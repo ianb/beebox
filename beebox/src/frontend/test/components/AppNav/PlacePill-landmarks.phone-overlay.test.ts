@@ -18,9 +18,9 @@ const landmarks: SwitchLandmark[] = Array.from({ length: 21 }, (_, i) => ({
   freshCount: 0,
 }));
 
-function list(searchOpen: boolean) {
+function list(searchOpen: boolean, shown?: SwitchLandmark[]) {
   return h(LandmarkList, {
-    landmarks,
+    landmarks: shown ?? landmarks,
     failed: false,
     onRetry: () => {},
     boxSlug: "test1",
@@ -62,4 +62,29 @@ void test("while the phone search overlay is open, the rest of <body> is inert",
     open: { overlayInBody: true, overlayInert: false, outsideInert: true, appInert: true },
     closed: { outsideInert: false, overlayPresent: false },
   });
+});
+
+// Search is only offered over 20 landmarks. If the list shrinks while the
+// overlay is open, the overlay goes away and the page must come back.
+void test("when the list shrinks below the search threshold, the page is no longer inert", async (t) => {
+  const realMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
+  });
+  t.teardown(() => {
+    if (realMatchMedia === undefined) Reflect.deleteProperty(window, "matchMedia");
+    else Object.defineProperty(window, "matchMedia", realMatchMedia);
+  });
+  const outside = document.createElement("div");
+  document.body.append(outside);
+  t.teardown(() => outside.remove());
+
+  const view = await mount(list(true));
+  const before = outside.hasAttribute("inert");
+  await view.rerender(list(true, landmarks.slice(0, 20)));
+  const after = { outsideInert: outside.hasAttribute("inert"), overlayPresent: document.querySelector("section[aria-modal=true]") !== null };
+  await view.unmount();
+
+  t.check({ before, after }, { before: true, after: { outsideInert: false, overlayPresent: false } });
 });

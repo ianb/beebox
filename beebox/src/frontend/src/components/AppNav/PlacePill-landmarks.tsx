@@ -181,7 +181,10 @@ export function LandmarkList({
       overlay?.removeEventListener("keydown", trapTab);
       for (const element of inerted) element.removeAttribute("inert");
     };
-  }, [searchOpen, mobileViewport, onCancelSearch]);
+    // `searchable` is a dependency because it decides whether the overlay
+    // renders: when the list shrinks to 20 the overlay goes away, and this
+    // cleanup must run to lift the inert it set.
+  }, [searchOpen, mobileViewport, searchable, onCancelSearch]);
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;

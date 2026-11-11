@@ -67,7 +67,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="group inline-flex items-center justify-center w-6 h-6 -m-[5px] rounded-full text-white text-[0.5625rem] leading-none cursor-pointer"
+        className="group inline-flex items-center justify-center w-6 h-6 -my-[5px] rounded-full text-white text-[0.5625rem] leading-none cursor-pointer"
       >
         <span aria-hidden className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info ring-1 ring-warm-50">{descriptor.icon}</span>
       </button>

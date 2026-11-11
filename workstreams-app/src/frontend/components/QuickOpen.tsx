@@ -25,11 +25,16 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // Only fetched once opened, so the palette costs nothing until it is wanted.
   const index = trpc.documents.paths.useQuery({ workstream }, { enabled: open });
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "p") {
         event.preventDefault();
-        setOpen((current) => !current);
+        // Close an open dialog through close() so focus returns where it was
+        // (its close event then unmounts it); unmounting an open dialog skips that.
+        const dialog = dialogRef.current;
+        if (dialog?.open === true) dialog.close();
+        else setOpen((current) => !current);
         return;
       }
     }
@@ -37,7 +42,6 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
     return () => { window.removeEventListener("keydown", onKey); };
   }, []);
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!open || dialog === null || dialog.open) return;
@@ -53,6 +57,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // makes (`RecentPage.tsx` recentRowTarget) — the palette is a way to reach a
   // document, not a way to reach the markdown reader specifically.
   function choose(relPath: string): void {
+    dialogRef.current?.close();
     setOpen(false);
     setQuery("");
     const issue = issueRelPathFromRepoPath(relPath);

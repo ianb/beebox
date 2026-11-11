@@ -113,6 +113,8 @@ function confirmTabArrangement(message: RelayTabArrangementMessage): Promise<boo
 
   return new Promise((resolve) => {
     const finish = (confirmed: boolean): void => {
+      // Close before removing, so focus returns to what the page had focused.
+      if (dialog.open) dialog.close();
       host.remove();
       resolve(confirmed);
     };

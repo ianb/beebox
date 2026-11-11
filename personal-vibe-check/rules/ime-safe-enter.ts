@@ -104,22 +104,54 @@ function walk(node: unknown, visit: (n: ESTree.Node) => void): void {
   }
 }
 
-/** Whether an expression reads a composition signal: `isComposing` (call or member), `229`, or "Process". */
-function containsGuard(node: ESTree.Node): boolean {
-  let found = false;
-  walk(node, (n) => {
-    if (found) return;
-    if (n.type === "Identifier" && n.name === "isComposing") found = true;
-    else if (n.type === "Literal" && (n.value === 229 || n.value === "Process")) found = true;
-  });
-  return found;
+type Polarity = "composing" | "notComposing";
+
+function flip(p: Polarity | null): Polarity | null {
+  if (p === null) return null;
+  return p === "composing" ? "notComposing" : "composing";
 }
 
-/** `!isComposing(e)`, `!e.isComposing`, `e.keyCode !== 229`: true only when no composition is active. */
+/** A direct composition read: `isComposing(e)` / `isComposing(e.nativeEvent)` or a member `e.isComposing`. */
+function isCompositionRead(node: ESTree.Node): boolean {
+  if (node.type === "CallExpression") return node.callee.type === "Identifier" && node.callee.name === "isComposing";
+  return node.type === "MemberExpression" && !node.computed && node.property.type === "Identifier" && node.property.name === "isComposing";
+}
+
+/** `e.keyCode`, `e.which`, `e.key`, or `e.nativeEvent.keyCode`: the side compared with 229 or "Process". */
+function isKeyField(node: ESTree.Node): boolean {
+  return node.type === "MemberExpression" && !node.computed && node.property.type === "Identifier" &&
+    ["keyCode", "which", "key"].includes(node.property.name);
+}
+
+/**
+ * What an expression being true says about composition: "composing" (true only
+ * while an IME composes), "notComposing" (true only when none does), or null
+ * (it says neither, or mixes in other conditions). Polarity is tracked
+ * through `!`, comparisons with `true`/`false`, `===`/`!==` against 229 or
+ * "Process", and `||` of composing reads.
+ */
+function polarity(node: ESTree.Node): Polarity | null {
+  if (isCompositionRead(node)) return "composing";
+  if (node.type === "UnaryExpression" && node.operator === "!") return isNode(node.argument) ? flip(polarity(node.argument)) : null;
+  if (node.type === "LogicalExpression" && node.operator === "||") {
+    return polarity(node.left) === "composing" || polarity(node.right) === "composing" ? "composing" : null;
+  }
+  if (node.type !== "BinaryExpression" || !["===", "==", "!==", "!="].includes(node.operator) || !isNode(node.left)) return null;
+  const negate = node.operator === "!==" || node.operator === "!=";
+  const sides: [ESTree.Node, ESTree.Node][] = [[node.left, node.right], [node.right, node.left]];
+  for (const [value, other] of sides) {
+    if (value.type !== "Literal") continue;
+    let p: Polarity | null = null;
+    if (typeof value.value === "boolean") p = value.value ? polarity(other) : flip(polarity(other));
+    else if ((value.value === 229 || value.value === "Process") && isKeyField(other)) p = "composing";
+    if (p !== null) return negate ? flip(p) : p;
+  }
+  return null;
+}
+
+/** True only when no composition is active: `!isComposing(e)`, `e.keyCode !== 229`, `e.isComposing === false`. */
 function isNegatedGuard(node: ESTree.Node): boolean {
-  if (node.type === "UnaryExpression" && node.operator === "!") return containsGuard(node.argument);
-  if (node.type === "BinaryExpression" && (node.operator === "!==" || node.operator === "!=")) return containsGuard(node);
-  return false;
+  return polarity(node) === "notComposing";
 }
 
 function andOperands(node: ESTree.Node): ESTree.Node[] {
@@ -128,15 +160,13 @@ function andOperands(node: ESTree.Node): ESTree.Node[] {
 }
 
 /**
- * True when composition alone makes the expression true: a bare read
+ * True when composition alone makes the expression true: a composing read
  * (`isComposing(e)`, `e.isComposing`, `e.keyCode === 229`), or an `||` with
- * such a read as one operand. `e.isComposing && e.shiftKey` is not enough.
+ * such a read as one operand. `e.isComposing && e.shiftKey` and
+ * `e.isComposing === false` are not.
  */
 function guardAlone(node: ESTree.Node): boolean {
-  if (node.type === "LogicalExpression") return node.operator === "||" && (guardAlone(node.left) || guardAlone(node.right));
-  if (node.type === "UnaryExpression") return false;
-  if (node.type === "BinaryExpression") return (node.operator === "===" || node.operator === "==") && containsGuard(node);
-  return containsGuard(node);
+  return polarity(node) === "composing";
 }
 
 /** `if (<composition>) return;` — the early exit that makes everything after it safe. */
@@ -205,7 +235,9 @@ function requiresModifier(comparison: ESTree.Node): boolean {
 function isSuppressOnly(statement: ESTree.Statement): boolean {
   const body = statement.type === "BlockStatement" ? statement.body : [statement];
   return body.every((s) => {
-    if (s.type === "ReturnStatement" || s.type === "BreakStatement") return true;
+    // A bare `return` (or `return true/false`) suppresses; `return submit()` acts.
+    if (s.type === "ReturnStatement") return s.argument === null || s.argument === undefined || (s.argument.type === "Literal" && typeof s.argument.value === "boolean");
+    if (s.type === "BreakStatement") return true;
     if (s.type !== "ExpressionStatement" || s.expression.type !== "CallExpression") return false;
     const callee = s.expression.callee;
     return (
