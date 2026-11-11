@@ -85,7 +85,7 @@ export function Stack({ children, gap, as, align, overflow, hideOnMobile, focusa
   const props = { className: classes, ...(focusable ? { tabIndex: 0 } : {}) };
   if (as === "section") return <section {...props}>{children}</section>;
   if (as === "article") return <article {...props}>{children}</article>;
-  if (as === "ul") return <ul {...props}>{children}</ul>;
-  if (as === "ol") return <ol {...props}>{children}</ol>;
+  if (as === "ul") return <ul role="list" {...props}>{children}</ul>;
+  if (as === "ol") return <ol role="list" {...props}>{children}</ol>;
   return <div {...props}>{children}</div>;
 }

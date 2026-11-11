@@ -44,7 +44,7 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
               <StatusBadge status="pending" className="ml-2">{pendingQuestions.length}</StatusBadge>
             </h2>
           </div>
-          <ul className="space-y-1">
+          <ul role="list" className="space-y-1">
             {pendingQuestions.slice(0, 5).map((q) => (
               <li key={q.path} className="text-sm" {...bbxSource("card", q.relativePath)}>
                 <Link
@@ -73,7 +73,7 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
               <StatusBadge status="pending" className="ml-2">{dueTasks.length}</StatusBadge>
             </h2>
           </div>
-          <ul className="space-y-1">
+          <ul role="list" className="space-y-1">
             {dueTasks.slice(0, 5).map((t) => (
               <li key={t.path} className="text-sm" {...bbxSource("card", t.path)}>
                 <Link to={href(cardUrl(boxSlug ?? "", t.path))} className="text-primary hover:text-primary-dark hover:underline">

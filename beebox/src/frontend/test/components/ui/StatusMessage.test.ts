@@ -1,5 +1,5 @@
 // StatusMessage: a pane's roomy placeholder or a menu's compact row. Both are
-// polite status regions.
+// polite status regions; busy marks loading.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
@@ -22,6 +22,24 @@ void test("the default is the pane variant", async (t) => {
 void test("the menu variant is a compact small-text row", async (t) => {
   const message = await messageOf({ variant: "menu", children: "Searching…" });
   t.check(message, { role: "status", text: "Searching…", classes: ["px-3", "py-2", "text-sm", "text-warm-700"] });
+});
+
+// Loading then a result in the same element: the live region exists before the
+// result arrives, so the result is announced as a change inside it; aria-busy
+// holds the announcement while the loading text shows.
+void test("one status region from loading to result", async (t) => {
+  const view = await mount(h(StatusMessage, { busy: true, children: "Loading…" }));
+  const element = view.container.firstElementChild;
+  const loading = { role: element?.getAttribute("role") ?? null, busy: element?.getAttribute("aria-busy") ?? null };
+  await view.rerender(h(StatusMessage, { children: "No recent files yet" }));
+  const same = view.container.firstElementChild === element;
+  const result = { role: element?.getAttribute("role") ?? null, busy: element?.getAttribute("aria-busy") ?? null, text: element?.textContent ?? "" };
+  await view.unmount();
+  t.check({ loading, same, result }, {
+    loading: { role: "status", busy: "true" },
+    same: true,
+    result: { role: "status", busy: null, text: "No recent files yet" },
+  });
 });
 
 void test("a layout class overrides the variant's padding", async (t) => {

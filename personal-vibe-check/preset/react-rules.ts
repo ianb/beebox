@@ -10,6 +10,9 @@ export const reactRules: Linter.RulesRecord = {
   // a chat composer that should grab focus on mount).
   ...jsxA11yPlugin.flatConfigs.recommended.rules,
   "jsx-a11y/no-autofocus": "off",
+  // Tailwind preflight sets list-style: none, and Safari/VoiceOver then drops
+  // list semantics; an explicit role="list" restores them. Default nav kept.
+  "jsx-a11y/no-redundant-roles": ["error", { nav: ["navigation"], ul: ["list"], ol: ["list"] }],
   // Every control has an accessible name. Screen readers, agents
   // driving the UI, and tests that click by role + name all need one;
   // an icon-only button with only `title` is the usual miss.

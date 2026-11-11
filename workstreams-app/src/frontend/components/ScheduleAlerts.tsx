@@ -112,7 +112,7 @@ export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error,
         return (
           <div key={group.priority} className="schedule-alert-group">
             <h3>{group.heading} <small>{members.length}</small></h3>
-            <ul className="schedule-alert-list">
+            <ul role="list" className="schedule-alert-list">
               {members.map((alert) => {
                 const acknowledge = (
                   <Button
@@ -137,7 +137,7 @@ export function ScheduleAlertList({ alerts, onAcknowledge, acknowledging, error,
       {closed.length > 0 ? (
         <details className="schedule-alerts-acknowledged" open={closed.some((alert) => alert.id === selected)}>
           <summary>Closed in the last 14 days <small>{closed.length}</small></summary>
-          <ul className="schedule-alert-list">
+          <ul role="list" className="schedule-alert-list">
             {closed.map((alert) => (
               <li key={alert.id} id={`schedule-alert-${alert.id}`} className={rowClass(alert, selected)} tabIndex={-1}>
                 <AlertBody alert={alert} showSchedule={named} />

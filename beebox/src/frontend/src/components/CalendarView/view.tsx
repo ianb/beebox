@@ -95,7 +95,7 @@ function StatusLines({ access, syncing }: { access: string | undefined; syncing:
 
 function EventList({ path, window, onNavigate }: { path: string; window: Window } & Pick<RendererProps, "onNavigate">): ReactNode {
   const query = trpc.calendar.cardEvents.useQuery({ path, from: window.from.toString(), to: window.to.toString() });
-  if (query.isLoading) return <StatusMessage>Loading events…</StatusMessage>;
+  if (query.isLoading) return <StatusMessage busy>Loading events…</StatusMessage>;
   if (query.error) return <Notice tone="error">Could not read this calendar's events: {query.error.message}</Notice>;
   const { events, unreadable } = query.data ?? { events: [], unreadable: [] };
   const open = (file: string) => () => onNavigate({ path: file, viewer: null, params: {}, viewState: null });
@@ -113,7 +113,7 @@ function EventList({ path, window, onNavigate }: { path: string; window: Window 
       {byDay(events, window.timeZone).map(([day, list]) => (
         <section key={day} className="flex flex-col gap-1">
           <Text material weight="semibold" size="sm">{day}</Text>
-          <ul className="flex flex-col gap-0.5">
+          <ul role="list" className="flex flex-col gap-0.5">
             {list.map((event) => (
               <li key={`${event.file}@${event.start}`} className="flex flex-wrap items-baseline gap-x-2">
                 <Text material tone="muted" size="sm" className="w-20 shrink-0">{event.allDay ? "All day" : timeLabel(event.start)}</Text>

@@ -79,7 +79,7 @@ export function BrowseSidebarBody(props: Props) {
       </>
     );
   }
-  if (loading) return <StatusMessage className="p-4">Loading...</StatusMessage>;
+  if (loading) return <StatusMessage busy className="p-4">Loading...</StatusMessage>;
   if (!isError) return null;
 
   return (

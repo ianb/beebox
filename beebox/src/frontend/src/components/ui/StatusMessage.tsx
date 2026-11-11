@@ -13,8 +13,9 @@ export interface StatusMessageProps {
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   /**
-   * The placeholder stands for content still loading: `aria-busy` tells
-   * assistive tech, and `bbx browser screenshot --card` waits for it to clear.
+   * The placeholder stands for content still loading: `aria-busy` asks screen
+   * readers to hold the region's announcement until the result replaces the
+   * loading text, and `bbx browser screenshot --card` waits for it to clear.
    */
   busy?: boolean;
 }
@@ -26,7 +27,8 @@ const VARIANT_CLASSES: Record<StatusMessageVariant, string> = {
 
 /**
  * A placeholder while there is nothing to show: loading, empty, or not
- * found. `role="status"` lets screen readers announce it. Errors use
+ * found. It stays one `role="status"` region from loading to result, so the
+ * result is announced as a change inside an existing live region. Errors use
  * `ErrorText`.
  */
 export function StatusMessage({ children, variant, className, busy }: StatusMessageProps) {

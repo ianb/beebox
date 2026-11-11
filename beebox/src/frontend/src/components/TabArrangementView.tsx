@@ -97,7 +97,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
           {proposal.windows.map((window, index) => (
             <Card key={window.id} as="section" aria-label={`Proposed window ${index + 1}`} background="warm">
               <Text as="h2" weight="semibold" className="mb-2">Window {index + 1}</Text>
-              <ol className="space-y-2">
+              <ol role="list" className="space-y-2">
                 {window.tabs.map((id) => (
                   <TabRow
                     key={id}

@@ -177,11 +177,11 @@ function ScheduleTableHead() {
   return (
     <thead>
       <tr className="text-left text-xs text-warm-700 border-b">
-        <th className="pb-2 font-medium">Name</th>
-        <th className="pb-2 font-medium">Schedule</th>
-        <th className="pb-2 font-medium">Last Run</th>
-        <th className="pb-2 font-medium">Status</th>
-        <th className="pb-2 font-medium"><VisuallyHidden>Actions</VisuallyHidden></th>
+        <th scope="col" className="pb-2 font-medium">Name</th>
+        <th scope="col" className="pb-2 font-medium">Schedule</th>
+        <th scope="col" className="pb-2 font-medium">Last Run</th>
+        <th scope="col" className="pb-2 font-medium">Status</th>
+        <th scope="col" className="pb-2 font-medium"><VisuallyHidden>Actions</VisuallyHidden></th>
       </tr>
     </thead>
   );

@@ -28,7 +28,7 @@ export function PhonePushDevices() {
       {apns.data?.configured === false ? (
         <Hint>The server has no APNs key, so paired phones get no push notifications.</Hint>
       ) : null}
-      {devices.isPending ? <StatusMessage>Loading paired phones…</StatusMessage>
+      {devices.isPending ? <StatusMessage busy>Loading paired phones…</StatusMessage>
         : devices.error ? <ErrorText>Could not load paired phones: {devices.error.message}</ErrorText>
         : registered.length === 0 ? <Hint>No paired phone has registered for notifications. The Bee Box app registers when it opens.</Hint>
         : (

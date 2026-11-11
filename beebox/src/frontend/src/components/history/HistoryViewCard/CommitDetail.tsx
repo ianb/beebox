@@ -110,7 +110,7 @@ export function CommitDetail({
 
       {/* Files */}
       {diffLoading ? (
-        <StatusMessage>Loading diff...</StatusMessage>
+        <StatusMessage busy>Loading diff...</StatusMessage>
       ) : null}
 
       {newFiles.length > 0 ? (

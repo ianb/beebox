@@ -52,7 +52,7 @@ function RecentChatLink({ chat, boxSlug, primary }: { chat: RecentChat; boxSlug:
 export function RecentChatList({ chats, boxSlug }: { chats: RecentChat[]; boxSlug: string }) {
   if (chats.length === 0) return <Text as="p" size="sm" tone="muted">No recent chats.</Text>;
   return (
-    <ul className="flex flex-col gap-2">
+    <ul role="list" className="flex flex-col gap-2">
       {chats.map((chat, index) => <RecentChatLink key={chat.sessionId} chat={chat} boxSlug={boxSlug} primary={index === 0} />)}
     </ul>
   );
@@ -67,7 +67,7 @@ function PageLink({ id, to, children }: { id: string; to: string; children: Reac
 /** The box's own `nav.card` shortcuts. */
 export function ShortcutLinks({ boxSlug, shortcuts }: { boxSlug: string; shortcuts: BoxScreenHome["shortcuts"] }) {
   return (
-    <ul className="flex flex-wrap gap-2">
+    <ul role="list" className="flex flex-wrap gap-2">
       {/* Keyed by position as well: a card may list one target under two labels. */}
       {shortcuts.map((shortcut, index) => (
         <PageLink key={`${index}:${shortcut.to}`} id={`bbx-box-screen-shortcut-${index}`} to={href(`/${boxSlug}${shortcut.to}`)}>{shortcut.label}</PageLink>
@@ -79,7 +79,7 @@ export function ShortcutLinks({ boxSlug, shortcuts }: { boxSlug: string; shortcu
 /** The other boxes, each opening its own box screen. */
 export function OtherBoxes({ boxes }: { boxes: KnownBox[] }) {
   return (
-    <ul className="flex flex-col gap-2">
+    <ul role="list" className="flex flex-col gap-2">
       {boxes.map((box) => (
         <li key={box.slug}>
           <Link id={`bbx-box-screen-box-${box.slug}`} to={href(`/${box.slug}/box`)} className={PLAIN_TILE}>

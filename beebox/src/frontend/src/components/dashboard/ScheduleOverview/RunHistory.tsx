@@ -98,7 +98,7 @@ function RunList({ name }: { name: string }) {
   if (query.error) return <p className="text-xs text-danger-dark">Could not load runs: {query.error.message}</p>;
   if (query.data.runs.length === 0) return <p className="text-xs text-warm-700">No runs recorded on this machine yet.</p>;
   return (
-    <ul className="divide-y divide-warm-200" aria-label={`Recent runs of ${name}`}>
+    <ul role="list" className="divide-y divide-warm-200" aria-label={`Recent runs of ${name}`}>
       {query.data.runs.map((run) => <RunItem key={run.ts} run={run} />)}
     </ul>
   );

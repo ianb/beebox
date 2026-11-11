@@ -175,7 +175,7 @@ export function AgentEngineSection() {
       ) : null}
 
       {update.isPending ? (
-        <div role="status"><Hint>Saving…</Hint></div>
+        <Hint>Saving…</Hint>
       ) : null}
       {update.isSuccess ? (
         <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>

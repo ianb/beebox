@@ -43,7 +43,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
 
   return (
     <nav aria-label="Breadcrumbs" className="px-3 py-2 border-b text-sm break-words">
-      <ol>
+      <ol role="list">
         <li className="inline">
           <button type="button"
             id="bbx-browse-crumb-root"

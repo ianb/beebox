@@ -32,7 +32,7 @@ export function CapturePhotoStrip({ states, previews, includeControlIds }: { sta
   };
 
   return (
-    <ul className="flex gap-2 px-4 py-2 overflow-x-auto bg-gray-900/80" aria-label="Photos in this capture">
+    <ul role="list" className="flex gap-2 px-4 py-2 overflow-x-auto bg-gray-900/80" aria-label="Photos in this capture">
       {states.map((state, i) => (
         <li key={i} className="flex-shrink-0">
           <PhotoTile index={i} state={state} src={previews[i] ?? null} onOpen={() => open(i)} id={includeControlIds ? `bbx-capture-photo-${String(i + 1)}` : undefined} />

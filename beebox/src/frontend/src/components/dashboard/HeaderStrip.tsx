@@ -32,7 +32,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
               <div className={`font-semibold ${s.color} mb-0.5`}>
                 {s.label} ({s.files.length})
               </div>
-              <ul className="font-mono text-warm-700 space-y-0.5 max-h-32 overflow-auto">
+              <ul role="list" className="font-mono text-warm-700 space-y-0.5 max-h-32 overflow-auto">
                 {s.files.map((f) => (
                   <li key={f}>{f}</li>
                 ))}

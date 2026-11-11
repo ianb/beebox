@@ -28,7 +28,7 @@ function SourceRenderer({ data }: RendererProps) {
     },
   });
   if (isLoading) {
-    return <StatusMessage className="p-4">Loading source…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading source…</StatusMessage>;
   }
   if (error || text === undefined) {
     const message = error instanceof Error ? error.message : "No content";

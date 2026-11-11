@@ -97,7 +97,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
     {!index.isLoading && !index.isError && matches.length === 0 && query !== ""
       ? <p className="empty-state">No path matches “{query}”.</p>
       : null}
-    <ul className="quick-open-results">
+    <ul role="list" className="quick-open-results">
       {matches.map((match, position) => (
         <li key={match.relPath}>
           <button

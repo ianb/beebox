@@ -57,7 +57,7 @@ function RunsGrid({ rows }: { rows: RunRow[] }) {
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr>{HEADERS.map((h) => <th key={h} className="text-left pr-2">{h}</th>)}</tr>
+        <tr>{HEADERS.map((h) => <th key={h} scope="col" className="text-left pr-2">{h}</th>)}</tr>
       </thead>
       <tbody>{rows.map((r) => <RunRowView key={r.batch} run={r} />)}</tbody>
     </table>

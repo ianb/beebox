@@ -114,7 +114,7 @@ export function ScheduledSection({ rows, issues, exhibitsOrigin, now }: { rows: 
         </span>
         <Link to="/alerts" className="schedule-all-alerts">all alerts</Link>
       </h2>
-      <ul>
+      <ul role="list">
         {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} exhibitsOrigin={exhibitsOrigin} now={now} />)}
       </ul>
     </section>

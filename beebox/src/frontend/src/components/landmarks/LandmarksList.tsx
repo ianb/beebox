@@ -75,7 +75,7 @@ export function LandmarksList() {
   const [filter, setFilter] = useState("");
 
   if (list.isLoading || chats.isLoading) {
-    return <StatusMessage>Loading…</StatusMessage>;
+    return <StatusMessage busy>Loading…</StatusMessage>;
   }
   const error = list.error ?? chats.error;
   if (error) {

@@ -142,7 +142,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
         </label>
         <Text as="p" size="xs" tone="subtle">{MANIFEST_SHAPE_HINT}</Text>
         {files.length > 0 ? (
-          <ul className="text-sm">
+          <ul role="list" className="text-sm">
             {files.map((f) => (
               <li key={f.name}>
                 <Row gap="sm" align="center">

@@ -112,7 +112,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <StatusMessage className="p-4">Loading figure…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading figure…</StatusMessage>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
