@@ -1,12 +1,15 @@
 ---
 title: "Full-suite red: test/core/browser/card-shot/run.e2e.test.ts"
-workstream: box-feedback-bugs
+workstream: test-quiet
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-feedback-bugs — the hourly full-suite run on main
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-11):** Not reproducible, no code fix. card-shot/run.e2e.test.ts last failed in hourly run 20261110-111416; the five tested runs after it (20261110-132619 through 20261110-234605) passed it, and their only failure was codex-sdk-session.boundary.test.ts. Reopen if it fails again.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `4398f595`. Bisecting the landings since the last tested

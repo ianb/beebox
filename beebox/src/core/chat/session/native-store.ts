@@ -24,9 +24,8 @@ import { resolveSessionLogPath } from "./history.js";
 import {
   codexSessionExists,
   readCodexSessionHistoryIfPresent,
-  readCodexSessionUpdatedAt,
+  readCodexSessionUpdatedAtIfPresent,
 } from "./codex-transcript/core.js";
-import { CodexHistoryRpcError } from "../../../services/codex-history-server.js";
 import { findPiSessionFile, parsePiSessionLog } from "./pi-transcript.js";
 
 /** A bounded window of a transcript, with the exact count of the whole. */
@@ -71,14 +70,7 @@ const claudeStore: NativeSessionStore = {
 
 const codexStore: NativeSessionStore = {
   exists: codexSessionExists,
-  async updatedAt(boxRoot, sessionId) {
-    try {
-      return await readCodexSessionUpdatedAt(boxRoot, sessionId);
-    } catch (error) {
-      if (error instanceof CodexHistoryRpcError && error.isNotFound) return null;
-      throw error;
-    }
-  },
+  updatedAt: readCodexSessionUpdatedAtIfPresent,
   readHistory: (boxRoot, { sessionId, slice }) => readCodexSessionHistoryIfPresent({ boxRoot, sessionId, slice }),
 };
 

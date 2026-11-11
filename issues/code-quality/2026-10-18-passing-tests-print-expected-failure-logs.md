@@ -1,6 +1,6 @@
 ---
 title: "Passing beebox tests print the logs of failures they provoke on purpose"
-workstream: unattached
+workstream: test-quiet
 area: tests
 priority: backlog
 labels: [tests, noise]
