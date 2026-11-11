@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { MenuItem } from "../ui/dropdown-menu-item";
+import { useMenuItemRole } from "../ui/Dropdown";
 import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
@@ -124,6 +125,8 @@ export function LandmarkList({
   const overlayRef = useRef<HTMLElement>(null);
   const { mobileViewport, visibleViewport } = useSearchViewport(searchOpen);
   const searchable = landmarks !== null && landmarks.length > 20;
+  // Inside a navigation Dropdown the rows are links, not menu items.
+  const rowsRole = useMenuItemRole() === "menuitem" ? "menu" : "group";
 
   useIsomorphicLayoutEffect(() => {
     if (!searchOpen) {
@@ -160,10 +163,23 @@ export function LandmarkList({
     };
     overlay?.addEventListener("mousedown", stopOutsideClose);
     overlay?.addEventListener("keydown", trapTab);
+    // The phone overlay says aria-modal, so the page behind it must not be
+    // reachable: make every other child of <body> inert while it is open. It
+    // is not a <dialog> because it sizes itself to the visual viewport for the
+    // iOS keyboard.
+    const inerted: Element[] = [];
+    if (overlay !== null && overlay.parentElement === document.body) {
+      for (const element of document.body.children) {
+        if (element === overlay || element.hasAttribute("inert")) continue;
+        element.setAttribute("inert", "");
+        inerted.push(element);
+      }
+    }
     searchRef.current?.focus();
     return () => {
       overlay?.removeEventListener("mousedown", stopOutsideClose);
       overlay?.removeEventListener("keydown", trapTab);
+      for (const element of inerted) element.removeAttribute("inert");
     };
   }, [searchOpen, mobileViewport, onCancelSearch]);
 
@@ -228,7 +244,7 @@ export function LandmarkList({
           <div className="min-w-0 flex-1">{searchField}</div>
           <Button id="bbx-switch-menu-landmark-search-cancel" intent="ghost" size="sm" onClick={onCancelSearch}>Cancel</Button>
         </header>
-        <div role="menu" aria-label="Matching landmarks" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">{rows}</div>
+        <div role={rowsRole} aria-label="Matching landmarks" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">{rows}</div>
       </section>,
       document.body,
     );
