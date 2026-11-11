@@ -1,0 +1,897 @@
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+// Picture-book page: a little green alien has just landed in a meadow at dusk.
+// The saucer's hatch is open and spilling warm light; the alien waves at us.
+
+type Pts = readonly Vec2[];
+
+const W = 800;
+const H = 600;
+
+const INK = "#1c2433";
+const GREEN = "#7cc86a";
+const GREEN_SHADE = "#3f7a5a";
+const GREEN_LIGHT = "#d6f29a";
+const WARM = "#ffd27a";
+
+// ── geometry helpers ────────────────────────────────────────────────
+function ellipsePts(cx: number, cy: number, rx: number, ry: number, n = 12): Vec2[] {
+  const out: Vec2[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2;
+    out.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return out;
+}
+
+/** A closed outline around a centreline, `w` wide, for limbs. */
+function tube(line: Pts, w0: number, w1: number): Vec2[] {
+  const left: Vec2[] = [];
+  const right: Vec2[] = [];
+  const n = line.length;
+  for (let i = 0; i < n; i += 1) {
+    const p = line[i] ?? [0, 0];
+    const a = line[Math.max(0, i - 1)] ?? p;
+    const b = line[Math.min(n - 1, i + 1)] ?? p;
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const w = (w0 + (w1 - w0) * (i / (n - 1))) / 2;
+    left.push([p[0] + nx * w, p[1] + ny * w]);
+    right.push([p[0] - nx * w, p[1] - ny * w]);
+  }
+  return [...left, ...right.reverse()];
+}
+
+// ── the alien ───────────────────────────────────────────────────────
+const AX = 330;
+const HEAD = ellipsePts(AX, 250, 100, 78, 14);
+const BODY: Pts = [
+  [AX, 318],
+  [AX + 34, 326],
+  [AX + 52, 372],
+  [AX + 62, 430],
+  [AX + 56, 470],
+  [AX + 30, 484],
+  [AX, 486],
+  [AX - 30, 484],
+  [AX - 56, 470],
+  [AX - 62, 430],
+  [AX - 52, 372],
+  [AX - 34, 326],
+];
+const BELLY = ellipsePts(AX + 4, 428, 28, 36, 10);
+const ARM_DOWN = tube(
+  [
+    [AX - 46, 360],
+    [AX - 72, 392],
+    [AX - 80, 432],
+  ],
+  24,
+  20,
+);
+const HAND_DOWN: Vec2 = [AX - 80, 440];
+const ARM_UP = tube(
+  [
+    [AX + 48, 366],
+    [AX + 100, 352],
+    [AX + 132, 312],
+    [AX + 140, 276],
+  ],
+  24,
+  20,
+);
+const HAND_UP: Vec2 = [AX + 142, 266];
+const LEG_L = tube(
+  [
+    [AX - 22, 476],
+    [AX - 24, 514],
+  ],
+  22,
+  22,
+);
+const LEG_R = tube(
+  [
+    [AX + 24, 476],
+    [AX + 26, 514],
+  ],
+  22,
+  22,
+);
+const FOOT_L = ellipsePts(AX - 30, 520, 26, 10, 10);
+const FOOT_R = ellipsePts(AX + 32, 520, 26, 10, 10);
+const ANT_L: Pts = [
+  [AX - 34, 180],
+  [AX - 48, 140],
+  [AX - 66, 106],
+];
+const ANT_R: Pts = [
+  [AX + 34, 180],
+  [AX + 52, 138],
+  [AX + 70, 104],
+];
+const EYE_L = { x: AX - 36, y: 244 };
+const EYE_R = { x: AX + 36, y: 244 };
+
+// ── the saucer ──────────────────────────────────────────────────────
+const SHIP = { x: 620, y: 432 };
+const SAUCER = ellipsePts(SHIP.x, SHIP.y, 150, 34, 16);
+const DOME = ellipsePts(SHIP.x, SHIP.y - 30, 72, 54, 14);
+
+export function setup(s: Sketch): void {
+  s.createCanvas(W, H);
+}
+
+function sky(s: Sketch): void {
+  s.background(
+    s.linearGradient(0, 0, 0, 440, [
+      [0, "#1a1f4a"],
+      [0.45, "#4b3f86"],
+      [0.8, "#c3708a"],
+      [1, "#f2b07a"],
+    ]),
+  );
+  // moon glow and moon
+  s.noStroke();
+  s.fill(
+    s.radialGradient(140, 110, 140, [
+      [0, "rgba(255,240,200,0.45)"],
+      [1, "rgba(255,240,200,0)"],
+    ]),
+  );
+  s.circle(140, 110, 280);
+  s.fill("#fbf1d2");
+  s.circle(140, 110, 70);
+  s.clip(ellipsePts(140, 110, 35, 35, 16), () => {
+    s.noFill();
+    s.brush("wash", { opacity: 0.25 });
+    s.stroke("#d8c9a2");
+    s.strokeWeight(16);
+    s.gesture({ pressure: "even" });
+    s.circle(150, 118, 14);
+    s.circle(128, 98, 8);
+    s.noBrush();
+  });
+  // stars
+  s.noStroke();
+  for (let i = 0; i < 70; i += 1) {
+    const x = s.random(0, W);
+    const y = s.random(0, 300);
+    const r = s.random(0.6, 2.2);
+    s.fill(`rgba(255,248,225,${(0.4 + s.random(0.6)).toFixed(2)})`);
+    s.circle(x, y, r * 2);
+  }
+  // a shooting star across the empty upper right
+  s.noFill();
+  s.brush("chalk", { opacity: 0.8 });
+  s.stroke("#fff6dc");
+  s.strokeWeight(6);
+  s.gesture({ pressure: "taper-in" });
+  s.curve([
+    [760, 40],
+    [690, 70],
+    [610, 112],
+  ]);
+  s.noBrush();
+  s.noStroke();
+  s.fill(
+    s.radialGradient(608, 113, 16, [
+      [0, "rgba(255,250,230,0.9)"],
+      [1, "rgba(255,250,230,0)"],
+    ]),
+  );
+  s.circle(608, 113, 32);
+  // soft clouds near the horizon
+  s.noFill();
+  s.brush("airbrush", { opacity: 0.35 });
+  s.stroke("#f6c3a6");
+  s.strokeWeight(40);
+  s.gesture({ pressure: "taper" });
+  s.curve([
+    [380, 300],
+    [480, 290],
+    [600, 300],
+    [720, 290],
+  ]);
+  s.stroke("#e19aa8");
+  s.strokeWeight(30);
+  s.curve([
+    [40, 340],
+    [160, 330],
+    [280, 342],
+  ]);
+  s.noBrush();
+}
+
+function land(s: Sketch): void {
+  // far hills
+  s.noStroke();
+  const farTop: Vec2[] = [
+    [-20, 384],
+    [110, 356],
+    [250, 382],
+    [420, 362],
+    [580, 384],
+    [720, 352],
+    [820, 366],
+  ];
+  const far = [...s.curvePath(farTop), ["line", W, H] as const, ["line", 0, H] as const, ["close"] as const];
+  s.fill(
+    s.linearGradient(0, 350, 0, 460, [
+      [0, "#7a68a8"],
+      [1, "#53517f"],
+    ]),
+  );
+  s.path(far);
+  s.clip(far, () => {
+    s.noFill();
+    s.brush("wash", { opacity: 0.45 });
+    s.gesture({ pressure: "taper" });
+    s.stroke("#c58aa6");
+    s.strokeWeight(26);
+    s.curve([
+      [80, 370],
+      [130, 362],
+      [240, 380],
+    ]);
+    s.curve([
+      [620, 372],
+      [720, 358],
+      [800, 366],
+    ]);
+  });
+  // a far farmhouse on the left hill, its window lit: someone is watching
+  const house = { x: 120, y: 360 };
+  s.fill("#3b3763");
+  s.polygon([
+    [house.x - 16, house.y + 4],
+    [house.x - 16, house.y - 12],
+    [house.x, house.y - 24],
+    [house.x + 16, house.y - 12],
+    [house.x + 16, house.y + 4],
+  ]);
+  s.rect(house.x + 6, house.y - 26, 5, 10);
+  s.fill(
+    s.radialGradient(house.x - 5, house.y - 6, 12, [
+      [0, "rgba(255,214,120,0.7)"],
+      [1, "rgba(255,214,120,0)"],
+    ]),
+  );
+  s.circle(house.x - 5, house.y - 6, 24);
+  s.fill("#ffd27a");
+  s.rect(house.x - 8, house.y - 9, 6, 6);
+  // a line of trees along the middle distance
+  const midTop: Vec2[] = [
+    [-20, 420],
+    [160, 404],
+    [360, 426],
+    [560, 410],
+    [820, 418],
+  ];
+  const mid = [...s.curvePath(midTop), ["line", W, H] as const, ["line", 0, H] as const, ["close"] as const];
+  s.fill("#3e4f6e");
+  s.path(mid);
+  for (let i = 0; i < 26; i += 1) {
+    const x = i * 32 + s.random(-10, 10);
+    const yb = 418 + Math.sin(i * 0.7) * 6;
+    const h = s.random(14, 34);
+    s.fill(s.random() < 0.5 ? "#3a4a69" : "#34425f");
+    s.curve(
+      [
+        [x - h * 0.35, yb],
+        [x - h * 0.3, yb - h * 0.5],
+        [x, yb - h],
+        [x + h * 0.32, yb - h * 0.45],
+        [x + h * 0.35, yb],
+      ],
+      true,
+    );
+  }
+  // meadow
+  const meadowTop: Vec2[] = [
+    [0, 446],
+    [200, 470],
+    [400, 486],
+    [600, 474],
+    [800, 452],
+  ];
+  const meadow = [
+    ...s.curvePath(meadowTop),
+    ["line", W, H] as const,
+    ["line", 0, H] as const,
+    ["close"] as const,
+  ];
+  s.fill(
+    s.linearGradient(0, 446, 0, H, [
+      [0, "#4f7f5c"],
+      [1, "#24443f"],
+    ]),
+  );
+  s.path(meadow);
+  s.clip(meadow, () => {
+    s.noFill();
+    // soft lighter patches of meadow catching the last sky light
+    s.brush("wash", { opacity: 0.5 });
+    s.gesture({ pressure: "taper" });
+    s.stroke("#7fae6a");
+    s.strokeWeight(60);
+    s.curve([
+      [-40, 480],
+      [160, 490],
+      [330, 506],
+    ]);
+    s.curve([
+      [470, 500],
+      [640, 486],
+      [840, 470],
+    ]);
+    // warm pool of hatch light on the grass
+    s.brush("airbrush", { opacity: 0.55 });
+    s.stroke("#f2d27a");
+    s.strokeWeight(70);
+    s.curve([
+      [380, 520],
+      [480, 516],
+      [600, 520],
+    ]);
+    // chalky texture, following the slope of the ground
+    s.brush("chalk", { opacity: 0.5 });
+    s.stroke("#93c07a");
+    s.strokeWeight(14);
+    s.gesture({ pressure: "taper", wobble: 2 });
+    for (let i = 0; i < 18; i += 1) {
+      const y = 486 + i * 6 + s.random(-3, 3);
+      const x = s.random(-80, 700);
+      const len = s.random(120, 260);
+      s.curve([
+        [x, y + (x / W) * -10],
+        [x + len / 2, y + 2],
+        [x + len, y - 2],
+      ]);
+    }
+    s.stroke("#173229");
+    s.brush("chalk", { opacity: 0.45 });
+    s.strokeWeight(18);
+    for (let i = 0; i < 8; i += 1) {
+      const y = 556 + i * 7;
+      const x = s.random(-80, 700);
+      s.curve([
+        [x, y],
+        [x + 160, y - 3],
+        [x + 300, y + 2],
+      ]);
+    }
+  });
+  s.noBrush();
+}
+
+function ship(s: Sketch): void {
+  // glow on the ground under the ship
+  s.noStroke();
+  s.fill(
+    s.radialGradient(SHIP.x - 60, 490, 220, [
+      [0, "rgba(255,214,130,0.55)"],
+      [1, "rgba(255,214,130,0)"],
+    ]),
+  );
+  s.ellipse(SHIP.x - 60, 490, 440, 140);
+  // legs
+  s.stroke(INK);
+  s.strokeWeight(4);
+  s.brush("ink");
+  s.gesture({ pressure: "even" });
+  s.line(SHIP.x - 90, 452, SHIP.x - 110, 490);
+  s.line(SHIP.x + 90, 452, SHIP.x + 110, 490);
+  // dome
+  s.fill(
+    s.linearGradient(SHIP.x - 60, SHIP.y - 80, SHIP.x + 40, SHIP.y - 10, [
+      [0, "#e8f6ff"],
+      [1, "#7aa4c8"],
+    ]),
+  );
+  s.noStroke();
+  s.curve(DOME, true);
+  s.clip(s.curvePath(DOME, true), () => {
+    s.noFill();
+    s.brush("airbrush", { opacity: 0.7 });
+    s.stroke("#ffffff");
+    s.strokeWeight(14);
+    s.gesture({ pressure: "taper" });
+    s.curve([
+      [SHIP.x - 52, SHIP.y - 40],
+      [SHIP.x - 36, SHIP.y - 66],
+      [SHIP.x - 6, SHIP.y - 78],
+    ]);
+    s.brush("wash", { opacity: 0.55 });
+    s.stroke("#e7a3b8");
+    s.strokeWeight(18);
+    s.gesture({ pressure: "taper" });
+    s.curve([
+      [SHIP.x - 70, SHIP.y - 22],
+      [SHIP.x, SHIP.y - 30],
+      [SHIP.x + 70, SHIP.y - 22],
+    ]);
+  });
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(3);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.6 });
+  s.curve(DOME, true);
+  s.noBrush();
+  s.noStroke();
+  // saucer
+  s.fill(
+    s.linearGradient(0, SHIP.y - 34, 0, SHIP.y + 34, [
+      [0, "#d9dde6"],
+      [0.5, "#9aa3b8"],
+      [1, "#5d6582"],
+    ]),
+  );
+  s.curve(SAUCER, true);
+  s.clip(s.curvePath(SAUCER, true), () => {
+    s.noFill();
+    // dusk sky reflected on the top, shadowed underside, a band seam
+    s.brush("wash", { opacity: 0.5 });
+    s.gesture({ pressure: "taper" });
+    s.stroke("#e6a6b8");
+    s.strokeWeight(22);
+    s.curve([
+      [SHIP.x - 150, SHIP.y - 4],
+      [SHIP.x - 40, SHIP.y - 22],
+      [SHIP.x + 120, SHIP.y - 18],
+    ]);
+    s.brush("wash", { opacity: 0.7, blend: "multiply" });
+    s.stroke("#5e5a92");
+    s.strokeWeight(30);
+    s.curve([
+      [SHIP.x - 150, SHIP.y + 26],
+      [SHIP.x, SHIP.y + 40],
+      [SHIP.x + 150, SHIP.y + 22],
+    ]);
+    s.brush("bristle", { load: 0.9, opacity: 0.6 });
+    s.stroke("#ffffff");
+    s.strokeWeight(10);
+    s.gesture({ pressure: "taper", wobble: 1 });
+    s.curve([
+      [SHIP.x - 110, SHIP.y - 10],
+      [SHIP.x - 40, SHIP.y - 20],
+      [SHIP.x + 30, SHIP.y - 22],
+    ]);
+    s.brush("ink");
+    s.stroke("#4b5170");
+    s.strokeWeight(2);
+    s.gesture({ pressure: "taper" });
+    s.curve([
+      [SHIP.x - 148, SHIP.y + 2],
+      [SHIP.x, SHIP.y + 14],
+      [SHIP.x + 148, SHIP.y + 2],
+    ]);
+  });
+  // lights along the rim, each with a glow
+  for (let i = 0; i < 7; i += 1) {
+    const t = (i - 3) / 3.4;
+    const x = SHIP.x + t * 140;
+    const y = SHIP.y + 12 - t * t * 8;
+    s.noStroke();
+    s.fill(
+      s.radialGradient(x, y, 14, [
+        [0, "rgba(255,220,120,0.8)"],
+        [1, "rgba(255,220,120,0)"],
+      ]),
+    );
+    s.circle(x, y, 28);
+    s.fill(WARM);
+    s.circle(x, y, 8);
+    s.fill("#fffbe6");
+    s.circle(x - 1, y - 1, 3);
+  }
+  // outlines
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(3);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.6 });
+  s.curve(SAUCER, true);
+  s.noBrush();
+}
+
+function hatch(s: Sketch): void {
+  const top: Vec2 = [SHIP.x - 58, SHIP.y + 26];
+  // beam of light falling from the open hatch
+  s.noStroke();
+  s.fill(
+    s.linearGradient(0, SHIP.y + 26, 0, 520, [
+      [0, "rgba(255,236,170,0.85)"],
+      [1, "rgba(255,236,170,0.05)"],
+    ]),
+  );
+  s.path([
+    ["move", top[0] - 34, top[1]],
+    ["line", top[0] + 34, top[1]],
+    ["line", top[0] + 70, 520],
+    ["line", top[0] - 110, 520],
+    ["close"],
+  ]);
+  // glowing doorway on the underside
+  s.fill("#fff4c8");
+  s.ellipse(top[0], top[1], 70, 12);
+  // ramp
+  const rampFill = s.linearGradient(top[0], top[1], top[0] - 90, 508, [
+    [0, "#d8d0cc"],
+    [1, "#948ca6"],
+  ]);
+  const ramp: Vec2[] = [
+    [top[0] - 26, top[1] + 2],
+    [top[0] + 10, top[1] + 4],
+    [top[0] - 70, 512],
+    [top[0] - 128, 506],
+  ];
+  const side: Vec2[] = [
+    [top[0] - 128, 506],
+    [top[0] - 70, 512],
+    [top[0] - 70, 519],
+    [top[0] - 128, 512],
+  ];
+  s.fill("#4d4868");
+  s.polygon(side);
+  s.fill(rampFill);
+  s.polygon(ramp);
+  s.clip(ramp, () => {
+    s.noFill();
+    s.brush("airbrush", { opacity: 0.8 });
+    s.stroke("#fff0bf");
+    s.strokeWeight(30);
+    s.gesture({ pressure: "taper-out" });
+    s.line(top[0] - 6, top[1] + 4, top[0] - 90, 506);
+    s.brush("ink");
+    s.stroke("#7d7690");
+    s.strokeWeight(1.5);
+    s.gesture({ pressure: "even" });
+    for (let i = 1; i < 6; i += 1) {
+      const t = i / 6;
+      s.line(top[0] - 26 - t * 102, top[1] + 2 + t * 178, top[0] + 10 - t * 80, top[1] + 4 + t * 182);
+    }
+  });
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(2.6);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.4 });
+  s.polygon(ramp);
+  s.polygon(side);
+  s.noBrush();
+}
+
+function shape(s: Sketch, pts: Pts, fillColor: string, shade: () => void, weight = 3.2, rim = true): void {
+  s.noStroke();
+  s.fill(fillColor);
+  s.curve(pts, true);
+  s.clip(s.curvePath(pts, true), () => {
+    s.noFill();
+    shade();
+    if (rim) {
+      // warm rim light: the same outline shifted left, so its band falls just
+      // inside the right-hand edge (the side facing the hatch)
+      s.push();
+      s.translate(-5, 2);
+      s.brush("airbrush", { opacity: 0.85 });
+      s.stroke("#ffe596");
+      s.strokeWeight(9);
+      s.gesture({ pressure: "even" });
+      s.curve(pts, true);
+      s.pop();
+    }
+  });
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(weight);
+  s.brush("ink", { thinning: 0.75 });
+  // heavier along the bottom-left (shadow side), light along the top
+  s.gesture({
+    pressure: [
+      [0, 0.7],
+      [0.25, 1],
+      [0.5, 0.95],
+      [0.75, 0.5],
+      [1, 0.7],
+    ],
+    wobble: 0.5,
+  });
+  s.curve(pts, true);
+  s.noBrush();
+}
+
+/**
+ * Form shadow for a part: its own outline shifted up-right, so a crescent of
+ * violet falls inside the bottom-left edge (away from the hatch light), plus
+ * pencil contour lines along the same crescent for tooth. `r` is the part's
+ * rough radius.
+ */
+function shadeSide(s: Sketch, pts: Pts, r: number): void {
+  const d = Math.max(4, r * 0.22);
+  s.gesture({ pressure: "even" });
+  s.push();
+  s.translate(d, -d * 0.7);
+  s.brush("wash", { opacity: 0.85, blend: "multiply", grain: 0.25 });
+  s.stroke("#7a70b4");
+  s.strokeWeight(d * 2.4);
+  s.curve(pts, true);
+  s.pop();
+  s.brush("pencil", { opacity: 0.3 });
+  s.stroke("#2c4f45");
+  s.strokeWeight(1.6);
+  s.gesture({ pressure: "taper", wobble: 0.6 });
+  for (let k = 1; k <= 3; k += 1) {
+    s.push();
+    s.translate(d * (0.25 + k * 0.18), -d * (0.2 + k * 0.12));
+    s.curve(pts, true);
+    s.pop();
+  }
+}
+
+function flower(s: Sketch, base: Vec2): void {
+  const top: Vec2 = [base[0] - 18, base[1] - 56];
+  s.noFill();
+  s.stroke("#2f5b3a");
+  s.strokeWeight(3);
+  s.brush("ink");
+  s.gesture({ pressure: "taper-out" });
+  s.curve([base, [base[0] - 4, base[1] - 30], top]);
+  s.curve([
+    [base[0] - 5, base[1] - 26],
+    [base[0] + 6, base[1] - 34],
+    [base[0] + 12, base[1] - 30],
+  ]);
+  s.noBrush();
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const px = top[0] + Math.cos(a) * 8;
+    const py = top[1] + Math.sin(a) * 8;
+    s.noStroke();
+    s.fill("#f6b9cf");
+    s.push();
+    s.translate(px, py);
+    s.rotate(a);
+    s.ellipse(0, 0, 16, 9);
+    s.pop();
+  }
+  s.fill("#f2c94c");
+  s.circle(top[0], top[1], 8);
+}
+
+function alien(s: Sketch): void {
+  // ground shadow
+  s.noStroke();
+  s.fill("rgba(15,30,30,0.35)");
+  s.ellipse(AX, 526, 170, 22);
+
+  // legs, arms and body first, then the tilted head on top
+  body(s);
+  s.push();
+  s.translate(AX, 320);
+  s.rotate(-0.12);
+  s.translate(-AX, -320);
+  // antennae
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(4.5);
+  s.brush("ink");
+  s.gesture({ pressure: "taper-out" });
+  s.curve(ANT_L);
+  s.curve(ANT_R);
+  s.noBrush();
+  for (const tip of [ANT_L[2], ANT_R[2]]) {
+    if (tip === undefined) continue;
+    s.noStroke();
+    s.fill(
+      s.radialGradient(tip[0], tip[1], 26, [
+        [0, "rgba(255,230,120,0.7)"],
+        [1, "rgba(255,230,120,0)"],
+      ]),
+    );
+    s.circle(tip[0], tip[1], 52);
+    shape(s, ellipsePts(tip[0], tip[1], 10, 10, 8), "#f6d548", () => {
+      s.brush("airbrush", { opacity: 0.8 });
+      s.stroke("#fffbe0");
+      s.strokeWeight(6);
+      s.line(tip[0] - 3, tip[1] - 4, tip[0] - 2, tip[1] - 3);
+    }, 2.6, false);
+  }
+
+  // head
+  shape(s, HEAD, GREEN, () => {
+    shadeSide(s, HEAD, 90);
+  }, 3.6);
+  // eyes
+  for (const e of [EYE_L, EYE_R]) {
+    shape(s, ellipsePts(e.x, e.y, 25, 29, 10), "#fbfaf2", () => {
+      s.brush("wash", { opacity: 0.4 });
+      s.stroke("#b9c4d6");
+      s.strokeWeight(14);
+      s.curve([
+        [e.x - 22, e.y - 10],
+        [e.x - 10, e.y + 18],
+        [e.x + 16, e.y + 22],
+      ]);
+    }, 3, false);
+    s.noStroke();
+    s.fill("#1e2a26");
+    s.circle(e.x + 3, e.y + 6, 26);
+    s.fill("#fefefe");
+    s.circle(e.x + 8, e.y, 9);
+    s.circle(e.x - 2, e.y + 12, 4);
+  }
+  // cheeks
+  s.noStroke();
+  for (const [x, y] of [
+    [EYE_L.x - 14, 282],
+    [EYE_R.x + 14, 282],
+  ] as const) {
+    s.fill(
+      s.radialGradient(x, y, 15, [
+        [0, "rgba(255,120,140,0.6)"],
+        [1, "rgba(255,120,140,0)"],
+      ]),
+    );
+    s.ellipse(x, y, 34, 22);
+  }
+  // smile
+  s.noFill();
+  s.brush("ink");
+  s.stroke(INK);
+  s.strokeWeight(3.4);
+  s.gesture({ pressure: "taper" });
+  s.curve([
+    [AX - 20, 290],
+    [AX, 300],
+    [AX + 20, 290],
+  ]);
+  s.noBrush();
+  s.pop();
+}
+
+function body(s: Sketch): void {
+  // legs and feet
+  for (const leg of [LEG_L, LEG_R]) {
+    shape(s, leg, GREEN, () => shadeSide(s, leg, 14));
+  }
+  for (const foot of [FOOT_L, FOOT_R]) {
+    shape(s, foot, GREEN, () => shadeSide(s, foot, 14));
+  }
+  // hanging arm, holding a flower picked from the meadow
+  shape(s, ARM_DOWN, GREEN, () => shadeSide(s, ARM_DOWN, 16));
+  shape(s, ellipsePts(HAND_DOWN[0], HAND_DOWN[1], 14, 14, 10), GREEN, () =>
+    shadeSide(s, ellipsePts(HAND_DOWN[0], HAND_DOWN[1], 14, 14, 10), 14),
+  );
+  flower(s, [HAND_DOWN[0] + 2, HAND_DOWN[1] - 4]);
+  // body
+  shape(s, BODY, GREEN, () => {
+    shadeSide(s, BODY, 60);
+    s.brush("wash", { opacity: 0.5 });
+    s.stroke("#5da956");
+    s.strokeWeight(40);
+    s.curve(BELLY, true);
+  });
+  // waving arm
+  shape(s, ARM_UP, GREEN, () => shadeSide(s, ARM_UP, 16));
+  shape(s, ellipsePts(HAND_UP[0], HAND_UP[1], 16, 16, 10), GREEN, () =>
+    shadeSide(s, ellipsePts(HAND_UP[0], HAND_UP[1], 16, 16, 10), 16),
+  );
+  // wave lines
+  s.noFill();
+  s.stroke("#fff3c4");
+  s.strokeWeight(3);
+  s.brush("ink");
+  s.gesture({ pressure: "taper" });
+  s.curve([
+    [HAND_UP[0] + 26, HAND_UP[1] - 26],
+    [HAND_UP[0] + 34, HAND_UP[1] - 8],
+    [HAND_UP[0] + 30, HAND_UP[1] + 12],
+  ]);
+  s.curve([
+    [HAND_UP[0] + 40, HAND_UP[1] - 34],
+    [HAND_UP[0] + 50, HAND_UP[1] - 10],
+    [HAND_UP[0] + 44, HAND_UP[1] + 18],
+  ]);
+  s.noBrush();
+
+}
+
+function clump(s: Sketch, x: number, y: number, h: number, dark: string, light: string): void {
+  const n = 5 + Math.floor(s.random(5));
+  for (let i = 0; i < n; i += 1) {
+    const t = (i / (n - 1)) * 2 - 1; // -1..1 across the clump
+    const bh = h * (0.55 + s.random(0.45)) * (1 - Math.abs(t) * 0.35);
+    const lean = t * h * 0.45 + s.random(-3, 3);
+    const bx = x + t * h * 0.12;
+    s.stroke(i % 2 === 0 ? dark : light);
+    s.strokeWeight(Math.max(1.2, h * 0.09));
+    s.gesture({ pressure: "taper-out", wobble: 0.4 });
+    s.curve([
+      [bx, y],
+      [bx + lean * 0.3, y - bh * 0.6],
+      [bx + lean, y - bh],
+    ]);
+  }
+}
+
+function meadowFlower(s: Sketch, x: number, y: number, r: number, color: string): void {
+  s.noStroke();
+  s.fill(color);
+  for (let i = 0; i < 5; i += 1) {
+    const a = (i / 5) * Math.PI * 2;
+    s.circle(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7, r * 1.3);
+  }
+  s.fill("#f2c94c");
+  s.circle(x, y, r * 0.9);
+}
+
+function grass(s: Sketch): void {
+  s.noFill();
+  s.brush("ink", { thinning: 0.8 });
+  // clumps, bigger toward the bottom of the page
+  for (let i = 0; i < 70; i += 1) {
+    const x = s.random(-10, W + 10);
+    const y = s.random(496, H + 6);
+    const depth = (y - 480) / 120; // 0 far .. 1 near
+    const lit = Math.hypot(x - 520, (y - 520) * 2) < 130;
+    clump(s, x, y, 8 + depth * 16, lit ? "#5f7a3c" : "#183329", lit ? "#e7d98a" : "#6f9c5c");
+  }
+  // meadow flowers like the one in the alien's hand
+  for (let i = 0; i < 26; i += 1) {
+    const x = s.random(0, W);
+    const y = s.random(500, H - 6);
+    if (Math.abs(x - AX) < 90 && y < 540) continue;
+    const r = 1.6 + ((y - 500) / 100) * 2.6;
+    meadowFlower(s, x, y, r, s.random() < 0.6 ? "#f6b9cf" : "#f4efe2");
+  }
+  // tall dark grass framing the bottom corners
+  s.noFill();
+  s.brush("ink", { thinning: 0.8 });
+  for (let i = 0; i < 6; i += 1) {
+    clump(s, 10 + i * 22, H + 4, 70 - i * 8, "#0f241e", "#22412f");
+    clump(s, W - 10 - i * 24, H + 4, 64 - i * 8, "#0f241e", "#22412f");
+  }
+  s.noBrush();
+}
+
+function fireflies(s: Sketch): void {
+  s.noStroke();
+  const spots: Vec2[] = [
+    [70, 420],
+    [150, 470],
+    [110, 540],
+    [200, 380],
+    [520, 360],
+    [560, 300],
+    [700, 340],
+    [750, 400],
+    [680, 520],
+    [470, 450],
+    [40, 330],
+  ];
+  for (const [x, y] of spots) {
+    s.fill(
+      s.radialGradient(x, y, 14, [
+        [0, "rgba(255,240,150,0.85)"],
+        [1, "rgba(255,240,150,0)"],
+      ]),
+    );
+    s.circle(x, y, 28);
+    s.fill("#fff8d0");
+    s.circle(x, y, 3);
+  }
+}
+
+export function draw(s: Sketch): void {
+  sky(s);
+  land(s);
+  ship(s);
+  hatch(s);
+  alien(s);
+  grass(s);
+  fireflies(s);
+}
