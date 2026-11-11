@@ -47,9 +47,9 @@ void test("Stack also serves as a page-level scroll container (it absorbed Colum
 
 // ## Heading renders a real heading; the level decides the look
 void test("Heading renders a real heading; the level decides the look", async (t) => {
-  t.check(html(h(Heading, { level: 2, children: "This box" })), "<h2 class=\"text-lg font-semibold text-warm-900\">This box</h2>");
+  t.check(html(h(Heading, { level: 2, children: "This box" })), "<h2 class=\"text-lg font-semibold text-balance text-warm-900\">This box</h2>");
 
-  t.check(html(h(Heading, { level: 3, className: "mb-2", children: "Engines" })), "<h3 class=\"text-sm font-semibold text-warm-900 mb-2\">Engines</h3>");
+  t.check(html(h(Heading, { level: 3, className: "mb-2", children: "Engines" })), "<h3 class=\"text-sm font-semibold text-balance text-warm-900 mb-2\">Engines</h3>");
 });
 
 // ## StatusMessage announces a pane's placeholder
