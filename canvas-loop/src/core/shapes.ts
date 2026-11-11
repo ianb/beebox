@@ -33,7 +33,7 @@ export function tubePath(points: readonly Vec2[], options: TubeOptions): PathCom
     if (q !== undefined) length += Math.hypot(q[0] - p[0], q[1] - p[1]);
   }
   // Step small enough that even a very short tube keeps both ends.
-  const samples = resample(centre, { closed: false, step: Math.max(0.01, Math.min(options.width / 8, length / 2)) });
+  const samples = resample(centre, { closed: false, step: Math.max(length / 2000, Math.min(options.width / 8, length / 2)) });
   if (samples.length < 2) throw new SketchUsageError({ detail: "tube needs at least two distinct points" });
   const left: Vec2[] = [];
   const right: Vec2[] = [];

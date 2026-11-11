@@ -264,9 +264,10 @@ export class Painter {
   #clipUnion(shapes: readonly ClipShape[], body: () => void): void {
     const parent = this.ctx;
     const transform = parent.getTransform();
-    const layer = this.#onLayer(body, { opacity: 1, start: parent.getImageData(0, 0, this.width, this.height) });
-    const mask = this.#makeLayer({ width: this.width, height: this.height });
-    replaceInShapes(parent, { layer, mask, shapes, transform, width: this.width, height: this.height });
+    const before = parent.getImageData(0, 0, this.width, this.height);
+    const layer = this.#onLayer(body, { opacity: 1, start: before });
+    const size = { width: this.width, height: this.height };
+    replaceInShapes(parent, { layer, mask: this.#makeLayer(size), scratch: this.#makeLayer(size), before, shapes, transform, ...size });
   }
 
   /**

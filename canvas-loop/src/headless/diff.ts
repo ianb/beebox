@@ -2,7 +2,7 @@
 // changed between two frames, for the open question "how should an agent see
 // whether its change helped?". Writes every view; which ones to keep is
 // decided by the diff exploration (see the canvas-brushes plan).
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Canvas, loadImage } from "@napi-rs/canvas";
 import type { SKRSContext2D } from "@napi-rs/canvas";
@@ -111,6 +111,7 @@ function highlight(b: Frame, mask: Uint8Array): Buffer {
 }
 
 const CELL = 12;
+const MAX_REGIONS = 4;
 // A cell joins a cluster only with this many changed pixels: a one-pixel outline
 // shift crossing a cell (about 12 px) stays below it, a painted patch does not.
 const MIN_CELL = 16;
@@ -198,12 +199,12 @@ export async function writeDiff(before: string, args: { after: string; outDir: s
   const { mask, stats } = changedMask(a, b);
   mkdirSync(args.outDir, { recursive: true });
   // A rerun into the same directory must not leave the previous run's change crops behind.
-  for (const name of readdirSync(args.outDir)) if (/^change-\d+\.png$/.test(name)) rmSync(join(args.outDir, name));
+  for (let i = 1; i <= MAX_REGIONS; i += 1) rmSync(join(args.outDir, `change-${i}.png`), { force: true });
   const files: [string, Buffer][] = [
     ["side-by-side.png", sideBySide(a, b)],
     ["highlight.png", highlight(b, mask)],
   ];
-  const regions = changeRegions(mask, { width: a.width, height: a.height, limit: 4 });
+  const regions = changeRegions(mask, { width: a.width, height: a.height, limit: MAX_REGIONS });
   for (const [i, region] of regions.entries()) files.push([`change-${i + 1}.png`, cropPair(a, { b, region })]);
   for (const [name, buf] of files) writeFileSync(join(args.outDir, name), buf);
   const regionLines = regions.map((r, i) => `change-${i + 1}.png: x=${r.x} y=${r.y} ${r.w}×${r.h}, ${r.changed} px`);

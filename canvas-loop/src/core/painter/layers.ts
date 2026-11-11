@@ -1,6 +1,6 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
-import type { ClipShape, Ctx2D, CtxTransform, Layer, LayerImage } from "../paint.js";
+import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage } from "../paint.js";
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 
 /** Draw a full-canvas layer image onto `ctx` at device scale, once. */
@@ -36,18 +36,35 @@ export function isShapeList(shape: ClipShape | readonly ClipShape[]): shape is r
 
 /**
  * Replace the part of `parent` inside the union of `shapes` with `layer`'s
- * pixels there (`mask` is a scratch layer). Outside the shapes, `parent` is
- * untouched; inside, transparent result pixels stay transparent.
+ * pixels there. Each pixel becomes before × (1 − m) + result × m, where m is
+ * the shapes' coverage, so an antialiased edge blends instead of losing alpha.
+ * The sum is built on `scratch` (with "lighter", an exact premultiplied add),
+ * then copied over `parent`, which keeps any clip the parent already has.
  */
 export function replaceInShapes(
   parent: Ctx2D,
-  args: { layer: Layer; mask: Layer; shapes: readonly ClipShape[]; transform: CtxTransform; width: number; height: number },
+  args: {
+    layer: Layer;
+    mask: Layer;
+    scratch: Layer;
+    before: CtxImageData;
+    shapes: readonly ClipShape[];
+    transform: CtxTransform;
+    width: number;
+    height: number;
+  },
 ): void {
-  const { layer, mask, width, height } = args;
+  const { layer, mask, scratch, width, height } = args;
   const m = args.transform;
   mask.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
   fillShapes(mask.ctx, args.shapes);
   maskLayer(layer, { mask, width, height });
-  drawLayer(parent, { image: mask.image, width, height, opacity: 1, op: "destination-out" });
-  drawLayer(parent, { image: layer.image, width, height, opacity: 1, op: "source-over" });
+  scratch.ctx.putImageData(args.before, 0, 0);
+  drawLayer(scratch.ctx, { image: mask.image, width, height, opacity: 1, op: "destination-out" });
+  drawLayer(scratch.ctx, { image: layer.image, width, height, opacity: 1, op: "lighter" });
+  parent.save();
+  parent.resetTransform();
+  parent.clearRect(0, 0, width, height);
+  parent.restore();
+  drawLayer(parent, { image: scratch.image, width, height, opacity: 1, op: "source-over" });
 }

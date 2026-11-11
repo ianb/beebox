@@ -138,3 +138,44 @@ test("a short tube keeps its two points", () => {
     ),
   );
 });
+
+test("an empty union clip leaves antialiased edge pixels alone", () => {
+  const s = makeSketch({ width: 60, height: 60 });
+  s.background("#ff0000");
+  s.clip(
+    [
+      [
+        [10.5, 10],
+        [50, 10],
+        [50, 50],
+        [10.5, 50],
+      ],
+    ],
+    () => {},
+  );
+  assert.deepEqual(pixel(s, [10, 30]), [255, 0, 0, 255]);
+});
+
+test("a brushed arc of minus one whole turn is a full circle", () => {
+  const s = makeSketch({ width: 100, height: 100 });
+  s.noFill();
+  s.stroke("#000000");
+  s.strokeWeight(4);
+  s.brush("ink");
+  s.gesture({ pressure: "even" });
+  s.arc(50, 50, 30, 0, -2 * Math.PI);
+  assert.ok(pixel(s, [20, 50])[3] > 0, "the left side is drawn");
+});
+
+test("a tube shorter than 0.01 units still has an outline", () => {
+  const s = makeSketch({ width: 20, height: 20 });
+  assert.doesNotThrow(() =>
+    s.tube(
+      [
+        [0, 0],
+        [0.009, 0],
+      ],
+      { width: 0.02 },
+    ),
+  );
+});

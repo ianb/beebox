@@ -153,7 +153,9 @@ export function ellipseContour(args: {
   // ellipse; otherwise the end wraps forward to within one turn of the start.
   const turn = Math.PI * 2;
   const raw = args.end - args.start;
-  const full = raw >= turn - 1e-9;
+  // A nonzero whole number of turns (either direction) draws the whole ellipse, as Skia does.
+  const wholeTurns = raw !== 0 && Math.abs(raw / turn - Math.round(raw / turn)) < 1e-9;
+  const full = raw >= turn - 1e-9 || wholeTurns;
   const sweep = full ? turn : ((raw % turn) + turn) % turn;
   const n = Math.max(8, segmentsFor(Math.abs(sweep) * Math.max(args.rx, args.ry), args.step));
   const points: Vec2[] = [];
