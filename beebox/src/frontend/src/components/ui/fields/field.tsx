@@ -1,5 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { FieldMessage, FieldShell, fieldMessageId, inputClasses, useFieldInk } from "./shell";
+import { FieldMessage, FieldShell, fieldMessageId, inputClasses, isShown, useFieldInk } from "./shell";
 
 export { RadioGroup } from "./radio";
 export type { RadioOption, RadioGroupProps } from "./radio";
@@ -47,7 +47,7 @@ export function TextField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
@@ -105,7 +105,7 @@ export function TextareaField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <textarea
@@ -156,7 +156,7 @@ export function NumberField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
@@ -210,7 +210,7 @@ export function CheckboxField({
   required = required ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   const ink = useFieldInk();
   const labelClass = disabled === true
     ? `flex items-center gap-2 text-sm ${ink.label} opacity-50`
@@ -285,7 +285,7 @@ export function SelectField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <select

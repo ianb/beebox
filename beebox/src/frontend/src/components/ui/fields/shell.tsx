@@ -33,21 +33,30 @@ export function useFieldInk(): { label: string; helper: string } {
 }
 
 /**
+ * Whether a field's error or helper renders. React draws nothing for
+ * `null`, `false`, or "", so those count as absent everywhere a field decides
+ * it is invalid, links a message, or renders one.
+ */
+export function isShown(node: ReactNode): boolean {
+  return node !== undefined && node !== null && node !== false && node !== "";
+}
+
+/**
  * The id of the message under a field, for its control's `aria-describedby`,
  * or undefined when the field shows none. A screen reader then reads the hint,
  * or the error, each time the control takes focus; `role="alert"` alone
  * announces an error only once, when it appears.
  */
 export function fieldMessageId(fieldId: string, message: { error: ReactNode | undefined; helper: ReactNode | undefined }): string | undefined {
-  return message.error !== undefined || message.helper !== undefined ? `${fieldId}-message` : undefined;
+  return isShown(message.error) || isShown(message.helper) ? `${fieldId}-message` : undefined;
 }
 
 /** The error, or else the helper, under a field. Its id is `fieldMessageId`'s. */
 export function FieldMessage({ fieldId, error, helper }: { fieldId: string; error: ReactNode | undefined; helper: ReactNode | undefined }) {
   const ink = useFieldInk();
   const id = `${fieldId}-message`;
-  if (error !== undefined) return <div id={id} className="text-danger-dark text-sm mt-1" role="alert">{error}</div>;
-  if (helper !== undefined) return <div id={id} className={`text-xs ${ink.helper} mt-1`}>{helper}</div>;
+  if (isShown(error)) return <div id={id} className="text-danger-dark text-sm mt-1" role="alert">{error}</div>;
+  if (isShown(helper)) return <div id={id} className={`text-xs ${ink.helper} mt-1`}>{helper}</div>;
   return null;
 }
 

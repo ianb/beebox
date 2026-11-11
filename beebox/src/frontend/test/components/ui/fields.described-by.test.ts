@@ -53,3 +53,22 @@ void test("select, checkbox, and radio group are described the same way", async 
     radio: { describedBy: "bbx-t-size-message", text: "Pick one" },
   });
 });
+
+// React renders nothing for null, false, or "", so none of them is an error:
+// the field stays valid and the helper still describes it.
+void test("an absent error (null, false, empty) leaves the helper as the description", async (t) => {
+  const states = [];
+  for (const error of [null, false, ""]) {
+    const view = await mount(h(TextField, { id: "bbx-t-absent", label: "Email", value: "", onChange: noop, helper: "Work email", error }));
+    const input = view.container.querySelector("input");
+    states.push({
+      invalid: input?.getAttribute("aria-invalid") ?? null,
+      describedBy: input?.getAttribute("aria-describedby") ?? null,
+      alerts: view.container.querySelectorAll("[role=alert]").length,
+      message: view.container.querySelector("#bbx-t-absent-message")?.textContent ?? null,
+    });
+    await view.unmount();
+  }
+  const expected = { invalid: null, describedBy: "bbx-t-absent-message", alerts: 0, message: "Work email" };
+  t.check(states, [expected, expected, expected]);
+});

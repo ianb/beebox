@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { FieldMessage, fieldMessageId, useFieldInk } from "./shell";
+import { FieldMessage, fieldMessageId, isShown, useFieldInk } from "./shell";
 
 export interface RadioOption {
   value: string;
@@ -52,7 +52,7 @@ export function RadioGroup({
   const autoId = useId();
   const groupId = id !== undefined ? id : autoId;
   const groupName = name !== undefined ? name : groupId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   const ink = useFieldInk();
 
   return (
