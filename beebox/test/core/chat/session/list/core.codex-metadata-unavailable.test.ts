@@ -19,22 +19,23 @@ import { getSessionLogPath } from "../../../../../src/core/chat/session/transcri
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
 import { codexBinaryPath, codexCliArgs } from "../../../../../src/services/codex-binary.js";
 import { consoleLines } from "../../../../helpers/console-lines.js";
+import { oneOf, str } from "@ianbicking/tap-check/check";
 
 const CLAUDE_CHAT = "11111111-1111-4111-8111-111111111111";
 const CODEX_CHAT = "22222222-2222-4222-8222-222222222222";
 
-/** What an operator reads when the `codex` launcher cannot find `node` on the emptied PATH. */
-const NO_NODE = "env: node: No such file or directory\n";
-
-/** The failure text Node gives for a `codex` invocation that exits 127 for lack of `node`. */
-function commandFailed(args: string[]): string {
-  return `Error: Command failed: ${[codexBinaryPath(), ...codexCliArgs(args)].join(" ")}\n${NO_NODE}`;
-}
+/**
+ * What an operator reads when the `codex` launcher cannot find `node` on the
+ * emptied PATH. The wording is the system `env`'s: BSD (macOS) prints the name
+ * bare, GNU (Linux) quotes it.
+ */
+const NO_NODE = oneOf("env: node: No such file or directory\n", "env: ‘node’: No such file or directory\n");
 
 /** The two warnings one enumeration logs: the failed plugin list, then the omitted codex chats. */
-function enumerationWarnings(): string[] {
+function enumerationWarnings() {
+  const command = [codexBinaryPath(), ...codexCliArgs(["plugin", "list", "--json"])].join(" ");
   return [
-    `[codex-plugin] \`codex plugin list\` failed; re-registering the marketplace: ${commandFailed(["plugin", "list", "--json"])}`,
+    str`[codex-plugin] \`codex plugin list\` failed; re-registering the marketplace: Error: Command failed: ${command}\n${NO_NODE}`,
     "[chat] codex thread metadata unavailable; omitting this box's codex chats: CodexPluginInstallError: Could not install the Bee Box Codex plugin",
   ];
 }

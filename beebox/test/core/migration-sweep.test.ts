@@ -334,7 +334,8 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
   });
 
   holder.child.stdin.end("finish");
-  await holder.exited;
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await holder.exited, stderr: holder.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check((await sweepMigrations({ boxRoot: box.root, yield: true })).status, "applied");
 
   // A deploy holding the maintenance owner lock is the other way a box is in use.

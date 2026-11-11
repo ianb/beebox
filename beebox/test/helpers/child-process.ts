@@ -6,6 +6,9 @@
  * comparing bytes to text. The child's stderr is captured, never inherited: a
  * passing test stays quiet, and an early exit reports what the child said.
  *
+ * The wait is bounded: a child that prints no line within `readyMs` (default
+ * 30 s) is killed, and the wait fails with its stderr.
+ *
  * `spawnThenAbandon` starts a child and closes every pipe to it at once, the
  * way they close when the parent dies. An orphan test that kept a reader open
  * would hide a write that fails with EPIPE in the real case.
@@ -21,6 +24,8 @@ export interface ChildSpec {
   args: string[];
   /** Defaults to this process's environment. */
   env?: NodeJS.ProcessEnv;
+  /** How long `spawnUntilFirstLine` waits for the first line. */
+  readyMs?: number;
 }
 
 /** A TypeScript script run under tsx. Children run from the package root. */
@@ -28,9 +33,11 @@ export function tsxChild(script: string, args: string[]): ChildSpec {
   return { command: process.execPath, args: ["--import", "tsx", script, ...args] };
 }
 
+/** How a child ended. `spawnError` is set when it never started (no such executable). */
 export interface ChildExit {
   code: number | null;
   signal: NodeJS.Signals | null;
+  spawnError?: string;
 }
 
 export interface StartedChild {
@@ -56,6 +63,7 @@ function start(spec: ChildSpec): StartedChild {
   });
   const exited = new Promise<ChildExit>((resolve) => {
     child.once("exit", (code, signal) => { resolve({ code, signal }); });
+    child.once("error", (error) => { if (child.pid === undefined) resolve({ code: null, signal: null, spawnError: error.message }); });
   });
   return {
     child,
@@ -76,17 +84,23 @@ export async function spawnUntilFirstLine(spec: ChildSpec): Promise<ReadyChild> 
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+  const readyMs = spec.readyMs ?? 30_000;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    void started.kill();
+  }, readyMs);
   const line = await new Promise<string>((resolve, reject) => {
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
       const end = stdout.indexOf("\n");
       if (end !== -1) resolve(stdout.slice(0, end));
     });
-    child.once("error", reject);
-    void started.exited.then(({ code, signal }) => {
-      reject(new Error(`child exited before its first line (code ${String(code)}, signal ${String(signal)}): ${stderr}`));
+    void started.exited.then(({ code, signal, spawnError }) => {
+      const why = timedOut ? `child printed no line within ${String(readyMs)} ms and was killed` : `child exited before its first line (code ${String(code)}, signal ${String(signal)})`;
+      reject(new Error(spawnError ?? `${why}: ${stderr}`));
     });
-  });
+  }).finally(() => { clearTimeout(timer); });
   return { ...started, line, stderr: () => stderr };
 }
 

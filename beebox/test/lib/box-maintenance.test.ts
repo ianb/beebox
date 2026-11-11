@@ -41,7 +41,8 @@ void test("line 19", async (t) => {
 
   const descendant = await acquireBoxWork(box.root, { reason: "test", inherited: env.BBX_BOX_WORK });
   holder.child.stdin.end("finish");
-  await holder.exited;
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await holder.exited, stderr: holder.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check(entered, false);
 
   await descendant.release();
@@ -427,7 +428,8 @@ void test("The per-process lease sidecar lists the live reasons.", async (t) => 
   t.check(blocked.replace(/since \S+ \(pid \d+\)/u, "since <time> (pid <n>)"), "Timed out draining box work: deployment; held by fixture child since <time> (pid <n>)");
 
   namedChild.child.stdin.end("finish");
-  await namedChild.exited;
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await namedChild.exited, stderr: namedChild.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check(await boxWorkHolders(namedBox.root), []);
 });
 
