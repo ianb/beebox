@@ -45,7 +45,7 @@ no visible effect today (C1).
 **BIG CHANGE (likely).** **Chosen scope** (approved 2026-11-11): about
 1,800–1,950 changed source and test lines across about 120 files in `beebox/src/frontend`, `beebox/src/webapp`,
 `workstreams-app`, `beebox-clerk`, `personal-vibe-check`, and the iOS project
-file, plus about 200 lines of docs (`frontend.md`, `box-docs/views.md`,
+file, plus about 200 lines of docs (`frontend.md`, `box-docs/views.md` (generated from `src/core/views/doc/`),
 `security-report.md`, `ios-app` docs). Breakdown: samples about 500 (done);
 the original adopt set about 600 more; D4 `px`→`rem` about 140 (66 sites);
 B12 `button-has-type` about 140 (69 sites); Temporal (G) about 250–400; iOS
@@ -894,6 +894,44 @@ Both land with their docs chunk and are run once
   chosen) reports new upstream-detected patterns.
 - Not held by a test: visual items (D2, D3, A5) — `bin/theme-check` at change
   time only.
+
+## Implementation status (2026-11-11)
+
+Done on `worktree-web-guidance-scan`, each a commit with its tests:
+0a browser floor (in `5e58c6a08`), 0b iOS 18 (`a7e5911d3`), F1/F2 headers
+(`552f70f2c`), chunk 2 forms and small fixes (`5e58c6a08`), B1 + its rule
+(`5400d888b`), D1 rule (`6dcd4e2a9`), B2/B3 (`0c8d26872`), B7–B11 and B13
+(`2b28b2b92`), C3–C5 (`6d5268754`), C2 (`fa9ab696e`), B4/D2/D3
+(`269641389`), G Temporal (`caeab2641`), H0 (`1bbfad911`), H views doc
+(`b654246fe`), composer cleanup (in `2b28b2b92`).
+
+Deviations from the entries above, each for a reason found while doing it:
+- **E1, card-body images stay eager.** `components/Markdown/body.tsx` also
+  renders in the chat transcript (`chat/markdown-rendering.tsx`,
+  `chat/CalloutBlock.tsx` import it), where the open-thread hold waits for
+  images. Only the lightbox peers (`fetchpriority="low"`) and the views-doc
+  sentence landed.
+- **F4 held.** Trusted Types reports in the Report-Only policy would fill
+  the 200 KB rolling CSP report log (`routes/api-csp-report.ts`,
+  `MAX_LOG_FILE_BYTES`) and push out the script-src violations that CSP
+  promotion is judged by. Revisit with a separate report path or a larger
+  log.
+- **F2 Permissions-Policy is narrow:** `usb=(), serial=(), hid=(),
+  payment=()`. Camera, microphone, display capture, geolocation, wake lock
+  and clipboard are used by the app or plausibly by box views.
+- **F3 HSTS not added;** whether the edge sends it is still unchecked.
+- **The views doc** is generated from `src/core/views/doc/*.ts`;
+  `box-docs/` is gitignored output. Edits went to the source.
+- **D5** needed nothing: both tables already scroll horizontally.
+- **G** pins `temporal-polyfill` 1.0.7 (1.0.8 is inside the repo's 7-day
+  release-age gate). The engine package also depends on it: `bbx view check`
+  renders box views in Node 24, which has no Temporal, and a Markdown todo
+  with a due date failed there until the check loaded the polyfill.
+- **B11** labels the toast region only; the modal case still needs a
+  reproduction and a decision.
+- **Pre-existing breakage fixed on the way:** the clerk typecheck failed on
+  `main` (TS7016 for `@joplin/turndown-plugin-gfm`) because its tsconfig did
+  not include the declaration beside `webpage-readable.ts` (`68d20d8e6`).
 
 ## Implementation order
 
