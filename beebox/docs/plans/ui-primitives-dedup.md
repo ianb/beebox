@@ -1,6 +1,6 @@
 ---
 title: "UI primitives: remove duplicates and guard against new ones"
-status: draft
+status: active
 workstream: web-guidance-scan
 issues:
   - ../../../issues/code-quality/2026-10-13-component-reuse-review.md
