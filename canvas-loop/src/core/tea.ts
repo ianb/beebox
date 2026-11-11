@@ -4,9 +4,15 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
 // sketch — which imports only this module — can name them.
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
+import type { BrushName } from "./brush/presets.js";
+import type { GroupOptions } from "./painter/engine.js";
 
-export type { ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
+export type { BrushName } from "./brush/presets.js";
+export type { GroupOptions } from "./painter/engine.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
 export type TextAlign = "center" | "end" | "left" | "right" | "start";
@@ -143,6 +149,22 @@ export interface View {
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
   /** Clip to a polygon/path for the duration of `body` (state saved/restored). */
   clip(shape: ClipShape, body: () => void): void;
+  /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
+  curve(points: readonly Vec2[], closed?: boolean): void;
+  /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
+  /** Back to plain Canvas2D strokes. */
+  noBrush(): void;
+  /** How the hand moves for the marks that follow: pressure, wobble, seed. */
+  gesture(gesture: Gesture): void;
+  /** The canvas's paper texture, which grainy brushes read. */
+  paper(paper: Paper): void;
+  /** Draw `body` on its own layer, then composite it once with opacity and blend. */
+  group(options: GroupOptions, body: () => void): void;
+  blendMode(blend: BlendMode): void;
+  /** Fills, strokes and marks remove pixels until `noErase()`. */
+  erase(): void;
+  noErase(): void;
   text(content: string, x: number, y: number): void;
   textSize(size: number): void;
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;

@@ -2,8 +2,11 @@ import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
 import { formatArgs } from "../core/format.js";
-import type { ClipShape, ColorStop, Ctx2D, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
-import { Painter } from "../core/painter.js";
+import type { BrushName } from "../core/brush/presets.js";
+import type { Brush, BrushOverrides, Gesture, Paper } from "../core/brush/types.js";
+import type { BlendMode, ClipShape, ColorStop, Ctx2D, Layer, LayerImage, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
+import { Painter } from "../core/painter/engine.js";
+import type { GroupOptions } from "../core/painter/engine.js";
 import { SeededRandom } from "../core/prng.js";
 import type { SketchHost, SketchInputEvent } from "../core/types.js";
 
@@ -11,6 +14,17 @@ import type { SketchHost, SketchInputEvent } from "../core/types.js";
 // no DOM, so the global CanvasTextAlign / CanvasTextBaseline aren't in scope.
 type TextAlign = "center" | "end" | "left" | "right" | "start";
 type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+
+/** An offscreen Skia canvas of `size`, as a Painter layer (groups, brush marks, paper). */
+function makeSkiaLayer(size: { width: number; height: number }): Layer {
+  const canvas = createCanvas(size.width, size.height);
+  return {
+    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
+    ctx: canvas.getContext("2d") as unknown as Ctx2D,
+    // eslint-disable-next-line no-restricted-syntax -- opaque-image boundary: a Skia Canvas is what this runtime's drawImage accepts
+    image: canvas as unknown as LayerImage,
+  };
+}
 
 /**
  * A p5-like drawing surface in instance mode. The runtime constructs one Sketch
@@ -62,11 +76,14 @@ export class Sketch {
     // gap is a wider `fillStyle` union (it also allows CanvasPattern, which the
     // engine never sets), so structural assignability needs one boundary cast.
     // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
-    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height });
+    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height, makeLayer: makeSkiaLayer });
   }
 
+  /** The raw context drawing lands on now: the canvas, or the innermost open group's layer. */
   get ctx(): SKRSContext2D {
-    return this.#requireCtx();
+    this.#requireCtx();
+    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: every context the Painter holds was made by @napi-rs/canvas (the canvas or a makeSkiaLayer layer)
+    return this.#requirePainter().ctx as unknown as SKRSContext2D;
   }
 
   /** Raw pixel buffer of the current frame — used by the runtime for capture. */
@@ -199,6 +216,33 @@ export class Sketch {
   }
   clip(shape: ClipShape, body: () => void): void {
     this.#requirePainter().clip(shape, body);
+  }
+  curve(points: readonly Vec2[], closed?: boolean): void {
+    this.#requirePainter().curve(points, closed);
+  }
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
+    this.#requirePainter().brush(base, overrides);
+  }
+  noBrush(): void {
+    this.#requirePainter().noBrush();
+  }
+  gesture(gesture: Gesture): void {
+    this.#requirePainter().gesture(gesture);
+  }
+  paper(paper: Paper): void {
+    this.#requirePainter().paper(paper);
+  }
+  group(options: GroupOptions, body: () => void): void {
+    this.#requirePainter().group(options, body);
+  }
+  blendMode(blend: BlendMode): void {
+    this.#requirePainter().blendMode(blend);
+  }
+  erase(): void {
+    this.#requirePainter().erase();
+  }
+  noErase(): void {
+    this.#requirePainter().noErase();
   }
   text(...args: [string, number, number]): void {
     this.#requirePainter().text(...args);

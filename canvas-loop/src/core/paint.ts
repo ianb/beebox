@@ -26,17 +26,61 @@ export interface Ctx2DGradient {
   addColorStop(offset: number, color: string): void;
 }
 
+/**
+ * An offscreen surface's image, as `drawImage` accepts it. Opaque: each runtime
+ * hands its real canvas through one boundary cast in its `makeLayer` factory.
+ */
+export interface LayerImage {
+  readonly layerImageBrand: never;
+}
+
+/** An offscreen drawing surface: a context to draw on and the image to composite. */
+export interface Layer {
+  readonly ctx: Ctx2D;
+  readonly image: LayerImage;
+}
+
+/** Make an offscreen layer of the given device-pixel size (runtime-specific). */
+export type MakeLayer = (size: { width: number; height: number }) => Layer;
+
+/** A 2D affine transform, `[a b c d e f]` as Canvas2D reports it. */
+export interface CtxTransform {
+  readonly a: number;
+  readonly b: number;
+  readonly c: number;
+  readonly d: number;
+  readonly e: number;
+  readonly f: number;
+}
+
+/** Pixel data from `createImageData`. */
+export interface CtxImageData {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Uint8ClampedArray;
+}
+
 /** The exact 2D-context surface the drawing engine uses. */
 export interface Ctx2D {
   fillStyle: string | Ctx2DGradient;
   strokeStyle: string | Ctx2DGradient;
   lineWidth: number;
+  lineCap: "butt" | "round" | "square";
+  lineJoin: "bevel" | "miter" | "round";
+  globalAlpha: number;
+  globalCompositeOperation: string;
   font: string;
   textAlign: CtxTextAlign;
   textBaseline: CtxTextBaseline;
   save(): void;
   restore(): void;
   resetTransform(): void;
+  getTransform(): CtxTransform;
+  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  drawImage(image: LayerImage, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
+  createImageData(width: number, height: number): CtxImageData;
+  putImageData(imageData: CtxImageData, dx: number, dy: number): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
   translate(x: number, y: number): void;
   rotate(angle: number): void;
   scale(x: number, y: number): void;
@@ -74,6 +118,27 @@ export type PathCommand =
   | readonly ["quad", number, number, number, number]
   | readonly ["bezier", number, number, number, number, number, number]
   | readonly ["close"];
+
+/**
+ * How drawn pixels combine with what is already there. `"normal"` is Canvas2D's
+ * `source-over`; the rest are Canvas2D composite modes that Skia and browsers share.
+ */
+export type BlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "soft-light"
+  | "hard-light"
+  | "color-dodge"
+  | "color-burn";
+
+/** The Canvas2D `globalCompositeOperation` value for a blend mode. */
+export function compositeOp(blend: BlendMode): string {
+  return blend === "normal" ? "source-over" : blend;
+}
 
 /** A gradient color stop, `[offset0to1, cssColor]`. */
 export type ColorStop = readonly [number, string];

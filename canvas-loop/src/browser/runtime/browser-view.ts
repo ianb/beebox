@@ -5,22 +5,26 @@
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../../core/paint.js";
-import { Painter } from "../../core/painter.js";
-import type { Paint, TextAlign, TextBaseline, View } from "../../core/tea.js";
+import { Painter } from "../../core/painter/engine.js";
+import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paint, Paper, TextAlign, TextBaseline, View } from "../../core/tea.js";
+import { makeDomLayer } from "./layer.js";
 
 export class BrowserView implements View {
   #painter: Painter;
-  #ctx: CanvasRenderingContext2D;
   #log: (args: readonly unknown[]) => void;
 
   constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; log: (args: readonly unknown[]) => void }) {
-    this.#ctx = deps.ctx;
     this.#log = deps.log;
     // The DOM context satisfies the structural Ctx2D the Painter uses; only its
     // `fillStyle` union is wider (adds CanvasPattern, never set here), so one
     // boundary cast bridges what structural assignability can't express.
-    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: CanvasRenderingContext2D is a superset of Ctx2D (wider fillStyle union)
-    this.#painter = new Painter({ ctx: deps.ctx as unknown as Ctx2D, width: deps.width, height: deps.height });
+    this.#painter = new Painter({
+      // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: CanvasRenderingContext2D is a superset of Ctx2D (wider fillStyle union)
+      ctx: deps.ctx as unknown as Ctx2D,
+      width: deps.width,
+      height: deps.height,
+      makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),
+    });
   }
 
   get width(): number {
@@ -31,9 +35,10 @@ export class BrowserView implements View {
   }
   get ctx(): SKRSContext2D {
     // The `View.ctx` escape hatch is typed against Skia's context; a sketch that
-    // reaches for it uses only the shared 2D methods, present on both.
+    // reaches for it uses only the shared 2D methods, present on both. It is the
+    // Painter's active context, so raw drawing inside a group lands on the group.
     // eslint-disable-next-line no-restricted-syntax -- escape-hatch boundary: the DOM ctx stands in for SKRSContext2D; sketches touch only the shared subset
-    return this.#ctx as unknown as SKRSContext2D;
+    return this.#painter.ctx as unknown as SKRSContext2D;
   }
 
   background(paint: Paint): void {
@@ -86,6 +91,33 @@ export class BrowserView implements View {
   }
   clip(shape: ClipShape, body: () => void): void {
     this.#painter.clip(shape, body);
+  }
+  curve(points: readonly Vec2[], closed?: boolean): void {
+    this.#painter.curve(points, closed);
+  }
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
+    this.#painter.brush(base, overrides);
+  }
+  noBrush(): void {
+    this.#painter.noBrush();
+  }
+  gesture(gesture: Gesture): void {
+    this.#painter.gesture(gesture);
+  }
+  paper(paper: Paper): void {
+    this.#painter.paper(paper);
+  }
+  group(options: GroupOptions, body: () => void): void {
+    this.#painter.group(options, body);
+  }
+  blendMode(blend: BlendMode): void {
+    this.#painter.blendMode(blend);
+  }
+  erase(): void {
+    this.#painter.erase();
+  }
+  noErase(): void {
+    this.#painter.noErase();
   }
   text(...args: [string, number, number]): void {
     this.#painter.text(...args);

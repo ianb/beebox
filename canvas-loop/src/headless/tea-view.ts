@@ -1,7 +1,7 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import type { Sketch } from "./sketch.js";
-import type { ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
+import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paper, ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
 
 /**
  * The drawing capability handed to `draw`. A thin facade over the shared Sketch
@@ -78,6 +78,33 @@ export class TeaView implements View {
   }
   clip(shape: ClipShape, body: () => void): void {
     this.#sketch.clip(shape, body);
+  }
+  curve(points: readonly Vec2[], closed?: boolean): void {
+    this.#sketch.curve(points, closed);
+  }
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
+    this.#sketch.brush(base, overrides);
+  }
+  noBrush(): void {
+    this.#sketch.noBrush();
+  }
+  gesture(gesture: Gesture): void {
+    this.#sketch.gesture(gesture);
+  }
+  paper(paper: Paper): void {
+    this.#sketch.paper(paper);
+  }
+  group(options: GroupOptions, body: () => void): void {
+    this.#sketch.group(options, body);
+  }
+  blendMode(blend: BlendMode): void {
+    this.#sketch.blendMode(blend);
+  }
+  erase(): void {
+    this.#sketch.erase();
+  }
+  noErase(): void {
+    this.#sketch.noErase();
   }
   text(...args: [string, number, number]): void {
     this.#sketch.text(...args);
