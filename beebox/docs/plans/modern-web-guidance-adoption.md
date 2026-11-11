@@ -787,9 +787,10 @@ None. Each category is small enough to do from its entry here.
   `--bbx-composer-height` cleanup (the filed issue).
 - **B2 menu roles:** no preference; the plan's lean stands (arrow keys for
   command menus, no menu role for link lists).
-- **D4 `px`→`rem`:** not wanted without a reason; stays rejected.
-- **G Temporal:** open to a polyfill, since Temporal is where dates are going.
-  Category G is reopened as "evaluate a polyfill" (question 2).
+- **D4 `px`→`rem`:** approved after the reason was given (text follows the
+  browser's default size setting).
+- **G Temporal:** approved: move date code to Temporal behind a polyfill
+  that loads only where Temporal is missing. Which polyfill is question 2.
 - **Dev-agent skill:** undecided.
 
 ## Open design questions
@@ -798,7 +799,7 @@ None. Each category is small enough to do from its entry here.
    (iOS 18.3 per the guides' data), `light-dark()`, `text-wrap` and others
    need a newer WebKit. Lean: raise the iOS target to 18, which removes most
    fallback work; this is an iOS-app change (`bbx-ios-overlap`).
-2. **Temporal polyfill** (G). Evaluate `temporal-polyfill` (FullCalendar's,
+2. **Which Temporal polyfill** (G). Compare `temporal-polyfill` (FullCalendar's,
    smaller) against `@js-temporal/polyfill` (TC39's reference): size, load only
    where `globalThis.Temporal` is missing, and which `Date` code moves first
    (`ui/FriendlyDate.tsx`, calendar and todo date logic).
