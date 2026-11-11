@@ -19,7 +19,7 @@ function PdfRenderer({ data, mode, workspacePdf }: RendererProps) {
   const apiBase = getApiBase();
   const rawUrl = apiRawFileUrl(apiBase, data.path);
   const src = useVersionedFileUrl(rawUrl, { path: data.path });
-  if (src.state === "loading") return <StatusMessage className="p-4">Loading PDF…</StatusMessage>;
+  if (src.state === "loading") return <StatusMessage busy className="p-4">Loading PDF…</StatusMessage>;
   if (src.state === "missing") return <Text as="div" tone="subtle" className="p-4">File not found: {toDisplayPath(data.path)}</Text>;
   return <PdfFrame src={src.url} title={basename} downloadName={basename} mode={mode ?? "page"} workspacePdf={workspacePdf} />;
 }

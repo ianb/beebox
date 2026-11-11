@@ -239,7 +239,7 @@ function SelectedFilePreview({ path, pubId, candidate }: { path: string; pubId: 
 
 function FilePreview({ path, error, loading, result }: { path: string; error: string | null; loading: boolean; result: PreviewResult | undefined }) {
   if (error !== null) return <div role="alert"><ErrorText>{error}</ErrorText></div>;
-  if (loading) return <StatusMessage>Loading text preview…</StatusMessage>;
+  if (loading) return <StatusMessage busy>Loading text preview…</StatusMessage>;
   const preview = result;
   if (preview === undefined) return null;
   if (preview.kind === "binary") return <Hint>{path} is a binary file ({humanBytes(preview.bytes)}); its contents are not previewed.</Hint>;

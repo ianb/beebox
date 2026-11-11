@@ -26,7 +26,7 @@ function BrowserSwitch({ boxName }: { boxName: string }) {
   const { state } = push;
   const body = (() => {
     switch (state) {
-      case "checking": return <StatusMessage>Checking this browser…</StatusMessage>;
+      case "checking": return <StatusMessage busy>Checking this browser…</StatusMessage>;
       case "unsupported": return <Text as="p" size="sm">This browser can&apos;t show notifications from the box. Try a current version of Chrome, Firefox, Edge, or Safari.</Text>;
       case "needs-install": return <Text as="p" size="sm">On iPhone or iPad, add this app to your Home Screen first: tap the Share button, then &ldquo;Add to Home Screen.&rdquo; Open it from the Home Screen icon, then come back here.</Text>;
       case "no-server-key": return <Text as="p" size="sm">The server is not set up to send browser notifications. Tell whoever runs this box.</Text>;
@@ -72,7 +72,7 @@ function PhoneState() {
   const apns = trpc.notifications.apnsStatus.useQuery();
   const failure = thisDevice.error ?? apns.error;
   if (failure) return <ErrorText>Could not check this phone: {failure.message}</ErrorText>;
-  if (thisDevice.data === undefined || apns.data === undefined) return <StatusMessage>Checking this phone…</StatusMessage>;
+  if (thisDevice.data === undefined || apns.data === undefined) return <StatusMessage busy>Checking this phone…</StatusMessage>;
   const state = phonePushState({
     paired: thisDevice.data.device !== null,
     turnedOff: thisDevice.data.device?.notificationsOff === true,

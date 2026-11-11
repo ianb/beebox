@@ -134,7 +134,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
-    return <StatusMessage variant="menu">Loading...</StatusMessage>;
+    return <StatusMessage busy variant="menu">Loading...</StatusMessage>;
   }
   if (state.kind === "error") {
     return (

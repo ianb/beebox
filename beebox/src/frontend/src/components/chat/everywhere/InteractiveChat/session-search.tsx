@@ -112,7 +112,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
   // Re-render each minute so the hit ages stay current.
   useNow(60_000);
   if (state.kind === "loading") {
-    return <StatusMessage variant="menu">Searching…</StatusMessage>;
+    return <StatusMessage busy variant="menu">Searching…</StatusMessage>;
   }
   if (state.kind === "error") {
     return (

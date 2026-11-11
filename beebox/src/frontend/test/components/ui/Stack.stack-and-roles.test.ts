@@ -32,7 +32,7 @@ void test("Two Text spans in a Stack are flex items, so each takes its own line 
 
 // The default gap is `md`, and `as` still selects the element:
 void test("The default gap is md, and as still selects the element:", async (t) => {
-  t.check(html(h(Stack, { as: "ul", children: h("li", null, "a") })), "<ul class=\"flex flex-col gap-3\"><li>a</li></ul>");
+  t.check(html(h(Stack, { as: "ul", children: h("li", null, "a") })), "<ul role=\"list\" class=\"flex flex-col gap-3\"><li>a</li></ul>");
 });
 
 // `Stack` also serves as a page-level scroll container (it absorbed `Column`).

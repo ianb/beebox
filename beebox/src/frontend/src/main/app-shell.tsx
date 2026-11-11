@@ -103,7 +103,7 @@ export function BoxValidationLayout() {
   useDropBoxScopedCache(boxSlug);
   useFirstLoadMark(FIRST_LOAD_MARKS.boxValidated, boxesState.loaded && boxExists);
 
-  if (!boxesState.loaded) return <StatusMessage>Loading box...</StatusMessage>;
+  if (!boxesState.loaded) return <StatusMessage busy>Loading box...</StatusMessage>;
   if (boxesState.error) return <BoxValidationError />;
   return boxExists ? <Outlet /> : <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />;
 }

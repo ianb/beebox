@@ -7,7 +7,7 @@ import type { ExhibitInventoryEntry } from "../../shared/exhibits.js";
  * page names `bin/exhibits url`.
  */
 export function ExhibitLinks({ entries, origin, dated }: { entries: ExhibitInventoryEntry[]; origin: string; dated?: boolean }) {
-  return <ul className="exhibit-links">{entries.map((entry) => <li key={entry.slug}>
+  return <ul role="list" className="exhibit-links">{entries.map((entry) => <li key={entry.slug}>
     {entry.title === null
       ? <><a href={`${origin}${entry.path}`}>{entry.slug}</a> <span className="muted">{entry.problem}</span></>
       : <><a href={`${origin}${entry.path}`}>{entry.title}</a>{dated && entry.created !== null ? <> <small className="muted">{friendlyTimestamp(entry.created)}</small></> : null}</>}

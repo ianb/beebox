@@ -34,7 +34,7 @@ function CommentsRenderer({ data }: RendererProps) {
   });
 
   if (isLoading) {
-    return <StatusMessage className="p-4">Loading comments…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading comments…</StatusMessage>;
   }
   if (error) {
     const message = error instanceof Error ? error.message : "error";

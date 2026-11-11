@@ -188,7 +188,7 @@ export function LandmarkList({
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
-    return <StatusMessage variant="menu">Loading…</StatusMessage>;
+    return <StatusMessage busy variant="menu">Loading…</StatusMessage>;
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

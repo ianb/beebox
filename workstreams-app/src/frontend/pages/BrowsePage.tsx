@@ -68,7 +68,7 @@ function ChangedIn({ document }: { document: BrowsedDocument }) {
 function DirectoryView({ entries, workstream }: { entries: DirectoryEntry[]; workstream: string | null }) {
   if (entries.length === 0) return <p className="empty-state">Empty directory.</p>;
   return (
-    <ul className="document-list">
+    <ul role="list" className="document-list">
       {entries.map((entry) => (
         <li key={entry.relPath}>
           <Link

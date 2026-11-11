@@ -151,7 +151,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
       </div>
 
       {loading ? (
-        <StatusMessage>Loading...</StatusMessage>
+        <StatusMessage busy>Loading...</StatusMessage>
       ) : error ? (
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       ) : display.length === 0 ? (

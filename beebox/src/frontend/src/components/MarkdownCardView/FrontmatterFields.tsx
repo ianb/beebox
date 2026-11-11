@@ -164,7 +164,7 @@ function FieldRow({ name, value, root }: { name: string; value: unknown; root: b
       <dt className="min-w-0 max-w-32 text-warm-700 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{fieldLabel(name)}</dt>
       <dd className="min-w-0 max-w-full">
         {todos !== null ? (
-          <ul className="min-w-0 space-y-1">
+          <ul role="list" className="min-w-0 space-y-1">
             {todos.map(({ entry, index }) => <FrontmatterTodo key={index} entry={entry} index={index} />)}
           </ul>
         ) : name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <FieldValue value={value} />}

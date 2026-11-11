@@ -137,7 +137,7 @@ export function QuickChatList({ views, label, boxSlug, busy, errors, actions }: 
   actions: QuickChatRowActions;
 }) {
   return (
-    <ul aria-label={label} className="flex flex-col gap-2">
+    <ul role="list" aria-label={label} className="flex flex-col gap-2">
       {views.map((view) => (
         <QuickChatRow key={view.id} view={view} boxSlug={boxSlug} busy={busy.includes(view.id)} error={errors[view.id]} actions={actions} />
       ))}

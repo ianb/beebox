@@ -85,7 +85,8 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
-        <thead><tr className="border-b border-warm-300 text-left text-warm-700"><th className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
+        <caption className="sr-only">Storage</caption>
+        <thead><tr className="border-b border-warm-300 text-left text-warm-700"><th scope="col" className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} scope="col" className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
         <tbody>
           <StorageRow label="Annexed" columns={columns.map((column) => column.value.annexed)} />
           <StorageRow label="Regular Git" columns={columns.map((column) => column.value.regular)} />
@@ -99,7 +100,7 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
 function StorageRow({ label, columns }: { label: string; columns: Array<{ files: number; bytes: number }> }) {
   return (
     <tr className="border-b border-warm-200">
-      <td className="py-2 pr-3 font-medium">{label}</td>
+      <th scope="row" className="py-2 pr-3 text-left font-medium">{label}</th>
       {columns.map((column, index) => <td key={index} className="py-2 px-3 text-right tabular-nums">{humanBytes(column.bytes)} <span className="text-warm-700">· {column.files.toLocaleString()}</span></td>)}
     </tr>
   );

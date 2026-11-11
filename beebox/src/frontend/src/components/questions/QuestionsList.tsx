@@ -116,7 +116,7 @@ export function QuestionsList() {
   const archive = [...demoted, ...answered];
 
   if (isLoading) {
-    return <StatusMessage>Loading...</StatusMessage>;
+    return <StatusMessage busy>Loading...</StatusMessage>;
   }
 
   return (

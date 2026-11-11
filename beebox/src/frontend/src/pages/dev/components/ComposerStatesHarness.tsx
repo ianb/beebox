@@ -267,7 +267,7 @@ export function ComposerStatesHarness() {
       ))}
       <div className="max-w-5xl mx-auto px-4 pt-4 mt-4 border-t border-warm-300">
         <div className="text-sm font-semibold text-warm-700 mb-2">Impossible combinations (filtered)</div>
-        <ul className="text-xs text-warm-700 space-y-1">
+        <ul role="list" className="text-xs text-warm-700 space-y-1">
           {impossible.map((c) => (
             <li key={comboKey(c)}>
               <span className="font-mono text-warm-700">{comboLabel(c)}</span> — {impossibleReason(c)}

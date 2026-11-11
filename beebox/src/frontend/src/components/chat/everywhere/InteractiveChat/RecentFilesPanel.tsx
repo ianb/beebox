@@ -34,7 +34,7 @@ export function RecentFilesPanel({ entries, onPanel }: RecentFilesPanelProps) {
 
   if (files.length === 0) {
     return (
-      <StatusMessage variant="menu" className="flex items-center gap-2">
+      <StatusMessage variant="menu" busy={isLoading} className="flex items-center gap-2">
         <DirectoryIcon size={16} />
         {isLoading ? "Loading…" : "No recent files yet"}
       </StatusMessage>

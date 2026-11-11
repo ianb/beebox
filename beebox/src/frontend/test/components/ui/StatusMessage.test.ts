@@ -1,5 +1,5 @@
 // StatusMessage: a pane's roomy placeholder or a menu's compact row. Both are
-// polite status regions.
+// polite status regions unless busy.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
@@ -22,6 +22,11 @@ void test("the default is the pane variant", async (t) => {
 void test("the menu variant is a compact small-text row", async (t) => {
   const message = await messageOf({ variant: "menu", children: "Searching…" });
   t.check(message, { role: "status", text: "Searching…", classes: ["px-3", "py-2", "text-sm", "text-warm-700"] });
+});
+
+void test("a busy placeholder is not a live region", async (t) => {
+  const message = await messageOf({ busy: true, children: "Loading…" });
+  t.check(message.role, null);
 });
 
 void test("a layout class overrides the variant's padding", async (t) => {

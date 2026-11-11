@@ -257,7 +257,7 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading ? <StatusMessage>Loading...</StatusMessage> : null}
+      {loading ? <StatusMessage busy>Loading...</StatusMessage> : null}
 
       {hasMore && !loading ? <button type="button"
           id={`${idPrefix}-load-more`}

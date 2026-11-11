@@ -258,7 +258,7 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
               <span className="muted"> · {unresolved} not anchored to a span</span>
             )}
           </h2>
-          <ul className="comment-list">
+          <ul role="list" className="comment-list">
             {items.map((comment) => (
               <CommentBody
                 key={comment.id}

@@ -51,7 +51,7 @@ export function RecentNotifications() {
   return (
     <Stack gap="sm">
       <Heading level={3}>Recent</Heading>
-      {recent.isPending ? <StatusMessage>Loading recent notifications…</StatusMessage>
+      {recent.isPending ? <StatusMessage busy>Loading recent notifications…</StatusMessage>
         : recent.error ? (
           <Stack gap="xs">
             <ErrorText>Could not load recent notifications: {recent.error.message}</ErrorText>

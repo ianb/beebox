@@ -115,10 +115,11 @@ function BatchTable({ batch, schemaJson, onNavigate }: { batch: BatchSummary; sc
 function RecordsGrid({ rows, columns, filed, open, onToggle }: { rows: unknown[]; columns: string[]; filed: Set<number>; open: number | null; onToggle: (i: number) => void }) {
   return (
     <table className="w-full text-sm">
+      <caption className="sr-only">Batch records</caption>
       <thead>
         <tr>
-          <th className="text-left pr-2">#</th>
-          {columns.map((c) => <th key={c} className="text-left pr-2">{c}</th>)}
+          <th scope="col" className="text-left pr-2">#</th>
+          {columns.map((c) => <th key={c} scope="col" className="text-left pr-2">{c}</th>)}
         </tr>
       </thead>
       <tbody>

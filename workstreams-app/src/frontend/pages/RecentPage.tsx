@@ -112,7 +112,7 @@ export function RecentView({ feed, quotas, quotaError, workstream }: { feed: Rec
       )}
       {files.length === 0
         ? <p className="empty-state">Nothing changed recently{workstream === null ? "" : ` in ${workstream}`}.</p>
-        : <ul className="document-list recent-list">{files.map((file) => (
+        : <ul role="list" className="document-list recent-list">{files.map((file) => (
             <RecentRow key={`${file.workstream ?? "main"}:${file.relPath}`} file={file} now={now} />
           ))}</ul>}
       {feed.truncated ? <p className="muted">Showing the most recent changes only.</p> : null}
