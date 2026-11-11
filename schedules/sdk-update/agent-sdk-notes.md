@@ -38,7 +38,7 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.1` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.319` on 2026-11-08;
   next `0.3.321` (settles 2026-11-11T19:03Z) and `0.3.322` (2026-11-12T01:57Z).
@@ -71,6 +71,13 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.167.1 — HELD with 0.165.0–0.167.0, nothing relevant (published 2026-11-10T21:32Z)
+
+Unitemized release; its two commits add opt-in incremental tools for OpenAI
+Responses and restrict legacy incremental tools to Bedrock. beebox uses
+neither. Held behind
+`issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 
 ### 0.3.321 / 0.3.322 / Claude Code 2.1.321 / 2.1.322 — pending (published 2026-11-09T19:03Z and 2026-11-10T01:57Z); 0.3.320 never published
 
