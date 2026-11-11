@@ -51,3 +51,5 @@ in it to show:
 
 Related: [private chat sessions](2026-09-28-private-chat-sessions-search-gating.md),
 which decides who may see a chat at all.
+
+This is the prerequisite for [voice and video calls in a shared chat](2026-11-11-voice-and-video-calls-in-a-shared-chat.md).
