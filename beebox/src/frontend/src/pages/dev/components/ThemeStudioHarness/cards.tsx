@@ -5,7 +5,7 @@
  * interface card holds app panels in the card material.
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { MarkdownCardView } from "../../../../components/MarkdownCardView/view";
 import { SidecarTabStrip } from "../../../../components/chat/workspace/SidecarTabStrip/view";
 import { workspacePanelId } from "../../../../components/chat/workspace/address";
@@ -28,7 +28,7 @@ import { Image } from "../../../../components/ui/Image/view";
 import { Row } from "../../../../components/ui/Row";
 import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";
-import { SelectField } from "../../../../components/ui/fields/field";
+import { CheckboxField, SelectField } from "../../../../components/ui/fields/field";
 import { StudioFigure } from "./figure";
 
 /**
@@ -131,6 +131,7 @@ type Theme = ResolvedCardTheme;
 
 function ReadingCard({ theme }: { theme: Theme }) {
   const { name, stock } = theme.choice;
+  const [checked, setChecked] = useState(false);
   return <CardThemeSurface theme={theme} title="A little room to grow" detail="Seed exchange · Saturday" symbol={null} boxSlug={undefined} mode="companion"
     properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>{READING_PATH}</dd></dl></>}>
     <MarkdownCardView mode="companion" onNavigate={noop} data={{
@@ -147,7 +148,7 @@ function ReadingCard({ theme }: { theme: Theme }) {
       </Row>
     </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
-      <label className="flex items-center gap-2 text-sm"><input id="bbx-studio-check" type="checkbox" /> Bring spare envelopes</label>
+      <CheckboxField id="bbx-studio-check" label="Bring spare envelopes" checked={checked} onChange={setChecked} />
       <Button id="bbx-studio-action" size="sm" onClick={noop}>Sample action</Button>
       <Button id="bbx-studio-disabled" size="sm" intent="secondary" disabled>Disabled</Button>
     </div>

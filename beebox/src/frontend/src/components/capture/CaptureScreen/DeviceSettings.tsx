@@ -4,6 +4,8 @@
  * settings toggle is on.
  */
 
+import { SelectField, type SelectOption } from "../../ui/fields/field";
+
 interface DevicePrefs {
   videoDeviceId: string | null;
   audioDeviceId: string | null;
@@ -17,37 +19,35 @@ interface DeviceSettingsProps {
   onUpdate: (key: keyof DevicePrefs, value: string | null) => void;
 }
 
+function deviceOptions(devices: MediaDeviceInfo[], fallbackName: string): SelectOption[] {
+  return [
+    { value: "", label: "Default" },
+    ...devices.map((d) => ({ value: d.deviceId, label: d.label || `${fallbackName} ${d.deviceId.slice(0, 8)}` })),
+  ];
+}
+
 export function DeviceSettings(props: DeviceSettingsProps) {
+  const ids = props.includeControlIds !== false;
   return (
     <div className="px-4 py-3 bg-gray-900/90 border-t border-gray-700 z-10 flex gap-4 text-sm">
-      <label className="flex flex-col gap-1 flex-1">
-        <span className="text-gray-400">Camera</span>
-        <select
-          id={props.includeControlIds === false ? undefined : "bbx-capture-camera-select"}
-          value={props.devicePrefs.videoDeviceId ?? ""}
-          onChange={(e) => props.onUpdate("videoDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-400 rounded px-2 py-1 text-sm [color-scheme:dark]"
-        >
-          <option value="">Default</option>
-          {props.videoDevices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(0, 8)}`}</option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1 flex-1">
-        <span className="text-gray-400">Microphone</span>
-        <select
-          id={props.includeControlIds === false ? undefined : "bbx-capture-mic-select"}
-          value={props.devicePrefs.audioDeviceId ?? ""}
-          onChange={(e) => props.onUpdate("audioDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-400 rounded px-2 py-1 text-sm [color-scheme:dark]"
-        >
-          <option value="">Default</option>
-          {props.audioDevices.map((d) => (
-            <option key={d.deviceId} value={d.deviceId}>{d.label || `Mic ${d.deviceId.slice(0, 8)}`}</option>
-          ))}
-        </select>
-      </label>
+      <SelectField
+        tone="dark"
+        className="flex-1"
+        id={ids ? "bbx-capture-camera-select" : undefined}
+        label="Camera"
+        value={props.devicePrefs.videoDeviceId ?? ""}
+        onChange={(value) => props.onUpdate("videoDeviceId", value === "" ? null : value)}
+        options={deviceOptions(props.videoDevices, "Camera")}
+      />
+      <SelectField
+        tone="dark"
+        className="flex-1"
+        id={ids ? "bbx-capture-mic-select" : undefined}
+        label="Microphone"
+        value={props.devicePrefs.audioDeviceId ?? ""}
+        onChange={(value) => props.onUpdate("audioDeviceId", value === "" ? null : value)}
+        options={deviceOptions(props.audioDevices, "Mic")}
+      />
     </div>
   );
 }

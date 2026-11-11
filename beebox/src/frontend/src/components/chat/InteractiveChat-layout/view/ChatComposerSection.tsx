@@ -120,8 +120,8 @@ export interface ComposerSectionProps {
   /** Re-run a failed file upload from the chip. */
   onRetryFileAttachment: (id: number) => void;
   onRemoveSelection: (id: number) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-  onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** The hidden file input behind the Add menu's "Add files…" (`useFilePicker`). */
+  fileInput: ReactNode;
   typingMode: boolean;
   typingLocked: boolean;
   setTypingMode: (v: boolean) => void;
@@ -139,7 +139,7 @@ export interface ComposerSectionProps {
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
     attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRetryFileAttachment, onRemoveSelection,
-    fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
+    fileInput, typingMode, typingLocked, setTypingMode, setTypingLocked,
     isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow, includeControlIds = true,
   } = props;
   return (
@@ -160,13 +160,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
       <FileAttachmentPanel attachments={fileAttachments} onRemove={onRemoveFileAttachment} onRetry={onRetryFileAttachment} />
 
       {/* Hidden file input — opened by the "+" attach button. */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={onFileInputChange}
-      />
+      {fileInput}
 
       {/* Input area: single row on desktop, button bar on mobile (hidden on mobile when typing) */}
       {inputArea}

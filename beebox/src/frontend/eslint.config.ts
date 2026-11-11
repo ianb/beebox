@@ -245,6 +245,54 @@ export default [
       ],
     },
   },
+  // One owner per control: a raw <input>, <textarea> or <select> skips the
+  // field primitives' label, error and ink. Each tag lists the files that
+  // render it (`allowIn`, relative to this config), one file per line with the
+  // reason; a new file in ui/fields/ is not exempt until it is listed here.
+  {
+    files: ["src/**/*.tsx"],
+    rules: {
+      "personal-vibe-check/require-ui-primitive": [
+        "error",
+        {
+          elements: {
+            input: {
+              allowIn: [
+                // TextField and NumberField.
+                "src/components/ui/fields/field.tsx",
+                // CheckboxField and Checkbox.
+                "src/components/ui/fields/checkbox.tsx",
+                // RadioGroup's radios.
+                "src/components/ui/fields/radio.tsx",
+                // useFilePicker's hidden file input.
+                "src/components/ui/fields/file-picker.tsx",
+                // A visible file input: a browser-automation tool sets files on it (see its header).
+                "src/components/browser-task/SubmissionForm.tsx",
+              ],
+              message:
+                "Use TextField, NumberField, CheckboxField, Checkbox, RadioGroup or useFilePicker (components/ui/fields).",
+            },
+            textarea: {
+              allowIn: [
+                // TextareaField.
+                "src/components/ui/fields/field.tsx",
+                // The chat composer's textarea: autosize, caret tracking, IME-safe Enter.
+                "src/components/chat/InteractiveChat-composer/ComposerTextarea.tsx",
+              ],
+              message: "Use TextareaField (components/ui/fields/field).",
+            },
+            select: {
+              allowIn: [
+                // SelectField.
+                "src/components/ui/fields/field.tsx",
+              ],
+              message: "Use SelectField (components/ui/fields/field); tone=\"dark\" on the capture screen.",
+            },
+          },
+        },
+      ],
+    },
+  },
   {
     // Same options as the preset, plus an allowance for TanStack Router's
     // `throw redirect(...)` pattern — the router catches thrown Redirects

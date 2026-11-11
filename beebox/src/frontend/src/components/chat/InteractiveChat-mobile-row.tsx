@@ -7,10 +7,9 @@
 import { useRef } from "react";
 import { CloseButton } from "../ui/CloseButton";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
+import { joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
-import { useComposerCaret } from "./composer-caret";
-import { ComposerSendButton } from "./InteractiveChat-composer/view";
+import { ComposerSendButton, ComposerTextarea } from "./InteractiveChat-composer/view";
 import type { ComposerRowProps } from "./composer-row-props";
 import { segmentCapturing } from "../../machines/transcription-events";
 
@@ -33,29 +32,25 @@ export function MobileTextareaRow({
   // This textarea is separate from the desktop composer's (which has its own
   // ref + autoscroll wired in useChatActions), so it needs its own pinning.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const noteTyped = useComposerCaret({ textareaRef, text: input });
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
   const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="flex gap-2 items-center">
-      <textarea
+      <ComposerTextarea
         // `-mobile`, not the desktop row's address: this row and the button
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
         // Recorded in docs/plans/agent-points-at-ui.md, Track 1.
         id={hasControlIds ? "bbx-composer-input-mobile" : undefined}
-        ref={textareaRef}
-        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
+        mobile
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        isTranscribing={isTranscribing}
+        transcript={transcription.transcript}
         onPaste={onPaste}
         onDrop={onDrop}
-        readOnly={isTranscribing}
-        enterKeyHint="enter"
-        aria-label="Message"
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className={composerTextareaClasses({ mobile: true, isTranscribing })}
-        autoFocus
       />
       {isTranscribing ? (
         <>

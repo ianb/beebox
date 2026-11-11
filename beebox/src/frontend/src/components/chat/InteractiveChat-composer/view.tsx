@@ -13,9 +13,9 @@ import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicStatus } from "./MicStatus";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
+import { joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
-import { useComposerCaret } from "../composer-caret";
+import { ComposerTextarea } from "./ComposerTextarea";
 import type { AddFiles } from "../InteractiveChat-attachments/attachments";
 import type { ComposerRowProps } from "../composer-row-props";
 import type { TranscriptionState } from "../../../hooks/useRealtimeTranscription/hook";
@@ -23,6 +23,8 @@ import { segmentCapturing } from "../../../machines/transcription-events";
 import type { FinalWord } from "../../../machines/transcription-events";
 import { useFirstLoadMark } from "../../../lib/first-load-marks";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+
+export { ComposerTextarea };
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
@@ -99,24 +101,20 @@ function DesktopComposerRow({
   handleKeyDown: (e: React.KeyboardEvent) => void;
   includeControlIds: boolean;
 }) {
-  const noteTyped = useComposerCaret({ textareaRef, text: input });
   const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      <textarea
+      <ComposerTextarea
         id={includeControlIds ? "bbx-composer-input" : undefined}
-        ref={textareaRef}
-        autoFocus
-        enterKeyHint="send"
-        aria-label="Message"
-        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
+        mobile={false}
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        isTranscribing={isTranscribing}
+        transcript={transcription.transcript}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}
-        readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className={composerTextareaClasses({ mobile: false, isTranscribing })}
       />
       {isTranscribing ? (
         <>

@@ -9444,6 +9444,26 @@ tests:
       - 'Safari 18|iOS 18'
       - 'fallback|progressive enhancement'
     tags: [frontend, browser-support]
+  # Status (2026-11-11, Claude claude-opus-5-5, ui-primitives-dedup Track 5):
+  # passes on first run. Read frontend.md, named CheckboxField with the label
+  # prop, set Checkbox apart for rows named by their own text, and cited
+  # require-ui-primitive for raw <input type="checkbox">.
+  - id: dev-settings-checkbox
+    surface: dev
+    prompt: >
+      I want to add a checkbox to a settings section in the beebox web app,
+      "Sync calendar daily". What component do I use, and how is it labelled?
+      Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names CheckboxField from components/ui/fields (label to the right), or
+      Checkbox with aria-label or aria-labelledby when the row's own text names
+      it; says a raw <input> fails lint (require-ui-primitive). FAILS if it
+      proposes a raw <input type="checkbox">.
+    correct_matches:
+      - 'CheckboxField'
+    tags: [frontend, fields]
   - id: view-enter-field-ime-and-name
     prompt: >
       I want a view where I type into a text field and press Enter to add an

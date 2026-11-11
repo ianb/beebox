@@ -16,6 +16,7 @@ import {
 import { cn } from "../../lib/cn";
 import { Badge } from "../ui/Badge";
 import { Toggle } from "../ui/Toggle";
+import { CheckboxField } from "../ui/fields/field";
 
 export interface HistoryFilterState {
   connectors: string[];
@@ -213,18 +214,13 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
                   </div>
                 )}
                 {section.options.map((opt) => (
-                  <label
+                  <CheckboxField
                     key={opt.value}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-warm-700 hover:bg-warm-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(opt.value)}
-                      onChange={() => onToggle(opt.value)}
-                      className="accent-primary"
-                    />
-                    <span className="truncate">{opt.label}</span>
-                  </label>
+                    checked={selected.includes(opt.value)}
+                    onChange={() => onToggle(opt.value)}
+                    label={<span className="block truncate">{opt.label}</span>}
+                    className="px-3 py-1.5"
+                  />
                 ))}
               </div>
             ))

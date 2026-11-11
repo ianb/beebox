@@ -127,7 +127,7 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
   const { recording, recordingTime, error, finalizing, showSettings, sessionId, retryFeedback } = state;
   const { counts } = uploads;
   const { videoDevices, audioDevices, devicePrefs, updateDevicePref } = devices;
-  const { galleryRef, uploadRef, pickFromGallery, pickFileToUpload, handleGallerySelect, handleFileSelect } = inputs;
+  const { pickFromGallery, pickFileToUpload, galleryInput, uploadInput } = inputs;
   const { cameraOn, flashing, startCamera, toggleCamera, flipCamera } = camera;
   const { setShowSettings, setError, toggleRecording, takePhoto, retryFailedUploads } = actions;
   const { skipPendingUploads, handleDone, handleCancel } = actions;
@@ -174,8 +174,8 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
 
       <CapturePhotoStrip states={uploads.photoStates} previews={uploads.photoPreviews} includeControlIds={includeControlIds} />
 
-      <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={handleGallerySelect} />
-      <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />
+      {galleryInput}
+      {uploadInput}
 
       <CaptureControls
         includeControlIds={includeControlIds}

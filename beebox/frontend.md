@@ -171,7 +171,7 @@ Every static interactive control carries a stable `id="bbx-<area>-<control>"`: k
 Every control also has an accessible name, which screen readers, the box agent, `bin/browse`, tours, and DOM tests all use:
 
 - The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row. When an item repeats several controls (a question card's "Submit", "Later", "Answer in chat"), name the item instead: `role="group"` with `aria-labelledby` its heading (`<Card role="group">`). The box agent's scan reports a named group as the container of those controls.
-- The `control-has-associated-label` rule exempts raw `audio`, `canvas`, `embed`, `input`, `textarea`, `tr` and `video` elements (`personal-vibe-check/preset/react-rules.ts`, `ignoreElements`), so the rule does not report a raw `<input>` with no label. Use the fields primitives, which carry the label.
+- A raw `<input>`, `<textarea>` or `<select>` fails lint outside the files that own it (`personal-vibe-check/require-ui-primitive`; each tag's owners are listed in `src/frontend/eslint.config.ts`). Use the fields primitives, which carry the label. The chat composer's textarea is `ComposerTextarea` (`components/chat/InteractiveChat-composer/`).
 - An icon-only control sets `aria-label`, or the primitive's `label` prop. `title` alone is not enough; `jsx-a11y/control-has-associated-label` enforces this on native elements.
 - A toggle or disclosure keeps one name in both states and exposes the state: `aria-checked` on a switch, `aria-pressed` on a toggle button, `aria-expanded` on a disclosure.
 
@@ -183,7 +183,9 @@ Every control also has an accessible name, which screen readers, the box agent, 
 **Inputs** (all in `ui/fields/`)
 - `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled. `identifier` on `<TextField>` turns off spellcheck, autocorrect and auto-capitalization for hostnames, ids, URLs and names. `revealable` on a `type="password"` `<TextField>` adds a "Show password" button (`aria-pressed` carries the state); use it on login, setup and change-password.
 - `<CheckboxField>` — inline checkbox with label to the right.
-- `<SelectField>` — dropdown select with options array.
+- `<Checkbox>` — a bare checkbox for a row whose own text names it (a todo) or a display-only marker (a Markdown task). `aria-label` or `aria-labelledby` is required by type; with no `onChange` it renders read-only.
+- `<SelectField>` — dropdown select with options array. `tone="dark"` on the dark capture screen (the field and ink of `ModalDialog`'s dark tone).
+- `useFilePicker({ accept, multiple, onFiles })` — returns `{ open, input }`: render `input` (a hidden file input) and call `open` from the caller's button or menu item.
 - `<RadioGroup>` — stacked (`variant="list"`) or card-style (`variant="cards"`) radios.
 - `<Toggle>` — iOS-style pill switch for immediate-apply settings (distinct from CheckboxField, which is form-bound). Props: `checked`, `onChange`, `disabled`, `label`.
 

@@ -12,9 +12,9 @@ export interface UiInternal {
 
 export const UI_INTERNALS: readonly UiInternal[] = [
   { name: "FieldShell", reason: "fields/field.tsx" },
-  { name: "FieldMessage", reason: "fields/field.tsx" },
+  { name: "FieldMessage", reason: "fields/checkbox.tsx" },
   { name: "RevealButton", reason: "fields/field.tsx" },
-  { name: "useFieldInk", reason: "fields/field.tsx" },
+  { name: "useFieldInk", reason: "fields/checkbox.tsx" },
   { name: "MenuContext", reason: "menu-item.tsx" },
 ];
 

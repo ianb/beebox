@@ -36,11 +36,12 @@
  * `ComposerRegion`, a leaf that isn't an ancestor of the companion pane.
  */
 
-import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob, unsupportedImageMessage } from "../../../lib/image-paste";
 import { useComposerFileUploads } from "./composer-file-uploads";
 import { useEmissionStore } from "../input-store";
 import { toastError } from "../../ui/toast-store";
+import { useFilePicker } from "../../ui/fields/field";
 import { routeAddedFiles } from "./file-routing";
 import type { EmissionStore, ImageItem, FileItem } from "../../../input/emission-store";
 import { composerToken } from "@shared/composer-tokens";
@@ -155,7 +156,6 @@ export function useChatAttachments(opts: {
 }) {
   const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     addUploadFiles, uploadImageOriginal, retryFileUpload, awaitPendingUploads,
     forget: forgetUpload, forgetImage: forgetImageUpload, forgetAll: forgetAllUploads,
@@ -273,15 +273,6 @@ export function useChatAttachments(opts: {
     editor.removeImage(id);
   }, [editor, emissionStore, forgetImageUpload]);
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    // Clear the input before routing, so picking the same file twice in a row
-    // still fires a change event.
-    e.target.value = "";
-    if (files.length === 0) return;
-    void addFiles(files);
-  }, [addFiles]);
-
   const removeFileAttachment = useCallback((id: number) => {
     // The upload may still be running; `setFileState` no-ops once the item is
     // gone, so a late result can't resurrect the chip. Dropping the handle here
@@ -291,11 +282,8 @@ export function useChatAttachments(opts: {
     editor.removeFile(id);
   }, [editor, forgetUpload]);
 
-  /** The Add menu's one file entry — opens the hidden picker; routing decides the rest. */
-  const handleAddFiles = useCallback(() => {
-    const el = fileInputRef.current;
-    if (el !== null) el.click();
-  }, []);
+  /** The Add menu's one file entry opens this picker; routing decides the rest. */
+  const filePicker = useFilePicker({ multiple: true, onFiles: (files) => { void addFiles(files); } });
 
   const resetAttachments = useCallback(() => {
     // Release the object URLs after send — the base64 payload is independent
@@ -310,8 +298,8 @@ export function useChatAttachments(opts: {
   }, [editor, forgetAllUploads]);
 
   return {
-    fileInputRef,
+    fileInput: filePicker.input,
     addFiles, removeAttachment, removeFileAttachment, retryFileUpload, awaitPendingUploads,
-    handleAddFiles, handleFileInputChange, resetAttachments,
+    handleAddFiles: filePicker.open, resetAttachments,
   };
 }

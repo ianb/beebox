@@ -131,7 +131,6 @@ function noop() {}
 
 export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
   // nothing ever subscribes), it just feeds the fabricated `input` text in.
   const inputStore: InputStore = { get: () => spec.input, set: noop, subscribe: () => noop };
@@ -215,8 +214,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
         onRemoveFileAttachment={noop}
         onRetryFileAttachment={noop}
         onRemoveSelection={noop}
-        fileInputRef={fileInputRef}
-        onFileInputChange={noop}
+        fileInput={null}
         typingMode={spec.typingMode}
         typingLocked={spec.typingLocked}
         setTypingMode={noop}

@@ -13,7 +13,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { caretAfterTextChange } from "../../../src/components/chat/composer-caret.js";
+import { caretAfterTextChange } from "../../../../src/components/chat/InteractiveChat-composer/composer-caret.js";
 
 // A keystroke's own change is left alone. The person typing is the only one who
 // knows where they want the caret, and moving it would fight them.

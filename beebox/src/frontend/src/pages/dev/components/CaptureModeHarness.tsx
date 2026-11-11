@@ -26,6 +26,7 @@ import type { RetryFeedback } from "../../capture/retry-feedback";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/api-context";
 import { parseCaptureWrapper } from "../../../components/chat/capture-message";
 import { UploadAbortedError } from "../../../lib/binary-upload";
+import { CheckboxField, NumberField } from "../../../components/ui/fields/field";
 import type { SessionEntry } from "../../../api";
 
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
@@ -266,18 +267,13 @@ function OverlayDemo() {
         Press Done mid-flight for the &ldquo;waiting for N uploads / Skip them&rdquo; path.
       </p>
       <div className="flex flex-wrap items-center gap-3 mb-2 text-sm text-warm-700">
-        <label className="flex items-center gap-1.5">
-          seconds per upload
-          <input
-            type="number" min={0} max={60} value={seconds}
-            onChange={(e) => setSeconds(Number(e.target.value))}
-            className="w-16 px-1.5 py-0.5 rounded border border-warm-300"
-          />
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={fail} onChange={(e) => setFail(e.target.checked)} />
-          fail every upload
-        </label>
+        <NumberField
+          label="Seconds per upload"
+          min={0} max={60} value={seconds}
+          onChange={(value) => setSeconds(value ?? 0)}
+          className="w-32"
+        />
+        <CheckboxField label="Fail every upload" checked={fail} onChange={setFail} />
       </div>
       <button type="button" onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
         Open capture overlay
