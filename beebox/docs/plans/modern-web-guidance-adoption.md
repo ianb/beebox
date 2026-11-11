@@ -829,8 +829,7 @@ None. Each category is small enough to do from its entry here.
 
 ## NOT in scope
 
-- `px`→`rem` (D4): 66 sites, no reader need shown.
-- `Dropdown` on `popover` + anchor positioning: fails the iOS 17 floor.
+- `Dropdown` on `popover` + anchor positioning: anchor positioning is above the iOS 18 floor.
 - Container queries: needs a Tailwind plugin and per-component rewrites with no
   measured problem.
 - Running the upstream eval suite on Opus 5.5: cost, and on-demand retrieval
@@ -932,6 +931,18 @@ Deviations from the entries above, each for a reason found while doing it:
 - **Pre-existing breakage fixed on the way:** the clerk typecheck failed on
   `main` (TS7016 for `@joplin/turndown-plugin-gfm`) because its tsconfig did
   not include the declaration beside `webpage-readable.ts` (`68d20d8e6`).
+
+Later, after the boxholder's go-ahead: B12 `react/button-has-type` with 69
+explicit button types (`d45bc4faa`), D4 `px`→`rem` with its lint rule
+(`f50d4e2df`), the C7 rule (`c22fccbc6`), the knowledge audits
+(`e29deda9b`), and fixes from the cross-model review of the implementation
+(`a884ce949`).
+
+**Size.** About 3,170 changed source and test lines (about 1,000 of them
+tests) and about 210 lines of authored docs: a BIG CHANGE, about 1.7 times
+the 1,800–1,950 estimate. The overrun came from tests, which were about a
+third of the change, the two sweeps (D4 converted 84 sites in classes and
+CSS, B12 69 buttons), and five lint rules with their test suites.
 
 ## Implementation order
 
