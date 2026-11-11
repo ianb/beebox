@@ -56,11 +56,16 @@ which is about transcribing a conversation the box overhears.
   the leading option in a survey of the field) waits until calls need more
   than two or three people.
 - **One recording per person**, transcribed separately, then **folded into
-  one transcript.** The fold needs a shared clock: each device's recording
-  start measured against the box's time (for example from a round trip over
-  the signaling socket), and word or segment timestamps from transcription,
-  so utterances interleave in the order they were said. Overlapping speech
-  stays as two lines.
+  one transcript.** Start by trusting device clocks: each device stamps its
+  recording start with its own wall clock (NTP keeps ordinary computers and
+  phones within tens of milliseconds), and transcription supplies word or
+  segment timestamps, so utterances interleave in the order they were said.
+  Overlapping speech stays as two lines. Take the stamp when the first audio
+  arrives, not when recording was requested, since the microphone can take a
+  moment to start. Use real time, not the box's simulated clock
+  (`boxClockShiftMs`). Cheap guard: measure each device's offset from the
+  box once per call (one round trip over the signaling socket) and flag a
+  skew over a second, instead of correcting for it.
 - **Fold in the activity as well,** the way chat already folds the agent's
   tool activity between replies: chat messages typed during the call, the
   agent's work, and cards opened or changed land on the same timeline as
