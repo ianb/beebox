@@ -1,5 +1,6 @@
 /* Phosphor: a monochrome ANSI terminal, separated by text and tone instead of framed controls. */
 .bbx-box-presentation[data-chrome-theme="phosphor"]{
+  color-scheme:dark;
   color:#80f58d;background:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px),radial-gradient(ellipse at 50% 25%,#082d15,#020b05 78%);
   font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;--bbx-selection:#a5ffad;--bbx-selection-ink:#061009;--bbx-focus-ring:#a5ffad;--bbx-desk-background:#020b05;--bbx-desk-pattern:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px);--bbx-desk-edge:#237038;--bbx-bar-paper:#031008;--bbx-bar-edge:#237038;
 }

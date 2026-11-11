@@ -1,5 +1,6 @@
 /* Deck: worn turquoise screen printing on charcoal cloth. */
 .bbx-box-presentation[data-chrome-theme="deck"] {
+  color-scheme: dark;
   --bbx-desk-background: #242925;
   --bbx-desk-pattern: none;
   --bbx-desk-edge: #44959a;

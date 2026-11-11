@@ -13,6 +13,7 @@
   --bbx-focus-ring: #f4d389;
 }
 .bbx-box-presentation[data-chrome-theme="gilt"] {
+  color-scheme: dark;
   background: url("./gilt-panorama.webp") center top / cover no-repeat, #9d742f;
 }
 [data-chrome-theme="gilt"] .bbx-app-nav {
