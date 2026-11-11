@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import { Sketch } from "../../src/headless/sketch.js";
+import { TeaView } from "../../src/headless/tea-view.js";
 
 const NO_OP_HOST = { recordLog(): void {}, requestSnapshot(): void {} };
 
@@ -195,4 +196,24 @@ test("brush validation names the problem", () => {
   s.strokeWeight(2);
   s.gesture({ pressure: [[0.5, 1], [0.2, 0]] });
   assert.throws(() => s.line(0, 0, 5, 5), /sorted by t/);
+});
+
+test("the TEA View draws brushed marks inside a group", () => {
+  const s = makeSketch({ width: 120, height: 60 });
+  const v = new TeaView(s);
+  v.background("#ffffff");
+  v.group({ opacity: 0.8 }, () => {
+    v.noFill();
+    v.stroke("#2f6b3a");
+    v.strokeWeight(20);
+    v.brush("bristle");
+    v.gesture({ pressure: "even", seed: 3 });
+    v.curve([
+      [10, 30],
+      [60, 20],
+      [110, 30],
+    ]);
+  });
+  const [r, g] = pixel(s, [60, 22]);
+  assert.ok(g > r, "green paint landed");
 });

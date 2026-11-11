@@ -22,6 +22,11 @@ gallery/
     events.json     the scripted events file the sketch was run with
     meta.yaml       see fields below
     runs.jsonl      append-only re-exercise log (one JSON object per line)
+    history/        optional: the drawing's iteration record
+      cycle-N.txt   the sketch as it stood at render cycle N (text, not
+                    code: it is not linted or rendered by `gallery check`)
+      notes.md      per cycle, what the agent meant to change and what it saw
+      account.md    the agent's closing account of the process
 ```
 
 Exactly one of `sketch.ts` / `sketch-tea.ts` exists per exercise — whichever

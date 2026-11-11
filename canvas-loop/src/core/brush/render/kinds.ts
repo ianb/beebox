@@ -76,6 +76,8 @@ function smoothstep(edge: readonly [number, number], x: number): number {
 
 interface Bristle {
   readonly offset: number;
+  /** This bristle's share of the brush flow, 0.55..1. */
+  readonly strength: number;
   readonly thickness: number;
   readonly dryAt: number;
 }
@@ -90,7 +92,8 @@ function makeBristles(input: KindInput, brush: BristleBrush): Bristle[] {
     const offset = -1 + (2 * (i + 0.5)) / n + (brush.spread * (r1 - 0.5) * 2) / n;
     // Outer bristles carry less paint and run dry sooner.
     const dryAt = brush.load * total * (0.7 + 0.6 * r3) * (1 - 0.35 * Math.abs(offset));
-    return { offset, thickness: (input.width / n) * 1.7 * (1 + brush.spread * (r2 - 0.5)), dryAt };
+    const strength = 0.55 + 0.45 * rand(input.seed, { channel: 24, index: i });
+    return { offset, strength, thickness: (input.width / n) * 2.2 * (1 + brush.spread * (r2 - 0.5)), dryAt };
   });
 }
 
@@ -111,8 +114,8 @@ function bristlePoints(input: KindInput, args: { b: Bristle; index: number }): B
     const contact = smoothstep([reach - 0.15, reach + 0.1], c.p);
     const dry = 1 - smoothstep([b.dryAt * 0.7, b.dryAt], c.s);
     // In the drying zone the bristle skips: short random gaps along its length.
-    const gap = dry < 1 && rand(input.seed, { channel: 30 + args.index, index: Math.floor(c.s / 4) }) > dry ? 0 : 1;
-    const alpha = contact * dry * gap;
+    const gap = dry < 1 && rand(input.seed, { channel: 30 + args.index, index: Math.floor(c.s / 2.5) }) > dry ? 0 : 1;
+    const alpha = contact * dry * gap * b.strength;
     const spread = (b.offset * input.width * (0.35 + 0.65 * c.p)) / 2;
     return {
       x: c.x + c.nx * spread,
