@@ -52,6 +52,9 @@ function pairingDeepLink(token: string, boxName: string): string {
   return `beebox://pair?${params.toString()}`;
 }
 
+/** A made-up token the length of a real one, so the blurred stand-in is the real code's size. */
+const PLACEHOLDER_TOKEN = "x".repeat(43);
+
 /** The list is scoped to what the caller may reach, so the heading says which
  *  list this is rather than implying a short one is the whole box. */
 function deviceHeading(scope: DeviceScope | undefined): string {
@@ -168,25 +171,6 @@ export function CompanionPairingSection() {
           </Hint>
         ) : null}
 
-        <Row gap="sm" wrap>
-          {loopbackHost(window.location.hostname) ? null : <Button
-            id="bbx-settings-pairing-create-qr"
-            loading={createMutation.isPending ? !showQr : false}
-            loadingLabel="Creating..."
-            onClick={showQrCode}
-          >
-            Show QR Code (iPhone)
-          </Button>}
-          <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
-            Copy Link (Mac)
-          </Button>
-        </Row>
-
-        {createMutation.error ? (
-          <ErrorText>{createMutation.error.message}</ErrorText>
-        ) : null}
-        {copyError ? <ErrorText>{copyError}</ErrorText> : null}
-
         {ticket !== null && showQr ? (
           <Stack gap="sm">
             <div
@@ -199,7 +183,40 @@ export function CompanionPairingSection() {
               {ticket.deepLink}
             </code>
           </Stack>
+        ) : (
+          // A blurred stand-in where the code will be, so the section reads as
+          // "the QR code" at a glance; the button over it makes the real one.
+          <div className="relative w-fit rounded border border-warm-200 bg-white p-3">
+            <div
+              aria-hidden="true"
+              className="blur-sm opacity-60 select-none"
+              dangerouslySetInnerHTML={{ __html: qrSvg(pairingDeepLink(PLACEHOLDER_TOKEN, boxName), 5) }}
+            />
+            {loopbackHost(window.location.hostname) ? null : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button
+                  id="bbx-settings-pairing-create-qr"
+                  loading={createMutation.isPending ? !showQr : false}
+                  loadingLabel="Creating..."
+                  onClick={showQrCode}
+                >
+                  Show QR Code (iPhone)
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Row gap="sm" wrap>
+          <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
+            Copy Link (Mac)
+          </Button>
+        </Row>
+
+        {createMutation.error ? (
+          <ErrorText>{createMutation.error.message}</ErrorText>
         ) : null}
+        {copyError ? <ErrorText>{copyError}</ErrorText> : null}
 
         <Stack gap="xs">
           <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
