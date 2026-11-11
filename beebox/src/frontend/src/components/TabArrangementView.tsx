@@ -10,6 +10,7 @@ import { CheckboxField } from "./ui/fields/field";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";
+import { List } from "./ui/List";
 
 interface CapturedTab {
   id: string;
@@ -97,7 +98,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
           {proposal.windows.map((window, index) => (
             <Card key={window.id} as="section" aria-label={`Proposed window ${index + 1}`} background="warm">
               <Text as="h2" weight="semibold" className="mb-2">Window {index + 1}</Text>
-              <ol role="list" className="space-y-2">
+              <List ordered gap="sm">
                 {window.tabs.map((id) => (
                   <TabRow
                     key={id}
@@ -107,7 +108,7 @@ function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementD
                     onDeletedChange={(checked) => toggleDeleted(id, checked)}
                   />
                 ))}
-              </ol>
+              </List>
             </Card>
           ))}
         </Stack>

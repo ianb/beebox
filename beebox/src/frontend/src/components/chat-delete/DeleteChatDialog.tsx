@@ -4,6 +4,7 @@ import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { ModalDialog } from "../ui/ModalDialog";
 import { ArchiveChatSection } from "./ArchiveChatSection";
+import { List } from "../ui/List";
 
 type DeleteResult = RouterOutput["chat"]["deleteSession"];
 
@@ -78,21 +79,21 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
 
         <section className="mt-4 text-sm text-warm-700">
           <h3 className="font-semibold text-warm-900">Removed</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
+          <List marker="disc" gap="xs" className="mt-1">
             <li>The transcript and its working files on this machine.</li>
             <li>The active chat listing and its card. Earlier committed versions remain in git history.</li>
             <li>Pending reminders linked to this conversation.</li>
-          </ul>
+          </List>
         </section>
 
         <section className="mt-4 text-sm text-warm-700">
           <h3 className="font-semibold text-warm-900">Stays</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
+          <List marker="disc" gap="xs" className="mt-1">
             <li>Cards, files, memories, commits, and other effects created by the conversation.</li>
             <li>Transcript copies on other machines.</li>
             <li>Claude Code prompt history, checkpoints, debug data, and other application caches.</li>
             <li>Anthropic API data governed by Anthropic&apos;s retention policy.</li>
-          </ul>
+          </List>
           <p className="mt-2 space-x-3">
             <a id="bbx-chat-delete-docs-local" className="text-info-dark underline" href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noreferrer">
               Claude local data

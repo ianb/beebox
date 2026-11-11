@@ -138,7 +138,7 @@ function SheetView({ data }: RendererProps) {
       {loading ? (
         <StatusMessage variant="inline" busy>Loading spreadsheet data…</StatusMessage>
       ) : (
-        <SheetTable rows={currentRows} />
+        <SheetTable rows={currentRows} caption={currentTab?.title ?? sheet.title} />
       )}
 
       <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />

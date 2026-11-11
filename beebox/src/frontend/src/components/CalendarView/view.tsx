@@ -19,6 +19,7 @@ import { bodyHeadingTitle } from "../../lib/card-field-faces";
 import { isRecord } from "@shared/is-record";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
+import { List } from "../ui/List";
 
 const DAYS_SHOWN = 30;
 
@@ -113,7 +114,7 @@ function EventList({ path, window, onNavigate }: { path: string; window: Window 
       {byDay(events, window.timeZone).map(([day, list]) => (
         <section key={day} className="flex flex-col gap-1">
           <Text material weight="semibold" size="sm">{day}</Text>
-          <ul role="list" className="flex flex-col gap-0.5">
+          <List gap="xs">
             {list.map((event) => (
               <li key={`${event.file}@${event.start}`} className="flex flex-wrap items-baseline gap-x-2">
                 <Text material tone="muted" size="sm" className="w-20 shrink-0">{event.allDay ? "All day" : timeLabel(event.start)}</Text>
@@ -121,7 +122,7 @@ function EventList({ path, window, onNavigate }: { path: string; window: Window 
                 {event.location === undefined ? null : <Text material tone="muted" size="sm">{event.location}</Text>}
               </li>
             ))}
-          </ul>
+          </List>
         </section>
       ))}
     </div>

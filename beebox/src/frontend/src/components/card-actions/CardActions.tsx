@@ -16,6 +16,7 @@ import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { legacyHistoryState } from "../history/card-state";
 import { StatusMessage } from "../ui/StatusMessage";
+import { List } from "../ui/List";
 
 function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
@@ -98,9 +99,9 @@ export function CardActions({ target, onTrashed, vertical }: {
           <section className="mt-4">
             <Heading level={3}>{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Heading>
             <Text as="p" size="sm" tone="subtle" className="mt-1">Those links will stop working. They are not changed automatically.</Text>
-            <ul className="mt-2 list-disc pl-5 text-sm text-warm-700">
+            <List marker="disc" className="mt-2 text-sm text-warm-700">
               {referrers.map((referrer) => <li key={referrer.path}>{referrer.path} ({referrer.refs})</li>)}
-            </ul>
+            </List>
           </section>
         ) : null}
         {trash.error ? <ErrorText className="mt-4">{trash.error.message}</ErrorText> : null}

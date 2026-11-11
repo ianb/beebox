@@ -21,6 +21,7 @@ import { TextField } from "../../ui/fields/field";
 import { OpenRouterModelRow, OpenRouterUsageLine } from "./parts";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { List } from "../../ui/List";
 
 const DESCRIPTION =
   "Models added here appear in the chat model picker and can be the box default. Each one is billed " +
@@ -90,7 +91,7 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
           {list.data.models.length === 0
             ? <Hint>No OpenRouter models added. Nothing on this box can bill OpenRouter for chat until you add one.</Hint>
             : (
-              <ul role="list" className="list-none p-0 m-0 flex flex-col gap-3" aria-label="Added OpenRouter models">
+              <List gap="md" aria-label="Added OpenRouter models">
                 {list.data.models.map((model) => (
                   <OpenRouterModelRow
                     key={model.id}
@@ -100,7 +101,7 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
                     onRemove={() => { remove.mutate({ id: model.id }); }}
                   />
                 ))}
-              </ul>
+              </List>
             )}
         </>
       ) : null}

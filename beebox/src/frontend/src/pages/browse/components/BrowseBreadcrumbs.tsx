@@ -6,6 +6,7 @@
 
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { areaDisplayLabel } from "@shared/display-path";
+import { List } from "../../../components/ui/List";
 
 interface BrowseBreadcrumbsProps {
   dirPath: string;
@@ -43,8 +44,8 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
 
   return (
     <nav aria-label="Breadcrumbs" className="px-3 py-2 border-b text-sm break-words">
-      <ol role="list">
-        <li className="inline">
+      <List ordered direction="wrap" className="[&>li]:min-w-0">
+        <li>
           <button type="button"
             id="bbx-browse-crumb-root"
             data-bbx-does={underRoot ? "goes to the top of the content" : "goes to the whole box"}
@@ -57,7 +58,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
           const isLast = i === segments.length - 1;
           const label = i === 0 && !isContentArea ? areaDisplayLabel(seg) : segmentLabel(seg);
           return (
-            <li key={segPath} className="inline">
+            <li key={segPath}>
               <wbr />
               {i > 0 || !underRoot ? <span aria-hidden="true" className="text-warm-700 px-0.5">/</span> : null}
               {isLast ? (
@@ -71,7 +72,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
             </li>
           );
         })}
-      </ol>
+      </List>
     </nav>
   );
 }

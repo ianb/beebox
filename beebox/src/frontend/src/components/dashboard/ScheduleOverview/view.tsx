@@ -2,7 +2,7 @@
  * Schedule overview — table of all scheduled scripts with status and recent ticks.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useBoxNow } from "../../../lib/box-clock";
 import { useNow } from "../../../lib/use-now";
 import { trpc } from "../../../lib/trpc/client";
@@ -13,6 +13,7 @@ import { Card } from "../../ui/Card";
 import { InlineAction } from "../../ui/InlineAction";
 import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
+import { Table, Td, Th } from "../../ui/Table";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
 import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
@@ -128,14 +129,14 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
     <>
       <tr className={!s.enabled ? "opacity-50" : ""} {...bbxSource("schedule", s.name)}>
-        <td className="py-2 pr-3">
+        <Td>
           <ScheduleNameCell s={s} />
-        </td>
-        <td className="py-2 pr-3 text-warm-700 text-xs">
+        </Td>
+        <Td className="text-warm-700 text-xs">
           <span title={rawScheduleTitle(s)}>{s.cadence}</span>
           {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
-        </td>
-        <td className="py-2 pr-3 text-warm-700 text-xs">
+        </Td>
+        <Td className="text-warm-700 text-xs">
           {s.lastRun ? (
             <InlineAction
               intent="subtle"
@@ -148,8 +149,8 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
             </InlineAction>
           ) : "never"}
           <RunStrip runs={s.runStrip} />
-        </td>
-        <td className="py-2 pr-3">
+        </Td>
+        <Td>
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
             <span className="text-warning text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
               &#9888; {s.missingRequirements.join(", ")}
@@ -159,16 +160,16 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : (
             <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onShowRuns={() => setShowRuns(!showRuns)} />
           )}
-        </td>
-        <td className="py-2">
+        </Td>
+        <Td>
           <TriggerButton name={s.name} enabled={s.enabled} onFinished={() => setShowRuns(true)} />
-        </td>
+        </Td>
       </tr>
       {showRuns ? (
         <tr>
-          <td colSpan={5} className="pb-2">
+          <Td colSpan={5} className="pt-0">
             <RunHistory name={s.name} />
-          </td>
+          </Td>
         </tr>
       ) : null}
     </>
@@ -178,29 +179,27 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
 function ScheduleTableHead() {
   return (
     <thead>
-      <tr className="text-left text-xs text-warm-700 border-b">
-        <th scope="col" className="pb-2 font-medium">Name</th>
-        <th scope="col" className="pb-2 font-medium">Schedule</th>
-        <th scope="col" className="pb-2 font-medium">Last Run</th>
-        <th scope="col" className="pb-2 font-medium">Status</th>
-        <th scope="col" className="pb-2 font-medium"><VisuallyHidden>Actions</VisuallyHidden></th>
+      <tr>
+        <Th scope="col">Name</Th>
+        <Th scope="col">Schedule</Th>
+        <Th scope="col">Last Run</Th>
+        <Th scope="col">Status</Th>
+        <Th scope="col"><VisuallyHidden>Actions</VisuallyHidden></Th>
       </tr>
     </thead>
   );
 }
 
-function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
+function ScheduleTable({ schedules, labelledBy }: { schedules: ScheduleInfo[]; labelledBy: string }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <ScheduleTableHead />
-        <tbody className="divide-y divide-warm-200">
-          {schedules.map((s) => (
-            <ScheduleRow key={s.name} s={s} />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table labelledBy={labelledBy} className="text-sm">
+      <ScheduleTableHead />
+      <tbody>
+        {schedules.map((s) => (
+          <ScheduleRow key={s.name} s={s} />
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
@@ -218,6 +217,7 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
 
 export function ScheduleOverview({ schedules, recentTicks, loading, error }: ScheduleOverviewProps) {
   const [showTicks, setShowTicks] = useState(false);
+  const headingId = useId();
 
   if (loading) {
     return (
@@ -250,9 +250,9 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   return (
     <Card as="section" aria-label="Schedules" shadow border="none">
-      <h2 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h2>
+      <h2 id={headingId} className="text-sm font-semibold text-warm-700 mb-3">Schedules</h2>
 
-      <ScheduleTable schedules={schedules} />
+      <ScheduleTable schedules={schedules} labelledBy={headingId} />
 
       {recentTicks.length > 0 ? (
         <div className="mt-3 pt-3 border-t">

@@ -246,7 +246,9 @@ export default [
     },
   },
   // One owner per control: a raw <input>, <textarea> or <select> skips the
-  // field primitives' label, error and ink. Each tag lists the files that
+  // field primitives' label, error and ink; a raw list or table skips List's
+  // role and Table's name and scroll container. Markdown bodies are Markdoc
+  // output, not JSX, so this does not see them. Each tag lists the files that
   // render it (`allowIn`, relative to this config), one file per line with the
   // reason; a new file in ui/fields/ is not exempt until it is listed here.
   {
@@ -287,6 +289,41 @@ export default [
                 "src/components/ui/fields/field.tsx",
               ],
               message: "Use SelectField (components/ui/fields/field); tone=\"dark\" on the capture screen.",
+            },
+            ul: {
+              allowIn: [
+                // List: marker, gap, direction, divided, and role="list" when unmarked.
+                "src/components/ui/List.tsx",
+              ],
+              message: "Use List (components/ui/List) with raw <li> children.",
+            },
+            ol: {
+              allowIn: [
+                // List with marker="decimal" or ordered.
+                "src/components/ui/List.tsx",
+              ],
+              message: "Use List marker=\"decimal\" or List ordered (components/ui/List).",
+            },
+            table: {
+              allowIn: [
+                // Table: the required name and the one scroll container.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Table (components/ui/Table): caption or labelledBy; variant=\"grid\" for document content.",
+            },
+            th: {
+              allowIn: [
+                // Th: required scope, variant classes.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Th (components/ui/Table) with scope=\"col\" or \"row\".",
+            },
+            td: {
+              allowIn: [
+                // Td: variant classes, forwarded cell attributes.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Td (components/ui/Table).",
             },
           },
         },

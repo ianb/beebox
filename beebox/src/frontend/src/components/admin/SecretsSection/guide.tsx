@@ -15,6 +15,7 @@ import { ExternalLink } from "../../ui/ExternalLink";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { Heading } from "../../ui/Heading";
+import { List } from "../../ui/List";
 
 export type SecretGuideEntry = RouterOutput["secrets"]["guides"][number];
 type SecretVerified = RouterOutput["secrets"]["setValue"]["verified"];
@@ -39,16 +40,16 @@ export function GuidePanel({ guide }: { guide: SecretGuideEntry }) {
         {guide.uses.length === 0 ? null : (
           <Stack gap="xs">
             <Text size="xs" tone="muted" uppercase weight="medium">Used for</Text>
-            <ul className="list-disc pl-4 space-y-0.5">
+            <List marker="disc" gap="xs">
               {guide.uses.map((use) => (
                 <li key={use}><Text size="sm" tone="subtle">{use}</Text></li>
               ))}
-            </ul>
+            </List>
           </Stack>
         )}
         <Stack gap="xs">
           <Text size="xs" tone="muted" uppercase weight="medium">Setup steps</Text>
-          <ol className="list-decimal list-inside space-y-1">
+          <List marker="decimal" gap="xs">
             {guide.obtainSteps.map((step, index) => (
               <li key={step}>
                 <Text size="sm" tone="subtle" as="span">{step}</Text>
@@ -60,7 +61,7 @@ export function GuidePanel({ guide }: { guide: SecretGuideEntry }) {
                 ) : null}
               </li>
             ))}
-          </ol>
+          </List>
           {linkedStep === -1 ? (
             <ExternalLink href={guide.obtainUrl} variant="inline" className="self-start">{guide.obtainUrl}</ExternalLink>
           ) : null}

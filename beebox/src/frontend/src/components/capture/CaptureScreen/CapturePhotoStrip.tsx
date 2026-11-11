@@ -16,6 +16,7 @@
 import { useLightbox } from "../../LightboxProvider";
 import type { UploadState } from "../../../pages/capture/api";
 import { Spinner } from "../../ui/Spinner";
+import { List } from "../../ui/List";
 
 export function CapturePhotoStrip({ states, previews, includeControlIds }: { states: UploadState[]; previews: (string | null)[]; includeControlIds: boolean }) {
   const lightbox = useLightbox();
@@ -33,13 +34,13 @@ export function CapturePhotoStrip({ states, previews, includeControlIds }: { sta
   };
 
   return (
-    <ul role="list" className="flex gap-2 px-4 py-2 overflow-x-auto bg-gray-900/80" aria-label="Photos in this capture">
+    <List direction="row" gap="sm" className="px-4 py-2 overflow-x-auto bg-gray-900/80" aria-label="Photos in this capture">
       {states.map((state, i) => (
         <li key={i} className="flex-shrink-0">
           <PhotoTile index={i} state={state} src={previews[i] ?? null} onOpen={() => open(i)} id={includeControlIds ? `bbx-capture-photo-${String(i + 1)}` : undefined} />
         </li>
       ))}
-    </ul>
+    </List>
   );
 }
 

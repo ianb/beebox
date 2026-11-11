@@ -16,6 +16,7 @@ import { conciseScheduleError } from "@shared/schedule-error";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
 import { deferText, idleLabel } from "./idle";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { List } from "../../ui/List";
 
 type RunEntry = RouterOutput["scheduler"]["runs"]["runs"][number];
 
@@ -80,7 +81,7 @@ function RunItem({ run }: { run: RunEntry }) {
   const { summary } = run;
   const ended = outcome(run);
   return (
-    <li className="py-2">
+    <li>
       <div className="flex flex-wrap items-center gap-2 text-xs text-warm-700">
         <Badge tone={ended.tone} size="sm">{ended.label}</Badge>
         <FriendlyDate iso={run.ts} />
@@ -99,9 +100,9 @@ function RunList({ name }: { name: string }) {
   if (query.error) return <p className="text-xs text-danger-dark">Could not load runs: {query.error.message}</p>;
   if (query.data.runs.length === 0) return <p className="text-xs text-warm-700">No runs recorded on this machine yet.</p>;
   return (
-    <ul role="list" className="divide-y divide-warm-200" aria-label={`Recent runs of ${name}`}>
+    <List divided className="mt-2" aria-label={`Recent runs of ${name}`}>
       {query.data.runs.map((run) => <RunItem key={run.ts} run={run} />)}
-    </ul>
+    </List>
   );
 }
 

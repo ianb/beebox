@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 
 import { useBoxName } from "../../hooks/useBoxName";
 import type { RouterOutput } from "../../lib/trpc/client";
+import { List } from "../ui/List";
 
 type StatusResponse = RouterOutput["status"]["status"];
 
@@ -32,11 +33,11 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
               <div className={`font-semibold ${s.color} mb-0.5`}>
                 {s.label} ({s.files.length})
               </div>
-              <ul role="list" className="font-mono text-warm-700 space-y-0.5 max-h-32 overflow-auto">
+              <List gap="xs" className="font-mono text-warm-700 max-h-32 overflow-auto">
                 {s.files.map((f) => (
                   <li key={f}>{f}</li>
                 ))}
-              </ul>
+              </List>
             </div>
           ))}
         </div>

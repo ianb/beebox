@@ -14,6 +14,7 @@ import { getApiBase } from "../../api";
 import { trpc } from "../../lib/trpc/client";
 import { ExternalLink } from "../ui/ExternalLink";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { List } from "../ui/List";
 
 /** The dev router listens here (`workstreams-app/src/router/server/listener.ts` ROUTER_PORT). We don't pre-fill
  *  it as a *per-box* `--target`: viewing `/admin` on `localhost:3210` means
@@ -95,7 +96,7 @@ export function TailscaleSection() {
       ) : null}
 
       <h3 className="text-sm font-semibold text-warm-800 mb-2">Getting started</h3>
-      <ol className="list-decimal list-inside text-sm text-warm-700 space-y-2 mb-4">
+      <List marker="decimal" gap="sm" className="text-sm text-warm-700 mb-4">
         <li>
           Install Tailscale on this machine and on your phone or laptop, and sign in to
           each.{" "}
@@ -122,7 +123,7 @@ export function TailscaleSection() {
           To let family members in, invite them to your tailnet.{" "}
           <ExternalLink id="bbx-admin-tailscale-sharing" href="https://tailscale.com/kb/1388">Sharing with family</ExternalLink>
         </li>
-      </ol>
+      </List>
 
       <p className="text-sm text-warm-700">
         Run <code className={CODE}>bbx tailscale status</code> any time to see where things

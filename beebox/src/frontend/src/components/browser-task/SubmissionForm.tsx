@@ -27,6 +27,7 @@ import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { InlineAction } from "../ui/InlineAction";
+import { List } from "../ui/List";
 
 const MANIFEST_FILE = "records.json";
 
@@ -142,7 +143,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
         </label>
         <Text as="p" size="xs" tone="subtle">{MANIFEST_SHAPE_HINT}</Text>
         {files.length > 0 ? (
-          <ul role="list" className="text-sm">
+          <List className="text-sm">
             {files.map((f) => (
               <li key={f.name}>
                 <Row gap="sm" align="center">
@@ -153,7 +154,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
               </li>
             ))}
             <li><Text as="span" tone="subtle" size="sm">{String(files.length)} files, {humanBytes(total)}</Text></li>
-          </ul>
+          </List>
         ) : null}
         {validation !== null && !validation.ok ? <IssueList heading="Not ready to submit" issues={validation.issues} /> : null}
         {validation?.ok === true && upload.phase === "idle" ? (
@@ -184,13 +185,13 @@ function IssueList({ heading, issues }: { heading: string; issues: SubmissionIss
   return (
     <div>
       <Text as="div" size="sm" weight="semibold" tone="danger">{heading}</Text>
-      <ul className="list-disc pl-5 text-sm">
+      <List marker="disc" className="text-sm">
         {issues.map((issue, i) => (
           <li key={`${issue.path}:${String(i)}`}>
             <Text as="span" mono>{issue.path}</Text>: {issue.message}
           </li>
         ))}
-      </ul>
+      </List>
     </div>
   );
 }
