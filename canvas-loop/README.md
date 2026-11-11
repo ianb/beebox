@@ -33,8 +33,12 @@ edges, which a whole frame at 1× hides. To crop a frame you already have:
 `pnpm --dir canvas-loop run cli zoom out/frame-0000.png 90,80,160,120@4`.
 
 `cli diff <before.png> <after.png> [--out dir]` (experimental) writes views of
-what changed between two frames: side by side, changed pixels highlighted,
-the changed area cropped, and a line of numbers.
+what changed between two frames: `highlight.png` (the after frame greyed,
+magenta where pixels got darker, green where they got lighter),
+`change-N.png` (each separate changed region cropped and enlarged, before and
+after), `side-by-side.png`, and `stats.txt` (pixel counts and where each
+change crop is). Look at the highlight first to find the edits, then the
+change crops to judge them.
 
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 overwritten each run. On success it prints only the transcript path and frame

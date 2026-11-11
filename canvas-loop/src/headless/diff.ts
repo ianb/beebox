@@ -48,7 +48,9 @@ function changedMask(a: Frame, b: Frame): { mask: Uint8Array; stats: DiffStats }
     for (let c = 0; c < 4; c += 1) d = Math.max(d, Math.abs((a.data[i * 4 + c] ?? 0) - (b.data[i * 4 + c] ?? 0)));
     deltaSum += d;
     if (d > THRESHOLD) {
-      mask[i] = 1;
+      const lumA = (a.data[i * 4] ?? 0) + (a.data[i * 4 + 1] ?? 0) + (a.data[i * 4 + 2] ?? 0);
+      const lumB = (b.data[i * 4] ?? 0) + (b.data[i * 4 + 1] ?? 0) + (b.data[i * 4 + 2] ?? 0);
+      mask[i] = lumB <= lumA ? 1 : 2;
       changed += 1;
       const x = i % a.width;
       const y = Math.floor(i / a.width);
@@ -90,23 +92,75 @@ function highlight(b: Frame, mask: Uint8Array): Buffer {
   for (const [i, m] of mask.entries()) {
     const grey = ((b.data[i * 4] ?? 0) + (b.data[i * 4 + 1] ?? 0) + (b.data[i * 4 + 2] ?? 0)) / 3;
     const faded = 200 + grey * 0.2;
-    const hit = m === 1;
-    image.data[i * 4] = hit ? 230 : faded;
-    image.data[i * 4 + 1] = hit ? 0 : faded;
-    image.data[i * 4 + 2] = hit ? 160 : faded;
+    // Magenta: the pixel got darker (paint added). Green: it got lighter (paint removed or lightened).
+    const [r, g, bl] = m === 1 ? [230, 0, 160] : m === 2 ? [0, 170, 60] : [faded, faded, faded];
+    image.data[i * 4] = r;
+    image.data[i * 4 + 1] = g;
+    image.data[i * 4 + 2] = bl;
     image.data[i * 4 + 3] = 255;
   }
   ctx.putImageData(image, 0, 0);
   return out.toBuffer("image/png");
 }
 
-function cropPair(a: Frame, args: { b: Frame; bounds: NonNullable<DiffStats["bounds"]> }): Buffer {
-  const pad = 12;
-  const x = Math.max(0, args.bounds.x - pad);
-  const y = Math.max(0, args.bounds.y - pad);
-  const w = Math.min(a.width - x, args.bounds.w + pad * 2);
-  const h = Math.min(a.height - y, args.bounds.h + pad * 2);
-  const scale = Math.max(1, Math.min(4, Math.floor(480 / Math.max(w, h))));
+const CELL = 12;
+// A cell joins a cluster only with this many changed pixels: a one-pixel outline
+// shift crossing a cell (about 12 px) stays below it, a painted patch does not.
+const MIN_CELL = 16;
+
+interface Region {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly changed: number;
+}
+
+/** The densest connected clusters of changed pixels (by 12px cells), largest first. */
+export function changeRegions(mask: Uint8Array, args: { width: number; height: number; limit: number }): Region[] {
+  const cols = Math.ceil(args.width / CELL);
+  const rows = Math.ceil(args.height / CELL);
+  const counts = new Uint32Array(cols * rows);
+  for (const [i, m] of mask.entries()) {
+    if (m === 0) continue;
+    const cell = Math.floor(Math.floor(i / args.width) / CELL) * cols + Math.floor((i % args.width) / CELL);
+    counts[cell] = (counts[cell] ?? 0) + 1;
+  }
+  const seen = new Uint8Array(counts.length);
+  const regions: Region[] = [];
+  for (const [start, count] of counts.entries()) {
+    if (count < MIN_CELL || seen[start] === 1) continue;
+    const stack = [start];
+    seen[start] = 1;
+    let [c0, r0, c1, r1, total] = [Infinity, Infinity, -Infinity, -Infinity, 0];
+    while (stack.length > 0) {
+      const cell = stack.pop() ?? 0;
+      const c = cell % cols;
+      const r = Math.floor(cell / cols);
+      total += counts[cell] ?? 0;
+      [c0, r0, c1, r1] = [Math.min(c0, c), Math.min(r0, r), Math.max(c1, c), Math.max(r1, r)];
+      // Join touching cells only, so separate edits (each cheek, each hand) get their own crop.
+      for (let dr = -1; dr <= 1; dr += 1) {
+        for (let dc = -1; dc <= 1; dc += 1) {
+          const nc = c + dc;
+          const nr = r + dr;
+          const n = nr * cols + nc;
+          if (nc < 0 || nr < 0 || nc >= cols || nr >= rows || seen[n] === 1 || (counts[n] ?? 0) < MIN_CELL) continue;
+          seen[n] = 1;
+          stack.push(n);
+        }
+      }
+    }
+    const x = Math.max(0, c0 * CELL - CELL);
+    const y = Math.max(0, r0 * CELL - CELL);
+    regions.push({ x, y, w: Math.min(args.width, (c1 + 2) * CELL) - x, h: Math.min(args.height, (r1 + 2) * CELL) - y, changed: total });
+  }
+  return regions.toSorted((p, q) => q.changed - p.changed).slice(0, args.limit);
+}
+
+function cropPair(a: Frame, args: { b: Frame; region: Region }): Buffer {
+  const { x, y, w, h } = args.region;
+  const scale = Math.max(1, Math.min(6, Math.floor(360 / Math.max(w, h))));
   const gap = 8;
   const out = new Canvas(w * scale * 2 + gap, h * scale);
   const ctx = out.getContext("2d");
@@ -140,8 +194,11 @@ export async function writeDiff(before: string, args: { after: string; outDir: s
     ["side-by-side.png", sideBySide(a, b)],
     ["highlight.png", highlight(b, mask)],
   ];
-  if (stats.bounds !== undefined) files.push(["changed-crop.png", cropPair(a, { b, bounds: stats.bounds })]);
+  const regions = changeRegions(mask, { width: a.width, height: a.height, limit: 4 });
+  for (const [i, region] of regions.entries()) files.push([`change-${i + 1}.png`, cropPair(a, { b, region })]);
   for (const [name, buf] of files) writeFileSync(join(args.outDir, name), buf);
-  writeFileSync(join(args.outDir, "stats.txt"), `${statsLine(stats)}\n`);
+  const regionLines = regions.map((r, i) => `change-${i + 1}.png: x=${r.x} y=${r.y} ${r.w}×${r.h}, ${r.changed} px`);
+  const legend = "highlight.png: magenta = got darker, green = got lighter";
+  writeFileSync(join(args.outDir, "stats.txt"), `${[statsLine(stats), legend, ...regionLines].join("\n")}\n`);
   return { files: [...files.map(([name]) => name), "stats.txt"], stats };
 }
