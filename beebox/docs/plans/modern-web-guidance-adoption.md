@@ -196,7 +196,7 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
 
 **A1. Enter handlers skip IME composition** (`ime-safe-enter-submit`,
 `forms/js-ajax`). **SAMPLE, committed** `f4def2b71`, `9bb68f8a3`, `20c78287c`,
-and the round-2 fix.
+`f0ba03273`.
 - Asks: a keydown handler that acts on Enter returns early while an IME is
   composing.
 - Found: 4 static-scanner findings, 4 real
