@@ -25,8 +25,12 @@ us more. Every change lands here — hand-written and terse.
   transcript. `cli zoom <frame.png> <x,y,w,h[@scale]>...` crops an existing
   frame.
 - **Sketch lint relaxed** for `src/examples/` and `src/gallery/`: `max-params`,
-  default params, function length, `1.0` literals, plain `Error`, and
-  `reverse()` are allowed there. TEA sketches there no longer need the
+  default params, function and file length, `1.0` literals, plain `Error`, and
+  `reverse()` are allowed there.
+- **Mark seed from points only.** A mark's randomness no longer depends on its
+  brush, gesture or width, so tuning those keeps the same wobble.
+- **`cli diff`** (experimental): changed-pixel highlight (darker/lighter),
+  per-region before/after crops, side by side, and stats. TEA sketches there no longer need the
   `max-params` disable comment.
 - **`SketchUsageError` moved to core** (`src/core/errors.ts`); the headless
   errors module re-exports it.

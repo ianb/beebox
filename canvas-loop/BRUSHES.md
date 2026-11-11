@@ -95,10 +95,10 @@ that follow.
 - `wobble` moves the line sideways by up to that many pixels, smoothly, like a
   hand. The default is 0.
 - `seed` fixes a mark's random character (wobble, scatter, bristle drying).
-  Without a seed, a mark's randomness comes from its own points, brush and
-  gesture. Adding or removing **another** mark never changes this one. Moving
-  one of this mark's points changes all of its randomness, unless you give it
-  a `seed`.
+  Without a seed, a mark's randomness comes from its own points only. Adding
+  or removing **another** mark never changes this one, and changing its brush,
+  pressure, width or colour keeps its wobble. Moving one of its points changes
+  all of its randomness, unless you give it a `seed`.
 
 `--seed` on the command line does not change brush marks.
 

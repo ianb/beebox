@@ -13,7 +13,7 @@ import type { Ctx2D, CtxTransform, Layer, MakeLayer, Paint, Vec2 } from "../../p
 import { resolveGradient } from "../../paint.js";
 import { evalEnvelope, validateEnvelope } from "./envelope.js";
 import { paintBristle, paintInk, paintStamp } from "./kinds.js";
-import { hashNumbers, hashString, noise1 } from "../random.js";
+import { hashNumbers, noise1 } from "../random.js";
 import type { Sample } from "./sample.js";
 import { resample } from "./sample.js";
 import type { Brush, Gesture } from "../types.js";
@@ -67,10 +67,15 @@ function validate(req: MarkRequest): void {
   }
 }
 
+/**
+ * The mark's random seed: its explicit `gesture.seed`, or a hash of its device
+ * points alone. Brush, pressure, width and opacity are left out on purpose, so
+ * tuning them keeps the same wobble and scatter (a diff then shows only the
+ * tuned change, not a re-rolled mark).
+ */
 function markSeed(req: MarkRequest, device: readonly Contour[]): number {
   if (req.gesture.seed !== undefined) return req.gesture.seed >>> 0;
-  const basis = hashString(JSON.stringify([req.brush, req.gesture, req.weight]), 0);
-  return hashNumbers(device.flatMap((c) => c.points.flat()), basis);
+  return hashNumbers(device.flatMap((c) => c.points.flat()), 0x811c9dc5);
 }
 
 function shapeSamples(req: MarkRequest, args: { contour: Contour; width: number; seed: number }): Sample[] {

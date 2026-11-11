@@ -47,12 +47,13 @@ const teaExhaustiveness = {
 // 2026-11-11: a sketch is a drawing iterated in short render cycles, not
 // long-lived library code; the brush round-1 drawers each rewrote working
 // helpers to satisfy these rules before their first render. Relaxed are the
-// rules they hit: positional/default params, function length, `1.0` literals,
-// plain `Error`, and in-place `reverse()`. Unused-variable and type rules stay.
+// rules they hit: positional/default params, function and file length, `1.0`
+// literals, plain `Error`, and in-place `reverse()`. Unused-variable and type
+// rules stay.
 const sketchLineBudget = {
   files: ["src/examples/**/*.ts", "src/gallery/**/*.ts"],
   rules: {
-    "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
+    "max-lines": "off",
     "max-params": "off",
     "default/no-default-params": "off",
     "max-lines-per-function": "off",

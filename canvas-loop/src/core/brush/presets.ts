@@ -51,7 +51,7 @@ const AIRBRUSH: StampBrush = {
   grain: 0,
   tip: "soft",
   spacing: 0.1,
-  flow: 0.09,
+  flow: 0.14,
   sizeByPressure: 0.2,
   opacityByPressure: 0.8,
   scatter: 0,
@@ -62,7 +62,7 @@ const AIRBRUSH: StampBrush = {
 const WASH: StampBrush = {
   kind: "stamp",
   opacity: 0.8,
-  grain: 0.45,
+  grain: 0.25,
   tip: "soft",
   spacing: 0.08,
   flow: 0.3,
