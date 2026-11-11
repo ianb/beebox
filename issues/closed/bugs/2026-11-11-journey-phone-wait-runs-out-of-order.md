@@ -1,11 +1,14 @@
 ---
 title: "journey-phone-wait fails on main: the runs list has self-off before ran"
-workstream: unattached
+workstream: web-guidance-scan
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-web-guidance-scan — change-selected test run
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** The wait starts at the real hour; started 10:00–11:00 UTC the 11:00 run comes first. The test now checks which runs happened and that the log is in time order.
 
 `beebox/test/user-stories/journey-phone-wait.test.ts`, test "A wait lives
 through the interval in time order, and resumes after a stop", fails on
