@@ -6,7 +6,7 @@ import { mount } from "../../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import { any } from "@ianbicking/tap-check/check";
-import { CaptureResumeDialog } from "../../../../src/components/capture/CaptureOverlay/CaptureResumeDialog.js";
+import { CaptureResumeDialog } from "../../../../src/components/capture/CaptureScreen/CaptureResumeDialog.js";
 
 const capture = {
   id: "capture-1",

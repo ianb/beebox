@@ -1,15 +1,15 @@
-// ModalCard: opens a native modal <dialog>, routes Escape (the native cancel
+// ModalDialog: opens a native modal <dialog>, routes Escape (the native cancel
 // event) to onCancel with the browser's close prevented, routes a press on the
 // backdrop to onBackdropClick, forwards the id, and returns focus on close.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
-import { ModalCard, type ModalCardProps } from "../../../src/components/ui/ModalCard.js";
+import { ModalDialog, type ModalDialogProps } from "../../../src/components/ui/ModalDialog.js";
 
-function card(props: Partial<Omit<ModalCardProps, "children">>) {
+function card(props: Partial<Omit<ModalDialogProps, "children">>) {
   const children = [h("h2", { id: "title", key: "title" }, "Title"), h("button", { id: "inside", type: "button", key: "inside" }, "Inside")];
-  return h(ModalCard, { open: true, labelledBy: "title", ...props, children });
+  return h(ModalDialog, { open: true, labelledBy: "title", ...props, children });
 }
 
 void test("open shows a modal dialog with the id and label; closing returns focus", async (t) => {

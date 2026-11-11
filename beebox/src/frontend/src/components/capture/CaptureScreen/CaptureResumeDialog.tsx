@@ -14,7 +14,7 @@
 
 import type { ResumableCaptureView } from "./useCaptureResume";
 import { friendlyDate } from "../../ui/FriendlyDate";
-import { ModalCard } from "../../ui/ModalCard";
+import { ModalDialog } from "../../ui/ModalDialog";
 import { summarizeCaptureContents } from "../../chat/capture-message";
 
 /**
@@ -31,7 +31,7 @@ export function CaptureResumeDialog({ capture, busy, onResume, onSubmit, onDisca
 }) {
   const hasControlIds = includeControlIds !== false;
   return (
-    <ModalCard open tone="dark" labelledBy="capture-resume-title">
+    <ModalDialog open tone="dark" labelledBy="capture-resume-title">
       <h2 id="capture-resume-title" className="text-lg font-semibold">Unfinished capture</h2>
       <p className="mt-2 text-sm text-gray-300">
         A capture from {friendlyDate(capture.startedAt)} was never submitted — it still has {summarizeCaptureContents(capture.counts)}.
@@ -51,6 +51,6 @@ export function CaptureResumeDialog({ capture, busy, onResume, onSubmit, onDisca
           Discard
         </button>
       </div>
-    </ModalCard>
+    </ModalDialog>
   );
 }

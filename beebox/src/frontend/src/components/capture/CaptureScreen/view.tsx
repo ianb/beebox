@@ -53,7 +53,7 @@ function toResumeTarget(capture: ResumableCaptureView): CaptureResumeTarget {
   };
 }
 
-export function CaptureOverlay({ targetSessionId, onExit, includeControlIds }: { targetSessionId: string | null; onExit: (outcome: CaptureExit) => void; includeControlIds?: boolean }) {
+export function CaptureScreen({ targetSessionId, onExit, includeControlIds }: { targetSessionId: string | null; onExit: (outcome: CaptureExit) => void; includeControlIds?: boolean }) {
   const hasControlIds = includeControlIds !== false;
   const [decision, setDecision] = useState<Decision>(null);
   const [busy, setBusy] = useState(false);

@@ -1,5 +1,5 @@
 /**
- * The voice chip: a Dropdown-triggered chip whose face shows
+ * The voice chip: a Menu-triggered chip whose face shows
  * mute/narration/transcribing state, and whose menu holds the I/O voice
  * controls (Mute speech, Narration mode, Voice settings) — moved here from
  * `ChatMenu`/`MuteButton`/`NarrationStatusBadge` by chunk 3 of
@@ -10,19 +10,19 @@
  * a chat header row; the chip itself is unchanged.
  *
  * `VoiceChipFace` is exported separately so it can be rendered in a test
- * (src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts) without the Dropdown/router
+ * (src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts) without the Menu/router
  * context the full chip needs.
  */
 
 import { isDiarizedHqService, type HqTranscriptionService } from "@shared/transcription-services";
 import { memo, useState, type ReactNode } from "react";
-import { Dropdown } from "../../ui/Dropdown";
-import { MenuItem, MenuDivider } from "../../ui/dropdown-menu-item";
+import { Menu } from "../../ui/Menu";
+import { MenuItem, MenuDivider } from "../../ui/menu-item";
 import { trpc } from "../../../lib/trpc/client";
 import { toastError } from "../../ui/toast-store";
 import { voiceChipLabel } from "./voice-chip-label";
 import {
-  VoicePanel, transcriptionServiceLabel, hqTranscriptionServiceLabel,
+  VoiceMenuBody, transcriptionServiceLabel, hqTranscriptionServiceLabel,
   type TranscriptionServiceOption, type HqTranscriptionOption, type TtsBackendOption,
   type ServiceCapabilities,
 } from "./panels";
@@ -149,7 +149,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
       );
     case "voice":
       return (
-        <VoicePanel
+        <VoiceMenuBody
           onBack={onBackToRoot}
           currentService={currentService}
           onSelectTranscriptionService={onSelectTranscriptionService}
@@ -238,12 +238,12 @@ export const VoiceChip = memo(function VoiceChip({
   const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight, diarizationEnabled }) + (alert ? " — voice notice" : "");
 
   return (
-    <Dropdown
+    <Menu
       align="right"
       // Slightly wider than the menu default so the scope controls remain
       // compact without making the menu dominate a narrow viewport.
       width="w-[min(18rem,calc(100vw-1rem))]"
-      panelIndex={panel === "root" ? 0 : 1}
+      pageIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <VoiceChipButtonFace label={label} onClick={toggle} ariaProps={ariaProps}>
@@ -268,6 +268,6 @@ export const VoiceChip = memo(function VoiceChip({
         onSelectTtsBackend={onSelectTtsBackend}
         capabilities={capabilities.data}
       />
-    </Dropdown>
+    </Menu>
   );
 });

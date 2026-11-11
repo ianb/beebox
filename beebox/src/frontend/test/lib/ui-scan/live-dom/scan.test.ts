@@ -12,7 +12,7 @@
 // browser they come from CSS and layout: `data-test-style` is the computed style,
 // `data-test-rect` is `left,top,width,height` of the border box. Everything else
 // is markup copied from `InteractiveChat-composer.tsx`,
-// `InteractiveChat-voice-button.tsx` and `ui/Dropdown.tsx`.
+// `InteractiveChat-voice-button.tsx` and `ui/Menu.tsx`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

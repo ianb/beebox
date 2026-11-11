@@ -6,13 +6,13 @@
  * callbacks come in as props.
  */
 
-import { Dropdown } from "../../ui/Dropdown";
+import { Menu } from "../../ui/Menu";
 import { CloseButton } from "../../ui/CloseButton";
-import { MenuItem } from "../../ui/dropdown-menu-item";
+import { MenuItem } from "../../ui/menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
-import { MicOverlay } from "./MicOverlay";
+import { MicStatus } from "./MicStatus";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
 import { useComposerCaret } from "../composer-caret";
@@ -230,14 +230,14 @@ export function ChatInputArea({
             here (not in the textarea rows) so it rides the record/stop
             control on both desktop and mobile. */}
         {isTranscribing ? (
-          <MicOverlay
+          <MicStatus
             hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
             degraded={transcription.state === "reconnecting"}
             livePaused={transcription.state === "recordingLocal"}
           />
         ) : null}
         {/* Add menu: capture mode, add files, screenshot, share location. */}
-        <Dropdown
+        <Menu
           align="left"
           vertical="above"
           // Wide enough that the "(send a message first)" disabled reasons
@@ -275,7 +275,7 @@ export function ChatInputArea({
           <MenuItem id={hasControlIds ? "bbx-composer-add-files" : undefined} onClick={onAddFiles}>Add files…</MenuItem>
           <ScreenshotMenuItem addFiles={addFiles} includeControlId={hasControlIds} />
           <ShareLocationMenuItem includeControlId={hasControlIds} />
-        </Dropdown>
+        </Menu>
 
         {/* First-class capture button on the mobile row (room the desktop
             textarea occupies). Desktop reaches capture via the Add menu. */}

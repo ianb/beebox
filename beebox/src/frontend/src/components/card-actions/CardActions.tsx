@@ -6,9 +6,9 @@ import { cardChatSearch } from "../../lib/system-card-navigation";
 import type { ViewTarget } from "../../lib/view-url";
 import { explicitConversationHistoryState } from "../chat/workspace/history";
 import { Button } from "../ui/Button";
-import { ModalCard } from "../ui/ModalCard";
-import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
-import { MenuItem } from "../ui/dropdown-menu-item";
+import { ModalDialog } from "../ui/ModalDialog";
+import { Menu, type MenuVertical } from "../ui/Menu";
+import { MenuItem } from "../ui/menu-item";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
@@ -24,7 +24,7 @@ function MoreIcon() {
 export function CardActions({ target, onTrashed, vertical }: {
   target: ViewTarget;
   onTrashed?: (() => void) | undefined;
-  vertical?: DropdownVertical;
+  vertical?: MenuVertical;
 }) {
   const { path } = target;
   const { boxSlug } = useParams({ strict: false });
@@ -71,7 +71,7 @@ export function CardActions({ target, onTrashed, vertical }: {
 
   return (
     <>
-      <Dropdown
+      <Menu
         vertical={vertical}
         trigger={({ toggle, ariaProps }) => (
           <Button icon={<MoreIcon />} label="Card actions" intent="ghost" size="sm" onClick={toggle} {...ariaProps} />
@@ -81,9 +81,9 @@ export function CardActions({ target, onTrashed, vertical }: {
         <MenuItem id={`bbx-card-open-chat-new-${instanceId}`} onClick={() => openChat("new")}>Start a new chat</MenuItem>
         <MenuItem onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>View history</MenuItem>
         <MenuItem danger onClick={() => setConfirming(true)}>Move to Trash…</MenuItem>
-      </Dropdown>
+      </Menu>
       {chatError !== null ? <Text as="span" size="xs" tone="danger">{chatError}</Text> : null}
-      <ModalCard
+      <ModalDialog
         open={confirming}
         labelledBy="trash-card-title"
         // Escape is ignored while the move is in flight.
@@ -108,7 +108,7 @@ export function CardActions({ target, onTrashed, vertical }: {
           <Button intent="secondary" onClick={() => setConfirming(false)} disabled={trash.isPending}>Cancel</Button>
           <Button intent="destructive" onClick={doTrash} loading={trash.isPending} disabled={refs.isLoading || refs.isError} loadingLabel="Moving…">Move to Trash</Button>
         </div>
-      </ModalCard>
+      </ModalDialog>
     </>
   );
 }

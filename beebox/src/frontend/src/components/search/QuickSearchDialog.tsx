@@ -2,7 +2,7 @@ import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "r
 import { TextField } from "../ui/fields/field";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
-import { ModalCard } from "../ui/ModalCard";
+import { ModalDialog } from "../ui/ModalDialog";
 import { SearchResults, type SearchResult } from "./SearchResults";
 import { searchResultTarget } from "./target";
 import { heldBackText } from "./held-back";
@@ -10,7 +10,7 @@ import { trpc } from "../../lib/trpc/client";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 import { isComposing } from "../../lib/ime";
 
-export function QuickSearchOverlay() {
+export function QuickSearchDialog() {
   const workspace = useWorkspace();
   const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
@@ -50,7 +50,7 @@ export function QuickSearchOverlay() {
   };
   // Escape reaches the dialog's native cancel; the shell's top margin keeps the
   // input still while results grow below it.
-  return <ModalCard open labelledBy="quick-search-title" initialFocus='input[type="search"]' onCancel={close} onBackdropClick={close} className="mt-[10vh] max-w-xl">
+  return <ModalDialog open labelledBy="quick-search-title" initialFocus='input[type="search"]' onCancel={close} onBackdropClick={close} className="mt-[10vh] max-w-xl">
     <h2 id="quick-search-title" className="sr-only">Quick search</h2>
     <TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" />
     {!query ? <Text tone="muted" className="pt-3">Type to search this box. Press Escape to close.</Text> : null}
@@ -58,5 +58,5 @@ export function QuickSearchOverlay() {
     {results.error ? <ErrorText className="pt-3">Could not search: {results.error.message}</ErrorText> : null}
     {results.data ? <div className="-mx-5 -mb-5 mt-3 max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
     {heldNote ? <Text tone="muted" size="sm" className="pt-3">{heldNote}</Text> : null}
-  </ModalCard>;
+  </ModalDialog>;
 }

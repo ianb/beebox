@@ -3,7 +3,7 @@
  * studio renders the same button with fixed props (see `AppNav/nav.tsx`).
  */
 
-import type { DropdownTriggerProps } from "../ui/Dropdown";
+import type { MenuTriggerProps } from "../ui/Menu";
 import { Avatar } from "../ui/Avatar";
 
 /** Who the avatar draws; null before sign-in is known. */
@@ -15,8 +15,8 @@ export interface ProfileButtonUser {
 
 export function ProfileButtonFace({ user, onClick, ariaProps }: {
   user: ProfileButtonUser | null;
-  onClick: DropdownTriggerProps["toggle"];
-  ariaProps: DropdownTriggerProps["ariaProps"];
+  onClick: MenuTriggerProps["toggle"];
+  ariaProps: MenuTriggerProps["ariaProps"];
 }) {
   return (
     <button

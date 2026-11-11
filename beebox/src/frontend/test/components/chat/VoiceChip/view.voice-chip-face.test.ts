@@ -1,7 +1,7 @@
 // # Voice chip face
 //
 // `VoiceChipFace` (`components/chat/VoiceChip.tsx`) is the presentational half of
-// the app bar's voice chip — renderable standalone, without the `Dropdown` or
+// the app bar's voice chip — renderable standalone, without the `Menu` or
 // router context the full `VoiceChip` needs.
 //
 // One drawing shares a single bot between two **orthogonal** facts:

@@ -20,7 +20,7 @@ import { CaptureBubbleView, type CaptureBubbleModel, type CaptureLiveStatus } fr
 import { RESOLVED_HOLD_MS } from "../../../components/chat/useCaptureBubbles";
 import { CaptureChip } from "../../../components/chat/CaptureChip";
 import { UserMessage } from "../../../components/chat/user-message/view";
-import { CaptureOverlay } from "../../../components/capture/CaptureOverlay/view";
+import { CaptureScreen } from "../../../components/capture/CaptureScreen/view";
 import { CaptureControls } from "../../../components/capture/CaptureControls";
 import type { RetryFeedback } from "../../capture/retry-feedback";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/api-context";
@@ -285,7 +285,7 @@ function OverlayDemo() {
       <pre className="mt-2 text-xs text-warm-700 whitespace-pre-wrap">{log.join("\n") || "(fake capture-api calls appear here)"}</pre>
       {open ? (
         <CaptureApiProvider value={api}>
-          <CaptureOverlay targetSessionId="dev-chat" onExit={() => setOpen(false)} />
+          <CaptureScreen targetSessionId="dev-chat" onExit={() => setOpen(false)} />
         </CaptureApiProvider>
       ) : null}
     </div>

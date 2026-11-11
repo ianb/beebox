@@ -5,7 +5,7 @@
  * mounts the whole feature with a single tag.
  */
 
-import { ScreenshotConsentPopup } from "./ScreenshotConsentPopup";
+import { ScreenshotConsentDialog } from "./ScreenshotConsentDialog";
 import { ScreenshotIndicatorStrip } from "./ScreenshotIndicatorStrip";
 import type { ScreenshotRequestController } from "./screenshot-request-handler";
 
@@ -17,7 +17,7 @@ export function ScreenshotRequestUI({ controller }: { controller: ScreenshotRequ
     <>
       <ScreenshotIndicatorStrip indicators={indicators} onDismiss={handleDismissIndicator} />
       {activeRequest ? (
-        <ScreenshotConsentPopup
+        <ScreenshotConsentDialog
           key={activeRequest.requestId}
           request={activeRequest}
           onResolved={handleResolveActive}

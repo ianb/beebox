@@ -1,6 +1,6 @@
 /**
  * Transcript search for the "Recent chats" panel: the debounced field state
- * and the result rows. Split from `SessionListPanel.tsx` to keep that file
+ * and the result rows. Split from `SessionListMenuBody.tsx` to keep that file
  * under the line cap.
  *
  * Results are one row per CHAT (the server folds chunk hits), each landing
@@ -18,7 +18,7 @@ import {
   type ChatSessionInfo,
 } from "../../../../api";
 import { bbxSource } from "../../../../lib/source-tag";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { useMenuClose } from "../../../ui/Menu";
 import { Highlight } from "../../../search/SearchResults";
 import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
@@ -108,7 +108,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
   currentSessionId: string | null;
   onRetry: () => void;
 }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   // Re-render each minute so the hit ages stay current.
   useNow(60_000);
   if (state.kind === "loading") {

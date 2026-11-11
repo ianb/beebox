@@ -56,7 +56,7 @@ export function useSourceView() {
   return { active, toggle };
 }
 
-interface SourceViewOverlayProps {
+interface SourceInspectorProps {
   active: boolean;
   onClose: () => void;
 }
@@ -65,12 +65,12 @@ interface SourceViewOverlayProps {
  * Inner component that gets remounted (via key) when source view is toggled,
  * so all state resets automatically without setState-in-effect.
  */
-export function SourceViewOverlay({ active, onClose }: SourceViewOverlayProps) {
+export function SourceInspector({ active, onClose }: SourceInspectorProps) {
   if (!active) return null;
-  return <SourceViewOverlayInner onClose={onClose} />;
+  return <SourceInspectorInner onClose={onClose} />;
 }
 
-function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
+function SourceInspectorInner({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<SelectedSource | null>(null);
   const [hovered, setHovered] = useState<Element | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);

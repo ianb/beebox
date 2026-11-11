@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { DropdownTriggerProps } from "../ui/Dropdown";
+import type { MenuTriggerProps } from "../ui/Menu";
 import type { LandmarkIdentity } from "@backend/trpc/routers/landmarks/router.js";
 import { dirBasename, type Place } from "../../lib/place-label";
 import { CardMark } from "../ui/CardMark";
@@ -39,13 +39,13 @@ export type PlacePillLandmark = Pick<LandmarkIdentity, "dir" | "label" | "symbol
 
 /**
  * Where one half's menu opens. The face supplies the trigger and the wrapper's
- * layout classes; the live pill wraps them in a `Dropdown` with its menu body,
+ * layout classes; the live pill wraps them in a `Menu` with its menu body,
  * the theme studio with a fixed one.
  */
 export type PlacePillMenu = (half: {
   half: "switch" | "here";
   className: string;
-  trigger: (props: DropdownTriggerProps) => ReactNode;
+  trigger: (props: MenuTriggerProps) => ReactNode;
 }) => ReactNode;
 
 /**
@@ -73,7 +73,7 @@ export function PlacePillFace({ boxSlug, boxName, place, landmark, menu, onOpen 
         half: "switch",
         className: "min-w-0 flex overflow-hidden",
         trigger: ({ open, toggle, ariaProps }) => (
-          // w-full is load-bearing on a Dropdown trigger — measured in-browser
+          // w-full is load-bearing on a Menu trigger — measured in-browser
           // on the retired ContextChip: the native <button> doesn't stretch to
           // its wrapper on its own, and without it a long label overflows
           // instead of truncating.

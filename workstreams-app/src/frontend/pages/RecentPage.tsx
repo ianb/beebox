@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { QuotaPanel } from "../components/QuotaPanel.js";
-import { Button, Pill } from "../components/ui.js";
+import { Button, Badge } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Quota, RecentFeed, RecentFile } from "../types.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
@@ -59,8 +59,8 @@ function RecentRow({ file, now }: { file: RecentFile; now: number }) {
         ? <Link to="/issues" search={target.search}>{file.relPath}</Link>
         : <Link to="/browse" search={target.search}>{file.relPath}</Link>}
       <span className="muted">{ago(file.at, now)}</span>
-      {file.workstream === null ? null : <Pill tone="accent">{file.workstream}</Pill>}
-      {file.inProgress ? <Pill tone="warning">in progress</Pill> : null}
+      {file.workstream === null ? null : <Badge tone="accent">{file.workstream}</Badge>}
+      {file.inProgress ? <Badge tone="warning">in progress</Badge> : null}
     </li>
   );
 }

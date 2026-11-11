@@ -6,13 +6,13 @@ import { byId, mount } from "../../helpers/dom-harness.js";
 import { createElement as h, type ReactNode } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { Dropdown } from "../../../src/components/ui/Dropdown.js";
-import { MenuItem } from "../../../src/components/ui/dropdown-menu-item.js";
+import { Menu } from "../../../src/components/ui/Menu.js";
+import { MenuItem } from "../../../src/components/ui/menu-item.js";
 
 const noop = (): void => undefined;
 
 async function openMenu(kind: "menu" | "navigation", children: ReactNode) {
-  const view = await mount(h(Dropdown, {
+  const view = await mount(h(Menu, {
     kind,
     trigger: ({ toggle, ariaProps }) => h("button", { id: "bbx-t-trigger", type: "button", onClick: toggle, ...ariaProps }, "Open"),
     children,

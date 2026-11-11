@@ -1,5 +1,5 @@
 /**
- * SessionListPanel — the "Recent chats" sub-panel body.
+ * SessionListMenuBody — the "Recent chats" sub-panel body.
  *
  * Rendered by `SessionChip`'s "Recent chats ›" row. The unified bar briefly
  * retired it (docs/implemented-plans/top-nav-ia.md Track C2) on the theory
@@ -42,9 +42,9 @@ import { href, toSearch } from "../../../../lib/routing";
 import { getChatSessions, type ChatSessionInfo, type DeadChatInfo } from "../../../../api";
 import { groupByTranscriptState } from "../../../../lib/transcript-state";
 import { bbxSource } from "../../../../lib/source-tag";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { useMenuClose } from "../../../ui/Menu";
 import { TextField } from "../../../ui/fields/field";
-import { MenuItem } from "../../../ui/dropdown-menu-item";
+import { MenuItem } from "../../../ui/menu-item";
 import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
 import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
@@ -57,7 +57,7 @@ type LoadState =
   | { kind: "error" }
   | { kind: "loaded"; sessions: ChatSessionInfo[]; dead: DeadChatInfo[] };
 
-export function SessionListPanel({ contextDir }: { contextDir: string | null }) {
+export function SessionListMenuBody({ contextDir }: { contextDir: string | null }) {
   const { boxSlug } = useParams({ strict: false });
   // eslint-disable-next-line no-restricted-syntax -- `strict: false` collapses the search type across every route; this component only ever renders under routes that carry an optional `session` string param, matching the ChatPage/HistoryPage convention.
   const search = useSearch({ strict: false }) as { session?: string };
@@ -211,7 +211,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
  * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
  */
 function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; boxSlug: string; allRows: readonly { label: string }[] }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   if (dead.length === 0) return null;
   return (
     <>
@@ -277,7 +277,7 @@ function SessionRows({
   /** True for the done group: the whole row recedes behind its heading. */
   muted: boolean;
 }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   // Re-render each minute so the ages stay current.
   useNow(60_000);
   return (

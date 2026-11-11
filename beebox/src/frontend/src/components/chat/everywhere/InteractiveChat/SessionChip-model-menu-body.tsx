@@ -16,7 +16,7 @@
  *   statement about the box, not an instruction to this conversation.
  */
 
-import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../../../ui/menu-item";
 import { chatModelLabel, chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 import { isGlmModelId, useAddedModels, useGlmAvailable } from "./model-availability-store";
 
@@ -37,7 +37,7 @@ function PinIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export interface ModelPanelProps {
+export interface ModelMenuBodyProps {
   onBack: () => void;
   /** This chat's own choice; `null` means it follows the box default. */
   selectedModel: string | null;
@@ -61,7 +61,7 @@ export interface ModelPanelProps {
 }
 
 /** One engine's heading plus its models, or the reason it has none to show. */
-function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
+function EngineSection(props: ModelMenuBodyProps & { engine: ChatAgentEngine }) {
   const { engine, agentEngine, boxEngine, enabledEngines, canChooseEngine, boxDefault, canPin, selectedModel } = props;
   const isOwn = engine === agentEngine;
   const enabled = enabledEngines.includes(engine);
@@ -136,7 +136,7 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
 }
 
 /** "Model" sub-panel. */
-export function ModelPanel(props: ModelPanelProps) {
+export function ModelMenuBody(props: ModelMenuBodyProps) {
   const { onBack, selectedModel, boxDefault, canPin, agentEngine, enabledEngines, boxEngine } = props;
   const addedModels = useAddedModels();
   const defaultLabel = boxDefault === null

@@ -3,10 +3,10 @@ import { Link } from "@tanstack/react-router";
 
 import { CodeBlock, languageForPath } from "../components/CodeBlock.js";
 import { CommentLayer } from "../components/CommentLayer.js";
-import { DocumentLifecyclePills } from "../components/DocumentLifecyclePills.js";
+import { DocumentLifecycleBadges } from "../components/DocumentLifecycleBadges.js";
 
 import { Markdown } from "../components/Markdown.js";
-import { Button, Pill } from "../components/ui.js";
+import { Button, Badge } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import { usePageIdentity } from "../lib/page-identity.js";
 import type { BrowsedDocument, DirectoryEntry } from "../types.js";
@@ -20,14 +20,14 @@ import type { BrowsedDocument, DirectoryEntry } from "../types.js";
  * (`router.tsx` issuesRoute). A worktree is never a path segment — that is
  * the `/<worktree>/dev/` shape this replaces.
  */
-function KindPill({ document }: { document: BrowsedDocument }) {
+function KindBadge({ document }: { document: BrowsedDocument }) {
   const tone = document.tracked ? "info" : "neutral";
   return (
     <>
-      <Pill tone={tone}>{document.kind}</Pill>
-      <DocumentLifecyclePills lifecycle={document.lifecycle} />
-      {document.tracked ? null : <Pill tone="warning">untracked</Pill>}
-      {document.workstream === null ? null : <Pill tone="accent">{document.workstream}</Pill>}
+      <Badge tone={tone}>{document.kind}</Badge>
+      <DocumentLifecycleBadges lifecycle={document.lifecycle} />
+      {document.tracked ? null : <Badge tone="warning">untracked</Badge>}
+      {document.workstream === null ? null : <Badge tone="accent">{document.workstream}</Badge>}
     </>
   );
 }
@@ -77,7 +77,7 @@ function DirectoryView({ entries, workstream }: { entries: DirectoryEntry[]; wor
           >
             {entry.name}{entry.kind === "directory" ? "/" : ""}
           </Link>
-          <DocumentLifecyclePills lifecycle={entry.lifecycle} />
+          <DocumentLifecycleBadges lifecycle={entry.lifecycle} />
         </li>
       ))}
     </ul>
@@ -125,7 +125,7 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
     <main className="simple-page">
       <header>
         <h1 className="browse-title">{label}</h1>
-        <p className="issue-meta"><KindPill document={document} /></p>
+        <p className="issue-meta"><KindBadge document={document} /></p>
         <ChangedIn document={document} />
       </header>
       <div ref={contentRef}><DocumentBody document={document} /></div>

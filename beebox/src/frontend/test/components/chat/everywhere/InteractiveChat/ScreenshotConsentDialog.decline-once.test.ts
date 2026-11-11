@@ -4,7 +4,7 @@
 import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
-import { ScreenshotConsentPopup } from "../../../../../src/components/chat/everywhere/InteractiveChat/ScreenshotConsentPopup.js";
+import { ScreenshotConsentDialog } from "../../../../../src/components/chat/everywhere/InteractiveChat/ScreenshotConsentDialog.js";
 
 void test("Escape then a backdrop press posts one decline", async (t) => {
   const posts: Array<{ url: string; body: unknown }> = [];
@@ -16,7 +16,7 @@ void test("Escape then a backdrop press posts one decline", async (t) => {
   t.teardown(() => { globalThis.fetch = realFetch; });
 
   const resolutions: unknown[] = [];
-  const view = await mount(h(ScreenshotConsentPopup, {
+  const view = await mount(h(ScreenshotConsentDialog, {
     request: { requestId: "req-1", session: "s-1", expiresAt: new Date(Date.now() + 60_000).toISOString() },
     onResolved: (indicator) => { resolutions.push(indicator); },
   }));

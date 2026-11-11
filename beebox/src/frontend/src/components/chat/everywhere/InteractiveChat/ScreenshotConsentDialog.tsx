@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../../ui/Button";
-import { ModalCard } from "../../../ui/ModalCard";
+import { ModalDialog } from "../../../ui/ModalDialog";
 import { Row } from "../../../ui/Row";
 import { Hint } from "../../../ui/Hint";
 import { Heading } from "../../../ui/Heading";
@@ -27,7 +27,7 @@ import {
   type ScreenshotRequest,
 } from "./screenshot-request-handler";
 
-export function ScreenshotConsentPopup({ request, onResolved }: {
+export function ScreenshotConsentDialog({ request, onResolved }: {
   request: ScreenshotRequest;
   /** Called once — with an indicator on a successful share, or null on decline/dismiss/timeout. */
   onResolved: (indicator: ScreenshotIndicator | null) => void;
@@ -87,7 +87,7 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
   if (sharing) return null;
 
   return (
-    <ModalCard open labelledBy="bbx-screenshot-consent-title" onCancel={decline} onBackdropClick={decline}>
+    <ModalDialog open labelledBy="bbx-screenshot-consent-title" onCancel={decline} onBackdropClick={decline}>
       <Heading level={2} id="bbx-screenshot-consent-title">
         The agent wants to see this screen
       </Heading>
@@ -103,6 +103,6 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
           Share screenshot
         </Button>
       </Row>
-    </ModalCard>
+    </ModalDialog>
   );
 }

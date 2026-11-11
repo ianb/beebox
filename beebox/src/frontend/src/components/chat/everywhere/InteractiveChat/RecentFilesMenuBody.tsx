@@ -14,17 +14,17 @@ import type { SessionEntry } from "../../../../api";
 import type { FileSummary } from "@core/file-summary";
 import { FileEntry } from "../../../ui/FileEntry";
 import { DirectoryIcon } from "../../../../file-types/icons";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { useMenuClose } from "../../../ui/Menu";
 import { StatusMessage } from "../../../ui/StatusMessage";
 
-interface RecentFilesPanelProps {
+interface RecentFilesMenuBodyProps {
   entries: SessionEntry[];
   onPanel?: (summary: FileSummary<unknown>) => void;
 }
 
-export function RecentFilesPanel({ entries, onPanel }: RecentFilesPanelProps) {
+export function RecentFilesMenuBody({ entries, onPanel }: RecentFilesMenuBodyProps) {
   const { files, isLoading } = useRecentFiles(entries);
-  const close = useDropdownClose();
+  const close = useMenuClose();
   const handlePanel = onPanel
     ? (summary: FileSummary<unknown>) => {
         close();

@@ -16,7 +16,7 @@ import { KeywordHint } from "./KeywordHint";
  *   spoken commands can't be heard; the manual stop/send buttons still work.
  *   The bars stay green: the recording itself is fine.
  */
-export function MicOverlay({ hasText, degraded, livePaused }: { hasText: boolean; degraded: boolean; livePaused: boolean }) {
+export function MicStatus({ hasText, degraded, livePaused }: { hasText: boolean; degraded: boolean; livePaused: boolean }) {
   return (
     <div className="absolute bottom-full right-0 mb-1 flex flex-col items-end gap-1 pointer-events-none">
       <VolumeIndicator degraded={degraded} />

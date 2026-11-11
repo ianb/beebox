@@ -6,12 +6,12 @@
  * (`VoiceChip-panels.tsx`) in chunk 3 of docs/implemented-plans/chat-header-chips.md.
  */
 
-import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../../../ui/menu-item";
 
 /**
  * "Advanced" sub-panel: debug toggles and process controls + status footer.
  */
-export function AdvancedPanel({
+export function AdvancedMenuBody({
   onBack,
   debugView,
   onToggleDebugView,

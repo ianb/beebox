@@ -15,8 +15,8 @@
  */
 
 import type { ReactNode } from "react";
-import { Dropdown, useDropdownClose } from "../ui/Dropdown";
-import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { Menu, useMenuClose } from "../ui/Menu";
+import { MenuItem, MenuDivider } from "../ui/menu-item";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing/parse";
 import { snippet } from "../../lib/snippet";
 
@@ -86,7 +86,7 @@ function ControlButton({
   onClick: () => void;
   children: ReactNode;
 }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   return (
     <button
       type="button"
@@ -119,7 +119,7 @@ export function SpeechMenu({ segments, playing, anyPlaying, canSkip, onStop, onS
   const hasMultiple = segments.length > 1;
 
   return (
-    <Dropdown
+    <Menu
       width="w-64"
       dense
       trigger={({ toggle, ariaProps }) => (
@@ -158,6 +158,6 @@ export function SpeechMenu({ segments, playing, anyPlaying, canSkip, onStop, onS
           ))}
         </>
       ) : null}
-    </Dropdown>
+    </Menu>
   );
 }

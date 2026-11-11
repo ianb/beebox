@@ -1,14 +1,14 @@
 /**
- * `MenuItem`/`MenuDivider` — the row primitives for `Dropdown`'s children,
- * split out of Dropdown.tsx to keep that file under the 300-line cap. Reads
- * `DropdownContext` (exported by Dropdown.tsx) for close-on-click and dense
+ * `MenuItem`/`MenuDivider` — the row primitives for `Menu`'s children,
+ * split out of Menu.tsx to keep that file under the 300-line cap. Reads
+ * `MenuContext` (exported by Menu.tsx) for close-on-click and dense
  * spacing.
  */
 
 import { useContext, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "../../lib/cn";
-import { DropdownContext, useMenuItemRole } from "./Dropdown";
+import { MenuContext, useMenuItemRole } from "./Menu";
 
 interface MenuItemBase {
   children: ReactNode;
@@ -65,7 +65,7 @@ function MenuItemContent({ icon, children }: { icon: ReactNode | undefined; chil
 function noop() {}
 
 export function MenuItem(props: MenuItemProps) {
-  const ctx = useContext(DropdownContext);
+  const ctx = useContext(MenuContext);
   const role = useMenuItemRole();
   const close = ctx !== null ? ctx.close : noop;
   const dense = ctx !== null ? ctx.dense : false;
@@ -109,7 +109,7 @@ export function MenuItem(props: MenuItemProps) {
         // expected to surface their own user-visible errors; this is the
         // last-resort log if an onClick's promise rejects uncaught.
         void Promise.resolve(onClick()).catch((err: unknown) => {
-          console.error("[Dropdown] MenuItem onClick handler threw:", err);
+          console.error("[Menu] MenuItem onClick handler threw:", err);
         });
       }}
       className={className}
@@ -120,7 +120,7 @@ export function MenuItem(props: MenuItemProps) {
 }
 
 export function MenuDivider() {
-  const ctx = useContext(DropdownContext);
+  const ctx = useContext(MenuContext);
   const dense = ctx !== null ? ctx.dense : false;
   return <div className={cn("border-t border-warm-100", dense ? "my-0.5" : "my-1")} role="separator" />;
 }

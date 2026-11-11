@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
-import { ModalCard } from "../ui/ModalCard";
+import { ModalDialog } from "../ui/ModalDialog";
 import { ArchiveChatSection } from "./ArchiveChatSection";
 
 type DeleteResult = RouterOutput["chat"]["deleteSession"];
@@ -59,7 +59,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   };
 
   return (
-    <ModalCard
+    <ModalDialog
       open
       labelledBy="delete-chat-title"
       initialFocus="#bbx-chat-delete-cancel"
@@ -124,7 +124,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
             {cleanup ? "Retry cleanup" : "Delete permanently"}
           </Button>
         </div>
-    </ModalCard>
+    </ModalDialog>
   );
 }
 

@@ -6,8 +6,8 @@ import { MaterialContext } from "./material";
 
 // The "first focusable menu item" the open/close focus management below
 // looks for. Deliberately broader than `[role="menuitem"]`: several existing
-// menus nest plain focusable controls (e.g. `RecentFilesPanel`'s per-row
-// preview/panel buttons, `LandmarkLinksPanel`'s group-expand toggles) that
+// menus nest plain focusable controls (e.g. `RecentFilesMenuBody`'s per-row
+// preview/panel buttons, `LandmarkLinksMenuBody`'s group-expand toggles) that
 // aren't `MenuItem`s themselves but are still real, reachable menu content.
 const FOCUSABLE_MENU_ITEM_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -31,7 +31,7 @@ function moveMenuFocus(menu: HTMLElement, event: { key: string; target: EventTar
   return true;
 }
 
-export interface DropdownContextValue {
+export interface MenuContextValue {
   close: () => void;
   /** Tighter padding for menu items + dividers. */
   dense: boolean;
@@ -39,25 +39,25 @@ export interface DropdownContextValue {
   menu: boolean;
 }
 
-/** Exported for `MenuItem`/`MenuDivider` (`dropdown-menu-item.tsx`) only. */
-export const DropdownContext = createContext<DropdownContextValue | null>(null);
+/** Exported for `MenuItem`/`MenuDivider` (`menu-item.tsx`) only. */
+export const MenuContext = createContext<MenuContextValue | null>(null);
 
-/** Close the enclosing Dropdown. No-op outside one. For custom menu content. */
-export function useDropdownClose(): () => void {
-  const ctx = useContext(DropdownContext);
+/** Close the enclosing Menu. No-op outside one. For custom menu content. */
+export function useMenuClose(): () => void {
+  const ctx = useContext(MenuContext);
   return ctx !== null ? ctx.close : () => {};
 }
 
-/** The role a menu row takes: `"menuitem"` in a command menu, none in a navigation list or outside a Dropdown's panel. */
+/** The role a menu row takes: `"menuitem"` in a command menu, none in a navigation list or outside a Menu's panel. */
 export function useMenuItemRole(): "menuitem" | undefined {
-  const ctx = useContext(DropdownContext);
+  const ctx = useContext(MenuContext);
   return ctx === null || ctx.menu ? "menuitem" : undefined;
 }
 
-export type DropdownAlign = "left" | "right";
-export type DropdownVertical = "below" | "above";
+export type MenuAlign = "left" | "right";
+export type MenuVertical = "below" | "above";
 
-export interface DropdownTriggerProps {
+export interface MenuTriggerProps {
   open: boolean;
   /**
    * Wire into your trigger element's `onClick` (pass the reference directly,
@@ -70,17 +70,17 @@ export interface DropdownTriggerProps {
   ariaProps: { "aria-haspopup"?: "menu"; "aria-expanded": boolean };
 }
 
-export interface DropdownProps {
+export interface MenuProps {
   /**
    * Render prop that produces the trigger. Wire `toggle` into your
    * element's `onClick` and spread `ariaProps` for accessibility.
    */
-  trigger: (props: DropdownTriggerProps) => ReactNode;
+  trigger: (props: MenuTriggerProps) => ReactNode;
   children: ReactNode;
   /** Menu edge aligned to the trigger. Default `"right"`. */
-  align?: DropdownAlign;
+  align?: MenuAlign;
   /** Whether the menu opens below or above the trigger. Default `"below"`. */
-  vertical?: DropdownVertical;
+  vertical?: MenuVertical;
   /** Tailwind width class for the menu. Default `"w-48"`. */
   width?: string;
   /** Tighter padding for menu items + dividers. */
@@ -96,7 +96,7 @@ export interface DropdownProps {
    * value) and slides in — from the right on a deeper panel, from the left
    * on a shallower one. Omit for menus with no sub-panels (no animation).
    */
-  panelIndex?: number;
+  pageIndex?: number;
   /**
    * `"menu"` (default) is a command menu: `role="menu"`, `aria-haspopup="menu"`
    * on the trigger, rows are `role="menuitem"`, and ArrowUp/ArrowDown/Home/End
@@ -111,7 +111,7 @@ export interface DropdownProps {
 // 1. Focus the first menu item when the menu opens via a keyboard activation
 //    of the trigger (a keyboard-activated click has `event.detail === 0`).
 //    Mouse opens leave focus untouched so no focus ring appears. Some menus
-//    (e.g. `RecentFilesPanel`) mount a loading row before their real content,
+//    (e.g. `RecentFilesMenuBody`) mount a loading row before their real content,
 //    so a plain post-mount check can miss the first item entirely — a
 //    one-shot MutationObserver picks it up whenever it actually appears.
 // 2. A `keepOpen` submenu row (the panel-swap idiom) unmounts the focused
@@ -161,7 +161,7 @@ function useOpenMenuFocus({ open, menuRef, keyboardOpenRef }: {
 
 // Direction for the panel-swap slide: the "adjust state during render"
 // pattern (react.dev "You Might Not Need an Effect") rather than an effect,
-// so the very first render after a `panelIndex` change already picks the
+// so the very first render after a `pageIndex` change already picks the
 // right class — an effect would land one render late. Calling `setState`
 // here is safe because it's conditioned on an actual change, so it can't
 // loop. The result is null until a panel swap happens WITHIN the current
@@ -169,17 +169,17 @@ function useOpenMenuFocus({ open, menuRef, keyboardOpenRef }: {
 // the direction left over from a previous session — the onClose reset back
 // to the root panel records a spurious "left" that would otherwise play on
 // the next open), so each closed→open transition clears it.
-function usePanelSlideDirection({ open, panelIndex }: { open: boolean; panelIndex: number }): "right" | "left" | null {
-  const [prevPanelIndex, setPrevPanelIndex] = useState(panelIndex);
+function usePageSlideDirection({ open, pageIndex }: { open: boolean; pageIndex: number }): "right" | "left" | null {
+  const [prevPageIndex, setPrevPageIndex] = useState(pageIndex);
   const [direction, setDirection] = useState<"right" | "left" | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) setDirection(null);
   }
-  if (panelIndex !== prevPanelIndex) {
-    setDirection(open ? (panelIndex > prevPanelIndex ? "right" : "left") : null);
-    setPrevPanelIndex(panelIndex);
+  if (pageIndex !== prevPageIndex) {
+    setDirection(open ? (pageIndex > prevPageIndex ? "right" : "left") : null);
+    setPrevPageIndex(pageIndex);
   }
   return direction;
 }
@@ -195,7 +195,7 @@ function visibleViewport() {
   };
 }
 
-export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex, kind: kindArg }: DropdownProps) {
+export function Menu({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, pageIndex, kind: kindArg }: MenuProps) {
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
   const width = widthArg ?? "w-48";
@@ -314,10 +314,10 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
 
   useDismiss({ root: rootRef, portal: menuRef, open, onDismiss: closeMenu });
 
-  const currentPanelIndex = panelIndex ?? 0;
-  const direction = usePanelSlideDirection({ open, panelIndex: currentPanelIndex });
+  const currentPageIndex = pageIndex ?? 0;
+  const direction = usePageSlideDirection({ open, pageIndex: currentPageIndex });
 
-  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: closeMenu, dense, menu: isMenu }), [closeMenu, dense, isMenu]);
+  const ctxValue = useMemo<MenuContextValue>(() => ({ close: closeMenu, dense, menu: isMenu }), [closeMenu, dense, isMenu]);
   const toggle = useCallback(
     (event?: ReactMouseEvent<HTMLElement>) => {
       setOpen((o) => {
@@ -330,7 +330,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     },
     [],
   );
-  const triggerProps: DropdownTriggerProps = {
+  const triggerProps: MenuTriggerProps = {
     open,
     toggle,
     ariaProps: isMenu ? { "aria-haspopup": "menu", "aria-expanded": open } : { "aria-expanded": open },
@@ -354,17 +354,17 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
                 width,
               )}
             >
-              {/* Keyed on panelIndex: the panel-swap idiom (VoiceChip/SessionChip/
+              {/* Keyed on pageIndex: the panel-swap idiom (VoiceChip/SessionChip/
                   PlacePill) remounts this wrapper on every panel change, which
                   also re-triggers useOpenMenuFocus's re-anchor observer. The
                   slide direction reflects whether the new panel is deeper
                   (right) or shallower (left); motion-safe: leaves it an instant
                   swap under prefers-reduced-motion. */}
               <div
-                key={currentPanelIndex}
+                key={currentPageIndex}
                 className={cn(
-                  direction === "right" && "motion-safe:animate-dropdown-panel-in-right",
-                  direction === "left" && "motion-safe:animate-dropdown-panel-in-left",
+                  direction === "right" && "motion-safe:animate-menu-page-in-right",
+                  direction === "left" && "motion-safe:animate-menu-page-in-left",
                 )}
               >
                 <MenuPanelScope value={ctxValue}>{children}</MenuPanelScope>
@@ -378,33 +378,33 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
 }
 
 /**
- * The open menu's contexts: its Dropdown, and no material. The menu is a
+ * The open menu's contexts: its Menu, and no material. The menu is a
  * white app panel, so it keeps app ink when its trigger sits in a material.
  */
-function MenuPanelScope({ value, children }: { value: DropdownContextValue; children: ReactNode }) {
+function MenuPanelScope({ value, children }: { value: MenuContextValue; children: ReactNode }) {
   return (
     <MaterialContext.Provider value={false}>
-      <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>
+      <MenuContext.Provider value={value}>{children}</MenuContext.Provider>
     </MaterialContext.Provider>
   );
 }
 
 /**
- * Re-establish a Dropdown's context on the far side of a `createPortal`.
+ * Re-establish a Menu's context on the far side of a `createPortal`.
  *
  * A portal moves DOM, not React context: menu content rendered by one tree
- * and portaled into a Dropdown that lives in another (the app bar's here
+ * and portaled into a Menu that lives in another (the app bar's here
  * menu, `components/app-bar-chrome.tsx`) would otherwise see no
- * `DropdownContext`, and its `MenuItem`s would silently fail to close the
+ * `MenuContext`, and its `MenuItem`s would silently fail to close the
  * menu. Wrap the portaled content in this with the slot's `close`.
  */
-export function PortaledMenuScope({ close, menu, children }: { close: () => void; /** False when the host Dropdown is `kind="navigation"`. Default true. */ menu?: boolean; children: ReactNode }) {
+export function PortaledMenuScope({ close, menu, children }: { close: () => void; /** False when the host Menu is `kind="navigation"`. Default true. */ menu?: boolean; children: ReactNode }) {
   const isMenu = menu ?? true;
-  const value = useMemo<DropdownContextValue>(() => ({ close, dense: false, menu: isMenu }), [close, isMenu]);
-  return <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>;
+  const value = useMemo<MenuContextValue>(() => ({ close, dense: false, menu: isMenu }), [close, isMenu]);
+  return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;
 }
 
-// `MenuItem`/`MenuDivider` live in `dropdown-menu-item.tsx` (split out to
+// `MenuItem`/`MenuDivider` live in `menu-item.tsx` (split out to
 // keep this file under the line cap and avoid a value-import cycle — that
-// file reads `DropdownContext`, exported above). Callers import them from
+// file reads `MenuContext`, exported above). Callers import them from
 // there directly.

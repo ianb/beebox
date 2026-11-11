@@ -1,8 +1,8 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CardSymbolData } from "@shared/card-symbol";
-import { MenuItem } from "../ui/dropdown-menu-item";
-import { useMenuItemRole } from "../ui/Dropdown";
+import { MenuItem } from "../ui/menu-item";
+import { useMenuItemRole } from "../ui/Menu";
 import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
@@ -125,7 +125,7 @@ export function LandmarkList({
   const overlayRef = useRef<HTMLElement>(null);
   const { mobileViewport, visibleViewport } = useSearchViewport(searchOpen);
   const searchable = landmarks !== null && landmarks.length > 20;
-  // Inside a navigation Dropdown the rows are links, not menu items.
+  // Inside a navigation Menu the rows are links, not menu items.
   const rowsRole = useMenuItemRole() === "menuitem" ? "menu" : "group";
 
   useIsomorphicLayoutEffect(() => {

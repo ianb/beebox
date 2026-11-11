@@ -20,8 +20,8 @@
 
 import { LandmarkGroupRows } from "../../../landmarks/LandmarkGroupRows";
 import { trpc } from "../../../../lib/trpc/client";
-import { useDropdownClose, useMenuItemRole } from "../../../ui/Dropdown";
-import { MenuDivider } from "../../../ui/dropdown-menu-item";
+import { useMenuClose, useMenuItemRole } from "../../../ui/Menu";
+import { MenuDivider } from "../../../ui/menu-item";
 
 interface ResolvedLink {
   ref: string;
@@ -36,14 +36,14 @@ interface ResolvedGroup {
   count: number;
 }
 
-interface LandmarkLinksPanelProps {
+interface LandmarkLinksMenuBodyProps {
   /** Box-relative dir the chat is scoped to (`""` for root, null for none). */
   contextDir: string | null;
   /** Open a link's target in the companion pane. */
   onPanel: (link: ResolvedLink) => void;
 }
 
-export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelProps) {
+export function LandmarkLinksMenuBody({ contextDir, onPanel }: LandmarkLinksMenuBodyProps) {
   const { data, isError, error, refetch } = trpc.landmarks.forDir.useQuery(
     { dir: contextDir ?? "" },
     { enabled: contextDir !== null },
@@ -83,7 +83,7 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
 }
 
 function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   const role = useMenuItemRole();
   return (
     <button

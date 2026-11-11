@@ -9420,7 +9420,7 @@ tests:
   # === modern-web-guidance adoption (docs/plans/modern-web-guidance-adoption.md) ===
   # Status (2026-11-11, Claude claude-opus-5-5): both pass on first run in the
   # web-guidance-scan worktree. dev-browser-floor read frontend.md and
-  # Dropdown.tsx, quoted the Safari 18.0 floor, and said anchor positioning
+  # Menu.tsx, quoted the Safari 18.0 floor, and said anchor positioning
   # needs the existing JS positioning. view-enter-field-ime-and-name found the
   # views doc's "Controls People Can Use" section by grep and led with
   # <form onSubmit>, isComposing as the fallback, and a visible label.
@@ -9437,7 +9437,7 @@ tests:
       WKWebView at iOS 18 (Safari 18.0) plus current desktop browsers; says
       anchor positioning is newer than Safari 18.0, so it may be used only as
       progressive enhancement (the menu still works without it) or with a
-      small fallback, and that ui/Dropdown already positions in JS. FAILS if it
+      small fallback, and that ui/Menu already positions in JS. FAILS if it
       says anchor positioning is safe without a fallback, or names a floor
       not in the docs.
     correct_matches:

@@ -2,16 +2,16 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useModalDialog } from "../../hooks/useModalDialog";
 import { cn } from "../../lib/cn";
 
-export type ModalCardTone = "light" | "dark";
+export type ModalDialogTone = "light" | "dark";
 
-export interface ModalCardProps {
+export interface ModalDialogProps {
   children: ReactNode;
   /** Renders nothing while false; opening shows a native modal `<dialog>`. */
   open: boolean;
   /** Id of the heading that names the dialog. */
   labelledBy: string;
   /** `dark` for a dialog over the dark capture screen. */
-  tone?: ModalCardTone;
+  tone?: ModalDialogTone;
   /**
    * Escape (the native `cancel` event). The default close is always
    * prevented; the caller decides whether to close. Omit it and Escape does
@@ -28,7 +28,7 @@ export interface ModalCardProps {
   className?: string;
 }
 
-const TONE_CLASSES: Record<ModalCardTone, string> = {
+const TONE_CLASSES: Record<ModalDialogTone, string> = {
   light: "bg-white text-warm-900",
   dark: "border border-gray-700 bg-gray-900 text-white",
 };
@@ -41,7 +41,7 @@ const TONE_CLASSES: Record<ModalCardTone, string> = {
  * the `<dialog>` itself landed on the backdrop. The backdrop press is a
  * pointer shortcut for Escape, so it is a listener rather than a control.
  */
-export function ModalCard({ children, open, labelledBy, tone, onCancel, onBackdropClick, initialFocus, id, className }: ModalCardProps) {
+export function ModalDialog({ children, open, labelledBy, tone, onCancel, onBackdropClick, initialFocus, id, className }: ModalDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useModalDialog({ dialog: dialogRef, open, ...(initialFocus === undefined ? {} : { initialFocus }) });
   useEffect(() => {

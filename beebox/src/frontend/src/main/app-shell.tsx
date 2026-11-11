@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "../components/DebugLog";
 import { reportPreviousAdminHang } from "../lib/admin-hang-probe";
 import { startVoiceStagingDrainer } from "../lib/audio/voice-staging-queue/queue";
-import { SourceViewOverlay, useSourceView } from "../components/SourceViewOverlay";
+import { SourceInspector, useSourceView } from "../components/SourceInspector";
 import { ConversationCardProvider } from "../components/chat/everywhere/card-context/context";
 import { BoxConversationProvider, useBoxConversation } from "../components/chat/everywhere/conversation-context/context";
 import { BoxConversationShell } from "../components/chat/everywhere/BoxConversationShell/view";
@@ -37,7 +37,7 @@ import { DocumentIcon } from "../components/DocumentIcon";
 import { DocumentPlace } from "../components/DocumentPlace";
 import { useVisualViewportHeight } from "../hooks/useVisualViewportHeight";
 import { BoxSlugProvider } from "../lib/box-slug";
-import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
+import { QuickSearchDialog } from "../components/search/QuickSearchDialog";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
 import { useBoxClockSync } from "../hooks/useBoxClockSync";
@@ -140,8 +140,8 @@ export function ProductLayout() {
             {standalonePage ? null : <BoxConversationShell />}<Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-          <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
-          <QuickSearchOverlay />
+          <SourceInspector active={sourceView.active} onClose={handleCloseSourceView} />
+          <QuickSearchDialog />
         </Stack>
     </BoxShellProviders>
   );
