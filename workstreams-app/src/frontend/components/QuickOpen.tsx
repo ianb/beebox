@@ -78,7 +78,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
           value={query}
           onChange={(event) => { setQuery(event.target.value); }}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && matches[0]) choose(matches[0].relPath);
+            if (event.key === "Enter" && !event.nativeEvent.isComposing && matches[0]) choose(matches[0].relPath);
           }}
         />
         {/* An empty corpus and an empty search are different states. */}

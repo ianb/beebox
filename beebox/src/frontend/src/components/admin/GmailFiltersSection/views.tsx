@@ -6,6 +6,7 @@
 
 import { TextField } from "../../ui/fields/field";
 import { Button } from "../../ui/Button";
+import { isComposing } from "../../../lib/ime";
 
 interface GmailLabelListProps {
   labels: string[];
@@ -62,7 +63,7 @@ export function GmailLabelList({
           value={newLabel}
           onChange={onNewLabelChange}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !isComposing(e.nativeEvent)) {
               e.preventDefault();
               onAdd();
             }
