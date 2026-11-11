@@ -19,10 +19,13 @@ const FIGURE_STARTERS: Record<FigureRuntimeType, string> = {
 // figure fits at phone width too.
 export default function (p5, { mount, figure }) {
   const width = () => Math.min(mount.clientWidth || 360, 640);
+  // A reader who asked for reduced motion gets one still frame.
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let angle = 0;
   const instance = new p5((p) => {
     p.setup = () => {
       p.createCanvas(width(), width());
+      if (still) p.noLoop();
     };
     p.draw = () => {
       // Derive ALL layout from p.width / p.height, not captured constants —
@@ -55,6 +58,8 @@ export default function (p5, { mount, figure }) {
 // fits at phone width too.
 export default function (THREE, { mount, figure }) {
   const width = () => Math.min(mount.clientWidth || 360, 640);
+  // A reader who asked for reduced motion gets one still frame.
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
   camera.position.z = 2.5;
@@ -75,6 +80,7 @@ export default function (THREE, { mount, figure }) {
     renderer.setSize(canvasW, canvasW);
     camera.aspect = 1;
     camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
   }
   resize();
 
@@ -85,7 +91,7 @@ export default function (THREE, { mount, figure }) {
     renderer.render(scene, camera);
     raf = requestAnimationFrame(loop);
   };
-  loop();
+  if (!still) loop();
 
   const ro = new ResizeObserver(() => {
     if (canvasW !== width()) resize();
@@ -199,8 +205,13 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 24);
 }
 
+// A reader who asked for reduced motion gets the paused first frame.
 export default (cl, { mount, figure }) =>
-  cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
+  cl.mountSketch(mount, {
+    module: { params, canvas, init, update, draw },
+    initialParams: figure.params,
+    autoplay: !matchMedia("(prefers-reduced-motion: reduce)").matches,
+  });
 `,
 };
 
