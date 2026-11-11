@@ -127,10 +127,22 @@ function andOperands(node: ESTree.Node): ESTree.Node[] {
   return [node];
 }
 
-/** `if (<reads composition>) return;` — the early exit that makes everything after it safe. */
+/**
+ * True when composition alone makes the expression true: a bare read
+ * (`isComposing(e)`, `e.isComposing`, `e.keyCode === 229`), or an `||` with
+ * such a read as one operand. `e.isComposing && e.shiftKey` is not enough.
+ */
+function guardAlone(node: ESTree.Node): boolean {
+  if (node.type === "LogicalExpression") return node.operator === "||" && (guardAlone(node.left) || guardAlone(node.right));
+  if (node.type === "UnaryExpression") return false;
+  if (node.type === "BinaryExpression") return (node.operator === "===" || node.operator === "==") && containsGuard(node);
+  return containsGuard(node);
+}
+
+/** `if (<composition>) return;` — the early exit that makes everything after it safe. */
 function isEarlyReturnGuard(statement: ESTree.Node): boolean {
   if (statement.type !== "IfStatement" || statement.alternate) return false;
-  if (!containsGuard(statement.test) || andOperands(statement.test).some(isNegatedGuard)) return false;
+  if (!guardAlone(statement.test)) return false;
   const body = statement.consequent.type === "BlockStatement" ? statement.consequent.body : [statement.consequent];
   return body.at(-1)?.type === "ReturnStatement";
 }

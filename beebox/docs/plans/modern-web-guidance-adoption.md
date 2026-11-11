@@ -39,7 +39,8 @@ category marks it as a boxholder decision.
 source and test lines, plus 370 for the lint rule with its tests and docs) and
 stop. That covers the
 four real static-scanner findings, the field-description gap that touches every
-form, and the modal scroll leak.
+form, and the `min-h-dvh` pages. The modal scroll rule in the same sample has
+no visible effect today (C1).
 
 **Chosen scope**, if every "adopt" and "adopt with changes" recommendation
 below is approved: about 1,100 changed source and test lines across about 60
@@ -194,7 +195,8 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
 ### Category A — Forms and input
 
 **A1. Enter handlers skip IME composition** (`ime-safe-enter-submit`,
-`forms/js-ajax`). **SAMPLE, committed** `f4def2b71`, `9bb68f8a3`, `20c78287c`.
+`forms/js-ajax`). **SAMPLE, committed** `f4def2b71`, `9bb68f8a3`, `20c78287c`,
+and the round-2 fix.
 - Asks: a keydown handler that acts on Enter returns early while an IME is
   composing.
 - Found: 4 static-scanner findings, 4 real
@@ -209,7 +211,9 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
   (negated in its `&&` chain or an enclosing `if`, or an earlier
   `if (<guard>) return;`); the first version accepted any `isComposing` read
   anywhere, which cross-model review showed could pass an unsafe handler
-  (fixed in `20c78287c`). On 1,049 files it reports the same 4 sites at the
+  (fixed in `20c78287c`); round 2 found that `if (e.isComposing && e.shiftKey)
+  return;` also passed, so an early return now counts only when composition
+  alone triggers it (a bare read, or one operand of an `||`). On 1,049 files it reports the same 4 sites at the
   parent commit and 0 after the fix. Misses: handlers imported from another
   module, and `addEventListener` handlers on non-text elements are reported
   (no element exemption).
@@ -592,18 +596,21 @@ Temporal. Rec: **reject**; revisit when Temporal is Baseline.
   `beebox/templates/` (procedure cards), and `src/schemas/guide/` found 0.
   The figure starter sketches live in string literals
   (`src/templates/builtins/starters.ts`), which the scanner cannot see, so
-  they were written out (`figureStarterSketch` for `p5js`, `three`, `d3`) and
-  scanned: 0. Read against the guides: the p5 and three starters animate on
-  every frame (`p.draw`, `requestAnimationFrame`) with no
-  `prefers-reduced-motion` check, and the figure harness applies none
-  (`git grep reduced` in `components/FigureView` is empty), while the app
+  they were written out (`figureStarterSketch` for all four runtimes: `p5js`,
+  `three`, `d3`, `canvas-loop`) and scanned: 0. Read against the guides: the
+  p5 and three starters animate on every frame (`p.draw`,
+  `requestAnimationFrame`) and the canvas-loop starter ticks through
+  `cl.mountSketch`, all with no `prefers-reduced-motion` check; neither the
+  figure harness nor `canvas-loop/src` applies one (`git grep reduced` in
+  `components/FigureView` and `canvas-loop/src` is empty), while the app
   already honours it elsewhere (`lib/reduced-motion.ts`). A box agent copies
   the starter, so every new figure inherits it. Captions serve as alt text
   (`src/schemas/figure.ts`: *"the caption (alt text) shows beneath the
   figure"*).
 - **H0. Reduced motion in figure starters.** Draw one frame and stop when
   `matchMedia("(prefers-reduced-motion: reduce)")` matches; one line in the
-  figure schema instructions. 2 files. Rec: **adopt with changes**
+  figure schema instructions. 2 files (canvas-loop may need its own option in
+  `mountSketch`). Rec: **adopt with changes**
   (starters and instructions; not a harness-level pause).
 - **Options.**
   1. Add about 10 lines to `box-docs/views.md`: name controls, use native
@@ -697,8 +704,8 @@ telemetry.
 ## Could this be simpler?
 
 The simplest version is the three samples plus F1 (one header hook): about
-500 lines, all four static findings, every form's descriptions, the modal
-scroll leak, and the clickjacking exposure. It fails on the keyboard and
+500 lines, all four static findings, every form's descriptions, and the
+clickjacking exposure. It fails on the keyboard and
 screen-reader defects in shared primitives (B2, B3, B9–B11), which a person
 using a screen reader or a keyboard meets on every menu and tab strip, and it
 leaves no rule to stop regressions (principle 11). The fuller plan does not

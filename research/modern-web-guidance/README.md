@@ -15,8 +15,8 @@ Code: `beebox/src/frontend/src/`, the stock views (`beebox/src/schemas/*.tsx`,
 `beebox/src/plugins/*/view*`), `workstreams-app/src/frontend/`, and
 `beebox-clerk/`. Tests, fixtures and generated output were skipped.
 Templates were added after the plan's cross-model review: `beebox/src/templates/`
-(including the figure starter sketches, written out from their string
-literals), `beebox/templates/`, and `beebox/src/schemas/guide/`. The static
+(including the four figure starter sketches, `p5js`, `three`, `d3` and
+`canvas-loop`, written out from their string literals), `beebox/templates/`, and `beebox/src/schemas/guide/`. The static
 scan found 0 there; the reading found one item (reduced motion in the figure
 starters, plan item H0).
 

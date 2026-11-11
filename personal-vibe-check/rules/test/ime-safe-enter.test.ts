@@ -68,6 +68,8 @@ describe("ime-safe-enter", () => {
         // A composition read that does not control the Enter branch.
         { code: "<input onKeyDown={(e) => { if (e.isComposing) log(); if (e.key === \"Enter\") submit(); }} />", errors: ERR },
         { code: "<input onKeyDown={(e) => { if (e.key === \"Enter\") submit(); if (e.isComposing) return; }} />", errors: ERR },
+        // An early return that needs more than composition leaves Enter unguarded.
+        { code: "<input onKeyDown={(e) => { if (e.isComposing && e.shiftKey) return; if (e.key === \"Enter\") submit(); }} />", errors: ERR },
         // A non-negated guard in the chain means "only while composing".
         { code: "<input onKeyDown={(e) => { if (e.key === \"Enter\" && e.isComposing) submit(); }} />", errors: ERR },
       ],
