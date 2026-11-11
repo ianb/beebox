@@ -138,12 +138,6 @@ function indexDoc(entries: { filename: string; readWhen: string }[]): string {
     "own content (its guides, personality, box-local card types) are in that box's",
     "`_content/docs/generated/` instead.",
     "",
-    "Bee Box is open source. Its code is at https://github.com/ianb/beebox and its",
-    "site is https://beebox.run/. Point a person there when they ask where Bee Box",
-    "comes from, want to read its source, or want to follow or report on its",
-    "development. The copy this box runs is the installed package, which can be",
-    "older or newer than the repository's main branch.",
-    "",
     "| Doc | Read it when |",
     "|---|---|",
   ];
