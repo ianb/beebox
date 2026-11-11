@@ -18,7 +18,7 @@ step (below).
   `sandbox` policy stays authoritative. Fastify always selects the production
   policy: it serves the built frontend, never Vite's HMR HTML.
 - **Framing and companion headers** — `registerDocumentSecurityHeaders`
-  (`src/webapp/server/document-security-headers.ts`) runs after that hook
+  (`src/webapp/document-security-headers.ts`) runs after that hook
   and adds `X-Frame-Options: SAMEORIGIN`, an **enforced**
   `Content-Security-Policy: frame-ancestors 'self'`, `Referrer-Policy:
   strict-origin-when-cross-origin`, and a `Permissions-Policy` that turns off

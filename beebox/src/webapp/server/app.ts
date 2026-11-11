@@ -32,7 +32,7 @@ import {
   registerUnbuiltFrontendRoot,
 } from "../server-root/root-routes.js";
 import { registerCspReportRoute } from "../routes/api-csp-report.js";
-import { registerDocumentSecurityHeaders } from "./document-security-headers.js";
+import { registerDocumentSecurityHeaders } from "../document-security-headers.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";

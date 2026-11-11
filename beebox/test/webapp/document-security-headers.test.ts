@@ -10,8 +10,8 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
-import { registerCspReportingHeaders } from "../../../src/webapp/server-root/root-routes.js";
-import { registerDocumentSecurityHeaders } from "../../../src/webapp/server/document-security-headers.js";
+import { registerCspReportingHeaders } from "../../src/webapp/server-root/root-routes.js";
+import { registerDocumentSecurityHeaders } from "../../src/webapp/document-security-headers.js";
 
 async function makeServer() {
   const app = Fastify();
@@ -34,6 +34,7 @@ function securityHeaders(headers: Record<string, unknown>): Record<string, unkno
     reportOnlyPresent: headers["content-security-policy-report-only"] !== undefined,
     referrer: headers["referrer-policy"],
     permissions: headers["permissions-policy"],
+    hsts: headers["strict-transport-security"],
   };
 }
 
@@ -46,6 +47,7 @@ void test("an HTML document is protected from cross-origin framing and keeps its
     reportOnlyPresent: true,
     referrer: "strict-origin-when-cross-origin",
     permissions: "usb=(), serial=(), hid=(), payment=()",
+    hsts: "max-age=86400",
   });
 });
 
@@ -62,6 +64,7 @@ void test("a route's own CSP and Referrer-Policy win; framing protection still a
         reportOnlyPresent: false,
         referrer: "strict-origin-when-cross-origin",
         permissions: "usb=(), serial=(), hid=(), payment=()",
+        hsts: "max-age=86400",
       },
       invite: {
         frameOptions: "SAMEORIGIN",
@@ -69,6 +72,7 @@ void test("a route's own CSP and Referrer-Policy win; framing protection still a
         reportOnlyPresent: true,
         referrer: "no-referrer",
         permissions: "usb=(), serial=(), hid=(), payment=()",
+        hsts: "max-age=86400",
       },
     },
   );
@@ -83,5 +87,6 @@ void test("a non-HTML response gets none of them", async (t) => {
     reportOnlyPresent: false,
     referrer: undefined,
     permissions: undefined,
+    hsts: undefined,
   });
 });
