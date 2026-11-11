@@ -10,6 +10,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { installCodexPlugin, CodexPluginInstallError } from "../../../src/core/agent/ensure-codex-plugin.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 /** A fake `codex`, recording what was asked of it. */
 function fakeCodex(responses: (args: string[]) => string) {
@@ -94,6 +95,7 @@ void test("Since codex-cli 0.153.4 the list also carries the account's remote pl
 // Our own entry without a local path is a registration this module does not
 // understand, and it re-registers rather than trusting it:
 void test("Our own entry without a local path is a registration this module does not und...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const codex = fakeCodex((args) => {
     if (args[1] === "list") return JSON.stringify({
       installed: [{ pluginId: "beebox-codex@beebox", version: "0.1.1", source: { source: "remote", id: "plugin_x" } }],
@@ -103,6 +105,8 @@ void test("Our own entry without a local path is a registration this module does
   await installCodexPlugin(codex.run);
 
   t.check(codex.calls.at(-1), "plugin add beebox-codex@beebox --json");
+  // The log tells an operator which listing entry was not understood:
+  t.check(warnings(), ["[codex-plugin] our plugin is listed without a local path; re-registering: { source: 'remote', id: 'plugin_x' }"]);
 
   // The plugin not being installed here is a different fact from the registration
   // being broken, and collapsing the two is how a checkout hijacks the entry: if
@@ -146,6 +150,7 @@ void test("Our own entry without a local path is a registration this module does
 // every `codex plugin …` command on the machine stayed broken until a human ran
 // the removal by hand. Now the failed list *is* the repair signal.
 void test("The regression case. A temp checkout registered the marketplace and was then...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const codex = fakeCodex((args) => {
     if (args[1] === "list") {
       // What Codex prints once the registered marketplace root is gone.
@@ -162,6 +167,8 @@ void test("The regression case. A temp checkout registered the marketplace and w
     "plugin marketplace add <root> --json",
     "plugin add beebox-codex@beebox --json",
   ]);
+  // The log names the failed list as the reason for re-registering:
+  t.check(warnings(), ["[codex-plugin] `codex plugin list` failed; re-registering the marketplace: FakeCodexFailureError: marketplace root does not contain a supported manifest"]);
 
   // The removals are best-effort — they run when the state is already broken, so
   // "nothing to remove" and "too broken to remove cleanly" are both fine. Only the
@@ -177,11 +184,13 @@ void test("The regression case. A temp checkout registered the marketplace and w
     "plugin marketplace add <root> --json",
     "plugin add beebox-codex@beebox --json",
   ]);
+  t.check(warnings(), ["[codex-plugin] `codex plugin list` failed; re-registering the marketplace: FakeCodexFailureError: no"]);
 });
 
 // A registration whose path is gone gets the same repair even when the list
 // itself still answers — a stale entry naming a culled worktree.
 void test("A registration whose path is gone gets the same repair even when the list its...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const codex = fakeCodex((args) => (
     args[1] === "list" ? listing({ version: "0.1.1", path: "/nonexistent/culled-worktree/plugins/beebox-codex" }) : "{}"
   ));
@@ -211,4 +220,6 @@ void test("A registration whose path is gone gets the same repair even when the 
     true,
     "Could not install the Bee Box Codex plugin",
   ]);
+  // The failed list is logged before the install gives up:
+  t.check(warnings(), ["[codex-plugin] `codex plugin list` failed; re-registering the marketplace: FakeCodexFailureError: codex: command not found"]);
 });

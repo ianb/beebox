@@ -1,12 +1,15 @@
 ---
 title: "Tests that spawn a child process have no shared helper for 'wait for its first line' or 'drop its pipes like a dying parent'"
-workstream: unattached
+workstream: test-quiet
 area: beebox
 labels: [testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261103-231838
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** test/helpers/child-process.ts: spawnUntilFirstLine (first stdout line as a string, stderr captured, bounded wait) and spawnThenAbandon (closes stdin, stdout and stderr at once). The file-lock and git-lock crashed-holder tests, the box-maintenance holder tests and the Docling driver lock and orphan tests use them.
 
 Two sessions in one workstream hit the same gap in `beebox/test/helpers/`,
 which has per-case child scripts (`file-lock-child.ts`,

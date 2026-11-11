@@ -21,6 +21,7 @@ import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-hel
 import { stopChatSessionsAndWait } from "../../../../src/core/chat/session/registry/shutdown.js";
 import { BACKGROUND_STALL_MS } from "../../../../src/core/chat/session/run/live-tasks.js";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 // eslint-disable-next-line no-restricted-syntax -- test-only: the one frame field the pump reads, of the SDK's large union
 const toolProgress = { type: "tool_progress" } as unknown as SDKMessage;
@@ -468,6 +469,7 @@ void test("the sweep keeps a chat with a live background task until it settles o
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
+  const warnings = consoleLines(t, "warn");
   clock = 1_000;
   const session = registry.getOrCreate("s1");
   await session.send("go");
@@ -516,6 +518,8 @@ void test("the sweep keeps a chat with a live background task until it settles o
   });
   quiet.stop();
   await tick();
+  // Ending a run with a live task is logged, with the cause when there is one:
+  t.check(warnings(), ["[ChatSession] Ending run s-quiet with 1 live background task(s)"]);
 
   // A run that has gone quiet past the limit is hung. It goes, and ends outright.
   const hung = registry.getOrCreate("s2");
@@ -528,6 +532,7 @@ void test("the sweep keeps a chat with a live background task until it settles o
   registry.sweepIdle();
   await tick();
   t.check({ size: registry.size(), running: hung.isRunning(), aborted: hungRun?.aborted }, { size: 0, running: false, aborted: true });
+  t.check(warnings(), ["[ChatSession] Ending run s2 with 1 live background task(s): it had produced no output for 4 hours and was treated as hung"]);
 
   // A later run on the same session starts with no live tasks: the last run's
   // set must not pin it. The fake's fresh run reports none.
@@ -542,6 +547,7 @@ void test("the sweep keeps a chat with a live background task until it settles o
   await again.send("again");
   await tick();
   t.check(again.isWorkingInBackground(), false);
+  t.check(warnings(), ["[ChatSession] Ending run s3 with 1 live background task(s)"]);
 });
 
 void test("the live cap passes over a chat with background work", async (t) => {
@@ -556,6 +562,7 @@ void test("the live cap passes over a chat with background work", async (t) => {
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
+  const warnings = consoleLines(t, "warn");
   clock = 1_000;
   const working = registry.getOrCreate("working");
   await working.send("go");
@@ -586,6 +593,13 @@ void test("the live cap passes over a chat with background work", async (t) => {
   registry.enforceLiveCap("third");
   await tick();
   t.check({ working: working.isRunning(), quiet: quiet.isRunning() }, { working: true, quiet: true });
+
+  // Shutting down ends both runs with tasks live, and says the server was the cause:
+  await registry.shutdown();
+  t.check(warnings(), [
+    "[ChatSession] Ending run working with 1 live background task(s): the Bee Box server shut down",
+    "[ChatSession] Ending run quiet with 1 live background task(s): the Bee Box server shut down",
+  ]);
 });
 
 // ## Ending a run with tasks live
@@ -605,6 +619,7 @@ void test("stop and restart abort a run only while tasks are live", async (t) =>
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
+  const warnings = consoleLines(t, "warn");
   const session = registry.getOrCreate("s1");
   const cases: [string, () => void, string[]][] = [
     ["stop, no tasks", () => { session.stop(); }, []],
@@ -624,6 +639,8 @@ void test("stop and restart abort a run only while tasks are live", async (t) =>
     seen[name] = run?.aborted;
   }
   t.check(seen, { "stop, no tasks": false, "stop, live task": true, "restart, no tasks": false, "restart, live task": true });
+  // Each abort with a task live is logged:
+  t.check(warnings(), Array.from({ length: 2 }, () => "[ChatSession] Ending run s1 with 1 live background task(s)"));
 });
 
 // ## Shutdown during a prewarm's probe spawns nothing

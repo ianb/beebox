@@ -84,3 +84,7 @@ Not resolved. Leave open.
 ## Note 2026-11-11
 
 `card-shot/run.e2e.test.ts` passes in isolation on main at 9e412427b, and `bin/schedules list` reports the last hourly full-suite run clean. Likely stale; close once the next runs stay green.
+
+## Note 2026-11-11 (test-quiet, reopened)
+
+Closed earlier today as not reproducible; that was wrong. In worktree-test-quiet (no browser code changed) `card-shot/run.e2e.test.ts` passed in one full run, then failed in the next two full runs and once run alone, each time at the screenshot step: "✗ Failed to read: Resource temporarily unavailable (os error 35) (the command reached the daemon but no response came back ...)". No agent-browser or Chrome processes were left running afterwards. The hourly runs since 20261110-111416 only happened to pass it. The 2026-11-09 report of the same failure (`issues/closed/bugs/2026-11-09-full-suite-red-box-feedback-bugs-6100813f.md`) stays closed as a duplicate of this one.

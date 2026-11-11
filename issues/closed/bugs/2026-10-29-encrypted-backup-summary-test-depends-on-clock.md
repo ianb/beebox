@@ -1,12 +1,15 @@
 ---
 title: "`AdminOverview.encrypted-backup-summary.test.ts` fails once its hardcoded snapshot date is 36 hours old"
-workstream: unattached
+workstream: test-quiet
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.311 bump
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** Fixed on main by 521159ebb: the fresh case builds verifiedAt from the clock and the stale case uses a 2000 date.
 
 `beebox/src/frontend/test/components/admin/AdminOverview.encrypted-backup-summary.test.ts`
 ("summarizes encrypted backup lifecycle") passes a fixture with

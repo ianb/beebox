@@ -13,7 +13,8 @@ import { join, dirname } from "node:path";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, writeFile, rm, realpath } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -35,6 +36,32 @@ for (const root of roots) {
   if ((await boxMaintenanceStatus(root)).phase !== "ready") throw Error("opened early");
 }
 `;
+
+const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
+
+/**
+ * `bbx engine maintenance` as a shell runs it: the exit code and what it wrote
+ * to stderr (the controller's own notices and the holders'). The command is
+ * the node script given.
+ */
+async function maintain(roots: string[], opts: { script: string; verifyHub?: string }): Promise<{ code: number; stderr: string }> {
+  const args = [...cli.slice(1), "engine", "maintenance", ...roots.flatMap((root) => ["--box", root]), ...(opts.verifyHub ? ["--verify-hub", opts.verifyHub] : []), "--", process.execPath, "--import", "tsx", "--input-type=module", "-e", opts.script];
+  const child = spawn(process.execPath, args, { stdio: ["ignore", "ignore", "pipe"] });
+  let stderr = "";
+  child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+  const code = await new Promise<number | null>((resolve) => child.once("close", resolve));
+  return { code: code ?? 1, stderr };
+}
+
+/** The recovery snapshot the holder reports for each box it closes (boxes close in path order). */
+function snapshotLines(roots: string[]): string {
+  return roots.toSorted().map((root) => `Deployment recovery snapshot: ${root} refs/bbx/migrations/deployment/snapshots/«uuid»`).join("\n");
+}
+
+/** The notice for each box that did not complete maintenance. */
+function unverifiedLines(roots: string[]): string {
+  return roots.toSorted().map((root) => `Box not verified; it reopens with unfinished maintenance: ${root}`).join("\n");
+}
 
 void test("line 37", async (t) => {
   t.teardown(async () => {
@@ -59,28 +86,32 @@ void test("line 37", async (t) => {
   await two.write("input.txt", "another draft");
   two.commitAll("initial");
   await one.write("input.txt", "dirty valuable draft");
-  const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
-  const invoke = (script: string, verifyHub?: string) => runMaintenance([two.root, one.root], {
-    command: process.execPath,
-    cli,
-    ...(verifyHub ? { verifyHub } : {}),
-    args: ["--import", "tsx", "--input-type=module", "-e", script],
-  });
+  const roots = [await realpath(one.root), await realpath(two.root)];
+  const invoke = (script: string, verifyHub?: string) => maintain([two.root, one.root], { script, ...(verifyHub ? { verifyHub } : {}) });
   // A host with no box (a freshly provisioned server) runs the command and nothing else.
   t.check(await runMaintenance([], { command: process.execPath, cli, args: ["-e", "process.exitCode = 3"] }), 3);
-  t.check(await invoke(readyScript), 0);
+  // Each holder reports the recovery snapshot it took of its box:
+  const completed = await invoke(readyScript);
+  t.check(completed.code, 0);
+  await t.checkText(completed.stderr, snapshotLines(roots));
 
   t.check(await boxMaintenanceStatus(one.root), null);
 
   t.check(await boxMaintenanceStatus(two.root), null);
 
-  t.check(await invoke(readyScript + "\nprocess.exitCode = 1;"), 1);
+  // A command that fails leaves every box unverified; the controller and then
+  // each holder say so (the holder prints after it receives the verdict):
+  const failed = await invoke(readyScript + "\nprocess.exitCode = 1;");
+  t.check(failed.code, 1);
+  await t.checkText(failed.stderr, [snapshotLines(roots), unverifiedLines(roots), unverifiedLines(roots)].join("\n"));
 
   t.check((await boxMaintenanceStatus(one.root))?.phase, "exclusive");
 
   t.check((await boxMaintenanceStatus(two.root))?.phase, "exclusive");
 
-  t.check(await invoke(readyScript), 0);
+  const recovered = await invoke(readyScript);
+  t.check(recovered.code, 0);
+  await t.checkText(recovered.stderr, snapshotLines(roots));
 
   t.check(await boxMaintenanceStatus(one.root), null);
 
@@ -98,11 +129,10 @@ void test("line 37", async (t) => {
   await once(canary, "listening");
   const address = canary.address();
   assert.ok(address && typeof address !== "string");
-  t.check(
-    await invoke(readyScript + "\nprocess.exitCode = 1;", `http://127.0.0.1:${address.port}`)
-    ,
-    1,
-  );
+  // The hub canary accepts only box "one", so only "two" is reported unverified:
+  const canaryRun = await invoke(readyScript + "\nprocess.exitCode = 1;", `http://127.0.0.1:${address.port}`);
+  t.check(canaryRun.code, 1);
+  await t.checkText(canaryRun.stderr, [snapshotLines(roots), unverifiedLines([roots[1]!]), unverifiedLines([roots[1]!])].join("\n"));
 
   t.check(await boxMaintenanceStatus(one.root), null);
 
@@ -131,12 +161,10 @@ void test("line 124", async (t) => {
   });
   await box.write("input.txt", "draft");
   box.commitAll("initial");
-  const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
   process.env.GIT_DIR = join(box.root, "no-such-git-dir");
-  t.check(
-    await runMaintenance([box.root], { command: process.execPath, cli, args: ["--import", "tsx", "--input-type=module", "-e", `delete process.env.GIT_DIR;\n${readyScript}`] }),
-    0,
-  );
+  const run = await maintain([box.root], { script: `delete process.env.GIT_DIR;\n${readyScript}` });
+  t.check(run.code, 0);
+  await t.checkText(run.stderr, snapshotLines([await realpath(box.root)]));
   delete process.env.GIT_DIR;
   t.check(await boxMaintenanceStatus(box.root), null);
 });

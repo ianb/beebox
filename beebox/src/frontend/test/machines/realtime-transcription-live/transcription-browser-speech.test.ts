@@ -3,6 +3,7 @@
 // errors give up instead of restarting.
 
 import { test } from "tap";
+import { consoleLines } from "../../../../../test/helpers/console-lines.js";
 import { BrowserSpeechLink, STABLE_WORD_MS } from "../../../src/machines/realtime-transcription-live/transcription-browser-speech";
 import type { SpeechRecognitionLike } from "../../../src/lib/audio/live-engine";
 
@@ -83,7 +84,10 @@ void test("a recognizer that ends by itself restarts and keeps its text, final a
 void test("a fatal error gives up once; other errors just restart", (t) => {
   const { instances, clock, errors, link } = rig();
   t.teardown(() => link.detach());
+  const warnings = consoleLines(t, "warn");
   instances[0]?.onerror?.({ error: "no-speech", message: "" });
+  // A non-fatal error is logged and the engine restarts:
+  t.check(warnings(), ["[realtime-transcription] browser speech error, restarting: no-speech"]);
   clock.now += 5000;
   instances[0]?.onend?.();
   t.check(instances.map((r) => r.lang), ["en-US", "en-US"]);

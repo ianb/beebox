@@ -22,6 +22,7 @@ import {
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE, type ClaudeCliService } from "../../../src/services/claude-cli.js";
 import { createFakeCodexCli } from "../../../src/services/codex-cli/core.js";
 import { createChatBackend } from "../../../src/services/claude-chat/core.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 /** Run with console.error captured: a refused run logs its reason, which these examples show. */
 async function capturingErrors<T>(run: () => Promise<T>) {
@@ -138,9 +139,12 @@ void test("Codex has its own preflight and remedy", async (t) => {
 void test("An inconclusive process answer does not block a run the SDK may still complet...", async (t) => {
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "inconclusive", detail: "timed out" } });
+  const warnings = consoleLines(t, "warn");
   await checkCodexAuth({ codexCli });
   await checkCodexAuth({ codexCli });
   t.check(codexCli.statusCalls, 2);
+  // Each probe logs that Codex is left to report its own state:
+  t.check(warnings(), Array.from({ length: 2 }, () => "[codex-auth] status probe was inconclusive; letting Codex report its runtime state: timed out"));
 });
 
 // The chat dispatch selects the provider preflight. A Codex engine does not
@@ -206,8 +210,10 @@ void test("claude auth status intermittently comes back empty on a machine that 
 void test("When the retry also comes back empty we still don't know — and the preflight...", async (t) => {
   resetClaudeAuthCache();
   const cli = flakyCli(2, { loggedIn: true });
+  const warnings = consoleLines(t, "warn");
   const outcome = await checkClaudeAuth({ claudeCli: cli }).then(() => "proceeded").catch((e) => e.name);
   t.check({ outcome, probes: cli.calls() }, { outcome: "proceeded", probes: 2 });
+  t.check(warnings(), ["Claude auth probe returned no usable answer twice; proceeding and letting the agent invocation report auth state itself."]);
 
   // An inconclusive result is never cached as success — the next call probes again.
 

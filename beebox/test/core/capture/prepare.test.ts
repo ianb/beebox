@@ -15,6 +15,7 @@ import { parse as parseYaml } from "yaml";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { splitCardContent } from "../../../src/exports/cards.js";
 import { createEventBus, type BusEvent } from "../../../src/core/event-bus/core.js";
 import type { ChatSession } from "../../../src/core/chat/session/run/core.js";
@@ -154,6 +155,11 @@ async function prepareOn(box: TmpBox, { id, startedAt }: { id: string; startedAt
   return { ...chat, ...cardPaths(id, startedAt) };
 }
 
+// A capture staged with no target chat (the `/capture` deep link) falls back to the
+// most-active chat, and the prepare log says so on every run:
+const noTargetWarning = (box: TmpBox) =>
+  `[capture] Capture has no target session; falling back to the most-active session for box=${box.root}`;
+
 const gitSubjects = (boxRoot: string) => execFileSync("git", ["log", "--format=%s"], { cwd: boxRoot }).toString().trim().split("\n");
 const captureCommits = (boxRoot: string) => gitSubjects(boxRoot).filter((l) => l.startsWith("Capture:")).length;
 
@@ -170,7 +176,9 @@ void test("Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const id = await stageSealedSession(box.root);
+  const warnings = consoleLines(t, "warn");
   const { eventBus, attach, docRel, close } = await prepareOn(box, { id });
+  t.check(warnings(), [noTargetWarning(box)]);
 
   // One capture card, with its audio cards transcribed — and with nothing left
   // untranscribed, the card carries no `transcription-failed` flag. A capture that
@@ -271,7 +279,9 @@ void test("A native segment is one complete M4A file.", async (t) => {
     audioFormat: "m4a-aac",
   });
   await setStagingState({ boxRoot: box.root, id: staged.id, state: "sealed" });
+  const warnings = consoleLines(t, "warn");
   const { attach, close } = await prepareOn(box, { id: staged.id, startedAt: "2026-07-09T15:00:00.000Z" });
+  t.check(warnings(), [noTargetWarning(box)]);
   t.check(
     ({
       media: await box.read(`${attach}/audio-001.attach/audio-001.m4a`),
@@ -308,7 +318,13 @@ void test("When only some clips transcribe, the capture is delivered anyway with
   // Script only the first segment's clip; the second clip fails to transcribe.
   await configureBox(box, { script: { "audio-001.webm": SCRIPT["audio-001.webm"] } });
   const id = await stageSealedSession(box.root);
+  const warnings = consoleLines(t, "warn");
   const { eventBus, attach, docRel, close } = await prepareOn(box, { id });
+  // The log names the clip that failed and why, so a boxholder can fix the script:
+  t.check(warnings(), [
+    noTargetWarning(box),
+    `[capture] 1 clip(s) failed to transcribe for ${cardPaths(id).basename}: audio-002.audio.card: Fake transcription script at ${box.root}/_config/fake-transcription.json has no entry for "audio-002.webm" or "*"`,
+  ]);
 
   const doc = await box.read(docRel);
   const clipCards = (await readdir(box.path(attach))).filter((f) => f.endsWith(".audio.card")).toSorted();
@@ -371,8 +387,12 @@ void test("A delivery failure leaves the committed document in place and the ses
     session.send = async () => { if (failNext) { failNext = false; return false; } return true; };
   }
 
+  const warnings = consoleLines(t, "warn");
+  const errors = consoleLines(t, "error");
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: failFirstSend });
   t.check((await readStagingSession({ boxRoot: box.root, id }))?.state, "failed:deliver");
+  // The log says the capture was saved but not delivered:
+  t.check(errors(), [`[capture] Delivery failed for ${cardPaths(id).basename}: CaptureDeliveryError: Capture delivery send failed`]);
 
   // The document is committed exactly once, and the body is assembled. Re-running
   // preparation delivers (send succeeds now) with no duplicate cards or commits,
@@ -400,6 +420,8 @@ void test("A delivery failure leaves the committed document in place and the ses
     captureCommits: 1,
   },
   );
+  // Each of the two runs logs the missing target:
+  t.check(warnings(), [noTargetWarning(box), noTargetWarning(box)]);
 });
 
 // ## Two concurrent preparations commit independently (pathspec-scoped)
@@ -423,11 +445,13 @@ void test("Two staged sessions prepared via Promise.all must each produce their 
 
   const { registry, eventBus, close } = chatFor(box);
 
+  const warnings = consoleLines(t, "warn");
   await Promise.all([
     prepareCaptureSession({ boxRoot: box.root, id: idA, eventBus, registry }),
     prepareCaptureSession({ boxRoot: box.root, id: idB, eventBus, registry }),
   ]);
   await tick();
+  t.check(warnings(), [noTargetWarning(box), noTargetWarning(box)]);
 
   const baseA = cardPaths(idA).basename;
   const baseB = cardPaths(idB).basename;
@@ -555,9 +579,21 @@ void test("A card that fails validation must not leave orphaned uncommitted file
   await writeFile(`${box.root}/${cardRel}`, "---\ndelivered: not-a-boolean\n---\n");
 
   const { registry, eventBus, close } = chatFor(box);
+  const warnings = consoleLines(t, "warn");
+  const errors = consoleLines(t, "error");
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 
   t.check((await readStagingSession({ boxRoot: box.root, id }))?.state, "failed:assemble");
+  // The log names the card that failed validation and which fields were wrong. The
+  // transcription outcome cannot be written onto that same invalid card, which the
+  // warning also names:
+  const card = `${box.root}/${cardRel}`;
+  const problems = "invalid capture-session frontmatter:\n  - delivered: expected boolean, got string\n  - session-id: required (expected string)";
+  t.check(errors(), [`[capture] Validation failed for box=${box.root} session=${id} (${cardPaths(id).basename}, 1 error(s)): ${card}: ${problems}`]);
+  t.check(warnings(), [
+    noTargetWarning(box),
+    `[capture] Could not record the transcription outcome on ${card}: CardIOError: ${card}: ${problems}`,
+  ]);
 
   // With nobody present in the app, the person gets one `quiet` notice. This
   // capture never resolved a target chat, so the notice opens a new one. The
@@ -604,7 +640,9 @@ void test("Post-annex boxes gitignore the whole capture staging attach scope (/t
   const box = await makeTmpBox({ git: true });
   await configureBox(box, { extraIgnore: "**/tmp-capture/**/*.attach/**\n" });
   const id = await stageSealedSession(box.root);
+  const warnings = consoleLines(t, "warn");
   const { basename, attach, docRel, close } = await prepareOn(box, { id });
+  t.check(warnings(), [noTargetWarning(box)]);
 
   // The capture delivered (staging cleaned up) and the card was committed —
   // flipped to `delivered` — while the attach files exist on disk untracked:

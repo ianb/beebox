@@ -26,6 +26,7 @@ import {
 } from "../../../src/services/docling/subprocess.js";
 import { DOCLING_VERSION } from "../../../src/services/docling/version.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
+import { spawnThenAbandon, spawnUntilFirstLine, type ReadyChild } from "../../helpers/child-process.js";
 
 // ## Lock paths
 //
@@ -169,19 +170,18 @@ void test("oom_kill is read from a cgroup memory.events file", (t) => {
 // The locks are taken before Docling is imported, so any `python3` exercises
 // them. A second driver waits while another process holds the lock and gives
 // up with exit 75 when its wait runs out; once the holder is gone it proceeds.
-// A driver whose parent is gone stops within a few seconds. Skipped, loudly,
-// without a `python3`.
-/** Resolves once the holder has printed `held`, which it does after taking the lock. */
-async function heldBy(holder: ReturnType<typeof execa>): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    holder.stdout?.once("data", () => resolve());
-    holder.once("error", reject);
+// A driver whose parent is gone stops within a few seconds. A TAP skip, with
+// the reason, without a `python3`.
+/** A process holding `lockPath`, resolved once it has printed `held`. */
+async function lockHolder(lockPath: string): Promise<ReadyChild> {
+  return spawnUntilFirstLine({
+    command: "python3",
+    args: ["-I", "-c", "import fcntl,sys,time\nf=open(sys.argv[1],'a')\nfcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(30)", lockPath],
   });
 }
 
 const python = await execa("python3", ["--version"], { reject: false }).catch(() => null);
 const pythonSkip = python?.exitCode === 0 ? null : "python3 is not available";
-if (pythonSkip !== null) console.warn(`[skipped] docling driver locks: ${pythonSkip}`);
 
 void test("A held lock makes the driver wait, then give up with exit 75; a free one lets it through", { skip: pythonSkip ?? false }, async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "docling-lock-"));
@@ -193,11 +193,10 @@ void test("A held lock makes the driver wait, then give up with exit 75; a free 
     lockPaths: [path.join(dir, "box.lock"), lockPath], lockWaitSeconds: 1, parentPid: 0, ...over,
   });
 
-  const holder = execa("python3", ["-I", "-c", "import fcntl,sys,time\nf=open(sys.argv[1],'a')\nfcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(30)", lockPath]);
-  await heldBy(holder);
+  const holder = await lockHolder(lockPath);
+  t.teardown(holder.kill);
   const blocked = await execa("python3", ["-I", DOCLING_DRIVER_PATH, request({})], { reject: false });
-  holder.kill();
-  await holder.catch(() => null);
+  await holder.kill();
   const free = await execa("python3", ["-I", DOCLING_DRIVER_PATH, request({})], { reject: false });
 
   t.check(blocked.exitCode, 75);
@@ -212,18 +211,15 @@ void test("A driver whose parent is gone stops with exit 70", { skip: pythonSkip
   const lockPath = path.join(dir, "bbx-docling.lock");
   const gone = await execa("python3", ["-I", "-c", "import os; print(os.getpid())"]);
   const deadPid = Number(gone.stdout.trim());
-  const holder = execa("python3", ["-I", "-c", "import fcntl,sys,time\nf=open(sys.argv[1],'a')\nfcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(30)", lockPath]);
-  await heldBy(holder);
+  const holder = await lockHolder(lockPath);
+  t.teardown(holder.kill);
   // It would wait 60 s for the lock; the parent check ends it first. Its
-  // stderr reader is gone, as it is when the parent dies: the stop message
+  // pipes are closed, as they are when the parent dies: the stop message
   // then cannot be written, and the driver must still stop.
-  const orphanRun = execa("python3", ["-I", DOCLING_DRIVER_PATH, JSON.stringify({
+  const orphan = spawnThenAbandon({ command: "python3", args: ["-I", DOCLING_DRIVER_PATH, JSON.stringify({
     source: "x.pdf", outputDir: dir, ocr: "off", languages: null, documentTimeoutSeconds: 10,
     lockPaths: [lockPath], lockWaitSeconds: 60, parentPid: deadPid,
-  })], { reject: false, timeout: 20_000, stdout: "ignore" });
-  orphanRun.stderr?.destroy();
-  const orphan = await orphanRun;
-  holder.kill();
-  await holder.catch(() => null);
-  t.check(orphan.exitCode, 70);
+  })] });
+  t.teardown(orphan.kill);
+  t.check(await orphan.exited, { code: 70, signal: null });
 });

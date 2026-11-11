@@ -15,6 +15,7 @@ import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
@@ -158,7 +159,10 @@ void test("A batch whose target chat is not known to the box is a broken invaria
   const sent: string[] = [];
   const { registry, eventBus, close } = chatFor(box);
   const wireSession = wiring({ isBusy: () => false, enqueue: () => {}, send: async (i) => { sent.push(textOf(i)); return true; } });
+  const errors = consoleLines(t, "error");
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
+  // The server log names the batch and the chat that is missing:
+  t.check(errors(), [`[bulk] Target chat for batch ${id} (session=s-missing) no longer exists; leaving retryable`]);
 
   t.check(
     {
@@ -243,9 +247,12 @@ void test("A send failure leaves the committed batch in place and the session in
     isBusy: () => false, enqueue: () => {},
     send: async () => { if (failNext) { failNext = false; return false; } return true; },
   });
+  const errors = consoleLines(t, "error");
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
   const cardRel = await batchCardRel(box);
+  // The server log names the batch whose message could not be sent:
+  t.check(errors(), [`[bulk] Delivery failed for batch ${cardRel.split("/")[2]}: UserMessageDeliveryError: User-message delivery send failed`]);
   t.check(
     {
       state: (await readStagingSession({ boxRoot: box.root, id }))?.state,

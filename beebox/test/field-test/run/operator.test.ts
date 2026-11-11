@@ -13,6 +13,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFakeChatBackend, type FakeChatBackendRun } from "../../../src/services/claude-chat/core.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { startOperatorSession } from "../../../src/field-test/run/operator.js";
 import {
   assembleOperatorPrompt,
@@ -289,6 +290,7 @@ void test("An interrupt that never produces a result would leave the stream ambi
   const run = backend.lastRun();
   if (run === null) throw new Error("no run");
 
+  const errors = consoleLines(t, "error");
   const stuck = session.sendActivity("Do the thing.");
   run.emitAssistantText("Trying.");
   run.emitAssistantText("Still trying.");
@@ -299,6 +301,8 @@ void test("An interrupt that never produces a result would leave the stream ambi
     status: "turn-capped",
     error: "activity exceeded its 1-turn cap; the interrupted turn never produced a result",
   });
+  // The loud part of "loudly":
+  t.check(errors(), ["Field-test operator: an interrupted activity never produced a result; session aborted"]);
 
   await t.checkThrows(async () => (await session.sendActivity("Next item")), "OperatorSessionClosedError");
 
@@ -322,6 +326,7 @@ void test("An activity that goes quiet ends on the awake-time budget — awake t
     drainGraceMs: 120,
     timeoutPollMs: 20,
   });
+  const errors = consoleLines(t, "error");
   const turn = await session.sendActivity("Do something that never finishes.");
   t.check(turn, {
     note: "",
@@ -329,6 +334,7 @@ void test("An activity that goes quiet ends on the awake-time budget — awake t
     status: "timed-out",
     error: str`no completion after ${any(String)}ms of awake time; the interrupted turn never produced a result`,
   });
+  t.check(errors(), ["Field-test operator: an interrupted activity never produced a result; session aborted"]);
 
   await session.stop();
 });

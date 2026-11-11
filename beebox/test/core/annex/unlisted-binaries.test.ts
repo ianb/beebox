@@ -12,6 +12,7 @@ import { unordered } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import {
   findUnlistedBinaries,
   describeUnlistedBinaries,
@@ -100,12 +101,17 @@ void test("An unreadable scope is an error, not an empty result.", async (t) => 
   const box2 = await makeTmpBox();
   await put({ root: box2.root, relPath: "locked.attach/big.parquet", size: BIG });
   await fs.chmod(box2.path("locked.attach"), 0o000);
+  const warnings = consoleLines(t, "warn");
   const outcome = await findUnlistedBinaries(box2.root).then(
     () => "reported clean",
     (e: unknown) => (e instanceof Error ? e.name : "non-error"),
   );
   await fs.chmod(box2.path("locked.attach"), 0o755);
   t.check(outcome, "UnlistedScanIncompleteError");
+  // The scope walk logs the directory it could not read, before the scan fails:
+  t.check(warnings(), [
+    `Could not read ${box2.path("locked.attach")} while finding attach scopes, skipping: Error: EACCES: permission denied, scandir '${box2.path("locked.attach")}'`,
+  ]);
 
   await box2.cleanup();
 });

@@ -9,6 +9,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { activePluginNames } from "../../../src/core/box/config.js";
 import { activePlugins, describeInvalidPluginEntries, listPlugins } from "../../../src/core/plugins/active.js";
 
@@ -96,7 +97,10 @@ void test("The listing covers every installed plugin and the active ones' stubs"
   const box = await boxWithPlugins(["courseware", "nope"]);
   await box.write("src/schemas/course.ts", "// stub\n");
   await box.write("src/views/concept-map.tsx", "// stub\n");
+  const warnings = consoleLines(t, "warn");
   const { plugins, problems } = await listPlugins(box.root);
+  // The placeholder stub defines no schema, which the schema loader logs:
+  t.check(warnings(), ["Warning: course.ts does not export a default cardSchema(), skipping"]);
   t.check(({ stubs: plugins[0]?.stubs.map((s) => `${s.kind} ${s.name} ${s.path} ${s.present ? "present" : "missing"}`), problems }), {
     stubs: [
       "schema course src/schemas/course.ts present",

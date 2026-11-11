@@ -1,13 +1,16 @@
 ---
 title: "Passing beebox tests print the logs of failures they provoke on purpose"
-workstream: unattached
+workstream: test-quiet
 area: tests
 priority: backlog
 labels: [tests, noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: doctest-typecheck — retire-doctest track 5; a full `pnpm test` run in beebox wrote a 39,245-line log for a green suite
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** About 140 passing test files printed ~1000 stderr lines; they now check those lines with test/helpers/console-lines.ts (t.capture) or pipe their children's stderr. Wrong log texts fixed in google-calendar/state.ts, place-cards.ts and ref-exists.ts. Two intermittent lines under full-suite load remain: issues/code-quality/2026-11-11-intermittent-stderr-under-full-suite-load.md.
 
 Tests that exercise a failure path let the code's own error log reach the
 run's output. The test passes, and the output looks like a failure. Seen in

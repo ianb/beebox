@@ -14,6 +14,7 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 function contextFor(box: TmpBox) {
   const ctx: TrpcContext = trpcContext({ boxRoot: box.root, boxSlug: "t", isAuthenticatedOwner: true });
@@ -51,6 +52,7 @@ void test("line 46", async (t) => {
   await box.write("_bookkeeping/questions/Broken.question.card", MALFORMED);
 
   const caller = contextFor(box);
+  const warnings = consoleLines(t, "warn");
   const { items } = await caller.questions();
 
   const dir = "_bookkeeping/questions";
@@ -81,6 +83,11 @@ void test("line 46", async (t) => {
       askedAt: undefined,
     },
   ]);
+
+  // The state scan and the question parse each log the card and the missing field:
+  const broken = `${box.root}/${dir}/Broken.question.card`;
+  const why = `CardIOError: ${broken}: invalid question frontmatter:\n  - prompt: required (expected string)`;
+  t.check(warnings(), [`Could not load card ${broken}, listing as unknown: ${why}`, `Question card failed to parse, surfacing as invalid: ${broken}: ${why}`]);
 
   // The malformed card keeps its `CardInfo` fields (path, name, type) — enough
   // for a caller to link to it — even though none of the typed question fields

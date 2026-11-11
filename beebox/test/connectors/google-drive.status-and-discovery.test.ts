@@ -7,6 +7,7 @@ import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive } from "../../src/services/google-drive/core.js";
 import type { FakeGoogleDriveOptions } from "../../src/services/google-drive/core.js";
@@ -384,6 +385,7 @@ void test("Two remote children can derive the same local card name.", async (t) 
 
   const drive = fakeDrive([occupant, newcomer], { folders: [folderFixture({ id: "folder-1", name: "Folder" })] });
   const connector = createGoogleDriveConnector(box.root, drive);
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
   const cards = (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card"));
   t.check(result, {
@@ -419,6 +421,11 @@ void test("Two remote children can derive the same local card name.", async (t) 
     error: "Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive.id sheet-occupant",
   });
   t.check((await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card")), ["_content/drive/folder/Raced_Child.gsheet.card", "_content/drive/folder/Shared_Name.gsheet.card"]);
+
+  // Each of the two syncs logs that the occupant is no longer in the Drive folder
+  // yet keeps syncing where it is:
+  const left = "[google-drive] _content/drive/folder/Folder.gfolder.card: not-in-folder: _content/drive/folder/Shared_Name.gsheet.card — Drive sheet-occupant is no longer in this folder; left in place and still syncing";
+  t.check(warnings(), [left, left]);
 });
 
 // ## Folder discovery — an unreadable card blocks rediscovery

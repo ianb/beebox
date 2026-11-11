@@ -31,6 +31,7 @@ import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { textPdf } from "../../../helpers/pdf-fixtures.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 async function refuseCommits(box: TmpBox) {
   const { stdout } = await execa("git", ["rev-parse", "--git-path", "hooks"], { cwd: box.root });
@@ -156,7 +157,10 @@ void test("A wakeup sweep commits the whole tree, and it can land while an impor
     },
   };
   const { ctx } = createCollectorContext(box.root);
+  const warnings = consoleLines(t, "warn");
   t.check(await runPdfMode(ctx, { pdfPath, docling: sweepThenFail }).then(() => "imported", (e) => e.message), "extraction crashed");
+  // The log says the committed session was left in place:
+  t.check(warnings(), [str`[scan-import] Failed session _content/inbox/scan-${any(String)}.capture-session.card was partly committed by another writer; leaving it in place.`]);
 
   const tracked = (await execa("git", ["ls-files", "_content/inbox"], { cwd: box.root })).stdout;
   const status = (await execa("git", ["status", "--porcelain", "_content/inbox"], { cwd: box.root })).stdout;
@@ -189,7 +193,12 @@ void test("The ledger records the hash only for an import that succeeded, so fai
   const box = await makeTmpBox({ git: true });
   await rm(join(box.root, ".beebox/intake-job-locks"), { recursive: true, force: true });
   await writeFile(join(box.root, ".beebox/intake-job-locks"), "not a directory");
+  const warnings = consoleLines(t, "warn");
   t.check(await importPdf(box), "imported true");
+  // The log names the session whose job was not created, and why:
+  t.check(warnings(), [
+    str`[scan-import] Intake job for _content/inbox/scan-${any(String)}.capture-session.card was not created; the next wakeup queues it: Error: EEXIST: file already exists, mkdir '${box.root}/.beebox/intake-job-locks'`,
+  ]);
 
   t.check({ sessions: await sessions(box), staged: await staged(box) }, { sessions: ONE_SESSION, staged: [] });
 });

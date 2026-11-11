@@ -8,6 +8,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import {
   createFakeGoogleDrive,
@@ -540,8 +541,14 @@ void test("A Doc found by a newly mounted folder opens the diagnosis on that fir
   const missingScope = await scopeInsufficientError();
   drive.getDocument = async () => { throw missingScope; };
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, drive).sync();
   t.check(result.created, ["_content/drive/notes/Plan.attach/Plan.md", "_content/drive/notes/Plan.gdoc.card"]);
+  // The sync log says the Doc synced without revision tracking, and why:
+  t.check(warnings(), [
+    "[google-drive] Could not fetch Docs API metadata for Plan (syncing without revision tracking or lossy details): " +
+    "the Google sign-in lacks the documents.readonly scope. Re-authorize Google in Settings, under Google services, to grant it.",
+  ]);
   t.check(await loadDocsApiDiagnosis(box.root), {
     kind: "scope-insufficient",
     message:
@@ -576,9 +583,12 @@ void test("A pass that hit the folder depth cap keeps an open diagnosis when it 
   box.commitAll("mount a deep folder");
   await recordDocsApiDiagnosis(box.root, () => openDiagnosis);
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, createFakeGoogleDrive({ files: tooDeepFolders() })).sync();
   // The cap is a note, not a failure.
   t.check(result.success, true);
+  // The sync log names the folder past the cap:
+  t.check(warnings(), ['[google-drive] _content/drive/deep/Deep.gfolder.card: Folder folder-9 ("Level 9") is deeper than the 8-level mirror depth cap — not descended']);
   // The unscanned levels may hold Docs that still fail.
   t.check(await loadDocsApiDiagnosis(box.root), openDiagnosis);
 });
@@ -600,9 +610,12 @@ void test("A pass that hit the folder depth cap clears the diagnosis when a Doc 
     documents: new Map([["doc-1", documentFor({ id: "doc-1", name: "Plan" })]]),
   });
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, drive).sync();
   // The cap is a note, not a failure.
   t.check(result.success, true);
+  // The sync log names the folder past the cap:
+  t.check(warnings(), ['[google-drive] _content/drive/deep/Deep.gfolder.card: Folder folder-9 ("Level 9") is deeper than the 8-level mirror depth cap — not descended']);
   // The Doc reached the Docs API, so the box-wide problem is gone.
   t.check(await loadDocsApiDiagnosis(box.root), null);
 });

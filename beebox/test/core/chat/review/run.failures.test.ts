@@ -8,6 +8,7 @@ import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/prom
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
@@ -159,6 +160,7 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
     sessionId: "sess9999", husk: "", entries: [bulk("w1"), bulk("w2")],
   });
 
+  const warnings = consoleLines(t, "warn");
   const summary = await runChatReview(box.root, {
     reviewer: fakeReviewer([{
       ...OUTPUT,
@@ -167,6 +169,8 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
   t.check(summary, summaryWith({ bootstrapped: 1, rejected: [`${sid("sess9999")}:title`] }));
+  // The log says which field was dropped and what the scan found, not the secret itself:
+  t.check(warnings(), ["chat-review: dropped generated title — leak scan found credential (OpenAI API key)"]);
 
   const card = await readFile(box.path(huskPath), "utf8");
   t.checkText(card, `---
@@ -296,11 +300,13 @@ void test("A reviewer failure is counted, not fatal", async (t) => {
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seed(box, { sessionId: "sessfail", husk: "", entries: [bulk("x1"), bulk("x2")] });
 
+  const warnings = consoleLines(t, "warn");
   const summary = await runChatReview(box.root, {
     reviewer: fakeReviewer([new Error("model unavailable")]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
   t.check(summary, summaryWith({ bootstrapped: 1, reviewerFailures: 1 }));
+  t.check(warnings(), [`chat-review: reviewer failed for ${sid("sessfail")}: Error: model unavailable`]);
 
   const state = await loadReviewState(box.root);
   t.check(state, {

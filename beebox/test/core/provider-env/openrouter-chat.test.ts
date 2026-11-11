@@ -24,6 +24,7 @@ import { ProviderSetupError } from "../../../src/core/provider-setup-error.js";
 import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const kimi = { id: "moonshotai/kimi-k2-0905:exacto", label: "Kimi K2" };
 
@@ -187,16 +188,25 @@ void test("A malformed entry is dropped with a warning; the rest survive.", asyn
     smallModel: kimi.id,
     openrouterModels: [kimi, { id: "not an id", label: "x" }, { id: "qwen/qwen3-coder", label: "" }, { ...kimi, label: "dup" }],
   });
+  const warnings = consoleLines(t, "warn");
+  // Each load of the config logs the two dropped entries, so the owner can find them:
+  const dropped = [
+    'Box config openrouterModels entry {"id":"not an id","label":"x"} is not {id, label} with an OpenRouter id — ignoring it.',
+    'Box config openrouterModels entry {"id":"qwen/qwen3-coder","label":""} is not {id, label} with an OpenRouter id — ignoring it.',
+  ];
   t.check(await loadAddedModels(box.root), [
     {
       id: "moonshotai/kimi-k2-0905:exacto",
       label: "Kimi K2",
     },
   ]);
+  t.check(warnings(), dropped);
 
   t.check(await loadBoxModel(box.root), "moonshotai/kimi-k2-0905:exacto");
+  t.check(warnings(), dropped);
 
   t.check(await loadSmallModel(box.root), "moonshotai/kimi-k2-0905:exacto");
+  t.check(warnings(), dropped);
 
   await box.cleanup();
 });
@@ -205,7 +215,9 @@ void test("A malformed entry is dropped with a warning; the rest survive.", asyn
 // can run, so it reads as none.
 void test("A default that names a model no longer in the list is not a policy the box ca...", async (t) => {
   const box = await boxWith({ agentModel: kimi.id });
+  const warnings = consoleLines(t, "warn");
   t.check(await loadBoxModel(box.root), null);
+  t.check(warnings(), ['Box config agentModel "moonshotai/kimi-k2-0905:exacto" is not a model any engine offers — ignoring it.']);
 
   await box.cleanup();
 });
@@ -312,7 +324,10 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
 
   t.check(await flagsByModel({ claudeCodeTelemetry: "off" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
 
+  const warnings = consoleLines(t, "warn");
   t.check(await flagsByModel({ claudeCodeTelemetry: "maybe" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
+  // The loader tells the owner the setting was not understood (once per config read):
+  t.check(warnings(), Array.from({ length: 2 }, () => '[box-config] Treating invalid claudeCodeTelemetry value as off: "maybe"'));
 });
 
 // ## No cost figure for third-party runs
@@ -386,6 +401,7 @@ void test("The spawn gate alone is not enough:", async (t) => {
 
   await writeFile(join(box.root, "_config/box.json"), JSON.stringify({}));
   clearBoxConfigCache(box.root);
+  const refusals = consoleLines(t, "error");
   const sent = await session.send("second");
   await tick();
   t.check([sent, errors, run?.sent, run?.closed, backend.runs.map((r) => r.startOptions.model)], [
@@ -407,4 +423,6 @@ void test("The spawn gate alone is not enough:", async (t) => {
     ["OpenRouterSetupError", "OpenRouterSetupError"],
     ["moonshotai/kimi-k2-0905:exacto"],
   ]);
+  // The cold start's refusal is also logged, so the server log shows why the chat stopped:
+  t.check(refusals(), ["[chat-preflight] run refused: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, which is not added for this box. Add it in Admin → OpenRouter models, or pick another model."]);
 });

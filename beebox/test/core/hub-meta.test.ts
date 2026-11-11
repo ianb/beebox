@@ -14,6 +14,7 @@ import { isoDate } from "@ianbicking/tap-check/check";
 import * as crypto from "node:crypto";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { bearerMatchesHashes, hubMetaPath, readHubMeta, writeHubMeta } from "../../src/core/hub-meta.js";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { createScanToken, revokeScanToken } from "../../src/core/scan/tokens.js";
@@ -103,8 +104,13 @@ void test("the hub's read follows the file's mtime through a one-second cache, a
   t.check(readHubMeta(box.root, now), published);
   clock += 1_000;
   // Malformed: every credential is refused rather than guessed at; the warning names the box.
+  const warnings = consoleLines(t, "warn");
   t.check(readHubMeta(box.root, now), undefined);
+  const parseError = "Expected property name or '}' in JSON at position 2 (line 1 column 3)";
+  t.check(warnings(), [`[hub-meta] ${hubMetaPath(box.root)} is unreadable or malformed; refusing every credential for this box: ${parseError}`]);
   writeHubMeta(box.root, fixedNow);
+  // The rewrite says it replaced a malformed file:
+  t.check(warnings(), [`[hub-meta] replacing malformed ${hubMetaPath(box.root)}: ${parseError}`]);
   clock += 1_000;
   t.check(readHubMeta(box.root, now), { ...published, writtenAt: "2026-10-24T12:00:00.000Z" });
 });

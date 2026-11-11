@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createFakeAgent } from "./fake-agent.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { createTestServer } from "../helpers/test-server.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment } from "../../src/lib/box-maintenance/admission.js";
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
@@ -92,8 +93,11 @@ answered-via: cli
 `);
 
   // An answered question stays answered; the record clears when an attempt completes.
+  const errors = consoleLines(t, "error");
   const again = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: cliQuestion, answer: "second thoughts" } });
   t.check(again.statusCode, 400);
+  // The refusal reaches the server log with its reason:
+  t.check(errors(), ["[trpc] mutation actions.answer failed: Question is already answered; an answered question is terminal"]);
 
   const open = await acquireBoxMaintenance(boxRoot, { reason: "done" });
   await open.complete();

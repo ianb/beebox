@@ -14,6 +14,7 @@ import "@ianbicking/tap-check/tap";
 import { mkdir, realpath, writeFile, utimes } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { findSessionLog, listSessions } from "../../../src/cli/lib/session.js";
 import { partitionByAffinity } from "../../../src/cli/commands/session/modes.js";
 import {
@@ -78,7 +79,12 @@ void test("The history file below has:", async (t) => {
   // Encoded dir names start with the encoded (random) real tmp box root —
   // strip that prefix so expected output stays deterministic.
   const prefix = encodeProjectDir(await realpath(box.root));
+  // The history row that points outside the box is read from the box root
+  // instead, and each lookup that meets it says so:
+  const escapeWarning = "[chat-history] contextDir ../../elsewhere escapes the box; reading from the box root instead";
+  const warnings = consoleLines(t, "warn");
   const roots = await listSessionRoots(box.root);
+  t.check(warnings(), [escapeWarning]);
   t.check(
     roots.map((r) => ({
       contextDir: r.contextDir,
@@ -99,6 +105,7 @@ void test("The history file below has:", async (t) => {
   // ## listSessions — aggregated across roots, newest first, contextDir tagged
 
   const sessions = await listSessions(box.root);
+  t.check(warnings(), [escapeWarning]);
   t.check(
     sessions.map((s) => ({
       id: s.sessionId.slice(0, 8),
@@ -123,6 +130,7 @@ void test("The history file below has:", async (t) => {
   // ## findSessionLog — a landmark session resolves via history
 
   const found = await findSessionLog(box.root, bunkerNew);
+  t.check(warnings(), []);
   t.check(found, { ok: true, value: getSessionLogPath(join(box.root, "_content/bunker"), bunkerNew) });
 
   // A session missing from the history file is still found by probing every
@@ -131,6 +139,7 @@ void test("The history file below has:", async (t) => {
   const orphan = "eeee5555-0000-0000-0000-000000000005";
   await seedLog(join(box.root, "_content/bunker"), { id: orphan, mtime: "2026-07-04T10:00:00Z" });
   const foundOrphan = await findSessionLog(box.root, orphan);
+  t.check(warnings(), [escapeWarning, escapeWarning]);
   t.check(foundOrphan, { ok: true, value: getSessionLogPath(join(box.root, "_content/bunker"), orphan) });
 
   // ## findSessionLog miss — the error carries EVERY directory searched
@@ -139,6 +148,7 @@ void test("The history file below has:", async (t) => {
   // full sweep rather than a single misleading path.
 
   const missing = await findSessionLog(box.root, "ffff6666-0000-0000-0000-000000000006");
+  t.check(warnings(), [escapeWarning]);
   t.check(missing, {
     ok: false,
     error: [dirname(getSessionLogPath(box.root, "x")), dirname(getSessionLogPath(join(box.root, "_content/bunker"), "x"))],

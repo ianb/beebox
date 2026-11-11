@@ -249,8 +249,13 @@ export async function readCodexSessionHistoryIfPresent(options: {
   sessionId: string;
   slice: SessionLogSlice;
 }): Promise<{ entries: SessionEntry[]; total: number } | null> {
+  return unlessCodexNotFound(readCodexSessionHistory(options));
+}
+
+/** `null` for the one RPC failure that means Codex does not know the id. */
+async function unlessCodexNotFound<T>(read: Promise<T>): Promise<T | null> {
   try {
-    return await readCodexSessionHistory(options);
+    return await read;
   } catch (error) {
     if (error instanceof CodexHistoryRpcError && error.isNotFound) return null;
     throw error;
@@ -261,6 +266,11 @@ export async function readCodexSessionHistoryIfPresent(options: {
 export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: string): Promise<Date> {
   const raw = await readThread(boxRoot, sessionId);
   return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
+}
+
+/** `readCodexSessionUpdatedAt`, or `null` when Codex does not know the id. */
+export async function readCodexSessionUpdatedAtIfPresent(boxRoot: string, sessionId: string): Promise<Date | null> {
+  return unlessCodexNotFound(readCodexSessionUpdatedAt(boxRoot, sessionId));
 }
 
 /**
@@ -349,13 +359,7 @@ async function listThreadPages(
 }
 
 export async function codexSessionExists(boxRoot: string, sessionId: string): Promise<boolean> {
-  try {
-    await readThread(boxRoot, sessionId);
-    return true;
-  } catch (error) {
-    if (error instanceof CodexHistoryRpcError && error.isNotFound) return false;
-    throw error;
-  }
+  return (await unlessCodexNotFound(readThread(boxRoot, sessionId).then(() => true))) ?? false;
 }
 
 export async function deleteCodexSession(boxRoot: string, sessionId: string): Promise<void> {

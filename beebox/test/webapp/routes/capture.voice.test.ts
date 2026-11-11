@@ -47,14 +47,16 @@ interface UploadOpts {
 
 // Wait for a voice session's (fire-and-forget) HQ job to settle before a
 // test's cleanup closes the event bus — a still-running job emitting into a
-// torn-down bus would throw asynchronously into the NEXT test.
+// torn-down bus would throw asynchronously into the NEXT test. The job writes
+// the manifest and then emits its status, so the settled signal is the status
+// event, not the manifest alone.
 async function waitForHqDone(ctx: TestServer, id: string) {
   const timeoutMs = 2000;
   const start = Date.now();
   for (;;) {
-    const manifest = await manifestOf(ctx, id);
-    if (voiceOf(manifest).hq.state === "failed" || voiceOf(manifest).hq.state === "ready") return manifest;
-    if (Date.now() - start > timeoutMs) return manifest;
+    const emitted = ctx.eventBus.readSince(0).some((e) =>
+      e.event === "voice-recording-status" && e.data.recordingId === id && (e.data.hq.state === "failed" || e.data.hq.state === "ready"));
+    if (emitted || Date.now() - start > timeoutMs) return manifestOf(ctx, id);
     await new Promise((r) => setTimeout(r, 10));
   }
 }

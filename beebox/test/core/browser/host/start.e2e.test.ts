@@ -25,6 +25,7 @@ import http from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 import { ensureBrowserHost, stopBrowserHosts, type BrowserHostHandle } from "../../../../src/core/browser/host/start.js";
 import { pidsNaming, processTable } from "../../../../src/core/browser/host-process/run.js";
@@ -147,6 +148,7 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   // A stale dev bundle is rebuilt on first run; do that outside the host's 20 s start window.
   await execFileAsync(path.join(PACKAGE_ROOT, "bin", "bbx"), ["--version"]);
   const box = { boxRoot, stateDir };
+  const warnings = consoleLines(t, "warn");
 
   // First run: open a page, log in, stop gracefully.
   const first = await ensureBrowserHost(box);
@@ -191,6 +193,9 @@ void test("A real browser host starts, serves the dashboard through the relay, a
     return handle.pid !== second.pid && handle;
   }, { label: "a new host after the kill", timeoutMs: 30_000 });
   // The killed host's dashboard, daemon and Chrome are gone.
+  // Each start that met the killed host said its dashboard was gone (the wait
+  // above can try more than once, so the line may repeat):
+  t.check([...new Set(warnings())], [`Box browser host ${String(second.pid)} for ${boxRoot}: the dashboard does not answer; starting a new host.`]);
   t.check(survivors(secondPids), []);
   await run(third, ["open", siteUrl]);
   t.check(await title(third), "login=priya");
@@ -205,6 +210,7 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   await run(fourth, ["open", siteUrl]);
   t.check(await title(fourth), "login=priya");
   const fourthPids = await recordPids(fourth);
+  t.check(warnings(), [`Box browser host ${String(third.pid)} for ${boxRoot}: the dashboard does not answer; starting a new host.`]);
   // The old host was stopped; a new dashboard serves the relay.
   t.check({ oldHost: alive(third.pid), oldDashboard: alive(thirdPids.dashboard), newDashboard: alive(fourthPids.dashboard) }, { oldHost: false, oldDashboard: false, newDashboard: true });
 });

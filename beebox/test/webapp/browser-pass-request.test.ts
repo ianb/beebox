@@ -9,6 +9,7 @@ import { BROWSER_PASS_COOKIE, signBrowserPass } from "../../src/core/browser/pas
 import { signSession } from "../../src/webapp/auth.js";
 import { resolveBoxIdentity } from "../../src/webapp/box-identity.js";
 import { makeTestServer } from "../helpers/test-route-server.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
 process.env.BBX_OWNER_EMAIL = "priya@example.com";
@@ -31,6 +32,7 @@ async function ownerQuery(headers: Record<string, string>): Promise<number> {
 }
 
 void tap.test("the pass admits the agent, and an owner session beside it does not make it the owner", async (t) => {
+  const errors = consoleLines(t, "error");
   t.check(
     {
       sessionOnly: await ownerQuery({ cookie: SESSION }),
@@ -42,6 +44,11 @@ void tap.test("the pass admits the agent, and an owner session beside it does no
     // 403: admitted, but an agent is refused an owner procedure; 401: not admitted.
     { sessionOnly: 200, passOnly: 403, passAndSession: 403, nothing: 401, sameSitePage: 401 },
   );
+  // Each refused owner procedure reaches the server log, once per 403:
+  t.check(errors(), [
+    "[trpc] query voice.capabilities failed: Owner access required",
+    "[trpc] query voice.capabilities failed: Owner access required",
+  ]);
 });
 
 void tap.test("box-scoped identity readers see nobody when the pass is present", async (t) => {

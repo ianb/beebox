@@ -23,6 +23,7 @@ import { createFakeJev } from "../../../../src/services/jev.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
 import { contentHash } from "../../../../src/lib/content-hash.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 /**
  * Seed review state as a pass that already titled the chat: `generated`
@@ -238,6 +239,7 @@ void test("The expensive path is the correct fallback; the warning keeps the deg
   const failing = {
     async check() { throw new Error("jev unavailable"); },
   };
+  const warnings = consoleLines(t, "warn");
   const summary = await runChatReview(box.root, {
     reviewer: {
       async review() { throw new Error("must not run"); },
@@ -246,6 +248,8 @@ void test("The expensive path is the correct fallback; the warning keeps the deg
     maxSessions: 10, now: NOW, ownerEmail: null, freshness: failing,
   });
   t.check(summary, summaryWith({ titled: 1 }));
+  // The warning names the session and the error behind the fallback:
+  t.check(warnings(), [`chat-review: freshness check failed for ${sessionId}, running the title reviewer instead: Error: jev unavailable`]);
 
   await box.cleanup();
 });
@@ -266,5 +270,7 @@ void test("`BBX_JEV_FAKE` resolves a working checker; a bad value degrades to no
   t.check(yes, { checker: anything(), fake: true });
   t.check(yes === null ? null : await yes.checker.check({ title: "T", recent: "r", sessionId: "s" }), { keeps: true });
 
+  const warnings = consoleLines(t, "warn");
   t.check(await resolveFreshnessChecker(box.root, { BBX_JEV_FAKE: "banana" }), null);
+  t.check(warnings(), ['chat-review: ignoring invalid BBX_JEV_FAKE="banana"; titling will run without freshness checks']);
 });

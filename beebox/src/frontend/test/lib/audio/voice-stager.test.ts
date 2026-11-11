@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../test/helpers/console-lines.js";
 import {
   VoiceStager,
   startStagedRecording,
@@ -98,6 +99,7 @@ void test("Frames of an odd size split across chunks:", async (t) => {
 // is a no-op.
 void test("seal flushes the partial batch before finalize, so the queue's own chunk coun...", async (t) => {
   const { sink, ops, chunks } = recordingSink();
+  const warnings = consoleLines(t, "warn");
   const rec = startStagedRecording({ recordingId: "r1", targetSessionId: null, sink });
   for (let i = 0; i < 51; i++) rec.push(frame(3));
   t.check(rec.hasAudio(), true);
@@ -114,11 +116,14 @@ void test("seal flushes the partial batch before finalize, so the queue's own ch
   rec.push(frame(3));
   rec.discard();
   t.check(ops, ["create r1 target=null", "chunk r1 480000", "chunk r1 9600", "finalize r1 emission=e1 hq=e1"]);
+  // The repeated seal is silent; the discard after it is ignored with a log:
+  t.check(warnings(), ["[voice-staging] Ignoring discard of recording r1: already sealed"]);
 });
 
 // ## Discard is terminal too
 void test("Discard is terminal too", async (t) => {
   const { sink, ops } = recordingSink();
+  const warnings = consoleLines(t, "warn");
   const rec = startStagedRecording({ recordingId: "r2", targetSessionId: "chat-1", sink });
   t.check(rec.hasAudio(), false);
 
@@ -126,4 +131,6 @@ void test("Discard is terminal too", async (t) => {
   rec.discard();
   rec.seal({ emissionId: null, hq: null });
   t.check(ops, ["create r2 target=chat-1", "discard r2"]);
+  // A repeated discard is silent; the seal after it is ignored with a log:
+  t.check(warnings(), ["[voice-staging] Ignoring seal of recording r2: already discarded"]);
 });

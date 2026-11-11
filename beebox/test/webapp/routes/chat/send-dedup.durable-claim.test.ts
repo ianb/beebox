@@ -31,6 +31,9 @@ import type { ChatBackend } from "../../../../src/services/claude-chat-types.js"
 import { createEventBus, type BusEvent } from "../../../../src/core/event-bus/core.js";
 import { createServer } from "../../../../src/webapp/server/app.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { waitForLines } from "./console-lines-wait.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 /**
  * Hold every `ChatSession.send()` open at its first instruction — the window in
@@ -218,6 +221,7 @@ void test("This section used to assert a shared 500, and a freed id:", async (t)
   });
 
   backend.failNextStart = new Error("spawn EBADF");
+  const errors = consoleLines(t, "error");
   const gate = openSendGate();
   const send = () => ctx.request({
     method: "POST",
@@ -240,6 +244,11 @@ void test("This section used to assert a shared 500, and a freed id:", async (t)
   });
 
   t.check(`${a.statusCode} | turn=${typeof bodyField(a.body, "turnId")} | shared=${bodyField(b.body, "turnId") === bodyField(a.body, "turnId")} | retry=${retry.statusCode} | dedup=${bodyField(retry.body, "deduplicated")} | recorded=${recorded.length}`, "200 | turn=string | shared=true | retry=200 | dedup=true | recorded=1");
+  // The failed spawn is logged for the operator after the client was answered:
+  t.check(await waitForLines(errors, { count: 2, label: "the spawn failure logs" }), [
+    spawnFailedLine({ code: "?", message: "spawn EBADF" }),
+    "[chat] send failed to start a run: Error: spawn EBADF",
+  ]);
 });
 
 // ## The claim and the record cross the restart together
@@ -269,6 +278,7 @@ void test("The persisted message event and the durable write are one synchronous
   backend.failNextStart = new Error("spawn EBADF");
   const started = nextStart(backend);
   const crashed = await makeTestServer({ chatBackend: backend });
+  const errors = consoleLines(t, "error");
 
   const failed = await crashed.request({
     method: "POST",
@@ -279,6 +289,10 @@ void test("The persisted message event and the durable write are one synchronous
 
   // Crash once the run has failed to start, the state this section is about.
   await started;
+  t.check(await waitForLines(errors, { count: 2, label: "the spawn failure logs" }), [
+    spawnFailedLine({ code: "?", message: "spawn EBADF" }),
+    "[chat] send failed to start a run: Error: spawn EBADF",
+  ]);
   await crashed.server.close();
   const restarted = await restartOver(crashed.boxRoot, createFakeChatBackend());
   const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-1" });

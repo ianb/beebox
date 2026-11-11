@@ -27,6 +27,7 @@ import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { readRecent } from "../../src/core/notification/log.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-qaging-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -266,10 +267,13 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
   box.commitAll("seed question");
 
   setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
+  const warnings = consoleLines(t, "warn");
   t.check(await ageQuestions(box.root), {
     nudged: [],
     expired: [],
   });
+  // The loud skip names the card:
+  t.check(warnings(), ["Question aging: pending question missing asked-at, skipping: _bookkeeping/questions/NoAskedAt.question.card"]);
 
   const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
   t.check(card, "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n");
