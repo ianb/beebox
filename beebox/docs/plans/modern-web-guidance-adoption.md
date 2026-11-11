@@ -175,18 +175,26 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
   about 30 leans: `popover` on iOS (guide data: iOS 18.3), anchor positioning,
   `closedby`, invoker commands, `interestfor`, `light-dark()` (17.5),
   `text-wrap` (17.5), Trusted Types (26), Temporal (none).
-- **Rec.** Write a one-paragraph policy in `beebox/frontend.md`: floor =
-  Safari 17.0 / Chrome current; features above the floor only as progressive
+- **What is known.** Only the iOS floor is recorded:
+  `ios-app/BeeBox.xcodeproj/project.pbxproj` sets
+  `IPHONEOS_DEPLOYMENT_TARGET = 17.0`, so the app's WKWebView can be Safari
+  17.0. That is an observed floor for one client, not a policy for the web
+  app. Nothing records which desktop Safari, Firefox, or Chrome versions may
+  open a box.
+- **Rec.** Write a one-paragraph policy in `beebox/frontend.md` once the
+  engines are decided. Lean: Safari 17.0 (the iOS app) and current Chrome,
+  Safari and Firefox on desktop; features above that floor only as progressive
   enhancement with no fallback code over about 20 lines. The upstream skill
   reads such a line and applies it.
-- **Boxholder decision.** Keep iOS 17.0, or raise it. Raising to iOS 18
-  would unlock `popover` for B2/C3 and change four leans; nothing else in this
-  plan depends on it.
+- **Boxholder decision (human decision required).** Which engines the web app
+  supports, and whether the iOS target stays at 17.0. Raising iOS to 18 would
+  unlock `popover` for B2/C3 and change four leans; it would not settle
+  desktop support.
 
 ### Category A — Forms and input
 
 **A1. Enter handlers skip IME composition** (`ime-safe-enter-submit`,
-`forms/js-ajax`). **SAMPLE, committed** `f4def2b71` + `9bb68f8a3`.
+`forms/js-ajax`). **SAMPLE, committed** `f4def2b71`, `9bb68f8a3`, `20c78287c`.
 - Asks: a keydown handler that acts on Enter returns early while an IME is
   composing.
 - Found: 4 static-scanner findings, 4 real
@@ -197,38 +205,50 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
 - Ours: agrees in code (`lib/ime.ts`), silent in docs.
 - Size: 4 files, 9 lines. Risk none. Verified by the lint rule below.
 - Lint: **ESLint, ported.** `personal-vibe-check/rules/ime-safe-enter.ts`,
-  on with `react: true`. On 1,049 files it reports the same 4 sites at the
-  parent commit and 0 after the fix. Exact enough to block.
+  on with `react: true`. A guard counts only when it controls the Enter test
+  (negated in its `&&` chain or an enclosing `if`, or an earlier
+  `if (<guard>) return;`); the first version accepted any `isComposing` read
+  anywhere, which cross-model review showed could pass an unsafe handler
+  (fixed in `20c78287c`). On 1,049 files it reports the same 4 sites at the
+  parent commit and 0 after the fix. Misses: handlers imported from another
+  module, and `addEventListener` handlers on non-text elements are reported
+  (no element exemption).
 - Rec: **adopt** (done as sample).
 
 **A2. Field hints and errors are linked to the control** (`forms/labeling-state`,
 `accessibility/descriptions-and-hints`, the `aria-describedby` half of
-`validate-input-after-interaction`). **SAMPLE, committed** `4b36324c4`.
+`validate-input-after-interaction`). **SAMPLE, committed** `4b36324c4`,
+`96da6aa4c`.
 - Asks: hint and error text referenced by `aria-describedby`.
 - Found: 6 control types set `aria-invalid` and none set `aria-describedby`
   (`ui/fields/field.tsx`, `ui/fields/radio.tsx`). Real: all. A screen reader
   heard an error once, through `role="alert"`, and never heard a hint.
 - Ours: silent (`frontend.md` lists "label + input + error + helper").
-- Size: 3 files changed, 1 test added (+85/−17). 224 change-selected tests
-  pass.
+- Size: 3 files changed, 1 test added (about +120/−25 over both commits).
+  The second commit came from cross-model review: `error` is a `ReactNode`,
+  and `error={null}` made the field invalid and pointed it at an empty alert.
+  One predicate, `isShown`, now decides invalid state, the linked id, and the
+  rendered message. 225 change-selected tests pass.
 - Lint: none needed; the primitive owns the wiring.
 - Rec: **adopt** (done as sample).
 
 **A3. Raw controls with no accessible name** (`forms/labeling-state`,
 `checkbox`).
-- Found: 5 real. Chat composer textareas
+- Found: 4 real. Chat composer textareas
   (`chat/InteractiveChat-composer/view.tsx:106`,
   `InteractiveChat-mobile-row.tsx:42`, named only by placeholder);
   `DebugLog.tsx:230`; the Cloudflare revoke-acknowledge checkbox
-  (`admin/CloudflarePublishConnectionsSection/view.tsx:267`); the rendered
-  task-list checkbox (`Markdown/body.tsx:266`).
+  (`admin/CloudflarePublishConnectionsSection/view.tsx:267`). The disabled
+  task-list marker in rendered Markdown (`Markdown/body.tsx:266`) is not
+  counted: the forms audit judged it not real (read-only, in prose), and the
+  `checkbox` audit's "minor" call does not override that.
 - Ours: conflicts with the code; `frontend.md` requires a name on every
   control. Lint misses these because `control-has-associated-label` ignores
   `input` and `textarea`.
-- Size: 5 files, `aria-label` or a wrapping `<label>`. Low risk.
+- Size: 4 files, `aria-label` or a wrapping `<label>`. Low risk.
 - Lint: a new rule (or removing `input`/`textarea` from `ignoreElements`,
   which tightens an existing rule's options and needs the boxholder's yes).
-  Lean: leave the existing rule's options alone; the 5 sites are fixed by hand.
+  Lean: leave the existing rule's options alone; the 4 sites are fixed by hand.
 - Rec: **adopt**.
 
 **A4. Autofill and identifier hints** (`autofill-sign-in-form`,
@@ -369,8 +389,14 @@ tests). Rec: **adopt with changes**; reject Invoker Commands.
 **B11. Toasts under a modal** (`persistent-toast-notifications`).
 `ui/ToastViewport.tsx:22` is a `fixed z-[9999]` div; a `showModal()` dialog is
 in the top layer and makes the page inert, so a toast raised while a dialog is
-open is hidden and silent. Label the container and hold toasts while a modal
-is open. 1 file. Rec: **adopt with changes**; keep `role="alert"`.
+open is likely hidden and silent (from the platform rules; not reproduced).
+The store is the app's single transient error channel and ordinary errors
+expire after ten seconds (`ui/toast-store.ts`, `DEFAULT_TTL_MS = 10_000`), so
+"hold until the dialog closes" can let an error expire unseen.
+Rec: **adopt with changes**: label the container now (1 line). For the modal
+case, first reproduce an error raised under an open `ModalCard`; the fix
+(render the viewport in the top layer, or pause expiry while a modal is open)
+is a **human decision**. Keep `role="alert"`.
 
 **B12. `<button>` without `type`** (`html/html`). 69 raw `<button>` tags lack
 `type`; none is inside a `<form>` today, so no live bug.
@@ -397,13 +423,21 @@ components guides (we write none).
 ### Category C — Dialogs and overlays
 
 **C1. Contain scroll under modal dialogs** (`prevent-page-scroll-under-modal-dialog`,
-`dialog`). **SAMPLE, committed** `f8630e8c3`.
-- Found: 3 native modal dialogs, none with `overscroll-behavior`. Real: all.
-- Size: 9 CSS lines in `src/frontend/src/index.css`. Checked in the dev app
-  that the rules are served; scroll chaining itself was not driven
-  (`bin/browse` scrolls programmatically).
+`dialog`). **SAMPLE, committed** `f8630e8c3`; provisional.
+- Found: 3 native modal dialogs, none with `overscroll-behavior`.
+- Checked after review: on `/chat`, `/search`, `/browse`, `/admin`,
+  `/settings` and `/inventory` the window does not scroll
+  (`document.scrollingElement` 800/800 at a 1200×800 viewport), because the
+  shell is fixed height (`.h-app`). Scroll chaining from a dialog goes to the
+  window, so today the rule has no visible effect on those pages. It matters
+  only on a page that scrolls the window, and none was found. Not driven with
+  a real wheel or touch.
+- Size: 9 CSS lines in `src/frontend/src/index.css`. The rules are served in
+  the dev app.
 - Lint: none (one global rule).
-- Rec: **adopt** (done; add the same rule to `workstreams-app` styles).
+- Rec: **adopt with changes, low value**: keep the sample as a harmless guard,
+  or drop it; the boxholder's call. Do not copy it to `workstreams-app` unless
+  a scrolling page behind its exhibit dialog shows the leak.
 
 **C2. PlacePill landmark search overlay** (`dialog`,
 `accessibility/modals-native-dialogs`).
@@ -554,6 +588,23 @@ Temporal. Rec: **reject**; revisit when Temporal is Baseline.
   0 static findings and no audit findings beyond E1's grid sentence.
   `box-docs/views.md` says nothing about accessibility
   (grep for `access|screen reader|sr-only` is empty).
+- **Templates** (added after review). `legacy-scan` on `src/templates/`,
+  `beebox/templates/` (procedure cards), and `src/schemas/guide/` found 0.
+  The figure starter sketches live in string literals
+  (`src/templates/builtins/starters.ts`), which the scanner cannot see, so
+  they were written out (`figureStarterSketch` for `p5js`, `three`, `d3`) and
+  scanned: 0. Read against the guides: the p5 and three starters animate on
+  every frame (`p.draw`, `requestAnimationFrame`) with no
+  `prefers-reduced-motion` check, and the figure harness applies none
+  (`git grep reduced` in `components/FigureView` is empty), while the app
+  already honours it elsewhere (`lib/reduced-motion.ts`). A box agent copies
+  the starter, so every new figure inherits it. Captions serve as alt text
+  (`src/schemas/figure.ts`: *"the caption (alt text) shows beneath the
+  figure"*).
+- **H0. Reduced motion in figure starters.** Draw one frame and stop when
+  `matchMedia("(prefers-reduced-motion: reduce)")` matches; one line in the
+  figure schema instructions. 2 files. Rec: **adopt with changes**
+  (starters and instructions; not a harness-level pause).
 - **Options.**
   1. Add about 10 lines to `box-docs/views.md`: name controls, use native
      `<dialog>`/`<details>`, `loading="lazy"` on grids, IME-safe Enter. Cheap;
@@ -569,8 +620,8 @@ Temporal. Rec: **reject**; revisit when Temporal is Baseline.
      not filtered, so it works, but the telemetry carries query text
      (see preferences); the wrapper must set `DISABLE_TELEMETRY=1` and pin the
      version, and `security-report.md` §3 gains a row.
-- **Rec.** Option 1 now. Option 4 later, only if box views start using
-  modern features the box agent gets wrong. Reject 3.
+- **Rec.** H0 and option 1 now. Option 4 later, only if box views start
+  using modern features the box agent gets wrong. Reject 3.
 
 ### Category I — Lint and baselined scan
 
@@ -586,13 +637,24 @@ What can become ESLint, by source:
 | `role="progressbar"`/`"meter"` | audit B9 | yes, but 2 sites | reject (fix by hand) |
 | the other 32 upstream matchers | upstream | most yes | reject as ESLint |
 
-The other 32 upstream matchers found nothing in our code, so porting them
-guards patterns nobody here writes. Instead, run `legacy-scan --json` weekly
-inside `schedules/supplemental-lint/` against a baseline (empty today), the
-way it treats oxlint. It catches a new legacy pattern, and it picks up new
-upstream matchers with no port. Constraints: run from a pinned copy in its own
-directory (never `npx @latest` in a schedule), outside the checkout's scripts;
-the scanner sends no telemetry.
+The other 32 upstream matchers found nothing real in our code (the one
+`dark-mode` hit in the app is a boot-splash fallback, judged not real), so
+porting them guards patterns nobody here writes.
+
+For later scans, two options:
+1. **Rerun on update (lean).** When the pinned guidance version is bumped
+   (see "Agent guidance"), rerun `legacy-scan --json` once from the pinned
+   copy and read the new findings. No schedule, no baseline file.
+2. **Weekly baselined scan** inside `schedules/supplemental-lint/`, the way it
+   treats oxlint. The baseline would hold one entry today
+   (`beebox/src/frontend/index.html` `dark-mode`, not real). It needs a pinned
+   scanner copy, a baseline, and an owner for bumps: durable machinery for a
+   scanner whose four real findings are already fixed.
+   **Human decision required.**
+
+Either way: run from a pinned copy in its own directory (never `npx @latest`
+in a schedule), outside the checkout's scripts. The scanner sends no
+telemetry.
 
 ### Agent guidance: whole, part, or none
 
@@ -615,7 +677,7 @@ the scanner sends no telemetry.
 - **Box agents.** Category H, option 1 now; option 4 later.
 - **Order.** (1) Category 0 decision; (2) the sweep by approved category, each
   lint rule landing in the same chunk as its fixes (as sample A1 did);
-  (3) the weekly baselined scan; (4) the dev-agent skill. The sweep does not
+  (3) the dev-agent skill; a pinned `legacy-scan` rerun at each version bump. The sweep does not
   wait on the skill: the audit already did the guide reading.
 
 ### Per-model fit
@@ -641,7 +703,7 @@ screen-reader defects in shared primitives (B2, B3, B9–B11), which a person
 using a screen reader or a keyboard meets on every menu and tab strip, and it
 leaves no rule to stop regressions (principle 11). The fuller plan does not
 add machinery: no new subsystem, no new test tier, no new dependency. The
-weekly scan reuses `supplemental-lint`. Cut from the fuller version already:
+recurring scan is optional (Category I) and off by default. Cut from the fuller version already:
 the `px`→`rem` sweep, the `Dropdown` popover rewrite, container queries,
 running the eval suite, and DOM matchers in `bbx view check`.
 
@@ -658,12 +720,12 @@ None. Each category is small enough to do from its entry here.
 | A2 two fields share an id, so `-message` ids collide | axe `duplicate-id` in tours | ids are `bbx-` unique by rule | clear in tours |
 | B2 arrow-key roving fights a panel that holds inputs | to write with B2 | `Dropdown.tsx` notes panels hold plain controls | silent until a keyboard user hits it; B2's test covers a panel with an input |
 | B3 tests and ui-scan query `[role=tab]` for the re-roled filters | existing DOM tests fail | update tests in the chunk | clear |
-| B11 toasts held during a modal are lost if the modal never closes | to write with B11 | release on close or unmount | silent if mishandled; the test opens and closes a dialog |
+| B11 an error raised under a modal expires (10 s TTL) before the modal closes | no | no | silent; reproduce before choosing a fix (B11) |
 | C2 `inert` on the app root also covers the overlay's own portal | to write with C2 | portal target outside the inert root | silent on desktop, breaks typing; verify on iOS |
 | D2 `color-scheme: dark` on chrome flips a light control inside it | `bin/theme-check` | fields already pin `[color-scheme:light]` (`ui/fields/shell.tsx`) | visible in theme-check |
 | F1 `X-Frame-Options` breaks a same-origin frame we use | header test | `SAMEORIGIN` keeps same-origin frames | clear (frame refuses to load) |
 | F2 Permissions-Policy blocks camera in capture | no | allow `self` | clear in capture; verify on iOS before landing |
-| Weekly `legacy-scan` runs a changed upstream version | no | pinned copy, bumped on purpose | silent if unpinned; the schedule must not use `@latest` |
+| A rerun of `legacy-scan` uses a changed upstream version | no | pinned copy, bumped on purpose | silent if unpinned; never use `@latest` |
 
 > **Critical gap:** none. The silent rows above each name the test that the
 > chunk adds.
@@ -735,8 +797,8 @@ Both land with their docs chunk and are run once
   B11.
 - A header test holds F1/F2 on the HTML route.
 - axe `target-size` in tours holds B4.
-- The weekly baselined `legacy-scan` reports any new upstream-detected
-  pattern.
+- A pinned `legacy-scan` rerun at each guidance bump (or the weekly scan, if
+  chosen) reports new upstream-detected patterns.
 - Not held by a test: visual items (D2, D3, A5) — `bin/theme-check` at change
   time only.
 
@@ -756,8 +818,10 @@ follows dependency, then value.
 8. B4 + axe `target-size`; D2, D3, D5 (theme-check).
 9. E1 (after confirming `body.tsx` is not in chat).
 10. A6 and B12 if approved.
-11. Category H option 1 (`box-docs/views.md`), knowledge audits.
-12. Weekly baselined `legacy-scan` in `schedules/supplemental-lint/`.
+11. Category H: H0 (figure starters) and option 1 (`box-docs/views.md`),
+    knowledge audits.
+12. Only if chosen: weekly baselined `legacy-scan` in
+    `schedules/supplemental-lint/`.
 13. Dev-agent skill install (pinned, telemetry off), dev knowledge audit.
 
 ## Rollout shape
