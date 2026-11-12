@@ -295,6 +295,17 @@ export default [
               allowIn: ["src/components/ui/AnchoredLayer.tsx"],
               message: "An anchored panel is <Popover> or <Menu>.",
             },
+            {
+              // Removing the outline needs a focus style in its place; `hover:` and bare `ring-*` do not count.
+              all: ["outline-none|focus:outline-none|focus-visible:outline-none"],
+              none: [
+                "focus:ring-*|focus-visible:ring-*|focus-within:ring-*",
+                "focus:border-*|focus-visible:border-*",
+                "focus:shadow-*|focus-visible:shadow-*",
+                "focus:outline-*!focus:outline-none|focus-visible:outline-*!focus-visible:outline-none",
+              ],
+              message: "outline-none removes the keyboard focus ring: add focus-visible:ring-*, a border, shadow or outline.",
+            },
             { all: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
           ],
           stylePosition: { values: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },

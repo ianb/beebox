@@ -245,6 +245,7 @@ Dialog rules, with no exception, since the primitives render a native `<dialog>`
 - Never write `role="dialog"` on a `div`.
 - A viewport layer (the `fixed` class or an inline `position: "fixed"`) is a `ui/` primitive; `restricted-classes` lists the few files that own one.
 - Never lock body overflow; the native modal makes the page behind inert.
+- `outline-none` (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or `focus-within:` ring, border, shadow or outline beside it, or the keyboard focus ring is gone (`restricted-classes`; `hover:` does not count). A `tabIndex={-1}` container that only takes script focus is the one case for an `eslint-disable-next-line` with that reason.
 
 **Renderer-specific**
 - `<BboxOverlay>` — bounding box for image renderer (rectangle with color + position).

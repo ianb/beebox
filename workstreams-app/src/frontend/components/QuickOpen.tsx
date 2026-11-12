@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { searchPaths } from "../lib/path-search.js";
 import { trpc } from "../trpc.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
 import { DocumentLifecycleBadges } from "./DocumentLifecycleBadges.js";
+import { useModalDialog } from "./useModalDialog.js";
 
 /**
  * Cmd-P over every browsable path — ported from the retired doc browser's
@@ -25,7 +26,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // Only fetched once opened, so the palette costs nothing until it is wanted.
   const index = trpc.documents.paths.useQuery({ workstream }, { enabled: open });
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useModalDialog(open);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "p") {
@@ -40,15 +41,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
     }
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); };
-  }, []);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!open || dialog === null || dialog.open) return;
-    // Light dismiss (click outside) in addition to Escape; React 18's typings lack the attribute.
-    dialog.setAttribute("closedby", "any");
-    dialog.showModal();
-  }, [open]);
+  }, [dialogRef]);
 
   if (!open) return null;
 

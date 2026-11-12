@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Markdown } from "../../components/Markdown.js";
+import { useModalDialog } from "../../components/useModalDialog.js";
 import type { ExhibitBoot, ExhibitFigure } from "../../../shared/exhibits.js";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
@@ -17,12 +18,7 @@ function isImage(file: string): boolean {
  * the dialog scrolls to pan. A click anywhere closes it.
  */
 function EnlargedFigure({ figure, onClose }: { figure: ExhibitFigure; onClose: () => void }): ReactNode {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null || dialog.open) return;
-    dialog.showModal();
-  }, []);
+  const dialogRef = useModalDialog(true);
   return (
     <dialog
       aria-label={`${figure.label} enlarged`}

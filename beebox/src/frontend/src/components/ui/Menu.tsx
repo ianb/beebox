@@ -362,6 +362,7 @@ function MenuPanel({ menuRef, style, isMenu, width, dense, pageIndex, open, clos
         if (moveMenuFocus(event.currentTarget, event)) event.preventDefault();
       } : undefined}
       style={style}
+      // eslint-disable-next-line personal-vibe-check/restricted-classes -- the panel is a tabIndex=-1 container that takes script focus; its items carry the visible focus style
       className={cn(
         "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain transition-[width] duration-150 ease-out focus:outline-none",
         dense ? "py-0.5" : "py-1",
