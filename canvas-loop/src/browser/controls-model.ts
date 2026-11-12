@@ -9,7 +9,7 @@ import type { ParamDecl, ParamsDecl, ParamValues } from "../core/tea.js";
 
 /** One resolved control: its kind, name, bounds/options, and current value. */
 export type ControlModel =
-  | { kind: "number"; name: string; min: number; max: number; step: number | "any"; value: number }
+  | { kind: "number"; name: string; min: number; max: number; step: number | "any"; value: number; control: "slider" | "field" }
   | { kind: "boolean"; name: string; value: boolean }
   | { kind: "select"; name: string; options: readonly string[]; value: string }
   | { kind: "trigger"; name: string };
@@ -18,7 +18,15 @@ function modelFor(deps: { name: string; param: ParamDecl; value: number | boolea
   const { name, param, value } = deps;
   switch (param.type) {
     case "number":
-      return { kind: "number", name, min: param.min, max: param.max, step: param.step ?? "any", value: typeof value === "number" ? value : param.default };
+      return {
+        kind: "number",
+        name,
+        min: param.min,
+        max: param.max,
+        step: param.step ?? "any",
+        value: typeof value === "number" ? value : param.default,
+        control: param.control ?? "slider",
+      };
     case "boolean":
       return { kind: "boolean", name, value: typeof value === "boolean" ? value : param.default };
     case "select":
@@ -32,4 +40,16 @@ function modelFor(deps: { name: string; param: ParamDecl; value: number | boolea
 export function controlModels(deps: { decl: ParamsDecl; values: ParamValues<ParamsDecl> }): ControlModel[] {
   const values: Record<string, number | boolean | string> = deps.values;
   return Object.entries(deps.decl).map(([name, param]) => modelFor({ name, param, value: values[name] }));
+}
+
+/**
+ * What a typed number field holds, as a value to send: undefined while it is
+ * empty, not a number, out of range, or off the step (for whole-number steps).
+ */
+export function parseField(text: string, model: Extract<ControlModel, { kind: "number" }>): number | undefined {
+  if (text.trim() === "") return undefined;
+  const value = Number(text);
+  if (!Number.isFinite(value) || value < model.min || value > model.max) return undefined;
+  if (model.step !== "any" && Number.isInteger(model.step) && !Number.isInteger((value - model.min) / model.step)) return undefined;
+  return value;
 }

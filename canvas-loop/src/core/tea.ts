@@ -25,13 +25,18 @@ export type CursorKind = "default" | "pointer" | "grab" | "grabbing" | "crosshai
 export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
 
 // ── Parameter declarations ───────────────────────────────────────────
-/** A number slider: `{ type: "number", min, max, default, step? }`. */
+/**
+ * A number: `{ type: "number", min, max, default, step?, control? }`. Shown as a
+ * slider, or with `control: "field"` as a box the person types into (only a
+ * valid, in-range value is sent; `step: 1` also requires a whole number).
+ */
 export interface NumberParam {
   type: "number";
   min: number;
   max: number;
   default: number;
   step?: number;
+  control?: "slider" | "field";
 }
 /** A boolean toggle: `{ type: "boolean", default }`. */
 export interface BooleanParam {

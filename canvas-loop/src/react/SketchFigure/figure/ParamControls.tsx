@@ -4,10 +4,11 @@
 // path — so widgets never touch model state. Display values come from `values`
 // (the controlled/uncontrolled resolution is the caller's job), so this
 // component is fully presentational: no runtime reference, no effects.
+import { useState } from "react";
 import type { JSX } from "react";
 import type { ParamsDecl, ParamValues } from "../../../core/tea.js";
 import type { ControlModel } from "../../../browser/controls-model.js";
-import { controlModels } from "../../../browser/controls-model.js";
+import { controlModels, parseField } from "../../../browser/controls-model.js";
 
 export interface ParamControlsProps {
   decl: ParamsDecl;
@@ -16,8 +17,35 @@ export interface ParamControlsProps {
   onTrigger: (name: string) => void;
 }
 
+/** A typed number field: keeps what the person typed, sends each valid entry, marks an invalid one. */
+function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+  const { model } = props;
+  const [text, setText] = useState(String(model.value));
+  const valid = parseField(text, model) !== undefined;
+  return (
+    <label className="cl-param-row">
+      <span className="cl-param-name">{model.name}</span>
+      <input
+        type="number"
+        className="cl-field"
+        min={model.min}
+        max={model.max}
+        step={model.step}
+        value={text}
+        aria-invalid={!valid}
+        onChange={(e) => {
+          setText(e.target.value);
+          const next = parseField(e.target.value, model);
+          if (next !== undefined) props.onParam(model.name, next);
+        }}
+      />
+    </label>
+  );
+}
+
 function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
   const { model } = props;
+  if (model.control === "field") return <FieldRow model={model} onParam={props.onParam} />;
   return (
     <label className="cl-param-row">
       <span className="cl-param-name">{model.name}</span>

@@ -11,7 +11,7 @@
 // the same classes <ParamControls> renders.
 import type { ParamsDecl, ParamValues } from "../core/tea.js";
 import type { ControlModel } from "./controls-model.js";
-import { controlModels } from "./controls-model.js";
+import { controlModels, parseField } from "./controls-model.js";
 
 export interface ControlDeps {
   decl: ParamsDecl;
@@ -32,8 +32,27 @@ function row(name: string, deps: { control: HTMLElement; prefix: string }): HTML
   return wrap;
 }
 
+/** A typed number field: sends each valid entry; marks an invalid one and sends nothing. */
+function fieldControl(deps: { model: Extract<ControlModel, { kind: "number" }>; onParam: ControlDeps["onParam"]; prefix: string }): HTMLElement {
+  const { model, prefix } = deps;
+  const input = document.createElement("input");
+  input.type = "number";
+  input.className = `${prefix}field`;
+  input.min = String(model.min);
+  input.max = String(model.max);
+  input.step = String(model.step);
+  input.value = String(model.value);
+  input.addEventListener("input", () => {
+    const next = parseField(input.value, model);
+    input.setAttribute("aria-invalid", String(next === undefined));
+    if (next !== undefined) deps.onParam(model.name, next);
+  });
+  return row(model.name, { control: input, prefix });
+}
+
 function numberControl(deps: { model: Extract<ControlModel, { kind: "number" }>; onParam: ControlDeps["onParam"]; prefix: string }): HTMLElement {
   const { model, prefix } = deps;
+  if (model.control === "field") return fieldControl(deps);
   const input = document.createElement("input");
   input.type = "range";
   input.min = String(model.min);

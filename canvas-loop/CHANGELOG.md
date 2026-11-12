@@ -36,6 +36,9 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Typed number fields.** A number param with `control: "field"` shows as a
+  number box in browser figures (DOM and React); only valid, in-range values
+  (whole numbers for `step: 1`) are sent.
 - **Erase and gradient marks under transforms.** @napi-rs/canvas 1.0.2 limits
   destination-out and source-in fills under a transform to the quadrant past
   the translation origin, so erasing a translated or rotated shape cleared only

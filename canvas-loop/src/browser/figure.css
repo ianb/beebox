@@ -36,3 +36,5 @@
   .cl-param-value { color: #93c5fd; }
   .cl-error { border-color: #7f1d1d; background: #2a1414; color: #fca5a5; }
 }
+.cl-field { width: 6em; font: inherit; padding: 2px 6px; border: 1px solid #c7d2fe; border-radius: 5px; }
+.cl-field[aria-invalid="true"] { border-color: #f87171; background: #fef2f2; }

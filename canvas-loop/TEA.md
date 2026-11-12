@@ -107,7 +107,7 @@ So the world an event sees is exactly the state after frame **N−1**'s draw, an
 
 | Type | Declaration | `p` value |
 | --- | --- | --- |
-| number | `{ type: "number", min, max, default, step? }` | `number` |
+| number | `{ type: "number", min, max, default, step?, control? }` | `number` — a slider, or with `control: "field"` a box the person types into (only a valid, in-range value is sent; `step: 1` requires a whole number) |
 | boolean | `{ type: "boolean", default }` | `boolean` |
 | select | `{ type: "select", options: [...] as const, default }` | union of `options` |
 | trigger | `{ type: "trigger" }` | — (arrives only as a `trigger` msg) |
