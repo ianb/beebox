@@ -1,5 +1,5 @@
 ---
-title: "Create a box on the server without running add-box.sh from a laptop"
+title: "A management plane for the server: create boxes and grant secrets without add-box.sh or SSH"
 workstream: box-isolation
 area: beebox
 needs: [decision, design]
@@ -70,3 +70,30 @@ staging one) and pick it explicitly; and the "manage the server" operations
 `add-box.sh`, `prod-ssh`, `bin/deploy-status` and `bbx engine` commands run
 over SSH) have one documented home. The shapes above for box creation are
 one part of that.
+
+## Granting secrets belongs here too (2026-11-11)
+
+Since boxes run as their own users, a box's Admin page reads only that
+box's copy of the secret store (`secrets.machineView` reports
+`scope: "box"`). It cannot see the machine's other keys, so its "Add a key
+to this box" picker for existing keys never appears, and granting a key the
+server already holds takes SSH: `bbx engine secrets grant <box> <name>` as
+the hub user, then re-exporting the box's copy (the export-and-verify step
+in `add-box.sh`). The boxholder found this on a new box that had only the
+Claude token.
+
+The boxholder's direction: the management plane that creates boxes also
+grants and revokes secrets. One owner-only surface over the machine (the
+hub user's master store and the box list) instead of each box's Admin page
+reaching for machine state it can no longer see. Its operations, at least:
+
+- create a box (the shapes above);
+- grant and revoke a machine secret for a box, re-exporting that box's copy;
+- add or replace a machine secret's value;
+- list boxes, their grants, and their health.
+
+The root-helper shape above extends naturally: the same narrow sudo verb set
+gains `grant` and `revoke`, or the hub (which already owns the master store)
+does the store edit and asks the helper only to install the box's copy.
+Each box's Admin page then links to the management plane for anything
+machine-wide, and keeps its box-scoped view.
