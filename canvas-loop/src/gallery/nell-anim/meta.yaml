@@ -1,0 +1,22 @@
+slug: nell-anim
+title: "Nell Rows Out, animated: drag the lantern, the carp watches the light and the reader"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 10
+tier: tea
+harness-commit: 604cb8c3
+frames: 120
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Animation round (from gallery/open-opus-a). Boxholder review pending. Seamless 3 s idle loop; dragging the lantern swings it on a damped pendulum and the carp's eye follows; bringing the light close makes the carp content; pointer near the carp makes it look at the reader; dusk slider; five cached layers keep draw at 5-7 ms.
+self-report-summary: >
+  Wanted movable/fading cached layers (sprites), a cheap fast-ink for moving marks, a timing line, spring helpers, and relative imports in TEA. Found that paper() per frame rebuilt the texture (fixed).
+features-exercised:
+  - TEA tier with pointer input, params and triggers
+  - cache for static painted layers
+  - brushes in motion (seeded marks)
+  - events file with snapshot entries

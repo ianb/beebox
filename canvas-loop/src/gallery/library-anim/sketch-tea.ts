@@ -1,0 +1,381 @@
+import type { BrushName, DeepReadonly, Msg, ParamsDecl, ParamValues, Util, Vec2, View } from "@ianbicking/canvas-loop";
+
+export const canvas = { width: 760, height: 760 };
+
+export const params = {
+  current: { type: "number", min: 0, max: 2, default: 1, step: 0.1 },
+  lantern: { type: "boolean", default: true },
+  fireflies: { type: "boolean", default: true },
+} as const satisfies ParamsDecl;
+
+type Params = ParamValues<typeof params>;
+interface Ripple { x: number; y: number; born: number }
+
+export interface Model {
+  frame: number;
+  ripples: readonly Ripple[];
+  dragging: boolean;
+  lastDragFrame: number;
+  lanternLit: boolean;
+  hoveringLantern: boolean;
+}
+
+export function init(u: Util<typeof params>): Model {
+  return { frame: 0, ripples: [], dragging: false, lastDragFrame: -20, lanternLit: u.params.lantern, hoveringLantern: false };
+}
+
+function overLantern(x: number, y: number): boolean {
+  return Math.hypot(x - 327, y - 454) < 36;
+}
+
+function overWater(x: number, y: number): boolean {
+  return y > 605 && x >= 0 && x <= 760 && y <= 760;
+}
+
+function addRipple(model: DeepReadonly<Model>, x: number, y: number): Model {
+  return { ...model, ripples: [...model.ripples.slice(-5), { x, y, born: model.frame }] };
+}
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch (msg.type) {
+    case "tick":
+      return { ...model, frame: msg.frame, ripples: model.ripples.filter((r) => msg.frame - r.born < 56) };
+    case "mousedown":
+      if (overLantern(msg.x, msg.y)) {
+        u.handled("toggle-lantern");
+        return { ...model, lanternLit: !model.lanternLit, dragging: false };
+      }
+      if (overWater(msg.x, msg.y)) {
+        u.handled("touch-water");
+        return { ...addRipple(model, msg.x, msg.y), dragging: true, lastDragFrame: model.frame };
+      }
+      return model;
+    case "mousemove":
+      if (model.dragging && overWater(msg.x, msg.y) && model.frame - model.lastDragFrame >= 5) {
+        u.handled("trail-ripples");
+        return { ...addRipple(model, msg.x, msg.y), lastDragFrame: model.frame };
+      }
+      if (overLantern(msg.x, msg.y) !== model.hoveringLantern) {
+        u.handled("lantern-hover");
+        return { ...model, hoveringLantern: overLantern(msg.x, msg.y) };
+      }
+      return model;
+    case "mouseup":
+      if (model.dragging) {
+        u.handled("release-water");
+        return { ...model, dragging: false };
+      }
+      return model;
+    case "param":
+      if (msg.name === "lantern") return { ...model, lanternLit: u.params.lantern };
+      return model;
+    case "keydown":
+    case "keyup":
+    case "trigger":
+      return model;
+  }
+}
+
+function drawWater(v: View, model: DeepReadonly<Model>, p: Params): void {
+  const phase = model.frame * 0.055 * p.current;
+  v.noBrush();
+  v.noFill();
+  for (let row = 0; row < 5; row += 1) {
+    const y = 646 + row * 21;
+    const drift = Math.sin(phase + row * 1.4) * 14;
+    v.stroke(row % 2 ? "#f4c58b3c" : "#a8c7b047");
+    v.strokeWeight(row % 2 ? 2.1 : 1.5);
+    for (let col = 0; col < 3; col += 1) {
+      const x = (col * 249 + row * 73 + drift + 780) % 780 - 10;
+      v.line(x, y, x + 18 + row * 2, y - 1);
+    }
+  }
+  for (let i = 0; i < 5; i += 1) {
+    const y = 647 + i * 19;
+    const x = 313 + Math.sin(phase * 0.7 + i * 1.8) * (12 + i * 2);
+    v.stroke("#f9d3968a");
+    v.strokeWeight(3.5 - i * 0.25);
+    v.line(x, y, x + 20 + i * 2, y - 1);
+  }
+  for (const ripple of model.ripples) {
+    const age = model.frame - ripple.born;
+    const radius = 7 + age * (0.65 + p.current * 0.25);
+    const alpha = Math.max(0, Math.round((1 - age / 56) * 145)).toString(16).padStart(2, "0");
+    v.stroke(`#d8d5ae${alpha}`);
+    v.strokeWeight(2.3);
+    v.ellipse(ripple.x, ripple.y, radius * 2.5, radius * 0.75);
+    if (age > 11) {
+      v.stroke(`#b6d0bc${alpha}`);
+      v.strokeWeight(1.3);
+      v.ellipse(ripple.x, ripple.y, radius * 3.6, radius * 1.1);
+    }
+  }
+}
+
+function drawLight(v: View, model: DeepReadonly<Model>, p: Params): void {
+  if (!model.lanternLit) {
+    v.noStroke();
+    v.fill("#294445a8");
+    v.rect(339, 462, 50, 57);
+    v.fill("#4c514bce");
+    v.rect(320, 445, 14, 18);
+    return;
+  }
+  const pulse = 0.5 + 0.5 * Math.sin(model.frame * 0.09);
+  const size = (model.hoveringLantern ? 89 : 69) + pulse * 9;
+  v.noStroke();
+  v.fill(v.ellipseGradient(327, 455, size * 2, size * 2, [[0, "#ffe5a965"], [1, "#ffe5a900"]]));
+  v.ellipse(327, 455, size * 2, size * 2);
+  v.fill("#fff3b2");
+  v.ellipse(326 + Math.sin(model.frame * 0.16) * 1.2, 454, 8 + pulse * 2, 13 + pulse * 3);
+  v.fill("#ffdda92c");
+  v.ellipse(364, 492, 39 + pulse * 7, 45 + pulse * 7);
+  for (let i = 0; i < 5; i += 1) {
+    const y = 655 + i * 18;
+    const x = 315 + Math.sin(model.frame * 0.065 + i * 2) * 13;
+    v.fill("#ffda9f7a");
+    v.ellipse(x, y, 16 + (i % 2) * 9, 3.5);
+  }
+  if (p.fireflies) {
+    for (let i = 0; i < 4; i += 1) {
+      const x = 460 + i * 47 + Math.sin(model.frame * 0.025 + i * 2.4) * 9;
+      const y = 370 + i * 27 + Math.cos(model.frame * 0.035 + i * 2.1) * 10;
+      v.fill("#ffe0a862");
+      v.circle(x, y, 7);
+      v.fill("#fff1bf");
+      v.circle(x, y, 2.5);
+    }
+  }
+}
+
+function drawTurtleEye(v: View, model: DeepReadonly<Model>): void {
+  const blinkDistance = Math.abs((model.frame % 100) - 65);
+  const openness = Math.min(1, blinkDistance / 3);
+  v.noStroke();
+  v.fill("#3b6b61");
+  v.ellipse(629, 511, 10, 13);
+  v.fill("#142f37");
+  v.ellipse(629, 511, 6, 1.2 + openness * 7);
+  if (openness > 0.55) {
+    v.fill("#f6d69c");
+    v.circle(630, 509, 2.2);
+  }
+}
+
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+  v.cache("painted-library", () => drawOriginal(v));
+  drawTurtleEye(v, model);
+  drawWater(v, model, p);
+  drawLight(v, model, p);
+}
+
+const P = (points: number[][]): Vec2[] => points.map((point) => [point[0] ?? 0, point[1] ?? 0]);
+
+function blob(s: View, points: number[][], color: string): void {
+  s.noStroke();
+  s.fill(color);
+  s.curve(P(points), true);
+}
+
+function mark(s: View, points: number[][], color: string, width: number, brush: BrushName = "ink"): void {
+  s.noFill();
+  s.stroke(color);
+  s.strokeWeight(width);
+  s.brush(brush);
+  s.gesture({ pressure: "taper", wobble: 0.5 });
+  s.curve(P(points));
+}
+
+function glint(s: View, x: number, y: number, r: number): void {
+  s.noStroke();
+  s.fill("#ffdb91");
+  s.circle(x, y, r);
+  mark(s, [[x-r*1.3,y],[x+r*1.3,y]], "#ffe8b4", 1.4);
+  mark(s, [[x,y-r*1.3],[x,y+r*1.3]], "#ffe8b4", 1.4);
+}
+
+function drawOriginal(s: View): void {
+  s.paper({ scale: 3.2, contrast: 0.68, seed: 11 });
+  s.background(s.linearGradient(0, 0, 0, 760, [
+    [0, "#182d47"], [0.38, "#496b78"], [0.62, "#b38c76"], [1, "#233f58"],
+  ]));
+
+  // A gap in the storm over the library.
+  s.noStroke();
+  s.fill(s.ellipseGradient(388, 250, 550, 460, [[0, "#deb5909c"], [1, "#deb59000"]]));
+  s.ellipse(388, 250, 550, 460);
+  s.fill("#f8dfae");
+  s.circle(590, 117, 55);
+  s.fill("#f1d8a9");
+  s.circle(590, 117, 52);
+
+  // Rain clouds, broken into broad painted bands.
+  for (let i = 0; i < 11; i += 1) {
+    const y = 47 + i * 18;
+    mark(s, [[-30,y+16],[105,y-7],[270,y+7],[430,y-14],[780,y+5]], i % 2 ? "#72939865" : "#102f4c57", 23, "wash");
+  }
+  for (let i = 0; i < 25; i += 1) {
+    const x = 18 + (i * 101) % 735;
+    const y = 35 + (i * 71) % 270;
+    if (i % 4 === 0) glint(s, x, y, 1.8);
+  }
+
+  // Flooded village on the far bank.
+  blob(s, [[0,330],[80,304],[159,318],[230,299],[330,312],[460,295],[570,317],[680,300],[760,318],[760,445],[0,445]], "#355664");
+  const houses: [number, number, number][] = [[43,339,62],[162,344,48],[583,330,59],[690,345,51]];
+  for (const [x, y, w] of houses) {
+    blob(s, [[x-8,y+8],[x+w/2,y-26],[x+w+8,y+8]], "#213d51");
+    s.fill("#294658"); s.noStroke(); s.rect(x,y,w,75);
+    s.fill("#ddaa78"); s.rect(x+w*0.43,y+20,11,13);
+    mark(s, [[x-8,y+8],[x+w/2,y-26],[x+w+8,y+8]], "#173248", 2.3);
+  }
+  const trees: [number, number, number][] = [[-8,294,30],[124,269,34],[265,281,27],[451,280,37],[541,274,30],[773,282,37]];
+  for (const [x, top, spread] of trees) {
+    mark(s, [[x,405],[x-5,354],[x+4,top+17]], "#243f4e", 4.5, "ink");
+    blob(s, [[x-spread,356],[x-spread-4,top+42],[x-9,top+4],[x+7,top],[x+spread,top+38],[x+spread-8,356]], "#315561");
+    mark(s, [[x-18,top+50],[x-5,top+37],[x+14,top+47]], "#64827988", 4, "bristle");
+  }
+  mark(s, [[0,407],[140,402],[263,410],[384,399],[557,407],[760,403]], "#b5a58a66", 3.2, "bristle");
+
+  // Quiet water behind the principal subject.
+  s.noStroke();
+  s.fill(s.linearGradient(0, 410, 0, 760, [[0,"#536c71"],[0.48,"#284e62"],[1,"#172e49"]]));
+  s.rect(0, 410, 760, 350);
+  for (let row = 0; row < 21; row += 1) {
+    const y = 425 + row * 16;
+    const width = 32 + row * 2;
+    for (let col = 0; col < 9; col += 1) {
+      const x = ((col * 103 + row * 43) % 825) - 35;
+      mark(s, [[x,y],[x+width*0.5,y-2],[x+width,y]], row % 3 === 0 ? "#dcb28a56" : "#8eb2aa55", row % 3 === 0 ? 3.6 : 2.3, "bristle");
+    }
+  }
+
+  // The turtle's feet sit deep in the flood; the neck leads the eye right.
+  blob(s, [[214,567],[158,577],[128,609],[139,644],[222,650],[274,620]], "#254c4d");
+  blob(s, [[494,573],[523,600],[570,612],[597,642],[562,659],[493,646],[458,617]], "#20494b");
+  blob(s, [[174,516],[202,471],[319,441],[464,454],[529,502],[519,567],[444,617],[284,632],[193,585]], "#305b57");
+  blob(s, [[489,495],[537,477],[590,492],[631,481],[668,508],[674,542],[646,562],[602,557],[565,538],[507,545]], "#3b6b61");
+  blob(s, [[618,542],[637,559],[661,559],[653,569],[621,561]], "#31574e");
+  mark(s, [[583,501],[636,492],[661,508]], "#a9b781", 10, "wash");
+  s.noStroke(); s.fill("#142f37"); s.ellipse(629, 511, 7, 9);
+  s.fill("#f6d69c"); s.circle(630, 509, 2.4);
+  s.fill("#36574d"); s.circle(663, 527, 2.2);
+  mark(s, [[614,500],[627,497],[638,503]], "#264c49", 3.1);
+  mark(s, [[637,539],[649,544],[661,540]], "#183a3b", 2.4);
+  mark(s, [[550,532],[567,547],[587,553]], "#204044", 2.3);
+  mark(s, [[536,510],[559,493],[589,487]], "#91a97c", 8, "bristle");
+  mark(s, [[182,552],[210,570],[242,575]], "#749578", 8, "bristle");
+  mark(s, [[147,610],[169,605],[191,608]], "#83a17c", 6, "bristle");
+  mark(s, [[517,617],[546,627],[570,635]], "#75957a", 6, "bristle");
+
+  // Broad shell: the little library is built into its painted dome.
+  const shell = [[205,507],[237,416],[325,373],[420,390],[492,451],[522,536],[474,588],[355,605],[244,574]];
+  blob(s, shell, "#704f49");
+  s.clip(s.curvePath(P(shell), true), () => {
+    for (let i = 0; i < 23; i += 1) {
+      const y = 392 + i * 9;
+      mark(s, [[211,y+38],[281,y+11],[374,y+23],[487,y+65]], i % 3 === 0 ? "#d2916866" : "#3b544e88", 15, "bristle");
+    }
+    mark(s, [[250,446],[316,412],[398,422],[466,468]], "#e5b78366", 28, "wash");
+    for (let i = 0; i < 8; i += 1) {
+      const x = 240 + i * 31;
+      mark(s, [[x,476],[x+9,463],[x+24,464]], "#f2bf825d", 7, "bristle");
+    }
+    mark(s, [[236,455],[258,430],[287,416]], "#b37a6388", 2.7);
+    mark(s, [[298,393],[309,408],[319,415]], "#c9926f9c", 2.6);
+    mark(s, [[352,385],[356,402],[354,411]], "#dfaa7da6", 2.8);
+    mark(s, [[420,407],[409,422],[403,434]], "#d69d749c", 2.6);
+    mark(s, [[480,468],[465,481],[448,486]], "#d9a079a0", 2.6);
+    mark(s, [[494,531],[472,530],[453,523]], "#d89b739c", 2.7);
+    mark(s, [[272,567],[289,549],[301,543]], "#d69d758c", 2.8);
+    mark(s, [[359,590],[363,568],[370,552]], "#d09b748c", 2.8);
+  });
+  mark(s, shell.concat([shell[0] ?? [205,507]]), "#223d42", 5.5);
+  mark(s, [[213,530],[285,557],[372,571],[464,557],[514,525]], "#dfad77", 9, "bristle");
+  mark(s, [[232,531],[297,548],[379,553],[464,531]], "#233e3f", 3.5);
+
+  // The timbered room glows through a wall set into the shell.
+  s.noStroke();
+  s.fill(s.ellipseGradient(359, 472, 205, 180, [[0,"#edb87b6b"],[1,"#edb87b00"]]));
+  s.ellipse(359,472,205,180);
+  blob(s, [[292,441],[317,411],[405,407],[440,435],[448,526],[405,552],[300,533]], "#294445");
+  blob(s, [[311,443],[330,426],[393,423],[419,441],[421,517],[395,533],[313,517]], "#bb8060");
+  blob(s, [[303,441],[329,416],[390,413],[425,438],[419,449],[391,431],[332,433],[310,453]], "#503e3d");
+  mark(s, [[307,443],[333,425],[390,423],[419,444]], "#f1c390", 5, "bristle");
+  for (let i = 0; i < 7; i += 1) {
+    const x = 322 + i * 13;
+    mark(s, [[x,427],[x+8,435]], "#ad7258", 2.5, "ink");
+  }
+  s.noStroke(); s.fill("#deb57e"); s.rect(331, 442, 65, 12);
+  s.fill("#604d45"); s.textSize(8); s.textAlign("center"); s.text("BOOKS", 363, 451);
+  s.noStroke(); s.fill("#efc48b"); s.rect(332, 453, 63, 69);
+  s.fill("#a25e4b"); s.rect(339, 462, 49, 58);
+  s.fill("#f9d68e"); s.rect(344, 467, 39, 50);
+  // Book spines in the window, some tilted by the crossing.
+  for (let i = 0; i < 7; i += 1) {
+    const x = 345 + i * 5.5;
+    s.fill(["#703f46","#54716b","#936447","#355769"][i%4] ?? "#703f46");
+    s.rect(x, 481 + (i%3)*2, 4.2, 24 - (i%3)*2);
+  }
+  mark(s, [[344,506],[383,506]], "#5c493e", 2);
+  mark(s, [[363,467],[363,517]], "#6f4d42", 2);
+  mark(s, [[342,481],[386,481]], "#e8b673", 1.5);
+  mark(s, [[340,519],[387,519]], "#704e45", 3);
+  mark(s, [[325,450],[333,441],[397,439],[409,450]], "#f1c596", 4, "bristle");
+  mark(s, [[300,531],[348,544],[398,541],[440,524]], "#172f35", 5);
+  // Roof shingles climb the turtle's curve.
+  for (let i = 0; i < 9; i += 1) {
+    const x = 277 + i * 19;
+    mark(s, [[x,420-(i<5?i:9-i)*5],[x+16,412-(i<5?i:9-i)*5]], "#d8a879", 3.4, "bristle");
+  }
+
+  // A small keeper on the shell: coat, face, lantern and reaching arm.
+  blob(s, [[257,451],[246,475],[256,505],[283,510],[294,477],[281,454]], "#d19a5d");
+  blob(s, [[255,454],[263,435],[278,435],[287,451],[279,464],[262,464]], "#a75646");
+  s.noStroke(); s.fill("#efd0a2"); s.ellipse(273, 446, 15, 17);
+  s.fill("#273c3e"); s.circle(277, 442, 2.4);
+  s.fill("#ad6253"); s.circle(281, 448, 2.5);
+  mark(s, [[267,453],[274,458],[281,455]], "#823f3a", 2);
+  mark(s, [[260,463],[249,478],[255,499],[281,502]], "#f2c885", 4.5, "bristle");
+  mark(s, [[274,471],[272,498]], "#9f6347", 2);
+  s.noStroke(); s.fill("#8a5b4b"); s.circle(267, 481, 2.3);
+  s.circle(266, 490, 2.3);
+  mark(s, [[279,475],[304,459],[321,449]], "#d5a66d", 7, "ink");
+  s.noStroke(); s.fill("#edc193"); s.circle(318, 450, 5);
+  mark(s, [[259,503],[251,524]], "#463e3b", 5);
+  mark(s, [[280,504],[289,526]], "#463e3b", 5);
+  // Lantern at the end of the keeper's arm.
+  s.noStroke(); s.fill(s.ellipseGradient(327, 455, 125, 125, [[0,"#ffd38a9c"],[1,"#ffd38a00"]])); s.ellipse(327,455,125,125);
+  s.fill("#fce2a3"); s.rect(318, 443, 18, 24);
+  s.noFill(); s.stroke("#243b3e"); s.strokeWeight(3); s.brush("ink");
+  s.rect(316,441,22,27);
+  mark(s, [[321,441],[325,433],[333,441]], "#27383b", 2);
+
+  // Ripples and the wake wrap the crossing in light.
+  for (let i = 0; i < 13; i += 1) {
+    const y = 617 + i * 10;
+    const extent = 145 + i * 15;
+    mark(s, [[380-extent,y+7],[315,y],[419,y-2],[380+extent,y+5]], i % 2 ? "#e0bd8d77" : "#8cb9ad8b", i % 2 ? 5 : 3, "bristle");
+  }
+  mark(s, [[542,573],[610,577],[697,600],[755,593]], "#b1c8ac", 5, "wash");
+  mark(s, [[105,610],[170,592],[230,608]], "#91b1a8", 6, "wash");
+  for (let i = 0; i < 14; i += 1) {
+    const y = 647 + i * 7;
+    const x = 302 + Math.sin(i * 2.6) * 20;
+    mark(s, [[x,y],[x+24+(i%3)*10,y-2]], i % 3 === 0 ? "#ffd197b0" : "#edaf75a0", 6 + (i%3), "bristle");
+  }
+  const reeds: [number, number][] = [[20,1],[744,-1]];
+  for (const [x, flip] of reeds) {
+    mark(s, [[x,766],[x+flip*7,713],[x+flip*28,649]], "#142e3e", 6, "ink");
+    mark(s, [[x+flip*9,757],[x+flip*33,693],[x+flip*42,677]], "#203d46", 3.5, "ink");
+    blob(s, [[x+flip*9,723],[x+flip*34,710],[x+flip*45,715],[x+flip*25,728]], "#254b4c");
+    blob(s, [[x+flip*19,687],[x+flip*38,675],[x+flip*50,680],[x+flip*33,694]], "#31544c");
+    mark(s, [[x+flip*28,649],[x+flip*31,628]], "#806b56", 7, "bristle");
+  }
+  for (let i = 0; i < 7; i += 1) {
+    const y = 600 + i * 23;
+    const x = 579 + Math.sin(i * 2.1) * 26;
+    mark(s, [[x,y],[x+25+i*2,y-1]], "#c5c8ae75", 3.5, "bristle");
+  }
+  s.paperTexture(0.36);
+}

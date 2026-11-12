@@ -1,0 +1,20 @@
+[
+  { "frame": 0, "type": "snapshot", "label": "quiet crossing" },
+  { "frame": 13, "type": "mousemove", "x": 326, "y": 454 },
+  { "frame": 16, "type": "snapshot", "label": "lantern hover" },
+  { "frame": 23, "type": "mousedown", "x": 327, "y": 453 },
+  { "frame": 25, "type": "snapshot", "label": "lantern dimmed" },
+  { "frame": 28, "type": "mouseup", "x": 327, "y": 453 },
+  { "frame": 31, "type": "mousedown", "x": 327, "y": 453 },
+  { "frame": 33, "type": "mouseup", "x": 327, "y": 453 },
+  { "frame": 40, "type": "mousedown", "x": 455, "y": 688 },
+  { "frame": 46, "type": "mousemove", "x": 489, "y": 692 },
+  { "frame": 53, "type": "mousemove", "x": 522, "y": 698 },
+  { "frame": 54, "type": "mouseup", "x": 522, "y": 698 },
+  { "frame": 58, "type": "snapshot", "label": "ripples behind a finger" },
+  { "frame": 65, "type": "snapshot", "label": "a slow blink" },
+  { "frame": 68, "type": "param", "name": "current", "value": 1.8 },
+  { "frame": 75, "type": "snapshot", "label": "quicker current" },
+  { "frame": 85, "type": "param", "name": "fireflies", "value": false },
+  { "frame": 92, "type": "snapshot", "label": "fireflies tucked away" }
+]
