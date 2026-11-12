@@ -80,6 +80,13 @@ type Msg =
   | { type: "trigger"; name: string };
 ```
 
+In a browser, mouse, touch and pen all arrive as the `mouse*` messages, so
+one sketch serves a phone too. A drag that starts on the canvas does not scroll
+the page, and a press always ends with `mouseup`, even when the finger leaves
+the canvas or the browser cancels the touch. A finger has no hover: a touch
+sketch gets `mousemove` only while pressed. Hit areas a fingertip must land
+on want to be about 40 pixels across.
+
 ## Frame-N guarantee
 
 For each frame N, the runtime:

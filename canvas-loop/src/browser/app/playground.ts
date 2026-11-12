@@ -3,7 +3,7 @@
 // serialises every interaction to the headless events-file format. All wiring
 // goes through the Runtime's input methods, so hand interaction and scripted
 // replay converge on one representation.
-import { pixelRatioOf, sizeCanvas } from "../mount.js";
+import { pixelRatioOf, sizeCanvas, wireInput } from "../mount.js";
 import type { CanvasSize } from "../../core/tea.js";
 import { buildControls } from "../controls.js";
 import { REGISTRY } from "./registry.js";
@@ -17,7 +17,6 @@ const MAX_LOG_LINES = 200;
 interface Session {
   runtime: Runtime;
   canvas: HTMLCanvasElement;
-  pressed: boolean;
 }
 
 class Playground {
@@ -152,7 +151,7 @@ class Playground {
       onFrame: (frame) => this.#onFrame(frame),
       onLog: (line) => this.#onLog(line),
     });
-    const session: Session = { runtime, canvas, pressed: false };
+    const session: Session = { runtime, canvas };
     this.#session = session;
     this.#wireInput(session);
     this.#renderControls(runtime);
@@ -181,32 +180,9 @@ class Playground {
 
   // ── input wiring (all through Runtime) ───────────────────────────
   #wireInput(session: Session): void {
-    const { canvas, runtime } = session;
-    canvas.addEventListener("mousedown", (e) => {
-      session.pressed = true;
-      canvas.focus();
-      const p = coords(canvas, e);
-      runtime.pointer({ type: "mousedown", x: p.x, y: p.y });
-    });
-    // Every move is sent, pressed or not, so sketches can react to hover.
-    canvas.addEventListener("mousemove", (e) => {
-      const p = coords(canvas, e);
-      runtime.pointer({ type: "mousemove", x: p.x, y: p.y });
-    });
-    const release = (e: MouseEvent): void => {
-      if (!session.pressed) return;
-      session.pressed = false;
-      const p = coords(canvas, e);
-      runtime.pointer({ type: "mouseup", x: p.x, y: p.y });
-    };
-    canvas.addEventListener("mouseup", release);
-    canvas.addEventListener("mouseleave", release);
-    canvas.addEventListener("keydown", (e) => {
-      if (e.repeat) return;
-      if (e.key.startsWith("Arrow")) e.preventDefault();
-      runtime.key({ type: "keydown", key: e.key });
-    });
-    canvas.addEventListener("keyup", (e) => runtime.key({ type: "keyup", key: e.key }));
+    // The same pointer/touch/key wiring as a mounted figure; the canvas is
+    // replaced (not reused) on restart, so its listeners go with it.
+    wireInput(session.canvas, session.runtime);
   }
 
   // ── toolbar actions ──────────────────────────────────────────────
@@ -303,14 +279,6 @@ function labeled(name: string, control: HTMLElement): HTMLElement {
   caption.textContent = name;
   wrap.append(caption, control);
   return wrap;
-}
-
-function coords(canvas: HTMLCanvasElement, e: MouseEvent): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  const ratio = pixelRatioOf(canvas);
-  const sx = rect.width === 0 ? 1 : canvas.width / ratio / rect.width;
-  const sy = rect.height === 0 ? 1 : canvas.height / ratio / rect.height;
-  return { x: Math.round((e.clientX - rect.left) * sx), y: Math.round((e.clientY - rect.top) * sy) };
 }
 
 function mount(): void {

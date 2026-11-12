@@ -68,6 +68,21 @@ export class FakeElement {
   focus(): void {
     // Focus is irrelevant to these tests; the listener wiring calls it.
   }
+  /** Pointers captured by this element (pointer ids). */
+  captured = new Set<number>();
+  setPointerCapture(id: number): void {
+    this.captured.add(id);
+  }
+  hasPointerCapture(id: number): boolean {
+    return this.captured.has(id);
+  }
+  releasePointerCapture(id: number): void {
+    this.captured.delete(id);
+  }
+  /** Call this element's listeners for `type` with `event`. */
+  fire(type: string, event: unknown): void {
+    for (const fn of this.listeners.get(type) ?? []) fn(event);
+  }
   getBoundingClientRect(): { left: number; top: number; width: number; height: number } {
     return { left: 0, top: 0, width: this.width, height: this.height };
   }

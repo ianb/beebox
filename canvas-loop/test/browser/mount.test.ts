@@ -114,11 +114,11 @@ test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", (
   const canvas = container?.find((el) => el.tagName === "canvas");
   assert.ok(canvas !== null && canvas !== undefined, "canvas present before teardown");
   assert.ok(rafState.pending.size > 0, "the loop has a pending frame before teardown");
-  assert.equal(canvas.addedListeners, 6, "input wiring attached its listeners");
+  assert.equal(canvas.addedListeners, 7, "input wiring attached its listeners");
 
   teardown();
   assert.equal(rafState.pending.size, 0, "teardown cancels the pending animation frame");
-  assert.equal(canvas.removedListeners, 6, "teardown removes every input listener");
+  assert.equal(canvas.removedListeners, 7, "teardown removes every input listener");
   assert.equal(mount.children.length, 0, "teardown removes the container from the mount");
 });
 
@@ -235,4 +235,39 @@ test("mountSketch keeps a module's sound export, so its runtime collects voices"
   runFrames(3);
   assert.ok(calls > 0, "sound() ran after ticks");
   teardown();
+});
+
+test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, page scrolling is off, a second finger is ignored", () => {
+  const seen: string[] = [];
+  const raw = {
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: (): null => null,
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: null, msg: Msg, _u: Util): null => {
+      if (msg.type !== "tick") seen.push(`${msg.type} ${"x" in msg ? `${msg.x},${msg.y}` : ""}`.trim());
+      return model;
+    },
+    draw: (): void => {},
+  };
+  const canvas = new FakeElement("canvas");
+  canvas.width = 50;
+  canvas.height = 50;
+  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {} });
+  assert.ok(attached !== null, "attached to the fake canvas");
+  assert.equal(canvas.style["touchAction"], "none", "a drag on the canvas does not scroll the page");
+
+  const touch = (pointerId: number, at: { x: number; y: number; isPrimary?: boolean }): object => ({ pointerId, isPrimary: at.isPrimary ?? true, pointerType: "touch", clientX: at.x, clientY: at.y });
+  canvas.fire("pointerdown", touch(7, { x: 10, y: 10 }));
+  assert.deepEqual([...canvas.captured], [7], "the finger is captured, so sliding off the canvas still reports");
+  canvas.fire("pointerdown", touch(8, { x: 40, y: 40, isPrimary: false }));
+  canvas.fire("pointermove", touch(8, { x: 41, y: 41, isPrimary: false }));
+  canvas.fire("pointermove", touch(7, { x: 20, y: 15 }));
+  // The browser takes the touch (e.g. a system gesture): the press still ends.
+  canvas.fire("pointercancel", touch(7, { x: 20, y: 15 }));
+  canvas.fire("lostpointercapture", touch(7, { x: 20, y: 15 }));
+  runFrames(2);
+  assert.deepEqual(seen, ["mousedown 10,10", "mousemove 20,15", "mouseup 20,15"]);
+  assert.deepEqual([...canvas.captured], [], "capture released");
+  attached.teardown();
 });
