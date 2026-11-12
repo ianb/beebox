@@ -9478,7 +9478,7 @@ tests:
       I want a small info bubble that opens from a badge in the beebox chat.
       How do I build it? Explain only; do not change files.
     expected_level: knows_about
-    should_read_any: ["beebox/frontend.md"]
+    should_read_any: ["beebox/frontend.md", "components/ui/Popover.tsx"]
     watch_for: >
       Names ui/Popover (render-prop trigger, label). FAILS if it proposes an
       absolute-positioned div or calling useDismiss in the component.
@@ -9491,7 +9491,7 @@ tests:
       Add a confirm dialog before deleting an item in the beebox web app. What
       do I build it with? Explain only; do not change files.
     expected_level: knows_about
-    should_read_any: ["beebox/frontend.md"]
+    should_read_any: ["beebox/frontend.md", "components/ui/ModalDialog.tsx"]
     watch_for: >
       Names ModalDialog (labelledBy the heading, caller supplies the action
       row). FAILS if it proposes role="dialog", a raw <dialog>, or a fixed
@@ -9506,7 +9506,7 @@ tests:
       beebox web app. There are no tab panels, the buttons just change the
       list. What do I use? Explain only; do not change files.
     expected_level: knows_about
-    should_read_any: ["beebox/frontend.md"]
+    should_read_any: ["beebox/frontend.md", "components/ui/TabBar.tsx"]
     watch_for: >
       Names TabBar with mode="buttons", or buttons with aria-pressed in a
       role="group". FAILS if it proposes role="tablist" or role="tab" with no
