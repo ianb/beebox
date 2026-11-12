@@ -52,7 +52,7 @@ void test("targets: each selector of a rule naming a theme under test, deduplica
     { sheet: "gilt-chrome.css", selector: "[data-chrome-theme=\"gilt\"] .bbx-card-overlay", media: [] },
     { sheet: "gilt-chrome.css", selector: "[data-chrome-theme=\"gilt\"] .bbx-app-nav", media: ["print"] },
     { sheet: "gilt-chrome.css", selector: "[data-chrome-theme=\"gilt\"] button:hover", media: ["(min-width: 640px)"] },
-  ], { themes: ["gilt"], exemptions: [{ selector: ".bbx-card-overlay", reason: "modal" }] });
+  ], { themes: ["gilt"], shared: [], exemptions: [{ selector: ".bbx-card-overlay", reason: "modal" }] });
   t.check(targets.map(({ original, selector, media }) => ({ original, selector, media })), [
     { original: "[data-chrome-theme=\"gilt\"] .bbx-app-nav", selector: "[data-chrome-theme=\"gilt\"] .bbx-app-nav", media: [] },
     { original: "[data-chrome-theme=\"gilt\"] button:hover", selector: "[data-chrome-theme=\"gilt\"] button:where(*)", media: ["(min-width: 640px)"] },
@@ -61,6 +61,18 @@ void test("targets: each selector of a rule naming a theme under test, deduplica
   if (first === undefined || second === undefined) throw new Error("expected two targets");
   t.check(describeUncoveredRule(first, { unparsable: false }), "rule matches nothing in the studio: [data-chrome-theme=\"gilt\"] .bbx-app-nav (gilt-chrome.css)");
   t.check(describeUncoveredRule(second, { unparsable: true }), "rule selector could not be tested: [data-chrome-theme=\"gilt\"] button:hover in @media (min-width: 640px) (gilt-chrome.css)");
+  t.end();
+});
+
+// A shared theme sheet styles every theme, so its rules that name no theme
+// need a specimen under each; a rule there that names another theme does not.
+void test("a shared sheet's rules that name no theme are targets for every theme", (t) => {
+  const targets = ruleTargets([
+    { sheet: "question-beside.css", selector: "[data-question-beside] h2", media: [] },
+    { sheet: "question-beside.css", selector: "[data-card-theme=\"deck\"] [data-question-beside]", media: [] },
+    { sheet: "index.css", selector: ".bbx-other", media: [] },
+  ], { themes: ["gilt"], shared: ["question-beside.css"], exemptions: [] });
+  t.check(targets.map(({ original }) => original), ["[data-question-beside] h2"]);
   t.end();
 });
 
@@ -87,7 +99,7 @@ void test("each hook member of an :is() list stands in for its list", (t) => {
 void test("a member target reports its member, and points at its whole selector", (t) => {
   const targets = ruleTargets([
     { sheet: "chrome.css", selector: "[data-chrome-theme=\"paper\"] .bbx-app-nav :is(#bbx-nav-voice, #bbx-nav-back-to-chat)", media: [] },
-  ], { themes: ["paper"], exemptions: [] });
+  ], { themes: ["paper"], shared: [], exemptions: [] });
   t.check(targets.map((target) => [target.member, target.whole === null ? null : target.whole === targets[0]?.key, target.selector]), [
     [null, null, "[data-chrome-theme=\"paper\"] .bbx-app-nav :is(#bbx-nav-voice, #bbx-nav-back-to-chat)"],
     ["#bbx-nav-voice", true, "[data-chrome-theme=\"paper\"] .bbx-app-nav :is(#bbx-nav-voice)"],

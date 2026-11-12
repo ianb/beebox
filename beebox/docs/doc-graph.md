@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-12T13:10:56Z
-Total documents: 643
+Generated: 2026-11-12T18:00:30Z
+Total documents: 644
 
 ## Issues
 
@@ -20,6 +20,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-sound.md** — "canvas-loop: sound as a view of state" (221 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-styles.md** — "canvas-loop: per-call styles; retire the p5-style tier" (430 lines) · shipped history · implemented
+- **docs/implemented-plans/card-front-material.md** — "Card fronts take the card's ink; the theme audit flags app ink in cards" (161 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-activity-stages.md** — "Chat activity row shows stages, and Codex steps get real labels" (381 lines) · shipped history · implemented
@@ -185,6 +186,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
 - docs/implemented-plans/capture-mode.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/card-front-material.md:45 (mention) — - Root `AGENTS.md`: no lint weakening or audit exemptions to pass. The
 - docs/implemented-plans/card-reading.md:53 (mention) — | Include line | Show a label and link | The Markdown body of an `AGENTS.md` / `CLAUDE.md` file | Background, inline |
 - docs/implemented-plans/card-view-widgets.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -2534,7 +2536,7 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 95 lines | current reference
+Title: "Authoring themes" | 104 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
@@ -2774,7 +2776,7 @@ Title: "Card themes" | 285 lines | current reference
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:80 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
+- docs/theme-authoring.md:89 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:22 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 - ../research/modern-web-guidance/audit/visual-js-pwa.md:50 (mention) — - Applies here: partly — card `symbol:` takes author `background:`/`foreground:` colours (`beebox/docs/box/card-themes.m
 
@@ -4514,6 +4516,15 @@ References:
 - → docs/implemented-plans/input-extraction.md (mention)
 - → docs/cards/migrations.md (mention)
 - → src/services/AGENTS.md (mention)
+
+#### docs/implemented-plans/card-front-material.md **[ORPHAN]**
+
+Title: "Card fronts take the card's ink; the theme audit flags app ink in cards" | 161 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-10-24-status-and-error-text-ignore-card-material.md (frontmatter)
+- → docs/implemented-plans/theme-studio.md (mention)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/card-prominence.md
 
@@ -8386,6 +8397,7 @@ References:
 Title: "Theme studio: show what the app shows, at screen scale" | 389 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/card-front-material.md:43 (mention) — (`docs/implemented-plans/theme-studio.md:266`: *"Chat materials provide
 - ../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Direction
 - ../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Chat root
 - ../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studi
@@ -8625,7 +8637,7 @@ References:
 - → ../issues/exploration/2026-10-08-motion-in-the-app.md (frontmatter)
 - → ../issues/decisions/2026-08-26-axe-region-rule-on-floating-menus.md (frontmatter)
 - → ../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md (frontmatter)
-- → ../issues/bugs/2026-10-24-status-and-error-text-ignore-card-material.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-24-status-and-error-text-ignore-card-material.md (frontmatter)
 - → ../issues/code-quality/2026-10-31-modules-at-line-cap-block-small-changes.md (frontmatter)
 - → ../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md (frontmatter)
 - → docs/implemented-plans/modern-web-guidance-adoption.md (mention)
