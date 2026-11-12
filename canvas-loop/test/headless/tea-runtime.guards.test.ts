@@ -18,24 +18,24 @@ function guardModule(offend: () => void): LoadedTeaModule {
   });
 }
 
-test("Math.random() inside a sketch is a determinism error pointing at s.random()", () => {
+test("Math.random() inside a sketch is a determinism error pointing at u.random()", () => {
   const dir = tmpDir();
   const result = teaRun(teaRunOptions(guardModule(() => void Math.random()), { outDir: dir, frames: 3 }));
   assert.equal(result.errors.length, 1, "run reported one error");
   const [message] = result.errors;
   assert.ok(message !== undefined && message.includes("Math.random"), "names the offending API");
-  assert.ok(message.includes("s.random()"), "points at the seeded replacement");
+  assert.ok(message.includes("u.random()"), "points at the seeded replacement");
   const transcript = readTranscript(dir);
   assert.ok(transcript.includes("ERROR DeterminismError"), "transcript records the error");
 });
 
-test("Date.now() inside a sketch is a determinism error pointing at s.millis()", () => {
+test("Date.now() inside a sketch is a determinism error pointing at the tick msg", () => {
   const dir = tmpDir();
   const result = teaRun(teaRunOptions(guardModule(() => void Date.now()), { outDir: dir, frames: 3 }));
   assert.equal(result.errors.length, 1);
   const [message] = result.errors;
   assert.ok(message !== undefined && message.includes("Date.now"), "names Date.now");
-  assert.ok(message.includes("s.millis()"), "points at s.millis()");
+  assert.ok(message.includes("tick msg"), "points at the tick msg");
 });
 
 test("nondeterministic globals are restored after a run", () => {

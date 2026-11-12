@@ -1,5 +1,4 @@
-// Shared drawing-data types for both tiers (the mutable Sketch engine and the
-// TEA View facade). Everything here is DATA, not calls on a live context: point
+// Shared drawing-data types for the View and the Painter. Everything here is DATA, not calls on a live context: point
 // arrays, a tagged path mini-language, and gradient handles. That keeps the
 // surface serializable-in-principle — a later browser renderer could emit these
 // as JSON draw commands — and keeps live `CanvasGradient`/`Path2D` objects from
@@ -33,7 +32,7 @@ export interface TextBox {
   h?: number;
 }
 
-/** How `text` lays out and styles one call. Unset style keys use the current text and fill settings. */
+/** How `text` lays out and styles one call. Keys left out take the defaults: size 12, sans-serif, normal, black, left, top. */
 export interface TextOptions {
   align?: "left" | "center" | "right";
   /** Default "top". "baseline": `y` is the first line's alphabetic baseline. */
@@ -100,9 +99,6 @@ export interface AtOptions {
   readonly rotate?: number;
   readonly scale?: number | readonly [number, number];
 }
-
-/** `text` arguments: a point with the current alignment, or a box with options. */
-export type TextArgs = [string, number, number] | [string, TextBox, TextOptions?];
 
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";

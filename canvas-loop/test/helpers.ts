@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TeaRunOptions } from "../src/headless/tea-runtime.js";
 import type { LoadedTeaModule } from "../src/headless/tea-load.js";
-import { Sketch } from "../src/headless/sketch.js";
+import { Surface } from "../src/headless/surface.js";
 import type { ParamsDecl, ParamValues } from "../src/core/tea.js";
 import { TeaUtil, TeaView } from "../src/headless/tea-view.js";
 
@@ -58,13 +58,13 @@ export interface TeaViewHarness {
 export function teaView(size: { width: number; height: number }, options?: { seed?: number; outline?: boolean; decl?: ParamsDecl; values?: ParamValues<ParamsDecl> }): TeaViewHarness {
   const opts = options ?? {};
   const logs: string[] = [];
-  const sketch = new Sketch({ host: { recordLog: (entry) => logs.push(entry.message), requestSnapshot: () => {} }, seed: opts.seed ?? 1, fps: 60, onHandled: () => {}, outline: opts.outline === true });
-  sketch.createCanvas(size.width, size.height);
-  const v = new TeaView({ sketch, decl: opts.decl ?? {}, getParams: () => opts.values ?? {} });
-  const u = new TeaUtil<Record<string, never>>({ sketch, getParams: () => ({}), onHandled: () => {} });
+  const host = { recordLog: (entry: { message: string }): void => void logs.push(entry.message), requestSnapshot: (): void => {} };
+  const surface = new Surface({ ...size, host, seed: opts.seed ?? 1, outline: opts.outline === true });
+  const v = new TeaView({ surface, decl: opts.decl ?? {}, getParams: () => opts.values ?? {} });
+  const u = new TeaUtil<Record<string, never>>({ surface, getParams: () => ({}), onHandled: () => {} });
   const rgba = (x: number, y: number): number[] => {
     const at = (y * size.width + x) * 4;
-    return [...sketch.readPixels().data.slice(at, at + 4)];
+    return [...surface.readPixels().data.slice(at, at + 4)];
   };
-  return { v, u, alpha: (x, y) => rgba(x, y)[3] ?? 0, rgba, pixels: () => sketch.readPixels().data, finishFrame: () => sketch.finishFrame(), logs };
+  return { v, u, alpha: (x, y) => rgba(x, y)[3] ?? 0, rgba, pixels: () => surface.readPixels().data, finishFrame: () => surface.finishFrame(), logs };
 }

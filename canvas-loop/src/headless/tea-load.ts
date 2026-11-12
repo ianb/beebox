@@ -123,13 +123,11 @@ function parseCanvas(raw: unknown): CanvasSize | undefined {
   };
 }
 
-/** Detect the TEA tier: a module is TEA iff it exports an `update` function. */
-export function isTeaModule(mod: Record<string, unknown>): boolean {
-  return typeof mod["update"] === "function";
-}
-
 /** Validate a dynamically-imported module against the TEA contract. */
 export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
+  if (typeof mod["setup"] === "function") {
+    throw new CliError({ detail: "this module exports setup(): the p5-style sketch form is retired. Write a TEA sketch: export canvas, init(u), update(model, msg, u) and draw(v, model, p) (see canvas-loop/TEA.md)" });
+  }
   const init = readFn<LoadedTeaModule["init"]>(mod, "init");
   const update = readFn<LoadedTeaModule["update"]>(mod, "update");
   const draw = readFn<LoadedTeaModule["draw"]>(mod, "draw");

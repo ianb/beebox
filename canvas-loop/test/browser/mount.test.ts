@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, mountSketch, sanitizeInitialParams, type EmittedEvent } from "@ianbicking/canvas-loop/browser";
 import type { Msg, Util } from "@ianbicking/canvas-loop";
-import { isTeaModule, toTeaModule } from "../../src/headless/tea-load.js";
+import { toTeaModule } from "../../src/headless/tea-load.js";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
 import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
 
@@ -179,7 +179,6 @@ test("onEvent carries the engagement verdict (handled names + model-reference ch
 test("the headless loader ignores a default export (dual-export entries)", () => {
   const { module } = makeModule();
   const dual = { ...module, default: (): null => null };
-  assert.equal(isTeaModule(dual), true, "TEA detection keys on the named update export");
   const loaded = toTeaModule(dual);
   assert.equal(typeof loaded.update, "function", "the named exports load normally");
   assert.equal("default" in loaded, false, "the loaded module carries no default export");

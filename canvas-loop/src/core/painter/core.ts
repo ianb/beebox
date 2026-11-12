@@ -4,9 +4,9 @@
 // browser `CanvasRenderingContext2D` (the HTML playground) — the two concrete
 // contexts are each handed in through one boundary cast by their owner.
 //
-// Painter owns only drawing: style state, transforms, the shape/text/gradient
+// Painter owns only drawing: scopes (at/group/clip), the shape/text/gradient
 // primitives, brushes, groups, and the data→ctx crossing. Randomness, time,
-// input, capture, and canvas creation stay with the caller (Sketch for the CLI,
+// input, capture, and canvas creation stay with the caller (the headless Surface,
 // the browser runtime for the playground), which also supplies `makeLayer` for
 // offscreen surfaces.
 import { PaperSheet } from "../brush/paper.js";
@@ -14,8 +14,8 @@ import { renderMark } from "../brush/render/mark.js";
 import type { Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
 import { SketchUsageError, assertUnit } from "../errors.js";
-import { StyledPainter, styleProblem as styleProblemFor } from "./style.js";
-import type { ResolvedStyle, StyleState } from "./style.js";
+import { styleProblem as styleProblemFor } from "./style.js";
+import type { ResolvedStyle } from "./style.js";
 import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, PasteOptions, Sprite, SpriteOptions } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
 import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
@@ -29,21 +29,18 @@ function isIdentity(m: CtxTransform): boolean {
 }
 
 /**
- * The shared p5-like drawing surface over a structural `Ctx2D`. Drawing is
+ * The shared drawing surface over a structural `Ctx2D`. Every call carries its style; the Painter keeps none. Drawing is
  * deterministic: colors are CSS strings or plain-data gradient handles, and
  * brush jitter comes from per-mark seeds. The engine mutates the context but
  * holds no time/random/input state.
  */
-export class PainterCore extends StyledPainter {
+export class PainterCore {
   readonly width: number;
   readonly height: number;
 
   // The bottom entry is the canvas; `group` pushes its layer's context.
   #ctxStack: Ctx2D[];
   #makeLayer: MakeLayer;
-  #styleStack: StyleState[] = [];
-  // `pop` may not reach below the depth an open group started at.
-  #floor = 0;
   #paper: PaperSheet;
   // Opacity of each open group, so a mark's visible strength can be judged.
   #alphaStack: number[] = [];
@@ -66,7 +63,6 @@ export class PainterCore extends StyledPainter {
   #noted = new Set<string>();
 
   constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; note?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
-    super();
     this.#ctxStack = [options.ctx];
     this.pixelRatio = options.pixelRatio ?? 1;
     this.#device = { width: Math.round(options.width * this.pixelRatio), height: Math.round(options.height * this.pixelRatio) };
@@ -95,20 +91,6 @@ export class PainterCore extends StyledPainter {
     this.#paper.set(paper);
   }
 
-  push(): void {
-    this.ctx.save();
-    this.#styleStack.push({ ...this.style });
-  }
-  /** Restore the last pushed state. Returns false on underflow (no matching push in this scope). */
-  pop(): boolean {
-    if (this.#styleStack.length <= this.#floor) return false;
-    const restored = this.#styleStack.pop();
-    if (restored === undefined) return false;
-    this.ctx.restore();
-    this.style = restored;
-    return true;
-  }
-
   /** Report `message` once per run (a call whose style can draw nothing). */
   protected note(message: string | undefined): void {
     if (message === undefined || this.#noted.has(message)) return;
@@ -121,10 +103,8 @@ export class PainterCore extends StyledPainter {
    * No layer: drawing inside composites onto the canvas as usual.
    */
   at(options: AtOptions, body: () => void): void {
-    const depth = this.#styleStack.length;
-    const savedFloor = this.#floor;
-    this.push();
-    this.#floor = depth + 1;
+    const ctx = this.ctx;
+    ctx.save();
     try {
       const { translate, rotate, scale } = options;
       if (translate !== undefined) this.ctx.translate(translate[0], translate[1]);
@@ -135,21 +115,8 @@ export class PainterCore extends StyledPainter {
       }
       body();
     } finally {
-      this.#floor = depth;
-      while (this.#styleStack.length > depth && this.pop());
-      this.#floor = savedFloor;
+      ctx.restore();
     }
-  }
-
-  // ── transforms ───────────────────────────────────────────────────
-  translate(x: number, y: number): void {
-    this.ctx.translate(x, y);
-  }
-  rotate(radians: number): void {
-    this.ctx.rotate(radians);
-  }
-  scale(x: number, y?: number): void {
-    this.ctx.scale(x, y ?? x);
   }
 
   protected resolvePaint(paint: Paint): string | Ctx2DGradient {
@@ -170,21 +137,15 @@ export class PainterCore extends StyledPainter {
       this.#clipUnion(shape, body);
       return;
     }
-    const depth = this.#styleStack.length;
-    const savedFloor = this.#floor;
-    this.push();
-    // The body may not pop the clip's own save.
-    this.#floor = depth + 1;
+    const ctx = this.ctx;
+    ctx.save();
     try {
-      const ctx = this.ctx;
       if (isPathShape(shape)) tracePath(ctx, shape);
       else tracePolygon(ctx, shape);
       ctx.clip();
       body();
     } finally {
-      this.#floor = depth;
-      while (this.#styleStack.length > depth && this.pop());
-      this.#floor = savedFloor;
+      ctx.restore();
     }
   }
 
@@ -218,7 +179,7 @@ export class PainterCore extends StyledPainter {
     this.#pool.release(layer);
   }
 
-  /** Run `body` drawing onto a fresh full-canvas layer; state changes inside do not leak out. */
+  /** Run `body` drawing onto a fresh full-canvas layer. */
   #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData; keep?: boolean; into?: Layer; where?: string }): Layer {
     const { opacity, start } = options;
     // A sprite draws into its own layer in local coordinates; a cache keeps its layer for good;
@@ -229,10 +190,6 @@ export class PainterCore extends StyledPainter {
     const layer = options.into ?? (fresh ? this.#makeLayer(this.#device) : this.#pool.acquire());
     if (start !== undefined) layer.ctx.putImageData(start, 0, 0);
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-    const savedFloor = this.#floor;
-    const savedStyle = { ...this.style };
-    const depth = this.#styleStack.length;
-    this.#floor = depth;
     this.#ctxStack.push(layer.ctx);
     this.#alphaStack.push(opacity);
     if (options.where !== undefined) this.#where.push(options.where);
@@ -240,11 +197,8 @@ export class PainterCore extends StyledPainter {
       body();
     } finally {
       if (options.where !== undefined) this.#where.pop();
-      while (this.#styleStack.length > depth && this.pop());
       this.#ctxStack.pop();
       this.#alphaStack.pop();
-      this.#floor = savedFloor;
-      this.style = savedStyle;
     }
     return layer;
   }
@@ -258,7 +212,7 @@ export class PainterCore extends StyledPainter {
   cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
     const [key, body, paste] = args;
     const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
-    const op = paste === undefined ? this.composite() : this.composite({ blend: paste.blend ?? "normal", erase: paste.erase ?? false });
+    const op = this.composite({ blend: paste?.blend ?? "normal", erase: paste?.erase ?? false });
     drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op });
   }
 
@@ -276,13 +230,12 @@ export class PainterCore extends StyledPainter {
     return { kind: "sprite", key, width, height };
   }
 
-  /** Draw a sprite with its top-left corner at (x, y), under the current transform, with paste options (or an opacity). */
-  image(...args: [Sprite, number, number, (number | PasteOptions)?]): void {
-    const [sprite, x, y, more] = args;
-    const paste: PasteOptions | undefined = typeof more === "object" ? more : undefined;
-    const opacity = typeof more === "number" ? more : paste?.opacity;
+  /** Draw a sprite with its top-left corner at (x, y), under the current transform, with paste options. */
+  image(...args: [Sprite, number, number, PasteOptions?]): void {
+    const [sprite, x, y, paste] = args;
+    const opacity = paste?.opacity;
     if (opacity !== undefined) assertUnit(opacity, "image opacity");
-    const mode = paste === undefined ? this.current() : { blend: paste.blend ?? "normal", erase: paste.erase ?? false };
+    const mode = { blend: paste?.blend ?? "normal", erase: paste?.erase ?? false };
     const layer = this.#sprites.get(sprite.key);
     if (layer === undefined) throw new SketchUsageError({ detail: `sprite "${sprite.key}" is not defined in this run (call sprite() first)` });
     const ctx = this.ctx;
@@ -322,22 +275,21 @@ export class PainterCore extends StyledPainter {
     return scale > 0 ? 0.5 / scale : 0.5;
   }
 
-  protected composite(mode?: { blend: BlendMode; erase: boolean }): string {
-    const { blend, erase } = mode ?? this.current();
-    return erase ? "destination-out" : compositeOp(blend);
+  protected composite(mode: { blend: BlendMode; erase: boolean }): string {
+    return mode.erase ? "destination-out" : compositeOp(mode.blend);
   }
 
 
   /**
-   * Fill and stroke the shape `trace` lays down, per the current style. While
+   * Fill and stroke the shape `trace` lays down, per `shape.style`. While
    * erasing under a transform, the shape is drawn normally on a pooled layer and
    * that layer is erased with under an identity transform: @napi-rs/canvas 1.0.2
    * limits a destination-out fill under a transform to the quadrant past the
    * translation origin.
    */
-  protected paintShape(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; fill: boolean; style?: ResolvedStyle; call?: string }): void {
-    const style = shape.style ?? this.current();
-    if (shape.style !== undefined) this.note(styleProblemFor(shape.call ?? "shape", { style, open: !shape.fill }));
+  protected paintShape(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; fill: boolean; style: ResolvedStyle; call: string }): void {
+    const { style } = shape;
+    this.note(styleProblemFor(shape.call, { style, open: !shape.fill }));
     if (!style.erase || isIdentity(this.ctx.getTransform())) {
       trace(this.ctx);
       this.#fillAndStroke(shape, style);

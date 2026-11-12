@@ -23,8 +23,6 @@ export interface RecorderDeps {
   every: number;
   /** Raw pixels of the current frame, for capture. */
   readPixels: () => Pixels;
-  /** Whether the canvas exists yet (setup ran) — gates error-frame capture. */
-  canvasReady: () => boolean;
   /** Regions to write as enlarged crops beside every captured frame. */
   zooms?: readonly Zoom[];
 }
@@ -43,9 +41,8 @@ function normalizeError(error: unknown): { name: string; message: string; stack:
 
 /**
  * Accumulates the transcript across a frame loop: log lines, param changes,
- * captured/deduped frames, and errors — then writes out/. Both the mutable tier
- * (runtime.ts) and the TEA tier (tea-runtime.ts) drive it, so capture policy,
- * dedup, and the on-disk format are defined once.
+ * captured/deduped frames, and errors — then writes out/. tea-runtime.ts drives
+ * it; capture policy, dedup, and the on-disk format are defined here.
  */
 export class FrameRecorder implements SketchHost {
   #deps: RecorderDeps;
@@ -117,7 +114,7 @@ export class FrameRecorder implements SketchHost {
 
   recordError(error: unknown): void {
     const { name, message, stack } = normalizeError(error);
-    if (this.#deps.canvasReady() && !this.#frameCaptured) {
+    if (!this.#frameCaptured) {
       this.#capture(this.#currentFrame);
     }
     this.#entries.push({ kind: "error", frame: this.#currentFrame, name, message, stack });

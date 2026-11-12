@@ -76,7 +76,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** https://api.flutter.dev/flutter/flutter_test/matchesGoldenFile.html (repository https://github.com/flutter/flutter, BSD 3-Clause)
 - **What we took:** The frame-stepped test shape. An injected event takes effect on the next stepped frame, and a snapshot is taken on demand.
-- **Where it landed:** `canvas-loop/src/headless/runtime.ts`, `canvas-loop/README.md`
+- **Where it landed:** `canvas-loop/src/headless/tea-runtime.ts`, `canvas-loop/README.md`
 
 ### Ghost-CLI, by TryGhost
 

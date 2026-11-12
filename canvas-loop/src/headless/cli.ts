@@ -4,50 +4,16 @@ import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "./errors.js";
-import { parseEvents } from "./events.js";
 import { checkGallery } from "./gallery.js";
 import type { GalleryCheckResult } from "./gallery.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
-import { run } from "./runtime.js";
-import { isTeaModule, toTeaModule } from "./tea-load.js";
+import { toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { teaRun } from "./tea-runtime.js";
 import { encodeZoomPng, parseZoom } from "./recorder/zoom.js";
 import { statsLine, writeDiff } from "./diff.js";
 import { CHECKPOINT_ENV, saveCheckpoint } from "./checkpoint/save.js";
 import { checkpointPage } from "./checkpoint/page.js";
-import type { ScriptEvent } from "./events.js";
-import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
-
-const OPTIONAL_HANDLERS = [
-  "mousePressed",
-  "mouseReleased",
-  "mouseMoved",
-  "mouseDragged",
-  "keyPressed",
-  "keyReleased",
-] as const;
-
-function readFn<T>(mod: Record<string, unknown>, name: string): T | undefined {
-  const value = mod[name];
-  if (typeof value !== "function") return undefined;
-  // eslint-disable-next-line no-restricted-syntax -- parse boundary: dynamic sketch exports are `unknown`; validated typeof === "function" above
-  return value as T;
-}
-
-function toModule(mod: Record<string, unknown>): SketchModule {
-  const setup = readFn<(s: Sketch) => void>(mod, "setup");
-  const draw = readFn<(s: Sketch) => void>(mod, "draw");
-  if (setup === undefined || draw === undefined) {
-    throw new CliError({ detail: "sketch must export setup(s) and draw(s) functions" });
-  }
-  const module: SketchModule = { setup, draw };
-  for (const name of OPTIONAL_HANDLERS) {
-    const handler = readFn<SketchEventHandler>(mod, name);
-    if (handler !== undefined) module[name] = handler;
-  }
-  return module;
-}
 
 function intOption(params: { value: string | undefined; fallback: number; name: string }): number {
   const { value, fallback, name } = params;
@@ -177,16 +143,9 @@ async function main(): Promise<void> {
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);
 
-  if (isTeaModule(imported)) {
-    const module = toTeaModule(imported);
-    const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
-    finishRun(teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
-    return;
-  }
-  const module = toModule(imported);
-  let events: ScriptEvent[] = [];
-  if (eventsPath !== undefined) events = parseEvents(readEventsJson(resolve(eventsPath)));
-  finishRun(run({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
+  const module = toTeaModule(imported);
+  const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
+  finishRun(teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
 }
 
 /** Report the run, and save a checkpoint when CANVAS_LOOP_CHECKPOINTS names a directory. */

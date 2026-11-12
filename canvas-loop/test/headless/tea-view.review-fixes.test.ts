@@ -94,7 +94,7 @@ test("a thick bristle mark is not cropped by its layer", () => {
   h.v.line(40, 120, 200, 120, {
     stroke: "#000000",
     weight: 40,
-    brush: h.v.brushOf("bristle", { bristles: 1, spread: 1, grain: 0 }),
+    brush: { preset: "bristle", bristles: 1, spread: 1, grain: 0 },
     gesture: { pressure: 1, seed: 2 },
   });
   const data = h.pixels();

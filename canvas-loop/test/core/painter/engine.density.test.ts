@@ -12,6 +12,8 @@ function skiaLayer(size: { width: number; height: number }): Layer {
   return { ctx: canvas.getContext("2d") as unknown as Ctx2D, image: canvas as unknown as LayerImage };
 }
 
+const INK = { stroke: "#000000", weight: 4, brush: { preset: "ink", thinning: 0 }, gesture: { pressure: "even" } } as const;
+
 function densePainter(): { painter: Painter; alpha: (x: number, y: number) => number } {
   const base = skiaLayer({ width: 200, height: 100 });
   const painter = new Painter({ ctx: base.ctx, width: 100, height: 50, makeLayer: skiaLayer, pixelRatio: 2 });
@@ -21,9 +23,7 @@ function densePainter(): { painter: Painter; alpha: (x: number, y: number) => nu
 
 test("shapes land at twice their logical coordinates", () => {
   const { painter, alpha } = densePainter();
-  painter.noStroke();
-  painter.fill("#000000");
-  painter.rect(10, 10, 20, 20);
+  painter.rect(10, 10, 20, 20, { fill: "#000000" });
   assert.equal(alpha(25, 25), 255, "logical (12.5, 12.5)");
   assert.equal(alpha(55, 55), 255, "logical (27.5, 27.5)");
   assert.equal(alpha(65, 65), 0, "logical (32.5, 32.5) is outside");
@@ -32,9 +32,7 @@ test("shapes land at twice their logical coordinates", () => {
 test("a sprite is painted at full density and placed in logical units", () => {
   const { painter, alpha } = densePainter();
   const dot = painter.sprite({ key: "dot", width: 10, height: 10 }, () => {
-    painter.noStroke();
-    painter.fill("#000000");
-    painter.rect(0, 0, 10, 10);
+    painter.rect(0, 0, 10, 10, { fill: "#000000" });
   });
   painter.image(dot, 30, 0);
   assert.equal(alpha(61, 1), 255);
@@ -46,17 +44,9 @@ test("brush width scales with density, and background covers the whole canvas", 
   const { painter, alpha } = densePainter();
   painter.background("#ffffff");
   assert.equal(alpha(199, 99), 255);
-  painter.stroke("#000000");
-  painter.strokeWeight(4);
-  painter.brush("ink", { thinning: 0 });
-  painter.gesture({ pressure: "even" });
-  painter.line(10, 25, 90, 25);
+  painter.line(10, 25, 90, 25, INK);
   const { painter: p2, alpha: a2 } = densePainter();
-  p2.stroke("#000000");
-  p2.strokeWeight(4);
-  p2.brush("ink", { thinning: 0 });
-  p2.gesture({ pressure: "even" });
-  p2.line(10, 25, 90, 25);
+  p2.line(10, 25, 90, 25, INK);
   assert.ok(a2(100, 47) > 0 && a2(100, 53) > 0, "about 8 device px wide around y=50");
   assert.equal(a2(100, 58), 0);
   assert.equal(alpha(100, 50), 255);

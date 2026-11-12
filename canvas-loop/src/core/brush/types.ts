@@ -33,7 +33,7 @@ interface BrushCommon {
   readonly opacity: number;
   /** How much the paper texture bites into the mark, 0..1. */
   readonly grain: number;
-  /** Blend with the drawing below. A non-normal `blendMode()` set by the sketch wins. */
+  /** Blend with the drawing below. A non-normal `blend` in the call's style wins. */
   readonly blend?: BlendMode;
 }
 

@@ -136,17 +136,18 @@ test("a path with two moves paints no bridge between its pieces", () => {
 test("brush blend multiply darkens the colour underneath", () => {
   const h = makeView({ width: 60, height: 20 });
   h.v.background("#ffff00");
-  h.v.line(5, 10, 55, 10, { stroke: "#00ffff", weight: 10, brush: h.v.brushOf("ink", { blend: "multiply" }), gesture: { pressure: "even" } });
+  h.v.line(5, 10, 55, 10, { stroke: "#00ffff", weight: 10, brush: { preset: "ink", blend: "multiply" }, gesture: { pressure: "even" } });
   const [r, g, b] = pixel(h, [30, 10]);
   assert.ok(r < 40 && g > 200 && b < 40, `yellow × cyan should be green, got ${r},${g},${b}`);
 });
 
 test("brush and style validation names the problem", () => {
   const { v } = makeView({ width: 10, height: 10 });
+  const line = (brush: NonNullable<Style["brush"]>): void => v.line(0, 0, 5, 5, { stroke: "#000", brush });
   // eslint-disable-next-line no-restricted-syntax -- deliberately wrong input: checks the runtime guard a hand-edited sketch would hit
-  assert.throws(() => v.brushOf("charcoal" as "ink", {}), /unknown brush "charcoal"/);
-  assert.throws(() => v.brushOf("ink", { bristles: 3 }), /"bristles" does not apply to a ink brush/);
-  assert.throws(() => v.brushOf("pencil", { spacing: 0 }), /spacing must be a number/);
+  assert.throws(() => line("charcoal" as "ink"), /unknown brush "charcoal"/);
+  assert.throws(() => line({ preset: "ink", bristles: 3 }), /"bristles" does not apply to a ink brush/);
+  assert.throws(() => line({ preset: "pencil", spacing: 0 }), /spacing must be a number/);
   assert.throws(() => v.line(0, 0, 5, 5, { stroke: "#000", weight: Number.NaN, brush: "ink" }), /style\.weight must be a number ≥ 0/);
   assert.throws(
     () => v.line(0, 0, 5, 5, { stroke: "#000", weight: 2, brush: "ink", gesture: { pressure: [[0.5, 1], [0.2, 0]] } }),
