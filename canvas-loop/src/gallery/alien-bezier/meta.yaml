@@ -1,0 +1,22 @@
+slug: alien-bezier
+title: "Alien, outlines as hand-placed beziers"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 6
+tier: mutable
+harness-commit: 30859a84
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 1 (path-form condition: bezier). Boxholder review pending. Clean, friendly, close to the guide; head highlight reads as streaks; limbs have token shading; less line weight variation than real inking.
+self-report-summary: >
+  Beziers matched the pose from cycle 1 and never moved. Bristle on small parts (11-24px) gave blotches or nothing. Wanted inner-edge shading of a shape, a CLI crop/zoom, and guidance on minimum mark size; judged texture only from enlarged crops.
+features-exercised:
+  - brushes (ink, pencil, bristle)
+  - gesture pressure envelopes and wobble
+  - clip for shading inside shapes
+  - "path form: bezier"

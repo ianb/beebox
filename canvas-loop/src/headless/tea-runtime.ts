@@ -1,5 +1,7 @@
 import { SketchUsageError, UnhandledMsgError } from "./errors.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { Zoom } from "./recorder/zoom.js";
+import { FrameTimer } from "./recorder/timing.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import { bucketTeaByFrame } from "./tea-events.js";
@@ -22,6 +24,12 @@ export interface TeaRunOptions {
   seed: number;
   fps: number;
   every: number;
+  /** Regions to write as enlarged crops beside every captured frame (`--zoom`). */
+  zooms?: readonly Zoom[];
+  /** Add a timing summary line to the transcript (`--timing`). */
+  timing?: boolean;
+  /** Outline placed sprites, clips and `debugBox`es over each frame (`--outline`). */
+  outline?: boolean;
   events: readonly TeaScriptEvent[];
   eventsPath: string | undefined;
 }
@@ -106,6 +114,7 @@ class TeaRunner {
   // read after. TeaUtil.handled and Sketch.handled push here via injected
   // callbacks — the runtime owns it; the capability objects never see it.
   #handledNames: string[] = [];
+  #timer: FrameTimer | undefined;
 
   constructor(options: TeaRunOptions) {
     this.#options = options;
@@ -113,13 +122,15 @@ class TeaRunner {
     this.#recorder = new FrameRecorder({
       frames: options.frames,
       every: options.every,
+      ...(options.zooms === undefined ? {} : { zooms: options.zooms }),
       readPixels: () => this.#sketch.readPixels(),
       canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
     });
     const onHandled = (name: string): void => {
       this.#handledNames.push(name);
     };
-    this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps, onHandled });
+    this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps, onHandled, outline: options.outline === true });
+    if (options.timing === true) this.#timer = new FrameTimer();
     this.#util = new TeaUtil({ sketch: this.#sketch, getParams: () => this.#params, onHandled });
     this.#view = new TeaView(this.#sketch);
     this.#eventsByFrame = bucketTeaByFrame(options.events);
@@ -129,6 +140,7 @@ class TeaRunner {
     const restoreConsole = patchConsole(this.#recorder);
     try {
       withGuards(() => this.#execute());
+      if (this.#timer !== undefined) this.#recorder.recordLog({ level: "log", message: this.#timer.report() });
     } finally {
       restoreConsole();
     }
@@ -156,9 +168,12 @@ class TeaRunner {
     const events = this.#eventsByFrame.get(frame) ?? [];
     this.#recorder.markEvents(events.length > 0);
     for (const event of events) this.#dispatchEvent(event);
-    this.#fold({ type: "tick", frame });
-    const drawn = this.#options.module.draw(this.#view, this.#model, this.#params);
-    assertSync(drawn, "draw");
+    const tick = (): void => void this.#fold({ type: "tick", frame });
+    if (this.#timer === undefined) tick();
+    else this.#timer.update(tick);
+    const draw = (): unknown => this.#options.module.draw(this.#view, this.#model, this.#params);
+    assertSync(this.#timer === undefined ? draw() : this.#timer.draw(frame, draw), "draw");
+    this.#sketch.finishFrame();
     this.#recorder.captureIfNeeded(frame);
   }
 

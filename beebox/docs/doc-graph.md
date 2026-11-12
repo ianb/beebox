@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-11-11T22:44:34Z
+Generated: 2026-11-12T02:46:54Z
 Total documents: 636
 
 ## Issues
@@ -82,6 +82,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
+- **docs/plans/canvas-brushes.md** — "canvas-loop brushes: an iterative drawing space for agents" (553 lines) · proposal · active
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -108,7 +109,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -9131,6 +9131,13 @@ References:
 - → docs/box/quick-chat.md (mention)
 - → docs/landmarks.md (mention)
 
+#### docs/plans/canvas-brushes.md **[ORPHAN]**
+
+Title: "canvas-loop brushes: an iterative drawing space for agents" | 553 lines | proposal | active
+
+References:
+- → docs/plans/README.md (mention)
+
 #### docs/plans/capture-fast-landing.md
 
 Title: "Capture fast landing — deliver first, process behind the message" | 322 lines | proposal | active
@@ -10274,6 +10281,7 @@ Referenced by:
 - docs/plans/README.md:36 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
 - docs/plans/asset-annex.md:1082 (mention) — the server. See that directory's `README.md` for the restore
+- docs/plans/canvas-brushes.md:311 (mention) — wire `makeLayer` in each runtime. Document in README.md, TEA.md, a new
 - docs/plans/container-first.md:324 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:94 (mention) — `README.md` install table. Reshaped in place to guide-card form.
@@ -11757,14 +11765,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 14 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 

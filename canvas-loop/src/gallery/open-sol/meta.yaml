@@ -1,0 +1,21 @@
+slug: open-sol
+title: "The Library That Crossed the Flood: a turtle carries a lit library across a flooded valley"
+created: 2026-11-11
+model: gpt-6-sol
+driver: opus-5.5
+cycles: 10
+tier: mutable
+harness-commit: fb867ca9
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 3 (open brief, no reference). Boxholder review pending. Original concept, calm turtle face and lit books; keeper has folk-art anatomy and the water strokes look programmed.
+self-report-summary: >
+  Ranked views by purpose: frame for composition, zoom for texture, highlight to locate small edits, change crops for tiny details, side by side for large balance changes. Wanted layered irregular wet-paint colour within a shape.
+features-exercised:
+  - brushes, gestures, paper texture
+  - tube, offset, multi-shape clip, ellipseGradient
+  - zoomed crops and cli diff between cycles

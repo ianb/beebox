@@ -1,9 +1,19 @@
+import type { CursorKind, TextStyle } from "../core/tea.js";
+import type { SpriteOptions } from "../core/paint.js";
+import type { Sprite } from "../core/paint.js";
+import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
+import { curveCommands } from "../core/contours.js";
+import { offsetPoints, tubePath } from "../core/shapes.js";
+import type { TubeOptions } from "../core/shapes.js";
 import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
 import { formatArgs } from "../core/format.js";
-import type { ClipShape, ColorStop, Ctx2D, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
-import { Painter } from "../core/painter.js";
+import type { BrushName } from "../core/brush/presets.js";
+import type { Brush, BrushOverrides, Gesture, Paper } from "../core/brush/types.js";
+import type { BlendMode, ClipShape, ColorStop, Ctx2D, Layer, LayerImage, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
+import { Painter } from "../core/painter/engine.js";
+import type { GroupOptions } from "../core/paint.js";
 import { SeededRandom } from "../core/prng.js";
 import type { SketchHost, SketchInputEvent } from "../core/types.js";
 
@@ -11,6 +21,17 @@ import type { SketchHost, SketchInputEvent } from "../core/types.js";
 // no DOM, so the global CanvasTextAlign / CanvasTextBaseline aren't in scope.
 type TextAlign = "center" | "end" | "left" | "right" | "start";
 type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+
+/** An offscreen Skia canvas of `size`, as a Painter layer (groups, brush marks, paper). */
+function makeSkiaLayer(size: { width: number; height: number }): Layer {
+  const canvas = createCanvas(size.width, size.height);
+  return {
+    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
+    ctx: canvas.getContext("2d") as unknown as Ctx2D,
+    // eslint-disable-next-line no-restricted-syntax -- opaque-image boundary: a Skia Canvas is what this runtime's drawImage accepts
+    image: canvas as unknown as LayerImage,
+  };
+}
 
 /**
  * A p5-like drawing surface in instance mode. The runtime constructs one Sketch
@@ -40,7 +61,10 @@ export class Sketch {
   #random: SeededRandom;
   #onHandled: (name: string) => void;
 
-  constructor(options: { host: SketchHost; seed: number; fps: number; onHandled: (name: string) => void }) {
+  #outline: boolean;
+
+  constructor(options: { host: SketchHost; seed: number; fps: number; onHandled: (name: string) => void; outline?: boolean }) {
+    this.#outline = options.outline === true;
     this.#host = options.host;
     this.#fps = options.fps;
     this.#random = new SeededRandom(options.seed);
@@ -62,11 +86,17 @@ export class Sketch {
     // gap is a wider `fillStyle` union (it also allows CanvasPattern, which the
     // engine never sets), so structural assignability needs one boundary cast.
     // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
-    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height });
+    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height, makeLayer: makeSkiaLayer,
+      warn: (message) => this.#host.recordLog({ level: "warn", message }),
+      outline: this.#outline,
+    });
   }
 
+  /** The raw context drawing lands on now: the canvas, or the innermost open group's layer. */
   get ctx(): SKRSContext2D {
-    return this.#requireCtx();
+    this.#requireCtx();
+    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: every context the Painter holds was made by @napi-rs/canvas (the canvas or a makeSkiaLayer layer)
+    return this.#requirePainter().ctx as unknown as SKRSContext2D;
   }
 
   /** Raw pixel buffer of the current frame — used by the runtime for capture. */
@@ -163,10 +193,13 @@ export class Sketch {
 
   // ── gradients ────────────────────────────────────────────────────
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    return this.#requirePainter().linearGradient(...args);
+    return linearGradient(...args);
   }
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    return this.#requirePainter().radialGradient(...args);
+    return radialGradient(...args);
+  }
+  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+    return ellipseGradient(...args);
   }
 
   // ── drawing ──────────────────────────────────────────────────────
@@ -197,8 +230,71 @@ export class Sketch {
   path(commands: readonly PathCommand[]): void {
     this.#requirePainter().path(commands);
   }
-  clip(shape: ClipShape, body: () => void): void {
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#requirePainter().clip(shape, body);
+  }
+  paperTexture(amount: number): void {
+    this.#requirePainter().paperTexture(amount);
+  }
+  cache(key: string, body: () => void): void {
+    this.#requirePainter().cache(key, body);
+  }
+  sprite(options: SpriteOptions, body: () => void): Sprite {
+    return this.#requirePainter().sprite(options, body);
+  }
+  image(...args: [Sprite, number, number, number?]): void {
+    this.#requirePainter().image(...args);
+  }
+  curve(points: readonly Vec2[], closed?: boolean): void {
+    this.#requirePainter().curve(points, closed);
+  }
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return curveCommands(points, closed ?? false);
+  }
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
+    return tubePath(points, options);
+  }
+  offset(points: readonly Vec2[], distance: number): Vec2[] {
+    return offsetPoints(points, distance);
+  }
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
+    this.#requirePainter().brush(base, overrides);
+  }
+  noBrush(): void {
+    this.#requirePainter().noBrush();
+  }
+  gesture(gesture: Gesture): void {
+    this.#requirePainter().gesture(gesture);
+  }
+  paper(paper: Paper): void {
+    this.#requirePainter().paper(paper);
+  }
+  group(options: GroupOptions, body: () => void): void {
+    this.#requirePainter().group(options, body);
+  }
+  blendMode(blend: BlendMode): void {
+    this.#requirePainter().blendMode(blend);
+  }
+  erase(): void {
+    this.#requirePainter().erase();
+  }
+  noErase(): void {
+    this.#requirePainter().noErase();
+  }
+  textFont(family: string): void {
+    this.#requirePainter().textFont(family);
+  }
+  textStyle(style: TextStyle): void {
+    this.#requirePainter().textStyle(style);
+  }
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#requirePainter().debugBox(...args);
+  }
+  /** Headless renders have no pointer; kept so sketches run unchanged in both runtimes. */
+  cursor(_kind: CursorKind): void {}
+  /** Draw this frame's `--outline` overlay (the runtime calls it after `draw`). */
+  finishFrame(): void {
+    this.#painter?.finishFrame();
   }
   text(...args: [string, number, number]): void {
     this.#requirePainter().text(...args);

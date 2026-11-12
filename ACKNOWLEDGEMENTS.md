@@ -16,6 +16,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** The browser automation CLI and its dashboard as the box browser that the box agent and the person share; beebox runs it unmodified and proxies the dashboard.
 - **Where it landed:** `beebox/package.json` (pinned dependency); the box browser per `beebox/docs/plans/shared-browser.md`.
 
+### perfect-freehand, by Steve Ruiz
+
+- **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
+- **What we took:** Its pressure-sensitive stroke outline as canvas-loop's ink brush; canvas-loop supplies synthetic pressure from a gesture envelope and fills the outline.
+- **Where it landed:** `canvas-loop/package.json` (pinned dependency); `canvas-loop/src/core/brush/render/kinds.ts`.
+
 ### restic, by the restic contributors
 
 - **Source:** [restic](https://github.com/restic/restic) (BSD 2-Clause; [licence](beebox/deploy/restic-LICENSE)).

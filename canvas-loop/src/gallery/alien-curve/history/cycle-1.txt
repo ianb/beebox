@@ -1,0 +1,227 @@
+import type { PathCommand, Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+// A friendly green alien, picture-book style: ink outlines drawn with s.curve,
+// bristle and pencil shading clipped inside each shape.
+
+const INK = "#1f2a1c";
+const GREEN = "#79c96a";
+const GREEN_DARK = "#4f9a48";
+const GREEN_LIGHT = "#a6e08f";
+
+type Pts = readonly Vec2[];
+
+/** Points around an ellipse, for a closed curve. */
+function ellipsePts(cx: number, cy: number, rx: number, ry: number, n = 10): Vec2[] {
+  const out: Vec2[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2;
+    out.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return out;
+}
+
+/** The same Catmull-Rom curve as s.curve(points, true), as path commands for clip(). */
+function closedCurvePath(points: Pts): PathCommand[] {
+  const n = points.length;
+  const at = (i: number): Vec2 => points[(i + n) % n] ?? [0, 0];
+  const first = at(0);
+  const cmds: PathCommand[] = [["move", first[0], first[1]]];
+  for (let i = 0; i < n; i += 1) {
+    const p0 = at(i - 1);
+    const p1 = at(i);
+    const p2 = at(i + 1);
+    const p3 = at(i + 2);
+    cmds.push([
+      "bezier",
+      p1[0] + (p2[0] - p0[0]) / 6,
+      p1[1] + (p2[1] - p0[1]) / 6,
+      p2[0] - (p3[0] - p1[0]) / 6,
+      p2[1] - (p3[1] - p1[1]) / 6,
+      p2[0],
+      p2[1],
+    ]);
+  }
+  cmds.push(["close"]);
+  return cmds;
+}
+
+// ── shapes ───────────────────────────────────────────────────────────
+const HEAD = ellipsePts(200, 175, 106, 84, 12);
+const BODY: Pts = [
+  [200, 250],
+  [240, 256],
+  [252, 300],
+  [258, 360],
+  [251, 388],
+  [200, 398],
+  [149, 388],
+  [142, 360],
+  [148, 300],
+  [160, 256],
+];
+const ARM_R: Pts = [
+  [242, 262],
+  [290, 258],
+  [318, 236],
+  [336, 232],
+  [326, 262],
+  [296, 284],
+  [248, 294],
+];
+const ARM_L: Pts = [
+  [156, 286],
+  [128, 318],
+  [118, 352],
+  [118, 376],
+  [134, 372],
+  [136, 346],
+  [152, 322],
+];
+const LEG_L: Pts = [
+  [166, 386],
+  [190, 386],
+  [191, 438],
+  [165, 438],
+];
+const LEG_R: Pts = [
+  [210, 386],
+  [234, 386],
+  [235, 438],
+  [209, 438],
+];
+const FOOT_L = ellipsePts(172, 443, 24, 11, 8);
+const FOOT_R = ellipsePts(228, 443, 24, 11, 8);
+const HAND_R = ellipsePts(330, 222, 14, 14, 8);
+const HAND_L = ellipsePts(122, 380, 13, 13, 8);
+const BELLY = ellipsePts(200, 345, 30, 36, 8);
+const EYE_L = ellipsePts(160, 164, 26, 31, 8);
+const EYE_R = ellipsePts(240, 164, 26, 31, 8);
+
+function flatFill(s: Sketch, pts: Pts, color: string): void {
+  s.noStroke();
+  s.fill(color);
+  s.noBrush();
+  s.curve(pts, true);
+}
+
+function outline(s: Sketch, pts: Pts, weight = 3.2, closed = true): void {
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(weight);
+  s.brush("ink", { thinning: 0.35 });
+  s.gesture({ pressure: closed ? [[0, 0.8], [0.5, 1], [1, 0.8]] : "taper", wobble: 0.6 });
+  s.curve(pts, closed);
+}
+
+/** Bristle shading inside `pts`: a dark side and a light highlight. */
+function shade(s: Sketch, pts: Pts, marks: () => void): void {
+  s.clip(closedCurvePath(pts), () => {
+    s.noFill();
+    marks();
+  });
+}
+
+function bristleStroke(s: Sketch, color: string, weight: number, pts: Pts, opacity = 0.55): void {
+  s.stroke(color);
+  s.strokeWeight(weight);
+  s.brush("bristle", { opacity });
+  s.gesture({ pressure: "taper", wobble: 1.5 });
+  s.curve(pts);
+}
+
+function greenPart(s: Sketch, pts: Pts, marks: () => void): void {
+  flatFill(s, pts, GREEN);
+  shade(s, pts, marks);
+  outline(s, pts);
+}
+
+// ── draw ─────────────────────────────────────────────────────────────
+export function setup(s: Sketch): void {
+  s.createCanvas(400, 500);
+}
+
+export function draw(s: Sketch): void {
+  s.background("#f4f1ea");
+
+  // ground shadow
+  s.noStroke();
+  s.fill("rgba(120,110,80,0.22)");
+  s.ellipse(200, 450, 190, 26);
+
+  // antennae
+  for (const [base, tip] of [
+    [[168, 100], [140, 42]],
+    [[232, 100], [262, 36]],
+  ] as const) {
+    outline(s, [base, [(base[0] + tip[0]) / 2 + (tip[0] < 200 ? 3 : -3), (base[1] + tip[1]) / 2], tip], 3.4, false);
+    const ball = ellipsePts(tip[0], tip[1], 11, 11, 8);
+    flatFill(s, ball, "#f2d34a");
+    outline(s, ball, 2.8);
+  }
+
+  // legs and feet
+  for (const leg of [LEG_L, LEG_R]) greenPart(s, leg, () => bristleStroke(s, GREEN_DARK, 8, [[leg[1][0] - 4, 388], [leg[1][0] - 4, 436]]));
+  for (const foot of [FOOT_L, FOOT_R]) greenPart(s, foot, () => bristleStroke(s, GREEN_DARK, 6, [[foot[0][0] - 40, 449], [foot[0][0], 450]]));
+
+  // arms and hands (behind the body)
+  greenPart(s, ARM_L, () => bristleStroke(s, GREEN_DARK, 7, [[150, 300], [126, 336], [128, 372]]));
+  greenPart(s, HAND_L, () => bristleStroke(s, GREEN_DARK, 6, [[112, 386], [128, 390]]));
+  greenPart(s, ARM_R, () => bristleStroke(s, GREEN_DARK, 7, [[250, 290], [296, 280], [326, 256]]));
+  greenPart(s, HAND_R, () => bristleStroke(s, GREEN_DARK, 6, [[322, 230], [340, 228]]));
+
+  // body
+  greenPart(s, BODY, () => {
+    bristleStroke(s, GREEN_DARK, 14, [[156, 262], [150, 320], [154, 392]]);
+    bristleStroke(s, GREEN_DARK, 12, [[160, 392], [200, 398], [244, 390]]);
+    bristleStroke(s, GREEN_LIGHT, 10, [[232, 266], [242, 310], [244, 350]], 0.6);
+  });
+  flatFill(s, BELLY, "#62ad56");
+  shade(s, BELLY, () => bristleStroke(s, GREEN_DARK, 10, [[178, 330], [182, 362], [200, 378]]));
+
+  // head
+  greenPart(s, HEAD, () => {
+    bristleStroke(s, GREEN_DARK, 16, [[104, 170], [130, 230], [200, 258], [272, 232], [298, 180]]);
+    bristleStroke(s, GREEN_LIGHT, 14, [[140, 112], [190, 98], [246, 104]], 0.65);
+  });
+
+  // eyes
+  for (const [eye, px] of [
+    [EYE_L, 165],
+    [EYE_R, 235],
+  ] as const) {
+    flatFill(s, eye, "#ffffff");
+    shade(s, eye, () => {
+      s.stroke("#c9cfd6");
+      s.strokeWeight(2);
+      s.brush("pencil");
+      s.gesture({ pressure: 0.6 });
+      for (let i = 0; i < 6; i += 1) s.line(px - 30 + i * 4, 196, px - 12 + i * 4, 178);
+    });
+    outline(s, eye, 3);
+    s.noStroke();
+    s.noBrush();
+    s.fill(INK);
+    s.circle(px, 172, 26);
+    s.fill("#ffffff");
+    s.circle(px + 6, 165, 8);
+  }
+
+  // cheeks
+  for (const cx of [132, 268]) {
+    s.group({ opacity: 0.75 }, () => {
+      s.noFill();
+      s.stroke("#e98b86");
+      s.strokeWeight(9);
+      s.brush("bristle", { opacity: 0.8 });
+      s.gesture({ pressure: "swell", wobble: 0.8 });
+      s.curve([
+        [cx - 9, 205],
+        [cx, 204],
+        [cx + 9, 205],
+      ]);
+    });
+  }
+
+  // smile
+  outline(s, [[180, 212], [200, 223], [220, 212]], 3.6, false);
+}
