@@ -27,6 +27,7 @@ import { useCallback, useId, useRef, useState, type FocusEvent, type MouseEvent 
 import { cn } from "../../lib/cn";
 import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
 import { useAnchoredLayer, type AnchorAlign, type AnchorVertical, type LayerDismissReason } from "./AnchoredLayer";
+import { MaterialContext } from "./material";
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -152,7 +153,8 @@ export function Popover({ trigger, label, children, align, vertical, width }: Po
             WIDTH_CLASSES[width ?? "md"],
           )}
         >
-          {typeof children === "function" ? <Slot render={children} value={closeAndRestore} /> : children}
+          {/* The panel is white, so what is in it keeps app ink. */}
+          <MaterialContext.Provider value={false}>{typeof children === "function" ? <Slot render={children} value={closeAndRestore} /> : children}</MaterialContext.Provider>
         </dialog>
       ) : null}
     </span>

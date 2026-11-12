@@ -1,6 +1,7 @@
 import { createContext, useContext, useId, type ReactNode } from "react";
 import { invariant } from "@shared/invariant";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 export type TableVariant = "data" | "grid";
 export type TableScroll = "x" | "both";
@@ -55,6 +56,8 @@ export function Table({ children, variant, scroll, className, caption, captionHi
   variant = variant ?? "data";
   if (caption !== undefined) invariant(caption.trim() !== "", "Table caption must not be empty");
   const nameId = labelledBy ?? captionId;
+  // On a card's material the caption takes the card's soft ink.
+  const soft = useMaterial(undefined) ? "text-card-soft" : "text-warm-700";
   return (
     <div
       role="region"
@@ -72,7 +75,7 @@ export function Table({ children, variant, scroll, className, caption, captionHi
         className={cn("w-full border-collapse", TABLE_CLASSES[variant])}
       >
         {caption === undefined ? null : (
-          <caption id={captionId} className={captionHidden === true ? "sr-only" : "pb-1 text-left text-sm text-warm-700"}>
+          <caption id={captionId} className={captionHidden === true ? "sr-only" : cn("pb-1 text-left text-sm", soft)}>
             {caption}
           </caption>
         )}
@@ -109,7 +112,7 @@ const CELL_CLASSES: Record<TableVariant, string> = {
 const GRID_TH = "border border-warm-300 px-2 py-1 align-top bg-warm-100 font-medium text-warm-700";
 const TH_CLASSES: Record<TableVariant, Record<ThProps["scope"], string>> = {
   data: {
-    col: "pb-2 pr-3 last:pr-0 align-bottom font-medium text-warm-700",
+    col: "pb-2 pr-3 last:pr-0 align-bottom font-medium",
     row: "py-2 pr-3 align-top font-medium",
   },
   grid: { col: GRID_TH, row: GRID_TH },
@@ -122,8 +125,10 @@ function alignClass(numeric: boolean | undefined): string {
 /** A header cell. `scope` is required. */
 export function Th({ children, scope, numeric, className, ...rest }: ThProps) {
   const variant = useContext(VariantContext);
+  // A data column header sits on the page or the card's paper; a grid header paints its own tint.
+  const soft = useMaterial(undefined) ? "text-card-soft" : "text-warm-700";
   return (
-    <th scope={scope} className={cn(TH_CLASSES[variant][scope], alignClass(numeric), className)} {...rest}>
+    <th scope={scope} className={cn(TH_CLASSES[variant][scope], variant === "data" && scope === "col" ? soft : null, alignClass(numeric), className)} {...rest}>
       {children}
     </th>
   );

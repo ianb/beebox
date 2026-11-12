@@ -11,6 +11,7 @@ import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";
 import { List } from "./ui/List";
+import { MaterialContext } from "./ui/material";
 
 interface CapturedTab {
   id: string;
@@ -165,7 +166,8 @@ function TabRow(props: {
   if (tab === undefined) return <li className="text-sm text-danger">Unknown tab UUID</li>;
   return (
     <li className={`min-w-0 rounded border px-3 py-2 ${deleted ? "border-danger/30 bg-danger/5" : "border-warm-200 bg-white"}`}>
-      <CheckboxField
+      {/* A white app panel: its text keeps app ink. */}
+      <MaterialContext.Provider value={false}><CheckboxField
         checked={deleted}
         disabled={deletionDisabled}
         onChange={onDeletedChange}
@@ -183,7 +185,7 @@ function TabRow(props: {
             </div>
           </div>
         )}
-      />
+      /></MaterialContext.Provider>
     </li>
   );
 }

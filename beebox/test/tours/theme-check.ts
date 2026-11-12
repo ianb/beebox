@@ -7,7 +7,7 @@
  * walks the catalog and exits 1 on any miss, for landing.
  */
 
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { THEME_CATALOG } from "../../src/shared/card-theme/core.js";
@@ -29,6 +29,27 @@ const RULE_EXEMPTIONS: readonly RuleExemption[] = [
   { selector: "#bbx-chat-load-older:disabled", reason: "disabled only while older messages load, and the contrast audit skips disabled text" },
 ];
 
+/**
+ * Theme sheets whose rules that name no theme are not yet held to coverage:
+ * on 2026-11-12 each had rules for states the studio does not show (a card
+ * turning over, a disabled swatch, inset and plain quote treatments, a
+ * figure's error). Shrink this list as specimens land; a new sheet is
+ * covered from the start.
+ */
+const SHARED_NOT_YET_COVERED: readonly string[] = [
+  "materials.css", "card-themes.css", "quote-sheets.css", "card-turn.css", "figure-controls.css",
+  "stock-textures.css", "chrome.css", "system-theme-picker.css", "interface.css",
+];
+
+/**
+ * The theme sheets. A rule in one that names no theme (the question patch)
+ * is worn by every theme, so the studio must show it too.
+ */
+async function sharedSheets(): Promise<string[]> {
+  return (await readdir(path.join(import.meta.dirname, "../../src/frontend/src/themes")))
+    .filter((name) => name.endsWith(".css") && !SHARED_NOT_YET_COVERED.includes(name));
+}
+
 /** Every catalog theme in the studio: each system theme and stock with its paired card, then each card stock not yet covered under Flat. */
 function catalogCases(): StudioCase[] {
   const cases: StudioCase[] = [];
@@ -48,8 +69,12 @@ function catalogCases(): StudioCase[] {
 
 /** Contrast is measured at a laptop and a phone, one screen of scroll at a time. */
 const CONTRAST_SCREENS = SCREENS.filter((s) => s.name === "laptop" || s.name === "phone");
-/** Each scroll step keeps this much of the last, so a line cut at one edge is whole in the next. */
-const STEP_OVERLAP = 80;
+/**
+ * Each scroll step keeps this much of the last, so a line cut at one edge is
+ * whole in the next. A sticky row at the bottom of the screen (the question
+ * patch's) covers about 100px there, so the overlap clears it.
+ */
+const STEP_OVERLAP = 160;
 /** The card contents label shows while its card scrolls, and on load, rests 1.2s after and fades for 0.25s (card-themes.css); audit it at rest. */
 const SETTLE_MS = 1600;
 const SCROLLER = "document.getElementById(\"bbx-theme-studio-scroll\")";
@@ -98,6 +123,7 @@ async function checkContrast(session: BrowseSession, { c, screen, outDir }: { c:
 
 /** Rules per case, collected on the case's first load; and which rule keys matched anywhere. */
 interface Coverage {
+  shared: readonly string[];
   targets: Map<string, RuleTarget[]>;
   all: Map<string, RuleTarget>;
   matched: Set<string>;
@@ -113,7 +139,7 @@ async function checkScreen(session: BrowseSession, { c, screen, coverage }: { c:
   const name = caseName(c);
   let targets = coverage.targets.get(name);
   if (targets === undefined) {
-    targets = ruleTargets(await collectRules(session), { themes: [c.system, c.card], exemptions: RULE_EXEMPTIONS });
+    targets = ruleTargets(await collectRules(session), { themes: [c.system, c.card], shared: coverage.shared, exemptions: RULE_EXEMPTIONS });
     coverage.targets.set(name, targets);
     for (const target of targets) coverage.all.set(target.key, target);
   }
@@ -183,7 +209,7 @@ async function main(): Promise<number> {
   }];
   const workers = Number(values.jobs);
   if (!Number.isInteger(workers) || workers < 1) throw new Error(`--jobs must be a whole number of browser sessions, got ${values.jobs}`);
-  const coverage: Coverage = { targets: new Map(), all: new Map(), matched: new Set(), unparsable: new Set() };
+  const coverage: Coverage = { shared: await sharedSheets(), targets: new Map(), all: new Map(), matched: new Set(), unparsable: new Set() };
   const jobs: Job[] = [
     ...CONTRAST_SCREENS.flatMap((screen) => cases.map((c) => ({ kind: "contrast" as const, screen, c }))),
     ...SCREENS.flatMap((screen) => cases.map((c) => ({ kind: "screen" as const, screen, c }))),

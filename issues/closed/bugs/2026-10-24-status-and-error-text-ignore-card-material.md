@@ -1,12 +1,15 @@
 ---
 title: "Loading and error text in card views keep app colours on dark cards"
-workstream: unattached
+workstream: card-ink-dark-themes
 area: beebox
 labels: [themes]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — cross-model review (codex gpt-6-sol) of the place-page ink fix
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** Landed on worktree-card-ink-dark-themes (26ac8d2d0, c45a8f3f2): card-front status/error/caption/inline-action text follows the card material; error uses each theme's --bbx-danger.
 
 `StatusMessage` ("Loading place…", "Loading figure…", "Loading PDF…") and
 `ErrorText` use fixed app colours (`text-warm-700`, the danger red). In a card

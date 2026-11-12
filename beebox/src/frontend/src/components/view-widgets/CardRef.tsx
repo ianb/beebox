@@ -15,6 +15,7 @@ import { refWithQuery, useViewHost, type ResolvedRef } from "../../lib/view-host
 import { Badge } from "../ui/Badge";
 import { InlineAction } from "../ui/InlineAction";
 import { Text } from "../ui/Text";
+import { MaterialContext } from "../ui/material";
 
 type CardRefChild = ReactNode | ((resolved: ResolvedRef | null) => ReactNode);
 
@@ -65,6 +66,8 @@ export function CardRef({ cardRef, view, params, children, embed, caption }: Car
   const missing = resolved !== null && !resolved.exists;
 
   return (
+    // A white app panel: its text keeps app ink, and the card it embeds sets its own.
+    <MaterialContext.Provider value={false}>
     <div className="my-2 rounded-lg border border-warm-200 bg-white">
       <div className="flex items-center gap-2 px-3 py-2">
         <Text weight="medium" truncate className="min-w-0 flex-1">{title}</Text>
@@ -81,5 +84,6 @@ export function CardRef({ cardRef, view, params, children, embed, caption }: Car
         <div className="border-t border-warm-200 p-3">{host.renderInline(inlineRef)}</div>
       ) : null}
     </div>
+    </MaterialContext.Provider>
   );
 }

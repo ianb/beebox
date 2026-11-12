@@ -14,6 +14,7 @@ import { parseDiff } from "./CommitDetail-diff";
 import { stripTrailers, trailerString } from "@shared/commit-trailers";
 import { CommitTab } from "./CommitDetail-commit";
 import { DiffTab, MovedTab, NewFilesTab } from "./CommitDetail-tabs";
+import { MaterialContext } from "../../ui/material";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
@@ -60,7 +61,12 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 
 // --- Main component ---
 
-export function CommitDetail({
+/** A white app panel: on a card it keeps app ink. */
+export function CommitDetail(props: CommitDetailProps) {
+  return <MaterialContext.Provider value={false}><CommitDetailPanel {...props} /></MaterialContext.Provider>;
+}
+
+function CommitDetailPanel({
   commit,
   onBack,
   onFilterSession,

@@ -121,7 +121,8 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
       {problem}
       <div ref={front} id={frontId} className="bbx-card-front" data-card-mode={mode} hidden={back} aria-hidden={back}>
         <CardContentsMenu id={contentsId} frontRef={front} entries={outline} />
-        <CardOutlineContext.Provider value={publishOutline}>{children}</CardOutlineContext.Provider>
+        {/* The front is the card's paper too: text on it takes the card's ink. App panels (a plain Card, a Menu, a Notice) reset it. */}
+        <MaterialContext.Provider value><CardOutlineContext.Provider value={publishOutline}>{children}</CardOutlineContext.Provider></MaterialContext.Provider>
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">
         {/* The back of the card is its own paper: everything on it sits on the material. */}
