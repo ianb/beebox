@@ -10,7 +10,7 @@
 // (2026-11-12) it delivered events 0.2 s to over 30 s late, split one burst
 // into batches farther apart than the quiet window, and delivered the
 // scaffold's own writes from before the watch started. No fixed wait bounds
-// that (issues/bugs/2026-11-12-schema-watcher-chunked-write-test-times-out-under-load.md).
+// that (issues/closed/bugs/2026-11-12-schema-watcher-chunked-write-test-times-out-under-load.md).
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";

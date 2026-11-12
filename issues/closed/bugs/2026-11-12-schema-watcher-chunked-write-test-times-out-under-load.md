@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-web-guidance-scan — change-selected test runs
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** Fixed in 1954d7d01..ded80c752: test now uses fake fs.watch and mocked clock; no production change. Real-filesystem test deliberately not added (FSEvents lag).
 
 `beebox/test/core/schema-watcher.test.ts`, test "a write in three chunks
 invalidates once, after the last", fails intermittently:
