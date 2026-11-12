@@ -1032,3 +1032,23 @@ by counting the test file; all move unchanged.
   834 files; all passed except `test/core/schema-watcher.test.ts` (a file
   watcher timing test that imports none of the changed files; it also fails
   alone).
+- 2026-11-11, Track 2: Styling text and scroll-wrapper rule, new "Dates"
+  subsection (`datesSection` in `files.ts`, placed after "ViewCard
+  Structure" in `generateViewsDoc`), A6 and A7 control bullets, `alt` in the
+  name bullet, the `aria-label` fix in the "Inbox Dashboard" example, and the
+  four consolidations (link/embed merged into "Showing Files in Chat", with
+  "How the Agent Knows a Companion View is Open" kept for `zoomed-view` and
+  `open-card`; `reportActivity` cell and companion text point at "Reporting
+  Card Activity"; views skill and `bbx-commands.ts` point at "Testing a
+  View"). 116 changed lines (62 added, 54 removed), all docs. The wrapper is
+  named "scroll wrapper" with `role="region"`, `aria-label`, `tabIndex={0}`
+  and `overflowX: "auto"`; Track 3's `wide-table-without-wrapper` message
+  should say "scroll wrapper" and name "Styling". Browser check (bin/browse
+  at 390x844 and 1280x900, a fixture view in the test1 clone, deleted
+  after): the page does not scroll sideways (document scrollWidth equals the
+  window width), the wrapper scrolls (scrollWidth 640 in a 332px box), Tab
+  focus reaches it with a fully visible ring, arrow keys scroll it, the
+  snapshot lists `region "Prices"`, `Temporal.PlainDate.from("2026-08-14")`
+  shows "Aug 14", and `bbx view check` passes the view. Screenshots in
+  `scratch/impl/box-view/track2/`. `test:changed` again selected 834 files;
+  only `schema-watcher.test.ts` failed (same as Track 1).

@@ -202,6 +202,19 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 
 The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;
 
+export const datesSection = `### Dates
+
+\`Temporal\` is a global in views. A date-only value such as \`due: 2026-08-14\`
+arrives as the string \`"2026-08-14"\`. Read it with
+\`Temporal.PlainDate.from(value)\` and show it with
+\`toLocaleString(undefined, { month: "short", day: "numeric" })\`. A timestamp
+(\`2026-08-14T09:30:00Z\`) is \`Temporal.Instant.from(value)\`. Today is
+\`Temporal.Now.plainDateISO()\`; days until a date is \`today.until(date).days\`.
+Do not use \`new Date("2026-08-14")\`: it reads the date as midnight UTC, so a
+person west of UTC sees the day before.
+\`new Date().toISOString().slice(0, 10)\` is today in UTC, not today where the
+person is.`;
+
 export const controlsSection = `## Controls People Can Use
 
 A view is used by mouse, touch, keyboard, and screen reader, and the box agent
@@ -210,11 +223,18 @@ drives it by the same names. Write native HTML before ARIA:
 - Every control has a name: \`<button>\` text, a \`<label>\` for an input
   (\`<label>Due <input type="date" /></label>\`), or \`aria-label\` on an
   icon-only button. A placeholder is not a name. Put \`aria-label\` only on an
-  element with a role; on a plain \`<div>\` it is ignored.
+  element with a role; on a plain \`<div>\` it is ignored.  An \`<img>\` has
+  \`alt\` (\`alt=""\` for decoration).
 - Use \`<button type="button">\` for actions and \`<a href>\` for links, not a
   clickable \`<div>\`. A disclosure is \`<details><summary>\`; a modal is
   \`<dialog>\` opened with \`showModal()\`.
 - A toggle keeps one name and exposes its state with \`aria-pressed\`.
+- Give a field the keyboard it needs: \`type="email"\`, \`"tel"\`, \`"url"\`, or
+  \`inputMode="numeric"\`; on a field where Enter sends, \`enterKeyHint="send"\`.
+- Show the result of an action ("Saved", "Copied") in an element with
+  \`role="status"\` that is on the page before the action, and change its
+  text. Put an error in \`role="alert"\`. A screen reader does not read text
+  that arrives in a new element.
 - If Enter in a text field submits, wrap it in a \`<form onSubmit>\`, or skip
   Enter while \`event.nativeEvent.isComposing\`: Japanese, Chinese and Korean
   input use Enter to confirm text.
