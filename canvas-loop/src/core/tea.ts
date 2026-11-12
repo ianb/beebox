@@ -4,16 +4,17 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
 // sketch — which imports only this module — can name them.
-import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 import type { BrushName } from "./brush/presets.js";
-import type { GroupOptions } from "./painter/engine.js";
+import type { GroupOptions, SpriteOptions } from "./painter/engine.js";
 import type { TubeOptions } from "./shapes.js";
 
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { GroupOptions } from "./painter/engine.js";
+export type { GroupOptions, SpriteOptions } from "./painter/engine.js";
+export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
@@ -165,6 +166,10 @@ export interface View {
   paperTexture(amount: number): void;
   /** Draw `body` once into a stored layer; later calls with the same key paste it. */
   cache(key: string, body: () => void): void;
+  /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
+  sprite(options: SpriteOptions, body: () => void): Sprite;
+  /** Draw a sprite with its top-left at (x, y) under the current transform, at `opacity` (default 1). */
+  image(sprite: Sprite, x: number, y: number, opacity?: number): void;
   /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
   /** Back to plain Canvas2D strokes. */

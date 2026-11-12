@@ -3,6 +3,8 @@
 // context-generic Painter (one drawing implementation for both harnesses). It
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
+import type { SpriteOptions } from "../../core/painter/engine.js";
+import type { Sprite } from "../../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
 import { curveCommands } from "../../core/contours.js";
 import { offsetPoints, tubePath } from "../../core/shapes.js";
@@ -106,6 +108,12 @@ export class BrowserView implements View {
   }
   cache(key: string, body: () => void): void {
     this.#painter.cache(key, body);
+  }
+  sprite(options: SpriteOptions, body: () => void): Sprite {
+    return this.#painter.sprite(options, body);
+  }
+  image(...args: [Sprite, number, number, number?]): void {
+    this.#painter.image(...args);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#painter.curve(points, closed);

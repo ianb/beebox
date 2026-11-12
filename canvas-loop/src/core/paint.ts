@@ -195,6 +195,14 @@ export function ellipseGradient(...args: [number, number, number, number, readon
   return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: w / 2, scaleY: h / w, stops };
 }
 
+/** A sprite handle from `sprite(...)`: plain data naming a stored picture; draw it with `image`. */
+export interface Sprite {
+  readonly kind: "sprite";
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+}
+
 /** Any gradient handle. */
 export type Gradient = LinearGradient | RadialGradient;
 

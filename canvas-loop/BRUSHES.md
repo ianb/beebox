@@ -228,6 +228,23 @@ headless. To animate one:
   depend on: when a param changes the static scene, put its value in the key
   (`` s.cache(`sky-${p.dusk}`, …) ``). The cache keeps the transform from the first
   call, and the 24 most recent keys.
+- `sprite({ key, width, height }, body)` paints `body` once, in its own
+  coordinates (0..width, 0..height), and returns a handle; `image(sprite, x,
+  y, opacity?)` draws it under the current transform. Use sprites for things
+  that move but keep their look: a character, a boat, a cloud. Paint each pose
+  as its own sprite (`key: "baker-wave"`) and switch between them; rock, bob or
+  flip it with `translate`, `rotate` and `scale(-1, 1)`. A sprite must fit the
+  canvas; the 400 most recent keys are kept.
+
+```ts
+const boat = v.sprite({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
+v.push();
+v.translate(x, y);
+v.rotate(Math.sin(frame / 30) * 0.05);  // rock
+v.image(boat, -60, -40);
+v.pop();
+```
+
 - A mark's randomness comes from its points, so a mark whose points move
   re-rolls its wobble every frame: the line "boils", as in hand-drawn
   animation. To keep it still, give it `gesture({ seed })`.

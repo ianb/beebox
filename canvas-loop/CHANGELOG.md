@@ -36,6 +36,9 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Sprites.** `sprite({ key, width, height }, body)` paints once in local
+  coordinates; `image(sprite, x, y, opacity?)` places it under the current
+  transform, so painted things can move, rock and flip cheaply.
 - **Faster frames.** Brush marks reuse one offscreen canvas and groups reuse
   pooled layers, instead of a new canvas per mark or group; the faint-mark
   pixel read-back runs headless only. Headless output is byte-identical; the

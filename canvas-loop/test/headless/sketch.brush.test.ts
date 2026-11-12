@@ -311,3 +311,25 @@ test("calling paper() again with the same settings keeps the texture (no per-fra
   const ms = Number(process.hrtime.bigint() - start) / 1e6;
   assert.ok(ms < 200, `20 repeated paper() calls took ${ms.toFixed(0)} ms`);
 });
+
+test("a sprite is drawn once and placed anywhere under the current transform", () => {
+  const s = makeSketch({ width: 100, height: 60 });
+  let runs = 0;
+  const make = () =>
+    s.sprite({ key: "dot", width: 10, height: 10 }, () => {
+      runs += 1;
+      s.noStroke();
+      s.fill("#ff0000");
+      s.rect(0, 0, 10, 10);
+    });
+  s.image(make(), 5, 5);
+  s.push();
+  s.translate(60, 20);
+  s.image(make(), 0, 0, 0.5);
+  s.pop();
+  assert.equal(runs, 1, "the body ran once");
+  assert.deepEqual(pixel(s, [9, 9]), [255, 0, 0, 255]);
+  assert.equal(pixel(s, [64, 24])[3], 128, "translated, half opacity");
+  assert.equal(pixel(s, [30, 30])[3], 0);
+  assert.throws(() => s.image({ kind: "sprite", key: "nope", width: 1, height: 1 }, 0, 0), /not defined/);
+});

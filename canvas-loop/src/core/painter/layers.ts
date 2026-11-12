@@ -77,12 +77,14 @@ export function withComposite(ctx: Ctx2D, args: { op: string; draw: () => void }
   ctx.globalCompositeOperation = previous;
 }
 
-/** Most cached layers kept at once; the oldest is dropped first. */
-const CACHE_LIMIT = 24;
-
 /** Layers stored by key for `cache()`, oldest dropped first past the limit. */
 export class LayerCache {
   #layers = new Map<string, Layer>();
+  #limit: number;
+
+  constructor(limit: number) {
+    this.#limit = limit;
+  }
 
   get(key: string): Layer | undefined {
     return this.#layers.get(key);
@@ -91,7 +93,7 @@ export class LayerCache {
   set(key: string, layer: Layer): Layer {
     this.#layers.set(key, layer);
     const oldest = this.#layers.keys().next();
-    if (this.#layers.size > CACHE_LIMIT && oldest.done !== true) this.#layers.delete(oldest.value);
+    if (this.#layers.size > this.#limit && oldest.done !== true) this.#layers.delete(oldest.value);
     return layer;
   }
 }

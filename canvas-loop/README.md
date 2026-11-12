@@ -96,7 +96,7 @@ see [TEA.md](./TEA.md#engagement-verdicts).)
 | Canvas & time | `createCanvas(w, h)`, `width`, `height`, `frameCount`, `millis()` (= `frameCount / fps * 1000`) |
 | Drawing | `background`, `fill`, `noFill`, `stroke`, `noStroke`, `strokeWeight`, `rect`, `circle`, `ellipse`, `line`, `triangle`, `arc`, `text`, `textSize`, `textAlign` |
 | Organic shapes | `polygon(points)`, `path(commands)` (data-encoded `["move"/"line"/"quad"/"bezier"/"close", …]`), `curve(points, closed?)` (smooth curve through points), `curvePath(points, closed?)` (its path commands), `clip(shape, () => …)` (polygon/path region for the callback) |
-| Brushes & compositing | `brush`, `noBrush`, `gesture`, `paper`, `paperTexture`, `group`, `blendMode`, `erase`, `noErase`, `ellipseGradient`, `tube`, `offset`, `clip([shapes…])`, `cache` — see [BRUSHES.md](./BRUSHES.md) |
+| Brushes & compositing | `brush`, `noBrush`, `gesture`, `paper`, `paperTexture`, `group`, `blendMode`, `erase`, `noErase`, `ellipseGradient`, `tube`, `offset`, `clip([shapes…])`, `cache`, `sprite`, `image` — see [BRUSHES.md](./BRUSHES.md) |
 | Gradients | `linearGradient(x1,y1,x2,y2, stops)`, `radialGradient(x,y,radius, stops)` → an opaque handle `fill`/`stroke`/`background` accept anywhere a color string is |
 | Transform | `push`, `pop`, `translate`, `rotate`, `scale` |
 | Randomness | `random()`, `random(max)`, `random(min, max)`, `randomChoice(arr)` — seeded (`--seed`) |

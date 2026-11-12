@@ -1,3 +1,5 @@
+import type { SpriteOptions } from "../core/painter/engine.js";
+import type { Sprite } from "../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
 import { curveCommands } from "../core/contours.js";
 import { offsetPoints, tubePath } from "../core/shapes.js";
@@ -231,6 +233,12 @@ export class Sketch {
   }
   cache(key: string, body: () => void): void {
     this.#requirePainter().cache(key, body);
+  }
+  sprite(options: SpriteOptions, body: () => void): Sprite {
+    return this.#requirePainter().sprite(options, body);
+  }
+  image(...args: [Sprite, number, number, number?]): void {
+    this.#requirePainter().image(...args);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#requirePainter().curve(points, closed);

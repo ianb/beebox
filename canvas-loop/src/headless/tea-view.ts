@@ -1,3 +1,4 @@
+import type { Sprite, SpriteOptions } from "../core/tea.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import type { Sketch } from "./sketch.js";
@@ -93,6 +94,12 @@ export class TeaView implements View {
   }
   cache(key: string, body: () => void): void {
     this.#sketch.cache(key, body);
+  }
+  sprite(options: SpriteOptions, body: () => void): Sprite {
+    return this.#sketch.sprite(options, body);
+  }
+  image(...args: [Sprite, number, number, number?]): void {
+    this.#sketch.image(...args);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#sketch.curve(points, closed);
