@@ -142,7 +142,9 @@ tests:
       - '(?:not|no|never|isn.t|doesn.t)[\s\S]{0,160}(?:confirm|correct|verified)|(?:silence|uncorrected)[\s\S]{0,160}(?:not|isn.t|doesn.t)'
     tags: [jev-triage]
 
-  # Status (not yet run): conversation-strip plan, docs/plans/conversation-strip.md.
+  # Status (2026-11-12, Claude): 1/1 passed, 3 reads, 3 searches, 35k context,
+  # against the worktree test box. It found the tour type and the command by
+  # looking; it did not answer from the always-loaded guidance alone.
   - id: tour-strip-walkthrough
     prompt: >
       A new family member is joining this box and wants to be walked through
