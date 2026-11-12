@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Sketch } from "../../src/headless/sketch.js";
+import { TeaView } from "../../src/headless/tea-view.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { controlModels } from "../../src/browser/controls-model.js";
 
@@ -41,4 +42,27 @@ test("a param's label and hint survive loading and reach its control", () => {
   });
   const [model] = controlModels({ decl: loaded.params ?? {}, values: {} });
   assert.deepEqual([model?.name, model?.label, model?.hint], ["a", "box A", "first species"]);
+});
+
+test("box text uses per-call style without changing the current settings", () => {
+  const s = makeSketch();
+  s.textSize(12);
+  const before = s.textWidth("H");
+  s.noFill();
+  const bounds = s.text("Hi", { x: 50, y: 30 }, { align: "center", valign: "middle", size: 20, fill: "#000000" });
+  assert.equal(bounds.size, 20);
+  assert.ok(alpha(s, [Math.round(bounds.x + bounds.w / 4), 30]) > 0 || alpha(s, [Math.round(bounds.x + 2), 30]) > 0, "the text drew in the per-call fill");
+  assert.equal(s.textWidth("H"), before, "the text size is still 12");
+  const none = makeSketch();
+  none.noFill();
+  none.text("Hi", 50, 30);
+  assert.equal(none.readPixels().data.some((v) => v !== 0), false, "point text still follows noFill");
+});
+
+test("control draws a stand-in with the param's value headless, and rejects an undeclared name", () => {
+  const s = makeSketch();
+  const v = new TeaView({ sketch: s, decl: { n: { type: "number", min: 1, max: 9, default: 7 } }, getParams: () => ({ n: 7 }) });
+  v.control("n", { x: 10, y: 10, w: 40, h: 24 });
+  assert.equal(alpha(s, [30, 11]), 255, "the stand-in's frame is drawn");
+  assert.throws(() => v.control("missing", { x: 0, y: 0, w: 10 }), /no param named "missing"/u);
 });

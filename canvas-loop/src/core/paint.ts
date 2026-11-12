@@ -19,6 +19,48 @@
 /** Text weight and slant, as p5's `textStyle`. */
 export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
 
+/**
+ * Where `text` writes. Without `w`, `align` places the text about `x`; without
+ * `h`, `valign` places it about `y`. With `w`, lines wrap to it.
+ */
+export interface TextBox {
+  x: number;
+  y: number;
+  w?: number;
+  h?: number;
+}
+
+/** How `text` lays out and styles one call. Unset style keys use the current text and fill settings. */
+export interface TextOptions {
+  align?: "left" | "center" | "right";
+  valign?: "top" | "middle" | "bottom";
+  /** Wrap at word breaks to the box width (default: on when `w` is set). */
+  wrap?: boolean;
+  /** Shrink the size until the text fits the box (never grows it). */
+  fit?: boolean;
+  /** Line spacing as a multiple of the size (default 1.25). */
+  lineHeight?: number;
+  size?: number;
+  font?: string;
+  style?: TextStyle;
+  fill?: Paint;
+}
+
+/** What `text` drew: the ink box in logical pixels, the line count, and the size used. */
+export interface TextBounds {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  lines: number;
+  size: number;
+  /** True when the text overflows the box at that size. */
+  overflow: boolean;
+}
+
+/** `text` arguments: a point with the current alignment, or a box with options. */
+export type TextArgs = [string, number, number] | [string, TextBox, TextOptions?];
+
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
 /** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */

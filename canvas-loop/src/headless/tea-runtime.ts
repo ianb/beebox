@@ -132,7 +132,7 @@ class TeaRunner {
     this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps, onHandled, outline: options.outline === true });
     if (options.timing === true) this.#timer = new FrameTimer();
     this.#util = new TeaUtil({ sketch: this.#sketch, getParams: () => this.#params, onHandled });
-    this.#view = new TeaView(this.#sketch);
+    this.#view = new TeaView({ sketch: this.#sketch, decl: options.module.params, getParams: () => this.#params });
     this.#eventsByFrame = bucketTeaByFrame(options.events);
   }
 

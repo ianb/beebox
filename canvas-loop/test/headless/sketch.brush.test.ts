@@ -200,7 +200,7 @@ test("brush validation names the problem", () => {
 
 test("the TEA View draws brushed marks inside a group", () => {
   const s = makeSketch({ width: 120, height: 60 });
-  const v = new TeaView(s);
+  const v = new TeaView({ sketch: s, decl: {}, getParams: () => ({}) });
   v.background("#ffffff");
   v.group({ opacity: 0.8 }, () => {
     v.noFill();

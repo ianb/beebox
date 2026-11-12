@@ -119,6 +119,20 @@ Declare with `as const satisfies ParamsDecl` so selects narrow to their option
 union. Read values via `u.params.name` (in `update`) and the `p` argument (in
 `draw`). Triggers carry no value — handle the `{ type: "trigger", name }` msg.
 
+Every declaration also takes `label`, `hint` and `panel`. `panel: false`
+keeps the param out of the side panel.
+
+### Inputs over the canvas
+
+`v.control(name, { x, y, w, h?, size?, align?, bold? })` in `draw` puts the
+param's native input over the canvas at that box (logical pixels) for this
+frame. Browser figures place the real `<input>`/`<select>` there and take it out
+of the panel; headless renders draw a stand-in showing the current value, so
+frames show the layout. Call it every frame the input should show: an input not
+placed in a frame is hidden (a three-species equation places three boxes).
+Scripted `param` events drive it headless as before. Only `mountSketch` figures
+place inputs so far; the React figure and the playground keep the panel.
+
 ## Events file
 
 The same JSON array as the mutable tier, plus two TEA-only entry types. Each is

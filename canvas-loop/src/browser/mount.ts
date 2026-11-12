@@ -11,9 +11,9 @@
 // hosts with a strict CSP import the stylesheet instead:
 //
 //   import "@ianbicking/canvas-loop/browser/figure.css";
-import type { CanvasSize } from "../core/tea.js";
+import type { CanvasSize, ControlBox } from "../core/tea.js";
 import { toTeaModule } from "../headless/tea-load.js";
-import { buildControls } from "./controls.js";
+import { buildControls, ControlOverlay } from "./controls.js";
 import { sanitizeInitialParams } from "./param-validate.js";
 import { Runtime, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
 import type { PlaygroundModule } from "./sketch-types.js";
@@ -57,6 +57,8 @@ export interface AttachSketchOptions {
   onEvent?: (entry: EmittedEvent) => void;
   /** Called once if a frame throws; the loop stops. Default: `console.error`. */
   onError?: (error: unknown) => void;
+  /** After each draw: where `v.control` placed param inputs this frame. */
+  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
 }
 
 export interface AttachedSketch {
@@ -93,6 +95,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     },
     ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
+    ...(opts.onPlace !== undefined ? { onPlace: opts.onPlace } : {}),
   });
   runtime.setPaused(opts.paused);
   // Wire input BEFORE starting the loop: if listener setup throws (hostile or
@@ -158,11 +161,16 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
 
   const container = document.createElement("div");
   container.className = "cl-figure";
+  // The stage hugs the canvas so over-canvas inputs (`v.control`) position against it.
+  const stage = document.createElement("div");
+  stage.className = "cl-stage";
+  stage.style.position = "relative";
   const canvas = document.createElement("canvas");
   canvas.className = "cl-canvas";
   sizeCanvas(canvas, size);
   canvas.tabIndex = 0;
-  container.append(canvas);
+  stage.append(canvas);
+  container.append(stage);
 
   const frameLabel = document.createElement("span");
   frameLabel.className = "cl-frame";
@@ -171,6 +179,24 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   // `attached` is assigned right below; runtime callbacks only fire from rAF
   // frames and control events, never synchronously during attachSketch.
   let attached: AttachedSketch | null = null;
+  // Over-canvas inputs. The first draw runs inside attachSketch, before
+  // `attached` exists, so the latest placements are kept and synced after.
+  let placed: ReadonlyMap<string, ControlBox> = new Map();
+  let excluded: ReadonlySet<string> = new Set();
+  let renderPanel = (): void => {};
+  const overlay = new ControlOverlay({
+    stage,
+    size,
+    decl,
+    handlers: {
+      onParam: (name, value) => attached?.runtime.setParam(name, value),
+      onTrigger: (name) => attached?.runtime.trigger(name),
+    },
+    onShownChange: (names) => {
+      excluded = names;
+      renderPanel();
+    },
+  });
   // Raw overrides — attachSketch is the single validation point (no duplicate here).
   attached = attachSketch(canvas, {
     module,
@@ -180,6 +206,10 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
     onFrame: (frame) => {
       frameLabel.textContent = `frame ${frame}`;
+    },
+    onPlace: (placements) => {
+      placed = placements;
+      if (attached !== null) overlay.sync(placements, attached.runtime.paramValues());
     },
     onEvent: (entry) => {
       opts.onEvent?.(entry);
@@ -196,7 +226,7 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   // The panel is rebuilt after a restart so widgets show the re-applied
   // initial values (widget edits keep themselves in sync; restart doesn't).
   const panelHost = document.createElement("div");
-  const renderPanel = (): void => {
+  renderPanel = (): void => {
     panelHost.replaceChildren(
       buildControls({
         decl,
@@ -204,9 +234,11 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
         onParam: (name, value) => runtime.setParam(name, value),
         onTrigger: (name) => runtime.trigger(name),
         classPrefix: "cl-",
+        exclude: excluded,
       }),
     );
   };
+  overlay.sync(placed, runtime.paramValues());
 
   // Any throw between a started runtime and a returned teardown would leak the
   // rAF loop + listeners with no way to stop them — tear down before rethrowing.
@@ -225,6 +257,7 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
 
   return () => {
     attached.teardown();
+    overlay.remove();
     container.remove();
   };
 }

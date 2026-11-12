@@ -125,8 +125,9 @@ function ControlRow(props: { model: ControlModel; onParam: ParamControlsProps["o
 
 /** The panel of param widgets for a sketch declaration — presentational only. */
 export function ParamControls(props: ParamControlsProps): JSX.Element {
-  const models = controlModels({ decl: props.decl, values: props.values });
+  const models = controlModels({ decl: props.decl, values: props.values }).filter((model) => props.decl[model.name]?.panel !== false);
   if (models.length === 0) {
+    if (Object.keys(props.decl).length > 0) return <div className="cl-params" />;
     return <p className="cl-muted">This sketch declares no params.</p>;
   }
   return (

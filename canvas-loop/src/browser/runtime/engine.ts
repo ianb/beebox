@@ -8,7 +8,7 @@
 // replays byte-for-byte through the CLI.
 import { SeededRandom } from "../../core/prng.js";
 import { UnhandledMsgError } from "../../headless/errors.js";
-import type { Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
+import type { ControlBox, Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
@@ -89,6 +89,8 @@ export interface RuntimeDeps {
    * Default when omitted: `console.error` (still exactly once).
    */
   onError?: (error: unknown) => void;
+  /** After each draw: where `v.control` placed param inputs this frame. */
+  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
 }
 
 export class Runtime {
@@ -113,6 +115,7 @@ export class Runtime {
   #onLog: (entry: RuntimeLog) => void;
   #onEvent: ((entry: EmittedEvent) => void) | undefined;
   #onError: ((error: unknown) => void) | undefined;
+  #onPlace: ((placements: ReadonlyMap<string, ControlBox>) => void) | undefined;
   #errored = false;
   #overrides: ParamOverrides | undefined;
   // Per-event engagement accumulator (mirrors the headless runners); reset
@@ -130,13 +133,14 @@ export class Runtime {
     this.#onLog = deps.onLog;
     this.#onEvent = deps.onEvent;
     this.#onError = deps.onError;
+    this.#onPlace = deps.onPlace;
     this.#util = new BrowserUtil({
       random: this.#random,
       getParams: () => this.#params,
       log: (args) => this.#recordLog(args),
       onHandled: (name) => this.#handledNames.push(name),
     });
-    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args) });
+    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }
@@ -338,6 +342,8 @@ export class Runtime {
 
   #draw(): void {
     this.#module.draw(this.#view, this.#model, this.#params);
+    const placements = this.#view.takePlacements();
+    this.#onPlace?.(placements);
   }
 
   #recordLog(args: readonly unknown[]): void {

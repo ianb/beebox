@@ -2,7 +2,8 @@
 //
 //   - `reaction` (select) picks one of five reactions; boxes A–D are typed
 //     number fields, one coefficient per species in the order the equation is
-//     written. A three-species reaction ignores box D, and the canvas says so.
+//     written. The inputs sit in the equation (`v.control`); a three-species
+//     reaction places only boxes A–C.
 //   - the picture: the equation with the typed coefficients; each side's
 //     molecules drawn as atoms, repeated by coefficient; a tally per element with
 //     one dot per atom on each side, green when the two sides match, red when not.
@@ -30,10 +31,10 @@ import {
   type Tally,
 } from "./chem-tea.js";
 
-const COEF = { type: "number", min: 1, max: 12, default: 1, step: 1, control: "field" } as const;
+const COEF = { type: "number", min: 1, max: 12, default: 1, step: 1, control: "field", panel: false } as const;
 
 export const params = {
-  reaction: { type: "select", options: REACTION_IDS, default: "water" },
+  reaction: { type: "select", options: REACTION_IDS, default: "water", panel: false },
   A: COEF,
   B: COEF,
   C: COEF,
@@ -410,32 +411,16 @@ function equationParts(v: View, r: Reaction): EqPart[] {
   return parts;
 }
 
-function coefValue(p: ParamView, slot: Slot): number {
-  return p[slot];
-}
-
-function drawCoefBox(v: View, args: { slot: Slot; x: number; value: number; glow: number }): void {
-  const { slot, x, value, glow } = args;
+function drawCoefBox(v: View, args: { slot: Slot; x: number; glow: number }): void {
+  const { slot, x, glow } = args;
   const y = EQ_Y - BOX + 10;
   if (glow > 0) {
     v.noStroke();
     v.fill(`rgba(242, 193, 78, ${(0.55 * glow).toFixed(3)})`);
     roundRect(v, { x: x - 6, y: y - 6, w: BOX + 12, h: BOX + 12, r: 12 });
   }
-  v.fill("#ffffff");
-  v.stroke("#8a83a0");
-  v.strokeWeight(2);
-  roundRect(v, { x, y, w: BOX, h: BOX, r: 8 });
-  v.noStroke();
-  v.fill("#3b3487");
-  setText(v, 28, "bold");
-  v.textAlign("center", "middle");
-  v.text(String(value), x + BOX / 2, y + BOX / 2 + 1);
-  // the box's letter, matching the typed field's name
-  v.fill("#8a83a0");
-  setText(v, 12, "bold");
-  v.textAlign("center", "top");
-  v.text(`box ${slot}`, x + BOX / 2, y + BOX + 5);
+  // The learner types into the real input, placed in the equation.
+  v.control(slot, { x, y, w: BOX, h: BOX, size: 26, align: "center", bold: true });
 }
 
 function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> }): void {
@@ -455,7 +440,7 @@ function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> 
     if (part.kind === "coef" && part.slot !== undefined) {
       const since = model.edit?.slot === part.slot ? model.frame - model.edit.frame : Infinity;
       const glow = since < 45 ? 1 - since / 45 : 0;
-      drawCoefBox(v, { slot: part.slot, x, value: coefValue(p, part.slot), glow });
+      drawCoefBox(v, { slot: part.slot, x, glow });
     } else if (part.kind === "formula" && part.id !== undefined) {
       drawFormula(v, { id: part.id, x, y: EQ_Y, size: EQ_SIZE, color: INK });
     } else {
@@ -467,24 +452,6 @@ function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> 
     }
     x += part.w;
   }
-}
-
-function drawUnusedNote(v: View, p: ParamView): void {
-  if (speciesCount(REACTIONS[p.reaction]) >= 4) return;
-  const x = 572;
-  const y = 22;
-  v.noFill();
-  v.stroke("#b9b2c7");
-  v.strokeWeight(1.5);
-  roundRect(v, { x, y, w: 30, h: 30, r: 6 });
-  v.line(x + 6, y + 24, x + 24, y + 6);
-  v.noStroke();
-  v.fill("#9a93ab");
-  setText(v, 13, "bold");
-  v.textAlign("left", "alphabetic");
-  v.text(`box D (${p.D}): not used`, x + 38, y + 13);
-  setText(v, 12);
-  v.text("this reaction has only 3 boxes", x + 38, y + 28);
 }
 
 function bob(args: { model: DeepReadonly<Model>; index: number }): number {
@@ -683,7 +650,7 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   const r = REACTIONS[p.reaction];
   const coefs = coefsOf(p);
   v.cache(`bg-${p.reaction}`, () => drawBackground(v, p));
-  drawUnusedNote(v, p);
+  v.control("reaction", { x: 596, y: 22, w: 180, h: 30, size: 15 });
   drawEquation(v, { p, model });
   const rows = tally(r, coefs);
   const off: ReadonlySet<Element> = new Set(rows.filter((t) => t.left !== t.right).map((t) => t.el));

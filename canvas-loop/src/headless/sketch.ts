@@ -1,5 +1,5 @@
 import type { CursorKind, TextStyle } from "../core/tea.js";
-import type { SpriteOptions } from "../core/paint.js";
+import type { SpriteOptions, TextArgs, TextBounds } from "../core/paint.js";
 import type { Sprite } from "../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
 import { curveCommands } from "../core/contours.js";
@@ -299,8 +299,8 @@ export class Sketch {
   finishFrame(): void {
     this.#painter?.finishFrame();
   }
-  text(...args: [string, number, number]): void {
-    this.#requirePainter().text(...args);
+  text(...args: TextArgs): TextBounds {
+    return this.#requirePainter().text(...args);
   }
 
   // ── transcript ───────────────────────────────────────────────────

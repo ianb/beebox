@@ -81,6 +81,11 @@ function parseParam(raw: unknown, name: string): ParamDecl {
     if (typeof text !== "string") throw new CliError({ detail: `${where}: "${key}" must be a string` });
     decl[key] = text;
   }
+  const panel = raw["panel"];
+  if (panel !== undefined) {
+    if (typeof panel !== "boolean") throw new CliError({ detail: `${where}: "panel" must be a boolean` });
+    decl.panel = panel;
+  }
   return decl;
 }
 

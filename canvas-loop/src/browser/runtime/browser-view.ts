@@ -3,8 +3,8 @@
 // context-generic Painter (one drawing implementation for both harnesses). It
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
-import type { CursorKind, TextStyle } from "../../core/tea.js";
-import type { SpriteOptions } from "../../core/paint.js";
+import type { ControlBox, CursorKind, TextStyle } from "../../core/tea.js";
+import type { SpriteOptions, TextArgs, TextBounds } from "../../core/paint.js";
 import type { Sprite } from "../../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
 import { curveCommands } from "../../core/contours.js";
@@ -15,14 +15,18 @@ import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGr
 import { Painter } from "../../core/painter/engine.js";
 import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paint, Paper, TextAlign, TextBaseline, View } from "../../core/tea.js";
 import { makeDomLayer } from "./layer.js";
+import { SketchUsageError } from "../../core/errors.js";
 
 export class BrowserView implements View {
   #painter: Painter;
   #canvas: HTMLCanvasElement;
   #log: (args: readonly unknown[]) => void;
+  #names: ReadonlySet<string>;
+  #placed = new Map<string, ControlBox>();
 
-  constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; pixelRatio: number; log: (args: readonly unknown[]) => void }) {
+  constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; pixelRatio: number; log: (args: readonly unknown[]) => void; params: ReadonlySet<string> }) {
     this.#log = deps.log;
+    this.#names = deps.params;
     this.#canvas = deps.ctx.canvas;
     // The DOM context satisfies the structural Ctx2D the Painter uses; only its
     // `fillStyle` union is wider (adds CanvasPattern, never set here), so one
@@ -37,6 +41,19 @@ export class BrowserView implements View {
       // No `warn`: faint-mark checks read pixels back, which stalls the GPU in a browser every frame.
       // They are an authoring aid for headless transcripts.
     });
+  }
+
+  /** Record where param `name`'s input sits this frame; the figure places the real input there. */
+  control(name: string, box: ControlBox): void {
+    if (!this.#names.has(name)) throw new SketchUsageError({ detail: `control("${name}"): no param named "${name}" is declared` });
+    this.#placed.set(name, { ...box });
+  }
+
+  /** This frame's control placements; clears them for the next draw. */
+  takePlacements(): Map<string, ControlBox> {
+    const placed = this.#placed;
+    this.#placed = new Map();
+    return placed;
   }
 
   get width(): number {
@@ -170,8 +187,8 @@ export class BrowserView implements View {
   cursor(kind: CursorKind): void {
     if (this.#canvas.style.cursor !== kind) this.#canvas.style.cursor = kind;
   }
-  text(...args: [string, number, number]): void {
-    this.#painter.text(...args);
+  text(...args: TextArgs): TextBounds {
+    return this.#painter.text(...args);
   }
   textSize(size: number): void {
     this.#painter.textSize(size);

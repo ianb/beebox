@@ -7,13 +7,27 @@ import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, TextStyle, Vec2 } from "./paint.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 import type { BrushName } from "./brush/presets.js";
-import type { GroupOptions, SpriteOptions } from "./paint.js";
+import type { GroupOptions, SpriteOptions, TextArgs, TextBounds } from "./paint.js";
+
 import type { TubeOptions } from "./shapes.js";
 
+/** Where a param's input sits over the canvas: logical pixels; `h` defaults to the input's natural height. */
+export interface ControlBox {
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  /** The input's text size in logical pixels (default 14). */
+  size?: number;
+  /** The input's text alignment (default left). */
+  align?: "left" | "center" | "right";
+  /** Bold input text. */
+  bold?: boolean;
+}
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { GroupOptions, SpriteOptions } from "./paint.js";
+export type { GroupOptions, SpriteOptions, TextArgs, TextBounds, TextBox, TextOptions } from "./paint.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 
@@ -34,6 +48,8 @@ export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" |
 export interface ParamText {
   label?: string;
   hint?: string;
+  /** `false`: no input in the side panel; the param shows only where `v.control` places it. */
+  panel?: boolean;
 }
 export interface NumberParam extends ParamText {
   type: "number";
@@ -202,7 +218,13 @@ export interface View {
   /** Fills, strokes and marks remove pixels until `noErase()`. */
   erase(): void;
   noErase(): void;
-  text(content: string, x: number, y: number): void;
+  /**
+   * `text(s, x, y)` writes at a point with the current alignment.
+   * `text(s, {x, y, w?, h?}, {align, valign, wrap, fit, lineHeight, size, font, style, fill})`
+   * lays out in a box (or about a point when `w`/`h` are absent) with per-call
+   * style that leaves the current settings alone. Both return the bounds drawn.
+   */
+  text(...args: TextArgs): TextBounds;
   textSize(size: number): void;
   /** How wide `text` would draw in the current text size, font and style (logical pixels). */
   textWidth(content: string): number;
@@ -211,6 +233,13 @@ export interface View {
   textStyle(style: TextStyle): void;
   /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
   cursor(kind: CursorKind): void;
+  /**
+   * Put param `name`'s native input over the canvas at `box` (logical pixels)
+   * for this frame. In a browser figure the real `<input>`/`<select>` sits
+   * there and leaves the side panel; headless renders draw a stand-in showing
+   * the current value. Call it every frame the input should show.
+   */
+  control(name: string, box: ControlBox): void;
   /** With `run --outline`, a labelled box drawn over the frame (e.g. a hit area); otherwise nothing. */
   debugBox(label: string, x: number, y: number, w: number, h: number): void;
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;

@@ -49,6 +49,16 @@ us more. Every change lands here — hand-written and terse.
 - **Hover reaches browser sketches.** The browser figure and playground sent
   `mousemove` only while a button was held, so hover cues worked headless but
   not in a browser; every move is now sent.
+- **Text in a box.** `text(s, {x, y, w?, h?}, {align, valign, wrap, fit,
+  lineHeight, size, font, style, fill})` wraps at word breaks to `w`, aligns
+  inside the box (or about the point when `w`/`h` are absent), shrinks to fit
+  with `fit`, and returns the bounds drawn. Style keys apply to that call only,
+  so they never leak into later text. `text(s, x, y)` is unchanged and also
+  returns bounds.
+- **Inputs over the canvas.** `v.control(name, box)` places a param's native
+  input inside the drawing (DOM figures); headless renders draw a stand-in with
+  the value. `panel: false` on a param keeps it out of the side panel. The
+  balance-reaction gallery entry now types coefficients inside the equation.
 - **Typed number fields.** A number param with `control: "field"` shows as a
   number box in browser figures (DOM and React); only valid, in-range values
   (whole numbers for `step: 1`) are sent.
