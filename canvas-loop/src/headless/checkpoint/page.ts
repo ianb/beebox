@@ -81,6 +81,21 @@ range.addEventListener("input", () => show(Number(range.value)));
 document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight" || e.key === "ArrowLeft") { range.value = String(Number(range.value) + (e.key === "ArrowRight" ? 1 : -1)); show(Number(range.value)); }
 });
+// Play steps through the renders on a timer (looping), like a flipbook.
+const play = document.getElementById("play");
+let timer;
+function stop() { clearInterval(timer); timer = undefined; play.textContent = "Play"; }
+play.addEventListener("click", () => {
+  if (timer !== undefined) { stop(); return; }
+  play.textContent = "Pause";
+  if (Number(range.value) >= steps.length - 1) { range.value = "0"; show(0); }
+  timer = setInterval(() => {
+    const next = (Number(range.value) + 1) % steps.length;
+    range.value = String(next);
+    show(next);
+  }, Number(document.getElementById("speed").value));
+});
+range.addEventListener("pointerdown", stop);
 range.value = String(steps.length - 1);
 show(steps.length - 1);
 `;
@@ -94,7 +109,9 @@ export function checkpointPage(dir: string, title: string): string {
 <style>
 body { margin: 0; background: #f7f5ef; color: #1e293b; font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; padding-bottom: 48px; }
 main { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
-#step { width: 100%; }
+.controls { display: flex; gap: 12px; align-items: center; }
+.controls button { font: inherit; padding: 4px 14px; border-radius: 6px; border: 1px solid #c7d2fe; background: #eef2ff; cursor: pointer; }
+#step { flex: 1; }
 img { max-width: 100%; border-radius: 6px; display: block; margin: 10px 0; }
 #note { font-size: 17px; }
 #errors { color: #b91c1c; white-space: pre-wrap; }
@@ -103,8 +120,10 @@ pre { background: #1b1f2a; color: #e2e8f0; padding: 12px; border-radius: 6px; ov
 </style></head>
 <body><main>
 <h1>${title.replaceAll("<", "&lt;")}</h1>
-<p>Each checkpoint is one render the agent stopped to look at. Drag the slider or use ← →.</p>
-<input type="range" id="step" min="0" step="1" />
+<p>Each checkpoint is one render the agent stopped to look at. Press Play, or drag the slider (← → also step).</p>
+<div class="controls"><button id="play">Play</button>
+<label>speed <select id="speed"><option value="2000">slow</option><option value="1100" selected>medium</option><option value="500">fast</option></select></label>
+<input type="range" id="step" min="0" step="1" /></div>
 <h2 id="head"></h2><p id="note"></p><p id="errors"></p>
 <img id="img" alt="the rendered frame at this checkpoint" />
 <h3>Changed since the previous checkpoint</h3><ul id="changes"></ul>
