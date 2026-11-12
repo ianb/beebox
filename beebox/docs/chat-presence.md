@@ -18,9 +18,13 @@ all of these are true:
   visible (the native composer takes DOM focus from the page).
 
 The client joins once these have held for one second and leaves as soon as
-one stops. The delay keeps a quick start-then-stop from reaching a tRPC
-adapter race that would leave the watcher in the room
-(`issues/bugs/2026-11-12-trpc-ws-drops-early-subscription-stop.md`).
+one stops. tRPC's adapter drops a stop that arrives before the subscription
+registers, which leaves the watcher in the room until the socket closes
+(`issues/bugs/2026-11-12-trpc-ws-drops-early-subscription-stop.md`). The
+delay keeps ordinary churn (a focus flicker, a quick chat switch) out of that
+window. It remains reachable when a reconnect resends the start and the
+person leaves within the milliseconds the server takes to resolve the new
+socket's context.
 When the client leaves, the server removes the person. A closed tab or a dead connection ends it too: tRPC aborts
 the subscription when the WebSocket closes, and the server's keep-alive drops
 an unresponsive socket within about 35 seconds.

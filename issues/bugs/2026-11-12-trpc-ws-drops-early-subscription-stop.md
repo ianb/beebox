@@ -20,7 +20,10 @@ Every WebSocket subscription is exposed (`events.subscribe`,
 `events.turnStream`, `chatPresence.watch`). For most this costs a server-side
 iterator. For chat presence it would leave a person shown in a chat they left,
 so `frontend/src/components/AppNav/PresenceHeads.tsx` joins only after a
-person has been in a chat for one second (`JOIN_AFTER_MS`).
+person has been in a chat for one second (`JOIN_AFTER_MS`). That narrows the
+window but does not close it: after a reconnect, wsLink resends the start,
+and a leave within the context-resolution milliseconds still strands the
+watcher (cross-model review round 2).
 
 Fix options: a pnpm patch (`patches/`) that remembers early-stopped ids and
 aborts them on registration, or an upstream report/fix. Check whether a newer
