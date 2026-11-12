@@ -6,6 +6,9 @@
 // leaking into sketch code. The `trace*`/`resolveGradient` helpers below are the
 // one place those data forms are turned into ctx calls; the engine calls them.
 
+import type { BrushName } from "./brush/presets.js";
+import type { Brush, Gesture } from "./brush/types.js";
+
 // ── Structural 2D-context subset ─────────────────────────────────────
 // The drawing engine (paint.ts helpers + Painter) is typed against this
 // structural subset rather than a concrete `SKRSContext2D`/`CanvasRenderingContext2D`.
@@ -33,7 +36,8 @@ export interface TextBox {
 /** How `text` lays out and styles one call. Unset style keys use the current text and fill settings. */
 export interface TextOptions {
   align?: "left" | "center" | "right";
-  valign?: "top" | "middle" | "bottom";
+  /** Default "top". "baseline": `y` is the first line's alphabetic baseline. */
+  valign?: "top" | "middle" | "bottom" | "baseline";
   /** Wrap at word breaks to the box width (default: on when `w` is set). */
   wrap?: boolean;
   /** Shrink the size until the text fits the box (never grows it). */
@@ -43,7 +47,10 @@ export interface TextOptions {
   size?: number;
   font?: string;
   style?: TextStyle;
+  /** Default black. */
   fill?: Paint;
+  blend?: BlendMode;
+  erase?: boolean;
 }
 
 /** What `text` drew: the ink box in logical pixels, the line count, and the size used. */
@@ -56,6 +63,39 @@ export interface TextBounds {
   size: number;
   /** True when the text overflows the box at that size. */
   overflow: boolean;
+}
+
+/**
+ * How one drawing call paints: plain data, held in variables and spread to
+ * vary (`{ ...ink, stroke: "red" }`). A key left out means none (no fill, no
+ * stroke, no brush) or the default (weight 1, blend "normal").
+ */
+export interface Style {
+  readonly fill?: Paint;
+  readonly stroke?: Paint;
+  /** Stroke width in logical pixels (default 1). */
+  readonly weight?: number;
+  /** Strokes become brushed marks: a preset name, or a Brush (see `brushOf`). */
+  readonly brush?: BrushName | Brush;
+  /** How the hand moves for brushed marks (pressure, wobble, seed). */
+  readonly gesture?: Gesture;
+  readonly blend?: BlendMode;
+  /** Remove pixels instead of adding them. */
+  readonly erase?: boolean;
+}
+
+/** How `image` pastes a sprite. */
+export interface PasteOptions {
+  readonly opacity?: number;
+  readonly blend?: BlendMode;
+  readonly erase?: boolean;
+}
+
+/** A transform scope for `at`: applied as translate, then rotate, then scale. */
+export interface AtOptions {
+  readonly translate?: readonly [number, number];
+  readonly rotate?: number;
+  readonly scale?: number | readonly [number, number];
 }
 
 /** `text` arguments: a point with the current alignment, or a box with options. */

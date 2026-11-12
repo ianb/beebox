@@ -93,7 +93,9 @@ function startX(box: TextBox, align: TextOptions["align"]): (width: number) => n
   return () => box.x;
 }
 
-function startY(box: TextBox, at: { valign: TextOptions["valign"]; height: number }): number {
+function startY(box: TextBox, at: { valign: TextOptions["valign"]; height: number; size: number; lineHeight: number }): number {
+  // "baseline": the first line's baseline at y; lines are drawn on their middles, about 0.35 em above the baseline.
+  if (at.valign === "baseline") return box.y - 0.35 * at.size - at.lineHeight / 2;
   if (at.valign === "middle") return (box.h === undefined ? box.y : box.y + box.h / 2) - at.height / 2;
   if (at.valign === "bottom") return (box.h === undefined ? box.y : box.y + box.h) - at.height;
   return box.y;
@@ -110,7 +112,7 @@ export function layoutText(content: string, at: { size: number; box: TextBox; op
   const { rows, widths, height, fits } = trial(content, { ...at, size });
   const lineHeight = size * (at.options.lineHeight ?? LINE_HEIGHT);
   const left = startX(at.box, at.options.align);
-  const top = startY(at.box, { valign: at.options.valign, height });
+  const top = startY(at.box, { valign: at.options.valign, height, size, lineHeight });
   const lines = rows.map((text, index) => {
     const width = widths[index] ?? 0;
     return { text, x: left(width), y: top + (index + 0.5) * lineHeight, width };

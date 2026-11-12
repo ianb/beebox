@@ -117,6 +117,11 @@ export class Sketch {
     return this.#ctx;
   }
 
+  /** The drawing engine (for the TEA view, which calls it directly). */
+  get painter(): Painter {
+    return this.#requirePainter();
+  }
+
   #requirePainter(): Painter {
     if (this.#painter === undefined) {
       throw new SketchUsageError({ detail: "call createCanvas() in setup() before drawing" });

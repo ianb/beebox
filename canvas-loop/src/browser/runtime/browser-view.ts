@@ -11,7 +11,8 @@ import { curveCommands } from "../../core/contours.js";
 import { offsetPoints, tubePath } from "../../core/shapes.js";
 import type { TubeOptions } from "../../core/shapes.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
-import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../../core/paint.js";
+import type { AtOptions, ClipShape, ColorStop, Ctx2D, LinearGradient, PasteOptions, PathCommand, RadialGradient, Style, TextOptions, Vec2 } from "../../core/paint.js";
+import { resolveBrush } from "../../core/brush/presets.js";
 import { Painter } from "../../core/painter/engine.js";
 import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paint, Paper, TextAlign, TextBaseline, View } from "../../core/tea.js";
 import { makeDomLayer } from "./layer.js";
@@ -38,6 +39,8 @@ export class BrowserView implements View {
       height: deps.height,
       makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),
       pixelRatio: deps.pixelRatio,
+      // Style problems (a call that can draw nothing) need no pixel reads; they go to the log.
+      note: (message) => this.#log([message]),
       // No `warn`: faint-mark checks read pixels back, which stalls the GPU in a browser every frame.
       // They are an authoring aid for headless transcripts.
     });
@@ -88,32 +91,41 @@ export class BrowserView implements View {
   strokeWeight(weight: number): void {
     this.#painter.strokeWeight(weight);
   }
-  rect(...args: [number, number, number, number, number?]): void {
+  rect(...args: [number, number, number, number, (number | Style)?]): void {
     this.#painter.rect(...args);
   }
-  textWidth(content: string): number {
-    return this.#painter.textWidth(content);
+  roundRect(...args: [number, number, number, number, number, Style]): void {
+    this.#painter.roundRect(...args);
   }
-  circle(...args: [number, number, number]): void {
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#painter.textWidth(content, options);
+  }
+  circle(...args: [number, number, number, Style?]): void {
     this.#painter.circle(...args);
   }
-  ellipse(...args: [number, number, number, number]): void {
+  ellipse(...args: [number, number, number, number, Style?]): void {
     this.#painter.ellipse(...args);
   }
-  line(...args: [number, number, number, number]): void {
+  line(...args: [number, number, number, number, Style?]): void {
     this.#painter.line(...args);
   }
-  triangle(...args: [number, number, number, number, number, number]): void {
+  triangle(...args: [number, number, number, number, number, number, Style?]): void {
     this.#painter.triangle(...args);
   }
-  arc(...args: [number, number, number, number, number]): void {
+  arc(...args: [number, number, number, number, number, Style?]): void {
     this.#painter.arc(...args);
   }
-  polygon(points: readonly Vec2[]): void {
-    this.#painter.polygon(points);
+  polygon(points: readonly Vec2[], style?: Style): void {
+    this.#painter.polygon(points, style);
   }
-  path(commands: readonly PathCommand[]): void {
-    this.#painter.path(commands);
+  path(commands: readonly PathCommand[], style?: Style): void {
+    this.#painter.path(commands, style);
+  }
+  at(options: AtOptions, body: () => void): void {
+    this.#painter.at(options, body);
+  }
+  brushOf(base: BrushName, overrides: BrushOverrides): Brush {
+    return resolveBrush(base, overrides);
   }
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
     return linearGradient(...args);
@@ -130,17 +142,17 @@ export class BrowserView implements View {
   paperTexture(amount: number): void {
     this.#painter.paperTexture(amount);
   }
-  cache(key: string, body: () => void): void {
-    this.#painter.cache(key, body);
+  cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
+    this.#painter.cache(...args);
   }
   sprite(options: SpriteOptions, body: () => void): Sprite {
     return this.#painter.sprite(options, body);
   }
-  image(...args: [Sprite, number, number, number?]): void {
+  image(...args: [Sprite, number, number, (number | PasteOptions)?]): void {
     this.#painter.image(...args);
   }
-  curve(points: readonly Vec2[], closed?: boolean): void {
-    this.#painter.curve(points, closed);
+  curve(...args: [readonly Vec2[], boolean?, Style?]): void {
+    this.#painter.curve(...args);
   }
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
     return curveCommands(points, closed ?? false);

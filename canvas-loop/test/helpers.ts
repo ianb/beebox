@@ -5,6 +5,8 @@ import type { RunOptions } from "../src/headless/runtime.js";
 import type { TeaRunOptions } from "../src/headless/tea-runtime.js";
 import type { LoadedTeaModule } from "../src/headless/tea-load.js";
 import type { SketchModule } from "../src/headless/sketch.js";
+import { Sketch } from "../src/headless/sketch.js";
+import { TeaView } from "../src/headless/tea-view.js";
 
 /** Fresh temp directory for a test run's out/ output. */
 export function tmpDir(): string {
@@ -52,4 +54,17 @@ export function readDirBytes(dir: string): Map<string, Buffer> {
 /** Read a transcript.md from an out/ directory. */
 export function readTranscript(dir: string): string {
   return readFileSync(join(dir, "transcript.md"), "utf8");
+}
+
+/** A TEA `View` over a fresh headless canvas, its pixels, and what it logged (the TEA test harness). */
+export function teaView(size: { width: number; height: number }): { v: TeaView; alpha: (x: number, y: number) => number; rgba: (x: number, y: number) => number[]; logs: string[] } {
+  const logs: string[] = [];
+  const sketch = new Sketch({ host: { recordLog: (entry) => logs.push(entry.message), requestSnapshot: () => {} }, seed: 1, fps: 60, onHandled: () => {} });
+  sketch.createCanvas(size.width, size.height);
+  const v = new TeaView({ sketch, decl: {}, getParams: () => ({}) });
+  const rgba = (x: number, y: number): number[] => {
+    const at = (y * size.width + x) * 4;
+    return [...sketch.readPixels().data.slice(at, at + 4)];
+  };
+  return { v, alpha: (x, y) => rgba(x, y)[3] ?? 0, rgba, logs };
 }

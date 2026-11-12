@@ -9,7 +9,9 @@
 // through, and `style.ts` the style state.
 import type { Contour } from "../contours.js";
 import { curveCommands, ellipseContour, pathContours } from "../contours.js";
-import type { Ctx2D, Paint, PathCommand, TextArgs, TextBounds, TextBox, TextOptions, TextStyle, Vec2 } from "../paint.js";
+import type { Ctx2D, Paint, PathCommand, Style, TextArgs, TextBounds, TextBox, TextOptions, TextStyle, Vec2 } from "../paint.js";
+import { resolveStyle } from "./style.js";
+import type { ResolvedStyle } from "./style.js";
 import { inPaintSpace, tracePath, tracePolygon } from "../paint.js";
 import { PainterCore } from "./core.js";
 import { withComposite } from "./layers.js";
@@ -38,6 +40,11 @@ function roundedRect(b: { x: number; y: number; w: number; h: number; r: number 
   ];
 }
 
+/** What `text(s, box, options)` uses for options left out. */
+const TEXT_DEFAULTS = { size: 12, font: "sans-serif", style: "normal", fill: "#000000", align: "left", valign: "top" } as const satisfies TextOptions;
+
+const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
+
 export class Painter extends PainterCore {
   background(paint: Paint): void {
     const ctx = this.ctx;
@@ -52,68 +59,81 @@ export class Painter extends PainterCore {
     ctx.restore();
   }
 
-  /** A rectangle; with a fifth argument, its corners are rounded to that radius (as p5's `rect`). */
-  rect(...args: [number, number, number, number, number?]): void {
-    const [x, y, w, h, radius] = args;
-    if (radius !== undefined && radius > 0) {
-      this.path(roundedRect({ x, y, w, h, r: Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2) }));
+  /** A rectangle (with a number fifth argument, rounded corners: the old modal form). */
+  rect(...args: [number, number, number, number, (number | Style)?]): void {
+    const [x, y, w, h, more] = args;
+    if (typeof more === "number" && more > 0) {
+      this.path(roundedRect({ x, y, w, h, r: Math.min(more, Math.abs(w) / 2, Math.abs(h) / 2) }));
       return;
     }
     const corners: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
     this.#closed((ctx) => {
       ctx.beginPath();
       ctx.rect(x, y, w, h);
-    }, () => [{ points: corners, closed: true }]);
+    }, { contours: () => [{ points: corners, closed: true }], style: typeof more === "object" ? more : undefined, call: "rect" });
   }
 
-  circle(...args: [number, number, number]): void {
-    const [x, y, diameter] = args;
-    this.ellipse(x, y, diameter, diameter);
+  /** A rectangle with corners rounded to `radius`. */
+  roundRect(...args: [number, number, number, number, number, Style]): void {
+    const [x, y, w, h, radius, style] = args;
+    const r = Math.max(0, Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2));
+    const commands = roundedRect({ x, y, w, h, r });
+    this.#closed((ctx) => tracePath(ctx, commands), { contours: () => pathContours(commands, this.step()), style, call: "roundRect" });
   }
 
-  ellipse(...args: [number, number, number, number]): void {
-    const [x, y, w, h] = args;
+  circle(...args: [number, number, number, Style?]): void {
+    const [x, y, diameter, style] = args;
+    this.ellipse(x, y, diameter, diameter, ...(style === undefined ? [] : [style]));
+  }
+
+  ellipse(...args: [number, number, number, number, Style?]): void {
+    const [x, y, w, h, style] = args;
     this.#closed((ctx) => {
       ctx.beginPath();
       ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
-    }, () => [ellipseContour({ x, y, rx: w / 2, ry: h / 2, start: 0, end: Math.PI * 2, step: this.step() })]);
+    }, { contours: () => [ellipseContour({ x, y, rx: w / 2, ry: h / 2, start: 0, end: Math.PI * 2, step: this.step() })], style, call: "ellipse" });
   }
 
-  line(...args: [number, number, number, number]): void {
-    const [x1, y1, x2, y2] = args;
+  line(...args: [number, number, number, number, Style?]): void {
+    const [x1, y1, x2, y2, style] = args;
     const trace = (ctx: Ctx2D): void => {
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
     };
-    this.paintShape(trace, { contours: () => [{ points: [[x1, y1], [x2, y2]], closed: false }], fill: false });
+    this.paintShape(trace, { contours: () => [{ points: [[x1, y1], [x2, y2]], closed: false }], fill: false, ...this.#resolved(style, "line") });
   }
 
-  triangle(...args: [number, number, number, number, number, number]): void {
-    const [x1, y1, x2, y2, x3, y3] = args;
+  triangle(...args: [number, number, number, number, number, number, Style?]): void {
+    const [x1, y1, x2, y2, x3, y3, style] = args;
     const points: Vec2[] = [[x1, y1], [x2, y2], [x3, y3]];
-    this.#closed((ctx) => tracePolygon(ctx, points), () => [{ points, closed: true }]);
+    this.#closed((ctx) => tracePolygon(ctx, points), { contours: () => [{ points, closed: true }], style, call: "triangle" });
   }
 
-  arc(...args: [number, number, number, number, number]): void {
-    const [x, y, radius, start, end] = args;
+  arc(...args: [number, number, number, number, number, Style?]): void {
+    const [x, y, radius, start, end, style] = args;
     this.#closed((ctx) => {
       ctx.beginPath();
       ctx.arc(x, y, radius, start, end);
-    }, () => [ellipseContour({ x, y, rx: radius, ry: radius, start, end, step: this.step() })]);
+    }, { contours: () => [ellipseContour({ x, y, rx: radius, ry: radius, start, end, step: this.step() })], style, call: "arc" });
   }
 
-  polygon(points: readonly Vec2[]): void {
-    this.#closed((ctx) => tracePolygon(ctx, points), () => [{ points, closed: true }]);
+  polygon(points: readonly Vec2[], style?: Style): void {
+    this.#closed((ctx) => tracePolygon(ctx, points), { contours: () => [{ points, closed: true }], style, call: "polygon" });
   }
 
-  path(commands: readonly PathCommand[]): void {
-    this.#closed((ctx) => tracePath(ctx, commands), () => pathContours(commands, this.step()));
+  path(commands: readonly PathCommand[], style?: Style): void {
+    this.#closed((ctx) => tracePath(ctx, commands), { contours: () => pathContours(commands, this.step()), style, call: "path" });
   }
 
   /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
-  curve(points: readonly Vec2[], closed?: boolean): void {
-    this.path(curveCommands(points, closed ?? false));
+  curve(...args: [readonly Vec2[], boolean?, Style?]): void {
+    const [points, closed, style] = args;
+    this.path(curveCommands(points, closed ?? false), ...(style === undefined ? [] : [style]));
+  }
+
+  #resolved(style: Style | undefined, call: string): { style?: ResolvedStyle; call: string } {
+    return style === undefined ? { call } : { style: resolveStyle(style, call), call };
   }
 
   /**
@@ -128,11 +148,11 @@ export class Painter extends PainterCore {
     return this.#boxText(content, { box: at, options: typeof more === "object" ? more : {} });
   }
 
-  /** The width `text` would take in the current text size, font and style, in logical pixels. */
-  textWidth(content: string): number {
+  /** The width `text` would take: with options, at their size, font and style (defaults otherwise); without, the modal text settings. */
+  textWidth(content: string, options?: TextOptions): number {
     const ctx = this.ctx;
     const previous = ctx.font;
-    ctx.font = this.#font({});
+    ctx.font = options === undefined ? this.#font({}) : this.#font({ ...TEXT_DEFAULTS, ...options });
     const { width } = ctx.measureText(content);
     ctx.font = previous;
     return width;
@@ -154,40 +174,57 @@ export class Painter extends PainterCore {
     return { x, y: at.y - size, w, h: size * 1.25, lines: 1, size, overflow: false };
   }
 
+  /**
+   * Text with explicit options; nothing comes from the modal settings. One
+   * line with no box width is one native `fillText` at (x, y) with the
+   * context's own alignment and baseline; anything else is laid out.
+   */
   #boxText(content: string, at: { box: TextBox; options: TextOptions }): TextBounds {
-    const { options } = at;
+    const options = { ...TEXT_DEFAULTS, ...at.options };
     const ctx = this.ctx;
     const previous = { font: ctx.font, align: ctx.textAlign, baseline: ctx.textBaseline };
-    const measure = (text: string, size: number): number => {
-      ctx.font = this.#font({ ...options, size });
-      return ctx.measureText(text).width;
+    const mode = { blend: options.blend ?? "normal", erase: options.erase ?? false } as const;
+    const paint = (draw: () => void): void => {
+      ctx.fillStyle = this.resolvePaint(options.fill);
+      withComposite(ctx, { op: this.composite(mode), draw });
     };
-    const layout = layoutText(content, { size: options.size ?? this.style.textSize, box: at.box, options, measure });
-    const fill = options.fill ?? (this.style.fillEnabled ? this.style.fillColor : undefined);
-    if (fill !== undefined) {
+    let bounds: TextBounds;
+    if (at.box.w === undefined && at.box.h === undefined && !content.includes("\n")) {
+      ctx.font = this.#font(options);
+      ctx.textAlign = options.align;
+      ctx.textBaseline = BASELINES[options.valign];
+      paint(() => ctx.fillText(content, at.box.x, at.box.y));
+      const w = ctx.measureText(content).width;
+      const x = options.align === "center" ? at.box.x - w / 2 : options.align === "right" ? at.box.x - w : at.box.x;
+      const h = options.size * 1.25;
+      const top = { top: at.box.y, middle: at.box.y - h / 2, bottom: at.box.y - h, baseline: at.box.y - options.size }[options.valign];
+      bounds = { x, y: top, w, h, lines: 1, size: options.size, overflow: false };
+    } else {
+      const measure = (text: string, size: number): number => {
+        ctx.font = this.#font({ ...options, size });
+        return ctx.measureText(text).width;
+      };
+      const layout = layoutText(content, { size: options.size, box: at.box, options, measure });
       ctx.font = this.#font({ ...options, size: layout.size });
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = this.resolvePaint(fill);
-      withComposite(ctx, {
-        op: this.composite(),
-        draw: () => {
-          for (const line of layout.lines) ctx.fillText(line.text, line.x, line.y);
-        },
+      paint(() => {
+        for (const line of layout.lines) ctx.fillText(line.text, line.x, line.y);
       });
+      bounds = { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
     }
     ctx.font = previous.font;
     ctx.textAlign = previous.align;
     ctx.textBaseline = previous.baseline;
-    return { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
+    return bounds;
   }
 
   #font(over: { size?: number; font?: string; style?: TextStyle }): string {
     return `${over.style ?? this.style.textStyle} ${over.size ?? this.style.textSize}px ${over.font ?? this.style.textFont}`;
   }
 
-  /** A fillable shape: fill (when enabled) and stroke what `trace` lays down. */
-  #closed(trace: (ctx: Ctx2D) => void, contours: () => Contour[]): void {
-    this.paintShape(trace, { contours, fill: true });
+  /** A fillable shape: fill and stroke what `trace` lays down (with `style`, else the modal state). */
+  #closed(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; style: Style | undefined; call: string }): void {
+    this.paintShape(trace, { contours: shape.contours, fill: true, ...this.#resolved(shape.style, shape.call) });
   }
 }

@@ -5,14 +5,14 @@ import type { ControlModel } from "../browser/controls-model.js";
 import { recordOf } from "../core/records.js";
 import type { Sprite, SpriteOptions } from "../core/tea.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, TextArgs, TextBounds, Vec2 } from "../core/paint.js";
+import type { AtOptions, ClipShape, ColorStop, LinearGradient, Paint, PasteOptions, PathCommand, RadialGradient, Style, TextArgs, TextBounds, TextOptions, Vec2 } from "../core/paint.js";
+import { resolveBrush } from "../core/brush/presets.js";
+import type { Painter } from "../core/painter/engine.js";
 import type { Sketch } from "./sketch.js";
 import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paper, TubeOptions, ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
 
-// ── control stand-ins ────────────────────────────────────────────────
-// What a param's over-canvas input looks like in a headless render: a plain
-// field showing the current value, so frames and zoom crops show where the
-// browser's native input will sit and what it holds.
+// ── control stand-ins: a plain field showing the param's value, so headless
+// frames show where the browser's native input will sit and what it holds.
 
 const NATURAL_HEIGHT = 24;
 const DEFAULT_SIZE = 14;
@@ -30,64 +30,34 @@ function shown(model: ControlModel): string {
   }
 }
 
-function frame(sketch: Sketch, at: { box: ControlBox; h: number; button: boolean }): void {
-  sketch.push();
-  sketch.stroke("#767676");
-  sketch.strokeWeight(1);
-  sketch.fill(at.button ? "#efefef" : "#ffffff");
-  sketch.noBrush();
-  sketch.noErase();
-  sketch.blendMode("normal");
-  const { box } = at;
-  sketch.rect(box.x + 0.5, box.y + 0.5, box.w - 1, at.h - 1, 3);
-  sketch.pop();
-}
+const FIELD: Style = { fill: "#ffffff", stroke: "#767676", weight: 1 };
+const BUTTON: Style = { ...FIELD, fill: "#efefef" };
+const MARK: Style = { stroke: "#222222", weight: 1.75 };
 
-function checkbox(sketch: Sketch, at: { box: ControlBox; h: number; checked: boolean }): void {
-  const side = Math.min(at.h, 16);
-  const x = at.box.x + 1;
-  const y = at.box.y + (at.h - side) / 2;
-  frame(sketch, { box: { x, y, w: side }, h: side, button: false });
-  if (!at.checked) return;
-  sketch.push();
-  sketch.noFill();
-  sketch.noBrush();
-  sketch.stroke("#111111");
-  sketch.strokeWeight(2);
-  sketch.path([["move", x + side * 0.22, y + side * 0.52], ["line", x + side * 0.42, y + side * 0.72], ["line", x + side * 0.78, y + side * 0.28]]);
-  sketch.pop();
-}
-
-function chevron(sketch: Sketch, at: { x: number; y: number }): void {
-  sketch.push();
-  sketch.noFill();
-  sketch.noBrush();
-  sketch.stroke("#444444");
-  sketch.strokeWeight(1.5);
-  sketch.path([["move", at.x - 4, at.y - 2], ["line", at.x, at.y + 2], ["line", at.x + 4, at.y - 2]]);
-  sketch.pop();
-}
-
-/** Draw `model`'s stand-in in `box` without touching the sketch's style state. */
-function drawStandIn(sketch: Sketch, at: { box: ControlBox; model: ControlModel }): void {
+/** Draw `model`'s stand-in in `box`; explicit styles, so the sketch's state is untouched. */
+function drawStandIn(painter: Painter, at: { box: ControlBox; model: ControlModel }): void {
   const { box, model } = at;
   const h = box.h ?? NATURAL_HEIGHT;
   if (model.kind === "boolean") {
-    checkbox(sketch, { box, h, checked: model.value });
+    const side = Math.min(h, 16);
+    const x = box.x + 1;
+    const y = box.y + (h - side) / 2;
+    painter.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 3, FIELD);
+    if (model.value) painter.path([["move", x + side * 0.22, y + side * 0.52], ["line", x + side * 0.42, y + side * 0.72], ["line", x + side * 0.78, y + side * 0.28]], MARK);
     return;
   }
   const button = model.kind === "trigger";
-  frame(sketch, { box, h, button });
+  painter.roundRect(box.x + 0.5, box.y + 0.5, box.w - 1, h - 1, 3, button ? BUTTON : FIELD);
   const select = model.kind === "select";
-  const right = select ? 22 : 6;
-  if (select) chevron(sketch, { x: box.x + box.w - 12, y: box.y + h / 2 });
-  sketch.text(shown(model), { x: box.x + 6, y: box.y, w: box.w - 6 - right, h }, {
+  const cx = box.x + box.w - 12;
+  const cy = box.y + h / 2;
+  if (select) painter.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
+  painter.text(shown(model), { x: box.x + 6, y: box.y, w: box.w - 6 - (select ? 22 : 6), h }, {
     align: button ? "center" : (box.align ?? "left"),
     valign: "middle",
     wrap: false,
     fit: true,
     size: box.size ?? DEFAULT_SIZE,
-    font: "sans-serif",
     style: box.bold === true ? "bold" : "normal",
     fill: "#111111",
   });
@@ -115,7 +85,7 @@ export class TeaView implements View {
     if (model === undefined) {
       throw new SketchUsageError({ detail: `control("${name}"): no param named "${name}" is declared` });
     }
-    drawStandIn(this.#sketch, { box, model });
+    drawStandIn(this.#sketch.painter, { box, model });
     this.#sketch.debugBox(`control ${name}`, box.x, box.y, box.w, box.h ?? 24);
   }
 
@@ -147,34 +117,41 @@ export class TeaView implements View {
   strokeWeight(weight: number): void {
     this.#sketch.strokeWeight(weight);
   }
-  // Rest-tuple params keep max-params (2) satisfied while presenting the
-  // p5-style positional signature — same technique as Sketch's own methods.
-  rect(...args: [number, number, number, number, number?]): void {
-    this.#sketch.rect(...args);
+  rect(...args: [number, number, number, number, (number | Style)?]): void {
+    this.#sketch.painter.rect(...args);
   }
-  textWidth(content: string): number {
-    return this.#sketch.textWidth(content);
+  roundRect(...args: [number, number, number, number, number, Style]): void {
+    this.#sketch.painter.roundRect(...args);
   }
-  circle(...args: [number, number, number]): void {
-    this.#sketch.circle(...args);
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#sketch.painter.textWidth(content, options);
   }
-  ellipse(...args: [number, number, number, number]): void {
-    this.#sketch.ellipse(...args);
+  circle(...args: [number, number, number, Style?]): void {
+    this.#sketch.painter.circle(...args);
   }
-  line(...args: [number, number, number, number]): void {
-    this.#sketch.line(...args);
+  ellipse(...args: [number, number, number, number, Style?]): void {
+    this.#sketch.painter.ellipse(...args);
   }
-  triangle(...args: [number, number, number, number, number, number]): void {
-    this.#sketch.triangle(...args);
+  line(...args: [number, number, number, number, Style?]): void {
+    this.#sketch.painter.line(...args);
   }
-  arc(...args: [number, number, number, number, number]): void {
-    this.#sketch.arc(...args);
+  triangle(...args: [number, number, number, number, number, number, Style?]): void {
+    this.#sketch.painter.triangle(...args);
   }
-  polygon(points: readonly Vec2[]): void {
-    this.#sketch.polygon(points);
+  arc(...args: [number, number, number, number, number, Style?]): void {
+    this.#sketch.painter.arc(...args);
   }
-  path(commands: readonly PathCommand[]): void {
-    this.#sketch.path(commands);
+  polygon(points: readonly Vec2[], style?: Style): void {
+    this.#sketch.painter.polygon(points, style);
+  }
+  path(commands: readonly PathCommand[], style?: Style): void {
+    this.#sketch.painter.path(commands, style);
+  }
+  at(options: AtOptions, body: () => void): void {
+    this.#sketch.painter.at(options, body);
+  }
+  brushOf(base: BrushName, overrides: BrushOverrides): Brush {
+    return resolveBrush(base, overrides);
   }
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
     return this.#sketch.linearGradient(...args);
@@ -197,17 +174,17 @@ export class TeaView implements View {
   paperTexture(amount: number): void {
     this.#sketch.paperTexture(amount);
   }
-  cache(key: string, body: () => void): void {
-    this.#sketch.cache(key, body);
+  cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
+    this.#sketch.painter.cache(...args);
   }
   sprite(options: SpriteOptions, body: () => void): Sprite {
     return this.#sketch.sprite(options, body);
   }
-  image(...args: [Sprite, number, number, number?]): void {
-    this.#sketch.image(...args);
+  image(...args: [Sprite, number, number, (number | PasteOptions)?]): void {
+    this.#sketch.painter.image(...args);
   }
-  curve(points: readonly Vec2[], closed?: boolean): void {
-    this.#sketch.curve(points, closed);
+  curve(...args: [readonly Vec2[], boolean?, Style?]): void {
+    this.#sketch.painter.curve(...args);
   }
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
     return this.#sketch.curvePath(points, closed);

@@ -7,7 +7,7 @@ import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, TextStyle, Vec2 } from "./paint.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 import type { BrushName } from "./brush/presets.js";
-import type { GroupOptions, SpriteOptions, TextArgs, TextBounds } from "./paint.js";
+import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextArgs, TextBounds, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 
@@ -27,7 +27,7 @@ export interface ControlBox {
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { GroupOptions, SpriteOptions, TextArgs, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextArgs, TextBounds, TextBox, TextOptions } from "./paint.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 
@@ -169,17 +169,18 @@ export interface View {
   stroke(paint: Paint): void;
   noStroke(): void;
   strokeWeight(weight: number): void;
-  /** A rectangle; a fifth argument rounds its corners to that radius. */
-  rect(x: number, y: number, w: number, h: number, radius?: number): void;
-  circle(x: number, y: number, diameter: number): void;
-  ellipse(x: number, y: number, w: number, h: number): void;
-  line(x1: number, y1: number, x2: number, y2: number): void;
-  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
-  /** Closed polygon through `points`, filled/stroked per the current state. */
-  polygon(points: readonly Vec2[]): void;
-  /** Render a data-encoded `PathCommand` list, filled/stroked per the current state. */
-  path(commands: readonly PathCommand[]): void;
+  rect(x: number, y: number, w: number, h: number, style?: number | Style): void;
+  /** A rectangle with corners rounded to `radius`. */
+  roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): void;
+  circle(x: number, y: number, diameter: number, style?: Style): void;
+  ellipse(x: number, y: number, w: number, h: number, style?: Style): void;
+  line(x1: number, y1: number, x2: number, y2: number, style?: Style): void;
+  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style?: Style): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style?: Style): void;
+  /** Closed polygon through `points`. */
+  polygon(points: readonly Vec2[], style?: Style): void;
+  /** Render a data-encoded `PathCommand` list. */
+  path(commands: readonly PathCommand[], style?: Style): void;
   /** Build a linear-gradient handle usable anywhere a `Paint` is accepted. */
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
@@ -189,7 +190,7 @@ export interface View {
   /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
   /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
-  curve(points: readonly Vec2[], closed?: boolean): void;
+  curve(points: readonly Vec2[], closed?: boolean, style?: Style): void;
   /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
   /** A tube's closed outline around a smooth centreline (limbs, stems, tails). */
@@ -198,12 +199,16 @@ export interface View {
   offset(points: readonly Vec2[], distance: number): Vec2[];
   /** Show the paper's texture across everything drawn so far (0..1). */
   paperTexture(amount: number): void;
-  /** Draw `body` once into a stored layer; later calls with the same key paste it. */
-  cache(key: string, body: () => void): void;
+  /** Draw `body` once into a stored layer; later calls with the same key paste it (with `paste`'s blend or erase). */
+  cache(key: string, body: () => void, paste?: { blend?: BlendMode; erase?: boolean }): void;
   /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
   sprite(options: SpriteOptions, body: () => void): Sprite;
-  /** Draw a sprite with its top-left at (x, y) under the current transform, at `opacity` (default 1). */
-  image(sprite: Sprite, x: number, y: number, opacity?: number): void;
+  /** Draw a sprite with its top-left at (x, y) under the current transform, with paste options. */
+  image(sprite: Sprite, x: number, y: number, paste?: number | PasteOptions): void;
+  /** A preset brush with some fields changed, for a style's `brush`. */
+  brushOf(base: BrushName, overrides: BrushOverrides): Brush;
+  /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. */
+  at(options: AtOptions, body: () => void): void;
   /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
   /** Back to plain Canvas2D strokes. */
@@ -226,8 +231,8 @@ export interface View {
    */
   text(...args: TextArgs): TextBounds;
   textSize(size: number): void;
-  /** How wide `text` would draw in the current text size, font and style (logical pixels). */
-  textWidth(content: string): number;
+  /** How wide `text` would draw with these options (logical pixels). */
+  textWidth(content: string, options?: TextOptions): number;
   /** Font family for `text` (CSS names, e.g. `"Georgia, serif"`); which fonts exist depends on the machine. */
   textFont(family: string): void;
   textStyle(style: TextStyle): void;

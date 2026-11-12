@@ -14,9 +14,9 @@ import { renderMark } from "../brush/render/mark.js";
 import type { Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
 import { SketchUsageError, assertUnit } from "../errors.js";
-import { StyledPainter } from "./style.js";
-import type { StyleState } from "./style.js";
-import type { ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, Sprite, SpriteOptions } from "../paint.js";
+import { StyledPainter, styleProblem as styleProblemFor } from "./style.js";
+import type { ResolvedStyle, StyleState } from "./style.js";
+import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, PasteOptions, Sprite, SpriteOptions } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
 import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
 import { FaintWatch } from "./faint.js";
@@ -61,8 +61,11 @@ export class PainterCore extends StyledPainter {
   #where: string[] = [];
   // Faint-mark checks read pixels back; only done when someone listens for warnings.
   #measure: boolean;
+  // Style problems (a call that can draw nothing), each reported once.
+  #note: (message: string) => void;
+  #noted = new Set<string>();
 
-  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
+  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; note?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
     super();
     this.#ctxStack = [options.ctx];
     this.pixelRatio = options.pixelRatio ?? 1;
@@ -70,6 +73,7 @@ export class PainterCore extends StyledPainter {
     this.#paper = new PaperSheet(options.makeLayer, { size: this.#device, pixelRatio: this.pixelRatio });
     this.#faint = new FaintWatch(options.warn ?? (() => {}));
     this.#measure = options.warn !== undefined;
+    this.#note = options.note ?? options.warn ?? (() => {});
     this.#debug = new DebugOverlay(options.outline === true);
     this.#pool = new LayerPool(options.makeLayer, this.#device);
     // A high-density canvas (pixelRatio > 1) draws in logical units under a base scale.
@@ -103,6 +107,38 @@ export class PainterCore extends StyledPainter {
     this.ctx.restore();
     this.style = restored;
     return true;
+  }
+
+  /** Report `message` once per run (a call whose style can draw nothing). */
+  protected note(message: string | undefined): void {
+    if (message === undefined || this.#noted.has(message)) return;
+    this.#noted.add(message);
+    this.#note(message);
+  }
+
+  /**
+   * Draw `body` translated, rotated, then scaled; the transform ends with it.
+   * No layer: drawing inside composites onto the canvas as usual.
+   */
+  at(options: AtOptions, body: () => void): void {
+    const depth = this.#styleStack.length;
+    const savedFloor = this.#floor;
+    this.push();
+    this.#floor = depth + 1;
+    try {
+      const { translate, rotate, scale } = options;
+      if (translate !== undefined) this.ctx.translate(translate[0], translate[1]);
+      if (rotate !== undefined) this.ctx.rotate(rotate);
+      if (scale !== undefined) {
+        if (typeof scale === "number") this.ctx.scale(scale, scale);
+        else this.ctx.scale(scale[0], scale[1]);
+      }
+      body();
+    } finally {
+      this.#floor = depth;
+      while (this.#styleStack.length > depth && this.pop());
+      this.#floor = savedFloor;
+    }
   }
 
   // ── transforms ───────────────────────────────────────────────────
@@ -219,9 +255,11 @@ export class PainterCore extends StyledPainter {
    * with the same `key`. The key must name everything the pixels depend on
    * (including the transform at the first call); a new key redraws.
    */
-  cache(key: string, body: () => void): void {
+  cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
+    const [key, body, paste] = args;
     const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
-    drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op: this.composite() });
+    const op = paste === undefined ? this.composite() : this.composite({ blend: paste.blend ?? "normal", erase: paste.erase ?? false });
+    drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op });
   }
 
   /**
@@ -238,22 +276,26 @@ export class PainterCore extends StyledPainter {
     return { kind: "sprite", key, width, height };
   }
 
-  /** Draw a sprite with its top-left corner at (x, y), under the current transform, at `opacity` (default 1). */
-  image(...args: [Sprite, number, number, number?]): void {
-    const [sprite, x, y, opacity] = args;
+  /** Draw a sprite with its top-left corner at (x, y), under the current transform, with paste options (or an opacity). */
+  image(...args: [Sprite, number, number, (number | PasteOptions)?]): void {
+    const [sprite, x, y, more] = args;
+    const paste: PasteOptions | undefined = typeof more === "object" ? more : undefined;
+    const opacity = typeof more === "number" ? more : paste?.opacity;
+    if (opacity !== undefined) assertUnit(opacity, "image opacity");
+    const mode = paste === undefined ? this.current() : { blend: paste.blend ?? "normal", erase: paste.erase ?? false };
     const layer = this.#sprites.get(sprite.key);
     if (layer === undefined) throw new SketchUsageError({ detail: `sprite "${sprite.key}" is not defined in this run (call sprite() first)` });
     const ctx = this.ctx;
     this.#outline("sprite", { label: sprite.key, rect: [x, y, sprite.width, sprite.height] });
-    const draw = (): void => {
+    const draw = (op: string): void => {
       const target = this.ctx;
       const alpha = target.globalAlpha;
       target.globalAlpha = alpha * (opacity ?? 1);
-      withComposite(target, { op: this.composite(), draw: () => target.drawImage(layer.image, 0, 0, sprite.width * this.pixelRatio, sprite.height * this.pixelRatio, x, y, sprite.width, sprite.height) });
+      withComposite(target, { op, draw: () => target.drawImage(layer.image, 0, 0, sprite.width * this.pixelRatio, sprite.height * this.pixelRatio, x, y, sprite.width, sprite.height) });
       target.globalAlpha = alpha;
     };
-    if (this.style.erasing && !isIdentity(ctx.getTransform())) this.#viaLayer(draw);
-    else draw();
+    if (mode.erase && !isIdentity(ctx.getTransform())) this.#viaLayer(() => draw("source-over"));
+    else draw(this.composite(mode));
   }
 
   /** With `run --outline`, a labelled box over the frame (e.g. a hit area); otherwise nothing. */
@@ -280,8 +322,9 @@ export class PainterCore extends StyledPainter {
     return scale > 0 ? 0.5 / scale : 0.5;
   }
 
-  protected composite(): string {
-    return this.style.erasing ? "destination-out" : compositeOp(this.style.blend);
+  protected composite(mode?: { blend: BlendMode; erase: boolean }): string {
+    const { blend, erase } = mode ?? this.current();
+    return erase ? "destination-out" : compositeOp(blend);
   }
 
 
@@ -292,15 +335,18 @@ export class PainterCore extends StyledPainter {
    * limits a destination-out fill under a transform to the quadrant past the
    * translation origin.
    */
-  protected paintShape(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; fill: boolean }): void {
-    if (!this.style.erasing || isIdentity(this.ctx.getTransform())) {
+  protected paintShape(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; fill: boolean; style?: ResolvedStyle; call?: string }): void {
+    const style = shape.style ?? this.current();
+    if (shape.style !== undefined) this.note(styleProblemFor(shape.call ?? "shape", { style, open: !shape.fill }));
+    if (!style.erase || isIdentity(this.ctx.getTransform())) {
       trace(this.ctx);
-      this.#fillAndStroke(shape);
+      this.#fillAndStroke(shape, style);
       return;
     }
+    const drawn = { ...style, erase: false };
     this.#viaLayer(() => {
       trace(this.ctx);
-      this.#fillAndStroke(shape);
+      this.#fillAndStroke(shape, drawn);
     });
   }
 
@@ -311,38 +357,37 @@ export class PainterCore extends StyledPainter {
     this.#pool.borrow((layer) => {
       layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
       this.#ctxStack.push(layer.ctx);
-      this.style.erasing = false;
       try {
         body();
       } finally {
-        this.style.erasing = true;
         this.#ctxStack.pop();
       }
       drawLayer(target, { image: layer.image, ...this.#device, opacity: 1, op: "destination-out" });
     });
   }
 
-  #fillAndStroke(shape: { contours: () => Contour[]; fill: boolean }): void {
-    if (shape.fill && this.style.fillEnabled) {
+  #fillAndStroke(shape: { contours: () => Contour[]; fill: boolean }, style: ResolvedStyle): void {
+    const paint = style.fill;
+    if (shape.fill && paint !== undefined) {
       const ctx = this.ctx;
-      const paint = this.style.fillColor;
       ctx.fillStyle = this.resolvePaint(paint);
-      withComposite(ctx, { op: this.composite(), draw: () => inPaintSpace(ctx, { paint, fill: () => ctx.fill() }) });
+      withComposite(ctx, { op: this.composite(style), draw: () => inPaintSpace(ctx, { paint, fill: () => ctx.fill() }) });
     }
-    this.#strokeShape(shape.contours);
+    this.#strokeShape(shape.contours, style);
   }
 
-  #strokeShape(contours: () => Contour[]): void {
-    if (!this.style.strokeEnabled) return;
-    const brush = this.style.brush;
+  #strokeShape(contours: () => Contour[], style: ResolvedStyle): void {
+    const stroke = style.stroke;
+    if (stroke === undefined) return;
+    const brush = style.brush;
     if (brush === undefined) {
       const ctx = this.ctx;
-      ctx.strokeStyle = this.resolvePaint(this.style.strokeColor);
-      ctx.lineWidth = this.style.strokeW;
-      withComposite(ctx, { op: this.composite(), draw: () => ctx.stroke() });
+      ctx.strokeStyle = this.resolvePaint(stroke);
+      ctx.lineWidth = style.weight;
+      withComposite(ctx, { op: this.composite(style), draw: () => ctx.stroke() });
       return;
     }
-    const { erasing, blend } = this.style;
+    const { erase: erasing, blend } = style;
     const composite = erasing ? "destination-out" : compositeOp(blend === "normal" ? (brush.blend ?? "normal") : blend);
     const peak = renderMark({
       target: this.ctx,
@@ -351,13 +396,13 @@ export class PainterCore extends StyledPainter {
       measure: this.#measure,
       canvas: this.#device,
       contours: contours(),
-      paint: this.style.strokeColor,
-      weight: this.style.strokeW,
+      paint: stroke,
+      weight: style.weight,
       brush,
-      gesture: this.style.gesture,
+      gesture: style.gesture,
       paper: () => this.#paper.layer(),
       composite,
     });
-    if (peak !== undefined && !erasing && this.style.gesture.faint !== true) this.#faint.check(peak, { groupAlphas: this.#alphaStack, where: this.#where.at(-1) });
+    if (peak !== undefined && !erasing && style.gesture.faint !== true) this.#faint.check(peak, { groupAlphas: this.#alphaStack, where: this.#where.at(-1) });
   }
 }
