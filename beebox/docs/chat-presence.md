@@ -11,7 +11,8 @@ A person is present in a chat while their page holds a live
 (`frontend/src/components/AppNav/PresenceHeads.tsx`) holds one only while
 all of these are true:
 
-- the chat is the current conversation and has a committed turn;
+- the chat is the current conversation (a session id; a brand-new chat
+  counts from its reservation, which nobody else can know before its first turn);
 - its transcript is on screen (`workspace.transcriptVisible`);
 - the page is active: in a browser, visible and focused; in the iOS web view,
   visible (the native composer takes DOM focus from the page).

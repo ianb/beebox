@@ -65,7 +65,10 @@ export function PresenceHeads() {
   const workspace = useWorkspace();
   const active = usePageActive();
   const target = conversation?.rendered?.target;
-  const sessionId = target?.kind === "session" && conversation?.unstarted !== true ? target.sessionId : null;
+  // A session this tab just reserved counts too: its first turn may already be
+  // committed while the tab still holds the reservation, and until then no one
+  // else can know its id.
+  const sessionId = target?.kind === "session" ? target.sessionId : null;
   const transcriptVisible = workspace?.transcriptVisible === true;
   const people = useChatPresence(sessionId, active && transcriptVisible);
   return <PresenceHeadsFace people={people} />;
