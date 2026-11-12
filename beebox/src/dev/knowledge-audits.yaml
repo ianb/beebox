@@ -9464,6 +9464,56 @@ tests:
     correct_matches:
       - 'CheckboxField'
     tags: [frontend, fields]
+  # Status (2026-11-12, Claude claude-opus-5-5, box-view-guidance-and-checks
+  # Track 4): the answers are right in all three; each FAILS only the
+  # should_read_any check. The agent found the primitive by grepping the repo
+  # and Grep-ed beebox/frontend.md (dev-confirm-dialog cites frontend.md:243-247,
+  # dev-filter-buttons cites :236) but never opened it with Read, and the runner
+  # counts only Read. dev-anchored-popover read Popover.tsx and ack-badge.tsx.
+  # Unresolved: either require a Read of frontend.md in the guidance or let a
+  # Grep of the file count; not decided here.
+  - id: dev-anchored-popover
+    surface: dev
+    prompt: >
+      I want a small info bubble that opens from a badge in the beebox chat.
+      How do I build it? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names ui/Popover (render-prop trigger, label). FAILS if it proposes an
+      absolute-positioned div or calling useDismiss in the component.
+    correct_matches:
+      - 'Popover'
+    tags: [frontend, popover]
+  - id: dev-confirm-dialog
+    surface: dev
+    prompt: >
+      Add a confirm dialog before deleting an item in the beebox web app. What
+      do I build it with? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names ModalDialog (labelledBy the heading, caller supplies the action
+      row). FAILS if it proposes role="dialog", a raw <dialog>, or a fixed
+      inset-0 overlay, or window.confirm.
+    correct_matches:
+      - 'ModalDialog'
+    tags: [frontend, dialog]
+  - id: dev-filter-buttons
+    surface: dev
+    prompt: >
+      I want a row of filter buttons (All, Open, Done) above a list in the
+      beebox web app. There are no tab panels, the buttons just change the
+      list. What do I use? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names TabBar with mode="buttons", or buttons with aria-pressed in a
+      role="group". FAILS if it proposes role="tablist" or role="tab" with no
+      panels.
+    correct_matches:
+      - 'TabBar|aria-pressed'
+    tags: [frontend, tabs]
   - id: view-enter-field-ime-and-name
     prompt: >
       I want a view where I type into a text field and press Enter to add an
@@ -9481,3 +9531,77 @@ tests:
       - 'isComposing|<form|onSubmit'
       - 'label'
     tags: [views, accessibility]
+  # === Views: dates, wide tables, announcements, check advice (docs/plans/box-view-guidance-and-checks.md, Track 4) ===
+  # Status (2026-11-12, Claude claude-opus-5-5, Track 4): the four new audits
+  # and the five reruns (view-enter-field-ime-and-name, views-full-bleed-layout,
+  # views-render-test-command, chat-screenshot-when, box-page-interaction) all
+  # pass on the web-guidance-scan test1 clone, each after reading views.md (the
+  # advice audit read its "Testing a View" section). view-date-only-temporal
+  # led with Temporal.PlainDate and named both UTC traps. view-wide-table-scroll
+  # gave role="region", aria-label, tabIndex 0, overflowX and said full-bleed
+  # does not help. view-announce-action-result said an empty role="status"
+  # present before the save, a conditionally rendered element is not read, and
+  # errors in role="alert". view-check-advice-meaning said the check passed and
+  # each advice line is fixed or answered with a reason.
+  - id: view-date-only-temporal
+    prompt: >
+      A card type has `due: 2026-08-14` in its frontmatter. In its view I want
+      "Aug 14" and how many days are left. How do you read and show it?
+      Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Uses the views doc's "Dates" section: Temporal.PlainDate.from(due),
+      Temporal.Now.plainDateISO() and today.until(date).days. FAILS if it
+      parses with new Date(due) or cuts toISOString() for today.
+    correct_matches:
+      - 'Temporal\.PlainDate'
+      - 'plainDateISO'
+    response_not_matches:
+      - 'new Date\(\s*(due|card\.fields\.due|value)'
+    tags: [views, dates]
+  - id: view-wide-table-scroll
+    prompt: >
+      My view's table has nine columns and runs off the card on my phone. What
+      do you change? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Puts the table in a scroll wrapper with overflow-x auto that is named
+      (role="region" with aria-label) and focusable (tabIndex 0), per the
+      views doc's "Styling". FAILS if it proposes layout = "full-bleed" as the
+      fix.
+    correct_matches:
+      - 'overflow-?x|overflowX'
+      - 'tabIndex|focusable|keyboard'
+    tags: [views, layout]
+  - id: view-announce-action-result
+    prompt: >
+      After the Save button in my view works, how should the view tell the
+      person, including a screen reader user? Explain only; do not change
+      files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Changes the text of a role="status" element that is already on the page
+      before the action, and puts errors in role="alert". FAILS if it only
+      inserts a new element after saving, or relies on color alone.
+    correct_matches:
+      - 'role="?status'
+      - 'role="?alert'
+    tags: [views, accessibility]
+  - id: view-check-advice-meaning
+    prompt: >
+      `bbx view check` printed `✓ planner` and then two `advice:` lines. Did
+      the check fail? What do you do? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Says the check passed (advice is not a failure), then fixes each line
+      using the views.md section it names, or says why the advice does not
+      apply to that view. FAILS if it calls the check failed or ignores the
+      advice.
+    correct_matches:
+      - 'not (a )?fail|did not fail|passed|still passes|doesn.t fail'
+      - 'section|advice'
+    tags: [views]
