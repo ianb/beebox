@@ -147,7 +147,7 @@ async function main(): Promise<void> {
     const dir = parsed.positionals[1];
     if (dir === undefined) throw new CliError({ detail: "usage: cli checkpoints <dir> [--out page.html] [--title text]" });
     const out = resolve(parsed.values.out ?? join(dir, "index.html"));
-    writeFileSync(out, checkpointPage(resolve(dir), parsed.values.title ?? "How this drawing was made"));
+    writeFileSync(out, await checkpointPage(resolve(dir), parsed.values.title ?? "How this drawing was made"));
     console.log(out);
     return;
   }

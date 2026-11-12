@@ -3,6 +3,7 @@
 // changed (lines added/removed), and the source as it stood.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { Canvas, loadImage } from "@napi-rs/canvas";
 import type { CheckpointMeta } from "./save.js";
 
 interface Step {
@@ -36,17 +37,21 @@ function readSources(dir: string): Record<string, string> {
   return out;
 }
 
-/** The picture to show for a run: its last captured full frame (not a zoom). */
-function mainFrame(framesDir: string): string | undefined {
+/** The picture to show for a run: its last captured full frame (not a zoom), as an inline JPEG (a PNG per step makes the page huge). */
+async function mainFrame(framesDir: string): Promise<string | undefined> {
   if (!existsSync(framesDir)) return undefined;
   const frames = readdirSync(framesDir)
     .filter((n) => /^frame-\d+\.png$/.test(n))
     .toSorted();
   const last = frames.at(-1);
-  return last === undefined ? undefined : `data:image/png;base64,${readFileSync(join(framesDir, last)).toString("base64")}`;
+  if (last === undefined) return undefined;
+  const image = await loadImage(join(framesDir, last));
+  const canvas = new Canvas(image.width, image.height);
+  canvas.getContext("2d").drawImage(image, 0, 0);
+  return `data:image/jpeg;base64,${(await canvas.encode("jpeg", 88)).toString("base64")}`;
 }
 
-function loadSteps(dir: string): Step[] {
+async function loadSteps(dir: string): Promise<Step[]> {
   const steps: Step[] = [];
   let previous: Record<string, string> = {};
   for (const name of readdirSync(dir).filter((n) => /^\d{4}$/.test(n)).toSorted()) {
@@ -57,7 +62,7 @@ function loadSteps(dir: string): Step[] {
     const changes = files
       .map((file) => ({ file, ...lineChanges(previous[file] ?? "", sources[file] ?? "") }))
       .filter((c) => c.added + c.removed > 0);
-    steps.push({ seq: meta.seq, at: meta.at, note: meta.note ?? "", errors: meta.errors, image: mainFrame(join(at, "frames")), changes, sources });
+    steps.push({ seq: meta.seq, at: meta.at, note: meta.note ?? "", errors: meta.errors, image: await mainFrame(join(at, "frames")), changes, sources });
     previous = sources;
   }
   return steps;
@@ -101,8 +106,8 @@ show(steps.length - 1);
 `;
 
 /** The checkpoint page for `dir`, as one HTML string (images inlined). */
-export function checkpointPage(dir: string, title: string): string {
-  const data = JSON.stringify(loadSteps(dir)).replaceAll("</", "<\\/");
+export async function checkpointPage(dir: string, title: string): Promise<string> {
+  const data = JSON.stringify(await loadSteps(dir)).replaceAll("</", "<\\/");
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${title.replaceAll("<", "&lt;")}</title>
@@ -112,7 +117,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
 .controls { display: flex; gap: 12px; align-items: center; }
 .controls button { font: inherit; padding: 4px 14px; border-radius: 6px; border: 1px solid #c7d2fe; background: #eef2ff; cursor: pointer; }
 #step { flex: 1; }
-img { max-width: 100%; border-radius: 6px; display: block; margin: 10px 0; }
+img { max-width: 100%; max-height: 72vh; border-radius: 6px; display: block; margin: 10px 0; }
 #note { font-size: 17px; }
 #errors { color: #b91c1c; white-space: pre-wrap; }
 .add { color: #047857; } .del { color: #b91c1c; }
@@ -124,8 +129,8 @@ pre { background: #1b1f2a; color: #e2e8f0; padding: 12px; border-radius: 6px; ov
 <div class="controls"><button id="play">Play</button>
 <label>speed <select id="speed"><option value="2000">slow</option><option value="1100" selected>medium</option><option value="500">fast</option></select></label>
 <input type="range" id="step" min="0" step="1" /></div>
-<h2 id="head"></h2><p id="note"></p><p id="errors"></p>
 <img id="img" alt="the rendered frame at this checkpoint" />
+<h2 id="head"></h2><p id="note"></p><p id="errors"></p>
 <h3>Changed since the previous checkpoint</h3><ul id="changes"></ul>
 <h3>Source at this checkpoint</h3><div id="sources"></div>
 </main>
