@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop: effects, masks, blend modes, easing (klad gaps)"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop: effects, masks, blend modes, easing (klad gaps)
 
-Subplan of [canvas-brushes.md](canvas-brushes.md). The boxholder asked to look
+Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The boxholder asked to look
 again at klad's drawing format (`docs/format.md`, read 2026-11-12, MIT) as a
 completeness checklist and to "implement some of the brushes and stuff that's
 easy to implement". This plan takes the gaps that Canvas2D already provides in

@@ -1,6 +1,6 @@
 // # bbx figure run
 //
-// docs/plans/figure-check.md. A canvas-loop figure renders headlessly from a
+// docs/implemented-plans/figure-check.md. A canvas-loop figure renders headlessly from a
 // box: the entry compiles for Node, runs in a child under a timeout, and the
 // transcript and frames land under _tmp/figure-run/.
 

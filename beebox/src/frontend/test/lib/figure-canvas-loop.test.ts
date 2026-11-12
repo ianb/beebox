@@ -2,7 +2,7 @@
 //
 // FigureMount hands a canvas-loop sketch a `mountSketch` that warns about
 // card/module param drift and reports learner activity (plan
-// docs/plans/figure-check.md, Track C). The activity
+// docs/implemented-plans/figure-check.md, Track C). The activity
 // detail is an allowlist: declared param values and handled names, capped at
 // 200 characters; never coordinates, raw keys or model state.
 

@@ -1,6 +1,6 @@
 /**
  * The beebox side of a canvas-loop figure's `lib.mountSketch(mount, opts)`
- * call (plan `docs/plans/figure-check.md`). FigureMount hands the sketch a copy
+ * call (plan `docs/implemented-plans/figure-check.md`). FigureMount hands the sketch a copy
  * of the canvas-loop browser namespace whose `mountSketch`:
  *
  * - console-warns once per card param that the module does not declare, or

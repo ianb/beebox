@@ -2,7 +2,7 @@
 //
 // The workspace used to pass one focused-card reporter to every mounted
 // card, so a figure still running in the other pane reported under the
-// focused card's name (plan docs/plans/figure-check.md, review decision
+// focused card's name (plan docs/implemented-plans/figure-check.md, review decision
 // "Attribution"). Each card now binds the reporter to its own activity
 // source, the key a send from that card captures.
 

@@ -1,6 +1,6 @@
 ---
 title: "Figure verification: bbx figure run, the figure log, and teaching"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues:
   - ../../../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md

@@ -7,7 +7,7 @@
  * `_tmp/figure-run/<card path, leading underscores dropped>/out/`
  * (transcript.md and frame PNGs).
  *
- * Plan: docs/plans/figure-check.md.
+ * Plan: docs/implemented-plans/figure-check.md.
  */
 import { spawn } from "node:child_process";
 import { existsSync, promises as fs, realpathSync } from "node:fs";

@@ -1,6 +1,6 @@
 // Group effects, soft masks, the added blend modes, and tween/ease (the klad
 // gaps that Canvas2D already provides; plan:
-// beebox/docs/plans/canvas-brushes-effects.subplan.md).
+// beebox/docs/implemented-plans/canvas-brushes-effects.subplan.md).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { teaView } from "../helpers.js";

@@ -1,7 +1,7 @@
 // # Built-in renderers receive the card's activity reporter
 //
 // A figure reports learner activity like an agent view does (plan
-// docs/plans/figure-check.md, Track C), so ActiveFileRenderer hands the
+// docs/implemented-plans/figure-check.md, Track C), so ActiveFileRenderer hands the
 // companion pane's `reportActivity` to built-in renderers too, not only to
 // bound agent views.
 
