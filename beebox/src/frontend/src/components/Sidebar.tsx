@@ -7,6 +7,7 @@
  */
 
 import { useState, type ReactNode } from "react";
+import { MaterialContext } from "./ui/material";
 
 interface SidebarProps {
   /** Header title */
@@ -33,7 +34,12 @@ interface SidebarProps {
   idPrefix?: string;
 }
 
-export function Sidebar({
+/** A white app panel: on a card it keeps app ink. */
+export function Sidebar(props: SidebarProps) {
+  return <MaterialContext.Provider value={false}><SidebarPanel {...props} /></MaterialContext.Provider>;
+}
+
+function SidebarPanel({
   title,
   headingLevel,
   subtitle,

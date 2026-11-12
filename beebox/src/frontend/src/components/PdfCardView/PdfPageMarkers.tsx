@@ -48,7 +48,7 @@ export function PdfPageMarkers({ markers, activePage, onSelect }: PdfPageMarkers
               : "border-transparent text-warm-400 hover:border-warm-300 hover:text-warm-700"
           }`}
         >
-          <Text size="xs" mono>p.&nbsp;{page}</Text>
+          <Text size="xs" mono material={false}>p.&nbsp;{page}</Text>
         </button>
       ))}
     </div>

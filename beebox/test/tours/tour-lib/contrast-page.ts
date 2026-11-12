@@ -295,7 +295,9 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   };
   const APP_TEXT = /^text-(warm|primary|accent|info|danger|success|warning|coral|gold|plum|rose|iris)(-|$)/;
   const APP_PANEL = /^bg-(white|black|warm|primary|accent|info|danger|success|warning|coral|gold|plum|rose|iris)(-|$)/;
-  const TEXT_COLOR = /^text-(?!(xs|sm|base|lg|xl|[2-9]xl|left|right|center|justify|start|end|balance|pretty|wrap|nowrap|ellipsis|clip)$)/;
+  // A text utility that is not a size, alignment or wrap; an arbitrary value
+  // (text-[0.625rem]) is most often a size, and never an app palette color.
+  const TEXT_COLOR = /^text-(?!(xs|sm|base|lg|xl|[2-9]xl|left|right|center|justify|start|end|balance|pretty|wrap|nowrap|ellipsis|clip)$|\[)/;
   // A theme may remap an app utility to its ink (the field list); text that
   // ends up in one of the card's inks follows the material however it got there.
   const INKS = ["ink", "ink-soft", "pen", "danger", "code-ink", "bullet", "counter"];
