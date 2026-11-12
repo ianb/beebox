@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Touch.** Browser input uses pointer events: touch and pen work like the
+  mouse, as the same `mousedown`/`mousemove`/`mouseup` messages. A drag on
+  the canvas no longer scrolls the page; the pressing pointer is captured, so
+  its release always arrives (also on a cancelled touch); a second finger is
+  ignored while one is down. Before, touch got only a late tap.
+
 - **Effects, masks, more blends, tween** (gaps found by reading klad's
   drawing format). `group` takes `effects`: `blur`, `glow`, `shadow`, and
   colour adjustments (`hue`, `saturation`, `brightness`, `contrast`,

@@ -314,29 +314,41 @@ function coerceModule(raw: unknown): PlaygroundModule {
 
 /**
  * Wire pointer/key listeners on the canvas straight into the runtime's input
- * methods — the same dispatch path scripted events take. Returns a teardown
- * that removes every listener, so cleanup leaves nothing behind.
+ * methods — the same dispatch path scripted events take. Pointer events cover
+ * mouse, touch and pen; each reaches the sketch as `mousedown`/`mousemove`/
+ * `mouseup`, so sketches and events files are the same for every device.
+ * Returns a teardown that removes every listener.
  */
 export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
-  let pressed = false;
-  const onDown = (e: MouseEvent): void => {
+  // A drag that starts on the canvas belongs to the sketch, not to page scrolling.
+  canvas.style.touchAction = "none";
+  // The one pointer (finger or mouse) that pressed; others are ignored until it lifts.
+  let pressedId: number | undefined;
+  const send = (type: "mousedown" | "mousemove" | "mouseup", e: PointerEvent): void => {
+    const p = coords(canvas, e);
+    runtime.pointer({ type, x: p.x, y: p.y });
+  };
+  const onDown = (e: PointerEvent): void => {
+    if (!e.isPrimary || pressedId !== undefined) return;
     runtime.enableSound();
-    pressed = true;
-    canvas.focus();
-    const p = coords(canvas, e);
-    runtime.pointer({ type: "mousedown", x: p.x, y: p.y });
+    pressedId = e.pointerId;
+    // Keep this pointer's moves and its release even when it slides off the canvas.
+    canvas.setPointerCapture(e.pointerId);
+    canvas.focus({ preventScroll: true });
+    send("mousedown", e);
   };
-  // Every move is sent, pressed or not (as in a scripted events file), so a
-  // sketch can react to hover; the sketch tracks its own pressed state.
-  const onMove = (e: MouseEvent): void => {
-    const p = coords(canvas, e);
-    runtime.pointer({ type: "mousemove", x: p.x, y: p.y });
+  // Every move of the primary pointer is sent, pressed or not (as in a scripted
+  // events file), so a sketch can react to hover; a finger only moves while down.
+  const onMove = (e: PointerEvent): void => {
+    if (!e.isPrimary || (pressedId !== undefined && e.pointerId !== pressedId)) return;
+    send("mousemove", e);
   };
-  const release = (e: MouseEvent): void => {
-    if (!pressed) return;
-    pressed = false;
-    const p = coords(canvas, e);
-    runtime.pointer({ type: "mouseup", x: p.x, y: p.y });
+  // A lift, a cancel (the browser took the touch) and a lost capture all end the press once.
+  const release = (e: PointerEvent): void => {
+    if (e.pointerId !== pressedId) return;
+    pressedId = undefined;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    send("mouseup", e);
   };
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
@@ -345,17 +357,18 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
     runtime.key({ type: "keydown", key: e.key });
   };
   const onKeyUp = (e: KeyboardEvent): void => runtime.key({ type: "keyup", key: e.key });
-  canvas.addEventListener("mousedown", onDown);
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseup", release);
-  canvas.addEventListener("mouseleave", release);
+  const listeners = [
+    ["pointerdown", onDown],
+    ["pointermove", onMove],
+    ["pointerup", release],
+    ["pointercancel", release],
+    ["lostpointercapture", release],
+  ] as const;
+  for (const [type, fn] of listeners) canvas.addEventListener(type, fn);
   canvas.addEventListener("keydown", onKeyDown);
   canvas.addEventListener("keyup", onKeyUp);
   return () => {
-    canvas.removeEventListener("mousedown", onDown);
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseup", release);
-    canvas.removeEventListener("mouseleave", release);
+    for (const [type, fn] of listeners) canvas.removeEventListener(type, fn);
     canvas.removeEventListener("keydown", onKeyDown);
     canvas.removeEventListener("keyup", onKeyUp);
   };
