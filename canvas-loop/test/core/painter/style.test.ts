@@ -31,3 +31,8 @@ test("styleProblem flags calls that can draw nothing", () => {
   assert.equal(problem({ fill: "red" }, false), undefined);
   assert.equal(problem({ stroke: "red" }, true), undefined);
 });
+
+test("a brush preset with overrides is plain data", () => {
+  const brush = resolveStyle({ stroke: "#000", brush: { preset: "pencil", opacity: 0.6 } }, "line").brush;
+  assert.deepEqual([brush?.kind, brush !== undefined && "opacity" in brush ? brush.opacity : undefined], ["stamp", 0.6]);
+});

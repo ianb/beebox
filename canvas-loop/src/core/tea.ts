@@ -27,7 +27,7 @@ export interface ControlBox {
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextArgs, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { AtOptions, BrushPreset, GroupOptions, PasteOptions, SpriteOptions, Style, TextArgs, TextBounds, TextBox, TextOptions } from "./paint.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 

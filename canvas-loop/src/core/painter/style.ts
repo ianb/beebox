@@ -66,6 +66,13 @@ export function assertStyle(style: Style, call: string): void {
   }
 }
 
+function brushFrom(brush: Style["brush"]): Brush | undefined {
+  if (brush === undefined) return undefined;
+  if (typeof brush === "string" || "kind" in brush) return resolveBrush(brush, undefined);
+  const { preset, ...overrides } = brush;
+  return resolveBrush(preset, overrides);
+}
+
 /** Validate `style` and fill in its defaults. */
 export function resolveStyle(style: Style, call: string): ResolvedStyle {
   assertStyle(style, call);
@@ -73,7 +80,7 @@ export function resolveStyle(style: Style, call: string): ResolvedStyle {
     fill: style.fill,
     stroke: style.stroke,
     weight: style.weight ?? 1,
-    brush: style.brush === undefined ? undefined : resolveBrush(style.brush, undefined),
+    brush: brushFrom(style.brush),
     gesture: style.gesture ?? {},
     blend: style.blend ?? "normal",
     erase: style.erase ?? false,

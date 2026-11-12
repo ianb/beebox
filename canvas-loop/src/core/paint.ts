@@ -7,7 +7,7 @@
 // one place those data forms are turned into ctx calls; the engine calls them.
 
 import type { BrushName } from "./brush/presets.js";
-import type { Brush, Gesture } from "./brush/types.js";
+import type { Brush, BrushOverrides, Gesture } from "./brush/types.js";
 
 // ── Structural 2D-context subset ─────────────────────────────────────
 // The drawing engine (paint.ts helpers + Painter) is typed against this
@@ -75,14 +75,17 @@ export interface Style {
   readonly stroke?: Paint;
   /** Stroke width in logical pixels (default 1). */
   readonly weight?: number;
-  /** Strokes become brushed marks: a preset name, or a Brush (see `brushOf`). */
-  readonly brush?: BrushName | Brush;
+  /** Strokes become brushed marks: a preset name, a preset with fields changed (`{ preset: "pencil", opacity: 0.6 }`), or a Brush. */
+  readonly brush?: BrushName | BrushPreset | Brush;
   /** How the hand moves for brushed marks (pressure, wobble, seed). */
   readonly gesture?: Gesture;
   readonly blend?: BlendMode;
   /** Remove pixels instead of adding them. */
   readonly erase?: boolean;
 }
+
+/** A brush preset with some fields changed, as plain data. */
+export type BrushPreset = { readonly preset: BrushName } & BrushOverrides;
 
 /** How `image` pastes a sprite. */
 export interface PasteOptions {
