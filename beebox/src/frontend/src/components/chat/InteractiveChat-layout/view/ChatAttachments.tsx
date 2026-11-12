@@ -18,6 +18,7 @@ import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
 import type { ImageItem, FileItem } from "../../../../input/emission-store";
 import { Spinner } from "../../../ui/Spinner";
+import { InlineAction } from "../../../ui/InlineAction";
 import { ComposerStrip, TokenTag } from "./ComposerStrip";
 
 /**
@@ -186,13 +187,9 @@ function FileChip({
           // Nothing to retry: the bytes are gone. The message says to pick it again.
           <span className="text-[0.625rem] text-danger" role="status">Can't read this file — remove it and pick it again</span>
         ) : state.status === "failed" ? (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="text-[0.625rem] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
-          >
+          <InlineAction intent="danger" onClick={onRetry} className="text-[0.625rem] text-left truncate">
             Upload failed — retry
-          </button>
+          </InlineAction>
         ) : (
           <span className="text-[0.625rem] text-warm-700">{statusLabel}</span>
         )}

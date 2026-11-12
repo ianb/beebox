@@ -20,6 +20,7 @@
  */
 
 import type { Rule } from "eslint";
+import type { RestrictedClassesEntry } from "../types";
 import { fileOwner } from "./lib/allow-in.ts";
 import {
   type ClassEntryPatterns,
@@ -30,13 +31,6 @@ import {
   readClassValue,
 } from "./lib/class-matcher.ts";
 
-interface EntryOption {
-  all: string[];
-  none?: string[];
-  allowIn?: string[];
-  message: string;
-}
-
 interface StylePositionOption {
   values: string[];
   allowIn?: string[];
@@ -44,7 +38,7 @@ interface StylePositionOption {
 }
 
 interface Options {
-  entries: EntryOption[];
+  entries: RestrictedClassesEntry[];
   callees?: string[];
   stylePosition?: StylePositionOption;
 }
@@ -57,7 +51,7 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
-function isEntry(value: unknown): value is EntryOption {
+function isEntry(value: unknown): value is RestrictedClassesEntry {
   return (
     isRecord(value) &&
     isStringArray(value.all) &&

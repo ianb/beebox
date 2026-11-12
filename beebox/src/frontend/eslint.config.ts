@@ -5,7 +5,7 @@
 // raise it — don't quietly switch it off. Burn down debt rule-by-rule instead.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+import { outlineNeedsFocusStyle, vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
@@ -295,17 +295,7 @@ export default [
               allowIn: ["src/components/ui/AnchoredLayer.tsx"],
               message: "An anchored panel is <Popover> or <Menu>.",
             },
-            {
-              // Removing the outline needs a focus style in its place; `hover:` and bare `ring-*` do not count.
-              all: ["outline-none|focus:outline-none|focus-visible:outline-none"],
-              none: [
-                "focus:ring-*|focus-visible:ring-*|focus-within:ring-*",
-                "focus:border-*|focus-visible:border-*",
-                "focus:shadow-*|focus-visible:shadow-*",
-                "focus:outline-*!focus:outline-none|focus-visible:outline-*!focus-visible:outline-none",
-              ],
-              message: "outline-none removes the keyboard focus ring: add focus-visible:ring-*, a border, shadow or outline.",
-            },
+            outlineNeedsFocusStyle,
             { all: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
           ],
           stylePosition: { values: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },

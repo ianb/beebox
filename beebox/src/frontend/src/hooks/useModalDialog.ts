@@ -1,7 +1,7 @@
 /**
- * Show a native `<dialog>` as a modal while `open`. showModal() puts it in the
- * top layer and makes the page behind it inert (the focus trap); closing
- * returns focus to whatever had it before. `initialFocus` names an element
+ * Show a native `<dialog>` as a modal while `open` (`lib/native-modal`).
+ * showModal() puts it in the top layer and makes the page behind it inert (the
+ * focus trap); closing returns focus to whatever had it before. `initialFocus` names an element
  * inside the dialog to focus instead of the browser's first control. While
  * open it holds toast expiry, since the modal covers the toasts, and it is the
  * newest Escape layer (`lib/escape-layers`), so a menu or popover opened
@@ -13,6 +13,7 @@
 import { useEffect, type RefObject } from "react";
 import { acquireHold } from "../components/ui/toast-store";
 import { pushEscapeLayer } from "../lib/escape-layers";
+import { showNativeModal } from "../lib/native-modal";
 
 export function useModalDialog({ dialog: dialogRef, open, initialFocus }: {
   dialog: RefObject<HTMLDialogElement | null>;
@@ -22,16 +23,14 @@ export function useModalDialog({ dialog: dialogRef, open, initialFocus }: {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!open || dialog === null) return;
-    const priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
+    const closeModal = showNativeModal(dialog);
     const releaseHold = acquireHold();
     const escapeLayer = pushEscapeLayer();
     if (initialFocus !== undefined) dialog.querySelector<HTMLElement>(initialFocus)?.focus();
     return () => {
       releaseHold();
       escapeLayer.release();
-      if (dialog.open) dialog.close();
-      priorFocus?.focus();
+      closeModal();
     };
   }, [dialogRef, open, initialFocus]);
 }

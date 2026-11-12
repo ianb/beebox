@@ -179,7 +179,7 @@ Every control also has an accessible name, which screen readers, the box agent, 
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
 - `<ButtonLink>` — a router link drawn as a `<Button>` (`to`, `search`, `intent`, `size`), for navigation that reads as a button ("New chat"). No loading or flash.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
-- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
+- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc., and `label` for an accessible name when the visible text needs context ("dismiss" → "Dismiss: …").
 
 **Inputs** (all in `ui/fields/`)
 - `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled. `identifier` on `<TextField>` turns off spellcheck, autocorrect and auto-capitalization for hostnames, ids, URLs and names. `revealable` on a `type="password"` `<TextField>` adds a "Show password" button (`aria-pressed` carries the state); use it on login, setup and change-password.
@@ -245,7 +245,7 @@ Dialog rules, with no exception, since the primitives render a native `<dialog>`
 - Never write `role="dialog"` on a `div`.
 - A viewport layer (the `fixed` class or an inline `position: "fixed"`) is a `ui/` primitive; `restricted-classes` lists the few files that own one.
 - Never lock body overflow; the native modal makes the page behind inert.
-- `outline-none` (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or `focus-within:` ring, border, shadow or outline beside it, or the keyboard focus ring is gone (`restricted-classes`; `hover:` does not count). A `tabIndex={-1}` container that only takes script focus is the one case for an `eslint-disable-next-line` with that reason.
+- `outline-none` (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or `focus-within:` ring, border, shadow or outline beside it, or the keyboard focus ring is gone (`restricted-classes`; `hover:` does not count). A `tabIndex={-1}` container that takes script focus needs one too: `Popover` and `Menu` panels show `focus-visible:ring-inset` when a keyboard open focuses the panel itself.
 
 **Renderer-specific**
 - `<BboxOverlay>` — bounding box for image renderer (rectangle with color + position).

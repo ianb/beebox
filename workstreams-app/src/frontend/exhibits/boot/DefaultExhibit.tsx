@@ -31,9 +31,8 @@ function EnlargedFigure({ figure, onClose }: { figure: ExhibitFigure; onClose: (
       <button
         aria-label="Close the enlarged view"
         className="m-0 block min-h-full min-w-full cursor-zoom-out border-0 bg-transparent p-0 text-left"
-        // Closing through the dialog, as Escape does, returns focus to the
-        // figure's button; unmounting directly would drop it on the body.
-        onClick={() => { dialogRef.current?.close(); }}
+        // Unmounting closes the dialog (useModalDialog) and returns focus to the figure's button.
+        onClick={onClose}
         type="button"
       >
         <img

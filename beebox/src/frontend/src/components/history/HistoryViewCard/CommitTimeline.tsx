@@ -18,7 +18,7 @@ import { StatusMessage } from "../../ui/StatusMessage";
 import { phaseTone } from "../phase-tone";
 import { useBoxNow } from "../../../lib/box-clock";
 import { agoOnClock } from "../../../lib/relative-time";
-import { formatClock } from "@shared/relative-time";
+import { commitGap } from "./commit-gap";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -62,13 +62,6 @@ function groupBySession(commits: HistoryCommit[]): CommitGroup[] {
   }
 
   return groups;
-}
-
-/** Time between two commits as a clock, or null when negative or over an hour. */
-function commitGap(fromDate: string, toDate: string): string | null {
-  const diff = new Date(toDate).getTime() - new Date(fromDate).getTime();
-  if (diff < 0 || diff > 3600000) return null;
-  return formatClock(diff);
 }
 
 /**

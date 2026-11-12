@@ -62,10 +62,12 @@ export function formatDuration(ms: number): string {
 
 /**
  * A running clock, from milliseconds: "0:07", "3:20", and "1:05:09" from an
- * hour on. Minutes are not padded; seconds always are.
+ * hour on. Minutes are not padded; seconds always are. A negative or
+ * non-finite value has no reading and gives "—", so it never shows as "0:00".
  */
 export function formatClock(ms: number): string {
-  const totalSeconds = Number.isFinite(ms) && ms > 0 ? Math.floor(ms / SECOND) : 0;
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const totalSeconds = Math.floor(ms / SECOND);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = String(totalSeconds % 60).padStart(2, "0");
@@ -75,9 +77,9 @@ export function formatClock(ms: number): string {
 
 /**
  * The gap since the last message, for the agent's `time_passed` attribute:
- * null under six hours (the caller omits the attribute), else
- * {@link formatDuration}: "7h 30m", "2d 3h".
+ * null under six hours or for a non-finite gap (a bad stamp; the caller omits
+ * the attribute), else {@link formatDuration}: "7h 30m", "2d 3h".
  */
 export function formatTimePassed(ms: number): string | null {
-  return ms < 6 * HOUR ? null : formatDuration(ms);
+  return !Number.isFinite(ms) || ms < 6 * HOUR ? null : formatDuration(ms);
 }

@@ -19,6 +19,7 @@ import { useSyncExternalStore } from "react";
 import { subscribeToasts, getToasts, dismissToast, type Toast } from "./toast-store";
 import { cn } from "../../lib/cn";
 import { NOTICE_TONE_CLASSES } from "./Notice";
+import { InlineAction } from "./InlineAction";
 
 export function ToastViewport() {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
@@ -61,14 +62,9 @@ function ToastCard(props: { toast: Toast }) {
           {toast.action.label}
         </a>
       ) : null}
-      <button
-        type="button"
-        onClick={() => dismissToast(toast.id)}
-        aria-label={`Dismiss: ${toast.message}`}
-        className="flex-shrink-0 text-danger hover:text-danger-dark underline"
-      >
+      <InlineAction intent="danger" onClick={() => dismissToast(toast.id)} label={`Dismiss: ${toast.message}`} className="shrink-0">
         dismiss
-      </button>
+      </InlineAction>
     </div>
   );
 }

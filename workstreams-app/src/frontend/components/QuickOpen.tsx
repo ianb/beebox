@@ -31,17 +31,14 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "p") {
         event.preventDefault();
-        // Close an open dialog through close() so focus returns where it was
-        // (its close event then unmounts it); unmounting an open dialog skips that.
-        const dialog = dialogRef.current;
-        if (dialog?.open === true) dialog.close();
-        else setOpen((current) => !current);
+        // Closing unmounts the dialog; useModalDialog closes it and returns focus.
+        setOpen((current) => !current);
         return;
       }
     }
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); };
-  }, [dialogRef]);
+  }, []);
 
   if (!open) return null;
 
@@ -50,7 +47,6 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // makes (`RecentPage.tsx` recentRowTarget) — the palette is a way to reach a
   // document, not a way to reach the markdown reader specifically.
   function choose(relPath: string): void {
-    dialogRef.current?.close();
     setOpen(false);
     setQuery("");
     const issue = issueRelPathFromRepoPath(relPath);

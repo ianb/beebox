@@ -63,20 +63,22 @@ void test("formatDuration picks one rule per magnitude", async (t) => {
 // ## A running clock
 //
 // Minutes are not padded and seconds always are; an hour or more adds an
-// hours field with padded minutes. Fractions of a second floor, and a bad or
-// negative value reads as zero.
+// hours field with padded minutes. Fractions of a second floor. A negative or
+// non-finite value has no reading and gives a dash, never a plausible "0:00".
 void test("formatClock writes M:SS, then H:MM:SS from an hour", async (t) => {
   t.check(
     [0, 7 * SEC, 59_999, MIN, 3 * MIN + 20 * SEC, 59 * MIN + 59 * SEC, HOUR, HOUR + 5 * MIN + 9 * SEC, 26 * HOUR].map(formatClock).join(" / "),
     "0:00 / 0:07 / 0:59 / 1:00 / 3:20 / 59:59 / 1:00:00 / 1:05:09 / 26:00:00",
   );
-  t.check([-5, Number.NaN].map(formatClock).join(" / "), "0:00 / 0:00");
+  t.check([-5, Number.NaN, Infinity, -Infinity].map(formatClock).join(" / "), "— / — / — / —");
 });
 
 // ## Time passed
 //
 // The agent sees nothing under six hours, then the same text as a duration.
+// A non-finite gap comes from a bad stamp and also gives nothing, never "0ms".
 void test("formatTimePassed is null under six hours and a duration after", async (t) => {
   t.check([5 * HOUR + 59 * MIN, 0, -HOUR].map(formatTimePassed), [null, null, null]);
+  t.check([Number.NaN, Infinity, -Infinity].map(formatTimePassed), [null, null, null]);
   t.check([6 * HOUR, 7 * HOUR + 30 * MIN, DAY, 2 * DAY + 3 * HOUR].map(formatTimePassed), ["6h", "7h 30m", "1d", "2d 3h"]);
 });

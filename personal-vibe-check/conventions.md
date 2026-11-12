@@ -219,6 +219,11 @@ project's own config:
 }
 ```
 
+The preset exports shared entries from `@ianbicking/personal-vibe-check/eslint`
+to put in `entries`: `outlineNeedsFocusStyle` bans `outline-none` without a
+`focus:`, `focus-visible:` or `focus-within:` ring, border, shadow or outline
+beside it.
+
 **Options:**
 
 - `entries` (required): `{ all: Pattern[], none?: Pattern[], allowIn?: string[], message: string }[]`.
