@@ -19,6 +19,7 @@ import { CheckboxField } from "../ui/fields/field";
 import { Popover, type PopoverTriggerProps } from "../ui/Popover";
 import { InlineAction } from "../ui/InlineAction";
 import { CloseButton } from "../ui/CloseButton";
+import { MaterialContext } from "../ui/material";
 
 export interface HistoryFilterState {
   connectors: string[];
@@ -81,6 +82,8 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
   };
 
   return (
+    // The bar paints an app tint, so its controls keep app ink.
+    <MaterialContext.Provider value={false}>
     <section aria-label="History filters" className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectPopover
@@ -135,6 +138,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
         </div>
       ) : null}
     </section>
+    </MaterialContext.Provider>
   );
 }
 

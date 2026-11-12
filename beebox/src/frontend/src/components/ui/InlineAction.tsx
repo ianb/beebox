@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 /** `quiet` keeps the surrounding text's color and underlines only on hover: a link inside text that has its own treatment (a todo's words). */
 export type InlineActionIntent = "emphatic" | "subtle" | "danger" | "quiet";
@@ -24,7 +25,7 @@ export interface InlineActionProps {
   expanded?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
-  /** Take the subtle/emphatic colours from the enclosing card's material. */
+  /** Take the colours from the enclosing card's material. Defaults to the nearest Card's. */
   material?: boolean;
 }
 
@@ -38,6 +39,7 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
 const MATERIAL_INTENT_CLASSES: Partial<Record<InlineActionIntent, string>> = {
   emphatic: "text-card-pen hover:text-card-ink underline",
   subtle: "text-card-soft hover:text-card-ink underline",
+  danger: "text-card-danger hover:text-card-ink underline",
 };
 
 export function InlineAction({
@@ -53,6 +55,7 @@ export function InlineAction({
   className,
   material,
 }: InlineActionProps) {
+  material = useMaterial(material);
   const intent = intentArg ?? "emphatic";
   const disabled = disabledArg ?? false;
   const [pending, setPending] = useState(false);

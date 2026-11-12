@@ -93,9 +93,9 @@ export function QuestionContext({ question, headingId }: { question: QuestionInf
 
 /** The submit/dismiss row, pinned to the bottom of whatever scrolls the
  *  card: even a long option list never scrolls the answer buttons out of
- *  reach (the second fold the field-test operator hit). Card backgrounds
- *  are white, so the pinned row paints over content sliding beneath it. */
-const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
+ *  reach (the second fold the field-test operator hit). It paints the
+ *  card's paper over content sliding beneath it. */
+const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-card-paper py-2 -mb-2";
 
 /**
  * The row's secondary actions: "Answer in chat" where a list offers it, then
