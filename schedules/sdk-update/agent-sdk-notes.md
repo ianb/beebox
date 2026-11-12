@@ -33,15 +33,15 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.319`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.322`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.1` (Codex)
+- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.2` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.319` on 2026-11-08;
-  next `0.3.321` (settles 2026-11-11T19:03Z) and `0.3.322` (2026-11-12T01:57Z).
+- **Current recommendation:** Agent SDK moved to `0.3.322` on 2026-11-12
+  (taking `0.3.321`); nothing newer is published.
   `bin/land` refused 2026-11-07 and 11-08 over a
   dirty main checkout; both commits reached main and production by
   2026-11-09 (deploy `5a32213cd`). Codex stays held at `0.164.0` (0.165.0–0.167.0) on
@@ -72,6 +72,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
+### Codex 0.167.2 — HELD with 0.165.0–0.167.1, nothing relevant (published 2026-11-11T22:44Z)
+
+Turns incremental tool updates on by default for Google Cloud Vertex AI.
+beebox's Codex runs on the OpenAI provider. Held behind
+`issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
+
 ### Codex 0.167.1 — HELD with 0.165.0–0.167.0, nothing relevant (published 2026-11-10T21:32Z)
 
 Unitemized release; its two commits add opt-in incremental tools for OpenAI
@@ -79,7 +85,7 @@ Responses and restrict legacy incremental tools to Bedrock. beebox uses
 neither. Held behind
 `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 
-### 0.3.321 / 0.3.322 / Claude Code 2.1.321 / 2.1.322 — pending (published 2026-11-09T19:03Z and 2026-11-10T01:57Z); 0.3.320 never published
+### 0.3.321 / 0.3.322 / Claude Code 2.1.321 / 2.1.322 — APPLIED 2026-11-12 (published 2026-11-09T19:03Z and 2026-11-10T01:57Z); 0.3.320 never published
 
 - **Model:** Claude Fable 5.2 (`claude-fable-5-2`) is the default Fable. beebox's
   `fable` alias still pins 5.1; `claude-fable-5-2` verified on the current pin
@@ -99,7 +105,7 @@ neither. Held behind
   directory writes; Bash commands no longer run in the wrong folder when
   several are sent at once. The account-email check now refuses only commands
   that also name a User-Agent, so scheduled runs no longer stop at its prompt.
-- **Action:** Settled path; takeable 2026-11-11T19:03Z and 2026-11-12T01:57Z.
+- **Action:** Applied 2026-11-12, SDK pins only. Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.322, `pnpm -C beebox test` (15,108 pass, 2 fail, 4 skip; run with `BBX_TEST_IGNORE_LOAD=1` under memory-pressure level 2; `file-watcher.test.ts` passed alone, `card-shot/run.e2e.test.ts` failed alone with the agent-browser os error 35 recorded in `issues/closed/bugs/2026-07-10-agent-browser-screenshot-flake.md`; neither imports the SDK). The two Codex test failures from 10-30 and 11-07 are fixed on main.
 - **Sources:** [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), [Claude Code 2.1.321](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21321)
 
 ### Codex 0.167.0 — HELD with 0.165.0 / 0.166.0 (published 2026-11-06T01:40Z)
