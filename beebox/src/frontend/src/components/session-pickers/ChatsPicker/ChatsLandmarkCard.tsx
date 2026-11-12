@@ -8,8 +8,8 @@
  */
 
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { href, toSearch } from "../../../lib/routing";
+import { toSearch } from "../../../lib/routing";
+import { ButtonLink } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
@@ -17,6 +17,7 @@ import { SessionRow, type SessionRowItem } from "../SessionRow";
 import { DeadSessionSection, type DeadSessionRowItem } from "./DeadSessionRow";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
+import { ExpanderButton } from "../../landmarks/ChevronIcon";
 
 export interface PickerLandmark {
   /** Box-relative path; empty string for the root tile. */
@@ -52,13 +53,9 @@ export function ChatsLandmarkCard({
             ) : null}
           </Stack>
           <div className="ml-auto">
-            <Link
-              to={href(`/${boxSlug}/chat`)}
-              search={toSearch({ session: "new", contextDir: landmark.dir })}
-              className="px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
-            >
+            <ButtonLink to={`/${boxSlug}/chat`} search={toSearch({ session: "new", contextDir: landmark.dir })} size="sm">
               New
-            </Link>
+            </ButtonLink>
           </div>
         </div>
 
@@ -72,13 +69,7 @@ export function ChatsLandmarkCard({
 
         {hasOlder ? (
           <Stack gap="xs">
-            <button
-              type="button"
-              onClick={() => setShowOlder((v) => !v)}
-              className="self-start text-xs text-info-dark hover:underline"
-            >
-              {showOlder ? "Hide" : "Show"} older ({landmark.olderSessions.length})
-            </button>
+            <ExpanderButton open={showOlder} onToggle={() => setShowOlder((v) => !v)} label="Show older" count={landmark.olderSessions.length} />
             {showOlder ? (
               <Stack gap="xs">
                 {landmark.olderSessions.map((s) => (

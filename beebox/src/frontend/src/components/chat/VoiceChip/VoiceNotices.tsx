@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { hqFailureNotices } from "../../../lib/audio/hq-failure-notices";
 import { voiceStagingFailures, voiceStagingIsPersistent, voiceStagingStatus } from "../../../lib/audio/voice-staging-queue/queue";
+import { InlineAction } from "../../ui/InlineAction";
 
 /**
  * Voice problems that will not fix themselves, shown on the voice chip
@@ -64,7 +65,7 @@ export function VoiceNoticeList() {
       {notices.map((notice) => (
         <div key={notice.key} className="flex items-start gap-2 rounded bg-warning-50 px-2 py-1 text-xs text-warning-dark">
           <span className="flex-1">{notice.message}</span>
-          <button type="button" className="underline" onClick={() => notice.dismiss()}>Dismiss</button>
+          <InlineAction intent="subtle" onClick={() => notice.dismiss()}>Dismiss</InlineAction>
         </div>
       ))}
     </div>

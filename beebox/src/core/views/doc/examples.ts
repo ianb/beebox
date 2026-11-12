@@ -57,6 +57,7 @@ export default function InboxDashboard({ cards }) {
     <div>
       <h2>Inbox ({filtered.length} items)</h2>
       <input
+        aria-label="Filter"
         placeholder="Filter..."
         value={filter}
         onChange={e => setFilter(e.target.value)}

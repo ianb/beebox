@@ -6,8 +6,7 @@
  * chip that can be dismissed to drop the session filter.
  */
 
-import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
-import { useDismiss } from "../../hooks/useDismiss";
+import { useMemo, type ReactNode } from "react";
 import {
   TRIGGER_KINDS,
   TRIGGER_KIND_LABELS,
@@ -16,6 +15,10 @@ import {
 import { cn } from "../../lib/cn";
 import { Badge } from "../ui/Badge";
 import { Toggle } from "../ui/Toggle";
+import { CheckboxField } from "../ui/fields/field";
+import { Popover, type PopoverTriggerProps } from "../ui/Popover";
+import { InlineAction } from "../ui/InlineAction";
+import { CloseButton } from "../ui/CloseButton";
 
 export interface HistoryFilterState {
   connectors: string[];
@@ -108,29 +111,18 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
           onChange={(v) => onChange({ ...filter, feedback: v })}
         />
         {activeCount > 0 ? (
-          <button
-            id={`${idPrefix}-clear`}
-            type="button"
-            onClick={clearAll}
-            className="text-[0.6875rem] text-warm-700 hover:text-warm-900 underline ml-auto"
-          >
-            Clear
-          </button>
+          <span className="text-[0.6875rem] ml-auto">
+            <InlineAction id={`${idPrefix}-clear`} intent="subtle" onClick={clearAll}>
+              Clear
+            </InlineAction>
+          </span>
         ) : null}
       </div>
       {filter.session ? (
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Chat {filter.session.slice(0, 8)}</span>
-            <button
-              id={`${idPrefix}-clear-session`}
-              type="button"
-              onClick={() => onChange({ ...filter, session: null })}
-              className="ml-1 text-primary-dark hover:text-danger"
-              aria-label="Clear chat filter"
-            >
-              ×
-            </button>
+            <CloseButton id={`${idPrefix}-clear-session`} size="sm" ink label="Clear chat filter" onClick={() => onChange({ ...filter, session: null })} className="-my-1.5 -mr-2" />
           </Badge>
         </div>
       ) : null}
@@ -138,7 +130,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Path {filter.path}</span>
-            <button id={`${idPrefix}-clear-path`} type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
+            <CloseButton id={`${idPrefix}-clear-path`} size="sm" ink label="Clear path filter" onClick={() => onChange({ ...filter, path: null })} className="-my-1.5 -mr-2" />
           </Badge>
         </div>
       ) : null}
@@ -165,12 +157,6 @@ interface MultiSelectPopoverProps {
 }
 
 function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle }: MultiSelectPopoverProps) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => setOpen(false), []);
-  useDismiss({ root: rootRef, open, onDismiss: close });
-
   const hasSelection = selected.length > 0;
   const firstLabel = options.find((o) => o.value === selected[0])?.label ?? selected[0];
   const summary =
@@ -189,49 +175,38 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
       : [{ heading: null, options }];
 
   return (
-    <div className="relative" ref={rootRef}>
-      <FilterChipButton
-        id={id}
-        active={hasSelection}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        {summary}
-        <span className="ml-1 text-warm-400" aria-hidden="true">▾</span>
-      </FilterChipButton>
-      {open ? (
-        <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 w-60 max-h-72 overflow-auto">
-          {options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-700 italic">No values</div>
-          ) : (
-            sections.map((section) => (
-              <div key={section.heading ?? ""}>
-                {section.heading === null ? null : (
-                  <div className="px-3 pt-1.5 pb-0.5 text-[0.625rem] uppercase tracking-wide text-warm-700">
-                    {section.heading}
-                  </div>
-                )}
-                {section.options.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-warm-700 hover:bg-warm-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(opt.value)}
-                      onChange={() => onToggle(opt.value)}
-                      className="accent-primary"
-                    />
-                    <span className="truncate">{opt.label}</span>
-                  </label>
-                ))}
+    <Popover
+      label={label}
+      trigger={({ toggle, ariaProps }) => (
+        <FilterChipButton id={id} active={hasSelection} onClick={toggle} ariaProps={ariaProps}>
+          {summary}
+          <span className="ml-1 text-warm-400" aria-hidden="true">▾</span>
+        </FilterChipButton>
+      )}
+    >
+      {options.length === 0 ? (
+        <div className="text-xs text-warm-700 italic">No values</div>
+      ) : (
+        sections.map((section) => (
+          <div key={section.heading ?? ""}>
+            {section.heading === null ? null : (
+              <div className="pt-1.5 pb-0.5 text-[0.625rem] uppercase tracking-wide text-warm-700">
+                {section.heading}
               </div>
-            ))
-          )}
-        </div>
-      ) : null}
-    </div>
+            )}
+            {section.options.map((opt) => (
+              <CheckboxField
+                key={opt.value}
+                checked={selected.includes(opt.value)}
+                onChange={() => onToggle(opt.value)}
+                label={<span className="block truncate">{opt.label}</span>}
+                className="py-1"
+              />
+            ))}
+          </div>
+        ))
+      )}
+    </Popover>
   );
 }
 
@@ -257,19 +232,19 @@ function ToggleChip({ id, label, checked, onChange }: ToggleChipProps) {
 interface FilterChipButtonProps {
   id: string;
   active: boolean;
-  onClick: () => void;
+  onClick: PopoverTriggerProps["toggle"];
   children: ReactNode;
-  "aria-haspopup"?: "listbox";
-  "aria-expanded"?: boolean;
+  /** The Popover trigger's ARIA, when the chip opens one. */
+  ariaProps?: PopoverTriggerProps["ariaProps"];
 }
 
-function FilterChipButton({ id, active, onClick, children, ...aria }: FilterChipButtonProps) {
+function FilterChipButton({ id, active, onClick, children, ariaProps }: FilterChipButtonProps) {
   return (
     <button
       id={id}
       type="button"
       onClick={onClick}
-      {...aria}
+      {...ariaProps}
       className={cn(
         "inline-flex items-center text-xs px-2 py-1 rounded-full border transition-colors",
         active

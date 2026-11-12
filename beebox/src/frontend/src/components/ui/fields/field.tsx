@@ -1,10 +1,14 @@
 import { useId, useState, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "../../../lib/cn";
 import { RevealButton } from "./reveal-button";
-import { FieldMessage, FieldShell, fieldMessageId, inputClasses, isShown, useFieldInk } from "./shell";
+import { FieldShell, fieldMessageId, inputClasses, isShown, type FieldTone } from "./shell";
 
 export { RadioGroup } from "./radio";
 export type { RadioOption, RadioGroupProps } from "./radio";
+export { Checkbox, CheckboxField } from "./checkbox";
+export type { CheckboxProps, CheckboxFieldProps } from "./checkbox";
+export { useFilePicker } from "./file-picker";
+export type { FilePickerOptions } from "./file-picker";
 
 // ---------- TextField ----------
 
@@ -73,7 +77,7 @@ export function TextField({
       required={required}
       aria-invalid={hasError ? true : undefined}
       aria-describedby={fieldMessageId(fieldId, { error, helper })}
-      className={inputClasses(hasError, canReveal ? cn("pr-10", inputClassName) : inputClassName)}
+      className={inputClasses({ error: hasError }, canReveal ? cn("pr-10", inputClassName) : inputClassName)}
       {...identifierProps}
       {...rest}
     />
@@ -142,7 +146,7 @@ export function TextareaField({
         rows={rows}
         aria-invalid={hasError ? true : undefined}
         aria-describedby={fieldMessageId(fieldId, { error, helper })}
-        className={inputClasses(hasError, inputClassName)}
+        className={inputClasses({ error: hasError }, inputClassName)}
         {...rest}
       />
     </FieldShell>
@@ -196,73 +200,10 @@ export function NumberField({
         required={required}
         aria-invalid={hasError ? true : undefined}
         aria-describedby={fieldMessageId(fieldId, { error, helper })}
-        className={inputClasses(hasError, inputClassName)}
+        className={inputClasses({ error: hasError }, inputClassName)}
         {...rest}
       />
     </FieldShell>
-  );
-}
-
-// ---------- CheckboxField ----------
-
-type NativeCheckboxPassThrough = Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  "checked" | "onChange" | "id" | "className" | "type" | "children" | "value"
->;
-
-export interface CheckboxFieldProps extends NativeCheckboxPassThrough {
-  label: ReactNode;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  error?: ReactNode;
-  helper?: ReactNode;
-  id?: string;
-  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
-  className?: string;
-}
-
-export function CheckboxField({
-  label,
-  checked,
-  onChange,
-  error,
-  helper,
-  id,
-  required,
-  disabled,
-  className,
-  ...rest
-}: CheckboxFieldProps) {
-  required = required ?? false;
-  const autoId = useId();
-  const fieldId = id !== undefined ? id : autoId;
-  const hasError = isShown(error);
-  const ink = useFieldInk();
-  const labelClass = disabled === true
-    ? `flex items-center gap-2 text-sm ${ink.label} opacity-50`
-    : `flex items-center gap-2 text-sm ${ink.label} cursor-pointer`;
-  return (
-    <div className={className}>
-      <label htmlFor={fieldId} className={labelClass}>
-        <input
-          id={fieldId}
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          required={required}
-          disabled={disabled}
-          aria-invalid={hasError ? true : undefined}
-          aria-describedby={fieldMessageId(fieldId, { error, helper })}
-          className="accent-primary disabled:cursor-not-allowed"
-          {...rest}
-        />
-        <span className="min-w-0 flex-1">
-          {label}
-          {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
-        </span>
-      </label>
-      <FieldMessage fieldId={fieldId} error={error} helper={helper} />
-    </div>
   );
 }
 
@@ -291,6 +232,8 @@ export interface SelectFieldProps extends NativeSelectPassThrough {
   /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
   hideLabel?: boolean;
+  /** `dark` for a select on the dark capture screen, matching `ModalDialog`'s dark tone. */
+  tone?: FieldTone;
 }
 
 export function SelectField({
@@ -305,6 +248,7 @@ export function SelectField({
   className,
   required,
   hideLabel,
+  tone,
   ...rest
 }: SelectFieldProps) {
   required = required ?? false;
@@ -313,7 +257,7 @@ export function SelectField({
   const fieldId = id !== undefined ? id : autoId;
   const hasError = isShown(error);
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className} tone={tone}>
       <select
         id={fieldId}
         value={value}
@@ -321,7 +265,7 @@ export function SelectField({
         required={required}
         aria-invalid={hasError ? true : undefined}
         aria-describedby={fieldMessageId(fieldId, { error, helper })}
-        className={inputClasses(hasError, inputClassName)}
+        className={inputClasses({ error: hasError, tone }, inputClassName)}
         {...rest}
       >
         {options.map((opt) => (

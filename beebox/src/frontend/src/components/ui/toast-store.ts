@@ -95,11 +95,14 @@ export interface ToastStore {
   /** Raise an error toast; identical messages collapse into one with a counter. */
   error: (message: string, opts?: ToastOptions) => void;
   /**
-   * Stop expiry while `held` (a modal dialog covers the toasts, so a timer
-   * running then would expire them unseen); on release every toast starts a
-   * full timer, so it is visible for the whole interval.
+   * Stop expiry until the returned release runs. `ModalDialog` takes a hold
+   * while it is open: a modal covers the toasts, so a timer running then
+   * would expire them unseen. Holds are counted, so overlapping modals (a
+   * lightbox opened from a dialog) keep the hold until the last releases;
+   * then every toast starts a full timer, so it is visible for the whole
+   * interval. Each release works once; a second call does nothing.
    */
-  hold: (held: boolean) => void;
+  acquireHold: () => () => void;
   /** Whether expiry is held now. */
   isHeld: () => boolean;
   /** Dismiss a toast by id (the user's close button). No-op if already gone. */
@@ -118,7 +121,7 @@ export function createToastStore(options?: ToastStoreOptions): ToastStore {
   let nextId = 1;
   const timers = new Map<number, CancelTimer>();
   const listeners = new Set<() => void>();
-  let held = false;
+  let holds = 0;
 
   function notify(): void {
     for (const listener of listeners) listener();
@@ -127,13 +130,23 @@ export function createToastStore(options?: ToastStoreOptions): ToastStore {
   function armExpiry(id: number): void {
     timers.get(id)?.();
     timers.delete(id);
-    if (!held) timers.set(id, schedule(() => remove(id), ttlMs));
+    if (holds === 0) timers.set(id, schedule(() => remove(id), ttlMs));
   }
 
-  function hold(next: boolean): void {
-    if (next === held) return;
-    held = next;
+  function rearmAll(): void {
     for (const toast of toasts) if (toast.persist !== true) armExpiry(toast.id);
+  }
+
+  function acquireHold(): () => void {
+    holds += 1;
+    if (holds === 1) rearmAll();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      holds -= 1;
+      if (holds === 0) rearmAll();
+    };
   }
 
   function remove(id: number): void {
@@ -179,8 +192,8 @@ export function createToastStore(options?: ToastStoreOptions): ToastStore {
 
   return {
     error,
-    hold,
-    isHeld: () => held,
+    acquireHold,
+    isHeld: () => holds > 0,
     dismiss: remove,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -199,7 +212,7 @@ const store = createToastStore();
 
 export const toastError = store.error;
 export const dismissToast = store.dismiss;
-export const holdToasts = store.hold;
+export const acquireHold = store.acquireHold;
 export const toastsHeld = store.isHeld;
 export const subscribeToasts = store.subscribe;
 export const getToasts = store.getSnapshot;

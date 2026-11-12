@@ -2,7 +2,7 @@
 // It carries its address only when the composer is the product one; a dev
 // gallery copy renders without ids.
 // First, and bare: React DOM must load after the happy-dom window exists.
-// The composer mounts in the DOM harness: server rendering warns that Dropdown's
+// The composer mounts in the DOM harness: server rendering warns that Menu's
 // layout effect does nothing there.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, createRef, type ReactElement } from "react";

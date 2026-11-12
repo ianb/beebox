@@ -12,6 +12,8 @@ import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { errorMessage } from "@shared/error-guards";
+import { StatusMessage } from "../ui/StatusMessage";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
 type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
@@ -61,15 +63,6 @@ function deviceHeading(scope: DeviceScope | undefined): string {
   return scope === "own" ? "Your paired devices" : "Paired devices";
 }
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function DeviceRow({ device }: { device: MobileDevice }) {
   const utils = trpc.useUtils();
   const revokeMutation = trpc.pairing.revokeDevice.useMutation({
@@ -82,9 +75,9 @@ function DeviceRow({ device }: { device: MobileDevice }) {
       <Text as="div">
         <Text weight="medium">{device.label}</Text>{" "}
         <Text size="xs" tone="muted" className="ml-1">
-          Paired {formatDate(device.createdAt)}
-          {device.lastUsedAt ? ` - last used ${formatDate(device.lastUsedAt)}` : ""}
-          {device.revokedAt ? ` - unpaired ${formatDate(device.revokedAt)}` : ""}
+          Paired {friendlyDate(device.createdAt)}
+          {device.lastUsedAt ? ` - last used ${friendlyDate(device.lastUsedAt)}` : ""}
+          {device.revokedAt ? ` - unpaired ${friendlyDate(device.revokedAt)}` : ""}
         </Text>
       </Text>
       {!device.revokedAt ? (
@@ -179,7 +172,7 @@ export function CompanionPairingSection() {
               aria-label="iOS pairing QR code"
               dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
             />
-            <Text size="xs" tone="muted">Expires {formatDate(ticket.expiresAt)}</Text>
+            <Text size="xs" tone="muted">Expires {friendlyDate(ticket.expiresAt)}</Text>
             <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
               {ticket.deepLink}
             </code>
@@ -222,7 +215,7 @@ export function CompanionPairingSection() {
         <Stack gap="xs">
           <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
           {devicesQuery.isLoading ? (
-            <Hint>Loading devices...</Hint>
+            <StatusMessage variant="inline" busy>Loading devices…</StatusMessage>
           ) : devicesQuery.error ? (
             <ErrorText>Devices could not be loaded. {devicesQuery.error.message}</ErrorText>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (

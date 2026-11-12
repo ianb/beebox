@@ -30,9 +30,9 @@ void test("Two Text spans in a Stack are flex items, so each takes its own line 
   t.check(html(h(Stack, { gap: "xs", children: h(React.Fragment, null, h(Text, null, "Label"), h(Text, null, "Description")) })), "<div class=\"flex flex-col gap-1\"><span class=\"text-warm-900 text-base\">Label</span><span class=\"text-warm-900 text-base\">Description</span></div>");
 });
 
-// The default gap is `md`, and `as` still selects the element:
+// The default gap is `md`, and `as` still selects the element (lists are `List`):
 void test("The default gap is md, and as still selects the element:", async (t) => {
-  t.check(html(h(Stack, { as: "ul", children: h("li", null, "a") })), "<ul role=\"list\" class=\"flex flex-col gap-3\"><li>a</li></ul>");
+  t.check(html(h(Stack, { as: "section", children: "a" })), "<section class=\"flex flex-col gap-3\">a</section>");
 });
 
 // `Stack` also serves as a page-level scroll container (it absorbed `Column`).

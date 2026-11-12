@@ -12,7 +12,7 @@ import { Hint } from "../../ui/Hint";
 import { Row } from "../../ui/Row";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
-import { TextField } from "../../ui/fields/field";
+import { CheckboxField, TextField } from "../../ui/fields/field";
 import { ExternalLink } from "../../ui/ExternalLink";
 import { FriendlyDate } from "../../ui/FriendlyDate";
 import { AdminSectionCard } from "../AdminSectionCard";
@@ -21,6 +21,7 @@ import { OrphanPublications } from "./OrphanPublications";
 import { Accordion } from "../../ui/Accordion";
 import { TokenSetupGuidance } from "./guidance";
 import { RevealCloudflareToken } from "./RevealCloudflareToken";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
 
@@ -83,7 +84,7 @@ export function CloudflarePublishConnectionsSection() {
   }
 
   if (connections.isLoading) {
-    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><Hint>Loading Cloudflare connections…</Hint></AdminSectionCard>;
+    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><StatusMessage variant="inline" busy>Loading Cloudflare connections…</StatusMessage></AdminSectionCard>;
   }
 
   return (
@@ -263,16 +264,12 @@ function ConnectionCard({
           {connection.tokenStatus === "active" ? <Button id={`bbx-admin-cf-publish-revoke-${connection.name}`} intent="destructive" disabled={pending || !revokeAcknowledged} onClick={onRevoke}>Revoke credential</Button> : null}
         </Row>
         {connection.tokenStatus === "active" ? (
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input
-              id={`bbx-admin-cf-publish-revoke-ack-${connection.name}`}
-              type="checkbox"
-              className="mt-1"
-              checked={revokeAcknowledged}
-              onChange={(event) => setRevokeAcknowledged(event.target.checked)}
-            />
-            <Text as="span" size="sm">Revoking removes this host&apos;s token but does not take live sites offline. I have disabled sites first, or understand I will need a working credential to do so.</Text>
-          </label>
+          <CheckboxField
+            id={`bbx-admin-cf-publish-revoke-ack-${connection.name}`}
+            checked={revokeAcknowledged}
+            onChange={setRevokeAcknowledged}
+            label="Revoking removes this host's token but does not take live sites offline. I have disabled sites first, or understand I will need a working credential to do so."
+          />
         ) : null}
         <Hint>Cloudflare dashboard: <ExternalLink href={`https://dash.cloudflare.com/${connection.accountId}`} id={`bbx-admin-cf-publish-dashboard-${connection.name}`} variant="inline">open this account</ExternalLink></Hint>
       </Stack>

@@ -4,7 +4,7 @@
  * Full-width directory listing for the canonical Browse card.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { apiRawFileUrl, getApiBase } from "../../api";
 import type { RealtimeEvent } from "../../hooks/useBusSubscription";
@@ -16,7 +16,7 @@ import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc/client";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
-import { BrowseContextMenu } from "./components/BrowseContextMenu";
+import { BrowseContextMenu, contextMenuOpening, type ContextMenuState, type FileContextMenuEvent } from "./components/BrowseContextMenu";
 import { Stack } from "../../components/ui/Stack";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody/view";
@@ -29,12 +29,6 @@ interface BrowseBodyProps {
   onNavigate: (path: string, options: { kind: BrowseMissingKind; replace?: boolean }) => void;
   onFileNavigate: (target: ViewTarget) => void;
   onLinkNavigate: (target: ViewTarget) => void;
-}
-
-interface ContextMenuState {
-  x: number;
-  y: number;
-  path: string;
 }
 
 /**
@@ -75,26 +69,6 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (contextMenu === null) return;
-
-    const closeMenu = () => setContextMenu(null);
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
-    };
-
-    window.addEventListener("click", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("click", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [contextMenu]);
-
   const handleDelete = useCallback(async (path: string) => {
     if (deletingPath !== null) return;
 
@@ -118,9 +92,12 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
     }
   }, [deletingPath, dirPath, utils.status.browse]);
 
-  const handleFileContextMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>, path: string) => {
+  const handleFileContextMenu = useCallback((event: FileContextMenuEvent, path: string) => {
+    const opening = contextMenuOpening(event, path);
+    if (opening === null) return;
     event.preventDefault();
-    setContextMenu({ x: event.clientX, y: event.clientY, path });
+    // A keyboard-opened menu stays put when the browser follows the key with its own contextmenu event.
+    setContextMenu((current) => (current?.openedBy === "keyboard" && current.path === path && !("key" in event) ? current : opening));
   }, []);
 
   return (
@@ -150,11 +127,10 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
 
       {contextMenu !== null ? (
         <BrowseContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          path={contextMenu.path}
+          menu={contextMenu}
           deletingPath={deletingPath}
           onDelete={handleDelete}
+          onClose={() => setContextMenu(null)}
         />
       ) : null}
     </Stack>

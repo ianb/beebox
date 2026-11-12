@@ -14,6 +14,8 @@ import { Hint } from "../ui/Hint";
 import { TextField } from "../ui/fields/field";
 import { isComposing } from "../../lib/ime";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { StatusMessage } from "../ui/StatusMessage";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";
 
@@ -101,7 +103,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
       <Stack gap="sm">
         <Text size="sm" weight="medium">Password reset link for {resetLink.email}</Text>
         <Text mono breakAll size="sm">{resetLink.url}</Text>
-        <Text size="xs" tone="muted">Expires {new Date(resetLink.expiresAt).toLocaleTimeString()}</Text>
+        <Text size="xs" tone="muted">Expires {friendlyDate(resetLink.expiresAt, "time")}</Text>
         <Text size="xs" tone="muted">
           Single-use. Creating another link replaces this one. Send it only through a trusted channel.
         </Text>
@@ -123,7 +125,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 function LoadingAllowedUsers() {
   return (
     <AdminSectionCard id="allowed-users" description={DESCRIPTION} busy>
-      <Hint>Loading allowed users…</Hint>
+      <StatusMessage variant="inline" busy>Loading allowed users…</StatusMessage>
     </AdminSectionCard>
   );
 }

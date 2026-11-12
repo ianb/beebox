@@ -23,13 +23,13 @@ import { Row } from "../../ui/Row";
 import { Stack } from "../../ui/Stack";
 import { Heading } from "../../ui/Heading";
 import { ErrorText } from "../../ui/ErrorText";
-import { Hint } from "../../ui/Hint";
 import { Button } from "../../ui/Button";
 import { BoxSecretsView } from "./box";
 import { ConnectServiceSection } from "./connect";
 import { GrantExistingForm, grantableSecrets } from "./grant";
 import { MachineSecretsView } from "./machine";
 import { AdminSectionCard } from "../AdminSectionCard";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 const DESCRIPTION =
   "API keys live in one store outside every box, and each box holds a grant to the ones it may use. Stored values stay hidden unless you choose Show.";
@@ -50,7 +50,7 @@ export function SecretsSection() {
   if (status.isLoading) {
     return (
       <AdminSectionCard id="secrets" description={DESCRIPTION} busy>
-        <Hint>Loading secrets…</Hint>
+        <StatusMessage variant="inline" busy>Loading secrets…</StatusMessage>
       </AdminSectionCard>
     );
   }

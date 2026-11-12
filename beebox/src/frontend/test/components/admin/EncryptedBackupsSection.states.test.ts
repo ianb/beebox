@@ -3,7 +3,6 @@
 // Setup keeps the password write-only and names its custody; configured state
 // shows a copyable host command plus the unconfirmed runner prerequisite.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, not } from "@ianbicking/tap-check/check";

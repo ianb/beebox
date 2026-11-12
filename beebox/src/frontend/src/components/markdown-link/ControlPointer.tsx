@@ -35,7 +35,7 @@ import { isNativeShell } from "../chat/native-post";
 import { windowNativeControlBridge } from "../chat/native-command-bridge";
 import { NATIVE_POINT_TIMEOUT_MS, requestNativePointAtControl } from "../chat/native-control-point";
 import { performControlAction, type ControlTarget } from "../../lib/ui-scan/actions";
-import { isRectInViewport } from "../../lib/ui-scan/ring";
+import { isRectInViewport, RING_DURATION_MS } from "../../lib/ui-scan/ring";
 import { isElementVisible } from "../../lib/ui-scan/live-dom/dom";
 import { resolveVisibleControl, type ResolveFailure } from "../../lib/ui-scan/resolve";
 import type { ControlAction } from "../../lib/ui-scan/types";
@@ -329,7 +329,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       </button>
       {description === null ? null : <span className="text-warm-700"> — {description}</span>}
       {ring === null ? null : (
-        <ControlRing key={ring.seq} target={ring.element} onDone={() => setRing(null)} />
+        <ControlRing key={ring.seq} target={ring.element} durationMs={RING_DURATION_MS} onDone={() => setRing(null)} />
       )}
     </>
   );

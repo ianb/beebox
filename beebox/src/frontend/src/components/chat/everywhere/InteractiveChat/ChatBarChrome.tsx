@@ -26,7 +26,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "../../../../lib/trpc/client";
-import { PortaledMenuScope } from "../../../ui/Dropdown";
+import { PortaledMenuScope } from "../../../ui/Menu";
 import { useAppBarHereMenuClaim, useAppBarPlace, useAppBarSlots } from "../../../app-bar-chrome";
 import { contextChipLabel } from "./context-chip-label";
 import { ContextMenuBody } from "./ContextMenuBody";

@@ -82,9 +82,9 @@ void test("moving into an embedded card clears the outer hover outline", async (
   if (outer === undefined || inner === undefined) throw new Error("paragraphs missing");
   for (const paragraph of paragraphs) paragraph.getBoundingClientRect = () => DOMRect.fromRect({ x: 10, y: 10, width: 200, height: 40 });
   await view.act(() => { outer.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })); });
-  t.check([...view.container.querySelectorAll("[aria-hidden].pointer-events-none")].map((node) => node.tagName), ["DIV"]);
+  t.check([...document.body.querySelectorAll("[aria-hidden].pointer-events-none")].map((node) => node.tagName), ["DIV"]);
   await view.act(() => { inner.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })); });
-  t.check([...view.container.querySelectorAll("[aria-hidden].pointer-events-none")].map((node) => node.tagName), ["DIV"]);
+  t.check([...document.body.querySelectorAll("[aria-hidden].pointer-events-none")].map((node) => node.tagName), ["DIV"]);
 });
 
 // A new touch point replaces every other source's unconfirmed point.

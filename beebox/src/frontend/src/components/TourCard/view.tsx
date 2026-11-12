@@ -16,6 +16,7 @@ import { Markdown } from "../Markdown/body";
 import { Heading } from "../ui/Heading";
 import { Badge } from "../ui/Badge";
 import { Stack } from "../ui/Stack";
+import { List } from "../ui/List";
 import { bbxSource } from "../../lib/source-tag";
 import { selectedBeatIndex, tourCurrent, type BeatPick } from "./beat-selection";
 import type { RendererProps } from "../../file-type-registry";
@@ -26,7 +27,7 @@ function BeatTitles({ beats, currentIndex, selected, onPick }: {
   beats: readonly TourBeat[]; currentIndex: number | null; selected: number | null; onPick: (title: string) => void;
 }) {
   return (
-    <ol aria-label="Steps" className="flex flex-wrap gap-1">
+    <List ordered direction="wrap" gap="xs" aria-label="Steps">
       {beats.map((beat, index) => (
         <li key={beat.title}>
           <button type="button" aria-current={index === currentIndex ? "step" : undefined} aria-pressed={index === selected}
@@ -36,7 +37,7 @@ function BeatTitles({ beats, currentIndex, selected, onPick }: {
           </button>
         </li>
       ))}
-    </ol>
+    </List>
   );
 }
 

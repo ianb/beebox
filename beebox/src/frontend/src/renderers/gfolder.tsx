@@ -32,6 +32,7 @@ import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "../directory-listing";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { parentDir } from "../lib/parent-dir";
+import { StatusMessage } from "../components/ui/StatusMessage";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -197,7 +198,7 @@ function GfolderView({ data, onNavigate }: RendererProps) {
 
       <Stack gap="xs">
         <Text size="sm" weight="semibold" uppercase tone="muted">Mirrored here</Text>
-        {listing.isLoading ? <Text size="sm" tone="subtle">Loading…</Text> : null}
+        {listing.isLoading ? <StatusMessage variant="inline" busy>Loading mirrored files…</StatusMessage> : null}
         {listing.error === null ? null : (
           <ErrorText>Error: {listing.error.message}</ErrorText>
         )}

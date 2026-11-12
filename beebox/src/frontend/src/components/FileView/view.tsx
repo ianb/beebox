@@ -51,6 +51,7 @@ import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
 import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
 import { usePointSelection } from "../point-selection-context";
+import { StatusMessage } from "../ui/StatusMessage";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -162,8 +163,8 @@ function useMovedCardRecovery({
 }
 
 function pendingFileViewLabel({ loading, followingMove }: { loading: boolean; followingMove: boolean }): string | null {
-  if (loading) return "Loading...";
-  if (followingMove) return "Following moved card...";
+  if (loading) return "Loading…";
+  if (followingMove) return "Following moved card…";
   return null;
 }
 
@@ -279,7 +280,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
   }, [path, data, binding]);
 
   const pendingLabel = pendingFileViewLabel({ loading, followingMove });
-  if (pendingLabel !== null) return <div aria-busy="true" className="p-4 text-warm-700">{pendingLabel}</div>;
+  if (pendingLabel !== null) return <StatusMessage variant="inline" busy className="p-4">{pendingLabel}</StatusMessage>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;

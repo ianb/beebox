@@ -11,6 +11,7 @@ import { Card } from "../ui/Card";
 import { Heading } from "../ui/Heading";
 import { Text } from "../ui/Text";
 import { GoogleServiceProblem } from "./GoogleConnectLink";
+import { StatusMessage } from "../ui/StatusMessage";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
@@ -86,7 +87,7 @@ export function CalendarSection() {
     return (
       <Card material padding="lg" border="none" shadow>
         <Heading level={2} className="mb-4">Google Calendar</Heading>
-        <Text as="p" size="sm" tone="muted">Loading calendars...</Text>
+        <StatusMessage variant="inline" busy>Loading calendars…</StatusMessage>
       </Card>
     );
   }

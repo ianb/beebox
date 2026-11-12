@@ -129,9 +129,8 @@ export default function Prose({ cards }) {
 
 // ## A todo's due date renders in Node
 //
-// The todo widget shows its due date through Temporal. Node 24 has no
-// Temporal, so the view check installs the polyfill before rendering, as the
-// browser app does in boot(); without it this view would fail the check.
+// The todo widget formats its due date with the same code in Node as in the
+// browser, so a view that shows one passes the check.
 void test("A Markdown todo with a due date renders under the view check", async (t) => {
   t.teardown(async () => {
     try {

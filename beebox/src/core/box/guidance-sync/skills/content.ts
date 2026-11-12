@@ -223,5 +223,5 @@ Views are React (\`.tsx\`) components that render box data in the browser. **Rea
 
 A view always gives a **card type** a custom interface; there is no card-less standalone view.
 
-To see a view you built or changed, open a card it renders in the box browser and capture it at phone and desktop widths: \`bbx browser set viewport 390 844\`, \`bbx browser open /views/<card path>\`, \`bbx browser screenshot --card\`, then \`set viewport 1280 900\` and capture again. Then try its controls with \`snapshot -i\` and \`click\`. The \`browser\` skill has the loop and what the output lines mean. Do not use \`bbx chat screenshot\` for this: it shows only what the person has on their screen. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
+To see a view you built or changed, follow "Testing a View" in views.md. Do not use \`bbx chat screenshot\` for this: it shows only what the person has on their screen. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
 `;

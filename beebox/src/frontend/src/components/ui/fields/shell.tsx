@@ -7,11 +7,23 @@ import { useMaterial } from "../material";
 // so it shows on light paper too; the light color scheme draws a select's
 // arrow and menu for the white field on a dark theme. The gold focus ring is
 // faint on white, so focus also darkens the border.
-const INPUT_BASE = "w-full border rounded px-3 py-2 bg-white text-warm-900 [color-scheme:light] focus:outline-none focus:ring-2 focus:ring-accent focus:border-warm-900 disabled:opacity-50 disabled:cursor-not-allowed";
+const INPUT_BASE = "w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
 
-export function inputClasses(error: boolean, extra?: string): string {
-  const border = error ? "border-danger" : "border-warm-700";
-  return cn(INPUT_BASE, border, extra);
+/**
+ * `dark` is for a control on the dark capture screen: the field and ink of
+ * `ModalDialog`'s dark tone, with a gray-400 edge (about 6.7:1 on gray-900) and the
+ * dark color scheme for a select's arrow and menu.
+ */
+export type FieldTone = "light" | "dark";
+
+const TONE_CLASSES: Record<FieldTone, { field: string; border: string }> = {
+  light: { field: "bg-white text-warm-900 [color-scheme:light] focus:border-warm-900", border: "border-warm-700" },
+  dark: { field: "bg-gray-900 text-white [color-scheme:dark] focus:border-white", border: "border-gray-400" },
+};
+
+export function inputClasses(state: { error: boolean; tone?: FieldTone }, extra?: string): string {
+  const tone = TONE_CLASSES[state.tone ?? "light"];
+  return cn(INPUT_BASE, tone.field, state.error ? "border-danger" : tone.border, extra);
 }
 
 interface FieldShellProps {
@@ -23,13 +35,16 @@ interface FieldShellProps {
   helper: ReactNode | undefined;
   children: ReactNode;
   className?: string;
+  tone?: FieldTone;
 }
 
-/** Label and helper ink for a field: the app palette, or the enclosing Card's material. */
-export function useFieldInk(): { label: string; helper: string } {
-  return useMaterial(undefined)
-    ? { label: "text-card-ink", helper: "text-card-soft" }
-    : { label: "text-warm-700", helper: "text-warm-700" };
+/** Label, helper and error ink for a field: the app palette, the enclosing Card's material, or the dark tone. */
+export function useFieldInk(tone?: FieldTone): { label: string; helper: string; error: string } {
+  const material = useMaterial(undefined);
+  if (tone === "dark") return { label: "text-gray-300", helper: "text-gray-300", error: "text-danger-light" };
+  return material
+    ? { label: "text-card-ink", helper: "text-card-soft", error: "text-danger-dark" }
+    : { label: "text-warm-700", helper: "text-warm-700", error: "text-danger-dark" };
 }
 
 /**
@@ -52,16 +67,16 @@ export function fieldMessageId(fieldId: string, message: { error: ReactNode | un
 }
 
 /** The error, or else the helper, under a field. Its id is `fieldMessageId`'s. */
-export function FieldMessage({ fieldId, error, helper }: { fieldId: string; error: ReactNode | undefined; helper: ReactNode | undefined }) {
-  const ink = useFieldInk();
+export function FieldMessage({ fieldId, error, helper, tone }: { fieldId: string; error: ReactNode | undefined; helper: ReactNode | undefined; tone?: FieldTone }) {
+  const ink = useFieldInk(tone);
   const id = `${fieldId}-message`;
-  if (isShown(error)) return <div id={id} className="text-danger-dark text-sm mt-1" role="alert">{error}</div>;
+  if (isShown(error)) return <div id={id} className={`${ink.error} text-sm mt-1`} role="alert">{error}</div>;
   if (isShown(helper)) return <div id={id} className={`text-xs ${ink.helper} mt-1`}>{helper}</div>;
   return null;
 }
 
-export function FieldShell({ id, label, hideLabel, required, error, helper, children, className }: FieldShellProps) {
-  const ink = useFieldInk();
+export function FieldShell({ id, label, hideLabel, required, error, helper, children, className, tone }: FieldShellProps) {
+  const ink = useFieldInk(tone);
   const labelClass = hideLabel
     ? "sr-only"
     : `block text-sm font-medium ${ink.label} mb-1`;
@@ -72,7 +87,7 @@ export function FieldShell({ id, label, hideLabel, required, error, helper, chil
         {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </label>
       {children}
-      <FieldMessage fieldId={id} error={error} helper={helper} />
+      <FieldMessage fieldId={id} error={error} helper={helper} tone={tone} />
     </div>
   );
 }

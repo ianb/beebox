@@ -12,6 +12,7 @@
  */
 
 import type { RetryFeedback } from "../../pages/capture/retry-feedback";
+import { Spinner } from "../ui/Spinner";
 
 interface CaptureControlsProps {
   includeControlIds?: boolean;
@@ -68,7 +69,7 @@ function UploadFailureBanner(props: {
   if (props.feedback.phase === "retrying") {
     return (
       <div className="flex items-center justify-center gap-2 text-warning-light text-sm py-3 px-4" aria-live="polite">
-        <span className="w-4 h-4 border-2 border-warning-light border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        <Spinner />
         Retrying {props.feedback.count} upload{props.feedback.count > 1 ? "s" : ""}…
       </div>
     );
@@ -166,7 +167,7 @@ export function CaptureControls(props: CaptureControlsProps) {
           aria-busy={props.finalizing}
           className="w-12 h-12 rounded-full bg-success flex items-center justify-center disabled:opacity-30 active:bg-success">
           {props.finalizing ? (
-            <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+            <Spinner size="md" tone="onDark" />
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
           )}

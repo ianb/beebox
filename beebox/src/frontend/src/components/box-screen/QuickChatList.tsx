@@ -23,6 +23,7 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { TextLink } from "../ui/TextLink";
+import { List } from "../ui/List";
 
 export interface QuickChatRowActions {
   onChoose: (view: QuickChatView, candidateId: string) => Promise<void>;
@@ -137,10 +138,10 @@ export function QuickChatList({ views, label, boxSlug, busy, errors, actions }: 
   actions: QuickChatRowActions;
 }) {
   return (
-    <ul role="list" aria-label={label} className="flex flex-col gap-2">
+    <List gap="sm" aria-label={label}>
       {views.map((view) => (
         <QuickChatRow key={view.id} view={view} boxSlug={boxSlug} busy={busy.includes(view.id)} error={errors[view.id]} actions={actions} />
       ))}
-    </ul>
+    </List>
   );
 }

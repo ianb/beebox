@@ -9,10 +9,10 @@
  * arrow keys navigate (wrapping at the ends).
  */
 
-import { useEffect, useRef, useState } from "react";
-import { useModalDialog } from "../hooks/useModalDialog";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
+import { ModalDialog } from "./ui/ModalDialog";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { useLightboxGestures } from "../hooks/use-lightbox-gestures.js";
 import { SWIPE_GUTTER_PX } from "../lib/lightbox-gesture-math.js";
@@ -111,28 +111,26 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, onOpenCar
     return () => document.removeEventListener("keydown", handleKey, { capture: true });
   }, [onClose, onIndexChange, safeIndex, total, hasMany]);
 
-  // A native modal <dialog>: showModal() puts it in the top layer, makes the
-  // page behind it inert (the focus trap), and the cleanup returns focus to
-  // whatever opened it. Escape stays with the capture-phase handler above,
-  // whose preventDefault also stops the dialog's own cancel.
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const hasCurrent = current !== undefined;
-  // showModal focuses the first control, the full-screen backdrop button,
-  // which rings the whole viewport; start on the visible close button.
-  useModalDialog({ dialog: dialogRef, open: hasCurrent, initialFocus: "#bbx-lightbox-close" });
-
   if (!current) return null;
 
   const captionText = captionOf(current);
   const goPrev = () => onIndexChange(step(-1));
   const goNext = () => onIndexChange(step(1));
 
+  // A fullscreen ModalDialog: the page behind is inert and focus returns to
+  // the opener on close. Escape stays with the capture-phase handler above,
+  // whose preventDefault also stops the dialog's own cancel; onCancel covers
+  // a close the browser forces. The dialog's first control is the
+  // full-screen backdrop button, which would ring the whole viewport, so
+  // focus starts on the visible close button.
   return createPortal(
-    <dialog
-      ref={dialogRef}
-      aria-label={`${current.alt.trim() === "" ? "Image" : current.alt}${hasMany ? ` (${safeIndex + 1} of ${total})` : ""}`}
-      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-transparent"
-      onCancel={(event) => event.preventDefault()}
+    <ModalDialog
+      open
+      layout="fullscreen"
+      tone="clear"
+      label={`${current.alt.trim() === "" ? "Image" : current.alt}${hasMany ? ` (${safeIndex + 1} of ${total})` : ""}`}
+      initialFocus="#bbx-lightbox-close"
+      onCancel={onClose}
     >
     <div
       ref={rootRef}
@@ -234,7 +232,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, onOpenCar
         <NavButton direction="next" onClick={goNext} />
       ) : null}
     </div>
-    </dialog>,
+    </ModalDialog>,
     document.body
   );
 }

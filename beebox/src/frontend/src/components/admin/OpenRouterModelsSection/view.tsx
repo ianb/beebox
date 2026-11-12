@@ -20,6 +20,8 @@ import { Text } from "../../ui/Text";
 import { TextField } from "../../ui/fields/field";
 import { OpenRouterModelRow, OpenRouterUsageLine } from "./parts";
 import { AdminSectionCard } from "../AdminSectionCard";
+import { StatusMessage } from "../../ui/StatusMessage";
+import { List } from "../../ui/List";
 
 const DESCRIPTION =
   "Models added here appear in the chat model picker and can be the box default. Each one is billed " +
@@ -41,7 +43,7 @@ export function OpenRouterModelsSection() {
   const runsAdded = config.data !== undefined
     && AGENT_ENGINES.some((e) => runsAddedModels(e) && (config.data.agentEngine === e || config.data.engines[e] === true));
   if (config.error !== null) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><ErrorText>{config.error.message}</ErrorText></AdminSectionCard>;
-  if (config.data === undefined) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION} busy><Hint>Loading…</Hint></AdminSectionCard>;
+  if (config.data === undefined) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION} busy><StatusMessage variant="inline" busy>Loading OpenRouter settings…</StatusMessage></AdminSectionCard>;
   // The section keeps its address when it does not apply, so the overview and an agent can still point at it.
   if (!runsAdded) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><Hint>Not available: Claude Code is off for this box. Turn it on under Agent engine and model.</Hint></AdminSectionCard>;
   return <OpenRouterModelsCard defaultModel={config.data.agentModel} />;
@@ -65,7 +67,7 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
 
   return (
     <AdminSectionCard id="openrouter-models" description={DESCRIPTION} busy={list.isLoading}>
-      {list.isLoading ? <Hint>Loading OpenRouter models…</Hint> : null}
+      {list.isLoading ? <StatusMessage variant="inline" busy>Loading OpenRouter models…</StatusMessage> : null}
       {list.error ? (
         <div role="alert">
           <ErrorText>{list.error.message}</ErrorText>
@@ -89,7 +91,7 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
           {list.data.models.length === 0
             ? <Hint>No OpenRouter models added. Nothing on this box can bill OpenRouter for chat until you add one.</Hint>
             : (
-              <ul role="list" className="list-none p-0 m-0 flex flex-col gap-3" aria-label="Added OpenRouter models">
+              <List gap="md" aria-label="Added OpenRouter models">
                 {list.data.models.map((model) => (
                   <OpenRouterModelRow
                     key={model.id}
@@ -99,7 +101,7 @@ function OpenRouterModelsCard({ defaultModel }: { defaultModel: string | null })
                     onRemove={() => { remove.mutate({ id: model.id }); }}
                   />
                 ))}
-              </ul>
+              </List>
             )}
         </>
       ) : null}

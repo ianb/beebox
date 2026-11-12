@@ -14,6 +14,7 @@ import { ExternalLink } from "../ui/ExternalLink";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { TextField } from "../ui/fields/field";
 import { AdminSectionCard } from "./AdminSectionCard";
 import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
@@ -64,15 +65,17 @@ export function ClaudeCodeSection() {
               className="flex gap-2"
               onSubmit={(e) => { e.preventDefault(); if (code.trim()) { send({ type: "SUBMIT_CODE", code }); setCode(""); } }}
             >
-              <input
+              <TextField
                 id="cb-admin-claude-login-code"
-                className="flex-1 border border-warm-300 rounded px-2 py-1 text-base sm:text-sm font-mono"
+                label="Anthropic sign-in code"
+                hideLabel
+                identifier
+                className="flex-1"
+                inputClassName="font-mono"
                 value={code}
-                onChange={(e) => { setCode(e.target.value); }}
+                onChange={setCode}
                 placeholder="paste code"
                 autoComplete="off"
-                spellCheck={false}
-                aria-label="Anthropic sign-in code"
               />
               <Button id="cb-admin-claude-submit-code" type="submit" disabled={!code.trim() || isSubmittingCode} loading={isSubmittingCode}>
                 Submit code

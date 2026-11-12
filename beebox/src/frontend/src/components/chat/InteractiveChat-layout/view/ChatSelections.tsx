@@ -9,11 +9,12 @@
  * composer.
  */
 
-import { useState } from "react";
 import { type SelectionItem } from "../../../../lib/selection/serialize";
 import { CloseButton } from "../../../ui/CloseButton";
+import { Popover } from "../../../ui/Popover";
 import { displayName } from "../../../../lib/display-name";
 import { snippet } from "../../../../lib/snippet";
+import { ComposerStrip, TokenTag } from "./ComposerStrip";
 
 function docName(ref: string | null): string {
   if (ref === null) return "Chat";
@@ -29,11 +30,11 @@ export function SelectionPanel({
 }) {
   if (selections.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {selections.map((selection) => (
         <SelectionPill key={selection.id} selection={selection} onRemove={() => onRemove(selection.id)} />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -44,30 +45,33 @@ function SelectionPill({
   selection: SelectionItem;
   onRemove: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
     <div className="relative group" data-bbx-source={`selection-${selection.id}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-1.5 max-w-[16rem] rounded bg-warm-200 pl-1.5 pr-2 py-1 hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
-        title="Click to view the selected text"
+      <Popover
+        label={`Selection ${String(selection.id)} from ${docName(selection.ref)}`}
+        vertical="above"
+        trigger={({ toggle, ariaProps }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            {...ariaProps}
+            className="flex items-center gap-1.5 max-w-[16rem] rounded bg-warm-200 pl-1.5 pr-2 py-1 hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
+            title="Click to view the selected text"
+          >
+            <TokenTag>{`selection#${String(selection.id)}`}</TokenTag>
+            <span className="text-xs text-warm-700 truncate">“{snippet(selection.text, 32)}”</span>
+          </button>
+        )}
       >
-        <span className="font-mono text-[0.625rem] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
-        <span className="text-xs text-warm-700 truncate">“{snippet(selection.text, 32)}”</span>
-      </button>
-      <CloseButton variant="bubble" label="Remove selection" onClick={onRemove} className="absolute -top-2 -right-2" />
-      {open ? (
-        <div className="absolute bottom-full mb-1 left-0 z-50 w-72 p-2 rounded-lg border border-warm-300 bg-white shadow-lg">
-          <div className="text-xs font-medium text-warm-800 truncate" title={selection.ref ?? undefined}>{docName(selection.ref)}</div>
-          {selection.position === "" ? null : (
-            <div className="text-[0.6875rem] text-warm-700 mt-0.5 break-words">{selection.position}</div>
-          )}
-          <div className="mt-1 pt-1 border-t border-warm-200 text-sm text-warm-700 max-h-40 overflow-auto whitespace-pre-wrap">
-            {selection.text}
-          </div>
+        <div className="text-xs font-medium text-warm-800 truncate" title={selection.ref ?? undefined}>{docName(selection.ref)}</div>
+        {selection.position === "" ? null : (
+          <div className="text-[0.6875rem] text-warm-700 mt-0.5 break-words">{selection.position}</div>
+        )}
+        <div className="mt-1 pt-1 border-t border-warm-200 text-sm text-warm-700 whitespace-pre-wrap">
+          {selection.text}
         </div>
-      ) : null}
+      </Popover>
+      <CloseButton variant="bubble" label="Remove selection" onClick={onRemove} className="absolute -top-2 -right-2" />
     </div>
   );
 }

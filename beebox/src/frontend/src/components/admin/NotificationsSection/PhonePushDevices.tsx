@@ -15,6 +15,7 @@ import { Badge } from "../../ui/Badge";
 import { ErrorText } from "../../ui/ErrorText";
 import { FriendlyDate } from "../../ui/FriendlyDate";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { List } from "../../ui/List";
 
 export function PhonePushDevices() {
   const devices = trpc.pairing.devices.useQuery();
@@ -32,7 +33,7 @@ export function PhonePushDevices() {
         : devices.error ? <ErrorText>Could not load paired phones: {devices.error.message}</ErrorText>
         : registered.length === 0 ? <Hint>No paired phone has registered for notifications. The Bee Box app registers when it opens.</Hint>
         : (
-          <Stack as="ul" gap="xs">
+          <List gap="xs">
             {registered.map((d) => (
               <li key={d.id}>
                 <Row gap="sm" align="baseline" wrap>
@@ -43,7 +44,7 @@ export function PhonePushDevices() {
                 </Row>
               </li>
             ))}
-          </Stack>
+          </List>
         )}
     </Stack>
   );

@@ -13,6 +13,7 @@
 import { useState, type ReactNode } from "react";
 import { useViewHost, type ResolvedRef } from "../../lib/view-host";
 import { Badge } from "../ui/Badge";
+import { InlineAction } from "../ui/InlineAction";
 import { Text } from "../ui/Text";
 
 type CardRefChild = ReactNode | ((resolved: ResolvedRef | null) => ReactNode);
@@ -50,21 +51,12 @@ export function CardRef({ cardRef, view, params, children }: CardRefProps) {
         <Text weight="medium" truncate className="min-w-0 flex-1">{title}</Text>
         {resolved?.type ? <Badge tone="info" size="sm">{resolved.type}</Badge> : null}
         {missing ? <Badge tone="danger" size="sm">missing</Badge> : null}
-        <button
-          type="button"
-          onClick={() => host.openCard(cardRef, { label: title, viewer: view ?? null, params })}
-          className="shrink-0 text-sm text-primary hover:underline"
-        >
+        <InlineAction onClick={() => host.openCard(cardRef, { label: title, viewer: view ?? null, params })} className="shrink-0 text-sm">
           Open
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpanded((x) => !x)}
-          aria-expanded={expanded}
-          className="shrink-0 text-sm text-warm-700 hover:text-warm-900"
-        >
+        </InlineAction>
+        <InlineAction intent="subtle" onClick={() => setExpanded((x) => !x)} expanded={expanded} className="shrink-0 text-sm">
           {expanded ? "Collapse" : "Expand"}
-        </button>
+        </InlineAction>
       </div>
       {expanded ? (
         <div className="border-t border-warm-200 p-3">{host.renderInline(cardRef)}</div>

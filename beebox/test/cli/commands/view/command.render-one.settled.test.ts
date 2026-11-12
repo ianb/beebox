@@ -13,7 +13,7 @@ import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const PKG = process.cwd();
@@ -256,4 +256,41 @@ export default function V() { return <p>ok</p>; }
     stdout: "selected  /views/_content/notes/A%20b.doc.card?select=x%26y\nplain  /views/_content/notes/A%20b.doc.card\nelsewhere  (_content/M.menu.card opens in view a-menu, the view bound to menu cards)\n",
     stderr: "",
   });
+});
+
+// With `--snapshot <path>`, a passing view leaves each state's settled DOM
+// there for advice: the container's HTML after effects and data, and the
+// <style> elements in the head. A failing view leaves none.
+void test("a passing view writes its settled DOM per state; a failing one writes nothing", async (t) => {
+  const box = await boxWithView({ view: `${HEAD}
+export default function V({ readFile }) {
+  const [text, setText] = useState(null);
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = ".w { overflow-x: auto }";
+    document.head.appendChild(style);
+    void readFile("_content/data.txt").then(setText);
+  }, [readFile]);
+  return text === null ? <p>Loading</p> : <div className="w">{text}</div>;
+}
+`, files: { "_content/data.txt": "loaded" } });
+  t.teardown(() => box.cleanup());
+  const snapshot = join(box.root, "snapshot.json");
+  t.check(await runCli(box.root, ["view", "render-one", "v", "--snapshot", snapshot]), { code: 0, stdout: "", stderr: "" });
+  t.check(JSON.parse(await readFile(snapshot, "utf-8")), [
+    { label: "no card", html: "<div class=\"w\">loaded</div>", headStyles: ["<style>.w { overflow-x: auto }</style>"] },
+  ]);
+
+  // A snapshot that cannot be written leaves the view passing, with a remark.
+  const nowhere = join(box.root, "missing-dir", "snapshot.json");
+  t.check(await runCli(box.root, ["view", "render-one", "v", "--snapshot", nowhere]), {
+    code: 0,
+    stdout: `bbx-view-check partial: advice not checked: could not write the snapshot: ENOENT: no such file or directory, open '${nowhere}'\n`,
+    stderr: "",
+  });
+
+  await writeFile(join(box.root, "src", "views", "v.tsx"), `${HEAD}export default function V() { throw new Error("broken"); }\n`);
+  await rm(snapshot);
+  t.check((await runCli(box.root, ["view", "render-one", "v", "--snapshot", snapshot])).code, 1);
+  await t.checkThrows(() => readFile(snapshot, "utf-8"), "Error: ENOENT: no such file or directory, open '" + snapshot + "'");
 });

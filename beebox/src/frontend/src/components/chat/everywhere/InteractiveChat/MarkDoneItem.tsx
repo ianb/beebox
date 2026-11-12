@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { MenuItem } from "../../../ui/dropdown-menu-item";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { MenuItem } from "../../../ui/menu-item";
+import { useMenuClose } from "../../../ui/Menu";
 import { getChatSessionIdentity, markChatDone } from "../../../../api-chat";
 
 /**
@@ -20,7 +20,7 @@ import { getChatSessionIdentity, markChatDone } from "../../../../api-chat";
  * wrong-way toggle.
  */
 export function MarkDoneItem({ sessionId }: { sessionId: string | null }) {
-  const close = useDropdownClose();
+  const close = useMenuClose();
   // null until loaded, and stays null for a chat with no card (nothing to mark).
   const [done, setDone] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);

@@ -153,7 +153,7 @@ interface InteractiveChatProps {
  * (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
 // Capture mode is rare and opens full screen; its code loads when it opens.
-const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
+const CaptureScreen = lazyOverlay(() => import("../../../capture/CaptureScreen/view"), (m) => m.CaptureScreen);
 
 function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
@@ -162,7 +162,7 @@ function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCaptu
   onExitCapture: (outcome: CaptureExit) => void;
 }) {
   if (!captureMode || usesNativeShell) return null;
-  return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
+  return <CaptureScreen targetSessionId={sessionId} onExit={onExitCapture} />;
 }
 
 /** Presentation toggles stay with the box input, independently of session actors. */
@@ -193,6 +193,11 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
+function useConversationLoadMarks(ready: boolean, loading: boolean): void {
+  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, ready);
+  useFirstLoadMark(FIRST_LOAD_MARKS.history, ready && !loading);
+}
+
 export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
@@ -204,8 +209,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
-  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
-  useFirstLoadMark(FIRST_LOAD_MARKS.history, conversationSelection?.kind === "ready" && !snapshot.matches("loading"));
+  useConversationLoadMarks(conversationSelection?.kind === "ready", snapshot.matches("loading"));
   // Put the turn in the tab title, so a chat left in a background tab says
   // whether the box is still working on it. The deps are one boolean, so this
   // publishes once per turn rather than once per streamed token.

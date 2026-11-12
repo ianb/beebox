@@ -1,8 +1,7 @@
-import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CardSymbolData } from "@shared/card-symbol";
-import { MenuItem } from "../ui/dropdown-menu-item";
-import { useMenuItemRole } from "../ui/Dropdown";
+import { MenuItem } from "../ui/menu-item";
+import { ModalDialog } from "../ui/ModalDialog";
 import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
@@ -122,11 +121,8 @@ export function LandmarkList({
   const [query, setQuery] = useState("");
   const queryRef = useRef("");
   const searchRef = useRef<HTMLInputElement>(null);
-  const overlayRef = useRef<HTMLElement>(null);
   const { mobileViewport, visibleViewport } = useSearchViewport(searchOpen);
   const searchable = landmarks !== null && landmarks.length > 20;
-  // Inside a navigation Dropdown the rows are links, not menu items.
-  const rowsRole = useMenuItemRole() === "menuitem" ? "menu" : "group";
 
   useIsomorphicLayoutEffect(() => {
     if (!searchOpen) {
@@ -134,57 +130,8 @@ export function LandmarkList({
       setQuery("");
       return;
     }
-    const overlay = overlayRef.current;
-    const stopOutsideClose = (event: MouseEvent) => event.stopPropagation();
-    const trapTab = (event: KeyboardEvent) => {
-      if (isComposing(event)) return;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (queryRef.current !== "") {
-          queryRef.current = "";
-          setQuery("");
-        } else {
-          onCancelSearch();
-        }
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = [...(overlay?.querySelectorAll<HTMLElement>('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])];
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    };
-    overlay?.addEventListener("mousedown", stopOutsideClose);
-    overlay?.addEventListener("keydown", trapTab);
-    // The phone overlay says aria-modal, so the page behind it must not be
-    // reachable: make every other child of <body> inert while it is open. It
-    // is not a <dialog> because it sizes itself to the visual viewport for the
-    // iOS keyboard.
-    const inerted: Element[] = [];
-    if (overlay !== null && overlay.parentElement === document.body) {
-      for (const element of document.body.children) {
-        if (element === overlay || element.hasAttribute("inert")) continue;
-        element.setAttribute("inert", "");
-        inerted.push(element);
-      }
-    }
     searchRef.current?.focus();
-    return () => {
-      overlay?.removeEventListener("mousedown", stopOutsideClose);
-      overlay?.removeEventListener("keydown", trapTab);
-      for (const element of inerted) element.removeAttribute("inert");
-    };
-    // `searchable` is a dependency because it decides whether the overlay
-    // renders: when the list shrinks to 20 the overlay goes away, and this
-    // cleanup must run to lift the inert it set.
-  }, [searchOpen, mobileViewport, searchable, onCancelSearch]);
+  }, [searchOpen, mobileViewport, searchable]);
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
@@ -239,18 +186,31 @@ export function LandmarkList({
     </>
   );
 
+  // On a phone, search takes the whole visible viewport: a fullscreen modal
+  // sized to the visual viewport, so the list stays above the iOS keyboard.
+  // It renders inside the menu panel, so a press in it is not a press outside
+  // the menu; Escape on a row clears the query, then leaves search.
   if (searchable && searchOpen && mobileViewport) {
-    return createPortal(
-      // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- phone overlay sized to the visual viewport for the iOS keyboard; inert is set in code
-      <section ref={overlayRef} role="dialog" aria-label="Search landmarks" aria-modal="true" className="fixed z-[110] flex flex-col overflow-hidden bg-white text-sm"
-        style={{ top: visibleViewport.top, left: visibleViewport.left, width: visibleViewport.width, height: visibleViewport.height }}>
-        <header className="flex shrink-0 items-center gap-2 border-b border-warm-200 px-3 py-2">
-          <div className="min-w-0 flex-1">{searchField}</div>
-          <Button id="bbx-switch-menu-landmark-search-cancel" intent="ghost" size="sm" onClick={onCancelSearch}>Cancel</Button>
-        </header>
-        <div role={rowsRole} aria-label="Matching landmarks" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">{rows}</div>
-      </section>,
-      document.body,
+    return (
+      <ModalDialog
+        open
+        layout="fullscreen"
+        label="Search landmarks"
+        style={visibleViewport}
+        initialFocus="#bbx-switch-menu-landmark-search"
+        onCancel={() => {
+          if (queryRef.current === "") onCancelSearch();
+          else updateQuery("");
+        }}
+      >
+        <div className="flex h-full flex-col text-sm">
+          <header className="flex shrink-0 items-center gap-2 border-b border-warm-200 px-3 py-2">
+            <div className="min-w-0 flex-1">{searchField}</div>
+            <Button id="bbx-switch-menu-landmark-search-cancel" intent="ghost" size="sm" onClick={onCancelSearch}>Cancel</Button>
+          </header>
+          <div role="group" aria-label="Matching landmarks" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">{rows}</div>
+        </div>
+      </ModalDialog>
     );
   }
 

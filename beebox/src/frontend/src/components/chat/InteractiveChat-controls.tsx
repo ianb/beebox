@@ -12,6 +12,7 @@ import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { SidecarTab } from "./sidecar-tabs";
 import { boxNow } from "../../lib/box-clock";
 import { formatDuration } from "@shared/relative-time";
+import { CloseButton } from "../ui/CloseButton";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -45,13 +46,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
       </svg>
       {schedule.label}: {remaining}
       {schedule.alarm ? " 🔔" : null}
-      <button type="button"
-        onClick={onCancel}
-        className="ml-0.5 text-accent-dark/60 hover:text-accent-dark"
-        title="Cancel schedule"
-      >
-        {"×"}
-      </button>
+      <CloseButton size="sm" ink label="Cancel schedule" onClick={onCancel} className="-my-1.5 -mr-2" />
     </span>
   );
 }

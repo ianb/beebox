@@ -17,6 +17,8 @@ import { Badge } from "./components/ui/Badge";
 import { TextLink } from "./components/ui/TextLink";
 import { getRenderers, type FileData, type RendererProps } from "./file-type-registry";
 import type { ReactNode } from "react";
+import { StatusMessage } from "./components/ui/StatusMessage";
+import { List } from "./components/ui/List";
 
 /** One `.card` entry in a `status.browse` listing. */
 export type BrowseCardEntry = RouterOutput["status"]["browse"]["cards"][number];
@@ -87,7 +89,7 @@ function CardAccordionBody({
 }) {
   const { data: card, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
 
-  if (isLoading) return <Text size="sm" tone="muted">Loading...</Text>;
+  if (isLoading) return <StatusMessage variant="inline" busy>Loading card…</StatusMessage>;
   if (error || !card) return <Text size="sm" tone="danger">Failed to load card</Text>;
 
   const fileData: FileData = {
@@ -143,7 +145,7 @@ export function DirectoryListing(props: DirectoryListingProps) {
     <>
       {isEmpty ? <Text size="sm" tone="muted">Empty directory</Text> : null}
       {browse.dirs.length > 0 ? (
-        <Stack as="ul" gap="xs" className="mb-2">
+        <List gap="xs" className="mb-2">
           {browse.dirs.map((dir) => (
             <li key={dir.name}>
               <TextLink
@@ -155,7 +157,7 @@ export function DirectoryListing(props: DirectoryListingProps) {
               </TextLink>
             </li>
           ))}
-        </Stack>
+        </List>
       ) : null}
       {cards.length > 0 ? (
         <Stack gap="xs" className="mb-2">
@@ -175,7 +177,7 @@ export function DirectoryListing(props: DirectoryListingProps) {
         </Stack>
       ) : null}
       {browse.files.length > 0 ? (
-        <Stack as="ul" gap="xs">
+        <List gap="xs">
           {browse.files.map((file) => (
             <li key={file.relativePath}>
               <TextLink to={href(`/${boxSlug}/browse/${file.relativePath}`)}>
@@ -183,7 +185,7 @@ export function DirectoryListing(props: DirectoryListingProps) {
               </TextLink>
             </li>
           ))}
-        </Stack>
+        </List>
       ) : null}
     </>
   );

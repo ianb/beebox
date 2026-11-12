@@ -34,6 +34,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** Distinct Start and Stop recording tasks across Siri, Shortcuts, and system controls, with audio preserved independently of transcription.
 - **Where it landed:** `ios-app/BeeBox/Intents/VoiceNoteIntents.swift`, `Services/VoiceNoteCoordinator.swift`, and `ios-app/BeeBoxControls/BeeBoxControls.swift`.
 
+### A (more) Modern CSS Reset, by Andy Bell
+
+- **Source:** https://piccalil.li/blog/a-more-modern-css-reset/ (blog post; no licence stated; we wrote our own rule from the idea)
+- **What we took:** One global `prefers-reduced-motion` rule that sets animation and transition durations near zero on every element; we added a spinner exemption that slows it instead.
+- **Where it landed:** `beebox/src/frontend/src/index.css`
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)
@@ -123,7 +129,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **Source:** [GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src) (Apache-2.0).
 - **What we took:** The detection logic of its `ime-safe-enter-submit` static matcher, ported to an ESLint rule: an Enter test in a keydown handler needs an IME composition check, with its exemptions for button-like elements, modifier-gated Enter, and suppress-only branches.
 - **Also took:** the `accessible-names` finding that `aria-label` on a role-less `div`/`span`/`p` is dropped, and the `responsive-design` finding that `100vh` overshoots on mobile Safari, as the rules `aria-label-needs-role` and `no-viewport-height-class`; the `dialog` guide's native-`<dialog>` rule as `prefer-native-dialog`; and the `typography` guide's rem font sizes as `no-px-font-size-class`.
-- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`, `aria-label-needs-role.ts`, `no-viewport-height-class.ts`, `prefer-native-dialog.ts`, `no-px-font-size-class.ts`.
+- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`, `aria-label-needs-role.ts`, `no-viewport-height-class.ts`, `prefer-native-dialog.ts`, `no-px-font-size-class.ts`; the same checks as `bbx view check` advice for box views in `beebox/src/core/views/advice/`.
 
 ### No Mistakes, by kunchenguid
 

@@ -5,7 +5,6 @@
 // reached reads "due" in the neutral tone the card rows use. The todo text
 // truncates so the card name stays on its own item's line.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";

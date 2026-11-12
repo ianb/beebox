@@ -17,6 +17,8 @@ export interface InlineActionProps {
   intent?: InlineActionIntent;
   disabled?: boolean;
   title?: string;
+  /** Accessible name when the visible text is not enough on its own ("dismiss" → "Dismiss: Upload failed"). */
+  label?: string;
   flash?: FlashSpec;
   /** For a disclosure toggle: whether what it controls is shown (`aria-expanded`). */
   expanded?: boolean;
@@ -45,6 +47,7 @@ export function InlineAction({
   intent: intentArg,
   disabled: disabledArg,
   title,
+  label,
   flash,
   expanded,
   className,
@@ -96,6 +99,7 @@ export function InlineAction({
       onClick={(e) => void handleClick(e)}
       disabled={isBusy}
       title={title}
+      aria-label={label}
       aria-expanded={expanded}
       className={cn(
         (material === true ? MATERIAL_INTENT_CLASSES[intent] : undefined) ?? INTENT_CLASSES[intent],

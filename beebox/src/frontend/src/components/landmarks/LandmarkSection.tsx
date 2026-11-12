@@ -24,7 +24,7 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
-import { ChevronIcon } from "./ChevronIcon";
+import { ExpanderButton } from "./ChevronIcon";
 import { LandmarkGroupRows, useLandmarkRowInk } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
@@ -173,16 +173,7 @@ export function LandmarkLinks({
         ))}
       </div>
       {links.length > LINK_CAP ? (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          aria-expanded={showAll}
-          className="flex items-center gap-2 self-start px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
-        >
-          <ChevronIcon open={showAll} />
-          <Text as="span" size="sm">{showAll ? "Show fewer" : "Show all"}</Text>
-          <Text as="span" size="xs" tone="muted">{links.length}</Text>
-        </button>
+        <ExpanderButton open={showAll} onToggle={() => setShowAll((v) => !v)} label={showAll ? "Show fewer" : "Show all"} count={links.length} />
       ) : null}
     </Stack>
   );

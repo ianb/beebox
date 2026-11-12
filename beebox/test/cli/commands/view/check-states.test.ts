@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { statesToCheck, partialRemarks, PARTIAL_PREFIX } from "../../../../src/cli/commands/view/check-states.js";
+import { statesToCheck, partialRemarks, snapshotOf, PARTIAL_PREFIX, SNAPSHOT_MAX_BYTES } from "../../../../src/cli/commands/view/check-states.js";
 
 const boxCardPaths = [
   "_content/recipes/Stew.recipe.card",
@@ -66,4 +66,15 @@ void test("declared states come after the automatic ones; an unreachable card is
 void test("partial remarks are the prefixed stdout lines", (t) => {
   t.check(partialRemarks(`hello from the view\n${PARTIAL_PREFIX}no card: still loading after 5s\n`), ["no card: still loading after 5s"]);
   t.end();
+});
+
+// The limit counts the UTF-8 bytes of the state's JSON as written: two
+// million `界` are 2,000,000 characters but 6,000,000 bytes.
+void test("a state over SNAPSHOT_MAX_BYTES as written keeps no HTML", async (t) => {
+  const wide = "界".repeat(2_000_000);
+  t.check([
+    SNAPSHOT_MAX_BYTES,
+    snapshotOf("wide", { html: `<p>${wide}</p>`, headStyles: [] }).html === null,
+    snapshotOf("ascii", { html: "<p>ok</p>", headStyles: ["p {}"] }),
+  ], [5_000_000, true, { label: "ascii", html: "<p>ok</p>", headStyles: ["p {}"] }]);
 });

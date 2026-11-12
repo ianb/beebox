@@ -3,12 +3,11 @@
 // `new Date("2026-08-14")` parses as UTC midnight, so formatting it in the
 // browser's zone rendered the *previous* day anywhere behind UTC — a todo due
 // `2026-08-14` showed as "due Aug 13, 2026" on the Plate in US timezones.
-// `friendlyDate` reads a date-only value as a `Temporal.PlainDate`, which has
-// no zone, so the day shown is the day written; full timestamps are instants
+// `friendlyDate` formats a date-only value at its UTC midnight in UTC, so the
+// day shown is the day written in every zone; full timestamps are instants
 // and keep local-zone formatting. Each check runs in a zone named by `TZ`, so
 // the result does not depend on the runner's zone.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { friendlyDate } from "../../../src/components/ui/FriendlyDate.js";
@@ -27,7 +26,7 @@ function inZone<T>(tz: string, fn: () => T): T {
 
 /**
  * How `Date` shows `value` with date and time in the current zone: what
- * `friendlyDate` showed before Temporal, and must still show for an instant.
+ * `friendlyDate` must show for an instant.
  * The space before "AM" differs between ICU versions, so the expected text
  * comes from the runtime rather than a literal.
  */
@@ -65,4 +64,13 @@ void test("friendlyDate formats strings and epochs, and returns bad input as wri
   t.check(friendlyDate(epoch), friendlyDate(new Date(epoch).toISOString()));
   t.check(inZone("UTC", () => friendlyDate(epoch)), inZone("UTC", () => dateShown(epoch)));
   t.check([friendlyDate("sometime"), friendlyDate("2026-02-30"), friendlyDate(Number.NaN)], ["sometime", "2026-02-30", "NaN"]);
+});
+
+// "time" shows an instant's time alone, in the viewer's zone, and a date-only
+// value (which has no time) its day:
+void test("friendlyDate time mode shows the time of an instant and the day of a date-only value", async (t) => {
+  const iso = "2026-08-14T03:00:00Z";
+  t.check(inZone("America/Los_Angeles", () => friendlyDate(iso, "time").replace(/\s/gu, " ")), "8:00 PM");
+  t.check(inZone("Asia/Kolkata", () => friendlyDate(iso, "time").replace(/\s/gu, " ")), "8:30 AM");
+  t.check(inZone("Pacific/Kiritimati", () => friendlyDate("2026-08-14", "time")), "Aug 14, 2026");
 });

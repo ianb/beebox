@@ -8,6 +8,7 @@ import { Hint } from "../../ui/Hint";
 import { HistoryBrowser } from "./HistoryBrowser";
 import { describeFilter, paramsToFilter } from "../filter";
 import { parseHistoryCardState } from "../card-state";
+import { InlineAction } from "../../ui/InlineAction";
 
 export function HistoryViewCard(props: Omit<RendererProps, "params"> & { params?: ResolvedViewParams; legacyParams?: Record<string, string> }) {
   const instanceId = useId().replaceAll(":", "");
@@ -30,7 +31,7 @@ export function HistoryViewCard(props: Omit<RendererProps, "params"> & { params?
   return <div className="flex flex-col gap-2">
     <Row justify="between" align="start" wrap className="px-3">
       <Text as="span" size="sm" tone="muted" className="min-w-0 flex-1 break-words">{describeFilter(filter)}</Text>
-      {overridden ? <Text as="span" size="xs" tone="muted" className="shrink-0 whitespace-normal">Modified from card · <button id={`bbx-history-view-reset-${instanceId}`} type="button" onClick={() => update({ filter: cardDefaults }, "push")} className="text-info-dark hover:underline">reset</button></Text> : null}
+      {overridden ? <Text as="span" size="xs" tone="muted" className="shrink-0 whitespace-normal">Modified from card · <InlineAction id={`bbx-history-view-reset-${instanceId}`} onClick={() => update({ filter: cardDefaults }, "push")}>reset</InlineAction></Text> : null}
     </Row>
     <div className="h-[70vh] min-h-96 border border-subtle rounded overflow-hidden">
       <HistoryBrowser filter={filter} filterBar onFilterChange={next => update({ filter: next }, "push")} selectedHash={state.commit} onSelectedHashChange={commit => update({ ...state, commit }, "replace")} idPrefix={`bbx-history-${instanceId}`} />

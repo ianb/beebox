@@ -54,6 +54,7 @@ import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { Link } from "../markdown-link/link";
 import { useOptionalLightbox } from "../LightboxProvider";
 import { Button } from "../ui/Button";
+import { Checkbox } from "../ui/fields/field";
 import { Image } from "../ui/Image/view";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
@@ -186,7 +187,7 @@ function Fence({ children, "data-language": language }: { children?: ReactNode; 
   };
   return (
     <pre data-language={language}>
-      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1 print:hidden" flash={{ label: "Copied" }} onClick={copy}>
+      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1 print:hidden" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={copy}>
         Copy
       </Button>
       <span ref={textRef}>{children}</span>
@@ -260,16 +261,9 @@ function Blockquote({ children }: { children?: ReactNode }) {
   return <blockquote className="bbx-blockquote">{children}</blockquote>;
 }
 
+/** A Markdown task marker: display-only; the item's own text follows it. */
 function Task({ done }: { done?: boolean }) {
-  return (
-    <input
-      type="checkbox"
-      checked={done === true}
-      disabled
-      readOnly
-      className="mr-2 align-middle accent-warm-500"
-    />
-  );
+  return <Checkbox checked={done === true} disabled aria-label="Task" className="mr-2 align-middle" />;
 }
 
 type MarkdownComponent = React.ComponentType<Record<string, unknown>>;

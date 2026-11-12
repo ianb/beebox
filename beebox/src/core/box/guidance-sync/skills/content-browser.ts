@@ -65,8 +65,9 @@ bbx browser screenshot --card
 
 \`screenshot --card\` prints the image path, then \`whole card\` or
 \`partial\` with what the image leaves out, then an \`overflow:\` line for
-each part that is wider than its box, and \`view error:\` when the view
-failed. Read the image. Then try the controls: \`snapshot -i\`, \`click\`,
+each part that is wider than its box, a \`scrolls sideways:\` line for each
+part that scrolls inside its box and holds more than the image shows,
+and \`view error:\` when the view failed. Read the image. Then try the controls: \`snapshot -i\`, \`click\`,
 \`fill\`, \`get text\`, and capture again. Pressing a control that saves
 data changes the box, the same as editing the file.
 
