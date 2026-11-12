@@ -332,7 +332,7 @@ No critical gaps.
 - **Typing and speaking indicators.** Not free: the iOS composer is native
   (`NativeComposerView.swift`), so typing needs a new bridge message, and the
   web composer needs debounced signals. The frame union leaves room for them.
-  Stays open on the issue.
+  Filed as `issues/features/2026-11-12-chat-shows-who-is-typing-or-speaking.md`.
 - **Idle presence** (hidden tab, backgrounded app). Boxholder direction:
   active only this round.
 - **Profile pictures for other people.** The WebSocket identity has no
