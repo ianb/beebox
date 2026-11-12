@@ -1,6 +1,6 @@
 ---
 title: "schema-watcher test: a chunked write sometimes never invalidates within 5 s"
-workstream: unattached
+workstream: schema-watcher-flake
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -31,3 +31,23 @@ timing-sensitive file is a flake to fix, not to add.
 (`7d0de419d`) and on the branch at load average about 15: it failed all six
 times on both. It is not specific to the branch; it now fails on `main` too
 in this environment.
+
+## Cause (2026-11-12, workstream schema-watcher-flake)
+
+The watcher does not drop events. On macOS, `fs.watch` on a directory
+(recursive or not) goes through FSEvents. With `fseventsd` near 80–100% CPU,
+a standalone probe saw FSEvents deliver a write 0.2–10.5 s late; kqueue
+on the file saw it within 1 ms and 100 ms polling within 85 ms. A 2-minute
+probe delivered all 24 writes. Inside the test, delivery took 3.6–9.1 s,
+and once over 30 s. Two more effects broke the test's claims: FSEvents
+split one burst into two batches 165 ms apart (two invalidations), and
+it delivered the scaffold's `src/schemas` writes from before the watch
+started, so a "pass" could come from those instead of the test's write.
+
+Production runs on Linux (inotify) and is not affected. On a busy Mac,
+hot reload lags by the FSEvents delay and may invalidate twice; both are
+harmless.
+
+Fix: the test now uses a fake `fs.watch` and a mocked clock for the burst
+rule, and checks the watch's directory and options through the same fake.
+Nothing in the file waits on the OS.
