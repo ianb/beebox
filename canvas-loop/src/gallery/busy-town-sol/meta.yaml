@@ -1,0 +1,22 @@
+slug: busy-town-sol
+title: "Willow Wick: a busy street of 17 clickable townsfolk"
+created: 2026-11-11
+model: gpt-6-sol
+driver: opus-5.5
+cycles: 6
+tier: tea
+harness-commit: 9018dc4c
+frames: 240
+seed: 42
+fps: 60
+every: 40
+reconstructed: false
+audit: >
+  Busy-town round. Boxholder review pending. 17 clickable residents across three shopfronts with five chain cues; hover shows a ring and a name; dusk param; about 2.7 ms per frame headless.
+self-report-summary: >
+  Wanted a hover cursor and an easier way to layer a moving person behind a window frame.
+features-exercised:
+  - TEA tier with pointer input, hover cues, params and triggers
+  - sprites for characters and poses
+  - cache for the painted town
+  - sibling -tea helper files
