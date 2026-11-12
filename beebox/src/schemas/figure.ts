@@ -246,17 +246,20 @@ Input types are \`mousedown\`, \`mouseup\`, \`mousemove\`, \`keydown\`, \`keyup\
 
 ### Sharing code and data between figures and views
 
-Put code that more than one figure or view uses in \`src/lib/\` at the box
-root, and data in a card's attach scope or a JSON file. A figure entry and a
-view both import them by relative path
-(\`import { atomColor } from "../../../src/lib/chem.ts"\`,
-\`import elements from "../../Elements.attach/elements.json"\`); each is
-bundled into the importer, so a change reaches every figure and view that
-imports it. Code a canvas-loop figure imports must stay pure: no module-level
-\`let\` (state belongs in the model), and no \`Math.random\` or \`Date\`
-(calling either during a \`bbx figure run\` stops it with an error). React components cannot be drawn on a canvas, so a view that should
-show a figure's picture embeds the figure card with
-\`<CardRef cardRef="…" />\` from \`beebox/view-widgets\`.`,
+Put code and data that more than one figure or view uses in \`src/lib/\` at
+the box root, and import it with \`@/\`, which is the box root from any
+figure or view however deep, and survives \`bbx mv\` of the card:
+\`import { atomColor } from "@/src/lib/chem"\`,
+\`import elements from "@/src/lib/elements.json"\`. A relative path out of a
+card's attach folder breaks when the card moves; \`bbx mv\` does not rewrite
+code. Each import is bundled into the importer, so an edit reaches every
+figure and view that imports it. Code a canvas-loop figure imports must stay
+pure: no module-level \`let\` (state belongs in the model), and no
+\`Math.random\` or \`Date\` (calling either during a \`bbx figure run\`
+stops it with an error). React components cannot be drawn on a canvas, so a
+view shows a figure by embedding the figure card:
+\`<CardRef cardRef="…" params={…} embed caption="…" />\` from
+\`beebox/view-widgets\`.`,
 });
 
 export type FigureFields = InferCardFields<typeof FigureSchema>;

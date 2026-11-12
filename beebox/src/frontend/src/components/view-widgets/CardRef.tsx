@@ -11,7 +11,7 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { useViewHost, type ResolvedRef } from "../../lib/view-host";
+import { refWithQuery, useViewHost, type ResolvedRef } from "../../lib/view-host";
 import { Badge } from "../ui/Badge";
 import { InlineAction } from "../ui/InlineAction";
 import { Text } from "../ui/Text";
@@ -31,12 +31,31 @@ export interface CardRefProps {
    * self-contained.
    */
   children?: CardRefChild;
+  /**
+   * Render the card frameless and inline, in place of the chip, as a Markdown
+   * image embed does. `cardRef` stays a literal attribute, so `bbx mv` tracks it.
+   */
+  embed?: boolean;
+  /** Text shown with an embedded card (the embed's caption). Only with `embed`. */
+  caption?: string;
 }
 
-export function CardRef({ cardRef, view, params, children }: CardRefProps) {
+export function CardRef({ cardRef, view, params, children, embed, caption }: CardRefProps) {
   const host = useViewHost();
   const resolved = host.useResolvedRef(cardRef);
   const [expanded, setExpanded] = useState(false);
+  const inlineRef = refWithQuery(cardRef, {
+    ...(view === undefined ? {} : { view }),
+    ...(params === undefined ? {} : { params }),
+  });
+
+  if (embed === true) {
+    return (
+      <div data-card-embed="" className="contents">
+        {host.renderInline(inlineRef, caption === undefined || caption === "" ? undefined : { caption })}
+      </div>
+    );
+  }
 
   if (typeof children === "function") {
     return <>{children(resolved)}</>;
@@ -59,7 +78,7 @@ export function CardRef({ cardRef, view, params, children }: CardRefProps) {
         </InlineAction>
       </div>
       {expanded ? (
-        <div className="border-t border-warm-200 p-3">{host.renderInline(cardRef)}</div>
+        <div className="border-t border-warm-200 p-3">{host.renderInline(inlineRef)}</div>
       ) : null}
     </div>
   );

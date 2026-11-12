@@ -1382,9 +1382,15 @@ tests:
   - id: figure-shared-code
     prompt: "A second canvas-loop figure needs the atom-drawing helper and element data a first figure already has. Where do they go so both figures, and a view, use one copy?"
     expected_level: knows_directly
-    watch_for: "src/lib/ at the box root, imported by relative path from each figure entry and view; data as a JSON file imported directly; the shared code must stay pure (no module state, Math.random, Date). Does not copy the helper"
-    correct_contains: ["src/lib"]
-    tags: [cards, schemas, figure]
+    watch_for: "src/lib/ at the box root, imported as @/src/lib/… (box-root, survives moving the card) from each figure entry and view, data as JSON there too; the shared code must stay pure (no module state, Math.random, Date). Does not copy the helper or use a ../../ path"
+    correct_contains: ["@/src/lib"]
+
+  - id: figure-in-view
+    prompt: "A view should show the same molecule drawing a canvas-loop figure already makes, with the molecule chosen by the view. How?"
+    expected_level: knows_directly
+    watch_for: "Embeds the figure card with <CardRef cardRef=… params={{…}} embed /> from beebox/view-widgets, which bbx mv keeps up to date; does not redraw it in React or put a ![](…) path in a string in view code"
+    correct_contains: ["embed"]
+    tags: [cards, schemas, figure, views]
 
   - id: figure-activity
     prompt: "A learner is working a canvas-loop figure open beside the chat. Will you learn what they did, and what decides how it is described?"
