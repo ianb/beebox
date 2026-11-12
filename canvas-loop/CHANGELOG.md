@@ -36,6 +36,9 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Checkpoints.** `CANVAS_LOOP_CHECKPOINTS=<dir>` saves every `run` (sources,
+  events, frames, transcript, `--note`); `cli checkpoints <dir>` builds a page
+  that steps through them.
 - **Development aids** (busy-town round asks). `run --outline` outlines placed
   sprites (with keys), clip regions and `debugBox(label, x, y, w, h)` boxes;
   `run --timing` adds per-frame draw/update times to the transcript. Faint-mark

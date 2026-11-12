@@ -31,3 +31,8 @@ export type { GalleryCheckEntry, GalleryCheckResult } from "../headless/gallery.
 // ── Experimental: frame diff views (`cli diff`) ───────────────────────
 export { statsLine, writeDiff } from "../headless/diff.js";
 export type { DiffStats } from "../headless/diff.js";
+
+// ── Development checkpoints (CANVAS_LOOP_CHECKPOINTS, `cli checkpoints`) ──
+export { CHECKPOINT_ENV, saveCheckpoint } from "../headless/checkpoint/save.js";
+export type { CheckpointMeta } from "../headless/checkpoint/save.js";
+export { checkpointPage, lineChanges } from "../headless/checkpoint/page.js";

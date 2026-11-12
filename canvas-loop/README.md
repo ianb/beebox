@@ -23,7 +23,7 @@ fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
 ```sh
 pnpm --dir canvas-loop run cli run <sketch.ts> \
   [--frames 120] [--events events.json] [--out out/] \
-  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]... [--outline] [--timing]
+  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]... [--outline] [--timing] [--note text]
 ```
 
 `--outline` draws sprite, clip and `debugBox` outlines over each captured
@@ -35,6 +35,15 @@ captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and
 lists it under the frame in the transcript. Use it to judge brush texture and
 edges, which a whole frame at 1× hides. To crop a frame you already have:
 `pnpm --dir canvas-loop run cli zoom out/frame-0000.png 90,80,160,120@4`.
+
+**Checkpoints.** With `CANVAS_LOOP_CHECKPOINTS=<dir>` in the environment,
+every `run` also saves a numbered checkpoint there: the sketch directory's
+`.ts` files, the events file, the rendered frames and transcript, and
+`meta.json` (time, arguments, errors, and `run --note "what I changed"`).
+`cli checkpoints <dir> [--out page.html] [--title text]` turns them into one
+self-contained page with a slider: each render's picture, note, changed lines
+per file, and source. It records how a drawing was developed, one look at a
+time.
 
 `cli diff <before.png> <after.png> [--out dir]` (experimental) writes views of
 what changed between two frames: `highlight.png` (the after frame greyed,

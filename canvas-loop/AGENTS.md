@@ -16,6 +16,9 @@ prefer it for new work and name the file `*-tea.ts` so its lint applies), and
 3. `Read out/transcript.md`; its inline frame images render in `Read`.
 4. Fix and re-run. A re-run reproduces the exact pixels.
 
+If `CANVAS_LOOP_CHECKPOINTS` is set, each render is saved as a checkpoint; add
+`--note "what you changed and why"` to each `run` so the record reads as a story.
+
 Script interactions as events: one events file is a test, a reproduction, and a
 demo. Events for frame N dispatch before frame N's `draw`, so compute click
 coordinates from the sketch's own position math. Pin a frame the capture policy
