@@ -26,6 +26,8 @@ import { ellipseGradient, linearGradient, radialGradient } from "./paint.js";
 import { offsetPoints, tubePath } from "./shapes.js";
 import type { TubeOptions } from "./shapes.js";
 import type { Painter } from "./painter/engine.js";
+import { ease, tween, tweenPoint } from "./ease.js";
+import type { EaseName, Keyframe } from "./ease.js";
 
 export class PainterView {
   protected readonly painter: Painter;
@@ -109,6 +111,18 @@ export class PainterView {
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.painter.clip(shape, body);
+  }
+  mask(maskBody: () => void, body: () => void): void {
+    this.painter.mask(maskBody, body);
+  }
+  tween(...args: [readonly Keyframe<number>[], number, EaseName?]): number {
+    return tween(...args);
+  }
+  tweenPoint(...args: [readonly Keyframe<readonly number[]>[], number, EaseName?]): number[] {
+    return tweenPoint(...args);
+  }
+  ease(name: EaseName, u: number): number {
+    return ease(name, u);
   }
   cache(...args: [string, () => void, Omit<PasteOptions, "opacity">?]): void {
     this.painter.cache(...args);

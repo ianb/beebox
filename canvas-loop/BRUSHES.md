@@ -151,7 +151,11 @@ v.group({ opacity: 0.6, blend: "multiply" }, () => {
   group do not darken where they overlap.
 - **Blend** is how the finished group combines with what is under it:
   `"normal"`, `"multiply"`, `"screen"`, `"overlay"`, `"darken"`, `"lighten"`,
-  `"soft-light"`, `"hard-light"`, `"color-dodge"`, `"color-burn"`.
+  `"soft-light"`, `"hard-light"`, `"color-dodge"`, `"color-burn"`, `"add"`
+  (light sums toward white: sparks, fire), `"difference"`, `"exclusion"`,
+  and `"hue"`, `"saturation"`, `"color"`, `"luminosity"` (take that property
+  from the group, the rest from what is under it: `"color"` tints a grey
+  drawing). An unknown name is an error.
 - A style's `blend` does the same for one shape.
 - A style with `erase: true` removes pixels: the fill, stroke or mark cuts a
   hole. Inside a group it removes only the group's own pixels. Elsewhere,
@@ -159,6 +163,39 @@ v.group({ opacity: 0.6, blend: "multiply" }, () => {
 - Groups nest.
 - `clip([shapeA, shapeB, …], body)` clips to the union of several shapes, for
   example one light pass over a whole figure made of parts.
+
+## Effects
+
+`group`'s `effects` work on the finished group as it is composited:
+
+```ts
+v.group({ effects: { shadow: { x: 4, y: 6, blur: 6, color: "rgba(0,0,0,0.4)" } } }, () => drawCard(v));
+v.group({ effects: { glow: { blur: 12, color: "#ffd84a" } }, blend: "screen" }, () => drawLamp(v));
+v.group({ effects: { blur: 3 } }, () => drawDistantHills(v));
+v.group({ effects: { saturation: 0.3, brightness: 1.1 } }, () => drawMemory(v));
+```
+
+| Effect | Value |
+| --- | --- |
+| `blur` | radius in pixels |
+| `glow` | `{ blur, color, strength? }`: a halo in `color` around what the group drew; `strength` 1–6 (default 2) builds it brighter |
+| `shadow` | `{ x?, y?, blur?, color }`: a drop shadow, offset and softened |
+| `hue` | rotate hues, degrees |
+| `saturation`, `brightness`, `contrast` | factors: 1 unchanged, 0 grey / black / flat |
+| `grayscale`, `sepia`, `invert` | amounts 0..1 |
+
+Colour adjustments apply first, then `blur`, then `shadow`. The glow is
+drawn beneath the group, from its silhouette, so a shadow does not fall from
+the glow. For another order, nest groups: the inner group's effects come
+first. The glow does not brighten the group itself (add `blend: "screen"` or
+`"add"` for that).
+
+Lengths are canvas pixels, and the shadow's `x`, `y` point along the canvas:
+an enclosing `at` scale or rotation changes neither. A group inside a sprite
+is cut at the sprite's edge, so leave room in the sprite for its blur, glow
+or shadow. An effect runs over the whole canvas each time the group draws, so
+put a static effected picture in a `cache` or `sprite`. Browsers before
+Safari 18 ignore effects.
 
 ## Gradients and paper texture
 

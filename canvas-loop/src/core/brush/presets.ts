@@ -1,6 +1,6 @@
 // Named brush presets and brush validation.
 import { SketchUsageError } from "../errors.js";
-import type { BlendMode } from "../paint.js";
+import { BLEND_MODES, type BlendMode } from "../compose.js";
 import type { BristleBrush, Brush, BrushKind, BrushOverrides, InkBrush, StampBrush } from "./types.js";
 
 const INK: InkBrush = { kind: "ink", opacity: 1, grain: 0, thinning: 0.75 };
@@ -106,18 +106,7 @@ const KIND_FIELDS: Record<BrushKind, Record<string, readonly [number, number] | 
   bristle: { opacity: UNIT, grain: UNIT, blend: undefined, bristles: [1, 64], flow: UNIT, load: [0.01, 10], spread: UNIT },
 };
 
-const BLENDS: readonly BlendMode[] = [
-  "normal",
-  "multiply",
-  "screen",
-  "overlay",
-  "darken",
-  "lighten",
-  "soft-light",
-  "hard-light",
-  "color-dodge",
-  "color-burn",
-];
+const BLENDS: readonly BlendMode[] = BLEND_MODES;
 
 function isBrushName(name: string): name is BrushName {
   return Object.hasOwn(BRUSH_PRESETS, name);

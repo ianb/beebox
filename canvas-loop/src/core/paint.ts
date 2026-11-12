@@ -6,7 +6,11 @@
 // one place those data forms are turned into ctx calls; the engine calls them.
 
 import type { BrushName } from "./brush/presets.js";
+import type { BlendMode, Effects } from "./compose.js";
 import type { Brush, BrushOverrides, Gesture } from "./brush/types.js";
+
+export { BLEND_MODES, compositeOp } from "./compose.js";
+export type { BlendMode, Effects, Shadow } from "./compose.js";
 
 // ── Structural 2D-context subset ─────────────────────────────────────
 // The drawing engine (paint.ts helpers + Painter) is typed against this
@@ -159,6 +163,8 @@ export interface Ctx2D {
   lineJoin: "bevel" | "miter" | "round";
   globalAlpha: number;
   globalCompositeOperation: string;
+  /** A CSS filter list applied to later drawing ("none" for none). */
+  filter: string;
   font: string;
   textAlign: CtxTextAlign;
   textBaseline: CtxTextBaseline;
@@ -212,27 +218,6 @@ export type PathCommand =
   | readonly ["quad", number, number, number, number]
   | readonly ["bezier", number, number, number, number, number, number]
   | readonly ["close"];
-
-/**
- * How drawn pixels combine with what is already there. `"normal"` is Canvas2D's
- * `source-over`; the rest are Canvas2D composite modes that Skia and browsers share.
- */
-export type BlendMode =
-  | "normal"
-  | "multiply"
-  | "screen"
-  | "overlay"
-  | "darken"
-  | "lighten"
-  | "soft-light"
-  | "hard-light"
-  | "color-dodge"
-  | "color-burn";
-
-/** The Canvas2D `globalCompositeOperation` value for a blend mode. */
-export function compositeOp(blend: BlendMode): string {
-  return blend === "normal" ? "source-over" : blend;
-}
 
 /** A gradient color stop, `[offset0to1, cssColor]`. */
 export type ColorStop = readonly [number, string];
@@ -303,10 +288,11 @@ export interface SpriteOptions {
   readonly height: number;
 }
 
-/** Options for `group`: opacity applied once to the finished group, and its blend mode. */
+/** Options for `group`: opacity applied once to the finished group, its blend mode, and its effects. */
 export interface GroupOptions {
   readonly opacity?: number;
   readonly blend?: BlendMode;
+  readonly effects?: Effects;
 }
 
 /** Any gradient handle. */
@@ -376,6 +362,16 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
  * would squash its line width too.
  */
 /** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
+/** Apply an `at` scope's transform to `ctx`: translate, then rotate, then scale. */
+export function applyAt(ctx: Ctx2D, options: AtOptions): void {
+  const { translate, rotate, scale } = options;
+  if (translate !== undefined) ctx.translate(translate[0], translate[1]);
+  if (rotate !== undefined) ctx.rotate(rotate);
+  if (scale === undefined) return;
+  if (typeof scale === "number") ctx.scale(scale, scale);
+  else ctx.scale(scale[0], scale[1]);
+}
+
 export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
   ctx.save();
   try {

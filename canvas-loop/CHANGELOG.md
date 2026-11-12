@@ -5,6 +5,15 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Effects, masks, more blends, tween** (gaps found by reading klad's
+  drawing format). `group` takes `effects`: `blur`, `glow`, `shadow`, and
+  colour adjustments (`hue`, `saturation`, `brightness`, `contrast`,
+  `grayscale`, `sepia`, `invert`). `v.mask(maskBody, body)` is a soft,
+  alpha-proportional mask. Blends add `"add"`, `"difference"`,
+  `"exclusion"`, `"hue"`, `"saturation"`, `"color"`, `"luminosity"`; an
+  unknown blend name is now an error (it used to draw as the previous blend).
+  `v.tween`, `v.tweenPoint` and `v.ease` give eased keyframe values.
+
 - **Figures: console log, narrow columns, `keepInside`, initial params.** A
   figure's log goes to the browser console (`[canvas-loop] frame N: …`)
   instead of being dropped. `teaRun` takes `initialParams` (checked against
