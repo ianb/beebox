@@ -1,10 +1,12 @@
-// Shared drawing-data types for both tiers (the mutable Sketch engine and the
-// TEA View facade). Everything here is DATA, not calls on a live context: point
+// Shared drawing-data types for the View and the Painter. Everything here is DATA, not calls on a live context: point
 // arrays, a tagged path mini-language, and gradient handles. That keeps the
 // surface serializable-in-principle — a later browser renderer could emit these
 // as JSON draw commands — and keeps live `CanvasGradient`/`Path2D` objects from
 // leaking into sketch code. The `trace*`/`resolveGradient` helpers below are the
 // one place those data forms are turned into ctx calls; the engine calls them.
+
+import type { BrushName } from "./brush/presets.js";
+import type { Brush, BrushOverrides, Gesture } from "./brush/types.js";
 
 // ── Structural 2D-context subset ─────────────────────────────────────
 // The drawing engine (paint.ts helpers + Painter) is typed against this
@@ -18,6 +20,89 @@
 
 /** Text weight and slant, as p5's `textStyle`. */
 export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
+
+/**
+ * Where `text` writes. Without `w`, `align` places the text about `x`; without
+ * `h`, `valign` places it about `y`. With `w`, lines wrap to it.
+ */
+export interface TextBox {
+  x: number;
+  y: number;
+  w?: number;
+  h?: number;
+}
+
+/** How `text` lays out and styles one call. Keys left out take the defaults: size 12, sans-serif, normal, black, left, top. */
+export interface TextOptions {
+  align?: "left" | "center" | "right";
+  /** Default "top". "baseline": `y` is the first line's alphabetic baseline. */
+  valign?: "top" | "middle" | "bottom" | "baseline";
+  /** Wrap at word breaks to the box width (default: on when `w` is set). */
+  wrap?: boolean;
+  /** Shrink the size until the text fits the box (never grows it). */
+  fit?: boolean;
+  /** Line spacing as a multiple of the size (default 1.25). */
+  lineHeight?: number;
+  size?: number;
+  font?: string;
+  style?: TextStyle;
+  /** Default black. */
+  fill?: Paint;
+  /** A band of this color around the letters, drawn under them, so text reads over lines and busy ground. */
+  halo?: Paint;
+  blend?: BlendMode;
+  erase?: boolean;
+}
+
+/** What `text` drew: the ink box in logical pixels, the line count, and the size used. */
+export interface TextBounds {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  lines: number;
+  size: number;
+  /** True when the text overflows the box at that size. */
+  overflow: boolean;
+}
+
+/**
+ * How one drawing call paints: plain data, held in variables and spread to
+ * vary (`{ ...ink, stroke: "red" }`). A key left out means none (no fill, no
+ * stroke, no brush) or the default (weight 1, blend "normal").
+ */
+export interface Style {
+  readonly fill?: Paint;
+  readonly stroke?: Paint;
+  /** Stroke width in logical pixels (default 1). */
+  readonly weight?: number;
+  /** Strokes become brushed marks: a preset name, a preset with fields changed (`{ preset: "pencil", opacity: 0.6 }`), or a Brush. */
+  readonly brush?: BrushName | BrushPreset | Brush;
+  /** How the hand moves for brushed marks (pressure, wobble, seed). */
+  readonly gesture?: Gesture;
+  readonly blend?: BlendMode;
+  /** Remove pixels instead of adding them. */
+  readonly erase?: boolean;
+  /** Dash a plain stroke: lengths on, off, on, … in logical pixels (`[6, 4]`). Brushed strokes cannot be dashed. */
+  readonly dash?: readonly number[];
+}
+
+/** A brush preset with some fields changed, as plain data. */
+export type BrushPreset = { readonly preset: BrushName } & BrushOverrides;
+
+/** How `image` pastes a sprite. */
+export interface PasteOptions {
+  readonly opacity?: number;
+  readonly blend?: BlendMode;
+  readonly erase?: boolean;
+}
+
+/** A transform scope for `at`: applied as translate, then rotate, then scale. */
+export interface AtOptions {
+  readonly translate?: readonly [number, number];
+  readonly rotate?: number;
+  readonly scale?: number | readonly [number, number];
+}
 
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
@@ -102,6 +187,9 @@ export interface Ctx2D {
   clip(): void;
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
+  strokeText(text: string, x: number, y: number): void;
+  setLineDash(segments: number[]): void;
+  measureText(text: string): { readonly width: number };
   createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
 }
@@ -285,18 +373,29 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
  * traced, so only the gradient is squashed. Only fills use this: a stroke
  * would squash its line width too.
  */
+/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
+export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
+  ctx.save();
+  try {
+    return body();
+  } finally {
+    ctx.restore();
+  }
+}
+
 export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
   const { paint } = args;
   if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
     args.fill();
     return;
   }
-  ctx.save();
-  ctx.translate(paint.x2, paint.y2);
-  ctx.scale(1, paint.scaleY);
-  ctx.translate(-paint.x2, -paint.y2);
-  args.fill();
-  ctx.restore();
+  const { x2, y2, scaleY } = paint;
+  withSaved(ctx, () => {
+    ctx.translate(x2, y2);
+    ctx.scale(1, scaleY);
+    ctx.translate(-x2, -y2);
+    args.fill();
+  });
 }
 
 /** Build the ctx-bound gradient for a gradient handle. */

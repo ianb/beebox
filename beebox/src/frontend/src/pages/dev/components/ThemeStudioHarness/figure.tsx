@@ -25,9 +25,7 @@ const SKETCH = {
   // eslint-disable-next-line max-params -- canvas-loop's TEA contract fixes draw(view, model, params)
   draw: (v: View, _model: DeepReadonly<null>, p: ParamValues<typeof params>): void => {
     v.background("#0b0e17");
-    v.noStroke();
-    v.fill(p.tray === "seedlings" ? "#86efac" : "#fb923c");
-    v.circle(40 + p.warmth * 5, 40, 16);
+    v.circle(40 + p.warmth * 5, 40, 16, { fill: p.tray === "seedlings" ? "#86efac" : "#fb923c" });
   },
 };
 

@@ -10,7 +10,7 @@ The picture: an 800×600 page at dusk. The green alien stands in a meadow, left 
 - **Short airbrush marks give almost no paint.** Cheeks drawn as a 12px airbrush `line` at weight 20–24 and opacity 0.55–0.85 were invisible at 1× for four cycles. A radial-gradient ellipse worked on the first try. BRUSHES.md warns that short marks read as noise; for airbrush they read as nothing.
 - **Chalk as a thin line reads as dashes.** A 6px chalk shooting star was a dotted, broken path. An airbrush trail with a thin ink core worked.
 - **`max-lines` (600) in the lint preset.** The finished sketch was 915 lines and failed lint. I split it into `common.ts`, `scene.ts` and `sketch.ts` and confirmed with a byte-compare that the render did not change. A picture sketch grows fast; the rule fits app code better than drawing code.
-- **A slip of mine:** early on, to check how the `Vec2` type was used, I opened the first ~60 lines of `src/gallery/alien-curve/sketch.ts`, which the brief says not to open. I saw its header comment and its `ellipsePts`/`closedCurvePath` helpers. I wrote my own helpers and did not use its geometry or shading, but I did see that file.
+- **A slip of mine:** early on, to check how the `Vec2` type was used, I opened the first ~60 lines of `src/gallery/alien-curve/sketch-tea.ts`, which the brief says not to open. I saw its header comment and its `ellipsePts`/`closedCurvePath` helpers. I wrote my own helpers and did not use its geometry or shading, but I did see that file.
 
 ## What I wanted and did not have
 

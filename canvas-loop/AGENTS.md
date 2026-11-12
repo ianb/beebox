@@ -4,15 +4,17 @@ Use canvas-loop to see what a program draws (sketches, simulations, generative
 figures, interactive canvas toys, `SketchFigure` embeds) without a live
 browser. Real DOM or CSS app UI stays with the browse skill.
 
-Reference, read before writing: [README.md](README.md) (mutable tier, `Sketch`
-API, events file, capture policy, `<SketchFigure>`), [TEA.md](TEA.md) (TEA tier;
-prefer it for new work and name the file `*-tea.ts` so its lint applies), and
+Reference, read before writing: [TEA.md](TEA.md) (sketch contract, drawing
+API with a style on every call; name files `*-tea.ts`), [README.md](README.md)
+(run, events, capture, `<SketchFigure>`), [BRUSHES.md](BRUSHES.md) and
 [src/gallery/README.md](src/gallery/README.md) (exercise corpus).
 
 ## The loop
 
 1. Write the sketch.
-2. Render it: `pnpm --dir canvas-loop run cli run <sketch.ts> --events <events.json> --out out [--seed 42] [--frames 120]`.
+2. Render it from the repo root: `pnpm --dir canvas-loop run cli run <sketch.ts> --events <events.json> --out out [--seed 42] [--frames 120]`.
+   `--dir` runs the command in `canvas-loop/`, so the paths are relative to it. Each run empties `--out` first.
+   `run` does not type-check; a sketch under `canvas-loop/src/` is checked by `pnpm --dir canvas-loop exec tsc --noEmit -p .`.
 3. `Read out/transcript.md`; its inline frame images render in `Read`.
 4. Fix and re-run. A re-run reproduces the exact pixels.
 

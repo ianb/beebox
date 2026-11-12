@@ -8,7 +8,9 @@
 // replays byte-for-byte through the CLI.
 import { SeededRandom } from "../../core/prng.js";
 import { UnhandledMsgError } from "../../headless/errors.js";
-import type { Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
+import type { Voice, ControlBox, Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
+import { Score } from "../../core/sound/voice.js";
+import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
@@ -74,8 +76,12 @@ export interface RuntimeDeps {
   ctx: CanvasRenderingContext2D;
   width: number;
   height: number;
+  /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
+  pixelRatio?: number;
   seed: number;
   onFrame: (frame: number) => void;
+  /** A voice whose frame has come (default: the runtime's own `SoundPlayer` plays it). */
+  onVoice?: (voice: Voice) => void;
   onLog: (entry: RuntimeLog) => void;
   /** Partial override of declared param defaults — the initial values init() sees. */
   initialParams?: ParamOverrides;
@@ -87,6 +93,8 @@ export interface RuntimeDeps {
    * Default when omitted: `console.error` (still exactly once).
    */
   onError?: (error: unknown) => void;
+  /** After each draw: where `v.control` placed param inputs this frame. */
+  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
 }
 
 export class Runtime {
@@ -108,9 +116,16 @@ export class Runtime {
   #acc = 0;
   #last: number | undefined;
   #onFrame: (frame: number) => void;
+  #onVoice: ((voice: Voice) => void) | undefined;
+  // Plays the sketch's voices, when it has a `sound` export.
+  #player: SoundPlayer | undefined;
+  #score = new Score();
+  // Voices declared ahead of their `at` frame, waiting for it.
+  #waiting: Voice[] = [];
   #onLog: (entry: RuntimeLog) => void;
   #onEvent: ((entry: EmittedEvent) => void) | undefined;
   #onError: ((error: unknown) => void) | undefined;
+  #onPlace: ((placements: ReadonlyMap<string, ControlBox>) => void) | undefined;
   #errored = false;
   #overrides: ParamOverrides | undefined;
   // Per-event engagement accumulator (mirrors the headless runners); reset
@@ -125,16 +140,19 @@ export class Runtime {
     this.#overrides = deps.initialParams;
     this.#params = initialParams(this.#decl, this.#overrides);
     this.#onFrame = deps.onFrame;
+    this.#player = deps.module.sound === undefined ? undefined : new SoundPlayer((message) => console.info(message));
+    this.#onVoice = deps.onVoice ?? ((voice) => this.#player?.play(voice));
     this.#onLog = deps.onLog;
     this.#onEvent = deps.onEvent;
     this.#onError = deps.onError;
+    this.#onPlace = deps.onPlace;
     this.#util = new BrowserUtil({
       random: this.#random,
       getParams: () => this.#params,
       log: (args) => this.#recordLog(args),
       onHandled: (name) => this.#handledNames.push(name),
     });
-    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, log: (args) => this.#recordLog(args) });
+    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }
@@ -149,6 +167,12 @@ export class Runtime {
   stop(): void {
     if (this.#raf !== undefined) cancelAnimationFrame(this.#raf);
     this.#raf = undefined;
+    this.#player?.close();
+  }
+
+  /** Allow sound; call from a user gesture's handler (browsers start audio only then). */
+  enableSound(): void {
+    this.#player?.enable();
   }
 
   setPaused(paused: boolean): void {
@@ -175,6 +199,9 @@ export class Runtime {
     this.#frame = 0;
     this.#acc = 0;
     this.#last = undefined;
+    this.#score.clear();
+    this.#waiting = [];
+    this.#player?.stopAll();
     this.#model = frozen(this.#module.init(this.#util));
     this.#onFrame(this.#frame);
     this.#draw();
@@ -270,7 +297,21 @@ export class Runtime {
   #doFrame(): void {
     this.#flushPending();
     this.#fold({ type: "tick", frame: this.#frame });
+    this.#collectSound();
     this.#frame += 1;
+  }
+
+  // After a fold, as headless does: new voices join the score; any whose frame
+  // has come start now, the rest wait for it.
+  #collectSound(): void {
+    const sound = this.#module.sound;
+    if (sound === undefined) return;
+    const frame = this.#frame;
+    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame));
+    const due = this.#waiting.filter((voice) => voice.at <= frame);
+    if (due.length === 0) return;
+    this.#waiting = this.#waiting.filter((voice) => voice.at > frame);
+    for (const voice of due) this.#onVoice?.(voice);
   }
 
   #flushPending(): void {
@@ -336,6 +377,9 @@ export class Runtime {
 
   #draw(): void {
     this.#module.draw(this.#view, this.#model, this.#params);
+    this.#view.finishFrame();
+    const placements = this.#view.takePlacements();
+    this.#onPlace?.(placements);
   }
 
   #recordLog(args: readonly unknown[]): void {

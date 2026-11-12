@@ -16,6 +16,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** The browser automation CLI and its dashboard as the box browser that the box agent and the person share; beebox runs it unmodified and proxies the dashboard.
 - **Where it landed:** `beebox/package.json` (pinned dependency); the box browser per `beebox/docs/plans/shared-browser.md`.
 
+### Karplus–Strong string synthesis, by Kevin Karplus and Alex Strong
+
+- **Source:** "Digital Synthesis of Plucked-String and Drum Timbres", Computer Music Journal 7(2), 1983 (published algorithm)
+- **What we took:** The plucked-string algorithm: a noise burst circulating through a delay line one period long, averaged on each pass.
+- **Where it landed:** `canvas-loop/src/core/sound/synth.ts`
+
 ### perfect-freehand, by Steve Ruiz
 
 - **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
@@ -82,7 +88,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** https://api.flutter.dev/flutter/flutter_test/matchesGoldenFile.html (repository https://github.com/flutter/flutter, BSD 3-Clause)
 - **What we took:** The frame-stepped test shape. An injected event takes effect on the next stepped frame, and a snapshot is taken on demand.
-- **Where it landed:** `canvas-loop/src/headless/runtime.ts`, `canvas-loop/README.md`
+- **Where it landed:** `canvas-loop/src/headless/tea-runtime.ts`, `canvas-loop/README.md`
 
 ### Ghost-CLI, by TryGhost
 

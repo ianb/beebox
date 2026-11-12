@@ -195,14 +195,9 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   const cx = v.width / 2;
   const cy = v.height / 2;
   const orbit = 90;
-  if (p["show-ring"]) {
-    v.noFill();
-    v.stroke("#334155");
-    v.circle(cx, cy, orbit * 2);
-  }
-  v.noStroke();
-  v.fill(TONES[p.tone] ?? "#7dd3fc");
-  v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 24);
+  // Each drawing call takes its style; nothing carries over between calls.
+  if (p["show-ring"]) v.circle(cx, cy, orbit * 2, { stroke: "#334155" });
+  v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 24, { fill: TONES[p.tone] ?? "#7dd3fc" });
 }
 
 // A reader who asked for reduced motion gets the paused first frame.

@@ -73,8 +73,11 @@ export function replaceInShapes(
 export function withComposite(ctx: Ctx2D, args: { op: string; draw: () => void }): void {
   const previous = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = args.op;
-  args.draw();
-  ctx.globalCompositeOperation = previous;
+  try {
+    args.draw();
+  } finally {
+    ctx.globalCompositeOperation = previous;
+  }
 }
 
 /** Layers stored by key for `cache()`, oldest dropped first past the limit. */

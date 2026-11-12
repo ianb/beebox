@@ -6,13 +6,13 @@ You are drawing a picture with canvas-loop, a deterministic Canvas2D sandbox in 
 
 Aim high. The guide is a flat diagram; do not trace it or lightly decorate it. A picture-book illustrator would compose a scene (a place, a ground, a sky or a room, a reason the alien is waving), give it light and atmosphere, paint colour with brushes instead of leaving flat fills, and vary the line. Your result should look like a page from a good picture book, not like clip-art. Be demanding of yourself in every cycle.
 
-Do not open `canvas-loop/src/examples/alien-reference.ts` (the guide's source) or any other `canvas-loop/src/gallery/alien-*` directory.
+Do not open `canvas-loop/src/examples/alien-reference-tea.ts` (the guide's source) or any other `canvas-loop/src/gallery/alien-*` directory.
 
 **Read first:** `canvas-loop/README.md` (the Run and "Writing a sketch" sections, the Sketch API table) and `canvas-loop/BRUSHES.md` (brushes, gestures, paper, groups, zoom). Use the mutable tier (`setup`/`draw`). Draw outlines mostly with `s.curve(points, closed?)`, a smooth curve through points; use `s.path` where you need corners. `s.curvePath(points, true)` gives the same curve for `clip`.
 
-**Workspace.** Write `canvas-loop/src/gallery/alien-scene-sol/sketch.ts`. Render with:
+**Workspace.** Write `canvas-loop/src/gallery/alien-scene-sol/sketch-tea.ts`. Render with:
 
-    pnpm --dir canvas-loop run cli run src/gallery/alien-scene-sol/sketch.ts --frames 1 --out canvas-loop/out/alien-scene-sol/cycle-N --zoom x,y,w,h
+    pnpm --dir canvas-loop run cli run src/gallery/alien-scene-sol/sketch-tea.ts --frames 1 --out canvas-loop/out/alien-scene-sol/cycle-N --zoom x,y,w,h
 
 Choose one or more `--zoom` regions each cycle (the regions you are working on). Look at the frame and the zoom images (`canvas-loop/out/alien-scene-sol/cycle-N/frame-0000.png`, `frame-0000-zoom1.png`, …).
 
@@ -24,7 +24,7 @@ Choose one or more `--zoom` regions each cycle (the regions you are working on).
 This record will be used to study how agents judge their own changes, so be concrete and honest.
 
 **Rules.** Edit nothing outside `canvas-loop/src/gallery/alien-scene-sol/` and `canvas-loop/out/alien-scene-sol`. If the library has a bug or a confusing behaviour, work around it if you can and describe it in your account; do not patch the library. Do not run git commands. Run commands in the foreground. Before you finish:
-- `pnpm --dir canvas-loop exec eslint src/gallery/alien-scene-sol/sketch.ts` must pass.
+- `pnpm --dir canvas-loop exec eslint src/gallery/alien-scene-sol/sketch-tea.ts` must pass.
 - `pnpm --dir canvas-loop typecheck` must report no errors in your sketch (errors in other `src/gallery/alien-*` directories belong to other drawers working at the same time; ignore them).
 
 **Account.** Finish by writing `canvas-loop/src/gallery/alien-scene-sol/history/account.md`:

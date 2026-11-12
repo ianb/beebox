@@ -59,7 +59,8 @@ export class DebugOverlay {
       for (const [x, y] of rest) ctx.lineTo(x, y);
       ctx.closePath();
       ctx.stroke();
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      // A see-through tag, so the label does not hide the art it names.
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
       ctx.fillRect(first[0], first[1] - 12, label.length * 5.6 + 6, 12);
       ctx.fillStyle = "#ffffff";
       ctx.fillText(label, first[0] + 3, first[1] - 11);

@@ -1,0 +1,25 @@
+slug: periodic-trends
+title: "Periodic trends explorer (canvas-loop side of the d3 comparison)"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 7
+tier: tea
+harness-commit: ba092074
+frames: 300
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Shaded main-group table plus a line chart across a period or down a group, linked hover and pin,
+  values and exceptions toggles. Built head to head with a d3 version (kept outside the repo,
+  scratch/d3-compare/); see the comparison exhibit.
+self-report-summary: >
+  TEA model and scripted clicks were easy; wanted textWidth (added since), per-call text options so
+  alignment cannot leak, small scale/tick and colour-ramp helpers.
+features-exercised:
+  - TEA pointer input (hover, click)
+  - select, boolean and trigger params
+  - sibling -tea helper files
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

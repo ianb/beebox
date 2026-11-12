@@ -23,8 +23,6 @@ export interface RecorderDeps {
   every: number;
   /** Raw pixels of the current frame, for capture. */
   readPixels: () => Pixels;
-  /** Whether the canvas exists yet (setup ran) — gates error-frame capture. */
-  canvasReady: () => boolean;
   /** Regions to write as enlarged crops beside every captured frame. */
   zooms?: readonly Zoom[];
 }
@@ -43,14 +41,14 @@ function normalizeError(error: unknown): { name: string; message: string; stack:
 
 /**
  * Accumulates the transcript across a frame loop: log lines, param changes,
- * captured/deduped frames, and errors — then writes out/. Both the mutable tier
- * (runtime.ts) and the TEA tier (tea-runtime.ts) drive it, so capture policy,
- * dedup, and the on-disk format are defined once.
+ * captured/deduped frames, and errors — then writes out/. tea-runtime.ts drives
+ * it; capture policy, dedup, and the on-disk format are defined here.
  */
 export class FrameRecorder implements SketchHost {
   #deps: RecorderDeps;
   #entries: TranscriptEntry[] = [];
   #toEncode = new Map<string, Pixels>();
+  #files = new Map<string, Uint8Array>();
   #zoomsToEncode = new Map<string, { pixels: Pixels; zoom: Zoom }>();
   #lastZooms: readonly ZoomImage[] = [];
   #currentFrame = 0;
@@ -117,7 +115,7 @@ export class FrameRecorder implements SketchHost {
 
   recordError(error: unknown): void {
     const { name, message, stack } = normalizeError(error);
-    if (this.#deps.canvasReady() && !this.#frameCaptured) {
+    if (!this.#frameCaptured) {
       this.#capture(this.#currentFrame);
     }
     this.#entries.push({ kind: "error", frame: this.#currentFrame, name, message, stack });
@@ -166,6 +164,11 @@ export class FrameRecorder implements SketchHost {
     return this.#errors;
   }
 
+  /** Write `bytes` as `file` beside the frames (e.g. `sound.wav`). */
+  addFile(file: string, bytes: Uint8Array): void {
+    this.#files.set(file, bytes);
+  }
+
   writeOutput(outDir: string, meta: RunMeta): RunResult {
     rmSync(outDir, { recursive: true, force: true });
     mkdirSync(outDir, { recursive: true });
@@ -175,6 +178,7 @@ export class FrameRecorder implements SketchHost {
     for (const [file, { pixels, zoom }] of this.#zoomsToEncode) {
       writeFileSync(join(outDir, file), encodeZoomPng(pixels, zoom));
     }
+    for (const [file, bytes] of this.#files) writeFileSync(join(outDir, file), bytes);
     const transcriptPath = join(outDir, "transcript.md");
     writeFileSync(transcriptPath, renderTranscript(meta, this.#entries));
     return {

@@ -32,6 +32,7 @@ class FakeCanvas {
   height = 0;
   tabIndex = -1;
   textContent = "";
+  style: Record<string, string> = {};
   children: unknown[] = [];
   append(): void {
     // no-op: these tests never inspect the mounted tree

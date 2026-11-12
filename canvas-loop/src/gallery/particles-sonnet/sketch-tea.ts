@@ -13,13 +13,25 @@
 // All state lives in Model; the only way it changes is `update` returning a
 // new Model; the switch on `msg.type` is exhaustive. `draw` only paints. See
 // TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Style,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },
   gravity: { type: "number", min: -0.3, max: 0.5, default: 0.08, step: 0.01 },
   trails: { type: "boolean", default: false },
-  palette: { type: "select", options: ["warm", "cool", "mono"], default: "warm" },
+  palette: {
+    type: "select",
+    options: ["warm", "cool", "mono"],
+    default: "warm",
+  },
   burst: { type: "trigger" },
 } as const satisfies ParamsDecl;
 
@@ -61,7 +73,10 @@ function emitterAt(frame: number): { x: number; y: number } {
   };
 }
 
-function spawnParticle(params_: { emitter: { x: number; y: number }; u: Util<typeof params> }): Particle {
+function spawnParticle(params_: {
+  emitter: { x: number; y: number };
+  u: Util<typeof params>;
+}): Particle {
   const { emitter, u } = params_;
   return {
     x: emitter.x,
@@ -96,7 +111,14 @@ function advanceParticle(params_: {
     vx += (dx / dist) * ATTRACT_STRENGTH;
     vy += (dy / dist) * ATTRACT_STRENGTH;
   }
-  return { ...particle, x: particle.x + vx, y: particle.y + vy, vx, vy, age: particle.age + 1 };
+  return {
+    ...particle,
+    x: particle.x + vx,
+    y: particle.y + vy,
+    vx,
+    vy,
+    age: particle.age + 1,
+  };
 }
 
 function stepParticles(params_: {
@@ -111,31 +133,57 @@ function stepParticles(params_: {
 }
 
 function capParticles(particles: readonly Particle[]): readonly Particle[] {
-  return particles.length > MAX_PARTICLES ? particles.slice(particles.length - MAX_PARTICLES) : particles;
+  return particles.length > MAX_PARTICLES
+    ? particles.slice(particles.length - MAX_PARTICLES)
+    : particles;
 }
 
-function tick(params_: { model: DeepReadonly<Model>; frame: number; u: Util<typeof params> }): Model {
+function tick(params_: {
+  model: DeepReadonly<Model>;
+  frame: number;
+  u: Util<typeof params>;
+}): Model {
   const { model, frame, u } = params_;
   const emitter = emitterAt(frame);
-  const advanced = stepParticles({ particles: model.particles, gravity: u.params.gravity, attractor: model.attractor });
+  const advanced = stepParticles({
+    particles: model.particles,
+    gravity: u.params.gravity,
+    attractor: model.attractor,
+  });
   const count = spawnCount({ rate: u.params.rate, u });
   const spawned: Particle[] = [];
   for (let i = 0; i < count; i++) spawned.push(spawnParticle({ emitter, u }));
-  return { frame, emitter, attractor: model.attractor, particles: capParticles([...advanced, ...spawned]) };
+  return {
+    frame,
+    emitter,
+    attractor: model.attractor,
+    particles: capParticles([...advanced, ...spawned]),
+  };
 }
 
-function burst(params_: { model: DeepReadonly<Model>; u: Util<typeof params> }): Model {
+function burst(params_: {
+  model: DeepReadonly<Model>;
+  u: Util<typeof params>;
+}): Model {
   const { model, u } = params_;
   const spawned: Particle[] = [];
-  for (let i = 0; i < BURST_COUNT; i++) spawned.push(spawnParticle({ emitter: model.emitter, u }));
-  return { ...model, particles: capParticles([...model.particles, ...spawned]) };
+  for (let i = 0; i < BURST_COUNT; i++)
+    spawned.push(spawnParticle({ emitter: model.emitter, u }));
+  return {
+    ...model,
+    particles: capParticles([...model.particles, ...spawned]),
+  };
 }
 
 export function init(): Model {
   return { frame: 0, particles: [], emitter: emitterAt(0), attractor: null };
 }
 
-export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "tick":
       return tick({ model, frame: msg.frame, u });
@@ -143,7 +191,9 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
       u.log(`attractor on at (${msg.x}, ${msg.y})`);
       return { ...model, attractor: { x: msg.x, y: msg.y } };
     case "mousemove":
-      return model.attractor === null ? model : { ...model, attractor: { x: msg.x, y: msg.y } };
+      return model.attractor === null
+        ? model
+        : { ...model, attractor: { x: msg.x, y: msg.y } };
     case "mouseup":
       u.log("attractor off");
       return { ...model, attractor: null };
@@ -161,7 +211,11 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
   }
 }
 
-function paletteColor(params_: { palette: Palette; variant: number; alpha: number }): string {
+function paletteColor(params_: {
+  palette: Palette;
+  variant: number;
+  alpha: number;
+}): string {
   const { palette, variant, alpha } = params_;
   if (palette === "warm") {
     const hue = 10 + variant * 45; // red -> amber
@@ -175,57 +229,82 @@ function paletteColor(params_: { palette: Palette; variant: number; alpha: numbe
   return `hsla(0, 0%, ${lightness}%, ${alpha})`;
 }
 
-function drawParticle(params_: { v: View; particle: Particle; palette: Palette }): void {
+function drawParticle(params_: {
+  v: View;
+  particle: Particle;
+  palette: Palette;
+}): void {
   const { v, particle, palette } = params_;
   const lifeFrac = 1 - particle.age / particle.maxAge;
   const size = 2 + particle.variant * 4;
-  v.noStroke();
-  v.fill(paletteColor({ palette, variant: particle.variant, alpha: Math.max(lifeFrac, 0) }));
-  v.circle(particle.x, particle.y, size);
+  v.circle(particle.x, particle.y, size, {
+    fill: paletteColor({
+      palette,
+      variant: particle.variant,
+      alpha: Math.max(lifeFrac, 0),
+    }),
+  });
 }
 
-function drawEmitter(params_: { v: View; emitter: { x: number; y: number } }): void {
+function drawEmitter(params_: {
+  v: View;
+  emitter: { x: number; y: number };
+}): void {
   const { v, emitter } = params_;
-  v.noFill();
-  v.stroke("#f8fafc");
-  v.strokeWeight(1.5);
-  v.circle(emitter.x, emitter.y, 10);
+  v.circle(emitter.x, emitter.y, 10, { stroke: "#f8fafc", weight: 1.5 });
 }
 
-function drawAttractor(params_: { v: View; attractor: { x: number; y: number } }): void {
+function drawAttractor(params_: {
+  v: View;
+  attractor: { x: number; y: number };
+}): void {
   const { v, attractor } = params_;
   const { x, y } = attractor;
-  v.noFill();
-  v.stroke("#fde047");
-  v.strokeWeight(2);
-  v.circle(x, y, 18);
-  v.line(x - 12, y, x + 12, y);
-  v.line(x, y - 12, x, y + 12);
+  const reticle: Style = { stroke: "#fde047", weight: 2 };
+  v.circle(x, y, 18, reticle);
+  v.line(x - 12, y, x + 12, y, reticle);
+  v.line(x, y - 12, x, y + 12, reticle);
 }
 
-function drawHud(params_: { v: View; model: DeepReadonly<Model>; p: Params }): void {
+function drawHud(params_: {
+  v: View;
+  model: DeepReadonly<Model>;
+  p: Params;
+}): void {
   const { v, model, p } = params_;
-  v.noStroke();
-  v.fill("#e2e8f0");
-  v.textSize(14);
-  v.textAlign("left", "top");
-  v.text(`frame ${model.frame}   particles ${model.particles.length}`, 8, 8);
-  v.text(`palette ${p.palette}   attractor ${model.attractor === null ? "off" : "on"}`, 8, 26);
+  const label = {
+    size: 14,
+    fill: "#e2e8f0",
+    align: "left",
+    valign: "top",
+  } as const;
+  v.text(
+    `frame ${model.frame}   particles ${model.particles.length}`,
+    { x: 8, y: 8 },
+    label,
+  );
+  v.text(
+    `palette ${p.palette}   attractor ${model.attractor === null ? "off" : "on"}`,
+    { x: 8, y: 26 },
+    label,
+  );
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   if (p.trails) {
-    v.fill("rgba(11, 16, 32, 0.18)");
-    v.noStroke();
-    v.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    v.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, {
+      fill: "rgba(11, 16, 32, 0.18)",
+    });
   } else {
     v.background("#0b1020");
   }
 
-  for (const particle of model.particles) drawParticle({ v, particle, palette: p.palette });
+  for (const particle of model.particles)
+    drawParticle({ v, particle, palette: p.palette });
 
   drawEmitter({ v, emitter: model.emitter });
-  if (model.attractor !== null) drawAttractor({ v, attractor: model.attractor });
+  if (model.attractor !== null)
+    drawAttractor({ v, attractor: model.attractor });
 
   drawHud({ v, model, p });
 }

@@ -70,12 +70,15 @@ export function paperOverlay(ctx: Ctx2D, args: { paper: Layer; amount: number; w
 export class PaperSheet {
   #makeLayer: MakeLayer;
   #size: { width: number; height: number };
+  #pixelRatio: number;
   #paper: Paper = {};
   #layer: Layer | undefined;
 
-  constructor(makeLayer: MakeLayer, size: { width: number; height: number }) {
+  /** `size` is in device pixels; the tooth is scaled by `pixelRatio` so it looks the same at any density. */
+  constructor(makeLayer: MakeLayer, args: { size: { width: number; height: number }; pixelRatio: number }) {
     this.#makeLayer = makeLayer;
-    this.#size = size;
+    this.#size = args.size;
+    this.#pixelRatio = args.pixelRatio;
   }
 
   /** Change the paper; the texture is rebuilt only when the settings actually differ. */
@@ -87,7 +90,8 @@ export class PaperSheet {
   }
 
   layer(): Layer {
-    this.#layer ??= makePaper(this.#makeLayer, { ...this.#size, paper: this.#paper });
+    const scale = (this.#paper.scale ?? 3) * this.#pixelRatio;
+    this.#layer ??= makePaper(this.#makeLayer, { ...this.#size, paper: { ...this.#paper, scale } });
     return this.#layer;
   }
 }

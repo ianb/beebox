@@ -5,6 +5,46 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Dashes, text measuring, and text warnings** (asked for by the round-2 d3
+  comparison agents). A style takes `dash: [on, off, …]` for plain strokes.
+  `v.textBounds(s, box, options)` returns the bounds `text` would draw,
+  without drawing. Text takes `halo`, a color drawn around the letters. Runs
+  warn when two different texts overlap in a frame, and headless runs warn
+  when the font has no glyph for a character.
+
+- **Sound.** An optional `sound(model, p)` export returns voices (`pluck`,
+  `tone`, `noise`), each one sound with an id and a start frame. Headless
+  runs write `sound.wav` and a waveform `sound.png`; browser figures play the
+  same samples after the first click. See TEA.md, "Sound", and the
+  `guitar-strings` gallery entry.
+
+- **Breaking: a style on every call; TEA is the only sketch form** (see
+  [TEA.md](./TEA.md#drawing)). Each shape call takes a `Style` as its last
+  argument: `{ fill, stroke, weight, brush, gesture, blend, erase }`, plain
+  data kept in `const`s and spread to vary. A missing key means none (or
+  weight 1, blend normal). A brush with changed fields is data too:
+  `{ preset: "pencil", opacity: 0.6 }`. Removed: `fill`, `noFill`, `stroke`,
+  `noStroke`, `strokeWeight`, `brush`, `noBrush`, `gesture`, `blendMode`,
+  `erase`, `noErase`, `textSize`, `textAlign`, `textFont`, `textStyle`,
+  `push`, `pop`, `translate`, `rotate`, `scale`, and `text(s, x, y)`.
+  - `at({ translate, rotate, scale }, body)` scopes a transform. It has no
+    layer, so `erase` inside it erases the canvas. `group` and `clip` are
+    unchanged.
+  - `roundRect(x, y, w, h, radius, style)` replaces `rect`'s radius argument.
+    `curve(points, closed, style)` needs `closed`.
+  - `text(s, {x, y, w?, h?}, options)` is the only text form. Defaults: size
+    12, sans-serif, normal, fill black, align left, valign top. One line with
+    no `w` draws at (x, y); `valign: "baseline"` puts its baseline on `y`.
+    `textWidth(s, options)` measures with the same options.
+  - `image(sprite, x, y, { opacity, blend, erase })` and
+    `cache(key, body, { blend, erase })` take their paste style.
+  - A bad style throws at the call (unknown key, negative weight, unknown
+    brush). A call that can draw nothing (a line with no stroke, a shape with
+    neither fill nor stroke) logs a line once.
+  - The mutable tier (`setup`/`draw(s)`, the `Sketch` API, input handlers) is
+    removed. A module that exports `setup` gets a loader error. The mutable
+    examples and gallery entries are rewritten as TEA: `bounce-tea.ts`,
+    `alien-reference-tea.ts`, `brushes-sampler-tea.ts`.
 - **Brushes, gestures, paper, groups** (see [BRUSHES.md](./BRUSHES.md)).
   `brush(name, overrides?)` / `noBrush()` turn every stroked shape into a
   brushed mark; presets `ink`, `marker`, `pencil`, `chalk`, `airbrush`,
@@ -36,6 +76,32 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Text, shapes and labels from the educational round.** `textWidth(text)`
+  measures text in the current size/font/style; `rect(x, y, w, h, radius)`
+  rounds corners; params take `label` and `hint`, shown by the generated
+  controls (DOM and React); `--timing` names its worst frame; `--outline`
+  label tags are see-through.
+- **Sharp on high-density screens.** Browser figures and the playground back
+  the canvas with `size × devicePixelRatio` pixels (capped at 3) and draw in
+  logical units under a base scale; the Painter takes a `pixelRatio` and sizes
+  layers, sprites and the paper texture to match. Headless output (ratio 1) is
+  unchanged byte for byte.
+- **Hover reaches browser sketches.** The browser figure and playground sent
+  `mousemove` only while a button was held, so hover cues worked headless but
+  not in a browser; every move is now sent.
+- **Text in a box.** `text(s, {x, y, w?, h?}, {align, valign, wrap, fit,
+  lineHeight, size, font, style, fill})` wraps at word breaks to `w`, aligns
+  inside the box (or about the point when `w`/`h` are absent), shrinks to fit
+  with `fit`, and returns the bounds drawn. Style keys apply to that call only,
+  so they never leak into later text. `text(s, x, y)` is unchanged and also
+  returns bounds.
+- **Inputs over the canvas.** `v.control(name, box)` places a param's native
+  input inside the drawing (DOM figures); headless renders draw a stand-in with
+  the value. `panel: false` on a param keeps it out of the side panel. The
+  balance-reaction gallery entry now types coefficients inside the equation.
+- **Typed number fields.** A number param with `control: "field"` shows as a
+  number box in browser figures (DOM and React); only valid, in-range values
+  (whole numbers for `step: 1`) are sent.
 - **Erase and gradient marks under transforms.** @napi-rs/canvas 1.0.2 limits
   destination-out and source-in fills under a transform to the quadrant past
   the translation origin, so erasing a translated or rotated shape cleared only

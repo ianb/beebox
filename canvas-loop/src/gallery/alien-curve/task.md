@@ -2,15 +2,15 @@
 
 You are drawing a picture with canvas-loop, a deterministic Canvas2D sandbox in this repository, as part of an experiment on how agents draw with brushes. Your written account at the end matters as much as the picture.
 
-**Task.** Draw the friendly green alien in the guide image as a picture-book illustration: ink outlines, with pencil or bristle-brush shading and colour. Follow the guide for pose and proportion, and make it pretty. The guide image is `<scratch>/guide/frame-0000.png`; look at it with Read. Do not open `canvas-loop/src/examples/alien-reference.ts` (the guide's source code) or any other `canvas-loop/src/gallery/alien-*` directory.
+**Task.** Draw the friendly green alien in the guide image as a picture-book illustration: ink outlines, with pencil or bristle-brush shading and colour. Follow the guide for pose and proportion, and make it pretty. The guide image is `<scratch>/guide/frame-0000.png`; look at it with Read. Do not open `canvas-loop/src/examples/alien-reference-tea.ts` (the guide's source code) or any other `canvas-loop/src/gallery/alien-*` directory.
 
 **Path form (the experimental condition).** Draw every outline with `s.curve(points, closed?)` — a smooth curve through the points you give (see BRUSHES.md). Shading and texture marks may use any shape.
 
 **Read first:** `canvas-loop/README.md` (the Run and "Writing a sketch" sections, the Sketch API table) and `canvas-loop/BRUSHES.md` (brushes, gestures, paper, groups). Use the mutable tier (`setup`/`draw`), a 400×500 canvas.
 
-**Workspace.** Write `canvas-loop/src/gallery/alien-curve/sketch.ts`. Render with:
+**Workspace.** Write `canvas-loop/src/gallery/alien-curve/sketch-tea.ts`. Render with:
 
-    pnpm --dir canvas-loop run cli run src/gallery/alien-curve/sketch.ts --frames 1 --out <scratch>/alien-curve/cycle-N
+    pnpm --dir canvas-loop run cli run src/gallery/alien-curve/sketch-tea.ts --frames 1 --out <scratch>/alien-curve/cycle-N
 
 then Read `<scratch>/alien-curve/cycle-N/frame-0000.png`.
 
@@ -21,7 +21,7 @@ then Read `<scratch>/alien-curve/cycle-N/frame-0000.png`.
 
 This record will be used to study how agents judge their own changes, so be concrete and honest.
 
-**Rules.** Edit nothing outside `canvas-loop/src/gallery/alien-curve/` and `<scratch>/alien-curve`. If the library has a bug or a confusing behaviour, work around it if you can and describe it in your account; do not patch the library. Do not run git commands. Before you finish, `pnpm --dir canvas-loop exec eslint src/gallery/alien-curve/sketch.ts` must pass; fix lint in your sketch only. Run commands in the foreground.
+**Rules.** Edit nothing outside `canvas-loop/src/gallery/alien-curve/` and `<scratch>/alien-curve`. If the library has a bug or a confusing behaviour, work around it if you can and describe it in your account; do not patch the library. Do not run git commands. Before you finish, `pnpm --dir canvas-loop exec eslint src/gallery/alien-curve/sketch-tea.ts` must pass; fix lint in your sketch only. Run commands in the foreground.
 
 **Account.** Finish by writing `canvas-loop/src/gallery/alien-curve/history/account.md`:
 - What fought you: bugs, confusing API, surprises. Be specific (what you wrote, what you expected, what happened).

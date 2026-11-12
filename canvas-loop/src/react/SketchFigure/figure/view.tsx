@@ -25,7 +25,7 @@ import type { JSX } from "react";
 import type { TeaScriptEvent } from "../../../headless/tea-events.js";
 import type { PlaygroundModule } from "../../../browser/sketch-types.js";
 import type { Runtime } from "../../../browser/runtime/engine.js";
-import { DEFAULT_CANVAS, attachSketch } from "../../../browser/mount.js";
+import { DEFAULT_CANVAS, attachSketch, setDensity } from "../../../browser/mount.js";
 import { ParamControls } from "./ParamControls.js";
 import { RecorderPanel } from "./RecorderPanel.js";
 import type { ParamRecord } from "../figure-internals.js";
@@ -170,6 +170,8 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       canvas: { width: canvasWidth, height: canvasHeight },
       ...(modParams !== undefined ? { params: modParams } : {}),
     };
+    // Sharp on high-density screens: a device-pixel backing store; React keeps the display size.
+    setDensity(el, { width: canvasWidth, height: canvasHeight });
     const attached = attachSketch(el, {
       module,
       seed,

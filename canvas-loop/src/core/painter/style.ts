@@ -1,107 +1,69 @@
-// The Painter's style state: what push() saves and pop() restores.
+// Styles: checking one where a call receives it, filling in its defaults, and
+// spotting a call that can draw nothing.
 import { resolveBrush } from "../brush/presets.js";
-import type { BrushName } from "../brush/presets.js";
-import type { Brush, BrushOverrides, Gesture } from "../brush/types.js";
-import type { BlendMode, CtxTextAlign, CtxTextBaseline, Paint, TextStyle } from "../paint.js";
+import type { Brush, Gesture } from "../brush/types.js";
+import type { BlendMode, Paint, Style } from "../paint.js";
+import { SketchUsageError } from "../errors.js";
 
-export interface StyleState {
-  fillColor: Paint;
-  fillEnabled: boolean;
-  strokeColor: Paint;
-  strokeEnabled: boolean;
-  strokeW: number;
-  textSize: number;
-  textAlignH: CtxTextAlign;
-  textAlignV: CtxTextBaseline;
-  textFont: string;
-  textStyle: TextStyle;
-  brush: Brush | undefined;
-  gesture: Gesture;
-  blend: BlendMode;
-  erasing: boolean;
+/** A Style with every default filled in: what one drawing call paints with. */
+export interface ResolvedStyle {
+  readonly fill: Paint | undefined;
+  readonly stroke: Paint | undefined;
+  readonly weight: number;
+  readonly brush: Brush | undefined;
+  readonly gesture: Gesture;
+  readonly blend: BlendMode;
+  readonly erase: boolean;
+  readonly dash: readonly number[] | undefined;
 }
 
-/** The style a fresh Painter starts with (p5's defaults). */
-export function initialStyle(): StyleState {
+const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash"]);
+
+/** Check a Style at the call that received it; errors name the call and the key. */
+export function assertStyle(style: Style, call: string): void {
+  for (const key of Object.keys(style)) {
+    if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (fill, stroke, weight, brush, gesture, blend, erase, dash)` });
+  }
+  const { dash } = style;
+  if (dash !== undefined) {
+    const ok = Array.isArray(dash) && dash.length > 0 && dash.every((n) => Number.isFinite(n) && n >= 0) && dash.some((n) => n > 0);
+    if (!ok) throw new SketchUsageError({ detail: `${call}: style.dash must be lengths ≥ 0, at least one over 0 (got ${JSON.stringify(dash)})` });
+    if (style.brush !== undefined) throw new SketchUsageError({ detail: `${call}: style.dash works on plain strokes; a brushed stroke cannot be dashed` });
+  }
+  const { weight } = style;
+  if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) {
+    throw new SketchUsageError({ detail: `${call}: style.weight must be a number ≥ 0 (got ${String(weight)})` });
+  }
+}
+
+function brushFrom(brush: Style["brush"]): Brush | undefined {
+  if (brush === undefined) return undefined;
+  if (typeof brush === "string" || "kind" in brush) return resolveBrush(brush, undefined);
+  const { preset, ...overrides } = brush;
+  return resolveBrush(preset, overrides);
+}
+
+/** Validate `style` and fill in its defaults. */
+export function resolveStyle(style: Style, call: string): ResolvedStyle {
+  assertStyle(style, call);
   return {
-    fillColor: "#ffffff",
-    fillEnabled: true,
-    strokeColor: "#000000",
-    strokeEnabled: false,
-    strokeW: 1,
-    textSize: 12,
-    textAlignH: "left",
-    textAlignV: "alphabetic",
-    textFont: "sans-serif",
-    textStyle: "normal",
-    brush: undefined,
-    gesture: {},
-    blend: "normal",
-    erasing: false,
+    fill: style.fill,
+    stroke: style.stroke,
+    weight: style.weight ?? 1,
+    brush: brushFrom(style.brush),
+    gesture: style.gesture ?? {},
+    blend: style.blend ?? "normal",
+    erase: style.erase ?? false,
+    dash: style.dash,
   };
 }
 
-/**
- * The style half of the Painter: setters for what `push()` saves and `pop()`
- * restores. The Painter extends it with the drawing that reads the style.
- */
-export class StyledPainter {
-  protected style: StyleState = initialStyle();
-
-  // ── style ────────────────────────────────────────────────────────
-  fill(paint: Paint): void {
-    this.style.fillColor = paint;
-    this.style.fillEnabled = true;
+/** Why a call with this style would draw nothing, or undefined. `open` shapes (lines, open curves) have no fill. */
+export function styleProblem(call: string, args: { style: ResolvedStyle; open: boolean }): string | undefined {
+  const { style, open } = args;
+  if (open && style.stroke === undefined) {
+    return style.fill === undefined ? `${call}: the style has no stroke, so nothing is drawn` : `${call}: a line has no inside, so its fill draws nothing; give the style a stroke`;
   }
-  noFill(): void {
-    this.style.fillEnabled = false;
-  }
-  stroke(paint: Paint): void {
-    this.style.strokeColor = paint;
-    this.style.strokeEnabled = true;
-  }
-  noStroke(): void {
-    this.style.strokeEnabled = false;
-  }
-  strokeWeight(weight: number): void {
-    this.style.strokeW = weight;
-  }
-  textSize(size: number): void {
-    this.style.textSize = size;
-  }
-  textAlign(horizontal: CtxTextAlign, vertical?: CtxTextBaseline): void {
-    this.style.textAlignH = horizontal;
-    if (vertical !== undefined) this.style.textAlignV = vertical;
-  }
-  /** The font family for `text`, as CSS names it (`"Georgia, serif"`). Which fonts exist depends on the machine. */
-  textFont(family: string): void {
-    this.style.textFont = family;
-  }
-  textStyle(style: TextStyle): void {
-    this.style.textStyle = style;
-  }
-
-  // ── brushes ──────────────────────────────────────────────────────
-  /** Strokes from now on are brushed marks: a preset name (with overrides) or a Brush. */
-  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
-    this.style.brush = resolveBrush(base, overrides);
-  }
-  /** Back to plain Canvas2D strokes. */
-  noBrush(): void {
-    this.style.brush = undefined;
-  }
-  /** How the hand moves for the marks that follow (pressure, wobble, seed). */
-  gesture(gesture: Gesture): void {
-    this.style.gesture = gesture;
-  }
-  blendMode(blend: BlendMode): void {
-    this.style.blend = blend;
-  }
-  /** Fills, strokes and marks remove pixels instead of adding them, until `noErase()`. */
-  erase(): void {
-    this.style.erasing = true;
-  }
-  noErase(): void {
-    this.style.erasing = false;
-  }
+  if (!open && style.fill === undefined && style.stroke === undefined) return `${call}: the style has neither fill nor stroke, so nothing is drawn`;
+  return undefined;
 }

@@ -6,17 +6,19 @@ function ms(start: bigint): number {
   return Number(process.hrtime.bigint() - start) / 1e6;
 }
 
-function summary(label: string, samples: readonly number[]): string {
+/** `samples` are [frame, ms] pairs; the worst frame is named so a spike can be found. */
+function summary(label: string, samples: readonly (readonly [number, number])[]): string {
   if (samples.length === 0) return `${label}: no frames`;
-  const sorted = samples.toSorted((a, b) => a - b);
+  const sorted = samples.map((s) => s[1]).toSorted((a, b) => a - b);
   const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
   const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] ?? 0;
-  return `${label} avg ${avg.toFixed(2)} ms, p95 ${p95.toFixed(2)} ms, max ${(sorted.at(-1) ?? 0).toFixed(2)} ms`;
+  const worst = samples.reduce((w, s) => (s[1] > w[1] ? s : w));
+  return `${label} avg ${avg.toFixed(2)} ms, p95 ${p95.toFixed(2)} ms, max ${worst[1].toFixed(2)} ms (frame ${worst[0]})`;
 }
 
 export class FrameTimer {
-  #draw: number[] = [];
-  #update: number[] = [];
+  #draw: [number, number][] = [];
+  #update: [number, number][] = [];
   #first: number | undefined;
 
   /** Time one frame's draw; frame 0 (which paints caches and sprites) is reported apart. */
@@ -24,15 +26,15 @@ export class FrameTimer {
     const start = process.hrtime.bigint();
     const result = body();
     if (frame === 0) this.#first = ms(start);
-    else this.#draw.push(ms(start));
+    else this.#draw.push([frame, ms(start)]);
     return result;
   }
 
   /** Time one frame's update fold (TEA). */
-  update(body: () => void): void {
+  update(frame: number, body: () => void): void {
     const start = process.hrtime.bigint();
     body();
-    this.#update.push(ms(start));
+    this.#update.push([frame, ms(start)]);
   }
 
   report(): string {

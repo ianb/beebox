@@ -1,13 +1,14 @@
-import { SketchUsageError, UnhandledMsgError } from "./errors.js";
+import { DeterminismError, SketchUsageError, UnhandledMsgError } from "./errors.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
 import type { Zoom } from "./recorder/zoom.js";
 import { FrameTimer } from "./recorder/timing.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
-import { Sketch } from "./sketch.js";
+import { Surface } from "./surface.js";
+import { Score } from "../core/sound/voice.js";
+import { soundFiles } from "./recorder/sound.js";
 import { bucketTeaByFrame } from "./tea-events.js";
 import type { TeaScriptEvent } from "./tea-events.js";
 import { TeaUtil, TeaView } from "./tea-view.js";
-import { withGuards } from "./guards.js";
 import type { RunMeta } from "./transcript.js";
 import type { CanvasSize, Msg, ParamsDecl, ParamValues } from "../core/tea.js";
 // Type-only: the loader owns LoadedTeaModule (see tea-load.ts for why it
@@ -99,10 +100,67 @@ function verdict(a: { handled: readonly string[]; changed: boolean }): string {
   return a.changed ? "Δmodel" : "(unhandled)";
 }
 
+/**
+ * Run `body` with the ambient nondeterministic globals virtualized: Math.random,
+ * Date.now, performance.now, and argless `new Date()` / `Date()` all throw a
+ * DeterminismError pointing at the sketch's seeded `random()` / `millis()`.
+ * Originals are always restored, even if `body` throws.
+ *
+ * `body` must be fully synchronous — the guards are installed process-wide for
+ * its duration, so nothing async should run underneath them.
+ */
+function withGuards<T>(body: () => T): T {
+  const realRandom = Math.random;
+  const realDateNow = Date.now;
+  const realPerfNow = performance.now;
+  const realDate = globalThis.Date;
+
+  const guardedDate = new Proxy(realDate, {
+    construct(target, args) {
+      if (args.length === 0) {
+        throw new DeterminismError({ api: "new Date", use: "a frame count from the tick msg" });
+      }
+      return Reflect.construct(target, args);
+    },
+    apply() {
+      throw new DeterminismError({ api: "Date", use: "a frame count from the tick msg" });
+    },
+    get(target, property) {
+      if (property === "now") {
+        return () => {
+          throw new DeterminismError({ api: "Date.now", use: "a frame count from the tick msg" });
+        };
+      }
+      return Reflect.get(target, property);
+    },
+  });
+
+  Math.random = () => {
+    throw new DeterminismError({ api: "Math.random", use: "u.random() in init/update" });
+  };
+  Date.now = () => {
+    throw new DeterminismError({ api: "Date.now", use: "a frame count from the tick msg" });
+  };
+  performance.now = () => {
+    throw new DeterminismError({ api: "performance.now", use: "a frame count from the tick msg" });
+  };
+  globalThis.Date = guardedDate;
+
+  try {
+    return body();
+  } finally {
+    Math.random = realRandom;
+    Date.now = realDateNow;
+    performance.now = realPerfNow;
+    globalThis.Date = realDate;
+  }
+}
+
+
 class TeaRunner {
   #options: TeaRunOptions;
   #recorder: FrameRecorder;
-  #sketch: Sketch;
+  #surface: Surface;
   #util: TeaUtil<ParamsDecl>;
   #view: TeaView;
   #eventsByFrame: Map<number, TeaScriptEvent[]>;
@@ -111,10 +169,11 @@ class TeaRunner {
   #mouseX = 0;
   #mouseY = 0;
   // Per-dispatch engagement accumulator: reset before each interaction fold,
-  // read after. TeaUtil.handled and Sketch.handled push here via injected
+  // read after. TeaUtil.handled pushes here via injected
   // callbacks — the runtime owns it; the capability objects never see it.
   #handledNames: string[] = [];
   #timer: FrameTimer | undefined;
+  #score = new Score();
 
   constructor(options: TeaRunOptions) {
     this.#options = options;
@@ -123,16 +182,16 @@ class TeaRunner {
       frames: options.frames,
       every: options.every,
       ...(options.zooms === undefined ? {} : { zooms: options.zooms }),
-      readPixels: () => this.#sketch.readPixels(),
-      canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
+      readPixels: () => this.#surface.readPixels(),
     });
     const onHandled = (name: string): void => {
       this.#handledNames.push(name);
     };
-    this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps, onHandled, outline: options.outline === true });
+    const size = options.module.canvas ?? DEFAULT_CANVAS;
+    this.#surface = new Surface({ ...size, host: this.#recorder, seed: options.seed, outline: options.outline === true });
     if (options.timing === true) this.#timer = new FrameTimer();
-    this.#util = new TeaUtil({ sketch: this.#sketch, getParams: () => this.#params, onHandled });
-    this.#view = new TeaView(this.#sketch);
+    this.#util = new TeaUtil({ surface: this.#surface, getParams: () => this.#params, onHandled });
+    this.#view = new TeaView({ surface: this.#surface, decl: options.module.params, getParams: () => this.#params });
     this.#eventsByFrame = bucketTeaByFrame(options.events);
   }
 
@@ -149,13 +208,14 @@ class TeaRunner {
 
   #execute(): void {
     try {
-      const size = this.#options.module.canvas ?? DEFAULT_CANVAS;
-      this.#sketch.createCanvas(size.width, size.height);
       const initial = this.#options.module.init(this.#util);
       assertSync(initial, "init");
       this.#model = frozenModel(initial);
       for (let frame = 0; frame < this.#options.frames; frame++) {
         this.#runFrame(frame);
+      }
+      for (const [file, bytes] of soundFiles(this.#score.voices(), { frames: this.#options.frames, fps: this.#options.fps })) {
+        this.#recorder.addFile(file, bytes);
       }
     } catch (error) {
       this.#recorder.recordError(error);
@@ -164,17 +224,28 @@ class TeaRunner {
 
   #runFrame(frame: number): void {
     this.#recorder.beginFrame(frame);
-    this.#sketch.frameCount = frame;
     const events = this.#eventsByFrame.get(frame) ?? [];
     this.#recorder.markEvents(events.length > 0);
     for (const event of events) this.#dispatchEvent(event);
     const tick = (): void => void this.#fold({ type: "tick", frame });
     if (this.#timer === undefined) tick();
-    else this.#timer.update(tick);
+    else this.#timer.update(frame, tick);
+    this.#collectSound(frame);
     const draw = (): unknown => this.#options.module.draw(this.#view, this.#model, this.#params);
     assertSync(this.#timer === undefined ? draw() : this.#timer.draw(frame, draw), "draw");
-    this.#sketch.finishFrame();
+    this.#surface.finishFrame();
     this.#recorder.captureIfNeeded(frame);
+  }
+
+  // After frame N's fold: the voices the model holds join the score.
+  #collectSound(frame: number): void {
+    const sound = this.#options.module.sound;
+    if (sound === undefined) return;
+    for (const voice of this.#score.add(sound(this.#model, this.#params), frame)) {
+      const pitch = voice.kind === "noise" ? "" : ` ${voice.freq} Hz`;
+      const when = voice.at === frame ? "" : ` at frame ${voice.at}`;
+      this.#recorder.recordLog({ level: "log", message: `sound ${voice.kind} "${voice.id}"${pitch}${when}` });
+    }
   }
 
   // snapshot forces a capture (no fold); param folds and keeps its dedicated
@@ -249,8 +320,8 @@ class TeaRunner {
       fps: this.#options.fps,
       frames: this.#options.frames,
       eventsPath: this.#options.eventsPath,
-      width: this.#sketch.width,
-      height: this.#sketch.height,
+      width: this.#surface.width,
+      height: this.#surface.height,
     };
   }
 }

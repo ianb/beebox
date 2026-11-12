@@ -63,7 +63,9 @@ export const DUR: Readonly<Record<Id, number>> = {
 };
 
 /** Who reacts when an act starts, and how many frames later. */
-export const CHAIN: Readonly<Partial<Record<Id, readonly { readonly id: Id; readonly delay: number }[]>>> = {
+export const CHAIN: Readonly<
+  Partial<Record<Id, readonly { readonly id: Id; readonly delay: number }[]>>
+> = {
   baker: [{ id: "dog", delay: 45 }],
   window: [{ id: "cat", delay: 95 }],
   clock: [
