@@ -107,6 +107,7 @@ export class LayerPool {
   #size: { width: number; height: number };
   #free: Layer[] = [];
   #scratch: Layer | undefined;
+  #paintScratch: Layer | undefined;
 
   constructor(make: MakeLayer, size: { width: number; height: number }) {
     this.#make = make;
@@ -133,6 +134,12 @@ export class LayerPool {
     const layer = this.acquire();
     body(layer);
     this.release(layer);
+  }
+
+  /** A second reusable layer marks paint gradients on. */
+  paintScratch(): Layer {
+    this.#paintScratch ??= this.#make(this.#size);
+    return this.#paintScratch;
   }
 
   /** The one layer brush marks draw into (each mark clears and clips its own corner of it). */

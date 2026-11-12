@@ -22,6 +22,8 @@ export interface MarkRequest {
   readonly target: Ctx2D;
   /** A reusable canvas-sized layer: the mark draws in its top-left corner, cleared and clipped to the mark's bounds. */
   readonly scratch: Layer;
+  /** A second reusable layer, for painting a gradient before it colours the mark. */
+  readonly paintScratch: Layer;
   /** Read the mark's strongest pixel back (for faint-mark warnings); costly in a browser, where it stalls the GPU. */
   readonly measure: boolean;
   readonly canvas: { readonly width: number; readonly height: number };
@@ -143,7 +145,7 @@ function paintKind(ctx: Ctx2D, args: { brush: Brush; samples: Sample[]; closed: 
 }
 
 /** Fill the layer's coverage with the paint, keeping the coverage's alpha. */
-function colorize(layer: Layer, args: { paint: Paint; m: CtxTransform; b: Bounds }): void {
+function colorize(layer: Layer, args: { paint: Paint; m: CtxTransform; b: Bounds; paintScratch: Layer }): void {
   const { ctx } = layer;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
@@ -153,10 +155,16 @@ function colorize(layer: Layer, args: { paint: Paint; m: CtxTransform; b: Bounds
     ctx.fillRect(0, 0, args.b.w, args.b.h);
     return;
   }
-  // A gradient is defined in the sketch's user space: paint under that transform.
+  // A gradient is defined in the sketch's user space, so it is painted under that transform, on a
+  // second layer, then applied with source-in under identity: @napi-rs/canvas 1.0.2 limits a
+  // source-in fill under a transform to the quadrant past the translation origin.
   const { m, b } = args;
-  ctx.setTransform(m.a, m.b, m.c, m.d, m.e - b.x, m.f - b.y);
-  ctx.fillStyle = resolveGradient(ctx, args.paint);
+  const pc = args.paintScratch.ctx;
+  pc.save();
+  pc.setTransform(1, 0, 0, 1, 0, 0);
+  pc.clearRect(0, 0, b.w, b.h);
+  pc.setTransform(m.a, m.b, m.c, m.d, m.e - b.x, m.f - b.y);
+  pc.fillStyle = resolveGradient(pc, args.paint);
   const det = m.a * m.d - m.b * m.c;
   const inv = (p: Vec2): Vec2 => {
     const x = p[0] + b.x - m.e;
@@ -168,10 +176,12 @@ function colorize(layer: Layer, args: { paint: Paint; m: CtxTransform; b: Bounds
   const ys = corners.map((c) => c[1]);
   const x0 = Math.min(...xs);
   const y0 = Math.min(...ys);
-  ctx.beginPath();
-  ctx.rect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+  pc.beginPath();
+  pc.rect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
   const paint = args.paint;
-  inPaintSpace(ctx, { paint, fill: () => ctx.fill() });
+  inPaintSpace(pc, { paint, fill: () => pc.fill() });
+  pc.restore();
+  ctx.drawImage(args.paintScratch.image, 0, 0, b.w, b.h, 0, 0, b.w, b.h);
 }
 
 /** The strongest pixel's alpha (0..1) on a layer, sampling every other pixel. */
@@ -218,7 +228,7 @@ export function renderMark(req: MarkRequest): { alpha: number; x: number; y: num
     layer.ctx.globalAlpha = req.brush.grain;
     layer.ctx.drawImage(req.paper().image, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
   }
-  colorize(layer, { paint: req.paint, m, b });
+  colorize(layer, { paint: req.paint, m, b, paintScratch: req.paintScratch });
   const t = req.target;
   t.save();
   t.setTransform(1, 0, 0, 1, 0, 0);

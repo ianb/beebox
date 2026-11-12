@@ -36,6 +36,12 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Erase and gradient marks under transforms.** @napi-rs/canvas 1.0.2 limits
+  destination-out and source-in fills under a transform to the quadrant past
+  the translation origin, so erasing a translated or rotated shape cleared only
+  part of it. Erasing under a transform now draws via a layer composited under
+  identity, and gradient-coloured marks paint the gradient on a second layer.
+  The Painter's primitives move to `engine.ts` over a `PainterCore` (`core.ts`).
 - **Checkpoints.** `CANVAS_LOOP_CHECKPOINTS=<dir>` saves every `run` (sources,
   events, frames, transcript, `--note`); `cli checkpoints <dir>` builds a page
   that steps through them.

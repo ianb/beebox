@@ -1,5 +1,5 @@
 import type { CursorKind, TextStyle } from "../core/tea.js";
-import type { SpriteOptions } from "../core/painter/engine.js";
+import type { SpriteOptions } from "../core/paint.js";
 import type { Sprite } from "../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
 import { curveCommands } from "../core/contours.js";
@@ -13,7 +13,7 @@ import type { BrushName } from "../core/brush/presets.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "../core/brush/types.js";
 import type { BlendMode, ClipShape, ColorStop, Ctx2D, Layer, LayerImage, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import { Painter } from "../core/painter/engine.js";
-import type { GroupOptions } from "../core/painter/engine.js";
+import type { GroupOptions } from "../core/paint.js";
 import { SeededRandom } from "../core/prng.js";
 import type { SketchHost, SketchInputEvent } from "../core/types.js";
 

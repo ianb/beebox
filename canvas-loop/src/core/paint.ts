@@ -206,6 +206,19 @@ export interface Sprite {
   readonly height: number;
 }
 
+/** What `sprite` stores: a key naming everything the picture depends on, and its size in pixels. */
+export interface SpriteOptions {
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Options for `group`: opacity applied once to the finished group, and its blend mode. */
+export interface GroupOptions {
+  readonly opacity?: number;
+  readonly blend?: BlendMode;
+}
+
 /** Any gradient handle. */
 export type Gradient = LinearGradient | RadialGradient;
 

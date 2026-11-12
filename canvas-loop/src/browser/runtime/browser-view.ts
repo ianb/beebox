@@ -4,7 +4,7 @@
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
 import type { CursorKind, TextStyle } from "../../core/tea.js";
-import type { SpriteOptions } from "../../core/painter/engine.js";
+import type { SpriteOptions } from "../../core/paint.js";
 import type { Sprite } from "../../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
 import { curveCommands } from "../../core/contours.js";
