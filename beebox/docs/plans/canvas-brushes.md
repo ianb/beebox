@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop brushes: an iterative drawing space for agents"
-status: draft
+status: active
 workstream: canvas-brushes
 issues: []
 ---
