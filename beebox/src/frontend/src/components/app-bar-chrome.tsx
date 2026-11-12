@@ -37,7 +37,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { useDropdownClose, useMenuItemRole } from "./ui/Dropdown";
+import { useMenuClose, useMenuItemRole } from "./ui/Menu";
 import { dropPlace, pushPlace, topPlace, type PlaceEntry } from "../lib/place-stack";
 
 /** Where the user is: a display label plus the box dir it lives in. */
@@ -49,7 +49,7 @@ export interface AppBarPlace {
 }
 
 /**
- * A registered menu portal target. `close` is the enclosing `Dropdown`'s
+ * A registered menu portal target. `close` is the enclosing `Menu`'s
  * close function: portaled children keep the React context of the tree they
  * were *rendered* from, not the DOM they land in, so the page must re-provide
  * it (see `PortaledMenuScope`) or its `MenuItem`s won't dismiss the menu.
@@ -57,7 +57,7 @@ export interface AppBarPlace {
 export interface AppBarMenuSlot {
   element: HTMLElement;
   close: () => void;
-  /** Whether the host Dropdown is a command menu; false for a navigation list (no menu roles). */
+  /** Whether the host Menu is a command menu; false for a navigation list (no menu roles). */
   menu: boolean;
 }
 
@@ -71,7 +71,7 @@ interface AppBarChromeValues {
   chipSlot: HTMLElement | null;
   /**
    * The here-menu target, or null when no here menu is open. Only ever one:
-   * the container mounts inside the pill's here `Dropdown`, which exists only
+   * the container mounts inside the pill's here `Menu`, which exists only
    * while open, and only the visible bar's pill can be opened.
    */
   hereSlot: AppBarMenuSlot | null;
@@ -235,16 +235,16 @@ export function AppBarChipSlot() {
 }
 
 /**
- * The here menu's container, rendered by the pill INSIDE its open `Dropdown`.
+ * The here menu's container, rendered by the pill INSIDE its open `Menu`.
  * Mounting it there (rather than keeping a hidden container alive elsewhere)
- * is what keeps `Dropdown`'s open/close, focus-restore and click-outside
+ * is what keeps `Menu`'s open/close, focus-restore and click-outside
  * semantics untouched: the menu content lives where the menu is, and the
  * page's portal follows it. The registration lands during the same commit as
  * the open, so the page's portal fills it before the browser paints.
  */
 export function AppBarHereSlot() {
   const writers = useContext(AppBarChromeWriteContext);
-  const close = useDropdownClose();
+  const close = useMenuClose();
   const menu = useMenuItemRole() === "menuitem";
   const setRef = useCallback(
     (element: HTMLDivElement | null) => {

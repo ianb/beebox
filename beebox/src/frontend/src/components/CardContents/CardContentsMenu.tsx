@@ -19,8 +19,8 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Dropdown } from "../ui/Dropdown";
-import { MenuItem } from "../ui/dropdown-menu-item";
+import { Menu } from "../ui/Menu";
+import { MenuItem } from "../ui/menu-item";
 import { Button } from "../ui/Button";
 import { buildOutline, currentSection, type OutlineEntry, type OutlineItem } from "./outline";
 
@@ -209,7 +209,7 @@ export function CardContentsMenu({ id, frontRef, entries }: {
 
   return (
     <div ref={wrapper} className="bbx-card-contents print:hidden">
-      <Dropdown
+      <Menu
         align="right"
         width="w-72 max-w-[calc(100vw-2rem)]"
         trigger={({ toggle, ariaProps }) => (
@@ -230,7 +230,7 @@ export function CardContentsMenu({ id, frontRef, entries }: {
         )}
       >
         <ContentsList items={items} current={current} frontRef={frontRef} onJump={jump} />
-      </Dropdown>
+      </Menu>
     </div>
   );
 }

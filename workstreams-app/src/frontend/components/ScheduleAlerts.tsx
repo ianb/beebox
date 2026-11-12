@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Button, Pill } from "./ui.js";
+import { Button, Badge } from "./ui.js";
 import { Markdown } from "./Markdown.js";
 import { useEffect, useRef, type ReactNode } from "react";
 import { friendlyTimestamp } from "../lib/format.js";
@@ -48,7 +48,7 @@ function AlertBody({ alert, showSchedule }: { alert: ScheduleAlert; showSchedule
   return (
     <div className="schedule-alert-body">
       <div className="schedule-alert-head">
-        <Pill tone={priorityTones[alert.priority]}>{alert.priority}</Pill>
+        <Badge tone={priorityTones[alert.priority]}>{alert.priority}</Badge>
         {showSchedule ? <span className="schedule-alert-schedule">{alert.workstream}</span> : null}
         <strong>{alert.title}</strong>
         <span className="muted">{friendlyTimestamp(alert.createdAt)}</span>

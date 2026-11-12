@@ -1,11 +1,10 @@
 /**
  * Ack badges shown alongside a user message — one per `<ack>` the agent
- * emitted in its reply. Each badge opens a small dialog with the ack label
+ * emitted in its reply. Each badge opens a popover with the ack label
  * and an optional ref link.
  */
 
-import { useRef, useState } from "react";
-import { useDismiss } from "../../hooks/useDismiss";
+import { Popover } from "../ui/Popover";
 import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
 import { parseViewUrl } from "../../lib/view-url";
 import type { OnZoomView } from "./markdown-rendering";
@@ -19,71 +18,49 @@ import type { OnZoomView } from "./markdown-rendering";
  * ack badges first.
  */
 export function AckBadgeCluster({ acks, onZoomView }: { acks: AckIndication[] | undefined; onZoomView?: OnZoomView }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
   if (!acks || acks.length === 0) return null;
   return (
     <span className="inline-flex items-center gap-0.5">
       {acks.map((ack, i) => (
-        <AckBadge
-          key={i}
-          ack={ack}
-          open={openIndex === i}
-          onToggle={() => setOpenIndex((cur) => (cur === i ? null : i))}
-          onClose={() => setOpenIndex(null)}
-          onZoomView={onZoomView}
-        />
+        <AckBadge key={i} ack={ack} onZoomView={onZoomView} />
       ))}
     </span>
   );
 }
 
-function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
-  ack: AckIndication;
-  open: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-  onZoomView?: OnZoomView;
-}) {
+function AckBadge({ ack, onZoomView }: { ack: AckIndication; onZoomView?: OnZoomView }) {
   const descriptor = getAckKind(ack.kind);
-  const rootRef = useRef<HTMLSpanElement>(null);
-
-  useDismiss({ root: rootRef, open, onDismiss: onClose });
-
   if (!descriptor) return null;
   const label = ack.text ? `${descriptor.defaultPhrase} — ${ack.text}` : descriptor.defaultPhrase;
 
-  function handleRefClick() {
-    if (!ack.ref || !onZoomView) return;
-    const target = parseViewUrl(ack.ref);
-    onZoomView({ target, label: target.path });
-    onClose();
-  }
-
   return (
-    <span ref={rootRef} className="relative inline-flex">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={label}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className="group inline-flex items-center justify-center w-6 h-6 -my-[5px] rounded-full text-white text-[0.5625rem] leading-none cursor-pointer"
-      >
-        <span aria-hidden className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info ring-1 ring-warm-50">{descriptor.icon}</span>
-      </button>
-      {open ? (
-        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
-        <div
-          role="dialog"
+    <Popover
+      label={label}
+      trigger={({ toggle, ariaProps }) => (
+        <button
+          type="button"
+          onClick={toggle}
           aria-label={label}
-          className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
+          {...ariaProps}
+          className="group inline-flex items-center justify-center w-6 h-6 -my-[5px] rounded-full text-white text-[0.5625rem] leading-none cursor-pointer"
         >
+          <span aria-hidden className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info ring-1 ring-warm-50">{descriptor.icon}</span>
+        </button>
+      )}
+    >
+      {(close) => (
+        <>
           <div className="font-medium text-warm-900">{label}</div>
           {ack.ref ? (
             onZoomView ? (
               <button
                 type="button"
-                onClick={handleRefClick}
+                onClick={() => {
+                  if (!ack.ref) return;
+                  const target = parseViewUrl(ack.ref);
+                  onZoomView({ target, label: target.path });
+                  close();
+                }}
                 className="mt-1 block text-left text-info hover:underline break-all font-mono text-[0.6875rem]"
               >
                 {ack.ref}
@@ -92,8 +69,8 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
               <div className="mt-1 text-warm-700 break-all font-mono text-[0.6875rem]">{ack.ref}</div>
             )
           ) : null}
-        </div>
-      ) : null}
-    </span>
+        </>
+      )}
+    </Popover>
   );
 }

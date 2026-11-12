@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { captureSelection, findAnchoredRange, highlightRanges, type SelectionAnchor } from "../lib/selection-anchor.js";
 import { recorderAvailability, startRecording } from "../lib/recorder.js";
 import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
-import { Button, Pill } from "./ui.js";
+import { Button, Badge } from "./ui.js";
 import { trpc } from "../trpc.js";
 import type { Comment } from "../types.js";
 
@@ -23,10 +23,10 @@ function CommentBody({ comment, onClear }: { comment: Comment; onClear: () => vo
   return (
     <li className="comment-item">
       <p className="comment-meta">
-        <Pill tone={comment.origin === "voice" ? "accent" : "neutral"}>{comment.origin}</Pill>
+        <Badge tone={comment.origin === "voice" ? "accent" : "neutral"}>{comment.origin}</Badge>
         {comment.workstream === null
-          ? <Pill tone="warning">unrouted</Pill>
-          : <Pill tone="info">{comment.workstream}</Pill>}
+          ? <Badge tone="warning">unrouted</Badge>
+          : <Badge tone="info">{comment.workstream}</Badge>}
         <span className="muted">{comment.at.slice(0, 16).replace("T", " ")}</span>
         <Button intent="quiet" onClick={onClear}>clear</Button>
       </p>

@@ -4,7 +4,6 @@
 // site record. The card's `pubId` only selects that record; actions use the
 // publication id and current candidate revision supplied by the server.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, not } from "@ianbicking/tap-check/check";
@@ -119,7 +118,7 @@ const actionButtonPatterns = {
 function actionButton(rendered: string, action: keyof typeof actionButtonPatterns) {
   return rendered.match(actionButtonPatterns[action])?.[0] ?? "";
 }
-const SPINNER = '<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+const SPINNER = '<svg class="bbx-spinner animate-spin shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
 const BUTTON_BASE = "inline-flex items-center justify-center font-medium transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
 /** A disabled action button, with the spinner and `aria-busy` only on the running action. */
 function disabledButton(parts: { action: "prepare" | "disable"; busy: boolean }): string {

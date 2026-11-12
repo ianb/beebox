@@ -3,6 +3,7 @@ import { Button } from "../../../ui/Button";
 import { MaterialContext } from "../../../ui/material";
 import { UserMessageText } from "../../user-message-text";
 import { QUEUED_EDGE } from "../../user-message/view";
+import { LiveDot } from "../../../ui/LiveDot";
 
 /** The queued user bubble: the realtime text and the HQ job's status line. */
 function PendingHqBubble({ pending }: { pending: PendingHq }) {
@@ -16,7 +17,7 @@ function PendingHqBubble({ pending }: { pending: PendingHq }) {
       </div>
       {/* Inside the bubble, like the sent message's "Live text" line: the status belongs to this message. */}
       <div role="status" className="bbx-chat-user-status flex items-center gap-1.5 text-xs text-white mt-1">
-        <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse" />
+        <LiveDot />
         {pending.status}
       </div>
     </div>

@@ -31,6 +31,7 @@ import { plaintextRenderer } from "./renderers/plaintext.js";
 import { binaryRenderer } from "./renderers/binary.js";
 import { directoryRenderer } from "./renderers/directory.js";
 import { todoViewRenderer } from "./renderers/todo-view.js";
+import { tourRenderer } from "./renderers/tour.js";
 import { viewRenderer } from "./renderers/view.js";
 import { chatHuskRenderer } from "./renderers/chat-husk.js";
 import { questionRenderer } from "./renderers/question.js";
@@ -80,6 +81,7 @@ const rendererRegistrations = defineRegistry<RendererEntry>({
     binaryRenderer,
     directoryRenderer,
     todoViewRenderer,
+    tourRenderer,
     viewRenderer,
     chatHuskRenderer,
     questionRenderer,

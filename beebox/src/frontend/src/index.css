@@ -533,3 +533,25 @@ s {
   background-color: #fde68a;
   color: inherit;
 }
+
+/*
+ * Reduced motion, one rule for the whole app (after Andy Bell's "A (more)
+ * Modern CSS Reset"). Outside any Tailwind layer so it applies to utilities
+ * too; scripted motion checks lib/reduced-motion.ts instead. A near-zero
+ * duration, not `animation: none`, so an animation still reaches its end
+ * state and fires `animationend` (the card turn depends on it). A spinner is
+ * essential motion (WCAG 2.3.3): it keeps turning, at a third of its speed;
+ * the class selector outranks `*` among the !important declarations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bbx-spinner {
+    animation-duration: 3s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

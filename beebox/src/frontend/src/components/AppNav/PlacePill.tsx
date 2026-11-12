@@ -42,7 +42,7 @@
  */
 
 import { useEffect } from "react";
-import { Dropdown } from "../ui/Dropdown";
+import { Menu } from "../ui/Menu";
 import { PlacePillFace } from "../app-bar-faces/PlacePillFace";
 import { trpc } from "../../lib/trpc/client";
 import type { Place } from "../../lib/place-label";
@@ -150,7 +150,7 @@ export function PlacePill({
       landmark={landmark}
       onOpen={(half) => { if (half === "switch") switchMenu.open(); else hereMenu.open(); }}
       menu={({ half, className, trigger }) => (
-        <Dropdown kind="navigation" align="left" width="w-[20rem]" className={className} trigger={trigger}>
+        <Menu kind="navigation" align="left" width="w-[20rem]" className={className} trigger={trigger}>
           {half === "switch" ? (
             <SwitchMenuBody
               boxSlug={boxSlug}
@@ -166,9 +166,9 @@ export function PlacePill({
             // Two providers for one menu (plan Track C1/C2). On a chat page
             // the body is the chat's own — it needs `messages` and the
             // companion-pane zoom the bar can't reach — so we render the
-            // portal target INSIDE the open Dropdown and the chat fills it.
+            // portal target INSIDE the open Menu and the chat fills it.
             // Keeping the container here (rather than a permanently-mounted
-            // hidden one elsewhere) leaves Dropdown's open/close, focus
+            // hidden one elsewhere) leaves Menu's open/close, focus
             // restore, and click-outside semantics completely untouched; the
             // registration lands in the same commit as the open, so the
             // chat's portal fills it before paint. Everywhere else — and
@@ -177,7 +177,7 @@ export function PlacePill({
           ) : landmark === null ? null : (
             <HereMenuBody dir={landmark.dir} boxSlug={boxSlug} links={hereLinks} groups={hereGroups} />
           )}
-        </Dropdown>
+        </Menu>
       )}
     />
   );

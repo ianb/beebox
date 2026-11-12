@@ -2,7 +2,7 @@
  * The measuring script for `bbx browser screenshot --card`
  * (docs/implemented-plans/agent-self-view.md, Track C). Runs in the page with `eval` and
  * returns one JSON string: where the card is, how much of it the browser
- * painted, what inside it is wider than its box, any view error it shows, and
+ * painted, what inside it is wider than its box, what scrolls sideways, any view error it shows, and
  * whether part of it is still loading (`aria-busy`).
  *
  * It scrolls the card's scroll container to the top-left first: the app puts a
@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 
-/** Overflow findings reported, at most. */
+/** Overflow and sideways-scroller findings reported, at most (each). */
 const MAX_OVERFLOW = 10;
 
 /** The script for one card panel, as an `eval` argument. */
@@ -32,9 +32,10 @@ const inClip=(e)=>{for(let a=e.parentElement;a&&a!==el;a=a.parentElement){if(/(a
 const cands=[...el.querySelectorAll('*')].filter((e)=>{const s=getComputedStyle(e);if(s.overflowX!=='visible'||inClip(e))return false;const b=e.getBoundingClientRect();return b.width>0&&(e.scrollWidth>e.clientWidth+1||b.right>r.right+1);});
 const leaves=cands.filter((e)=>!cands.some((o)=>o!==e&&e.contains(o)));
 const overflow=leaves.slice(0,${String(MAX_OVERFLOW)}).map((e)=>({tag:e.tagName.toLowerCase(),text:(e.textContent||'').replace(/\\s+/g,' ').trim().slice(0,40),excess:Math.round(Math.max(e.scrollWidth-e.clientWidth,e.getBoundingClientRect().right-r.right))}));
+const scrolls=[...el.querySelectorAll('*')].filter((e)=>/^(auto|scroll)$/.test(getComputedStyle(e).overflowX)&&e.scrollWidth>e.clientWidth+1).slice(0,${String(MAX_OVERFLOW)}).map((e)=>({tag:e.tagName.toLowerCase(),text:(e.textContent||'').replace(/\\s+/g,' ').trim().slice(0,40),hidden:Math.round(e.scrollWidth-e.clientWidth)}));
 const alert=el.querySelector('[role=alert]');
 const busy=el.querySelector('[aria-busy=true]')!==null;
-return JSON.stringify({found:true,url:location.href,card:{width:r.width,height:r.height},painted:{x:left-r.left,y:top-r.top,width:Math.max(0,right-left),height:Math.max(0,bottom-top)},viewport:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,overflow,errorText:alert?(alert.textContent||'').replace(/\\s+/g,' ').trim().slice(0,300):null,busy});
+return JSON.stringify({found:true,url:location.href,card:{width:r.width,height:r.height},painted:{x:left-r.left,y:top-r.top,width:Math.max(0,right-left),height:Math.max(0,bottom-top)},viewport:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,overflow,scrolls,errorText:alert?(alert.textContent||'').replace(/\\s+/g,' ').trim().slice(0,300):null,busy});
 })()`;
 }
 
@@ -50,6 +51,8 @@ export const MEASURE = z.discriminatedUnion("found", [
     viewport: Box,
     dpr: z.number().positive(),
     overflow: z.array(z.object({ tag: z.string(), text: z.string(), excess: z.number() })),
+    /** Parts that scroll sideways and hold more than they show: reachable, but the image shows only the start. */
+    scrolls: z.array(z.object({ tag: z.string(), text: z.string(), hidden: z.number() })),
     errorText: z.string().nullable(),
     /** Part of the card still shows a loading state (`aria-busy`). */
     busy: z.boolean(),

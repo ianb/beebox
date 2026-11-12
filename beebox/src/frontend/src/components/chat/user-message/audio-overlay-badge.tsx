@@ -8,8 +8,8 @@
  * parsed from agent replies, which this data isn't.
  */
 
-import { useRef, useState, type ReactNode } from "react";
-import { useDismiss } from "../../../hooks/useDismiss";
+import { type ReactNode } from "react";
+import { Popover } from "../../ui/Popover";
 import type { AudioOverlayEntry } from "../audio-overlay-store";
 import type { TranscriptionProvenance } from "../message-parsing";
 
@@ -114,63 +114,41 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
  * sitting side by side in the same absolutely-positioned row.
  */
 export function AudioOverlayBadgeCluster({ overlay, originalText }: { overlay: AudioOverlayEntry | undefined; originalText: string }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
   if (!overlay) return null;
   const specs = buildAudioBadgeSpecs(overlay, originalText);
   if (specs.length === 0) return null;
   return (
     <span className="inline-flex items-center gap-0.5">
-      {specs.map((spec, i) => (
-        <AudioOverlayBadge
-          key={spec.kind}
-          spec={spec}
-          open={openIndex === i}
-          onToggle={() => setOpenIndex((cur) => (cur === i ? null : i))}
-          onClose={() => setOpenIndex(null)}
-        />
+      {specs.map((spec) => (
+        <AudioOverlayBadge key={spec.kind} spec={spec} />
       ))}
     </span>
   );
 }
 
-function AudioOverlayBadge({ spec, open, onToggle, onClose }: {
-  spec: AudioBadgeSpec;
-  open: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}) {
-  const rootRef = useRef<HTMLSpanElement>(null);
-
-  useDismiss({ root: rootRef, open, onDismiss: onClose });
-
+function AudioOverlayBadge({ spec }: { spec: AudioBadgeSpec }) {
   return (
-    <span ref={rootRef} className="relative inline-flex">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={spec.label}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        // Solid contrast like AckBadge (the first muted bg-white/25 pass was
-        // illegible — boxholder, 2026-08-16), one step larger than the ack
-        // cluster, with a stroke-SVG glyph instead of a font glyph so it
-        // stays crisp at badge size. Reads in both themes since the bubble
-        // is always white-on-color regardless of app theme.
-        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-info text-white leading-none ring-1 ring-warm-50 cursor-pointer"
-      >
-        <span aria-hidden className="inline-flex">{spec.glyph}</span>
-      </button>
-      {open ? (
-        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
-        <div
-          role="dialog"
+    <Popover
+      label={spec.label}
+      trigger={({ toggle, ariaProps }) => (
+        <button
+          type="button"
+          onClick={toggle}
           aria-label={spec.label}
-          className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
+          {...ariaProps}
+          // Solid contrast like AckBadge (the first muted bg-white/25 pass was
+          // illegible — boxholder, 2026-08-16), one step larger than the ack
+          // cluster, with a stroke-SVG glyph instead of a font glyph so it
+          // stays crisp at badge size. Reads in both themes since the bubble
+          // is always white-on-color regardless of app theme.
+          className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-info text-white leading-none ring-1 ring-warm-50 cursor-pointer"
         >
-          <div className="font-medium text-warm-900">{spec.label}</div>
-          {spec.detail}
-        </div>
-      ) : null}
-    </span>
+          <span aria-hidden className="inline-flex">{spec.glyph}</span>
+        </button>
+      )}
+    >
+      <div className="font-medium text-warm-900">{spec.label}</div>
+      {spec.detail}
+    </Popover>
   );
 }

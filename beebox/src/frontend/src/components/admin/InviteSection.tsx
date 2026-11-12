@@ -9,6 +9,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { CheckboxField, TextField } from "../ui/fields/field";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 const DESCRIPTION = "The link creates one member account for this box and expires after 15 minutes.";
 
@@ -95,7 +96,7 @@ export function InviteSection() {
                 <Text as="div" mono breakAll size="sm">{inviteUrl}</Text>
                 <Row justify="between" wrap>
                   <Text size="xs" tone="muted">
-                    Expires {expiresAt === null ? "soon" : new Date(expiresAt).toLocaleTimeString()}
+                    Expires {expiresAt === null ? "soon" : friendlyDate(expiresAt, "time")}
                   </Text>
                   <Button id="bbx-admin-invite-copy-link" type="button" intent="secondary" onClick={copy} flash={{ label: "Copied", failLabel: "Copy failed" }}>
                     Copy link

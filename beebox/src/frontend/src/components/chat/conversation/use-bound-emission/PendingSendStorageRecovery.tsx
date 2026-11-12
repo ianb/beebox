@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../ui/Button";
 import { Stack } from "../../../ui/Stack";
+import { TextareaField } from "../../../ui/fields/field";
 import { createPendingSendsStore, pendingSendRecoveryCopies, quarantineUnreadablePendingSends,
   type PendingSendRecoveryCopy, type PendingSendsStore } from "./pending-sends";
+
+/** The preserved copy is read-only; its field takes no edits. */
+function keepPreserved(): void {}
 
 function PreservedCopy({ copy }: { copy: PendingSendRecoveryCopy }) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -14,7 +18,7 @@ function PreservedCopy({ copy }: { copy: PendingSendRecoveryCopy }) {
   return <details>
     <summary>Preserved saved-message copy</summary>
     {downloadUrl !== null && <a href={downloadUrl} download="saved-message-recovery.txt" className="text-sm text-primary underline">Download preserved copy</a>}
-    <textarea aria-label="Preserved unreadable saved messages" readOnly value={copy.raw} className="w-full rounded border border-warm-300 p-2 text-xs" />
+    <TextareaField label="Preserved unreadable saved messages" hideLabel readOnly value={copy.raw} onChange={keepPreserved} />
   </details>;
 }
 

@@ -86,8 +86,13 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
  * and re-render each open card per token (`components/chat/AGENTS.md`,
  * "Workspace card roots survive presentation changes").
  */
-export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelection, reportActivity }: CardCallbacks & {
+export function WorkspaceCanvas({ children, strip, turnActive, turnTools, onAddSelection, reportActivity }: CardCallbacks & {
   children: ReactNode;
+  /**
+   * The conversation strip (`ConversationStrip`): its own full-width row
+   * above the grid, so it tops the cards and the messages in every layout.
+   */
+  strip: ReactNode;
   /** A chat turn is running; with `turnTools`, marks the documents it is editing. */
   turnActive: boolean;
   turnTools: readonly SessionContentBlock[];
@@ -99,11 +104,11 @@ export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelectio
   useEffect(() => {
     setVisited((old) => visiblePaths.every((path) => old.has(path)) ? old : new Set([...old, ...visiblePaths]));
   }, [visiblePaths]);
-  if (!workspace) return children;
+  if (!workspace) return <>{strip}{children}</>;
   const { projection, mobile } = workspace;
   const transcript = projection.transcript;
   const split = !mobile && workspace.state.layout.kind === "split" && transcript !== "full";
-  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden><div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "auto minmax(0, 1fr)" }}>
+  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden>{strip}<div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "auto minmax(0, 1fr)" }}>
     {/* Row 1 holds only the intention strip, above the cards (or above the chat when no card is open). */}
     <IntentionStrip split={split} />
     {Object.values(workspace.state.tabs).map((tab) => {

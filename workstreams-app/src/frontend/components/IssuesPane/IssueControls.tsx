@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { CheckIcon, CopyIcon, Pill } from "../ui.js";
+import { CheckIcon, CopyIcon, Badge } from "../ui.js";
 import { issueNextActionSchema } from "../../../shared/documents.js";
 import { issueProvenance } from "../../../shared/issue-provenance.js";
 import { trpc } from "../../trpc.js";
@@ -104,18 +104,18 @@ export function IssueTags({ issue }: { issue: Issue }) {
   const provenance = issueProvenance(issue.frontmatter.discoveredIn);
   const discoveredBy = issue.frontmatter.discoveredBy;
   const tags = [
-    ...issue.frontmatter.needs.toSorted((a, b) => Number(b === "manual-testing") - Number(a === "manual-testing")).map((need) => <Pill tone={need === "manual-testing" ? "manual" : "neutral"} key={`need-${need}`}>needs:{need}</Pill>),
-    issue.frontmatter.area ? <Pill key="area">{issue.frontmatter.area}</Pill> : null,
-    ...issue.frontmatter.labels.map((label) => <Pill tone="accent" key={`label-${label}`}>{label}</Pill>),
-    issue.frontmatter.filedBy ? <Pill key="filed">filed:{issue.frontmatter.filedBy}</Pill> : null,
+    ...issue.frontmatter.needs.toSorted((a, b) => Number(b === "manual-testing") - Number(a === "manual-testing")).map((need) => <Badge tone={need === "manual-testing" ? "manual" : "neutral"} key={`need-${need}`}>needs:{need}</Badge>),
+    issue.frontmatter.area ? <Badge key="area">{issue.frontmatter.area}</Badge> : null,
+    ...issue.frontmatter.labels.map((label) => <Badge tone="accent" key={`label-${label}`}>{label}</Badge>),
+    issue.frontmatter.filedBy ? <Badge key="filed">filed:{issue.frontmatter.filedBy}</Badge> : null,
     // WHERE it was noticed, which is the half that helps route or judge an issue.
     // The context clause is a sentence and is shown in the detail pane instead;
     // here it is the pill's tooltip so a scan can still reach it.
-    provenance ? <Pill key="from" title={provenance.context ?? undefined}>from:{provenance.source}</Pill> : null,
+    provenance ? <Badge key="from" title={provenance.context ?? undefined}>from:{provenance.source}</Badge> : null,
     // Who found it, but only when that says something: `agent` duplicates the
     // `filed:agent` pill sitting next to it, and a queue of `discovered:agent`
     // was what hid the provenance above.
-    discoveredBy !== undefined && discoveredBy !== "agent" ? <Pill key="discoverer">discovered:{discoveredBy}</Pill> : null,
+    discoveredBy !== undefined && discoveredBy !== "agent" ? <Badge key="discoverer">discovered:{discoveredBy}</Badge> : null,
   ];
   return <div className="issue-tags">{tags}</div>;
 }

@@ -15,6 +15,7 @@ import { readAttention, writeAttention } from "./attention-store";
 import { useBoxConversation } from "../../everywhere/conversation-context/context";
 import { useSelectedTranscript } from "../selected-transcript";
 import type { AmbientRepliesProps, AmbientSession } from "./view";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 type Props = AmbientRepliesProps & { session: AmbientSession; completion: string | null; onActivity: (sessionId: string, needed: boolean) => void };
 function useAmbientSessionReply(props: Props) {
@@ -82,7 +83,7 @@ export function AmbientSessionReply(props: Props) {
     <section aria-label={`${session.label} conversation activity`} {...bbxSource("session", session.sessionId)} className="p-2">
       <Accordion title={<Text size="sm">{session.label} · {label}</Text>}>
         <div aria-busy={loading}>
-          {Boolean(loading) && <Hint>Loading conversation activity…</Hint>}
+          {Boolean(loading) && <StatusMessage variant="inline" busy>Loading conversation activity…</StatusMessage>}
           {Boolean(error) && <ErrorText>Could not refresh conversation: {error?.message}</ErrorText>}
           {!loading && !error && !transcript?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}

@@ -68,7 +68,7 @@ const CONSULTED_ICON = '<svg class="w-[13px] h-[13px]" viewBox="0 0 24 24" aria-
 function badgeCluster(badge: { label: string; icon: string } | null): string {
   const button = badge === null
     ? ""
-    : `<span class="inline-flex items-center gap-0.5"><span class="relative inline-flex"><button type="button" aria-label="${badge.label}" aria-haspopup="dialog" aria-expanded="false" class="${BADGE_CLASS}"><span aria-hidden="true" class="inline-flex">${badge.icon}</span></button></span></span>`;
+    : `<span class="inline-flex items-center gap-0.5"><span class="contents"><button type="button" aria-label="${badge.label}" aria-haspopup="dialog" aria-expanded="false" class="${BADGE_CLASS}"><span aria-hidden="true" class="inline-flex">${badge.icon}</span></button></span></span>`;
   return `<span class="absolute -top-1 -left-1 inline-flex items-center gap-0.5">${button}</span>`;
 }
 

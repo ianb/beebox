@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { trpcClient } from "../lib/trpc/client";
 import { describeArg } from "../lib/debug-log-format";
 import { CloseButton } from "./ui/CloseButton";
+import { TextField } from "./ui/fields/field";
 import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../lib/stored-flag";
 import { isRuntimeLintLine, setRuntimeLintSink } from "../lib/runtime-lint/report";
 
@@ -227,14 +228,16 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-x-0 bottom-0 z-[100] bg-white/95 border-t-2 border-warm-400 shadow-lg flex flex-col" style={{ maxHeight: "50vh" }}>
       <div className="flex items-center gap-2 px-3 py-1.5 bg-warm-100 border-b border-warm-300 text-xs">
         <span className="font-bold text-warm-700">Debug Log</span>
-        <input
+        <TextField
           id="bbx-debug-log-filter"
-          type="text"
+          type="search"
+          label="Filter log entries"
+          hideLabel
+          className="flex-1"
+          inputClassName="px-2 py-0.5 text-xs"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={setFilter}
           placeholder="Filter..."
-          aria-label="Filter log entries"
-          className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
         <button type="button" id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
         <CloseButton id="bbx-debug-log-close" onClick={onClose} size="sm" />

@@ -4,12 +4,13 @@
  * `dom-harness.ts`. React DOM reads the window and the hook once, when it
  * loads, so this module must evaluate before `react-dom` does: `dom-harness.ts`
  * imports it first, and a test imports `dom-harness.ts` first. It also
- * installs Temporal (`temporal-global.ts`), which the app loads in `boot()`.
+ * installs the Popover API happy-dom lacks (`popover-api.ts`).
  */
-import "./temporal-global.js";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { installPopoverApi } from "./popover-api.js";
 
 GlobalRegistrator.register({ url: "http://localhost/" });
+installPopoverApi();
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 // The app's page has a doctype, so it renders in standards mode. happy-dom
 // reports no `compatMode`, which KaTeX reads as quirks mode and warns about.

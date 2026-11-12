@@ -37,6 +37,7 @@ import { Button } from "../ui/Button";
 import { MaterialContext } from "../ui/material";
 import { QUEUED_EDGE } from "./user-message/view";
 import { summarizeCaptureContents } from "./capture-message";
+import { LiveDot } from "../ui/LiveDot";
 
 /** Live refinement from a `capture-status` bus event (more granular than the query state). */
 export type CaptureLiveStatus = "preparing" | "transcribing" | "delivered" | "failed";
@@ -141,9 +142,8 @@ function CameraIcon() {
   );
 }
 
-/** Dot colour and animation per phase — the caption's status light. */
-const PHASE_DOT: Record<CaptureBubblePhase, string> = {
-  working: "bg-accent animate-pulse",
+/** Dot colour per settled phase — the caption's status light. A working capture pulses (`LiveDot`). */
+const SETTLED_DOT: Record<Exclude<CaptureBubblePhase, "working">, string> = {
   resolved: "bg-success",
   "failed-fresh": "bg-danger",
   "failed-aged": "bg-danger",
@@ -159,7 +159,7 @@ const PHASE_TEXT: Record<CaptureBubblePhase, string> = {
 function CaptureCaption({ caption, phase }: { caption: string; phase: CaptureBubblePhase }) {
   return (
     <div className={`flex items-center gap-1.5 text-xs pr-2 ${PHASE_TEXT[phase]}`}>
-      <span className={`inline-block w-2 h-2 rounded-full ${PHASE_DOT[phase]}`} />
+      {phase === "working" ? <LiveDot tone="accent" /> : <span className={`inline-block w-2 h-2 rounded-full ${SETTLED_DOT[phase]}`} />}
       {caption}
     </div>
   );

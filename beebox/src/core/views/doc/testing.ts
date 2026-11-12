@@ -34,6 +34,14 @@ outside render (a \`readFile\` rejection with no \`catch\`), or a card type with
 no card among its dependency cards (the app passes a view only those).
 \`adapterFetch\` always rejects in the check.
 
+A view that renders may also print \`advice:\` lines: a pattern this doc
+forbids, found in its source or in what it rendered (an unwrapped wide table, a
+control with no name, a \`new Date("2026-08-14")\`). Each line names the
+section of this doc with the fix, and the file and line or the element. Advice
+does not fail the check. Fix it, or leave it and say why it does not apply.
+When the advice cannot run, the view is partly checked with the remark
+\`advice not checked: <reason>\`.
+
 \`bbx view typecheck\` type-checks every view against the real \`ViewProps\`; it
 catches field mistakes a render can miss.
 
@@ -74,6 +82,8 @@ A path that starts with \`/\` is a page of this box. \`screenshot --card\`
 captures the whole card, not the window, and says \`whole card\` or
 \`partial\` (and what is missing). It prints an \`overflow:\` line for each
 part that is wider than its box: at phone width that usually means a row that
-needs to wrap. To test the view's controls, run \`bbx browser snapshot -i\`,
+needs to wrap. A \`scrolls sideways:\` line names a part that scrolls inside
+its own box and holds more than the image shows (a wide table in a scroll
+wrapper); the image shows only its start. To test the view's controls, run \`bbx browser snapshot -i\`,
 then \`click\` or \`fill\` a ref, and capture again.`;
 

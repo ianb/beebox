@@ -18,7 +18,9 @@ a pile of files that only look organized.
   and checked, so a dangling reference is a warning you see, not a silent
   hole.
 - Move or rename a card and the references pointing at it are rewritten, so
-  reorganizing does not leave broken links behind.
+  reorganizing does not leave broken links behind. The rewrite also reaches
+  mentions of the moved card's path in any markdown file of the box, in a code
+  span or plain text as well as in a link (source files are not read).
 - A card is checked against its type on read, again right after an agent
   edit, and again before a commit, so a broken card cannot quietly enter
   the history.
@@ -26,7 +28,8 @@ a pile of files that only look organized.
   the box warns about a link to a heading the target does not have.
 - Attachments live beside their card and travel with it.
 - Filenames say what a thing is, so the folder tree itself reads as a map,
-  with curated landmarks on top for the spots worth bookmarking.
+  with curated landmarks on top for the spots worth bookmarking. A card
+  filename joins words with underscores; a space in one fails the card check.
 - A stray file with no business in an attachment folder is caught before it
   is committed.
 

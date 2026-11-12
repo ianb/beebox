@@ -7,6 +7,8 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Heading } from "../ui/Heading";
 import { FriendlyDate } from "../ui/FriendlyDate";
+import { Table, Td, Th } from "../ui/Table";
+import { useId } from "react";
 import { isRecord } from "@shared/is-record";
 import type { BrowserTaskRunEntry } from "@schemas/browser-task";
 
@@ -37,43 +39,43 @@ function parseRuns(value: unknown): RunRow[] {
 }
 
 export function RunsTable({ runs }: { runs: unknown }) {
+  const headingId = useId();
   const rows = parseRuns(runs);
   if (rows.length === 0) return null;
   return (
     <Card padding="md">
       <Stack gap="sm">
-        <Heading level={2}>Runs</Heading>
-        <div className="overflow-x-auto">
-          <RunsGrid rows={rows} />
-        </div>
+        <Heading level={2} id={headingId}>Runs</Heading>
+        <RunsGrid rows={rows} labelledBy={headingId} />
       </Stack>
     </Card>
   );
 }
 
 const HEADERS = ["when", "scanned", "kept", "filed", "skipped", "stopped", "note"];
+const NUMERIC = new Set(["scanned", "kept", "filed", "skipped"]);
 
-function RunsGrid({ rows }: { rows: RunRow[] }) {
+function RunsGrid({ rows, labelledBy }: { rows: RunRow[]; labelledBy: string }) {
   return (
-    <table className="w-full text-sm">
+    <Table labelledBy={labelledBy} className="text-sm">
       <thead>
-        <tr>{HEADERS.map((h) => <th key={h} scope="col" className="text-left pr-2">{h}</th>)}</tr>
+        <tr>{HEADERS.map((h) => <Th key={h} scope="col" numeric={NUMERIC.has(h)}>{h}</Th>)}</tr>
       </thead>
       <tbody>{rows.map((r) => <RunRowView key={r.batch} run={r} />)}</tbody>
-    </table>
+    </Table>
   );
 }
 
 function RunRowView({ run: r }: { run: RunRow }) {
   return (
-    <tr className="align-top">
-      <td className="pr-2"><FriendlyDate iso={r.at} mode="date" /></td>
-      <td className="pr-2">{String(r.scanned)}</td>
-      <td className="pr-2">{String(r.kept)}</td>
-      <td className="pr-2">{String(r.filed)}</td>
-      <td className="pr-2">{String(r.skipped)}</td>
-      <td className="pr-2">{r.reason}{r.stoppedAt !== "" ? ` at ${r.stoppedAt}` : ""}</td>
-      <td className="pr-2">{r.note ?? ""}</td>
+    <tr>
+      <Td><FriendlyDate iso={r.at} mode="date" /></Td>
+      <Td numeric>{String(r.scanned)}</Td>
+      <Td numeric>{String(r.kept)}</Td>
+      <Td numeric>{String(r.filed)}</Td>
+      <Td numeric>{String(r.skipped)}</Td>
+      <Td>{r.reason}{r.stoppedAt !== "" ? ` at ${r.stoppedAt}` : ""}</Td>
+      <Td>{r.note ?? ""}</Td>
     </tr>
   );
 }

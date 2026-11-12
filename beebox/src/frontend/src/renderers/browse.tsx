@@ -6,7 +6,7 @@ import { BrowseLocationError } from "../pages/browse/components/BrowseLocationEr
 import { BROWSE_DEFAULT_DIRECTORY, browseDirectoryLabel, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc/client";
 import { type ViewState, type ViewTarget } from "../lib/view-url";
-import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
+import { BrowseSkeleton } from "../pages/browse/components/BrowseSkeleton";
 import { useAppBarPlace } from "../components/app-bar-chrome";
 import { useCardVisible } from "../components/chat/everywhere/card-context/context";
 import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider/provider";
@@ -100,7 +100,7 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
     hasDetail: state.detail !== undefined,
     directoryLoading: directory.isLoading,
     detailLoading: state.detail !== undefined && detail.isLoading,
-  })) return <BrowseLoading />;
+  })) return <BrowseSkeleton />;
   if (!valid) return <BrowseLocationError error={`Cannot browse ${state.detail?.path ?? (state.directory || "/")}: ${directory.error?.message ?? detail.error?.message ?? "expected an existing directory and a file detail"}`} onRoot={reset} onRetry={() => { void directory.refetch(); if (state.detail) void detail.refetch(); }} />;
   return <>
     {navigationError ? <BrowseLocationError error={navigationError} onRoot={reset} /> : null}

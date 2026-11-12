@@ -15,7 +15,7 @@
  * no signal at all.
  */
 
-import { MenuItem } from "../../ui/dropdown-menu-item";
+import { MenuItem } from "../../ui/menu-item";
 import { toastError } from "../../ui/toast-store";
 import { captureTabScreenshot, isScreenshotSupported } from "../screenshot-capture";
 import type { AddFiles } from "../InteractiveChat-attachments/attachments";

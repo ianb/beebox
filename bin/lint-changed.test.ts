@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { dispatchPlan, packageOf, splitBeeBoxTargets, withLayoutCheck } from "./lint-changed.js";
+import { dispatchPlan, packageOf, splitBeeBoxTargets, withLayoutCheck, withUiCheck } from "./lint-changed.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 
 // What `packageOwnerDirs` returns for this repo: workspace packages minus the
@@ -155,4 +155,19 @@ test("the layout check runs once, on code or package.json changes, deletions inc
     base: "HEAD~1",
   });
   assert.deepEqual(child?.argv, ["pnpm", "--dir", "beebox", "lint:changed", "--base", "HEAD~1"]);
+});
+
+test("the ui check runs once, on frontend source or frontend.md changes, deletions included", () => {
+  const labels = (changed: string[]): string[] =>
+    withUiCheck(dispatchPlan({ paths: changed, packageDirs: PACKAGE_DIRS, hasScript: () => true }), changed).map(
+      (c) => c.label,
+    );
+  assert.deepEqual(
+    withUiCheck([], ["beebox/src/frontend/src/components/ui/Gone.tsx"]).map((c) => c.label),
+    ["pnpm ui-check"],
+  );
+  assert.deepEqual(withUiCheck([], ["beebox/frontend.md"]).map((c) => c.label), ["pnpm ui-check"]);
+  assert.deepEqual(withUiCheck([], ["beebox/src/core/box.ts"]), []);
+  // beebox's own lint:changed adds the check in its child run, so the root plan does not.
+  assert.deepEqual(labels(["beebox/src/frontend/src/a.tsx"]), ["pnpm --dir beebox lint:changed"]);
 });

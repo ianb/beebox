@@ -33,9 +33,11 @@ import { viewSlugFromSourcePath } from "../../lib/view-source-path";
 import { type ViewState } from "../../lib/view-url";
 import type { ViewHistory, ViewLayout } from "@core/views/types.js";
 import { useViewHistory } from "../../hooks/useViewHistory";
+import { StatusMessage } from "../ui/StatusMessage";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
 import "../view-widgets/window-globals";
+import { Notice } from "../ui/Notice";
 /** View card data from the API */
 interface ViewCard {
   path: string;
@@ -68,6 +70,8 @@ interface ViewProps extends ViewFileHelpers {
    * the companion pane (inline/page renders don't accumulate).
    */
   reportActivity: (kind: ActivityKind, detail?: string) => void;
+  /** `"strip"` when drawn in the conversation strip, else `"page"`. */
+  mode: "page" | "strip";
 }
 
 /**
@@ -120,6 +124,8 @@ interface AgentViewRendererProps {
    * area already supplies the inset — so the view's own layout is not applied.
    */
   embedded: boolean;
+  /** The surface mode the view receives as its `mode` prop. */
+  viewMode: "page" | "strip";
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
   viewState?: ViewState | null;
@@ -225,7 +231,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -341,18 +347,18 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (error) {
     return (
-      <div role="alert" className="border border-danger-light bg-danger-50 rounded-lg p-4">
-        <h3 className="text-danger-dark font-medium mb-2">View Error</h3>
+      <Notice tone="error">
+        <h3 className="font-medium mb-2">View Error</h3>
         <Pre size="sm" error>{error}</Pre>
-      </div>
+      </Notice>
     );
   }
 
   if (!mod || loadedCards?.slug !== slug) {
     return (
-      <div aria-busy="true" className="flex items-center justify-center p-8 text-gray-500">
-        Loading view...
-      </div>
+      <StatusMessage busy className="flex items-center justify-center">
+        Loading view…
+      </StatusMessage>
     );
   }
   const { params: loadedParams, cards, files } = loadedCards;
@@ -384,6 +390,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
             params={loadedParams}
             viewHistory={viewHistory}
             reportActivity={report}
+            mode={viewMode}
           />
         </ViewHostProvider>
       </ViewErrorBoundary>

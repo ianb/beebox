@@ -27,15 +27,15 @@
  */
 
 import { memo, useState, type ReactNode } from "react";
-import { Dropdown } from "../../../ui/Dropdown";
+import { Menu } from "../../../ui/Menu";
 import { SessionChipFace } from "../../../app-bar-faces/SessionChipFace";
-import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
-import { AdvancedPanel } from "./SessionChip-advanced-panels";
+import { MenuItem, MenuDivider } from "../../../ui/menu-item";
+import { AdvancedMenuBody } from "./SessionChip-advanced-menu-body";
 import { DeleteChatDialog } from "../../../chat-delete/DeleteChatDialog";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../../../lib/routing";
-import { ModelPanel } from "./SessionChip-model-panel";
-import { SessionListPanel } from "./SessionListPanel";
+import { ModelMenuBody } from "./SessionChip-model-menu-body";
+import { SessionListMenuBody } from "./SessionListMenuBody";
 import { chatModelLabel, type ChatAgentEngine } from "@shared/chat-models.js";
 import { useAddedModels } from "./model-availability-store";
 import { modelDrift, engineDrift } from "./model-drift";
@@ -91,7 +91,7 @@ function RootPanel({
   );
 }
 
-/** "Recent chats" sub-panel: back row + the shared `SessionListPanel` body. */
+/** "Recent chats" sub-panel: back row + the shared `SessionListMenuBody` body. */
 function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir: string | null }) {
   return (
     <>
@@ -99,7 +99,7 @@ function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir:
         <span className="text-warm-700">‹ Recent chats</span>
       </MenuItem>
       <MenuDivider />
-      <SessionListPanel contextDir={contextDir} />
+      <SessionListMenuBody contextDir={contextDir} />
     </>
   );
 }
@@ -124,7 +124,7 @@ interface SessionChipBodyProps {
   onSelectModel: (model: string | null) => void;
   onOpenAdvanced: () => void;
   onBackToRoot: () => void;
-  advancedProps: Omit<Parameters<typeof AdvancedPanel>[0], "onBack">;
+  advancedProps: Omit<Parameters<typeof AdvancedMenuBody>[0], "onBack">;
   /** The current chat's id, for the done toggle; null before one exists. */
   sessionId: string | null;
 }
@@ -144,7 +144,7 @@ function SessionChipBody(props: SessionChipBodyProps): ReactNode {
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
       return agentEngine === null || boxEngine === null ? null : (
-        <ModelPanel
+        <ModelMenuBody
           onBack={onBackToRoot}
           selectedModel={selectedModel}
           boxDefault={boxDefault}
@@ -159,7 +159,7 @@ function SessionChipBody(props: SessionChipBodyProps): ReactNode {
         />
       );
     case "advanced":
-      return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
+      return <AdvancedMenuBody onBack={onBackToRoot} {...advancedProps} />;
   }
 }
 
@@ -250,13 +250,13 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
 
   return (
     <>
-      <Dropdown
+      <Menu
         align="right"
         // The Recent-chats panel renders two-line rows (label, id, timestamp,
         // landmark) that want 28rem; the other panels keep the compact menu
-        // width. Dropdown's viewport clamp still bounds it on narrow screens.
+        // width. Menu's viewport clamp still bounds it on narrow screens.
         width={panel === "sessions" ? "w-[28rem]" : "w-56"}
-        panelIndex={panel === "root" ? 0 : 1}
+        pageIndex={panel === "root" ? 0 : 1}
         onClose={() => setPanel("root")}
         trigger={({ toggle, ariaProps }) => (
           <SessionChipFace label={label} drift={drift} offEngine={offEngine} accessibleName={accessibleName} onClick={toggle} ariaProps={ariaProps} />
@@ -299,7 +299,7 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
             onDeleteConversation: () => setDeleteOpen(true),
           }}
         />
-      </Dropdown>
+      </Menu>
       {sessionId === null ? null : (
         <DeleteChatDialog
           open={deleteOpen}

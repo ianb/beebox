@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { Image } from "../../../ui/Image/view";
 import { Text } from "../../../ui/Text";
 import type { ScreenshotIndicator } from "./screenshot-request-handler";
+import { StatusPill } from "./StatusPill";
 
 /** How long a "shared" row lingers before it ages out. */
 const INDICATOR_TTL_MS = 6_000;
@@ -44,7 +45,7 @@ function IndicatorRow({ indicator, onDismiss }: {
   }, [indicator.requestId, indicator.thumbnailUrl, onDismiss]);
 
   return (
-    <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
+    <StatusPill>
       <span aria-hidden="true">📸</span>
       <Text size="xs" tone="subtle">
         screenshot added to the chat
@@ -56,7 +57,7 @@ function IndicatorRow({ indicator, onDismiss }: {
         bordered
         className="ml-auto w-8 h-8 rounded"
       />
-    </div>
+    </StatusPill>
   );
 }
 

@@ -13,7 +13,7 @@ phone, not a bolt-on to typing.
 
 - Dictate a chat message with spoken controls: say "send message," "erase
   message," or "microphone off" instead of reaching for the screen. "Send
-  checkpoint" sends what you have so far and tells the agent the message is
+  checkpoint" (or "checkpoint message") sends what you have so far and tells the agent the message is
   partial, so it does not answer yet and the next message continues it.
 - Keeps dictating through a brief network drop or the microphone getting
   grabbed by something else, instead of losing what you said.

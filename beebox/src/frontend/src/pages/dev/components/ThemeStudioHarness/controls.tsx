@@ -5,11 +5,12 @@
  * `controls=0` leaves it out (theme-check and the screen preview use that).
  */
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { THEME_CATALOG } from "@shared/card-theme/core";
 import { defaultStockOf, pairedCard, type StudioCase } from "@shared/theme-studio-case";
 import { SCREENS } from "@shared/theme-screens";
 import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../../../../lib/stored-flag";
+import { CheckboxField, SelectField, TextField } from "../../../../components/ui/fields/field";
 
 /** Theme names the studio's own CSS styles (`theme-studio-*.css`). */
 export const STUDIO_THEMES = ["draft", "undertow", "deck-study", "patina-study", "rose-trellis-study", "gold-thread-study"] as const;
@@ -50,27 +51,17 @@ export function ThemeStudioControls({ state, onChange }: { state: StudioState; o
     </div>
     <ThemeFields idPrefix="bbx-studio-system" label="System" names={systemNames} theme={state.system} stock={state.systemStock}
       onChange={(system, systemStock) => setSystem({ system, systemStock })} />
-    <label className="flex items-center gap-2" htmlFor="bbx-studio-card-follows">
-      <input id="bbx-studio-card-follows" type="checkbox" checked={follow} onChange={(event) => {
-        setFollow(event.target.checked);
-        if (event.target.checked) onChange({ ...state, ...pairedCard(state) });
-      }} />
-      Card follows system
-    </label>
+    <CheckboxField id="bbx-studio-card-follows" label="Card follows system" checked={follow} onChange={(checked) => {
+      setFollow(checked);
+      if (checked) onChange({ ...state, ...pairedCard(state) });
+    }} />
     {follow ? null : <ThemeFields idPrefix="bbx-studio-card" label="Card" names={cardNames} theme={state.card} stock={state.cardStock}
       onChange={(card, cardStock) => onChange({ ...state, card, cardStock })} />}
-    <Field label="Screen" htmlFor="bbx-studio-screen">
-      <select id="bbx-studio-screen" value={state.screen ?? ""} className="w-full rounded border border-warm-700 px-1 py-1 text-sm"
-        onChange={(event) => onChange({ ...state, screen: event.target.value === "" ? undefined : event.target.value })}>
-        <option value="">Fill the window</option>
-        {SCREENS.map((screen) => <option key={screen.name} value={screen.name}>{screen.label} · {screen.width}×{screen.height}</option>)}
-      </select>
-    </Field>
+    <SelectField id="bbx-studio-screen" label="Screen" value={state.screen ?? ""}
+      options={[{ value: "", label: "Fill the window" },
+        ...SCREENS.map((screen) => ({ value: screen.name, label: `${screen.label} · ${screen.width}×${screen.height}` }))]}
+      onChange={(screen) => onChange({ ...state, screen: screen === "" ? undefined : screen })} />
   </section>;
-}
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
-  return <div className="flex flex-col gap-1"><label htmlFor={htmlFor}>{label}</label>{children}</div>;
 }
 
 /**
@@ -110,17 +101,14 @@ function OtherPicker({ id, label, options, value, onChange, labelOf }: {
 }) {
   const [other, setOther] = useState(!options.includes(value));
   const showOther = other || !options.includes(value);
-  return <Field label={label} htmlFor={id}>
-    <select id={id} value={showOther ? OTHER : value} className="w-full rounded border border-warm-700 px-1 py-1 text-sm"
-      onChange={(event) => {
-        if (event.target.value === OTHER) { setOther(true); return; }
+  return <div className="space-y-1">
+    <SelectField id={id} label={label} value={showOther ? OTHER : value}
+      options={[...options.map((option) => ({ value: option, label: labelOf?.(option) ?? option })), { value: OTHER, label: "Other…" }]}
+      onChange={(next) => {
+        if (next === OTHER) { setOther(true); return; }
         setOther(false);
-        onChange(event.target.value);
-      }}>
-      {options.map((option) => <option key={option} value={option}>{labelOf?.(option) ?? option}</option>)}
-      <option value={OTHER}>Other…</option>
-    </select>
-    {showOther ? <input id={`${id}-other`} aria-label={`${label} name`} value={value} placeholder="name"
-      className="w-full rounded border border-warm-700 px-2 py-1 text-sm" onChange={(event) => onChange(event.target.value)} /> : null}
-  </Field>;
+        onChange(next);
+      }} />
+    {showOther ? <TextField id={`${id}-other`} label={`${label} name`} hideLabel identifier value={value} placeholder="name" onChange={onChange} /> : null}
+  </div>;
 }

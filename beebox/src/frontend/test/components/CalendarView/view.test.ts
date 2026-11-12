@@ -5,7 +5,6 @@
 // today in the viewer's zone. An all-day event is its calendar day in every
 // zone; a timed event falls on the day its start is in the viewer's zone.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { byDay, upcomingWindow } from "../../../src/components/CalendarView/view.js";
@@ -13,10 +12,32 @@ import { byDay, upcomingWindow } from "../../../src/components/CalendarView/view
 // The query runs from the start of today to the start of the day 30 days on,
 // each in the viewer's zone, across the DST change on Nov 1:
 void test("The window runs from the start of today for 30 days, in the viewer's zone", async (t) => {
-  const window = upcomingWindow(Temporal.ZonedDateTime.from("2026-10-20T15:30[America/New_York]"));
+  const zoneBefore = process.env["TZ"];
+  t.teardown(() => {
+    if (zoneBefore === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = zoneBefore;
+  });
+  process.env["TZ"] = "America/New_York";
+  const window = upcomingWindow(new Date("2026-10-20T15:30:00-04:00"));
   t.check(
-    { first: window.first.toString(), last: window.last.toString(), from: window.from.toString(), to: window.to.toString(), timeZone: window.timeZone },
-    { first: "2026-10-20", last: "2026-11-19", from: "2026-10-20T04:00:00Z", to: "2026-11-19T05:00:00Z", timeZone: "America/New_York" },
+    { first: window.first, last: window.last, from: window.from.toISOString(), to: window.to.toISOString(), timeZone: window.timeZone },
+    { first: "2026-10-20", last: "2026-11-19", from: "2026-10-20T04:00:00.000Z", to: "2026-11-19T05:00:00.000Z", timeZone: "America/New_York" },
+  );
+});
+
+// Chile starts DST at midnight on 2026-09-06, so that day begins at 01:00. The
+// end is the start of Oct 6 (midnight), not Oct 6 at 01:00:
+void test("The window end is a local midnight even when the first day began at 01:00", async (t) => {
+  const zoneBefore = process.env["TZ"];
+  t.teardown(() => {
+    if (zoneBefore === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = zoneBefore;
+  });
+  process.env["TZ"] = "America/Santiago";
+  const window = upcomingWindow(new Date("2026-09-06T15:00:00Z"));
+  t.check(
+    { first: window.first, last: window.last, from: window.from.toISOString(), to: window.to.toISOString() },
+    { first: "2026-09-06", last: "2026-10-06", from: "2026-09-06T04:00:00.000Z", to: "2026-10-06T03:00:00.000Z" },
   );
 });
 

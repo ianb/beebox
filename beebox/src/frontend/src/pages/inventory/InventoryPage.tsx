@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { InventoryContent } from "./components/InventoryContent/view";
 import { InventoryError } from "./components/InventoryError";
 import { InventoryHeader } from "./components/InventoryHeader";
-import { InventoryLoading } from "./components/InventoryLoading";
+import { InventorySkeleton } from "./components/InventorySkeleton";
 
 export function InventoryCardBody({ viewState, onViewStateChange }: { viewState: ViewState | null; onViewStateChange: (state: ViewState, mode?: "push" | "replace") => void }) {
   const parsed = parseInventoryCardState(viewState);
@@ -39,7 +39,7 @@ export function InventoryCardBody({ viewState, onViewStateChange }: { viewState:
         <InventoryHeader refreshing={refreshing} refresh={refresh} refreshError={refreshError} />
         {parsed.ok ? null : <Stack gap="xs"><ErrorText>{parsed.error}</ErrorText><Button intent="secondary" size="sm" className="self-start" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
         {inventory.isLoading ? (
-          <InventoryLoading />
+          <InventorySkeleton />
         ) : inventory.error !== null ? (
           <InventoryError message={inventory.error.message} refresh={refresh} />
         ) : data === undefined ? (

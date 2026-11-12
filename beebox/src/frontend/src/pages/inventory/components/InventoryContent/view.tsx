@@ -10,6 +10,7 @@ import { ErrorText } from "../../../../components/ui/ErrorText";
 import { Hint } from "../../../../components/ui/Hint";
 import { Heading } from "../../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
+import { Table, Td, Th } from "../../../../components/ui/Table";
 import { InventoryTreemap } from "./InventoryTreemap";
 import { friendlyDate } from "../../../../components/ui/FriendlyDate";
 
@@ -83,14 +84,14 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
     { label: "Unlinked", value: storage.unlinked },
   ];
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
-        <thead><tr className="border-b border-warm-300 text-left text-warm-700"><th scope="col" className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} scope="col" className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
+    <div>
+      <Table caption="Storage by link state" captionHidden className="text-sm">
+        <thead><tr><Th scope="col">Storage</Th>{columns.map((column) => <Th key={column.label} scope="col" numeric>{column.label}</Th>)}</tr></thead>
         <tbody>
           <StorageRow label="Annexed" columns={columns.map((column) => column.value.annexed)} />
           <StorageRow label="Regular Git" columns={columns.map((column) => column.value.regular)} />
         </tbody>
-      </table>
+      </Table>
       <Text as="p" size="xs" tone="muted" className="mt-2">Cells show logical content size and physical file count; annex sizes include content not fetched locally. Repository footprint includes dependencies and Git storage, and Git storage is part of that total. Loose files appear only under All.</Text>
     </div>
   );
@@ -98,9 +99,9 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
 
 function StorageRow({ label, columns }: { label: string; columns: Array<{ files: number; bytes: number }> }) {
   return (
-    <tr className="border-b border-warm-200">
-      <th scope="row" className="py-2 pr-3 text-left font-medium">{label}</th>
-      {columns.map((column, index) => <td key={index} className="py-2 px-3 text-right tabular-nums">{humanBytes(column.bytes)} <span className="text-warm-700">· {column.files.toLocaleString()}</span></td>)}
+    <tr>
+      <Th scope="row">{label}</Th>
+      {columns.map((column, index) => <Td key={index} numeric>{humanBytes(column.bytes)} <span className="text-warm-700">· {column.files.toLocaleString()}</span></Td>)}
     </tr>
   );
 }

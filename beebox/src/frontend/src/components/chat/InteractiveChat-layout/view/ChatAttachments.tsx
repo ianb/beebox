@@ -17,6 +17,9 @@ import { CloseButton } from "../../../ui/CloseButton";
 import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
 import type { ImageItem, FileItem } from "../../../../input/emission-store";
+import { Spinner } from "../../../ui/Spinner";
+import { InlineAction } from "../../../ui/InlineAction";
+import { ComposerStrip, TokenTag } from "./ComposerStrip";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -50,7 +53,7 @@ export function AttachmentPanel({
   };
 
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {attachments.map((att) => (
         <ThumbTile
           key={att.id}
@@ -62,7 +65,7 @@ export function AttachmentPanel({
       {Array.from({ length: pendingCount }, (_unused, i) => (
         <PendingThumb key={`pending-${i}`} />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -70,15 +73,12 @@ export function AttachmentPanel({
 function PendingThumb() {
   return (
     <div
-      className="w-16 h-16 rounded border border-warm-300 bg-warm-200 flex items-center justify-center"
+      className="w-16 h-16 rounded border border-warm-300 bg-warm-200 text-warm-600 flex items-center justify-center"
       role="status"
       title="Processing image…"
       aria-label="Processing image"
     >
-      <svg className="w-5 h-5 animate-spin text-warm-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
+      <Spinner size="md" />
     </div>
   );
 }
@@ -107,9 +107,7 @@ function ThumbTile({
           bordered
         />
       </button>
-      <div className="absolute -top-1 left-0 text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
-        {attachment.id}
-      </div>
+      <TokenTag corner>{attachment.id}</TokenTag>
       <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
     </div>
   );
@@ -135,7 +133,7 @@ export function FileAttachmentPanel({
   if (attachments.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {attachments.map((att) => (
         <FileChip
           key={att.id}
@@ -144,7 +142,7 @@ export function FileAttachmentPanel({
           onRetry={() => onRetry(att.id)}
         />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -177,9 +175,7 @@ function FileChip({
       data-bbx-upload-state={state.status === "failed" && state.unreadable === true ? "unreadable" : state.status}
       title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
-      <span className="text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
-        {attachment.id}
-      </span>
+      <TokenTag>{attachment.id}</TokenTag>
       <svg className="w-4 h-4 text-warm-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
@@ -191,13 +187,9 @@ function FileChip({
           // Nothing to retry: the bytes are gone. The message says to pick it again.
           <span className="text-[0.625rem] text-danger" role="status">Can't read this file — remove it and pick it again</span>
         ) : state.status === "failed" ? (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="text-[0.625rem] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
-          >
+          <InlineAction intent="danger" onClick={onRetry} className="text-[0.625rem] text-left truncate">
             Upload failed — retry
-          </button>
+          </InlineAction>
         ) : (
           <span className="text-[0.625rem] text-warm-700">{statusLabel}</span>
         )}
