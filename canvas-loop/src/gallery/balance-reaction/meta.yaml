@@ -22,3 +22,4 @@ features-exercised:
   - typed number fields (control "field")
   - select param
   - sibling -tea helper file
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

@@ -16,9 +16,9 @@ gallery/
     task.md        the prompt the agent received (verbatim where recorded;
                     otherwise a best-effort reconstruction — see `reconstructed`
                     in meta.yaml)
-    sketch.ts       the sketch AS DELIVERED (post-audit), mutable tier — OR
-    sketch-tea.ts   … TEA tier (the tea/* lint discipline keys off this exact
-                    filename, same convention as src/examples/)
+    sketch-tea.ts   the sketch AS DELIVERED (post-audit); helpers beside it
+                    are named `<name>-tea.ts` (the tea/* lint keys off the
+                    suffix, same convention as src/examples/)
     events.json     the scripted events file the sketch was run with
     meta.yaml       see fields below
     runs.jsonl      append-only re-exercise log (one JSON object per line)
@@ -29,9 +29,10 @@ gallery/
       account.md    the agent's closing account of the process
 ```
 
-Exactly one of `sketch.ts` / `sketch-tea.ts` exists per exercise — whichever
-matches the tier the sketch was authored in (`meta.yaml`'s `tier` field says
-which).
+Some exercises were first written as mutable p5-style sketches (`setup`/`draw`)
+or with the modal drawing API. Both are retired: those sketches were rewritten
+mechanically to TEA and per-call styles, and their `meta.yaml` says so in
+`migrated`. `history/` keeps the code as the agent wrote it.
 
 **No PNGs or transcripts are committed.** Output is fully determined by
 `(sketch, events, seed, harness-commit)`; committing source + metadata keeps
@@ -49,7 +50,8 @@ was actually observed at the time, so that trade-off doesn't lose information.
 | `model` | the agent model that wrote the sketch (e.g. `sonnet-5`, `opus-4.8`) |
 | `driver` | who orchestrated the exercise (e.g. `fable-5`) |
 | `cycles` | write→run→read-transcript iterations to the delivered result |
-| `tier` | `mutable` or `tea` |
+| `tier` | `tea`, the only sketch form |
+| `migrated` | optional: when and how the code was rewritten mechanically after the run |
 | `harness-commit` | the canvas-loop commit the sketch was authored against |
 | `frames`, `seed`, `fps`, `every` | the CLI run parameters `gallery check` uses to render it (`seed`/`fps`/`every` default to the CLI's own defaults — 42/60/30 — if omitted) |
 | `reconstructed` | `true` if `task.md` is a reconstruction rather than the verbatim prompt |
@@ -72,11 +74,11 @@ omitted for a mechanical `rerun` that involves no agent.
 
 ## Adding an exercise
 
-1. Give an agent a visual/interactive task using canvas-loop (mutable or TEA
-   tier); let it run the normal write→run→Read-transcript loop.
+1. Give an agent a visual/interactive task using canvas-loop; let it run the
+   normal write→run→Read-transcript loop.
 2. Once the result is good, create `gallery/<slug>/`: copy in the final
-   `sketch.ts`/`sketch-tea.ts` and `events.json`, write `task.md` (the actual
-   prompt given, or a clearly-marked reconstruction), and `meta.yaml`.
+   `sketch-tea.ts` and `events.json`, write `task.md` (the actual prompt
+   given, or a clearly-marked reconstruction), and `meta.yaml`.
 3. Add one `runs.jsonl` line with `"action": "authored"`.
 4. Run `pnpm --dir canvas-loop run gallery:check` — it must pass (determinism
    + lint) before the exercise is committed.
@@ -84,7 +86,7 @@ omitted for a mechanical `rerun` that involves no agent.
 ## Re-exercising
 
 To check an existing exercise still holds against a later harness commit,
-re-run it unchanged (`pnpm --dir canvas-loop run cli run gallery/<slug>/sketch*.ts --events gallery/<slug>/events.json`),
+re-run it unchanged (`pnpm --dir canvas-loop run cli run gallery/<slug>/sketch-tea.ts --events gallery/<slug>/events.json`),
 compare by eye against the last recorded audit, and append a `rerun` line to
 its `runs.jsonl`. Re-exercise cadence is manual, by design (see
 `LIBRARY-PLAN.md`'s open questions) — there is no scheduled job.

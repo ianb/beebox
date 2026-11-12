@@ -1,6 +1,13 @@
 // Acorn Lane: a busy picture-book street. Every townsperson idles; click one
 // and it performs its little act, sometimes setting off a neighbour.
-import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamValues,
+  ParamsDecl,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 import type { Id } from "./things-tea.js";
 import { CHAIN, H, IDS, W, act, boxOf, hit } from "./things-tea.js";
 import { paintNightSky, paintTown } from "./town-tea.js";
@@ -8,7 +15,11 @@ import * as A from "./actors-tea.js";
 import * as S from "./folk-tea.js";
 
 export const params = {
-  time: { type: "select", options: ["morning", "dusk", "night"] as const, default: "morning" },
+  time: {
+    type: "select",
+    options: ["morning", "dusk", "night"] as const,
+    default: "morning",
+  },
   rain: { type: "boolean", default: false },
   reset: { type: "trigger" },
 } as const satisfies ParamsDecl;
@@ -30,7 +41,13 @@ export interface Model {
 
 function fresh(frame: number, u: Util<typeof params>): Model {
   // every act "started" long ago, so none is playing
-  return { frame, hover: "", start: u.record(IDS, () => -100_000), queue: [], bloom: 0 };
+  return {
+    frame,
+    hover: "",
+    start: u.record(IDS, () => -100_000),
+    queue: [],
+    bloom: 0,
+  };
 }
 
 export function init(u: Util<typeof params>): Model {
@@ -40,7 +57,10 @@ export function init(u: Util<typeof params>): Model {
 /** Start an act on `id` at frame `at` unless it is already playing; queue its chain reactions. */
 function begin(model: DeepReadonly<Model>, id: Id, at: number): Model {
   if (act({ frame: at, start: model.start }, id) !== null) return model;
-  const chained = (CHAIN[id] ?? []).map((c) => ({ id: c.id, at: at + c.delay }));
+  const chained = (CHAIN[id] ?? []).map((c) => ({
+    id: c.id,
+    at: at + c.delay,
+  }));
   return {
     ...model,
     start: { ...model.start, [id]: at },
@@ -52,10 +72,18 @@ function begin(model: DeepReadonly<Model>, id: Id, at: number): Model {
 function tick(model: DeepReadonly<Model>, frame: number): Model {
   const due = model.queue.filter((c) => c.at <= frame);
   const rest = model.queue.filter((c) => c.at > frame);
-  return due.reduce<Model>((m, c) => begin(m, c.id, frame), { ...model, frame, queue: rest });
+  return due.reduce<Model>((m, c) => begin(m, c.id, frame), {
+    ...model,
+    frame,
+    queue: rest,
+  });
 }
 
-export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "tick":
       return tick(model, msg.frame);
@@ -92,7 +120,11 @@ const SHADE: Readonly<Record<ParamValues<typeof params>["time"], string>> = {
   night: "#6670b0",
 };
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+export function draw(
+  v: View,
+  model: DeepReadonly<Model>,
+  p: ParamValues<typeof params>,
+): void {
   const night = p.time === "night";
   const s: A.Scene = { ...model, night, evening: p.time !== "morning" };
   v.cache("town", () => paintTown(v));
@@ -119,21 +151,15 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   A.manhole(v, s);
   A.bus(v, s);
   if (p.rain) {
-    v.noStroke();
-    v.fill("rgba(90,100,130,0.25)");
-    v.rect(0, 0, W, H);
+    v.rect(0, 0, W, H, { fill: "rgba(90,100,130,0.25)" });
   }
   const shade = SHADE[p.time];
   if (shade !== "") {
-    v.blendMode("multiply");
-    v.noStroke();
-    v.fill(shade);
-    v.rect(0, 0, W, H);
+    v.rect(0, 0, W, H, { fill: shade, blend: "multiply" });
     // lights go on after the shade, with a screen blend, so they glow through it
-    v.blendMode("screen");
-    if (night) v.cache("night-sky", () => paintNightSky(v));
+    if (night)
+      v.cache("night-sky", () => paintNightSky(v), { blend: "screen" });
     A.lights(v, s);
-    v.blendMode("normal");
   }
   if (p.rain) A.rain(v, model.frame);
   A.bubbles(v, s);

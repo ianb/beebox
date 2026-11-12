@@ -1,22 +1,18 @@
-# TEA sketches (The Elm Architecture)
+# Writing a sketch (TEA)
 
-A second sketch tier for canvas-loop. Where the [mutable tier](./README.md)
-gives you p5-style `setup`/`draw` with free-floating state, a **TEA sketch** is a
-pure fold: `model = msgs.reduce(update, init())`, then `draw` renders it. State
-changes only by `update` returning a new `Model`. This is a Redux reducer — the
-most training-saturated shape there is — with Elm's guarantees enforced by types,
-a runtime deep-freeze, a double-run byte-diff, and lint.
-
-Same CLI, same transcript. The runtime picks the tier by detecting an `update`
-export:
+A canvas-loop sketch follows The Elm Architecture (TEA). It is a pure fold:
+`model = msgs.reduce(update, init())`, then `draw` renders the model. State
+changes only when `update` returns a new `Model`. Types, a runtime deep-freeze,
+a double-run byte-diff and lint enforce this. TEA is the only sketch form: a
+module that exports `setup` gets a loader error that names the TEA form.
 
 ```sh
 pnpm --dir canvas-loop run cli run src/examples/orbit-tea.ts \
   --events src/examples/orbit-tea-events.json --out out
 ```
 
-Name TEA sketches `*-tea.ts` — the TEA lint discipline is scoped to that suffix
-so the two tiers can share `src/examples/`.
+Name sketch files `*-tea.ts`. The TEA lint applies to that suffix. The
+[README](./README.md) covers running, the events file and the capture policy.
 
 ## Contract
 
@@ -48,14 +44,7 @@ Capabilities are injected, not ambient — `update` gets `Util` (randomness,
 params, log, `handled`) and no drawing; `draw` gets `View` (drawing, log,
 snapshot, `ctx`) and no randomness. That withholding *is* the enforcement.
 
-`View` carries the same drawing surface as the mutable `Sketch` (see the
-[README API table](./README.md#the-sketch-api)), including the organic-shape
-primitives — `polygon`, `path` (data-encoded commands), `arc`, `clip`, and
-`linearGradient`/`radialGradient` handles that `fill`/`stroke`/`background`
-accept as a `Paint`. `v.ctx` remains the escape hatch, but these should now
-cover curves/gradients/clipping so a `draw` stays serializable-in-principle.
-[`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) is a worked port that draws a
-full tidal-fjord scene through them with zero `ctx`.
+[Drawing](#drawing) below covers `View`.
 
 The lint preset caps functions at 2 parameters. Sketch directories
 (`src/examples/`, `src/gallery/`) turn that cap off, so a sketch there needs
@@ -104,6 +93,148 @@ For each frame N, the runtime:
 So the world an event sees is exactly the state after frame **N−1**'s draw, and
 `draw` runs exactly once per frame. `init` runs once before frame 0.
 
+## Drawing
+
+`draw(v, model, p)` paints through `v: View`. Nothing on `View` sets state
+that a later call reads: each call says how it paints.
+
+### Styles
+
+A shape call takes a `Style` as its last argument. A style is a plain object.
+Keep the ones you reuse in `const`s and spread to vary them:
+
+```ts
+import type { DeepReadonly, Style, TextOptions, View } from "@ianbicking/canvas-loop";
+
+const CARD: Style = { fill: "#f8fafc", stroke: "#334155", weight: 2 };
+const INK: Style = { stroke: "#1d2a44", weight: 3, brush: "ink" };
+const LABEL: TextOptions = { size: 14, fill: "#334155", align: "center", valign: "middle" };
+
+interface Model {
+  hot: boolean;
+}
+
+export function draw(v: View, model: DeepReadonly<Model>): void {
+  v.roundRect(20, 20, 160, 80, 8, model.hot ? { ...CARD, fill: "#fde68a" } : CARD);
+  v.line(30, 80, 170, 80, INK);
+  v.text("Sun", { x: 100, y: 50 }, LABEL);
+}
+```
+
+| Key | Meaning | When left out |
+| --- | --- | --- |
+| `fill` | a CSS color string or a gradient handle | no fill |
+| `stroke` | a CSS color string or a gradient handle | no stroke |
+| `weight` | stroke width in logical pixels | 1 |
+| `brush` | strokes become brushed marks: a preset name (`"ink"`), a preset with fields changed (`{ preset: "pencil", opacity: 0.6 }`), or a `Brush` | plain strokes |
+| `gesture` | how the hand moves for brushed marks: `{ pressure, wobble, seed, faint }` | `{}` |
+| `blend` | how the pixels combine with what is under them (`"multiply"`, `"screen"`, …) | `"normal"` |
+| `erase` | `true` removes pixels instead of adding them | `false` |
+
+A brush preset kept in a variable needs its type, or TypeScript widens
+`preset` to `string`: `const SHADE: BrushPreset = { preset: "bristle", load: 0.4 }`.
+[BRUSHES.md](./BRUSHES.md) lists the presets, their fields and gestures.
+
+Colors are CSS strings only (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`).
+
+The style is checked at each call. An unknown key, a negative `weight` or an
+unknown brush name throws an error that names the call and the key. A call
+that can draw nothing logs a line to the transcript once per distinct message:
+a `line` or open `curve` with no stroke, or a closed shape with neither fill
+nor stroke.
+
+### Shapes
+
+```ts
+v.background(paint)
+v.rect(x, y, w, h, style)               v.roundRect(x, y, w, h, radius, style)
+v.circle(x, y, diameter, style)         v.ellipse(x, y, w, h, style)
+v.line(x1, y1, x2, y2, style)           v.triangle(x1, y1, x2, y2, x3, y3, style)
+v.arc(x, y, radius, start, end, style)  v.polygon(points, style)
+v.path(commands, style)                 v.curve(points, closed, style)
+```
+
+- Points are `Vec2` tuples, `[x, y]`.
+- `path` takes data-encoded commands: `["move", x, y]`, `["line", x, y]`,
+  `["quad", cx, cy, x, y]`, `["bezier", c1x, c1y, c2x, c2y, x, y]`,
+  `["close"]`.
+- `curve` draws a smooth curve through every point. `closed` is required.
+  `v.curvePath(points, closed?)` returns the same curve as path commands.
+- `v.tube(points, { width, profile? })` and `v.offset(points, distance)` return
+  outlines as data (see [BRUSHES.md](./BRUSHES.md#shape-helpers)).
+- `v.linearGradient(x1, y1, x2, y2, stops)`, `v.radialGradient(x, y, radius,
+  stops)` and `v.ellipseGradient(x, y, w, h, stops)` return gradient handles.
+  Use a handle anywhere a color goes: `{ fill: v.radialGradient(…) }`.
+
+### Text
+
+```ts
+v.text(s, { x, y, w?, h? }, options)    // returns the bounds drawn
+v.textWidth(s, options)                 // width in logical pixels
+```
+
+| Option | Default |
+| --- | --- |
+| `size` | 12 |
+| `font` (CSS family, e.g. `"Georgia, serif"`) | `"sans-serif"` |
+| `style` (`"normal"`, `"italic"`, `"bold"`, `"bold italic"`) | `"normal"` |
+| `fill` | `"#000000"` |
+| `align` (`"left"`, `"center"`, `"right"`) | `"left"` |
+| `valign` (`"top"`, `"middle"`, `"bottom"`, `"baseline"`) | `"top"` |
+| `blend`, `erase` | as for a style |
+| `wrap` | on when `w` is set |
+| `fit` (shrink until the text fits the box) | off |
+| `lineHeight` (multiple of `size`) | 1.25 |
+
+- One line with no `w` draws at (x, y): `align` places it about `x` and
+  `valign` about `y`. `"baseline"` puts the alphabetic baseline on `y`.
+- With `w`, lines wrap at word breaks to the box width. With `h`, `valign`
+  places the lines inside the box.
+- The bounds are `{ x, y, w, h, lines, size, overflow }`. `overflow` is true
+  when the text does not fit the box.
+- Which fonts exist depends on the machine. Use common families.
+
+### Scopes
+
+Each scope takes a body function. Its effect ends when the body returns.
+
+- `v.at({ translate?: [x, y], rotate?: radians, scale?: n | [sx, sy] }, body)`
+  transforms the drawing in `body`: translate, then rotate, then scale. For
+  another order, nest `at` calls. It has no layer: `erase` inside it erases
+  the canvas beneath.
+- `v.group({ opacity?, blend? }, body)` draws `body` on its own layer, then
+  composites the layer once. `erase` inside a group erases only the group's
+  pixels.
+- `v.clip(shape, body)` clips `body` to a polygon or path, or to the union of
+  an array of them.
+- `v.cache(key, body, { blend?, erase? }?)` draws `body` once into a stored
+  layer and pastes it on later calls with the same `key`.
+- `v.sprite({ key, width, height }, body)` draws `body` once in its own
+  coordinates and returns a handle. `v.image(sprite, x, y, { opacity?, blend?,
+  erase? }?)` draws it with its top-left at (x, y), under the current `at`.
+
+[BRUSHES.md](./BRUSHES.md#animation-and-interaction) covers cache and sprite
+keys.
+
+### Other `View` members
+
+- `v.width`, `v.height`: the canvas size.
+- `v.paper({ scale, contrast, seed })` and `v.paperTexture(amount)`: see
+  [BRUSHES.md](./BRUSHES.md#paper).
+- `v.control(name, box)`: see [Inputs over the canvas](#inputs-over-the-canvas).
+- `v.cursor(kind)`: the pointer's look over a browser figure. Headless, it
+  does nothing.
+- `v.debugBox(label, x, y, w, h)`: a labelled box drawn only with
+  `run --outline`.
+- `v.log(...args)`: a frame-tagged transcript line. `console.log/warn/error`
+  also land in the transcript.
+- `v.snapshot(label?)`: capture this frame.
+- `v.ctx`: the raw `@napi-rs/canvas` context, for what `View` does not cover
+  (shadows, `drawImage`). It follows `at`, `group` and `clip`. Prefer the
+  calls above: they are data, so a `draw` stays serializable in principle.
+  [`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) draws a full
+  scene without `ctx`.
+
 ## Params reference
 
 `params` is a record of declarations. Four types:
@@ -135,30 +266,7 @@ place inputs so far; the React figure and the playground keep the panel.
 
 ## Events file
 
-The same JSON array as the mutable tier, plus two TEA-only entry types. Each is
-validated against `params` — an unknown name or wrong value type is a clear
-error before frame 0:
-
-```json
-[
-  { "frame": 30, "type": "mousedown", "x": 297, "y": 288 },
-  { "frame": 40, "type": "keydown", "key": "ArrowUp" },
-  { "frame": 55, "type": "param", "name": "focus", "value": "Earth" },
-  { "frame": 70, "type": "param", "name": "speed-scale", "value": 2.5 },
-  { "frame": 80, "type": "snapshot", "label": "after speed-up" },
-  { "frame": 85, "type": "param", "name": "show-orbits", "value": false },
-  { "frame": 110, "type": "trigger", "name": "reset" }
-]
-```
-
-Input types (`mousedown`/`mouseup`/`mousemove`/`keydown`/`keyup`) match the
-mutable tier. A `param` change adds an automatic transcript line:
-`**[frame 70]** param: speed-scale → 2.5`. A `snapshot` entry
-(`{ "frame", "type": "snapshot", "label"? }`) folds no `Msg` — it forces a
-capture of that frame without perturbing the model, and its optional `label`
-flows to the transcript frame heading (`### frame 80 — after speed-up`). It is
-the scriptable twin of `v.snapshot(label?)`, for pinning a frame the capture
-policy would otherwise skip.
+The format is in the [README](./README.md#events-file).
 
 ## Engagement verdicts
 
@@ -206,9 +314,8 @@ export default (cl, { mount, figure }) =>
   cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
 ```
 
-The headless CLI is unaffected: TEA detection keys on the named `update`
-export (`src/headless/tea-load.ts`) and the loader reads only the contract
-exports, so `default` is ignored. One file is simultaneously the
+The headless loader (`src/headless/tea-load.ts`) reads only the contract
+exports, so the CLI ignores `default`. One file is simultaneously the
 headless-runnable sketch and the embeddable figure entry.
 
 `mountSketch(mount, opts)` lives at `@ianbicking/canvas-loop/browser` — the
@@ -265,6 +372,18 @@ case "keydown":
   return nudgeSelected({ model, key: msg.key, u });   // → { ...model, planets: planets.map(…) }
 case "trigger":
   return msg.name === "reset" ? init() : model;
+```
+
+`draw` keeps its styles in `const`s and passes one to each call:
+
+```ts
+const ORBIT_RING: Style = { stroke: "#1e293b", weight: 1 };
+const SELECTION_RING: Style = { stroke: "#f8fafc", weight: 2 };
+
+v.circle(CENTER_X, CENTER_Y, SUN_RADIUS * 2, { fill: "#facc15" });
+v.circle(pos.x, pos.y, planet.size, { fill: planet.color });
+if (selected) v.circle(pos.x, pos.y, planet.size + HIT_PADDING * 2 + 4, SELECTION_RING);
+v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
 ```
 
 Note the boundary: `reset` restores the *model* (planets, selection) but leaves

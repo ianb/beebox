@@ -22,3 +22,4 @@ features-exercised:
   - TEA pointer input (drag)
   - brushes with gesture keyframes
   - chained cache for finished strokes
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

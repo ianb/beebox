@@ -11,7 +11,14 @@
 //
 // No polygon/path/clip/gradient primitive in the View subset, so this uses
 // `v.ctx` (the documented escape hatch) for path fills, clipping, gradients.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 
 export const params = {
   tide: { type: "number", min: -1, max: 1, default: 0, step: 0.05 },
@@ -50,37 +57,74 @@ const BEACH_MAX_EXPOSED = 68;
 
 // Each wall's ridge slopes from `outerY` (high, at the frame edge) down to
 // `topY` where it meets the channel — nested Vs receding toward the horizon.
-const FAR_CONFIG = { outerY: 150, topY: 176, edgeTopX: 222, edgeBottomX: 202, ridgeAmp: 10, edgeAmp: 6 };
-const MID_CONFIG: LayerConfig = { outerY: 118, topY: 226, edgeTopX: 202, edgeBottomX: 168, ridgeAmp: 16, edgeAmp: 11 };
-const NEAR_CONFIG: LayerConfig = { outerY: 62, topY: 272, edgeTopX: 168, edgeBottomX: 95, ridgeAmp: 24, edgeAmp: 17 };
+const FAR_CONFIG = {
+  outerY: 150,
+  topY: 176,
+  edgeTopX: 222,
+  edgeBottomX: 202,
+  ridgeAmp: 10,
+  edgeAmp: 6,
+};
+const MID_CONFIG: LayerConfig = {
+  outerY: 118,
+  topY: 226,
+  edgeTopX: 202,
+  edgeBottomX: 168,
+  ridgeAmp: 16,
+  edgeAmp: 11,
+};
+const NEAR_CONFIG: LayerConfig = {
+  outerY: 62,
+  topY: 272,
+  edgeTopX: 168,
+  edgeBottomX: 95,
+  ridgeAmp: 24,
+  edgeAmp: 17,
+};
 type LayerConfig = typeof FAR_CONFIG;
 
 // Jagged skyline sloping fromY→toY as x sweeps fromX→toX; y jitters upward
 // off the slope (rocky peaks against the sky, not a smooth bump).
-function jaggedRidge(
-  a: { u: Util<typeof params>; fromX: number; toX: number; fromY: number; toY: number; amp: number },
-): Point[] {
+function jaggedRidge(a: {
+  u: Util<typeof params>;
+  fromX: number;
+  toX: number;
+  fromY: number;
+  toY: number;
+  amp: number;
+}): Point[] {
   const { u, fromX, toX, fromY, toY, amp } = a;
   const steps = 9;
   const pts: Point[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const base = fromY + (toY - fromY) * t;
-    pts.push({ x: fromX + (toX - fromX) * t, y: base - u.random(0, amp) + u.random(0, amp * 0.25) });
+    pts.push({
+      x: fromX + (toX - fromX) * t,
+      y: base - u.random(0, amp) + u.random(0, amp * 0.25),
+    });
   }
   return pts;
 }
 
 // Jagged rock face: y sweeps fromY..toY, x jitters off the fromX..toX line.
-function jaggedEdge(
-  a: { u: Util<typeof params>; fromY: number; toY: number; fromX: number; toX: number; amp: number },
-): Point[] {
+function jaggedEdge(a: {
+  u: Util<typeof params>;
+  fromY: number;
+  toY: number;
+  fromX: number;
+  toX: number;
+  amp: number;
+}): Point[] {
   const { u, fromY, toY, fromX, toX, amp } = a;
   const steps = 16;
   const pts: Point[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    pts.push({ x: fromX + (toX - fromX) * t + u.random(-amp, amp), y: fromY + (toY - fromY) * t });
+    pts.push({
+      x: fromX + (toX - fromX) * t + u.random(-amp, amp),
+      y: fromY + (toY - fromY) * t,
+    });
   }
   return pts;
 }
@@ -88,9 +132,23 @@ function jaggedEdge(
 function buildLayer(u: Util<typeof params>, cfg: LayerConfig): CliffLayer {
   const { outerY, topY, edgeTopX, edgeBottomX, ridgeAmp, edgeAmp } = cfg;
   const ridge = (x0: number, x1: number): Point[] =>
-    jaggedRidge({ u, fromX: x0, toX: x1, fromY: outerY, toY: topY, amp: ridgeAmp });
+    jaggedRidge({
+      u,
+      fromX: x0,
+      toX: x1,
+      fromY: outerY,
+      toY: topY,
+      amp: ridgeAmp,
+    });
   const edge = (x0: number, x1: number): Point[] =>
-    jaggedEdge({ u, fromY: topY, toY: HEIGHT, fromX: x0, toX: x1, amp: edgeAmp });
+    jaggedEdge({
+      u,
+      fromY: topY,
+      toY: HEIGHT,
+      fromX: x0,
+      toX: x1,
+      amp: edgeAmp,
+    });
   return {
     topRidgeLeft: ridge(0, edgeTopX),
     innerEdgeLeft: edge(edgeTopX, edgeBottomX),
@@ -101,7 +159,8 @@ function buildLayer(u: Util<typeof params>, cfg: LayerConfig): CliffLayer {
 
 function buildHazeSkyline(u: Util<typeof params>): readonly Point[] {
   const pts: Point[] = [];
-  for (let i = 0; i <= 14; i++) pts.push({ x: (i / 14) * WIDTH, y: HORIZON_Y - 18 - u.random(0, 14) });
+  for (let i = 0; i <= 14; i++)
+    pts.push({ x: (i / 14) * WIDTH, y: HORIZON_Y - 18 - u.random(0, 14) });
   return pts;
 }
 
@@ -115,7 +174,11 @@ export function init(u: Util<typeof params>): Model {
   };
 }
 
-export function update(model: DeepReadonly<Model>, msg: Msg, _u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  _u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "tick":
       return { ...model, frame: msg.frame };
@@ -195,10 +258,15 @@ const DAY_PALETTE: Palette = {
   beach: "#7a7168",
 };
 
-function ridgePath(a: { ctx: View["ctx"]; layer: CliffLayer; side: "left" | "right" }): void {
+function ridgePath(a: {
+  ctx: View["ctx"];
+  layer: CliffLayer;
+  side: "left" | "right";
+}): void {
   const { ctx, layer, side } = a;
   const topRidge = side === "left" ? layer.topRidgeLeft : layer.topRidgeRight;
-  const innerEdge = side === "left" ? layer.innerEdgeLeft : layer.innerEdgeRight;
+  const innerEdge =
+    side === "left" ? layer.innerEdgeLeft : layer.innerEdgeRight;
   const cornerX = side === "left" ? 0 : WIDTH;
   ctx.moveTo(cornerX, HEIGHT);
   const firstRidge = topRidge[0];
@@ -210,7 +278,12 @@ function ridgePath(a: { ctx: View["ctx"]; layer: CliffLayer; side: "left" | "rig
 
 // Fills the cliff mass, then a top-lit/base-shadowed gradient over the same
 // clip — flat silhouettes read as cutouts, this gives them a rock face.
-function fillLayer(a: { v: View; layer: CliffLayer; color: string; topY: number }): void {
+function fillLayer(a: {
+  v: View;
+  layer: CliffLayer;
+  color: string;
+  topY: number;
+}): void {
   const { v, layer, color, topY } = a;
   const { ctx } = v;
   ctx.save();
@@ -237,7 +310,11 @@ function drawSky(v: View, palette: Palette): void {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
-function drawHazeSkyline(a: { v: View; skyline: readonly Point[]; palette: Palette }): void {
+function drawHazeSkyline(a: {
+  v: View;
+  skyline: readonly Point[];
+  palette: Palette;
+}): void {
   const { v, skyline, palette } = a;
   const { ctx } = v;
   ctx.fillStyle = palette.haze;
@@ -251,7 +328,11 @@ function drawHazeSkyline(a: { v: View; skyline: readonly Point[]; palette: Palet
 
 // Region between the near cliffs' inner edges from `topY` down to the frame
 // bottom — used for both the water sheet and the exposed beach.
-function channelPath(a: { ctx: View["ctx"]; near: CliffLayer; topY: number }): void {
+function channelPath(a: {
+  ctx: View["ctx"];
+  near: CliffLayer;
+  topY: number;
+}): void {
   const { ctx, near, topY } = a;
   const pts = [
     { x: xAtY(near.innerEdgeLeft, topY), y: topY },
@@ -266,7 +347,12 @@ function channelPath(a: { ctx: View["ctx"]; near: CliffLayer; topY: number }): v
   ctx.closePath();
 }
 
-function drawWater(a: { v: View; near: CliffLayer; frame: number; palette: Palette }): void {
+function drawWater(a: {
+  v: View;
+  near: CliffLayer;
+  frame: number;
+  palette: Palette;
+}): void {
   const { v, near, frame, palette } = a;
   const { ctx } = v;
   ctx.save();
@@ -295,7 +381,12 @@ function drawWater(a: { v: View; near: CliffLayer; frame: number; palette: Palet
 // Wet-rock rim along the cliff bases: a stroke centered on each inner edge,
 // clipped to the cliff side so only the rock face darkens. It widens as the
 // tide drops (freshly exposed wet rock) and nearly vanishes at high tide.
-function drawWetBands(a: { v: View; near: CliffLayer; tide: number; palette: Palette }): void {
+function drawWetBands(a: {
+  v: View;
+  near: CliffLayer;
+  tide: number;
+  palette: Palette;
+}): void {
   const { v, near, tide, palette } = a;
   const { ctx } = v;
   ctx.save();
@@ -316,7 +407,12 @@ function drawWetBands(a: { v: View; near: CliffLayer; tide: number; palette: Pal
 
 // The exposed foreshore at the bottom of the frame: wet strip at the
 // waterline, drier gravel below, with a pale foam line at the contact.
-function drawBeach(a: { v: View; near: CliffLayer; beachY: number; palette: Palette }): void {
+function drawBeach(a: {
+  v: View;
+  near: CliffLayer;
+  beachY: number;
+  palette: Palette;
+}): void {
   const { v, near, beachY, palette } = a;
   const { ctx } = v;
   if (beachY >= HEIGHT) return;
@@ -346,17 +442,32 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   // between the cliffs reads as fjord, not sky; layers painted next cover it.
   v.ctx.fillStyle = palette.distantWater;
   v.ctx.fillRect(0, HORIZON_Y + 5, WIDTH, HEIGHT - HORIZON_Y - 5);
-  fillLayer({ v, layer: model.far, color: palette.far, topY: FAR_CONFIG.outerY });
-  fillLayer({ v, layer: model.mid, color: palette.mid, topY: MID_CONFIG.outerY });
-  fillLayer({ v, layer: model.near, color: palette.near, topY: NEAR_CONFIG.outerY });
+  fillLayer({
+    v,
+    layer: model.far,
+    color: palette.far,
+    topY: FAR_CONFIG.outerY,
+  });
+  fillLayer({
+    v,
+    layer: model.mid,
+    color: palette.mid,
+    topY: MID_CONFIG.outerY,
+  });
+  fillLayer({
+    v,
+    layer: model.near,
+    color: palette.near,
+    topY: NEAR_CONFIG.outerY,
+  });
   drawWater({ v, near: model.near, frame: model.frame, palette });
   drawWetBands({ v, near: model.near, tide: p.tide, palette });
   drawBeach({ v, near: model.near, beachY, palette });
 
-  v.noStroke();
-  v.fill("rgba(255,255,255,0.85)");
-  v.textSize(12);
-  v.textAlign("left", "top");
   const shore = Math.max(0, Math.round(HEIGHT - beachY));
-  v.text(`tide ${p.tide.toFixed(2)}  ${p.timeOfDay}  shore ${shore}px  frame ${model.frame}`, 8, 8);
+  v.text(
+    `tide ${p.tide.toFixed(2)}  ${p.timeOfDay}  shore ${shore}px  frame ${model.frame}`,
+    { x: 8, y: 8 },
+    { size: 12, fill: "rgba(255,255,255,0.85)", align: "left", valign: "top" },
+  );
 }

@@ -14,7 +14,15 @@
 // The model holds only what the params cannot: the frame, when the equation
 // last became balanced (for the celebration's clock), and which box was last
 // edited (for a short highlight). Everything else is derived from params in draw.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Style,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 
 import {
   commonFactor,
@@ -31,10 +39,23 @@ import {
   type Tally,
 } from "./chem-tea.js";
 
-const COEF = { type: "number", min: 1, max: 12, default: 1, step: 1, control: "field", panel: false } as const;
+const COEF = {
+  type: "number",
+  min: 1,
+  max: 12,
+  default: 1,
+  step: 1,
+  control: "field",
+  panel: false,
+} as const;
 
 export const params = {
-  reaction: { type: "select", options: REACTION_IDS, default: "water", panel: false },
+  reaction: {
+    type: "select",
+    options: REACTION_IDS,
+    default: "water",
+    panel: false,
+  },
   A: COEF,
   B: COEF,
   C: COEF,
@@ -74,7 +95,9 @@ function coefsOf(p: ParamView): number[] {
 }
 
 function isBalanced(p: ParamView): boolean {
-  return tally(REACTIONS[p.reaction], coefsOf(p)).every((t) => t.left === t.right);
+  return tally(REACTIONS[p.reaction], coefsOf(p)).every(
+    (t) => t.left === t.right,
+  );
 }
 
 function slotNamed(name: string): Slot | undefined {
@@ -87,17 +110,26 @@ export function init(u: Util<typeof params>): Model {
   return { frame: 0, balancedAt: isBalanced(u.params) ? 0 : null, edit: null };
 }
 
-function onParam(args: { model: DeepReadonly<Model>; name: string; u: Util<typeof params> }): Model {
+function onParam(args: {
+  model: DeepReadonly<Model>;
+  name: string;
+  u: Util<typeof params>;
+}): Model {
   const { model, name, u } = args;
   const balanced = isBalanced(u.params);
   const balancedAt = balanced ? (model.balancedAt ?? model.frame) : null;
-  if (balanced && model.balancedAt === null) u.log(`balanced: ${coefsOf(u.params).join(", ")}`);
+  if (balanced && model.balancedAt === null)
+    u.log(`balanced: ${coefsOf(u.params).join(", ")}`);
   const slot = slotNamed(name);
   const edit = slot === undefined ? model.edit : { slot, frame: model.frame };
   return { ...model, balancedAt, edit };
 }
 
-export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "tick":
       return { ...model, frame: msg.frame };
@@ -124,36 +156,63 @@ const GOOD = "#2f8a4a";
 const GOOD_TINT = "#e2f3df";
 const BAD = "#c8402f";
 const BAD_TINT = "#fbe2dc";
+const CARD_EDGE: Style = { fill: CARD, stroke: "#d9cfb8", weight: 1.5 };
 const FONT = "Avenir Next, Helvetica Neue, Helvetica, Arial, sans-serif";
 
-type Style = "normal" | "bold";
+type Weight = "normal" | "bold";
 
-function setText(v: View, size: number, style: Style = "normal"): void {
-  v.textFont(FONT);
-  v.textSize(size);
-  v.textStyle(style);
+interface Say {
+  size: number;
+  fill: string;
+  style?: Weight;
+  align?: "left" | "center" | "right";
+  valign?: "top" | "middle" | "bottom" | "baseline";
 }
 
-/** Text width at a size: View has no textWidth, so measure on the raw context with the font `text` would set. */
-function textW(v: View, args: { s: string; size: number; style?: Style }): number {
-  v.ctx.font = `${args.style ?? "normal"} ${args.size}px ${FONT}`;
-  return v.ctx.measureText(args.s).width;
+/** One line of text in the page font; (x, y) is the left end of the baseline unless `align`/`valign` say otherwise. */
+function say(v: View, s: string, at: { x: number; y: number }, o: Say): void {
+  v.text(s, at, {
+    size: o.size,
+    font: FONT,
+    style: o.style ?? "normal",
+    fill: o.fill,
+    align: o.align ?? "left",
+    valign: o.valign ?? "baseline",
+  });
 }
 
-function roundRect(v: View, box: { x: number; y: number; w: number; h: number; r: number }): void {
+function textW(
+  v: View,
+  args: { s: string; size: number; style?: Weight },
+): number {
+  return v.textWidth(args.s, {
+    size: args.size,
+    font: FONT,
+    style: args.style ?? "normal",
+  });
+}
+
+function roundRect(
+  v: View,
+  box: { x: number; y: number; w: number; h: number; r: number },
+  style: Style,
+): void {
   const { x, y, w, h, r } = box;
-  v.path([
-    ["move", x + r, y],
-    ["line", x + w - r, y],
-    ["quad", x + w, y, x + w, y + r],
-    ["line", x + w, y + h - r],
-    ["quad", x + w, y + h, x + w - r, y + h],
-    ["line", x + r, y + h],
-    ["quad", x, y + h, x, y + h - r],
-    ["line", x, y + r],
-    ["quad", x, y, x + r, y],
-    ["close"],
-  ]);
+  v.path(
+    [
+      ["move", x + r, y],
+      ["line", x + w - r, y],
+      ["quad", x + w, y, x + w, y + r],
+      ["line", x + w, y + h - r],
+      ["quad", x + w, y + h, x + w - r, y + h],
+      ["line", x + r, y + h],
+      ["quad", x, y + h, x, y + h - r],
+      ["line", x, y + r],
+      ["quad", x, y, x + r, y],
+      ["close"],
+    ],
+    style,
+  );
 }
 
 const SUB_SCALE = 0.62;
@@ -163,49 +222,52 @@ function formulaW(v: View, args: { id: MoleculeId; size: number }): number {
   let w = 0;
   for (const [el, n] of MOLECULES[args.id].formula) {
     w += textW(v, { s: el, size: args.size, style: "bold" });
-    if (n > 1) w += textW(v, { s: String(n), size: args.size * SUB_SCALE, style: "bold" }) + 1;
+    if (n > 1)
+      w +=
+        textW(v, { s: String(n), size: args.size * SUB_SCALE, style: "bold" }) +
+        1;
   }
   return w;
 }
 
 /** Write a formula with real subscripts; (x, y) is the left end of the baseline. */
-function drawFormula(v: View, args: { id: MoleculeId; x: number; y: number; size: number; color: string }): void {
+function drawFormula(
+  v: View,
+  args: { id: MoleculeId; x: number; y: number; size: number; color: string },
+): void {
   const { id, y, size, color } = args;
   let x = args.x;
-  v.noStroke();
-  v.fill(color);
-  v.textAlign("left", "alphabetic");
   for (const [el, n] of MOLECULES[id].formula) {
-    setText(v, size, "bold");
-    v.text(el, x, y);
+    say(v, el, { x, y }, { size, fill: color, style: "bold" });
     x += textW(v, { s: el, size, style: "bold" });
     if (n > 1) {
       const sub = size * SUB_SCALE;
-      setText(v, sub, "bold");
-      v.text(String(n), x + 1, y + size * 0.22);
+      say(
+        v,
+        String(n),
+        { x: x + 1, y: y + size * 0.22 },
+        { size: sub, fill: color, style: "bold" },
+      );
       x += textW(v, { s: String(n), size: sub, style: "bold" }) + 1;
     }
   }
 }
 
 /** One atom: a shaded ball with a soft highlight up and to the left. */
-function drawAtom(v: View, args: { el: Element; x: number; y: number; r: number }): void {
+function drawAtom(
+  v: View,
+  args: { el: Element; x: number; y: number; r: number },
+): void {
   const { el, x, y, r } = args;
   const look = LOOK[el];
-  v.noStroke();
-  v.fill(
-    v.radialGradient(x - r * 0.35, y - r * 0.4, r * 1.45, [
-      [0, "#ffffff"],
-      [0.28, look.fill],
-      [0.8, look.fill],
-      [1, look.edge],
-    ]),
-  );
-  v.circle(x, y, r * 2);
-  v.noFill();
-  v.stroke(look.edge);
-  v.strokeWeight(Math.max(0.8, r * 0.12));
-  v.circle(x, y, r * 2);
+  const shade = v.radialGradient(x - r * 0.35, y - r * 0.4, r * 1.45, [
+    [0, "#ffffff"],
+    [0.28, look.fill],
+    [0.8, look.fill],
+    [1, look.edge],
+  ]);
+  v.circle(x, y, r * 2, { fill: shade });
+  v.circle(x, y, r * 2, { stroke: look.edge, weight: Math.max(0.8, r * 0.12) });
 }
 
 interface Box {
@@ -245,13 +307,22 @@ function drawMolecule(v: View, m: Placed): void {
   const ox = cx - (b.x + b.w / 2) * scale;
   const oy = cy - (b.y + b.h / 2) * scale;
   // a soft red halo behind each atom of an element that does not balance
-  v.noStroke();
-  v.fill("rgba(200, 64, 47, 0.55)");
   for (const atom of MOLECULES[id].atoms) {
-    if (off.has(atom.el)) v.circle(ox + atom.x * scale, oy + atom.y * scale, LOOK[atom.el].radius * scale * 2 + 8);
+    if (off.has(atom.el))
+      v.circle(
+        ox + atom.x * scale,
+        oy + atom.y * scale,
+        LOOK[atom.el].radius * scale * 2 + 8,
+        { fill: "rgba(200, 64, 47, 0.55)" },
+      );
   }
   for (const atom of MOLECULES[id].atoms) {
-    drawAtom(v, { el: atom.el, x: ox + atom.x * scale, y: oy + atom.y * scale, r: LOOK[atom.el].radius * scale });
+    drawAtom(v, {
+      el: atom.el,
+      x: ox + atom.x * scale,
+      y: oy + atom.y * scale,
+      r: LOOK[atom.el].radius * scale,
+    });
   }
 }
 
@@ -265,13 +336,22 @@ const MAX_SCALE = 24;
 const GAP = 0.45; // gap between molecules, in molecule units
 
 /** The column count that lets `n` molecules fill the cell at the largest size. */
-function bestGrid(args: { id: MoleculeId; n: number; w: number; h: number }): Grid {
+function bestGrid(args: {
+  id: MoleculeId;
+  n: number;
+  w: number;
+  h: number;
+}): Grid {
   const { id, n, w, h } = args;
   const b = moleculeBounds(id);
   let best: Grid = { cols: 1, rows: n, scale: 0 };
   for (let cols = 1; cols <= n; cols += 1) {
     const rows = Math.ceil(n / cols);
-    const scale = Math.min(MAX_SCALE, w / (cols * (b.w + GAP)), h / (rows * (b.h + GAP)));
+    const scale = Math.min(
+      MAX_SCALE,
+      w / (cols * (b.w + GAP)),
+      h / (rows * (b.h + GAP)),
+    );
     if (scale > best.scale + 0.01) best = { cols, rows, scale };
   }
   return best;
@@ -298,7 +378,10 @@ const STARS: readonly Star[] = [
   { at: { end: "right", dy: 40 }, size: 6, delay: 24, color: "#9b6bd3" },
 ];
 
-function drawStar(v: View, args: { x: number; y: number; size: number; color: string }): void {
+function drawStar(
+  v: View,
+  args: { x: number; y: number; size: number; color: string },
+): void {
   const { x, y, size, color } = args;
   const pts: [number, number][] = [];
   for (let k = 0; k < 8; k += 1) {
@@ -306,9 +389,7 @@ function drawStar(v: View, args: { x: number; y: number; size: number; color: st
     const ang = (k * Math.PI) / 4 - Math.PI / 2;
     pts.push([x + Math.cos(ang) * r, y + Math.sin(ang) * r]);
   }
-  v.noStroke();
-  v.fill(color);
-  v.polygon(pts);
+  v.polygon(pts, { fill: color });
 }
 
 /** Stars pop out around the equation strip, one after another, then twinkle gently. */
@@ -317,10 +398,19 @@ function drawStars(v: View, args: { strip: Box; t: number }): void {
   for (const [i, st] of STARS.entries()) {
     const age = t - st.delay;
     if (age < 0) continue;
-    const pop = age < 12 ? age / 12 : age < 24 ? 1.25 - ((age - 12) / 12) * 0.25 : 1;
+    const pop =
+      age < 12 ? age / 12 : age < 24 ? 1.25 - ((age - 12) / 12) * 0.25 : 1;
     const twinkle = age < 24 ? 1 : 0.8 + 0.2 * Math.sin(age * 0.08 + i * 1.7);
-    const pos = { x: st.at.end === "left" ? strip.x - 18 : strip.x + strip.w + 18, y: strip.y + strip.h / 2 + st.at.dy };
-    drawStar(v, { x: pos.x, y: pos.y, size: st.size * pop * twinkle, color: st.color });
+    const pos = {
+      x: st.at.end === "left" ? strip.x - 18 : strip.x + strip.w + 18,
+      y: strip.y + strip.h / 2 + st.at.dy,
+    };
+    drawStar(v, {
+      x: pos.x,
+      y: pos.y,
+      size: st.size * pop * twinkle,
+      color: st.color,
+    });
   }
 }
 
@@ -338,55 +428,62 @@ const STATUS_TOP = 540;
 function drawBackground(v: View, p: ParamView): void {
   const r = REACTIONS[p.reaction];
   v.background(PAPER);
-  setText(v, 26, "bold");
-  v.noStroke();
-  v.fill(INK);
-  v.textAlign("left", "alphabetic");
-  v.text("Balance the equation", 28, 44);
-  setText(v, 15);
-  v.fill(SOFT_INK);
-  v.text(r.title, 30, 66);
+  say(
+    v,
+    "Balance the equation",
+    { x: 28, y: 44 },
+    { size: 26, fill: INK, style: "bold" },
+  );
+  say(v, r.title, { x: 30, y: 66 }, { size: 15, fill: SOFT_INK });
 
   // the two picture panels
   for (const [x, label] of [
     [24, "Before: reactants"],
     [424, "After: products"],
   ] as const) {
-    v.fill(CARD);
-    v.stroke("#d9cfb8");
-    v.strokeWeight(1.5);
-    roundRect(v, { x, y: PANEL_TOP, w: 352, h: PANEL_H, r: 14 });
-    v.noStroke();
-    v.fill(SOFT_INK);
-    setText(v, 12, "bold");
-    v.textAlign("left", "alphabetic");
-    v.text(label.toUpperCase(), x + 14, PANEL_TOP + 20);
+    roundRect(v, { x, y: PANEL_TOP, w: 352, h: PANEL_H, r: 14 }, CARD_EDGE);
+    say(
+      v,
+      label.toUpperCase(),
+      { x: x + 14, y: PANEL_TOP + 20 },
+      { size: 12, fill: SOFT_INK, style: "bold" },
+    );
   }
   // the arrow between the panels
-  v.noFill();
-  v.stroke(SOFT_INK);
-  v.strokeWeight(4);
-  v.brush("ink");
-  v.gesture({ pressure: "even", wobble: 0.8, seed: 3 });
-  v.line(384, PANEL_TOP + PANEL_H / 2, 414, PANEL_TOP + PANEL_H / 2);
-  v.line(404, PANEL_TOP + PANEL_H / 2 - 9, 415, PANEL_TOP + PANEL_H / 2);
-  v.line(404, PANEL_TOP + PANEL_H / 2 + 9, 415, PANEL_TOP + PANEL_H / 2);
-  v.noBrush();
+  const arrow: Style = {
+    stroke: SOFT_INK,
+    weight: 4,
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.8, seed: 3 },
+  };
+  v.line(384, PANEL_TOP + PANEL_H / 2, 414, PANEL_TOP + PANEL_H / 2, arrow);
+  v.line(404, PANEL_TOP + PANEL_H / 2 - 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
+  v.line(404, PANEL_TOP + PANEL_H / 2 + 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
 
   // tally card
-  v.fill(CARD);
-  v.stroke("#d9cfb8");
-  v.strokeWeight(1.5);
-  roundRect(v, { x: 24, y: TALLY_TOP, w: 752, h: STATUS_TOP - TALLY_TOP - 12, r: 14 });
-  v.noStroke();
-  v.fill(SOFT_INK);
-  setText(v, 12, "bold");
-  v.textAlign("left", "alphabetic");
-  v.text("ATOM COUNT", 38, TALLY_TOP + 20);
-  setText(v, 12);
-  v.textAlign("center", "alphabetic");
-  v.text("left side", 290, TALLY_TOP + 20);
-  v.text("right side", 510, TALLY_TOP + 20);
+  roundRect(
+    v,
+    { x: 24, y: TALLY_TOP, w: 752, h: STATUS_TOP - TALLY_TOP - 12, r: 14 },
+    CARD_EDGE,
+  );
+  say(
+    v,
+    "ATOM COUNT",
+    { x: 38, y: TALLY_TOP + 20 },
+    { size: 12, fill: SOFT_INK, style: "bold" },
+  );
+  say(
+    v,
+    "left side",
+    { x: 290, y: TALLY_TOP + 20 },
+    { size: 12, fill: SOFT_INK, align: "center" },
+  );
+  say(
+    v,
+    "right side",
+    { x: 510, y: TALLY_TOP + 20 },
+    { size: 12, fill: SOFT_INK, align: "center" },
+  );
   v.paperTexture(0.12);
 }
 
@@ -411,19 +508,35 @@ function equationParts(v: View, r: Reaction): EqPart[] {
   return parts;
 }
 
-function drawCoefBox(v: View, args: { slot: Slot; x: number; glow: number }): void {
+function drawCoefBox(
+  v: View,
+  args: { slot: Slot; x: number; glow: number },
+): void {
   const { slot, x, glow } = args;
   const y = EQ_Y - BOX + 10;
   if (glow > 0) {
-    v.noStroke();
-    v.fill(`rgba(242, 193, 78, ${(0.55 * glow).toFixed(3)})`);
-    roundRect(v, { x: x - 6, y: y - 6, w: BOX + 12, h: BOX + 12, r: 12 });
+    roundRect(
+      v,
+      { x: x - 6, y: y - 6, w: BOX + 12, h: BOX + 12, r: 12 },
+      { fill: `rgba(242, 193, 78, ${(0.55 * glow).toFixed(3)})` },
+    );
   }
   // The learner types into the real input, placed in the equation.
-  v.control(slot, { x, y, w: BOX, h: BOX, size: 26, align: "center", bold: true });
+  v.control(slot, {
+    x,
+    y,
+    w: BOX,
+    h: BOX,
+    size: 26,
+    align: "center",
+    bold: true,
+  });
 }
 
-function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> }): void {
+function drawEquation(
+  v: View,
+  args: { p: ParamView; model: DeepReadonly<Model> },
+): void {
   const { p, model } = args;
   const r = REACTIONS[p.reaction];
   const parts = equationParts(v, r);
@@ -431,24 +544,26 @@ function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> 
   let x = (W - total) / 2;
   if (model.balancedAt !== null) {
     const strip = { x: x - 18, y: EQ_Y - BOX + 2, w: total + 36, h: BOX + 32 };
-    v.noStroke();
-    v.fill(GOOD_TINT);
-    roundRect(v, { ...strip, r: 14 });
+    roundRect(v, { ...strip, r: 14 }, { fill: GOOD_TINT });
     drawStars(v, { strip, t: model.frame - model.balancedAt });
   }
   for (const part of parts) {
     if (part.kind === "coef" && part.slot !== undefined) {
-      const since = model.edit?.slot === part.slot ? model.frame - model.edit.frame : Infinity;
+      const since =
+        model.edit?.slot === part.slot
+          ? model.frame - model.edit.frame
+          : Infinity;
       const glow = since < 45 ? 1 - since / 45 : 0;
       drawCoefBox(v, { slot: part.slot, x, glow });
     } else if (part.kind === "formula" && part.id !== undefined) {
       drawFormula(v, { id: part.id, x, y: EQ_Y, size: EQ_SIZE, color: INK });
     } else {
-      v.noStroke();
-      v.fill(SOFT_INK);
-      setText(v, 30, "bold");
-      v.textAlign("center", "alphabetic");
-      v.text(part.kind === "plus" ? "+" : "→", x + part.w / 2, EQ_Y);
+      say(
+        v,
+        part.kind === "plus" ? "+" : "→",
+        { x: x + part.w / 2, y: EQ_Y },
+        { size: 30, fill: SOFT_INK, style: "bold", align: "center" },
+      );
     }
     x += part.w;
   }
@@ -479,26 +594,35 @@ function drawSide(v: View, args: SideArgs): void {
     // the cell's caption: "box B: 2 × O₂"
     const capY = PANEL_TOP + 46;
     const capSize = 17;
-    setText(v, capSize, "bold");
     const head = `${n} × `;
     const headW = textW(v, { s: head, size: capSize, style: "bold" });
     const capW = headW + formulaW(v, { id, size: capSize });
     const capX = cx + (cellW - capW) / 2;
-    v.noStroke();
-    v.fill("#3b3487");
-    v.textAlign("left", "alphabetic");
-    v.text(head, capX, capY);
+    say(
+      v,
+      head,
+      { x: capX, y: capY },
+      { size: capSize, fill: "#3b3487", style: "bold" },
+    );
     drawFormula(v, { id, x: capX + headW, y: capY, size: capSize, color: INK });
-    if (i > 0) {
-      v.stroke("#e6dcc6");
-      v.strokeWeight(1.5);
-      v.line(cx, PANEL_TOP + 30, cx, PANEL_TOP + PANEL_H - 14);
-    }
+    if (i > 0)
+      v.line(cx, PANEL_TOP + 30, cx, PANEL_TOP + PANEL_H - 14, {
+        stroke: "#e6dcc6",
+        weight: 1.5,
+      });
     // the molecules, n of them, as large as the cell allows
-    const area = { x: cx + 10, y: PANEL_TOP + 58, w: cellW - 20, h: PANEL_H - 70 };
+    const area = {
+      x: cx + 10,
+      y: PANEL_TOP + 58,
+      w: cellW - 20,
+      h: PANEL_H - 70,
+    };
     const g = bestGrid({ id, n, w: area.w, h: area.h });
     const pitchX = area.w / g.cols;
-    const pitchY = Math.min(area.h / g.rows, (moleculeBounds(id).h + GAP) * g.scale * 1.25);
+    const pitchY = Math.min(
+      area.h / g.rows,
+      (moleculeBounds(id).h + GAP) * g.scale * 1.25,
+    );
     const top = area.y + (area.h - pitchY * g.rows) / 2;
     for (let k = 0; k < n; k += 1) {
       const row = Math.floor(k / g.cols);
@@ -508,7 +632,10 @@ function drawSide(v: View, args: SideArgs): void {
       drawMolecule(v, {
         id,
         cx: rowLeft + pitchX * (col + 0.5),
-        cy: top + pitchY * (row + 0.5) + bob({ model, index: firstSlot * 13 + k }),
+        cy:
+          top +
+          pitchY * (row + 0.5) +
+          bob({ model, index: firstSlot * 13 + k }),
         scale: g.scale,
         off,
       });
@@ -516,7 +643,18 @@ function drawSide(v: View, args: SideArgs): void {
   }
 }
 
-function drawDots(v: View, args: { el: Element; n: number; pitch: number; x: number; y: number; dir: 1 | -1; color: string }): void {
+function drawDots(
+  v: View,
+  args: {
+    el: Element;
+    n: number;
+    pitch: number;
+    x: number;
+    y: number;
+    dir: 1 | -1;
+    color: string;
+  },
+): void {
   const { el, n, pitch, x, y, dir, color } = args;
   if (n === 0) return;
   const look = LOOK[el];
@@ -524,18 +662,13 @@ function drawDots(v: View, args: { el: Element; n: number; pitch: number; x: num
     const d = Math.min(pitch * 0.82, 13);
     for (let i = 0; i < n; i += 1) {
       const cx = x + dir * (pitch * i + pitch / 2);
-      v.fill(look.fill);
-      v.stroke(look.edge);
-      v.strokeWeight(1.2);
-      v.circle(cx, y, d);
+      v.circle(cx, y, d, { fill: look.fill, stroke: look.edge, weight: 1.2 });
     }
     return;
   }
   // too many to show one by one: a bar of the same length
   const len = pitch * n;
-  v.noStroke();
-  v.fill(color);
-  v.rect(dir === 1 ? x : x - len, y - 5, len, 10);
+  v.rect(dir === 1 ? x : x - len, y - 5, len, 10, { fill: color });
 }
 
 const DOTS_SPAN = 150;
@@ -545,47 +678,99 @@ function drawTallyRow(v: View, args: { t: Tally; y: number }): void {
   const { t, y } = args;
   const ok = t.left === t.right;
   const look = LOOK[t.el];
-  v.noStroke();
-  v.fill(ok ? GOOD_TINT : BAD_TINT);
-  roundRect(v, { x: 34, y: y - 17, w: 732, h: 34, r: 10 });
+  roundRect(
+    v,
+    { x: 34, y: y - 17, w: 732, h: 34, r: 10 },
+    { fill: ok ? GOOD_TINT : BAD_TINT },
+  );
   // element: ball + name
   drawAtom(v, { el: t.el, x: 54, y, r: 9 });
-  v.noStroke();
-  v.fill(INK);
-  setText(v, 15, "bold");
-  v.textAlign("left", "middle");
-  v.text(`${look.name} (${t.el})`, 70, y);
+  say(
+    v,
+    `${look.name} (${t.el})`,
+    { x: 70, y },
+    { size: 15, fill: INK, style: "bold", valign: "middle" },
+  );
   // counts, one dot per atom, both sides at the same spacing so lengths compare
   const most = Math.max(t.left, t.right, 1);
   const pitch = Math.min(14, DOTS_SPAN / most);
   const sideColor = ok ? GOOD : BAD;
-  drawDots(v, { el: t.el, n: t.left, pitch, x: CENTER - 22, y, dir: -1, color: look.edge });
-  drawDots(v, { el: t.el, n: t.right, pitch, x: CENTER + 22, y, dir: 1, color: look.edge });
+  drawDots(v, {
+    el: t.el,
+    n: t.left,
+    pitch,
+    x: CENTER - 22,
+    y,
+    dir: -1,
+    color: look.edge,
+  });
+  drawDots(v, {
+    el: t.el,
+    n: t.right,
+    pitch,
+    x: CENTER + 22,
+    y,
+    dir: 1,
+    color: look.edge,
+  });
   // the comparison in the middle
-  v.noStroke();
-  v.fill(sideColor);
-  v.circle(CENTER, y, 26);
-  v.fill("#ffffff");
-  setText(v, 20, "bold");
-  v.textAlign("center", "middle");
-  v.text(ok ? "=" : "≠", CENTER, y + 1);
+  v.circle(CENTER, y, 26, { fill: sideColor });
+  say(
+    v,
+    ok ? "=" : "≠",
+    { x: CENTER, y: y + 1 },
+    {
+      size: 20,
+      fill: "#ffffff",
+      style: "bold",
+      align: "center",
+      valign: "middle",
+    },
+  );
   // the numbers at the outer ends
-  setText(v, 20, "bold");
-  v.fill(sideColor);
-  v.textAlign("right", "middle");
-  v.text(String(t.left), CENTER - 30 - DOTS_SPAN, y + 1);
-  v.textAlign("left", "middle");
-  v.text(String(t.right), CENTER + 30 + DOTS_SPAN, y + 1);
-  setText(v, 13, ok ? "bold" : "normal");
-  v.textAlign("right", "middle");
-  v.text(ok ? "matches" : t.left > t.right ? "more on the left" : "more on the right", 756, y);
+  say(
+    v,
+    String(t.left),
+    { x: CENTER - 30 - DOTS_SPAN, y: y + 1 },
+    {
+      size: 20,
+      fill: sideColor,
+      style: "bold",
+      align: "right",
+      valign: "middle",
+    },
+  );
+  say(
+    v,
+    String(t.right),
+    { x: CENTER + 30 + DOTS_SPAN, y: y + 1 },
+    { size: 20, fill: sideColor, style: "bold", valign: "middle" },
+  );
+  const verdict = ok
+    ? "matches"
+    : t.left > t.right
+      ? "more on the left"
+      : "more on the right";
+  say(
+    v,
+    verdict,
+    { x: 756, y },
+    {
+      size: 13,
+      fill: sideColor,
+      style: ok ? "bold" : "normal",
+      align: "right",
+      valign: "middle",
+    },
+  );
 }
 
 function drawTally(v: View, rows: readonly Tally[]): void {
   const span = STATUS_TOP - 12 - (TALLY_TOP + 30);
   const step = Math.min(42, span / rows.length);
   const top = TALLY_TOP + 30 + (span - step * rows.length) / 2;
-  for (const [i, t] of rows.entries()) drawTallyRow(v, { t, y: top + step * (i + 0.5) });
+  for (const [i, t] of rows.entries())
+    drawTallyRow(v, { t, y: top + step * (i + 0.5) });
 }
 
 function nameList(els: readonly Element[]): string {
@@ -594,56 +779,72 @@ function nameList(els: readonly Element[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
 }
 
-function drawStatus(v: View, args: { rows: readonly Tally[]; coefs: readonly number[]; model: DeepReadonly<Model> }): void {
+function drawStatus(
+  v: View,
+  args: {
+    rows: readonly Tally[];
+    coefs: readonly number[];
+    model: DeepReadonly<Model>;
+  },
+): void {
   const { rows, coefs, model } = args;
   const off = rows.filter((t) => t.left !== t.right).map((t) => t.el);
   const y = STATUS_TOP;
   if (off.length > 0 || model.balancedAt === null) {
-    v.noStroke();
-    v.fill("#fff6e0");
-    v.stroke("#e7c879");
-    v.strokeWeight(1.5);
-    roundRect(v, { x: 24, y, w: 752, h: 48, r: 12 });
-    v.noStroke();
-    v.fill(BAD);
-    setText(v, 17, "bold");
-    v.textAlign("left", "alphabetic");
+    roundRect(
+      v,
+      { x: 24, y, w: 752, h: 48, r: 12 },
+      { fill: "#fff6e0", stroke: "#e7c879", weight: 1.5 },
+    );
     const verb = off.length === 1 ? "does not match" : "do not match";
-    v.text(`Not balanced yet: ${nameList(off)} ${verb}.`, 40, y + 21);
-    v.fill(SOFT_INK);
-    setText(v, 13);
-    v.text("Change the big numbers in the boxes. The small numbers inside a formula stay the same.", 40, y + 39);
+    say(
+      v,
+      `Not balanced yet: ${nameList(off)} ${verb}.`,
+      { x: 40, y: y + 21 },
+      { size: 17, fill: BAD, style: "bold" },
+    );
+    say(
+      v,
+      "Change the big numbers in the boxes. The small numbers inside a formula stay the same.",
+      { x: 40, y: y + 39 },
+      { size: 13, fill: SOFT_INK },
+    );
     return;
   }
   const t = model.frame - model.balancedAt;
   const pop = Math.min(1, t / 14);
   const ease = 1 - (1 - pop) ** 3;
-  v.noStroke();
-  v.fill(`rgba(47, 138, 74, ${(0.35 + 0.65 * ease).toFixed(3)})`);
-  roundRect(v, { x: 24, y, w: 752, h: 48, r: 12 });
-  v.fill("#ffffff");
-  setText(v, 22, "bold");
-  v.textAlign("left", "alphabetic");
-  v.text("Balanced!", 40, y + 22);
-  setText(v, 14);
+  roundRect(
+    v,
+    { x: 24, y, w: 752, h: 48, r: 12 },
+    { fill: `rgba(47, 138, 74, ${(0.35 + 0.65 * ease).toFixed(3)})` },
+  );
+  say(
+    v,
+    "Balanced!",
+    { x: 40, y: y + 22 },
+    { size: 22, fill: "#ffffff", style: "bold" },
+  );
   const factor = commonFactor(coefs);
   const line =
     factor > 1
       ? `Every box can be divided by ${factor}. Can you find smaller numbers that also work?`
       : "Every atom on the left is still there on the right. Nothing appears or disappears.";
-  v.text(line, 40, y + 40);
+  say(v, line, { x: 40, y: y + 40 }, { size: 14, fill: "#ffffff" });
   // a hand-drawn tick at the right end
-  v.noFill();
-  v.stroke("#ffffff");
-  v.strokeWeight(5);
-  v.brush("ink");
-  v.gesture({ pressure: "taper-out", wobble: 0.6, seed: 11 });
-  v.path([
-    ["move", 724, y + 24],
-    ["line", 735, y + 35],
-    ["line", 756, y + 12],
-  ]);
-  v.noBrush();
+  v.path(
+    [
+      ["move", 724, y + 24],
+      ["line", 735, y + 35],
+      ["line", 756, y + 12],
+    ],
+    {
+      stroke: "#ffffff",
+      weight: 5,
+      brush: "ink",
+      gesture: { pressure: "taper-out", wobble: 0.6, seed: 11 },
+    },
+  );
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
@@ -653,9 +854,25 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   v.control("reaction", { x: 596, y: 22, w: 180, h: 30, size: 15 });
   drawEquation(v, { p, model });
   const rows = tally(r, coefs);
-  const off: ReadonlySet<Element> = new Set(rows.filter((t) => t.left !== t.right).map((t) => t.el));
-  drawSide(v, { ids: r.left, coefs: coefs.slice(0, r.left.length), firstSlot: 0, x: 24, model, off });
-  drawSide(v, { ids: r.right, coefs: coefs.slice(r.left.length), firstSlot: r.left.length, x: 424, model, off });
+  const off: ReadonlySet<Element> = new Set(
+    rows.filter((t) => t.left !== t.right).map((t) => t.el),
+  );
+  drawSide(v, {
+    ids: r.left,
+    coefs: coefs.slice(0, r.left.length),
+    firstSlot: 0,
+    x: 24,
+    model,
+    off,
+  });
+  drawSide(v, {
+    ids: r.right,
+    coefs: coefs.slice(r.left.length),
+    firstSlot: r.left.length,
+    x: 424,
+    model,
+    off,
+  });
   drawTally(v, rows);
   drawStatus(v, { rows, coefs, model });
 }

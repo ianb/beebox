@@ -35,3 +35,4 @@ features-exercised:
   - mousedown/mousemove/mouseup direct manipulation (attractor placement/drag)
   - motion trails (translucent overlay redraw)
   - seeded randomness (stochastic fractional spawn rate)
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

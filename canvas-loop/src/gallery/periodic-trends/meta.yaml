@@ -22,3 +22,4 @@ features-exercised:
   - TEA pointer input (hover, click)
   - select, boolean and trigger params
   - sibling -tea helper files
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

@@ -10,9 +10,9 @@ Do not open any `canvas-loop/src/gallery/alien-*` or `canvas-loop/src/gallery/op
 
 **Read first:** `canvas-loop/README.md` (the Run and "Writing a sketch" sections, the Sketch API table) and `canvas-loop/BRUSHES.md` (brushes, gestures, paper, shape helpers, groups, zoom). Use the mutable tier (`setup`/`draw`).
 
-**Workspace.** Write `canvas-loop/src/gallery/open-opus-b/sketch.ts` (you may split it into more files in that directory). Render with:
+**Workspace.** Write `canvas-loop/src/gallery/open-opus-b/sketch-tea.ts` (you may split it into more files in that directory). Render with:
 
-    pnpm --dir canvas-loop run cli run src/gallery/open-opus-b/sketch.ts --frames 1 --out <scratch>/open-opus-b/cycle-N --zoom x,y,w,h
+    pnpm --dir canvas-loop run cli run src/gallery/open-opus-b/sketch-tea.ts --frames 1 --out <scratch>/open-opus-b/cycle-N --zoom x,y,w,h
 
 Choose one or more `--zoom` regions each cycle. From cycle 2 on, also compare with the previous cycle:
 

@@ -20,3 +20,4 @@ features-exercised:
   - cache for static painted layers
   - brushes in motion (seeded marks)
   - events file with snapshot entries
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

@@ -4,7 +4,8 @@ created: 2026-11-11
 model: gpt-6-sol
 driver: opus-5.5
 cycles: 3
-tier: mutable
+tier: tea
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
 harness-commit: 69002fd6
 frames: 1
 seed: 42

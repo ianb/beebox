@@ -13,7 +13,13 @@ export const WARM = "#ffd27a";
 export const AX = 330;
 
 // ── geometry helpers ────────────────────────────────────────────────
-export function ellipsePts(cx: number, cy: number, rx: number, ry: number, n = 12): Vec2[] {
+export function ellipsePts(
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  n = 12,
+): Vec2[] {
   const out: Vec2[] = [];
   for (let i = 0; i < n; i += 1) {
     const a = (i / n) * Math.PI * 2;
@@ -42,4 +48,3 @@ export function tube(line: Pts, w0: number, w1: number): Vec2[] {
   }
   return [...left, ...right.reverse()];
 }
-

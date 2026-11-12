@@ -8,7 +8,15 @@
 //     thinner), with a short taper at the start and, once finished, at the end.
 //   - finished strokes are drawn once into a cache keyed on (page, count); each
 //     frame pastes it and draws only the stroke in progress.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Style,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 
 const BRUSHES = ["ink", "pencil", "marker", "bristle", "wash"] as const;
 const COLOURS = ["black", "red", "blue", "green", "ochre"] as const;
@@ -59,7 +67,9 @@ export interface Stroke {
   readonly points: readonly Pt[];
 }
 
-type Mode = { readonly type: "idle" } | { readonly type: "painting"; readonly stroke: Stroke };
+type Mode =
+  | { readonly type: "idle" }
+  | { readonly type: "painting"; readonly stroke: Stroke };
 
 export interface Model {
   readonly strokes: readonly Stroke[];
@@ -83,29 +93,61 @@ function inCanvas(x: number, y: number): boolean {
 
 function addPoint(stroke: Stroke, x: number, y: number): Stroke {
   const last = stroke.points.at(-1);
-  if (last !== undefined && Math.hypot(x - last[0], y - last[1]) < MIN_STEP) return stroke;
+  if (last !== undefined && Math.hypot(x - last[0], y - last[1]) < MIN_STEP)
+    return stroke;
   return { ...stroke, points: [...stroke.points, [x, y]] };
 }
 
-function startStroke(model: DeepReadonly<Model>, msg: { x: number; y: number }, u: Util<typeof params>): Model {
+function startStroke(
+  model: DeepReadonly<Model>,
+  msg: { x: number; y: number },
+  u: Util<typeof params>,
+): Model {
   if (!inCanvas(msg.x, msg.y)) return model;
   u.handled("stroke-start");
   const { brush, colour, size } = u.params;
-  const stroke: Stroke = { brush, colour: HEX[colour], width: WIDTH[brush][size], seed: model.nextSeed, points: [[msg.x, msg.y]] };
-  return { ...model, nextSeed: model.nextSeed + 1, mode: { type: "painting", stroke } };
+  const stroke: Stroke = {
+    brush,
+    colour: HEX[colour],
+    width: WIDTH[brush][size],
+    seed: model.nextSeed,
+    points: [[msg.x, msg.y]],
+  };
+  return {
+    ...model,
+    nextSeed: model.nextSeed + 1,
+    mode: { type: "painting", stroke },
+  };
 }
 
-function finishStroke(model: DeepReadonly<Model>, msg: { x: number; y: number }, u: Util<typeof params>): Model {
+function finishStroke(
+  model: DeepReadonly<Model>,
+  msg: { x: number; y: number },
+  u: Util<typeof params>,
+): Model {
   if (model.mode.type !== "painting") return model;
   u.handled("stroke-end");
   const stroke = addPoint(model.mode.stroke, msg.x, msg.y);
-  return { ...model, strokes: [...model.strokes, stroke], mode: { type: "idle" } };
+  return {
+    ...model,
+    strokes: [...model.strokes, stroke],
+    mode: { type: "idle" },
+  };
 }
 
-function onTrigger(model: DeepReadonly<Model>, name: string, u: Util<typeof params>): Model {
+function onTrigger(
+  model: DeepReadonly<Model>,
+  name: string,
+  u: Util<typeof params>,
+): Model {
   if (name === "clear") {
     u.handled("clear");
-    return { ...model, strokes: [], page: model.page + 1, mode: { type: "idle" } };
+    return {
+      ...model,
+      strokes: [],
+      page: model.page + 1,
+      mode: { type: "idle" },
+    };
   }
   if (name === "undo" && model.strokes.length > 0) {
     u.handled("undo");
@@ -114,13 +156,23 @@ function onTrigger(model: DeepReadonly<Model>, name: string, u: Util<typeof para
   return model;
 }
 
-export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "mousedown":
       return startStroke(model, msg, u);
     case "mousemove":
       if (model.mode.type !== "painting") return model;
-      return { ...model, mode: { type: "painting", stroke: addPoint(model.mode.stroke, msg.x, msg.y) } };
+      return {
+        ...model,
+        mode: {
+          type: "painting",
+          stroke: addPoint(model.mode.stroke, msg.x, msg.y),
+        },
+      };
     case "mouseup":
       return finishStroke(model, msg, u);
     case "trigger":
@@ -152,7 +204,10 @@ function clamp01(x: number): number {
  * segment length is speed), smoothed, then tapered at the start and, for a
  * finished stroke, at the end.
  */
-function pressureEnvelope(points: readonly Pt[], finished: boolean): [number, number][] {
+function pressureEnvelope(
+  points: readonly Pt[],
+  finished: boolean,
+): [number, number][] {
   const seg = points.slice(1).map((p, i) => {
     const q = points[i] ?? p;
     return Math.hypot(p[0] - q[0], p[1] - q[1]);
@@ -164,13 +219,17 @@ function pressureEnvelope(points: readonly Pt[], finished: boolean): [number, nu
     const speed = (before + after) / 2;
     return 1 - (1 - MIN_PRESSURE) * clamp01((speed - 3) / (FAST - 3));
   });
-  const smooth = raw.map((p, i) => ((raw[i - 1] ?? p) + 2 * p + (raw[i + 1] ?? p)) / 4);
+  const smooth = raw.map(
+    (p, i) => ((raw[i - 1] ?? p) + 2 * p + (raw[i + 1] ?? p)) / 4,
+  );
   const keys: [number, number][] = [];
   let along = 0;
   for (const [i, p] of smooth.entries()) {
     if (i > 0) along += seg[i - 1] ?? 0;
     const taperIn = 0.25 + 0.75 * clamp01(along / TAPER_IN);
-    const taperOut = finished ? 0.15 + 0.85 * clamp01((total - along) / TAPER_OUT) : 1;
+    const taperOut = finished
+      ? 0.15 + 0.85 * clamp01((total - along) / TAPER_OUT)
+      : 1;
     keys.push([total > 0 ? along / total : 0, p * Math.min(taperIn, taperOut)]);
   }
   return keys;
@@ -178,22 +237,35 @@ function pressureEnvelope(points: readonly Pt[], finished: boolean): [number, nu
 
 // ── drawing ───────────────────────────────────────────────────────────
 
-function paintStroke(v: View, stroke: DeepReadonly<Stroke>, finished: boolean): void {
+function paintStroke(
+  v: View,
+  stroke: DeepReadonly<Stroke>,
+  finished: boolean,
+): void {
   const pts = stroke.points;
   const first = pts[0];
   if (first === undefined) return;
-  v.noFill();
-  v.stroke(stroke.colour);
-  v.strokeWeight(stroke.width);
-  v.brush(stroke.brush);
+  const base: Style = {
+    stroke: stroke.colour,
+    weight: stroke.width,
+    brush: stroke.brush,
+  };
   if (pts.length < 2) {
     // A click without a drag: a short dab.
-    v.gesture({ pressure: 0.8, seed: stroke.seed });
-    v.line(first[0], first[1], first[0] + 1, first[1] + 0.5);
+    v.line(first[0], first[1], first[0] + 1, first[1] + 0.5, {
+      ...base,
+      gesture: { pressure: 0.8, seed: stroke.seed },
+    });
     return;
   }
-  v.gesture({ pressure: pressureEnvelope(pts, finished), seed: stroke.seed });
-  v.curve(pts.map(([x, y]) => [x, y]));
+  v.curve(
+    pts.map(([x, y]) => [x, y]),
+    false,
+    {
+      ...base,
+      gesture: { pressure: pressureEnvelope(pts, finished), seed: stroke.seed },
+    },
+  );
 }
 
 /**
@@ -211,7 +283,6 @@ function drawLayer(v: View, model: DeepReadonly<Model>, count: number): void {
     }
     drawLayer(v, model, count - 1);
     paintStroke(v, stroke, true);
-    v.noBrush();
   });
 }
 
@@ -219,23 +290,21 @@ function drawLayer(v: View, model: DeepReadonly<Model>, count: number): void {
 function drawChip(v: View, p: Params): void {
   const x = canvas.width - 150;
   const y = 12;
-  v.noBrush();
-  v.noStroke();
-  v.fill("rgba(255,255,255,0.7)");
-  v.rect(x, y, 138, 30);
-  v.fill(HEX[p.colour]);
-  v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3));
-  v.fill("#444");
-  v.textSize(13);
-  v.textAlign("left", "middle");
-  v.text(`${p.brush} · ${p.colour} · ${p.size}`, x + 32, y + 16);
+  v.rect(x, y, 138, 30, { fill: "rgba(255,255,255,0.7)" });
+  v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3), {
+    fill: HEX[p.colour],
+  });
+  v.text(
+    `${p.brush} · ${p.colour} · ${p.size}`,
+    { x: x + 32, y: y + 16 },
+    { size: 13, fill: "#444", align: "left", valign: "middle" },
+  );
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   drawLayer(v, model, model.strokes.length);
   if (model.mode.type === "painting") {
     paintStroke(v, model.mode.stroke, false);
-    v.noBrush();
   }
   drawChip(v, p);
 }

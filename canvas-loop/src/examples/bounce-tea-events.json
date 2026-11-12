@@ -7,5 +7,7 @@
   { "frame": 14, "type": "mousemove", "x": 248, "y": 126 },
   { "frame": 16, "type": "mousemove", "x": 260, "y": 120 },
   { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
-  { "frame": 90, "type": "keydown", "key": "r" }
+  { "frame": 17, "type": "snapshot", "label": "released" },
+  { "frame": 90, "type": "keydown", "key": "r" },
+  { "frame": 90, "type": "snapshot", "label": "reset" }
 ]

@@ -5,6 +5,33 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Breaking: a style on every call; TEA is the only sketch form** (see
+  [TEA.md](./TEA.md#drawing)). Each shape call takes a `Style` as its last
+  argument: `{ fill, stroke, weight, brush, gesture, blend, erase }`, plain
+  data kept in `const`s and spread to vary. A missing key means none (or
+  weight 1, blend normal). A brush with changed fields is data too:
+  `{ preset: "pencil", opacity: 0.6 }`. Removed: `fill`, `noFill`, `stroke`,
+  `noStroke`, `strokeWeight`, `brush`, `noBrush`, `gesture`, `blendMode`,
+  `erase`, `noErase`, `textSize`, `textAlign`, `textFont`, `textStyle`,
+  `push`, `pop`, `translate`, `rotate`, `scale`, and `text(s, x, y)`.
+  - `at({ translate, rotate, scale }, body)` scopes a transform. It has no
+    layer, so `erase` inside it erases the canvas. `group` and `clip` are
+    unchanged.
+  - `roundRect(x, y, w, h, radius, style)` replaces `rect`'s radius argument.
+    `curve(points, closed, style)` needs `closed`.
+  - `text(s, {x, y, w?, h?}, options)` is the only text form. Defaults: size
+    12, sans-serif, normal, fill black, align left, valign top. One line with
+    no `w` draws at (x, y); `valign: "baseline"` puts its baseline on `y`.
+    `textWidth(s, options)` measures with the same options.
+  - `image(sprite, x, y, { opacity, blend, erase })` and
+    `cache(key, body, { blend, erase })` take their paste style.
+  - A bad style throws at the call (unknown key, negative weight, unknown
+    brush). A call that can draw nothing (a line with no stroke, a shape with
+    neither fill nor stroke) logs a line once.
+  - The mutable tier (`setup`/`draw(s)`, the `Sketch` API, input handlers) is
+    removed. A module that exports `setup` gets a loader error. The mutable
+    examples and gallery entries are rewritten as TEA: `bounce-tea.ts`,
+    `alien-reference-tea.ts`, `brushes-sampler-tea.ts`.
 - **Brushes, gestures, paper, groups** (see [BRUSHES.md](./BRUSHES.md)).
   `brush(name, overrides?)` / `noBrush()` turn every stroked shape into a
   brushed mark; presets `ink`, `marker`, `pencil`, `chalk`, `airbrush`,
