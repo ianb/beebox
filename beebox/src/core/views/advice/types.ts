@@ -39,9 +39,9 @@ export const ADVICE_MESSAGES: Record<AdviceRule, string> = {
   "viewport-height":
     "a `100vh` or `h-screen` height; use `dvh` (views.md, \"Controls People Can Use\")",
   "date-string-parse":
-    "`new Date(text)` reads a date-only value as midnight UTC; use `Temporal.PlainDate.from` or `Temporal.Instant.from` (views.md, \"Dates\")",
+    "`new Date(text)` reads a date-only value as midnight UTC; build it with `Date.UTC(y, m - 1, d)` and format it with `timeZone: \"UTC\"` (views.md, \"Dates\")",
   "utc-today":
-    "`toISOString()` cut to a date is today in UTC; use `Temporal.Now.plainDateISO()` (views.md, \"Dates\")",
+    "`toISOString()` cut to a date is today in UTC; use `new Intl.DateTimeFormat(\"en-CA\").format(new Date())` (views.md, \"Dates\")",
   "unnamed-control":
     "a control with no name; give it text, a `<label>`, or `aria-label` (a placeholder is not a name) (views.md, \"Controls People Can Use\")",
   "img-without-alt":

@@ -11701,6 +11701,14 @@ test1:
       peak: 37185
       added: 2180
       turns: 5
+  view-date-only-utc:
+    - date: 2026-11-12T05:31:46.342Z
+      boxCommit: cf0b9184b5be7a8a5594f8e8af0a03bfb83086ca
+      repoCommit: b9478abc8a81c76c60321474195633ca8caacc95
+      initial: 35016
+      peak: 38958
+      added: 3942
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

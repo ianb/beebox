@@ -204,14 +204,25 @@ The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` 
 
 export const datesSection = `### Dates
 
-\`Temporal\` is a global in views. A date-only value such as \`due: 2026-08-14\`
-arrives as the string \`"2026-08-14"\`. Read it with
-\`Temporal.PlainDate.from(value)\` and show it with
-\`toLocaleString(undefined, { month: "short", day: "numeric" })\`. A timestamp
-(\`2026-08-14T09:30:00Z\`) is \`Temporal.Instant.from(value)\`. Today is
-\`Temporal.Now.plainDateISO()\`; days until a date is \`today.until(date).days\`.
-Do not use \`new Date("2026-08-14")\`: it reads the date as midnight UTC, so a
-person west of UTC sees the day before.
+A date-only value such as \`due: 2026-08-14\` arrives as the string
+\`"2026-08-14"\`. It names a day, not a moment. Split it into numbers, build
+its midnight UTC with \`Date.UTC\`, and format it with \`timeZone: "UTC"\`, so
+every viewer sees that day:
+
+\`\`\`tsx
+const dayOf = (text: string): number => {
+  const [y = 0, m = 1, d = 1] = text.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+};
+const today = new Intl.DateTimeFormat("en-CA").format(new Date()); // "2026-08-14", the viewer's day
+new Date(dayOf(due)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }); // "Aug 14"
+const daysLeft = (dayOf(due) - dayOf(today)) / 86_400_000;
+\`\`\`
+
+A timestamp (\`2026-08-14T09:30:00Z\`) is a moment: \`new Date(value)\`,
+formatted without \`timeZone\`, shows it in the viewer's zone. Do not show
+\`new Date("2026-08-14")\` in the viewer's zone: it reads the date as midnight
+UTC, so a person west of UTC sees the day before.
 \`new Date().toISOString().slice(0, 10)\` is today in UTC, not today where the
 person is.`;
 

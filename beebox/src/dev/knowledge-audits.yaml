@@ -9543,7 +9543,12 @@ tests:
   # present before the save, a conditionally rendered element is not read, and
   # errors in role="alert". view-check-advice-meaning said the check passed and
   # each advice line is fixed or answered with a reason.
-  - id: view-date-only-temporal
+  # Status (2026-11-12, Claude claude-opus-5-5, Temporal removal):
+  # view-date-only-temporal renamed view-date-only-utc after the "Dates"
+  # section dropped Temporal. Passes 2/2 on the web-guidance-scan test1 clone:
+  # read views.md, split the string, Date.UTC, timeZone "UTC", today from
+  # Intl.DateTimeFormat("en-CA"), and named both UTC traps.
+  - id: view-date-only-utc
     prompt: >
       A card type has `due: 2026-08-14` in its frontmatter. In its view I want
       "Aug 14" and how many days are left. How do you read and show it?
@@ -9551,12 +9556,14 @@ tests:
     expected_level: knows_about
     should_read_any: ["node_modules/beebox/box-docs/views.md"]
     watch_for: >
-      Uses the views doc's "Dates" section: Temporal.PlainDate.from(due),
-      Temporal.Now.plainDateISO() and today.until(date).days. FAILS if it
-      parses with new Date(due) or cuts toISOString() for today.
+      Uses the views doc's "Dates" section: splits the string into numbers,
+      builds it with Date.UTC, formats with timeZone "UTC", and takes today
+      in the viewer's zone (Intl.DateTimeFormat("en-CA") or local getters).
+      FAILS if it parses with new Date(due) for display in the local zone, or
+      cuts toISOString() for today.
     correct_matches:
-      - 'Temporal\.PlainDate'
-      - 'plainDateISO'
+      - 'Date\.UTC'
+      - 'timeZone:?\s*"?UTC'
     response_not_matches:
       - 'new Date\(\s*(due|card\.fields\.due|value)'
     tags: [views, dates]
