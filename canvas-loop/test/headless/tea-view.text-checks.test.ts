@@ -79,3 +79,40 @@ test("a character the font cannot draw is reported once", () => {
   assert.ok(missing.some((line) => line.includes('"₈" (U+2088)')), logs.join("\n"));
   assert.equal(missing.filter((line) => line.includes("U+2088")).length, 1);
 });
+
+test("review fixes: halo bounds, a warning budget, erase pastes, and cached text past the frame cap", () => {
+  const { v, logs, finishFrame } = teaView({ width: 400, height: 200 });
+  const plain = v.textBounds("H", { x: 40, y: 40 }, { size: 80 });
+  const haloed = v.textBounds("H", { x: 40, y: 40 }, { size: 80, halo: "#fff" });
+  assert.deepEqual([haloed.x, haloed.y, haloed.w], [plain.x - 10, plain.y - 10, plain.w + 20]);
+  // A label whose words change every frame warns at most ten times, then once more to say so.
+  for (let frame = 0; frame < 30; frame += 1) {
+    v.text(`value ${frame}`, { x: 10, y: 10 }, { size: 16 });
+    v.text("Units", { x: 20, y: 12 }, { size: 16 });
+    finishFrame();
+  }
+  assert.equal(logs.filter((line) => /^text[ :]/u.test(line)).length, 11, logs.join("\n"));
+  assert.match(logs.at(-1) ?? "", /no more overlaps are reported/u);
+});
+
+test("an erasing cache paste adds no texts; a cache keeps its texts when the frame is full", () => {
+  const { v, logs, finishFrame } = teaView({ width: 400, height: 200 });
+  for (let i = 0; i < 2100; i += 1) v.text(`n${i}`, { x: (i % 40) * 10, y: 150 + Math.floor(i / 40) }, { size: 1 });
+  v.cache("label", () => void v.text("Visible", { x: 100, y: 50 }, { size: 16 }));
+  finishFrame();
+  logs.length = 0;
+  v.cache("label", () => {}, { erase: true });
+  v.text("Other", { x: 105, y: 52 }, { size: 16 });
+  finishFrame();
+  assert.equal(logs.length, 0, logs.join("\n"));
+  v.cache("label", () => {});
+  v.text("Other", { x: 105, y: 52 }, { size: 16 });
+  finishFrame();
+  assert.equal(logs.filter((line) => line.includes('"Visible" overlaps text "Other"') || line.includes('"Other" overlaps text "Visible"')).length, 1, logs.join("\n"));
+});
+
+test("letters a font draws produce no glyph warning", () => {
+  const { v, logs } = teaView({ width: 200, height: 40 });
+  v.text("Hello ° → naïve", { x: 5, y: 5 });
+  assert.deepEqual(logs.filter((line) => line.includes("has no glyph")), []);
+});

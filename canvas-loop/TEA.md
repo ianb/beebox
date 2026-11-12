@@ -203,7 +203,9 @@ v.textWidth(s, options)                 // width in logical pixels
   clear of another label or to size a backing box. A `halo` in the background
   color keeps a label readable where it crosses a line.
 - The run warns, once per pair of texts, when two different texts overlap in
-  a frame (the same text twice, as for a shadow, is not reported). Headless
+  a frame (the same text twice, as for a shadow, is not reported). A rotated
+  text counts as the upright box around it. After ten pairs it stops
+  reporting. A `halo` is part of the bounds. Headless
   runs also warn when the font has no glyph for a character, which draws as
   an empty box or nothing; use a plain word or another character.
 

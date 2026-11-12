@@ -238,12 +238,12 @@ export class PainterCore {
     const [key, body, paste] = args;
     let layer = this.#cache.get(key);
     if (layer === undefined) {
-      const mark = this.#overlap.mark();
-      layer = this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
-      this.#cacheTexts.set(key, this.#overlap.since(mark));
+      const { result: built, texts } = this.#overlap.collect(() => this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
+      layer = this.#cache.set(key, built);
+      this.#cacheTexts.set(key, texts);
       // Forget texts of caches that have been dropped.
       for (const old of this.#cacheTexts.keys()) if (this.#cache.get(old) === undefined) this.#cacheTexts.delete(old);
-    } else {
+    } else if (paste?.erase !== true) {
       for (const rect of this.#cacheTexts.get(key) ?? []) this.#overlap.add(rect);
     }
     const op = this.composite({ blend: paste?.blend ?? "normal", erase: paste?.erase ?? false });

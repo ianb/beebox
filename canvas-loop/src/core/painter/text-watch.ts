@@ -12,16 +12,23 @@ export interface TextRect {
   readonly h: number;
 }
 
-// Most texts compared in one frame (pairs grow with the square).
-const MAX_TEXTS = 1500;
+// Most texts compared in one frame.
+const MAX_TEXTS = 2000;
+// Most overlap warnings in one run; a changing label could otherwise warn every frame.
+const MAX_REPORTS = 10;
 // Overlap smaller than this in either direction is not reported (antialiasing, touching edges).
 const SLACK = 2;
 
 const quote = (s: string): string => JSON.stringify(s.length > 30 ? `${s.slice(0, 29)}…` : s);
 
-/** Collects one frame's text boxes and reports pairs that overlap. */
+/**
+ * Collects one frame's text boxes and reports pairs that overlap. Boxes are
+ * upright: a rotated label is compared by the upright box around it.
+ */
 export class TextOverlap {
   #frame: TextRect[] = [];
+  // Texts each cache being drawn collects, innermost last (not capped).
+  #collecting: TextRect[][] = [];
   #report: (message: string) => void;
   // Pairs already reported: each pair once per run, wherever it moves.
   #reported = new Set<string>();
@@ -31,35 +38,52 @@ export class TextOverlap {
   }
 
   add(rect: TextRect): void {
-    if (rect.content.trim() !== "" && this.#frame.length < MAX_TEXTS) this.#frame.push(rect);
+    if (rect.content.trim() === "") return;
+    for (const list of this.#collecting) list.push(rect);
+    if (this.#frame.length < MAX_TEXTS) this.#frame.push(rect);
   }
 
-  /** How many texts this frame has so far (with `since`, the texts a cache draws). */
-  mark(): number {
-    return this.#frame.length;
-  }
-
-  since(mark: number): TextRect[] {
-    return this.#frame.slice(mark);
+  /** Run `body` and also return the texts it added (a cache's texts, added again each time it is pasted). */
+  collect<T>(body: () => T): { result: T; texts: TextRect[] } {
+    const texts: TextRect[] = [];
+    this.#collecting.push(texts);
+    try {
+      return { result: body(), texts };
+    } finally {
+      this.#collecting.pop();
+    }
   }
 
   /** Report this frame's overlapping pairs and start a new frame. */
   finish(): void {
-    const texts = this.#frame;
+    const texts = this.#frame.toSorted((a, b) => a.x - b.x);
     this.#frame = [];
+    if (this.#reported.size > MAX_REPORTS) return;
+    // Sweep left to right: only texts that start before `a` ends can overlap it.
     for (const [i, a] of texts.entries()) {
-      for (const b of texts.slice(i + 1)) {
-        // The same words twice is a shadow or an outline, drawn on purpose.
-        if (a.content === b.content) continue;
-        const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
-        const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-        const pair = JSON.stringify([a.content, b.content].toSorted());
-        if (w > SLACK && h > SLACK && !this.#reported.has(pair)) {
-          this.#reported.add(pair);
-          this.#report(`text ${quote(a.content)} overlaps text ${quote(b.content)} near (${Math.round(Math.max(a.x, b.x))}, ${Math.round(Math.max(a.y, b.y))}); move one, or place them with v.textBounds first`);
-        }
+      for (let j = i + 1; j < texts.length; j += 1) {
+        const b = texts[j];
+        if (b === undefined || b.x >= a.x + a.w - SLACK) break;
+        this.#check(a, b);
+        if (this.#reported.size > MAX_REPORTS) return;
       }
     }
+  }
+
+  #check(a: TextRect, b: TextRect): void {
+    // The same words twice is a shadow or an outline, drawn on purpose.
+    if (a.content === b.content) return;
+    const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    if (w <= SLACK || h <= SLACK) return;
+    const pair = JSON.stringify([a.content, b.content].toSorted());
+    if (this.#reported.has(pair)) return;
+    this.#reported.add(pair);
+    if (this.#reported.size > MAX_REPORTS) {
+      this.#report(`text: more than ${MAX_REPORTS} pairs of texts overlap; no more overlaps are reported this run`);
+      return;
+    }
+    this.#report(`text ${quote(a.content)} overlaps text ${quote(b.content)} near (${Math.round(Math.max(a.x, b.x))}, ${Math.round(Math.max(a.y, b.y))}); move one, or place them with v.textBounds first`);
   }
 }
 
@@ -86,7 +110,8 @@ export class GlyphWatch {
   check(content: string, font: { style: string; family: string }): void {
     for (const char of content) {
       const code = char.codePointAt(0) ?? 0;
-      if (code < 0x80 || /[\p{M}\p{Cc}\p{Cf}\s]/u.test(char)) continue;
+      // Spaces, controls, format characters and variation selectors draw nothing by design.
+      if (/[\p{Cc}\p{Cf}\s\uFE00-\uFE0F]/u.test(char)) continue;
       const name = `${font.style} ${font.family}`;
       const key = `${name}\u0000${char}`;
       if (this.#checked.has(key)) continue;

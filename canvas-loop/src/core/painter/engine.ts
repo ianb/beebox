@@ -49,6 +49,9 @@ interface LaidText {
   bounds: TextBounds;
 }
 
+/** Width of a halo's band around text of `size`. */
+const haloWidth = (size: number): number => Math.max(2, size / 4);
+
 const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
 
 export class Painter extends PainterCore {
@@ -179,16 +182,22 @@ export class Painter extends PainterCore {
     });
     const native = box.w === undefined && box.h === undefined && !content.includes("\n");
     const layout = native ? undefined : layoutText(content, { size: options.size, box, options, measure });
+    // A halo widens the ink by half its band on every side.
+    const grow = (b: TextBounds): TextBounds => {
+      if (options.halo === undefined) return b;
+      const pad = haloWidth(b.size) / 2;
+      return { ...b, x: b.x - pad, y: b.y - pad, w: b.w + 2 * pad, h: b.h + 2 * pad };
+    };
     if (layout !== undefined) {
       const bounds = { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
-      return { box, options, layout, bounds };
+      return { box, options, layout, bounds: grow(bounds) };
     }
     const size = options.size;
     const w = measure(content, size);
     const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
     const h = size * 1.25;
     const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
-    return { box, options, layout, bounds: { x, y: top, w, h, lines: 1, size, overflow: false } };
+    return { box, options, layout, bounds: grow({ x, y: top, w, h, lines: 1, size, overflow: false }) };
   }
 
   #drawText(content: string, laid: LaidText): void {
@@ -206,7 +215,7 @@ export class Painter extends PainterCore {
         const halo = options.halo;
         if (halo !== undefined) {
           ctx.strokeStyle = this.resolvePaint(halo);
-          ctx.lineWidth = Math.max(2, size / 4);
+          ctx.lineWidth = haloWidth(size);
           ctx.lineJoin = "round";
         }
         const write = (...[text, x, y]: [string, number, number]): void => {
