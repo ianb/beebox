@@ -1364,6 +1364,8 @@ tests:
   # Status (2026-11-12): figure-canvas-loop-check, -api-docs, figure-shared-code
   # and figure-activity added with `bbx figure run`, the canvas-loop box docs
   # and figure activity; `--filter figure` passes 12/12 on the worktree's test1.
+  # figure-sound added 2026-11-12 with sample and note voices; passes on the
+  # worktree's test1 (sample ding, marimba note from u.scaleNote(count % 10)).
 
   - id: figure-canvas-loop-check
     prompt: "You just built a canvas-loop figure card. How do you check that it works and that clicks on it do what you meant, from inside the box?"

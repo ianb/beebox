@@ -199,6 +199,20 @@ Cross-model plan review (gpt-6-sol, 2026-11-12), adjudicated:
   lint-clean output.
 - Citation and `scaleNote` wording: fixed.
 
+Cross-model code review (gpt-6-sol, 2026-11-12), adjudicated:
+
+- Pad silent at C9 (fundamental above the harmonic ceiling): fixed; the
+  fundamental always sounds. Test covers C0 and C9.
+- Waiting deadline enforced only when the import settles: fixed with a timer.
+- `scaleNote` could return C10, which validation rejects: now a clear error;
+  TEA.md says to keep the step in range.
+- High `epiano` notes aliased: the tine is left out when its sidebands would
+  pass Nyquist.
+- An error while flushing waiting voices was an unhandled rejection: caught
+  per voice and logged; a closed player ignores the late load.
+- Tap versus any gesture: unchanged. The gesture rule predates this work; the
+  boxholder's words were about autoplay.
+
 ## Subplans
 
 none
