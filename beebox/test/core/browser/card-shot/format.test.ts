@@ -14,6 +14,7 @@ const WHOLE: FoundMeasure = {
   viewport: { width: 390, height: 2184 },
   dpr: 1,
   overflow: [{ tag: "div", text: "Scale: 0.5x 1x 1.5x 2x 3x", excess: 25 }],
+  scrolls: [],
   errorText: null,
   busy: false,
 };
@@ -29,12 +30,23 @@ void test("a whole card, with an overflow finding", (t) => {
 });
 
 void test("a card taller than the capture and wider than its panel says what is missing", (t) => {
-  const partial: FoundMeasure = { ...WHOLE, card: { width: 500, height: 12000 }, painted: { x: 0, y: 0, width: 366, height: 7900 }, overflow: [], errorText: "View Error TypeError: x is undefined", busy: true };
+  const partial: FoundMeasure = { ...WHOLE, card: { width: 500, height: 12000 }, painted: { x: 0, y: 0, width: 366, height: 7900 }, overflow: [], scrolls: [], errorText: "View Error TypeError: x is undefined", busy: true };
   t.check(formatCardShot({ cardPath: "_content/a.card", imagePath: "/i.png", measure: partial }), [
     "✓ Screenshot saved to /i.png",
     "card: _content/a.card at 390px wide — partial: the image shows 7900px of the card's 12000px height, from 0px down; it shows 366px of the card's 500px width",
     "view error: View Error TypeError: x is undefined",
     "still loading: part of the card was still loading when it was captured; this image may not show the finished view",
+    "",
+  ].join("\n"));
+  t.end();
+});
+
+void test("a part that scrolls sideways gets its own line, apart from an overflow finding", (t) => {
+  const scrolling: FoundMeasure = { ...WHOLE, overflow: [], scrolls: [{ tag: "div", text: "Prices Mon Tue Wed", hidden: 412 }] };
+  t.check(formatCardShot({ cardPath: "_content/a.card", imagePath: "/i.png", measure: scrolling }), [
+    "✓ Screenshot saved to /i.png",
+    "card: _content/a.card at 390px wide — whole card (366×2027)",
+    'scrolls sideways: <div> "Prices Mon Tue Wed" has 412px more to the side; the image shows only its start',
     "",
   ].join("\n"));
   t.end();

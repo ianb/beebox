@@ -1016,3 +1016,19 @@ findings, each checked:
    sets; positive fixture for a visible table in an `aria-hidden` subtree.
 Also corrected the IME case count to 44 (24 valid, 20 invalid), verified
 by counting the test file; all move unchanged.
+
+## Implementation status
+
+- 2026-11-11, Track 1: `MEASURE.scrolls` and the `scrolls sideways:` line
+  (`measure.ts`, `format.ts`); doc lines in `testing.ts` and
+  `content-browser.ts`. About 12 source, 37 test, 7 doc changed lines. The
+  e2e fixture holds a wrapped 12-column table and an outer scroller that
+  holds a wide row and a wrapped table: 3 lines at 390px (wrapper, outer,
+  inner), 1 at 1280px (outer only; a 720px table fits), 1 `overflow:` line
+  (the old fixture row) throughout. `scrolls` is a required field of
+  `MEASURE`, so the `run.test.ts` measures gained `scrolls: []`. The
+  fixture's `body` height shrank by the 100px the new blocks add, so the
+  card heights the test asserts are unchanged. `pnpm test:changed` selected
+  834 files; all passed except `test/core/schema-watcher.test.ts` (a file
+  watcher timing test that imports none of the changed files; it also fails
+  alone).

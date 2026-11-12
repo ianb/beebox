@@ -47,7 +47,7 @@ function evalReply(measure: object): ExecReply {
 void test("a card taller than its panel: grow, measure, capture, restore", async (t) => {
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "card-shot-"));
   t.teardown(() => fs.rm(outDir, { recursive: true, force: true }));
-  const base = { found: true, url: "http://localhost:3210/wt/test1/views/a.card", card: { width: 366, height: 2027 }, viewport: { width: 390, height: 844 }, dpr: 1, overflow: [], errorText: null, busy: false };
+  const base = { found: true, url: "http://localhost:3210/wt/test1/views/a.card", card: { width: 366, height: 2027 }, viewport: { width: 390, height: 844 }, dpr: 1, overflow: [], scrolls: [], errorText: null, busy: false };
   const measures = [evalReply({ ...base, painted: { x: 0, y: 0, width: 366, height: 671 } }), evalReply({ ...base, painted: { x: 0, y: 0, width: 366, height: 2027 } })];
   const sent: string[][] = [];
   const io = {

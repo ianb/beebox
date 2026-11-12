@@ -74,6 +74,8 @@ A path that starts with \`/\` is a page of this box. \`screenshot --card\`
 captures the whole card, not the window, and says \`whole card\` or
 \`partial\` (and what is missing). It prints an \`overflow:\` line for each
 part that is wider than its box: at phone width that usually means a row that
-needs to wrap. To test the view's controls, run \`bbx browser snapshot -i\`,
+needs to wrap. A \`scrolls sideways:\` line names a part that scrolls inside
+its own box and holds more than the image shows (a wide table in a scroll
+wrapper); the image shows only its start. To test the view's controls, run \`bbx browser snapshot -i\`,
 then \`click\` or \`fill\` a ref, and capture again.`;
 

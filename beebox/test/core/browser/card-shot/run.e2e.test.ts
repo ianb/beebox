@@ -5,6 +5,9 @@
 // The card's bottom is a red block; the image must contain it at phone and
 // desktop widths. A loading block (`aria-busy`) 5000px tall clears after
 // 300 ms: the capture must wait for it, or the card measures 7500px.
+// A table in its own sideways scroller, and an outer scroller that holds both
+// a wide row and such a table, give `scrolls sideways:` lines and no
+// `overflow:` line.
 // A card taller than the capture limit is reported partial and cropped to
 // what was painted.
 
@@ -43,16 +46,23 @@ function findChrome(): string | undefined {
 
 const chrome = findChrome();
 
+/** A table of twelve columns: wider than a phone, narrower than a desktop window. */
+const TABLE = `<table style="border-collapse:collapse;min-width:720px">${"<tr>" + Array.from({ length: 12 }, (_, i) => `<td style="width:60px">A${String(i + 1)}</td>`).join("\n") + "</tr>"}</table>`;
+
+/** Fixed-height blocks in the card: 100px in all. */
+const SCROLLERS = `<div class="wrapped" style="overflow-x:auto;height:40px">${TABLE}</div>
+<div class="outer" style="overflow-x:auto;height:60px"><div style="white-space:nowrap;width:1500px;height:20px">outer row</div><div class="inner" style="overflow-x:auto;height:40px">${TABLE}</div></div>`;
+
 /** A page shaped like the app: header, then a panel that fills the rest and scrolls. */
 function fixture(cardPath: string, cardHeight: number): string {
   return `<!DOCTYPE html><html><head><title>fixture</title><style>
 html,body{height:100%;margin:0}body{display:flex;flex-direction:column}
 header{height:60px;flex:none}#p{flex:1;min-height:0;overflow:auto}
-article{background:#eee}.body{height:${String(cardHeight - 120)}px}
+article{background:#eee}.body{height:${String(cardHeight - 220)}px}
 .wide{white-space:nowrap;height:20px;overflow:visible}.bottom{height:100px;background:#f00}
 </style></head><body><header>app</header><div id="p"><article>
 <div id="loading" aria-busy="true" style="height:5000px">Loading view...</div>
-<div class="wide">${"wide text that will not wrap ".repeat(8)}</div><div class="body"></div><div class="bottom"></div>
+<div class="wide">${"wide text that will not wrap ".repeat(8)}</div>${SCROLLERS}<div class="body"></div><div class="bottom"></div>
 </article></div><script>document.getElementById('p').id=${JSON.stringify(cardPanelId(cardPath))};
 setTimeout(()=>document.getElementById('loading').remove(),300)</script></body></html>`;
 }
@@ -103,7 +113,8 @@ void test("A card in a scrolling panel is captured whole at both widths; a card 
     const size = await io.sendFull(["eval", "`${String(innerWidth)}x${String(innerHeight)}`"]);
     results[`w${String(width)}`] = {
       fit: shot.output.split("\n")[1],
-      overflow: shot.output.split("\n").some((line) => line.startsWith("overflow:")),
+      overflow: shot.output.split("\n").filter((line) => line.startsWith("overflow:")).length,
+      scrolls: shot.output.split("\n").filter((line) => line.startsWith("scrolls sideways:")).map((line) => line.split(" has ")[0]),
       imageHeight: bottom.height,
       bottomIsRed: bottom.rgb[0] === 255 && bottom.rgb[1] === 0 && bottom.rgb[2] === 0,
       // The viewport is put back after the capture.
@@ -122,8 +133,8 @@ void test("A card in a scrolling panel is captured whole at both widths; a card 
   };
 
   t.check(results, {
-    w390: { fit: "card: short.card at 390px wide — whole card (390×2500)", overflow: true, imageHeight: 2500, bottomIsRed: true, viewportAfter: "390x844" },
-    w1280: { fit: "card: short.card at 1280px wide — whole card (1280×2500)", overflow: true, imageHeight: 2500, bottomIsRed: true, viewportAfter: "1280x844" },
+    w390: { fit: "card: short.card at 390px wide — whole card (390×2500)", overflow: 1, scrolls: ["scrolls sideways: <div> \"A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12\"", "scrolls sideways: <div> \"outer rowA1 A2 A3 A4 A5 A6 A7 A8 A9 A10 \"", "scrolls sideways: <div> \"A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12\""], imageHeight: 2500, bottomIsRed: true, viewportAfter: "390x844" },
+    w1280: { fit: "card: short.card at 1280px wide — whole card (1280×2500)", overflow: 1, scrolls: ["scrolls sideways: <div> \"outer rowA1 A2 A3 A4 A5 A6 A7 A8 A9 A10 \""], imageHeight: 2500, bottomIsRed: true, viewportAfter: "1280x844" },
     tall: { fit: "card: tall.card at 390px wide — partial: the image shows 7940px of the card's 10000px height, from 0px down", imageMatchesPainted: true },
   });
 });
