@@ -20,7 +20,9 @@ so the two tiers can share `src/examples/`.
 
 ## Contract
 
-A TEA sketch imports **only** `@ianbicking/canvas-loop` (types only) and exports:
+A TEA sketch imports **only** `@ianbicking/canvas-loop` (types only) and,
+for a large sketch, sibling helper files named `<name>-tea.ts` (imported as
+`./<name>-tea.js`; the TEA lint applies to them too). It exports:
 
 ```ts
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
@@ -209,7 +211,8 @@ unknown names or mismatched types warn and fall back to defaults),
   switch — a statechart's modal part, zero machinery.
 - **No async.** No `async`/`await`/`.then`/`new Promise`; runs are synchronous.
 - **Exhaustive switch on `msg.type`.** List every case; no `default`.
-- **Import only `@ianbicking/canvas-loop`**, types only.
+- **Import only `@ianbicking/canvas-loop`** (types only) and sibling
+  `./<name>-tea.js` helpers.
 
 Lint enforces all of it on `*-tea.ts` (`tea/no-module-state`,
 `tea/no-model-mutation`, `tea/no-async-sketch`, `tea/no-classes`,
