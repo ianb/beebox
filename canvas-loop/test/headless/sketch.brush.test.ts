@@ -300,3 +300,14 @@ test("cache draws its body once per key and pastes the same pixels after", () =>
   s.cache("scene-2", scene);
   assert.equal(runs, 2, "a new key redraws");
 });
+
+test("calling paper() again with the same settings keeps the texture (no per-frame rebuild)", () => {
+  const s = makeSketch({ width: 300, height: 300 });
+  s.paper({ scale: 3 });
+  s.paperTexture(1);
+  const start = process.hrtime.bigint();
+  for (let i = 0; i < 20; i += 1) s.paper({ scale: 3 });
+  s.paperTexture(1);
+  const ms = Number(process.hrtime.bigint() - start) / 1e6;
+  assert.ok(ms < 200, `20 repeated paper() calls took ${ms.toFixed(0)} ms`);
+});

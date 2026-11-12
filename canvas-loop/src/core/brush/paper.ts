@@ -78,7 +78,10 @@ export class PaperSheet {
     this.#size = size;
   }
 
+  /** Change the paper; the texture is rebuilt only when the settings actually differ. */
   set(paper: Paper): void {
+    const same = paper.scale === this.#paper.scale && paper.contrast === this.#paper.contrast && paper.seed === this.#paper.seed;
+    if (same) return;
     this.#paper = paper;
     this.#layer = undefined;
   }
