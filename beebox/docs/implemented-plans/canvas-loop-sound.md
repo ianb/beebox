@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: sound as a view of state"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---

@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: per-call styles; retire the p5-style tier"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---

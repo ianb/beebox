@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-12T07:16:58Z
-Total documents: 641
+Generated: 2026-11-12T13:10:56Z
+Total documents: 643
 
 ## Issues
 
@@ -18,6 +18,8 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/bounded-reactor-batches.md** — "Bounded reactor batches and capped intake jobs" (727 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
+- **docs/implemented-plans/canvas-loop-sound.md** — "canvas-loop: sound as a view of state" (221 lines) · shipped history · implemented
+- **docs/implemented-plans/canvas-loop-styles.md** — "canvas-loop: per-call styles; retire the p5-style tier" (430 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-activity-stages.md** — "Chat activity row shows stages, and Codex steps get real labels" (381 lines) · shipped history · implemented
@@ -181,6 +183,7 @@ Referenced by:
 - docs/implemented-plans/box-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/box-view-guidance-and-checks.md:599 (mention) — lints; the preset is a standalone package (root `AGENTS.md`: *"Shared
 - docs/implemented-plans/boxes-as-packages-v2.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
 - docs/implemented-plans/capture-mode.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/card-reading.md:53 (mention) — | Include line | Show a label and link | The Markdown body of an `AGENTS.md` / `CLAUDE.md` file | Background, inline |
 - docs/implemented-plans/card-view-widgets.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -797,6 +800,7 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/implemented-plans/box-shape-in-package-json.md:81 (mention) — `README.md:46`, `dev/lib/context-assembly/assembly.ts:119`.
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+- docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
 - docs/implemented-plans/cards-as-markdown-rfc.md:82 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/doc-structure.md:92 (mention) — new `docs/testing/` directory is checked automatically. `README.md` files
@@ -4471,6 +4475,20 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/figure-card-type.md (mention)
+
+#### docs/implemented-plans/canvas-loop-sound.md **[ORPHAN]**
+
+Title: "canvas-loop: sound as a view of state" | 221 lines | shipped history | implemented
+
+No references in or out.
+
+#### docs/implemented-plans/canvas-loop-styles.md **[ORPHAN]**
+
+Title: "canvas-loop: per-call styles; retire the p5-style tier" | 430 lines | shipped history | implemented
+
+References:
+- → README.md (mention)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/capture-mode.md
 
