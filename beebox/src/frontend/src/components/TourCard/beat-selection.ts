@@ -1,5 +1,5 @@
 /**
- * Which beat of a tour the strip shows (`docs/plans/conversation-strip.md`,
+ * Which beat of a tour the strip shows (`docs/implemented-plans/conversation-strip.md`,
  * Track B). The selection follows the card's `current` until the person
  * clicks another title. A click is remembered together with the `current`
  * it was made under, so when the agent moves `current` the pick lapses and

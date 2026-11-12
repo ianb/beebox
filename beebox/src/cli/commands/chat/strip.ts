@@ -1,7 +1,7 @@
 /**
  * `bbx chat strip set <card>` and `bbx chat strip clear` — put a card in the
  * conversation's strip across the top of the person's page, or take it out
- * (`docs/plans/conversation-strip.md`). The server checks that the card
+ * (`docs/implemented-plans/conversation-strip.md`). The server checks that the card
  * exists and has a strip rendering; a refusal prints its message and exits 1.
  */
 

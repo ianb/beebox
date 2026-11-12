@@ -1,5 +1,5 @@
 /**
- * The beats of a `tour` card (`docs/plans/conversation-strip.md`, Track B).
+ * The beats of a `tour` card (`docs/implemented-plans/conversation-strip.md`, Track B).
  *
  * A tour's body is markdown. Each line that starts with `## ` opens a beat:
  * the heading text is the beat's title and the markdown up to the next such

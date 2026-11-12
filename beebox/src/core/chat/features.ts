@@ -56,7 +56,7 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
     label: "Show agent prose",
   },
   {
-    // The conversation's strip (docs/plans/conversation-strip.md): no card,
+    // The conversation's strip (docs/implemented-plans/conversation-strip.md): no card,
     // closed by the person, or the box path of the card it shows. Set by
     // `bbx chat strip`, which checks the card; the person's dismiss sets
     // `dismissed`.

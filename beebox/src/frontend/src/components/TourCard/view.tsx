@@ -1,5 +1,5 @@
 /**
- * TourCard — renderer for `tour` cards (`docs/plans/conversation-strip.md`,
+ * TourCard — renderer for `tour` cards (`docs/implemented-plans/conversation-strip.md`,
  * Track B). A tour is an ordered list of beats (`##` sections of the body)
  * with one named current by the `current` field.
  *

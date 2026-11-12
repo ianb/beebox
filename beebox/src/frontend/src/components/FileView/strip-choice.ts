@@ -1,6 +1,6 @@
 /**
  * What draws a card in the conversation strip
- * (`docs/plans/conversation-strip.md`, Tracks B and C): a box view bound
+ * (`docs/implemented-plans/conversation-strip.md`, Tracks B and C): a box view bound
  * for the strip wins; else the first built-in renderer that declares
  * `strip: true`; else nothing, and the strip shows a one-line notice.
  */

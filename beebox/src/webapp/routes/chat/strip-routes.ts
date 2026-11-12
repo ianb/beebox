@@ -1,6 +1,6 @@
 /**
  * POST /api/chat/strip — set or clear a conversation's strip
- * (`docs/plans/conversation-strip.md`), called by `bbx chat strip`.
+ * (`docs/implemented-plans/conversation-strip.md`), called by `bbx chat strip`.
  *
  * Body `{ session, card }`. `card: null` clears the strip. Otherwise the card
  * must resolve and be of a strip-capable type (`resolveStripCard`). The

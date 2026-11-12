@@ -232,7 +232,7 @@ void test("No tags → no deltas, content unchanged.", async (t) => {
 
 // ## The `strip` feature
 //
-// `docs/plans/conversation-strip.md`, Track A. The value is `none`,
+// `docs/implemented-plans/conversation-strip.md`, Track A. The value is `none`,
 // `dismissed`, or a box path to a `.card`. A command sets it; the agent's
 // `<chat-app>` tag cannot, and the snapshot leaves it out at `none`.
 void test("strip accepts none, dismissed, and box card paths only", async (t) => {

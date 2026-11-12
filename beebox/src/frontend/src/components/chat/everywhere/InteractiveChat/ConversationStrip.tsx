@@ -1,5 +1,5 @@
 /**
- * The conversation strip (`docs/plans/conversation-strip.md`, Track B): one
+ * The conversation strip (`docs/implemented-plans/conversation-strip.md`, Track B): one
  * card, small, across the top of the conversation's page, above both the
  * cards and the messages. The `strip` chat feature names the card; the box
  * agent sets it with `bbx chat strip set`. The person's dismiss sets it to

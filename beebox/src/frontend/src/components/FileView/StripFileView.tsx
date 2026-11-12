@@ -1,5 +1,5 @@
 /**
- * A card in the conversation strip (`docs/plans/conversation-strip.md`):
+ * A card in the conversation strip (`docs/implemented-plans/conversation-strip.md`):
  * frameless, drawn by the strip's box view or a built-in renderer that
  * declares `strip: true` (`strip-choice.ts`). A card that is gone, fails to
  * load, or has no strip rendering shows one line naming its path; the strip

@@ -1,10 +1,12 @@
 ---
 title: "Conversation strip and tour cards"
-status: draft
+status: implemented
 workstream: demo-support
 issues: []
 ---
 # Conversation strip and tour cards
+
+**Implementation record.** Tracks A, B and C are implemented (about 1,340 added lines against an estimate of about 1,050). Not done: the tour file `test/tours/conversation-strip.tour.ts`; reaching a strip in the running app needs a tour card and a strip set by an agent turn or by hand. Not verified: a box-supplied strip view rendered in a real box (Track C is covered by unit tests only), the native iOS shell, and real voice checkpoints driving a tour.
 
 A conversation gets one optional docked region, the strip, across the top of
 its page: under the app bar, above both the cards and the messages. The strip

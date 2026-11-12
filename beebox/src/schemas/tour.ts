@@ -1,5 +1,5 @@
 /**
- * `tour` card schema (`docs/plans/conversation-strip.md`, Track B): an ordered
+ * `tour` card schema (`docs/implemented-plans/conversation-strip.md`, Track B): an ordered
  * walk-through. Each `## ` heading in the body opens a beat; `current` names
  * the beat the person is on. The first strip-capable card type
  * (`src/shared/strip-types.ts`).

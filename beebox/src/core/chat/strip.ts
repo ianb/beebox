@@ -1,5 +1,5 @@
 /**
- * Resolve the card `bbx chat strip set` names (`docs/plans/conversation-strip.md`).
+ * Resolve the card `bbx chat strip set` names (`docs/implemented-plans/conversation-strip.md`).
  *
  * The ref goes through `parseRef` / `resolveRefPath` only, so a `..` escape or
  * a path outside the box namespace fails closed. The card type comes from the
