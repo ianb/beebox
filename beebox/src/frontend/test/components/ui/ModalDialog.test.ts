@@ -7,7 +7,7 @@ import { createElement as h } from "react";
 import { test } from "tap";
 import { ModalDialog, type ModalDialogProps } from "../../../src/components/ui/ModalDialog.js";
 
-function card(props: Partial<Omit<ModalDialogProps, "children">>) {
+function card(props: Partial<Omit<ModalDialogProps, "children" | "labelledBy" | "label">>) {
   const children = [h("h2", { id: "title", key: "title" }, "Title"), h("button", { id: "inside", type: "button", key: "inside" }, "Inside")];
   return h(ModalDialog, { open: true, labelledBy: "title", ...props, children });
 }
@@ -90,4 +90,26 @@ void test("closing through the open prop does not count as Escape", async (t) =>
   await view.rerender(card({ open: false, onCancel }));
   await view.act(() => new Promise((resolve) => setTimeout(resolve, 10)));
   t.check(cancels, 0);
+});
+
+// A fullscreen dialog has no card: the children are the dialog's own content,
+// named by a text label when there is no heading, placed by an inline rect.
+void test("layout fullscreen renders the children unpadded with the label and rect", async (t) => {
+  const view = await mount(h(ModalDialog, {
+    open: true,
+    layout: "fullscreen",
+    tone: "clear",
+    label: "Search",
+    style: { top: 10, left: 0, width: 300, height: 400 },
+    children: h("button", { id: "inside", type: "button" }, "Inside"),
+  }));
+  t.teardown(() => view.unmount());
+  const dialog = view.container.querySelector("dialog");
+  t.check({
+    open: dialog?.open,
+    label: dialog?.getAttribute("aria-label"),
+    labelledBy: dialog?.getAttribute("aria-labelledby"),
+    firstChild: dialog?.firstElementChild?.id,
+    rect: [dialog?.style.top, dialog?.style.width, dialog?.style.height],
+  }, { open: true, label: "Search", labelledBy: null, firstChild: "inside", rect: ["10px", "300px", "400px"] });
 });

@@ -3,11 +3,16 @@
  * top layer and makes the page behind it inert (the focus trap); closing
  * returns focus to whatever had it before. `initialFocus` names an element
  * inside the dialog to focus instead of the browser's first control. While
- * open it holds toast expiry, since the modal covers the toasts.
+ * open it holds toast expiry, since the modal covers the toasts, and it is the
+ * newest Escape layer (`lib/escape-layers`), so a menu or popover opened
+ * before it leaves Escape to the modal's `cancel`.
+ *
+ * Only `components/ui/ModalDialog.tsx` imports this (lint-enforced).
  */
 
 import { useEffect, type RefObject } from "react";
 import { acquireHold } from "../components/ui/toast-store";
+import { pushEscapeLayer } from "../lib/escape-layers";
 
 export function useModalDialog({ dialog: dialogRef, open, initialFocus }: {
   dialog: RefObject<HTMLDialogElement | null>;
@@ -20,9 +25,11 @@ export function useModalDialog({ dialog: dialogRef, open, initialFocus }: {
     const priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
     const releaseHold = acquireHold();
+    const escapeLayer = pushEscapeLayer();
     if (initialFocus !== undefined) dialog.querySelector<HTMLElement>(initialFocus)?.focus();
     return () => {
       releaseHold();
+      escapeLayer.release();
       if (dialog.open) dialog.close();
       priorFocus?.focus();
     };

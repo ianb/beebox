@@ -1,12 +1,14 @@
 // A modal dialog opens with focus on the named element and, when it closes,
 // hands focus back to the element that had it before. While open it holds
-// toast expiry, and a modal that unmounts while open releases the hold.
+// toast expiry, and a modal that unmounts while open releases the hold. It is
+// the newest Escape layer while open.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../helpers/dom-harness.js";
 import { createElement as h, type ReactNode } from "react";
 import { test } from "tap";
 import { useModalDialog } from "../../src/hooks/useModalDialog.js";
 import { toastsHeld } from "../../src/components/ui/toast-store.js";
+import { pushEscapeLayer } from "../../src/lib/escape-layers.js";
 
 const opener = document.createElement("button");
 opener.id = "opener";
@@ -39,4 +41,16 @@ void test("an open modal holds toasts, and unmounting it while open releases the
   const whileOpen = toastsHeld();
   await view.unmount();
   t.check({ whileOpen, afterUnmount: toastsHeld(), dialogOpen: dialogElement.open }, { whileOpen: true, afterUnmount: false, dialogOpen: false });
+});
+
+// A menu or popover opened before the modal leaves Escape to the modal while
+// it is open, and gets it back when the modal closes.
+void test("an open modal is the newest Escape layer", async (t) => {
+  const earlier = pushEscapeLayer();
+  t.teardown(() => earlier.release());
+  const before = earlier.ownsEscape();
+  const view = await mount(h(Host, { open: true }));
+  const whileOpen = earlier.ownsEscape();
+  await view.unmount();
+  t.check({ before, whileOpen, afterClose: earlier.ownsEscape() }, { before: true, whileOpen: false, afterClose: true });
 });

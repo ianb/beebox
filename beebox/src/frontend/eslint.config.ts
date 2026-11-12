@@ -138,6 +138,32 @@ const DISMISS_PATTERN = {
   message: "An anchored panel is <Popover> or <Menu> (components/ui); only ui/AnchoredLayer.tsx uses useDismiss.",
 };
 
+// A modal is <ModalDialog>; only ui/ModalDialog.tsx calls useModalDialog.
+const MODAL_DIALOG_PATTERN = {
+  group: ["**/hooks/useModalDialog"],
+  message: "A modal is <ModalDialog> (components/ui/ModalDialog); only it uses useModalDialog.",
+};
+
+// Files that draw a viewport-fixed layer (`fixed`, inline `position: fixed`),
+// one per line with the reason. Exempt from that entry only.
+const VIEWPORT_LAYER_OWNERS = [
+  // The primitives.
+  "src/components/ui/AnchoredLayer.tsx",
+  "src/components/ui/ModalDialog.tsx",
+  "src/components/ui/ControlRing.tsx",
+  "src/components/ui/ToastViewport.tsx",
+  // The full-screen camera surface, not a layer over the app: a modal would hold every toast.
+  "src/components/capture/CaptureScreen/view.tsx",
+  // A dock at the bottom of the screen.
+  "src/components/DebugLog.tsx",
+  // Draws over the whole app by design.
+  "src/components/SourceInspector.tsx",
+  // The theme studio's floating controls.
+  "src/pages/dev/components/ThemeStudioHarness/controls.tsx",
+];
+const VIEWPORT_LAYER_MESSAGE =
+  "A viewport layer is a ui/ primitive: ModalDialog, Popover, Menu, AnchoredLayer, ControlRing, ToastViewport.";
+
 export default [
   // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
   // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
@@ -157,7 +183,7 @@ export default [
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN] },
+        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN, MODAL_DIALOG_PATTERN] },
       ],
     },
   },
@@ -167,7 +193,7 @@ export default [
     files: OUTSIDE_VITE_SHARED_RAW,
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, DISMISS_PATTERN] }],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, DISMISS_PATTERN, MODAL_DIALOG_PATTERN] }],
     },
   },
   // The one owner of useDismiss: the base patterns without DISMISS_PATTERN.
@@ -175,7 +201,15 @@ export default [
     files: ["src/components/ui/AnchoredLayer.tsx"],
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] }],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, MODAL_DIALOG_PATTERN] }],
+    },
+  },
+  // The one owner of useModalDialog: the base patterns without MODAL_DIALOG_PATTERN.
+  {
+    files: ["src/components/ui/ModalDialog.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN] }],
     },
   },
   // Backend src/lib/ ban by resolved path — see BACKEND_LIB_DIR comment above.
@@ -261,7 +295,9 @@ export default [
               allowIn: ["src/components/ui/AnchoredLayer.tsx"],
               message: "An anchored panel is <Popover> or <Menu>.",
             },
+            { all: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
           ],
+          stylePosition: { values: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
         },
       ],
     },
@@ -346,6 +382,15 @@ export default [
                 "src/components/ui/Table.tsx",
               ],
               message: "Use Td (components/ui/Table).",
+            },
+            dialog: {
+              allowIn: [
+                // ModalDialog: showModal(), focus return, toast hold, Escape layer.
+                "src/components/ui/ModalDialog.tsx",
+                // Popover: a non-modal <dialog popover="manual">.
+                "src/components/ui/Popover.tsx",
+              ],
+              message: "Use ModalDialog (a modal) or Popover (an anchored panel) from components/ui.",
             },
           },
           roles: Object.fromEntries(

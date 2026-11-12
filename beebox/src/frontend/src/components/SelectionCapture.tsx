@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AnchoredLayer } from "./ui/AnchoredLayer";
+import { ControlRing } from "./ui/ControlRing";
 import { extractPointSelection, extractTextSelection, pointTarget, type ExtractedSelection } from "../lib/selection/position";
 
 // Mounted capture roots. Captures nest — a card embedded in a chat message
@@ -94,7 +95,7 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
 }) {
   const [point, setPoint] = useState<PendingPoint | null>(null);
   const [hovered, setHovered] = useState<Element | null>(null);
-  const [outline, setOutline] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [outline, setOutline] = useState<DOMRect | null>(null);
   const pointerTypeRef = useRef<string | null>(null);
 
   const choosePoint = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -136,9 +137,7 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
     if (container === null) return;
     const target = hovered ?? point?.element ?? null;
     const rect = target !== null && container.contains(target) && pointIsVisible(target) ? target.getBoundingClientRect() : null;
-    setOutline(rect !== null && rect.width > 0 && rect.height > 0
-      ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
-      : null);
+    setOutline(rect !== null && rect.width > 0 && rect.height > 0 ? rect : null);
     if (point !== null) {
       const current = extractPoint(point.element, container);
       if (!container.contains(point.element) || !pointIsVisible(point.element) || current?.text !== point.text || current.position !== point.position) {
@@ -300,8 +299,7 @@ export function SelectionCapture({ onCapture, extractPoint: extractPointProp, ex
     >
       {children}
       {pointMode && outline !== null ? (
-        <div aria-hidden className="pointer-events-none fixed z-40 rounded-sm border-2 border-accent bg-accent/10"
-          style={outline} />
+        <ControlRing target={outline} tone="subtle" />
       ) : null}
       {button === null ? null : (
         // Beside the block, at the tap's height, kept inside the visible viewport.

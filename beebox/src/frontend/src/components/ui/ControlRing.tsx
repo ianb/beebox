@@ -1,50 +1,87 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ringBox, RING_DURATION_MS, RING_PADDING } from "../../lib/ui-scan/ring";
+import { cn } from "../../lib/cn";
+import { ringBox, RING_PADDING, type RingBox } from "../../lib/ui-scan/ring";
+
+export type ControlRingTone = "accent" | "subtle";
+
+export type ControlRingProps = {
+  /**
+   * What the ring goes around. An element is tracked on every frame, so a
+   * control that moves (a scroll settling, the keyboard opening) keeps its
+   * ring; a rect is drawn where it is, and the caller passes a new one.
+   */
+  target: HTMLElement | DOMRect;
+  /**
+   * `accent` (default): a pulsing accent ring that calls attention to a
+   * control. `subtle`: a static accent outline with a light fill, for the
+   * block a pointer is over.
+   */
+  tone?: ControlRingTone;
+} & (
+  | {
+      /** Remove the ring after this long: `onDone` runs and the caller unmounts it. */
+      durationMs: number;
+      onDone: () => void;
+    }
+  | { durationMs?: undefined; onDone?: undefined }
+);
+
+const TONE_CLASSES: Record<ControlRingTone, string> = {
+  accent: "rounded-md border-2 border-accent ring-4 ring-accent/30 animate-pulse",
+  subtle: "rounded-md border-2 border-accent bg-accent/10",
+};
+
+function boxOf(target: HTMLElement | DOMRect): RingBox {
+  return ringBox(target instanceof HTMLElement ? target.getBoundingClientRect() : target, RING_PADDING);
+}
+
+function place(node: HTMLElement, box: RingBox): void {
+  node.style.top = `${box.top}px`;
+  node.style.left = `${box.left}px`;
+  node.style.width = `${box.width}px`;
+  node.style.height = `${box.height}px`;
+}
 
 /**
- * The ring a `control:` pointer draws around the control it points at.
+ * A ring drawn around a control or a block: the one viewport-fixed highlight
+ * rectangle. A `control:` pointer rings the control it points at; selection
+ * capture's point mode outlines the block under the pointer.
  *
- * An absolutely-positioned overlay in the accent colour (the palette's focus-ring
- * role), `pointer-events: none` so it never intercepts the click it is inviting,
- * removed on a timer. It tracks the target's box on every frame while it is up,
- * so a control that moves — a scroll settling, the keyboard opening — keeps its
- * ring. Under `prefers-reduced-motion` the ring is static: the global rule in
+ * Inflated by `RING_PADDING` so it does not cover its target, and
+ * `pointer-events: none`, so it never intercepts the click it is inviting.
+ * Under `prefers-reduced-motion` the accent ring is static: the global rule in
  * `index.css` stops the pulse.
  *
  * Deliberately not a spotlight: no mask, no popover, no modal layer. Taking over
  * the screen is the part of a guided tour this feature rejected.
  */
-export function ControlRing({ target, onDone }: { target: HTMLElement; onDone: () => void }) {
+export function ControlRing({ target, tone, durationMs, onDone }: ControlRingProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!(target instanceof HTMLElement)) return;
     let frame = 0;
     const track = () => {
-      const node = ref.current;
-      if (node !== null) {
-        const box = ringBox(target.getBoundingClientRect(), RING_PADDING);
-        node.style.top = `${box.top}px`;
-        node.style.left = `${box.left}px`;
-        node.style.width = `${box.width}px`;
-        node.style.height = `${box.height}px`;
-      }
+      if (ref.current !== null) place(ref.current, boxOf(target));
       frame = requestAnimationFrame(track);
     };
     track();
-    const timer = setTimeout(onDone, RING_DURATION_MS);
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(timer);
-    };
-  }, [target, onDone]);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
 
-  const initial = ringBox(target.getBoundingClientRect(), RING_PADDING);
+  useEffect(() => {
+    if (durationMs === undefined) return;
+    const timer = setTimeout(onDone, durationMs);
+    return () => clearTimeout(timer);
+  }, [durationMs, onDone]);
+
+  const initial = boxOf(target);
   return createPortal(
     <div
       ref={ref}
       aria-hidden="true"
-      className="fixed z-50 rounded-md border-2 border-accent ring-4 ring-accent/30 pointer-events-none animate-pulse"
+      className={cn("pointer-events-none fixed z-50", TONE_CLASSES[tone ?? "accent"])}
       style={{
         top: `${initial.top}px`,
         left: `${initial.left}px`,
