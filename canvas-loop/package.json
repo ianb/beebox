@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.2",
+    "perfect-freehand": "1.2.3",
     "yaml": "^2.7.0"
   },
   "peerDependencies": {

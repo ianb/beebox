@@ -1,0 +1,654 @@
+
+===== sketch-tea.ts =====
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import { paintTown } from "./town-tea.js";
+import { THINGS, paintSprite, type Thing } from "./people-tea.js";
+
+export const canvas = { width: 1000, height: 700 };
+export const params = {
+  dusk: { type: "boolean", default: false },
+  reset: { type: "trigger" },
+} as const satisfies ParamsDecl;
+type Params = ParamValues<typeof params>;
+export interface Model { frame: number; hover: string; acts: Readonly<Record<string, number>> }
+
+export function init(): Model { return { frame: 0, hover: "", acts: {} }; }
+
+function bounds(t: Thing, x: number, y: number): boolean {
+  if(t.kind==="bus") return Math.abs(x-t.x)<81 && Math.abs(y-t.y)<44;
+  if(t.kind==="flag") return x>t.x-6 && x<t.x+64 && y>t.y-75 && y<t.y+7;
+  const upper=t.y<300;
+  return Math.abs(x-t.x)<(upper?24:31) && y>t.y-(upper?67:83) && y<t.y+10;
+}
+function hit(x: number, y: number): string { return THINGS.findLast(t=>bounds(t,x,y))?.id ?? ""; }
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch(msg.type){
+    case "tick": return { ...model, frame: msg.frame };
+    case "mousemove": { const hover=hit(msg.x,msg.y); return hover===model.hover?model:{...model,hover}; }
+    case "mousedown": {
+      const id=hit(msg.x,msg.y);if(!id)return model;u.handled(id);
+      const chain:Readonly<Record<string,string>>={baker:"sweeper",violinist:"skater",bus:"conductor",flag:"astronomer",clock:"mailcarrier"};
+      const other=chain[id];
+      return {...model,acts:{...model.acts,[id]:model.frame,...(other?{[other]:model.frame+8}:{})}};
+    }
+    case "trigger": return msg.name==="reset"?init():model;
+    case "mouseup":
+    case "keydown":
+    case "keyup":
+    case "param": return model;
+  }
+}
+
+function label(v: View, text: string, x: number, y: number): void {
+  v.noStroke();v.fill("#fff3d9");v.rect(x-34,y-17,68,20);
+  v.fill("#405657");v.textSize(11);v.textAlign("center");v.text(text,x,y-3);
+}
+
+function notes(v: View,x: number,y: number,age: number): void {
+  v.noStroke();v.fill("#506f86");v.textSize(22);v.text("♪",x+age*.5,y-age*.8);
+  v.text("♫",x+14+age*.3,y-23-age*.5);
+}
+
+function actEffectA(v: View,t:Thing,age:number): void {
+  const x=t.x,y=t.y, s=Math.sin(age*.2);
+  v.noStroke();
+  switch(t.act){
+    case "loaf": v.fill("#e6ad69");v.ellipse(x+28,y-46-age*.08,31,16);for(let i=0;i<3;i+=1){v.fill("#fff4d8");v.circle(x+23+i*8,y-66-(age+i*13)%28,4);}break;
+    case "sweep":v.stroke("#8a644d");v.strokeWeight(3);v.line(x+25,y-38,x+35+s*14,y+5);v.noStroke();v.fill("#e1cf9e");v.ellipse(x+35+s*14,y+5,22,7);break;
+    case "letters":for(let i=0;i<4;i+=1){v.fill("#fff4d7");v.rect(x+10+i*8+age*.18,y-57-i*13-age*.3,15,10);}break;
+    case "wave":v.fill("#f1dbab");v.circle(x+34,y-72+s*8,8);break;
+    case "ladder":v.stroke("#956c54");v.strokeWeight(4);v.line(x+27,y-5,x+27+s*7,y-119);v.line(x+48,y-5,x+48+s*7,y-119);for(let i=0;i<5;i+=1)v.line(x+27+s*7,y-16-i*20,x+48+s*7,y-16-i*20);break;
+    case "water":v.fill("#85afc9");for(let i=0;i<6;i+=1)v.circle(x+20+i*7,y-30+((age+i*9)%40),4);break;
+    case "music":notes(v,x,y-78,age);break;
+    case "cloth":v.fill("#da8b8b");v.triangle(x+24,y-54,x+75+s*9,y-67,x+67,y-16);break;
+    default:break;
+  }
+}
+
+function actEffectB(v: View,t:Thing,age:number,frame:number): void {
+  const x=t.x,y=t.y,s=Math.sin(age*.2);
+  v.noStroke();
+  switch(t.act){
+    case "books":for(let i=0;i<4;i+=1){v.fill(i%2?"#d58f67":"#6a9690");v.rect(x+23+i*9,y-46-(age%18)*.5-i*5,7,20);}break;
+    case "stars":for(let i=0;i<5;i+=1){v.fill("#f9e5a0");v.circle(x-44+i*19,y-89+Math.sin(frame*.12+i)*9,4+(i%2)*3);}break;
+    case "whistle":notes(v,x,y-72,age*.6);break;
+    case "wheel":v.noFill();v.stroke("#4c6266");v.strokeWeight(3);v.circle(x+20,y-4,30+age*.3);v.circle(x-24,y-4,30+age*.3);break;
+    case "spin":v.noFill();v.stroke("#e8bd83");v.strokeWeight(3);v.arc(x,y-45,35,age*.13,age*.13+Math.PI*1.5);break;
+    case "drive":v.fill("#e8ddc4");for(let i=0;i<3;i+=1)v.ellipse(x-90-i*14,y+16,19,8);break;
+    case "flutter":v.fill("#f2c36f");v.circle(x+61,y-50+s*8,5);break;
+    case "chime":v.noFill();v.stroke("#eecb7e");v.strokeWeight(3);v.circle(x,y-27,65+age*.8);break;
+    case "bloom":v.fill("#f8dfa1");for(let i=0;i<5;i+=1)v.circle(x-24+i*12,y-59-age*.38,4);break;
+    default:break;
+  }
+}
+
+function drawThing(v: View,t:Thing,model:DeepReadonly<Model>):void{
+  const age=model.frame-(model.acts[t.id]??-1000);
+  const active=age>=0&&age<72;
+  const hovered=model.hover===t.id;
+  const bus=t.kind==="bus";
+  const flag=t.kind==="flag";
+  const special=bus||flag||t.kind==="clock"||t.kind==="flowers";
+  const width=bus?152:flag?70:special?72:56;
+  const height=bus?78:flag?76:special?72:84;
+  const pose=active&&age%28<18;
+  const sprite=v.sprite({key:`town-${t.id}-${pose?"act":"idle"}`,width,height},()=>paintSprite(v,t,pose));
+  const idle=Math.sin(model.frame*.055+t.x)*1.4;
+  const hop=hovered?Math.sin(model.frame*.22)*3.8:0;
+  const busShift=bus&&active?Math.sin(Math.min(age,70)/70*Math.PI)*96:0;
+  v.push();v.translate(t.x+busShift,t.y+idle-hop);
+  if(t.y<300&&!special)v.scale(.75);
+  if(!special){
+    const angle=active?(t.act==="spin"?age*.13:Math.sin(age*.22)*.09):Math.sin(model.frame*.045+t.x)*.012;
+    v.rotate(angle);
+  } else if(flag) v.rotate(Math.sin(model.frame*.11)*.035);
+  v.image(sprite,-width/2,-height);
+  v.pop();
+  if(active){actEffectA(v,t,age);actEffectB(v,t,age,model.frame);}
+  if(hovered){
+    v.noFill();v.stroke("#fff6ce");v.strokeWeight(2);v.circle(t.x,t.y-height*.56,Math.min(width,66)+8+Math.sin(model.frame*.25)*4);
+    label(v,t.id.toUpperCase(),t.x,t.y-height-8);
+  }
+}
+
+export function draw(v:View,model:DeepReadonly<Model>,p:Params):void{
+  v.cache(`busy-town-${p.dusk}`,()=>paintTown(v,p.dusk));
+  for(const t of THINGS)drawThing(v,t,model);
+  // A few tiny looping marks make the printed street breathe even at rest.
+  v.noFill();v.stroke("#f9edcd");v.strokeWeight(2);
+  for(let i=0;i<3;i+=1){const x=52+i*324;const dy=Math.sin(model.frame*.06+i)*5;v.arc(x,533+dy,10,0,Math.PI);}
+  v.noStroke();v.fill("#4a6262");v.textAlign("left");v.textSize(11);
+  v.text("WILLOW WICK • click anyone and see what happens",27,686);
+}
+
+===== town-tea.ts =====
+import type { View } from "@ianbicking/canvas-loop";
+
+const INK = "#35454c";
+
+function mark(v: View, points: [number, number][], color: string, width = 3): void {
+  v.noFill(); v.stroke(color); v.strokeWeight(width); v.brush("ink");
+  v.gesture({ pressure: "taper", wobble: 0.65 }); v.curve(points);
+}
+
+function block(v: View, x: number, y: number, w: number, h: number, color: string): void {
+  v.noStroke(); v.fill(color); v.rect(x, y, w, h);
+  v.noFill(); v.stroke(INK); v.strokeWeight(2.5); v.brush("ink"); v.rect(x, y, w, h);
+}
+
+function window(v: View, x: number, y: number, color: string): void {
+  block(v, x, y, 47, 56, "#f6d497");
+  v.noStroke(); v.fill(color); v.rect(x + 6, y + 7, 35, 39);
+  v.fill("#ffffff8a"); v.rect(x + 9, y + 9, 4, 25);
+  mark(v, [[x+23,y+5],[x+23,y+48]], INK, 2);
+  block(v, x - 4, y + 49, 55, 8, "#efbd7b");
+}
+
+function shop(v: View, x: number, w: number, color: string, name: string, awning: string): void {
+  block(v, x, 185, w, 326, color);
+  block(v, x - 7, 170, w + 14, 20, "#f5d5a5");
+  for (let i = 0; i < 5; i += 1) {
+    const wx = x + 24 + i * ((w - 72) / 4);
+    window(v, wx, 228, i % 2 ? "#7ac4bc" : "#94cfc9");
+  }
+  v.noStroke(); v.fill("#fdf0d5"); v.rect(x + 7, 355, w - 14, 66);
+  v.fill(awning); v.rect(x + 6, 416, w - 12, 22);
+  for (let i = 0; i < 8; i += 1) {
+    v.fill(i % 2 ? "#fff2d1" : awning); v.rect(x + 8 + i * ((w - 16) / 8), 438, (w - 16) / 8, 32);
+  }
+  block(v, x + 20, 476, 64, 35, "#eed5a7");
+  v.noStroke(); v.fill(INK); v.textAlign("center"); v.textSize(21); v.text(name, x + w / 2, 399);
+}
+
+function stars(v:View,dusk:boolean):void{
+  if(!dusk)return;
+  v.noStroke();v.fill("#f8e8bc");
+  for(let i=0;i<18;i+=1)v.circle(18+i*53,33+(i*43)%95,2+i%3);
+}
+
+export function paintTown(v: View, dusk: boolean): void {
+  v.paper({ scale: 3, contrast: 0.7, seed: 21 });
+  v.background(dusk ? "#506984" : "#b8e1d8");
+  stars(v,dusk);
+  v.noStroke(); v.fill(dusk ? "#f7e2a8" : "#fff0b8"); v.circle(846, 83, 80);
+  v.fill(dusk ? "#7295a2" : "#eaf3d7");
+  for (let i = 0; i < 8; i += 1) v.ellipse(i * 147 - 30, 140 + i % 2 * 13, 165, 57);
+  // Rooflines are staggered so the page reads as a street rather than a grid.
+  shop(v, 24, 300, "#e9a77e", "BUN & BELL", "#bf6a62");
+  shop(v, 344, 302, "#f4cc86", "POST & PARCEL", "#6d9e9d");
+  shop(v, 665, 309, "#a9c6aa", "ODD & ENDS", "#e89d71");
+  v.noStroke(); v.fill("#865e5a"); v.triangle(12,170,174,86,335,170);
+  v.fill("#557b82"); v.triangle(333,170,495,100,656,170);
+  v.fill("#6e8f77"); v.triangle(654,170,815,79,985,170);
+  for (let x = 55; x < 970; x += 28) mark(v, [[x,171],[x+15,163]], "#fbe7bb", 2);
+  for(let roof=0;roof<3;roof+=1){
+    const left=roof*322+24;
+    for(let row=0;row<3;row+=1)for(let i=0;i<8-row;i+=1){
+      const x=left+21+i*35+row*17,y=151-row*17;
+      mark(v,[[x,y],[x+18,y-4]],"#f1d4ad8c",1.5);
+    }
+  }
+  block(v,72,104,34,44,"#a26b61");
+  block(v,718,100,33,43,"#789b81");
+  v.noFill();v.stroke("#f8e5be");v.strokeWeight(3);
+  for(let i=0;i<3;i+=1)v.arc(90+i*7,81-i*15,18,0,Math.PI);
+  // Shop displays, doors, and tiny objects make the static plate worth searching.
+  for (const x of [39, 358, 681]) {
+    block(v, x + 3, 476, 118, 52, "#e8f2dc");
+    v.noStroke(); v.fill("#d38869");
+    for (let i = 0; i < 4; i += 1) v.ellipse(x+20+i*26, 503, 19, 12);
+  }
+  // Tiny notices, parcels, bread and a signpost break up the long façade.
+  for(const [x,y] of [[288,306],[610,306],[936,306]] as const){
+    block(v,x,y,25,31,"#f9e7c4");
+    mark(v,[[x+5,y+10],[x+18,y+10]],"#9b7e6d",1.4);
+    mark(v,[[x+5,y+18],[x+15,y+18]],"#9b7e6d",1.4);
+  }
+  // Three distinct windows at pavement level: pastries, mail, and curios.
+  for(let i=0;i<5;i+=1){
+    v.noStroke();v.fill(i%2?"#e5ad74":"#b66c55");
+    v.ellipse(56+i*30,490+i%2*6,24,13);
+    v.fill("#f6dda4");v.circle(61+i*30,487+i%2*6,3);
+  }
+  for(let i=0;i<4;i+=1){
+    block(v,376+i*32,482-i%2*7,22,23,"#d2a479");
+    mark(v,[[380+i*32,487-i%2*7],[392+i*32,499-i%2*7]],"#9e765f",1.5);
+  }
+  for(let i=0;i<5;i+=1){
+    v.noStroke();v.fill(["#f0d18a","#90b4b0","#d78b73"][i%3]??"#f0d18a");
+    v.circle(702+i*34,492+i%2*7,14);
+    v.fill("#4d6567");v.circle(702+i*34,492+i%2*7,4);
+  }
+  for(let i=0;i<3;i+=1){block(v,480+i*22,507-i*7,20,16,"#c9956e");}
+  block(v,97,487,24,19,"#e7ad76");
+  v.noStroke();v.fill("#8c614d");v.circle(107,489,5);
+  mark(v,[[834,533],[834,468]],"#4d6564",4);
+  block(v,810,452,53,20,"#f3d69e");
+  v.noStroke();v.fill("#475d5c");v.textSize(10);v.textAlign("center");v.text("BUS STOP",836,466);
+  block(v, 233, 472, 74, 69, "#765c59");
+  block(v, 561, 472, 68, 69, "#668d8b");
+  block(v, 878, 472, 76, 69, "#789272");
+  v.fill("#f6dfa8"); v.circle(290,505,5); v.circle(611,505,5); v.circle(936,505,5);
+  block(v, 0, 537, 1000, 43, "#ead6ab");
+  v.noStroke(); v.fill("#7eaaac"); v.rect(0, 580, 1000, 120);
+  mark(v, [[0,584],[250,581],[550,584],[1000,581]], "#e8f2d2", 4);
+  for (let i = 0; i < 14; i += 1) {
+    v.noStroke(); v.fill("#f1e7ba"); v.rect(i*79+7, 634, 41, 5);
+  }
+  // Lamp posts and planters frame little vignettes.
+  for (const x of [17, 329, 650, 980]) {
+    mark(v, [[x,561],[x,401]], "#45575a", 6);
+    if(dusk){v.noStroke();v.fill(v.ellipseGradient(x,398,104,104,[[0,"#ffe6a482"],[1,"#ffe6a400"]]));v.ellipse(x,398,104,104);}
+    v.noStroke(); v.fill("#f4d994"); v.circle(x,395,17);
+    v.fill("#50615d"); v.rect(x-12,383,24,4);
+  }
+  for (const x of [122, 432, 757, 964]) {
+    block(v,x,531,32,30,"#be896a");
+    v.noStroke(); v.fill("#6d9b74");
+    for (let i=0;i<5;i+=1) v.circle(x+4+i*6,526-i%2*8,14);
+    v.fill("#f8c8a2"); v.circle(x+8,516,5); v.circle(x+25,519,5);
+  }
+  v.paperTexture(0.28);
+}
+
+===== people-tea.ts =====
+import type { View } from "@ianbicking/canvas-loop";
+
+export type Kind = "fox" | "bear" | "cat" | "mouse" | "rabbit" | "dog" | "bird" | "frog";
+export interface Thing { id: string; x: number; y: number; kind: Kind | "bus" | "flag" | "clock" | "flowers"; color: string; act: string }
+
+export const THINGS: readonly Thing[] = [
+  {id:"baker",x:87,y:482,kind:"bear",color:"#b87955",act:"loaf"},
+  {id:"sweeper",x:183,y:493,kind:"fox",color:"#cd7952",act:"sweep"},
+  {id:"mailcarrier",x:395,y:488,kind:"rabbit",color:"#e6d3a7",act:"letters"},
+  {id:"shopkeeper",x:724,y:490,kind:"frog",color:"#79a474",act:"wave"},
+  {id:"painter",x:906,y:483,kind:"dog",color:"#cba27a",act:"ladder"},
+  {id:"gardener",x:129,y:283,kind:"mouse",color:"#aeb0a1",act:"water"},
+  {id:"violinist",x:243,y:283,kind:"cat",color:"#bd927d",act:"music"},
+  {id:"tailor",x:449,y:283,kind:"fox",color:"#cb8c63",act:"cloth"},
+  {id:"librarian",x:563,y:283,kind:"bear",color:"#a78e74",act:"books"},
+  {id:"astronomer",x:770,y:283,kind:"rabbit",color:"#e7d4aa",act:"stars"},
+  {id:"conductor",x:44,y:566,kind:"bird",color:"#668ca0",act:"whistle"},
+  {id:"cyclist",x:315,y:564,kind:"mouse",color:"#a8a79d",act:"wheel"},
+  {id:"skater",x:550,y:564,kind:"cat",color:"#db9e83",act:"spin"},
+  {id:"bus",x:749,y:604,kind:"bus",color:"#e3a15b",act:"drive"},
+  {id:"flag",x:471,y:153,kind:"flag",color:"#db725f",act:"flutter"},
+  {id:"clock",x:496,y:392,kind:"clock",color:"#f1d99d",act:"chime"},
+  {id:"flowers",x:805,y:538,kind:"flowers",color:"#e8a58d",act:"bloom"},
+];
+
+function paintSpecial(v:View,thing:Thing,pose:boolean):boolean{
+  const {kind,color}=thing;
+  v.noStroke();
+  if (kind === "bus") {
+    v.fill("#dc8f57"); v.rect(1,8,149,56); v.fill("#f6d391"); v.rect(13,15,123,28);
+    v.fill("#668e9c"); for(let i=0;i<4;i+=1)v.rect(20+i*29,19,22,19);
+    v.fill("#3e5357"); v.circle(30,66,21); v.circle(119,66,21);
+    v.fill("#f8eed0"); v.textSize(13); v.textAlign("center"); v.text("TOWN LOOP",75,57);
+    return true;
+  }
+  if(kind==="flag") { v.fill("#534c4b");v.rect(4,0,4,72);v.fill(color);v.triangle(8,5,pose?57:50,pose?21:9,8,36);return true; }
+  if(kind==="clock") {v.fill("#f7dfad");v.circle(30,30,54);v.fill("#586d70");v.circle(30,30,46);v.fill("#f9edce");v.circle(30,30,40);v.stroke("#344a4c");v.strokeWeight(3);v.line(30,30,pose?39:30,14);v.line(30,30,pose?22:42,35);return true;}
+  if(kind==="flowers") {v.fill("#b07963");v.rect(3,34,65,32);for(let i=0;i<6;i+=1){const x=10+i*10;v.stroke("#668f68");v.strokeWeight(2);v.line(x,39,x,pose?13:19);v.noStroke();v.fill(i%2?"#edacaa":"#f1d68d");v.circle(x,pose?13:19,13);}return true;}
+  return false;
+}
+
+function outfit(id:string):string{
+  if(id==="baker")return "#f4ead4";
+  if(id==="mailcarrier")return "#54849d";
+  if(id==="shopkeeper")return "#d4a765";
+  if(id==="painter")return "#ebe6c8";
+  if(id==="astronomer")return "#71728d";
+  if(id==="violinist")return "#b86662";
+  return "#547d82";
+}
+
+function props(v:View,thing:Thing):void{
+  if(thing.id==="baker"){v.noStroke();v.fill("#f9f1db");v.rect(13,5,30,8);v.rect(19,0,18,10);}
+  if(thing.id==="mailcarrier"){v.noStroke();v.fill("#d9ae70");v.rect(34,52,16,13);}
+  if(thing.id==="painter"){v.noStroke();v.fill("#d27c60");v.rect(14,6,28,6);}
+  if(thing.id==="sweeper"){v.stroke("#9b7156");v.strokeWeight(2);v.line(50,52,54,82);v.noStroke();v.fill("#e5c99d");v.ellipse(54,80,13,5);}
+  if(thing.id==="gardener"){v.noStroke();v.fill("#89aec0");v.ellipse(47,65,17,13);v.rect(40,54,15,9);}
+  if(thing.id==="violinist"){v.noStroke();v.fill("#a86f49");v.ellipse(44,58,17,10);v.stroke("#695648");v.strokeWeight(2);v.line(49,51,51,35);}
+  if(thing.id==="tailor"){v.noStroke();v.fill("#dfb488");v.triangle(43,48,49,65,37,65);v.circle(43,51,6);}
+  if(thing.id==="librarian"){v.noStroke();v.fill("#be8b61");v.rect(37,52,17,14);v.fill("#f8e4bd");v.rect(39,54,13,11);}
+  if(thing.id==="astronomer"){v.stroke("#dfbc7d");v.strokeWeight(5);v.line(44,47,59,32);v.noStroke();v.fill("#f4d997");v.circle(58,32,9);}
+  if(thing.id==="conductor"){v.noStroke();v.fill("#344f66");v.rect(11,7,34,7);v.rect(17,0,22,10);}
+  if(thing.id==="cyclist"){v.noStroke();v.fill("#e8bf7c");v.rect(15,8,27,6);}
+  if(thing.id==="skater"){v.noStroke();v.fill("#426b77");v.rect(17,4,26,6);}
+}
+
+export function paintSprite(v: View, thing: Thing, pose: boolean): void {
+  const {kind,color}=thing;
+  if(paintSpecial(v,thing,pose))return;
+  v.noStroke();
+  // A character is drawn around a fixed foot position in a 56×84 sprite.
+  const ears=kind==="rabbit"?23:kind==="fox"||kind==="cat"?13:kind==="mouse"?10:0;
+  v.fill("#495459");v.ellipse(19,76,16,8);v.ellipse(38,76,16,8);
+  v.fill(outfit(thing.id));v.ellipse(28,57,36,40);
+  if(kind==="fox"||kind==="cat") {v.fill(color);v.triangle(9,62,-3,pose?44:55,14,51);}
+  v.fill(color);
+  if(ears){v.ellipse(14,17,kind==="rabbit"?12:15,ears*1.6);v.ellipse(42,17,kind==="rabbit"?12:15,ears*1.6);}
+  v.circle(28,27,39);
+  v.fill("#f3d6ac");v.ellipse(28,35,24,17);
+  v.fill("#263d43");v.circle(21,27,3.5);v.circle(35,27,3.5);v.circle(28,36,3);
+  v.noFill();v.stroke("#34474a");v.strokeWeight(1.6);v.arc(28,39,5,0,Math.PI);
+  v.stroke(color);v.strokeWeight(7);v.line(13,48,pose?2:8,pose?30:61);v.line(43,48,pose?55:49,pose?32:61);
+  if(kind==="bird"){v.noStroke();v.fill("#e7bc70");v.triangle(28,34,48,38,28,42);}
+  props(v,thing);
+}
+
+===== events.json =====
+[
+  {
+    "frame": 8,
+    "type": "mousemove",
+    "x": 87,
+    "y": 452
+  },
+  {
+    "frame": 8,
+    "type": "mousedown",
+    "x": 87,
+    "y": 452
+  },
+  {
+    "frame": 14,
+    "type": "snapshot",
+    "label": "baker act"
+  },
+  {
+    "frame": 21,
+    "type": "mousemove",
+    "x": 183,
+    "y": 463
+  },
+  {
+    "frame": 21,
+    "type": "mousedown",
+    "x": 183,
+    "y": 463
+  },
+  {
+    "frame": 27,
+    "type": "snapshot",
+    "label": "sweeper act"
+  },
+  {
+    "frame": 34,
+    "type": "mousemove",
+    "x": 395,
+    "y": 458
+  },
+  {
+    "frame": 34,
+    "type": "mousedown",
+    "x": 395,
+    "y": 458
+  },
+  {
+    "frame": 40,
+    "type": "snapshot",
+    "label": "mailcarrier act"
+  },
+  {
+    "frame": 47,
+    "type": "mousemove",
+    "x": 724,
+    "y": 460
+  },
+  {
+    "frame": 47,
+    "type": "mousedown",
+    "x": 724,
+    "y": 460
+  },
+  {
+    "frame": 53,
+    "type": "snapshot",
+    "label": "shopkeeper act"
+  },
+  {
+    "frame": 60,
+    "type": "mousemove",
+    "x": 906,
+    "y": 453
+  },
+  {
+    "frame": 60,
+    "type": "mousedown",
+    "x": 906,
+    "y": 453
+  },
+  {
+    "frame": 66,
+    "type": "snapshot",
+    "label": "painter act"
+  },
+  {
+    "frame": 73,
+    "type": "mousemove",
+    "x": 129,
+    "y": 255
+  },
+  {
+    "frame": 73,
+    "type": "mousedown",
+    "x": 129,
+    "y": 255
+  },
+  {
+    "frame": 79,
+    "type": "snapshot",
+    "label": "gardener act"
+  },
+  {
+    "frame": 86,
+    "type": "mousemove",
+    "x": 243,
+    "y": 255
+  },
+  {
+    "frame": 86,
+    "type": "mousedown",
+    "x": 243,
+    "y": 255
+  },
+  {
+    "frame": 92,
+    "type": "snapshot",
+    "label": "violinist act"
+  },
+  {
+    "frame": 99,
+    "type": "mousemove",
+    "x": 449,
+    "y": 255
+  },
+  {
+    "frame": 99,
+    "type": "mousedown",
+    "x": 449,
+    "y": 255
+  },
+  {
+    "frame": 105,
+    "type": "snapshot",
+    "label": "tailor act"
+  },
+  {
+    "frame": 112,
+    "type": "mousemove",
+    "x": 563,
+    "y": 255
+  },
+  {
+    "frame": 112,
+    "type": "mousedown",
+    "x": 563,
+    "y": 255
+  },
+  {
+    "frame": 118,
+    "type": "snapshot",
+    "label": "librarian act"
+  },
+  {
+    "frame": 125,
+    "type": "mousemove",
+    "x": 770,
+    "y": 255
+  },
+  {
+    "frame": 125,
+    "type": "mousedown",
+    "x": 770,
+    "y": 255
+  },
+  {
+    "frame": 131,
+    "type": "snapshot",
+    "label": "astronomer act"
+  },
+  {
+    "frame": 138,
+    "type": "mousemove",
+    "x": 44,
+    "y": 536
+  },
+  {
+    "frame": 138,
+    "type": "mousedown",
+    "x": 44,
+    "y": 536
+  },
+  {
+    "frame": 144,
+    "type": "snapshot",
+    "label": "conductor act"
+  },
+  {
+    "frame": 151,
+    "type": "mousemove",
+    "x": 315,
+    "y": 534
+  },
+  {
+    "frame": 151,
+    "type": "mousedown",
+    "x": 315,
+    "y": 534
+  },
+  {
+    "frame": 157,
+    "type": "snapshot",
+    "label": "cyclist act"
+  },
+  {
+    "frame": 164,
+    "type": "mousemove",
+    "x": 550,
+    "y": 534
+  },
+  {
+    "frame": 164,
+    "type": "mousedown",
+    "x": 550,
+    "y": 534
+  },
+  {
+    "frame": 170,
+    "type": "snapshot",
+    "label": "skater act"
+  },
+  {
+    "frame": 177,
+    "type": "mousemove",
+    "x": 749,
+    "y": 584
+  },
+  {
+    "frame": 177,
+    "type": "mousedown",
+    "x": 749,
+    "y": 584
+  },
+  {
+    "frame": 183,
+    "type": "snapshot",
+    "label": "bus act"
+  },
+  {
+    "frame": 190,
+    "type": "mousemove",
+    "x": 485,
+    "y": 113
+  },
+  {
+    "frame": 190,
+    "type": "mousedown",
+    "x": 485,
+    "y": 113
+  },
+  {
+    "frame": 196,
+    "type": "snapshot",
+    "label": "flag act"
+  },
+  {
+    "frame": 203,
+    "type": "mousemove",
+    "x": 496,
+    "y": 365
+  },
+  {
+    "frame": 203,
+    "type": "mousedown",
+    "x": 496,
+    "y": 365
+  },
+  {
+    "frame": 209,
+    "type": "snapshot",
+    "label": "clock act"
+  },
+  {
+    "frame": 216,
+    "type": "mousemove",
+    "x": 805,
+    "y": 509
+  },
+  {
+    "frame": 216,
+    "type": "mousedown",
+    "x": 805,
+    "y": 509
+  },
+  {
+    "frame": 222,
+    "type": "snapshot",
+    "label": "flowers act"
+  },
+  {
+    "frame": 229,
+    "type": "param",
+    "name": "dusk",
+    "value": true
+  },
+  {
+    "frame": 232,
+    "type": "snapshot",
+    "label": "evening town"
+  },
+  {
+    "frame": 237,
+    "type": "trigger",
+    "name": "reset"
+  },
+  {
+    "frame": 239,
+    "type": "snapshot",
+    "label": "reset town"
+  }
+]

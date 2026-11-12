@@ -10,7 +10,7 @@
 export * from "../core/tea.js";
 export { isPathShape, resolveGradient, tracePath, tracePolygon } from "../core/paint.js";
 export type { Ctx2D, Ctx2DGradient, CtxTextAlign, CtxTextBaseline } from "../core/paint.js";
-export { Painter } from "../core/painter.js";
+export { Painter } from "../core/painter/engine.js";
 export { SeededRandom } from "../core/prng.js";
 export { formatArgs, formatValue } from "../core/format.js";
 export type { EventType, LogLevel, SketchEvent, SketchHost, SketchInputEvent } from "../core/types.js";

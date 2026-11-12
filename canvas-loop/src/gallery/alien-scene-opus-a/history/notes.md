@@ -1,0 +1,54 @@
+# alien-scene-opus-a notes
+
+## Cycle 1
+**Intent:** First full composition on an 800×600 page: dusk meadow (gradient sky, moon with glow, stars, airbrush clouds, violet far hills, bristle-textured meadow), a landed saucer on the right with an open hatch spilling warm light, and the alien left of centre waving at the reader. Each alien part is filled flat, then clipped wash (cool shadow, left) and airbrush (warm light, right), then inked. Grass blades with tapered ink, fireflies as radial glows. Zooms on the head (230,160,200,160) and the waving hand/ship hatch (440,220,240,300).
+
+**Seen:** The page reads as a scene: moon, stars, pink horizon, saucer, alien. But the alien is lit like the guide (bright flat green, the shading wash and airbrush barely show at 1×; the head zoom shows a faint grainy left edge and a pale right band, nothing more) so it looks pasted onto a dusk scene. The dome's lower outline shows through the saucer (drawn in the wrong order). The hatch is a flat cream parallelogram with no opening on the saucer. The meadow bristle strokes read as horizontal stripes, not grass. Cheeks are invisible at 1×. The pose is the guide's pose.
+
+## Cycle 2
+**Intent:** Relight the alien for dusk: a violet multiply wash over each part's left/bottom, pencil hatching in the shadow, a stronger warm airbrush rim on the right (the hatch light). Tilt the head 0.12 rad toward the reader and give the lowered hand a pink flower, so the pose and the reason for the wave are mine. Fix dome outline order, add a dome highlight, and rebuild the hatch as a glowing slot under the saucer with a gradient beam and an inked ramp. Zooms on the head and on the body/flower.
+
+**Seen:** Head tilt works and makes the alien livelier; the clip and brushes follow the rotation. The body zoom shows the pencil hatching as fine diagonal lines in the lower left and a faint grain, but the violet multiply wash is too weak: at 1× the alien is still bright, nearly uniform green. The warm rim on the right is invisible. The flower's stem is hidden under the arm (I drew the flower before the arm), so the pink flower floats in the air. Fireflies sitting on the alien's belly read as blemishes. Hatch: the beam and slot now read as light, but the ramp is a flat grey board. Meadow still has the horizontal bristle stripes.
+
+## Cycle 3
+**Intent:** Strengthen the dusk lighting on the alien (multiply wash opacity 0.6→0.85, deeper violet; rim airbrush wider and brighter). Vary the outline weight around each shape with pressure keyframes (heavy bottom-left, light top). Draw the flower after the hand so the stem shows. Place fireflies by hand away from the alien. Replace the meadow bristle stripes with wash patches, a warm airbrush pool of hatch light, and chalk strokes along the slope (light above, dark in the foreground). Zooms: body/flower and the meadow near the ramp.
+
+**Seen:** The stronger multiply wash now shows: the alien's left sides are a darker, grainy green and the figure sits better in the dusk. The varied outline weight is visible (thicker bottoms). The flower stem now shows, running down into the hand, though it crosses over the hand outline. The meadow zoom shows mottled chalk texture that reads as grass and a warm pool under the hatch; the stripes are gone. Still weak: the warm rim on the right of the alien is hardly visible; the far hills are a flat violet band with straight segments; the ramp is a flat grey parallelogram; the saucer is a flat gradient with dot lights, the most clip-art thing on the page.
+
+## Cycle 4
+**Intent:** (a) Rim light: inside each alien part's clip, draw the part's own outline shifted 5px left in warm airbrush, so a band falls just inside the right edge. (b) Paint the saucer: pink sky reflection on top, multiply violet underside, a white bristle highlight streak, a seam line; rim lights get glows and placement along the curve. (c) Ramp gets a dark side edge, a light airbrush down its middle, and slat lines. (d) Background: curved far hills with pink wash, a middle-distance tree line, and a tiny farmhouse with a lit window on the left hill. Zooms: alien right edge/arm and the ship.
+
+**Seen:** Big gain in the background: curved hills with pink wash, a tree line and the tiny lit farmhouse give depth and a story (someone up there is watching). The saucer now has a pink sky reflection, a darker underside, a seam and glowing lights; it no longer looks like clip-art at 1×. The rim light shows in the zoom as a thin yellow band along the right edges of the arm and hand, but is still weak at 1×. Two regressions/bugs: the ramp is now a dark slab (I reused the side fill colour for the ramp top: my bug), and in the face zoom the diagonal pencil hatching across the cheek reads as stubble, which makes the face look dirty. The shadow is a diagonal blob that does not follow the forms.
+
+## Cycle 5
+**Intent:** Replace the blob shadow with a form shadow: the part's own outline shifted up-right, drawn as a wide multiply wash, so a violet crescent sits inside the bottom-left edge of every part; replace the diagonal hatching with three pencil contour lines that follow that crescent. Fix the ramp top fill. Stronger cheeks. Pink reflection low on the dome. Zooms: face, and lower body/legs.
+
+**Seen:** The form shadow works: every part now has a violet crescent inside its lower-left edge that follows the shape, and the right edges carry a pale warm band, so head, body and limbs read as round. In the zooms the wash is very grainy, a mottled, spongy texture that reads a little like moss or dirt on the skin; the pencil contours dissolve into it and are not readable as lines. The ramp is light again. The cheeks are still almost invisible (a short airbrush line gives very little paint). Foreground grass is a sparse, even scatter of single blades.
+
+## Cycle 6
+**Intent:** Lower the shadow wash's paper grain (grain 0.25) and pencil opacity so the skin looks painted, not dirty. Cheeks as radial-gradient blush ellipses. Replace scattered single blades with grass clumps (fans of 5-9 blades, larger toward the bottom, warm-tinted inside the hatch light), small pink/white meadow flowers that echo the one in the alien's hand, and tall dark clumps framing the bottom corners. Add a chalk shooting star in the empty upper right. Zooms: face, and lower-right meadow.
+
+**Seen:** Clear improvements. The lower grain made the skin shading smooth and painted; the face zoom shows a clean violet crescent along the lower left and a warm band on the right. The cheeks finally read as pink blush. The meadow zoom shows clumps of grass fanning out, warm-yellow blades inside the hatch light, pink and white flowers, and the dark corner clumps frame the bottom of the page. The shooting star in chalk reads as a dotted, broken line, more like a dashed path than a streak. The lit middle of the head and body is still one flat bright green area.
+
+## Cycle 7
+**Intent:** Paint the lit skin: broad, lighter-green bristle strokes that follow the form (arcs across the forehead and chin, vertical strokes on the body) under the shadow, and a softer belly. Shooting star rebuilt as an airbrush glow trail with a thin ink core. Try a whole-page paper tone: a multiply group (opacity 0.22) of grainy wash strokes, to put everything on one sheet of paper. Zooms: forehead/head, body, and a sky patch (to judge the paper tone).
+
+**Seen:** The shooting star is now a clean glowing streak (zoom 3); a clear win over the chalk version. The body zoom shows the bristle strokes as soft vertical streaks under the shadow, so the lit area no longer reads as one flat fill; on the head they are subtler. The paper tone hurt more than it helped: at 1× the whole page is a little duller (whites of the eyes and the moon greyer), and in the zoom it adds a uniform felt-like grain on top of the skin texture. The rim light is still too weak to read at 1×. The alien's ground shadow is a centred dark ellipse that ignores where the light comes from.
+
+## Cycle 8
+**Intent:** Cut the paper tone from 0.22 to 0.13 opacity so it only hints at paper. Make the rim light brighter and wider (opacity 1, #fff0a8, 11px). Replace the centred ground shadow with a soft radial shadow stretched to the left, away from the hatch light. Zooms: alien right edge (arm and body), feet/shadow.
+
+**Seen:** The lighter paper tone is a fair compromise: the eyes and moon are bright again and the grain is only visible in zooms. The rim light is now visible in the zoom along the outer edge of the raised arm, the hand and the right side of the body, and faintly at 1×. The cast shadow is soft and leans left; it is subtle but correct. New problem seen only in the feet zoom: grass clumps are drawn on top of the legs (one sits mid-shin), which looks like stickers on the leg rather than grass in front of it.
+
+## Cycle 9
+**Intent:** Draw the alien's outlines, antennae and smile in a deep green (#1d3b33) instead of the navy ink used for the ship, so the character's line is softer and belongs to its colour, as in painted picture books. Keep grass clumps off the alien's legs (only at or below foot level). Zooms: head with antennae, and feet.
+
+**Seen:** The green line helps a little: in the head zoom the outlines and antennae are a dark green that sits with the skin instead of a hard navy cut-out; at 1× the change is barely visible. The legs are clean now and grass clumps sit around the feet only. Remaining: the light from the hatch does not reach the alien except as the thin rim; the tree line is flat dark cones.
+
+## Cycle 10
+**Intent:** Final cycle. A screen-blended warm bloom (radial gradient, group opacity 0.5) around the hatch so its light spills over the ramp, grass and the alien's lower right side, tying the two figures together. Give each distant tree a pale violet sky edge on its top-left (the outline shifted down-right, clipped). Zooms: the space between alien and ship, and the tree line.
+
+**Seen:** The bloom is barely visible at 1×: a slight warm lift on the grass between the alien and the ramp, and nothing I can see on the alien itself. In the zoom it yellows the meadow near the ramp a little. The tree edges show in the zoom as a pale line inside each tree's left edge; it reads more like a bevel than like sky light, a small and slightly odd change. Neither change hurt; neither did much. Final frame is this one.
+
+## After cycle 10 (no new picture)
+ESLint's max-lines (600) failed on the 915-line sketch, so I split it into `common.ts` (constants, `ellipsePts`, `tube`), `scene.ts` (sky, land, saucer, hatch, grass, fireflies, bloom, paper tone) and `sketch.ts` (the alien, `setup`, `draw`), and removed two unused colour constants. I rendered once more only to byte-compare: the frame is identical to cycle 10. `history/cycle-10.txt` is the pre-split single file.

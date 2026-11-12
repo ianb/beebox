@@ -73,7 +73,9 @@ write_files:
   # Runtime and cache directories the units expect. /run/beebox holds the box
   # sockets (made by the socket units) and the per-box hub secrets (written by
   # the hub user, read by systemd for LoadCredential=), so the hub user must be
-  # able to create files there.
+  # able to create files there. Keep in step with
+  # deploy/systemd/beebox.tmpfiles.conf, which the deploy installs on every host
+  # (test/deploy/host-memory.test.ts checks the two match).
   - path: /etc/tmpfiles.d/beebox.conf
     permissions: "0644"
     content: |

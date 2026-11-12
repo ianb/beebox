@@ -141,7 +141,6 @@ export function init(): Model {
   return { particles: [], frame: 0, mode: { type: "idle" } };
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch (msg.type) {
     case "tick":
@@ -225,7 +224,6 @@ function drawHud(a: { v: View; model: DeepReadonly<Model>; p: Params }): void {
   v.text(`palette ${p.palette}   attractor ${attractor}`, 10, 28);
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   if (p.trails) {
     // Translucent overlay preserves prior frames → motion trails.

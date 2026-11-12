@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "./errors.js";
@@ -11,6 +12,10 @@ import { run } from "./runtime.js";
 import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { teaRun } from "./tea-runtime.js";
+import { encodeZoomPng, parseZoom } from "./recorder/zoom.js";
+import { statsLine, writeDiff } from "./diff.js";
+import { CHECKPOINT_ENV, saveCheckpoint } from "./checkpoint/save.js";
+import { checkpointPage } from "./checkpoint/page.js";
 import type { ScriptEvent } from "./events.js";
 import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 
@@ -83,6 +88,24 @@ function reportGalleryResult(result: GalleryCheckResult): void {
   if (!result.ok) process.exitCode = 1;
 }
 
+/** `cli zoom <frame.png> <spec>...`: write enlarged crops of an existing frame beside it. */
+async function zoomFile(args: readonly string[]): Promise<void> {
+  const [file, ...specs] = args;
+  if (file === undefined || specs.length === 0) {
+    throw new CliError({ detail: "usage: cli zoom <frame.png> <x,y,w,h[@scale]>..." });
+  }
+  const image = await loadImage(resolve(file));
+  const canvas = new Canvas(image.width, image.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, image.width, image.height);
+  for (const [index, spec] of specs.entries()) {
+    const out = join(dirname(resolve(file)), `${basename(file, ".png")}-crop${index + 1}.png`);
+    writeFileSync(out, encodeZoomPng(pixels, parseZoom(spec)));
+    console.log(out);
+  }
+}
+
 async function main(): Promise<void> {
   const parsed = parseArgs({
     args: process.argv.slice(2),
@@ -94,6 +117,11 @@ async function main(): Promise<void> {
       seed: { type: "string" },
       fps: { type: "string" },
       every: { type: "string" },
+      zoom: { type: "string", multiple: true },
+      timing: { type: "boolean" },
+      outline: { type: "boolean" },
+      note: { type: "string" },
+      title: { type: "string" },
     },
   });
   const command = parsed.positionals[0];
@@ -105,10 +133,32 @@ async function main(): Promise<void> {
     reportGalleryResult(await checkGallery());
     return;
   }
+  if (command === "diff") {
+    const [before, after] = parsed.positionals.slice(1);
+    if (before === undefined || after === undefined) {
+      throw new CliError({ detail: "usage: cli diff <before.png> <after.png> [--out dir]" });
+    }
+    const outDir = resolve(parsed.values.out ?? "diff");
+    const { stats } = await writeDiff(resolve(before), { after: resolve(after), outDir });
+    console.log(`${outDir} — ${statsLine(stats)}`);
+    return;
+  }
+  if (command === "checkpoints") {
+    const dir = parsed.positionals[1];
+    if (dir === undefined) throw new CliError({ detail: "usage: cli checkpoints <dir> [--out page.html] [--title text]" });
+    const out = resolve(parsed.values.out ?? join(dir, "index.html"));
+    writeFileSync(out, await checkpointPage(resolve(dir), parsed.values.title ?? "How this drawing was made"));
+    console.log(out);
+    return;
+  }
+  if (command === "zoom") {
+    await zoomFile(parsed.positionals.slice(1));
+    return;
+  }
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
     });
   }
   if (sketchArg === undefined) {
@@ -121,7 +171,8 @@ async function main(): Promise<void> {
   const every = intOption({ value: values.every, fallback: 30, name: "every" });
   const outDir = resolve(values.out ?? "out");
   const eventsPath = values.events;
-  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath };
+  const zooms = (values.zoom ?? []).map((spec) => parseZoom(spec));
+  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms, timing: values.timing === true, outline: values.outline === true };
 
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);
@@ -129,13 +180,23 @@ async function main(): Promise<void> {
   if (isTeaModule(imported)) {
     const module = toTeaModule(imported);
     const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
-    reportResult(teaRun({ module, events, ...common }));
+    finishRun(teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
     return;
   }
   const module = toModule(imported);
   let events: ScriptEvent[] = [];
   if (eventsPath !== undefined) events = parseEvents(readEventsJson(resolve(eventsPath)));
-  reportResult(run({ module, events, ...common }));
+  finishRun(run({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
+}
+
+/** Report the run, and save a checkpoint when CANVAS_LOOP_CHECKPOINTS names a directory. */
+function finishRun(result: RunResult, made: { sketchPath: string; eventsPath: string | undefined; outDir: string; note: string | undefined }): void {
+  reportResult(result);
+  const dir = process.env[CHECKPOINT_ENV];
+  if (dir === undefined || dir === "") return;
+  const events = made.eventsPath === undefined ? undefined : resolve(made.eventsPath);
+  const saved = saveCheckpoint(resolve(dir), { ...made, eventsPath: events, args: process.argv.slice(2), errors: result.errors });
+  console.log(`checkpoint ${saved}`);
 }
 
 try {

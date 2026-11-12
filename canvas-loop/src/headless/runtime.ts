@@ -1,5 +1,7 @@
 import { bucketByFrame, dispatchEvent } from "./events.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { Zoom } from "./recorder/zoom.js";
+import { FrameTimer } from "./recorder/timing.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import type { RunMeta } from "./transcript.js";
@@ -38,6 +40,12 @@ export interface RunOptions {
   seed: number;
   fps: number;
   every: number;
+  /** Regions to write as enlarged crops beside every captured frame (`--zoom`). */
+  zooms?: readonly Zoom[];
+  /** Add a timing summary line to the transcript (`--timing`). */
+  timing?: boolean;
+  /** Outline placed sprites, clips and `debugBox`es over each frame (`--outline`). */
+  outline?: boolean;
   events: readonly ScriptEvent[];
   eventsPath: string | undefined;
 }
@@ -52,12 +60,14 @@ class CanvasLoopRunner {
   // Per-event engagement accumulator: reset before each dispatch, read after.
   // Sketch.handled pushes here via the injected callback.
   #handledNames: string[] = [];
+  #timer: FrameTimer | undefined;
 
   constructor(options: RunOptions) {
     this.#options = options;
     this.#recorder = new FrameRecorder({
       frames: options.frames,
       every: options.every,
+      ...(options.zooms === undefined ? {} : { zooms: options.zooms }),
       readPixels: () => this.#sketch.readPixels(),
       canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
     });
@@ -66,7 +76,9 @@ class CanvasLoopRunner {
       seed: options.seed,
       fps: options.fps,
       onHandled: (name) => this.#handledNames.push(name),
+      outline: options.outline === true,
     });
+    if (options.timing === true) this.#timer = new FrameTimer();
     this.#eventsByFrame = bucketByFrame(options.events);
   }
 
@@ -74,6 +86,7 @@ class CanvasLoopRunner {
     const restoreConsole = patchConsole(this.#recorder);
     try {
       withGuards(() => this.#execute());
+      if (this.#timer !== undefined) this.#recorder.recordLog({ level: "log", message: this.#timer.report() });
     } finally {
       restoreConsole();
     }
@@ -114,7 +127,10 @@ class CanvasLoopRunner {
         });
       }
     }
-    this.#options.module.draw(this.#sketch);
+    const draw = (): void => this.#options.module.draw(this.#sketch);
+    if (this.#timer === undefined) draw();
+    else this.#timer.draw(frame, draw);
+    this.#sketch.finishFrame();
     this.#recorder.captureIfNeeded(frame);
   }
 

@@ -36,9 +36,10 @@ current truth.
 - **`docs/box/`** — prose docs written for box agents, shipped into every
   installed package's `box-docs/` beside the generated reference docs
   (`src/core/docs-gen/package-docs/core.ts`). Each has a `read-when:` frontmatter
-  line that becomes its row in the `box-docs/README.md` index. Currently
-  [what you could do with your box](box/what-you-could-do.md) and
-  [interface cards](box/interface-cards.md).
+  line that becomes its row in the `box-docs/README.md` index. Examples:
+  [what you could do with your box](box/what-you-could-do.md),
+  [interface cards](box/interface-cards.md), and
+  [about Bee Box](box/about-bee-box.md) (the project, its code, and its site).
 - **`docs/architecture/`** — the onboarding narrative series: longform,
   human-facing "what is this thing" writing. Not required reading, not a
   design-rationale reference (that's `docs/design/`).

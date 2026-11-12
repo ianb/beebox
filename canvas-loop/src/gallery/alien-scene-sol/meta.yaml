@@ -1,0 +1,22 @@
+slug: alien-scene-sol
+title: "Alien picture-book scene (sol)"
+created: 2026-11-11
+model: gpt-6-sol
+driver: opus-5.5
+cycles: 3
+tier: mutable
+harness-commit: 69002fd6
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 2 (own scene, guide fixes the character only). Boxholder review pending. Dusk meadow, alien in a scarf and satchel waving to a small friend in a departing saucer; moon, layered hills, flowers. Bristle-heavy painting gives the most painted look of the round; long bristle sky strokes read as stripes and the hand is a mitten. Stopped after 3 of 10 cycles.
+self-report-summary: >
+  Quick and absorbing; bristle gives most of the paint character but long repeated strokes make a mechanical pattern. Wanted control of a mark's internal colour and edge, and richer broken texture in distant land.
+features-exercised:
+  - brushes (ink, wash, airbrush, chalk, pencil, bristle)
+  - groups with blend modes
+  - clip with curvePath
+  - zoomed crops (--zoom)

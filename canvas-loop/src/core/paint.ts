@@ -16,6 +16,9 @@
 // assignability doesn't hold, but every method/property the engine touches is
 // shared and behaves identically).
 
+/** Text weight and slant, as p5's `textStyle`. */
+export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
+
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
 /** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */
@@ -26,17 +29,62 @@ export interface Ctx2DGradient {
   addColorStop(offset: number, color: string): void;
 }
 
+/**
+ * An offscreen surface's image, as `drawImage` accepts it. Opaque: each runtime
+ * hands its real canvas through one boundary cast in its `makeLayer` factory.
+ */
+export interface LayerImage {
+  readonly layerImageBrand: never;
+}
+
+/** An offscreen drawing surface: a context to draw on and the image to composite. */
+export interface Layer {
+  readonly ctx: Ctx2D;
+  readonly image: LayerImage;
+}
+
+/** Make an offscreen layer of the given device-pixel size (runtime-specific). */
+export type MakeLayer = (size: { width: number; height: number }) => Layer;
+
+/** A 2D affine transform, `[a b c d e f]` as Canvas2D reports it. */
+export interface CtxTransform {
+  readonly a: number;
+  readonly b: number;
+  readonly c: number;
+  readonly d: number;
+  readonly e: number;
+  readonly f: number;
+}
+
+/** Pixel data from `createImageData`. */
+export interface CtxImageData {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Uint8ClampedArray;
+}
+
 /** The exact 2D-context surface the drawing engine uses. */
 export interface Ctx2D {
   fillStyle: string | Ctx2DGradient;
   strokeStyle: string | Ctx2DGradient;
   lineWidth: number;
+  lineCap: "butt" | "round" | "square";
+  lineJoin: "bevel" | "miter" | "round";
+  globalAlpha: number;
+  globalCompositeOperation: string;
   font: string;
   textAlign: CtxTextAlign;
   textBaseline: CtxTextBaseline;
   save(): void;
   restore(): void;
   resetTransform(): void;
+  getTransform(): CtxTransform;
+  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  drawImage(image: LayerImage, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
+  createImageData(width: number, height: number): CtxImageData;
+  getImageData(x: number, y: number, w: number, h: number): CtxImageData;
+  putImageData(imageData: CtxImageData, dx: number, dy: number): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
   translate(x: number, y: number): void;
   rotate(angle: number): void;
   scale(x: number, y: number): void;
@@ -75,6 +123,27 @@ export type PathCommand =
   | readonly ["bezier", number, number, number, number, number, number]
   | readonly ["close"];
 
+/**
+ * How drawn pixels combine with what is already there. `"normal"` is Canvas2D's
+ * `source-over`; the rest are Canvas2D composite modes that Skia and browsers share.
+ */
+export type BlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "soft-light"
+  | "hard-light"
+  | "color-dodge"
+  | "color-burn";
+
+/** The Canvas2D `globalCompositeOperation` value for a blend mode. */
+export function compositeOp(blend: BlendMode): string {
+  return blend === "normal" ? "source-over" : blend;
+}
+
 /** A gradient color stop, `[offset0to1, cssColor]`. */
 export type ColorStop = readonly [number, string];
 
@@ -106,7 +175,48 @@ export interface RadialGradient {
   readonly x2: number;
   readonly y2: number;
   readonly r2: number;
+  /** Vertical squash about the centre (height ÷ width); absent means circular. */
+  readonly scaleY?: number;
   readonly stops: readonly ColorStop[];
+}
+
+/** A linear gradient from (x1, y1) to (x2, y2). */
+export function linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
+  const [x1, y1, x2, y2, stops] = args;
+  return { kind: "linear-gradient", x1, y1, x2, y2, stops };
+}
+
+/** A circular radial gradient around (x, y). */
+export function radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
+  const [x, y, radius, stops] = args;
+  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
+}
+
+/** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
+export function ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+  const [x, y, w, h, stops] = args;
+  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: w / 2, scaleY: h / w, stops };
+}
+
+/** A sprite handle from `sprite(...)`: plain data naming a stored picture; draw it with `image`. */
+export interface Sprite {
+  readonly kind: "sprite";
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** What `sprite` stores: a key naming everything the picture depends on, and its size in pixels. */
+export interface SpriteOptions {
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Options for `group`: opacity applied once to the finished group, and its blend mode. */
+export interface GroupOptions {
+  readonly opacity?: number;
+  readonly blend?: BlendMode;
 }
 
 /** Any gradient handle. */
@@ -166,6 +276,27 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
         break;
     }
   }
+}
+
+/**
+ * Run a fill in the paint's own space. An elliptical radial gradient is a
+ * circular one under a vertical scale about its centre; Canvas2D reads a
+ * gradient in the transform current at fill time, while the path was already
+ * traced, so only the gradient is squashed. Only fills use this: a stroke
+ * would squash its line width too.
+ */
+export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
+  const { paint } = args;
+  if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
+    args.fill();
+    return;
+  }
+  ctx.save();
+  ctx.translate(paint.x2, paint.y2);
+  ctx.scale(1, paint.scaleY);
+  ctx.translate(-paint.x2, -paint.y2);
+  args.fill();
+  ctx.restore();
 }
 
 /** Build the ctx-bound gradient for a gradient handle. */

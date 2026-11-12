@@ -20,7 +20,9 @@ so the two tiers can share `src/examples/`.
 
 ## Contract
 
-A TEA sketch imports **only** `@ianbicking/canvas-loop` (types only) and exports:
+A TEA sketch imports **only** `@ianbicking/canvas-loop` (types only) and,
+for a large sketch, sibling helper files named `<name>-tea.ts` (imported as
+`./<name>-tea.js`; the TEA lint applies to them too). It exports:
 
 ```ts
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
@@ -55,13 +57,18 @@ cover curves/gradients/clipping so a `draw` stays serializable-in-principle.
 [`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) is a worked port that draws a
 full tidal-fjord scene through them with zero `ctx`.
 
-The lint preset caps functions at 2 parameters; the `update`/`draw` contract
-signatures are the one sanctioned exception. Put this exact comment on each
-(and nowhere else):
+The lint preset caps functions at 2 parameters. Sketch directories
+(`src/examples/`, `src/gallery/`) turn that cap off, so a sketch there needs
+nothing. Elsewhere, the `update`/`draw` contract signatures are the one
+sanctioned exception; put this exact comment on each:
 
 ```ts
 // eslint-disable-next-line max-params -- TEA contract signature
 ```
+
+`Util` also has `record(keys, value)`: `u.record(IDS, () => 0)` builds a
+`Record<Id, number>` for id-keyed state without casts. `DeepReadonly` keeps
+tuples as tuples, so `Vec2` points can live in a `Model`.
 
 ## The `Msg` union
 
@@ -208,7 +215,8 @@ unknown names or mismatched types warn and fall back to defaults),
   switch — a statechart's modal part, zero machinery.
 - **No async.** No `async`/`await`/`.then`/`new Promise`; runs are synchronous.
 - **Exhaustive switch on `msg.type`.** List every case; no `default`.
-- **Import only `@ianbicking/canvas-loop`**, types only.
+- **Import only `@ianbicking/canvas-loop`** (types only) and sibling
+  `./<name>-tea.js` helpers.
 
 Lint enforces all of it on `*-tea.ts` (`tea/no-module-state`,
 `tea/no-model-mutation`, `tea/no-async-sketch`, `tea/no-classes`,

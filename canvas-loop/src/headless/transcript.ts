@@ -5,7 +5,14 @@ export type TranscriptEntry =
   | { kind: "log"; frame: number; level: LogLevel; message: string }
   | { kind: "param"; frame: number; name: string; value: number | boolean | string }
   | { kind: "input"; frame: number; event: string; verdict: string }
-  | { kind: "image"; frame: number; labels: string[]; file: string; unchanged: boolean }
+  | {
+      kind: "image";
+      frame: number;
+      labels: string[];
+      file: string;
+      unchanged: boolean;
+      zooms: readonly { file: string; label: string }[];
+    }
   | { kind: "error"; frame: number; name: string; message: string; stack: string };
 
 export interface RunMeta {
@@ -31,10 +38,17 @@ function renderHeader(meta: RunMeta): string {
   ].join("\n");
 }
 
-function renderImage(entry: { frame: number; labels: string[]; file: string; unchanged: boolean }): string {
+function renderImage(entry: {
+  frame: number;
+  labels: string[];
+  file: string;
+  unchanged: boolean;
+  zooms: readonly { file: string; label: string }[];
+}): string {
   const suffix = entry.labels.length > 0 ? ` — ${entry.labels.join(", ")}` : "";
   const heading = `### frame ${entry.frame}${suffix}${entry.unchanged ? " (unchanged)" : ""}`;
-  return `${heading}\n![frame ${entry.frame}${suffix}](${entry.file})`;
+  const zooms = entry.zooms.map((z) => `\n\nzoom ${z.label}\n![frame ${entry.frame} zoom ${z.label}](${z.file})`);
+  return `${heading}\n![frame ${entry.frame}${suffix}](${entry.file})${zooms.join("")}`;
 }
 
 function renderEntry(entry: TranscriptEntry): string {

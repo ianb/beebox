@@ -1,7 +1,10 @@
+import type { CursorKind, TextStyle } from "../core/tea.js";
+import { recordOf } from "../core/records.js";
+import type { Sprite, SpriteOptions } from "../core/tea.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import type { Sketch } from "./sketch.js";
-import type { ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
+import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paper, TubeOptions, ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
 
 /**
  * The drawing capability handed to `draw`. A thin facade over the shared Sketch
@@ -76,8 +79,71 @@ export class TeaView implements View {
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
     return this.#sketch.radialGradient(...args);
   }
-  clip(shape: ClipShape, body: () => void): void {
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#sketch.clip(shape, body);
+  }
+  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+    return this.#sketch.ellipseGradient(...args);
+  }
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
+    return this.#sketch.tube(points, options);
+  }
+  offset(points: readonly Vec2[], distance: number): Vec2[] {
+    return this.#sketch.offset(points, distance);
+  }
+  paperTexture(amount: number): void {
+    this.#sketch.paperTexture(amount);
+  }
+  cache(key: string, body: () => void): void {
+    this.#sketch.cache(key, body);
+  }
+  sprite(options: SpriteOptions, body: () => void): Sprite {
+    return this.#sketch.sprite(options, body);
+  }
+  image(...args: [Sprite, number, number, number?]): void {
+    this.#sketch.image(...args);
+  }
+  curve(points: readonly Vec2[], closed?: boolean): void {
+    this.#sketch.curve(points, closed);
+  }
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return this.#sketch.curvePath(points, closed);
+  }
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
+    this.#sketch.brush(base, overrides);
+  }
+  noBrush(): void {
+    this.#sketch.noBrush();
+  }
+  gesture(gesture: Gesture): void {
+    this.#sketch.gesture(gesture);
+  }
+  paper(paper: Paper): void {
+    this.#sketch.paper(paper);
+  }
+  group(options: GroupOptions, body: () => void): void {
+    this.#sketch.group(options, body);
+  }
+  blendMode(blend: BlendMode): void {
+    this.#sketch.blendMode(blend);
+  }
+  erase(): void {
+    this.#sketch.erase();
+  }
+  noErase(): void {
+    this.#sketch.noErase();
+  }
+  textFont(family: string): void {
+    this.#sketch.textFont(family);
+  }
+  textStyle(style: TextStyle): void {
+    this.#sketch.textStyle(style);
+  }
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#sketch.debugBox(...args);
+  }
+  cursor(kind: CursorKind): void {
+    this.#sketch.cursor(kind);
   }
   text(...args: [string, number, number]): void {
     this.#sketch.text(...args);
@@ -149,6 +215,10 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   log(...args: readonly unknown[]): void {
     this.#sketch.log(...args);
+  }
+
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> {
+    return recordOf(keys, value);
   }
 
   handled(name: string): void {

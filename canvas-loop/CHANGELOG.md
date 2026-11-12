@@ -5,6 +5,76 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Brushes, gestures, paper, groups** (see [BRUSHES.md](./BRUSHES.md)).
+  `brush(name, overrides?)` / `noBrush()` turn every stroked shape into a
+  brushed mark; presets `ink`, `marker`, `pencil`, `chalk`, `airbrush`,
+  `wash`, `bristle`. `gesture({ pressure, wobble, seed })` sets pressure
+  envelopes and hand wobble. `paper({ scale, contrast, seed })` sets the
+  canvas's grain. `group({ opacity, blend }, body)`, `blendMode()`,
+  `erase()`/`noErase()`. Width comes from `strokeWeight`. Mark randomness is
+  per mark (adding a mark never changes another); `--seed` does not affect it.
+  Fills stay flat. Adds the `perfect-freehand` dependency (ink outlines).
+- **Curves.** `curve(points, closed?)` draws a Catmull-Rom curve through the
+  points; `curvePath(points, closed?)` returns its path commands for `clip` or
+  `path`. Open curves mirror their end points (no pinch on 3-point curves).
+- **`ctx` follows groups.** `s.ctx` / `v.ctx` is the context drawing lands on
+  now: inside a `group`, the group's layer. `clip` and `group` unwind any
+  unmatched `push()` from their body, even when it throws.
+- **Zoomed crops.** `run --zoom x,y,w,h[@scale]` (repeatable) writes an
+  enlarged, nearest-pixel crop beside every captured frame and lists it in the
+  transcript. `cli zoom <frame.png> <x,y,w,h[@scale]>...` crops an existing
+  frame.
+- **Sketch lint relaxed** for `src/examples/` and `src/gallery/`: `max-params`,
+  default params, function and file length, `1.0` literals, plain `Error`, and
+  `reverse()` are allowed there.
+- **Mark seed from points only.** A mark's randomness no longer depends on its
+  brush, gesture or width, so tuning those keeps the same wobble.
+- **Shape helpers and texture** (round-2 asks). `tube(points, { width,
+  profile })` returns a limb outline around a smooth centreline;
+  `offset(points, distance)` grows or shrinks a closed outline;
+  `clip([shapes…], body)` clips to a union; `ellipseGradient(x, y, w, h,
+  stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
+  page. A mark too faint to see adds a transcript warning. Bristles wander
+  sideways so long strokes do not stripe.
+- **Erase and gradient marks under transforms.** @napi-rs/canvas 1.0.2 limits
+  destination-out and source-in fills under a transform to the quadrant past
+  the translation origin, so erasing a translated or rotated shape cleared only
+  part of it. Erasing under a transform now draws via a layer composited under
+  identity, and gradient-coloured marks paint the gradient on a second layer.
+  The Painter's primitives move to `engine.ts` over a `PainterCore` (`core.ts`).
+- **Checkpoints.** `CANVAS_LOOP_CHECKPOINTS=<dir>` saves every `run` (sources,
+  events, frames, transcript, `--note`); `cli checkpoints <dir>` builds a page
+  that steps through them.
+- **Development aids** (busy-town round asks). `run --outline` outlines placed
+  sprites (with keys), clip regions and `debugBox(label, x, y, w, h)` boxes;
+  `run --timing` adds per-frame draw/update times to the transcript. Faint-mark
+  warnings name the sprite or cache they came from; `gesture({ faint: true })`
+  silences one. `textFont`/`textStyle`; `cursor(kind)` for browser figures;
+  `u.record(keys, value)`; `DeepReadonly` keeps tuples.
+- **TEA sketches may import sibling `./<name>-tea.js` helpers** (the TEA lint
+  applies to them by name). The animation round's sketches were forced into
+  single 1,200–1,500-line files.
+- **Sprites.** `sprite({ key, width, height }, body)` paints once in local
+  coordinates; `image(sprite, x, y, opacity?)` places it under the current
+  transform, so painted things can move, rock and flip cheaply.
+- **Faster frames.** Brush marks reuse one offscreen canvas and groups reuse
+  pooled layers, instead of a new canvas per mark or group; the faint-mark
+  pixel read-back runs headless only. Headless output is byte-identical; the
+  animated brush pages went from 39 to 58 fps together in Chrome.
+- **`cache(key, body)`** draws a static part once and pastes it on later
+  frames, so painted scenes can animate.
+- **Review fixes.** `clip([shapes…])` now erases and blends like a single
+  clip; `pop()` cannot escape a single clip; tube ends are round; brushed
+  `arc` follows Canvas2D's sweep; a `path` starting with `line` has no segment
+  from the origin; thick bristle marks are not cropped and very short ones
+  paint; short tubes work; duplicate pressure keyframes hold the last value on
+  both sides; `cli diff` reads erased pixels as lighter and clears old crops.
+- **`cli diff`** (experimental): changed-pixel highlight (darker/lighter),
+  per-region before/after crops, side by side, and stats. TEA sketches there no longer need the
+  `max-params` disable comment.
+- **`SketchUsageError` moved to core** (`src/core/errors.ts`); the headless
+  errors module re-exports it.
+
 - **Claude plugin removed.** `claude-plugin/` and the `sync:claude-skill`
   script are gone, and the generated `.claude/skills/canvas-loop-sketch/` copy
   with them. The authoring loop, gallery flow, and audit norms now live in

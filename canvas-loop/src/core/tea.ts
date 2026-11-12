@@ -4,12 +4,24 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
 // sketch — which imports only this module — can name them.
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, TextStyle, Vec2 } from "./paint.js";
+import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
+import type { BrushName } from "./brush/presets.js";
+import type { GroupOptions, SpriteOptions } from "./paint.js";
+import type { TubeOptions } from "./shapes.js";
 
-export type { ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
+export type { BrushName } from "./brush/presets.js";
+export type { GroupOptions, SpriteOptions } from "./paint.js";
+export type { Sprite } from "./paint.js";
+export type { TubeOptions } from "./shapes.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
 export type TextAlign = "center" | "end" | "left" | "right" | "start";
+export type { TextStyle } from "./paint.js";
+/** Pointer shapes for `cursor`. */
+export type CursorKind = "default" | "pointer" | "grab" | "grabbing" | "crosshair" | "move" | "text" | "not-allowed";
 export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
 
 // ── Parameter declarations ───────────────────────────────────────────
@@ -65,8 +77,10 @@ export type ParamValues<D extends ParamsDecl> = {
 /** Recursively `readonly` — the Model type `update`/`draw` see, so mutation is a compile error. */
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
-  : T extends readonly (infer E)[]
-    ? ReadonlyArray<DeepReadonly<E>>
+  : T extends readonly unknown[]
+    ? number extends T["length"]
+      ? ReadonlyArray<DeepReadonly<T[number]>>
+      : { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T extends object
       ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
       : T;
@@ -111,6 +125,8 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * handles and may change nothing. See TEA.md "Engagement verdicts".
    */
   handled(name: string): void;
+  /** A record with one entry per key: `u.record(IDS, () => 0)` gives `Record<Id, number>`. */
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V>;
 }
 
 /**
@@ -141,10 +157,49 @@ export interface View {
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
-  /** Clip to a polygon/path for the duration of `body` (state saved/restored). */
-  clip(shape: ClipShape, body: () => void): void;
+  /** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
+  ellipseGradient(x: number, y: number, w: number, h: number, stops: readonly ColorStop[]): RadialGradient;
+  /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
+  /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
+  curve(points: readonly Vec2[], closed?: boolean): void;
+  /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
+  /** A tube's closed outline around a smooth centreline (limbs, stems, tails). */
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[];
+  /** A closed outline grown (`distance` > 0) or shrunk (< 0) along its normals. */
+  offset(points: readonly Vec2[], distance: number): Vec2[];
+  /** Show the paper's texture across everything drawn so far (0..1). */
+  paperTexture(amount: number): void;
+  /** Draw `body` once into a stored layer; later calls with the same key paste it. */
+  cache(key: string, body: () => void): void;
+  /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
+  sprite(options: SpriteOptions, body: () => void): Sprite;
+  /** Draw a sprite with its top-left at (x, y) under the current transform, at `opacity` (default 1). */
+  image(sprite: Sprite, x: number, y: number, opacity?: number): void;
+  /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
+  brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
+  /** Back to plain Canvas2D strokes. */
+  noBrush(): void;
+  /** How the hand moves for the marks that follow: pressure, wobble, seed. */
+  gesture(gesture: Gesture): void;
+  /** The canvas's paper texture, which grainy brushes read. */
+  paper(paper: Paper): void;
+  /** Draw `body` on its own layer, then composite it once with opacity and blend. */
+  group(options: GroupOptions, body: () => void): void;
+  blendMode(blend: BlendMode): void;
+  /** Fills, strokes and marks remove pixels until `noErase()`. */
+  erase(): void;
+  noErase(): void;
   text(content: string, x: number, y: number): void;
   textSize(size: number): void;
+  /** Font family for `text` (CSS names, e.g. `"Georgia, serif"`); which fonts exist depends on the machine. */
+  textFont(family: string): void;
+  textStyle(style: TextStyle): void;
+  /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
+  cursor(kind: CursorKind): void;
+  /** With `run --outline`, a labelled box drawn over the frame (e.g. a hit area); otherwise nothing. */
+  debugBox(label: string, x: number, y: number, w: number, h: number): void;
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;
   push(): void;
   pop(): void;

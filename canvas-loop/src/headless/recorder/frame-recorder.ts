@@ -2,6 +2,8 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { encodePng, frameFileName, hashPixels } from "./capture.js";
 import type { Pixels } from "./capture.js";
+import { encodeZoomPng, zoomFileName, zoomLabel } from "./zoom.js";
+import type { Zoom } from "./zoom.js";
 import { formatArgs } from "../../core/format.js";
 import { renderTranscript } from "../transcript.js";
 import type { RunMeta, TranscriptEntry } from "../transcript.js";
@@ -23,6 +25,13 @@ export interface RecorderDeps {
   readPixels: () => Pixels;
   /** Whether the canvas exists yet (setup ran) — gates error-frame capture. */
   canvasReady: () => boolean;
+  /** Regions to write as enlarged crops beside every captured frame. */
+  zooms?: readonly Zoom[];
+}
+
+interface ZoomImage {
+  readonly file: string;
+  readonly label: string;
 }
 
 function normalizeError(error: unknown): { name: string; message: string; stack: string } {
@@ -42,6 +51,8 @@ export class FrameRecorder implements SketchHost {
   #deps: RecorderDeps;
   #entries: TranscriptEntry[] = [];
   #toEncode = new Map<string, Pixels>();
+  #zoomsToEncode = new Map<string, { pixels: Pixels; zoom: Zoom }>();
+  #lastZooms: readonly ZoomImage[] = [];
   #currentFrame = 0;
   #framesAttempted = 0;
   #frameHadLog = false;
@@ -131,12 +142,18 @@ export class FrameRecorder implements SketchHost {
     const labels = this.#frameLabels.slice();
     this.#frameCaptured = true;
     if (hash === this.#lastHash && this.#lastFile !== undefined) {
-      this.#entries.push({ kind: "image", frame, labels, file: this.#lastFile, unchanged: true });
+      this.#entries.push({ kind: "image", frame, labels, file: this.#lastFile, unchanged: true, zooms: this.#lastZooms });
       return;
     }
     const file = frameFileName(frame);
     this.#toEncode.set(file, pixels);
-    this.#entries.push({ kind: "image", frame, labels, file, unchanged: false });
+    const zooms = (this.#deps.zooms ?? []).map((zoom, index) => {
+      const zoomFile = zoomFileName(frame, index);
+      this.#zoomsToEncode.set(zoomFile, { pixels, zoom });
+      return { file: zoomFile, label: zoomLabel(zoom) };
+    });
+    this.#lastZooms = zooms;
+    this.#entries.push({ kind: "image", frame, labels, file, unchanged: false, zooms });
     this.#lastHash = hash;
     this.#lastFile = file;
   }
@@ -154,6 +171,9 @@ export class FrameRecorder implements SketchHost {
     mkdirSync(outDir, { recursive: true });
     for (const [file, pixels] of this.#toEncode) {
       writeFileSync(join(outDir, file), encodePng(pixels));
+    }
+    for (const [file, { pixels, zoom }] of this.#zoomsToEncode) {
+      writeFileSync(join(outDir, file), encodeZoomPng(pixels, zoom));
     }
     const transcriptPath = join(outDir, "transcript.md");
     writeFileSync(transcriptPath, renderTranscript(meta, this.#entries));
