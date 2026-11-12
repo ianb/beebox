@@ -34,12 +34,24 @@ desktop and phone.
   check, or correct a form while it works, and tell the agent in chat to
   continue. The agent can also ask a question in the browser tab, and your
   Done or Not done answer returns to the chat that asked. The agent does not
-  type your passwords. See the limits below.
+  type your passwords. The agent also opens your box's own pages in this
+  browser to check its work: it loads a card or view it just built, clicks
+  through it, and takes a picture of the whole card, which also says whether
+  the card fit. It acts as the agent, not as you, through a credential that
+  lasts an hour, so Settings, pairing, Secrets, and Admin stay out of its
+  reach, and it does not touch the tab you have open. See the limits below.
 - **Questions** — the queue of things the agent is asking you.
 - **Landmarks** — a curated map of the box's notable places. Opening a place
   shows a place page: a few lines the agent keeps current on where things stand
-  there, suggested first moves for a chat, the place's important cards in
-  tiers, and an "Also here" list of its other recent cards.
+  there (which can embed cards), suggested first moves for a chat, the place's
+  important cards in tiers, and an "Also here" list of its other recent cards.
+  A place can also carry one **intention**: a single line saying what the next
+  piece of work there is, with the card the work happens in. When it is set,
+  going to the place opens that card beside the chat, and the line shows on the
+  place page and as a strip above the cards while a chat in the place is open.
+  The agent writes it when you leave work unfinished there, and a daily
+  procedure reviews each place that changed and rewrites or clears it. The ×
+  hides the line on that device until its text changes.
 - **History** — every change, drawn from git, with diffs and the files touched.
 - **Storage** — how much space the box is using and where.
 - **Settings**: pairing a phone, connectors, notifications for this browser and this phone, and other account controls.
@@ -106,7 +118,10 @@ install on the maintainer's server had not run when it landed, memory during a
 real agent turn was not measured, and the log-in-then-agent-continues walk is
 only partly exercised. A box has a browser only where a Chrome can be found; the
 container image does not bundle one, and the item then says none is installed.
-The browser is an open-source tool's own dashboard, and its script runs under
+The agent's self-check in that browser (2026-11-08) needs the browser to be
+installed, and the project's plan leaves one check on a deployed box behind
+Cloudflare as not yet run; an action the agent takes there that saves data is
+a real change to the box. The browser is an open-source tool's own dashboard, and its script runs under
 the box's address with the reach of the person signed in, so the project pins
 and reviews its version; its cookies are stored unencrypted in the box user's
 state directory, outside git and backups. The counts in the navigation bar walk

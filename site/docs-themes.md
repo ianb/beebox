@@ -197,7 +197,12 @@ a box-local type or view would be. A card type can declare its own body tags,
 valid only in that type.
 
 **Where it is thin.** Building these is agent work with real capability, so
-the quality is the agent's. Nothing gates a badly-built view. There are two
+the quality is the agent's. Nothing gates a badly-built view, but the agent
+can now look at its own work: `bbx view check` renders each card type and
+prints advice for patterns the views guide forbids, and the box browser opens
+the box's own pages as the agent and screenshots a card (November 2026). Both
+are checks the agent runs, not gates, and the browser check is partly
+unexercised on a deployed box. There are two
 plugins, both written by the project; the stated position is no registry and
 no marketplace. Recipes and courses stopped being on by default when they
 became plugins, and activation is a manual, agent-run step that no one has
