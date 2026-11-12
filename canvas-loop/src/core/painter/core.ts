@@ -17,7 +17,7 @@ import { SketchUsageError, assertUnit } from "../errors.js";
 import { styleProblem as styleProblemFor } from "./style.js";
 import type { ResolvedStyle } from "./style.js";
 import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, PasteOptions, Sprite, SpriteOptions } from "../paint.js";
-import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
+import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
 import { FaintWatch } from "./faint.js";
 import { LayerCache, LayerPool, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
@@ -104,8 +104,7 @@ export class PainterCore {
    */
   at(options: AtOptions, body: () => void): void {
     const ctx = this.ctx;
-    ctx.save();
-    try {
+    withSaved(ctx, () => {
       const { translate, rotate, scale } = options;
       if (translate !== undefined) this.ctx.translate(translate[0], translate[1]);
       if (rotate !== undefined) this.ctx.rotate(rotate);
@@ -114,9 +113,7 @@ export class PainterCore {
         else this.ctx.scale(scale[0], scale[1]);
       }
       body();
-    } finally {
-      ctx.restore();
-    }
+    });
   }
 
   protected resolvePaint(paint: Paint): string | Ctx2DGradient {
@@ -138,15 +135,12 @@ export class PainterCore {
       return;
     }
     const ctx = this.ctx;
-    ctx.save();
-    try {
+    withSaved(ctx, () => {
       if (isPathShape(shape)) tracePath(ctx, shape);
       else tracePolygon(ctx, shape);
       ctx.clip();
       body();
-    } finally {
-      ctx.restore();
-    }
+    });
   }
 
   /**
@@ -238,17 +232,15 @@ export class PainterCore {
     const mode = { blend: paste?.blend ?? "normal", erase: paste?.erase ?? false };
     const layer = this.#sprites.get(sprite.key);
     if (layer === undefined) throw new SketchUsageError({ detail: `sprite "${sprite.key}" is not defined in this run (call sprite() first)` });
-    const ctx = this.ctx;
     this.#outline("sprite", { label: sprite.key, rect: [x, y, sprite.width, sprite.height] });
     const draw = (op: string): void => {
       const target = this.ctx;
-      const alpha = target.globalAlpha;
-      target.globalAlpha = alpha * (opacity ?? 1);
-      withComposite(target, { op, draw: () => target.drawImage(layer.image, 0, 0, sprite.width * this.pixelRatio, sprite.height * this.pixelRatio, x, y, sprite.width, sprite.height) });
-      target.globalAlpha = alpha;
+      withSaved(target, () => {
+        target.globalAlpha *= opacity ?? 1;
+        withComposite(target, { op, draw: () => target.drawImage(layer.image, 0, 0, sprite.width * this.pixelRatio, sprite.height * this.pixelRatio, x, y, sprite.width, sprite.height) });
+      });
     };
-    if (mode.erase && !isIdentity(ctx.getTransform())) this.#viaLayer(() => draw("source-over"));
-    else draw(this.composite(mode));
+    this.drawComposited(mode, draw);
   }
 
   /** With `run --outline`, a labelled box over the frame (e.g. a hit area); otherwise nothing. */
@@ -300,6 +292,25 @@ export class PainterCore {
       trace(this.ctx);
       this.#fillAndStroke(shape, drawn);
     });
+  }
+
+  /** Run `body` in canvas coordinates (the base transform), whatever `at` scopes are open. */
+  inCanvasSpace(body: () => void): void {
+    const ctx = this.ctx;
+    withSaved(ctx, () => {
+      ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+      body();
+    });
+  }
+
+  /**
+   * Run `draw` with the composite op for `mode`. Erasing under a transform
+   * draws with source-over on a layer and erases with that layer instead
+   * (the napi quadrant limit; see `paintShape`).
+   */
+  protected drawComposited(mode: { blend: BlendMode; erase: boolean }, draw: (op: string) => void): void {
+    if (mode.erase && !isIdentity(this.ctx.getTransform())) this.#viaLayer(() => draw("source-over"));
+    else draw(this.composite(mode));
   }
 
   /** Draw `body` with source-over on a pooled layer under the current transform, then erase with it (identity transform). */

@@ -139,6 +139,7 @@ function shower(element: HTMLInputElement | HTMLSelectElement): BareInput["show"
     if (model.kind !== "number" && model.kind !== "select") return;
     const value = String(model.value);
     if (element.value !== value) element.value = value;
+    element.removeAttribute("aria-invalid");
   };
 }
 

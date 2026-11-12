@@ -48,8 +48,9 @@ snapshot, `ctx`) and no randomness. That withholding *is* the enforcement.
 
 The lint preset caps functions at 2 parameters. Sketch directories
 (`src/examples/`, `src/gallery/`) turn that cap off, so a sketch there needs
-nothing. Elsewhere, the `update`/`draw` contract signatures are the one
-sanctioned exception; put this exact comment on each:
+nothing. Elsewhere, if lint reports `max-params` on `update` or `draw`, the
+contract signatures are the one sanctioned exception; put this exact comment
+on each:
 
 ```ts
 // eslint-disable-next-line max-params -- TEA contract signature
@@ -155,6 +156,8 @@ v.path(commands, style)                 v.curve(points, closed, style)
 ```
 
 - Points are `Vec2` tuples, `[x, y]`.
+- `rect` and `roundRect` take the top-left corner. `circle`, `ellipse` and
+  `arc` take the centre.
 - `path` takes data-encoded commands: `["move", x, y]`, `["line", x, y]`,
   `["quad", cx, cy, x, y]`, `["bezier", c1x, c1y, c2x, c2y, x, y]`,
   `["close"]`.

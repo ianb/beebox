@@ -83,8 +83,11 @@ export class TeaView extends PainterView implements View {
     if (model === undefined) {
       throw new SketchUsageError({ detail: `control("${name}"): no param named "${name}" is declared` });
     }
-    drawStandIn(this.painter, { box, model });
-    this.painter.debugBox(`control ${name}`, box.x, box.y, box.w, box.h ?? NATURAL_HEIGHT);
+    // Control boxes are canvas coordinates, as the browser's overlay places them.
+    this.painter.inCanvasSpace(() => {
+      drawStandIn(this.painter, { box, model });
+      this.painter.debugBox(`control ${name}`, box.x, box.y, box.w, box.h ?? NATURAL_HEIGHT);
+    });
   }
 
   get ctx(): SKRSContext2D {

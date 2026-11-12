@@ -10,9 +10,8 @@ import type { Contour } from "../contours.js";
 import { curveCommands, ellipseContour, pathContours } from "../contours.js";
 import type { Ctx2D, Paint, PathCommand, Style, TextBounds, TextBox, TextOptions, TextStyle, Vec2 } from "../paint.js";
 import { resolveStyle } from "./style.js";
-import { inPaintSpace, tracePath, tracePolygon } from "../paint.js";
+import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { PainterCore } from "./core.js";
-import { withComposite } from "./layers.js";
 import { layoutText } from "./text-layout.js";
 
 /**
@@ -46,15 +45,15 @@ const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "a
 export class Painter extends PainterCore {
   background(paint: Paint): void {
     const ctx = this.ctx;
-    ctx.save();
-    ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
-    ctx.globalCompositeOperation = "source-over";
-    // Resolve after the reset so a gradient's coords are canvas-space.
-    ctx.fillStyle = this.resolvePaint(paint);
-    ctx.beginPath();
-    ctx.rect(0, 0, this.width, this.height);
-    inPaintSpace(ctx, { paint, fill: () => ctx.fill() });
-    ctx.restore();
+    withSaved(ctx, () => {
+      ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+      // Resolve after the reset so a gradient's coords are canvas-space.
+      ctx.fillStyle = this.resolvePaint(paint);
+      ctx.beginPath();
+      ctx.rect(0, 0, this.width, this.height);
+      inPaintSpace(ctx, { paint, fill: () => ctx.fill() });
+    });
   }
 
   rect(...args: [number, number, number, number, Style]): void {
@@ -152,42 +151,45 @@ export class Painter extends PainterCore {
    */
   #boxText(content: string, at: { box: TextBox; options: TextOptions }): TextBounds {
     const options = { ...TEXT_DEFAULTS, ...at.options };
-    const ctx = this.ctx;
-    const previous = { font: ctx.font, align: ctx.textAlign, baseline: ctx.textBaseline };
+    const { box } = at;
     const mode = { blend: options.blend ?? "normal", erase: options.erase ?? false } as const;
-    const paint = (draw: () => void): void => {
-      ctx.fillStyle = this.resolvePaint(options.fill);
-      withComposite(ctx, { op: this.composite(mode), draw });
-    };
-    let bounds: TextBounds;
-    if (at.box.w === undefined && at.box.h === undefined && !content.includes("\n")) {
-      ctx.font = this.#font(options);
-      ctx.textAlign = options.align;
-      ctx.textBaseline = BASELINES[options.valign];
-      paint(() => ctx.fillText(content, at.box.x, at.box.y));
-      const w = ctx.measureText(content).width;
-      const x = options.align === "center" ? at.box.x - w / 2 : options.align === "right" ? at.box.x - w : at.box.x;
-      const h = options.size * 1.25;
-      const top = { top: at.box.y, middle: at.box.y - h / 2, bottom: at.box.y - h, baseline: at.box.y - options.size }[options.valign];
-      bounds = { x, y: top, w, h, lines: 1, size: options.size, overflow: false };
-    } else {
-      const measure = (text: string, size: number): number => {
+    const measureCtx = this.ctx;
+    const measure = (text: string, size: number): number => withSaved(measureCtx, () => {
+      measureCtx.font = this.#font({ ...options, size });
+      return measureCtx.measureText(text).width;
+    });
+    const native = box.w === undefined && box.h === undefined && !content.includes("\n");
+    const layout = native ? undefined : layoutText(content, { size: options.size, box, options, measure });
+    const size = layout?.size ?? options.size;
+    const lineHeight = size * (options.lineHeight ?? 1.25);
+    // Draws on whichever context is current: the canvas, or an erase layer.
+    const draw = (op: string): void => {
+      const ctx = this.ctx;
+      withSaved(ctx, () => {
         ctx.font = this.#font({ ...options, size });
-        return ctx.measureText(text).width;
-      };
-      const layout = layoutText(content, { size: options.size, box: at.box, options, measure });
-      ctx.font = this.#font({ ...options, size: layout.size });
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      paint(() => {
-        for (const line of layout.lines) ctx.fillText(line.text, line.x, line.y);
+        ctx.fillStyle = this.resolvePaint(options.fill);
+        ctx.globalCompositeOperation = op;
+        if (layout === undefined) {
+          ctx.textAlign = options.align;
+          ctx.textBaseline = BASELINES[options.valign];
+          ctx.fillText(content, box.x, box.y);
+          return;
+        }
+        ctx.textAlign = "left";
+        const baseline = options.valign === "baseline";
+        ctx.textBaseline = baseline ? "alphabetic" : "middle";
+        for (const [index, line] of layout.lines.entries()) ctx.fillText(line.text, line.x, baseline ? box.y + index * lineHeight : line.y);
       });
-      bounds = { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
+    };
+    this.drawComposited(mode, draw);
+    if (layout !== undefined) {
+      return { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
     }
-    ctx.font = previous.font;
-    ctx.textAlign = previous.align;
-    ctx.textBaseline = previous.baseline;
-    return bounds;
+    const w = measure(content, size);
+    const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
+    const h = size * 1.25;
+    const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
+    return { x, y: top, w, h, lines: 1, size, overflow: false };
   }
 
   #font(over: { size: number; font: string; style: TextStyle }): string {

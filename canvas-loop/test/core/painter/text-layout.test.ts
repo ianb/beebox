@@ -31,3 +31,8 @@ test("fit shrinks the size until the text fits, and reports overflow when it can
   assert.equal(over.overflow, true);
   assert.equal(over.size, 20);
 });
+
+test("fit never grows text below the minimum size", () => {
+  const out = layoutText("abcdefgh", { size: 2, box: { x: 0, y: 0, w: 1 }, options: { fit: true, wrap: false }, measure });
+  assert.equal(out.size, 2);
+});

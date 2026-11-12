@@ -54,3 +54,40 @@ test("single-line text with no box width is one native fillText at the point", (
   assert.deepEqual(calls, ["Hello@60,20 center/alphabetic normal 16px sans-serif"]);
   assert.deepEqual(logs, []);
 });
+
+test("a throwing call inside at does not leave its transform behind", () => {
+  const { v, rgba } = teaView({ width: 40, height: 40 });
+  const bad = v.radialGradient(0, 0, -5, [[0, "#000"], [1, "#fff"]]);
+  assert.throws(() => v.at({ translate: [20, 20] }, () => v.background(bad)));
+  v.rect(0, 0, 5, 5, { fill: "#ff0000" });
+  assert.deepEqual(rgba(2, 2), [255, 0, 0, 255], "drawn at the origin");
+});
+
+test("erasing text under a transform removes its pixels", () => {
+  const { v, alpha } = teaView({ width: 160, height: 100 });
+  v.background("#000000");
+  v.at({ translate: [80, 50] }, () => v.text("MMMM", { x: -70, y: -30 }, { size: 24, erase: true }));
+  let erased = 0;
+  for (let x = 10; x < 80; x += 1) for (let y = 20; y < 50; y += 1) if (alpha(x, y) < 255) erased += 1;
+  assert.ok(erased > 100, `erased ${erased} px`);
+});
+
+test("a control is placed in canvas coordinates, whatever at scope is open", () => {
+  const decl = { n: { type: "number", min: 0, max: 9, default: 3 } } as const;
+  const { v, alpha } = teaView({ width: 200, height: 60 }, { decl, values: { n: 3 } });
+  v.at({ translate: [100, 0] }, () => v.control("n", { x: 10, y: 10, w: 40 }));
+  assert.equal(alpha(30, 11), 255, "the stand-in sits at x=10..50");
+  assert.equal(alpha(130, 11), 0, "not moved by the translate");
+});
+
+test("multi-line baseline text puts the first line on the same baseline as one line", () => {
+  const one = teaView({ width: 200, height: 120 });
+  one.v.text("Hello", { x: 10, y: 50 }, { size: 40, valign: "baseline" });
+  const two = teaView({ width: 200, height: 120 });
+  two.v.text("Hello\nHello", { x: 10, y: 50 }, { size: 40, valign: "baseline" });
+  const firstInk = (h: typeof one): number => {
+    for (let y = 0; y < 120; y += 1) for (let x = 0; x < 200; x += 1) if (h.alpha(x, y) > 0) return y;
+    return -1;
+  };
+  assert.equal(firstInk(two), firstInk(one));
+});

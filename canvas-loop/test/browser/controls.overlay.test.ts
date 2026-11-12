@@ -47,3 +47,17 @@ test("a placed param's input sits on the stage at its box and leaves the panel",
   teardown();
   assert.equal(stage.find((el) => el.className.includes("cl-overlay-input")), null, "teardown removes it");
 });
+
+test("showing the param's value clears a stale invalid mark", () => {
+  const mount = new FakeElement("div");
+  const teardown = mountSketch(asHTMLElement(mount), { module: placingModule({ on: true }) });
+  const input = mount.find((el) => el.className.includes("cl-overlay-input"));
+  assert.ok(input !== null);
+  input.value = "99";
+  for (const fn of input.listeners.get("input") ?? []) fn({});
+  assert.equal(input.attributes.get("aria-invalid"), "true");
+  runFrames(3);
+  assert.equal(input.value, "3", "the model's value is shown again");
+  assert.equal(input.attributes.has("aria-invalid"), false);
+  teardown();
+});

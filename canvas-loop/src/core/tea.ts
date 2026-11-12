@@ -214,8 +214,8 @@ export interface View {
   /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
   cursor(kind: CursorKind): void;
   /**
-   * Put param `name`'s native input over the canvas at `box` (logical pixels)
-   * for this frame. In a browser figure the real `<input>`/`<select>` sits
+   * Put param `name`'s native input over the canvas at `box` (canvas
+   * coordinates in logical pixels; `at` scopes do not move it) for this frame. In a browser figure the real `<input>`/`<select>` sits
    * there and leaves the side panel; headless renders draw a stand-in showing
    * the current value. Call it every frame the input should show.
    */

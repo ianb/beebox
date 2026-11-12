@@ -79,6 +79,8 @@ A style's `brush` is a preset name or a preset with fields changed. The presets:
 | `wash` | stamp | broad, soft-edged, translucent tone with a little paper texture: shadows | 20–80 |
 | `bristle` | bristle | a loaded paint brush; separate bristle lines that dry out on long strokes | 12–40 |
 
+To stop a marker multiplying, override its blend: `brush: { preset: "marker", blend: "normal" }`.
+
 Texture needs size and contrast. A brush in a colour close to the colour under
 it, or a bristle or chalk mark shorter than a few widths, reads as flat tone
 or as noise. Use `--zoom` (below) to see what a mark really looks like.

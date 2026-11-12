@@ -77,7 +77,7 @@ function trial(content: string, at: { size: number; box: TextBox; options: TextO
 /** The size `fit` settles on: the largest (to 1/4 px) at or below `size` that fits, else the floor. */
 function fitSize(content: string, at: { size: number; box: TextBox; options: TextOptions; measure: Measure }): number {
   if (trial(content, at).fits) return at.size;
-  let lo = MIN_FIT_SIZE;
+  let lo = Math.min(MIN_FIT_SIZE, at.size);
   let hi = at.size;
   while (hi - lo > 0.25) {
     const mid = (lo + hi) / 2;

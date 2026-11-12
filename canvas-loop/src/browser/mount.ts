@@ -238,8 +238,6 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
       }),
     );
   };
-  overlay.sync(placed, runtime.paramValues());
-
   // Any throw between a started runtime and a returned teardown would leak the
   // rAF loop + listeners with no way to stop them — tear down before rethrowing.
   try {
@@ -249,8 +247,11 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
       container.append(panelHost);
     }
     mount.append(container);
+    // After insertion, so the stage has its shown width for scaling input text.
+    overlay.sync(placed, runtime.paramValues());
   } catch (e) {
     attached.teardown();
+    overlay.remove();
     container.remove();
     throw e;
   }

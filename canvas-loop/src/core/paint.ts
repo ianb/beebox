@@ -367,18 +367,29 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
  * traced, so only the gradient is squashed. Only fills use this: a stroke
  * would squash its line width too.
  */
+/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
+export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
+  ctx.save();
+  try {
+    return body();
+  } finally {
+    ctx.restore();
+  }
+}
+
 export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
   const { paint } = args;
   if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
     args.fill();
     return;
   }
-  ctx.save();
-  ctx.translate(paint.x2, paint.y2);
-  ctx.scale(1, paint.scaleY);
-  ctx.translate(-paint.x2, -paint.y2);
-  args.fill();
-  ctx.restore();
+  const { x2, y2, scaleY } = paint;
+  withSaved(ctx, () => {
+    ctx.translate(x2, y2);
+    ctx.scale(1, scaleY);
+    ctx.translate(-x2, -y2);
+    args.fill();
+  });
 }
 
 /** Build the ctx-bound gradient for a gradient handle. */

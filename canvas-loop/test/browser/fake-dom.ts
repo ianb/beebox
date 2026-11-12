@@ -62,6 +62,9 @@ export class FakeElement {
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
   }
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+  }
   focus(): void {
     // Focus is irrelevant to these tests; the listener wiring calls it.
   }
