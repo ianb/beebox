@@ -1,6 +1,6 @@
 ---
 title: "A chat with more than one person shows who is present, and who is typing or speaking"
-workstream: unattached
+workstream: chat-presence
 area: beebox
 labels: [chat, multi-user, presence]
 filed-by: agent
