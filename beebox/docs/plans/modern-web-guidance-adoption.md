@@ -959,6 +959,16 @@ the 1,800–1,950 estimate. The overrun came from tests, which were about a
 third of the change, the two sweeps (D4 converted 84 sites in classes and
 CSS, B12 69 buttons), and five lint rules with their test suites.
 
+2026-11-12, **G reverted.** The boxholder decided to remove Temporal and
+`temporal-polyfill` entirely ("going halfway just isn't worth it"). The
+loader in `boot()`, the test helper, the `ESNext.Temporal` lib, the
+polyfill in `bbx view check`, and both package dependencies are gone.
+FriendlyDate, the todo date chips and CalendarView use `Date` and
+`Intl.DateTimeFormat` again: a date-only value is formatted at its midnight
+UTC in UTC, an instant in the viewer's zone, and CalendarView groups timed
+events with `localDay`. The G tests keep their expected strings. The broader
+migration is parked in `docs/unimplemented-plans/temporal-everywhere.md`.
+
 ## Implementation order
 
 Each line is a chunk; each lands with its own lint rule and test. Order

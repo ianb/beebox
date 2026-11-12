@@ -4,7 +4,6 @@
 // site record. The card's `pubId` only selects that record; actions use the
 // publication id and current candidate revision supplied by the server.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, not } from "@ianbicking/tap-check/check";

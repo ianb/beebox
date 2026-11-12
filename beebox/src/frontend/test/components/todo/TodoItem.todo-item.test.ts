@@ -6,7 +6,6 @@
 // treatment; date and assignment chips follow. Plate state comes from the
 // server, so only a todo the server calls `escalated` reads as overdue.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";

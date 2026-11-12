@@ -304,8 +304,8 @@ export default [
     },
   },
   // One owner per time format: FriendlyDate and friendlyDate own the browser's
-  // date and time text. The deploy page is a separate script with no React
-  // and no Temporal polyfill, so it keeps its call.
+  // date and time text. The deploy page is a separate script with no React,
+  // so it keeps its call.
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/components/ui/FriendlyDate.tsx", "src/deploy-page/**"],

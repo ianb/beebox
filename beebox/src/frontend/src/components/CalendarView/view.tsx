@@ -17,6 +17,7 @@ import { StatusMessage } from "../ui/StatusMessage";
 import { CardBody } from "../MarkdownCardView/CardBody";
 import { bodyHeadingTitle } from "../../lib/card-field-faces";
 import { isRecord } from "@shared/is-record";
+import { localDay } from "@shared/local-day";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
 import { List } from "../ui/List";
@@ -24,21 +25,23 @@ import { List } from "../ui/List";
 const DAYS_SHOWN = 30;
 
 interface Window {
-  /** The first day shown and the day `DAYS_SHOWN` days on, where the window ends. */
-  first: Temporal.PlainDate;
-  last: Temporal.PlainDate;
+  /** The first day shown and the day `DAYS_SHOWN` days on, where the window ends, as `YYYY-MM-DD`. */
+  first: string;
+  last: string;
   /** The start of each of those days in the viewer's zone, for the query. */
-  from: Temporal.Instant;
-  to: Temporal.Instant;
+  from: Date;
+  to: Date;
   timeZone: string;
 }
 
-/** Today's start through `DAYS_SHOWN` days on, in `now`'s zone (the viewer's). */
-export function upcomingWindow(now: Temporal.ZonedDateTime): Window {
-  const first = now.toPlainDate();
-  const last = first.add({ days: DAYS_SHOWN });
-  const startOf = (day: Temporal.PlainDate) => day.toZonedDateTime(now.timeZoneId).toInstant();
-  return { first, last, from: startOf(first), to: startOf(last), timeZone: now.timeZoneId };
+/** Today's start through `DAYS_SHOWN` days on, in the viewer's zone (the runtime's local zone). */
+export function upcomingWindow(now: Date): Window {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setDate(to.getDate() + DAYS_SHOWN);
+  return { first: localDay(from, timeZone), last: localDay(to, timeZone), from, to, timeZone };
 }
 
 /** `access` and `syncing` from the card's `google-calendar:` block, when present and well-formed. */
@@ -51,8 +54,9 @@ function calendarFacts(frontmatter: Record<string, unknown>): { access: string |
   };
 }
 
-const dayLabel = (day: Temporal.PlainDate): string => day.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric" });
-const timeLabel = (start: string): string => Temporal.Instant.from(start).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
+/** A `YYYY-MM-DD` day's label, formatted at its UTC midnight in UTC so it is that day in every zone. */
+const dayLabel = (day: string): string => new Date(`${day}T00:00:00Z`).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const timeLabel = (start: string): string => new Date(start).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
 
 interface ListedEvent {
   start: string;
@@ -66,21 +70,20 @@ interface ListedEvent {
  * The day an event starts on. An all-day `2026-11-05` is that calendar day in
  * any zone; a timed event's start is an instant, placed in `timeZone`.
  */
-function dayOf(event: ListedEvent, timeZone: string): Temporal.PlainDate {
-  if (event.allDay) return Temporal.PlainDate.from(event.start);
-  return Temporal.Instant.from(event.start).toZonedDateTimeISO(timeZone).toPlainDate();
+function dayOf(event: ListedEvent, timeZone: string): string {
+  return event.allDay ? event.start : localDay(new Date(event.start), timeZone);
 }
 
 /** Events grouped under their day's label, in order. Grouped by the day itself, so two days never share a label's group. */
 export function byDay(events: readonly ListedEvent[], timeZone: string): Array<[string, ListedEvent[]]> {
-  const groups = new Map<string, { day: Temporal.PlainDate; events: ListedEvent[] }>();
+  const groups = new Map<string, ListedEvent[]>();
   for (const event of events) {
     const day = dayOf(event, timeZone);
-    const group = groups.get(day.toString());
-    if (group) group.events.push(event);
-    else groups.set(day.toString(), { day, events: [event] });
+    const group = groups.get(day);
+    if (group) group.push(event);
+    else groups.set(day, [event]);
   }
-  return [...groups.values()].map(({ day, events: list }) => [dayLabel(day), list]);
+  return [...groups].map(([day, list]) => [dayLabel(day), list]);
 }
 
 function StatusLines({ access, syncing }: { access: string | undefined; syncing: boolean }): ReactNode {
@@ -95,7 +98,7 @@ function StatusLines({ access, syncing }: { access: string | undefined; syncing:
 }
 
 function EventList({ path, window, onNavigate }: { path: string; window: Window } & Pick<RendererProps, "onNavigate">): ReactNode {
-  const query = trpc.calendar.cardEvents.useQuery({ path, from: window.from.toString(), to: window.to.toString() });
+  const query = trpc.calendar.cardEvents.useQuery({ path, from: window.from.toISOString(), to: window.to.toISOString() });
   if (query.isLoading) return <StatusMessage busy>Loading events…</StatusMessage>;
   if (query.error) return <Notice tone="error">Could not read this calendar's events: {query.error.message}</Notice>;
   const { events, unreadable } = query.data ?? { events: [], unreadable: [] };
@@ -135,7 +138,7 @@ export function CalendarView({ data, onNavigate }: RendererProps) {
   return (
     <div className="bbx-card-content">
       <StatusLines access={facts.access} syncing={facts.syncing} />
-      <EventList path={data.path} window={upcomingWindow(Temporal.Now.zonedDateTimeISO())} onNavigate={onNavigate} />
+      <EventList path={data.path} window={upcomingWindow(new Date())} onNavigate={onNavigate} />
       <CardBody data={data} title={bodyHeadingTitle(frontmatter)} onNavigate={onNavigate} hideEmptyBody />
     </div>
   );

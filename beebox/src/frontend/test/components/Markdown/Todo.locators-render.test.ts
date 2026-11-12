@@ -7,7 +7,6 @@
 // (`stampLocators`); the `todo` transform in `markdoc-config.ts` copies the
 // stamp onto the `Tag` as `locator`.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";

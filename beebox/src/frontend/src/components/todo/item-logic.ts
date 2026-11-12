@@ -80,22 +80,24 @@ export function hiddenInReading({ status, assigned }: TodoWho): boolean {
 }
 
 /**
- * The calendar day a shared todo epoch names. `parseIsoDate` and
+ * The `YYYY-MM-DD` day a shared todo epoch names. `parseIsoDate` and
  * `resolveStartEpoch` return a day as its UTC midnight, so the day is read in
- * UTC; from here on it is a `PlainDate`, which has no zone to shift it.
+ * UTC.
  */
-function calendarDay(epoch: number): Temporal.PlainDate {
-  return Temporal.Instant.fromEpochMilliseconds(epoch).toZonedDateTimeISO("UTC").toPlainDate();
+function calendarDay(epoch: number): string {
+  return new Date(epoch).toISOString().slice(0, 10);
 }
 
 /**
- * "Sep 15", or "Sep 15, 2027" outside the current year. A `PlainDate` is
- * formatted as the day it is, in every browser zone (`FriendlyDate.tsx` has
- * the same rule and the bug it prevents).
+ * "Sep 15", or "Sep 15, 2027" outside the current year. The epoch is a UTC
+ * calendar day (`parseIsoDate`), so it is formatted in UTC: the day shown is
+ * the day written, in every browser zone (`FriendlyDate.tsx` has the same
+ * rule and the bug it prevents).
  */
 function dayLabel(epoch: number, { nowYear, locale }: { nowYear: number; locale: string | undefined }): string {
-  const day = calendarDay(epoch);
-  return day.toLocaleString(locale, { month: "short", day: "numeric", ...(day.year === nowYear ? {} : { year: "numeric" }) });
+  const date = new Date(epoch);
+  const sameYear = date.getUTCFullYear() === nowYear;
+  return date.toLocaleString(locale, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" });
 }
 
 interface TodoDateChip {
@@ -159,7 +161,7 @@ export function nextDateOf(items: readonly {
   }
   const [best] = candidates.toSorted((a, b) => a.epoch - b.epoch || (a.kind === b.kind ? 0 : a.kind === "due" ? -1 : 1));
   if (best === undefined) return null;
-  const iso = calendarDay(best.epoch).toString();
+  const iso = calendarDay(best.epoch);
   if (best.kind === "due") return { iso, word: dueWord(best.plateState) };
   return { iso, word: startPrefix({ plateState: best.plateState, startIso: iso }) === "since" ? "since" : "starts" };
 }
@@ -184,7 +186,7 @@ export function dateChips(
   }
   if (start !== undefined && start !== "") {
     const epoch = resolveStartEpoch(start, due);
-    const iso = epoch === null ? null : calendarDay(epoch).toString();
+    const iso = epoch === null ? null : calendarDay(epoch);
     chips.push({ kind: "start", iso, text: `${startPrefix({ plateState, startIso: iso })} ${epoch === null ? start : dayLabel(epoch, format)}`, warning: false });
   }
   return chips;

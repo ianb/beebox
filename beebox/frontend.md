@@ -10,7 +10,7 @@ Bee Box targets current Chrome, Safari and Firefox, and the iOS app's
 WKWebView at iOS 18 (Safari 18.0). Use any feature Baseline-available in
 Safari 18.0 without a fallback. A newer feature is progressive enhancement: use
 it only where the page still works without it, with no fallback code over
-about 20 lines and no polyfill (Temporal is the one exception). workstreams-app
+about 20 lines and no polyfill. workstreams-app
 and beebox-clerk run in Chrome only.
 
 ## Card themes
@@ -150,11 +150,13 @@ next action, and an `<ErrorText>` message with a retry. A blank screen while
 data resolves is a bug. A narrow change keeps the container's existing
 handling and does not add unreachable states.
 
-New calendar-date, time-zone, and duration code uses `Temporal`, never `Date`:
-a date-only value is a `Temporal.PlainDate`, a timestamp a `Temporal.Instant`.
-`boot()` loads the polyfill where the browser lacks Temporal
-(`src/frontend/src/lib/temporal.ts`), so read `Temporal` only inside functions, never at module
-load; a test of such code imports `src/frontend/test/helpers/temporal-global.ts`.
+Dates use `Date` and `Intl.DateTimeFormat`; do not use `Temporal`. A
+date-only `YYYY-MM-DD` value is a calendar day: parse it by its components
+(`parseIsoDate` in `@shared/todo-model` gives its midnight UTC) and format it
+with `timeZone: "UTC"`, so it shows its own day in every zone. Never format
+`new Date("YYYY-MM-DD")` in the viewer's zone. A timestamp is an instant,
+shown in the viewer's zone. The day an instant falls on in a zone is
+`localDay` (`@shared/local-day`).
 
 ## Frontend UI Primitives
 

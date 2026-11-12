@@ -3,12 +3,11 @@
 // `new Date("2026-08-14")` parses as UTC midnight, so formatting it in the
 // browser's zone rendered the *previous* day anywhere behind UTC — a todo due
 // `2026-08-14` showed as "due Aug 13, 2026" on the Plate in US timezones.
-// `friendlyDate` reads a date-only value as a `Temporal.PlainDate`, which has
-// no zone, so the day shown is the day written; full timestamps are instants
+// `friendlyDate` formats a date-only value at its UTC midnight in UTC, so the
+// day shown is the day written in every zone; full timestamps are instants
 // and keep local-zone formatting. Each check runs in a zone named by `TZ`, so
 // the result does not depend on the runner's zone.
 
-import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { friendlyDate } from "../../../src/components/ui/FriendlyDate.js";
@@ -27,7 +26,7 @@ function inZone<T>(tz: string, fn: () => T): T {
 
 /**
  * How `Date` shows `value` with date and time in the current zone: what
- * `friendlyDate` showed before Temporal, and must still show for an instant.
+ * `friendlyDate` must show for an instant.
  * The space before "AM" differs between ICU versions, so the expected text
  * comes from the runtime rather than a literal.
  */
