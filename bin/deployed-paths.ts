@@ -19,7 +19,7 @@
  * rewrite) so the drift test can compare the two literally.
  */
 export const DEPLOYED_PATHS_PATTERN =
-  "^(beebox|tap-check|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
+  "^(beebox|tap-check|personal-vibe-check|patches|canvas-loop)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
 
 /**
  * Paths under a shipped root that never reach the server: `beebox/docs/` is
@@ -37,8 +37,9 @@ export const DEPLOYED_PATHS_PATTERN =
  * leaves alone.
  *
  * Tests never run on the server: `beebox/test/` (tours included),
- * `beebox/src/frontend/test/`, and any `*.test.ts(x)` file in a shipped
- * package. A test-only commit used to deploy, with a restart and about a
+ * `beebox/src/frontend/test/`, `canvas-loop/test/`, and any `*.test.ts(x)`
+ * file in a shipped package. (`canvas-loop/` ships: bbx and the frontend
+ * figure runtime bundle it, and its TEA.md/BRUSHES.md become box docs.) A test-only commit used to deploy, with a restart and about a
  * minute of downtime, for nothing (2026-11-11). Nothing shipped imports
  * from these paths.
  *
@@ -55,7 +56,7 @@ export const DEPLOYED_PATHS_PATTERN =
 export const NOT_SHIPPED_PATTERN =
   "^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)"
   + "|^beebox/((src|deploy)/(.*/)?)?(AGENTS|CLAUDE)\\.md$|^(tap-check|personal-vibe-check)/(AGENTS|CLAUDE)\\.md$"
-  + "|^beebox/(src/frontend/)?test/|\\.test\\.tsx?$"
+  + "|^beebox/(src/frontend/)?test/|^canvas-loop/test/|\\.test\\.tsx?$"
   + "|^beebox/deploy/((add-box|deploy-target|deploy-outcome|check-origin-tls-ref)\\.sh|prod-[a-z-]+|notify-macos|target\\.env\\.example|README\\.md)$"
   + "|^beebox/deploy/(hetzner|launchd)/|^beebox/(docker|tools)/|^beebox/[^/]+\\.md$";
 const DEPLOYED_PATHS = new RegExp(DEPLOYED_PATHS_PATTERN);
