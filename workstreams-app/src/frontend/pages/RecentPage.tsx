@@ -4,25 +4,9 @@ import { QuotaPanel } from "../components/QuotaPanel.js";
 import { Button, Badge } from "../components/ui.js";
 import { trpc } from "../trpc.js";
 import type { Quota, RecentFeed, RecentFile } from "../types.js";
+import { formatAgoMs } from "../../../../beebox/src/shared/relative-time.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
 import { usePageIdentity } from "../lib/page-identity.js";
-
-/**
- * The browser's front door (`docs/plans/general-browser.md`, Track 3).
- *
- * A feed, not a file tree: "a file is interesting if it has been modified
- * recently, IN ANY WORKSTREAM." The tree is still reachable by browsing into a
- * directory; it just is not what you land on.
- */
-function ago(at: number, now: number): string {
-  const seconds = Math.max(0, now - at);
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${String(minutes)}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${String(hours)}h ago`;
-  return `${String(Math.floor(hours / 24))}d ago`;
-}
 
 /**
  * Where a feed row goes. The feed addresses everything by repository path, but
@@ -58,7 +42,7 @@ function RecentRow({ file, now }: { file: RecentFile; now: number }) {
       {target.to === "/issues"
         ? <Link to="/issues" search={target.search}>{file.relPath}</Link>
         : <Link to="/browse" search={target.search}>{file.relPath}</Link>}
-      <span className="muted">{ago(file.at, now)}</span>
+      <span className="muted">{formatAgoMs((now - file.at) * 1000)}</span>
       {file.workstream === null ? null : <Badge tone="accent">{file.workstream}</Badge>}
       {file.inProgress ? <Badge tone="warning">in progress</Badge> : null}
     </li>
@@ -120,6 +104,13 @@ export function RecentView({ feed, quotas, quotaError, workstream }: { feed: Rec
   );
 }
 
+/**
+ * The browser's front door (`docs/plans/general-browser.md`, Track 3).
+ *
+ * A feed, not a file tree: "a file is interesting if it has been modified
+ * recently, IN ANY WORKSTREAM." The tree is still reachable by browsing into a
+ * directory; it just is not what you land on.
+ */
 export function RecentPage({ workstream }: { workstream: string | null }) {
   usePageIdentity("recent", workstream);
   const recent = trpc.documents.recent.useQuery();

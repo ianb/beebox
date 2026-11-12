@@ -103,20 +103,6 @@ export function newMessageId(): string {
 }
 
 /**
- * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
- * Returns null when the gap is under 6 hours — callers should omit the attribute then.
- */
-export function formatTimePassed(ms: number): string | null {
-  const SIX_HOURS = 6 * 60 * 60 * 1000;
-  if (ms < SIX_HOURS) return null;
-  const totalHours = Math.floor(ms / (60 * 60 * 1000));
-  if (totalHours < 24) return `${totalHours}h`;
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  return hours > 0 ? `${days}d${hours}h` : `${days}d`;
-}
-
-/**
  * Ephemeral marker shown in the message stream when the user switches models.
  * `afterGroupCount` snapshots the number of message groups at insertion time
  * — the marker renders between that group and whatever comes after, which

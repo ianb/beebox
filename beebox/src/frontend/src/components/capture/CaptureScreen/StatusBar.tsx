@@ -12,13 +12,13 @@
  * in `CaptureControls`, where there is room for a control worth tapping.
  */
 
+import { formatClock } from "@shared/relative-time";
 import { LiveDot } from "../../ui/LiveDot";
 
 interface StatusBarProps {
   includeControlIds?: boolean;
   recording: boolean;
   recordingTime: number;
-  formatTime: (s: number) => string;
   audioTotal: number;
   audioUploading: number;
   audioUploaded: number;
@@ -56,7 +56,7 @@ export function StatusBar(props: StatusBarProps) {
         {props.recording ? (
           <div className="flex items-center gap-2">
             <LiveDot tone="danger" />
-            <span className="text-sm font-mono">{props.formatTime(props.recordingTime)}</span>
+            <span className="text-sm font-mono">{formatClock(props.recordingTime * 1000)}</span>
           </div>
         ) : null}
         {!props.recording && props.audioTotal > 0 ? (

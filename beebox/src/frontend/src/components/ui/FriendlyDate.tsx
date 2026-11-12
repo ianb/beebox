@@ -5,12 +5,18 @@
  *
  *   <FriendlyDate iso={card.captured} />            → "Jun 14, 2026, 10:36 AM"
  *   <FriendlyDate iso={card.captured} mode="date" /> → "Jun 14, 2026"
+ *   <FriendlyDate iso={card.captured} mode="time" /> → "10:36 AM"
  *   <FriendlyDate iso="2026-08-14" />               → "Aug 14, 2026"
  */
+export type FriendlyDateMode = "datetime" | "date" | "time";
+
 interface FriendlyDateProps {
   iso: string;
-  /** "datetime" (default) shows date + time; "date" shows the day only. */
-  mode?: "datetime" | "date";
+  /**
+   * "datetime" (default) shows date + time; "date" shows the day only; "time"
+   * shows the time only (a date-only value has no time, so it shows the day).
+   */
+  mode?: FriendlyDateMode;
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,13 +47,14 @@ function parse(value: string | number): Temporal.PlainDate | Temporal.Instant | 
  * The text {@link FriendlyDate} shows, for places that need a string (titles,
  * sentences). Takes an ISO string or epoch milliseconds. A day is shown as
  * that day, never with a time; an instant in the browser's zone, with the time
- * unless `mode` is "date". A value that does not parse comes back as written
+ * unless `mode` is "date", and the time alone when `mode` is "time". A value that does not parse comes back as written
  * rather than "Invalid Date".
  */
-export function friendlyDate(value: string | number, mode?: "datetime" | "date"): string {
+export function friendlyDate(value: string | number, mode?: FriendlyDateMode): string {
   const parsed = parse(value);
   if (parsed === null) return String(value);
   if (parsed instanceof Temporal.PlainDate || mode === "date") return parsed.toLocaleString(undefined, { dateStyle: "medium" });
+  if (mode === "time") return parsed.toLocaleString(undefined, { timeStyle: "short" });
   return parsed.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 

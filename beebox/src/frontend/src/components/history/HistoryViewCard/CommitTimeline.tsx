@@ -18,6 +18,7 @@ import { StatusMessage } from "../../ui/StatusMessage";
 import { phaseTone } from "../phase-tone";
 import { useBoxNow } from "../../../lib/box-clock";
 import { agoOnClock } from "../../../lib/relative-time";
+import { formatClock } from "@shared/relative-time";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -63,17 +64,11 @@ function groupBySession(commits: HistoryCommit[]): CommitGroup[] {
   return groups;
 }
 
-/**
- * Format duration between two dates as MM:SS.
- */
-function formatDuration(fromDate: string, toDate: string): string | null {
-  const from = new Date(fromDate).getTime();
-  const to = new Date(toDate).getTime();
-  const diff = to - from;
-  if (diff < 0 || diff > 3600000) return null; // Skip if negative or > 1 hour
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+/** Time between two commits as a clock, or null when negative or over an hour. */
+function commitGap(fromDate: string, toDate: string): string | null {
+  const diff = new Date(toDate).getTime() - new Date(fromDate).getTime();
+  if (diff < 0 || diff > 3600000) return null;
+  return formatClock(diff);
 }
 
 /**
@@ -129,7 +124,7 @@ function CommitRow({
   // distinction this timeline exists to draw.
   const triggers = commitTriggers(commit.trailers);
   const step = commitStep(commit.trailers);
-  const duration = prevCommitDate ? formatDuration(prevCommitDate, commit.date) : null;
+  const duration = prevCommitDate ? commitGap(prevCommitDate, commit.date) : null;
 
   const ariaLabel = [
     `Commit ${commit.hash.substring(0, 7)}`,

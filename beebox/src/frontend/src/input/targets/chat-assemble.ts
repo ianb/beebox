@@ -23,7 +23,7 @@ import { composerToken, composerTokenIn } from "@shared/composer-tokens";
 /**
  * Frame state at the moment of sending, pre-formatted as plain values:
  * `localTime` is "HH:MM"; `zoomedView` is the serialized `view:` URI of
- * the zoomed companion view or null; `timePassed` is the "3h"/"2d4h"
+ * the zoomed companion view or null; `timePassed` is the "7h"/"2d 4h"
  * gap-since-last-message string or null (callers omit it under 6h,
  * per formatTimePassed).
  */

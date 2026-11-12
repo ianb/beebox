@@ -66,3 +66,12 @@ void test("friendlyDate formats strings and epochs, and returns bad input as wri
   t.check(inZone("UTC", () => friendlyDate(epoch)), inZone("UTC", () => dateShown(epoch)));
   t.check([friendlyDate("sometime"), friendlyDate("2026-02-30"), friendlyDate(Number.NaN)], ["sometime", "2026-02-30", "NaN"]);
 });
+
+// "time" shows an instant's time alone, in the viewer's zone, and a date-only
+// value (which has no time) its day:
+void test("friendlyDate time mode shows the time of an instant and the day of a date-only value", async (t) => {
+  const iso = "2026-08-14T03:00:00Z";
+  t.check(inZone("America/Los_Angeles", () => friendlyDate(iso, "time").replace(/\s/gu, " ")), "8:00 PM");
+  t.check(inZone("Asia/Kolkata", () => friendlyDate(iso, "time").replace(/\s/gu, " ")), "8:30 AM");
+  t.check(inZone("Pacific/Kiritimati", () => friendlyDate("2026-08-14", "time")), "Aug 14, 2026");
+});

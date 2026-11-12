@@ -37,10 +37,6 @@ function sendableCount(c: {
   return c.photosUploaded + c.photosUploading + c.audioUploaded + c.audioUploading + c.filesUploaded + c.filesUploading;
 }
 
-function formatTime(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
 /** null = undecided (dialog may show); otherwise the surface runs fresh or resumed. */
 type Decision = null | { kind: "fresh" } | { kind: "resume"; target: CaptureResumeTarget };
 
@@ -136,7 +132,7 @@ function CaptureSurface({ targetSessionId, resume, onExit, includeControlIds }: 
     <CaptureShell>
       <StatusBar
         includeControlIds={includeControlIds}
-        recording={recording} recordingTime={recordingTime} formatTime={formatTime}
+        recording={recording} recordingTime={recordingTime}
         audioTotal={counts.audioTotal} audioUploading={counts.audioUploading} audioUploaded={counts.audioUploaded} audioFailed={counts.audioFailed}
         photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed} photosUnreadable={counts.photosUnreadable}
         fileTotal={counts.fileTotal} filesUploading={counts.filesUploading} filesUploaded={counts.filesUploaded} filesFailed={counts.filesFailed} filesUnreadable={counts.filesUnreadable}

@@ -302,6 +302,22 @@ export default [
       ],
     },
   },
+  // One owner per time format: FriendlyDate and friendlyDate own the browser's
+  // date and time text. The deploy page is a separate script with no React
+  // and no Temporal polyfill, so it keeps its call.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/ui/FriendlyDate.tsx", "src/deploy-page/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...["toLocaleTimeString", "toLocaleDateString"].map((property) => ({
+          property,
+          message: "Use friendlyDate(value, mode) or <FriendlyDate> from components/ui/FriendlyDate.",
+        })),
+      ],
+    },
+  },
   // One owner per control: a raw <input>, <textarea> or <select> skips the
   // field primitives' label, error and ink; a raw list or table skips List's
   // role and Table's name and scroll container; a hand-written menu role or

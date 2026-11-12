@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import type { SessionContentBlock } from "../../../api";
 import { trpc } from "../../../lib/trpc/client";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 interface SessionLogProps {
   sessionId: string;
@@ -83,7 +84,7 @@ function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: 
           {isUser ? "User" : "Assistant"}
         </span>
         <span className="text-xs text-warm-700">
-          {new Date(entry.timestamp).toLocaleTimeString()}
+          {friendlyDate(entry.timestamp, "time")}
         </span>
       </div>
       <div className="space-y-1">
