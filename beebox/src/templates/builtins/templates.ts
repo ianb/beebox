@@ -9,6 +9,7 @@ import { createInitialGuideTemplate } from "../../schemas/guide/templates.js";
 import { createRecordTemplate } from "../../schemas/record.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script/schema.js";
 import { createTodoViewTemplate } from "../../schemas/todo-view.js";
+import { createTourTemplate } from "../../schemas/tour.js";
 import { TODO_STATUSES } from "../../shared/todo-model.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
 import { createPersonTemplate } from "../../schemas/person.js";
@@ -79,6 +80,22 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
       if (args.reason) opts.reason = args.reason;
       if (args["lock-group"]) opts.lockGroup = args["lock-group"];
       return createScheduledScriptTemplate(opts);
+    },
+  }),
+
+  eraseTemplateArgs({
+    name: "tour",
+    description: "A tour card — an ordered walk-through for the conversation strip",
+    cardTypes: ["tour"],
+    defaultForTypes: ["tour"],
+    argsSchema: z.object({
+      title: z.string().describe("Display title for the tour"),
+      body: z.string().optional().describe("Tour body: one `## ` heading per beat (default: one empty beat)"),
+    }),
+    generate: (args) => {
+      const opts: Parameters<typeof createTourTemplate>[0] = { title: args.title };
+      if (args.body !== undefined) opts.body = args.body;
+      return createTourTemplate(opts);
     },
   }),
 

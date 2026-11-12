@@ -142,6 +142,22 @@ tests:
       - '(?:not|no|never|isn.t|doesn.t)[\s\S]{0,160}(?:confirm|correct|verified)|(?:silence|uncorrected)[\s\S]{0,160}(?:not|isn.t|doesn.t)'
     tags: [jev-triage]
 
+  # Status (2026-11-12, Claude): 1/1 passed, 3 reads, 3 searches, 35k context,
+  # against the worktree test box. It found the tour type and the command by
+  # looking; it did not answer from the always-loaded guidance alone.
+  - id: tour-strip-walkthrough
+    prompt: >
+      A new family member is joining this box and wants to be walked through
+      it a step at a time, with the steps staying in view while they click
+      around. What do you create and what do you run? Explain only; do not
+      change files.
+    expected_level: knows_directly
+    watch_for: "Writes a tour card with one `##` heading per beat and shows it with `bbx chat strip set`"
+    correct_contains: ["tour"]
+    correct_matches:
+      - 'bbx chat strip set'
+    tags: [conversation-strip]
+
   # === Quick chat routing ===
   # Status (2026-09-21, Claude): 1/1 passed, 0 reads/searches, 23k context,
   # against a disposable standalone clone with installed package-doc files.

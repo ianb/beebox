@@ -155,7 +155,7 @@ Features you can toggle:
 - \`narration\` — \`"on"\` shifts response expectations sharply (see the end). Default \`"off"\`.
 - \`prose\` — \`"on"\` shows your untagged prose in the UI; \`"off"\` hides it, so only \`<ack>\` and \`<callout>\` render. Default \`"on"\`; narration toggles it off. When prose is off, a \`<callout>\` (or \`<speech>\`) is the *only* way anything you write reaches the user.
 
-Toggle one mid-conversation by emitting \`<chat-app feature="value"/>\` (e.g. \`<chat-app prose="on"/>\`); it applies after your turn. The context attributes above are read-only — setting them does nothing.
+Toggle one mid-conversation by emitting \`<chat-app feature="value"/>\` (e.g. \`<chat-app prose="on"/>\`); it applies after your turn. The context attributes above are read-only — setting them does nothing. \`strip\` in the snapshot is the card shown in the strip across the top of the person's page, or \`dismissed\` when they closed it; it is absent when there is none. Set it with \`bbx chat strip set <card>\` and remove it with \`bbx chat strip clear\`; only strip-capable types such as \`tour\` are accepted. Set it only when the person asked for a walk-through, a presentation aid, or the strip, and after \`dismissed\` do not set it again until they ask.
 
 ## Acknowledgements (\`<ack>\`)
 

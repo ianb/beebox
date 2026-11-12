@@ -204,7 +204,7 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
   await store.set("narration", "on");
   t.check(
     { inMemory: store.get(), written: await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777") },
-    { inMemory: { narration: "on", prose: "on" }, written: null },
+    { inMemory: { narration: "on", prose: "on", strip: "none" }, written: null },
   );
 
   // A recorded session persists as it always did:

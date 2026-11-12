@@ -16,7 +16,7 @@ import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { ExternalLink } from "./ui/ExternalLink";
 import { Text } from "./ui/Text";
 
-export type PdfFrameMode = "page" | "chat" | "companion" | "embed";
+export type PdfFrameMode = "page" | "chat" | "companion" | "embed" | "strip";
 
 export interface PdfFrameProps {
   /** URL of the raw PDF bytes. */
@@ -42,6 +42,7 @@ const OUTER_CLASSES: Record<PdfFrameMode, string> = {
   chat: "flex flex-col",
   companion: "flex flex-col h-full min-h-0",
   embed: "flex flex-col h-full min-h-0",
+  strip: "flex flex-col",
 };
 
 const FRAME_CLASSES: Record<PdfFrameMode, string> = {
@@ -53,6 +54,8 @@ const FRAME_CLASSES: Record<PdfFrameMode, string> = {
   // content-sized, so without the floor a PDF collapses to ~150px there.
   companion: "w-full flex-1 min-h-[70vh]",
   embed: "w-full flex-1 min-h-[70vh]",
+  // No PDF renderer declares a strip rendering; this keeps the map total.
+  strip: "w-full h-40",
 };
 
 function PdfActions({ src, downloadName }: { src: string; downloadName: string }) {
