@@ -105,6 +105,14 @@ void test("every message names its views.md section", async (t) => {
   t.check(["Controls People Can Use", "Dates", "Styling"].filter((s) => !doc.includes(`## ${s}\n`)), []);
 });
 
+// The rule matches both `new Date("2026-08-14")` and `new Date("2026-08-14T03:00:00Z")`
+// and cannot tell them apart in a variable, so one message gives the remedy for each:
+void test("date and today messages give the right remedy for date-only values and timestamps", async (t) => {
+  const parse = ADVICE_MESSAGES["date-string-parse"];
+  t.check([/date-only/.test(parse), /Date\.UTC/.test(parse), /timestamp/.test(parse), /instant/.test(parse)], [true, true, true, true]);
+  t.check(/formatToParts/.test(ADVICE_MESSAGES["utc-today"]), true);
+});
+
 // The guide cannot teach what the advice reports.
 void test("no tsx example in the generated views doc gets source advice", async (t) => {
   const findings = finder(t);

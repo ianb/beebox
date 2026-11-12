@@ -39,9 +39,9 @@ export const ADVICE_MESSAGES: Record<AdviceRule, string> = {
   "viewport-height":
     "a `100vh` or `h-screen` height; use `dvh` (views.md, \"Controls People Can Use\")",
   "date-string-parse":
-    "`new Date(text)` reads a date-only value as midnight UTC; build it with `Date.UTC(y, m - 1, d)` and format it with `timeZone: \"UTC\"` (views.md, \"Dates\")",
+    "`new Date(text)` reads a date-only value (`2026-08-14`) as midnight UTC, so a viewer west of UTC sees the day before: build a date-only value with `Date.UTC(y, m - 1, d)` and format it with `timeZone: \"UTC\"`. A timestamp (`2026-08-14T09:30:00Z`) is an instant: keep `new Date(text)` and format it without `timeZone`, in the display zone (views.md, \"Dates\")",
   "utc-today":
-    "`toISOString()` cut to a date is today in UTC; use `new Intl.DateTimeFormat(\"en-CA\").format(new Date())` (views.md, \"Dates\")",
+    "`toISOString()` cut to a date is today in UTC; build the day from `new Intl.DateTimeFormat(\"en-CA\", {year, month, day}).formatToParts(new Date())` (year, month, day parts), not from `format()` text (views.md, \"Dates\")",
   "unnamed-control":
     "a control with no name; give it text, a `<label>`, or `aria-label` (a placeholder is not a name) (views.md, \"Controls People Can Use\")",
   "img-without-alt":

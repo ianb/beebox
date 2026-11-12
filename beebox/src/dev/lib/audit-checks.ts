@@ -16,6 +16,13 @@ function unquote(value: string): string {
  * `cd dir && cat file` (or `;`). Each word after the `cd` is also tried
  * joined to its directory. Anything more is left unresolved.
  */
+/** A Grep whose path (the text after the last " in ") is `file` itself, not a directory holding it. */
+function grepTargets(search: { tool: string; summary: string }, file: string): boolean {
+  if (search.tool !== "Grep") return false;
+  const at = search.summary.lastIndexOf(" in ");
+  return at !== -1 && search.summary.slice(at + 4).trim().endsWith(file);
+}
+
 function readMentionsFile(read: string, file: string): boolean {
   const vars = new Map<string, string>();
   for (const [, name, value] of read.matchAll(ASSIGNMENT)) {
@@ -91,7 +98,12 @@ export function runChecks(
   }));
   let shouldReadAnyCheck: AutomatedChecks["shouldReadAnyCheck"];
   if (test.should_read_any !== undefined) {
-    const matched = test.should_read_any.find((file) => behavior.filesRead.some((read) => readMentionsFile(read, file)));
+    // A Grep aimed at the file itself counts as consulting it: an agent that
+    // searches frontend.md for a primitive's name and cites the lines has
+    // read the part that matters.
+    const consulted = (file: string) =>
+      behavior.filesRead.some((read) => readMentionsFile(read, file)) || behavior.searches.some((search) => grepTargets(search, file));
+    const matched = test.should_read_any.find(consulted);
     shouldReadAnyCheck = { files: test.should_read_any, wasRead: matched !== undefined, matched };
   }
   const shouldNotReadChecks = (test.should_not_read ?? []).map((file) => ({

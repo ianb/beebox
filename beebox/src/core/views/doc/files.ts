@@ -212,12 +212,23 @@ every viewer sees that day:
 \`\`\`tsx
 const dayOf = (text: string): number => {
   const [y = 0, m = 1, d = 1] = text.split("-").map(Number);
-  return Date.UTC(y, m - 1, d);
+  const utcMs = Date.UTC(y, m - 1, d);
+  const back = new Date(utcMs); // Date.UTC rolls 2026-02-30 over to March 2; reject it
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== m - 1 || back.getUTCDate() !== d) throw new Error(\`Not a date: \${text}\`);
+  return utcMs;
 };
-const today = new Intl.DateTimeFormat("en-CA").format(new Date()); // "2026-08-14", the viewer's day
+const todayText = (): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const part = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+  return \`\${part("year")}-\${part("month")}-\${part("day")}\`; // "2026-08-14"
+};
 new Date(dayOf(due)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }); // "Aug 14"
-const daysLeft = (dayOf(due) - dayOf(today)) / 86_400_000;
+const daysLeft = (dayOf(due) - dayOf(todayText())) / 86_400_000;
 \`\`\`
+
+A view cannot read the box's timezone, so \`todayText()\` is today where the
+person viewing is (usually the boxholder), in the zone their device is set to.
+Do not assemble it from \`format()\` output: its layout is up to the browser.
 
 A timestamp (\`2026-08-14T09:30:00Z\`) is a moment: \`new Date(value)\`,
 formatted without \`timeZone\`, shows it in the viewer's zone. Do not show

@@ -39,8 +39,10 @@ export function upcomingWindow(now: Date): Window {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const from = new Date(now);
   from.setHours(0, 0, 0, 0);
-  const to = new Date(from);
+  // The end is its own day's midnight: `from` may be 01:00 when a DST change skips midnight.
+  const to = new Date(now);
   to.setDate(to.getDate() + DAYS_SHOWN);
+  to.setHours(0, 0, 0, 0);
   return { first: localDay(from, timeZone), last: localDay(to, timeZone), from, to, timeZone };
 }
 

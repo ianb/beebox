@@ -9548,6 +9548,9 @@ tests:
   # section dropped Temporal. Passes 2/2 on the web-guidance-scan test1 clone:
   # read views.md, split the string, Date.UTC, timeZone "UTC", today from
   # Intl.DateTimeFormat("en-CA"), and named both UTC traps.
+  # Status (2026-11-12, Claude claude-opus-5-5, review fixes): after the Dates
+  # example gained a UTC round-trip check and formatToParts for today, passes
+  # 1/1 on the same clone; the agent reproduced both and the Feb 30 rejection.
   - id: view-date-only-utc
     prompt: >
       A card type has `due: 2026-08-14` in its frontmatter. In its view I want
@@ -9558,7 +9561,7 @@ tests:
     watch_for: >
       Uses the views doc's "Dates" section: splits the string into numbers,
       builds it with Date.UTC, formats with timeZone "UTC", and takes today
-      in the viewer's zone (Intl.DateTimeFormat("en-CA") or local getters).
+      in the viewer's zone (Intl.DateTimeFormat formatToParts or local getters).
       FAILS if it parses with new Date(due) for display in the local zone, or
       cuts toISOString() for today.
     correct_matches:
