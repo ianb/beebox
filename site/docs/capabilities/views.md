@@ -36,6 +36,13 @@ view is attached to a card type, so there is no standalone, card-less view.
 The agent writes and edits view code the same way it edits any other file in
 the box, then you see the result displayed.
 
+The agent checks a view before handing it over. `bbx view check` renders each
+card type the view displays, runs its effects, and prints advice where the
+view uses a pattern the box's view guidance forbids. A view can declare named
+states for the check to render. The agent can also open
+the card in the box's own browser and look at it
+([web-interface.md](web-interface.md)).
+
 **Limits**
 
 Views are for presenting data that already exists, not for work that needs

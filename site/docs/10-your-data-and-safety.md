@@ -80,7 +80,14 @@ unless the owner turns them on, because they include hashes of the lines each
 change adds.
 
 **Authentication is always on.** Every route sits behind a login wall, with
-no flag that disables it. A box with no member list is owner-only.
+no flag that disables it. A box with no member list is owner-only. Pages the
+web app serves refuse to be shown inside another site's frame. The processes a
+box starts (the agent, git, command-line tools) receive a reduced environment
+that leaves out the server's session-signing secret and other boxes'
+credentials. The security documentation calls that a guard against accidents
+and lazy exfiltration, not a boundary against a hostile agent, since the
+secret file is readable by anything running as the same user. One gap it lists
+as open: a box's own card-type definitions load inside the server process.
 
 Read [security/overview.md](security/overview.md) for the threat model,
 accepted risks, and known limitations, including that boxes served by one hub share a

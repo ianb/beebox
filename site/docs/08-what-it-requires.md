@@ -11,6 +11,11 @@ VPS. The documentation says a $5/month VPS is enough for the container path.
 The box runs on a full computer; the design rules out serverless hosting. It
 does not run on a phone.
 
+**A current browser, and for the iPhone app, iOS 18.** The web app targets
+current Chrome, Safari, and Firefox, with Safari 18 as the oldest it is held
+to. The iPhone companion app needs iOS 18 or later; the project raised that
+from iOS 17 on 2026-11-11 so the web app inside it can rely on Safari 18.
+
 **A coding-agent login.** Claude Code or Codex. For Claude, the documentation
 requires you to sign in with a Claude subscription yourself; it says an API
 key alone will not work, by design. The documentation does not describe
