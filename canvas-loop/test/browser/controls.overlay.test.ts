@@ -15,7 +15,8 @@ function placingModule(place: { on: boolean }): Record<string, unknown> {
     },
     canvas: { width: 200, height: 100 },
     init: () => ({}),
-    update: (model: unknown) => model,
+    // A new model each tick, so each frame draws: this draw reads `place`, outside the model.
+    update: (model: object) => ({ ...model }),
     draw: (v: View) => {
       if (place.on) v.control("count", { x: 50, y: 25, w: 40, h: 20, size: 18 });
     },

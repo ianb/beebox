@@ -62,6 +62,10 @@ export class Runtime {
   #mouseY = 0;
   #paused = false;
   #raf: number | undefined;
+  // Off screen: the loop is stopped until `resume` (see `suspend`).
+  #suspended = false;
+  // The canvas no longer shows the current model and params; the next frame draws.
+  #dirty = true;
   #acc = 0;
   #last: number | undefined;
   #onFrame: (frame: number) => void;
@@ -117,6 +121,30 @@ export class Runtime {
     if (this.#raf !== undefined) cancelAnimationFrame(this.#raf);
     this.#raf = undefined;
     this.#player?.close();
+  }
+
+  /**
+   * Stop the loop while the canvas is off screen, silencing any sound. Time
+   * stops with it: `resume` continues from the same frame, as after a pause.
+   */
+  suspend(): void {
+    if (this.#raf === undefined) return;
+    cancelAnimationFrame(this.#raf);
+    this.#raf = undefined;
+    this.#suspended = true;
+    this.#player?.stopAll();
+  }
+
+  /** Restart a loop `suspend` stopped (a stopped or failed sketch stays stopped). */
+  resume(): void {
+    if (!this.#suspended) return;
+    this.#suspended = false;
+    this.start();
+  }
+
+  /** Draw again on the next frame though the model is unchanged (e.g. a web font finished loading). */
+  invalidate(): void {
+    this.#dirty = true;
   }
 
   /** Allow sound; call from a user gesture's handler (browsers start audio only then). */
@@ -217,10 +245,8 @@ export class Runtime {
     const last = this.#last ?? now;
     this.#last = now;
     if (this.#paused) {
-      if (this.#pending.length > 0) {
-        this.#flushPending();
-        this.#draw();
-      }
+      this.#flushPending();
+      if (this.#dirty) this.#draw();
       return;
     }
     let dt = now - last;
@@ -233,7 +259,9 @@ export class Runtime {
       steps += 1;
     }
     if (steps > 0) {
-      this.#draw();
+      // `draw` depends only on the model and params, so an unchanged pair
+      // means an unchanged picture: a still figure costs almost nothing.
+      if (this.#dirty) this.#draw();
       this.#onFrame(this.#frame);
     }
   }
@@ -306,6 +334,7 @@ export class Runtime {
         return { type: intent.type, key: intent.key ?? "" };
       case "param":
         this.#params = Object.freeze({ ...this.#params, [intent.name]: intent.value });
+        this.#dirty = true;
         return { type: "param", name: intent.name, value: intent.value };
       case "trigger":
         return { type: "trigger", name: intent.name };
@@ -322,11 +351,13 @@ export class Runtime {
     // Reference-change is the free engagement signal — compute before freezing
     // (frozen() returns the same reference it froze, so it must run first).
     const changed = next !== this.#model;
+    if (changed) this.#dirty = true;
     this.#model = frozen(next);
     return changed;
   }
 
   #draw(): void {
+    this.#dirty = false;
     this.#module.draw(this.#view, this.#model, this.#params);
     this.#view.finishFrame();
     const placements = this.#view.takePlacements();
@@ -336,4 +367,27 @@ export class Runtime {
   #recordLog(args: readonly unknown[]): void {
     this.#onLog({ frame: this.#frame, message: args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") });
   }
+}
+
+/**
+ * Sleep while off screen: suspend the runtime's loop when the canvas leaves
+ * the viewport (with a margin, so it wakes just before it scrolls in) and
+ * resume it on return. Also redraw once when a web font finishes loading,
+ * since a still figure otherwise keeps the fallback font it first drew with.
+ * Hosts without these APIs (bare Node) get no watching. Returns a teardown.
+ */
+export function watchVisibility(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
+  const observer = typeof IntersectionObserver === "undefined" ? undefined : new IntersectionObserver((entries) => {
+    const onScreen = entries.at(-1)?.isIntersecting;
+    if (onScreen === true) runtime.resume();
+    else if (onScreen === false) runtime.suspend();
+  }, { rootMargin: "200px" });
+  observer?.observe(canvas);
+  const fonts = typeof document === "undefined" ? undefined : document.fonts;
+  const redraw = (): void => runtime.invalidate();
+  fonts?.addEventListener("loadingdone", redraw);
+  return () => {
+    observer?.disconnect();
+    fonts?.removeEventListener("loadingdone", redraw);
+  };
 }
