@@ -7,6 +7,7 @@
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../lib/routing";
 import { CardMark } from "./ui/CardMark";
+import { ButtonLink } from "./ui/Button";
 import type { CardSymbolData } from "@shared/card-symbol";
 
 interface Box {
@@ -41,14 +42,9 @@ function BoxMark({ box }: { box: Box }) {
  */
 export function SignInLink({ returnTo }: { returnTo: string }) {
   return (
-    <Link
-      id="bbx-box-selection-sign-in"
-      to={href("/auth/login")}
-      search={toSearch({ returnTo })}
-      className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
-    >
+    <ButtonLink id="bbx-box-selection-sign-in" to="/auth/login" search={toSearch({ returnTo })} intent="primary" size="lg">
       Sign in
-    </Link>
+    </ButtonLink>
   );
 }
 

@@ -187,7 +187,7 @@ function Fence({ children, "data-language": language }: { children?: ReactNode; 
   };
   return (
     <pre data-language={language}>
-      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1 print:hidden" flash={{ label: "Copied" }} onClick={copy}>
+      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1 print:hidden" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={copy}>
         Copy
       </Button>
       <span ref={textRef}>{children}</span>

@@ -11,7 +11,7 @@ import { CloseButton } from "../../ui/CloseButton";
 import { MenuItem } from "../../ui/menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
-import { VoiceToggleButton } from "./InteractiveChat-voice-button";
+import { CIRCLE_BTN, VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicStatus } from "./MicStatus";
 import { joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
@@ -42,9 +42,24 @@ export interface TranscriptionHandle {
   cancel: () => void;
 }
 
-const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
-
 const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
+
+/** "Edit before sending": stops dictation and moves its transcript into the text. Shared by the desktop and mobile rows. */
+export function DictationEditButton({ id, onClick }: { id: string | undefined; onClick: () => void }) {
+  return (
+    <button type="button"
+      id={id}
+      onClick={onClick}
+      className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+      aria-label="Edit before sending"
+      title="Edit before sending"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    </button>
+  );
+}
 
 /**
  * The composer's trailing send button, shared by the desktop and mobile rows.
@@ -125,7 +140,7 @@ function DesktopComposerRow({
             ink
             className="flex-shrink-0"
           />
-          <button type="button"
+          <DictationEditButton
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
               onStopDictation();
@@ -135,14 +150,7 @@ function DesktopComposerRow({
               // Now editable typed text, not voice — drop the dictation draft.
               clearDraft();
             }}
-            className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
-            aria-label="Edit before sending"
-            title="Edit before sending"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
+          />
         </>
       ) : null}
       {/* One send control, one address: which message it commits depends on

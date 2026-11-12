@@ -18,6 +18,7 @@ import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
 import type { ImageItem, FileItem } from "../../../../input/emission-store";
 import { Spinner } from "../../../ui/Spinner";
+import { ComposerStrip, TokenTag } from "./ComposerStrip";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -51,7 +52,7 @@ export function AttachmentPanel({
   };
 
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {attachments.map((att) => (
         <ThumbTile
           key={att.id}
@@ -63,7 +64,7 @@ export function AttachmentPanel({
       {Array.from({ length: pendingCount }, (_unused, i) => (
         <PendingThumb key={`pending-${i}`} />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -105,9 +106,7 @@ function ThumbTile({
           bordered
         />
       </button>
-      <div className="absolute -top-1 left-0 text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
-        {attachment.id}
-      </div>
+      <TokenTag corner>{attachment.id}</TokenTag>
       <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
     </div>
   );
@@ -133,7 +132,7 @@ export function FileAttachmentPanel({
   if (attachments.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {attachments.map((att) => (
         <FileChip
           key={att.id}
@@ -142,7 +141,7 @@ export function FileAttachmentPanel({
           onRetry={() => onRetry(att.id)}
         />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -175,9 +174,7 @@ function FileChip({
       data-bbx-upload-state={state.status === "failed" && state.unreadable === true ? "unreadable" : state.status}
       title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
-      <span className="text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
-        {attachment.id}
-      </span>
+      <TokenTag>{attachment.id}</TokenTag>
       <svg className="w-4 h-4 text-warm-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>

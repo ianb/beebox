@@ -14,6 +14,7 @@ import { CloseButton } from "../../../ui/CloseButton";
 import { Popover } from "../../../ui/Popover";
 import { displayName } from "../../../../lib/display-name";
 import { snippet } from "../../../../lib/snippet";
+import { ComposerStrip, TokenTag } from "./ComposerStrip";
 
 function docName(ref: string | null): string {
   if (ref === null) return "Chat";
@@ -29,11 +30,11 @@ export function SelectionPanel({
 }) {
   if (selections.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-2 px-3 py-2 border-t border-warm-300 bg-warm-100/70">
+    <ComposerStrip>
       {selections.map((selection) => (
         <SelectionPill key={selection.id} selection={selection} onRemove={() => onRemove(selection.id)} />
       ))}
-    </div>
+    </ComposerStrip>
   );
 }
 
@@ -57,7 +58,7 @@ function SelectionPill({
             className="flex items-center gap-1.5 max-w-[16rem] rounded bg-warm-200 pl-1.5 pr-2 py-1 hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
             title="Click to view the selected text"
           >
-            <span className="font-mono text-[0.625rem] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
+            <TokenTag>{`selection#${String(selection.id)}`}</TokenTag>
             <span className="text-xs text-warm-700 truncate">“{snippet(selection.text, 32)}”</span>
           </button>
         )}

@@ -177,6 +177,7 @@ Every control also has an accessible name, which screen readers, the box agent, 
 
 **Actions**
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
+- `<ButtonLink>` — a router link drawn as a `<Button>` (`to`, `search`, `intent`, `size`), for navigation that reads as a button ("New chat"). No loading or flash.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
 - `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
 

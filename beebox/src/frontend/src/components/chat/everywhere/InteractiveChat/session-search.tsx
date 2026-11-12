@@ -23,6 +23,7 @@ import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
 import { sessionIdHint } from "./session-list-grouping";
 import { StatusMessage } from "../../../ui/StatusMessage";
+import { InlineAction } from "../../../ui/InlineAction";
 
 /** A query short enough to act on (the debounce has settled on it). */
 const MIN_QUERY = 2;
@@ -116,9 +117,9 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t search chats.{" "}
-        <button type="button" onClick={() => onRetry()} className="underline hover:no-underline">
+        <InlineAction intent="danger" onClick={() => onRetry()}>
           Retry
-        </button>
+        </InlineAction>
       </div>
     );
   }

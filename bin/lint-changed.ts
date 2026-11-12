@@ -186,7 +186,7 @@ export function withLayoutCheck(commands: LintCommand[], changed: string[]): Lin
 }
 
 /**
- * The UI doc-coverage check, on the same paths the pre-commit hook gates it on
+ * The UI check (doc coverage and repeated class strings), on the same paths the pre-commit hook gates it on
  * (`.husky/pre-commit`: the frontend source or `beebox/frontend.md`, deletions
  * included). Like the layout check, a root plan that delegates to beebox's
  * `lint:changed` leaves it to that child run.

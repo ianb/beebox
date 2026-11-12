@@ -150,6 +150,8 @@ fi
 
 # UI doc coverage: every export of components/ui/ is named in beebox/frontend.md
 # and every <Name> its primitives section lists exists.
+# Also: no appearance class string of six or more tokens repeats across
+# frontend files.
 if git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMRD | grep -qE '^beebox/src/frontend/src/|^beebox/frontend\.md$'; then
   run_in beebox pnpm --silent ui-check
 fi

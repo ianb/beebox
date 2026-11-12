@@ -17,6 +17,7 @@ import { ErrorText } from "../../ui/ErrorText";
 import { EMPTY_FILTER } from "../filter";
 import { historySelectionMissing, resolveHistorySelection } from "./history-selection";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { InlineAction } from "../../ui/InlineAction";
 
 const CommitDetail = lazy(async () => {
   const module = await import("./CommitDetail");
@@ -139,7 +140,7 @@ export function HistoryBrowser({
   return (
     <Row gap="none" align="stretch" className="h-full">
       <Sidebar title="Commits" headingLevel="h2" subtitle={`${commits.length} loaded`} detailSelected={hasDetail} idPrefix={`${idPrefix}-sidebar`}>
-        {filterBar && facetsQuery.isError ? <div className="px-3 py-2"><ErrorText>History filters could not be loaded. <button id={`${idPrefix}-facets-retry`} type="button" className="underline" onClick={() => void facetsQuery.refetch()}>Retry</button></ErrorText></div> : null}
+        {filterBar && facetsQuery.isError ? <div className="px-3 py-2"><ErrorText>History filters could not be loaded. <InlineAction id={`${idPrefix}-facets-retry`} intent="danger" onClick={() => void facetsQuery.refetch()}>Retry</InlineAction></ErrorText></div> : null}
         {filterBar ? (
           <HistoryFilterBar
             filter={filter}
@@ -147,7 +148,7 @@ export function HistoryBrowser({
             onChange={onFilterChange} idPrefix={`${idPrefix}-filter`}
           />
         ) : null}
-        {!hasDetail && (isError || deepLinkMissing) ? <div className="px-3 py-2 md:hidden"><ErrorText>{isError ? <>History could not be loaded: {error.message} <button id={`${idPrefix}-list-retry-mobile`} type="button" className="underline" onClick={() => void refetch()}>Retry</button></> : `No commit in this box's history starts with ${selectedHash}.`}</ErrorText></div> : null}
+        {!hasDetail && (isError || deepLinkMissing) ? <div className="px-3 py-2 md:hidden"><ErrorText>{isError ? <>History could not be loaded: {error.message} <InlineAction id={`${idPrefix}-list-retry-mobile`} intent="danger" onClick={() => void refetch()}>Retry</InlineAction></> : `No commit in this box's history starts with ${selectedHash}.`}</ErrorText></div> : null}
         <CommitTimeline
           commits={commits}
           selectedHash={selectedCommit?.hash || null}
@@ -174,7 +175,7 @@ export function HistoryBrowser({
         ) : (
           <Row justify="center" align="center" className="h-full">
             <Text tone={deepLinkMissing || isError ? "danger" : "muted"}>
-              {isError ? <>History could not be loaded: {error.message} <button id={`${idPrefix}-list-retry`} type="button" className="underline" onClick={() => void refetch()}>Retry</button></>
+              {isError ? <>History could not be loaded: {error.message} <InlineAction id={`${idPrefix}-list-retry`} intent="danger" onClick={() => void refetch()}>Retry</InlineAction></>
                 : deepLinkMissing
                 ? `No commit in this box's history starts with ${selectedHash}.`
                 : (deepLinkPending && typeof selectedHash === "string"

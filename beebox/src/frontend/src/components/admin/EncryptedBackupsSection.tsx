@@ -42,7 +42,6 @@ export function EncryptedBackupsSection() {
   });
   const [repository, setRepository] = useState("");
   const [password, setPassword] = useState("");
-  const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -57,15 +56,14 @@ export function EncryptedBackupsSection() {
     }
   };
 
+  /** Rethrows a failure so the button flashes "Copy failed"; the alert below says what to do instead. */
   const copyCommand = async (command: string) => {
     try {
       await navigator.clipboard.writeText(command);
       setCopyFailed(false);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch (_error) {
-      setCopied(false);
+    } catch (error) {
       setCopyFailed(true);
+      throw error;
     }
   };
 
@@ -158,8 +156,8 @@ export function EncryptedBackupsSection() {
                       <Text size="xs" tone="muted">Host command</Text>
                       <Text size="sm" mono breakAll>{backupCommand({ boxRoot: query.data.boxRoot, boxSlug: query.data.boxSlug, installKind: query.data.installKind, operation: "run" })}</Text>
                       {query.data.installKind === "docker" ? <Hint>Run this from the directory containing compose.yaml.</Hint> : null}
-                      <Button id="bbx-admin-encrypted-backups-copy-command" className="self-start" intent="secondary" onClick={() => void copyCommand(backupCommand({ boxRoot: query.data.boxRoot, boxSlug: query.data.boxSlug, installKind: query.data.installKind, operation: "run" }))} flash={{ label: "Copied" }}>
-                        {copied ? "Copied" : "Copy command"}
+                      <Button id="bbx-admin-encrypted-backups-copy-command" className="self-start" intent="secondary" onClick={() => copyCommand(backupCommand({ boxRoot: query.data.boxRoot, boxSlug: query.data.boxSlug, installKind: query.data.installKind, operation: "run" }))} flash={{ label: "Copied", failLabel: "Copy failed" }}>
+                        Copy command
                       </Button>
                       {copyFailed ? <div role="alert"><ErrorText>Could not copy. Select and copy the command above.</ErrorText></div> : null}
                       {query.data.newestVerified === null ? <Text size="sm" mono breakAll>{backupCommand({ boxRoot: query.data.boxRoot, boxSlug: query.data.boxSlug, installKind: query.data.installKind, operation: "status" })}</Text> : null}

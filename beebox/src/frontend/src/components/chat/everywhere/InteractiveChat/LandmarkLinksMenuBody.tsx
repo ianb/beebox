@@ -22,6 +22,7 @@ import { LandmarkGroupRows } from "../../../landmarks/LandmarkGroupRows";
 import { trpc } from "../../../../lib/trpc/client";
 import { useMenuClose, useMenuItemRole } from "../../../ui/Menu";
 import { MenuDivider } from "../../../ui/menu-item";
+import { InlineAction } from "../../../ui/InlineAction";
 
 interface ResolvedLink {
   ref: string;
@@ -55,9 +56,9 @@ export function LandmarkLinksMenuBody({ contextDir, onPanel }: LandmarkLinksMenu
     return (
       <div className="px-3 py-2 text-sm text-danger-dark border-t border-warm-200">
         Couldn&rsquo;t load landmark links: {error.message}.{" "}
-        <button id="bbx-landmark-links-retry" type="button" onClick={() => void refetch()} className="underline hover:no-underline">
+        <InlineAction id="bbx-landmark-links-retry" intent="danger" onClick={() => void refetch()}>
           Retry
-        </button>
+        </InlineAction>
       </div>
     );
   }

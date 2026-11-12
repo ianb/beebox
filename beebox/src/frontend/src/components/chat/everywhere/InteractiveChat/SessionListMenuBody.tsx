@@ -50,6 +50,7 @@ import { useNow } from "../../../../lib/use-now";
 import { useChatSearch, ChatSearchRows } from "./session-search";
 import { StatusMessage } from "../../../ui/StatusMessage";
 import { cardUrl } from "@shared/card-url";
+import { InlineAction } from "../../../ui/InlineAction";
 
 type LoadState =
   | { kind: "loading" }
@@ -139,9 +140,9 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t load chats.{" "}
-        <button id="bbx-session-list-retry" type="button" onClick={() => load()} className="underline hover:no-underline">
+        <InlineAction id="bbx-session-list-retry" intent="danger" onClick={() => load()}>
           Retry
-        </button>
+        </InlineAction>
       </div>
     );
   }

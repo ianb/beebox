@@ -34,6 +34,9 @@ export type SessionRowItem = PickerSession | UnassignedSession;
  * binding under the label; a row listed under its own landmark doesn't
  * carry one, because the section header already says where it lives.
  */
+/** The bordered link look of a chat row, shared with the dead-chat rows (`ChatsPicker/DeadSessionRow.tsx`). */
+export const SESSION_ROW_LINK_CLASSES = "block px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors";
+
 export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxSlug: string }) {
   const contextDir = "contextDir" in session ? session.contextDir : null;
   // Re-render each minute so the age stays current.
@@ -44,7 +47,7 @@ export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxS
       <Link
         to={href(`/${boxSlug}/chat`)}
         search={toSearch({ session: session.sessionId })}
-        className="block flex-1 min-w-0 px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
+        className={`${SESSION_ROW_LINK_CLASSES} flex-1 min-w-0`}
       >
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">

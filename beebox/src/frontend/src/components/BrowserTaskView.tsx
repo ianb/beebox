@@ -118,7 +118,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
         />
 
         <Row gap="sm" align="center" wrap>
-          <Button intent="secondary" size="sm" flash={{ label: "Copied" }} onClick={() => navigator.clipboard.writeText(copyBlock)}>
+          <Button intent="secondary" size="sm" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={() => navigator.clipboard.writeText(copyBlock)}>
             Copy prompt, schema and watermark
           </Button>
           <Text as="span" size="sm" tone="subtle">Everything the executor needs, as one block. To run it, ask Claude Code in the box directory, with Claude in Chrome, to run this browser task.</Text>

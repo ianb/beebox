@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { ModalDialog } from "../ui/ModalDialog";
 import { ArchiveChatSection } from "./ArchiveChatSection";
 import { List } from "../ui/List";
+import { Notice } from "../ui/Notice";
 
 type DeleteResult = RouterOutput["chat"]["deleteSession"];
 
@@ -107,14 +108,14 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         <ArchiveChatSection sessionId={sessionId} huskPath={huskPath} busy={mutation.isPending} onArchived={onClose} />
 
         {mutation.error ? (
-          <p className="mt-4 rounded border border-danger-light bg-danger-50 p-2 text-sm text-danger-dark" role="alert">
+          <Notice tone="error" className="mt-4">
             {mutation.error.message}
-          </p>
+          </Notice>
         ) : null}
         {cleanup ? (
-          <p className="mt-4 rounded border border-warning bg-warning/10 p-2 text-sm text-warm-800" role="alert">
+          <Notice tone="warning" className="mt-4">
             {cleanupMessage}
-          </p>
+          </Notice>
         ) : null}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
+import { Link, type LinkProps } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import { cn } from "../../lib/cn";
 import { useMaterial } from "./material";
 import { Spinner } from "./Spinner";
@@ -305,5 +307,42 @@ export function Button(props: ButtonProps) {
       </button>
       {flash !== undefined ? <span role="status" className="sr-only">{flashText}</span> : null}
     </>
+  );
+}
+
+/**
+ * A router link that looks like a `Button`: navigation drawn as a button
+ * ("New chat", "Open chat →"). It has no loading, flash or disabled state;
+ * those belong to actions.
+ */
+export function ButtonLink({
+  id,
+  to,
+  search,
+  intent,
+  size,
+  className,
+  children,
+}: {
+  /** Stable `bbx-` control address (see lib/ui-scan). */
+  id?: string;
+  to: string;
+  search?: LinkProps["search"];
+  intent?: ButtonIntent;
+  size?: ButtonSize;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
+  children: ReactNode;
+}) {
+  const material = useMaterial(undefined);
+  return (
+    <Link
+      id={id}
+      to={href(to)}
+      search={search}
+      className={buildClasses({ intent: intent ?? "secondary", shape: "rect", size: size ?? "md", iconOnly: false, fullWidth: false, extra: className, material })}
+    >
+      {children}
+    </Link>
   );
 }

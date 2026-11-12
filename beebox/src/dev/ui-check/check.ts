@@ -2,16 +2,21 @@
 /**
  * `pnpm ui-check`: every component and hook exported from `components/ui/` is
  * named in `frontend.md`, and every `<Name>` its primitives section lists is
- * an export. Prints each breach and exits 1; prints nothing when clean.
+ * an export; and no appearance class string of six or more tokens repeats
+ * across frontend files (`repeated-classes.ts`). Prints each breach and exits
+ * 1; prints nothing when clean.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { parseSourceFile } from "../layout/scan/imports.js";
 import { docCoverageProblems, UI_INTERNALS, type UiExport, type UiImport } from "./doc-coverage.js";
+import { REPEATED_CLASS_ALLOWANCES } from "./repeated-class-allowances.js";
+import { repeatedClassProblems } from "./repeated-classes.js";
 import { ALL_EXPORTS, exportedValueNames, importedNames, isDocumentedKind } from "./exports.js";
 
 const BEEBOX = resolve(import.meta.dirname, "../../..");
-const COMPONENTS = join(BEEBOX, "src/frontend/src/components");
+const FRONTEND_SRC = join(BEEBOX, "src/frontend/src");
+const COMPONENTS = join(FRONTEND_SRC, "components");
 const UI = join(COMPONENTS, "ui");
 
 function sourceFiles(dir: string): string[] {
@@ -38,7 +43,7 @@ function uiExports(): UiExport[] {
 function internalImports(): UiImport[] {
   const names = new Set(UI_INTERNALS.map((entry) => entry.name));
   const found: UiImport[] = [];
-  for (const path of sourceFiles(join(BEEBOX, "src/frontend/src"))) {
+  for (const path of sourceFiles(FRONTEND_SRC)) {
     const text = readFileSync(path, "utf8");
     if (!text.includes("import * as") && ![...names].some((name) => text.includes(name))) continue;
     for (const use of importedNames(parse(path, text))) {
@@ -52,10 +57,16 @@ function internalImports(): UiImport[] {
   return found;
 }
 
-const problems = docCoverageProblems({
-  exports: uiExports(),
-  doc: readFileSync(join(BEEBOX, "frontend.md"), "utf8"),
-  internalImports: internalImports(),
-});
+const problems = [
+  ...docCoverageProblems({
+    exports: uiExports(),
+    doc: readFileSync(join(BEEBOX, "frontend.md"), "utf8"),
+    internalImports: internalImports(),
+  }),
+  ...repeatedClassProblems(
+    sourceFiles(FRONTEND_SRC).map((path) => ({ file: relative(FRONTEND_SRC, path), sourceFile: parse(path, readFileSync(path, "utf8")) })),
+    REPEATED_CLASS_ALLOWANCES,
+  ),
+];
 for (const problem of problems) process.stderr.write(`ui-check: ${problem}\n`);
 process.exit(problems.length === 0 ? 0 : 1);

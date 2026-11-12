@@ -11,6 +11,7 @@ import { trpcClient } from "../../../../lib/trpc/client";
 import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 import { LiveDot } from "../../../ui/LiveDot";
+import { StatusPill } from "./StatusPill";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus
@@ -52,7 +53,7 @@ export function useBackgroundTasks(sessionId: string | null): {
 
 function TaskPill({ task }: { task: LiveTask }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
+    <StatusPill>
       <LiveDot tone="info" />
       <span className="font-medium truncate">{task.description}</span>
       {task.lastToolName ? (
@@ -61,7 +62,7 @@ function TaskPill({ task }: { task: LiveTask }) {
       {task.elapsedMs !== undefined ? (
         <span className="text-warm-400 ml-auto flex-shrink-0 tabular-nums">{formatDuration(task.elapsedMs)}</span>
       ) : null}
-    </div>
+    </StatusPill>
   );
 }
 

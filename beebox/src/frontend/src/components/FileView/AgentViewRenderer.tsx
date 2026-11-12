@@ -37,6 +37,7 @@ import { StatusMessage } from "../ui/StatusMessage";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
 import "../view-widgets/window-globals";
+import { Notice } from "../ui/Notice";
 /** View card data from the API */
 interface ViewCard {
   path: string;
@@ -342,10 +343,10 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (error) {
     return (
-      <div role="alert" className="border border-danger-light bg-danger-50 rounded-lg p-4">
-        <h3 className="text-danger-dark font-medium mb-2">View Error</h3>
+      <Notice tone="error">
+        <h3 className="font-medium mb-2">View Error</h3>
         <Pre size="sm" error>{error}</Pre>
-      </div>
+      </Notice>
     );
   }
 

@@ -21,6 +21,7 @@ import { ChatInputArea } from "../../InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../../InteractiveChat-mobile-row";
 import { CloseButton } from "../../../ui/CloseButton";
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
+import { InlineAction } from "../../../ui/InlineAction";
 
 export type { AttachmentItem, FileAttachmentItem };
 
@@ -41,9 +42,9 @@ export function ChatStatusBanners(props: {
   const { error, warning, onDismissError, activeSchedules, onCancelSchedule } = props;
   const message = error || warning;
   const tone = error
-    ? { bar: "bg-danger-50 border-danger-light text-danger-dark", button: "text-danger hover:text-danger-dark" }
+    ? { bar: "bg-danger-50 border-danger-light text-danger-dark", button: "danger" as const }
     // warm-800 text: warning-dark on warning-50 is 3.3:1, under AA for text-sm.
-    : { bar: "bg-warning-50 border-warning-light text-warm-800", button: "text-warm-700 hover:text-warm-900" };
+    : { bar: "bg-warning-50 border-warning-light text-warm-800", button: "subtle" as const };
   return (
     <>
       {/* Error or warning display */}
@@ -52,13 +53,9 @@ export function ChatStatusBanners(props: {
           {/* Real space text node (not just margin) so a copy of the banner
               keeps the message and "dismiss" separated. */}
           {message}{"  "}
-          <button type="button"
-            id="bbx-chat-error-dismiss"
-            onClick={onDismissError}
-            className={`${tone.button} underline`}
-          >
+          <InlineAction id="bbx-chat-error-dismiss" intent={tone.button} onClick={onDismissError}>
             dismiss
-          </button>
+          </InlineAction>
         </div>
       ) : null}
 
@@ -103,9 +100,9 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
       <span>
         {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
       </span>
-      <button type="button" id="bbx-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-700 hover:text-warm-900 underline">
+      <InlineAction id="bbx-chat-expired-attachments-dismiss" intent="subtle" onClick={onDismiss} className="shrink-0">
         dismiss
-      </button>
+      </InlineAction>
     </div>
   );
 }

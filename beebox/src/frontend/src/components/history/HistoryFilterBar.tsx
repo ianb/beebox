@@ -17,6 +17,8 @@ import { Badge } from "../ui/Badge";
 import { Toggle } from "../ui/Toggle";
 import { CheckboxField } from "../ui/fields/field";
 import { Popover, type PopoverTriggerProps } from "../ui/Popover";
+import { InlineAction } from "../ui/InlineAction";
+import { CloseButton } from "../ui/CloseButton";
 
 export interface HistoryFilterState {
   connectors: string[];
@@ -109,29 +111,18 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
           onChange={(v) => onChange({ ...filter, feedback: v })}
         />
         {activeCount > 0 ? (
-          <button
-            id={`${idPrefix}-clear`}
-            type="button"
-            onClick={clearAll}
-            className="text-[0.6875rem] text-warm-700 hover:text-warm-900 underline ml-auto"
-          >
-            Clear
-          </button>
+          <span className="text-[0.6875rem] ml-auto">
+            <InlineAction id={`${idPrefix}-clear`} intent="subtle" onClick={clearAll}>
+              Clear
+            </InlineAction>
+          </span>
         ) : null}
       </div>
       {filter.session ? (
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Chat {filter.session.slice(0, 8)}</span>
-            <button
-              id={`${idPrefix}-clear-session`}
-              type="button"
-              onClick={() => onChange({ ...filter, session: null })}
-              className="ml-1 text-primary-dark hover:text-danger"
-              aria-label="Clear chat filter"
-            >
-              ×
-            </button>
+            <CloseButton id={`${idPrefix}-clear-session`} size="sm" ink label="Clear chat filter" onClick={() => onChange({ ...filter, session: null })} className="-my-1.5 -mr-2" />
           </Badge>
         </div>
       ) : null}
@@ -139,7 +130,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Path {filter.path}</span>
-            <button id={`${idPrefix}-clear-path`} type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
+            <CloseButton id={`${idPrefix}-clear-path`} size="sm" ink label="Clear path filter" onClick={() => onChange({ ...filter, path: null })} className="-my-1.5 -mr-2" />
           </Badge>
         </div>
       ) : null}
