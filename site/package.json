@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@markdoc/markdoc": "^0.5.7",
-    "yaml": "^2.6.0",
+    "yaml": "^2.7.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

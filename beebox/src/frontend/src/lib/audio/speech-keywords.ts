@@ -36,9 +36,10 @@ const sendClosePattern = KeywordPattern.compile(`
 // mic), but the agent gets its own tag meaning "partial — I am still talking".
 // Always two words with "checkpoint", so talking ABOUT checkpoints ("add a
 // checkpoint before the deploy") does not fire; only the send verbs take an
-// article.
+// article. "Checkpoint message" mirrors "send message".
 const sendCheckpointPattern = KeywordPattern.compile(`
   (send | sent) (a | the)? checkpoint (message)?
+  checkpoint message
   (commit | add) checkpoint
 `);
 

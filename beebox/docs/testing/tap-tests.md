@@ -32,8 +32,8 @@ the default plugins. Every `pnpm install` re-links `@tapjs/test` from the store
 and restores the shipped default build, so "the first tap run after an install
 uses the wrong loaders" is deterministic, not a flake.
 
-The monorepo root's `postinstall` therefore runs `tap build` (~3s) after
-`patch-package`, so every workspace install builds it — a fresh worktree, a
+The monorepo root's `postinstall` therefore runs `tap build` (~3s), so
+every workspace install builds it — a fresh worktree, a
 detached checkout, a deploy. It lives at the root rather than in
 `beebox`'s own `postinstall` because `beebox` is packed and
 installed as a tarball dependency by boxes: a `postinstall` there would run

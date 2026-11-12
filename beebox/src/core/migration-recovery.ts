@@ -4,6 +4,7 @@ import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { gitAsBoxOwner } from "../lib/box-owner-exec.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
+import { gitEnvironment } from "../lib/git/env.js";
 
 export interface MigrationSnapshot {
   ref: string;
@@ -15,11 +16,7 @@ function git(boxRoot: string, index?: string) {
   return async (args: string[]): Promise<string> => {
     return gitAsBoxOwner(args, {
       cwd: boxRoot,
-      env: {
-        ...process.env,
-        GIT_LITERAL_PATHSPECS: "1",
-        ...(index ? { GIT_INDEX_FILE: index } : {}),
-      },
+      env: gitEnvironment({ overrides: { GIT_LITERAL_PATHSPECS: "1", ...(index ? { GIT_INDEX_FILE: index } : {}) } }),
       maxBuffer: 32 * 1024 * 1024,
     });
   };

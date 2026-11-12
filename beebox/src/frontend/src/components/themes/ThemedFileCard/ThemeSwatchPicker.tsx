@@ -52,7 +52,7 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
         <Button size="sm" intent="ghost" disabled={!hasOverride || mutation.isPending} onClick={() => select(null)}>Use default</Button>
         <span className="text-xs ml-2">{hasOverride ? "This card has its own appearance." : "Following the box, card type, and system theme defaults."}</span>
       </div>
-      {mutation.isPending ? <p role="status" className="text-sm mt-2">Saving appearance…</p> : null}
+      {mutation.isPending ? <p className="text-sm mt-2">Saving appearance…</p> : null}
       {mutation.data?.commitWarning ? <p role="status" className="text-sm mt-2">{mutation.data.commitWarning}</p> : null}
       {mutation.error ? <p role="alert" className="text-sm text-danger mt-2">Could not save appearance: {mutation.error.message}</p> : null}
     </section>

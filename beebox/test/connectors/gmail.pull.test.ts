@@ -15,6 +15,7 @@ import { findTrackedGmailThreads } from "../../src/connectors/gmail/tracking.js"
 import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake/core.js";
 import type { GmailMessage } from "../../src/services/google-gmail-types.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 function message(opts: {
   id: string;
@@ -365,8 +366,11 @@ void test("An expired cursor establishes a new checkpoint, leaves tracked cards 
   await connector.sync();
   gmail.expireHistory();
   gmail.addMessage(message({ id: "gap", subject: "During gap", labelIds: ["Label_7"] }));
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
   t.check(result, { success: true, created: [], updated: [], procedures: [] });
+  // The sync log says why no mail from the gap was imported:
+  t.check(warnings(), ["Gmail: history cursor expired; rule counts were refreshed without importing mail"]);
 
   t.check(await transientState(box.root), {
     historyId: "3",
@@ -409,8 +413,11 @@ void test("Only an explicit rule selection may create a card.", async (t) => {
     await rm(join(box.root, tracked.cardPath), { force: true });
     return originalGetThread(id);
   };
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
   t.check(result, { success: true, created: [], updated: [], procedures: [] });
+  // The sync log says the removed card was not recreated:
+  t.check(warnings(), ["Gmail: tracked card disappeared during sync; not recreating thread deleted-during-sync"]);
 
   t.check(await findTrackedGmailThreads(box.root), new Map());
 });
@@ -443,7 +450,10 @@ void test("A message deleted after history named it does not stop sync", async (
   gmail.addMessage(message({ id: "deleted", subject: "Deleted", labelIds: ["Label_7"] }));
   gmail.addMessage(message({ id: "kept", subject: "Kept", labelIds: ["Label_7"] }));
   gmail.deleteMessage("deleted");
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+  // The sync log names the message history still mentioned:
+  t.check(warnings(), ["Gmail: skipped Message not found: deleted; it was deleted after history named it"]);
   t.check(result, {
     success: true,
     created: [
@@ -499,7 +509,10 @@ void test("A tracked thread deleted in Gmail keeps its card", async (t) => {
   gmail.addMessage(message({ id: "m2", threadId: "tracked", subject: "Working thread" }));
   gmail.deleteMessage("m1");
   gmail.deleteMessage("m2");
+  const warnings = consoleLines(t, "warn");
   t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
+  // The sync log names the thread history still mentioned:
+  t.check(warnings(), ["Gmail: skipped Thread not found: tracked; it was deleted after history named it"]);
 
   t.check(await transientState(box.root), { historyId: "4" });
   t.check(await findTrackedGmailThreads(box.root), new Map([
@@ -551,7 +564,10 @@ void test("A missing attachment skips only its message", async (t) => {
   };
   gmail.addMessage(withAttachment);
   gmail.addMessage(message({ id: "m3", threadId: "tracked", subject: "Working thread" }));
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+  // The sync log names the message skipped and the attachment that was not found:
+  t.check(warnings(), ["Gmail: skipped message m2; Attachment not found: m2:att-gone"]);
   t.check(result, {
     success: true,
     created: [

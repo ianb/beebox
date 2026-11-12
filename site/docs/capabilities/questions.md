@@ -13,20 +13,44 @@ authority or confidence to decide itself.
 
 - Asks you a concrete question (pick one of a few options, type an answer, or
   confirm/deny) with enough context to answer without looking anything up.
-- Never auto-answers on your behalf: an unanswered question ages out of the
-  active list rather than the box guessing and moving on.
+- Never records a guess as your answer. An unanswered question ages out of the
+  active list and stays answerable. If you put a question away or leave it
+  waiting, the box may settle it for you in a smaller way (see "Putting a
+  question away" below), and says so on the card.
 - Turns your answer into two things when relevant: the immediate action it
   unblocks, and a durable rule recorded so the same situation doesn't ask
   again.
 - Lets you answer from the question's own card, from chat, or from a "needs
-  attention" list, and dismiss one you don't want to answer.
+  attention" list, and put one away with "Later" if you don't want to answer
+  it now.
+- Opens the newest waiting question beside a new chat, so you can answer it
+  in words in the chat. The pinned row on that question offers "Later" and
+  "Decide for me".
 - Reminds you (chases itself) when a question sits unanswered and the queue
   isn't draining.
 - Opens a new box with one question of its own, "What do you want to keep track
-  of here?" The empty first chat shows the newest waiting question as the
-  agent's opening line, with "Not now" beside it, and your reply is taken as
-  the answer: the agent records what the box is for and then offers a few things
-  it could do about that.
+  of here?" A new chat opens with that question beside it, and the empty chat
+  tells you to answer it there or start something else. The agent judges
+  whether your first message answers it; if so it records what the box is for
+  and then offers a few things it could do about that.
+
+**Putting a question away**
+
+"Later" sets a question aside; it stays answerable, and you can still answer
+it from the Questions page or in chat. "Decide for me" hands it to the box:
+an agent works on it in the background, in a chat that appears in your chat
+list. The agent is told to choose the reversible option that changes the
+least, and never to delete, send, spend, publish, or reword your words. It
+either records a provisional decision, with its reasoning and how to undo it,
+or rewrites the question to be simpler and asks again.
+
+A daily review (on by default, and it runs an agent only when a question
+qualifies) does the same for questions put away three or more days ago and
+questions that have waited fourteen or more days, at most five per run. A
+decision made this way is shown on the card as "The box decided for now". It
+is not your answer: the card keeps no answer from you, and what the box
+learns from it is marked as inferred. If you answer later, the box reverses
+what it can of its decision and tells you what it could not.
 
 **What it needs**
 

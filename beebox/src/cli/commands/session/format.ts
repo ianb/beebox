@@ -9,7 +9,6 @@ import {
   getSessionMetadata,
   type SessionMetadata,
 } from "../../lib/session.js";
-import { fmt } from "../../../lib/format.js";
 
 /** Session metadata plus the context root the transcript was found under. */
 export interface EnrichedSession extends SessionMetadata {
@@ -38,7 +37,7 @@ function formatTimeRange(start: Date | null, end: Date | null): string {
 /** Dim `[<contextDir>]` tag for landmark-bound sessions; "" for root-bound. */
 function contextLabel(contextDir: string): string {
   if (contextDir === "") return "";
-  return `  ${fmt.dim(`[${contextDir}]`)}`;
+  return `  [${contextDir}]`;
 }
 
 export function sessionDivider(meta: EnrichedSession): string {

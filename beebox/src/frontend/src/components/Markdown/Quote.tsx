@@ -20,19 +20,11 @@
 import type { ReactNode } from "react";
 import type { QuoteTreatment } from "@shared/markdoc-config/tags/quote-treatment";
 import { isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import type { ViewTarget } from "../../lib/view-url";
+import { useMarkdownRender } from "../../lib/markdown-render";
 
-interface QuoteLinkContext {
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}
-
-function Attribution({
-  from,
-  linkCtx,
-}: {
-  from: string;
-  linkCtx: QuoteLinkContext;
-}): ReactNode {
+function Attribution({ from }: { from: string }): ReactNode {
+  const { onNavigate } = useMarkdownRender();
   if (isPersonRef(from)) {
     const displayName = speakerDisplay(from);
     return (
@@ -40,7 +32,7 @@ function Attribution({
         type="button"
         onClick={() => {
           const target: ViewTarget = { path: from, viewer: null, params: {}, viewState: null };
-          linkCtx.onNavigate(target, { label: displayName });
+          onNavigate(target, { label: displayName });
         }}
         className="bbx-theme-link"
       >
@@ -57,39 +49,32 @@ interface QuoteProps {
   children?: ReactNode;
 }
 
-export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
-  QuoteInline: (props: QuoteProps) => ReactNode;
-  QuoteBlock: (props: QuoteProps) => ReactNode;
-} {
-  function QuoteInline({ from, treatment, children }: QuoteProps) {
-    return (
-      <span className="bbx-quote bbx-quote-inline" data-from={from} data-treatment={treatment}>
-        <span className="bbx-quote-mark">{"“"}</span>
-        {children}
-        <span className="bbx-quote-mark">{"”"}</span>
-        {from !== undefined && from !== "" ? (
-          <span className="bbx-quote-attribution">
-            {" — "}
-            <Attribution from={from} linkCtx={linkCtx} />
-          </span>
-        ) : null}
-      </span>
-    );
-  }
+export function QuoteInline({ from, treatment, children }: QuoteProps) {
+  return (
+    <span className="bbx-quote bbx-quote-inline" data-from={from} data-treatment={treatment}>
+      <span className="bbx-quote-mark">{"“"}</span>
+      {children}
+      <span className="bbx-quote-mark">{"”"}</span>
+      {from !== undefined && from !== "" ? (
+        <span className="bbx-quote-attribution">
+          {" — "}
+          <Attribution from={from} />
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
-  function QuoteBlock({ from, treatment, children }: QuoteProps) {
-    return (
-      <figure className="bbx-quote bbx-quote-block" data-from={from} data-treatment={treatment}>
-        <blockquote className="bbx-quote-body">{children}</blockquote>
-        {from !== undefined && from !== "" ? (
-          <figcaption className="bbx-quote-attribution">
-            {"— "}
-            <Attribution from={from} linkCtx={linkCtx} />
-          </figcaption>
-        ) : null}
-      </figure>
-    );
-  }
-
-  return { QuoteInline, QuoteBlock };
+export function QuoteBlock({ from, treatment, children }: QuoteProps) {
+  return (
+    <figure className="bbx-quote bbx-quote-block" data-from={from} data-treatment={treatment}>
+      <blockquote className="bbx-quote-body">{children}</blockquote>
+      {from !== undefined && from !== "" ? (
+        <figcaption className="bbx-quote-attribution">
+          {"— "}
+          <Attribution from={from} />
+        </figcaption>
+      ) : null}
+    </figure>
+  );
 }

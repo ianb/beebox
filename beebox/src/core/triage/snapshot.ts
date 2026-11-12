@@ -12,8 +12,17 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { deriveCategoryName, disambiguateCategoryNames } from "./instructions.js";
 import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 import { findDestination } from "../landmark/destination.js";
+import { invariant } from "../../shared/invariant.js";
+import { COMPILED_INSTRUCTIONS_REF, compiledPolicy, compiledRules, loadCompiledInstructions, type CompiledState } from "./compiled.js";
 
 const INTAKE_GUIDE_REF = "/_config/intake.guide.card";
+/** Bump when the text changes, so compiled instructions built on the old text become stale. */
+export const TRIAGE_PRINCIPLES_VERSION = 1;
+/** Boxholder-chosen starting defaults (2026-10-29); any guide rule or destination exception outranks them. */
+export const DEFAULT_TRIAGE_PRINCIPLES = `Default tie-break principles [basis: default], applied in order when more than one destination's rule covers an item. Destination rules and their stated exceptions outrank them.
+1. The more specific destination wins: one whose rule names this item's party, property, account or document type beats one that names only a general category.
+2. A destination where work is pending (a case, a sale, a bill to pay) beats an archival destination kept for reference.
+3. The destination for the more consequential obligation (court, tax, legal deadline) beats a convenience record.`;
 const digest = (text: string): string => createHash("sha256").update(text).digest("hex");
 const refSchema = z.string().refine((ref) => {
   const parsed = parseRef(ref);
@@ -36,7 +45,11 @@ export const instructionSnapshotSchema = z.object({
   if (new Set(value.destinations.map((d) => d.ref)).size !== value.destinations.length) ctx.addIssue({ code: "custom", message: "Duplicate destination refs" });
 });
 export type InstructionSnapshot = z.infer<typeof instructionSnapshotSchema>;
-export interface SnapshotOptions { guideOverlay?: string; landmarkOverlays?: Record<string, string> }
+export interface SnapshotOptions {
+  guideOverlay?: string; landmarkOverlays?: Record<string, string>;
+  /** Ignore compiled instructions; trials and the compile pass itself read raw rules. */
+  raw?: boolean;
+}
 class TriageInstructionsError extends Error {
   constructor({ kind, ref }: { kind: "ref" | "guide" | "landmark"; ref: string }) { super(`${kind === "ref" ? "Invalid instruction ref" : `Invalid ${kind} fields`}: ${ref}`); this.name = "TriageInstructionsError"; }
 }
@@ -50,8 +63,36 @@ function canonicalRef(ref: string): string {
 
 function overlayField(overlay: string | undefined): { overlay?: string } { return overlay === undefined ? {} : { overlay }; }
 
-/** Candidates are explicit filesystem files; their keys remain canonical box refs. */
+/** The snapshot plus what happened to the compiled instructions. Overlays always compile raw. */
+export async function compileInstructionSnapshotWithStatus(boxRoot: string, options?: SnapshotOptions): Promise<{ snapshot: InstructionSnapshot; compiled: CompiledState | { status: "not-used" } }> {
+  const raw = await compileRawSnapshot(boxRoot, options);
+  if (options?.raw === true || raw.trial) return { snapshot: raw, compiled: { status: "not-used" } };
+  const compiled = await loadCompiledInstructions(boxRoot, { rawSources: raw.sources, principlesVersion: TRIAGE_PRINCIPLES_VERSION });
+  if (compiled.status !== "current") return { snapshot: raw, compiled };
+  const entries = new Map(compiled.compiled.destinations.map((entry) => [entry.ref, entry]));
+  const principles = `\n${DEFAULT_TRIAGE_PRINCIPLES}`;
+  invariant(raw.policy.split(principles).length === 2, "Default principles must occur once in the raw policy");
+  const addition = compiledPolicy(compiled.compiled, new Map(raw.destinations.map((d) => [d.ref, d.name])));
+  return {
+    compiled,
+    snapshot: instructionSnapshotSchema.parse({
+      ...raw,
+      policy: addition === "" ? raw.policy : raw.policy.replace(principles, `${principles}\n${addition}`),
+      sources: [...raw.sources, { ref: COMPILED_INSTRUCTIONS_REF, digest: compiled.digest }],
+      destinations: raw.destinations.map((d) => {
+        const entry = entries.get(d.ref);
+        return entry === undefined ? d : { ...d, rules: compiledRules(d.rules, entry) };
+      }),
+    }),
+  };
+}
+
 export async function compileInstructionSnapshot(boxRoot: string, options?: SnapshotOptions): Promise<InstructionSnapshot> {
+  return (await compileInstructionSnapshotWithStatus(boxRoot, options)).snapshot;
+}
+
+/** Candidates are explicit filesystem files; their keys remain canonical box refs. */
+async function compileRawSnapshot(boxRoot: string, options?: SnapshotOptions): Promise<InstructionSnapshot> {
   const sources: InstructionSnapshot["sources"] = [];
   const guidePath = options?.guideOverlay ?? path.join(boxRoot, INTAKE_GUIDE_REF.slice(1));
   let guide: string | null;
@@ -74,6 +115,7 @@ export async function compileInstructionSnapshot(boxRoot: string, options?: Snap
     const usedActions = new Set([...rules.map((rule) => rule.action), parsed.defaultAction?.action]);
     policy = compileGuide({ ...parsed, triageRules: rules.map((rule) => ({ ...rule, confidence: rule.confidence === "hypothesis" ? "low" : rule.confidence, text: `[basis: ${rule.basis}${rule.confidence === "hypothesis" ? "; trial hypothesis" : ""}] ${rule.text}` })), actions: parsed.actions.filter((action) => usedActions.has(action.name)), experiments: [], reactions: [] }, "intake");
   }
+  policy += `\n${DEFAULT_TRIAGE_PRINCIPLES}`;
   policy += "\nSource precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.";
   const overlays = new Map(Object.entries(options?.landmarkOverlays ?? {}).map(([ref, file]) => [canonicalRef(ref), file]));
   const matches = await glob("{_content,_config}/**/*.landmark.card", { cwd: boxRoot, nodir: true });

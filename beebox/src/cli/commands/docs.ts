@@ -1,4 +1,4 @@
-/** Explicit generated-guidance convergence, sharing migration admission and Git recovery. */
+/** Explicit generated-guidance convergence, admitted as ordinary box work. */
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { refreshGeneratedDocs } from "../../core/docs-refresh.js";
@@ -6,7 +6,6 @@ import { errorMessage } from "../../shared/error-guards.js";
 
 interface RefreshOptions {
   json?: boolean;
-  withinMaintenance?: boolean;
 }
 
 export const docsCommand = new Command("docs")
@@ -14,19 +13,16 @@ export const docsCommand = new Command("docs")
   .addCommand(
     new Command("refresh")
       .description(
-        "Refresh stale docs, card rules, and box skills, preserving dirty input in Git",
+        "Refresh stale docs, card rules, and box skills, leaving other uncommitted work alone",
       )
       .option("--json", "Report the result as JSON")
       .option(
         "--within-maintenance",
-        "Join the invoking maintenance controller",
+        "Accepted for older deploy scripts; the invoking permit admits the refresh either way",
       )
       .action(async (options: RefreshOptions) => {
         try {
-          const result = await refreshGeneratedDocs({
-            boxRoot: await requireBoxRoot(),
-            withinMaintenance: options.withinMaintenance === true,
-          });
+          const result = await refreshGeneratedDocs({ boxRoot: await requireBoxRoot() });
           if (options.json) console.log(JSON.stringify(result));
           else if (result.status === "refreshed")
             console.log("Regenerated agent docs, card rules, and box skills.");

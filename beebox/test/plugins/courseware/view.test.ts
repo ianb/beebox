@@ -7,7 +7,7 @@
 // host sets `params.path` to the card being displayed; the view finds that card in
 // `cards` and renders its body through the `Markdown` widget, then the graph.
 //
-// This renders the built plugin view the way `bbx view test` does after its
+// This renders the built plugin view the way `bbx view check` does after its
 // compile step: `dist/plugins/courseware/view.js` is built by the real plugin
 // build step and imported through the package `exports` map, given the cards the
 // real loader selects, and rendered to a string inside `NodeViewHostProvider`.
@@ -23,7 +23,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { buildProps } from "../../../src/cli/commands/view/command.js";
+import { buildProps } from "../../../src/cli/commands/view/render-one.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 import { parseConcepts } from "../../../src/plugins/courseware/view/concept-data.js";
 import { buildGraph } from "../../../src/plugins/courseware/view/graph/model.js";
@@ -47,7 +47,7 @@ async function activateCourseware(box: TmpBox) {
   await writeFile(join(box.root, "src", "schemas", "concept-map.ts"), SCHEMA_STUB);
 }
 
-// What `bbx view test` does after compiling: build the props from the real
+// What `bbx view check` does after compiling: build the props from the real
 // card loader, render inside the node view host.
 async function renderConceptMap(box: TmpBox, params: Record<string, string>) {
   const { cards, files } = await loadViewCards(box.root, ["**/*.concept-map.card"]);

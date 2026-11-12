@@ -13,6 +13,7 @@ import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { fetchFileMeta } from "../lib/file-meta";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { StatusMessage } from "../components/ui/StatusMessage";
 
 function BinaryRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
@@ -32,7 +33,7 @@ function BinaryRenderer({ data }: RendererProps) {
       <Text as="div" size="lg" weight="bold">{basename}</Text>
       <Text as="div" tone="subtle" size="sm" mono breakAll>{data.path}</Text>
       {isLoading ? (
-        <Text as="div" tone="subtle" size="sm">Loading file info…</Text>
+        <StatusMessage variant="inline" busy>Loading file info…</StatusMessage>
       ) : meta?.absent === true ? (
         <Text as="div" tone="subtle" size="sm">
           Content is not stored on this machine. Fetch it with{" "}

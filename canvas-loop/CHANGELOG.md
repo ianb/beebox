@@ -5,6 +5,142 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Dashes, text measuring, and text warnings** (asked for by the round-2 d3
+  comparison agents). A style takes `dash: [on, off, …]` for plain strokes.
+  `v.textBounds(s, box, options)` returns the bounds `text` would draw,
+  without drawing. Text takes `halo`, a color drawn around the letters. Runs
+  warn when two different texts overlap in a frame, and headless runs warn
+  when the font has no glyph for a character.
+
+- **Sound.** An optional `sound(model, p)` export returns voices (`pluck`,
+  `tone`, `noise`), each one sound with an id and a start frame. Headless
+  runs write `sound.wav` and a waveform `sound.png`; browser figures play the
+  same samples after the first click. See TEA.md, "Sound", and the
+  `guitar-strings` gallery entry.
+
+- **Breaking: a style on every call; TEA is the only sketch form** (see
+  [TEA.md](./TEA.md#drawing)). Each shape call takes a `Style` as its last
+  argument: `{ fill, stroke, weight, brush, gesture, blend, erase }`, plain
+  data kept in `const`s and spread to vary. A missing key means none (or
+  weight 1, blend normal). A brush with changed fields is data too:
+  `{ preset: "pencil", opacity: 0.6 }`. Removed: `fill`, `noFill`, `stroke`,
+  `noStroke`, `strokeWeight`, `brush`, `noBrush`, `gesture`, `blendMode`,
+  `erase`, `noErase`, `textSize`, `textAlign`, `textFont`, `textStyle`,
+  `push`, `pop`, `translate`, `rotate`, `scale`, and `text(s, x, y)`.
+  - `at({ translate, rotate, scale }, body)` scopes a transform. It has no
+    layer, so `erase` inside it erases the canvas. `group` and `clip` are
+    unchanged.
+  - `roundRect(x, y, w, h, radius, style)` replaces `rect`'s radius argument.
+    `curve(points, closed, style)` needs `closed`.
+  - `text(s, {x, y, w?, h?}, options)` is the only text form. Defaults: size
+    12, sans-serif, normal, fill black, align left, valign top. One line with
+    no `w` draws at (x, y); `valign: "baseline"` puts its baseline on `y`.
+    `textWidth(s, options)` measures with the same options.
+  - `image(sprite, x, y, { opacity, blend, erase })` and
+    `cache(key, body, { blend, erase })` take their paste style.
+  - A bad style throws at the call (unknown key, negative weight, unknown
+    brush). A call that can draw nothing (a line with no stroke, a shape with
+    neither fill nor stroke) logs a line once.
+  - The mutable tier (`setup`/`draw(s)`, the `Sketch` API, input handlers) is
+    removed. A module that exports `setup` gets a loader error. The mutable
+    examples and gallery entries are rewritten as TEA: `bounce-tea.ts`,
+    `alien-reference-tea.ts`, `brushes-sampler-tea.ts`.
+- **Brushes, gestures, paper, groups** (see [BRUSHES.md](./BRUSHES.md)).
+  `brush(name, overrides?)` / `noBrush()` turn every stroked shape into a
+  brushed mark; presets `ink`, `marker`, `pencil`, `chalk`, `airbrush`,
+  `wash`, `bristle`. `gesture({ pressure, wobble, seed })` sets pressure
+  envelopes and hand wobble. `paper({ scale, contrast, seed })` sets the
+  canvas's grain. `group({ opacity, blend }, body)`, `blendMode()`,
+  `erase()`/`noErase()`. Width comes from `strokeWeight`. Mark randomness is
+  per mark (adding a mark never changes another); `--seed` does not affect it.
+  Fills stay flat. Adds the `perfect-freehand` dependency (ink outlines).
+- **Curves.** `curve(points, closed?)` draws a Catmull-Rom curve through the
+  points; `curvePath(points, closed?)` returns its path commands for `clip` or
+  `path`. Open curves mirror their end points (no pinch on 3-point curves).
+- **`ctx` follows groups.** `s.ctx` / `v.ctx` is the context drawing lands on
+  now: inside a `group`, the group's layer. `clip` and `group` unwind any
+  unmatched `push()` from their body, even when it throws.
+- **Zoomed crops.** `run --zoom x,y,w,h[@scale]` (repeatable) writes an
+  enlarged, nearest-pixel crop beside every captured frame and lists it in the
+  transcript. `cli zoom <frame.png> <x,y,w,h[@scale]>...` crops an existing
+  frame.
+- **Sketch lint relaxed** for `src/examples/` and `src/gallery/`: `max-params`,
+  default params, function and file length, `1.0` literals, plain `Error`, and
+  `reverse()` are allowed there.
+- **Mark seed from points only.** A mark's randomness no longer depends on its
+  brush, gesture or width, so tuning those keeps the same wobble.
+- **Shape helpers and texture** (round-2 asks). `tube(points, { width,
+  profile })` returns a limb outline around a smooth centreline;
+  `offset(points, distance)` grows or shrinks a closed outline;
+  `clip([shapes…], body)` clips to a union; `ellipseGradient(x, y, w, h,
+  stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
+  page. A mark too faint to see adds a transcript warning. Bristles wander
+  sideways so long strokes do not stripe.
+- **Text, shapes and labels from the educational round.** `textWidth(text)`
+  measures text in the current size/font/style; `rect(x, y, w, h, radius)`
+  rounds corners; params take `label` and `hint`, shown by the generated
+  controls (DOM and React); `--timing` names its worst frame; `--outline`
+  label tags are see-through.
+- **Sharp on high-density screens.** Browser figures and the playground back
+  the canvas with `size × devicePixelRatio` pixels (capped at 3) and draw in
+  logical units under a base scale; the Painter takes a `pixelRatio` and sizes
+  layers, sprites and the paper texture to match. Headless output (ratio 1) is
+  unchanged byte for byte.
+- **Hover reaches browser sketches.** The browser figure and playground sent
+  `mousemove` only while a button was held, so hover cues worked headless but
+  not in a browser; every move is now sent.
+- **Text in a box.** `text(s, {x, y, w?, h?}, {align, valign, wrap, fit,
+  lineHeight, size, font, style, fill})` wraps at word breaks to `w`, aligns
+  inside the box (or about the point when `w`/`h` are absent), shrinks to fit
+  with `fit`, and returns the bounds drawn. Style keys apply to that call only,
+  so they never leak into later text. `text(s, x, y)` is unchanged and also
+  returns bounds.
+- **Inputs over the canvas.** `v.control(name, box)` places a param's native
+  input inside the drawing (DOM figures); headless renders draw a stand-in with
+  the value. `panel: false` on a param keeps it out of the side panel. The
+  balance-reaction gallery entry now types coefficients inside the equation.
+- **Typed number fields.** A number param with `control: "field"` shows as a
+  number box in browser figures (DOM and React); only valid, in-range values
+  (whole numbers for `step: 1`) are sent.
+- **Erase and gradient marks under transforms.** @napi-rs/canvas 1.0.2 limits
+  destination-out and source-in fills under a transform to the quadrant past
+  the translation origin, so erasing a translated or rotated shape cleared only
+  part of it. Erasing under a transform now draws via a layer composited under
+  identity, and gradient-coloured marks paint the gradient on a second layer.
+  The Painter's primitives move to `engine.ts` over a `PainterCore` (`core.ts`).
+- **Checkpoints.** `CANVAS_LOOP_CHECKPOINTS=<dir>` saves every `run` (sources,
+  events, frames, transcript, `--note`); `cli checkpoints <dir>` builds a page
+  that steps through them.
+- **Development aids** (busy-town round asks). `run --outline` outlines placed
+  sprites (with keys), clip regions and `debugBox(label, x, y, w, h)` boxes;
+  `run --timing` adds per-frame draw/update times to the transcript. Faint-mark
+  warnings name the sprite or cache they came from; `gesture({ faint: true })`
+  silences one. `textFont`/`textStyle`; `cursor(kind)` for browser figures;
+  `u.record(keys, value)`; `DeepReadonly` keeps tuples.
+- **TEA sketches may import sibling `./<name>-tea.js` helpers** (the TEA lint
+  applies to them by name). The animation round's sketches were forced into
+  single 1,200–1,500-line files.
+- **Sprites.** `sprite({ key, width, height }, body)` paints once in local
+  coordinates; `image(sprite, x, y, opacity?)` places it under the current
+  transform, so painted things can move, rock and flip cheaply.
+- **Faster frames.** Brush marks reuse one offscreen canvas and groups reuse
+  pooled layers, instead of a new canvas per mark or group; the faint-mark
+  pixel read-back runs headless only. Headless output is byte-identical; the
+  animated brush pages went from 39 to 58 fps together in Chrome.
+- **`cache(key, body)`** draws a static part once and pastes it on later
+  frames, so painted scenes can animate.
+- **Review fixes.** `clip([shapes…])` now erases and blends like a single
+  clip; `pop()` cannot escape a single clip; tube ends are round; brushed
+  `arc` follows Canvas2D's sweep; a `path` starting with `line` has no segment
+  from the origin; thick bristle marks are not cropped and very short ones
+  paint; short tubes work; duplicate pressure keyframes hold the last value on
+  both sides; `cli diff` reads erased pixels as lighter and clears old crops.
+- **`cli diff`** (experimental): changed-pixel highlight (darker/lighter),
+  per-region before/after crops, side by side, and stats. TEA sketches there no longer need the
+  `max-params` disable comment.
+- **`SketchUsageError` moved to core** (`src/core/errors.ts`); the headless
+  errors module re-exports it.
+
 - **Claude plugin removed.** `claude-plugin/` and the `sync:claude-skill`
   script are gone, and the generated `.claude/skills/canvas-loop-sketch/` copy
   with them. The authoring loop, gallery flow, and audit norms now live in

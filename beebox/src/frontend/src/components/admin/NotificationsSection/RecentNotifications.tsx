@@ -15,6 +15,7 @@ import { Button } from "../../ui/Button";
 import { ErrorText } from "../../ui/ErrorText";
 import { FriendlyDate } from "../../ui/FriendlyDate";
 import { StatusMessage } from "../../ui/StatusMessage";
+import { List } from "../../ui/List";
 
 type LoggedNotification = RouterOutput["notifications"]["recent"][number];
 type DeliveryLine = LoggedNotification["deliveries"][number];
@@ -51,7 +52,7 @@ export function RecentNotifications() {
   return (
     <Stack gap="sm">
       <Heading level={3}>Recent</Heading>
-      {recent.isPending ? <StatusMessage>Loading recent notifications…</StatusMessage>
+      {recent.isPending ? <StatusMessage busy>Loading recent notifications…</StatusMessage>
         : recent.error ? (
           <Stack gap="xs">
             <ErrorText>Could not load recent notifications: {recent.error.message}</ErrorText>
@@ -60,9 +61,9 @@ export function RecentNotifications() {
         )
         : recent.data.length === 0 ? <Hint>No notifications in the last three days.</Hint>
         : (
-          <Stack as="ul" gap="md">
+          <List gap="md">
             {recent.data.map((n) => <RecentItem key={n.intent.id} notification={n} />)}
-          </Stack>
+          </List>
         )}
     </Stack>
   );

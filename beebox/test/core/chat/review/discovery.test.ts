@@ -26,6 +26,7 @@ import {
 import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../src/cli/lib/session.js";
 import { prefixHash } from "../../../../src/core/chat/review/span.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 // Pin this machine's origin id to a file under the tmp box, so a test run
 // neither reads nor mints the real `~/.local/share/beebox/origin-id`.
@@ -295,6 +296,7 @@ void test("The span walk streams the transcript in pages, so a session that grew
     },
   });
 
+  const warnings = consoleLines(t, "warn");
   const window = await readSessionWindow({
     sessionId: "sesscap",
     logPath: getSessionLogPath(box.root, "sesscap"),
@@ -304,6 +306,8 @@ void test("The span walk streams the transcript in pages, so a session that grew
   assert.ok(window);
   const { entries: spanEntries, ...spanRest } = window;
   t.check(spanRest, { endIndex: 5003, endPrefixHash: any(String), bootstrap: null, clipped: true });
+  // The clip is logged, so a long chat's lag is explained:
+  t.check(warnings(), [`chat-review: session sesscap has more than ${String(MAX_SESSION_ENTRIES)} unread entries; reviewing the first window now and the rest on later runs.`]);
   t.check(
     spanEntries.map((e) => e.uuid),
     Array.from({ length: 5000 }, (_, i) => `cap-${String(i + 4)}`),

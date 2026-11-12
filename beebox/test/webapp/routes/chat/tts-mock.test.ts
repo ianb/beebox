@@ -271,7 +271,7 @@ void test("When the browser stops listening — a stop, a new reply, a closed ta
   leaving.abort();
   await eventually(() => slow.cancels === 1, { label: "the route cancels the clip" });
   releaseRest();
-  t.check(({ status: res.status, gotHead: firstRead.value.length > 0, cancels: slow.cancels }), {
+  t.check(({ status: res.status, gotHead: (firstRead.value?.length ?? 0) > 0, cancels: slow.cancels }), {
     status: 200,
     gotHead: true,
     cancels: 1,

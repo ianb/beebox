@@ -21,12 +21,12 @@ import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBack
 import { chatSystemPrompt, NARRATION_OVERLAY } from "../prompts.js";
 import {
   accumulateAssistantText, buildContentBlocks, warnErroredTurn,
-  type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type TaskEvent,
+  type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type LiveTaskEntry, type TaskEvent,
 } from "../messages.js";
 import { createTurnDurabilityGate } from "./transcript-sync.js";
 import { recordTurnMarkerForSession } from "../../turn-marker.js";
 import {
-  captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
+  assertDrainHeld, captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
   loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "../state.js";
 import { pumpSessionRun } from "./consume.js";
@@ -40,6 +40,7 @@ import {
 } from "./start.js";
 import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
+import { createLiveTasks, endRun, END_CAUSES, maintenanceCause, type EndCause } from "./live-tasks.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { chatSystemPrompt, NARRATION_OVERLAY, buildContentBlocks };
@@ -58,8 +59,10 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining = false; // `draining`: a queued drain's send is in flight
+  // `draining`: non-null while a queued drain's send is in flight, holding its inputs (out of the queue, not yet delivered; `stop()` empties it in place)
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining: ChatSendInput[] | null = null;
   private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
+  private readonly liveTasks: ReturnType<typeof createLiveTasks>;
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -89,6 +92,7 @@ export class ChatSession extends EventEmitter {
     options = options ?? {};
     this.boxRoot = boxRoot;
     this.options = options;
+    this.liveTasks = createLiveTasks(options.now ?? Date.now, { boxRoot, sessionId: () => this.sessionId });
     this.coined = createCoinedRunState(options);
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
     this.modelFile = options.modelFile ?? null;
@@ -108,14 +112,8 @@ export class ChatSession extends EventEmitter {
         this.emit("features-changed", { features });
       },
     });
-    if (this.sessionId) {
-      log("init", `Loaded session: ${this.sessionId}`);
-    } else {
-      log("init", "No saved session, will create on first message");
-    }
-    if (this.explicitModel) {
-      log("init", `Loaded model override: ${this.explicitModel}`);
-    }
+    log("init", this.sessionId ? `Loaded session: ${this.sessionId}` : "No saved session, will create on first message");
+    if (this.explicitModel) log("init", `Loaded model override: ${this.explicitModel}`);
   }
 
   /**
@@ -192,6 +190,7 @@ export class ChatSession extends EventEmitter {
     });
     this.transition({ phase: "ready", run });
     this.coined.noteRunStarted(this.sessionId, this.options);
+    this.liveTasks.set([]); this.liveTasks.noteRunMessage();
     this.emit("task-level", []); // The live-task level is per-process; the CLI sends none at startup.
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
@@ -220,7 +219,7 @@ export class ChatSession extends EventEmitter {
     this.transition({ phase: "idle" });
     // A failed drain does not drain again: with two queued messages and a
     // start that keeps failing, the two would alternate without end.
-    if (!this.draining) this.drainQueue();
+    if (this.draining === null) this.drainQueue();
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -228,13 +227,14 @@ export class ChatSession extends EventEmitter {
       durability: this.durability,
       boxRoot: this.boxRoot, model: this.resolvedModel,
       getSessionId: () => this.sessionId,
+      noteRunMessage: () => { this.liveTasks.noteRunMessage(); },
       recordTurnMarker: (sessionId) => recordTurnMarkerForSession(this.boxRoot, sessionId),
       handleMessage: (msg) => this.handleMessage(msg),
       isStopping: () => this.state.phase === "stopping",
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
       releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
-      emitClose: (code) => { this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
+      emitClose: (code) => { this.liveTasks.closed(); this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
       queueLength: () => this.messageQueue.length,
       drainQueue: () => this.drainQueue(),
       log,
@@ -255,7 +255,7 @@ export class ChatSession extends EventEmitter {
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
     if (msg.type === "task") { this.emit("task", msg.task); return; }
-    if (msg.type === "task-level") { this.emit("task-level", msg.tasks); return; }
+    if (msg.type === "task-level") { this.liveTasks.observe(msg.tasks); this.emit("task-level", msg.tasks); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 
@@ -298,7 +298,8 @@ export class ChatSession extends EventEmitter {
    */
   private drainQueue(): void {
     drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
-      send: async (input) => { this.draining = true; try { return await this.send(input, { independent: true }); } finally { this.draining = false; } },
+      // Checked at admission (no run started for a taken drain) and again at dispatch, after the awaits between; once dispatched, a stop no longer marks them.
+      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true, onAdmitted: () => { assertDrainHeld(queued); }, onDispatch: () => { assertDrainHeld(queued); this.draining = null; } }); } finally { this.draining = null; } },
       // A queued drain often has no "error" listener, and an unheard "error" throws (see start-refusal.ts); the drain has already logged it.
       onError: (error) => { if (this.listenerCount("error") > 0) this.emit("error", error); } });
   }
@@ -310,22 +311,23 @@ export class ChatSession extends EventEmitter {
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
    * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
+   * `onDispatch` runs synchronously just before the content goes to the run, with no await between; a throw abandons it too.
    */
-  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onDispatch?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
     const opening = (async () => {
       const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
+      try { return await work.run(() => this.sendAdmitted(message, options ?? {})); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onDispatch, onRefused }: NonNullable<Parameters<ChatSession["send"]>[1]>): Promise<boolean> {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
     // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
     const live = this.liveRun() !== null;
-    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart(); return false; }
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart({ cause: END_CAUSES.providerChanged }); return false; }
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
@@ -334,7 +336,7 @@ export class ChatSession extends EventEmitter {
     // before run creation: observers of "a run exists" (drain-path tests,
     // callers polling the backend) expect run.send to follow run creation
     // with no awaits in between.
-    const content = await composeTurnContent(this.boxRoot, {
+    const { content, dispatched } = await composeTurnContent(this.boxRoot, {
       rawInput,
       features: this.features,
       // "First message of this conversation", not "no id yet": a coined chat
@@ -342,6 +344,7 @@ export class ChatSession extends EventEmitter {
       // first-message-only context (last activity, calendar, health).
       sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
+      sessionId: this.liveTasks.ending() ? null : this.sessionId, // a run still closing has not finished its note
     });
 
     if (this.liveRun() === null) {
@@ -355,7 +358,7 @@ export class ChatSession extends EventEmitter {
     }
 
     // ready → streaming.
-    this.transition({ phase: "streaming", run });
+    onDispatch?.(); this.transition({ phase: "streaming", run });
     this.turnText = "";
     try {
       run.send(content, { clientComposed: rawInput.clientComposed === true });
@@ -367,13 +370,14 @@ export class ChatSession extends EventEmitter {
       log("send", `Dispatch failed, turn abandoned: ${errorMessage(e)}`);
       throw e;
     }
+    dispatched();
     return true;
     } finally { this.preparingTurn = false; }
   }
 
-  /** Close an idle subprocess for maintenance without discarding its queued input. */
-  pauseForMaintenance(): void { this.maintenancePaused = true;
-    if (!this.isBusy()) this.restart();
+  /** Close an idle subprocess for maintenance without discarding its queued input; `reason` names the owner. */
+  pauseForMaintenance(reason?: string): void { this.maintenancePaused = true;
+    if (!this.isBusy()) this.restart({ cause: maintenanceCause(reason ?? "unnamed") });
   }
 
   resumeAfterMaintenance(): void { this.maintenancePaused = false;
@@ -383,10 +387,7 @@ export class ChatSession extends EventEmitter {
   /** Interrupt the current turn. */
   interrupt(): void {
     const run = this.liveRun();
-    if (run === null) {
-      log("interrupt", "No run to interrupt");
-      return;
-    }
+    if (run === null) { log("interrupt", "No run to interrupt"); return; }
     log("interrupt", "Sending interrupt");
     void run.interrupt().catch((e: unknown) => {
       log("interrupt", `Interrupt failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -439,22 +440,37 @@ export class ChatSession extends EventEmitter {
 
   isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
+  /** A run the server is ending (`restart`, `stop`) stays busy until its close handler runs: its input is already closed,
+   *  so a send then would be dropped; callers queue instead, and the close handler drains the queue into a fresh run. */
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state) || this.liveTasks.ending(); }
+
+  /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
+  isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
+
+  /** Live background tasks of the current run, stalled or not; none with no run. Maintenance counts them; a page that opens late reads them. */
+  liveTaskList(): readonly LiveTaskEntry[] { return this.isRunning() ? this.liveTasks.list() : []; }
 
   /**
    * Stop the current run gracefully. Clears the pending queue so the
    * close handler won't auto-drain into a fresh run.
+   *
+   * The queue is lost whether or not a run is live: every caller discards the
+   * session after this (or, for the live-cap eviction, its run). So every
+   * input lost here, the queue and an in-flight drain's inputs alike, goes out
+   * as "queue-dropped", which the route layer records as undelivered. An
+   * in-flight drain may still deliver; the client reconciles that case.
    */
-  stop(): void {
+  stop(cause?: EndCause): void {
+    const dropped = [...(this.draining?.splice(0) ?? []), ...this.messageQueue]; this.messageQueue = []; // the splice empties the drain's own list
     const run = this.liveRun();
     if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
       log("stop", "Stopping run");
       // → stopping: the close handler reads this phase as the intentional-stop
       // signal and won't drain the queue.
       this.transition({ phase: "stopping", run, wasBusy: lifecycleBusy(this.state) });
-      this.messageQueue = [];
-      void run.close();
+      endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, cause });
     }
+    if (dropped.length > 0) this.emit("queue-dropped", dropped);
   }
 
   /**
@@ -463,7 +479,7 @@ export class ChatSession extends EventEmitter {
    * drains the queue into the fresh run so wedged sessions recover
    * without losing in-flight user messages.
    */
-  restart(): void {
+  restart(opts?: { cause?: EndCause }): void {
     const run = this.liveRun();
     if (run === null) {
       log("restart", "No run to restart");
@@ -472,7 +488,7 @@ export class ChatSession extends EventEmitter {
     // Leave the phase as-is (ready/streaming): the close handler sees it's not
     // "stopping" and drains the queue into a fresh run.
     log("restart", "Closing run — close handler will drain any queued messages");
-    void run.close();
+    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, cause: opts?.cause });
   }
 
   /**

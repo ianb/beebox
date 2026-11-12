@@ -3,7 +3,7 @@ title: "Author public-site cards in a box and export them to the repository"
 status: partial
 workstream: public-site
 issues:
-  - ../../../issues/exploration/2026-08-19-site-authored-in-a-box.md
+  - ../../../issues/closed/exploration/2026-08-19-site-authored-in-a-box.md
   - ../../../issues/features/2026-07-20-public-site.md
 ---
 # Author public-site cards in a box and export them to the repository
@@ -15,7 +15,7 @@ only the reviewed public cards and a readable editorial history.
 
 **Issues addressed:**
 
-- `issues/exploration/2026-08-19-site-authored-in-a-box.md` — authoring the
+- `issues/closed/exploration/2026-08-19-site-authored-in-a-box.md` — authoring the
   public site inside a box and exporting it to the static site.
 - `issues/features/2026-07-20-public-site.md` — the repository remains the
   source for a static, precalculated site while the working process stays out
@@ -74,7 +74,7 @@ only the reviewed public cards and a readable editorial history.
   plan turns that convention into a tested export operation.
 - **The earlier issue already names the intended first experiment.** It calls
   for a page schema in a test box, a walkthrough authored as a card, and a
-  crude export to `site/content/` (`issues/exploration/2026-08-19-site-authored-in-a-box.md:42-43`).
+  crude export to `site/content/` (`issues/closed/exploration/2026-08-19-site-authored-in-a-box.md:42-43`).
   The current site uses `site/cards/`, so this plan updates the destination to
   the shipped source root.
 

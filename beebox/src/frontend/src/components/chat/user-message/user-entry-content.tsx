@@ -11,13 +11,14 @@ import {
   parseDeliveredUserMessageParts,
   type DeliveredUserMessagePart,
 } from "@shared/delivered-user-message";
-import { Image } from "../../ui/Image";
+import { Image } from "../../ui/Image/view";
 import { Pre } from "../../ui/Pre";
 import type { SessionEntry } from "../../../api";
 import type { AudioOverlayEntry } from "../audio-overlay-store";
 import { extractFileAttachments, imageBlockSrc, stripUserDisplayTags } from "../message-parsing";
 import { CaptureChip } from "../CaptureChip";
 import { UploadChip } from "./UploadChip";
+import { QuestionHandoffChip } from "./QuestionHandoffChip";
 import { UserMessageText } from "../user-message-text";
 
 /**
@@ -54,7 +55,7 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
     case "text":
       if (stripUserDisplayTags(part.text, { attachedFileIds }).trim() === "") return null;
       return (
-        <div className="text-sm whitespace-pre-wrap">
+        <div className="text-sm whitespace-pre-wrap" data-point-block="">
           <UserMessageText text={part.text} attachedFileIds={attachedFileIds} />
         </div>
       );
@@ -62,6 +63,8 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
       return <CaptureChip model={part} />;
     case "upload":
       return <UploadChip model={part} />;
+    case "question-handoff":
+      return <QuestionHandoffChip model={part} />;
     default:
       return assertNever(part);
   }

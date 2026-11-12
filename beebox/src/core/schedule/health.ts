@@ -16,7 +16,7 @@
  */
 
 import { CronExpressionParser } from "cron-parser";
-import rrulePkg from "rrule";
+import { parseScheduleRrule } from "../../scheduled-script-fields.js";
 import {
   parseDuration,
   type ParsedScheduledScript,
@@ -29,7 +29,6 @@ import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core/opera
 
 export { conciseScheduleError } from "../../shared/schedule-error.js";
 
-const { rrulestr } = rrulePkg;
 
 export type TaskHealthStatus =
   | "ok"
@@ -234,7 +233,7 @@ function findMissedOccurrence(
     ({ earliest, cadenceMs } = found);
   } else if (parsed.rrule) {
     try {
-      const rule = rrulestr(parsed.rrule);
+      const rule = parseScheduleRrule(parsed.rrule, { anchor: baseline });
       const between = rule.between(baseline, now, false);
       if (between.length === 0) return null;
       earliest = between[0] ?? null;

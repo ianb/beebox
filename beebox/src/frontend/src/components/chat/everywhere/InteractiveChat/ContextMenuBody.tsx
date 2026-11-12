@@ -1,25 +1,25 @@
 /**
  * The chat's "here" menu body — the full form of the app bar's here menu
  * (docs/implemented-plans/top-nav-ia.md Track C2). Lifted verbatim out of the retired
- * `ContextChip`: its trigger and Dropdown died with the chat header row, but
+ * `ContextChip`: its trigger and Menu died with the chat header row, but
  * its body is still the richest here menu we have, and it can only be built
  * from chat state — `messages` feeds "Recent files", and rows open in the
  * companion pane via `onZoomView`. The bar's own reduced menu
  * (`components/PlacePill-here.tsx`) is what non-chat pages get.
  *
- * Rendered into the pill's open here-Dropdown through `createPortal`
+ * Rendered into the pill's open here-Menu through `createPortal`
  * (`ChatBarChrome`), so it keeps this tree's React context — hence
  * `PortaledMenuScope` around it on the caller's side, or its `MenuItem`s
  * couldn't dismiss the menu.
  *
  * Rows: "Open <dir>/" (only with a context dir), "Search", "Recent files ›"
- * leading to the `RecentFilesPanel` sub-panel, then the landmark's links and
- * groups after a divider (`LandmarkLinksPanel`, absent when there are none) — the
+ * leading to the `RecentFilesMenuBody` sub-panel, then the landmark's links and
+ * groups after a divider (`LandmarkLinksMenuBody`, absent when there are none) — the
  * folder menu's order in docs/plans/box-screen.md track 3.
  *
- * The panel swap is local state here rather than the `Dropdown`'s
- * `panelIndex`, which lives on the far side of the portal: the rows still
- * swap in place and `Dropdown`'s focus re-anchor observer still fires (it
+ * The panel swap is local state here rather than the `Menu`'s
+ * `pageIndex`, which lives on the far side of the portal: the rows still
+ * swap in place and `Menu`'s focus re-anchor observer still fires (it
  * watches any DOM change while open), but the directional slide animation
  * doesn't play for this menu. Reuniting them would mean publishing panel
  * depth back up through the chrome for one CSS transition.
@@ -31,11 +31,11 @@
  */
 
 import { memo, useState, type ReactNode } from "react";
-import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../../../ui/menu-item";
 import { href } from "../../../../lib/routing";
 import { toDisplayPath } from "@shared/display-path";
-import { LandmarkLinksPanel } from "./LandmarkLinksPanel";
-import { RecentFilesPanel } from "./RecentFilesPanel";
+import { LandmarkLinksMenuBody } from "./LandmarkLinksMenuBody";
+import { RecentFilesMenuBody } from "./RecentFilesMenuBody";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { SessionEntry } from "../../../../api";
 import type { OnZoomView } from "../../ChatMessages/view";
@@ -49,7 +49,7 @@ interface ResolvedLink {
   exists: boolean;
 }
 
-type RecentFilesPanelFileHandler = Parameters<typeof RecentFilesPanel>[0]["onPanel"];
+type RecentFilesMenuBodyFileHandler = Parameters<typeof RecentFilesMenuBody>[0]["onPanel"];
 
 /**
  * "Open <dir>/" browse link — only rendered when there's a context dir (root
@@ -93,7 +93,7 @@ function RootPanel({
           <span className="text-warm-600">›</span>
         </span>
       </MenuItem>
-      <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
+      <LandmarkLinksMenuBody contextDir={dir} onPanel={onLandmarkPanel} />
     </>
   );
 }
@@ -105,7 +105,7 @@ function RecentFilesSubPanel({
 }: {
   onBack: () => void;
   messages: SessionEntry[];
-  onFilePanel: RecentFilesPanelFileHandler;
+  onFilePanel: RecentFilesMenuBodyFileHandler;
 }) {
   return (
     <>
@@ -113,7 +113,7 @@ function RecentFilesSubPanel({
         <span className="text-warm-700">‹ Recent files</span>
       </MenuItem>
       <MenuDivider />
-      <RecentFilesPanel entries={messages} onPanel={onFilePanel} />
+      <RecentFilesMenuBody entries={messages} onPanel={onFilePanel} />
     </>
   );
 }
@@ -136,7 +136,7 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
       label: link.label ?? link.title,
     });
   };
-  const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
+  const onFilePanel: RecentFilesMenuBodyFileHandler = (summary) => {
     onZoomView({
       target: { path: summary.path, viewer: null, params: {}, viewState: null },
       label: summary.title,

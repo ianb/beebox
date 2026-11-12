@@ -7,13 +7,15 @@
  * Part of the public `beebox/view-widgets` set. Like CardLink, the card
  * reference prop is `cardRef` (React reserves `ref`). Both controls and the
  * inline render come from the view host, so behavior is surface-correct and the
- * same source works in the browser and the `bbx view test` node harness.
+ * same source works in the browser and the `bbx view check` node harness.
  */
 
 import { useState, type ReactNode } from "react";
 import { useViewHost, type ResolvedRef } from "../../lib/view-host";
 import { Badge } from "../ui/Badge";
+import { InlineAction } from "../ui/InlineAction";
 import { Text } from "../ui/Text";
+import { MaterialContext } from "../ui/material";
 
 type CardRefChild = ReactNode | ((resolved: ResolvedRef | null) => ReactNode);
 
@@ -45,30 +47,24 @@ export function CardRef({ cardRef, view, params, children }: CardRefProps) {
   const missing = resolved !== null && !resolved.exists;
 
   return (
+    // A white app panel: its text keeps app ink, and the card it embeds sets its own.
+    <MaterialContext.Provider value={false}>
     <div className="my-2 rounded-lg border border-warm-200 bg-white">
       <div className="flex items-center gap-2 px-3 py-2">
         <Text weight="medium" truncate className="min-w-0 flex-1">{title}</Text>
         {resolved?.type ? <Badge tone="info" size="sm">{resolved.type}</Badge> : null}
         {missing ? <Badge tone="danger" size="sm">missing</Badge> : null}
-        <button
-          type="button"
-          onClick={() => host.openCard(cardRef, { label: title, viewer: view ?? null, params })}
-          className="shrink-0 text-sm text-primary hover:underline"
-        >
+        <InlineAction onClick={() => host.openCard(cardRef, { label: title, viewer: view ?? null, params })} className="shrink-0 text-sm">
           Open
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpanded((x) => !x)}
-          aria-expanded={expanded}
-          className="shrink-0 text-sm text-warm-700 hover:text-warm-900"
-        >
+        </InlineAction>
+        <InlineAction intent="subtle" onClick={() => setExpanded((x) => !x)} expanded={expanded} className="shrink-0 text-sm">
           {expanded ? "Collapse" : "Expand"}
-        </button>
+        </InlineAction>
       </div>
       {expanded ? (
         <div className="border-t border-warm-200 p-3">{host.renderInline(cardRef)}</div>
       ) : null}
     </div>
+    </MaterialContext.Provider>
   );
 }

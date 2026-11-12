@@ -12,6 +12,8 @@ import { href } from "../../../lib/routing";
 import { Text } from "../../ui/Text";
 import { groupByTranscriptState } from "../../../lib/transcript-state";
 import type { RouterOutput } from "../../../lib/trpc/client";
+import { cardUrl } from "@shared/card-url";
+import { SESSION_ROW_LINK_CLASSES } from "../SessionRow";
 
 /** A dead chat as `chat.byLandmark` reports it under a landmark. */
 export type DeadSessionRowItem = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["dead"][number];
@@ -19,8 +21,8 @@ export type DeadSessionRowItem = RouterOutput["chat"]["byLandmark"]["landmarks"]
 function DeadSessionRow({ session, boxSlug }: { session: DeadSessionRowItem; boxSlug: string }) {
   return (
     <Link
-      to={href(`/${boxSlug}/browse/${session.huskPath}`)}
-      className="block px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
+      to={href(cardUrl(boxSlug, session.huskPath))}
+      className={SESSION_ROW_LINK_CLASSES}
     >
       <Text as="div" size="sm" tone="muted" className="line-clamp-2">
         {session.label}

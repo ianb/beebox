@@ -176,21 +176,27 @@ function expandRecurring(
 
   const iter = event.iterator();
   let occurrence: ICAL.Time | null;
-  // Safety limit to prevent infinite loops on broken RRULEs
-  let count = 0;
-  const MAX_EXPANSIONS = 500;
+  // Two limits. Occurrences before the range are walked past, not kept, so a
+  // daily series that began years ago must not use up the cap before reaching
+  // the range (it used to: a 500-step limit counted them). The walk limit
+  // stops a rule that never advances; the kept limit bounds the result.
+  let walked = 0;
+  let kept = 0;
+  const MAX_WALKED = 100_000;
+  const MAX_KEPT = 500;
 
   // RecurExpansion#next() is declared as always-Time, but returns a falsy
   // value once the iteration is exhausted (see the class's own usage example).
-  while ((occurrence = asIcalTime(iter.next())) && count < MAX_EXPANSIONS) {
+  while ((occurrence = asIcalTime(iter.next())) && kept < MAX_KEPT) {
+    if (++walked > MAX_WALKED) {
+      console.warn(`${filename}: stopped expanding a recurring event after ${String(MAX_WALKED)} occurrences without reaching the range`);
+      break;
+    }
     // Past our range — stop iterating
     if (occurrence.compare(rangeEnd) >= 0) break;
-    // Before our range — skip (but count toward limit)
-    if (occurrence.compare(rangeStart) < 0) {
-      count++;
-      continue;
-    }
-    count++;
+    // Before our range — skip
+    if (occurrence.compare(rangeStart) < 0) continue;
+    kept++;
 
     const occStart = occurrence.toJSDate();
     let occEnd: Date;

@@ -48,12 +48,14 @@ function addScripts(pkgPath: string, pkg: Record<string, unknown>): string[] {
     "format:check": "prettier --check src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "lint:circular": "oxlint -c .oxlint-cycles.json src/",
     prepare: "husky",
   };
   let scriptsAdded = 0;
   for (const [name, cmd] of Object.entries(scripts)) {
-    if (!(name in existingScripts)) {
+    // An earlier vibe-init wrote this madge script; replace it, not a custom one.
+    const outdated = name === "lint:circular" && existingScripts[name] === "madge --circular --extensions ts,tsx src/";
+    if (!(name in existingScripts) || outdated) {
       existingScripts[name] = cmd;
       scriptsAdded++;
     }
@@ -122,18 +124,18 @@ async function writeKnipConfig(): Promise<string[]> {
   return ["Created knip.json"];
 }
 
-// 5b. Write .madgerc: madge counts `import type` edges unless told not to, and
+// 5b. Write .oxlint-cycles.json: `lint:circular` runs only oxlint's
+// import/no-cycle, which counts `import type` edges unless told not to, and
 // conventions.md accepts type-only cycles.
-function writeMadgeConfig(): string[] {
-  const madgePath = join(cwd, ".madgerc");
-  if (existsSync(madgePath)) return [];
-  writeJson(madgePath, {
-    detectiveOptions: {
-      ts: { skipTypeImports: true },
-      tsx: { skipTypeImports: true },
-    },
+function writeCycleConfig(): string[] {
+  const configPath = join(cwd, ".oxlint-cycles.json");
+  if (existsSync(configPath)) return [];
+  writeJson(configPath, {
+    plugins: ["import"],
+    categories: { correctness: "off" },
+    rules: { "import/no-cycle": ["error", { ignoreTypes: true }] },
   });
-  return ["Created .madgerc"];
+  return ["Created .oxlint-cycles.json"];
 }
 
 // 6. Install CLI tools + husky + lint-staged (pin versions where needed for compatibility)
@@ -143,7 +145,6 @@ function installToolDeps(pkg: Record<string, unknown>): string[] {
     prettier: null,
     oxlint: null,
     knip: null,
-    madge: null,
     husky: null,
     "lint-staged": null,
   };
@@ -297,7 +298,7 @@ async function main() {
     ...writePrettierConfig(),
     ...writeTsconfig(),
     ...(await writeKnipConfig()),
-    ...writeMadgeConfig(),
+    ...writeCycleConfig(),
     ...installToolDeps(pkg),
     ...addLintStagedConfig(pkgPath, pkg),
     ...setupHuskyHook(),

@@ -14,7 +14,7 @@ priority: normal
 > Containers, not a permission control plane, are the primary containment
 > story; this stays open as the bare-metal fallback. Priority lowered
 > `important` → `normal`; `needs: [design]` stands. See
-> [cross-box filesystem isolation](2026-09-04-cross-box-filesystem-isolation.md),
+> [cross-box filesystem isolation](../closed/features/2026-09-04-cross-box-filesystem-isolation.md),
 > which wants the same wall for a different reason.
 >
 > Two findings from that discussion, so the next session does not re-derive
@@ -79,3 +79,5 @@ launch gate per the
 [posture](../decisions/2026-07-20-soft-launch-posture.md) — launch
 honesty means security-overview.md describes what IS true today — but it's the
 highest-value post-launch security build.
+
+Re-reviewed 2026-10-30: per-box Linux users now separate boxes at the OS level on unit hosts, which reduces the cross-box case this guarded. bypassPermissions is still set in both SDK entry points, so no deny rule applies.

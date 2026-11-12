@@ -95,7 +95,7 @@ const SOURCE_IDS = [...new Set(ALL_SOURCE_IDS)];
  * The text of every JSX opening tag in a file, innermost tags included.
  *
  * A regex can't do this: an attribute value holds arrow functions (`() =>`),
- * template literals and nested JSX, so the first `>` after `<Dropdown` is
+ * template literals and nested JSX, so the first `>` after `<Menu` is
  * routinely not the end of that tag. So walk it — tracking quotes and brace
  * depth — and stop at the first `>` that is neither quoted nor inside `{...}`.
  * Comments are stripped first: an apostrophe in one ("the menu-default") would
@@ -127,7 +127,7 @@ function openingTags(source: string): string[] {
 
 /**
  * `file:tagname` for each opening tag matching a predicate, narrowed to the
- * innermost match — a `<Dropdown>` tag textually contains its `trigger` prop's
+ * innermost match — a `<Menu>` tag textually contains its `trigger` prop's
  * `<button>`, and the attribute belongs to the button.
  */
 function tagsWhere(predicate: (tag: string) => boolean): { site: string; tag: string }[] {
@@ -153,7 +153,7 @@ function tagsWhere(predicate: (tag: string) => boolean): { site: string; tag: st
 // least *have* disclosure semantics, which catches tagging something that discloses
 // nothing.
 //
-// Our four triggers are all `Dropdown` triggers, and a `Dropdown` hands its
+// Our four triggers are all `Menu` triggers, and a `Menu` hands its
 // trigger the ARIA through `ariaProps` rather than literal attributes — so a
 // spread of that object counts, and the next section pins down what it contains.
 void test("reveal is the one action that dispatches a synthetic click, and the attribute...", async (t) => {
@@ -171,13 +171,13 @@ void test("reveal is the one action that dispatches a synthetic click, and the a
 
 // ## …and `ariaProps` really is that ARIA
 //
-// The spread above is only evidence if `Dropdown` puts the attributes in it. It
+// The spread above is only evidence if `Menu` puts the attributes in it. It
 // does, and the type says so, so a rename breaks this test rather than silently
 // hollowing out the check.
-void test("The spread above is only evidence if Dropdown puts the attributes in it.", async (t) => {
-  const dropdown = SOURCES.find((f) => f.path === "components/ui/Dropdown.tsx")!;
+void test("The spread above is only evidence if Menu puts the attributes in it.", async (t) => {
+  const dropdown = SOURCES.find((f) => f.path === "components/ui/Menu.tsx")!;
   const ariaPropsType = /ariaProps: {[^}]*}/.exec(dropdown.text)![0];
-  t.check(ariaPropsType, 'ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean }');
+  t.check(ariaPropsType, 'ariaProps: { "aria-haspopup"?: "menu"; "aria-expanded": boolean }');
 });
 
 // ## Every id in the plan's table exists exactly once
@@ -250,11 +250,11 @@ void test("The exploded composer gallery and capture-mode gallery render reusabl
   }
   function composerCopy(includeControlIds: boolean, busy: boolean) {
     return React.createElement(React.Fragment, null,
-      React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-lock" : undefined }),
-      React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
+      React.createElement("button", { type: "button", id: includeControlIds ? "bbx-composer-keyboard-lock" : undefined }),
+      React.createElement("button", { type: "button", id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
       React.createElement(TargetStrip, {
         status: busy ? { state: "busy", disposition: "will-queue" } : { state: "ready" },
-        pendingCount: 0, isStreaming: busy, speechPlaying: false,
+        pendingCount: 0, isStreaming: busy, catchingUp: false, speechPlaying: false,
         onInterrupt: () => {}, onStopSpeech: () => {}, includeControlIds,
       }),
     );

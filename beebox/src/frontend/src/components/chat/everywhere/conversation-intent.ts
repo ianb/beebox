@@ -1,4 +1,5 @@
 /** Browsing carries focus; explicit session/landmark intent can replace it. */
+import { deepEqual } from "@tanstack/react-router";
 import { parseChatAgentEngine } from "@shared/chat-models";
 import type { ConversationSelection, ConversationTarget } from "@shared/chat-composer-binding";
 import type { ConversationRequest } from "./resolve-conversation";
@@ -58,6 +59,23 @@ export function routeConversationRequest(input: RouteIntentInput): ConversationR
   if (chatPage) return { kind: "default" };
   if (cardPath) return { kind: "card", cardPath };
   return { kind: "landmark", contextDir: browseDir ?? "" };
+}
+
+/**
+ * What pinning `selection` to this history entry must change, or null when the
+ * entry already holds it. The entry is compared the way the router compares
+ * state, ignoring key order: the router answers a same-URL replace with equal
+ * state by reloading without writing it, so an order-sensitive check here saw
+ * a restored `start` selection as unsaved on every pass and replaced forever.
+ */
+export function routeSelectionUpdate(input: { chatPage: boolean; search: RouteIntentInput["search"]; capture: boolean;
+  selection: ConversationSelection; saved: unknown }): { session: string | null; consumeCapture: boolean } | null {
+  const { chatPage, search, selection } = input;
+  const target = selection.kind === "ready" ? selection.target : null;
+  const session = chatPage && target?.kind === "session" && search.session !== target.sessionId ? target.sessionId : null;
+  const consumeCapture = chatPage && input.capture;
+  if (session === null && !consumeCapture && deepEqual(selection, input.saved)) return null;
+  return { session, consumeCapture };
 }
 
 /** Each async resolution owns a ticket; newer intent and unmount invalidate it. */

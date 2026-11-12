@@ -7,6 +7,7 @@ import { legacyHistoryState } from "../../../history/card-state";
 import { PropertyLink, PropertyProblem } from "./property-section";
 import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
 import { anyFileChange } from "../../../../lib/live-refresh";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 /**
  * The newest commit touching the card (history follows renames), and a link
@@ -24,7 +25,7 @@ export function CardLastChange({ path, onNavigate }: { path: string; onNavigate:
   const history: ViewTarget = { path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) };
   return <section className="mt-6" aria-label="Last change" data-card-section="changed">
     <h3 className="text-sm font-semibold mb-2">Changed</h3>
-    {query.isLoading ? <p className="text-sm" role="status">Checking history…</p> : null}
+    {query.isLoading ? <StatusMessage variant="inline" busy>Checking history…</StatusMessage> : null}
     {query.error ? <PropertyProblem message={`Could not read history: ${query.error.message}`} onRetry={() => { void query.refetch(); }} /> : null}
     {query.data && line === null ? <p className="text-sm">Not committed yet</p> : null}
     {line === null ? null : <p className="text-sm">

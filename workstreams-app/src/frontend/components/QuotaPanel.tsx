@@ -1,5 +1,4 @@
 import { compactDuration, friendlyTimestamp, quotaPace, quotaSummaryText, quotaWindowsForDisplay } from "../lib/format.js";
-import { useState } from "react";
 import type { Quota } from "../types.js";
 
 /** One lane of the race: a runner at its percent, its trail behind it. */
@@ -45,13 +44,19 @@ function Window({ window }: { window: Quota["windows"][number] }) {
   </section>;
 }
 
+// React 18's typings lack the popover attributes; React 18 still forwards them
+// to the DOM, and spreading keeps them out of the type and unknown-property checks.
+// A `popover="auto"` element gets click-outside and Escape dismissal, and returns
+// focus to its invoker, from the browser.
+const POPOVER_TARGET = { popovertarget: "bbx-quota-popover" };
+const POPOVER_AUTO = { popover: "auto" };
+
 export function QuotaPanel({ quotas, error }: { quotas: Quota[]; error?: string | undefined }) {
-  const [open, setOpen] = useState(false);
   const summary = error ? "unavailable" : quotas.map((quota) => {
     if (quota.status !== "available") return `${quota.provider} unavailable`;
     return `${quota.provider} ${quotaSummaryText(quota)}`;
   }).join(" · ");
-  return <details className="quota-popover" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary>Quotas{summary ? ` · ${summary}` : ""}</summary><button type="button" className="quota-backdrop" aria-label="Close quotas" onClick={() => setOpen(false)} /><div className="quota-panel" role="region" aria-label="Agent capacity">
+  return <div className="quota-popover"><button type="button" className="quota-toggle" {...POPOVER_TARGET}>Quotas{summary ? ` · ${summary}` : ""}</button><div id="bbx-quota-popover" {...POPOVER_AUTO} className="quota-panel" role="region" aria-label="Agent capacity">
     {error ? <p>{error}</p> : quotas.map((quota) => <article className="quota-card" key={quota.provider}><h2>{quota.provider === "claude" ? "Claude account" : quota.provider === "codex" ? "Codex" : "GLM (Z.ai)"}</h2>{quota.status === "available" ? quotaWindowsForDisplay(quota).map((window) => <Window key={window.label} window={window} />) : <p>{quota.message ?? "Quota unavailable."}</p>}{quota.credits ? <p className="muted">Credits: {quota.credits.unlimited ? "unlimited" : quota.credits.balance ?? "unavailable"}</p> : null}<p className="muted">{quota.stale ? "Stale · " : ""}Updated {friendlyTimestamp(quota.fetchedAt)}</p></article>)}
-  </div></details>;
+  </div></div>;
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseRef, resolveRefPath } from "./ref-path/core.js";
+import { AGENT_ENGINES } from "./agent-models.js";
 
 const identity = z.string().trim().min(1).max(1024);
 const contextDir = z.string().max(4096);
@@ -7,7 +8,7 @@ export const conversationTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("session"), sessionId: identity.refine((value) => value !== "new"), contextDir }),
   z.object({
     kind: z.literal("start"), clientConversationId: identity, contextDir,
-    engine: z.enum(["claude", "codex"]), model: identity.optional(),
+    engine: z.enum(AGENT_ENGINES), model: identity.optional(),
     seedFeatures: z.record(z.string(), z.string()).optional(),
   }),
 ]);

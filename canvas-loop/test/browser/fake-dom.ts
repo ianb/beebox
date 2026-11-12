@@ -20,8 +20,12 @@ export class FakeElement {
   checked = false;
   selected = false;
   tabIndex = -1;
+  title = "";
+  clientWidth = 0;
+  attributes = new Map<string, string>();
   width = 0;
   height = 0;
+  style: Record<string, string> = {};
   children: FakeElement[] = [];
   parent: FakeElement | null = null;
   listeners = new Map<string, Listener[]>();
@@ -54,6 +58,12 @@ export class FakeElement {
   removeEventListener(type: string, fn: Listener): void {
     this.removedListeners += 1;
     this.listeners.set(type, (this.listeners.get(type) ?? []).filter((f) => f !== fn));
+  }
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
   }
   focus(): void {
     // Focus is irrelevant to these tests; the listener wiring calls it.
@@ -108,7 +118,7 @@ export const rafState: {
 };
 
 Object.assign(globalThis, {
-  document: { createElement: (tag: string) => new FakeElement(tag) },
+  document: { createElement: (tag: string) => new FakeElement(tag), activeElement: null },
   requestAnimationFrame: (cb: (now: number) => void): number => {
     rafState.pending.set(rafState.next, cb);
     return rafState.next++;

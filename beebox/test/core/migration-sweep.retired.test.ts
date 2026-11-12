@@ -33,6 +33,7 @@ void test("a pending retired migration asks a human, runs no agent, and is not r
   const agent = createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: () => ({ status: "repaired", reason: "must not run" }) });
 
   t.check(MIGRATIONS.filter((m) => m.name === PROBE && isRetiredMigration(m)).map((m) => m.name), [PROBE]);
+  const stderr = t.capture(process.stderr, "write");
   const result = await sweepMigrations({ boxRoot: box.root, repair: true, repairAgent: agent });
 
   t.check(result.status, "failed");
@@ -40,5 +41,7 @@ void test("a pending retired migration asks a human, runs no agent, and is not r
   t.check(agent.invocations, []);
   t.check((await readManifest(box.root))?.filter((entry) => entry.name === PROBE), []);
   const card = await readFile(join(box.root, QUESTION), "utf8");
+  // The sweep forwards the tombstone's own stderr to the operator, naming the way out:
+  t.check(stderr.args().map(([chunk]) => String(chunk)).join(""), str`Migration ${PROBE} was retired on 2026-10-08 because every fleet box had applied it, and this box never did. Restore its migrator from git history (retirement commit 81c647230; see "Retired migrations" in beebox/docs/cards/migrations.md), run it by hand, then record ${PROBE} in the manifest.\n`);
   t.check(card, str`${any(String)}Migration ${PROBE} was retired on 2026-10-08${any(String)}81c647230${any(String)}Retired migrations${any(String)}`);
 });

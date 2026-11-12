@@ -42,11 +42,13 @@ export function adminArrivalViewState(search: Record<string, unknown>): ViewStat
   const message = search["message"];
   const reconnect = search["reconnect"];
   const tab = search["tab"];
+  const section = search["section"];
   const state: ViewState = {
     ...((google === "connected" || google === "error") ? { google } : {}),
     ...(typeof message === "string" ? { message } : {}),
     ...(reconnect === "google" ? { reconnect } : {}),
     ...(isAdminTab(tab) ? { tab } : {}),
+    ...(isAdminSectionId(section) ? { section } : {}),
   };
   return Object.keys(state).length === 0 ? null : state;
 }

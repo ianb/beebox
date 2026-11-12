@@ -16,6 +16,26 @@ import { resolveRefPath } from "./shared/ref-path/core.js";
 
 const { rrulestr } = rrulePkg;
 
+/**
+ * Parse a scheduled script's `rrule`. rrule takes the parse time as the start
+ * of a rule with no DTSTART, and the scheduler parses on every check, so a rule
+ * like `FREQ=WEEKLY;BYDAY=MO` had a fresh occurrence "now" on every tick of a
+ * Monday (issues/closed/bugs/2026-10-27-rrule-without-dtstart-is-due-on-every-tick.md).
+ * Such a rule instead starts at midnight UTC of `anchor`'s day: the day of the
+ * last run (or the baseline) for a due or missed-occurrence check, so its
+ * occurrences are stable times on matching days. The DTSTART goes into the
+ * text, not rrulestr's `dtstart` option, which a multi-line rule (EXDATE,
+ * RDATE) ignores. A rule with its own DTSTART is parsed as written.
+ */
+export function parseScheduleRrule(value: string, { anchor }: { anchor: Date }): ReturnType<typeof rrulestr> {
+  if (/\bDTSTART\b/iu.test(value)) return rrulestr(value);
+  const day = anchor.toISOString().slice(0, 10).replaceAll("-", "");
+  const lines = value.split(/\r?\n/u).map((line) => line.trim()).filter((line) => line !== "");
+  // A bare `FREQ=...` line is the RRULE; a multi-line value names its lines.
+  const named = lines.map((line) => (/^[A-Z-]+[:;]/iu.test(line) ? line : `RRULE:${line}`));
+  return rrulestr([`DTSTART:${day}T000000Z`, ...named].join("\n"));
+}
+
 // `new Date()` alone is far too permissive ("5" parses as May 2001), so
 // require an ISO 8601 shape first: date, optionally time, optionally zone.
 const ISO_DATETIME_SHAPE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
@@ -43,7 +63,7 @@ export const CronField = z.string().refine(
 export const RruleField = z.string().refine(
   (value) => {
     try {
-      rrulestr(value);
+      parseScheduleRrule(value, { anchor: new Date() });
       return true;
     } catch (_e) {
       return false;

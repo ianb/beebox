@@ -13,6 +13,7 @@
   --bbx-focus-ring: #f4d389;
 }
 .bbx-box-presentation[data-chrome-theme="gilt"] {
+  color-scheme: dark;
   background: url("./gilt-panorama.webp") center top / cover no-repeat, #9d742f;
 }
 [data-chrome-theme="gilt"] .bbx-app-nav {
@@ -94,6 +95,7 @@
   --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: var(--gilt-paper);
   --bbx-ink: var(--gilt-ink);
+  --bbx-danger: #fea6b0;
   --bbx-ink-soft: var(--gilt-soft);
   --bbx-pen: var(--gilt-accent);
   --bbx-edge: var(--gilt-edge);

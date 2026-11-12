@@ -10,27 +10,14 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { CliError } from "./errors.js";
-import { parseEvents } from "./events.js";
-import type { ScriptEvent } from "./events.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
-import { run } from "./runtime.js";
-import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 import { parseTeaEvents } from "./tea-events.js";
-import { isTeaModule, toTeaModule } from "./tea-load.js";
+import { toTeaModule } from "./tea-load.js";
 import { teaRun } from "./tea-runtime.js";
 
 const PACKAGE_ROOT = new URL("../../", import.meta.url);
 const GALLERY_DIR = new URL("src/gallery/", PACKAGE_ROOT);
-const SKETCH_FILE_NAMES = ["sketch-tea.ts", "sketch.ts"] as const;
-
-const OPTIONAL_HANDLERS = [
-  "mousePressed",
-  "mouseReleased",
-  "mouseMoved",
-  "mouseDragged",
-  "keyPressed",
-  "keyReleased",
-] as const;
+const SKETCH_FILE_NAMES = ["sketch-tea.ts"] as const;
 
 interface GalleryMeta {
   frames: number;
@@ -108,28 +95,7 @@ function sketchFileName(exerciseDir: URL, slug: string): string {
   for (const name of SKETCH_FILE_NAMES) {
     if (exists(new URL(name, exerciseDir))) return name;
   }
-  throw new CliError({ detail: `src/gallery/${slug}: no sketch.ts or sketch-tea.ts found` });
-}
-
-function readFn<T>(mod: Record<string, unknown>, name: string): T | undefined {
-  const value = mod[name];
-  if (typeof value !== "function") return undefined;
-  // eslint-disable-next-line no-restricted-syntax -- parse boundary: dynamic sketch exports are `unknown`; validated typeof === "function" above
-  return value as T;
-}
-
-function toMutableModule(mod: Record<string, unknown>): SketchModule {
-  const setup = readFn<(s: Sketch) => void>(mod, "setup");
-  const draw = readFn<(s: Sketch) => void>(mod, "draw");
-  if (setup === undefined || draw === undefined) {
-    throw new CliError({ detail: "sketch must export setup(s) and draw(s) functions" });
-  }
-  const module: SketchModule = { setup, draw };
-  for (const name of OPTIONAL_HANDLERS) {
-    const handler = readFn<SketchEventHandler>(mod, name);
-    if (handler !== undefined) module[name] = handler;
-  }
-  return module;
+  throw new CliError({ detail: `src/gallery/${slug}: no sketch-tea.ts found` });
 }
 
 function readEventsJson(eventsUrl: URL): unknown {
@@ -150,14 +116,9 @@ async function runOnce(params: { exerciseDir: URL; sketchFile: string; meta: Gal
     every: meta.every,
     eventsPath: hasEvents ? "events.json" : undefined,
   };
-  if (isTeaModule(imported)) {
-    const module = toTeaModule(imported);
-    const events = hasEvents ? parseTeaEvents(readEventsJson(eventsUrl), module.params) : [];
-    return teaRun({ module, events, ...common });
-  }
-  const module = toMutableModule(imported);
-  const events: ScriptEvent[] = hasEvents ? parseEvents(readEventsJson(eventsUrl)) : [];
-  return run({ module, events, ...common });
+  const module = toTeaModule(imported);
+  const events = hasEvents ? parseTeaEvents(readEventsJson(eventsUrl), module.params) : [];
+  return teaRun({ module, events, ...common });
 }
 
 function collectFiles(dir: string): Map<string, Buffer> {

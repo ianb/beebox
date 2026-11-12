@@ -14,34 +14,22 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { spawnUntilFirstLine, tsxChild } from "../helpers/child-process.js";
 import { stageAndCommitPaths, getStatus } from "../../src/lib/git/core/operations.js";
 import { LOCK_STALE_MS } from "../../src/lib/file-lock.js";
 
-const PACKAGE_ROOT = join(import.meta.dirname, "../..");
-const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/box-git-lock-child.ts");
+const CHILD_SCRIPT = join(import.meta.dirname, "../helpers/box-git-lock-child.ts");
 
 // Start a real process that takes the box git lock, wait until it holds it,
 // then SIGKILL it — a genuine crashed holder, guard directory and all, with no
 // exit handler having run.
 async function crashedHolder(boxRoot: string, env: NodeJS.ProcessEnv) {
-  const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, boxRoot], {
-    cwd: PACKAGE_ROOT,
-    stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, ...env },
-  });
-  let stderr = "";
-  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
-  await new Promise((resolve, reject) => {
-    child.stdout.on("data", (chunk) => { if (String(chunk).includes("held")) resolve(undefined); });
-    child.once("error", reject);
-    child.once("exit", (code) => { reject(new Error(`child exited early (${code}): ${stderr}`)); });
-  });
-  child.kill("SIGKILL");
-  await new Promise((resolve) => child.once("exit", resolve));
+  const holder = await spawnUntilFirstLine({ ...tsxChild(CHILD_SCRIPT, [boxRoot]), env: { ...process.env, ...env } });
+  if (holder.line !== "held") throw new Error(`unexpected first line from the holder: ${holder.line}`);
+  await holder.kill();
 }
 
 // ## A crashed holder does not block the next writer

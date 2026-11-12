@@ -32,7 +32,9 @@ An intake job means new items have arrived in the inbox and need triage.
 ## Steps
 
 1. Read this job card to find the referenced items (each entry in
-   \`items:\` has a \`ref\` pointing to an inbox card)
+   \`items:\` has a \`ref\` pointing to an inbox card). Items pasted into
+   your prompt are already read; open each one listed under "Not pasted in"
+   yourself.
 2. Check for an applicable guide — see the compiled reference in
    \`_content/docs/generated/\` if available
 3. Read each referenced item to understand what it is

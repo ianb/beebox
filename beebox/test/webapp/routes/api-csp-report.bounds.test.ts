@@ -11,6 +11,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
 import { makeTestServer } from "../../helpers/test-route-server.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
@@ -44,6 +45,7 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const bigDoc = "https://evil.example/" + "A".repeat(5000);
   t.check(
     await postCsp("application/csp-report", { "csp-report": { "violated-directive": "img-src", "blocked-uri": "https://x/y", "document-uri": bigDoc } })
@@ -88,6 +90,11 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
     logLines(),
     linesBeforeJson,
   );
+  // Both oversized bodies are logged as 413s:
+  t.check(errors(), [
+    "[http] POST /api/csp-report failed (413): Request body is too large",
+    "[http] POST /api/csp-report failed (413): Request body is too large",
+  ]);
 
   // ## A batch POST logs at most the per-request cap
 

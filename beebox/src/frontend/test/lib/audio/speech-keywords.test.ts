@@ -88,6 +88,8 @@ void test("\"Send checkpoint\" is a plain send on the client (the mic re-arms), 
 
   t.check(detectKeyword("commit checkpoint")?.action, "sendCheckpoint");
 
+  t.check(detectKeyword("first part checkpoint message")?.processedTranscript, "first part <send-checkpoint-message phrase=\"checkpoint message\" />");
+
   t.check(detectKeyword("first part of the idea add checkpoint")?.processedTranscript, "first part of the idea <send-checkpoint-message phrase=\"add checkpoint\" />");
 });
 

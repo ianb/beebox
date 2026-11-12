@@ -2,7 +2,7 @@
  * Schedule overview — table of all scheduled scripts with status and recent ticks.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useBoxNow } from "../../../lib/box-clock";
 import { useNow } from "../../../lib/use-now";
 import { trpc } from "../../../lib/trpc/client";
@@ -13,6 +13,7 @@ import { Card } from "../../ui/Card";
 import { InlineAction } from "../../ui/InlineAction";
 import { Toggle } from "../../ui/Toggle";
 import { VisuallyHidden } from "../../ui/VisuallyHidden";
+import { Table, Td, Th } from "../../ui/Table";
 import { ScheduleStatusIndicator } from "./ScheduleStatusIndicator";
 import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
@@ -20,6 +21,8 @@ import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
 import { agoOnClock } from "../../../lib/relative-time";
 import { formatDuration } from "@shared/relative-time";
+import { LiveDot } from "../../ui/LiveDot";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -54,7 +57,7 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
       checked={enabled}
       onChange={(next) => mutation.mutate({ name, enabled: next })}
       disabled={mutation.isPending}
-      label={enabled ? "Disable schedule" : "Enable schedule"}
+      label={`Schedule ${name}`}
       className="shrink-0"
     />
   );
@@ -78,6 +81,7 @@ function TriggerButton({ name, enabled, onFinished }: { name: string; enabled: b
       disabled={!enabled}
       loading={mutation.isPending}
       loadingLabel="..."
+      label={`Run ${name}`}
       title={!enabled ? "Schedule is disabled" : `Run ${name} now`}
     >
       Run
@@ -125,14 +129,14 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
   return (
     <>
       <tr className={!s.enabled ? "opacity-50" : ""} {...bbxSource("schedule", s.name)}>
-        <td className="py-2 pr-3">
+        <Td>
           <ScheduleNameCell s={s} />
-        </td>
-        <td className="py-2 pr-3 text-warm-700 text-xs">
+        </Td>
+        <Td className="text-warm-700 text-xs">
           <span title={rawScheduleTitle(s)}>{s.cadence}</span>
           {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
-        </td>
-        <td className="py-2 pr-3 text-warm-700 text-xs">
+        </Td>
+        <Td className="text-warm-700 text-xs">
           {s.lastRun ? (
             <InlineAction
               intent="subtle"
@@ -145,8 +149,8 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
             </InlineAction>
           ) : "never"}
           <RunStrip runs={s.runStrip} />
-        </td>
-        <td className="py-2 pr-3">
+        </Td>
+        <Td>
           {s.missingRequirements && s.missingRequirements.length > 0 ? (
             <span className="text-warning text-xs" title={`Missing: ${s.missingRequirements.join(", ")}`}>
               &#9888; {s.missingRequirements.join(", ")}
@@ -156,16 +160,16 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
           ) : (
             <ScheduleStatusIndicator lastResult={s.lastResult} lastError={s.lastError} lastDeferReason={s.lastDeferReason} onShowRuns={() => setShowRuns(!showRuns)} />
           )}
-        </td>
-        <td className="py-2">
+        </Td>
+        <Td>
           <TriggerButton name={s.name} enabled={s.enabled} onFinished={() => setShowRuns(true)} />
-        </td>
+        </Td>
       </tr>
       {showRuns ? (
         <tr>
-          <td colSpan={5} className="pb-2">
+          <Td colSpan={5} className="pt-0">
             <RunHistory name={s.name} />
-          </td>
+          </Td>
         </tr>
       ) : null}
     </>
@@ -175,29 +179,27 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
 function ScheduleTableHead() {
   return (
     <thead>
-      <tr className="text-left text-xs text-warm-700 border-b">
-        <th className="pb-2 font-medium">Name</th>
-        <th className="pb-2 font-medium">Schedule</th>
-        <th className="pb-2 font-medium">Last Run</th>
-        <th className="pb-2 font-medium">Status</th>
-        <th className="pb-2 font-medium"><VisuallyHidden>Actions</VisuallyHidden></th>
+      <tr>
+        <Th scope="col">Name</Th>
+        <Th scope="col">Schedule</Th>
+        <Th scope="col">Last Run</Th>
+        <Th scope="col">Status</Th>
+        <Th scope="col"><VisuallyHidden>Actions</VisuallyHidden></Th>
       </tr>
     </thead>
   );
 }
 
-function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
+function ScheduleTable({ schedules, labelledBy }: { schedules: ScheduleInfo[]; labelledBy: string }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <ScheduleTableHead />
-        <tbody className="divide-y divide-warm-200">
-          {schedules.map((s) => (
-            <ScheduleRow key={s.name} s={s} />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table labelledBy={labelledBy} className="text-sm">
+      <ScheduleTableHead />
+      <tbody>
+        {schedules.map((s) => (
+          <ScheduleRow key={s.name} s={s} />
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
@@ -207,7 +209,7 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
   const elapsed = now === 0 || Number.isNaN(startedAt) ? null : formatDuration(Math.max(0, now - startedAt));
   return (
     <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
-      <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />
+      <LiveDot tone="warning" className="mr-1 align-middle" />
       running{elapsed === null ? "" : ` (${elapsed})`}
     </span>
   );
@@ -215,12 +217,13 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
 
 export function ScheduleOverview({ schedules, recentTicks, loading, error }: ScheduleOverviewProps) {
   const [showTicks, setShowTicks] = useState(false);
+  const headingId = useId();
 
   if (loading) {
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
         <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
-        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
+        <StatusMessage variant="inline" busy>Loading schedules…</StatusMessage>
       </Card>
     );
   }
@@ -247,9 +250,9 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
 
   return (
     <Card as="section" aria-label="Schedules" shadow border="none">
-      <h2 className="text-sm font-semibold text-warm-700 mb-3">Schedules</h2>
+      <h2 id={headingId} className="text-sm font-semibold text-warm-700 mb-3">Schedules</h2>
 
-      <ScheduleTable schedules={schedules} />
+      <ScheduleTable schedules={schedules} labelledBy={headingId} />
 
       {recentTicks.length > 0 ? (
         <div className="mt-3 pt-3 border-t">

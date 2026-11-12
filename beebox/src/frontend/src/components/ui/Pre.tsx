@@ -69,16 +69,24 @@ export function Pre({
       : "bg-warm-50 rounded p-3"
     : "";
   const scrollClass = scroll !== false ? SCROLL_CLASSES[scroll] : "";
+  // A scroller is focusable in Chrome but not in Safari; without a tab stop a
+  // keyboard user cannot scroll it. A region needs a name, so it takes `title`
+  // or a generic one.
+  const scrollProps =
+    scroll !== false
+      ? { tabIndex: 0, role: "region", "aria-label": title ?? "Scrollable text" }
+      : {};
   const classes = cn(
     "font-mono whitespace-pre-wrap break-words",
     SIZE_CLASSES[size],
     colorClass,
     boxClass,
     scrollClass,
+    scroll !== false ? "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" : "",
     className,
   );
   return (
-    <pre className={classes} title={title}>
+    <pre className={classes} title={title} {...scrollProps}>
       {children}
     </pre>
   );

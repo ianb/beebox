@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
+import { chatModelForEngine, chatModelLabel, chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES } from "../../src/shared/agent-models.js";
 import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
 import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
@@ -12,6 +12,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import type { AgentEngine } from "../../src/shared/agent-models.js";
 
 // Ids rotate; tiers do not. Examples name a model by engine and tier and read
@@ -31,7 +32,8 @@ const labelled = (r: { model: string | null; source: string }) => ({ model: labe
 //
 // Every model id an engine offers belongs to a tier, and a tier round-trips back
 // to a model that engine can run. The round-trip is by model, not by tier name.
-const ENGINES: AgentEngine[] = ["claude", "codex"];
+// pi has no tier table: it runs only the box's added OpenRouter models.
+const ENGINES = ["claude", "codex"] as const;
 
 /** Does every model this engine offers reverse to a tier selecting that same model? */
 function tiersRoundTrip(engine: AgentEngine): boolean {
@@ -52,6 +54,25 @@ void test("line 29", async (t) => {
     null,
     null,
   ]);
+});
+
+// ## pi runs only the box's added models
+//
+// pi has no models of its own and no tier table (docs/plans/pi-box-engine.md,
+// Track 2): its menu is the owner's added OpenRouter list with no "Default" row,
+// a removed added pick is kept for the spawn to refuse, and asking it for a tier
+// is a broken invariant.
+void test("pi runs only the box's added models", async (t) => {
+  const added = [{ id: "qwen/qwen3-coder", label: "Qwen3 Coder" }];
+  t.check([chatModelOptions("pi", added), chatModelOptions("pi", [])], [
+    [{ label: "Qwen3 Coder", model: "qwen/qwen3-coder" }],
+    [],
+  ]);
+  t.check([chatModelForEngine("pi", "qwen/qwen3-coder"), chatModelLabel("pi", { model: "qwen/qwen3-coder", added: [] })], [
+    "qwen/qwen3-coder",
+    "qwen/qwen3-coder (removed in admin)",
+  ]);
+  t.checkThrows(() => resolveProcedureModel({ engine: "pi", model: "strong" }), "InvariantError: pi has no procedure tiers; its models come from the box's added OpenRouter list");
 });
 
 // Web chats persist overrides independently by native session id. The saved
@@ -262,8 +283,11 @@ void test("A hand-edited agentModel that no engine offers is rejected at the con
   await writeConfig({ agentModel: tierId("claude", "balanced") });
   t.check(label(await loadBoxModel(policyBox.root)), "claude balanced");
 
+  const warnings = consoleLines(t, "warn");
   await writeConfig({ agentModel: "sonnet" });
   t.check(await loadBoxModel(policyBox.root), null);
+  // The owner is told which setting was ignored:
+  t.check(warnings(), ['Box config agentModel "sonnet" is not a model any engine offers — ignoring it.']);
 
   await writeConfig({});
   t.check(await loadBoxModel(policyBox.root), null);
@@ -311,8 +335,10 @@ void test("A codex box never receives a Claude model id, whatever the box config
   await writeSmall({ agentEngine: "codex" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
 
+  const warnings = consoleLines(t, "warn");
   await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
+  t.check(warnings(), ['Box config smallModel "haiku" is not a model any engine offers — ignoring it.']);
 
   await writeSmall({ agentEngine: "codex", smallModel: tierId("codex", "balanced") });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex balanced");
@@ -352,10 +378,20 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
   // A config that disables the box's own default engine is a mistake, not a state to
   // honor: nothing could run. The default comes back enabled, loudly.
 
+  const warnings = consoleLines(t, "warn");
   await writeEngines({ agentEngine: "codex", engines: { claude: true, codex: false } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
     "codex",
+  ]);
+  t.check(warnings(), ["Box config disables its own default engine (codex); treating it as enabled, since nothing could run otherwise."]);
+
+  // pi is enabled like any other engine.
+
+  await writeEngines({ engines: { claude: true, pi: true } });
+  t.check(await loadEnabledEngines(engineBox.root), [
+    "claude",
+    "pi",
   ]);
 
   await engineBox.cleanup();

@@ -19,6 +19,7 @@ import { any, str } from "@ianbicking/tap-check/check";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 /** Every todo in the glob, whatever its status or assignee, plus the issues beside them. */
 async function collectTodos(boxRoot: string, options?: { glob: string }) {
@@ -332,8 +333,11 @@ async function scopeAndOrdering(t: Test) {
     "store/x.doc.card",
     doc("", '{% todo id="survives" %}Should still collect{% /todo %}\n')
   );
+  const warnings = consoleLines(t, "warn");
   const badTzResult = await collectTodos(badTzBox.root);
   t.check(badTzResult.todos.map((todo) => todo.id), ["survives"]);
+  // The server log names the bad value and the fallback:
+  t.check(warnings(), ['Box config timezone "America/Chciago" is not a valid IANA timezone — falling back to the host timezone.']);
 
   await badTzBox.cleanup();
 

@@ -149,14 +149,31 @@ export function extractCardDocs(input: ExtractInput): SearchDoc[] {
     fragment: "",
     content: joinContent([...fold.extra, preamble]),
   };
-  const sectionDocs = sections.map((s): SearchDoc => ({
-    ...base,
-    id: docId(path, s.fragment),
-    fragment: s.fragment,
-    content: normalizeContent(s.text),
-  }));
+  const sectionDocs = sections.map((s): SearchDoc => sectionDoc(base, s));
   // Section paths are unique (`uniqueSectionPaths`) and never "", so ids are too.
   return [cardDoc, ...sectionDocs];
+}
+
+/**
+ * A section indexes only its own text. With the card's title and `contains`
+ * copied in, a query for either returned every section, and each preview
+ * repeated the card summary; the query layer shows a section hit under its
+ * card's title (`issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md`).
+ */
+function sectionDoc(base: Omit<SearchDoc, "id" | "fragment" | "content">, section: { fragment: string; text: string }): SearchDoc {
+  return {
+    ...base,
+    title: "",
+    contains: "",
+    id: docId(base.path, section.fragment),
+    fragment: section.fragment,
+    content: normalizeContent(section.text),
+  };
+}
+
+/** The id of a card's or file's own document is `cardDocId(path)`; a section's adds its fragment. */
+export function cardDocId(path: string): string {
+  return docId(path, "");
 }
 
 function docId(path: string, fragment: string): string {
@@ -189,12 +206,7 @@ export function extractMarkdownFileDocs(input: {
   const { preamble, sections } = splitMarkdownSections(content);
   return [
     { ...base, id: docId(path, ""), fragment: "", content: normalizeContent(preamble) },
-    ...sections.map((s): SearchDoc => ({
-      ...base,
-      id: docId(path, s.fragment),
-      fragment: s.fragment,
-      content: normalizeContent(s.text),
-    })),
+    ...sections.map((s): SearchDoc => sectionDoc(base, s)),
   ];
 }
 

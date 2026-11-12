@@ -11,26 +11,46 @@ VPS. The documentation says a $5/month VPS is enough for the container path.
 The box runs on a full computer; the design rules out serverless hosting. It
 does not run on a phone.
 
+**A current browser, and for the iPhone app, iOS 18.** The web app targets
+current Chrome, Safari, and Firefox, with Safari 18 as the oldest it is held
+to. The iPhone companion app needs iOS 18 or later; the project raised that
+from iOS 17 on 2026-11-11 so the web app inside it can rely on Safari 18.
+
 **A coding-agent login.** Claude Code or Codex. For Claude, the documentation
 requires you to sign in with a Claude subscription yourself; it says an API
 key alone will not work, by design. The documentation does not describe
-running Bee Box against a local model. A box can optionally run other vendors'
+running Bee Box against a local model. On a server or other machine with no
+browser to sign in from, a long-lived token created with `claude setup-token`
+(good for about a year) takes the place of the interactive sign-in. A box can optionally run other vendors'
 models on the Claude side instead: GLM models through a Z.ai key, or models the
 owner adds through an OpenRouter key (billed per use). Only three OpenRouter
 models are recorded as tested through a full agent turn, and the documentation
-warns that others may fail turns that need tools.
+warns that others may fail turns that need tools. A third engine, called pi, is
+an open-source coding-agent library that runs inside the box's server and uses
+only OpenRouter models the owner has added, so it needs an OpenRouter key and no
+Claude or ChatGPT subscription. It is billed per use, and its cost figures are
+estimates. Its documentation records live runs on a few models (DeepSeek, Qwen,
+Kimi) and names one DeepSeek model that does not work. It cannot be steered
+mid-turn from the chat, and it runs as the same operating-system user as the
+server, so the outer boundary is the same as for the other engines
+([the pi engine](concepts/pi-engine.md)).
 
 **Accounts, per connector, all optional.** A Google account, plus signing in
 with it and a one-time setup, for Gmail, Calendar, and Drive; the
 documentation calls that setup the hardest part of installing today. A transcription vendor key (Mistral, OpenAI, or Deepgram) for
 voice. A Cloudflare account for publishing. A git remote if you want the box
-pushed off the machine. Photos, voice, and typing need none of these.
+pushed off the machine. A place to keep encrypted backups (an SFTP server, an
+S3-compatible bucket, Backblaze B2, or a local directory) if you want them; the
+box makes none until you set one up ([backups](install/backups.md)). Photos, voice, and typing need none of
+these.
 
 **Docker, or the from-source prerequisites.** The container path needs Docker
-with Compose v2 and a clone of the repository, since no image is published
-yet. The from-source path needs Node 24, pnpm, and several system binaries
+with Compose v2 and a clone of the repository, because the install guide
+builds the image from that clone. A prebuilt image is also published daily to
+GitHub's container registry (the Mac app uses it), but the Docker guide does not
+yet describe pulling it. The from-source path needs Node 24, pnpm, and several system binaries
 (`pandoc`, ImageMagick, `poppler-utils`, `git-lfs`, an Excel reader,
-`fclones`).
+`fclones`, and `shellcheck` for the commit hook).
 
 **Running cost: model usage.** Each agent turn sends its context to the model
 provider, so a running box eats into your subscription's usage limits, or

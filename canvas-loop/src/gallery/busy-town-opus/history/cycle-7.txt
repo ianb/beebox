@@ -1,0 +1,2348 @@
+===== sketch-tea.ts =====
+// Acorn Lane: a busy picture-book street. Every townsperson idles; click one
+// and it performs its little act, sometimes setting off a neighbour.
+import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
+import type { Id } from "./things-tea.js";
+import { CHAIN, H, NOT_STARTED, W, act, hit } from "./things-tea.js";
+import { paintLights, paintTown } from "./town-tea.js";
+import * as A from "./actors-tea.js";
+
+export const params = {
+  time: { type: "select", options: ["morning", "dusk", "night"] as const, default: "morning" },
+  rain: { type: "boolean", default: false },
+  reset: { type: "trigger" },
+} as const satisfies ParamsDecl;
+
+export const canvas = { width: W, height: H };
+
+interface Cue {
+  readonly id: Id;
+  readonly at: number;
+}
+
+export interface Model {
+  readonly frame: number;
+  readonly hover: Id | "";
+  readonly start: Readonly<Record<Id, number>>;
+  readonly queue: readonly Cue[];
+  readonly bloom: number;
+}
+
+function fresh(frame: number): Model {
+  return { frame, hover: "", start: NOT_STARTED, queue: [], bloom: 0 };
+}
+
+export function init(): Model {
+  return fresh(0);
+}
+
+/** Start an act on `id` at frame `at` unless it is already playing; queue its chain reactions. */
+function begin(model: DeepReadonly<Model>, id: Id, at: number): Model {
+  if (act({ frame: at, start: model.start }, id) !== null) return model;
+  const chained = (CHAIN[id] ?? []).map((c) => ({ id: c.id, at: at + c.delay }));
+  return {
+    ...model,
+    start: { ...model.start, [id]: at },
+    queue: [...model.queue, ...chained],
+    bloom: id === "window" ? Math.min(3, model.bloom + 1) : model.bloom,
+  };
+}
+
+function tick(model: DeepReadonly<Model>, frame: number): Model {
+  const due = model.queue.filter((c) => c.at <= frame);
+  const rest = model.queue.filter((c) => c.at > frame);
+  return due.reduce<Model>((m, c) => begin(m, c.id, frame), { ...model, frame, queue: rest });
+}
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch (msg.type) {
+    case "tick":
+      return tick(model, msg.frame);
+    case "mousemove": {
+      const id = hit(model, msg.x, msg.y) ?? "";
+      return id === model.hover ? model : { ...model, hover: id };
+    }
+    case "mousedown": {
+      const id = hit(model, msg.x, msg.y);
+      if (id === null) return model;
+      const at = model.frame + 1;
+      if (act({ frame: at, start: model.start }, id) !== null) {
+        u.handled(`${id} (busy)`);
+        return model;
+      }
+      u.handled(id);
+      return begin(model, id, at);
+    }
+    case "mouseup":
+    case "keydown":
+    case "keyup":
+    case "param":
+      return model;
+    case "trigger":
+      if (msg.name !== "reset") return model;
+      u.handled("reset");
+      return fresh(model.frame);
+  }
+}
+
+const SHADE: Readonly<Record<ParamValues<typeof params>["time"], string>> = {
+  morning: "",
+  dusk: "#f2b48c",
+  night: "#5a64a8",
+};
+
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+  const night = p.time === "night";
+  const s: A.Scene = { ...model, night };
+  v.cache("town", () => paintTown(v));
+  // back to front
+  A.chimney(v, s);
+  A.flag(v, s);
+  A.clockHands(v, s);
+  A.windowAndGoat(v, s);
+  A.owl(v, s);
+  A.cat(v, s);
+  A.painter(v, s);
+  A.baker(v, s);
+  A.mailCarrier(v, s);
+  A.mailbox(v, s);
+  A.hydrant(v, s);
+  A.lamp(v, s);
+  A.bucket(v, s);
+  A.dog(v, s);
+  A.grocer(v, s);
+  A.duck(v, s);
+  A.pigeons(v, s);
+  A.snail(v, s);
+  A.manhole(v, s);
+  A.bus(v, s);
+  if (p.rain) {
+    v.noStroke();
+    v.fill("rgba(90,100,130,0.25)");
+    v.rect(0, 0, W, H);
+  }
+  const shade = SHADE[p.time];
+  if (shade !== "") {
+    v.blendMode("multiply");
+    v.noStroke();
+    v.fill(shade);
+    v.rect(0, 0, W, H);
+    v.blendMode("screen");
+    v.cache(`lights-${p.time}`, () => paintLights(v, night));
+    v.blendMode("normal");
+  }
+  if (p.rain) A.rain(v, model.frame);
+  A.bubbles(v, s);
+  A.hoverGlint(v, s);
+}
+
+===== things-tea.ts =====
+// What can be clicked, where it is, how long its act lasts, and who it sets off.
+// Positions are pure functions of the model, so update (hit-testing) and draw
+// (painting) agree without sharing state.
+
+export const IDS = [
+  "baker",
+  "chimney",
+  "window",
+  "cat",
+  "mail",
+  "mailbox",
+  "painter",
+  "bucket",
+  "owl",
+  "hydrant",
+  "dog",
+  "lamp",
+  "grocer",
+  "clock",
+  "pigeons",
+  "flag",
+  "duck",
+  "bus",
+  "manhole",
+  "snail",
+] as const;
+export type Id = (typeof IDS)[number];
+
+export interface Box {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+export interface Clock {
+  readonly frame: number;
+  readonly start: Readonly<Record<Id, number>>;
+}
+
+/** Frames each act runs (60 fps). */
+export const DUR: Readonly<Record<Id, number>> = {
+  baker: 170,
+  chimney: 150,
+  window: 220,
+  cat: 110,
+  mail: 120,
+  mailbox: 130,
+  painter: 150,
+  bucket: 120,
+  owl: 140,
+  hydrant: 170,
+  dog: 140,
+  lamp: 200,
+  grocer: 160,
+  clock: 160,
+  pigeons: 170,
+  flag: 140,
+  duck: 120,
+  bus: 230,
+  manhole: 170,
+  snail: 160,
+};
+
+/** Who reacts when an act starts, and how many frames later. */
+export const CHAIN: Readonly<Partial<Record<Id, readonly { readonly id: Id; readonly delay: number }[]>>> = {
+  baker: [{ id: "dog", delay: 45 }],
+  window: [{ id: "cat", delay: 95 }],
+  clock: [
+    { id: "pigeons", delay: 20 },
+    { id: "owl", delay: 40 },
+  ],
+  painter: [{ id: "bucket", delay: 70 }],
+  hydrant: [{ id: "dog", delay: 40 }],
+  mail: [{ id: "mailbox", delay: 40 }],
+  bus: [{ id: "duck", delay: 205 }],
+  manhole: [{ id: "snail", delay: 25 }],
+  flag: [{ id: "pigeons", delay: 15 }],
+};
+
+/** Every act's start frame before anything has been clicked: long ago. */
+export const NOT_STARTED: Readonly<Record<Id, number>> = {
+  baker: -100_000,
+  chimney: -100_000,
+  window: -100_000,
+  cat: -100_000,
+  mail: -100_000,
+  mailbox: -100_000,
+  painter: -100_000,
+  bucket: -100_000,
+  owl: -100_000,
+  hydrant: -100_000,
+  dog: -100_000,
+  lamp: -100_000,
+  grocer: -100_000,
+  clock: -100_000,
+  pigeons: -100_000,
+  flag: -100_000,
+  duck: -100_000,
+  bus: -100_000,
+  manhole: -100_000,
+  snail: -100_000,
+};
+
+// ── Layout ───────────────────────────────────────────────────────────
+export const W = 1000;
+export const H = 750;
+export const STREET = 540; // building bases / back of the sidewalk
+export const CURB = 600;
+export const ROAD_END = 712;
+export const FEET = 566; // where standing folk put their feet
+
+export const BUS_HOME = 590;
+export const BUS_Y = 582;
+export const BUS_W = 220;
+export const BUS_H = 112;
+
+/** Act progress 0..1 while an act runs, otherwise null. */
+export function act(c: Clock, id: Id): number | null {
+  const t = (c.frame - c.start[id]) / DUR[id];
+  return t >= 0 && t < 1 ? t : null;
+}
+
+/** Bus left edge: drives off right, wraps round the block, and creeps back to the stop. */
+export function busX(c: Clock): number {
+  const t = act(c, "bus");
+  if (t === null) return BUS_HOME;
+  if (t < 0.45) {
+    const k = t / 0.45;
+    return BUS_HOME + k * k * (W - BUS_HOME + 40);
+  }
+  if (t < 0.55) return W + 100; // round the corner, out of sight
+  const k = (t - 0.55) / 0.45;
+  const ease = 1 - (1 - k) * (1 - k);
+  return -BUS_W - 60 + ease * (BUS_HOME + BUS_W + 60);
+}
+
+/** Snail left edge: it crawls the curb and loops once every ~80 s. */
+export function snailX(frame: number): number {
+  return 40 + ((frame * 0.05) % 300);
+}
+
+const STATIC: Readonly<Record<Exclude<Id, "bus" | "snail">, Box>> = {
+  baker: { x: 84, y: 470, w: 60, h: 98 },
+  chimney: { x: 168, y: 196, w: 34, h: 56 },
+  window: { x: 50, y: 282, w: 80, h: 86 },
+  cat: { x: 52, y: 362, w: 50, h: 54 },
+  mail: { x: 268, y: 470, w: 60, h: 98 },
+  mailbox: { x: 360, y: 506, w: 40, h: 64 },
+  painter: { x: 520, y: 330, w: 70, h: 230 },
+  bucket: { x: 586, y: 548, w: 30, h: 32 },
+  owl: { x: 440, y: 236, w: 56, h: 62 },
+  hydrant: { x: 420, y: 530, w: 28, h: 44 },
+  dog: { x: 452, y: 534, w: 74, h: 52 },
+  lamp: { x: 594, y: 384, w: 30, h: 190 },
+  grocer: { x: 740, y: 470, w: 60, h: 98 },
+  clock: { x: 868, y: 168, w: 64, h: 64 },
+  pigeons: { x: 808, y: 306, w: 186, h: 30 },
+  flag: { x: 896, y: 44, w: 70, h: 50 },
+  duck: { x: 900, y: 478, w: 60, h: 90 },
+  manhole: { x: 268, y: 640, w: 70, h: 40 },
+};
+
+export function boxOf(c: Clock, id: Id): Box {
+  if (id === "bus") return { x: busX(c), y: BUS_Y, w: BUS_W, h: BUS_H };
+  if (id === "snail") return { x: snailX(c.frame), y: 578, w: 36, h: 26 };
+  return STATIC[id];
+}
+
+/** Front-most first: the order a click is offered to things. */
+const HIT_ORDER: readonly Id[] = [
+  "bus",
+  "snail",
+  "manhole",
+  "duck",
+  "dog",
+  "bucket",
+  "hydrant",
+  "mailbox",
+  "baker",
+  "mail",
+  "grocer",
+  "lamp",
+  "cat",
+  "painter",
+  "owl",
+  "window",
+  "chimney",
+  "pigeons",
+  "clock",
+  "flag",
+];
+
+export function hit(c: Clock, x: number, y: number): Id | null {
+  for (const id of HIT_ORDER) {
+    const b = boxOf(c, id);
+    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return id;
+  }
+  return null;
+}
+
+===== actors-tea.ts =====
+// Every moving thing, drawn each frame from sprites and a few cheap marks.
+import type { Sprite, View } from "@ianbicking/canvas-loop";
+import type { Clock, Id } from "./things-tea.js";
+import { BUS_Y, FEET, IDS, W, act, boxOf, busX, snailX } from "./things-tea.js";
+import * as S from "./folk-tea.js";
+
+export interface Scene extends Clock {
+  readonly hover: Id | "";
+  readonly bloom: number;
+  readonly night: boolean;
+}
+
+interface Place {
+  readonly x: number;
+  readonly y: number;
+  readonly px: number;
+  readonly py: number;
+  readonly rot?: number;
+  readonly flip?: boolean;
+  readonly alpha?: number;
+  readonly scale?: number;
+}
+
+/** Draw a sprite with its pivot (px, py) at (x, y), turned, flipped and scaled about the pivot. */
+export function put(v: View, s: Sprite, at: Place): void {
+  v.push();
+  v.translate(at.x, at.y);
+  if (at.rot !== undefined) v.rotate(at.rot);
+  if (at.flip === true) v.scale(-1, 1);
+  if (at.scale !== undefined) v.scale(at.scale);
+  v.image(s, -at.px, -at.py, at.alpha ?? 1);
+  v.pop();
+}
+
+/** Hover cue: a little hop while the pointer is over an idle thing. */
+export function hop(s: Scene, id: Id): number {
+  return s.hover === id && act(s, id) === null ? -Math.abs(Math.sin(s.frame * 0.22)) * 6 : 0;
+}
+
+/** Hover cue for fixed things: a small wiggle. */
+function wiggle(s: Scene, id: Id): number {
+  return s.hover === id && act(s, id) === null ? Math.sin(s.frame * 0.5) * 0.06 : 0;
+}
+
+function puff(v: View, x: number, y: number, r: number, alpha: number): void {
+  v.noStroke();
+  v.fill(`rgba(250,250,250,${alpha.toFixed(3)})`);
+  v.circle(x, y, r * 2);
+}
+
+function drops(v: View, color: string, pts: readonly (readonly [number, number])[]): void {
+  v.noStroke();
+  v.fill(color);
+  for (const [x, y] of pts) v.ellipse(x, y, 4, 6);
+}
+
+const bell = (t: number, a: number, b: number): number => (t < a || t > b ? 0 : Math.sin(((t - a) / (b - a)) * Math.PI));
+
+// ── Bakery row ─────────────────────────────────────────────────────
+
+export function chimney(v: View, s: Scene): void {
+  const t = act(s, "chimney");
+  const shake = t === null ? wiggle(s, "chimney") : Math.sin(t * 60) * 0.08 * (1 - t);
+  put(v, S.chimney(v), { x: 185, y: 252, px: 17, py: 56, rot: shake });
+  for (let i = 0; i < 6; i += 1) {
+    const age = ((s.frame + i * 20) % 120) / 120;
+    puff(v, 186 + Math.sin(age * 5 + i) * 8 + age * 30, 196 - age * 90, 5 + age * 12, (1 - age) * 0.55);
+  }
+  if (t !== null) {
+    v.noFill();
+    v.noBrush();
+    for (let i = 0; i < 3; i += 1) {
+      const k = t * 1.6 - i * 0.25;
+      if (k <= 0 || k >= 1) continue;
+      v.stroke(`rgba(90,80,90,${(0.8 * (1 - k)).toFixed(3)})`);
+      v.strokeWeight(5 * (1 - k) + 1);
+      v.ellipse(186 + k * 20, 190 - k * 150, 18 + k * 50, 8 + k * 20);
+    }
+  }
+}
+
+export function windowAndGoat(v: View, s: Scene): void {
+  const t = act(s, "window");
+  const open = t !== null && t > 0.04 && t < 0.94;
+  const x = 50;
+  const y = 282 + hop(s, "window");
+  if (open) {
+    const rise = Math.min(1, (t - 0.04) / 0.12) * Math.min(1, (0.94 - t) / 0.1);
+    put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 });
+    const gy = y + 120 - rise * 52;
+    v.clip([[x + 16, y + 6], [x + 64, y + 6], [x + 64, y + 66], [x + 16, y + 66]], () => {
+      put(v, S.folk(v, "goat-water"), { x: x + 40, y: gy, px: 32, py: 96 });
+    });
+    v.clip([[x, y + 64], [x + 80, y + 64], [x + 80, y + 86], [x, y + 86]], () => put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 }));
+    const pour = t > 0.18 && t < 0.8;
+    const tilt = pour ? 0.55 + Math.sin(s.frame * 0.2) * 0.08 : 0;
+    // the can pokes out over the sill, held at the goat's hands
+    if (rise > 0.6) put(v, S.wateringCan(v), { x: x + 66, y: gy - 38, px: 6, py: 10, rot: tilt });
+    if (pour) {
+      const sx = x + 66 + Math.cos(tilt) * 23 - Math.sin(tilt) * -8;
+      const sy = gy - 38 + Math.sin(tilt) * 23 + Math.cos(tilt) * -8;
+      const pts: [number, number][] = [];
+      for (let i = 0; i < 5; i += 1) {
+        const k = ((s.frame * 2 + i * 7) % 35) / 35;
+        pts.push([sx - k * 22, sy + k * k * (y + 56 - sy)]);
+      }
+      // what the box cannot hold drips out underneath, onto whoever sits below
+      for (let i = 0; i < 4; i += 1) {
+        const k = ((s.frame * 1.5 + i * 13) % 52) / 52;
+        if (t > 0.3) pts.push([x + 28 + (i % 2) * 8, y + 82 + k * 40]);
+      }
+      drops(v, "rgba(110,170,230,0.85)", pts);
+    }
+  } else {
+    put(v, S.windowSprite(v, false), { x, y, px: 0, py: 0 });
+  }
+  // flowers in the box: they sway, and grow while watered
+  const grow = t !== null && t > 0.18 ? Math.min(1, (t - 0.18) / 0.5) : 0;
+  const tall = 10 + s.bloom * 6 + grow * 6;
+  const colors = ["#e84a6a", "#f2c84b", "#b46ad8", "#ff8a3a", "#e84a6a"];
+  for (let i = 0; i < 5; i += 1) {
+    const fx = x + 16 + i * 12;
+    const sway = Math.sin(s.frame * 0.05 + i) * 2;
+    v.noBrush();
+    v.noFill();
+    v.stroke("#3f7a3a");
+    v.strokeWeight(2);
+    v.line(fx, y + 67, fx + sway, y + 67 - tall);
+    v.noStroke();
+    v.fill(colors[i] ?? "#e84a6a");
+    v.circle(fx + sway, y + 67 - tall, 9 + grow * 3 + s.bloom);
+    v.fill("#fff3b0");
+    v.circle(fx + sway, y + 67 - tall, 3);
+  }
+}
+
+export function cat(v: View, s: Scene): void {
+  const t = act(s, "cat");
+  const leap = t === null ? 0 : Math.sin(Math.min(1, t / 0.7) * Math.PI) * 46;
+  const mode = t !== null && t < 0.75 ? "arch" : "sit";
+  const x = 52;
+  const y = 360 - leap + hop(s, "cat");
+  // tail first, behind
+  const flick = t === null ? Math.sin(s.frame * 0.09) * 10 + Math.sin(s.frame * 0.23) * 4 : 0;
+  v.noBrush();
+  v.noFill();
+  v.stroke("#8e8a9a");
+  v.strokeWeight(6);
+  if (mode === "sit") {
+    v.curve([[x + 36, y + 50], [x + 50, y + 56], [x + 56 + flick * 0.3, y + 64], [x + 54 + flick, y + 78]]);
+  } else {
+    v.curve([[x + 42, y + 34], [x + 50, y + 20], [x + 52, y + 4]]);
+  }
+  put(v, S.cat(v, mode), { x, y, px: 0, py: 0 });
+}
+
+export function baker(v: View, s: Scene): void {
+  const t = act(s, "baker");
+  const x = 114;
+  const pose: S.Pose = t === null || t > 0.82 ? "baker-idle" : t < 0.28 ? "baker-reach" : "baker-up";
+  const bob = Math.sin(s.frame * 0.07) * 1.2 + hop(s, "baker");
+  put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 });
+  if (t === null || t > 0.82) return;
+  let lx: number;
+  let ly: number;
+  if (t < 0.28) {
+    const k = t / 0.28;
+    lx = 200 - k * 58;
+    ly = 520 - k * 12;
+    v.noBrush();
+    v.stroke("#8a5a3a");
+    v.strokeWeight(3);
+    v.line(lx + 26, ly + 2, 142, 543);
+  } else {
+    lx = x;
+    ly = FEET - 92 + bob;
+  }
+  put(v, S.loaf(v), { x: lx, y: ly, px: 22, py: 14 });
+  for (let i = 0; i < 6; i += 1) {
+    const age = ((s.frame * 1.3 + i * 11) % 66) / 66;
+    puff(v, lx + Math.sin(age * 6 + i * 2) * 7, ly - 8 - age * 46, 3 + age * 8, (1 - age) * 0.7);
+  }
+}
+
+// ── Post office ────────────────────────────────────────────────────
+
+export function mailCarrier(v: View, s: Scene): void {
+  const t = act(s, "mail");
+  const x = 292;
+  const pose: S.Pose = t !== null && t < 0.6 ? "mail-toss" : "mail-idle";
+  const bob = t === null ? Math.abs(Math.sin(s.frame * 0.05)) * -2 : Math.sin(t * Math.PI * 4) * -4;
+  put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 });
+  if (t === null || t > 0.62) return;
+  for (let i = 0; i < 3; i += 1) {
+    const k = (t - i * 0.12) / 0.4;
+    if (k <= 0 || k >= 1) continue;
+    const lx = 318 + k * 46;
+    const ly = 506 - Math.sin(k * Math.PI) * 60 + k * 18;
+    put(v, S.letter(v), { x: lx, y: ly, px: 9, py: 6, rot: k * 6 });
+  }
+}
+
+export function mailbox(v: View, s: Scene): void {
+  const t = act(s, "mailbox");
+  const open = t !== null && t > 0.1 && t < 0.8;
+  const jig = t === null ? 0 : Math.sin(t * 50) * 0.07 * (1 - t);
+  put(v, S.mailbox(v, open), { x: 380, y: 570 + hop(s, "mailbox"), px: 20, py: 66, rot: jig });
+  if (t === null) return;
+  for (let i = 0; i < 4; i += 1) {
+    const k = (t - 0.12 - i * 0.05) / 0.62;
+    if (k <= 0 || k >= 1) continue;
+    const up = Math.sin(k * Math.PI) * (50 + i * 12);
+    put(v, S.letter(v), { x: 380 + Math.sin(k * 9 + i) * (10 + i * 5), y: 524 - up, px: 9, py: 6, rot: Math.sin(k * 7 + i) * 0.8 });
+  }
+}
+
+// ── Painter's house ────────────────────────────────────────────────
+
+export function owl(v: View, s: Scene): void {
+  const t = act(s, "owl");
+  // an owl keeps owl hours: asleep by day, awake at night
+  const roused = t !== null && t > 0.05 && t < 0.85;
+  const awake = s.night ? !roused || Math.floor(s.frame / 6) % 2 === 0 : roused;
+  put(v, S.owl(v, awake), { x: 441, y: 237 + hop(s, "owl"), px: 0, py: 0 });
+  if (!awake && t === null) {
+    for (let i = 0; i < 3; i += 1) {
+      const k = ((s.frame + i * 40) % 120) / 120;
+      v.noStroke();
+      v.fill(`rgba(60,70,110,${(1 - k).toFixed(3)})`);
+      v.textSize(9 + k * 8);
+      v.textAlign("center", "middle");
+      v.text("z", 490 + k * 22 + Math.sin(k * 8) * 4, 240 - k * 34);
+    }
+  }
+}
+
+export function painter(v: View, s: Scene): void {
+  const t = act(s, "painter");
+  const wob = t === null ? wiggle(s, "painter") : Math.sin(t * Math.PI * 9) * 0.2 * (1 - t) * Math.min(1, t * 8);
+  const hang = t !== null && t < 0.8;
+  put(v, S.ladder(v, hang), { x: 536, y: 568, px: 16, py: 236, rot: wob });
+  if (!hang) {
+    // idle: the brush arm dabs, leaving a dab of yellow on the wall
+    const dab = Math.sin(s.frame * 0.12);
+    v.noStroke();
+    v.fill("rgba(247,214,92,0.9)");
+    v.ellipse(592 + dab * 2, 382 + dab * 7, 7, 10);
+  }
+  if (t !== null && t < 0.9) {
+    // paint drips falling to the bucket
+    const pts: [number, number][] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const k = (t - 0.1 - i * 0.08) / 0.35;
+      if (k > 0 && k < 1) pts.push([584 + i * 3, 360 + k * k * 196]);
+    }
+    drops(v, "#f2c43a", pts);
+  }
+}
+
+export function bucket(v: View, s: Scene): void {
+  const t = act(s, "bucket");
+  const tip = t === null ? wiggle(s, "bucket") : bell(t, 0, 0.7) * 1.1;
+  const jump = t === null ? hop(s, "bucket") : -bell(t, 0, 0.25) * 18;
+  if (t !== null && t > 0.12) {
+    const k = Math.min(1, (t - 0.12) / 0.2);
+    const fade = t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
+    v.noStroke();
+    v.fill(`rgba(247,214,92,${(0.95 * fade).toFixed(3)})`);
+    v.ellipse(618, 580, 10 + k * 56, 6 + k * 12);
+    for (let i = 0; i < 6; i += 1) v.circle(600 + i * 8 + k * 10, 572 - Math.sin(i * 2.1) * 6 * k, 4 + (i % 2) * 2);
+  }
+  put(v, S.bucket(v), { x: 600, y: 582 + jump, px: 16, py: 32, rot: tip });
+}
+
+export function hydrant(v: View, s: Scene): void {
+  const t = act(s, "hydrant");
+  put(v, S.hydrant(v), { x: 434, y: 576 + hop(s, "hydrant"), px: 14, py: 44, rot: t === null ? 0 : Math.sin(t * 70) * 0.03 });
+  if (t === null || t > 0.85) return;
+  const pts: [number, number][] = [];
+  const reach = Math.min(1, t / 0.15);
+  for (let i = 0; i < 24; i += 1) {
+    const k = (((s.frame * 3 + i * 7) % 48) / 48) * reach;
+    pts.push([448 + k * 60, 552 - Math.sin(k * Math.PI) * 40 + k * 16 + Math.sin(i * 3) * 2]);
+  }
+  drops(v, "rgba(120,180,235,0.85)", pts);
+}
+
+export function dog(v: View, s: Scene): void {
+  const t = act(s, "dog");
+  const hy = act(s, "hydrant");
+  const wet = hy !== null && hy > 0.2;
+  const x = 488;
+  let rot = 0;
+  let flip = false;
+  let lift = hop(s, "dog");
+  const begging = t !== null && act(s, "baker") !== null;
+  if (begging) {
+    // sits up on its hind legs for the bread
+    v.push();
+    v.translate(x - 19, 584);
+    v.rotate(-0.55 + Math.sin(s.frame * 0.3) * 0.05);
+    v.image(S.dog(v, "stand"), -18, -50);
+    v.pop();
+    return;
+  }
+  if (t !== null) {
+    // chase its own tail: flip back and forth, hopping
+    flip = Math.floor(t * 12) % 2 === 1;
+    lift = -Math.abs(Math.sin(t * Math.PI * 12)) * 10;
+    rot = Math.sin(t * Math.PI * 6) * 0.15;
+  }
+  const wag = Math.sin(s.frame * (t === null ? 0.4 : 1.2)) * 6;
+  v.push();
+  v.translate(x, 586 + lift);
+  v.rotate(rot);
+  if (flip) v.scale(-1, 1);
+  v.noBrush();
+  v.noFill();
+  v.stroke("#d9a25f");
+  v.strokeWeight(5);
+  v.curve([[-22, -22], [-30, -28], [-34 + wag * 0.4, -38], [-32 + wag, -44]]);
+  v.image(S.dog(v, wet ? "wet" : "stand"), -37, -52);
+  v.pop();
+}
+
+export function lamp(v: View, s: Scene): void {
+  const t = act(s, "lamp");
+  const on = s.night || t !== null;
+  const flick = t !== null && t < 0.15 ? Math.floor(t * 60) % 2 === 0 : on;
+  put(v, S.lamp(v, flick), { x: 609, y: 574, px: 15, py: 190, rot: wiggle(s, "lamp") });
+  if (!flick) return;
+  v.blendMode("screen");
+  v.image(S.glow(v), 609 - 80, 400 - 80, s.night ? 1 : 0.7);
+  v.blendMode("normal");
+  if (t !== null) {
+    v.noStroke();
+    v.fill("#5a4a3a");
+    for (let i = 0; i < 2; i += 1) {
+      const a = s.frame * 0.15 + i * Math.PI;
+      v.ellipse(609 + Math.cos(a) * (18 + i * 6), 398 + Math.sin(a * 1.3) * 12, 5, 3);
+    }
+  }
+}
+
+// ── Grocer and town hall ───────────────────────────────────────────
+
+export function grocer(v: View, s: Scene): void {
+  const t = act(s, "grocer");
+  const x = 762;
+  const juggling = t !== null && t < 0.9;
+  if (!juggling) {
+    // sweeping: the broom swings about the hands
+    const sw = Math.sin(s.frame * 0.1) * 0.35;
+    v.push();
+    v.translate(x - 16, FEET - 14);
+    v.rotate(0.35 + sw);
+    v.noBrush();
+    v.stroke("#8a5a3a");
+    v.strokeWeight(3);
+    v.line(0, -16, -6, 22);
+    v.noStroke();
+    v.fill("#d9b45a");
+    v.polygon([[-14, 20], [2, 20], [4, 32], [-16, 32]]);
+    v.pop();
+    put(v, S.folk(v, "grocer-sweep"), { x, y: FEET + hop(s, "grocer"), px: 32, py: 96 });
+    return;
+  }
+  put(v, S.folk(v, "grocer-juggle"), { x, y: FEET + Math.sin(t * 40) * 1.5, px: 32, py: 96 });
+  for (let i = 0; i < 3; i += 1) {
+    const a = t * Math.PI * 10 + (i * Math.PI * 2) / 3;
+    put(v, S.apple(v), { x: x + Math.cos(a) * 22, y: FEET - 64 - Math.abs(Math.sin(a)) * 60, px: 7, py: 8, scale: 1.4 });
+  }
+}
+
+export function clockHands(v: View, s: Scene): void {
+  const t = act(s, "clock");
+  const spin = t === null ? 0 : t * t * Math.PI * 8;
+  const minute = s.frame * 0.0017 - Math.PI / 2 + spin;
+  const hour = s.frame * 0.00014 + 0.9 + spin / 12;
+  const cx = 900;
+  const cy = 200 + (t === null ? 0 : Math.sin(t * 80) * 1.2);
+  v.noBrush();
+  v.stroke("#3b2a24");
+  v.strokeWeight(4);
+  v.line(cx, cy, cx + Math.cos(hour) * 13, cy + Math.sin(hour) * 13);
+  v.strokeWeight(3);
+  v.line(cx, cy, cx + Math.cos(minute) * 20, cy + Math.sin(minute) * 20);
+  v.noStroke();
+  v.fill("#c23b3b");
+  v.circle(cx, cy, 6);
+  if (s.hover === "clock" && t === null) {
+    v.image(S.glint(v), cx + 16, cy - 30, 0.6 + Math.sin(s.frame * 0.3) * 0.4);
+  }
+  if (t !== null) {
+    // sound rings from the tower
+    v.noFill();
+    for (let i = 0; i < 3; i += 1) {
+      const k = (t * 3 - i * 0.3) % 1;
+      if (k < 0) continue;
+      v.stroke(`rgba(194,59,59,${(0.6 * (1 - k)).toFixed(3)})`);
+      v.strokeWeight(2);
+      v.arc(cx, 130, 40 + k * 90, Math.PI * 1.1, Math.PI * 1.9);
+    }
+  }
+}
+
+const PIGEON_HOME: readonly (readonly [number, number])[] = [
+  [818, 336],
+  [842, 336],
+  [954, 336],
+  [978, 336],
+];
+
+export function pigeons(v: View, s: Scene): void {
+  const t = act(s, "pigeons");
+  for (const [i, [hx, hy]] of PIGEON_HOME.entries()) {
+    if (t === null || t > 0.95) {
+      const peck = Math.max(0, Math.sin(s.frame * 0.06 + i * 1.7)) ** 6 * 0.6;
+      put(v, S.pigeon(v, false), { x: hx, y: hy + hop(s, "pigeons"), px: 13, py: 20, rot: peck, flip: i % 2 === 1 });
+      continue;
+    }
+    // fly a loop round the tower and land
+    const k = Math.min(1, t / 0.95);
+    const a = k * Math.PI * 2 + i * 0.6;
+    const r = Math.sin(k * Math.PI);
+    const fx = hx + (900 - hx) * r + Math.cos(a) * 90 * r;
+    const fy = hy - r * 170 + Math.sin(a) * 40 * r;
+    const flapping = Math.floor(s.frame / 5 + i) % 2 === 0;
+    put(v, S.pigeon(v, flapping), { x: fx, y: fy, px: 13, py: 20, flip: Math.cos(a) < 0 });
+  }
+}
+
+export function flag(v: View, s: Scene): void {
+  const t = act(s, "flag");
+  const amp = t === null ? (s.hover === "flag" ? 6 : 3) : 9;
+  const speed = t === null ? 0.12 : 0.45;
+  const len = 52 + (t === null ? 0 : bell(t, 0, 1) * 10);
+  const top: [number, number][] = [];
+  const bottom: [number, number][] = [];
+  for (let i = 0; i <= 8; i += 1) {
+    const k = i / 8;
+    const w = Math.sin(s.frame * speed - k * 5) * amp * k;
+    top.push([902 + k * len, 44 + w]);
+    bottom.push([902 + k * len, 76 + w - k * 4]);
+  }
+  v.noBrush();
+  v.stroke("#3b2a24");
+  v.strokeWeight(1.5);
+  v.fill("#d8443a");
+  v.polygon([...top, ...bottom.reverse()]);
+  const mid = Math.sin(s.frame * speed - 2.5) * amp * 0.5;
+  v.noStroke();
+  v.fill("#f2c84b");
+  v.circle(902 + len * 0.5, 60 + mid, 13);
+  v.fill("#8a5a3a");
+  v.rect(898 + len * 0.5, 50 + mid, 8, 4);
+}
+
+export function duck(v: View, s: Scene): void {
+  const t = act(s, "duck");
+  const quack = t !== null && t < 0.85;
+  const x = 928;
+  const rustle = quack ? 0 : Math.sin(s.frame * 0.05) * 0.03;
+  const jump = quack ? -bell(t, 0, 0.3) * 18 : hop(s, "duck");
+  put(v, S.folk(v, quack ? "duck-quack" : "duck-read"), { x, y: 553 + jump, px: 32, py: 96, rot: rustle });
+}
+
+// ── The road ───────────────────────────────────────────────────────
+
+export function manhole(v: View, s: Scene): void {
+  const t = act(s, "manhole");
+  const cx = 303;
+  const cy = 662;
+  if (t === null) {
+    put(v, S.manhole(v), { x: cx, y: cy + hop(s, "manhole") * 0.5, px: 31, py: 10 });
+    const age = (s.frame % 150) / 150;
+    if (age < 0.5) puff(v, cx + Math.sin(age * 9) * 6, cy - 6 - age * 50, 4 + age * 10, 0.45 * (1 - age * 2));
+    return;
+  }
+  const up = bell(t, 0.05, 0.92);
+  v.noStroke();
+  v.fill("#1f1f26");
+  v.ellipse(cx, cy, 54, 14);
+  v.clip([[cx - 40, cy - 80], [cx + 40, cy - 80], [cx + 40, cy], [cx - 40, cy]], () => {
+    const look = t > 0.3 && t < 0.7 ? Math.sin((t - 0.3) * 25) * 4 : 0;
+    put(v, S.mole(v), { x: cx + look, y: cy + 36 - up * 50, px: 20, py: 40 });
+  });
+  put(v, S.manhole(v), { x: cx + 38 * up, y: cy - 4 * up, px: 31, py: 10, rot: -0.2 * up });
+}
+
+export function snail(v: View, s: Scene): void {
+  const t = act(s, "snail");
+  const tucked = t !== null && t < 0.9;
+  put(v, S.snail(v, tucked), { x: snailX(s.frame), y: 580 + hop(s, "snail"), px: 0, py: 0, rot: tucked ? Math.sin(s.frame * 0.6) * 0.05 : 0 });
+}
+
+export function bus(v: View, s: Scene): void {
+  const t = act(s, "bus");
+  const x = busX(s);
+  const idleShake = t === null ? Math.sin(s.frame * 1.7) * 0.6 : Math.sin(s.frame * 0.9) * 1.2;
+  const y = BUS_Y + idleShake + hop(s, "bus");
+  // exhaust from the back
+  for (let i = 0; i < 4; i += 1) {
+    const age = ((s.frame * (t === null ? 1 : 2.5) + i * 15) % 60) / 60;
+    puff(v, x - 6 - age * 40, y + 78 - age * 26, 4 + age * 10, (1 - age) * 0.45);
+  }
+  v.image(S.bus(v), x, y);
+  const turn = x * 0.07;
+  for (const wx of [48, 172]) put(v, S.wheel(v), { x: x + wx, y: y + 98, px: 15, py: 15, rot: turn });
+  if (t !== null && t > 0.6) {
+    // a passenger waves out of the window on the way back
+    v.noStroke();
+    v.fill("#f4b6b4");
+    v.circle(x + 34 + Math.sin(s.frame * 0.4) * 4, y + 8, 8);
+  }
+}
+
+// ── Speech, hover glints, weather ─────────────────────────────────
+
+interface Bubble {
+  readonly text: string;
+  readonly from: number;
+  readonly to: number;
+  readonly dx: number;
+  readonly dy: number;
+}
+
+const BUBBLES: Readonly<Partial<Record<Id, Bubble>>> = {
+  baker: { text: "Fresh bread!", from: 0.3, to: 0.8, dx: 50, dy: -12 },
+  chimney: { text: "POF!", from: 0.05, to: 0.4, dx: -20, dy: -10 },
+  window: { text: "Drink up, petunias!", from: 0.2, to: 0.75, dx: 90, dy: -10 },
+  cat: { text: "MRRAOW!", from: 0, to: 0.6, dx: 60, dy: 0 },
+  mail: { text: "Special delivery!", from: 0.05, to: 0.55, dx: 0, dy: -10 },
+  mailbox: { text: "*burp*", from: 0.15, to: 0.6, dx: 30, dy: -20 },
+  painter: { text: "Whoa whoa whoa!", from: 0.05, to: 0.7, dx: -10, dy: 0 },
+  bucket: { text: "SPLOSH", from: 0.15, to: 0.5, dx: 40, dy: -6 },
+  owl: { text: "WHO?!", from: 0.08, to: 0.75, dx: 70, dy: 6 },
+  hydrant: { text: "fssshhh", from: 0.05, to: 0.6, dx: -14, dy: -16 },
+  dog: { text: "Woof! Woof!", from: 0.1, to: 0.8, dx: 0, dy: -8 },
+  lamp: { text: "ding!", from: 0, to: 0.3, dx: 36, dy: 10 },
+  grocer: { text: "Ta-da!", from: 0.5, to: 0.9, dx: 56, dy: 10 },
+  clock: { text: "DONG! DONG!", from: 0.05, to: 0.8, dx: -96, dy: -4 },
+  flag: { text: "flap flap", from: 0.1, to: 0.7, dx: -60, dy: 30 },
+  duck: { text: "QUACK! QUACK!", from: 0.05, to: 0.85, dx: -40, dy: -8 },
+  bus: { text: "beep beep!", from: 0, to: 0.25, dx: 150, dy: -12 },
+  manhole: { text: "Oh, hi!", from: 0.3, to: 0.7, dx: 40, dy: -60 },
+  snail: { text: "eek", from: 0.05, to: 0.6, dx: 34, dy: -12 },
+};
+
+/** Some lines depend on what the neighbours are doing. */
+function say(s: Scene, id: Id, line: string): string {
+  if (id === "duck" && act(s, "bus") !== null) return "QUACK! You're late!";
+  if (id === "dog" && act(s, "baker") !== null) return "Sniff sniff... bread?";
+  if (id === "dog" && act(s, "hydrant") !== null) return "Brrr! Wet dog!";
+  if (id === "owl" && s.night) return "Hoo! It's MY bedtime!";
+  if (id === "cat" && act(s, "window") !== null) return "MRRAOW! Wet!";
+  return line;
+}
+
+interface Placed {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+}
+
+const overlaps = (a: Placed, b: Placed): boolean => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 4 && Math.abs(a.y - b.y) < 29;
+
+export function bubbles(v: View, s: Scene): void {
+  const placed: Placed[] = [];
+  for (const id of IDS) {
+    const b = BUBBLES[id];
+    const t = act(s, id);
+    if (b === undefined || t === null || t < b.from || t > b.to) continue;
+    const box = boxOf(s, id);
+    const text = say(s, id, b.text);
+    const w = text.length * 7.2 + 18;
+    const cx = Math.min(W - w / 2 - 6, Math.max(w / 2 + 6, box.x + box.w / 2 + b.dx));
+    const tipX = cx - b.dx * 0.15;
+    const tipY = Math.max(24, box.y + b.dy - 14) + 24;
+    // nudge up past any bubble already placed, so lines never cover each other
+    let cy = tipY - 24;
+    for (let tries = 0; tries < 5 && placed.some((p) => overlaps(p, { x: cx, y: cy, w })); tries += 1) cy -= 30;
+    placed.push({ x: cx, y: cy, w });
+    v.noBrush();
+    v.fill("#fffdf4");
+    v.stroke("#3b2a24");
+    v.strokeWeight(2);
+    v.triangle(cx - 6, cy + 10, cx + 6, cy + 10, tipX, tipY);
+    v.rect(cx - w / 2, cy - 13, w, 25);
+    v.noStroke();
+    v.rect(cx - 7, cy + 8, 14, 5);
+    v.fill("#3b2a24");
+    v.textSize(13);
+    v.textAlign("center", "middle");
+    v.text(text, cx, cy);
+  }
+}
+
+export function hoverGlint(v: View, s: Scene): void {
+  if (s.hover === "" || act(s, s.hover) !== null) return;
+  const b = boxOf(s, s.hover);
+  const k = Math.sin(s.frame * 0.25);
+  put(v, S.glint(v), { x: b.x + b.w - 4, y: b.y + 6, px: 12, py: 12, rot: s.frame * 0.05, alpha: 0.75 + k * 0.25, scale: 1.1 + k * 0.3 });
+}
+
+export function rain(v: View, frame: number): void {
+  v.noBrush();
+  v.stroke("rgba(210,225,250,0.7)");
+  v.strokeWeight(1.5);
+  for (let i = 0; i < 110; i += 1) {
+    const x = (i * 97.3 + frame * 3) % 1040 - 20;
+    const y = (i * 53.7 + frame * 14) % 760;
+    v.line(x, y, x - 4, y + 14);
+  }
+  v.noFill();
+  v.stroke("rgba(220,235,250,0.5)");
+  for (let i = 0; i < 8; i += 1) {
+    const k = ((frame + i * 13) % 40) / 40;
+    v.ellipse(60 + i * 123, i % 2 === 0 ? 590 : 728, 6 + k * 22, 2 + k * 6);
+  }
+}
+
+===== folk-tea.ts =====
+// Sprites: every character, pose and prop, painted once and placed every frame.
+import type { Sprite, View } from "@ianbicking/canvas-loop";
+import type { Folk } from "./paint-tea.js";
+import { FOLK_H, FOLK_W, INK, ellipsePts, flat, ink, inked, label, paintCat, paintDog, paintFolk, paintMole, paintOwlWindow, paintPigeon, paintSnail } from "./paint-tea.js";
+
+const BAKER: Folk = { species: "bear", fur: "#a8784e", muzzle: "#ecd3ad", shirt: "#9cc0e0", trim: "#d8443a", hat: "chef", arms: { l: [14, 84], r: [50, 84] } };
+const MAIL: Folk = { species: "rabbit", fur: "#f3eee6", muzzle: "#ffffff", shirt: "#4a7ab8", trim: "#2f5d8a", hat: "cap", arms: { l: [16, 84], r: [48, 80] } };
+const PAINTER: Folk = { species: "fox", fur: "#e07a3a", muzzle: "#fff4e6", shirt: "#f6f6f0", trim: "#c23b3b", hat: "beret", arms: { l: [10, 72], r: [56, 34] } };
+const GOAT: Folk = { species: "goat", fur: "#f4f1ea", muzzle: "#e4dccd", shirt: "#e88aa8", trim: "#c95a7a", hat: "none", arms: { l: [54, 66], r: [58, 58] } };
+const GROCER: Folk = { species: "pig", fur: "#f4b6b4", muzzle: "#f4b6b4", shirt: "#7ab86a", trim: "#3f7a3a", hat: "cap", arms: { l: [12, 80], r: [18, 88] } };
+const DUCK: Folk = { species: "duck", fur: "#f7e27a", muzzle: "#f7e27a", shirt: "#6a8fd0", trim: "#7a4ab0", hat: "beret", arms: { l: [22, 70], r: [42, 70] } };
+const DRIVER: Folk = { species: "hippo", fur: "#9a8fb4", muzzle: "#b9aecf", shirt: "#3a5a9a", trim: "#3a5a9a", hat: "cap", arms: { l: [10, 66], r: [54, 66] } };
+
+export type Pose =
+  | "baker-idle"
+  | "baker-reach"
+  | "baker-up"
+  | "mail-idle"
+  | "mail-toss"
+  | "painter-paint"
+  | "painter-hang"
+  | "goat-water"
+  | "grocer-sweep"
+  | "grocer-juggle"
+  | "duck-read"
+  | "duck-quack";
+
+function bag(v: View): void {
+  inked(v, "#a0703e", () => v.curve([[8, 70], [26, 72], [28, 90], [10, 92], [6, 80]], true), 1.8);
+  inked(v, "#ffffff", () => v.rect(12, 64, 12, 8), 1.2);
+  v.noFill();
+  ink(v, 1.6);
+  v.line(22, 58, 14, 72);
+}
+
+
+function newspaper(v: View): void {
+  inked(v, "#f3efe2", () => v.polygon([[12, 52], [52, 50], [54, 82], [10, 84]]), 1.6);
+  v.noFill();
+  ink(v, 0.9);
+  for (let i = 0; i < 5; i += 1) v.line(16, 62 + i * 4, 30, 62 + i * 4);
+  for (let i = 0; i < 6; i += 1) v.line(34, 58 + i * 4, 49, 58 + i * 4);
+  label(v, "NEWS", 22, 56, 6);
+}
+
+function poseBody(v: View, pose: Pose): void {
+  switch (pose) {
+    case "baker-idle":
+      paintFolk(v, BAKER);
+      return;
+    case "baker-reach":
+      paintFolk(v, { ...BAKER, arms: { l: [56, 72], r: [60, 78] } });
+      return;
+    case "baker-up":
+      paintFolk(v, { ...BAKER, arms: { l: [12, 24], r: [52, 24] }, eyes: "happy" });
+      return;
+    case "mail-idle":
+      paintFolk(v, MAIL);
+      bag(v);
+      return;
+    case "mail-toss":
+      paintFolk(v, { ...MAIL, arms: { l: [16, 84], r: [58, 36] }, eyes: "happy" });
+      bag(v);
+      return;
+    case "painter-paint":
+      paintFolk(v, PAINTER);
+      return;
+    case "painter-hang":
+      paintFolk(v, { ...PAINTER, arms: { l: [12, 30], r: [52, 30] }, eyes: "wide" });
+      return;
+    case "goat-water":
+      paintFolk(v, GOAT);
+      return;
+    case "grocer-sweep":
+      paintFolk(v, GROCER);
+      return;
+    case "grocer-juggle":
+      paintFolk(v, { ...GROCER, arms: { l: [10, 34], r: [54, 34] }, eyes: "happy" });
+      return;
+    case "duck-read":
+      paintFolk(v, DUCK);
+      newspaper(v);
+      return;
+    case "duck-quack":
+      paintFolk(v, { ...DUCK, arms: { l: [8, 40], r: [56, 40] }, eyes: "wide" });
+      return;
+  }
+}
+
+export function folk(v: View, pose: Pose): Sprite {
+  return v.sprite({ key: pose, width: FOLK_W, height: FOLK_H }, () => poseBody(v, pose));
+}
+
+export function loaf(v: View): Sprite {
+  return v.sprite({ key: "loaf", width: 44, height: 26 }, () => {
+    inked(v, "#d58b42", () => v.curve(ellipsePts(22, 14, 18, 9, 10), true), 1.8);
+    v.noFill();
+    ink(v, 1.4);
+    v.stroke("#9a5a26");
+    for (const x of [14, 22, 30]) v.line(x - 3, 9, x + 3, 18);
+  });
+}
+
+/** Watering can, 30×22; handle (the pivot) at (6, 10), spout tip at (29, 2). */
+export function wateringCan(v: View): Sprite {
+  return v.sprite({ key: "can", width: 30, height: 22 }, () => {
+    inked(v, "#6fa8c8", () => v.polygon([[18, 12], [22, 10], [29, 2], [25, 14]]), 1.4);
+    inked(v, "#6fa8c8", () => v.rect(4, 8, 16, 13), 1.6);
+    v.noFill();
+    ink(v, 2);
+    v.curve([[4, 12], [1, 6], [8, 4], [12, 8]]);
+  });
+}
+
+export function chimney(v: View): Sprite {
+  return v.sprite({ key: "chimney", width: 34, height: 56 }, () => {
+    inked(v, "#b85a40", () => v.rect(4, 8, 26, 46), 2);
+    inked(v, "#8a3b2a", () => v.rect(1, 3, 32, 9), 2);
+    v.noFill();
+    ink(v, 1);
+    for (let r = 0; r < 4; r += 1) v.line(4, 20 + r * 10, 30, 20 + r * 10);
+  });
+}
+
+/** The goat's window: shutters shut, or flung open on a dark room. 80×86, sill at y 66. */
+export function windowSprite(v: View, open: boolean): Sprite {
+  return v.sprite({ key: open ? "window-open" : "window-shut", width: 80, height: 86 }, () => {
+    if (open) {
+      inked(v, "#5a4a6a", () => v.rect(16, 6, 48, 60), 2.4);
+      for (const x of [2, 64]) inked(v, "#4a8fb8", () => v.rect(x, 4, 14, 62), 2);
+    } else {
+      inked(v, "#cfe7f2", () => v.rect(16, 6, 48, 60), 2.4);
+      for (const x of [16, 40]) {
+        inked(v, "#4a8fb8", () => v.rect(x, 6, 24, 60), 2);
+        v.noFill();
+        ink(v, 1);
+        for (let i = 0; i < 6; i += 1) v.line(x + 3, 14 + i * 8, x + 21, 14 + i * 8);
+      }
+    }
+    inked(v, "#a0603a", () => v.rect(10, 66, 60, 14), 2);
+  });
+}
+
+export function cat(v: View, mode: "sit" | "arch"): Sprite {
+  return v.sprite({ key: `cat-${mode}`, width: 50, height: 56 }, () => paintCat(v, mode));
+}
+
+export function mailbox(v: View, open: boolean): Sprite {
+  return v.sprite({ key: open ? "mailbox-open" : "mailbox", width: 40, height: 66 }, () => {
+    v.noFill();
+    ink(v, 3);
+    v.line(20, 40, 20, 64);
+    inked(v, "#3a6fc0", () => v.path([["move", 4, 42], ["line", 4, 18], ["quad", 20, 2, 36, 18], ["line", 36, 42], ["close"]]), 2.2);
+    if (open) {
+      inked(v, "#2a4f90", () => v.polygon([[6, 22], [34, 22], [38, 8], [10, 4]]), 1.6);
+      flat(v, INK, () => v.rect(8, 22, 24, 5));
+    } else {
+      inked(v, "#2a4f90", () => v.rect(8, 22, 24, 6), 1.6);
+    }
+    label(v, "mail", 20, 36, 9, "#ffffff");
+  });
+}
+
+/** Ladder with the fox on it, 80×240; foot pivot at (16, 236). */
+export function ladder(v: View, hang: boolean): Sprite {
+  return v.sprite({ key: hang ? "ladder-hang" : "ladder-paint", width: 80, height: 240 }, () => {
+    v.noFill();
+    ink(v, 3);
+    v.stroke("#8a5a3a");
+    v.line(10, 238, 40, 6);
+    v.line(34, 238, 64, 6);
+    for (let i = 1; i < 12; i += 1) {
+      const k = i / 12;
+      v.line(10 + k * 30, 238 - k * 232, 34 + k * 30, 238 - k * 232);
+    }
+    v.push();
+    v.translate(14, hang ? 18 : 56);
+    poseBody(v, hang ? "painter-hang" : "painter-paint");
+    v.pop();
+    if (!hang) {
+      // brush
+      v.noFill();
+      ink(v, 2.4);
+      v.line(70, 92, 72, 72);
+      inked(v, "#f7d65c", () => v.rect(68, 64, 8, 9), 1.4);
+    }
+  });
+}
+
+export function bucket(v: View): Sprite {
+  return v.sprite({ key: "bucket", width: 32, height: 34 }, () => {
+    inked(v, "#d6d6dc", () => v.polygon([[3, 8], [29, 8], [26, 32], [6, 32]]), 1.8);
+    inked(v, "#f7d65c", () => v.ellipse(16, 9, 26, 7), 1.4);
+    flat(v, "#f7d65c", () => v.rect(5, 12, 7, 10));
+    label(v, "PAINT", 16, 24, 6.5);
+  });
+}
+
+export function owl(v: View, awake: boolean): Sprite {
+  return v.sprite({ key: awake ? "owl-awake" : "owl-asleep", width: 54, height: 60 }, () => paintOwlWindow(v, awake));
+}
+
+export function hydrant(v: View): Sprite {
+  return v.sprite({ key: "hydrant", width: 28, height: 44 }, () => {
+    inked(v, "#d8443a", () => v.path([["move", 6, 42], ["line", 6, 14], ["quad", 14, 2, 22, 14], ["line", 22, 42], ["close"]]), 2);
+    inked(v, "#d8443a", () => v.rect(1, 20, 26, 7), 1.6);
+    inked(v, "#b8302a", () => v.rect(3, 38, 22, 5), 1.4);
+    flat(v, "#f6c7b8", () => v.rect(9, 14, 3, 20));
+  });
+}
+
+export function dog(v: View, mode: "stand" | "wet"): Sprite {
+  return v.sprite({ key: `dog-${mode}`, width: 74, height: 52 }, () => paintDog(v, mode));
+}
+
+/** Lamp post, 30×190, bulb centre at (15, 16). */
+export function lamp(v: View, on: boolean): Sprite {
+  return v.sprite({ key: on ? "lamp-on" : "lamp-off", width: 30, height: 190 }, () => {
+    v.noFill();
+    ink(v, 4);
+    v.stroke("#2f3a4a");
+    v.line(15, 30, 15, 186);
+    inked(v, "#2f3a4a", () => v.rect(9, 176, 12, 12), 1.6);
+    inked(v, on ? "#fff3b0" : "#dfe8ee", () => v.polygon([[6, 8], [24, 8], [21, 28], [9, 28]]), 2);
+    inked(v, "#2f3a4a", () => v.polygon([[3, 8], [27, 8], [15, 1]]), 1.6);
+  });
+}
+
+export function apple(v: View): Sprite {
+  return v.sprite({ key: "apple", width: 14, height: 15 }, () => {
+    inked(v, "#d8443a", () => v.circle(7, 9, 11), 1.2);
+    flat(v, "#3f7a3a", () => v.ellipse(9, 2.5, 5, 3));
+  });
+}
+
+export function pigeon(v: View, flap: boolean): Sprite {
+  return v.sprite({ key: flap ? "pigeon-flap" : "pigeon", width: 26, height: 22 }, () => paintPigeon(v, flap));
+}
+
+export function snail(v: View, tucked: boolean): Sprite {
+  return v.sprite({ key: tucked ? "snail-tucked" : "snail", width: 36, height: 24 }, () => paintSnail(v, tucked));
+}
+
+export function mole(v: View): Sprite {
+  return v.sprite({ key: "mole", width: 40, height: 40 }, () => paintMole(v));
+}
+
+export function manhole(v: View): Sprite {
+  return v.sprite({ key: "manhole", width: 62, height: 20 }, () => {
+    inked(v, "#55545e", () => v.ellipse(31, 10, 58, 16), 1.8);
+    v.noFill();
+    ink(v, 1);
+    v.ellipse(31, 10, 42, 10);
+    v.line(14, 10, 48, 10);
+  });
+}
+
+export function letter(v: View): Sprite {
+  return v.sprite({ key: "letter", width: 18, height: 13 }, () => {
+    inked(v, "#ffffff", () => v.rect(1, 1, 16, 11), 1.2);
+    v.noFill();
+    ink(v, 0.9);
+    v.line(1, 1, 9, 7);
+    v.line(17, 1, 9, 7);
+    flat(v, "#d8443a", () => v.rect(12, 3, 3, 3));
+  });
+}
+
+export function wheel(v: View): Sprite {
+  return v.sprite({ key: "wheel", width: 30, height: 30 }, () => {
+    inked(v, "#2b2b33", () => v.circle(15, 15, 27), 1.8);
+    inked(v, "#c9c9d2", () => v.circle(15, 15, 12), 1.2);
+    flat(v, "#2b2b33", () => v.rect(14, 9, 2, 12));
+  });
+}
+
+/** The number 5 bus, 220×100 body (wheels drawn separately), facing right. */
+export function bus(v: View): Sprite {
+  return v.sprite({ key: "bus", width: 220, height: 100 }, () => {
+    // passengers behind the glass
+    inked(v, "#bfe2ee", () => v.rect(12, 14, 196, 34), 2);
+    const heads = [["#f4b6b4", 34], ["#a8784e", 74], ["#f3eee6", 112], ["#8e8a9a", 148]] as const;
+    for (const [c, x] of heads) {
+      inked(v, c, () => v.circle(x, 40, 22), 1.4);
+      flat(v, INK, () => {
+        v.circle(x - 4, 38, 2.5);
+        v.circle(x + 4, 38, 2.5);
+      });
+    }
+    v.push();
+    v.translate(176, 8);
+    v.scale(0.55);
+    paintFolk(v, DRIVER);
+    v.pop();
+    // body with window cut-outs: paint the body as four bands around the glass
+    flat(v, "#f2b134", () => {
+      v.rect(2, 2, 216, 12);
+      v.rect(2, 48, 216, 46);
+      v.rect(2, 2, 10, 92);
+      v.rect(208, 2, 10, 92);
+    });
+    v.noFill();
+    ink(v, 2.6);
+    v.path([["move", 8, 2], ["line", 210, 2], ["quad", 218, 2, 218, 12], ["line", 218, 94], ["line", 2, 94], ["line", 2, 8], ["quad", 2, 2, 8, 2]]);
+    ink(v, 1.6);
+    for (const x of [56, 96, 134, 168]) v.line(x, 14, x, 48);
+    inked(v, "#3a5a9a", () => v.rect(2, 60, 216, 8), 1.4);
+    label(v, "5  ACORN LANE", 92, 80, 11, "#7a3b1a");
+    inked(v, "#fff3b0", () => v.circle(212, 78, 10), 1.4);
+    inked(v, "#d8443a", () => v.rect(2, 72, 6, 10), 1.2);
+  });
+}
+
+/** A soft glint star for hover cues. */
+export function glint(v: View): Sprite {
+  return v.sprite({ key: "glint", width: 24, height: 24 }, () => {
+    v.noStroke();
+    v.fill(v.radialGradient(12, 12, 12, [[0, "rgba(255,255,220,0.95)"], [1, "rgba(255,255,220,0)"]]));
+    v.circle(12, 12, 24);
+    flat(v, "#fffbe0", () => {
+      v.polygon([[12, 0], [14, 10], [24, 12], [14, 14], [12, 24], [10, 14], [0, 12], [10, 10]]);
+    });
+  });
+}
+
+/** A warm glow for lamps and windows, drawn with a screen blend. */
+export function glow(v: View): Sprite {
+  return v.sprite({ key: "glow", width: 160, height: 160 }, () => {
+    v.noStroke();
+    v.fill(v.radialGradient(80, 80, 80, [[0, "rgba(255,226,140,0.9)"], [0.4, "rgba(255,210,120,0.35)"], [1, "rgba(255,200,120,0)"]]));
+    v.circle(80, 80, 160);
+  });
+}
+
+===== paint-tea.ts =====
+// Shared brush helpers and the townsfolk painter. Everything here paints in
+// sprite-local coordinates; nothing here keeps state.
+import type { Vec2, View } from "@ianbicking/canvas-loop";
+
+export const INK = "#3b2a24";
+
+/** A deterministic 0..1 hash of an integer, for scattering marks in draw (which has no randomness). */
+export function hash(n: number): number {
+  const s = Math.sin(n * 127.1 + 311.7) * 43_758.5453;
+  return s - Math.floor(s);
+}
+
+/** Ink outline state: brushed ink, even pressure, a little hand wobble. */
+export function ink(v: View, weight = 2.2, seed?: number): void {
+  v.brush("ink", { thinning: 0.35 });
+  v.stroke(INK);
+  v.strokeWeight(weight);
+  v.gesture(seed === undefined ? { pressure: "even", wobble: 0.7 } : { pressure: "even", wobble: 0.7, seed });
+}
+
+/** Fill with a flat colour and outline with ink, then draw. */
+export function inked(v: View, fill: string, body: () => void, weight = 2.2): void {
+  v.fill(fill);
+  ink(v, weight);
+  body();
+}
+
+/** A flat fill with no outline. */
+export function flat(v: View, fill: string, body: () => void): void {
+  v.noStroke();
+  v.noBrush();
+  v.fill(fill);
+  body();
+}
+
+/** A soft wash shadow inside a closed outline. */
+export function shadeInside(v: View, pts: readonly Vec2[], shade: string, shift: Vec2 = [6, 6]): void {
+  v.clip(v.curvePath(pts, true), () => {
+    v.noStroke();
+    v.noBrush();
+    v.fill(shade);
+    v.curve(
+      v.offset(pts, 2).map(([x, y]): Vec2 => [x + shift[0], y + shift[1]]),
+      true,
+    );
+  });
+}
+
+/** An ellipse as points, for curve/clip/offset. */
+export function ellipsePts(cx: number, cy: number, rx: number, ry: number, n = 10): Vec2[] {
+  const out: Vec2[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2;
+    out.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return out;
+}
+
+/** Plain text label in ink. */
+export function label(v: View, text: string, x: number, y: number, size = 12, color = INK): void {
+  v.noStroke();
+  v.noBrush();
+  v.fill(color);
+  v.textSize(size);
+  v.textAlign("center", "middle");
+  v.text(text, x, y);
+}
+
+// ── Townsfolk (standing, 64×100 sprite, feet at (32, 96)) ─────────────
+
+export type Species = "bear" | "rabbit" | "fox" | "pig" | "goat" | "duck" | "hippo";
+
+export interface Arms {
+  readonly l: Vec2;
+  readonly r: Vec2;
+}
+
+export interface Folk {
+  readonly species: Species;
+  readonly fur: string;
+  readonly muzzle: string;
+  readonly shirt: string;
+  readonly trim: string;
+  readonly hat: "chef" | "cap" | "beret" | "none";
+  readonly arms: Arms;
+  /** Eyes: open dots, or happy closed arcs. */
+  readonly eyes?: "open" | "happy" | "wide";
+}
+
+export const FOLK_W = 64;
+export const FOLK_H = 100;
+const HEAD: Vec2 = [32, 42];
+const HEAD_R = 15;
+const SHOULDER_L: Vec2 = [21, 62];
+const SHOULDER_R: Vec2 = [43, 62];
+
+const BODY: readonly Vec2[] = [
+  [32, 55],
+  [44, 60],
+  [47, 76],
+  [44, 90],
+  [32, 92],
+  [20, 90],
+  [17, 76],
+  [20, 60],
+];
+
+function arm(v: View, f: Folk, from: Vec2, to: Vec2): void {
+  const mid: Vec2 = [(from[0] + to[0]) / 2 + (to[0] < from[0] ? -2 : 2), (from[1] + to[1]) / 2 + 2];
+  inked(v, f.shirt, () => v.path(v.tube([from, mid, to], { width: 8, profile: [[0, 1], [1, 0.8]] })), 1.8);
+  inked(v, f.fur, () => v.circle(to[0], to[1], 8), 1.6);
+}
+
+function ears(v: View, f: Folk): void {
+  const [hx, hy] = HEAD;
+  switch (f.species) {
+    case "bear":
+    case "hippo": {
+      const r = f.species === "bear" ? 6 : 4;
+      for (const dx of [-11, 11]) {
+        inked(v, f.fur, () => v.circle(hx + dx, hy - 12, r * 2));
+        flat(v, f.muzzle, () => v.circle(hx + dx, hy - 12, r));
+      }
+      return;
+    }
+    case "rabbit": {
+      for (const dx of [-6, 6]) {
+        const pts = ellipsePts(hx + dx, hy - 25, 5, 15);
+        inked(v, f.fur, () => v.curve(pts, true));
+        flat(v, "#f2a7b8", () => v.ellipse(hx + dx, hy - 24, 4, 20));
+      }
+      return;
+    }
+    case "fox": {
+      for (const s of [-1, 1]) {
+        const pts: Vec2[] = [
+          [hx + s * 5, hy - 12],
+          [hx + s * 15, hy - 27],
+          [hx + s * 15, hy - 6],
+        ];
+        inked(v, f.fur, () => v.polygon(pts));
+        flat(v, INK, () => v.polygon([[hx + s * 12, hy - 18], [hx + s * 15, hy - 26], [hx + s * 15, hy - 16]]));
+      }
+      return;
+    }
+    case "pig": {
+      for (const s of [-1, 1]) {
+        inked(v, f.fur, () =>
+          v.polygon([
+            [hx + s * 5, hy - 13],
+            [hx + s * 17, hy - 18],
+            [hx + s * 13, hy - 5],
+          ]),
+        );
+      }
+      return;
+    }
+    case "goat": {
+      for (const s of [-1, 1]) {
+        v.noFill();
+        ink(v, 3.4);
+        v.stroke("#8a7a60");
+        v.curve([
+          [hx + s * 6, hy - 11],
+          [hx + s * 12, hy - 18],
+          [hx + s * 18, hy - 15],
+        ]);
+        inked(v, f.fur, () => v.curve(ellipsePts(hx + s * 16, hy - 6, 7, 3.5, 8), true), 1.6);
+      }
+      return;
+    }
+    case "duck":
+      inked(v, f.fur, () => v.curve([[hx - 2, hy - 13], [hx + 2, hy - 22], [hx + 5, hy - 14]], false), 1.6);
+      return;
+  }
+}
+
+function face(v: View, f: Folk): void {
+  const [hx, hy] = HEAD;
+  if (f.species === "duck") {
+    inked(v, "#f29a2e", () => v.curve(ellipsePts(hx, hy + 6, 10, 4.5, 10), true), 1.8);
+    v.noFill();
+    ink(v, 1.2);
+    v.line(hx - 8, hy + 6, hx + 8, hy + 6);
+  } else if (f.species === "pig") {
+    inked(v, "#f0a2a8", () => v.ellipse(hx, hy + 5, 13, 9), 1.8);
+    flat(v, INK, () => {
+      v.ellipse(hx - 2.5, hy + 5, 2.2, 3);
+      v.ellipse(hx + 2.5, hy + 5, 2.2, 3);
+    });
+  } else {
+    const long = f.species === "fox" || f.species === "goat";
+    flat(v, f.muzzle, () => v.ellipse(hx, hy + 6, long ? 14 : 16, long ? 12 : 11));
+    flat(v, INK, () => v.ellipse(hx, hy + 2.5, 5, 3.5));
+    v.noFill();
+    ink(v, 1.3);
+    v.curve([[hx - 3.5, hy + 7], [hx, hy + 8.5], [hx + 3.5, hy + 7]]);
+  }
+  if (f.species === "goat") {
+    inked(v, f.muzzle, () => v.polygon([[hx - 3, hy + 11], [hx + 3, hy + 11], [hx, hy + 20]]), 1.4);
+  }
+  const eyes = f.eyes ?? "open";
+  if (eyes === "happy") {
+    v.noFill();
+    ink(v, 1.6);
+    v.curve([[hx - 8, hy - 2], [hx - 5.5, hy - 4.5], [hx - 3, hy - 2]]);
+    v.curve([[hx + 3, hy - 2], [hx + 5.5, hy - 4.5], [hx + 8, hy - 2]]);
+  } else {
+    const r = eyes === "wide" ? 4.5 : 3;
+    if (eyes === "wide") flat(v, "#ffffff", () => {
+      v.circle(hx - 5.5, hy - 3, 9);
+      v.circle(hx + 5.5, hy - 3, 9);
+    });
+    flat(v, INK, () => {
+      v.ellipse(hx - 5.5, hy - 3, r, r * 1.3);
+      v.ellipse(hx + 5.5, hy - 3, r, r * 1.3);
+    });
+    flat(v, "#ffffff", () => {
+      v.circle(hx - 5, hy - 4, 1.4);
+      v.circle(hx + 6, hy - 4, 1.4);
+    });
+  }
+  flat(v, "rgba(240,120,120,0.45)", () => {
+    v.circle(hx - 10, hy + 4, 5);
+    v.circle(hx + 10, hy + 4, 5);
+  });
+}
+
+function hat(v: View, f: Folk): void {
+  const [hx, hy] = HEAD;
+  switch (f.hat) {
+    case "chef":
+      inked(v, "#ffffff", () => {
+        v.curve([[hx - 11, hy - 12], [hx - 15, hy - 24], [hx - 6, hy - 32], [hx + 6, hy - 32], [hx + 15, hy - 24], [hx + 11, hy - 12]], true);
+      }, 1.8);
+      inked(v, "#f3eee4", () => v.rect(hx - 11, hy - 15, 22, 5), 1.6);
+      return;
+    case "cap":
+      inked(v, f.trim, () => v.path([["move", hx - 13, hy - 9], ["quad", hx, hy - 26, hx + 13, hy - 9], ["close"]]), 1.8);
+      inked(v, f.trim, () => v.rect(hx + 4, hy - 11, 15, 4), 1.6);
+      return;
+    case "beret":
+      inked(v, f.trim, () => v.curve(ellipsePts(hx - 2, hy - 13, 15, 6, 10), true), 1.8);
+      flat(v, f.trim, () => v.rect(hx - 3, hy - 22, 3, 5));
+      return;
+    case "none":
+      return;
+  }
+}
+
+/** Paint a standing townsperson into a 64×100 sprite. */
+export function paintFolk(v: View, f: Folk): void {
+  // legs and feet
+  flat(v, "rgba(60,40,30,0.18)", () => v.ellipse(32, 96, 40, 7));
+  inked(v, f.fur, () => {
+    v.rect(23, 86, 7, 8);
+    v.rect(34, 86, 7, 8);
+  }, 1.6);
+  const footColor = f.species === "duck" ? "#f29a2e" : INK;
+  flat(v, footColor, () => {
+    v.ellipse(25, 95, 12, 5);
+    v.ellipse(39, 95, 12, 5);
+  });
+  // body
+  inked(v, f.shirt, () => v.curve(BODY, true));
+  shadeInside(v, BODY, "rgba(40,20,40,0.18)", [7, 5]);
+  v.clip(v.curvePath(BODY, true), () => {
+    v.noFill();
+    v.stroke("rgba(40,20,40,0.6)");
+    v.brush("pencil", { opacity: 0.8 });
+    v.strokeWeight(1.6);
+    v.gesture({ pressure: "taper", wobble: 0.4 });
+    for (let i = 0; i < 7; i += 1) v.line(30 + i * 4, 92, 46 + i * 4, 60);
+  });
+  flat(v, f.trim, () => v.rect(18, 80, 28, 4));
+  if (f.hat === "chef") {
+    // apron
+    inked(v, "#ffffff", () => v.curve([[24, 66], [40, 66], [42, 88], [32, 90], [22, 88]], true), 1.6);
+  }
+  arm(v, f, SHOULDER_L, f.arms.l);
+  arm(v, f, SHOULDER_R, f.arms.r);
+  ears(v, f);
+  const head = ellipsePts(HEAD[0], HEAD[1], HEAD_R, HEAD_R - 1, 12);
+  inked(v, f.fur, () => v.curve(head, true));
+  shadeInside(v, head, "rgba(60,30,20,0.16)", [5, 5]);
+  face(v, f);
+  hat(v, f);
+}
+
+// ── Other creatures ──────────────────────────────────────────────────
+
+/** Sitting cat, 50×56, seat at bottom; the tail is drawn live. `mode` arched = leaping fright. */
+export function paintCat(v: View, mode: "sit" | "arch"): void {
+  const fur = "#8e8a9a";
+  if (mode === "sit") {
+    const body: Vec2[] = [[25, 22], [36, 32], [38, 50], [25, 54], [12, 50], [14, 32]];
+    inked(v, fur, () => v.curve(body, true));
+    shadeInside(v, body, "rgba(30,20,50,0.2)", [6, 4]);
+    inked(v, "#e9e4ee", () => v.ellipse(25, 44, 12, 14), 1.4);
+  } else {
+    const body: Vec2[] = [[8, 46], [12, 26], [25, 18], [40, 26], [44, 46], [38, 36], [25, 30], [14, 36]];
+    inked(v, fur, () => v.curve(body, true));
+    for (const x of [10, 16, 36, 42]) inked(v, fur, () => v.rect(x - 2, 40, 4, 12), 1.4);
+  }
+  const hy = mode === "sit" ? 18 : 16;
+  for (const s of [-1, 1]) inked(v, fur, () => v.polygon([[25 + s * 4, hy - 6], [25 + s * 11, hy - 16], [25 + s * 11, hy - 2]]), 1.6);
+  inked(v, fur, () => v.circle(25, hy, 22), 1.8);
+  if (mode === "sit") {
+    v.noFill();
+    ink(v, 1.4);
+    v.curve([[18, hy - 1], [20.5, hy - 3], [23, hy - 1]]);
+    v.curve([[27, hy - 1], [29.5, hy - 3], [32, hy - 1]]);
+  } else {
+    flat(v, "#ffffff", () => {
+      v.circle(20, hy - 2, 7);
+      v.circle(30, hy - 2, 7);
+    });
+    flat(v, INK, () => {
+      v.circle(20, hy - 2, 3);
+      v.circle(30, hy - 2, 3);
+    });
+  }
+  flat(v, "#e88a9a", () => v.triangle(23.5, hy + 3, 26.5, hy + 3, 25, hy + 5));
+  v.noFill();
+  ink(v, 0.9);
+  for (const s of [-1, 1]) {
+    v.line(25 + s * 4, hy + 4, 25 + s * 13, hy + 2);
+    v.line(25 + s * 4, hy + 5, 25 + s * 13, hy + 7);
+  }
+}
+
+/** Puppy on four legs, 72×52, facing right, ground at y 50; the tail is drawn live. */
+export function paintDog(v: View, mode: "stand" | "wet"): void {
+  const fur = "#d9a25f";
+  flat(v, "rgba(60,40,30,0.18)", () => v.ellipse(34, 49, 54, 6));
+  for (const x of [18, 26, 42, 50]) inked(v, fur, () => v.rect(x - 3, 34, 7, 14), 1.4);
+  const body: Vec2[] = [[14, 26], [34, 22], [54, 26], [56, 36], [34, 40], [14, 38]];
+  inked(v, fur, () => v.curve(body, true));
+  shadeInside(v, body, "rgba(90,40,10,0.2)", [4, 6]);
+  flat(v, "#8c5a2e", () => v.ellipse(30, 28, 12, 8));
+  inked(v, fur, () => v.circle(58, 20, 24), 1.8);
+  inked(v, "#f3dcb4", () => v.ellipse(66, 25, 12, 9), 1.4);
+  flat(v, INK, () => v.ellipse(70, 22, 5, 4));
+  inked(v, "#8c5a2e", () => v.curve([[50, 12], [47, 22], [50, 32], [54, 22]], true), 1.6);
+  if (mode === "wet") {
+    v.noFill();
+    ink(v, 1.4);
+    v.curve([[57, 16], [60, 14], [63, 16]]);
+    flat(v, "rgba(120,180,230,0.8)", () => {
+      for (const [x, y] of [[20, 18], [40, 15], [60, 6], [10, 30]] as const) v.ellipse(x, y, 3, 5);
+    });
+  } else {
+    flat(v, INK, () => v.circle(61, 16, 4));
+  }
+  flat(v, "#d23b3b", () => v.rect(46, 26, 10, 4));
+  flat(v, "#f2c84b", () => v.circle(51, 32, 4));
+}
+
+/** An owl in a top-floor window, 54×60 including the window frame. */
+export function paintOwlWindow(v: View, awake: boolean): void {
+  inked(v, awake ? "#fde9a8" : "#3d4a6b", () => v.rect(4, 4, 46, 50), 2.4);
+  const owl: Vec2[] = [[27, 16], [40, 24], [41, 46], [27, 52], [13, 46], [14, 24]];
+  inked(v, "#9b7653", () => v.curve(owl, true), 1.8);
+  flat(v, "#d8bf98", () => v.ellipse(27, 42, 16, 16));
+  for (const s of [-1, 1]) flat(v, "#9b7653", () => v.triangle(27 + s * 6, 20, 27 + s * 13, 13, 27 + s * 12, 24));
+  if (awake) {
+    flat(v, "#ffffff", () => {
+      v.circle(21, 28, 12);
+      v.circle(33, 28, 12);
+    });
+    flat(v, INK, () => {
+      v.circle(21, 28, 5);
+      v.circle(33, 28, 5);
+    });
+  } else {
+    v.noFill();
+    ink(v, 1.5);
+    v.curve([[17, 28], [21, 30], [25, 28]]);
+    v.curve([[29, 28], [33, 30], [37, 28]]);
+    // nightcap
+    inked(v, "#c94f6d", () => v.polygon([[16, 20], [38, 20], [46, 8]]), 1.4);
+    flat(v, "#ffffff", () => v.circle(46, 8, 6));
+  }
+  flat(v, "#f29a2e", () => v.triangle(25, 32, 29, 32, 27, 37));
+  v.noFill();
+  ink(v, 2.6);
+  v.line(27, 4, 27, 54);
+  inked(v, "#b4553a", () => v.rect(0, 52, 54, 6), 1.8);
+}
+
+/** One pigeon, 26×22, facing right. */
+export function paintPigeon(v: View, flap: boolean): void {
+  const body: Vec2[] = [[4, 14], [12, 9], [22, 11], [20, 18], [10, 19]];
+  inked(v, "#9aa3b5", () => v.curve(body, true), 1.4);
+  inked(v, "#9aa3b5", () => v.circle(20, 8, 9), 1.4);
+  flat(v, "#7c5fa8", () => v.ellipse(18, 12, 6, 4));
+  flat(v, INK, () => v.circle(21, 7, 2));
+  flat(v, "#f29a2e", () => v.triangle(24, 7, 26, 8.5, 24, 9.5));
+  if (flap) {
+    inked(v, "#c3c9d6", () => v.polygon([[9, 11], [4, 0], [16, 10]]), 1.2);
+  } else {
+    inked(v, "#c3c9d6", () => v.curve([[7, 12], [14, 11], [16, 15], [8, 16]], true), 1.2);
+  }
+}
+
+/** A snail, 34×24, facing right; shell or tucked in. */
+export function paintSnail(v: View, tucked: boolean): void {
+  if (!tucked) {
+    inked(v, "#cfd98a", () => v.curve([[2, 21], [20, 20], [30, 14], [32, 21], [18, 23]], true), 1.3);
+    v.noFill();
+    ink(v, 1.2);
+    v.line(29, 15, 31, 7);
+    v.line(31, 15, 34, 8);
+    flat(v, INK, () => {
+      v.circle(31, 7, 2.5);
+      v.circle(34, 8, 2.5);
+    });
+  }
+  inked(v, "#c8814a", () => v.circle(14, 13, 20), 1.6);
+  v.noFill();
+  ink(v, 1.2);
+  v.curve([[14, 13], [17, 11], [18, 15], [13, 18], [8, 13], [12, 6], [20, 7]]);
+}
+
+/** A mole in a hard hat, 40×40; head and shoulders only. */
+export function paintMole(v: View): void {
+  inked(v, "#5d5468", () => v.curve([[6, 40], [6, 22], [20, 12], [34, 22], [34, 40]], true), 1.8);
+  inked(v, "#f3a6b4", () => v.ellipse(20, 26, 10, 7), 1.4);
+  flat(v, INK, () => {
+    v.circle(15, 20, 3);
+    v.circle(25, 20, 3);
+  });
+  inked(v, "#f2c84b", () => v.path([["move", 6, 15], ["quad", 20, -2, 34, 15], ["close"]]), 1.8);
+  inked(v, "#f2c84b", () => v.rect(3, 13, 34, 4), 1.4);
+  flat(v, "#ffffff", () => v.circle(20, 8, 5));
+  inked(v, "#8fb3d9", () => v.circle(4, 32, 8), 1.2);
+  inked(v, "#8fb3d9", () => v.circle(36, 32, 8), 1.2);
+}
+
+===== town-tea.ts =====
+// The still town: sky, buildings, sidewalk, road. Painted once into a cache.
+import type { Vec2, View } from "@ianbicking/canvas-loop";
+import { INK, ellipsePts, flat, hash, ink, inked, label } from "./paint-tea.js";
+import { CURB, H, ROAD_END, STREET, W } from "./things-tea.js";
+
+function sky(v: View): void {
+  v.noStroke();
+  v.fill(v.linearGradient(0, 0, 0, STREET, [
+    [0, "#8ec9ec"],
+    [0.6, "#cfe9f4"],
+    [1, "#f3f0dc"],
+  ]));
+  v.rect(0, 0, W, STREET);
+  // clouds: soft wash puffs
+  v.noFill();
+  v.stroke("rgba(255,255,255,0.85)");
+  v.brush("wash", { opacity: 0.8 });
+  v.gesture({ pressure: "swell", wobble: 3 });
+  for (const [x, y, w] of [[120, 70, 140], [430, 50, 110], [690, 90, 160], [300, 140, 80]] as const) {
+    v.strokeWeight(34);
+    v.line(x, y, x + w, y + 4);
+    v.strokeWeight(26);
+    v.line(x + w * 0.2, y - 16, x + w * 0.7, y - 14);
+  }
+  // distant hills and rooftops
+  flat(v, "#a9cf9a", () => v.curve([[-20, 330], [150, 270], [330, 300], [520, 250], [760, 290], [1020, 240], [1020, 560], [-20, 560]], true));
+  flat(v, "#b9b3d4", () => {
+    for (let i = 0; i < 14; i += 1) {
+      const x = i * 75 + hash(i) * 30;
+      const h = 60 + hash(i + 9) * 70;
+      v.rect(x, 330 - h, 46, h + 220);
+      v.triangle(x - 4, 330 - h, x + 50, 330 - h, x + 23, 300 - h);
+    }
+  });
+  v.noStroke();
+  v.fill(v.linearGradient(0, 150, 0, 330, [
+    [0, "rgba(255,255,255,0)"],
+    [1, "rgba(255,255,255,0.45)"],
+  ]));
+  v.rect(0, 150, W, 400);
+}
+
+function win(v: View, x: number, y: number, w: number, h: number, curtain = "#e9d6f0"): void {
+  inked(v, "#cfe7f2", () => v.rect(x, y, w, h), 2.2);
+  flat(v, curtain, () => {
+    v.triangle(x + 2, y + 2, x + w * 0.35, y + 2, x + 2, y + h * 0.7);
+    v.triangle(x + w - 2, y + 2, x + w * 0.65, y + 2, x + w - 2, y + h * 0.7);
+  });
+  v.noFill();
+  ink(v, 1.6);
+  v.line(x + w / 2, y, x + w / 2, y + h);
+  v.line(x, y + h / 2, x + w, y + h / 2);
+  inked(v, "#ffffff", () => v.rect(x - 4, y + h, w + 8, 5), 1.6);
+}
+
+function facade(v: View, x: number, y: number, w: number, h: number, color: string): void {
+  inked(v, color, () => v.rect(x, y, w, h), 2.6);
+  // shade the right side and under the eaves with wash
+  v.clip([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], () => {
+    v.noFill();
+    v.stroke("rgba(70,40,60,0.45)");
+    v.brush("wash", { opacity: 0.6 });
+    v.gesture({ pressure: "even", wobble: 2 });
+    v.strokeWeight(26);
+    v.line(x + w - 4, y, x + w - 4, y + h);
+    v.strokeWeight(30);
+    v.line(x, y + 6, x + w, y + 6);
+  });
+}
+
+function bricks(v: View, x: number, y: number, w: number, h: number, color: string, seed: number): void {
+  v.noFill();
+  v.stroke(color);
+  v.brush("pencil", { opacity: 0.6 });
+  v.strokeWeight(2.4);
+  for (let i = 0; i < Math.floor((w * h) / 2400); i += 1) {
+    const bx = x + hash(seed + i) * (w - 24);
+    const by = y + hash(seed + i * 3 + 1) * (h - 10);
+    v.gesture({ pressure: "even", seed: seed + i });
+    v.rect(bx, by, 18, 8);
+  }
+}
+
+/** Pencil lines across a wall: clapboards (horizontal) or boards (vertical). */
+function boards(v: View, x: number, y: number, w: number, h: number, o: { color: string; gap: number; vertical: boolean }): void {
+  v.noFill();
+  v.stroke(o.color);
+  v.brush("pencil", { opacity: 0.55 });
+  v.strokeWeight(2);
+  v.gesture({ pressure: "taper", wobble: 0.8 });
+  if (o.vertical) {
+    for (let bx = x + o.gap; bx < x + w - 4; bx += o.gap) v.line(bx, y + 4, bx + 1, y + h - 2);
+  } else {
+    for (let by = y + o.gap; by < y + h - 4; by += o.gap) v.line(x + 3, by, x + w - 3, by + 1);
+  }
+}
+
+function awning(v: View, x: number, y: number, w: number, a: string, b: string): void {
+  const n = Math.round(w / 20);
+  const sw = w / n;
+  for (let i = 0; i < n; i += 1) {
+    flat(v, i % 2 === 0 ? a : b, () => {
+      v.polygon([[x + i * sw, y], [x + (i + 1) * sw, y], [x + (i + 1) * sw + 4, y + 26], [x + i * sw + 4, y + 26]]);
+      v.circle(x + i * sw + sw / 2 + 4, y + 26, sw);
+    });
+  }
+  v.noFill();
+  ink(v, 2.2);
+  v.line(x, y, x + w, y);
+  v.line(x, y, x + 4, y + 26);
+  v.line(x + w, y, x + w + 4, y + 26);
+}
+
+function signBoard(v: View, cx: number, y: number, w: number, text: string, color: string): void {
+  inked(v, color, () => v.rect(cx - w / 2, y, w, 24), 2.2);
+  label(v, text, cx, y + 13, 15, "#fffaf0");
+}
+
+function door(v: View, x: number, y: number, w: number, color: string): void {
+  inked(v, color, () => v.path([["move", x, STREET], ["line", x, y + w / 2], ["quad", x + w / 2, y - 6, x + w, y + w / 2], ["line", x + w, STREET], ["close"]]), 2.4);
+  flat(v, "#f2c84b", () => v.circle(x + w - 9, y + 50, 6));
+  inked(v, "#d6eef7", () => v.rect(x + 8, y + 18, w - 16, 22), 1.4);
+}
+
+function bakery(v: View): void {
+  facade(v, 20, 255, 212, STREET - 255, "#f2c6a0");
+  bricks(v, 24, 262, 204, 120, "#c98e6a", 10);
+  inked(v, "#b54a3a", () => v.polygon([[10, 262], [242, 262], [222, 222], [30, 222]]), 2.6);
+  v.clip([[10, 262], [242, 262], [222, 222], [30, 222]], () => {
+    v.noFill();
+    v.stroke("#8e3328");
+    v.brush("bristle", { load: 0.5 });
+    v.gesture({ pressure: "press", wobble: 1.5 });
+    v.strokeWeight(14);
+    for (let i = 0; i < 4; i += 1) v.line(24 + i * 6, 230 + i * 9, 228 - i * 4, 232 + i * 9);
+  });
+  win(v, 150, 290, 56, 60);
+  signBoard(v, 162, 380, 104, "BAKERY", "#8a4b2e");
+  // shop window with loaves
+  inked(v, "#fff1d6", () => v.rect(30, 455, 106, 74), 2.4);
+  for (let i = 0; i < 5; i += 1) {
+    inked(v, "#d58b42", () => v.curve(ellipsePts(46 + i * 19, 515 - (i % 2) * 22, 9, 6, 8), true), 1.4);
+  }
+  label(v, "fresh!", 83, 470, 11, "#b54a3a");
+  door(v, 152, 452, 50, "#8a4b2e");
+  awning(v, 22, 412, 208, "#d8443a", "#fff6ea");
+}
+
+function postOffice(v: View): void {
+  facade(v, 242, 300, 170, STREET - 300, "#b9d4e6");
+  boards(v, 242, 300, 170, STREET - 300, { color: "#86a7c2", gap: 13, vertical: false });
+  inked(v, "#7d9bb8", () => v.rect(236, 290, 182, 14), 2.2);
+  win(v, 262, 324, 52, 56);
+  win(v, 340, 324, 52, 56);
+  signBoard(v, 327, 398, 150, "POST OFFICE", "#2f5d8a");
+  inked(v, "#fff7e6", () => v.rect(252, 440, 66, 70), 2.2);
+  for (const [x, y, c] of [[258, 480, "#c99a63"], [282, 486, "#d8b27e"], [270, 462, "#c99a63"]] as const) {
+    inked(v, c, () => v.rect(x, y, 26, 22), 1.4);
+    v.noFill();
+    ink(v, 1);
+    v.line(x + 13, y, x + 13, y + 22);
+  }
+  door(v, 330, 446, 48, "#2f5d8a");
+}
+
+function paintersHouse(v: View): void {
+  // left half freshly painted, right half old and peeling
+  facade(v, 420, 216, 186, STREET - 216, "#a9a2b3");
+  flat(v, "#f7d65c", () => v.rect(422, 218, 100, STREET - 220));
+  v.noFill();
+  v.stroke("#f7d65c");
+  v.brush("bristle", { load: 0.6 });
+  v.gesture({ pressure: "press", wobble: 2 });
+  v.strokeWeight(22);
+  for (let i = 0; i < 9; i += 1) v.line(520, 230 + i * 34, 534 + hash(i) * 14, 238 + i * 34);
+  flat(v, "#d9d2df", () => {
+    for (let i = 0; i < 6; i += 1) v.ellipse(548 + hash(i + 40) * 50, 260 + hash(i + 50) * 250, 14, 9);
+  });
+  inked(v, "#6c6578", () => v.rect(414, 206, 198, 14), 2.2);
+  for (const row of [0, 1, 2]) {
+    for (const col of [1, 2]) win(v, 440 + col * 55, 244 + row * 80, 42, 52, row === 1 ? "#f6c3c9" : "#e9d6f0");
+  }
+  win(v, 446, 324, 42, 52, "#c9e7c3");
+  door(v, 440, 468, 46, "#3f7a5a");
+  // wet paint sign on the sidewalk
+  inked(v, "#ffffff", () => v.rect(492, 500, 40, 24), 1.6);
+  label(v, "WET", 512, 507, 9, "#c23b3b");
+  label(v, "PAINT", 512, 517, 9, "#c23b3b");
+  v.noFill();
+  ink(v, 1.8);
+  v.line(500, 524, 496, 548);
+  v.line(524, 524, 528, 548);
+}
+
+function grocer(v: View): void {
+  facade(v, 612, 300, 182, STREET - 300, "#cfe3b4");
+  boards(v, 612, 300, 182, STREET - 300, { color: "#9fbf84", gap: 17, vertical: true });
+  inked(v, "#8fb27a", () => v.rect(606, 290, 194, 14), 2.2);
+  win(v, 636, 322, 54, 56, "#fbe1a6");
+  win(v, 718, 322, 54, 56, "#fbe1a6");
+  signBoard(v, 703, 392, 160, "FRUIT & VEG", "#3f7a3a");
+  inked(v, "#fff7e6", () => v.rect(624, 466, 80, 64), 2.2);
+  door(v, 724, 462, 50, "#3f7a3a");
+  awning(v, 614, 422, 180, "#3f9a4a", "#fffbe8");
+}
+
+function fruitStand(v: View): void {
+  for (const [x, c] of [[630, "#d8443a"], [672, "#f29a2e"]] as const) {
+    inked(v, "#b98a56", () => v.rect(x, 528, 40, 34), 2);
+    for (let i = 0; i < 6; i += 1) inked(v, c, () => v.circle(x + 8 + (i % 3) * 12, 524 + Math.floor(i / 3) * 8, 11), 1.2);
+  }
+  inked(v, "#fffaf0", () => v.rect(642, 548, 50, 14), 1.4);
+  label(v, "APPLES 5¢", 667, 555, 8);
+}
+
+function townHall(v: View): void {
+  facade(v, 800, 336, 194, STREET - 336, "#eadcc4");
+  bricks(v, 804, 380, 186, 150, "#c4ad86", 60);
+  // tower
+  facade(v, 864, 150, 72, 190, "#e3d2b4");
+  bricks(v, 866, 236, 68, 96, "#c4ad86", 90);
+  inked(v, "#5a6f9a", () => v.polygon([[856, 152], [944, 152], [900, 98]]), 2.4);
+  inked(v, "#c9b48e", () => v.rect(794, 330, 206, 14), 2.2);
+  inked(v, "#fffdf4", () => v.circle(900, 200, 56), 2.6);
+  flat(v, INK, () => {
+    for (let i = 0; i < 12; i += 1) {
+      const a = (i / 12) * Math.PI * 2;
+      v.circle(900 + Math.cos(a) * 22, 200 + Math.sin(a) * 22, i % 3 === 0 ? 4 : 2);
+    }
+  });
+  v.noFill();
+  ink(v, 2.6);
+  v.line(900, 98, 900, 40);
+  signBoard(v, 897, 352, 120, "TOWN HALL", "#7a5a3a");
+  for (const x of [818, 948]) win(v, x, 392, 34, 52);
+  for (const x of [846, 940]) inked(v, "#f6efe0", () => v.rect(x, 392, 12, 148), 1.8);
+  door(v, 876, 456, 48, "#7a4a3a");
+  inked(v, "#d6c7a8", () => v.rect(864, 530, 72, 10), 1.6);
+  // bus stop and bench
+  v.noFill();
+  ink(v, 3);
+  v.line(846, 470, 846, 568);
+  inked(v, "#d8443a", () => v.circle(846, 466, 34), 2);
+  label(v, "BUS", 846, 462, 10, "#ffffff");
+  label(v, "stop", 846, 472, 8, "#ffffff");
+  inked(v, "#8a5a3a", () => v.rect(880, 540, 96, 8), 1.8);
+  inked(v, "#8a5a3a", () => v.rect(880, 512, 96, 8), 1.8);
+  flat(v, INK, () => {
+    v.rect(886, 548, 4, 18);
+    v.rect(966, 548, 4, 18);
+  });
+}
+
+function street(v: View): void {
+  // sidewalk
+  inked(v, "#e2d6c0", () => v.rect(-4, STREET, W + 8, CURB - STREET), 2);
+  v.noFill();
+  ink(v, 1.2);
+  for (let x = 40; x < W; x += 80) v.line(x, STREET, x - 14, CURB);
+  flat(v, "#b9ab94", () => v.rect(0, CURB - 6, W, 8));
+  // the shops' shadow along the back of the sidewalk
+  v.noFill();
+  v.stroke("rgba(90,70,80,0.5)");
+  v.brush("wash", { opacity: 0.55 });
+  v.gesture({ pressure: "even", wobble: 2 });
+  v.strokeWeight(16);
+  v.line(-10, STREET + 6, W + 10, STREET + 6);
+  // road
+  flat(v, "#6d6c78", () => v.rect(0, CURB + 2, W, ROAD_END - CURB - 2));
+  v.noFill();
+  v.stroke("rgba(255,255,255,0.4)");
+  v.brush("chalk", { opacity: 0.6 });
+  v.gesture({ pressure: "even", wobble: 1 });
+  v.strokeWeight(14);
+  for (let i = 0; i < 10; i += 1) v.line(hash(i + 70) * W, 620 + i * 9, hash(i + 80) * W + 160, 622 + i * 9);
+  flat(v, "#f6efe0", () => {
+    for (let x = 10; x < W; x += 70) v.rect(x, 654, 36, 5);
+  });
+  // crosswalk
+  flat(v, "#f6efe0", () => {
+    for (let i = 0; i < 5; i += 1) v.rect(436 + i * 22, 610, 13, 96);
+  });
+  // verge
+  flat(v, "#8fc278", () => v.rect(0, ROAD_END, W, H - ROAD_END));
+  v.noFill();
+  v.stroke("#6fa85a");
+  v.brush("bristle", { load: 0.7 });
+  v.gesture({ pressure: "taper", wobble: 2 });
+  v.strokeWeight(16);
+  for (let i = 0; i < 7; i += 1) v.line(i * 150 - 20, 728 + (i % 2) * 10, i * 150 + 120, 726 + (i % 3) * 8);
+  inked(v, "#b9ab94", () => v.rect(-4, ROAD_END - 2, W + 8, 7), 1.6);
+  for (let i = 0; i < 40; i += 1) {
+    const x = hash(i + 100) * W;
+    const y = ROAD_END + 14 + hash(i + 200) * 26;
+    flat(v, ["#ffffff", "#f2c84b", "#e88aa8"][i % 3] ?? "#ffffff", () => v.circle(x, y, 5));
+  }
+  // street sign
+  v.noFill();
+  ink(v, 3);
+  v.line(130, 742, 130, 702);
+  inked(v, "#3f7a3a", () => v.rect(92, 690, 76, 16), 1.6);
+  label(v, "ACORN LANE", 130, 698, 9, "#ffffff");
+  // snail crossing joke sign
+  ink(v, 2.4);
+  v.line(26, 598, 26, 556);
+  inked(v, "#f2c84b", () => v.polygon([[26, 532], [44, 550], [26, 568], [8, 550]]), 1.6);
+  label(v, "SNAIL", 26, 546, 6.5);
+  label(v, "X-ING", 26, 555, 6.5);
+}
+
+/** Little things to find: a mouse hole, a lost sock, a nest, a fishbowl, a pot plant. */
+function jokes(v: View): void {
+  // mouse hole in the bakery wall, with a mouse eyeing a crumb
+  flat(v, "#2a1f1c", () => v.path([["move", 140, STREET], ["line", 140, 532], ["quad", 147, 522, 154, 532], ["line", 154, STREET], ["close"]]));
+  inked(v, "#b9b3c4", () => v.ellipse(148, 535, 10, 8), 1.2);
+  inked(v, "#b9b3c4", () => v.circle(145, 530, 5), 1);
+  flat(v, INK, () => v.circle(150, 534, 1.6));
+  flat(v, "#d58b42", () => v.circle(164, 538, 4));
+  // LOST SOCK poster on the painter's house, and the sock itself up on the town hall
+  inked(v, "#fffaf0", () => v.rect(552, 452, 44, 40), 1.4);
+  label(v, "LOST:", 574, 461, 8, "#c23b3b");
+  label(v, "one red", 574, 472, 7);
+  label(v, "sock", 574, 482, 7);
+  inked(v, "#d8443a", () => v.path([["move", 884, 336], ["line", 884, 322], ["line", 892, 322], ["line", 892, 332], ["line", 900, 336], ["line", 898, 342], ["line", 884, 342], ["close"]]), 1.2);
+  // a nest in the bakery gutter
+  inked(v, "#9a6a3a", () => v.curve(ellipsePts(46, 222, 16, 6, 8), true), 1.4);
+  flat(v, "#bfe2ee", () => {
+    v.ellipse(40, 217, 6, 8);
+    v.ellipse(48, 216, 6, 8);
+  });
+  // fishbowl in the post office window, pot plant at the grocer's
+  inked(v, "rgba(190,226,240,0.9)", () => v.circle(366, 372, 26), 1.4);
+  flat(v, "#f29a2e", () => v.ellipse(368, 374, 10, 6));
+  inked(v, "#c97a4a", () => v.polygon([[734, 366], [756, 366], [752, 380], [738, 380]]), 1.4);
+  flat(v, "#3f9a4a", () => {
+    v.ellipse(740, 358, 9, 16);
+    v.ellipse(750, 356, 9, 18);
+    v.ellipse(745, 352, 8, 18);
+  });
+  // a puddle by the curb
+  flat(v, "rgba(160,190,220,0.7)", () => v.ellipse(760, 706, 70, 10));
+}
+
+/** The whole still town, for `v.cache`. */
+export function paintTown(v: View): void {
+  sky(v);
+  bakery(v);
+  postOffice(v);
+  paintersHouse(v);
+  grocer(v);
+  townHall(v);
+  street(v);
+  fruitStand(v);
+  jokes(v);
+  v.paperTexture(0.35);
+}
+
+/** Warm window and lamp glows for dusk/night, for a screen-blended cache. */
+export function paintLights(v: View, night: boolean): void {
+  const glow = (x: number, y: number, w: number, h: number): void => {
+    v.noStroke();
+    v.fill(v.ellipseGradient(x, y, w, h, [
+      [0, night ? "rgba(255,214,120,0.95)" : "rgba(255,200,120,0.6)"],
+      [1, "rgba(255,200,120,0)"],
+    ]));
+    v.ellipse(x, y, w, h);
+  };
+  const windows: readonly Vec2[] = [
+    [178, 320], [83, 492], [288, 352], [366, 352], [285, 475], [516, 270], [571, 270], [467, 350], [516, 350], [571, 430], [663, 350], [745, 350], [664, 498], [835, 418], [965, 418], [900, 200],
+  ];
+  for (const [x, y] of windows) glow(x, y, 90, 80);
+  glow(609, 392, 160, 160);
+  if (night) {
+    flat(v, "rgba(255,255,230,0.9)", () => {
+      for (let i = 0; i < 40; i += 1) v.circle(hash(i + 300) * W, hash(i + 400) * 180, 1.5 + hash(i + 500) * 2);
+    });
+    flat(v, "#fff6d0", () => v.circle(120, 70, 50));
+  }
+}
+
+===== events.json =====
+[
+ {
+  "frame": 2,
+  "type": "mousedown",
+  "x": 700,
+  "y": 640
+ },
+ {
+  "frame": 6,
+  "type": "mousedown",
+  "x": 900,
+  "y": 200
+ },
+ {
+  "frame": 10,
+  "type": "mousedown",
+  "x": 55,
+  "y": 590
+ },
+ {
+  "frame": 12,
+  "type": "mousedown",
+  "x": 90,
+  "y": 320
+ },
+ {
+  "frame": 18,
+  "type": "mousedown",
+  "x": 114,
+  "y": 520
+ },
+ {
+  "frame": 20,
+  "type": "snapshot",
+  "label": "bus pulls away; clock spins"
+ },
+ {
+  "frame": 24,
+  "type": "mousedown",
+  "x": 550,
+  "y": 450
+ },
+ {
+  "frame": 30,
+  "type": "mousedown",
+  "x": 292,
+  "y": 520
+ },
+ {
+  "frame": 36,
+  "type": "mousedown",
+  "x": 434,
+  "y": 550
+ },
+ {
+  "frame": 42,
+  "type": "mousedown",
+  "x": 609,
+  "y": 450
+ },
+ {
+  "frame": 45,
+  "type": "snapshot",
+  "label": "goat waters, pigeons fly, painter wobbles"
+ },
+ {
+  "frame": 48,
+  "type": "mousedown",
+  "x": 762,
+  "y": 520
+ },
+ {
+  "frame": 54,
+  "type": "mousedown",
+  "x": 930,
+  "y": 60
+ },
+ {
+  "frame": 60,
+  "type": "mousedown",
+  "x": 185,
+  "y": 225
+ },
+ {
+  "frame": 62,
+  "type": "snapshot",
+  "label": "baker's loaf, hydrant, mail toss"
+ },
+ {
+  "frame": 66,
+  "type": "mousedown",
+  "x": 303,
+  "y": 662
+ },
+ {
+  "frame": 72,
+  "type": "mousedown",
+  "x": 928,
+  "y": 520
+ },
+ {
+  "frame": 80,
+  "type": "snapshot",
+  "label": "mailbox burps, mole"
+ },
+ {
+  "frame": 100,
+  "type": "snapshot",
+  "label": "grocer juggles, dog chases tail"
+ },
+ {
+  "frame": 112,
+  "type": "snapshot",
+  "label": "cat leaps from the drips"
+ },
+ {
+  "frame": 130,
+  "type": "snapshot",
+  "label": "bucket splosh"
+ },
+ {
+  "frame": 150,
+  "type": "snapshot",
+  "label": "bus comes back round the corner"
+ },
+ {
+  "frame": 170,
+  "type": "mousemove",
+  "x": 292,
+  "y": 520
+ },
+ {
+  "frame": 176,
+  "type": "snapshot",
+  "label": "hover: mail carrier hops"
+ },
+ {
+  "frame": 180,
+  "type": "mousedown",
+  "x": 77,
+  "y": 392
+ },
+ {
+  "frame": 190,
+  "type": "snapshot",
+  "label": "cat clicked on its own"
+ },
+ {
+  "frame": 200,
+  "type": "mousedown",
+  "x": 468,
+  "y": 265
+ },
+ {
+  "frame": 205,
+  "type": "mousedown",
+  "x": 380,
+  "y": 540
+ },
+ {
+  "frame": 210,
+  "type": "mousedown",
+  "x": 488,
+  "y": 560
+ },
+ {
+  "frame": 215,
+  "type": "mousedown",
+  "x": 600,
+  "y": 565
+ },
+ {
+  "frame": 220,
+  "type": "snapshot",
+  "label": "duck scolds the bus; owl, dog, bucket"
+ },
+ {
+  "frame": 225,
+  "type": "mousedown",
+  "x": 830,
+  "y": 325
+ },
+ {
+  "frame": 226,
+  "type": "param",
+  "name": "time",
+  "value": "dusk"
+ },
+ {
+  "frame": 230,
+  "type": "snapshot",
+  "label": "dusk"
+ },
+ {
+  "frame": 232,
+  "type": "trigger",
+  "name": "reset"
+ },
+ {
+  "frame": 233,
+  "type": "snapshot",
+  "label": "after reset: everyone settles"
+ },
+ {
+  "frame": 236,
+  "type": "param",
+  "name": "time",
+  "value": "night"
+ },
+ {
+  "frame": 236,
+  "type": "param",
+  "name": "rain",
+  "value": true
+ },
+ {
+  "frame": 237,
+  "type": "mousedown",
+  "x": 468,
+  "y": 265
+ },
+ {
+  "frame": 239,
+  "type": "snapshot",
+  "label": "night, raining; owl"
+ }
+]
+

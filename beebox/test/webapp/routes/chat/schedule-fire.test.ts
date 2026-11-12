@@ -22,6 +22,7 @@ import { setMostActive } from "../../../../src/core/chat/session/history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -109,10 +110,16 @@ void test("A legacy entry and an unresumable chat both drop the fire silently", 
   await makeTranscript(box2.root, SESSION_MOST_ACTIVE);
   const deps = { boxRoot: box2.root, registry: registry2, eventBus: eventBus2, wireSession: noopWire };
 
+  const warnings = consoleLines(t, "warn");
   await fireChatSchedule(deps, makeSchedule({}));
   await fireChatSchedule(deps, makeSchedule({ sessionId: SESSION_DEAD }));
   const fired = eventBus2.readSince(0).filter((event) => event.event === "schedule-fired");
   t.check({ runs: backend2.runs, fired }, { runs: [], fired: [] });
+  // Each drop is logged with its reason, so a missing reminder can be traced:
+  t.check(warnings(), [
+    '[schedule] Dropping check-in "reminder": it predates per-conversation check-ins and has no conversation',
+    `[schedule] Dropping check-in "reminder": conversation ${SESSION_DEAD} cannot be resumed (missing-local-transcript)`,
+  ]);
 });
 
 // ## A failed turn is not retried in a fresh session
@@ -128,6 +135,7 @@ void test("A check-in whose turn errors is not re-sent into a fresh session", as
   t.teardown(() => { registry3.shutdown(); eventBus3.close(); });
   await makeTranscript(box3.root, SESSION_DEAD);
 
+  const warnings = consoleLines(t, "warn");
   const firePromise3 = fireChatSchedule(
     { boxRoot: box3.root, registry: registry3, eventBus: eventBus3, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_DEAD }),
@@ -136,6 +144,11 @@ void test("A check-in whose turn errors is not re-sent into a fresh session", as
   backend3.runs[0]?.emitResult({ isError: true });
   await firePromise3;
   t.check(backend3.runs.map((run) => run.startOptions.resumeSessionId ?? null), [SESSION_DEAD]);
+  // The errored turn is logged, then the check-in is dropped for it:
+  t.check(warnings(), [
+    `[chat-session] Turn ended with is_error=true (session ${SESSION_DEAD}). phase=<unreported> subtype=error_during_execution num_turns=1 duration_ms=0`,
+    `[schedule] Dropping check-in "reminder": the turn in conversation ${SESSION_DEAD} failed`,
+  ]);
 });
 
 // ## A chat whose model was removed drops the schedule
@@ -160,9 +173,45 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
   await makeTranscript(box4.root, SESSION_A);
   // The chat's own pick; the box config has no openrouterModels, as after removal.
   registry4.getOrCreate(SESSION_A).setModel("moonshotai/kimi-k2-0905:exacto");
+  const warnings = consoleLines(t, "warn");
+  const errors = consoleLines(t, "error");
   await fireChatSchedule(
     { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),
   );
   t.check(backend4.runs.map((run) => run.startOptions.resumeSessionId), []);
+  // The refusal tells the owner how to fix it; the drop names the conversation:
+  t.check(errors(), ["[chat-preflight] run refused: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, which is not added for this box. Add it in Admin → OpenRouter models, or pick another model."]);
+  t.check(warnings(), [`[schedule] Dropping check-in "reminder": conversation ${SESSION_A}'s model cannot run on this box`]);
+});
+
+// ## A check-in turn is pinned, and a deletion during its start abandons it
+//
+// The turn holds a pin, as a person's send does, so the live cap cannot evict
+// the chat mid-turn. A deletion that begins after the first check, while the
+// send awaits admission, is caught by the send's checks: nothing is sent and
+// no "failed" drop is logged for a chat being deleted.
+void test("A check-in turn is pinned, and a deletion during its start abandons it", async (t) => {
+  const box5 = await makeTmpBox({ git: true });
+  const backend5 = createFakeChatBackend();
+  const registry5 = makeRegistry(box5.root, backend5);
+  const eventBus5 = createEventBus(box5.root);
+  t.teardown(() => { registry5.shutdown(); eventBus5.close(); });
+  await makeTranscript(box5.root, SESSION_A);
+  let deleting = false;
+  const pins: string[] = [];
+  const realIsBlocked = registry5.deletion.isBlocked.bind(registry5.deletion);
+  registry5.deletion.isBlocked = (id: string) => deleting || realIsBlocked(id);
+  const realPin = registry5.pinSession.bind(registry5);
+  registry5.pinSession = (session) => {
+    pins.push("pinned");
+    deleting = true; // the deletion starts once the fire has passed its first check
+    const release = realPin(session);
+    return () => { pins.push("released"); release(); };
+  };
+  await fireChatSchedule(
+    { boxRoot: box5.root, registry: registry5, eventBus: eventBus5, wireSession: noopWire },
+    makeSchedule({ sessionId: SESSION_A }),
+  );
+  t.check({ pins, sent: backend5.runs.flatMap((run) => run.sentClientComposed) }, { pins: ["pinned", "released"], sent: [] });
 });

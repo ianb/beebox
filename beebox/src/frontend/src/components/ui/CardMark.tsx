@@ -27,7 +27,7 @@ export type CardMarkSize = "xs" | "sm" | "md" | "lg";
 
 /** Box size and text size per step. The box is fixed so a long glyph cannot move a layout. */
 const SIZE_CLASSES: Record<CardMarkSize, string> = {
-  xs: "w-4 h-4 text-[11px]",
+  xs: "w-4 h-4 text-[0.6875rem]",
   sm: "w-5 h-5 text-sm",
   md: "w-9 h-9 text-2xl",
   lg: "w-14 h-14 text-4xl",

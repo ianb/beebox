@@ -62,7 +62,7 @@ export function BrowseSidebarBody(props: Props) {
             id="bbx-browse-listing-mode"
             checked={listingMode === "raw"}
             onChange={(raw) => setListingMode(raw ? "raw" : "compact")}
-            label={listingMode === "raw" ? "Showing raw listing — switch to compact" : "Showing compact listing — switch to raw"}
+            label="Raw listing"
           />
           <Text as="span" size="xs" tone="muted">Raw</Text>
         </Row>
@@ -79,7 +79,7 @@ export function BrowseSidebarBody(props: Props) {
       </>
     );
   }
-  if (loading) return <StatusMessage className="p-4">Loading...</StatusMessage>;
+  if (loading) return <StatusMessage busy className="p-4">Loading...</StatusMessage>;
   if (!isError) return null;
 
   return (

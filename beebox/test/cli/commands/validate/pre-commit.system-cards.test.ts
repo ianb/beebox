@@ -105,7 +105,7 @@ void test("An old box may omit all anchors.", async (t) => {
   await t.checkThrows(async () => (await markMigrationApplied({ boxRoot: box.root, name: SYSTEM_CARD_MIGRATION })), "SystemCardInvariantError");
 
   t.checkText(
-    (await runPreCommitChecks(box.root, { colors: false })).report,
+    (await runPreCommitChecks(box.root)).report,
     `Required system card missing from proposed commit: _config/interface/dashboard.card. Restore it from Git.
 Required system card missing from proposed commit: _config/interface/settings.card. Restore it from Git.
 Required system card missing from proposed commit: _config/interface/browse.card. Restore it from Git.

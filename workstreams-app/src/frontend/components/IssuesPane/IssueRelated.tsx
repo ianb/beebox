@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Pill } from "../ui.js";
+import { Badge } from "../ui.js";
 import { issueSearchParams } from "../../lib/issue-link.js";
 import { trpc } from "../../trpc.js";
 import type { Issue, RelatedResult, RelatedRow } from "../../types.js";
@@ -33,10 +33,10 @@ function RelatedRows({ result }: { result: RelatedResult }) {
     return <p className="muted">Nothing in the queue or the design docs ranks close to this one.</p>;
   }
   return <>
-    <ol className="related-list">{result.rows.map((row) => <li key={row.path}>
+    <ol role="list" className="related-list">{result.rows.map((row) => <li key={row.path}>
       <span className="related-score">{row.score.toFixed(3)}</span>
       <RelatedTarget row={row} />
-      {row.status === null ? <Pill tone="accent">doc</Pill> : <Pill tone={row.status === "closed" ? "neutral" : "info"}>{row.status}</Pill>}
+      {row.status === null ? <Badge tone="accent">doc</Badge> : <Badge tone={row.status === "closed" ? "neutral" : "info"}>{row.status}</Badge>}
       <span className="related-title">{row.title}</span>
     </li>)}</ol>
     {result.unembedded > 0

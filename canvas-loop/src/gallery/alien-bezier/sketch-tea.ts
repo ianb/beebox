@@ -1,0 +1,486 @@
+// Friendly green alien, picture-book style: ink outlines drawn as hand-placed
+// bezier/quad paths, with bristle and pencil shading clipped inside each shape.
+import type {
+  Envelope,
+  PathCommand,
+  Style,
+  View,
+} from "@ianbicking/canvas-loop";
+
+type Path = readonly PathCommand[];
+
+const INK = "#1f2a1c";
+const GREEN = "#7ccd6a";
+const GREEN_DARK = "#4f9a45";
+const GREEN_LIGHT = "#b9ec9f";
+const BELLY = "#5fae52";
+const YELLOW = "#f4d548";
+const CHEEK = "#f3a7a0";
+const PAPER = "#f5f1e8";
+
+// --- Outlines (control points placed by hand) ---
+
+const HEAD: Path = [
+  ["move", 95, 175],
+  ["bezier", 95, 120, 145, 90, 200, 90],
+  ["bezier", 255, 90, 305, 120, 305, 175],
+  ["bezier", 305, 232, 258, 260, 200, 260],
+  ["bezier", 142, 260, 95, 232, 95, 175],
+  ["close"],
+];
+
+const BODY: Path = [
+  ["move", 158, 250],
+  ["bezier", 147, 280, 142, 322, 146, 370],
+  ["bezier", 148, 394, 172, 398, 200, 398],
+  ["bezier", 228, 398, 252, 394, 254, 370],
+  ["bezier", 258, 322, 253, 280, 242, 250],
+  ["close"],
+];
+
+const BELLY_PATCH: Path = [
+  ["move", 200, 310],
+  ["bezier", 218, 310, 230, 326, 230, 345],
+  ["bezier", 230, 366, 216, 380, 200, 380],
+  ["bezier", 184, 380, 170, 366, 170, 345],
+  ["bezier", 170, 326, 182, 310, 200, 310],
+  ["close"],
+];
+
+const ARM_L: Path = [
+  ["move", 152, 286],
+  ["bezier", 126, 302, 110, 336, 111, 374],
+  ["line", 133, 374],
+  ["bezier", 132, 346, 138, 328, 149, 316],
+  ["close"],
+];
+
+const ARM_R: Path = [
+  ["move", 248, 262],
+  ["bezier", 284, 262, 308, 250, 320, 226],
+  ["line", 339, 234],
+  ["bezier", 326, 268, 296, 290, 252, 292],
+  ["close"],
+];
+
+const LEG_L: Path = [
+  ["move", 166, 392],
+  ["quad", 165, 415, 166, 438],
+  ["line", 190, 438],
+  ["quad", 191, 415, 190, 392],
+  ["close"],
+];
+
+const LEG_R: Path = [
+  ["move", 210, 392],
+  ["quad", 209, 415, 210, 438],
+  ["line", 234, 438],
+  ["quad", 235, 415, 234, 392],
+  ["close"],
+];
+
+function oval(
+  c: readonly [number, number],
+  r: readonly [number, number],
+): Path {
+  const [cx, cy] = c;
+  const [rx, ry] = r;
+  const k = 0.5523;
+  return [
+    ["move", cx - rx, cy],
+    ["bezier", cx - rx, cy - ry * k, cx - rx * k, cy - ry, cx, cy - ry],
+    ["bezier", cx + rx * k, cy - ry, cx + rx, cy - ry * k, cx + rx, cy],
+    ["bezier", cx + rx, cy + ry * k, cx + rx * k, cy + ry, cx, cy + ry],
+    ["bezier", cx - rx * k, cy + ry, cx - rx, cy + ry * k, cx - rx, cy],
+    ["close"],
+  ];
+}
+
+const EYE_L = oval([160, 165], [26, 31]);
+const EYE_R = oval([240, 165], [26, 31]);
+
+const STALK_L: Path = [
+  ["move", 166, 96],
+  ["quad", 150, 70, 143, 50],
+];
+const STALK_R: Path = [
+  ["move", 234, 96],
+  ["quad", 250, 70, 258, 44],
+];
+const SMILE: Path = [
+  ["move", 180, 213],
+  ["bezier", 190, 226, 210, 226, 220, 212],
+];
+
+// --- Drawing helpers ---
+
+function flat(v: View, o: { shape: Path; color: string }): void {
+  const { shape, color } = o;
+  v.path(shape, { fill: color });
+}
+
+// Closed ovals here start at the left point and run clockwise: top-left, top-right,
+// bottom-right, bottom-left. Heavier ink on the lower (shadow) side.
+const HEAVY_BELOW: Envelope = [
+  [0, 0.75],
+  [0.3, 0.6],
+  [0.55, 0.9],
+  [0.75, 1],
+  [0.95, 0.85],
+  [1, 0.75],
+];
+
+function outline(
+  v: View,
+  o: { shape: Path; weight?: number; pressure?: Envelope },
+): void {
+  const shape = o.shape;
+  const weight = o.weight ?? 3.2;
+  const pressure = o.pressure ?? "even";
+  v.path(shape, {
+    stroke: INK,
+    weight,
+    brush: { preset: "ink", thinning: 0.35 },
+    gesture: { pressure, wobble: 0.6 },
+  });
+}
+
+/** Bristle shading: strokes along a direction inside the shape's clip. */
+type Stroke = readonly [number, number, number, number];
+
+function bristleShade(
+  v: View,
+  o: {
+    shape: Path;
+    color: string;
+    strokes: readonly Stroke[];
+    weight: number;
+    opacity: number;
+  },
+): void {
+  const { shape, color, strokes, weight, opacity } = o;
+  const style: Style = {
+    stroke: color,
+    weight,
+    brush: { preset: "bristle", opacity, load: 0.8 },
+    gesture: { pressure: "taper", wobble: 1.5 },
+  };
+  v.clip(shape, () => {
+    for (const [x1, y1, x2, y2] of strokes) {
+      v.path(
+        [
+          ["move", x1, y1],
+          ["quad", (x1 + x2) / 2 + 4, (y1 + y2) / 2 + 4, x2, y2],
+        ],
+        style,
+      );
+    }
+  });
+}
+
+function part(
+  v: View,
+  o: {
+    shape: Path;
+    color: string;
+    shade?: () => void;
+    weight?: number;
+    pressure?: Envelope;
+  },
+): void {
+  flat(v, o);
+  o.shade?.();
+  outline(v, o);
+}
+
+/** Curved shadow strokes following the lower-right rim of an oval region. */
+function rimStrokes(
+  e: { cx: number; cy: number; rx: number; ry: number },
+  run: { n: number; from: number; to: number },
+): Stroke[] {
+  const { cx, cy, rx, ry } = e;
+  const { n, from, to } = run;
+  const out: Stroke[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = from + ((to - from) * i) / Math.max(1, n - 1);
+    const b = a + 0.9;
+    const r = 1 - (i % 3) * 0.05;
+    out.push([
+      cx + Math.cos(a) * rx * r,
+      cy + Math.sin(a) * ry * r,
+      cx + Math.cos(b) * rx * r,
+      cy + Math.sin(b) * ry * r,
+    ]);
+  }
+  return out;
+}
+
+/** A small round part: flat fill, a bristle crescent of shade on its lower right, ink outline. */
+function ball(
+  v: View,
+  o: {
+    c: readonly [number, number];
+    r: readonly [number, number];
+    color: string;
+    shadeColor: string;
+  },
+): void {
+  const shape = oval(o.c, o.r);
+  const [cx, cy] = o.c;
+  const [rx, ry] = o.r;
+  part(v, {
+    shape,
+    color: o.color,
+    shade: () => {
+      v.clip(shape, () => {
+        // flat crescent: shade colour, then the base colour offset up-left
+        v.group({ opacity: 0.65 }, () => {
+          flat(v, { shape, color: o.shadeColor });
+          flat(v, {
+            shape: oval(
+              [cx - rx * 0.38, cy - ry * 0.5],
+              [rx * 1.05, ry * 1.05],
+            ),
+            color: o.color,
+          });
+        });
+        // pencil hatch over the shaded side
+        const hatch: Style = {
+          stroke: o.shadeColor,
+          weight: 2,
+          brush: { preset: "pencil", opacity: 0.8 },
+          gesture: { pressure: "even", wobble: 0.3 },
+        };
+        for (let i = 0; i < 6; i += 1) {
+          const x = cx + rx * (0.1 + i * 0.18);
+          v.line(x, cy + ry * 1.1, x + rx * 0.35, cy - ry * 0.2, hatch);
+        }
+      });
+    },
+  });
+}
+
+export const canvas = { width: 400, height: 500 };
+
+export type Model = Record<string, never>;
+
+export function init(): Model {
+  return {};
+}
+
+export function update(model: Model): Model {
+  return model;
+}
+
+export function draw(v: View): void {
+  v.background(PAPER);
+  v.paper({ scale: 3, contrast: 0.6 });
+
+  // Ground shadow
+  const ground = oval([200, 450], [95, 13]);
+  v.group({ opacity: 0.35, blend: "multiply" }, () => {
+    flat(v, { shape: ground, color: "#c9c1aa" });
+  });
+  bristleShade(v, {
+    shape: ground,
+    color: "#a99f86",
+    strokes: [
+      [115, 449, 285, 451],
+      [140, 455, 262, 456],
+    ],
+    weight: 10,
+    opacity: 0.35,
+  });
+
+  // Antennae
+  outline(v, { shape: STALK_L, weight: 3.6 });
+  outline(v, { shape: STALK_R, weight: 3.6 });
+  ball(v, { c: [140, 40], r: [11, 11], color: YELLOW, shadeColor: "#d9a426" });
+  ball(v, { c: [262, 34], r: [11, 11], color: YELLOW, shadeColor: "#d9a426" });
+
+  // Legs and feet
+  for (const leg of [LEG_L, LEG_R]) {
+    part(v, {
+      shape: leg,
+      color: GREEN,
+      shade: () => {
+        bristleShade(v, {
+          shape: leg,
+          color: GREEN_DARK,
+          strokes: [
+            [180, 392, 182, 436],
+            [226, 392, 228, 436],
+          ],
+          weight: 9,
+          opacity: 0.5,
+        });
+      },
+    });
+  }
+  ball(v, { c: [172, 443], r: [24, 11], color: GREEN, shadeColor: GREEN_DARK });
+  ball(v, { c: [228, 443], r: [24, 11], color: GREEN, shadeColor: GREEN_DARK });
+
+  // Arms (behind body)
+  part(v, {
+    shape: ARM_L,
+    color: GREEN,
+    shade: () => {
+      bristleShade(v, {
+        shape: ARM_L,
+        color: GREEN_DARK,
+        strokes: [[140, 300, 126, 372]],
+        weight: 9,
+        opacity: 0.5,
+      });
+    },
+  });
+  ball(v, { c: [122, 379], r: [13, 13], color: GREEN, shadeColor: GREEN_DARK });
+  part(v, {
+    shape: ARM_R,
+    color: GREEN,
+    shade: () => {
+      bristleShade(v, {
+        shape: ARM_R,
+        color: GREEN_DARK,
+        strokes: [[255, 288, 330, 240]],
+        weight: 8,
+        opacity: 0.5,
+      });
+    },
+  });
+  ball(v, { c: [330, 222], r: [14, 14], color: GREEN, shadeColor: GREEN_DARK });
+
+  // Body
+  part(v, {
+    shape: BODY,
+    color: GREEN,
+    weight: 3.6,
+    pressure: [
+      [0, 0.7],
+      [0.4, 1],
+      [0.6, 1],
+      [1, 0.7],
+    ],
+    shade: () => {
+      const rim = rimStrokes(
+        { cx: 200, cy: 325, rx: 55, ry: 75 },
+        { n: 9, from: -0.8, to: 1.6 },
+      );
+      bristleShade(v, {
+        shape: BODY,
+        color: GREEN_DARK,
+        strokes: rim,
+        weight: 18,
+        opacity: 0.6,
+      });
+      // shadow cast by the head onto the top of the body
+      bristleShade(v, {
+        shape: BODY,
+        color: GREEN_DARK,
+        strokes: [
+          [150, 258, 250, 262],
+          [152, 268, 248, 270],
+        ],
+        weight: 12,
+        opacity: 0.55,
+      });
+      bristleShade(v, {
+        shape: BODY,
+        color: GREEN_LIGHT,
+        strokes: [
+          [160, 270, 152, 340],
+          [168, 266, 160, 320],
+        ],
+        weight: 8,
+        opacity: 0.5,
+      });
+      flat(v, { shape: BELLY_PATCH, color: BELLY });
+      bristleShade(v, {
+        shape: BELLY_PATCH,
+        color: GREEN_DARK,
+        strokes: [
+          [214, 318, 222, 372],
+          [206, 330, 212, 378],
+        ],
+        weight: 8,
+        opacity: 0.35,
+      });
+    },
+  });
+
+  // Head
+  part(v, {
+    shape: HEAD,
+    color: GREEN,
+    weight: 3.8,
+    pressure: HEAVY_BELOW,
+    shade: () => {
+      const rim = rimStrokes(
+        { cx: 200, cy: 175, rx: 105, ry: 85 },
+        { n: 13, from: -0.4, to: 2.5 },
+      );
+      bristleShade(v, {
+        shape: HEAD,
+        color: GREEN_DARK,
+        strokes: rim,
+        weight: 18,
+        opacity: 0.5,
+      });
+      bristleShade(v, {
+        shape: HEAD,
+        color: GREEN_LIGHT,
+        strokes: [
+          [112, 160, 140, 112],
+          [124, 150, 160, 104],
+          [140, 128, 185, 100],
+        ],
+        weight: 12,
+        opacity: 0.8,
+      });
+    },
+  });
+
+  // Eyes
+  for (const [eye, px] of [
+    [EYE_L, 165],
+    [EYE_R, 235],
+  ] as const) {
+    part(v, {
+      shape: eye,
+      color: "#ffffff",
+      shade: () => {
+        // a cool lid shadow along the top of the eye white
+        bristleShade(v, {
+          shape: eye,
+          color: "#c9d6e3",
+          strokes: [[px - 30, 140, px + 22, 138]],
+          weight: 10,
+          opacity: 0.7,
+        });
+      },
+    });
+    flat(v, { shape: oval([px, 172], [13, 13]), color: INK });
+    flat(v, { shape: oval([px + 6, 165], [4, 4]), color: "#ffffff" });
+  }
+
+  // Cheeks: pencil scribble inside an oval
+  for (const cx of [132, 268]) {
+    const cheek = oval([cx, 205], [12, 7]);
+    v.group({ opacity: 0.85 }, () => {
+      flat(v, { shape: cheek, color: CHEEK });
+    });
+    v.clip(cheek, () => {
+      const scribble: Style = {
+        stroke: "#e0706c",
+        weight: 3,
+        brush: { preset: "pencil", opacity: 0.9 },
+        gesture: { pressure: "even", wobble: 0.5 },
+      };
+      for (let i = -3; i <= 3; i += 1)
+        v.line(cx - 14 + i * 4, 214, cx - 4 + i * 4, 196, scribble);
+    });
+  }
+
+  // Smile
+  outline(v, { shape: SMILE, weight: 3.4 });
+}

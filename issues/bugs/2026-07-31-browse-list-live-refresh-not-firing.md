@@ -102,3 +102,5 @@ The boxholder: "for seeing updates we might need an entirely new approach.
 The fs watcher is problematic, and I think it might need a redesign." Treat
 this bug as a symptom of the live-update mechanism, not a Browse defect; see
 also [box-watcher-ceiling-leaves-attach-scopes-unwatched](2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
+
+Re-reviewed 2026-10-30: no change since the 2026-10-23 repro; the next check (whether the file-change event reaches the browser) has not been done.

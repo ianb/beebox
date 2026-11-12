@@ -56,10 +56,19 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  * different model in a fresh chat would change who answers (boxholder,
  * 2026-09-19: "if the model is removed the message goes nowhere").
  */
-type FiredTurnOutcome = "delivered" | "failed" | "refused";
+export type FiredTurnOutcome = "delivered" | "failed" | "refused";
 
-function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<FiredTurnOutcome> {
-  const { session, eventBus, firedMessage } = deps;
+/** Thrown by a fired turn's check when the turn is no longer wanted (deletion began); abandons it without an error log. */
+export class FiredTurnCancelledError extends Error {
+  constructor(readonly sessionId: string) {
+    super("Fired turn cancelled");
+    this.name = "FiredTurnCancelledError";
+  }
+}
+
+/** Send a server-started turn and settle when it ends; also the interrupted-chat wake's path (`./interrupted-wake.ts`). */
+export function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string; checks?: { onAdmitted: () => void; onDispatch: () => void } }): Promise<FiredTurnOutcome> {
+  const { session, eventBus, firedMessage, checks } = deps;
   return new Promise<FiredTurnOutcome>((resolve, reject) => {
     let settled = false;
     const finish = (ok: FiredTurnOutcome): void => {
@@ -96,11 +105,11 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
     session.once("done", onDone);
     session.once("close", onFail);
     session.once("error", onFail);
-    void session.send({ text: firedMessage, clientComposed: true }).then((sent) => {
+    void session.send({ text: firedMessage, clientComposed: true }, checks).then((sent) => {
       if (!sent) finish("failed");
     }).catch((error: unknown) => {
       if (error instanceof BoxMaintenanceError) reject(error);
-      else console.error("[schedule] Send failed:", error);
+      else if (!(error instanceof FiredTurnCancelledError)) console.error("[schedule] Send failed:", error);
       finish("failed");
     });
   });
@@ -135,7 +144,14 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
   wireSession(target);
   registry.enforceLiveCap(targetId);
   registry.touch(targetId, { subprocessUse: true });
-  const outcome = await sendFiredTurn({ session: target, eventBus, firedMessage: buildFiredMessage(schedule) });
+  // Held for the turn, as a person's send is, so the live cap cannot evict it mid-turn.
+  const releasePin = registry.pinSession(target);
+  // Rechecked once the send holds the turn: a deletion may have begun during its awaits.
+  const stillWanted = (): void => { if (registry.deletion.isBlocked(targetId)) throw new FiredTurnCancelledError(targetId); };
+  let outcome: FiredTurnOutcome;
+  try {
+    outcome = await sendFiredTurn({ session: target, eventBus, firedMessage: buildFiredMessage(schedule), checks: { onAdmitted: stillWanted, onDispatch: stillWanted } });
+  } finally { releasePin(); }
   if (outcome === "refused") drop(`conversation ${targetId}'s model cannot run on this box`);
   else if (outcome === "failed" && !registry.deletion.isBlocked(targetId)) drop(`the turn in conversation ${targetId} failed`);
 }

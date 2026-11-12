@@ -21,6 +21,7 @@ import { ensureChatHusk, reconcileChatHusks } from "../../../src/core/chat/husk.
 import { findChatHuskEntry, listChatHusks } from "../../../src/core/chat/husk-read.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../src/core/chat/session/origin.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const { id, name } = await localOrigin();
 
@@ -228,7 +229,10 @@ title: Planning the garden
 ---
 `);
   await box.write("_content/chat/web/broken.chat.card", "no frontmatter here\n");
+  const warnings = consoleLines(t, "warn");
   const husks = await listChatHusks(box.root);
+  // The card that cannot be read is named, so it can be fixed:
+  t.check(warnings(), ["chat-husk: skipping _content/chat/web/broken.chat.card: no frontmatter mapping"]);
   t.check(husks, [
     stamped({ path: "_content/chat/web/2026-07-01_aaaa1111.chat.card", session: "aaaa1111-0000-0000-0000-000000000000", contextDir: "_content/projects" }),
     { path: "_content/chat/web/renamed-topic_bbbb2222.chat.card", session: "bbbb2222-0000-0000-0000-000000000000", title: "Planning the garden" },

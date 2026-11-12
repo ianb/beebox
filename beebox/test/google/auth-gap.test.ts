@@ -2,7 +2,7 @@
 //
 // `getGoogleAuth` returns `null` for four unrelated situations, and every caller
 // printed one sentence for all of them: *"Google auth not configured. Run: bbx
-// google-auth."*
+// google-auth." (the command has since been removed)*
 //
 // That sentence is wrong for three of the four, and it cost real work. On
 // 2026-09-14 a boxholder reauthorized twice against a grant that was already
@@ -57,7 +57,7 @@ void test("resolveSecret returns typed refusals carrying, in its own words, \"a 
   const box = await grantedBox();
   delete process.env.BBX_GOOGLE_TOKENS_FILE;
   const gap = await explainGoogleAuthGap(box.root);
-  // It also never tells this caller to run `bbx google-auth`, which is the whole point.
+  // It also never tells this caller to reconnect Google, which is the whole point.
   t.checkText(gap, `Google auth unavailable: no token file where this process looks — ${box.root}/_config/connectors/google.secret.json (BBX_GOOGLE_TOKENS_FILE is not set in this process). If the services authenticate fine, the grant is healthy and reauthorizing will not help: this process is looking somewhere else. Run it with the box service's environment.`);
 
   // ## A token file that exists but cannot be read is a different problem

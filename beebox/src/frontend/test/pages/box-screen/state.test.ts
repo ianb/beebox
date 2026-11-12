@@ -8,6 +8,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../test/helpers/console-lines.js";
+import { jsonParseMessage } from "../../helpers/json-parse-error.js";
 import { readFileSync } from "node:fs";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry,
@@ -281,10 +283,13 @@ void test("The page stored the thought and closed before submit answered.", asyn
 // A malformed stored value is dropped with a warning rather than breaking the
 // page, and the key is the box screen's own, never the chat composer's:
 void test("A malformed stored value is dropped with a warning rather than breaking the p...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   t.check(parseStoredBoxScreen("{not json"), {
     draft: "",
     unsent: null,
   });
+  // The console says the draft was not restored, with the parser's reason:
+  t.check(warnings(), [`[box-screen] could not restore the new-thought draft SyntaxError: ${jsonParseMessage("{not json")}`]);
 
   t.check([boxScreenStorageKey({ boxSlug: "test1", scope: "" }), boxScreenStorageKey({ boxSlug: "test1", scope: "main/test1" })], [
     "bbx-box-screen:test1",

@@ -7,14 +7,14 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
-import { execFileSync, spawn } from "node:child_process";
-import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { strict as assert } from "node:assert";
 import { MIGRATIONS, MANIFEST_PATH, type Migration } from "../../src/core/migrations.js";
 import type { TmpBox } from "../helpers/test-helpers.js";
+import { spawnUntilFirstLine, tsxChild } from "../helpers/child-process.js";
 import { createFakeAgent } from "./fake-agent.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
@@ -103,6 +103,39 @@ void test("The common case — this runs against every box on every deploy, so t
   t.check(await boxMaintenanceStatus(box.root), null);
 
   await busy.release();
+});
+
+// ## Stale docs alone never close the box
+//
+// The hourly pass sweeps with `refresh`. Stale generated docs used to send it
+// through box maintenance, which ended a running chat's background tasks
+// (`docs/implemented-plans/maintenance-live-tasks.md`). Now the refresh runs as ordinary
+// box work in the open peek: with live work held, the pass refreshes and
+// answers `current`, and no maintenance phase is ever written.
+void test("Stale docs alone never close the box", async (t) => {
+  t.teardown(async () => {
+    try {
+      clearInterval(watch);
+      await busy.release();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write(".gitignore", ".beebox/\n_content/docs/generated/\n");
+  await box.write("AGENTS.md", "# Box\n");
+  await seedManifest(box, { pending: [] });
+  await box.commitAll("seed box");
+  const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+  const phases: string[] = [];
+  const watch = setInterval(() => { void boxMaintenanceStatus(box.root).then((status) => { if (status) phases.push(status.reason); }); }, 50);
+  const sweep = sweepMigrations({ boxRoot: box.root, yield: true, refresh: true }).then((outcome) => outcome.status);
+  t.check({
+    status: await Promise.race([sweep, new Promise((resolve) => setTimeout(() => resolve("still draining"), 20_000))]),
+    refreshed: git(box, "log", "-1", "--format=%s"),
+    phases,
+  }, { status: "current", refreshed: "Refresh generated docs", phases: [] });
 });
 
 // ## A pending script migration is applied and committed as one unit
@@ -280,7 +313,7 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
 void test("--yield is the hourly schedule's mode.", async (t) => {
   t.teardown(async () => {
     try {
-      holder.kill();
+      await holder.kill();
       await box.cleanup();
     } catch (error) {
       t.error(error);
@@ -289,8 +322,7 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
-  const holder = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
-  await once(holder.stdout, "data");
+  const holder = await spawnUntilFirstLine(tsxChild(join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), [box.root]));
 
   const deferred = await sweepMigrations({ boxRoot: box.root, yield: true });
   t.check({ status: deferred.status, holders: expectStatus(deferred, "deferred").holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) }, {
@@ -301,8 +333,9 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
     phase: null,
   });
 
-  holder.stdin.end("finish");
-  await once(holder, "exit");
+  holder.child.stdin.end("finish");
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await holder.exited, stderr: holder.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check((await sweepMigrations({ boxRoot: box.root, yield: true })).status, "applied");
 
   // A deploy holding the maintenance owner lock is the other way a box is in use.

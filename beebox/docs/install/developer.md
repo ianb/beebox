@@ -40,16 +40,16 @@ server), the Docker path is simpler: see
 - **System binaries** the agent uses for document/image/spreadsheet handling —
   `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`, an Excel reader
   (`openpyxl` + the `xlsx2csv` CLI, for `.xlsx`), and `fclones` (duplicate
-  files):
+  files). `shellcheck` is for the commit hook and the schedule lint:
 
   ```bash
   # macOS — openpyxl/xlsx2csv have no brew formula, install them via pip
-  brew install pandoc imagemagick poppler git-lfs fclones
+  brew install pandoc imagemagick poppler git-lfs fclones shellcheck
   python3 -m pip install --break-system-packages openpyxl xlsx2csv
 
   # Debian/Ubuntu (fclones is not in apt; upstream ships an amd64 .deb —
   # see deploy/hetzner/cloud-init.yaml for the pinned download)
-  sudo apt-get install pandoc imagemagick poppler-utils git-lfs python3-openpyxl xlsx2csv
+  sudo apt-get install pandoc imagemagick poppler-utils git-lfs python3-openpyxl xlsx2csv shellcheck
   ```
 
   On Debian/Ubuntu the `imagemagick` package is ImageMagick 6, which ships

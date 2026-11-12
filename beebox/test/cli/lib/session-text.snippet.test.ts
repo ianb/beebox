@@ -35,3 +35,9 @@ void test("External assistant input keeps its text in transcript snippets and hi
 void test("A message that is only a selection has no words of the user's own, so there i...", async (t) => {
   t.check(extractSnippet("<typed user=\"boxholder\"><user-selection ref=\"/a.doc.card\" pos=\"body\">quoted</user-selection></typed>", 80), null);
 });
+
+// A "Decide for me" handoff is the box's instruction to its agent. The chat it
+// starts is named for the question handed off, without the card path or skill.
+void test("A Decide for me handoff names the chat for the question", async (t) => {
+  t.check(extractSnippet("<question-handoff doc=\"_bookkeeping/questions/Talks_Guide.question.card\" title=\"Which talks &amp; why?\">\nFigure out the question at _bookkeeping/questions/Talks_Guide.question.card, which the person handed to you from the question card. Use the figure-it-out skill.\n</question-handoff>", 80), "Decide for me: Which talks & why?");
+});

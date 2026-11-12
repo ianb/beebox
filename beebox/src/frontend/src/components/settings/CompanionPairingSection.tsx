@@ -12,6 +12,8 @@ import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { errorMessage } from "@shared/error-guards";
+import { StatusMessage } from "../ui/StatusMessage";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
 type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
@@ -25,6 +27,16 @@ function boxBaseUrl(): string {
   const apiBase = getApiBase();
   const boxPath = apiBase.endsWith("/api") ? apiBase.slice(0, -"/api".length) : apiBase;
   return new URL(boxPath, window.location.origin).toString().replace(/\/$/, "");
+}
+
+/**
+ * Whether a phone could never reach the box at this page's host. The QR code
+ * carries the page's own origin, so a page opened at localhost hands the phone
+ * an address that names the phone itself, and pairing fails with no reason
+ * given. The Mac app on the same computer can still use the link.
+ */
+export function loopbackHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "[::1]" || /^127\./.test(hostname);
 }
 
 /**
@@ -42,19 +54,13 @@ function pairingDeepLink(token: string, boxName: string): string {
   return `beebox://pair?${params.toString()}`;
 }
 
+/** A made-up token the length of a real one, so the blurred stand-in is the real code's size. */
+const PLACEHOLDER_TOKEN = "x".repeat(43);
+
 /** The list is scoped to what the caller may reach, so the heading says which
  *  list this is rather than implying a short one is the whole box. */
 function deviceHeading(scope: DeviceScope | undefined): string {
   return scope === "own" ? "Your paired devices" : "Paired devices";
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 function DeviceRow({ device }: { device: MobileDevice }) {
@@ -69,9 +75,9 @@ function DeviceRow({ device }: { device: MobileDevice }) {
       <Text as="div">
         <Text weight="medium">{device.label}</Text>{" "}
         <Text size="xs" tone="muted" className="ml-1">
-          Paired {formatDate(device.createdAt)}
-          {device.lastUsedAt ? ` - last used ${formatDate(device.lastUsedAt)}` : ""}
-          {device.revokedAt ? ` - unpaired ${formatDate(device.revokedAt)}` : ""}
+          Paired {friendlyDate(device.createdAt)}
+          {device.lastUsedAt ? ` - last used ${friendlyDate(device.lastUsedAt)}` : ""}
+          {device.revokedAt ? ` - unpaired ${friendlyDate(device.revokedAt)}` : ""}
         </Text>
       </Text>
       {!device.revokedAt ? (
@@ -152,15 +158,50 @@ export function CompanionPairingSection() {
           </Hint>
         </Stack>
 
+        {loopbackHost(window.location.hostname) ? (
+          <Hint>
+            {`A phone can't reach this box at ${window.location.host}. To pair an iPhone, open this page at an address the phone can reach, such as this computer's Tailscale name, and show the QR code there.`}
+          </Hint>
+        ) : null}
+
+        {ticket !== null && showQr ? (
+          <Stack gap="sm">
+            <div
+              className="w-fit rounded border border-warm-200 bg-white p-3"
+              role="img"
+              aria-label="iOS pairing QR code"
+              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
+            />
+            <Text size="xs" tone="muted">Expires {friendlyDate(ticket.expiresAt)}</Text>
+            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
+              {ticket.deepLink}
+            </code>
+          </Stack>
+        ) : (
+          // A blurred stand-in where the code will be, so the section reads as
+          // "the QR code" at a glance; the button over it makes the real one.
+          <div className="relative w-fit rounded border border-warm-200 bg-white p-3">
+            <div
+              aria-hidden="true"
+              className="blur-sm opacity-60 select-none"
+              dangerouslySetInnerHTML={{ __html: qrSvg(pairingDeepLink(PLACEHOLDER_TOKEN, boxName), 5) }}
+            />
+            {loopbackHost(window.location.hostname) ? null : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button
+                  id="bbx-settings-pairing-create-qr"
+                  loading={createMutation.isPending ? !showQr : false}
+                  loadingLabel="Creating..."
+                  onClick={showQrCode}
+                >
+                  Show QR Code (iPhone)
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         <Row gap="sm" wrap>
-          <Button
-            id="bbx-settings-pairing-create-qr"
-            loading={createMutation.isPending ? !showQr : false}
-            loadingLabel="Creating..."
-            onClick={showQrCode}
-          >
-            Show QR Code (iPhone)
-          </Button>
           <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
             Copy Link (Mac)
           </Button>
@@ -171,24 +212,10 @@ export function CompanionPairingSection() {
         ) : null}
         {copyError ? <ErrorText>{copyError}</ErrorText> : null}
 
-        {ticket !== null && showQr ? (
-          <Stack gap="sm">
-            <div
-              className="w-fit rounded border border-warm-200 bg-white p-3"
-              aria-label="iOS pairing QR code"
-              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
-            />
-            <Text size="xs" tone="muted">Expires {formatDate(ticket.expiresAt)}</Text>
-            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
-              {ticket.deepLink}
-            </code>
-          </Stack>
-        ) : null}
-
         <Stack gap="xs">
           <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
           {devicesQuery.isLoading ? (
-            <Hint>Loading devices...</Hint>
+            <StatusMessage variant="inline" busy>Loading devices…</StatusMessage>
           ) : devicesQuery.error ? (
             <ErrorText>Devices could not be loaded. {devicesQuery.error.message}</ErrorText>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (

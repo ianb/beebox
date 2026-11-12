@@ -40,3 +40,7 @@ bypasses it.
 Tension: an agent that can ask for grants will ask often. The declared use
 and the one-request-per-turn rule are the limits; the review of observed
 purposes (`docs/secrets.md`, "Why a secret exists") is how over-asking shows.
+
+Re-reviewed 2026-10-30: The issue's premise that the agent can only tell the person what to run is partly out of date: `bbx secrets declare` plus the admin 'Declared slots' list already form the request half for new secrets.
+
+Out of date in the body above: Add to 'Shape': `bbx secrets declare --uses` and Admin > Secrets 'Declared slots waiting on a value and a grant' already cover requesting a new, empty secret. The remaining gap is (a) requesting a grant of an existing secret to this box, (b) connector scopes, (c) approving from chat, and (d) the ends-the-turn request shape.

@@ -139,7 +139,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // template-ledger entry and parked update with it, root first. Fails closed
   // (exit 1, nothing written) on two instruction files in one directory, a
   // CLAUDE.local.md, or differing ledger/park duplicates. Legacy support to
-  // remove: issues/deferred/2026-10-09-retire-claude-md-box-compat.md.
+  // remove: issues/code-quality/2026-10-09-retire-claude-md-box-compat.md.
   { name: "agents-md-2026-10", script: "src/scripts/migrate/agents-md/run.ts" },
   // Rewrites the retired image/silence/purpose/correction Markdoc tags: image
   // and silence become a link and plain text, a briefing's purpose moves to
@@ -175,6 +175,18 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // sentence. Touches only lines that match the stock text; an answered,
   // dismissed, or expired card keeps its proposal.
   { name: "root-question-2026-10", script: "src/scripts/migrate/root-question/run.ts" },
+  // Moves each .gfolder.card's `last-sync` into the gitignored Drive state
+  // (`folders` in google-drive.state.json) and deletes the key, so a mirror
+  // pass that changed nothing on Drive changes no tracked file. Seeds the
+  // state before writing cards; a card it cannot plan exits 2 as a leftover.
+  // Plan: docs/implemented-plans/drive-sync-time-out-of-card.md.
+  { name: "gfolder-last-sync-2026-10", script: "src/scripts/migrate/gfolder-last-sync/run.ts" },
+  // Moves the flat `_content/calendar/*.ics` into one `<Name>.calendar.card`
+  // per calendar with its events in `<Name>.attach/`, renamed to
+  // `{date}_{title}_{shortId}.ics`, and rewrites the event index to match.
+  // Writes a journal first; the calendar connector refuses to sync while it
+  // exists, and a rerun finishes it. Plan: docs/implemented-plans/calendar-cards.md.
+  { name: "calendar-folders-2026-10", script: "src/scripts/migrate/calendar-folders/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

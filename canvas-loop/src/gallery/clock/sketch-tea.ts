@@ -48,7 +48,6 @@ export function init(): Model {
   return { virtualSeconds: START_VIRTUAL_SECONDS };
 }
 
-// eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined reducer signature
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch (msg.type) {
     case "tick": {
@@ -94,24 +93,19 @@ function drawTicks(v: View): void {
     const outerY = CENTER_Y + TICK_OUTER_RADIUS * Math.sin(angle);
     const innerX = CENTER_X + (TICK_OUTER_RADIUS - length) * Math.cos(angle);
     const innerY = CENTER_Y + (TICK_OUTER_RADIUS - length) * Math.sin(angle);
-    v.stroke("#e2e8f0");
-    v.strokeWeight(isHour ? HOUR_TICK_WEIGHT : MINUTE_TICK_WEIGHT);
-    v.line(innerX, innerY, outerX, outerY);
+    v.line(innerX, innerY, outerX, outerY, { stroke: "#e2e8f0", weight: isHour ? HOUR_TICK_WEIGHT : MINUTE_TICK_WEIGHT });
   }
 }
 
 function drawNumerals(v: View): void {
-  v.noStroke();
-  v.fill("#f8fafc");
-  v.textSize(NUMERAL_SIZE);
-  v.textAlign("center", "middle");
+  const numeral = { size: NUMERAL_SIZE, fill: "#f8fafc", align: "center", valign: "middle" } as const;
   for (let n = 1; n <= 12; n++) {
     // Numeral n sits at the same angle as hour-hand-at-n on the clock face:
     // 12 at top (-90deg), each hour advances 30deg clockwise.
     const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
     const x = CENTER_X + NUMERAL_RADIUS * Math.cos(angle);
     const y = CENTER_Y + NUMERAL_RADIUS * Math.sin(angle);
-    v.text(String(n), x, y);
+    v.text(String(n), { x, y }, numeral);
   }
 }
 
@@ -120,9 +114,7 @@ function drawHand(params_: { v: View; angle: number; length: number; weight: num
   const dialAngle = angle - Math.PI / 2; // 0 rad here = 12 o'clock, clockwise
   const x = CENTER_X + length * Math.cos(dialAngle);
   const y = CENTER_Y + length * Math.sin(dialAngle);
-  v.stroke(color);
-  v.strokeWeight(weight);
-  v.line(CENTER_X, CENTER_Y, x, y);
+  v.line(CENTER_X, CENTER_Y, x, y, { stroke: color, weight });
 }
 
 function drawDigital(params_: { v: View; virtualSeconds: number }): void {
@@ -132,21 +124,13 @@ function drawDigital(params_: { v: View; virtualSeconds: number }): void {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   const pad = (n: number): string => String(n).padStart(2, "0");
-  v.noStroke();
-  v.fill("#facc15");
-  v.textSize(16);
-  v.textAlign("center", "top");
-  v.text(`${pad(hours24)}:${pad(minutes)}:${pad(seconds)}`, CENTER_X, 12);
+  v.text(`${pad(hours24)}:${pad(minutes)}:${pad(seconds)}`, { x: CENTER_X, y: 12 }, { size: 16, fill: "#facc15", align: "center", valign: "top" });
 }
 
-// eslint-disable-next-line max-params -- TEA contract: draw(view, model, params) is the framework-defined render signature
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   v.background("#0b1020");
 
-  v.noFill();
-  v.stroke("#334155");
-  v.strokeWeight(2);
-  v.circle(CENTER_X, CENTER_Y, FACE_RADIUS * 2);
+  v.circle(CENTER_X, CENTER_Y, FACE_RADIUS * 2, { stroke: "#334155", weight: 2 });
 
   drawTicks(v);
   if (p.style === "classic") drawNumerals(v);
@@ -156,9 +140,7 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   drawHand({ v, angle: angles.minute, length: MINUTE_HAND_LENGTH, weight: MINUTE_HAND_WEIGHT, color: "#e2e8f0" });
   drawHand({ v, angle: angles.second, length: SECOND_HAND_LENGTH, weight: SECOND_HAND_WEIGHT, color: "#f87171" });
 
-  v.noStroke();
-  v.fill("#f8fafc");
-  v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS * 2);
+  v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS * 2, { fill: "#f8fafc" });
 
   if (p.showDigital) drawDigital({ v, virtualSeconds: model.virtualSeconds });
 }

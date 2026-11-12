@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
-import { movePhase2CardFiles, movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
+import { inNewDestination, movePhase2CardFiles, movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // The card move and the standalone file move both retain access to their object.
@@ -100,4 +100,20 @@ void test("Cards without attachments still move normally.", async (t) => {
     ).then(() => "unexpected success", (error: Error) => error.name)),
     "AnnexPreservingMoveError",
   );
+});
+
+// A failed move leaves no empty directories at its destination.
+void test("A failed move removes the directories made for it and no others", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await fs.mkdir(box.path("_content/kept"), { recursive: true });
+  await t.checkThrows(() => movePhase2CardFiles(box.path("_content/missing.doc.card"), box.path("_content/kept/new/deep/missing.doc.card")), "AnnexPreservingMoveError");
+  t.check(await fs.readdir(box.path("_content/kept")), []);
+
+  // A directory something else put a file in stays.
+  await t.checkThrows(() => inNewDestination(box.path("_content/kept/a/b/x"), async () => {
+    await fs.writeFile(box.path("_content/kept/a/other"), "other");
+    throw new Error("rename failed");
+  }), "Error");
+  t.check(await fs.readdir(box.path("_content/kept/a")), ["other"]);
 });

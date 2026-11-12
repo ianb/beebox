@@ -181,8 +181,11 @@ export { noModuleState, noModelMutation, noAsyncSketch, noClasses };
 export const teaImportRestriction: { patterns: Array<{ regex: string; message: string }> } = {
   patterns: [
     {
-      regex: "^(?!@ianbicking/canvas-loop$).+",
-      message: "Sketches may import only the canvas-loop framework types (@ianbicking/canvas-loop).",
+      // Sibling `*-tea.ts` helpers are allowed (boxholder-approved 2026-11-11: animated
+      // sketches were forced into single 1,500-line files); the helpers carry the same
+      // TEA discipline because the lint applies to them by name.
+      regex: "^(?!@ianbicking/canvas-loop$|\\./[\\w.-]+-tea\\.js$).+",
+      message: "Sketches may import only the canvas-loop framework types (@ianbicking/canvas-loop) and sibling ./<name>-tea.js helpers.",
     },
   ],
 };

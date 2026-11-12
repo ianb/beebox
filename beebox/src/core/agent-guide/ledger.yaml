@@ -29,8 +29,27 @@ budget:
   # Raised 2026-10-26 (+65) for the `figure-it-out` and `simplify-question`
   # box skills' descriptions and the `question-review` procedure's
   # description (docs/implemented-plans/questions-later-and-figure-it-out.md).
-  guide_words: 5743
-  always_loaded_words: 10993
+  # Raised 2026-10-29 (+6) for the new `calendar` card type's entry in the
+  # guide's card-type list (docs/implemented-plans/calendar-cards.md); the calendar skill
+  # description was trimmed to offset the rest.
+  # Raised 2026-10-30 (+90) for the box browser: TOOLS' `tools.browser`
+  # pointer (+67) and the `browser` box skill's description
+  # (docs/plans/shared-browser.md, chunk 11).
+  # Raised 2026-11-01 for TOOLS' `tools.webpage` pointer
+  # (docs/plans/webpage-capture-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +24) for TOOLS' `bbx refs` sentence
+  # (docs/plans/knowledge-base-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +32) for TOOLS' `bbx pdf save` sentence
+  # (docs/plans/knowledge-base-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +20) for SEARCHING's held-back-area
+  # line (docs/plans/knowledge-base-tools.md).
+  # Raised 2026-11-01 (+27 always-loaded, +26 guide_words) for DOCS' pointer to the box
+  # agent changelog; the entries stay in the doc (docs/implemented-plans/agent-changes.md).
+  # Raised 2026-11-09 to the test1 clone measurement: +62 guide words for
+  # LANDMARKS. `landmarks.intention` (docs/implemented-plans/place-intention.md, Track C);
+  # the rest is drift from merges since 2026-11-01.
+  guide_words: 6025
+  always_loaded_words: 11861
   uncited_words_per_section: 60
 
 lint:
@@ -170,7 +189,7 @@ registry:
     referrers:
       - src/core/docs-gen/content.ts
   - handle: TOOLS
-    governs: the command-line converters on the box host and installing a missing one
+    governs: the command-line converters on the box host, installing a missing one, and the box browser
     referrers:
       - src/core/chat/session/prompts.ts
       - src/dev/knowledge-audits.yaml
@@ -371,11 +390,11 @@ rows:
     audits: [ref-package-doc-plain-text]
     mechanics: box-docs/provenance.md
   - id: about-cards.markdown-dialect
-    rule: Body Markdown is GFM with box differences (backslash or `<br>` line breaks, an HTML allow-list, footnotes, Markdoc tags live even in fenced code); the reference is markdown.md.
+    rule: Body Markdown is GFM with box differences (backslash or `<br>` line breaks, an HTML allow-list, footnotes, `$`/`$$` TeX math, Markdoc tags live even in fenced code); the reference is markdown.md.
     handle: ABOUT_CARDS
     bin: indirect
-    reason: Matters only when a body needs more than plain prose (a line break, a merged-cell table, a footnote, a literal `{%`); without the pointer an agent guesses from GitHub's rules, which differ.
-    audits: [markdown-dialect-line-break]
+    reason: Matters only when a body needs more than plain prose (a line break, a merged-cell table, a footnote, a formula, a literal `{%`); without the pointer an agent guesses from GitHub's rules, which differ.
+    audits: [markdown-dialect-line-break, markdown-math]
     mechanics: box-docs/markdown.md
   - id: about-cards.link-with-title
     rule: When naming another card or file in a card body or a reply, link it with a human title rather than a bare filename.
@@ -486,11 +505,11 @@ rows:
     reason: Scheduled sub-agents load the guide but not the chat prompt, so the guide is the only place they learn how to report back.
     audits: [bbx-chat-self-note-exists]
   - id: commands.chat-family
-    rule: "`bbx chat screenshot`, `whats-changed`, `retranscribe`, and `ask-about-audio`, and when each applies."
+    rule: "`bbx chat screenshot` (only for what is on the person's screen), `whats-changed`, `retranscribe`, and `ask-about-audio`, and when each applies."
     handle: COMMANDS
     bin: delete
     reason: They work only in a live chat session, and the chat system prompt, loaded there, states each with when to use it; bbx-commands.md has the rest. The draft had this indirect.
-    audits: [chat-screenshot-when, chat-last-audio-when]
+    audits: [chat-screenshot-when, chat-screenshot-person-screen, chat-last-audio-when]
     mechanics: card-chat-thread rule
   - id: commands.health
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
@@ -642,11 +661,11 @@ rows:
     audits: [triage-vs-reactor-flow, triage-pipeline-stages]
     mechanics: box-docs/triage.md
   - id: intake.triage-replay
-    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; destination follow-up questions create ordinary agent todos; missing evidence and confirmation need honest provenance.
+    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; compiled triage instructions are generated from them and never edited; destination follow-up questions create ordinary agent todos; missing evidence and confirmation need honest provenance.
     handle: INTAKE
     bin: indirect
     reason: Needed when triaging or correcting a filing decision; keep the repair procedure in an on-demand document.
-    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty, triage-destination-todo-question]
+    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty, triage-destination-todo-question, triage-compiled-is-generated]
     mechanics: box-docs/triage-instructions.md
   - id: intake.capture-detail
     rule: The capture pipeline (preparation worker, timeline, the `<capture>` message, `bbx scan-import` batches landing in the inbox).
@@ -798,6 +817,12 @@ rows:
     reason: Every pointer in the guide names a doc there, and an agent that does not know the index exists opens docs at random or not at all.
     audits: [search-finds-engine-doc]
     mechanics: box-docs/README.md
+  - id: docs.changes
+    rule: "`box-docs/agent-changes.md` lists recent changes; read it when something remembered fails, a note disagrees with the docs, or before saying Bee Box cannot do something."
+    handle: DOCS
+    bin: core
+    reason: The guide describes only the present, so an agent working from a saved note or a resumed chat has no sign that the note went stale. The entries stay in the doc so they add nothing here (boxholder, 2026-11-01).
+    audits: [change-note-stale, change-note-right, change-doc-before-cannot]
   - id: docs.read-first
     rule: Read the doc before answering how something works or working with an unfamiliar type; don't reconstruct a mechanism from memory.
     handle: DOCS
@@ -921,6 +946,12 @@ rows:
     bin: core
     reason: The trigger is saving an ordinary card, a turn that never opens the landmark's type doc, so a rule kept only in card-landmark.md is never met there (place-shows-cards plan review, finding 1). "Write one if none" seeds existing places, which have no body.
     audits: [landmark-body-after-card-save]
+  - id: landmarks.intention
+    rule: When the person leaves work in a place unfinished or finishes what its intention named, set or clear the landmark's `intention` in the same turn, from evidence they chose that track; a card merely present, arrived, or set aside is not one.
+    handle: LANDMARKS
+    bin: core
+    reason: The trigger is an ordinary chat turn that ends mid-work, where the landmark's type doc is never open, so the rule has to be in the guide to fire (docs/implemented-plans/place-intention.md, Track C). The restraint half is the boxholder's "not creative" requirement; without it an agent writes an intention from whatever is in the folder.
+    audits: [landmark-intention, landmark-intention-restraint]
   - id: landmarks.read-first
     rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
     handle: LANDMARKS
@@ -950,7 +981,7 @@ rows:
     reason: Search is frequent and the phrasing decides whether it finds anything; an agent without it types two guessed keywords or quotes a phrase. Cut to two sentences; the embeddings explanation moved with the examples.
     audits: [search-query-phrasing, search-exact-identifier]
   - id: search.examples-filters-results
-    rule: The embeddings explanation, the four example queries, the filter flags, and the result format (a `#fragment` locator, the `contains:` line, an excerpt, "N of total").
+    rule: The embeddings explanation, the four example queries, the filter flags, the area setting (`search.areas` in box.json, `--area`), and the result format (a `#fragment` locator, the `contains:` line, an excerpt, "N of total"). Only the held-back line stays in the guide.
     handle: SEARCHING
     bin: indirect
     reason: Usage detail of one command, needed when narrowing a search or reading a truncated result. Moved verbatim to a new `bbx search` entry in bbx-commands.md, whose read-when now names it; the `--path people` example was corrected to `--path _content/people`, since the filter is a prefix of the box-relative path.
@@ -1023,6 +1054,41 @@ rows:
     reason: Rare, and needed only when a tool is missing. Moved verbatim to a new `bbx host install` entry in bbx-commands.md; the guide keeps one pointer sentence carrying the command and the `sudo apt` prohibition, since the reflex fires before any doc is open.
     audits: [host-package-install]
     mechanics: box-docs/bbx-commands.md
+  - id: tools.webpage
+    rule: "To keep a copy of a page, use `bbx webpage save`; a saved or refused page that was wrong becomes a case in the tricks folder's `webpage.ts`."
+    handle: TOOLS
+    bin: indirect
+    reason: The options and the function's shape are mechanics, so they live in the command's help.
+    audits: [webpage-keep-a-page, webpage-bad-page, webpage-redirect]
+    mechanics: bbx webpage save --help
+  - id: tools.pdf-save
+    rule: "To keep a copy of a PDF, use `bbx pdf save <url>`, not `curl` into a folder; it records the address and hash on the card, and a reply that is not a PDF is refused."
+    handle: TOOLS
+    bin: indirect
+    reason: Without the pointer an agent downloads the file and files it by hand, losing the address and hash. The options and exit codes are mechanics, so they live in the command's help.
+    audits: [pdf-save-keep-a-pdf]
+    mechanics: bbx pdf save --help
+  - id: tools.refs
+    rule: "To find what cites a card, and which block, run `bbx refs <card>[#anchor]`, not grep: it resolves relative links the way `bbx mv` does."
+    handle: TOOLS
+    bin: indirect
+    reason: Change propagation needs the citing cards and the anchors they name, and a grep misses relative refs, which the reflex reaches for first. The output format and --json are mechanics, so they live in the command's help; the guide keeps one sentence (docs/plans/knowledge-base-tools.md, Track D).
+    audits: [refs-who-cites-this]
+    mechanics: bbx refs --help
+  - id: tools.browser
+    rule: "A page that needs a login, scripts, or the person's help is read with `bbx browser` (public pages with WebFetch first); at a login or human check, ask the person to open Browser from the profile menu on a computer and say when done, never ask for or type their password."
+    handle: TOOLS
+    bin: indirect
+    reason: The commands and the handoff are mechanics for one capability, so they live in the `browser` skill. The guide keeps one pointer sentence carrying the handoff and the password prohibition, because a login wall comes up inside tasks about something else and the reflex (asking for the password, or giving up) fires before any skill is open (shared-browser plan, 2026-10-30).
+    audits: [browser-login-needed, browser-vs-webfetch]
+    mechanics: browser skill
+  - id: tools.box-pages-in-browser
+    rule: "To see a card or view (your own work, or a layout the person reports), open it in the box browser with a box path (`bbx browser open /views/<card path>`) and capture it with `screenshot --card` at phone and desktop widths; `bbx chat screenshot` is only for what is on the person's screen."
+    handle: TOOLS
+    bin: delete
+    reason: The chat system prompt states the screenshot rule where the screenshot command is described, and the views skill (loaded for view work) and browser skill carry the loop; the guide would repeat them (agent-self-view plan, 2026-11-08).
+    audits: [chat-screenshot-when, chat-screenshot-person-screen, box-page-interaction]
+    mechanics: browser skill, views skill
 
   # --- HISTORY ---
   - id: history.git-log-first

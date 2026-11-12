@@ -140,7 +140,7 @@ a trip to the box screen while the page is in front of the person
 - **Webpage card writer.** `writeWebpageCard` in
   `src/webapp/trpc/routers/clerk.ts:256` writes the card and
   `<card>.attach/page.frozen`. Reuse. `createWebpageTemplate`
-  (`src/schemas/webpage.tsx:108`) writes `capture-id`
+  (`src/schemas/webpage.ts:108`) writes `capture-id`
   (`webpage.tsx:143`). Reuse. Not reused: `buildFilename` (title plus
   second-rounded time, `clerk.ts:231`), which can collide for two sends in
   one second; the send names its card with its id.

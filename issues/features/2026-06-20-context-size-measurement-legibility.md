@@ -14,3 +14,7 @@ The knowledge-audit report shows each audit's loaded-context size — `initial` 
 - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-guide vs. box AGENTS.md vs. tool schemas, so you know *which* tier to trim. The JSONL doesn't break `usage` down this way — it'd mean token-counting each component separately (the API's count-tokens endpoint, or a local tokenizer) and reconciling against the measured total.
 
 Open questions: whether the trend belongs in the audit report or in a dedicated `bbx context-budget` command that runs the 0-read audits purely as a measurement harness; how the ledger handles a box being audited from many worktrees (the box clone's HEAD churns on template-sync — see the harness note); whether the breakdown is worth the second token-counting pass or whether the ledger + a delta already give bbx-context everything it needs.
+
+Re-reviewed 2026-10-30: a per-layer breakdown exists in words (pnpm agent-context), and pnpm lint:guide fails when the always-loaded guide exceeds its word budget. Still open: a token ceiling in the knowledge-audit run and reconciling layer counts against measured usage.
+
+Out of date in the body above: Mark the compositional breakdown as partly done (word counts per layer via pnpm agent-context) and the ceiling as partly done (word budget in lint:guide); narrow the remaining items to a token-based initial ceiling in audit config and token reconciliation.

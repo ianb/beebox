@@ -30,16 +30,17 @@ test("a fenced block copies its text and confirms", async (t) => {
     text: button.textContent,
     type: button.getAttribute("type"),
     live: button.getAttribute("aria-live"),
+    status: button.parentElement?.querySelector("[role=status]")?.textContent,
   });
   // One button, on the fence; the blockquote has none.
-  t.check(buttons.map(state), [{ inside: "PRE", text: "Copy", type: "button", live: "polite" }]);
+  t.check(buttons.map(state), [{ inside: "PRE", text: "Copy", type: "button", live: null, status: "" }]);
   const [button] = buttons;
   if (button === undefined) return;
   await view.act(() => { button.click(); });
   await view.act(() => Promise.resolve());
   t.check({ copied, button: state(button) }, {
     copied: ["Hi Sam,\n\nLunch on Friday?\n"],
-    button: { inside: "PRE", text: "Copied", type: "button", live: "polite" },
+    button: { inside: "PRE", text: "Copied", type: "button", live: null, status: "Copied" },
   });
   await view.unmount();
 });

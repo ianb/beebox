@@ -335,9 +335,16 @@ LAYOUTCHECK
 # the cleanup that repairs it. Best-effort here: the hard post-install prune
 # below is authoritative, while this recovery pass may be running on a full
 # filesystem with partially broken tools.
+# The root store is pruned only when disk is low (see ROOT_STORE_PRUNE_BELOW_PCT
+# at the post-install prune for why).
 step "Pruning deploy package caches before disk gate..."
 ssh "$SSH_TARGET" bash -s <<'PREFLIGHTCLEAN'
-pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune' \
   || echo "  WARNING: Bee Box pnpm store preflight prune failed" >&2
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
@@ -517,6 +524,8 @@ RSYNC_OPTS=(-az --delete
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
+# The agent-browser package itself is a beebox dependency (the box browser,
+# docs/plans/shared-browser.md), so it installs with beebox.
 for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
@@ -694,7 +703,7 @@ queue_remote stdin bash -s <<'REMOTE'
   # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
   # silently resolving something new). HUSKY=0 skips husky's hook install (no
   # .git on the server) so it doesn't print a spurious ".git can't be found".
-  # patch-package still runs via the root postinstall to patch eslint-config-agent.
+  # pnpm applies the patches in pnpm-workspace.yaml's patchedDependencies.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
   # The install competes for RAM with every running box's `bbx engine serve` +
@@ -730,19 +739,6 @@ queue_remote stdin bash -s <<'REMOTE'
   # Refresh the operator-facing command after every dependency reconciliation.
   # Internal callers resolve this same direct package dependency themselves.
   ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex
-  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
-  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
-  # reinstall can silently restore a binary compiled for the old ABI (this
-  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
-  # /healthz stayed green). Load the module with the runtime that will serve
-  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
-  # a second failure fails the deploy.
-  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
-    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
-    (cd node_modules/better-sqlite3 && rm -rf build \
-      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
-    node -e 'require("better-sqlite3")'
-  fi
 REMOTE
 
 # Reconcile each package-layout box's own node_modules against its manifest
@@ -762,13 +758,25 @@ queue_remote stdin bash -s /var/lib/beebox /opt/beebox/beebox \
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
 # pnpm 10's `store prune` also deletes every cached registry metadata file, so
-# after this step the server has no warm metadata cache. A migration that runs
+# after a prune the server has no warm metadata cache. A migration that runs
 # pnpm on the server must not assume one: use `--prefer-offline`, never
 # `--offline`.
+# The root store is pruned only when less than 30% of / is free. With
+# `nodeLinker: hoisted`, a frozen install over an existing node_modules fetches
+# every platform's optional binaries (esbuild, sharp, TypeScript 7, oxc) even
+# though it installs only this host's, and prune drops them again because no
+# project links them. Pruning on every deploy made each install refetch several
+# GB with the services stopped; on a slow registry day (2026-11-09) that held
+# production down for half an hour. Keeping them costs about 6.5 GB of disk.
 queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
-pnpm store prune
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune'
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
   sudo -u beebox -H bash -lc 'cd /home/beebox && uv cache clean'
@@ -910,7 +918,7 @@ bash "$install_dir/beebox/deploy/install-restic.sh" /usr/local/bin/restic
 # files, installed whole: a template socket and service, the pass service, and
 # the sandbox drop-in both templates include. The hub and scheduler units are
 # installed whole too; the scheduler runs as the scheduler user.
-units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
+units=(beebox-boxes.slice beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
 for unit in "${units[@]}"; do
   src="$install_dir/beebox/deploy/systemd/$unit"
   dest="/etc/systemd/system/$unit"
@@ -923,6 +931,16 @@ for unit in "${units[@]}"; do
     fi
   fi
 done
+# /run/beebox and the cache directories come back at every boot from
+# tmpfiles.d. A host provisioned before cloud-init carried this entry had none,
+# and its first reboot left the hub unable to start (2026-11-11). --create is
+# idempotent and also repairs a directory with the wrong owner or mode.
+tmpfiles_src="$install_dir/beebox/deploy/systemd/beebox.tmpfiles.conf"
+if ! cmp -s "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf; then
+  install -o root -g root -m 0644 "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf
+  echo "  installed /etc/tmpfiles.d/beebox.conf"
+fi
+systemd-tmpfiles --create /etc/tmpfiles.d/beebox.conf
 # A fresh host has never enabled the hub; an existing one is a no-op.
 systemctl enable beebox-hub.service >/dev/null 2>&1 || true
 # cloud-init makes a system user without a home; the unit's WorkingDirectory
@@ -935,6 +953,17 @@ systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
 # round 5, codex gpt-6-sol, 2026-10-24). cloud-init's tmpfiles entry creates it
 # with the same owner and mode; the layout preflight guarantees the group.
 install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
+# Box users push over ssh with only GitHub's host key in the system file;
+# cloud-init writes it on new hosts. A host provisioned before that line had
+# it only in ~beebox/.ssh/known_hosts, and every box push failed host-key
+# verification once boxes moved to their own users. Keep in step with
+# hetzner/cloud-init.yaml.
+github_host_key='github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
+if ! grep -qxF "$github_host_key" /etc/ssh/ssh_known_hosts 2>/dev/null; then
+  printf '%s\n' "$github_host_key" >> /etc/ssh/ssh_known_hosts
+  chmod 0644 /etc/ssh/ssh_known_hosts
+  echo "  added GitHub's host key to /etc/ssh/ssh_known_hosts"
+fi
 for unit in beebox-box@.service beebox-pass@.service beebox-backup@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"
@@ -1017,6 +1046,23 @@ REMOTE
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
 
+  # The box browser's host pieces: passt, Chrome for Testing, the launcher's
+  # unshare copy and its AppArmor profiles, then a check that Chrome keeps its
+  # sandbox (docs/plans/shared-browser.md, Track F). After the restart, so a
+  # first install's download does not lengthen the downtime window; a failure
+  # here fails the deploy with the services up. Bytes from the build checkout
+  # through stdin, as for the other root helpers.
+  queue_step "Installing the box browser..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-browser-install"
+
+  # Codex's sandbox: bubblewrap, limited to box users, and the AppArmor grant
+  # that lets it create user namespaces on Ubuntu 24.04, then a check as a box
+  # user. Without it prompt-only Codex runs fail before running anything.
+  queue_step "Installing Codex's sandbox..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-codex-sandbox-install"
+
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
   #      crash-looping. The hub blocks on startAll() before it listens, and a
@@ -1053,7 +1099,10 @@ REMOTE
       echo "  deploy/hetzner/cloud-init.yaml), then redeploy."
       exit 1
     fi
-    codex_check_home=$(mktemp -d)
+    # Codex refuses to put its helper binaries under a temporary directory and
+    # warns on every run, so the throwaway CODEX_HOME lives in root's cache.
+    mkdir -p "$HOME/.cache"
+    codex_check_home=$(mktemp -d "$HOME/.cache/bbx-codex-check.XXXXXX")
     trap 'rm -rf "$codex_check_home"' EXIT
     if ! CODEX_HOME="$codex_check_home" codex plugin --help >/dev/null; then
       echo "  FAILED: package-pinned Codex CLI does not support plugins"
@@ -1227,6 +1276,13 @@ if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
   echo "The TypeScript 7 binary did not run from the staged install; not activating. Uploaded artifacts remain staged." >&2
   exit 1
 fi
+# Fill the store with everything the live install will ask for while the
+# services still run. The stage's node_modules exists by now (a link to the live
+# tree or its own install), and with one present `pnpm fetch` pulls the same
+# all-platform set the hoisted live install fetches; see the cache prune step.
+# Without this, any new package's downloads happen after the services stop.
+echo "  Prefetching packages for activation..."
+(cd "$stage_dir" && HUSKY=0 npm_config_update_notifier=false CI=true pnpm fetch)
 boxes=()
 for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")

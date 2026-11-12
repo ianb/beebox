@@ -12,6 +12,12 @@
  * upgrade therefore never wakes a sleeping box (the hub's WS handler calls
  * `get()` alone), while `ensureRunning()`, on the HTTP path, connects and
  * waits up to the readiness bound. State names mirror systemd's.
+ *
+ * A crashing box is retried by systemd, not here: the unit restarts itself with
+ * a growing delay and has no start limit (deploy/systemd/beebox-box@.service).
+ * While it waits out a delay, its sub-state is `auto-restart`; the hub reports
+ * that as a crash loop (503 with the last journal line) and does not wait on
+ * the socket, which cannot answer until systemd's delay has passed.
  */
 
 import { execFile } from "node:child_process";
@@ -31,7 +37,7 @@ const run = promisify(execFile);
 const unitRowSchema = z.object({ unit: z.string(), active: z.string(), sub: z.string() });
 const unitListSchema = z.array(unitRowSchema);
 
-export type UnitState = "active" | "activating" | "deactivating" | "inactive" | "failed" | "unknown";
+export type UnitState = "active" | "activating" | "deactivating" | "inactive" | "failed" | "auto-restart" | "unknown";
 
 export interface SocketBox {
   slug: string;
@@ -40,7 +46,7 @@ export interface SocketBox {
   state: UnitState;
   /** The last readiness probe over the socket answered. Reset when the unit leaves `active`. */
   ready: boolean;
-  /** The failed unit's last journal line, fetched once per failure for the hub's 503. */
+  /** A failed or restarting unit's last journal line, fetched once per failure for the hub's 503. */
   lastJournal: string | undefined;
   /** A cold start in flight, so concurrent requests await one probe. */
   waking: Promise<Endpoint | undefined> | undefined;
@@ -81,7 +87,9 @@ export async function defaultProbe(endpoint: Endpoint): Promise<boolean> {
   }
 }
 
-export function unitStateOf(active: string): UnitState {
+/** systemd's ActiveState, except a unit waiting to restart after a crash (sub-state `auto-restart` or, since v254, `auto-restart-queued`). */
+export function unitStateOf(active: string, sub: string): UnitState {
+  if (sub.startsWith("auto-restart")) return "auto-restart";
   switch (active) {
     case "active": case "activating": case "deactivating": case "inactive": case "failed":
       return active;
@@ -97,6 +105,8 @@ function runStatusOf(state: UnitState): BoxRunStatus {
     case "activating": return "starting";
     case "deactivating": case "inactive": case "unknown": return "stopped";
     case "failed": return "unhealthy";
+    // With a nonzero `consecutiveFailures` this is a crash loop to `hub/health.ts`.
+    case "auto-restart": return "starting";
     default: return assertNever(state);
   }
 }
@@ -146,25 +156,27 @@ export class SocketProvider implements EndpointProvider {
     this.timer = undefined;
   }
 
-  /** One `systemctl list-units` for every box unit; a failed unit's last journal line is fetched once. */
+  /** One `systemctl list-units` for every box unit; a failing unit's last journal line is fetched once. */
   async poll(): Promise<void> {
     const output = await this.runCommand("systemctl", ["list-units", "beebox-box@*.service", "--all", "--output=json", "--no-pager", "--plain"]);
     const rows = unitListSchema.parse(JSON.parse(output === "" ? "[]" : output));
     const seen = new Map<string, UnitState>();
     for (const row of rows) {
       const match = /^beebox-box@(.+)\.service$/.exec(row.unit);
-      if (match?.[1] !== undefined) seen.set(match[1], unitStateOf(row.active));
+      if (match?.[1] !== undefined) seen.set(match[1], unitStateOf(row.active, row.sub));
     }
     for (const box of this.boxes.values()) {
       const state = seen.get(box.slug) ?? "inactive";
       const was = box.state;
       box.state = state;
       if (state !== "active") box.ready = false;
-      if (state === "failed" && was !== "failed") {
+      const failing = state === "failed" || state === "auto-restart";
+      if (failing && was !== state) {
         box.lastJournal = await this.lastJournalLine(box.slug);
-        box.lastError = `unit failed${box.lastJournal === undefined ? "" : `: ${box.lastJournal}`}`;
+        const what = state === "failed" ? "unit failed" : "unit crashed and is waiting to restart";
+        box.lastError = `${what}${box.lastJournal === undefined ? "" : `: ${box.lastJournal}`}`;
       }
-      if (state !== "failed") box.lastJournal = undefined;
+      if (!failing) box.lastJournal = undefined;
     }
   }
 
@@ -192,24 +204,34 @@ export class SocketProvider implements EndpointProvider {
   /**
    * Connect to the socket (which starts the unit) and wait for readiness, up
    * to the bound. Concurrent callers share one wake. A unit that is `failed`
-   * is not poked: systemd's start limit owns it until a deploy or a human.
+   * or waiting to restart is not poked: systemd's restart delay owns it.
    */
   async ensureRunning(slug: string): Promise<Endpoint | undefined> {
     const box = this.boxes.get(slug);
     if (!box) return undefined;
     const live = this.get(slug);
     if (live) return live;
-    if (box.state === "failed") return undefined;
+    if (this.isFailing(box)) return undefined;
     if (box.waking) return box.waking;
     box.waking = this.wake(box).finally(() => { box.waking = undefined; });
     return box.waking;
+  }
+
+  private isFailing(box: SocketBox): boolean {
+    return box.state === "failed" || box.state === "auto-restart";
   }
 
   private async wake(box: SocketBox): Promise<Endpoint | undefined> {
     const endpoint = this.endpointOf(box);
     const deadline = Date.now() + this.readyTimeoutMs;
     while (Date.now() < deadline) {
-      if (await this.probe(endpoint)) {
+      // A poll saw the unit crash while this wake waited, before or during a
+      // probe: its journal line is the answer, not a probe timeout or a probe
+      // that reached the dying process.
+      if (this.isFailing(box)) return undefined;
+      const answered = await this.probe(endpoint);
+      if (this.isFailing(box)) return undefined;
+      if (answered) {
         box.ready = true;
         box.state = "active";
         box.lastError = undefined;
@@ -234,7 +256,7 @@ export class SocketProvider implements EndpointProvider {
       pid: undefined,
       port: undefined,
       restarts: 0,
-      consecutiveFailures: box.state === "failed" ? 1 : 0,
+      consecutiveFailures: box.state === "failed" || box.state === "auto-restart" ? 1 : 0,
       lastError: box.lastError,
       lastStart: undefined,
     }));

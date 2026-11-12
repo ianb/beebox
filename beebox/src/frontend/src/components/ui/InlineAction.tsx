@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 /** `quiet` keeps the surrounding text's color and underlines only on hover: a link inside text that has its own treatment (a todo's words). */
 export type InlineActionIntent = "emphatic" | "subtle" | "danger" | "quiet";
@@ -17,12 +18,14 @@ export interface InlineActionProps {
   intent?: InlineActionIntent;
   disabled?: boolean;
   title?: string;
+  /** Accessible name when the visible text is not enough on its own ("dismiss" → "Dismiss: Upload failed"). */
+  label?: string;
   flash?: FlashSpec;
   /** For a disclosure toggle: whether what it controls is shown (`aria-expanded`). */
   expanded?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
-  /** Take the subtle/emphatic colours from the enclosing card's material. */
+  /** Take the colours from the enclosing card's material. Defaults to the nearest Card's. */
   material?: boolean;
 }
 
@@ -36,6 +39,7 @@ const INTENT_CLASSES: Record<InlineActionIntent, string> = {
 const MATERIAL_INTENT_CLASSES: Partial<Record<InlineActionIntent, string>> = {
   emphatic: "text-card-pen hover:text-card-ink underline",
   subtle: "text-card-soft hover:text-card-ink underline",
+  danger: "text-card-danger hover:text-card-ink underline",
 };
 
 export function InlineAction({
@@ -45,11 +49,13 @@ export function InlineAction({
   intent: intentArg,
   disabled: disabledArg,
   title,
+  label,
   flash,
   expanded,
   className,
   material,
 }: InlineActionProps) {
+  material = useMaterial(material);
   const intent = intentArg ?? "emphatic";
   const disabled = disabledArg ?? false;
   const [pending, setPending] = useState(false);
@@ -96,6 +102,7 @@ export function InlineAction({
       onClick={(e) => void handleClick(e)}
       disabled={isBusy}
       title={title}
+      aria-label={label}
       aria-expanded={expanded}
       className={cn(
         (material === true ? MATERIAL_INTENT_CLASSES[intent] : undefined) ?? INTENT_CLASSES[intent],

@@ -19,6 +19,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 - **No server spin-up for testing.** Route tests use Fastify's `inject()`, not a running server. State-in → render → check output.
 - **TAP over fancy test runners.** TAP's text protocol is agent-readable and zero-dependency.
 - **`.test.ts` with `t.check` is the test form** ([reference](testing/check.md)). Each check compares a whole value, and the type checker checks the expected value.
+- **A kept test that proves a guard must fail without it.** When a regression test exists to prove a wait, guard, or fix, commit, then remove that code and confirm the test fails. Restore from the commit; `git checkout <file>` on uncommitted work loses it.
 
 **Iteration runs the selected tests, not the suite.** `pnpm test:changed`
 selects and runs the tests the diff implicates; `pnpm typecheck` and
@@ -34,7 +35,9 @@ hundreds of tests import selects about half the suite, which takes about
 first, from the ledger's per-file times. At 5 minutes or more it says to run
 the command in the background, because load can make the run pass an agent
 shell's 10-minute foreground limit. `node --import tsx ../bin/test-select.ts`
-prints the same line and the selection without running it.
+prints the same line and the selection without running it, plus the largest
+reason groups (`547 imports beebox/src/x.ts; …`). Add `--why` to list every
+reason with its tests.
 
 ## Instruments
 

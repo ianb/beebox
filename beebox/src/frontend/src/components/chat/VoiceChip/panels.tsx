@@ -1,15 +1,16 @@
 /**
  * `VoiceChip`'s "Voice settings" sub-panel — split out of VoiceChip.tsx to
  * keep that file under the 300-line cap. Moved here from
- * `SessionChip-advanced-panels.tsx` by chunk 3 of
+ * `SessionChip-advanced-menu-body.tsx` by chunk 3 of
  * docs/implemented-plans/chat-header-chips.md; the mutation handlers (with rollback +
  * toast on rejection) stay owned by VoiceChip.tsx, which passes them in.
  * (The Model sub-panel that used to live here moved to `ChatMenu` — see
- * `SessionChip-model-panel.tsx` — in the chip polish round, since Model isn't
+ * `SessionChip-model-menu-body.tsx` — in the chip polish round, since Model isn't
  * an I/O concern.)
  */
 
-import { MenuItem, MenuDivider } from "../../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../../ui/menu-item";
+import { BrowserSpeechRow } from "./browser-speech-row";
 import type { RouterOutput } from "../../../lib/trpc/client";
 import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
 import type { TtsBackend } from "@shared/tts-backends.js";
@@ -113,7 +114,7 @@ export function hqTranscriptionServiceLabel(service: string | null): string {
 }
 
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
-export function VoicePanel({
+export function VoiceMenuBody({
   onBack,
   currentService,
   onSelectTranscriptionService,
@@ -148,6 +149,7 @@ export function VoicePanel({
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
+      <BrowserSpeechRow />
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {

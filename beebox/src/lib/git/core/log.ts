@@ -8,7 +8,8 @@
  * shared/commit-trailers) and simple-git — no value cycle back to git.ts.
  */
 
-import { simpleGit } from "simple-git";
+import { boxGit } from "../env.js";
+import type { SimpleGit } from "simple-git";
 import { existsSync } from "node:fs";
 import * as pathModule from "node:path";
 
@@ -124,7 +125,7 @@ function parseHashGrouped(raw: string): Map<string, string[]> {
  * if the stat passes fail — stats are decorative.
  */
 async function fetchPageStats(
-  git: ReturnType<typeof simpleGit>,
+  git: SimpleGit,
   page: { count: number; offset: number }
 ): Promise<Map<string, FileStat>> {
   const { count, offset } = page;
@@ -183,7 +184,7 @@ export async function getLogPaginated(
       logOptions["--skip"] = offset;
     }
 
-    const git = simpleGit(boxRoot);
+    const git = boxGit(boxRoot);
     const result = await git.log<GitLogFormat>(logOptions);
     const statMap = await fetchPageStats(git, { count, offset });
 
@@ -216,7 +217,7 @@ export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> 
   const into = { connectors: new Set<string>(), triggers: new Map<string, CommitTrigger>() };
 
   try {
-    const raw = await simpleGit(boxRoot).raw([
+    const raw = await boxGit(boxRoot).raw([
       "log",
       "--format=%(trailers:only,unfold)%x00",
     ]);
@@ -250,7 +251,7 @@ interface GetLogFilteredParams {
 
 /** Attach per-commit file stats (filtered page) to the given entries. */
 async function attachFilteredStats(
-  git: ReturnType<typeof simpleGit>,
+  git: SimpleGit,
   { logArgs, entries }: { logArgs: string[]; entries: GitLogEntryExtended[] }
 ): Promise<void> {
   try {
@@ -281,7 +282,7 @@ async function getLogFiltered(
   params: GetLogFilteredParams
 ): Promise<GitLogEntryExtended[]> {
   const { boxRoot, count, offset, greps, path, followPath = false } = params;
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
 
   const grepArgs = [
     "--extended-regexp",

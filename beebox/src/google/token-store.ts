@@ -3,15 +3,18 @@
  * write of it. The OAuth2 *client* built from these tokens lives in
  * `google-auth.ts`; this file knows only about the file.
  *
- * Storage: centralized via the BBX_GOOGLE_TOKENS_FILE env var (preferred), or
- * per-box _config/connectors/google.secret.json (legacy fallback). The
- * centralized case means ONE refresh token is shared by gmail/calendar/drive
- * across every box on the server — which is why the "this grant is dead" state
- * lives here, with the credential, rather than in per-connector or per-box
- * state. See docs/implemented-plans/google-auth-reauth-health.md.
+ * Storage: the BBX_GOOGLE_TOKENS_FILE env var (preferred); on a unit host,
+ * where each box is its own user, the box user's own
+ * `~/.config/beebox/google-tokens.json` beside its secret store; else per-box
+ * _config/connectors/google.secret.json (legacy fallback, inside the box tree
+ * the agent works in). With the env var, ONE refresh token is shared by
+ * gmail/calendar/drive across every box that names the file — which is why the
+ * "this grant is dead" state lives here, with the credential, rather than in
+ * per-connector or per-box state. See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../shared/error-guards.js";
@@ -19,6 +22,7 @@ import { getBoxDir } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { onUnitHost } from "../lib/unit-host.js";
 
 class NoTokenStoragePathError extends Error {
   constructor() {
@@ -87,11 +91,25 @@ export function legacySecretPath(boxRoot: string): string {
 }
 
 /**
- * Resolve the centralized token file path.
- * Returns the path from BBX_GOOGLE_TOKENS_FILE env var, or null if not set.
+ * The token file outside any box tree: BBX_GOOGLE_TOKENS_FILE, else on a unit
+ * host the box user's home (the hub leaves the variable out of `box.env`, so
+ * the hub's own file never reaches a box). Null on a machine with neither.
  */
 export function centralTokenPath(): string | null {
-  return process.env.BBX_GOOGLE_TOKENS_FILE || null;
+  const configured = process.env.BBX_GOOGLE_TOKENS_FILE;
+  if (configured !== undefined && configured !== "") return configured;
+  return onUnitHost() ? path.join(os.homedir(), ".config", "beebox", "google-tokens.json") : null;
+}
+
+/**
+ * The record a first write to the central file starts from: the box's in-tree
+ * file, so a refresh that carries only an access token does not create a
+ * central record without the refresh token the box still holds in its tree.
+ */
+function seedPathFor(targetPath: string, boxRoot: string | undefined): string | undefined {
+  if (boxRoot === undefined) return undefined;
+  const legacy = legacySecretPath(boxRoot);
+  return legacy === targetPath ? undefined : legacy;
 }
 
 /**
@@ -150,13 +168,13 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
  * degrade to "no tokens" because it only ever reads; a *writer* that degrades
  * the same way destroys the credential it failed to read.
  */
-async function readTokensForUpdate(targetPath: string): Promise<GoogleTokens> {
+async function readTokensForUpdate(targetPath: string, seedPath: string | undefined): Promise<GoogleTokens> {
   let content: string;
   try {
     content = await fs.readFile(targetPath, "utf-8");
   } catch (e) {
-    if (errnoCode(e) === "ENOENT") return {};
-    throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+    if (errnoCode(e) !== "ENOENT") throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+    return seedPath === undefined ? {} : readTokensForUpdate(seedPath, undefined);
   }
   try {
     return JSON.parse(content);
@@ -177,9 +195,10 @@ async function readTokensForUpdate(targetPath: string): Promise<GoogleTokens> {
  * callback, and a lost update there would leave a stale "reconnect" nag.
  */
 async function updateGoogleTokens(
-  targetPath: string,
+  file: { targetPath: string; seedPath: string | undefined },
   update: (existing: GoogleTokens) => GoogleTokens,
 ): Promise<void> {
+  const { targetPath, seedPath } = file;
   const lockPath = `${targetPath}.lock`;
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes.
@@ -195,7 +214,7 @@ async function updateGoogleTokens(
         timeoutError: () => new GoogleTokenLockError(lockPath),
       },
       async () => {
-        const existing = await readTokensForUpdate(targetPath);
+        const existing = await readTokensForUpdate(targetPath, seedPath);
         await writeFileAtomic(targetPath, {
           content: JSON.stringify(update(existing), null, 2),
           mode: 0o600,
@@ -225,7 +244,7 @@ export async function saveGoogleTokens(
   }
 
   const provesGrantWorks = !!(updates.accessToken || updates.refreshToken);
-  await updateGoogleTokens(targetPath, (existing) => {
+  await updateGoogleTokens({ targetPath, seedPath: seedPathFor(targetPath, boxRoot) }, (existing) => {
     const merged = { ...existing, ...updates };
     if (provesGrantWorks) {
       delete merged.needsReauthSince;
@@ -251,7 +270,7 @@ export async function markGoogleAuthDead(opts: {
     throw new NoTokenStoragePathError();
   }
   const nowIso = getBoxTimeISO(opts.boxRoot);
-  await updateGoogleTokens(targetPath, (existing) => ({
+  await updateGoogleTokens({ targetPath, seedPath: seedPathFor(targetPath, opts.boxRoot) }, (existing) => ({
     ...existing,
     needsReauthSince: existing.needsReauthSince ?? nowIso,
     reauthReason: opts.reason,

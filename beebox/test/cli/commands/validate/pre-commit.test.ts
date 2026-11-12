@@ -29,7 +29,7 @@ void test("A staged card that fails validation blocks", async (t) => {
   await box.write("_content/notes/Plan.doc.card", "---\nstatus: not-a-doc-field\n---\nBody text\n");
   stage(box);
 
-  const outcome = await runPreCommitChecks(box.root, { colors: false });
+  const outcome = await runPreCommitChecks(box.root);
   t.check([outcome.errorCount > 0, outcome.report.includes("Plan.doc.card")], [
     true,
     true,
@@ -42,7 +42,7 @@ void test("A staged card that fails validation blocks", async (t) => {
   await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nBody text\n");
   stage(box);
 
-  const clean = await runPreCommitChecks(box.root, { colors: false });
+  const clean = await runPreCommitChecks(box.root);
   t.check([clean.errorCount, clean.report, clean.linkWarnings], [
     0,
     "",
@@ -55,7 +55,7 @@ void test("A staged card that fails validation blocks", async (t) => {
   // schema before anything else loads the box:
 
   await box.write("_config/schemas/doc.ts", "export {};\n");
-  const legacy = await runPreCommitChecks(box.root, { colors: false });
+  const legacy = await runPreCommitChecks(box.root);
   t.check([legacy.errorCount, legacy.report.includes("legacy location")], [
     1,
     true,
@@ -86,7 +86,7 @@ void test("Only a delete or rename can make a link in an unstaged referrer newly
 
   await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nAn unrelated add.\n");
   stage(box);
-  const added = await runPreCommitChecks(box.root, { colors: false });
+  const added = await runPreCommitChecks(box.root);
   t.check([added.errorCount, added.linkWarnings], [
     0,
     null,
@@ -99,7 +99,7 @@ void test("Only a delete or rename can make a link in an unstaged referrer newly
   box.commitAll("unrelated");
   execSync("git rm -q _content/docs/target.md", { cwd: box.root });
 
-  const deleted = await runPreCommitChecks(box.root, { colors: false });
+  const deleted = await runPreCommitChecks(box.root);
   t.check(
     [
       deleted.errorCount,
@@ -131,7 +131,7 @@ void test("checkBoxRoot is wired into --pre-commit as a blocking error — the c
   await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\ncreated: 2026-08-19T10:00:00Z\n---\n");
   stage(strayBox);
 
-  const strayOutcome = await runPreCommitChecks(strayBox.root, { colors: false });
+  const strayOutcome = await runPreCommitChecks(strayBox.root);
   t.check([strayOutcome.errorCount > 0, strayOutcome.report.includes("Box root: recipes"), strayOutcome.report.includes("closed vocabulary")], [
     true,
     true,
@@ -154,11 +154,11 @@ void test("The unlisted-binary guard reads the index (core/annex/staged-unlisted
   const box = await makeTmpBox({ git: true });
   await box.write("_content/notes/Trip.attach/export.parquet", "x".repeat(1024 * 1024 + 1));
 
-  const unstaged = await runPreCommitChecks(box.root, { colors: false });
+  const unstaged = await runPreCommitChecks(box.root);
   t.check(unstaged.errorCount, 0);
 
   stage(box);
-  const staged = await runPreCommitChecks(box.root, { colors: false });
+  const staged = await runPreCommitChecks(box.root);
   t.check([staged.errorCount, staged.report.includes("export.parquet")], [
     1,
     true,

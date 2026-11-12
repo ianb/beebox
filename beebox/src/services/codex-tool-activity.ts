@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { CodexSdkItem } from "./codex-sdk-session/core.js";
 import type { ChatMessageAssistant, ChatMessageContent } from "../core/chat/message-types.js";
+import type { SessionContentBlock } from "../cli/lib/session-content.js";
 import { isRecord } from "../shared/is-record.js";
 import { declaredPresent } from "../lib/declared-present.js";
 
@@ -11,11 +12,54 @@ const changeSchema = z.looseObject({
   kind: z.unknown().optional(),
 });
 
+/**
+ * Codex's own parse of a command (app-server `CommandAction`; the rollout's
+ * `parsed_cmd`, whose `list_files` is spelled `listFiles` here). Its `command`
+ * copy is dropped: the step already carries the command.
+ */
+const commandActionSchema = z.discriminatedUnion("type", [
+  z.looseObject({ type: z.literal("read"), name: z.string(), path: z.string() }),
+  z.looseObject({ type: z.literal("search"), query: z.string().nullable().optional(), path: z.string().nullable().optional() }),
+  z.looseObject({ type: z.enum(["listFiles", "list_files"]), path: z.string().nullable().optional() }),
+  z.looseObject({ type: z.literal("unknown") }),
+]);
+
+/** A Codex command action as a Bash step's `input.actions` carries it. */
+export type CodexCommandAction =
+  | { type: "read"; name: string; path: string }
+  | { type: "search"; query: string | null; path: string | null }
+  | { type: "listFiles"; path: string | null }
+  | { type: "unknown" };
+
+/**
+ * Codex's command actions in the step's shape, or null when absent or
+ * unreadable. One malformed action drops them all, so the step falls back to
+ * its command rather than describing part of it.
+ */
+export function codexCommandActions(raw: unknown): CodexCommandAction[] | null {
+  const parsed = z.array(commandActionSchema).min(1).safeParse(raw);
+  if (!parsed.success) return null;
+  return parsed.data.map((action): CodexCommandAction => {
+    switch (action.type) {
+      case "read":
+        return { type: "read", name: action.name, path: action.path };
+      case "search":
+        return { type: "search", query: action.query ?? null, path: action.path ?? null };
+      case "listFiles":
+      case "list_files":
+        return { type: "listFiles", path: action.path ?? null };
+      case "unknown":
+        return { type: "unknown" };
+    }
+  });
+}
+
 const codexToolItemSchema = z.discriminatedUnion("type", [
   z.looseObject({
     id: z.string(),
     type: z.literal("commandExecution"),
     command: z.string(),
+    commandActions: z.unknown().optional(),
   }),
   z.looseObject({
     id: z.string(),
@@ -100,6 +144,17 @@ export function codexDisplayCommand(command: string): string {
   return command;
 }
 
+/**
+ * The history block for a Codex agent message. Codex marks a message written
+ * between steps `commentary`: the same thing as Claude's progress update, so
+ * it becomes one and folds as a note.
+ */
+export function codexAgentMessageBlock(text: string, phase: string | null | undefined): SessionContentBlock {
+  return phase === "commentary" && text.trim() !== ""
+    ? { type: "thinking", text, progressUpdate: true }
+    : { type: "text", text };
+}
+
 /** One provider-owned conversion point used by both live streaming and history. */
 export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   const collab = collabToolCallSchema.safeParse(raw);
@@ -114,11 +169,12 @@ export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   }
   const item = parsed.data;
   if (item.type === "commandExecution") {
+    const actions = codexCommandActions(item.commandActions);
     return {
       type: "tool_use",
       id: item.id,
       name: "Bash",
-      input: { command: codexDisplayCommand(item.command) },
+      input: { command: codexDisplayCommand(item.command), ...(actions === null ? {} : { actions }) },
     };
   }
   if (item.type === "fileChange") {

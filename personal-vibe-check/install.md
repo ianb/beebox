@@ -10,8 +10,7 @@ A full static-analysis + formatting + pre-commit stack:
 - **Prettier** with matching formatting rules
 - **TypeScript** strict config (via `tsconfig.base.json`)
 - **Knip** for dead-code / unused-export / unused-dependency detection
-- **Madge** for circular-dependency detection
-- **Oxlint** as a supplemental fast linter
+- **Oxlint** as a supplemental fast linter, and (`import/no-cycle` only) for circular-dependency detection
 - **Husky + lint-staged** pre-commit hook (formats + lints staged files)
 - **Claude Code hook** (`PostToolUse`) that lints each file after it's edited/written
 
@@ -40,8 +39,8 @@ Concrete outputs, so you can evaluate whether to accept them:
 3. Creates `eslint.config.ts` importing `vibeCheck` (auto-detects React based on your `dependencies`).
 4. Creates `prettier.config.ts` re-exporting the shared Prettier config.
 5. Creates `tsconfig.json` extending `@ianbicking/personal-vibe-check/tsconfig.base.json` — only if no `tsconfig.json` exists.
-6. Creates `knip.json` with your entry point filled in, and `.madgerc` so `lint:circular` ignores type-only imports.
-7. Installs as devDependencies: `eslint@^9 prettier oxlint knip madge husky lint-staged`.
+6. Creates `knip.json` with your entry point filled in, and `.oxlint-cycles.json` so `lint:circular` runs only oxlint's cycle check and ignores type-only imports.
+7. Installs as devDependencies: `eslint@^9 prettier oxlint knip husky lint-staged`.
 8. Runs `npx husky init` and writes `.husky/pre-commit` with `npx lint-staged` + `npm run typecheck`.
 9. Adds a `PostToolUse` hook (`matcher: "Edit|Write"`, command: `npx vibe-check lint --hook`) to `.claude/settings.json`.
 10. Copies `conventions.md` into the project root and appends `@conventions.md` to the project's instruction file: an existing `CLAUDE.md`, else `AGENTS.md` (created if absent). Claude Code and Codex both read `AGENTS.md`; a `CLAUDE.md` beside it would make Claude Code ignore it.
@@ -60,7 +59,7 @@ Use the manual path instead of `vibe-init` when:
 
 ```bash
 npm install --save-dev @ianbicking/personal-vibe-check \
-  eslint@^9 prettier oxlint knip madge husky lint-staged
+  eslint@^9 prettier oxlint knip husky lint-staged
 ```
 
 ESLint must be pinned to v9 — v10 has breaking plugin incompatibilities. Other versions can float.
@@ -114,18 +113,17 @@ Remove `jsx` and `types` if the project has no JSX / no Node types. The base con
 
 Replace `src/index.ts` with the project's actual entry(ies). For a Vite/Next app, common entries include `src/main.tsx` or `src/app/**/page.tsx`.
 
-### 5b. Create `.madgerc`
+### 5b. Create `.oxlint-cycles.json`
 
 ```json
 {
-  "detectiveOptions": {
-    "ts": { "skipTypeImports": true },
-    "tsx": { "skipTypeImports": true }
-  }
+  "plugins": ["import"],
+  "categories": { "correctness": "off" },
+  "rules": { "import/no-cycle": ["error", { "ignoreTypes": true }] }
 }
 ```
 
-Without it, madge counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
+`lint:circular` runs oxlint with only this rule. Without `ignoreTypes`, it counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
 
 ### 6. Add `package.json` scripts
 
@@ -138,7 +136,7 @@ Without it, madge counts `import type` edges, so every type-only back-edge into 
     "format:check": "prettier --check src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "lint:circular": "oxlint -c .oxlint-cycles.json src/",
     "prepare": "husky"
   },
   "lint-staged": {

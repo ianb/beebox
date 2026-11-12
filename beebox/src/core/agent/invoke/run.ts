@@ -7,7 +7,6 @@
  * and translates the outcome into the public `AgentResult` shape.
  */
 
-import { fmt } from "../../../lib/format.js";
 import { buildAgentTimeContext } from "./simulated-clock.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { gitMvNudgeHook } from "../../sdk-hooks.js";
@@ -190,17 +189,14 @@ function emitRunBanner(
   const { onOutput } = options;
   const { isResume, maxTurns, systemPrompt, tzContext } = context;
   onOutput?.(
-    fmt.dim("$ ") +
-      fmt.cmd("claude-agent-sdk query") +
-      fmt.dim(
-        ` (model=${options.model ?? "default"} maxTurns=${maxTurns}${isResume ? ` resume=${options.resumeSessionId}` : ""})`,
-      ) +
+    "$ claude-agent-sdk query" +
+      ` (model=${options.model ?? "default"} maxTurns=${maxTurns}${isResume ? ` resume=${options.resumeSessionId}` : ""})` +
       "\n",
   );
   if (systemPrompt || tzContext) {
-    onOutput?.(`\n${fmt.dim("System prompt:")}\n${fmt.dim("─".repeat(40))}\n${systemPrompt}${tzContext}\n${fmt.dim("─".repeat(40))}\n\n`);
+    onOutput?.(`\nSystem prompt:\n${"─".repeat(40)}\n${systemPrompt}${tzContext}\n${"─".repeat(40)}\n\n`);
   }
-  onOutput?.(`${fmt.dim("User prompt:")}\n${fmt.dim("─".repeat(40))}\n${options.prompt}\n${fmt.dim("─".repeat(40))}\n\n`);
+  onOutput?.(`User prompt:\n${"─".repeat(40)}\n${options.prompt}\n${"─".repeat(40)}\n\n`);
 }
 
 /**

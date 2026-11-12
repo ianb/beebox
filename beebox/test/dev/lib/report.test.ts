@@ -35,6 +35,7 @@ const res = (id: string, initialTokens: number | null): TestResult => ({
     cardsNotUnderChecks: [],
     shouldReadChecks: [],
     shouldNotReadChecks: [],
+    readBeforeEditChecks: [],
     bashContainsChecks: [],
   },
 });

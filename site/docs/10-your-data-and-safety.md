@@ -6,10 +6,11 @@ description: "Where your data lives, what leaves the machine, and what the agent
 Your data lives in the **box**: one directory on your machine, kept under
 version control with git. There is no cloud service holding it. If you
 configure a remote copy of that history, each wakeup pass pushes the box's
-full history there. Credentials are kept in a machine-level store outside
+full history there. Encrypted backups, if you set them up, go to a destination
+you pick (see "What leaves the machine"). Credentials are kept in a machine-level store outside
 every box, and a box holds a grant to the ones you allow it to use.
 
-**What the agent may do.** The agent that runs a box (Claude Code or Codex)
+**What the agent may do.** The agent that runs a box (Claude Code, Codex, or pi)
 has full permissions: nothing restricts it to a fixed list of allowed
 actions. It can run any command on the machine, as the same user the box
 runs as, and read or write any file in the box. On a server or in the Docker
@@ -27,12 +28,13 @@ what it's allowed to do in response. Text written by someone else can try to
 steer it. The security
 documentation states plainly that there is no injection filter and no
 containment sandbox today. What reduces the risk is how you run it: a
-single-operator box, scheduled processing off until you enable it, and a few
-actions that refuse to proceed without a human present.
+single-operator box, connector syncs (the path outside content takes into the
+box) off until you enable them, and a few actions that refuse to proceed
+without a human present.
 
 **What leaves the machine.** Every agent turn sends its context to the model
 provider; there is no opt-out, because that is the product. If the owner
-chooses a GLM or OpenRouter model, that vendor is the provider for those
+chooses a GLM or OpenRouter model (the pi engine runs only OpenRouter models), that vendor is the provider for those
 turns, and its account settings govern retention (for OpenRouter, the
 upstream host can change per request and the box cannot pin it). Voice goes to a
 transcription vendor you configure. Quick chat, the thought box on the box
@@ -54,7 +56,15 @@ notifies you when something changes in the box sends the text of the changed
 cards to the same routing model, with a request that the provider not retain
 it; it needs the same OpenRouter key. Push to the iPhone app goes through
 Apple, and push to a browser through that browser's vendor; a notification
-carries a title, a short body, and where a tap should land. Google services,
+carries a title, a short body, and where a tap should land. Encrypted backups ([install/backups.md](install/backups.md)) send data only if
+you set them up, from Admin or the command line. A backup holds the box's git history and attachments, its
+secrets, and its agent conversation files, encrypted by restic before upload;
+the recovery password stays with you, and a lost password makes the backup
+unreadable. The operating-system user the box runs as holds the unattended
+password and the destination's access credentials, and so can the agent: if the
+destination permits deletion, a misled agent could delete backups. The
+documentation recommends a destination with versioning or immutability, and
+says a test restore is the final proof that a backup works. Google services,
 web push, and publishing send data only if you connect them. A
 published site is stored and served by the Cloudflare account you connect, and
 is visible to whoever has its address. Gmail access is limited to
@@ -70,8 +80,19 @@ unless the owner turns them on, because they include hashes of the lines each
 change adds.
 
 **Authentication is always on.** Every route sits behind a login wall, with
-no flag that disables it. A box with no member list is owner-only.
+no flag that disables it. A box with no member list is owner-only. Pages the
+web app serves refuse to be shown inside another site's frame. The processes a
+box starts (the agent, git, command-line tools) receive a reduced environment
+that leaves out the server's session-signing secret and other boxes'
+credentials. The security documentation calls that a guard against accidents
+and lazy exfiltration, not a boundary against a hostile agent, since the
+secret file is readable by anything running as the same user. One gap it lists
+as open: a box's own card-type definitions load inside the server process.
 
 Read [security/overview.md](security/overview.md) for the threat model,
-accepted risks, and known limitations, including that boxes on one machine
-share a system-level account and a browser security boundary.
+accepted risks, and known limitations, including that boxes served by one hub share a
+browser security boundary and, on a local machine, a system-level account. The
+maintainer's own server pipeline, which the documentation says is not a
+supported install path, now gives each box its own operating-system user and a
+service sandbox that hides sibling boxes' directories; the security overview
+had not yet been updated for that when this was written.

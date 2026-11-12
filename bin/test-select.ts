@@ -3,8 +3,14 @@
  *
  *   node --import tsx bin/test-select.ts            # one test path per line
  *   node --import tsx bin/test-select.ts --run      # run exactly those
+ *   node --import tsx bin/test-select.ts --why      # grouped by reason, with counts
+ *   node --import tsx bin/test-select.ts --json     # { files, reasons }
  *   node --import tsx bin/test-select.ts --base <ref>
  *   node --import tsx bin/test-select.ts --no-cache  # rebuild the graph
+ *
+ * A reason is the changed path that reached a test (it imports the path, or
+ * spawns a child that runs it), or a category: the test itself changed, or the
+ * graph cannot resolve it. The list form prints the largest groups on stderr.
  *
  * `pnpm test:changed` in beebox is the `--run` form, and it is the
  * agent's iteration command. `pnpm test` keeps its meaning: everything.
@@ -25,13 +31,14 @@ import { readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { estimateLines, estimateSeconds } from "./test-estimate.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 import { git, gitBranch, gitCommonDir } from "./lib/git.js";
 import { changedPaths, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
 import { hashFileset, ledgerPaths, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
 import { appendLedgerRecord, readRecords } from "./test-ledger.js";
-import { selectTests, spawnerEdges } from "./test-select-lib.js";
+import { reasonSummary, selectTests, spawnerEdges } from "./test-select-lib.js";
 import { carefulExclusions, taprcJobs } from "./test-tiers.js";
 
 const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
@@ -68,7 +75,8 @@ async function readCliBundleInputs(): Promise<Set<string> | null> {
 
 interface Args {
   base: string;
-  run: boolean;
+  /** How a selection is reported: one path per line, by reason, JSON, or run. */
+  mode: "list" | "why" | "json" | "run";
   cache: boolean;
 }
 
@@ -80,11 +88,29 @@ class MissingBaseRefError extends Error {
   }
 }
 
+/** More than one of `--run`, `--why`, `--json`. */
+class ConflictingModesError extends Error {
+  constructor(modes: string[]) {
+    super(`pick one of ${modes.join(", ")}`);
+    this.name = "ConflictingModesError";
+  }
+}
+
 function parseArgs(argv: string[]): Args {
   const baseIndex = argv.indexOf("--base");
   const base = baseIndex === -1 ? "main" : argv[baseIndex + 1];
   if (base === undefined) throw new MissingBaseRefError();
-  return { base, run: argv.includes("--run"), cache: !argv.includes("--no-cache") };
+  const modes = (["run", "why", "json"] as const).filter((mode) => argv.includes(`--${mode}`));
+  if (modes.length > 1) throw new ConflictingModesError(modes.map((mode) => `--${mode}`));
+  return { base, mode: modes[0] ?? "list", cache: !argv.includes("--no-cache") };
+}
+
+/** `--why`: each reason with its count, then its tests. */
+function whyLines(reasons: { reason: string; tests: string[] }[]): string[] {
+  return reasons.flatMap((group) => [
+    `${String(group.tests.length).padStart(5)}  ${group.reason}`,
+    ...group.tests.map((test) => `         ${packageRelative(test)}`),
+  ]);
 }
 
 /**
@@ -144,19 +170,7 @@ function runSelected(files: string[]): number {
   const binDir = join(REPO_ROOT, "node_modules/.bin");
   const result = spawnSync(
     process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(REPO_ROOT, "bin/test-ledger.ts"),
-      "run",
-      "--tier",
-      "ordinary",
-      "--mode",
-      "selected",
-      "--",
-      "tap",
-      ...files,
-    ],
+    binTsArgs("bin/test-ledger.ts", ["run", "--tier", "ordinary", "--mode", "selected", "--", "tap", ...files]),
     {
       cwd: PACKAGE_ROOT,
       stdio: "inherit",
@@ -186,10 +200,15 @@ export async function main(argv: string[]): Promise<number> {
   });
   const files = selection.selected.map(packageRelative);
 
+  if (args.mode === "json") {
+    const reasons = selection.reasons.map((group) => ({ ...group, tests: group.tests.map(packageRelative) }));
+    console.log(JSON.stringify({ files, reasons }, null, 2));
+    return 0;
+  }
   if (files.length === 0) {
     const [message, summary] = emptyRunLines();
     console.log(message);
-    if (!args.run) return 0;
+    if (args.mode !== "run") return 0;
     try {
       recordEmptyRun({
         changed,
@@ -204,9 +223,14 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const estimate = selectionEstimate(files);
-  if (!args.run) {
-    // stderr: stdout stays one path per line, which finish-preflight parses.
+  const estimate = [...selectionEstimate(files), `test-select: by reason: ${reasonSummary(selection.reasons, 3)}`];
+  if (args.mode === "why") {
+    for (const line of estimate) console.error(line);
+    for (const line of whyLines(selection.reasons)) console.log(line);
+    return 0;
+  }
+  if (args.mode === "list") {
+    // stderr: stdout stays one path per line for scripts that read it.
     for (const line of estimate) console.error(line);
     for (const file of files) console.log(file);
     return 0;

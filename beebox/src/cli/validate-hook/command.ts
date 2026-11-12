@@ -203,7 +203,7 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
     if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
     const summary = await lintMarkdownFiles([fp], { boxRoot });
     return {
-      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary, { colors: false }),
+      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary),
       hasErrors: summary.totalErrors > 0,
     };
   }
@@ -219,7 +219,7 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
   });
   const parts: string[] = [];
   if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
-    parts.push(formatLintResults(summary, { colors: false }));
+    parts.push(formatLintResults(summary));
   }
   if (stale !== null) parts.push(stale);
   return { feedback: parts.length === 0 ? null : parts.join("\n"), hasErrors: summary.totalErrors > 0 };

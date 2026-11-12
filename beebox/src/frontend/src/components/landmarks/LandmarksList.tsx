@@ -75,7 +75,7 @@ export function LandmarksList() {
   const [filter, setFilter] = useState("");
 
   if (list.isLoading || chats.isLoading) {
-    return <StatusMessage>Loading…</StatusMessage>;
+    return <StatusMessage busy>Loading…</StatusMessage>;
   }
   const error = list.error ?? chats.error;
   if (error) {
@@ -145,7 +145,7 @@ export function LandmarksList() {
        * the root, the one directory that always exists.
        */}
       {hasUnassigned && !filtering ? (
-        <Card padding="md" border="subtle" shadow>
+        <Card padding="md" border="subtle" shadow role="group" aria-label="Other chats">
           <Stack gap="md">
             <div className="flex items-center gap-3">
               <span className="text-4xl leading-none flex-shrink-0" aria-hidden>💬</span>

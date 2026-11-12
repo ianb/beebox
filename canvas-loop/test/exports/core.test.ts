@@ -4,14 +4,14 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 // Self-reference the package by its published name (what a sibling workspace
 // package does). That this file typechecks proves the "." export resolves for a
-// NodeNext consumer — including the type-only `Sketch` re-export from headless.
+// NodeNext consumer.
 import { Painter, SeededRandom, formatArgs } from "@ianbicking/canvas-loop";
-import type { Msg, ParamsDecl, Sketch } from "@ianbicking/canvas-loop";
+import type { Msg, ParamsDecl, Style } from "@ianbicking/canvas-loop";
 
 // Name the imported types so the compiler must resolve them (unused-var-safe).
 type _Msg = Msg;
 type _Params = ParamsDecl;
-type _Sketch = Sketch;
+type _Style = Style;
 
 test("core values are usable through the package name (self-reference)", () => {
   const a = new SeededRandom(42);

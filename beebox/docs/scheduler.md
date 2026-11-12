@@ -20,6 +20,8 @@ launchctl load ~/Library/LaunchAgents/com.beebox.scheduler.plist
 
 The daemon runs `bbx tick` every 60 seconds for each configured box. `bbx tick` checks all `_config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules and runs any that are due.
 
+`bbx tick --json` prints the result as one object with a record per script: `ran`, `skipped` with its `reason` (not due, disabled, budget exceeded, system busy, a deferral), `error` with its message, or `inconclusive`. The exit status is 0 whether or not a script errored (`bbx engine wakeup --skip-push` followed by `bbx tick` in the field-test day advance relies on that), so a caller reads `errorCount` or the records.
+
 Key behaviors:
 - **Config reload** — The box list is reloaded each cycle, so `bbx boxes add/remove` takes effect without restarting
 - **Error isolation** — One box failing doesn't affect others
@@ -58,6 +60,43 @@ Key behaviors:
   exit 1 for it: nothing found a defect, so gating a script on health must not
   report a healthy box as broken. The vocabulary is in
   `src/shared/inconclusive.ts`.
+
+## The job check
+
+Each pass, after the tick, runs a job check (`src/core/schedule/job-check/`).
+Every scheduled wakeup is connector-scoped, so a job card with no
+`connector:` (a question follow-up, scan or capture intake, a job an agent
+wrote) runs only in a full wakeup. The check starts one when:
+
+- an unscoped job with normal priority is in `_bookkeeping/jobs/` and its
+  working copy is its committed content (an untracked card or an uncommitted
+  edit is a write in progress; low-priority and connector-tagged jobs ride
+  along with any full wakeup);
+- the job is due: new, edited since its last attempt, or past its backoff
+  (+1 h after the first attempt, +6 h after the second, then daily);
+- neither the wakeup cycle lock nor the reactor lock is held;
+- fewer than 24 runs were started by the check today (box-local day).
+
+The run is `bbx engine wakeup --max-cycles 3`. On a unit host the pass asks the
+box server to start it (`wakeup.start`, through the hub, which starts an idle
+box), because the pass unit's children end with the pass; elsewhere the
+daemon's own process starts it. Either way the pass waits only until the run's
+child holds the cycle lock. The attempt and today's count are saved before the
+start, so a failed write starts nothing; a run that found the lock held or
+failed before taking it is refunded. A job is given
+up 7 days after the check first saw it; its card stays, and the
+`stalled-jobs` health check names it.
+
+State is `.beebox/job-check.json` (per job file: first sight, content hash,
+attempts, next time; per box: runs today), written under
+`.beebox/job-check.lock`. An unreadable file stops the check (it may hide
+today's count): nothing starts, and each pass with a waiting job logs a
+`state unreadable` line naming it. Deleting the file makes every waiting job
+due once more, with a new 7-day lifetime. Decisions are `job-check` lines in
+`scheduler.jsonl`, with `action` one of `started`, `not started`,
+`daily bound`, `gave up`, `skipped`, `state unreadable`, or `run ended` (the
+run's `ok`, `jobsProcessed`, `jobsRemaining`, and detail, written when it
+settles). An idle box costs one directory read and writes nothing.
 
 ## Configuration
 
@@ -127,7 +166,7 @@ Stderr goes to `~/.local/share/beebox/scheduler-stderr.log` (for crash diagnosti
 ## One pass, one box: `bbx engine scheduler pass`
 
 The daemon's per-box body (admission, the dirty-repo note, the heartbeat, the
-growth probe, the tick, the alerts) is `bbx engine scheduler pass <boxRoot>`
+growth probe, the tick, the job check, the alerts) is `bbx engine scheduler pass <boxRoot>`
 (`src/core/schedule/scheduler/pass.ts`). On a machine without units the daemon
 runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
 as `beebox-sched`, whose manifest is `/var/lib/beebox-sched/.config/beebox/boxes.json`,

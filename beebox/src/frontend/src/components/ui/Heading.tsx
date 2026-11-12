@@ -16,6 +16,6 @@ export interface HeadingProps {
 /** A section heading. Renders a real `h2`/`h3`, so the outline and the look stay in step. */
 export function Heading({ children, level, id, className, material }: HeadingProps) {
   const color = useMaterial(material) ? "text-card-ink" : "text-warm-900";
-  if (level === 2) return <h2 id={id} className={cn("text-lg font-semibold", color, className)}>{children}</h2>;
-  return <h3 id={id} className={cn("text-sm font-semibold", color, className)}>{children}</h3>;
+  if (level === 2) return <h2 id={id} className={cn("text-lg font-semibold text-balance", color, className)}>{children}</h2>;
+  return <h3 id={id} className={cn("text-sm font-semibold text-balance", color, className)}>{children}</h3>;
 }

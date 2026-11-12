@@ -40,6 +40,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../../shared/error-guards.js";
+import { serverSecret } from "../../lib/server-secrets.js";
 
 /** Cookie name. Mirrored in `docs/mobile-contract.md` §8 (mirrored constants). */
 export const MOBILE_COOKIE_NAME = "bbx_mobile";
@@ -92,7 +93,7 @@ export function deriveMobileSessionKey(hubSecret: string): string {
 /** The derived key when this process is a box unit on a unit host; null elsewhere. */
 function unitHostKey(): string | null {
   if (process.env.BBX_UNIT_HOST !== "1") return null;
-  const hubSecret = process.env.BBX_HUB_SECRET;
+  const hubSecret = serverSecret("BBX_HUB_SECRET");
   if (!hubSecret) return null;
   return deriveMobileSessionKey(hubSecret);
 }
@@ -156,6 +157,21 @@ function getOrCreateSecret(boxRoot: string): string {
   fs.writeFileSync(file, generated, { mode: 0o600 });
   secretCache.set(boxRoot, generated);
   return generated;
+}
+
+/**
+ * The box's cookie key, for another signed cookie that must verify wherever
+ * this one does (the box browser pass, `core/browser/pass.ts`). The caller
+ * derives its own subkey from it; never sign with it directly. The signing
+ * form creates the secret file when none exists, as minting does.
+ */
+export function boxCookieSigningKey(boxRoot: string): string {
+  return getOrCreateSecret(boxRoot);
+}
+
+/** The same key for verifying: null when the box never minted one. */
+export function boxCookieVerifyKey(boxRoot: string): string | null {
+  return readSecret(boxRoot);
 }
 
 function signature(key: string, payload: string): string {

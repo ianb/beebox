@@ -102,14 +102,6 @@ export interface DoctorDeps {
   engines: string;
   packageManager: string;
   resolveSdkBinary: () => string | null;
-  /**
-   * Loads better-sqlite3 and opens an in-memory database, resolving to a
-   * detail string. This is THE check that catches Node-ABI drift directly —
-   * a native module compiled against a different Node breaks at dlopen, and
-   * historically that surfaced as an opaque crash at first box boot rather
-   * than anything naming the cause.
-   */
-  loadBetterSqlite3: () => Promise<string>;
   /** Wall clock, injected so the schedules-heartbeat check is deterministic. */
   nowMs: number;
 }

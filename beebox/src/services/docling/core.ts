@@ -1,9 +1,10 @@
 /**
  * DoclingService — the slice of the Docling document extractor we drive.
  *
- * Docling is a Python tool; we shell out to it through `uvx` at a pinned
- * version (one cached uv environment per version, shared by every box on a
- * host because they all run as the same user). The interface is deliberately
+ * Docling is a Python tool; we run our driver (`convert.py`, beside this file)
+ * through `uvx` at a pinned version, one subprocess per document. The driver
+ * runs one conversion at a time per box and per host, and keeps memory down
+ * (D18); `subprocess.ts` builds its request and names how it ended. The interface is deliberately
  * one method: hand it a document and a scratch directory, get back either the
  * artifacts it produced or a human-readable reason it didn't. Extraction
  * failure is a *normal* outcome — the caller's job is to fall back to filing
@@ -21,23 +22,38 @@ import * as path from "node:path";
 import { err, ok, okVoid, type Result } from "../../shared/result.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { startAwakeTimeout } from "../../shared/awake-timeout.js";
+import * as os from "node:os";
 import { DOCLING_VERSION } from "./version.js";
 import { truncateTitle } from "../../core/file-summary.js";
+import {
+  classifyDoclingExit,
+  DOCLING_ENV,
+  doclingArgs,
+  doclingFailureMessage,
+  doclingLockPaths,
+  driverReason,
+  LOCK_ACQUIRED_MARKER,
+  LOCK_WAIT_SECONDS,
+  readOomKillCount,
+  conversionBudgetSeconds,
+  type DoclingRequest,
+} from "./subprocess.js";
+import { readPdfPageCount } from "../../core/pdf/probe.js";
 
 /**
- * Docling's own per-document budget, passed as `--document-timeout` (D6). It
- * covers conversion only, so the outer kill below is the one that also covers
- * model load and interpreter start.
+ * The outer kill, counted in *awake* time (D6), is Docling's own budget plus
+ * this slack: its `document_timeout` covers conversion only, not interpreter
+ * start, model load, or the page renders written afterwards. It starts when the
+ * driver holds its locks (D18); waiting has its own budget.
  */
-const DOCUMENT_TIMEOUT_SECONDS = 600;
+const PROCESS_SLACK_MS = 5 * 60 * 1000;
 
 /**
- * Outer kill, counted in *awake* time (D6). Larger than the inner budget
- * because a cold host still has to build the uv environment and load model
- * weights before conversion starts — but only by a few minutes: a run that has
- * not finished by then is stuck, not slow (boxholder review 2026-08-02).
+ * Budget from spawn until the driver holds its locks: its own lock wait plus a
+ * few minutes for a cold uv environment build. The driver gives up first
+ * (exit 75); this only catches a driver stuck before it could.
  */
-const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
+const WAIT_TIMEOUT_MS = (LOCK_WAIT_SECONDS + 5 * 60) * 1000;
 
 /** How much subprocess output travels into a failure message (which lands in a card's `error:`). */
 const ERROR_DETAIL_LIMIT = 400;
@@ -68,7 +84,7 @@ const MAX_EXTRACTION_BYTES = 512 * 1024 ** 2;
 /**
  * What OCR should do with this document. Three intents, not a boolean, because
  * "there is no text to read" and "the text there is unusable" want different
- * modes — see `doclingArgs`.
+ * modes — see `doclingRequest`.
  */
 export type DoclingOcr =
   /** Read the embedded text layer; run no OCR. */
@@ -120,53 +136,35 @@ function condense(text: string): string {
 }
 
 /**
- * Build the CLI invocation. Split out so the decisions log has one place to
- * point at and the tests can assert the exact argv without running anything.
+ * Build the driver's request. Split out so the decisions log has one place to
+ * point at and the tests can assert it without running anything.
+ *
+ * OCR mode depends on why we are OCRing (D7):
+ *
+ * `regions` feeds the layout's regions to the engine. Measured better on dense
+ * forms than full-page — on four scanned documents it never produced more
+ * run-together words and recovered up to 61% more of them.
+ *
+ * `replace` replaces the page's text wholesale (`full_page`), which is what a
+ * junk layer needs: `regions` leaves the existing layer in place around what it
+ * OCRs, so fragments of the garbage survive into the output.
+ *
+ * The engine is rapidocr, set in the driver. Languages only matter with OCR on.
  */
-export function doclingArgs(sourcePath: string, options: DoclingExtractOptions): string[] {
-  const args = [
-    "--from", `docling==${DOCLING_VERSION}`,
-    // rapidocr, not Docling's easyocr default. Scored against the page itself
-    // on a notarized form: rapidocr read 6/6 handwritten fields and produced
-    // no run-together words, where easyocr managed 5/6 and ran words together
-    // seven times on the same page. `uvx --with` keeps it in the throwaway
-    // environment, so the host needs nothing installed.
-    "--with", "onnxruntime",
-    "--with", "rapidocr",
-    "docling", "convert", sourcePath,
-    "--to", "md",
-    "--to", "json",
-    // Referenced mode is what makes page renders and figures land as real
-    // files instead of base64 inside the JSON (D4).
-    "--image-export-mode", "referenced",
-    "--table-mode", "fast",
-    // No GPU on the deploy target; `auto` would probe for one every run.
-    "--device", "cpu",
-    "--document-timeout", String(DOCUMENT_TIMEOUT_SECONDS),
-    "--output", options.workDir,
-    // Routine-success chatter is a bug (AGENTS.md); warnings/errors still print.
-    "-q",
-  ];
-  if (options.ocr === "off") {
-    args.push("--no-ocr");
-    return args;
-  }
-  // `--force-ocr` is deprecated in 2.117; `--ocr-mode` is the supported
-  // spelling (D7). Which mode depends on why we are OCRing:
-  //
-  // `regions` feeds the layout's regions to the engine. Measured better on
-  // dense forms than full-page — on four scanned documents it never produced
-  // more run-together words and recovered up to 61% more of them.
-  //
-  // `full_page` replaces the page's text wholesale, which is what a junk
-  // layer needs: `regions` leaves the existing layer in place around what it
-  // OCRs, so fragments of the garbage survive into the output.
-  args.push("--ocr", "--ocr-mode", options.ocr === "regions" ? "layout_regions" : "full_page");
-  args.push("--ocr-engine", "rapidocr");
-  if (options.languages && options.languages.length > 0) {
-    args.push("--ocr-lang", options.languages.join(","));
-  }
-  return args;
+export function doclingRequest(
+  sourcePath: string,
+  options: DoclingExtractOptions & { pages: number | null; env: NodeJS.ProcessEnv; homeDir: string; parentPid: number },
+): DoclingRequest {
+  return {
+    source: sourcePath,
+    outputDir: options.workDir,
+    ocr: options.ocr,
+    languages: options.ocr === "off" ? null : options.languages,
+    documentTimeoutSeconds: conversionBudgetSeconds(options.pages, options.ocr),
+    lockPaths: doclingLockPaths(options.env, options.homeDir),
+    lockWaitSeconds: LOCK_WAIT_SECONDS,
+    parentPid: options.parentPid,
+  };
 }
 
 /** Recursively collect every file under `dir` (Docling nests its artifacts dir). */
@@ -269,15 +267,20 @@ export async function checkExtractionBounds(extraction: DoclingExtraction): Prom
 }
 
 /**
- * Consume a subprocess output stream, keeping only its last
- * {@link OUTPUT_TAIL_BYTES}. The stream must be consumed either way (an
- * unconsumed pipe stalls the subprocess); this is what makes consuming it cheap.
+ * Consume the driver's output, keeping its tail, and call `onLocked` once when
+ * the driver reports it holds its locks. The marker is matched across chunk
+ * boundaries by checking the retained tail.
  */
-async function captureTail(stream: AsyncIterable<unknown> | undefined): Promise<string> {
+async function watchOutput(stream: AsyncIterable<unknown> | undefined, onLocked: () => void): Promise<string> {
   if (stream === undefined) return "";
   let tail = "";
+  let locked = false;
   for await (const chunk of stream) {
     tail = (tail + String(chunk)).slice(-OUTPUT_TAIL_BYTES);
+    if (!locked && tail.includes(LOCK_ACQUIRED_MARKER)) {
+      locked = true;
+      onLocked();
+    }
   }
   return tail;
 }
@@ -286,30 +289,54 @@ export function createDoclingService(): DoclingService {
   return {
     async extract(sourcePath, options): Promise<Result<DoclingExtraction>> {
       const controller = new AbortController();
+      let phase: "waiting" | "converting" = "waiting";
+      let timedOut: "waiting" | "converting" | null = null;
       // A plain multi-minute `setTimeout` fires the instant a sleeping laptop wakes
       // (beebox/AGENTS.md, startAwakeTimeout), which would kill a healthy extraction.
-      const budget = startAwakeTimeout({
-        timeoutMs: PROCESS_TIMEOUT_MS,
-        onTimeout: () => controller.abort(),
+      const startBudget = (timeoutMs: number) => startAwakeTimeout({
+        timeoutMs,
+        onTimeout: () => {
+          timedOut = phase;
+          controller.abort();
+        },
       });
+      let budget = startBudget(WAIT_TIMEOUT_MS);
       try {
-        const subprocess = execa("uvx", doclingArgs(sourcePath, options), {
+        const oomKillsBefore = await readOomKillCount();
+        // process.env is read only to find the uv/HF cache dirs for the lock paths; the child gets DOCLING_ENV.
+        const pages = await readPdfPageCount(sourcePath);
+        const request = doclingRequest(sourcePath, { ...options, pages, env: process.env, homeDir: os.homedir(), parentPid: process.pid });
+        const processTimeoutMs = request.documentTimeoutSeconds * 1000 + PROCESS_SLACK_MS;
+        const subprocess = execa("uvx", doclingArgs(request), {
           cancelSignal: controller.signal,
           reject: false,
-          // Docling prints model-loading progress on stderr even under -q.
+          env: DOCLING_ENV,
+          // Docling prints model-loading progress on stderr.
           all: true,
           // We read the output only to build a failure message, so stream it
-          // through `captureTail` instead of letting execa buffer all of it.
+          // through `watchOutput` instead of letting execa buffer all of it.
           buffer: false,
         });
-        const outputTail = captureTail(subprocess.all);
+        const outputTail = watchOutput(subprocess.all, () => {
+          budget.stop();
+          phase = "converting";
+          budget = startBudget(processTimeoutMs);
+        });
         const result = await subprocess;
         const output = await outputTail;
-        if (controller.signal.aborted) {
-          return err(`Docling did not finish within ${PROCESS_TIMEOUT_MS / 60_000} minutes and was stopped`);
-        }
-        if (result.exitCode !== 0) {
-          return err(`Docling exited ${String(result.exitCode)}: ${condense(output)}`);
+        const outcome = classifyDoclingExit({
+          exitCode: result.exitCode,
+          signal: result.signal,
+          timedOut,
+          oomKillsBefore,
+          oomKillsAfter: await readOomKillCount(),
+        });
+        if (outcome.kind !== "ok") {
+          return err(doclingFailureMessage({
+            outcome,
+            budgets: { waitMinutes: WAIT_TIMEOUT_MS / 60_000, convertMinutes: Math.round(processTimeoutMs / 60_000) },
+            detail: condense(driverReason(output) ?? output),
+          }));
         }
         const collected = await collectOutputs(options.workDir);
         if (!collected.ok) return collected;

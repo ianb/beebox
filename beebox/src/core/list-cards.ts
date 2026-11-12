@@ -52,6 +52,11 @@ const MARKDOWN_SKIP_DIRS = new Set([
  * Accepts a box-relative or absolute path (only the segment sequence matters).
  */
 export function isBuiltinLintableMarkdown(filePath: string): boolean {
+  return isAuthoredMarkdown(filePath) && !isAgentInstructionsFile(filePath);
+}
+
+/** {@link isBuiltinLintableMarkdown} without the instruction-file exclusion. */
+function isAuthoredMarkdown(filePath: string): boolean {
   if (!filePath.endsWith(".md")) return false;
   const parts = filePath.split(path.sep);
   if (parts.some((seg) => MARKDOWN_SKIP_DIRS.has(seg))) return false;
@@ -59,7 +64,7 @@ export function isBuiltinLintableMarkdown(filePath: string): boolean {
   for (let i = 0; i + 1 < parts.length; i++) {
     if (parts[i] === "docs" && parts[i + 1] === "generated") return false;
   }
-  return !isAgentInstructionsFile(filePath);
+  return true;
 }
 
 // Heavy dirs pruned during the walk itself (perf — never descend them). The
@@ -86,6 +91,21 @@ export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
   return files
     .filter((abs) => isBuiltinLintableMarkdown(path.relative(boxRoot, abs)))
     .toSorted();
+}
+
+/**
+ * Every authored `.md` file including agent instruction files (`AGENTS.md`,
+ * `CLAUDE.md`), absolute paths, sorted. `bbx mv` rewrites path mentions in
+ * these; lint and link validation keep using {@link listBoxMarkdownFiles}.
+ */
+export async function listBoxMarkdownFilesWithInstructions(boxRoot: string): Promise<string[]> {
+  const files = await glob("**/*.md", {
+    cwd: boxRoot,
+    nodir: true,
+    absolute: true,
+    ignore: MARKDOWN_WALK_PRUNE,
+  });
+  return files.filter((abs) => isAuthoredMarkdown(path.relative(boxRoot, abs))).toSorted();
 }
 
 /**

@@ -15,6 +15,7 @@ import { createGoogleCalendarConnector } from "../../src/connectors/google-calen
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
 import { contentHash } from "../../src/lib/content-hash.js";
 import ky from "ky";
+import { consoleLines } from "../helpers/console-lines.js";
 
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
@@ -35,7 +36,7 @@ async function throwCalendarHttpError(status: number, url: string): Promise<neve
 
 const PRIMARY = { id: "primary", summary: "Main", primary: true, accessRole: "owner" };
 
-const CAL_DIR = "_content/calendar";
+const CAL_DIR = "_content/calendar/Main.attach";
 
 // Boxes made by examples; the teardown removes them all.
 const boxes: Awaited<ReturnType<typeof makeTmpBox>>[] = [];
@@ -130,7 +131,7 @@ after(async () => {
 // A patch that comes back 404 is definitive: there is no event on Google to
 // patch, and no number of retries changes that. The edit used to sit in the
 // retry queue forever, re-patched and re-reported on every wakeup. Now the file
-// is stranded — moved to `_content/calendar/stranded/`, untracked, reported once.
+// is stranded — moved to `_content/calendar/Main.attach/stranded/`, untracked, reported once.
 void test("A patch that comes back 404 is definitive:", async (t) => {
   const box = await newBox();
   const inner = primaryCalendar([
@@ -159,13 +160,20 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
   inner.events = [];
 
   // The patch 404s. One try, then the file is stranded.
+  const warnings = consoleLines(t, "warn");
   const strandRun = await connector.sync();
+  // The sync log names the refusal, then says where the edit went:
+  t.check(warnings(), [
+    "  API error patching in primary: 404",
+    `  Failed to push local edit for ${file}, keeping the local file`,
+    `  Stranded ${file} — deleted on Google (HTTP 404); moved to stranded/`,
+  ]);
   const dir = join(box.root, CAL_DIR);
   t.check(
     ({
       success: strandRun.success,
       patchCalls,
-      blamed: strandRun.error?.includes(`_content/calendar/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
+      blamed: strandRun.error?.includes(`_content/calendar/Main.attach/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
       gone: (await icsNames(box)).includes(file),
       kept: (await readFile(join(dir, "stranded", file), "utf-8")).includes("MINE now"),
     }),
@@ -188,12 +196,12 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
   // Columns are status, path(s) — and the box package puts the box under
   // content/, so match by suffix rather than by a whole path.
   const rows = nameStatus.trim().split("\n").filter(Boolean).map((line) => line.split("\t"));
-  const vacated = rows.find((row) => row[1]?.endsWith(`_content/calendar/${file}`));
+  const vacated = rows.find((row) => row[1]?.endsWith(`_content/calendar/Main.attach/${file}`));
   // Git may record the move as a rename (R) or as a delete plus an add.
   const renamed = vacated?.[0]?.startsWith("R") === true
-    && vacated[2]?.endsWith(`_content/calendar/stranded/${file}`) === true;
+    && vacated[2]?.endsWith(`_content/calendar/Main.attach/stranded/${file}`) === true;
   const deletedAndAdded = vacated?.[0] === "D"
-    && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/stranded/${file}`));
+    && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/Main.attach/stranded/${file}`));
   t.check(
     ({
       tracked: Object.keys((await loadCalendarState(box.root)).eventFiles),
@@ -258,6 +266,8 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
   const file = await editFirst(box, { from: "SUMMARY:Lunch", to: "SUMMARY:Lunch MINE" });
   const dir = join(box.root, CAL_DIR);
 
+  const warnings = consoleLines(t, "warn");
+
   // First failure: reported, file kept, and the retry window opens.
   const firstFail = await connector.sync();
   const first = {
@@ -289,6 +299,15 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
     tracked: Object.keys((await loadCalendarState(box.root)).eventFiles).length,
     quiet: quietRun.error ?? null,
   };
+  // Each of the three failed patches logs the refusal and the file it keeps; the
+  // third run then logs the stranding with the last error named:
+  const refused = ["  API error patching in primary: 503", `  Failed to push local edit for ${file}, keeping the local file`];
+  t.check(warnings(), [
+    ...refused,
+    ...refused,
+    ...refused,
+    `  Stranded ${file} — not pushed for 7 days: HTTP 503; moved to stranded/`,
+  ]);
   t.check(({ first, second, third }), {
     first: {
       success: false,
@@ -335,8 +354,11 @@ void test("A push Google accepts inside the window closes it instead:", async (t
 
   const connector = connectAt(box, { calendar, now: () => clock });
   await connector.sync();
-  await editFirst(box, { from: "SUMMARY:Lunch", to: "SUMMARY:Lunch MINE" });
+  const file = await editFirst(box, { from: "SUMMARY:Lunch", to: "SUMMARY:Lunch MINE" });
+  const warnings = consoleLines(t, "warn");
   await connector.sync();
+  // The one refused patch is logged with the file whose edit stays:
+  t.check(warnings(), ["  API error patching in primary: 503", `  Failed to push local edit for ${file}, keeping the local file`]);
   const opened = await pendingSince(box, "evt-lunch primary");
 
   patchFails = false;
@@ -496,13 +518,16 @@ void test("Pushing a locally-created .ics is two steps:", async (t) => {
   await chmod(filePath, 0o444);
 
   const connector = connect(box, calendar);
+  const warnings = consoleLines(t, "warn");
   const first = await connector.sync();
+  // The sync log says Google has the event and the local file stayed as it was:
+  t.check(warnings(), [`  Pushed annotated.ics to Google but could not rewrite it locally: Error: EACCES: permission denied, open '${filePath}'`]);
   const state = await loadCalendarState(box.root);
   const entry = Object.values(state.eventFiles)[0];
   const afterFirst = {
     success: first.success,
     pushed: first.pushed?.length,
-    blamed: first.error?.includes("_content/calendar/annotated.ics (local-push, error)"),
+    blamed: first.error?.includes("_content/calendar/Main.attach/annotated.ics (local-push, error)"),
     remote: inner.events.map((e) => e.summary),
     tracked: {
       ids: Object.keys(state.eventFiles).length,
@@ -579,7 +604,10 @@ void test("The pending-edit pass patches Google and then rewrites the local file
   await chmod(filePath, 0o444);
 
   mode.quiet = true;
+  const warnings = consoleLines(t, "warn");
   const rewriteFailed = await connector.sync();
+  // The sync log says Google has the edit and the local file stayed as it was:
+  t.check(warnings(), [`  Pushed ${file} to Google but could not rewrite it locally: Error: EACCES: permission denied, open '${filePath}'`]);
 
   // The entry is still tracked, and its hash describes what Google accepted
   // rather than what is on disk — that mismatch is the retry.
@@ -587,7 +615,7 @@ void test("The pending-edit pass patches Google and then rewrites the local file
   const entry = state.eventFiles["evt-review primary"];
   const afterFailure = {
     success: rewriteFailed.success,
-    blamed: rewriteFailed.error?.includes(`_content/calendar/${file} (local-push, error)`),
+    blamed: rewriteFailed.error?.includes(`_content/calendar/Main.attach/${file} (local-push, error)`),
     remote: inner.events.map((e) => e.summary),
     tracked: {
       ids: Object.keys(state.eventFiles).length,
@@ -617,7 +645,7 @@ void test("The pending-edit pass patches Google and then rewrites the local file
       ],
       tracked: {
         ids: 1,
-        filename: "2026-06-05_t-review.ics",
+        filename: "2026-06-05_Review_t-review.ics",
         pending: true,
       },
     },

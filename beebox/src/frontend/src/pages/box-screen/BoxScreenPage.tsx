@@ -147,7 +147,7 @@ function BoxScreen({ boxSlug }: { boxSlug: string }) {
           )}
           {home.error === null ? null : <ErrorText>Could not load this box: {home.error.message}</ErrorText>}
           <BoxScreenSection id="bbx-box-screen-recent" title="Pick up where you left off">
-            {home.data === undefined ? <StatusMessage>Loading…</StatusMessage> : <RecentChatList chats={home.data.recentChats} boxSlug={boxSlug} />}
+            {home.data === undefined ? <StatusMessage busy>Loading…</StatusMessage> : <RecentChatList chats={home.data.recentChats} boxSlug={boxSlug} />}
           </BoxScreenSection>
           {home.data === undefined || home.data.shortcuts.length === 0 ? null : (
             <BoxScreenSection id="bbx-box-screen-shortcuts" title="Shortcuts">

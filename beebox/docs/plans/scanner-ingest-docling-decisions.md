@@ -271,3 +271,169 @@ WebP has a [16,383-pixel side limit](https://developers.google.com/speed/webp/fa
 Bound generated images proportionally to that limit without enlarging smaller
 images. This keeps unusually tall PDF pages extractable while retaining the
 original document and Docling coordinates.
+
+## D18. A Python driver bounds memory; one conversion at a time (2026-11-03)
+
+Supersedes the CLI half of D2 and the argv of D3, D4, and D7; their choices
+(pinned version, rapidocr, fast tables, CPU, 144-dpi page renders, figures on,
+OCR modes) are kept unchanged. Plan: [`docling-memory.md`](../implemented-plans/docling-memory.md).
+
+**Problem.** Two concurrent conversions stalled a hosted box at its 1 GiB
+`MemoryHigh`. Measured alone, one CLI conversion did not fit either. With
+`--image-export-mode referenced` the CLI turns on page and picture images,
+which makes the pipeline keep every page's 2x render until the document is
+assembled (`standard_pdf_pipeline.py:598`, about 14 MB a page). Batches of four
+pages and 100-page queues between stages add a spike on top.
+
+**Decision.** `core.ts` runs `convert.py` (beside it) through the same `uvx`
+environment. The driver builds the CLI's options for our flags, then changes
+only these: no page or picture images in the pipeline; layout, table and OCR
+batches of 1; `queue_max_size` 4; `MALLOC_ARENA_MAX=2`. After conversion it
+renders each page with the same backend call the pipeline uses, crops that
+page's figures, writes them, and frees the render. It saves JSON in placeholder
+mode with the file URIs already set, because referenced mode deep-copies the
+document and loads every image back in. The CLI exposes none of the batch or
+queue settings (`--page-batch-size` measured no effect).
+
+Before importing Docling, the driver takes a kernel `flock` on
+`$HOME/.cache/bbx-docling.lock` (per box on a hosted host, per user on a
+laptop), then on `$UV_CACHE_DIR/bbx-docling.lock` (host-wide). The kernel
+releases both when the driver exits, so a lock cannot expire while Docling
+runs or outlive it. The driver exits when its Node parent is gone. A wait over
+the longest conversion budget fails as "another conversion ran too long" (D19). A SIGKILL is reported as
+an out-of-memory kill only when the cgroup's `oom_kill` count rose.
+
+**Measurements.** Ubuntu 24.04 arm64 VM, 3 CPUs (prod is x86_64, 3 CPUs), each
+run in a fresh cgroup v2 child, peak anonymous memory sampled from
+`memory.stat`. Six public PDFs from a hosted box, described by shape:
+
+| PDF | CLI peak | Driver peak | CLI time | Driver time |
+|---|---:|---:|---:|---:|
+| 9-page digital, 1 figure | 1,398 MB | 851 MB | 19 s | 19 s |
+| 56-page digital, mostly tables, 31 figures | 2,320 MB | 1,125 MB | 176 s | 216 s |
+| 85-page digital, tables | 2,518 MB | 1,107 MB | 264 s | 285 s |
+| 122-page digital report | 3,398 MB | 1,025 MB | 457 s | 268 s |
+| 333-page digital manual | OOM-killed at a 3.5 GB cap after 110 s | 1,041 MB | — | 652 s |
+| 16-page 200-dpi scan, OCR `regions` | 2,048 MB | 1,562 MB | 135 s | 141 s |
+
+Where the driver's memory goes (56-page report): Python and Docling imports
+about 256 MB; layout and table models about 290 MB more; then a spike during
+inference. The table model accounts for about 370 MB of the spike and most of
+the time; with tables off the peak was 716 MB. On scans, RapidOCR's text
+detector adds about 900 MB at its peak: Docling OCRs at 3x, and the detector's
+`limit_type: min` never shrinks a large input. Changing that changes OCR output,
+so it waits for a quality comparison (D7, D15).
+
+Tried and not adopted: one inference thread or two (under 5%); chunking a
+large PDF with `page_range` and `DoclingDocument.concatenate` (no gain once
+page images leave the pipeline, and it changed text at 2 of 6 chunk boundaries,
+where Docling joins paragraphs across pages); the pypdfium2 backend and
+disabling torch compile (no measurable gain).
+
+**Output.** Byte-identical to the CLI for the same options on every PDF above
+that the CLI could finish: the same page and figure file names, which carry a
+SHA-256 of the pixels, the same markdown, and the same JSON apart from file
+paths. On macOS, where the CLI has the memory to finish, the 333-page manual
+and the scan with OCR `replace` and a language override were identical too.
+Deliberate difference: when Docling ends with a status other than
+success, the CLI exits 0 with no files; the driver exits 1 with the status and
+Docling's errors.
+
+**Acceptance, beside a box.** One cgroup with `memory.high` 2G and
+`memory.max` 2560M, 3 GB of swap, a 550 MB stand-in for the box server and a
+chat (it touches all its memory every 200 ms and records each pass), and the
+driver:
+
+| PDF | Cgroup peak | Swap | Memory stall (full) | Time | Stand-in p99 / worst pass |
+|---|---:|---:|---:|---:|---:|
+| 333-page digital manual | 1,593 MB | 0 | 0 s | 539 s | 939 ms / 4.1 s |
+| 16-page scan, OCR `regions` | 2,051 MB | 220 MB | about 1 s, 63 throttle events | 100 s | 601 ms / 0.8 s |
+
+The stand-in alone passes in 189 ms p99, 239 ms worst. Its slower passes
+during the manual came with zero memory pressure, so they are CPU contention:
+Docling runs four inference threads on three cores. Fewer threads might help
+co-tenants (two threads measured slightly faster on the 56-page report) but
+can change floating-point results, so it needs its own output comparison.
+
+**Limits.** 2 GiB per box (`MemoryHigh=2G`; with it, proposed `MemoryMax=2560M`
+and `OOMPolicy=continue`) fits one conversion beside the box server and a chat
+(about 550 MB). If the OOM killer picks the `bbx` process that waits on Docling
+rather than Docling itself, no card error is written; the journal has the kill.
+Agent subprocesses now inherit `UV_CACHE_DIR` and `HF_HOME`: before this they
+built a private uv environment and model cache per box (6.4 GB and 506 MB on
+one box) and would have missed the host lock.
+
+**Revisit:** on every Docling upgrade, repeat the comparison: run the CLI and
+the driver on the same PDFs and compare artifact names, markdown, and JSON. If
+upstream exposes batch and queue sizes on the CLI, the driver can go.
+
+## D19. Conversion budgets scale with page count (2026-11-03)
+
+Supersedes D6's numbers; its two-timeout shape is kept. A flat 10 minutes
+(Docling's `document_timeout` 600 s and the outer awake kill) stopped three
+prod conversions, including a 333-page manual and an 84-page report. D18's
+batches of one also made table-heavy PDFs 10-20% slower.
+
+Now `core.ts` reads the page count with `pdfinfo` before it starts the driver
+and sets Docling's budget to 5 minutes plus 10 s a page (30 s a page with OCR),
+capped at 90 minutes; an unknown count gets the cap
+(`conversionBudgetSeconds` in `services/docling/subprocess.ts`). The outer
+kill is that budget plus 5 minutes for interpreter start, model load, and the
+page renders written after conversion, and starts when the driver holds its
+locks. The lock wait is 2 hours: the cap, that slack, and a margin. One long
+conversion ahead never refuses a queued PDF; two at the cap can, and the card
+then says it waited too long.
+
+Basis: the D18 VM measured about 2-3.5 s a page for digital PDFs and 9 s a
+page with OCR, on three cores to itself. Prod shares three cores across seven
+boxes, so the per-page figures carry about 3x headroom. **Revisit:** when a
+prod conversion's real duration is known (the card records none today), or if
+a legitimate document hits the cap.
+
+## D20. RapidOCR's detector no longer enlarges small regions (2026-11-03)
+
+The driver passes `rapidocr_params = {"Det.limit_type": "max",
+"Det.limit_side_len": 2000}`. RapidOCR's default (`limit_type: min`, 736)
+enlarges every image until its short side is 736 px before text detection. A
+full-width one-line layout region, which RapidOCR's preprocessing makes about
+2000 x 32 px, was therefore detected at about 46,000 x 736 px. With the new
+setting the detector reads at most 2000 px a side, which is the cap RapidOCR
+already applies to every input (`Global.max_side_len`), so large regions and
+the images recognition reads are unchanged. OCR modes (D7) and the engine are
+unchanged.
+
+Scored on two degraded scans made from digital government reports, whose text
+layer is the reference: ten prose pages and ten table pages, rendered at
+200 dpi, tilted under a degree, blurred, noised, and JPEG-compressed. Recall is
+the share of reference words found; run-together words are output tokens that
+split into two reference words (D7's measure). The real scan has no reference;
+its column is the share of words shared with the old output.
+
+| Setting | Prose recall, run-together | Table recall | Real 16-page scan | Peak: prose scan / real scan |
+|---|---:|---:|---:|---:|
+| Default | 0.951, 29 | 0.921 | (reference) | 1,634 / 1,558 MB |
+| **Detector max 2000** | **0.953, 26** | **0.922** | **99.6%** | **1,218 / 1,555 MB** |
+| Detector max 1280 | 0.948, 24 | 0.900 | 97.2% | 1,173 / 1,342 MB |
+| Global max 1280 | 0.964, 4 | 0.933 | 97.7% | 1,514 / 1,369 MB |
+| OCR render at 2x | 0.971, 1 | 0.916 | 97.2% | 1,603 / 1,250 MB |
+
+The two synthetic fixtures (`scan-financial`, `junk-layer-legal`) scored 1.000
+under every setting. OCR time fell about 20%.
+
+Not taken: a global cap of 1280 scored best on these letter-size scans, but
+RapidOCR's recognizer then reads the shrunken image too, so a large-format
+page is read at about 75 dpi, and a full-width region under about 23 px tall
+resizes to zero height and raises an error (cross-model review). A detector
+cap of 1280 lost table recall. Rendering at 2x lost table recall.
+
+Accepted edge: a region about 15 px wide and 2000 px tall (at 216 dpi, a
+5-pt-wide vertical strip) now resizes to zero width in the detector and yields
+no text. Before, the same strip was enlarged to about 92,000 x 736 px, the
+pattern this entry removes. At most it holds a single column of tiny vertical
+text (cross-model review, round 2).
+
+Still open: the real scan's peak stays near 1.6 GB, from the detector on large
+full-page regions; see `issues/closed/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md`.
+On table-heavy scans the larger cost is TableFormer: turning OCR off left
+1,622 MB on the table scan, and turning table structure off as well left
+660 MB (`issues/bugs/2026-11-03-tableformer-memory-on-scanned-tables.md`).

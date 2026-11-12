@@ -45,6 +45,8 @@ import {
 } from "../workstreams-app/src/server/main/issue-next-actions.js";
 import { emitJson, issueLine, reportHits } from "./issues-output.js";
 import { activateDueRepositories } from "./deferred-issues.js";
+import { commandClose } from "./issues-close.js";
+import { DocMoveError } from "./lib/doc-move.js";
 
 const USAGE = `bin/issues — survey and search the issue queue
 
@@ -59,6 +61,10 @@ const USAGE = `bin/issues — survey and search the issue queue
   issues next-action <issue> <value> [--message <text>] | --message <text>
                                            set a request (replaces any existing one)
   issues next-action <issue> --clear       remove it after acting on it
+  issues close <issue> --resolution <implemented|wontfix|superseded> --note <text>
+         [--workstream <name>] [--dry-run]
+                                           move into closed/<category>/, set resolution and
+                                           workstream, add the note, rewrite every reference
 
 Status (every subcommand):  default open only, --closed only closed, --all both.
 Filters: --category --area --label --workstream --discovered-in --needs
@@ -73,6 +79,9 @@ similar: --docs  also rank ${DOCS_SUBDIR}/**/*.md as prior art
 next-action: requests live in a local store outside git (dev-issue-actions/
          beside the main checkout; BBX_ISSUE_ACTIONS_ROOT overrides). Values:
          ${issueNextActionSchema.options.join(" ")}
+close:   --workstream defaults to the worktree branch's name; off one, it is left as is.
+         Relative links in --note are written from the closed location.
+         Prints each rewritten reference; "check by hand" lines go to stderr.
 Common:  --json  --limit N  --rebuild (discard .issues-index/ first)
 
 Embeddings key, first match wins: BBX_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,
@@ -281,6 +290,7 @@ async function main(): Promise<void> {
     case "show": return commandShow(values, rest);
     case "activate-due": return commandActivateDue(values);
     case "next-action": return commandNextAction(values, rest);
+    case "close": return commandClose(values, rest);
     default: throw new UnknownSubcommandError(command);
   }
 }
@@ -288,7 +298,7 @@ async function main(): Promise<void> {
 try {
   await main();
 } catch (error) {
-  if (error instanceof UsageError) {
+  if (error instanceof UsageError || error instanceof DocMoveError) {
     process.stderr.write(`issues: ${error.message}\n`);
     process.exitCode = 2;
   } else {

@@ -77,7 +77,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ),
         photos: PhotosExporter(ledgerDirectory: Paths.support.appending(path: "photos", directoryHint: .isDirectory)),
         hostName: Host.current().localizedName ?? "mac",
-        oldUploaderPlist: OldUploaderCheck.plistURL(home: Paths.home),
         now: { Date() },
         notify: UploadNotifications.post
     )

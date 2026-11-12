@@ -20,6 +20,7 @@ import { assertNever } from "../shared/invariant.js";
 import { createEventBus } from "./event-bus/core.js";
 import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
 import { formatTarget, targetUrl } from "./notification/target.js";
+import { targetProblem, UnsendableTargetError } from "./notification/target-check.js";
 import { appendDelivery, appendIntent } from "./notification/log.js";
 import { channelsToTry, type ChannelPlan } from "./notification/channels.js";
 import { livePresence, type Presence } from "./notification/presence.js";
@@ -238,6 +239,9 @@ export async function planNotification(
 }
 
 export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): Promise<NotifyResult> {
+  // Before the log line: a refused target is never written or sent.
+  const problem = await targetProblem(boxRoot, request.intent.target);
+  if (problem !== null) throw new UnsendableTargetError(problem);
   const now = request.now ?? getBoxTime(boxRoot);
   const services = request.services ?? {};
   const input = request.intent;
@@ -266,4 +270,46 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   // A send restricted to one channel is a test of that channel: the banner does not stand in for it.
   const shown = emitted && request.channel === undefined && intent.loudness !== "dot" && presence.activeWeb > 0;
   return { id: intent.id, deliveries, shown };
+}
+
+/**
+ * Where a sweep sends from: this process ({@link inProcessSender}), or the box
+ * server (`cli/lib/notify-route.ts` `routedSender`), which holds the channel
+ * keys a box-spawned process does not.
+ */
+export interface NotifySender {
+  send(request: NotifyRequest): Promise<NotifyResult>;
+}
+
+/** Send in this process, with `services` for any request that names none. */
+export function inProcessSender(boxRoot: string, services?: NotifyServices): NotifySender {
+  return {
+    send: (request) => notifyBoxholder(boxRoot, { ...request, services: request.services ?? services }),
+  };
+}
+
+/** The skip details the channel code writes (`notification/intent.ts`). */
+const SKIP_DETAILS: ReadonlySet<string | undefined> = new Set(["present", "no-audience", "unconfigured"]);
+
+/**
+ * Whether a latch may record this send. Sent when it reached someone, or when
+ * every delivery skipped `no-audience` (nobody to reach, so a retry cannot
+ * help). A `failed` delivery, an `unconfigured` skip (keys missing in the
+ * sending process, which a later send may not share), or an unknown skip
+ * detail is not sent.
+ */
+export function notificationSent(result: NotifyResult): boolean {
+  if (notificationReached(result)) return true;
+  for (const d of result.deliveries) {
+    if (d.status === "skipped" && !SKIP_DETAILS.has(d.detail)) {
+      console.warn(`[notify-boxholder] unknown skip detail on ${d.channel}: ${d.detail ?? "(none)"}; treated as not sent`);
+    }
+  }
+  return result.deliveries.every((d) => d.status === "skipped" && d.detail === "no-audience");
+}
+
+/** One line for a log: each delivery's channel, status, and detail. */
+export function describeDeliveries(result: NotifyResult): string {
+  const parts = result.deliveries.map((d) => `${d.channel} ${d.status}${d.detail === undefined ? "" : ` (${d.detail})`}`);
+  return parts.join(", ") || "no channel tried";
 }

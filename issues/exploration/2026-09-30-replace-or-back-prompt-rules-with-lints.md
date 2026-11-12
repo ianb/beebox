@@ -62,3 +62,5 @@ Some may already be enforced by the preset, a third-party plugin
 
 Related: [architectural boundary lints](2026-07-24-architectural-boundary-lints.md),
 [review all prompts](../docs-and-chores/2026-03-16-review-all-prompts.md).
+
+Re-reviewed 2026-10-30: no-default-params and max-params 2 are already lint rules; the lockfile import, box-time, awake-timeout and barrel-file candidates still have no lint.

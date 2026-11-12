@@ -5,7 +5,7 @@
 // `<user-selection>` tag. The agent reads it as a rough locator, not an exact
 // offset. Clauses are omitted when their part is null.
 //
-// The DOM-walking half (`extractSelection`) is verified in the browser, since
+// The DOM-walking half (`extractPointSelection`) is verified in the browser, since
 // it depends on the live rendered document; this covers the pure formatter.
 
 import { test } from "tap";

@@ -27,11 +27,9 @@ import {
   trailerValues,
   workstreamFromBranch,
 } from "./commit-provenance.js";
+import { binTsArgs, TSX_IMPORT as TSX } from "./lib/bin-ts.js";
 
 const SCRIPT = fileURLToPath(new URL("commit-provenance.ts", import.meta.url));
-// Absolute: node resolves a bare `--import tsx` against the CWD, and every
-// subprocess here runs inside a throwaway repo with no node_modules.
-const TSX = import.meta.resolve("tsx");
 const tmpRoots: string[] = [];
 
 after(() => {
@@ -61,7 +59,7 @@ interface Run {
 
 /** Run the script as the hooks do — a real subprocess, cwd inside the repo. */
 function run(cwd: string, args: string[]): Run {
-  const result = spawnSync("node", ["--import", TSX, SCRIPT, ...args], {
+  const result = spawnSync(process.execPath, binTsArgs(SCRIPT, args), {
     cwd,
     encoding: "utf8",
     env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" },

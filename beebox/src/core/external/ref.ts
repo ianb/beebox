@@ -15,6 +15,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isWithin } from "../../lib/box-containment.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 /** Base for every external-ref resolution failure; carries the offending value. */
 export class ExternalRefError extends Error {
@@ -116,7 +117,7 @@ function lastModifyingCommit(absPath: string): string | null {
     const out = execFileSync(
       "git",
       ["-C", path.dirname(absPath), "log", "-1", "--format=%h", "--", path.basename(absPath)],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: gitEnvironment() },
     ).trim();
     return out === "" ? null : out;
   } catch (_e) {

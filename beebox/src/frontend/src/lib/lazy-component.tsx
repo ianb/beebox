@@ -73,7 +73,7 @@ function makeLazy<M, P extends object>(load: () => Promise<M>, options: { pick: 
 // Returns a plain function component, not `ComponentType<P>`: that union includes class
 // components, which a narrower-props `ComponentType` slot (`renderers/view.tsx`) rejects.
 export function lazyComponent<M, P extends object>(load: () => Promise<M>, pick: (module: M) => ComponentType<P>): (props: P) => ReactElement {
-  return makeLazy(load, { pick, fallback: () => <StatusMessage>Loading…</StatusMessage> });
+  return makeLazy(load, { pick, fallback: () => <StatusMessage busy>Loading…</StatusMessage> });
 }
 
 /**

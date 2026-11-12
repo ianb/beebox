@@ -9,6 +9,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
@@ -44,8 +45,8 @@ const SCRIPT = {
 
 async function configureBox(box: TmpBox) {
   await box.write(".gitignore", GITIGNORE);
-  await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
-  await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+  await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
+  await box.write("_config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
   box.commitAll("configure fake transcription");
 }
 
@@ -85,12 +86,15 @@ void test("An open session with media, untouched for over an hour, is CAS-sealed
   // Advance the clock past the window and sweep, firing (and awaiting) prepare.
   process.env.BBX_TIME = LATE;
   let prep = Promise.resolve();
+  const warnings = consoleLines(t, "warn");
   const result = await sweepAbandonedCaptures({
     boxRoot: box.root,
     firePreparation: (sweptId) => { prep = prepareCaptureSession({ boxRoot: box.root, id: sweptId, eventBus, registry }); },
   });
   await prep;
   await tick();
+  // The prepare log notes the capture had no target chat:
+  t.check(warnings(), [`[capture] Capture has no target session; falling back to the most-active session for box=${box.root}`]);
 
   t.check(result, { sealed: [id], refired: [], discarded: [], staleFailed: [], staleTmpCaptureCards: [] });
 
@@ -110,17 +114,18 @@ images:
 audio-clips:
   - attach/audio-001.audio.card
 partial: true
-transcription-failed: true
 delivered: true
 ---
+Note
+«blankline»
 [photo-001](attach/photo-001.image.card)
 «blankline»
-[audio clip 1 not transcribed]`);
+to self.`);
 
   const sent = eventBus.readSince(0).find((e) => e.event === "chat-user-message");
   const msg = eventSchemas["chat-user-message"].parse(sent?.data).message;
-  t.checkText(msg, `<capture doc="${docRel}" images="1" audio="0:00" partial="1" transcription-failed="1">
-1 photo
+  t.checkText(msg, `<capture doc="${docRel}" images="1" audio="0:03" partial="1">
+Note to self.
 </capture>`);
 
   // The staging media was cleaned up once delivered:
@@ -156,7 +161,10 @@ void test("Empty orphans discarded, fresh sessions untouched, stale failures war
   await addPhoto({ boxRoot: box.root, id: fresh.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
 
   // Sweep with no firePreparation (the seal-only path): sealing still happens.
+  const warnings = consoleLines(t, "warn");
   const result = await sweepAbandonedCaptures({ boxRoot: box.root });
+  // The sweep log lists the failed capture a person has to look at:
+  t.check(warnings(), [`[capture] Sweep found 1 stale failed capture(s) needing attention (not auto-retried): ${failed.id}`]);
 
   t.check(result, { sealed: [], refired: [], discarded: [empty.id], staleFailed: [failed.id], staleTmpCaptureCards: [] });
 

@@ -10,8 +10,8 @@ import { Row } from "../ui/Row";
 import { Card } from "../ui/Card";
 import { Heading } from "../ui/Heading";
 import { Text } from "../ui/Text";
-import { Notice } from "../ui/Notice";
-import { GoogleConnectLink } from "./GoogleConnectLink";
+import { GoogleServiceProblem } from "./GoogleConnectLink";
+import { StatusMessage } from "../ui/StatusMessage";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
 
@@ -26,7 +26,7 @@ export function CalendarSection() {
 
   const calendars = calendarsQuery.data;
   const config = configQuery.data;
-  const error = calendarsQuery.error?.message ?? configQuery.error?.message ?? null;
+  const error = calendarsQuery.error ?? configQuery.error;
 
   const [daysBack, setDaysBack] = useState<number | null>(null);
   const [daysForward, setDaysForward] = useState<number | null>(null);
@@ -78,8 +78,7 @@ export function CalendarSection() {
     return (
       <Card material padding="lg" border="none" shadow>
         <Heading level={2} className="mb-4">Google Calendar</Heading>
-        <Notice tone="warning">{error}</Notice>
-        <GoogleConnectLink id="bbx-settings-calendar-connect-google" />
+        <GoogleServiceProblem error={error} id="bbx-settings-calendar-connect-google" service="Calendar" />
       </Card>
     );
   }
@@ -88,7 +87,7 @@ export function CalendarSection() {
     return (
       <Card material padding="lg" border="none" shadow>
         <Heading level={2} className="mb-4">Google Calendar</Heading>
-        <Text as="p" size="sm" tone="muted">Loading calendars...</Text>
+        <StatusMessage variant="inline" busy>Loading calendars…</StatusMessage>
       </Card>
     );
   }

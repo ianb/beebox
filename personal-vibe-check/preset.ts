@@ -1,11 +1,16 @@
 import type { Linter } from "eslint";
-import type { VibeCheckOptions, vibeCheck as DeclaredVibeCheck } from "./types";
-import { allRulesOffFrom, baseConfig } from "./preset/base-config.ts";
+import type {
+  VibeCheckOptions,
+  vibeCheck as DeclaredVibeCheck,
+  outlineNeedsFocusStyle as DeclaredOutlineNeedsFocusStyle,
+} from "./types";
+import { baseConfig } from "./preset/base-config.ts";
 import { disabledRules } from "./preset/disabled-rules.ts";
 import { enabledRules } from "./preset/enabled-rules.ts";
 import { globalOverrides } from "./preset/global-overrides.ts";
 import { mainPlugins } from "./preset/main-plugins.ts";
 import { reactRules } from "./preset/react-rules.ts";
+import { outlineNeedsFocusStyle } from "./preset/restricted-class-entries.ts";
 import { tsxOverride } from "./preset/tsx-overrides.ts";
 
 // The rule choices and their rationale comments live in `preset/`, one module
@@ -27,8 +32,6 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
   const roots = options?.roots ?? ["src"];
   const restrictClassesOptions = options?.restrictComponentClasses ?? null;
 
-  const allRulesOff = allRulesOffFrom(baseConfig);
-
   const exts = "{ts,tsx,js,jsx}";
   const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 
@@ -42,7 +45,6 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       plugins: mainPlugins(react),
       settings: react ? { react: { version: "detect" } } : {},
       rules: {
-        ...allRulesOff,
         ...enabledRules,
         ...(react ? reactRules : {}),
         ...disabledRules,
@@ -56,6 +58,8 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
     ...(react ? [] : [tsxOverride]),
   ];
 }
+
+export { outlineNeedsFocusStyle };
 
 // Default export for backward compatibility
 export default vibeCheck;
@@ -85,4 +89,8 @@ const _parametersMatch: MutuallyAssignable<
 const _returnTypeMatches: MutuallyAssignable<
   ReturnType<typeof vibeCheck>,
   ReturnType<typeof DeclaredVibeCheck>
+> = true;
+const _outlineEntryMatches: MutuallyAssignable<
+  typeof outlineNeedsFocusStyle,
+  typeof DeclaredOutlineNeedsFocusStyle
 > = true;

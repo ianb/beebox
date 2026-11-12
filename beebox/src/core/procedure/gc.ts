@@ -14,7 +14,6 @@ import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { commitPaths, pathsHaveChanges } from "../../lib/git/core/operations.js";
 import { getBoxDir, BOX_DIRS } from "../../lib/paths/core.js";
-import { fmt } from "../../lib/format.js";
 import { parseDuration } from "../../scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule/running-procedures.js";
 import { ok, type Result } from "../../shared/result.js";
@@ -129,7 +128,7 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ rem
         continue;
       }
       if (expiry === "invalid") {
-        ctx.writeLine(fmt.warn(`Unparseable expires on ${dirName} — keeping`));
+        ctx.writeLine(`Unparseable expires on ${dirName} — keeping`);
         kept++;
         continue;
       }
@@ -154,7 +153,7 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ rem
         trailers: { "Commit-Source": "procedure-gc" },
       });
     }
-    ctx.writeLine(fmt.ok(`Removed ${removed.length} expired run dir(s)`));
+    ctx.writeLine(`✓ Removed ${removed.length} expired run dir(s)`);
   }
 
   return ok({ removed });

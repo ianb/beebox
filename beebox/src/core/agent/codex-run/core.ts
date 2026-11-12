@@ -2,7 +2,6 @@
 
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { fmt } from "../../../lib/format.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { buildTimezoneContext, loadCodexTelemetry } from "../../box/config.js";
 import type { AgentResult } from "../types.js";
@@ -56,8 +55,13 @@ function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): 
   return signal ? AbortSignal.any([signal, limit]) : limit;
 }
 
-async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv | undefined> {
-  return options.env === undefined ? undefined : buildScriptEnv(options.boxRoot, options.env);
+/**
+ * Always the agent profile. With no `env` option the Codex SDK copies all of
+ * `process.env` into the CLI, which handed a Codex job the server's
+ * credentials (`lib/credential-env.ts`).
+ */
+async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv> {
+  return buildScriptEnv(options.boxRoot, options.env);
 }
 
 /** The box guidance Codex does not load itself (`@` includes), or nothing for a run without box context. */
@@ -68,6 +72,9 @@ async function includedBoxContext(boxRoot: string, loadBoxContext: boolean): Pro
     boxRoot,
   });
 }
+
+/** An unattended run has nobody to press stop, so its turn ends after ten minutes. */
+const CODEX_AGENT_TURN_TIMEOUT_MS = 600_000;
 
 /** Codex cannot list tools, so only an empty list (a prompt-only pass) changes the run. */
 function isPromptOnly(tools: string[] | undefined): boolean {
@@ -100,7 +107,7 @@ export async function runCodexAgent(
     const readOnly = isPromptOnly(options.tools);
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(
-        `${fmt.warn("Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.")}\n`,
+        "Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.\n",
       );
     }
     const env = await invocationEnv(options);
@@ -114,6 +121,7 @@ export async function runCodexAgent(
       analytics: (await loadCodexTelemetry(options.boxRoot)) === "on",
       loadProjectDocs: loadBoxContext,
       readOnly,
+      turnTimeoutMs: CODEX_AGENT_TURN_TIMEOUT_MS,
     });
     const changedPaths = new Set<string>();
     let toolCount = 0;
@@ -161,7 +169,7 @@ export async function runCodexAgent(
         onOutput: options.onOutput,
       });
     } catch (error) {
-      options.onOutput?.(`${fmt.warn(`Could not record Codex token usage: ${errorMessage(error)}`)}\n`);
+      options.onOutput?.(`Could not record Codex token usage: ${errorMessage(error)}\n`);
     }
     const validation = await validateHookPathsResult([...changedPaths]);
     if (validation.feedback !== null && !validation.hasErrors) {

@@ -38,7 +38,16 @@ export type ChatEvent =
   | { type: "STREAM_LOST"; reason: string }
   | { type: "REFRESH" }
   | { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }
-  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string }
+  | { type: "OTHER_USER_MESSAGE"; message: string; userName: string; timestamp: string; messageId?: string }
+  // The box dropped an accepted send before the agent received it
+  // (`chat-user-message-undelivered`). See `markPendingUndelivered`.
+  | { type: "MESSAGE_UNDELIVERED"; messageId: string }
+  // The box refused a queued send outright, so it recorded nothing.
+  | { type: "SEND_REFUSED"; messageId: string }
+  // An undelivered send was discarded, here or in another tab.
+  | { type: "MESSAGE_DISCARDED"; messageId: string }
+  // The box's accepted list, refetched for an undelivered send this tab held no entry for.
+  | { type: "ACCEPTED_REFETCHED"; accepted: PendingSessionEntry[] }
   | { type: "INJECTED_USER_MESSAGE"; message: string; timestamp: string }
   | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
   | { type: "SET_SEED_FEATURE"; feature: string; value: string }
@@ -117,6 +126,12 @@ export interface ChatContext {
    * in `refreshing`.
    */
   refreshCause: "turn" | "resync";
+  /**
+   * Counts history that landed from the box: a load or refresh that succeeded,
+   * or a server-pushed history. A failed fetch leaves it unchanged. The
+   * "Catching up…" label reads it (`InteractiveChat/catch-up.ts`).
+   */
+  historySyncs: number;
   /**
    * What to address backend chat calls by — either an existing session id
    * or `"new"` to start a fresh conversation. Held alongside `sessionId`

@@ -38,6 +38,7 @@ export function OpenRouterModelRow(
           </Row>
           <Text size="xs" mono tone="muted" breakAll>{model.id}</Text>
           <Hint>{describeCatalog(model.catalog)}</Hint>
+          {model.piWarning === null ? null : <Text size="xs" tone="emphasis">{model.piWarning}</Text>}
         </Stack>
         <Button
           size="sm"

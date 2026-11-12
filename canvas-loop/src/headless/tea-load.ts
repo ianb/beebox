@@ -1,5 +1,5 @@
 import { CliError } from "./errors.js";
-import type { CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+import type { Voice, CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
 
 /**
  * A TEA sketch module after validation; the model is opaque to the runtime.
@@ -14,6 +14,7 @@ export interface LoadedTeaModule {
   init(u: Util<ParamsDecl>): unknown;
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+  sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,6 +45,11 @@ function numberParam(record: Record<string, unknown>, where: string): ParamDecl 
     default: requireFiniteNumber({ record, key: "default", where }),
   };
   if (record["step"] !== undefined) decl.step = requireFiniteNumber({ record, key: "step", where });
+  const control = record["control"];
+  if (control !== undefined) {
+    if (control !== "slider" && control !== "field") throw new CliError({ detail: `${where}: "control" must be "slider" or "field"` });
+    decl.control = control;
+  }
   return decl;
 }
 
@@ -69,6 +75,22 @@ function selectParam(record: Record<string, unknown>, where: string): ParamDecl 
 function parseParam(raw: unknown, name: string): ParamDecl {
   const where = `params.${name}`;
   if (!isRecord(raw)) throw new CliError({ detail: `${where} must be an object` });
+  const decl = parseParamKind(raw, where);
+  for (const key of ["label", "hint"] as const) {
+    const text = raw[key];
+    if (text === undefined) continue;
+    if (typeof text !== "string") throw new CliError({ detail: `${where}: "${key}" must be a string` });
+    decl[key] = text;
+  }
+  const panel = raw["panel"];
+  if (panel !== undefined) {
+    if (typeof panel !== "boolean") throw new CliError({ detail: `${where}: "panel" must be a boolean` });
+    decl.panel = panel;
+  }
+  return decl;
+}
+
+function parseParamKind(raw: Record<string, unknown>, where: string): ParamDecl {
   switch (raw["type"]) {
     case "number":
       return numberParam(raw, where);
@@ -102,18 +124,20 @@ function parseCanvas(raw: unknown): CanvasSize | undefined {
   };
 }
 
-/** Detect the TEA tier: a module is TEA iff it exports an `update` function. */
-export function isTeaModule(mod: Record<string, unknown>): boolean {
-  return typeof mod["update"] === "function";
-}
-
 /** Validate a dynamically-imported module against the TEA contract. */
 export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
+  if (typeof mod["setup"] === "function") {
+    throw new CliError({ detail: "this module exports setup(): the p5-style sketch form is retired. Write a TEA sketch: export canvas, init(u), update(model, msg, u) and draw(v, model, p) (see canvas-loop/TEA.md)" });
+  }
   const init = readFn<LoadedTeaModule["init"]>(mod, "init");
   const update = readFn<LoadedTeaModule["update"]>(mod, "update");
   const draw = readFn<LoadedTeaModule["draw"]>(mod, "draw");
   if (init === undefined || update === undefined || draw === undefined) {
     throw new CliError({ detail: "TEA sketch must export init(u), update(model, msg, u), and draw(v, model, p)" });
   }
-  return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw };
+  if (mod["sound"] !== undefined && typeof mod["sound"] !== "function") {
+    throw new CliError({ detail: "the \"sound\" export must be a function sound(model, p) returning voices" });
+  }
+  const sound = readFn<NonNullable<LoadedTeaModule["sound"]>>(mod, "sound");
+  return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw, ...(sound === undefined ? {} : { sound }) };
 }

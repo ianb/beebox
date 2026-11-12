@@ -292,6 +292,31 @@ export function formatStepTime(ms: number, usual: StepStats | undefined): string
 }
 
 /**
+ * How much slower than usual the walk's finished steps ran, together: their
+ * total time over the total of their medians. 1 when no finished step has
+ * enough history to have a usual time.
+ *
+ * A loaded host slows every step by a similar factor, and the walk's budget
+ * grows by it (bin/smoke-harness.ts, `Budget.scaleTo`). A hung or broken step
+ * adds nothing here until it finishes, so on a healthy host it still meets the
+ * unscaled budget.
+ */
+export function walkSlowdown(
+  done: readonly SmokeStepRecord[],
+  history: ReadonlyMap<string, StepStats>,
+): number {
+  let actual = 0;
+  let usual = 0;
+  for (const step of done) {
+    const stats = history.get(step.id);
+    if (step.outcome !== "ok" || stats === undefined || stats.ran < USUAL_MIN_RUNS) continue;
+    actual += step.ms;
+    usual += stats.medianSeconds * 1000;
+  }
+  return usual > 0 ? actual / usual : 1;
+}
+
+/**
  * How many runs a step must have survived before "it never fails" is evidence
  * rather than noise. Below this the report shows the counts and says nothing
  * about trimming — after one green run every step has a spotless record.

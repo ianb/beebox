@@ -26,7 +26,7 @@ levels, prompt style, and failure patterns are in
 From `beebox/`:
 
 ```bash
-pnpm knowledge-audit run --box ~/src/box-worktrees/<worktree>/test1 [--filter <tag-or-id>] [--engine claude|codex]
+pnpm knowledge-audit run --box ~/src/box-worktrees/<worktree>/test1 [--filter <tag-or-id>] [--engine claude|codex|pi]
 pnpm knowledge-audit run --dev [--model <id>] [--filter <tag-or-id>]
 pnpm knowledge-audit list
 ```

@@ -192,7 +192,7 @@ A box with no scheduler running will show a stale `last verified` rather than a
 wrong verdict.
 
 On a flip to broken, the boxholder gets one notification per breakage over
-the iPhone app and Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
+the iPhone app and Web Push. Reconnecting (admin page, Google Services section) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).

@@ -55,3 +55,5 @@ verification for figures?
 Courses are the opt-in courseware plugin, not core Bee Box
 (`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
 core and journey work leave it out.
+
+Re-reviewed 2026-10-30: still parked; `generate-doc-images.ts` is now the directory `beebox/src/dev/generate-doc-images/`.

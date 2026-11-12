@@ -5,6 +5,7 @@ import {
   listMobileDevices,
   mayManageMobileDevice,
   revokeMobileDevice,
+  setDeviceNotificationsOff,
   type DeviceViewer,
 } from "../../../core/mobile/pairing.js";
 import { router, authedProcedure } from "../procedures.js";
@@ -54,6 +55,23 @@ export const pairingRouter = router({
     );
     return { scope: who.isOwner ? ("box" as const) : ("own" as const), devices };
   }),
+
+  // The phone this request came from, so Settings in the app can say whether
+  // this phone is registered for notifications. Null for a request with no
+  // device credential, such as a browser or a password session in the app.
+  thisDevice: authedProcedure.query(({ ctx }) => ({
+    device: listMobileDevices(ctx.boxRoot).find((item) => item.id === ctx.mobileDeviceId) ?? null,
+  })),
+
+  // Only the phone itself: the request's device credential names which one.
+  setThisDeviceNotificationsOff: authedProcedure
+    .input(z.object({ off: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const ok = ctx.mobileDeviceId !== null
+        && await setDeviceNotificationsOff(ctx.boxRoot, { deviceId: ctx.mobileDeviceId, off: input.off });
+      if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "This request has no paired device." });
+      return { ok: true };
+    }),
 
   revokeDevice: authedProcedure
     .input(z.object({ deviceId: z.string().min(1) }))

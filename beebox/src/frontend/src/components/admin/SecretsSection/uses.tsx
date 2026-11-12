@@ -16,6 +16,7 @@
 import type { RouterOutput } from "../../../lib/trpc/client";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
+import { List } from "../../ui/List";
 
 type SecretUses = RouterOutput["secrets"]["machineView"]["secrets"][number]["uses"];
 
@@ -35,7 +36,7 @@ export function SecretUsesBlock({ uses }: { uses: SecretUses }) {
     <Stack gap="xs">
       <Text size="xs" tone="muted" uppercase weight="medium">Used for</Text>
       {uses.builtin.length === 0 && uses.declared.length === 0 ? null : (
-        <ul className="list-disc pl-4 space-y-0.5">
+        <List marker="disc" gap="xs">
           {uses.builtin.map((use) => (
             <li key={`builtin-${use}`}>
               <Text size="sm" tone="subtle">{use}</Text>
@@ -46,7 +47,7 @@ export function SecretUsesBlock({ uses }: { uses: SecretUses }) {
               <Text size="sm" tone="subtle">{use}</Text> <Text size="xs" tone="muted">(declared)</Text>
             </li>
           ))}
-        </ul>
+        </List>
       )}
       {uses.observed.length === 0 ? null : (
         <Text size="xs" tone="muted" italic>observed: {uses.observed.join(" · ")}</Text>

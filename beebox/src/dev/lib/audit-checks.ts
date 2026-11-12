@@ -1,6 +1,6 @@
 /** Automated knowledge-audit checks over normalized agent behavior. */
 
-import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner/runner/run-test.js";
+import type { AgentBehavior, AutomatedChecks, AuditTest, ReadBeforeEditOutcome } from "./test-runner/runner/run-test.js";
 import type { SearchWhere } from "./test-suite-schema.js";
 
 const ASSIGNMENT = /(?:^|[;&|]\s*)(?:export\s+)?([A-Za-z_]\w*)=("[^"]*"|'[^']*'|[^\s;&|]+)/gu;
@@ -16,6 +16,13 @@ function unquote(value: string): string {
  * `cd dir && cat file` (or `;`). Each word after the `cd` is also tried
  * joined to its directory. Anything more is left unresolved.
  */
+/** A Grep whose path (the text after the last " in ") is `file` itself, not a directory holding it. */
+function grepTargets(search: { tool: string; summary: string }, file: string): boolean {
+  if (search.tool !== "Grep") return false;
+  const at = search.summary.lastIndexOf(" in ");
+  return at !== -1 && search.summary.slice(at + 4).trim().endsWith(file);
+}
+
 function readMentionsFile(read: string, file: string): boolean {
   const vars = new Map<string, string>();
   for (const [, name, value] of read.matchAll(ASSIGNMENT)) {
@@ -27,6 +34,14 @@ function readMentionsFile(read: string, file: string): boolean {
   if (cd?.[1] === undefined || cd[2] === undefined) return false;
   const dir = unquote(cd[1]).replace(/\/+$/u, "");
   return cd[2].split(/[\s;&|]+/u).some((word) => word !== "" && `${dir}/${unquote(word)}`.includes(file));
+}
+
+function readBeforeEdit(file: string, behavior: AgentBehavior): ReadBeforeEditOutcome {
+  const before = behavior.readsBeforeFirstEdit;
+  if (before === undefined) return "not-recorded";
+  const reads = (from: number, to: number | undefined) => behavior.filesRead.slice(from, to).some((read) => readMentionsFile(read, file));
+  if (reads(0, before ?? undefined)) return "read-first";
+  return before !== null && reads(before, undefined) ? "read-after" : "not-read";
 }
 
 interface RunChecksContext {
@@ -83,13 +98,19 @@ export function runChecks(
   }));
   let shouldReadAnyCheck: AutomatedChecks["shouldReadAnyCheck"];
   if (test.should_read_any !== undefined) {
-    const matched = test.should_read_any.find((file) => behavior.filesRead.some((read) => readMentionsFile(read, file)));
+    // A Grep aimed at the file itself counts as consulting it: an agent that
+    // searches frontend.md for a primitive's name and cites the lines has
+    // read the part that matters.
+    const consulted = (file: string) =>
+      behavior.filesRead.some((read) => readMentionsFile(read, file)) || behavior.searches.some((search) => grepTargets(search, file));
+    const matched = test.should_read_any.find(consulted);
     shouldReadAnyCheck = { files: test.should_read_any, wasRead: matched !== undefined, matched };
   }
   const shouldNotReadChecks = (test.should_not_read ?? []).map((file) => ({
     file,
     wasRead: behavior.filesRead.some((read) => readMentionsFile(read, file)),
   }));
+  const readBeforeEditChecks = (test.read_before_edit ?? []).map((file) => ({ file, outcome: readBeforeEdit(file, behavior) }));
   const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
     const matched = behavior.bashRawCommands.find((command) =>
       command.toLowerCase().includes(expected.toLowerCase()));
@@ -107,6 +128,7 @@ export function runChecks(
     shouldReadChecks,
     shouldReadAnyCheck,
     shouldNotReadChecks,
+    readBeforeEditChecks,
     bashContainsChecks,
   };
 }
@@ -122,6 +144,7 @@ export function automatedChecksPassed(checks: AutomatedChecks): boolean {
     checks.shouldReadChecks.every((check) => check.wasRead) &&
     (checks.shouldReadAnyCheck?.wasRead ?? true) &&
     checks.shouldNotReadChecks.every((check) => !check.wasRead) &&
+    checks.readBeforeEditChecks.every((check) => check.outcome === "read-first") &&
     checks.bashContainsChecks.every((check) => check.found) &&
     (checks.shouldSearchCheck?.found ?? true) &&
     checks.agentStopped === undefined;

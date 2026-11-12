@@ -9,7 +9,7 @@
 // deterministic fakes (a manual clock, a barrier-gated pidfile store, a
 // controllable spawner) and reproduce the documented races.
 //
-// router.ts constructs the REAL effects (execa, get-port, the serialized pidfile
+// router.ts constructs the REAL effects (execa, freePort, the serialized pidfile
 // store, http.request probes) and wires this core to the HTTP/WS server. Both
 // this module and router.ts are import-safe: importing them binds no ports and
 // installs no signal handlers (that lives in router.ts's `main()`).

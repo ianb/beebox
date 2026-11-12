@@ -125,7 +125,9 @@ composer not suppressed, wrong attribution — with no error surfaced).
   for somebody else's device: a distinct refusal would confirm the id exists on this box.
 - **Projection:** `listMobileDevices` strips `tokenHash` and the APNs token. A device's push
   registration (§5.9) appears as `push: { environment, registeredAt } | null`; the raw APNs token
-  never leaves the server process.
+  never leaves the server process. `notificationsOff` is the person's per-box switch, set from
+  Settings in the app by `pairing.setThisDeviceNotificationsOff`. It survives re-registration, and
+  the box skips the phone while it is on. The native app does not read it.
 
 ---
 
@@ -264,7 +266,16 @@ the contract.
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`, one per
+  `NativeBridgeChannel`).
+- **Every channel accepts only the box's own main frame.** WebKit exposes `webkit.messageHandlers` to
+  every frame, so `Coordinator.receiveBridgeMessage` refuses a message unless the frame is the main
+  frame and its `frameInfo.securityOrigin` equals the box's origin. A sandboxed page (opaque origin) is
+  refused even when its URL is on the box. Web code must post from the top document. Handlers stay in
+  the page content world because the web app runs there; a dedicated `WKContentWorld` would hide them
+  from the app. An app page with the box's real origin (including the shared-browser dashboard, if
+  opened in the webview) passes this guard; the guard separates frames, and same-origin script is
+  inside the box's trust boundary.
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -1237,7 +1248,8 @@ See §1.3 (full request/response/errors).
   `test/webapp/routes/pairing.push-token.test.ts`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
-  Admin Notifications section shows (no device listed under Phones).
+  Admin Notifications section shows (no device listed under Phones) and Settings shows in the app
+  (`pairing.thisDevice`).
 
 ### 5.10 APNs notification payload (box → Apple → native)
 
@@ -1253,16 +1265,23 @@ See §1.3 (full request/response/errors).
   | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId, box }` |
   | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId, box }` |
 - **Custom keys the client reads:** `target` is the notification target string
-  (`chat:<sessionId>`, `chat:new`, `card:<path>`, `question:<path>`, `admin:<section>`,
-  `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it renders to.
-  `notificationId` is the log id; `chat:new` carries it so the chat page can show the
-  notification. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
+  (`chat:<sessionId>`, `chat:new`, `chat:new:<place>`, `place:<dir>`, `card:<path>`, `question:<path>`,
+  `admin:<section>`, `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it
+  renders to. `notificationId` is the log id; `chat:new` and `place:` carry it so the chat page can show the
+  notification. `chat:new:<place>` also carries the place directory as `contextDir`
+  (`chat?new=1&contextDir=<place>&notification=<id>`). `place:<dir>` renders to
+  `chat?place=<dir>&notification=<id>`; the chat route opens the place's latest chat, or a new one
+  there. Both refuse `_content` (use `chat:new`). An app before 2026-11-10 refuses both forms
+  (`chat:new:` because its `chat:<sessionId>` rule rejects `/`; `place:` as an unknown scheme): the
+  tap brings the app forward where it was and logs an unreadable target. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
   directory's name, `src/lib/box-slug.ts` · `boxSlug`, the same slug as the box URL prefix).
 - **What iOS does with them.** In the foreground (`willPresent`), `loud` presents banner, sound,
   and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
   webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
   box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
-  `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
+  `targetUrl`, and loads it in the chat webview (§3.1). A `card:` or `question:` target renders
+  to `views/<path>`, each path segment `encodeURIComponent`-encoded, which opens the card beside the chat; boxes before 2026-10-28 rendered
+  `browse/<path>`, which still redirects. A missing or unreadable target opens
   nothing new and logs a warning. On every foreground the app clears the badge and removes
   delivered `dot` notifications.
 - **Box identity.** The payload names the box in `box`. A tap opens on the paired box whose slug
@@ -1498,7 +1517,7 @@ iOS 18+ AudioRecordingIntent requires a Live Activity. Widget/control extension
 opens `beebox://capture/voice?action=toggle|stop`; it owns no recorder or fake
 process-local recording state. Foreground task UI is the explicit fallback. Stop/show links for an existing
 protected draft require its in-app unlock; Siri/App Intents still refuse it.
-iOS 17 records through foreground UI without newer control APIs. AAC recording
+AAC recording
 has a ten-minute/advertised-byte cap and finalized short segments: interruption
 retains completed audio, while sudden termination can lose an unfinished tail
 of at most ten seconds. Never claim complete audio from that recovered draft.
@@ -1657,7 +1676,7 @@ without the other is a contract break.
   `notificationId`, `box` (the box slug, matched against `PairedBox.slug`) beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
   `NotificationTap` ↔ `core/notification/apns-payload.ts` · `buildApnsRequest`.
 - **Notification target rules** — `Models/NotificationTarget.swift` · `NotificationTarget` ↔
-  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the six schemes, the 1000-character
+  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the seven schemes (and `chat:new:<place>`), the 1000-character
   limit, the chat-session and admin-section character rules, `encodeURIComponent`, and the admin
   card path `_config/interface/admin.card` (`shared/system-card-paths.ts` · `SYSTEM_CARD_PATHS`).
   One deliberate difference: Swift fences a card path to a first segment starting with `_`, where
@@ -1909,7 +1928,7 @@ waiting in `PendingEmissionStore`, open the web app instead. The rule is
 
 The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
 new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
-box's `nav.card` shortcuts) show the web app at a box-relative path through the same
+box's `nav.card` shortcuts, whose card refs arrive as `/views/<path>`) show the web app at a box-relative path through the same
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.

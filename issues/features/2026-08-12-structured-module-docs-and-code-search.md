@@ -117,3 +117,5 @@ one-way part.
 - Does the scope annotation get *enforced* (a lint error on importing a
   subdirectory-local export from outside), or is it advisory? Enforcement is
   what makes it real; it is also what makes it a much larger change.
+
+Re-reviewed 2026-10-30: not started. The named search files moved: `embed-pass.ts` and `manifest.ts` are under `beebox/src/core/search/refresh/`, the store under `beebox/src/core/search/store/`.

@@ -102,28 +102,6 @@ export function newMessageId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
-  const sizeClass = mobile ? "text-base" : "text-sm min-w-0";
-  const stateClass = isTranscribing
-    ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
-    : "bg-white border-warm-400";
-  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-600`;
-}
-
-/**
- * Format a millisecond gap as "Xh" or "XdYh" (hours omitted when zero).
- * Returns null when the gap is under 6 hours — callers should omit the attribute then.
- */
-export function formatTimePassed(ms: number): string | null {
-  const SIX_HOURS = 6 * 60 * 60 * 1000;
-  if (ms < SIX_HOURS) return null;
-  const totalHours = Math.floor(ms / (60 * 60 * 1000));
-  if (totalHours < 24) return `${totalHours}h`;
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  return hours > 0 ? `${days}d${hours}h` : `${days}d`;
-}
-
 /**
  * Ephemeral marker shown in the message stream when the user switches models.
  * `afterGroupCount` snapshots the number of message groups at insertion time

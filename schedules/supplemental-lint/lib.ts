@@ -1,17 +1,18 @@
 /**
- * The comparable form of an oxlint / madge report.
+ * The comparable form of an oxlint report (`lint:oxlint` and the
+ * `import/no-cycle` run behind `lint:circular`).
  *
  * Pure — run.ts owns running the commands — because the week-over-week diff is
- * only useful if identical findings compare equal. madge numbers its cycle
- * list, so one cycle appearing near the top renumbered every line below it and
- * the sweep reported 35 unchanged cycles as new (run 20260912-152524). oxlint
- * prints each finding's path, line number and surrounding source, so moving a
- * file or editing above a finding re-reported it: run 20261003-193157 reported
- * 21 unchanged warnings as new after a directory reorganisation.
+ * only useful if identical findings compare equal. oxlint prints each finding's
+ * path, line number and surrounding source, so moving a file or editing above a
+ * finding re-reported it: run 20261003-193157 reported 21 unchanged warnings as
+ * new after a directory reorganisation.
+ *
+ * The parse reads oxlint's graphical format. oxlint prints a one-line
+ * `file:line:col: …` format when stdout is not a terminal, so both beebox
+ * scripts pass `-f default`; a compact line would pass through unchanged and
+ * key the finding by position again.
  */
-
-/** madge's ordinal prefix: `7) a > b`. */
-const MADGE_ORDINAL = /^\d+\) /u;
 
 /** Lines that say the tool ran, not what it found. */
 const NOISE = /^Finished in |^Processed \d+ files|^Found \d+ warnings? and \d+ errors?\.$/u;
@@ -21,6 +22,9 @@ const OXLINT_HEADER = /^\s*[!x×] [\w-]+\([\w-]+\): /u;
 
 /** oxlint's location line: `    ,-[src/a.ts:128:27]`. */
 const OXLINT_LOCATION = /^\s*,-\[.*:(\d+):\d+\]$/u;
+
+/** A finding's trailing `help:`/`note:` text, such as no-cycle's import-path diagram. */
+const OXLINT_TRAILER = /^\s*(?:help|note): /u;
 
 /** One source-excerpt line: ` 128 |     for (…) settle();`, with `,->`/`|`/`` `-> `` span markers. */
 const OXLINT_SOURCE = /^\s*(\d+) \|(?: (?:,->|`->|\|))?(.*)$/u;
@@ -35,6 +39,8 @@ const OXLINT_SOURCE = /^\s*(\d+) \|(?: (?:,->|`->|\|))?(.*)$/u;
 export function reportLines(output: string): string[] {
   const lines: string[] = [];
   let finding: { header: string; line?: string | undefined; code?: string | undefined } | undefined;
+  // After a finding's trailer starts, every line up to the blank one belongs to it.
+  let inTrailer = false;
   const flush = (): void => {
     if (finding) lines.push(finding.code === undefined ? finding.header : `${finding.header} | ${finding.code}`);
     finding = undefined;
@@ -43,11 +49,17 @@ export function reportLines(output: string): string[] {
     const line = raw.trimEnd();
     if (OXLINT_HEADER.test(line)) {
       flush();
+      inTrailer = false;
       finding = { header: line.trim() };
       continue;
     }
+    if (inTrailer) {
+      if (line === "") inTrailer = false;
+      continue;
+    }
     if (finding) {
-      if (line === "" || /^\s*help: /u.test(line)) {
+      if (line === "" || OXLINT_TRAILER.test(line)) {
+        inTrailer = line !== "";
         flush();
         continue;
       }
@@ -57,7 +69,7 @@ export function reportLines(output: string): string[] {
       if (source && source[1] === finding.line && finding.code === undefined) finding.code = source[2]?.trim();
       continue;
     }
-    lines.push(line.replace(MADGE_ORDINAL, ""));
+    lines.push(line);
   }
   flush();
   return lines

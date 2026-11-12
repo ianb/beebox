@@ -53,11 +53,14 @@ async function writeCardParts(cardPath: string, parts: CardParts): Promise<void>
   await fs.writeFile(cardPath, renderFrontmatterBlock(parts.fields, parts.body));
 }
 
-/** The outcome the folder card reports after a sync pass. */
+/**
+ * The outcome the folder card reports after a sync pass. No time: when the
+ * pass ran is Drive state (`folders` in `state.ts`), so a pass that found
+ * nothing new leaves the card's bytes alone.
+ */
 export interface FolderStamp {
   name: string | null;
   link: string | null;
-  lastSync: string;
   error: string | null;
   /**
    * Children the pass could not account for. A pass that listed the folder
@@ -68,12 +71,12 @@ export interface FolderStamp {
   problems: FolderProblemCounts | null;
 }
 
-/** Re-stamp a folder card's Drive metadata and last-sync outcome. */
-export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Promise<void> {
+/** Re-stamp a folder card's Drive metadata and outcome; false when nothing differed. */
+export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Promise<boolean> {
   const parts = await readCardParts(cardPath);
+  const before = JSON.stringify(parts.fields);
   if (stamp.link !== null) parts.fields["drive"] = { ...driveMap(parts), link: stamp.link };
   if (stamp.name !== null) parts.fields["title"] = stamp.name;
-  parts.fields["last-sync"] = stamp.lastSync;
   if (stamp.problems !== null) {
     stampCount(parts.fields, { key: "not-in-folder", count: stamp.problems.notInFolder });
     stampCount(parts.fields, { key: "unknown", count: stamp.problems.unknown });
@@ -82,7 +85,9 @@ export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Pr
   // no message still writes one.
   if (stamp.error === null) delete parts.fields["error"];
   else parts.fields["error"] = stamp.error === "" ? "Sync failed without a message" : stamp.error;
+  if (JSON.stringify(parts.fields) === before) return false;
   await writeCardParts(cardPath, parts);
+  return true;
 }
 
 /** A count worth reporting is written; zero removes the field entirely. */

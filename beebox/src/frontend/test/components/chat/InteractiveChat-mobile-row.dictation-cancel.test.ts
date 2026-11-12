@@ -1,8 +1,11 @@
 // The dictation cancel control is a named close button on both composer rows.
 // It carries its address only when the composer is the product one; a dev
 // gallery copy renders without ids.
+// First, and bare: React DOM must load after the happy-dom window exists.
+// The composer mounts in the DOM harness: server rendering warns that Menu's
+// layout effect does nothing there.
+import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, createRef, type ReactElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "tap";
 import { ChatInputArea } from "../../../src/components/chat/InteractiveChat-composer/view.js";
 import { MobileTextareaRow } from "../../../src/components/chat/InteractiveChat-mobile-row.js";
@@ -22,11 +25,14 @@ const rowProps: ComposerRowProps = {
   onStopDictation: noop, onVoiceSegmentSend: noop,
 };
 
-function render(element: ReactElement): string {
-  return renderToStaticMarkup(h(InputStoreProvider, { value: store }, element));
+async function render(element: ReactElement): Promise<string> {
+  const view = await mount(h(InputStoreProvider, { value: store }, element));
+  const html = view.container.innerHTML;
+  await view.unmount();
+  return html;
 }
 
-function desktop(includeControlIds: boolean): string {
+function desktop(includeControlIds: boolean): Promise<string> {
   return render(h(ChatInputArea, {
     ...rowProps, textareaRef: createRef<HTMLTextAreaElement>(), handleKeyDown: noop,
     onKeyboard: noop, onVoice: noop, voicePaused: false, onUnpause: noop, onAddFiles: noop, addFiles: () => Promise.resolve({ added: 0 }),
@@ -34,7 +40,7 @@ function desktop(includeControlIds: boolean): string {
   }));
 }
 
-function mobile(includeControlIds: boolean): string {
+function mobile(includeControlIds: boolean): Promise<string> {
   return render(h(MobileTextareaRow, { ...rowProps, includeControlIds }));
 }
 
@@ -45,11 +51,11 @@ function cancelButtonIds(html: string): Array<string | null> {
 }
 
 void test("the desktop and mobile cancel buttons are named and addressed", async (t) => {
-  t.check(cancelButtonIds(desktop(true)), ["bbx-composer-dictation-cancel"]);
-  t.check(cancelButtonIds(mobile(true)), ["bbx-composer-dictation-cancel-mobile"]);
+  t.check(cancelButtonIds(await desktop(true)), ["bbx-composer-dictation-cancel"]);
+  t.check(cancelButtonIds(await mobile(true)), ["bbx-composer-dictation-cancel-mobile"]);
 });
 
 void test("a gallery copy renders the cancel buttons without ids", async (t) => {
-  t.check(cancelButtonIds(desktop(false)), [null]);
-  t.check(cancelButtonIds(mobile(false)), [null]);
+  t.check(cancelButtonIds(await desktop(false)), [null]);
+  t.check(cancelButtonIds(await mobile(false)), [null]);
 });

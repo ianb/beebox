@@ -70,9 +70,13 @@ export function appendQueuedSend(
   };
 }
 
-/** Fire the queued message at the backend; the chat-complete SSE triggers refresh. */
+/**
+ * Fire the queued message at the backend; the chat-complete SSE triggers
+ * refresh. A refusal comes back as SEND_REFUSED, so the optimistic entry says
+ * it was not delivered instead of looking queued until it ages out.
+ */
 export function dispatchQueuedSend(
-  { context, event }: { context: ChatContext; event: SendEvent },
+  { context, event, self }: { context: ChatContext; event: SendEvent; self: { send: (event: ChatEvent) => void } },
 ): void {
   queueMessageToBackend({
     session: context.sessionInput,
@@ -80,6 +84,7 @@ export function dispatchQueuedSend(
     messageId: event.messageId,
     ...(event.images ? { images: event.images } : {}),
     ...cardFieldsFromEvent(event),
+    onRefused: () => self.send({ type: "SEND_REFUSED", messageId: event.messageId }),
   });
 }
 
@@ -96,6 +101,7 @@ export function appendOtherUserMessage(
         timestamp: event.timestamp,
         content: [{ type: "text", text: event.message }],
         user: event.userName,
+        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
       },
     ],
   };

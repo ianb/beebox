@@ -20,7 +20,7 @@
     "lint:knip": "knip",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
-    "postinstall": "patch-package && pnpm --dir beebox exec tap build",
+    "postinstall": "pnpm --dir beebox exec tap build",
     "prepare": "husky",
     "project-size": "node --import tsx bin/project-size.ts",
     "retired-product-name-check": "node --import tsx bin/retired-product-name-check.ts",
@@ -31,7 +31,6 @@
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.226",
     "execa": "^9.6.1",
     "yaml": "^2.7.0",
     "zod": "^4.4.3"
@@ -41,15 +40,11 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "agent-browser": "^0.27.0",
     "@ianbicking/tap-check": "workspace:*",
-    "better-sqlite3": "^12.10.0",
     "esbuild": "^0.25.12",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "knip": "^6.41.0",
-    "patch-package": "^8.0.0",
-    "shellcheck": "4.1.0",
     "tsx": "^4.23.15",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
@@ -70,8 +65,7 @@
     "peerDependencyRules": {
       "allowedVersions": {
         "@typescript-eslint/parser": "8",
-        "eslint-plugin-react-hooks": "7",
-        "madge>typescript": "6"
+        "eslint-plugin-react-hooks": "7"
       }
     }
   },

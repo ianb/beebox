@@ -19,6 +19,7 @@ import * as childProcess from "node:child_process";
 import { promisify } from "node:util";
 import type { Test } from "tap";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { inspectIndexLock, INDEX_LOCK_STALE_MS, formatAge, type IndexLockStatus } from "../../src/lib/git-stale-lock.js";
 
 const execFileAsync = promisify(childProcess.execFile);
@@ -63,6 +64,10 @@ const lockPathOf = (box: TmpBox) => join(box.root, ".git", "index.lock");
 
 // What the verdict reports: the lock path with symlinks (macOS /var) resolved.
 const realLockPathOf = (box: TmpBox) => join(realpathSync(box.root), ".git", "index.lock");
+
+// The log line announcing that an abandoned lock was removed.
+const removedNotice = (box: TmpBox) =>
+  str`[git-stale-lock] removed an abandoned ${realLockPathOf(box)} (${any(String)} old, no git process held it). A git process was killed mid-write here — check for an OOM kill, a mid-commit shutdown, or a full disk.`;
 
 // Write a lock file and backdate it, standing in for one a killed git left
 // behind `ageMs` ago.
@@ -147,7 +152,7 @@ void test("Backdated well past the staleness window, with no process holding it 
   );
 
   t.check(logged, [
-    str`[git-stale-lock] removed an abandoned ${realLockPathOf(box)} (${any(String)} old, no git process held it). A git process was killed mid-write here — check for an OOM kill, a mid-commit shutdown, or a full disk.`,
+    removedNotice(box),
   ]);
 });
 
@@ -182,7 +187,12 @@ void test("Age alone is not enough.", async (t) => {
   // refusal is sticky:
 
   await handle.close();
+  const errors = consoleLines(t, "error");
   const now = await recoverStaleIndexLock(box.root);
+  // Removal is announced here too:
+  t.check(errors(), [
+    removedNotice(box),
+  ]);
   t.check(
     { now, lockExists: existsSync(lockPath) },
     { now: verdictOf({ box, state: "stale", plantedAgeMs: INDEX_LOCK_STALE_MS + 60 * 60_000 }), lockExists: false },
@@ -267,13 +277,15 @@ void test("The payoff.", async (t) => {
   await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
   await box.write("after-the-crash.md", "written while the abandoned lock stood\n");
 
-  const realError = console.error;
-  console.error = () => {};
+  const errors = consoleLines(t, "error");
   const hash = await stageAndCommitPaths(box.root, {
     paths: ["after-the-crash.md"],
     message: "commit past an abandoned index lock",
   });
-  console.error = realError;
+  // Recovery is announced, as above:
+  t.check(errors(), [
+    removedNotice(box),
+  ]);
 
   t.check({ hash, lockExists: existsSync(lockPathOf(box)) }, { hash: any(String).matches(/^[\da-f]{40}$/), lockExists: false });
 });

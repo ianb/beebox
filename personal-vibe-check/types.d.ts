@@ -7,7 +7,7 @@
  * that source into every consumer's program, type-checked under whichever
  * tsconfig that consumer happens to have. Ten packages here disagree about
  * `exactOptionalPropertyTypes`, module resolution, and `lib`, and several of the
- * plugins this preset imports (`eslint-config-agent`, `eslint-plugin-ddd`,
+ * plugins this preset imports (`eslint-plugin-default`, `eslint-plugin-error`,
  * `eslint-plugin-jsx-a11y`) ship no types at all, so `noImplicitAny` consumers
  * would inherit TS7016 errors from a file they don't own. A `.d.ts` is covered
  * by `skipLibCheck`, so consumers get the contract and nothing else.
@@ -52,7 +52,7 @@ export interface VibeCheckOptions {
   /**
    * Source roots the reviewed ruleset applies to. Default `["src"]`. Add e.g.
    * `"scripts"` to hold first-party tooling outside `src/` to the same rules
-   * instead of eslint-config-agent's harsher global base. Only affects the main
+   * instead of leaving them without the reviewed rules. Only affects the main
    * (non-type-aware) rule block; the type-aware scope stays src-only since it
    * needs tsconfig project membership.
    */
@@ -63,6 +63,25 @@ export interface VibeCheckOptions {
    */
   restrictComponentClasses?: RestrictComponentClassesOptions;
 }
+
+/** One `restricted-classes` entry. Mirrors the rule's `meta.schema`. */
+export interface RestrictedClassesEntry {
+  /** Patterns that must all be present for the entry to fire. */
+  all: string[];
+  /** Patterns any one of which makes the class set acceptable. */
+  none?: string[];
+  /** Files that own the shape, as globs relative to ESLint's working directory. */
+  allowIn?: string[];
+  message: string;
+}
+
+/**
+ * The `restricted-classes` entry for a removed focus outline: `outline-none`
+ * (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or
+ * `focus-within:` ring, border, shadow or outline beside it. `hover:` and a
+ * bare `ring-*` do not count.
+ */
+export declare const outlineNeedsFocusStyle: RestrictedClassesEntry;
 
 /** Returns a flat ESLint config array. */
 export declare function vibeCheck(options?: VibeCheckOptions): Linter.Config[];

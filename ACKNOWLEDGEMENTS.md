@@ -10,6 +10,24 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### agent-browser, by Vercel Labs
+
+- **Source:** [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) (Apache-2.0).
+- **What we took:** The browser automation CLI and its dashboard as the box browser that the box agent and the person share; beebox runs it unmodified and proxies the dashboard.
+- **Where it landed:** `beebox/package.json` (pinned dependency); the box browser per `beebox/docs/plans/shared-browser.md`.
+
+### Karplus–Strong string synthesis, by Kevin Karplus and Alex Strong
+
+- **Source:** "Digital Synthesis of Plucked-String and Drum Timbres", Computer Music Journal 7(2), 1983 (published algorithm)
+- **What we took:** The plucked-string algorithm: a noise burst circulating through a delay line one period long, averaged on each pass.
+- **Where it landed:** `canvas-loop/src/core/sound/synth.ts`
+
+### perfect-freehand, by Steve Ruiz
+
+- **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
+- **What we took:** Its pressure-sensitive stroke outline as canvas-loop's ink brush; canvas-loop supplies synthetic pressure from a gesture envelope and fills the outline.
+- **Where it landed:** `canvas-loop/package.json` (pinned dependency); `canvas-loop/src/core/brush/render/kinds.ts`.
+
 ### restic, by the restic contributors
 
 - **Source:** [restic](https://github.com/restic/restic) (BSD 2-Clause; [licence](beebox/deploy/restic-LICENSE)).
@@ -21,6 +39,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **Source:** [Open Planet Software's recording integrations](https://openplanet.zendesk.com/hc/en-gb/articles/48116180645521-One-tap-recording-integrations) (proprietary product; no source code or assets copied).
 - **What we took:** Distinct Start and Stop recording tasks across Siri, Shortcuts, and system controls, with audio preserved independently of transcription.
 - **Where it landed:** `ios-app/BeeBox/Intents/VoiceNoteIntents.swift`, `Services/VoiceNoteCoordinator.swift`, and `ios-app/BeeBoxControls/BeeBoxControls.swift`.
+
+### A (more) Modern CSS Reset, by Andy Bell
+
+- **Source:** https://piccalil.li/blog/a-more-modern-css-reset/ (blog post; no licence stated; we wrote our own rule from the idea)
+- **What we took:** One global `prefers-reduced-motion` rule that sets animation and transition durations near zero on every element; we added a spinner exemption that slows it instead.
+- **Where it landed:** `beebox/src/frontend/src/index.css`
 
 ### Agent Skills, by addyosmani (Addy Osmani)
 
@@ -64,7 +88,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** https://api.flutter.dev/flutter/flutter_test/matchesGoldenFile.html (repository https://github.com/flutter/flutter, BSD 3-Clause)
 - **What we took:** The frame-stepped test shape. An injected event takes effect on the next stepped frame, and a snapshot is taken on demand.
-- **Where it landed:** `canvas-loop/src/headless/runtime.ts`, `canvas-loop/README.md`
+- **Where it landed:** `canvas-loop/src/headless/tea-runtime.ts`, `canvas-loop/README.md`
 
 ### Ghost-CLI, by TryGhost
 
@@ -106,6 +130,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - From `improve-codebase-architecture` and `codebase-design`: the deepening pass, the deletion test, and the module, interface, depth, and seam vocabulary.
 - **Where it landed:** `beebox/docs/testing.md`, `beebox/code-style.md`
 
+### Modern Web Guidance, by Google Chrome
+
+- **Source:** [GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src) (Apache-2.0).
+- **What we took:** The detection logic of its `ime-safe-enter-submit` static matcher, ported to an ESLint rule: an Enter test in a keydown handler needs an IME composition check, with its exemptions for button-like elements, modifier-gated Enter, and suppress-only branches.
+- **Also took:** the `accessible-names` finding that `aria-label` on a role-less `div`/`span`/`p` is dropped, and the `responsive-design` finding that `100vh` overshoots on mobile Safari, as the rules `aria-label-needs-role` and `no-viewport-height-class`; the `dialog` guide's native-`<dialog>` rule as `prefer-native-dialog`; and the `typography` guide's rem font sizes as `no-px-font-size-class`.
+- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`, `aria-label-needs-role.ts`, `no-viewport-height-class.ts`, `prefer-native-dialog.ts`, `no-px-font-size-class.ts`; the same checks as `bbx view check` advice for box views in `beebox/src/core/views/advice/`.
+
 ### No Mistakes, by kunchenguid
 
 - **Source:** https://github.com/kunchenguid/no-mistakes (MIT)
@@ -132,6 +163,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **Source:** https://github.com/anomalyco/opencode (MIT)
 - **What we took:** One declared, static small-model slot for cheap passes, with no router and no fallback.
 - **Where it landed:** `beebox/docs/model-policy.md`, `beebox/src/core/model-policy.ts`, `beebox/src/core/box/config.ts`
+
+### pi, by Mario Zechner (earendil-works)
+
+- **Source:** [pi](https://github.com/earendil-works/pi) (MIT, as declared in the package metadata).
+- **What we took:** The pi coding-agent harness as a third box engine, used as a library.
+- **Where it landed:** `beebox/src/core/agent/pi-run/`, `beebox/src/services/claude-chat/pi-chat.ts`, and `beebox/docs/pi-engine.md`.
 
 ### Sentry feedback widget, by getsentry (Sentry)
 

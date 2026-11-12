@@ -81,7 +81,7 @@ function tabCheck({ scrollable }: { scrollable: boolean }): { result: CheckResul
   const strip = new StubElement({ tagName: "div", id: "strip", box: STRIP_BOX, overflowX: "auto" }).within(body);
   // The Home tab is inside the viewport but scrolled out to the left of the strip.
   const tab = new StubElement({ tagName: "button", id: "home-tab", box: { x: 20, y: 10, width: 80, height: 40 } }).within(strip);
-  if (!scrollable) tab.scrollIntoView = () => undefined;
+  if (!scrollable) tab.scrollIntoView = () => {};
   const elements = [tab, strip];
   const document = {
     getElementById: (id: string) => elements.find((e) => e.id === id) ?? null,

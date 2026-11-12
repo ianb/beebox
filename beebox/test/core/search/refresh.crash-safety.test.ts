@@ -57,7 +57,7 @@ void test("Build an index over one card and snapshot the manifest that describes
   const staleManifest = await readFile(searchManifestPath(box.root), "utf8");
   // The feedback AGENTS.md entry is scaffolding; the Dentist entry is the contract.
   t.check(await loadManifest(box.root), {
-    schemaVersion: 7,
+    schemaVersion: 8,
     files: {
       "_config/feedback/AGENTS.md": anything(),
       "_content/inbox/Dentist.doc.card": {

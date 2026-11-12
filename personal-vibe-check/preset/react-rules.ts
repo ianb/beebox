@@ -5,13 +5,48 @@ import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 export const reactRules: Linter.RulesRecord = {
   // jsx-a11y recommended, minus no-autofocus. ~15 rules catching real
   // accessibility bugs (interactive elements without keyboard
-  // handlers, images/inputs without labels, invalid anchors, etc.) —
-  // see conventions.md for the fix taxonomy. no-autofocus is off
-  // because it fights a deliberate autofocus (e.g. a chat composer
-  // that should grab focus on mount); every other recommended rule
-  // is kept as-is.
+  // handlers, images/inputs without labels, invalid anchors, etc.).
+  // no-autofocus is off because it fights a deliberate autofocus (e.g.
+  // a chat composer that should grab focus on mount).
   ...jsxA11yPlugin.flatConfigs.recommended.rules,
   "jsx-a11y/no-autofocus": "off",
+  // Tailwind preflight sets list-style: none, and Safari/VoiceOver then drops
+  // list semantics; an explicit role="list" restores them. Default nav kept.
+  "jsx-a11y/no-redundant-roles": ["error", { nav: ["navigation"], ul: ["list"], ol: ["list"] }],
+  // Every control has an accessible name. Screen readers, agents
+  // driving the UI, and tests that click by role + name all need one;
+  // an icon-only button with only `title` is the usual miss.
+  // Recommended ships this "off" with these options; they are kept.
+  // The rule sees native elements only: a component's own label prop
+  // (e.g. a Button's `label`) is enforced by its types instead.
+  "jsx-a11y/control-has-associated-label": [
+    "error",
+    {
+      ignoreElements: ["audio", "canvas", "embed", "input", "textarea", "tr", "video"],
+      ignoreRoles: ["grid", "listbox", "menu", "menubar", "radiogroup", "row", "tablist", "toolbar", "tree", "treegrid"],
+      includeRoles: ["alert", "dialog"],
+    },
+  ],
+  // Not in recommended. A focusable element hidden from assistive tech
+  // can take focus while announcing nothing.
+  "jsx-a11y/no-aria-hidden-on-focusable": "error",
+  // Not in recommended. Link text such as "click here" or "link" names
+  // nothing out of context.
+  "jsx-a11y/anchor-ambiguous-text": "error",
+  // A keydown handler that acts on Enter skips IME composition, so Enter
+  // that confirms Japanese/Chinese/Korean input does not submit. Ported
+  // from modern-web-guidance's ime-safe-enter-submit matcher.
+  "personal-vibe-check/ime-safe-enter": "error",
+  // aria-label on a div/span/p/i/b without a role is dropped by browsers.
+  // Ported from modern-web-guidance's accessible-names guide.
+  "personal-vibe-check/aria-label-needs-role": "error",
+  // role="dialog"/"alertdialog" on anything but <dialog> skips the focus trap,
+  // Escape and inert page that showModal() gives. Ported from
+  // modern-web-guidance's dialog guides.
+  "personal-vibe-check/prefer-native-dialog": "error",
+  // prefer-tag-over-role stays off: it asks for <output> on every
+  // role="status" and <hr> for separators, which is churn without a
+  // user-visible gain.
   // React hooks
   "react-hooks/rules-of-hooks": "error",
   "react-hooks/exhaustive-deps": "error",
@@ -32,6 +67,8 @@ export const reactRules: Linter.RulesRecord = {
   "react-hooks/use-memo": "error",
   "react-hooks/incompatible-library": "error",
   // React JSX
+  // A button inside a form defaults to type=submit; explicit types prevent accidental submits.
+  "react/button-has-type": "error",
   "react/jsx-no-useless-fragment": "error",
   "react/self-closing-comp": "error",
   "react/no-unknown-property": "error",

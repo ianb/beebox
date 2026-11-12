@@ -253,6 +253,9 @@ export interface ControlHref {
   unknownAction: string | null;
 }
 
+/** The markdown link target for the box's Browser page. */
+const BOX_BROWSER_HREF = "box-browser:";
+
 function isControlAction(value: string): value is ControlAction {
   return value === "point" || value === "focus" || value === "reveal";
 }
@@ -292,6 +295,11 @@ function classifyControlHref(href: string): ControlHref | { kind: "external" } {
  * below, which would otherwise send it down the `external` branch and render a
  * dead `<a href="control:…">`.
  *
+ * `box-browser:` is the box's Browser page, written by the agent after `bbx
+ * browser ask` (docs/plans/shared-browser-ask.subplan.md). The agent cannot
+ * know the page's address under a dev router's outer prefix, and a root-absolute
+ * path would be read as a box file.
+ *
  * `legacy-view` is the retired `view:` scheme. It no longer routes anywhere; it
  * exists only so renderers can draw a visibly-broken "needs migration" marker
  * instead of a silently-inert `<a href="view:…">`. Removable once all controlled
@@ -302,9 +310,11 @@ export function classifyMarkdownHref(
 ):
   | { kind: "legacy-view"; raw: string }
   | ControlHref
+  | { kind: "box-browser" }
   | { kind: "relative"; path: string }
   | { kind: "external" } {
   if (href.startsWith("view:")) return { kind: "legacy-view", raw: href };
+  if (href === BOX_BROWSER_HREF) return { kind: "box-browser" };
   if (href.startsWith(CONTROL_SCHEME)) return classifyControlHref(href);
   // Protocol-relative (`//host/x`) and any URL scheme (http:, mailto:, tel:,
   // data:, …) are external, not in-box paths.
@@ -418,7 +428,7 @@ export function apiImageUrl(boxSlug: string, path: string): string {
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
-// crash in plain Node (test runners, the `bbx view test` widget bundle) where
+// crash in plain Node (test runners, the `bbx view check` widget bundle) where
 // `import.meta.env` is undefined.
 export function viteBase(): string {
   try {

@@ -1,0 +1,13 @@
+<!-- The prompt as given, except that scratch-directory paths are shown as <scratch>. -->
+
+You are one side of a head-to-head comparison between two ways of building educational interactives: **canvas-loop** (a deterministic Canvas2D sandbox in this repository) and **d3**. You build the **canvas-loop** side; another agent builds the same visual in d3 at the same time (do not look at `scratch/d3-compare/`).
+
+**The visual: a periodic trends explorer** for a learner around 14–16 years old. Show the main-group elements (groups 1, 2 and 13–18, periods 1–6; the transition metals may be shown greyed or omitted) and let the learner explore one property at a time: atomic radius, electronegativity (Pauling) or first ionization energy, chosen with a control. Show the property both as a periodic-table layout (each cell shaded or sized by the value) and as a line chart of the value across a chosen period or down a chosen group. Hovering or clicking an element shows its value and highlights it in both views. The learner should be able to see the trends (radius grows down a group and shrinks across a period; electronegativity and ionization energy the opposite way) and spot the exceptions. Use real values from standard references (a small embedded data table is fine; say where the numbers come from). Clean and readable first; this is a chart, not a painting.
+
+**Tools.** Read `canvas-loop/README.md`, `canvas-loop/TEA.md` and `canvas-loop/BRUSHES.md`. Write a TEA sketch `canvas-loop/src/gallery/periodic-trends/sketch-tea.ts` (helpers named `<name>-tea.ts`). Controls are params (select, number with `control: "field"`, boolean, trigger); hover and clicks arrive as mousemove/mousedown Msgs. Script a learner's session in `canvas-loop/src/gallery/periodic-trends/events.json` (param changes, mousemoves, clicks, snapshots) and render with:
+
+    pnpm --dir canvas-loop run cli run src/gallery/periodic-trends/sketch-tea.ts --frames 300 --every 1000 --events src/gallery/periodic-trends/events.json --out <scratch>/trends-cl/cycle-N [--zoom x,y,w,h] [--outline]
+
+**Budget: 8 render cycles.** Keep `history/notes.md` (Intent and Seen per cycle) and `history/cycle-N.txt` copies in the sketch folder. Edit nothing outside it and the output directory; do not patch the library; no git; foreground commands; before finishing, `pnpm --dir canvas-loop exec eslint src/gallery/periodic-trends/` must pass and `pnpm --dir canvas-loop typecheck` must report no errors in your files.
+
+**Account.** Write `canvas-loop/src/gallery/periodic-trends/history/account.md`: what a learner sees and does, what was easy, what fought you (including the render-and-read loop), how many cycles you used, and what you would want from the library. Reply with its text.

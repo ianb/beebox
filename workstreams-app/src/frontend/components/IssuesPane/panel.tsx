@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Ref } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
@@ -6,7 +6,7 @@ import { CopyIssuePath, IssueTags, NextActionMessage, NextActionSelect, Priority
 import { IssueCategoryNav } from "./IssueCategoryNav.js";
 import { IssueRelated } from "./IssueRelated.js";
 import { Markdown } from "../Markdown.js";
-import { Button, Pill } from "../ui.js";
+import { Button, Badge } from "../ui.js";
 import { trpc } from "../../trpc.js";
 import { issueCategoryId } from "../../lib/issue-category-nav.js";
 import { issueSearchParams } from "../../lib/issue-link.js";
@@ -82,19 +82,14 @@ function editedChange(issue: Issue, priority: Priority): IssueChange {
   };
 }
 
+// React 18's typings lack the popover attributes; React 18 still forwards them
+// to the DOM, and spreading keeps them out of the type and unknown-property checks.
+// A `popover="auto"` element gets click-outside and Escape dismissal, and returns
+// focus to its invoker, from the browser.
+const POPOVER_TARGET = { popovertarget: "bbx-issues-filter-popover" };
+const POPOVER_AUTO = { popover: "auto" };
+
 function FilterMenu({ filters, categories, needs, workstreams, onFilters }: { filters: IssueFilters; categories: string[]; needs: string[]; workstreams: string[]; onFilters: (filters: IssueFilters) => void }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    function closeOnEscape(event: KeyboardEvent): void {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setOpen(false);
-      document.querySelector<HTMLElement>("#bbx-issues-filter")?.focus();
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [open]);
   function without(field: "category" | "priority" | "needs" | "workstream"): IssueFilters {
     const { [field]: _removed, ...remaining } = filters;
     return remaining;
@@ -105,14 +100,14 @@ function FilterMenu({ filters, categories, needs, workstreams, onFilters }: { fi
   function setSort(value: string): void {
     if (value === "date" || value === "priority") onFilters({ ...filters, sort: value });
   }
-  return <details className="filter-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary id="bbx-issues-filter">Filter</summary><button type="button" id="bbx-issues-filter-close" className="filter-backdrop" aria-hidden="true" tabIndex={-1} hidden={!open} onClick={() => setOpen(false)} /><div className="filter-popover" role="dialog" aria-label="Issue filters">
+  return <div className="filter-menu"><button type="button" id="bbx-issues-filter" {...POPOVER_TARGET}>Filter</button><div id="bbx-issues-filter-popover" {...POPOVER_AUTO} className="filter-popover" role="dialog" aria-label="Issue filters">
     <label>Status <select value={filters.status ?? "open"} onChange={(event) => setStatus(event.target.value)}><option value="open">Open</option><option value="all">All</option><option value="closed">Closed</option></select></label>
     <label>Sort <select value={filters.sort ?? "date"} onChange={(event) => setSort(event.target.value)}><option value="date">Newest filed</option><option value="priority">Priority</option></select></label>
     <label>Category <select value={filters.category ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, category: event.target.value } : without("category"))}><option value="">Every category</option>{categories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
     <label>Priority <select value={filters.priority ?? ""} onChange={(event) => onFilters(isPriority(event.target.value) ? { ...filters, priority: event.target.value } : without("priority"))}><option value="">Any priority</option><option value="important">Important</option><option value="normal">Normal</option><option value="backlog">Backlog</option><option value="uncategorized">Uncategorized</option></select></label>
     <label>Needs <select value={filters.needs ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, needs: event.target.value } : without("needs"))}><option value="">Every need</option>{needs.map((need) => <option value={need} key={need}>{need}</option>)}</select></label>
     <label>Workstream <select value={filters.workstream ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, workstream: event.target.value } : without("workstream"))}><option value="">Every workstream</option>{workstreams.map((workstream) => <option value={workstream} key={workstream}>{workstream}</option>)}</select></label>
-  </div></details>;
+  </div></div>;
 }
 
 function IssueRow({ issue, selected, change, rowRef, onSelect, onChange }: { issue: Issue; selected: boolean; change?: IssueChange | undefined; rowRef?: Ref<HTMLLIElement> | undefined; onSelect: () => void; onChange: (change: IssueChange) => void }) {
@@ -202,5 +197,5 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
   function setFilters(next: IssueFilters): void { void navigate({ to: "/issues", search: { ...next, ...(search.issue ? { issue: search.issue, issueVisibility: search.issueVisibility === "private" ? "private" : undefined } : {}) } }); }
   function select(issue: Issue): void { void navigate({ to: "/issues", search: { ...search, ...issueSearchParams(issue) } }); }
   function back(): void { void navigate({ to: "/issues", search: { ...search, issue: undefined, issueVisibility: undefined } }); }
-  return <main className="issues-page"><header className="issues-header"><div className="issue-breadcrumb"><a href="/">/</a><Link to="/">workstreams</Link><span>/</span><h1>issues</h1></div><FilterMenu filters={search} categories={categories} needs={needs} workstreams={workstreams} onFilters={setFilters} /><div className="active-filters">{search.status && search.status !== "open" ? <Pill>{`status: ${search.status}`}</Pill> : null}{search.sort === "priority" ? <Pill>sort: priority</Pill> : <Pill>sort: newest filed</Pill>}{search.category ? <Pill>{`category: ${search.category}`}</Pill> : null}{search.priority ? <Pill>{`priority: ${search.priority}`}</Pill> : null}{search.needs ? <Pill tone={search.needs === "manual-testing" ? "manual" : "neutral"}>{`needs: ${search.needs}`}</Pill> : null}{search.workstream ? <Pill>{`workstream: ${search.workstream}`}</Pill> : null}</div><div className="issue-save-actions"><span>{saving ? "Saving issue changes…" : `${changes.size} unsaved issue${changes.size === 1 ? "" : "s"}`}</span><Button disabled={changes.size === 0 || saving} onClick={onReset}>Reset</Button><Button intent="primary" disabled={changes.size === 0 || saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</Button></div></header><div className="issue-browser"><section className="issue-list-pane" aria-label="Issues" ref={listPaneRef}>{visible.length > 0 ? <><IssueCategoryNav categories={[...byCategory.entries()].map(([name, records]) => ({ name, count: records.length }))} scrollRoot={listPaneRef} />{[...byCategory.entries()].map(([category, records]) => <section className="issue-category" id={issueCategoryId(category)} data-issue-category={category} tabIndex={-1} key={category}><h2 className="issue-category-heading">{category} <small>{records.length}</small></h2><ul className="issue-list">{records.map((issue) => { const key = issueChangeKey(issue); const isSelected = selectedKey === key; return <IssueRow key={key} issue={issue} selected={isSelected} change={changes.get(key)} rowRef={isSelected ? selectedRowRef : undefined} onSelect={() => select(issue)} onChange={onChange} />; })}</ul></section>)}</> : <p className="empty-state">No issues match these filters.</p>}</section><IssueDetail issue={selected} missing={missing} onBack={back} /></div></main>;
+  return <main className="issues-page"><header className="issues-header"><div className="issue-breadcrumb"><a href="/">/</a><Link to="/">workstreams</Link><span>/</span><h1>issues</h1></div><FilterMenu filters={search} categories={categories} needs={needs} workstreams={workstreams} onFilters={setFilters} /><div className="active-filters">{search.status && search.status !== "open" ? <Badge>{`status: ${search.status}`}</Badge> : null}{search.sort === "priority" ? <Badge>sort: priority</Badge> : <Badge>sort: newest filed</Badge>}{search.category ? <Badge>{`category: ${search.category}`}</Badge> : null}{search.priority ? <Badge>{`priority: ${search.priority}`}</Badge> : null}{search.needs ? <Badge tone={search.needs === "manual-testing" ? "manual" : "neutral"}>{`needs: ${search.needs}`}</Badge> : null}{search.workstream ? <Badge>{`workstream: ${search.workstream}`}</Badge> : null}</div><div className="issue-save-actions"><span>{saving ? "Saving issue changes…" : `${changes.size} unsaved issue${changes.size === 1 ? "" : "s"}`}</span><Button disabled={changes.size === 0 || saving} onClick={onReset}>Reset</Button><Button intent="primary" disabled={changes.size === 0 || saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</Button></div></header><div className="issue-browser"><section className="issue-list-pane" aria-label="Issues" ref={listPaneRef}>{visible.length > 0 ? <><IssueCategoryNav categories={[...byCategory.entries()].map(([name, records]) => ({ name, count: records.length }))} scrollRoot={listPaneRef} />{[...byCategory.entries()].map(([category, records]) => <section className="issue-category" id={issueCategoryId(category)} data-issue-category={category} tabIndex={-1} key={category}><h2 className="issue-category-heading">{category} <small>{records.length}</small></h2><ul role="list" className="issue-list">{records.map((issue) => { const key = issueChangeKey(issue); const isSelected = selectedKey === key; return <IssueRow key={key} issue={issue} selected={isSelected} change={changes.get(key)} rowRef={isSelected ? selectedRowRef : undefined} onSelect={() => select(issue)} onChange={onChange} />; })}</ul></section>)}</> : <p className="empty-state">No issues match these filters.</p>}</section><IssueDetail issue={selected} missing={missing} onBack={back} /></div></main>;
 }

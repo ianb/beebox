@@ -127,3 +127,7 @@ clearing the manual-testing flag.
 ## Audit 2026-10-22
 
 Item 6 is partly done. `.github/workflows/image.yml` publishes the container image to GHCR on `v*` tags (and `:edge` on manual runs), so a clone-free image pull is possible. The install docs under `beebox/docs/install/` do not yet mention the `ghcr.io` image. No npm publish or `bbx onboard` wizard exists. The manual-testing items are unchanged.
+
+Re-reviewed 2026-10-30: item 11 (root README front door) is done; item 6 remains partial (image published, not documented; no npm publish).
+
+Out of date in the body above: Mark item 11 done (README.md front door with agent install prompt). Under item 6, add that beebox/docs/install/ does not yet mention the ghcr.io image.

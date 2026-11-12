@@ -26,6 +26,7 @@ import type { TodoLocator } from "@shared/todo-locators";
 import { TodoItem } from "../todo/TodoItem";
 import { hiddenInReading } from "../todo/item-logic";
 import { usePlateState } from "../todo/card-todos-context";
+import { useMarkdownRender } from "../../lib/markdown-render";
 
 function resolveStatus(status: string | undefined): TodoStatus {
   return status !== undefined && isTodoStatus(status) ? status : "open";
@@ -65,17 +66,12 @@ function RenderedTodo({ props, layout, cardPath }: { props: TodoProps; layout: "
   );
 }
 
-export function makeTodoComponents({ cardPath }: { cardPath: string | null }): {
-  TodoInline: (props: TodoProps) => ReactNode;
-  TodoBlock: (props: TodoProps) => ReactNode;
-} {
-  function TodoInline(props: TodoProps) {
-    return <RenderedTodo props={props} layout="inline" cardPath={cardPath} />;
-  }
+export function TodoInline(props: TodoProps) {
+  const { cardPath } = useMarkdownRender();
+  return <RenderedTodo props={props} layout="inline" cardPath={cardPath} />;
+}
 
-  function TodoBlock(props: TodoProps) {
-    return <RenderedTodo props={props} layout="block" cardPath={cardPath} />;
-  }
-
-  return { TodoInline, TodoBlock };
+export function TodoBlock(props: TodoProps) {
+  const { cardPath } = useMarkdownRender();
+  return <RenderedTodo props={props} layout="block" cardPath={cardPath} />;
 }

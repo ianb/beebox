@@ -330,3 +330,35 @@ destinations:
   assert.ok(navOnly);
   t.check(findDestination(navOnly.destinations, "triage"), null);
 });
+
+// ## The intention
+//
+// `intention` is one line of inline Markdown, kept verbatim, with an optional
+// prime card (docs/implemented-plans/place-intention.md, Track A). A hand-written bare
+// string means `{ text }`.
+void test("intention is one line of inline Markdown, kept verbatim, with an optional prime card", async (t) => {
+  t.check(
+    {
+      object: parseLandmarkFields("---\nnavigation:\n  label: Writing\nintention:\n  text: \"Finish the *garden post*: the ending is not written 🌱\"\n  ref: /_content/writing/Garden_Post.doc.card\n---\n")?.intention,
+      bare: parseLandmarkFields("---\nnavigation:\n  label: Writing\nintention: Finish the post\n---\n")?.intention,
+      none: parseLandmarkFields("---\nnavigation:\n  label: Writing\n---\n")?.intention,
+    },
+    {
+      object: { text: "Finish the *garden post*: the ending is not written 🌱", ref: "/_content/writing/Garden_Post.doc.card" },
+      bare: { text: "Finish the post" },
+      none: undefined,
+    },
+  );
+});
+
+// A blank or multi-line intention is a card error, not something to trim: the
+// landmark fails to parse, the same way an invalid opener does.
+void test("A blank or multi-line intention makes the landmark fail to parse, like an invalid opener", async (t) => {
+  t.check(
+    {
+      blank: parseLandmarkFields("---\nnavigation:\n  label: Writing\nintention:\n  text: \"  \"\n---\n"),
+      multiline: parseLandmarkFields("---\nnavigation:\n  label: Writing\nintention:\n  text: |\n    Finish the post\n    and the ending\n---\n"),
+    },
+    { blank: null, multiline: null },
+  );
+});

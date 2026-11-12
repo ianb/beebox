@@ -1,6 +1,6 @@
 /**
  * Transcript search for the "Recent chats" panel: the debounced field state
- * and the result rows. Split from `SessionListPanel.tsx` to keep that file
+ * and the result rows. Split from `SessionListMenuBody.tsx` to keep that file
  * under the line cap.
  *
  * Results are one row per CHAT (the server folds chunk hits), each landing
@@ -10,20 +10,20 @@
  */
 
 import { useState, useEffect } from "react";
-import { Link } from "@tanstack/react-router";
-import { href, toSearch } from "../../../../lib/routing";
+import { toSearch } from "../../../../lib/routing";
 import {
   searchChatTranscripts,
   type ChatSearchHitInfo,
   type ChatSessionInfo,
 } from "../../../../api";
 import { bbxSource } from "../../../../lib/source-tag";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { MenuItem } from "../../../ui/menu-item";
 import { Highlight } from "../../../search/SearchResults";
 import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
 import { sessionIdHint } from "./session-list-grouping";
 import { StatusMessage } from "../../../ui/StatusMessage";
+import { InlineAction } from "../../../ui/InlineAction";
 
 /** A query short enough to act on (the debounce has settled on it). */
 const MIN_QUERY = 2;
@@ -108,19 +108,18 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
   currentSessionId: string | null;
   onRetry: () => void;
 }) {
-  const close = useDropdownClose();
   // Re-render each minute so the hit ages stay current.
   useNow(60_000);
   if (state.kind === "loading") {
-    return <StatusMessage variant="menu">Searching…</StatusMessage>;
+    return <StatusMessage busy variant="menu">Searching…</StatusMessage>;
   }
   if (state.kind === "error") {
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
         Couldn&rsquo;t search chats.{" "}
-        <button type="button" onClick={() => onRetry()} className="underline hover:no-underline">
+        <InlineAction intent="danger" onClick={() => onRetry()}>
           Retry
-        </button>
+        </InlineAction>
       </div>
     );
   }
@@ -139,18 +138,16 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
         const isViewing = currentSessionId === hit.sessionId;
         const idHint = sessionIdHint({ sessionId: hit.sessionId, label }, labelled);
         return (
-          <Link
+          <MenuItem
             key={hit.sessionId}
-            role="menuitem"
-            to={href(`/${boxSlug}/chat`)}
+            to={`/${boxSlug}/chat`}
             search={toSearch({ session: hit.sessionId, m: hit.anchor })}
-            onClick={close}
             title={`Session ${hit.sessionId}`}
             {...bbxSource("session", hit.sessionId)}
-            className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
+            active={isViewing}
           >
             <div className="flex items-baseline gap-2">
-              <span className={`flex-1 truncate ${isViewing ? "font-medium text-warm-900" : "text-warm-800"}`}>
+              <span className="flex-1 truncate">
                 {label}
               </span>
               {idHint === null ? null : <span className="text-xs text-warm-700 flex-shrink-0 font-mono">{idHint}</span>}
@@ -159,7 +156,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
               <Highlight text={hit.snippet} query={query} />
             </div>
             <div className="mt-0.5 text-xs text-warm-400">{agoOnClock(hit.created, "real")}</div>
-          </Link>
+          </MenuItem>
         );
       })}
       {state.stale ? <div className="px-3 py-1 text-xs text-warm-400">Index busy — results may be stale.</div> : null}

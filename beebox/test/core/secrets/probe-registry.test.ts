@@ -39,6 +39,7 @@ import { resolveSecret } from "../../../src/core/secrets/resolve.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { FetchLike } from "../../../src/core/secrets/probe-registry.js";
 import { invariant } from "../../../src/shared/invariant.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 interface RecordedCall {
   url: string;
@@ -120,7 +121,10 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // and the boxholder needs to know that, not a silent `unchecked`.
 
   await setSecret({ name: "deepgram", value: "not-json-at-all" });
+  const warnings = consoleLines(t, "warn");
   const malformed = await probeSecret({ name: "deepgram", deps: { fetch: recordingFetch(200, []) } });
+  // The server log names the secret and tells the boxholder the expected shape:
+  t.check(warnings(), ['[secrets] the stored secret "deepgram" is not valid JSON (Unexpected token \'o\', "not-json-at-all" is not valid JSON) — treating it as not configured. Multi-field credentials are stored as a JSON string.']);
   t.check(malformed, { status: "failed", reason: "the stored value is not in the shape this credential needs", at: isoDate() });
 
   // ## A probe that outlives its value never stamps the new one

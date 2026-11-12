@@ -12,7 +12,8 @@ import { errorMessage } from "@shared/error-guards";
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
 import { boxNow } from "../../lib/box-clock";
-import { buildOptimisticContent, holdInjectedMessage, mergeAcceptedIntoPending } from "./chat-shared";
+import { buildOptimisticContent, holdInjectedMessage, markPendingUndelivered, mergeAcceptedIntoPending } from "./chat-shared";
+import { applyRefetchedAccepted, discardPendingSend, markRefusedSend, refetchAccepted as refetchAcceptedFor } from "./chat-undelivered";
 import { initialChatContext } from "./chat-machine-context";
 import {
   chatTailSlice,
@@ -60,15 +61,16 @@ export const chatMachine = setup({
     // and a swallowed SEND there meant no receipt and a shell redelivery
     // loop painting duplicate rows (the 2026-08-19 voice-duplicate
     // regression).
-    queueSend: enqueueActions(({ enqueue, context, event }, params: { from: "loading" | "streaming" | "refreshing" }) => {
+    queueSend: enqueueActions(({ enqueue, context, event, self }, params: { from: "loading" | "streaming" | "refreshing" }) => {
       invariant(event.type === "SEND", "queueSend only fires on SEND");
       logFsm(`send-from-${params.from}`, {
         len: event.message.length,
         pending: context.pendingMessages.length,
       });
       enqueue.assign(appendQueuedSend({ context, event }));
-      dispatchQueuedSend({ context, event });
+      dispatchQueuedSend({ context, event, self });
     }),
+    refetchAccepted: ({ context, self }) => refetchAcceptedFor({ context, self }),
   },
   actors: {
     fetchInitial: fetchInitialActor,
@@ -82,7 +84,7 @@ export const chatMachine = setup({
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
-      actions: assign(applyServerMessages),
+      actions: assign((args) => ({ ...applyServerMessages(args), historySyncs: args.context.historySyncs + 1 })),
     },
     // Global handler: refresh history from any state (e.g., after SSE chat-complete)
     REFRESH: {
@@ -99,6 +101,19 @@ export const chatMachine = setup({
     OTHER_USER_MESSAGE: {
       actions: assign(appendOtherUserMessage),
     },
+    // Global handler: the box dropped an accepted send before the agent got
+    // it. Undelivered entries still reconcile: a drain admitted during the
+    // stop can deliver after all, and then the bubble retires.
+    MESSAGE_UNDELIVERED: {
+      actions: enqueueActions(({ enqueue, context, event }) => {
+        const marked = markPendingUndelivered({ messages: context.messages, pendingMessages: context.pendingMessages, messageId: event.messageId });
+        if (marked === null) enqueue("refetchAccepted");
+        else enqueue.assign(marked);
+      }),
+    },
+    SEND_REFUSED: { actions: assign(markRefusedSend) },
+    MESSAGE_DISCARDED: { actions: assign(discardPendingSend) },
+    ACCEPTED_REFETCHED: { actions: assign(applyRefetchedAccepted) },
     // Global handler: the box injected a message (a delivered capture or
     // upload); show it until the transcript has it (holdInjectedMessage).
     INJECTED_USER_MESSAGE: {
@@ -167,7 +182,7 @@ export const chatMachine = setup({
             return {
               messages, pendingMessages, sessionId: event.output.sessionId,
               processRunning: event.output.running, processBusy: event.output.busy,
-              totalEntries: event.output.total, initial: undefined,
+              totalEntries: event.output.total, initial: undefined, historySyncs: context.historySyncs + 1,
             };
           }),
         },
@@ -364,7 +379,7 @@ export const chatMachine = setup({
         input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
-          actions: assign(({ context, event }) => applyRefreshedHistory({ context, output: event.output })),
+          actions: assign(({ context, event }) => ({ ...applyRefreshedHistory({ context, output: event.output }), historySyncs: context.historySyncs + 1 })),
         },
         onError: {
           target: "idle",

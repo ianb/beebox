@@ -30,19 +30,18 @@ import { invariant } from "../../shared/invariant.js";
 import { createAsyncIterableQueue } from "../claude-chat-queue.js";
 import {
   allocateSessionIdFilePath,
-  cleanupSessionIdFile,
-  writeSessionIdFile,
 } from "../../core/chat/session/id-file.js";
-import { toSdkUserContent } from "../claude-chat-content.js";
+import { buildRunFromQuery } from "./claude-run.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
 import { boxSessionSettings } from "../../core/agent/box-session-settings.js";
 import { createCodexChatBackend } from "./codex-chat.js";
+import { createPiChatBackend } from "./pi-chat.js";
+import type { AgentEngine } from "../../shared/agent-models.js";
+import { injectedCredentials } from "../../lib/credential-env.js";
 import type {
   ChatBackend,
   ChatBackendRun,
-  ChatBackendSendOptions,
   ChatBackendStartOptions,
-  ChatContentBlock,
 } from "../claude-chat-types.js";
 
 const BBX_CHAT_SESSION_ID_ENV = "BBX_CHAT_SESSION_ID";
@@ -67,15 +66,10 @@ export {
   type FakeChatBackendRun,
 } from "./fake.js";
 
-// ─── Real implementation ─────────────────────────────────────────────────────
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiChatBackend } from "./pi-chat.js";
 
-/** Pull a string `session_id` off a raw SDK message, or null if absent. */
-function messageSessionId(msg: SDKMessage): string | null {
-  if ("session_id" in msg && typeof msg.session_id === "string" && msg.session_id.length > 0) {
-    return msg.session_id;
-  }
-  return null;
-}
+// ─── Real implementation ─────────────────────────────────────────────────────
 
 type AgentSdk = typeof AgentSdkModule;
 let agentSdk: AgentSdk | undefined;
@@ -142,9 +136,7 @@ export function buildQueryOptions(
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
-  if (opts.tools !== undefined) {
-    queryOptions.tools = opts.tools;
-  }
+  if (opts.tools !== undefined) queryOptions.tools = opts.tools;
   queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()] };
   queryOptions.plugins = [{
     type: "local",
@@ -158,13 +150,13 @@ export function buildQueryOptions(
 }
 
 /**
- * Provider credentials are baked into a warm subprocess's env, and a consumed
- * slot's env wins over the caller's — so a key rotation between prewarm and
- * send must invalidate the slot rather than silently keep the old credential.
- * The telemetry flags ride the same way: a box that turns telemetry off must
- * not be served a slot warmed while it was on.
+ * Provider credentials (the `claudeEngine` injections, `lib/credential-env.ts`)
+ * are baked into a warm subprocess's env, and a consumed slot's env wins over the
+ * caller's — so a key rotation between prewarm and send must invalidate the slot
+ * rather than silently keep the old credential. The telemetry flags ride the same
+ * way: a box that turns telemetry off must not reuse a slot warmed while it was on.
  */
-const PROVIDER_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] as const;
+const PROVIDER_ENV_KEYS: readonly string[] = [...injectedCredentials("claudeEngine"), "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
 
 function providerEnvMatches(warm: Record<string, string | undefined>, next: Record<string, string | undefined>): boolean {
   return PROVIDER_ENV_KEYS.every((key) => (warm[key] ?? null) === (next[key] ?? null));
@@ -283,77 +275,6 @@ function createClaudeChatBackend(): ChatBackend {
     return pending;
   }
 
-  function buildRunFromQuery(params: {
-    q: Query;
-    opts: ChatBackendStartOptions;
-    inputQueue: ReturnType<typeof createAsyncIterableQueue<SDKUserMessage>>;
-    messageQueue: ReturnType<typeof createAsyncIterableQueue<SDKMessage>>;
-    /** File to write the SDK-assigned session id into, or null (resume). */
-    sessionIdFilePath: string | null;
-  }): ChatBackendRun {
-    const { q, opts, inputQueue, messageQueue, sessionIdFilePath } = params;
-    const run: ChatBackendRun = {
-      closed: false,
-      messages: messageQueue.iterable,
-      send(content: ChatContentBlock[], options?: ChatBackendSendOptions): void {
-        if (run.closed) return;
-        // Narrow our loose ChatContentBlock into the SDK's strict
-        // ContentBlockParam, throwing on a malformed image rather than casting
-        // it through (see claude-chat-content.ts). No cast: the converted
-        // content makes the literal a valid SDKUserMessage.
-        inputQueue.push({
-          type: "user",
-          message: { role: "user", content: toSdkUserContent(content) },
-          session_id: opts.resumeSessionId ?? "",
-          parent_tool_use_id: null,
-          // Text the user did not type: the CLI must not expand `@path`
-          // mentions in it into file attachments.
-          ...(options?.clientComposed === true ? { client_composed: true as const } : {}),
-        });
-      },
-      async interrupt(): Promise<void> {
-        if (run.closed) return;
-        await q.interrupt();
-      },
-      async close(): Promise<void> {
-        if (run.closed) return;
-        inputQueue.end();
-        await pump.catch(() => {
-          // Errors already surface via the messages iterator.
-        });
-      },
-    };
-
-    const pump = (async (): Promise<void> => {
-      let sessionIdWritten = false;
-      try {
-        for await (const msg of q) {
-          // Publish the SDK-assigned session id to the per-subprocess file the
-          // moment it first appears, so a mid-turn `bbx chat screenshot` in this
-          // subprocess can target this exact conversation (new sessions only —
-          // resumes carry the id in env and get no file).
-          if (!sessionIdWritten && sessionIdFilePath !== null) {
-            const id = messageSessionId(msg);
-            if (id !== null) {
-              writeSessionIdFile(sessionIdFilePath, id);
-              sessionIdWritten = true;
-            }
-          }
-          messageQueue.push(msg);
-        }
-      } finally {
-        messageQueue.end();
-        run.closed = true;
-        if (sessionIdFilePath !== null) cleanupSessionIdFile(sessionIdFilePath);
-      }
-    })();
-    pump.catch(() => {
-      // messageQueue.end() already ran in the finally.
-    });
-
-    return run;
-  }
-
   return {
     requiresClaudeAuth: true,
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
@@ -431,16 +352,16 @@ function createClaudeChatBackend(): ChatBackend {
 export function createChatBackend(): ChatBackend {
   const claude = createClaudeChatBackend();
   const codex = createCodexChatBackend();
+  const pi = createPiChatBackend();
   return {
     requiresClaudeAuth: true,
     requiresCodexAuth: true,
-    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
-    prewarm: async (opts) => {
-      if (opts.engine !== "codex") await claude.prewarm?.(opts);
-    },
-    load: async (engine) => {
-      if (engine !== "codex") await claude.load?.(engine);
-    },
+    start: (opts) => ({
+      claude: () => claude.start(opts), codex: () => codex.start(opts), pi: () => pi.start(opts),
+    } satisfies Record<AgentEngine, () => ChatBackendRun>)[opts.engine ?? "claude"](),
+    // Only the Claude backend keeps warm processes; the others have nothing to prewarm or load.
+    prewarm: async (opts) => { if ((opts.engine ?? "claude") === "claude") await claude.prewarm?.(opts); },
+    load: async (engine) => { if ((engine ?? "claude") === "claude") await claude.load?.(engine); },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,

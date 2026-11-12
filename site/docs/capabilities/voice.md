@@ -13,10 +13,13 @@ phone, not a bolt-on to typing.
 
 - Dictate a chat message with spoken controls: say "send message," "erase
   message," or "microphone off" instead of reaching for the screen. "Send
-  checkpoint" sends what you have so far and tells the agent the message is
+  checkpoint" (or "checkpoint message") sends what you have so far and tells the agent the message is
   partial, so it does not answer yet and the next message continues it.
 - Keeps dictating through a brief network drop or the microphone getting
   grabbed by something else, instead of losing what you said.
+- Closes the browser's microphone on its own after five minutes with no new
+  spoken words, keeps the text, and shows a notice saying why, so a forgotten
+  recorder does not stay open.
 - Every dictated message gets a second, higher-quality transcription from the
   box when a transcription key is available; there is no setting for it. The
   live text on screen is sent only when that pass cannot run or fails, and it is

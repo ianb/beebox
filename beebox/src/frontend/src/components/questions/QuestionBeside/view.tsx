@@ -10,10 +10,12 @@
  * `data-question-beside`; `data-chat-side` says where the notch points.
  */
 
+import type { ReactNode } from "react";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
+import { MaterialContext } from "../../ui/material";
 import { bbxSource } from "../../../lib/source-tag";
-import { LATER } from "../question-tab";
+import { LATER } from "../question-close";
 import { optionsLine } from "./options-line";
 import { QuestionContext, type QuestionInfo } from "../QuestionForm/view";
 
@@ -38,13 +40,25 @@ function BoxDecided({ decision, reasoning }: { decision: string; reasoning: stri
   );
 }
 
+/**
+ * The patch the question sits on. It lies on the card's paper, so the text,
+ * hints and ghost buttons on it take the card's ink (`MaterialContext`).
+ */
+export function QuestionPatch({ path, chatSide, children }: { path: string; chatSide: BesideActions["chatSide"]; children: ReactNode }) {
+  return (
+    <div className="bbx-question-patch" data-question-beside="" data-chat-side={chatSide} {...bbxSource("card", path)}>
+      <MaterialContext.Provider value>{children}</MaterialContext.Provider>
+    </div>
+  );
+}
+
 export function QuestionBeside({ question, actions }: { question: QuestionInfo; actions: BesideActions }) {
   const { onLater: handleLater, onFigureOut: handleFigureOut, onShowChat: handleShowChat } = actions;
   const choices = question.inputType === "select" ? optionsLine(question.options) : null;
   const decided = question.provisional;
   const pending = question.state === "pending";
   return (
-    <div className="bbx-question-patch" data-question-beside="" data-chat-side={actions.chatSide} {...bbxSource("card", question.relativePath)}>
+    <QuestionPatch path={question.relativePath} chatSide={actions.chatSide}>
       <QuestionContext question={question} />
       {choices === null ? null : <Text as="p" className="bbx-question-choices mb-3">{choices}</Text>}
       {decided === undefined ? null : <BoxDecided decision={decided.decision} reasoning={decided.reasoning} />}
@@ -60,6 +74,6 @@ export function QuestionBeside({ question, actions }: { question: QuestionInfo; 
           </Button>
         ) : null}
       </div>
-    </div>
+    </QuestionPatch>
   );
 }

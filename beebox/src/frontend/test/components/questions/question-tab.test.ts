@@ -7,7 +7,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { dismissesOnClose, pickArrivalQuestion, questionToggle } from "../../../src/components/questions/question-tab.js";
+import { dismissesOnClose, pickArrivalQuestion } from "../../../src/components/questions/question-close.js";
+import { questionToggle } from "../../../src/components/questions/question-tab.js";
 import type { QuestionInfo } from "../../../src/components/questions/QuestionForm/view.js";
 
 function question(name: string, over: Partial<QuestionInfo>): QuestionInfo {

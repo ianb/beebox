@@ -171,6 +171,15 @@ void test("An image in that same chat message resolves the same way — basePath
 
 // ## classifyMarkdownHref
 //
+// `box-browser:` is the Browser page; only the exact form, so nothing else with
+// that prefix is taken for it.
+void test("`box-browser:` is the Browser page", (t) => {
+  t.check(classifyMarkdownHref("box-browser:"), { kind: "box-browser" });
+  t.check(classifyMarkdownHref("box-browser:x"), { kind: "external" });
+  t.end();
+});
+
+//
 // Splits an href into the cases the Markdown renderer cares about. A plain relative/absolute path is a box reference; anything with a scheme or anchor is external; the retired `view:` scheme is `legacy-view` so renderers can draw a visibly-broken marker:
 void test("Splits an href into the cases the Markdown renderer cares about.", async (t) => {
   t.check(classifyMarkdownHref("view:_content/a.md"), {
@@ -406,4 +415,13 @@ void test("These build the URLs the file/image renderers embed a box-relative pa
   t.check(apiImageUrl("test1", "_content/Q&A #3 100% done?.png"), "/test1/api/image/_content/Q%26A%20%233%20100%25%20done%3F.png");
 
   t.check(apiRawFileUrl("/test1/api", "_content/Q&A #3 100% done?.md"), "/test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md");
+});
+
+// A chat "show me" link carries a percent-encoded JSON `viewState`. The
+// markdown normalizer keeps the query as written, and the target decodes it
+// once into the view's state (box-docs views.md, "Show-me links").
+test("a percent-encoded viewState link resolves to the view's state", (t) => {
+  const href = normalizeMarkdownLink("/_content/Periodic_Table.chem.card?viewState=%7B%22select%22%3A%22Na%22%7D", (url) => url);
+  t.check(resolveContentTarget(undefined, href), { path: "_content/Periodic_Table.chem.card", viewer: null, params: {}, viewState: { select: "Na" } });
+  t.end();
 });

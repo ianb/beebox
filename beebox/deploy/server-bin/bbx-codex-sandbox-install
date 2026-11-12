@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Install what Codex's sandbox needs on the host and prove it works for a box.
+#
+#   bbx-codex-sandbox-install <engine>     (as root; deploy.sh runs it every deploy)
+#
+# <engine> is the installed beebox package, /opt/beebox/beebox. Codex runs
+# prompt-only procedures and read-only audits in its own sandbox
+# (src/services/codex-sdk-session/core.ts), which is bubblewrap. It installs:
+#   - bubblewrap, with /usr/bin/bwrap made 0750 root:beebox-boxes by
+#     dpkg-statoverride, so the override survives package upgrades.
+#   - deploy/apparmor/beebox-codex, which lets that bwrap create user
+#     namespaces on Ubuntu 24.04.
+# Then it runs `codex sandbox -- /bin/true` as one box user inside the box
+# sandbox. That is the read-only sandbox with no network, the setup that failed
+# before this helper existed.
+#
+# Idempotent: each piece is compared with what is there and replaced only when
+# it differs. Output is quiet on success and complete on failure.
+set -euo pipefail
+# The deploy's remote script runs with /home/beebox/.env's PATH, which omits
+# /usr/sbin; apt, dpkg and apparmor_parser need it.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bbx-codex-sandbox-install <engine>" >&2
+  exit 64
+fi
+engine="$1"
+readonly BWRAP=/usr/bin/bwrap
+readonly APPARMOR_SRC="$engine/deploy/apparmor/beebox-codex"
+readonly APPARMOR_DEST=/etc/apparmor.d/beebox-codex
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+# Run a command with its output kept back unless it fails.
+quietly() {
+  if ! "$@" > "$log" 2>&1; then
+    echo "  FAILED: $*" >&2
+    sed 's/^/    /' "$log" >&2
+    return 1
+  fi
+}
+
+# --- bubblewrap --------------------------------------------------------------
+# The override first, so the binary is never installed open to every user.
+if [[ "$(dpkg-statoverride --list "$BWRAP" 2> /dev/null)" != "root beebox-boxes 0750 $BWRAP" ]]; then
+  dpkg-statoverride --remove "$BWRAP" > /dev/null 2>&1 || true
+  dpkg-statoverride --add root beebox-boxes 0750 "$BWRAP"
+  echo "  set $BWRAP to 0750 root:beebox-boxes"
+fi
+if ! dpkg-query -W -f='${Status}' bubblewrap 2> /dev/null | grep -qx 'install ok installed'; then
+  quietly apt-get update -qq
+  quietly env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bubblewrap
+  echo "  installed bubblewrap"
+fi
+if [[ "$(stat -c '%U:%G %a' "$BWRAP")" != "root:beebox-boxes 750" ]]; then
+  chown root:beebox-boxes "$BWRAP"
+  chmod 0750 "$BWRAP"
+fi
+
+# --- AppArmor ----------------------------------------------------------------
+if ! cmp -s "$APPARMOR_SRC" "$APPARMOR_DEST" || ! grep -q '^beebox-codex-bwrap ' /sys/kernel/security/apparmor/profiles; then
+  install -o root -g root -m 0644 "$APPARMOR_SRC" "$APPARMOR_DEST"
+  quietly apparmor_parser -r "$APPARMOR_DEST"
+  echo "  loaded $APPARMOR_DEST"
+fi
+
+# --- The check ----------------------------------------------------------------
+# One existing box user, through the box units' own sandbox drop-in and
+# environment file. A host with no box yet has nobody to check as.
+slug=""
+for home in /var/lib/beebox/*/; do
+  candidate=$(basename "$home")
+  [[ "$candidate" =~ ^[a-z0-9][a-z0-9-]{0,27}$ && -e "$home/box/.git" ]] || continue
+  getent passwd "bbx-$candidate" > /dev/null || continue
+  slug="$candidate"
+  break
+done
+if [[ -z "$slug" ]]; then
+  echo "  no box user yet; Codex sandbox check skipped"
+  exit 0
+fi
+props=()
+while IFS= read -r line; do
+  [[ "$line" =~ ^[A-Za-z]+= ]] || continue
+  props+=(-p "${line//%i/$slug}")
+done < "$engine/deploy/systemd/box-sandbox.conf"
+if ! timeout 90 systemd-run --quiet --wait --pipe --collect \
+  --uid="bbx-$slug" --gid="bbx-$slug" \
+  -p EnvironmentFile=/etc/beebox/box.env -p "WorkingDirectory=/var/lib/beebox/$slug/box" -p RuntimeMaxSec=60 \
+  "${props[@]}" -- /usr/local/bin/codex sandbox -- /bin/true < /dev/null > "$log" 2>&1; then
+  echo "  FAILED: Codex's sandbox does not start for a box user (checked as bbx-$slug)." >&2
+  sed 's/^/    /' "$log" >&2
+  echo "  Prompt-only Codex procedures and read-only Codex runs would fail." >&2
+  exit 1
+fi
+echo "  Codex sandbox check passed (as bbx-$slug)"

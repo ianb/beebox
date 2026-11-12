@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 import { bodyField } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { buildMultipartForm } from "../../../../src/lib/multipart.js";
 
 async function postClip(ctx: TestServer) {
@@ -46,7 +47,10 @@ void test("mai is reachable only through OpenRouter, so with an empty secret sto
   await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
   await writeFile(join(ctx.boxRoot, "_config/transcription.json"), JSON.stringify({ hqService: "mai" }));
 
+  const errors = consoleLines(t, "error");
   const res = await postClip(ctx);
+  // The server log carries the same named failure:
+  t.check(errors(), ['[transcribe-audio] HQ transcription failed: HQ transcription service "mai" needs an OpenRouter key — MAI-Transcribe-2 is reachable no other way. Grant the "openrouter" secret to this box, or pick a different hqService.']);
   t.check({ status: res.statusCode, code: bodyField(res.body, "code"), permanent: bodyField(res.body, "permanent"), namesTheSecret: /"openrouter"/.test(String(bodyField(res.body, "error"))) }, {
     status: 500,
     code: "missing_openrouter_key",

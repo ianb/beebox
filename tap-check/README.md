@@ -64,6 +64,7 @@ export default [
       "tap-check/check-whole-value": "error",
       "tap-check/no-voided-check": "error",
       "tap-check/no-tap-assert": "error",
+      "tap-check/no-text-locator": "error",
     },
   },
 ];
@@ -72,6 +73,7 @@ export default [
 - `check-whole-value`: do not check a length, a boolean, a comparison, or `JSON.stringify(x)`. Check the value.
 - `no-voided-check`: do not `void` a check. Await it, so a failure is not lost.
 - `no-tap-assert`: use `t.check`, not `t.equal`, `t.same`, or `t.ok`.
+- `no-text-locator`: do not find a DOM element by reading `textContent` or `innerText` in a `.find`, `.filter`, or `.some` callback. Find it by id or by role and accessible name. Reading the text to check it is allowed.
 
 ## Docs
 

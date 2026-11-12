@@ -21,6 +21,7 @@ import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";
 import { labelSource, type ChatSessionEntry } from "../../../../../src/core/chat/session/list/core.js";
 import { makeTmpBox } from "../../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../../helpers/console-lines.js";
 
 /** The features snapshot the composer prepends to a session's first message. */
 const ENVELOPE = '<chat-app narration="off" prose="on" ' +
@@ -37,7 +38,7 @@ function firstMessage(text: string) {
 }
 
 /** A list row as the enumeration builds it, minus the fields labelling ignores. */
-function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?: string }): ChatSessionEntry {
+function entry(engine: "claude" | "codex" | "pi", fields: { preview?: string; logPath?: string }): ChatSessionEntry {
   return {
     sessionId: engine === "codex" ? "01a0023e-9c1f" : "claude01-9c1f",
     engine,
@@ -103,6 +104,7 @@ void test("A husk title still wins — the nightly chat review's name for a chat
     [
       labelSource(entry("codex", { preview: "hi" })),
       labelSource(entry("claude", { logPath: "/box/log.jsonl" })),
+      labelSource(entry("pi", { logPath: "/box/.beebox/pi/sessions/s.jsonl" })),
     ],
     [
     {
@@ -112,6 +114,10 @@ void test("A husk title still wins — the nightly chat review's name for a chat
     {
       kind: "transcript",
       logPath: "/box/log.jsonl",
+    },
+    {
+      kind: "pi-transcript",
+      logPath: "/box/.beebox/pi/sessions/s.jsonl",
     },
   ],
   );
@@ -145,9 +151,10 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
   );
 
   // An unreadable transcript is a label problem, not a list problem: it warns and
-  // falls back rather than failing the whole enumeration. (Expect the warning below;
-  // that's the fixture.)
+  // falls back rather than failing the whole enumeration, and the warning names
+  // the session and the file error.
 
+  const warnings = consoleLines(t, "warn");
   t.check(
     await resolveSessionLabel({
       sessionId: "claude01-9c1f",
@@ -155,5 +162,25 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
       source: { kind: "transcript", logPath: box.path("gone.jsonl") },
     }),
     "claude01",
+  );
+  t.check(warnings(), [`chat: could not read metadata for session claude01-9c1f, using id prefix: Error: ENOENT: no such file or directory, open '${box.path("gone.jsonl")}'`]);
+});
+
+// A pi chat reads its first user message from its own session file, past the
+// header and the system prompt pi writes before it.
+void test("A pi chat reads its first user message from its session file.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const logPath = box.path("pi.jsonl");
+  const message = (role: string, text: string) => JSON.stringify({ type: "message", message: { role, content: [{ type: "text", text }] } });
+  await writeFile(logPath, [
+    JSON.stringify({ type: "session", version: 3, id: "pi01-9c1f" }),
+    message("system", "You are pi."),
+    message("user", firstMessage("what's on my calendar tomorrow")),
+  ].join("\n") + "\n");
+
+  t.check(
+    await resolveSessionLabel({ sessionId: "pi01-9c1f", title: undefined, source: { kind: "pi-transcript", logPath } }),
+    "“what's on my calendar tomorrow”",
   );
 });

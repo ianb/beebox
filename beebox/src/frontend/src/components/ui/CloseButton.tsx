@@ -58,13 +58,16 @@ export function CloseButton({ onClick, id, label, size, variant, onDark, ink, di
         aria-label={label}
         title={label}
         className={cn(
-          "w-5 h-5 rounded-full bg-danger text-white inline-flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 disabled:cursor-not-allowed",
+          // 24 px hit area (-m-0.5 keeps the layout footprint at 20 px); the red circle is the inner span.
+          "group w-6 h-6 -m-0.5 rounded-full text-white inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 disabled:cursor-not-allowed",
           className,
         )}
       >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-        </svg>
+        <span aria-hidden="true" className="w-5 h-5 rounded-full bg-danger group-hover:bg-danger-dark shadow inline-flex items-center justify-center">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </span>
       </button>
     );
   }

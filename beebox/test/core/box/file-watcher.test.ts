@@ -478,7 +478,9 @@ void test("Repeats inside the 50 ms window collapse, but the last write still re
 // ## High-churn trees stay excluded
 //
 // `_bookkeeping/procedure/runs` and `_bookkeeping/trash` are never live-rendered and churn constantly;
-// watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
+// watching them exhausted the server's inotify limit on 2026-06-11. `_bookkeeping/archive`
+// is never live-rendered either, and its filed items' folders alone passed the watch budget
+// on a production box (2026-10-27). Dotfile trees
 // (`.git`, `.beebox`) are excluded for the same reason. Ordinary content
 // trees receive no path-specific treatment: the generic watch budget is their
 // safety boundary.
@@ -496,6 +498,7 @@ void test("bookkeeping/procedure/runs and bookkeeping/trash are never live-rende
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "_bookkeeping", "procedure", "runs", "r1"), { recursive: true });
   await mkdir(join(box.root, "_bookkeeping", "trash", "old"), { recursive: true });
+  await mkdir(join(box.root, "_bookkeeping", "archive", "captures", "item.attach"), { recursive: true });
   await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
   await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
@@ -639,7 +642,7 @@ void test("An unexpectedly large imported tree must degrade live updates instead
     { watched: watcher.watchedDirs(), capLogs },
     {
       watched: [".", ...Array.from({ length: 15 }, () => any(String))],
-      capLogs: [str`[box-watcher] directory watch limit of 16 reached for ${box.root}; live updates below _bookkeeping are disabled`],
+      capLogs: [str`[box-watcher] directory watch limit of 16 reached for ${box.root}; live updates below bulk are disabled`],
     },
   );
 
@@ -651,11 +654,11 @@ void test("An unexpectedly large imported tree must degrade live updates instead
   t.check(
     { limited, check },
     {
-      limited: { maxWatchedDirs: 16, belowPath: "_bookkeeping" },
+      limited: { maxWatchedDirs: 16, belowPath: "bulk" },
       check: {
         name: "box-watch-limit",
         ok: false,
-        message: "Live updates are off below _bookkeeping: the box has more than 16 watched directories.",
+        message: "Live updates are off below bulk: the box has more than 16 watched directories.",
         severity: "warning",
       },
     },

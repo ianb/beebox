@@ -6,17 +6,16 @@
  * callbacks come in as props.
  */
 
-import TextareaAutosize from "react-textarea-autosize";
-import { Dropdown } from "../../ui/Dropdown";
+import { Menu } from "../../ui/Menu";
 import { CloseButton } from "../../ui/CloseButton";
-import { MenuItem } from "../../ui/dropdown-menu-item";
+import { MenuItem } from "../../ui/menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
-import { VoiceToggleButton } from "./InteractiveChat-voice-button";
-import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
+import { CIRCLE_BTN, VoiceToggleButton } from "./InteractiveChat-voice-button";
+import { MicStatus } from "./MicStatus";
+import { joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
-import { useComposerCaret } from "../composer-caret";
+import { ComposerTextarea } from "./ComposerTextarea";
 import type { AddFiles } from "../InteractiveChat-attachments/attachments";
 import type { ComposerRowProps } from "../composer-row-props";
 import type { TranscriptionState } from "../../../hooks/useRealtimeTranscription/hook";
@@ -24,6 +23,8 @@ import { segmentCapturing } from "../../../machines/transcription-events";
 import type { FinalWord } from "../../../machines/transcription-events";
 import { useFirstLoadMark } from "../../../lib/first-load-marks";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+
+export { ComposerTextarea };
 
 export interface TranscriptionHandle {
   state: TranscriptionState;
@@ -41,9 +42,24 @@ export interface TranscriptionHandle {
   cancel: () => void;
 }
 
-const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
-
 const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
+
+/** "Edit before sending": stops dictation and moves its transcript into the text. Shared by the desktop and mobile rows. */
+export function DictationEditButton({ id, onClick }: { id: string | undefined; onClick: () => void }) {
+  return (
+    <button type="button"
+      id={id}
+      onClick={onClick}
+      className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+      aria-label="Edit before sending"
+      title="Edit before sending"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    </button>
+  );
+}
 
 /**
  * The composer's trailing send button, shared by the desktop and mobile rows.
@@ -56,22 +72,26 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
  * DOM, so the mobile row passes its own address.
  */
 export function ComposerSendButton({
-  id, onClick, disabled, title, size,
+  id, onClick, disabled, label, title, size,
 }: {
   id?: string;
   onClick: () => void;
   disabled: boolean;
+  /** Accessible name: the action ("Send"), never the disabled reason. */
+  label: string;
+  /** Tooltip; the disabled reason when there is one. */
   title: string;
   /** `lg` on the button bar (matches the circle controls), `md` on the mobile drop-up row. */
   size: "lg" | "md";
 }) {
   const dim = size === "lg" ? "w-14 h-14" : "w-12 h-12";
   return (
-    <button
+    <button type="button"
       id={id}
       onClick={onClick}
       disabled={disabled}
       className={`flex items-center justify-center ${dim} rounded-full flex-shrink-0 bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+      aria-label={label}
       title={title}
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,24 +116,20 @@ function DesktopComposerRow({
   handleKeyDown: (e: React.KeyboardEvent) => void;
   includeControlIds: boolean;
 }) {
-  const noteTyped = useComposerCaret({ textareaRef, text: input });
+  const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      <TextareaAutosize
+      <ComposerTextarea
         id={includeControlIds ? "bbx-composer-input" : undefined}
-        ref={textareaRef}
-        autoFocus
-        enterKeyHint="send"
-        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
+        mobile={false}
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        isTranscribing={isTranscribing}
+        transcript={transcription.transcript}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}
-        readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className={composerTextareaClasses({ mobile: false, isTranscribing })}
-        minRows={1}
-        maxRows={8}
       />
       {isTranscribing ? (
         <>
@@ -124,7 +140,7 @@ function DesktopComposerRow({
             ink
             className="flex-shrink-0"
           />
-          <button
+          <DictationEditButton
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
               onStopDictation();
@@ -134,13 +150,7 @@ function DesktopComposerRow({
               // Now editable typed text, not voice — drop the dictation draft.
               clearDraft();
             }}
-            className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
-            title="Edit before sending"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
+          />
         </>
       ) : null}
       {/* One send control, one address: which message it commits depends on
@@ -169,7 +179,8 @@ function DesktopComposerRow({
         // A live segment can always be sent: with live text paused its words
         // arrive only from the HQ pass (docs/implemented-plans/resilient-voice-recording.md).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
-        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
+        label={sendLabel}
+        title={sendDisabledReason ?? sendLabel}
       />
     </div>
   );
@@ -225,14 +236,14 @@ export function ChatInputArea({
             here (not in the textarea rows) so it rides the record/stop
             control on both desktop and mobile. */}
         {isTranscribing ? (
-          <MicOverlay
+          <MicStatus
             hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
             degraded={transcription.state === "reconnecting"}
             livePaused={transcription.state === "recordingLocal"}
           />
         ) : null}
         {/* Add menu: capture mode, add files, screenshot, share location. */}
-        <Dropdown
+        <Menu
           align="left"
           vertical="above"
           // Wide enough that the "(send a message first)" disabled reasons
@@ -270,7 +281,7 @@ export function ChatInputArea({
           <MenuItem id={hasControlIds ? "bbx-composer-add-files" : undefined} onClick={onAddFiles}>Add files…</MenuItem>
           <ScreenshotMenuItem addFiles={addFiles} includeControlId={hasControlIds} />
           <ShareLocationMenuItem includeControlId={hasControlIds} />
-        </Dropdown>
+        </Menu>
 
         {/* First-class capture button on the mobile row (room the desktop
             textarea occupies). Desktop reaches capture via the Add menu. */}
@@ -314,10 +325,11 @@ export function ChatInputArea({
         <div className="flex-1 sm:hidden" />
 
         {/* Mobile-only: keyboard button */}
-        <button
+        <button type="button"
           id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          aria-label="Type a message"
           title="Type a message"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

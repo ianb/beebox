@@ -15,6 +15,7 @@ import { readCapture, writeCapture } from "../../../src/core/quick-capture/store
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { materializeCaptureSource } from "../../../src/core/quick-capture/source.js";
 import { access } from "node:fs/promises";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { join } from "node:path";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { createHash } from "node:crypto";
@@ -182,6 +183,7 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     },
   });
 
+  const errors=consoleLines(t,"error");
   const hidden=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`,headers:b});
   t.check(hidden, trpcFailure({
     statusCode: 403,
@@ -190,6 +192,8 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     errorCode: "FORBIDDEN",
     path: "quickCapture.detail",
   }));
+  // The refusal reaches the server log with its reason:
+  t.check(errors(), ["[trpc] query quickCapture.detail failed: This capture belongs to another user."]);
 
   const otherList=await ctx.request({method:"GET",url:"/api/trpc/quickCapture.list",headers:b});
   t.check(otherList, trpcOk({ captures: [] }));
@@ -282,6 +286,7 @@ void test("Deleting an original removes its exposed source content but retains a
     serverAccepted: true,
   }));
 
+  const errors=consoleLines(t,"error");
   const late=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.choose",headers:{"content-type":"application/json"},payload:{id:eventId,candidateId:firstChoiceId(before)}});
   t.check(late, trpcFailure({
     statusCode: 404,
@@ -290,6 +295,7 @@ void test("Deleting an original removes its exposed source content but retains a
     errorCode: "NOT_FOUND",
     path: "quickCapture.choose",
   }));
+  t.check(errors(), ["[trpc] mutation quickCapture.choose failed: The original capture was deleted."]);
 
   t.check(await eventUpload(ctx,{id:"33333333-3333-4333-8333-333333333333",value:{version:1,capturedAt:"2026-10-12T12:02:00Z",source:"apple-native-input",parentCaptureId:id,input:"Late words"}}), {
     statusCode: 410,

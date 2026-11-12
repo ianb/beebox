@@ -11,7 +11,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../../procedures.js";
-import { loadAddedModels, parseAddedModel } from "../../../../core/box/config.js";
+import { loadAddedModels, loadEnabledEngines, parseAddedModel } from "../../../../core/box/config.js";
+import { lookupPiModel, piBundledCatalog } from "../../../../core/agent/pi-run/session/core.js";
 import { getOpenRouterKey } from "../../../../core/openrouter.js";
 import { lookupOpenRouterModel, readOpenRouterKeyUsage } from "../../../../core/openrouter-catalog.js";
 import type { FetchLike } from "../../../../core/secrets/probe-registry.js";
@@ -28,6 +29,25 @@ function commitWarning(commitError: Error | null): string | null {
   return "Saved, but the Git commit failed.";
 }
 
+/**
+ * What pi lacks to run an added model, in admin's words, or null. Uses the
+ * run's own lookup (`lookupPiModel`), so admin and a pi turn never disagree.
+ */
+async function piModelWarning(id: string, deps: { fetch: FetchLike; now: number }): Promise<string | null> {
+  const found = await lookupPiModel({ catalog: piBundledCatalog(), id }, deps);
+  switch (found.source) {
+    case "pi":
+      return null;
+    case "listing":
+      return "pi has no built-in settings for this model, so it uses OpenRouter's listing. "
+        + (found.pricesKnown
+          ? "Some models fail with settings built this way."
+          : "OpenRouter lists no price for it, so pi counts its cost as $0.");
+    case "none":
+      return `pi cannot run this model: ${found.missing}.`;
+  }
+}
+
 export const openrouterAdminProcedures = {
   /**
    * The added models with their live catalog entry (price, context), whether
@@ -38,13 +58,17 @@ export const openrouterAdminProcedures = {
   openrouterModels: ownerProcedure.query(async ({ ctx }) => {
     const fetchImpl = fetchFor(ctx.services);
     const now = Date.now();
-    const [added, key] = await Promise.all([
+    const [added, key, engines] = await Promise.all([
       loadAddedModels(ctx.boxRoot),
       getOpenRouterKey(ctx.boxRoot, { purpose: "admin-usage", observe: false }),
+      loadEnabledEngines(ctx.boxRoot),
     ]);
+    // Only a box that can run pi needs to hear what pi lacks.
+    const piOn = engines.includes("pi");
     const models = await Promise.all(added.map(async (m) => ({
       ...m,
       catalog: await lookupOpenRouterModel(m.id, { fetch: fetchImpl, now }),
+      piWarning: piOn ? await piModelWarning(m.id, { fetch: fetchImpl, now }) : null,
     })));
     return {
       keyGranted: key !== null,

@@ -81,3 +81,9 @@ void test("Some outside values are plain text, not Markdown:", async (t) => {
   const value = escapeMarkdownText("[verify](/_content/finance) <b>now</b>\n# not a heading", { indent: "  " });
   t.check(render(`- **message:** ${value}`), "<article><ul><li><strong>message:</strong> [verify](/_content/finance) &lt;b&gt;now&lt;/b&gt;<br># not a heading</li></ul></article>");
 });
+
+// Only a backtick run of the same length closes a code span, as in the parser.
+void test("A longer backtick run does not hide a tag from escaping", async (t) => {
+  t.check(neutralizeIngestedMarkdown("`a {% source %} `` b"), "`a \\{% source %} `` b");
+  t.check(neutralizeIngestedMarkdown("`a {% source %}` b"), "`a {% source %}` b");
+});

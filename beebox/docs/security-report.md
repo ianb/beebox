@@ -8,6 +8,33 @@ reviewed-by: Ian Bicking
 
 # Security report — structured version
 
+**Scoped amendment (2026-10-30, box browser), not yet reviewed:** Adds the
+shared box browser ([plan](plans/shared-browser.md)): the person's
+`/<slug>/browser/` page and its accepted third-party script (§1, §8), the
+agent's exec route and the host's command socket (§1), the browser profile's
+cookies (§2), and the per-box network namespace on the production server
+(§5). Scoped to those rows; not a re-audit of other changes since
+`c0844b44e` or of the private security tier.
+
+**Scoped amendment (2026-11-08, box browser pass; reviewed by Ian):** Adds
+the box browser pass ([plan](implemented-plans/agent-self-view.md)): a one-hour signed
+cookie that lets the box browser open its own box's pages as the agent. It
+updates the wall's list of admitted credentials (§1 auth architecture), the
+exec route (§1: box paths, `screenshot --card`), and the person-page refusal
+(§1), and adds the credential (§2), the hub's forwarding rule (§4), and its
+accepted residuals (§8).
+Scoped to those rows; not a re-audit of other changes since `c0844b44e` or of
+the private security tier.
+
+**Scoped amendment (2026-10-30, credential environment table; reviewed by
+Ian):** Adds the long-lived Claude token row and the single credential table
+behind the child-env, agent, and tooling allowlists (§2); records the Codex-run
+and procedure-shell environment fixes and the open view-metadata gap (§2, §7b
+channel C). Scoped to those rows; not a re-audit of other changes since
+`c0844b44e` or of the private security tier. Later on 2026-10-30, also reviewed
+by Ian: the view-metadata gap is fixed, and two other open gaps are recorded
+(§2, §7b channel C).
+
 **Scoped amendment (2026-10-26; reviewed by Ian):** Adds the signed-in-owner
 Admin page backup setup and schedule controls, machine-local attempt record, and
 host-specific runner behavior on this worktree. This amendment updates the backup
@@ -211,7 +238,9 @@ asset extension on a non-API URL; the diagnostic bearer bypass
 (`BBX_DIAG_API_KEY`, GET-only, whitelisted to `health.check` +
 `debugLog.get`, exact-match against the full tRPC batch —
 `auth.ts:68-119`); the mobile pairing-redeem carve-out; the per-box agent
-loopback token; the machine-wide `BBX_BROWSE_API_KEY`; mobile device
+loopback token; the box browser pass (`bbx_browser_pass`, §2), which acts as
+the agent and wins over any person credential on the same request; the
+machine-wide `BBX_BROWSE_API_KEY`; mobile device
 auth (bearer or `bbx_mobile` cookie); or session identity + `canAccessBox`
 (`box-access.ts:21-35` — **fail-closed**: an empty/missing `allowedEmails`
 list means owner-only). A corrupt credential store answers **503**, never
@@ -269,6 +298,8 @@ Notable abilities, and the items that are more than routine:
 | `POST /api/quick-captures/:captureId`; tRPC `quickCapture.capabilities` / `list` / `detail` / `retry` / `choose` / `delete` (`src/webapp/routes/quick-capture/register.ts`, `src/webapp/trpc/routers/quick-capture.ts`) | Accept one complete text/material capture, read caller receipts, retry processing, choose an offered destination, or delete a source | mitigated | medium | authed | Same capture owner resolution as existing uploads; older ownerless mobile tokens are refused outside open mode. UUID, strict declaration, bounded multipart parts/bytes, declared digest and owner-scoped replay protect acceptance. Choices come from stored offers. Deletion tombstones under the same capture lock before removing source bytes; chat messages already sent and Git history remain. |
 | tRPC `quickChat.submit` / `choose` / `discard` / `home` (`src/webapp/trpc/routers/quick-chat.ts`) | Store a thought, route it with Jev, and post it to a chat as the caller; post to a destination the stored record offered; end an unsent thought; list open thoughts, recent chats, and `nav.card` shortcuts | mitigated | medium | authed | `authedProcedure`; a paired device's token passes (`mobileOk`), as for `share.*`. `submit` sends context to Jev (§3) and can incur provider spend. Delivery uses the send route's sender and message-id claim, so a thought posts once per id; `choose` accepts only a candidate id stored in the record. Record ids must be UUIDs. |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
+| `ALL /<slug>/browser/*`, its WebSocket stream (`src/webapp/routes/browser/proxy/route.ts:141`, gate in `proxy/person-gate.ts`) | Drive the box browser through agent-browser's dashboard: navigate, type, read pages, and read the profile's cookies in its Storage pane | accepted | high | authed | Person only: the agent bearer, the box browser pass and the browse key get 403 (`person-gate.ts:checkPerson`), then a box-access check; this gate runs on every request below `/browser`, assets and the upgrade included, because the box auth hook lets asset paths through. A request naming an `Origin` must be same-origin (`isSameOrigin`); a WebSocket handshake without fetch metadata relies on the `SameSite=Lax` session cookie. The upstream hop carries no cookie, `Authorization` or hub header (`route.ts:45-50`). **Accepted:** the dashboard is third-party JavaScript served on the box origin, so its script holds the person's beebox authority (`connect-src 'self'`); a dashboard bug that renders page content as HTML would reach the box. Mitigations: React escaping, an exact pinned version reviewed at each bump, a CSP that keeps script to the dashboard's own files (`proxy/response.ts:18`). Boxholder decision 2026-10-30 ([plan, Failure modes](plans/shared-browser.md#failure-modes)); revisit with a separate host name if boxes get members other than the boxholder |
+| `POST /<slug>/api/browser/exec` (`src/webapp/routes/browser/exec-route.ts:43`) and the host's command socket (`src/core/browser/host-process/command-server.ts`) | The agent's `bbx browser`: run one agent-browser command in the box browser | mitigated | medium | authed (agent) | Agent bearer only; a session cookie gets 403. Arguments are checked before they reach the host (`src/core/browser/exec-args.ts`): `REFUSED_FLAGS` (profile, CDP, executable, config and similar) and `REFUSED_SUBCOMMANDS` (`connect`, `batch`, `dashboard`, `install`, `upgrade`, `plugin`, `mcp`) give 400, so the agent stays on the box profile and inside the namespace. The engine passes the arguments to the browser host's command socket (0600 in a 0700 directory, `command-server.ts:180`), and the host runs the pinned CLI with an environment built from nothing; the agent's own environment carries no `AGENT_BROWSER_*` value. Before each command the engine installs the box browser pass (§2) through the same socket (`src/core/browser/agent-command/pass-install.ts`); the agent never handles it. An address starting with one `/` on `open`/`goto`/`navigate`/`tab new` is rewritten to this box's page under the operator's app URL (`agent-command/box-path.ts`); `//host` is refused. `screenshot --card` runs a fixed measuring script and an element capture on a box card page only (`src/core/browser/card-shot/`) |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
@@ -301,6 +332,8 @@ returns 500 "not configured" without reading R2 (`pub-worker/src/worker.ts`,
 | Local password store — `~/.bbx-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
 | Session secret — `~/.bbx-session-secret` / `BBX_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env-allowlist.ts` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
 | Invite & password-reset capabilities — `~/.bbx-auth.json.invites.json` (`auth-capabilities.ts`, one shared store since `68c5e537`; the file keeps its legacy name, on-disk `version: 2`, auto-upgrades from `version: 1` on first write) | SHA-256 hash at rest, 0600, atomic + locked | Invite: create one member account on one box. Reset: replace one existing member's password on one box | Per-box | 15-min TTL, single-use, 100-live cap shared across both kinds | ok |
+| Box browser profile — cookies and site storage of every site the person or agent signs into (`src/core/browser/paths.ts:75`, `<state dir>/browser/<slug>-<key>/profile`; on the server under `/var/lib/beebox/<slug>/.local/share/beebox/`) | Directories 0700 (`host-process/run.ts:55`); Chrome's Linux store with no keyring, so cookies are **unencrypted** in effect | Every site session in the profile: whoever reads the directory signs in as the person on those sites | Per box (per box user on the server; on a shared-user dev machine, readable by sibling boxes as in §7b channel B) | Until the person signs out of the site or the directory is deleted; outside the box's git repository and not in the restic backup (`src/core/box-backup/run/inventory.ts`), so a restore does not bring sessions back | mitigated — the person page and exec route keep agents off the Storage pane (§1); the agent can still act as the person on signed-in sites through `bbx browser`, which is the feature |
+| Box browser pass — cookie `bbx_browser_pass` in the box browser's profile (`src/core/browser/pass.ts`, installed by `agent-command/pass-install.ts`) | HMAC-signed `{ exp }`, keyed by an HKDF subkey (`beebox box browser pass v1`) of the box's mobile-cookie key: the per-box 0600 secret file, or on a unit host the key derived from the box's hub secret, so the hub verifies it without reading the box. Set `HttpOnly`, `SameSite=Strict`, `Secure` on https, path = the app base (`/` in production) | The agent's authority on this box's pages and APIs (actor `agent`, `user: null`, no owner flags), the same as the agent bearer: no Settings, pairing, Secrets reveal or Admin, and refused by every route that requires the bearer header (browser exec, secrets resolve, chat UI and screenshot routes) and by the person's `/browser/` page. Counted only on a request with `Sec-Fetch-Site: same-origin` or `none`, or an unlabelled WebSocket whose `Origin` is the app's (`passSiteOk`), so a same-site or cross-site page cannot use it | Per box | One hour; the engine refreshes it when under 30 minutes are left. Rotates with the mobile secret file, or with the hub secret at reboot on a unit host. The app URL comes from operator environment only (`BBX_PUBLIC_URL`/`PUBLIC_URL`, or `BBX_DEV_APP_URL` from the dev router), never from the agent-editable `_config/box.json`; plain http only on loopback | mitigated — accepted residuals (§8): a WebSocket opened with a pass outlives it, until Chrome exits 30 minutes after the last browser command (`AGENT_BROWSER_IDLE_TIMEOUT_MS`, `host-process/agent-browser.ts`), the tab leaves the page, or the engine stops; while open it also keeps the box from idling out. The agent, which can read the profile, holds the never-expiring bearer anyway. The value can appear in the dashboard's activity feed, which only the person opens. In dev, cookies are not port-scoped, so the pass also reaches other servers on `localhost` under the worktree path if the agent opens them |
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
 | `BBX_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; never allowlisted into box subprocesses (`script-env-allowlist.ts`) | Hub process lifetime | ok |
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/hetzner/setup-server.sh:219`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
@@ -316,6 +349,7 @@ returns 500 "not configured" without reading R2 (`pub-worker/src/worker.ts`,
 | Provider keys — Mistral / Deepgram / OpenAI / Gemini / OpenRouter (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `openai-thinking-key.ts`, `gemini-key.ts`, `openrouter.ts`) | Machine secret store only, per-box grant (`docs/secrets.md`) — the box-file and env-var fallbacks (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`, `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`) have been removed, along with their entries in `SECRET_ENV_NAMES` and the hub/tooling allowlists | Spend/abuse the provider account | Per-box grant | Operator-set | ok — the file-mode gap this row used to carry is closed with the fallback that created it: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Restic recovery password and backend credentials (`src/core/box-backup/admin-config.ts`, `config.ts`, `run/backup.ts`, `restic.ts`) | Owner enters a password once on the Admin page or provides a 0600 file through CLI; the Admin server endpoint writes a new 0600 file outside the box, and the per-box 0600 config stores its path and repository URL, not the password. Restic backend credentials come from the standard environment or per-user credential files | Unlock encrypted backups; destination credential may also permit deletion | Per-box repository; local to box's OS user | Owner keeps an independent recovery copy; a lost password makes snapshots unreadable | mitigated; high / local — the Admin server endpoint refuses leading/trailing whitespace and line breaks, checks repository identity before saving config, and removes its new key file on setup failure. Restic receives arguments without a shell. A process running as the box user can still read the unattended key and may delete backups; destination versioning or immutability is recommended. |
 | Mac backup command socket (`mac-app/Sources/BeeBoxMac/BackupControl.swift`) | Unix socket under the app's private run directory, mode 0600; accepts typed configure/run/status/check requests and executes them as the VM's `node` user | Configure destination and cause an encrypted backup from the local Mac box; no arbitrary guest command | Same Mac OS user; only while the app runs | App closes the socket at exit | mitigated; medium / local — no password bytes cross the socket, but the guest password-file path and repository URL do. A same-user process can already read the app's mounted home and control its files. |
+| Long-lived Claude token — `claude-oauth-token` in the machine secret store (`core/claude-oauth-token.ts`) | Secret store, per-box grant; injected as `CLAUDE_CODE_OAUTH_TOKEN` into first-party Claude runs and the `claude auth status` probe only. An ambient `CLAUDE_CODE_OAUTH_TOKEN` is in no allowlist and is dropped from the probe (`src/lib/credential-env.ts`) | Run Claude Code as the boxholder's subscription | Per-box grant | Long-lived, no refresh; rotate by minting a new one with `claude setup-token` and replacing the store entry | ok |
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
@@ -336,6 +370,41 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.test.ts`.
+Since 2026-10-29 the credential entries of all three lists come from one table,
+`src/lib/credential-env.ts`, which gives every credential variable a visibility
+(inherit, inject, blank, deny) for the hub child, the agent and tooling
+profiles, and a Claude CLI run, with a reason; the warm-slot comparison takes
+its credential keys from it. `test/credential-visibility/every-consumer.test.ts`
+reads each consumer's environment at its process boundary and pins every cell;
+`test/lib/credential-env.test.ts` fails when a credential-looking name enters a
+plain list. Codex agent runs without explicit additions now get the agent
+profile; before, the Codex SDK copied the whole server environment into the
+CLI. Procedure shell steps (`core/procedure/shell.ts`) likewise received the
+whole server environment beneath the agent profile, because execa merges
+`process.env` by default; they now get the agent profile plus four named
+per-run values (`TRIAGE_ITEMS`, `BBX_CHAT_SESSION_ID`,
+`BBX_CHAT_SESSION_ID_FILE`, `CODEX_THREAD_ID`), none a credential
+(`test/core/procedure/shell.test.ts`). **Fixed 2026-10-30:** view metadata import
+(`webapp/views/compiler/meta-import.ts`) ran box-authored view code in a child
+with the whole server environment, so a view could return `BBX_HUB_SECRET`,
+`BBX_DIAG_API_KEY`, or `BBX_VAPID_PRIVATE_KEY` as metadata when the server
+listed views. That child now gets the agent allowlist without the injected
+values, and the `bbx view check` render child gets the agent profile
+([view-metadata-import-runs-box-code-with-the-server-env](../../issues/closed/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md)).
+**Fixed 2026-11-08:** every Git child the engine starts gets an allowlist
+(`lib/git/env.ts`: the agent list plus Git's identity and repository
+variables), so a hook, `core.fsmonitor` command, or filter an agent writes into
+`.git/` no longer runs with the server's environment
+([server-commits-run-box-hooks-with-the-server-env](../../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md));
+an ESLint fence on `simpleGit` and a source scan of raw `git` spawns
+(`test/lib/git/env.test.ts`) keep it so. The `claude auth` and Codex CLI
+commands and gws take the agent list
+([claude-auth-commands-and-gws-spread-the-server-env](../../issues/closed/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)),
+and `bbx upgrade`/`bbx migrate` children take a package-manager list or the
+tooling list
+([upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env](../../issues/closed/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md)).
+**Open gap, high:** box card schemas load inside the server process
+([box-schemas-load-inside-the-server-process](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)).
 The standard trick runner is a deliberate exception by declaration: it resolves
 only the selected trick's named dependencies and puts those values in that
 single child environment for that invocation; it does not widen the general
@@ -353,7 +422,7 @@ wakeup cycle or routine use without a per-action confirmation.
 
 | Destination | Trigger | Data sent | Credential | Scoping / opt-out | State |
 |---|---|---|---|---|---|
-| **Anthropic** (`agent/run.ts`, via Claude Code subprocess) | Automatic — every wakeup job, chat turn, and scan batch on a Claude model (the default); runs on a third-party model go to the next row instead | Full agent-turn context: prompts plus **whatever box files the agent reads during the turn** (any card, email, chat); user-uploaded images; scanned photos (`scan-vision-claude.ts`, hermetic `tools: []` call) | Claude subscription auth (`ANTHROPIC_API_KEY` stripped to force it) | None — this is the product | ok (stated plainly) |
+| **Anthropic** (`agent/run.ts`, via Claude Code subprocess) | Automatic — every wakeup job, chat turn, and scan batch on a Claude model (the default); runs on a third-party model go to the next row instead | Full agent-turn context: prompts plus **whatever box files the agent reads during the turn** (any card, email, chat); user-uploaded images; scanned photos (`scan-vision-claude/`, hermetic `tools: []` call) | Claude subscription auth (`ANTHROPIC_API_KEY` stripped to force it) | None — this is the product | ok (stated plainly) |
 | **Third-party models on the claude engine — OpenRouter and GLM (Z.ai)** (`src/core/provider-env/core.ts`, `provider-env/openrouter-chat.ts`, `core/glm-key.ts`) | Every chat turn, prewarm, and agent run whose model is an owner-added OpenRouter model or a `glm-*` model, including a box whose default is one. On an OpenRouter-default box this covers all background agent work: wakeups, procedure steps (tiered or not), the procedure review judge, chat titles and reviews, retro observation, triage, triage research, and migration repair (`core/model-policy.ts` `resolveTierModel`, `resolveSmallModelForEngine`). Scan-import photo reading stays on its own backend (Anthropic row, or Gemini) | Same as the Anthropic row: the full agent-turn context, meaning the system prompt, the conversation, and every tool result, which includes card text, files the agent reads, and connector content. Claude Code sends it to `openrouter.ai`, which forwards each request to an upstream host that can change per request, or to `api.z.ai`. Claude Code also sends each WebFetch hostname to `api.anthropic.com` for its domain check; the flags below do not stop that | `openrouter` secret (the same entry the optional services use) or `glm` secret; store-only, server access, per-box grant, set as `ANTHROPIC_AUTH_TOKEN` in the child env | OpenRouter: the owner adds each model in Admin → OpenRouter models. Every spawn re-checks the list and the key, and so does each turn of a running chat. GLM: the `glm` grant. Without either, the run refuses; it never falls back to Claude | mitigated; medium / owner — the per-request pins of the optional-services row cannot apply, because Claude Code builds these requests. Host choice, training, and retention follow the OpenRouter account's privacy settings, which are account-wide and which the box cannot read or verify; the admin section links to them and recommends allowing only no-training, zero-retention hosts. Z.ai's terms govern GLM; the box has no per-request control there. Claude Code's own telemetry, error reports, and other nonessential Anthropic traffic are off for these runs (`DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`) |
 | **Mistral** (`voxtral.ts`) | Automatic — the **default** transcription backend (batch + streaming) | Raw voice audio | Per-box key | `_config/transcription.json`; switch service | ok |
 | **OpenAI** (`openai-audio.ts`, `openai-embeddings.ts`) | When configured: Whisper is the default HQ re-transcription pass; embeddings run on the automatic index refresh | Raw audio + context prompt; **each card's searchable text** + literal search queries; TTS reply text | Separate keys (transcription ≠ embeddings, deliberate) | Switch transcription service; omit embeddings key → text-only search | ok |
@@ -391,7 +460,9 @@ wakeup cycle or routine use without a per-action confirmation.
 | Session mechanics | `auth.ts` | ok | HMAC-SHA256 cookie, 30-day TTL, timing-safe verify with length pre-check; `gen`-based revocation on password change/user removal; hub mode never verifies cookies in the box process |
 | Timing-safe comparisons | `auth.ts:68-76,171-184`, `browse-key.ts:57-72` | ok | All bearer/secret compares |
 | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; Fastify always selects the built-frontend policy and Vite explicitly selects its HMR policy. **Currently Report-Only** — blocks nothing; promotion to enforcing is a deliberate gated step (`pnpm csp-digest`) |
+| Framing, referrer, permissions, HSTS headers | `src/webapp/document-security-headers.ts` | ok | HTML documents from a box and from the hub (login, box picker) get `X-Frame-Options: SAMEORIGIN` and an enforced `Content-Security-Policy: frame-ancestors 'self'` (the Report-Only policy's `frame-ancestors` is ignored by browsers, so before 2026-11-11 any site could frame the app), `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: usb=(), serial=(), hid=(), payment=()`, and `Strict-Transport-Security: max-age=86400` (Cloudflare did not send HSTS, checked 2026-11-11; one day, no subdomains, to raise later). Routes that set their own value keep it (frozen-page `sandbox` CSP; auth routes' `no-referrer`) |
 | Cross-box browser isolation | — | accepted | Boxes share one origin; a script in one box can make same-origin requests to a sibling. Accepted single-operator; server-side forgery still blocked (session secret never reaches boxes). [boxes-share-one-origin](../../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md) |
+| Box browser pass forwarding | `src/hub/server/box-credentials.ts` (`takeBrowserPass`, `stripForeignPasses`) | mitigated | The pass cookie's path is the app base (`/` in production), so it would ride a request to a sibling box's path. The hub forwards only the target box's own pass and removes every other value, on HTTP and WebSocket upgrades (`test/hub/server.browser-pass.test.ts`). A sibling box never receives a pass it could replay |
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
 | Input validation | Zod at tRPC/route boundaries; `bbx validate` for cards; strict manifest unions (`publish/manifest-edge.ts`) | ok | |
@@ -414,6 +485,8 @@ wakeup cycle or routine use without a per-action confirmation.
 | TLS — Tailscale path | Terminated by `tailscale serve` (LE certs), tailnet-only | ok | — | — |
 | Tailscale exposure gate | `tailscale-target.ts`, `tailscale-setup.ts:100-160` | mitigated | — | — | Refuses to expose a target that can't prove an auth-enforcing posture (`/auth/me` probe, anonymous-401 check); funnel never invoked, detected funnel = hard failure |
 | Cross-box env isolation | Hub child-env allowlist (§2) | mitigated | — | — | |
+| Box browser network namespace | On a unit host the browser host, agent-browser's daemon and dashboard, and Chrome run in a private network namespace per box (`src/core/browser/host/namespace.ts`): `unshare` maps the box uid to itself, `pasta` gives outbound access with `-t none -u none -T none -U none --no-map-gw`, and the command drops every capability. The deploy installs `passt`, Chrome for Testing, the 0750 `root:beebox-boxes` unshare copy and two AppArmor `userns` profiles, then checks `chrome://sandbox` as a box user (`deploy/server-bin/bbx-browser-install`, `deploy/apparmor/beebox-browser`) | mitigated | high | local (box users) | Another box user cannot reach this box's dashboard, stream or debugging port, and the browser cannot reach host loopback or the host's own address (verified, [linux-verification.md](../../research/embedded-browser/linux-verification.md)); the engine reaches the browser only through 0600 Unix sockets. pasta's port forwarding is off; its default would forward to every host-loopback listener, and `test/core/browser/host/namespace.test.ts` pins the flags. No fallback: without `pasta` or the launcher the host refuses to start. Residual: the cloud metadata address is reachable from the namespace, as from every box process, and a web page can aim the browser at it; tracked privately with box-user egress |
+| Codex sandbox user namespaces | Codex runs prompt-only and read-only turns in its bubblewrap sandbox (`src/services/codex-sdk-session/core.ts`). Ubuntu 24.04 restricts unprivileged user namespaces, so the deploy installs `bubblewrap`, sets `/usr/bin/bwrap` to 0750 `root:beebox-boxes` with `dpkg-statoverride`, loads an AppArmor profile granting that binary `userns`, and checks `codex sandbox -- /bin/true` as a box user (`deploy/server-bin/bbx-codex-sandbox-install`, `deploy/apparmor/beebox-codex`) | mitigated | medium | local (box users) | Only box users and the hub can run the exempt `bwrap`; other host users keep the restriction. A box user can use it to create namespaces, which bubblewrap exists to do and which the box browser's `unshare` copy already allows them. Without the grant, Codex's sandbox fails closed: the command does not run |
 | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host-apt`); NOPASSWD sudoers entry for the `beebox` user, that one path only; `deploy.sh` installs both from the build checkout via stdin, never from the box-user-owned `/opt/beebox`, and `visudo -c` checks the entry. The Docker image carries the same wrapper for `node`. | accepted | high | local (any box agent) | The wrapper is the whole boundary: re-execs under an empty environment with `bash -p`; exact package names only (apt's regex fallback blocked); a private apt config reads only the distro's deb822 sources file (the legacy `sources.list` is ignored), so third-party sources are invisible; refuses any upgrade or removal; installs only the inspected `name=version` set with `--no-download`; refuses packages that ship system units (including under `/etc/systemd/system`), init scripts, root cron jobs, D-Bus system services, systemd generators, sudoers/polkit rules, or setuid/setgid files. Every attempt is logged to `/var/log/beebox/host-apt.log`. Residual: distro maintainer scripts run as root, a `postinst` `setcap` is not detected, and installs are host-wide (every box sees them). Boxholder decision 2026-09-17 (sudo wrapper, distro only, refuse services); `docs/implemented-plans/box-host-packages.md`. Regression: `deploy/server-bin/bbx-host-apt.smoke.sh` (Docker, Ubuntu 24.04 + Debian bookworm). |
 | Secrets on the server | `/home/beebox/.env`, 0600 (`setup-server.sh:219`) | ok | — | — | |
 | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require manual application; documented in `deploy/README.md` but not decided-acceptable — [deploy-infra-drift-setup-server-not-rerun](../../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md) |
@@ -505,7 +578,7 @@ context:**
 | Email bodies + attachments | Gmail connector | `src/connectors/gmail/connector.ts` |
 | Web clippings + frozen-page HTML | Chrome extension (`beebox-clerk`) | `beebox-clerk/src/platform/clerk-api.ts` |
 | Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar/connector.ts` |
-| Image text (OCR/vision) | Scan-import + vision models — injection can hide *in a screenshot* | `src/services/scan-vision-claude.ts` |
+| Image text (OCR/vision) | Scan-import + vision models — injection can hide *in a screenshot* | `src/services/scan-vision-claude/core.ts` |
 | Voice transcripts | Transcription pipeline | `src/core/transcription/` |
 | Card bodies generally | Any of the above lands as a card, and cards become agent context | `src/core/card-io.ts` |
 
@@ -544,8 +617,8 @@ another box's caller. Three channels, and what covers each:
 | Channel | What a leak looks like | Control | Verified by |
 |---|---|---|---|
 | **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/scenarios/cross-box-probe.test.ts` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
-| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
-| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2) | `test/hub/supervisor.test.ts` |
+| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
+| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2), whose credential entries come from `src/lib/credential-env.ts`. Fixed 2026-10-30: view metadata import gave box-authored view code the whole server environment; it now gets the agent allowlist. Fixed 2026-11-08: server-side Git children, including box hooks, get an allowlist. Open gap: box card schemas load inside the server process (§2) | `test/hub/supervisor.test.ts`; `test/credential-visibility/every-consumer.test.ts`; `test/lib/git/env.test.ts` |
 
 **Findings of the 2026-09-03 scan** (state after this pass):
 
@@ -569,7 +642,7 @@ is not a credential-only path; recorded as accepted rather than closed
 (cross-model review, 2026-09-04). Channel B is not defended and is not
 claimed to be; a determined same-user process reads what it likes. That is
 accepted for now and tracked for a fix in
-[cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
+[cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)
 (the agent-side half is
 [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
 which shares the two-box fixture). Boxes also share one browser origin
@@ -629,7 +702,7 @@ Every `accepted` item, with its rationale:
    the aggregated `scheduler-stderr.log`), and a symlink it plants inside its
    own box is followed by string-contained read sinks. Env-level isolation is
    the posture for now — a per-box boundary is tracked in
-   [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
+   [cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md);
    the network channel is tested to zero and re-swept weekly. (§7b)
 
 13. **Box agents install distro packages as root** — through one validating
@@ -656,6 +729,23 @@ Every `accepted` item, with its rationale:
    the boxholder; publications within one box are mutually trusted. Separate
    boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
    (§4, §6a)
+
+16. **The box browser's dashboard runs on the box origin** — agent-browser's
+   dashboard is third-party JavaScript with the person's beebox authority on
+   that origin; a bug that renders browsed content as HTML would reach the
+   box. Mitigated by React escaping, an exact pinned version reviewed at each
+   bump, and a CSP limiting script to the dashboard's own files. Accepted
+   2026-10-30 by the boxholder over a separate host name
+   ([plan](plans/shared-browser.md#failure-modes)). (§1)
+
+17. **Box browser pass residuals** — a live-update WebSocket opened with the
+   pass stays open past the pass's hour, until Chrome exits 30 minutes after
+   the agent's last browser command (and keeps the box awake meanwhile); the
+   pass value can appear in the dashboard's activity feed; in dev it also
+   reaches other `localhost` servers under the worktree path. Accepted
+   2026-11-08 by the boxholder: the pass acts as the agent, whose bearer
+   never expires, and the dev case is the developer's own machine
+   ([plan](implemented-plans/agent-self-view.md#not-in-scope)). (§2)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being

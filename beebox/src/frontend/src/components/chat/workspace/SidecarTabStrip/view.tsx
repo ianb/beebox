@@ -139,7 +139,7 @@ function TabCloseButton({ title, pinned, closing, onClose }: { title: string; pi
       title={closing ?? "Close tab"}
       data-close-kind={closing === null ? undefined : "not-now"}
       className={cn(
-        "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "bbx-interface-tab-action inline-flex items-center justify-center min-w-6 min-h-6 flex-shrink-0 mr-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         // On a pinned tab the close button is the thing you did not ask
         // for; it stays out of the way until you reach for it.
         pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
@@ -177,13 +177,22 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   const ambiguous = ambiguousMarks(pinned.map((t) => ({ symbol: identities.get(t.target.path)?.symbol ?? null })));
   const overflow = useTabStripReveal({ activePath, tabRefs, tabCount: tabs.length, pinnedCount: pinned.length });
 
+  // The stored label is what the link that opened this tab called it — a
+  // stand-in until the card's own title arrives, never the final word.
+  const titleOf = (tab: PanelTab) => identities.get(tab.target.path)?.title ?? displayName(tab.target.path);
+  const titleCounts = new Map<string, number>();
+  for (const tab of tabs) titleCounts.set(titleOf(tab), (titleCounts.get(titleOf(tab)) ?? 0) + 1);
+
   function renderTab(tab: PanelTab) {
     const isActive = tab.target.path === activePath;
     const identity = identities.get(tab.target.path) ?? null;
-    // The stored label is what the link that opened this tab called it — a
-    // stand-in until the card's own title arrives, never the final word.
-    const title = identity?.title ?? displayName(tab.target.path);
+    const title = titleOf(tab);
+    // Two open cards can share a title; their names then carry the path.
+    const name = (titleCounts.get(title) ?? 0) > 1 ? `${title} (${tab.target.path})` : title;
     const face = pinnedFace({ symbol: identity?.symbol ?? null, title, ambiguous });
+    // A pinned tab's visible text is its abbreviation; the name keeps it first.
+    const tabLabel = name === title ? undefined : tab.pinned && face.abbreviation !== null ? `${face.abbreviation} ${name}` : name;
+
     const theme = themeForTab({ path: tab.target.path, identity, presentation });
     return (
       <div
@@ -221,6 +230,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             if (target) onSelectTab(target.target.path);
           }}
           aria-selected={isActive}
+          aria-label={tabLabel}
           onClick={() => onSelectTab(tab.target.path)}
           // The full title and path stay reachable on hover, which is where a
           // mark-only tab's identity lives.
@@ -249,20 +259,20 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             e.stopPropagation();
             onTogglePin(tab.target.path);
           }}
-          aria-label={tab.pinned ? `Unpin ${title}` : `Pin ${title}`}
+          aria-label={tab.pinned ? `Unpin ${name}` : `Pin ${name}`}
           aria-pressed={tab.pinned}
           title={tab.pinned ? "Unpin tab" : "Pin tab"}
           className={cn(
-            "bbx-interface-tab-action flex-shrink-0 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "bbx-interface-tab-action inline-flex items-center justify-center min-w-6 min-h-6 flex-shrink-0 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
             // Pinned: always shown, because it is the only thing that says the
             // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
             // a row of tabs is not a row of icons.
-            tab.pinned ? "bbx-interface-tab-pin" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            tab.pinned ? "bbx-interface-tab-pin" : "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
           )}
         >
           <PinIcon filled={tab.pinned} />
         </button>
-        <TabCloseButton title={title} pinned={tab.pinned} closing={closeLabel?.(tab.target.path) ?? null} onClose={() => onCloseTab(tab.target.path)} />
+        <TabCloseButton title={name} pinned={tab.pinned} closing={closeLabel?.(tab.target.path) ?? null} onClose={() => onCloseTab(tab.target.path)} />
       </div>
     );
   }

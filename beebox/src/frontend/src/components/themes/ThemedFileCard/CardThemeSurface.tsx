@@ -6,6 +6,7 @@ import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
 import { Text } from "../../ui/Text";
 import { CardContentsMenu } from "../../CardContents/CardContentsMenu";
+import { CardOutlineContext, useCardOutline } from "../../CardContents/CardOutlineContext";
 import { MaterialContext } from "../../ui/material";
 import { prefersReducedMotion } from "../../../lib/reduced-motion";
 
@@ -55,6 +56,7 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
   const instance = useId();
   const toggle = useRef<HTMLButtonElement>(null);
   const front = useRef<HTMLDivElement>(null);
+  const [outline, publishOutline] = useCardOutline();
   const propertiesId = controlAddress("bbx-card-properties", instance);
   const frontId = controlAddress("bbx-card-front", instance);
   const backId = controlAddress("bbx-card-back", instance);
@@ -118,8 +120,9 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
       </header>
       {problem}
       <div ref={front} id={frontId} className="bbx-card-front" data-card-mode={mode} hidden={back} aria-hidden={back}>
-        <CardContentsMenu id={contentsId} frontRef={front} />
-        {children}
+        <CardContentsMenu id={contentsId} frontRef={front} entries={outline} />
+        {/* The front is the card's paper too: text on it takes the card's ink. App panels (a plain Card, a Menu, a Notice) reset it. */}
+        <MaterialContext.Provider value><CardOutlineContext.Provider value={publishOutline}>{children}</CardOutlineContext.Provider></MaterialContext.Provider>
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">
         {/* The back of the card is its own paper: everything on it sits on the material. */}

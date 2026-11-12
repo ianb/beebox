@@ -12,7 +12,7 @@
 import { useCallback, useRef } from "react";
 import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
-import { CapturedPageMeta, frozenSnapshotUrl } from "./CapturedPageMeta";
+import { CapturedPageMeta, frozenSnapshotUrl, pageCapture } from "./CapturedPageMeta";
 import { type RendererProps } from "../file-type-registry";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
@@ -64,7 +64,7 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
       {typeof title === "string" && title !== "" ? (
         <Text as="h1" size="lg" weight="semibold" className="mb-1">{title}</Text>
       ) : null}
-      <CapturedPageMeta sourceUrl={sourceUrl} frozenUrl={frozenUrl} capturedAt={capturedAt} />
+      <CapturedPageMeta sourceUrl={sourceUrl} frozenUrl={frozenUrl} capturedAt={capturedAt} capture={pageCapture(frontmatter["capture"])} />
 
       {/* Commentary leads — the boxholder's remarks, with chips that jump down
           into the page body below. */}

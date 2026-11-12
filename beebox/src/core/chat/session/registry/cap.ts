@@ -11,8 +11,26 @@
 
 import { makeLog } from "../log.js";
 import type { RegistryEntry } from "./options.js";
+import { END_CAUSES } from "../ended-note.js";
 
 const log = makeLog("ChatSessionRegistry");
+// A working chat is held (`isHeld`), so only a stalled one ends here with live tasks.
+const HUNG_CAUSE = END_CAUSES.hung;
+
+/** Whether anything still needs this entry's subprocess: a listener or background work. */
+function isHeld(entry: RegistryEntry): boolean {
+  return entry.refCount > 0 || entry.session.isWorkingInBackground();
+}
+
+/** Stop and drop every entry quiet since `cutoff` that nothing holds. */
+export function evictIdleEntries(entries: Map<string, RegistryEntry>, cutoff: number): void {
+  for (const [id, entry] of entries) {
+    if (entry.lastActivity > cutoff || isHeld(entry)) continue;
+    log("sweep", `Idle eviction of ${id}`);
+    entry.session.stop(HUNG_CAUSE);
+    entries.delete(id);
+  }
+}
 
 export function enforceLiveCap(
   entries: Map<string, RegistryEntry>,
@@ -28,13 +46,13 @@ export function enforceLiveCap(
   if (live.length < opts.maxLive) return;
 
   // Evict the oldest live entry that isn't the current session and has no
-  // in-flight listeners.
+  // in-flight listeners or background work.
   live.sort((a, b) => a.entry.lastSubprocessUse - b.entry.lastSubprocessUse);
   for (const candidate of live) {
     if (candidate.id === opts.currentSessionId) continue;
-    if (candidate.entry.refCount > 0) continue;
+    if (isHeld(candidate.entry)) continue;
     log("evict", `Stopping subprocess for ${candidate.id} (LRU under cap)`);
-    candidate.entry.session.stop();
+    candidate.entry.session.stop(HUNG_CAUSE);
     return;
   }
   log("evict", `Live cap reached but no evictable candidate (refcounts: ${live.map((l) => `${l.id}=${l.entry.refCount}`).join(", ")})`);

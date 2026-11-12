@@ -16,7 +16,7 @@ set and asks which to keep.
 
 The periodic sweep in
 [2026-10-08-remove-tests-that-never-earn-their-keep](../code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md)
-and [2026-10-08-test-volume-sweep](../code-quality/2026-10-08-test-volume-sweep.md)
+and [2026-10-08-test-volume-sweep](../closed/code-quality/2026-10-08-test-volume-sweep.md)
 removes low-value tests after they land, across the whole suite. This issue is
 the per-branch gate: review the tests that the branch adds or changes, at
 `/finish`, before merge. The sweep's agreed criteria (restates the code, second
@@ -185,3 +185,5 @@ revisit if K1? notes pile up), and the recurring suite-wide sweep, which
 stays with
 [2026-10-08-remove-tests-that-never-earn-their-keep](../code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md)
 and should rank whole files by flag density rather than list checks.
+
+Re-reviewed 2026-10-30: the accepted design's four tasks have not started.

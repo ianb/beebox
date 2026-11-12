@@ -13,6 +13,7 @@ import { Text } from "../../components/ui/Text";
 import { withBase } from "../../api";
 import { GoogleSignInButton } from "./components/GoogleSignInButton";
 import { LoginFields } from "./components/LoginFields";
+import { StatusMessage } from "../../components/ui/StatusMessage";
 
 interface AuthMethods {
   password: boolean;
@@ -84,7 +85,7 @@ export function LoginPage() {
 
   return (
     <main>
-      <Row justify="center" align="center" className="min-h-screen p-4">
+      <Row justify="center" align="center" className="min-h-dvh p-4">
         <Card padding="lg" shadow className="max-w-sm w-full">
           <Stack gap="md">
             <Text as="h1" size="2xl" weight="bold" tone="emphasis" center>
@@ -92,7 +93,7 @@ export function LoginPage() {
             </Text>
 
             {methods === null ? (
-              <Text as="p" tone="subtle" center>Loading sign-in options…</Text>
+              <StatusMessage variant="inline" busy>Loading sign-in options…</StatusMessage>
             ) : (
               <>
                 {methods.password ? (

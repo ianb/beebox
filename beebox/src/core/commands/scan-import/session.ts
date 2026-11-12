@@ -26,7 +26,7 @@ import {
   selectScanVisionBackend,
   type ScanVisionService,
 } from "../../../services/scan-vision.js";
-import { createClaudeScanVision } from "../../../services/scan-vision-claude.js";
+import { createClaudeScanVision } from "../../../services/scan-vision-claude/core.js";
 import { getGeminiApiKey } from "../../gemini-key.js";
 import { routeVia } from "../../openrouter.js";
 import { checkClaudeAuth, ClaudeAuthError } from "../../agent/auth-preflight.js";

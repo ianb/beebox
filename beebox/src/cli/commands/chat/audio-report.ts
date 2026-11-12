@@ -11,7 +11,7 @@
  * `null`); a failed/unreachable POST warns once but never fails the command.
  */
 
-import { loopbackHeaders } from "./audio-fetch.js";
+import { loopbackHeaders } from "../../lib/loopback-headers.js";
 
 export interface RetranscriptionReport {
   kind: "retranscription";
@@ -59,6 +59,33 @@ export function buildRetranscriptionReport(opts: {
     ...(service !== undefined ? { service } : {}),
     ...(recordedAt !== null ? { recordedAt } : {}),
   };
+}
+
+/**
+ * The footer `bbx chat retranscribe` prints under the new text: what produced
+ * it and the realtime transcript it replaces. `service` is the resolved name
+ * from the result (the box default is never left unnamed); `language` is the
+ * language the service detected, omitted when it reports none, so a reader
+ * can see that a garbled result decoded the audio as another language.
+ */
+export function retranscriptionFooter(opts: {
+  service: string | undefined;
+  language: string;
+  diarized: boolean;
+  sidecarPath: string | null;
+  recordedAt: string | null;
+  realtimeTranscript: string | null;
+}): string[] {
+  const language = opts.language.trim();
+  return [
+    "--",
+    `service: ${opts.service ?? "(box default)"}`,
+    ...(language === "" || language === "unknown" ? [] : [`language: ${language}`]),
+    ...(opts.diarized ? ["diarized: true"] : []),
+    ...(opts.sidecarPath === null ? [] : [`word-timestamps: ${opts.sidecarPath}`]),
+    ...(opts.recordedAt === null ? [] : [`recorded-at: ${opts.recordedAt}`]),
+    ...(opts.realtimeTranscript === null ? [] : [`realtime-transcript: ${opts.realtimeTranscript}`]),
+  ];
 }
 
 /** Build the `chat-audio-consulted` report body, or `null` for the same reasons as {@link buildRetranscriptionReport}. */

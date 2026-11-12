@@ -237,6 +237,12 @@ export type CalendarApiResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: unknown };
 
+/** The status, then the response body when Google sent one. */
+async function httpErrorDetail(err: HTTPError): Promise<string> {
+  const text = await err.response.text();
+  return text === "" ? String(err.response.status) : `${err.response.status} ${text}`;
+}
+
 /** Delete an event via the calendar service. HTTP errors come back as `ok: false`. */
 export async function deleteEventViaApi(
   calendar: GoogleCalendarService,
@@ -248,9 +254,7 @@ export async function deleteEventViaApi(
     return { ok: true, value: undefined };
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response.status;
-      const text = await err.response.text();
-      console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
+      console.warn(`  API error deleting from ${calendarId}: ${await httpErrorDetail(err)}`);
       return { ok: false, error: err };
     }
     throw err;
@@ -267,9 +271,7 @@ export async function insertEventViaApi(
     return { ok: true, value: await calendar.insertEvent(calendarId, event) };
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response.status;
-      const text = await err.response.text();
-      console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
+      console.warn(`  API error pushing to ${calendarId}: ${await httpErrorDetail(err)}`);
       return { ok: false, error: err };
     }
     throw err;
@@ -286,9 +288,7 @@ export async function patchEventViaApi(
     return { ok: true, value: await calendar.patchEvent(calendarId, { eventId: googleEventId, event }) };
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response.status;
-      const text = await err.response.text();
-      console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
+      console.warn(`  API error patching in ${calendarId}: ${await httpErrorDetail(err)}`);
       return { ok: false, error: err };
     }
     throw err;

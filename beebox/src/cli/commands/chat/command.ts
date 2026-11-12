@@ -12,8 +12,10 @@ import { Command } from "commander";
 import { chatReviewCommand } from "./review.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
-import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./audio.js";
+import { loopbackHeaders } from "../../lib/loopback-headers.js";
+import { getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./audio.js";
 import { uiCommand } from "./ui.js";
+import { stripCommand } from "./strip.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -281,6 +283,7 @@ export const chatCommand = new Command("chat")
   .addCommand(whatsChangedCommand)
   .addCommand(screenshotCommand)
   .addCommand(uiCommand)
+  .addCommand(stripCommand)
   .addCommand(getLastAudioCommand)
   .addCommand(askAboutAudioCommand)
   .addCommand(retranscribeCommand)

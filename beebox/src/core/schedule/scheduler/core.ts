@@ -14,13 +14,13 @@ import {
 } from "../../box/boxes-config.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../../lib/dev-bundle-reload.js";
-import { writeBoxLog } from "./box-log.js";
+import { writeBoxLog } from "../box-log.js";
 import { runSchedulerPass } from "./pass.js";
 import { boxRunWrapperPresent, runPassThroughWrapper, unitSlugForBoxRoot } from "./box-run.js";
 
 // The per-box log moved to `./box-log.ts` and the pass itself to `./pass.ts`;
 // re-exported so the CLI (`cli/commands/scheduler`) keeps one import.
-export { boxLogFile, type LogEntry } from "./box-log.js";
+export { boxLogFile, type LogEntry } from "../box-log.js";
 export { runSchedulerPass } from "./pass.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */

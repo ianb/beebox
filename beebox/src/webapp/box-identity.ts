@@ -19,6 +19,7 @@
 
 import { loadBoxConfig } from "../core/box/config.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
+import { requestHasBrowserPass } from "./browser-pass-request.js";
 import {
   getOwnerEmail,
   localUserName,
@@ -68,7 +69,8 @@ async function boxGrantsBrowseOwner(boxRoot: string): Promise<boolean> {
 /**
  * Resolve a request's identity for one box.
  *
- * In order: a real identity (`hub`/`cookie`) wins; `open` wins; `unavailable`
+ * In order: the box browser pass (nobody, so the request acts as the agent);
+ * then a real identity (`hub`/`cookie`) wins; `open` wins; `unavailable`
  * is returned as-is (the browse key must NEVER mask a corrupt credential store
  * — that path fails closed with a 503); then the browse rung, which needs all
  * three of a valid key, the box's opt-in, and a local owner to bind to; else
@@ -79,6 +81,10 @@ export async function resolveBoxIdentity(opts: {
   request: IdentityRequest;
   openAccess: boolean;
 }): Promise<RequestIdentity> {
+  // The box browser pass wins over every person credential on the request: the
+  // box's own browser acts as the agent, never as a person whose login it
+  // happens to hold (docs/implemented-plans/agent-self-view.md, Track A).
+  if (requestHasBrowserPass(opts.boxRoot, opts.request.headers)) return { email: null, name: null, source: null };
   const identity = resolveRequestIdentity(opts.request, { openAccess: opts.openAccess });
   if (identity.email !== null) return identity;
   if (identity.source === "open" || identity.source === "unavailable") return identity;

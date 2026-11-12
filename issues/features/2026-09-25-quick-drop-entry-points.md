@@ -118,3 +118,7 @@ Still open, so this issue stays open:
 ## Audit 2026-10-22
 
 One "still open" item above is out of date. The iOS app has an App Intent that saves a thought without opening the app (`ios-app/BeeBox/Intents/CaptureThoughtIntent.swift`, commit d5ba5ed9c). It stores the text in the quick-capture queue and uploads it (`QuickCaptureStore`, `QuickCaptureUploadCoordinator`), not through `quickChat.submit`. A Control Center voice-note control also exists (`ios-app/BeeBoxControls/BeeBoxControls.swift:18`). Siri voice invocation of the shortcut failed on a device and stays open in `issues/bugs/2026-08-08-ios-siri-app-intent-capture.md`. The Mac, the share-sheet destination, the notification for a waiting thought, and photo or file drops remain open. The plan `beebox/docs/plans/box-screen.md` still has `status: partial`.
+
+Re-reviewed 2026-10-30: still open for the Mac, share-sheet destination, waiting-thought notification, and photo/file drops.
+
+Out of date in the body above: Body's 'what is missing' still reads as if no entry points exist; restate the problem as the remaining open list from the 2026-10-22 audit.

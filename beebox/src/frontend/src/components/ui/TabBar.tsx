@@ -31,38 +31,45 @@ export interface TabBarProps<V extends string> {
   variant?: "underline" | "pills";
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /**
+   * `"tabs"` (default) is a tablist whose tabs each control a panel. `"buttons"`
+   * is for a row of filter or view switches with no panel: a `role="group"` of
+   * `aria-pressed` buttons, all in the tab order.
+   */
+  mode?: "tabs" | "buttons";
   /** Take colours from the enclosing card's material (`card-pen` active, `card-soft` idle). */
   material?: boolean;
 }
 
 const UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "border-transparent text-warm-400 cursor-not-allowed",
-  active: "border-primary text-primary font-medium",
+  active: "border-primary text-primary",
   idle: "border-transparent text-warm-700 hover:text-warm-900 hover:border-warm-300 cursor-pointer",
 };
 
 const MATERIAL_UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "border-transparent text-card-soft opacity-50 cursor-not-allowed",
-  active: "border-card-pen text-card-pen font-medium",
+  active: "border-card-pen text-card-pen",
   idle: "border-transparent text-card-soft hover:text-card-ink hover:border-card-rule cursor-pointer",
 };
 
 const MATERIAL_PILL_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "bg-transparent text-card-soft opacity-50 cursor-not-allowed",
-  active: "bg-card-pen text-card-paper font-medium",
+  active: "bg-card-pen text-card-paper",
   idle: "bg-card-tint text-card-ink hover:bg-card-rule cursor-pointer",
 };
 
 const PILL_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "bg-transparent text-warm-400 cursor-not-allowed",
-  active: "bg-primary text-white font-medium",
+  active: "bg-primary text-white",
   idle: "bg-warm-100 text-warm-700 hover:bg-warm-200 cursor-pointer",
 };
 
-export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, controlsPrefix, variant, className, material }: TabBarProps<V>) {
+export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefix, controlsPrefix, variant, className, material, mode }: TabBarProps<V>) {
   const underlineStates = material === true ? MATERIAL_UNDERLINE_STATE : UNDERLINE_STATE;
   const pillStates = material === true ? MATERIAL_PILL_STATE : PILL_STATE;
   const pills = variant === "pills";
+  const buttons = mode === "buttons";
   // Roving focus: one tab stop, arrows move between enabled tabs and select as they go.
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     const enabled = tabs.filter(tab => tab.disabled !== true);
@@ -79,7 +86,7 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
     else event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[tabs.indexOf(next)]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className={cn(pills ? "flex flex-wrap gap-2" : material === true ? "flex gap-0 border-b border-card-rule" : "flex gap-0 border-b border-warm-300", className)}>
+    <div role={buttons ? "group" : "tablist"} aria-label={label} className={cn(pills ? "flex flex-wrap gap-2" : material === true ? "flex gap-0 border-b border-card-rule" : "flex gap-0 border-b border-warm-300", className)}>
       {tabs.map((tab) => {
         const active = tab.value === value;
         const disabled = tab.disabled === true;
@@ -90,13 +97,14 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
             key={tab.value}
             id={idPrefix !== undefined ? `${idPrefix}-${tab.value}` : undefined}
             type="button"
-            role="tab"
-            aria-selected={active}
-            aria-controls={controlsPrefix !== undefined ? `${controlsPrefix}-${tab.value}` : undefined}
+            role={buttons ? undefined : "tab"}
+            aria-pressed={buttons ? active : undefined}
+            aria-selected={buttons ? undefined : active}
+            aria-controls={!buttons && controlsPrefix !== undefined ? `${controlsPrefix}-${tab.value}` : undefined}
             aria-disabled={disabled || undefined}
-            tabIndex={active ? 0 : -1}
+            tabIndex={buttons || active ? 0 : -1}
             disabled={disabled}
-            onKeyDown={onKeyDown}
+            onKeyDown={buttons ? undefined : onKeyDown}
             onClick={() => {
               if (!disabled) onChange(tab.value);
             }}

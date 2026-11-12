@@ -16,6 +16,7 @@ import { extfileRenderer } from "./renderers/extfile.js";
 import { imageCardRenderer, rawImageRenderer } from "./renderers/image.js";
 import { pdfRenderer } from "./renderers/pdf.js";
 import { personRenderer } from "./renderers/person.js";
+import { calendarRenderer } from "./renderers/calendar.js";
 import { landmarkRenderer } from "./renderers/landmark.js";
 import { pdfCardTextRenderer, pdfCardOriginalRenderer } from "./renderers/pdf-card.js";
 import { doclingStructureRenderer, doclingRawJsonRenderer } from "./renderers/docling.js";
@@ -30,6 +31,7 @@ import { plaintextRenderer } from "./renderers/plaintext.js";
 import { binaryRenderer } from "./renderers/binary.js";
 import { directoryRenderer } from "./renderers/directory.js";
 import { todoViewRenderer } from "./renderers/todo-view.js";
+import { tourRenderer } from "./renderers/tour.js";
 import { viewRenderer } from "./renderers/view.js";
 import { chatHuskRenderer } from "./renderers/chat-husk.js";
 import { questionRenderer } from "./renderers/question.js";
@@ -62,6 +64,7 @@ const rendererRegistrations = defineRegistry<RendererEntry>({
     rawImageRenderer,
     pdfRenderer,
     personRenderer,
+    calendarRenderer,
     landmarkRenderer,
     pdfCardTextRenderer,
     pdfCardOriginalRenderer,
@@ -78,6 +81,7 @@ const rendererRegistrations = defineRegistry<RendererEntry>({
     binaryRenderer,
     directoryRenderer,
     todoViewRenderer,
+    tourRenderer,
     viewRenderer,
     chatHuskRenderer,
     questionRenderer,

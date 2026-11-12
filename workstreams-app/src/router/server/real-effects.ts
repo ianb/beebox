@@ -17,7 +17,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { execa } from "execa";
-import getPorts from "get-port";
+import { freePort } from "../../../../beebox/src/lib/free-port.js";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "../box-entry.js";
 import { createPidStore, type PidRecord } from "../pidfile.js";
 import type { TimerHandle } from "../lifecycle.js";
@@ -386,7 +386,7 @@ export function createRealEffects(): RouterEffects {
     load1: () => os.loadavg()[0] ?? 0,
     pidStore,
     writeHubConfig: writeWorktreeHubConfig,
-    getPort: () => getPorts(),
+    getPort: () => freePort(),
     openLog: (file) => createWriteStream(file, { flags: "a" }),
     resolveWorktree,
     resolveBoxEntries,

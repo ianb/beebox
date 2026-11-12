@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
 export type StackGap = "none" | "xs" | "sm" | "md" | "lg";
-export type StackAs = "div" | "section" | "article" | "ul" | "ol";
+export type StackAs = "div" | "section" | "article";
 export type StackAlign = "start" | "center" | "end" | "stretch";
 export type StackOverflow = "visible" | "hidden" | "auto" | "scroll";
 
@@ -85,7 +85,5 @@ export function Stack({ children, gap, as, align, overflow, hideOnMobile, focusa
   const props = { className: classes, ...(focusable ? { tabIndex: 0 } : {}) };
   if (as === "section") return <section {...props}>{children}</section>;
   if (as === "article") return <article {...props}>{children}</article>;
-  if (as === "ul") return <ul {...props}>{children}</ul>;
-  if (as === "ol") return <ol {...props}>{children}</ol>;
   return <div {...props}>{children}</div>;
 }

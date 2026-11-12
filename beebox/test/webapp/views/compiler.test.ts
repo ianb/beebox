@@ -14,7 +14,7 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Metadata extraction
 //
-// The compiler extracts name, description, dependencies, modes, layout, and rendersCardTypes from the view's named exports:
+// The compiler extracts name, description, dependencies, modes, layout, rendersCardTypes, and checkStates from the view's named exports:
 void test("The compiler extracts name, description, dependencies, modes, layout, and ren...", async (t) => {
   const tmp = await mkdtemp(join(tmpdir(), "views-test-"));
   const viewsDir = join(tmp, "views");
@@ -27,6 +27,7 @@ export const dependencies = ["_content/**/*.card", "_content/**/*.card"];
 export const modes = ["page", "chat"];
 export const layout = "full-bleed";
 export const rendersCardTypes = ["sandbox"];
+export const checkStates = [{ name: "picked", path: "_content/A.sandbox.card", params: { select: "O" } }];
 export default function Test() {
   return window.__bbxReact.createElement("div", null, "hello");
 }
@@ -42,6 +43,7 @@ export default function Test() {
     modes: ["page", "chat"],
     layout: "full-bleed",
     rendersCardTypes: ["sandbox"],
+    checkStates: [{ name: "picked", path: "_content/A.sandbox.card", params: { select: "O" } }],
     lastModified: isoDate(),
   });
 
@@ -169,6 +171,7 @@ export default function Minimal() {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   });
 
@@ -191,8 +194,56 @@ export default function Wide() {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
+    metadataError: "layout: Invalid option: expected one of \"inset\"|\"full-bleed\"",
     lastModified: isoDate(),
   });
+
+  // A `checkStates` entry gives its card as `path`, not `params.path`, and
+  // state names are lowercase and unique within the view:
+
+  await writeFile(join(viewsDir2, "states.tsx"), `
+export const checkStates = [{ name: "a", path: "_content/A.x.card", params: { path: "x" } }, { name: "a", path: "_content/A.x.card" }];
+export default function States() {
+  return window.__bbxReact.createElement("div", null, "states");
+}
+`);
+  t.check((await compileView(join(viewsDir2, "states.tsx"))).meta.description, "Invalid metadata export checkStates.0.params.path: give the card as the state's path, not params.path");
+
+  // A function in place of the list is rejected too, though JSON would drop it:
+
+  await writeFile(join(viewsDir2, "fn.tsx"), `
+export const checkStates = () => [];
+export default function Fn() {
+  return window.__bbxReact.createElement("div", null, "fn");
+}
+`);
+  t.check((await compileView(join(viewsDir2, "fn.tsx"))).meta.metadataError, "checkStates: Invalid input: expected array, received string");
+});
+
+// ## Metadata import does not see server credentials
+//
+// Reading the exports runs the box-authored view. The child that runs it gets
+// the agent profile's allowlist, so a view cannot publish a server secret as
+// its name. The spawn profile is stated as `agent`:
+void test("A view that exports a server secret as its name gets nothing", async (t) => {
+  const saved = process.env.BBX_HUB_SECRET;
+  process.env.BBX_HUB_SECRET = "server-hub-secret";
+  t.teardown(() => {
+    if (saved === undefined) Reflect.deleteProperty(process.env, "BBX_HUB_SECRET");
+    else process.env.BBX_HUB_SECRET = saved;
+  });
+  const viewsDir = join(await mkdtemp(join(tmpdir(), "views-test-")), "views");
+  await mkdir(viewsDir, { recursive: true });
+  await writeFile(join(viewsDir, "leak.tsx"), `
+export const name = String(process.env.BBX_HUB_SECRET);
+export const description = String(process.env.BBX_SPAWN_PROFILE);
+export default function Leak() {
+  return window.__bbxReact.createElement("div", null, "leak");
+}
+`);
+  const { meta } = await compileView(join(viewsDir, "leak.tsx"));
+  t.check({ name: meta.name, description: meta.description }, { name: "undefined", description: "agent" });
 });
 
 // ## Error module
@@ -255,6 +306,7 @@ export default function Summary() {
       modes: ["page"],
       layout: "inset",
       rendersCardTypes: [],
+      checkStates: [],
       lastModified: isoDate(),
     },
     {
@@ -265,6 +317,7 @@ export default function Summary() {
       modes: ["chat"],
       layout: "inset",
       rendersCardTypes: [],
+      checkStates: [],
       lastModified: isoDate(),
     },
   ]);
@@ -294,6 +347,7 @@ export default function Broken() {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   });
 });

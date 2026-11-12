@@ -10,6 +10,7 @@
  */
 
 import type { RouterOutput } from "../../lib/trpc/client";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
 type TickResultData = NonNullable<SchedulerLogEntry["result"]>;
@@ -51,7 +52,7 @@ function TickEntry({ tick }: { tick: SchedulerLogEntry }) {
   const active = tickHadActivity(tick);
   return (
     <div className={`flex items-center gap-2 ${active ? "text-warm-900" : "text-warm-700"}`}>
-      <span className="font-mono">{new Date(tick.ts).toLocaleTimeString()}</span>
+      <span className="font-mono">{friendlyDate(tick.ts, "time")}</span>
       {tick.result ? <TickResult result={tick.result} /> : null}
       {tick.error ? <span className="text-danger-dark">{tick.error}</span> : null}
     </div>

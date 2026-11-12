@@ -30,6 +30,7 @@ import { Hint } from "../../ui/Hint";
 import { Notice } from "../../ui/Notice";
 import { bbxSource } from "../../../lib/source-tag";
 import { controlAddress } from "@shared/ui-scan/control-address";
+import { cardUrl } from "@shared/card-url";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 
@@ -181,7 +182,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       <Row gap="sm" align="center" wrap>
         <Link
           id={driveControlId("open", mount.driveId)}
-          to={href(`/${boxSlug}/browse/${mount.cardPath}`)}
+          to={href(cardUrl(boxSlug ?? "", mount.cardPath))}
           className="text-sm text-primary hover:text-primary-dark underline"
         >
           Open

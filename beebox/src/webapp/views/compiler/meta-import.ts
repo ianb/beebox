@@ -4,8 +4,8 @@
  * A view module can have top-level side effects (the risk is documented in
  * `docs/implemented-plans/boxes-as-packages-v2.md`'s Failure modes table: "a view module
  * with top-level side effects now executes at list time"). Reading its
- * `name`/`description`/`dependencies`/`modes`/`layout`/`rendersCardTypes`
- * exports
+ * `name`/`description`/`dependencies`/`modes`/`layout`/`rendersCardTypes`/
+ * `checkStates` exports
  * therefore means importing it, which we isolate the same way `bbx view
  * check` isolates a full render: a killable child process with a hard
  * timeout, so a pathological view (an infinite loop or a promise that never
@@ -18,6 +18,13 @@
  * limit was tried first; a `SIGXCPU` handler (tap installs one) swallows it,
  * and macOS sends no SIGKILL at the hard limit. On 2026-10-16 an orphaned
  * runner had spun for 16 days.
+ *
+ * The view is box-authored code and its exports come back as metadata the
+ * server lists, so the child must not see the server's environment: a view
+ * exporting `name = process.env.BBX_HUB_SECRET` would publish the secret. It
+ * gets `agentAllowlistEnv()`, the agent profile's inherited allowlist without
+ * the values `buildScriptEnv` injects: importing a module needs no way back to
+ * the server, and an engine-hosted compile has no box to derive one from.
  */
 
 import * as fs from "node:fs/promises";
@@ -25,6 +32,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { z } from "zod";
 import { writeNodeViewModule, type ViewHostContext } from "../node-view-runtime.js";
+import { agentAllowlistEnv } from "../../../core/script-env/core.js";
 
 const RUNNER_FILENAME = "extract-meta-runner.mjs";
 const IMPORT_TIMEOUT_MS = 3_000;
@@ -46,6 +54,8 @@ try {
   // instead of the runner silently dropping it.
   if (mod.layout !== undefined) out.layout = mod.layout;
   if (Array.isArray(mod.rendersCardTypes)) out.rendersCardTypes = mod.rendersCardTypes;
+  // JSON drops a function; send its type instead, so the schema rejects it.
+  if (mod.checkStates !== undefined) out.checkStates = typeof mod.checkStates === "function" ? "function" : mod.checkStates;
   process.stdout.write(JSON.stringify(out));
 } catch (e) {
   process.stderr.write(String((e && e.stack) || e));
@@ -53,14 +63,38 @@ try {
 }
 `;
 
+/**
+ * One `checkStates` entry. The card goes in `path` only: the view receives it
+ * as `params.path`, so a `params.path` as well would be two places for it.
+ * `view`, `viewState` and `fragment` are view-URL keys the app keeps for
+ * itself (frontend `lib/view-url.ts`); the view never sees them as params.
+ */
+const RESERVED_PARAMS = ["path", "view", "viewState", "fragment"];
+const declaredCheckStateSchema = z.object({
+  name: z.string().regex(/^[\da-z][\da-z-]*$/, "use lowercase letters, digits and hyphens"),
+  path: z.string().min(1),
+  params: z.record(z.string(), z.string()).superRefine((params, ctx) => {
+    for (const key of RESERVED_PARAMS.filter((k) => k in params)) {
+      ctx.addIssue({ code: "custom", path: [key], message: key === "path" ? "give the card as the state's path, not params.path" : `"${key}" is a view-URL key the view never receives` });
+    }
+  }).optional(),
+}).strict();
+
 /** Metadata a view module may export, validated at the subprocess boundary. */
 const importedViewMetaSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   dependencies: z.array(z.string()).optional(),
-  modes: z.array(z.enum(["page", "chat"])).optional(),
+  modes: z.array(z.enum(["page", "chat", "strip"])).optional(),
   layout: z.enum(["inset", "full-bleed"]).optional(),
   rendersCardTypes: z.array(z.string()).optional(),
+  checkStates: z.array(declaredCheckStateSchema).superRefine((states, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, state] of states.entries()) {
+      if (seen.has(state.name)) ctx.addIssue({ code: "custom", path: [index, "name"], message: `duplicate state name "${state.name}"` });
+      seen.add(state.name);
+    }
+  }).optional(),
 });
 export type ImportedViewMeta = z.infer<typeof importedViewMetaSchema>;
 
@@ -75,6 +109,7 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
   return new Promise((resolve) => {
     const runnerPath = path.join(dir, RUNNER_FILENAME);
     const child = spawn(process.execPath, [runnerPath, moduleUrl], {
+      env: agentAllowlistEnv(),
       timeout: IMPORT_TIMEOUT_MS,
       killSignal: "SIGKILL",
     });

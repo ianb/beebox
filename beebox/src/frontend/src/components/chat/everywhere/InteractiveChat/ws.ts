@@ -68,6 +68,18 @@ function forSession(dataSessionId: string | null, sessionId: string | null): boo
 }
 
 /**
+ * Whether this view shows a message the box injected (`user: null`): only the
+ * chat it was delivered to. One with no session id started a new chat that no
+ * view is showing ("Decide for me" starts one in the background), and a chat
+ * with no id yet is not the chat any delivery named. {@link forSession}
+ * matches a null id on either side, so such a message appeared in whatever
+ * chat was open, as the person's own, and stayed there until a reload.
+ */
+export function holdsInjectedMessage(eventSessionId: string | null, sessionId: string | null): boolean {
+  return eventSessionId !== null && sessionId === eventSessionId;
+}
+
+/**
  * True when this tab has its own session assigned AND it's the exact one an
  * audio-review event (`chat-retranscription` / `chat-audio-consulted`)
  * targets. Unlike {@link forSession}, there is no null-permissive default —
@@ -194,6 +206,8 @@ export function useChatWs(opts: {
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
   onTaskLevel: (tasks: LiveTaskEntry[]) => void;
+  /** Re-read the live background-task set: level signals sent while the socket was down are not replayed. */
+  resyncTasks: () => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   onScreenshotRequest: (request: ScreenshotRequest) => void;
   /** Called immediately before assignment rewrites the fresh-chat URL. */
@@ -201,7 +215,7 @@ export function useChatWs(opts: {
   /** Written by the two audio-review events; read by `UserMessage`'s badges. */
   audioOverlayStore: AudioOverlayStore;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onTaskLevel, resyncTasks, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
   const ensureReservation = useBoxConversation()?.ensureReservation;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
@@ -239,7 +253,8 @@ export function useChatWs(opts: {
   }, [send, sessionId, ensureReservation]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
-  // chat-history, chat-complete, chat-user-message, and the secondary events.
+  // chat-history, chat-complete, chat-user-message (and its undelivered and
+  // discarded markers), and the secondary events.
   // Events tagged with a sessionId are filtered to this view's session only.
   useBusSubscription({
     onConnect: useCallback(() => {
@@ -252,13 +267,16 @@ export function useChatWs(opts: {
       // reconnect inside the gate's window isn't dropped — the gate arms a
       // trailing timer so it's still eventually serviced.
       refreshGateRef.current?.notifyReconnect(triggerRefresh);
-    }, [triggerRefresh]),
+      resyncTasks();
+    }, [triggerRefresh, resyncTasks]),
     onError: useCallback(() => { recordChatSendEnvironmentEvent("bus-ws-error"); }, []),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");
       const history = busEventData(event, "chat-history");
       const complete = busEventData(event, "chat-complete");
       const userMessage = busEventData(event, "chat-user-message");
+      const undelivered = busEventData(event, "chat-user-message-undelivered");
+      const discarded = busEventData(event, "chat-user-message-discarded");
       if (scheduleFired) {
         if (scheduleFired.alarm) {
           alarm.play();
@@ -280,6 +298,7 @@ export function useChatWs(opts: {
         send({ type: "REFRESH" });
       } else if (userMessage) {
         if (!forSession(userMessage.sessionId, sessionId)) return;
+        if (userMessage.user === null && !holdsInjectedMessage(userMessage.sessionId, sessionId)) return;
         if (userMessage.user === null) {
           // SERVER-INJECTED message — a delivered `<upload>` batch or `<capture>`
           // (`core/chat/session/deliver-user-message.ts` emits `user: null`).
@@ -300,8 +319,15 @@ export function useChatWs(opts: {
             message: userMessage.message,
             userName: userMessage.user.name,
             timestamp: userMessage.timestamp,
+            ...(userMessage.messageId !== undefined ? { messageId: userMessage.messageId } : {}),
           });
         }
+      } else if (undelivered) {
+        if (!forSession(undelivered.sessionId, sessionId)) return;
+        send({ type: "MESSAGE_UNDELIVERED", messageId: undelivered.messageId });
+      } else if (discarded) {
+        if (!forSession(discarded.sessionId, sessionId)) return;
+        send({ type: "MESSAGE_DISCARDED", messageId: discarded.messageId });
       } else {
         handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore });
       }

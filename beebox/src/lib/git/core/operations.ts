@@ -24,7 +24,7 @@
  * need one.
  */
 
-import { simpleGit, CleanOptions } from "simple-git";
+import { CleanOptions } from "simple-git";
 
 import {
   GitCommandError,
@@ -37,7 +37,8 @@ import {
   LOG_FORMAT,
 } from "../internal.js";
 import { withBoxGitLock } from "../../git-lock.js";
-import { commitEnvironment } from "./commit-env.js";
+import { commitDateOverrides } from "./commit-env.js";
+import { boxGit } from "../env.js";
 import { inspectIndexLock, recoverStaleIndexLock } from "../../git-stale-lock.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -101,7 +102,7 @@ export async function initRepo(
   initialBranch?: string
 ): Promise<void> {
   initialBranch = initialBranch ?? "main";
-  await simpleGit(boxRoot).raw(["init", "-b", initialBranch]);
+  await boxGit(boxRoot).raw(["init", "-b", initialBranch]);
 }
 
 
@@ -118,14 +119,14 @@ export async function initRepo(
  * it (empty from the repo root).
  */
 export async function gitBoxPrefix(boxRoot: string): Promise<string> {
-  return (await simpleGit(boxRoot).revparse(["--show-prefix"])).trim();
+  return (await boxGit(boxRoot).revparse(["--show-prefix"])).trim();
 }
 
 /**
  * Get the status of the repository.
  */
 export async function getStatus(boxRoot: string): Promise<GitStatus> {
-  const status = await simpleGit(boxRoot).status();
+  const status = await boxGit(boxRoot).status();
 
   // simple-git separates modified and deleted; our GitStatus combines
   // all working-tree changes (modifications + deletions) into `modified`
@@ -195,7 +196,7 @@ async function withIndexLockRetry<T>(dir: string, op: () => Promise<T>): Promise
  */
 async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): Promise<string> {
   const head = async (): Promise<string | null> =>
-    (await hasCommits(boxRoot)) ? (await simpleGit(boxRoot).revparse(["HEAD"])).trim() : null;
+    (await hasCommits(boxRoot)) ? (await boxGit(boxRoot).revparse(["HEAD"])).trim() : null;
   return withBoxGitLock(boxRoot, async () => {
     const before = await head();
     await withIndexLockRetry(boxRoot, op);
@@ -213,7 +214,7 @@ async function commitAndReadHead(boxRoot: string, op: () => Promise<unknown>): P
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await withBoxGitLock(boxRoot, () => withIndexLockRetry(boxRoot, () => simpleGit(boxRoot).add(paths)));
+  await withBoxGitLock(boxRoot, () => withIndexLockRetry(boxRoot, () => boxGit(boxRoot).add(paths)));
 }
 
 /**
@@ -227,7 +228,7 @@ export async function stageFiles(boxRoot: string, paths: string[]): Promise<void
  */
 export async function unstageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  const reset = (): Promise<string> => simpleGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]);
+  const reset = (): Promise<string> => boxGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]);
   await withBoxGitLock(boxRoot, () => withIndexLockRetry(boxRoot, reset));
 }
 
@@ -252,7 +253,7 @@ async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> 
   // the destination and leaves the source deletion staged after the commit.
   // `-z`: without it git quotes a non-ASCII path ("photo-caf\303\251.jpg"),
   // and the quoted string then fails as a commit pathspec.
-  const output = await simpleGit(boxRoot).raw(["diff", "--cached", "--name-only", "--no-renames", "--relative", "-z", "--", ...paths]);
+  const output = await boxGit(boxRoot).raw(["diff", "--cached", "--name-only", "--no-renames", "--relative", "-z", "--", ...paths]);
   return output.split("\0").filter((line) => line !== "");
 }
 
@@ -271,9 +272,9 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
  * untracked. A path already deleted and committed is absent: `git add` refuses
  * it ("pathspec did not match any files").
  */
-async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]> {
+export async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]> {
   if (paths.length === 0) return [];
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   // Porcelain paths are relative to the repository root, not to boxRoot.
   const prefix = (await git.raw(["rev-parse", "--show-prefix"])).trim();
   // `-z` entries are `XY <path>`; `--no-renames` keeps each to one path.
@@ -290,7 +291,7 @@ async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]>
  */
 export async function stageAll(boxRoot: string): Promise<void> {
   await withBoxGitLock(boxRoot, async () => {
-    await withIndexLockRetry(boxRoot, () => simpleGit(boxRoot).raw(["add", "-A"]));
+    await withIndexLockRetry(boxRoot, () => boxGit(boxRoot).raw(["add", "-A"]));
     await unstageOversizedBlobs(boxRoot);
   });
 }
@@ -308,7 +309,7 @@ export async function commit(
 ): Promise<string> {
   const message = buildCommitMessage(options);
 
-  const git = simpleGit(boxRoot).env(commitEnvironment(boxRoot));
+  const git = boxGit(boxRoot, { overrides: commitDateOverrides(boxRoot) });
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
   return commitAndReadHead(boxRoot, () => git.commit(message, commitArgs));
@@ -332,7 +333,7 @@ export async function commitPaths(
   }
 
   const message = buildCommitMessage(options);
-  const git = simpleGit(boxRoot).env(commitEnvironment(boxRoot));
+  const git = boxGit(boxRoot, { overrides: commitDateOverrides(boxRoot) });
   const commitArgs = ["commit", "-m", message];
   if (options.amend) {
     commitArgs.push("--amend");
@@ -418,7 +419,7 @@ export async function getLog(
   if (count === 0) return [];
 
   try {
-    const result = await simpleGit(boxRoot).log<GitLogFormat>({
+    const result = await boxGit(boxRoot).log<GitLogFormat>({
       maxCount: count,
       format: LOG_FORMAT,
     });
@@ -455,7 +456,7 @@ export async function getDiff(
 ): Promise<string> {
   staged = staged ?? false;
   const args = staged ? ["--cached"] : [];
-  return simpleGit(boxRoot).diff(args);
+  return boxGit(boxRoot).diff(args);
 }
 
 /**
@@ -463,7 +464,7 @@ export async function getDiff(
  */
 export async function hasCommits(boxRoot: string): Promise<boolean> {
   try {
-    await simpleGit(boxRoot).revparse(["HEAD"]);
+    await boxGit(boxRoot).revparse(["HEAD"]);
     return true;
   } catch (_e) {
     // revparse HEAD fails when there are no commits yet — that means false.
@@ -494,7 +495,7 @@ export interface PushResult {
  * and tick callers can log the outcome without blowing up the cycle.
  */
 export async function pushToRemote(boxRoot: string): Promise<PushResult> {
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot, { network: true });
 
   const remotes = await git.getRemotes();
   if (remotes.length === 0) {
@@ -530,7 +531,7 @@ export async function getCommitDiff(
   boxRoot: string,
   hash: string
 ): Promise<string> {
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   try {
     // Try normal diff against parent, with low rename threshold
     return await git.diff(["-M10", `${hash}~1`, hash]);
@@ -552,7 +553,7 @@ export async function getCommitDiff(
  * Get the current HEAD commit hash.
  */
 export async function getHead(boxRoot: string): Promise<string> {
-  const hash = await simpleGit(boxRoot).revparse(["HEAD"]);
+  const hash = await boxGit(boxRoot).revparse(["HEAD"]);
   return hash.trim();
 }
 
@@ -566,7 +567,7 @@ export async function getHead(boxRoot: string): Promise<string> {
  * against a `sha` captured before the changes being discarded.
  */
 async function resetHard(boxRoot: string, sha: string): Promise<void> {
-  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).raw(["reset", "--hard", sha]));
+  await withBoxGitLock(boxRoot, () => boxGit(boxRoot).raw(["reset", "--hard", sha]));
 }
 
 /**
@@ -580,7 +581,7 @@ export async function clean(
   const modes: CleanOptions[] = [CleanOptions.FORCE];
   if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
   if (opts.directories) modes.push(CleanOptions.RECURSIVE);
-  await withBoxGitLock(boxRoot, () => simpleGit(boxRoot).clean(modes));
+  await withBoxGitLock(boxRoot, () => boxGit(boxRoot).clean(modes));
 }
 
 /**

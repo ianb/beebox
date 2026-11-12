@@ -41,9 +41,10 @@ import {
   buildConsultedReport,
   buildRetranscriptionReport,
   postAudioReviewReport,
+  retranscriptionFooter,
 } from "./audio-report.js";
 
-export { loopbackHeaders, audioMimeType, missingMessageIdError } from "./audio-fetch.js";
+export { audioMimeType, missingMessageIdError } from "./audio-fetch.js";
 
 const HQ_SERVICE_SET = new Set<string>(HQ_TRANSCRIPTION_SERVICES);
 /** Type guard for the `--service` option against the known HQ services. */
@@ -289,24 +290,24 @@ export const retranscribeCommand = new Command("retranscribe")
           sidecarPath = `${audioPath}.words.json`;
           await fs.writeFile(sidecarPath, JSON.stringify(result.words, null, 2) + "\n");
         } else {
-          console.error(`${label}: --timestamps requested but service ${service ?? "(box default)"} returned no word timing`);
+          console.error(`${label}: --timestamps requested but service ${result.service ?? service ?? "(box default)"} returned no word timing`);
         }
       }
 
       // Footer: what produced this, and the realtime transcript it replaces
       // so the caller can see what the live pass got wrong.
-      console.log("--");
-      console.log(`service: ${service ?? "(box default)"}`);
-      if (result.diarized === true) console.log("diarized: true");
-      if (sidecarPath !== null) console.log(`word-timestamps: ${sidecarPath}`);
-      if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
-      if (realtimeTranscript !== null) console.log(`realtime-transcript: ${realtimeTranscript}`);
+      for (const line of retranscriptionFooter({
+        service: result.service ?? service,
+        language: result.language,
+        diarized: result.diarized === true,
+        sidecarPath,
+        recordedAt,
+        realtimeTranscript,
+      })) console.log(line);
 
       // Best-effort report of the correction — skips silently for --file
       // runs or old tabs that never echoed an id. `newText` is the exact
-      // string just printed (post relabel/diarization processing);
-      // `result.service` is the actually-resolved HQ service name, never the
-      // unresolved "(box default)" placeholder printed above.
+      // string just printed (post relabel/diarization processing).
       const report = buildRetranscriptionReport({
         sessionId: fetchedSessionId,
         messageId: fetchedMessageId,

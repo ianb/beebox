@@ -16,7 +16,7 @@ const NOW = Date.parse("2026-09-26T12:00:00.000Z");
 type ManifestStatus = "live" | "disabled" | "revoked";
 const deps: WorkerDeps = { now: () => NOW, jwksFor: () => async () => null };
 
-function sharedEnv(overrides: Partial<Env> = {}): Env {
+function sharedEnv(overrides?: Partial<Env>): Env {
   return {
     PUB_STORE: env.PUB_STORE,
     ACCESS_TEAM_DOMAIN: undefined,
@@ -29,8 +29,16 @@ function sharedEnv(overrides: Partial<Env> = {}): Env {
   };
 }
 
-function request(path: string, requestEnv: Env = sharedEnv(), hostname = HOSTNAME, init?: RequestInit): Promise<Response> {
-  return handle({ request: new Request(`https://${hostname}${path}`, init), env: requestEnv, deps });
+interface RequestOptions {
+  env?: Env;
+  hostname?: string;
+  init?: RequestInit;
+}
+
+function request(path: string, opts?: RequestOptions): Promise<Response> {
+  const requestEnv = opts?.env ?? sharedEnv();
+  const hostname = opts?.hostname ?? HOSTNAME;
+  return handle({ request: new Request(`https://${hostname}${path}`, opts?.init), env: requestEnv, deps });
 }
 
 async function makeRelease(files: Record<string, string>) {
@@ -43,7 +51,8 @@ async function makeRelease(files: Record<string, string>) {
   return { id: await releaseIdForFiles(inventory), files: inventory };
 }
 
-async function seed(status: ManifestStatus = "live") {
+async function seed(manifestStatus?: ManifestStatus) {
+  const status = manifestStatus ?? "live";
   const files = { "index.html": HTML, "docs/index.html": "<h1>Docs</h1>", "assets/site.css": CSS, "assets/site.json": JSON_CONTENT };
   const activeRelease = await makeRelease(files);
   const manifest: SiteEdgeManifest = siteEdgeManifestSchema.parse({
@@ -55,7 +64,7 @@ async function seed(status: ManifestStatus = "live") {
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/docs/index.html`, "<h1>Docs</h1>");
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/assets/site.css`, CSS);
   await env.PUB_STORE.put(`pubs/${PUB_ID}/releases/${activeRelease.id}/assets/site.json`, JSON_CONTENT);
-  await env.PUB_STORE.put(`slugs/hello`, PUB_ID);
+  await env.PUB_STORE.put("slugs/hello", PUB_ID);
   await env.PUB_STORE.put(`shared-routes/${PUB_ID}/route.json`, JSON.stringify({
     schemaVersion: 1, pubId: PUB_ID, boxHostHandle: BOX_HANDLE, hostname: HOSTNAME,
     path: "/hello/", manifestHostHandle: SITE_HANDLE,
@@ -97,7 +106,7 @@ describe("shared-host routes", () => {
     expect(page.headers.get("Cache-Control")).toBe("no-store");
     expect(page.headers.get("Access-Control-Allow-Origin")).toBeNull();
     expect(page.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
-    const head = await request("/hello/", sharedEnv(), HOSTNAME, { method: "HEAD" });
+    const head = await request("/hello/", { init: { method: "HEAD" } });
     expect(head.status).toBe(200);
     expect(await head.text()).toBe("");
     const rootWithoutSlash = await request("/hello?source=typed");
@@ -164,7 +173,7 @@ describe("shared-host routes", () => {
 
   it("fails closed for wrong host, stale slug pointer, and marker disagreement", async () => {
     await seed();
-    expect((await request("/hello/", sharedEnv(), "other.example.org")).status).toBe(404);
+    expect((await request("/hello/", { hostname: "other.example.org" })).status).toBe(404);
     await env.PUB_STORE.put("slugs/hello", "j".repeat(26));
     expect((await request("/hello/")).status).toBe(404);
     await env.PUB_STORE.put("slugs/hello", PUB_ID);
@@ -202,6 +211,6 @@ describe("shared-host routes", () => {
   it("rejects partial shared-mode bindings instead of falling back to legacy routing", async () => {
     const incomplete = sharedEnv();
     delete incomplete.PUB_HOSTNAME;
-    expect((await request("/hello/", incomplete)).status).toBe(404);
+    expect((await request("/hello/", { env: incomplete })).status).toBe(404);
   });
 });

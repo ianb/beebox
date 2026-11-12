@@ -83,12 +83,12 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Create Event",
         when: "User asks to add a new event to their calendar",
-        instructions: "Write a new .ics file in _content/calendar/ with proper ICS format including VTIMEZONE and TZID. Use X-BBX-CALENDAR-ID to target a specific calendar. The event will be pushed to Google Calendar on next sync.",
+        instructions: "Write a new .ics file in the target calendar's attach folder (_content/calendar/<Name>.attach/, beside <Name>.calendar.card) with proper ICS format including VTIMEZONE and TZID. The folder decides the calendar. The event will be pushed to Google Calendar on next sync.",
       },
       {
         name: "Edit Event",
         when: "User asks to change an existing calendar event (time, title, location, etc.)",
-        instructions: "Find the .ics file in _content/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
+        instructions: "Find the .ics file in its calendar's attach folder under _content/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
       },
       {
         name: "Delete Event",

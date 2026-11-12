@@ -1,4 +1,36 @@
 tests:
+  # === The box agent changelog (docs/implemented-plans/agent-changes.md) ===
+  # Status (2026-11-01, Claude): all three passed on the agent-changelog test1
+  # clone; each agent opened box-docs/agent-changes.md by itself.
+  - id: change-note-stale
+    prompt: >
+      A note I saved months ago says to run `bbx view test <slug>` to check a
+      view. I want to check my views now. What command do I run? Explain only;
+      do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/agent-changes.md", "node_modules/beebox/box-docs/bbx-commands.md"]
+    watch_for: "Does not repeat the note: finds the command is gone by looking it up, not from memory, and says the note is out of date."
+    correct_contains: ["bbx view check"]
+    tags: [agent-changes]
+  - id: change-note-right
+    prompt: >
+      My note says `bbx todos --now` lists what is due now. Someone told me a
+      changelog entry said that flag was removed, so I should delete the note.
+      Should I? Explain only; do not change files.
+    expected_level: knows_about
+    watch_for: "Checks the current command (`bbx todos --help`, the changelog, or todos.md) before answering, and keeps the note because the flag exists; the removed flag is `--on-plate`."
+    correct_contains: ["--now"]
+    tags: [agent-changes]
+  - id: change-doc-before-cannot
+    prompt: >
+      My old note says Bee Box has no way to keep a copy of a web page except
+      pasting it into a card by hand. Is that still true? Explain only; do not
+      change files.
+    expected_level: knows_about
+    watch_for: "Checks instead of agreeing with the note, and says the note is out of date."
+    correct_contains: ["bbx webpage save"]
+    tags: [agent-changes]
+
   # Status (2026-10-06, Codex): passed on a disposable standalone clone;
   # 2 files read, 1 search. Configured Claude transcript was unavailable.
   - id: parked-template-resolution
@@ -84,6 +116,19 @@ tests:
       - '(?:best.effort|do.your.best)[\s\S]{0,160}(?:permit|allow|policy|instruction)|(?:permit|allow|policy|instruction)[\s\S]{0,160}(?:best.effort|do.your.best)'
     tags: [jev-triage]
 
+  # Status (2026-10-29, Claude): passed on the worktree test1 clone; 0 reads/searches, 34k context.
+  - id: triage-compiled-is-generated
+    prompt: >
+      A filing tie-break in this box's compiled triage instructions looks
+      wrong. Where should the fix go, and should the compiled file be edited?
+      Explain briefly without reading files, using tools, or changing anything.
+    expected_level: knows_directly
+    watch_for: "Edits the intake guide or a landmark rule, never the generated compiled file"
+    correct_matches:
+      - '(?:guide|landmark)'
+      - '(?:not|never|don.t|shouldn.t)[\s\S]{0,80}edit[\s\S]{0,80}(?:compiled|generated)|(?:compiled|generated)[\s\S]{0,120}(?:not|never)[\s\S]{0,40}edit'
+    tags: [jev-triage]
+
   - id: triage-evidence-honesty
     prompt: >
       A document's attachment could not be extracted, so the classifier has
@@ -96,6 +141,22 @@ tests:
     correct_matches:
       - '(?:not|no|never|isn.t|doesn.t)[\s\S]{0,160}(?:confirm|correct|verified)|(?:silence|uncorrected)[\s\S]{0,160}(?:not|isn.t|doesn.t)'
     tags: [jev-triage]
+
+  # Status (2026-11-12, Claude): 1/1 passed, 3 reads, 3 searches, 35k context,
+  # against the worktree test box. It found the tour type and the command by
+  # looking; it did not answer from the always-loaded guidance alone.
+  - id: tour-strip-walkthrough
+    prompt: >
+      A new family member is joining this box and wants to be walked through
+      it a step at a time, with the steps staying in view while they click
+      around. What do you create and what do you run? Explain only; do not
+      change files.
+    expected_level: knows_directly
+    watch_for: "Writes a tour card with one `##` heading per beat and shows it with `bbx chat strip set`"
+    correct_contains: ["tour"]
+    correct_matches:
+      - 'bbx chat strip set'
+    tags: [conversation-strip]
 
   # === Quick chat routing ===
   # Status (2026-09-21, Claude): 1/1 passed, 0 reads/searches, 23k context,
@@ -597,6 +658,96 @@ tests:
       - '(?:refus|unsupported|macOS|cannot)[\s\S]{0,250}(?:ask|boxholder)'
     tags: [host-packages]
 
+  # TOOLS, the box browser (docs/plans/shared-browser.md, chunk 11): the guide's
+  # pointer carries the handoff; the `browser` skill carries the mechanics.
+  # Status (2026-10-30, Claude): pass on a committed scratch copy of the
+  # worktree's test1 clone, 0 reads, 0 searches, 44k ctx; first run. Asked the
+  # person to open Browser from the profile menu on a computer and say when
+  # done; said it never asks for or types the password.
+  - id: browser-login-needed
+    prompt: >
+      You are partway through a task and a site you need is asking for a
+      login. What do you do? Explain only; do not use tools or change
+      anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Runs bbx browser ask with what the page needs, puts the printed link in
+      its reply, and ends its turn; then continues with bbx browser when the
+      answer arrives. FAILS if it asks for the password or offers to type it.
+    correct_contains: ["bbx browser ask"]
+    tags: [browser, behavioral]
+  # Status (2026-10-31, Claude): pass on the shared-browser test1 clone, 0 reads,
+  # 0 searches, 44k ctx. Failed first on the guide's stale TOOLS text; passes
+  # after it names `bbx browser ask`.
+
+  # Status (2026-10-30, Claude): pass on the same copy, 0 reads, 0 searches,
+  # 34k ctx; first run. WebFetch for public pages, bbx browser for the
+  # person's account, the person logs in via Browser.
+  - id: webpage-keep-a-page
+    prompt: >
+      Someone asks you to keep a copy of an article at a URL. What do you run?
+      Explain only; do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Runs bbx webpage save with the URL.
+    correct_contains: ["bbx webpage save"]
+    tags: [browser, webpage]
+
+  - id: webpage-bad-page
+    prompt: >
+      A forum answers 200 with a sign-in page, and bbx webpage save saved it as
+      a card. How do you stop that happening again on this box? Explain only;
+      do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Adds a refusal for that site to src/tricks/webpage.ts.
+    correct_contains: ["webpage.ts"]
+    tags: [browser, webpage]
+
+  - id: webpage-redirect
+    prompt: >
+      bbx webpage save stops, exit 4, and says the URL redirects to a sign-in
+      page. What do you do? Explain only; do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Does not follow it. Uses the box browser, or asks the person to log in.
+    correct_contains: ["bbx browser"]
+    tags: [browser, webpage]
+
+  - id: refs-who-cites-this
+    prompt: >
+      A source card was just re-saved and its text changed. How do you find
+      which other cards cite it, and which block of it each one cites? Explain
+      only; do not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: Uses bbx refs, not grep, so relative links are found too.
+    correct_contains: ["bbx refs"]
+    tags: [refs]
+
+  - id: pdf-save-keep-a-pdf
+    prompt: >
+      You found a PDF at a government web address and want to keep it in the
+      box with its address and a hash. What command do you run? Explain only;
+      do not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: Uses bbx pdf save, not a download followed by scan-import.
+    correct_contains: ["bbx pdf save"]
+    tags: [pdf]
+
+  - id: browser-vs-webfetch
+    prompt: >
+      How do you read a page that needs the person's account, and how is that
+      different from reading a public page? Explain only; do not use tools or
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Public pages through WebFetch; a page behind the person's login through
+      bbx browser, the box's shared browser, with the person logging in
+      themselves via Browser in the profile menu.
+    correct_contains: ["bbx browser"]
+    tags: [browser]
+
   # Guards ledger row tools.available (added 2026-09-26, doc-structure Track
   # 3, TOOLS): the host's converters are used directly.
   # Status (2026-09-26, doc-structure Track 3, TOOLS): pass on the test1 clone,
@@ -724,6 +875,41 @@ tests:
       - 'Claude in Chrome'
       - 'file_upload|Focus card|Submit batch|Copy prompt'
     tags: [browser-task]
+
+  # === Nested AGENTS.md on pi ===
+  #
+  # pi loads only the walk-up AGENTS.md at session start. Its read, edit and
+  # write tools append a deeper directory's AGENTS.md to the result the first
+  # time they touch a file there (docs/pi-engine.md, "Nested AGENTS.md"); the
+  # pi reader counts that delivery as a read. read_before_edit checks the
+  # order. pi only: Claude Code loads the nested file without a Read, and only
+  # pi's reader records edits, so should_read and read_before_edit fail on
+  # Claude and Codex by design.
+  # Status (2026-10-29, pi, deepseek/deepseek-v3.2): before delivery, the agent
+  # edited first and read the AGENTS.md only after an `ls` listed it. With
+  # delivery, 4 of 6 runs passed; each pass added the `- Changed:` line in its
+  # first edit. The 2 failures hit the 12-turn limit while checking line
+  # endings before an edit, with the delivered rule already in hand; the block
+  # then said only "Instructions for files in ..." and the model probed where
+  # the file ended. After the block was marked as not part of the file, 3 of 3
+  # passed (4-9 turns, 23k initial context, $0.003-$0.008 per run).
+  - id: pi-nested-agents-before-edit
+    prompt: >
+      In the slow-cooker party mix recipe in _content/recipes, add 1 cup of
+      cheese crackers to the ingredients.
+    expected_level: knows_directly
+    watch_for: "Has _content/recipes/AGENTS.md (read or delivered) before editing the recipe, and adds the Notes line that file asks for"
+    fixture:
+      _content/recipes/AGENTS.md: |
+        # Recipes
+
+        When you change a recipe in this directory, add a line to its
+        `## Notes` section that starts with `- Changed:` and says what changed.
+    should_read: ["_content/recipes/AGENTS.md"]
+    read_before_edit: ["_content/recipes/AGENTS.md"]
+    cards_contain: ["- Changed:", "cheese crackers"]
+    max_turns: 12
+    tags: [pi, nested-agents]
 
   # === Box Structure and Navigation ===
   #
@@ -911,16 +1097,14 @@ tests:
       The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
 
-  # Refresh (2026-10-22, Claude): accepts "Make a scan-upload token in Settings";
-  # dropped should_read README.md (runs find phone-photos.md by listing box-docs).
+  # Refresh (2026-10-22, Claude): dropped should_read README.md (runs find phone-photos.md by listing box-docs).
   - id: iphone-photos-album-setup
     prompt: "I'm thinking about ways to add photos to the box. Can new photos from an Apple Photos album on my iPhone come in automatically? How would I set that up? Can you do the setup for me, including the token?"
     expected_level: knows_about
-    watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token and all Mac setup actions to the boxholder"
-    correct_contains_any: ["scan-uploader", "scan uploader"]
+    watch_for: "Explains the Mac plus iCloud album plus Bee Box Desktop path; reads the phone-photos package doc; leaves pairing, credentials and all Mac setup actions to the boxholder"
+    correct_contains_any: ["Bee Box Desktop", "Mac app"]
     correct_matches:
       - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
-      - '(?:boxholder|user).{0,80}(?:mint|create|generate|make).{0,40}token|(?:mint|create|generate|make).{0,40}token.{0,80}(?:Settings|boxholder|yourself)'
       - 'you.{0,100}(?:install|configure|run|grant|approve)|(?:install|configure|run|grant|approve).{0,100}(?:you|your|boxholder)'
     response_not_matches:
       - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:mint|create|generate)\\b[^.]{0,60}token"
@@ -1820,7 +2004,7 @@ tests:
     watch_for: >
       Opens the calendar guide (its compiled doc, or the guide card) before
       answering, and describes its Create Event action: a new .ics file in
-      _content/calendar/, pushed on the next sync.
+      the calendar card's attach folder, pushed on the next sync.
     should_read_any: ["calendar-guide.md", "calendar.guide.card"]
     correct_matches: ['\.ics|event file|calendar folder']
     tags: [guides]
@@ -1928,6 +2112,22 @@ tests:
       - '(?:at a time|reminder)[\s\S]{0,200}(?:schedul|card)'
       - '(?:watch|when something (?:happens|changes))'
     tags: [connectors, notifications]
+
+  # Status (2026-11-10, Claude): both pass on the worktree test1 clone after `place:` was added (35k ctx each);
+  # the journal nudge still answers chat:new:<dir>.
+  - id: notification-opens-a-place
+    prompt: "The boxholder keeps a journal in the place _content/journal. Set up nothing yet: which bbx notify --target would you use for a nightly 'time to write in your journal' nudge, so a tap lands where they write?"
+    expected_level: knows_about
+    watch_for: "Reads the notify or schedule guidance and answers chat:new:_content/journal (a new chat in that place), not chat:new or a card target"
+    correct_contains: ["chat:new:_content/journal"]
+    tags: [notifications, schedules]
+
+  - id: notification-resumes-a-place
+    prompt: "The boxholder has an ongoing conversation about the porch rebuild in the place _content/projects/porch-rebuild. Set up nothing yet: which bbx notify --target would you use for a weekly 'pick the porch back up' nudge, so a tap continues that conversation?"
+    expected_level: knows_about
+    watch_for: "Reads the notify or schedule guidance and answers place:_content/projects/porch-rebuild (the place's latest chat), not chat:new:<dir>, which starts a new chat"
+    correct_contains: ["place:_content/projects/porch-rebuild"]
+    tags: [notifications, schedules]
 
   # === Scheduled Tasks ===
   #
@@ -3176,10 +3376,30 @@ tests:
   # sync is bidirectional — creates .ics files, describes editing, explains push.
   # Before fix: agent thought calendar was read-only (0/3 pass).
 
+  # Status (2026-10-29, calendar-cards, Claude): pass on the migrated test1
+  # clone with a fictional Marlowe Family card; 2 reads, 34k ctx. Same run:
+  # calendar-create-event, -edit-event, -vtimezone-authoring, -upcoming-events
+  # pass; calendar-bidirectional failed only its literal "two-way" check (the
+  # answer was right) and passed on a rerun; card-calendar.md now also says
+  # "two-way" so the card doc alone carries it.
+  - id: calendar-folder-picks-calendar
+    prompt: >
+      Where would you write a new event so that it lands on the Marlowe Family
+      calendar rather than another one? Answer from what you know about this
+      box; do not change any files.
+    expected_level: knows_directly
+    watch_for: >
+      Names the calendar card's attach folder
+      (_content/calendar/Marlowe_Family.attach/) and says the folder decides
+      the calendar. Does not tell the agent to set X-BBX-CALENDAR-ID or to
+      write into _content/calendar/ itself.
+    correct_matches: ['Marlowe_Family\.attach|attach folder']
+    tags: [calendar]
+
   - id: calendar-create-event
     prompt: "I need to add a dentist appointment next Tuesday at 2pm to my calendar. Can you do that?"
     expected_level: knows_about
-    watch_for: "Says yes and creates an .ics file in _content/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
+    watch_for: "Says yes and creates an .ics file in a calendar card's attach folder under _content/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
     correct_contains: ["sync"]
     max_turns: 15
     tags: [calendar]
@@ -5489,6 +5709,58 @@ tests:
       use plain markdown" rule directly (an unknown tag trips validation) and
       itself suggests checking card-recipe.md for an existing field.
 
+  # === Compositions (docs/implemented-plans/composition-editor.md) ===
+  #
+  # `{% composition %}` and `{% editorial %}` are doc-card scoped tags taught
+  # in the doc schema instructions ("## Compositions" in
+  # node_modules/beebox/box-docs/card-doc.md), not the always-on guide, so the
+  # plan's knows_directly is run as knows_about.
+  #
+  # Status (2026-10-27, Claude): 2/2 passed on the isolated test1 clone; both
+  # read card-doc.md (2-3 reads, 34k initial ctx). Marks answer used joiner for
+  # the bridge and a gap description, not a written ending. Layout answer
+  # suggested {% source %} for an interview line lifted into the post, which
+  # the guidance allows for secondhand lines.
+
+  - id: composition-editorial-marks
+    prompt: >
+      My doc card _content/store/Garden.doc.card has a {% composition %} with
+      my essay in it. Two of my paragraphs don't connect, and the ending is
+      missing. If I ask you to bridge the paragraphs and point out the missing
+      ending, what do you write inside the composition and how do you mark it?
+      When else may you change my words there? Explain only; do not change
+      files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/card-doc.md"]
+    watch_for: >
+      Says the text inside a composition is the person's; the agent changes
+      or adds words there only on the person's instruction. Any words of the
+      agent's go in {% editorial kind=... %}: joiner for connecting text, gap
+      for the missing ending, note for a comment. Does not use {% quote %} or
+      {% todo %} for its own words.
+    correct_contains: ["{% editorial"]
+    correct_matches:
+      - 'gap'
+      - '(?:only|unless|until)[\s\S]{0,120}(?:ask|instruct|tell|request)'
+    tags: [cards, compositions, markdown]
+
+  - id: composition-one-per-card
+    prompt: >
+      I'm turning my notes and two interview transcripts in a doc card into a
+      blog post. How do you lay out the card: can it hold more than one
+      {% composition %}, and where do the transcripts and my revision notes
+      go? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/card-doc.md"]
+    watch_for: >
+      One composition per doc card, holding the post; sources, notes, and
+      revision notes stay outside the composition in the rest of the body.
+    correct_contains: ["{% composition"]
+    correct_matches:
+      - '(?:one|single|at most one|only one)[\s\S]{0,60}composition'
+      - '(?:outside|after|before|rest of the body)[\s\S]{0,120}(?:transcript|note|source)|(?:transcript|note|source)[\s\S]{0,120}outside'
+    tags: [cards, compositions]
+
   # === Search and the contains: field ===
   #
   # Status (2026-07-10): the two hybrid-search phrasing audits
@@ -5653,6 +5925,33 @@ tests:
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
+  # === Views: declared check states ===
+  #
+  # A view exports `checkStates` (name, card path, params) so `bbx view check`
+  # renders a state its samples miss, and `bbx view states <slug>` prints the
+  # page path to open it (docs/implemented-plans/view-declared-check-states.md). Lives in
+  # views.md (Testing a View), so knows_about. Passes 2026-11-09 on the
+  # worktree test1 clone: 3 reads, 3 searches, 35k context.
+
+  - id: views-declared-check-states
+    prompt: >
+      My periodic table view crashes only when an element is selected, which
+      happens with the view parameter select=O. bbx view check passes. How do
+      I make the check render the selected state, and how do I then
+      screenshot that state? Explain only; do not change anything.
+    expected_level: knows_about
+    watch_for: >
+      Reads node_modules/beebox/box-docs/views.md, then says to export
+      `checkStates` with a name, the card path, and `params: { select: "O" }`,
+      and to get the page path from `bbx view states <slug>` for
+      `bbx browser open` and `screenshot --card`. Must NOT put the card in
+      `params.path` or invent a test harness.
+    should_read: ["node_modules/beebox/box-docs/views.md"]
+    correct_contains: ["checkStates", "bbx view states"]
+    correct_matches:
+      - 'params[\s\S]{0,60}select'
+    tags: [views]
+
   # === Views: card inset vs full bleed ===
   #
   # The card insets a view by default; a view opts into running to the card's
@@ -5677,7 +5976,7 @@ tests:
     correct_contains_any: ["full-bleed"]
     tags: [views, layout]
 
-  # === Views: render-test command (bbx view test) ===
+  # === Views: render-test command (bbx view check) ===
   #
   # Indirect knowledge, like the other view-authoring audits: the command lives
   # in node_modules/beebox/box-docs/views.md (Testing a View), the bbx-commands.md reference, and
@@ -5687,7 +5986,7 @@ tests:
   # asking them whether it works.
   #
   # Status (2026-06-20): 1/1 passes — agent reads node_modules/beebox/box-docs/views.md (1 read,
-  # 0 searches) and names `bbx view test <slug>` as the verification step. NOTE on
+  # 0 searches) and named `bbx view test <slug>` (since removed; the command is now `bbx view check`) as the verification step. NOTE on
   # prompt shape: a *cold* "how do I test a view" prompt fails — the agent answers
   # from training (0 reads) and misses the post-training command, even proposing a
   # puppeteer trick. An *authoring* framing that asks for a written plan and says
@@ -5705,11 +6004,11 @@ tests:
     expected_level: knows_about
     watch_for: >
       Reads the views guide (per the views/ stub's "read before creating
-      views"), then names `bbx view test <slug>` as how it verifies the view
+      views"), then names `bbx view check` as how it verifies the view
       renders — not "open it in the browser", "visit the page", or "ask the
       user".
     should_read: ["node_modules/beebox/box-docs/views.md"]
-    correct_contains: ["bbx view test"]
+    correct_contains: ["bbx view check"]
     tags: [views]
 
   # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;
@@ -5891,23 +6190,59 @@ tests:
   # sentence alone.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
+  # Status (2026-11-08): chat-screenshot-when, chat-screenshot-person-screen
+  # and box-page-interaction pass 3/3 (claude, worktree test1 clone). Each
+  # agent named the right tool unprompted and read the browser skill or
+  # bbx-commands.md for the exact flags (2-3 reads), which is the loading the
+  # design expects: the chat prompt points at the skill.
   - id: chat-screenshot-when
     prompt: >
       A user in chat says a custom view they have open "looks broken — the
-      layout is all wrong." You can read the view's source, but you'd like to
-      see what they actually see rendered on their screen right now. Is there
-      a way to do that, and what should you expect to get back?
+      layout is all wrong" on their phone. You can read the view's source,
+      but you want to see it rendered at phone width. How do you look at it?
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
-      Names `bbx chat screenshot` as the way to get a real screenshot of what
-      the user currently sees (the right reach for a visual/layout question,
-      as opposed to whats-changed for content or just reading source), and
-      knows it asks the user's browser — so it may come back declined or
-      unavailable rather than always returning an image.
+      Opens the card in the box browser with a box path (`bbx browser open
+      /views/<card path>`), sets a phone viewport, and captures it with
+      `bbx browser screenshot --card`, reading the fit and overflow lines.
+      Does NOT reach for `bbx chat screenshot`, which shows only what is on
+      the user's screen and is not a way to look at a card or view.
+    correct_contains: ["bbx browser", "--card"]
+    correct_contains_any: ["/views/", "set viewport", "390"]
+    tags: [chat, screenshot, browser, views, see-as-the-user]
+
+  - id: chat-screenshot-person-screen
+    prompt: >
+      A user in chat writes: "what's that red badge up here? I don't know
+      what it means." The open-card snapshot says which card is open but
+      nothing about a badge. How do you find out what they are seeing?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Uses `bbx chat screenshot` to see the user's own screen, since the
+      user refers to what they are looking at and the snapshot does not say
+      enough, and knows it may come back declined or unavailable.
     correct_contains: ["bbx chat screenshot"]
     correct_contains_any: ["declin", "unavailable", "no-client", "no client", "may not"]
     tags: [chat, screenshot, see-as-the-user]
+
+  - id: box-page-interaction
+    prompt: >
+      You just added tabs ("Week" and "Month") and a "Mark done" button to
+      the habit-tracker view. bbx view check passes. How do you check that
+      switching to the Month tab works, the way a person would use it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Opens a card the view renders in the box browser (`bbx browser open
+      /views/<card path>`), takes `bbx browser snapshot -i` to find the tab's
+      ref, clicks it with `bbx browser click @eN`, then checks the result
+      (`screenshot --card`, `get text`, or a new snapshot). Knows that
+      pressing "Mark done" changes the card's data, as an edit would.
+    correct_contains: ["bbx browser", "click"]
+    correct_contains_any: ["snapshot -i", "snapshot"]
+    tags: [browser, views, interaction]
 
   - id: views-write-conflict-safe
     prompt: >
@@ -7291,7 +7626,7 @@ tests:
       that tell me about where this session came from?
     expected_level: knows_directly
     watch_for: >
-      Says the session came in from outside chat — the desktop scan uploader
+      Says the session came in from outside chat — Bee Box Desktop on a Mac
       PUT these files to the box under a named scan-upload credential, and
       `study-scansnap` is that credential's name, identifying the device or
       scanner profile that produced the batch. Should NOT read it as a file
@@ -8566,6 +8901,22 @@ tests:
     correct_contains: ["colspan"]
     tags: [markdown, cards]
 
+  # Status (2026-11-10, chat-math-rendering): pass on the worktree test1 clone, 1 read (markdown.md), 1 search, 35k ctx.
+  - id: markdown-math
+    prompt: >
+      I'm studying chemistry and physics with you in chat. When you reply with
+      a balanced equation like hydrogen burning to water, or a formula like
+      kinetic energy, how should you write it so it shows up properly here?
+    expected_level: knows_about
+    should_read_any: ["markdown.md"]
+    watch_for: >
+      TeX between dollar signs renders in chat: `$…$` inline, `$$…$$` displayed,
+      and mhchem `\ce{}` for chemistry. FAILS if it says math does not render
+      and offers only Unicode or plain-text formulas, or recommends `\(…\)` or
+      `\[…\]` delimiters.
+    correct_contains: ["$", "\\ce"]
+    tags: [markdown, chat]
+
   # === Dev-guidance audits (surface: dev) ===
   # A headless Claude Code session in the monorepo checkout, not a box agent:
   # `pnpm knowledge-audit run --dev`. Tests what the root and package
@@ -9031,3 +9382,252 @@ tests:
     correct_matches:
       - '(?:unconfirmed|not confirmed|unverified|could not (?:confirm|verify)|couldn.t (?:confirm|verify)|not verified)'
     tags: [provenance, behavioral]
+
+  # === Place intention (docs/implemented-plans/place-intention.md, Track C) ===
+  #
+  # Status (2026-11-09, Claude): both passed on the worktree test1 clone; 0 reads,
+  # 0 searches, 45k ctx. landmark-intention passed on content first time; its body
+  # matcher was widened after the agent said "standing description of what.s here".
+  #
+  # Guards ledger row landmarks.intention: the agent sets a landmark's
+  # `intention` when work is left unfinished, keeps "where things stand" in
+  # the body, and writes none without evidence of a chosen track.
+  - id: landmark-intention
+    chat_mode: true
+    prompt: >
+      In a chat in the writing place, the person dictated two paragraphs for a
+      blog post and you put them in a draft card. They said "I'll finish the
+      ending tomorrow" and stopped. What, besides the draft card, do you
+      update on the place's landmark, and what goes where: the body, the
+      intention, the openers? Explain only; do not read files, use tools, or
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Sets `intention` with a one-line `text` and `ref` on the draft card;
+      updates the body with where things stand; adds no opener.
+    correct_matches:
+      - 'intention'
+      - '\bref\b[\s\S]{0,120}(?:draft|post|card)|(?:draft|post|card)[\s\S]{0,120}\bref\b'
+      - '(?:body|summary)[\s\S]{0,200}(?:where things stand|stands|status|state|what.s here|holds|description)'
+    response_not_matches:
+      - 'add(?:ing)? (?:an|a new|the) opener'
+    tags: [landmark, intention]
+
+  - id: landmark-intention-restraint
+    chat_mode: true
+    prompt: >
+      Three things sit under a place: an email that arrived asking the person
+      for a favor, a recipe they saved months ago and never cooked, and a
+      draft they told you last week to leave alone for now. Nothing else
+      changed. Does the place's landmark get an intention? Say which, if any,
+      and why. Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Writes none: an arrived email, an uncooked recipe, and set-aside work are
+      not evidence the person chose a track. FAILS if it proposes an intention
+      for any of the three.
+    correct_matches:
+      - '\bno\b|none|not (?:get|set|write|add)|leave[\s\S]{0,20}(?:empty|without|unset)|remove'
+      - '(?:chose|chosen|choice|decid|track|evidence|asked|said)'
+    response_not_matches:
+      - 'intention:[\s\S]{0,80}(?:favor|email|recipe|cook)'
+    tags: [landmark, intention]
+
+  # === modern-web-guidance adoption (docs/implemented-plans/modern-web-guidance-adoption.md) ===
+  # Status (2026-11-11, Claude claude-opus-5-5): both pass on first run in the
+  # web-guidance-scan worktree. dev-browser-floor read frontend.md and
+  # Menu.tsx, quoted the Safari 18.0 floor, and said anchor positioning
+  # needs the existing JS positioning. view-enter-field-ime-and-name found the
+  # views doc's "Controls People Can Use" section by grep and led with
+  # <form onSubmit>, isComposing as the fallback, and a visible label.
+  - id: dev-browser-floor
+    surface: dev
+    prompt: >
+      I'm adding a popup menu to the beebox web app that stays anchored to its
+      button. Can I use CSS anchor positioning with no fallback? Which
+      browsers does the web app support? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names the floor from frontend.md "Browser support": the iOS app's
+      WKWebView at iOS 18 (Safari 18.0) plus current desktop browsers; says
+      anchor positioning is newer than Safari 18.0, so it may be used only as
+      progressive enhancement (the menu still works without it) or with a
+      small fallback, and that ui/Menu already positions in JS. FAILS if it
+      says anchor positioning is safe without a fallback, or names a floor
+      not in the docs.
+    correct_matches:
+      - 'Safari 18|iOS 18'
+      - 'fallback|progressive enhancement'
+    tags: [frontend, browser-support]
+  # Status (2026-11-11, Claude claude-opus-5-5, ui-primitives-dedup Track 5):
+  # passes on first run. Read frontend.md, named CheckboxField with the label
+  # prop, set Checkbox apart for rows named by their own text, and cited
+  # require-ui-primitive for raw <input type="checkbox">.
+  - id: dev-settings-checkbox
+    surface: dev
+    prompt: >
+      I want to add a checkbox to a settings section in the beebox web app,
+      "Sync calendar daily". What component do I use, and how is it labelled?
+      Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names CheckboxField from components/ui/fields (label to the right), or
+      Checkbox with aria-label or aria-labelledby when the row's own text names
+      it; says a raw <input> fails lint (require-ui-primitive). FAILS if it
+      proposes a raw <input type="checkbox">.
+    correct_matches:
+      - 'CheckboxField'
+    tags: [frontend, fields]
+  # Status (2026-11-12, Claude claude-opus-5-5, box-view-guidance-and-checks
+  # Track 4): the answers are right in all three; each FAILS only the
+  # should_read_any check. The agent found the primitive by grepping the repo
+  # and Grep-ed beebox/frontend.md (dev-confirm-dialog cites frontend.md:243-247,
+  # dev-filter-buttons cites :236) but never opened it with Read, and the runner
+  # counts only Read. dev-anchored-popover read Popover.tsx and ack-badge.tsx.
+  # Unresolved: either require a Read of frontend.md in the guidance or let a
+  # Grep of the file count; not decided here.
+  - id: dev-anchored-popover
+    surface: dev
+    prompt: >
+      I want a small info bubble that opens from a badge in the beebox chat.
+      How do I build it? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md", "components/ui/Popover.tsx"]
+    watch_for: >
+      Names ui/Popover (render-prop trigger, label). FAILS if it proposes an
+      absolute-positioned div or calling useDismiss in the component.
+    correct_matches:
+      - 'Popover'
+    tags: [frontend, popover]
+  - id: dev-confirm-dialog
+    surface: dev
+    prompt: >
+      Add a confirm dialog before deleting an item in the beebox web app. What
+      do I build it with? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md", "components/ui/ModalDialog.tsx"]
+    watch_for: >
+      Names ModalDialog (labelledBy the heading, caller supplies the action
+      row). FAILS if it proposes role="dialog", a raw <dialog>, or a fixed
+      inset-0 overlay, or window.confirm.
+    correct_matches:
+      - 'ModalDialog'
+    tags: [frontend, dialog]
+  - id: dev-filter-buttons
+    surface: dev
+    prompt: >
+      I want a row of filter buttons (All, Open, Done) above a list in the
+      beebox web app. There are no tab panels, the buttons just change the
+      list. What do I use? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md", "components/ui/TabBar.tsx"]
+    watch_for: >
+      Names TabBar with mode="buttons", or buttons with aria-pressed in a
+      role="group". FAILS if it proposes role="tablist" or role="tab" with no
+      panels.
+    correct_matches:
+      - 'TabBar|aria-pressed'
+    tags: [frontend, tabs]
+  - id: view-enter-field-ime-and-name
+    prompt: >
+      I want a view where I type into a text field and press Enter to add an
+      item to a list. What should the view do so it works for someone typing
+      Japanese and for a screen reader user? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Uses the views doc's "Controls People Can Use" section: the field has a
+      label (not only a placeholder); Enter submits through a <form onSubmit>,
+      or the key handler skips Enter while event.nativeEvent.isComposing,
+      because IME input confirms text with Enter. FAILS if it gives a bare
+      onKeyDown Enter handler with no composition check and no form.
+    correct_matches:
+      - 'isComposing|<form|onSubmit'
+      - 'label'
+    tags: [views, accessibility]
+  # === Views: dates, wide tables, announcements, check advice (docs/implemented-plans/box-view-guidance-and-checks.md, Track 4) ===
+  # Status (2026-11-12, Claude claude-opus-5-5, Track 4): the four new audits
+  # and the five reruns (view-enter-field-ime-and-name, views-full-bleed-layout,
+  # views-render-test-command, chat-screenshot-when, box-page-interaction) all
+  # pass on the web-guidance-scan test1 clone, each after reading views.md (the
+  # advice audit read its "Testing a View" section). view-date-only-temporal
+  # led with Temporal.PlainDate and named both UTC traps. view-wide-table-scroll
+  # gave role="region", aria-label, tabIndex 0, overflowX and said full-bleed
+  # does not help. view-announce-action-result said an empty role="status"
+  # present before the save, a conditionally rendered element is not read, and
+  # errors in role="alert". view-check-advice-meaning said the check passed and
+  # each advice line is fixed or answered with a reason.
+  # Status (2026-11-12, Claude claude-opus-5-5, Temporal removal):
+  # view-date-only-temporal renamed view-date-only-utc after the "Dates"
+  # section dropped Temporal. Passes 2/2 on the web-guidance-scan test1 clone:
+  # read views.md, split the string, Date.UTC, timeZone "UTC", today from
+  # Intl.DateTimeFormat("en-CA"), and named both UTC traps.
+  # Status (2026-11-12, Claude claude-opus-5-5, review fixes): after the Dates
+  # example gained a UTC round-trip check and formatToParts for today, passes
+  # 1/1 on the same clone; the agent reproduced both and the Feb 30 rejection.
+  - id: view-date-only-utc
+    prompt: >
+      A card type has `due: 2026-08-14` in its frontmatter. In its view I want
+      "Aug 14" and how many days are left. How do you read and show it?
+      Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Uses the views doc's "Dates" section: splits the string into numbers,
+      builds it with Date.UTC, formats with timeZone "UTC", and takes today
+      in the viewer's zone (Intl.DateTimeFormat formatToParts or local getters).
+      FAILS if it parses with new Date(due) for display in the local zone, or
+      cuts toISOString() for today.
+    correct_matches:
+      - 'Date\.UTC'
+      - 'timeZone:?\s*"?UTC'
+    response_not_matches:
+      - 'new Date\(\s*(due|card\.fields\.due|value)'
+    tags: [views, dates]
+  - id: view-wide-table-scroll
+    prompt: >
+      My view's table has nine columns and runs off the card on my phone. What
+      do you change? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Puts the table in a scroll wrapper with overflow-x auto that is named
+      (role="region" with aria-label) and focusable (tabIndex 0), per the
+      views doc's "Styling". FAILS if it proposes layout = "full-bleed" as the
+      fix.
+    correct_matches:
+      - 'overflow-?x|overflowX'
+      - 'tabIndex|focusable|keyboard'
+    tags: [views, layout]
+  - id: view-announce-action-result
+    prompt: >
+      After the Save button in my view works, how should the view tell the
+      person, including a screen reader user? Explain only; do not change
+      files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Changes the text of a role="status" element that is already on the page
+      before the action, and puts errors in role="alert". FAILS if it only
+      inserts a new element after saving, or relies on color alone.
+    correct_matches:
+      - 'role="?status'
+      - 'role="?alert'
+    tags: [views, accessibility]
+  - id: view-check-advice-meaning
+    prompt: >
+      `bbx view check` printed `✓ planner` and then two `advice:` lines. Did
+      the check fail? What do you do? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Says the check passed (advice is not a failure), then fixes each line
+      using the views.md section it names, or says why the advice does not
+      apply to that view. FAILS if it calls the check failed or ignores the
+      advice.
+    correct_matches:
+      - 'not (a )?fail|did not fail|passed|still passes|doesn.t fail'
+      - 'section|advice'
+    tags: [views]

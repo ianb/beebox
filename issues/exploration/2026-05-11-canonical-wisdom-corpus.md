@@ -16,3 +16,5 @@ Properties this would want:
 - **Discoverable on intent** — when a user asks for X, the agent searches the corpus and surfaces relevant entries; the user can override or extend before the agent commits to a build.
 
 Long horizon. The minimum viable version is just a `docs/patterns/` directory inside beebox itself with a handful of curated examples, surfaced to the agent via the existing rule system. The maximum is something like a federated wiki of agentic-design patterns across many systems. Worth flagging now so the architecture doesn't accidentally foreclose it (e.g., by hardcoding patterns into core rather than treating them as content).
+
+Re-reviewed 2026-10-30: no pattern corpus exists. The 'in lieu of plugins' framing is dated, because box plugins now exist (beebox/src/plugins/).

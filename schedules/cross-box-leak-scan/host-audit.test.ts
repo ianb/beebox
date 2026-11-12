@@ -15,7 +15,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { checkModes, checkSharedLogs, checkPerCwdKeying, checkNestedBoxes, checkUnknownSharedFiles, loadBoxRoots, type BoxRoot } from "./host-audit.js";
-import { prodAuditGate, describeFirstRun } from "./run.js";
+import { prodAuditGate, describeFirstRun, findingKey } from "./run.js";
 
 // ─── host-audit ─────────────────────────────────────────────────────────
 
@@ -280,4 +280,13 @@ test("describeFirstRun: a non-empty first report is a full handoff (not baseline
   assert.match(outcome.handoffTitle, /initial 1 finding/);
   assert.match(outcome.handoffBody, /not a diff/);
   assert.match(outcome.handoffBody, /request\.query\.file/);
+});
+
+test("findingKey drops a static line's line number, keeps everything else", () => {
+  const oldLine = "static  beebox/src/webapp/trpc/routers/status.ts:239  .input(z.object({ path: z.string().default(\"\") }))";
+  const newLine = "static  beebox/src/webapp/trpc/routers/status.ts:266  .input(z.object({ path: z.string().default(\"\") }))";
+  assert.equal(findingKey(oldLine), findingKey(newLine));
+  assert.notEqual(findingKey(oldLine), findingKey(newLine.replace("status.ts", "views.ts")));
+  const host = "local mode  /x/y:640  0644";
+  assert.equal(findingKey(host), host);
 });

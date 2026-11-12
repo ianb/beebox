@@ -8,30 +8,30 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { isoDate, str, uuid } from "@ianbicking/tap-check/check";
-import { execFileSync, spawn } from "node:child_process";
-import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { mkdir, readdir, readFile, rm, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { spawnUntilFirstLine, tsxChild } from "../helpers/child-process.js";
 import { acquireLock, forceAcquireLock, LOCK_STALE_MS, releaseLock, requestScopedLock } from "../../src/lib/file-lock.js";
 import { lockGuardPath } from "../../src/shared/lock-guard.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance/admission.js";
 
+const MAINTENANCE_CHILD = join(import.meta.dirname, "../helpers/box-maintenance-child.ts");
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 void test("line 19", async (t) => {
   t.teardown(async () => {
     try {
-      child.kill();
+      await holder.kill();
       await box.cleanup();
     } catch (error) {
       t.error(error);
     }
   });
   const box = await makeTmpBox({ git: true });
-  const child = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
-  const [data] = await once(child.stdout, "data");
-  const env: { BBX_BOX_WORK: string } = JSON.parse(String(data));
+  const holder = await spawnUntilFirstLine(tsxChild(MAINTENANCE_CHILD, [box.root]));
+  const env: { BBX_BOX_WORK: string } = JSON.parse(holder.line);
   let entered = false;
   const pending = acquireBoxMaintenance(box.root, { reason: "fixture" }).then((value) => { entered = true; return value; });
   while ((await boxMaintenanceStatus(box.root)) === null) await delay();
@@ -40,8 +40,9 @@ void test("line 19", async (t) => {
   await t.checkThrows(async () => (await acquireBoxWork(box.root, { reason: "test" })), "BoxMaintenanceError");
 
   const descendant = await acquireBoxWork(box.root, { reason: "test", inherited: env.BBX_BOX_WORK });
-  child.stdin.end("finish");
-  await once(child, "exit");
+  holder.child.stdin.end("finish");
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await holder.exited, stderr: holder.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check(entered, false);
 
   await descendant.release();
@@ -387,7 +388,7 @@ void test("Joined work has its own retained lease.", async (t) => {
 void test("The per-process lease sidecar lists the live reasons.", async (t) => {
   t.teardown(async () => {
     try {
-      namedChild.kill();
+      await namedChild.kill();
       await namedBox.cleanup();
     } catch (error) {
       t.error(error);
@@ -419,14 +420,42 @@ void test("The per-process lease sidecar lists the live reasons.", async (t) => 
   );
 
   await second.release();
-  const namedChild = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), namedBox.root], { stdio: ["pipe", "pipe", "inherit"] });
-  await once(namedChild.stdout, "data");
-  t.check((await boxWorkHolders(namedBox.root)).map((holder) => `${holder.reason} pid-matches=${String(holder.pid === namedChild.pid)}`).join(", "), "fixture child pid-matches=true");
+  const namedChild = await spawnUntilFirstLine(tsxChild(MAINTENANCE_CHILD, [namedBox.root]));
+  const childPid = namedChild.child.pid;
+  t.check((await boxWorkHolders(namedBox.root)).map((holder) => `${holder.reason} pid-matches=${String(holder.pid === childPid)}`).join(", "), "fixture child pid-matches=true");
 
   const blocked = await acquireBoxMaintenance(namedBox.root, { reason: "deployment", drainMs: 0 }).then(() => "unexpected", (error) => error.message);
   t.check(blocked.replace(/since \S+ \(pid \d+\)/u, "since <time> (pid <n>)"), "Timed out draining box work: deployment; held by fixture child since <time> (pid <n>)");
 
-  namedChild.stdin.end("finish");
-  await once(namedChild, "exit");
+  namedChild.child.stdin.end("finish");
+  // The holder released its lease and exited cleanly:
+  t.check({ exit: await namedChild.exited, stderr: namedChild.stderr() }, { exit: { code: 0, signal: null }, stderr: "" });
   t.check(await boxWorkHolders(namedBox.root), []);
+});
+
+// ## An owner that cannot defer records when it ends live background tasks
+//
+// The deployment holder and the development reload pass
+// `endsBackgroundTasksAt`; the server's poll reads the time from the phase
+// record (`docs/implemented-plans/maintenance-live-tasks.md`, Track 2). The time is fixed
+// when the box closes and survives the move to the exclusive phase. A
+// deferrable owner writes none, so its drain times out instead.
+void test("An owner that cannot defer records when it ends live background tasks", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  const deploy = await closeBoxMaintenance(box.root, { reason: "deployment", endsBackgroundTasksAt: "2026-11-02T18:13:15.000Z" });
+  const draining = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await deploy.beginChanges();
+  const exclusive = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await deploy.complete();
+  const sweep = await closeBoxMaintenance(box.root, { reason: "migration" });
+  const deferrable = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await sweep.release();
+  t.check({ draining, exclusive, deferrable }, { draining: "2026-11-02T18:13:15.000Z", exclusive: "2026-11-02T18:13:15.000Z", deferrable: undefined });
 });

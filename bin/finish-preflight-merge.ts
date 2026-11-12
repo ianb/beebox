@@ -193,7 +193,7 @@ export function mergeMain(root: string): MergeResult {
   }
   const after = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (before === after) return { status: "up-to-date", broughtPaths: [], resolved };
-  const brought = git(["diff", "--name-only", `${before}..HEAD`], { cwd: root, onError: "throw" })
+  const brought = git(["diff", "--name-only", "--no-renames", `${before}..HEAD`], { cwd: root, onError: "throw" })
     .split("\n")
     .filter((path) => path !== "");
   return { status: "merged", broughtPaths: brought, resolved };

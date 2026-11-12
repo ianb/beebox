@@ -31,6 +31,7 @@ import { VoiceChipFace } from "../../../components/chat/VoiceChip/view";
 import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { chatTargetStatus } from "../../../input/targets/chat-target";
 import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";
+import { List } from "../../../components/ui/List";
 
 // --- Axes ---
 
@@ -131,7 +132,6 @@ function noop() {}
 
 export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
   // nothing ever subscribes), it just feeds the fabricated `input` text in.
   const inputStore: InputStore = { get: () => spec.input, set: noop, subscribe: () => noop };
@@ -189,6 +189,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
       status={chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false })}
       pendingCount={0}
       isStreaming={spec.isStreaming}
+      catchingUp={false}
       onInterrupt={noop}
       speechPlaying={spec.speechPlaying}
       onStopSpeech={noop}
@@ -214,8 +215,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
         onRemoveFileAttachment={noop}
         onRetryFileAttachment={noop}
         onRemoveSelection={noop}
-        fileInputRef={fileInputRef}
-        onFileInputChange={noop}
+        fileInput={null}
         typingMode={spec.typingMode}
         typingLocked={spec.typingLocked}
         setTypingMode={noop}
@@ -242,14 +242,14 @@ export function ComposerStatesHarness() {
     const c = realizable.find((x) => comboKey(x) === selected);
     if (!c) return <div className="p-6 font-mono text-sm text-warm-700">Unknown state: {selected}</div>;
     return (
-      <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
+      <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 py-4">
         <ComposerSpecimen spec={specFor(c)} includeControlIds />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
+    <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 py-4">
       <div className="max-w-5xl mx-auto px-4 pb-2 text-sm text-warm-700">
         <strong>{realizable.length}</strong> realizable combinations (button bar:
         mode × narration × muted × streaming; plus mobile keyboard: open ×
@@ -266,13 +266,13 @@ export function ComposerStatesHarness() {
       ))}
       <div className="max-w-5xl mx-auto px-4 pt-4 mt-4 border-t border-warm-300">
         <div className="text-sm font-semibold text-warm-700 mb-2">Impossible combinations (filtered)</div>
-        <ul className="text-xs text-warm-700 space-y-1">
+        <List gap="xs" className="text-xs text-warm-700">
           {impossible.map((c) => (
             <li key={comboKey(c)}>
               <span className="font-mono text-warm-700">{comboLabel(c)}</span> — {impossibleReason(c)}
             </li>
           ))}
-        </ul>
+        </List>
       </div>
     </div>
   );

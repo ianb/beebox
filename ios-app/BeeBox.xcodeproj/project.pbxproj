@@ -72,6 +72,7 @@
 		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
 		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
 		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
+		5A1001042C3C0001000000F1 /* ChatWebViewBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C0001000000F1 /* ChatWebViewBridgeTests.swift */; };
 		5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */; };
 		5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */; };
 		5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */; };
@@ -240,6 +241,7 @@
 		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
 		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
+		5A1001152C3C0001000000F1 /* ChatWebViewBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebViewBridgeTests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebViewRequestTests.swift; sourceTree = "<group>"; };
 		5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinatorTests.swift; sourceTree = "<group>"; };
 		5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisitionTests.swift; sourceTree = "<group>"; };
@@ -482,6 +484,7 @@
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
 				5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
+				5A1001152C3C0001000000F1 /* ChatWebViewBridgeTests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
 				F1A000072E00000100000001 /* PushNotificationTests.swift */,
 				B0C500042F00000100000001 /* QuickChatOutboxTests.swift */,
@@ -785,6 +788,7 @@
 				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
 				5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */,
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
+				5A1001042C3C0001000000F1 /* ChatWebViewBridgeTests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
 				F1A000062E00000100000001 /* PushNotificationTests.swift in Sources */,
 				B0C500042F00000100000002 /* QuickChatOutboxTests.swift in Sources */,
@@ -896,7 +900,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -952,7 +956,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -979,7 +983,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1010,7 +1014,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1033,7 +1037,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1058,7 +1062,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1085,7 +1089,7 @@
 				DEVELOPMENT_TEAM = 44AJ3D25ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BeeBoxShareExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1112,7 +1116,7 @@
 				DEVELOPMENT_TEAM = 44AJ3D25ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BeeBoxShareExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1129,8 +1133,8 @@
 			};
 			name = Release;
 		};
-		C42E22DD348F58A0AD6D6FD8 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug; };
-		C4890F810094BAA9A0B880D4 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Release; };
+		C42E22DD348F58A0AD6D6FD8 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 18.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug; };
+		C4890F810094BAA9A0B880D4 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = BeeBoxControls/BeeBoxControls.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 44AJ3D25ZD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = BeeBoxControls/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 18.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", ); MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = app.beebox.ios.controls; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */

@@ -8,8 +8,8 @@
  */
 
 import { spawn } from "node:child_process";
-import { simpleGit } from "simple-git";
-import { errorMessage } from "../../shared/error-guards.js";
+import { boxGit, gitEnvironment } from "./env.js";
+import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 
 /**
  * A git command failed with an error we don't specifically handle (i.e. not an
@@ -171,7 +171,7 @@ export function gitWithInput(options: {
   okExitCodes?: readonly number[];
 }): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", options.args, { cwd: options.cwd, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("git", options.args, { cwd: options.cwd, stdio: ["pipe", "pipe", "pipe"], env: gitEnvironment() });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf-8");
@@ -183,6 +183,11 @@ export function gitWithInput(options: {
       stderr += chunk;
     });
     child.on("error", reject);
+    // Git can exit before reading all of its input. The exit code and stderr
+    // then decide the result; an unhandled EPIPE here would crash the process.
+    child.stdin.on("error", (error) => {
+      if (errnoCode(error) !== "EPIPE") reject(error);
+    });
     child.on("close", (code) => {
       const ok = code === 0 || (code !== null && options.okExitCodes?.includes(code) === true);
       if (ok) resolve(stdout);
@@ -246,7 +251,7 @@ async function stagedBlobSizes(boxRoot: string, paths: string[]): Promise<Map<st
  */
 export async function unstageOversizedBlobs(boxRoot: string, paths?: string[]): Promise<void> {
   try {
-    const git = simpleGit(boxRoot);
+    const git = boxGit(boxRoot);
     const out = await git.raw(["diff", "--cached", "--name-only", "-z", "--", ...(paths ?? [])]);
     const staged = out.split("\0").filter((p) => p.length > 0);
     const oversized: Array<{ path: string; bytes: number }> = [];

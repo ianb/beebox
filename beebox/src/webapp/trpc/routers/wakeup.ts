@@ -19,9 +19,11 @@
  * output is long, box-specific, and full of paths.
  */
 
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, publicProcedure } from "../procedures.js";
+import { router, publicProcedure, authedProcedure } from "../procedures.js";
 import { runBbxWakeup } from "../../../core/commands/wakeup.js";
+import { startJobCheckWakeup, type JobCheckStart } from "../../../core/schedule/job-check/core.js";
 import type { WakeupRunResult } from "../../../core/wakeup-runner.js";
 
 /**
@@ -53,6 +55,17 @@ function detailFor(result: WakeupRunResult): string {
   return "";
 }
 
+/**
+ * The box's own agent (the bearer the scheduler pass and every box-spawned
+ * shell hold) or the signed-in owner, as `notifications.send` accepts.
+ */
+const agentOrOwnerProcedure = authedProcedure.use(({ ctx, next }) => {
+  if (ctx.actor !== "agent" && !ctx.isAuthenticatedOwner) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Only the box's agent or its signed-in owner can start a wakeup." });
+  }
+  return next();
+});
+
 export const wakeupRouter = router({
   /**
    * Run a wakeup cycle now — the whole box, or one connector.
@@ -83,4 +96,15 @@ export const wakeupRouter = router({
         ...(input.includeOutput === true ? { output: tail(result.output) } : {}),
       };
     }),
+
+  /**
+   * Start one full wakeup for the scheduler pass's job check, and answer once
+   * its child has taken the cycle lock (`started`), found it held
+   * (`running`), or failed before taking it (`failed`). Unlike `force`, it
+   * does not wait for the run: the pass that asks is short-lived, and this
+   * server outlives it (`core/schedule/job-check/start.ts`).
+   */
+  start: agentOrOwnerProcedure
+    .input(z.object({ reason: z.literal("job-check") }).strict())
+    .mutation(({ ctx }): Promise<JobCheckStart> => startJobCheckWakeup(ctx.boxRoot, { run: ctx.services.wakeupRunner })),
 });

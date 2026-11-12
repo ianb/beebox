@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { FileData, FileRenderer } from "../../file-type-registry";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
-import type { FileViewMode } from "../file-view-types";
+import { isFrameless, type FileViewMode } from "../file-view-types";
 import { BoundAgentViewRenderer } from "./BoundAgentViewRenderer";
 
 interface ActiveFileRendererProps {
@@ -35,7 +35,8 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
     return (
       <BoundAgentViewRenderer
         slug={binding.slug}
-        embedded={mode === "embed"}
+        embedded={isFrameless(mode)}
+        strip={mode === "strip"}
         path={path}
         params={params}
         ownedViewState={viewState}

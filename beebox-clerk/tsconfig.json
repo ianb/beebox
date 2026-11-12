@@ -10,6 +10,6 @@
     // TypeScript 6+ no longer loads every @types package by default.
     "types": ["chrome"]
   },
-  "include": ["eslint.config.ts", ".wxt/wxt.d.ts", "src/**/*", "test/**/*"],
+  "include": ["eslint.config.ts", ".wxt/wxt.d.ts", "src/**/*", "test/**/*", "../beebox/src/shared/turndown-plugin-gfm.d.ts"],
   "exclude": ["node_modules", ".output"]
 }

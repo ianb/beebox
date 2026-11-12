@@ -13,7 +13,7 @@ import { getChatRuntime, type ChatRuntime } from "../../../chat-runtime.js";
 import { chatModelFileForSession, loadCurrentModel } from "../../../../core/chat/session/state.js";
 import { loadBoxModel } from "../../../../core/box/config.js";
 import { boxDefaultModel, liveModelState, resolveEffectiveModel, type ModelSource } from "../../../../core/model-policy.js";
-import { updateBoxConfigFields } from "../../../box-config-write.js";
+import { PiDefaultModelRequiredError, updateBoxConfigFields } from "../../../box-config-write.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "../../../../core/chat/session/engine.js";
 import { glmKeyUsable } from "../../../../core/glm-key.js";
 import { loadAddedModels, loadAgentEngine, loadEnabledEngines } from "../../../../core/box/config.js";
@@ -25,7 +25,7 @@ import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMisma
 import { commitChatHusk, setChatHuskStatus } from "../../../../core/chat/husk.js";
 import { sdkSessionIdSchema } from "../../../../core/chat/session/id.js";
 import { archiveChatSession } from "../../../../core/chat/session/archive.js";
-import { SessionDeletingError } from "../../../../core/chat/session/registry/core.js";
+import { SessionDeletingError, END_CAUSES } from "../../../../core/chat/session/registry/core.js";
 import { LockHeldError } from "../../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../../core/chat/session/availability.js";
 import type { ReserveResult } from "../../../../core/chat/session/reserve.js";
@@ -289,10 +289,10 @@ export const chatControlProcedures = {
       if (target.isBusy()) {
         // Mid-turn — defer restart to the turn's end so the response isn't lost.
         target.once("done", () => {
-          if (target.isRunning()) target.restart();
+          if (target.isRunning()) target.restart({ cause: END_CAUSES.modelChange });
         });
       } else {
-        target.restart();
+        target.restart({ cause: END_CAUSES.modelChange });
         restarted = true;
       }
     }
@@ -319,7 +319,11 @@ export const chatControlProcedures = {
         message: `Model ${input.model} is unavailable for ${engine} chats`,
       });
     }
-    const result = await updateBoxConfigFields({ boxRoot: ctx.boxRoot, agentModel: input.model });
+    // A pi box cannot clear its default: pi has no model of its own.
+    const result = await updateBoxConfigFields({ boxRoot: ctx.boxRoot, agentModel: input.model }).catch((e: unknown) => {
+      if (e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
+      throw e;
+    });
     if (result.commitError) {
       console.error(`[chat] the box model was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
     }
@@ -426,7 +430,7 @@ export const chatControlProcedures = {
     const { registry } = requireRuntime(ctx.boxRoot);
     const target = registry.get(input.session);
     if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "session not live" });
-    target.restart();
+    target.restart({ cause: END_CAUSES.restartRequested });
     return { ok: true };
   }),
 

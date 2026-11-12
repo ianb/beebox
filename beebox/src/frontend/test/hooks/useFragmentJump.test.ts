@@ -4,6 +4,7 @@
 // source line, so repeats, markup, and the blanked title all land right.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount, type Mounted } from "../helpers/dom-harness.js";
+import { consoleLines } from "../../../../test/helpers/console-lines.js";
 import { createElement as h, useEffect, useState, type ReactNode } from "react";
 import { test } from "tap";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -92,9 +93,12 @@ test("repeats, markup, and a fenced # line", async (t) => {
 
 test("a missing section shows the miss; a live edit does not re-jump", async (t) => {
   scrolled = [];
+  const warnings = consoleLines(t, "warn");
   const { view, rerender } = await render("/Weekly plan/Gone", body);
   t.check(scrolled.map((el) => el.tagName), []);
   t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
+  // The console names the section that is not in the source:
+  t.check(warnings(), ['[fragment] no section "/Weekly plan/Gone" in _content/Weekly.doc.card (not in the source)']);
   await rerender(at("/Weekly plan/Notes"));
   t.check(scrolled.map((el) => el.tagName), ["H2"]);
   t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false");
@@ -126,7 +130,9 @@ test("a body that opens with a blank line jumps to its first heading, not the to
 
 test("an edit that adds the missing section clears the notice without scrolling", async (t) => {
   scrolled = [];
+  const warnings = consoleLines(t, "warn");
   const { view, rerender } = await render("/install deps/Later", body);
+  t.check(warnings(), ['[fragment] no section "/install deps/Later" in _content/Weekly.doc.card (not in the source)']);
   t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "true");
   await rerender({ fragment: "/install deps/Later", source: `${body}\n## Later\n\n${filler}\n` });
   t.check(view.container.querySelector("[data-missed]")?.getAttribute("data-missed"), "false"); // notice cleared

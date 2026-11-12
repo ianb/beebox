@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { MaterialContext } from "./material";
 
 export type NoticeTone = "warning" | "error";
 
@@ -36,7 +37,8 @@ export function Notice({ children, tone, id, className }: NoticeProps) {
       role={tone === "error" ? "alert" : "status"}
       className={cn("rounded-lg border px-4 py-3 text-sm", NOTICE_TONE_CLASSES[tone], className)}
     >
-      {children}
+      {/* A notice paints its own tone, so what is in it keeps app ink. */}
+      <MaterialContext.Provider value={false}>{children}</MaterialContext.Provider>
     </div>
   );
 }

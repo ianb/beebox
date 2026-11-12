@@ -11,6 +11,7 @@
  * - chat-send-routes.ts    — POST /api/chat/send, /api/chat/self-note
  * - user-message-sender.ts — delivery shared by /api/chat/send and quickChat
  * - chat-audio-routes.ts   — transcribe-audio, voice-config, tts, transcribe-ws
+ * - strip-routes.ts        — POST /api/chat/strip (`bbx chat strip`)
  *
  * Session controls (history, sessions, status, set-model, set-feature,
  * interrupt, restart, schedules) moved to the chat **tRPC** router; they reach
@@ -23,7 +24,7 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { type ChatSession, type TaskEvent } from "../../../core/chat/session/run/core.js";
+import { type ChatSendInput, type ChatSession, type TaskEvent } from "../../../core/chat/session/run/core.js";
 import type { LiveTaskEntry } from "../../../core/chat/message-types.js";
 import { ChatSessionRegistry } from "../../../core/chat/session/registry/core.js";
 import type { ChatBackend } from "../../../services/claude-chat-types.js";
@@ -34,6 +35,7 @@ import type { EventBus } from "../../../core/event-bus/core.js";
 import type { TtsService } from "../../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./schedule-fire.js";
+import { startInterruptedWakes } from "./interrupted-wake.js";
 import { escapeXmlAttr } from "../../../shared/self-note.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
@@ -49,6 +51,7 @@ import { registerChatLastAudioRoutes } from "./last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./screenshot-routes.js";
 import { registerChatUiRoutes } from "./ui-routes.js";
+import { registerChatStripRoutes } from "./strip-routes.js";
 import { chatModelFileForSession } from "../../../core/chat/session/state.js";
 import { wireAfterTurnTitling } from "../../../core/chat/review/after-turn.js";
 import { createSdkChatReviewer } from "../../../core/chat/review/reviewer.js";
@@ -76,6 +79,8 @@ interface RegisterChatRoutesOptions {
 /**
  * Register chat routes on the Fastify server.
  */
+export { resolveMobileSender } from "./helpers.js";
+
 export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
   const devSurfaces = options.devSurfaces === true;
@@ -173,6 +178,20 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
       });
     });
 
+    // A stop dropped queued messages the box had accepted: record each one the
+    // client can name, so the chat shows it as not delivered instead of queued.
+    // Self-notes carry no id and drop unrecorded, as nobody is waiting on them.
+    session.on("queue-dropped", (dropped: ChatSendInput[]) => {
+      for (const { messageId } of dropped) {
+        if (messageId === undefined) continue;
+        eventBus.emit("chat-user-message-undelivered", {
+          sessionId: session.getSessionId(),
+          messageId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
     // Title the chat once its first exchange or two say what it is about,
     // instead of leaving it untitled until the nightly review.
     wireAfterTurnTitling(session, {
@@ -222,6 +241,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   const scheduleManager = new ChatScheduleManager(boxRoot, {
     onFire: ({ schedule }) => fireChatSchedule({ boxRoot, registry, eventBus, wireSession }, schedule),
   });
+  const stopInterruptedWakes = startInterruptedWakes({ boxRoot, registry, eventBus, wireSession });
 
   // Shared context handed to each route module.
   const ctx: ChatRoutesContext = {
@@ -276,6 +296,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   registerChatAudioReviewRoutes(ctx);
   registerChatScreenshotRoutes(ctx);
   registerChatUiRoutes(ctx);
+  registerChatStripRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a
   // pending "new" send can pick up the real id and update its URL.
@@ -286,6 +307,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
     clearChatRuntime(boxRoot);
+    stopInterruptedWakes();
     await registry.shutdown();
   });
 }

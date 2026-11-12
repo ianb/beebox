@@ -9,7 +9,7 @@ priority: normal
 ---
 
 The buildable feature that came out of the
-[Echo Show display research](../exploration/2026-07-27-echo-show-dashboard-display.md):
+[Echo Show display research](../closed/exploration/2026-07-27-echo-show-dashboard-display.md):
 a personalized dashboard web page that shows *"the things I care about,"* stays
 up on an Echo Show via the muted-audio Silk keepalive, and is touch-interactive.
 The page-trick is the easy part; the boxholder correctly split the real work into
@@ -122,3 +122,7 @@ All three reduce to the same core the research identified: a **device-scoped,
 read-only dashboard feed**. Paths for other screens (Fire TV / HDMI kiosk) reuse
 1 + 2 and skip the Silk-specific keepalive. Build order: auth (2) → dashboard
 view (1, the big one) → Silk keepalive (3).
+
+Re-reviewed 2026-10-30: Unbuilt. The Option A file list for the publish pipeline is stale (managed publications replaced submission/setup), and the mobile session file is now core/mobile/session.ts.
+
+Out of date in the body above: Update Option A's file list to beebox/src/publish/managed-publication-*.ts and managed-publications/, and Option B's to core/mobile/session.ts. Re-check whether production still sits behind Cloudflare Access after the per-box-user migration before using that wrinkle.

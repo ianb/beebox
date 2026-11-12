@@ -16,14 +16,14 @@
 //   portals import it), and the `react` shim must carry the whole public
 //   surface: `useSyncExternalStore`, `useLayoutEffect`, `useId` and
 //   `useImperativeHandle` were missing from the hand list before.
-// - The node compile (`bbx view test`, metadata import) must leave `react-dom`
+// - The node compile (`bbx view check`, metadata import) must leave `react-dom`
 //   external so the box's copy is used, not a second one bundled in.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createElement } from "react";
@@ -84,7 +84,7 @@ concepts:
 Fractions name parts of a whole; this map orders what to learn first.
 `;
 
-// What `bbx view test` does (src/cli/commands/view/command.ts): compile for
+// What `bbx view check` does (src/cli/commands/view/command.ts): compile for
 // Node, write the module beside the box's node_modules, import it, load the
 // cards its metadata selects, render inside the node view host.
 async function renderThroughCompiler(box: TmpBox, params: Record<string, string>) {
@@ -150,6 +150,23 @@ void test("The stub's metadata comes from the real import, and the rendered page
     true,
     true,
   ]);
+});
+
+// A box whose declared dependencies were never installed has only the
+// `beebox` link in `node_modules`. The check supplies the engine's `react` and
+// `react-dom`, so the stub renders there too; before, it failed with
+// `Cannot find package 'react-dom'`
+// (issues/closed/bugs/2026-11-09-view-check-cannot-resolve-react-dom-in-a-box.md).
+void test("The stub renders in a box whose node_modules holds only the beebox link", async (t) => {
+  const bare = await makeTmpBox({ deps: true, git: true });
+  t.teardown(() => bare.cleanup());
+  await activateCourseware(bare);
+  await bare.write(CARD_PATH, FRACTIONS_CARD);
+  await mkdir(join(bare.root, "src", "views"), { recursive: true });
+  await writeFile(join(bare.root, "src", "views", "concept-map.tsx"), STUB);
+  t.check((await readdir(join(bare.root, "node_modules"))).toSorted(), ["beebox"]);
+  const { html } = await renderThroughCompiler(bare, { path: CARD_PATH });
+  t.check(/Part-whole meaning/.exec(html)?.[0], "Part-whole meaning");
 });
 
 // ## The browser compile shims react-dom and carries the full React surface

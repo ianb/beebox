@@ -73,3 +73,5 @@ landmark there, and symptom 2 did not reproduce. The cheaper fix is in the
 skill: give the course no `prominence`, or place its landmark outside the
 attach folder. Change `derived-links.ts` only if a core pattern starts to
 nest a landmark in an attach folder.
+
+Re-reviewed 2026-10-30: Symptom 2 still latent and unreproduced; the step-7 skill text is now at beebox/src/plugins/courseware/skill.ts:88-92.

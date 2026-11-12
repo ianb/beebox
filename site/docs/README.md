@@ -89,10 +89,12 @@ the ones that bear on what the person is asking and open the pages named.
 
 - **A coding agent is the engine.** Claude Code or Codex does the work, on the
   subscription the person already has, and the engine that hosts it is kept
-  separate so a different agent can be swapped in later. The Claude engine can
-  also run other vendors' models, pay per use, with less testing behind them.
+  separate so a different agent can be swapped in later. A third engine, pi,
+  and the Claude engine can both run other vendors' models through OpenRouter,
+  pay per use, with less testing behind them.
   ([why not just a chatbot](03-why-not-just-a-chatbot.md),
-  [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md))
+  [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md),
+  [the pi engine](concepts/pi-engine.md))
 - **A knowledge base you own, wiki-like.** What goes in accumulates as
   documents that link to each other and are meant to be browsed, by the person
   and by the agent, rather than a transcript something searches.
@@ -101,6 +103,8 @@ the ones that bear on what the person is asking and open the pages named.
   [it keeps itself coherent](capabilities/integrity.md))
 - **The filesystem is all the state.** There is no hidden database beside the
   files: the box is a directory, and what is in it is what the system knows.
+  Some per-machine state, such as logins and the secret store, sits outside it;
+  encrypted backups gather that along with the box.
   ([how it works](07-how-it-works.md), [box layout](contracts/box-layout.md))
 - **Everything in git, and the history answers "why".** Not only
   recoverability: you can look back at how a card, a decision, or the box
@@ -132,7 +136,10 @@ the ones that bear on what the person is asking and open the pages named.
   [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
 - **It asks instead of guessing.** Lacking confidence or authority the agent
   writes a question and waits; the answer becomes a rule it reads next time. A
-  new box starts the same way, by asking what you want to keep track of.
+  new box starts the same way, by asking what you want to keep track of. The
+  person can hand a question to the box ("Decide for me"), and a daily review
+  settles questions left waiting too long, with a conservative, undoable choice
+  shown as the box's decision and never as the person's answer.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
 - **Groups get a box each.** Everyone in a box shares everything in it, and a

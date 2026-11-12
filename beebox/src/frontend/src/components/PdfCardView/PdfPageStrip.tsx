@@ -12,7 +12,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "../../lib/cn";
 import type { DocumentPage } from "../../lib/pdf-card";
-import { Image } from "../ui/Image";
+import { Image } from "../ui/Image/view";
 import { Text } from "../ui/Text";
 
 export interface PdfPageStripProps {

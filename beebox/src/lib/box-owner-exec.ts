@@ -1,9 +1,10 @@
 /** Box subprocesses need the box owner's REAL user id, not just its effective one. */
 import { execFile, type ExecFileOptions } from "node:child_process";
+import { gitEnvironment } from "./git/env.js";
 
 function run(args: string[], options: ExecFileOptions): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile("git", args, { ...options, encoding: "utf8" }, (error, stdout) => {
+    execFile("git", args, { env: gitEnvironment(), ...options, encoding: "utf8" }, (error, stdout) => {
       if (error) reject(error);
       else resolve(stdout);
     });

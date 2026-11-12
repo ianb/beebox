@@ -41,7 +41,7 @@
 }
 [data-chrome-theme="doodlebit"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #565656; background: #fff; border-radius: 8px; }
 [data-chrome-theme="doodlebit"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #202020; --bbx-ink-soft: #565656; --bbx-pen: #5c42b5; }
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #202020; --bbx-danger: #b73b55; --bbx-ink-soft: #565656; --bbx-pen: #5c42b5; }
 [data-chrome-theme="doodlebit"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #202020; }
 [data-chrome-theme="doodlebit"] #bbx-chat-load-older { background: #fff; color: #5c42b5; border-radius: 8px; }
 [data-chrome-theme="doodlebit"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }

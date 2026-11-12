@@ -11,7 +11,7 @@ import {
   buildReactorUserPrompt,
 } from "../../src/core/reactor/prompts.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
-import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
+import { describeJob } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
@@ -163,12 +163,12 @@ void test("Type filter only matches typed suffix", async (t) => {
   await box.write("_bookkeeping/jobs/sweep.intake.job.card", "---\nconnector: gmail\n---\nIntake");
 
   const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
-  t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() }]);
+  t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() }]);
 
   const all = await findJobCards(jobsDir);
   t.check(all, [
-    { file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() },
-    { file: "sweep.intake.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "msg1.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() },
+    { file: "sweep.intake.job.card", priority: "normal", connector: "gmail", createdAt: isoDate() },
   ]);
 
   await box.cleanup();
@@ -195,11 +195,13 @@ void test("A job no connector made (here, a full wakeup's inbox triage) matches 
     "feed.digest.job.card",
   ]);
 
-  // Other jobs stay put for a future run that does match them
+  // Other jobs stay put for a future run that does match them. Each card's
+  // connector comes back with it; the unscoped job has none (the scheduler
+  // pass's job check reads that):
   const noFilter = await findJobCards(jobsDir);
   t.check(noFilter, [
-    { file: "email.intake.job.card", priority: "normal", createdAt: isoDate() },
-    { file: "feed.digest.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "email.intake.job.card", priority: "normal", connector: "gmail", createdAt: isoDate() },
+    { file: "feed.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() },
     { file: "inbox.intake.job.card", priority: "normal", createdAt: isoDate() },
   ]);
 
@@ -219,7 +221,7 @@ void test("Current job cards are YAML frontmatter, not XML — discovery reads t
   await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: rss\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
   const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
-  t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", createdAt: isoDate() }]);
+  t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", connector: "gmail", createdAt: isoDate() }]);
 
   await box.cleanup();
 });
@@ -240,11 +242,11 @@ void test("Non-existent directory returns empty array", async (t) => {
   t.check(cards, []);
 });
 
-// ## buildJobDescription
+// ## describeJob
 //
 // ### Includes the job card and priority label (no xml fence)
 void test("Includes the job card and priority label (no xml fence)", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "task.intake.job.card", priority: "low", createdAt: null },
       relPath: "_bookkeeping/jobs/task.intake.job.card",
@@ -256,7 +258,7 @@ void test("Includes the job card and priority label (no xml fence)", async (t) =
       }),
     },
     "/tmp/fake-box",
-  );
+  )).full;
   // The schema instructions after the heading are large generated text, so only
   // their heading is checked; the card section above them is exact.
   t.check(
@@ -287,7 +289,7 @@ void test("The core purge fix:", async (t) => {
   const box = await makeTmpBox({ git: true });
   await box.write("store/inbox/item1.card", "---\nstatus: new\n---\nHello from item one");
 
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "x.intake.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/x.intake.job.card",
@@ -298,7 +300,7 @@ void test("The core purge fix:", async (t) => {
       }),
     },
     box.root,
-  );
+  )).full;
 
   t.check(
     desc,
@@ -332,7 +334,7 @@ void test("The core purge fix:", async (t) => {
 
 // ### Handles missing refs gracefully
 void test("Handles missing refs gracefully", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "task.intake.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/task.intake.job.card",
@@ -343,7 +345,7 @@ void test("Handles missing refs gracefully", async (t) => {
       }),
     },
     "/tmp/fake-box",
-  );
+  )).full;
   t.check(
     desc,
     str`${[
@@ -369,14 +371,14 @@ void test("Handles missing refs gracefully", async (t) => {
 // A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is
 // surfaced with its raw content and a warning rather than crashing the batch.
 void test("A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is s...", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "legacy.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/legacy.job.card",
       content: "<job><description>Old XML job</description></job>",
     },
     "/tmp/fake-box",
-  );
+  )).full;
   t.check(
     desc,
     `### _bookkeeping/jobs/legacy.job.card

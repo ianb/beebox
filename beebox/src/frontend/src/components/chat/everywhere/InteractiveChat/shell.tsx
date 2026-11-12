@@ -29,6 +29,7 @@ import { useRecoveryWidgets } from "./recovery";
 import { useChatMute, useChatSchedules, usePendingMessagePoll } from "./hooks";
 import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
+import { useChatCatchUp } from "./catch-up";
 import { useCompanionCard } from "../../InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "../../InteractiveChat-attachments/attachments";
 import { useChatSelections } from "./selections";
@@ -152,7 +153,7 @@ interface InteractiveChatProps {
  * (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
 // Capture mode is rare and opens full screen; its code loads when it opens.
-const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
+const CaptureScreen = lazyOverlay(() => import("../../../capture/CaptureScreen/view"), (m) => m.CaptureScreen);
 
 function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
@@ -161,7 +162,7 @@ function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCaptu
   onExitCapture: (outcome: CaptureExit) => void;
 }) {
   if (!captureMode || usesNativeShell) return null;
-  return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
+  return <CaptureScreen targetSessionId={sessionId} onExit={onExitCapture} />;
 }
 
 /** Presentation toggles stay with the box input, independently of session actors. */
@@ -192,6 +193,11 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
+function useConversationLoadMarks(ready: boolean, loading: boolean): void {
+  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, ready);
+  useFirstLoadMark(FIRST_LOAD_MARKS.history, ready && !loading);
+}
+
 export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
@@ -203,14 +209,13 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
-  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
-  useFirstLoadMark(FIRST_LOAD_MARKS.history, conversationSelection?.kind === "ready" && !snapshot.matches("loading"));
+  useConversationLoadMarks(conversationSelection?.kind === "ready", snapshot.matches("loading"));
   // Put the turn in the tab title, so a chat left in a background tab says
   // whether the box is still working on it. The deps are one boolean, so this
   // publishes once per turn rather than once per streamed token.
   useWorking(isStreaming);
   const currentUser = useCurrentUser();
-  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
+  const backgroundTasks = useBackgroundTasks(sessionId); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
   // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
   // text-only view every render — cheap, and stable in identity as long as
@@ -235,8 +240,11 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const { activeView } = tabs;
   const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
   const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
-  usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
+  // A not-delivered message is pending but not on its way: no "queued" count, no poll for its echo.
+  const queuedCount = pendingMessages.filter((entry) => entry.pending === true && entry.undelivered !== true).length;
+  usePendingMessagePoll({ pendingCount: queuedCount, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });
+  const catchingUp = useChatCatchUp({ snapshot, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
   // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
@@ -294,6 +302,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
     onTaskLevel: backgroundTasks.onTaskLevel,
+    resyncTasks: backgroundTasks.resync,
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
     shellManaged: true,
@@ -338,11 +347,11 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       isStreaming={isStreaming}
       streamText={streamText}
       streamTools={streamTools}
-      processBusy={Boolean(processBusy)} showAgentWorking={showAgentWorking}
+      processBusy={Boolean(processBusy)} showAgentWorking={showAgentWorking} catchingUp={catchingUp}
       processRunning={processRunning}
       sessionId={sessionId}
       totalEntries={totalEntries}
-      pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
+      pendingCount={queuedCount}
       error={error} replyLost={replyLost}
       currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}

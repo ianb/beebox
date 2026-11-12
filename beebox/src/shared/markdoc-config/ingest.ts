@@ -20,6 +20,19 @@ const HTML_START = /^<[!/?A-Za-z]/;
 /** A fence opener or closer: up to three spaces, then three or more backticks or tildes. */
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 
+/** Where a code span opened by `length` backticks ends: only a run of exactly that length closes it. */
+function codeSpanEnd(text: string, { from, length }: { from: number; length: number }): number | null {
+  let i = from;
+  while (i < text.length) {
+    const open = text.indexOf("`", i);
+    if (open === -1) return null;
+    const run = /^`+/.exec(text.slice(open))?.[0].length ?? 1;
+    if (run === length) return open + run;
+    i = open + run;
+  }
+  return null;
+}
+
 /** Escape the HTML openers and Markdoc tag openers in one run of non-fenced text, skipping code spans. */
 function neutralizeText(text: string): string {
   let out = "";
@@ -33,8 +46,7 @@ function neutralizeText(text: string): string {
     }
     if (c === "`") {
       const run = /^`+/.exec(text.slice(i))?.[0] ?? "`";
-      const close = text.indexOf(run, i + run.length);
-      const end = close === -1 ? i + run.length : close + run.length;
+      const end = codeSpanEnd(text, { from: i + run.length, length: run.length }) ?? i + run.length;
       out += text.slice(i, end);
       i = end;
       continue;

@@ -7,6 +7,7 @@
 
 import { spawn, execFile } from "node:child_process";
 import { claudeOauthTokenEnv } from "../core/claude-oauth-token.js";
+import { agentAllowlistEnv } from "../core/script-env/core.js";
 import { invariant } from "../shared/invariant.js";
 import { errnoCode } from "../shared/error-guards.js";
 
@@ -57,10 +58,10 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
   const boxRoot = options?.boxRoot;
   return {
     async authStatus() {
-      // An ambient token in this process's env never reaches an agent run (the
-      // script-env allowlist), so the probe must not answer for it either.
-      const env: NodeJS.ProcessEnv = { ...process.env };
-      delete env.CLAUDE_CODE_OAUTH_TOKEN;
+      // The probe answers for the credential an agent run uses, so it gets an
+      // agent run's environment: the agent allowlist, which holds no ambient
+      // CLAUDE_CODE_OAUTH_TOKEN, plus the box's own token when it has one.
+      const env = agentAllowlistEnv();
       if (boxRoot !== undefined) Object.assign(env, await claudeOauthTokenEnv(boxRoot, { purpose: "auth-status", observe: false }));
       return new Promise<Record<string, unknown>>((resolve) => {
         execFile("claude", ["auth", "status"], { timeout: 10000, env }, (err, stdout) => {
@@ -95,7 +96,7 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
 
       const child = spawn("claude", args, {
         stdio: ["pipe", "pipe", "pipe"],
-        env: { ...process.env, BROWSER: "echo" },
+        env: { ...agentAllowlistEnv(), BROWSER: "echo" },
       });
 
       let output = "";
@@ -141,6 +142,8 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
       const stdin = login.process.stdin;
       if (!stdin || stdin.destroyed) return { accepted: false, error: "Sign-in process is not accepting input — start again" };
       return new Promise((resolve) => {
+        // A write error is also emitted as "error"; without a listener it would crash the server.
+        stdin.once("error", (err) => { resolve({ accepted: false, error: err.message }); });
         stdin.write(`${code.trim()}\n`, (err) => {
           resolve(err ? { accepted: false, error: err.message } : { accepted: true });
         });
@@ -149,7 +152,7 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
 
     async authLogout() {
       return new Promise<{ success: boolean; error?: string }>((resolve) => {
-        execFile("claude", ["auth", "logout"], { timeout: 10000 }, (err) => {
+        execFile("claude", ["auth", "logout"], { timeout: 10000, env: agentAllowlistEnv() }, (err) => {
           if (err) {
             resolve({ success: false, error: err.message });
           } else {

@@ -15,7 +15,9 @@ import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import {
   runScanPromotePass,
   promotionLockPath,
@@ -295,10 +297,13 @@ void test("The wakeup still runs:", async (t) => {
   });
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A });
+  const errors = consoleLines(t, "error");
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: fakeUpload({ fail: true }).runner, runWakeup: fakeWakeup().runner },
   });
+  // The server log names the source and the reason the import failed:
+  t.check(errors(), ["[scan] Promote of 1 file(s) from scan-upload/laptop-scansnap failed: scan-import blew up"]);
   t.check({ imported: result.imported, failed: result.failed, wakeup: result.wakeup }, {
     imported: 0,
     failed: 1,
@@ -330,10 +335,13 @@ void test("Connector-scoped scheduled wakeups never drain a scan intake job (it 
   await quarantine(box, { sha256: HASH_A });
   const failing = fakeWakeup({ fail: true });
 
+  const errors = consoleLines(t, "error");
   const first = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: fakeUpload().runner, runWakeup: failing.runner },
   });
+  // The server log counts the attempt and says when the retry comes:
+  t.check(errors(), ["[scan] bbx wakeup after promote failed (attempt 1 of 6, retrying in 120s): bbx wakeup exited with code 1"]);
   t.check({ imported: first.imported, wakeup: first.wakeup, marker: await exists(wakeupMarkerPath(box.root)) }, {
     imported: 1,
     wakeup: {
@@ -622,10 +630,16 @@ void test("Quarantined bytes that vanished become a rejection, not an eternal re
   await fs.rm(quarantineFilePath(box.root, `${HASH_A}.pdf`));
   const upload = fakeUpload();
 
+  const errors = consoleLines(t, "error");
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
   });
+  // The server log names the file and the copy that is gone; the copy goes to a staging directory named per run:
+  const gone = quarantineFilePath(box.root, `${HASH_A}.pdf`);
+  t.check(errors(), [
+    str`[scan] Quarantined bytes for Vanished.pdf (${HASH_A.slice(0, 12)}) are gone: Error: ENOENT: no such file or directory, copyfile '${gone}' -> '${box.root}/_tmp/scan-staging/${any(String)}/Vanished.pdf'`,
+  ]);
   const entry = await readQuarantineEntry(box.root, HASH_A);
   assert.ok(entry);
   t.check({ imported: result.imported, calls: upload.calls.length, state: entry.state, reason: entry.reason }, {

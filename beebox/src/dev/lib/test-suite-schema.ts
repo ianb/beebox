@@ -31,7 +31,7 @@ export type AuditSurface = z.infer<typeof auditSurfaceSchema>;
 
 /** Fields that need a box, card files, Bash, or web tools — none exist in a dev audit. */
 const BOX_ONLY_FIELDS = [
-  "cards_contain", "cards_not_under", "bash_contains", "should_search", "context_dir", "fixture", "chat_mode", "final_reply", "plugins",
+  "cards_contain", "cards_not_under", "bash_contains", "read_before_edit", "should_search", "context_dir", "fixture", "chat_mode", "final_reply", "plugins",
 ] as const;
 
 const auditTestObjectSchema = z.object({
@@ -59,6 +59,12 @@ const auditTestObjectSchema = z.object({
   /** At least one path fragment must appear in observed reads. */
   should_read_any: z.array(z.string()).min(1).optional(),
   should_not_read: z.array(z.string()).optional(),
+  /**
+   * Each path fragment must appear in a read before the agent's first edit or
+   * write. pi's reader counts an instruction file a file tool delivered as a
+   * read; other engines' readers do not record edits, so the check fails there.
+   */
+  read_before_edit: z.array(z.string()).optional(),
   bash_contains: z.array(z.string()).optional(),
   /**
    * The agent must have looked something up before answering: `web` a web

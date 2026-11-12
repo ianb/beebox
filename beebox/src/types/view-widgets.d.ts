@@ -1,6 +1,6 @@
 /**
  * Ambient types for the public `beebox/view-widgets` specifier as seen
- * from backend code (`bbx view test` dynamic-imports it). The real implementation
+ * from backend code (`bbx view check` dynamic-imports it). The real implementation
  * is the esbuild bundle at dist/view-widgets/index.js (built from
  * src/frontend/src/components/view-widgets/node-entry.tsx). External boxes
  * get this same surface in module form via src/exports/view-widgets.d.ts
@@ -35,6 +35,6 @@ declare module "beebox/view-widgets" {
     /** Components by the name a scoped tag's transform emits. */
     components?: Partial<Record<string, ComponentType<Record<string, unknown>>>>;
   }>;
-  /** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view test`. */
+  /** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view check`. */
   export const NodeViewHostProvider: ComponentType<{ boxSlug?: string; children: ReactNode }>;
 }

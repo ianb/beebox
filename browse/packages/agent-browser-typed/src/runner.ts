@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { constants as osConstants } from "node:os";
 import { dirname, join } from "node:path";
@@ -37,8 +37,10 @@ export class AgentBrowserError extends Error {
   readonly args: readonly string[];
   /** The signal that ended the client, or null when it exited (or was killed by our own timeout). */
   readonly signal: string | null;
-  constructor({ code, stderr, stdout, args, signal, elapsedMs }: {
-    code: number; stderr: string; stdout: string; args: readonly string[]; signal?: string | null; elapsedMs?: number;
+  /** True when `timeoutMs` elapsed and this wrapper killed the client: upstream never answered. */
+  readonly timedOut: boolean;
+  constructor({ code, stderr, stdout, args, signal, elapsedMs, timedOut }: {
+    code: number; stderr: string; stdout: string; args: readonly string[]; signal?: string | null; elapsedMs?: number; timedOut?: boolean;
   }) {
     const output = stderr.trim() || stdout.trim();
     super(signal === undefined || signal === null
@@ -50,6 +52,7 @@ export class AgentBrowserError extends Error {
     this.stdout = stdout;
     this.args = args;
     this.signal = signal ?? null;
+    this.timedOut = timedOut ?? false;
   }
 
   /** Text for a caller to print: never empty, names the cause or says upstream gave none. */
@@ -77,6 +80,30 @@ export interface RunOptions {
   timeoutMs?: number;
 }
 
+/**
+ * SIGKILL the shim and the native client it spawned. `agent-browser.js`
+ * spawns the client with inherited stdio, so killing only the shim left the
+ * client holding our pipes: `close` waited out its 152 s of re-sends and the
+ * ceiling never fired early. The client stays in our process group, so a
+ * Ctrl-C still reaches it.
+ */
+function killTree(pid: number | undefined): void {
+  if (pid === undefined) return;
+  let children: number[] = [];
+  try {
+    children = execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" }).split("\n").filter((l) => l !== "").map(Number);
+  } catch {
+    // pgrep exits 1 when there are no children.
+  }
+  for (const target of [...children, pid]) {
+    try {
+      process.kill(target, "SIGKILL");
+    } catch {
+      // ESRCH: already exited.
+    }
+  }
+}
+
 export async function run(args: readonly string[], options?: RunOptions): Promise<RunResult> {
   const binary = resolveBinary();
   const opts: RunOptions = options === undefined ? {} : options;
@@ -89,7 +116,7 @@ export async function run(args: readonly string[], options?: RunOptions): Promis
     const started = Date.now();
     const timer = opts.timeoutMs === undefined ? null : setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
+      killTree(child.pid);
     }, opts.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });
@@ -97,7 +124,7 @@ export async function run(args: readonly string[], options?: RunOptions): Promis
     child.on("close", (code, signal) => {
       if (timer !== null) clearTimeout(timer);
       if (timedOut) {
-        reject(new AgentBrowserError({ code: -1, stderr: `killed after ${String(opts.timeoutMs)}ms`, stdout, args }));
+        reject(new AgentBrowserError({ code: -1, stderr: `killed after ${String(opts.timeoutMs)}ms`, stdout, args, timedOut: true }));
         return;
       }
       if (code === 0) {

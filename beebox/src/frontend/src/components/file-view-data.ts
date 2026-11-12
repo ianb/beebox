@@ -21,6 +21,8 @@ import { fetchFromBox, MAX_RETRIES, retryDelayMs, unreachableCause } from "../li
 import { fileChangeAt } from "../lib/live-refresh";
 import type { FileData } from "../file-type-registry";
 import { cardLoadRecovery, type CardLoadRecovery } from "../lib/moved-card-recovery";
+import { noteRequestStart } from "../lib/runtime-lint/fetch-storm";
+import { useRefreshEpisode } from "../lib/runtime-lint/refresh-episode";
 
 /* ---------- path classification ---------- */
 
@@ -99,6 +101,7 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
     queryKey: ["file-text", path],
     enabled: fetchText,
     queryFn: async ({ signal }) => {
+      noteRequestStart("raw-file", path);
       const resp = await fetchFromBox(apiRawFileUrl(apiBase, path), { signal });
       if (!resp.ok) {
         const message = `Failed to load: ${resp.status} ${resp.statusText}`;
@@ -141,7 +144,7 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
   const textState = resolveLoadState(textQuery);
   const recovery = cardLoadRecovery(cardQuery.error);
 
-  return useMemo<LoadResult>(() => {
+  const result = useMemo<LoadResult>(() => {
     if (isCard) {
       const card = cardState.value;
       if (card === null) {
@@ -176,4 +179,6 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
     }
     return { data: { path, content: textState.value }, loading: false, error: null, stale: textState.stale, recovery: null, refresh };
   }, [isCard, isDir, isBinary, isJson, path, cardState, textState, recovery, refresh]);
+  useRefreshEpisode({ path, surface: isCard ? "card-body" : "file", failing: result.stale !== null, error: isCard ? cardQuery.error : textQuery.error });
+  return result;
 }

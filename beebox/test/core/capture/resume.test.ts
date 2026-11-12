@@ -13,6 +13,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat/core.js";
@@ -83,9 +84,16 @@ void test("A sealed capture session resumes; a sealed voice session does not", a
   });
   const eventBus = createEventBus(box.root);
 
+  const warnings = consoleLines(t, "warn");
   await resumeStagingSessions({ boxRoot: box.root, eventBus, registry });
   const captureDelivered = await waitForGone({ boxRoot: box.root, id: capture.id });
   await tick();
+  // The startup log names the one session it resumed (not the voice one), then the
+  // preparation notes that the capture had no target chat:
+  t.check(warnings(), [
+    `[capture] Resuming staged capture ${capture.id} (state=sealed)`,
+    `[capture] Capture has no target session; falling back to the most-active session for box=${box.root}`,
+  ]);
 
   // The capture session was picked up and delivered (no longer sitting `sealed` on
   // disk — `prepareCaptureSession` cleans it up once delivered):
@@ -142,7 +150,10 @@ void test("A voice session with `hq.state: \"queued\"` resumes the HQ job", asyn
   });
   const eventBus = createEventBus(box.root);
 
+  const warnings = consoleLines(t, "warn");
   await resumeStagingSessions({ boxRoot: box.root, eventBus, registry });
+  // The startup log names the voice session whose HQ job it resumed:
+  t.check(warnings(), [`[voice-recording] Resuming HQ job for ${voice.id} (hq.state=queued)`]);
 
   // The job ran (and failed fast — this test box holds no HQ credentials), which
   // is the observable proof resume actually fired it rather than leaving it

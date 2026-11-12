@@ -5,8 +5,9 @@
  * husk's path) is future frame work.
  */
 
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
+import { ButtonLink } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -86,13 +87,9 @@ export function ChatHuskView({ data }: RendererProps) {
                 : transcriptStateLabel(availability.data.transcript)}
             </Text>
           ) : (
-            <Link
-              to={href(`/${boxSlug}/chat`)}
-              search={toSearch({ session })}
-              className="self-start px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
-            >
+            <ButtonLink to={`/${boxSlug}/chat`} search={toSearch({ session })} size="sm" className="self-start">
               Open chat →
-            </Link>
+            </ButtonLink>
           )}
           <DeleteChatAction
             sessionId={session}

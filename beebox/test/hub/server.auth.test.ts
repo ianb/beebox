@@ -122,12 +122,34 @@ void test("Unauthenticated HTML navigation redirects to `/auth/login`", async (t
       t.error(error);
     }
   });
+  await loginPageHeaders(t);
   await loginAndProxy(t);
   await bogusCredentials(t);
   await discovery(t);
   await healthzAndWebhookPrefix(t);
   await revocation(t);
 });
+
+// The hub serves the login page itself, so it adds the framing and policy
+// headers a box's own pages get (webapp/document-security-headers.ts);
+async function loginPageHeaders(t: Test) {
+  const login = await fetch(`${hubBase}/auth/login`, { redirect: "manual" });
+  t.check({
+    type: login.headers.get("content-type"),
+    frameOptions: login.headers.get("x-frame-options"),
+    csp: login.headers.get("content-security-policy"),
+    referrer: login.headers.get("referrer-policy"),
+    permissions: login.headers.get("permissions-policy"),
+    hsts: login.headers.get("strict-transport-security"),
+  }, {
+    type: "text/html",
+    frameOptions: "SAMEORIGIN",
+    csp: "frame-ancestors 'self'",
+    referrer: "strict-origin-when-cross-origin",
+    permissions: "usb=(), serial=(), hid=(), payment=()",
+    hsts: "max-age=86400",
+  });
+}
 
 async function loginAndProxy(t: Test) {
   const navResponse = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });
@@ -179,6 +201,39 @@ async function loginAndProxy(t: Test) {
     wrong: 401,
   });
 
+  // ## The diagnostic bearer proxies its whitelisted reads without a browser session
+  //
+  // `docs/server/operations.md` ("Live health") documents `BBX_DIAG_API_KEY` as a
+  // bearer on a box's `health.check`. The hub passes a GET on the whitelisted
+  // procedures through with no identity attached, and the box checks the key
+  // again (`isDiagnosticBypassRequest`, `src/webapp/auth.ts`). Anything else the
+  // key is sent to stays behind the wall.
+
+  const priorDiagKey = process.env.BBX_DIAG_API_KEY;
+  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-hub-auth-test";
+  const diag = { authorization: "Bearer test-diag-key-for-hub-auth-test" };
+  const diagHealth = await fetch(`${hubBase}/test1/api/trpc/health.check?input=%7B%22fresh%22%3Atrue%7D`, { headers: diag });
+  const diagBody = BoxEcho.parse(await diagHealth.json());
+  const diagOther = await fetch(`${hubBase}/test1/api/trpc/history.list`, { headers: diag });
+  const diagPost = await fetch(`${hubBase}/test1/api/trpc/health.check`, { method: "POST", headers: diag });
+  const diagWrong = await fetch(`${hubBase}/test1/api/trpc/health.check`, { headers: { authorization: "Bearer wrong" } });
+  if (priorDiagKey === undefined) delete process.env.BBX_DIAG_API_KEY;
+  else process.env.BBX_DIAG_API_KEY = priorDiagKey;
+  t.check({
+    status: diagHealth.status,
+    email: diagBody.xBbxAuthenticatedEmail,
+    secret: diagBody.xBbxHubSecret,
+    other: diagOther.status,
+    post: diagPost.status,
+    wrong: diagWrong.status,
+  }, {
+    status: 200,
+    email: null,
+    secret: null,
+    other: 401,
+    post: 401,
+    wrong: 401,
+  });
 }
 
 async function bogusCredentials(t: Test) {

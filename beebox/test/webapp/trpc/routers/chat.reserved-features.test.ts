@@ -59,13 +59,13 @@ void test("The root landmark seeds narration on.", async (t) => {
 
   const inherited = "11111111-1111-4111-8111-111111111111";
   await api.chat.reserveSession({ sessionId: inherited, contextDir: "", engine: "claude" });
-  t.check(await api.chat.features({ session: inherited }), { features: { narration: "on", prose: "on" } });
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "on", prose: "on", strip: "none" } });
 
   // An explicit per-chat `off` overrides the seeded `on` and survives the same
   // reload read even though the chat has not started and still has no history row.
 
   await api.chat.setFeature({ session: inherited, feature: "narration", value: "off" });
-  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on", strip: "none" } });
   t.check(await getFeaturesForSession(server.boxRoot, inherited), null);
 
   // ## A changed landmark seeds only new chats
@@ -80,8 +80,8 @@ void test("The root landmark seeds narration on.", async (t) => {
 
   const proseOff = "22222222-2222-4222-8222-222222222222";
   await api.chat.reserveSession({ sessionId: proseOff, contextDir: "", engine: "claude" });
-  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
-  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "off" } });
+  t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on", strip: "none" } });
+  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "off", strip: "none" } });
 
   // Once that reserved chat starts, later toggles leave the reservation path and
   // persist to history. The now-released reservation must not keep swallowing
@@ -102,7 +102,7 @@ void test("The root landmark seeds narration on.", async (t) => {
   );
   await api.chat.setFeature({ session: proseOff, feature: "prose", value: "on" });
   t.check(accepted.statusCode, 200);
-  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "on" } });
+  t.check(await api.chat.features({ session: proseOff }), { features: { narration: "off", prose: "on", strip: "none" } });
   t.check(await getFeaturesForSession(server.boxRoot, proseOff), { prose: "on" });
 
   // ## Persisted state outranks an unloaded live session
@@ -119,5 +119,5 @@ void test("The root landmark seeds narration on.", async (t) => {
     engine: "claude",
   });
   await api.chat.setModel({ session: started, model: "claude-sonnet-5-5" });
-  t.check(await api.chat.features({ session: started }), { features: { narration: "on", prose: "on" } });
+  t.check(await api.chat.features({ session: started }), { features: { narration: "on", prose: "on", strip: "none" } });
 });

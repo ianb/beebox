@@ -12,7 +12,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { trpcClient } from "../lib/trpc/client";
 import { describeArg } from "../lib/debug-log-format";
 import { CloseButton } from "./ui/CloseButton";
+import { TextField } from "./ui/fields/field";
 import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../lib/stored-flag";
+import { isRuntimeLintLine, setRuntimeLintSink } from "../lib/runtime-lint/report";
 
 interface LogEntry {
   level: "log" | "warn" | "error" | "info";
@@ -69,6 +71,9 @@ function queueForServer(level: LogEntry["level"], message: string) {
   if (level !== "error" && level !== "warn" && !verboseForwarding) return;
   // Don't forward SSE/network errors — they're expected during deploys
   if (isNetworkNoise(message)) return;
+  // The development build's console copy of a runtime-lint record: the record
+  // already went to the server under its own source.
+  if (isRuntimeLintLine(message)) return;
   sendBuffer.push({ level, message: truncateForServer(message) });
   if (!sendTimer) {
     sendTimer = setTimeout(flushToServer, 500);
@@ -127,6 +132,11 @@ export function enableDebugLogCapture() {
   // would hit it on import.
   if (typeof window === "undefined") return;
   patchConsole();
+  setRuntimeLintSink((lines) => {
+    const entries = lines.map((message) => ({ level: "warn" as const, message: truncateForServer(message) }));
+    // Diagnostics only: a failed submit must not raise its own errors (they would feed back into the log).
+    trpcClient.debugLog.submit.mutate({ source: "runtime-lint", entries }).catch(() => {});
+  });
 }
 
 /** Enable forwarding of all log levels (not just errors/warns) to the server. */
@@ -218,18 +228,21 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-x-0 bottom-0 z-[100] bg-white/95 border-t-2 border-warm-400 shadow-lg flex flex-col" style={{ maxHeight: "50vh" }}>
       <div className="flex items-center gap-2 px-3 py-1.5 bg-warm-100 border-b border-warm-300 text-xs">
         <span className="font-bold text-warm-700">Debug Log</span>
-        <input
+        <TextField
           id="bbx-debug-log-filter"
-          type="text"
+          type="search"
+          label="Filter log entries"
+          hideLabel
+          className="flex-1"
+          inputClassName="px-2 py-0.5 text-xs"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={setFilter}
           placeholder="Filter..."
-          className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
-        <button id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
+        <button type="button" id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
         <CloseButton id="bbx-debug-log-close" onClick={onClose} size="sm" />
       </div>
-      <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">
+      <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[0.6875rem] leading-tight">
         {filtered.length === 0 ? (
           <div className="text-warm-400 py-2">No log entries{filter ? " matching filter" : ""}</div>
         ) : (

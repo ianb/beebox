@@ -59,6 +59,7 @@ Whatever a figure is for, these make it usable and clear:
 - **Key what isn't self-evident.** If colours, symbols, or marks carry meaning, include a small legend; if it responds to the keyboard, name the keys.
 - **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped. Match the box's quiet visual style — no decorative noise.
 - **Fit the container.** Size from \`mount.clientWidth\` (fall back if 0, e.g. \`|| 360\`), watch it with a \`ResizeObserver\` (disconnect in teardown), and derive layout from the current canvas size — never a fixed pixel width or a \`size\` param. Give DOM controls \`width: 100%\`. A figure must work at phone width (~390px).
+- **Respect reduced motion.** When \`matchMedia("(prefers-reduced-motion: reduce)").matches\`, draw one still frame and do not start an animation loop (p5: \`p.noLoop()\` in setup; three: render once and skip \`requestAnimationFrame\`; canvas-loop: \`autoplay: false\`). The starter sketches already do this.
 - **Verify it renders before you call it done.** Open it and screenshot it: confirm it renders, the controls and instructions are visible, and nothing is clipped.
 
 ## Frontmatter

@@ -10,6 +10,7 @@ import { makeTestServer } from "../../../helpers/test-route-server.js";
 import {
   buildRetranscriptionReport,
   buildConsultedReport,
+  retranscriptionFooter,
 } from "../../../../src/cli/commands/chat/audio-report.js";
 
 // ## Route: a valid retranscription body emits `chat-retranscription`
@@ -196,4 +197,26 @@ void test("`buildConsultedReport`: present ids build the report; absent ones ski
   });
   t.check(buildConsultedReport({ sessionId: null, messageId: "msg-1", question: "q" }), null);
   t.check(buildConsultedReport({ sessionId: "sess-1", messageId: null, question: "q" }), null);
+});
+
+// ## The retranscribe footer names the service and the detected language
+//
+// The footer names the resolved service, not "(box default)", and the language
+// the service detected, so an agent can see that a garbled result decoded the
+// audio as another language
+// (issues/closed/bugs/2026-11-09-retranscribe-prints-garbled-text-as-success.md).
+// A service that reports no language (`""`, voxtral's `"unknown"`) gets no line.
+void test("The retranscribe footer names the resolved service and the detected language", (t) => {
+  const base = { diarized: false, sidecarPath: null, recordedAt: "2026-11-09T10:00:00Z", realtimeTranscript: "hello there" };
+  t.check(
+    {
+      detected: retranscriptionFooter({ ...base, service: "whisper-1", language: "japanese" }),
+      none: retranscriptionFooter({ ...base, service: "voxtral", language: "unknown" }),
+    },
+    {
+      detected: ["--", "service: whisper-1", "language: japanese", "recorded-at: 2026-11-09T10:00:00Z", "realtime-transcript: hello there"],
+      none: ["--", "service: voxtral", "recorded-at: 2026-11-09T10:00:00Z", "realtime-transcript: hello there"],
+    },
+  );
+  t.end();
 });

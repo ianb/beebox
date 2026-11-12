@@ -36,9 +36,10 @@ current truth.
 - **`docs/box/`** — prose docs written for box agents, shipped into every
   installed package's `box-docs/` beside the generated reference docs
   (`src/core/docs-gen/package-docs/core.ts`). Each has a `read-when:` frontmatter
-  line that becomes its row in the `box-docs/README.md` index. Currently
-  [what you could do with your box](box/what-you-could-do.md) and
-  [interface cards](box/interface-cards.md).
+  line that becomes its row in the `box-docs/README.md` index. Examples:
+  [what you could do with your box](box/what-you-could-do.md),
+  [interface cards](box/interface-cards.md), and
+  [about Bee Box](box/about-bee-box.md) (the project, its code, and its site).
 - **`docs/architecture/`** — the onboarding narrative series: longform,
   human-facing "what is this thing" writing. Not required reading, not a
   design-rationale reference (that's `docs/design/`).
@@ -81,6 +82,10 @@ merges. The shared validator rejects unreadable metadata and never assigns a
 shipped status automatically. Run `node --import tsx bin/doc-lifecycle-check.ts
 --index` from the monorepo root to check the staged state.
 
+To move a doc, run `bin/doc-move <from> <to>` (or `bin/issues close` for an
+issue) from the repo root: it rewrites only references that resolve to the
+moved file, test fixtures included, and prints each one.
+
 `pnpm doc-check --fix` repairs decayed links. When a file moves (an issue
 resolving `bugs/foo.md` → `closed/bugs/foo.md` is the common case) every
 relative link to it breaks. For a link whose literal target no longer resolves,
@@ -93,8 +98,7 @@ A broken link to a non-`.md` file (a moved file's own `../src/x.ts`) is
 matched by its path below the leading `../` against tracked files, under the
 same never-guess rule. Links inside code spans / fenced blocks (syntax
 illustrations) and generated emitter outputs are left untouched. Test
-fixtures (`*.test.ts`) are not scanned, so grep them for the old path before
-committing a move. It also prints a non-fatal report of
+fixtures (`*.test.ts`) are not scanned. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
 unique. Mechanism: `src/dev/doc-check/link-repair.ts`.
 

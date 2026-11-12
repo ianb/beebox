@@ -27,7 +27,7 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
 const MATERIAL_NEUTRAL_CLASSES = "bg-card-tint text-card-soft";
 
 const SIZE_CLASSES: Record<BadgeSize, string> = {
-  sm: "text-[10px] px-1.5 py-0.5",
+  sm: "text-[0.625rem] px-1.5 py-0.5",
   md: "text-xs px-2 py-0.5",
 };
 

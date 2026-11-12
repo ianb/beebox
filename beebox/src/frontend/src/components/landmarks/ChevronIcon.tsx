@@ -4,6 +4,8 @@
  * affordance, so a section's collapsed parts read as one kind of thing.
  */
 
+import { Text } from "../ui/Text";
+
 export function ChevronIcon({ open, className }: { open: boolean; className?: string }) {
   return (
     <svg
@@ -18,5 +20,24 @@ export function ChevronIcon({ open, className }: { open: boolean; className?: st
     >
       <path d="M9 6l6 6-6 6" />
     </svg>
+  );
+}
+
+/**
+ * The inline expander under a list on the Landmarks page ("Show all",
+ * "Show older"): chevron, label, count.
+ */
+export function ExpanderButton({ open, onToggle, label, count }: { open: boolean; onToggle: () => void; label: string; count: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="flex items-center gap-2 self-start px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
+    >
+      <ChevronIcon open={open} />
+      <Text as="span" size="sm">{label}</Text>
+      <Text as="span" size="xs" tone="muted">{count}</Text>
+    </button>
   );
 }

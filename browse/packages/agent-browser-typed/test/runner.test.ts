@@ -25,6 +25,13 @@ void test("A child that ignores its own timeout is still killed", async (t) => {
   t.check(killed, "agent-browser exited -1: killed after 1ms");
 });
 
+// ## A kill by the ceiling is marked, so a caller can say upstream never answered
+void test("A kill by the ceiling is marked, so a caller can say upstream never answered", async (t) => {
+  const flag = await run(["--version"], { timeoutMs: 1 }).then(() => "(no error)", (e: unknown) => e instanceof AgentBrowserError ? e.timedOut : String(e));
+  t.check(flag, true);
+  t.check(new AgentBrowserError({ code: 1, stderr: "✗ boom", stdout: "", args: ["snapshot"] }).timedOut, false);
+});
+
 // ## A client ended by a signal says which signal and how long it ran
 //
 // A signal leaves no exit code and no output; the old report was an empty exit 1

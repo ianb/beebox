@@ -269,20 +269,15 @@ export async function collectDossierCanonicalWarnings(
  * they are different surfaces with different fixers, and collapsing them would
  * hide which one a box's drift lives in.
  */
-export function formatCanonicalSummary(
-  counts: { refs: number; dossierLinks: number },
-  { colors }: { colors: boolean }
-): string {
+export function formatCanonicalSummary(counts: { refs: number; dossierLinks: number }): string {
   const { refs, dossierLinks } = counts;
-  const ESC = "";
-  const yellow = colors ? (s: string) => `${ESC}[33m${s}${ESC}[0m` : (s: string) => s;
   if (refs === 0 && dossierLinks === 0) {
     return "Canonical refs: all refs are box-root-canonical.";
   }
   const refPart = `${String(refs)} non-canonical ref${refs === 1 ? "" : "s"}`;
   const linkPart = `${String(dossierLinks)} non-canonical dossier link${dossierLinks === 1 ? "" : "s"}`;
   return (
-    `Canonical refs: ${yellow(refPart)}, ${yellow(linkPart)} ` +
+    `Canonical refs: ${refPart}, ${linkPart} ` +
     "— rerun with `--canonical --fix` to rewrite the ones whose target exists"
   );
 }

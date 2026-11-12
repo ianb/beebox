@@ -104,3 +104,29 @@ tRPC procedures (from the app or a tRPC client), not a raw HTTP endpoint.
 - `src/lib/rolling-log.ts` — `appendRollingLogStrict` (used by `submit`, rejects on filesystem
   failure so a mobile client doesn't clear a queued entry it never durably sent) vs. the lenient
   `appendRollingLog` (used elsewhere, best-effort)
+
+## Runtime lint
+
+The frontend checks a few runtime invariants and reports a broken one as a
+`[runtime-lint]` line (`src/frontend/src/lib/runtime-lint/`). Plan:
+`docs/implemented-plans/runtime-lint.md`.
+
+| Check | The invariant it reports broken |
+|---|---|
+| `content-replaced` | While a file's view stays open, its card body or an embed in it was unmounted and mounted again (`gapMs` between the two). |
+| `fetch-storm` | One request (procedure and input) started more than 8 times in 10 s. |
+| `refresh-failed` | An open card or file could not refresh (`phase=failed`, with `kind`), then recovered (`phase=recovered`, with `durationMs`). |
+| `suppressed` | The budget dropped `n` records (one per check and subject a minute, 20 a minute in all). |
+
+Records carry no card text, paths, or URLs: content and request inputs are
+page-local ids (`c1`, `c2`, …) that mean nothing outside the page.
+
+The client sends records as `debugLog.submit` batches with source
+`runtime-lint`. The server writes them only on a dev box (`devSurfaces`) or
+when it runs with `BBX_RUNTIME_LINT=1`; elsewhere it drops them. In the log
+they read `… [warn] [runtime-lint] content-replaced surface=card-body content=c1 gapMs=0`.
+
+The page also keeps its unread records at `window.__bbxRuntimeLint`.
+`bin/browse` takes them after each page command and prints them to stderr as
+`runtime-lint: <check> k=v …`, so an agent checking UI sees the command that
+broke an invariant.

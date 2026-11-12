@@ -10,13 +10,15 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
-import { any, instanceOf, is, str } from "@ianbicking/tap-check/check";
+import { any, containing, instanceOf, is, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
 import { z } from "zod";
 import {
   body,
   cardSchema,
   extendSchema,
+  pdfBase,
+  webpageBase,
   RedeclaredFieldError,
   RedeclaredTagError,
   type CardSchemaConfig,
@@ -322,4 +324,20 @@ extendSchema(progressBase, { fields: { mood: z.string() } });
   ${any(String)}redeclares a base field${any(String)}`,
   ],
   );
+});
+
+// ## A box adds fields to a built-in captured type
+//
+// `webpageBase` and `pdfBase` are what lets a box declare `topics:` on captured
+// pages and PDFs. The built-in fields, and their rules, still apply.
+void test("webpageBase and pdfBase take a box's fields and keep the built-in rules", async (t) => {
+  const fields = { topics: z.array(z.string()).optional() };
+  const webpage = cardSchema("webpage", extendSchema(webpageBase, { fields }));
+  const pdf = cardSchema("pdf", extendSchema(pdfBase, { fields }));
+  const page = { type: "webpage", sources: [{ href: "https://example.org/" }], topics: ["benefits"] };
+  t.check(webpage.frontmatterSchema.safeParse(page).success, true);
+  t.check(webpage.frontmatterSchema.safeParse({ type: "webpage", topics: ["benefits"] }).success, false);
+  t.check(webpage.frontmatterSchema.safeParse({ ...page, topics: "benefits" }).success, false);
+  t.check(Object.keys(pdf.fields), containing(["topics"]));
+  t.check(pdf.instructions, pdfBase.instructions);
 });

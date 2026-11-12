@@ -17,6 +17,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../../src/cli/commands/wakeup/steps.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { searchBox } from "../../../../src/core/search/query/core.js";
 import { acquireLock, releaseLock } from "../../../../src/lib/file-lock.js";
 import { searchLockPath } from "../../../../src/core/search/store/core.js";
@@ -50,6 +51,30 @@ items:
   // ## A pending backfill job blocks queueing another
 
   t.check(await createContainsBackfillJob(box.root), 0);
+});
+
+// ## A held-back search area is not queued
+//
+// A research box holds thousands of saved sources in a `search.areas` area.
+// Queueing them would hand a background agent thousands of summaries nobody
+// asked for (`docs/plans/knowledge-base-tools.md`, Track A).
+void test("cards in a held-back search area are not queued for contains", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("_config/box.json", JSON.stringify({ search: { areas: { archive: ["_content/archive"] } } }));
+  await box.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
+  await box.write("_content/archive/Saved.doc.card", DOC("Saved", "a saved page"));
+  box.commitAll("seed cards");
+  await refreshSearchIndex(box.root);
+  t.check(await createContainsBackfillJob(box.root), 1);
+  const jobFile = (await box.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill.job.card"));
+  t.check(await box.read(jobFile ?? ""), `---
+priority: low
+description: "Write the contains: field for 1 cards missing it."
+items:
+  - ref: _content/notes/A.doc.card
+---
+`);
 });
 
 // ## Nothing missing → nothing queued
@@ -112,6 +137,7 @@ void test("refreshSearchIndex is the box's only scheduled reconciliation of the 
       },
     ],
     total: 1,
+    heldBack: [],
     truncated: false,
     warnings: [],
     stale: false,
@@ -143,7 +169,10 @@ void test("openSearchIndex degrades under contention:", async (t) => {
 
   // Hold the search lock, as a concurrent query or a second wakeup would.
   await acquireLock(searchLockPath(box4.root), { purpose: "test" });
+  const warnings = consoleLines(t, "warn");
   t.check(await refreshSearchIndex(box4.root), false);
+  // The wakeup log says why the index was not refreshed:
+  t.check(warnings(), ["  search index: search index locked by another process; results may be stale"]);
 
   // Released, the same call reconciles and reports success.
   await releaseLock(searchLockPath(box4.root));

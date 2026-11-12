@@ -10,9 +10,7 @@ or three things that fit what this person has to hand and what they came for,
 and say them in plain words. Nothing here is something to jump into: when the
 person shows interest in one, the next step is to talk about it — what they
 want out of it, what they already have, how they'd use it — and only then to
-build. Everything here is implemented today. The optional Apple Photos path
-still needs a real-library and launchd-permission check; its setup doc calls
-out the steps and current verification limit. How each mechanism works is in
+build. Everything here is implemented today. How each mechanism works is in
 the rest of these docs and in the agent guide; this file says what a person
 could do with it and why they might want to.
 
@@ -41,7 +39,7 @@ searchable. Both are first-class input expecting a reply, and both have their
 own card instructions in these docs (`card-upload-batch.md`,
 `card-capture-session.md`).
 
-For an ongoing stream from an iPhone album, scan-uploader can export new
+For an ongoing stream from an iPhone album, Bee Box Desktop can send new
 photos from an iCloud-synced album on the user's Mac; see [Apple Photos
 setup](phone-photos.md).
 
@@ -136,6 +134,9 @@ What they can expect, and what you owe them:
 - **Talk about what is on screen.** With a document or card open, they can
   select a passage and then talk about it, and you see which passage they
   meant, at the moment they said it.
+  In a rendered document beside chat, Select mode lets them point to a block:
+  hover and click on desktop, or tap and confirm with `+` on touch. The
+  selection appears in the ordinary chat draft, where they can type or dictate.
 - **False starts are fine.** "Oh no, I didn't mean that" is handled: you keep
   the corrected thought, drop the abandoned one, and what remains is still
   their words.

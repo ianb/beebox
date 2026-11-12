@@ -12,10 +12,10 @@ import "@ianbicking/tap-check/tap";
 import { any, not, str } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { cardSchema, cardRef, opaqueContentRef, collectInlineRefs } from "../../src/exports/cards.js";
-import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
+import { describeJob } from "../../src/core/reactor/engine/batch-jobs.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
-// ## buildJobDescription does not inline an opaque ref, but does inline a cardRef
+// ## describeJob does not inline an opaque ref, but does inline a cardRef
 //
 // The end-to-end prompt boundary. A job schema with both an inline item and an
 // opaque body ref: the item card's text appears in the built job description; the
@@ -119,10 +119,10 @@ void test("intake-job items are cardRefs (inline), so a real intake job inlines 
   );
   const content = await box.read("box/jobs/x.intake.job.card");
 
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     { card: { file: "x.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/x.intake.job.card", content },
     box.root,
-  );
+  )).full;
 
   // The job body and the inlined cardRef target (verbatim, in its own fenced section) come first;
   // the schema instructions that follow are a large generated text, left to the doc's own tests.
@@ -167,10 +167,10 @@ void test("The whole point of the fence migration made visible — the job card'
   );
   const content = await box.read("box/jobs/z.intake.job.card");
 
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     { card: { file: "z.intake.job.card", priority: "low", createdAt: null }, relPath: "box/jobs/z.intake.job.card", content },
     box.root,
-  );
+  )).full;
 
   // The job body sits in a plain 3-backtick fence (no xml label), with no inlined ref
   // sections; the schema instructions that follow are a large generated text.
@@ -206,10 +206,10 @@ void test("A referenced card whose body contains its own  fence is wrapped in a 
   );
   const content = await box.read("box/jobs/y.intake.job.card");
 
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     { card: { file: "y.intake.job.card", priority: "normal", createdAt: null }, relPath: "box/jobs/y.intake.job.card", content },
     box.root,
-  );
+  )).full;
 
   // The inlined ref (its whole file, frontmatter included) sits inside a four-backtick
   // fence, so the body's own fence cannot close it early. The schema instructions that

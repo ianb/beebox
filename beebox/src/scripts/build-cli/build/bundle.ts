@@ -4,9 +4,9 @@
 // loader-hook overhead that dominates tsx startup, and splitting lets a run
 // load only the command it names (src/cli/commands.ts).
 //
-// node_modules are externalized (`packages: "external"`): native addons like
-// better-sqlite3 can't be bundled, and loading deps from disk keeps their own
-// __dirname / asset resolution intact.
+// node_modules are externalized (`packages: "external"`): native addons can't
+// be bundled, and loading deps from disk keeps their own __dirname / asset
+// resolution intact.
 //
 // An external sourcemap (cli.mjs.map) gives real stack traces under
 // `node --enable-source-maps` without slowing startup — node loads the map
@@ -17,7 +17,7 @@
 // `bbx` invocation (bin/bbx self-heals on staleness) or a test: the suite
 // rebuilds the bundle mid-run (test/hub.e2e.test.ts) while other tests exec the
 // CLI, which loads dist/exports/* and dist/view-widgets/* at runtime. When
-// only cli.mjs was renamed, `view test` under that overlap failed on a
+// only cli.mjs was renamed, `view check` under that overlap failed on a
 // partly written export.
 import { build } from "esbuild";
 import { buildPublicationWorker } from "./pub-worker.mjs";
@@ -110,7 +110,7 @@ await build({
 
 // Also build the public view-widgets layer (the `beebox/view-widgets`
 // export) to dist/view-widgets/index.js. Box-authored views import this
-// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view test` resolves it via the
+// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view check` resolves it via the
 // package `exports` map (the temp-dir node_modules/beebox symlink in
 // src/cli/commands/view/command.ts), and wraps the rendered view in the bundle's
 // NodeViewHostProvider. Only React (incl. its runtime entry points) stays
@@ -130,6 +130,11 @@ await build({
   target: "node22",
   jsx: "automatic",
   external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+  // This bundle only renders on the server (a browser maps the specifier to
+  // the app's own modules, webapp/views/compiler/compile.ts), where no
+  // stylesheet applies. KaTeX's CSS (components/Markdown/math-render.ts) and
+  // the fonts it names load as nothing.
+  loader: { ".css": "empty" },
   sourcemap: true,
   logLevel: "warning",
 });

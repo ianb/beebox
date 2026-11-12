@@ -18,7 +18,7 @@ title on tiles, card pages and chat embeds.
 
 **Issues addressed:** the four in the frontmatter. Related, not closed:
 
-- [Browse, plate, and folder counts disagree](../../../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md):
+- [Browse, plate, and folder counts disagree](../../../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md):
   not changed here. The Browse folder count stops at nested places if taken
   from the place walk, so it needs its own design (plan review finding 5).
 - [Collection views are badly defined](../../../issues/features/2026-08-19-collection-views-are-badly-defined.md):

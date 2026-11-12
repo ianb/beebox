@@ -30,6 +30,7 @@ import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { boxSlug as resolveBoxSlug } from "../lib/box-slug.js";
 import { notifyFakeMode } from "./notification/fake-mode.js";
+import { serverSecret } from "../lib/server-secrets.js";
 
 export interface SendPushResult {
   sent: number;
@@ -55,7 +56,7 @@ function vapidKeys(): { publicKey: string; privateKey: string } | null {
   // (lib/env.ts serverEnvSchema); the reads stay here alongside the
   // "throw if unconfigured" logic that a schema shouldn't own.
   const publicKey = process.env.BBX_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.BBX_VAPID_PRIVATE_KEY;
+  const privateKey = serverSecret("BBX_VAPID_PRIVATE_KEY");
   return publicKey && privateKey ? { publicKey, privateKey } : null;
 }
 

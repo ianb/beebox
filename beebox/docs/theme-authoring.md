@@ -37,6 +37,13 @@ outlining what a reader would struggle with, each labelled:
   does not show that pair;
 - text on a panel the theme did not declare that flips the paper's light or
   dark side (`surface #ffffff`), such as a white app panel in a dark card.
+- text in a card colored by an app palette utility (`app ink text-warm-700`)
+  instead of one of the card's inks, on any theme. It reads on this theme only
+  by chance; a dark theme will show it. Text on an app panel inside the card
+  (a plain `Card`, a `Notice`, a `bg-white` row) keeps app ink and is skipped.
+  The fix is in the component: render the text with a primitive that reads
+  `MaterialContext` (`Text`, `Hint`, `StatusMessage`, `ErrorText`,
+  `InlineAction`), or a `text-card-*` class.
 
 It then loads the studio at phone, tablet and desktop screen sizes and lists
 artwork that leaves a bare strip in its box, and painted artwork (WebP, PNG,
@@ -46,7 +53,9 @@ artwork to fill: `cover`, or `auto max(920px, 100%)` to keep a chosen scale.
 An SVG pattern may tile.
 
 At the same screens it lists every rule of the theme's CSS (scoped by
-`data-chrome-theme` or `data-card-theme`) that matches nothing in the studio,
+`data-chrome-theme` or `data-card-theme`), and every rule that names no theme
+in a sheet under `themes/` (worn by every theme, such as the question patch;
+older sheets are listed in `SHARED_NOT_YET_COVERED`), that matches nothing in the studio,
 and each `bbx-` member of an `:is()` list that matches nothing in its place:
 a surface the studio lacks, or dead CSS. Render the surface in
 `pages/dev/components/ThemeStudioHarness/` with the real component, delete a

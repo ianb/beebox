@@ -29,6 +29,8 @@ interface SubscriptionRecord {
   boxes: string[];
   createdAt: string;
   ua?: string | undefined;
+  /** Who turned this on: the signed-in person's email. Absent when no person was signed in. */
+  subscribedBy?: string | undefined;
 }
 
 /** Endpoint → record. */
@@ -39,6 +41,7 @@ const subscriptionRecordSchema = z.object({
   boxes: z.array(z.string()),
   createdAt: z.string(),
   ua: z.string().optional(),
+  subscribedBy: z.string().optional(),
 });
 
 const subscriptionStoreSchema = z.record(z.string(), subscriptionRecordSchema);
@@ -156,21 +159,24 @@ export async function addSubscription(opts: {
   boxSlug: string;
   subscription: StoredPushSubscription;
   ua?: string | undefined;
+  subscribedBy?: string | undefined;
   now: Date;
 }): Promise<void> {
-  const { boxSlug, subscription, ua, now } = opts;
+  const { boxSlug, subscription, ua, subscribedBy, now } = opts;
   await withStoreLock(async (store) => {
     const existing = store[subscription.endpoint];
     if (existing) {
       existing.keys = subscription.keys;
       if (!existing.boxes.includes(boxSlug)) existing.boxes.push(boxSlug);
       if (ua) existing.ua = ua;
+      if (subscribedBy) existing.subscribedBy = subscribedBy;
     } else {
       store[subscription.endpoint] = {
         keys: subscription.keys,
         boxes: [boxSlug],
         createdAt: now.toISOString(),
         ...(ua ? { ua } : {}),
+        ...(subscribedBy ? { subscribedBy } : {}),
       };
     }
     await saveStore(store);
@@ -219,6 +225,7 @@ export async function transferEndpoint(opts: {
       boxes,
       createdAt: old?.createdAt ?? now.toISOString(),
       ...(old?.ua ? { ua: old.ua } : {}),
+      ...(old?.subscribedBy ? { subscribedBy: old.subscribedBy } : {}),
     };
     await saveStore(store);
   });

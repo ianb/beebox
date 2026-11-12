@@ -11,9 +11,9 @@
 // hosts with a strict CSP import the stylesheet instead:
 //
 //   import "@ianbicking/canvas-loop/browser/figure.css";
-import type { CanvasSize } from "../core/tea.js";
+import type { CanvasSize, ControlBox } from "../core/tea.js";
 import { toTeaModule } from "../headless/tea-load.js";
-import { buildControls } from "./controls.js";
+import { buildControls, ControlOverlay } from "./controls.js";
 import { sanitizeInitialParams } from "./param-validate.js";
 import { Runtime, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
 import type { PlaygroundModule } from "./sketch-types.js";
@@ -57,6 +57,8 @@ export interface AttachSketchOptions {
   onEvent?: (entry: EmittedEvent) => void;
   /** Called once if a frame throws; the loop stops. Default: `console.error`. */
   onError?: (error: unknown) => void;
+  /** After each draw: where `v.control` placed param inputs this frame. */
+  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
 }
 
 export interface AttachedSketch {
@@ -83,6 +85,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     ctx,
     width: size.width,
     height: size.height,
+    pixelRatio: pixelRatioOf(canvas),
     seed: opts.seed,
     // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
     ...(initialParams !== undefined ? { initialParams } : {}),
@@ -92,6 +95,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     },
     ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
+    ...(opts.onPlace !== undefined ? { onPlace: opts.onPlace } : {}),
   });
   runtime.setPaused(opts.paused);
   // Wire input BEFORE starting the loop: if listener setup throws (hostile or
@@ -101,6 +105,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     runtime.start();
   } catch (e) {
     detachInput();
+    runtime.stop();
     throw e;
   }
   return {
@@ -157,12 +162,16 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
 
   const container = document.createElement("div");
   container.className = "cl-figure";
+  // The stage hugs the canvas so over-canvas inputs (`v.control`) position against it.
+  const stage = document.createElement("div");
+  stage.className = "cl-stage";
+  stage.style.position = "relative";
   const canvas = document.createElement("canvas");
   canvas.className = "cl-canvas";
-  canvas.width = size.width;
-  canvas.height = size.height;
+  sizeCanvas(canvas, size);
   canvas.tabIndex = 0;
-  container.append(canvas);
+  stage.append(canvas);
+  container.append(stage);
 
   const frameLabel = document.createElement("span");
   frameLabel.className = "cl-frame";
@@ -171,6 +180,24 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   // `attached` is assigned right below; runtime callbacks only fire from rAF
   // frames and control events, never synchronously during attachSketch.
   let attached: AttachedSketch | null = null;
+  // Over-canvas inputs. The first draw runs inside attachSketch, before
+  // `attached` exists, so the latest placements are kept and synced after.
+  let placed: ReadonlyMap<string, ControlBox> = new Map();
+  let excluded: ReadonlySet<string> = new Set();
+  let renderPanel = (): void => {};
+  const overlay = new ControlOverlay({
+    stage,
+    size,
+    decl,
+    handlers: {
+      onParam: (name, value) => attached?.runtime.setParam(name, value),
+      onTrigger: (name) => attached?.runtime.trigger(name),
+    },
+    onShownChange: (names) => {
+      excluded = names;
+      renderPanel();
+    },
+  });
   // Raw overrides — attachSketch is the single validation point (no duplicate here).
   attached = attachSketch(canvas, {
     module,
@@ -180,6 +207,10 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
     onFrame: (frame) => {
       frameLabel.textContent = `frame ${frame}`;
+    },
+    onPlace: (placements) => {
+      placed = placements;
+      if (attached !== null) overlay.sync(placements, attached.runtime.paramValues());
     },
     onEvent: (entry) => {
       opts.onEvent?.(entry);
@@ -196,7 +227,7 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   // The panel is rebuilt after a restart so widgets show the re-applied
   // initial values (widget edits keep themselves in sync; restart doesn't).
   const panelHost = document.createElement("div");
-  const renderPanel = (): void => {
+  renderPanel = (): void => {
     panelHost.replaceChildren(
       buildControls({
         decl,
@@ -204,10 +235,10 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
         onParam: (name, value) => runtime.setParam(name, value),
         onTrigger: (name) => runtime.trigger(name),
         classPrefix: "cl-",
+        exclude: excluded,
       }),
     );
   };
-
   // Any throw between a started runtime and a returned teardown would leak the
   // rAF loop + listeners with no way to stop them — tear down before rethrowing.
   try {
@@ -217,14 +248,18 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
       container.append(panelHost);
     }
     mount.append(container);
+    // After insertion, so the stage has its shown width for scaling input text.
+    overlay.sync(placed, runtime.paramValues());
   } catch (e) {
     attached.teardown();
+    overlay.remove();
     container.remove();
     throw e;
   }
 
   return () => {
     attached.teardown();
+    overlay.remove();
     container.remove();
   };
 }
@@ -273,6 +308,7 @@ function coerceModule(raw: unknown): PlaygroundModule {
     init: loaded.init,
     update: loaded.update,
     draw: loaded.draw,
+    ...(loaded.sound === undefined ? {} : { sound: loaded.sound }),
   };
 }
 
@@ -285,13 +321,15 @@ function coerceModule(raw: unknown): PlaygroundModule {
 export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
   let pressed = false;
   const onDown = (e: MouseEvent): void => {
+    runtime.enableSound();
     pressed = true;
     canvas.focus();
     const p = coords(canvas, e);
     runtime.pointer({ type: "mousedown", x: p.x, y: p.y });
   };
+  // Every move is sent, pressed or not (as in a scripted events file), so a
+  // sketch can react to hover; the sketch tracks its own pressed state.
   const onMove = (e: MouseEvent): void => {
-    if (!pressed) return;
     const p = coords(canvas, e);
     runtime.pointer({ type: "mousemove", x: p.x, y: p.y });
   };
@@ -303,6 +341,7 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
   };
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
+    runtime.enableSound();
     if (e.key.startsWith("Arrow")) e.preventDefault();
     runtime.key({ type: "keydown", key: e.key });
   };
@@ -324,9 +363,39 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
 }
 
 /** CSS→canvas coordinate mapping for a pointer event (accounts for display scaling). */
+/**
+ * Size a canvas for the screen's pixel density: `size` logical pixels shown at
+ * that size, backed by `size × devicePixelRatio` device pixels, so drawing is
+ * sharp on a high-density display. The ratio is kept on the element.
+ */
+export function sizeCanvas(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
+  setDensity(canvas, size);
+  canvas.style.width = `${size.width}px`;
+}
+
+/** Give a canvas a backing store of `size × devicePixelRatio` device pixels (its display size is left alone). */
+export function setDensity(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
+  // No devicePixelRatio (a non-browser host) means 1; very dense screens are capped at 3.
+  const dpr = Number(globalThis.devicePixelRatio);
+  const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(3, Math.max(1, dpr)) : 1;
+  canvas.width = Math.round(size.width * ratio);
+  canvas.height = Math.round(size.height * ratio);
+  RATIOS.set(canvas, ratio);
+}
+
+// The pixel ratio each canvas was sized with (kept off the DOM).
+const RATIOS = new WeakMap<HTMLCanvasElement, number>();
+
+/** The pixel ratio `sizeCanvas` gave a canvas (1 for a canvas it did not size). */
+export function pixelRatioOf(canvas: HTMLCanvasElement): number {
+  return RATIOS.get(canvas) ?? 1;
+}
+
 function coords(canvas: HTMLCanvasElement, e: MouseEvent): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const sx = rect.width === 0 ? 1 : canvas.width / rect.width;
-  const sy = rect.height === 0 ? 1 : canvas.height / rect.height;
+  // In logical (sketch) pixels: the backing store is pixelRatio times larger.
+  const ratio = pixelRatioOf(canvas);
+  const sx = rect.width === 0 ? 1 : canvas.width / ratio / rect.width;
+  const sy = rect.height === 0 ? 1 : canvas.height / ratio / rect.height;
   return { x: Math.round((e.clientX - rect.left) * sx), y: Math.round((e.clientY - rect.top) * sy) };
 }

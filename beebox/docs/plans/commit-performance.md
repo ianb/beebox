@@ -96,7 +96,7 @@ Make the heavy externals lazy (dynamic import at use site):
 
 - `typescript` in `cli/commands/view-typecheck.ts`
 - `@anthropic-ai/claude-agent-sdk` in `core/agent/stream.ts` and
-  `services/scan-vision-claude.ts`
+  `services/scan-vision-claude/core.ts`
 - `sharp` in `core/commands/scan-import-helpers.ts` and
   `core/commands/document-extract.ts`
 

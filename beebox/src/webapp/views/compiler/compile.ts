@@ -24,7 +24,7 @@ import { boxPackageHost, type ViewHostContext } from "../node-view-runtime.js";
  *   `window.__bbxReact`/`window.__bbxReactDOM` shims, as the running app's
  *   frontend dynamically imports it.
  * - "node" — React and `react-dom` externalized to the bare specifiers so a Node
- *   renderer (`bbx view test`) resolves the real React from node_modules and
+ *   renderer (`bbx view check`) resolves the real React from node_modules and
  *   shares one instance with `react-dom/server`. Emits an inline
  *   source map and a box-relative source name so render-time stack traces map
  *   back to the `.tsx`.
@@ -168,7 +168,7 @@ const reactExternalPlugin: esbuild.Plugin = {
  * to the host's `window.__bbxViewWidgets` registry, mirroring the React shim.
  * The host (ViewRenderer) installs that global before any view loads. Node
  * builds externalize the bare specifier instead (resolved via the package
- * `exports` map — see compileView and `bbx view test`).
+ * `exports` map — see compileView and `bbx view check`).
  */
 const viewWidgetsExternalPlugin: esbuild.Plugin = {
   name: "view-widgets-external",
@@ -316,6 +316,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
   };
 
   let mtimeIso: string;
@@ -341,7 +342,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     const { output } = await bundleView(viewPath, { target: "node" });
     const result = await importViewMetadata(output, viewHost);
     if (result === null) meta = fallback;
-    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}` };
+    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}`, metadataError: `${result.invalid}` };
     else {
       const imported = result.meta;
       meta = {
@@ -352,6 +353,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
         modes: imported.modes ?? ["page"],
         layout: imported.layout ?? "inset",
         rendersCardTypes: imported.rendersCardTypes ?? [],
+        checkStates: imported.checkStates ?? [],
       };
     }
   } catch (_e) {
@@ -389,7 +391,7 @@ export async function compileView(
 /**
  * Edit-time compile check for the validation hooks: returns null if the view
  * compiles, or a human-readable error message otherwise. Compile only — no
- * execution, no type-check (the deeper signal is `bbx view test`), and no
+ * execution, no type-check (the deeper signal is `bbx view check`), and no
  * metadata import (a syntax-checking hook shouldn't pay for a subprocess
  * import). Shared by the shell `bbx validate --hook` and the in-process
  * `cardValidatorHook` so both surface the same error. Uses the default

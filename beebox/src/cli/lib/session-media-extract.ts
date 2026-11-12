@@ -120,18 +120,26 @@ function messageContent(record: unknown): unknown[] | null {
   return Array.isArray(content) ? content : null;
 }
 
+/** An image block's payload field and declared type: Claude's `source`, or pi's block itself. */
+interface ImageSource {
+  data: unknown;
+  mediaType: unknown;
+}
+
 /**
- * The `source` object of the `index`-th image block, or null when the entry
- * has no such image. Counts image blocks only, in document order — the same
- * enumeration `transformContent` uses to mint the reference.
+ * The source of the `index`-th image block, or null when the entry has no
+ * such image. Counts image blocks only, in document order — the same
+ * enumeration `transformContent` uses to mint the reference. A Claude block
+ * holds `source.{data,media_type}`; a pi block holds `data` and `mimeType`.
  */
-function imageSourceAt(content: unknown[], index: number): Record<string, unknown> | null {
+function imageSourceAt(content: unknown[], index: number): ImageSource | null {
   let seen = 0;
   for (const block of content) {
     if (!isRecord(block) || block["type"] !== "image") continue;
     if (seen === index) {
       const source = block["source"];
-      return isRecord(source) ? source : null;
+      if (isRecord(source)) return { data: source["data"], mediaType: source["media_type"] };
+      return "data" in block ? { data: block["data"], mediaType: block["mimeType"] } : null;
     }
     seen += 1;
   }
@@ -139,8 +147,8 @@ function imageSourceAt(content: unknown[], index: number): Record<string, unknow
 }
 
 /** Which detached payload this source's `data` field holds, or -1. */
-function slotIndexOf(source: Record<string, unknown>): number {
-  const data = source["data"];
+function slotIndexOf(source: ImageSource): number {
+  const { data } = source;
   if (typeof data !== "string" || !data.startsWith(SLOT_PREFIX)) return -1;
   const index = Number(data.slice(SLOT_PREFIX.length));
   return Number.isInteger(index) && index >= 0 ? index : -1;
@@ -177,7 +185,7 @@ export function extractSessionMedia(
   const found = slot === -1 ? undefined : slots[slot];
   if (found === undefined) return { ok: false, reason: "no-payload" };
 
-  const declared = source["media_type"];
+  const declared = source.mediaType;
   const mediaType = typeof declared === "string" && SERVABLE_MEDIA_TYPES.has(declared)
     ? declared
     : "application/octet-stream";

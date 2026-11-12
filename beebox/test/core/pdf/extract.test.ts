@@ -27,6 +27,7 @@ import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
@@ -57,13 +58,13 @@ function parsePdfCard(content: string, source: string) {
 }
 
 // What `runPdfMode` reports in `data`.
-const PdfImportData = z.object({ extracted: z.boolean(), sessionCardPath: z.string(), intakeJobPath: z.string().nullable() });
+const PdfImportData = z.object({ extracted: z.boolean(), sessionCardPath: z.string(), intakeJobPaths: z.array(z.string()).nullable() });
 const importData = (result: CommandResult) => PdfImportData.parse(result.data);
 
 // `importData` as the checks expect it. The session card name carries a clock stamp and a
 // random suffix; the job card name carries the clock.
 const sessionCardPath = str`_content/inbox/scan-${any(String)}.capture-session.card`;
-const intakeJobPath = str`_bookkeeping/jobs/${any(String)}`;
+const intakeJobPaths = [str`_bookkeeping/jobs/${any(String)}`];
 
 // The session card `runPdfMode` writes: it lists the pdf card, plus the uploader when one is given.
 const sessionCardText = (uploader?: string) => `---
@@ -127,7 +128,7 @@ void test("A successful extraction lands an extracted pdf card", async (t) => {
   const result = await importPdf(box, { docling });
   t.check({ success: result.success, data: importData(result) }, {
     success: true,
-    data: { extracted: true, sessionCardPath, intakeJobPath },
+    data: { extracted: true, sessionCardPath, intakeJobPaths },
   });
 
   // The fake was asked for a no-OCR extraction — `do_ocr=False` is the default, not
@@ -382,10 +383,13 @@ void test("Nothing is lost:", async (t) => {
   });
   const box = await makeTmpBox({ git: true });
   const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
+  const warnings = consoleLines(t, "warn");
   const result = await importPdf(box, { docling });
+  // The server log names the PDF and why extraction failed:
+  t.check(warnings(), ["[scan-import] Docling extraction failed for incoming.pdf: Docling exited 1: killed by the OOM killer"]);
   t.check({ success: result.success, data: importData(result) }, {
     success: true,
-    data: { extracted: false, sessionCardPath, intakeJobPath },
+    data: { extracted: false, sessionCardPath, intakeJobPaths },
   });
 
   t.check(await attachContents(box), "source.pdf");
@@ -401,7 +405,7 @@ void test("Nothing is lost:", async (t) => {
     },
     body: "",
   });
-  // Intake still completed (the `intakeJobPath` above) — a Docling problem is not an intake problem.
+  // Intake still completed (the `intakeJobPaths` above) — a Docling problem is not an intake problem.
 });
 
 // ## Empty markdown is an extraction with an empty body, not a failure
@@ -419,7 +423,7 @@ void test("A document with no readable text is a real answer.", async (t) => {
   });
   const box = await makeTmpBox({ git: true });
   const result = await importPdf(box, { docling: createFakeDocling({ markdown: "", pageCount: 1 }) });
-  t.check(importData(result), { extracted: true, sessionCardPath, intakeJobPath });
+  t.check(importData(result), { extracted: true, sessionCardPath, intakeJobPaths });
 
   const { rel, content } = await readPdfCard(box);
   const card = parsePdfCard(content, rel);
@@ -585,6 +589,8 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
   const attachAbsDir = join(scratch, "attach");
   await mkdir(workDir, { recursive: true });
   await mkdir(attachAbsDir, { recursive: true });
+  // The source is a real PDF so the text-layer step reads a file that exists.
+  await writeFile(join(scratch, "source.pdf"), textPdf());
 
   const tooMany = await extractPdf({
     docling: createFakeDocling({ pageCount: MAX_EXTRACTION_ARTIFACTS + 1 }),
@@ -615,7 +621,8 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
     ok: true,
     value: {
       body: "# Fake Document\n\nExtracted body.\n",
-      assetNames: ["docling.json.gz", "page-001.webp", "page-002.webp", "page-003.webp", "figure-001.webp", "figure-002.webp"],
+      // The text layer is stored beside the renders when poppler is installed.
+      assetNames: ["docling.json.gz", ...(havePdftotext ? ["text-layer.txt"] : []), "page-001.webp", "page-002.webp", "page-003.webp", "figure-001.webp", "figure-002.webp"],
       doclingFilename: "docling.json.gz",
       doclingVersion: "2.117.0-fake",
       pageCount: 3,

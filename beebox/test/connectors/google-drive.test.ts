@@ -450,7 +450,7 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
     await box.read("_bookkeeping/connectors/google-drive.state.json"),
   );
   t.check(calls.getFile, 1);
-  t.check(trashed, { success: true, created: [], updated: ["_content/drive/folder/Folder.gfolder.card"] });
+  t.check(trashed, { success: true, created: [], updated: [] });
   t.check((await box.list()).split("\n").filter((f) => f.startsWith("_content/drive/")), [
     "_content/drive/.gitkeep",
     "_content/drive/folder",
@@ -474,7 +474,7 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
       "_content/drive/folder/Folder_Child.attach/Sheet1.json",
       "_content/drive/folder/Folder_Child.gsheet.card",
     ],
-    updated: ["_content/drive/folder/Folder.gfolder.card"],
+    updated: [],
   });
   t.check((await box.list()).split("\n").filter((f) => f.startsWith("_content/drive/")), [
     "_content/drive/.gitkeep",

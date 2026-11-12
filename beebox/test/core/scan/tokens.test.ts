@@ -37,14 +37,6 @@ const MOBILE_STORE = ".beebox/mobile-devices.secret.json";
 void test("Mint returns the secret once; the store keeps only a hash", async (t) => {
   t.teardown(async () => {
     try {
-      await idBox.cleanup();
-      await oldBox.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  t.teardown(async () => {
-    try {
       await box.cleanup();
     } catch (error) {
       t.error(error);
@@ -89,9 +81,6 @@ void test("Mint returns the secret once; the store keeps only a hash", async (t)
     createdAt: minted.createdAt,
     createdBy: "owner@example.com",
     lastUsedAt: isoDate(),
-    lastClientContract: undefined,
-    lastClientBuild: undefined,
-    lastClientBuiltAt: undefined,
   });
 
   t.check(await resolveScanRequestAuth(box.root, { authorization: minted.token }), null);
@@ -110,7 +99,6 @@ void test("Mint returns the secret once; the store keeps only a hash", async (t)
       createdBy: "owner@example.com",
       lastUsedAt: isoDate(),
       revoked: false,
-      lastClient: null,
     },
   ]);
 
@@ -203,63 +191,4 @@ void test("Mint returns the secret once; the store keeps only a hash", async (t)
     fs.readdirSync(path.join(box.root, ".beebox")).filter((f) => f.startsWith("scan-tokens.secret.json.tmp")),
     [],
   );
-
-  // ## The request path records what the uploader said it was
-  //
-  // An uploader volunteers its contract version and build on every request. The box
-  // records them and never acts on them at the gate — an old uploader is reported,
-  // not refused — so this is provenance, not a credential check.
-
-  const idBox = await makeTmpBox();
-  const idToken = await createScanToken(idBox.root, { name: "scansnap-laptop", createdBy: null });
-  await resolveScanRequestAuth(idBox.root, {
-    authorization: `Bearer ${idToken.token}`,
-    "x-scan-contract": "1",
-    "x-scan-client-build": "16e177c0",
-    "x-scan-client-built-at": "2026-09-14T18:46:01.243Z",
-  });
-  t.check(listScanTokens(idBox.root)[0]?.lastClient, {
-    contract: "1",
-    build: "16e177c0",
-    builtAt: "2026-09-14T18:46:01.243Z",
-  });
-
-  // A checkout reports `source` instead of a build, which is the honest answer: it
-  // runs current source every sweep and cannot drift.
-
-  await resolveScanRequestAuth(idBox.root, {
-    authorization: `Bearer ${idToken.token}`,
-    "x-scan-contract": "1",
-    "x-scan-client-build": "source",
-  });
-  t.check(listScanTokens(idBox.root)[0]?.lastClient, { contract: "1", build: "source", builtAt: null });
-
-  // A later request that reports nothing CLEARS what was recorded, rather than
-  // leaving the previous uploader's identity in place. One token can be used by
-  // more than one uploader — a second laptop, or the same laptop after an older
-  // bundle is copied over the newer one — and keeping the newer identity would
-  // answer the stale-uploader question backwards, reporting a current build for a
-  // request an older uploader made.
-
-  await resolveScanRequestAuth(idBox.root, { authorization: `Bearer ${idToken.token}` });
-  t.check(listScanTokens(idBox.root)[0]?.lastClient, null);
-
-  // An uploader too old to send the headers leaves `lastClient` null rather than
-  // recording a blank. "Not reported" and "reported as nothing" have to stay
-  // distinct, because the freshness health check treats the first as no opinion and
-  // would otherwise call every pre-existing uploader stale.
-
-  const oldBox = await makeTmpBox();
-  const oldToken = await createScanToken(oldBox.root, { name: "older-uploader", createdBy: null });
-  await resolveScanRequestAuth(oldBox.root, { authorization: `Bearer ${oldToken.token}` });
-  t.check(listScanTokens(oldBox.root)[0]?.lastClient, null);
-
-  // Untrusted header text is capped, so a hostile or broken client cannot bloat the
-  // credential store:
-
-  await resolveScanRequestAuth(oldBox.root, {
-    authorization: `Bearer ${oldToken.token}`,
-    "x-scan-client-build": "x".repeat(5000),
-  });
-  t.check(listScanTokens(oldBox.root)[0]?.lastClient, { contract: null, build: "x".repeat(100), builtAt: null });
 });

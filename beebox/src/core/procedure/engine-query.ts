@@ -6,7 +6,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { fmt } from "../../lib/format.js";
 import { ok, okVoid, err, type Result } from "../../shared/result.js";
 import { invariant } from "../../shared/invariant.js";
 import type { CommandContext } from "../command-runner.js";
@@ -56,13 +55,13 @@ export async function listProcedures(ctx: CommandContext): Promise<Result<string
     const cards = files.filter((f) => f.endsWith(".procedure.card"));
 
     if (cards.length === 0) {
-      ctx.writeLine(fmt.dim("No procedure definitions found."));
+      ctx.writeLine("No procedure definitions found.");
       return ok([]);
     }
 
     for (const card of cards) {
       const name = card.replace(".procedure.card", "");
-      ctx.writeLine(`  ${fmt.strong(name)} ${fmt.dim(card)}`);
+      ctx.writeLine(`  ${name} ${card}`);
     }
 
     return ok(cards);
@@ -70,7 +69,7 @@ export async function listProcedures(ctx: CommandContext): Promise<Result<string
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedures directory ${procedureDir}:`, e);
     }
-    ctx.writeLine(fmt.dim("No _config/procedures/ directory."));
+    ctx.writeLine("No _config/procedures/ directory.");
     return ok([]);
   }
 }
@@ -84,7 +83,7 @@ export async function procedureStatus(
 ): Promise<Result<void, ProcedureError>> {
   const resolved = await resolveRunDir(ctx.boxRoot, runDir);
   if (resolved === null) {
-    ctx.writeLine(fmt.dim("No procedure runs found."));
+    ctx.writeLine("No procedure runs found.");
     return okVoid;
   }
 
@@ -97,11 +96,11 @@ export async function procedureStatus(
       return err({ cause: "parse", message: `Could not read run card: ${runCardPath}` });
     }
 
-    ctx.writeLine(fmt.header(`Procedure Run: ${run.procedure}`));
-    ctx.writeLine(fmt.kv("Outcome", fmt.status(run.outcome ?? "not finished")));
-    ctx.writeLine(fmt.kv("Started", run["started-at"]));
+    ctx.writeLine(`Procedure Run: ${run.procedure}`);
+    ctx.writeLine(`Outcome: ${run.outcome ?? "not finished"}`);
+    ctx.writeLine(`Started: ${run["started-at"]}`);
     if (run["completed-at"] !== undefined) {
-      ctx.writeLine(fmt.kv("Completed", run["completed-at"]));
+      ctx.writeLine(`Completed: ${run["completed-at"]}`);
     }
     ctx.writeLine("");
 
@@ -109,25 +108,25 @@ export async function procedureStatus(
       const status = step.status;
       const icon =
         status === "completed"
-          ? fmt.success("✓")
+          ? "✓"
           : status === "skipped"
-            ? fmt.dim("○")
+            ? "○"
             : status === "failed"
-              ? fmt.error("✗")
+              ? "✗"
               : status === "running"
-                ? fmt.warn("▸")
-                : fmt.dim("·");
-      ctx.writeLine(`  ${icon} ${fmt.strong(step.id)} ${fmt.dim(`(${status})`)}`);
+                ? "▸"
+                : "·";
+      ctx.writeLine(`  ${icon} ${step.id} (${status})`);
       if (step.run?.error !== undefined) {
-        ctx.writeLine(fmt.fail(`      ${step.run.error}`));
+        ctx.writeLine(`✗       ${step.run.error}`);
       }
       if (step.validate?.error !== undefined) {
         // An inconclusive check produced no verdict — say that, in the
         // warning voice, instead of printing it as a failure.
         ctx.writeLine(
           step.validate.status === "inconclusive"
-            ? fmt.warn(`      ? ${step.validate.error}`)
-            : fmt.fail(`      ${step.validate.error}`)
+            ? `      ? ${step.validate.error}`
+            : `✗       ${step.validate.error}`
         );
       }
     }

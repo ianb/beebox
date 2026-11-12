@@ -5,18 +5,20 @@
  */
 
 import type { FastifyInstance, FastifyError } from "fastify";
-import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
+import { registerBoxAdmission } from "./box-admission.js";
+import { createMaintenanceChatCheck } from "./maintenance-quiesce.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { assertEventSchemaNotNewer, createEventBus } from "../../core/event-bus/core.js";
 import { registerAuthSurface } from "../routes/auth/register.js";
 import { registerGoogleServicesCallback } from "../routes/admin.js";
-import { isHubMode } from "../auth.js";
+import { hubSecret, isHubMode } from "../auth.js";
 import { maybeArmFirstRunSetup } from "../setup-token.js";
 import { removeServeEndpoint } from "../../core/serve-endpoint.js";
 import { refreshHubMeta } from "../../core/hub-meta.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { sealServerSecrets } from "../../lib/server-secrets.js";
 import { sweepStaleIndexLock } from "../../lib/git-stale-lock.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../lib/git-lock.js";
 import type { InternalServerOptions } from "../server-types.js";
@@ -30,20 +32,13 @@ import {
   registerUnbuiltFrontendRoot,
 } from "../server-root/root-routes.js";
 import { registerCspReportRoute } from "../routes/api-csp-report.js";
+import { registerDocumentSecurityHeaders } from "../document-security-headers.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
-import {
-  DEV_BUNDLE_RELOAD_EXIT_CODE,
-  abandonDevBundleDrain,
-  devBundleWasReplaced,
-  DEV_BUNDLE_RELOAD_REQUEST,
-  DEV_BUNDLE_RELOAD_NOW,
-  DEV_BUNDLE_RELOAD_ABORTED,
-} from "../../lib/dev-bundle-reload.js";
-import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../../core/chat/schedules/core.js";
+import { DEV_BUNDLE_RELOAD_EXIT_CODE, abandonDevBundleDrain, devBundleWasReplaced, DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED } from "../../lib/dev-bundle-reload.js";
 import { getChatRuntime } from "../chat-runtime.js";
-import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
+import { acquireBoxStartup, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
 import { markStartupPhase } from "../../lib/startup-timing.js";
 import { listenOn, resolveListenTarget } from "./listen-target.js";
@@ -53,6 +48,8 @@ import { removeHomeSnapshot, writeHomeSnapshotsAtShutdown } from "../../core/cha
 import { startServeMemoryProbe } from "./memory-probe.js";
 import { onUnitHost } from "../../lib/unit-host.js";
 import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
+import { stopBrowserHosts } from "../../core/browser/host/start.js";
+import { setRuntimeLintWriting } from "../trpc/routers/debug-log.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -162,6 +159,9 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
     mode: "prod",
     reportPath: PROD_CSP_REPORT_PATH,
   });
+  // After the CSP hook: that hook yields to any route that already set a CSP,
+  // and this one adds the enforced frame-ancestors CSP.
+  registerDocumentSecurityHeaders(server);
 
   // Register cookie support (used for auth sessions)
   await server.register(fastifyCookie);
@@ -283,6 +283,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // the socket bind so a smuggled `openAccess: true` never kills the previous
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
+  sealServerSecrets(process.env);
+  setRuntimeLintWriting(options.devSurfaces === true || options.runtimeLint === true);
   markStartupPhase("cli-loaded");
   // Decided before any side effect: a misconfigured unit (a passed socket with
   // no path, or two of them) must fail here, not after the previous server
@@ -361,10 +363,11 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     console.log(`\nReceived ${signal}, shutting down...`);
     clearInterval(maintenanceCheck); await (await memoryProbe).stop();
     await stopLocalBackupRunnerForServer();
+    await stopBrowserHosts();
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
-    await writeHomeSnapshotsAtShutdown(boxes, process.env.BBX_HUB_SECRET);
+    await writeHomeSnapshotsAtShutdown(boxes, hubSecret());
     for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     // Let any git write we started finish before we go. Exiting on top of one
     // orphans it into whatever SIGKILL follows (the hub's escalation, or
@@ -417,7 +420,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
 
     // The same poll quiesces chat for CLI maintenance and supervised reload.
     // The supervisor owns reload admission across both child generations.
-    const paused = new Set<string>();
+    const checkBoxChat = createMaintenanceChatCheck();
     let checking = false;
     let reloadRequested = false;
     let warned = false;
@@ -439,18 +442,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
       void withoutBoxWork(async () => {
         for (const box of boxes) {
           const runtime = getChatRuntime(box.boxRoot);
-          if (!runtime) continue;
-          // Only a live owner pauses chat; a record without one is unfinished maintenance, not closure.
-          if ((await boxMaintenanceStatus(box.boxRoot))?.owner) {
-            pauseBoxChatSchedules(box.boxRoot);
-            paused.add(box.boxRoot);
-            if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
-              runtime.registry.quiesceForMaintenance();
-            }
-          } else if (paused.delete(box.boxRoot)) {
-            runtime.registry.resumeAfterMaintenance();
-            resumeBoxChatSchedules(box.boxRoot);
-          }
+          if (runtime) await checkBoxChat(box.boxRoot, runtime.registry);
         }
         if (reloadRequested || warned || !(await devBundleWasReplaced())) return;
         if (isHubMode() && process.send) {

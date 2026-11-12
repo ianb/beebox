@@ -49,3 +49,5 @@ sits beside every other record instead of in a per-app JSON store.
 
 Whether this is the first starter built under the use-case decision, ahead of
 lending, inventory, meal planning, and scanned paper.
+
+Re-reviewed 2026-10-30: Still open. `bbx query todos --group` takes place (default) or status; 'plate' in the body is likely a typo for place.

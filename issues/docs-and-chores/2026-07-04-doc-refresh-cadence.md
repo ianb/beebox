@@ -28,3 +28,5 @@ Proposal: a periodic doc-refresh pass (add to
 The 2026-07 baseline (docs verified against code) makes drift-since-last-
 refresh a meaningful signal; keep the cadence low (quarterly-ish) so it
 stays an adjudication, not a chore.
+
+Re-reviewed 2026-10-30: still no periodic docs-vs-code adjudication. The weekly agent-docs-refresh schedule covers only the public site corpus (site/docs/), not beebox/docs/ or module AGENTS.md files.

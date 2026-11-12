@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../../../test/helpers/console-lines.js";
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
 import { storageScopeFor } from "../../../../../src/lib/storage-scope.js";
 import type { Emission } from "../../../../../src/input/emission.js";
@@ -282,7 +283,10 @@ void test("The session-storage quota is about 5 MB, so two large photos can exce
   const storage = memoryStorage();
   storage.setItem = () => { throw new DOMException("The quota has been exceeded.", "QuotaExceededError"); };
   const store = open(storage);
+  const warnings = consoleLines(t, "warn");
   store.stage(typed("big-1", "two large photos"), chatBinding);
+  // The console says the send has no recovery copy:
+  t.check(warnings(), ["Pending send is too large to save for reload recovery; sending without a recovery copy. QuotaExceededError: The quota has been exceeded."]);
   t.check({ live: store.getSnapshot(), saved: [...storage.data.keys()] }, { live: [{ emission: typed("big-1", "two large photos"), binding: chatBinding, status: "pending" }], saved: [] });
 
   // Its acceptance then clears it like any other send:

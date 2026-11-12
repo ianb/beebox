@@ -3,8 +3,8 @@
 A menu-bar app around a box. It pairs with boxes (Copy Link (Mac) in a box's
 Settings → Companion Apps, then Pair with a Box… here, or a `beebox://pair`
 link clicked in the browser) and opens them in the browser. It uploads new
-files from watched folders and Photos albums to a box (Preferences → Watched Folders),
-which replaces `scan-uploader`'s launchd agent on this Mac. It can also run a
+files from watched folders and Photos albums to a box (Preferences → Watched Folders).
+It can also run a
 box itself, in a lightweight VM through Apple's
 [Containerization](https://github.com/apple/containerization) framework
 (pinned at 0.48.0): Preferences → Box on this Mac → "Run a box on this Mac", off by
@@ -16,7 +16,7 @@ default. With it off the app downloads nothing. Design:
 
 - `Sources/BeeBoxMacCore/`: the logic, with no AppKit and no VM: paired boxes
   (`BoxStore`), the pairing sheet's model, the hosting setting, the scan-upload
-  client (`Scan/`, a second client of
+  client (`Scan/`, the client of
   [the scan-upload contract](../beebox/docs/scan-upload-contract.md)), and
   upload folders, scan tokens and Photos bookkeeping (`Uploads/`).
 - `Sources/BeeBoxMac/`: the app: menu, Preferences, VM runtime, PhotoKit,

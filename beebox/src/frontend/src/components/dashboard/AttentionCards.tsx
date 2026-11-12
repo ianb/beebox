@@ -9,6 +9,8 @@ import type { QuestionInfo } from "../questions/QuestionForm/view";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { StatusBadge } from "../ui/StatusBadge";
+import { cardUrl } from "@shared/card-url";
+import { List } from "../ui/List";
 
 /** A browser task the boxholder should run: due by its cadence, or never scanned. */
 export interface DueBrowserTask {
@@ -43,11 +45,11 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
               <StatusBadge status="pending" className="ml-2">{pendingQuestions.length}</StatusBadge>
             </h2>
           </div>
-          <ul className="space-y-1">
+          <List gap="xs">
             {pendingQuestions.slice(0, 5).map((q) => (
               <li key={q.path} className="text-sm" {...bbxSource("card", q.relativePath)}>
                 <Link
-                  to={href(`/${boxSlug}/views/${q.relativePath}`)}
+                  to={href(cardUrl(boxSlug ?? "", q.relativePath))}
                   className="text-primary hover:text-primary-dark hover:underline"
                 >
                   {q.prompt || q.name}
@@ -59,7 +61,7 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
                 +{pendingQuestions.length - 5} more
               </li>
             )}
-          </ul>
+          </List>
         </Card>
       )}
 
@@ -72,10 +74,10 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
               <StatusBadge status="pending" className="ml-2">{dueTasks.length}</StatusBadge>
             </h2>
           </div>
-          <ul className="space-y-1">
+          <List gap="xs">
             {dueTasks.slice(0, 5).map((t) => (
               <li key={t.path} className="text-sm" {...bbxSource("card", t.path)}>
-                <Link to={href(`/${boxSlug}/browse/${t.path}`)} className="text-primary hover:text-primary-dark hover:underline">
+                <Link to={href(cardUrl(boxSlug ?? "", t.path))} className="text-primary hover:text-primary-dark hover:underline">
                   {t.title}
                 </Link>
                 <span className="text-xs text-warm-700 ml-2">{t.stateLabel}</span>
@@ -86,7 +88,7 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
                 +{dueTasks.length - 5} more
               </li>
             )}
-          </ul>
+          </List>
         </Card>
       )}
 

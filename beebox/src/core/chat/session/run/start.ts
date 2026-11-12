@@ -32,6 +32,7 @@ import type { ChatBackendStartOptions, ChatContentBlock } from "../../../../serv
 import type { ChatSessionOptions } from "../options.js";
 import { buildLandmarkBoxContext } from "../landmark-context.js";
 import { UnsafeAgentContextIncludeError } from "../../../agent-context-includes.js";
+import { pendingRunEndedNote } from "../ended-note.js";
 
 const log = makeLog("ChatSession");
 
@@ -192,13 +193,17 @@ export async function buildBackendStartOptions(
  */
 export async function composeTurnContent(
   boxRoot: string,
-  { rawInput, features, sessionStart, healthGate }: {
+  { rawInput, features, sessionStart, healthGate, sessionId }: {
     rawInput: ChatSendInput;
     features: FeatureStore;
     sessionStart: boolean;
     healthGate?: HealthGate;
+    /** Whose run-ended note (`../ended-note.ts`) to carry; it rides inside the snapshot so the person's message stays clean. */
+    sessionId: string | null;
   },
-): Promise<ChatContentBlock[]> {
+): Promise<{ content: ChatContentBlock[]; dispatched: () => void }> {
+  // Removed only once the turn is dispatched (`dispatched`): a failed start keeps it for the next turn.
+  const runEnded = pendingRunEndedNote(boxRoot, sessionId);
   await features.ensureLoaded();
   // Omit-when-empty: `undefined` (not `""`) drops the attribute, since the
   // snapshot pipeline renders empty strings. `card-activity` collapses to
@@ -206,11 +211,11 @@ export async function composeTurnContent(
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
-  const activityChildren = renderActivityChildren({
+  const activityChildren = [renderActivityChildren({
     kinds: rawInput.cardActivity ?? [],
     details: rawInput.cardState ?? {},
     ...(openCard !== undefined ? { openCard } : {}),
-  });
+  }), runEnded.element ?? ""].filter((child) => child !== "").join("\n");
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     ...(rawInput.viewContext !== undefined ? { viewContext: rawInput.viewContext } : {}),
@@ -227,5 +232,5 @@ export async function composeTurnContent(
   const content = buildContentBlocks(input);
   const imgCount = (input.images ?? []).length;
   log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
-  return toBackendContent(content);
+  return { content: toBackendContent(content), dispatched: runEnded.clear };
 }

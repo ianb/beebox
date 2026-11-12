@@ -125,8 +125,10 @@ another box with that instruction.
 
 Legacy `_config/connectors/*.secret.json` API-key files no longer work as a
 fallback; the machine secret store is the only source a connector reads a key
-from. The one exception is Google OAuth tokens, where a per-box
-`google.secret.json` is still read when `BBX_GOOGLE_TOKENS_FILE` is unset.
+from. The one exception is Google OAuth tokens, which the box rewrites as it
+refreshes them, so they stay out of the store. On the server each box keeps its
+token in its own home, `/var/lib/beebox/<box>/.config/beebox/google-tokens.json`;
+a per-box `google.secret.json` is still read when that file is absent.
 `bbx health` flags any stray file it finds. Don't create new ones — move
 a machine's existing files into the store once with `bbx secrets migrate`
 (`--dry-run` prints the plan first), then delete the originals.

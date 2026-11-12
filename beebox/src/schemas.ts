@@ -37,6 +37,7 @@ import { CaptureSessionSchema } from "./schemas/capture-session.js";
 import { UploadBatchSchema } from "./schemas/upload-batch.js";
 import { RecordSchema } from "./schemas/record.js";
 import { EmailThreadSchema } from "./schemas/email-thread.js";
+import { CalendarSchema } from "./schemas/calendar.js";
 import { EmailMessageSchema } from "./schemas/email-message.js";
 import { EmailOutboundSchema } from "./schemas/email-outbound.js";
 import { IntakeJobSchema } from "./schemas/intake-job.js";
@@ -51,6 +52,7 @@ import { TodoReviewJobSchema } from "./schemas/todo-review-job.js";
 import { PersonalitySchema } from "./schemas/personality/schema.js";
 import { QuestionFollowupJobSchema } from "./schemas/question-followup-job.js";
 import { TodoViewSchema } from "./schemas/todo-view.js";
+import { TourSchema } from "./schemas/tour.js";
 import { BriefingSchema } from "./schemas/briefing.js";
 import { PersonSchema } from "./schemas/person.js";
 import { PlaceSchema } from "./schemas/place.js";
@@ -98,6 +100,7 @@ export const cardSchemas = defineRegistry<CardSchema>({
     PersonSchema,
     PlaceSchema,
     TodoViewSchema,
+    TourSchema,
     QuestionSchema,
     BrowserTaskSchema,
     CommentarySchema,
@@ -114,6 +117,7 @@ export const cardSchemas = defineRegistry<CardSchema>({
     FigureSchema,
     // synced & captured
     EmailThreadSchema,
+    CalendarSchema,
     EmailMessageSchema,
     PublicationSchema,
     GdocSchema,

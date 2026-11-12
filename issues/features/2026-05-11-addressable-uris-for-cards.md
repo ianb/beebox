@@ -28,3 +28,5 @@ This sidesteps the Obsidian failure mode where `[[Note]]` always resolves to cur
 **Prerequisite work**: version semantics need to be deliberate again. Card root-tag versions got lazy after the ske era — for URI version pinning to be meaningful, versions need to change on meaningful events (schema-incompatible change, significant content revision) rather than be noise or always-1.0.0. Worth a deliberate pass on what bumps a version, who does the bumping (agent at edit time? schema-driven?), and how garbage collection interacts with the "every old version is addressable" promise (it probably means *never* GC versions referenced by any live ref).
 
 No `callback://` URI scheme needed — plain `https://` does the job and works across email, calendar, external apps, and chat without any handler registration.
+
+Re-reviewed 2026-10-30: the real card URL shape is /<box>/views/<card path> (shared/card-url.ts); no version or fragment addressing exists yet.

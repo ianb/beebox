@@ -29,4 +29,7 @@ export type WakeupRunner = (opts: {
   boxRoot: string;
   triggeredBy: string;
   connector?: string | undefined;
+  maxCycles?: number | undefined;
+  /** Each chunk of the child's output as it arrives (`startBbxWakeup` watches for the acquired line). */
+  onChunk?: ((text: string) => void) | undefined;
 }) => Promise<WakeupRunResult>;

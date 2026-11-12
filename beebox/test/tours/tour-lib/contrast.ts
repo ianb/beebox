@@ -16,7 +16,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Sharp from "sharp";
-import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type PageRuns, type RunLines, type TextRun } from "./contrast-page.js";
+import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type Field, type PageRuns, type RunLines, type Selection, type TextRun } from "./contrast-page.js";
 
 export interface ContrastPage {
   eval(expression: string): Promise<string>;
@@ -31,6 +31,7 @@ export interface RawImage {
 }
 
 type Rgb = readonly [number, number, number];
+type Rgba = Field["fg"];
 
 export type ContrastFailure =
   /** Text against the pixels under it. */
@@ -38,7 +39,13 @@ export type ContrastFailure =
   /** A token pair the theme's components render together. */
   | { kind: "token"; material: number; theme: string; fg: string; bg: string; ratio: number; required: number }
   /** Text in a card on an undeclared surface on the other side of light/dark from the paper. */
-  | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number };
+  | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number }
+  /** Text in a card colored by an app palette utility instead of the card's ink. */
+  | { kind: "ink"; run: number; selector: string; text: string; theme: string; utility: string; fg: string; ratio: number; required: number }
+  /** Selected text: the `::selection` ink on its background. */
+  | { kind: "selection"; selector: string; text: string; fg: string; bg: string; ratio: number; required: number; rects: Selection["rects"] }
+  /** A select: its value's ink on its field, or its edge (field or border) against the pixels around it. */
+  | { kind: "field"; part: "text" | "edge"; selector: string; text: string; fg: string; bg: string; ratio: number; required: number; rect: Field["rect"] };
 
 /**
  * WCAG AA. Large text is 24px, or 18.66px bold. A placeholder gets the large
@@ -167,6 +174,16 @@ export function scoreRuns(image: RawImage, page: Pick<PageRuns, "width" | "runs"
   return failures;
 }
 
+/**
+ * Text in a card that takes app ink: it reads on this theme only by chance of
+ * the theme's colors. No ratio applies; `ratio` and `required` are 0.
+ */
+export function scoreInk(page: Pick<PageRuns, "runs">): ContrastFailure[] {
+  return page.runs.flatMap((run) => run.appInk === null ? [] : [{
+    kind: "ink" as const, run: run.id, selector: run.selector, text: run.text, theme: run.appInk.theme, utility: run.appInk.utility, fg: hex(run.fg), ratio: 0, required: 0,
+  }]);
+}
+
 /** Token pairs below AA, named by token so the fix lands in the theme's material. */
 export function scoreMaterials(materials: readonly Material[]): ContrastFailure[] {
   return materials.flatMap((m, material) => m.pairs.flatMap((pair) => {
@@ -177,12 +194,82 @@ export function scoreMaterials(materials: readonly Material[]): ContrastFailure[
   }));
 }
 
+/**
+ * Selected text below AA. A translucent selection background is scored over
+ * white; shipped selection colors are opaque.
+ */
+export function scoreSelections(selections: readonly Selection[]): ContrastFailure[] {
+  return selections.flatMap((s) => {
+    const [br, bgG, bb, ba] = s.bg;
+    const bg: Rgb = [br * ba + 255 * (1 - ba), bgG * ba + 255 * (1 - ba), bb * ba + 255 * (1 - ba)];
+    const [r, g, b, a] = s.fg;
+    const fg: Rgb = [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
+    const ratio = contrastRatio(fg, bg);
+    return ratio >= NORMAL ? [] : [{ kind: "selection" as const, selector: s.selector, text: s.text, fg: hex(fg), bg: hex(bg), ratio: round(ratio), required: NORMAL, rects: s.rects }];
+  });
+}
+
+/** WCAG 1.4.11: a control's boundary needs 3:1 against what is next to it. */
+const EDGE = 3;
+
+/** Pixels in a ring two to four pixels outside a box. */
+function ringSamples(image: RawImage, { width, rect }: { width: number; rect: Field["rect"] }): Rgb[] {
+  const scale = image.width / width;
+  const out: Rgb[] = [];
+  const at = (x: number, y: number): void => {
+    const [px, py] = [Math.round(x * scale), Math.round(y * scale)];
+    if (px < 0 || py < 0 || px >= image.width || py >= image.height) return;
+    const i = (py * image.width + px) * image.channels;
+    out.push([image.data[i] ?? 0, image.data[i + 1] ?? 0, image.data[i + 2] ?? 0]);
+  };
+  for (const d of [2, 4]) {
+    for (let t = 0.05; t < 1; t += 0.05) {
+      at(rect.x + rect.w * t, rect.y - d);
+      at(rect.x + rect.w * t, rect.y + rect.h + d);
+      at(rect.x - d, rect.y + rect.h * t);
+      at(rect.x + rect.w + d, rect.y + rect.h * t);
+    }
+  }
+  return out;
+}
+
+/**
+ * Each select's value against its field (AA), and its edge: the field or its
+ * border against the surface around it, or the border against the field,
+ * whichever is strongest, at 3:1. A field that paints nothing has only its
+ * border and shows the surface; translucent colors fold over the surface.
+ */
+export function scoreFields(image: RawImage, page: Pick<PageRuns, "width" | "fields">): ContrastFailure[] {
+  return page.fields.flatMap((f) => {
+    const ring = ringSamples(image, { width: page.width, rect: f.rect });
+    const median = ring.toSorted((a, b) => luminance(a) - luminance(b))[Math.floor(ring.length / 2)];
+    if (median === undefined) return [];
+    const over = (c: Rgba | null, under: Rgb): Rgb | null => c === null ? null : mix([c[0], c[1], c[2]], { under, a: c[3] });
+    const field = over(f.field, median) ?? median;
+    const fg = over(f.fg, field) ?? field;
+    const failures: ContrastFailure[] = [];
+    const common = { kind: "field" as const, selector: f.selector, text: f.text, rect: f.rect };
+    const text = contrastRatio(fg, field);
+    if (text < NORMAL) failures.push({ ...common, part: "text", fg: hex(fg), bg: hex(field), ratio: round(text), required: NORMAL });
+    const edges = ring.map((s) => {
+      const border = over(f.border, s);
+      return { s, ratio: Math.max(contrastRatio(field, s), border === null ? 1 : Math.max(contrastRatio(border, s), contrastRatio(border, field))) };
+    }).toSorted((a, b) => a.ratio - b.ratio);
+    const worst = edges[Math.min(edges.length - 1, Math.floor(edges.length * PERCENTILE))];
+    if (worst !== undefined && worst.ratio < EDGE) failures.push({ ...common, part: "edge", fg: hex(over(f.border, worst.s) ?? field), bg: hex(worst.s), ratio: round(worst.ratio), required: EDGE });
+    return failures;
+  });
+}
+
 /** One line per miss: ratio, what, colors, where. */
 export function describeContrastFailure(f: ContrastFailure): string {
   const ratio = `${f.ratio.toFixed(2)}:1 < ${String(f.required)}`;
   switch (f.kind) {
     case "text": return `${ratio}  "${f.text}"  ${f.fg} on ${f.bg}  ${f.selector}`;
     case "token": return `${ratio}  ${f.theme}: ${f.fg} on ${f.bg} (material tokens)`;
+    case "field": return f.part === "text" ? `${ratio}  select "${f.text}"  ${f.fg} on its field ${f.bg}  ${f.selector}` : `${ratio}  select edge  ${f.fg} against ${f.bg} around it  ${f.selector}`;
+    case "selection": return `${ratio}  selected "${f.text}"  ${f.fg} on ${f.bg}  ${f.selector}`;
+    case "ink": return `app ink in a ${f.theme} card: ${f.utility} (${f.fg}) instead of the card's ink  "${f.text}"  ${f.selector}`;
     case "surface": return `surface ${f.bg} is not part of ${f.theme} (paper ${f.paper}) and inverts it ${f.ratio.toFixed(1)}:1  "${f.text}"  ${f.selector}`;
   }
 }
@@ -197,7 +284,9 @@ function parseEval(stdout: string): PageRuns {
 function marksFor(failures: readonly ContrastFailure[], page: PageRuns): OverlayMark[] {
   const perMaterial = new Map<number, number>();
   return failures.map((f) => {
-    if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : `surface ${f.bg}` };
+    if (f.kind === "selection") return { rects: f.rects, label: `selection ${f.ratio.toFixed(1)}:1` };
+    if (f.kind === "field") return { rects: [f.rect], label: `select ${f.part} ${f.ratio.toFixed(1)}:1` };
+    if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : f.kind === "ink" ? `app ink ${f.utility}` : `surface ${f.bg}` };
     const n = (perMaterial.get(f.material) ?? 0) + 1;
     perMaterial.set(f.material, n);
     const at = page.materials[f.material]?.at ?? { x: 0, y: 0, w: 1, h: 1 };
@@ -224,7 +313,11 @@ export interface ContrastResult {
 }
 
 function failureKey(f: ContrastFailure): string {
-  return f.kind === "token" ? `token ${f.theme} ${f.fg} ${f.bg}` : `${f.kind} ${String(f.run)}`;
+  if (f.kind === "token") return `token ${f.theme} ${f.fg} ${f.bg}`;
+  // Scrolling moves the rects; the element and its colors name the miss.
+  if (f.kind === "selection") return `selection ${f.selector} ${f.fg} ${f.bg}`;
+  if (f.kind === "field") return `field ${f.part} ${f.selector}`;
+  return `${f.kind} ${String(f.run)}`;
 }
 
 /**
@@ -281,7 +374,8 @@ export async function auditContrast(page: ContrastPage, { outline, before }: {
     if (Math.abs(info.height / info.width - runs.height / runs.width) > 0.01) {
       throw new Error(`contrast audit: capture is ${String(info.width)}×${String(info.height)} but the viewport is ${String(runs.width)}×${String(runs.height)}`);
     }
-    const failures = [...scoreRuns({ data, width: info.width, height: info.height, channels: info.channels }, runs), ...scoreMaterials(runs.materials)];
+    const image = { data, width: info.width, height: info.height, channels: info.channels };
+    const failures = [...scoreRuns(image, runs), ...scoreInk(runs), ...scoreMaterials(runs.materials), ...scoreSelections(runs.selections), ...scoreFields(image, runs)];
     if (outline) marks = marksFor(failures, runs);
     return { failures, runs: runs.runs.map(({ id }) => id), lines: runs.lines, unmeasured: runs.unmeasured };
   } finally {

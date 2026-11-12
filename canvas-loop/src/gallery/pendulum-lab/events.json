@@ -1,0 +1,257 @@
+[
+ {
+  "frame": 0,
+  "type": "snapshot",
+  "label": "start"
+ },
+ {
+  "frame": 30,
+  "type": "mousemove",
+  "x": 300,
+  "y": 200
+ },
+ {
+  "frame": 40,
+  "type": "param",
+  "name": "length",
+  "value": 0.25
+ },
+ {
+  "frame": 50,
+  "type": "snapshot",
+  "label": "short string, held"
+ },
+ {
+  "frame": 60,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 120,
+  "type": "snapshot",
+  "label": "released, 1x"
+ },
+ {
+  "frame": 400,
+  "type": "snapshot",
+  "label": "mid-trial"
+ },
+ {
+  "frame": 680,
+  "type": "snapshot",
+  "label": "trial 1 done"
+ },
+ {
+  "frame": 700,
+  "type": "param",
+  "name": "speed",
+  "value": "16\u00d7"
+ },
+ {
+  "frame": 710,
+  "type": "param",
+  "name": "length",
+  "value": 0.5
+ },
+ {
+  "frame": 720,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 760,
+  "type": "snapshot",
+  "label": "trial 2 running at 16x"
+ },
+ {
+  "frame": 800,
+  "type": "param",
+  "name": "length",
+  "value": 1.0
+ },
+ {
+  "frame": 805,
+  "type": "snapshot",
+  "label": "L=1 held"
+ },
+ {
+  "frame": 810,
+  "type": "mousedown",
+  "x": 280,
+  "y": 244
+ },
+ {
+  "frame": 811,
+  "type": "mouseup",
+  "x": 280,
+  "y": 244
+ },
+ {
+  "frame": 900,
+  "type": "param",
+  "name": "length",
+  "value": 1.5
+ },
+ {
+  "frame": 910,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1020,
+  "type": "param",
+  "name": "length",
+  "value": 2.0
+ },
+ {
+  "frame": 1030,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1140,
+  "type": "snapshot",
+  "label": "five Earth trials"
+ },
+ {
+  "frame": 1160,
+  "type": "param",
+  "name": "length",
+  "value": 1.0
+ },
+ {
+  "frame": 1160,
+  "type": "param",
+  "name": "angle",
+  "value": 25
+ },
+ {
+  "frame": 1170,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1260,
+  "type": "param",
+  "name": "angle",
+  "value": 5
+ },
+ {
+  "frame": 1270,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1350,
+  "type": "snapshot",
+  "label": "angle trials"
+ },
+ {
+  "frame": 1360,
+  "type": "param",
+  "name": "theory",
+  "value": true
+ },
+ {
+  "frame": 1362,
+  "type": "snapshot",
+  "label": "theory on"
+ },
+ {
+  "frame": 1380,
+  "type": "param",
+  "name": "gravity",
+  "value": "Moon"
+ },
+ {
+  "frame": 1382,
+  "type": "snapshot",
+  "label": "moon held"
+ },
+ {
+  "frame": 1390,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1480,
+  "type": "snapshot",
+  "label": "moon swinging"
+ },
+ {
+  "frame": 1590,
+  "type": "param",
+  "name": "length",
+  "value": 0.5
+ },
+ {
+  "frame": 1600,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1750,
+  "type": "param",
+  "name": "gravity",
+  "value": "Jupiter"
+ },
+ {
+  "frame": 1750,
+  "type": "param",
+  "name": "length",
+  "value": 2.0
+ },
+ {
+  "frame": 1760,
+  "type": "trigger",
+  "name": "time"
+ },
+ {
+  "frame": 1840,
+  "type": "snapshot",
+  "label": "jupiter done"
+ },
+ {
+  "frame": 1860,
+  "type": "param",
+  "name": "sqrtAxis",
+  "value": true
+ },
+ {
+  "frame": 1862,
+  "type": "snapshot",
+  "label": "sqrt axis"
+ },
+ {
+  "frame": 1880,
+  "type": "mousemove",
+  "x": 785,
+  "y": 184
+ },
+ {
+  "frame": 1881,
+  "type": "snapshot",
+  "label": "hover point"
+ },
+ {
+  "frame": 1900,
+  "type": "mousemove",
+  "x": 600,
+  "y": 470
+ },
+ {
+  "frame": 1901,
+  "type": "snapshot",
+  "label": "hover row"
+ },
+ {
+  "frame": 1920,
+  "type": "trigger",
+  "name": "clear"
+ },
+ {
+  "frame": 1925,
+  "type": "snapshot",
+  "label": "cleared"
+ }
+]

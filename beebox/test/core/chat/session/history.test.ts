@@ -16,7 +16,6 @@ import {
   loadHistoryEntries,
   appendHistory,
   getDirectoryForSession,
-  getLastSessionForDirectory,
   resolveSessionLogPath,
   sessionLogPathFor,
   removeSessionFromHistory,
@@ -25,9 +24,11 @@ import {
   getMostActiveSavedAt,
   setMostActive,
 } from "../../../../src/core/chat/session/history.js";
+import { getLastSessionForDirectory } from "../../../../src/core/chat/session/last-session.js";
 import { getSessionDir, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { resolveChatEngine } from "../../../../src/core/chat/session/engine.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 // `getLastSessionForDirectory` skips entries whose JSONL doesn't exist
 // on disk (the "ghost" check guards against resuming sessions the SDK
@@ -114,7 +115,9 @@ void test("The history file is per-checkout; the husk card travels with the box.
     ".beebox/chat-session-history.json",
     JSON.stringify({ sessions: [{ id: junkSession, engine: "codex" }], migrated: true }),
   );
+  const warnings = consoleLines(t, "warn");
   t.check(await resolveChatEngine(box.root, { sessionId: junkSession }), "codex");
+  t.check(warnings(), ["chat-husk: _content/chat/web/2026-08-26_0198f0b0.chat.card has an unknown engine \"gpt-9\"; ignoring it"]);
 });
 
 // ## Deletion removes exact duplicates and conditionally clears the pointer
@@ -330,6 +333,7 @@ void test("\"\" is the box-root landmark, and a chat opened from the Box row is 
   await appendHistory(box.root, { sessionId: "abc", contextDir: "" });
   await appendHistory(box.root, { sessionId: "def" });
   await seedSessionLog(box.root, "abc");
+  const warnings = consoleLines(t, "warn");
 
   t.check(
     {
@@ -343,6 +347,8 @@ void test("\"\" is the box-root landmark, and a chat opened from the Box row is 
     lastForRoot: "abc",
   },
   );
+  // "def" is newer but has no transcript, so the lookup skips it and logs the skip:
+  t.check(warnings(), ["[chat-session-history] Skipping ghost claude entry for <root>: def"]);
 });
 
 // ## sessionLogPathFor resolves an entry the caller already holds

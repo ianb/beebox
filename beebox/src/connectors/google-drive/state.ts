@@ -28,9 +28,20 @@ export interface DriveTransientState {
    * leaves the moment its card is re-created.
    */
   driveTrashed: string[];
+  /**
+   * When the box last ran a mirror pass over each folder mount, keyed by the
+   * folder's Drive ID. Kept here rather than on the `.gfolder.card`: a time
+   * that changes on every pass would make every pass a commit.
+   */
+  folders: Record<string, FolderSyncRecord>;
 }
 
-export const DEFAULT_DRIVE_STATE: DriveTransientState = { files: {}, driveTrashed: [] };
+/** One folder mount's last mirror pass, successful or not. */
+export interface FolderSyncRecord {
+  lastSync: string;
+}
+
+export const DEFAULT_DRIVE_STATE: DriveTransientState = { files: {}, driveTrashed: [], folders: {} };
 
 /**
  * The state as it may actually be ON DISK: a file written before a field
@@ -41,10 +52,17 @@ export const DEFAULT_DRIVE_STATE: DriveTransientState = { files: {}, driveTrashe
 interface StoredDriveState {
   files?: Record<string, FileState>;
   driveTrashed?: string[];
+  folders?: Record<string, FolderSyncRecord>;
 }
 
 export function normalizeDriveState(stored: StoredDriveState): DriveTransientState {
-  return { files: stored.files ?? {}, driveTrashed: stored.driveTrashed ?? [] };
+  // Fresh containers: a box with no state file loads `DEFAULT_DRIVE_STATE`
+  // itself, and the sync writes into these maps in place.
+  return {
+    files: { ...stored.files },
+    driveTrashed: [...(stored.driveTrashed ?? [])],
+    folders: { ...stored.folders },
+  };
 }
 
 /** Load the connector's state with every field present. */
@@ -65,7 +83,7 @@ export function emptyFileState(): FileState {
 /**
  * Merge one writer's per-file changes onto freshly-loaded state.
  *
- * Field-by-field merge semantics (the `files` map is the only field):
+ * Field-by-field merge semantics:
  *   - **`files[driveId]`** — merged per key. For each driveId in `working`
  *     (the state this writer mutated in place): if this writer CREATED or
  *     MODIFIED that file's `FileState` (it differs from the `snapshot` this
@@ -79,6 +97,8 @@ export function emptyFileState(): FileState {
  *     merge starts from a copy of `fresh.files`.
  *   - No deletions: the Drive sync only ever adds/updates `files` entries, so a
  *     key never needs removing.
+ *   - **`folders[driveId]`** — merged per key the same way: an entry this
+ *     writer changed wins, every other entry comes from `fresh`.
  *   - **`driveTrashed`** — a set, merged as one: `fresh` plus whatever this
  *     writer ADDED, minus whatever this writer REMOVED (an ID it re-created a
  *     card for, or one whose tombstone is gone). Additions and removals are
@@ -94,14 +114,25 @@ export function mergeDriveState(opts: {
   working: DriveTransientState;
 }): DriveTransientState {
   const { fresh, snapshot, working } = opts;
-  const files: Record<string, FileState> = { ...fresh.files };
-  for (const [driveId, state] of Object.entries(working.files)) {
-    const before = snapshot.files[driveId];
-    if (!before || JSON.stringify(before) !== JSON.stringify(state)) {
-      files[driveId] = state;
-    }
+  return {
+    files: mergeChangedKeys({ fresh: fresh.files, snapshot: snapshot.files, working: working.files }),
+    driveTrashed: mergeDriveTrashed(opts),
+    folders: mergeChangedKeys({ fresh: fresh.folders, snapshot: snapshot.folders, working: working.folders }),
+  };
+}
+
+/** `fresh`, with every entry this writer created or changed taken from `working`. */
+function mergeChangedKeys<T>(maps: {
+  fresh: Record<string, T>;
+  snapshot: Record<string, T>;
+  working: Record<string, T>;
+}): Record<string, T> {
+  const merged: Record<string, T> = { ...maps.fresh };
+  for (const [key, value] of Object.entries(maps.working)) {
+    const before = maps.snapshot[key];
+    if (before === undefined || JSON.stringify(before) !== JSON.stringify(value)) merged[key] = value;
   }
-  return { files, driveTrashed: mergeDriveTrashed(opts) };
+  return merged;
 }
 
 /** `fresh`, plus this writer's additions, minus this writer's removals. */

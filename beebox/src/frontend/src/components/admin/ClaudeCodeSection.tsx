@@ -6,9 +6,15 @@
 import { useState } from "react";
 import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
-import { ExternalLink } from "../ui/ExternalLink";
+import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { Notice } from "../ui/Notice";
+import { Card } from "../ui/Card";
+import { ErrorText } from "../ui/ErrorText";
+import { ExternalLink } from "../ui/ExternalLink";
+import { Row } from "../ui/Row";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
+import { TextField } from "../ui/fields/field";
 import { AdminSectionCard } from "./AdminSectionCard";
 import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
@@ -30,7 +36,7 @@ export function ClaudeCodeSection() {
   if (isLoading) {
     return (
       <AdminSectionCard id="claude-code" description={DESCRIPTION} busy>
-        <p className="text-sm text-warm-700">Checking status...</p>
+        <Text size="sm" tone="muted">Checking status…</Text>
       </AdminSectionCard>
     );
   }
@@ -38,59 +44,50 @@ export function ClaudeCodeSection() {
   return (
     <AdminSectionCard id="claude-code" description={DESCRIPTION}>
       {status?.loggedIn ? (
-        <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
-          <span className="font-medium text-success-dark">Authenticated</span>
-          {status.email ? (
-            <>
-              {" "}
-              <span className="text-success-dark ml-2">as {status.email}</span>
-            </>
-          ) : null}
-        </div>
+        <Row gap="sm">
+          <Badge tone="success">Authenticated</Badge>
+          {status.email ? <Text size="sm" tone="muted">as {status.email}</Text> : null}
+        </Row>
       ) : (
-        <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
-          Not authenticated
-          {status?.error ? (
-            <span className="text-warm-700 ml-2">({status.error})</span>
-          ) : null}
-        </div>
+        <Stack gap="sm">
+          <Row><Badge tone="neutral">Not authenticated</Badge></Row>
+          {status?.error ? <ErrorText>{status.error}</ErrorText> : null}
+        </Stack>
       )}
 
       {authUrl && isPolling ? (
-        <div className="mb-4 p-4 bg-info-50 border border-info-100 rounded">
-          <p className="text-sm text-primary mb-2">
-            Complete authentication in a new tab:
-          </p>
-          <ExternalLink id="bbx-admin-claude-login-link" href={authUrl}>Open Anthropic Login</ExternalLink>
-          <p className="text-xs text-primary mt-2">
-            After signing in, Anthropic shows a code. Paste it here:
-          </p>
-          <form
-            className="flex gap-2 mt-2"
-            onSubmit={(e) => { e.preventDefault(); if (code.trim()) { send({ type: "SUBMIT_CODE", code }); setCode(""); } }}
-          >
-            <input
-              id="cb-admin-claude-login-code"
-              className="flex-1 border border-warm-300 rounded px-2 py-1 text-sm font-mono"
-              value={code}
-              onChange={(e) => { setCode(e.target.value); }}
-              placeholder="paste code"
-              autoComplete="off"
-              spellCheck={false}
-              aria-label="Anthropic sign-in code"
-            />
-            <Button id="cb-admin-claude-submit-code" type="submit" disabled={!code.trim() || isSubmittingCode} loading={isSubmittingCode}>
-              Submit code
-            </Button>
-          </form>
-        </div>
+        <Card background="info">
+          <Stack gap="sm">
+            <Text as="p" size="sm">Complete authentication in a new tab:</Text>
+            <div><ExternalLink id="bbx-admin-claude-login-link" href={authUrl}>Open Anthropic Login</ExternalLink></div>
+            <Text as="p" size="xs" tone="muted">After signing in, Anthropic shows a code. Paste it here:</Text>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => { e.preventDefault(); if (code.trim()) { send({ type: "SUBMIT_CODE", code }); setCode(""); } }}
+            >
+              <TextField
+                id="cb-admin-claude-login-code"
+                label="Anthropic sign-in code"
+                hideLabel
+                identifier
+                className="flex-1"
+                inputClassName="font-mono"
+                value={code}
+                onChange={setCode}
+                placeholder="paste code"
+                autoComplete="off"
+              />
+              <Button id="cb-admin-claude-submit-code" type="submit" disabled={!code.trim() || isSubmittingCode} loading={isSubmittingCode}>
+                Submit code
+              </Button>
+            </form>
+          </Stack>
+        </Card>
       ) : null}
 
-      {error ? (
-        <Notice tone="error" className="mb-4">{error}</Notice>
-      ) : null}
+      {error ? <ErrorText>{error}</ErrorText> : null}
 
-      <div className="flex gap-3">
+      <Row gap="sm" wrap>
         {!status?.loggedIn ? (
           <Button
             id="bbx-admin-claude-authenticate"
@@ -122,7 +119,7 @@ export function ClaudeCodeSection() {
         >
           Refresh
         </Button>
-      </div>
+      </Row>
     </AdminSectionCard>
   );
 }

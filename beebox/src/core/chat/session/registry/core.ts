@@ -27,10 +27,12 @@ import type { AgentEngine } from "../../../box/config.js";
 import { createReservationFeatureHandoff, reserveAndWarm, sweepExpiredReservations } from "./reservations.js";
 import { recordSessionStart } from "./start-record.js";
 import { prewarmBackend } from "./warm.js";
-import { enforceLiveCap } from "./cap.js";
+import { enforceLiveCap, evictIdleEntries } from "./cap.js";
 import { pinEntry, pinSessionObject } from "./pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./options.js";
 import { stopChatSessionsAndWait } from "./shutdown.js";
+
+export { END_CAUSES } from "../ended-note.js";
 
 export { SessionDeletingError } from "../delete/deletion-state.js"; export type { ChatSessionRegistryOptions } from "./options.js";
 
@@ -199,9 +201,9 @@ export class ChatSessionRegistry extends EventEmitter {
   /** Running/busy snapshot of every session held — entries plus the pre-id
    *  `pending` ones, which a single-session `status` query cannot name. Touches
    *  nothing: an observer that kept sessions warm would change what it measures. */
-  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean }[] {
+  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean; liveTasks: number }[] {
     const held = [...[...this.entries.values()].map((e) => e.session), ...this.pending];
-    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy() }));
+    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy(), liveTasks: s.liveTaskList().length }));
   }
 
   /** Number of entries with a live subprocess. */
@@ -237,7 +239,7 @@ export class ChatSessionRegistry extends EventEmitter {
       existing.lastActivity = this.now();
       return existing.session;
     }
-    const baseOpts = this.buildSessionOptions(sessionId);
+    const baseOpts = { ...this.buildSessionOptions(sessionId), now: this.now };
     // A reserved id names a conversation the harness has not created yet: the
     // run is told to *use* this id, and the landmark binding and feature seeds
     // captured at reserve time ride with it (nothing else carries them — the
@@ -313,7 +315,7 @@ export class ChatSessionRegistry extends EventEmitter {
     opts = opts ?? {};
     this.noteActivity();
     const { contextDir, seedFeatures, engine, model } = opts;
-    const baseOpts = this.buildSessionOptions(null);
+    const baseOpts = { ...this.buildSessionOptions(null), now: this.now };
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
@@ -453,19 +455,13 @@ export class ChatSessionRegistry extends EventEmitter {
   }
 
   /**
-   * Drop entries with no recent activity and no active SSE listeners.
+   * Drop entries with no recent activity, no active SSE listeners, and no
+   * background work still going: a subagent outlives its parent's turn.
    * Their subprocesses are stopped and their entries removed. Public so the
    * cleanup timer and tests (with an injected `now`) share one code path.
    */
   sweepIdle(): void {
-    const cutoff = this.now() - this.idleTimeoutMs;
-    for (const [id, entry] of this.entries) {
-      if (entry.lastActivity > cutoff) continue;
-      if (entry.refCount > 0) continue;
-      log("sweep", `Idle eviction of ${id}`);
-      entry.session.stop();
-      this.entries.delete(id);
-    }
+    evictIdleEntries(this.entries, this.now() - this.idleTimeoutMs);
     sweepExpiredReservations({ store: this.reservations, backend: this.backend });
     // Reap the warm slot once chat has gone quiet, so an idle box doesn't hold
     // a Claude subprocess around the clock. The next accessor re-warms it.
@@ -477,8 +473,8 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /** Preserve entries/queued input while closing idle SDK runs for maintenance.
    *  closeWarm never rejects (see ChatBackend.closeWarm); quiescing does not wait on it. */
-  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); void this.backend.closeWarm?.();
-    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(); }
+  quiesceForMaintenance(reason: string): void { this.maintenance.paused = true; this.stopCleanup(); void this.backend.closeWarm?.();
+    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(reason); }
 
   resumeAfterMaintenance(): void { this.maintenance.paused = false; for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.resumeAfterMaintenance(); this.startCleanup(); }
 

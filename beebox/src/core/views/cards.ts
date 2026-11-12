@@ -2,13 +2,13 @@
  * Load the real cards and files a view receives from its dependency globs.
  *
  * Shared by the `/api/views/:slug/cards` route (the running app) and the
- * `bbx view test` command, so both feed a view provably the same data. Glob each
+ * `bbx view check` command, so both feed a view provably the same data. Glob each
  * dependency pattern, parse `.card` files into ViewCard, list non-card files,
  * deep-list each card's attach scope, and annotate git working-tree status.
  *
  * Unlike the route's original inline version, this also reports cards that
  * matched a dependency glob but failed to load (`skipped`) — the route ignores
- * that list (a live page silently omits a broken card), but `bbx view test`
+ * that list (a live page silently omits a broken card), but `bbx view check`
  * surfaces it as author feedback.
  */
 
@@ -109,7 +109,7 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
       cards.push(viewCard);
     } catch (e) {
       // The route omits broken cards silently; we additionally record them so
-      // `bbx view test` can report "your dependency selected an invalid card".
+      // `bbx view check` can report "your dependency selected an invalid card".
       skipped.push({ path: relPath, error: e instanceof Error ? e.message : String(e) });
     }
   }

@@ -25,6 +25,12 @@ import {
 } from "../message-parsing";
 import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
+import { UNDELIVERED_EDGE, UndeliveredActions, UndeliveredLine, type UndeliveredVerbs } from "./undelivered";
+import { StatusMessage } from "../../ui/StatusMessage";
+
+export type { UndeliveredVerbs };
+// The words a Resend sends again (`undelivered-verbs.ts`).
+export { originalDisplayText };
 
 /** A message not yet sent: a dashed edge inside the bubble, in its own ink. */
 export const QUEUED_EDGE = "outline-dashed outline-1 outline-current -outline-offset-4";
@@ -82,7 +88,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
   return (
     <div className="py-1">
       <div className="flex justify-center">
-        <button
+        <button type="button"
           onClick={handleExpand}
           className="text-xs text-warm-700 hover:text-warm-900 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
         >
@@ -95,7 +101,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
       {expanded ? (
         <div className="mx-4 mt-2 bg-warm-50 border border-warm-200 rounded-lg p-3 text-xs">
           {loadingOutput ? (
-            <div className="text-warm-700 italic">Loading output...</div>
+            <StatusMessage variant="inline" busy>Loading output…</StatusMessage>
           ) : output ? (
             <Pre size="xs" scroll="md">{output}</Pre>
           ) : (
@@ -111,7 +117,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView, audioOverlayStore }: {
+export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView, audioOverlayStore, undeliveredVerbs }: {
   entries: SessionEntry[];
   debugView?: boolean;
   currentUserEmail?: string;
@@ -120,6 +126,8 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   onZoomView?: OnZoomView;
   /** Overlay store for retranscription/consulted badges (Track 3); undefined where no chat is wired to one (e.g. the dev harness). */
   audioOverlayStore?: AudioOverlayStore;
+  /** Resend and Discard on the person's own undelivered message; without it the bubble offers none. */
+  undeliveredVerbs?: UndeliveredVerbs;
 }) {
   // A hook, so it must run unconditionally — before the early returns below.
   // `entries` is never empty in practice (see the invariant further down),
@@ -158,8 +166,11 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   const senderEmail = firstEntry.userEmail;
   const transcriptionProvenance = resolveTranscriptionProvenance(firstEntry);
   // Compare by email if available (same user across devices), fall back to name
+  // The box's record of an accepted message carries a baseline too, but it
+  // can be anyone's; only a copy this tab made (no `messageId` of its own,
+  // since its uuid is the id) is the viewer's by construction.
   const isOtherUser = isOtherChatUser({
-    locallyAuthored: firstEntry.reconcileKnownUuids !== undefined,
+    locallyAuthored: firstEntry.reconcileKnownUuids !== undefined && firstEntry.messageId === undefined,
     senderEmail,
     senderName,
     currentUserEmail,
@@ -173,11 +184,17 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     ? <div role="status" className="bbx-chat-user-status text-xs mt-1 italic">Live text — HQ transcript unavailable</div>
     : null;
 
-  const isPending = entries.every((e) => e.pending === true);
+  // A user group holds one entry (`groupMessages`). Not delivered outranks
+  // queued: a dropped message is still pending, but it is no longer on its way.
+  const isUndelivered = firstEntry.undelivered === true;
+  const isPending = !isUndelivered && entries.every((e) => e.pending === true);
   // Queued is drawn as a dashed edge in the bubble's own ink, with the
   // "queued" line inside: fading the bubble would fade its text below AA.
-  const pendingClass = isPending ? ` ${QUEUED_EDGE}` : "";
-  const pendingTitle = isPending ? "Queued — sends when the current reply finishes" : undefined;
+  const pendingClass = isUndelivered ? ` ${UNDELIVERED_EDGE}` : isPending ? ` ${QUEUED_EDGE}` : "";
+  const pendingTitle = isUndelivered
+    ? "Not delivered — the agent never received this message"
+    : isPending ? "Queued — sends when the current reply finishes" : undefined;
+  const statusLine = isUndelivered ? <UndeliveredLine entry={firstEntry} /> : isPending ? <PendingIndicator /> : null;
 
   if (isOtherUser) {
     // Other user's message: left-aligned with name label. Fix (2026-08,
@@ -212,7 +229,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
               />
             ))}
             {hqStatus}
-            {isPending ? <PendingIndicator /> : null}
+            {statusLine}
           </div>
         </div>
       </div>
@@ -249,8 +266,9 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
             />
           ))}
           {hqStatus}
-          {isPending ? <PendingIndicator /> : null}
+          {statusLine}
         </div>
+        {isUndelivered && undeliveredVerbs !== undefined ? <UndeliveredActions entry={firstEntry} verbs={undeliveredVerbs} /> : null}
       </div>
     </div>
   );

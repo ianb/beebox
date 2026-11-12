@@ -5,6 +5,7 @@
  * file under its line budget.
  */
 
+import { requestHasBrowserPass } from "../browser-pass-request.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
@@ -28,6 +29,7 @@ import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
 import { startupPhases } from "../../lib/startup-timing.js";
+import { serverSecret } from "../../lib/server-secrets.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -182,7 +184,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // server-level state — boxes have their own richer health endpoint at
   // /<box>/api/trpc/health.check that this does NOT roll up.
   server.get("/healthz", async (request, reply) => {
-    if (!process.env.BBX_DIAG_API_KEY) {
+    if (!serverSecret("BBX_DIAG_API_KEY")) {
       return reply.status(503).send({ status: "unconfigured", error: "BBX_DIAG_API_KEY not set" });
     }
     if (!verifyDiagBearerKey(request)) {
@@ -297,6 +299,10 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       if (verifyBrowseKey(request.headers)) {
         return { boxes: await describeBoxes(boxes) };
       }
+      // A box's own browser sees that box only (core/browser/pass.ts), ahead of
+      // any session it also holds, as at the hub.
+      const passBoxes = boxes.filter((box) => requestHasBrowserPass(box.boxRoot, request.headers));
+      if (passBoxes.length > 0) return { boxes: await describeBoxes(passBoxes) };
       const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       // Through the shared resolver (FIX 1): a corrupt store answers 503, and a
@@ -372,6 +378,12 @@ export function registerSpaFallback(
       // Browse-key sessions pass the box-scoped auth gate; a page navigation
       // that falls through to here must not bounce them to login.
       if (verifyBrowseKey(request.headers)) {
+        return reply.type("text/html").send(await spaDocument(url));
+      }
+      // The box's own browser, with its pass for the box this URL names
+      // (core/browser/pass.ts): the page's API calls then act as the agent.
+      const passBox = boxForUrl(request.url, opts.boxes);
+      if (passBox !== undefined && requestHasBrowserPass(passBox.boxRoot, request.headers)) {
         return reply.type("text/html").send(await spaDocument(url));
       }
       const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });

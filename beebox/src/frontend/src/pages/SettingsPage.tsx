@@ -5,6 +5,7 @@
 import { useParams } from "@tanstack/react-router";
 import { CalendarSection } from "../components/settings/CalendarSection";
 import { CompanionPairingSection } from "../components/settings/CompanionPairingSection";
+import { NotificationsSection } from "../components/settings/NotificationsSection";
 import { DriveSection } from "../components/settings/DriveSection/view";
 import { ScanUploaderSection } from "../components/settings/ScanUploaderSection";
 import { Stack } from "../components/ui/Stack";
@@ -27,6 +28,8 @@ export function SettingsPage() {
 function SettingsSections({ boxKey }: { boxKey: string }) {
   return <>
         <ProbeSection name="BoxSystemThemePicker"><BoxSystemThemePicker boxKey={boxKey} /></ProbeSection>
+
+        <ProbeSection name="NotificationsSection"><NotificationsSection /></ProbeSection>
 
         <ProbeSection name="CompanionPairingSection"><CompanionPairingSection /></ProbeSection>
 

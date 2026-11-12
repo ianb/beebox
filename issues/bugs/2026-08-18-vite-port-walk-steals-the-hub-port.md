@@ -107,3 +107,7 @@ that have no `.bbx-box` marker.
 ## Audit 2026-10-22
 
 Pointers moved. Port allocation is now `workstreams-app/src/router/core/worktree-start.ts:65` (two parallel `getPort()` calls; the dashboard port is gone). `--strictPort` is at `workstreams-app/src/router/core/generation.ts:147`. Still open: the probe-to-bind window and the sequential ports. An automatic retry now exists (`f783135f1`), but `retryDecision` restarts only after a `waitForHttp` timeout. A child that exits with `EADDRINUSE` parks the worktree as `failed` on the first failure. The note about a stale router process no longer applies to a fresh router start.
+
+Re-reviewed 2026-10-30: The 2026-08-18 'fix is not running' note is stale; --strictPort is in the router code. Automatic retry exists only for HTTP-wait failures, so an EADDRINUSE child exit still parks the worktree.
+
+Out of date in the body above: Update paths from bin/router-core.ts to workstreams-app/src/router/core/{worktree-start,generation}.ts; drop the 'fix not running' banner; in 'What's left', note the bounded retry (f783135f1) and that it skips childExit failures.

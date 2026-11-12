@@ -1,0 +1,22 @@
+slug: lens-rays
+title: "Thin-lens ray diagram (canvas-loop side of the second d3 comparison)"
+created: 2026-11-12
+model: opus-5.5
+driver: opus-5.5
+cycles: 10
+tier: tea
+harness-commit: 70fcfacb
+frames: 480
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Draggable object and tip, typed focal length and lens type in the drawing, three principal rays with virtual extensions, the thin-lens equation substituted, the object-at-F case. Stopped: satisfied. Built head to head with a d3 version (scratch/d3-round2/lens-rays-d3).
+self-report-summary: >
+  TEA and computed hit tests made drags exact; label placement took most cycles; wanted a dash style key, a text halo, text bounds before drawing, missing-glyph warnings and arrowheads.
+features-exercised:
+  - pointer drag
+  - v.control
+  - v.clip
+  - zoom crops

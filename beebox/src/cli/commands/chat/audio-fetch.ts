@@ -8,20 +8,7 @@
  */
 
 import * as path from "node:path";
-import { resolveAgentToken } from "../../../core/agent/token.js";
-
-/**
- * Request headers for loopback calls to the live server: JSON content type
- * plus the per-box agent bearer when available (required to pass the auth
- * wall in production; harmless when auth is disabled in dev).
- */
-export function loopbackHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (process.env.BBX_BOX_WORK) headers["x-bbx-box-work"] = process.env.BBX_BOX_WORK;
-  const token = resolveAgentToken();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
-}
+import { loopbackHeaders } from "../../lib/loopback-headers.js";
 
 /** File extension for the audio Content-Type the browser sent. */
 export function audioExtension(contentType: string): string {

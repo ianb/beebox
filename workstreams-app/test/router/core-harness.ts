@@ -338,6 +338,7 @@ export async function makeHarness(options?: { devNoHub?: boolean; boxes?: string
     browseDir: path.join(tmp, "browse"),
     devNoHub: options?.devNoHub === true,
     routerPid: 4242,
+    appOrigin: "http://localhost:3210",
     log: LOG ? (m) => console.log(m) : () => {},
   });
 

@@ -37,10 +37,10 @@ void test("No todos, no line", async (t) => {
 
 // ## All done
 //
-// The card is finished; the line still says so, and "0 now" is not a
+// The card is finished; the line still says so, and "0 todos now" is not a
 // control.
 void test("The card is finished; the line still says so, and \"0 on your plate\" is not a...", async (t) => {
-  t.check(text(line({ done: 2 }, noop)), "0 now · 2 done");
+  t.check(text(line({ done: 2 }, noop)), "0 todos now · 2 done");
 });
 
 // ## Overdue
@@ -49,18 +49,18 @@ void test("The card is finished; the line still says so, and \"0 on your plate\"
 // With an open todo rendered below, the first count is a button that scrolls
 // to it.
 void test("escalated is the server's word for past due; the line calls it overdue.", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 now] · 1 overdue · 2 done");
+  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 todos now] · 1 overdue · 2 done");
 });
 
 // In a box view nothing is drawn to scroll to, so the same counts are plain
 // text rather than a button that does nothing:
 void test("In a box view nothing is drawn to scroll to, so the same counts are plain tex...", async (t) => {
-  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 now · 1 overdue · 2 done");
+  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 todos now · 1 overdue · 2 done");
 });
 
 // Parked todos are named when there are any:
 void test("Parked todos are named when there are any:", async (t) => {
-  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 now · 2 parked");
+  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 todo now · 2 parked");
 });
 
 // ## Later
@@ -69,9 +69,9 @@ void test("Parked todos are named when there are any:", async (t) => {
 // names it "later", as the plate's headline does. The control is the count
 // of the todos it goes to: "now" when any are, else "later".
 void test("An open todo whose start has not come yet is not due now; the line names...", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 now] · 1 later");
+  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 todos now] · 1 later");
 
-  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 now · [1 later]");
+  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 todos now · [1 later]");
 });
 
 // On a card, the control scrolls to the first todo in the set it names. A todo

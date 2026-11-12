@@ -1,6 +1,6 @@
 // # Scan upload routes
 //
-// The server half of the scan-uploader wire contract
+// The server half of the scan-upload wire contract
 // (`docs/scan-upload-contract.md`). This file is that contract's executable form:
 // it drives the routes exactly as the laptop uploader will — check a batch of
 // hashes, PUT the unknown ones, re-check — and pins every documented status.
@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { any, isoDate } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
@@ -133,10 +134,9 @@ void test("An uploader's first move is check, which answers unknown for a hash t
     body: { states: { [hash]: { state: "unknown" } }, contractVersion: SCAN_CONTRACT_VERSION },
   });
 
-  // The same response carries the box's contract version (above), which is how a copied
-  // uploader bundle notices it has fallen behind this box. It is a sibling of
-  // `states`, so an uploader that predates it reads the response exactly as
-  // before — see the contract doc's "Client identity".
+  // The same response carries the box's contract version (above), which a client can
+  // compare with its own. It is a sibling of `states`, so a client that predates
+  // it reads the response exactly as before — see the contract doc's "Client identity".
 
   // The PUT streams the bytes into quarantine, re-hashes them, sniffs the magic
   // bytes against the claimed extension, and decodes the image — all before the 200:
@@ -562,6 +562,7 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
     }
   });
   resetScanRateLimits();
+  const warnings = consoleLines(t, "warn");
   const ctx = await makeScanTestServer();
 
   let last = await check(ctx, []);
@@ -577,6 +578,11 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
     statusCode: 429,
     retryAfter: any(Number).between(1, 60),
   });
+  // Each refused request is logged with the credential it came from; the test token has no owner:
+  t.check(warnings(), [
+    "[scan] Rate limit tripped for owner:unknown on POST /test/api/scan/check",
+    "[scan] Rate limit tripped for owner:unknown on POST /test/api/scan/check",
+  ]);
 
   // Clearing the window lets the same credential straight back in:
 
@@ -584,7 +590,7 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
   t.check(await check(ctx, []), checked({}));
 });
 
-// ## Auth: a scan token and the owner both reach these routes; a phone does not
+// ## Auth: only a scan token reaches these routes; the owner's browser and a phone do not
 //
 // These routes are registered in a sibling scope outside the box's general auth
 // hook — that hook 401s a scan bearer, so a scan token would never reach a handler
@@ -633,8 +639,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
   const tokenSidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`));
   t.check(tokenSidecar, sidecarOf({ hash: sha256(png), state: "pending", ext: ".png", name: "Receipts_001.png", tokenName: "laptop-scansnap" }));
 
-  // The boxholder's own identity works too, so these routes can be driven by hand;
-  // a paired phone's device token — a full-access credential everywhere else —
+  // The boxholder's browser identity does not pass, and a paired phone's device token — a full-access credential everywhere else —
   // resolves to nothing here, because the scan gate reads the scan store and only
   // the scan store:
 
@@ -661,7 +666,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
   const notAuthenticated = { statusCode: 401, body: { error: "Not authenticated" } };
   t.check({ anonymous: asOwner, owner: asOwnerHub, phone: asPhone }, {
     anonymous: notAuthenticated,
-    owner: checked({ [sha256(png)]: { state: "pending" } }),
+    owner: notAuthenticated,
     phone: notAuthenticated,
   });
 });
@@ -697,7 +702,14 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
     }
   });
   resetScanRateLimits();
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer({ assetsHiddenAgain: true });
+  // Startup tells the operator the routes are disabled and how to restore them:
+  t.check(errors(), [
+    `[scan] Box ${ctx.boxRoot} is not annex-converted; scan upload is disabled (every request answers 503). ` +
+      "Every box is annex-shaped from creation, so this box's `.gitignore` hides assets or its annex " +
+      "was never initialized. Re-run `bbx init` on the box to restore both.",
+  ]);
   const png = await pngBytes();
 
   const refused = await check(ctx, [sha256(png)]);

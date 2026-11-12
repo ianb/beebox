@@ -1,6 +1,7 @@
 /** Bounded graceful-close boundary for registry-owned chat sessions. */
 
 import { startAwakeTimeout } from "../../../../shared/awake-timeout.js";
+import { END_CAUSES, type EndCause } from "../ended-note.js";
 
 const CHAT_SHUTDOWN_GRACE_MS = 10_000;
 
@@ -10,7 +11,7 @@ export interface ShutdownChatSession {
   /** Settles when a run start in flight has finished or failed; at once when none is. */
   whenStarted(): Promise<unknown>;
   once(event: "close", listener: () => void): unknown;
-  stop(): void;
+  stop(cause?: EndCause): void;
 }
 
 /**
@@ -19,7 +20,10 @@ export interface ShutdownChatSession {
  * but its start (the bootstrap docs commit, then the backend spawn) would
  * finish after the caller tore the box down; so openings settle next, and a
  * run they opened is stopped too. Stopping clears a session's queue, so a
- * stopped run does not drain into a new send.
+ * stopped run does not drain into a new send. Last, every session is stopped
+ * once more, running or not: a queue held without a run (a failed start, a
+ * maintenance pause) or filled during the shutdown wait is lost with the
+ * process, and `stop()` is what records those messages as undelivered.
  */
 export async function stopChatSessionsAndWait(
   sessions: ShutdownChatSession[],
@@ -45,7 +49,7 @@ export async function stopChatSessionsAndWait(
       closes.push(new Promise<void>((resolve) => {
         session.once("close", () => { unfinished.delete(session); resolve(); });
       }));
-      session.stop();
+      session.stop(END_CAUSES.shutdown);
     }
   };
   try {
@@ -61,5 +65,6 @@ export async function stopChatSessionsAndWait(
     return [...unfinished].map(label);
   } finally {
     timeout.stop();
+    for (const session of sessions) session.stop(END_CAUSES.shutdown);
   }
 }

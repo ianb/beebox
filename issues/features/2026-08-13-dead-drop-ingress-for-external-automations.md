@@ -70,3 +70,7 @@ surface, verified at every hop, stored apart from user auth.
   that documents clicking through a console. (The removed `bbx pub setup` was
   the cautionary example: its Access instructions went stale and
   dashboard-bound. Publishing setup now lives in Admin.)
+
+Re-reviewed 2026-10-30: Still unbuilt. The scan-ingress precedent moved: router allowlist in workstreams-app/src/router/server/auth.ts and hub gate in beebox/src/hub/server/scan-gate.ts.
+
+Out of date in the body above: Update the scan-token precedent pointers (router auth, scan-gate.ts) and drop the scan-rate-limit.ts reference; note the unused hub 'webhook' prefix as a possible home.

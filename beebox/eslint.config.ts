@@ -45,6 +45,8 @@ const noDirectCreateNew = {
 // alias without opening the alias for anything else.
 const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
 const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
+const LIST_ENTRY_IMPORT_MESSAGE =
+  "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.";
 // A plugin (`src/plugins/<name>/`, docs/implemented-plans/plugins.md) is a library a box
 // completes through stubs, published as `beebox/plugins/<name>`. Its files
 // import only `src/exports/*`, `src/cards/plugin-definition.ts`, their own
@@ -88,15 +90,14 @@ const NODE_BUILTIN_PATTERNS = ["node:*", ...builtinModules.filter((name) => !nam
 
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
-  // (migrators etc.), which otherwise falls through to eslint-config-agent's
-  // harsher global base — same rules as src/, not a weakening. See the per-edit
+  // (migrators etc.), which otherwise gets none of the reviewed ruleset —
+  // same rules as src/, not a weakening. See the per-edit
   // lint hook: this is what stops it flagging scripts with rules src/ is held to
   // deliberately (and `lint` below now covers scripts/ too).
   // `test` in roots (added 2026-07-15): test/ is held to the same reviewed
-  // ruleset as src/ — previously it fell through to eslint-config-agent's
-  // harsher unreviewed base, whose extra bans (`??`, inline unions,
-  // process.env["X"], fs-filename) are NOT house style and made per-edit hook
-  // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
+  // ruleset as src/ — previously it fell through to an unreviewed base,
+  // whose extra bans (`??`, inline unions, process.env["X"], fs-filename) were
+  // NOT house style and made per-edit hook reports on test files misleading. `pnpm lint` and lint-staged enforce it.
   ...vibeCheck({ react: false, roots: ["src", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   // The React profile, scoped to list components (see LIST_ENTRY_GLOB above).
   // Every entry is re-scoped to the glob so nothing else in this package picks
@@ -122,7 +123,6 @@ export default [
       // "nonsensical" (requires className on every JSX element), but its preset
       // re-enables it for .tsx/JSX files — where our schema files (e.g.
       // capture-session.tsx) legitimately render className-free elements.
-      "custom/jsx-classname-required": "off",
     },
   },
   // NOTE: The block above once also turned off 16 more rules, added when
@@ -184,9 +184,9 @@ export default [
     // 2026-09-27 (latest is 8.70.1; the fix only exists in canary prereleases,
     // which the workspace's 7-day `minimumReleaseAge` gate rightly refuses to
     // install). Rather than adopt an unvetted prerelease or carve out the
-    // rule, `patches/@typescript-eslint+eslint-plugin+8.59.4.patch` applies
-    // that exact upstream diff to the installed package via patch-package
-    // (already wired into the root `postinstall`), so the rule stays fully
+    // rule, `patches/@typescript-eslint__eslint-plugin@8.59.4.patch` applies
+    // that exact upstream diff to the installed package (pnpm's
+    // `patchedDependencies` in `pnpm-workspace.yaml`), so the rule stays fully
     // enabled — including type information — for these files. Drop that patch
     // once a released `@typescript-eslint/eslint-plugin` version already
     // contains the fix.
@@ -244,8 +244,36 @@ export default [
           patterns: [
             {
               group: LIST_ENTRY_IMPORT_PATTERNS,
-              message:
-                "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.",
+              message: LIST_ENTRY_IMPORT_MESSAGE,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Every Git child gets the allowlisted environment of src/lib/git/env.ts
+    // (`boxGit`): an agent's hook or `.git/config` command runs with it.
+    // Repeated from the block above because this one REPLACES the rule.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [LIST_ENTRY_GLOB, "src/lib/git/env.ts", "src/dev/**", "src/scripts/**", "src/frontend/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "simple-git",
+              importNames: ["simpleGit", "default"],
+              allowTypeImports: true,
+              message: "Use boxGit from src/lib/git/env.ts, so the Git child gets the allowlisted environment.",
+            },
+          ],
+          patterns: [
+            {
+              group: LIST_ENTRY_IMPORT_PATTERNS,
+              message: LIST_ENTRY_IMPORT_MESSAGE,
             },
           ],
         },

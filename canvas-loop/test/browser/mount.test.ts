@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, mountSketch, sanitizeInitialParams, type EmittedEvent } from "@ianbicking/canvas-loop/browser";
 import type { Msg, Util } from "@ianbicking/canvas-loop";
-import { isTeaModule, toTeaModule } from "../../src/headless/tea-load.js";
+import { toTeaModule } from "../../src/headless/tea-load.js";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
 import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
 
@@ -179,7 +179,6 @@ test("onEvent carries the engagement verdict (handled names + model-reference ch
 test("the headless loader ignores a default export (dual-export entries)", () => {
   const { module } = makeModule();
   const dual = { ...module, default: (): null => null };
-  assert.equal(isTeaModule(dual), true, "TEA detection keys on the named update export");
   const loaded = toTeaModule(dual);
   assert.equal(typeof loaded.update, "function", "the named exports load normally");
   assert.equal("default" in loaded, false, "the loaded module carries no default export");
@@ -217,5 +216,23 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
   const thrown = errors.flat().find((e): e is Error => e instanceof Error);
   assert.ok(thrown !== undefined && thrown.name === "UnhandledMsgError", "an UnhandledMsgError was surfaced");
   assert.ok(thrown.message.includes("tick"), "the error names the unhandled msg type");
+  teardown();
+});
+
+test("mountSketch keeps a module's sound export, so its runtime collects voices", () => {
+  const mount = new FakeElement("div");
+  const { module } = makeModule();
+  let calls = 0;
+  const teardown = mountSketch(asHTMLElement(mount), {
+    module: {
+      ...module,
+      sound: () => {
+        calls += 1;
+        return [];
+      },
+    },
+  });
+  runFrames(3);
+  assert.ok(calls > 0, "sound() ran after ticks");
   teardown();
 });

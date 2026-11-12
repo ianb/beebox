@@ -14,12 +14,13 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any } from "@ianbicking/tap-check/check";
-import Database from "better-sqlite3";
+import { any, str } from "@ianbicking/tap-check/check";
+import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 import { assertEventSchemaNotNewer, createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
 import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
 
@@ -40,7 +41,9 @@ const samples = {
   "question-dismissed": { path: "Q.question.card", timestamp: TS },
   "question-expired": { path: "Q.question.card", timestamp: TS },
   "cards-changed": { source: "gmail" },
-  "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Rosa" }, timestamp: TS },
+  "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Rosa" }, timestamp: TS, messageId: "m1", hadImages: true },
+  "chat-user-message-undelivered": { sessionId: "s1", messageId: "m1", timestamp: TS },
+  "chat-user-message-discarded": { sessionId: "s1", messageId: "m1", timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
   "chat-task": { sessionId: "s1", task: { phase: "started", taskId: "t1", status: "running", description: "Generate image" } },
   "chat-task-level": { sessionId: "s1", tasks: [{ taskId: "t1", description: "Generate image" }] },
@@ -165,19 +168,56 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
   bus.emit("cards-changed", { source: "gmail" });
 
   const dbPath = join(box.root, ".beebox/events.db");
-  const raw = new Database(dbPath);
+  const raw = new DatabaseSync(dbPath);
   const ins = raw.prepare("INSERT INTO events (event, data) VALUES (?, ?)");
   ins.run("card-created", JSON.stringify({ path: 123 }));   // schema mismatch
   ins.run("cards-changed", "{not json");                     // syntax-level failure
   ins.run("mystery-event", JSON.stringify({ x: 1 }));        // unknown event name
+  // SQLite stores a BLOB in a TEXT column; node:sqlite reads it back as bytes.
+  raw.exec("INSERT INTO events (event, data) VALUES ('cards-changed', x'ff')");
   raw.close();
 
+  const warnings = consoleLines(t, "warn");
   const rows = bus.readSince(0);
+  // Each broken row logs once, with a running count, and says what consumers do with it:
+  const surfaced = "Surfaced as an \"unknown\" sentinel; downstream consumers ignore it.";
+  t.check(warnings(), [
+    `[EventBus] Row id=2 event="card-created" failed read validation: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "path"
+    ],
+    "message": "Invalid input: expected string, received number"
+  },
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "template"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  },
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "timestamp"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+] (count=1). ${surfaced}`,
+    str`[EventBus] Row id=3 event="cards-changed" failed read validation: JSON parse failed: SyntaxError: ${any(String)} (count=2). ${surfaced}`,
+    `[EventBus] Row id=4 event="mystery-event" failed read validation: unknown event name "mystery-event" (count=3). ${surfaced}`,
+    `[EventBus] Row id=5 event="cards-changed" failed read validation: a stored column is not text (count=4). ${surfaced}`,
+  ]);
   t.check(rows, [
     { id: 1, event: "cards-changed", data: { source: "gmail" }, createdAt },
     { id: 2, event: "unknown", data: { originalEvent: "card-created", raw: { path: 123 }, error: any(String) }, createdAt },
     { id: 3, event: "unknown", data: { originalEvent: "cards-changed", raw: "{not json", error: any(String).startsWith("JSON parse failed: SyntaxError") }, createdAt },
     { id: 4, event: "unknown", data: { originalEvent: "mystery-event", raw: { x: 1 }, error: 'unknown event name "mystery-event"' }, createdAt },
+    { id: 5, event: "unknown", data: { originalEvent: "cards-changed", raw: "x'ff'", error: "a stored column is not text" }, createdAt },
   ]);
 
   // The valid sibling keeps its real payload; a sentinel carries the original event
@@ -210,12 +250,15 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
 
   bus1.close();
 
-  const raw = new Database(join(box.root, ".beebox/events.db"));
+  const raw = new DatabaseSync(join(box.root, ".beebox/events.db"));
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION - 1);
   raw.close();
 
+  const warnings = consoleLines(t, "warn");
   const bus2 = createEventBus(box.root);
   t.check(bus2.readSince(0), []);
+  // The log says which generations differ and how many rows went:
+  t.check(warnings(), [`[EventBus] Event-schema generation changed (${EVENT_SCHEMA_GENERATION - 1} → ${EVENT_SCHEMA_GENERATION}); truncated 2 persisted event(s). Reconnecting clients resync via the bus's full-resync path.`]);
 });
 
 // ## A newer generation on disk refuses to open and keeps its rows
@@ -238,7 +281,7 @@ void test("Two engine checkouts can serve one box. When the stored generation is
   bus1.emit("cards-changed", { source: "a" });
   bus1.close();
 
-  const raw = new Database(dbPath);
+  const raw = new DatabaseSync(dbPath);
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION + 1);
   raw.close();
 
@@ -255,7 +298,7 @@ void test("Two engine checkouts can serve one box. When the stored generation is
     assertEventSchemaNotNewer(box.root);
   }, expected);
 
-  const after = new Database(dbPath, { readonly: true });
+  const after = new DatabaseSync(dbPath, { readOnly: true });
   t.check(after.prepare("SELECT schema_generation AS gen FROM event_meta").all(), [{ gen: EVENT_SCHEMA_GENERATION + 1 }]);
   t.check(after.prepare("SELECT id, event, data FROM events").all(), [
     { id: 1, event: "cards-changed", data: JSON.stringify({ source: "a" }) },
@@ -304,11 +347,14 @@ void test("A box upgraded from before generation stamping has an events table fu
   const box = await makeTmpBox();
   const legacyPath = join(box.root, ".beebox");
   await box.write(".beebox/.keep", "");
-  const legacy = new Database(join(legacyPath, "events.db"));
+  const legacy = new DatabaseSync(join(legacyPath, "events.db"));
   legacy.exec("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))");
   legacy.prepare("INSERT INTO events (event, data) VALUES (?, ?)").run("cards-changed", JSON.stringify({ source: "old" }));
   legacy.close();
 
+  const warnings = consoleLines(t, "warn");
   const bus = createEventBus(box.root);
   t.check(bus.readSince(0), []);
+  // The log says the pre-generation rows were dropped:
+  t.check(warnings(), [`[EventBus] Initialized event-schema generation ${EVENT_SCHEMA_GENERATION}; truncated 1 pre-generation event(s) of unknown shape. Reconnecting clients resync via the bus's full-resync path.`]);
 });

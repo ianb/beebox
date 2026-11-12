@@ -52,3 +52,10 @@ the `bbx` CLI's commands. The inventory is part of the work.
 
 Related: [bin scripts reimplement git, process, and argv helpers](../closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md)
 moved some scripts onto shared argument parsing.
+
+**2026-10-28 (retrospective 20261028-234100):** Three more sessions:
+theme-colors/20261027T031020Z-implemented.md (`bin/theme-check` and
+`bin/exhibits add` reject `--help`), box-backups/20261027T005647Z-landed.md
+(asking `pnpm smoke` for help on one flag ran a full smoke), and
+no-browse-links/20261028T192051Z-implemented.md (`bbx notify` flags took
+three tries; the title is positional).

@@ -51,3 +51,7 @@ Partly met, less than on 2026-10-08, per [D2](../../beebox/test/plugins/coursewa
 Courses are the opt-in courseware plugin, not core Bee Box
 (`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
 core and journey work leave it out.
+
+Re-reviewed 2026-10-30: still partly met as of the last walks; code pointers moved into the courseware plugin.
+
+Out of date in the body above: Update pointers: `S/schemas/progress.ts` -> `beebox/src/plugins/courseware/progress.ts`; `guidance-sync/skills/content.ts:33` and `skills-content.ts:33` -> `beebox/src/plugins/courseware/skill.ts:28` (the they/them rule).

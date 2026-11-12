@@ -1,0 +1,23 @@
+# AppArmor grant for Codex's sandbox.
+#
+# Codex runs commands in a read-only or workspace-write sandbox through
+# bubblewrap. It runs the first `bwrap` on PATH and falls back to a copy it
+# bundles. Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1, so
+# without a profile granting `userns`, bwrap's namespace has no capabilities and
+# fails on "loopback: Failed RTM_NEWADDR: Operation not permitted" before the
+# command runs.
+#
+# The grant is for the distro's /usr/bin/bwrap. The deploy makes that binary
+# mode 0750, group beebox-boxes (dpkg-statoverride), so only box users and the
+# hub run the exempt binary; everyone else keeps the restriction.
+#
+# deploy/server-bin/bbx-codex-sandbox-install installs this file to
+# /etc/apparmor.d/beebox-codex and loads it with `apparmor_parser -r` when it
+# changes.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile beebox-codex-bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+}

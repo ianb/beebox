@@ -33,7 +33,7 @@ void test("dedicated-home inventory selects that box's auth state and excludes t
   });
 });
 
-void test("unit-host inventory omits hub credentials but selects per-box Claude and Codex logins", async (t) => {
+void test("unit-host inventory omits hub credentials but selects the box user's Claude, Codex and Google logins", async (t) => {
   // These environment overrides exercise the deployment-specific inventory branch and are restored in teardown.
   const previousUnitHost = process.env.BBX_UNIT_HOST;
   const previousDedicatedHome = process.env.BBX_BACKUP_DEDICATED_HOME;
@@ -51,7 +51,7 @@ void test("unit-host inventory omits hub credentials but selects per-box Claude 
   const externalKinds = inventory.external.map((item) => item.kind).toSorted();
   const hubSkipped = inventory.skipped.filter((item) => item.kind === "auth" || item.kind === "session-secret").map((item) => item.reason).toSorted();
   t.check({ externalKinds, hubSkipped }, {
-    externalKinds: ["box-secrets", "claude-auth", "codex-auth", "origin-id"] as const,
+    externalKinds: ["box-secrets", "claude-auth", "codex-auth", "google-tokens", "origin-id"] as const,
     hubSkipped: ["hub-owned account store is outside the per-box backup", "hub-owned session secret is outside the per-box backup"].toSorted(),
   });
 });

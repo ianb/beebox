@@ -20,7 +20,7 @@
 // ./router-core.ts (`createRouterCore(effects, config)`, owning the worktrees map
 // and driving transitions through injected effects); the state model in
 // ./router-lifecycle.ts; the serialized pidfile store in ./router-pidfile.ts; the
-// REAL effects (execa, get-port, http.request probes) in ./router-real-effects.ts;
+// REAL effects (execa, freePort, http.request probes) in ./router-real-effects.ts;
 // the proxy and its retry/body-replay machinery in ./router-proxy.ts; the pages
 // the router renders itself in ./router-pages.ts; the per-request dispatch in
 // ./router-dispatch.ts and the WS upgrade in ./router-upgrade.ts; the shared
@@ -61,6 +61,7 @@ import { isBenignSocketError } from "./proxy.js";
 import { dispatchRouterRequest, type DispatchContext } from "./dispatch.js";
 import { handleRouterUpgrade, type UpgradeState } from "./upgrade.js";
 import { routerLogPath, startRouterLogFile, stopRouterLogFile } from "./log-file.js";
+import { startTerminalWriter, writeToTerminal } from "./terminal-writer.js";
 import { formatDenial, writeDeny, UpgradeDenialThrottle } from "./deny-log.js";
 import {
   WORKTREE_UNAVAILABLE,
@@ -258,7 +259,7 @@ async function listenUnixSocket(server: http.Server, sockPath: string): Promise<
 
 function setTabTitle(title: string): void {
   if (!process.stdout.isTTY) return;
-  process.stdout.write(`\u001B]0;${title}\u0007`);
+  writeToTerminal(`\u001B]0;${title}\u0007`);
 }
 
 function updateTabTitle(core: RouterCore): void {
@@ -329,6 +330,7 @@ async function main(): Promise<void> {
     browseDir: BROWSE_DIR,
     devNoHub: DEV_NO_HUB,
     routerPid: process.pid,
+    appOrigin: `http://localhost:${ROUTER_PORT}`,
     log,
     onStateChange: () => updateTabTitle(core),
   });
@@ -336,7 +338,7 @@ async function main(): Promise<void> {
   // authenticate) and the UDS server (trusted-local, unauthenticated). Both share
   // ONE handler-building function and ONE RouterAuthDeps — the only difference is
   // the `trustedLocal` flag baked into each server instance.
-  const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
+  const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries, appOrigin: `http://localhost:${ROUTER_PORT}` });
   const workstreamsAppLogPath = path.join(LOG_DIR, "workstreams-app.log");
   const workstreamsApp = createWorkstreamsAppSupervisor(
     createRealWorkstreamsAppEffects(STATE_DIR),
@@ -407,6 +409,7 @@ async function main(): Promise<void> {
 
   // Before the sweep, so everything boot does is in the durable record — the
   // sweep's own kill lines are exactly what a post-mortem of a bad restart wants.
+  startTerminalWriter();
   await startRouterLogFile(LOG_DIR);
   log(`durable log: ${routerLogPath() ?? "unavailable"}`);
   await acquireRouterPidFile();

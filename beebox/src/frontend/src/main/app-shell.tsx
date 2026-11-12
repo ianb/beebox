@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "../components/DebugLog";
 import { reportPreviousAdminHang } from "../lib/admin-hang-probe";
 import { startVoiceStagingDrainer } from "../lib/audio/voice-staging-queue/queue";
-import { SourceViewOverlay, useSourceView } from "../components/SourceViewOverlay";
+import { SourceInspector, useSourceView } from "../components/SourceInspector";
 import { ConversationCardProvider } from "../components/chat/everywhere/card-context/context";
 import { BoxConversationProvider, useBoxConversation } from "../components/chat/everywhere/conversation-context/context";
 import { BoxConversationShell } from "../components/chat/everywhere/BoxConversationShell/view";
@@ -22,6 +22,7 @@ import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "../components/themes/BoxPresentationProvider";
 import { AppNav } from "../components/AppNav/nav";
 import { AppBarChromeProvider } from "../components/app-bar-chrome";
+import { PointSelectionProvider } from "../components/point-selection-context";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { StatusMessage } from "../components/ui/StatusMessage";
@@ -36,7 +37,7 @@ import { DocumentIcon } from "../components/DocumentIcon";
 import { DocumentPlace } from "../components/DocumentPlace";
 import { useVisualViewportHeight } from "../hooks/useVisualViewportHeight";
 import { BoxSlugProvider } from "../lib/box-slug";
-import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
+import { QuickSearchDialog } from "../components/search/QuickSearchDialog";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
 import { useBoxClockSync } from "../hooks/useBoxClockSync";
@@ -69,7 +70,7 @@ startVoiceStagingDrainer();
  */
 export function RootLayout() {
   // Every page gets the route's slug as context, so `Markdown` reads it
-  // without depending on the router (it also renders in `bbx view test`).
+  // without depending on the router (it also renders in `bbx view check`).
   const { boxSlug } = useParams({ strict: false });
   return (
     <BoxSlugProvider boxSlug={boxSlug}>
@@ -102,7 +103,7 @@ export function BoxValidationLayout() {
   useDropBoxScopedCache(boxSlug);
   useFirstLoadMark(FIRST_LOAD_MARKS.boxValidated, boxesState.loaded && boxExists);
 
-  if (!boxesState.loaded) return <StatusMessage>Loading box...</StatusMessage>;
+  if (!boxesState.loaded) return <StatusMessage busy>Loading box...</StatusMessage>;
   if (boxesState.error) return <BoxValidationError />;
   return boxExists ? <Outlet /> : <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />;
 }
@@ -129,6 +130,7 @@ export function ProductLayout() {
         <DocumentPlace />
         <Stack gap="none" className="h-app">
           <AppNav
+            standalone={standalonePage}
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
           />
@@ -138,8 +140,8 @@ export function ProductLayout() {
             {standalonePage ? null : <BoxConversationShell />}<Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-          <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
-          <QuickSearchOverlay />
+          <SourceInspector active={sourceView.active} onClose={handleCloseSourceView} />
+          <QuickSearchDialog />
         </Stack>
     </BoxShellProviders>
   );
@@ -153,8 +155,12 @@ export function DevHarnessLayout() {
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
   return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
-    <WorkspaceShellProvider><AppBarChromeProvider><ConversationCardProvider>{children}</ConversationCardProvider></AppBarChromeProvider></WorkspaceShellProvider>
+    <WorkspaceShellProvider><AppBarChromeProvider><PointAndCardProviders>{children}</PointAndCardProviders></AppBarChromeProvider></WorkspaceShellProvider>
   </BoxPresentationProvider></BoxConversationProvider>;
+}
+
+function PointAndCardProviders({ children }: { children: ReactNode }) {
+  return <ConversationCardProvider><PointSelectionProvider>{children}</PointSelectionProvider></ConversationCardProvider>;
 }
 
 function WorkspaceShellProvider({ children }: { children: ReactNode }) {

@@ -108,7 +108,9 @@ const mountedRecipes = {
     "_content/drive/recipes/Budget_2026.gsheet.card",
     "_content/drive/recipes/Scanpdf.glink.card",
   ],
-  updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+  // The mount wrote the card with Drive's name and link already, so the
+  // first pass finds nothing on it to change.
+  updated: [],
   pushed: [],
   failures: [],
   notes: [],
@@ -143,7 +145,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 ---`;
 
 async function refusal(op: Promise<unknown>): Promise<string> {

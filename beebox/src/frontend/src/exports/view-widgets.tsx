@@ -1,11 +1,11 @@
 /**
  * Node entry for the `beebox/view-widgets` bundle (dist/view-widgets).
  *
- * `bbx view test` renders a view to a string in Node, with no browser app around
+ * `bbx view check` renders a view to a string in Node, with no browser app around
  * it: no Router, no tRPC, no QueryClient. So the same widget components consume
  * a *node* view host here — `useResolvedRef` derives a title from the ref's
  * filename (no fetch), `renderInline` emits a minimal block, `openCard` is a
- * no-op (there is no surface to navigate). `bbx view test` wraps the rendered
+ * no-op (there is no surface to navigate). `bbx view check` wraps the rendered
  * view in `NodeViewHostProvider` (see src/cli/commands/view/command.ts), and the view's
  * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef/Markdown
  * here via the package `exports` map.
@@ -40,7 +40,7 @@ function typeFromRef(ref: string): string {
 }
 
 function useNodeResolvedRef(cardRef: string): ResolvedRef {
-  // No filesystem access from the rendered component; `bbx view test` is a smoke
+  // No filesystem access from the rendered component; `bbx view check` is a smoke
   // render, so existence is assumed and the title is filename-derived.
   return { path: cardRef, title: filenameTitle(cardRef), type: typeFromRef(cardRef), exists: true };
 }

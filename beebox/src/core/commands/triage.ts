@@ -30,7 +30,7 @@ export const triageCommand: CommandDefinition = {
     }
     if (args["engine"] === "jev") {
       const result = await runJevTriage({ boxRoot: ctx.boxRoot, dryRun });
-      ctx.writeLine(`Triage: ${result.decisions.length} decision(s), ${result.deferred.length} deferred.`);
+      ctx.writeLine(`Triage: ${result.decisions.length} decision(s), ${result.deferred.length} deferred, ${result.duplicates.length} exact duplicate(s)${result.compiled === null ? "" : `; compiled instructions ${result.compiled}`}.`);
       for (const receipt of result.decisions) ctx.writeLine(`${receipt.id} ${receipt.judgment.outcome} ${dryRun ? "preview" : receipt.application.state}`);
       if (result.failed.length > 0) return { success: false, error: `${result.failed.length} triage item(s) failed`, data: result };
       return { success: true, data: result };

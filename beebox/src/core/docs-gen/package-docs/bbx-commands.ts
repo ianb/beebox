@@ -112,7 +112,7 @@ function bbxCommandsTemplates(): string[] {
 }
 
 /**
- * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, session, reactor, finish.
+ * Hand-written command sections: mv, rm, validate, view check, answer, contains, status, session, reactor, finish.
  */
 function bbxCommandsCore(): string[] {
   return [
@@ -125,6 +125,8 @@ function bbxCommandsCore(): string[] {
     "```",
     "",
     "Use this instead of `git mv` or `mv` — it updates cross-references.",
+    "",
+    "It also rewrites any path that resolves exactly to the moved card (or into its `.attach/` folder) in every `.md` file, `AGENTS.md` included, even when the path is not a link: in a code span, a fenced block, or plain text. Relative paths stay relative, `/_content/…` and `_content/…` stay box-absolute. Paths in `.ts` files are not touched; check those by hand.",
     "",
     "**Examples:**",
     "```bash",
@@ -158,18 +160,22 @@ function bbxCommandsCore(): string[] {
     "so you rarely call this yourself; run it to re-check one card while debugging. Returns a",
     "non-zero exit code on failure.",
     "",
-    "## bbx view test",
+    "## bbx view check",
     "",
-    "Render-test an agent-authored view (`views/<slug>.tsx`) in Node — no browser needed.",
+    "Render every agent-authored view (`views/<slug>.tsx`) in Node and report which fail.",
     "",
     "```",
-    "bbx view test <slug> [--path <card>] [--raw]",
+    "bbx view check [--json]",
     "```",
     "",
-    "Compiles the view, loads the real cards its `dependencies` select, renders it once, and",
-    "prints the HTML — or, on failure, the error with a stack mapped to your `.tsx` source.",
-    "Use it to check a view after writing it. It's a synchronous render (no effects/async",
-    `helpers); see \`${BOX_PACKAGE_DOCS}/views.md\` for what it does and doesn't cover.`,
+    "Renders each view with real cards and reports which fail: `✓ <slug>`, `~ <slug>",
+    "(partly checked)`, or `✗ <slug>` with the state and error, and `advice:` lines that do",
+    "not fail it. Exits non-zero if any view fails. Run it after writing or changing a view;",
+    "what it covers is in",
+    `\`${BOX_PACKAGE_DOCS}/views.md\`, "Testing a View".`,
+    "",
+    "`bbx view states <slug>` prints the page path that opens each declared state, for",
+    "`bbx browser open` and `bbx browser screenshot --card`.",
     "",
     "## bbx answer",
     "",

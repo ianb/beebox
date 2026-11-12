@@ -125,13 +125,8 @@ if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
     echo "Created new DNS record."
   fi
 
-  # Set SSL mode to Flexible (Cloudflare→origin over HTTP)
-  echo "Setting SSL mode to Flexible..."
-  curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/settings/ssl" \
-    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data '{"value":"flexible"}' >/dev/null
-  echo "SSL mode set."
+  # The zone's SSL mode is left alone: it covers every hostname in the zone.
+  # Set it in the Cloudflare dashboard (docs/server/provisioning.md).
 else
   echo "Skipping DNS update (set CLOUDFLARE_API_TOKEN to enable)"
 fi

@@ -41,7 +41,7 @@ void test("A chat with no choice of its own follows the box; one with a choice k
     "default",
   ]);
 
-  const choice = "claude-fable-5-1";
+  const choice = "claude-fable-5-2";
   const own = await resolveSessionModel(box.root, { engine: "claude", explicit: choice });
   t.check([own.model === choice, own.source], [
     true,

@@ -88,3 +88,7 @@ the bulk pipeline and was not touched by that branch.
 4. **Repeat, but finish the batch instead.** The photos should stay gone and the
    composer text should clear — the batch carried it as its introduction.
 5. **Escape out of an overlay** rather than clicking Cancel: same restore.
+
+Re-reviewed 2026-10-30: the web path is gone. On iOS there is no cancel, but a batch that fails before sealing discards the composer photos it folded in, and the status line says only the message was kept.
+
+Out of date in the body above: Rewrite for iOS: the defect is NativeComposerView's .failed branch discarding folded composer photos (staged copies deleted after removeImage), not a web cancel. Replace the web manual-testing steps with an iOS repro (photos inline, add over-threshold selection, force the batch to fail before sealing).

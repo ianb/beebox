@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { resolveRequestIdentity, isDiagnosticBypassRequest, type DiagRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server/app.js";
 import { makeTestServer } from "../helpers/test-route-server.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const ORIGINAL_DIAG_KEY = process.env.BBX_DIAG_API_KEY;
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
@@ -26,13 +27,15 @@ delete process.env.BBX_HUB_SECRET;
 
 const NOT_AUTHENTICATED = { statusCode: 401, body: { error: "Not authenticated" } };
 
+const SECRETS_REFUSAL =
+  "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)";
+
 /** The secret panel's refusal of a browse key on the machine-level store. */
 const SECRETS_NEED_OWNER_SESSION = {
   statusCode: 403,
   body: {
     error: {
-      message:
-        "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)",
+      message: SECRETS_REFUSAL,
       code: -32003,
       data: { code: "FORBIDDEN", httpStatus: 403, path: "secrets.formatHints", recovery: null },
     },
@@ -216,6 +219,7 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   const PRIOR_STORE = process.env.BBX_SECRETS_FILE;
   delete process.env.BBX_SECRETS_FILE;
 
+  const errors = consoleLines(t, "error");
   const optedIn = await makeTestServer({ openAccess: false });
   await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
@@ -270,4 +274,10 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
       },
     },
   });
+  // Each refusal reaches the server log with its procedure, in request order:
+  t.check(errors(), [
+    `[trpc] query secrets.formatHints failed: ${SECRETS_REFUSAL}`,
+    `[trpc] query secrets.formatHints failed: ${SECRETS_REFUSAL}`,
+    "[trpc] query voice.capabilities failed: Owner access required",
+  ]);
 });

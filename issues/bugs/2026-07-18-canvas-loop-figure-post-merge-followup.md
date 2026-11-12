@@ -60,7 +60,7 @@ The demo `Orbit.figure.card` (in the test box at
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
 ([agent-browser-screenshot-flake](../closed/bugs/2026-07-10-agent-browser-screenshot-flake.md),
-[browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
+[browse-daemon-wedges-on-animated-canvas](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the
 speed slider / show-orbits toggle / focus select / reset button work, a planet
@@ -107,3 +107,7 @@ agents at the headless loop (a box cannot resolve the package).
   — `--box` crashes on a shape-2 box package root. (Resolved.)
 - [figure-compile-cache-and-attach-guard](../code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md)
   — loose `.attach` gate, unbounded compile caches, views-side dep-staleness.
+
+Re-reviewed 2026-10-30: item 1 (fixed-size canvas overflows at phone width) is unchanged. Items 2 and 5 (post-merge install and the July deploy) are long past and many deploys have run since.
+
+Out of date in the body above: Drop items 2 (stale node_modules after the move) and 5 (July deploy health) as overtaken; reword item 6 since the canvas-loop-sketch skill is gone; keep item 1 as the bug and items 3-4 as optional checks.

@@ -25,6 +25,7 @@ import { TODO_ASSIGNED_PLACEHOLDER_ID, todoAssignedWarning } from "../shared/tod
 import { isRecord } from "../shared/is-record.js";
 import type { LintIssue } from "../exports/cards.js";
 import { errorMessage } from "../shared/error-guards.js";
+import { findComposition, type CompositionProblem } from "../shared/composition/region.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
 // imports resolve to the CJS bundle, which only exposes a default export.
@@ -57,6 +58,27 @@ export function lintBodyMarkdoc(bodyText: string, scopedTags?: Readonly<Record<s
     ];
   }
   const tagSpans = collectTagSpans(ast);
+  return [...validateBody(ast, { tagSpans, scopedTags }), ...compositionIssues(bodyText, scopedTags)];
+}
+
+const COMPOSITION_PROBLEMS: Record<Exclude<CompositionProblem["problem"], "none">, string> = {
+  multiple: "this body has more than one {% composition %}; a card has at most one",
+  inline: "{% composition %} is inline; put the opening and closing tags each on its own line",
+  unclosed: "{% composition %} has no matching {% /composition %}, or a tag inside it is unclosed",
+};
+
+/**
+ * A schema that declares the `composition` tag gets a whole-body check:
+ * `validate` sees one node at a time, so it cannot count compositions.
+ */
+function compositionIssues(bodyText: string, scopedTags?: Readonly<Record<string, Schema>>): LintIssue[] {
+  if (scopedTags === undefined || !Object.hasOwn(scopedTags, "composition")) return [];
+  const found = findComposition(bodyText);
+  if (!("problem" in found) || found.problem === "none") return [];
+  return [{ type: "validation", severity: "warning", message: `Composition: ${COMPOSITION_PROBLEMS[found.problem]}` }];
+}
+
+function validateBody(ast: Node, { tagSpans, scopedTags }: { tagSpans: TagSpan[]; scopedTags: Readonly<Record<string, Schema>> | undefined }): LintIssue[] {
   return validate(ast, withScopedTags(scopedTags))
     // `html-unsupported` warnings come from the raw-HTML rewrite
     // (`shared/markdoc-config/parse/html-tokens.ts`): markup that was clearly meant

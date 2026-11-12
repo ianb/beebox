@@ -108,6 +108,8 @@ export interface DispatchInput {
   packageDirs: string[];
   /** Does `<dir>/package.json` define this script? */
   hasScript: (dir: string, script: string) => boolean;
+  /** `--base` given to the root run; beebox's child `lint:changed` must diff against the same ref. */
+  base?: string;
 }
 
 /**
@@ -153,10 +155,11 @@ export function dispatchPlan(input: DispatchInput): LintCommand[] {
   for (const dir of [...packages].toSorted()) {
     const script = dir === "beebox" ? "lint:changed" : "lint";
     if (!input.hasScript(dir, script)) continue;
+    const baseArgs = script === "lint:changed" && input.base !== undefined ? ["--base", input.base] : [];
     commands.push({
       label: `pnpm --dir ${dir} ${script}`,
       cwd: ".",
-      argv: ["pnpm", "--dir", dir, script],
+      argv: ["pnpm", "--dir", dir, script, ...baseArgs],
     });
   }
   if (schedules) {
@@ -166,6 +169,32 @@ export function dispatchPlan(input: DispatchInput): LintCommand[] {
     commands.push({ label: "pnpm lint:bin", cwd: ".", argv: ["pnpm", "lint:bin"] });
   }
   return commands;
+}
+
+const BEEBOX_LINT_CHANGED = "pnpm --dir beebox lint:changed";
+
+/**
+ * The layout check, on the same paths the pre-commit hook gates it on
+ * (`.husky/pre-commit`: a code file or a `package.json`, deletions included).
+ * It scans every package root, so it runs once: a plan that delegates to
+ * beebox's `lint:changed` leaves it to that child run.
+ */
+export function withLayoutCheck(commands: LintCommand[], changed: string[]): LintCommand[] {
+  const needed = changed.some((path) => /\.(ts|tsx|mts|cts|js|mjs|cjs)$|(^|\/)package\.json$/.test(path));
+  if (!needed || commands.some((command) => command.label === BEEBOX_LINT_CHANGED)) return commands;
+  return [...commands, { label: "pnpm layout-check", cwd: "beebox", argv: ["pnpm", "--silent", "layout-check"] }];
+}
+
+/**
+ * The UI check (doc coverage and repeated class strings), on the same paths the pre-commit hook gates it on
+ * (`.husky/pre-commit`: the frontend source or `beebox/frontend.md`, deletions
+ * included). Like the layout check, a root plan that delegates to beebox's
+ * `lint:changed` leaves it to that child run.
+ */
+export function withUiCheck(commands: LintCommand[], changed: string[]): LintCommand[] {
+  const needed = changed.some((path) => path.startsWith("beebox/src/frontend/src/") || path === "beebox/frontend.md");
+  if (!needed || commands.some((command) => command.label === BEEBOX_LINT_CHANGED)) return commands;
+  return [...commands, { label: "pnpm ui-check", cwd: "beebox", argv: ["pnpm", "--silent", "ui-check"] }];
 }
 
 // ── the I/O shell ───────────────────────────────────────────────────────────
@@ -276,10 +305,17 @@ function beeboxCommands(paths: string[]): LintCommand[] {
 
 function main(argv: string[]): number {
   const args = parseArgs(argv);
-  const paths = existing(changedPaths({ base: args.base, cwd: REPO_ROOT }));
-  const commands = args.root
-    ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript })
-    : beeboxCommands(paths);
+  const changed = changedPaths({ base: args.base, cwd: REPO_ROOT });
+  const paths = existing(changed);
+  const commands = withUiCheck(
+    withLayoutCheck(
+      args.root
+        ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript, base: args.base })
+        : beeboxCommands(paths),
+      changed,
+    ),
+    changed,
+  );
   if (commands.length === 0) {
     console.log("lint-changed: nothing lintable changed");
     return 0;

@@ -55,7 +55,8 @@ For images and audio, don't fetch. Render a bounded image with
 \`<img src={imageUrl(f.path, { width: 960, format: "auto" })} />\`; use
 \`fileUrl(f.path)\` for audio and for a link to the full-resolution image. Image
 variants are generated on demand and cached, so do not make a small display
-download the original.
+download the original. Add \`loading="lazy"\` to images in a grid or long list
+so offscreen ones wait.
 
 \`imageUrl\` requires \`width\` or \`height\`. It uses \`fit: "scale-down"\` and
 \`quality: 85\` by default; \`format: "auto"\` negotiates AVIF/WebP/JPEG. Other
@@ -200,3 +201,71 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 \`\`\`
 
 The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;
+
+export const datesSection = `### Dates
+
+A date-only value such as \`due: 2026-08-14\` arrives as the string
+\`"2026-08-14"\`. It names a day, not a moment. Split it into numbers, build
+its midnight UTC with \`Date.UTC\`, and format it with \`timeZone: "UTC"\`, so
+every viewer sees that day:
+
+\`\`\`tsx
+const dayOf = (text: string): number => {
+  const [y = 0, m = 1, d = 1] = text.split("-").map(Number);
+  const utcMs = Date.UTC(y, m - 1, d);
+  const back = new Date(utcMs); // Date.UTC rolls 2026-02-30 over to March 2; reject it
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== m - 1 || back.getUTCDate() !== d) throw new Error(\`Not a date: \${text}\`);
+  return utcMs;
+};
+const todayText = (): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const part = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+  return \`\${part("year")}-\${part("month")}-\${part("day")}\`; // "2026-08-14"
+};
+new Date(dayOf(due)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }); // "Aug 14"
+const daysLeft = (dayOf(due) - dayOf(todayText())) / 86_400_000;
+\`\`\`
+
+A view cannot read the box's timezone, so \`todayText()\` is today where the
+person viewing is (usually the boxholder), in the zone their device is set to.
+Do not assemble it from \`format()\` output: its layout is up to the browser.
+
+A timestamp (\`2026-08-14T09:30:00Z\`) is a moment: \`new Date(value)\`,
+formatted without \`timeZone\`, shows it in the viewer's zone. Do not show
+\`new Date("2026-08-14")\` in the viewer's zone: it reads the date as midnight
+UTC, so a person west of UTC sees the day before.
+\`new Date().toISOString().slice(0, 10)\` is today in UTC, not today where the
+person is.`;
+
+export const controlsSection = `## Controls People Can Use
+
+A view is used by mouse, touch, keyboard, and screen reader, and the box agent
+drives it by the same names. Write native HTML before ARIA:
+
+- Every control has a name: \`<button>\` text, a \`<label>\` for an input
+  (\`<label>Due <input type="date" /></label>\`), or \`aria-label\` on an
+  icon-only button. A placeholder is not a name. Put \`aria-label\` only on an
+  element with a role; on a plain \`<div>\` it is ignored.  An \`<img>\` has
+  \`alt\` (\`alt=""\` for decoration).
+- Use \`<button type="button">\` for actions and \`<a href>\` for links, not a
+  clickable \`<div>\`. A disclosure is \`<details><summary>\`; a modal is
+  \`<dialog>\` opened with \`showModal()\`.
+- A toggle keeps one name and exposes its state with \`aria-pressed\`.
+- Give a field the keyboard it needs: \`type="email"\`, \`"tel"\`, \`"url"\`, or
+  \`inputMode="numeric"\`; on a field where Enter sends, \`enterKeyHint="send"\`.
+- Show the result of an action ("Saved", "Copied") in an element with
+  \`role="status"\` that is on the page before the action, and change its
+  text. Put an error in \`role="alert"\`. A screen reader does not read text
+  that arrives in a new element.
+- If Enter in a text field submits, wrap it in a \`<form onSubmit>\`, or skip
+  Enter while \`event.nativeEvent.isComposing\`: Japanese, Chinese and Korean
+  input use Enter to confirm text.
+- Touch targets are at least 24×24 px. Do not hide a control until hover;
+  phones have none.
+- Charts and figures need a text alternative: a caption that states what the
+  picture shows, or the numbers in a table.
+- Animation driven by script (\`requestAnimationFrame\`, a canvas loop, a timer)
+  stops when \`matchMedia("(prefers-reduced-motion: reduce)").matches\`. The app
+  stops CSS animations and transitions for a person who asks for reduced
+  motion.
+- Use \`dvh\` (not \`vh\`) for heights tied to the screen.`;

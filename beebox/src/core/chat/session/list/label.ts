@@ -18,6 +18,7 @@
  */
 
 import { readFirstUserSnippet, snippetFromUserText } from "../../../../cli/lib/session-snippet.js";
+import { readPiFirstUserSnippet } from "../pi-transcript.js";
 
 /** Chars of the first user message used when there is no title. */
 const SNIPPET_MAX_LEN = 400;
@@ -46,6 +47,8 @@ export function quoteSnippet(text: string): string {
  */
 export type SessionLabelSource =
   | { kind: "transcript"; logPath: string }
+  /** A pi session file (`../pi-transcript.ts`). */
+  | { kind: "pi-transcript"; logPath: string }
   /**
    * Undefined when the thread's metadata never reached us. The chat lists drop
    * such a chat before labelling (`session/list.ts` `loadSessionEntry`), so
@@ -79,6 +82,9 @@ export async function resolveSessionLabel(args: {
 async function firstUserSnippet(source: SessionLabelSource): Promise<string | null> {
   if (source.kind === "transcript") {
     return readFirstUserSnippet({ logPath: source.logPath, snippetMaxLen: SNIPPET_MAX_LEN });
+  }
+  if (source.kind === "pi-transcript") {
+    return readPiFirstUserSnippet({ path: source.logPath, snippetMaxLen: SNIPPET_MAX_LEN });
   }
   // Only the *first* message, so there is no rescan when it strips to nothing
   // (the transcript path keeps looking, since a transcript's opening turns can

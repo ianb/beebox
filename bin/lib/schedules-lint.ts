@@ -195,27 +195,23 @@ const shellcheckSchema = z.object({
   ),
 });
 
-/** The shellcheck binary the npm wrapper fetches. The wrapper's default is
- *  `latest` — a GitHub lookup whose answer changes under us — so the release is
- *  pinned here the way the wrapper itself is pinned in the lockfile. It
- *  downloads once per `node_modules` (lazily, on the first lint), and its
- *  progress chatter goes to **stdout**, which would land in the middle of the
- *  JSON below; `error` is the quietest level that still reports a failure. */
-const SHELLCHECK_ENV = { SHELLCHECKJS_RELEASE: "v0.11.0", SHELLCHECKJS_LOGGER_LEVEL: "error" };
+/** Where a missing shellcheck comes from; `bin/doctor` checks for it too. */
+const SHELLCHECK_INSTALL = "install shellcheck (brew install shellcheck / apt-get install shellcheck)";
 
 /**
- * One shellcheck run over every shell script in every schedule — pinned in the
- * root `devDependencies` and invoked through `pnpm exec`, so the version is the
- * lockfile's rather than whatever the laptop happens to have installed.
+ * One shellcheck run over every shell script in every schedule, using the
+ * system shellcheck on PATH.
  */
 async function shellcheckFindings(input: { repoRoot: string; scripts: ScriptFile[] }): Promise<LintFinding[]> {
   if (input.scripts.length === 0) return [];
   const byPath = new Map(input.scripts.map((script) => [script.absolute, script]));
-  const result = await execa("pnpm", ["exec", "shellcheck", "--format=json1", "--", ...byPath.keys()], {
+  const result = await execa("shellcheck", ["--format=json1", "--", ...byPath.keys()], {
     cwd: input.repoRoot,
     reject: false,
-    env: SHELLCHECK_ENV,
   });
+  if (result.exitCode === undefined) {
+    throw new LinterFailedError({ tool: "shellcheck", exitCode: undefined, output: `${result.shortMessage}; ${SHELLCHECK_INSTALL}` });
+  }
   if (result.exitCode !== 0 && result.exitCode !== 1) {
     throw new LinterFailedError({ tool: "shellcheck", exitCode: result.exitCode, output: result.stderr || result.stdout });
   }

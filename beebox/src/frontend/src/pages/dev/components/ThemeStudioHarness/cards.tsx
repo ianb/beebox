@@ -5,7 +5,7 @@
  * interface card holds app panels in the card material.
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { MarkdownCardView } from "../../../../components/MarkdownCardView/view";
 import { SidecarTabStrip } from "../../../../components/chat/workspace/SidecarTabStrip/view";
 import { workspacePanelId } from "../../../../components/chat/workspace/address";
@@ -24,7 +24,25 @@ import { useCompanionMaterial } from "../../../../hooks/useCompanionMaterial";
 import { PaneControls } from "../../../../components/chat/workspace/PaneControls";
 import { useMobileChatViewport } from "../../../../components/chat/everywhere/use-mobile-card-navigation";
 import { Pre } from "../../../../components/ui/Pre";
+import { Image } from "../../../../components/ui/Image/view";
+import { Row } from "../../../../components/ui/Row";
+import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";
+import { CheckboxField, SelectField } from "../../../../components/ui/fields/field";
+import { StudioFigure } from "./figure";
+import { StatusMessage } from "../../../../components/ui/StatusMessage";
+import { ErrorText } from "../../../../components/ui/ErrorText";
+import { InlineAction } from "../../../../components/ui/InlineAction";
+import { Table, Td, Th } from "../../../../components/ui/Table";
+import { QUESTION_PATH, QuestionCard } from "./question";
+
+/**
+ * Stands in for an embedded figure, which paints its own light panel whatever
+ * the card theme; shapes only, since the figure's own text is not themed.
+ */
+const WIDGET_ART = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120"><rect width="320" height="120" fill="#fafafa"/><rect x="16" y="14" width="288" height="6" rx="3" fill="#ddd"/><rect x="16" y="14" width="90" height="6" rx="3" fill="#8ab4f8"/><circle cx="106" cy="17" r="7" fill="#8ab4f8"/>${[0, 1, 2, 3, 4].map((i) => `<circle cx="${60 + i * 50}" cy="${80 - (i % 2) * 14}" r="11" fill="${i % 2 === 0 ? "#7cbf72" : "#d9534f"}"/>`).join("")}</svg>`,
+)}`;
 
 function noop() { /* The specimen never opens, pins or closes a card. */ }
 
@@ -72,6 +90,8 @@ The hall is free {% source href="https://example.org/hall-hours" retrieved="2026
 Dry seeds for a week before you seal the envelope.
 {% /source %}
 
+Last year's list {% source ref="../../../outside-the-box.md" %}ran out by eleven{% /source %}. {% todo %}Order envelopes {% see-also ref="../../../outside-the-box.md" %}the old supplier{% /see-also %}{% /todo %}
+
 This sample includes **bold**, *italic*, ~~retired text~~ and a [sample link](#before-saturday).`;
 
 const READING_PATH = "notes/Seed exchange.doc.card";
@@ -87,8 +107,10 @@ function tab(path: string, { label, pinned }: { label: string; pinned: boolean }
  * the desk's direct child. A card is themed (`data-active-card`); any other
  * file sits on a neutral desk.
  */
-function CompanionDesk({ id, tabs, active, identities, content, children }: {
+function CompanionDesk({ id, label, tabs, active, identities, content, children }: {
   id: string;
+  /** Names the desk, as the workspace names a pane, so each desk's pane controls are its own. */
+  label: string;
   tabs: PanelTab[];
   active: string;
   identities: Map<string, CardIdentity>;
@@ -97,7 +119,8 @@ function CompanionDesk({ id, tabs, active, identities, content, children }: {
 }) {
   const material = useCompanionMaterial(active);
   const mobile = useMobileChatViewport();
-  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0">
+  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0"
+    role="group" aria-label={label}>
     <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={id} tabs={tabs} activePath={active} identities={identities} boxSlug={undefined}
         onSelectTab={noop} onCloseTab={noop} onTogglePin={noop} />
@@ -113,18 +136,49 @@ type Theme = ResolvedCardTheme;
 
 function ReadingCard({ theme }: { theme: Theme }) {
   const { name, stock } = theme.choice;
+  const [checked, setChecked] = useState(false);
   return <CardThemeSurface theme={theme} title="A little room to grow" detail="Seed exchange · Saturday" symbol={null} boxSlug={undefined} mode="companion"
     properties={<><h2>Properties</h2><p>Fixed sample content for checking the back of a card.</p><dl><dt>Theme</dt><dd>{name} / {stock}</dd><dt>File</dt><dd>{READING_PATH}</dd></dl></>}>
     <MarkdownCardView mode="companion" onNavigate={noop} data={{
       path: READING_PATH, kind: "frontmatter", type: "doc", schema: null, body: SAMPLE,
       frontmatter: { status: "planning", hall: "Grange hall", volunteers: ["Dana", "Lee"], host: { ref: "people/Dana.person.card" } },
     }} />
+    <div className="bbx-card-content">
+      <StudioFigure />
+      <CaptionedFigure caption="Drag the slider to warm the seed tray: germination starts near 20 °C">
+        <img src={WIDGET_ART} alt="" className="block w-full" />
+      </CaptionedFigure>
+      <Row justify="center" className="my-2">
+        <Image src={WIDGET_ART} alt="Seed tray sketch" size="chat" caption="An image embed shows its caption beneath" />
+      </Row>
+      <CardStatusLines />
+    </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
-      <label className="flex items-center gap-2 text-sm"><input id="bbx-studio-check" type="checkbox" /> Bring spare envelopes</label>
+      <CheckboxField id="bbx-studio-check" label="Bring spare envelopes" checked={checked} onChange={setChecked} />
       <Button id="bbx-studio-action" size="sm" onClick={noop}>Sample action</Button>
       <Button id="bbx-studio-disabled" size="sm" intent="secondary" disabled>Disabled</Button>
     </div>
   </CardThemeSurface>;
+}
+
+/**
+ * What a card view shows on its own paper besides its content: a loading
+ * line, an error with its retry, and a table's caption and column headers.
+ */
+function CardStatusLines() {
+  return <Stack gap="sm" className="my-3">
+    <StatusMessage variant="inline">Loading the seed list…</StatusMessage>
+    <Row gap="sm">
+      <ErrorText>The seed list could not be loaded.</ErrorText>
+      <InlineAction intent="subtle" onClick={noop}>Retry</InlineAction>
+      <InlineAction intent="danger" onClick={noop}>Remove it</InlineAction>
+      <InlineAction onClick={noop}>Open the list</InlineAction>
+    </Row>
+    <Table caption="Seeds by table">
+      <thead><tr><Th scope="col">Table</Th><Th scope="col" numeric>Packets</Th></tr></thead>
+      <tbody><tr><Td>By the door</Td><Td numeric>20</Td></tr></tbody>
+    </Table>
+  </Stack>;
 }
 
 /** Interface cards (Settings) render app panels inside the card material. */
@@ -139,7 +193,10 @@ function SystemThemePanel() {
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
+    <SelectField id="bbx-studio-select" label="Toolbar size" value="regular" onChange={noop}
+      options={[{ value: "compact", label: "Compact" }, { value: "regular", label: "Regular" }, { value: "large", label: "Large" }]} />
     <Text size="xs" tone="muted">This box has its own system theme.</Text>
+    <Text size="xs" tone="danger">The last change could not be saved.</Text>
   </Stack></Card>;
 }
 
@@ -152,17 +209,22 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     ["notes/Welcome table.doc.card", identity("Welcome table", "🪧")],
     [SETTINGS_PATH, identity("Settings", "⚙️")],
     ["notes/Volunteers.doc.card", identity("Volunteers", "🙋")],
+    [QUESTION_PATH, identity("Hall opening", "❓")],
   ]);
   return <div className="min-w-0 space-y-4">
-    <CompanionDesk id="bbx-studio-tabs-reading" active={READING_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
       tabs={[tab(READING_PATH, { label: "Seed exchange", pinned: true }), tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: false })]}>
       <ReadingCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-settings" active={SETTINGS_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"
       tabs={[tab(SETTINGS_PATH, { label: "Settings", pinned: false }), tab("notes/Volunteers.doc.card", { label: "Volunteers", pinned: false })]}>
       <SettingsCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-file" active={FILE_PATH} identities={identities} content="neutral"
+    <CompanionDesk id="bbx-studio-tabs-question" label="Question card" active={QUESTION_PATH} identities={identities} content="card"
+      tabs={[tab(QUESTION_PATH, { label: "Hall opening", pinned: false })]}>
+      <QuestionCard theme={theme} />
+    </CompanionDesk>
+    <CompanionDesk id="bbx-studio-tabs-file" label="Plain file" active={FILE_PATH} identities={identities} content="neutral"
       tabs={[tab(FILE_PATH, { label: "packing-list.txt", pinned: false })]}>
       <Pre className="m-4">{"envelopes  40\nlabels     2 sheets\ntape       1 roll\npens       6"}</Pre>
     </CompanionDesk>

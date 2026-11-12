@@ -189,3 +189,26 @@ void test("filterByDateRange", async (t) => {
     },
   ]);
 });
+
+// ## A long-running daily series still shows its upcoming days
+//
+// Occurrences before the range are walked past, not counted toward the result
+// limit. A daily series begun in 2024 is past its 500th occurrence by
+// mid-2025, and used to expand to nothing for a later window.
+void test("a daily series that began years before the range still expands inside it", (t) => {
+  const daily = `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:daily-1
+SUMMARY:Morning walk
+DTSTART:20240101T140000Z
+DTEND:20240101T143000Z
+RRULE:FREQ=DAILY
+END:VEVENT
+END:VCALENDAR`;
+  const parsed = parseIcsContent(daily, {
+    filename: "walk.ics",
+    range: { from: new Date("2026-11-02T00:00:00Z"), to: new Date("2026-11-04T00:00:00Z") },
+  });
+  t.check(parsed.map((e) => e.start.toISOString()), ["2026-11-02T14:00:00.000Z", "2026-11-03T14:00:00.000Z"]);
+  t.end();
+});

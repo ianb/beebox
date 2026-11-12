@@ -1,9 +1,10 @@
 // Contrast scoring over a glyph-free capture: thresholds, the percentile that
-// tolerates texture but not a band, faded groups, and material surfaces.
+// tolerates texture but not a band, faded groups, material surfaces, and app
+// ink in a card.
 
 import { test } from "tap";
-import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreRuns, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
-import type { Material, TextRun } from "./tour-lib/contrast-page.js";
+import { composite, contrastRatio, mergeContrastSteps, scoreInk, scoreMaterials, scoreFields, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
+import type { Field, Material, TextRun } from "./tour-lib/contrast-page.js";
 
 type Rgb = [number, number, number];
 
@@ -22,7 +23,7 @@ function image({ left, right, split }: { left: Rgb; right?: Rgb; split?: number 
 }
 
 function run(over: Partial<TextRun>): TextRun {
-  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, placeholder: false, material: -1, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
+  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, placeholder: false, material: -1, appInk: null, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
 }
 
 function page(runs: TextRun[], materials?: Material[]): { width: number; runs: TextRun[]; materials: Material[] } {
@@ -88,8 +89,56 @@ void test("readable text on an undeclared surface that inverts the paper is a su
   t.end();
 });
 
+// Text in a card colored by an app palette utility misses the material
+// whatever its contrast: the next theme's paper may be dark. The page script
+// leaves `appInk` null on app panels and for text in the card's ink.
+void test("text in a card with an app palette utility is an ink miss", (t) => {
+  t.check(scoreInk({ runs: [
+    run({ id: 4, text: "Later", fg: [0x6b, 0x5d, 0x4b, 1], appInk: { utility: "text-warm-700", theme: "paper/cream" } }),
+    run({ id: 5, text: "Ten", appInk: null }),
+  ] }), [
+    { kind: "ink", run: 4, selector: "p", text: "Later", theme: "paper/cream", utility: "text-warm-700", fg: "#6b5d4b", ratio: 0, required: 0 },
+  ]);
+  t.end();
+});
+
 void test("token pairs below AA are named by token", (t) => {
   t.check(scoreMaterials([dark]).map((f) => f.kind === "token" && `${f.fg} on ${f.bg} ${String(f.ratio)}`), ["--bbx-ink on --bbx-sheet 2.68"]);
+  t.end();
+});
+
+// A translucent selection background is scored over white: half-black is gray
+// 127.5, which white text reads on at 3.98:1 and black at 5.28:1.
+void test("selected text below AA fails; a translucent background is scored over white", (t) => {
+  const at = [{ x: 0, y: 0, w: 40, h: 10 }];
+  t.check(scoreSelections([
+    { selector: "pre", text: "doors open", fg: [0, 0, 0, 1], bg: [0, 0, 0, 0.5], rects: at },
+    { selector: "p", text: "Sample", fg: [255, 255, 255, 1], bg: [0, 0, 0, 0.5], rects: at },
+  ]), [
+    { kind: "selection", selector: "p", text: "Sample", fg: "#ffffff", bg: "#808080", ratio: 3.98, required: 4.5, rects: at },
+  ]);
+  t.end();
+});
+
+// The field's edge passes when the field, or its border, stands 3:1 off the
+// surface around it, or the border off the field (WCAG 1.4.11).
+void test("a select's edge is scored against the pixels around it; its value against its field", (t) => {
+  const rect = { x: 20, y: 4, w: 60, h: 2 };
+  const field = (over: Partial<Field>): Field => ({ selector: "select", text: "Regular", fg: [46, 39, 32, 1], field: [255, 255, 255, 1], border: null, rect, ...over });
+  const paper = image({ left: [245, 239, 226] });
+  t.check(scoreFields(paper, { width: 100, fields: [
+    // The old warm-400 border: 1.55:1 on the white field.
+    field({ border: [217, 206, 189, 1] }),
+    // warm-700: 6.38:1 on the field.
+    field({ border: [107, 93, 75, 1] }),
+    // A pale value on its field.
+    field({ border: [107, 93, 75, 1], fg: [170, 170, 170, 1] }),
+  ] }).map((f) => f.kind === "field" && `${f.part} ${f.fg} ${f.bg} ${String(f.ratio)}`), [
+    "edge #d9cebd #f5efe2 1.55",
+    "text #aaaaaa #ffffff 2.32",
+  ]);
+  // A white field on a dark card needs no border.
+  t.check(scoreFields(image({ left: [35, 102, 106] }), { width: 100, fields: [field({ border: null })] }), []);
   t.end();
 });
 

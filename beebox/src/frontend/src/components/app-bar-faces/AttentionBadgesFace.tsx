@@ -55,6 +55,36 @@ function SegmentDivider() {
 // in the shared chip pill switched to `ring-inset`.
 const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40";
 
+/**
+ * The questions count: in a chat it shows and hides the question beside the
+ * chat, elsewhere it links to the Questions page. One control in two modes, so
+ * it carries one id.
+ */
+function QuestionsSegment({ id, count, toggle, path }: {
+  id: string;
+  count: number;
+  toggle: { label: string; onToggle: () => void } | undefined;
+  path: string;
+}) {
+  if (toggle !== undefined) {
+    const handleToggle = toggle.onToggle;
+    const label = `${toggle.label} (${count} waiting)`;
+    return (
+      <button type="button" id={id} onClick={handleToggle} className={SEGMENT} title={label} aria-label={label}>
+        <QuestionIcon />
+        {count}
+      </button>
+    );
+  }
+  const label = `${count} question${count !== 1 ? "s" : ""} waiting for you`;
+  return (
+    <Link id={id} to={href(path)} className={SEGMENT} title={label} aria-label={label}>
+      <QuestionIcon />
+      {count}
+    </Link>
+  );
+}
+
 /** The badges as drawn, from counts; the theme studio renders them with fixed ones. */
 export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, escalatedTodos, errorCount, onOpenErrors, questionToggle }: {
   base: string;
@@ -73,34 +103,16 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
   onOpenErrors: () => void;
 }) {
   const showErrors = errorCount > 0;
-  const handleToggleQuestion = questionToggle?.onToggle;
 
   const segments = [
-    pendingQuestions > 0 && questionToggle !== undefined ? (
-      <button
-        key="questions"
-        type="button"
-        id="bbx-nav-questions"
-        onClick={handleToggleQuestion}
-        className={SEGMENT}
-        title={`${questionToggle.label} (${pendingQuestions} waiting)`}
-        aria-label={`${questionToggle.label} (${pendingQuestions} waiting)`}
-      >
-        <QuestionIcon />
-        {pendingQuestions}
-      </button>
-    ) : pendingQuestions > 0 ? (
-      <Link
+    pendingQuestions > 0 ? (
+      <QuestionsSegment
         key="questions"
         id="bbx-nav-questions"
-        to={href(`${base}/questions`)}
-        className={SEGMENT}
-        title={`${pendingQuestions} question${pendingQuestions !== 1 ? "s" : ""} waiting for you`}
-        aria-label={`${pendingQuestions} question${pendingQuestions !== 1 ? "s" : ""} waiting for you`}
-      >
-        <QuestionIcon />
-        {pendingQuestions}
-      </Link>
+        count={pendingQuestions}
+        toggle={questionToggle}
+        path={`${base}/questions`}
+      />
     ) : null,
     onPlateTodos > 0 ? (
       <Link

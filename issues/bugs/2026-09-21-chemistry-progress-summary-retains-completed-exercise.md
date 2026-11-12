@@ -54,3 +54,7 @@ core and journey work leave it out.
 
 The stale summary is in a `progress` card, a courseware type. The fix is
 in the courseware guidance.
+
+Re-reviewed 2026-10-30: Guidance paths moved into the courseware plugin; the stale-summary gap is unchanged.
+
+Out of date in the body above: In 'Candidate authoring guidance', replace beebox/src/schemas/progress.ts:87-89 with beebox/src/plugins/courseware/progress.ts:91 and guidance-sync/skills/content.ts:111-113 with beebox/src/plugins/courseware/skill.ts:60-62.

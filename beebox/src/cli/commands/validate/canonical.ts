@@ -42,12 +42,9 @@ export function canonicalCounts(buckets: CanonicalBuckets): { refs: number; doss
  * The view/dossier findings (card findings already printed under their own file
  * headers by the card formatter) followed by the two-bucket summary line.
  */
-export function formatCanonicalReport(
-  buckets: CanonicalBuckets,
-  { colors }: { colors: boolean }
-): string {
+export function formatCanonicalReport(buckets: CanonicalBuckets): string {
   const findings = [...buckets.viewWarnings, ...buckets.dossierWarnings];
-  const summary = formatCanonicalSummary(canonicalCounts(buckets), { colors });
+  const summary = formatCanonicalSummary(canonicalCounts(buckets));
   return findings.length === 0 ? summary : `${findings.join("\n")}\n\n${summary}`;
 }
 

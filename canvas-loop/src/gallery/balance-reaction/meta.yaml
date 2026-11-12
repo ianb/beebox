@@ -1,0 +1,25 @@
+slug: balance-reaction
+title: "Balance the equation (typed coefficients)"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 7
+tier: tea
+harness-commit: 5a3d0655
+frames: 360
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Five reactions; learner types coefficients into number fields; molecules drawn per coefficient,
+  per-element atom tallies with mismatch shown but no answer given, celebration when balanced.
+  Checked in Chrome: typed fields drive the picture; an out-of-range entry is marked invalid.
+self-report-summary: >
+  Wants textWidth and subscript text, rounded rects, param labels/hints, a way to disable a param
+  that does not apply, feedback on rejected input, and a param reset when another param changes.
+features-exercised:
+  - typed number fields (control "field")
+  - select param
+  - sibling -tea helper file
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

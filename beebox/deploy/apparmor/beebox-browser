@@ -1,0 +1,28 @@
+# AppArmor grants for the box browser (docs/plans/shared-browser.md, Track F;
+# verified in research/embedded-browser/linux-verification.md).
+#
+# Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1: a program
+# may create a user namespace only if an AppArmor profile grants `userns`. Two
+# programs need one:
+#   - the launcher's copy of unshare, which creates each box browser's user,
+#     network and mount namespaces (src/core/browser/host/namespace.ts). The copy
+#     is mode 0750, group beebox-boxes, so only box users run the exempt binary;
+#     /usr/bin/unshare stays restricted for everyone else.
+#   - Chrome for Testing, whose own sandbox creates namespaces. Same pattern as
+#     Ubuntu's profile for /opt/google/chrome/chrome.
+# pasta needs none: it joins the namespace unshare made and creates none.
+#
+# deploy/deploy.sh installs this file to /etc/apparmor.d/beebox-browser and
+# loads it with `apparmor_parser -r` when it changes. The paths must match
+# NAMESPACE_UNSHARE and the deploy's Chrome location (test/deploy/browser.test.ts).
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile beebox-browser-unshare /opt/beebox-browser/bin/unshare flags=(unconfined) {
+  userns,
+}
+
+profile beebox-browser-chrome /opt/beebox-browser/.agent-browser/browsers/*/chrome flags=(unconfined) {
+  userns,
+}

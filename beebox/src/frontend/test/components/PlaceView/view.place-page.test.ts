@@ -33,6 +33,7 @@ function payload(overrides?: Partial<PlacePayload>): PlacePayload {
     depth: 0,
     features: {},
     openers: ["Who has what right now?", "Log a new loan"],
+    intention: null,
     arrival: "_content/lending/Lending.landmark.card",
     ...overrides,
   };

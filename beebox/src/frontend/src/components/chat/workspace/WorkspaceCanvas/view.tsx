@@ -23,11 +23,13 @@ import type { ActivityKind } from "@core/chat/card-activity";
 import { withoutFragment } from "../../../../lib/view-url";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
+import { IntentionStrip } from "../../../intention/IntentionStrip";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
+
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
@@ -46,8 +48,10 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
     onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
     onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
     onAddSelection={onAddSelection} reportActivity={reportActivity} />;
+  // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
-    style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 1 }}
+    role="group" aria-label={pane === "left" ? "Left pane" : "Right pane"}
+    style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 2 }}
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>
     {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={workspace.mobile ? "bbx-panel-tabs-mobile" : pane === "left" ? "bbx-panel-tabs" : "bbx-panel-tabs-right"} tabs={tabs} activePath={tab.target.path} identities={identities} boxSlug={boxSlug}
@@ -82,8 +86,13 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
  * and re-render each open card per token (`components/chat/AGENTS.md`,
  * "Workspace card roots survive presentation changes").
  */
-export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelection, reportActivity }: CardCallbacks & {
+export function WorkspaceCanvas({ children, strip, turnActive, turnTools, onAddSelection, reportActivity }: CardCallbacks & {
   children: ReactNode;
+  /**
+   * The conversation strip (`ConversationStrip`): its own full-width row
+   * above the grid, so it tops the cards and the messages in every layout.
+   */
+  strip: ReactNode;
   /** A chat turn is running; with `turnTools`, marks the documents it is editing. */
   turnActive: boolean;
   turnTools: readonly SessionContentBlock[];
@@ -95,11 +104,13 @@ export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelectio
   useEffect(() => {
     setVisited((old) => visiblePaths.every((path) => old.has(path)) ? old : new Set([...old, ...visiblePaths]));
   }, [visiblePaths]);
-  if (!workspace) return children;
+  if (!workspace) return <>{strip}{children}</>;
   const { projection, mobile } = workspace;
   const transcript = projection.transcript;
   const split = !mobile && workspace.state.layout.kind === "split" && transcript !== "full";
-  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden><div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "minmax(0, 1fr)" }}>
+  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden>{strip}<div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "auto minmax(0, 1fr)" }}>
+    {/* Row 1 holds only the intention strip, above the cards (or above the chat when no card is open). */}
+    <IntentionStrip split={split} />
     {Object.values(workspace.state.tabs).map((tab) => {
       const path = tab.target.path;
       if (!visited.has(path) && !visiblePaths.includes(path)) return null;
@@ -107,7 +118,7 @@ export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelectio
       return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} editing={edited.has(path)} onAddSelection={onAddSelection} reportActivity={reportActivity} />;
     })}
     <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "bbx-conversation-desk flex flex-col min-h-0 min-w-0 relative" : "hidden"}
-      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1" }}>
+      style={{ gridRow: split && (transcript === "left" || transcript === "right") ? "1 / -1" : 2, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1" }}>
       <TranscriptFloatingControls restore={projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
     </div>
   </div></>;

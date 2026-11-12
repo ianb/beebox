@@ -13,6 +13,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { createGmailConnector } from "../../../src/connectors/gmail/connector.js";
 import { strandedDraftsHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/connectors.js";
 
@@ -160,7 +161,12 @@ void test("If the agent writes a draft whose in-reply-to doesn't point to a real
 
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+
+  // The sync log names the source message it could not read:
+  const missing = `${box.root}/_content/inbox/email/thread-Bad-aaa00000/does-not-exist.email-message.card`;
+  t.check(warnings(), [`gmail-drafts: cannot read source message ${missing}: Error: ENOENT: no such file or directory, open '${missing}'`]);
 
   // No draft uploaded, sync reports the error per-card
   t.check(gmail.drafts, []);

@@ -325,15 +325,6 @@ export function eventToIcs(
   return comp.toString();
 }
 
-export function eventFilename(event: GoogleCalendarEvent): string {
-  const dateStr =
-    event.start?.dateTime?.slice(0, 10) ||
-    event.start?.date ||
-    "no-date";
-  const shortId = event.id.slice(-8);
-  return `${dateStr}_${shortId}.ics`;
-}
-
 /** Check if an event's start falls within a time window */
 export function isInWindow(event: GoogleCalendarEvent, window: { start: Date; end: Date }): boolean {
   // Recurring masters: Google already filtered server-side via timeMin/timeMax
@@ -360,6 +351,17 @@ function readEventTime(
   const result: { dateTime: string; timeZone?: string } = { dateTime: value.toJSDate().toISOString() };
   if (tzid) result.timeZone = String(tzid);
   return result;
+}
+
+/** Whether `content` parses as a calendar holding an event with a start. Quiet: the caller reports a file that does not. */
+export function parsesAsDatedEvent(content: string): boolean {
+  try {
+    const vevent = new ICAL.Component(ICAL.parse(content)).getFirstSubcomponent("vevent");
+    return vevent !== null && asIcalTime(vevent.getFirstPropertyValue("dtstart")) !== null;
+  } catch (_e) {
+    // ignore: a parse error is exactly the "no" this answers; the caller names the file
+    return false;
+  }
 }
 
 /**

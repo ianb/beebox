@@ -8,6 +8,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import {
   createFakeGoogleDrive,
@@ -27,7 +28,9 @@ import {
 import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import ky from "ky";
-import { any } from "@ianbicking/tap-check/check";
+import { execSync } from "node:child_process";
+import { loadDriveState } from "../../src/connectors/google-drive/state.js";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import {
   loadDocsApiDiagnosis,
   recordDocsApiDiagnosis,
@@ -474,21 +477,27 @@ title: Scan 2024.pdf
 origin: mirror
 ---`);
 
-  // The folder card is re-stamped with the Drive name, link, and the last outcome.
+  // The folder card is re-stamped with the Drive name and link. When the pass
+  // ran goes to the gitignored Drive state, keyed by the folder's Drive ID.
 
-  const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
-  await t.checkText(folderCard.replace(/last-sync: .*/, "last-sync: «stamped»"), `---
+  await t.checkText(await box.read("_content/drive/recipes/Recipes.gfolder.card"), `---
 drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «stamped»
 ---`);
+  const firstSync = (await loadDriveState(box.root)).folders["folder-1"]?.lastSync;
+  t.check(firstSync, isoDate());
 
-  // A second pass with nothing changed creates nothing and rewrites no pointer.
+  // A second pass with nothing changed on Drive changes no tracked file, so it
+  // reports nothing and makes no commit; only the state's sync time moves.
 
+  const head = () => execSync("git rev-parse HEAD", { cwd: box.root, encoding: "utf-8" });
+  const before = head();
   const again = await connector.sync();
-  t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
+  t.check(again, { success: true, created: [], updated: [] });
+  t.check(head(), before);
+  t.check((await loadDriveState(box.root)).folders["folder-1"], { lastSync: isoDate() });
 });
 
 // ## Docs API diagnosis — folder discovery counts, and a capped pass clears only on evidence
@@ -532,8 +541,14 @@ void test("A Doc found by a newly mounted folder opens the diagnosis on that fir
   const missingScope = await scopeInsufficientError();
   drive.getDocument = async () => { throw missingScope; };
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, drive).sync();
   t.check(result.created, ["_content/drive/notes/Plan.attach/Plan.md", "_content/drive/notes/Plan.gdoc.card"]);
+  // The sync log says the Doc synced without revision tracking, and why:
+  t.check(warnings(), [
+    "[google-drive] Could not fetch Docs API metadata for Plan (syncing without revision tracking or lossy details): " +
+    "the Google sign-in lacks the documents.readonly scope. Re-authorize Google in Settings, under Google services, to grant it.",
+  ]);
   t.check(await loadDocsApiDiagnosis(box.root), {
     kind: "scope-insufficient",
     message:
@@ -568,9 +583,12 @@ void test("A pass that hit the folder depth cap keeps an open diagnosis when it 
   box.commitAll("mount a deep folder");
   await recordDocsApiDiagnosis(box.root, () => openDiagnosis);
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, createFakeGoogleDrive({ files: tooDeepFolders() })).sync();
   // The cap is a note, not a failure.
   t.check(result.success, true);
+  // The sync log names the folder past the cap:
+  t.check(warnings(), ['[google-drive] _content/drive/deep/Deep.gfolder.card: Folder folder-9 ("Level 9") is deeper than the 8-level mirror depth cap — not descended']);
   // The unscanned levels may hold Docs that still fail.
   t.check(await loadDocsApiDiagnosis(box.root), openDiagnosis);
 });
@@ -592,9 +610,12 @@ void test("A pass that hit the folder depth cap clears the diagnosis when a Doc 
     documents: new Map([["doc-1", documentFor({ id: "doc-1", name: "Plan" })]]),
   });
 
+  const warnings = consoleLines(t, "warn");
   const result = await createGoogleDriveConnector(box.root, drive).sync();
   // The cap is a note, not a failure.
   t.check(result.success, true);
+  // The sync log names the folder past the cap:
+  t.check(warnings(), ['[google-drive] _content/drive/deep/Deep.gfolder.card: Folder folder-9 ("Level 9") is deeper than the 8-level mirror depth cap — not descended']);
   // The Doc reached the Docs API, so the box-wide problem is gone.
   t.check(await loadDocsApiDiagnosis(box.root), null);
 });

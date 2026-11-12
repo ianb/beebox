@@ -51,7 +51,7 @@ function render(props: Pick<ItemProps, "status"> & Partial<ItemProps>, actions: 
 /** Whether the checkbox is live, and whether a "+" is offered. */
 function controls(html: string) {
   const box = /<input[^>]*>/.exec(html)?.[0] ?? "";
-  return `${box.includes("disabled") ? "read-only" : "live"}, ${html.includes('aria-label="Add to chat"') ? "+" : "no +"}`;
+  return `${box.includes(" disabled=\"\"") ? "read-only" : "live"}, ${html.includes('aria-label="Add to chat"') ? "+" : "no +"}`;
 }
 
 const calls: SetTodoStatusInput[] = [];

@@ -1,0 +1,19 @@
+[
+  { "frame": 5, "type": "snapshot", "label": "at rest" },
+  { "frame": 20, "type": "mousedown", "x": 200, "y": 150 },
+  { "frame": 21, "type": "mouseup", "x": 200, "y": 150 },
+  { "frame": 26, "type": "snapshot", "label": "A string plucked" },
+  { "frame": 60, "type": "mousedown", "x": 480, "y": 92 },
+  { "frame": 62, "type": "mousemove", "x": 482, "y": 160 },
+  { "frame": 64, "type": "mousemove", "x": 484, "y": 230 },
+  { "frame": 66, "type": "mousemove", "x": 486, "y": 316 },
+  { "frame": 67, "type": "mouseup", "x": 486, "y": 316 },
+  { "frame": 72, "type": "snapshot", "label": "strummed down" },
+  { "frame": 150, "type": "param", "name": "tuning", "value": "open G" },
+  { "frame": 160, "type": "mousedown", "x": 300, "y": 92 },
+  { "frame": 162, "type": "mousemove", "x": 300, "y": 316 },
+  { "frame": 163, "type": "mouseup", "x": 300, "y": 316 },
+  { "frame": 168, "type": "snapshot", "label": "open G strum" },
+  { "frame": 220, "type": "mousemove", "x": 400, "y": 270 },
+  { "frame": 222, "type": "snapshot", "label": "hover the B string" }
+]

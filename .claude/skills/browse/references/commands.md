@@ -6,7 +6,7 @@ bin/browse open /chats                          # → http://localhost:3210/<wt>
 bin/browse open /test1/chats                    # WRONG — doubles the box, lands elsewhere silently
 bin/browse open https://example.com             # bare URL passes through unchanged
 bin/browse back / forward / reload
-AGENT_BROWSER_INIT_SCRIPTS=/abs/stub.js bin/browse open /admin  # after close --all; stub fetch here, network route misses batched tRPC
+bin/browse open /admin --init-script /abs/stub.js  # launch options (--args, --headed, …) need a closed browser; stub fetch here, network route misses batched tRPC
 
 # Reading
 bin/browse snapshot -i                          # interactive elements only (preferred)
@@ -45,7 +45,7 @@ bin/browse wait @e1                             # until element appears
 bin/browse wait --text "Success"                # until text appears
 bin/browse wait --url "**/dashboard"            # until URL matches glob
 bin/browse wait --load networkidle              # post-navigation catch-all
-bin/browse wait --text "Filed" --timeout 180000 # every wait ends: --timeout ms, default 30 s
+bin/browse wait --text "Filed" --timeout 180000 # every wait ends: --timeout ms, default 25 s
 
 # Clerk extension (BROWSE_CLERK=1 loads its localhost test build, rebuilt when stale)
 BROWSE_CLERK=1 bin/browse clerk-popup feed      # popup acting on tab "feed", in tab "clerk-popup"
@@ -119,3 +119,5 @@ an exclusive lock on a profile and refuses to open one another instance owns.
 A new session therefore starts with an empty cookie jar; the browse key is
 re-seeded on its first own-origin `open`, but any login or app state you set up
 in one session is not visible in another.
+
+Page commands print `runtime-lint: <check> k=v …` lines to stderr when the app reports a broken runtime invariant; treat them as findings, not noise.

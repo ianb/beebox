@@ -1,5 +1,6 @@
 /* Night Atlas: distant warm lights over sea-green terrain and quiet teal reading surfaces. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] {
+  color-scheme: dark;
   --bbx-desk-background: #167d7e;
   --bbx-desk-pattern: none;
   --bbx-desk-edge: #5caaa4;
@@ -164,6 +165,7 @@
    Raw tool details are light plates (chrome.css, .bbx-chat-plate). */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
   --bbx-ink: #e0f5e9;
+  --bbx-danger: #fddadd;
   --bbx-ink-soft: #bfe2d8;
   --bbx-pen: #ffd38b;
 }
@@ -198,6 +200,7 @@
   --bbx-code-ink: #e0f5e9;
   --bbx-paper: #124e53;
   --bbx-ink: #e0f5e9;
+  --bbx-danger: #fddadd;
   --bbx-ink-soft: #bfe2d8;
   --bbx-pen: #ffd38b;
   --bbx-edge: #5caaa4;

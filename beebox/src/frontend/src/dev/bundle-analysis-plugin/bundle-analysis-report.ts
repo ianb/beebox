@@ -8,7 +8,7 @@
 
 import { gzipSync } from "node:zlib";
 import { relative as relativePath } from "node:path";
-import type { OutputAsset, OutputBundle, OutputChunk } from "rollup";
+import type { Rollup } from "vite";
 import type {
   BundleAssetReport,
   BundleChunkReport,
@@ -16,6 +16,10 @@ import type {
   BundlePackageTotal,
   BundleReport,
 } from "../bundle-analysis-types";
+
+type OutputAsset = Rollup.OutputAsset;
+type OutputBundle = Rollup.OutputBundle;
+type OutputChunk = Rollup.OutputChunk;
 
 const NODE_MODULES_MARKER = "/node_modules/";
 

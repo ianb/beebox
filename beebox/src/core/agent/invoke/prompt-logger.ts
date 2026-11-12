@@ -10,6 +10,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createWriteStream, type WriteStream } from "node:fs";
+import { packageManagerEnvironment } from "../../../lib/package-manager-env.js";
 
 export interface PromptLogger {
   proxy: ChildProcess;
@@ -45,6 +46,7 @@ export async function startPromptLogger(
     "--merge-sse",
   ], {
     stdio: ["ignore", "pipe", "pipe"],
+    env: packageManagerEnvironment(),
   });
 
   proxy.stdout.on("data", (data) => logStream.write(data));

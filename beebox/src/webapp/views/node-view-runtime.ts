@@ -6,7 +6,7 @@
  * symlinking in the one host copy is what keeps hooks/dispatcher identity
  * intact instead of loading a second React.
  *
- * Two callers share this: `bbx view test` (renders in-process) and the view
+ * Two callers share this: `bbx view check` (renders in-process) and the view
  * compiler's metadata extractor (imports in a subprocess). Both just need a
  * file on disk they can `import()`; this module only does the filesystem
  * part.
@@ -59,14 +59,17 @@ export interface NodeViewModule {
  * wired up for the given view-host context:
  *
  * - `engine-hosted` — no box package hosts the compile, so resolve through the
- *   running beebox's own copies (`PACKAGE_ROOT`), same as `bbx view test`
+ *   running beebox's own copies (`PACKAGE_ROOT`), same as `bbx view check`
  *   has always done. Two levels are needed here because `PACKAGE_ROOT`'s own
  *   `node_modules` is itself a symlink into the shared workspace tree in dev, so
  *   `beebox` (self-reference, for `beebox/view-widgets`) can't live
  *   inside it — it gets its own inner `node_modules` instead.
  * - `box-package` — resolve box dependencies through the package's own
- *   `node_modules`, but override React in the inner directory with the engine's
- *   copy so the view and `react-dom/server` share one hooks dispatcher.
+ *   `node_modules`, but override `react` and `react-dom` in the inner directory
+ *   with the engine's copies, so the view and `react-dom/server` share one
+ *   hooks dispatcher. A box whose declared dependencies were never installed
+ *   has only the `beebox` link; a plugin view that imports `react-dom` (React
+ *   Flow's portals) still resolves.
  */
 export async function writeNodeViewModule(output: string, host: ViewHostContext): Promise<NodeViewModule> {
   const tmpDir = path.join(os.tmpdir(), `bbx-view-${randomUUID()}`);
@@ -84,10 +87,11 @@ export async function writeNodeViewModule(output: string, host: ViewHostContext)
       await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "beebox"), "dir");
     } else {
       await fs.symlink(path.join(host.boxRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
-      const engineReact = path.dirname(
-        createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
-      );
-      await fs.symlink(engineReact, path.join(innerDir, "node_modules", "react"), "dir");
+      const requireFromEngine = createRequire(path.join(PACKAGE_ROOT, "package.json"));
+      for (const name of ["react", "react-dom"]) {
+        const enginePackage = path.dirname(requireFromEngine.resolve(`${name}/package.json`));
+        await fs.symlink(enginePackage, path.join(innerDir, "node_modules", name), "dir");
+      }
     }
     await fs.writeFile(tmpFile, output, "utf-8");
     return {

@@ -17,7 +17,7 @@ const ROTATE_MS = 10000;
  * keyword set discoverable without a help page: a single quoted phrase at a
  * time, cycling slowly, filtered to what's actually valid — send/erase/
  * cancel only appear once there's text for them to act on. Positioned by
- * MicOverlay alongside the volume bars.
+ * MicStatus alongside the volume bars.
  */
 export function KeywordHint({ hasText }: { hasText: boolean }) {
   const [tick, setTick] = useState(0);

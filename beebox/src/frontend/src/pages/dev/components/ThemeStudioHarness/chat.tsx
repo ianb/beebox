@@ -59,7 +59,7 @@ const REPLY: SessionEntry[] = [{
     { type: "tool_result", toolUseId: "studio-read", resultSummary: "Before Saturday: choose three seed varieties…" },
     { type: "tool_use", toolName: "Grep", toolId: "studio-grep", input: { pattern: "envelope", path: "notes" } },
     { type: "tool_result", toolUseId: "studio-grep", resultSummary: "notes/Seed exchange.doc.card: Label each envelope clearly" },
-    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday)." },
+    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday). Last year it {% source ref=\"../outside-the-box.md\" %}ran out by eleven{% /source %}." },
   ],
 }];
 const COMPACTED = entry({ uuid: "studio-compacted", type: "compaction" }, "Earlier: the hall, the date and who brings tape.");
@@ -93,7 +93,9 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
     </div>
     {/* Each state keeps the composer's ids, which theme rules key on, so the ids repeat. */}
     <div className="space-y-3">
-      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <ComposerSpecimen key={i} spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />)}
+      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <div key={i} role="group" aria-label={`Composer state ${i + 1}`}>
+        <ComposerSpecimen spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />
+      </div>)}
     </div>
   </section>;
 }

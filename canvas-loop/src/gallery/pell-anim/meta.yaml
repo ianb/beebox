@@ -1,0 +1,23 @@
+slug: pell-anim
+title: "Old Pell Lights the Lamps, animated: light the last lamp and the boat comes home"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 10
+tier: tea
+harness-commit: 604cb8c3
+frames: 120
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Animation round (from gallery/open-opus-b). Boxholder review pending. Clicking the dark lantern lights it and brings the last boat home while the page text changes; drag the moon, part the reeds, ring the water; wind/dusk/fireflies params; about 17 ms per frame.
+self-report-summary: >
+  Same asks for movable and bounded caches and a cheap tube; TEA has no draw-side randomness or setup hook; DeepReadonly turns Vec2 tuples into arrays; clip is expensive in motion.
+features-exercised:
+  - TEA tier with pointer input, params and triggers
+  - cache for static painted layers
+  - brushes in motion (seeded marks)
+  - events file with snapshot entries
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
