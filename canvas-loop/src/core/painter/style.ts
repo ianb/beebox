@@ -14,14 +14,21 @@ export interface ResolvedStyle {
   readonly gesture: Gesture;
   readonly blend: BlendMode;
   readonly erase: boolean;
+  readonly dash: readonly number[] | undefined;
 }
 
-const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase"]);
+const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash"]);
 
 /** Check a Style at the call that received it; errors name the call and the key. */
 export function assertStyle(style: Style, call: string): void {
   for (const key of Object.keys(style)) {
-    if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (fill, stroke, weight, brush, gesture, blend, erase)` });
+    if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (fill, stroke, weight, brush, gesture, blend, erase, dash)` });
+  }
+  const { dash } = style;
+  if (dash !== undefined) {
+    const ok = Array.isArray(dash) && dash.length > 0 && dash.every((n) => Number.isFinite(n) && n >= 0) && dash.some((n) => n > 0);
+    if (!ok) throw new SketchUsageError({ detail: `${call}: style.dash must be lengths ≥ 0, at least one over 0 (got ${JSON.stringify(dash)})` });
+    if (style.brush !== undefined) throw new SketchUsageError({ detail: `${call}: style.dash works on plain strokes; a brushed stroke cannot be dashed` });
   }
   const { weight } = style;
   if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) {
@@ -47,6 +54,7 @@ export function resolveStyle(style: Style, call: string): ResolvedStyle {
     gesture: style.gesture ?? {},
     blend: style.blend ?? "normal",
     erase: style.erase ?? false,
+    dash: style.dash,
   };
 }
 

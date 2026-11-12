@@ -46,6 +46,11 @@ export class BrowserView extends PainterView implements View {
     this.#placed.set(name, { ...box });
   }
 
+  /** End the frame: report this frame's overlapping texts. */
+  finishFrame(): void {
+    this.painter.finishFrame();
+  }
+
   /** This frame's control placements; clears them for the next draw. */
   takePlacements(): Map<string, ControlBox> {
     const placed = this.#placed;

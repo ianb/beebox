@@ -13,6 +13,7 @@ import { resolveStyle } from "./style.js";
 import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { PainterCore } from "./core.js";
 import { layoutText } from "./text-layout.js";
+import type { TextLayout } from "./text-layout.js";
 
 /**
  * The shared drawing surface over a structural `Ctx2D`. Drawing is
@@ -39,6 +40,14 @@ function roundedRect(b: { x: number; y: number; w: number; h: number; r: number 
 
 /** What `text(s, box, options)` uses for options left out. */
 const TEXT_DEFAULTS = { size: 12, font: "sans-serif", style: "normal", fill: "#000000", align: "left", valign: "top" } as const satisfies TextOptions;
+
+/** Text laid out for one call, ready to draw. */
+interface LaidText {
+  box: TextBox;
+  options: TextOptions & Required<Pick<TextOptions, "size" | "font" | "style" | "fill" | "align" | "valign">>;
+  layout: TextLayout | undefined;
+  bounds: TextBounds;
+}
 
 const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
 
@@ -131,7 +140,18 @@ export class Painter extends PainterCore {
    */
   text(...args: [string, TextBox, TextOptions?]): TextBounds {
     const [content, box, options] = args;
-    return this.#boxText(content, { box, options: options ?? {} });
+    const laid = this.#layText(content, { box, options: options ?? {} });
+    this.#drawText(content, laid);
+    const resolved = laid.options;
+    if (!(resolved.erase ?? false)) this.recordText(content, laid.bounds);
+    this.checkGlyphs(content, { style: resolved.style, family: resolved.font });
+    return laid.bounds;
+  }
+
+  /** The bounds `text` would draw with these arguments, without drawing. */
+  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    const [content, box, options] = args;
+    return this.#layText(content, { box, options: options ?? {} }).bounds;
   }
 
   /** The width `text` would take with these options, in logical pixels. */
@@ -145,14 +165,13 @@ export class Painter extends PainterCore {
   }
 
   /**
-   * Text with explicit options; nothing comes from the modal settings. One
-   * line with no box width is one native `fillText` at (x, y) with the
-   * context's own alignment and baseline; anything else is laid out.
+   * Lay text out without drawing. One line with no box is placed by the
+   * context's own alignment and baseline (`layout` undefined); anything else
+   * is laid out line by line.
    */
-  #boxText(content: string, at: { box: TextBox; options: TextOptions }): TextBounds {
+  #layText(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
     const options = { ...TEXT_DEFAULTS, ...at.options };
     const { box } = at;
-    const mode = { blend: options.blend ?? "normal", erase: options.erase ?? false } as const;
     const measureCtx = this.ctx;
     const measure = (text: string, size: number): number => withSaved(measureCtx, () => {
       measureCtx.font = this.#font({ ...options, size });
@@ -160,8 +179,23 @@ export class Painter extends PainterCore {
     });
     const native = box.w === undefined && box.h === undefined && !content.includes("\n");
     const layout = native ? undefined : layoutText(content, { size: options.size, box, options, measure });
-    const size = layout?.size ?? options.size;
+    if (layout !== undefined) {
+      const bounds = { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
+      return { box, options, layout, bounds };
+    }
+    const size = options.size;
+    const w = measure(content, size);
+    const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
+    const h = size * 1.25;
+    const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
+    return { box, options, layout, bounds: { x, y: top, w, h, lines: 1, size, overflow: false } };
+  }
+
+  #drawText(content: string, laid: LaidText): void {
+    const { box, options, layout } = laid;
+    const size = laid.bounds.size;
     const lineHeight = size * (options.lineHeight ?? 1.25);
+    const mode = { blend: options.blend ?? "normal", erase: options.erase ?? false } as const;
     // Draws on whichever context is current: the canvas, or an erase layer.
     const draw = (op: string): void => {
       const ctx = this.ctx;
@@ -169,27 +203,29 @@ export class Painter extends PainterCore {
         ctx.font = this.#font({ ...options, size });
         ctx.fillStyle = this.resolvePaint(options.fill);
         ctx.globalCompositeOperation = op;
+        const halo = options.halo;
+        if (halo !== undefined) {
+          ctx.strokeStyle = this.resolvePaint(halo);
+          ctx.lineWidth = Math.max(2, size / 4);
+          ctx.lineJoin = "round";
+        }
+        const write = (...[text, x, y]: [string, number, number]): void => {
+          if (halo !== undefined) ctx.strokeText(text, x, y);
+          ctx.fillText(text, x, y);
+        };
         if (layout === undefined) {
           ctx.textAlign = options.align;
           ctx.textBaseline = BASELINES[options.valign];
-          ctx.fillText(content, box.x, box.y);
+          write(content, box.x, box.y);
           return;
         }
         ctx.textAlign = "left";
         const baseline = options.valign === "baseline";
         ctx.textBaseline = baseline ? "alphabetic" : "middle";
-        for (const [index, line] of layout.lines.entries()) ctx.fillText(line.text, line.x, baseline ? box.y + index * lineHeight : line.y);
+        for (const [index, line] of layout.lines.entries()) write(line.text, line.x, baseline ? box.y + index * lineHeight : line.y);
       });
     };
     this.drawComposited(mode, draw);
-    if (layout !== undefined) {
-      return { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
-    }
-    const w = measure(content, size);
-    const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
-    const h = size * 1.25;
-    const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
-    return { x, y: top, w, h, lines: 1, size, overflow: false };
   }
 
   #font(over: { size: number; font: string; style: TextStyle }): string {

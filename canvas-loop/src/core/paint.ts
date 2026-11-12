@@ -48,6 +48,8 @@ export interface TextOptions {
   style?: TextStyle;
   /** Default black. */
   fill?: Paint;
+  /** A band of this color around the letters, drawn under them, so text reads over lines and busy ground. */
+  halo?: Paint;
   blend?: BlendMode;
   erase?: boolean;
 }
@@ -81,6 +83,8 @@ export interface Style {
   readonly blend?: BlendMode;
   /** Remove pixels instead of adding them. */
   readonly erase?: boolean;
+  /** Dash a plain stroke: lengths on, off, on, … in logical pixels (`[6, 4]`). Brushed strokes cannot be dashed. */
+  readonly dash?: readonly number[];
 }
 
 /** A brush preset with some fields changed, as plain data. */
@@ -183,6 +187,8 @@ export interface Ctx2D {
   clip(): void;
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
+  strokeText(text: string, x: number, y: number): void;
+  setLineDash(segments: number[]): void;
   measureText(text: string): { readonly width: number };
   createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;

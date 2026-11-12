@@ -131,6 +131,7 @@ export function draw(v: View, model: DeepReadonly<Model>): void {
 | `gesture` | how the hand moves for brushed marks: `{ pressure, wobble, seed, faint }` | `{}` |
 | `blend` | how the pixels combine with what is under them (`"multiply"`, `"screen"`, …) | `"normal"` |
 | `erase` | `true` removes pixels instead of adding them | `false` |
+| `dash` | lengths on, off, on, … for a plain stroke (`[6, 4]`); a brushed stroke cannot be dashed | solid |
 
 A brush preset kept in a variable needs its type, or TypeScript widens
 `preset` to `string`: `const SHADE: BrushPreset = { preset: "bristle", load: 0.4 }`.
@@ -173,6 +174,7 @@ v.path(commands, style)                 v.curve(points, closed, style)
 
 ```ts
 v.text(s, { x, y, w?, h? }, options)    // returns the bounds drawn
+v.textBounds(s, { x, y, w?, h? }, options) // the same bounds, nothing drawn
 v.textWidth(s, options)                 // width in logical pixels
 ```
 
@@ -184,6 +186,7 @@ v.textWidth(s, options)                 // width in logical pixels
 | `fill` | `"#000000"` |
 | `align` (`"left"`, `"center"`, `"right"`) | `"left"` |
 | `valign` (`"top"`, `"middle"`, `"bottom"`, `"baseline"`) | `"top"` |
+| `halo` (a color drawn as a band around the letters, under them) | none |
 | `blend`, `erase` | as for a style |
 | `wrap` | on when `w` is set |
 | `fit` (shrink until the text fits the box) | off |
@@ -196,6 +199,13 @@ v.textWidth(s, options)                 // width in logical pixels
 - The bounds are `{ x, y, w, h, lines, size, overflow }`. `overflow` is true
   when the text does not fit the box.
 - Which fonts exist depends on the machine. Use common families.
+- Use `textBounds` to place a label before drawing it, for example to move it
+  clear of another label or to size a backing box. A `halo` in the background
+  color keeps a label readable where it crosses a line.
+- The run warns, once per pair of texts, when two different texts overlap in
+  a frame (the same text twice, as for a shadow, is not reported). Headless
+  runs also warn when the font has no glyph for a character, which draws as
+  an empty box or nothing; use a plain word or another character.
 
 ### Scopes
 

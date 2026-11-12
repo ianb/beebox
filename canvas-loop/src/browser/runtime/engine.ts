@@ -377,6 +377,7 @@ export class Runtime {
 
   #draw(): void {
     this.#module.draw(this.#view, this.#model, this.#params);
+    this.#view.finishFrame();
     const placements = this.#view.takePlacements();
     this.#onPlace?.(placements);
   }

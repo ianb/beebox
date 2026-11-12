@@ -195,6 +195,8 @@ export interface View {
    * black, left, top. Returns the bounds drawn.
    */
   text(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  /** The bounds `text` would return for these arguments, without drawing (to place labels before drawing them). */
+  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */
   textWidth(content: string, options?: TextOptions): number;
   /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. No layer. */

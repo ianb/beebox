@@ -20,6 +20,8 @@ import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageDat
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
 import { FaintWatch } from "./faint.js";
+import { GlyphWatch, TextOverlap } from "./text-watch.js";
+import type { TextRect } from "./text-watch.js";
 import { LayerCache, LayerPool, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
 
@@ -61,6 +63,11 @@ export class PainterCore {
   // Style problems (a call that can draw nothing), each reported once.
   #note: (message: string) => void;
   #noted = new Set<string>();
+  #overlap: TextOverlap;
+  // Texts each cache drew, added again each frame the cache is pasted.
+  #cacheTexts = new Map<string, readonly TextRect[]>();
+  // Only with `warn` (headless): probing glyphs reads pixels back.
+  #glyphs: GlyphWatch | undefined;
 
   constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; note?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
     this.#ctxStack = [options.ctx];
@@ -71,6 +78,9 @@ export class PainterCore {
     this.#measure = options.warn !== undefined;
     this.#note = options.note ?? options.warn ?? (() => {});
     this.#debug = new DebugOverlay(options.outline === true);
+    this.#overlap = new TextOverlap((message) => this.note(message));
+    const warn = options.warn;
+    this.#glyphs = warn === undefined ? undefined : new GlyphWatch(options.makeLayer, (message) => this.note(message));
     this.#pool = new LayerPool(options.makeLayer, this.#device);
     // A high-density canvas (pixelRatio > 1) draws in logical units under a base scale.
     if (this.pixelRatio !== 1) options.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
@@ -96,6 +106,27 @@ export class PainterCore {
     if (message === undefined || this.#noted.has(message)) return;
     this.#noted.add(message);
     this.#note(message);
+  }
+
+  /** Remember a text drawn this frame, in canvas coordinates, for the overlap check. Texts in sprites are skipped (their coordinates are the sprite's). */
+  protected recordText(content: string, box: { x: number; y: number; w: number; h: number; size: number }): void {
+    if (this.#where.some((w) => w.startsWith("sprite"))) return;
+    const m = this.ctx.getTransform();
+    // Trim the line gap above and below the letters.
+    const trim = box.size * 0.12;
+    const top = box.y + trim;
+    const bottom = box.y + box.h - trim;
+    const corners = [[box.x, top], [box.x + box.w, top], [box.x, bottom], [box.x + box.w, bottom]] as const;
+    const xs = corners.map(([x, y]) => (m.a * x + m.c * y + m.e) / this.pixelRatio);
+    const ys = corners.map(([x, y]) => (m.b * x + m.d * y + m.f) / this.pixelRatio);
+    const x = Math.min(...xs);
+    const y = Math.min(...ys);
+    this.#overlap.add({ content, x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y });
+  }
+
+  /** Warn (headless) about characters the font cannot draw. */
+  protected checkGlyphs(content: string, font: { style: string; family: string }): void {
+    this.#glyphs?.check(content, font);
   }
 
   /**
@@ -205,7 +236,16 @@ export class PainterCore {
    */
   cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
     const [key, body, paste] = args;
-    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
+    let layer = this.#cache.get(key);
+    if (layer === undefined) {
+      const mark = this.#overlap.mark();
+      layer = this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
+      this.#cacheTexts.set(key, this.#overlap.since(mark));
+      // Forget texts of caches that have been dropped.
+      for (const old of this.#cacheTexts.keys()) if (this.#cache.get(old) === undefined) this.#cacheTexts.delete(old);
+    } else {
+      for (const rect of this.#cacheTexts.get(key) ?? []) this.#overlap.add(rect);
+    }
     const op = this.composite({ blend: paste?.blend ?? "normal", erase: paste?.erase ?? false });
     drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op });
   }
@@ -250,6 +290,7 @@ export class PainterCore {
 
   /** Draw this frame's debug outlines over the canvas (the runtime calls it after `draw`). */
   finishFrame(): void {
+    this.#overlap.finish();
     this.#debug.draw(this.#ctxStack[0] ?? this.ctx);
   }
 
@@ -347,7 +388,12 @@ export class PainterCore {
       const ctx = this.ctx;
       ctx.strokeStyle = this.resolvePaint(stroke);
       ctx.lineWidth = style.weight;
-      withComposite(ctx, { op: this.composite(style), draw: () => ctx.stroke() });
+      if (style.dash !== undefined) ctx.setLineDash([...style.dash]);
+      try {
+        withComposite(ctx, { op: this.composite(style), draw: () => ctx.stroke() });
+      } finally {
+        if (style.dash !== undefined) ctx.setLineDash([]);
+      }
       return;
     }
     const { erase: erasing, blend } = style;

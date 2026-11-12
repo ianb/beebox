@@ -95,6 +95,9 @@ export class PainterView {
   text(...args: [string, TextBox, TextOptions?]): TextBounds {
     return this.painter.text(...args);
   }
+  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    return this.painter.textBounds(...args);
+  }
   textWidth(content: string, options?: TextOptions): number {
     return this.painter.textWidth(content, options);
   }

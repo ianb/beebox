@@ -5,6 +5,13 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Dashes, text measuring, and text warnings** (asked for by the round-2 d3
+  comparison agents). A style takes `dash: [on, off, …]` for plain strokes.
+  `v.textBounds(s, box, options)` returns the bounds `text` would draw,
+  without drawing. Text takes `halo`, a color drawn around the letters. Runs
+  warn when two different texts overlap in a frame, and headless runs warn
+  when the font has no glyph for a character.
+
 - **Sound.** An optional `sound(model, p)` export returns voices (`pluck`,
   `tone`, `noise`), each one sound with an id and a start frame. Headless
   runs write `sound.wav` and a waveform `sound.png`; browser figures play the
