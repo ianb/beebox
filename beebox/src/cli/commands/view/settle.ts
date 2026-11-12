@@ -90,6 +90,12 @@ async function readBoxFile({ boxRoot, filePath, opts }: { boxRoot: string; fileP
 
 interface BoundaryState { error: Error | null }
 
+/** A settled render's DOM: the container's HTML and the `<style>` elements in the head. */
+export interface SettledDom {
+  html: string;
+  headStyles: string[];
+}
+
 /** Records the first error a render or an effect throws. */
 class CheckBoundary extends Component<{ children: ReactNode; onError: (e: Error) => void }, BoundaryState> {
   override state: BoundaryState = { error: null };
@@ -107,7 +113,8 @@ class CheckBoundary extends Component<{ children: ReactNode; onError: (e: Error)
 /**
  * Render `View` with `props` until it settles. The async helpers are answered
  * here: `readFile` from the box; writes are not performed and resolve as if
- * they were; `commitFile` commits nothing; `adapterFetch` rejects.
+ * they were; `commitFile` commits nothing; `adapterFetch` rejects. A render
+ * with no error also returns its settled DOM, for `bbx view check` advice.
  */
 export async function settledRender(opts: {
   boxRoot: string;
@@ -115,7 +122,7 @@ export async function settledRender(opts: {
   props: ViewProps;
   Host: ComponentType<{ boxSlug?: string; children: ReactNode }>;
   budgetMs?: number;
-}): Promise<{ error: Error | null; partial: string[] }> {
+}): Promise<{ error: Error | null; partial: string[]; snapshot: SettledDom | null }> {
   const { boxRoot, View, Host } = opts;
   const budgetMs = opts.budgetMs ?? SETTLE_BUDGET_MS;
   const window = installDom().window;
@@ -158,6 +165,7 @@ export async function settledRender(opts: {
   process.on("unhandledRejection", onUncaught);
   process.on("uncaughtException", onUncaught);
   let settled = false;
+  let snapshot: SettledDom | null = null;
   try {
     await act(async () => {
       const view = createElement(Host, { boxSlug: props.boxSlug, children: createElement(View, props) });
@@ -169,6 +177,10 @@ export async function settledRender(opts: {
       await act(() => new Promise<void>((resolve) => { setTimeout(resolve, TICK_MS); }));
       if (pending > 0) quietSince = Date.now();
       else if (Date.now() - quietSince >= QUIET_MS) { settled = true; break; }
+    }
+    // What the advice rules read; serialized here, judged in the advise child.
+    if (caught.error === null) {
+      snapshot = { html: container.innerHTML, headStyles: [...window.document.head.querySelectorAll("style")].map((s) => s.outerHTML) };
     }
     await act(async () => { root.unmount(); });
   } finally {
@@ -185,5 +197,5 @@ export async function settledRender(opts: {
   if (caught.error === null && !settled) partial.push(`still loading after ${(budgetMs / 1000).toFixed(1)}s`);
   if (writes > 0) partial.push(`${String(writes)} write${writes === 1 ? "" : "s"} not performed`);
   for (const message of new Set(uncaught)) partial.push(`uncaught outside render: ${message}`);
-  return { error: caught.error, partial };
+  return { error: caught.error, partial, snapshot };
 }

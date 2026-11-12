@@ -12,7 +12,34 @@
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { isWithin } from "../../../lib/box-containment.js";
+import { isWithin } from "../../lib/box-containment.js";
+import type * as TS from "../../lib/typescript/syntax.js";
+
+/** A module specifier this node imports, if it is an import-shaped node with a literal one. */
+export function importedSpecifier(ts: typeof TS, node: TS.Node): string | null {
+  if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier !== undefined) {
+    return ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : null;
+  }
+  if (ts.isCallExpression(node)) {
+    const callee = node.expression;
+    const isLoader = callee.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(callee) && callee.text === "require");
+    const first = node.arguments[0];
+    if (isLoader && first !== undefined && ts.isStringLiteralLikeNode(first)) return first.text;
+  }
+  return null;
+}
+
+/** Every module specifier a parsed file imports (`import`, `export … from`, `import()`, `require()`). */
+export function fileSpecifiers(ts: typeof TS, file: TS.SourceFile): string[] {
+  const out: string[] = [];
+  const visit = (node: TS.Node): void => {
+    const specifier = importedSpecifier(ts, node);
+    if (specifier !== null) out.push(specifier);
+    node.forEachChild(visit);
+  };
+  visit(file);
+  return out;
+}
 
 const SOURCE_EXTENSIONS = [".tsx", ".ts"];
 
@@ -40,11 +67,11 @@ async function resolveLocal(fromFile: string, specifier: string): Promise<string
 /**
  * `entry` and every local `.ts`/`.tsx` file it reaches, as real absolute
  * paths, in visit order. `listSpecifiers` gives a file's import specifiers
- * (the caller parses; see `markdown-check.ts`).
+ * (the caller parses, usually through `fileSpecifiers`).
  */
 export async function localImportClosure(
   entry: string,
-  { root, listSpecifiers }: { root: string; listSpecifiers: (source: string) => string[] },
+  { root, listSpecifiers }: { root: string; listSpecifiers: (file: { path: string; source: string }) => string[] },
 ): Promise<{ path: string; source: string }[]> {
   const realRoot = await fs.realpath(root);
   const seen = new Set<string>();
@@ -63,7 +90,7 @@ export async function localImportClosure(
       continue; // unreadable: the compile check's concern
     }
     out.push({ path: real, source });
-    for (const specifier of listSpecifiers(source)) {
+    for (const specifier of listSpecifiers({ path: real, source })) {
       if (!specifier.startsWith("./") && !specifier.startsWith("../")) continue;
       const resolved = await resolveLocal(real, specifier);
       if (resolved !== null) queue.push(resolved);

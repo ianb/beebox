@@ -8,12 +8,15 @@
  * Then each state the view declares in its `checkStates` export, by name
  * (docs/implemented-plans/view-declared-check-states.md).
  *
- * Also the record the `render-one` child sends the sweep about a view that
- * rendered but was not fully checked.
+ * Also the records the children send the sweep: the `render-one` child's
+ * remarks about a view that rendered but was not fully checked, and its
+ * settled DOM per state; the `advise` child's advice.
  */
 
+import { z } from "zod";
 import { cardTypeFromName } from "../../../shared/card-name.js";
 import type { DeclaredCheckState } from "../../../core/views/types.js";
+import { viewAdviceSchema, type ViewAdvice } from "../../../core/views/advice/core.js";
 
 /** One set of inputs the check renders a view with. */
 export interface CheckState {
@@ -67,3 +70,41 @@ export const PARTIAL_PREFIX = "bbx-view-check partial: ";
 export function partialRemarks(stdout: string): string[] {
   return stdout.split("\n").filter((line) => line.startsWith(PARTIAL_PREFIX)).map((line) => line.slice(PARTIAL_PREFIX.length));
 }
+
+/** A line the `advise` child prints for each advice rule a view breaks. */
+export const ADVICE_PREFIX = "bbx-view-check advice: ";
+
+/** The advice in an `advise` child's stdout, and how many advice lines did not parse. */
+export function adviceLines(stdout: string): { advice: ViewAdvice[]; unreadable: number } {
+  const advice: ViewAdvice[] = [];
+  let unreadable = 0;
+  for (const line of stdout.split("\n")) {
+    if (!line.startsWith(ADVICE_PREFIX)) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line.slice(ADVICE_PREFIX.length));
+    } catch (_e) {
+      unreadable += 1;
+      continue;
+    }
+    const result = viewAdviceSchema.safeParse(parsed);
+    if (result.success) advice.push(result.data);
+    else unreadable += 1;
+  }
+  return { advice, unreadable };
+}
+
+/** A state's serialized DOM larger than this is not written; its advice is not checked. */
+export const SNAPSHOT_MAX_CHARS = 5_000_000;
+
+/**
+ * One check state's settled DOM as the `render-one` child writes it for the
+ * `advise` child: `html` is null when the state was over `SNAPSHOT_MAX_CHARS`.
+ */
+export const viewDomSnapshotSchema = z.strictObject({
+  label: z.string(),
+  html: z.string().nullable(),
+  headStyles: z.array(z.string()),
+});
+
+export type ViewDomSnapshot = z.infer<typeof viewDomSnapshotSchema>;

@@ -14,8 +14,8 @@ import { compileView, resolveViewsDir } from "../../../webapp/views/compiler/com
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
 import { loadViewCards } from "../../../core/views/cards.js";
 import type { ViewProps } from "../../../core/views/types.js";
-import { statesToCheck, PARTIAL_PREFIX, type CheckState } from "./check-states.js";
-import { settledRender, SETTLE_BUDGET_MS } from "./settle.js";
+import { statesToCheck, PARTIAL_PREFIX, SNAPSHOT_MAX_CHARS, type CheckState, type ViewDomSnapshot } from "./check-states.js";
+import { settledRender, SETTLE_BUDGET_MS, type SettledDom } from "./settle.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {
@@ -95,6 +95,14 @@ interface RenderViewOptions {
   allowInvalidCards: boolean;
   /** The sweep's per-view timeout; the settled renders share what is left of it. */
   timeoutMs: number;
+  /** Where to write each state's settled DOM (`ViewDomSnapshot[]`) when the view passes. */
+  snapshotPath?: string;
+}
+
+/** A state's snapshot, with its HTML dropped when it is too large to judge. */
+function snapshotOf(label: string, dom: SettledDom): ViewDomSnapshot {
+  const size = dom.html.length + dom.headStyles.reduce((n, s) => n + s.length, 0);
+  return size > SNAPSHOT_MAX_CHARS ? { label, html: null, headStyles: [] } : { label, ...dom };
 }
 
 /** Room left at the end of the per-view timeout for cleanup and the report. */
@@ -152,6 +160,7 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
     process.setSourceMapsEnabled(true);
     let state: CheckState | null = null;
     let stage = "first frame";
+    const snapshots: ViewDomSnapshot[] = [];
     // Import (module evaluation) and render share one diagnostic block so a
     // top-level throw in the view gets the same source-mapped stack a render
     // throw does — both are the same class of authoring bug.
@@ -176,6 +185,7 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
         stage = "after effects";
         const settled = await settledRender({ boxRoot, View: viewMod.default, props, Host: NodeViewHostProvider, budgetMs });
         if (settled.error !== null) throw settled.error;
+        if (settled.snapshot !== null) snapshots.push(snapshotOf(current.label, settled.snapshot));
         for (const remark of settled.partial) process.stdout.write(`${PARTIAL_PREFIX}${current.label}: ${remark}\n`);
       }
     } catch (e) {
@@ -196,6 +206,8 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
         return 1;
       }
     }
+    // Only a passing view gets advice, so only it leaves a snapshot.
+    if (options.snapshotPath !== undefined) await fs.writeFile(options.snapshotPath, JSON.stringify(snapshots), { mode: 0o600 });
     return 0;
   } finally {
     await mod.cleanup();

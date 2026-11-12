@@ -1059,3 +1059,48 @@ by counting the test file; all move unchanged.
   `ui-primitives-dedup`); the bullet lands together with that plan. 6
   changed lines (4 added, 2 removed), all docs. `markdown-check.test.ts`
   passes; generated `views.md` read. `test:changed` as in Track 2.
+- 2026-11-11, Track 3: `src/core/views/advice/` (`types.ts`, `ime-enter.ts`,
+  `source.ts`, `dom.ts`, `core.ts`), the hidden `bbx view advise` child and
+  `runAdvice` (`src/cli/commands/view/advise.ts`), the snapshot step in
+  `settle.ts` and `render-one.ts`, and output in `command.ts`. The 44 IME
+  cases moved to `personal-vibe-check/rules/test/ime-safe-enter.cases.ts`
+  (exported as `./rules/ime-safe-enter.cases`); the ESLint test and
+  `advice.source.test.ts` both run them. About 1,050 source, 720 test, 15 doc
+  changed lines; source is over the ~620 estimate, mostly the full IME port
+  (326 lines, function for function with the ESLint rule) and file comments.
+  Deviations:
+  - The sweep names the snapshot file (`--snapshot <path>` to `render-one`,
+    in a temp directory it removes in `finally`) instead of reading
+    `bbx-view-check snapshot: <path>` from the child's stdout, which view
+    code also writes to; so there is no `SNAPSHOT_PREFIX`.
+  - `page too large` is a per-state remark the advise child prints
+    (`advice not checked: <state>: page too large`); its other states and the
+    source scan still run.
+  - Advice failures are partial remarks, so the view prints `~ <slug> (partly
+    checked)`, not `✓`; `ok` and the exit code are unchanged.
+  - `wide-table-without-wrapper` also accepts a table that scrolls itself
+    (`display: block; overflow-x: …`), not only an ancestor.
+  - `ViewAdvice.where` is an array (findings merged by rule).
+  - `advice/core.ts` is the directory's one entry (layout rule 5): it
+    re-exports the record types and holds `renderedAdvice`, the jsdom
+    rebuild. `importedSpecifier` and the specifier walk moved from
+    `markdown-check/core.ts` into `src/core/views/local-imports.ts`, shared
+    by both checks.
+  Scenario 4: the worktree test1 clone and test1 print no advice. The four
+  older backups use the removed v2 box shape and the engine refuses them; the
+  run covered test1, its clone, and the 2026-10-25 snapshot (4 boxes), 34
+  views. Counts (entries / files): `utc-today` 13 / 4 (11 on `new Date()`,
+  2 on another date); `unnamed-control` 11 / 5; `date-string-parse` 8 / 4
+  (4 add a time of day before parsing, open question 2); `clickable-non-control`
+  3 / 3; `viewport-height` 1 / 1; `enter-without-ime-check`,
+  `wide-table-without-wrapper`, `img-without-alt`, `aria-label-without-role`
+  0. The zeros are not rule misses: the one unguarded Enter handler is in a
+  view that fails to render (advice runs only for passing views), and the
+  tables and images with no `alt` sit in branches that render only with data
+  no check state reaches, and no view puts `aria-label` on a generic element. 36 entries against the expected 45–65. Elapsed time
+  for the 34 views: 44.4 s with advice skipped, 55.8 s with it, about 340 ms
+  more per view. Exit codes unchanged.
+  `test:changed` selected 839 files; all passed except
+  `schema-watcher.test.ts` (passes alone; known load flake) and
+  `card-shot/run.e2e.test.ts`, which fails the same way with this track's
+  changes reverted (the browser daemon's read returns `os error 35`).
