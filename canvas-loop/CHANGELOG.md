@@ -36,6 +36,9 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Hover reaches browser sketches.** The browser figure and playground sent
+  `mousemove` only while a button was held, so hover cues worked headless but
+  not in a browser; every move is now sent.
 - **Typed number fields.** A number param with `control: "field"` shows as a
   number box in browser figures (DOM and React); only valid, in-range values
   (whole numbers for `step: 1`) are sent.

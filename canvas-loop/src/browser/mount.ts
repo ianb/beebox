@@ -290,8 +290,9 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
     const p = coords(canvas, e);
     runtime.pointer({ type: "mousedown", x: p.x, y: p.y });
   };
+  // Every move is sent, pressed or not (as in a scripted events file), so a
+  // sketch can react to hover; the sketch tracks its own pressed state.
   const onMove = (e: MouseEvent): void => {
-    if (!pressed) return;
     const p = coords(canvas, e);
     runtime.pointer({ type: "mousemove", x: p.x, y: p.y });
   };

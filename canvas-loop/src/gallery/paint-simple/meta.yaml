@@ -1,0 +1,24 @@
+slug: paint-simple
+title: "A simple paint program"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 6
+tier: tea
+harness-commit: 3015b223
+frames: 300
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Paints by dragging with five brush presets, five colours and three sizes; pressure from pointer
+  speed; strokes stored as data; clear and undo; finished strokes cached in a chain, about 2.4 ms
+  per frame. Checked by hand in Chrome (drag-painting works).
+self-report-summary: >
+  Works; wants per-frame timing with frame numbers, timestamps on pointer messages, an
+  append-to-cached-layer primitive, an eraser brush, and on-canvas palette helpers.
+features-exercised:
+  - TEA pointer input (drag)
+  - brushes with gesture keyframes
+  - chained cache for finished strokes

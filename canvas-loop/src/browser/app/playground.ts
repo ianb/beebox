@@ -187,8 +187,8 @@ class Playground {
       const p = coords(canvas, e);
       runtime.pointer({ type: "mousedown", x: p.x, y: p.y });
     });
+    // Every move is sent, pressed or not, so sketches can react to hover.
     canvas.addEventListener("mousemove", (e) => {
-      if (!session.pressed) return;
       const p = coords(canvas, e);
       runtime.pointer({ type: "mousemove", x: p.x, y: p.y });
     });
