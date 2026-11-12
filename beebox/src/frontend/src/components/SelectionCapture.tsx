@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { AnchoredLayer } from "./ui/AnchoredLayer";
 import { extractPointSelection, extractTextSelection, pointTarget, type ExtractedSelection } from "../lib/selection/position";
 
 // Mounted capture roots. Captures nest — a card embedded in a chat message
@@ -303,26 +304,24 @@ export function SelectionCapture({ onCapture, extractPoint: extractPointProp, ex
           style={outline} />
       ) : null}
       {button === null ? null : (
-        <button
-          id="bbx-selection-add"
-          type="button"
-          aria-label="Add selection to message"
-          title="Add selection to message"
-          // Keep confirmation interaction inside this capture.
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onMouseUp={(e) => e.stopPropagation()}
-          onClick={handleClick}
-          className="bbx-system-control flex items-center justify-center w-11 h-11 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50"
-          style={{
-            position: "fixed",
-            left: `clamp(8px, ${button.left + 6}px, calc(100% - 2.75rem - 8px))`,
-            top: `clamp(8px, ${button.top - 6}px, calc(100% - 2.75rem - 8px))`,
-          }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+        // Beside the block, at the tap's height, kept inside the visible viewport.
+        <AnchoredLayer at={{ x: button.left + 6, y: button.top - 6 }}>
+          <button
+            id="bbx-selection-add"
+            type="button"
+            aria-label="Add selection to message"
+            title="Add selection to message"
+            // Keep confirmation interaction inside this capture.
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseUp={(e) => e.stopPropagation()}
+            onClick={handleClick}
+            className="bbx-system-control flex items-center justify-center w-11 h-11 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </AnchoredLayer>
       )}
     </div>
   );

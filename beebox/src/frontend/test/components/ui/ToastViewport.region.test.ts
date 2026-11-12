@@ -1,11 +1,12 @@
-// The toast viewport is a named region.
+// The toast viewport is a named region, and only a modal holds its toasts.
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount } from "../../helpers/dom-harness.js";
+import { byId, mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { eventually } from "@ianbicking/tap-check/check";
 import { ToastViewport } from "../../../src/components/ui/ToastViewport.js";
+import { Popover } from "../../../src/components/ui/Popover.js";
+import { ModalDialog } from "../../../src/components/ui/ModalDialog.js";
 import { toastError, dismissToast, getToasts, toastsHeld } from "../../../src/components/ui/toast-store.js";
 
 void test("the toast viewport is a named region", async (t) => {
@@ -18,23 +19,31 @@ void test("the toast viewport is a named region", async (t) => {
 });
 
 
-void test("an open dialog holds toast expiry until it closes", async (t) => {
-  const held: boolean[] = [];
+// The toast hold belongs to ModalDialog, which covers the toasts. A Popover
+// does not cover them, so their timers keep running while one is open.
+void test("an open ModalDialog holds toast expiry until it closes; an open Popover does not", async (t) => {
   toastError("Save failed");
-  const view = await mount(h(ToastViewport));
-  const dialog = document.createElement("dialog");
-  document.body.append(dialog);
-  t.teardown(() => dialog.remove());
-  dialog.setAttribute("open", "");
-  await eventually(() => toastsHeld(), { label: "held while the dialog is open" });
-  held.push(toastsHeld());
-  dialog.removeAttribute("open");
-  await eventually(() => !toastsHeld(), { label: "released when the dialog closes" });
-  held.push(toastsHeld());
-  // Still there after a held stretch: the dialog did not let it expire unseen.
+  const view = await mount(h(Host, { modal: false, popover: false }));
+  const states: Record<string, boolean> = {};
+  await view.rerender(h(Host, { modal: false, popover: true }));
+  await view.act(() => { byId(view.container, "bbx-t-popover").dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })); });
+  states.popoverOpen = toastsHeld();
+  await view.rerender(h(Host, { modal: true, popover: false }));
+  states.modalOpen = toastsHeld();
+  await view.rerender(h(Host, { modal: false, popover: false }));
+  states.modalClosed = toastsHeld();
+  // Still there after a held stretch: the modal did not let it expire unseen.
   const shown = getToasts().map((toast) => toast.message);
   await view.unmount();
-  held.push(toastsHeld());
   for (const toast of getToasts()) dismissToast(toast.id);
-  t.check({ held, shown }, { held: [true, false, false], shown: ["Save failed"] });
+  t.check({ states, shown }, { states: { popoverOpen: false, modalOpen: true, modalClosed: false }, shown: ["Save failed"] });
 });
+
+function Host({ modal, popover }: { modal: boolean; popover: boolean }) {
+  return h("div", null,
+    h(ToastViewport),
+    popover
+      ? h(Popover, { label: "Details", trigger: ({ toggle, ariaProps }) => h("button", { id: "bbx-t-popover", type: "button", onClick: toggle, ...ariaProps }, "Open"), children: "Text" })
+      : null,
+    h(ModalDialog, { open: modal, labelledBy: "bbx-t-heading", children: h("h2", { id: "bbx-t-heading" }, "Heading") }));
+}

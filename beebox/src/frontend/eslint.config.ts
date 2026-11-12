@@ -131,6 +131,13 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/ui-scan/resolve.ts",
 ];
 
+// Dismissal (outside press, Escape) belongs to the anchored layer, so every
+// anchored panel is a Menu or a Popover. Only ui/AnchoredLayer.tsx imports it.
+const DISMISS_PATTERN = {
+  group: ["**/hooks/useDismiss"],
+  message: "An anchored panel is <Popover> or <Menu> (components/ui); only ui/AnchoredLayer.tsx uses useDismiss.",
+};
+
 export default [
   // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
   // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
@@ -150,7 +157,7 @@ export default [
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] },
+        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN] },
       ],
     },
   },
@@ -160,7 +167,15 @@ export default [
     files: OUTSIDE_VITE_SHARED_RAW,
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS] }],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, DISMISS_PATTERN] }],
+    },
+  },
+  // The one owner of useDismiss: the base patterns without DISMISS_PATTERN.
+  {
+    files: ["src/components/ui/AnchoredLayer.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] }],
     },
   },
   // Backend src/lib/ ban by resolved path — see BACKEND_LIB_DIR comment above.
@@ -240,6 +255,12 @@ export default [
               allowIn: ["src/components/ui/Spinner.tsx"],
               message: "Use <Spinner> from components/ui/Spinner.",
             },
+            {
+              // The edge positions only: `*-full` would also match `rounded-full`.
+              all: ["absolute", "top-full|bottom-full|left-full|right-full", "z-*"],
+              allowIn: ["src/components/ui/AnchoredLayer.tsx"],
+              message: "An anchored panel is <Popover> or <Menu>.",
+            },
           ],
         },
       ],
@@ -247,7 +268,8 @@ export default [
   },
   // One owner per control: a raw <input>, <textarea> or <select> skips the
   // field primitives' label, error and ink; a raw list or table skips List's
-  // role and Table's name and scroll container. Markdown bodies are Markdoc
+  // role and Table's name and scroll container; a hand-written menu role or
+  // aria-haspopup skips Menu's keys and dismissal. Markdown bodies are Markdoc
   // output, not JSX, so this does not see them. Each tag lists the files that
   // render it (`allowIn`, relative to this config), one file per line with the
   // reason; a new file in ui/fields/ is not exempt until it is listed here.
@@ -326,6 +348,49 @@ export default [
               message: "Use Td (components/ui/Table).",
             },
           },
+          roles: Object.fromEntries(
+            ["menu", "menuitem", "menuitemcheckbox", "menuitemradio"].map((role) => [role, {
+              allowIn: [
+                // Menu: the panel's role="menu".
+                "src/components/ui/Menu.tsx",
+                // MenuItem: rows and their sibling action.
+                "src/components/ui/menu-item.tsx",
+              ],
+              message: "Use Menu and MenuItem (components/ui/Menu, components/ui/menu-item); a row's second button is MenuItem action.",
+            }]),
+          ),
+          attributes: {
+            "aria-haspopup": {
+              allowIn: [
+                // The trigger props of Menu and Popover.
+                "src/components/ui/Menu.tsx",
+                "src/components/ui/Popover.tsx",
+              ],
+              message: "Spread the trigger props of Menu or Popover (ariaProps).",
+            },
+          },
+        },
+      ],
+    },
+  },
+  // One word per overlay kind: a component named ...Modal or ...Popup reads as
+  // a second kind of overlay. Names only; the element, role, class and import
+  // rules above check what a component renders.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "personal-vibe-check/component-name-suffix": [
+        "error",
+        {
+          banned: {
+            Popup: "Name it ...Popover (a <Popover>) or ...Menu (a <Menu>).",
+            Overlay: "Name it ...Dialog (a <ModalDialog>), ...Popover or ...Screen.",
+            Modal: "Name it ...Dialog and render <ModalDialog>.",
+            Sheet: "Name it ...Dialog (a <ModalDialog>) or ...Popover.",
+            Tooltip: "Name it ...Popover (a <Popover>), or use a title attribute.",
+          },
+          // A box drawn over an image: the one meaning "Overlay" keeps.
+          allowIn: ["src/components/ui/BboxOverlay.tsx"],
         },
       ],
     },

@@ -16,6 +16,7 @@ export const UI_INTERNALS: readonly UiInternal[] = [
   { name: "RevealButton", reason: "fields/field.tsx" },
   { name: "useFieldInk", reason: "fields/checkbox.tsx" },
   { name: "MenuContext", reason: "menu-item.tsx" },
+  { name: "useAnchoredLayer", reason: "Menu.tsx" },
 ];
 
 /** Names the primitives section uses as `<Name>` that are not exports of `components/ui/`. */

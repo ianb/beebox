@@ -37,12 +37,11 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { href, toSearch } from "../../../../lib/routing";
+import { useParams, useSearch } from "@tanstack/react-router";
+import { toSearch } from "../../../../lib/routing";
 import { getChatSessions, type ChatSessionInfo, type DeadChatInfo } from "../../../../api";
 import { groupByTranscriptState } from "../../../../lib/transcript-state";
 import { bbxSource } from "../../../../lib/source-tag";
-import { useMenuClose } from "../../../ui/Menu";
 import { TextField } from "../../../ui/fields/field";
 import { MenuItem } from "../../../ui/menu-item";
 import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
@@ -211,7 +210,6 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
  * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
  */
 function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; boxSlug: string; allRows: readonly { label: string }[] }) {
-  const close = useMenuClose();
   if (dead.length === 0) return null;
   return (
     <>
@@ -220,19 +218,12 @@ function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; b
           {group.rows.map((s) => {
             const idHint = sessionIdHint(s, allRows);
             return (
-              <Link
-                key={s.sessionId}
-                role="menuitem"
-                to={href(cardUrl(boxSlug, s.huskPath))}
-                onClick={close}
-                title={`Session ${s.sessionId}`}
-                className="block px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
-              >
+              <MenuItem key={s.sessionId} to={cardUrl(boxSlug, s.huskPath)} title={`Session ${s.sessionId}`}>
                 <div className="flex items-baseline gap-2">
                   <span className="flex-1 truncate">{s.label}</span>
                   {idHint === null ? null : <span className="text-xs flex-shrink-0 font-mono">{idHint}</span>}
                 </div>
-              </Link>
+              </MenuItem>
             );
           })}
         </SessionGroup>
@@ -277,7 +268,6 @@ function SessionRows({
   /** True for the done group: the whole row recedes behind its heading. */
   muted: boolean;
 }) {
-  const close = useMenuClose();
   // Re-render each minute so the ages stay current.
   useNow(60_000);
   return (
@@ -286,18 +276,16 @@ function SessionRows({
         const isViewing = currentSessionId === s.sessionId;
         const idHint = sessionIdHint(s, allRows);
         return (
-          <Link
+          <MenuItem
             key={s.sessionId}
-            role="menuitem"
-            to={href(`/${boxSlug}/chat`)}
+            to={`/${boxSlug}/chat`}
             search={toSearch({ session: s.sessionId })}
-            onClick={close}
             title={`Session ${s.sessionId}`}
             {...bbxSource("session", s.sessionId)}
-            className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
+            active={isViewing}
           >
             <div className="flex items-baseline gap-2">
-              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-700" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
+              <span className={`flex-1 truncate ${muted || isViewing ? "" : "text-warm-800"}`}>
                 {s.label}
               </span>
               {idHint === null ? null : <span className="text-xs text-warm-700 flex-shrink-0 font-mono">{idHint}</span>}
@@ -311,7 +299,7 @@ function SessionRows({
                 <span className="text-xs text-warm-700 truncate">in {s.landmarkLabel}</span>
               ) : null}
             </div>
-          </Link>
+          </MenuItem>
         );
       })}
     </>

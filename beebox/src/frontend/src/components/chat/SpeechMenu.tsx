@@ -3,19 +3,17 @@
  * controlling and replaying its speech.
  *
  * Menu, top to bottom:
- *   - A control row of icon buttons on one line:
- *       Stop          — stop the current speech sequence (disabled if nothing
- *                       is playing). Does NOT mute; see VoiceChip for that.
- *       Fast-forward  — abort the current segment and play the next. Only
- *                       shown when this message has multiple segments; disabled
- *                       unless this message is playing and a next segment exists.
+ *   - Stop          — stop the current speech sequence (disabled if nothing
+ *                     is playing). Does NOT mute; see VoiceChip for that.
  *   - Replay        — replay all of this message's speech from the start.
+ *   - Fast-forward  — abort the current segment and play the next. Only
+ *                     shown when this message has multiple segments; disabled
+ *                     unless this message is playing and a next segment exists.
  *   - Replay from:  — only when multiple segments: jump straight to a chosen
  *                     segment, listed by a short prefix of its text.
  */
 
-import type { ReactNode } from "react";
-import { Menu, useMenuClose } from "../ui/Menu";
+import { Menu } from "../ui/Menu";
 import { MenuItem, MenuDivider } from "../ui/menu-item";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing/parse";
 import { snippet } from "../../lib/snippet";
@@ -75,33 +73,6 @@ function ReloadGlyph() {
   );
 }
 
-function ControlButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  const close = useMenuClose();
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={() => { if (disabled) return; close(); onClick(); }}
-      className="flex-1 inline-flex items-center justify-center h-7 rounded text-warm-700 hover:bg-warm-50 disabled:text-warm-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-    >
-      {children}
-    </button>
-  );
-}
-
 export interface SpeechMenuProps {
   segments: SpeechSegment[];
   /** This message's speech is currently playing. */
@@ -134,19 +105,11 @@ export function SpeechMenu({ segments, playing, anyPlaying, canSkip, onStop, onS
         </button>
       )}
     >
-      <div role="group" aria-label="Playback controls" className="flex items-stretch gap-1 px-1.5 py-0.5">
-        <ControlButton label="Stop" disabled={!anyPlaying} onClick={onStop}>
-          <StopGlyph />
-        </ControlButton>
-        <ControlButton label="Replay" disabled={false} onClick={() => onReplay(0)}>
-          <ReloadGlyph />
-        </ControlButton>
-        {hasMultiple ? (
-          <ControlButton label="Fast-forward" disabled={!(playing && canSkip)} onClick={onSkip}>
-            <ForwardGlyph />
-          </ControlButton>
-        ) : null}
-      </div>
+      <MenuItem icon={<StopGlyph />} disabled={!anyPlaying} onClick={onStop}>Stop</MenuItem>
+      <MenuItem icon={<ReloadGlyph />} onClick={() => onReplay(0)}>Replay</MenuItem>
+      {hasMultiple ? (
+        <MenuItem icon={<ForwardGlyph />} disabled={!(playing && canSkip)} onClick={onSkip}>Fast-forward</MenuItem>
+      ) : null}
       {hasMultiple ? (
         <>
           <MenuDivider />

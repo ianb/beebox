@@ -6,8 +6,7 @@
  * chip that can be dismissed to drop the session filter.
  */
 
-import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
-import { useDismiss } from "../../hooks/useDismiss";
+import { useMemo, type ReactNode } from "react";
 import {
   TRIGGER_KINDS,
   TRIGGER_KIND_LABELS,
@@ -17,6 +16,7 @@ import { cn } from "../../lib/cn";
 import { Badge } from "../ui/Badge";
 import { Toggle } from "../ui/Toggle";
 import { CheckboxField } from "../ui/fields/field";
+import { Popover, type PopoverTriggerProps } from "../ui/Popover";
 
 export interface HistoryFilterState {
   connectors: string[];
@@ -166,12 +166,6 @@ interface MultiSelectPopoverProps {
 }
 
 function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle }: MultiSelectPopoverProps) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => setOpen(false), []);
-  useDismiss({ root: rootRef, open, onDismiss: close });
-
   const hasSelection = selected.length > 0;
   const firstLabel = options.find((o) => o.value === selected[0])?.label ?? selected[0];
   const summary =
@@ -190,44 +184,38 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
       : [{ heading: null, options }];
 
   return (
-    <div className="relative" ref={rootRef}>
-      <FilterChipButton
-        id={id}
-        active={hasSelection}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        {summary}
-        <span className="ml-1 text-warm-400" aria-hidden="true">▾</span>
-      </FilterChipButton>
-      {open ? (
-        <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 w-60 max-h-72 overflow-auto">
-          {options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-700 italic">No values</div>
-          ) : (
-            sections.map((section) => (
-              <div key={section.heading ?? ""}>
-                {section.heading === null ? null : (
-                  <div className="px-3 pt-1.5 pb-0.5 text-[0.625rem] uppercase tracking-wide text-warm-700">
-                    {section.heading}
-                  </div>
-                )}
-                {section.options.map((opt) => (
-                  <CheckboxField
-                    key={opt.value}
-                    checked={selected.includes(opt.value)}
-                    onChange={() => onToggle(opt.value)}
-                    label={<span className="block truncate">{opt.label}</span>}
-                    className="px-3 py-1.5"
-                  />
-                ))}
+    <Popover
+      label={label}
+      trigger={({ toggle, ariaProps }) => (
+        <FilterChipButton id={id} active={hasSelection} onClick={toggle} ariaProps={ariaProps}>
+          {summary}
+          <span className="ml-1 text-warm-400" aria-hidden="true">▾</span>
+        </FilterChipButton>
+      )}
+    >
+      {options.length === 0 ? (
+        <div className="text-xs text-warm-700 italic">No values</div>
+      ) : (
+        sections.map((section) => (
+          <div key={section.heading ?? ""}>
+            {section.heading === null ? null : (
+              <div className="pt-1.5 pb-0.5 text-[0.625rem] uppercase tracking-wide text-warm-700">
+                {section.heading}
               </div>
-            ))
-          )}
-        </div>
-      ) : null}
-    </div>
+            )}
+            {section.options.map((opt) => (
+              <CheckboxField
+                key={opt.value}
+                checked={selected.includes(opt.value)}
+                onChange={() => onToggle(opt.value)}
+                label={<span className="block truncate">{opt.label}</span>}
+                className="py-1"
+              />
+            ))}
+          </div>
+        ))
+      )}
+    </Popover>
   );
 }
 
@@ -253,19 +241,19 @@ function ToggleChip({ id, label, checked, onChange }: ToggleChipProps) {
 interface FilterChipButtonProps {
   id: string;
   active: boolean;
-  onClick: () => void;
+  onClick: PopoverTriggerProps["toggle"];
   children: ReactNode;
-  "aria-haspopup"?: "listbox";
-  "aria-expanded"?: boolean;
+  /** The Popover trigger's ARIA, when the chip opens one. */
+  ariaProps?: PopoverTriggerProps["ariaProps"];
 }
 
-function FilterChipButton({ id, active, onClick, children, ...aria }: FilterChipButtonProps) {
+function FilterChipButton({ id, active, onClick, children, ariaProps }: FilterChipButtonProps) {
   return (
     <button
       id={id}
       type="button"
       onClick={onClick}
-      {...aria}
+      {...ariaProps}
       className={cn(
         "inline-flex items-center text-xs px-2 py-1 rounded-full border transition-colors",
         active

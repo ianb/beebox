@@ -96,3 +96,28 @@ void test("a list of links has no menu roles and no arrow-key handling", async (
     { menus: 0, items: 0, popup: null, expanded: "true", prevented: false, active: "bbx-t-a" },
   );
 });
+
+// A row's sibling action (the model pin) is the next menu item for the arrow
+// keys; choosing it runs only the action, and `keepOpen` leaves the menu open.
+void test("a row's action is the next item, and choosing it neither selects the row nor closes the menu", async (t) => {
+  const calls: string[] = [];
+  const view = await openMenu("menu", [
+    h(MenuItem, {
+      key: "a",
+      id: "bbx-t-a",
+      onClick: () => { calls.push("select"); },
+      action: { label: "Pin A", icon: "*", onSelect: () => { calls.push("pin"); }, keepOpen: true },
+      children: "A",
+    }),
+    h(MenuItem, { key: "b", id: "bbx-t-b", onClick: noop, children: "B" }),
+  ]);
+  t.teardown(() => view.unmount());
+  byId(document.body, "bbx-t-a").focus();
+  press(byId(document.body, "bbx-t-a"), "ArrowDown");
+  const afterArrow = { role: document.activeElement?.getAttribute("role"), name: document.activeElement?.getAttribute("aria-label") };
+  await view.act(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.click(); });
+  t.check(
+    { afterArrow, calls, open: document.body.querySelectorAll("[role=menu]").length, wrappers: [...document.body.querySelectorAll("[role=none]")].length },
+    { afterArrow: { role: "menuitem", name: "Pin A" }, calls: ["pin"], open: 1, wrappers: 2 },
+  );
+});

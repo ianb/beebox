@@ -103,32 +103,26 @@ function EngineSection(props: ModelMenuBodyProps & { engine: ChatAgentEngine }) 
         const pinned = isOwn && model === boxDefault;
         const showPin = canPin && engine === boxEngine;
         return (
-          <div key={opt.label} role="none" className="flex items-stretch">
-            <div role="none" className="flex-1 min-w-0">
-              <MenuItem
-                onClick={() => {
-                  if (isOwn) props.onSelectModel(model);
-                  else props.onChooseStart({ engine, model });
-                }}
-              >
-                <span className="flex justify-between gap-2 w-full">
-                  <span>{isOwn && selectedModel === model ? "✓ " : "  "}{opt.label}</span>
-                  {pinned ? <span className="text-warm-700 text-xs self-center">default</span> : null}
-                </span>
-              </MenuItem>
-            </div>
-            {showPin ? (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => { props.onPinModel(model); }}
-                aria-label={pinned ? `${opt.label} is the box default` : `Pin ${opt.label} as the box default`}
-                className="px-2 text-warm-400 hover:text-warm-700 hover:bg-warm-50 transition-colors"
-              >
-                <PinIcon filled={pinned} />
-              </button>
-            ) : null}
-          </div>
+          <MenuItem
+            key={opt.label}
+            onClick={() => {
+              if (isOwn) props.onSelectModel(model);
+              else props.onChooseStart({ engine, model });
+            }}
+            {...(showPin ? {
+              action: {
+                label: pinned ? `${opt.label} is the box default` : `Pin ${opt.label} as the box default`,
+                icon: <PinIcon filled={pinned} />,
+                onSelect: () => { props.onPinModel(model); },
+                keepOpen: true,
+              },
+            } : {})}
+          >
+            <span className="flex justify-between gap-2 w-full">
+              <span>{isOwn && selectedModel === model ? "✓ " : "  "}{opt.label}</span>
+              {pinned ? <span className="text-warm-700 text-xs self-center">default</span> : null}
+            </span>
+          </MenuItem>
         );
       })}
     </>

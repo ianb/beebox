@@ -2,11 +2,10 @@
  * Dashboard header strip — box name, connection status, inline action buttons.
  */
 
-import { useState, useRef, useEffect } from "react";
-
 import { useBoxName } from "../../hooks/useBoxName";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { List } from "../ui/List";
+import { Popover } from "../ui/Popover";
 
 type StatusResponse = RouterOutput["status"]["status"];
 
@@ -15,7 +14,11 @@ interface HeaderStripProps {
   connected: boolean;
 }
 
-function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
+/**
+ * The file lists. The popover is the one scroll container, so a keyboard open
+ * (which focuses the text-only panel) scrolls it with the arrow keys.
+ */
+function GitStatusDetails({ git }: { git: StatusResponse["git"] }) {
   const { staged, modified, untracked } = git;
   const sections: Array<{ label: string; files: string[]; color: string }> = [];
   if (staged.length > 0) sections.push({ label: "Staged", files: staged, color: "text-success-dark" });
@@ -23,7 +26,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-warm-700" });
 
   return (
-    <div className="fixed left-[10vw] top-24 w-[80vw] bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">
+    <div className="text-xs">
       {git.clean ? (
         <p className="text-success">Working tree clean</p>
       ) : (
@@ -33,7 +36,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
               <div className={`font-semibold ${s.color} mb-0.5`}>
                 {s.label} ({s.files.length})
               </div>
-              <List gap="xs" className="font-mono text-warm-700 max-h-32 overflow-auto">
+              <List gap="xs" className="font-mono text-warm-700 break-all">
                 {s.files.map((f) => (
                   <li key={f}>{f}</li>
                 ))}
@@ -47,22 +50,10 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
 }
 
 export function HeaderStrip({ status, connected }: HeaderStripProps) {
-  const [showGit, setShowGit] = useState(false);
-  const gitRef = useRef<HTMLDivElement>(null);
   const boxRoot = status?.boxRoot;
   // NOT the last segment of boxRoot — since the operational root moved to <box>/content that is
   // the literal word "content" on every box, so the largest text on the dashboard named no box.
   const { boxName } = useBoxName();
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (gitRef.current && e.target instanceof Node && !gitRef.current.contains(e.target)) {
-        setShowGit(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b">
@@ -82,19 +73,25 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
           title={connected ? "Connected" : "Disconnected"}
         />
         {status ? (
-          <div className="relative" ref={gitRef}>
-            <button type="button"
-              id="bbx-dashboard-git-status"
-              data-bbx-does="opens the box's git status — which files are modified or untracked"
-              onClick={() => setShowGit(!showGit)}
-              className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 whitespace-nowrap ${
-                status.git.clean ? "text-success" : "text-warning"
-              }`}
-            >
-              {status.git.clean ? "clean" : `dirty (${status.git.modified.length + status.git.untracked.length} files)`}
-            </button>
-            {showGit ? <GitStatusPopover git={status.git} /> : null}
-          </div>
+          <Popover
+            label="Git status"
+            width="lg"
+            trigger={({ toggle, ariaProps }) => (
+              <button type="button"
+                id="bbx-dashboard-git-status"
+                data-bbx-does="opens the box's git status — which files are modified or untracked"
+                onClick={toggle}
+                {...ariaProps}
+                className={`text-sm px-2 py-0.5 rounded hover:bg-warm-100 whitespace-nowrap ${
+                  status.git.clean ? "text-success" : "text-warning"
+                }`}
+              >
+                {status.git.clean ? "clean" : `dirty (${status.git.modified.length + status.git.untracked.length} files)`}
+              </button>
+            )}
+          >
+            <GitStatusDetails git={status.git} />
+          </Popover>
         ) : null}
       </div>
     </div>
