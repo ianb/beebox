@@ -3,6 +3,7 @@ import type { Sprite, View } from "@ianbicking/canvas-loop";
 import type { Clock, Id } from "./things-tea.js";
 import { BUS_Y, FEET, IDS, W, act, boxOf, busX, snailX } from "./things-tea.js";
 import * as S from "./folk-tea.js";
+import { LIT_WINDOWS } from "./town-tea.js";
 
 export interface Scene extends Clock {
   readonly hover: Id | "";
@@ -331,9 +332,11 @@ export function lamp(v: View, s: Scene): void {
   const flick = t !== null && t < 0.15 ? Math.floor(t * 60) % 2 === 0 : on;
   put(v, S.lamp(v, flick), { x: 609, y: 574, px: 15, py: 190, rot: wiggle(s, "lamp") });
   if (!flick) return;
-  v.blendMode("screen");
-  v.image(S.glow(v), 609 - 80, 400 - 80, s.night ? 1 : 0.7);
-  v.blendMode("normal");
+  if (!s.evening) {
+    v.blendMode("screen");
+    v.image(S.glow(v), 609 - 80, 400 - 80, 0.7);
+    v.blendMode("normal");
+  }
   if (t !== null) {
     v.noStroke();
     v.fill("#5a4a3a");
@@ -463,8 +466,18 @@ export function duck(v: View, s: Scene): void {
   const quack = t !== null && t < 0.85;
   const x = 928;
   const rustle = quack ? 0 : Math.sin(s.frame * 0.05) * 0.03;
-  const jump = quack ? -bell(t, 0, 0.3) * 18 : hop(s, "duck");
-  put(v, S.folk(v, quack ? "duck-quack" : "duck-read"), { x, y: 553 + jump, px: 32, py: 96, rot: rustle });
+  const jump = quack ? -bell(t, 0, 0.3) * 22 : hop(s, "duck");
+  // sitting: the legs are hidden behind the seat plank; only the feet dangle below it
+  const y = 552 + jump;
+  v.clip([[x - 40, 300], [x + 40, 300], [x + 40, 544 + Math.min(0, jump)], [x - 40, 544 + Math.min(0, jump)]], () => {
+    put(v, S.folk(v, quack ? "duck-quack" : "duck-read"), { x, y, px: 32, py: 96, rot: rustle });
+  });
+  put(v, S.benchSeat(v), { x: 880, y: 538, px: 0, py: 0 });
+  const kick = Math.sin(s.frame * (quack ? 0.5 : 0.08)) * 3;
+  v.noStroke();
+  v.fill("#f29a2e");
+  v.ellipse(x - 8 + kick, 556 + Math.min(0, jump), 13, 6);
+  v.ellipse(x + 8 - kick, 556 + Math.min(0, jump), 13, 6);
 }
 
 // ── The road ───────────────────────────────────────────────────────
@@ -536,7 +549,7 @@ const BUBBLES: Readonly<Partial<Record<Id, Bubble>>> = {
   mailbox: { text: "*burp*", from: 0.15, to: 0.6, dx: 30, dy: -20 },
   painter: { text: "Whoa whoa whoa!", from: 0.05, to: 0.7, dx: -10, dy: 0 },
   bucket: { text: "SPLOSH", from: 0.15, to: 0.5, dx: 40, dy: -6 },
-  owl: { text: "WHO?!", from: 0.08, to: 0.75, dx: 70, dy: 6 },
+  owl: { text: "WHO?!", from: 0.02, to: 0.75, dx: 70, dy: 6 },
   hydrant: { text: "fssshhh", from: 0.05, to: 0.6, dx: -14, dy: -16 },
   dog: { text: "Woof! Woof!", from: 0.1, to: 0.8, dx: 0, dy: -8 },
   lamp: { text: "ding!", from: 0, to: 0.3, dx: 36, dy: 10 },
@@ -565,9 +578,12 @@ interface Placed {
   readonly x: number;
   readonly y: number;
   readonly w: number;
+  readonly text: string;
+  readonly tipX: number;
+  readonly tipY: number;
 }
 
-const overlaps = (a: Placed, b: Placed): boolean => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 4 && Math.abs(a.y - b.y) < 29;
+const overlaps = (a: Placed, b: { x: number; y: number; w: number }): boolean => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 4 && Math.abs(a.y - b.y) < 32;
 
 export function bubbles(v: View, s: Scene): void {
   const placed: Placed[] = [];
@@ -577,26 +593,32 @@ export function bubbles(v: View, s: Scene): void {
     if (b === undefined || t === null || t < b.from || t > b.to) continue;
     const box = boxOf(s, id);
     const text = say(s, id, b.text);
-    const w = text.length * 7.2 + 18;
-    const cx = Math.min(W - w / 2 - 6, Math.max(w / 2 + 6, box.x + box.w / 2 + b.dx));
-    const tipX = cx - b.dx * 0.15;
+    const w = text.length * 7.6 + 20;
+    const x = Math.min(W - w / 2 - 6, Math.max(w / 2 + 6, box.x + box.w / 2 + b.dx));
     const tipY = Math.max(24, box.y + b.dy - 14) + 24;
     // nudge up past any bubble already placed, so lines never cover each other
-    let cy = tipY - 24;
-    for (let tries = 0; tries < 5 && placed.some((p) => overlaps(p, { x: cx, y: cy, w })); tries += 1) cy -= 30;
-    placed.push({ x: cx, y: cy, w });
-    v.noBrush();
+    let y = tipY - 24;
+    for (let tries = 0; tries < 6 && placed.some((p) => overlaps(p, { x, y, w })); tries += 1) y -= 32;
+    placed.push({ x, y, w, text, tipX: x - b.dx * 0.15, tipY });
+  }
+  // all tails first, then all boxes: a long tail passes behind other bubbles, never over their words
+  v.noBrush();
+  v.fill("#fffdf4");
+  v.stroke("#3b2a24");
+  v.strokeWeight(2);
+  for (const p of placed) v.triangle(p.x - 6, p.y + 10, p.x + 6, p.y + 10, p.tipX, p.tipY);
+  v.textFont('"Comic Sans MS", "Chalkboard SE", sans-serif');
+  v.textStyle("bold");
+  v.textSize(13);
+  v.textAlign("center", "middle");
+  for (const p of placed) {
     v.fill("#fffdf4");
     v.stroke("#3b2a24");
-    v.strokeWeight(2);
-    v.triangle(cx - 6, cy + 10, cx + 6, cy + 10, tipX, tipY);
-    v.rect(cx - w / 2, cy - 13, w, 25);
+    v.rect(p.x - p.w / 2, p.y - 13, p.w, 25);
     v.noStroke();
-    v.rect(cx - 7, cy + 8, 14, 5);
+    v.rect(p.x - 7, p.y + 8, 14, 5);
     v.fill("#3b2a24");
-    v.textSize(13);
-    v.textAlign("center", "middle");
-    v.text(text, cx, cy);
+    v.text(p.text, p.x, p.y);
   }
 }
 
@@ -605,6 +627,16 @@ export function hoverGlint(v: View, s: Scene): void {
   const b = boxOf(s, s.hover);
   const k = Math.sin(s.frame * 0.25);
   put(v, S.glint(v), { x: b.x + b.w - 4, y: b.y + 6, px: 12, py: 12, rot: s.frame * 0.05, alpha: 0.75 + k * 0.25, scale: 1.1 + k * 0.3 });
+}
+
+/** Lit windows and the lamp, after the night shade, with the screen blend already set. */
+export function lights(v: View, s: Scene): void {
+  const g = S.glow(v);
+  const k = s.night ? 0.75 : 0.45;
+  for (const [x, y] of LIT_WINDOWS) put(v, g, { x, y, px: 80, py: 80, scale: 0.6, alpha: k });
+  const w = act(s, "window");
+  if (w !== null && w > 0.04 && w < 0.94) put(v, g, { x: 90, y: 318, px: 80, py: 80, scale: 0.6, alpha: k });
+  if (s.evening || act(s, "lamp") !== null) v.image(g, 609 - 80, 400 - 80, s.night ? 1 : 0.8);
 }
 
 export function rain(v: View, frame: number): void {

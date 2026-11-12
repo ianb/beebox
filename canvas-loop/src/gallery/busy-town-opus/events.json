@@ -124,6 +124,17 @@
   "label": "bus comes back round the corner"
  },
  {
+  "frame": 150,
+  "type": "mousemove",
+  "x": 120,
+  "y": 650
+ },
+ {
+  "frame": 154,
+  "type": "snapshot",
+  "label": "hover: the bus, mid-drive, under the pointer"
+ },
+ {
   "frame": 170,
   "type": "mousemove",
   "x": 292,
@@ -214,19 +225,19 @@
   "label": "after reset: everyone settles"
  },
  {
-  "frame": 236,
+  "frame": 234,
   "type": "param",
   "name": "time",
   "value": "night"
  },
  {
-  "frame": 236,
+  "frame": 234,
   "type": "param",
   "name": "rain",
   "value": true
  },
  {
-  "frame": 237,
+  "frame": 234,
   "type": "mousedown",
   "x": 468,
   "y": 265
@@ -234,6 +245,6 @@
  {
   "frame": 239,
   "type": "snapshot",
-  "label": "night, raining (the owl has just been clicked)"
+  "label": "night, raining; the owl objects"
  }
 ]

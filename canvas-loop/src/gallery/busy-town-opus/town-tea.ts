@@ -15,7 +15,7 @@ function sky(v: View): void {
   v.noFill();
   v.stroke("rgba(255,255,255,0.85)");
   v.brush("wash", { opacity: 0.8 });
-  v.gesture({ pressure: "swell", wobble: 3 });
+  v.gesture({ pressure: "swell", wobble: 3, faint: true });
   for (const [x, y, w] of [[120, 70, 140], [430, 50, 110], [690, 90, 160], [300, 140, 80]] as const) {
     v.strokeWeight(34);
     v.line(x, y, x + w, y + 4);
@@ -71,8 +71,8 @@ function facade(v: View, x: number, y: number, w: number, h: number, color: stri
 function bricks(v: View, x: number, y: number, w: number, h: number, color: string, seed: number): void {
   v.noFill();
   v.stroke(color);
-  v.brush("pencil", { opacity: 0.6 });
-  v.strokeWeight(2.4);
+  v.brush("pencil", { opacity: 0.85 });
+  v.strokeWeight(2.6);
   for (let i = 0; i < Math.floor((w * h) / 2400); i += 1) {
     const bx = x + hash(seed + i) * (w - 24);
     const by = y + hash(seed + i * 3 + 1) * (h - 10);
@@ -85,8 +85,8 @@ function bricks(v: View, x: number, y: number, w: number, h: number, color: stri
 function boards(v: View, x: number, y: number, w: number, h: number, o: { color: string; gap: number; vertical: boolean }): void {
   v.noFill();
   v.stroke(o.color);
-  v.brush("pencil", { opacity: 0.55 });
-  v.strokeWeight(2);
+  v.brush("pencil", { opacity: 0.85 });
+  v.strokeWeight(2.4);
   v.gesture({ pressure: "taper", wobble: 0.8 });
   if (o.vertical) {
     for (let bx = x + o.gap; bx < x + w - 4; bx += o.gap) v.line(bx, y + 4, bx + 1, y + h - 2);
@@ -148,7 +148,7 @@ function bakery(v: View): void {
 
 function postOffice(v: View): void {
   facade(v, 242, 300, 170, STREET - 300, "#b9d4e6");
-  boards(v, 242, 300, 170, STREET - 300, { color: "#86a7c2", gap: 13, vertical: false });
+  boards(v, 242, 300, 170, STREET - 300, { color: "#7597b4", gap: 13, vertical: false });
   inked(v, "#7d9bb8", () => v.rect(236, 290, 182, 14), 2.2);
   win(v, 262, 324, 52, 56);
   win(v, 340, 324, 52, 56);
@@ -194,7 +194,7 @@ function paintersHouse(v: View): void {
 
 function grocer(v: View): void {
   facade(v, 612, 300, 182, STREET - 300, "#cfe3b4");
-  boards(v, 612, 300, 182, STREET - 300, { color: "#9fbf84", gap: 17, vertical: true });
+  boards(v, 612, 300, 182, STREET - 300, { color: "#8cae72", gap: 17, vertical: true });
   inked(v, "#8fb27a", () => v.rect(606, 290, 194, 14), 2.2);
   win(v, 636, 322, 54, 56, "#fbe1a6");
   win(v, 718, 322, 54, 56, "#fbe1a6");
@@ -355,25 +355,15 @@ export function paintTown(v: View): void {
   v.paperTexture(0.35);
 }
 
-/** Warm window and lamp glows for dusk/night, for a screen-blended cache. */
-export function paintLights(v: View, night: boolean): void {
-  const glow = (x: number, y: number, w: number, h: number): void => {
-    v.noStroke();
-    v.fill(v.ellipseGradient(x, y, w, h, [
-      [0, night ? "rgba(255,214,120,0.95)" : "rgba(255,200,120,0.6)"],
-      [1, "rgba(255,200,120,0)"],
-    ]));
-    v.ellipse(x, y, w, h);
-  };
-  const windows: readonly Vec2[] = [
-    [178, 320], [83, 492], [288, 352], [366, 352], [285, 475], [516, 270], [571, 270], [467, 350], [516, 350], [571, 430], [663, 350], [745, 350], [664, 498], [835, 418], [965, 418], [900, 200],
-  ];
-  for (const [x, y] of windows) glow(x, y, 90, 80);
-  glow(609, 392, 160, 160);
-  if (night) {
-    flat(v, "rgba(255,255,230,0.9)", () => {
-      for (let i = 0; i < 40; i += 1) v.circle(hash(i + 300) * W, hash(i + 400) * 180, 1.5 + hash(i + 500) * 2);
-    });
-    flat(v, "#fff6d0", () => v.circle(120, 70, 50));
-  }
+/** Window centres that light up after dark (the goat's window lights only when its shutters are open). */
+export const LIT_WINDOWS: readonly Vec2[] = [
+  [178, 320], [83, 492], [288, 352], [366, 352], [285, 475], [516, 270], [571, 270], [467, 350], [516, 350], [571, 430], [663, 350], [745, 350], [664, 498], [835, 418], [965, 418], [900, 200],
+];
+
+/** Moon and stars, for a screen-blended cache at night. */
+export function paintNightSky(v: View): void {
+  flat(v, "rgba(255,255,230,0.9)", () => {
+    for (let i = 0; i < 40; i += 1) v.circle(hash(i + 300) * W, hash(i + 400) * 180, 1.5 + hash(i + 500) * 2);
+  });
+  flat(v, "#fff6d0", () => v.circle(120, 70, 50));
 }

@@ -20,6 +20,14 @@ function window(v: View, x: number, y: number, color: string): void {
   block(v, x - 4, y + 49, 55, 8, "#efbd7b");
 }
 
+export function paintOccupiedWindowTrim(v: View): void {
+  for (const x of [105, 219, 425, 539, 747]) {
+    v.noStroke(); v.fill("#ead0a0"); v.rect(x, 277, 47, 7);
+    v.fill("#614e4b"); v.rect(x - 4, 283, 55, 3);
+    v.fill("#f7dfb7"); v.rect(x, 228, 3, 49); v.rect(x + 44, 228, 3, 49);
+  }
+}
+
 function shop(v: View, x: number, w: number, color: string, name: string, awning: string): void {
   block(v, x, 185, w, 326, color);
   block(v, x - 7, 170, w + 14, 20, "#f5d5a5");
@@ -33,7 +41,7 @@ function shop(v: View, x: number, w: number, color: string, name: string, awning
     v.fill(i % 2 ? "#fff2d1" : awning); v.rect(x + 8 + i * ((w - 16) / 8), 438, (w - 16) / 8, 32);
   }
   block(v, x + 20, 476, 64, 35, "#eed5a7");
-  v.noStroke(); v.fill(INK); v.textAlign("center"); v.textSize(21); v.text(name, x + w / 2, 399);
+  v.noStroke(); v.fill(INK); v.textAlign("center"); v.textFont("Georgia"); v.textStyle("bold"); v.textSize(20); v.text(name, x + w / 2, 399); v.textStyle("normal");
 }
 
 function stars(v:View,dusk:boolean):void{
@@ -114,7 +122,7 @@ export function paintTown(v: View, dusk: boolean): void {
   // Lamp posts and planters frame little vignettes.
   for (const x of [17, 329, 650, 980]) {
     mark(v, [[x,561],[x,401]], "#45575a", 6);
-    if(dusk){v.noStroke();v.fill(v.ellipseGradient(x,398,104,104,[[0,"#ffe6a482"],[1,"#ffe6a400"]]));v.ellipse(x,398,104,104);}
+    if(dusk){v.blendMode("screen");v.noStroke();v.fill(v.ellipseGradient(x,398,104,104,[[0,"#ffe6a4b3"],[1,"#ffe6a400"]]));v.ellipse(x,398,104,104);v.blendMode("normal");}
     v.noStroke(); v.fill("#f4d994"); v.circle(x,395,17);
     v.fill("#50615d"); v.rect(x-12,383,24,4);
   }

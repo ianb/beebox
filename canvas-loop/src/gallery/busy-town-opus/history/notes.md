@@ -71,3 +71,33 @@
 **Intent:** No drawing changes. Add a hover over the clock (a fixed thing that glints rather than hops) and a move off into empty verge, then a last full render to confirm every click, the hover cue on both kinds of thing, dusk, reset, and night rain.
 
 **Seen:** All 20 things answer to their names, the reset trigger answers, and the three mouse moves change the hover. Hovering the clock puts a soft four-point glint at its rim (frame 190); hovering the mail carrier makes her hop (frame 176). Dusk, reset and night rain all render as before. One flaw remains in the events: the owl is clicked at frame 237 in the night, and its "Hoo! It's MY bedtime!" bubble only starts at 8% of its act, after the last frame, so the final snapshot shows it blinking without the line. I relabelled that snapshot rather than spend a thirteenth render. ESLint passes on the directory; `pnpm typecheck` reports no errors.
+
+## Cycle 13 (revision)
+
+**Intent:** Use the new tools. Draw every hit box with `debugBox` and render with `--outline` and `--timing` to check boxes against the art and get real per-frame numbers. Replace the hand-written start-frame literal with `u.record(IDS, …)`. Set `cursor("pointer")` while hovering a clickable thing. Signs in bold Trebuchet MS, speech in Comic Sans MS. Lights after the night shade as per-window glow sprites with a screen blend (so the goat's window lights up only when its shutters are open), with moon and stars in a small night-sky cache; the cloud wash marked `faint: true`. Fix the weak points: the duck sits on the bench (clipped above the seat, a seat plank sprite on top, feet dangling), painter and grocer acts shortened, night shade lighter, the owl's line starts sooner.
+
+**Seen:** The outline view confirmed every hit box against its art in one look (magenta sprite boxes inside yellow hit boxes for all 20; the duck's box covers the duck on the bench). The duck now sits, legs hidden by the seat plank, feet dangling. Signs in bold Trebuchet and speech in Comic Sans read more like a picture book. Night is lighter, and the goat's window glows only while it is open. `--timing`: draw avg 3.12 ms, p95 9.49 ms, max 70.84 ms; frame 0 825 ms. The p95 and max come from sprites painted on first use, mid-act. The one remaining faint mark is named: it is in sprite "bus", the tiny driver's pencil hatching, not the cloud I had guessed.
+
+## Cycle 14
+
+**Intent:** Paint every sprite at frame 0 (`warm`), so no act pays for its poses mid-animation. Skip hatching on the tiny bus driver. Make the clapboards, boards and bricks stronger so the walls show their texture at 1×.
+
+**Seen:** `--timing` now reads draw avg 2.11 ms, p95 4.73 ms, max 9.41 ms (frame 0, which paints everything, 1280 ms). No faint-mark warnings at all. The clapboards, boards and town-hall stones now show at 1×. At frame 100 the mailbox's "*burp*" is half hidden: the long tails of "fssshhh" (stacked above it) and of "Sniff sniff... bread?" cross its box, because each bubble draws its tail and box together.
+
+## Cycle 15
+
+**Intent:** Draw all bubble tails first and all boxes after, so a tail passes behind other bubbles; widen the stacking gap a little.
+
+**Seen:** Tails now pass behind other bubbles: at frame 100 "fssshhh", "*burp*" and "Sniff sniff... bread?" stack cleanly with every word visible. Timing: draw avg 1.61 ms, p95 3.73 ms, max 7.74 ms. In the night frame the owl has been clicked one frame earlier, so its line has not started.
+
+## Cycle 16
+
+**Intent:** Events only, with `--outline`: switch to night and click the owl at frame 234 so the last frame shows "Hoo! It's MY bedtime!"; hover the bus while it drives back (frame 150) to check that a moving hit box follows the bus and the glint and cursor go with it.
+
+**Seen:** With `--outline`, the bus's yellow hit box rides along with the bus as it comes back round the corner, and the hover at frame 150 changes the model; the bus is mid-act, so by design it gets no hop or glint (the cue is only for idle things), while the pointer cursor still shows. In the last frame the owl's "Hoo! It's MY bedtime!" bubble is up, but the outline labels sit over its left end, so I cannot tell whether the text fits its box.
+
+## Cycle 17
+
+**Intent:** No code changes. A clean render without `--outline`, zoomed on the owl's bubble at night and on the sitting duck, as the final check.
+
+**Seen:** At 3× the owl's night line "Hoo! It's MY bedtime!" fits its Comic Sans bubble, and the duck sits on the bench: the seat plank crosses its body and its orange feet dangle below. `--timing` for this run: draw avg 2.22 ms, p95 5.73 ms, max 16.37 ms. Two identical runs of all 20 acts gave max 5.3 ms and 31.9 ms, so the worst frame is machine noise (another agent was rendering at the same time); the average and p95 are the numbers to trust. ESLint passes and `pnpm typecheck` reports no errors. I used five of the six revision cycles.

@@ -64,21 +64,30 @@ function props(v:View,thing:Thing):void{
   if(thing.id==="skater"){v.noStroke();v.fill("#426b77");v.rect(17,4,26,6);}
 }
 
+function paintHead(v: View, kind: Thing["kind"], color: string): void {
+  v.noStroke(); v.fill(color);
+  if(kind==="rabbit") {v.ellipse(16,9,11,34);v.ellipse(40,9,11,34);}
+  if(kind==="fox") {v.triangle(8,20,8,1,23,16);v.triangle(33,16,48,1,48,20);}
+  if(kind==="cat") {v.triangle(8,21,12,3,23,17);v.triangle(33,17,44,3,48,21);}
+  if(kind==="mouse") {v.circle(10,14,18);v.circle(46,14,18);}
+  if(kind==="bear") {v.circle(12,15,14);v.circle(44,15,14);}
+  if(kind==="frog") {v.circle(15,11,15);v.circle(41,11,15);}
+  v.circle(28,27,39);
+  v.fill("#f3d6ac");v.ellipse(28,35,kind==="fox"?29:24,17);
+  v.fill("#263d43");v.circle(21,27,3.5);v.circle(35,27,3.5);v.circle(28,36,3);
+  v.noFill();v.stroke("#34474a");v.strokeWeight(1.6);v.arc(28,39,5,0,Math.PI);
+  if(kind==="cat"){v.line(9,34,19,36);v.line(37,36,47,34);}
+}
+
 export function paintSprite(v: View, thing: Thing, pose: boolean): void {
   const {kind,color}=thing;
   if(paintSpecial(v,thing,pose))return;
   v.noStroke();
   // A character is drawn around a fixed foot position in a 56×84 sprite.
-  const ears=kind==="rabbit"?23:kind==="fox"||kind==="cat"?13:kind==="mouse"?10:0;
   v.fill("#495459");v.ellipse(19,76,16,8);v.ellipse(38,76,16,8);
   v.fill(outfit(thing.id));v.ellipse(28,57,36,40);
   if(kind==="fox"||kind==="cat") {v.fill(color);v.triangle(9,62,-3,pose?44:55,14,51);}
-  v.fill(color);
-  if(ears){v.ellipse(14,17,kind==="rabbit"?12:15,ears*1.6);v.ellipse(42,17,kind==="rabbit"?12:15,ears*1.6);}
-  v.circle(28,27,39);
-  v.fill("#f3d6ac");v.ellipse(28,35,24,17);
-  v.fill("#263d43");v.circle(21,27,3.5);v.circle(35,27,3.5);v.circle(28,36,3);
-  v.noFill();v.stroke("#34474a");v.strokeWeight(1.6);v.arc(28,39,5,0,Math.PI);
+  paintHead(v,kind,color);
   v.stroke(color);v.strokeWeight(7);v.line(13,48,pose?2:8,pose?30:61);v.line(43,48,pose?55:49,pose?32:61);
   if(kind==="bird"){v.noStroke();v.fill("#e7bc70");v.triangle(28,34,48,38,28,42);}
   props(v,thing);

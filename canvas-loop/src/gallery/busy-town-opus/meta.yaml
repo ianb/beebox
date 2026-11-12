@@ -3,7 +3,7 @@ title: "Acorn Lane: a busy street of 20 clickable townsfolk"
 created: 2026-11-11
 model: opus-5.5
 driver: opus-5.5
-cycles: 12
+cycles: 17
 tier: tea
 harness-commit: 9018dc4c
 frames: 240

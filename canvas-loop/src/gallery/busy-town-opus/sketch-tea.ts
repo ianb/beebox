@@ -2,9 +2,10 @@
 // and it performs its little act, sometimes setting off a neighbour.
 import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
 import type { Id } from "./things-tea.js";
-import { CHAIN, H, NOT_STARTED, W, act, hit } from "./things-tea.js";
-import { paintLights, paintTown } from "./town-tea.js";
+import { CHAIN, H, IDS, W, act, boxOf, hit } from "./things-tea.js";
+import { paintNightSky, paintTown } from "./town-tea.js";
 import * as A from "./actors-tea.js";
+import * as S from "./folk-tea.js";
 
 export const params = {
   time: { type: "select", options: ["morning", "dusk", "night"] as const, default: "morning" },
@@ -27,12 +28,13 @@ export interface Model {
   readonly bloom: number;
 }
 
-function fresh(frame: number): Model {
-  return { frame, hover: "", start: NOT_STARTED, queue: [], bloom: 0 };
+function fresh(frame: number, u: Util<typeof params>): Model {
+  // every act "started" long ago, so none is playing
+  return { frame, hover: "", start: u.record(IDS, () => -100_000), queue: [], bloom: 0 };
 }
 
-export function init(): Model {
-  return fresh(0);
+export function init(u: Util<typeof params>): Model {
+  return fresh(0, u);
 }
 
 /** Start an act on `id` at frame `at` unless it is already playing; queue its chain reactions. */
@@ -80,20 +82,21 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
     case "trigger":
       if (msg.name !== "reset") return model;
       u.handled("reset");
-      return fresh(model.frame);
+      return fresh(model.frame, u);
   }
 }
 
 const SHADE: Readonly<Record<ParamValues<typeof params>["time"], string>> = {
   morning: "",
   dusk: "#f2b48c",
-  night: "#5a64a8",
+  night: "#6670b0",
 };
 
 export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
   const night = p.time === "night";
   const s: A.Scene = { ...model, night, evening: p.time !== "morning" };
   v.cache("town", () => paintTown(v));
+  S.warm(v);
   // back to front
   A.chimney(v, s);
   A.flag(v, s);
@@ -126,11 +129,18 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
     v.noStroke();
     v.fill(shade);
     v.rect(0, 0, W, H);
+    // lights go on after the shade, with a screen blend, so they glow through it
     v.blendMode("screen");
-    v.cache(`lights-${p.time}`, () => paintLights(v, night));
+    if (night) v.cache("night-sky", () => paintNightSky(v));
+    A.lights(v, s);
     v.blendMode("normal");
   }
   if (p.rain) A.rain(v, model.frame);
   A.bubbles(v, s);
   A.hoverGlint(v, s);
+  v.cursor(model.hover === "" ? "default" : "pointer");
+  for (const id of IDS) {
+    const b = boxOf(model, id);
+    v.debugBox(id, b.x, b.y, b.w, b.h);
+  }
 }

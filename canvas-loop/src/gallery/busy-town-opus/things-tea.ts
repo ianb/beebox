@@ -46,13 +46,13 @@ export const DUR: Readonly<Record<Id, number>> = {
   cat: 110,
   mail: 120,
   mailbox: 130,
-  painter: 150,
+  painter: 120,
   bucket: 120,
   owl: 140,
   hydrant: 170,
   dog: 140,
   lamp: 200,
-  grocer: 160,
+  grocer: 130,
   clock: 160,
   pigeons: 170,
   flag: 140,
@@ -76,30 +76,6 @@ export const CHAIN: Readonly<Partial<Record<Id, readonly { readonly id: Id; read
   bus: [{ id: "duck", delay: 205 }],
   manhole: [{ id: "snail", delay: 25 }],
   flag: [{ id: "pigeons", delay: 15 }],
-};
-
-/** Every act's start frame before anything has been clicked: long ago. */
-export const NOT_STARTED: Readonly<Record<Id, number>> = {
-  baker: -100_000,
-  chimney: -100_000,
-  window: -100_000,
-  cat: -100_000,
-  mail: -100_000,
-  mailbox: -100_000,
-  painter: -100_000,
-  bucket: -100_000,
-  owl: -100_000,
-  hydrant: -100_000,
-  dog: -100_000,
-  lamp: -100_000,
-  grocer: -100_000,
-  clock: -100_000,
-  pigeons: -100_000,
-  flag: -100_000,
-  duck: -100_000,
-  bus: -100_000,
-  manhole: -100_000,
-  snail: -100_000,
 };
 
 // ── Layout ───────────────────────────────────────────────────────────

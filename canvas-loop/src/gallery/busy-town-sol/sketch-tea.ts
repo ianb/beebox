@@ -1,5 +1,5 @@
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
-import { paintTown } from "./town-tea.js";
+import { paintOccupiedWindowTrim, paintTown } from "./town-tea.js";
 import { THINGS, paintSprite, type Thing } from "./people-tea.js";
 
 export const canvas = { width: 1000, height: 700 };
@@ -12,20 +12,34 @@ export interface Model { frame: number; hover: string; acts: Readonly<Record<str
 
 export function init(): Model { return { frame: 0, hover: "", acts: {} }; }
 
-function bounds(t: Thing, x: number, y: number): boolean {
-  if(t.kind==="bus") return Math.abs(x-t.x)<81 && Math.abs(y-t.y)<44;
-  if(t.kind==="flag") return x>t.x-6 && x<t.x+64 && y>t.y-75 && y<t.y+7;
+function busShift(t: Thing, model: DeepReadonly<Model>): number {
+  if(t.kind!=="bus") return 0;
+  const age=model.frame-(model.acts.bus??-1000);
+  return age>=0&&age<72?Math.sin(Math.min(age,70)/70*Math.PI)*96:0;
+}
+
+function bounds(t: Thing, x: number, y: number, model: DeepReadonly<Model>): boolean {
+  if(t.kind==="bus") return x>t.x+busShift(t,model)-76 && x<t.x+busShift(t,model)+76 && y>t.y-78 && y<t.y+2;
+  if(t.kind==="flag") return x>t.x-35 && x<t.x+35 && y>t.y-76 && y<t.y;
   const upper=t.y<300;
   return Math.abs(x-t.x)<(upper?24:31) && y>t.y-(upper?67:83) && y<t.y+10;
 }
-function hit(x: number, y: number): string { return THINGS.findLast(t=>bounds(t,x,y))?.id ?? ""; }
+function hit(x: number, y: number, model: DeepReadonly<Model>): string { return THINGS.findLast(t=>bounds(t,x,y,model))?.id ?? ""; }
+
+function showHitAreas(v: View, model: DeepReadonly<Model>): void {
+  for (const t of THINGS) {
+    if (t.kind === "bus") v.debugBox(t.id, t.x+busShift(t,model)-76, t.y-78, 152, 80);
+    else if (t.kind === "flag") v.debugBox(t.id, t.x-35, t.y-76, 70, 76);
+    else { const upper=t.y<300; v.debugBox(t.id,t.x-(upper?24:31),t.y-(upper?67:83),(upper?48:62),(upper?77:93)); }
+  }
+}
 
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch(msg.type){
     case "tick": return { ...model, frame: msg.frame };
-    case "mousemove": { const hover=hit(msg.x,msg.y); return hover===model.hover?model:{...model,hover}; }
+    case "mousemove": { const hover=hit(msg.x,msg.y,model); return hover===model.hover?model:{...model,hover}; }
     case "mousedown": {
-      const id=hit(msg.x,msg.y);if(!id)return model;u.handled(id);
+      const id=hit(msg.x,msg.y,model);if(!id)return model;u.handled(id);
       const chain:Readonly<Record<string,string>>={baker:"sweeper",violinist:"skater",bus:"conductor",flag:"astronomer",clock:"mailcarrier"};
       const other=chain[id];
       return {...model,acts:{...model.acts,[id]:model.frame,...(other?{[other]:model.frame+8}:{})}};
@@ -40,7 +54,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
 
 function label(v: View, text: string, x: number, y: number): void {
   v.noStroke();v.fill("#fff3d9");v.rect(x-34,y-17,68,20);
-  v.fill("#405657");v.textSize(11);v.textAlign("center");v.text(text,x,y-3);
+  v.fill("#405657");v.textFont("Trebuchet MS");v.textStyle("bold");v.textSize(10);v.textAlign("center");v.text(text,x,y-3);v.textStyle("normal");
 }
 
 function notes(v: View,x: number,y: number,age: number): void {
@@ -94,8 +108,8 @@ function drawThing(v: View,t:Thing,model:DeepReadonly<Model>):void{
   const sprite=v.sprite({key:`town-${t.id}-${pose?"act":"idle"}`,width,height},()=>paintSprite(v,t,pose));
   const idle=Math.sin(model.frame*.055+t.x)*1.4;
   const hop=hovered?Math.sin(model.frame*.22)*3.8:0;
-  const busShift=bus&&active?Math.sin(Math.min(age,70)/70*Math.PI)*96:0;
-  v.push();v.translate(t.x+busShift,t.y+idle-hop);
+  const shift=busShift(t,model);
+  v.push();v.translate(t.x+shift,t.y+idle-hop);
   if(t.y<300&&!special)v.scale(.75);
   if(!special){
     const angle=active?(t.act==="spin"?age*.13:Math.sin(age*.22)*.09):Math.sin(model.frame*.045+t.x)*.012;
@@ -105,14 +119,17 @@ function drawThing(v: View,t:Thing,model:DeepReadonly<Model>):void{
   v.pop();
   if(active){actEffectA(v,t,age);actEffectB(v,t,age,model.frame);}
   if(hovered){
-    v.noFill();v.stroke("#fff6ce");v.strokeWeight(2);v.circle(t.x,t.y-height*.56,Math.min(width,66)+8+Math.sin(model.frame*.25)*4);
-    label(v,t.id.toUpperCase(),t.x,t.y-height-8);
+    v.noFill();v.stroke("#fff6ce");v.strokeWeight(2);v.circle(t.x+shift,t.y-height*.56,Math.min(width,66)+8+Math.sin(model.frame*.25)*4);
+    label(v,t.id.toUpperCase(),t.x+shift,t.kind==="flowers"?t.y-90:t.y<300?t.y-88:t.y+25);
   }
 }
 
 export function draw(v:View,model:DeepReadonly<Model>,p:Params):void{
   v.cache(`busy-town-${p.dusk}`,()=>paintTown(v,p.dusk));
+  v.cursor(model.hover?"pointer":"default");
   for(const t of THINGS)drawThing(v,t,model);
+  paintOccupiedWindowTrim(v);
+  showHitAreas(v,model);
   // A few tiny looping marks make the printed street breathe even at rest.
   v.noFill();v.stroke("#f9edcd");v.strokeWeight(2);
   for(let i=0;i<3;i+=1){const x=52+i*324;const dy=Math.sin(model.frame*.06+i)*5;v.arc(x,533+dy,10,0,Math.PI);}

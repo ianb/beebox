@@ -61,6 +61,8 @@ export function label(v: View, text: string, x: number, y: number, size = 12, co
   v.noStroke();
   v.noBrush();
   v.fill(color);
+  v.textFont('"Trebuchet MS", Verdana, sans-serif');
+  v.textStyle("bold");
   v.textSize(size);
   v.textAlign("center", "middle");
   v.text(text, x, y);
@@ -83,6 +85,8 @@ export interface Folk {
   readonly trim: string;
   readonly hat: "chef" | "cap" | "beret" | "none";
   readonly arms: Arms;
+  /** Skip the pencil hatching (for tiny folk, where it is too faint to see). */
+  readonly plain?: boolean;
   /** Eyes: open dots, or happy closed arcs. */
   readonly eyes?: "open" | "happy" | "wide";
 }
@@ -260,7 +264,7 @@ export function paintFolk(v: View, f: Folk): void {
   // body
   inked(v, f.shirt, () => v.curve(BODY, true));
   shadeInside(v, BODY, "rgba(40,20,40,0.18)", [7, 5]);
-  v.clip(v.curvePath(BODY, true), () => {
+  if (f.plain !== true) v.clip(v.curvePath(BODY, true), () => {
     v.noFill();
     v.stroke("rgba(40,20,40,0.6)");
     v.brush("pencil", { opacity: 0.8 });

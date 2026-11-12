@@ -290,7 +290,7 @@ export function bus(v: View): Sprite {
     v.push();
     v.translate(176, 8);
     v.scale(0.55);
-    paintFolk(v, DRIVER);
+    paintFolk(v, { ...DRIVER, plain: true });
     v.pop();
     // body with window cut-outs: paint the body as four bands around the glass
     flat(v, "#f2b134", () => {
@@ -309,6 +309,11 @@ export function bus(v: View): Sprite {
     inked(v, "#fff3b0", () => v.circle(212, 78, 10), 1.4);
     inked(v, "#d8443a", () => v.rect(2, 72, 6, 10), 1.2);
   });
+}
+
+/** The bench's seat plank, 96×10, drawn over a sitting duck. */
+export function benchSeat(v: View): Sprite {
+  return v.sprite({ key: "bench-seat", width: 98, height: 12 }, () => inked(v, "#8a5a3a", () => v.rect(1, 2, 96, 8), 1.8));
 }
 
 /** A soft glint star for hover cues. */
@@ -330,4 +335,32 @@ export function glow(v: View): Sprite {
     v.fill(v.radialGradient(80, 80, 80, [[0, "rgba(255,226,140,0.9)"], [0.4, "rgba(255,210,120,0.35)"], [1, "rgba(255,200,120,0)"]]));
     v.circle(80, 80, 160);
   });
+}
+
+const POSES: readonly Pose[] = [
+  "baker-idle", "baker-reach", "baker-up", "mail-idle", "mail-toss", "painter-paint", "painter-hang",
+  "goat-water", "grocer-sweep", "grocer-juggle", "duck-read", "duck-quack",
+];
+
+/**
+ * Paint every sprite up front. Sprites paint on first use, so without this the
+ * first click on each thing pays for its poses mid-animation (a 70 ms hitch).
+ * After frame 0 each call is only a lookup.
+ */
+export function warm(v: View): void {
+  for (const pose of POSES) folk(v, pose);
+  for (const b of [false, true]) {
+    windowSprite(v, b);
+    mailbox(v, b);
+    ladder(v, b);
+    owl(v, b);
+    lamp(v, b);
+    pigeon(v, b);
+    snail(v, b);
+  }
+  cat(v, "sit");
+  cat(v, "arch");
+  dog(v, "stand");
+  dog(v, "wet");
+  for (const f of [loaf, wateringCan, chimney, bucket, hydrant, apple, mole, manhole, letter, wheel, bus, benchSeat, glint, glow]) f(v);
 }

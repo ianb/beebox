@@ -84,3 +84,43 @@ What I wanted and did not have:
 I am pleased with it. It looks like a busy picture-book spread: bright shopfronts, a street crowded with small animals at work, signs, and a few jokes to find. Clicking around is the fun part. The chains are what make it feel alive: the goat waters the petunias and the drips set off the cat, the bell scatters the pigeons and wakes the owl, the dog begs at the bread. Dusk is the most beautiful of the three times. The night rain version is atmospheric, though the characters go quite dark under the blue shade.
 
 Weaker points: the duck stands in front of the bench instead of sitting on it, some acts (painter, grocer) last a little long, the brush texture is subtle at full size, and when many acts overlap the bubbles stack into a tall column. Performance needed no fighting at all. Sprites plus one cache put the frame cost at about 2 to 3 ms, so I spent the cycles on the picture.
+
+## Revision
+
+Five more render cycles (13 to 17) with the new library tools.
+
+What I changed:
+
+- **The duck sits on the bench.** It is clipped above the seat line, a seat-plank sprite is drawn over it, and two orange feet dangle below and kick.
+- **Lights after the night shade.** The old second cache of glows is gone. The shade is a multiply rect, then each lit window gets the glow sprite through `image()` with `blendMode("screen")`. Because the lights are now per thing, the goat's window glows only while its shutters are open, and the lamp's glow follows its state. Moon and stars sit in a small `night-sky` cache. The window list (`LIT_WINDOWS`) lives in the town file. The night shade is lighter, so characters stay readable.
+- **Every sprite is painted at frame 0** (`warm`). Before this, the first click on each thing painted its poses mid-act, which caused a 70 ms hitch.
+- **Speech bubbles draw all tails first, then all boxes.** A long tail from a stacked bubble now passes behind the others instead of across their words.
+- **Shorter acts.** The painter goes from 150 to 120 frames and the grocer from 160 to 130.
+- **Stronger wall texture.** The post-office clapboards, the grocer's boards and the town-hall stones now show at 1×.
+- **The owl's night line appears in the final snapshot.** The night switch and the owl click move to frame 234, and the owl's bubble starts sooner.
+
+The new tools, and whether each helped:
+
+- **`--outline` plus `debugBox`: helped most.** One frame showed all 20 yellow hit boxes against their magenta sprite boxes. In the original round I found a 24 px lamp miss only through an "(unhandled)" verdict; here I could confirm every box at a glance, including the bus's moving box riding along with it at frame 154. Its labels do cover small art: at night they sat over the left end of the owl's bubble, so I needed a clean render to check it.
+- **`--timing`: helped at once.** The first run showed avg 3.12 ms but max 70.84 ms and p95 9.49 ms. That led straight to the lazy-sprite hitch, which wall-clock subtraction had hidden. After `warm` the numbers were avg 2.11, p95 4.73, max 9.41.
+- **Faint-mark warnings that name the sprite: helped.** The one warning I had blamed on a cloud said `in sprite "bus"`. It was the tiny bus driver's pencil hatching, now skipped with a `plain` flag. `gesture({ faint: true })` now marks the cloud wash as deliberate, and the transcript has no warnings.
+- **`textFont` / `textStyle`: helped.** Signs are bold Trebuchet MS and speech is bold Comic Sans MS, which reads much more like a picture book. Bubble widths are still my estimate of 7.6 px per character, because the View has no text measuring.
+- **`u.record(IDS, () => -100_000)`: helped.** It replaced the 20-line `NOT_STARTED` literal. `init` and the reset now take `u` for it.
+- **`cursor("pointer")`: used.** It is set from `model.hover` every frame. It does nothing headless, so it is unchecked here.
+- **The screen-blend `image()` recipe: helped.** It is the new lighting described above.
+
+What still fights me:
+
+- **Bubble width is a guess** without a `textWidth`, so long lines in other fonts could overflow their box.
+- **The outline labels are opaque black tags** that cover the art they label in crowded areas.
+- **Wall-clock and `--timing` maxima are noisy** while other renders run. The same all-acts run gave max 5.3 ms once and 31.9 ms the next.
+- **Frame 0 now costs about 1.2 s**, because it paints every pose. That is fine headless, but a browser figure would show a one-second blank start.
+
+New per-frame timing, from `--timing`:
+
+- Final events run: draw avg 2.22 ms, p95 5.73 ms.
+- All 20 acts started together (151 frames): avg 1.36 to 2.19 ms, p95 2.18 to 5.29 ms.
+- Update: about 0.01 ms.
+- Frame 0, which paints everything: about 1.0 to 1.2 s.
+
+All of these are well under 16 ms except for noise spikes in the maximum. With the brief's wall-clock command, `--frames 1` now takes 2.2 to 2.8 s, because the up-front sprite painting moved into frame 0, and `--frames 121` takes 2.3 to 3.4 s; the machine was busy, so `--timing` is the better figure.
