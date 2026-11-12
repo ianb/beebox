@@ -101,11 +101,12 @@ For each frame N, the runtime:
 So the world an event sees is exactly the state after frame **N−1**'s draw, and
 `draw` runs exactly once per frame headless. `init` runs once before frame 0.
 
-In a browser, `draw` runs only when the frame's model is a new object or a
-param changed; otherwise the canvas keeps the last picture. So `draw` must
-read only `model` and `p`: a value from anywhere else (a module `let`, the
-clock) would go stale. To animate, change the model on `tick`. A figure
-scrolled off screen sleeps: its frames stop until it is back, as when paused.
+In a browser, `draw` runs only when the frame's model is a new object, a
+param changed, or input arrived; otherwise the canvas keeps the last picture.
+So `draw` must read only `model` and `p`: a value from anywhere else (a module
+`let`, the clock) would go stale. To animate, change the model on `tick`. A
+figure scrolled off screen sleeps: its frames stop until it is back, as when
+paused, and a sound playing when it left is cut off.
 
 ## Drawing
 

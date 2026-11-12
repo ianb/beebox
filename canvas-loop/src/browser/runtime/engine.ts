@@ -120,6 +120,8 @@ export class Runtime {
   stop(): void {
     if (this.#raf !== undefined) cancelAnimationFrame(this.#raf);
     this.#raf = undefined;
+    // Stopped is final: coming back on screen does not restart it.
+    this.#suspended = false;
     this.#player?.close();
   }
 
@@ -297,6 +299,9 @@ export class Runtime {
     if (this.#pending.length === 0) return;
     const intents = this.#pending;
     this.#pending = [];
+    // Input redraws even when the model is unchanged, so what draw derives from
+    // the moment (the cursor, over-canvas inputs) never lags an interaction.
+    this.#dirty = true;
     for (const intent of intents) {
       const entry: TeaScriptEvent = { frame: this.#frame, ...intent };
       this.#log.push(entry);
@@ -383,11 +388,15 @@ export function watchVisibility(canvas: HTMLCanvasElement, runtime: Runtime): ()
     else if (onScreen === false) runtime.suspend();
   }, { rootMargin: "200px" });
   observer?.observe(canvas);
+  // A resized canvas (rotation, a narrower pane) redraws, so over-canvas inputs resize with it.
+  const resized = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(() => runtime.invalidate());
+  resized?.observe(canvas);
   const fonts = typeof document === "undefined" ? undefined : document.fonts;
   const redraw = (): void => runtime.invalidate();
   fonts?.addEventListener("loadingdone", redraw);
   return () => {
     observer?.disconnect();
+    resized?.disconnect();
     fonts?.removeEventListener("loadingdone", redraw);
   };
 }

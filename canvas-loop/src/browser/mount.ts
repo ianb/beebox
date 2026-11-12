@@ -192,8 +192,15 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     size,
     decl,
     handlers: {
-      onParam: (name, value) => attached?.runtime.setParam(name, value),
-      onTrigger: (name) => attached?.runtime.trigger(name),
+      // A control's change is a user gesture: it may unlock sound (iOS needs one).
+      onParam: (name, value) => {
+        attached?.runtime.enableSound();
+        attached?.runtime.setParam(name, value);
+      },
+      onTrigger: (name) => {
+        attached?.runtime.enableSound();
+        attached?.runtime.trigger(name);
+      },
     },
     onShownChange: (names) => {
       excluded = names;
@@ -234,8 +241,14 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
       buildControls({
         decl,
         values: runtime.paramValues(),
-        onParam: (name, value) => runtime.setParam(name, value),
-        onTrigger: (name) => runtime.trigger(name),
+        onParam: (name, value) => {
+          runtime.enableSound();
+          runtime.setParam(name, value);
+        },
+        onTrigger: (name) => {
+          runtime.enableSound();
+          runtime.trigger(name);
+        },
         classPrefix: "cl-",
         exclude: excluded,
       }),

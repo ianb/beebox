@@ -108,10 +108,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   // Destructure the module's stable sub-identities so the creation effect can key
   // on them (not the wrapper object's identity) — an inline module literal built
   // from module-scope functions then stays stable across re-renders.
-  const modInit = props.module.init;
-  const modUpdate = props.module.update;
-  const modDraw = props.module.draw;
-  const modParams = props.module.params;
+  const { init: modInit, update: modUpdate, draw: modDraw, params: modParams, sound: modSound } = props.module;
   const decl = modParams ?? {};
   const canvas = props.module.canvas ?? DEFAULT_CANVAS;
   const canvasWidth = canvas.width;
@@ -169,6 +166,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       draw: modDraw,
       canvas: { width: canvasWidth, height: canvasHeight },
       ...(modParams !== undefined ? { params: modParams } : {}),
+      ...(modSound !== undefined ? { sound: modSound } : {}),
     };
     // Sharp on high-density screens: a device-pixel backing store; React keeps the display size.
     setDensity(el, { width: canvasWidth, height: canvasHeight });
@@ -209,7 +207,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       attached.teardown();
       runtimeRef.current = null;
     };
-  }, [modInit, modUpdate, modDraw, modParams, seed, canvasWidth, canvasHeight, autoplay, isClient]);
+  }, [modInit, modUpdate, modDraw, modParams, modSound, seed, canvasWidth, canvasHeight, autoplay, isClient]);
 
   // Toggle the existing runtime's paused state when the user hits play/pause —
   // pausing freezes the frame and state rather than tearing the runtime down.
@@ -231,6 +229,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   }, [props.params]);
 
   const handleParam = useCallback((name: string, value: number | boolean | string): void => {
+    runtimeRef.current?.enableSound(); // a control's change is a gesture: it may unlock sound
     const latest = latestRef.current;
     if (latest !== null && latest.controlled) {
       // Host owns the values: report the change; the params effect dispatches it.
@@ -242,6 +241,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   }, []);
 
   const handleTrigger = useCallback((name: string): void => {
+    runtimeRef.current?.enableSound();
     runtimeRef.current?.trigger(name);
   }, []);
 

@@ -57,16 +57,17 @@ test("a still figure draws once, then only when the model or a param changes", (
   assert.deepEqual(counts, { draws: 1, ticks: 29 }, "29 ticks, the model unchanged: no redraws");
   attached.runtime.pointer({ type: "mousemove", x: 5, y: 5 });
   runFrames(2);
-  assert.equal(counts.draws, 1, "a hover the sketch ignores redraws nothing");
+  // Input always redraws once (the cursor or an over-canvas input may follow it), then rests.
+  assert.equal(counts.draws, 2, "a hover redraws once, even with the model unchanged");
   attached.runtime.pointer({ type: "mousedown", x: 5, y: 5 });
   runFrames(2);
-  assert.equal(counts.draws, 2, "a click that changes the model redraws once");
+  assert.equal(counts.draws, 3, "a click redraws once");
   attached.runtime.setParam("size", 5);
   runFrames(2);
-  assert.equal(counts.draws, 3, "a param change redraws once");
+  assert.equal(counts.draws, 4, "a param change redraws once");
   attached.runtime.invalidate();
-  runFrames(1);
-  assert.equal(counts.draws, 4, "invalidate (a font arrived) redraws once");
+  runFrames(5);
+  assert.equal(counts.draws, 5, "invalidate (a font arrived, a resize) redraws once");
   attached.teardown();
 });
 
