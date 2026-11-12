@@ -4,7 +4,7 @@
  *
  * A port of the ESLint rule `personal-vibe-check/rules/ime-safe-enter.ts` to
  * the TypeScript syntax tree, because no ESLint runs in a box and the preset
- * cannot reach a box at runtime (docs/plans/box-view-guidance-and-checks.md,
+ * cannot reach a box at runtime (docs/implemented-plans/box-view-guidance-and-checks.md,
  * Track 3, "Why not one shared implementation"). The decision is the same,
  * function for function; both run the cases in
  * `personal-vibe-check/rules/test/ime-safe-enter.cases.ts`, so a change to

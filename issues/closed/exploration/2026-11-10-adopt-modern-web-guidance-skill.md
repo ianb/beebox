@@ -7,7 +7,10 @@ needs: [decision]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — boxholder request, 2026-11-10"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** modern-web-guidance-adoption plan implemented. Divergences: dev-agent skill not installed (boxholder, 2026-11-12); Temporal (G) reverted; F4 Trusted Types held, now issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md.
 
 [GoogleChrome/modern-web-guidance](https://github.com/GoogleChrome/modern-web-guidance)
 is a set of agent skills about the current web platform: about 250 features (CSS
@@ -86,9 +89,9 @@ a guide that is never retrieved costs nothing.
 ## Scan and adoption plan (2026-11-11)
 
 The scan ran, and a plan for discussion is at
-[`beebox/docs/plans/modern-web-guidance-adoption.md`](../../beebox/docs/plans/modern-web-guidance-adoption.md).
+[`beebox/docs/implemented-plans/modern-web-guidance-adoption.md`](../../../beebox/docs/implemented-plans/modern-web-guidance-adoption.md).
 The guide-by-guide evidence is in
-[`research/modern-web-guidance/`](../../research/modern-web-guidance/README.md).
+[`research/modern-web-guidance/`](../../../research/modern-web-guidance/README.md).
 
 - `legacy-scan` (33 rules, about 20% of the guides) found 7 candidates; 4
   were real (IME-unsafe Enter handlers). Its CSS matchers cannot see Tailwind

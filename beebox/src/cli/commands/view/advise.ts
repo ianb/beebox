@@ -1,7 +1,7 @@
 /**
  * Advice for `bbx view check`: the hidden `bbx view advise <slug> --snapshot
  * <path>` child and `runAdvice`, which the sweep uses to run it
- * (docs/plans/box-view-guidance-and-checks.md, Track 3, "Advisory-only
+ * (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3, "Advisory-only
  * guarantee").
  *
  * The sweep runs advice only after a view's render child has passed, in a

@@ -9417,7 +9417,7 @@ tests:
       - 'intention:[\s\S]{0,80}(?:favor|email|recipe|cook)'
     tags: [landmark, intention]
 
-  # === modern-web-guidance adoption (docs/plans/modern-web-guidance-adoption.md) ===
+  # === modern-web-guidance adoption (docs/implemented-plans/modern-web-guidance-adoption.md) ===
   # Status (2026-11-11, Claude claude-opus-5-5): both pass on first run in the
   # web-guidance-scan worktree. dev-browser-floor read frontend.md and
   # Menu.tsx, quoted the Safari 18.0 floor, and said anchor positioning
@@ -9531,7 +9531,7 @@ tests:
       - 'isComposing|<form|onSubmit'
       - 'label'
     tags: [views, accessibility]
-  # === Views: dates, wide tables, announcements, check advice (docs/plans/box-view-guidance-and-checks.md, Track 4) ===
+  # === Views: dates, wide tables, announcements, check advice (docs/implemented-plans/box-view-guidance-and-checks.md, Track 4) ===
   # Status (2026-11-12, Claude claude-opus-5-5, Track 4): the four new audits
   # and the five reruns (view-enter-field-ime-and-name, views-full-bleed-layout,
   # views-render-test-command, chat-screenshot-when, box-page-interaction) all

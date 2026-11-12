@@ -3,7 +3,7 @@ title: "Temporal everywhere: replace Date across beebox, workstreams-app, bin an
 status: parked
 workstream: web-guidance-scan
 issues:
-  - ../../../issues/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
+  - ../../../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
 ---
 # Temporal everywhere: replace Date across beebox, workstreams-app, bin and Clerk
 

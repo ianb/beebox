@@ -1,9 +1,9 @@
 ---
 title: "Adopt modern-web-guidance: code sweep, lint rules, agent guidance"
-status: active
+status: implemented
 workstream: web-guidance-scan
 issues:
-  - ../../../issues/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
+  - ../../../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
 ---
 # Adopt modern-web-guidance: code sweep, lint rules, agent guidance
 
@@ -860,11 +860,11 @@ None. Each category is small enough to do from its entry here.
 - **G Temporal:** approved: move date code to Temporal behind a polyfill
   that loads only where Temporal is missing. The package choice is the
   plan's (Category G).
-- **Dev-agent skill:** undecided.
+- **Dev-agent skill:** not installed (decided 2026-11-12). Dev agents use the repo's own guidance and lint rules.
 
 ## Open design questions
 
-1. **Dev-agent skill** — install the pinned, telemetry-off copy, or none.
+1. **Dev-agent skill** — decided 2026-11-12: none.
 2. **One disclosure idiom** (B13). Lean: keep `Accordion`, drop its region.
 3. **B11 toasts under a modal** — decided after the reproduction in chunk 5.
 
@@ -992,8 +992,9 @@ follows dependency, then value.
 12. Composer-height cleanup (closes the filed issue).
 13. Category H: H0 (figure starters) and option 1 (`box-docs/views.md`),
     knowledge audits.
-14. Not scheduled: weekly baselined `legacy-scan`; dev-agent skill install
-    (undecided).
+14. Not scheduled: weekly baselined `legacy-scan`. Dev-agent skill install:
+    decided against (2026-11-12). F4 Trusted Types: held, tracked in
+    `issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md`.
 
 ## Rollout shape
 

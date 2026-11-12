@@ -6,7 +6,7 @@
  * Inside a `ModalDialog` it is therefore the modal's descendant and stays
  * interactive.
  *
- * Interaction contract (docs/plans/ui-primitives-dedup.md, Track 7):
+ * Interaction contract (docs/implemented-plans/ui-primitives-dedup.md, Track 7):
  * 1. A press on the trigger toggles; Enter or Space opens. The trigger
  *    carries `aria-haspopup`, `aria-expanded` and, while open, `aria-controls`.
  * 2. A keyboard open focuses the first focusable element in the panel, or the

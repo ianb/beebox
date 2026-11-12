@@ -3,7 +3,7 @@
 // `bbx view check` runs advice in a child after a view has passed. Whatever
 // that child does (hangs, crashes, prints junk), `runAdvice` resolves with
 // advice and remarks, within its timeout. These tests run real processes and
-// time them (docs/plans/box-view-guidance-and-checks.md, Track 3,
+// time them (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3,
 // "Advisory-only guarantee").
 
 import { test } from "tap";

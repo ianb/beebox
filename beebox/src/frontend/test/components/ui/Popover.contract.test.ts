@@ -1,6 +1,6 @@
 // # The Popover interaction contract
 //
-// Rules 2–5 of the contract in docs/plans/ui-primitives-dedup.md (Track 7):
+// Rules 2–5 of the contract in docs/implemented-plans/ui-primitives-dedup.md (Track 7):
 // initial focus by how it opened, Tab and Shift+Tab at every edge, Escape, and
 // an outside press. happy-dom has no Tab key, so each Tab case focuses the
 // element that sequential navigation reaches in DOM order (the panel follows

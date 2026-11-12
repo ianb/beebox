@@ -1,6 +1,6 @@
 /**
  * Source rules of `bbx view check` advice: patterns in one view file that the
- * views doc forbids (docs/plans/box-view-guidance-and-checks.md, Track 3).
+ * views doc forbids (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3).
  *
  * - `enter-without-ime-check`: `ime-enter.ts`.
  * - `clickable-non-control`: a JSX `div`, `span`, `li`, `td`, `tr` or `p`

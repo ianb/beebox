@@ -139,7 +139,7 @@ void test("A box with no views at all is trivially OK", async (t) => {
 //
 // A passing view also gets advice: patterns the views doc forbids, from its
 // source and from what it rendered. Advice never changes `ok` or the exit
-// code (docs/plans/box-view-guidance-and-checks.md, Track 3).
+// code (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3).
 
 const ADVISED_VIEW = `export const name = "Advised";
 export const dependencies = [];

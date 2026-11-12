@@ -5,9 +5,9 @@ A dated snapshot of how our web code measures against
 (guides at commit `4dd96834`, 2026-11-10) and its scanner in
 [modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src)
 (commit `596acbc7`, 2026-11-11). The decisions it feeds are in
-[the adoption plan](../../beebox/docs/plans/modern-web-guidance-adoption.md).
+[the adoption plan](../../beebox/docs/implemented-plans/modern-web-guidance-adoption.md).
 The issue is
-[adopt-modern-web-guidance-skill](../../issues/exploration/2026-11-10-adopt-modern-web-guidance-skill.md).
+[adopt-modern-web-guidance-skill](../../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md).
 
 ## What was scanned
 

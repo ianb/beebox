@@ -1,7 +1,7 @@
 /**
  * Advice from `bbx view check`: a pattern the views doc forbids, found in a
  * view that renders. Advice never changes whether the view passes
- * (docs/plans/box-view-guidance-and-checks.md, Track 3).
+ * (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3).
  */
 
 import { z } from "zod";

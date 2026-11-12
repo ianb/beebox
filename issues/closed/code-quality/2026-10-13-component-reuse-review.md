@@ -1,16 +1,19 @@
 ---
 title: "Review component reuse: dialogs, overlays and inputs are hand-made where no primitive exists"
-workstream: unattached
+workstream: web-guidance-scan
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-devprocess-talk — the developer asked whether the components rule holds, and a quick scan found the gaps
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** ui-primitives-dedup Tracks 5, 7, 8 and the guards (input/select primitives, overlays, ui-check coverage); plan now in implemented-plans. Phone checks of the new popovers and lightbox are pending with the boxholder.
 
 The frontend rule says to reach for a primitive in
 `beebox/src/frontend/src/components/ui/` before writing appearance inline, and
 to put a page's own supporting components under `pages/<x>/components/`
-([frontend guidance](../../beebox/frontend.md#frontend-ui-primitives)). The
+([frontend guidance](../../../beebox/frontend.md#frontend-ui-primitives)). The
 developer's worry: a component can be rewritten instead of reused, and nothing
 measures that. A quick scan on 2026-10-13 says the rule holds where a primitive
 exists and breaks where none does.

@@ -1,6 +1,6 @@
 /**
  * DOM rules of `bbx view check` advice, over the settled render of one check
- * state (docs/plans/box-view-guidance-and-checks.md, Track 3). jsdom does no
+ * state (docs/implemented-plans/box-view-guidance-and-checks.md, Track 3). jsdom does no
  * layout and the check loads no app CSS, so each rule reports only what the
  * markup proves, and never computes an accessible name:
  *

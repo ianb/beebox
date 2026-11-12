@@ -1,15 +1,15 @@
 ---
 title: "UI primitives: remove duplicates and guard against new ones"
-status: active
+status: implemented
 workstream: web-guidance-scan
 issues:
-  - ../../../issues/code-quality/2026-10-13-component-reuse-review.md
+  - ../../../issues/closed/code-quality/2026-10-13-component-reuse-review.md
   - ../../../issues/exploration/2026-10-08-motion-in-the-app.md
   - ../../../issues/decisions/2026-08-26-axe-region-rule-on-floating-menus.md
   - ../../../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md
   - ../../../issues/bugs/2026-10-24-status-and-error-text-ignore-card-material.md
   - ../../../issues/code-quality/2026-10-31-modules-at-line-cap-block-small-changes.md
-  - ../../../issues/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
+  - ../../../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
 ---
 # UI primitives: remove duplicates and guard against new ones
 

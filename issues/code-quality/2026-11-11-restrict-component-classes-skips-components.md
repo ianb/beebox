@@ -16,7 +16,7 @@ classes on a primitive's call site are therefore unchecked inside `components/`.
 The ui-primitives-dedup plan measured the rule over `components/`: 97 findings
 in 39 files. The rule guards against restyling a primitive. It does not stop a
 second copy of a primitive, so that plan does not depend on it and leaves it out
-of scope (`beebox/docs/plans/ui-primitives-dedup.md`, "NOT in scope").
+of scope (`beebox/docs/implemented-plans/ui-primitives-dedup.md`, "NOT in scope").
 
 Decide:
 

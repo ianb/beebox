@@ -1,6 +1,6 @@
 ---
 title: "Box views: wide tables, dates, controls guidance, and view-check advice"
-status: active
+status: implemented
 workstream: web-guidance-scan
 issues: []
 ---

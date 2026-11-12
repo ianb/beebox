@@ -276,7 +276,7 @@ export default [
   },
   // One owner per visual shape: a copy of a primitive's classes elsewhere is
   // a duplicate. Each entry lists the files that own the shape (`allowIn`,
-  // relative to this config); docs/plans/ui-primitives-dedup.md adds the rest.
+  // relative to this config); docs/implemented-plans/ui-primitives-dedup.md adds the rest.
   {
     files: ["src/**/*.tsx"],
     rules: {
