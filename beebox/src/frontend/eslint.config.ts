@@ -310,7 +310,7 @@ export default [
   // render it (`allowIn`, relative to this config), one file per line with the
   // reason; a new file in ui/fields/ is not exempt until it is listed here.
   {
-    files: ["src/**/*.tsx"],
+    files: ["src/**/*.{ts,tsx}"],
     rules: {
       "personal-vibe-check/require-ui-primitive": [
         "error",

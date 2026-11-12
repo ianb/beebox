@@ -145,7 +145,7 @@ export function Popover({ trigger, label, children, align, vertical, width }: Po
           aria-label={label}
           tabIndex={-1}
           // The top layer's UA style centers a popover (`inset: 0; margin: auto`); the anchored style replaces it.
-          style={{ ...style, inset: "auto", margin: 0 }}
+          style={{ ...style, right: "auto", bottom: "auto", margin: 0 }}
           className={cn(
             // The panel stays in its trigger's DOM subtree, so it resets the text styles it would inherit (a badge row's caps).
             "bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 text-sm font-normal normal-case tracking-normal text-left overflow-y-auto overscroll-contain focus:outline-none",

@@ -37,7 +37,11 @@ function file(relative: string): string {
 }
 
 function valid(code: string, spec?: { options?: Options; filename?: string }): RuleTester.ValidTestCase {
-  return { code, options: [spec?.options ?? DEFAULT], filename: file(spec?.filename ?? "src/app/Thing.tsx") };
+  return {
+    code,
+    options: [spec?.options ?? DEFAULT],
+    filename: file(spec?.filename ?? "src/app/Thing.tsx"),
+  };
 }
 
 function invalid(
@@ -85,7 +89,12 @@ describe("require-ui-primitive: elements", () => {
         }),
         // An owner of another tag is not an owner of this one.
         invalid("<input />", {
-          options: { elements: { input: INPUT, select: { message: "Use SelectField.", allowIn: ["src/x.tsx"] } } },
+          options: {
+            elements: {
+              input: INPUT,
+              select: { message: "Use SelectField.", allowIn: ["src/x.tsx"] },
+            },
+          },
           filename: "src/x.tsx",
           errors: [element("input", "Use a field.")],
         }),
@@ -95,9 +104,32 @@ describe("require-ui-primitive: elements", () => {
           errors: [element("input", "Use a field.")],
         }),
         invalid("<textarea />", {
-          options: { elements: { textarea: { message: "Use TextareaField.", allowIn: ["src/ui/**/*.tsx"] } } },
+          options: {
+            elements: { textarea: { message: "Use TextareaField.", allowIn: ["src/ui/**/*.tsx"] } },
+          },
           filename: "src/app/Thing.tsx",
           errors: [element("textarea", "Use TextareaField.")],
+        }),
+      ],
+    });
+  });
+
+  it("reports a tag held in a local constant", () => {
+    tester.run("require-ui-primitive", rule, {
+      valid: [
+        valid('const Box = "div"; <Box />'),
+        valid('let Input = "input"; <Input />'),
+        valid("function f(Input) { return <Input />; }"),
+        valid('const Input = "input"; <Input />', { filename: "src/ui/fields/field.tsx" }),
+        valid("const Input = other; <Input />"),
+      ],
+      invalid: [
+        invalid('const Input = "input"; <Input />', { errors: [element("input", "Use a field.")] }),
+        invalid('const Input = "input"; function f() { return <Input></Input>; }', {
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid('const Input = cond ? "input" : "div"; <Input />', {
+          errors: [element("input", "Use a field.")],
         }),
       ],
     });
@@ -107,7 +139,9 @@ describe("require-ui-primitive: elements", () => {
     tester.run("require-ui-primitive", rule, {
       valid: [
         valid("<textarea />", {
-          options: { elements: { textarea: { message: "Use TextareaField.", allowIn: ["src/ui/**/*.tsx"] } } },
+          options: {
+            elements: { textarea: { message: "Use TextareaField.", allowIn: ["src/ui/**/*.tsx"] } },
+          },
           filename: "src/ui/fields/area.tsx",
         }),
       ],
@@ -127,8 +161,14 @@ describe("require-ui-primitive: roles", () => {
         valid("<div role={`${kind}`} />"),
         valid("<div role={open ? kind : 'none'} />"),
         valid('<div role="" />'),
-        // A spread may carry a role; it is not read.
-        valid('<div {...{ role: "menu" }} />'),
+        // A spread of a non-literal may carry a role; it is not read.
+        valid("<div {...props} />"),
+        valid("<div {...{ role: kind }} />"),
+        valid("<div {...{ [key]: 'menu' }} />"),
+        // A let, a parameter and an import are not static.
+        valid("let r = 'menu'; <div role={r} />"),
+        valid("function f(r) { return <div role={r} />; }"),
+        valid("import { r } from './r'; <div role={r} />"),
       ],
       invalid: [
         invalid('<div role="menu" />', { errors: [role("menu", "Use <Menu>.")] }),
@@ -136,8 +176,74 @@ describe("require-ui-primitive: roles", () => {
         invalid("<ul role={`menu`} />", { errors: [role("menu", "Use <Menu>.")] }),
         invalid("<ul role={open ? 'menu' : 'list'} />", { errors: [role("menu", "Use <Menu>.")] }),
         invalid('<div role="presentation  menu" />', { errors: [role("menu", "Use <Menu>.")] }),
+        // A literal object spread, a constant, and both together.
+        invalid('<div {...{ role: "menu" }} />', { errors: [role("menu", "Use <Menu>.")] }),
+        invalid('<div {...{ "role": "menu", ...{ "aria-haspopup": true } }} />', {
+          errors: [role("menu", "Use <Menu>."), attribute("aria-haspopup", "Use <Menu> or <Popover>.")],
+        }),
+        invalid('const r = "menu"; <div role={r} />', { errors: [role("menu", "Use <Menu>.")] }),
+        invalid('const a = "menu"; const b = a; <div role={b} />', {
+          errors: [role("menu", "Use <Menu>.")],
+        }),
+        invalid('const r = "menu"; function f() { return <div {...{ role: r }} />; }', {
+          errors: [role("menu", "Use <Menu>.")],
+        }),
         // A component's role prop is checked too.
         invalid('<Panel role="menu" />', { errors: [role("menu", "Use <Menu>.")] }),
+      ],
+    });
+  });
+});
+
+describe("require-ui-primitive: createElement", () => {
+  const TS = { filename: "src/app/make.ts" };
+  it("reports createElement calls from react", () => {
+    tester.run("require-ui-primitive", rule, {
+      valid: [
+        valid('import { createElement } from "react"; createElement("div", null)', TS),
+        valid('import React from "react"; React.createElement(Input, {})', TS),
+        valid('import React from "react"; React.createElement(tag, {})', TS),
+        valid('import { createElement } from "react"; createElement("input", {})', {
+          filename: "src/ui/fields/field.tsx",
+        }),
+        // Not React's createElement.
+        valid('const document = {}; document.createElement("input")', TS),
+        valid('import { createElement } from "./h"; createElement("input")', TS),
+        valid('function createElement() {} createElement("input")', TS),
+        valid('import { createElement } from "react"; createElement("div", { role: kind })', TS),
+      ],
+      invalid: [
+        invalid('import { createElement } from "react"; createElement("input", {})', {
+          ...TS,
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid('import { createElement as h } from "react"; h("input")', {
+          ...TS,
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid('import React from "react"; React.createElement("input", null)', {
+          ...TS,
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid('import * as R from "react"; R.createElement(`input`)', {
+          ...TS,
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid('import { createElement } from "react"; const tag = "input"; createElement(tag)', {
+          ...TS,
+          errors: [element("input", "Use a field.")],
+        }),
+        invalid(
+          'import { createElement } from "react"; createElement("div", { role: "menu", "aria-haspopup": true })',
+          {
+            ...TS,
+            errors: [role("menu", "Use <Menu>."), attribute("aria-haspopup", "Use <Menu> or <Popover>.")],
+          },
+        ),
+        invalid('import { createElement } from "react"; createElement("div", { ...{ role: "menu" } })', {
+          ...TS,
+          errors: [role("menu", "Use <Menu>.")],
+        }),
       ],
     });
   });
@@ -149,7 +255,9 @@ describe("require-ui-primitive: attributes", () => {
       valid: [
         valid('<button aria-expanded="true" />'),
         valid("<button aria-haspopup />", {
-          options: { attributes: { "aria-haspopup": { message: "x", allowIn: ["src/app/*.tsx"] } } },
+          options: {
+            attributes: { "aria-haspopup": { message: "x", allowIn: ["src/app/*.tsx"] } },
+          },
         }),
       ],
       invalid: [
