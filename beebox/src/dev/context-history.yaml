@@ -88,6 +88,13 @@ test1:
       peak: 35050
       added: 3220
       turns: 3
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35027
+      peak: 39992
+      added: 4965
+      turns: 4
   figure-card-runtimes:
     - date: 2026-06-24T03:03:06.228Z
       boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
@@ -110,6 +117,13 @@ test1:
       peak: 34978
       added: 3158
       turns: 3
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35017
+      peak: 40011
+      added: 4994
+      turns: 4
   figure-card-embed-params:
     - date: 2026-06-24T03:03:06.228Z
       boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
@@ -139,6 +153,13 @@ test1:
       peak: 35168
       added: 3351
       turns: 3
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35014
+      peak: 40005
+      added: 4991
+      turns: 4
   courseware-build-a-course:
     - date: 2026-06-24T05:32:02.635Z
       boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
@@ -10563,6 +10584,13 @@ test1:
       peak: 35110
       added: 3277
       turns: 4
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35030
+      peak: 38036
+      added: 3006
+      turns: 5
   publishing-private-notes-scope:
     - date: 2026-10-22T21:53:52.895Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
@@ -10610,6 +10638,13 @@ test1:
       peak: 33914
       added: 2086
       turns: 3
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35025
+      peak: 39856
+      added: 4831
+      turns: 5
   speak-you-on-cards:
     - date: 2026-10-22T21:54:57.112Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
@@ -10812,6 +10847,13 @@ test1:
       initial: 31837
       peak: 35035
       added: 3198
+      turns: 4
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35034
+      peak: 40013
+      added: 4979
       turns: 4
   schedule-run-summary:
     - date: 2026-10-22T21:55:41.478Z
@@ -11402,6 +11444,13 @@ test1:
       peak: 44161
       added: 0
       turns: 2
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 45628
+      peak: 45628
+      added: 0
+      turns: 2
   figure-it-out-leaves-risky:
     - date: 2026-10-26T02:26:21.173Z
       boxCommit: 529a56d0937006b1a8288b56393e64b9760c6dd9
@@ -11415,6 +11464,13 @@ test1:
       repoCommit: b433253393aa210c8743529dd10c63eac7c0efda
       initial: 44098
       peak: 44098
+      added: 0
+      turns: 2
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 45565
+      peak: 45565
       added: 0
       turns: 2
   simplify-question-concrete:
@@ -11724,6 +11780,38 @@ test1:
       peak: 38958
       added: 3947
       turns: 11
+  figure-canvas-loop-check:
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35032
+      peak: 41792
+      added: 6760
+      turns: 6
+  figure-canvas-loop-api-docs:
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35028
+      peak: 40587
+      added: 5559
+      turns: 6
+  figure-shared-code:
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35042
+      peak: 37548
+      added: 2506
+      turns: 5
+  figure-activity:
+    - date: 2026-11-12T16:08:12.384Z
+      boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
+      repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
+      initial: 35031
+      peak: 63626
+      added: 28595
+      turns: 10
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
