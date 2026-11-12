@@ -17,8 +17,11 @@ all of these are true:
 - the page is active: in a browser, visible and focused; in the iOS web view,
   visible (the native composer takes DOM focus from the page).
 
-When any stops being true, the client ends the subscription and the server
-removes the person. A closed tab or a dead connection ends it too: tRPC aborts
+The client joins once these have held for one second and leaves as soon as
+one stops. The delay keeps a quick start-then-stop from reaching a tRPC
+adapter race that would leave the watcher in the room
+(`issues/bugs/2026-11-12-trpc-ws-drops-early-subscription-stop.md`).
+When the client leaves, the server removes the person. A closed tab or a dead connection ends it too: tRPC aborts
 the subscription when the WebSocket closes, and the server's keep-alive drops
 an unresponsive socket within about 35 seconds.
 

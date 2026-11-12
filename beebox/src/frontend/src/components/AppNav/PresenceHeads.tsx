@@ -39,25 +39,67 @@ function usePageActive(): boolean {
   return active;
 }
 
-/** The other people present in `sessionId`, or none while not watching it. */
-function useChatPresence(sessionId: string | null, watching: boolean): readonly PresenceHead[] {
-  const [people, setPeople] = useState<readonly PresenceHead[]>(NO_ONE);
+/**
+ * Join only after the person has been in the chat this long. tRPC's WebSocket
+ * adapter drops a `subscription.stop` that arrives before it has registered the
+ * subscription, which would leave a watcher in the room until the socket
+ * closes; a start that has held this long is registered before its stop
+ * comes. Leaving is immediate.
+ */
+const JOIN_AFTER_MS = 1000;
+
+/** `value` once it has held for `ms`; null at once whenever `value` is null. */
+function useSettled(value: string | null, ms: number): string | null {
+  const [settled, setSettled] = useState<string | null>(null);
+  useEffect(() => {
+    if (value === null) return;
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => {
+      clearTimeout(timer);
+      setSettled(null);
+    };
+  }, [value, ms]);
+  return settled === value ? settled : null;
+}
+
+/** The people one subscription last reported, and the chat they are in. */
+interface Report {
+  sessionId: string;
+  people: readonly PresenceHead[];
+}
+
+/**
+ * Which heads to draw: a live subscription's latest report, only for the chat
+ * the person is in now. A reconnecting socket's last list may be stale, and a
+ * report from the chat they just left belongs to that chat.
+ */
+export function headsToShow(opts: { live: boolean; inChat: string | null; report: Report | null }): readonly PresenceHead[] {
+  const { live, inChat, report } = opts;
+  if (!live || inChat === null || report === null || report.sessionId !== inChat) return NO_ONE;
+  return report.people;
+}
+
+/** The other people present in the chat the person is in, or none. */
+function useChatPresence(inChat: string | null): readonly PresenceHead[] {
+  const watched = useSettled(inChat, JOIN_AFTER_MS);
+  const [report, setReport] = useState<Report | null>(null);
   const sub = trpc.chatPresence.watch.useSubscription(
-    { sessionId: sessionId ?? "" },
+    { sessionId: watched ?? "" },
     {
-      enabled: watching && sessionId !== null,
+      enabled: watched !== null,
       // A new or restarted subscription starts from nobody until its first frame.
-      onStarted: useCallback(() => setPeople(NO_ONE), []),
-      onData: useCallback((frame: { t: "others"; people: PresenceHead[] }) => setPeople(frame.people), []),
+      onStarted: useCallback(() => setReport(null), []),
+      // The hook calls the latest options, so a frame is labelled with the chat its subscription watches.
+      onData: useCallback((frame: { t: "others"; people: PresenceHead[] }) => {
+        setReport(watched === null ? null : { sessionId: watched, people: frame.people });
+      }, [watched]),
       onError: useCallback((err: { message: string }) => {
         // wsLink reconnects on its own; with no live subscription no heads show.
         console.warn(`[chat-presence] ${err.message}`);
       }, []),
     },
   );
-  // Only a live subscription's list is current: while the WebSocket reconnects
-  // the people it last reported may have left.
-  return sub.status === "pending" ? people : NO_ONE;
+  return headsToShow({ live: sub.status === "pending", inChat, report });
 }
 
 export function PresenceHeads() {
@@ -70,6 +112,6 @@ export function PresenceHeads() {
   // else can know its id.
   const sessionId = target?.kind === "session" ? target.sessionId : null;
   const transcriptVisible = workspace?.transcriptVisible === true;
-  const people = useChatPresence(sessionId, active && transcriptVisible);
+  const people = useChatPresence(active && transcriptVisible ? sessionId : null);
   return <PresenceHeadsFace people={people} />;
 }
