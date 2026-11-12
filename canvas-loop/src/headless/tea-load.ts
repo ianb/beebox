@@ -74,6 +74,17 @@ function selectParam(record: Record<string, unknown>, where: string): ParamDecl 
 function parseParam(raw: unknown, name: string): ParamDecl {
   const where = `params.${name}`;
   if (!isRecord(raw)) throw new CliError({ detail: `${where} must be an object` });
+  const decl = parseParamKind(raw, where);
+  for (const key of ["label", "hint"] as const) {
+    const text = raw[key];
+    if (text === undefined) continue;
+    if (typeof text !== "string") throw new CliError({ detail: `${where}: "${key}" must be a string` });
+    decl[key] = text;
+  }
+  return decl;
+}
+
+function parseParamKind(raw: Record<string, unknown>, where: string): ParamDecl {
   switch (raw["type"]) {
     case "number":
       return numberParam(raw, where);

@@ -206,8 +206,11 @@ export class Sketch {
   background(paint: Paint): void {
     this.#requirePainter().background(paint);
   }
-  rect(...args: [number, number, number, number]): void {
+  rect(...args: [number, number, number, number, number?]): void {
     this.#requirePainter().rect(...args);
+  }
+  textWidth(content: string): number {
+    return this.#requirePainter().textWidth(content);
   }
   circle(...args: [number, number, number]): void {
     this.#requirePainter().circle(...args);

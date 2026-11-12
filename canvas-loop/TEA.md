@@ -66,6 +66,9 @@ sanctioned exception; put this exact comment on each:
 // eslint-disable-next-line max-params -- TEA contract signature
 ```
 
+Every param may also carry `label` (the words its control shows; default: the
+param's name) and `hint` (a short line shown with it).
+
 `Util` also has `record(keys, value)`: `u.record(IDS, () => 0)` builds a
 `Record<Id, number>` for id-keyed state without casts. `DeepReadonly` keeps
 tuples as tuples, so `Vec2` points can live in a `Model`.

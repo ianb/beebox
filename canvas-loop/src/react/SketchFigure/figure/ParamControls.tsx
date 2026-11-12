@@ -24,7 +24,7 @@ function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onP
   const valid = parseField(text, model) !== undefined;
   return (
     <label className="cl-param-row">
-      <span className="cl-param-name">{model.name}</span>
+      <span className="cl-param-name">{model.label}</span>
       <input
         type="number"
         className="cl-field"
@@ -39,8 +39,13 @@ function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onP
           if (next !== undefined) props.onParam(model.name, next);
         }}
       />
+      <Hint hint={model.hint} />
     </label>
   );
+}
+
+function Hint(props: { hint: string | undefined }): JSX.Element | null {
+  return props.hint === undefined ? null : <span className="cl-param-hint">{props.hint}</span>;
 }
 
 function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
@@ -48,7 +53,7 @@ function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; on
   if (model.control === "field") return <FieldRow model={model} onParam={props.onParam} />;
   return (
     <label className="cl-param-row">
-      <span className="cl-param-name">{model.name}</span>
+      <span className="cl-param-name">{model.label}</span>
       <span className="cl-range-holder">
         <input
           type="range"
@@ -60,6 +65,7 @@ function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; on
         />
         <span className="cl-param-value">{model.value}</span>
       </span>
+      <Hint hint={model.hint} />
     </label>
   );
 }
@@ -68,8 +74,9 @@ function BooleanRow(props: { model: Extract<ControlModel, { kind: "boolean" }>; 
   const { model } = props;
   return (
     <label className="cl-param-row">
-      <span className="cl-param-name">{model.name}</span>
+      <span className="cl-param-name">{model.label}</span>
       <input type="checkbox" checked={model.value} onChange={(e) => props.onParam(model.name, e.target.checked)} />
+      <Hint hint={model.hint} />
     </label>
   );
 }
@@ -78,7 +85,7 @@ function SelectRow(props: { model: Extract<ControlModel, { kind: "select" }>; on
   const { model } = props;
   return (
     <label className="cl-param-row">
-      <span className="cl-param-name">{model.name}</span>
+      <span className="cl-param-name">{model.label}</span>
       <select value={model.value} onChange={(e) => props.onParam(model.name, e.target.value)}>
         {model.options.map((option) => (
           <option key={option} value={option}>
@@ -86,6 +93,7 @@ function SelectRow(props: { model: Extract<ControlModel, { kind: "select" }>; on
           </option>
         ))}
       </select>
+      <Hint hint={model.hint} />
     </label>
   );
 }
@@ -94,8 +102,8 @@ function TriggerRow(props: { model: Extract<ControlModel, { kind: "trigger" }>; 
   const { model } = props;
   return (
     <div className="cl-param-row">
-      <button type="button" className="cl-trigger-btn" onClick={() => props.onTrigger(model.name)}>
-        {model.name}
+      <button type="button" className="cl-trigger-btn" title={model.hint} onClick={() => props.onTrigger(model.name)}>
+        {model.label}
       </button>
     </div>
   );

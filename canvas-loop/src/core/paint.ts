@@ -102,6 +102,7 @@ export interface Ctx2D {
   clip(): void;
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
+  measureText(text: string): { readonly width: number };
   createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
 }

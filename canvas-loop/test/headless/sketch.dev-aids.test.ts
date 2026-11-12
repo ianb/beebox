@@ -55,7 +55,7 @@ test("--timing adds one timing line to the transcript", () => {
   const outDir = tmpDir();
   const module = { setup: (s: Sketch): void => s.createCanvas(10, 10), draw: (s: Sketch): void => s.background("#000") };
   run(runOptions(module, { outDir, frames: 5, timing: true }));
-  assert.match(readTranscript(outDir), /timing: draw avg [\d.]+ ms, p95 [\d.]+ ms, max [\d.]+ ms; frame 0 draw/);
+  assert.match(readTranscript(outDir), /timing: draw avg [\d.]+ ms, p95 [\d.]+ ms, max [\d.]+ ms \(frame \d+\); frame 0 draw/);
 });
 
 test("u.record builds a typed record; DeepReadonly keeps tuples as tuples", () => {

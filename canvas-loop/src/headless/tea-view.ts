@@ -49,8 +49,11 @@ export class TeaView implements View {
   }
   // Rest-tuple params keep max-params (2) satisfied while presenting the
   // p5-style positional signature — same technique as Sketch's own methods.
-  rect(...args: [number, number, number, number]): void {
+  rect(...args: [number, number, number, number, number?]): void {
     this.#sketch.rect(...args);
+  }
+  textWidth(content: string): number {
+    return this.#sketch.textWidth(content);
   }
   circle(...args: [number, number, number]): void {
     this.#sketch.circle(...args);

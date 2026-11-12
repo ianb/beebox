@@ -22,13 +22,19 @@ export interface ControlDeps {
   classPrefix?: string;
 }
 
-function row(name: string, deps: { control: HTMLElement; prefix: string }): HTMLElement {
+function row(text: { label: string; hint: string | undefined }, deps: { control: HTMLElement; prefix: string }): HTMLElement {
   const wrap = document.createElement("label");
   wrap.className = `${deps.prefix}param-row`;
   const caption = document.createElement("span");
   caption.className = `${deps.prefix}param-name`;
-  caption.textContent = name;
+  caption.textContent = text.label;
   wrap.append(caption, deps.control);
+  if (text.hint !== undefined) {
+    const hint = document.createElement("span");
+    hint.className = `${deps.prefix}param-hint`;
+    hint.textContent = text.hint;
+    wrap.append(hint);
+  }
   return wrap;
 }
 
@@ -47,7 +53,7 @@ function fieldControl(deps: { model: Extract<ControlModel, { kind: "number" }>; 
     input.setAttribute("aria-invalid", String(next === undefined));
     if (next !== undefined) deps.onParam(model.name, next);
   });
-  return row(model.name, { control: input, prefix });
+  return row(model, { control: input, prefix });
 }
 
 function numberControl(deps: { model: Extract<ControlModel, { kind: "number" }>; onParam: ControlDeps["onParam"]; prefix: string }): HTMLElement {
@@ -70,7 +76,7 @@ function numberControl(deps: { model: Extract<ControlModel, { kind: "number" }>;
   const holder = document.createElement("span");
   holder.className = `${prefix}range-holder`;
   holder.append(input, readout);
-  return row(model.name, { control: holder, prefix });
+  return row(model, { control: holder, prefix });
 }
 
 function booleanControl(deps: { model: Extract<ControlModel, { kind: "boolean" }>; onParam: ControlDeps["onParam"]; prefix: string }): HTMLElement {
@@ -79,7 +85,7 @@ function booleanControl(deps: { model: Extract<ControlModel, { kind: "boolean" }
   input.type = "checkbox";
   input.checked = model.value;
   input.addEventListener("change", () => deps.onParam(model.name, input.checked));
-  return row(model.name, { control: input, prefix });
+  return row(model, { control: input, prefix });
 }
 
 function selectControl(deps: { model: Extract<ControlModel, { kind: "select" }>; onParam: ControlDeps["onParam"]; prefix: string }): HTMLElement {
@@ -93,7 +99,7 @@ function selectControl(deps: { model: Extract<ControlModel, { kind: "select" }>;
     select.append(el);
   }
   select.addEventListener("change", () => deps.onParam(model.name, select.value));
-  return row(model.name, { control: select, prefix });
+  return row(model, { control: select, prefix });
 }
 
 function triggerControl(deps: { model: Extract<ControlModel, { kind: "trigger" }>; onTrigger: ControlDeps["onTrigger"]; prefix: string }): HTMLElement {
@@ -101,7 +107,8 @@ function triggerControl(deps: { model: Extract<ControlModel, { kind: "trigger" }
   const button = document.createElement("button");
   button.type = "button";
   button.className = `${prefix}trigger-btn`;
-  button.textContent = model.name;
+  button.textContent = model.label;
+  if (model.hint !== undefined) button.title = model.hint;
   button.addEventListener("click", () => deps.onTrigger(model.name));
   const wrap = document.createElement("div");
   wrap.className = `${prefix}param-row`;

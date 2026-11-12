@@ -36,6 +36,11 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Text, shapes and labels from the educational round.** `textWidth(text)`
+  measures text in the current size/font/style; `rect(x, y, w, h, radius)`
+  rounds corners; params take `label` and `hint`, shown by the generated
+  controls (DOM and React); `--timing` names its worst frame; `--outline`
+  label tags are see-through.
 - **Sharp on high-density screens.** Browser figures and the playground back
   the canvas with `size × devicePixelRatio` pixels (capped at 3) and draw in
   logical units under a base scale; the Painter takes a `pixelRatio` and sizes

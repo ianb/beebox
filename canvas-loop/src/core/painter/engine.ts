@@ -20,6 +20,23 @@ import { withComposite } from "./layers.js";
  * brush jitter comes from per-mark seeds. The engine mutates the context but
  * holds no time/random/input state.
  */
+/** A rounded rectangle as path commands (corner arcs as quadratic curves). */
+function roundedRect(b: { x: number; y: number; w: number; h: number; r: number }): PathCommand[] {
+  const { x, y, w, h, r } = b;
+  return [
+    ["move", x + r, y],
+    ["line", x + w - r, y],
+    ["quad", x + w, y, x + w, y + r],
+    ["line", x + w, y + h - r],
+    ["quad", x + w, y + h, x + w - r, y + h],
+    ["line", x + r, y + h],
+    ["quad", x, y + h, x, y + h - r],
+    ["line", x, y + r],
+    ["quad", x, y, x + r, y],
+    ["close"],
+  ];
+}
+
 export class Painter extends PainterCore {
   background(paint: Paint): void {
     const ctx = this.ctx;
@@ -34,8 +51,13 @@ export class Painter extends PainterCore {
     ctx.restore();
   }
 
-  rect(...args: [number, number, number, number]): void {
-    const [x, y, w, h] = args;
+  /** A rectangle; with a fifth argument, its corners are rounded to that radius (as p5's `rect`). */
+  rect(...args: [number, number, number, number, number?]): void {
+    const [x, y, w, h, radius] = args;
+    if (radius !== undefined && radius > 0) {
+      this.path(roundedRect({ x, y, w, h, r: Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2) }));
+      return;
+    }
     const corners: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
     this.#closed((ctx) => {
       ctx.beginPath();
@@ -96,13 +118,27 @@ export class Painter extends PainterCore {
   text(...args: [string, number, number]): void {
     const [content, x, y] = args;
     const ctx = this.ctx;
-    ctx.font = `${this.style.textStyle} ${this.style.textSize}px ${this.style.textFont}`;
+    ctx.font = this.#font();
     ctx.textAlign = this.style.textAlignH;
     ctx.textBaseline = this.style.textAlignV;
     if (this.style.fillEnabled) {
       ctx.fillStyle = this.resolvePaint(this.style.fillColor);
       withComposite(ctx, { op: this.composite(), draw: () => ctx.fillText(content, x, y) });
     }
+  }
+
+  /** The width `text` would take in the current text size, font and style, in logical pixels. */
+  textWidth(content: string): number {
+    const ctx = this.ctx;
+    const previous = ctx.font;
+    ctx.font = this.#font();
+    const { width } = ctx.measureText(content);
+    ctx.font = previous;
+    return width;
+  }
+
+  #font(): string {
+    return `${this.style.textStyle} ${this.style.textSize}px ${this.style.textFont}`;
   }
 
   /** A fillable shape: fill (when enabled) and stroke what `trace` lays down. */

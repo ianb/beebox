@@ -30,7 +30,12 @@ export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" |
  * slider, or with `control: "field"` as a box the person types into (only a
  * valid, in-range value is sent; `step: 1` also requires a whole number).
  */
-export interface NumberParam {
+/** Words for a param's control: a human `label` (default: the param's name) and a short `hint` shown with it. */
+export interface ParamText {
+  label?: string;
+  hint?: string;
+}
+export interface NumberParam extends ParamText {
   type: "number";
   min: number;
   max: number;
@@ -39,18 +44,18 @@ export interface NumberParam {
   control?: "slider" | "field";
 }
 /** A boolean toggle: `{ type: "boolean", default }`. */
-export interface BooleanParam {
+export interface BooleanParam extends ParamText {
   type: "boolean";
   default: boolean;
 }
 /** A choice from a fixed list: `{ type: "select", options, default }`. */
-export interface SelectParam {
+export interface SelectParam extends ParamText {
   type: "select";
   options: readonly string[];
   default: string;
 }
 /** A fire-and-forget button — no value, arrives only as a `trigger` Msg. */
-export interface TriggerParam {
+export interface TriggerParam extends ParamText {
   type: "trigger";
 }
 export type ParamDecl = NumberParam | BooleanParam | SelectParam | TriggerParam;
@@ -148,7 +153,8 @@ export interface View {
   stroke(paint: Paint): void;
   noStroke(): void;
   strokeWeight(weight: number): void;
-  rect(x: number, y: number, w: number, h: number): void;
+  /** A rectangle; a fifth argument rounds its corners to that radius. */
+  rect(x: number, y: number, w: number, h: number, radius?: number): void;
   circle(x: number, y: number, diameter: number): void;
   ellipse(x: number, y: number, w: number, h: number): void;
   line(x1: number, y1: number, x2: number, y2: number): void;
@@ -198,6 +204,8 @@ export interface View {
   noErase(): void;
   text(content: string, x: number, y: number): void;
   textSize(size: number): void;
+  /** How wide `text` would draw in the current text size, font and style (logical pixels). */
+  textWidth(content: string): number;
   /** Font family for `text` (CSS names, e.g. `"Georgia, serif"`); which fonts exist depends on the machine. */
   textFont(family: string): void;
   textStyle(style: TextStyle): void;

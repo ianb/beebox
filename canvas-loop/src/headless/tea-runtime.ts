@@ -170,7 +170,7 @@ class TeaRunner {
     for (const event of events) this.#dispatchEvent(event);
     const tick = (): void => void this.#fold({ type: "tick", frame });
     if (this.#timer === undefined) tick();
-    else this.#timer.update(tick);
+    else this.#timer.update(frame, tick);
     const draw = (): unknown => this.#options.module.draw(this.#view, this.#model, this.#params);
     assertSync(this.#timer === undefined ? draw() : this.#timer.draw(frame, draw), "draw");
     this.#sketch.finishFrame();

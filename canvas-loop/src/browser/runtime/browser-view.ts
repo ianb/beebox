@@ -71,8 +71,11 @@ export class BrowserView implements View {
   strokeWeight(weight: number): void {
     this.#painter.strokeWeight(weight);
   }
-  rect(...args: [number, number, number, number]): void {
+  rect(...args: [number, number, number, number, number?]): void {
     this.#painter.rect(...args);
+  }
+  textWidth(content: string): number {
+    return this.#painter.textWidth(content);
   }
   circle(...args: [number, number, number]): void {
     this.#painter.circle(...args);
