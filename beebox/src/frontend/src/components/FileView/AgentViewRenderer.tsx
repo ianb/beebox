@@ -6,7 +6,7 @@
  */
 
 import { errorMessage } from "@shared/error-guards";
-import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
@@ -27,6 +27,7 @@ import {
   refToTarget,
   type ViewHost,
   type ResolvedRef,
+  type RenderInline,
 } from "../../lib/view-host";
 import { type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { viewSlugFromSourcePath } from "../../lib/view-source-path";
@@ -145,7 +146,7 @@ interface AgentViewRendererProps {
    * by the mount site (which owns FileView) so AgentAgentViewRenderer never imports
    * FileView (that would form a value-import cycle). Omitted → expand is a no-op.
    */
-  renderInline?: (target: ViewTarget) => ReactNode;
+  renderInline?: RenderInline<ViewTarget>;
 }
 
 /**
@@ -170,19 +171,19 @@ function buildViewHost(args: {
   boxSlug: string | undefined;
   basePath: string;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline?: (target: ViewTarget) => ReactNode;
+  renderInline?: RenderInline<ViewTarget>;
 }): ViewHost {
   const { boxSlug, basePath, onNavigate, renderInline } = args;
   return {
     openCard: makeOpenCard(onNavigate, basePath),
     useResolvedRef: useBrowserResolvedRef,
-    renderInline: (cardRef) => {
+    renderInline: (cardRef, opts) => {
       const target = refToTarget(cardRef, basePath);
       // A box-escaping ref has no file to inline; the chip that owns this
       // expansion already shows its own `missing` badge (the resolver reports
       // exists:false for escapes), so rendering nothing here isn't silent.
       if (target === null || renderInline === undefined) return null;
-      return renderInline(target);
+      return renderInline(target, opts);
     },
     basePath,
     boxSlug: boxSlug || "",

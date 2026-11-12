@@ -40,6 +40,7 @@ import { generateBbxCommands } from "./bbx-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "../content.js";
 import { generateProcedureGuide } from "./procedure-guide.js";
 import { generateTriageGuide } from "./triage.js";
+import { generateCanvasLoopBrushesDoc, generateCanvasLoopDoc } from "./canvas-loop-doc.js";
 import { BOX_PACKAGE_DOCS, PACKAGE_DOCS_DIR_NAME } from "../shared.js";
 
 export interface EngineDoc {
@@ -65,6 +66,8 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "narration-mode.md", readWhen: "The chat snapshot reports narration=\"on\" — the user is dictating, not chatting.", generate: generateNarrationModeDoc },
   { filename: "reducing-instruction-file.md", readWhen: "The box's AGENTS.md is flagged as too large.", generate: generateReducingInstructionFileDoc },
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
+  { filename: "canvas-loop.md", readWhen: "Writing a canvas-loop figure: the sketch contract, drawing calls and styles, text, scopes, input, sound.", generate: generateCanvasLoopDoc },
+  { filename: "canvas-loop-brushes.md", readWhen: "Using canvas-loop brushes, paper, sprites and caches in a figure.", generate: generateCanvasLoopBrushesDoc },
 ];
 
 /** Prose docs for box agents, shipped as-is (frontmatter stripped). */

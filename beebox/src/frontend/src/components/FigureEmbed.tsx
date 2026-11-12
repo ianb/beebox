@@ -13,9 +13,7 @@
  */
 
 import type { ComponentType } from "react";
-import { resolveContentTarget } from "../lib/view-url";
-import { isUrlRef } from "@shared/ref-path/core";
-import { isImagePath } from "./chat/message-parsing";
+import { embedTarget } from "../lib/card-embed";
 import { FileView } from "./FileView/view";
 import { useWatchedContent } from "../lib/runtime-lint/watched-content";
 import { Img as DefaultImg, type MarkdownComponentOverrides } from "./Markdown/body";
@@ -40,14 +38,8 @@ const cast = <T,>(c: T) => c as unknown as ComponentType<Record<string, unknown>
 function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: string; width?: string }) {
   const { onNavigate, basePath } = useMarkdownRender();
   // An in-box, non-image path embeds the card/file inline via its own viewer.
-  // Images and external URLs are ordinary markdown images.
-  // A `null` target is an embed path that escapes the box root; it falls
-  // through to `DefaultImg`, whose `resolveImageSrc` yields an empty src —
-  // a visibly broken image instead of a silently substituted card.
-  const target =
-    typeof src === "string" && src !== "" && !isUrlRef(src) && !isImagePath(src)
-      ? resolveContentTarget(basePath, src)
-      : null;
+  // Images and external URLs are ordinary markdown images (`embedTarget` is null).
+  const target = embedTarget(basePath, src);
   // Runtime lint: an embed must stay mounted while the card around it is open.
   // Registered in the outer card's view scope; the embed's own FileView is inside.
   useWatchedContent("card-embed", target?.path ?? null);

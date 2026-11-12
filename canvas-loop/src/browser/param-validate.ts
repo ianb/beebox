@@ -6,12 +6,14 @@
 //     host dispatch, and scripted events).
 // Keeping one `checkParam` means a number is finiteness-checked and clamped to
 // its declared [min, max] the same way no matter which door a value comes in.
-import type { ParamDecl, ParamsDecl } from "../core/tea.js";
-import type { ParamOverrides } from "./runtime/engine.js";
+import type { ParamDecl, ParamsDecl, ParamValues } from "../core/tea.js";
 
 /** Outcome of checking one value against its declaration. `note` flags an
  * accepted-but-adjusted value (a clamped number) so callers can warn. */
-type ParamCheck =
+/** A partial override of declared param defaults, applied at construct/restart. */
+export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
+
+export type ParamCheck =
   | { ok: true; value: number | boolean | string; note?: string }
   | { ok: false; reason: string };
 
@@ -20,7 +22,7 @@ type ParamCheck =
  * finite (NaN/±Infinity reject) and are clamped into [min, max]; booleans and
  * selects must match their declared shape; triggers never take a value.
  */
-function checkParam(param: ParamDecl, value: number | boolean | string): ParamCheck {
+export function checkParam(param: ParamDecl, value: number | boolean | string): ParamCheck {
   switch (param.type) {
     case "number": {
       if (typeof value !== "number") return { ok: false, reason: `${JSON.stringify(value)} is not a number` };
@@ -92,4 +94,15 @@ export function sanitizeParamChange(deps: {
   }
   if (check.note !== undefined) console.warn(`canvas-loop: param "${name}" ${check.note}`);
   return check.value;
+}
+
+/** The params `init` sees: each declared default, or its override (triggers have no value). */
+export function initialParams(decl: ParamsDecl, overrides: ParamOverrides | undefined): ParamValues<ParamsDecl> {
+  const values: Record<string, number | boolean | string> = {};
+  for (const [name, param] of Object.entries(decl)) {
+    if (param.type === "trigger") continue;
+    const override = overrides?.[name];
+    values[name] = override ?? param.default;
+  }
+  return Object.freeze(values);
 }

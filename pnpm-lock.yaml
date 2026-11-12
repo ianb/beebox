@@ -98,6 +98,9 @@ importers:
       '@markdoc/markdoc':
         specifier: ^0.5.7
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
+      '@napi-rs/canvas':
+        specifier: 1.0.2
+        version: 1.0.2
       '@openai/codex':
         specifier: 0.164.0
         version: 0.164.0
@@ -188,6 +191,9 @@ importers:
       markdownlint:
         specifier: ^0.40.0
         version: 0.40.0
+      perfect-freehand:
+        specifier: 1.2.3
+        version: 1.2.3
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -228,6 +234,9 @@ importers:
       '@earendil-works/pi-ai':
         specifier: 1.4.0
         version: 1.4.0(@aws-sdk/credential-provider-node@3.972.88)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.4)(undici@7.28.0)(ws@8.21.1)(zod@4.4.3)
+      '@ianbicking/canvas-loop':
+        specifier: workspace:*
+        version: link:../canvas-loop
       '@ianbicking/personal-vibe-check':
         specifier: workspace:*
         version: link:../personal-vibe-check

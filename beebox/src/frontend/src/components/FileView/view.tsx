@@ -47,6 +47,7 @@ import { TodoActionsProvider } from "../todo/TodoActionsProvider";
 import { isFrameless, type FileViewProps } from "../file-view-types";
 import { StripFileView } from "./StripFileView";
 import type { ViewTarget } from "../../lib/view-url";
+import type { InlineRenderOptions } from "../../lib/view-host";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
 import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
@@ -213,6 +214,11 @@ export function withBodyNotices({ stale, onRefresh, sectionMissed }: {
  * A card's todo summary sits above whichever renderer is active, core or box view; an embed has no chrome for it.
  * The todos inside get their tick and "+ to chat" actions here too (an embed inherits its host's).
  */
+/** The `caption` prop for an inline render's options (none when no caption was given). */
+function captionProp(opts: InlineRenderOptions | undefined): { caption?: string } {
+  return opts?.caption === undefined ? {} : { caption: opts.caption };
+}
+
 function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mode"]; path: string; onAddSelection: FileViewProps["onAddSelection"] }, content: ReactNode): ReactNode {
   if ((mode !== undefined && isFrameless(mode)) || !isCardPath(path)) return content;
   return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
@@ -238,7 +244,7 @@ export function FileView(props: FileViewProps) {
   if (props.mode === "strip") {
     const { onNavigate } = props;
     return <RuntimeLintViewScope><StripFileView path={props.path} onNavigate={onNavigate}
-      renderInline={(target) => <FileView path={target.path} mode="embed" rendererName={target.viewer} params={target.params} viewState={target.viewState} onNavigate={onNavigate} />} /></RuntimeLintViewScope>;
+      renderInline={(target, opts) => <FileView path={target.path} mode="embed" rendererName={target.viewer} params={target.params} viewState={target.viewState} onNavigate={onNavigate} {...captionProp(opts)} />} /></RuntimeLintViewScope>;
   }
   return <RuntimeLintViewScope><FileViewContent {...props} pointMode={pointMode} onExitPointMode={onExitPointMode} /></RuntimeLintViewScope>;
 }
@@ -306,7 +312,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
       {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
       {...(reportActivity !== undefined ? { reportActivity } : {})}
       onNavigate={onNavigate} caption={caption}
-      renderInline={(inlineTarget) => (
+      renderInline={(inlineTarget, opts) => (
         <FileView
           path={inlineTarget.path}
           mode="embed"
@@ -315,6 +321,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
           viewState={inlineTarget.viewState}
           onNavigate={onNavigate}
           onAddSelection={onAddSelection}
+          {...captionProp(opts)}
         />
       )}
     />

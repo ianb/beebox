@@ -152,9 +152,10 @@ export default function (d3, { mount, figure }) {
 }
 `,
   "canvas-loop": `// canvas-loop figure: a TEA sketch (named exports) plus the figure factory
-// (default export). The named exports run headlessly through the canvas-loop
-// CLI — verify with that loop, not screenshots. Import canvas-loop TYPES only;
-// the browser API arrives as the factory's \`cl\` argument.
+// (default export). Check it with \`bbx figure run <card>\` and an events file
+// beside this one (card-figure.md, "Checking a canvas-loop figure"); the
+// drawing API is in canvas-loop.md. Import canvas-loop TYPES only; the browser API arrives as
+// the factory's \`cl\` argument.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {

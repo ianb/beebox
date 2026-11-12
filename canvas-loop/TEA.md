@@ -187,6 +187,7 @@ v.textWidth(s, options)                 // width in logical pixels
 | `align` (`"left"`, `"center"`, `"right"`) | `"left"` |
 | `valign` (`"top"`, `"middle"`, `"bottom"`, `"baseline"`) | `"top"` |
 | `halo` (a color drawn as a band around the letters, under them) | none |
+| `keepInside` (slide the text back inside the canvas, 4px margin, when it would cross an edge) | off |
 | `blend`, `erase` | as for a style |
 | `wrap` | on when `w` is set |
 | `fit` (shrink until the text fits the box) | off |
@@ -217,9 +218,15 @@ Each scope takes a body function. Its effect ends when the body returns.
   transforms the drawing in `body`: translate, then rotate, then scale. For
   another order, nest `at` calls. It has no layer: `erase` inside it erases
   the canvas beneath.
-- `v.group({ opacity?, blend? }, body)` draws `body` on its own layer, then
-  composites the layer once. `erase` inside a group erases only the group's
-  pixels.
+- `v.group({ opacity?, blend?, effects? }, body)` draws `body` on its own
+  layer, then composites the layer once. `erase` inside a group erases only
+  the group's pixels. `effects` adds blur, a glow, a drop shadow or colour
+  adjustments: see [BRUSHES.md](./BRUSHES.md#effects).
+- `v.mask(maskBody, body)` keeps `body` where `maskBody` paints, in
+  proportion to its alpha: a gradient in the mask fades the body out. Unlike
+  `clip`, the mask is any drawing and its edge can be soft. Like `group`, the
+  body draws on its own layer: `erase` inside it erases only the body, and
+  blends inside it blend with the body only.
 - `v.clip(shape, body)` clips `body` to a polygon or path, or to the union of
   an array of them.
 - `v.cache(key, body, { blend?, erase? }?)` draws `body` once into a stored
@@ -234,6 +241,15 @@ keys.
 ### Other `View` members
 
 - `v.width`, `v.height`: the canvas size.
+- `v.tween(keys, t, ease?)`: a number moving through keyframes
+  `[[time, value], …]` (sorted by time) at time `t`, eased within each span:
+  `v.tween([[0, 40], [30, 260], [60, 260]], model.frame, "in-out")`. It holds
+  the first and last values outside the keys. `v.tweenPoint` does the same
+  for tuples (points, colour channels). Eases: `"linear"` (default), `"in"`,
+  `"out"`, `"in-out"`, `"out-back"` (overshoots and settles), `"step"`
+  (holds, then jumps at the span's end). A keyframe `[time, value, ease]`
+  eases the span it starts with its own curve. Two keyframes at the same time
+  make a jump. `v.ease(name, u)` is one curve at `u` in 0..1.
 - `v.paper({ scale, contrast, seed })` and `v.paperTexture(amount)`: see
   [BRUSHES.md](./BRUSHES.md#paper).
 - `v.control(name, box)`: see [Inputs over the canvas](#inputs-over-the-canvas).
@@ -373,6 +389,10 @@ embeds are frameless), `initialParams?` (validated against the declaration;
 unknown names or mismatched types warn and fall back to defaults),
 `onParamsChange?`, `onEvent?`. It injects no styles — hosts import
 `@ianbicking/canvas-loop/src/browser/figure.css` (CSP-clean by construction).
+
+A figure's log (`v.log`, style notes, overlap warnings) goes to the browser
+console as `[canvas-loop] frame N: …`. The figure shrinks to fit a narrow column; the
+canvas keeps its aspect ratio and pointer input stays accurate.
 
 ## The discipline (one list)
 

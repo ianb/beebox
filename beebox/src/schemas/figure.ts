@@ -177,7 +177,89 @@ export default (cl, { mount, figure }) =>
 
   A card param matching no module param (or declared for a \`trigger\`) is dropped — its query value does nothing.
 - **\`export const canvas = { width, height }\` is authoritative for the drawing
-  size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.`,
+  size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.
+  The figure scales down to fit a narrow column, keeping its aspect ratio.
+- **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
+  \`canvas-loop.md\`; brushes, paper, sprites and caches in
+  \`canvas-loop-brushes.md\` (both beside this file).
+
+### The factory's arguments
+
+The default export is called as \`(cl, { mount, figure })\`:
+
+- \`cl\` — canvas-loop's browser API: \`cl.mountSketch(mount, options)\` with
+  \`module\`, \`initialParams\`, \`autoplay\`, \`seed\`, \`panel\`, \`transport\`,
+  \`onParamsChange\`, \`onEvent\`, \`onError\`.
+- \`mount\` — the element to mount into.
+- \`figure.params\` (embed values), \`figure.data\` (the card's \`data:\`),
+  \`figure.meta\` (frontmatter), \`figure.file\` (the views file helpers:
+  \`readFile\`, \`fileUrl\`, \`writeFile\`, \`appendFile\`, …).
+
+What the learner does in a figure open beside the chat reaches you as
+\`explored\` activity, as a view's does: param changes (\`set speed = 2\`) and
+inputs the sketch acknowledged with \`u.handled(name)\` (\`pressed tray-sugar\`).
+Name what \`update\` handles with \`u.handled\`, and that is what you hear.
+
+### Checking a canvas-loop figure
+
+Render it headlessly; no browser needed:
+
+\`\`\`sh
+bbx figure run <card path>          # or no path: every canvas-loop figure in the box
+\`\`\`
+
+- It compiles the entry, runs it with canvas-loop's own headless runner and
+  writes \`_tmp/figure-run/…/out/transcript.md\` (the command prints the path) plus frame PNGs
+  (frame 0, the last frame, every 30th, and any frame that logged or ran an
+  event). Read the transcript and look at the frames.
+- The transcript lists \`v.log\` lines, warnings (a style that draws nothing,
+  text that overlaps other text, a character the font cannot draw), errors, and
+  each scripted input with what it did: \`mousedown (200,150) → pressed\`
+  (names from \`u.handled\`), \`Δmodel\` when the model changed, \`(unhandled)\`
+  when nothing happened. The command prints the warnings and errors and exits
+  non-zero on an error.
+- Script input with an events file beside the entry,
+  \`<entry stem>-events.json\`; it is used automatically and is the figure's
+  standing check. \`--events <file>\` picks another; \`--frames N\` runs N
+  frames (default: through the last event plus 60); \`--params name=value\`
+  starts a param elsewhere (the card's \`params:\` defaults apply first).
+- Code outside the default export runs in Node: keep \`window\`, \`document\`
+  and \`matchMedia\` inside the factory.
+
+The events file is a JSON array; all events for frame N run, in file order,
+before frame N's draw (canvas coordinates, 60 frames a second):
+
+\`\`\`json
+[
+  { "frame": 6, "type": "mousedown", "x": 200, "y": 150 },
+  { "frame": 8, "type": "mouseup", "x": 200, "y": 150 },
+  { "frame": 30, "type": "param", "name": "speed", "value": 2.5 },
+  { "frame": 40, "type": "keydown", "key": "r" },
+  { "frame": 50, "type": "trigger", "name": "reset" },
+  { "frame": 55, "type": "snapshot", "label": "after reset" }
+]
+\`\`\`
+
+Input types are \`mousedown\`, \`mouseup\`, \`mousemove\`, \`keydown\`, \`keyup\`;
+\`param\` and \`trigger\` names must be declared in the module's \`params\`;
+\`snapshot\` captures that frame.
+
+### Sharing code and data between figures and views
+
+Put code and data that more than one figure or view uses in \`src/lib/\` at
+the box root, and import it with \`@/\`, which is the box root from any
+figure or view however deep, and survives \`bbx mv\` of the card:
+\`import { atomColor } from "@/src/lib/chem"\`,
+\`import elements from "@/src/lib/elements.json"\`. A relative path out of a
+card's attach folder breaks when the card moves; \`bbx mv\` does not rewrite
+code. Each import is bundled into the importer, so an edit reaches every
+figure and view that imports it. Code a canvas-loop figure imports must stay
+pure: no module-level \`let\` (state belongs in the model), and no
+\`Math.random\` or \`Date\` (calling either during a \`bbx figure run\`
+stops it with an error). React components cannot be drawn on a canvas, so a
+view shows a figure by embedding the figure card:
+\`<CardRef cardRef="…" params={…} embed caption="…" />\` from
+\`beebox/view-widgets\`.`,
 });
 
 export type FigureFields = InferCardFields<typeof FigureSchema>;

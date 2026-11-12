@@ -17,12 +17,13 @@ import { SketchUsageError, assertUnit } from "../errors.js";
 import { styleProblem as styleProblemFor } from "./style.js";
 import type { ResolvedStyle } from "./style.js";
 import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, PasteOptions, Sprite, SpriteOptions } from "../paint.js";
-import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon, withSaved } from "../paint.js";
+import { compositeGroup, resolveEffects } from "./effects.js";
+import { applyAt, compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
 import { FaintWatch } from "./faint.js";
-import { GlyphWatch, TextOverlap } from "./text-watch.js";
+import { GlyphWatch, TextOverlap, textRect } from "./text-watch.js";
 import type { TextRect } from "./text-watch.js";
-import { LayerCache, LayerPool, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
+import { LayerCache, LayerPool, drawLayer, isShapeList, maskLayer, replaceInShapes, withComposite } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
 
 /** True for the identity transform. */
@@ -108,20 +109,11 @@ export class PainterCore {
     this.#note(message);
   }
 
-  /** Remember a text drawn this frame, in canvas coordinates, for the overlap check. Texts in sprites are skipped (their coordinates are the sprite's). */
+  /** Remember a text drawn this frame, in canvas coordinates, for the overlap check. Texts in sprites (their coordinates are the sprite's) and masks are skipped. */
   protected recordText(content: string, box: { x: number; y: number; w: number; h: number; size: number }): void {
-    if (this.#where.some((w) => w.startsWith("sprite"))) return;
-    const m = this.ctx.getTransform();
-    // Trim the line gap above and below the letters.
-    const trim = box.size * 0.12;
-    const top = box.y + trim;
-    const bottom = box.y + box.h - trim;
-    const corners = [[box.x, top], [box.x + box.w, top], [box.x, bottom], [box.x + box.w, bottom]] as const;
-    const xs = corners.map(([x, y]) => (m.a * x + m.c * y + m.e) / this.pixelRatio);
-    const ys = corners.map(([x, y]) => (m.b * x + m.d * y + m.f) / this.pixelRatio);
-    const x = Math.min(...xs);
-    const y = Math.min(...ys);
-    this.#overlap.add({ content, x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y });
+    // A mask's text is a stencil, not something read, so it can't overlap a label.
+    if (this.#where.some((w) => w.startsWith("sprite") || w === "mask")) return;
+    this.#overlap.add(textRect(content, { box, m: this.ctx.getTransform(), pixelRatio: this.pixelRatio }));
   }
 
   /** Warn (headless) about characters the font cannot draw. */
@@ -136,13 +128,7 @@ export class PainterCore {
   at(options: AtOptions, body: () => void): void {
     const ctx = this.ctx;
     withSaved(ctx, () => {
-      const { translate, rotate, scale } = options;
-      if (translate !== undefined) this.ctx.translate(translate[0], translate[1]);
-      if (rotate !== undefined) this.ctx.rotate(rotate);
-      if (scale !== undefined) {
-        if (typeof scale === "number") this.ctx.scale(scale, scale);
-        else this.ctx.scale(scale[0], scale[1]);
-      }
+      applyAt(ctx, options);
       body();
     });
   }
@@ -198,10 +184,28 @@ export class PainterCore {
   group(options: GroupOptions, body: () => void): void {
     const opacity = options.opacity ?? 1;
     assertUnit(opacity, "group opacity");
-    const layer = this.#onLayer(body, { opacity });
+    // Validate before drawing, so a bad option fails without painting the body.
     const op = compositeOp(options.blend ?? "normal");
-    drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity, op });
+    const effects = resolveEffects(options.effects, this.pixelRatio);
+    const layer = this.#onLayer(body, { opacity });
+    compositeGroup(this.ctx, { layer, effects, pool: this.#pool, opacity, op, ...this.#device });
     this.#pool.release(layer);
+  }
+
+  /**
+   * Draw `body` kept only where `maskBody` paints, in proportion to its alpha:
+   * an opaque mask keeps everything, a transparent one nothing, a gradient
+   * fades. The mask's colours do not matter. Like a group, the body draws on
+   * its own layer (erase inside it erases only the body), then composites normally.
+   */
+  mask(maskBody: () => void, body: () => void): void {
+    const layer = this.#onLayer(body, { opacity: 1 });
+    try {
+      this.#pool.release(maskLayer(layer, { mask: this.#onLayer(maskBody, { opacity: 1, where: "mask" }), ...this.#device }));
+      drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op: "source-over" });
+    } finally {
+      this.#pool.release(layer);
+    }
   }
 
   /** Run `body` drawing onto a fresh full-canvas layer. */
@@ -220,6 +224,10 @@ export class PainterCore {
     if (options.where !== undefined) this.#where.push(options.where);
     try {
       body();
+    } catch (error) {
+      // A pooled layer goes back to the pool; a kept or caller's layer is not the pool's.
+      if (!fresh && options.into === undefined) this.#pool.release(layer);
+      throw error;
     } finally {
       if (options.where !== undefined) this.#where.pop();
       this.#ctxStack.pop();
@@ -236,6 +244,7 @@ export class PainterCore {
    */
   cache(...args: [string, () => void, { blend?: BlendMode; erase?: boolean }?]): void {
     const [key, body, paste] = args;
+    const op = this.composite({ blend: paste?.blend ?? "normal", erase: paste?.erase ?? false }); // before building: a bad option stores nothing
     let layer = this.#cache.get(key);
     if (layer === undefined) {
       const { result: built, texts } = this.#overlap.collect(() => this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
@@ -246,7 +255,6 @@ export class PainterCore {
     } else if (paste?.erase !== true) {
       for (const rect of this.#cacheTexts.get(key) ?? []) this.#overlap.add(rect);
     }
-    const op = this.composite({ blend: paste?.blend ?? "normal", erase: paste?.erase ?? false });
     drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op });
   }
 
@@ -309,7 +317,8 @@ export class PainterCore {
   }
 
   protected composite(mode: { blend: BlendMode; erase: boolean }): string {
-    return mode.erase ? "destination-out" : compositeOp(mode.blend);
+    const op = compositeOp(mode.blend); // checked even when erasing: a misspelt blend is an error either way
+    return mode.erase ? "destination-out" : op;
   }
 
 
@@ -412,6 +421,7 @@ export class PainterCore {
       paper: () => this.#paper.layer(),
       composite,
     });
-    if (peak !== undefined && !erasing && style.gesture.faint !== true) this.#faint.check(peak, { groupAlphas: this.#alphaStack, where: this.#where.at(-1) });
+    // A mask's marks are stencils, never seen, so their strength isn't judged.
+    if (peak !== undefined && !erasing && style.gesture.faint !== true && !this.#where.includes("mask")) this.#faint.check(peak, { groupAlphas: this.#alphaStack, where: this.#where.at(-1) });
   }
 }

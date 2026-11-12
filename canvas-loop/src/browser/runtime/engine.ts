@@ -14,8 +14,12 @@ import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
-import { sanitizeParamChange } from "../param-validate.js";
+import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
+import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
+import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
+
+export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -41,61 +45,6 @@ function frozen(value: unknown): unknown {
   return value;
 }
 
-/** A partial override of declared param defaults, applied at construct/restart. */
-export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
-
-function initialParams(decl: ParamsDecl, overrides: ParamOverrides | undefined): ParamValues<ParamsDecl> {
-  const values: Record<string, number | boolean | string> = {};
-  for (const [name, param] of Object.entries(decl)) {
-    if (param.type === "trigger") continue;
-    const override = overrides?.[name];
-    values[name] = override ?? param.default;
-  }
-  return Object.freeze(values);
-}
-
-/** A frame-tagged log line surfaced to the transcript panel. */
-export interface RuntimeLog {
-  frame: number;
-  message: string;
-}
-
-/**
- * A streamed event carries the same engagement verdict the headless transcript
- * shows, as structured data rather than a rendered string: `handled` (the names
- * `u.handled(...)` acknowledged) and `changed` (did `update` return a new model
- * reference). Both are present on interaction events (mouse/key/trigger), absent
- * on `param` (a param change is definitionally applied — no separate verdict).
- * Hosts render the verdict however they like; the on-disk events log
- * (`eventsJSON`) stays the clean `TeaScriptEvent` shape.
- */
-export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean };
-
-export interface RuntimeDeps {
-  module: PlaygroundModule;
-  ctx: CanvasRenderingContext2D;
-  width: number;
-  height: number;
-  /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
-  pixelRatio?: number;
-  seed: number;
-  onFrame: (frame: number) => void;
-  /** A voice whose frame has come (default: the runtime's own `SoundPlayer` plays it). */
-  onVoice?: (voice: Voice) => void;
-  onLog: (entry: RuntimeLog) => void;
-  /** Partial override of declared param defaults — the initial values init() sees. */
-  initialParams?: ParamOverrides;
-  /** Streams every recorded input entry (the `{frame, type, …}` events-file line, plus the engagement verdict) as it is dispatched. */
-  onEvent?: (entry: EmittedEvent) => void;
-  /**
-   * Called once if a frame (update/draw) throws: the loop stops and the error
-   * surfaces here instead of throwing uncaught on every subsequent rAF tick.
-   * Default when omitted: `console.error` (still exactly once).
-   */
-  onError?: (error: unknown) => void;
-  /** After each draw: where `v.control` placed param inputs this frame. */
-  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
-}
 
 export class Runtime {
   #module: PlaygroundModule;
@@ -177,6 +126,8 @@ export class Runtime {
 
   setPaused(paused: boolean): void {
     this.#paused = paused;
+    // Resume from now, not from when the loop last ran.
+    if (!paused) this.#last = undefined;
   }
 
   get paused(): boolean {

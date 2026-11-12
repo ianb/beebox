@@ -200,7 +200,26 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 <CardRef cardRef="/_content/recipes/Pasta.recipe.card" />
 \`\`\`
 
-The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;
+The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.
+
+**\`<CardRef cardRef="…" embed />\`** shows the card itself in place, with no chip: a figure draws live, with \`params\` passed to it and \`caption\` beneath. Use it to put a figure in a view:
+
+\`\`\`tsx
+<CardRef cardRef="/_content/figures/Atom.figure.card" params={{ element: "H" }} embed caption="Hydrogen" />
+\`\`\`
+
+A card body shown with \`<Markdown>\` embeds the cards it names with \`![caption](…)\` too, as on the card's page. Write a view's own embeds as \`<CardRef … embed />\`: a path inside a string in view code is not tracked, so a move would break it.
+
+## Shared code and data
+
+Code or data that more than one view or figure uses goes in \`src/lib/\`. Import it from the box root with \`@/\`, which means the same file from any view or figure, however deep, and keeps working when a card moves:
+
+\`\`\`tsx
+import { atomColor } from "@/src/lib/chem";
+import elements from "@/src/lib/elements.json";
+\`\`\`
+
+Each import is bundled into the view, and the view picks up an edit to an imported file. \`@/\` works in views and figures, which the engine bundles; not in schemas or tricks.`;
 
 export const datesSection = `### Dates
 

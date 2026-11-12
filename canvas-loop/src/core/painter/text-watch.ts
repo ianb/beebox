@@ -1,7 +1,7 @@
 // Two checks on drawn text, reported as warnings: labels that overlap other
 // labels in one frame, and characters the font has no glyph for (they draw
 // as empty boxes or not at all, with no error from the canvas).
-import type { Layer, MakeLayer } from "../paint.js";
+import type { CtxTransform, Layer, MakeLayer } from "../paint.js";
 
 /** A text's ink box in canvas coordinates. */
 export interface TextRect {
@@ -25,6 +25,21 @@ const quote = (s: string): string => JSON.stringify(s.length > 30 ? `${s.slice(0
  * Collects one frame's text boxes and reports pairs that overlap. Boxes are
  * upright: a rotated label is compared by the upright box around it.
  */
+/** A drawn text's letter box in canvas coordinates, from its layout box under transform `m`. */
+export function textRect(content: string, args: { box: { x: number; y: number; w: number; h: number; size: number }; m: CtxTransform; pixelRatio: number }): TextRect {
+  const { box, m, pixelRatio } = args;
+  // Trim the line gap above and below the letters.
+  const trim = box.size * 0.12;
+  const top = box.y + trim;
+  const bottom = box.y + box.h - trim;
+  const corners = [[box.x, top], [box.x + box.w, top], [box.x, bottom], [box.x + box.w, bottom]] as const;
+  const xs = corners.map(([x, y]) => (m.a * x + m.c * y + m.e) / pixelRatio);
+  const ys = corners.map(([x, y]) => (m.b * x + m.d * y + m.f) / pixelRatio);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { content, x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
 export class TextOverlap {
   #frame: TextRect[] = [];
   // Texts each cache being drawn collects, innermost last (not capped).

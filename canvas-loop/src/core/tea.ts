@@ -10,6 +10,7 @@ import type { Voice } from "./sound/voice.js";
 import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
+import type { EaseName, Keyframe } from "./ease.js";
 
 /** Where a param's input sits over the canvas: logical pixels; `h` defaults to the input's natural height. */
 export interface ControlBox {
@@ -27,7 +28,8 @@ export interface ControlBox {
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { AtOptions, BrushPreset, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shadow, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { EaseName, Keyframe } from "./ease.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, PluckVoice, ToneVoice, Voice } from "./sound/voice.js";
@@ -201,8 +203,16 @@ export interface View {
   textWidth(content: string, options?: TextOptions): number;
   /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. No layer. */
   at(options: AtOptions, body: () => void): void;
-  /** Draw `body` on its own layer, then composite it once with opacity and blend. */
+  /** Draw `body` on its own layer, then composite it once with opacity, blend and effects (blur, glow, shadow, colour adjustments). */
   group(options: GroupOptions, body: () => void): void;
+  /** Draw `body` kept where `maskBody` paints, in proportion to its alpha (a gradient mask fades it). */
+  mask(maskBody: () => void, body: () => void): void;
+  /** A number between keyframes `[[time, value], …]` at time `t`, eased within each span. */
+  tween(keys: readonly Keyframe<number>[], t: number, ease?: EaseName): number;
+  /** `tween` for tuples (points, colour channels). */
+  tweenPoint(keys: readonly Keyframe<readonly number[]>[], t: number, ease?: EaseName): number[];
+  /** An easing curve at `u` (clamped to 0..1). */
+  ease(name: EaseName, u: number): number;
   /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
   /** Draw `body` once into a stored layer; later calls with the same key paste it (with `paste`'s blend or erase). */

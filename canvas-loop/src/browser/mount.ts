@@ -90,9 +90,8 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
     ...(initialParams !== undefined ? { initialParams } : {}),
     onFrame: opts.onFrame,
-    onLog: () => {
-      // Figures surface frames + recorded events, not the transcript log.
-    },
+    // The log (`v.log`, style notes, overlap warnings, replay verdicts) goes to the console, frame-tagged.
+    onLog: (entry) => console.log(`[canvas-loop] frame ${entry.frame}: ${entry.message}`),
     ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
     ...(opts.onPlace !== undefined ? { onPlace: opts.onPlace } : {}),

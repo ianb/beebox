@@ -6,13 +6,13 @@
  * around it keeps its dismiss button.
  */
 
-import type { ReactNode } from "react";
 import { useFileData } from "../file-view-data";
 import { getRenderers } from "../../file-type-registry";
 import { useStripViewBinding } from "../../lib/view-bindings";
 import { Text } from "../ui/Text";
 import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
 import { stripRendererChoice } from "./strip-choice";
+import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 
 function StripNotice({ path }: { path: string }) {
@@ -22,7 +22,7 @@ function StripNotice({ path }: { path: string }) {
 export function StripFileView({ path, onNavigate, renderInline }: {
   path: string;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline: (target: ViewTarget) => ReactNode;
+  renderInline: RenderInline<ViewTarget>;
 }) {
   const { data, loading, error } = useFileData(path);
   const binding = useStripViewBinding(data?.type);

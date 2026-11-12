@@ -1,5 +1,6 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useState } from "react";
 import type { ActivityKind } from "@core/chat/card-activity.js";
+import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
 import { AgentViewRenderer } from "./AgentViewRenderer";
 
@@ -15,7 +16,7 @@ export interface BoundAgentViewRendererProps {
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   reportActivity?: (kind: ActivityKind, detail?: string) => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline: (target: ViewTarget) => ReactNode;
+  renderInline: RenderInline<ViewTarget>;
 }
 
 /** Stable component boundary around a replaceable authored-view module. */

@@ -4,18 +4,20 @@ import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, M
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 
 /** Draw a full-canvas layer image onto `ctx` at device scale, once. */
-export function drawLayer(ctx: Ctx2D, args: { image: LayerImage; width: number; height: number; opacity: number; op: string }): void {
+export function drawLayer(ctx: Ctx2D, args: { image: LayerImage; width: number; height: number; opacity: number; op: string; filter?: string }): void {
   ctx.save();
   ctx.resetTransform();
   ctx.globalAlpha = args.opacity;
   ctx.globalCompositeOperation = args.op;
+  if (args.filter !== undefined) ctx.filter = args.filter;
   ctx.drawImage(args.image, 0, 0, args.width, args.height, 0, 0, args.width, args.height);
   ctx.restore();
 }
 
-/** Keep only the parts of `layer` inside `mask`'s painted pixels. */
-export function maskLayer(layer: Layer, args: { mask: Layer; width: number; height: number }): void {
+/** Keep only the parts of `layer` inside `mask`'s painted pixels. Returns `mask`, for the caller to release. */
+export function maskLayer(layer: Layer, args: { mask: Layer; width: number; height: number }): Layer {
   drawLayer(layer.ctx, { image: args.mask.image, width: args.width, height: args.height, opacity: 1, op: "destination-in" });
+  return args.mask;
 }
 
 /** Fill every shape opaque on `ctx` (under its current transform): their union. */
@@ -128,6 +130,7 @@ export class LayerPool {
     ctx.resetTransform();
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
+    ctx.filter = "none";
     ctx.clearRect(0, 0, this.#size.width, this.#size.height);
     this.#free.push(layer);
   }
@@ -135,8 +138,11 @@ export class LayerPool {
   /** Lend a layer for the length of `body`, then take it back. */
   borrow(body: (layer: Layer) => void): void {
     const layer = this.acquire();
-    body(layer);
-    this.release(layer);
+    try {
+      body(layer);
+    } finally {
+      this.release(layer);
+    }
   }
 
   /** A second reusable layer marks paint gradients on. */

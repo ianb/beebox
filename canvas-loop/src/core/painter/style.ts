@@ -3,6 +3,7 @@
 import { resolveBrush } from "../brush/presets.js";
 import type { Brush, Gesture } from "../brush/types.js";
 import type { BlendMode, Paint, Style } from "../paint.js";
+import { compositeOp } from "../compose.js";
 import { SketchUsageError } from "../errors.js";
 
 /** A Style with every default filled in: what one drawing call paints with. */
@@ -46,6 +47,7 @@ function brushFrom(brush: Style["brush"]): Brush | undefined {
 /** Validate `style` and fill in its defaults. */
 export function resolveStyle(style: Style, call: string): ResolvedStyle {
   assertStyle(style, call);
+  compositeOp(style.blend ?? "normal");
   return {
     fill: style.fill,
     stroke: style.stroke,

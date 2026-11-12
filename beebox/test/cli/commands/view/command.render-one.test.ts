@@ -127,6 +127,44 @@ export default function Prose({ cards }) {
   });
 });
 
+// ## Card embeds render in Node
+//
+// A card written as an image, and `<CardRef embed>`, render through the node
+// host's placeholder. They need no FileView, so the Node bundle loads and
+// renders them:
+void test("A card embed in Markdown and a CardRef embed render in Node", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeViewBox();
+  await box.write("_content/inbox/A.doc.card", DOC_CARD);
+  await writeView(box, { rel: "figure.tsx", content: `
+import { Markdown, CardRef } from "beebox/view-widgets";
+export const name = "Figure";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Figure({ cards }) {
+  return (
+    <div>
+      {cards.map((card) => <Markdown key={card.path} card={card}>{"![Hydrogen](/_content/figures/Atom.figure.card?element=H)"}</Markdown>)}
+      <CardRef cardRef="/_content/figures/Atom.figure.card" params={{ element: "H" }} embed caption="Hydrogen" />
+    </div>
+  );
+}
+` });
+
+  const r = await runRenderOne(box.root, ["figure"]);
+  t.check(r, {
+    code: 0,
+    stdout: "",
+    stderr: "",
+  });
+});
+
 // ## A todo's due date renders in Node
 //
 // The todo widget formats its due date with the same code in Node as in the
