@@ -46,3 +46,11 @@ void test("currentBeatIndex finds the titled beat or null", async (t) => {
   const beats = parseTourBeats("## A\n## B\n").beats;
   t.check([currentBeatIndex(beats, "B"), currentBeatIndex(beats, " A "), currentBeatIndex(beats, "C"), currentBeatIndex(beats, undefined)], [1, 0, null, null]);
 });
+
+// Markdown allows closing hashes on a heading. They are not part of the
+// title, so `current: Arrival` names the beat written as `## Arrival ##`.
+void test("closing hashes are not part of a beat title", async (t) => {
+  const { beats } = parseTourBeats("## Arrival ##\nHello.\n## C# basics\n");
+  t.check(beats.map((beat) => beat.title), ["Arrival", "C# basics"]);
+  t.check(currentBeatIndex(beats, "Arrival"), 0);
+});

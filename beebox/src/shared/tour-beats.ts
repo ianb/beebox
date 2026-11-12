@@ -5,7 +5,8 @@
  * the heading text is the beat's title and the markdown up to the next such
  * line is its content. Text before the first heading is the tour's
  * introduction and belongs to no beat. A `## ` line inside a fenced code
- * block is content, not a heading.
+ * block is content, not a heading. Markdown's optional closing hashes
+ * (`## Arrival ##`) are not part of the title.
  *
  * Shared by the schema's `validate` hook (server) and the tour renderer
  * (browser), so both agree on what a beat is.
@@ -42,7 +43,7 @@ export function parseTourBeats(body: string): ParsedTour {
     const heading = fence === null && marker === undefined ? BEAT_HEADING.exec(line) : null;
     const title = heading?.[1];
     if (title !== undefined) {
-      beats.push({ title: title.trim(), lines: [] });
+      beats.push({ title: title.replace(/\s+#+\s*$/, "").trim(), lines: [] });
       continue;
     }
     const open = beats.at(-1);

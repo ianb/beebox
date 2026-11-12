@@ -9,7 +9,7 @@
  * it as it skips the cards pane; the dismiss button stays addressable.
  */
 
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { boxRelativePath } from "@shared/box-path";
 import { STRIP_DISMISSED, stripCardPath } from "@shared/strip-types";
 import { errorMessage } from "@shared/error-guards";
@@ -27,6 +27,13 @@ export function ConversationStrip({ features, sessionId, setChatFeatures }: {
   setChatFeatures: Dispatch<SetStateAction<Record<string, string>>>;
 }) {
   const workspace = useWorkspace();
+  // A dismiss answer applies only while its conversation is still the open
+  // one and no later dismiss has started; otherwise conversation A's answer
+  // would overwrite conversation B's feature map (the narration toggle's rule).
+  const requestIdRef = useRef(0);
+  useEffect(() => {
+    requestIdRef.current++;
+  }, [sessionId]);
   const ref = stripCardPath(features.strip);
   if (ref === null) return null;
   const path = boxRelativePath(ref);
@@ -37,17 +44,20 @@ export function ConversationStrip({ features, sessionId, setChatFeatures }: {
   const dismiss = () => {
     // Optimistic, then reconciled from the server's answer; rolled back on a
     // refusal, since no event corrects a write the server refused.
+    const requestId = ++requestIdRef.current;
     setChatFeatures((prev) => ({ ...prev, strip: STRIP_DISMISSED }));
     if (sessionId === null) {
       console.warn("[strip] dismissed with no session; hidden on this page only");
       return;
     }
     setChatFeature({ sessionId, feature: "strip", value: STRIP_DISMISSED })
-      .then((res) => setChatFeatures(res.features))
+      .then((res) => {
+        if (requestIdRef.current === requestId) setChatFeatures(res.features);
+      })
       .catch((e: unknown) => {
         console.warn(`[strip] dismiss failed: ${errorMessage(e)}`);
         toastError("Failed to dismiss the strip", { cause: e });
-        setChatFeatures((prev) => ({ ...prev, strip: ref }));
+        if (requestIdRef.current === requestId) setChatFeatures((prev) => ({ ...prev, strip: ref }));
       });
   };
   return (

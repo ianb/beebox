@@ -56,7 +56,7 @@ something one step at a time while they keep the real interface open.
   The heading is the beat's title. Titles must differ.
 - Text before the first heading is an introduction. It is not a beat.
 - \`current:\` holds the title of the beat the person is on. Move it as the
-  walk advances. It must match a beat title exactly, or validation fails.
+  walk advances. It must match a beat title, or validation fails.
 - When the tour follows something the person said, use their own words in
   the beat titles.
 - Under a beat, put what the person needs for that step: links to cards
