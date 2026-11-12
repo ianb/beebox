@@ -44,6 +44,11 @@ function numberParam(record: Record<string, unknown>, where: string): ParamDecl 
     default: requireFiniteNumber({ record, key: "default", where }),
   };
   if (record["step"] !== undefined) decl.step = requireFiniteNumber({ record, key: "step", where });
+  const control = record["control"];
+  if (control !== undefined) {
+    if (control !== "slider" && control !== "field") throw new CliError({ detail: `${where}: "control" must be "slider" or "field"` });
+    decl.control = control;
+  }
   return decl;
 }
 
