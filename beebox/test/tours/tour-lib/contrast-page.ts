@@ -28,6 +28,14 @@ export interface TextRun {
    * Controls draw their own surfaces by design, so they get -1 too.
    */
   material: number;
+  /**
+   * Text in a themed card colored by an app palette utility (`text-warm-700`)
+   * instead of the card's ink: that class, and the card's theme. Null outside
+   * a card, in a region with its own `--bbx-ink`, or on an app panel (a
+   * `bg-white` or palette background between the text and the card), which
+   * keeps app ink by design.
+   */
+  appInk: { utility: string; theme: string } | null;
   /** The lines measured: those wholly inside the viewport and its scrolling ancestors. */
   rects: Rect[];
 }
@@ -114,6 +122,11 @@ export interface Selection {
  * - Text shadows stay in the capture: a halo is part of what is read against.
  * - Controls draw their own surfaces by design, and a region that sets its
  *   own `--bbx-ink` declares its own material, so neither gets a surface check.
+ * - App ink in a card: the nearest ancestor (up to the card) with a text
+ *   color utility names where a run's color comes from. An app palette
+ *   utility there means the text ignores the card's material, whatever its
+ *   contrast on this theme. Controls are included: a ghost button paints no
+ *   surface of its own.
  * - Selects: the shown value's ink and the field's own colors, for a pass
  *   that scores the field's edge against the pixels around it.
  * - Selection: the theme studio paints sample text with the
@@ -280,6 +293,37 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     el.setAttribute("data-bbx-audit-run", String(next));
     return next;
   };
+  const APP_TEXT = /^text-(warm|primary|accent|info|danger|success|warning|coral|gold|plum|rose|iris)(-|$)/;
+  const APP_PANEL = /^bg-(white|black|warm|primary|accent|info|danger|success|warning|coral|gold|plum|rose|iris)(-|$)/;
+  const TEXT_COLOR = /^text-(?!(xs|sm|base|lg|xl|[2-9]xl|left|right|center|justify|start|end|balance|pretty|wrap|nowrap|ellipsis|clip)$)/;
+  // A theme may remap an app utility to its ink (the field list); text that
+  // ends up in one of the card's inks follows the material however it got there.
+  const INKS = ["ink", "ink-soft", "pen", "danger", "code-ink", "bullet", "counter"];
+  const inksOf = new Map();
+  const cardInks = (card) => {
+    let inks = inksOf.get(card);
+    if (inks !== undefined) return inks;
+    const probe = document.createElement("span");
+    card.append(probe);
+    inks = INKS.map((name) => {
+      probe.style.color = "var(--bbx-" + name + ", transparent)";
+      return parse(getComputedStyle(probe).color);
+    }).filter((c) => c !== null).map((c) => c.slice(0, 3).join(","));
+    probe.remove();
+    inksOf.set(card, inks);
+    return inks;
+  };
+  const appInkOf = (el, card, color) => {
+    for (let cur = el; cur !== null && cur !== card; cur = cur.parentElement) {
+      if ([...cur.classList].some((c) => APP_PANEL.test(c))) return null;
+    }
+    if (color !== null && cardInks(card).includes(color.slice(0, 3).join(","))) return null;
+    for (let cur = el; cur !== null && cur !== card; cur = cur.parentElement) {
+      const utility = [...cur.classList].find((c) => TEXT_COLOR.test(c));
+      if (utility !== undefined) return APP_TEXT.test(utility) ? utility : null;
+    }
+    return null;
+  };
   const byElement = new Map();
   const linesOf = new Map();
   const unmeasurable = new Set();
@@ -324,6 +368,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
       // A region that sets its own ink (a heading strip over artwork) is its own material.
       const ownInk = themed !== null && getComputedStyle(el).getPropertyValue("--bbx-ink") !== getComputedStyle(themed).getPropertyValue("--bbx-ink");
       const card = control || ownInk ? null : themed;
+      const utility = themed === null || ownInk ? null : appInkOf(el, themed, raw);
       run = {
         id,
         selector: describe(el),
@@ -333,6 +378,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
         large: size >= 24 || Number(cs.fontWeight) >= 700 && size >= 18.66,
         placeholder,
         material: card === null ? -1 : materialOf.get(card) ?? -1,
+        appInk: utility === null ? null : { utility, theme: (themed.dataset["cardTheme"] ?? "") + "/" + (themed.dataset["cardStock"] ?? "") },
         rects: []
       };
       byElement.set(el, run);

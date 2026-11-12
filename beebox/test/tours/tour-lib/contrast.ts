@@ -40,6 +40,8 @@ export type ContrastFailure =
   | { kind: "token"; material: number; theme: string; fg: string; bg: string; ratio: number; required: number }
   /** Text in a card on an undeclared surface on the other side of light/dark from the paper. */
   | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number }
+  /** Text in a card colored by an app palette utility instead of the card's ink. */
+  | { kind: "ink"; run: number; selector: string; text: string; theme: string; utility: string; fg: string; ratio: number; required: number }
   /** Selected text: the `::selection` ink on its background. */
   | { kind: "selection"; selector: string; text: string; fg: string; bg: string; ratio: number; required: number; rects: Selection["rects"] }
   /** A select: its value's ink on its field, or its edge (field or border) against the pixels around it. */
@@ -172,6 +174,16 @@ export function scoreRuns(image: RawImage, page: Pick<PageRuns, "width" | "runs"
   return failures;
 }
 
+/**
+ * Text in a card that takes app ink: it reads on this theme only by chance of
+ * the theme's colors. No ratio applies; `ratio` and `required` are 0.
+ */
+export function scoreInk(page: Pick<PageRuns, "runs">): ContrastFailure[] {
+  return page.runs.flatMap((run) => run.appInk === null ? [] : [{
+    kind: "ink" as const, run: run.id, selector: run.selector, text: run.text, theme: run.appInk.theme, utility: run.appInk.utility, fg: hex(run.fg), ratio: 0, required: 0,
+  }]);
+}
+
 /** Token pairs below AA, named by token so the fix lands in the theme's material. */
 export function scoreMaterials(materials: readonly Material[]): ContrastFailure[] {
   return materials.flatMap((m, material) => m.pairs.flatMap((pair) => {
@@ -257,6 +269,7 @@ export function describeContrastFailure(f: ContrastFailure): string {
     case "token": return `${ratio}  ${f.theme}: ${f.fg} on ${f.bg} (material tokens)`;
     case "field": return f.part === "text" ? `${ratio}  select "${f.text}"  ${f.fg} on its field ${f.bg}  ${f.selector}` : `${ratio}  select edge  ${f.fg} against ${f.bg} around it  ${f.selector}`;
     case "selection": return `${ratio}  selected "${f.text}"  ${f.fg} on ${f.bg}  ${f.selector}`;
+    case "ink": return `app ink in a ${f.theme} card: ${f.utility} (${f.fg}) instead of the card's ink  "${f.text}"  ${f.selector}`;
     case "surface": return `surface ${f.bg} is not part of ${f.theme} (paper ${f.paper}) and inverts it ${f.ratio.toFixed(1)}:1  "${f.text}"  ${f.selector}`;
   }
 }
@@ -273,7 +286,7 @@ function marksFor(failures: readonly ContrastFailure[], page: PageRuns): Overlay
   return failures.map((f) => {
     if (f.kind === "selection") return { rects: f.rects, label: `selection ${f.ratio.toFixed(1)}:1` };
     if (f.kind === "field") return { rects: [f.rect], label: `select ${f.part} ${f.ratio.toFixed(1)}:1` };
-    if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : `surface ${f.bg}` };
+    if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : f.kind === "ink" ? `app ink ${f.utility}` : `surface ${f.bg}` };
     const n = (perMaterial.get(f.material) ?? 0) + 1;
     perMaterial.set(f.material, n);
     const at = page.materials[f.material]?.at ?? { x: 0, y: 0, w: 1, h: 1 };
@@ -362,7 +375,7 @@ export async function auditContrast(page: ContrastPage, { outline, before }: {
       throw new Error(`contrast audit: capture is ${String(info.width)}×${String(info.height)} but the viewport is ${String(runs.width)}×${String(runs.height)}`);
     }
     const image = { data, width: info.width, height: info.height, channels: info.channels };
-    const failures = [...scoreRuns(image, runs), ...scoreMaterials(runs.materials), ...scoreSelections(runs.selections), ...scoreFields(image, runs)];
+    const failures = [...scoreRuns(image, runs), ...scoreInk(runs), ...scoreMaterials(runs.materials), ...scoreSelections(runs.selections), ...scoreFields(image, runs)];
     if (outline) marks = marksFor(failures, runs);
     return { failures, runs: runs.runs.map(({ id }) => id), lines: runs.lines, unmeasured: runs.unmeasured };
   } finally {

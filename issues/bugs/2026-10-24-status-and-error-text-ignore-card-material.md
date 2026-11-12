@@ -1,6 +1,6 @@
 ---
 title: "Loading and error text in card views keep app colours on dark cards"
-workstream: unattached
+workstream: card-ink-dark-themes
 area: beebox
 labels: [themes]
 filed-by: agent

@@ -1,8 +1,9 @@
 // Contrast scoring over a glyph-free capture: thresholds, the percentile that
-// tolerates texture but not a band, faded groups, and material surfaces.
+// tolerates texture but not a band, faded groups, material surfaces, and app
+// ink in a card.
 
 import { test } from "tap";
-import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreFields, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
+import { composite, contrastRatio, mergeContrastSteps, scoreInk, scoreMaterials, scoreFields, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
 import type { Field, Material, TextRun } from "./tour-lib/contrast-page.js";
 
 type Rgb = [number, number, number];
@@ -22,7 +23,7 @@ function image({ left, right, split }: { left: Rgb; right?: Rgb; split?: number 
 }
 
 function run(over: Partial<TextRun>): TextRun {
-  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, placeholder: false, material: -1, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
+  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, placeholder: false, material: -1, appInk: null, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
 }
 
 function page(runs: TextRun[], materials?: Material[]): { width: number; runs: TextRun[]; materials: Material[] } {
@@ -85,6 +86,19 @@ void test("readable text on an undeclared surface that inverts the paper is a su
   t.check(panel.map((f) => f.kind === "surface" && f.bg), ["#ffffff"]);
   // The declared code paper is part of the material, however dark.
   t.check(scoreRuns(image({ left: [16, 39, 45] }), page([run({ fg: [216, 244, 239, 1], material: 0 })], [dark])), []);
+  t.end();
+});
+
+// Text in a card colored by an app palette utility misses the material
+// whatever its contrast: the next theme's paper may be dark. The page script
+// leaves `appInk` null on app panels and for text in the card's ink.
+void test("text in a card with an app palette utility is an ink miss", (t) => {
+  t.check(scoreInk({ runs: [
+    run({ id: 4, text: "Later", fg: [0x6b, 0x5d, 0x4b, 1], appInk: { utility: "text-warm-700", theme: "paper/cream" } }),
+    run({ id: 5, text: "Ten", appInk: null }),
+  ] }), [
+    { kind: "ink", run: 4, selector: "p", text: "Later", theme: "paper/cream", utility: "text-warm-700", fg: "#6b5d4b", ratio: 0, required: 0 },
+  ]);
   t.end();
 });
 
