@@ -105,6 +105,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     runtime.start();
   } catch (e) {
     detachInput();
+    runtime.stop();
     throw e;
   }
   return {
@@ -307,6 +308,7 @@ function coerceModule(raw: unknown): PlaygroundModule {
     init: loaded.init,
     update: loaded.update,
     draw: loaded.draw,
+    ...(loaded.sound === undefined ? {} : { sound: loaded.sound }),
   };
 }
 
@@ -319,6 +321,7 @@ function coerceModule(raw: unknown): PlaygroundModule {
 export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
   let pressed = false;
   const onDown = (e: MouseEvent): void => {
+    runtime.enableSound();
     pressed = true;
     canvas.focus();
     const p = coords(canvas, e);
@@ -338,6 +341,7 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
   };
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
+    runtime.enableSound();
     if (e.key.startsWith("Arrow")) e.preventDefault();
     runtime.key({ type: "keydown", key: e.key });
   };

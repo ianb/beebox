@@ -4,6 +4,8 @@ import type { Zoom } from "./recorder/zoom.js";
 import { FrameTimer } from "./recorder/timing.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Surface } from "./surface.js";
+import { Score } from "../core/sound/voice.js";
+import { soundFiles } from "./recorder/sound.js";
 import { bucketTeaByFrame } from "./tea-events.js";
 import type { TeaScriptEvent } from "./tea-events.js";
 import { TeaUtil, TeaView } from "./tea-view.js";
@@ -171,6 +173,7 @@ class TeaRunner {
   // callbacks — the runtime owns it; the capability objects never see it.
   #handledNames: string[] = [];
   #timer: FrameTimer | undefined;
+  #score = new Score();
 
   constructor(options: TeaRunOptions) {
     this.#options = options;
@@ -211,6 +214,9 @@ class TeaRunner {
       for (let frame = 0; frame < this.#options.frames; frame++) {
         this.#runFrame(frame);
       }
+      for (const [file, bytes] of soundFiles(this.#score.voices(), { frames: this.#options.frames, fps: this.#options.fps })) {
+        this.#recorder.addFile(file, bytes);
+      }
     } catch (error) {
       this.#recorder.recordError(error);
     }
@@ -224,10 +230,22 @@ class TeaRunner {
     const tick = (): void => void this.#fold({ type: "tick", frame });
     if (this.#timer === undefined) tick();
     else this.#timer.update(frame, tick);
+    this.#collectSound(frame);
     const draw = (): unknown => this.#options.module.draw(this.#view, this.#model, this.#params);
     assertSync(this.#timer === undefined ? draw() : this.#timer.draw(frame, draw), "draw");
     this.#surface.finishFrame();
     this.#recorder.captureIfNeeded(frame);
+  }
+
+  // After frame N's fold: the voices the model holds join the score.
+  #collectSound(frame: number): void {
+    const sound = this.#options.module.sound;
+    if (sound === undefined) return;
+    for (const voice of this.#score.add(sound(this.#model, this.#params), frame)) {
+      const pitch = voice.kind === "noise" ? "" : ` ${voice.freq} Hz`;
+      const when = voice.at === frame ? "" : ` at frame ${voice.at}`;
+      this.#recorder.recordLog({ level: "log", message: `sound ${voice.kind} "${voice.id}"${pitch}${when}` });
+    }
   }
 
   // snapshot forces a capture (no fold); param folds and keeps its dedicated

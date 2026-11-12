@@ -1,0 +1,21 @@
+slug: guitar-strings
+title: "Guitar strings: the first sound example"
+created: 2026-11-12
+model: opus-5.5
+driver: opus-5.5
+cycles: 2
+tier: tea
+harness-commit: 70fcfacb
+frames: 300
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Six strings to pluck or strum; each pluck is one voice from sound(model). Written by the driver as the sound plan's example; sound.wav and sound.png come with every run.
+self-report-summary: >
+  Written by the driver, not an agent exercise.
+features-exercised:
+  - sound export (pluck voices)
+  - pointer drag
+  - select param in the drawing

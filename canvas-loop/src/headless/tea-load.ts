@@ -1,5 +1,5 @@
 import { CliError } from "./errors.js";
-import type { CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+import type { Voice, CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
 
 /**
  * A TEA sketch module after validation; the model is opaque to the runtime.
@@ -14,6 +14,7 @@ export interface LoadedTeaModule {
   init(u: Util<ParamsDecl>): unknown;
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+  sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -134,5 +135,6 @@ export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
   if (init === undefined || update === undefined || draw === undefined) {
     throw new CliError({ detail: "TEA sketch must export init(u), update(model, msg, u), and draw(v, model, p)" });
   }
-  return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw };
+  const sound = readFn<NonNullable<LoadedTeaModule["sound"]>>(mod, "sound");
+  return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw, ...(sound === undefined ? {} : { sound }) };
 }

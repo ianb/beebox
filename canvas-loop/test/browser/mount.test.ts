@@ -218,3 +218,21 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
   assert.ok(thrown.message.includes("tick"), "the error names the unhandled msg type");
   teardown();
 });
+
+test("mountSketch keeps a module's sound export, so its runtime collects voices", () => {
+  const mount = new FakeElement("div");
+  const { module } = makeModule();
+  let calls = 0;
+  const teardown = mountSketch(asHTMLElement(mount), {
+    module: {
+      ...module,
+      sound: () => {
+        calls += 1;
+        return [];
+      },
+    },
+  });
+  runFrames(3);
+  assert.ok(calls > 0, "sound() ran after ticks");
+  teardown();
+});

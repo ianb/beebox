@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Sound.** An optional `sound(model, p)` export returns voices (`pluck`,
+  `tone`, `noise`), each one sound with an id and a start frame. Headless
+  runs write `sound.wav` and a waveform `sound.png`; browser figures play the
+  same samples after the first click. See TEA.md, "Sound", and the
+  `guitar-strings` gallery entry.
+
 - **Breaking: a style on every call; TEA is the only sketch form** (see
   [TEA.md](./TEA.md#drawing)). Each shape call takes a `Style` as its last
   argument: `{ fill, stroke, weight, brush, gesture, blend, erase }`, plain

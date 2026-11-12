@@ -6,6 +6,7 @@ import type { SKRSContext2D } from "@napi-rs/canvas";
 // module, can name them.
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
 import type { Paper } from "./brush/types.js";
+import type { Voice } from "./sound/voice.js";
 import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
@@ -29,6 +30,7 @@ export type { BrushName } from "./brush/presets.js";
 export type { AtOptions, BrushPreset, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
+export type { NoiseVoice, PluckVoice, ToneVoice, Voice } from "./sound/voice.js";
 
 export type { TextStyle } from "./paint.js";
 /** Pointer shapes for `cursor`. */
@@ -246,4 +248,10 @@ export interface TeaModule<D extends ParamsDecl, M> {
   init(u: Util<D>): M;
   update(model: DeepReadonly<M>, msg: Msg, u: Util<D>): M;
   draw(v: View, model: DeepReadonly<M>, p: ParamValues<D>): void;
+  /**
+   * Optional: the sounds the model holds, as voices. Called after every tick.
+   * A voice is one occurrence (a new id for each new sound), starting at its
+   * `at` frame, which may not be earlier than the frame that first returns it.
+   */
+  sound?(model: DeepReadonly<M>, p: ParamValues<D>): readonly Voice[];
 }

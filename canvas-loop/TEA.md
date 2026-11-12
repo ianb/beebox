@@ -238,6 +238,37 @@ keys.
   [`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) draws a full
   scene without `ctx`.
 
+## Sound
+
+An optional `sound(model, p)` export returns the sounds the model holds, as
+voices. The runtime calls it after every tick, in both runtimes.
+
+```ts
+export function sound(model: DeepReadonly<Model>): readonly Voice[] {
+  return model.plucks.map((p) => ({ id: `pluck-${p.n}`, at: p.frame, kind: "pluck", freq: p.freq }));
+}
+```
+
+- A voice is one sound. Give each new sound a new id (keep a counter in the
+  model). Returning a voice again is harmless; returning its id with
+  different data is an error. Dropping it from the list does not stop it.
+- `at` is the frame it starts on. A new voice may not start before the frame
+  that first returns it, so a longer run never changes earlier audio. Events
+  for frame N run before its tick, so a pluck from a click on frame N starts at
+  `model.frame + 1` when the model keeps the last tick's frame.
+- Kinds: `pluck` (`freq`, `decay` seconds, `brightness` 0..1), `tone`
+  (`freq`, `duration`, `wave` sine/triangle/square), `noise` (`duration`).
+  All take `gain` 0..1 (default 0.5). Voices add up and clip at ±1; keep the
+  gains of overlapping voices low. At most 32 new voices a frame.
+- Headless runs write `sound.wav` and `sound.png` (the waveform, a red mark at
+  each voice start, a grey line each second) beside the frames, and a
+  transcript line per voice. The same voice renders the same samples in both
+  runtimes.
+- In a browser, sound starts after the first click or key press on the
+  figure; that input's own sound plays. Restart stops sounding voices.
+- Replay from the start is exact. Seeking to a frame is not supported yet.
+- Example: `canvas-loop/src/gallery/guitar-strings/`.
+
 ## Params reference
 
 `params` is a record of declarations. Four types:
