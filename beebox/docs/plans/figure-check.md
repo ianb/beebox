@@ -1,11 +1,11 @@
 ---
-title: "Figure verification: teach the box browser, expose replay and the log"
+title: "Figure verification: bbx figure run, the figure log, and teaching"
 status: draft
 workstream: canvas-brushes
 issues:
   - ../../../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md
 ---
-# Figure verification: teach the box browser, expose replay and the log
+# Figure verification: `bbx figure run`, the figure log, and teaching
 
 A box agent rebuilt the courseware box's hardware scale as a canvas-loop
 figure and filed feedback (`_config/feedback/Canvas_Loop_Figure_In_A_Box.doc.card`
@@ -26,6 +26,29 @@ tool; the issue's other items stay open, so finish amends it rather than
 closing it),
 `issues/code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md`
 (untouched). Searched `issues/` for "figure" and "canvas-loop".
+
+## Decision log
+
+- **2026-11-12, boxholder:** "you shouldn't need the browser at all with
+  canvas-loop, right?" and then "yes, that's fine as a new dependency". The
+  browser-replay design below (Tracks A's `script` option and B) is replaced
+  by `bbx figure run`, a wrapper over canvas-loop's headless runner, shipped
+  with beebox: canvas-loop as a devDependency inlined into the CLI bundle,
+  `@napi-rs/canvas` and `perfect-freehand` as beebox dependencies, canvas-loop
+  in the deploy sync list, `bin/bbx` rebuilding when canvas-loop source
+  changes. The run happens in a child process (`figure run-one`) under a
+  timeout. `teaRun` gained validated `initialParams` so the card's param
+  defaults and `--params` apply as in the browser. The browser `script`
+  replay was removed again before landing. Track A's console log, the
+  narrow-column fit and `keepInside` stay, as do Tracks C, D (rewritten for
+  `bbx figure run`) and E.
+- **2026-11-12, second feedback card** (`Code_Reuse_Across_Figures_And_Views`
+  in the courseware box): figure entries and views already bundle relative
+  imports and JSON (verified with `bbx figure run`); the gap is guidance.
+  Track D adds "Sharing code and data between figures and views" (`src/lib/`,
+  JSON imports, purity) and a box-docs copy of canvas-loop's TEA.md and
+  BRUSHES.md (`canvas-loop.md`, `canvas-loop-brushes.md`), whose
+  sibling-only import rule is the checkout's lint.
 
 ## Design
 

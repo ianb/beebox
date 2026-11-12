@@ -1,10 +1,11 @@
 // The browser runtime's data types: what it is built from and what it reports.
-import type { ControlBox, Voice } from "../core/tea.js";
-import type { TeaScriptEvent } from "../headless/tea-events.js";
-import type { PlaygroundModule } from "./sketch-types.js";
+import type { ControlBox, Voice } from "../../core/tea.js";
+import type { TeaScriptEvent } from "../../headless/tea-events.js";
+import type { PlaygroundModule } from "../sketch-types.js";
 
-/** A partial override of declared param defaults, applied at construct/restart. */
-export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
+import type { ParamOverrides } from "../param-validate.js";
+
+export type { ParamOverrides };
 
 /** A frame-tagged log line surfaced to the transcript panel. */
 export interface RuntimeLog {
@@ -47,11 +48,4 @@ export interface RuntimeDeps {
   onError?: (error: unknown) => void;
   /** After each draw: where `v.control` placed param inputs this frame. */
   onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
-  /**
-   * Replay these parsed events at once, as a headless run does: frames 0 through
-   * `frame` (default: the last event's frame), each frame's events then its tick
-   * then a draw. Each scripted input logs its verdict. Replayed events are not
-   * streamed to `onEvent`. The runtime is then paused.
-   */
-  script?: { events: readonly TeaScriptEvent[]; frame?: number };
 }

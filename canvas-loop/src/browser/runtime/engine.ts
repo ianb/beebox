@@ -13,14 +13,13 @@ import { Score } from "../../core/sound/voice.js";
 import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
-import { UnhandledFold, describeInput, verdict } from "../../core/engagement.js";
 import { BrowserView } from "./browser-view.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
-import type { ParamOverrides, RuntimeDeps } from "../runtime-types.js";
-import type { EmittedEvent, RuntimeLog } from "../runtime-types.js";
+import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
+import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
 
-export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "../runtime-types.js";
+export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -104,43 +103,7 @@ export class Runtime {
     });
     this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
-    if (deps.script === undefined) this.#draw();
-    else this.#replay(deps.script);
-  }
-
-  /** See `RuntimeDeps.script`. */
-  #replay(script: { events: readonly TeaScriptEvent[]; frame?: number }): void {
-    const last = script.frame ?? Math.max(0, ...script.events.map((event) => event.frame));
-    const fold = new UnhandledFold();
-    for (let frame = 0; frame <= last; frame += 1) {
-      this.#frame = frame;
-      for (const event of script.events) if (event.frame === frame) this.#replayEvent(event, fold);
-      this.#fold({ type: "tick", frame });
-      this.#collectSound();
-      this.#draw();
-    }
-    for (const message of fold.summary()) this.#recordLog([message]);
-    this.#frame = last + 1;
-    this.#paused = true;
-    this.#onFrame(this.#frame);
-  }
-
-  #replayEvent(event: TeaScriptEvent, fold: UnhandledFold): void {
-    if (event.type === "snapshot") {
-      this.#recordLog([`snapshot${event.label === undefined ? "" : ` ${event.label}`}`]);
-      return;
-    }
-    this.#log.push(event);
-    if (event.type === "param") {
-      this.#fold(this.#toMsg(event));
-      this.#recordLog([`param: ${event.name} = ${JSON.stringify(event.value)}`]);
-      return;
-    }
-    this.#handledNames = [];
-    const msg = this.#toMsg(event);
-    const changed = this.#fold(msg);
-    const text = verdict({ handled: this.#handledNames, changed });
-    if (msg.type !== "param" && msg.type !== "tick" && fold.show(msg.type, text)) this.#recordLog([`${describeInput(msg)} → ${text}`]);
+    this.#draw();
   }
 
   // ── lifecycle ────────────────────────────────────────────────────

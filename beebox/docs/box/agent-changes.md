@@ -11,6 +11,7 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-12 (8942fdb9e): `bbx figure run <card>` renders a canvas-loop figure headlessly: transcript and frames. Shared figure and view code goes in `src/lib/`. See `card-figure.md`.
 - 2026-11-10 (f92ece238): `bbx notify --target` takes `chat:new:<place directory>` (a new chat there) and `place:<place directory>` (its latest chat); the place needs its landmark card. See **REACHING_THE_BOXHOLDER**.
 - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemistry. A note saying math is unsupported is out of date. See `markdown.md`.
 - 2026-11-09 (7e42666b9): `bbx view check` now runs effects and renders each card type, so views it passed before can fail. Views declare `checkStates`; `bbx view states <slug>` lists them. See `views.md`.

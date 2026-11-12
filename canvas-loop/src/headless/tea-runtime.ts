@@ -7,6 +7,7 @@ import { Surface } from "./surface.js";
 import { Score } from "../core/sound/voice.js";
 import { soundFiles } from "./recorder/sound.js";
 import { UnhandledFold, describeInput, verdict } from "../core/engagement.js";
+import { checkParam } from "../browser/param-validate.js";
 import type { InteractionMsg } from "../core/engagement.js";
 import { bucketTeaByFrame } from "./tea-events.js";
 import type { TeaScriptEvent } from "./tea-events.js";
@@ -35,6 +36,8 @@ export interface TeaRunOptions {
   outline?: boolean;
   events: readonly TeaScriptEvent[];
   eventsPath: string | undefined;
+  /** Start params other than the declared defaults (checked against the declaration). */
+  initialParams?: Readonly<Record<string, number | boolean | string>>;
 }
 
 // Reflection over an opaque sketch Model: its property values are genuinely
@@ -66,11 +69,20 @@ function assertSync(result: unknown, where: string): void {
   }
 }
 
-function initialParams(decl: ParamsDecl): ParamValues<ParamsDecl> {
+/** Declared defaults, with `overrides` applied; an unknown name or a value the declaration rejects (or would clamp) is an error. */
+function initialParams(decl: ParamsDecl, overrides: Readonly<Record<string, number | boolean | string>> | undefined): ParamValues<ParamsDecl> {
   const values: Record<string, number | boolean | string> = {};
   for (const [name, param] of Object.entries(decl)) {
     if (param.type === "trigger") continue;
     values[name] = param.default;
+  }
+  for (const [name, value] of Object.entries(overrides ?? {})) {
+    const param = decl[name];
+    if (param === undefined) throw new SketchUsageError({ detail: `initial param "${name}": the sketch declares no such param` });
+    const check = checkParam(param, value);
+    if (!check.ok) throw new SketchUsageError({ detail: `initial param "${name}": ${check.reason}` });
+    if (check.note !== undefined) throw new SketchUsageError({ detail: `initial param "${name}": ${String(value)} is outside the declared range` });
+    values[name] = check.value;
   }
   return Object.freeze(values);
 }
@@ -159,7 +171,7 @@ class TeaRunner {
 
   constructor(options: TeaRunOptions) {
     this.#options = options;
-    this.#params = initialParams(options.module.params);
+    this.#params = initialParams(options.module.params, options.initialParams);
     this.#recorder = new FrameRecorder({
       frames: options.frames,
       every: options.every,

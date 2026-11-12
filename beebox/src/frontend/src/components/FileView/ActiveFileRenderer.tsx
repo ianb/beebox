@@ -49,7 +49,8 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
     );
   }
   return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} workspacePdf={props.workspacePdf}
-    viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState} />;
+    viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState}
+    {...(reportActivity !== undefined ? { reportActivity } : {})} />;
 }
 
 /** Registry marker; FileView renders the stable bound renderer directly. */

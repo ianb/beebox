@@ -520,13 +520,15 @@ RSYNC_OPTS=(-az --delete
 # Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
 # members linked via `workspace:*` deps, so they must all be present alongside
 # beebox on the server for the root `pnpm install` to resolve.
-# personal-vibe-check and tap-check are devDeps of beebox (the server
-# install is non-prod because the runtime uses tsx, itself a devDep).
+# personal-vibe-check, tap-check and canvas-loop are devDeps of beebox (the
+# server install is non-prod because the runtime uses tsx, itself a devDep).
+# canvas-loop is also inlined into dist/cli.mjs (`bbx figure run`); syncing it
+# keeps the frozen workspace install resolvable and the tsx fallback working.
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
 # The agent-browser package itself is a beebox dependency (the box browser,
 # docs/plans/shared-browser.md), so it installs with beebox.
-for repo in personal-vibe-check tap-check beebox; do
+for repo in personal-vibe-check tap-check canvas-loop beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
     # Fatal, not skipped: beebox's frozen install needs every workspace dep,

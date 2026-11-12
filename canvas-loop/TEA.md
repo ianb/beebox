@@ -372,17 +372,11 @@ attach). Its opts: `module` (validated TEA module object), `seed?`,
 module declares params), `transport?` (play/pause/restart; default off —
 embeds are frameless), `initialParams?` (validated against the declaration;
 unknown names or mismatched types warn and fall back to defaults),
-`onParamsChange?`, `onEvent?`, `script?`. It injects no styles — hosts import
+`onParamsChange?`, `onEvent?`. It injects no styles — hosts import
 `@ianbicking/canvas-loop/src/browser/figure.css` (CSP-clean by construction).
 
 A figure's log (`v.log`, style notes, overlap warnings) goes to the browser
-console as `[canvas-loop] frame N: …`. `script: { events, frame? }` replays an
-events file (its parsed JSON, the same format as headless runs) at mount:
-frames 0 through `frame` (default: the last event's frame) run at once, as a
-headless run does, each scripted input logs its verdict to the console
-(repeated `(unhandled)` lines fold into one count per input type, also in the
-headless transcript), and the figure is left paused there. Replayed events
-are not streamed to `onEvent`. The figure shrinks to fit a narrow column; the
+console as `[canvas-loop] frame N: …`. The figure shrinks to fit a narrow column; the
 canvas keeps its aspect ratio and pointer input stays accurate.
 
 ## The discipline (one list)

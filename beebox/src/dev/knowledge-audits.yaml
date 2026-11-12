@@ -1361,6 +1361,34 @@ tests:
       factory's `cl` argument. A pass names the box-can't-resolve-the-package
       reason, not just the syntax.
 
+  - id: figure-canvas-loop-check
+    prompt: "You just built a canvas-loop figure card. How do you check that it works and that clicks on it do what you meant, from inside the box?"
+    expected_level: knows_directly
+    watch_for: "Runs bbx figure run <card> with an <entry stem>-events.json beside the entry, then reads _tmp/figure-run/…/transcript.md (verdict lines, warnings) and the frame PNGs; does NOT reach for canvas-loop's pnpm CLI or the dev checkout"
+    correct_contains: ["bbx figure run"]
+    tags: [cards, schemas, figure]
+
+  - id: figure-canvas-loop-api-docs
+    prompt: "Writing a canvas-loop figure, where do you look up how to draw text with a style, or what options v.text takes?"
+    expected_level: knows_directly
+    watch_for: "Names the box doc canvas-loop.md (shipped with the engine docs), not canvas-loop's source checkout"
+    correct_contains: ["canvas-loop.md"]
+    tags: [cards, schemas, figure]
+
+  - id: figure-shared-code
+    prompt: "A second canvas-loop figure needs the atom-drawing helper and element data a first figure already has. Where do they go so both figures, and a view, use one copy?"
+    expected_level: knows_directly
+    watch_for: "src/lib/ at the box root, imported by relative path from each figure entry and view; data as a JSON file imported directly; the shared code must stay pure (no module state, Math.random, Date). Does not copy the helper"
+    correct_contains: ["src/lib"]
+    tags: [cards, schemas, figure]
+
+  - id: figure-activity
+    prompt: "A learner is working a canvas-loop figure open beside the chat. Will you learn what they did, and what decides how it is described?"
+    expected_level: knows_directly
+    watch_for: "Yes, as explored activity: param changes and inputs the sketch acknowledged with u.handled(name); unacknowledged inputs are not reported"
+    correct_contains: ["u.handled"]
+    tags: [cards, schemas, figure]
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run

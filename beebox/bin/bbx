@@ -100,6 +100,9 @@ elif [ "$PROJECT_DIR/package.json" -nt "$BUNDLE" ]; then
   needs_build=1
 elif [ -n "$(find "$PROJECT_DIR/src" -path "$PROJECT_DIR/src/frontend" -prune -o -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)" ]; then
   needs_build=1
+# canvas-loop is inlined into the bundle (`bbx figure run`), so its source counts too.
+elif [ -d "$PROJECT_DIR/../canvas-loop/src" ] && [ -n "$(find "$PROJECT_DIR/../canvas-loop/src" -path "*/src/gallery" -prune -o -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)" ]; then
+  needs_build=1
 fi
 
 if [ "$needs_build" = 1 ]; then

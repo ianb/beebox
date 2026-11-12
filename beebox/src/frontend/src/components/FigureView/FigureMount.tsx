@@ -12,6 +12,8 @@
 import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../../hooks/useViewFileHelpers";
+import type { FigureParamDecl } from "../../lib/figure-params";
+import { wrapCanvasLoopLib, type FigureActivityReporter } from "../../lib/figure-canvas-loop";
 
 export type FigureRuntime = "p5js" | "three" | "d3" | "canvas-loop";
 
@@ -54,7 +56,7 @@ export type FigureSketch = (
  * `optimizeDeps`) plus its stylesheet (real CSS import, not a runtime <style>,
  * so the prod CSP's style-src stays clean).
  */
-async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
+async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness): Promise<unknown> {
   if (runtime === "p5js") {
     const mod = await import("p5");
     return mod.default;
@@ -64,9 +66,15 @@ async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   }
   if (runtime === "canvas-loop") {
     await import("@ianbicking/canvas-loop/browser/figure.css");
-    return import("@ianbicking/canvas-loop/browser");
+    return wrapCanvasLoopLib(await import("@ianbicking/canvas-loop/browser"), harness);
   }
   return import("d3");
+}
+
+/** What the canvas-loop `mountSketch` wrapper adds for this figure (`lib/figure-canvas-loop.ts`). */
+interface CanvasLoopHarness {
+  declared: readonly FigureParamDecl[];
+  reportActivity?: FigureActivityReporter;
 }
 
 interface FigureMountProps {
@@ -74,9 +82,13 @@ interface FigureMountProps {
   sketch: FigureSketch;
   figure: FigureContext;
   onError: (message: string) => void;
+  /** The card's declared `params:`, checked against a canvas-loop module's own. Default none. */
+  declaredParams?: readonly FigureParamDecl[];
+  /** Companion-pane activity for this card; absent elsewhere. */
+  reportActivity?: FigureActivityReporter;
 }
 
-export function FigureMount({ runtime, sketch, figure, onError }: FigureMountProps) {
+export function FigureMount({ runtime, sketch, figure, onError, declaredParams, reportActivity }: FigureMountProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   // Hold the latest figure context in a ref so the mount effect can read it at
   // mount time without taking it as a dependency — rebuilding the context object
@@ -87,6 +99,13 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
   useEffect(() => {
     figureRef.current = figure;
   }, [figure]);
+  // Same pattern for the mount-time harness inputs: a new reporter or param
+  // list identity must not remount the sketch. The reporter is called through
+  // the ref, so a re-bound reporter takes effect without a remount.
+  const harnessRef = useRef({ declaredParams, reportActivity });
+  useEffect(() => {
+    harnessRef.current = { declaredParams, reportActivity };
+  }, [declaredParams, reportActivity]);
 
   useEffect(() => {
     const el = mountRef.current;
@@ -101,7 +120,11 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
 
     void (async () => {
       try {
-        const lib = await loadRuntimeLib(runtime);
+        const { declaredParams: declared, reportActivity: reporter } = harnessRef.current;
+        const lib = await loadRuntimeLib(runtime, {
+          declared: declared ?? [],
+          ...(reporter !== undefined ? { reportActivity: (kind, detail) => { harnessRef.current.reportActivity?.(kind, detail); } } : {}),
+        });
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
         // Legacy backstop: an <svg> without a viewBox *crops* instead of

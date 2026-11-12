@@ -19,7 +19,7 @@ import { isMarkdownPath } from "../../../file-view-data";
 import type { SidecarTab } from "../../sidecar-tabs";
 import type { PaneId } from "../state-types.js";
 import type { AddSelectionInput } from "../../../../lib/selection/position";
-import type { ActivityKind } from "@core/chat/card-activity";
+import { bindCardActivity, type CardActivityReport } from "../../InteractiveChat-card-hooks";
 import { withoutFragment } from "../../../../lib/view-url";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
@@ -27,10 +27,12 @@ import { IntentionStrip } from "../../../intention/IntentionStrip";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
-  reportActivity: (kind: ActivityKind, detail?: string) => void;
+  /** Reports by activity source; each card binds it to its own (`bindCardActivity`). */
+  reportActivity: CardActivityReport;
 }
 
-function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
+function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity: reportBySource }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
+  const reportActivity = bindCardActivity(reportBySource, tab.target);
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
   const { boxSlug } = useParams({ strict: false });

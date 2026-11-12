@@ -19,7 +19,8 @@
 // CLI, which loads dist/exports/* and dist/view-widgets/* at runtime. When
 // only cli.mjs was renamed, `view check` under that overlap failed on a
 // partly written export.
-import { build } from "esbuild";
+import { build, type Plugin } from "esbuild";
+import { createRequire } from "node:module";
 import { buildPublicationWorker } from "./pub-worker.mjs";
 import { buildPluginBundles } from "./plugins.ts";
 import { CLI_CHUNK_PATTERN, prunableChunks, recordBuild, stagingOrder } from "./cli-chunks.ts";
@@ -29,6 +30,14 @@ import { dirname, join, relative } from "node:path";
 const root = join(import.meta.dirname, "..", "..", "..", "..");
 const distDir = join(root, "dist");
 const tmpDir = join(distDir, `.build-${process.pid}`);
+
+const requireFromRoot = createRequire(join(root, "package.json"));
+const inlineCanvasLoop: Plugin = {
+  name: "inline-canvas-loop",
+  setup(plugin) {
+    plugin.onResolve({ filter: /^@ianbicking\/canvas-loop(\/|$)/ }, (args) => ({ path: requireFromRoot.resolve(args.path) }));
+  },
+};
 
 const t = process.hrtime.bigint();
 await build({
@@ -48,6 +57,10 @@ await build({
   format: "esm",
   target: "node22",
   packages: "external",
+  // canvas-loop is a private workspace package that exports TypeScript
+  // source, so it cannot stay a bare import in an installed package: inline
+  // it (its own npm dependencies stay external, declared by beebox).
+  plugins: [inlineCanvasLoop],
   sourcemap: true,
   logLevel: "warning",
 });

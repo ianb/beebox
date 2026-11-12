@@ -5,11 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
-- **Figures: console log, replay, narrow columns, `keepInside`.** A figure's
-  log goes to the browser console (`[canvas-loop] frame N: …`) instead of
-  being dropped. `mountSketch({ script: { events, frame? } })` replays an
-  events file at mount and pauses; `parseTeaEvents` is exported from
-  `./browser`. Figures shrink to fit a narrow column (they overflowed at
+- **Figures: console log, narrow columns, `keepInside`, initial params.** A
+  figure's log goes to the browser console (`[canvas-loop] frame N: …`)
+  instead of being dropped. `teaRun` takes `initialParams` (checked against
+  the declaration; an unknown name or bad value is an error). Figures shrink to fit a narrow column (they overflowed at
   phone width). Text takes `keepInside: true`: placed as usual, then moved
   back inside the canvas when it would cross an edge. Repeated `(unhandled)`
   transcript lines fold into one count per input type.

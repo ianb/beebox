@@ -120,6 +120,7 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@earendil-works/pi-ai": "1.4.0",
+    "@ianbicking/canvas-loop": "workspace:*",
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@ianbicking/tap-check": "workspace:*",
     "@types/dagre": "^0.7.54",
@@ -154,6 +155,7 @@
     "@googleworkspace/cli": "0.22.5",
     "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@markdoc/markdoc": "^0.5.7",
+    "@napi-rs/canvas": "1.0.2",
     "@openai/codex": "0.164.0",
     "@openai/codex-sdk": "0.164.0",
     "@orama/orama": "3.1.18",
@@ -184,6 +186,7 @@
     "ky": "^1.14.3",
     "markdown-it-footnote": "4.0.0",
     "markdownlint": "^0.40.0",
+    "perfect-freehand": "1.2.3",
     "proper-lockfile": "^4.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

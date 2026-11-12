@@ -7,11 +7,13 @@
 // Keeping one `checkParam` means a number is finiteness-checked and clamped to
 // its declared [min, max] the same way no matter which door a value comes in.
 import type { ParamDecl, ParamsDecl, ParamValues } from "../core/tea.js";
-import type { ParamOverrides } from "./runtime-types.js";
 
 /** Outcome of checking one value against its declaration. `note` flags an
  * accepted-but-adjusted value (a clamped number) so callers can warn. */
-type ParamCheck =
+/** A partial override of declared param defaults, applied at construct/restart. */
+export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
+
+export type ParamCheck =
   | { ok: true; value: number | boolean | string; note?: string }
   | { ok: false; reason: string };
 
@@ -20,7 +22,7 @@ type ParamCheck =
  * finite (NaN/±Infinity reject) and are clamped into [min, max]; booleans and
  * selects must match their declared shape; triggers never take a value.
  */
-function checkParam(param: ParamDecl, value: number | boolean | string): ParamCheck {
+export function checkParam(param: ParamDecl, value: number | boolean | string): ParamCheck {
   switch (param.type) {
     case "number": {
       if (typeof value !== "number") return { ok: false, reason: `${JSON.stringify(value)} is not a number` };

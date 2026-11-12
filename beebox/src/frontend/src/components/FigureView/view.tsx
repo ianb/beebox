@@ -41,7 +41,7 @@ function parseRuntime(value: unknown): FigureRuntime | null {
 }
 
 
-export function FigureView({ data, onNavigate, params, mode, caption }: RendererProps) {
+export function FigureView({ data, onNavigate, params, mode, caption, reportActivity }: RendererProps) {
   const apiBase = getApiBase();
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
@@ -121,7 +121,8 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
 
   const figureEl = (
     <ViewErrorBoundary onRetry={() => void loadModule()}>
-      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
+      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} declaredParams={declared}
+        {...(reportActivity !== undefined ? { reportActivity } : {})} />
     </ViewErrorBoundary>
   );
 

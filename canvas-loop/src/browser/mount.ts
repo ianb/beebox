@@ -13,7 +13,6 @@
 //   import "@ianbicking/canvas-loop/browser/figure.css";
 import type { CanvasSize, ControlBox } from "../core/tea.js";
 import { toTeaModule } from "../headless/tea-load.js";
-import { parseTeaEvents, type TeaScriptEvent } from "../headless/tea-events.js";
 import { buildControls, ControlOverlay } from "./controls.js";
 import { sanitizeInitialParams } from "./param-validate.js";
 import { Runtime, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
@@ -22,8 +21,6 @@ import type { PlaygroundModule } from "./sketch-types.js";
 // Re-exported so `./browser` consumers can type an `onEvent` handler that reads
 // the engagement verdict fields.
 export type { EmittedEvent } from "./runtime/engine.js";
-export { parseTeaEvents };
-export type { TeaScriptEvent };
 
 // Re-exported here so the public `./browser` subpath keeps exporting it (the
 // definition lives in param-validate.ts, shared with Runtime.setParam).
@@ -62,8 +59,6 @@ export interface AttachSketchOptions {
   onError?: (error: unknown) => void;
   /** After each draw: where `v.control` placed param inputs this frame. */
   onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
-  /** Replay parsed events at mount, then pause (see `RuntimeDeps.script`). */
-  script?: { events: readonly TeaScriptEvent[]; frame?: number };
 }
 
 export interface AttachedSketch {
@@ -97,12 +92,11 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     onFrame: opts.onFrame,
     // The log (`v.log`, style notes, overlap warnings, replay verdicts) goes to the console, frame-tagged.
     onLog: (entry) => console.log(`[canvas-loop] frame ${entry.frame}: ${entry.message}`),
-    ...(opts.script !== undefined ? { script: opts.script } : {}),
     ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
     ...(opts.onPlace !== undefined ? { onPlace: opts.onPlace } : {}),
   });
-  runtime.setPaused(opts.paused || opts.script !== undefined);
+  runtime.setPaused(opts.paused);
   // Wire input BEFORE starting the loop: if listener setup throws (hostile or
   // partial DOM shims), no rAF loop is left running with no teardown returned.
   const detachInput = wireInput(canvas, runtime);
@@ -151,13 +145,6 @@ export interface MountSketchOptions {
   onEvent?: (entry: EmittedEvent) => void;
   /** Called once if a frame throws; the loop stops. Default: `console.error`. */
   onError?: (error: unknown) => void;
-  /**
-   * Replay an events file (its parsed JSON, the same format as headless runs
-   * take) at mount: frames 0 through `frame` (default: the last event's frame)
-   * run at once, each scripted input logs its verdict to the console, and the
-   * figure is left paused there. Malformed events throw, naming the event.
-   */
-  script?: { events: unknown; frame?: number };
 }
 
 /**
@@ -211,11 +198,9 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     },
   });
   // Raw overrides — attachSketch is the single validation point (no duplicate here).
-  const script = opts.script === undefined ? undefined : { events: parseTeaEvents(opts.script.events, decl), ...(opts.script.frame !== undefined ? { frame: opts.script.frame } : {}) };
   attached = attachSketch(canvas, {
     module,
     seed,
-    ...(script !== undefined ? { script } : {}),
     paused: !(opts.autoplay ?? true),
     ...(opts.initialParams !== undefined ? { initialParams: opts.initialParams } : {}),
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
