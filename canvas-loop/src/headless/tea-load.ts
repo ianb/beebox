@@ -135,6 +135,9 @@ export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
   if (init === undefined || update === undefined || draw === undefined) {
     throw new CliError({ detail: "TEA sketch must export init(u), update(model, msg, u), and draw(v, model, p)" });
   }
+  if (mod["sound"] !== undefined && typeof mod["sound"] !== "function") {
+    throw new CliError({ detail: "the \"sound\" export must be a function sound(model, p) returning voices" });
+  }
   const sound = readFn<NonNullable<LoadedTeaModule["sound"]>>(mod, "sound");
   return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw, ...(sound === undefined ? {} : { sound }) };
 }

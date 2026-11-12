@@ -6,6 +6,7 @@ import type { Msg } from "../../src/core/tea.js";
 import type { Voice } from "../../src/core/sound/voice.js";
 import { teaRun } from "../../src/headless/tea-runtime.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
+import { toTeaModule } from "../../src/headless/tea-load.js";
 import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 interface Model {
@@ -60,4 +61,8 @@ test("a run with no sound writes no sound files", () => {
   const dir = tmpDir();
   teaRun(teaRunOptions({ ...module, sound: () => [] }, { outDir: dir, frames: 5 }));
   assert.throws(() => readFileSync(join(dir, "sound.wav")));
+});
+
+test("a sound export that is not a function is a loader error", () => {
+  assert.throws(() => toTeaModule({ init: () => ({}), update: (m: unknown) => m, draw: () => {}, sound: 42 }), /"sound" export must be a function/u);
 });

@@ -4,7 +4,7 @@
 // catch-up cannot drift. Browsers allow audio only after a user gesture:
 // `enable()` runs on the first pointer or key press, before that input is
 // dispatched, so its own sound plays. Voices before it are skipped.
-import { renderVoice } from "../../core/sound/synth.js";
+import { SAMPLE_RATE, renderVoice } from "../../core/sound/synth.js";
 import type { Voice } from "../../core/sound/voice.js";
 
 export class SoundPlayer {
@@ -30,8 +30,9 @@ export class SoundPlayer {
       this.#skipped = true;
       return;
     }
-    const samples = renderVoice(voice, context.sampleRate);
-    const buffer = context.createBuffer(1, samples.length, context.sampleRate);
+    // Rendered at the fixed rate the headless WAV uses; the browser resamples for the device.
+    const samples = renderVoice(voice, SAMPLE_RATE);
+    const buffer = context.createBuffer(1, samples.length, SAMPLE_RATE);
     buffer.copyToChannel(samples, 0);
     const source = context.createBufferSource();
     source.buffer = buffer;

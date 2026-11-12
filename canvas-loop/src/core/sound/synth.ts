@@ -23,7 +23,10 @@ function seedOf(text: string): number {
  * line; each pass averages neighbouring samples, so high partials fade first.
  * `brightness` smooths the first burst; `decay` sets the overall fade.
  */
-function pluck(voice: PluckVoice, sampleRate: number): Float32Array<ArrayBuffer> {
+function pluck(
+  voice: PluckVoice,
+  sampleRate: number,
+): Float32Array<ArrayBuffer> {
   const seconds = Math.min(voice.decay ?? 2, MAX_SECONDS);
   const out = new Float32Array(Math.ceil(seconds * sampleRate));
   const period = Math.max(2, Math.round(sampleRate / voice.freq));
@@ -78,7 +81,10 @@ function tone(voice: ToneVoice, sampleRate: number): Float32Array<ArrayBuffer> {
   return out;
 }
 
-function noise(voice: NoiseVoice, sampleRate: number): Float32Array<ArrayBuffer> {
+function noise(
+  voice: NoiseVoice,
+  sampleRate: number,
+): Float32Array<ArrayBuffer> {
   const length = Math.ceil(voice.duration * sampleRate);
   const out = new Float32Array(length);
   const random = new SeededRandom(seedOf(voice.id));
@@ -90,7 +96,10 @@ function noise(voice: NoiseVoice, sampleRate: number): Float32Array<ArrayBuffer>
 }
 
 /** One voice's samples, starting at its first sample. */
-export function renderVoice(voice: Voice, sampleRate: number): Float32Array<ArrayBuffer> {
+export function renderVoice(
+  voice: Voice,
+  sampleRate: number,
+): Float32Array<ArrayBuffer> {
   switch (voice.kind) {
     case "pluck":
       return pluck(voice, sampleRate);

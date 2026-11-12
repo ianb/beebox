@@ -41,6 +41,8 @@ export interface NoiseVoice extends VoiceBase {
 
 export type Voice = PluckVoice | ToneVoice | NoiseVoice;
 
+const WAVES: ReadonlySet<string> = new Set(["sine", "triangle", "square"]);
+
 /** Longest sound a voice can make, in seconds. */
 export const MAX_SECONDS = 10;
 
@@ -59,9 +61,9 @@ function check(ok: boolean, problem: { where: string; detail: string }): void {
 
 function inRange(
   value: number | undefined,
-  range: { min: number; max: number; exclusiveMin?: boolean },
+  range: { min: number; max: number; exclusiveMin?: boolean; required?: boolean },
 ): boolean {
-  if (value === undefined) return true;
+  if (value === undefined) return range.required !== true;
   if (!Number.isFinite(value) || value > range.max) return false;
   return range.exclusiveMin === true ? value > range.min : value >= range.min;
 }
@@ -94,7 +96,12 @@ export function assertVoice(voice: Voice): void {
   });
   if (voice.kind === "noise") {
     check(
-      inRange(voice.duration, { min: 0, max: MAX_SECONDS, exclusiveMin: true }),
+      inRange(voice.duration, {
+        min: 0,
+        max: MAX_SECONDS,
+        exclusiveMin: true,
+        required: true,
+      }),
       {
         where,
         detail: `"duration" must be over 0 and at most ${MAX_SECONDS} seconds`,
@@ -102,13 +109,22 @@ export function assertVoice(voice: Voice): void {
     );
     return;
   }
-  check(inRange(voice.freq, { min: 20, max: 20_000 }), {
+  check(inRange(voice.freq, { min: 20, max: 20_000, required: true }), {
     where,
     detail: `"freq" must be 20..20000 Hz (got ${String(voice.freq)})`,
   });
   if (voice.kind === "tone") {
+    check(voice.wave === undefined || WAVES.has(voice.wave), {
+      where,
+      detail: `"wave" must be sine, triangle or square (got ${JSON.stringify(voice.wave)})`,
+    });
     check(
-      inRange(voice.duration, { min: 0, max: MAX_SECONDS, exclusiveMin: true }),
+      inRange(voice.duration, {
+        min: 0,
+        max: MAX_SECONDS,
+        exclusiveMin: true,
+        required: true,
+      }),
       {
         where,
         detail: `"duration" must be over 0 and at most ${MAX_SECONDS} seconds`,

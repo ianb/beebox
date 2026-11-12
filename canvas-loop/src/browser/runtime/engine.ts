@@ -268,7 +268,6 @@ export class Runtime {
     if (this.#paused) {
       if (this.#pending.length > 0) {
         this.#flushPending();
-        this.#collectSound();
         this.#draw();
       }
       return;

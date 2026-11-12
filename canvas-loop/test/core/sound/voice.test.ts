@@ -60,3 +60,11 @@ test("at most 32 new voices a frame", () => {
   }));
   assert.throws(() => new Score().add(many, 0), /33 new voices on frame 0/u);
 });
+
+test("required fields and the wave name are checked", () => {
+  // eslint-disable-next-line no-restricted-syntax -- deliberately wrong input: a voice missing required fields, as plain JavaScript could pass
+  const bad = (voice: object): Voice => voice as unknown as Voice;
+  assert.throws(() => assertVoice(bad({ id: "n", at: 0, kind: "noise" })), /"duration"/u);
+  assert.throws(() => assertVoice(bad({ id: "t", at: 0, kind: "tone", duration: 1 })), /"freq"/u);
+  assert.throws(() => assertVoice(bad({ id: "w", at: 0, kind: "tone", freq: 440, duration: 1, wave: "sawtooth" })), /"wave" must be sine, triangle or square/u);
+});
