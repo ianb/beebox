@@ -5,6 +5,8 @@
    pinned row's notch points at the chat (below, toward the composer, on the
    phone). Colors come from the card theme's tokens. */
 
+/* A theme whose surface sets its own `background-image` (Deck's weave)
+   restates the stub with its image, or the image takes these layers' sizes. */
 .bbx-card-surface:has([data-question-beside]) {
   --bbx-question-stub: 6.5rem;
   background:
@@ -23,7 +25,13 @@
 }
 
 [data-question-beside] {
-  --bbx-question-patch: color-mix(in srgb, var(--bbx-paper, #fff) 80%, #d9b26f);
+  /* A tan patch on light paper. On a dark paper (a theme that declares
+     `color-scheme: dark`) tan muddies, so the patch lifts the paper toward
+     the theme's pen instead. Text on the patch takes the card's ink. */
+  --bbx-question-patch: light-dark(
+    color-mix(in srgb, var(--bbx-paper, #fff) 80%, #d9b26f),
+    color-mix(in oklab, var(--bbx-paper) 82%, var(--bbx-pen))
+  );
   position: relative;
   background: var(--bbx-question-patch);
   border-radius: 18px;

@@ -285,6 +285,11 @@
 .bbx-interface-tab[data-card-theme="deck"] {
   background-image: url("./deck-weave.svg");
 }
+/* The question stub (question-beside.css) sizes the surface's layers for its
+   paper strip; the weave keeps its own tile and fills the card. */
+.bbx-card-surface[data-card-theme="deck"]:has([data-question-beside]) {
+  background: url("./deck-weave.svg") left top / 120px 120px repeat;
+}
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(
   #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
   #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill

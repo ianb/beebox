@@ -48,7 +48,8 @@ const palette = {
   success: {
     DEFAULT: "#4F9E5E",
     light: "#7BBC87",
-    dark: "#3C7F49",
+    // Text on success-100 (5:1) and warm-50.
+    dark: "#306B3C",
     50: "#EBF5ED",
     100: "#D6EADD",
   },

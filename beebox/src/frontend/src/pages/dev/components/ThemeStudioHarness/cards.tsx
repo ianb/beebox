@@ -30,6 +30,7 @@ import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";
 import { CheckboxField, SelectField } from "../../../../components/ui/fields/field";
 import { StudioFigure } from "./figure";
+import { QUESTION_PATH, QuestionCard } from "./question";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -183,6 +184,7 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     ["notes/Welcome table.doc.card", identity("Welcome table", "🪧")],
     [SETTINGS_PATH, identity("Settings", "⚙️")],
     ["notes/Volunteers.doc.card", identity("Volunteers", "🙋")],
+    [QUESTION_PATH, identity("Hall opening", "❓")],
   ]);
   return <div className="min-w-0 space-y-4">
     <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
@@ -192,6 +194,10 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"
       tabs={[tab(SETTINGS_PATH, { label: "Settings", pinned: false }), tab("notes/Volunteers.doc.card", { label: "Volunteers", pinned: false })]}>
       <SettingsCard theme={theme} />
+    </CompanionDesk>
+    <CompanionDesk id="bbx-studio-tabs-question" label="Question card" active={QUESTION_PATH} identities={identities} content="card"
+      tabs={[tab(QUESTION_PATH, { label: "Hall opening", pinned: false })]}>
+      <QuestionCard theme={theme} />
     </CompanionDesk>
     <CompanionDesk id="bbx-studio-tabs-file" label="Plain file" active={FILE_PATH} identities={identities} content="neutral"
       tabs={[tab(FILE_PATH, { label: "packing-list.txt", pinned: false })]}>
