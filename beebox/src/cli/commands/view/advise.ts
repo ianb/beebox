@@ -48,8 +48,18 @@ export function runAdvice(opts: { command: string; args: string[]; cwd: string; 
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-    child.on("error", (e) => { resolve(notChecked(e.message)); });
+    // An abort raises "error" before the child has exited; wait for "close"
+    // when it started, so the snapshot is not removed under a live child.
+    let spawnError: Error | undefined;
+    child.on("error", (e) => {
+      if (child.pid === undefined) resolve(notChecked(e.message));
+      else spawnError = e;
+    });
     child.on("close", (code, exitSignal) => {
+      if (spawnError !== undefined) {
+        resolve(notChecked(spawnError.message));
+        return;
+      }
       if (exitSignal === "SIGKILL") {
         resolve(notChecked(`timed out after ${String(timeoutMs / 1000)}s`));
         return;

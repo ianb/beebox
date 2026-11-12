@@ -178,10 +178,19 @@ function renderInChild(args: {
     child.stdout.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
     });
+    // An abort raises "error" before the child has exited. Resolve only on
+    // "close" when the child started, so the caller never removes the snapshot
+    // directory under a live child.
+    let spawnError: Error | undefined;
     child.on("error", (e) => {
-      resolve({ slug, ok: false, error: `could not run bbx view render-one: ${e.message}` });
+      if (child.pid === undefined) resolve({ slug, ok: false, error: `could not run bbx view render-one: ${e.message}` });
+      else spawnError = e;
     });
     child.on("close", (code, exitSignal) => {
+      if (spawnError !== undefined) {
+        resolve({ slug, ok: false, error: `could not run bbx view render-one: ${spawnError.message}` });
+        return;
+      }
       const partial = partialRemarks(stdout);
       const withNotes = partial.length > 0 ? { partial } : {};
       if (code === 0) {

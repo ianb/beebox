@@ -93,3 +93,32 @@ setInterval(() => {}, 1000);
   };
   t.check(await eventually(() => pids.every((pid) => !alive(pid)), { label: "the parser process exited" }), true);
 });
+
+// An abort (Ctrl-C on `bbx view check`) raises "error" before the child has
+// exited. `runAdvice` resolves only after the child is gone, so the caller can
+// remove the snapshot directory without a live child still reading it.
+void test("an aborted advise child has exited when runAdvice resolves", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "bbx-advise-abort-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const pidFile = join(dir, "pid");
+  const controller = new AbortController();
+  const outcome = runAdvice({
+    command: process.execPath,
+    args: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(process.pid)); setInterval(() => {}, 1000)`],
+    cwd: PKG, env: process.env, timeoutMs: 30_000, signal: controller.signal,
+  });
+  const pid = await eventually(async () => Number(await readFile(pidFile, "utf8")), { label: "the child wrote its pid" });
+  controller.abort();
+  const resolved = await outcome;
+  const alive = (() => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (e) {
+      // ESRCH: no such process. Anything else is a real failure.
+      if (e instanceof Error && "code" in e && e.code === "ESRCH") return false;
+      throw e;
+    }
+  })();
+  t.check({ resolved, alive }, { resolved: { advice: [], partial: ["advice not checked: The operation was aborted"] }, alive: false });
+});
