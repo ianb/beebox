@@ -21,7 +21,8 @@
  * Enter branch that only suppresses (preventDefault, a bare return).
  *
  * The ESTree rule sees no parentheses; this port steps over them
- * (`unwrap`, `parentOf`).
+ * (`unwrap`, `parentOf`). It has no eslint-scope either: `bindingsIn` gives
+ * the bindings eslint-scope would record for a scope node.
  */
 
 import type * as TS from "../../../lib/typescript/syntax.js";
@@ -183,12 +184,14 @@ class ImeEnter {
     return body.every((s) => {
       // A bare `return` (or `return true/false`) suppresses; `return submit()` acts.
       if (ts.isReturnStatement(s)) {
-        const value = s.expression;
+        const value = s.expression === undefined ? undefined : this.unwrap(s.expression);
         return value === undefined || value.kind === ts.SyntaxKind.TrueKeyword || value.kind === ts.SyntaxKind.FalseKeyword;
       }
       if (ts.isBreakStatement(s)) return true;
-      if (!ts.isExpressionStatement(s) || !ts.isCallExpression(s.expression)) return false;
-      const name = this.memberName(s.expression.expression);
+      if (!ts.isExpressionStatement(s)) return false;
+      const call = this.unwrap(s.expression);
+      if (!ts.isCallExpression(call)) return false;
+      const name = this.memberName(this.unwrap(call.expression));
       return name !== null && SUPPRESS_CALLS.has(name);
     });
   }
@@ -223,33 +226,88 @@ class ImeEnter {
     return hit;
   }
 
-  /** Names a scope node declares, mapped to the function they hold (null when not a function). */
-  declaredHere(scope: TS.Node, name: string): { found: boolean; fn: FunctionNode | null } {
+  /** The names a binding (an identifier or a destructuring pattern) declares. */
+  boundNames(name: TS.BindingName): string[] {
     const { ts } = this;
-    if (this.isFunctionNode(scope)) {
-      const isParam = scope.parameters.some((p) => ts.isIdentifier(p.name) && p.name.text === name);
-      return { found: isParam, fn: null };
-    }
-    const list = ts.isSourceFile(scope) ? scope.statements : this.statementList(scope);
-    for (const statement of list ?? []) {
-      if (ts.isFunctionDeclaration(statement) && statement.name?.text === name) return { found: true, fn: statement };
-      if (ts.isVariableStatement(statement)) {
-        for (const declaration of statement.declarationList.declarations) {
-          if (!ts.isIdentifier(declaration.name) || declaration.name.text !== name) continue;
-          const init = declaration.initializer === undefined ? undefined : this.unwrap(declaration.initializer);
-          return { found: true, fn: init !== undefined && this.isFunctionNode(init) ? init : null };
-        }
-      }
-      if (ts.isImportDeclaration(statement) && statement.importClause !== undefined && importBinds(ts, { clause: statement.importClause, name })) return { found: true, fn: null };
-    }
-    return { found: false, fn: null };
+    if (ts.isIdentifier(name)) return [name.text];
+    return name.elements.flatMap((e) => (ts.isOmittedExpression(e) || e.name === undefined ? [] : this.boundNames(e.name)));
   }
 
-  /** An identifier handler's function, declared in an enclosing scope of the same file. */
+  /** What a declaration list binds `name` to, in order: the function it holds, or null. */
+  declaratorValues(list: TS.VariableDeclarationList, name: string): (FunctionNode | null)[] {
+    return list.declarations.filter((d) => this.boundNames(d.name).includes(name)).map((d) => {
+      const init = d.initializer === undefined ? undefined : this.unwrap(d.initializer);
+      return this.ts.isIdentifier(d.name) && init !== undefined && this.isFunctionNode(init) ? init : null;
+    });
+  }
+
+  isVarList(list: TS.VariableDeclarationList): boolean {
+    return (list.flags & this.ts.NodeFlags.BlockScoped) === 0;
+  }
+
+  /** The block-scoped bindings of `name` among a scope's own statements (function, class, let, const, import). */
+  lexicalBindings(statements: readonly TS.Node[], name: string): (FunctionNode | null)[] {
+    const { ts } = this;
+    return statements.flatMap((s): (FunctionNode | null)[] => {
+      if (ts.isFunctionDeclaration(s)) return s.name?.text === name ? [s] : [];
+      if (ts.isClassDeclaration(s)) return s.name?.text === name ? [null] : [];
+      if (ts.isVariableStatement(s)) return this.isVarList(s.declarationList) ? [] : this.declaratorValues(s.declarationList, name);
+      if (ts.isImportDeclaration(s)) return s.importClause !== undefined && importBinds(ts, { clause: s.importClause, name }) ? [null] : [];
+      return [];
+    });
+  }
+
+  /** The `var` bindings of `name` anywhere in `body`, not inside a nested function or class static block. */
+  varBindings(body: TS.Node, name: string): (FunctionNode | null)[] {
+    const { ts } = this;
+    const out: (FunctionNode | null)[] = [];
+    const visit = (n: TS.Node): void => {
+      if (ts.isFunctionLikeDeclaration(n) || ts.isClassStaticBlockDeclaration(n)) return;
+      if (ts.isVariableDeclarationList(n) && this.isVarList(n)) out.push(...this.declaratorValues(n, name));
+      n.forEachChild(visit);
+    };
+    body.forEachChild(visit);
+    return out;
+  }
+
+  /**
+   * What a scope node binds `name` to, as eslint-scope sees it: each binding
+   * is the function it holds, or null. Empty when the scope does not bind it.
+   */
+  bindingsIn(scope: TS.Node, name: string): (FunctionNode | null)[] {
+    const { ts } = this;
+    if (ts.isSourceFile(scope)) return [...this.lexicalBindings(scope.statements, name), ...this.varBindings(scope, name)];
+    if (ts.isFunctionLikeDeclaration(scope)) {
+      const params = scope.parameters.filter((p) => this.boundNames(p.name).includes(name)).map(() => null);
+      const own = [...params, ...(scope.body === undefined ? [] : this.varBindings(scope.body, name))];
+      // A function expression's own name sits in a scope just outside its parameters.
+      if (own.length === 0 && ts.isFunctionExpression(scope) && scope.name?.text === name) return [scope];
+      return own;
+    }
+    if (ts.isClassStaticBlockDeclaration(scope)) return this.varBindings(scope.body, name);
+    if (ts.isBlock(scope)) return this.lexicalBindings(scope.statements, name);
+    // One scope for every clause of a switch.
+    if (ts.isCaseBlock(scope)) return this.lexicalBindings(scope.clauses.flatMap((c) => c.statements), name);
+    if (ts.isForStatement(scope) || ts.isForInStatement(scope) || ts.isForOfStatement(scope)) {
+      const init = scope.initializer;
+      return init !== undefined && ts.isVariableDeclarationList(init) && !this.isVarList(init) ? this.declaratorValues(init, name) : [];
+    }
+    if (ts.isCatchClause(scope)) {
+      const binding = scope.variableDeclaration;
+      return binding !== undefined && this.boundNames(binding.name).includes(name) ? [null] : [];
+    }
+    return [];
+  }
+
+  /**
+   * An identifier handler's function, declared in an enclosing scope of the
+   * same file: the nearest scope that binds the name decides, and its first
+   * function binding is the handler (the ESLint rule's `resolveLocalFunction`).
+   */
   resolveLocalFunction(id: TS.Identifier): FunctionNode | null {
     for (let scope: TS.Node | null = id.parent; scope !== null; scope = this.ts.isSourceFile(scope) ? null : scope.parent) {
-      const { found, fn } = this.declaredHere(scope, id.text);
-      if (found) return fn;
+      const bindings = this.bindingsIn(scope, id.text);
+      if (bindings.length > 0) return bindings.find((b) => b !== null) ?? null;
     }
     return null;
   }

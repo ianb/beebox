@@ -281,6 +281,14 @@ export default function V({ readFile }) {
     { label: "no card", html: "<div class=\"w\">loaded</div>", headStyles: ["<style>.w { overflow-x: auto }</style>"] },
   ]);
 
+  // A snapshot that cannot be written leaves the view passing, with a remark.
+  const nowhere = join(box.root, "missing-dir", "snapshot.json");
+  t.check(await runCli(box.root, ["view", "render-one", "v", "--snapshot", nowhere]), {
+    code: 0,
+    stdout: `bbx-view-check partial: advice not checked: could not write the snapshot: ENOENT: no such file or directory, open '${nowhere}'\n`,
+    stderr: "",
+  });
+
   await writeFile(join(box.root, "src", "views", "v.tsx"), `${HEAD}export default function V() { throw new Error("broken"); }\n`);
   await rm(snapshot);
   t.check((await runCli(box.root, ["view", "render-one", "v", "--snapshot", snapshot])).code, 1);

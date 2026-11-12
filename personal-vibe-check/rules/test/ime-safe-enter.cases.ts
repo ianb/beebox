@@ -45,6 +45,16 @@ export const imeSafeEnterCases: { valid: string[]; invalid: string[] } = {
     "<input onKeyDown={(e) => { if (e.isComposing) { log(); return; } if (e.key === \"Enter\") submit(); }} />",
     // An early-return guard that also checks 229.
     "<input onKeyDown={(e) => { if (e.isComposing || e.keyCode === 229) { return; } if (e.key === \"Enter\") submit(); }} />",
+    // Parentheses around a suppression change nothing.
+    "<textarea onKeyDown={(e) => { if (e.key === \"Enter\") return (false); }} />",
+    "<textarea onKeyDown={(e) => { if (e.key === \"Enter\") (e.preventDefault)(); }} />",
+    "<textarea onKeyDown={(e) => { if (e.key === \"Enter\") (e.preventDefault()); }} />",
+    // A binding that shadows the handler's name is not resolved: a destructured
+    // parameter, a catch binding, a loop binding.
+    "const onKey = (e) => { if (e.key === \"Enter\") submit(); };\nfunction C({ onKey }) { return <input onKeyDown={onKey} />; }",
+    "const onKey = (e) => { if (e.key === \"Enter\") submit(); };\nfunction C([onKey = null]) { return <input onKeyDown={onKey} />; }",
+    "const onKey = (e) => { if (e.key === \"Enter\") submit(); };\ntry { run(); } catch ({ onKey }) { render(<input onKeyDown={onKey} />); }",
+    "const onKey = (e) => { if (e.key === \"Enter\") submit(); };\nfor (const onKey of keys) render(<input onKeyDown={onKey} />);",
   ],
   invalid: [
     "<input onKeyDown={(e) => { if (e.key === \"Enter\") { e.preventDefault(); submit(); } }} />",
@@ -78,5 +88,8 @@ export const imeSafeEnterCases: { valid: string[]; invalid: string[] } = {
     "<input onKeyDown={(e) => { if (e.isComposing && e.shiftKey) return; if (e.key === \"Enter\") submit(); }} />",
     // A non-negated guard in the chain means "only while composing".
     "<input onKeyDown={(e) => { if (e.key === \"Enter\" && e.isComposing) submit(); }} />",
+    // A function-scoped `var` declared in a nested block, and a `const` in another case of the same switch.
+    "function C(x) { if (x) { var onKey = (e) => { if (e.key === \"Enter\") submit(); }; } return <input onKeyDown={onKey} />; }",
+    "function C(x) { switch (x) { case 1: const onKey = (e) => { if (e.key === \"Enter\") submit(); }; break; default: return <input onKeyDown={onKey} />; } }",
   ],
 };

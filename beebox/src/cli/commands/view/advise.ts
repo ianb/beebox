@@ -35,27 +35,27 @@ export interface AdviceOutcome {
 }
 
 /** Runs advice for one passing view; resolves, never rejects. */
-export type AdviseRunner = (request: { boxRoot: string; slug: string; snapshotPath: string; env: NodeJS.ProcessEnv }) => Promise<AdviceOutcome>;
+export type AdviseRunner = (request: { boxRoot: string; slug: string; snapshotPath: string; env: NodeJS.ProcessEnv; signal?: AbortSignal | undefined }) => Promise<AdviceOutcome>;
 
 const notChecked = (reason: string): AdviceOutcome => ({ advice: [], partial: [`advice not checked: ${reason}`] });
 
 /** Run an advise process and read its advice; a kill at `timeoutMs`, a failure, or bad output becomes a remark. */
-export function runAdvice(opts: { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number }): Promise<AdviceOutcome> {
-  const { command, args, cwd, env, timeoutMs } = opts;
+export function runAdvice(opts: { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number; signal?: AbortSignal | undefined }): Promise<AdviceOutcome> {
+  const { command, args, cwd, env, timeoutMs, signal } = opts;
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, killSignal: "SIGKILL" });
+    const child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, killSignal: "SIGKILL", ...(signal === undefined ? {} : { signal }) });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
     child.on("error", (e) => { resolve(notChecked(e.message)); });
-    child.on("close", (code, signal) => {
-      if (signal === "SIGKILL") {
+    child.on("close", (code, exitSignal) => {
+      if (exitSignal === "SIGKILL") {
         resolve(notChecked(`timed out after ${String(timeoutMs / 1000)}s`));
         return;
       }
       if (code !== 0) {
-        resolve(notChecked(stderr.trim().split("\n")[0] || `exited with code ${String(code ?? signal ?? "null")}`));
+        resolve(notChecked(stderr.trim().split("\n")[0] || `exited with code ${String(code ?? exitSignal ?? "null")}`));
         return;
       }
       const { advice, unreadable } = adviceLines(stdout);
@@ -67,12 +67,13 @@ export function runAdvice(opts: { command: string; args: string[]; cwd: string; 
 }
 
 /** The real advise child: `bbx view advise` from this package. */
-export const spawnAdvise: AdviseRunner = ({ boxRoot, slug, snapshotPath, env }) => runAdvice({
+export const spawnAdvise: AdviseRunner = ({ boxRoot, slug, snapshotPath, env, signal }) => runAdvice({
   command: path.join(PACKAGE_ROOT, "bin", "bbx"),
   args: ["view", "advise", slug, "--snapshot", snapshotPath],
   cwd: boxRoot,
   env,
   timeoutMs: ADVICE_TIMEOUT_MS,
+  signal,
 });
 
 /** The advice for one view and its snapshot; remarks for states too large to judge. */

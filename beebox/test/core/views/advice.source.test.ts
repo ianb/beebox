@@ -28,12 +28,12 @@ function finder(t: { teardown: (fn: () => void) => void }): (source: string) => 
 
 void test("shared IME cases: the port agrees with the ESLint rule on every case", async (t) => {
   const findings = finder(t);
-  // 24 valid and 20 invalid; each invalid case reports once.
+  // 31 valid and 22 invalid; each invalid case reports once.
   const wrong = [
     ...imeSafeEnterCases.valid.filter((code) => findings(code).length > 0),
     ...imeSafeEnterCases.invalid.filter((code) => findings(code).join(",") !== "enter-without-ime-check 1"),
   ];
-  t.check([imeSafeEnterCases.valid.length, imeSafeEnterCases.invalid.length, wrong], [24, 20, []]);
+  t.check([imeSafeEnterCases.valid.length, imeSafeEnterCases.invalid.length, wrong], [31, 22, []]);
 });
 
 void test("IME: parentheses do not change the decision", async (t) => {

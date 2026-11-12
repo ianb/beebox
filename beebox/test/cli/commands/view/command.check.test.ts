@@ -7,13 +7,14 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { mkdir, writeFile, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { any, type Expected, str, unordered } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
-import { checkViews, type ViewCheckResult } from "../../../../src/cli/commands/view/command.js";
+import { checkViews, type SnapshotDirs, type ViewCheckResult } from "../../../../src/cli/commands/view/command.js";
 import { runAdvice, type AdviseRunner } from "../../../../src/cli/commands/view/advise.js";
 import { ADVICE_MESSAGES } from "../../../../src/core/views/advice/types.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
@@ -306,4 +307,102 @@ void test("a crashing advise runner leaves the view passing, with a remark", asy
     ok: true,
     views: [{ slug: "good", ok: true, partial: ["advice not checked: runner threw"] }],
   });
+});
+
+// The snapshot directory is advice's, so its failures are remarks too: a
+// directory that cannot be made (the view renders with no snapshot and gets
+// no advice), one the render child cannot write into, and one that cannot be
+// removed. None changes `ok`.
+void test("snapshot directory failures leave the view passing, with a remark", async (t) => {
+  const box = await makeViewBox();
+  t.teardown(() => box.cleanup());
+  await writeView(box, { rel: "good.tsx", content: GOOD_VIEW });
+  const calls: string[] = [];
+  const advise: AdviseRunner = ({ slug }) => {
+    calls.push(slug);
+    return Promise.resolve({ advice: [], partial: [] });
+  };
+  const failing = (what: string) => () => Promise.reject(new Error(`${what} failed`));
+  const removed: string[] = [];
+  const remove = (dir: string) => { removed.push(dir); return Promise.resolve(); };
+  const check = (snapshotDirs: SnapshotDirs) => checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS, advise, snapshotDirs });
+
+  t.check(await check({ make: failing("mkdtemp"), remove }), {
+    ok: true,
+    views: [{ slug: "good", ok: true, partial: ["advice not checked: could not make the snapshot directory: mkdtemp failed"] }],
+  });
+  t.check([calls, removed], [[], []]);
+
+  const missing = join(box.root, "no-such-dir");
+  t.check(await check({ make: () => Promise.resolve(missing), remove }), {
+    ok: true,
+    views: [{ slug: "good", ok: true, partial: [str`advice not checked: could not write the snapshot: ENOENT: ${any(String)}`] }],
+  });
+  t.check([calls, removed], [[], [missing]]);
+
+  const made = join(box.root, "snapshots");
+  await mkdir(made);
+  t.check(await check({ make: () => Promise.resolve(made), remove: failing("rm") }), {
+    ok: true,
+    views: [{ slug: "good", ok: true, partial: [`snapshot not removed: ${made}: rm failed`] }],
+  });
+  t.check(calls, ["good"]);
+});
+
+/** Resolves once `ready()` is true, checking every 50ms. */
+async function until(ready: () => Promise<boolean>): Promise<void> {
+  while (!(await ready())) await new Promise((resolve) => { setTimeout(resolve, 50); });
+}
+
+/** The pids of `parent`'s children whose command line contains `pattern`. */
+function childPids(parent: number, pattern: string): Promise<number[]> {
+  return new Promise((resolve) => {
+    const ps = spawn("pgrep", ["-P", String(parent), "-f", pattern]);
+    let out = "";
+    ps.stdout.on("data", (d) => { out += String(d); });
+    ps.on("close", () => { resolve(out.split("\n").filter((line) => line !== "").map(Number)); });
+  });
+}
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// SIGTERM (or SIGINT) to `bbx view check` stops the render child and removes
+// the snapshot directory before the sweep exits 128 + the signal number.
+void test("a terminated sweep stops its child and removes the snapshot directory", async (t) => {
+  const box = await makeViewBox();
+  const tmp = await mkdtemp(join(tmpdir(), "bbx-view-check-signal-"));
+  t.teardown(async () => {
+    await rm(tmp, { recursive: true, force: true });
+    await box.cleanup();
+  });
+  await writeView(box, { rel: "spin.tsx", content: `export const name = "Spin";
+export const dependencies = [];
+export const modes = ["page"];
+export default function Spin() { for (;;) {} }
+` });
+  const sweep = spawn(join(PACKAGE_ROOT, "bin", "bbx"), ["view", "check", "--timeout", String(TEST_VIEW_TIMEOUT_MS)], {
+    cwd: box.root,
+    env: { ...process.env, TMPDIR: tmp },
+  });
+  const exited = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+    sweep.on("close", (code, signal) => { resolve({ code, signal }); });
+  });
+  const pid = sweep.pid;
+  if (pid === undefined) throw new Error("the sweep did not start");
+  let renderChild: number | undefined;
+  await until(async () => {
+    [renderChild] = await childPids(pid, "render-one");
+    return renderChild !== undefined && (await readdir(tmp)).some((name) => name.startsWith("bbx-view-check-"));
+  });
+  sweep.kill("SIGTERM");
+  t.check(await exited, { code: 143, signal: null });
+  const left = (await readdir(tmp)).filter((name) => name.startsWith("bbx-view-check-"));
+  t.check([left, renderChild !== undefined && isRunning(renderChild)], [[], false]);
 });

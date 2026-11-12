@@ -14,8 +14,9 @@ import { compileView, resolveViewsDir } from "../../../webapp/views/compiler/com
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
 import { loadViewCards } from "../../../core/views/cards.js";
 import type { ViewProps } from "../../../core/views/types.js";
-import { statesToCheck, PARTIAL_PREFIX, SNAPSHOT_MAX_CHARS, type CheckState, type ViewDomSnapshot } from "./check-states.js";
-import { settledRender, SETTLE_BUDGET_MS, type SettledDom } from "./settle.js";
+import { statesToCheck, snapshotOf, ADVICE_NOT_CHECKED, PARTIAL_PREFIX, type CheckState, type ViewDomSnapshot } from "./check-states.js";
+import { settledRender, SETTLE_BUDGET_MS } from "./settle.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {
@@ -97,12 +98,6 @@ interface RenderViewOptions {
   timeoutMs: number;
   /** Where to write each state's settled DOM (`ViewDomSnapshot[]`) when the view passes. */
   snapshotPath?: string;
-}
-
-/** A state's snapshot, with its HTML dropped when it is too large to judge. */
-function snapshotOf(label: string, dom: SettledDom): ViewDomSnapshot {
-  const size = dom.html.length + dom.headStyles.reduce((n, s) => n + s.length, 0);
-  return size > SNAPSHOT_MAX_CHARS ? { label, html: null, headStyles: [] } : { label, ...dom };
 }
 
 /** Room left at the end of the per-view timeout for cleanup and the report. */
@@ -206,8 +201,15 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
         return 1;
       }
     }
-    // Only a passing view gets advice, so only it leaves a snapshot.
-    if (options.snapshotPath !== undefined) await fs.writeFile(options.snapshotPath, JSON.stringify(snapshots), { mode: 0o600 });
+    // Only a passing view gets advice, so only it leaves a snapshot. Advice
+    // never changes the result: a snapshot that cannot be written is a remark.
+    if (options.snapshotPath !== undefined) {
+      try {
+        await fs.writeFile(options.snapshotPath, JSON.stringify(snapshots), { mode: 0o600 });
+      } catch (e) {
+        process.stdout.write(`${PARTIAL_PREFIX}${ADVICE_NOT_CHECKED}could not write the snapshot: ${errorMessage(e)}\n`);
+      }
+    }
     return 0;
   } finally {
     await mod.cleanup();

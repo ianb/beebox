@@ -86,9 +86,14 @@ void test("wide-table-without-wrapper: 4 or more cells and nothing that scrolls"
 <div class="overflow-x-auto"><table class="e">${ROW4}</table></div>
 <table class="f" style="display: block; overflow-x: scroll">${ROW4}</table>
 <table class="g"><tr><td><table>${ROW4}</table></td></tr></table>
+<table class="h" style="overflow-x: auto">${ROW4}</table>
+<table class="i overflow-x-auto">${ROW4}</table>
+<table class="j block overflow-x-auto">${ROW4}</table>
 `, ".wrap { overflow-x: auto }"), [
     "wide-table-without-wrapper <table class=\"a\">",
     "wide-table-without-wrapper <table>",
+    "wide-table-without-wrapper <table class=\"h\" style=\"overflow-x: auto\">",
+    "wide-table-without-wrapper <table class=\"i overflow-x-auto\">",
   ]);
 });
 

@@ -66,6 +66,9 @@ export async function statesToCheck(opts: {
  */
 export const PARTIAL_PREFIX = "bbx-view-check partial: ";
 
+/** How a remark says advice did not run for a view; the sweep skips advice after one from the render child. */
+export const ADVICE_NOT_CHECKED = "advice not checked: ";
+
 /** The partial-check remarks in a child's stdout. */
 export function partialRemarks(stdout: string): string[] {
   return stdout.split("\n").filter((line) => line.startsWith(PARTIAL_PREFIX)).map((line) => line.slice(PARTIAL_PREFIX.length));
@@ -94,12 +97,12 @@ export function adviceLines(stdout: string): { advice: ViewAdvice[]; unreadable:
   return { advice, unreadable };
 }
 
-/** A state's serialized DOM larger than this is not written; its advice is not checked. */
-export const SNAPSHOT_MAX_CHARS = 5_000_000;
+/** A state's snapshot larger than this many UTF-8 bytes, as written, keeps no HTML; its advice is not checked. */
+export const SNAPSHOT_MAX_BYTES = 5_000_000;
 
 /**
  * One check state's settled DOM as the `render-one` child writes it for the
- * `advise` child: `html` is null when the state was over `SNAPSHOT_MAX_CHARS`.
+ * `advise` child: `html` is null when the state was over `SNAPSHOT_MAX_BYTES`.
  */
 export const viewDomSnapshotSchema = z.strictObject({
   label: z.string(),
@@ -108,3 +111,9 @@ export const viewDomSnapshotSchema = z.strictObject({
 });
 
 export type ViewDomSnapshot = z.infer<typeof viewDomSnapshotSchema>;
+
+/** A state's snapshot, with its HTML dropped when its JSON is over `SNAPSHOT_MAX_BYTES`. */
+export function snapshotOf(label: string, dom: { html: string; headStyles: string[] }): ViewDomSnapshot {
+  const full = { label, html: dom.html, headStyles: dom.headStyles };
+  return Buffer.byteLength(JSON.stringify(full)) > SNAPSHOT_MAX_BYTES ? { label, html: null, headStyles: [] } : full;
+}

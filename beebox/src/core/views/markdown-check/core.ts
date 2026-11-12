@@ -44,6 +44,7 @@ import * as path from "node:path";
 import type * as TS from "../../../lib/typescript/syntax.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { fileSpecifiers, importedSpecifier, localImportClosure } from "../local-imports.js";
+import { stringLiteralText } from "../literal-text.js";
 
 type Ts = typeof TS;
 
@@ -76,12 +77,10 @@ function isMarkdownLibrary(specifier: string): boolean {
   });
 }
 
-/** The literal text a string, template part, or regex node carries; null for anything else. */
+/** The literal text a string, template part, or regex node carries (a regex without its escapes); null for anything else. */
 function literalText(ts: Ts, node: TS.Node): string | null {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) return node.text;
   if (ts.isRegularExpressionLiteral(node)) return node.text.replaceAll("\\", "");
-  return null;
+  return stringLiteralText(ts, node);
 }
 
 /** Local names `Markdown` is imported under from `beebox/view-widgets`. */

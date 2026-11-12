@@ -19,6 +19,7 @@
 import type * as TS from "../../../lib/typescript/syntax.js";
 import { advice, type AdviceRule, type ViewAdvice } from "./types.js";
 import { unguardedEnterTests } from "./ime-enter.js";
+import { stringLiteralText } from "../literal-text.js";
 
 type Ts = typeof TS;
 
@@ -41,13 +42,6 @@ function isClickableNonControl(ts: Ts, node: TS.Node): boolean {
   if (props.some((p) => ts.isJsxSpreadAttribute(p))) return false;
   const names = props.flatMap((p) => (ts.isJsxAttribute(p) ? [p.name.getText()] : []));
   return names.includes("onClick") && !names.includes("role");
-}
-
-/** The text of a string, template part, or no-substitution template; null for anything else. */
-function literalText(ts: Ts, node: TS.Node): string | null {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) return node.text;
-  return null;
 }
 
 function hasViewportHeight(text: string): boolean {
@@ -125,7 +119,7 @@ export function sourceAdvice({ ts, parse }: { ts: Ts; parse: TS.Parse }, { fileN
   for (const hit of unguardedEnterTests(ts, file)) report("enter-without-ime-check", hit);
   const visit = (node: TS.Node): void => {
     if (isClickableNonControl(ts, node)) report("clickable-non-control", node);
-    const text = literalText(ts, node);
+    const text = stringLiteralText(ts, node);
     if (text !== null && hasViewportHeight(text)) report("viewport-height", node);
     if (isDateStringParse(ts, node)) report("date-string-parse", node);
     if (isUtcToday(ts, node)) report("utc-today", node);

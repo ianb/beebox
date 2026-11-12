@@ -16,9 +16,11 @@
  * - `aria-label-without-role`: `div`, `span`, `p`, `i`, `b` with `aria-label`
  *   and no `role` (`personal-vibe-check/rules/aria-label-needs-role.ts`).
  * - `wide-table-without-wrapper`: a `table` whose fullest row has
- *   `WIDE_TABLE_CELLS` or more cells, and neither it nor an ancestor inside
- *   the container scrolls sideways (`scrollsSideways`). The cell count
- *   stands in for width, which jsdom cannot measure.
+ *   `WIDE_TABLE_CELLS` or more cells, and no ancestor inside the container
+ *   scrolls sideways (`scrollsSideways`), nor the table itself with
+ *   `display: block` (a `display: table` box is not a scroll container,
+ *   whatever its overflow). The cell count stands in for width, which jsdom
+ *   cannot measure.
  *
  * Two skip sets. Not shown: inside `[hidden]`, under computed `display:
  * none`, in a closed `<dialog>`, or in a closed `<details>` outside its
@@ -112,8 +114,15 @@ function fullestRow(table: Element): number {
   return Math.max(0, ...rows.map((row) => [...row.children].filter((c) => c.localName === "td" || c.localName === "th").length));
 }
 
+/** Whether the table is itself a scroll container: block display (by style or the Tailwind `block` class) that scrolls sideways. */
+function scrollsItself(table: Element): boolean {
+  const block = table.classList.contains("block") || styleOf(table)?.display === "block";
+  return block && scrollsSideways(table);
+}
+
 function isUnwrappedWideTable({ table, container }: { table: Element; container: Element }): boolean {
-  return fullestRow(table) >= WIDE_TABLE_CELLS && !selfAndAncestors(table, container).some(scrollsSideways);
+  if (fullestRow(table) < WIDE_TABLE_CELLS || scrollsItself(table)) return false;
+  return !selfAndAncestors(table, container).slice(1).some(scrollsSideways);
 }
 
 /** The element's opening tag, cut to `WHERE_MAX` characters. */

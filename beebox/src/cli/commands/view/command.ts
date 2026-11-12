@@ -31,11 +31,11 @@ import { Command } from "commander";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { constants, tmpdir } from "node:os";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { listViews } from "../../../webapp/views/compiler/compile.js";
 import { renderView } from "./render-one.js";
-import { partialRemarks } from "./check-states.js";
+import { ADVICE_NOT_CHECKED, partialRemarks } from "./check-states.js";
 import { viewLintCommand } from "./lint.js";
 import { viewStatesCommand } from "./states.js";
 import { typecheckViews } from "./typecheck.js";
@@ -65,6 +65,17 @@ export interface ViewCheckResult {
 
 const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
 
+/** Where a view's snapshot goes: one fresh directory per view, removed after its advice. */
+export interface SnapshotDirs {
+  make: () => Promise<string>;
+  remove: (dir: string) => Promise<void>;
+}
+
+const TEMP_SNAPSHOT_DIRS: SnapshotDirs = {
+  make: () => mkdtemp(path.join(tmpdir(), "bbx-view-check-")),
+  remove: (dir) => rm(dir, { recursive: true, force: true }),
+};
+
 /**
  * Render one view in a killable child process (the hidden `bbx view render-one <slug>`) with a
  * hard timeout. A child is the only way to interrupt a pathological view whose
@@ -82,32 +93,53 @@ async function checkOneView(args: {
   timeoutMs: number;
   allowInvalidCards: boolean;
   advise: AdviseRunner;
+  snapshotDirs: SnapshotDirs;
+  signal: AbortSignal | undefined;
 }): Promise<ViewCheckResult> {
-  const { boxRoot, slug, advise } = args;
+  const { boxRoot, slug, advise, snapshotDirs, signal } = args;
   let env: NodeJS.ProcessEnv;
   try {
     env = await buildScriptEnv(boxRoot);
   } catch (e) {
     return { slug, ok: false, error: `could not build the render environment: ${errorMessage(e)}` };
   }
-  // The sweep names the snapshot file, so nothing the view prints can point it elsewhere.
-  const dir = await mkdtemp(path.join(tmpdir(), "bbx-view-check-"));
-  const snapshotPath = path.join(dir, "snapshot.json");
+  // The sweep names the snapshot file, so nothing the view prints can point
+  // it elsewhere. Advice never changes the result: without a directory the
+  // view renders with no snapshot and gets a remark instead of advice.
+  let dir: string;
   try {
-    const result = await renderInChild({ ...args, env, snapshotPath });
-    if (!result.ok) return result;
+    dir = await snapshotDirs.make();
+  } catch (e) {
+    const result = await renderInChild({ ...args, env, snapshotPath: null });
+    return result.ok ? withRemarks(result, [`${ADVICE_NOT_CHECKED}could not make the snapshot directory: ${errorMessage(e)}`]) : result;
+  }
+  // Neither the render child nor the advice step rejects, so the removal below always runs.
+  const snapshotPath = path.join(dir, "snapshot.json");
+  let result = await renderInChild({ ...args, env, snapshotPath });
+  // A render child that could not write the snapshot already said so.
+  if (result.ok && !(result.partial ?? []).some((remark) => remark.startsWith(ADVICE_NOT_CHECKED))) {
     let outcome: AdviceOutcome;
     try {
-      outcome = await advise({ boxRoot, slug, snapshotPath, env });
+      outcome = await advise({ boxRoot, slug, snapshotPath, env, signal });
     } catch (e) {
-      outcome = { advice: [], partial: [`advice not checked: ${errorMessage(e)}`] };
+      outcome = { advice: [], partial: [`${ADVICE_NOT_CHECKED}${errorMessage(e)}`] };
     }
-    const partial = [...(result.partial ?? []), ...outcome.partial];
     const advice = mergeAdvice(outcome.advice);
-    return { ...result, ...(partial.length > 0 ? { partial } : {}), ...(advice.length > 0 ? { advice } : {}) };
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+    result = { ...withRemarks(result, outcome.partial), ...(advice.length > 0 ? { advice } : {}) };
   }
+  try {
+    await snapshotDirs.remove(dir);
+  } catch (e) {
+    // The directory holds rendered box content; say where it was left.
+    result = withRemarks(result, [`snapshot not removed: ${dir}: ${errorMessage(e)}`]);
+  }
+  return result;
+}
+
+/** `result` with `remarks` added to its partial-check remarks. */
+function withRemarks(result: ViewCheckResult, remarks: readonly string[]): ViewCheckResult {
+  const partial = [...(result.partial ?? []), ...remarks];
+  return partial.length > 0 ? { ...result, partial } : result;
 }
 
 /** The render child's outcome for one view; `ok` is decided here and nowhere else. */
@@ -117,12 +149,16 @@ function renderInChild(args: {
   timeoutMs: number;
   allowInvalidCards: boolean;
   env: NodeJS.ProcessEnv;
-  snapshotPath: string;
+  /** Null: render with no snapshot (the sweep has nowhere to put one). */
+  snapshotPath: string | null;
+  /** Aborting it kills the child (SIGKILL). */
+  signal: AbortSignal | undefined;
 }): Promise<ViewCheckResult> {
-  const { boxRoot, slug, timeoutMs, allowInvalidCards, env, snapshotPath } = args;
+  const { boxRoot, slug, timeoutMs, allowInvalidCards, env, snapshotPath, signal } = args;
   const bbxBin = path.join(PACKAGE_ROOT, "bin", "bbx");
   const testArgs = [
-    "view", "render-one", slug, "--timeout", String(timeoutMs), "--snapshot", snapshotPath,
+    "view", "render-one", slug, "--timeout", String(timeoutMs),
+    ...(snapshotPath === null ? [] : ["--snapshot", snapshotPath]),
     ...(allowInvalidCards ? ["--allow-invalid-cards"] : []),
   ];
   return new Promise((resolve) => {
@@ -132,6 +168,7 @@ function renderInChild(args: {
       stdio: ["ignore", "pipe", "pipe"],
       timeout: timeoutMs,
       killSignal: "SIGKILL",
+      ...(signal === undefined ? {} : { signal }),
     });
     let stderr = "";
     let stdout = "";
@@ -144,14 +181,14 @@ function renderInChild(args: {
     child.on("error", (e) => {
       resolve({ slug, ok: false, error: `could not run bbx view render-one: ${e.message}` });
     });
-    child.on("close", (code, signal) => {
+    child.on("close", (code, exitSignal) => {
       const partial = partialRemarks(stdout);
       const withNotes = partial.length > 0 ? { partial } : {};
       if (code === 0) {
         resolve({ slug, ok: true, ...withNotes });
         return;
       }
-      const timedOut = signal === "SIGKILL";
+      const timedOut = exitSignal === "SIGKILL";
       const error = timedOut
         ? `render timed out after ${String(timeoutMs)}ms`
         : stderr.trim() || `bbx view render-one exited with code ${String(code ?? "null")}`;
@@ -177,16 +214,44 @@ export async function checkViews(args: {
   allowInvalidCards?: boolean;
   /** Runs advice for a passing view; tests pass a slow or failing one. */
   advise?: AdviseRunner;
+  /** Makes and removes each view's snapshot directory; tests pass failing ones. */
+  snapshotDirs?: SnapshotDirs;
+  /** Aborting stops the running child and ends the sweep after its cleanup. */
+  signal?: AbortSignal;
 }): Promise<{ ok: boolean; views: ViewCheckResult[] }> {
-  const { boxRoot, timeoutMs } = args;
+  const { boxRoot, timeoutMs, signal } = args;
   const allowInvalidCards = args.allowInvalidCards ?? false;
   const advise = args.advise ?? spawnAdvise;
+  const snapshotDirs = args.snapshotDirs ?? TEMP_SNAPSHOT_DIRS;
   const metas = await listViews(boxRoot);
   const views: ViewCheckResult[] = [];
   for (const meta of metas) {
-    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs, allowInvalidCards, advise }));
+    if (signal?.aborted === true) break;
+    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs, allowInvalidCards, advise, snapshotDirs, signal }));
   }
   return { ok: views.every((v) => v.ok), views };
+}
+
+/**
+ * Run `work` so SIGINT or SIGTERM aborts its signal instead of killing this
+ * process at once: the sweep then kills its child and removes the snapshot
+ * directory (rendered box content) before the command exits 128 + the
+ * signal number. A second signal kills at once. SIGKILL cannot be caught.
+ */
+async function withTerminationCleanup<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T & { interrupted: "SIGINT" | "SIGTERM" | null }> {
+  const controller = new AbortController();
+  let interrupted: "SIGINT" | "SIGTERM" | null = null;
+  const onInt = () => { interrupted = "SIGINT"; controller.abort(); };
+  const onTerm = () => { interrupted = "SIGTERM"; controller.abort(); };
+  process.once("SIGINT", onInt);
+  process.once("SIGTERM", onTerm);
+  try {
+    const result = await work(controller.signal);
+    return { ...result, interrupted };
+  } finally {
+    process.off("SIGINT", onInt);
+    process.off("SIGTERM", onTerm);
+  }
 }
 
 /** At most `WHERE_SHOWN` places, then how many more. */
@@ -238,7 +303,12 @@ const viewCheckCommand = new Command("check")
       const boxRoot = await requireBoxRoot();
       const parsed = Number(options.timeout);
       const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_VIEW_CHECK_TIMEOUT_MS;
-      const { ok, views } = await checkViews({ boxRoot, timeoutMs, allowInvalidCards: options.allowInvalidCards === true });
+      const { ok, views, interrupted } = await withTerminationCleanup((signal) =>
+        checkViews({ boxRoot, timeoutMs, allowInvalidCards: options.allowInvalidCards === true, signal }));
+      if (interrupted !== null) {
+        process.exitCode = 128 + constants.signals[interrupted];
+        return;
+      }
 
       if (options.json === true) {
         process.stdout.write(JSON.stringify({ ok, views }) + "\n");
