@@ -242,6 +242,8 @@ drives it by the same names. Write native HTML before ARIA:
   phones have none.
 - Charts and figures need a text alternative: a caption that states what the
   picture shows, or the numbers in a table.
-- Animation that runs on its own stops when
-  \`matchMedia("(prefers-reduced-motion: reduce)").matches\`.
+- Animation driven by script (\`requestAnimationFrame\`, a canvas loop, a timer)
+  stops when \`matchMedia("(prefers-reduced-motion: reduce)").matches\`. The app
+  stops CSS animations and transitions for a person who asks for reduced
+  motion.
 - Use \`dvh\` (not \`vh\`) for heights tied to the screen.`;

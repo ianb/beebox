@@ -1052,3 +1052,10 @@ by counting the test file; all move unchanged.
   shows "Aug 14", and `bbx view check` passes the view. Screenshots in
   `scratch/impl/box-view/track2/`. `test:changed` again selected 834 files;
   only `schema-watcher.test.ts` failed (same as Track 1).
+- 2026-11-11, Track 5: the motion bullet in `files.ts` now names
+  script-driven animation and says the app stops CSS animations and
+  transitions. The precondition holds on this branch (the global
+  `prefers-reduced-motion` rule is in `src/frontend/src/index.css`, from
+  `ui-primitives-dedup`); the bullet lands together with that plan. 6
+  changed lines (4 added, 2 removed), all docs. `markdown-check.test.ts`
+  passes; generated `views.md` read. `test:changed` as in Track 2.
