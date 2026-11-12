@@ -22,6 +22,7 @@ export class FakeElement {
   tabIndex = -1;
   width = 0;
   height = 0;
+  style: Record<string, string> = {};
   children: FakeElement[] = [];
   parent: FakeElement | null = null;
   listeners = new Map<string, Listener[]>();

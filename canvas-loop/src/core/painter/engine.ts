@@ -24,9 +24,9 @@ export class Painter extends PainterCore {
   background(paint: Paint): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.resetTransform();
+    ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     ctx.globalCompositeOperation = "source-over";
-    // Resolve after resetTransform so a gradient's coords are canvas-space.
+    // Resolve after the reset so a gradient's coords are canvas-space.
     ctx.fillStyle = this.resolvePaint(paint);
     ctx.beginPath();
     ctx.rect(0, 0, this.width, this.height);

@@ -74,6 +74,8 @@ export interface RuntimeDeps {
   ctx: CanvasRenderingContext2D;
   width: number;
   height: number;
+  /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
+  pixelRatio?: number;
   seed: number;
   onFrame: (frame: number) => void;
   onLog: (entry: RuntimeLog) => void;
@@ -134,7 +136,7 @@ export class Runtime {
       log: (args) => this.#recordLog(args),
       onHandled: (name) => this.#handledNames.push(name),
     });
-    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, log: (args) => this.#recordLog(args) });
+    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args) });
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }

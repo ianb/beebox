@@ -52,20 +52,28 @@ export class PainterCore extends StyledPainter {
   #cache = new LayerCache(24);
   #sprites = new LayerCache(400);
   #pool: LayerPool;
+  /** Device pixels per logical pixel (1 headless; the screen's ratio in a browser). */
+  readonly pixelRatio: number;
+  // The canvas in device pixels: layers, pastes and pixel reads use this size.
+  #device: { width: number; height: number };
   #debug: DebugOverlay;
   // Names of the sprites/caches being drawn into, innermost last (for warnings and outlines).
   #where: string[] = [];
   // Faint-mark checks read pixels back; only done when someone listens for warnings.
   #measure: boolean;
 
-  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; outline?: boolean }) {
+  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
     super();
     this.#ctxStack = [options.ctx];
-    this.#paper = new PaperSheet(options.makeLayer, { width: options.width, height: options.height });
+    this.pixelRatio = options.pixelRatio ?? 1;
+    this.#device = { width: Math.round(options.width * this.pixelRatio), height: Math.round(options.height * this.pixelRatio) };
+    this.#paper = new PaperSheet(options.makeLayer, { size: this.#device, pixelRatio: this.pixelRatio });
     this.#faint = new FaintWatch(options.warn ?? (() => {}));
     this.#measure = options.warn !== undefined;
     this.#debug = new DebugOverlay(options.outline === true);
-    this.#pool = new LayerPool(options.makeLayer, { width: options.width, height: options.height });
+    this.#pool = new LayerPool(options.makeLayer, this.#device);
+    // A high-density canvas (pixelRatio > 1) draws in logical units under a base scale.
+    if (this.pixelRatio !== 1) options.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     this.#makeLayer = options.makeLayer;
     this.width = options.width;
     this.height = options.height;
@@ -116,7 +124,7 @@ export class PainterCore extends StyledPainter {
   /** Darken the paper's valleys across everything drawn so far, so flat colour looks printed on paper. */
   paperTexture(amount: number): void {
     assertUnit(amount, "paperTexture amount");
-    paperOverlay(this.ctx, { paper: this.#paper.layer(), amount, width: this.width, height: this.height });
+    paperOverlay(this.ctx, { paper: this.#paper.layer(), amount, ...this.#device });
   }
 
   // Clip to a polygon/path (or the union of several) for the duration of `body`, restoring afterward.
@@ -152,12 +160,12 @@ export class PainterCore extends StyledPainter {
   #clipUnion(shapes: readonly ClipShape[], body: () => void): void {
     const parent = this.ctx;
     const transform = parent.getTransform();
-    const before = parent.getImageData(0, 0, this.width, this.height);
+    const before = parent.getImageData(0, 0, this.#device.width, this.#device.height);
     const layer = this.#onLayer(body, { opacity: 1, start: before });
     // `layer` and `scratch` take putImageData, so they are never pooled: @napi-rs/canvas reads such a
     // canvas lazily when it is drawn, and clearing it for reuse would blank what was drawn from it.
-    const scratch = this.#makeLayer({ width: this.width, height: this.height });
-    this.#pool.borrow((mask) => replaceInShapes(parent, { layer, mask, scratch, before, shapes, transform, width: this.width, height: this.height }));
+    const scratch = this.#makeLayer(this.#device);
+    this.#pool.borrow((mask) => replaceInShapes(parent, { layer, mask, scratch, before, shapes, transform, ...this.#device }));
   }
 
   /**
@@ -170,7 +178,7 @@ export class PainterCore extends StyledPainter {
     assertUnit(opacity, "group opacity");
     const layer = this.#onLayer(body, { opacity });
     const op = compositeOp(options.blend ?? "normal");
-    drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity, op });
+    drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity, op });
     this.#pool.release(layer);
   }
 
@@ -179,9 +187,10 @@ export class PainterCore extends StyledPainter {
     const { opacity, start } = options;
     // A sprite draws into its own layer in local coordinates; a cache keeps its layer for good;
     // the rest come from the pool and go back after use.
-    const m = options.into === undefined ? this.ctx.getTransform() : { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+    const pr = this.pixelRatio;
+    const m = options.into === undefined ? this.ctx.getTransform() : { a: pr, b: 0, c: 0, d: pr, e: 0, f: 0 };
     const fresh = options.keep === true || start !== undefined;
-    const layer = options.into ?? (fresh ? this.#makeLayer({ width: this.width, height: this.height }) : this.#pool.acquire());
+    const layer = options.into ?? (fresh ? this.#makeLayer(this.#device) : this.#pool.acquire());
     if (start !== undefined) layer.ctx.putImageData(start, 0, 0);
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     const savedFloor = this.#floor;
@@ -212,7 +221,7 @@ export class PainterCore extends StyledPainter {
    */
   cache(key: string, body: () => void): void {
     const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
-    drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: this.composite() });
+    drawLayer(this.ctx, { image: layer.image, ...this.#device, opacity: 1, op: this.composite() });
   }
 
   /**
@@ -225,7 +234,7 @@ export class PainterCore extends StyledPainter {
     if (!(width > 0 && height > 0 && width <= this.width && height <= this.height)) {
       throw new SketchUsageError({ detail: `sprite "${key}" size ${width}×${height} must be positive and fit the canvas` });
     }
-    if (this.#sprites.get(key) === undefined) this.#sprites.set(key, this.#onLayer(body, { opacity: 1, into: this.#makeLayer({ width, height }), where: `sprite "${key}"` }));
+    if (this.#sprites.get(key) === undefined) this.#sprites.set(key, this.#onLayer(body, { opacity: 1, into: this.#makeLayer({ width: Math.ceil(width * this.pixelRatio), height: Math.ceil(height * this.pixelRatio) }), where: `sprite "${key}"` }));
     return { kind: "sprite", key, width, height };
   }
 
@@ -240,7 +249,7 @@ export class PainterCore extends StyledPainter {
       const target = this.ctx;
       const alpha = target.globalAlpha;
       target.globalAlpha = alpha * (opacity ?? 1);
-      withComposite(target, { op: this.composite(), draw: () => target.drawImage(layer.image, 0, 0, sprite.width, sprite.height, x, y, sprite.width, sprite.height) });
+      withComposite(target, { op: this.composite(), draw: () => target.drawImage(layer.image, 0, 0, sprite.width * this.pixelRatio, sprite.height * this.pixelRatio, x, y, sprite.width, sprite.height) });
       target.globalAlpha = alpha;
     };
     if (this.style.erasing && !isIdentity(ctx.getTransform())) this.#viaLayer(draw);
@@ -309,7 +318,7 @@ export class PainterCore extends StyledPainter {
         this.style.erasing = true;
         this.#ctxStack.pop();
       }
-      drawLayer(target, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: "destination-out" });
+      drawLayer(target, { image: layer.image, ...this.#device, opacity: 1, op: "destination-out" });
     });
   }
 
@@ -340,7 +349,7 @@ export class PainterCore extends StyledPainter {
       scratch: this.#pool.scratch(),
       paintScratch: this.#pool.paintScratch(),
       measure: this.#measure,
-      canvas: { width: this.width, height: this.height },
+      canvas: this.#device,
       contours: contours(),
       paint: this.style.strokeColor,
       weight: this.style.strokeW,

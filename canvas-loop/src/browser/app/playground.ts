@@ -3,6 +3,7 @@
 // serialises every interaction to the headless events-file format. All wiring
 // goes through the Runtime's input methods, so hand interaction and scripted
 // replay converge on one representation.
+import { pixelRatioOf, sizeCanvas } from "../mount.js";
 import type { CanvasSize } from "../../core/tea.js";
 import { buildControls } from "../controls.js";
 import { REGISTRY } from "./registry.js";
@@ -134,8 +135,7 @@ class Playground {
     this.#logHost.textContent = "";
     const size = entry.module.canvas ?? DEFAULT_CANVAS;
     const canvas = document.createElement("canvas");
-    canvas.width = size.width;
-    canvas.height = size.height;
+    sizeCanvas(canvas, size);
     canvas.className = "sketch-canvas";
     canvas.tabIndex = 0;
     this.#canvasWrap.replaceChildren(canvas);
@@ -147,6 +147,7 @@ class Playground {
       ctx,
       width: size.width,
       height: size.height,
+      pixelRatio: pixelRatioOf(canvas),
       seed: this.#readSeed(),
       onFrame: (frame) => this.#onFrame(frame),
       onLog: (line) => this.#onLog(line),
@@ -230,8 +231,9 @@ class Playground {
   }
 
   #applyScale(canvas: HTMLCanvasElement): void {
-    canvas.style.width = `${canvas.width * this.#scale}px`;
-    canvas.style.height = `${canvas.height * this.#scale}px`;
+    const ratio = pixelRatioOf(canvas);
+    canvas.style.width = `${(canvas.width / ratio) * this.#scale}px`;
+    canvas.style.height = `${(canvas.height / ratio) * this.#scale}px`;
   }
 
   #readSeed(): number {
@@ -305,8 +307,9 @@ function labeled(name: string, control: HTMLElement): HTMLElement {
 
 function coords(canvas: HTMLCanvasElement, e: MouseEvent): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const sx = rect.width === 0 ? 1 : canvas.width / rect.width;
-  const sy = rect.height === 0 ? 1 : canvas.height / rect.height;
+  const ratio = pixelRatioOf(canvas);
+  const sx = rect.width === 0 ? 1 : canvas.width / ratio / rect.width;
+  const sy = rect.height === 0 ? 1 : canvas.height / ratio / rect.height;
   return { x: Math.round((e.clientX - rect.left) * sx), y: Math.round((e.clientY - rect.top) * sy) };
 }
 

@@ -21,7 +21,7 @@ export class BrowserView implements View {
   #canvas: HTMLCanvasElement;
   #log: (args: readonly unknown[]) => void;
 
-  constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; log: (args: readonly unknown[]) => void }) {
+  constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; pixelRatio: number; log: (args: readonly unknown[]) => void }) {
     this.#log = deps.log;
     this.#canvas = deps.ctx.canvas;
     // The DOM context satisfies the structural Ctx2D the Painter uses; only its
@@ -33,6 +33,7 @@ export class BrowserView implements View {
       width: deps.width,
       height: deps.height,
       makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),
+      pixelRatio: deps.pixelRatio,
       // No `warn`: faint-mark checks read pixels back, which stalls the GPU in a browser every frame.
       // They are an authoring aid for headless transcripts.
     });

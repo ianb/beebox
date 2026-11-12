@@ -36,6 +36,11 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Sharp on high-density screens.** Browser figures and the playground back
+  the canvas with `size × devicePixelRatio` pixels (capped at 3) and draw in
+  logical units under a base scale; the Painter takes a `pixelRatio` and sizes
+  layers, sprites and the paper texture to match. Headless output (ratio 1) is
+  unchanged byte for byte.
 - **Hover reaches browser sketches.** The browser figure and playground sent
   `mousemove` only while a button was held, so hover cues worked headless but
   not in a browser; every move is now sent.

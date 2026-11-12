@@ -83,6 +83,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     ctx,
     width: size.width,
     height: size.height,
+    pixelRatio: pixelRatioOf(canvas),
     seed: opts.seed,
     // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
     ...(initialParams !== undefined ? { initialParams } : {}),
@@ -159,8 +160,7 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   container.className = "cl-figure";
   const canvas = document.createElement("canvas");
   canvas.className = "cl-canvas";
-  canvas.width = size.width;
-  canvas.height = size.height;
+  sizeCanvas(canvas, size);
   canvas.tabIndex = 0;
   container.append(canvas);
 
@@ -325,9 +325,39 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
 }
 
 /** CSS→canvas coordinate mapping for a pointer event (accounts for display scaling). */
+/**
+ * Size a canvas for the screen's pixel density: `size` logical pixels shown at
+ * that size, backed by `size × devicePixelRatio` device pixels, so drawing is
+ * sharp on a high-density display. The ratio is kept on the element.
+ */
+export function sizeCanvas(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
+  setDensity(canvas, size);
+  canvas.style.width = `${size.width}px`;
+}
+
+/** Give a canvas a backing store of `size × devicePixelRatio` device pixels (its display size is left alone). */
+export function setDensity(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
+  // No devicePixelRatio (a non-browser host) means 1; very dense screens are capped at 3.
+  const dpr = Number(globalThis.devicePixelRatio);
+  const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(3, Math.max(1, dpr)) : 1;
+  canvas.width = Math.round(size.width * ratio);
+  canvas.height = Math.round(size.height * ratio);
+  RATIOS.set(canvas, ratio);
+}
+
+// The pixel ratio each canvas was sized with (kept off the DOM).
+const RATIOS = new WeakMap<HTMLCanvasElement, number>();
+
+/** The pixel ratio `sizeCanvas` gave a canvas (1 for a canvas it did not size). */
+export function pixelRatioOf(canvas: HTMLCanvasElement): number {
+  return RATIOS.get(canvas) ?? 1;
+}
+
 function coords(canvas: HTMLCanvasElement, e: MouseEvent): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const sx = rect.width === 0 ? 1 : canvas.width / rect.width;
-  const sy = rect.height === 0 ? 1 : canvas.height / rect.height;
+  // In logical (sketch) pixels: the backing store is pixelRatio times larger.
+  const ratio = pixelRatioOf(canvas);
+  const sx = rect.width === 0 ? 1 : canvas.width / ratio / rect.width;
+  const sy = rect.height === 0 ? 1 : canvas.height / ratio / rect.height;
   return { x: Math.round((e.clientX - rect.left) * sx), y: Math.round((e.clientY - rect.top) * sy) };
 }
