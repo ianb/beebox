@@ -17,10 +17,21 @@ export class SoundPlayer {
     this.#log = log;
   }
 
-  /** Call from a user gesture's handler. */
+  /**
+   * Call from a user gesture's handler: the press and the release both call
+   * it, since iOS counts only a touch's end as the gesture that unlocks audio.
+   */
   enable(): void {
+    playThroughSilentSwitch();
     if (this.#context === undefined) this.#context = new AudioContext();
-    if (this.#context.state === "suspended") void this.#context.resume();
+    const context = this.#context;
+    if (context.state === "running") return;
+    void context.resume();
+    // Older iOS unlocks only once a sound starts inside the gesture: one silent sample.
+    const source = context.createBufferSource();
+    source.buffer = context.createBuffer(1, 1, SAMPLE_RATE);
+    source.connect(context.destination);
+    source.start();
   }
 
   play(voice: Voice): void {
@@ -54,4 +65,15 @@ export class SoundPlayer {
     void this.#context?.close();
     this.#context = undefined;
   }
+}
+
+/**
+ * On iPhone, Web Audio is muted by the silent switch unless the page's audio
+ * session is "playback" (as a video's is). Safari 16.4+ has
+ * `navigator.audioSession`; elsewhere this does nothing.
+ */
+function playThroughSilentSwitch(): void {
+  if (typeof navigator === "undefined") return;
+  const session: unknown = Reflect.get(navigator, "audioSession");
+  if (typeof session === "object" && session !== null) Reflect.set(session, "type", "playback");
 }

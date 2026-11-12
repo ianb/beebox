@@ -15,7 +15,7 @@ import type { CanvasSize, ControlBox } from "../core/tea.js";
 import { toTeaModule } from "../headless/tea-load.js";
 import { buildControls, ControlOverlay } from "./controls.js";
 import { sanitizeInitialParams } from "./param-validate.js";
-import { Runtime, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
+import { Runtime, watchVisibility, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
 import type { PlaygroundModule } from "./sketch-types.js";
 
 // Re-exported so `./browser` consumers can type an `onEvent` handler that reads
@@ -100,8 +100,10 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
   // Wire input BEFORE starting the loop: if listener setup throws (hostile or
   // partial DOM shims), no rAF loop is left running with no teardown returned.
   const detachInput = wireInput(canvas, runtime);
+  let detachWatch = (): void => {};
   try {
     runtime.start();
+    detachWatch = watchVisibility(canvas, runtime);
   } catch (e) {
     detachInput();
     runtime.stop();
@@ -110,6 +112,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
   return {
     runtime,
     teardown: () => {
+      detachWatch();
       detachInput();
       runtime.stop();
     },
@@ -189,8 +192,15 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     size,
     decl,
     handlers: {
-      onParam: (name, value) => attached?.runtime.setParam(name, value),
-      onTrigger: (name) => attached?.runtime.trigger(name),
+      // A control's change is a user gesture: it may unlock sound (iOS needs one).
+      onParam: (name, value) => {
+        attached?.runtime.enableSound();
+        attached?.runtime.setParam(name, value);
+      },
+      onTrigger: (name) => {
+        attached?.runtime.enableSound();
+        attached?.runtime.trigger(name);
+      },
     },
     onShownChange: (names) => {
       excluded = names;
@@ -231,8 +241,14 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
       buildControls({
         decl,
         values: runtime.paramValues(),
-        onParam: (name, value) => runtime.setParam(name, value),
-        onTrigger: (name) => runtime.trigger(name),
+        onParam: (name, value) => {
+          runtime.enableSound();
+          runtime.setParam(name, value);
+        },
+        onTrigger: (name) => {
+          runtime.enableSound();
+          runtime.trigger(name);
+        },
         classPrefix: "cl-",
         exclude: excluded,
       }),
@@ -345,6 +361,8 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
   };
   // A lift, a cancel (the browser took the touch) and a lost capture all end the press once.
   const release = (e: PointerEvent): void => {
+    // iOS unlocks audio on a touch's end, not its start, so a lift asks too.
+    if (e.type === "pointerup") runtime.enableSound();
     if (e.pointerId !== pressedId) return;
     pressedId = undefined;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
@@ -389,7 +407,8 @@ export function sizeCanvas(canvas: HTMLCanvasElement, size: { width: number; hei
 export function setDensity(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
   // No devicePixelRatio (a non-browser host) means 1; very dense screens are capped at 3.
   const dpr = Number(globalThis.devicePixelRatio);
-  const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(3, Math.max(1, dpr)) : 1;
+  // Capped at 2: on a 3× phone screen 3× is barely sharper and costs 2.25× the pixels.
+  const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(2, Math.max(1, dpr)) : 1;
   canvas.width = Math.round(size.width * ratio);
   canvas.height = Math.round(size.height * ratio);
   RATIOS.set(canvas, ratio);

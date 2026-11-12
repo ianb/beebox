@@ -185,7 +185,8 @@ export function makeModule(): { module: Record<string, unknown>; counters: { dra
     params: decl,
     canvas: { width: 120, height: 90 },
     init: () => ({ t: 0 }),
-    update: (model: unknown) => model,
+    // A moving sketch: each tick is a new model, so each frame draws (a still one draws once).
+    update: (model: { t: number }) => ({ t: model.t + 1 }),
     draw: () => {
       counters.draws += 1;
     },

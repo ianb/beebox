@@ -5,6 +5,16 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Lighter on phones.** In a browser, `draw` runs only when the model is a
+  new object or a param changed, so a still figure costs almost nothing. A
+  figure sleeps while scrolled off screen (frames stop, sound stops) and
+  resumes where it was. Canvases draw at most 2× pixel density (was 3×).
+  `Runtime` gains `suspend`, `resume` and `invalidate` (a web font arriving
+  or the canvas resizing redraws once); input always redraws once. Sound on
+  iPhone: audio unlocks on a touch's end as well as its start and on a
+  control's change, and plays through the silent switch where Safari allows.
+  `<SketchFigure>` now passes the module's `sound` (it dropped it).
+
 - **Touch.** Browser input uses pointer events: touch and pen work like the
   mouse, as the same `mousedown`/`mousemove`/`mouseup` messages. A drag on
   the canvas no longer scrolls the page; the pressing pointer is captured, so
