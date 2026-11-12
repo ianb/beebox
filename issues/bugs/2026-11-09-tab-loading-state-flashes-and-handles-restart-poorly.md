@@ -24,5 +24,5 @@ hand, and the error reads as a fault, not as a wait. The tab should recognize
 that the box is restarting, say so, and load the card when the box is back.
 
 Related: [box first load is slow](2026-10-07-box-first-load-is-slow.md),
-[status and error text ignore card material](2026-10-24-status-and-error-text-ignore-card-material.md),
+[status and error text ignore card material](../closed/bugs/2026-10-24-status-and-error-text-ignore-card-material.md),
 [motion in the app](../exploration/2026-10-08-motion-in-the-app.md).

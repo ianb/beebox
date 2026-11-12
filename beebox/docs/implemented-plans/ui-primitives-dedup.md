@@ -7,7 +7,7 @@ issues:
   - ../../../issues/exploration/2026-10-08-motion-in-the-app.md
   - ../../../issues/decisions/2026-08-26-axe-region-rule-on-floating-menus.md
   - ../../../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md
-  - ../../../issues/bugs/2026-10-24-status-and-error-text-ignore-card-material.md
+  - ../../../issues/closed/bugs/2026-10-24-status-and-error-text-ignore-card-material.md
   - ../../../issues/code-quality/2026-10-31-modules-at-line-cap-block-small-changes.md
   - ../../../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
 ---

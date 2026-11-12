@@ -1,9 +1,9 @@
 ---
 title: "Card fronts take the card's ink; the theme audit flags app ink in cards"
-status: draft
+status: implemented
 workstream: card-ink-dark-themes
 issues:
-  - ../../../issues/bugs/2026-10-24-status-and-error-text-ignore-card-material.md
+  - ../../../issues/closed/bugs/2026-10-24-status-and-error-text-ignore-card-material.md
 ---
 # Card fronts take the card's ink; the theme audit flags app ink in cards
 
