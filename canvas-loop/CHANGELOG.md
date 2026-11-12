@@ -36,6 +36,12 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Development aids** (busy-town round asks). `run --outline` outlines placed
+  sprites (with keys), clip regions and `debugBox(label, x, y, w, h)` boxes;
+  `run --timing` adds per-frame draw/update times to the transcript. Faint-mark
+  warnings name the sprite or cache they came from; `gesture({ faint: true })`
+  silences one. `textFont`/`textStyle`; `cursor(kind)` for browser figures;
+  `u.record(keys, value)`; `DeepReadonly` keeps tuples.
 - **TEA sketches may import sibling `./<name>-tea.js` helpers** (the TEA lint
   applies to them by name). The animation round's sketches were forced into
   single 1,200–1,500-line files.

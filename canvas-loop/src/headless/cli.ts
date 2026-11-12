@@ -116,6 +116,8 @@ async function main(): Promise<void> {
       fps: { type: "string" },
       every: { type: "string" },
       zoom: { type: "string", multiple: true },
+      timing: { type: "boolean" },
+      outline: { type: "boolean" },
     },
   });
   const command = parsed.positionals[0];
@@ -158,7 +160,7 @@ async function main(): Promise<void> {
   const outDir = resolve(values.out ?? "out");
   const eventsPath = values.events;
   const zooms = (values.zoom ?? []).map((spec) => parseZoom(spec));
-  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms };
+  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms, timing: values.timing === true, outline: values.outline === true };
 
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);

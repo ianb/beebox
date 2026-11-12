@@ -16,6 +16,9 @@
 // assignability doesn't hold, but every method/property the engine touches is
 // shared and behaves identically).
 
+/** Text weight and slant, as p5's `textStyle`. */
+export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
+
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
 /** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */

@@ -114,6 +114,8 @@ that follow.
   The default is `"taper"` for open shapes and `"even"` for closed ones.
 - `wobble` moves the line sideways by up to that many pixels, smoothly, like a
   hand. The default is 0.
+- `faint: true` says the mark is meant to be faint, so it gets no faint-mark
+  warning (see "Faint marks").
 - `seed` fixes a mark's random character (wobble, scatter, bristle drying).
   Without a seed, a mark's randomness comes from its own points only. Adding
   or removing **another** mark never changes this one, and changing its brush,
@@ -173,7 +175,9 @@ s.group({ opacity: 0.6, blend: "multiply" }, () => {
 
 A mark whose strongest pixel lands below about 8% opacity (after its brush
 and any open groups) is too faint to see. The transcript gets a warning line
-with the mark's position, so you do not spend a cycle finding out. The check reads
+with the mark's position (and the sprite or cache it was drawn into, whose
+coordinates the position is in), so you do not spend a cycle finding out. For
+a mark that is meant to be that faint, set `gesture({ faint: true })`. The check reads
 pixels back, so it runs headless only; a browser figure skips it.
 
 Shading inside a shape: fill the shape, clip to it and draw marks, then draw
@@ -250,6 +254,34 @@ v.pop();
   animation. To keep it still, give it `gesture({ seed })`.
 - For interaction in a browser figure, write a TEA sketch (`*-tea.ts`, see
   [TEA.md](./TEA.md)): pointer input and params arrive as `Msg`s.
+
+### Recipes
+
+- **Light under a night shade.** Darken the page with a multiply rect, then
+  draw lit windows and lamps after it with `blendMode("screen")`: `image()`
+  and fills use the current blend, so a glow sprite brightens what is under it.
+- **Someone behind a window frame.** Draw the person, then the window's frame
+  and glazing bars as a sprite on top; or clip the person to the window
+  opening (`clip(openingRect, () => …)`).
+- **Randomness on the draw side.** TEA's `draw` gets no `random`. Scatter that
+  never changes (stars, grass) can be computed once into module `const` arrays
+  from a small seeded generator; a mark's own jitter comes from its `seed`.
+
+## Seeing what you made
+
+- `run --zoom x,y,w,h` adds enlarged crops (see "Seeing texture").
+- `run --outline` draws, over every captured frame, the box of each placed
+  sprite (magenta, labelled with its key), each clip region (cyan), and each
+  `debugBox(label, x, y, w, h)` the sketch draws (yellow; e.g. its hit areas).
+  Without the flag, `debugBox` draws nothing.
+- `run --timing` adds a line to the transcript with the average, 95th
+  percentile and worst draw time per frame (and TEA's update time), with
+  frame 0, which builds caches and sprites, reported apart.
+- `cli diff before.png after.png` shows what changed between two frames.
+- `cursor("pointer")` sets the pointer over a browser figure (until changed;
+  set `"default"` when the pointer leaves a target); headless it does nothing.
+- `textFont("Georgia, serif")` and `textStyle("italic")` style `text`. Which
+  fonts exist depends on the machine, so stick to common families.
 
 ## Determinism
 

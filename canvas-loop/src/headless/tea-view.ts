@@ -1,3 +1,5 @@
+import type { CursorKind, TextStyle } from "../core/tea.js";
+import { recordOf } from "../core/records.js";
 import type { Sprite, SpriteOptions } from "../core/tea.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
@@ -131,6 +133,18 @@ export class TeaView implements View {
   noErase(): void {
     this.#sketch.noErase();
   }
+  textFont(family: string): void {
+    this.#sketch.textFont(family);
+  }
+  textStyle(style: TextStyle): void {
+    this.#sketch.textStyle(style);
+  }
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#sketch.debugBox(...args);
+  }
+  cursor(kind: CursorKind): void {
+    this.#sketch.cursor(kind);
+  }
   text(...args: [string, number, number]): void {
     this.#sketch.text(...args);
   }
@@ -201,6 +215,10 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   log(...args: readonly unknown[]): void {
     this.#sketch.log(...args);
+  }
+
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> {
+    return recordOf(keys, value);
   }
 
   handled(name: string): void {

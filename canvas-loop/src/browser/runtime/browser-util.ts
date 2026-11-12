@@ -2,6 +2,7 @@
 // (the same mulberry32 stream the CLI uses, so a recorded session replays
 // byte-for-byte headless), a live view of the resolved param values, and `log`.
 // No drawing surface — `update` cannot paint, exactly as in the headless runtime.
+import { recordOf } from "../../core/records.js";
 import { SketchUsageError } from "../../headless/errors.js";
 import type { SeededRandom } from "../../core/prng.js";
 import type { ParamsDecl, ParamValues, Util } from "../../core/tea.js";
@@ -47,6 +48,10 @@ export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
 
   log(...args: readonly unknown[]): void {
     this.#log(args);
+  }
+
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> {
+    return recordOf(keys, value);
   }
 
   handled(name: string): void {

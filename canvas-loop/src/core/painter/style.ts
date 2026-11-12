@@ -2,7 +2,7 @@
 import { resolveBrush } from "../brush/presets.js";
 import type { BrushName } from "../brush/presets.js";
 import type { Brush, BrushOverrides, Gesture } from "../brush/types.js";
-import type { BlendMode, CtxTextAlign, CtxTextBaseline, Paint } from "../paint.js";
+import type { BlendMode, CtxTextAlign, CtxTextBaseline, Paint, TextStyle } from "../paint.js";
 
 export interface StyleState {
   fillColor: Paint;
@@ -13,6 +13,8 @@ export interface StyleState {
   textSize: number;
   textAlignH: CtxTextAlign;
   textAlignV: CtxTextBaseline;
+  textFont: string;
+  textStyle: TextStyle;
   brush: Brush | undefined;
   gesture: Gesture;
   blend: BlendMode;
@@ -30,6 +32,8 @@ export function initialStyle(): StyleState {
     textSize: 12,
     textAlignH: "left",
     textAlignV: "alphabetic",
+    textFont: "sans-serif",
+    textStyle: "normal",
     brush: undefined,
     gesture: {},
     blend: "normal",
@@ -68,6 +72,13 @@ export class StyledPainter {
   textAlign(horizontal: CtxTextAlign, vertical?: CtxTextBaseline): void {
     this.style.textAlignH = horizontal;
     if (vertical !== undefined) this.style.textAlignV = vertical;
+  }
+  /** The font family for `text`, as CSS names it (`"Georgia, serif"`). Which fonts exist depends on the machine. */
+  textFont(family: string): void {
+    this.style.textFont = family;
+  }
+  textStyle(style: TextStyle): void {
+    this.style.textStyle = style;
   }
 
   // ── brushes ──────────────────────────────────────────────────────

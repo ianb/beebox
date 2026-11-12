@@ -3,6 +3,7 @@
 // context-generic Painter (one drawing implementation for both harnesses). It
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
+import type { CursorKind, TextStyle } from "../../core/tea.js";
 import type { SpriteOptions } from "../../core/painter/engine.js";
 import type { Sprite } from "../../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
@@ -17,10 +18,12 @@ import { makeDomLayer } from "./layer.js";
 
 export class BrowserView implements View {
   #painter: Painter;
+  #canvas: HTMLCanvasElement;
   #log: (args: readonly unknown[]) => void;
 
   constructor(deps: { ctx: CanvasRenderingContext2D; width: number; height: number; log: (args: readonly unknown[]) => void }) {
     this.#log = deps.log;
+    this.#canvas = deps.ctx.canvas;
     // The DOM context satisfies the structural Ctx2D the Painter uses; only its
     // `fillStyle` union is wider (adds CanvasPattern, never set here), so one
     // boundary cast bridges what structural assignability can't express.
@@ -150,6 +153,18 @@ export class BrowserView implements View {
   }
   noErase(): void {
     this.#painter.noErase();
+  }
+  textFont(family: string): void {
+    this.#painter.textFont(family);
+  }
+  textStyle(style: TextStyle): void {
+    this.#painter.textStyle(style);
+  }
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#painter.debugBox(...args);
+  }
+  cursor(kind: CursorKind): void {
+    if (this.#canvas.style.cursor !== kind) this.#canvas.style.cursor = kind;
   }
   text(...args: [string, number, number]): void {
     this.#painter.text(...args);

@@ -17,12 +17,15 @@ export type Envelope = number | EnvelopePreset | readonly (readonly [number, num
  *   `"even"` for closed shapes.
  * - `wobble`: sideways hand wobble in device pixels (default 0).
  * - `seed`: fixes the mark's random character. Without it, the seed is a hash
- *   of the mark's own points, brush and gesture.
+ *   of the mark's own points.
+ * - `faint`: the mark is meant to be faint; no faint-mark warning.
  */
 export interface Gesture {
   readonly pressure?: Envelope;
   readonly wobble?: number;
   readonly seed?: number;
+  /** The mark is meant to be faint: no faint-mark warning for it. */
+  readonly faint?: boolean;
 }
 
 interface BrushCommon {

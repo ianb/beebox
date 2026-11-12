@@ -15,15 +15,16 @@ export class FaintWatch {
   }
 
   /** Check one mark's landed strength; warn a few times per run, then once that the rest are suppressed. */
-  check(peak: { alpha: number; x: number; y: number }, groupAlphas: readonly number[]): void {
-    const alpha = groupAlphas.reduce((a, b) => a * b, peak.alpha);
+  /** `where` names the sprite or cache the mark was drawn into (its position is in that layer's coordinates). */
+  check(peak: { alpha: number; x: number; y: number }, args: { groupAlphas: readonly number[]; where: string | undefined }): void {
+    const alpha = args.groupAlphas.reduce((a, b) => a * b, peak.alpha);
     if (alpha >= FAINT || this.#count > MAX_WARNINGS) return;
     this.#count += 1;
     if (this.#count > MAX_WARNINGS) {
       this.#warn("faint marks: more marks are too faint to see; further warnings suppressed");
       return;
     }
-    const at = `(${Math.round(peak.x)}, ${Math.round(peak.y)})`;
-    this.#warn(`faint mark near ${at}: it reaches only ${Math.round(alpha * 100)}% opacity and will barely show`);
+    const at = `(${Math.round(peak.x)}, ${Math.round(peak.y)})${args.where === undefined ? "" : ` in ${args.where}`}`;
+    this.#warn(`faint mark near ${at}: it reaches only ${Math.round(alpha * 100)}% opacity and will barely show (gesture({ faint: true }) marks it as intended)`);
   }
 }

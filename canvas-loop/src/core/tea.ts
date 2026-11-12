@@ -4,7 +4,7 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
 // sketch — which imports only this module — can name them.
-import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
+import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, TextStyle, Vec2 } from "./paint.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 import type { BrushName } from "./brush/presets.js";
 import type { GroupOptions, SpriteOptions } from "./painter/engine.js";
@@ -19,6 +19,9 @@ export type { TubeOptions } from "./shapes.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
 export type TextAlign = "center" | "end" | "left" | "right" | "start";
+export type { TextStyle } from "./paint.js";
+/** Pointer shapes for `cursor`. */
+export type CursorKind = "default" | "pointer" | "grab" | "grabbing" | "crosshair" | "move" | "text" | "not-allowed";
 export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
 
 // ── Parameter declarations ───────────────────────────────────────────
@@ -74,8 +77,10 @@ export type ParamValues<D extends ParamsDecl> = {
 /** Recursively `readonly` — the Model type `update`/`draw` see, so mutation is a compile error. */
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
-  : T extends readonly (infer E)[]
-    ? ReadonlyArray<DeepReadonly<E>>
+  : T extends readonly unknown[]
+    ? number extends T["length"]
+      ? ReadonlyArray<DeepReadonly<T[number]>>
+      : { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T extends object
       ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
       : T;
@@ -120,6 +125,8 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * handles and may change nothing. See TEA.md "Engagement verdicts".
    */
   handled(name: string): void;
+  /** A record with one entry per key: `u.record(IDS, () => 0)` gives `Record<Id, number>`. */
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V>;
 }
 
 /**
@@ -186,6 +193,13 @@ export interface View {
   noErase(): void;
   text(content: string, x: number, y: number): void;
   textSize(size: number): void;
+  /** Font family for `text` (CSS names, e.g. `"Georgia, serif"`); which fonts exist depends on the machine. */
+  textFont(family: string): void;
+  textStyle(style: TextStyle): void;
+  /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
+  cursor(kind: CursorKind): void;
+  /** With `run --outline`, a labelled box drawn over the frame (e.g. a hit area); otherwise nothing. */
+  debugBox(label: string, x: number, y: number, w: number, h: number): void;
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;
   push(): void;
   pop(): void;

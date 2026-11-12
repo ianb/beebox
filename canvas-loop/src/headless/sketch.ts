@@ -1,3 +1,4 @@
+import type { CursorKind, TextStyle } from "../core/tea.js";
 import type { SpriteOptions } from "../core/painter/engine.js";
 import type { Sprite } from "../core/paint.js";
 import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
@@ -60,7 +61,10 @@ export class Sketch {
   #random: SeededRandom;
   #onHandled: (name: string) => void;
 
-  constructor(options: { host: SketchHost; seed: number; fps: number; onHandled: (name: string) => void }) {
+  #outline: boolean;
+
+  constructor(options: { host: SketchHost; seed: number; fps: number; onHandled: (name: string) => void; outline?: boolean }) {
+    this.#outline = options.outline === true;
     this.#host = options.host;
     this.#fps = options.fps;
     this.#random = new SeededRandom(options.seed);
@@ -84,6 +88,7 @@ export class Sketch {
     // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
     this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height, makeLayer: makeSkiaLayer,
       warn: (message) => this.#host.recordLog({ level: "warn", message }),
+      outline: this.#outline,
     });
   }
 
@@ -275,6 +280,21 @@ export class Sketch {
   }
   noErase(): void {
     this.#requirePainter().noErase();
+  }
+  textFont(family: string): void {
+    this.#requirePainter().textFont(family);
+  }
+  textStyle(style: TextStyle): void {
+    this.#requirePainter().textStyle(style);
+  }
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#requirePainter().debugBox(...args);
+  }
+  /** Headless renders have no pointer; kept so sketches run unchanged in both runtimes. */
+  cursor(_kind: CursorKind): void {}
+  /** Draw this frame's `--outline` overlay (the runtime calls it after `draw`). */
+  finishFrame(): void {
+    this.#painter?.finishFrame();
   }
   text(...args: [string, number, number]): void {
     this.#requirePainter().text(...args);

@@ -23,8 +23,12 @@ fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
 ```sh
 pnpm --dir canvas-loop run cli run <sketch.ts> \
   [--frames 120] [--events events.json] [--out out/] \
-  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]...
+  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]... [--outline] [--timing]
 ```
+
+`--outline` draws sprite, clip and `debugBox` outlines over each captured
+frame; `--timing` adds a per-frame draw-time line to the transcript (see
+[BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
 
 `--zoom` (repeatable) also writes an enlarged crop of that region beside every
 captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and

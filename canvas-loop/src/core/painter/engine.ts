@@ -19,6 +19,7 @@ import { StyledPainter } from "./style.js";
 import type { StyleState } from "./style.js";
 import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, Layer, MakeLayer, Paint, PathCommand, Sprite, Vec2 } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
+import { DebugOverlay, outlinePoints, toCanvas } from "./debug.js";
 import { FaintWatch } from "./faint.js";
 import { LayerCache, LayerPool, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
@@ -60,15 +61,19 @@ export class Painter extends StyledPainter {
   #cache = new LayerCache(24);
   #sprites = new LayerCache(400);
   #pool: LayerPool;
+  #debug: DebugOverlay;
+  // Names of the sprites/caches being drawn into, innermost last (for warnings and outlines).
+  #where: string[] = [];
   // Faint-mark checks read pixels back; only done when someone listens for warnings.
   #measure: boolean;
 
-  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void }) {
+  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; outline?: boolean }) {
     super();
     this.#ctxStack = [options.ctx];
     this.#paper = new PaperSheet(options.makeLayer, { width: options.width, height: options.height });
     this.#faint = new FaintWatch(options.warn ?? (() => {}));
     this.#measure = options.warn !== undefined;
+    this.#debug = new DebugOverlay(options.outline === true);
     this.#pool = new LayerPool(options.makeLayer, { width: options.width, height: options.height });
     this.#makeLayer = options.makeLayer;
     this.width = options.width;
@@ -196,6 +201,7 @@ export class Painter extends StyledPainter {
 
   // Clip to a polygon/path (or the union of several) for the duration of `body`, restoring afterward.
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
+    for (const one of isShapeList(shape) ? shape : [shape]) this.#outline("clip", { label: "clip", shape: one });
     if (isShapeList(shape)) {
       this.#clipUnion(shape, body);
       return;
@@ -249,7 +255,7 @@ export class Painter extends StyledPainter {
   }
 
   /** Run `body` drawing onto a fresh full-canvas layer; state changes inside do not leak out. */
-  #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData; keep?: boolean; into?: Layer }): Layer {
+  #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData; keep?: boolean; into?: Layer; where?: string }): Layer {
     const { opacity, start } = options;
     // A sprite draws into its own layer in local coordinates; a cache keeps its layer for good;
     // the rest come from the pool and go back after use.
@@ -264,9 +270,11 @@ export class Painter extends StyledPainter {
     this.#floor = depth;
     this.#ctxStack.push(layer.ctx);
     this.#alphaStack.push(opacity);
+    if (options.where !== undefined) this.#where.push(options.where);
     try {
       body();
     } finally {
+      if (options.where !== undefined) this.#where.pop();
       while (this.#styleStack.length > depth && this.pop());
       this.#ctxStack.pop();
       this.#alphaStack.pop();
@@ -283,7 +291,7 @@ export class Painter extends StyledPainter {
    * (including the transform at the first call); a new key redraws.
    */
   cache(key: string, body: () => void): void {
-    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true }));
+    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true, where: `cache "${key}"` }));
     drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: this.#composite() });
   }
 
@@ -297,7 +305,7 @@ export class Painter extends StyledPainter {
     if (!(width > 0 && height > 0 && width <= this.width && height <= this.height)) {
       throw new SketchUsageError({ detail: `sprite "${key}" size ${width}×${height} must be positive and fit the canvas` });
     }
-    if (this.#sprites.get(key) === undefined) this.#sprites.set(key, this.#onLayer(body, { opacity: 1, into: this.#makeLayer({ width, height }) }));
+    if (this.#sprites.get(key) === undefined) this.#sprites.set(key, this.#onLayer(body, { opacity: 1, into: this.#makeLayer({ width, height }), where: `sprite "${key}"` }));
     return { kind: "sprite", key, width, height };
   }
 
@@ -307,16 +315,34 @@ export class Painter extends StyledPainter {
     const layer = this.#sprites.get(sprite.key);
     if (layer === undefined) throw new SketchUsageError({ detail: `sprite "${sprite.key}" is not defined in this run (call sprite() first)` });
     const ctx = this.ctx;
+    this.#outline("sprite", { label: sprite.key, rect: [x, y, sprite.width, sprite.height] });
     const alpha = ctx.globalAlpha;
     ctx.globalAlpha = alpha * (opacity ?? 1);
     withComposite(ctx, { op: this.#composite(), draw: () => ctx.drawImage(layer.image, 0, 0, sprite.width, sprite.height, x, y, sprite.width, sprite.height) });
     ctx.globalAlpha = alpha;
   }
 
+  /** With `run --outline`, a labelled box over the frame (e.g. a hit area); otherwise nothing. */
+  debugBox(...args: [string, number, number, number, number]): void {
+    this.#outline("box", { label: args[0], rect: [args[1], args[2], args[3], args[4]] });
+  }
+
+  /** Draw this frame's debug outlines over the canvas (the runtime calls it after `draw`). */
+  finishFrame(): void {
+    this.#debug.draw(this.#ctxStack[0] ?? this.ctx);
+  }
+
+  #outline(kind: "sprite" | "clip" | "box", args: { label: string; rect?: readonly [number, number, number, number]; shape?: ClipShape }): void {
+    // Outlines are in canvas coordinates; inside a sprite the coordinates are the sprite's own.
+    if (!this.#debug.enabled || this.#where.some((w) => w.startsWith("sprite"))) return;
+    const m = this.ctx.getTransform();
+    for (const points of outlinePoints(args)) this.#debug.add({ kind, label: args.label, points: toCanvas(m, points) });
+  }
+
   text(...args: [string, number, number]): void {
     const [content, x, y] = args;
     const ctx = this.ctx;
-    ctx.font = `${this.style.textSize}px sans-serif`;
+    ctx.font = `${this.style.textStyle} ${this.style.textSize}px ${this.style.textFont}`;
     ctx.textAlign = this.style.textAlignH;
     ctx.textBaseline = this.style.textAlignV;
     if (this.style.fillEnabled) {
@@ -372,6 +398,6 @@ export class Painter extends StyledPainter {
       paper: () => this.#paper.layer(),
       composite,
     });
-    if (peak !== undefined && !erasing) this.#faint.check(peak, this.#alphaStack);
+    if (peak !== undefined && !erasing && this.style.gesture.faint !== true) this.#faint.check(peak, { groupAlphas: this.#alphaStack, where: this.#where.at(-1) });
   }
 }
