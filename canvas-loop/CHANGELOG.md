@@ -36,6 +36,10 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Faster frames.** Brush marks reuse one offscreen canvas and groups reuse
+  pooled layers, instead of a new canvas per mark or group; the faint-mark
+  pixel read-back runs headless only. Headless output is byte-identical; the
+  animated brush pages went from 39 to 58 fps together in Chrome.
 - **`cache(key, body)`** draws a static part once and pastes it on later
   frames, so painted scenes can animate.
 - **Review fixes.** `clip([shapes…])` now erases and blends like a single

@@ -173,7 +173,8 @@ s.group({ opacity: 0.6, blend: "multiply" }, () => {
 
 A mark whose strongest pixel lands below about 8% opacity (after its brush
 and any open groups) is too faint to see. The transcript gets a warning line
-with the mark's position, so you do not spend a cycle finding out.
+with the mark's position, so you do not spend a cycle finding out. The check reads
+pixels back, so it runs headless only; a browser figure skips it.
 
 Shading inside a shape: fill the shape, clip to it and draw marks, then draw
 its outline last. The clip includes the inside half of the outline, so marks

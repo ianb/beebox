@@ -9,7 +9,7 @@
 // is also where the paper lives, so grain stays fixed to the canvas.
 import type { Contour } from "../../contours.js";
 import { SketchUsageError } from "../../errors.js";
-import type { Ctx2D, CtxTransform, Layer, MakeLayer, Paint, Vec2 } from "../../paint.js";
+import type { Ctx2D, CtxTransform, Layer, Paint, Vec2 } from "../../paint.js";
 import { inPaintSpace, resolveGradient } from "../../paint.js";
 import { evalEnvelope, validateEnvelope } from "../envelope.js";
 import { bristleReach, paintBristle, paintInk, paintStamp } from "./kinds.js";
@@ -20,7 +20,10 @@ import type { Brush, Gesture } from "../types.js";
 
 export interface MarkRequest {
   readonly target: Ctx2D;
-  readonly makeLayer: MakeLayer;
+  /** A reusable canvas-sized layer: the mark draws in its top-left corner, cleared and clipped to the mark's bounds. */
+  readonly scratch: Layer;
+  /** Read the mark's strongest pixel back (for faint-mark warnings); costly in a browser, where it stalls the GPU. */
+  readonly measure: boolean;
   readonly canvas: { readonly width: number; readonly height: number };
   readonly contours: readonly Contour[];
   readonly paint: Paint;
@@ -196,7 +199,13 @@ export function renderMark(req: MarkRequest): { alpha: number; x: number; y: num
   const reach = req.brush.kind === "bristle" ? bristleReach(width, req.brush) : width * (1 + (req.brush.kind === "stamp" ? req.brush.scatter : 0));
   const b = boundsOf(all, { pad: reach + (req.gesture.wobble ?? 0) + 2, canvas: req.canvas });
   if (b === undefined) return undefined;
-  const layer = req.makeLayer({ width: b.w, height: b.h });
+  const layer = req.scratch;
+  layer.ctx.save();
+  layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+  layer.ctx.clearRect(0, 0, b.w, b.h);
+  layer.ctx.beginPath();
+  layer.ctx.rect(0, 0, b.w, b.h);
+  layer.ctx.clip();
   layer.ctx.setTransform(1, 0, 0, 1, -b.x, -b.y);
   layer.ctx.fillStyle = "#000000";
   for (const [i, samples] of all.entries()) {
@@ -217,5 +226,7 @@ export function renderMark(req: MarkRequest): { alpha: number; x: number; y: num
   t.globalCompositeOperation = req.composite;
   t.drawImage(layer.image, 0, 0, b.w, b.h, b.x, b.y, b.w, b.h);
   t.restore();
-  return { alpha: peakAlpha(layer, b) * req.brush.opacity, x: b.x + b.w / 2, y: b.y + b.h / 2 };
+  const alpha = req.measure ? peakAlpha(layer, b) * req.brush.opacity : 1;
+  layer.ctx.restore();
+  return { alpha, x: b.x + b.w / 2, y: b.y + b.h / 2 };
 }

@@ -9,3 +9,10 @@ export class SketchUsageError extends Error {
     super(`Sketch API misuse: ${options.detail}`);
   }
 }
+
+/** Throw unless `value` is a finite number in 0..1; `what` names it in the message. */
+export function assertUnit(value: number, what: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new SketchUsageError({ detail: `${what} must be a number in 0..1, got ${value}` });
+  }
+}

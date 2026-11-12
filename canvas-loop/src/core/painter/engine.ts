@@ -16,13 +16,13 @@ import { renderMark } from "../brush/render/mark.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
 import { curveCommands, ellipseContour, pathContours } from "../contours.js";
-import { SketchUsageError } from "../errors.js";
+import { SketchUsageError, assertUnit } from "../errors.js";
 import { initialStyle } from "./style.js";
 import type { StyleState } from "./style.js";
 import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTextAlign, CtxTextBaseline, Layer, MakeLayer, Paint, PathCommand, Vec2 } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
 import { FaintWatch } from "./faint.js";
-import { LayerCache, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
+import { LayerCache, LayerPool, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
 
 /** Options for `group`: opacity applied once to the finished group, and its blend mode. */
@@ -53,11 +53,16 @@ export class Painter {
   #alphaStack: number[] = [];
   #faint: FaintWatch;
   #cache = new LayerCache();
+  #pool: LayerPool;
+  // Faint-mark checks read pixels back; only done when someone listens for warnings.
+  #measure: boolean;
 
   constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void }) {
     this.#ctxStack = [options.ctx];
     this.#paper = new PaperSheet(options.makeLayer, { width: options.width, height: options.height });
     this.#faint = new FaintWatch(options.warn ?? (() => {}));
+    this.#measure = options.warn !== undefined;
+    this.#pool = new LayerPool(options.makeLayer, { width: options.width, height: options.height });
     this.#makeLayer = options.makeLayer;
     this.width = options.width;
     this.height = options.height;
@@ -227,9 +232,7 @@ export class Painter {
 
   /** Darken the paper's valleys across everything drawn so far, so flat colour looks printed on paper. */
   paperTexture(amount: number): void {
-    if (!Number.isFinite(amount) || amount < 0 || amount > 1) {
-      throw new SketchUsageError({ detail: `paperTexture amount must be a number in 0..1, got ${amount}` });
-    }
+    assertUnit(amount, "paperTexture amount");
     paperOverlay(this.ctx, { paper: this.#paper.layer(), amount, width: this.width, height: this.height });
   }
 
@@ -267,8 +270,10 @@ export class Painter {
     const transform = parent.getTransform();
     const before = parent.getImageData(0, 0, this.width, this.height);
     const layer = this.#onLayer(body, { opacity: 1, start: before });
-    const size = { width: this.width, height: this.height };
-    replaceInShapes(parent, { layer, mask: this.#makeLayer(size), scratch: this.#makeLayer(size), before, shapes, transform, ...size });
+    // `layer` and `scratch` take putImageData, so they are never pooled: @napi-rs/canvas reads such a
+    // canvas lazily when it is drawn, and clearing it for reuse would blank what was drawn from it.
+    const scratch = this.#makeLayer({ width: this.width, height: this.height });
+    this.#pool.borrow((mask) => replaceInShapes(parent, { layer, mask, scratch, before, shapes, transform, width: this.width, height: this.height }));
   }
 
   /**
@@ -278,19 +283,19 @@ export class Painter {
    */
   group(options: GroupOptions, body: () => void): void {
     const opacity = options.opacity ?? 1;
-    if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
-      throw new SketchUsageError({ detail: `group opacity must be a number in 0..1, got ${opacity}` });
-    }
+    assertUnit(opacity, "group opacity");
     const layer = this.#onLayer(body, { opacity });
     const op = compositeOp(options.blend ?? "normal");
     drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity, op });
+    this.#pool.release(layer);
   }
 
   /** Run `body` drawing onto a fresh full-canvas layer; state changes inside do not leak out. */
-  #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData }): Layer {
+  #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData; keep?: boolean }): Layer {
     const { opacity, start } = options;
     const m = this.ctx.getTransform();
-    const layer = this.#makeLayer({ width: this.width, height: this.height });
+    // A kept layer (a cache) is the caller's for good; the rest come from the pool and go back after use.
+    const layer = options.keep === true || start !== undefined ? this.#makeLayer({ width: this.width, height: this.height }) : this.#pool.acquire();
     if (start !== undefined) layer.ctx.putImageData(start, 0, 0);
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     const savedFloor = this.#floor;
@@ -318,7 +323,7 @@ export class Painter {
    * (including the transform at the first call); a new key redraws.
    */
   cache(key: string, body: () => void): void {
-    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1 }));
+    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1, keep: true }));
     drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: this.#composite() });
   }
 
@@ -370,7 +375,8 @@ export class Painter {
     const composite = erasing ? "destination-out" : compositeOp(blend === "normal" ? (brush.blend ?? "normal") : blend);
     const peak = renderMark({
       target: this.ctx,
-      makeLayer: this.#makeLayer,
+      scratch: this.#pool.scratch(),
+      measure: this.#measure,
       canvas: { width: this.width, height: this.height },
       contours: contours(),
       paint: this.#style.strokeColor,

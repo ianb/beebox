@@ -1,6 +1,6 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
-import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage } from "../paint.js";
+import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, MakeLayer } from "../paint.js";
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 
 /** Draw a full-canvas layer image onto `ctx` at device scale, once. */
@@ -93,5 +93,49 @@ export class LayerCache {
     const oldest = this.#layers.keys().next();
     if (this.#layers.size > CACHE_LIMIT && oldest.done !== true) this.#layers.delete(oldest.value);
     return layer;
+  }
+}
+
+/**
+ * Canvas-sized layers, reused: creating an offscreen canvas for every group,
+ * clip and brush mark on every frame dominates an animation's cost.
+ */
+export class LayerPool {
+  #make: MakeLayer;
+  #size: { width: number; height: number };
+  #free: Layer[] = [];
+  #scratch: Layer | undefined;
+
+  constructor(make: MakeLayer, size: { width: number; height: number }) {
+    this.#make = make;
+    this.#size = size;
+  }
+
+  /** A clear, identity-transform layer; give it back with `release` when done. */
+  acquire(): Layer {
+    return this.#free.pop() ?? this.#make(this.#size);
+  }
+
+  /** Clear a layer and keep it for the next `acquire`. */
+  release(layer: Layer): void {
+    const { ctx } = layer;
+    ctx.resetTransform();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, this.#size.width, this.#size.height);
+    this.#free.push(layer);
+  }
+
+  /** Lend a layer for the length of `body`, then take it back. */
+  borrow(body: (layer: Layer) => void): void {
+    const layer = this.acquire();
+    body(layer);
+    this.release(layer);
+  }
+
+  /** The one layer brush marks draw into (each mark clears and clips its own corner of it). */
+  scratch(): Layer {
+    this.#scratch ??= this.#make(this.#size);
+    return this.#scratch;
   }
 }

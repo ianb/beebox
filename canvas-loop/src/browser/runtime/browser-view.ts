@@ -28,7 +28,8 @@ export class BrowserView implements View {
       width: deps.width,
       height: deps.height,
       makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),
-      warn: (message) => deps.log([message]),
+      // No `warn`: faint-mark checks read pixels back, which stalls the GPU in a browser every frame.
+      // They are an authoring aid for headless transcripts.
     });
   }
 
