@@ -26,3 +26,8 @@ whether the debounce or the test's wait is the part that is too tight.
 
 The file is not in `beebox/test/careful.txt`; that list says a
 timing-sensitive file is a flake to fix, not to add.
+
+2026-11-12, later: run alone three times each, alternating, on `main`
+(`7d0de419d`) and on the branch at load average about 15: it failed all six
+times on both. It is not specific to the branch; it now fails on `main` too
+in this environment.
