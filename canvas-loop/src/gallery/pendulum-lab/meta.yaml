@@ -1,0 +1,22 @@
+slug: pendulum-lab
+title: "Pendulum lab (canvas-loop side of the second d3 comparison)"
+created: 2026-11-12
+model: opus-5.5
+driver: opus-5.5
+cycles: 5
+tier: tea
+harness-commit: 70fcfacb
+frames: 1940
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Swinging pendulum with typed length, gravity and angle, timed 10-swing trials into a table and a period-against-length graph, theory curves and a square-root-of-length axis. Stopped: satisfied. Built head to head with a d3 version (scratch/d3-round2/pendulum-lab-d3).
+self-report-summary: >
+  Determinism let trial numbers be checked from the transcript; layout collisions took the cycles; wanted a dash key, a measure-without-drawing call, checkbox labels and overlap warnings.
+features-exercised:
+  - animation
+  - v.control
+  - v.cache backdrop
+  - sibling -tea helper files

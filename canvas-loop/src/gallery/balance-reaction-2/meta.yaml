@@ -1,0 +1,22 @@
+slug: balance-reaction-2
+title: "Balance the equation, rerun on per-call styles, text boxes and inputs over the canvas"
+created: 2026-11-12
+model: opus-5.5
+driver: opus-5.5
+cycles: 7
+tier: tea
+harness-commit: 70fcfacb
+frames: 900
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Rerun of balance-reaction with the improved library and a 16-cycle budget; coefficient inputs inside the equation, shared molecule scale, per-element bars with hints, hover and pin to light an element. Stopped: satisfied.
+self-report-summary: >
+  v.control, v.text boxes and per-call styles made inputs, wrapping and state colours easy; wanted a dash style key, rect clips, a glyph fallback for stand-ins, and expectations in the events file.
+features-exercised:
+  - v.control native inputs in the drawing
+  - v.text boxes
+  - per-call styles
+  - pointer hover and pin

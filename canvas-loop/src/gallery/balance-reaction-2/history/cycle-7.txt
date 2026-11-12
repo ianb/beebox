@@ -1,0 +1,183 @@
+# canvas-loop transcript
+
+- sketch: `src/gallery/balance-reaction-2/sketch-tea.ts`
+- seed: 42
+- fps: 60
+- frames: 900
+- events: `src/gallery/balance-reaction-2/events.json`
+- canvas: 960x720
+
+### frame 0
+![frame 0](frame-0000.png)
+
+### frame 30 — start: water, all ones (unchanged)
+![frame 30 — start: water, all ones](frame-0000.png)
+
+**[frame 60]** mousemove (500,560) → point-at-O
+
+### frame 60
+![frame 60](frame-0060.png)
+
+**[frame 90]** param: c3 → 2
+
+### frame 90
+![frame 90](frame-0090.png)
+
+**[frame 120]** mousemove (100,515) → point-at-H
+
+### frame 120
+![frame 120](frame-0120.png)
+
+**[frame 150]** mousedown (100,515) → pin-H
+
+### frame 150
+![frame 150](frame-0150.png)
+
+**[frame 151]** mouseup (100,515) → (unhandled)
+
+### frame 151 (unchanged)
+![frame 151](frame-0150.png)
+
+**[frame 152]** mousemove (480,30) → Δmodel
+
+### frame 152 (unchanged)
+![frame 152](frame-0150.png)
+
+**[frame 180]** param: c1 → 2
+
+### frame 180
+![frame 180](frame-0180.png)
+
+### frame 195 — balanced +15
+![frame 195 — balanced +15](frame-0195.png)
+
+### frame 215 — balanced +35
+![frame 215 — balanced +35](frame-0215.png)
+
+### frame 260 — balanced +80
+![frame 260 — balanced +80](frame-0260.png)
+
+**[frame 300]** mousedown (100,515) → unpin-H
+
+### frame 300
+![frame 300](frame-0300.png)
+
+**[frame 301]** mouseup (100,515) → (unhandled)
+
+### frame 301
+![frame 301](frame-0301.png)
+
+**[frame 302]** mousemove (480,30) → (unhandled)
+
+### frame 302
+![frame 302](frame-0302.png)
+
+**[frame 330]** param: reaction → Burning methane: CH₄ + O₂ → CO₂ + H₂O
+
+### frame 330
+![frame 330](frame-0330.png)
+
+**[frame 360]** param: c1 → 1
+
+### frame 360
+![frame 360](frame-0360.png)
+
+**[frame 390]** param: c2 → 2
+
+### frame 390
+![frame 390](frame-0390.png)
+
+**[frame 405]** param: c3 → 1
+
+### frame 405
+![frame 405](frame-0405.png)
+
+**[frame 420]** param: c4 → 2
+
+### frame 420
+![frame 420](frame-0420.png)
+
+### frame 450 — methane balanced
+![frame 450 — methane balanced](frame-0450.png)
+
+**[frame 480]** param: reaction → Burning propane: C₃H₈ + O₂ → CO₂ + H₂O
+
+### frame 480
+![frame 480](frame-0480.png)
+
+**[frame 510]** param: c3 → 3
+
+### frame 510
+![frame 510](frame-0510.png)
+
+**[frame 540]** param: c4 → 8
+
+### frame 540
+![frame 540](frame-0540.png)
+
+**[frame 570]** param: c4 → 4
+
+### frame 570
+![frame 570](frame-0570.png)
+
+**[frame 600]** param: c2 → 5
+
+### frame 600
+![frame 600](frame-0600.png)
+
+### frame 630 — propane balanced
+![frame 630 — propane balanced](frame-0630.png)
+
+**[frame 660]** param: reaction → Rust: Fe + O₂ → Fe₂O₃
+
+### frame 660
+![frame 660](frame-0660.png)
+
+**[frame 690]** param: c1 → 4
+
+### frame 690
+![frame 690](frame-0690.png)
+
+**[frame 720]** param: c3 → 2
+
+### frame 720
+![frame 720](frame-0720.png)
+
+**[frame 750]** param: c2 → 3
+
+### frame 750
+![frame 750](frame-0750.png)
+
+### frame 780 — rust balanced
+![frame 780 — rust balanced](frame-0780.png)
+
+**[frame 800]** param: reaction → Ammonia: N₂ + H₂ → NH₃
+
+### frame 800
+![frame 800](frame-0800.png)
+
+**[frame 830]** param: c1 → 2
+
+### frame 830
+![frame 830](frame-0830.png)
+
+**[frame 831]** param: c2 → 6
+
+### frame 831
+![frame 831](frame-0831.png)
+
+**[frame 832]** param: c3 → 4
+
+### frame 832
+![frame 832](frame-0832.png)
+
+### frame 860 — ammonia balanced, not simplest
+![frame 860 — ammonia balanced, not simplest](frame-0860.png)
+
+**[frame 880]** param: c2 → 12
+
+### frame 880
+![frame 880](frame-0880.png)
+
+### frame 899 (unchanged)
+![frame 899](frame-0880.png)

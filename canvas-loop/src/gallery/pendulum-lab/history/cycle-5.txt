@@ -1,0 +1,279 @@
+# canvas-loop transcript
+
+- sketch: `src/gallery/pendulum-lab/sketch-tea.ts`
+- seed: 42
+- fps: 60
+- frames: 1940
+- events: `src/gallery/pendulum-lab/events.json`
+- canvas: 960x636
+
+### frame 0 — start
+![frame 0 — start](frame-0000.png)
+
+**[frame 30]** mousemove (300,200) → Δmodel
+
+### frame 30 (unchanged)
+![frame 30](frame-0000.png)
+
+**[frame 40]** param: length → 0.25
+
+### frame 40
+![frame 40](frame-0040.png)
+
+### frame 50 — short string, held (unchanged)
+![frame 50 — short string, held](frame-0040.png)
+
+**[frame 60]** log: release: Earth, L=0.25 m, 10°
+
+**[frame 60]** trigger time → Δmodel
+
+### frame 60
+![frame 60](frame-0060.png)
+
+### frame 120 — released, 1x
+![frame 120 — released, 1x](frame-0120.png)
+
+### frame 400 — mid-trial
+![frame 400 — mid-trial](frame-0400.png)
+
+**[frame 662]** log: trial 1: Earth L=0.25 10° → 10 swings 10.05 s, T=1.005 s
+
+### frame 662
+![frame 662](frame-0662.png)
+
+### frame 680 — trial 1 done
+![frame 680 — trial 1 done](frame-0680.png)
+
+**[frame 700]** param: speed → 16×
+
+### frame 700
+![frame 700](frame-0700.png)
+
+**[frame 710]** param: length → 0.5
+
+### frame 710
+![frame 710](frame-0710.png)
+
+**[frame 720]** log: release: Earth, L=0.50 m, 10°
+
+**[frame 720]** trigger time → Δmodel
+
+### frame 720
+![frame 720](frame-0720.png)
+
+### frame 760 — trial 2 running at 16x
+![frame 760 — trial 2 running at 16x](frame-0760.png)
+
+**[frame 773]** log: trial 2: Earth L=0.50 10° → 10 swings 14.21 s, T=1.421 s
+
+### frame 773
+![frame 773](frame-0773.png)
+
+**[frame 800]** param: length → 1
+
+### frame 800
+![frame 800](frame-0800.png)
+
+### frame 805 — L=1 held
+![frame 805 — L=1 held](frame-0805.png)
+
+**[frame 810]** log: release: Earth, L=1.00 m, 10°
+
+**[frame 810]** mousedown (280,244) → let-go
+
+### frame 810
+![frame 810](frame-0810.png)
+
+**[frame 811]** mouseup (280,244) → (unhandled)
+
+### frame 811
+![frame 811](frame-0811.png)
+
+**[frame 885]** log: trial 3: Earth L=1.00 10° → 10 swings 20.10 s, T=2.010 s
+
+### frame 885
+![frame 885](frame-0885.png)
+
+**[frame 900]** param: length → 1.5
+
+### frame 900
+![frame 900](frame-0900.png)
+
+**[frame 910]** log: release: Earth, L=1.50 m, 10°
+
+**[frame 910]** trigger time → Δmodel
+
+### frame 910
+![frame 910](frame-0910.png)
+
+### frame 1000
+![frame 1000](frame-1000.png)
+
+**[frame 1002]** log: trial 4: Earth L=1.50 10° → 10 swings 24.62 s, T=2.462 s
+
+### frame 1002
+![frame 1002](frame-1002.png)
+
+**[frame 1020]** param: length → 2
+
+### frame 1020
+![frame 1020](frame-1020.png)
+
+**[frame 1030]** log: release: Earth, L=2.00 m, 10°
+
+**[frame 1030]** trigger time → Δmodel
+
+### frame 1030
+![frame 1030](frame-1030.png)
+
+**[frame 1136]** log: trial 5: Earth L=2.00 10° → 10 swings 28.42 s, T=2.842 s
+
+### frame 1136
+![frame 1136](frame-1136.png)
+
+### frame 1140 — five Earth trials
+![frame 1140 — five Earth trials](frame-1140.png)
+
+**[frame 1160]** param: length → 1
+
+**[frame 1160]** param: angle → 25
+
+### frame 1160
+![frame 1160](frame-1160.png)
+
+**[frame 1170]** log: release: Earth, L=1.00 m, 25°
+
+**[frame 1170]** trigger time → Δmodel
+
+### frame 1170
+![frame 1170](frame-1170.png)
+
+**[frame 1246]** log: trial 6: Earth L=1.00 25° → 10 swings 20.30 s, T=2.030 s
+
+### frame 1246
+![frame 1246](frame-1246.png)
+
+**[frame 1260]** param: angle → 5
+
+### frame 1260
+![frame 1260](frame-1260.png)
+
+**[frame 1270]** log: release: Earth, L=1.00 m, 5°
+
+**[frame 1270]** trigger time → Δmodel
+
+### frame 1270
+![frame 1270](frame-1270.png)
+
+**[frame 1345]** log: trial 7: Earth L=1.00 5° → 10 swings 20.07 s, T=2.007 s
+
+### frame 1345
+![frame 1345](frame-1345.png)
+
+### frame 1350 — angle trials
+![frame 1350 — angle trials](frame-1350.png)
+
+**[frame 1360]** param: theory → true
+
+### frame 1360
+![frame 1360](frame-1360.png)
+
+### frame 1362 — theory on
+![frame 1362 — theory on](frame-1362.png)
+
+**[frame 1380]** param: gravity → Moon
+
+### frame 1380
+![frame 1380](frame-1380.png)
+
+### frame 1382 — moon held
+![frame 1382 — moon held](frame-1382.png)
+
+**[frame 1390]** log: release: Moon, L=1.00 m, 5°
+
+**[frame 1390]** trigger time → Δmodel
+
+### frame 1390
+![frame 1390](frame-1390.png)
+
+### frame 1480 — moon swinging
+![frame 1480 — moon swinging](frame-1480.png)
+
+**[frame 1575]** log: trial 8: Moon L=1.00 5° → 10 swings 49.39 s, T=4.939 s
+
+### frame 1575
+![frame 1575](frame-1575.png)
+
+**[frame 1590]** param: length → 0.5
+
+### frame 1590
+![frame 1590](frame-1590.png)
+
+**[frame 1600]** log: release: Moon, L=0.50 m, 5°
+
+**[frame 1600]** trigger time → Δmodel
+
+### frame 1600
+![frame 1600](frame-1600.png)
+
+**[frame 1730]** log: trial 9: Moon L=0.50 5° → 10 swings 34.92 s, T=3.492 s
+
+### frame 1730
+![frame 1730](frame-1730.png)
+
+**[frame 1750]** param: gravity → Jupiter
+
+**[frame 1750]** param: length → 2
+
+### frame 1750
+![frame 1750](frame-1750.png)
+
+**[frame 1760]** log: release: Jupiter, L=2.00 m, 5°
+
+**[frame 1760]** trigger time → Δmodel
+
+### frame 1760
+![frame 1760](frame-1760.png)
+
+**[frame 1826]** log: trial 10: Jupiter L=2.00 5° → 10 swings 17.86 s, T=1.786 s
+
+### frame 1826
+![frame 1826](frame-1826.png)
+
+### frame 1840 — jupiter done
+![frame 1840 — jupiter done](frame-1840.png)
+
+**[frame 1860]** param: sqrtAxis → true
+
+### frame 1860
+![frame 1860](frame-1860.png)
+
+### frame 1862 — sqrt axis
+![frame 1862 — sqrt axis](frame-1862.png)
+
+**[frame 1880]** mousemove (785,184) → Δmodel
+
+### frame 1880
+![frame 1880](frame-1880.png)
+
+### frame 1881 — hover point
+![frame 1881 — hover point](frame-1881.png)
+
+**[frame 1900]** mousemove (600,470) → Δmodel
+
+### frame 1900
+![frame 1900](frame-1900.png)
+
+### frame 1901 — hover row
+![frame 1901 — hover row](frame-1901.png)
+
+**[frame 1920]** trigger clear → Δmodel
+
+### frame 1920
+![frame 1920](frame-1920.png)
+
+### frame 1925 — cleared
+![frame 1925 — cleared](frame-1925.png)
+
+### frame 1939
+![frame 1939](frame-1939.png)
