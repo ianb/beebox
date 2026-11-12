@@ -51,7 +51,8 @@ whose event never comes leaves the old schemas cached until the manual
 reload endpoint or the daily recycle. Production runs on Linux, where
 Node's `fs.watch` uses inotify, so these probes say nothing about
 production. On a busy Mac, hot reload lags by the FSEvents delay. A split
-burst invalidates twice, which costs one extra schema rebuild.
+burst invalidates twice; if a load runs between the two, the schemas
+are rebuilt once more.
 
 Fix: the test now uses a fake `fs.watch` and a mocked clock for the burst
 rule, and checks the watch's directory and options through the same fake.
