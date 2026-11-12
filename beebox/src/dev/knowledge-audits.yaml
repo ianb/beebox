@@ -1399,6 +1399,13 @@ tests:
     correct_contains: ["u.handled"]
     tags: [cards, schemas, figure]
 
+  - id: figure-sound
+    prompt: "A canvas-loop figure should play a pleasant sound when the learner gets an answer right, and a note that rises as a counter goes up. What voices do you return from sound()?"
+    expected_level: knows_directly
+    watch_for: "A sample voice from the library by name (kind: \"sample\", name: \"ding\" or \"confirm\" or \"chime\") for the right answer, and kind: \"note\" on an instrument such as marimba with the note from u.scaleNote(count); low gains; not raw tone/square waves"
+    correct_contains: ["scaleNote"]
+    tags: [cards, schemas, figure]
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run

@@ -2,6 +2,7 @@
 // read like a frame (one column per slice of time, a red mark at each voice
 // start, a grey tick each second).
 import { SAMPLE_RATE, encodeWav, mix } from "../../core/sound/synth.js";
+import { bundledLibrary } from "../../core/sound/library/bundled.generated.js";
 import type { Voice } from "../../core/sound/voice.js";
 import { encodePng } from "./capture.js";
 
@@ -58,7 +59,8 @@ export function soundFiles(
 ): Map<string, Uint8Array> {
   const files = new Map<string, Uint8Array>();
   if (voices.length === 0) return files;
-  const samples = mix(voices, { ...timing, sampleRate: SAMPLE_RATE });
+  const library = voices.some((voice) => voice.kind === "sample") ? bundledLibrary() : undefined;
+  const samples = mix(voices, { ...timing, sampleRate: SAMPLE_RATE, library });
   files.set("sound.wav", encodeWav(samples, SAMPLE_RATE));
   const starts = voices
     .filter((voice) => voice.at < timing.frames)

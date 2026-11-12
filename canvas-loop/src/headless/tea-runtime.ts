@@ -4,7 +4,7 @@ import type { Zoom } from "./recorder/zoom.js";
 import { FrameTimer } from "./recorder/timing.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Surface } from "./surface.js";
-import { Score } from "../core/sound/voice.js";
+import { Score, voiceDetail } from "../core/sound/voice.js";
 import { soundFiles } from "./recorder/sound.js";
 import { UnhandledFold, describeInput, verdict } from "../core/engagement.js";
 import { checkParam } from "../browser/param-validate.js";
@@ -237,7 +237,7 @@ class TeaRunner {
     const sound = this.#options.module.sound;
     if (sound === undefined) return;
     for (const voice of this.#score.add(sound(this.#model, this.#params), frame)) {
-      const pitch = voice.kind === "noise" ? "" : ` ${voice.freq} Hz`;
+      const pitch = voiceDetail(voice);
       const when = voice.at === frame ? "" : ` at frame ${voice.at}`;
       this.#recorder.recordLog({ level: "log", message: `sound ${voice.kind} "${voice.id}"${pitch}${when}` });
     }

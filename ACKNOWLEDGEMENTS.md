@@ -22,6 +22,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** The plucked-string algorithm: a noise burst circulating through a delay line one period long, averaged on each pass.
 - **Where it landed:** `canvas-loop/src/core/sound/synth.ts`
 
+### Modal synthesis and two-operator FM
+
+- **Source:** modal synthesis of struck bars and bells as sums of decaying partials (Perry Cook, *Real Sound Synthesis for Interactive Applications*, 2002); FM synthesis (John Chowning, "The Synthesis of Complex Audio Spectra by Means of Frequency Modulation", 1973), as in the DX7 electric piano.
+- **What we took:** marimba, bell and kalimba as decaying sine partials at measured ratios; the electric piano as one carrier with a decaying modulation index.
+- **Where it landed:** `canvas-loop/src/core/sound/instruments.ts`
+
 ### perfect-freehand, by Steve Ruiz
 
 - **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
@@ -230,3 +236,9 @@ Code dependencies are not listed; their licences travel in `node_modules`. This 
 - **Licence:** artwork [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/); code MIT
 - **Used for:** a box's mark wherever a surface needs a raster rather than a character: the Apple touch icon, the web-app manifest icons, and notification icons (`beebox/src/core/box/icon.ts`, `beebox/src/lib/twemoji.ts`).
 - **Why the artwork rather than a font:** librsvg renders emoji as monochrome line art, and the deployed server installs no emoji font, so drawing emoji as text would give a blank square in production. Twemoji ships each emoji as shapes, which need no font and come out in colour at any size. There is no in-app credit today because the app has no About surface; if one is added, this credit belongs on it.
+
+### Kenney audio packs, by Kenney Vleugels
+
+- **Source:** [kenney.nl](https://kenney.nl/assets) — Interface Sounds, Impact Sounds, RPG Audio, Casino Audio, Digital Audio, Music Jingles.
+- **Licence:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (credit not required; given here).
+- **Used for:** the recorded sounds a canvas-loop figure plays by name (`kind: "sample"`). The selected originals and each pack's `License.txt` are in `canvas-loop/sounds/kenney/`; `canvas-loop/src/core/sound/library/catalog.ts` names them.

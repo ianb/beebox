@@ -287,29 +287,135 @@ voices. The runtime calls it after every tick, in both runtimes.
 
 ```ts
 export function sound(model: DeepReadonly<Model>): readonly Voice[] {
-  return model.plucks.map((p) => ({ id: `pluck-${p.n}`, at: p.frame, kind: "pluck", freq: p.freq }));
+  return model.hits.map((h) => ({ id: `hit-${h.n}`, at: h.frame, kind: "sample", name: "ding", variant: h.n }));
 }
 ```
+
+### Choosing sounds
+
+You cannot hear the result, so choose by meaning. Use a recorded sound from
+the library for an event, and an instrument note for anything musical or
+anything that shows a value by pitch. Use `tone`, `noise` and `pluck` only
+when nothing below fits.
+
+| The figure… | Use |
+|---|---|
+| confirms a right answer, a match, a reward | `sample` `ding`, `confirm`, or `chime` |
+| rejects a move or an answer | `sample` `error` (once; never repeat it rapidly) |
+| responds to a press, a toggle, a selection | `sample` `click`, `toggle`, `select`, `tick` |
+| shows objects landing, touching, dropping | `sample` `knock`, `thud`, `clink`, `metal`, `drop` |
+| shows a value rising or a count growing | `note` with `u.scaleNote(count)` on `marimba` or `kalimba` |
+| finishes a level or a whole task | `sample` `fanfare` or `steel-drum`, or a three-note `bell` or `epiano` run |
+| needs a soft background chord | `note` on `pad`, with `duration`, at gain 0.1–0.2 |
+
+Rules that keep a figure pleasant:
+
+- Make a sound for an event the learner caused or should notice. Never make a
+  sound every frame or on every hover.
+- Keep gains low: 0.3–0.5 for one sound, 0.15–0.25 each when sounds overlap.
+  Voices add up and clip at ±1.
+- Space repeated sounds at least 4–6 frames apart, and vary `variant` (and a
+  small `rate` change, 0.9–1.1) so a repeated sound does not sound mechanical.
+- Use notes from one scale. `u.scaleNote(step)` gives the pentatonic scale on
+  C4, where any notes sound well together.
+- Prefer short sounds. Silence is fine: a figure with no sound is better than
+  one with a harsh sound.
+
+### Voice kinds
+
+Every voice has `id`, `at` (the frame it starts on) and `gain` 0..1 (default 0.5).
+
+- `sample`: a recorded sound. `name` (below), `variant` (which take, default 0;
+  wraps around), `rate` 0.5–2 (playback speed: faster is higher and shorter).
+- `note`: an instrument note. `instrument` (below), `note` (a name: a letter,
+  an optional `#` or `b`, and an octave, as `"C4"`, `"F#5"`, `"Bb3"`;
+  C0–C9), `duration` seconds (optional; a struck instrument rings at most this
+  long; the `pad` holds this long, then fades over 0.4 s). Notes are scaled so
+  their loudest sample is `gain`.
+- `pluck` (`freq`, `decay` seconds, `brightness` 0..1), `tone` (`freq`,
+  `duration`, `wave` sine/triangle/square), `noise` (`duration`): raw
+  primitives. A `square` tone is harsh; avoid it.
+
+`u.scaleNote(step, { root, scale })` returns a note name `step` scale steps
+from `root` (default `"C4"`; negative steps go down). `scale` is `pentatonic`
+(default), `major` or `minor`. A result outside C0–C9 is an error, so keep
+the step in range (`count % 10` stays within two octaves). Call it in
+`update` and keep the note in the model.
+
+### Instruments
+
+| Instrument | Sound | Default length |
+|---|---|---|
+| `marimba` | wooden bars, warm and short | 1.2 s |
+| `bell` | a church-like bell, long ring | 3 s |
+| `kalimba` | thumb-piano tines, a bright pluck | 1.5 s |
+| `epiano` | electric piano, soft and round | 1.5 s |
+| `pad` | a sustained, soft synth tone | `duration` (1.5 s) |
+
+### Recorded sounds
+
+Recordings from Kenney's audio packs (kenney.nl, CC0). "Takes" is how many
+variants the name has.
+
+| Name | Takes | Sound and use |
+|---|---|---|
+| `ding` | 4 | a short, clear glass ding: a correct answer, a match, a small reward |
+| `chime` | 2 | a longer glassy chime that rings out: an arrival, a finished step |
+| `bell` | 3 | a struck metal bell: an alarm, a timer done, a round over |
+| `confirm` | 4 | a soft rising two-note confirmation: saved, accepted, done |
+| `error` | 4 | a low buzzy 'no': a wrong answer, a blocked move |
+| `question` | 4 | a short questioning blip: a hint, a prompt to look |
+| `click` | 5 | a crisp button click: pressing a control |
+| `tick` | 3 | a tiny tick, quieter than a click: a counter step, a clock, a slider notch |
+| `select` | 4 | a light selection blip: picking an item |
+| `toggle` | 4 | a switch flipping: turning something on or off |
+| `open` | 4 | a short opening swipe: a panel or lid opening |
+| `close` | 4 | a short closing swipe: a panel or lid closing |
+| `rise` | 3 | an upward sweep: growing, zooming in, levelling up |
+| `fall` | 3 | a downward sweep: shrinking, zooming out, going away |
+| `drop` | 4 | a soft plop: dropping an item into place, a droplet |
+| `pop` | 2 | a tiny pop: a bubble, a seed, something appearing |
+| `knock` | 4 | a light knock on wood: a block landing, a tap on a table |
+| `thud` | 4 | a soft, dull thud: something soft landing, a ball on grass |
+| `clink` | 4 | a light glass clink: glassware touching, a test tube set down |
+| `metal` | 4 | a light metal hit: a tool, a lid, a pipe |
+| `step-grass` | 3 | a footstep on grass |
+| `step-wood` | 3 | a footstep on a wooden floor |
+| `step-stone` | 3 | a footstep on concrete or stone |
+| `step-snow` | 3 | a footstep in snow |
+| `page` | 2 | a page turning: a book, a card flipping over |
+| `coins` | 2 | coins jingling: money, collecting a reward |
+| `creak` | 2 | a wooden creak: a door, a branch, a floorboard |
+| `chop` | 1 | a chop: an axe, a knife on a board |
+| `card` | 3 | a card placed on a table |
+| `dice` | 2 | dice thrown onto a table |
+| `power-up` | 2 | an electronic rising arpeggio: a power-up, a level gained (game-like) |
+| `zap` | 2 | an electronic zap: electricity, a laser, a spark (game-like) |
+| `fanfare` | 2 | a short plucked-strings flourish: a win, a level complete |
+| `steel-drum` | 1 | a short steel-drum flourish: a bright, cheerful success |
+
+### The rules of voices
 
 - A voice is one sound. Give each new sound a new id (keep a counter in the
   model). Returning a voice again is harmless; returning its id with
   different data is an error. Dropping it from the list does not stop it.
 - `at` is the frame it starts on. A new voice may not start before the frame
   that first returns it, so a longer run never changes earlier audio. Events
-  for frame N run before its tick, so a pluck from a click on frame N starts at
-  `model.frame + 1` when the model keeps the last tick's frame.
-- Kinds: `pluck` (`freq`, `decay` seconds, `brightness` 0..1), `tone`
-  (`freq`, `duration`, `wave` sine/triangle/square), `noise` (`duration`).
-  All take `gain` 0..1 (default 0.5). Voices add up and clip at ±1; keep the
-  gains of overlapping voices low. At most 32 new voices a frame.
+  for frame N run before its tick, so a sound from a click on frame N starts
+  at `model.frame + 1` when the model keeps the last tick's frame.
+- At most 32 new voices a frame.
 - Headless runs write `sound.wav` and `sound.png` (the waveform, a red mark at
   each voice start, a grey line each second) beside the frames, and a
-  transcript line per voice. The same voice renders the same samples in both
-  runtimes.
-- In a browser, sound starts after the first click or key press on the
-  figure; that input's own sound plays. Restart stops sounding voices.
+  transcript line per voice (`sound sample "hit-3" ding #3`). The same voice
+  renders the same samples in both runtimes.
+- In a browser, sound starts after the first click, key press or control
+  change on the figure; that input's own sound plays. The recorded sounds load
+  separately when the figure first appears; a `sample` voice due while they
+  load waits up to 0.25 s, then is dropped with a console line. Restart stops
+  sounding voices.
 - Replay from the start is exact. Seeking to a frame is not supported yet.
-- Example: `canvas-loop/src/gallery/guitar-strings/`.
+- Examples: `canvas-loop/src/gallery/guitar-strings/`,
+  `canvas-loop/src/examples/sound-tea.ts`.
 
 ## Params reference
 
