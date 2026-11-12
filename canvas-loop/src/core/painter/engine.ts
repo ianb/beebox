@@ -143,7 +143,7 @@ export class Painter extends PainterCore {
    */
   text(...args: [string, TextBox, TextOptions?]): TextBounds {
     const [content, box, options] = args;
-    const laid = this.#layText(content, { box, options: options ?? {} });
+    const laid = this.#placeText(content, { box, options: options ?? {} });
     this.#drawText(content, laid);
     const resolved = laid.options;
     if (!(resolved.erase ?? false)) this.recordText(content, laid.bounds);
@@ -154,7 +154,7 @@ export class Painter extends PainterCore {
   /** The bounds `text` would draw with these arguments, without drawing. */
   textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
     const [content, box, options] = args;
-    return this.#layText(content, { box, options: options ?? {} }).bounds;
+    return this.#placeText(content, { box, options: options ?? {} }).bounds;
   }
 
   /** The width `text` would take with these options, in logical pixels. */
@@ -165,6 +165,43 @@ export class Painter extends PainterCore {
     const { width } = ctx.measureText(content);
     ctx.font = previous;
     return width;
+  }
+
+  /** Lay text out; with `keepInside`, move it so its bounds stay inside the canvas. */
+  #placeText(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
+    const laid = this.#layText(content, at);
+    if (at.options.keepInside !== true) return laid;
+    const shift = this.#insideShift(laid.bounds);
+    if (shift === undefined) return laid;
+    return this.#layText(content, { ...at, box: { ...at.box, x: at.box.x + shift.x, y: at.box.y + shift.y } });
+  }
+
+  /**
+   * The move, in the current coordinates, that brings `b` inside the canvas
+   * less a margin. Measured in canvas space, so it holds under `at`. Text
+   * larger than the canvas keeps its left/top edge inside. Undefined when no
+   * move is needed or the transform cannot be inverted.
+   */
+  #insideShift(b: TextBounds): { x: number; y: number } | undefined {
+    const MARGIN = 4;
+    const m = this.ctx.getTransform();
+    const pr = this.pixelRatio;
+    const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]] as const;
+    const xs = corners.map(([x, y]) => (m.a * x + m.c * y + m.e) / pr);
+    const ys = corners.map(([x, y]) => (m.b * x + m.d * y + m.f) / pr);
+    const fit = (...[lo, hi, size]: [number, number, number]): number => {
+      if (lo < MARGIN || hi - lo > size - 2 * MARGIN) return MARGIN - lo;
+      return hi > size - MARGIN ? size - MARGIN - hi : 0;
+    };
+    const dx = fit(Math.min(...xs), Math.max(...xs), this.width);
+    const dy = fit(Math.min(...ys), Math.max(...ys), this.height);
+    if (dx === 0 && dy === 0) return undefined;
+    const det = m.a * m.d - m.b * m.c;
+    if (Math.abs(det) < 1e-12) return undefined;
+    // Undo the linear part: canvas-space move (times the pixel ratio) → local move.
+    const cx = dx * pr;
+    const cy = dy * pr;
+    return { x: (m.d * cx - m.c * cy) / det, y: (-m.b * cx + m.a * cy) / det };
   }
 
   /**

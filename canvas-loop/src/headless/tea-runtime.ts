@@ -6,6 +6,8 @@ import type { RunResult } from "./recorder/frame-recorder.js";
 import { Surface } from "./surface.js";
 import { Score } from "../core/sound/voice.js";
 import { soundFiles } from "./recorder/sound.js";
+import { UnhandledFold, describeInput, verdict } from "../core/engagement.js";
+import type { InteractionMsg } from "../core/engagement.js";
 import { bucketTeaByFrame } from "./tea-events.js";
 import type { TeaScriptEvent } from "./tea-events.js";
 import { TeaUtil, TeaView } from "./tea-view.js";
@@ -76,29 +78,8 @@ function initialParams(decl: ParamsDecl): ParamValues<ParamsDecl> {
 // A scripted INTERACTION event: everything but snapshot (a forced capture) and
 // param (which keeps its own `param:` line). These earn an engagement verdict.
 type TeaInputEvent = Exclude<TeaScriptEvent, { type: "snapshot" } | { type: "param" }>;
-// The Msg an interaction folds as — the Msg union minus tick and param.
-type InteractionMsg = Exclude<Msg, { type: "tick" } | { type: "param" }>;
 
-/** Human description of an interaction for the transcript (`mousedown (297,288)`, `keydown ArrowUp`, `trigger reset`). */
-function describeInput(msg: InteractionMsg): string {
-  switch (msg.type) {
-    case "mousedown":
-    case "mouseup":
-    case "mousemove":
-      return `${msg.type} (${msg.x},${msg.y})`;
-    case "keydown":
-    case "keyup":
-      return `${msg.type} ${msg.key}`;
-    case "trigger":
-      return `trigger ${msg.name}`;
-  }
-}
 
-/** The engagement verdict: named acknowledgment wins, else a model-reference change, else unhandled. */
-function verdict(a: { handled: readonly string[]; changed: boolean }): string {
-  if (a.handled.length > 0) return a.handled.join(", ");
-  return a.changed ? "Δmodel" : "(unhandled)";
-}
 
 /**
  * Run `body` with the ambient nondeterministic globals virtualized: Math.random,
@@ -172,6 +153,7 @@ class TeaRunner {
   // read after. TeaUtil.handled pushes here via injected
   // callbacks — the runtime owns it; the capability objects never see it.
   #handledNames: string[] = [];
+  #unhandled = new UnhandledFold();
   #timer: FrameTimer | undefined;
   #score = new Score();
 
@@ -199,6 +181,7 @@ class TeaRunner {
     const restoreConsole = patchConsole(this.#recorder);
     try {
       withGuards(() => this.#execute());
+      for (const message of this.#unhandled.summary()) this.#recorder.recordLog({ level: "log", message });
       if (this.#timer !== undefined) this.#recorder.recordLog({ level: "log", message: this.#timer.report() });
     } finally {
       restoreConsole();
@@ -278,7 +261,8 @@ class TeaRunner {
     const msg = this.#toMsg(event);
     this.#handledNames = [];
     const changed = this.#fold(msg);
-    this.#recorder.recordInput({ event: describeInput(msg), verdict: verdict({ handled: this.#handledNames, changed }) });
+    const text = verdict({ handled: this.#handledNames, changed });
+    if (this.#unhandled.show(msg.type, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
   }
 
   #fold(msg: Msg): boolean {

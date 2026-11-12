@@ -48,6 +48,8 @@ export interface TextOptions {
   style?: TextStyle;
   /** Default black. */
   fill?: Paint;
+  /** Slide the text back inside the canvas (4px margin) when it would cross an edge; alignment holds otherwise. */
+  keepInside?: boolean;
   /** A band of this color around the letters, drawn under them, so text reads over lines and busy ground. */
   halo?: Paint;
   blend?: BlendMode;

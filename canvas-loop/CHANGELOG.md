@@ -5,6 +5,15 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Figures: console log, replay, narrow columns, `keepInside`.** A figure's
+  log goes to the browser console (`[canvas-loop] frame N: …`) instead of
+  being dropped. `mountSketch({ script: { events, frame? } })` replays an
+  events file at mount and pauses; `parseTeaEvents` is exported from
+  `./browser`. Figures shrink to fit a narrow column (they overflowed at
+  phone width). Text takes `keepInside: true`: placed as usual, then moved
+  back inside the canvas when it would cross an edge. Repeated `(unhandled)`
+  transcript lines fold into one count per input type.
+
 - **Dashes, text measuring, and text warnings** (asked for by the round-2 d3
   comparison agents). A style takes `dash: [on, off, …]` for plain strokes.
   `v.textBounds(s, box, options)` returns the bounds `text` would draw,

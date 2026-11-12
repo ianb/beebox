@@ -13,9 +13,14 @@ import { Score } from "../../core/sound/voice.js";
 import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
+import { UnhandledFold, describeInput, verdict } from "../../core/engagement.js";
 import { BrowserView } from "./browser-view.js";
-import { sanitizeParamChange } from "../param-validate.js";
+import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
+import type { ParamOverrides, RuntimeDeps } from "../runtime-types.js";
+import type { EmittedEvent, RuntimeLog } from "../runtime-types.js";
+
+export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "../runtime-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -41,61 +46,6 @@ function frozen(value: unknown): unknown {
   return value;
 }
 
-/** A partial override of declared param defaults, applied at construct/restart. */
-export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
-
-function initialParams(decl: ParamsDecl, overrides: ParamOverrides | undefined): ParamValues<ParamsDecl> {
-  const values: Record<string, number | boolean | string> = {};
-  for (const [name, param] of Object.entries(decl)) {
-    if (param.type === "trigger") continue;
-    const override = overrides?.[name];
-    values[name] = override ?? param.default;
-  }
-  return Object.freeze(values);
-}
-
-/** A frame-tagged log line surfaced to the transcript panel. */
-export interface RuntimeLog {
-  frame: number;
-  message: string;
-}
-
-/**
- * A streamed event carries the same engagement verdict the headless transcript
- * shows, as structured data rather than a rendered string: `handled` (the names
- * `u.handled(...)` acknowledged) and `changed` (did `update` return a new model
- * reference). Both are present on interaction events (mouse/key/trigger), absent
- * on `param` (a param change is definitionally applied — no separate verdict).
- * Hosts render the verdict however they like; the on-disk events log
- * (`eventsJSON`) stays the clean `TeaScriptEvent` shape.
- */
-export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean };
-
-export interface RuntimeDeps {
-  module: PlaygroundModule;
-  ctx: CanvasRenderingContext2D;
-  width: number;
-  height: number;
-  /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
-  pixelRatio?: number;
-  seed: number;
-  onFrame: (frame: number) => void;
-  /** A voice whose frame has come (default: the runtime's own `SoundPlayer` plays it). */
-  onVoice?: (voice: Voice) => void;
-  onLog: (entry: RuntimeLog) => void;
-  /** Partial override of declared param defaults — the initial values init() sees. */
-  initialParams?: ParamOverrides;
-  /** Streams every recorded input entry (the `{frame, type, …}` events-file line, plus the engagement verdict) as it is dispatched. */
-  onEvent?: (entry: EmittedEvent) => void;
-  /**
-   * Called once if a frame (update/draw) throws: the loop stops and the error
-   * surfaces here instead of throwing uncaught on every subsequent rAF tick.
-   * Default when omitted: `console.error` (still exactly once).
-   */
-  onError?: (error: unknown) => void;
-  /** After each draw: where `v.control` placed param inputs this frame. */
-  onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
-}
 
 export class Runtime {
   #module: PlaygroundModule;
@@ -154,7 +104,43 @@ export class Runtime {
     });
     this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
-    this.#draw();
+    if (deps.script === undefined) this.#draw();
+    else this.#replay(deps.script);
+  }
+
+  /** See `RuntimeDeps.script`. */
+  #replay(script: { events: readonly TeaScriptEvent[]; frame?: number }): void {
+    const last = script.frame ?? Math.max(0, ...script.events.map((event) => event.frame));
+    const fold = new UnhandledFold();
+    for (let frame = 0; frame <= last; frame += 1) {
+      this.#frame = frame;
+      for (const event of script.events) if (event.frame === frame) this.#replayEvent(event, fold);
+      this.#fold({ type: "tick", frame });
+      this.#collectSound();
+      this.#draw();
+    }
+    for (const message of fold.summary()) this.#recordLog([message]);
+    this.#frame = last + 1;
+    this.#paused = true;
+    this.#onFrame(this.#frame);
+  }
+
+  #replayEvent(event: TeaScriptEvent, fold: UnhandledFold): void {
+    if (event.type === "snapshot") {
+      this.#recordLog([`snapshot${event.label === undefined ? "" : ` ${event.label}`}`]);
+      return;
+    }
+    this.#log.push(event);
+    if (event.type === "param") {
+      this.#fold(this.#toMsg(event));
+      this.#recordLog([`param: ${event.name} = ${JSON.stringify(event.value)}`]);
+      return;
+    }
+    this.#handledNames = [];
+    const msg = this.#toMsg(event);
+    const changed = this.#fold(msg);
+    const text = verdict({ handled: this.#handledNames, changed });
+    if (msg.type !== "param" && msg.type !== "tick" && fold.show(msg.type, text)) this.#recordLog([`${describeInput(msg)} → ${text}`]);
   }
 
   // ── lifecycle ────────────────────────────────────────────────────
@@ -177,6 +163,8 @@ export class Runtime {
 
   setPaused(paused: boolean): void {
     this.#paused = paused;
+    // Resume from now, not from when the loop last ran.
+    if (!paused) this.#last = undefined;
   }
 
   get paused(): boolean {

@@ -116,3 +116,18 @@ test("letters a font draws produce no glyph warning", () => {
   v.text("Hello ° → naïve", { x: 5, y: 5 });
   assert.deepEqual(logs.filter((line) => line.includes("has no glyph")), []);
 });
+
+test("keepInside slides a centred label back inside the canvas, also under a transform", () => {
+  const { v } = teaView({ width: 200, height: 100 });
+  const options = { size: 16, align: "center", valign: "middle", keepInside: true } as const;
+  const plain = v.textBounds("Hydrogen · 1.008 u", { x: 10, y: 50 }, { ...options, keepInside: false });
+  assert.ok(plain.x < 0, "the plain label crosses the left edge");
+  const kept = v.textBounds("Hydrogen · 1.008 u", { x: 10, y: 50 }, options);
+  assert.ok(Math.abs(kept.x - 4) < 0.01, `left edge at the margin: ${kept.x}`);
+  assert.deepEqual(v.textBounds("Mid", { x: 100, y: 50 }, options), v.textBounds("Mid", { x: 100, y: 50 }, { ...options, keepInside: false }));
+  v.at({ translate: [150, 0], scale: 2 }, () => {
+    const right = v.textBounds("Label", { x: 20, y: 25 }, options);
+    // In local units the right edge sits at (200 - 4 - 150) / 2.
+    assert.ok(Math.abs(right.x + right.w - 23) < 0.01, `right edge: ${right.x + right.w}`);
+  });
+});
