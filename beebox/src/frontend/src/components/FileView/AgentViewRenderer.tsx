@@ -68,6 +68,8 @@ interface ViewProps extends ViewFileHelpers {
    * the companion pane (inline/page renders don't accumulate).
    */
   reportActivity: (kind: ActivityKind, detail?: string) => void;
+  /** `"strip"` when drawn in the conversation strip, else `"page"`. */
+  mode: "page" | "strip";
 }
 
 /**
@@ -120,6 +122,8 @@ interface AgentViewRendererProps {
    * area already supplies the inset — so the view's own layout is not applied.
    */
   embedded: boolean;
+  /** The surface mode the view receives as its `mode` prop. */
+  viewMode: "page" | "strip";
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
   viewState?: ViewState | null;
@@ -225,7 +229,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -384,6 +388,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
             params={loadedParams}
             viewHistory={viewHistory}
             reportActivity={report}
+            mode={viewMode}
           />
         </ViewHostProvider>
       </ViewErrorBoundary>

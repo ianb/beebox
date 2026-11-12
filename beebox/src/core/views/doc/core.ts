@@ -70,7 +70,7 @@ const metadataAndPropsSection = `## Metadata Exports
 | \`name\` | string | Yes | Human-readable name shown in UI |
 | \`description\` | string | Yes | What this view shows |
 | \`dependencies\` | string[] | Yes | Glob patterns for files that affect rendering |
-| \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, or both |
+| \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, \`"strip"\`, or a combination |
 | \`layout\` | string | No | \`"inset"\` (default) or \`"full-bleed"\` — see Styling |
 | \`rendersCardTypes\` | string[] | Yes | Card types this view renders — see below |
 
@@ -100,6 +100,11 @@ The built-in renderers (Card, Source) stay available through the
 renderer toggle. One view per type: if several views claim the same card
 type, the first by slug order wins. Without \`rendersCardTypes\`, custom
 types fall back to the generic built-ins.
+
+A view that lists \`"strip"\` in its exported \`modes\` is also drawn for its
+bound card types in the conversation strip, and then receives the prop
+\`mode: "strip"\` (otherwise \`mode: "page"\`). A strip rendering must be short:
+a few lines high.
 
 ## Component Props
 

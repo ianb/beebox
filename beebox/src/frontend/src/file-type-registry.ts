@@ -65,7 +65,7 @@ export interface RendererProps {
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
-  mode?: "page" | "chat" | "companion" | "embed";
+  mode?: "page" | "chat" | "companion" | "embed" | "strip";
   /** PDF file actions are hosted by the surrounding workspace pane. */
   workspacePdf?: boolean;
   /**
@@ -90,6 +90,12 @@ export interface FileRenderer {
   Component: React.ComponentType<RendererProps>;
   /** Priority — higher = more specific = shown first. Built-ins: source=0, xml=10, tree=20 */
   priority: number;
+  /**
+   * This renderer draws the card in the conversation strip (`mode="strip"`).
+   * Only such renderers are considered there; `shared/strip-types.ts` lists
+   * their types for the server.
+   */
+  strip?: true;
 }
 
 /** Props passed to a file type's custom list-entry middle slot. */
