@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-12T06:59:50Z
-Total documents: 639
+Generated: 2026-11-12T07:16:58Z
+Total documents: 641
 
 ## Issues
 
@@ -25,6 +25,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan engineering review — Codex SDK backend" (162 lines) · implementation review
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines) · shipped history · implemented
+- **docs/implemented-plans/conversation-strip.md** — "Conversation strip and tour cards" (524 lines) · shipped history · implemented
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
 - **docs/implemented-plans/credential-env-table.review.md** — "Plan review — credential-env-table" (74 lines) · implementation review
 - **docs/implemented-plans/deck-theme.md** — "Deck system and card theme" (186 lines) · shipped history · implemented
@@ -194,6 +195,7 @@ Referenced by:
 - docs/implemented-plans/codex-worktree-sessions.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/commit-provenance-trailers.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/connector-sync-isolation.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/conversation-strip.md:173 (mention) — - Agent guidance "only ever grows unless pruned" (root `AGENTS.md`). The
 - docs/implemented-plans/courseware-phase1.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/credential-env-table.md:43 (mention) — - Root `AGENTS.md`: "Bias toward strict"; the brief: fail closed, every
 - docs/implemented-plans/delivered-user-message-codec.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -585,6 +587,7 @@ Referenced by:
 - docs/implemented-plans/commit-provenance-trailers.md:33 (mention) — - `beebox/code-style.md` — no default parameters, max two positional
 - docs/implemented-plans/companion-pane-card-activity.md:42 (mention) — - `beebox/code-style.md` — files ≤300 lines, no default parameters, max 2
 - docs/implemented-plans/connector-sync-isolation.md:37 (mention) — - `code-style.md:27-33`: *"ONLY catch the minimal, specific error you can
+- docs/implemented-plans/conversation-strip.md:171 (mention) — - `beebox/code-style.md`: "No default parameters", "Max 2 positional
 - docs/implemented-plans/courseware-lesson-plan.md:29 (mention) — - `beebox/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
 - docs/implemented-plans/courseware-phase1.md:112 (mention) — - `beebox/code-style.md` → **"No default parameters"**, **"Max 2 positional
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:66 (mention) — - `code-style.md` "When to Result vs throw": callers here genuinely branch on
@@ -1306,7 +1309,7 @@ Referenced by:
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:16 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
-- ../issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md:20 (mention) — header. Read `beebox/docs/content-security-policy.md` first.
+- ../issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md:21 (mention) — header. Read `beebox/docs/content-security-policy.md` first.
 - ../research/embedded-browser/beebox-today.md:63 (mention) — - Auth wall: `beebox/src/webapp/server-box-scope.ts` (per-box), hub gate in `beebox/src/hub/server/core.ts`. Session coo
 - ../research/modern-web-guidance/audit/security-misc.md:28 (mention) — - Our guidance: agrees — `beebox/docs/content-security-policy.md` ("currently Report-Only"); `beebox/docs/implemented-pl
 
@@ -2771,6 +2774,13 @@ Referenced by:
 - frontend.md:22 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 - ../research/modern-web-guidance/audit/visual-js-pwa.md:50 (mention) — - Applies here: partly — card `symbol:` takes author `background:`/`foreground:` colours (`beebox/docs/box/card-themes.m
 
+#### docs/box/conversation-strip.md
+
+Title: "Conversation strip" | 40 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/conversation-strip.md:363 (mention) — - Box doc `docs/box/conversation-strip.md` with a `read-when`, mapped in
+
 #### docs/box/history.md
 
 Title: "Git history" | 32 lines | current reference
@@ -3118,6 +3128,7 @@ Referenced by:
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
 - docs/implemented-plans/chat-titles.md:484 (mention) — Codex-revision note); `docs/cards/schemas.md` and the
+- docs/implemented-plans/conversation-strip.md:213 (mention) — `docs/cards/schemas.md`, "Files to Touch". Follow it.
 - docs/implemented-plans/docs-reorg.gap-analysis.md:50 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
 - docs/implemented-plans/mvp-implementation-guide.md:421 (link) — See [adding-schemas.md](../cards/schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:426 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
@@ -5110,6 +5121,18 @@ References:
 - → ../issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md (frontmatter)
 - → docs/implemented-plans/stable-card-body.md (mention)
 
+#### docs/implemented-plans/conversation-strip.md **[ORPHAN]**
+
+Title: "Conversation strip and tour cards" | 524 lines | shipped history | implemented
+
+References:
+- → docs/plans/agent-points-at-ui.md (mention)
+- → docs/implemented-plans/sidecar-shell.md (mention)
+- → code-style.md (mention)
+- → AGENTS.md (mention)
+- → docs/cards/schemas.md (mention)
+- → docs/box/conversation-strip.md (mention)
+
 #### docs/implemented-plans/courseware-lesson-plan.md **[ORPHAN]**
 
 Title: "Courseware: the `lesson-plan` card" | 351 lines | shipped history | implemented
@@ -6593,7 +6616,7 @@ Referenced by:
 - docs/implemented-plans/ui-primitives-dedup.md:113 (mention) — The first pass ran 1.7 times its estimate (`modern-web-guidance-adoption.md`,
 - docs/unimplemented-plans/temporal-everywhere.md:30 (mention) — workstream umbrella. Its plan, `modern-web-guidance-adoption.md` Category
 - ../issues/closed/exploration/2026-11-10-adopt-modern-web-guidance-skill.md:92 (link) — [`beebox/docs/implemented-plans/modern-web-guidance-adoption.md`](../../../beebox/docs/implemented-plans/modern-web-guid
-- ../issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md:12 (link) — ([implemented](../../beebox/docs/implemented-plans/modern-web-guidance-adoption.md),
+- ../issues/deferred/2026-11-12-trusted-types-report-only-needs-its-own-report-path.md:13 (link) — ([implemented](../../beebox/docs/implemented-plans/modern-web-guidance-adoption.md),
 - ../research/modern-web-guidance/README.md:8 (link) — [the adoption plan](../../beebox/docs/implemented-plans/modern-web-guidance-adoption.md).
 
 References:
@@ -8158,6 +8181,7 @@ References:
 Title: "Sidecar shell: survive a transient failure, keep tabs, pin one" | 624 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/conversation-strip.md:167 (mention) — - `docs/implemented-plans/sidecar-shell.md` records "A landmark or context
 - docs/plans/chat-everywhere.md:28 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 
 References:
@@ -9067,6 +9091,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1308 lines | proposal | partial
 
 Referenced by:
+- docs/implemented-plans/conversation-strip.md:158 (mention) — - `docs/plans/agent-points-at-ui.md`, NOT in scope: *"A spotlight tour.
 - docs/mobile-contract.md:669 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/closed/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:18 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).

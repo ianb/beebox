@@ -11716,6 +11716,14 @@ test1:
       peak: 42075
       added: 7059
       turns: 7
+  tour-strip-walkthrough:
+    - date: 2026-11-12T06:52:51.704Z
+      boxCommit: 9f79e70d94157e46d25c74793d5c56cfc6b2a981
+      repoCommit: d57ab0b4fd5c271b35cb6ad2ee147d4582a43325
+      initial: 35011
+      peak: 38958
+      added: 3947
+      turns: 11
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -85,7 +85,7 @@ const importedViewMetaSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   dependencies: z.array(z.string()).optional(),
-  modes: z.array(z.enum(["page", "chat"])).optional(),
+  modes: z.array(z.enum(["page", "chat", "strip"])).optional(),
   layout: z.enum(["inset", "full-bleed"]).optional(),
   rendersCardTypes: z.array(z.string()).optional(),
   checkStates: z.array(declaredCheckStateSchema).superRefine((states, ctx) => {

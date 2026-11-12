@@ -30,6 +30,8 @@ export type ViewImageOptions = ViewImageBaseOptions & (
 );
 
 export interface ViewProps {
+  /** `"strip"` when drawn in the conversation strip, else `"page"`. */
+  mode?: "page" | "strip";
   cards: ViewCard[];
   /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
@@ -123,7 +125,7 @@ export interface ViewFile {
   gitStatus?: "dirty" | "untracked";
 }
 
-export type ViewMode = "page" | "chat";
+export type ViewMode = "page" | "chat" | "strip";
 
 /**
  * How the card surface frames a view. `"inset"` (the default) pads the view

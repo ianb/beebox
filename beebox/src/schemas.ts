@@ -52,6 +52,7 @@ import { TodoReviewJobSchema } from "./schemas/todo-review-job.js";
 import { PersonalitySchema } from "./schemas/personality/schema.js";
 import { QuestionFollowupJobSchema } from "./schemas/question-followup-job.js";
 import { TodoViewSchema } from "./schemas/todo-view.js";
+import { TourSchema } from "./schemas/tour.js";
 import { BriefingSchema } from "./schemas/briefing.js";
 import { PersonSchema } from "./schemas/person.js";
 import { PlaceSchema } from "./schemas/place.js";
@@ -99,6 +100,7 @@ export const cardSchemas = defineRegistry<CardSchema>({
     PersonSchema,
     PlaceSchema,
     TodoViewSchema,
+    TourSchema,
     QuestionSchema,
     BrowserTaskSchema,
     CommentarySchema,

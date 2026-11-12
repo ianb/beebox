@@ -17,6 +17,8 @@
  *                     max-height, scrollable, bordered.
  *     - "companion" — no extra chrome (the surrounding companion pane
  *                     provides its own header).
+ *     - "embed"     — frameless, inside another card's body.
+ *     - "strip"     — frameless, in the conversation strip; `StripFileView`.
  */
 
 import { ThemedFileCard } from "../themes/ThemedFileCard/view/ThemedFileCard";
@@ -42,7 +44,8 @@ import { MissingCardState } from "../card-actions/MissingCardState";
 import { FileStaleNotice } from "./FileStaleNotice";
 import { CardTodos } from "../todo/CardTodos";
 import { TodoActionsProvider } from "../todo/TodoActionsProvider";
-import type { FileViewProps } from "../file-view-types";
+import { isFrameless, type FileViewProps } from "../file-view-types";
+import { StripFileView } from "./StripFileView";
 import type { ViewTarget } from "../../lib/view-url";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
@@ -179,7 +182,7 @@ function fragmentRootFor({ mode, workspacePdf, onRoot }: {
   mode: FileViewProps["mode"]; workspacePdf: boolean | undefined; onRoot: (element: HTMLDivElement | null) => void;
 }, content: ReactNode): ReactNode {
   const attribute = { [FRAGMENT_ROOT_ATTRIBUTE]: "" };
-  if (mode === "embed") return <div {...attribute} className="contents">{content}</div>;
+  if (mode !== undefined && isFrameless(mode)) return <div {...attribute} className="contents">{content}</div>;
   return <div ref={onRoot} {...attribute} className={workspacePdf ? "h-full" : undefined}>{content}</div>;
 }
 
@@ -211,7 +214,7 @@ export function withBodyNotices({ stale, onRefresh, sectionMissed }: {
  * The todos inside get their tick and "+ to chat" actions here too (an embed inherits its host's).
  */
 function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mode"]; path: string; onAddSelection: FileViewProps["onAddSelection"] }, content: ReactNode): ReactNode {
-  if (mode === "embed" || !isCardPath(path)) return content;
+  if ((mode !== undefined && isFrameless(mode)) || !isCardPath(path)) return content;
   return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
 }
 
@@ -232,6 +235,11 @@ export function FileView(props: FileViewProps) {
   const globalPoint = usePointSelection();
   const pointMode = !props.workspacePdf && (props.pointMode === true || globalPoint?.active === true);
   const onExitPointMode = props.onExitPointMode ?? (globalPoint ? () => globalPoint.setActive(false) : undefined);
+  if (props.mode === "strip") {
+    const { onNavigate } = props;
+    return <RuntimeLintViewScope><StripFileView path={props.path} onNavigate={onNavigate}
+      renderInline={(target) => <FileView path={target.path} mode="embed" rendererName={target.viewer} params={target.params} viewState={target.viewState} onNavigate={onNavigate} />} /></RuntimeLintViewScope>;
+  }
   return <RuntimeLintViewScope><FileViewContent {...props} pointMode={pointMode} onExitPointMode={onExitPointMode} /></RuntimeLintViewScope>;
 }
 
@@ -239,13 +247,13 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();
-  const onAddSelection = selectionReceiver(suppliedAddSelection, mode === "embed" ? undefined : visibleSelectionSink);
+  const onAddSelection = selectionReceiver(suppliedAddSelection, isFrameless(mode) ? undefined : visibleSelectionSink);
   const { data, loading, error, stale, recovery, refresh } = useFileData(path, { recoverMoved: onMoved !== undefined });
   const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
   // Any renderer of the body gets section jumps: the hook resolves against the
   // DOM this view renders (`lib/fragment-target.ts`). Embeds never jump.
   const [fragmentRoot, setFragmentRoot] = useState<HTMLDivElement | null>(null);
-  const sectionMissed = useFragmentJump({ root: fragmentRoot, fragment: mode === "embed" ? undefined : fragment, source: fragmentSource(data), path });
+  const sectionMissed = useFragmentJump({ root: fragmentRoot, fragment: isFrameless(mode) ? undefined : fragment, source: fragmentSource(data), path });
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
@@ -318,7 +326,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
   // and on its own page.
   const body = withBodyNotices({ stale, onRefresh: refresh, sectionMissed }, captured);
 
-  if (mode === "embed") {
+  if (isFrameless(mode)) {
     // Frameless: just the renderer output, no header/toggle/border. For figures
     // and other media embedded inline in a card body via `![](view:…)`. No
     // stale marker either — an embed has no chrome to carry one, and the card
