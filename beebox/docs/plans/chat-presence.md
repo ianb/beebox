@@ -43,16 +43,17 @@ who may see a chat; see *Failure modes*). Searched the queue for `presence`,
 
 | Situation | Act, show, or quiet | Surface and card | Attention |
 |---|---|---|---|
-| Two people in one chat | Show | Small heads (avatars) stacked just below the profile avatar, on every page while that chat is the current conversation | Background; no sound, no animation beyond a short fade |
+| Two people in one chat | Show | Small heads (avatars) stacked just below the profile avatar, while the chat's transcript is on screen | Background; no sound, no animation beyond a short fade |
 | Someone leaves | Show (the head goes) | Same place | Background |
 | Alone | Quiet | Nothing rendered | None |
-| More than two others | Show two heads and a `+N` disc | Same place; hovering `+N` lists all names | Background |
+| More than two others | Show two heads and a `+N` disc | Same place; the disc's accessible label and desktop tooltip list the names | Background |
 | Different chats | Quiet | Nothing | None |
 
 The heads sit under the profile avatar because the bar is the one place
-present on every page, and the chat runtime is mounted on every page
-(`BoxConversationShell`), so "this chat" stays the current conversation
-while a card is in front.
+present on every page. The chat runtime is mounted on every page
+(`BoxConversationShell`), but a person counts as present only while the
+chat's transcript is on screen (`workspace.transcriptVisible`), so a person
+reading a card full-screen is not "in" the chat.
 
 ### Spirit
 
@@ -193,7 +194,10 @@ Total ~640 lines. Not a BIG CHANGE.
   deduped from watchers by email, ordered by earliest join. Not a box
   member record; it is whoever authenticated.
 - **Present** (decision): a watcher exists. The web client watches only while
-  the tab is visible and the chat is the current conversation.
+  the chat is the current conversation, its transcript is on screen, and the
+  page is active: in a browser, visible and focused
+  (`document.hasFocus()`); in the iOS web view, visible (the native composer
+  holds focus, so `hasFocus()` would drop people while they type).
 - **Presence frame** (new wire union `ChatPresenceFrame`): today only
   `{ t: "others"; people: PresentPerson[] }` — everyone present except the
   subscriber. Later frames (typing, call signaling, ring) are added to this
@@ -213,7 +217,7 @@ Total ~640 lines. Not a BIG CHANGE.
   export interface PresentPerson { email: string; name: string }
   export type ChatPresenceFrame = { t: "others"; people: PresentPerson[] };
   export interface ChatPresence {
-    /** Join a room; `onChange` gets the full person list on join and on every change. Returns leave(). */
+    /** Join a room; `onChange` gets everyone else present on join and whenever that list changes. Returns leave(). */
     join(opts: { boxRoot: string; sessionId: string; person: PresentPerson;
                  onChange: (people: PresentPerson[]) => void }): () => void;
     /** Rooms with at least one watcher (tests). */
@@ -227,8 +231,9 @@ Total ~640 lines. Not a BIG CHANGE.
   — when `ctx.user` is null or `ctx.actor` is `agent` (the box's own browser
   or bearer), it yields `{ t: "others", people: [] }` and waits for abort
   without joining: the agent is not a person in the room. Otherwise it joins,
-  yields an `others` frame on join and on each change where the list differs
-  from the last yielded one, and leaves in `finally`. Names: `ctx.user.name`
+  yields an `others` frame on join and on each change to that list (the room
+  skips sends that change nothing), and leaves in `finally`. tRPC's WebSocket
+  adapter aborts the iterator when the client stops or the socket closes. Names: `ctx.user.name`
   unless it equals the email, then `localUserName(email) ?? email`.
 - **Vocabulary lock-ins:** router name `chatPresence`, procedure `watch`,
   frame discriminant `t`, frame type `"others"`, `PresentPerson`.
@@ -242,14 +247,18 @@ Total ~640 lines. Not a BIG CHANGE.
   (container + pure `PresenceHeadsFace`).
 - **Why:** the person has to see who is there.
 - **Direction:** `useChatPresence(sessionId: string | null): PresentPerson[]`
-  subscribes with `enabled: sessionId !== null && visible`, where `visible`
-  tracks `document.visibilityState`; clears to `[]` when disabled or on
-  error. `PresenceHeads` reads the current conversation from
+  subscribes with `enabled: sessionId !== null && transcriptVisible && active`,
+  where `active` tracks `visibilitychange`, `focus`, and `blur` (focus is
+  ignored in the native shell, `isNativeShell()`). It returns the last frame's
+  people only while the subscription status is `pending` (live); while
+  `connecting` (the WebSocket is reconnecting), idle, or in error it returns
+  `[]`, so a stale head never outlives the connection that reported it. `PresenceHeads` reads the current conversation from
   `useBoxConversation()` and renders `PresenceHeadsFace({ people })`.
   `PresenceHeadsFace` renders nothing for `[]`; otherwise a vertical stack of
   up to two `Avatar size="sm"` heads with a white ring, then a `+N` disc when
   more remain. Each head has `title="<name> is in this chat"`; the stack is a
-  `role="list"` labelled "Also in this chat"; the `+N` title lists the rest.
+  `role="list"` labelled "Also in this chat"; the `+N` disc's `aria-label`
+  and `title` list the rest (on touch, the count alone shows).
   `AppNav` wraps `ProfileMenu` in a `relative` box and places the heads
   `absolute top-full right-0 mt-1 z-30`, so they float under the avatar
   without changing the bar's height. The face is pure so the theme studio and
@@ -260,9 +269,10 @@ Total ~640 lines. Not a BIG CHANGE.
 ### Track 3 — docs
 
 - `docs/chat-presence.md` (reference: what counts as present, the frame
-  union, how to add a frame); a line in `docs/mobile-contract.md` stating
-  presence uses web visibility and needs no bridge field; update the issue
-  to say typing/speaking is deferred.
+  union, the invariants a later frame must keep, the iOS gap); update the
+  issue to say typing/speaking is deferred; file the iOS box-screen gap as
+  its own issue. No `mobile-contract.md` change, since no bridge surface
+  changes.
 
 ## Could this be simpler?
 
@@ -293,7 +303,10 @@ none
 | Same person, two tabs; one closes | Room test: dedupe keeps the person while one watcher remains | `othersFor` dedupes by email | Clear |
 | A listener throws (subscriber gone mid-send) | Room test | `join` catches per listener and logs `[chat-presence]` | Logged |
 | Agent's browser (browse key, agentBrowsing owner) opens chat | Router test: `actor: "agent"` does not join | Agent check before join | Clear: agent never appears |
-| Private chats ship later and a person may not see chat S | No (feature does not exist) | A watcher learns only about room S, which it must name. The future private-chat gate goes at `watch`'s join step | Documented risk: today every member can list every chat (`private-chat-sessions` issue, "that panel already lists every chat box-wide"), so this adds no exposure |
+| Private chats ship later and a person may not see chat S | No (feature does not exist) | A watcher learns only about room S, which it must name. `authedProcedure` proves box access, not chat access. **Invariant for the private-chat work:** `watch` must make the same permission decision as reading the chat's transcript before joining, and end a watcher whose access is revoked | Documented risk: today every member can list every chat (`private-chat-sessions` issue, "that panel already lists every chat box-wide"), so this adds no exposure |
+| iOS: the person goes to the native box screen | No | **None this round.** The web view stays mounted at opacity 0 behind the box screen (`ios-app/BeeBox/Views/RootView.swift:471-482`), so the page stays visible and the person stays present in their last chat until the app goes to the background | **Accepted gap**, filed as an issue: fixing it needs a native→web surface signal (a bridge change and a device build), which the boxholder asked to avoid if possible. Decision for the boxholder |
+| iOS: app goes to the background | No (needs a device) | WebKit hides the page when the app backgrounds; if it does not, the suspended app's socket fails keep-alive within ~35s | Unverified on a device; the boxholder checks it on the phone |
+| WebSocket reconnecting after a drop | Hook: status gate | People shown only while status is `pending`; `connecting` shows none | Clear: heads vanish during the reconnect and return with fresh data |
 | Conversation switches while subscribed | Hook: input change resubscribes (tRPC) | Old subscription aborted, new one joins | Clear |
 | Box in open access (no identity) | Router test: `user: null` yields `[]` | No join | Clear: no heads |
 
@@ -329,8 +342,13 @@ No critical gaps.
 - **The agent seeing who is present.** Separate decision (the issue's
   "The agent" question).
 - **Showing yourself.** Heads are for other people (boxholder lean).
-- **Voice/video calls, signaling, ringing.** Next plan; this one only fixes
-  the frame union and the room so they can be added.
+- **Voice/video calls, signaling, ringing.** Next plan. The boundary it
+  inherits: downstream frames (an offer, a ring) join the `ChatPresenceFrame`
+  union on this subscription; upstream messages need their own
+  `authedProcedure` mutation that names a recipient watcher in the same room,
+  and the room's `onChange` callback grows into a frame sender. None of that
+  is built now.
+- **iOS native box screen.** See *Failure modes*; needs a bridge signal.
 - **Replacing `presence.heartbeat`.** Different question (notification
   routing); left as is.
 - **Presence across processes.** One process serves a box, as for the
@@ -340,14 +358,13 @@ No critical gaps.
 
 Decisions made without the boxholder, to revisit:
 
-1. **"Focused tab" means visible tab.** A visible but unfocused window (side
-   by side with another) counts as present. Reason: in the iOS app the web
-   view loses DOM focus to the native composer, so `document.hasFocus()`
-   would drop people while they type. Lean: keep.
-2. **Present while a card is in front.** The chat runtime stays mounted on
-   every page and the chat stays the current conversation, so a person
-   reading a card from the chat is still present in it. Lean: keep; it is
-   what a later call would want.
+1. **Focus in the browser, visibility in the iOS web view.** A browser tab
+   counts only when visible and focused. The iOS web view counts when
+   visible, because the native composer takes DOM focus from it.
+2. **Not present while the transcript is hidden.** A person reading a card
+   full-screen is not in the chat. A later call may want the opposite (stay
+   in the call while reading a card); revisit then.
+5. **iOS box screen gap accepted for now** (see *Failure modes*).
 3. **Overflow:** two heads and a `+N` disc. Lean: keep.
 4. **Order:** earliest arrival first, so heads do not jump. Lean: keep.
 
