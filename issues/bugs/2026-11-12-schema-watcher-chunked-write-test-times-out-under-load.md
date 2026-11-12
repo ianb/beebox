@@ -34,7 +34,7 @@ in this environment.
 
 ## Cause (2026-11-12, workstream schema-watcher-flake)
 
-The watcher does not drop events. On macOS, `fs.watch` on a directory
+No probe showed a lost event; the delay is in delivery. On macOS, `fs.watch` on a directory
 (recursive or not) goes through FSEvents. With `fseventsd` near 80–100% CPU,
 a standalone probe saw FSEvents deliver a write 0.2–10.5 s late; kqueue
 on the file saw it within 1 ms and 100 ms polling within 85 ms. A 2-minute
@@ -44,9 +44,14 @@ split one burst into two batches 165 ms apart (two invalidations), and
 it delivered the scaffold's `src/schemas` writes from before the watch
 started, so a "pass" could come from those instead of the test's write.
 
-Production runs on Linux (inotify) and is not affected. On a busy Mac,
-hot reload lags by the FSEvents delay and may invalidate twice; both are
-harmless.
+Not established: that FSEvents never loses an event. One in-test write
+went unseen for over 30 s, and that run did not wait long enough to tell
+whether it was late or lost. The watcher has no fallback: a final write
+whose event never comes leaves the old schemas cached until the manual
+reload endpoint or the daily recycle. Production runs on Linux, where
+Node's `fs.watch` uses inotify, so these probes say nothing about
+production. On a busy Mac, hot reload lags by the FSEvents delay. A split
+burst invalidates twice, which costs one extra schema rebuild.
 
 Fix: the test now uses a fake `fs.watch` and a mocked clock for the burst
 rule, and checks the watch's directory and options through the same fake.

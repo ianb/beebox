@@ -64,12 +64,12 @@ test("a write in three chunks invalidates once, after the last", async (t) => {
     onEvent?.("change", "note.ts");
     mock.timers.tick(50);
   }
-  // 100 ms after the last chunk, 200 ms after the first: a timer that the
-  // later chunks did not re-arm has fired by now.
-  mock.timers.tick(50);
+  // 149 ms after the last chunk, 249 ms after the first: a timer that the
+  // later chunks did not re-arm, or a shorter window, has fired by now.
+  mock.timers.tick(99);
   t.check(invalidated, []);
   // 150 ms after the last chunk: its quiet window has passed.
-  mock.timers.tick(50);
+  mock.timers.tick(1);
   t.check(invalidated, [box.root]);
   // Nothing re-fires once the burst has been handled.
   mock.timers.tick(1000);
