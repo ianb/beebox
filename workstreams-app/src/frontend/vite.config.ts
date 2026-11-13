@@ -31,6 +31,11 @@ export default defineConfig({
     host: "127.0.0.1",
     port: Number(process.env.WORKSTREAMS_APP_FRONTEND_PORT ?? 3221),
     strictPort: true,
+    // fsevents.watch() starts its stream synchronously on the JS thread; when
+    // fseventsd is busy (router cold start launches several Vite servers at
+    // once) each call blocks 1-25 s and the readiness probe times out.
+    // chokidar's fs.watch fallback starts streams off the main thread.
+    watch: { useFsEvents: false },
     proxy: {
       "/workstreams/api": {
         target: `http://127.0.0.1:${backendPort}`,

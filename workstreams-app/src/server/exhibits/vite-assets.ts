@@ -102,7 +102,9 @@ export function exhibitsViteConfig(options: ViteAssetsOptions): InlineConfig {
       },
       // Vite only watches module-graph files today, so these are cheap
       // insurance: an instrument writing captures must never drive the dev loop.
-      watch: { ignored: ["**/data/**", "**/captures/**", "**/events.jsonl"] },
+      // useFsEvents: false — fsevents.watch() blocks this process's event loop
+      // (and so the backend's health route) for seconds when fseventsd is busy.
+      watch: { ignored: ["**/data/**", "**/captures/**", "**/events.jsonl"], useFsEvents: false },
     },
   };
 }
