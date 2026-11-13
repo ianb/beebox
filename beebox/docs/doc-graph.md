@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-13T14:58:22Z
-Total documents: 654
+Generated: 2026-11-13T16:19:32Z
+Total documents: 655
 
 ## Issues
 
@@ -3758,6 +3758,7 @@ Title: "Measuring performance" | 301 lines | current reference
 
 Referenced by:
 - docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads, box starts, test-process and `bbx` start costs: the
+- docs/implemented-plans/direct-chat-load.md:39 (mention) — Chosen: the smallest fix plus one extra recovery attempt for a receipted chat, a delayed loading line, a quiet failure l
 - docs/implemented-plans/lazy-cli-commands.md:59 (mention) — lines in `docs/development/performance.md` and the CLI docs. Not a BIG
 - docs/implemented-plans/yaml-lazy-load.md:62 (mention) — `docs/development/performance.md`, about 10 lines.
 - docs/implemented-plans/yaml-read-parser.md:49 (mention) — 200 changed source and test lines. Docs: `docs/development/performance.md`,
@@ -5434,6 +5435,18 @@ References:
 - → ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md (frontmatter)
+
+#### docs/implemented-plans/direct-chat-load.md
+
+Title: "Direct chat load" | 145 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/chat-everywhere.md:845 (mention) — A load always lands on a usable chat (superseded by `direct-chat-load.md`): an
+
+References:
+- → ../issues/bugs/2026-11-13-choosing-conversation-notice-flashes-on-every-reload.md (frontmatter)
+- → docs/development/performance.md (mention)
+- → docs/plans/chat-everywhere.md (mention)
 
 #### docs/implemented-plans/doc-lifecycle-clarity.md **[ORPHAN]**
 
@@ -9462,6 +9475,7 @@ Title: "Chat everywhere: one input, explicit conversational focus" | 916 lines |
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:19 (link) — [chat everywhere](../plans/chat-everywhere.md), and
+- docs/implemented-plans/direct-chat-load.md:45 (mention) — - Earlier decision, `beebox/docs/plans/chat-everywhere.md:845-847`: *"Explicitly requested unknown IDs, foreign-scope re
 - docs/implemented-plans/notifications-design-notes.md:88 (mention) — `docs/plans/chat-everywhere.md`, Track C). A notification whose target is on
 - docs/mobile-parity.md:25 (link) — | Conversation-bound input across box pages | done in [chat-everywhere](plans/chat-everywhere.md) worktree — V3 destinat
 - docs/plans/chat-everywhere.review.md:3 (link) — Review of [Chat everywhere](chat-everywhere.md), 2026-09-07. The independent
@@ -9490,6 +9504,7 @@ References:
 - → docs/mobile-contract.md (mention)
 - → docs/plans/chat-everywhere.review.md (link)
 - → ../issues/closed/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md (link)
+- → docs/implemented-plans/direct-chat-load.md (mention)
 
 #### docs/plans/chat-everywhere.review.md
 

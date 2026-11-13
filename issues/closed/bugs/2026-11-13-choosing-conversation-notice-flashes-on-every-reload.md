@@ -1,10 +1,13 @@
 ---
 title: "Every chat reload flashes a \"Choosing conversation…\" notice, even when the URL names the conversation"
-workstream: unattached
+workstream: direct-chat-load
 area: beebox
 discovered-by: Ian
 filed-by: agent
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-13):** 852897585: loads resolve straight to a conversation; delayed Loading notice; Retry on thrown resolution.
 
 Each time a chat page loads, a "Choosing conversation…" notice appears above the chat for a moment. It shows even when the URL already names the conversation with `?session=<id>`. To the person, nothing is being chosen: the conversation is in the URL, and the notice does not say what the box is waiting for.
 

@@ -2,7 +2,8 @@ import type { ReservationReceipt, ReservationReceipts } from "./reservation-rece
 
 type Reserve = (receipt: ReservationReceipt) => Promise<{ kind: "reserved" | "taken" | "unsupported" }>;
 
-class ReservationRecoveryUnsupportedError extends Error {
+/** The engine no longer reserves ids (for example, the box default changed), so this reservation is gone for good. */
+export class ReservationRecoveryUnsupportedError extends Error {
   constructor() {
     super("This conversation's reservation could not be restored.");
     this.name = "ReservationRecoveryUnsupportedError";

@@ -55,7 +55,7 @@ import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 /** Bus events after which the pending-question list may have changed (the Questions page watches the same set). */
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
-  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
+  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Loading conversation…" : selection.reason;
 }
 
 /**
