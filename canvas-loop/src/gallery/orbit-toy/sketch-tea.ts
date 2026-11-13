@@ -174,20 +174,20 @@ export function draw(v: View, model: DeepReadonly<Model>): void {
 
   // orbit paths
   for (const p of model.planets) {
-    v.circle(CENTER_X, CENTER_Y, p.orbitRadius * 2, ORBIT_RING);
+    v.circle(CENTER_X, CENTER_Y, p.orbitRadius, ORBIT_RING);
   }
 
   // sun
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS * 2, { fill: "#facc15" });
+  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
 
   // planets
   for (let i = 0; i < model.planets.length; i++) {
     const p = model.planets[i];
     if (p === undefined) continue;
     const { x, y } = planetPos(p, model.frame);
-    v.circle(x, y, p.size, { fill: p.color });
+    v.circle(x, y, p.size / 2, { fill: p.color });
     if (i === model.selected) {
-      v.circle(x, y, p.size + HIT_PADDING * 2 + 4, SELECTION_RING);
+      v.circle(x, y, (p.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING);
     }
   }
 

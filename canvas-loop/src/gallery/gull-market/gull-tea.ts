@@ -28,9 +28,9 @@ function wing(v: View, pts: readonly Vec2[], tip: Vec2, seed: number): void {
   });
   v.clip(v.curvePath(pts, true), () => {
     // black primaries at the tip, with the white "mirror" spots
-    v.ellipse(tip[0], tip[1], 70, 84, { fill: "#23252b" });
-    v.circle(tip[0] + 2, tip[1] + 2, 10, { fill: WHITE });
-    v.circle(tip[0] - 12, tip[1] + 14, 8, { fill: WHITE });
+    v.ellipse(tip[0], tip[1], 35, 42, { fill: "#23252b" });
+    v.circle(tip[0] + 2, tip[1] + 2, 5, { fill: WHITE });
+    v.circle(tip[0] - 12, tip[1] + 14, 4, { fill: WHITE });
   });
   // feather texture: bristle strokes from the shoulder out toward the tip
   v.clip(v.curvePath(pts, true), () => {
@@ -246,7 +246,7 @@ function head(v: View): void {
     weight: 2.4,
     seed: 2041,
   });
-  v.circle(-146, -17, 7, { fill: "#e0402e" });
+  v.circle(-146, -17, 3.5, { fill: "#e0402e" });
   mark(
     v,
     [
@@ -259,10 +259,10 @@ function head(v: View): void {
   // eye: yellow iris, pupil glancing back, half lid and a cocky brow
   // (the stroke of the mark just above carries over onto these four circles)
   const eyeEdge: Style = { stroke: INK, weight: 1.6 };
-  v.circle(hx - 8, hy - 6, 17, { ...eyeEdge, fill: "#e0402e" });
-  v.circle(hx - 8, hy - 6, 13, { ...eyeEdge, fill: "#f7e05a" });
-  v.circle(hx - 4, hy - 5, 6, { ...eyeEdge, fill: INK });
-  v.circle(hx - 3, hy - 7, 2, { ...eyeEdge, fill: WHITE });
+  v.circle(hx - 8, hy - 6, 8.5, { ...eyeEdge, fill: "#e0402e" });
+  v.circle(hx - 8, hy - 6, 6.5, { ...eyeEdge, fill: "#f7e05a" });
+  v.circle(hx - 4, hy - 5, 3, { ...eyeEdge, fill: INK });
+  v.circle(hx - 3, hy - 7, 1, { ...eyeEdge, fill: WHITE });
   v.clip(ring(hx - 8, hy - 6, 9, 9), () => {
     v.rect(hx - 20, hy - 20, 24, 12, { fill: "#d7dde2" });
   });

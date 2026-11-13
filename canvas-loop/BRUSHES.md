@@ -15,7 +15,7 @@ const INK: Style = {
 
 v.background("#f6f2e7");
 v.curve([[40, 80], [120, 40], [200, 90]], false, INK);         // a smooth curve through the points
-v.circle(260, 70, 40, INK);                                    // any stroked shape takes the brush
+v.circle(260, 70, 20, INK);                                    // any stroked shape takes the brush
 v.line(40, 120, 300, 120, { stroke: "#1d2a44", weight: 4 });   // no brush: a plain Canvas2D stroke
 ```
 

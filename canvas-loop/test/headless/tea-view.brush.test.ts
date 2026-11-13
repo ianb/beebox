@@ -28,8 +28,8 @@ test("group opacity: overlapping opaque children do not darken where they overla
   const h = makeView({ width: 100, height: 60 });
   h.v.background("#ffffff");
   h.v.group({ opacity: 0.5 }, () => {
-    h.v.circle(35, 30, 40, { fill: "#cc0000" });
-    h.v.circle(65, 30, 40, { fill: "#cc0000" });
+    h.v.circle(35, 30, 20, { fill: "#cc0000" });
+    h.v.circle(65, 30, 20, { fill: "#cc0000" });
   });
   assert.deepEqual(pixel(h, [50, 30]), pixel(h, [25, 30]), "overlap matches a single-coverage point");
   assert.notDeepEqual(pixel(h, [25, 30]), [204, 0, 0, 255], "the group is translucent");
@@ -38,8 +38,8 @@ test("group opacity: overlapping opaque children do not darken where they overla
 test("group opacity: translucent children still compound with each other inside the group", () => {
   const h = makeView({ width: 100, height: 60 });
   h.v.group({ opacity: 0.5 }, () => {
-    h.v.circle(35, 30, 40, { fill: "rgba(0,0,200,0.5)" });
-    h.v.circle(65, 30, 40, { fill: "rgba(0,0,200,0.5)" });
+    h.v.circle(35, 30, 20, { fill: "rgba(0,0,200,0.5)" });
+    h.v.circle(65, 30, 20, { fill: "rgba(0,0,200,0.5)" });
   });
   assert.ok(pixel(h, [50, 30])[3] > pixel(h, [25, 30])[3], "overlap is more opaque than single coverage");
 });
@@ -200,7 +200,7 @@ test("clip to several shapes keeps drawing inside their union only", () => {
 test("an ellipse gradient is squashed: same colour at the same fraction of each radius", () => {
   const h = makeView({ width: 200, height: 100 });
   h.v.rect(0, 0, 200, 100, {
-    fill: h.v.ellipseGradient(100, 50, 160, 40, [
+    fill: h.v.ellipseGradient(100, 50, 80, 20, [
       [0, "#000000"],
       [1, "#ffffff"],
     ]),

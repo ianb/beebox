@@ -164,15 +164,16 @@ nor stroke.
 ```ts
 v.background(paint)
 v.rect(x, y, w, h, style)               v.roundRect(x, y, w, h, radius, style)
-v.circle(x, y, diameter, style)         v.ellipse(x, y, w, h, style)
+v.circle(x, y, radius, style)           v.ellipse(x, y, rx, ry, style)
 v.line(x1, y1, x2, y2, style)           v.triangle(x1, y1, x2, y2, x3, y3, style)
 v.arc(x, y, radius, start, end, style)  v.polygon(points, style)
 v.path(commands, style)                 v.curve(points, closed, style)
 ```
 
 - Points are `Vec2` tuples, `[x, y]`.
-- `rect` and `roundRect` take the top-left corner. `circle`, `ellipse` and
-  `arc` take the centre.
+- `rect` and `roundRect` take the top-left corner and a width and height.
+  `circle`, `ellipse` and `arc` take the centre and radii, as Canvas2D and SVG
+  do (not p5's diameter): `v.circle(50, 50, 10, …)` is 20 across.
 - `path` takes data-encoded commands: `["move", x, y]`, `["line", x, y]`,
   `["quad", cx, cy, x, y]`, `["bezier", c1x, c1y, c2x, c2y, x, y]`,
   `["close"]`.
@@ -181,7 +182,7 @@ v.path(commands, style)                 v.curve(points, closed, style)
 - `v.tube(points, { width, profile? })` and `v.offset(points, distance)` return
   outlines as data (see [BRUSHES.md](./BRUSHES.md#shape-helpers)).
 - `v.linearGradient(x1, y1, x2, y2, stops)`, `v.radialGradient(x, y, radius,
-  stops)` and `v.ellipseGradient(x, y, w, h, stops)` return gradient handles.
+  stops)` and `v.ellipseGradient(x, y, rx, ry, stops)` return gradient handles.
   Use a handle anywhere a color goes: `{ fill: v.radialGradient(…) }`.
 
 ### Text
@@ -568,9 +569,9 @@ case "trigger":
 const ORBIT_RING: Style = { stroke: "#1e293b", weight: 1 };
 const SELECTION_RING: Style = { stroke: "#f8fafc", weight: 2 };
 
-v.circle(CENTER_X, CENTER_Y, SUN_RADIUS * 2, { fill: "#facc15" });
-v.circle(pos.x, pos.y, planet.size, { fill: planet.color });
-if (selected) v.circle(pos.x, pos.y, planet.size + HIT_PADDING * 2 + 4, SELECTION_RING);
+v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
+v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
+if (selected) v.circle(pos.x, pos.y, planet.size / 2 + HIT_PADDING + 2, SELECTION_RING);
 v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
 ```
 

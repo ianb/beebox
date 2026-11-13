@@ -148,12 +148,12 @@ function drawWater(v: View, model: DeepReadonly<Model>, p: Params): void {
     const alpha = Math.max(0, Math.round((1 - age / 56) * 145))
       .toString(16)
       .padStart(2, "0");
-    v.ellipse(ripple.x, ripple.y, radius * 2.5, radius * 0.75, {
+    v.ellipse(ripple.x, ripple.y, (radius * 2.5) / 2, (radius * 0.75) / 2, {
       stroke: `#d8d5ae${alpha}`,
       weight: 2.3,
     });
     if (age > 11) {
-      v.ellipse(ripple.x, ripple.y, radius * 3.6, radius * 1.1, {
+      v.ellipse(ripple.x, ripple.y, (radius * 3.6) / 2, (radius * 1.1) / 2, {
         stroke: `#b6d0bc${alpha}`,
         weight: 1.3,
       });
@@ -171,8 +171,8 @@ function drawLight(v: View, model: DeepReadonly<Model>, p: Params): void {
   const pulse = 0.5 + 0.5 * Math.sin(model.frame * 0.09);
   const size = (model.hoveringLantern ? 89 : 69) + pulse * 9;
 
-  v.ellipse(327, 455, size * 2, size * 2, {
-    fill: v.ellipseGradient(327, 455, size * 2, size * 2, [
+  v.ellipse(327, 455, size, size, {
+    fill: v.ellipseGradient(327, 455, size, size, [
       [0, "#ffe5a965"],
       [1, "#ffe5a900"],
     ]),
@@ -181,26 +181,26 @@ function drawLight(v: View, model: DeepReadonly<Model>, p: Params): void {
   v.ellipse(
     326 + Math.sin(model.frame * 0.16) * 1.2,
     454,
-    8 + pulse * 2,
-    13 + pulse * 3,
+    (8 + pulse * 2) / 2,
+    (13 + pulse * 3) / 2,
     { fill: "#fff3b2" },
   );
 
-  v.ellipse(364, 492, 39 + pulse * 7, 45 + pulse * 7, { fill: "#ffdda92c" });
+  v.ellipse(364, 492, (39 + pulse * 7) / 2, (45 + pulse * 7) / 2, { fill: "#ffdda92c" });
   for (let i = 0; i < 5; i += 1) {
     const y = 655 + i * 18;
     const x = 315 + Math.sin(model.frame * 0.065 + i * 2) * 13;
 
-    v.ellipse(x, y, 16 + (i % 2) * 9, 3.5, { fill: "#ffda9f7a" });
+    v.ellipse(x, y, (16 + (i % 2) * 9) / 2, 1.75, { fill: "#ffda9f7a" });
   }
   if (p.fireflies) {
     for (let i = 0; i < 4; i += 1) {
       const x = 460 + i * 47 + Math.sin(model.frame * 0.025 + i * 2.4) * 9;
       const y = 370 + i * 27 + Math.cos(model.frame * 0.035 + i * 2.1) * 10;
 
-      v.circle(x, y, 7, { fill: "#ffe0a862" });
+      v.circle(x, y, 3.5, { fill: "#ffe0a862" });
 
-      v.circle(x, y, 2.5, { fill: "#fff1bf" });
+      v.circle(x, y, 1.25, { fill: "#fff1bf" });
     }
   }
 }
@@ -209,11 +209,11 @@ function drawTurtleEye(v: View, model: DeepReadonly<Model>): void {
   const blinkDistance = Math.abs((model.frame % 100) - 65);
   const openness = Math.min(1, blinkDistance / 3);
 
-  v.ellipse(629, 511, 10, 13, { fill: "#3b6b61" });
+  v.ellipse(629, 511, 5, 6.5, { fill: "#3b6b61" });
 
-  v.ellipse(629, 511, 6, 1.2 + openness * 7, { fill: "#142f37" });
+  v.ellipse(629, 511, 3, (1.2 + openness * 7) / 2, { fill: "#142f37" });
   if (openness > 0.55) {
-    v.circle(630, 509, 2.2, { fill: "#f6d69c" });
+    v.circle(630, 509, 1.1, { fill: "#f6d69c" });
   }
 }
 
@@ -249,7 +249,7 @@ function mark(
 }
 
 function glint(v: View, x: number, y: number, r: number): void {
-  v.circle(x, y, r, { fill: "#ffdb91" });
+  v.circle(x, y, r / 2, { fill: "#ffdb91" });
   mark(
     v,
     [
@@ -283,16 +283,16 @@ function drawOriginal(v: View): void {
 
   // A gap in the storm over the library.
 
-  v.ellipse(388, 250, 550, 460, {
-    fill: v.ellipseGradient(388, 250, 550, 460, [
+  v.ellipse(388, 250, 275, 230, {
+    fill: v.ellipseGradient(388, 250, 275, 230, [
       [0, "#deb5909c"],
       [1, "#deb59000"],
     ]),
   });
 
-  v.circle(590, 117, 55, { fill: "#f8dfae" });
+  v.circle(590, 117, 27.5, { fill: "#f8dfae" });
 
-  v.circle(590, 117, 52, { fill: "#f1d8a9" });
+  v.circle(590, 117, 26, { fill: "#f1d8a9" });
 
   // Rain clouds, broken into broad painted bands.
   for (let i = 0; i < 11; i += 1) {
@@ -530,9 +530,9 @@ function drawOriginal(v: View): void {
     10,
     "wash",
   );
-  v.ellipse(629, 511, 7, 9, { fill: "#142f37" });
-  v.circle(630, 509, 2.4, { fill: "#f6d69c" });
-  v.circle(663, 527, 2.2, { fill: "#36574d" });
+  v.ellipse(629, 511, 3.5, 4.5, { fill: "#142f37" });
+  v.circle(630, 509, 1.2, { fill: "#f6d69c" });
+  v.circle(663, 527, 1.1, { fill: "#36574d" });
   mark(
     v,
     [
@@ -772,8 +772,8 @@ function drawOriginal(v: View): void {
 
   // The timbered room glows through a wall set into the shell.
 
-  v.ellipse(359, 472, 205, 180, {
-    fill: v.ellipseGradient(359, 472, 205, 180, [
+  v.ellipse(359, 472, 102.5, 90, {
+    fill: v.ellipseGradient(359, 472, 102.5, 90, [
       [0, "#edb87b6b"],
       [1, "#edb87b00"],
     ]),
@@ -959,9 +959,9 @@ function drawOriginal(v: View): void {
     ],
     "#a75646",
   );
-  v.ellipse(273, 446, 15, 17, { fill: "#efd0a2" });
-  v.circle(277, 442, 2.4, { fill: "#273c3e" });
-  v.circle(281, 448, 2.5, { fill: "#ad6253" });
+  v.ellipse(273, 446, 7.5, 8.5, { fill: "#efd0a2" });
+  v.circle(277, 442, 1.2, { fill: "#273c3e" });
+  v.circle(281, 448, 1.25, { fill: "#ad6253" });
   mark(
     v,
     [
@@ -993,8 +993,8 @@ function drawOriginal(v: View): void {
     "#9f6347",
     2,
   );
-  v.circle(267, 481, 2.3, { fill: "#8a5b4b" });
-  v.circle(266, 490, 2.3, { fill: "#8a5b4b" });
+  v.circle(267, 481, 1.15, { fill: "#8a5b4b" });
+  v.circle(266, 490, 1.15, { fill: "#8a5b4b" });
   mark(
     v,
     [
@@ -1006,7 +1006,7 @@ function drawOriginal(v: View): void {
     7,
     "ink",
   );
-  v.circle(318, 450, 5, { fill: "#edc193" });
+  v.circle(318, 450, 2.5, { fill: "#edc193" });
   mark(
     v,
     [
@@ -1026,8 +1026,8 @@ function drawOriginal(v: View): void {
     5,
   );
   // Lantern at the end of the keeper's arm.
-  v.ellipse(327, 455, 125, 125, {
-    fill: v.ellipseGradient(327, 455, 125, 125, [
+  v.ellipse(327, 455, 62.5, 62.5, {
+    fill: v.ellipseGradient(327, 455, 62.5, 62.5, [
       [0, "#ffd38a9c"],
       [1, "#ffd38a00"],
     ]),

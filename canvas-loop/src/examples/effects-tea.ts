@@ -68,7 +68,7 @@ function lake(v: View): void {
 function lamp(v: View): void {
   v.rect(227, 110, 6, 100, { fill: "#30344f" });
   v.group({ effects: { glow: { blur: 18, color: "#ffd84a", strength: 3 } }, blend: "screen" }, () => {
-    v.circle(230, 104, 18, { fill: "#fff2b0" });
+    v.circle(230, 104, 9, { fill: "#fff2b0" });
   });
 }
 
@@ -83,7 +83,7 @@ function photo(v: View): void {
   v.group({ effects: { saturation: 0.2, sepia: 0.6, shadow: { x: 3, y: 4, blur: 4, color: "rgba(0,0,0,0.5)" } } }, () => {
     v.rect(20, 30, 110, 80, { fill: "#ffffff" });
     v.rect(26, 36, 98, 56, { fill: "#4aa3df" });
-    v.circle(95, 55, 14, { fill: "#ffcc33" });
+    v.circle(95, 55, 7, { fill: "#ffcc33" });
     v.polygon([[26, 92], [60, 66], [90, 92]], { fill: "#2e8b57" });
     v.text("summer", { x: 75, y: 101 }, { size: 9, align: "center", valign: "middle", fill: "#444444" });
   });
@@ -93,7 +93,7 @@ function firefly(v: View, frame: number): void {
   const [x = 0, y = 0] = v.tweenPoint(FLIGHT, frame % 120, "in-out");
   const pulse = v.tween([[0, 0.4], [10, 1], [20, 0.4]], frame % 20);
   v.group({ effects: { glow: { blur: 10, color: "#b7ff5a", strength: 5 } }, blend: "add", opacity: pulse }, () => {
-    v.circle(x, y, 8, { fill: "#e8ffb0" });
+    v.circle(x, y, 4, { fill: "#e8ffb0" });
   });
 }
 

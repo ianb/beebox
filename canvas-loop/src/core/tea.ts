@@ -178,8 +178,10 @@ export interface View {
   rect(x: number, y: number, w: number, h: number, style: Style): void;
   /** A rectangle with corners rounded to `radius`. */
   roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): void;
-  circle(x: number, y: number, diameter: number, style: Style): void;
-  ellipse(x: number, y: number, w: number, h: number, style: Style): void;
+  /** A circle of `radius` around (x, y). Round shapes take radii: `circle`, `ellipse`, `arc`, the gradients. */
+  circle(x: number, y: number, radius: number, style: Style): void;
+  /** An ellipse with radii `rx` (across) and `ry` (down) around (x, y). */
+  ellipse(x: number, y: number, rx: number, ry: number, style: Style): void;
   line(x1: number, y1: number, x2: number, y2: number, style: Style): void;
   triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style: Style): void;
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style: Style): void;
@@ -199,8 +201,8 @@ export interface View {
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
-  /** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
-  ellipseGradient(x: number, y: number, w: number, h: number, stops: readonly ColorStop[]): RadialGradient;
+  /** A radial gradient filling an ellipse with radii `rx` and `ry` around (x, y), like `ellipse`. */
+  ellipseGradient(x: number, y: number, rx: number, ry: number, stops: readonly ColorStop[]): RadialGradient;
   /**
    * Write text at a point (`{x, y}`) or in a box (`{x, y, w, h}`: wrap, align,
    * valign, fit). Options left out take the defaults: size 12, sans-serif,

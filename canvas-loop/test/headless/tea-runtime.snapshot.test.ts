@@ -16,7 +16,7 @@ const mover: LoadedTeaModule = toTeaModule({
   update: (model: { frame: number }, msg: Msg) => (msg.type === "tick" ? { frame: msg.frame } : model),
   draw: (v: View, model: { frame: number }) => {
     v.background("#000000");
-    v.circle(model.frame * 4, 25, 8, { fill: "#ffffff" });
+    v.circle(model.frame * 4, 25, 4, { fill: "#ffffff" });
   },
 });
 

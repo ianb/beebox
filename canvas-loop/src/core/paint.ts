@@ -267,10 +267,10 @@ export function radialGradient(...args: [number, number, number, readonly ColorS
   return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
 }
 
-/** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
+/** A radial gradient filling an ellipse with radii `rx` and `ry` around (x, y), like `ellipse`. */
 export function ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
-  const [x, y, w, h, stops] = args;
-  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: w / 2, scaleY: h / w, stops };
+  const [x, y, rx, ry, stops] = args;
+  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: rx, scaleY: ry / rx, stops };
 }
 
 /** A sprite handle from `sprite(...)`: plain data naming a stored picture; draw it with `image`. */

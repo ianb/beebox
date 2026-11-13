@@ -172,7 +172,7 @@ function awning(
       ],
       stripe,
     );
-    v.circle(x + i * sw + sw / 2 + 4, y + 26, sw, stripe);
+    v.circle(x + i * sw + sw / 2 + 4, y + 26, sw / 2, stripe);
   }
   v.line(x, y, x + w, y, ink(2.2));
   v.line(x, y, x + 4, y + 26, ink(2.2));
@@ -202,7 +202,7 @@ function door(v: View, x: number, y: number, w: number, color: string): void {
     ],
     inked(color, 2.4),
   );
-  v.circle(x + w - 9, y + 50, 6, { fill: "#f2c84b" });
+  v.circle(x + w - 9, y + 50, 3, { fill: "#f2c84b" });
   v.rect(x + 8, y + 18, w - 16, 22, inked("#d6eef7", 1.4));
 }
 
@@ -288,7 +288,7 @@ function paintersHouse(v: View): void {
   for (let i = 0; i < 9; i += 1)
     v.line(520, 230 + i * 34, 534 + hash(i) * 14, 238 + i * 34, swipe);
   for (let i = 0; i < 6; i += 1)
-    v.ellipse(548 + hash(i + 40) * 50, 260 + hash(i + 50) * 250, 14, 9, {
+    v.ellipse(548 + hash(i + 40) * 50, 260 + hash(i + 50) * 250, 7, 4.5, {
       fill: "#d9d2df",
     });
   v.rect(414, 206, 198, 14, inked("#6c6578", 2.2));
@@ -339,7 +339,7 @@ function fruitStand(v: View): void {
       v.circle(
         x + 8 + (i % 3) * 12,
         524 + Math.floor(i / 3) * 8,
-        11,
+        5.5,
         inked(c, 1.2),
       );
   }
@@ -362,13 +362,13 @@ function townHall(v: View): void {
     inked("#5a6f9a", 2.4),
   );
   v.rect(794, 330, 206, 14, inked("#c9b48e", 2.2));
-  v.circle(900, 200, 56, inked("#fffdf4", 2.6));
+  v.circle(900, 200, 28, inked("#fffdf4", 2.6));
   for (let i = 0; i < 12; i += 1) {
     const a = (i / 12) * Math.PI * 2;
     v.circle(
       900 + Math.cos(a) * 22,
       200 + Math.sin(a) * 22,
-      i % 3 === 0 ? 4 : 2,
+      (i % 3 === 0 ? 4 : 2) / 2,
       { fill: INK },
     );
   }
@@ -380,7 +380,7 @@ function townHall(v: View): void {
   v.rect(864, 530, 72, 10, inked("#d6c7a8", 1.6));
   // bus stop and bench
   v.line(846, 470, 846, 568, ink(3));
-  v.circle(846, 466, 34, inked("#d8443a", 2));
+  v.circle(846, 466, 17, inked("#d8443a", 2));
   label(v, "BUS", 846, 462, 10, "#ffffff");
   label(v, "stop", 846, 472, 8, "#ffffff");
   v.rect(880, 540, 96, 8, inked("#8a5a3a", 1.8));
@@ -441,7 +441,7 @@ function street(v: View): void {
   for (let i = 0; i < 40; i += 1) {
     const x = hash(i + 100) * W;
     const y = ROAD_END + 14 + hash(i + 200) * 26;
-    v.circle(x, y, 5, {
+    v.circle(x, y, 2.5, {
       fill: ["#ffffff", "#f2c84b", "#e88aa8"][i % 3] ?? "#ffffff",
     });
   }
@@ -477,10 +477,10 @@ function jokes(v: View): void {
     ],
     { fill: "#2a1f1c" },
   );
-  v.ellipse(148, 535, 10, 8, inked("#b9b3c4", 1.2));
-  v.circle(145, 530, 5, inked("#b9b3c4", 1));
-  v.circle(150, 534, 1.6, { fill: INK });
-  v.circle(164, 538, 4, { fill: "#d58b42" });
+  v.ellipse(148, 535, 5, 4, inked("#b9b3c4", 1.2));
+  v.circle(145, 530, 2.5, inked("#b9b3c4", 1));
+  v.circle(150, 534, 0.8, { fill: INK });
+  v.circle(164, 538, 2, { fill: "#d58b42" });
   // LOST SOCK poster on the painter's house, and the sock itself up on the town hall
   v.rect(552, 452, 44, 40, inked("#fffaf0", 1.4));
   label(v, "LOST:", 574, 461, 8, "#c23b3b");
@@ -501,11 +501,11 @@ function jokes(v: View): void {
   );
   // a nest in the bakery gutter
   v.curve(ellipsePts(46, 222, 16, 6, 8), true, inked("#9a6a3a", 1.4));
-  v.ellipse(40, 217, 6, 8, { fill: "#bfe2ee" });
-  v.ellipse(48, 216, 6, 8, { fill: "#bfe2ee" });
+  v.ellipse(40, 217, 3, 4, { fill: "#bfe2ee" });
+  v.ellipse(48, 216, 3, 4, { fill: "#bfe2ee" });
   // fishbowl in the post office window, pot plant at the grocer's
-  v.circle(366, 372, 26, inked("rgba(190,226,240,0.9)", 1.4));
-  v.ellipse(368, 374, 10, 6, { fill: "#f29a2e" });
+  v.circle(366, 372, 13, inked("rgba(190,226,240,0.9)", 1.4));
+  v.ellipse(368, 374, 5, 3, { fill: "#f29a2e" });
   v.polygon(
     [
       [734, 366],
@@ -515,11 +515,11 @@ function jokes(v: View): void {
     ],
     inked("#c97a4a", 1.4),
   );
-  v.ellipse(740, 358, 9, 16, { fill: "#3f9a4a" });
-  v.ellipse(750, 356, 9, 18, { fill: "#3f9a4a" });
-  v.ellipse(745, 352, 8, 18, { fill: "#3f9a4a" });
+  v.ellipse(740, 358, 4.5, 8, { fill: "#3f9a4a" });
+  v.ellipse(750, 356, 4.5, 9, { fill: "#3f9a4a" });
+  v.ellipse(745, 352, 4, 9, { fill: "#3f9a4a" });
   // a puddle by the curb
-  v.ellipse(760, 706, 70, 10, { fill: "rgba(160,190,220,0.7)" });
+  v.ellipse(760, 706, 35, 5, { fill: "rgba(160,190,220,0.7)" });
 }
 
 /** The whole still town, for `v.cache`. */
@@ -560,9 +560,9 @@ export const LIT_WINDOWS: readonly Vec2[] = [
 export function paintNightSky(v: View): void {
   // screen-blended inside the cache too, so stars overlapping the moon add up as they did
   for (let i = 0; i < 40; i += 1)
-    v.circle(hash(i + 300) * W, hash(i + 400) * 180, 1.5 + hash(i + 500) * 2, {
+    v.circle(hash(i + 300) * W, hash(i + 400) * 180, (1.5 + hash(i + 500) * 2) / 2, {
       fill: "rgba(255,255,230,0.9)",
       blend: "screen",
     });
-  v.circle(120, 70, 50, { fill: "#fff6d0", blend: "screen" });
+  v.circle(120, 70, 25, { fill: "#fff6d0", blend: "screen" });
 }

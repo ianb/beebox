@@ -153,7 +153,7 @@ function arm(v: View, f: Folk, from: Vec2, to: Vec2): void {
     }),
     inked(f.shirt, 1.8),
   );
-  v.circle(to[0], to[1], 8, inked(f.fur, 1.6));
+  v.circle(to[0], to[1], 4, inked(f.fur, 1.6));
 }
 
 function ears(v: View, f: Folk): void {
@@ -163,8 +163,8 @@ function ears(v: View, f: Folk): void {
     case "hippo": {
       const r = f.species === "bear" ? 6 : 4;
       for (const dx of [-11, 11]) {
-        v.circle(hx + dx, hy - 12, r * 2, inked(f.fur));
-        v.circle(hx + dx, hy - 12, r, { fill: f.muzzle });
+        v.circle(hx + dx, hy - 12, r, inked(f.fur));
+        v.circle(hx + dx, hy - 12, r / 2, { fill: f.muzzle });
       }
       return;
     }
@@ -172,7 +172,7 @@ function ears(v: View, f: Folk): void {
       for (const dx of [-6, 6]) {
         const pts = ellipsePts(hx + dx, hy - 25, 5, 15);
         v.curve(pts, true, inked(f.fur));
-        v.ellipse(hx + dx, hy - 24, 4, 20, { fill: "#f2a7b8" });
+        v.ellipse(hx + dx, hy - 24, 2, 10, { fill: "#f2a7b8" });
       }
       return;
     }
@@ -237,13 +237,13 @@ function face(v: View, f: Folk): void {
     v.curve(ellipsePts(hx, hy + 6, 10, 4.5, 10), true, inked("#f29a2e", 1.8));
     v.line(hx - 8, hy + 6, hx + 8, hy + 6, ink(1.2));
   } else if (f.species === "pig") {
-    v.ellipse(hx, hy + 5, 13, 9, inked("#f0a2a8", 1.8));
-    v.ellipse(hx - 2.5, hy + 5, 2.2, 3, { fill: INK });
-    v.ellipse(hx + 2.5, hy + 5, 2.2, 3, { fill: INK });
+    v.ellipse(hx, hy + 5, 6.5, 4.5, inked("#f0a2a8", 1.8));
+    v.ellipse(hx - 2.5, hy + 5, 1.1, 1.5, { fill: INK });
+    v.ellipse(hx + 2.5, hy + 5, 1.1, 1.5, { fill: INK });
   } else {
     const long = f.species === "fox" || f.species === "goat";
-    v.ellipse(hx, hy + 6, long ? 14 : 16, long ? 12 : 11, { fill: f.muzzle });
-    v.ellipse(hx, hy + 2.5, 5, 3.5, { fill: INK });
+    v.ellipse(hx, hy + 6, (long ? 14 : 16) / 2, (long ? 12 : 11) / 2, { fill: f.muzzle });
+    v.ellipse(hx, hy + 2.5, 2.5, 1.75, { fill: INK });
     v.curve(
       [
         [hx - 3.5, hy + 7],
@@ -287,16 +287,16 @@ function face(v: View, f: Folk): void {
   } else {
     const r = eyes === "wide" ? 4.5 : 3;
     if (eyes === "wide") {
-      v.circle(hx - 5.5, hy - 3, 9, { fill: "#ffffff" });
-      v.circle(hx + 5.5, hy - 3, 9, { fill: "#ffffff" });
+      v.circle(hx - 5.5, hy - 3, 4.5, { fill: "#ffffff" });
+      v.circle(hx + 5.5, hy - 3, 4.5, { fill: "#ffffff" });
     }
-    v.ellipse(hx - 5.5, hy - 3, r, r * 1.3, { fill: INK });
-    v.ellipse(hx + 5.5, hy - 3, r, r * 1.3, { fill: INK });
-    v.circle(hx - 5, hy - 4, 1.4, { fill: "#ffffff" });
-    v.circle(hx + 6, hy - 4, 1.4, { fill: "#ffffff" });
+    v.ellipse(hx - 5.5, hy - 3, r / 2, (r * 1.3) / 2, { fill: INK });
+    v.ellipse(hx + 5.5, hy - 3, r / 2, (r * 1.3) / 2, { fill: INK });
+    v.circle(hx - 5, hy - 4, 0.7, { fill: "#ffffff" });
+    v.circle(hx + 6, hy - 4, 0.7, { fill: "#ffffff" });
   }
-  v.circle(hx - 10, hy + 4, 5, { fill: "rgba(240,120,120,0.45)" });
-  v.circle(hx + 10, hy + 4, 5, { fill: "rgba(240,120,120,0.45)" });
+  v.circle(hx - 10, hy + 4, 2.5, { fill: "rgba(240,120,120,0.45)" });
+  v.circle(hx + 10, hy + 4, 2.5, { fill: "rgba(240,120,120,0.45)" });
 }
 
 function hat(v: View, f: Folk): void {
@@ -362,12 +362,12 @@ function hat(v: View, f: Folk): void {
 /** Paint a standing townsperson into a 64×100 sprite. */
 export function paintFolk(v: View, f: Folk): void {
   // legs and feet
-  v.ellipse(32, 96, 40, 7, { fill: "rgba(60,40,30,0.18)" });
+  v.ellipse(32, 96, 20, 3.5, { fill: "rgba(60,40,30,0.18)" });
   v.rect(23, 86, 7, 8, inked(f.fur, 1.6));
   v.rect(34, 86, 7, 8, inked(f.fur, 1.6));
   const footColor = f.species === "duck" ? "#f29a2e" : INK;
-  v.ellipse(25, 95, 12, 5, { fill: footColor });
-  v.ellipse(39, 95, 12, 5, { fill: footColor });
+  v.ellipse(25, 95, 6, 2.5, { fill: footColor });
+  v.ellipse(39, 95, 6, 2.5, { fill: footColor });
   // body
   v.curve(BODY, true, inked(f.shirt));
   shadeInside(v, BODY, "rgba(40,20,40,0.18)", [7, 5]);
@@ -417,7 +417,7 @@ export function paintCat(v: View, mode: "sit" | "arch"): void {
     ];
     v.curve(body, true, inked(fur));
     shadeInside(v, body, "rgba(30,20,50,0.2)", [6, 4]);
-    v.ellipse(25, 44, 12, 14, inked("#e9e4ee", 1.4));
+    v.ellipse(25, 44, 6, 7, inked("#e9e4ee", 1.4));
   } else {
     const body: Vec2[] = [
       [8, 46],
@@ -442,7 +442,7 @@ export function paintCat(v: View, mode: "sit" | "arch"): void {
       ],
       inked(fur, 1.6),
     );
-  v.circle(25, hy, 22, inked(fur, 1.8));
+  v.circle(25, hy, 11, inked(fur, 1.8));
   if (mode === "sit") {
     v.curve(
       [
@@ -463,10 +463,10 @@ export function paintCat(v: View, mode: "sit" | "arch"): void {
       ink(1.4),
     );
   } else {
-    v.circle(20, hy - 2, 7, { fill: "#ffffff" });
-    v.circle(30, hy - 2, 7, { fill: "#ffffff" });
-    v.circle(20, hy - 2, 3, { fill: INK });
-    v.circle(30, hy - 2, 3, { fill: INK });
+    v.circle(20, hy - 2, 3.5, { fill: "#ffffff" });
+    v.circle(30, hy - 2, 3.5, { fill: "#ffffff" });
+    v.circle(20, hy - 2, 1.5, { fill: INK });
+    v.circle(30, hy - 2, 1.5, { fill: INK });
   }
   v.triangle(23.5, hy + 3, 26.5, hy + 3, 25, hy + 5, { fill: "#e88a9a" });
   for (const s of [-1, 1]) {
@@ -478,7 +478,7 @@ export function paintCat(v: View, mode: "sit" | "arch"): void {
 /** Puppy on four legs, 72×52, facing right, ground at y 50; the tail is drawn live. */
 export function paintDog(v: View, mode: "stand" | "wet"): void {
   const fur = "#d9a25f";
-  v.ellipse(34, 49, 54, 6, { fill: "rgba(60,40,30,0.18)" });
+  v.ellipse(34, 49, 27, 3, { fill: "rgba(60,40,30,0.18)" });
   for (const x of [18, 26, 42, 50]) v.rect(x - 3, 34, 7, 14, inked(fur, 1.4));
   const body: Vec2[] = [
     [14, 26],
@@ -490,10 +490,10 @@ export function paintDog(v: View, mode: "stand" | "wet"): void {
   ];
   v.curve(body, true, inked(fur));
   shadeInside(v, body, "rgba(90,40,10,0.2)", [4, 6]);
-  v.ellipse(30, 28, 12, 8, { fill: "#8c5a2e" });
-  v.circle(58, 20, 24, inked(fur, 1.8));
-  v.ellipse(66, 25, 12, 9, inked("#f3dcb4", 1.4));
-  v.ellipse(70, 22, 5, 4, { fill: INK });
+  v.ellipse(30, 28, 6, 4, { fill: "#8c5a2e" });
+  v.circle(58, 20, 12, inked(fur, 1.8));
+  v.ellipse(66, 25, 6, 4.5, inked("#f3dcb4", 1.4));
+  v.ellipse(70, 22, 2.5, 2, { fill: INK });
   v.curve(
     [
       [50, 12],
@@ -520,12 +520,12 @@ export function paintDog(v: View, mode: "stand" | "wet"): void {
       [60, 6],
       [10, 30],
     ] as const)
-      v.ellipse(x, y, 3, 5, { fill: "rgba(120,180,230,0.8)" });
+      v.ellipse(x, y, 1.5, 2.5, { fill: "rgba(120,180,230,0.8)" });
   } else {
-    v.circle(61, 16, 4, { fill: INK });
+    v.circle(61, 16, 2, { fill: INK });
   }
   v.rect(46, 26, 10, 4, { fill: "#d23b3b" });
-  v.circle(51, 32, 4, { fill: "#f2c84b" });
+  v.circle(51, 32, 2, { fill: "#f2c84b" });
 }
 
 /** An owl in a top-floor window, 54×60 including the window frame. */
@@ -540,16 +540,16 @@ export function paintOwlWindow(v: View, awake: boolean): void {
     [14, 24],
   ];
   v.curve(owl, true, inked("#9b7653", 1.8));
-  v.ellipse(27, 42, 16, 16, { fill: "#d8bf98" });
+  v.ellipse(27, 42, 8, 8, { fill: "#d8bf98" });
   for (const s of [-1, 1])
     v.triangle(27 + s * 6, 20, 27 + s * 13, 13, 27 + s * 12, 24, {
       fill: "#9b7653",
     });
   if (awake) {
-    v.circle(21, 28, 12, { fill: "#ffffff" });
-    v.circle(33, 28, 12, { fill: "#ffffff" });
-    v.circle(21, 28, 5, { fill: INK });
-    v.circle(33, 28, 5, { fill: INK });
+    v.circle(21, 28, 6, { fill: "#ffffff" });
+    v.circle(33, 28, 6, { fill: "#ffffff" });
+    v.circle(21, 28, 2.5, { fill: INK });
+    v.circle(33, 28, 2.5, { fill: INK });
   } else {
     v.curve(
       [
@@ -578,7 +578,7 @@ export function paintOwlWindow(v: View, awake: boolean): void {
       ],
       inked("#c94f6d", 1.4),
     );
-    v.circle(46, 8, 6, { fill: "#ffffff" });
+    v.circle(46, 8, 3, { fill: "#ffffff" });
   }
   v.triangle(25, 32, 29, 32, 27, 37, { fill: "#f29a2e" });
   v.line(27, 4, 27, 54, ink(2.6));
@@ -595,9 +595,9 @@ export function paintPigeon(v: View, flap: boolean): void {
     [10, 19],
   ];
   v.curve(body, true, inked("#9aa3b5", 1.4));
-  v.circle(20, 8, 9, inked("#9aa3b5", 1.4));
-  v.ellipse(18, 12, 6, 4, { fill: "#7c5fa8" });
-  v.circle(21, 7, 2, { fill: INK });
+  v.circle(20, 8, 4.5, inked("#9aa3b5", 1.4));
+  v.ellipse(18, 12, 3, 2, { fill: "#7c5fa8" });
+  v.circle(21, 7, 1, { fill: INK });
   v.triangle(24, 7, 26, 8.5, 24, 9.5, { fill: "#f29a2e" });
   if (flap) {
     v.polygon(
@@ -638,10 +638,10 @@ export function paintSnail(v: View, tucked: boolean): void {
     );
     v.line(29, 15, 31, 7, ink(1.2));
     v.line(31, 15, 34, 8, ink(1.2));
-    v.circle(31, 7, 2.5, { fill: INK });
-    v.circle(34, 8, 2.5, { fill: INK });
+    v.circle(31, 7, 1.25, { fill: INK });
+    v.circle(34, 8, 1.25, { fill: INK });
   }
-  v.circle(14, 13, 20, inked("#c8814a", 1.6));
+  v.circle(14, 13, 10, inked("#c8814a", 1.6));
   v.curve(
     [
       [14, 13],
@@ -670,15 +670,15 @@ export function paintMole(v: View): void {
     true,
     inked("#5d5468", 1.8),
   );
-  v.ellipse(20, 26, 10, 7, inked("#f3a6b4", 1.4));
-  v.circle(15, 20, 3, { fill: INK });
-  v.circle(25, 20, 3, { fill: INK });
+  v.ellipse(20, 26, 5, 3.5, inked("#f3a6b4", 1.4));
+  v.circle(15, 20, 1.5, { fill: INK });
+  v.circle(25, 20, 1.5, { fill: INK });
   v.path(
     [["move", 6, 15], ["quad", 20, -2, 34, 15], ["close"]],
     inked("#f2c84b", 1.8),
   );
   v.rect(3, 13, 34, 4, inked("#f2c84b", 1.4));
-  v.circle(20, 8, 5, { fill: "#ffffff" });
-  v.circle(4, 32, 8, inked("#8fb3d9", 1.2));
-  v.circle(36, 32, 8, inked("#8fb3d9", 1.2));
+  v.circle(20, 8, 2.5, { fill: "#ffffff" });
+  v.circle(4, 32, 4, inked("#8fb3d9", 1.2));
+  v.circle(36, 32, 4, inked("#8fb3d9", 1.2));
 }

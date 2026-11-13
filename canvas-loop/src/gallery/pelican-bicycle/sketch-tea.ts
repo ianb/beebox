@@ -97,7 +97,7 @@ function drawGround(params_: { v: View; animFrame: number }): void {
   const bgSpacing = 160;
   const bgOffset = (scroll * 0.35) % bgSpacing;
   for (let x = -bgOffset; x < canvas.width + bgSpacing; x += bgSpacing) {
-    v.circle(x, GROUND_Y + WHEEL_RADIUS + 4, 70, { fill: "#1e293b" });
+    v.circle(x, GROUND_Y + WHEEL_RADIUS + 4, 35, { fill: "#1e293b" });
   }
 }
 
@@ -107,11 +107,11 @@ function drawWheel(params_: {
   angle: number;
 }): void {
   const { v, center, angle } = params_;
-  v.circle(center.x, center.y, WHEEL_RADIUS * 2, {
+  v.circle(center.x, center.y, WHEEL_RADIUS, {
     stroke: "#e2e8f0",
     weight: 5,
   });
-  v.circle(center.x, center.y, WHEEL_RADIUS * 2 - 10, {
+  v.circle(center.x, center.y, (WHEEL_RADIUS * 2 - 10) / 2, {
     fill: "#0f172a",
     stroke: "#e2e8f0",
     weight: 3,
@@ -125,7 +125,7 @@ function drawWheel(params_: {
     const y2 = center.y + Math.sin(a) * (WHEEL_RADIUS - 4);
     v.line(x1, y1, x2, y2, spoke);
   }
-  v.circle(center.x, center.y, 10, { fill: "#94a3b8" });
+  v.circle(center.x, center.y, 5, { fill: "#94a3b8" });
 }
 
 function drawFrame(v: View): void {
@@ -180,7 +180,7 @@ function drawCranks(params_: { v: View; angle: number }): void {
   });
   v.line(BB.x, BB.y, near.x, near.y, { stroke: "#334155", weight: 5 });
   v.rect(near.x - 8, near.y - 3, 16, 6, { fill: "#334155" });
-  v.circle(BB.x, BB.y, 12, { fill: "#94a3b8" });
+  v.circle(BB.x, BB.y, 6, { fill: "#94a3b8" });
 }
 
 interface Point {
@@ -264,7 +264,7 @@ function drawPelican(params_: {
     stroke: "#78716c",
     weight: 7,
   });
-  v.circle(nearFoot.x, nearFoot.y - 4, 10, { fill: "#78716c" });
+  v.circle(nearFoot.x, nearFoot.y - 4, 5, { fill: "#78716c" });
 
   // ── Far wing: shoulder to the far handlebar grip, mostly hidden by the body.
   const farShoulder = { x: bodyX + 8, y: bodyY - 18 };
@@ -278,7 +278,7 @@ function drawPelican(params_: {
   });
 
   // ── Body: plump oval, tail tucked toward the saddle.
-  v.ellipse(bodyX, bodyY, 112, 70, { fill: "#f8fafc" });
+  v.ellipse(bodyX, bodyY, 56, 35, { fill: "#f8fafc" });
   v.triangle(
     bodyX - 52,
     bodyY - 8,
@@ -316,7 +316,7 @@ function drawPelican(params_: {
 
   // ── Head + the pelican's signature bill: long flat upper mandible over a
   // sagging throat pouch, sketched as filled paths rather than primitives.
-  v.circle(headX, headY, 38, { fill: "#f1f5f9" });
+  v.circle(headX, headY, 19, { fill: "#f1f5f9" });
 
   const billTipX = headX + 84;
   const billTipY = headY + 10;
@@ -357,8 +357,8 @@ function drawPelican(params_: {
   ctx.restore();
 
   // Eye: white ring behind a dark pupil, set high on the head so it clears the bill.
-  v.circle(headX - 4, headY - 18, 8, { fill: "#1e293b" });
-  v.circle(headX - 4, headY - 18, 3, { fill: "#f8fafc" });
+  v.circle(headX - 4, headY - 18, 4, { fill: "#1e293b" });
+  v.circle(headX - 4, headY - 18, 1.5, { fill: "#f8fafc" });
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, _p: Params): void {

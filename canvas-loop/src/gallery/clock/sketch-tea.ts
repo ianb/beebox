@@ -130,7 +130,7 @@ function drawDigital(params_: { v: View; virtualSeconds: number }): void {
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   v.background("#0b1020");
 
-  v.circle(CENTER_X, CENTER_Y, FACE_RADIUS * 2, { stroke: "#334155", weight: 2 });
+  v.circle(CENTER_X, CENTER_Y, FACE_RADIUS, { stroke: "#334155", weight: 2 });
 
   drawTicks(v);
   if (p.style === "classic") drawNumerals(v);
@@ -140,7 +140,7 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   drawHand({ v, angle: angles.minute, length: MINUTE_HAND_LENGTH, weight: MINUTE_HAND_WEIGHT, color: "#e2e8f0" });
   drawHand({ v, angle: angles.second, length: SECOND_HAND_LENGTH, weight: SECOND_HAND_WEIGHT, color: "#f87171" });
 
-  v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS * 2, { fill: "#f8fafc" });
+  v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS, { fill: "#f8fafc" });
 
   if (p.showDigital) drawDigital({ v, virtualSeconds: model.virtualSeconds });
 }

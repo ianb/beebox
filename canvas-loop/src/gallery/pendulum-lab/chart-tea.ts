@@ -150,9 +150,9 @@ function drawDots(v: View, g: GraphState): void {
     const y = yOf(g.axes, t.period);
     if (g.fresh?.n === t.n && g.fresh.age < 90) {
       const k = g.fresh.age / 90;
-      v.circle(x, y, 12 + 30 * k, { stroke: PLANET_COLOR[t.planet], weight: 2 * (1 - k) + 0.5 });
+      v.circle(x, y, (12 + 30 * k) / 2, { stroke: PLANET_COLOR[t.planet], weight: 2 * (1 - k) + 0.5 });
     }
-    v.circle(x, y, 11, { fill: PLANET_COLOR[t.planet], stroke: "#ffffff", weight: 1.5 });
+    v.circle(x, y, 5.5, { fill: PLANET_COLOR[t.planet], stroke: "#ffffff", weight: 1.5 });
   }
 }
 
@@ -161,7 +161,7 @@ function drawTooltip(v: View, g: GraphState): void {
   if (t === undefined) return;
   const x = xOf(g.axes, t.length);
   const y = yOf(g.axes, t.period);
-  v.circle(x, y, 20, { stroke: INK, weight: 1.5 });
+  v.circle(x, y, 10, { stroke: INK, weight: 1.5 });
   const lines = [`Trial ${t.n} · ${t.planet}`, `L = ${fmt(t.length, 2)} m, ${t.angle}°`, `T = ${fmt(t.period, 3)} s`];
   const w = 132;
   const h = 58;
@@ -178,7 +178,7 @@ function drawLegend(v: View, g: GraphState): void {
   let x = PLOT.left;
   const y = GRAPH_CARD.y + 52;
   for (const pl of present) {
-    v.circle(x + 5, y, 9, { fill: PLANET_COLOR[pl], stroke: "#ffffff", weight: 1 });
+    v.circle(x + 5, y, 4.5, { fill: PLANET_COLOR[pl], stroke: "#ffffff", weight: 1 });
     say(v, pl, { x: x + 13, y }, { size: 12, fill: SOFT, valign: "middle" });
     x += 22 + v.textWidth(pl, { size: 12 }) + 10;
   }
@@ -243,7 +243,7 @@ export function drawTable(v: View, s: TableState): void {
     const freshTint = s.fresh?.n === t.n && s.fresh.age < 120 ? 1 - s.fresh.age / 120 : 0;
     if (s.focus === t.n) v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: "#efe8d8" });
     else if (freshTint > 0) v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: `rgba(250, 214, 120, ${(0.55 * freshTint).toFixed(3)})` });
-    v.circle(TABLE_CARD.x + 17, top + ROW_H / 2, 7, { fill: PLANET_COLOR[t.planet] });
+    v.circle(TABLE_CARD.x + 17, top + ROW_H / 2, 3.5, { fill: PLANET_COLOR[t.planet] });
     for (const c of cols) {
       say(v, c.cell(t), { x: c.x, y: top + ROW_H / 2 }, { size: 13, fill: c === THEORY_COLUMN ? SOFT : INK, align: c.align, valign: "middle", bold: c.head === "Period T" });
     }

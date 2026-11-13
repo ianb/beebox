@@ -38,7 +38,7 @@ function sky(v: View): void {
     const zigzag: Vec2[] = Array.from({ length: 46 }, (_, i): Vec2 => [i * 10 - 10, 100 + dy + ((i + phase) % 2 === 0 ? -9 : 9)]);
     v.curve(zigzag, false, SMUDGE);
   }
-  v.circle(310, 140, 36, { fill: "#fbe3a1" });
+  v.circle(310, 140, 18, { fill: "#fbe3a1" });
   // A wet glaze along the horizon mixes yellow into the orange and the blue edge.
   v.curve([[180, 150], [300, 128], [420, 138]], false, GLAZE);
 }

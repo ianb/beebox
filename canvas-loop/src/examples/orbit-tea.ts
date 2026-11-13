@@ -243,18 +243,18 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
 
   if (p["show-orbits"]) {
     for (const planet of model.planets)
-      v.circle(CENTER_X, CENTER_Y, planet.orbitRadius * 2, ORBIT_RING);
+      v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING);
   }
 
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS * 2, { fill: "#facc15" });
+  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
 
   for (let i = 0; i < model.planets.length; i++) {
     const planet = model.planets[i];
     if (planet === undefined) continue;
     const pos = planetPos({ planet, frame: model.frame, scale });
-    v.circle(pos.x, pos.y, planet.size, { fill: planet.color });
+    v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
     if (model.mode.type === "selected" && model.mode.index === i) {
-      v.circle(pos.x, pos.y, planet.size + HIT_PADDING * 2 + 4, SELECTION_RING);
+      v.circle(pos.x, pos.y, (planet.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING);
     }
   }
 

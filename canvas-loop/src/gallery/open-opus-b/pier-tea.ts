@@ -144,7 +144,7 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
   });
   // Glow, and a pool of light on the deck below.
   const r = (main ? 230 : 150) * k;
-  v.circle(hx, hy + 26 * k, 2 * r, {
+  v.circle(hx, hy + 26 * k, r, {
     fill: v.radialGradient(hx, hy + 26 * k, r, [
       [0, "rgba(255,222,140,0.85)"],
       [0.18, "rgba(255,196,112,0.45)"],
@@ -153,7 +153,7 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
     ]),
   });
   if (main) {
-    v.circle(hx, hy + 28 * k, 92 * k, {
+    v.circle(hx, hy + 28 * k, (92 * k) / 2, {
       fill: v.radialGradient(hx, hy + 28 * k, 46 * k, [
         [0, "rgba(255,246,210,0.95)"],
         [0.5, "rgba(255,226,150,0.5)"],
@@ -161,12 +161,12 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
       ]),
     });
   }
-  v.ellipse(hx, (deckTop(x) + deckFront(x)) / 2, 220 * k, 50 * k, {
+  v.ellipse(hx, (deckTop(x) + deckFront(x)) / 2, (220 * k) / 2, (50 * k) / 2, {
     fill: v.ellipseGradient(
       hx,
       (deckTop(x) + deckFront(x)) / 2,
-      220 * k,
-      50 * k,
+      (220 * k) / 2,
+      (50 * k) / 2,
       [
         [0, "rgba(255,210,140,0.6)"],
         [1, "rgba(255,190,120,0)"],
@@ -195,7 +195,7 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
     ],
     { fill: "#ffe2a0" },
   );
-  v.ellipse(hx, hy + 30 * k, 8 * k, 14 * k, { fill: "#fff6d6" });
+  v.ellipse(hx, hy + 30 * k, (8 * k) / 2, (14 * k) / 2, { fill: "#fff6d6" });
   v.triangle(
     hx - 15 * k,
     hy + 15 * k,

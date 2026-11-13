@@ -86,16 +86,16 @@ export class Painter extends PainterCore {
   }
 
   circle(...args: [number, number, number, Style]): void {
-    const [x, y, diameter, style] = args;
-    this.ellipse(x, y, diameter, diameter, style);
+    const [x, y, radius, style] = args;
+    this.ellipse(x, y, radius, radius, style);
   }
 
   ellipse(...args: [number, number, number, number, Style]): void {
-    const [x, y, w, h, style] = args;
+    const [x, y, rx, ry, style] = args;
     this.#closed((ctx) => {
       ctx.beginPath();
-      ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
-    }, { contours: () => [ellipseContour({ x, y, rx: w / 2, ry: h / 2, start: 0, end: Math.PI * 2, step: this.step() })], style, call: "ellipse" });
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    }, { contours: () => [ellipseContour({ x, y, rx, ry, start: 0, end: Math.PI * 2, step: this.step() })], style, call: "ellipse" });
   }
 
   line(...args: [number, number, number, number, Style]): void {

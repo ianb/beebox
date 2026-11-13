@@ -333,7 +333,7 @@ function drawStars(v: View, f: number, dusk: number): void {
     const st = STARS[i];
     if (st === undefined) continue;
     const tw = 0.6 + 0.4 * Math.sin(phase(f, st.k) + i * 1.7);
-    v.circle(st.x, st.y, st.d, {
+    v.circle(st.x, st.y, st.d / 2, {
       fill: `rgba(255,244,214,${(0.85 * tw).toFixed(3)})`,
     });
   }
@@ -341,17 +341,17 @@ function drawStars(v: View, f: number, dusk: number): void {
 
 function drawMoon(v: View, moon: Pt): void {
   const { x, y } = moon;
-  v.circle(x, y, 220, {
+  v.circle(x, y, 110, {
     fill: v.radialGradient(x, y, 110, [
       [0, "rgba(251,241,208,0.35)"],
       [1, "rgba(251,241,208,0)"],
     ]),
   });
-  v.circle(x, y, MOON_R * 2, { fill: C.moon });
+  v.circle(x, y, MOON_R, { fill: C.moon });
   // Faint dark patches, so the disc is a moon and not a lamp.
   const patch: Style = { fill: "rgba(214,196,170,0.45)" };
-  v.circle(x - 8, y - 6, 14, patch);
-  v.circle(x + 7, y + 8, 10, patch);
+  v.circle(x - 8, y - 6, 7, patch);
+  v.circle(x + 7, y + 8, 5, patch);
 }
 
 /** The rose wash, cloud streaks and hills: a transparent layer over the moon. */
@@ -687,7 +687,7 @@ function drawHouse(v: View, h: House): void {
     stroke: "#f2a77e",
   });
   for (const [wx, wy] of windows(h)) {
-    v.circle(wx, wy + 8, 60, {
+    v.circle(wx, wy + 8, 30, {
       fill: v.radialGradient(wx, wy + 8, 30, [
         [0, "rgba(255,200,110,0.45)"],
         [1, "rgba(255,200,110,0)"],
@@ -778,7 +778,7 @@ function drawBoatLight(
 ): void {
   const { x, y, k } = boatLantern(model, f);
   const a = (0.2 + dusk * 0.6) * (0.85 + 0.15 * Math.sin(phase(f, 4) + 1));
-  v.circle(x, y, 20 * k, {
+  v.circle(x, y, (20 * k) / 2, {
     fill: v.radialGradient(x, y, 10 * k, [
       [0, `rgba(255,226,150,${a.toFixed(3)})`],
       [1, "rgba(255,200,120,0)"],
@@ -806,7 +806,7 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
   // The boat faces home (left), so its local +x is drawn mirrored.
   v.at({ translate: [bx, by], scale: [-k, k] }, () => {
     // Hull shadow on the water, the lantern's broken streak, and a wake while under way.
-    v.ellipse(0, 4, 38, 5, { fill: "rgba(36,30,64,0.45)" });
+    v.ellipse(0, 4, 19, 2.5, { fill: "rgba(36,30,64,0.45)" });
     for (let j = 0; j < 5; j += 1) {
       const w = (7 - j) * (0.7 + 0.3 * Math.sin(phase(f, 3) + j));
       v.rect(2 - w / 2 + Math.sin(phase(f, 2) + j) * 1.2, 6 + j * 4.5, w, 1.3, {
@@ -822,7 +822,7 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
       }
     }
     v.at({ translate: [0, bob] }, () => {
-      v.circle(2, -20, 30, {
+      v.circle(2, -20, 15, {
         fill: v.radialGradient(2, -20, 15, [
           [0, "rgba(255,214,130,0.75)"],
           [1, "rgba(255,190,110,0)"],
@@ -862,7 +862,7 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
         true,
         fisher,
       );
-      v.circle(-8 + row * 1.3, -15.5, 4.4, fisher);
+      v.circle(-8 + row * 1.3, -15.5, 2.2, fisher);
       v.polygon(
         [
           [-12.5 + row * 1.3, -16.5],
@@ -881,7 +881,7 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
       } else {
         v.line(-8 + row, -10, -20 - row * 5, 3 + Math.max(0, row) * 1.5, oar);
       }
-      v.ellipse(2, -20.5, 2.6, 3.4, { fill: "#fff0b8" });
+      v.ellipse(2, -20.5, 1.3, 1.7, { fill: "#fff0b8" });
     });
   });
 }
@@ -1021,7 +1021,7 @@ function drawLampLight(
 ): void {
   const { x, hx, hy, k } = lamp;
   const r = (main ? 230 : 150) * k;
-  v.circle(hx, hy + 26 * k, 2 * r, {
+  v.circle(hx, hy + 26 * k, r, {
     fill: v.radialGradient(hx, hy + 26 * k, r, [
       [0, `rgba(255,222,140,${(0.85 * glow).toFixed(3)})`],
       [0.18, `rgba(255,196,112,${(0.45 * glow).toFixed(3)})`],
@@ -1030,7 +1030,7 @@ function drawLampLight(
     ]),
   });
   if (main) {
-    v.circle(hx, hy + 28 * k, 92 * k, {
+    v.circle(hx, hy + 28 * k, (92 * k) / 2, {
       fill: v.radialGradient(hx, hy + 28 * k, 46 * k, [
         [0, `rgba(255,246,210,${(0.95 * glow).toFixed(3)})`],
         [0.5, `rgba(255,226,150,${(0.5 * glow).toFixed(3)})`],
@@ -1039,8 +1039,8 @@ function drawLampLight(
     });
   }
   const py = (deckTop(x) + deckFront(x)) / 2;
-  v.ellipse(hx, py, 220 * k, 50 * k, {
-    fill: v.ellipseGradient(hx, py, 220 * k, 50 * k, [
+  v.ellipse(hx, py, (220 * k) / 2, (50 * k) / 2, {
+    fill: v.ellipseGradient(hx, py, (220 * k) / 2, (50 * k) / 2, [
       [0, `rgba(255,210,140,${(0.6 * glow).toFixed(3)})`],
       [1, "rgba(255,190,120,0)"],
     ]),
@@ -1094,7 +1094,7 @@ function drawLanternBody(
     },
   );
   if (glow > 0) {
-    v.ellipse(hx, hy + (30 - flame) * k, 8 * k, (14 + flame * 2) * k, {
+    v.ellipse(hx, hy + (30 - flame) * k, (8 * k) / 2, ((14 + flame * 2) * k) / 2, {
       fill: `rgba(255,246,214,${glow.toFixed(3)})`,
     });
   } else {
@@ -1149,7 +1149,7 @@ function drawLastLamp(v: View, bloom: number, f: number, invite: number): void {
   if (invite > 0) {
     // A pointer near the dark lantern: a faint pulse round it, as if it is waiting.
     const pulse = 0.6 + 0.4 * Math.sin(phase(f, 4));
-    v.circle(LANTERN[0], LANTERN[1] - 6, 140, {
+    v.circle(LANTERN[0], LANTERN[1] - 6, 70, {
       fill: v.radialGradient(LANTERN[0], LANTERN[1] - 6, 70, [
         [0, `rgba(255,224,160,${(0.75 * invite * pulse).toFixed(3)})`],
         [0.4, `rgba(255,200,130,${(0.3 * invite * pulse).toFixed(3)})`],
@@ -1541,7 +1541,7 @@ function drawNeckAndHead(v: View): void {
     }
   });
   litShape(v, HEAD_SHAPE, H.body, () => {
-    v.ellipse(HEAD.x + 6, HEAD.y + 6, 22, 9, { fill: H.belly });
+    v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
   });
   v.polygon(
     [
@@ -1594,8 +1594,8 @@ function drawNeckAndHead(v: View): void {
     { ...fine, weight: 2.2 },
   );
   v.curve(HEAD_SHAPE, true, { ...fine, weight: 2.2 });
-  v.circle(HEAD.x + 6, HEAD.y - 2, 7, { fill: "#fff2c8" });
-  v.circle(HEAD.x + 7, HEAD.y - 2, 3.5, { fill: H.ink });
+  v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" });
+  v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink });
 }
 
 /** An old bird's slow blink, twice a loop. */
@@ -1603,7 +1603,7 @@ function drawBlink(v: View, f: number): void {
   const t = f % (LOOP / 2);
   if (t > 9) return;
   const shut = Math.sin((t / 9) * Math.PI);
-  v.ellipse(HEAD.x + 6, HEAD.y - 2 - 3.5 * (1 - shut), 8.5, 7.5 * shut, {
+  v.ellipse(HEAD.x + 6, HEAD.y - 2 - 3.5 * (1 - shut), 4.25, (7.5 * shut) / 2, {
     fill: H.body,
   });
   v.line(
@@ -1722,7 +1722,7 @@ function drawFlame(
   const lean = -wind * 3;
   const lick = Math.sin(phase(f, 9)) * 0.8 + Math.sin(phase(f, 13) + 2) * 0.5;
   const size = 1 - lamp.bloom * 0.45;
-  v.circle(tx, ty - 4, 36 * size, {
+  v.circle(tx, ty - 4, (36 * size) / 2, {
     fill: v.radialGradient(tx, ty - 4, 18 * size, [
       [0, "rgba(255,240,180,0.95)"],
       [1, "rgba(255,160,80,0)"],
@@ -1731,8 +1731,8 @@ function drawFlame(
   v.ellipse(
     tx + lick * 0.6 + lean,
     ty - 6 - Math.abs(lick) * 0.5,
-    5 * size,
-    (11 + lick) * size,
+    (5 * size) / 2,
+    ((11 + lick) * size) / 2,
     { fill: "#fff3c0" },
   );
 }
@@ -1782,15 +1782,15 @@ function drawShadow(v: View): void {
   ];
   v.clip(deck, () => {
     v.group({ opacity: 0.85, blend: "multiply" }, () => {
-      v.ellipse(FEET_X - 80, FEET_Y - 5, 210, 24, {
-        fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 210, 24, [
+      v.ellipse(FEET_X - 80, FEET_Y - 5, 105, 12, {
+        fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 105, 12, [
           [0, "#5a3a58"],
           [0.55, "rgba(90,58,88,0.7)"],
           [1, "rgba(90,58,88,0)"],
         ]),
       });
-      v.ellipse(FEET_X + 2, FEET_Y + 2, 54, 10, {
-        fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 54, 10, [
+      v.ellipse(FEET_X + 2, FEET_Y + 2, 27, 5, {
+        fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 27, 5, [
           [0, "#3a2236"],
           [1, "rgba(58,34,54,0)"],
         ]),
@@ -1904,7 +1904,7 @@ function drawReeds(
         { fill: "#4a2f2c" },
       );
       const lit = along2(0.2);
-      v.ellipse(lit[0] + 2 * reed.dir, lit[1], 4, 18, {
+      v.ellipse(lit[0] + 2 * reed.dir, lit[1], 2, 9, {
         fill: "rgba(196,122,94,0.7)",
       });
       continue;
@@ -1999,7 +1999,7 @@ function drawLights(v: View, f: number, bloom: number, dusk: number): void {
     for (const [wi, [wx, wy]] of windows(h).entries()) {
       const flick = 0.85 + 0.15 * Math.sin(phase(f, 3 + wi) + hi * 2);
       const a = (0.15 + dusk * 0.5) * flick;
-      v.circle(wx, wy + 8, 52, {
+      v.circle(wx, wy + 8, 26, {
         fill: v.radialGradient(wx, wy + 8, 26, [
           [0, `rgba(255,206,120,${a.toFixed(3)})`],
           [1, "rgba(255,206,120,0)"],
@@ -2022,7 +2022,7 @@ function drawLights(v: View, f: number, bloom: number, dusk: number): void {
     const flick = 0.8 + 0.2 * Math.sin(phase(f, 5 + i) + i);
     const a = g * (0.25 + dusk * 0.55) * flick;
     const r = 40 * lamp.k;
-    v.circle(lamp.hx, lamp.hy + 28 * lamp.k, 2 * r, {
+    v.circle(lamp.hx, lamp.hy + 28 * lamp.k, r, {
       fill: v.radialGradient(lamp.hx, lamp.hy + 28 * lamp.k, r, [
         [0, `rgba(255,236,170,${a.toFixed(3)})`],
         [1, "rgba(255,210,130,0)"],
@@ -2061,13 +2061,13 @@ function drawFireflies(v: View, f: number): void {
     const y = fl.y + Math.sin(phase(f, fl.b) + fl.shift * 2) * fl.ry;
     const on = Math.max(0, Math.sin(phase(f, 2) + fl.shift * 3)) ** 3;
     if (on < 0.05) continue;
-    v.circle(x, y, 18, {
+    v.circle(x, y, 9, {
       fill: v.radialGradient(x, y, 9, [
         [0, `rgba(230,255,150,${(0.6 * on).toFixed(3)})`],
         [1, "rgba(200,255,120,0)"],
       ]),
     });
-    v.circle(x, y, 2.6, { fill: `rgba(250,255,210,${on.toFixed(3)})` });
+    v.circle(x, y, 1.3, { fill: `rgba(250,255,210,${on.toFixed(3)})` });
   }
 }
 
@@ -2084,8 +2084,8 @@ function drawMoths(v: View, f: number, bloom: number): void {
     const x = cx + Math.cos(ang) * (rad + far) + far * 0.6;
     const y = cy - 4 + Math.sin(ang) * rad * 0.7 - far * 0.4;
     const flap = Math.abs(Math.sin(phase(f, 24 + i * 6)));
-    v.ellipse(x - 2, y, 4, 2 + 4 * flap, wing);
-    v.ellipse(x + 2, y, 4, 2 + 4 * flap, wing);
+    v.ellipse(x - 2, y, 2, (2 + 4 * flap) / 2, wing);
+    v.ellipse(x + 2, y, 2, (2 + 4 * flap) / 2, wing);
   }
 }
 

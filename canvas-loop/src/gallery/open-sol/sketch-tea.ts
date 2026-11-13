@@ -25,7 +25,7 @@ function mark(
 }
 
 function glint(v: View, x: number, y: number, r: number): void {
-  v.circle(x, y, r, { fill: "#ffdb91" });
+  v.circle(x, y, r / 2, { fill: "#ffdb91" });
   mark(
     v,
     [
@@ -68,14 +68,14 @@ export function draw(v: View): void {
   );
 
   // A gap in the storm over the library.
-  v.ellipse(388, 250, 550, 460, {
-    fill: v.ellipseGradient(388, 250, 550, 460, [
+  v.ellipse(388, 250, 275, 230, {
+    fill: v.ellipseGradient(388, 250, 275, 230, [
       [0, "#deb5909c"],
       [1, "#deb59000"],
     ]),
   });
-  v.circle(590, 117, 55, { fill: "#f8dfae" });
-  v.circle(590, 117, 52, { fill: "#f1d8a9" });
+  v.circle(590, 117, 27.5, { fill: "#f8dfae" });
+  v.circle(590, 117, 26, { fill: "#f1d8a9" });
 
   // Rain clouds, broken into broad painted bands.
   for (let i = 0; i < 11; i += 1) {
@@ -312,9 +312,9 @@ export function draw(v: View): void {
     10,
     "wash",
   );
-  v.ellipse(629, 511, 7, 9, { fill: "#142f37" });
-  v.circle(630, 509, 2.4, { fill: "#f6d69c" });
-  v.circle(663, 527, 2.2, { fill: "#36574d" });
+  v.ellipse(629, 511, 3.5, 4.5, { fill: "#142f37" });
+  v.circle(630, 509, 1.2, { fill: "#f6d69c" });
+  v.circle(663, 527, 1.1, { fill: "#36574d" });
   mark(
     v,
     [
@@ -553,8 +553,8 @@ export function draw(v: View): void {
   );
 
   // The timbered room glows through a wall set into the shell.
-  v.ellipse(359, 472, 205, 180, {
-    fill: v.ellipseGradient(359, 472, 205, 180, [
+  v.ellipse(359, 472, 102.5, 90, {
+    fill: v.ellipseGradient(359, 472, 102.5, 90, [
       [0, "#edb87b6b"],
       [1, "#edb87b00"],
     ]),
@@ -739,9 +739,9 @@ export function draw(v: View): void {
     ],
     "#a75646",
   );
-  v.ellipse(273, 446, 15, 17, { fill: "#efd0a2" });
-  v.circle(277, 442, 2.4, { fill: "#273c3e" });
-  v.circle(281, 448, 2.5, { fill: "#ad6253" });
+  v.ellipse(273, 446, 7.5, 8.5, { fill: "#efd0a2" });
+  v.circle(277, 442, 1.2, { fill: "#273c3e" });
+  v.circle(281, 448, 1.25, { fill: "#ad6253" });
   mark(
     v,
     [
@@ -773,8 +773,8 @@ export function draw(v: View): void {
     "#9f6347",
     2,
   );
-  v.circle(267, 481, 2.3, { fill: "#8a5b4b" });
-  v.circle(266, 490, 2.3, { fill: "#8a5b4b" });
+  v.circle(267, 481, 1.15, { fill: "#8a5b4b" });
+  v.circle(266, 490, 1.15, { fill: "#8a5b4b" });
   mark(
     v,
     [
@@ -786,7 +786,7 @@ export function draw(v: View): void {
     7,
     "ink",
   );
-  v.circle(318, 450, 5, { fill: "#edc193" });
+  v.circle(318, 450, 2.5, { fill: "#edc193" });
   mark(
     v,
     [
@@ -806,8 +806,8 @@ export function draw(v: View): void {
     5,
   );
   // Lantern at the end of the keeper's arm.
-  v.ellipse(327, 455, 125, 125, {
-    fill: v.ellipseGradient(327, 455, 125, 125, [
+  v.ellipse(327, 455, 62.5, 62.5, {
+    fill: v.ellipseGradient(327, 455, 62.5, 62.5, [
       [0, "#ffd38a9c"],
       [1, "#ffd38a00"],
     ]),

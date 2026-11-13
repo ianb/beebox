@@ -153,7 +153,7 @@ function glow(
   rgb: string,
   a: number,
 ): void {
-  v.circle(x, y, r * 2, {
+  v.circle(x, y, r, {
     fill: v.radialGradient(x, y, r, [
       [0, `rgba(${rgb},${a})`],
       [1, `rgba(${rgb},0)`],
@@ -238,10 +238,10 @@ function sky(v: View): void {
     [720, 30, 1.5],
     [250, 92, 1.1],
   ] as const) {
-    v.circle(x, y, d, { fill: "rgba(240,236,255,0.7)" });
+    v.circle(x, y, d / 2, { fill: "rgba(240,236,255,0.7)" });
   }
   glow(v, 612, 66, 16, "255,240,210", 0.5);
-  v.circle(612, 66, 3.5, { fill: "#fff4d8" });
+  v.circle(612, 66, 1.75, { fill: "#fff4d8" });
 }
 
 const HILLS: Vec2[] = [
@@ -405,8 +405,8 @@ function fishBody(v: View): void {
     );
   });
   // deep water over the lower body
-  v.ellipse(690, 800, 360, 440, {
-    fill: v.ellipseGradient(690, 800, 360, 440, [
+  v.ellipse(690, 800, 180, 220, {
+    fill: v.ellipseGradient(690, 800, 180, 220, [
       [0, "rgba(14,28,40,0.75)"],
       [0.6, "rgba(14,28,40,0.4)"],
       [1, "rgba(14,28,40,0)"],
@@ -449,8 +449,8 @@ function glowEllipse(
   rgb: string,
   a: number,
 ): void {
-  v.ellipse(x, y, w, h, {
-    fill: v.ellipseGradient(x, y, w, h, [
+  v.ellipse(x, y, w / 2, h / 2, {
+    fill: v.ellipseGradient(x, y, w / 2, h / 2, [
       [0, `rgba(${rgb},${a})`],
       [1, `rgba(${rgb},0)`],
     ]),
@@ -627,13 +627,13 @@ function fishHead(v: View): void {
       }
     });
     // mouth, a round "O" toward the lantern
-    v.ellipse(538, 504, 18, 22, { fill: "#e8c48a" });
-    v.ellipse(537, 503, 11, 15, { fill: "#3a2216" });
-    v.ellipse(538, 505, 5, 8, { fill: "#b0603e" });
+    v.ellipse(538, 504, 9, 11, { fill: "#e8c48a" });
+    v.ellipse(537, 503, 5.5, 7.5, { fill: "#3a2216" });
+    v.ellipse(538, 505, 2.5, 4, { fill: "#b0603e" });
     // eye: large and old and kind, looking up at the lantern
-    v.circle(580, 496, 20, { fill: "#f2e2b4" });
-    v.circle(577, 494, 13, { fill: "#20160e" });
-    v.circle(574, 491, 4, { fill: "#fff6dc" });
+    v.circle(580, 496, 10, { fill: "#f2e2b4" });
+    v.circle(577, 494, 6.5, { fill: "#20160e" });
+    v.circle(574, 491, 2, { fill: "#fff6dc" });
     v.curve(
       [
         [568, 486],
@@ -692,7 +692,7 @@ function fishHead(v: View): void {
     [527, 550, 2.5],
     [534, 528, 2],
   ] as const) {
-    v.circle(x, y, d, { fill: "#ffe2b0" });
+    v.circle(x, y, d / 2, { fill: "#ffe2b0" });
   }
   // water lapping at the waterline
   v.curve(
@@ -1063,7 +1063,7 @@ function girl(v: View): void {
     gesture: { pressure: "taper", wobble: 0.4 },
   });
   // mitten
-  v.circle(486, 452, 14, { fill: "#c4402e" });
+  v.circle(486, 452, 7, { fill: "#c4402e" });
   // face in profile
   v.curve(FACE, true, { fill: "#e8b896" });
   v.clip(v.curvePath(FACE, true), () => {
@@ -1079,9 +1079,9 @@ function girl(v: View): void {
       { fill: "#c9967a" },
     );
     glow(v, 470, 440, 56, "255,196,120", 0.8);
-    v.circle(428, 408, 10, { fill: "rgba(214,110,90,0.45)" });
+    v.circle(428, 408, 5, { fill: "rgba(214,110,90,0.45)" });
   });
-  v.circle(433, 395, 3.6, { fill: "#1c140c" });
+  v.circle(433, 395, 1.8, { fill: "#1c140c" });
   const line: Style = {
     stroke: "#3a2214",
     weight: 1.6,
@@ -1098,7 +1098,7 @@ function girl(v: View): void {
     line,
   );
   v.curve(FACE.slice(2, 8), false, line);
-  v.ellipse(441, 411, 4, 5, { fill: "#5a2418" });
+  v.ellipse(441, 411, 2, 2.5, { fill: "#5a2418" });
   // hat with a turned-up band and a pompom
   v.curve(HAT, true, { fill: "#c4402e" });
   v.clip(v.curvePath(HAT, true), () => {
@@ -1128,7 +1128,7 @@ function girl(v: View): void {
     };
     for (let x = 400; x < 446; x += 5) v.line(x, 376, x + 1, 396, stitch);
   });
-  v.circle(400, 362, 13, { fill: "#efe0c8" });
+  v.circle(400, 362, 6.5, { fill: "#efe0c8" });
   const edge: Style = {
     stroke: "#14100c",
     weight: 2.2,
@@ -1171,7 +1171,7 @@ function lantern(v: View): void {
   );
   // body: cap, glass, base
   v.rect(x - 8, y - 12, 16, 22, { fill: "#fff2c4" });
-  v.circle(x, y, 18, {
+  v.circle(x, y, 9, {
     fill: v.radialGradient(x, y, 9, [
       [0, "#ffffff"],
       [1, "rgba(255,240,190,0)"],
@@ -1269,7 +1269,7 @@ function moths(v: View): void {
     ];
     v.polygon(wing(-1), { fill: "rgba(255,242,210,0.95)" });
     v.polygon(wing(1), { fill: "rgba(255,242,210,0.95)" });
-    v.ellipse(x, y, 2.5, 6, { fill: "#5a4632" });
+    v.ellipse(x, y, 1.25, 3, { fill: "#5a4632" });
   }
 }
 
@@ -1324,6 +1324,6 @@ function reeds(v: View): void {
   };
   v.line(56, 820, 58, 620, stalk);
   v.line(712, 820, 706, 580, stalk);
-  v.ellipse(58, 640, 10, 36, { fill: "#2a1a10" });
-  v.ellipse(706, 600, 10, 34, { fill: "#2a1a10" });
+  v.ellipse(58, 640, 5, 18, { fill: "#2a1a10" });
+  v.ellipse(706, 600, 5, 17, { fill: "#2a1a10" });
 }

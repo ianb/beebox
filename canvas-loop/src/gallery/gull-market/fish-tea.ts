@@ -114,6 +114,6 @@ function paintFish(v: View, f: FishSpec): void {
       seed: f.seed + 3,
     },
   );
-  v.circle(-L * 0.74, -h * 0.2 + bend(-L * 0.74), h * 0.6, { fill: "#ffffff" });
-  v.circle(-L * 0.74, -h * 0.2 + bend(-L * 0.74), h * 0.3, { fill: INK });
+  v.circle(-L * 0.74, -h * 0.2 + bend(-L * 0.74), (h * 0.6) / 2, { fill: "#ffffff" });
+  v.circle(-L * 0.74, -h * 0.2 + bend(-L * 0.74), (h * 0.3) / 2, { fill: INK });
 }

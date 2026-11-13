@@ -198,16 +198,16 @@ export function drawSky(v: View, r: SceneRandom): void {
     ]),
   );
   // Moon and its halo.
-  v.circle(190, 130, 220, {
+  v.circle(190, 130, 110, {
     fill: v.radialGradient(190, 130, 110, [
       [0, "rgba(251,241,208,0.35)"],
       [1, "rgba(251,241,208,0)"],
     ]),
   });
-  v.circle(190, 130, 58, { fill: C.moon });
+  v.circle(190, 130, 29, { fill: C.moon });
   // Stars.
   for (const star of r.stars)
-    v.circle(star.x, star.y, star.d, { fill: "rgba(255,244,214,0.85)" });
+    v.circle(star.x, star.y, star.d / 2, { fill: "rgba(255,244,214,0.85)" });
   // A broad rose wash low in the sky.
   v.curve(
     [
@@ -409,7 +409,7 @@ function drawHouse(v: View, h: House): void {
   const wy = top + h.h * 0.3;
   for (const fx of [0.28, 0.66]) {
     const wx = h.x + h.w * fx;
-    v.circle(wx, wy + 8, 60, {
+    v.circle(wx, wy + 8, 30, {
       fill: v.radialGradient(wx, wy + 8, 30, [
         [0, "rgba(255,200,110,0.45)"],
         [1, "rgba(255,200,110,0)"],
@@ -466,7 +466,7 @@ export function drawVillage(v: View, r: SceneRandom): void {
 function drawBoat(v: View): void {
   const bx = 778;
   const by = HORIZON + 4;
-  v.circle(bx + 4, by - 12, 44, {
+  v.circle(bx + 4, by - 12, 22, {
     fill: v.radialGradient(bx + 4, by - 12, 22, [
       [0, "rgba(255,214,130,0.7)"],
       [1, "rgba(255,190,110,0)"],
@@ -482,7 +482,7 @@ function drawBoat(v: View): void {
     { fill: "#3a2c4d" },
   );
   v.line(bx - 2, by - 4, bx - 2, by - 26, { stroke: "#3a2c4d", weight: 1.4 });
-  v.circle(bx + 5, by - 12, 3.4, { fill: "#fff0b8" });
+  v.circle(bx + 5, by - 12, 1.7, { fill: "#fff0b8" });
 }
 
 /** Dark reeds in the near corners, for depth: filled tapering leaves. */

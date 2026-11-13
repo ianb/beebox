@@ -237,7 +237,7 @@ function drawParticle(params_: {
   const { v, particle, palette } = params_;
   const lifeFrac = 1 - particle.age / particle.maxAge;
   const size = 2 + particle.variant * 4;
-  v.circle(particle.x, particle.y, size, {
+  v.circle(particle.x, particle.y, size / 2, {
     fill: paletteColor({
       palette,
       variant: particle.variant,
@@ -251,7 +251,7 @@ function drawEmitter(params_: {
   emitter: { x: number; y: number };
 }): void {
   const { v, emitter } = params_;
-  v.circle(emitter.x, emitter.y, 10, { stroke: "#f8fafc", weight: 1.5 });
+  v.circle(emitter.x, emitter.y, 5, { stroke: "#f8fafc", weight: 1.5 });
 }
 
 function drawAttractor(params_: {
@@ -261,7 +261,7 @@ function drawAttractor(params_: {
   const { v, attractor } = params_;
   const { x, y } = attractor;
   const reticle: Style = { stroke: "#fde047", weight: 2 };
-  v.circle(x, y, 18, reticle);
+  v.circle(x, y, 9, reticle);
   v.line(x - 12, y, x + 12, y, reticle);
   v.line(x, y - 12, x, y + 12, reticle);
 }
