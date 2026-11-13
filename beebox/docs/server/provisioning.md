@@ -140,6 +140,7 @@ box publishes, `0700` inside).
 /var/log/beebox/host-apt.log       # One JSON line per package install attempt
 /usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
 /usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
+/etc/turnserver.conf               # coturn's config, rendered from turn-server (deploy writes it)
 /run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
 /var/lib/beebox-deploy/windows.tsv  # One line per deploy window: opened, down, closed, outcome
 /etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
@@ -205,6 +206,47 @@ root, after the box browser:
   `loopback: Failed RTM_NEWADDR: Operation not permitted`.
 - A check, as one box user under the box sandbox, that `codex sandbox --
   /bin/true` succeeds. A host with no box yet skips it.
+
+### Call relay
+
+Calls relay media through one coturn for the whole host when two browsers
+cannot connect directly ([plan](../plans/self-hosted-turn.md)). Every deploy
+runs `server-bin/bbx-turn-install` as root, after the Codex sandbox. Its only
+input is the master store's `turn-server` entry, JSON
+`{"secret": "<64 hex>", "urls": ["turn:<ipv4>:3478?transport=udp", ...]}`:
+
+- No entry: coturn is stopped and disabled if it is installed.
+- An entry: coturn (Ubuntu's package) is installed, `/etc/turnserver.conf` is
+  rendered from `coturn/turnserver.conf` plus the URLs' addresses and the
+  secret (0640 `root:turnserver`), and coturn restarts when that changed. Two
+  test clients then relay to each other through the first IPv4 address. A URL
+  whose address is not on this host fails the deploy.
+
+coturn accepts only credentials the box server signs with the secret
+(`src/core/turn-server-key.ts`), relays UDP only, and refuses loopback,
+private, link-local and IPv4-mapped peers. It listens on 3478 (UDP and TCP)
+and relays on UDP 49160–49999. These ports are reached on the server's own
+address, not through Cloudflare; `hetzner/origin-firewall.sh` opens them to
+everyone. There is no TLS listener. `bin/deploy-status` prints a Relay line.
+`server-bin/bbx-turn-install.smoke.sh` runs the helper against real coturn in a
+Lima VM; run it after changing the helper or the template.
+
+**To turn it on**, as the hub user on the server:
+
+1. `openssl rand -hex 32` for the secret; `ip -br addr` for the public
+   addresses.
+2. `bbx engine secrets set turn-server` with the JSON above, listing a `udp`
+   and a `tcp` URL for the IPv4 address and a `udp` URL for the IPv6 one.
+3. Deploy, and check that `bin/deploy-status` shows the relay active.
+4. Re-run `deploy/add-box.sh` for each existing box; it grants `turn-server`
+   and re-exports the box's copy ([boxes](boxes.md)). Granting before coturn
+   runs hands calls a relay that does not answer. New boxes get the grant
+   when they are added.
+
+**To change the secret or the addresses:** set the new value, deploy, then
+re-run `add-box.sh` for every box. Relayed calls that start between the deploy and a box's
+re-export fail. Credentials last three hours, and the page fetches them only
+when it joins a call.
 
 ## Systemd units
 

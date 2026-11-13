@@ -149,10 +149,9 @@ const guides: Record<string, SecretGuide> = {
       + "a direct connection can still hear each other. Deploy configures coturn from the same value.",
     obtainUrl: "https://github.com/coturn/coturn",
     obtainSteps: [
-      "On the server, generate a secret with `openssl rand -hex 32`",
-      "List the server's public addresses with `ip -br addr`",
-      "Set it on the master store as the hub user: {\"secret\": \"…\", \"urls\": [\"turn:<ipv4>:3478?transport=udp\", \"turn:<ipv4>:3478?transport=tcp\"]}",
-      "Deploy, check that coturn is active, then grant it to each box and re-export (docs/server/boxes.md)",
+      "On the server, generate a secret with `openssl rand -hex 32` and list its public addresses with `ip -br addr`",
+      "Set it on the hub user's master store and deploy before granting it to any box (docs/server/provisioning.md, Call relay)",
+      "Paste both below as JSON: {\"secret\": \"…\", \"urls\": [\"turn:<ipv4>:3478?transport=udp\", \"turn:<ipv4>:3478?transport=tcp\"]}",
     ],
   },
   "cloudflare-turn": {

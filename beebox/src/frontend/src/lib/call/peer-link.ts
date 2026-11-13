@@ -34,6 +34,19 @@ export interface PeerLinkOptions {
   onRemote: (stream: MediaStream) => void;
 }
 
+/**
+ * A debug switch for checking the relay end to end: with
+ * `localStorage["bbx.call.forceRelay"] = "1"` a page uses only relay candidates,
+ * so a call connects only through TURN (docs/plans/self-hosted-turn.md).
+ */
+function iceTransportPolicy(): RTCIceTransportPolicy {
+  try {
+    return window.localStorage.getItem("bbx.call.forceRelay") === "1" ? "relay" : "all";
+  } catch (_error) {
+    return "all";
+  }
+}
+
 export class PeerLink {
   private readonly pc: RTCPeerConnection;
   private readonly polite: boolean;
@@ -45,7 +58,7 @@ export class PeerLink {
   private local: MediaStream | null;
 
   constructor(private readonly opts: PeerLinkOptions) {
-    this.pc = new RTCPeerConnection({ iceServers: opts.iceServers });
+    this.pc = new RTCPeerConnection({ iceServers: opts.iceServers, iceTransportPolicy: iceTransportPolicy() });
     this.polite = isPolite(opts.self, opts.other);
     this.local = opts.local;
     this.pc.onnegotiationneeded = () => { void this.offer(); };

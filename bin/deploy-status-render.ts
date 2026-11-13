@@ -5,6 +5,7 @@
  */
 
 import type {
+  RelayReport,
   CommitsReport,
   DeployRecord,
   DeployStatusReport,
@@ -99,6 +100,15 @@ function renderDisk(disk: DiskHealth): string {
   return line("Disk", `${disk.freeGiB.toFixed(1)} GiB free on / (threshold ${disk.thresholdGiB.toFixed(1)} GiB) · ${flag}`);
 }
 
+export function renderRelay(relay: RelayReport): string {
+  const version = relay.version === null ? "coturn" : `coturn ${relay.version}`;
+  if (relay.configured) {
+    return line("Relay", relay.state === "active" ? `${version} active` : `${version} ${relay.state} — relayed calls fail; run a deploy and read its relay step`);
+  }
+  if (relay.state === "active") return line("Relay", `${version} active without a turn-server secret; the next deploy stops it`);
+  return line("Relay", "none (no turn-server secret; boxes use Cloudflare TURN or STUN only)");
+}
+
 function renderMigrations(boxes: MigrationStatus[]): string[] {
   if (boxes.length === 0) return [line("Migrations", "no boxes found under /var/lib/beebox")];
   const attention = boxes.filter((box) => !box.status.ok || box.status.data.pending.length > 0 || box.status.data.questions.length > 0 || !box.status.data.manifest);
@@ -131,6 +141,7 @@ export function renderText(report: DeployStatusReport, now: Date): string {
     ...sectionLines({ label: "Lock", section: report.lock, render: renderLock }),
     ...sectionLines({ label: "Health", section: report.health, render: renderHealth }),
     ...sectionLines({ label: "Disk", section: report.disk, render: (data) => [renderDisk(data)] }),
+    ...sectionLines({ label: "Relay", section: report.relay, render: (data) => [renderRelay(data)] }),
     ...sectionLines({ label: "Migrations", section: report.migrations, render: renderMigrations }),
   ].join("\n");
 }

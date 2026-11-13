@@ -1,12 +1,22 @@
 ---
 title: "Self-hosted TURN relay for chat calls on the cloud server"
-status: draft
+status: active
 workstream: self-hosted-turn
 issues: []
 ---
 # Self-hosted TURN relay for chat calls on the cloud server
 
 Chat calls need a TURN relay when two browsers cannot connect directly. Today the relay is Cloudflare's hosted TURN, used only when a box is granted the `cloudflare-turn` secret. This plan runs one coturn server on the production Hetzner host. The box server mints coturn credentials locally with an HMAC, so no outside account and no outside call are needed. The scope is cloud deploys with a public IP only (boxholder, 2026-11-13: "it's fine if this is only for cloud deploys, where there should be a public IP"). Local and Mac installs keep today's behavior.
+
+**Decisions (boxholder, 2026-11-13):** "one TURN server for the machine is quite alright. We don't want it open, but it's not 'private' just 'don't let everyone use it'", then "Go ahead and implement". That accepts decision 4 (every granted box can read the shared secret). Decision 1 was not answered; the implementation takes the lean (coturn when granted, else Cloudflare, never both). Decisions 2 and 3 concern production and are open until rollout.
+
+**Implementation notes (2026-11-13):**
+- The smoke test runs in a Lima VM (`deploy/server-bin/bbx-turn-install.smoke.sh`), not Docker: coturn runs under systemd, and this machine has no Docker.
+- coturn 4.6.1 reads `denied-peer-ip=::` as a range that denies every peer, IPv4 included; with it, every relay check failed with "peer IP … denied in the range: ::". The template omits it. coturn still refuses `::` as a peer (smoke test).
+- The template is `deploy/coturn/turnserver.conf`, not `.template`: the helper appends the generated lines.
+- `user-quota` counts allocations per username, and the username holds its expiry, so it limits one page's join, not one box. `total-quota` is the host-wide limit.
+- deploy-status gets its own Relay section instead of a third line in `services`.
+- Existing boxes get the grant by re-running `add-box.sh`, which already re-exports safely; no separate loop.
 
 **Issues addressed:** none. `bin/issues similar "self-hosted TURN coturn relay calls"` found no match. The closed `issues/closed/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md:30` named the option this plan picks up: *"run coturn on the box host (a new public port and service)"*.
 
@@ -108,10 +118,10 @@ What it removes: the Cloudflare account and key, per-GB relay charges above Clou
   - If present: `apt-get install -y coturn` when missing. Check every host in `urls` is an address on a local interface (`ip -j addr`); refuse otherwise (exit 1, deploy fails with the services already up).
   - Render to `/etc/turnserver.conf.new`, mode 0640 root:turnserver, then compare and replace; restart `coturn` only on change.
   - Verify: `turnutils_uclient` allocates through the first IPv4 address in `urls` (coturn does not listen on loopback) with a credential minted from the secret (`-W` REST secret flag; confirm the flag on 4.6.1 in the chunk). A failed allocation fails the deploy. This checks the daemon, not reachability from outside; chunk D covers that.
-  - Template keys: `listening-port=3478`; `listening-ip` and `relay-ip` for each address in `urls` (no loopback listener); `min-port=49160`, `max-port=49999`; `use-auth-secret`; `static-auth-secret=<secret>`; `realm=beebox`; `fingerprint`; `no-tls`, `no-dtls`; `no-tcp-relay`; `no-multicast-peers`; `no-cli`; `no-rfc5780`; `no-stun-backward-compatibility`; `user-quota=20`; `total-quota=600`; `max-bps=3000000`; `stale-nonce=600`; `syslog`; `no-software-attribute`. `denied-peer-ip` for `0.0.0.0-0.255.255.255`, `10.0.0.0-10.255.255.255`, `100.64.0.0-100.127.255.255`, `127.0.0.0-127.255.255.255`, `169.254.0.0-169.254.255.255`, `172.16.0.0-172.31.255.255`, `192.0.0.0-192.0.0.255`, `192.168.0.0-192.168.255.255`, `198.18.0.0-198.19.255.255`, `240.0.0.0-255.255.255.255`, `::`, `::1`, `fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff`, `fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff`, `::ffff:0.0.0.0-::ffff:255.255.255.255`. The host's own public addresses stay **allowed**: two members relayed through this coturn reach each other at the host's IP, and denying it breaks the main case. `no-tcp-relay` keeps relays from opening TCP to nginx or sshd. A relay can still send UDP to any UDP port the host serves on its public address. Accepted risk: today no other public UDP service is expected (unverified on production; chunk B's first run records `ss -lun` in this plan). A future public UDP service on this host must weigh this.
+  - Template keys: `listening-port=3478`; `listening-ip` and `relay-ip` for each address in `urls` (no loopback listener); `min-port=49160`, `max-port=49999`; `use-auth-secret`; `static-auth-secret=<secret>`; `realm=beebox`; `fingerprint`; `no-tls`, `no-dtls`; `no-tcp-relay`; `no-multicast-peers`; `no-cli`; `no-rfc5780`; `no-stun-backward-compatibility`; `user-quota=20`; `total-quota=600`; `max-bps=3000000`; `stale-nonce=600`; `syslog`; `no-software-attribute`. `denied-peer-ip` for `0.0.0.0-0.255.255.255`, `10.0.0.0-10.255.255.255`, `100.64.0.0-100.127.255.255`, `127.0.0.0-127.255.255.255`, `169.254.0.0-169.254.255.255`, `172.16.0.0-172.31.255.255`, `192.0.0.0-192.0.0.255`, `192.168.0.0-192.168.255.255`, `198.18.0.0-198.19.255.255`, `240.0.0.0-255.255.255.255`, `::1`, `fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff`, `fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff`, `::ffff:0.0.0.0-::ffff:255.255.255.255`. The host's own public addresses stay **allowed**: two members relayed through this coturn reach each other at the host's IP, and denying it breaks the main case. `no-tcp-relay` keeps relays from opening TCP to nginx or sshd. A relay can still send UDP to any UDP port the host serves on its public address. Accepted risk: today no other public UDP service is expected (unverified on production; chunk B's first run records `ss -lun` in this plan). A future public UDP service on this host must weigh this.
   - No `external-ip`: a Hetzner Cloud server holds its public addresses on its own interface (verify with `ip addr` during chunk B's first run).
 - **Vocabulary lock-ins:** helper name; template path; relay range 49160–49999 (840 ports; a four-person mesh uses at most about 6 allocations per person).
-- **First chunk:** template, helper, deploy step, a Docker smoke script like `bbx-host-apt.smoke.sh` that renders the config from a fake store and runs `turnserver` plus an allocation. No open questions.
+- **First chunk:** template, helper, deploy step, a Lima smoke script (the role `bbx-host-apt.smoke.sh` plays with Docker) that renders the config from a fake store and runs `turnserver` plus an allocation. No open questions.
 
 ### C. Firewall, status, grants
 
