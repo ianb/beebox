@@ -43,7 +43,7 @@ export interface VoiceHqRequest {
  * segment produced no message (unconsumed/cancel/unmount seals), so a non-HQ
  * send is still findable by `get-last-audio`.
  */
-/** `call` marks a call recording, which always seals with `hq: null` (docs/plans/chat-calls.md, Track F). */
+/** `call` marks a call recording, which always seals with `hq: null` (docs/implemented-plans/chat-calls.md, Track F). */
 interface SealOpts {
   emissionId: string | null;
   hq: VoiceHqRequest | null;

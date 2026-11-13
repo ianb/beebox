@@ -1,6 +1,6 @@
 /**
  * The fold record: `_tmp/calls/<callId>.json`, everything the box needs to fold
- * a transcribed call after it ends (docs/plans/chat-calls.md, Track G). The
+ * a transcribed call after it ends (docs/implemented-plans/chat-calls.md, Track G). The
  * call itself lives only in memory; this file is written when transcription
  * first turns on, updated on each member, transcription and recording change
  * and each card change, and removed once the `<call>` message is delivered.

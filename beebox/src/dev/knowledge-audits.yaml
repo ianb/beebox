@@ -327,7 +327,7 @@ tests:
       - 'share[- ]id'
     tags: [chat, external-input, siri-app-intents]
 
-  # A transcribed call lands as a `<call>` message (docs/plans/chat-calls.md,
+  # A transcribed call lands as a `<call>` message (docs/implemented-plans/chat-calls.md,
   # Track G): acknowledge silently, act only when asked, answer from it later.
   # Not yet run.
   # Status (2026-11-12, Claude): passed on a throwaway box from this worktree's

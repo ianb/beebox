@@ -3,7 +3,7 @@
 People who have the same chat open can call each other from it. A call is
 voice first; anyone on it can turn their camera on, and anyone can turn
 transcription on for everyone. A transcribed call lands in the chat as one
-`<call>` entry when it ends. Plan: [plans/chat-calls.md](plans/chat-calls.md).
+`<call>` entry when it ends. Plan: [implemented-plans/chat-calls.md](implemented-plans/chat-calls.md).
 Presence, which decides who is offered a call: [chat-presence.md](chat-presence.md).
 
 ## Who is on a call

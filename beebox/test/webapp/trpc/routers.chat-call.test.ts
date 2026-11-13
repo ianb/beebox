@@ -79,7 +79,7 @@ void test("the agent cannot be on a call", async (t) => {
   await t.checkThrows(() => caller({ user: priya, actor: "agent" }).chatCall.iceServers(), "TRPCError: Only a box member can be on a call.");
 });
 
-// docs/plans/chat-calls.md, Track F: a member registers its recording before
+// docs/implemented-plans/chat-calls.md, Track F: a member registers its recording before
 // capture starts. Only the peer's own person may, and only while transcribing.
 void test("a member registers its own recording, only while transcription is on", async (t) => {
   const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));

@@ -1,5 +1,5 @@
 /**
- * Call transcription for one box (docs/plans/chat-calls.md, Track G): keep
+ * Call transcription for one box (docs/implemented-plans/chat-calls.md, Track G): keep
  * each transcribed call's fold record current from the room's call changes
  * and the box's card changes, fold and deliver the `<call>` message when the
  * call ends, and at startup fold the calls a restart left behind.

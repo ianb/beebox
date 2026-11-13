@@ -44,7 +44,7 @@ export interface VoiceFinalizeOp {
   chunkCount: number;
   emissionId: string | null;
   hq: { emissionId: string; sessionId: string | null } | null;
-  /** Set for a call recording, which sends `hq: null` (docs/plans/chat-calls.md, Track F). */
+  /** Set for a call recording, which sends `hq: null` (docs/implemented-plans/chat-calls.md, Track F). */
   call?: VoiceCallLink;
 }
 

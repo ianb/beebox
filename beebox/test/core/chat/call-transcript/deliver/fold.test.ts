@@ -1,6 +1,6 @@
 // # Folding a call transcript
 //
-// `foldCall` (docs/plans/chat-calls.md, Track G) turns each person's timed
+// `foldCall` (docs/implemented-plans/chat-calls.md, Track G) turns each person's timed
 // words into utterances at `firstAudioAtMs + word.start`, merges them with the
 // chat's activity while transcription was on, and names anyone whose audio is
 // missing or whose clock was more than a second off.

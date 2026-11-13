@@ -2,7 +2,7 @@
 //
 // `CallBarFace` draws a call this tab can join, this tab's own call with its
 // controls and each person's connection, or how a call ended
-// (docs/plans/chat-calls.md, Track D). Checked as the text a person reads,
+// (docs/implemented-plans/chat-calls.md, Track D). Checked as the text a person reads,
 // plus which toggles are pressed.
 
 import { test } from "tap";

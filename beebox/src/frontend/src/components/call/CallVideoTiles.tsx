@@ -1,6 +1,6 @@
 /**
  * Video from the call, above the transcript, while anyone sends video
- * (docs/plans/chat-calls.md, Track D). Tiles are muted: voices play through
+ * (docs/implemented-plans/chat-calls.md, Track D). Tiles are muted: voices play through
  * `CallAudio`, so a tile coming and going never cuts the sound.
  */
 

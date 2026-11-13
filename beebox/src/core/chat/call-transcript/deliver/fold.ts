@@ -1,5 +1,5 @@
 /**
- * Fold a transcribed call into one `<call>` message (docs/plans/chat-calls.md,
+ * Fold a transcribed call into one `<call>` message (docs/implemented-plans/chat-calls.md,
  * Track G). Pure: each person's recording becomes utterances placed by real
  * wall-clock time (`firstAudioAtMs + word.start`), merged with what happened
  * in the chat while transcription was on. Device clocks are trusted; a member

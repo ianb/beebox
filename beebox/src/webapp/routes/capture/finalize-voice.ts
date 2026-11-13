@@ -21,7 +21,7 @@
  * seal. Finalize is idempotent: a repeat once sealed returns the current
  * state (200); a repeat with a different `hq.emissionId` is refused (409).
  *
- * A call recording (docs/plans/chat-calls.md, Track F) sends `call:
+ * A call recording (docs/implemented-plans/chat-calls.md, Track F) sends `call:
  * { callId, firstAudioAtMs }` and `hq: null`: HQ always runs, with word timing
  * and no emission, since the call fold waits for it rather than a composer.
  */

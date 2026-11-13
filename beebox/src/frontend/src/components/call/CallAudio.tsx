@@ -1,6 +1,6 @@
 /**
  * The other call members' voices: one hidden autoplaying `<audio>` per
- * member (docs/plans/chat-calls.md, Track D). Mounted in the app bar, so a
+ * member (docs/implemented-plans/chat-calls.md, Track D). Mounted in the app bar, so a
  * call keeps sounding while the person moves around the app.
  */
 

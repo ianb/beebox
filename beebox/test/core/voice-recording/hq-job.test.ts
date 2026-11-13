@@ -329,7 +329,7 @@ void test("If a process restart interrupts a retrying job, runHqJob's backoff mu
 
 // ## A call recording asks for word timing and stores words on the recording's timeline
 //
-// docs/plans/chat-calls.md, Track F: the call fold places words by time, so a
+// docs/implemented-plans/chat-calls.md, Track F: the call fold places words by time, so a
 // recording sealed with `call` is transcribed with word timing and each piece's
 // words shift by that piece's start (here the second piece starts at 300 s).
 void test("A call recording stores words timed across pieces", async (t) => {

@@ -267,7 +267,7 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
       try {
         const result = await transcribePiece(
           { audioBuffer: wavBuffer, filename: `piece-${String(pieceIndex + 1)}.wav`, boxRoot },
-          // A call recording is folded by word time (docs/plans/chat-calls.md, Track F).
+          // A call recording is folded by word time (docs/implemented-plans/chat-calls.md, Track F).
           { service: hqRequest.service, wordTimestamps: session.voice.call !== undefined },
         );
         results.push({ ...result, startByte: piece.startByte });

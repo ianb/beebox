@@ -1,5 +1,5 @@
 /**
- * This tab's call (docs/plans/chat-calls.md, Track C): local media, one
+ * This tab's call (docs/implemented-plans/chat-calls.md, Track C): local media, one
  * `PeerLink` per other member, the `chatCall.join` subscription that is this
  * tab's membership, and its own mic's recording while the call is
  * transcribed. One call per tab. The UI reads `callEngine.getSnapshot()`

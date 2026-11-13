@@ -1,5 +1,5 @@
 /**
- * This tab's call, as the call bar shows it (docs/plans/chat-calls.md, Track C).
+ * This tab's call, as the call bar shows it (docs/implemented-plans/chat-calls.md, Track C).
  * A pure reducer: the engine (`call/engine.ts`) feeds it the server's frames
  * and what the browser reports about media and connections.
  */

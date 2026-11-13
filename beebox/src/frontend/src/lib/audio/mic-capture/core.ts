@@ -20,7 +20,7 @@
  * window; an aborted recovery ends the segment loudly with everything
  * captured so far preserved.
  *
- * Borrowed mode (docs/plans/chat-calls.md, Track F) records a stream someone
+ * Borrowed mode (docs/implemented-plans/chat-calls.md, Track F) records a stream someone
  * else owns, the call's own microphone: it never stops or re-acquires that
  * stream's tracks and never recovers. When the track ends, `onMicLost` fires
  * once and the owner of the recording finalizes it.

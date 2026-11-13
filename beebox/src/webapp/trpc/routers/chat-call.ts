@@ -160,7 +160,7 @@ export const chatCallRouter = router({
   /**
    * Name the voice staging session this member is about to record into, before
    * capture starts, so the fold waits for it even if the tab closes and the
-   * staging queue uploads it later (docs/plans/chat-calls.md, Track F).
+   * staging queue uploads it later (docs/implemented-plans/chat-calls.md, Track F).
    * `clockOffsetMs` is the member's real clock minus the server's at join.
    */
   registerRecording: authedProcedure

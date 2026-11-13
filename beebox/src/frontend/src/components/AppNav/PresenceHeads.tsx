@@ -121,7 +121,7 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
     },
   );
   const live = sub.status === "pending";
-  // Not present, so the chat's call is not this tab's to see (docs/plans/chat-calls.md).
+  // Not present, so the chat's call is not this tab's to see (docs/implemented-plans/chat-calls.md).
   useEffect(() => {
     if (!live) callEngine.reportPresence(null);
   }, [live]);

@@ -1,6 +1,6 @@
 // # MicCapture borrowed mode
 //
-// A call recording (docs/plans/chat-calls.md, Track F) records the call's own
+// A call recording (docs/implemented-plans/chat-calls.md, Track F) records the call's own
 // microphone stream. The capture must never stop that stream's track or
 // acquire a new one: the call keeps using it. When the track ends, the capture
 // reports it once and does not try to recover.

@@ -64,5 +64,5 @@ export const micLost = new EarCon({ name: "micLost", filename: "mic-lost.wav", v
 export const recordingResumed = new EarCon({ name: "recordingResumed", filename: "recording-start.mp3", volume: 0.7 });
 export const liveTextPaused = new EarCon({ name: "liveTextPaused", filename: "live-text-paused.wav", volume: 0.3 });
 export const liveTextResumed = new EarCon({ name: "liveTextResumed", filename: "live-text-resumed.wav", volume: 0.3 });
-// A call ringing in the open chat (docs/plans/chat-calls.md): played once, never repeated.
+// A call ringing in the open chat (docs/implemented-plans/chat-calls.md): played once, never repeated.
 export const callRing = new EarCon({ name: "callRing", filename: "beeprising.wav", volume: 0.6 });

@@ -1,6 +1,6 @@
 // # Who offers, and who yields when offers cross
 //
-// Perfect negotiation (docs/plans/chat-calls.md, Track C): the smaller peer id
+// Perfect negotiation (docs/implemented-plans/chat-calls.md, Track C): the smaller peer id
 // is polite; the member who joined later makes the first offer; a colliding
 // offer is ignored by the impolite side and accepted by the polite one.
 

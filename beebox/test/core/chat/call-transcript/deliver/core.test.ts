@@ -1,6 +1,6 @@
 // # Resuming a call fold after a restart
 //
-// The fold record (`_tmp/calls/<callId>.json`, docs/plans/chat-calls.md,
+// The fold record (`_tmp/calls/<callId>.json`, docs/implemented-plans/chat-calls.md,
 // Track G) is the only state a transcribed call leaves on disk. At startup
 // `resumeCallFolds` folds every recorded call that is not going on: it reads
 // the registered recordings' HQ results and delivers one `<call>` message. The

@@ -1,5 +1,5 @@
 /**
- * The `<call>` delivered user message (docs/plans/chat-calls.md, Track G): the
+ * The `<call>` delivered user message (docs/implemented-plans/chat-calls.md, Track G): the
  * folded transcript of a transcribed call between people in a chat. The
  * registry in `delivered-user-message.ts` dispatches to this codec.
  *

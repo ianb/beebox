@@ -1,9 +1,9 @@
 ---
 title: "Calls in a shared chat, optionally transcribed into it"
-status: draft
+status: implemented
 workstream: chat-presence
 issues:
-  - ../../../issues/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md
+  - ../../../issues/closed/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md
 ---
 # Calls in a shared chat, optionally transcribed into it
 

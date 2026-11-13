@@ -1,5 +1,5 @@
 /**
- * After a transcribed call ends (docs/plans/chat-calls.md, Track G): wait for
+ * After a transcribed call ends (docs/implemented-plans/chat-calls.md, Track G): wait for
  * every registered recording's HQ job, read what happened in the chat during
  * the call from its own transcript, fold, and deliver one `<call>` message.
  * The fold record (`record.ts`) is the only state; it is removed once the

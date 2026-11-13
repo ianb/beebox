@@ -1,5 +1,5 @@
 /**
- * The phone button beside the presence heads (docs/plans/chat-calls.md,
+ * The phone button beside the presence heads (docs/implemented-plans/chat-calls.md,
  * Track D): start a call when someone else is here and none is going, or
  * join the one going. Nothing otherwise. Pure, so tests render it.
  */

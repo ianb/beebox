@@ -160,7 +160,7 @@ export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
 const VoiceHqRequestSchema = z.object({
   requestedAt: z.string(),
   service: z.enum(HQ_TRANSCRIPTION_SERVICES),
-  /** Null for a call recording: no composer message waits on it (docs/plans/chat-calls.md, Track F). */
+  /** Null for a call recording: no composer message waits on it (docs/implemented-plans/chat-calls.md, Track F). */
   emissionId: z.string().nullable(),
   sessionId: z.string().nullable(),
 });
@@ -194,7 +194,7 @@ const StagingVoiceSchema = z.object({
   handoff: VoiceHandoffSchema,
   /**
    * Set when the recording is one member's microphone during a transcribed
-   * call (docs/plans/chat-calls.md, Track F). `firstAudioAtMs` is the device's
+   * call (docs/implemented-plans/chat-calls.md, Track F). `firstAudioAtMs` is the device's
    * real wall clock (never the box's shifted clock) when its first audio
    * arrived; the call fold places words at `firstAudioAtMs + word.start`.
    */

@@ -2,7 +2,7 @@
 //
 // `callReducer` folds the server's call frames and the browser's media and
 // connection reports into one state; `callOffer` and `callBarView` decide
-// what the phone button and the call bar show (docs/plans/chat-calls.md,
+// what the phone button and the call bar show (docs/implemented-plans/chat-calls.md,
 // Tracks C and D).
 
 import { test } from "tap";

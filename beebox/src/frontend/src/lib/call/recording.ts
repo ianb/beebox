@@ -1,6 +1,6 @@
 /**
  * Recording one member's own microphone while a call is transcribed
- * (docs/plans/chat-calls.md, Track F). The recording is an ordinary voice
+ * (docs/implemented-plans/chat-calls.md, Track F). The recording is an ordinary voice
  * staging session, registered with the call before capture starts so the
  * box's fold knows to wait for it even if this tab closes and the staging
  * queue uploads it later. It borrows the call's mic stream and never stops or

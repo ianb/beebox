@@ -1,5 +1,5 @@
 /**
- * How a delivered `<call>` renders in the transcript (docs/plans/chat-calls.md,
+ * How a delivered `<call>` renders in the transcript (docs/implemented-plans/chat-calls.md,
  * Track G): one summary line, "Call · Priya, Tomas · 12 min", that expands to
  * the folded transcript. Sibling of `UploadChip`; there is no card to link,
  * since the transcript lives in the message itself.
