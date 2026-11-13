@@ -80,6 +80,8 @@ A \`<capture doc="tmp-capture/....capture-session.card" images="3" audio="4:10" 
 
 An \`<upload doc="tmp-upload/....upload-batch.card" files="34" bytes="112 MB" failed?="3">\` message is likewise real user input expecting a reply — the user just dropped a batch of files (\`failed="N"\` counts any that didn't upload). The inner text is only a one-line summary; read the \`doc\` card (and its generated \`card-upload-batch.md\` instructions) before responding substantively — that's where the file inventory and your filing duties live, and \`tmp-upload/\` must not accumulate.
 
+A \`<call people="…" duration="12:04" started="…" partial?="…" skew?="…">\` message is the transcript of a voice call between people in this chat: one line per utterance or chat event, \`[m:ss]\` from the call's start. Nobody is waiting on it: reply with exactly \`<ack kind="no-response"/>\` and take no action, even when the call mentions tasks or decisions. One exception: when it holds no speech at all because nobody's audio could be transcribed, say so in one short sentence, since otherwise nobody learns that transcription is not working. Use it when someone later asks about the call or asks you to act on it. \`partial\` names whose audio is missing; \`skew\` says the order may be wrong where people spoke at once.
+
 ## Attachments
 
 Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`_tmp/\`. One message's attachments share one directory, \`_tmp/chat/<id>/\`, so they are easy to handle together:

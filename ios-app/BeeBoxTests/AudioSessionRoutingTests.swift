@@ -83,3 +83,30 @@ final class AudioSessionRoutingTests: XCTestCase {
         }
     }
 }
+
+final class CallAudioSessionTests: XCTestCase {
+    func testCallRoleIsVoiceChatPlayAndRecord() {
+        let configuration = AudioSessionRouting.configuration(role: .call, highQualityBluetoothAvailable: false)
+        XCTAssertEqual(configuration.category, .playAndRecord)
+        XCTAssertEqual(configuration.mode, .voiceChat)
+        XCTAssertEqual(configuration.options, [.defaultToSpeaker, .allowBluetoothHFP])
+    }
+
+    func testHeldCallRefusesRecordingAndSurvivesDeactivate() {
+        let hold = AudioSessionCallHold()
+        hold.set(true)
+        let session = SystemAudioSession(callHold: hold)
+        XCTAssertThrowsError(try session.activateRecording())
+        session.deactivate()
+        XCTAssertTrue(hold.isHeld)
+    }
+
+    func testMediaCaptureGrantedOnlyToBoxMainFrame() {
+        let box = "https://box.example.com"
+        XCTAssertEqual(ChatWebView.mediaCaptureDecision(frameOrigin: box, isMainFrame: true, allowedOrigin: box), .grant)
+        XCTAssertEqual(ChatWebView.mediaCaptureDecision(frameOrigin: box, isMainFrame: false, allowedOrigin: box), .deny)
+        XCTAssertEqual(ChatWebView.mediaCaptureDecision(frameOrigin: "https://evil.example", isMainFrame: true, allowedOrigin: box), .deny)
+        XCTAssertEqual(ChatWebView.mediaCaptureDecision(frameOrigin: nil, isMainFrame: true, allowedOrigin: box), .deny)
+        XCTAssertEqual(ChatWebView.mediaCaptureDecision(frameOrigin: box, isMainFrame: true, allowedOrigin: nil), .deny)
+    }
+}

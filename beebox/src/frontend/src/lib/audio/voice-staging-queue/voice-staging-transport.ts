@@ -119,8 +119,15 @@ async function sendChunk(op: StoredVoiceOp, payload: VoiceChunkOp): Promise<OpOu
  * server's own `VoiceFinalizeBodySchema` (`capture-finalize-voice.ts`) —
  * `src/frontend/test/lib/audio/voice-staging-queue/voice-staging-transport.capture-finalize-voice-contract.test.ts`.
  */
-export function buildVoiceFinalizeBody(payload: VoiceFinalizeOp): { chunkCount: number; emissionId: string | null; hq: { emissionId: string; sessionId: string | null } | null } {
-  return { chunkCount: payload.chunkCount, emissionId: payload.emissionId, hq: payload.hq };
+export function buildVoiceFinalizeBody(
+  payload: VoiceFinalizeOp,
+): Pick<VoiceFinalizeOp, "chunkCount" | "emissionId" | "hq" | "call"> {
+  return {
+    chunkCount: payload.chunkCount,
+    emissionId: payload.emissionId,
+    hq: payload.hq,
+    ...(payload.call !== undefined && { call: payload.call }),
+  };
 }
 
 async function sendFinalize(op: StoredVoiceOp, payload: VoiceFinalizeOp): Promise<OpOutcome> {

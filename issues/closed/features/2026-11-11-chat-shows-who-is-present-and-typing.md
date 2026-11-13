@@ -59,4 +59,4 @@ which decides who may see a chat at all.
 present" half (`beebox/docs/implemented-plans/chat-presence.md`). Typing and speaking
 moved to [their own issue](../../features/2026-11-12-chat-shows-who-is-typing-or-speaking.md).
 
-This is the prerequisite for [voice and video calls in a shared chat](../../features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md).
+This is the prerequisite for [voice and video calls in a shared chat](2026-11-11-voice-and-video-calls-in-a-shared-chat.md).

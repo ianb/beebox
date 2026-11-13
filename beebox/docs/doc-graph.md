@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-13T03:33:02Z
-Total documents: 650
+Generated: 2026-11-13T04:27:51Z
+Total documents: 653
 
 ## Issues
 
@@ -115,6 +115,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -1208,11 +1209,25 @@ References:
 - → docs/box-layout.md (link)
 - → docs/media/assets.md (link)
 
+#### docs/chat-calls.md
+
+Title: "Chat calls" | 93 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/chat-calls.md:509 (mention) — 6. **Residual risks accepted** (`docs/chat-calls.md`, Known limits): a tab
+
+References:
+- → docs/implemented-plans/chat-calls.md (link)
+- → docs/chat-presence.md (link)
+- → docs/secrets.md (link)
+- → docs/mobile-contract.md (link)
+
 #### docs/chat-presence.md
 
 Title: "Chat presence" | 61 lines | current reference
 
 Referenced by:
+- docs/chat-calls.md:7 (link) — Presence, which decides who is offered a call: [chat-presence.md](chat-presence.md).
 - docs/implemented-plans/chat-presence.md:110 (mention) — - Docs: a short reference section (`docs/chat-presence.md`, ~40 lines) and a
 - ../issues/features/2026-11-12-chat-shows-who-is-typing-or-speaking.md:20 (mention) — subscription per open chat; `beebox/docs/chat-presence.md` says how to add
 
@@ -1785,15 +1800,17 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1946 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1963 lines | current reference
 
 Referenced by:
 - AGENTS.md:71 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- docs/chat-calls.md:46 (link) — ([mobile-contract.md](mobile-contract.md) B16). While a call is active the app
 - docs/chat-presence.md:23 (mention) — (`docs/mobile-contract.md`, B15), and the person is present nowhere.
 - docs/chat.md:20 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
 - docs/chat/quick-chat.md:79 (link) — [mobile contract §5.11](../mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:53 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
+- docs/implemented-plans/chat-calls.md:166 (mention) — restores `.playback`). Both are recorded in `docs/mobile-contract.md`.
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
 - docs/implemented-plans/chat-presence.md:111 (mention) — note in `docs/mobile-contract.md` that presence rides web visibility (~5).
 - docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
@@ -1938,7 +1955,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:389 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:1003 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:1018 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/pi-engine.md:8 (link) — [model-policy](model-policy.md).
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:78 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
@@ -2116,7 +2133,7 @@ Referenced by:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:519 (mention) — 7. Docs: `docs/questions.md` (Later, provisional, the review),
 - docs/implemented-plans/todo-annotation.md:68 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
-- docs/mobile-contract.md:1012 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
+- docs/mobile-contract.md:1027 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/shared-browser-ask.subplan.md:86 (mention) — - **Rejected reuse: question cards** (`docs/questions.md`). They are for durable decisions with learning, in a queue. Th
 - docs/plans/shared-browser.md:52 (mention) — - Acting in a logged-in account (send, post, buy, delete, change settings) starts as **confirmation**: box guidance tell
@@ -2251,17 +2268,19 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 542 lines | current reference
+Title: "Secrets: the machine-level store" | 543 lines | current reference
 
 Referenced by:
 - AGENTS.md:71 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/box-layout.md:235 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/box-work.md:46 (link) — ([secrets](secrets.md#worktree-boxes-have-their-own-store)). In a worktree,
+- docs/chat-calls.md:40 (link) — secret (`{ keyId, apiToken }`, see [secrets.md](secrets.md)). The token
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/design/privacy-and-egress.md:11 (link) — ([`../secrets.md`](../secrets.md)).
 - docs/development/technologies.md:31 (link) — documented in [secrets.md](../secrets.md).
 - docs/guides.md:37 (link) — | Secrets: the machine-level store and grants | [secrets](secrets.md) |
+- docs/implemented-plans/chat-calls.md:189 (mention) — names in `docs/secrets.md:68-78` and `src/core/secrets/uses.ts`.
 - docs/implemented-plans/doc-structure-connectors.md:86 (mention) — `secrets.md` (the store is its own subject), `src/connectors/AGENTS.md`,
 - docs/implemented-plans/doc-structure-development.md:137 (mention) — | 4 | over budget | 19 | secrets.md#Secret names, a second statement of the OpenRouter-only backend in the store's vocab
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
@@ -3240,7 +3259,7 @@ Referenced by:
 - docs/design/trust.md:53 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:254 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/mobile-contract.md:1326 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/mobile-contract.md:1341 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:26 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -4445,7 +4464,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1035 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1050 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -4734,6 +4753,20 @@ References:
 - → ../issues/closed/bugs/2026-11-06-codex-chat-later-text-replaces-earlier-text.md (frontmatter)
 - → docs/implemented-plans/chat-progress-fold.md (mention)
 - → docs/architecture/spirit.md (mention)
+
+#### docs/implemented-plans/chat-calls.md
+
+Title: "Calls in a shared chat, optionally transcribed into it" | 550 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat-calls.md:6 (link) — `<call>` entry when it ends. Plan: [implemented-plans/chat-calls.md](implemented-plans/chat-calls.md).
+- ../issues/closed/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md:12 (mention) — **Closed (implemented, 2026-11-12):** Implemented on worktree-chat-presence (server call room, browser engine, call bar,
+
+References:
+- → ../issues/closed/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md (frontmatter)
+- → docs/mobile-contract.md (mention)
+- → docs/secrets.md (mention)
+- → docs/chat-calls.md (mention)
 
 #### docs/implemented-plans/chat-composer-rerender.md **[ORPHAN]**
 
@@ -6293,7 +6326,7 @@ References:
 Title: "iOS box screen: an accurate chat list while the box sleeps, and an honest one when it cannot answer" | 242 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1360 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
+- docs/mobile-contract.md:1375 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
 - ../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md:42 (mention) — Plan: `beebox/docs/implemented-plans/ios-box-screen-stale-list.md`. The box screen
 
 References:
@@ -6350,7 +6383,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1317 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1332 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -6663,7 +6696,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1767 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1784 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -9460,7 +9493,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 515 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1034 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1049 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -10042,7 +10075,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1761 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1778 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -11976,6 +12009,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

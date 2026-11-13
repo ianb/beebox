@@ -18,9 +18,10 @@ import type { HqErrorClassification } from "../classify.js";
 export type VoiceEvent =
   /**
    * A finalize that asks for HQ. Only fires the request once per recording.
-   * `sessionId` is null for the first message of a new chat.
+   * `sessionId` is null for the first message of a new chat; `emissionId` is
+   * null for a call recording.
    */
-  | { type: "requested"; requestedAt: string; service: HqTranscriptionService; emissionId: string; sessionId: string | null }
+  | { type: "requested"; requestedAt: string; service: HqTranscriptionService; emissionId: string | null; sessionId: string | null }
   /** The job started transcribing one piece. */
   | { type: "pieceStarted"; piece: number; pieces: number; attempt: number; pieceSeconds: number }
   /**

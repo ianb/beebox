@@ -13412,3 +13412,19 @@ box1:
       peak: 40880
       added: 9255
       turns: 16
+demo:
+  call-transcript-silent-then-answer:
+    - date: 2026-11-13T03:42:55.322Z
+      boxCommit: 16ee52a0a8181c718aa4cabced8a389baaa00a0d
+      repoCommit: 2f329fb416a1c31a506e60aa9432a9d841643ed7
+      initial: 44823
+      peak: 44823
+      added: 0
+      turns: 2
+    - date: 2026-11-13T04:01:37.923Z
+      boxCommit: 16ee52a0a8181c718aa4cabced8a389baaa00a0d
+      repoCommit: 0def19849d8b532bcf3be477a689d3f1f5f6d338
+      initial: 44877
+      peak: 44877
+      added: 0
+      turns: 2

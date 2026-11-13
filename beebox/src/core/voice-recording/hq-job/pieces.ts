@@ -12,6 +12,7 @@
  */
 
 import { invariant } from "../../../shared/invariant.js";
+import type { VoiceHqWord } from "../../capture/staging-schema.js";
 
 /** Bytes/second for 16 kHz mono 16-bit PCM: 16000 samples/s × 2 bytes/sample. */
 export const PCM_BYTES_PER_SECOND = 32_000;
@@ -57,4 +58,16 @@ export function planPieces(totalBytes: number, pieceSeconds: number): BytePieceR
 export function nextPieceSeconds(current: number): number | null {
   const halved = current / 2;
   return halved < HQ_PIECE_FLOOR_SECONDS ? null : halved;
+}
+
+/**
+ * Every piece's words on the whole recording's timeline. A service times each
+ * word from the start of the piece it was sent, so each piece's words shift by
+ * that piece's start offset in the recording.
+ */
+export function joinPieceWords(pieces: readonly { startByte: number; words: readonly { word: string; start: number; end: number }[] }[]): VoiceHqWord[] {
+  return pieces.flatMap(({ startByte, words }) => {
+    const offset = startByte / PCM_BYTES_PER_SECOND;
+    return words.map((w) => ({ start: offset + w.start, end: offset + w.end, text: w.word }));
+  });
 }

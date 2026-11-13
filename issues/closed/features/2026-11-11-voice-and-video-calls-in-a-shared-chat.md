@@ -1,19 +1,22 @@
 ---
 title: "People in the same chat can start a voice or video call, optionally transcribed into the chat"
-workstream: unattached
+workstream: chat-presence
 area: beebox
 labels: [chat, multi-user, voice, transcription]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — boxholder request, 2026-11-11"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** Implemented on worktree-chat-presence (server call room, browser engine, call bar, transcription fold, iOS permissions); decisions in beebox/docs/implemented-plans/chat-calls.md. Not run on an iPhone; production TURN needs a cloudflare-turn secret.
 
 When more than one person is in a chat, they should be able to start a voice
 call, or a voice and video call, from it. The call may be transcribed, so
 the conversation lands in the chat where the box agent can use it. Probably
 WebRTC.
 
-**Prerequisite:** [who is present in a chat](../closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md)
+**Prerequisite:** [who is present in a chat](2026-11-11-chat-shows-who-is-present-and-typing.md)
 comes first. A call rings the people present, and its signaling travels the
 same per-chat channel that presence and typing signals set up.
 
@@ -43,10 +46,10 @@ Two ways to know who said what:
   diarization needed, and it works the same for two or six people.
 - **Diarization** of a mixed recording. Needed only when several people
   share one microphone (two people in one room). See
-  [diarization as a capability](2026-08-31-request-diarization-as-capability-not-model.md)
-  and [the same speaker across recordings](2026-10-20-same-speaker-names-across-recordings.md).
+  [diarization as a capability](../../features/2026-08-31-request-diarization-as-capability-not-model.md)
+  and [the same speaker across recordings](../../features/2026-10-20-same-speaker-names-across-recordings.md).
 
-Related: [listening and note-taking mode](2026-08-29-listening-note-mode.md),
+Related: [listening and note-taking mode](../../features/2026-08-29-listening-note-mode.md),
 which is about transcribing a conversation the box overhears.
 
 ## Direction (boxholder, 2026-11-11)
