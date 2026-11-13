@@ -16,6 +16,7 @@ export type NativeShellChannel =
   | "beeboxHqDictationState"
   | "beeboxSpeechPlaybackState"
   | "beeboxResponseState"
+  | "beeboxCallState"
   | "beeboxComposerCommand"
   | "beeboxLastAudioRequest"
   | "beeboxSession"
