@@ -91,6 +91,10 @@ Complaints 2 (no warning when adding a name the machine already holds) and 3
 
 The boxholder wanted to give a production box keys the machine already held (OpenAI, Gemini, OpenRouter): "I couldn't find any way to bring them from the system into the individual box." An agent made the grants with `bbx engine secrets grant` over ssh instead.
 
-The disclosure from section 1 is gone. `GrantExistingForm` now renders open under the "Add a key to this box" heading on the "This box" tab (`beebox/src/frontend/src/components/admin/SecretsSection/view.tsx`), as a select labelled "Grant a key this machine already has". The boxholder still did not find it, so moving it out of the disclosure did not fix section 1. The form grants one name at a time and sits below the box's own key list and above the connect-a-service guides. That layout may be where it gets lost. This is a hypothesis; nobody watched the boxholder look for it.
+The disclosure from section 1 is gone, but on production the form never renders. Production runs per-box units: each box process reads its own copy of the store, exported from the master by `bbx engine secrets export-box`. `machineView` (`beebox/src/webapp/trpc/routers/secrets.ts`) lists that copy, so it holds only the box's own grants. `grantableSecrets` is then empty, and `view.tsx` hides `GrantExistingForm`. The page offers only "Add a new key", which pastes a duplicate value.
+
+A grant made on the master does not reach the box either. Only `deploy/add-box.sh` refreshes the box's copy. `bbx engine secrets grant` changed the master and reported success, and the box still resolved one secret. The agent then re-exported the box's copy by hand, following the steps in `add-box.sh`.
+
+On a unit host the box UI therefore has no grant path. The CLI grant needs a manual re-export that nothing tells the operator to run.
 
 The `normal` priority may be stale after this report.
