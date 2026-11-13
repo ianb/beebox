@@ -50,8 +50,13 @@ void test("the hub's 503 reads as its sentence, not its code", async (t) => {
     { refused: true, message: "Box test1 is closed for deployment" });
 });
 
-void test("a 503 after a lost response is not a refusal", async (t) => {
+void test("no answer after a lost response is a refusal", async (t) => {
   // The first POST may have been recorded before its response was lost.
-  t.check(await failure(new Error("lost"), json(503, { error: "Box is closed for deployment" })),
-    { refused: false, message: "Box is closed for deployment" });
+  t.check({
+    closed: await failure(new Error("lost"), json(503, { error: "Box is closed for deployment" })),
+    gone: await failure(new Error("lost"), json(410, { error: "Conversation is not available on this machine" })),
+  }, {
+    closed: { refused: false, message: "Box is closed for deployment" },
+    gone: { refused: false, message: "Conversation is not available on this machine" },
+  });
 });

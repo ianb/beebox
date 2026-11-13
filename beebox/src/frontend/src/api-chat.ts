@@ -340,8 +340,10 @@ const sendFailureBodySchema = z.object({ error: z.string().optional(), message: 
 
 /**
  * A failed send: 4xx and 503 are refusals before acceptance; anything else may
- * have reached the box. A 503 after an attempt whose outcome is unknown (a
- * network failure) proves nothing about that earlier attempt.
+ * have reached the box. After an attempt whose outcome is unknown (a network
+ * failure), no answer to the retry is a refusal: the first attempt may have
+ * been recorded, and a restart since can make the retry fail (a 410 for a
+ * reservation the restart forgot) before deduplication sees it.
  */
 async function rejectSend(response: Response, opts: { startup: boolean | undefined; earlierAttemptUncertain: boolean }): Promise<never> {
   if (response.status === 404 && opts.startup === true) throw new ConversationStartupPendingError();
@@ -349,7 +351,7 @@ async function rejectSend(response: Response, opts: { startup: boolean | undefin
   const body = parsed.success ? parsed.data : {};
   // The hub's 503 carries a code in `error` and the sentence in `message`.
   const reason = (response.status === 503 ? body.message : undefined) || body.error || response.statusText || "Chat send failed";
-  const refused = (response.status >= 400 && response.status < 500) || (response.status === 503 && !opts.earlierAttemptUncertain);
+  const refused = !opts.earlierAttemptUncertain && ((response.status >= 400 && response.status < 500) || response.status === 503);
   if (refused) throw new ChatSendRejectedError(reason);
   throw new RequestError(reason);
 }
