@@ -1,0 +1,384 @@
+{
+ "collectedAt": "2026-11-13T20:45:03.519Z",
+ "commit": "529a87745",
+ "values": {
+  "files": 9826,
+  "lines": 1298555,
+  "code.lines": 492966,
+  "code.files": 3710,
+  "tests.lines": 255681,
+  "tests.files": 2089,
+  "docs.lines": 334676,
+  "testts.files": 1714,
+  "testts.lines": 234829,
+  "tests.percentOfCode": 52,
+  "beebox.percent": 58
+ },
+ "datasets": {
+  "byCategory": {
+   "title": "Tracked files by category",
+   "columns": [
+    {
+     "key": "category",
+     "label": "Category"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true,
+     "round": 1000
+    }
+   ],
+   "rows": [
+    {
+     "category": "code",
+     "files": 3710,
+     "lines": 492966
+    },
+    {
+     "category": "tests",
+     "files": 2089,
+     "lines": 255681
+    },
+    {
+     "category": "config & data",
+     "files": 646,
+     "lines": 200820
+    },
+    {
+     "category": "docs: plans & reports",
+     "files": 474,
+     "lines": 161190
+    },
+    {
+     "category": "docs: issues",
+     "files": 1601,
+     "lines": 82613
+    },
+    {
+     "category": "docs: guides & other",
+     "files": 547,
+     "lines": 58473
+    },
+    {
+     "category": "docs: research",
+     "files": 177,
+     "lines": 28658
+    },
+    {
+     "category": "lockfiles",
+     "files": 1,
+     "lines": 14412
+    },
+    {
+     "category": "docs: agent instructions",
+     "files": 58,
+     "lines": 3742
+    },
+    {
+     "category": "binary",
+     "files": 523,
+     "lines": 0
+    }
+   ],
+   "bar": "lines"
+  },
+  "byPackage": {
+   "title": "Non-blank lines by package",
+   "columns": [
+    {
+     "key": "package",
+     "label": "Package"
+    },
+    {
+     "key": "code",
+     "label": "Code",
+     "numeric": true,
+     "round": 1000
+    },
+    {
+     "key": "tests",
+     "label": "Tests",
+     "numeric": true,
+     "round": 1000
+    },
+    {
+     "key": "docs",
+     "label": "Docs",
+     "numeric": true,
+     "round": 1000
+    },
+    {
+     "key": "total",
+     "label": "Total",
+     "numeric": true,
+     "round": 1000
+    }
+   ],
+   "rows": [
+    {
+     "package": "beebox",
+     "code": 334164,
+     "tests": 217552,
+     "docs": 197178,
+     "total": 748894
+    },
+    {
+     "package": "issues",
+     "code": 0,
+     "tests": 0,
+     "docs": 82613,
+     "total": 82613
+    },
+    {
+     "package": "canvas-loop",
+     "code": 38158,
+     "tests": 4045,
+     "docs": 3571,
+     "total": 45774
+    },
+    {
+     "package": "bin",
+     "code": 25789,
+     "tests": 15447,
+     "docs": 926,
+     "total": 42162
+    },
+    {
+     "package": "research",
+     "code": 4705,
+     "tests": 78,
+     "docs": 28658,
+     "total": 33441
+    },
+    {
+     "package": "ios-app",
+     "code": 32713,
+     "tests": 0,
+     "docs": 285,
+     "total": 32998
+    },
+    {
+     "package": "workstreams-app",
+     "code": 17669,
+     "tests": 9626,
+     "docs": 215,
+     "total": 27510
+    },
+    {
+     "package": "dev",
+     "code": 8257,
+     "tests": 0,
+     "docs": 8645,
+     "total": 16902
+    },
+    {
+     "package": "schedules",
+     "code": 5934,
+     "tests": 1842,
+     "docs": 4284,
+     "total": 12060
+    },
+    {
+     "package": "site",
+     "code": 4762,
+     "tests": 2054,
+     "docs": 4180,
+     "total": 10996
+    },
+    {
+     "package": "mac-app",
+     "code": 7218,
+     "tests": 0,
+     "docs": 228,
+     "total": 7446
+    },
+    {
+     "package": "personal-vibe-check",
+     "code": 3490,
+     "tests": 1522,
+     "docs": 683,
+     "total": 5695
+    },
+    {
+     "package": "beebox-clerk",
+     "code": 4102,
+     "tests": 1447,
+     "docs": 136,
+     "total": 5685
+    },
+    {
+     "package": "other (9 small)",
+     "code": 6005,
+     "tests": 2068,
+     "docs": 3074,
+     "total": 11147
+    }
+   ],
+   "bar": "total"
+  },
+  "testsByKind": {
+   "title": "Tests by kind",
+   "columns": [
+    {
+     "key": "kind",
+     "label": "Kind"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true,
+     "round": 1000
+    }
+   ],
+   "rows": [
+    {
+     "kind": "*.test.ts code",
+     "files": 1714,
+     "lines": 234829
+    },
+    {
+     "kind": "test fixtures & data",
+     "files": 278,
+     "lines": 12393
+    },
+    {
+     "kind": "test helper code",
+     "files": 97,
+     "lines": 8459
+    }
+   ],
+   "bar": "lines"
+  },
+  "testTsByPackage": {
+   "title": "*.test.ts files by package",
+   "columns": [
+    {
+     "key": "package",
+     "label": "Package"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    }
+   ],
+   "rows": [
+    {
+     "package": "beebox",
+     "files": 1422
+    },
+    {
+     "package": "bin",
+     "files": 95
+    },
+    {
+     "package": "workstreams-app",
+     "files": 61
+    },
+    {
+     "package": "canvas-loop",
+     "files": 49
+    },
+    {
+     "package": "site",
+     "files": 24
+    },
+    {
+     "package": "beebox-clerk",
+     "files": 17
+    },
+    {
+     "package": "schedules",
+     "files": 16
+    },
+    {
+     "package": "personal-vibe-check",
+     "files": 11
+    },
+    {
+     "package": "browse",
+     "files": 10
+    },
+    {
+     "package": "tap-check",
+     "files": 7
+    },
+    {
+     "package": "other (2 small)",
+     "files": 2
+    }
+   ],
+   "bar": "files"
+  },
+  "codeByExtension": {
+   "title": "Code by file extension",
+   "columns": [
+    {
+     "key": "extension",
+     "label": "Extension"
+    },
+    {
+     "key": "files",
+     "label": "Files",
+     "numeric": true
+    },
+    {
+     "key": "lines",
+     "label": "Non-blank lines",
+     "numeric": true,
+     "round": 1000
+    }
+   ],
+   "rows": [
+    {
+     "extension": ".ts",
+     "files": 2857,
+     "lines": 375004
+    },
+    {
+     "extension": ".tsx",
+     "files": 530,
+     "lines": 54308
+    },
+    {
+     "extension": ".swift",
+     "files": 168,
+     "lines": 40760
+    },
+    {
+     "extension": ".sh",
+     "files": 61,
+     "lines": 8141
+    },
+    {
+     "extension": ".html",
+     "files": 28,
+     "lines": 7040
+    },
+    {
+     "extension": ".css",
+     "files": 45,
+     "lines": 5975
+    },
+    {
+     "extension": "other (3 small)",
+     "files": 21,
+     "lines": 1738
+    }
+   ],
+   "bar": "lines"
+  }
+ },
+ "trees": {}
+}
