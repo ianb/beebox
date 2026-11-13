@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { createChatPresence, othersFor, type PresentPerson } from "../../../../src/core/chat/presence/room.js";
+import { createChatPresence, othersFor, type ChatPresenceFrame, type PresentPerson } from "../../../../src/core/chat/presence/room.js";
 
 const priya = { email: "priya@example.com", name: "Priya Marlowe" };
 const tomas = { email: "tomas@example.com", name: "Tomas Marlowe" };
@@ -15,9 +15,15 @@ function ignore(): void {
   // This watcher's updates are not under test.
 }
 
+/** Records each `others` list a watcher hears, ignoring `call` frames. */
 function recorder() {
   const seen: PresentPerson[][] = [];
-  return { seen, onChange: (others: PresentPerson[]) => seen.push(others) };
+  return {
+    seen,
+    onFrame: (frame: ChatPresenceFrame) => {
+      if (frame.t === "others") seen.push(frame.people);
+    },
+  };
 }
 
 void test("othersFor drops the subscriber, dedupes by email, and orders by earliest join", (t) => {
@@ -59,7 +65,7 @@ void test("a person's second tab changes nothing for the others", (t) => {
   const presence = createChatPresence();
   const p = recorder();
   presence.join({ boxRoot: "/box", sessionId: "s-1", person: priya, ...p });
-  const leaveTab1 = presence.join({ boxRoot: "/box", sessionId: "s-1", person: tomas, onChange: ignore });
+  const leaveTab1 = presence.join({ boxRoot: "/box", sessionId: "s-1", person: tomas, onFrame: ignore });
   const tab2 = recorder();
   presence.join({ boxRoot: "/box", sessionId: "s-1", person: tomas, ...tab2 });
   leaveTab1();
@@ -74,8 +80,8 @@ void test("rooms are per chat and per box", (t) => {
   const presence = createChatPresence();
   const p = recorder();
   presence.join({ boxRoot: "/box", sessionId: "s-1", person: priya, ...p });
-  presence.join({ boxRoot: "/box", sessionId: "s-2", person: tomas, onChange: ignore });
-  presence.join({ boxRoot: "/other-box", sessionId: "s-1", person: odette, onChange: ignore });
+  presence.join({ boxRoot: "/box", sessionId: "s-2", person: tomas, onFrame: ignore });
+  presence.join({ boxRoot: "/other-box", sessionId: "s-1", person: odette, onFrame: ignore });
   t.check(p.seen, [[]]);
   t.check(presence.size(), 3);
   t.end();
@@ -89,12 +95,12 @@ void test("one watcher throwing does not keep the others from hearing", (t) => {
   t.teardown(() => {
     console.warn = warn;
   });
-  presence.join({ boxRoot: "/box", sessionId: "s-1", person: priya, onChange: (others) => {
-    if (others.length > 0) throw new Error("socket gone");
+  presence.join({ boxRoot: "/box", sessionId: "s-1", person: priya, onFrame: (frame) => {
+    if (frame.t === "others" && frame.people.length > 0) throw new Error("socket gone");
   } });
   const o = recorder();
   presence.join({ boxRoot: "/box", sessionId: "s-1", person: odette, ...o });
-  presence.join({ boxRoot: "/box", sessionId: "s-1", person: tomas, onChange: ignore });
+  presence.join({ boxRoot: "/box", sessionId: "s-1", person: tomas, onFrame: ignore });
   t.check(o.seen, [[priya], [priya, tomas]]);
   t.check(warnings, ["[chat-presence] a watcher's update failed:", "[chat-presence] a watcher's update failed:"]);
   t.end();

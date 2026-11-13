@@ -101,7 +101,8 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
       // A new or restarted subscription starts from nobody until its first frame.
       onStarted: useCallback(() => setReport(null), []),
       // The hook calls the latest options, so a frame is labelled with the chat its subscription watches.
-      onData: useCallback((frame: { t: "others"; people: PresenceHead[] }) => {
+      onData: useCallback((frame: { t: "others"; people: PresenceHead[] } | { t: "call" }) => {
+        if (frame.t !== "others") return;
         setReport(watched === null ? null : { sessionId: watched, people: frame.people });
       }, [watched]),
       onError: useCallback((err: { message: string }) => {

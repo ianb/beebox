@@ -58,6 +58,7 @@ import { publicationsRouter } from "./routers/publications.js";
 import { todosRouter } from "./routers/todos.js";
 import { presenceRouter } from "./routers/presence.js";
 import { chatPresenceRouter } from "./routers/chat-presence.js";
+import { chatCallRouter } from "./routers/chat-call.js";
 import { notificationsRouter } from "./routers/notifications.js";
 
 const routerMembers = {
@@ -105,6 +106,7 @@ const routerMembers = {
   todos: todosRouter,
   presence: presenceRouter,
   chatPresence: chatPresenceRouter,
+  chatCall: chatCallRouter,
   notifications: notificationsRouter,
 };
 
