@@ -38,10 +38,12 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.2` (Codex)
+- **Latest reviewed upstream version:** `0.3.323` (SDK), `2.1.323` (Claude Code), `0.169.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.322` on 2026-11-12
-  (taking `0.3.321`); nothing newer is published.
+  (taking `0.3.321`). **`0.3.323` is held** until
+  `issues/bugs/2026-11-13-glm-sessions-assume-1m-context-on-claude-code-2-1-323.md`
+  lands (GLM chats would get a 1M-context assumption).
   `bin/land` refused 2026-11-07 and 11-08 over a
   dirty main checkout; both commits reached main and production by
   2026-11-09 (deploy `5a32213cd`). Codex stays held at `0.164.0` (0.165.0–0.167.0) on
@@ -71,6 +73,47 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.168.0 / 0.169.0 — HELD with 0.165.0–0.167.2 (published 2026-11-13T03:54Z and 08:37Z)
+
+0.168.0: open and resumed chats keep their saved model provider; steering
+messages reach running turns sent during the final transcript save (both apply
+to beebox's Codex chat); provider browsing, side-conversation workspace,
+audio recordings. 0.169.0: interrupted turns close cleanly and a delayed abort
+no longer interrupts a later turn; `codex exec` keeps project config and MCP
+servers off in untrusted directories (`--trust` saves trust); bundled SQLite
+3.54 with WAL fixes; custom model providers from the terminal. No memory
+change. Held behind
+`issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
+- **Sources:** [rust-v0.168.0](https://github.com/openai/codex/releases/tag/rust-v0.168.0), [rust-v0.169.0](https://github.com/openai/codex/releases/tag/rust-v0.169.0)
+
+### 0.3.323 / Claude Code 2.1.323 — HELD pending a GLM fix (published 2026-11-12T20:33Z)
+
+- **Hold, RUNTIME:** unrecognized model IDs now get a 1M context window
+  (was 200K), and Anthropic says sessions on smaller-window vendors' models
+  "can fail every turn until `/clear`". beebox runs `glm-*` models through the
+  claude engine (`core/glm-key.ts`) with no context setting. Filed:
+  `issues/bugs/2026-11-13-glm-sessions-assume-1m-context-on-claude-code-2-1-323.md`.
+  Take 0.3.323 once the fix sets `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` for GLM
+  runs (or GLM is retired, 2026-12-15).
+- **SDK:** a tool whose permission check errors after a PreToolUse hook allowed
+  it now goes to `canUseTool` (beebox's hooks never allow); `tool_progress`
+  heartbeats while hooks run long; `forkSession()` and `getSessionMessages`
+  compaction fixes; `canUseTool` no longer suggests allow rules for writes to
+  `.git` or `.claude`.
+- **RUNTIME fixes:** `/compact` no longer summarizes away an unanswered
+  message; a resumed session no longer joins the next message to an old
+  interrupted one; non-streaming requests recover from the errors streaming
+  ones do; memory spike after Claude changes a very large file fixed;
+  finished subagent transcripts are freed sooner.
+- **HARNESS:** a long list of Bash permission and sandbox fixes (rules through
+  `sudo`/`env`, wildcard allow rules, `rm` judged from the wrong folder, Write
+  past a Read deny, the sandbox switching off mid-session). The sandbox now
+  refuses `git worktree add/move/remove` and commits in other worktrees; this
+  repo's `.claude/settings.json` does not enable the sandbox, so worker
+  sessions are unaffected. `--permission-mode auto` falls back to Manual when
+  auto mode is unavailable. The laptop already runs 2.1.323.
+- **Sources:** [SDK 0.3.323](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03323), [Claude Code 2.1.323](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21323)
 
 ### Codex 0.167.2 — HELD with 0.165.0–0.167.1, nothing relevant (published 2026-11-11T22:44Z)
 

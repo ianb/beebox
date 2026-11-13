@@ -38,7 +38,10 @@ own file by that box's user only.
 
 ## Rollback
 
-Any commit in history redeploys with one command (full pipeline — build,
+Each deploy installs into its own release and switches `/opt/beebox` to it;
+a failure after the switch rolls back to the previous release by itself when
+no box applied a migration that release does not know
+([releases](../docs/server/deploying.md#releases)). Any commit in history redeploys with one command (full pipeline — build,
 frozen install, restart, healthcheck — so a rollback is as safe as a deploy):
 
 ```bash
