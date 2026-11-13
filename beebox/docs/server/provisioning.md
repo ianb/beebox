@@ -81,7 +81,7 @@ Then run `deploy/deploy.sh` from a checkout whose `target.env` names the server,
 - Users `beebox` (hub) and `beebox-sched` (scheduler), group `beebox-boxes`
 - The tmpfiles rules for `/run/beebox`, `/var/lib/beebox`, `/var/cache/beebox`, `/var/log/beebox` and `/etc/beebox`, and `/etc/beebox/box.env`
 
-`provision.sh` runs once as root after cloud-init finishes and before the first deploy: GitHub host keys, git identity, the `/home/beebox/.env` skeleton, Claude Code transcript retention, the nightly `claude-update` timer, and the Docling model pre-fetch into `/var/cache/beebox/hf` (skipped, with a message, until the first deploy provides the tree; pass the checkout path as `$1`). `setup-server.sh` is a retired stub that exits 1.
+`provision.sh` runs once as root after cloud-init finishes and before the first deploy: GitHub host keys, git identity, the `/home/beebox/.env` skeleton, Claude Code transcript retention, the nightly `claude-update` timer, the call relay's `turn-server` secret, and the Docling model pre-fetch into `/var/cache/beebox/hf` (skipped, with a message, until the first deploy provides the tree; pass the checkout path as `$1`). `setup-server.sh` is a retired stub that exits 1.
 
 **Neither runs on deploy.** `deploy.sh` owns everything repo-shaped: the tree under `/opt/beebox`, the hub, scheduler and box units, sudoers, the helpers, and the nginx site. The nginx site file lives in
 `nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
@@ -231,7 +231,13 @@ everyone. There is no TLS listener. `bin/deploy-status` prints a Relay line.
 `server-bin/bbx-turn-install.smoke.sh` runs the helper against real coturn in a
 Lima VM; run it after changing the helper or the template.
 
-**To turn it on**, as the hub user on the server:
+**A new host gets it automatically.** `hetzner/provision.sh` writes the
+`turn-server` entry from a fresh secret and the host's public addresses (it
+skips a host with no public IPv4 and never replaces an existing entry). The
+first deploy then starts coturn, and `add-box.sh` grants each box as it is
+added.
+
+**To turn it on by hand** (a host provisioned before this), as the hub user:
 
 1. `openssl rand -hex 32` for the secret; `ip -br addr` for the public
    addresses.
