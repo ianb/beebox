@@ -15,6 +15,7 @@ export interface LoadedTeaModule {
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
   sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
+  activity?: (model: unknown) => Record<string, unknown>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -162,5 +163,12 @@ export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
     throw new CliError({ detail: "the \"sound\" export must be a function sound(model, p) returning voices" });
   }
   const sound = readFn<NonNullable<LoadedTeaModule["sound"]>>(mod, "sound");
-  return { params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw, ...(sound === undefined ? {} : { sound }) };
+  if (mod["activity"] !== undefined && typeof mod["activity"] !== "function") {
+    throw new CliError({ detail: "the \"activity\" export must be a function activity(model) returning an object" });
+  }
+  const activity = readFn<NonNullable<LoadedTeaModule["activity"]>>(mod, "activity");
+  return {
+    params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw,
+    ...(sound === undefined ? {} : { sound }), ...(activity === undefined ? {} : { activity }),
+  };
 }

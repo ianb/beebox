@@ -463,6 +463,26 @@ typed; keys typed into it are not `keydown` msgs. Use `u.handled` and a check
 button, or check on each edit, as the exercise needs. Only `mountSketch` figures
 place inputs so far; the React figure and the playground keep the panel.
 
+## Activity
+
+An optional `activity(model)` export turns the state into a small data
+object, the way `draw` turns it into pixels:
+
+```ts
+export function activity(model: DeepReadonly<Model>): Record<string, unknown> {
+  return { molecules: model.molecules.map(formula), openBonds: openBonds(model) };
+}
+```
+
+After an input `update` handled (it called `u.handled`) or a param change,
+the runtime calls it on the new model and adds the result as `activity` to
+the event it streams to the host (`onEvent`). Headless transcripts show it as
+an `activity {…}` line. Keep it pure and small: what the state means, not
+the whole model. If it throws or returns a non-object, the event goes without
+it and the console warns once; the sketch keeps running. What the host does
+with it is the host's business: a beebox figure logs it as the person's
+activity for the chat agent.
+
 ## Events file
 
 The format is in the [README](./README.md#events-file).

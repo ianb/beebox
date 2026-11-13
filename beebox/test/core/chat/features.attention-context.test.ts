@@ -30,7 +30,7 @@ void test("line 12", async (t) => {
 
   t.check(composeChatAppSnapshot(fields), "<chat-app open-card=\"_content/house/Report.doc.card\" surface=\"card\" transcript=\"hidden\"/>");
 
-  t.check(extractCardFields({ openCard: "_content/stale.doc.card", cardActivity: ["modified"], cardState: { modified: "stale details" }, viewContext: { surface: "dashboard", transcript: "hidden" } }), {
+  t.check(extractCardFields({ openCard: "_content/stale.doc.card", viewContext: { surface: "dashboard", transcript: "hidden" } }), {
     viewContext: {
       surface: "dashboard",
       transcript: "hidden",
@@ -70,20 +70,17 @@ void test("Invalid URLs and hidden form data cannot become implicit context at t
   });
 });
 
-// A queued turn retains the last snapshot. Activity from a different subject does
-// not get relabeled as activity on the current card. Text and explicit selections
+// A queued turn retains the last snapshot. The open card follows the latest subject. Text and explicit selections
 // remain in the original messages.
 void test("A queued turn retains the last snapshot.", async (t) => {
-  const first = buildSendInput({ text: "first", images: undefined, channel: undefined, cardFields: extractCardFields({ viewContext: { surface: "card", focusedRef: "_content/A.doc.card", transcript: "visible" }, cardActivity: ["modified"], cardState: { modified: "changed A" } }) });
-  const second = buildSendInput({ text: "second", images: undefined, channel: undefined, cardFields: extractCardFields({ viewContext: { surface: "card", focusedRef: "_content/B.doc.card", transcript: "hidden" }, cardActivity: ["scrolled"], cardState: { scrolled: "0.6" } }) });
+  const first = buildSendInput({ text: "first", images: undefined, channel: undefined, cardFields: extractCardFields({ viewContext: { surface: "card", focusedRef: "_content/A.doc.card", transcript: "visible" } }) });
+  const second = buildSendInput({ text: "second", images: undefined, channel: undefined, cardFields: extractCardFields({ viewContext: { surface: "card", focusedRef: "_content/B.doc.card", transcript: "hidden" } }) });
   const combined = combineQueuedInputs([first, second]);
   t.check(combined, {
     text: "first\n\nsecond",
     images: [],
     viewContext: { surface: "card", focusedRef: "_content/B.doc.card", transcript: "hidden" },
     openCard: "_content/B.doc.card",
-    cardActivity: ["scrolled"],
-    cardState: { scrolled: "0.6" },
   });
   t.check(combineQueuedInputs([first, { text: "dashboard", viewContext: { surface: "dashboard", transcript: "hidden" } }]), {
     text: "first\n\ndashboard",

@@ -1,6 +1,6 @@
 ---
 title: "Activity log: what a person did in views and figures, on demand for the chat agent; figures lose file writes"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues:
   - ../../../issues/decisions/2026-11-13-view-file-writes-too-broad.md
@@ -81,7 +81,7 @@ moves up the ladder.
 
 Juni opens the molecule builder beside the chat. She adds C, H, H, then
 removes an H. Each handled click is an `onEvent` entry from canvas-loop with
-the sketch's `summary(model)` (molecules and open bonds). The figure harness
+the sketch's `activity(model)` (molecules and open bonds). The figure harness
 turns each into an activity entry and queues it. The queue posts batches to
 `activity.record` in order, one request at a time. The server stamps time,
 user and chat, and appends JSON lines to `.beebox/activity.jsonl`. Juni types
@@ -99,7 +99,7 @@ the log until rotation.
   own log.
 - Chosen: four tracks.
   - A: read-only figures (about 40 source and 30 test lines).
-  - B: canvas-loop `summary` export on `onEvent` entries (about 40 source and 40 test lines).
+  - B: canvas-loop `activity` export on `onEvent` entries (about 40 source and 40 test lines).
   - C: activity log, record route, send hint, `bbx chat activity` (about 450 source and 300 test lines).
   - D: page-side queue and the figure and view reporters (about 150 source and 120 test lines).
 - Docs: card-figure instructions, views doc, TEA.md, agent guide, agent-changes (about 120 lines).
@@ -136,7 +136,7 @@ the log until rotation.
   (`src/core/chat/features.ts`), called at `src/core/chat/session/run/start.ts:211`.
   Reuse: add one `<activity>` child.
 - Figure activity: `figure-canvas-loop.ts:77` (`reportActivity("explored", detail)`)
-  from canvas-loop `onEvent`. Extend with the summary and the log.
+  from canvas-loop `onEvent`. Extend with the sketch's activity and the log.
 - Session from the agent's environment: `resolveChatSessionId()`
   (`src/core/chat/session/id-file.ts:107`, `BBX_CHAT_SESSION_ID`, then the id
   file). Reuse. Do not copy `whats-changed`'s default of the most active
@@ -188,8 +188,9 @@ No decision depends on an external premise.
   until its first message is accepted. The page tags entries with its own
   key for that conversation; the first send carries the key; the server binds
   the key to the assigned session, and those entries count as that session's.
-- **summary** (new, canvas-loop): an optional pure export
-  `summary(model) => JSON object`; the runtime adds its value to each handled
+- **activity export** (new, canvas-loop): an optional pure export
+  `activity(model) => JSON object`, a second `draw` that turns the state into
+  data instead of pixels; the runtime adds its value as `activity` to each handled
   `onEvent` entry. canvas-loop does not know where it goes.
 - **activity queue** (new, frontend): the page's ordered, bounded,
   best-effort sender.
@@ -209,15 +210,15 @@ No decision depends on an external premise.
 - First chunk: the type, the pick, a test that `figure.file` has no write
   member, the doc change.
 
-### Track B: canvas-loop `summary`
+### Track B: canvas-loop `activity` export
 
-- What: a sketch may export `summary(model): Record<string, unknown>`. After a
+- What: a sketch may export `activity(model): Record<string, unknown>`. After a
   dispatch that handled a name or changed a param, the runtime calls it on the
-  new model and adds `summary` to the `onEvent` entry. Headless transcripts
+  new model and adds `activity` to the `onEvent` entry. Headless transcripts
   show it on the event line.
 - Why: the host needs the state after an action without wrapping `update`.
-- Direction: `summary` is pure and part of the cycle. An exception in it is
-  caught: the entry goes without `summary` and the console warns once; the
+- Direction: `activity` is pure and part of the cycle. An exception in it is
+  caught: the entry goes without `activity` and the console warns once; the
   sketch keeps running. No card, chat or file names in canvas-loop.
 - First chunk: browser runtime and headless runner, tests, TEA.md.
 
@@ -252,10 +253,16 @@ No decision depends on an external premise.
   - Each entry carries the chat the page has selected and the last
     `messageId` the page sent in it.
 - Figure reporter: the harness's `onEvent` wrapper (`figure-canvas-loop.ts`)
-  pushes `explored` entries with `detail` and `data: summary`, and keeps the
+  pushes `explored` entries with `detail` and `data: activity`, and keeps the
   latest-wins `reportActivity` call.
 - View reporter: `reportActivity(kind, detail, data?)` pushes an entry and
-  keeps the snapshot. `scrolled` is not logged.
+  keeps the snapshot. `reportActivity(kind, detail, activity?)`: the third
+  argument is the same kind of data object a figure's `activity` export gives.
+- Scroll, views only: the companion pane reports the topmost visible heading
+  of the view's content, once scrolling has settled (about 1 second without
+  movement) and the heading differs from the last one logged:
+  `scrolled` with `detail: "Moles and mass"`. Raw scroll positions are never
+  logged; a view with no headings logs no scroll.
 - Where: the companion pane beside a chat, where `reportActivity` is bound
   today (`WorkspaceCanvas/view.tsx:35`). On a card page or inline, views get
   a no-op reporter (`src/frontend/src/components/FileView/AgentViewRenderer.tsx:65`);
@@ -288,8 +295,8 @@ None. The view-and-embedded-figure message channel is a later plan.
 | A new chat has no session id yet | to add (pending key bound at first send) | key binding | n/a |
 | An entry lands after the send, before the reply ends | to add (late entry falls in the next window) | sequence cursor | n/a |
 | Queued sends merged into one turn | to add | the cursor advances once per turn | n/a |
-| `summary` throws | to add | caught at the enrichment step; the entry goes without `summary`; one console warning | console |
-| Scroll floods the queue | to add | `scrolled` is not logged (it stays in the latest-wins snapshot) | n/a |
+| `activity` throws | to add | caught at the enrichment step; the entry goes without `activity`; one console warning | console |
+| Scroll floods the queue | to add | only a settled change of topmost heading is logged | n/a |
 | A box figure still calls `figure.file.appendFile` | courseware's helper checks `file?.appendFile === undefined` and returns | box-side | silent: its log stops growing; agent-changes says so |
 | Rotation during a read | to add | the reader reads `.1` then the live file | n/a |
 
@@ -345,7 +352,7 @@ run it on test1.
 
 - Unit tests: the writer (truncate, rotate, sequence across rotation, read
   both), the cursor and window (late entry, merged sends, pending key), entry validation, the
-  page queue with a fake transport, canvas-loop `summary` on `onEvent`.
+  page queue with a fake transport, canvas-loop `activity` on `onEvent`, the settled-heading scroll reporter.
 - A route test for `activity.record` and the send hint.
 - A CLI test for `bbx chat activity` with `BBX_CHAT_SESSION_ID`.
 - A browser check: a figure beside a chat, actions, a message, the hint.
@@ -375,3 +382,66 @@ boxholder's call.
 6. Page and inline views have a no-op reporter. Accepted: scope stated as the companion pane.
 7. Scroll reports would evict useful entries. Accepted: `scrolled` is not logged.
 8. "Rotates away after 30 days" overstated the notification log's rotation. Accepted: wording made approximate.
+
+## Boxholder decisions after review (2026-11-13)
+
+- Names: one word, "activity", end to end: canvas-loop's `activity(model)`
+  export and the `activity` field on `onEvent` entries, `reportActivity`, the
+  `<activity>` hint, `bbx chat activity`, `.beebox/activity.jsonl`. canvas-loop
+  keeps `onEvent` for its stream of all inputs.
+- Scroll: views only, as the topmost heading after scrolling settles; not
+  pixels. Supersedes review item 7's "not logged".
+- No hard block on figure writes for now and no iframes; the gap goes in the
+  security report and an issue.
+
+## Code review (codex gpt-6-sol), two rounds
+
+Round 1, all fixed: the new-chat binding race; a timed-out batch written after a
+later one; a send waiting up to 5 s on the activity lock (now 250 ms, then no
+hint); a rotation during a read; the server time stamped before the lock;
+heading scroll on non-view cards; headless JSON of a cyclic activity object.
+
+Round 2:
+- New chat: the command waits up to 2 s for the binding; if the cursor is
+  still missing it says the chat may not be linked yet and to retry, instead
+  of "No activity". Fixed.
+- A request with no answer stalled the queue forever. Fixed: a 30 s request
+  timeout counts as a failure, so the one-minute drop applies. Accepted risk:
+  a server stalled past 30 s can still save that batch late, out of order or
+  twice (best effort, per the boxholder's "nothing should block").
+- "After your message" now compares `seq` with the cursor's `hinted`; times
+  could tie to the millisecond. Fixed.
+- The existing latest-wins `scrolled` snapshot still fires for every card.
+  Declined: that hint predates this plan; the boxholder's "views only" was
+  about the log, which logs headings for agent views only.
+
+Size: about 2,080 changed lines (1,162 source, 865 tests, 57 docs) against an
+estimate of about 1,300: a BIG CHANGE, reported to the boxholder after the
+fact. Most of the growth is the page side (queue, chat-machine key, scope
+contexts, the reporter type in every renderer).
+
+## Track E: the log replaces the per-send snapshot (boxholder, 2026-11-13)
+
+Boxholder: "I want to switch all activity over to this new system, including
+for views." The latest-wins `<card-activity>` snapshot that rode each send
+goes; the log is the only activity path.
+
+- Frontend: `CardActivityStore`, `useCardSend`'s report/capture of kinds and
+  details, and `cardActivity`/`cardState` on the send path go. The send keeps
+  `openCard`/`viewContext`: that is attention, not activity.
+- One reporter: a hook bound to a card logs `{card, via?}` into the chat's
+  scope when the component is inside a companion-pane card, and does nothing
+  elsewhere. Views, figures, the pane's `navigated` and the renderer switch
+  ("viewing as …") all call it; the `reportActivity` prop threading through
+  FileView goes.
+- Scroll: the pane logs the settled topmost heading for any card whose
+  content has headings (views and documents). The scroll-fraction snapshot
+  goes. Figures have no headings and log no scroll.
+- Server: `cardActivity`/`cardState` leave the send body (unknown keys from an
+  old open tab are stripped, not rejected), `ChatSendInput`, the turn merge,
+  and `start.ts`; `renderActivityChildren` goes. Old transcripts keep their
+  `<card-activity>` tags; tag parsing for display stays.
+- The agent sees the `<activity entries cards>` hint and runs
+  `bbx chat activity`. The prompt and the views guide drop the
+  `<card-activity>` text.
+- NOT in scope: views outside the companion pane (no chat to attribute to).

@@ -19,10 +19,12 @@ export interface RuntimeLog {
  * `u.handled(...)` acknowledged) and `changed` (did `update` return a new model
  * reference). Both are present on interaction events (mouse/key/trigger), absent
  * on `param` (a param change is definitionally applied — no separate verdict).
+ * A param change or a handled input also carries `activity` when the sketch
+ * exports `activity(model)` (core/activity.ts).
  * Hosts render the verdict however they like; the on-disk events log
  * (`eventsJSON`) stays the clean `TeaScriptEvent` shape.
  */
-export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean };
+export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean; activity?: Record<string, unknown> };
 
 export interface RuntimeDeps {
   module: PlaygroundModule;

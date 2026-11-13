@@ -17,9 +17,9 @@ import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../../services/claude-chat-content.js";
-import { isActivityKind, type CardStateDetails } from "../../../core/chat/card-activity.js";
 import type { ChatSendContextWithView } from "../../chat-runtime.js";
 import type { ChatSendInput } from "../../../core/chat/session/run/core.js";
+import type { ActivityTurn } from "../../../core/chat/session/messages.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
@@ -94,25 +94,18 @@ export const sendBodySchema = z.object({
   /** Frozen content attention at the send gesture; never a session target. */
   viewContext: attentionSnapshotSchema.optional(),
   /**
-   * What the user did to the companion-pane card since the agent's last
-   * reply (`scrolled`/`navigated`/`explored`/`modified`), surfaced as the
-   * `card-activity` snapshot attribute. Unrecognized kinds are dropped at
-   * serialization. Omitted when empty.
-   */
-  cardActivity: z.array(z.string()).optional(),
-  /**
-   * Per-kind free-text detail for the activity (e.g. the embedding query
-   * typed), surfaced as `<card-activity>` snapshot child element text. Keys are
-   * activity kinds; non-kind keys and non-string values are dropped.
-   */
-  cardState: z.record(z.string(), z.unknown()).optional(),
-  /**
    * Where the user is sending from, decided by the client (only it knows
    * whether the native shell is in effect) and surfaced as the `channel`
    * snapshot attribute. Absent from an old bundle, in which case the
    * route falls back to classifying the User-Agent (see `resolveChannel`).
    */
   channel: z.enum(CHAT_CHANNELS).optional(),
+  /**
+   * The page's key for a new conversation that has no session id yet, the same
+   * key it put on its activity entries. The server binds it to the session
+   * once the id is assigned (core/activity/cursor.ts). Sent on the first send.
+   */
+  pendingChat: z.string().min(1).max(200).optional(),
 });
 
 export type SendBody = z.infer<typeof sendBodySchema>;
@@ -172,27 +165,17 @@ export function resolveChannel(
 /**
  * Normalize the companion-pane fields off a send body into the shape
  * `ChatSendInput` wants: `openCard` (a non-empty path),
- * `cardActivity` (valid kinds only), `cardState` (per-kind detail strings). Everything is filtered
- * defensively at this parse boundary; absent/invalid fields are simply omitted.
+ * and the attention snapshot. Absent fields are omitted. An old open tab may still send
+ * `cardActivity`/`cardState`; the body schema strips unknown keys, so they never get here.
  */
 export function extractCardFields(
-  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState" | "viewContext">,
+  body: Pick<SendBody, "openCard" | "viewContext">,
 ): SendCardFields {
   const out: SendCardFields = {};
   if (body.viewContext !== undefined) {
     out.viewContext = body.viewContext;
     if (body.viewContext.focusedRef !== undefined) out.openCard = parseRef(body.viewContext.focusedRef).path;
   } else if (typeof body.openCard === "string" && body.openCard !== "") out.openCard = body.openCard;
-  if (body.viewContext !== undefined && body.viewContext.focusedRef === undefined) return out;
-  const kinds = Array.isArray(body.cardActivity) ? body.cardActivity.filter(isActivityKind) : [];
-  if (kinds.length > 0) out.cardActivity = kinds;
-  const details: CardStateDetails = {};
-  if (typeof body.cardState === "object") {
-    for (const [kind, detail] of Object.entries(body.cardState)) {
-      if (isActivityKind(kind) && typeof detail === "string" && detail !== "") details[kind] = detail;
-    }
-  }
-  if (Object.keys(details).length > 0) out.cardState = details;
   return out;
 }
 
@@ -202,15 +185,18 @@ export function extractCardFields(
  * optional-field filtering lives here once rather than at each call site.
  */
 export function buildSendInput(
-  { text, images, channel, cardFields }: {
+  { text, images, channel, cardFields, activityTurn }: {
     text: string;
     images: SendBody["images"];
     channel: ChatChannel | undefined;
     cardFields: SendCardFields;
+    /** Marks a person's send, which gets the activity hint (`pendingChat` as the page sent it). */
+    activityTurn?: ActivityTurn;
   },
 ): ChatSendInput {
   return {
     text,
+    ...(activityTurn !== undefined ? { activityTurn } : {}),
     ...(images ? { images } : {}),
     ...(channel !== undefined ? { channel } : {}),
     ...cardFields,

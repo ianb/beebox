@@ -16,7 +16,7 @@ import { buildTimezoneContext } from "../../../box/config.js";
 import { resolveStartEngine } from "../engine.js";
 import { buildScriptEnv } from "../../../script-env/core.js";
 import { composeSendSnapshot, type HealthGate } from "../../../session-context.js";
-import { renderActivityChildren } from "../../card-activity.js";
+import { advanceForSend, renderActivityHint } from "../../../activity/cursor.js";
 import {
   chatSystemPrompt,
   NARRATION_OVERLAY,
@@ -193,29 +193,27 @@ export async function buildBackendStartOptions(
  */
 export async function composeTurnContent(
   boxRoot: string,
-  { rawInput, features, sessionStart, healthGate, sessionId }: {
+  { rawInput, features, sessionStart, healthGate, sessionId, chatId }: {
     rawInput: ChatSendInput;
     features: FeatureStore;
     sessionStart: boolean;
     healthGate?: HealthGate;
     /** Whose run-ended note (`../ended-note.ts`) to carry; it rides inside the snapshot so the person's message stays clean. */
     sessionId: string | null;
+    /** The session's id for the activity cursor, whether or not a run is still closing. */
+    chatId: string | null;
   },
 ): Promise<{ content: ChatContentBlock[]; dispatched: () => void }> {
   // Removed only once the turn is dispatched (`dispatched`): a failed start keeps it for the next turn.
   const runEnded = pendingRunEndedNote(boxRoot, sessionId);
   await features.ensureLoaded();
   // Omit-when-empty: `undefined` (not `""`) drops the attribute, since the
-  // snapshot pipeline renders empty strings. `card-activity` collapses to
-  // `undefined` when nothing survives the canonical join.
+  // snapshot pipeline renders empty strings.
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
-  const activityChildren = [renderActivityChildren({
-    kinds: rawInput.cardActivity ?? [],
-    details: rawInput.cardState ?? {},
-    ...(openCard !== undefined ? { openCard } : {}),
-  }), runEnded.element ?? ""].filter((child) => child !== "").join("\n");
+  const activityHint = await activityHintFor(boxRoot, { rawInput, chatId });
+  const activityChildren = [activityHint, runEnded.element ?? ""].filter((child) => child !== "").join("\n");
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     ...(rawInput.viewContext !== undefined ? { viewContext: rawInput.viewContext } : {}),
@@ -233,4 +231,18 @@ export async function composeTurnContent(
   const imgCount = (input.images ?? []).length;
   log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
   return { content: toBackendContent(content), dispatched: runEnded.clear };
+}
+
+/** The `<activity>` snapshot child for a person's turn; "" for any other turn or when the cursor cannot be advanced. */
+async function activityHintFor(
+  boxRoot: string,
+  { rawInput, chatId }: { rawInput: ChatSendInput; chatId: string | null },
+): Promise<string> {
+  if (rawInput.activityTurn === undefined) return "";
+  try {
+    return renderActivityHint(await advanceForSend(boxRoot, { sessionId: chatId, pendingChat: rawInput.activityTurn.pendingChat }));
+  } catch (e) {
+    console.warn("[chat] could not advance the activity cursor in time; this turn carries no activity hint and its entries fall in the next window:", e);
+    return "";
+  }
 }

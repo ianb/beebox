@@ -53,6 +53,7 @@ import { useFragmentJump } from "../../hooks/useFragmentJump";
 import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
 import { usePointSelection } from "../point-selection-context";
 import { StatusMessage } from "../ui/StatusMessage";
+import { useCardActivityReporter } from "../../lib/activity/scope";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -249,7 +250,7 @@ export function FileView(props: FileViewProps) {
   return <RuntimeLintViewScope><FileViewContent {...props} pointMode={pointMode} onExitPointMode={onExitPointMode} /></RuntimeLintViewScope>;
 }
 
-function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, pointMode, onExitPointMode, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
+function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, pointMode, onExitPointMode, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();
@@ -267,10 +268,11 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
+  const reportActivity = useCardActivityReporter(path);
   const selectForPath = useCallback((name: string | null) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
-    // "explored" action. No-op outside the companion pane (reportActivity unset).
-    reportActivity?.("explored", name === null ? "using preferred view" : `viewing as ${name}`);
+    // "explored" action. Logged only in the companion pane.
+    reportActivity("explored", name === null ? "using preferred view" : `viewing as ${name}`);
     if (onSelectRenderer) {
       onSelectRenderer(name);
       return;
@@ -310,7 +312,6 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
       active={active} binding={binding} data={data} path={path} mode={mode} workspacePdf={workspacePdf}
       params={params} viewState={ownedViewState} canPushViewState={canPushArg}
       {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
-      {...(reportActivity !== undefined ? { reportActivity } : {})}
       onNavigate={onNavigate} caption={caption}
       renderInline={(inlineTarget, opts) => (
         <FileView

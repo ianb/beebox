@@ -56,7 +56,7 @@ void test("card params the module cannot honor warn once each", async (t) => {
 void test("activity reports params and handled names after the sketch's onEvent", async (t) => {
   const log: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], reportActivity: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
   wrapped.mountSketch(mount, { module: {}, onEvent: (event) => { log.push(`sketch ${event.type}`); } });
   const events: EmittedEvent[] = [
     { frame: 1, type: "param", name: "mass", value: 2.5 },
@@ -79,8 +79,24 @@ void test("activity reports params and handled names after the sketch's onEvent"
 void test("a long detail is capped at 200 characters", async (t) => {
   const details: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], reportActivity: (_kind, detail) => { details.push(detail ?? ""); } });
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (_kind, detail) => { details.push(detail ?? ""); } });
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["n".repeat(300)] });
   t.check(details, [`pressed ${"n".repeat(191)}…`]);
+});
+
+// The sketch's `activity(model)` value rides along as the third argument.
+// Events with nothing handled report nothing.
+void test("reports carry the sketch's activity", async (t) => {
+  const reported: unknown[][] = [];
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (...args) => { reported.push(args); } });
+  wrapped.mountSketch(mount, { module: {} });
+  calls[0]?.onEvent?.({ frame: 1, type: "mousedown", x: 4, y: 5, handled: ["add H"], changed: true, activity: { molecules: ["H2"] } });
+  calls[0]?.onEvent?.({ frame: 2, type: "mousemove", x: 4, y: 6 });
+  calls[0]?.onEvent?.({ frame: 3, type: "param", name: "mass", value: 2 });
+  t.check(reported, [
+    ["explored", "pressed add H", { molecules: ["H2"] }],
+    ["explored", "set mass = 2", undefined],
+  ]);
 });

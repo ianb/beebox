@@ -204,13 +204,18 @@ The default export is called as \`(cl, { mount, figure })\`:
   \`onParamsChange\`, \`onEvent\`, \`onError\`.
 - \`mount\` — the element to mount into.
 - \`figure.params\` (embed values), \`figure.data\` (the card's \`data:\`),
-  \`figure.meta\` (frontmatter), \`figure.file\` (the views file helpers:
-  \`readFile\`, \`fileUrl\`, \`writeFile\`, \`appendFile\`, …).
+  \`figure.meta\` (frontmatter), \`figure.file\` (read-only file helpers:
+  \`readFile\`, \`fileUrl\`, \`imageUrl\`; a figure cannot write files, so one
+  that must save lives inside a view).
 
 What the learner does in a figure open beside the chat reaches you as
 \`explored\` activity, as a view's does: param changes (\`set speed = 2\`) and
 inputs the sketch acknowledged with \`u.handled(name)\` (\`pressed tray-sugar\`).
 Name what \`update\` handles with \`u.handled\`, and that is what you hear.
+Every handled action is also kept in the activity log (\`bbx chat activity\`),
+with the value of the sketch's optional \`export function activity(model)\`
+(a small JSON object of the state after the action), so the log can say what
+the learner built, not only what they pressed.
 
 ### Checking a canvas-loop figure
 
