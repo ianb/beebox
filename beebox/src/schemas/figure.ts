@@ -208,14 +208,14 @@ The default export is called as \`(cl, { mount, figure })\`:
   \`readFile\`, \`fileUrl\`, \`imageUrl\`; a figure cannot write files, so one
   that must save lives inside a view).
 
-What the learner does in a figure open beside the chat reaches you as
-\`explored\` activity, as a view's does: param changes (\`set speed = 2\`) and
-inputs the sketch acknowledged with \`u.handled(name)\` (\`pressed tray-sugar\`).
-Name what \`update\` handles with \`u.handled\`, and that is what you hear.
-Every handled action is also kept in the activity log (\`bbx chat activity\`),
-with the value of the sketch's optional \`export function activity(model)\`
-(a small JSON object of the state after the action), so the log can say what
-the learner built, not only what they pressed.
+What the learner does in a figure open beside the chat goes to the activity
+log as \`explored\` entries, as a view's calls do: param changes
+(\`set speed = 2\`) and inputs the sketch acknowledged with \`u.handled(name)\`
+(\`pressed tray-sugar\`). Name what \`update\` handles with \`u.handled\`, and
+that is what you read. Each entry carries the value of the sketch's optional
+\`export function activity(model)\` (a small JSON object of the state after
+the action), so the log can say what the learner built, not only what they
+pressed. Your message shows only a count; \`bbx chat activity\` lists them.
 
 ### Checking a canvas-loop figure
 
@@ -233,7 +233,8 @@ bbx figure run <card path>          # or no path: every canvas-loop figure in th
   text that overlaps other text, a character the font cannot draw), errors, and
   each scripted input with what it did: \`mousedown (200,150) → pressed\`
   (names from \`u.handled\`), \`Δmodel\` when the model changed, \`(unhandled)\`
-  when nothing happened. The command prints the warnings and errors and exits
+  when nothing happened. With an \`activity\` export, each handled input adds
+  \`activity {…}\`: the data the log would get. The command prints the warnings and errors and exits
   non-zero on an error.
 - Script input with an events file beside the entry,
   \`<entry stem>-events.json\`; it is used automatically and is the figure's
