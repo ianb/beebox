@@ -1,6 +1,6 @@
 ---
 title: "Every chat reload flashes a \"Choosing conversation…\" notice, even when the URL names the conversation"
-workstream: unattached
+workstream: direct-chat-load
 area: beebox
 discovered-by: Ian
 filed-by: agent

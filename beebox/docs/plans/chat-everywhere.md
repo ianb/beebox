@@ -842,21 +842,21 @@ bootstrap or reconnect history refresh. This must precede history lookup: after
 a restart, raw history refresh for an empty Claude chat on a Codex-default
 box otherwise queries the wrong engine, bypassing bootstrap's unavailable answer.
 The server still refuses IDs already present in committed history/transcripts.
-Explicitly requested unknown IDs, foreign-scope receipts, and still-unavailable
-results do not become new chats automatically. An implicitly selected old chat
-with a missing local transcript starts fresh, as established by the main-branch
-resolver correction. Receipts are metadata, not user-message storage; they
+A load always lands on a usable chat (superseded by `direct-chat-load.md`): an
+id this box cannot open, named or remembered, becomes a new chat in the known
+place. A receipted chat whose recovery failed gets one more recovery attempt
+first; if that fails too, the load reports the error with Retry instead of
+switching chats. Receipts are metadata, not user-message storage; they
 last for the tab and are removed before a send or deletion attempt, when a
 user-message event is observed, or when bootstrap observes a real transcript.
 
-Already-lost IDs from before this change have no receipt. The unavailable
-notice offers an explicit Start new conversation action that retains the card
-query and unsent draft. Enter respects the same disabled-recipient condition
+Already-lost IDs from before this change have no receipt; they now open as a
+new chat that retains the card query and unsent draft. Enter respects the same disabled-recipient condition
 as the send button, before capturing any emission; it no longer produces the
 misleading Message kept for recovery toast for that blocked gesture.
 
 This recovery is same-tab only. A copied old empty-session URL without its
-receipt still requires an explicit new conversation. Re-reservation preserves
+receipt opens a new conversation. Re-reservation preserves
 the stored context/engine/model; feature defaults are recomputed by the existing
 reservation endpoint, so feature edits that existed only in the lost server
 reservation are not recovered by this correction.

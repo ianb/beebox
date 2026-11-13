@@ -22,6 +22,7 @@ import { invariant } from "@shared/invariant";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
 import { z } from "zod";
 
+const SLOW_RESOLUTION_MS = 1000;
 const shellSearch = z.object({ nativeComposer: z.coerce.string().optional(), capture: z.coerce.string().optional() });
 export function BoxConversationShell() {
   const conversation = useBoxConversation();
@@ -53,17 +54,8 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
       void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }), state: explicitConversationHistoryState({}) });
       return;
     }
-    void conversation.select({ kind: "session", sessionId: id, named: true });
+    void conversation.select({ kind: "session", sessionId: id });
     if (workspace) workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" });
-  }
-  function handleNewConversation() {
-    const contextDir = conversation.selection.kind === "ready" ? conversation.selection.target.contextDir : conversation.selection.contextDir;
-    if (route.chatPage) {
-      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...routeSearch, session: "new", contextDir }),
-        state: (old) => ({ ...old, bbxConversation: undefined }) });
-      return;
-    }
-    void conversation.select({ kind: "new", contextDir });
   }
   const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(storageScope));
   const publicationRevision = useRef(0);
@@ -78,9 +70,9 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
     postNativeMessage(window, { channel: "beeboxComposerBinding", payload: publication });
   }, [routeReady, boxSlug, conversation.selection, attention, workspace.ready]);
-  const handleRetry = conversation.retry;
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} />;
+  const handleRetry = conversation.retry;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     unstarted={conversation.unstarted}
@@ -105,15 +97,24 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
   />;
 }
 
-function ConversationNotice({ selection, onRetry, onNewConversation }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void }) {
-  if (selection.kind === "ready") return null;
+/**
+ * Loading goes straight to a conversation, so there is nothing to show while it
+ * resolves quickly; a slow load says so after a moment. Only a box that did not
+ * answer leaves a message, with Retry.
+ */
+function ConversationNotice({ selection, onRetry }: { selection: ConversationSelection; onRetry: () => Promise<void> }) {
+  const [slow, setSlow] = useState(false);
+  const resolving = selection.kind === "resolving";
+  useEffect(() => {
+    setSlow(false);
+    if (!resolving) return;
+    const timer = setTimeout(() => { setSlow(true); }, SLOW_RESOLUTION_MS);
+    return () => { clearTimeout(timer); };
+  }, [resolving]);
+  if (selection.kind === "ready" || (resolving && !slow)) return null;
+  if (selection.kind === "resolving") return <div className="px-3 py-2" role="status"><Text size="sm" tone="muted">Loading conversation…</Text></div>;
   return <div className="px-3 py-2" role="status">
-    <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>
-      {selection.kind === "unavailable" ? selection.reason : "Choosing conversation…"}
-    </Text>
-    {selection.kind === "unavailable" ? <>
-      <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button>
-      <Button id="bbx-conversation-new" size="sm" onClick={onNewConversation}>Start new conversation</Button>
-    </> : null}
+    <Text size="sm" tone="muted">{selection.reason}</Text>
+    <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button>
   </div>;
 }
