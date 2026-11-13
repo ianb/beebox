@@ -86,7 +86,7 @@ async function createRuntime(options: CreateModelRuntimeOptions): Promise<ModelR
 }
 
 /** A resume names a pi session with no file under the box's pi sessions directory. */
-export class PiSessionNotFoundError extends Error {
+class PiSessionNotFoundError extends Error {
   readonly sessionId: string;
 
   constructor(sessionId: string) {

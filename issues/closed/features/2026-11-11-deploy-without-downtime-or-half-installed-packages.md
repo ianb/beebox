@@ -1,12 +1,15 @@
 ---
 title: "Deploys stop the services for over a minute and leave box agents a half-installed package tree"
-workstream: unattached
+workstream: atomic-deploy
 area: beebox
 labels: [deploy, production]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — a box agent's report during a docs deploy, 2026-11-11"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-13):** Install-then-switch shipped in 7777a88de (beebox/docs/implemented-plans/atomic-deploy.md); first switch-over ran clean 2026-11-13. The box-docs light path is dropped (the boxholder judged it too obscure a case), the 'Bee Box is updating' message has little left to explain once no bbx run sees a partial tree, and the fast manual rollback is split out to issues/features/2026-11-13-deploy-fast-manual-rollback-command.md.
 
 Every deploy copies the build into `/opt/beebox` in place (`rsync --delete`),
 reinstalls packages, and restarts the hub and scheduler. `bin/deploy-status`
@@ -40,4 +43,14 @@ reports 66 to 84 seconds down per deploy on 2026-11-11. Two problems follow:
   The deploy window already writes a marker page for nginx
   (`beebox/deploy/server-bin/bbx-deploy-window`).
 
-Related: [release discipline and the update story](../decisions/2026-07-20-release-discipline-and-update-story.md).
+Related: [release discipline and the update story](../../decisions/2026-07-20-release-discipline-and-update-story.md).
+
+## Status 2026-11-13
+
+"Install, then switch" shipped on branch `worktree-atomic-deploy` (plan:
+`beebox/docs/plans/atomic-deploy.md`): each deploy installs into its own
+release directory, then switches `/opt/beebox` in one rename. Box agents no
+longer see a partial tree. Still open: the box-docs light path (second
+direction), the "Bee Box is updating" message (third direction; little left
+to explain after the switch), and a `deploy.sh --rollback` command (plan
+Track D, deferred). Issue left open for the light path.

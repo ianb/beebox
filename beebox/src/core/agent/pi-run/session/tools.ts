@@ -13,7 +13,7 @@ import { createBashToolDefinition, defineTool, type ToolDefinition } from "@eare
  * no local ripgrep/fd binary, pi downloads one from GitHub on first use. The
  * agent has `rg` through bash.
  */
-export const PI_BUILTIN_TOOLS = ["read", "bash", "edit", "write", "ls"] as const;
+const PI_BUILTIN_TOOLS = ["read", "bash", "edit", "write", "ls"] as const;
 
 /** The session variables pi's bash tool sets for the model to inspect (`tools/bash.js`). */
 const PI_SESSION_VARIABLES = ["PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"];

@@ -78,7 +78,7 @@ const PI_TOOL_CATEGORIZERS: Record<string, (args: Record<string, unknown>, acc: 
 };
 
 /** Behavior from a pi session's parsed records, in file order. */
-export function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>): AgentBehavior {
+function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>): AgentBehavior {
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
   const replyBlocks: ReplyBlock[] = [];

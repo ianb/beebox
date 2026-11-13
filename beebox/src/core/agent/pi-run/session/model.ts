@@ -36,7 +36,7 @@ const OPENROUTER_COMPAT = {
  * then undercounts; the cost line says so). With no listed output limit, the
  * context length is the ceiling.
  */
-export function piModelFromListing(listing: CatalogModel): PiModel {
+function piModelFromListing(listing: CatalogModel): PiModel {
   if (listing.contextLength === null) throw piModelUnusable(listing.id, NO_CONTEXT_LENGTH);
   const { promptPerMTok, completionPerMTok, cacheReadPerMTok } = listing.pricing;
   return {

@@ -31,7 +31,7 @@ export const CATCH_UP_MIN_HIDDEN_MS = 10_000;
 /** A refresh that lands sooner than this shows no label. */
 export const CATCH_UP_SHOW_DELAY_MS = 400;
 /** After this, stop claiming to catch up once no fetch is in flight. */
-export const CATCH_UP_MAX_MS = 20_000;
+const CATCH_UP_MAX_MS = 20_000;
 
 export interface CatchUpState {
   /** When the page was last hidden; null while visible. */

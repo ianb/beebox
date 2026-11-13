@@ -21,7 +21,7 @@ class DocsRefreshError extends Error {
 }
 
 /** A read, not a decision: stale generated output means work. */
-export async function docsRefreshHasWork(boxRoot: string): Promise<boolean> {
+async function docsRefreshHasWork(boxRoot: string): Promise<boolean> {
   return !(await generatedDocsAreCurrent(boxRoot));
 }
 

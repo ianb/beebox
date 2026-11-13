@@ -9,7 +9,7 @@ import { SITE_DOCS_PREFIX } from "./site-reference-links.js";
 
 // Frozen point-in-time snapshots: their broken/example links are intentional,
 // so --fix must not rewrite them (monorepo-relative prefixes).
-export const FROZEN_SCAN_PREFIXES = ["beebox/docs/reports/", "beebox/docs/user-stories/catalog/"];
+const FROZEN_SCAN_PREFIXES = ["beebox/docs/reports/", "beebox/docs/user-stories/catalog/"];
 
 // Generated emitter outputs quote other files' links verbatim (regenerate with
 // pnpm doc-graph / prompt-report); --fix must not touch them.

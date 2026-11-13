@@ -39,7 +39,7 @@ const FATAL_ERRORS: ReadonlySet<string> = new Set(["not-allowed", "service-not-a
  * context arrives). The prefix never shrinks; a later revision to a counted
  * word shows through because the text is rebuilt from the latest words.
  */
-export class StablePrefix {
+class StablePrefix {
   private words: string[] = [];
   private changedAt: number[] = [];
   private count = 0;

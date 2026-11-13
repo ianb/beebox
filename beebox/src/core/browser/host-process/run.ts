@@ -43,7 +43,7 @@ const DASHBOARD_READY_MS = 10_000;
 const KILL_GRACE_MS = 2000;
 const PARENT_POLL_MS = 2000;
 
-export class BrowserHostStartError extends Error {
+class BrowserHostStartError extends Error {
   override name = "BrowserHostStartError";
   constructor(readonly what: { readonly step: "not-installed" | "dashboard-start" | "dashboard-port"; readonly detail: string }) {
     super(`The box browser host could not start (${what.step}): ${what.detail}`);

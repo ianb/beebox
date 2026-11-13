@@ -17,7 +17,7 @@ import type { z } from "zod";
 /** better-sqlite3's default; node:sqlite's is 0, which fails on first contention. */
 const BUSY_TIMEOUT_MS = 5000;
 
-export class SqliteNoRowsStatementError extends Error {
+class SqliteNoRowsStatementError extends Error {
   override name = "SqliteNoRowsStatementError";
   constructor() {
     super("This statement does not return data");

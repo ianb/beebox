@@ -4,7 +4,7 @@
  * deferrable owner passes none, and its drain times out instead
  * (docs/implemented-plans/maintenance-live-tasks.md, Track 2).
  */
-export const END_BACKGROUND_TASKS_AFTER_MS = 60_000;
+const END_BACKGROUND_TASKS_AFTER_MS = 60_000;
 
 export function backgroundTasksDeadline(): string {
   return new Date(Date.now() + END_BACKGROUND_TASKS_AFTER_MS).toISOString();

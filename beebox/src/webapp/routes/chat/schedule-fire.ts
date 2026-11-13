@@ -59,7 +59,7 @@ function buildFiredMessage(schedule: ChatSchedule): string {
 export type FiredTurnOutcome = "delivered" | "failed" | "refused";
 
 /** Thrown by a fired turn's check when the turn is no longer wanted (deletion began); abandons it without an error log. */
-export class FiredTurnCancelledError extends Error {
+class FiredTurnCancelledError extends Error {
   constructor(readonly sessionId: string) {
     super("Fired turn cancelled");
     this.name = "FiredTurnCancelledError";

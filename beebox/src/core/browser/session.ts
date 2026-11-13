@@ -44,7 +44,7 @@ export type RunBrowserCommand = (args: readonly string[]) => Promise<ExecReply>;
  * (G2, 2026-10-30). Set once, the viewport holds for every later tab and
  * popup until the browser is launched again.
  */
-export const BOX_VIEWPORT = { width: 1280, height: 720 } as const;
+const BOX_VIEWPORT = { width: 1280, height: 720 } as const;
 
 /**
  * Start the box session if it is not running: open `about:blank` and set

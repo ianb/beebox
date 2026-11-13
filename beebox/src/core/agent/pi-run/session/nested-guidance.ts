@@ -37,7 +37,7 @@ import { AGENTS_MD, CLAUDE_MD } from "../../../agent-instruction-files.js";
 const GUIDANCE_FILES = [AGENTS_MD, CLAUDE_MD];
 
 /** The most text one instruction file, with its includes, adds to a tool result. */
-export const NESTED_GUIDANCE_MAX_CHARS = 12_000;
+const NESTED_GUIDANCE_MAX_CHARS = 12_000;
 
 const HEADER = /<nested-agents-md path=("(?:[^"\\]|\\.)*")>/gu;
 
@@ -200,7 +200,7 @@ async function deliverFrom(state: NestedGuidance, at: Touch & { dir: string }): 
  * per session. A file that fails to load adds a note instead, and a later
  * touch tries it again.
  */
-export async function nestedGuidanceFor(state: NestedGuidance, touched: { path: string; span: ReadSpan | null }): Promise<string | null> {
+async function nestedGuidanceFor(state: NestedGuidance, touched: { path: string; span: ReadSpan | null }): Promise<string | null> {
   const target = resolve(state.cwd, touched.path.replace(/^@/u, ""));
   if (!isWithin(state.boxRoot, target)) return null;
   const at = { realRoot: await realpath(state.boxRoot), realTarget: await realpathOrNull(target), span: touched.span };

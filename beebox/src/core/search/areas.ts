@@ -13,7 +13,7 @@ import type { SearchConfig } from "../box/config.js";
 const TMP_PREFIX = "_tmp";
 
 /** The `--area` value that removes nothing. */
-export const ALL_AREAS = "all";
+const ALL_AREAS = "all";
 
 /** An unknown --area value; carries the valid set for the error message. */
 export class UnknownAreaError extends Error {
