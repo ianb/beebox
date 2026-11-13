@@ -40,7 +40,7 @@ import { any } from "@ianbicking/tap-check/check";
 import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -409,4 +409,49 @@ void test("shared-host state files are written 0600", async (t) => {
   await saveQuestionLatch(join(dir, "box"), { paths: ["_content/Q.question.card"], nudged: {} });
 
   t.check({ store: await modeOf(storeFile), latch: await modeOf(latchFile) }, { store: "600", latch: "600" });
+});
+
+// ## 12. A deploy's box install leaves node_modules closed to other accounts
+//
+// `deploy/server-bin/bbx-box-install` runs each box's `pnpm install` as the box
+// user through `bash -l`, whose login umask is 002. That left
+// `explorations/box/node_modules` 0775 on prod (the 2026-11-13 leak-scan
+// finding). Here the real helper runs under umask 002 with `sudo`, `pnpm` and
+// `box-engine-link` stubbed: a fresh install makes node_modules 0770, and a
+// tree an older deploy left 0775 loses its "other" bits on the next pass.
+
+void test("a deploy's box install leaves node_modules without other-access", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "bbx-probe-install-"));
+  t.teardown(() => fs.rm(root, { recursive: true, force: true }));
+  const bin = join(root, "bin");
+  const engine = join(root, "engine");
+  const boxes = join(root, "boxes");
+  const stubs: Record<string, string> = {
+    [join(bin, "sudo")]: "#!/usr/bin/env bash\nshift 3\nexec \"$@\"\n",
+    [join(bin, "pnpm")]: "#!/usr/bin/env bash\nmkdir -p node_modules/.pnpm\n",
+    [join(engine, "bin", "box-engine-link")]: "#!/usr/bin/env bash\nexit 0\n",
+  };
+  for (const [file, body] of Object.entries(stubs)) {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, body, { mode: 0o755 });
+  }
+  for (const slug of ["fresh", "older"]) {
+    await fs.mkdir(join(boxes, slug, "box"), { recursive: true });
+    await fs.writeFile(join(boxes, slug, "box", "package.json"), "{}\n");
+  }
+  const olderModules = join(boxes, "older", "box", "node_modules");
+  await fs.mkdir(olderModules);
+  await fs.chmod(olderModules, 0o775);
+
+  const helper = path.resolve("deploy/server-bin/bbx-box-install");
+  execFileSync("/bin/bash", ["-c", 'umask 002; exec "$0" "$@"', helper, boxes, engine], {
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ""}` },
+    stdio: "pipe",
+  });
+
+  const modeOf = async (dir: string) => ((await fs.stat(dir)).mode & 0o777).toString(8);
+  t.check(
+    { fresh: await modeOf(join(boxes, "fresh", "box", "node_modules")), older: await modeOf(olderModules) },
+    { fresh: "770", older: "770" },
+  );
 });
