@@ -393,3 +393,29 @@ boxholder's call.
   pixels. Supersedes review item 7's "not logged".
 - No hard block on figure writes for now and no iframes; the gap goes in the
   security report and an issue.
+
+## Code review (codex gpt-6-sol), two rounds
+
+Round 1, all fixed: the new-chat binding race; a timed-out batch written after a
+later one; a send waiting up to 5 s on the activity lock (now 250 ms, then no
+hint); a rotation during a read; the server time stamped before the lock;
+heading scroll on non-view cards; headless JSON of a cyclic activity object.
+
+Round 2:
+- New chat: the command waits up to 2 s for the binding; if the cursor is
+  still missing it says the chat may not be linked yet and to retry, instead
+  of "No activity". Fixed.
+- A request with no answer stalled the queue forever. Fixed: a 30 s request
+  timeout counts as a failure, so the one-minute drop applies. Accepted risk:
+  a server stalled past 30 s can still save that batch late, out of order or
+  twice (best effort, per the boxholder's "nothing should block").
+- "After your message" now compares `seq` with the cursor's `hinted`; times
+  could tie to the millisecond. Fixed.
+- The existing latest-wins `scrolled` snapshot still fires for every card.
+  Declined: that hint predates this plan; the boxholder's "views only" was
+  about the log, which logs headings for agent views only.
+
+Size: about 2,080 changed lines (1,162 source, 865 tests, 57 docs) against an
+estimate of about 1,300: a BIG CHANGE, reported to the boxholder after the
+fact. Most of the growth is the page side (queue, chat-machine key, scope
+contexts, the reporter type in every renderer).

@@ -11,6 +11,8 @@ import { activityCommand, renderActivityText } from "../../../../src/cli/command
 import { advanceForSend } from "../../../../src/core/activity/cursor.js";
 import { recordActivity } from "../../../../src/core/activity/log.js";
 
+const NOT_LINKED = "No activity found for this chat. If this is a new chat's first reply, its activity may not be linked yet: run the command again in a moment.";
+
 void test("The command lists this session's window and marks entries after the message.", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
@@ -35,7 +37,8 @@ void test("The command lists this session's window and marks entries after the m
     return lines.flatMap((line) => line.split("\n")).map((line) => line.replace(/^\d\d:\d\d:\d\d/, "HH:MM:SS"));
   };
 
-  t.check(await run([]), ["No activity since your last reply."]);
+  // No cursor yet: the session has had no person's send this feature saw, or its binding has not landed.
+  t.check(await run([]), [NOT_LINKED]);
   await recordActivity(box.root, { user: null, entries: [
     { card: "Lab.figure.card", kind: "explored", detail: "add C", activity: { molecules: ["C"] }, chat: "s1" },
     { card: "Notes.view.card", kind: "scrolled", detail: "Moles and mass", chat: "s1" },
@@ -55,7 +58,8 @@ void test("The command lists this session's window and marks entries after the m
 });
 
 void test("An empty window prints the empty message.", (t) => {
-  t.check(renderActivityText([], { sentAt: undefined }), "No activity since your last reply.");
+  t.check(renderActivityText([], { hinted: 3 }), "No activity since your last reply.");
+  t.check(renderActivityText([], { hinted: undefined }), NOT_LINKED);
   t.end();
 });
 
@@ -72,7 +76,7 @@ void test("Each line shows the page's time for the action, or the server's when 
     { ...base, at, clientAt: "2026-11-13T09:13:21.000Z", detail: "set answer = " },
     { ...base, at, seq: 2, clientAt: "2026-11-13T09:13:29.000Z", detail: "set answer = 16" },
     { ...base, at, seq: 3, clientAt: "not a time", detail: "pressed tile-H" },
-  ], { sentAt: undefined }).split("\n").map((line) => line.slice(0, 8));
+  ], { hinted: 99 }).split("\n").map((line) => line.slice(0, 8));
   t.check(text, [local("2026-11-13T09:13:21.000Z"), local("2026-11-13T09:13:29.000Z"), local(at)]);
   t.end();
 });

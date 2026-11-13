@@ -8,11 +8,17 @@ import { boxNow } from "../box-clock";
 import { trpcClient } from "../trpc/client";
 import { ActivityQueue, realTimers } from "./queue";
 
+/** How long one request may go unanswered before it counts as failed. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 let pageQueue: ActivityQueue | null = null;
 
 function queue(): ActivityQueue {
   pageQueue ??= new ActivityQueue({
-    transport: (entries) => trpcClient.activity.record.mutate({ entries }),
+    // A request with no answer in 30 s counts as failed, so the one-minute drop applies and the
+    // queue cannot stall. A server that stalls past that can still save the batch late: out of
+    // order or twice. Accepted for a best-effort log (boxholder, 2026-11-13).
+    transport: (entries) => trpcClient.activity.record.mutate({ entries }, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
     timers: realTimers,
   });
   return pageQueue;
