@@ -24,8 +24,8 @@ export type FigureActivityReporter = (kind: ActivityKind, detail?: string) => vo
 /** Longest activity detail sent; a longer one is cut with an ellipsis. */
 const DETAIL_CAP = 200;
 
-/** The canvas-loop declaration type each card param type maps to. */
-const MODULE_TYPE_FOR: Record<FigureParamType, string> = { string: "select", number: "number", boolean: "boolean" };
+/** The canvas-loop declaration types each card param type can map to. */
+const MODULE_TYPES_FOR: Record<FigureParamType, readonly string[]> = { string: ["select", "text"], number: ["number"], boolean: ["boolean"] };
 
 /**
  * The activity detail for one recorded input, or null when it says nothing
@@ -53,8 +53,8 @@ export function paramMismatches(declared: readonly FigureParamDecl[], module: un
     const moduleType = isRecord(entry) && typeof entry.type === "string" ? entry.type : null;
     if (moduleType === null) {
       out.push(`figure params: card param "${decl.name}" is not declared in the canvas-loop module's params`);
-    } else if (moduleType !== MODULE_TYPE_FOR[decl.type]) {
-      out.push(`figure params: card param "${decl.name}" is ${decl.type}, but the module declares it ${moduleType} (card string→select, number→number, boolean→boolean)`);
+    } else if (!MODULE_TYPES_FOR[decl.type].includes(moduleType)) {
+      out.push(`figure params: card param "${decl.name}" is ${decl.type}, but the module declares it ${moduleType} (card string→select or text, number→number, boolean→boolean)`);
     }
   }
   return out;

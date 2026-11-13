@@ -36,15 +36,16 @@ void test("card params the module cannot honor warn once each", async (t) => {
   const { lib } = fakeLib();
   const wrapped = wrapCanvasLoopLib(lib, { declared: [
     { name: "mode", type: "string" },
+    { name: "formula", type: "string" },
     { name: "mass", type: "number" },
     { name: "tare", type: "boolean" },
     { name: "ghost", type: "number" },
   ] });
-  const module = { params: { mode: { type: "select" }, mass: { type: "number" }, tare: { type: "trigger" } } };
+  const module = { params: { mode: { type: "select" }, formula: { type: "text" }, mass: { type: "number" }, tare: { type: "trigger" } } };
   wrapped.mountSketch(mount, { module });
   wrapped.mountSketch(mount, { module });
   t.check(warnings, [
-    "figure params: card param \"tare\" is boolean, but the module declares it trigger (card string→select, number→number, boolean→boolean)",
+    "figure params: card param \"tare\" is boolean, but the module declares it trigger (card string→select or text, number→number, boolean→boolean)",
     "figure params: card param \"ghost\" is not declared in the canvas-loop module's params",
   ]);
 });

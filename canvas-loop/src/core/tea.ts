@@ -74,17 +74,31 @@ export interface SelectParam extends ParamText {
   options: readonly string[];
   default: string;
 }
+/**
+ * Typed text: `{ type: "text", default, placeholder?, multiline?, maxLength? }`.
+ * A native text box (a textarea with `multiline`); empty is allowed. Each edit
+ * arrives as a `param` msg, and a link can set it like any other param.
+ */
+export interface TextParam extends ParamText {
+  type: "text";
+  default: string;
+  /** Grey words shown while the box is empty. */
+  placeholder?: string;
+  multiline?: boolean;
+  /** The longest value accepted; the box stops typing there and a longer value is rejected. */
+  maxLength?: number;
+}
 /** A fire-and-forget button — no value, arrives only as a `trigger` Msg. */
 export interface TriggerParam extends ParamText {
   type: "trigger";
 }
-export type ParamDecl = NumberParam | BooleanParam | SelectParam | TriggerParam;
+export type ParamDecl = NumberParam | BooleanParam | SelectParam | TextParam | TriggerParam;
 
 /** A sketch's `params` export: a record of named parameter declarations. */
 export type ParamsDecl = Record<string, ParamDecl>;
 
 // Value type for a single declaration: number→number, boolean→boolean,
-// select→the union of its options (literal when declared `as const`), and
+// select→the union of its options (literal when declared `as const`), text→string, and
 // triggers carry no value (filtered out of ParamValues below).
 type ParamValue<P extends ParamDecl> = P extends NumberParam
   ? number
@@ -92,7 +106,9 @@ type ParamValue<P extends ParamDecl> = P extends NumberParam
     ? boolean
     : P extends SelectParam
       ? P["options"][number]
-      : never;
+      : P extends TextParam
+        ? string
+        : never;
 
 /**
  * The resolved parameter values a sketch reads: `u.params` in `update` and the

@@ -58,8 +58,8 @@ Whatever a figure is for, these make it usable and clear:
 - **Tell the viewer what to do.** A short on-figure instruction ("drag the H⁺ to the base", "click a category") removes the guesswork; don't rely on the viewer discovering the interaction.
 - **Key what isn't self-evident.** If colours, symbols, or marks carry meaning, include a small legend; if it responds to the keyboard, name the keys.
 - **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped. Match the box's quiet visual style — no decorative noise.
-- **Fit the container.** Size from \`mount.clientWidth\` (fall back if 0, e.g. \`|| 360\`), watch it with a \`ResizeObserver\` (disconnect in teardown), and derive layout from the current canvas size — never a fixed pixel width or a \`size\` param. Give DOM controls \`width: 100%\`. A figure must work at phone width (~390px).
-- **Respect reduced motion.** When \`matchMedia("(prefers-reduced-motion: reduce)").matches\`, draw one still frame and do not start an animation loop (p5: \`p.noLoop()\` in setup; three: render once and skip \`requestAnimationFrame\`; canvas-loop: \`autoplay: false\`). The starter sketches already do this.
+- **Fit the container.** A canvas-loop figure has a fixed \`canvas\` size and shrinks to fit (see below). Other figures: size from \`mount.clientWidth\` (fall back if 0, e.g. \`|| 360\`), watch it with a \`ResizeObserver\` (disconnect in teardown), and derive layout from the current canvas size — never a fixed pixel width or a \`size\` param. Give DOM controls \`width: 100%\`. A figure must work at phone width (~390px).
+- **Respect reduced motion.** When \`matchMedia("(prefers-reduced-motion: reduce)").matches\`, draw one still frame and do not start an animation loop (p5: \`p.noLoop()\` in setup; three: render once and skip \`requestAnimationFrame\`; canvas-loop: \`autoplay: false\`). The starter sketches already do this. A canvas-loop figure whose model stops changing stops redrawing, so a still one costs little.
 - **Verify it renders before you call it done.** Open it and screenshot it: confirm it renders, the controls and instructions are visible, and nothing is clipped.
 
 ## Frontmatter
@@ -164,7 +164,7 @@ export default (cl, { mount, figure }) =>
   An embed link's \`?speed=2\` then starts that slider at 2.
 - **The two vocabularies differ — map deliberately.** The card \`params:\` type
   is one of \`string\`/\`number\`/\`boolean\` only (the card schema enforces this);
-  the module \`params\` type is \`number\`/\`boolean\`/\`select\`/\`trigger\`. Bridge
+  the module \`params\` type is \`number\`/\`boolean\`/\`select\`/\`text\`/\`trigger\`. Bridge
   them by this table (a mismatch warns in the browser console and falls back
   to the declared default, so get it right):
 
@@ -173,12 +173,24 @@ export default (cl, { mount, figure }) =>
   | \`number\`  | \`number\`  | direct |
   | \`boolean\` | \`boolean\` | direct |
   | \`select\`  | \`string\`  | the embed value must be **one of the select's \`options\`** |
+  | \`text\`    | \`string\`  | any text (a formula, an equation, a question); a typed answer box when placed |
   | \`trigger\` | — | **not embed-controllable** (a trigger carries no value); omit it from card \`params:\` |
 
-  A card param matching no module param (or declared for a \`trigger\`) is dropped — its query value does nothing.
+  A card param matching no module param (or declared for a \`trigger\`) sets
+  no control; its value still reaches the factory as \`figure.params\`.
+- **Text from the link or typed by the learner is a \`text\` param**:
+  \`{ type: "text", default: "", placeholder?, multiline?, maxLength? }\`.
+  Place it with \`v.control(name, box)\` for a real text box over the canvas
+  (paste, keyboard and screen readers work); each edit arrives as a \`param\`
+  msg and in \`u.params\`. Write a literal \`+\` in a link as \`%2B\`
+  (\`?equation=2H2%2BO2-%3E2H2O\`): a bare \`+\` arrives as a space.
 - **\`export const canvas = { width, height }\` is authoritative for the drawing
   size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.
-  The figure scales down to fit a narrow column, keeping its aspect ratio.
+  The figure scales down to fit a narrow column, keeping its aspect ratio, and
+  never scales up. A chat or card column shows it about 560 pixels wide and a
+  phone about 360, so design at about 400 to 560 wide or keep text large enough
+  to survive the shrink. To size labels and hit areas to their text, measure in
+  \`update\` with \`u.textBounds\` / \`u.textWidth\`.
 - **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
   \`canvas-loop.md\`; brushes, paper, sprites and caches in
   \`canvas-loop-brushes.md\` (both beside this file).

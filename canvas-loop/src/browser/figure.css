@@ -38,6 +38,9 @@
 }
 .cl-field { width: 6em; font: inherit; padding: 2px 6px; border: 1px solid #c7d2fe; border-radius: 5px; }
 .cl-field[aria-invalid="true"] { border-color: #f87171; background: #fef2f2; }
+.cl-text { width: 100%; min-width: 8em; font: inherit; padding: 2px 6px; border: 1px solid #c7d2fe; border-radius: 5px; box-sizing: border-box; }
+textarea.cl-text { min-height: 3.5em; resize: vertical; }
+.cl-overlay-input.cl-text { min-width: 0; resize: none; }
 .cl-param-hint { grid-column: 2; color: #64748b; font-size: 12px; }
 .cl-stage { position: relative; width: fit-content; max-width: 100%; }
 .cl-overlay-input { font: 14px ui-sans-serif, system-ui, sans-serif; }

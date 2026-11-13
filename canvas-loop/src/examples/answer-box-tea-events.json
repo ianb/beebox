@@ -1,0 +1,8 @@
+[
+  { "frame": 4, "type": "param", "name": "answer", "value": "16" },
+  { "frame": 8, "type": "mousedown", "x": 40, "y": 85 },
+  { "frame": 9, "type": "mouseup", "x": 40, "y": 85 },
+  { "frame": 12, "type": "mousedown", "x": 200, "y": 85 },
+  { "frame": 13, "type": "mouseup", "x": 200, "y": 85 },
+  { "frame": 16, "type": "param", "name": "answer", "value": "18.016" }
+]

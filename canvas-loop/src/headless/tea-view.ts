@@ -23,6 +23,8 @@ function shown(model: ControlModel): string {
       return String(model.value);
     case "select":
       return model.value;
+    case "text":
+      return model.value === "" ? (model.placeholder ?? "") : model.value;
     case "trigger":
       return model.label;
     case "boolean":
@@ -52,14 +54,17 @@ function drawStandIn(painter: Painter, at: { box: ControlBox; model: ControlMode
   const cx = box.x + box.w - 12;
   const cy = box.y + h / 2;
   if (select) painter.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
-  painter.text(shown(model), { x: box.x + 6, y: box.y, w: box.w - 6 - (select ? 22 : 6), h }, {
+  // A text box shows its placeholder in grey while empty; a multi-line one wraps from the top.
+  const placeholder = model.kind === "text" && model.value === "";
+  const lines = model.kind === "text" && model.multiline;
+  painter.text(shown(model), { x: box.x + 6, y: box.y + (lines ? 4 : 0), w: box.w - 6 - (select ? 22 : 6), h: h - (lines ? 8 : 0) }, {
     align: button ? "center" : (box.align ?? "left"),
-    valign: "middle",
-    wrap: false,
+    valign: lines ? "top" : "middle",
+    wrap: lines,
     fit: true,
     size: box.size ?? DEFAULT_SIZE,
     style: box.bold === true ? "bold" : "normal",
-    fill: "#111111",
+    fill: placeholder ? "#767676" : "#111111",
   });
 }
 

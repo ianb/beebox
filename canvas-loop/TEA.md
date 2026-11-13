@@ -431,13 +431,14 @@ variants the name has.
 
 ## Params reference
 
-`params` is a record of declarations. Four types:
+`params` is a record of declarations. Five types:
 
 | Type | Declaration | `p` value |
 | --- | --- | --- |
 | number | `{ type: "number", min, max, default, step?, control? }` | `number` — a slider, or with `control: "field"` a box the person types into (only a valid, in-range value is sent; `step: 1` requires a whole number) |
 | boolean | `{ type: "boolean", default }` | `boolean` |
 | select | `{ type: "select", options: [...] as const, default }` | union of `options` |
+| text | `{ type: "text", default, placeholder?, multiline?, maxLength? }` | `string`, empty allowed — a text box (a textarea with `multiline`) for typed answers, formulas, predictions |
 | trigger | `{ type: "trigger" }` | — (arrives only as a `trigger` msg) |
 
 Declare with `as const satisfies ParamsDecl` so selects narrow to their option
@@ -451,11 +452,15 @@ keeps the param out of the side panel.
 
 `v.control(name, { x, y, w, h?, size?, align?, bold? })` in `draw` puts the
 param's native input over the canvas at that box (logical pixels) for this
-frame. Browser figures place the real `<input>`/`<select>` there and take it out
+frame: a slider or number field, checkbox, select, text box or button. Browser
+figures place the real `<input>`/`<select>`/`<textarea>` there and take it out
 of the panel; headless renders draw a stand-in showing the current value, so
 frames show the layout. Call it every frame the input should show: an input not
 placed in a frame is hidden (a three-species equation places three boxes).
-Scripted `param` events drive it headless as before. Only `mountSketch` figures
+Scripted `param` events drive it headless as before. A text box sends every
+edit (empty included) as a `param` msg, so `update` sees the answer as it is
+typed; keys typed into it are not `keydown` msgs. Use `u.handled` and a check
+button, or check on each edit, as the exercise needs. Only `mountSketch` figures
 place inputs so far; the React figure and the playground keep the panel.
 
 ## Events file

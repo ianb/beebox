@@ -20,7 +20,8 @@ export type ParamCheck =
 /**
  * Validate + coerce a single value against a param declaration. Numbers must be
  * finite (NaN/±Infinity reject) and are clamped into [min, max]; booleans and
- * selects must match their declared shape; triggers never take a value.
+ * selects must match their declared shape; text must be a string within
+ * `maxLength`; triggers never take a value.
  */
 export function checkParam(param: ParamDecl, value: number | boolean | string): ParamCheck {
   switch (param.type) {
@@ -36,6 +37,11 @@ export function checkParam(param: ParamDecl, value: number | boolean | string): 
       return typeof value === "string" && param.options.includes(value)
         ? { ok: true, value }
         : { ok: false, reason: `${JSON.stringify(value)} is not one of the declared options [${param.options.join(", ")}]` };
+    case "text":
+      if (typeof value !== "string") return { ok: false, reason: `${JSON.stringify(value)} is not text` };
+      return param.maxLength !== undefined && value.length > param.maxLength
+        ? { ok: false, reason: `the text is ${value.length} characters, longer than its maxLength ${param.maxLength}` }
+        : { ok: true, value };
     case "trigger":
       return { ok: false, reason: "a trigger param takes no value" };
   }
