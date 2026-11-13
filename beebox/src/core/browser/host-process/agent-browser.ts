@@ -22,7 +22,7 @@ import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { BOX_BROWSER_SESSION, type BrowserPaths } from "../paths.js";
 
 /** The pinned package's native binary for this platform is missing. */
-export class AgentBrowserBinaryMissingError extends Error {
+class AgentBrowserBinaryMissingError extends Error {
   override name = "AgentBrowserBinaryMissingError";
   constructor(readonly binary: string) {
     super(`agent-browser has no binary for this platform: ${binary} does not exist`);

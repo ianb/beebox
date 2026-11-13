@@ -21,10 +21,10 @@
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name the token lives under. */
-export const CLAUDE_OAUTH_TOKEN_SECRET = "claude-oauth-token";
+const CLAUDE_OAUTH_TOKEN_SECRET = "claude-oauth-token";
 
 /** The variable the Claude CLI and Agent SDK read the token from. */
-export const CLAUDE_OAUTH_TOKEN_VARIABLE = "CLAUDE_CODE_OAUTH_TOKEN";
+const CLAUDE_OAUTH_TOKEN_VARIABLE = "CLAUDE_CODE_OAUTH_TOKEN";
 
 /**
  * The env addition carrying this box's token, or none when the box has no

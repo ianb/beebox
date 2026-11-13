@@ -24,6 +24,6 @@ export class ResticCommandError extends Error {
     this.stage = stage; this.exitCode = exitCode; this.detail = detail;
   }
 }
-export class ResticUnavailableError extends Error {
+class ResticUnavailableError extends Error {
   constructor(cause: unknown) { super("restic could not be started; install restic and ensure it is on PATH", { cause }); this.name = "ResticUnavailableError"; }
 }

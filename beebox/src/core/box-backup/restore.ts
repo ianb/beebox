@@ -38,28 +38,28 @@ export class RestoreTargetNotEmptyError extends Error {
 export class RestoreTargetInsideBoxError extends Error {
   constructor(target: string) { super(`restore target is inside an existing box: ${target}`); this.name = "RestoreTargetInsideBoxError"; }
 }
-export class RestoreSnapshotNotFoundError extends Error {
+class RestoreSnapshotNotFoundError extends Error {
   constructor(snapshot: string) { super(`snapshot ${snapshot} was not found as a verified snapshot`); this.name = "RestoreSnapshotNotFoundError"; }
 }
-export class RestoreSnapshotAmbiguousError extends Error {
+class RestoreSnapshotAmbiguousError extends Error {
   constructor(snapshot: string) { super(`snapshot prefix ${snapshot} matches more than one verified snapshot`); this.name = "RestoreSnapshotAmbiguousError"; }
 }
-export class NoVerifiedBackupError extends Error {
+class NoVerifiedBackupError extends Error {
   constructor() { super("no verified backup snapshots are available"); this.name = "NoVerifiedBackupError"; }
 }
-export class InvalidRestoreSnapshotError extends Error {
+class InvalidRestoreSnapshotError extends Error {
   constructor() { super("selected snapshot is missing its Bee Box backup identity"); this.name = "InvalidRestoreSnapshotError"; }
 }
-export class RestoreSecretShareNotFoundError extends Error {
+class RestoreSecretShareNotFoundError extends Error {
   constructor(backupId: string) { super(`verified snapshot ${backupId} does not contain its expected external secret share`); this.name = "RestoreSecretShareNotFoundError"; }
 }
-export class RestoredBoxNotFoundError extends Error {
+class RestoredBoxNotFoundError extends Error {
   constructor() { super("restored snapshot does not contain a recognizable Bee Box root"); this.name = "RestoredBoxNotFoundError"; }
 }
-export class RestoreGitValidationError extends Error {
+class RestoreGitValidationError extends Error {
   constructor(boxPath: string, detail: string) { super(`Git validation failed for restored box at ${boxPath}; recovered files are preserved for inspection: ${detail}`); this.name = "RestoreGitValidationError"; }
 }
-export class RestoreAnnexValidationError extends Error {
+class RestoreAnnexValidationError extends Error {
   constructor(boxPath: string, detail: string) { super(`annex validation failed for restored box at ${boxPath}; recovered files are preserved for inspection: ${detail}`); this.name = "RestoreAnnexValidationError"; }
 }
 

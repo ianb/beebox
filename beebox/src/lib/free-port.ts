@@ -17,7 +17,7 @@ const RESERVE_MS = 15_000;
 const MAX_ATTEMPTS = 50;
 const reserved = new Map<number, number>();
 
-export class NoFreePortError extends Error {
+class NoFreePortError extends Error {
   override name = "NoFreePortError";
   constructor() {
     super(`No free port after ${String(MAX_ATTEMPTS)} attempts`);

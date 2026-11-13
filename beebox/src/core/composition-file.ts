@@ -23,7 +23,7 @@ export type CompositionWrite =
   | { status: "problem"; problem: CompositionProblem["problem"] | "closed-early"; where: "file" | "text" };
 
 /** SHA-256 of the region text (the form `findComposition` returns), as hex. */
-export function compositionHash(text: string): string {
+function compositionHash(text: string): string {
   return sha256Hex(text);
 }
 

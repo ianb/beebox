@@ -10,7 +10,7 @@
 import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { toJSONSchema, type z } from "zod";
 
-export const RESULT_TOOL_NAME = "submit_result";
+const RESULT_TOOL_NAME = "submit_result";
 
 /** The one host prompt sent after a run that completed without the call. */
 export const RESULT_TOOL_FOLLOW_UP =

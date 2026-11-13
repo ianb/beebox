@@ -57,7 +57,7 @@ export async function readCitedCard(boxRoot: string, ref: string): Promise<strin
 export const citedDigest = (text: string | null): string | null => text === null ? null : digest(text);
 
 /** Current digest of each cited card, null when it is missing or not a box card. */
-export async function citedDigests(boxRoot: string, refs: string[]): Promise<Array<{ ref: string; digest: string | null }>> {
+async function citedDigests(boxRoot: string, refs: string[]): Promise<Array<{ ref: string; digest: string | null }>> {
   return Promise.all([...new Set(refs)].toSorted().map(async (ref) => ({ ref, digest: citedDigest(await readCitedCard(boxRoot, ref)) })));
 }
 

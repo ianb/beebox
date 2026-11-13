@@ -36,7 +36,7 @@ import { CardSymbol } from "../shared/card-symbol.js";
 import { readPublishedIdentity } from "./landmark/identity-sync.js";
 import { AGENT_TOKEN_RELATIVE_PATH, MOBILE_DEVICES_FILE, SCAN_TOKENS_FILE, type TokenFile } from "./token-files.js";
 
-export const HUB_META_RELATIVE_PATH = ".beebox/hub-meta.json";
+const HUB_META_RELATIVE_PATH = ".beebox/hub-meta.json";
 
 /**
  * Whether this process reads boxes through their published metadata instead

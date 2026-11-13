@@ -106,7 +106,7 @@ export function pastaArgv(childPid: number): string[] {
 }
 
 /** The launcher or pasta is not installed; the host never runs without the namespace. */
-export class BrowserNamespaceUnavailableError extends Error {
+class BrowserNamespaceUnavailableError extends Error {
   override name = "BrowserNamespaceUnavailableError";
   constructor(readonly missing: string) {
     super(`The box browser needs a private network on this server, but ${missing} is missing (the deploy installs it).`);
@@ -114,7 +114,7 @@ export class BrowserNamespaceUnavailableError extends Error {
 }
 
 /** The child never left our network namespace, or pasta failed to attach. */
-export class BrowserNamespaceSetupError extends Error {
+class BrowserNamespaceSetupError extends Error {
   override name = "BrowserNamespaceSetupError";
   constructor(readonly what: { readonly step: "unshare-exited" | "no-namespace" | "no-pid"; readonly detail: string }) {
     super(`The box browser's private network could not be set up (${what.step}): ${what.detail}`);

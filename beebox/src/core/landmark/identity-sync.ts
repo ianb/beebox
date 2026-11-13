@@ -26,7 +26,7 @@ import { readLandmarkSymbol } from "./symbol.js";
  *
  * Delete this when no box in the field still carries the stock label.
  */
-export const STOCK_LABEL = "Box";
+const STOCK_LABEL = "Box";
 
 /** The name a label gives a box, or null when the label is absent, blank or the stock one. */
 export function nameFromLabel(label: string | undefined): string | null {

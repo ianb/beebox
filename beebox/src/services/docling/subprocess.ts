@@ -17,7 +17,7 @@ import type { DoclingExtractOptions } from "./core.js";
 export const DOCLING_DRIVER_PATH = path.join(PACKAGE_ROOT, "src", "services", "docling", "convert.py");
 
 /** Exit codes `convert.py` defines. */
-export const DRIVER_EXIT_BUSY = 75;
+const DRIVER_EXIT_BUSY = 75;
 
 /** `uv` reports a SIGKILLed child as 128 + 9 (measured). */
 const EXIT_SIGKILL = 137;
@@ -37,7 +37,7 @@ export const LOCK_ACQUIRED_MARKER = "bbx-docling: lock acquired";
  */
 const BUDGET_BASE_SECONDS = 5 * 60;
 const BUDGET_SECONDS_PER_PAGE = { text: 10, ocr: 30 } as const;
-export const MAX_CONVERSION_SECONDS = 90 * 60;
+const MAX_CONVERSION_SECONDS = 90 * 60;
 
 export function conversionBudgetSeconds(pages: number | null, ocr: DoclingExtractOptions["ocr"]): number {
   if (pages === null) return MAX_CONVERSION_SECONDS;

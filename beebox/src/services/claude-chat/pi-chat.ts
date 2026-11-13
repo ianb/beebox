@@ -32,7 +32,7 @@ import { invariant } from "../../shared/invariant.js";
 type AssistantMessage = Extract<PiAgentEvent, { type: "message_end" }>["message"] & { role: "assistant" };
 
 /** An image sent to a model whose listed input modalities have none. */
-export class PiImagesRefusedError extends Error {
+class PiImagesRefusedError extends Error {
   constructor(model: string | undefined) {
     super(`${model ?? "This model"} does not accept images`);
     this.name = "PiImagesRefusedError";

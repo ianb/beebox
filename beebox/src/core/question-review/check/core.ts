@@ -20,7 +20,7 @@ export type QuestionReviewCheckResult =
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export const QUESTION_REVIEW_INSTRUCTIONS = `# Question review
+const QUESTION_REVIEW_INSTRUCTIONS = `# Question review
 
 These questions have waited a long time or were put away (Later). Work every
 one with the figure-it-out skill, using its Review ending: every question
