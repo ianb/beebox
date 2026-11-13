@@ -17,7 +17,12 @@ simply accumulated unnoticed (2026-09-12: four ready commits sat unmerged,
 including the one that stopped the sweep from faking its own findings).
 
 - **Merge `main` first**, then run the checks your changes touch plus
-  `pnpm --dir beebox typecheck` and `pnpm lint:changed`. Land only on green.
+  `pnpm --dir beebox typecheck` and `pnpm lint:changed`. Land only on green,
+  except for a red that `main` already has.
+- **A red that `main` already has does not block.** Rerun the failing test file
+  or lint target in the main checkout. If it fails there with the same error,
+  land anyway. Name the failure in your alert, and find or file one issue for
+  it. Block only on failures your changes cause.
 - **Land with `bin/land`.** When it refuses, try to resolve the cause before
   giving up:
   - Main moved: merge `main` again, re-verify, and retry.
