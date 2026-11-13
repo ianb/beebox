@@ -80,6 +80,8 @@ if timeout 15 turnutils_uclient -y -n 1 -m 1 -u "$u" -w "$(cred "$u" $S)" 203.0.
 u="$(($(date +%s) + 600)):wrongkey"
 if timeout 15 turnutils_uclient -y -n 1 -m 1 -u "$u" -w "$(cred "$u" "ff$S")" 203.0.113.5 2>&1 | grep -q "Cannot complete Allocation"; then pass "refuses a credential signed with another secret"; else fail "foreign credential accepted"; fi
 
+# Disabled by hand but still running: removing the secret must still stop it.
+systemctl disable --quiet coturn
 rm -f "$store"
 if helper && ! systemctl is-active --quiet coturn && ! systemctl is-enabled --quiet coturn; then pass "secret removed: coturn stopped and disabled"; else fail "removal"; cat /tmp/helper.log; fi
 

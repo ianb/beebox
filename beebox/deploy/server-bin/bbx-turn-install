@@ -49,11 +49,11 @@ store="${store:-/home/beebox/.config/beebox/secrets.json}"
 
 installed() { dpkg-query -W -f='${Status}' coturn 2> /dev/null | grep -qx 'install ok installed'; }
 
-# Prints the rendered config on stdout and the check-allocation address and
-# secret on fd 3, or exits 3 when the store has no `turn-server` entry.
+# Prints the rendered config on stdout and the check's address, username and
+# password on fd 3, or exits 3 when the store has no `turn-server` entry.
 render() {
   STORE="$store" TEMPLATE_PATH="$TEMPLATE" ADDRS="$(ip -j addr)" python3 -I - <<'PY'
-import ipaddress, json, os, re, sys
+import base64, hashlib, hmac, ipaddress, json, os, re, sys, time
 
 store_path = os.environ["STORE"]
 if not os.path.exists(store_path):
@@ -107,8 +107,12 @@ for h in hosts:
     out += f"listening-ip={h}\nrelay-ip={h}\n"
 out += f"static-auth-secret={secret}\n"
 sys.stdout.write(out)
+# A ten-minute credential for the check, signed here so the shared secret never
+# appears in a process's arguments (src/core/turn-server-key.ts, restCredentials).
+username = f"{int(time.time()) + 600}:bbx-deploy-check"
+password = base64.b64encode(hmac.new(secret.encode(), username.encode(), hashlib.sha1).digest()).decode()
 with os.fdopen(3, "w") as check:
-    check.write(f"{v4[0]} {secret}\n")
+    check.write(f"{v4[0]} {username} {password}\n")
 PY
 }
 
@@ -117,14 +121,14 @@ check_line=$(render 3>&1 > "$rendered")
 status=$?
 set -e
 if [[ $status -eq 3 ]]; then
-  if installed && systemctl is-enabled --quiet coturn 2> /dev/null; then
+  if installed && { systemctl is-enabled --quiet coturn 2> /dev/null || systemctl is-active --quiet coturn; }; then
     quietly systemctl disable --now coturn
     echo "  coturn stopped: the master store has no turn-server entry"
   fi
   exit 0
 fi
 [[ $status -eq 0 ]] || exit 1
-read -r check_ip check_secret <<< "$check_line"
+read -r check_ip check_user check_password <<< "$check_line"
 
 changed=0
 if ! cmp -s "$rendered" "$CONF"; then
@@ -152,7 +156,7 @@ fi
 # Two clients allocate relays and send to each other's relay address (the
 # host's own IP), the path two relayed call members take.
 check() {
-  timeout 30 turnutils_uclient -y -n 2 -m 1 -l 120 -W "$check_secret" -u bbx-deploy-check "$check_ip"
+  timeout 30 turnutils_uclient -y -n 2 -m 1 -l 120 -u "$check_user" -w "$check_password" "$check_ip"
 }
 for _ in 1 2 3 4 5; do
   # Success is the final tally with every sent message received; a run whose
