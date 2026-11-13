@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: text params, text measurement in update, radii for round shapes"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
