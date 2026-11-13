@@ -331,9 +331,10 @@ tests:
   # Track G): acknowledge silently, act only when asked, answer from it later.
   # Not yet run.
   # Status (2026-11-12, Claude): passed on a throwaway box from this worktree's
-  # engine; knows_directly, 0 files read. A live call entry with no speech
-  # (both recordings untranscribed) still drew a prose reply; the prompt line
-  # now names the partial and empty cases.
+  # engine; knows_directly, 0 files read. Live call entries with no speech
+  # (no transcription key) drew a one-paragraph reply even when the prompt
+  # forbade it, so an entry with no speech now gets one sentence saying
+  # transcription is not working; an entry with speech stays silent.
   - id: call-transcript-silent-then-answer
     prompt: >
       This message just arrived in the chat:

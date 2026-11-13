@@ -69,7 +69,10 @@ messages are kept in that record as they are sent, because a busy agent
 writes them to its transcript only when their turn starts.
 
 The result is delivered as a `<call>` user message. The agent acknowledges
-it with `<ack kind="no-response"/>` and uses it when someone asks.
+it with `<ack kind="no-response"/>` and uses it when someone asks. When the
+entry holds no speech because nobody's audio could be transcribed (for
+example, the box has no transcription key), the agent says so in one
+sentence instead, so the failure is not silent.
 
 ## Known limits
 
