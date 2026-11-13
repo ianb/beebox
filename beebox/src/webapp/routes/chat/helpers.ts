@@ -20,6 +20,7 @@ import {
 import { isActivityKind, type CardStateDetails } from "../../../core/chat/card-activity.js";
 import type { ChatSendContextWithView } from "../../chat-runtime.js";
 import type { ChatSendInput } from "../../../core/chat/session/run/core.js";
+import type { ActivityTurn } from "../../../core/chat/session/messages.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
@@ -113,6 +114,12 @@ export const sendBodySchema = z.object({
    * route falls back to classifying the User-Agent (see `resolveChannel`).
    */
   channel: z.enum(CHAT_CHANNELS).optional(),
+  /**
+   * The page's key for a new conversation that has no session id yet, the same
+   * key it put on its activity entries. The server binds it to the session
+   * once the id is assigned (core/activity/cursor.ts). Sent on the first send.
+   */
+  pendingChat: z.string().min(1).max(200).optional(),
 });
 
 export type SendBody = z.infer<typeof sendBodySchema>;
@@ -202,15 +209,18 @@ export function extractCardFields(
  * optional-field filtering lives here once rather than at each call site.
  */
 export function buildSendInput(
-  { text, images, channel, cardFields }: {
+  { text, images, channel, cardFields, activityTurn }: {
     text: string;
     images: SendBody["images"];
     channel: ChatChannel | undefined;
     cardFields: SendCardFields;
+    /** Marks a person's send, which gets the activity hint (`pendingChat` as the page sent it). */
+    activityTurn?: ActivityTurn;
   },
 ): ChatSendInput {
   return {
     text,
+    ...(activityTurn !== undefined ? { activityTurn } : {}),
     ...(images ? { images } : {}),
     ...(channel !== undefined ? { channel } : {}),
     ...cardFields,

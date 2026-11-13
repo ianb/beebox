@@ -83,7 +83,14 @@ export interface ChatImage {
   dataBase64: string;
 }
 
+/** Present on a person's send: the turn gets the `<activity>` hint. Absent for scheduled, self-note and capture turns. */
+export interface ActivityTurn {
+  /** The page's key for a conversation that had no session id when it first sent. */
+  pendingChat?: string | undefined;
+}
+
 export interface ChatSendInput extends ChatSendContext {
+  activityTurn?: ActivityTurn;
   /** Send-time presentation context, independent of the conversation directory. */
   viewContext?: AttentionSnapshot;
   text: string;

@@ -245,8 +245,12 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   if (viewContext !== undefined) openCard = activityInputs.at(-1)?.openCard;
   const cardActivity = unionActivityKinds(activityInputs.map((q) => q.cardActivity));
   const cardState = mergeCardStateDetails(activityInputs.map((q) => q.cardState));
+  // One person-turn advances the activity cursor once, whatever it merged.
+  const turns = queued.flatMap((q) => (q.activityTurn === undefined ? [] : [q.activityTurn]));
+  const pendingChat = turns.findLast((t) => t.pendingChat !== undefined)?.pendingChat;
   return {
     text: combinedTextParts.join("\n\n"),
+    ...(turns.length > 0 ? { activityTurn: { ...(pendingChat !== undefined ? { pendingChat } : {}) } } : {}),
     images: combinedImages,
     ...(channel !== undefined ? { channel } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),

@@ -97,7 +97,7 @@ export function registerChatSendRoutes(
     // enqueue and send like `channel`.
     const cardFields = extractCardFields(body);
 
-    const outcome = await sendUserMessage({ target, message, messageId, user, channel, images, cardFields });
+    const outcome = await sendUserMessage({ target, message, messageId, user, channel, images, cardFields, pendingChat: body.pendingChat });
     return reply.status(outcome.status).send(outcome.body);
   });
 

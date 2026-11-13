@@ -1,0 +1,60 @@
+// # bbx chat activity
+//
+// Lists the window for the agent's own chat session (BBX_CHAT_SESSION_ID),
+// oldest first: `HH:MM:SS  card  kind  detail  {activity json}`. Entries that
+// arrived after the turn's message are marked; `--json` prints the raw lines.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { activityCommand, renderActivityText } from "../../../../src/cli/commands/chat/activity.js";
+import { advanceForSend } from "../../../../src/core/activity/cursor.js";
+import { recordActivity } from "../../../../src/core/activity/log.js";
+
+void test("The command lists this session's window and marks entries after the message.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const cwd = process.cwd();
+  process.chdir(box.root);
+  t.teardown(() => { process.chdir(cwd); });
+  const saved = process.env["BBX_CHAT_SESSION_ID"];
+  process.env["BBX_CHAT_SESSION_ID"] = "s1";
+  t.teardown(() => {
+    if (saved === undefined) delete process.env["BBX_CHAT_SESSION_ID"];
+    else process.env["BBX_CHAT_SESSION_ID"] = saved;
+  });
+  const run = async (args: string[]): Promise<string[]> => {
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (line: string) => { lines.push(line); };
+    try {
+      await activityCommand.parseAsync(args, { from: "user" });
+    } finally {
+      console.log = log;
+    }
+    return lines.flatMap((line) => line.split("\n")).map((line) => line.replace(/^\d\d:\d\d:\d\d/, "HH:MM:SS"));
+  };
+
+  t.check(await run([]), ["No activity since your last reply."]);
+  await recordActivity(box.root, { user: null, entries: [
+    { card: "Lab.figure.card", kind: "explored", detail: "add C", activity: { molecules: ["C"] }, chat: "s1" },
+    { card: "Notes.view.card", kind: "scrolled", detail: "Moles and mass", chat: "s1" },
+    { card: "Lab.figure.card", kind: "explored", detail: "other chat", chat: "s2" },
+  ] });
+  await advanceForSend(box.root, { sessionId: "s1" });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await recordActivity(box.root, { user: null, entries: [{ card: "Lab.figure.card", kind: "explored", detail: "remove H", chat: "s1" }] });
+
+  t.check(await run([]), [
+    "HH:MM:SS  Lab.figure.card  explored  add C  {\"molecules\":[\"C\"]}",
+    "HH:MM:SS  Notes.view.card  scrolled  Moles and mass",
+    "HH:MM:SS  Lab.figure.card  explored  remove H  (after your message)",
+  ]);
+  t.check(await run(["--card", "Notes.view.card"]), ["HH:MM:SS  Notes.view.card  scrolled  Moles and mass"]);
+  t.check((await run(["--json"])).map((line) => String(JSON.parse(line).detail)), ["add C", "Moles and mass", "remove H"]);
+});
+
+void test("An empty window prints the empty message.", (t) => {
+  t.check(renderActivityText([], { sentAt: undefined }), "No activity since your last reply.");
+  t.end();
+});
