@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop: colour variation within a stroke, smudge and wet paint"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop: colour variation within a stroke, smudge and wet paint
 
-Subplan of [canvas-brushes.md](./canvas-brushes.md). The effects subplan
+Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The effects subplan
 (`beebox/docs/implemented-plans/canvas-brushes-effects.subplan.md`) left
 klad's per-dab colour variation and smudge/wet paint out of scope. Asked which
 of the remaining klad features would improve agent drawings, I named these two;
