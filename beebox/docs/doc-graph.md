@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-13T01:25:37Z
-Total documents: 647
+Generated: 2026-11-13T01:48:51Z
+Total documents: 650
 
 ## Issues
 
@@ -115,6 +115,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -1208,6 +1209,18 @@ References:
 - → docs/box-layout.md (link)
 - → docs/media/assets.md (link)
 
+#### docs/chat-presence.md
+
+Title: "Chat presence" | 61 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/chat-presence.md:110 (mention) — - Docs: a short reference section (`docs/chat-presence.md`, ~40 lines) and a
+- ../issues/features/2026-11-12-chat-shows-who-is-typing-or-speaking.md:20 (mention) — subscription per open chat; `beebox/docs/chat-presence.md` says how to add
+
+References:
+- → docs/implemented-plans/chat-presence.md (link)
+- → docs/mobile-contract.md (mention)
+
 #### docs/chat.md
 
 Title: "Chat" | 23 lines | current reference
@@ -1408,6 +1421,7 @@ Referenced by:
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-image-files.md:54 (mention) — - **`beebox/docs/engineering-principles.md` #8 (one pipeline):** every image
 - docs/implemented-plans/chat-not-delivered.md:123 (mention) — - `docs/engineering-principles.md` fail-closed: Discard is refused unless an
+- docs/implemented-plans/chat-presence.md:125 (mention) — - **`engineering-principles.md` — one source of truth**: the room is the only
 - docs/implemented-plans/chat-review.md:49 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/chat-session-identity.md:32 (mention) — - `docs/engineering-principles.md` #1 types are structure (`:12`) — transcript
 - docs/implemented-plans/chat-titles.md:60 (mention) — - **`docs/engineering-principles.md` #8, one way to do each thing.** The
@@ -1772,15 +1786,17 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1945 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1946 lines | current reference
 
 Referenced by:
 - AGENTS.md:71 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- docs/chat-presence.md:23 (mention) — (`docs/mobile-contract.md`, B15), and the person is present nowhere.
 - docs/chat.md:20 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
 - docs/chat/quick-chat.md:79 (link) — [mobile contract §5.11](../mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:53 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
+- docs/implemented-plans/chat-presence.md:111 (mention) — note in `docs/mobile-contract.md` that presence rides web visibility (~5).
 - docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/doc-structure.md:237 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
@@ -1848,6 +1864,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:266 (mention) — where it matters most. See `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:50 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:30 (link) — shape is in [mobile contract §5.11](../../../beebox/docs/mobile-contract.md).
+- ../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md:51 (mention) — bridge contract (`beebox/docs/mobile-contract.md`).
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:31 (mention) — web (`docs/mobile-contract.md` §2).
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:59 (mention) — `docs/mobile-contract.md:21-23` records the shape: *"A paired box's `baseURL`
 - ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:40 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
@@ -1863,7 +1880,7 @@ Referenced by:
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
 - ../issues/features/2026-10-07-mac-companion-app.md:31 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
-- ../issues/features/2026-11-11-chat-shows-who-is-present-and-typing.md:48 (mention) — bridge contract (`beebox/docs/mobile-contract.md`).
+- ../issues/features/2026-11-12-chat-shows-who-is-typing-or-speaking.md:29 (mention) — so iOS typing needs a native→web bridge message (`beebox/docs/mobile-contract.md`).
 - ../research/embedded-browser/beebox-today.md:83 (mention) — - Mobile: the iOS app is a WKWebView of the web app (`ios-app/BeeBox/Views/ChatWebView.swift`); contract in `beebox/docs
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/modern-web-guidance/audit/a11y-html-ux.md:462 (mention) — - Safe-area: `viewport-fit=cover` absent from `index.html`; the one `env(safe-area-inset-bottom)` at `chat/everywhere/In
@@ -4779,6 +4796,20 @@ References:
 - → AGENTS.md (mention)
 - → docs/engineering-principles.md (mention)
 
+#### docs/implemented-plans/chat-presence.md
+
+Title: "Chat presence: show who else has this chat open" | 405 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat-presence.md:5 (link) — [plans/chat-presence.md](implemented-plans/chat-presence.md).
+- ../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md:59 (mention) — present" half (`beebox/docs/implemented-plans/chat-presence.md`). Typing and speaking
+
+References:
+- → ../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md (frontmatter)
+- → docs/chat-presence.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/engineering-principles.md (mention)
+
 #### docs/implemented-plans/chat-progress-fold.md
 
 Title: "Chat progress notes fold away when the turn ends" | 235 lines | shipped history | implemented
@@ -6620,7 +6651,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1766 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1767 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -6829,8 +6860,8 @@ Referenced by:
 - ../issues/closed/features/2026-08-09-agent-outcomes-need-a-voice.md:16 (link) — [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:18 (link) — [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:17 (link) — [docs/implemented-plans/notifications.md](../../../beebox/docs/implemented-plans/notifications.md).
+- ../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md:28 (mention) — (`beebox/docs/implemented-plans/notifications.md`, Track A). It records a
 - ../issues/features/2026-09-26-apns-push-relay-for-a-shared-app.md:12 (mention) — The notifications work (`beebox/docs/implemented-plans/notifications.md`, Track B and C)
-- ../issues/features/2026-11-11-chat-shows-who-is-present-and-typing.md:25 (mention) — (`beebox/docs/implemented-plans/notifications.md`, Track A). It records a
 
 References:
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (frontmatter)
@@ -9998,7 +10029,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1760 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1761 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -11932,6 +11963,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

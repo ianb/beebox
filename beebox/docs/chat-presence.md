@@ -2,7 +2,7 @@
 
 When two box members have the same chat open, each sees the other's head
 under the profile avatar. A person alone sees nothing. Plan:
-[plans/chat-presence.md](plans/chat-presence.md).
+[implemented-plans/chat-presence.md](implemented-plans/chat-presence.md).
 
 ## What counts as present
 

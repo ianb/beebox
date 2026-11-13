@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: "worktree-chat-presence — split from the chat presence issue, 2026-11-12"
 ---
 
-Split from [chat presence](2026-11-11-chat-shows-who-is-present-and-typing.md),
+Split from [chat presence](../closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md),
 which shipped the "who is present" half. The boxholder wants the familiar
 "… is typing" indicator in a chat more than one person has open, and the same
 for someone dictating or recording a voice message.

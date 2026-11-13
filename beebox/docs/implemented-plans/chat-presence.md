@@ -1,9 +1,9 @@
 ---
 title: "Chat presence: show who else has this chat open"
-status: draft
+status: implemented
 workstream: chat-presence
 issues:
-  - ../../../issues/features/2026-11-11-chat-shows-who-is-present-and-typing.md
+  - ../../../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md
 ---
 # Chat presence: show who else has this chat open
 
