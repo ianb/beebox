@@ -220,8 +220,11 @@ sees a half-copied source tree, and rollback becomes a symlink switch.
   1. One `SHIPPED` array names the members (`personal-vibe-check tap-check
      canvas-loop beebox package.json pnpm-workspace.yaml .npmrc
      pnpm-lock.yaml patches`). The upload loop and `prepare` both read it.
-     Stale stage entries (`agent-doctest`, `browse` today) are no longer
-     copied into the live tree.
+     Stale stage entries (`agent-doctest` today) are no longer copied into
+     the live tree. (`browse`, `site` and `workstreams-app` in `/opt/beebox`
+     are not stale: the frozen install creates `node_modules` for every
+     workspace member the lockfile lists, present or not. The rehearsal
+     showed it; it costs about 150 MB per release.)
   2. `deploy-info.json` is computed as now, uploaded to
      `$STAGE_DIR/beebox/deploy-info.json` after the rsync, and carried by
      `prepare`. The two queued deploy-info/history steps go away.
@@ -250,7 +253,15 @@ sees a half-copied source tree, and rollback becomes a symlink switch.
      migration repair, as for the existing restarted-by-trap marker.
 - **First chunk:** items 1–8 in one commit; they are one activation path.
 
-### Track D — `deploy.sh --rollback` (chunk 4)
+### Track D — `deploy.sh --rollback` (deferred)
+
+**Deferred during implementation.** The brief asks for "one command, or one
+automatic step on a failed health check"; Track C's trap is the automatic
+step, and `deploy.sh --ref <sha>` stays the one manual command (it builds a
+new release). A fast manual switch needs the build and upload half of
+`deploy.sh` skippable and a second activation script; that is about as large
+as Track C again for a path the automatic rollback mostly covers. The design
+below stays as the starting point if a manual fast rollback is wanted.
 
 - **What:** the one-command rollback.
 - **Direction:** `--rollback` excludes `--ref` and `--skip-restart`. It takes
@@ -301,7 +312,7 @@ none
 |---|---|---|---|
 | `prepare`'s install is OOM-killed under box load | no (plan: none, existing retry) | retry on 137, then the deploy fails before anything stops | clear |
 | Disk: three releases at ~2.6 GB each plus the stage | plan: prune test | prune keeps only live+previous before creating; the existing 15%/3 GiB gate runs first | clear |
-| A dependency was present only because a stale workspace member (`browse`, `agent-doctest`) sat in `/opt/beebox` | no | the canary and health checks catch a failed start; the rehearsal installs the real `SHIPPED` set on Linux | clear at deploy |
+| A dependency was present only because a stale entry (`agent-doctest`) sat in `/opt/beebox` | Lima rehearsal (frozen install of the `SHIPPED` set, `bbx --version` from it) | the canary and health checks catch a failed start | clear at deploy |
 | `switch` runs on the legacy real dir while a process holds files in it | plan: legacy-switch test | runs only after the services and box units stop; open files survive a rename | clear |
 | Rename of the symlink is not atomic | plan: switch test | `rename(2)` of a symlink over a symlink is atomic on the same filesystem; the temp link is created in the parent dir of the install dir | — |
 | Rollback after a box applied a migration the previous engine does not know | `rollback.test.ts` | refusal; the trap falls back to restarting on the new release | clear (message names the migrations) |
@@ -376,6 +387,7 @@ No critical gap: every silent row is accepted above with its reason.
 
 ## NOT in scope
 
+- **`deploy.sh --rollback`** (Track D): deferred; see that track.
 - **Light path for box-docs-only commits** (issue direction 2): each deploy
   still builds a full release. Considered; the release copy makes a docs-only
   deploy cheaper to add later, but it needs hook classification work.
@@ -422,7 +434,7 @@ Skip: purely infrastructural. No box agent or dev agent learns a new concept;
 1. Track A (one commit, can land alone).
 2. Track B helper + tests.
 3. Track C activation path.
-4. Track D `--rollback`.
+4. Track D `--rollback`: deferred (see Track D).
 5. Track E docs; Lima rehearsal; cross-model diff review.
 
 ## Rollout shape
@@ -449,6 +461,20 @@ back, prune.
   `previous`), reclaimed by the third deploy's prune.
 
 No data migration; no box changes shape.
+
+## Rehearsal (Lima Ubuntu 24.04 VM, arm64, 2026-11-13)
+
+`scratch/rehearse-releases.sh` (not tracked) ran the helper as root on a local
+VM against the last deploy's build output: prepare with a real frozen install
+of the `SHIPPED` set (55 s, 2.5 GB), legacy conversion, `bbx --version` through
+the link, a process started from release A that lazy-loads a `dist/cli-*.mjs`
+chunk after the switch to B, in-use detection from `/proc`, pruning, the
+rollback guard against applied manifests, rollback, the failed mark, and the
+legacy tree pruned at the third prepare. All checks passed after one
+expectation was corrected (pnpm creates `node_modules` for absent workspace
+members). Not rehearsed: `deploy.sh` end to end, the activation trap, and
+systemd. The generated activation and CONTROL scripts were syntax-checked and
+shellchecked locally.
 
 ## Cross-model plan review (codex gpt-6-sol, round 1, 2026-11-13)
 

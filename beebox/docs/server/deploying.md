@@ -10,11 +10,12 @@ persistent detached checkout `<main-repo-root>/.deploy-checkout` and transfers
 the result to a separate server staging directory. `--skip-restart` stops there:
 the running installation has not been activated.
 
-The staged CLI's maintenance controller then closes admission for affected
-boxes, waits for accepted work, and records Git recovery snapshots. It stays
-alive outside the services while the activation script stops them, copies the
-staged release into `/opt/beebox`, installs dependencies, converges boxes,
-restarts services, and checks readiness. Ordinary requests do not acquire the
+While the services still run, the server builds a new release from the stage
+and installs its dependencies (see *Releases* below). The new release's
+maintenance controller then closes admission for affected boxes, waits for
+accepted work, and records Git recovery snapshots. It stays alive outside the
+services while the activation script stops them, switches `/opt/beebox` to the
+new release, converges boxes, restarts services, and checks readiness. Ordinary requests do not acquire the
 controller's maintenance permissions. `deploy-info.json` records the shipped
 commit; final deployment success is written only after the checks finish.
 
@@ -34,9 +35,10 @@ When convergence fails, the deploy then runs the same bounded repair the hourly
 limit) for each box that still has a pending migration, after the other boxes
 are serving again, and still reports the deploy as failed. A chained deploy waits
 for it. The repair runs only when the activation reached its restart and both
-services are up. A failure before the restart starts the services again on the live tree as it
-stands (new code, possibly old dependencies), skips the repair, and fails the
-deploy at once. The hourly schedule retries anything the repair leaves. See
+services are up. A failure after the switch rolls back to the previous release
+when that is safe (see *Releases*); any other failure while the services are
+stopped starts them again on the live release. Either way the deploy skips the
+repair and fails at once. The hourly schedule retries anything the repair leaves. See
 [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older
@@ -86,6 +88,51 @@ The hook records its requested SHA synchronously before launching through
 `bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
+
+## Releases
+
+Each deploy installs into its own directory,
+`/opt/beebox.releases/<UTC stamp>-<sha>`, and `/opt/beebox` is a link to the
+live one. The helper in `src/scripts/deploy-releases/` does the work on the
+server; the deploy installs it as root to
+`/usr/local/lib/beebox/deploy-releases/` and runs `cli.ts` with Node's type
+stripping.
+
+- **prepare** (services running): copy the shipped entries out of the stage,
+  carry `deploy-history.json` forward with the new `deploy-info.json` first,
+  and run `pnpm install --frozen-lockfile` in the release. A failure here
+  changes nothing live.
+- **switch** (services stopped): point `previous` at the live release, then
+  rename a new link over `/opt/beebox`. A process resolves its release when it
+  starts (`bin/bbx` runs the bundle by its real path), so it sees the old
+  release or the new one, never a partial tree. Unit files, `/usr/local/bin/bbx`
+  and each box's `.beebox/engine` all name `/opt/beebox` and follow the link.
+- **rollback**: switch back to `previous` and mark the release it leaves with
+  `.bbx-release-failed`. The activation script's EXIT trap runs it on any
+  failure after the switch, reinstalls the restored release's unit files, and
+  restarts the services; the controller's per-box canary then runs against the
+  restored release. Rollback refuses when a box applied a migration the
+  previous engine does not know (`_config/migrations.jsonl` against the
+  previous release's `src/core/migrations.ts`), when a manifest cannot be read,
+  or when `previous` already failed. Then the services restart on the new
+  release and the deploy fails: fix forward, or deploy a chosen commit with
+  `--ref`.
+- **prune** (at the next prepare): keep the live release, `previous`, and any
+  release a running process was started from (a backup or scheduler pass is
+  not stopped by a deploy); delete the rest. Each release holds its own
+  `node_modules` (about 2.4 GB; pnpm copies on ext4), so the host carries two
+  or three.
+
+The first deploy on a host whose `/opt/beebox` is still a real directory moves
+that tree to `/opt/beebox.releases/legacy-<stamp>`, which becomes `previous`.
+That one switch leaves `/opt/beebox` absent between two renames, inside the
+window with every service stopped.
+
+The rollback helper is root-only. To see what is live:
+
+```bash
+deploy/prod-ssh 'node /usr/local/lib/beebox/deploy-releases/cli.ts status --install-dir /opt/beebox'
+```
 
 ## The box units
 
@@ -150,7 +197,9 @@ Consequences:
 
 ## Rolling back
 
-Any commit in history redeploys with one command from a local checkout:
+A deploy that fails after its switch rolls back by itself when that is safe
+(see *Releases*). Otherwise, any commit in history redeploys with one command
+from a local checkout:
 
 ```bash
 ./deploy/deploy.sh --ref <old-sha>
@@ -163,4 +212,5 @@ safe as a deploy. Pick the target from `deploy-history.json` on the server
 carry `requestedRef`, so previous rollbacks are recognizable). Rolling forward
 again is the same command with the newer sha. Note a rollback across a
 `pnpm-lock.yaml`/`patches/` change triggers a clean reinstall in the build
-checkout, so it takes a few minutes instead of seconds.
+checkout, so it takes a few minutes instead of seconds. The redeploy builds a
+new release like any deploy.

@@ -107,13 +107,17 @@ the scheduler's one wrapper, and the nightly Claude Code update. The accounts:
 - `beebox-sched` — the scheduler daemon. Its one sudo grant is
   `bbx-box-run <slug> scheduler-pass`, which runs a pass as that box's user.
 
-`/opt/beebox/` is root-owned and read-only to every account; each box's home
+`/opt/beebox` is a link to the live release under `/opt/beebox.releases/`
+([releases](deploying.md#releases)), owned by the hub user and read-only to
+every box account; each box's home
 is private to its user (`0751` at the top so the hub can read the one file the
 box publishes, `0700` inside).
 
 ```
-/opt/beebox/                       # Source code
-  beebox/
+/opt/beebox -> /opt/beebox.releases/<stamp>-<sha>   # The live release
+/opt/beebox.releases/              # Releases: live, previous, and any in use
+  previous -> <stamp>-<sha>        #   the rollback target
+/opt/beebox.deploy-stage/          # Upload target the next release is built from
 /var/lib/beebox/<slug>/            # A box user's home (0751, bbx-<slug>)
   box/                             #   the box itself (a git repo)
   .config/beebox/secrets.json      #   the box's own secret store (its grants only)
