@@ -72,6 +72,7 @@ function makeEffects() {
   const exhibitsEvents: string[] = [];
   let exhibitsRender: (() => string) | null = null;
   let holdFailures = 0;
+  let readyFailures = 0;
 
   function timer({ ms, callback, repeat }: { ms: number; callback: () => void; repeat: boolean }): FakeTimerRecord {
     const record: FakeTimerRecord = {
@@ -111,7 +112,13 @@ function makeEffects() {
         fake?.fire({ code: null, signal: "SIGTERM" });
       }
     },
-    waitUntilReady: async () => ({ status: "ready", activeJobs, buildId: lastBuildId }),
+    waitUntilReady: async () => {
+      if (readyFailures > 0) {
+        readyFailures--;
+        throw new Error("workstreams app did not become ready within 30000ms: health request timed out");
+      }
+      return { status: "ready", activeJobs, buildId: lastBuildId };
+    },
     readHealth: async () => ({ status: "ready", activeJobs, buildId: lastBuildId }),
     exhibitsToken: async () => "exhibits-token-abcdefghijklmnop",
     holdExhibitsPort: async (options) => {
@@ -166,6 +173,8 @@ function makeEffects() {
     setActiveJobs: (count: number) => { activeJobs = count; },
     /** Make the next N binds fail the way a not-yet-released port does. */
     setHoldFailures: (count: number) => { holdFailures = count; },
+    /** Make the next N generations miss their readiness budget. */
+    setReadyFailures: (count: number) => { readyFailures = count; },
     setFingerprint: (value: string) => { fingerprint = value; },
     triggerWatch: (relativePath: string | null) => watchChange?.(relativePath),
     fireTimer,
@@ -443,4 +452,49 @@ void test("A socket can outlive the process that owned it, so one refused bind i
   assert.match(racing.exhibitsFallback() ?? "", /Exhibits unavailable/);
 
   await racingSupervisor.shutdown();
+});
+
+// A start fails mostly under transient load: a router cold start launches several
+// Vite servers at once, and each can stall for seconds. Waiting for a source change
+// left the app down for hours, so a failed start retries on its own a few times,
+// spaced out, and then stops so a broken app does not restart forever.
+void test("A failed start retries on its own a few times, then waits for a source change or a manual retry.", async () => {
+  const fake = makeEffects();
+  const supervisor = createWorkstreamsAppSupervisor(fake.effects, {
+    appRoot: "/tmp/fake-workstreams-app",
+    logPath: "/tmp/fake-workstreams-app.log",
+    log: () => {},
+    quietMs: 10,
+    activeJobPollMs: 20,
+    reconcileMs: 30,
+    startRetryDelaysMs: [101, 102],
+  });
+
+  fake.setReadyFailures(1);
+  await supervisor.start();
+  assert.equal(supervisor.state().phase, "failed");
+  await fake.fireTimer(101);
+  await fake.settle();
+  assert.equal(supervisor.state().phase, "ready");
+
+  // Success resets the budget, and the budget runs out after the last delay.
+  fake.children.at(-1)!.fire({ code: 9, signal: null });
+  await fake.settle();
+  fake.setReadyFailures(3);
+  await supervisor.retry();
+  assert.equal(supervisor.state().phase, "failed");
+  await fake.fireTimer(101);
+  await fake.settle();
+  assert.equal(supervisor.state().phase, "failed");
+  await fake.fireTimer(102);
+  await fake.settle();
+  assert.equal(supervisor.state().phase, "failed");
+  const spawnsAfterBudget = fake.spawnOptions.length;
+  await fake.fireTimer(101);
+  await fake.fireTimer(102);
+  assert.equal(fake.spawnOptions.length, spawnsAfterBudget);
+
+  await supervisor.retry();
+  assert.equal(supervisor.state().phase, "ready");
+  await supervisor.shutdown();
 });
