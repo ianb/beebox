@@ -32,8 +32,14 @@ Files on 2026-10-30:
   ran `pnpm install` as the box user through `sudo ... bash -lc`, which uses
   the login umask 002 (journal, deploy of 2026-11-11 21:37). The helper now
   runs under `umask 007` and removes the "other" bits from each box's
-  top-level node_modules on each deploy. The next deploy repairs both trees,
-  so step 1 below does not apply to them.
+  top-level node_modules on each deploy. Fixed: after the deploy of
+  2026-11-13 18:14 both trees are 0770, and every box's node_modules is
+  0700 or 0770.
+
+State on 2026-11-13 (after that deploy): six `.gitconfig` files are still
+0664 (all except explorations, 0600). `mn-social-services`'s
+`notified-questions.json` is still 0664; the engine now writes it 0600, so
+its next rewrite tightens it.
 
 The migration and `add-box.sh` run `chmod -R go-rwx` on the box root only
 when they run. Nothing re-asserts the modes after that.
@@ -50,8 +56,8 @@ when they run. Nothing re-asserts the modes after that.
 The group bits (0660, 0640, 0770) that the same run reported are not a
 leak: the group is `bbx-<slug>`, which has one member, and `UMask=0007` is
 the documented posture. The audit now accepts them.
-3. Other `sudo -u bbx-<slug> -H bash -lc` calls in `deploy/deploy.sh` (the
-   maintenance converge `bbx engine migrate --sweep`, and the migrate status
-   and run steps near line 1350) also use umask 002, and they can write files
-   in the box. Prefix them with `umask 007;`, as `bbx-box-install` does now.
-   They are a possible source of the 0664 `notified-questions.json`.
+
+Done 2026-11-13: the `sudo -u bbx-<slug> -H bash -lc` calls in
+`deploy/deploy.sh` (maintenance converge, migrate status and repair) now
+start with `umask 007;`, as `bbx-box-install` does. They used the login
+umask 002 and could write files in the box.

@@ -895,7 +895,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
       # sudo normally drops this environment. Pass only the explicit fleet
       # permits into the trusted nested migration command; no repair agents run.
       sudo -u "$user" -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
-        'set -a; source "$1" 2>/dev/null; set +a; cd "$2" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
+        'umask 007; set -a; source "$1" 2>/dev/null; set +a; cd "$2" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
         bbx-sweep "$envfile" "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
     }
     for home in /var/lib/beebox/*/; do
@@ -1348,10 +1348,10 @@ if [[ $maintenance_rc -ne 0 ]]; then
     slug=$(basename "$(dirname "$box")")
     owner="bbx-$slug"
     envfile=/etc/beebox/box.env
-    status=$(sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; cd "$2" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$envfile" "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
+    status=$(sudo -u "$owner" -H bash -lc 'umask 007; set -a; source "$1"; set +a; cd "$2" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$envfile" "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
     [[ "$status" == *'"pending":[]'* ]] && continue
     echo "  $box: migration pending after a failed convergence; running bounded repair now..."
-    sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$2" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$envfile" "$box" \
+    sudo -u "$owner" -H bash -lc 'umask 007; set -a; source "$1"; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$2" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$envfile" "$box" \
       || echo "  $box: repair did not converge; the hourly box-convergence pass retries" >&2
   done
 fi
