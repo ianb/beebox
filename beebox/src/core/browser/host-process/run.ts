@@ -28,6 +28,7 @@ import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { dashboardEnv, runAgentBrowser } from "./agent-browser.js";
 import { resolveBrowserExecutable } from "../install.js";
 import { BOX_BROWSER_SESSION, browserPaths, type BrowserBox, type BrowserPaths } from "../paths.js";
+import { boxBrowserUserAgent } from "./user-agent.js";
 import { startCommandServer, type CommandServer } from "./command-server.js";
 import { startRelay, type Relay } from "./relay.js";
 
@@ -213,6 +214,7 @@ export async function runBrowserHost(box: BrowserBox, { enginePid }: { enginePid
   const env = dashboardEnv({
     paths, boxRoot: box.boxRoot, executablePath: executable.executablePath,
     home: process.env.HOME ?? "", pathVar: process.env.PATH ?? "",
+    userAgent: await boxBrowserUserAgent(executable.executablePath),
   });
   await clearStale(paths, env);
 
