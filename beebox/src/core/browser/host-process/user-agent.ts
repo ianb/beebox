@@ -27,22 +27,30 @@ export function majorVersionOf(versionLine: string): string | null {
 }
 
 /**
- * The windowed user agent for the Chromium at `executablePath`, or null when
- * its version cannot be read. Null leaves agent-browser's default, which on a
- * developer's machine (no executable path) is the browser agent-browser picks.
+ * The Chrome major version used when the browser's own cannot be read: on a
+ * developer's machine (agent-browser picks the browser, so there is no path to
+ * ask) or when `--version` fails. A recent stable version; a user agent a few
+ * versions behind the real browser is ordinary, a `HeadlessChrome` one is not.
  */
-export async function boxBrowserUserAgent(executablePath: string | undefined): Promise<string | null> {
-  if (executablePath === undefined) return null;
+const FALLBACK_MAJOR_VERSION = "157";
+
+async function readMajorVersion(executablePath: string | undefined): Promise<string> {
+  if (executablePath === undefined) return FALLBACK_MAJOR_VERSION;
   try {
     const { stdout } = await execFileAsync(executablePath, ["--version"], { timeout: 10_000, encoding: "utf8" });
     const major = majorVersionOf(stdout);
-    if (major === null) {
-      console.warn(`[browser] could not read a version from "${stdout.trim()}"; the browser keeps its headless user agent`);
-      return null;
-    }
-    return windowedUserAgent(major, { platform: process.platform, arch: process.arch });
+    if (major !== null) return major;
+    console.warn(`[browser] could not read a version from "${stdout.trim()}"; using Chrome ${FALLBACK_MAJOR_VERSION} in the user agent`);
   } catch (error) {
-    console.warn(`[browser] ${executablePath} --version failed; the browser keeps its headless user agent:`, error);
-    return null;
+    console.warn(`[browser] ${executablePath} --version failed; using Chrome ${FALLBACK_MAJOR_VERSION} in the user agent:`, error);
   }
+  return FALLBACK_MAJOR_VERSION;
+}
+
+/**
+ * The windowed user agent for the Chromium at `executablePath`. Always a
+ * plain Chrome string: its own version when it can be read, else a recent one.
+ */
+export async function boxBrowserUserAgent(executablePath: string | undefined): Promise<string> {
+  return windowedUserAgent(await readMajorVersion(executablePath), { platform: process.platform, arch: process.arch });
 }

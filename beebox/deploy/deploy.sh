@@ -168,6 +168,15 @@ trap 'on_signal HUP 1' HUP
 BBX_DEPLOY_NO_FALLBACK=1 require_deploy_target "$SCRIPT_DIR"
 SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 INSTALL_DIR="$BBX_DEPLOY_INSTALL_DIR"
+# Keepalives on every connection to the server (ssh here, and rsync's ssh).
+# Without them a dropped connection (laptop sleep, network change) left the
+# control ssh waiting forever with the deploy lock held: the server side had
+# already died, and no later deploy could start (twice on 2026-11-12). Now a
+# dead connection fails within about two minutes, exit 255, and the EXIT trap
+# reports it and releases the lock.
+SSH_KEEPALIVE=(-o ServerAliveInterval=30 -o ServerAliveCountMax=4)
+ssh() { command ssh "${SSH_KEEPALIVE[@]}" "$@"; }
+export RSYNC_RSH="ssh ${SSH_KEEPALIVE[*]}"
 
 
 # The latest-wins lock below is a lock DIRECTORY holding the owner's pid.

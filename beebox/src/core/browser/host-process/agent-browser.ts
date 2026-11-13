@@ -45,14 +45,14 @@ export interface DashboardEnvInput {
   /** The host's own `HOME` and `PATH`. */
   readonly home: string;
   readonly pathVar: string;
-  /** From `boxBrowserUserAgent`; null keeps agent-browser's default. */
-  readonly userAgent: string | null;
+  /** From `boxBrowserUserAgent`. */
+  readonly userAgent: string;
 }
 
 /** The whole environment agent-browser runs with. */
 export function dashboardEnv({ paths, boxRoot, executablePath, home, pathVar, userAgent }: DashboardEnvInput): Record<string, string> {
   return {
-    ...(userAgent === null ? {} : { AGENT_BROWSER_USER_AGENT: userAgent }),
+    AGENT_BROWSER_USER_AGENT: userAgent,
     AGENT_BROWSER_CONFIG: paths.config,
     AGENT_BROWSER_SOCKET_DIR: paths.socketDir,
     AGENT_BROWSER_SESSION: BOX_BROWSER_SESSION,
