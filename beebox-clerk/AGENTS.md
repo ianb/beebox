@@ -48,6 +48,9 @@ React, WXT, or chrome.*.
   loaded, HMR).
 - `pnpm build` — production build to `dist/chrome-mv3/`; load that
   directory unpacked via chrome://extensions.
+- `pnpm build:firefox` — Firefox MV3 build to `dist/firefox-mv3/`; load its
+  `manifest.json` as a temporary add-on from about:debugging. Untested in
+  daily use; the enable-box permission prompt differs from Chrome's.
 - `pnpm test` / `pnpm typecheck` / `pnpm lint` — tap, tsc, eslint. All must
   stay green; the root pre-commit hook runs lint-staged + typecheck.
 - `wxt prepare` (runs on install) generates `.wxt/` types; `tsconfig.json`
