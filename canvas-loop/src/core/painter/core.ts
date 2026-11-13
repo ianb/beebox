@@ -9,13 +9,12 @@
 // input, capture, and canvas creation stay with the caller (the headless Surface,
 // the browser runtime for the playground), which also supplies `makeLayer` for
 // offscreen surfaces.
-import { PaperSheet } from "../brush/paper.js";
+import { PaperSheet, paperOverlay } from "../brush/paper.js";
 import { renderMark } from "../brush/render/mark.js";
 import type { Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
 import { SketchUsageError, assertUnit } from "../errors.js";
-import { styleProblem as styleProblemFor } from "./style.js";
-import type { ResolvedStyle } from "./style.js";
+import { styleProblem as styleProblemFor, type ResolvedStyle } from "./style.js";
 import type { AtOptions, BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTransform, GroupOptions, Layer, MakeLayer, Paint, PasteOptions, Sprite, SpriteOptions } from "../paint.js";
 import { compositeGroup, resolveEffects } from "./effects.js";
 import { applyAt, compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon, withSaved } from "../paint.js";
@@ -24,7 +23,6 @@ import { FaintWatch } from "./faint.js";
 import { GlyphWatch, TextOverlap, textRect } from "./text-watch.js";
 import type { TextRect } from "./text-watch.js";
 import { LayerCache, LayerPool, drawLayer, isShapeList, maskLayer, replaceInShapes, withComposite } from "./layers.js";
-import { paperOverlay } from "../brush/paper.js";
 
 /** True for the identity transform. */
 function isIdentity(m: CtxTransform): boolean {
@@ -41,8 +39,8 @@ export class PainterCore {
   readonly width: number;
   readonly height: number;
 
-  // The bottom entry is the canvas; `group` pushes its layer's context.
-  #ctxStack: Ctx2D[];
+  // The bottom entry is the canvas; `group` pushes its layer. Smear brushes read the top one's image.
+  #layerStack: Layer[];
   #makeLayer: MakeLayer;
   #paper: PaperSheet;
   // Opacity of each open group, so a mark's visible strength can be judged.
@@ -70,8 +68,8 @@ export class PainterCore {
   // Only with `warn` (headless): probing glyphs reads pixels back.
   #glyphs: GlyphWatch | undefined;
 
-  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; note?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
-    this.#ctxStack = [options.ctx];
+  constructor(options: { surface: Layer; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void; note?: (message: string) => void; outline?: boolean; pixelRatio?: number }) {
+    this.#layerStack = [options.surface];
     this.pixelRatio = options.pixelRatio ?? 1;
     this.#device = { width: Math.round(options.width * this.pixelRatio), height: Math.round(options.height * this.pixelRatio) };
     this.#paper = new PaperSheet(options.makeLayer, { size: this.#device, pixelRatio: this.pixelRatio });
@@ -84,17 +82,20 @@ export class PainterCore {
     this.#glyphs = warn === undefined ? undefined : new GlyphWatch(options.makeLayer, (message) => this.note(message));
     this.#pool = new LayerPool(options.makeLayer, this.#device);
     // A high-density canvas (pixelRatio > 1) draws in logical units under a base scale.
-    if (this.pixelRatio !== 1) options.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    if (this.pixelRatio !== 1) options.surface.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     this.#makeLayer = options.makeLayer;
     this.width = options.width;
     this.height = options.height;
   }
 
-  /** The context drawing currently lands on: the canvas, or the innermost open group. */
-  get ctx(): Ctx2D {
-    const top = this.#ctxStack.at(-1);
+  /** The surface drawing currently lands on (the canvas, or the innermost open group's layer), and its context. */
+  get #surface(): Layer {
+    const top = this.#layerStack.at(-1);
     if (top === undefined) throw new SketchUsageError({ detail: "no drawing context" });
     return top;
+  }
+  get ctx(): Ctx2D {
+    return this.#surface.ctx;
   }
 
   /** Set the canvas's paper texture (grainy brushes read it). */
@@ -219,7 +220,7 @@ export class PainterCore {
     const layer = options.into ?? (fresh ? this.#makeLayer(this.#device) : this.#pool.acquire());
     if (start !== undefined) layer.ctx.putImageData(start, 0, 0);
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-    this.#ctxStack.push(layer.ctx);
+    this.#layerStack.push(layer);
     this.#alphaStack.push(opacity);
     if (options.where !== undefined) this.#where.push(options.where);
     try {
@@ -230,7 +231,7 @@ export class PainterCore {
       throw error;
     } finally {
       if (options.where !== undefined) this.#where.pop();
-      this.#ctxStack.pop();
+      this.#layerStack.pop();
       this.#alphaStack.pop();
     }
     return layer;
@@ -299,7 +300,7 @@ export class PainterCore {
   /** Draw this frame's debug outlines over the canvas (the runtime calls it after `draw`). */
   finishFrame(): void {
     this.#overlap.finish();
-    this.#debug.draw(this.#ctxStack[0] ?? this.ctx);
+    this.#debug.draw(this.#layerStack[0]?.ctx ?? this.ctx);
   }
 
   #outline(kind: "sprite" | "clip" | "box", args: { label: string; rect?: readonly [number, number, number, number]; shape?: ClipShape }): void {
@@ -369,11 +370,11 @@ export class PainterCore {
     const m = target.getTransform();
     this.#pool.borrow((layer) => {
       layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-      this.#ctxStack.push(layer.ctx);
+      this.#layerStack.push(layer);
       try {
         body();
       } finally {
-        this.#ctxStack.pop();
+        this.#layerStack.pop();
       }
       drawLayer(target, { image: layer.image, ...this.#device, opacity: 1, op: "destination-out" });
     });
@@ -408,9 +409,8 @@ export class PainterCore {
     const { erase: erasing, blend } = style;
     const composite = erasing ? "destination-out" : compositeOp(blend === "normal" ? (brush.blend ?? "normal") : blend);
     const peak = renderMark({
-      target: this.ctx,
-      scratch: this.#pool.scratch(),
-      paintScratch: this.#pool.paintScratch(),
+      target: this.#surface,
+      scratch: (name) => this.#pool.scratch(name),
       measure: this.#measure,
       canvas: this.#device,
       contours: contours(),

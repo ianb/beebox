@@ -155,7 +155,7 @@
     "@googleworkspace/cli": "0.22.5",
     "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@markdoc/markdoc": "^0.5.7",
-    "@napi-rs/canvas": "1.0.2",
+    "@napi-rs/canvas": "1.1.0",
     "@openai/codex": "0.164.0",
     "@openai/codex-sdk": "0.164.0",
     "@orama/orama": "3.1.18",

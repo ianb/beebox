@@ -38,8 +38,8 @@ export class Surface {
     const canvas = createCanvas(width, height);
     this.#canvasCtx = canvas.getContext("2d");
     this.painter = new Painter({
-      // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
-      ctx: this.#canvasCtx as unknown as Ctx2D,
+      // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union); a Skia Canvas is what this runtime's drawImage accepts
+      surface: { ctx: this.#canvasCtx as unknown as Ctx2D, image: canvas as unknown as LayerImage },
       width,
       height,
       makeLayer: makeSkiaLayer,
