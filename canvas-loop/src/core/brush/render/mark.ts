@@ -342,7 +342,7 @@ export function renderMark(
       t.globalCompositeOperation = req.composite;
       t.drawImage(layer.image, 0, 0, b.w, b.h, b.x, b.y, b.w, b.h);
     });
-    const alpha = req.measure ? peakAlpha(layer, b) * req.brush.opacity : 1;
+    const alpha = req.measure ? peakAlpha(layer, b) * req.brush.opacity * (base?.a ?? 1) : 1;
     return { alpha, x: b.x + b.w / 2, y: b.y + b.h / 2 };
   } finally {
     layer.ctx.restore();

@@ -35,6 +35,8 @@ export interface SmearRequest {
   /** Stroke width in device pixels at full pressure. */
   readonly width: number;
   readonly paper: () => Layer;
+  /** The target's size in device pixels: pickup near an edge reads the nearest patch inside it. */
+  readonly canvas: { readonly width: number; readonly height: number };
 }
 
 /** Scale every pixel (premultiplied) of the patch by `keep`, then add `add` at `amount`. */
@@ -65,7 +67,12 @@ function wetColour(req: SmearRequest): string | undefined {
   return cssColour(parseColour(req.load.ctx, req.paint), 1);
 }
 
-/** One dab: lay the load down through the tip at (x, y), radius r, strength alpha. */
+/**
+ * One dab: move the target toward the load through the tip at (x, y), radius r, by alpha.
+ * An exact premultiplied lerp, so a translucent drawing stays as translucent as the paint
+ * moved into it: erase the target by the tip mask (destination-out), then add the masked
+ * load (lighter). The dab layer holds the masked load at [0, size) and the mask at [size, 2·size).
+ */
 function layDab(req: SmearRequest, dab: { x: number; y: number; r: number; alpha: number; size: number }): void {
   const { size } = dab;
   const half = size / 2;
@@ -74,33 +81,43 @@ function layDab(req: SmearRequest, dab: { x: number; y: number; r: number; alpha
   const cx = dab.x - left;
   const cy = dab.y - top;
   const d = req.dab.ctx;
-  d.clearRect(0, 0, size, size);
-  d.drawImage(req.load.image, 0, 0, size, size, 0, 0, size, size);
-  // The tip as a radial gradient over the whole patch: soft fades from the centre; hard keeps a
-  // one-pixel antialiased edge. (destination-in must cover every pixel, so no path fill.)
-  d.globalCompositeOperation = "destination-in";
-  const g = d.createRadialGradient(cx, cy, 0, cx, cy, dab.r);
+  d.clearRect(0, 0, 2 * size, size);
+  // The tip as a radial gradient: soft fades from the centre; hard keeps a one-pixel antialiased edge.
+  const g = d.createRadialGradient(cx + size, cy, 0, cx + size, cy, dab.r);
   g.addColorStop(req.brush.tip === "soft" ? 0 : Math.max(0, (dab.r - 1) / dab.r), "rgba(0,0,0,1)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   d.fillStyle = g;
-  d.fillRect(0, 0, size, size);
+  d.fillRect(size, 0, size, size);
   if (req.brush.grain > 0) {
     d.globalCompositeOperation = "destination-out";
     d.globalAlpha = req.brush.grain;
-    d.drawImage(req.paper().image, left, top, size, size, 0, 0, size, size);
+    d.drawImage(req.paper().image, left, top, size, size, size, 0, size, size);
     d.globalAlpha = 1;
   }
-  d.globalCompositeOperation = "source-over";
   const t = req.target;
   t.globalAlpha = dab.alpha * req.brush.opacity;
+  t.globalCompositeOperation = "destination-out";
+  t.drawImage(req.dab.image, size, 0, size, size, left, top, size, size);
+  // Mask the load only now: a browser's destination-in also clears outside the drawn rect,
+  // which takes the mask with it.
+  d.globalCompositeOperation = "source-over";
+  d.drawImage(req.load.image, 0, 0, size, size, 0, 0, size, size);
+  d.globalCompositeOperation = "destination-in";
+  d.drawImage(req.dab.image, size, 0, size, size, 0, 0, size, size);
+  d.globalCompositeOperation = "source-over";
+  t.globalCompositeOperation = "lighter";
   t.drawImage(req.dab.image, 0, 0, size, size, left, top, size, size);
+  t.globalCompositeOperation = "source-over";
 }
 
 /** Mix the load with what is under (x, y) now, and with the stroke colour for wet paint. */
 function pickUp(req: SmearRequest, at: { x: number; y: number; size: number; keep: number }): void {
   const { size } = at;
-  const left = Math.round(at.x - size / 2);
-  const top = Math.round(at.y - size / 2);
+  // Off the canvas there is nothing to pick up; reading transparency there would make a smudge
+  // that starts past an edge erase what it crosses. Read the nearest patch inside instead.
+  const clamp = (v: number, extent: number): number => Math.max(0, Math.min(Math.max(0, extent - size), v));
+  const left = clamp(Math.round(at.x - size / 2), req.canvas.width);
+  const top = clamp(Math.round(at.y - size / 2), req.canvas.height);
   const l = req.load.ctx;
   mix(l, {
     size,

@@ -115,3 +115,13 @@ test("a one-dab wet mark paints; a wet colour the runtime cannot read is an erro
   assert.notDeepEqual(pixel(h, [20, 20]), [255, 255, 255, 255]);
   assert.throws(() => h.v.line(5, 20, 35, 20, { stroke: "not-a-colour", weight: 8, brush: "wet" }), /not a colour/);
 });
+
+test("a smudge with no carry leaves translucent paint as translucent as it was", () => {
+  const h = makeView({ width: 120, height: 40 });
+  h.v.group({ opacity: 1 }, () => {
+    h.v.rect(0, 0, 120, 40, { fill: "rgba(200, 0, 0, 0.2)" });
+    h.v.line(10, 20, 110, 20, { stroke: "#000", weight: 16, brush: { preset: "smudge", strength: 0, grain: 0 } });
+  });
+  const a = pixel(h, [60, 20])[3];
+  assert.ok(Math.abs(a - 51) <= 3, `alpha ${a}, was 51`);
+});

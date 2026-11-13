@@ -246,6 +246,21 @@ The review read the plan and the in-progress code.
   the canvas is not a real use. Group behaviour is tested (it found the
   @napi-rs/canvas bug above).
 
+## Review decisions (cross-model code review, codex gpt-6-sol, 2026-11-12)
+
+- **A smudge made translucent paint more opaque** (laying the load with
+  source-over): fixed. A dab is now an exact premultiplied lerp: erase the
+  target by the tip mask, then add the masked load with `lighter`. Test: a
+  `strength: 0` smudge over 20%-alpha red leaves it at 20%. A browser's
+  `destination-in` clears outside the drawn rect, so the mask is used on the
+  target before the load is masked.
+- **The faint-mark check ignored a jittered colour's own alpha:** fixed.
+- Found while checking the lerp fix: a smudge starting off the canvas picked
+  up transparency and erased what it crossed. Pickup now reads the nearest
+  patch inside the canvas.
+- No second review round: the fixes were checked with tests and by rendering
+  the example headless and in a browser.
+
 ## Implementation order
 
 1. Track 2 (painter surfaces) with existing tests green. Commit.
