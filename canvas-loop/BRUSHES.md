@@ -240,8 +240,8 @@ Safari 18 ignore effects.
 
 ## Gradients and paper texture
 
-- `ellipseGradient(x, y, w, h, stops)` is a radial gradient that fills an
-  ellipse of width `w` and height `h` (like `ellipse`), for flat pools of
+- `ellipseGradient(x, y, rx, ry, stops)` is a radial gradient that fills an
+  ellipse with radii `rx` and `ry` (like `ellipse`), for flat pools of
   light and oval glows. `radialGradient` is always circular.
 - `paperTexture(amount)` shows the paper's tooth across everything drawn so
   far, so flat fills and gradients look printed on paper. Call it last;

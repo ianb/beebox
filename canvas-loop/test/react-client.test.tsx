@@ -130,3 +130,22 @@ test("a throwing update surfaces a small inline error box and stops the loop", (
     root.unmount();
   });
 });
+
+// ── a text param's box follows a value set from outside ──────────────
+const textParams = { answer: { type: "text", default: "" } } as const;
+
+test("a controlled text param's box shows a new value the host sets", () => {
+  const render = (answer: string): React.ReactElement =>
+    React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params: textParams }, params: { answer }, showControls: true });
+  const { root, host } = mountInto(render("H2O"));
+  const shown = (): string | null => host.querySelector("input.cl-text")?.getAttribute("value") ?? null;
+  assert.equal(shown(), "H2O");
+  act(() => {
+    root.render(render("CO2"));
+  });
+  pumpFrames(2);
+  assert.equal(shown(), "CO2", "a value that is not an echo of typing replaces the draft");
+  act(() => {
+    root.unmount();
+  });
+});
