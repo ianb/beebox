@@ -419,3 +419,29 @@ Size: about 2,080 changed lines (1,162 source, 865 tests, 57 docs) against an
 estimate of about 1,300: a BIG CHANGE, reported to the boxholder after the
 fact. Most of the growth is the page side (queue, chat-machine key, scope
 contexts, the reporter type in every renderer).
+
+## Track E: the log replaces the per-send snapshot (boxholder, 2026-11-13)
+
+Boxholder: "I want to switch all activity over to this new system, including
+for views." The latest-wins `<card-activity>` snapshot that rode each send
+goes; the log is the only activity path.
+
+- Frontend: `CardActivityStore`, `useCardSend`'s report/capture of kinds and
+  details, and `cardActivity`/`cardState` on the send path go. The send keeps
+  `openCard`/`viewContext`: that is attention, not activity.
+- One reporter: a hook bound to a card logs `{card, via?}` into the chat's
+  scope when the component is inside a companion-pane card, and does nothing
+  elsewhere. Views, figures, the pane's `navigated` and the renderer switch
+  ("viewing as …") all call it; the `reportActivity` prop threading through
+  FileView goes.
+- Scroll: the pane logs the settled topmost heading for any card whose
+  content has headings (views and documents). The scroll-fraction snapshot
+  goes. Figures have no headings and log no scroll.
+- Server: `cardActivity`/`cardState` leave the send body (unknown keys from an
+  old open tab are stripped, not rejected), `ChatSendInput`, the turn merge,
+  and `start.ts`; `renderActivityChildren` goes. Old transcripts keep their
+  `<card-activity>` tags; tag parsing for display stays.
+- The agent sees the `<activity entries cards>` hint and runs
+  `bbx chat activity`. The prompt and the views guide drop the
+  `<card-activity>` text.
+- NOT in scope: views outside the companion pane (no chat to attribute to).

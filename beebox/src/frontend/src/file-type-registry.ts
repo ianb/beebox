@@ -17,7 +17,6 @@
  */
 
 import type { FileSummary } from "@core/file-summary";
-import type { ReportActivity } from "@core/chat/card-activity.js";
 import type { CardSchemaFacts } from "@backend/trpc/routers/card.js";
 import type { NavigateHint, ViewState, ViewTarget } from "./lib/view-url";
 import { GenericIcon, type FileIcon } from "./file-types/icons";
@@ -75,12 +74,6 @@ export interface RendererProps {
    * a normal captioned image; other renderers ignore it. Absent outside embeds.
    */
   caption?: string;
-  /**
-   * Report learner activity on this card to the companion chat (latest-wins
-   * per kind, seen on the agent's next turn). Bound to the card it renders;
-   * set only in the companion pane, so a renderer must treat it as optional.
-   */
-  reportActivity?: ReportActivity;
 }
 
 /** A renderer registration: `src/renderers.ts`'s registry contract, one member per registration. */

@@ -102,8 +102,7 @@ export interface ChatSendInput extends ChatSendContext {
    * Omitted when the transport doesn't know.
    */
   channel?: ChatChannel;
-  // `openCard`, `cardActivity`, `cardState`: `ChatSendContext`
-  // (`core/chat/card-activity.ts`), the one list of per-send context fields.
+  // `openCard`: `ChatSendContext` (`core/chat/card-activity.ts`), the per-send context fields.
   /**
    * The turn carries text the person at the composer did not type (a script's
    * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { ReportActivity } from "@core/chat/card-activity.js";
 import type { FileData, FileRenderer } from "../../file-type-registry";
 import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
@@ -18,14 +17,13 @@ interface ActiveFileRendererProps {
   viewState?: ViewState | null;
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
-  reportActivity?: ReportActivity;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   renderInline: RenderInline<ViewTarget>;
   caption?: string;
 }
 
 export function ActiveFileRenderer(props: ActiveFileRendererProps) {
-  const { active, binding, data, path, mode, params, viewState, canPushViewState, onViewStateChange, reportActivity, onNavigate, renderInline, caption } = props;
+  const { active, binding, data, path, mode, params, viewState, canPushViewState, onViewStateChange, onNavigate, renderInline, caption } = props;
   const stateKey = JSON.stringify(viewState ?? null);
   const [local, setLocal] = useState<{ path: string; stateKey: string; state: ViewState } | null>(null);
   const builtinState = local?.path === path && local.stateKey === stateKey ? local.state : viewState;
@@ -44,7 +42,6 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
         ownedViewState={viewState}
         canPushViewState={canPushViewState}
         {...(onViewStateChange !== undefined ? { onViewStateChange } : {})}
-        {...(reportActivity !== undefined ? { reportActivity } : {})}
         onNavigate={onNavigate}
         renderInline={renderInline}
       />
@@ -54,8 +51,7 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
     return caption !== undefined && caption.trim() !== "" ? <CaptionedFigure caption={caption}>{bound}</CaptionedFigure> : bound;
   }
   return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} workspacePdf={props.workspacePdf}
-    viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState}
-    {...(reportActivity !== undefined ? { reportActivity } : {})} />;
+    viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState} />;
 }
 
 /** Registry marker; FileView renders the stable bound renderer directly. */

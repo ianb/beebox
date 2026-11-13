@@ -1,5 +1,5 @@
 /**
- * Scroll activity for views: the topmost visible heading of the card's
+ * Scroll activity for companion-pane cards: the topmost visible heading of the card's
  * content, logged once scrolling has settled and only when it changed. Raw
  * positions are never reported, and content without headings reports nothing.
  */
@@ -33,15 +33,6 @@ export function topmostHeadingIn(container: HTMLElement): string | null {
     return { text: node.textContent, top: rect.top, bottom: rect.bottom };
   });
   return topmostVisibleHeading(boxes, view);
-}
-
-/**
- * Whether a pane's scroller shows an agent view as the card itself (the view
- * renderer's own root, not a view embedded in a Markdown card). Heading
- * activity is for views only; a Markdown or file card reports nothing.
- */
-export function rendersAgentView(scroller: HTMLElement): boolean {
-  return scroller.querySelector(".bbx-card-view:not([data-view-embedded])") !== null;
 }
 
 export interface HeadingScrollTracker {

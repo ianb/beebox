@@ -16,7 +16,6 @@ import { buildTimezoneContext } from "../../../box/config.js";
 import { resolveStartEngine } from "../engine.js";
 import { buildScriptEnv } from "../../../script-env/core.js";
 import { composeSendSnapshot, type HealthGate } from "../../../session-context.js";
-import { renderActivityChildren } from "../../card-activity.js";
 import { advanceForSend, renderActivityHint } from "../../../activity/cursor.js";
 import {
   chatSystemPrompt,
@@ -209,17 +208,12 @@ export async function composeTurnContent(
   const runEnded = pendingRunEndedNote(boxRoot, sessionId);
   await features.ensureLoaded();
   // Omit-when-empty: `undefined` (not `""`) drops the attribute, since the
-  // snapshot pipeline renders empty strings. `card-activity` collapses to
-  // `undefined` when nothing survives the canonical join.
+  // snapshot pipeline renders empty strings.
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
   const activityHint = await activityHintFor(boxRoot, { rawInput, chatId });
-  const activityChildren = [activityHint, renderActivityChildren({
-    kinds: rawInput.cardActivity ?? [],
-    details: rawInput.cardState ?? {},
-    ...(openCard !== undefined ? { openCard } : {}),
-  }), runEnded.element ?? ""].filter((child) => child !== "").join("\n");
+  const activityChildren = [activityHint, runEnded.element ?? ""].filter((child) => child !== "").join("\n");
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     ...(rawInput.viewContext !== undefined ? { viewContext: rawInput.viewContext } : {}),

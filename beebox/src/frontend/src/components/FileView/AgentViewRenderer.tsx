@@ -11,7 +11,7 @@ import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
 import type { ReportActivity } from "@core/chat/card-activity.js";
-import { usePaneCard, useActivityLogger } from "../../lib/activity/scope";
+import { usePaneCard, useCardActivityReporter } from "../../lib/activity/scope";
 import type { RealtimeEvent } from "../../hooks/useBusSubscription";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
@@ -64,12 +64,12 @@ interface ViewProps extends ViewFileHelpers {
   params: Record<string, string>;
   viewHistory: ViewHistory;
   /**
-   * Report user activity on this card to the chat's companion-pane accumulator,
-   * with an optional free-text detail surfaced as the `<card-activity>` element text (e.g. the query
-   * the user typed). Writes auto-report `"modified"` with the path; a view that
-   * changes parameters without changing data should call
+   * Log user activity on this card for the chat's agent, with an optional
+   * free-text detail (e.g. the query the user typed) and a small data object.
+   * Writes auto-report `"modified"` with the path; a view that changes
+   * parameters without changing data should call
    * `reportActivity("explored", "<what they're looking at>")`. A no-op outside
-   * the companion pane (inline/page renders don't accumulate).
+   * the companion pane.
    */
   reportActivity: ReportActivity;
   /** `"strip"` when drawn in the conversation strip, else `"page"`. */
@@ -78,9 +78,8 @@ interface ViewProps extends ViewFileHelpers {
 
 /**
  * Wrap the file helpers so a successful write/append/commit reports
- * `"modified"` with the path. Only the companion-pane AgentViewRenderer passes a
- * real reporter, so inline/page views can write freely without polluting the
- * accumulator.
+ * `"modified"` with the path. Outside the companion pane the reporter is a
+ * no-op, so inline/page views can write freely without polluting the log.
  */
 function withModifiedReporting(
   helpers: ViewFileHelpers,
@@ -133,8 +132,6 @@ interface AgentViewRendererProps {
   viewState?: ViewState | null;
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
-  /** Companion-pane activity reporter; omitted for inline/page renders. */
-  reportActivity?: ReportActivity;
   /**
    * The surface's "open a card here" primitive — companion → onZoomView,
    * browse → swap the detail pane, page → push a route. Lifted into the view
@@ -233,7 +230,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -334,16 +331,8 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   useLiveRefresh({ when: cardsChanged, refresh: refreshCards });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  // The view's reporter keeps the latest-wins snapshot and, in the companion
-  // pane, logs every call except `scrolled` (the pane logs that itself).
-  const paneCard = usePaneCard();
-  const logActivity = useActivityLogger();
-  const report = useCallback<ReportActivity>((...[kind, detail, activity]) => {
-    if (reportActivity === undefined) return;
-    reportActivity(kind, detail, activity);
-    if (paneCard === null || kind === "scrolled") return;
-    logActivity({ card: paneCard, kind, ...(detail !== undefined ? { detail } : {}), ...(activity !== undefined ? { activity } : {}) });
-  }, [reportActivity, paneCard, logActivity]);
+  // In the companion pane every call is logged under the pane's card; elsewhere it is a no-op.
+  const report = useCardActivityReporter(usePaneCard());
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewHistory = useViewHistory({ slug, state: viewState, canPush: canPushViewState, onChange: onViewStateChange });

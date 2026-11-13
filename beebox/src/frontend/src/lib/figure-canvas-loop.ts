@@ -13,25 +13,11 @@
 
 import type * as CanvasLoopBrowser from "@ianbicking/canvas-loop/browser";
 import type { EmittedEvent } from "@ianbicking/canvas-loop/browser";
-import type { ActivityKind } from "@core/chat/card-activity.js";
-import type { ActivityReport } from "./activity/page-queue";
+import type { ReportActivity } from "@core/chat/card-activity.js";
 import { isRecord } from "@shared/is-record";
 import type { FigureParamDecl, FigureParamType } from "./figure-params";
 
 type CanvasLoopLib = typeof CanvasLoopBrowser;
-
-/** Reports companion-pane activity for the card this figure renders. */
-export type FigureActivityReporter = (kind: ActivityKind, detail?: string) => void;
-
-/**
- * Where a figure's actions are logged: its own card, the card that shows it
- * when that differs (`via`), and the queue's `push`.
- */
-export interface FigureActivityLog {
-  card: string;
-  via?: string;
-  push: (report: ActivityReport) => void;
-}
 
 /** Longest activity detail sent; a longer one is cut with an ellipsis. */
 const DETAIL_CAP = 200;
@@ -75,11 +61,11 @@ export function paramMismatches(declared: readonly FigureParamDecl[], module: un
 /** Return `lib` with its `mountSketch` wrapped for this figure (see the module comment). */
 export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(lib: L, harness: {
   declared: readonly FigureParamDecl[];
-  reportActivity?: FigureActivityReporter;
-  activityLog?: FigureActivityLog;
+  /** Logs the figure's actions (`useCardActivityReporter`); absent means none. */
+  report?: ReportActivity;
 }): L {
   const warned = new Set<string>();
-  const { reportActivity, activityLog } = harness;
+  const { report } = harness;
   const mountSketch: CanvasLoopLib["mountSketch"] = (mount, opts) => {
     for (const warning of paramMismatches(harness.declared, opts.module)) {
       if (warned.has(warning)) continue;
@@ -87,16 +73,11 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
       console.warn(warning);
     }
     const sketchOnEvent = opts.onEvent;
-    const onEvent = reportActivity === undefined && activityLog === undefined ? sketchOnEvent : (event: EmittedEvent) => {
+    const onEvent = report === undefined ? sketchOnEvent : (event: EmittedEvent) => {
       sketchOnEvent?.(event);
       const detail = figureActivityDetail(event);
       if (detail === null) return;
-      reportActivity?.("explored", detail);
-      activityLog?.push({
-        card: activityLog.card, kind: "explored", detail,
-        ...(activityLog.via !== undefined ? { via: activityLog.via } : {}),
-        ...(event.activity !== undefined ? { activity: event.activity } : {}),
-      });
+      report("explored", detail, event.activity);
     };
     return lib.mountSketch(mount, {
       ...opts,

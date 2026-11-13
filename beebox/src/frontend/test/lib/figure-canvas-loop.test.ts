@@ -12,7 +12,6 @@ import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import type { EmittedEvent, MountSketchOptions } from "@ianbicking/canvas-loop/browser";
 import { wrapCanvasLoopLib } from "../../src/lib/figure-canvas-loop.js";
-import type { ActivityReport } from "../../src/lib/activity/page-queue.js";
 
 /** A stand-in canvas-loop namespace that records each `mountSketch` call's options. */
 function fakeLib() {
@@ -57,7 +56,7 @@ void test("card params the module cannot honor warn once each", async (t) => {
 void test("activity reports params and handled names after the sketch's onEvent", async (t) => {
   const log: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], reportActivity: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
   wrapped.mountSketch(mount, { module: {}, onEvent: (event) => { log.push(`sketch ${event.type}`); } });
   const events: EmittedEvent[] = [
     { frame: 1, type: "param", name: "mass", value: 2.5 },
@@ -80,37 +79,24 @@ void test("activity reports params and handled names after the sketch's onEvent"
 void test("a long detail is capped at 200 characters", async (t) => {
   const details: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], reportActivity: (_kind, detail) => { details.push(detail ?? ""); } });
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (_kind, detail) => { details.push(detail ?? ""); } });
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["n".repeat(300)] });
   t.check(details, [`pressed ${"n".repeat(191)}…`]);
 });
 
-// The figure's own card is the entry's `card`; the card that shows it (a view
-// embedding the figure) is `via`; the sketch's `activity(model)` value rides
-// along as `activity`. Events with nothing handled log nothing.
-void test("activity entries carry card, via and the sketch's activity", async (t) => {
-  const pushed: ActivityReport[] = [];
+// The sketch's `activity(model)` value rides along as the third argument.
+// Events with nothing handled report nothing.
+void test("reports carry the sketch's activity", async (t) => {
+  const reported: unknown[][] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], activityLog: { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", push: (report) => { pushed.push(report); } } });
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (...args) => { reported.push(args); } });
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "mousedown", x: 4, y: 5, handled: ["add H"], changed: true, activity: { molecules: ["H2"] } });
   calls[0]?.onEvent?.({ frame: 2, type: "mousemove", x: 4, y: 6 });
   calls[0]?.onEvent?.({ frame: 3, type: "param", name: "mass", value: 2 });
-  t.check(pushed, [
-    { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", kind: "explored", detail: "pressed add H", activity: { molecules: ["H2"] } },
-    { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", kind: "explored", detail: "set mass = 2" },
+  t.check(reported, [
+    ["explored", "pressed add H", { molecules: ["H2"] }],
+    ["explored", "set mass = 2", undefined],
   ]);
-});
-
-void test("a figure shown on its own page logs without via and keeps the latest-wins report", async (t) => {
-  const pushed: ActivityReport[] = [];
-  const reported: string[] = [];
-  const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [],
-    reportActivity: (kind, detail) => { reported.push(`${kind}: ${detail ?? ""}`); },
-    activityLog: { card: "Molecules.figure.card", push: (report) => { pushed.push(report); } } });
-  wrapped.mountSketch(mount, { module: {} });
-  calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["tare"] });
-  t.check({ pushed, reported }, { pushed: [{ card: "Molecules.figure.card", kind: "explored", detail: "pressed tare" }], reported: ["explored: pressed tare"] });
 });

@@ -5,6 +5,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
+import type { ReportActivity } from "@core/chat/card-activity.js";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { logActivity, type ActivityReport, type ActivityScope } from "./page-queue";
 
@@ -47,4 +48,23 @@ export function usePaneCard(): string | null {
 export function useActivityLogger(): (report: ActivityReport) => void {
   const getScope = useContext(ScopeContext);
   return useCallback((report) => { if (getScope !== null) logActivity(report, getScope()); }, [getScope]);
+}
+
+/**
+ * The one reporter for activity on `card`: logs `{card, kind, detail?, activity?}` into the selected
+ * conversation, with `via` set to the companion-pane card when that is another card (a figure inside a
+ * view). A no-op outside a companion-pane card, or when `card` is null.
+ */
+export function useCardActivityReporter(card: string | null): ReportActivity {
+  const paneCard = usePaneCard();
+  const log = useActivityLogger();
+  return useCallback<ReportActivity>((...[kind, detail, activity]) => {
+    if (paneCard === null || card === null) return;
+    log({
+      card, kind,
+      ...(paneCard !== card ? { via: paneCard } : {}),
+      ...(detail !== undefined ? { detail } : {}),
+      ...(activity !== undefined ? { activity } : {}),
+    });
+  }, [paneCard, card, log]);
 }

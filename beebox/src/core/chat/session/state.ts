@@ -16,7 +16,6 @@ import { randomBytes } from "node:crypto";
 import { acquireChatActiveLock, releaseChatActiveLock } from "../../schedule/state.js";
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import type { ChatChannel } from "../../../shared/chat-channel.js";
-import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { chatModelForEngine } from "../../../shared/chat-models.js";
@@ -206,9 +205,8 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
  * image attachments concatenated with per-message id offsets so `[imageN]`
  * tokens from different messages don't collide. The latest queued `channel`
  * and `openCard` win — they reflect where the user is now — but
- * `cardActivity` is unioned for that subject. With captured attention, only
- * sends about the latest focused ref participate; activity on another card
- * must not be attributed to it. Legacy clients retain their batch union.
+ * With captured attention, `openCard`
+ * comes from the latest send about the latest focused ref.
  */
 export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedImages: ChatImage[] = [];
@@ -237,14 +235,11 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     combinedTextParts.push(text);
     idOffset += imgs.length;
   }
-  // A later subject must not inherit an earlier card's activity. Old clients
-  // retain the historical union; a captured attention snapshot scopes it.
+  // A captured attention snapshot scopes `openCard` to the sends about the latest focused ref.
   const viewContext = queued.findLast((q) => q.viewContext !== undefined)?.viewContext;
-  const activityInputs = viewContext === undefined ? queued : queued.filter((q) =>
-    q.viewContext?.focusedRef === viewContext.focusedRef && q.viewContext?.surface === viewContext.surface);
-  if (viewContext !== undefined) openCard = activityInputs.at(-1)?.openCard;
-  const cardActivity = unionActivityKinds(activityInputs.map((q) => q.cardActivity));
-  const cardState = mergeCardStateDetails(activityInputs.map((q) => q.cardState));
+  if (viewContext !== undefined) {
+    openCard = queued.findLast((q) => q.viewContext?.focusedRef === viewContext.focusedRef && q.viewContext?.surface === viewContext.surface)?.openCard;
+  }
   // One person-turn advances the activity cursor once, whatever it merged.
   const turns = queued.flatMap((q) => (q.activityTurn === undefined ? [] : [q.activityTurn]));
   const pendingChat = turns.findLast((t) => t.pendingChat !== undefined)?.pendingChat;
@@ -255,8 +250,6 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     ...(channel !== undefined ? { channel } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(cardActivity.length > 0 ? { cardActivity } : {}),
-    ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...(queued.some((q) => q.clientComposed === true) ? { clientComposed: true as const } : {}),
   };
 }

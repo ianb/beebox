@@ -261,7 +261,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { captureEmissionDispatch, dispatchNativeEmission, sendVoiceSegment, sendStopSend, failedRegion } = useEmissionDispatch({
     send, pool, target, selection: conversationSelection, attention,
-    captureCardSend: cardSend.capture, acceptCardSend: cardSend.accepted, boxSlug, activeView, messages, emissionStore,
+    captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
     resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
@@ -370,7 +370,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       setTypingLocked={setTypingLocked}
       onVoiceSegmentSend={sendStopSend}
       send={send}
-      reportCardActivity={cardSend.report}
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}

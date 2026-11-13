@@ -248,7 +248,7 @@ When a companion view is open, every user message includes a \`zoomed-view\` att
 <typed zoomed-view="_content/notes/meeting.md">What about the furniture?</typed>
 \`\`\`
 
-This tells the agent what the user is looking at, so it can tailor its responses. The per-turn \`<chat-app>\` snapshot also carries it as the read-only \`open-card\` attribute (box-relative path), and a \`<card-activity>\` child element per kind of activity since the agent's last reply; a view feeds those (see "Reporting Card Activity"). For the precise change set, the agent runs \`bbx chat whats-changed --card <path>\`.
+This tells the agent what the user is looking at, so it can tailor its responses. The per-turn \`<chat-app>\` snapshot also carries it as the read-only \`open-card\` attribute (box-relative path), and an \`<activity>\` count of the actions since the agent's last reply; a view feeds those (see "Reporting Card Activity"). For the precise change set, the agent runs \`bbx chat whats-changed --card <path>\`.
 
 **Note:** The companion pane is a chat-only feature. The \`zoomed-view\` attribute is only meaningful in the chat frontend; other agent contexts (jobs, wakeup) don't surface it.`;
 
@@ -256,19 +256,17 @@ const reportingActivitySection = `## Reporting Card Activity (\`reportActivity\`
 
 If your view is meant to be opened beside the chat — a companion view the user pokes at while talking — report what they do, so the chat agent has context. Otherwise the agent sees only the card's *config file*, never the live state the user is looking at. For a static, read-only display there's nothing to report; skip this.
 
-The signal reaches the agent as read-only \`<card-activity kind="…">\` child elements of the per-turn snapshot — one per kind (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), with the element text being your optional free-text **detail** for that kind. \`reportActivity\` is a no-op outside the companion pane, so it's always safe to call.
-
-**Every call is also kept.** Besides that latest-per-kind snapshot, each call is appended to the activity log, and the agent lists the actions with \`bbx chat activity\` when it wants them. The optional third argument is a small JSON object kept with the action (\`reportActivity("explored", "added H", { atoms: ["C", "H"] })\`). Report meaningful actions, not every keystroke: a call per keystroke fills the log.
+Every call is appended to the activity log, as one entry of a kind (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`) with your optional free-text **detail**. The agent's next message carries a count of the entries, and it lists them with \`bbx chat activity\` when they bear on what the person asked. \`reportActivity\` is a no-op outside the companion pane, so it's always safe to call. The optional third argument is a small JSON object kept with the action (\`reportActivity("explored", "added H", { atoms: ["C", "H"] })\`). Report meaningful actions, not every keystroke: a call per keystroke fills the log.
 
 **What's automatic vs. what you wire:**
 - \`modified\` — automatic. A successful \`writeFile\`/\`appendFile\`/\`commitFile\` reports it with the path; don't call it yourself.
-- \`scrolled\` — automatic (the pane watches its own scroll). The log keeps only the topmost visible heading (h1–h4) once scrolling settles, so give long content headings.
+- \`scrolled\` — automatic (the pane watches its own scroll). The log keeps only the topmost visible heading (h1–h4) once scrolling settles, so give long content headings; content without headings logs no scroll.
 - \`explored\` — **you call it.** This is the important one: fire it when the user changes what the view is *showing* without changing data — the query they typed, a filter, a selected tab, a slider — and pass a detail describing the new state.
 - \`navigated\` — automatic when a link inside the view opens another card.
 
-**How to write the detail.** Report \`explored\` from your *primary* inputs, not every control. The detail is a short, human-legible line of what the user is now looking at — the input plus the salient result — because that exact string is what the agent reads (the \`<card-activity>\` element text). Keep it terse (a hint, not a dump): \`boat-water+road -> boats (0.568)\`, not the whole result list.
+**How to write the detail.** Report \`explored\` from your *primary* inputs, not every control. The detail is a short, human-legible line of what the user is now looking at — the input plus the salient result — because that exact string is what the agent reads in the log. Keep it terse (a hint, not a dump): \`boat-water+road -> boats (0.568)\`, not the whole result list.
 
-**Pattern: report from a text input once the user pauses.** The snapshot keeps only the last detail per kind, but the log keeps every call, so debounce (about a second) rather than reporting each keystroke.
+**Pattern: report from a text input once the user pauses.** The log keeps every call, so debounce (about a second) rather than reporting each keystroke.
 
 \`\`\`tsx
 function NearestNeighbors({ reportActivity }) {
@@ -289,7 +287,7 @@ function NearestNeighbors({ reportActivity }) {
 }
 \`\`\`
 
-For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`bbx chat whats-changed --card <path>\` for the exact, git-grounded change set — \`<card-activity> detail\` is the cheap live hint, not the source of truth.`;
+For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`bbx chat whats-changed --card <path>\` for the exact, git-grounded change set — the log's detail is the cheap live hint, not the source of truth.`;
 
 const stylingAndErrorsSection = `## Styling
 

@@ -398,7 +398,7 @@ export async function startChatTurn(params: {
    */
   pendingChat?: string;
 } & ChatSendContext): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, pendingChat, openCard, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, pendingChat, openCard } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? newMessageId();
   // What the person just did in a view or figure reaches the box before the
@@ -426,8 +426,6 @@ export async function startChatTurn(params: {
         ...(model !== undefined ? { model } : {}),
         ...(pendingChat !== undefined ? { pendingChat } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
-        ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
-        ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
         // Ambient, not a caller-supplied field: only the browser can tell the
         // native shell from mobile web, and it is re-read per send because the
         // viewport (and, on an in-app navigation, the shell) can change.

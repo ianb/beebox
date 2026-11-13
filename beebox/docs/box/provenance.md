@@ -143,7 +143,7 @@ commentary card built from selections — the span itself is the `{% source %}`
 anchor also carries:
 
 - `pos` — a rough locator. **Identical in form and meaning to the `pos` on
-  `<user-selection>` and `<card-activity>`** — same grammar (section, nearest
+  `<user-selection>`** — same grammar (section, nearest
   heading + `#id`, paragraph, approximate line), fully cross-referable. When
   you carry a selection into an anchor, copy its `pos` verbatim.
 - `version` — space-separated `kind:value` markers pinning the file state
