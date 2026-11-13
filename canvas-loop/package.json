@@ -34,7 +34,8 @@
     "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test",
     "build:playground": "node --import tsx src/browser/build.ts",
     "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
-    "gallery:check": "node --import tsx src/headless/cli.ts gallery check"
+    "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
+    "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.2",

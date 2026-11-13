@@ -2,10 +2,22 @@
 // same samples in every runtime (noise is seeded from the voice's id), so a
 // headless WAV and the browser's playback are the same sound.
 import { SeededRandom } from "../prng.js";
-import type { NoiseVoice, PluckVoice, ToneVoice, Voice } from "./voice.js";
+import { DEFAULT_SECONDS, renderNote } from "./instruments.js";
+import { renderSample } from "./library/samples.js";
+import type { SampleLibrary } from "./library/samples.js";
+import { noteFreq } from "./notes.js";
+import type { NoiseVoice, NoteVoice, PluckVoice, ToneVoice, Voice } from "./voice.js";
 import { MAX_SECONDS } from "./voice.js";
 
 export const SAMPLE_RATE = 44_100;
+
+/** A `sample` voice reached the renderer before the sample library was loaded (a runtime bug). */
+export class MissingLibraryError extends Error {
+  name = "MissingLibraryError";
+  constructor() {
+    super("canvas-loop: a sample voice was rendered without the sample library");
+  }
+}
 const DEFAULT_GAIN = 0.5;
 
 /** A stable 32-bit seed from a string (FNV-1a). */
@@ -95,11 +107,28 @@ function noise(
   return out;
 }
 
+function note(voice: NoteVoice, sampleRate: number): Float32Array<ArrayBuffer> {
+  return renderNote(voice.instrument, {
+    freq: noteFreq(voice.note),
+    seconds: voice.duration ?? DEFAULT_SECONDS[voice.instrument],
+    gain: voice.gain ?? DEFAULT_GAIN,
+    sampleRate,
+  });
+}
+
+/** How to render: the output rate, and the sample library `sample` voices play from. */
+export interface RenderOptions {
+  readonly sampleRate: number;
+  /** Needed only for `sample` voices; rendering one without it throws. */
+  readonly library?: SampleLibrary | undefined;
+}
+
 /** One voice's samples, starting at its first sample. */
 export function renderVoice(
   voice: Voice,
-  sampleRate: number,
+  options: RenderOptions,
 ): Float32Array<ArrayBuffer> {
+  const { sampleRate } = options;
   switch (voice.kind) {
     case "pluck":
       return pluck(voice, sampleRate);
@@ -107,6 +136,11 @@ export function renderVoice(
       return tone(voice, sampleRate);
     case "noise":
       return noise(voice, sampleRate);
+    case "note":
+      return note(voice, sampleRate);
+    case "sample":
+      if (options.library === undefined) throw new MissingLibraryError();
+      return renderSample(voice, { sampleRate, library: options.library });
   }
 }
 
@@ -117,14 +151,14 @@ export function renderVoice(
  */
 export function mix(
   voices: readonly Voice[],
-  timing: { frames: number; fps: number; sampleRate: number },
+  timing: { frames: number; fps: number } & RenderOptions,
 ): Float32Array<ArrayBuffer> {
   const { frames, fps, sampleRate } = timing;
   const out = new Float32Array(Math.ceil((frames / fps) * sampleRate));
   for (const voice of voices) {
     const start = Math.round((voice.at / fps) * sampleRate);
     if (start >= out.length) continue;
-    const samples = renderVoice(voice, sampleRate);
+    const samples = renderVoice(voice, timing);
     const end = Math.min(out.length, start + samples.length);
     for (let i = start; i < end; i += 1)
       out[i] = (out[i] ?? 0) + (samples[i - start] ?? 0);

@@ -9,7 +9,7 @@
  */
 .cl-figure { display: inline-flex; flex-direction: column; max-width: 100%; gap: 10px; font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #1e293b; }
 .cl-figure * { box-sizing: border-box; }
-.cl-canvas { display: block; max-width: 100%; height: auto; image-rendering: pixelated; outline: none; cursor: crosshair; border-radius: 6px; background: #05070d; }
+.cl-canvas { display: block; max-width: 100%; height: auto; image-rendering: pixelated; outline: none; cursor: default; border-radius: 6px; background: #05070d; }
 .cl-canvas:focus { box-shadow: 0 0 0 2px #2563eb; }
 .cl-placeholder { border-radius: 6px; background: #0b0e17; }
 .cl-toolbar { display: flex; align-items: center; gap: 8px; }

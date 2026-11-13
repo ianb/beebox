@@ -11812,6 +11812,14 @@ test1:
       peak: 63626
       added: 28595
       turns: 10
+  figure-sound:
+    - date: 2026-11-12T23:34:37.163Z
+      boxCommit: 582afe1ac2b967fdd5ec8a3705a4b850369a4f4c
+      repoCommit: d2fad3a5f6007d03bc96b17e936e2d68bf39863e
+      initial: 35102
+      peak: 43464
+      added: 8362
+      turns: 8
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

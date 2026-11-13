@@ -3,6 +3,11 @@
 // sound for the whole run, so the audio up to any frame depends only on the
 // voices declared up to that frame.
 import { SketchUsageError } from "../errors.js";
+import { INSTRUMENTS } from "./instruments.js";
+import type { Instrument } from "./instruments.js";
+import { SAMPLE_NAMES, isSampleName } from "./library/catalog.js";
+import type { SampleName } from "./library/catalog.js";
+import { midiOf } from "./notes.js";
 
 interface VoiceBase {
   /** Names the sound. Return the same id while the sound exists; a new id is a new sound. */
@@ -39,7 +44,27 @@ export interface NoiseVoice extends VoiceBase {
   readonly duration: number;
 }
 
-export type Voice = PluckVoice | ToneVoice | NoiseVoice;
+/** One note on a synthesized instrument (see `INSTRUMENTS`). */
+export interface NoteVoice extends VoiceBase {
+  readonly kind: "note";
+  readonly instrument: Instrument;
+  /** A note name: a letter, an optional # or b, and an octave ("C4", "F#5", "Bb3"). */
+  readonly note: string;
+  /** Seconds. A struck instrument rings this long at most; the pad holds this long, then fades. */
+  readonly duration?: number;
+}
+
+/** A recorded sound from the sample library, by name (see `SAMPLES`). */
+export interface SampleVoice extends VoiceBase {
+  readonly kind: "sample";
+  readonly name: SampleName;
+  /** Which take of the sound (default 0; wraps around the takes there are). Vary it for repeated sounds. */
+  readonly variant?: number;
+  /** Playback speed, 0.5..2 (default 1). Faster is higher and shorter. */
+  readonly rate?: number;
+}
+
+export type Voice = PluckVoice | ToneVoice | NoiseVoice | NoteVoice | SampleVoice;
 
 const WAVES: ReadonlySet<string> = new Set(["sine", "triangle", "square"]);
 
@@ -50,7 +75,11 @@ const KEYS: Record<Voice["kind"], ReadonlySet<string>> = {
   pluck: new Set(["id", "at", "gain", "kind", "freq", "decay", "brightness"]),
   tone: new Set(["id", "at", "gain", "kind", "freq", "duration", "wave"]),
   noise: new Set(["id", "at", "gain", "kind", "duration"]),
+  note: new Set(["id", "at", "gain", "kind", "instrument", "note", "duration"]),
+  sample: new Set(["id", "at", "gain", "kind", "name", "variant", "rate"]),
 };
+
+const INSTRUMENT_SET: ReadonlySet<string> = new Set(INSTRUMENTS);
 
 function check(ok: boolean, problem: { where: string; detail: string }): void {
   if (!ok)
@@ -68,6 +97,37 @@ function inRange(
   return range.exclusiveMin === true ? value > range.min : value >= range.min;
 }
 
+function assertNote(voice: NoteVoice, where: string): void {
+  check(INSTRUMENT_SET.has(voice.instrument), {
+    where,
+    detail: `"instrument" must be one of ${INSTRUMENTS.join(", ")} (got ${JSON.stringify(voice.instrument)})`,
+  });
+  const midi = typeof voice.note === "string" ? midiOf(voice.note) : undefined;
+  check(midi !== undefined && midi >= 12 && midi <= 120, {
+    where,
+    detail: `"note" must be a note name from C0 to C9, like "C4", "F#5" or "Bb3" (got ${JSON.stringify(voice.note)})`,
+  });
+  check(inRange(voice.duration, { min: 0, max: MAX_SECONDS, exclusiveMin: true }), {
+    where,
+    detail: `"duration" must be over 0 and at most ${MAX_SECONDS} seconds`,
+  });
+}
+
+function assertSample(voice: SampleVoice, where: string): void {
+  check(typeof voice.name === "string" && isSampleName(voice.name), {
+    where,
+    detail: `"name" must be a library sound (got ${JSON.stringify(voice.name)}); the sounds are: ${SAMPLE_NAMES.join(", ")}`,
+  });
+  check(voice.variant === undefined || (Number.isInteger(voice.variant) && voice.variant >= 0), {
+    where,
+    detail: `"variant" must be an integer ≥ 0 (got ${String(voice.variant)})`,
+  });
+  check(inRange(voice.rate, { min: 0.5, max: 2 }), {
+    where,
+    detail: `"rate" must be 0.5..2 (got ${String(voice.rate)})`,
+  });
+}
+
 /** Check one voice; errors name the voice and the key. */
 export function assertVoice(voice: Voice): void {
   const id =
@@ -79,7 +139,7 @@ export function assertVoice(voice: Voice): void {
   const where = `voice "${String(id)}"`;
   check(Object.hasOwn(KEYS, voice.kind), {
     where,
-    detail: `has unknown kind ${JSON.stringify(voice.kind)} (pluck, tone, noise)`,
+    detail: `has unknown kind ${JSON.stringify(voice.kind)} (${Object.keys(KEYS).join(", ")})`,
   });
   for (const key of Object.keys(voice))
     check(KEYS[voice.kind].has(key), {
@@ -94,6 +154,14 @@ export function assertVoice(voice: Voice): void {
     where,
     detail: `"gain" must be 0..1 (got ${String(voice.gain)})`,
   });
+  if (voice.kind === "note") {
+    assertNote(voice, where);
+    return;
+  }
+  if (voice.kind === "sample") {
+    assertSample(voice, where);
+    return;
+  }
   if (voice.kind === "noise") {
     check(
       inRange(voice.duration, {
@@ -143,6 +211,21 @@ export function assertVoice(voice: Voice): void {
     where,
     detail: '"brightness" must be 0..1',
   });
+}
+
+/** What a transcript line says about a voice after its kind and id: its pitch, instrument or sample. */
+export function voiceDetail(voice: Voice): string {
+  switch (voice.kind) {
+    case "noise":
+      return "";
+    case "note":
+      return ` ${voice.instrument} ${voice.note}`;
+    case "sample":
+      return ` ${voice.name}${voice.variant === undefined ? "" : ` #${voice.variant}`}`;
+    case "pluck":
+    case "tone":
+      return ` ${voice.freq} Hz`;
+  }
 }
 
 /** Most new voices one frame may declare. */
