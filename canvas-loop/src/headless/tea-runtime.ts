@@ -284,8 +284,8 @@ class TeaRunner {
 
   /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive). */
   #recordActivity(): void {
-    const data = this.#activity.of(this.#model);
-    if (data !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${JSON.stringify(data)}` });
+    const json = this.#activity.json(this.#model);
+    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}` });
   }
 
   #fold(msg: Msg): boolean {

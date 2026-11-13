@@ -1,9 +1,9 @@
 /**
  * The page's activity queue (plan `docs/plans/activity-log.md`, Track D):
  * ordered, bounded, best-effort. Reporters `push` entries; one request is in
- * flight at a time, batches go out in the order they were pushed. A failed
- * batch retries with backoff for up to a minute, then is dropped with one
- * console warning. It never throws to a caller and never blocks the UI.
+ * flight at a time, batches go out in the order they were pushed. A request
+ * is never abandoned while in flight. A failed batch retries with backoff
+ * until its failures span a minute, then is dropped with one console warning. It never throws to a caller and never blocks the UI.
  */
 
 import type { ActivityEntryInput } from "@core/activity/entry.js";
@@ -12,7 +12,7 @@ import type { ActivityEntryInput } from "@core/activity/entry.js";
 export const MAX_BATCH = 200;
 /** Above this many waiting entries the oldest are dropped. */
 export const MAX_QUEUED = 500;
-/** A batch is dropped once it has failed for this long. */
+/** A batch is dropped once its failures have spanned this long. */
 export const RETRY_WINDOW_MS = 60_000;
 /** Wait before the first send, so a burst of pushes travels as one batch. */
 const BATCH_DELAY_MS = 250;
@@ -88,15 +88,22 @@ export class ActivityQueue {
     }
   }
 
-  /** Resolves once the batch is sent or given up on; never rejects. */
+  /**
+   * Resolves once the batch is sent or given up on; never rejects. A request
+   * that is still in flight is never abandoned, however slow: the next batch
+   * waits behind it, so the log keeps the order entries were pushed in. Only
+   * failed responses count toward the one-minute window, measured from the
+   * first failure. A batch the server accepted whose response was lost is
+   * retried and can be logged twice; that is accepted, there is no dedup.
+   */
   private async sendWithRetry(batch: ActivityEntryInput[]): Promise<void> {
     const { timers } = this.options;
-    const deadline = timers.now() + RETRY_WINDOW_MS;
+    let firstFailureAt: number | null = null;
     let backoff = FIRST_BACKOFF_MS;
     for (;;) {
-      const outcome = await this.attempt(batch, deadline - timers.now());
-      if (outcome === "sent") return;
-      if (timers.now() + backoff >= deadline) {
+      if (await this.attempt(batch)) return;
+      firstFailureAt ??= timers.now();
+      if (timers.now() + backoff - firstFailureAt >= RETRY_WINDOW_MS) {
         console.warn(`activity: gave up on ${String(batch.length)} ${batch.length === 1 ? "entry" : "entries"} after ${String(RETRY_WINDOW_MS / 1000)}s of failures`);
         return;
       }
@@ -105,15 +112,13 @@ export class ActivityQueue {
     }
   }
 
-  /** One send, bounded by the time left; a hung request counts as a failure. */
-  private attempt(batch: ActivityEntryInput[], remainingMs: number): Promise<"sent" | "failed"> {
-    return new Promise<"sent" | "failed">((resolve) => {
-      const cancel = this.options.timers.after(Math.max(remainingMs, 0), () => { resolve("failed"); });
-      const settle = (outcome: "sent" | "failed"): void => { cancel(); resolve(outcome); };
-      let pending: Promise<unknown>;
-      // Failures are retried and, when the window closes, reported by the one drop warning.
-      try { pending = this.options.transport(batch); } catch (_error) { /* ignore: counted as a failed attempt */ settle("failed"); return; }
-      pending.then(() => { settle("sent"); }, () => { settle("failed"); });
-    });
+  /** One send; true when the server took it. Waits as long as the request takes. */
+  private async attempt(batch: ActivityEntryInput[]): Promise<boolean> {
+    try {
+      await this.options.transport(batch);
+      return true;
+    } catch (_error) {
+      return false; // retried, and reported by the one drop warning when the window closes
+    }
   }
 }

@@ -13,6 +13,8 @@ import type { ActivityLine } from "../../../core/activity/entry.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 
+/** A new chat's first turn binds its cursor just after the session id is assigned; wait this long for it. */
+const BIND_WAIT_MS = 2000;
 const EMPTY = "No activity since your last reply.";
 
 interface ActivityOptions {
@@ -57,6 +59,7 @@ export const activityCommand = new Command("activity")
     const boxRoot = await requireBoxRoot();
     const { cursor, entries } = await activityWindow(boxRoot, {
       sessionId,
+      bindWaitMs: BIND_WAIT_MS,
       ...(options.card !== undefined ? { card: options.card } : {}),
     });
     if (options.json === true) {

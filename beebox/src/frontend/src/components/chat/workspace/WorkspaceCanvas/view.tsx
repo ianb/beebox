@@ -25,7 +25,7 @@ import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
 import { useActivityLogger } from "../../../../lib/activity/scope";
-import { useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
+import { rendersAgentView, useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
@@ -72,7 +72,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
         if (!visible) return;
         const node = event.currentTarget;
         reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
-        logScrollHeading(node);
+        if (rendersAgentView(node)) logScrollHeading(node);
       }}>
       {/* A neutral desk is a material the system theme may ink; a card sets its own. */}
       <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><PaneScope pane={pane} card={tab.target.path}>

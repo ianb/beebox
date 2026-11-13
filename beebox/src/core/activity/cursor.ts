@@ -17,7 +17,8 @@ import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import type { ActivityLine } from "./entry.js";
-import { lastActivitySeq, readActivity, withActivityLock } from "./log.js";
+import { lastActivitySeq, readActivity, readActivityLocked, withActivityLock, withActivityLockWithin } from "./log.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 const cursorSchema = z.object({
   hinted: z.number().int().nonnegative(),
@@ -72,12 +73,35 @@ function inSession(line: ActivityLine, who: { sessionId: string | null; keys: re
   return line.pendingChat !== undefined && keys.includes(line.pendingChat);
 }
 
-/** A session's entries with `seq` above `previous`, oldest first, optionally only one card's. */
+const BIND_POLL_MS = 50;
+/** How long a person's send waits for the activity lock before going without a hint. */
+const SEND_LOCK_WAIT_MS = 250;
+
+/**
+ * The session's cursor, waiting up to `bindWaitMs` for it to appear. A new
+ * chat's first turn stores its cursor only when `bindPendingChat` runs, which
+ * is asynchronous to the session id reaching the agent, so an agent that
+ * reads the window at once can beat the write.
+ */
+async function readCursorAwaitingBind(boxRoot: string, opts: { sessionId: string; bindWaitMs: number }): Promise<ActivityCursor | null> {
+  const deadline = Date.now() + opts.bindWaitMs;
+  for (;;) {
+    const cursor = await readCursor(boxRoot, opts.sessionId);
+    if (cursor !== null || Date.now() >= deadline) return cursor;
+    await sleep(BIND_POLL_MS);
+  }
+}
+
+/**
+ * A session's entries with `seq` above `previous`, oldest first, optionally
+ * only one card's. With `bindWaitMs`, a session without a cursor is given that
+ * long for the first turn's binding to land before the window is read.
+ */
 export async function activityWindow(
   boxRoot: string,
-  opts: { sessionId: string; card?: string },
+  opts: { sessionId: string; card?: string; bindWaitMs?: number },
 ): Promise<{ cursor: ActivityCursor | null; entries: ActivityLine[] }> {
-  const cursor = await readCursor(boxRoot, opts.sessionId);
+  const cursor = await readCursorAwaitingBind(boxRoot, { sessionId: opts.sessionId, bindWaitMs: opts.bindWaitMs ?? 0 });
   const keys = cursor?.pendingKeys ?? [];
   const entries = (await readActivity(boxRoot)).filter((line) =>
     line.seq > (cursor?.previous ?? 0) && inSession(line, { sessionId: opts.sessionId, keys }) && (opts.card === undefined || line.card === opts.card));
@@ -107,13 +131,14 @@ export async function advanceForSend(
   boxRoot: string,
   opts: { sessionId: string | null; pendingChat?: string | undefined },
 ): Promise<ActivityHint> {
-  return withActivityLock(boxRoot, async () => {
+  // The hint is optional: past this bound the send goes without one (the caller warns) and the cursor stays, so the entries fall in the next window.
+  return withActivityLockWithin({ boxRoot, waitMs: SEND_LOCK_WAIT_MS }, async () => {
     const hinted = await lastActivitySeq(boxRoot);
     const sentAt = getBoxTimeISO(boxRoot);
     const old = opts.sessionId === null ? null : await readCursor(boxRoot, opts.sessionId);
     const keys = [...new Set([...(old?.pendingKeys ?? []), ...(opts.pendingChat === undefined ? [] : [opts.pendingChat])])];
     const previous = old?.hinted ?? 0;
-    const lines = (await readActivity(boxRoot)).filter((line) =>
+    const lines = (await readActivityLocked(boxRoot)).filter((line) =>
       line.seq > previous && line.seq <= hinted && inSession(line, { sessionId: opts.sessionId, keys }));
     if (opts.sessionId !== null) {
       await writeCursor(boxRoot, { sessionId: opts.sessionId, cursor: { hinted, previous, pendingKeys: keys, sentAt } });

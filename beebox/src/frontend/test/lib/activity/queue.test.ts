@@ -102,6 +102,47 @@ void test("a batch that keeps failing is dropped after a minute with one warning
   t.check(sent.slice(attempts), [["3"]]);
 });
 
+void test("a slow request is never abandoned: it keeps order however long it takes", async (t) => {
+  const warnings = captureWarnings(t);
+  const clock = manualClock();
+  const fake = slowTransport();
+  const queue = new ActivityQueue({ transport: fake.transport, timers: clock });
+  queue.push(entry(1));
+  await clock.advance(250);
+  queue.push(entry(2));
+  await clock.advance(120_000);
+  // Two minutes on, the first request is still in flight and the second has not been sent.
+  t.check({ sent: fake.sent, warnings }, { sent: [["1"]], warnings: [] });
+  fake.waiting[0]?.ok();
+  await clock.advance(1);
+  fake.waiting[1]?.ok();
+  await clock.advance(1);
+  t.check({ sent: fake.sent, most: fake.mostInFlight() }, { sent: [["1"], ["2"]], most: 1 });
+});
+
+void test("the minute is counted from the first failure, after a slow request", async (t) => {
+  const warnings = captureWarnings(t);
+  const clock = manualClock();
+  let release: () => void = () => { /* set when the first request starts */ };
+  let calls = 0;
+  const queue = new ActivityQueue({
+    transport: () => {
+      calls++;
+      if (calls > 1) return Promise.reject(new Error("down"));
+      return new Promise((_resolve, reject) => { release = () => { reject(new Error("down")); }; });
+    },
+    timers: clock,
+  });
+  queue.push(entry(1));
+  await clock.advance(250);
+  await clock.advance(90_000);
+  release();
+  await clock.advance(30_000);
+  t.check(warnings, []);
+  await clock.advance(40_000);
+  t.check({ warnings, retried: calls > 2 }, { warnings: ["activity: gave up on 1 entry after 60s of failures"], retried: true });
+});
+
 void test("above 500 queued entries the oldest are dropped with a warning", async (t) => {
   const warnings = captureWarnings(t);
   const clock = manualClock();

@@ -8,6 +8,7 @@
 // to the session id.
 
 import { test } from "tap";
+import { setTimeout as sleep } from "node:timers/promises";
 import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -82,4 +83,28 @@ void test("A session id that is not a plain id is refused.", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
   await t.checkThrows(() => readCursor(box.root, "../escape"), "ActivitySessionIdError: The activity cursor needs a plain chat session id");
+});
+
+// ## The first turn of a new chat: the command lists what the hint counted
+//
+// The agent can run `bbx chat activity` as soon as it has its session id,
+// which can be before `bindPendingChat` has stored the cursor. The reader
+// waits for the binding rather than reporting an empty window.
+void test("First turn of a new chat: the command lists the entries the hint counted.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await act(box.root, { card: "Lab.figure.card", detail: "add C", pendingChat: "p1" });
+  await act(box.root, { card: "Notes.view.card", detail: "Intro", pendingChat: "p1" });
+
+  t.check(await advanceForSend(box.root, { sessionId: null, pendingChat: "p1" }), { entries: 2, cards: 2 });
+  // The agent reads at once; the binding lands 200 ms later.
+  const early = activityWindow(box.root, { sessionId: "s7", bindWaitMs: 2000 });
+  await sleep(200);
+  await bindPendingChat(box.root, { sessionId: "s7", pendingChat: "p1" });
+  const window = await early;
+  t.check(details(window), ["add C", "Intro"]);
+  t.check(window.cursor?.sentAt, isoDate());
+
+  // Without a binding the wait ends and the window is empty.
+  t.check(details(await activityWindow(box.root, { sessionId: "s8", bindWaitMs: 150 })), []);
 });

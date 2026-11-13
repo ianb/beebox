@@ -42,6 +42,18 @@ export class ActivityReporter {
     return undefined;
   }
 
+  /** The activity data for `model` as JSON text, or undefined when there is none or it cannot be serialized (a cycle); warned once. */
+  json(model: unknown): string | undefined {
+    const data = this.of(model);
+    if (data === undefined) return undefined;
+    try {
+      return JSON.stringify(data);
+    } catch (error) {
+      this.#once(`activity(model) could not be serialized to JSON (${error instanceof Error ? error.message : String(error)}); left off the event`);
+      return undefined;
+    }
+  }
+
   #once(message: string): void {
     if (this.#warned) return;
     this.#warned = true;

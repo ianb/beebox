@@ -248,7 +248,7 @@ async function activityHintFor(
   try {
     return renderActivityHint(await advanceForSend(boxRoot, { sessionId: chatId, pendingChat: rawInput.activityTurn.pendingChat }));
   } catch (e) {
-    console.warn("[chat] could not advance the activity cursor; this turn carries no activity hint:", e);
+    console.warn("[chat] could not advance the activity cursor in time; this turn carries no activity hint and its entries fall in the next window:", e);
     return "";
   }
 }

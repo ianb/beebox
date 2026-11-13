@@ -33,9 +33,14 @@ export function activityLockPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", "activity.lock");
 }
 
-/** Run `fn` holding the log's lock (sequence, rotation and cursors share it). */
+/** Run `fn` holding the log's lock (sequence, rotation and cursors share it), waiting up to `waitMs` for it. */
+export function withActivityLockWithin<T>(opts: { boxRoot: string; waitMs: number }, fn: () => Promise<T>): Promise<T> {
+  return withFileLock({ lockPath: activityLockPath(opts.boxRoot), metadata: { purpose: "activity log" }, waitMs: opts.waitMs }, fn);
+}
+
+/** Run `fn` holding the log's lock (sequence, rotation and cursors share it). The lock is not re-entrant. */
 export function withActivityLock<T>(boxRoot: string, fn: () => Promise<T>): Promise<T> {
-  return withFileLock({ lockPath: activityLockPath(boxRoot), metadata: { purpose: "activity log" }, waitMs: LOCK_WAIT_MS }, fn);
+  return withActivityLockWithin({ boxRoot, waitMs: LOCK_WAIT_MS }, fn);
 }
 
 async function readTail(filePath: string): Promise<string[] | null> {
@@ -119,8 +124,9 @@ export async function recordActivity(
 ): Promise<number> {
   const entries = validEntries(opts.entries);
   if (entries.length === 0) return 0;
-  const at = getBoxTimeISO(boxRoot);
   return withActivityLock(boxRoot, async () => {
+    // Stamped under the lock, so an entry that waited behind a send is stamped after that send's `sentAt`.
+    const at = getBoxTimeISO(boxRoot);
     let seq = await lastActivitySeq(boxRoot);
     const lines: string[] = [];
     for (const entry of entries) {
@@ -162,8 +168,18 @@ async function readLines(filePath: string): Promise<ActivityLine[]> {
   return lines;
 }
 
-/** Every line, oldest first: the rotated file, then the live one. */
-export async function readActivity(boxRoot: string): Promise<ActivityLine[]> {
+/**
+ * Every line, oldest first: the rotated file, then the live one, read as one
+ * snapshot under the lock so a rotation cannot move entries from the live
+ * file into `.1` between the two reads. Callers already holding the lock use
+ * `readActivityLocked`.
+ */
+export function readActivity(boxRoot: string): Promise<ActivityLine[]> {
+  return withActivityLock(boxRoot, () => readActivityLocked(boxRoot));
+}
+
+/** `readActivity` for a caller that holds the activity lock. */
+export async function readActivityLocked(boxRoot: string): Promise<ActivityLine[]> {
   const rotated = await readLines(rotatedActivityLogPath(boxRoot));
   const live = await readLines(activityLogPath(boxRoot));
   const bySeq = new Map<number, ActivityLine>();

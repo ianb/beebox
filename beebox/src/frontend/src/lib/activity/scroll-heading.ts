@@ -35,6 +35,15 @@ export function topmostHeadingIn(container: HTMLElement): string | null {
   return topmostVisibleHeading(boxes, view);
 }
 
+/**
+ * Whether a pane's scroller shows an agent view as the card itself (the view
+ * renderer's own root, not a view embedded in a Markdown card). Heading
+ * activity is for views only; a Markdown or file card reports nothing.
+ */
+export function rendersAgentView(scroller: HTMLElement): boolean {
+  return scroller.querySelector(".bbx-card-view:not([data-view-embedded])") !== null;
+}
+
 export interface HeadingScrollTracker {
   /** Note a scroll; `read` finds the heading when scrolling settles. */
   scrolled: (read: () => string | null) => void;

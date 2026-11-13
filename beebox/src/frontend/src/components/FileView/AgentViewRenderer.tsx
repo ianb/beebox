@@ -389,7 +389,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   });
 
   return (
-    <div className="bbx-card-view" data-view-layout={layout}>
+    <div className="bbx-card-view" data-view-layout={layout} data-view-embedded={embedded || undefined}>
       <ViewErrorBoundary onRetry={() => void loadModule()} resetKey={reloadSeq}>
         <ViewHostProvider value={viewHost}>
           <Component

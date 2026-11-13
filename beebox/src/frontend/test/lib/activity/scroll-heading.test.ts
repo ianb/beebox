@@ -5,7 +5,7 @@
 import "../../helpers/dom-globals.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { createHeadingScrollTracker, topmostHeadingIn, topmostVisibleHeading, type HeadingBox } from "../../../src/lib/activity/scroll-heading.js";
+import { createHeadingScrollTracker, rendersAgentView, topmostHeadingIn, topmostVisibleHeading, type HeadingBox } from "../../../src/lib/activity/scroll-heading.js";
 import { manualClock } from "./manual-clock.js";
 
 const viewport = { top: 100, bottom: 500 };
@@ -34,6 +34,13 @@ void test("the DOM reader looks at h1 to h4 only", async (t) => {
   container.getBoundingClientRect = rect(0, 400);
   for (const node of container.querySelectorAll("h5, h2")) node.getBoundingClientRect = rect(50, 80);
   t.check(topmostHeadingIn(container), "Real");
+});
+
+void test("only a pane showing an agent view logs headings, not Markdown or an embedded view", async (t) => {
+  const scroller = (html: string): HTMLElement => { const node = document.createElement("div"); node.innerHTML = html; return node; };
+  t.check(rendersAgentView(scroller("<div class=\"bbx-card-view\" data-view-layout=\"inset\"><h1>Title</h1></div>")), true);
+  t.check(rendersAgentView(scroller("<article><h1>Notes</h1></article>")), false);
+  t.check(rendersAgentView(scroller("<article><h1>Notes</h1><div class=\"bbx-card-view\" data-view-layout=\"full-bleed\" data-view-embedded=\"true\"></div></article>")), false);
 });
 
 /** A tracker over a manual clock; `heading` is what the next settled read finds. */

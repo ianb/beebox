@@ -9,6 +9,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs";
+import { setTimeout as sleep } from "node:timers/promises";
+import { getBoxTimeISO } from "../../../src/lib/time.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { consoleLines } from "../../helpers/console-lines.js";
 import {
@@ -17,6 +19,7 @@ import {
   readActivity,
   recordActivity,
   rotatedActivityLogPath,
+  withActivityLock,
 } from "../../../src/core/activity/log.js";
 
 function lineBytes(path: string): number[] {
@@ -108,4 +111,46 @@ void test("Concurrent batches get distinct, ordered sequence numbers.", async (t
     recordActivity(box.root, { user: null, entries: [{ card: `Card${String(i)}.view.card`, kind: "scrolled", detail: "h" }, { card: `Card${String(i)}.view.card`, kind: "scrolled", detail: "h2" }] })));
   const seqs = (await readActivity(box.root)).map((l) => l.seq);
   t.check(seqs, Array.from({ length: 16 }, (_, i) => i + 1));
+});
+
+// ## A read is one snapshot under the lock
+//
+// A rotation runs under the lock and moves the live file to `.1`. A reader
+// that took the two files separately could read `.1` first and then miss the
+// entries a rotation moved into it. The read waits for the lock instead, so
+// it sees the files as a rotation left them.
+void test("A read waits for the lock and sees the files as a rotation left them.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await recordActivity(box.root, { user: null, entries: [{ card: "A.view.card", kind: "navigated" }, { card: "B.view.card", kind: "navigated" }] });
+  const reads: Promise<{ seq: number }[]>[] = [];
+  let settledEarly = false;
+  await withActivityLock(box.root, async () => {
+    const read = readActivity(box.root);
+    reads.push(read);
+    void read.then(() => { settledEarly = true; });
+    await sleep(150);
+    // A rotation in the middle of the would-be read.
+    fs.renameSync(activityLogPath(box.root), rotatedActivityLogPath(box.root));
+    fs.writeFileSync(activityLogPath(box.root), fs.readFileSync(rotatedActivityLogPath(box.root), "utf-8").replace(/"seq":\d+/g, (m) => `"seq":${String(Number(m.slice(6)) + 2)}`));
+  });
+  t.check(settledEarly, false);
+  t.check((await Promise.all(reads)).map((lines) => lines.map((l) => l.seq)), [[1, 2, 3, 4]]);
+});
+
+// ## An entry is stamped when it is appended
+void test("An entry that waited for the lock is stamped after what held it.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  let recorded: Promise<number> | null = null;
+  let heldUntil = "";
+  await withActivityLock(box.root, async () => {
+    recorded = recordActivity(box.root, { user: null, entries: [{ card: "A.view.card", kind: "navigated" }] });
+    await sleep(50);
+    heldUntil = getBoxTimeISO(box.root);
+  });
+  await recorded;
+  const [line] = await readActivity(box.root);
+  // ISO timestamps sort as text: sorted, the lock holder's time comes first.
+  t.check([line?.at, heldUntil].toSorted(), [heldUntil, line?.at]);
 });
