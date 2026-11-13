@@ -36,8 +36,9 @@ Files on 2026-10-30:
   2026-11-13 18:14 both trees are 0770, and every box's node_modules is
   0700 or 0770.
 
-State on 2026-11-13 (after that deploy): six `.gitconfig` files are still
-0664 (all except explorations, 0600). `mn-social-services`'s
+State on 2026-11-13 (after that deploy): six `.gitconfig` files were still
+0664; `chmod o-rwx` by hand made them 0660 the same day (explorations is
+0600). `mn-social-services`'s
 `notified-questions.json` is still 0664; the engine now writes it 0600, so
 its next rewrite tightens it.
 
