@@ -43,3 +43,5 @@ Evidence (on the server, previous boot): `journalctl -b -1 -k` around
 20:34 UTC for the out-of-memory task list, and `sar -r` / `sar -S` from
 `/var/log/sysstat` for memory and swap over time. The box is not named here;
 the boxholder knows which one ran the eval.
+
+2026-11-13 (retrospective 20261113-003305): no test or check followed this bug. Prevention to add with the fix: a test that starts a chat session whose run spawns child processes, evicts it as idle, and asserts no process from its tree remains.
