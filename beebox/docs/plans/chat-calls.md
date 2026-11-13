@@ -502,6 +502,14 @@ None.
 4. **Whisper fallback** for word timing costs an OpenAI call per recording
    when the configured service is whisper-llm. Lean: accept.
 
+5. **Agent on a speechless entry** (decided in implementation, 2026-11-12):
+   silent on a transcript with speech; one sentence when nobody's audio was
+   transcribed, since a live demo showed the model reports that failure
+   anyway and silence would hide a missing key.
+6. **Residual risks accepted** (`docs/chat-calls.md`, Known limits): a tab
+   closed mid-recording can lose its finalize; a server restart can briefly
+   ring a phantom call; card openings are not folded.
+
 ## Knowledge audits
 
 One `knows_directly` entry: the agent, given a `<call>` message, acknowledges
