@@ -322,7 +322,12 @@ export interface ChatTurnStart {
  *
  * Retries once on network failure with a stable messageId to prevent dup turns.
  */
-/** An explicit client-error response was refused before route acceptance. */
+/**
+ * The box refused the send and recorded nothing: a 4xx from the route, or a
+ * 503 from the box's admission gate or the hub (closed for maintenance, or not
+ * running). `/chat/send` itself never answers 503, so the same message id is
+ * safe to send again and the target conversation gained nothing from it.
+ */
 export class ChatSendRejectedError extends RequestError {
   constructor(message: string) { super(message); this.name = "ChatSendRejectedError"; }
 }
@@ -331,14 +336,14 @@ class ConversationStartupPendingError extends Error {
   constructor() { super("Waiting for conversation — retry this send"); this.name = "ConversationStartupPendingError"; }
 }
 
-/** A failed send: 4xx is the box's decision, anything else may be retried by the caller. */
+/** A failed send: 4xx and 503 are refusals before acceptance; anything else may have reached the box. */
 async function rejectSend(response: Response, startup: boolean | undefined): Promise<never> {
   if (response.status === 404 && startup === true) throw new ConversationStartupPendingError();
   const error = await response
     .json()
     .catch(() => ({ error: response.statusText }));
   const reason = error.error || "Chat send failed";
-  if (response.status >= 400 && response.status < 500) throw new ChatSendRejectedError(reason);
+  if ((response.status >= 400 && response.status < 500) || response.status === 503) throw new ChatSendRejectedError(reason);
   throw new RequestError(reason);
 }
 
