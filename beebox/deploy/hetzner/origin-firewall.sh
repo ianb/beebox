@@ -3,8 +3,8 @@
 #
 #   origin-firewall.sh <server> [--allow-http]
 #
-# SSH and ICMP stay open to everyone. 443 opens to Cloudflare's published ranges;
-# --allow-http also opens 80 to them. Every run replaces the firewall's rules, so
+# SSH, ICMP and the call relay's TURN ports stay open to everyone. 443 opens to
+# Cloudflare's published ranges; --allow-http also opens 80 to them. Every run replaces the firewall's rules, so
 # re-run it when Cloudflare changes its ranges, and edit this file rather than
 # the Hetzner console. Rules changes apply to new connections only.
 # See docs/server/provisioning.md, "Origin TLS".
@@ -41,6 +41,11 @@ rules = [
     {"direction": "in", "protocol": "tcp", "port": "22", "source_ips": everyone},
     {"direction": "in", "protocol": "icmp", "source_ips": everyone},
     {"direction": "in", "protocol": "tcp", "port": "443", "source_ips": cloudflare},
+    # The call relay (deploy/coturn/turnserver.conf): TURN, then relayed media.
+    # Cloudflare does not proxy it, so it is open to everyone; coturn checks credentials.
+    {"direction": "in", "protocol": "udp", "port": "3478", "source_ips": everyone},
+    {"direction": "in", "protocol": "tcp", "port": "3478", "source_ips": everyone},
+    {"direction": "in", "protocol": "udp", "port": "49160-49999", "source_ips": everyone},
 ]
 if os.environ["ALLOW_HTTP"] == "1":
     rules.append({"direction": "in", "protocol": "tcp", "port": "80", "source_ips": cloudflare})
