@@ -5,7 +5,7 @@
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "../../core/errors.js";
-import type { Ctx2D } from "../../core/paint.js";
+import type { Ctx2D, LayerImage } from "../../core/paint.js";
 import { Painter } from "../../core/painter/engine.js";
 import { PainterView } from "../../core/view.js";
 import type { ControlBox, CursorKind, View } from "../../core/tea.js";
@@ -24,8 +24,8 @@ export class BrowserView extends PainterView implements View {
     // boundary cast bridges what structural assignability can't express.
     super(
       new Painter({
-        // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: CanvasRenderingContext2D is a superset of Ctx2D (wider fillStyle union)
-        ctx: deps.ctx as unknown as Ctx2D,
+        // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: CanvasRenderingContext2D is a superset of Ctx2D (wider fillStyle union); the DOM canvas is what this runtime's drawImage accepts
+        surface: { ctx: deps.ctx as unknown as Ctx2D, image: deps.ctx.canvas as unknown as LayerImage },
         width: deps.width,
         height: deps.height,
         makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),

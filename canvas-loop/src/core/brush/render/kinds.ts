@@ -1,4 +1,4 @@
-// The three brush kinds. Each paints COVERAGE (black, varying alpha) onto the
+// The coverage brush kinds (smear is in smear.ts). Each paints COVERAGE (black, varying alpha) onto the
 // mark's layer in device pixels; the pipeline in render.ts then cuts the paper
 // grain out of it, colours it, and composites it once.
 import { getStroke } from "perfect-freehand";
@@ -15,6 +15,8 @@ export interface KindInput {
   /** Stroke width in device pixels at full pressure. */
   readonly width: number;
   readonly seed: number;
+  /** The colour of dab or bristle `index` at `alpha`: black coverage, or each one's own colour when the brush varies it. */
+  readonly ink: (index: number, alpha: number) => string;
 }
 
 /** Variable-width ink: perfect-freehand's outline of the pressure-tagged samples, filled. */
@@ -58,11 +60,11 @@ export function paintStamp(input: KindInput, brush: StampBrush): void {
     ctx.globalAlpha = alpha;
     if (brush.tip === "soft") {
       const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      g.addColorStop(0, "rgba(0,0,0,1)");
-      g.addColorStop(1, "rgba(0,0,0,0)");
+      g.addColorStop(0, input.ink(k, 1));
+      g.addColorStop(1, input.ink(k, 0));
       ctx.fillStyle = g;
     } else {
-      ctx.fillStyle = "#000000";
+      ctx.fillStyle = input.ink(k, 1);
     }
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -165,6 +167,7 @@ export function paintBristle(input: KindInput, brush: BristleBrush): void {
   if (only !== undefined) {
     // A mark shorter than one step: one dab of paint, as wide as the brush at this pressure.
     ctx.globalAlpha = brush.flow;
+    ctx.fillStyle = input.ink(0, 1);
     ctx.beginPath();
     ctx.arc(only.x, only.y, (input.width / 2) * (0.35 + 0.65 * only.p), 0, Math.PI * 2);
     ctx.fill();
@@ -173,8 +176,8 @@ export function paintBristle(input: KindInput, brush: BristleBrush): void {
   }
   ctx.lineCap = "butt";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "#000000";
   for (const [index, b] of makeBristles(input, brush).entries()) {
+    ctx.strokeStyle = input.ink(index, 1);
     let run: BristlePoint[] = [];
     for (const p of bristlePoints(input, { b, index })) {
       const last = run.at(-1);

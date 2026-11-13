@@ -1,7 +1,7 @@
 // Named brush presets and brush validation.
 import { SketchUsageError } from "../errors.js";
 import { BLEND_MODES, type BlendMode } from "../compose.js";
-import type { BristleBrush, Brush, BrushKind, BrushOverrides, InkBrush, StampBrush } from "./types.js";
+import type { BristleBrush, Brush, BrushKind, BrushOverrides, InkBrush, SmearBrush, StampBrush } from "./types.js";
 
 const INK: InkBrush = { kind: "ink", opacity: 1, grain: 0, thinning: 0.75 };
 
@@ -72,6 +72,34 @@ const WASH: StampBrush = {
   sizeJitter: 0.15,
 };
 
+/** Drags the drawing under it along the stroke; lays down no colour of its own. */
+const SMUDGE: SmearBrush = {
+  kind: "smear",
+  opacity: 1,
+  grain: 0.1,
+  tip: "soft",
+  spacing: 0.1,
+  flow: 0.9,
+  sizeByPressure: 0.3,
+  opacityByPressure: 0.6,
+  strength: 0.93,
+  color: 0,
+};
+
+/** Wet paint: lays down the stroke colour and mixes it with the paint it crosses. */
+const WET: SmearBrush = {
+  kind: "smear",
+  opacity: 1,
+  grain: 0.2,
+  tip: "hard",
+  spacing: 0.1,
+  flow: 0.85,
+  sizeByPressure: 0.4,
+  opacityByPressure: 0.3,
+  strength: 0.7,
+  color: 0.3,
+};
+
 export const BRUSH_PRESETS = {
   ink: INK,
   marker: MARKER,
@@ -80,6 +108,8 @@ export const BRUSH_PRESETS = {
   airbrush: AIRBRUSH,
   wash: WASH,
   bristle: BRISTLE,
+  smudge: SMUDGE,
+  wet: WET,
 } as const satisfies Record<string, Brush>;
 
 /** A preset name accepted by `brush()`. */
@@ -102,8 +132,21 @@ const KIND_FIELDS: Record<BrushKind, Record<string, readonly [number, number] | 
     opacityByPressure: UNIT,
     scatter: [0, 10],
     sizeJitter: UNIT,
+    hueJitter: [0, 180],
+    lightJitter: UNIT,
   },
-  bristle: { opacity: UNIT, grain: UNIT, blend: undefined, bristles: [1, 64], flow: UNIT, load: [0.01, 10], spread: UNIT },
+  smear: {
+    opacity: UNIT,
+    grain: UNIT,
+    tip: undefined,
+    spacing: [0.02, 10],
+    flow: UNIT,
+    sizeByPressure: UNIT,
+    opacityByPressure: UNIT,
+    strength: UNIT,
+    color: UNIT,
+  },
+  bristle: { opacity: UNIT, grain: UNIT, blend: undefined, bristles: [1, 64], flow: UNIT, load: [0.01, 10], spread: UNIT, hueJitter: [0, 180], lightJitter: UNIT },
 };
 
 const BLENDS: readonly BlendMode[] = BLEND_MODES;

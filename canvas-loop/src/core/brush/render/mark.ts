@@ -13,17 +13,22 @@ import type { Ctx2D, CtxTransform, Layer, Paint, Vec2 } from "../../paint.js";
 import { inPaintSpace, resolveGradient, withSaved } from "../../paint.js";
 import { evalEnvelope, validateEnvelope } from "../envelope.js";
 import { bristleReach, paintBristle, paintInk, paintStamp } from "./kinds.js";
+import type { Rgba } from "./colour.js";
 import { hashNumbers, noise1 } from "../random.js";
+import { BLACK, jitterBase, jitteredInk, jitterOf } from "./ink.js";
+import { renderSmear } from "./smear.js";
 import type { Sample } from "../sample.js";
 import { resample } from "../sample.js";
 import type { Brush, Gesture } from "../types.js";
 
+/** The scratch layers a mark may use: coverage, a gradient or a smear's load, a smear's copy of the drawing. */
+export type ScratchName = "mark" | "paint" | "before";
+
 export interface MarkRequest {
-  readonly target: Ctx2D;
-  /** A reusable canvas-sized layer: the mark draws in its top-left corner, cleared and clipped to the mark's bounds. */
-  readonly scratch: Layer;
-  /** A second reusable layer, for painting a gradient before it colours the mark. */
-  readonly paintScratch: Layer;
+  /** The surface the mark lands on; a smear brush also picks up what is already drawn there. */
+  readonly target: Layer;
+  /** Reusable canvas-sized layers. A mark draws in the top-left corner of "mark", cleared and clipped to its bounds. */
+  readonly scratch: (name: ScratchName) => Layer;
   /** Read the mark's strongest pixel back (for faint-mark warnings); costly in a browser, where it stalls the GPU. */
   readonly measure: boolean;
   readonly canvas: { readonly width: number; readonly height: number };
@@ -49,6 +54,7 @@ function stepFor(brush: Brush, width: number): number {
     case "ink":
       return Math.max(0.5, width / 6);
     case "stamp":
+    case "smear":
       return Math.max(0.25, width * brush.spacing);
     case "bristle":
       return Math.max(0.75, Math.min(3, width / 8));
@@ -166,14 +172,17 @@ function paintKind(
     closed: boolean;
     width: number;
     seed: number;
+    base: Rgba | undefined;
   },
 ): void {
+  const jitter = jitterOf(args.brush);
   const input = {
     ctx,
     samples: args.samples,
     closed: args.closed,
     width: args.width,
     seed: args.seed,
+    ink: jitter === undefined || args.base === undefined ? BLACK : jitteredInk(args.base, { jitter, seed: args.seed }),
   };
   switch (args.brush.kind) {
     case "ink":
@@ -184,6 +193,9 @@ function paintKind(
       break;
     case "bristle":
       paintBristle(input, args.brush);
+      break;
+    case "smear":
+      // Painted dab by dab onto the target by renderSmear, never as coverage.
       break;
   }
 }
@@ -256,7 +268,7 @@ export function renderMark(
   req: MarkRequest,
 ): { alpha: number; x: number; y: number } | undefined {
   validate(req);
-  const m = req.target.getTransform();
+  const m = req.target.ctx.getTransform();
   const scale = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
   if (scale === 0) return undefined;
   const width = req.weight * scale;
@@ -268,6 +280,12 @@ export function renderMark(
   const all = device.map((contour, i) =>
     shapeSamples(req, { contour, width, seed: hashNumbers([i], seed) }),
   );
+  if (req.brush.kind === "smear") {
+    // Smears move paint already drawn, so they paint straight onto the target and get no faint check.
+    const paint = typeof req.paint === "string" ? req.paint : undefined;
+    renderSmear({ ...req, target: req.target.ctx, targetImage: req.target.image, paint, brush: req.brush, load: req.scratch("paint"), dab: req.scratch("mark"), before: req.scratch("before"), contours: all, width });
+    return undefined;
+  }
   const reach =
     req.brush.kind === "bristle"
       ? bristleReach(width, req.brush)
@@ -277,7 +295,8 @@ export function renderMark(
     canvas: req.canvas,
   });
   if (b === undefined) return undefined;
-  const layer = req.scratch;
+  const layer = req.scratch("mark");
+  const base = jitterBase(req.brush, { paint: req.paint, ctx: layer.ctx });
   layer.ctx.save();
   try {
     layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -295,6 +314,7 @@ export function renderMark(
         closed,
         width,
         seed: hashNumbers([i], seed),
+        base,
       });
     }
     if (req.brush.grain > 0) {
@@ -313,11 +333,12 @@ export function renderMark(
         b.h,
       );
     }
-    colorize(layer, { paint: req.paint, m, b, paintScratch: req.paintScratch });
-    const t = req.target;
+    // Coverage is coloured here; a jittered mark already painted its own colours.
+    if (base === undefined) colorize(layer, { paint: req.paint, m, b, paintScratch: req.scratch("paint") });
+    const t = req.target.ctx;
     withSaved(t, () => {
       t.setTransform(1, 0, 0, 1, 0, 0);
-      t.globalAlpha = req.brush.opacity;
+      t.globalAlpha = req.brush.opacity * (base?.a ?? 1);
       t.globalCompositeOperation = req.composite;
       t.drawImage(layer.image, 0, 0, b.w, b.h, b.x, b.y, b.w, b.h);
     });

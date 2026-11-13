@@ -78,6 +78,8 @@ A style's `brush` is a preset name or a preset with fields changed. The presets:
 | `airbrush` | stamp | soft, even spray with no texture: glows and gradients | 20–80 |
 | `wash` | stamp | broad, soft-edged, translucent tone with a little paper texture: shadows | 20–80 |
 | `bristle` | bristle | a loaded paint brush; separate bristle lines that dry out on long strokes | 12–40 |
+| `smudge` | smear | drags the paint already under it along the stroke; adds no colour | 10–40 |
+| `wet` | smear | wet paint: lays down the stroke colour mixed with the paint it crosses | 10–40 |
 
 To stop a marker multiplying, override its blend: `brush: { preset: "marker", blend: "normal" }`.
 
@@ -93,7 +95,7 @@ variable needs the `BrushPreset` type:
 
 | Field | Kinds | Meaning |
 | --- | --- | --- |
-| `opacity` | all | opacity of the whole mark, 0..1. A mark does not darken where it crosses itself. |
+| `opacity` | all | opacity of the whole mark, 0..1. A mark does not darken where it crosses itself. A smear brush applies it to each dab instead. |
 | `grain` | all | how much the paper texture shows through, 0..1 |
 | `blend` | all | blend with the drawing underneath, e.g. `"multiply"` |
 | `thinning` | ink | how much low pressure thins the line, 0..1 |
@@ -105,6 +107,45 @@ variable needs the `BrushPreset` type:
 | `bristles` | bristle | number of bristles |
 | `load` | bristle | paint per bristle, as a fraction of the mark's length; lower is drier |
 | `spread` | bristle | random variation between bristles |
+| `hueJitter` | stamp, bristle | each dab or bristle shifts its hue by up to ± this many degrees, 0..180 |
+| `lightJitter` | stamp, bristle | each dab or bristle shifts its lightness by up to ± this much, 0..1 |
+| `tip`, `spacing`, `flow`, `sizeByPressure`, `opacityByPressure` | smear | as for stamp brushes |
+| `strength` | smear | how far the picked-up paint is carried, 0..1; higher drags it further |
+| `color` | smear | how much of the stroke colour goes into the brush at each dab, 0..1; 0 is a pure smudge |
+
+### Colour variation
+
+Real paint is never one flat colour. `hueJitter` and `lightJitter` give each
+dab (stamp brushes) or each bristle (bristle brushes) its own nearby shade,
+fixed by the mark's seed. Small values read as paint: `lightJitter: 0.08`
+on a bristle brush, `hueJitter: 10` on chalk. Large values read as confetti.
+They need a solid stroke colour, not a gradient.
+
+```ts
+v.curve(STEM, false, { stroke: "#4f7a3a", weight: 24, brush: { preset: "bristle", hueJitter: 12, lightJitter: 0.1 } });
+```
+
+### Smudge and wet paint
+
+`smudge` and `wet` move paint that is already drawn, so draw them **after**
+what they should mix with.
+
+- `smudge` ignores its stroke colour (any colour will do). Drag it from a
+  colour into its neighbour to soften an edge or blend two areas. Over empty
+  or flat paper it changes nothing.
+- `wet` lays down its stroke colour and mixes it with what it crosses: yellow
+  over blue turns green. Over plain paper it mixes with the paper colour; raise
+  `color` toward 1 for more of its own colour.
+- A smudge keeps dragging what it has already smeared, so one long zigzag
+  stroke along an edge blends it better than many short ones. Wet paint mixes
+  only with the paint that was there before the stroke.
+- Inside a `group`, they only move that group's paint.
+- They cannot erase or use a blend mode; `wet` needs a solid stroke colour.
+
+```ts
+v.curve(ZIGZAG_ALONG_EDGE, false, { stroke: "#000", weight: 14, brush: "smudge" }); // blend two areas
+v.curve(SKY_STREAK, false, { stroke: "#f1c40f", weight: 18, brush: "wet" });      // a glaze that mixes in
+```
 
 ## Gestures
 

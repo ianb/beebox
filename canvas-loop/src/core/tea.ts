@@ -27,7 +27,7 @@ export interface ControlBox {
   bold?: boolean;
 }
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
-export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
+export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
 export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shadow, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";

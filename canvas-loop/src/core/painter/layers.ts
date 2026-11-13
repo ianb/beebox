@@ -1,5 +1,6 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
+import type { ScratchName } from "../brush/render/mark.js";
 import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, MakeLayer } from "../paint.js";
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 
@@ -111,8 +112,7 @@ export class LayerPool {
   #make: MakeLayer;
   #size: { width: number; height: number };
   #free: Layer[] = [];
-  #scratch: Layer | undefined;
-  #paintScratch: Layer | undefined;
+  #scratches = new Map<ScratchName, Layer>();
 
   constructor(make: MakeLayer, size: { width: number; height: number }) {
     this.#make = make;
@@ -145,15 +145,12 @@ export class LayerPool {
     }
   }
 
-  /** A second reusable layer marks paint gradients on. */
-  paintScratch(): Layer {
-    this.#paintScratch ??= this.#make(this.#size);
-    return this.#paintScratch;
-  }
-
-  /** The one layer brush marks draw into (each mark clears and clips its own corner of it). */
-  scratch(): Layer {
-    this.#scratch ??= this.#make(this.#size);
-    return this.#scratch;
-  }
-}
+  /** A reusable canvas-sized layer brush marks work in: "mark" for coverage, "paint" for gradients and a smear's load, "before" for a smear's copy of the drawing. */
+  scratch(name: ScratchName): Layer {
+    let layer = this.#scratches.get(name);
+    if (layer === undefined) {
+      layer = this.#make(this.#size);
+      this.#scratches.set(name, layer);
+    }
+    return layer;
+  }}
