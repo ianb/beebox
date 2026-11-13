@@ -207,3 +207,11 @@ boxholder's call.
 4. "Same input, same answer" holds within one font environment only; headless and a browser can measure the same font differently, as they already draw it differently. Accepted as a doc statement; no cross-runtime guarantee.
 5. Narrow the radius change to `circle` only. Declined: the boxholder asked whether mixing diameter and radius is proper design; `ellipse(w, h)` beside `arc(radius)` is the same mix. The extra call sites are rewritten by script and checked pixel for pixel.
 6. The activity claim was too strong: the latest explored event wins, so a later handled press replaces the typed text, and details cap at 200 characters. Accepted: activity is a hint; no change to activity.
+
+## Code review (codex gpt-6-sol), two rounds
+
+- Fixed: a controlled React text box kept a stale draft; it now takes any value that is not an echo of its own typing (test in `canvas-loop/test/react-client.test.tsx`, checked to fail without the fix).
+- Fixed: an over-canvas textarea's minimum height overrode its placed box.
+- Fixed: BRUSHES.md described `ellipseGradient` with width and height.
+- Fixed along the way: canvas-loop `pnpm test` skipped the two `.tsx` React test files (Node's default pattern); it now runs them.
+- Accepted risk: a host that sets the text to a value the person typed a moment earlier, while that keystroke's echo is still pending, is read as an echo, and the box keeps the newer typing. Telling the two apart needs an edit id carried through `onParamsChange` and `params`; no host does this today.
