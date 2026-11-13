@@ -20,7 +20,7 @@ underscore areas (`beebox/src/webapp/routes/api/register/files-write.ts`,
 The boxholder decided on 2026-11-13: no hard block and no iframes yet, but
 this is a high priority to revisit; the gap makes them anxious. Page code can
 also call the card API, so cards are reachable too (they must validate).
-Removing write helpers from figures (`beebox/docs/plans/activity-log.md`,
+Removing write helpers from figures (`beebox/docs/implemented-plans/activity-log.md`,
 Track A) narrows the API but does not enforce anything.
 
 Options when this is taken up:

@@ -674,7 +674,7 @@ separate origin, no capability token.
   `guard`) admits any path that resolves inside an underscore area and is
   not a card or a dotfile: `_content`, `_config`, `_tmp`, attach folders,
   and so on. Taking helpers away from figures (planned:
-  `docs/plans/activity-log.md` Track A) is API hygiene, not enforcement.
+  `docs/implemented-plans/activity-log.md` Track A) is API hygiene, not enforcement.
 - **Who writes the code.** The box's own agents, from the box's own
   instructions and content, so prompt injection (§7a) can reach it: a
   poisoned input that leads an agent to write a hostile view gets the

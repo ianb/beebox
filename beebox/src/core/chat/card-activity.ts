@@ -4,7 +4,7 @@
  *
  * Every reported action goes to the activity log (`core/activity/`), which the
  * agent reads with `bbx chat activity`; nothing about activity rides on the
- * send itself. See `docs/plans/activity-log.md`.
+ * send itself. See `docs/implemented-plans/activity-log.md`.
  */
 
 // `ACTIVITY_KINDS`/`ActivityKind` live in `shared/card-activity-kinds.ts`
