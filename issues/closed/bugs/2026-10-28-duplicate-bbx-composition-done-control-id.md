@@ -1,12 +1,15 @@
 ---
 title: "`ui-scan.annotations.test.ts` is red: `bbx-composition-done` is declared twice"
-workstream: composition-editor
+workstream: knip-sweep
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-knip-sweep — full suite before landing the 2026-10-28 knip sweep
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-13):** Fixed on main by other work; the full beebox suite and pnpm lint are green on the merged knip-sweep tree (2026-11-13).
 
 `beebox/src/frontend/test/lib/ui-scan.annotations.test.ts` fails on main in
 "Note what \"exactly once\" is buying:" with the unexpected duplicate

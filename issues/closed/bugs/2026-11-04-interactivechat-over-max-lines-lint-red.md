@@ -1,12 +1,15 @@
 ---
 title: "`pnpm lint` is red on main: `InteractiveChat` is 151 lines, over `max-lines-per-function`"
-workstream: unattached
+workstream: knip-sweep
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: knip-sweep — pre-landing `pnpm lint` on 2026-11-04
 labels: [lint-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-13):** Fixed on main by other work; the full beebox suite and pnpm lint are green on the merged knip-sweep tree (2026-11-13).
 
 `pnpm lint` fails on current main with one error:
 

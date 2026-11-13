@@ -1,12 +1,15 @@
 ---
 title: "`AdminOverview.encrypted-backup-summary.test.ts` is red: its fixed timestamp aged past the 36-hour window"
-workstream: unattached
+workstream: knip-sweep
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-knip-sweep — full suite before landing the 2026-10-28 knip sweep
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-13):** Fixed on main by other work; the full beebox suite and pnpm lint are green on the merged knip-sweep tree (2026-11-13).
 
 `beebox/src/frontend/test/components/admin/AdminOverview.encrypted-backup-summary.test.ts`
 fails on main in "summarizes encrypted backup lifecycle". The fixture sets
