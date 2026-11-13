@@ -104,6 +104,8 @@ none
 | Engine no longer reserves ids (box default changed) | "Passive navigation…" (gone) | falls back to a new chat in the receipt's place | silent (console.warn) |
 | `fresh()` itself throws (status/reserve fails) | hook path, browser-verified with a stubbed 500 | `unavailable` + Retry | clear |
 | Codex fallback leaves stale `?session=` | `conversation-intent.test.ts` | track 4 | n/a |
+| Accepted first message, then a restart before the transcript: bootstrap `pending` holds it, the page opens a new chat | — | none (also unseen before this change) | silent; filed as `issues/bugs/2026-11-13-accepted-first-message-invisible-after-restart.md` |
+| Box unreachable: send waits for the transport's ~211 s retries | — | composer stays typeable; failure line + Retry at the end | clear; queued sends while unreachable would be new machinery |
 | Switching A→B: A stays visible for up to 1 s with no indicator | — | "Loading conversation…" after 1 s | accepted; resolution is usually well under a second |
 
 No critical gap.
