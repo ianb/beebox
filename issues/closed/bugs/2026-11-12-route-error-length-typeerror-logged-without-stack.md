@@ -1,11 +1,14 @@
 ---
 title: "A production \"Route error\" reading 'length' of undefined cannot be traced: the debug log drops the stack"
-workstream: unattached
+workstream: missing-session-recovery
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-missing-session-recovery — while fixing a refused first chat message after a deploy
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** describeArg now appends the first five stack frames (origin stripped) to a logged Error, so a recurrence of the TypeError names its place in the sourcemapped bundle. The TypeError itself was not reproduced; reopen with the logged frames if it recurs.
 
 A production box's `client-debug.log` recorded, about two minutes after a deploy reopened the box:
 
