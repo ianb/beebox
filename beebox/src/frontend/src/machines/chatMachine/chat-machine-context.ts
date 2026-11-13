@@ -30,6 +30,9 @@ export function initialChatContext(input: ChatMachineInput): ChatContext {
     ...(input.sessionInput === "new" && input.startModel !== undefined
       ? { startModel: input.startModel }
       : {}),
+    ...(input.sessionInput === "new" && input.pendingChat !== undefined
+      ? { pendingChat: input.pendingChat }
+      : {}),
     processRunning: false,
     processBusy: false,
     totalEntries: 0,

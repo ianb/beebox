@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-13T07:40:15Z
-Total documents: 654
+Generated: 2026-11-13T16:19:32Z
+Total documents: 655
 
 ## Issues
 
@@ -89,7 +89,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
-- **docs/plans/activity-log.md** — "Activity log: what a person did in views and figures, on demand for the chat agent; figures lose file writes" (378 lines) · proposal · draft
 - **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
@@ -918,7 +917,7 @@ Referenced by:
 - docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:492 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:499 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -971,9 +970,9 @@ Title: "Adding API Endpoints" | 250 lines | current reference
 Referenced by:
 - AGENTS.md:43 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc
 - docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
+- docs/implemented-plans/activity-log.md:122 (mention) — - `beebox/docs/adding-api-endpoints.md`: tRPC is the default. The record
 - docs/implemented-plans/docs-reorg.gap-analysis.md:166 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:151 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
-- docs/plans/activity-log.md:122 (mention) — - `beebox/docs/adding-api-endpoints.md`: tRPC is the default. The record
 - docs/plans/chat-search.md:218 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
 - docs/plans/ios-native-capture-mode.md:32 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
 - docs/plans/search-card.md:99 (mention) — point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
@@ -1041,7 +1040,7 @@ Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
 - docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
-- docs/security-report.md:493 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
+- docs/security-report.md:500 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
 - → ../mac-app/README.md (link)
@@ -1342,7 +1341,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:462 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:469 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:16 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -2293,7 +2292,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:506 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:55 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:346 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:353 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -2325,7 +2324,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:43 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:182 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:189 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -2357,7 +2356,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 756 lines | current reference
+Title: "Security report — structured version" | 804 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -2436,6 +2435,9 @@ References:
 - → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
 - → ../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md (link)
 - → ../issues/closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md (link)
+- → docs/implemented-plans/activity-log.md (mention)
+- → ../issues/decisions/2026-11-13-view-file-writes-too-broad.md (link)
+- → ../issues/decisions/2026-11-13-isolate-view-and-figure-code.md (link)
 - → docs/plans/publish-sites-admin.md (link)
 - → docs/plans/publish-shared-host-per-box.md (link)
 
@@ -3756,6 +3758,7 @@ Title: "Measuring performance" | 301 lines | current reference
 
 Referenced by:
 - docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads, box starts, test-process and `bbx` start costs: the
+- docs/implemented-plans/direct-chat-load.md:39 (mention) — Chosen: the smallest fix plus one extra recovery attempt for a receipted chat, a delayed loading line, a quiet failure l
 - docs/implemented-plans/lazy-cli-commands.md:59 (mention) — lines in `docs/development/performance.md` and the CLI docs. Not a BIG
 - docs/implemented-plans/yaml-lazy-load.md:62 (mention) — `docs/development/performance.md`, about 10 lines.
 - docs/implemented-plans/yaml-read-parser.md:49 (mention) — 200 changed source and test lines. Docs: `docs/development/performance.md`,
@@ -3833,6 +3836,18 @@ Referenced by:
 References:
 - → ../issues/closed/features/2026-10-15-expanded-activity-lines-say-too-little.md (frontmatter)
 - → docs/architecture/spirit.md (mention)
+
+#### docs/implemented-plans/activity-log.md
+
+Title: "Activity log: what a person did in views and figures, on demand for the chat agent; figures lose file writes" | 448 lines | shipped history | implemented
+
+Referenced by:
+- docs/security-report.md:677 (mention) — `docs/implemented-plans/activity-log.md` Track A) is API hygiene, not enforcement.
+- ../issues/decisions/2026-11-13-isolate-view-and-figure-code.md:23 (mention) — Removing write helpers from figures (`beebox/docs/implemented-plans/activity-log.md`,
+
+References:
+- → ../issues/decisions/2026-11-13-view-file-writes-too-broad.md (frontmatter)
+- → docs/adding-api-endpoints.md (mention)
 
 #### docs/implemented-plans/agent-applied-migrations.md
 
@@ -3953,7 +3968,7 @@ References:
 Title: "Agent self-view: the box agent opens, looks at, and uses its own box's pages" | 300 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:20 (link) — the box browser pass ([plan](implemented-plans/agent-self-view.md)): a one-hour signed
+- docs/security-report.md:27 (link) — the box browser pass ([plan](implemented-plans/agent-self-view.md)): a one-hour signed
 - ../issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md:12 (mention) — **Closed (implemented, 2026-11-08):** Resolved on branch worktree-agent-self-view (plan implemented-plans/agent-self-vie
 - ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:38 (link) — The self-view half is built on branch `worktree-agent-self-view` (not yet merged): the box browser holds a one-hour box
 - ../issues/features/2026-11-06-narrow-chat-screenshot-to-users-view.md:60 (link) — Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/implemented-plans/agent-self-vi
@@ -4246,7 +4261,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
-- docs/security-report.md:490 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:497 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:163 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 - ../issues/exploration/2026-11-11-look-at-klad-shared-human-agent-painting.md:94 (mention) — (`beebox/docs/implemented-plans/box-host-packages.md`). The `-dev` libraries
@@ -5420,6 +5435,18 @@ References:
 - → ../issues/closed/bugs/2026-08-20-session-end-hook-cancelled-by-slow-sweep.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md (frontmatter)
 - → ../issues/closed/bugs/2026-08-15-main-runtime-stays-stale-after-deploy-build.md (frontmatter)
+
+#### docs/implemented-plans/direct-chat-load.md
+
+Title: "Direct chat load" | 145 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/chat-everywhere.md:845 (mention) — A load always lands on a usable chat (superseded by `direct-chat-load.md`): an
+
+References:
+- → ../issues/bugs/2026-11-13-choosing-conversation-notice-flashes-on-every-reload.md (frontmatter)
+- → docs/development/performance.md (mention)
+- → docs/plans/chat-everywhere.md (mention)
 
 #### docs/implemented-plans/doc-lifecycle-clarity.md **[ORPHAN]**
 
@@ -8192,7 +8219,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:83 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:197 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:363 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:370 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9047 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -9171,14 +9198,6 @@ Referenced by:
 
 ### docs/plans/
 
-#### docs/plans/activity-log.md **[ORPHAN]**
-
-Title: "Activity log: what a person did in views and figures, on demand for the chat agent; figures lose file writes" | 378 lines | proposal | draft
-
-References:
-- → ../issues/decisions/2026-11-13-view-file-writes-too-broad.md (frontmatter)
-- → docs/adding-api-endpoints.md (mention)
-
 #### docs/plans/admin-encrypted-backups.md **[ORPHAN]**
 
 Title: "Configure encrypted backups in Admin" | 261 lines | proposal | partial
@@ -9456,6 +9475,7 @@ Title: "Chat everywhere: one input, explicit conversational focus" | 916 lines |
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:19 (link) — [chat everywhere](../plans/chat-everywhere.md), and
+- docs/implemented-plans/direct-chat-load.md:45 (mention) — - Earlier decision, `beebox/docs/plans/chat-everywhere.md:845-847`: *"Explicitly requested unknown IDs, foreign-scope re
 - docs/implemented-plans/notifications-design-notes.md:88 (mention) — `docs/plans/chat-everywhere.md`, Track C). A notification whose target is on
 - docs/mobile-parity.md:25 (link) — | Conversation-bound input across box pages | done in [chat-everywhere](plans/chat-everywhere.md) worktree — V3 destinat
 - docs/plans/chat-everywhere.review.md:3 (link) — Review of [Chat everywhere](chat-everywhere.md), 2026-09-07. The independent
@@ -9484,6 +9504,7 @@ References:
 - → docs/mobile-contract.md (mention)
 - → docs/plans/chat-everywhere.review.md (link)
 - → ../issues/closed/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md (link)
+- → docs/implemented-plans/direct-chat-load.md (mention)
 
 #### docs/plans/chat-everywhere.review.md
 
@@ -10457,7 +10478,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:730 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:772 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -10478,7 +10499,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:723 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:765 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -10659,7 +10680,7 @@ Title: "Shared browser: one web browser per box that the agent and the person bo
 Referenced by:
 - docs/implemented-plans/agent-self-view.md:124 (mention) — - **Box browser** (existing, `docs/plans/shared-browser.md` Ontology): the one agent-browser session `box` per box. Unch
 - docs/plans/shared-browser-ask.subplan.md:11 (link) — **Parent plan:** [shared-browser.md](shared-browser.md). That plan's NOT-in-scope line "A beebox viewer, input arbitrati
-- docs/security-report.md:12 (link) — shared box browser ([plan](plans/shared-browser.md)): the person's
+- docs/security-report.md:19 (link) — shared box browser ([plan](plans/shared-browser.md)): the person's
 - docs/server/provisioning.md:168 (link) — Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
 - ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:34 (link) — Partly resolved. Done: the box has one browser the agent drives with `bbx browser` and the person opens from the avatar
 - ../research/embedded-browser/acceptance-walkthrough.md:3 (link) — Gate G1 of [the shared-browser plan](../../beebox/docs/plans/shared-browser.md#implementation-order). Question: with the

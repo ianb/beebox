@@ -15,6 +15,7 @@
 
 import {
   EXHIBITS_DEFAULT_PORT,
+  clearTimer,
   errorMessage,
   settled,
   WORKSTREAMS_APP_BASE_PATH,
@@ -25,6 +26,7 @@ import {
   type WorkstreamsAppSupervisor,
   type WorkstreamsAppSupervisorConfig,
   type WorkstreamsAppTarget,
+  type WorkstreamsAppTimer,
 } from "./workstreams-app-contract.js";
 import { createExhibitsHoldManager, renderExhibitsFallback } from "./workstreams-app-exhibits.js";
 import { createGenerationManager } from "./workstreams-app-generation.js";
@@ -61,6 +63,7 @@ const DEFAULT_RECONCILE_MS = 30_000;
 const DEFAULT_ACTIVE_JOB_POLL_MS = 1_000;
 const DEFAULT_KILL_GRACE_MS = 2_000;
 const DEFAULT_EXHIBITS_HOLD_RETRY_MS = 250;
+const DEFAULT_START_RETRY_DELAYS_MS: readonly number[] = [5_000, 15_000, 45_000];
 
 function isBackendUrl(url: string): boolean {
   const pathname = url.split("?")[0] ?? url;
@@ -102,6 +105,42 @@ function readyState(options: {
   };
 }
 
+/**
+ * Automatic retries of a failed start. A start fails mostly under transient
+ * load, so a few spaced retries recover it; the budget resets on a ready
+ * generation and runs out so a broken app does not restart forever.
+ */
+function createStartRetry(options: {
+  effects: WorkstreamsAppEffects;
+  log: (message: string) => void;
+  delaysMs: readonly number[];
+  shouldRun: () => boolean;
+  run: () => void;
+}): { schedule(): void; reset(): void } {
+  let used = 0;
+  let timer: WorkstreamsAppTimer | null = null;
+  return {
+    schedule() {
+      const delay = options.delaysMs[used];
+      if (delay === undefined) {
+        options.log("[workstreams-app] start failed; no automatic retries left (a source change or manual retry starts it)");
+        return;
+      }
+      used += 1;
+      options.log(`[workstreams-app] start failed; automatic retry ${String(used)}/${String(options.delaysMs.length)} in ${String(delay)}ms`);
+      timer = clearTimer(timer);
+      timer = options.effects.setTimer(delay, () => {
+        timer = null;
+        if (options.shouldRun()) options.run();
+      });
+    },
+    reset() {
+      timer = clearTimer(timer);
+      used = 0;
+    },
+  };
+}
+
 export function createWorkstreamsAppSupervisor(
   effects: WorkstreamsAppEffects,
   config: WorkstreamsAppSupervisorConfig,
@@ -117,6 +156,13 @@ export function createWorkstreamsAppSupervisor(
   let currentState: WorkstreamsAppState = { phase: "stopped", changedAt: effects.now() };
   let launchPromise: Promise<void> | null = null;
   let shuttingDown = false;
+  const startRetry = createStartRetry({
+    effects,
+    log: config.log,
+    delaysMs: config.startRetryDelaysMs ?? DEFAULT_START_RETRY_DELAYS_MS,
+    shouldRun: () => !shuttingDown && currentState.phase === "failed",
+    run: () => { void launch(generations.current() ? "restart" : "start", "automatic retry after a failed start"); },
+  });
 
   const exhibits = createExhibitsHoldManager({
     effects,
@@ -199,6 +245,7 @@ export function createWorkstreamsAppSupervisor(
           return;
         }
         restarts.settle(coveredRestartVersion);
+        startRetry.reset();
         setState(readyState({
           effects,
           generation: result.generation,
@@ -210,6 +257,7 @@ export function createWorkstreamsAppSupervisor(
         if (failedGeneration) await generations.stop(failedGeneration);
         if (!shuttingDown) {
           setState({ phase: "failed", changedAt: effects.now(), message: errorMessage(error) });
+          startRetry.schedule();
         }
       }
     })();
@@ -234,6 +282,7 @@ export function createWorkstreamsAppSupervisor(
     if (shuttingDown) return;
     restarts.clearPending();
     restarts.cancelTimers();
+    startRetry.reset();
     await launch(generations.current() ? "restart" : "start", "manual retry");
   }
 
@@ -246,6 +295,7 @@ export function createWorkstreamsAppSupervisor(
     shuttingDown = true;
     sources.close();
     restarts.cancelTimers();
+    startRetry.reset();
     const generation = generations.take();
     if (generation) await generations.stop(generation);
     await exhibits.release();

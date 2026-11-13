@@ -9,6 +9,7 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
+import { useCardActivityReporter } from "../../lib/activity/scope";
 import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -26,6 +27,7 @@ import type { RendererProps } from "../../file-type-registry";
 import { StatusMessage } from "../ui/StatusMessage";
 import {
   FigureMount,
+  figureFileHelpers,
   type FigureContext,
   type FigureRuntime,
   type FigureSketch,
@@ -41,7 +43,7 @@ function parseRuntime(value: unknown): FigureRuntime | null {
 }
 
 
-export function FigureView({ data, onNavigate, params, mode, caption, reportActivity }: RendererProps) {
+export function FigureView({ data, onNavigate, params, mode, caption }: RendererProps) {
   const apiBase = getApiBase();
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
@@ -95,6 +97,7 @@ export function FigureView({ data, onNavigate, params, mode, caption, reportActi
   useLiveRefresh({ when: fileChangeAt(entryPath), refresh: () => { void loadModule(); } });
 
   const fileHelpers = useViewFileHelpers(apiBase);
+  const report = useCardActivityReporter(data.path);
   // Built inline (not memoized): FigureMount reads it via a ref and remounts on
   // `paramsKey`, so a fresh object identity each render is harmless — and it
   // avoids a stale-deps disable.
@@ -102,7 +105,7 @@ export function FigureView({ data, onNavigate, params, mode, caption, reportActi
     params: figureParams,
     data: isRecord(frontmatter.data) ? frontmatter.data : {},
     meta: frontmatter,
-    file: fileHelpers,
+    file: figureFileHelpers(fileHelpers),
   };
 
   if (runtime === null) {
@@ -122,7 +125,7 @@ export function FigureView({ data, onNavigate, params, mode, caption, reportActi
   const figureEl = (
     <ViewErrorBoundary onRetry={() => void loadModule()}>
       <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} declaredParams={declared}
-        {...(reportActivity !== undefined ? { reportActivity } : {})} />
+        report={report} />
     </ViewErrorBoundary>
   );
 

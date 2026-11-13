@@ -344,7 +344,7 @@ export class ChatSession extends EventEmitter {
       // first-message-only context (last activity, calendar, health).
       sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
-      sessionId: this.liveTasks.ending() ? null : this.sessionId, // a run still closing has not finished its note
+      chatId: this.sessionId, sessionId: this.liveTasks.ending() ? null : this.sessionId, // a run still closing has not finished its note
     });
 
     if (this.liveRun() === null) {

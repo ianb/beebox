@@ -8,6 +8,13 @@ reviewed-by: Ian Bicking
 
 # Security report — structured version
 
+**Scoped amendment (2026-11-13, view and figure code), reviewed by Ian:**
+Adds §7c: agent-written view and figure code runs in the page with the
+person's session and can call the raw file routes directly, so a figure's
+or view's write reach is the whole box's underscore areas regardless of the
+helpers it is handed. Adds roll-up item 18. Scoped to that threat; not a
+re-audit of other changes since `c0844b44e`.
+
 **Scoped amendment (2026-10-30, box browser), not yet reviewed:** Adds the
 shared box browser ([plan](plans/shared-browser.md)): the person's
 `/<slug>/browser/` page and its accepted third-party script (§1, §8), the
@@ -555,8 +562,9 @@ gathered here so the lifecycle reads as one story.
 
 Sections 1–6 inventory what exists. This section names threats that do
 not reduce to any single row — the emergent risks of the architecture.
-Two entries: prompt injection (7a) and cross-box leakage on a shared host
-(7b); add an entry when another architecture-level threat earns one.
+Three entries: prompt injection (7a), cross-box leakage on a shared host
+(7b), and agent-written page code with the person's session (7c); add an
+entry when another architecture-level threat earns one.
 
 ### 7a. Prompt injection via external content
 
@@ -647,6 +655,40 @@ accepted for now and tracked for a fix in
 [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
 which shares the two-box fixture). Boxes also share one browser origin
 (§4, accepted).
+
+### 7c. Agent-written view and figure code runs with the person's session
+
+Box agents write views (`src/views/*.tsx`) and figures (canvas-loop and
+other figure entries). Both run in the app's own page, same origin, with the
+signed-in person's session cookie. Nothing isolates them: no iframe, no
+separate origin, no capability token.
+
+- **What they are handed.** Views and figures get the view file helpers
+  (`src/frontend/src/hooks/useViewFileHelpers.ts`): read, `writeFile`,
+  `appendFile`, `commitFile`, and `adapterFetch` (connected services, with
+  keys the server adds). Figures get them as `figure.file`
+  (`src/frontend/src/components/FigureView/view.tsx`).
+- **What they can reach anyway.** Because the code runs in the page, it can
+  call any in-wall route itself with `fetch`, whatever helpers it is given.
+  The raw write route (`src/webapp/routes/api/register/files-write.ts`,
+  `guard`) admits any path that resolves inside an underscore area and is
+  not a card or a dotfile: `_content`, `_config`, `_tmp`, attach folders,
+  and so on. Taking helpers away from figures (planned:
+  `docs/implemented-plans/activity-log.md` Track A) is API hygiene, not enforcement.
+- **Who writes the code.** The box's own agents, from the box's own
+  instructions and content, so prompt injection (§7a) can reach it: a
+  poisoned input that leads an agent to write a hostile view gets the
+  person's in-wall abilities when the person opens it.
+- **Mitigations.** Card files are not writable through the raw route, but
+  page code can call the card API itself, so cards are reachable too; they
+  only have to pass schema validation. Raw writes are uncommitted until a
+  commit call, and Git history keeps prior versions of committed files.
+  `.beebox/` and dotfiles are out of the raw route's reach.
+- **Status.** accepted for now (boxholder, 2026-11-13: no hard block and no
+  iframes yet), as a high priority to revisit. Narrowing view writes:
+  [view-file-writes-too-broad](../../issues/decisions/2026-11-13-view-file-writes-too-broad.md).
+  Isolating view and figure code:
+  [isolate-view-and-figure-code](../../issues/decisions/2026-11-13-isolate-view-and-figure-code.md).
 
 ## 8. Accepted risks (roll-up)
 
@@ -746,6 +788,12 @@ Every `accepted` item, with its rationale:
    2026-11-08 by the boxholder: the pass acts as the agent, whose bearer
    never expires, and the dev case is the developer's own machine
    ([plan](implemented-plans/agent-self-view.md#not-in-scope)). (§2)
+18. **View and figure code runs with the person's session** — agent-written
+   views and figures run in the app's page and can call the raw file routes
+   (any non-card, non-dot file in the underscore areas) and other in-wall
+   routes (cards through the card API), whatever helpers they are given.
+   Accepted 2026-11-13 by the boxholder: no hard block and no iframes yet;
+   a high priority to revisit; tracked by two issues. (§7c)
 
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being

@@ -16,6 +16,7 @@ import { loopbackHeaders } from "../../lib/loopback-headers.js";
 import { getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./audio.js";
 import { uiCommand } from "./ui.js";
 import { stripCommand } from "./strip.js";
+import { activityCommand } from "./activity.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -281,6 +282,7 @@ export const chatCommand = new Command("chat")
   .description("Interact with the live chat session")
   .addCommand(selfNoteCommand)
   .addCommand(whatsChangedCommand)
+  .addCommand(activityCommand)
   .addCommand(screenshotCommand)
   .addCommand(uiCommand)
   .addCommand(stripCommand)

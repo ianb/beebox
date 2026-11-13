@@ -79,12 +79,11 @@ export function useBoundEmission(opts: {
   attention?: AttentionSnapshot;
   emissionStore: EmissionStore;
   captureCardSend: () => CardSendFields;
-  acceptCardSend?: (fields: CardSendFields) => void;
   getWitness: () => ChatWitness;
   onSent: () => void;
 }) {
   const conversation = useBoxConversation();
-  const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
+  const { pool, target, selection, attention, emissionStore, captureCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
     try { return createPendingSendsStore(sessionStorage, { boxSlug: pool.boxSlug, storageScope: pool.storageScope }); }
     catch (_cause) {
@@ -118,8 +117,7 @@ export function useBoundEmission(opts: {
       ? { ...witnessed, zoomedView: focused === undefined ? null : `view:${focused.startsWith("/") ? focused.slice(1) : focused}` }
       : witnessed;
     const fields = attention !== undefined || nativeBinding !== undefined
-      ? { ...cardFields, openCard: focused === undefined ? undefined : parseRef(focused).path,
-        ...(focused !== undefined && parseRef(focused).path === cardFields.openCard ? {} : { cardActivity: undefined, cardState: undefined }) }
+      ? { ...cardFields, openCard: focused === undefined ? undefined : parseRef(focused).path }
       : cardFields;
     let preparedId: string | undefined;
     let dispatched = false;
@@ -146,7 +144,6 @@ export function useBoundEmission(opts: {
           try { conversation?.forgetReservation(binding.target.sessionId); }
           catch (cause) { console.warn("Conversation reservation receipt could not be removed", cause); }
         }
-        if (receipt.disposition !== "rejected" && fields.cardActivity !== undefined) acceptCardSend?.(cardFields);
         if (!native) {
           if (receipt.disposition === "rejected") pending?.rejected(emission.id, receipt.reason);
           else pending?.accepted(emission.id);

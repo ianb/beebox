@@ -17,7 +17,6 @@ import type { useChatVoice } from "./voice";
 import type { useChatAttachments } from "../../InteractiveChat-attachments/attachments";
 import type { useChatSelections } from "./selections";
 import type { useChatActions } from "./actions";
-import type { CardActivityReport } from "../../InteractiveChat-card-hooks";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 
@@ -79,8 +78,6 @@ export interface ChatBodyProps {
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
   onVoiceSegmentSend: VoiceSegmentSend;
   send: (event: { type: "DISMISS_ERROR" }) => void;
-  /** Report user activity on a companion card, by its activity source (scrolled/navigated/…). */
-  reportCardActivity: CardActivityReport;
   /**
    * Native shell modes: embed also suppresses the header, while nativeComposer
    * keeps the normal web chrome. Both suppress the web input surface.

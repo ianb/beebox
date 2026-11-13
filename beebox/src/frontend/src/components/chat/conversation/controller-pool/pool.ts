@@ -84,10 +84,13 @@ export class ConversationControllerPool {
     // Assignment changes identity for routing, never the actor following the turn.
     const carried = [...this.entries.values()].find((entry) => entry.alias === key);
     if (carried !== undefined) return carried.actor;
-    const actor = this.createController(input ?? {
-      sessionInput: target.kind === "session" ? target.sessionId : "new",
-      contextDir: target.contextDir,
-      ...(target.kind === "start" ? { startEngine: target.engine, startModel: target.model } : {}),
+    const actor = this.createController({
+      ...(input ?? {
+        sessionInput: target.kind === "session" ? target.sessionId : "new",
+        contextDir: target.contextDir,
+        ...(target.kind === "start" ? { startEngine: target.engine, startModel: target.model } : {}),
+      }),
+      ...(target.kind === "start" ? { pendingChat: target.clientConversationId } : {}),
     });
     const entry: Entry = { actor, target, pins: 0, started: false, awaitingAssignment: false, startRejected: false, alias: null, assigned: false, waiters: new Set() };
     this.entries.set(key, entry);

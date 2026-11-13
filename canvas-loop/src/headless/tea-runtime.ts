@@ -1,4 +1,5 @@
 import { DeterminismError, SketchUsageError, UnhandledMsgError } from "./errors.js";
+import { ActivityReporter } from "../core/activity.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
 import type { Zoom } from "./recorder/zoom.js";
 import { FrameTimer } from "./recorder/timing.js";
@@ -166,6 +167,7 @@ class TeaRunner {
   // callbacks — the runtime owns it; the capability objects never see it.
   #handledNames: string[] = [];
   #unhandled = new UnhandledFold();
+  #activity: ActivityReporter;
   #timer: FrameTimer | undefined;
   #score = new Score();
 
@@ -187,6 +189,7 @@ class TeaRunner {
     this.#util = new TeaUtil({ surface: this.#surface, getParams: () => this.#params, onHandled });
     this.#view = new TeaView({ surface: this.#surface, decl: options.module.params, getParams: () => this.#params });
     this.#eventsByFrame = bucketTeaByFrame(options.events);
+    this.#activity = new ActivityReporter(options.module.activity, (message) => this.#recorder.recordLog({ level: "warn", message }));
   }
 
   run(): RunResult {
@@ -256,6 +259,7 @@ class TeaRunner {
         this.#params = Object.freeze({ ...this.#params, [event.name]: event.value });
         this.#recorder.recordParam({ name: event.name, value: event.value });
         this.#fold({ type: "param", name: event.name, value: event.value });
+        this.#recordActivity();
         return;
       }
       case "mousedown":
@@ -275,6 +279,13 @@ class TeaRunner {
     const changed = this.#fold(msg);
     const text = verdict({ handled: this.#handledNames, changed });
     if (this.#unhandled.show(msg.type, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
+    if (this.#handledNames.length > 0) this.#recordActivity();
+  }
+
+  /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive). */
+  #recordActivity(): void {
+    const json = this.#activity.json(this.#model);
+    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}` });
   }
 
   #fold(msg: Msg): boolean {

@@ -4,7 +4,7 @@ import type { trpc, RouterOutput } from "../../../lib/trpc/client";
 import { chatTailSlice, type ChatInitialLoad } from "../../../machines/chat-types";
 import type { ChatAgentEngine } from "@shared/chat-models";
 import type { ReservationReceipt, ReservationReceipts } from "./reservation-receipts";
-import { createReservationRecovery } from "./reservation-recovery";
+import { createReservationRecovery, ReservationRecoveryUnsupportedError } from "./reservation-recovery";
 
 type Utils = ReturnType<typeof trpc.useUtils>;
 type Bootstrap = RouterOutput["chat"]["bootstrap"];
@@ -17,8 +17,6 @@ export interface ConversationRequest {
   cardPath?: string;
   engine?: ChatAgentEngine;
   model?: string;
-  /** The user named this chat (the URL's `?session=`, or a pick from a list); a restored or remembered one is not named. */
-  named?: boolean;
 }
 export interface ResolvedConversation {
   selection: ConversationSelection;
@@ -41,17 +39,17 @@ async function restoreBeforeBootstrap(params: {
   sessionId: string | undefined;
   contextDir: string;
   ensureReservation: (sessionId: string) => Promise<ReservationReceipt | null>;
-}): Promise<{ contextDir: string; receipt: ReservationReceipt | null }> {
-  if (params.sessionId === undefined) return { contextDir: params.contextDir, receipt: null };
+}): Promise<{ contextDir: string; receipt: ReservationReceipt | null; failed: boolean }> {
+  if (params.sessionId === undefined) return { contextDir: params.contextDir, receipt: null, failed: false };
   try {
     const receipt = await params.ensureReservation(params.sessionId);
-    return { contextDir: receipt?.contextDir ?? params.contextDir, receipt };
+    return { contextDir: receipt?.contextDir ?? params.contextDir, receipt, failed: false };
   } catch (error) {
     // The id may have become a real chat since the receipt was written. Let
     // bootstrap prove that before turning a recovery transport error into the
     // selected conversation's error state.
     console.warn("Conversation reservation could not be recovered", error);
-    return { contextDir: params.contextDir, receipt: null };
+    return { contextDir: params.contextDir, receipt: null, failed: !(error instanceof ReservationRecoveryUnsupportedError) };
   }
 }
 async function fresh(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest; contextDir: string }): Promise<ResolvedConversation> {
@@ -79,11 +77,14 @@ async function fresh(params: { utils: Utils; reserve: Reserve; receipts: Reserva
     ...(request.model ? { model: request.model } : {}), seedFeatures: features,
   } } };
 }
-function resolveEmptyBootstrap(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
-  receiptProven: boolean }): Promise<ResolvedConversation> | ResolvedConversation {
-  if (input.receiptProven) {
-    return { unstarted: false, selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
-  }
+/**
+ * A load always lands on a usable chat: a session this box cannot open (never
+ * created, expired, ran elsewhere, being deleted) is replaced by a new one in
+ * the same place. The conversation menu is how the person picks another.
+ */
+function replaceMissing(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
+  session: string | undefined; reason: string }): Promise<ResolvedConversation> {
+  if (input.session !== undefined) console.warn(`Conversation ${input.session} could not be opened (${input.reason}); starting a new one`);
   return fresh({ ...input.params, contextDir: input.contextDir });
 }
 function retireUsedReceipt(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): void {
@@ -119,20 +120,27 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     session = (await utils.chat.lastSessionForDirectory.fetch({ contextDir })).sessionId ?? undefined;
   }
   if (request.kind === "new" || (request.kind !== "default" && !session)) return fresh({ ...params, contextDir });
+  // A receipt names the place this tab reserved the chat in; a replacement stays there too.
   const provenReceipt = session === undefined ? undefined : params.receipts?.get(session);
-  const receiptProven = provenReceipt !== undefined;
   if (provenReceipt !== undefined) contextDir = provenReceipt.contextDir;
   const ensureReservation = params.ensureReservation ?? createReservationRecovery(params.receipts, params.reserve);
   const restored = await restoreBeforeBootstrap({ sessionId: session, contextDir, ensureReservation });
   contextDir = restored.contextDir;
-  const data: Bootstrap = await utils.chat.bootstrap.fetch(
-    { session, slice: chatTailSlice() },
-    { staleTime: 0 },
-  );
-  if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receiptProven });
-  // Recover a proven empty reservation before replacing an implicitly selected missing chat.
-  if (data.kind === "unavailable" && request.named !== true && !receiptProven && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
-  if (data.kind === "unavailable") return { unstarted: false, selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
+  const bootstrap = () => utils.chat.bootstrap.fetch({ session, slice: chatTailSlice() }, { staleTime: 0 });
+  let data: Bootstrap = await bootstrap();
+  // Recovery failed (say, the box was restarting) and the chat is not there
+  // without it. Bootstrap just answered, so the box is up: recover once more
+  // before replacing a chat this tab holds a receipt for. A second transport
+  // failure throws; the person sees it with Retry, not a different chat.
+  if (data.kind !== "resumable" && restored.failed && session !== undefined) {
+    const receipt = await ensureReservation(session).catch((error: unknown) => {
+      if (error instanceof ReservationRecoveryUnsupportedError) return null;
+      throw error;
+    });
+    if (receipt !== null) data = await bootstrap();
+  }
+  if (data.kind === "empty") return replaceMissing({ params, contextDir, session, reason: "no transcript" });
+  if (data.kind === "unavailable") return replaceMissing({ params, contextDir, session, reason: data.reason });
   retireUsedReceipt(data, params.receipts);
   // Bootstrap answers the session's directory too, read after any reservation
   // recovery above. Seeding the `chat.directoryFor` cache saves the chat's own

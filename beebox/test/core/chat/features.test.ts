@@ -168,19 +168,16 @@ void test("The companion-pane open-card attribute (box-relative path) rides on e
   );
 });
 
-// Companion-pane activity rides as `<card-activity>` child elements (rendered by
-// `renderActivityChildren`), turning `<chat-app>` into a paired tag. Children
-// rather than attributes so a detail can be long or multi-line.
-void test("Companion-pane activity rides as <card-activity> child elements (rendered by...", async (t) => {
+// Child elements (here the `<activity>` hint) turn `<chat-app>` into a paired tag.
+void test("Child elements make <chat-app> a paired tag", async (t) => {
   await t.checkText(
     composeChatAppSnapshot({
       features: {},
       openCard: "_content/notes/Trip.doc.card",
-      activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
+      activityChildren: '<activity entries="3" cards="1"/>',
     }),
     `<chat-app narration="off" prose="on" open-card="_content/notes/Trip.doc.card">
-<card-activity kind="scrolled"/>
-<card-activity kind="explored">boat-water+road -> boats</card-activity>
+<activity entries="3" cards="1"/>
 </chat-app>`,
   );
 });

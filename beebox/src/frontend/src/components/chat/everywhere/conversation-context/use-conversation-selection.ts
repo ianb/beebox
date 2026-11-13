@@ -60,10 +60,14 @@ export function useConversationSelection(boxSlug: string) {
       setState(next);
       if (next.selection.kind === "ready") setRendered(next.selection);
     } catch (error) {
+      // A missing conversation already resolves to a new chat, so a throw means
+      // the box did not answer after the transport's own retries
+      // (lib/trpc/transient.ts) or failed outright.
       if (!gate.accepts(requestId)) return;
-      setState((old) => ({ ...old, selection: { kind: "unavailable", contextDir: request.contextDir ?? "", reason: error instanceof Error ? error.message : "Could not resolve conversation" } }));
+      console.warn("Conversation could not be loaded", error);
+      setState((old) => ({ ...old, selection: { kind: "unavailable", contextDir: request.contextDir ?? "", reason: "Couldn't load the conversation." } }));
     }
-  }, [utils, reserve, receipts, ensureReservation, gate]);
+  }, [utils, reserve, receipts, ensureReservation, gate, setState, setRendered]);
   useEffect(() => () => gate.cancel(), [gate]);
   useEffect(() => { saveConversation(storageScope, state.selection); }, [storageScope, state.selection]);
   const assigned = useCallback((sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => {
@@ -75,6 +79,6 @@ export function useConversationSelection(boxSlug: string) {
     }
     setState((old) => ({ ...old, selection: replace(old.selection) }));
     setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
-  }, [boxSlug]);
+  }, [boxSlug, setState, setRendered]);
   return { storageScope, forgetReservation, ensureReservation, restored, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
 }

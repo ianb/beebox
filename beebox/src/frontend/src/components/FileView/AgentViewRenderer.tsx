@@ -10,7 +10,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
-import type { ActivityKind } from "@core/chat/card-activity.js";
+import type { ReportActivity } from "@core/chat/card-activity.js";
+import { usePaneCard, useCardActivityReporter } from "../../lib/activity/scope";
 import type { RealtimeEvent } from "../../hooks/useBusSubscription";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
@@ -63,27 +64,26 @@ interface ViewProps extends ViewFileHelpers {
   params: Record<string, string>;
   viewHistory: ViewHistory;
   /**
-   * Report user activity on this card to the chat's companion-pane accumulator,
-   * with an optional free-text detail surfaced as the `<card-activity>` element text (e.g. the query
-   * the user typed). Writes auto-report `"modified"` with the path; a view that
-   * changes parameters without changing data should call
+   * Log user activity on this card for the chat's agent, with an optional
+   * free-text detail (e.g. the query the user typed) and a small data object.
+   * Writes auto-report `"modified"` with the path; a view that changes
+   * parameters without changing data should call
    * `reportActivity("explored", "<what they're looking at>")`. A no-op outside
-   * the companion pane (inline/page renders don't accumulate).
+   * the companion pane.
    */
-  reportActivity: (kind: ActivityKind, detail?: string) => void;
+  reportActivity: ReportActivity;
   /** `"strip"` when drawn in the conversation strip, else `"page"`. */
   mode: "page" | "strip";
 }
 
 /**
  * Wrap the file helpers so a successful write/append/commit reports
- * `"modified"` with the path. Only the companion-pane AgentViewRenderer passes a
- * real reporter, so inline/page views can write freely without polluting the
- * accumulator.
+ * `"modified"` with the path. Outside the companion pane the reporter is a
+ * no-op, so inline/page views can write freely without polluting the log.
  */
 function withModifiedReporting(
   helpers: ViewFileHelpers,
-  report: (kind: ActivityKind, detail?: string) => void,
+  report: ReportActivity,
 ): ViewFileHelpers {
   return {
     ...helpers,
@@ -132,8 +132,6 @@ interface AgentViewRendererProps {
   viewState?: ViewState | null;
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
-  /** Companion-pane activity reporter; omitted for inline/page renders. */
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
   /**
    * The surface's "open a card here" primitive — companion → onZoomView,
    * browse → swap the detail pane, page → push a route. Lifted into the view
@@ -232,7 +230,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -333,7 +331,10 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   useLiveRefresh({ when: cardsChanged, refresh: refreshCards });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  const report = useCallback((kind: ActivityKind, detail?: string) => { reportActivity?.(kind, detail); }, [reportActivity]);
+  // In the companion pane every call is logged under the card the view renders
+  // (its bound `path`, else the pane's card), with `via` when embedded; elsewhere a no-op.
+  const paneCard = usePaneCard();
+  const report = useCardActivityReporter(viewParams.path ?? paneCard);
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewHistory = useViewHistory({ slug, state: viewState, canPush: canPushViewState, onChange: onViewStateChange });
@@ -379,7 +380,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   });
 
   return (
-    <div className="bbx-card-view" data-view-layout={layout}>
+    <div className="bbx-card-view" data-view-layout={layout} data-view-embedded={embedded || undefined}>
       <ViewErrorBoundary onRetry={() => void loadModule()} resetKey={reloadSeq}>
         <ViewHostProvider value={viewHost}>
           <Component

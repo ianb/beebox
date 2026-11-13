@@ -162,9 +162,8 @@ export function mergeSeedFeatures(input: {
  * `open-card` (companion-pane state), ride on every message; so does
  * `todos` (Track 5a's ambient count — recomputed fresh each send, only
  * present when nonzero); `last-activity`/`health` only on the first
- * message of a new session (see `session-context.ts`). Companion-pane
- * activity rides as `<card-activity>` child elements, not attributes
- * (see `card-activity.ts`).
+ * message of a new session (see `session-context.ts`). The activity hint
+ * and the run-ended note ride as child elements, not attributes.
  */
 const READ_ONLY_ATTRS = new Set([
   "local-time",
@@ -190,9 +189,8 @@ export const SIMULATED_CLOCK_NOTE = "simulated: local-time is the date; the date
  * Serialize the system → agent snapshot: the optional read-only context
  * attributes plus all current feature states.
  *
- * Companion-pane activity, when present, rides as `<card-activity>` child
- * elements (so `<chat-app>` becomes a paired tag); otherwise it's
- * self-closing.
+ * Child elements (the `<activity>` hint, the run-ended note), when present,
+ * make `<chat-app>` a paired tag; otherwise it's self-closing.
  *
  * Example output:
  *   <chat-app narration="on" prose="off"
@@ -209,7 +207,7 @@ export function composeChatAppSnapshot(input: {
   todos?: string;
   openCard?: string;
   viewContext?: AttentionSnapshot;
-  /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
+  /** Pre-rendered child elements. */
   activityChildren?: string;
 }): string {
   const attrs: string[] = [];

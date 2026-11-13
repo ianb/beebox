@@ -271,3 +271,50 @@ test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, pa
   assert.deepEqual([...canvas.captured], [], "capture released");
   attached.teardown();
 });
+
+test("a handled event carries the sketch's activity(model) after the fold; a throwing activity warns once and the sketch runs on", () => {
+  interface Model {
+    hits: number;
+  }
+  const make = (activity: (model: Model) => Record<string, unknown>) => ({
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: (): Model => ({ hits: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: Model, msg: Msg, u: Util): Model => {
+      if (msg.type !== "mousedown") return model;
+      u.handled("pick");
+      return { hits: model.hits + 1 };
+    },
+    draw: (): void => {},
+    activity,
+  });
+  const run = (raw: object): EmittedEvent[] => {
+    const canvas = new FakeElement("canvas");
+    canvas.width = 50;
+    canvas.height = 50;
+    const emitted: EmittedEvent[] = [];
+    const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, onEvent: (entry) => emitted.push(entry) });
+    assert.ok(attached !== null);
+    for (const x of [10, 20]) {
+      attached.runtime.pointer({ type: "mousedown", x, y: 10 });
+      runFrames(2);
+    }
+    attached.runtime.pointer({ type: "mousemove", x: 12, y: 12 });
+    runFrames(2);
+    return emitted;
+  };
+  const emitted = run(make((model) => ({ hits: model.hits })));
+  assert.deepEqual(emitted.filter((e) => e.type === "mousedown").map((e) => e.activity), [{ hits: 1 }, { hits: 2 }], "the model after each fold");
+  assert.equal(emitted.find((e) => e.type === "mousemove")?.activity, undefined, "an unhandled input carries none");
+
+  let failing: EmittedEvent[] = [];
+  const warnings = captureWarnings(() => {
+    failing = run(make(() => {
+      throw new Error("bad summary");
+    }));
+  });
+  assert.equal(failing.filter((e) => e.type === "mousedown").length, 2, "both clicks still stream");
+  assert.ok(failing.every((e) => e.activity === undefined));
+  assert.equal(warnings.filter((w) => w.includes("activity(model) threw")).length, 1, "one warning");
+});

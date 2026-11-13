@@ -9,6 +9,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { resolveConversation } from "../../../../src/components/chat/everywhere/resolve-conversation.js";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
+import { ReservationRecoveryUnsupportedError } from "../../../../src/components/chat/everywhere/reservation-recovery.js";
 import { QueryClient } from "@tanstack/react-query";
 
 type ResolveParams = Parameters<typeof resolveConversation>[0];
@@ -137,7 +138,7 @@ void test("Constructing a new store over the same storage simulates a reload in 
     utils: recoveryUtils.utils,
     reserve: async (input) => { reservationRestored = true; return reserve(input); },
     receipts: reloadedReceipts,
-    request: { kind: "session", named: true, sessionId: coinedId },
+    request: { kind: "session", sessionId: coinedId },
   });
   const recoveryCall = reserveCalls[1];
   const recoveredContext = recovered.selection.kind === "ready" ? recovered.selection.target.contextDir : "unavailable";
@@ -166,53 +167,80 @@ void test("Constructing a new store over the same storage simulates a reload in 
   );
 });
 
-// ## Missing ids without exact local provenance remain unavailable
+// ## A conversation this box cannot open becomes a new chat
 //
-// An arbitrary explicit id has no receipt, and a receipt stored for another API
-// scope cannot authorize it. Neither case calls the reservation endpoint.
-void test("An arbitrary explicit id has no receipt, and a receipt stored for another API...", async (t) => {
+// A load always lands on a usable chat. An id named in the URL that this box has
+// no transcript for (never created, expired, ran elsewhere, being deleted) is
+// replaced by a new chat in the same place; the conversation menu picks another.
+// Without a matching receipt the old id is never re-reserved: a receipt stored
+// for another API scope does not authorize it, so the only reservation is the
+// replacement's fresh id.
+void test("An id named in the URL that this box has no transcript for is replaced by a ...", async (t) => {
   const storage = new MemoryStorage();
   const paperReceipts = new ReservationReceipts(storage, "paper-cards/test1");
   paperReceipts.put({ sessionId: "other-scope-id", contextDir: "papers", engine: "claude", model: "sonnet" });
-  let reserves = 0;
-  const reserve: ResolveParams["reserve"] = async () => { reserves += 1; return { kind: "taken" }; };
+  const reserved: string[] = [];
+  const reserve: ResolveParams["reserve"] = async (input) => { reserved.push(input.sessionId); return { kind: "reserved", sessionId: input.sessionId }; };
+  const originalWarn = console.warn;
+  const warnings: unknown[] = [];
+  console.warn = (...args: unknown[]) => { warnings.push(args[0]); };
   const unknownUtils = fakeUtils({ bootstraps: [unavailable("unknown-id")] });
   const unknown = await resolveConversation({ utils: unknownUtils.utils, reserve,
-    receipts: paperReceipts, request: { kind: "session", named: true, sessionId: "unknown-id" } });
+    receipts: paperReceipts, request: { kind: "session", sessionId: "unknown-id", contextDir: "notes" } });
   const chatReceipts = new ReservationReceipts(storage, "chat-everywhere/test1");
   const crossScopeUtils = fakeUtils({ bootstraps: [unavailable("other-scope-id")] });
   const crossScope = await resolveConversation({ utils: crossScopeUtils.utils, reserve,
-    receipts: chatReceipts, request: { kind: "session", named: true, sessionId: "other-scope-id" } });
+    receipts: chatReceipts, request: { kind: "session", sessionId: "other-scope-id" } });
+  const deletingUtils = fakeUtils({ bootstraps: [{ ...unavailable("deleting"), reason: "deletion-in-progress" }] });
+  const deleting = await resolveConversation({ utils: deletingUtils.utils, reserve,
+    receipts: chatReceipts, request: { kind: "session", sessionId: "deleting" } });
+  console.warn = originalWarn;
+  function shape(result: Awaited<ReturnType<typeof resolveConversation>>) {
+    const target = result.selection.kind === "ready" ? result.selection.target : null;
+    return { kind: result.selection.kind, target: target?.kind, contextDir: target?.contextDir,
+      label: result.selection.kind === "ready" ? result.selection.label : null, unstarted: result.unstarted };
+  }
   t.check(
-    { unknown: unknown.selection.kind, crossScope: crossScope.selection.kind, reserves,
-      unknownBootstraps: unknownUtils.bootstrapCalls(), crossScopeBootstraps: crossScopeUtils.bootstrapCalls() },
+    { unknown: shape(unknown), crossScope: shape(crossScope), deleting: shape(deleting),
+      reusedAnOldId: reserved.some((id) => ["unknown-id", "other-scope-id", "deleting"].includes(id)),
+      reserves: reserved.length, warnings: warnings.length },
     {
-    unknown: "unavailable",
-    crossScope: "unavailable",
-    reserves: 0,
-    unknownBootstraps: 1,
-    crossScopeBootstraps: 1,
+    unknown: { kind: "ready", target: "session", contextDir: "notes", label: "New conversation", unstarted: true },
+    crossScope: { kind: "ready", target: "session", contextDir: "", label: "New conversation", unstarted: true },
+    deleting: { kind: "ready", target: "session", contextDir: "", label: "New conversation", unstarted: true },
+    reusedAnOldId: false,
+    reserves: 3,
+    warnings: 3,
   },
   );
 });
 
 // A matching receipt never makes `taken` mean success. Bootstrap is retried for
-// the race where the chat became real; if it is still missing or empty, it stays
-// unavailable under the receipt's original landmark.
+// the race where the chat became real; if it is still missing, a new chat
+// replaces it under the receipt's original place.
 void test("A matching receipt never makes taken mean success.", async (t) => {
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "still-missing", contextDir: "papers", engine: "claude" });
-  let reserves = 0;
-  const reserve: ResolveParams["reserve"] = async () => { reserves += 1; return { kind: "taken" }; };
-  const utils = fakeUtils({ bootstraps: [{ kind: "empty" }] });
+  const outcomes: string[] = [];
+  const reserve: ResolveParams["reserve"] = async (input) => {
+    const kind = input.sessionId === "still-missing" ? "taken" : "reserved";
+    outcomes.push(`${input.sessionId === "still-missing" ? "old" : "new"}:${kind}`);
+    return kind === "taken" ? { kind } : { kind, sessionId: input.sessionId };
+  };
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  const utils = fakeUtils({ bootstraps: [unavailable("still-missing")] });
   const result = await resolveConversation({ utils: utils.utils, reserve, receipts,
-    request: { kind: "session", named: true, sessionId: "still-missing" } });
-  const context = result.selection.kind === "unavailable" ? result.selection.contextDir : "wrong";
-  t.check({ kind: result.selection.kind, context, reserves, bootstraps: utils.bootstrapCalls() }, {
-    kind: "unavailable",
+    request: { kind: "session", sessionId: "still-missing" } });
+  console.warn = originalWarn;
+  const target = result.selection.kind === "ready" ? result.selection.target : null;
+  t.check({ kind: result.selection.kind, context: target?.contextDir,
+    replaced: target?.kind === "session" && target.sessionId !== "still-missing", outcomes, bootstraps: utils.bootstrapCalls() }, {
+    kind: "ready",
     context: "papers",
-    reserves: 1,
+    replaced: true,
+    outcomes: ["old:taken", "new:reserved"],
     bootstraps: 1,
   });
 });
@@ -225,51 +253,54 @@ void test("If the retry proves the chat became real, normal bootstrap wins and i
   receipts.put({ sessionId: "became-real", contextDir: "papers", engine: "claude" });
   const utils = fakeUtils({ bootstraps: [resumable("became-real", { total: 1, contextDir: "papers" })] });
   const result = await resolveConversation({ utils: utils.utils, reserve: async () => ({ kind: "taken" }), receipts,
-    request: { kind: "session", named: true, sessionId: "became-real" } });
+    request: { kind: "session", sessionId: "became-real" } });
   t.check({ kind: result.selection.kind, receipt: receipts.get("became-real") ?? null }, {
     kind: "ready",
     receipt: null,
   });
 });
 
-// ## A proven implicit selection never silently changes identity
+// ## A failed recovery is retried before a receipted chat is replaced
 //
 // Passive navigation can restore a remembered conversation without naming it in
-// the URL. Its exact receipt remains identity evidence even when the recovery
-// request itself fails: a missing or unexpectedly empty bootstrap must stay on
-// that conversation rather than minting a fresh default chat.
+// the URL. If its reservation recovery fails (the box restarting after a refused
+// first send) and bootstrap then cannot find it, bootstrap's answer shows the box
+// is up, so recovery runs once more. Success keeps the same chat; a second
+// failure throws, so the page reports it with Retry rather than swapping to a
+// different chat. An engine that no longer reserves ids means the reservation is
+// gone for good: a new chat replaces it in the receipt's place.
 void test("Passive navigation can restore a remembered conversation without naming it in...", async (t) => {
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "remembered", contextDir: "papers", engine: "claude" });
+  const receipt = { sessionId: "remembered", contextDir: "papers", engine: "claude" as const };
   let fallbackReserves = 0;
   const reserve: ResolveParams["reserve"] = async () => {
     fallbackReserves += 1;
-    return { kind: "reserved", sessionId: "replacement" };
+    return { kind: "reserved", sessionId: `replacement-${fallbackReserves}` };
   };
   const originalWarn = console.warn;
   console.warn = () => {};
-  const missingUtils = fakeUtils({ bootstraps: [unavailable("remembered")] });
-  const missing = await resolveConversation({ utils: missingUtils.utils, reserve, receipts,
-    ensureReservation: async () => { throw new Error("server restarting"); },
-    request: { kind: "session", sessionId: "remembered", contextDir: "elsewhere" } });
-  const emptyUtils = fakeUtils({ bootstraps: [{ kind: "empty" }] });
-  const empty = await resolveConversation({ utils: emptyUtils.utils, reserve, receipts,
-    ensureReservation: async () => { throw new Error("server restarting"); },
-    request: { kind: "session", sessionId: "remembered", contextDir: "elsewhere" } });
+  const request = { kind: "session" as const, sessionId: "remembered", contextDir: "elsewhere" };
+  let recoveries = 0;
+  const recoveredUtils = fakeUtils({ bootstraps: [unavailable("remembered"), resumable("remembered", { contextDir: "papers" })] });
+  const recovered = await resolveConversation({ utils: recoveredUtils.utils, reserve, receipts, request,
+    ensureReservation: async () => { recoveries += 1; if (recoveries === 1) throw new Error("server restarting"); return receipt; } });
+  const downUtils = fakeUtils({ bootstraps: [unavailable("remembered")] });
+  const down = await resolveConversation({ utils: downUtils.utils, reserve, receipts, request,
+    ensureReservation: async () => { throw new Error("server restarting"); } }).catch((error: unknown) => error instanceof Error ? error.message : "?");
+  const goneUtils = fakeUtils({ bootstraps: [{ kind: "empty" }] });
+  const gone = await resolveConversation({ utils: goneUtils.utils, reserve, receipts, request,
+    ensureReservation: async () => { throw new ReservationRecoveryUnsupportedError(); } });
   console.warn = originalWarn;
-  t.check({ missing: missing.selection, empty: empty.selection, fallbackReserves }, {
-    missing: {
-      kind: "unavailable",
-      contextDir: "papers",
-      reason: "This conversation has no saved transcript in this box.",
-    },
-    empty: {
-      kind: "unavailable",
-      contextDir: "papers",
-      reason: "This conversation has no saved transcript in this box.",
-    },
-    fallbackReserves: 0,
+  t.check({ recovered: recovered.selection, recoveries, recoveredBootstraps: recoveredUtils.bootstrapCalls(),
+    down, gone: gone.selection, fallbackReserves }, {
+    recovered: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: "remembered", contextDir: "papers" } },
+    recoveries: 2,
+    recoveredBootstraps: 2,
+    down: "server restarting",
+    gone: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: "replacement-1", contextDir: "papers" } },
+    fallbackReserves: 1,
   });
 });
 
@@ -304,7 +335,7 @@ void test("Codex cannot accept a client-coined id, so it still carries context, 
 // ## An implicitly chosen missing transcript starts fresh
 //
 // An old box default or remembered chat does not require the user to recover an
-// unavailable transcript. Explicit picks above still preserve the requested id.
+// unavailable transcript. On a Codex box the replacement is a pending `start`.
 void test("An old box default or remembered chat does not require the user to recover an...", async (t) => {
   const utils = fakeUtils({ boxEngine: "codex", bootstraps: [unavailable("old-default")] });
   const result = await resolveConversation({ utils: utils.utils,

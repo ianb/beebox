@@ -1023,9 +1023,9 @@ See §1.3 (full request/response/errors).
 
 - **Direction:** the webview's own JS → box, on every native emission (§4.1).
 - **Request:** `{ "Content-Type": "application/json", ...mobileAuthHeaders() }`; body
-  `{ session, message, messageId, images?, contextDir?, seedFeatures?, openCard?, cardActivity?, cardState?, channel? }`.
+  `{ session, message, messageId, images?, contextDir?, seedFeatures?, openCard?, channel? }`.
   A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
-  the retired `openQuestion` field is stripped by the schema if an old client sends it.
+  the retired `openQuestion`, `cardActivity` and `cardState` fields are stripped by the schema if an old client sends them (activity goes through `activity.record`).
   `channel` is the client's own reading of the surface — `web-desktop | web-mobile | ios-native`
   (`src/shared/chat-channel.ts`), sent because the WebView's User-Agent cannot be told from mobile
   Safari's. A body without it (an old web bundle, or the Share Extension's S3 send) falls back to

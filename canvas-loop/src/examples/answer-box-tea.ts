@@ -7,6 +7,9 @@
 //     out from a width function: `update` passes `u.textWidth` to hit-test a
 //     click, `draw` passes `v.textWidth` to paint, and the two agree exactly.
 //
+//   - `activity(model)` turns the state into data after each handled action,
+//     the way `draw` turns it into pixels; a host such as a figure may log it.
+//
 // Click a tile to show its atomic mass.
 import type { DeepReadonly, Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
 
@@ -78,6 +81,11 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
     case "trigger":
       return model;
   }
+}
+
+/** What the state means now, for a host that logs it: the answer's verdict and the tiles opened. */
+export function activity(model: DeepReadonly<Model>): Record<string, unknown> {
+  return { verdict: model.verdict, shown: [...model.shown] };
 }
 
 const VERDICT: Record<Model["verdict"], { text: string; fill: string }> = {
