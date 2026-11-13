@@ -109,11 +109,13 @@ stripping.
   and each box's `.beebox/engine` all name `/opt/beebox` and follow the link.
 - **rollback**: switch back to `previous` and mark the release it leaves with
   `.bbx-release-failed`. The activation script's EXIT trap runs it on any
-  failure after the switch, reinstalls the restored release's unit files, and
+  failure after the switch, reinstalls the restored release's unit files (a
+  drop-in only the failed release had stays until the next deploy), and
   restarts the services; the controller's per-box canary then runs against the
   restored release. Rollback refuses when a box applied a migration the
   previous engine does not know (`_config/migrations.jsonl` against the
-  previous release's `src/core/migrations.ts`), when a manifest cannot be read,
+  previous release's `src/core/migrations.ts`), when a box's manifest is missing
+  or cannot be read,
   or when `previous` already failed. Then the services restart on the new
   release and the deploy fails: fix forward, or deploy a chosen commit with
   `--ref`.

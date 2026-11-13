@@ -322,6 +322,9 @@ none
 | The first switch: `/opt/beebox` is absent between the two renames | no | once per host, inside the window with hub, scheduler and box units stopped; the tree is renamed back if the link fails | silent, accepted: microseconds, once, with no service running; Ubuntu 24.04's coreutils has no `mv --exchange` and Node has no `renameat2` |
 | `switch` fails between writing `previous` and the live link | `layout.test.ts` (order) | `previous` is written first; the trap reads the real link, not a flag | clear |
 | Automatic rollback leaves the new release's systemd units | no | the trap re-runs `install_units` from the restored release | clear |
+| A drop-in file the failed release added stays installed after rollback (`install_units` copies, never deletes) | no | none; deleting unknown files under `/etc/systemd` could remove an operator's own drop-in | silent, accepted: drop-ins are added rarely, and the next deploy reinstalls the set |
+| A box's manifest is missing | `rollback.test.ts` | rollback refuses (what the box holds is unknown) | clear |
+| A hub that accepts connections and never answers holds the health poll | no | one 180 s deadline for the whole poll, each attempt capped at the time left | clear |
 | A box's pnpm bin shim embeds `NODE_PATH` of the release that was live at its last install | no | `NODE_PATH` is a fallback only; Node resolves from the real path of `bin/bbx` first, and a pruned path is skipped | silent, accepted: a correct install never resolves through `NODE_PATH` |
 | `deploy.sh --rollback` while a deploy runs | no | refuse when the lock is held | clear |
 | Automatic rollback leaves root helpers and sudoers from the new release | no | documented; `deploy.sh --ref <sha>` reinstalls | clear in docs |
@@ -496,3 +499,17 @@ Adjudication of the seven findings:
 7. Cut `status` and failed marks: partly rejected. The failed mark stops a
    manual rollback after an automatic one from returning to the failed
    release. `status` is two lines.
+
+## Cross-model diff review (codex gpt-6-sol, round 1, 2026-11-13)
+
+1. A box with no manifest counted as "applied nothing": fixed; a box (a
+   `box/.git`) without a manifest refuses rollback.
+2. First cutover not atomic: the same accepted one-time exception as in the
+   plan review; raised to the boxholder.
+3. The legacy switch wrote `previous` after the live link: fixed; `previous`
+   is written first and both are restored if the live link fails.
+4. A failed switch lost the old `previous`: fixed; it is restored (tested).
+5. Rollback leaves drop-ins the failed release added: accepted (Failure
+   modes).
+6. A hanging `/healthz` could hold the poll for over an hour: fixed with one
+   180 s deadline.

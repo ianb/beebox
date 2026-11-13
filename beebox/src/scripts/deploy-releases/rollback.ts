@@ -13,15 +13,16 @@ export function migrationNames(release: string): string[] | null {
 
 /**
  * Migration names any box under `boxesRoot` recorded as applied
- * (`<root>/<slug>/box/_config/migrations.jsonl`), or null when a manifest
- * cannot be read. A box with no manifest has applied nothing.
+ * (`<root>/<slug>/box/_config/migrations.jsonl`), or null when a box's
+ * manifest is missing or cannot be read: then what the box holds is unknown
+ * (docs/cards/migrations.md asks for an explicit decision about such a box).
  */
 export function appliedMigrations(boxesRoot: string): Set<string> | null {
   const applied = new Set<string>();
   if (!fs.existsSync(boxesRoot)) return applied;
   for (const slug of fs.readdirSync(boxesRoot).toSorted()) {
+    if (!fs.existsSync(path.join(boxesRoot, slug, "box", ".git"))) continue;
     const manifest = path.join(boxesRoot, slug, "box", "_config", "migrations.jsonl");
-    if (!fs.existsSync(manifest)) continue;
     try {
       for (const line of fs.readFileSync(manifest, "utf8").split("\n")) {
         if (line.trim() === "") continue;

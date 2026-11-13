@@ -39,6 +39,7 @@ export function makeRelease(host: Host, { name, migrations }: { name: string; mi
 export function makeBox(host: Host, { slug, manifest }: { slug: string; manifest: { applied: string[] } | { raw: string } }): void {
   const dir = path.join(host.boxesRoot, slug, "box", "_config");
   fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(path.join(host.boxesRoot, slug, "box", ".git"));
   const text = "raw" in manifest ? manifest.raw
     : manifest.applied.map((name) => `${JSON.stringify({ name, "applied-at": "2026-11-01T00:00:00Z" })}\n`).join("");
   fs.writeFileSync(path.join(dir, "migrations.jsonl"), text);

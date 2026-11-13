@@ -1077,8 +1077,16 @@ TOOLCHECK
     # with verdict "unhealthy" is a hard fail; only 200 + "ok" passes.
     verdict=""
     code=""
-    for i in $(seq 1 180); do
-      code=$($CURL -o /tmp/healthz.out -w '%{http_code}' \
+    # One deadline for the whole poll: a hub that accepts connections but never
+    # answers would otherwise hold each attempt for the full --max-time, and
+    # 180 of them kept the boxes closed (and an automatic rollback waiting)
+    # for over an hour.
+    deadline=$((SECONDS + 180))
+    while (( SECONDS < deadline )); do
+      attempt_max=$(( deadline - SECONDS ))
+      (( attempt_max > 30 )) && attempt_max=30
+      (( attempt_max < 1 )) && attempt_max=1
+      code=$($CURL --max-time "$attempt_max" -o /tmp/healthz.out -w '%{http_code}' \
         -H "Authorization: Bearer $KEY" \
         http://localhost:3210/healthz 2>/dev/null || echo "000")
       # 200 (ok) or 503 (unhealthy) both mean the hub answered with a verdict;

@@ -45,6 +45,21 @@ void test("a switch between releases records the old one as previous", async (t)
     { live: "opt/beebox.releases/r2", previous: "opt/beebox.releases/r1" });
 });
 
+void test("a switch whose live link cannot change leaves both links as they were", async (t) => {
+  const host = makeHost();
+  const opt = path.dirname(host.layout.installDir);
+  t.teardown(() => { fs.chmodSync(opt, 0o755); host.cleanup(); });
+  switchRelease(host.layout, makeRelease(host, { name: "r0", migrations: [] }));
+  switchRelease(host.layout, makeRelease(host, { name: "r1", migrations: [] }));
+  const r2 = makeRelease(host, { name: "r2", migrations: [] });
+  // The live link's directory refuses new entries; the releases dir does not.
+  fs.chmodSync(opt, 0o555);
+
+  await t.checkThrows(() => switchRelease(host.layout, r2), "Error");
+  t.check({ live: linkTarget(host, host.layout.installDir), previous: linkTarget(host, host.layout.previousLink) },
+    { live: "opt/beebox.releases/r1", previous: "opt/beebox.releases/r0" });
+});
+
 void test("an empty install dir from provisioning is replaced and leaves no rollback target", async (t) => {
   const host = makeHost();
   t.teardown(host.cleanup);

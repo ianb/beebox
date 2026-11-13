@@ -157,12 +157,19 @@ export function switchRelease(layout: Layout, to: string): string | null {
   if (path.dirname(target) !== fs.realpathSync(layout.releasesDir)) throw new ReleaseRefusedError({ kind: "outside-releases", release: to, releasesDir: layout.releasesDir });
   if (!isComplete(target)) throw new ReleaseRefusedError({ kind: "incomplete", release: to });
   const stat = lstatOrNull(layout.installDir);
+  const restorePrevious = previousRestorer(layout.previousLink);
   if (stat?.isSymbolicLink()) {
     const from = realOrNull(layout.installDir);
-    // The rollback target is recorded before live changes, so a failure here
-    // leaves live untouched and a failure after leaves both links consistent.
+    // The rollback target is recorded before live changes. If the live link
+    // then cannot change, the old target comes back, so a failed switch
+    // leaves both links as they were.
     if (from !== null && from !== target) replaceLink(layout.previousLink, from);
-    replaceLink(layout.installDir, target);
+    try {
+      replaceLink(layout.installDir, target);
+    } catch (e) {
+      restorePrevious();
+      throw e;
+    }
     return from;
   }
   if (stat === null) {
@@ -181,11 +188,25 @@ export function switchRelease(layout: Layout, to: string): string | null {
   const legacy = path.join(layout.releasesDir, `legacy-${stamp()}`);
   fs.renameSync(layout.installDir, legacy);
   try {
+    replaceLink(layout.previousLink, legacy);
     replaceLink(layout.installDir, target);
   } catch (e) {
+    restorePrevious();
     fs.renameSync(legacy, layout.installDir);
     throw e;
   }
-  replaceLink(layout.previousLink, legacy);
   return legacy;
+}
+
+/** A function that puts the `previous` link back as it is now (absent, or its current target). */
+function previousRestorer(previousLink: string): () => void {
+  const target = lstatOrNull(previousLink)?.isSymbolicLink() === true ? fs.readlinkSync(previousLink) : null;
+  return () => {
+    try {
+      if (target === null) fs.rmSync(previousLink, { force: true });
+      else replaceLink(previousLink, target);
+    } catch (e) {
+      console.error(`  could not restore ${previousLink}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
 }

@@ -59,6 +59,12 @@ void test("an unreadable manifest or migration list refuses", async (t) => {
   t.teardown(host.cleanup);
   makeBox(host, { slug: "alpha", manifest: { raw: "{not json\n" } });
   t.check(reason(host, null), "a box's migration manifest could not be read");
+  // A box with no manifest at all: what it holds is unknown.
+  fs.rmSync(path.join(host.boxesRoot, "alpha", "box", "_config", "migrations.jsonl"));
+  t.check(reason(host, null), "a box's migration manifest could not be read");
+  // A directory that is not a box (no .git) is not consulted.
+  fs.rmSync(path.join(host.boxesRoot, "alpha", "box", ".git"), { recursive: true });
+  t.check(reason(host, null), "ok");
   fs.rmSync(path.join(host.boxesRoot, "alpha"), { recursive: true });
   fs.rmSync(path.join(host.layout.releasesDir, "r1", "beebox", "src", "core", "migrations.ts"));
   t.check(reason(host, null), "the previous release <root>/opt/beebox.releases/r1 has no readable migration list");
