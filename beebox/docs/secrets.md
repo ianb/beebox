@@ -70,6 +70,7 @@ one in this table; see "Google client credentials" below.
 |---|---|---|---|
 | `mistral` | `core/mistral-key.ts`, `/api/adapters/mistral` | `mistral.secret.json` | `BBX_MISTRAL_API_KEY` |
 | `deepgram` | `core/deepgram-key.ts` | `deepgram.secret.json` | `BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT` |
+| `turn-server` | `core/turn-server-key.ts` (`{secret, urls}`; the host's own coturn, signed locally in `trpc/routers/chat-call.ts`; `deploy/server-bin/bbx-turn-install` renders coturn's config from the master store's copy) | — | — (store-only) |
 | `cloudflare-turn` | `core/cloudflare-turn-key.ts` (`{keyId, apiToken}`; relay credentials for calls, `trpc/routers/chat-call.ts`) | — | — (store-only) |
 | `openai` | `core/search/embeddings-key.ts`, `/api/adapters/openai` | `openai.secret.json` | `BBX_OPENAI_API_KEY` |
 | `openai-thinking` | chat TTS, Whisper, the realtime mint | — | `THINKING_OPENAI_API_KEY` |

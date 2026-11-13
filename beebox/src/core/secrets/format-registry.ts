@@ -71,6 +71,11 @@ const secretFormats: Record<string, SecretFormat> = {
     pattern: /^{/,
     minLength: 20,
   },
+  "turn-server": {
+    hint: 'JSON with the host\'s coturn secret and its URLs: {"secret": "<64 hex>", "urls": ["turn:<ip>:3478?transport=udp", …]}.',
+    pattern: /^{/,
+    minLength: 80,
+  },
   "cloudflare-turn": {
     hint: 'JSON with the TURN key id and its API token: {"keyId": "…", "apiToken": "…"}.',
     pattern: /^{/,
