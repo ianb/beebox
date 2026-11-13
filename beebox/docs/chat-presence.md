@@ -13,9 +13,14 @@ all of these are true:
 
 - the chat is the current conversation (a session id; a brand-new chat
   counts from its reservation, which nobody else can know before its first turn);
-- its transcript is on screen (`workspace.transcriptVisible`);
 - the page is active: in a browser, visible and focused; in the iOS web view,
-  visible (the native composer takes DOM focus from the page).
+  visible and shown (the native composer takes DOM focus from the page, so
+  focus does not count there).
+
+A card open over the chat still counts. In the iOS app, the native box screen
+covers the web view without unloading it; the app reports that with
+`window.beeboxShellShown = false` and a `beebox:shell-shown` event
+(`docs/mobile-contract.md`, B15), and the person is present nowhere.
 
 The client joins once these have held for one second and leaves as soon as
 one stops. tRPC's adapter drops a stop that arrives before the subscription
@@ -28,10 +33,6 @@ socket's context.
 When the client leaves, the server removes the person. A closed tab or a dead connection ends it too: tRPC aborts
 the subscription when the WebSocket closes, and the server's keep-alive drops
 an unresponsive socket within about 35 seconds.
-
-Known gap: in the iOS app, the web view stays mounted and visible to the page
-behind the native box screen, so a person who switches to the box screen
-stays present in their last chat until the app goes to the background.
 
 ## The server side
 

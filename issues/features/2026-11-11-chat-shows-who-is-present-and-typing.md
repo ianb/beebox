@@ -54,8 +54,6 @@ which decides who may see a chat at all.
 
 **Split, 2026-11-12:** the chat-presence workstream builds the "who is
 present" half (`beebox/docs/plans/chat-presence.md`). Typing and speaking
-moved to [their own issue](2026-11-12-chat-shows-who-is-typing-or-speaking.md);
-the iOS box-screen gap is
-[a bug](../bugs/2026-11-12-ios-box-screen-keeps-chat-presence.md).
+moved to [their own issue](2026-11-12-chat-shows-who-is-typing-or-speaking.md).
 
 This is the prerequisite for [voice and video calls in a shared chat](2026-11-11-voice-and-video-calls-in-a-shared-chat.md).

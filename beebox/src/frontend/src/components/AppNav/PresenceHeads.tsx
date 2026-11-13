@@ -3,23 +3,32 @@
  *
  * Being subscribed to `chatPresence.watch` is being present, so this
  * subscribes only while the person is in the chat: it is the current
- * conversation, its transcript is on screen, and the page is active. In a
- * browser, active is visible and focused; in the iOS web view, visible, since
- * the native composer takes DOM focus from the page while the person types.
+ * conversation and the page is active. In a browser, active is visible and
+ * focused. In the iOS web view, it is visible and shown: the native composer
+ * takes DOM focus from the page while the person types, and the app keeps the
+ * page mounted but hidden behind its native box screen, which it reports as
+ * `window.beeboxShellShown` and the `beebox:shell-shown` event.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { trpc } from "../../lib/trpc/client";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
-import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 import { isNativeShell } from "../chat/native-post";
 import { PresenceHeadsFace, type PresenceHead } from "../app-bar-faces/PresenceHeadsFace";
+
+declare global {
+  interface Window {
+    /** Set by the iOS app: false while its native box screen covers this page. */
+    beeboxShellShown?: boolean;
+  }
+}
 
 const NO_ONE: readonly PresenceHead[] = [];
 
 function pageActive(): boolean {
   if (document.visibilityState !== "visible") return false;
-  return isNativeShell() || document.hasFocus();
+  if (isNativeShell()) return window.beeboxShellShown !== false;
+  return document.hasFocus();
 }
 
 /** Whether the person is looking at this page now; see the module comment. */
@@ -30,10 +39,12 @@ function usePageActive(): boolean {
     document.addEventListener("visibilitychange", update);
     window.addEventListener("focus", update);
     window.addEventListener("blur", update);
+    window.addEventListener("beebox:shell-shown", update);
     return () => {
       document.removeEventListener("visibilitychange", update);
       window.removeEventListener("focus", update);
       window.removeEventListener("blur", update);
+      window.removeEventListener("beebox:shell-shown", update);
     };
   }, []);
   return active;
@@ -104,14 +115,12 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
 
 export function PresenceHeads() {
   const conversation = useBoxConversation();
-  const workspace = useWorkspace();
   const active = usePageActive();
   const target = conversation?.rendered?.target;
   // A session this tab just reserved counts too: its first turn may already be
   // committed while the tab still holds the reservation, and until then no one
   // else can know its id.
   const sessionId = target?.kind === "session" ? target.sessionId : null;
-  const transcriptVisible = workspace?.transcriptVisible === true;
-  const people = useChatPresence(active && transcriptVisible ? sessionId : null);
+  const people = useChatPresence(active ? sessionId : null);
   return <PresenceHeadsFace people={people} />;
 }

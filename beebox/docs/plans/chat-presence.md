@@ -361,10 +361,10 @@ Decisions made without the boxholder, to revisit:
 1. **Focus in the browser, visibility in the iOS web view.** A browser tab
    counts only when visible and focused. The iOS web view counts when
    visible, because the native composer takes DOM focus from it.
-2. **Not present while the transcript is hidden.** A person reading a card
-   full-screen is not in the chat. A later call may want the opposite (stay
-   in the call while reading a card); revisit then.
-5. **iOS box screen gap accepted for now** (see *Failure modes*).
+2. **Decided by the boxholder, 2026-11-12:** a card covering the chat still
+   counts as present (the transcript-visible gate is removed), and the iOS
+   native box screen means present nowhere. iOS reports the box screen with
+   a native→web signal (`mobile-contract.md` B15).
 3. **Overflow:** two heads and a `+N` disc. Lean: keep.
 4. **Order:** earliest arrival first, so heads do not jump. Lean: keep.
 

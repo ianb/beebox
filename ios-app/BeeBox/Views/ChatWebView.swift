@@ -140,6 +140,10 @@ struct ChatWebView: UIViewRepresentable {
     var screenshotRequest: NativeScreenshotRequest?
     var speechStopRequest: NativeSpeechStopRequest?
     var navigationRequest: NavigationRequest?
+    /// Whether this web app is the surface on screen. Behind the native box
+    /// screen it stays mounted but is not shown; the page hears this as
+    /// `window.beeboxShellShown` and the `beebox:shell-shown` event.
+    var shown: Bool
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var composerCommandResults: [NativeComposerCommandResult]
     var onComposerBinding: (NativeComposerBinding?) -> Void
@@ -175,6 +179,7 @@ struct ChatWebView: UIViewRepresentable {
         screenshotRequest: NativeScreenshotRequest? = nil,
         speechStopRequest: NativeSpeechStopRequest? = nil,
         navigationRequest: NavigationRequest? = nil,
+        shown: Bool = true,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         composerCommandResults: [NativeComposerCommandResult] = [],
         onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
@@ -206,6 +211,7 @@ struct ChatWebView: UIViewRepresentable {
         self.screenshotRequest = screenshotRequest
         self.speechStopRequest = speechStopRequest
         self.navigationRequest = navigationRequest
+        self.shown = shown
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.composerCommandResults = composerCommandResults
         self.onComposerBinding = onComposerBinding
@@ -288,6 +294,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.speechStopRequest = speechStopRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         context.coordinator.composerCommandResults = composerCommandResults
+        context.coordinator.shown = shown
         if loadNavigationRequest(into: webView, coordinator: context.coordinator) == false, webView.url == nil {
             webView.load(request())
         }
@@ -298,6 +305,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
         context.coordinator.deliverComposerCommandResults(to: webView)
         context.coordinator.deliverSpeechStopRequest(to: webView)
+        context.coordinator.deliverShown(to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -358,6 +366,10 @@ struct ChatWebView: UIViewRepresentable {
         var speechStopRequest: NativeSpeechStopRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         var composerCommandResults: [NativeComposerCommandResult] = []
+        var shown = true
+        /// What the current document was last told about `shown`; nil for a
+        /// new document.
+        private var deliveredShown: Bool?
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
         /// attempt and starts a new one under the SAME emission ID, so an ID
@@ -458,6 +470,7 @@ struct ChatWebView: UIViewRepresentable {
             captureScreenshot(from: webView)
             deliverComposerCommandAcknowledgements(to: webView)
             deliverComposerCommandResults(to: webView)
+            deliverShown(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -493,6 +506,29 @@ struct ChatWebView: UIViewRepresentable {
             // the same persisted IDs into the new page.
             inflightEmissionGenerations.removeAll()
             refusedBridgeMessages.removeAll()
+            deliveredShown = nil
+        }
+
+        /// Tell the page whether it is on screen (chat presence,
+        /// beebox/docs/chat-presence.md). Sent once per change and once per
+        /// loaded document.
+        func deliverShown(to webView: WKWebView) {
+            guard pageLoaded, deliveredShown != shown else {
+                return
+            }
+            deliveredShown = shown
+            let script = "window.beeboxShellShown=\(shown);window.dispatchEvent(new Event('beebox:shell-shown'));"
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                guard let self, let error else {
+                    return
+                }
+                self.deliveredShown = nil
+                BoxLog.warn(
+                    "shell-shown was not delivered: \(error.localizedDescription)",
+                    category: .webview,
+                    targetBoxID: self.boxID
+                )
+            }
         }
 
         func webView(

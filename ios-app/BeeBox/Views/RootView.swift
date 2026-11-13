@@ -511,6 +511,7 @@ struct RootView: View {
             screenshotRequest: screenshotRequest,
             speechStopRequest: speechStopRequest,
             navigationRequest: navigationRequest,
+            shown: composerShown,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             composerCommandResults: composerCommandResults,
             onComposerBinding: { publication in
