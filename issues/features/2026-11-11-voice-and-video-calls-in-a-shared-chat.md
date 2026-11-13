@@ -13,7 +13,7 @@ call, or a voice and video call, from it. The call may be transcribed, so
 the conversation lands in the chat where the box agent can use it. Probably
 WebRTC.
 
-**Prerequisite:** [who is present in a chat](2026-11-11-chat-shows-who-is-present-and-typing.md)
+**Prerequisite:** [who is present in a chat](../closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md)
 comes first. A call rings the people present, and its signaling travels the
 same per-chat channel that presence and typing signals set up.
 

@@ -1,12 +1,15 @@
 ---
 title: "A chat with more than one person shows who is present, and who is typing or speaking"
-workstream: unattached
+workstream: chat-presence
 area: beebox
 labels: [chat, multi-user, presence]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — boxholder request, 2026-11-11"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-12):** Presence half landed on the chat-presence branch (room.ts, PresenceHeads.tsx); typing/speaking split into 2026-11-12-chat-shows-who-is-typing-or-speaking.
 
 A box can have more than one member (the owner plus `allowedEmails` in
 `_config/box.json`), and two people can have the same chat open. Today
@@ -49,7 +52,11 @@ in it to show:
 - **The agent:** whether the box agent sees who is present, for example to
   address the right person.
 
-Related: [private chat sessions](2026-09-28-private-chat-sessions-search-gating.md),
+Related: [private chat sessions](../../features/2026-09-28-private-chat-sessions-search-gating.md),
 which decides who may see a chat at all.
 
-This is the prerequisite for [voice and video calls in a shared chat](2026-11-11-voice-and-video-calls-in-a-shared-chat.md).
+**Split, 2026-11-12:** the chat-presence workstream builds the "who is
+present" half (`beebox/docs/implemented-plans/chat-presence.md`). Typing and speaking
+moved to [their own issue](../../features/2026-11-12-chat-shows-who-is-typing-or-speaking.md).
+
+This is the prerequisite for [voice and video calls in a shared chat](../../features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md).
