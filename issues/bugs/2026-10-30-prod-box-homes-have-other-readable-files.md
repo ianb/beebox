@@ -27,6 +27,13 @@ Files on 2026-10-30:
   umask (0007), so this mode is from before the 2026-10-25 migration.
 - `/var/lib/beebox/mn-social-services/box/node_modules`, 0775. It holds npm
   packages (not confidential), but the box root may be listed through it.
+- `/var/lib/beebox/explorations/box/node_modules`, 0775 (found 2026-11-13).
+  The cause of both node_modules modes: `deploy/server-bin/bbx-box-install`
+  ran `pnpm install` as the box user through `sudo ... bash -lc`, which uses
+  the login umask 002 (journal, deploy of 2026-11-11 21:37). The helper now
+  runs under `umask 007` and removes the "other" bits from each box's
+  top-level node_modules on each deploy. The next deploy repairs both trees,
+  so step 1 below does not apply to them.
 
 The migration and `add-box.sh` run `chmod -R go-rwx` on the box root only
 when they run. Nothing re-asserts the modes after that.
@@ -43,3 +50,8 @@ when they run. Nothing re-asserts the modes after that.
 The group bits (0660, 0640, 0770) that the same run reported are not a
 leak: the group is `bbx-<slug>`, which has one member, and `UMask=0007` is
 the documented posture. The audit now accepts them.
+3. Other `sudo -u bbx-<slug> -H bash -lc` calls in `deploy/deploy.sh` (the
+   maintenance converge `bbx engine migrate --sweep`, and the migrate status
+   and run steps near line 1350) also use umask 002, and they can write files
+   in the box. Prefix them with `umask 007;`, as `bbx-box-install` does now.
+   They are a possible source of the 0664 `notified-questions.json`.
