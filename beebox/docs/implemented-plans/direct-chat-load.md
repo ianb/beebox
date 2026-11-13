@@ -1,9 +1,9 @@
 ---
 title: "Direct chat load"
-status: active
+status: implemented
 workstream: direct-chat-load
 issues:
-  - ../../../issues/bugs/2026-11-13-choosing-conversation-notice-flashes-on-every-reload.md
+  - ../../../issues/closed/bugs/2026-11-13-choosing-conversation-notice-flashes-on-every-reload.md
 ---
 # Direct chat load
 
