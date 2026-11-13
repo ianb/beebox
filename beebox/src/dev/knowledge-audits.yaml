@@ -3133,6 +3133,19 @@ tests:
       = parameters changed without data changing. The agent should not narrate
       them back or infer why — run `bbx chat whats-changed` for ground truth.
 
+  - id: chat-activity-log
+    prompt: "Your message has <activity entries=\"12\" cards=\"1\"/> and the person writes \"I can't get the molecule builder to make water.\" How do you find out what they actually did in it?"
+    expected_level: knows_directly
+    watch_for: "Runs bbx chat activity (optionally --card) to list the actions; does not use whats-changed for this"
+    correct_contains: ["bbx chat activity"]
+    chat_mode: true
+    tags: [chat, views, figures]
+    notes: >
+      The <activity> child counts the actions logged in views and figures since
+      the last reply (plan docs/plans/activity-log.md). `bbx chat activity`
+      lists them for the agent's own session; whats-changed is files.
+      Status 2026-11-13: pass (1 file read) on the worktree test box.
+
   # === Chat Voice ===
   #
   # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"
