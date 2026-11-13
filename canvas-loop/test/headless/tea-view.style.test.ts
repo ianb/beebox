@@ -51,7 +51,7 @@ test("single-line text with no box width is one native fillText at the point", (
     fillText(...args);
   };
   v.text("Hello", { x: 60, y: 20 }, { size: 16, align: "center", valign: "baseline" });
-  assert.deepEqual(calls, ["Hello@60,20 center/alphabetic normal 16px sans-serif"]);
+  assert.deepEqual(calls, ["Hello@60,20 center/alphabetic 16px sans-serif"]);
   assert.deepEqual(logs, []);
 });
 

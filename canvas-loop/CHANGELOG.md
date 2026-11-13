@@ -5,6 +5,16 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Colour variation, smudge and wet paint.** Stamp and bristle brushes take
+  `hueJitter` (degrees) and `lightJitter` (0..1): each dab or bristle gets its
+  own nearby shade, seeded by the mark. A new brush kind, `smear`, with
+  presets `smudge` (drags the paint under it) and `wet` (lays down its colour
+  mixed with what it crosses); fields `strength` and `color`. Wet paint picks
+  up from the drawing as it was before the stroke. `PainterCore` now takes its
+  canvas as a `surface: Layer` (was `ctx`). `@napi-rs/canvas` 1.0.2 → 1.1.0:
+  1.0.2 lost a layer that had been read as an image while its context had an
+  open `save()`; 1.1.0 also writes `ctx.font` without `normal`.
+
 - **Instruments and recorded sounds.** Two voice kinds. `note` plays a named
   note (`"C4"`, `"F#5"`) on a synthesized `marimba`, `bell`, `kalimba`,
   `epiano` or `pad`, scaled so its peak is `gain`. `sample` plays a recorded

@@ -60,6 +60,10 @@ export interface StampBrush extends BrushCommon {
   readonly scatter: number;
   /** Random dab size variation, 0..1. */
   readonly sizeJitter: number;
+  /** Each dab shifts its hue by up to ± this many degrees, 0..180 (default 0). Needs a solid stroke colour. */
+  readonly hueJitter?: number;
+  /** Each dab shifts its lightness by up to ± this much, 0..1 (default 0). Needs a solid stroke colour. */
+  readonly lightJitter?: number;
 }
 
 /** Separate bristles that follow the path and run out of paint. */
@@ -72,15 +76,41 @@ export interface BristleBrush extends BrushCommon {
   readonly load: number;
   /** Random variation in bristle placement and thickness, 0..1. */
   readonly spread: number;
+  /** Each bristle shifts its hue by up to ± this many degrees, 0..180 (default 0). Needs a solid stroke colour. */
+  readonly hueJitter?: number;
+  /** Each bristle shifts its lightness by up to ± this much, 0..1 (default 0). Needs a solid stroke colour. */
+  readonly lightJitter?: number;
 }
 
-export type Brush = InkBrush | StampBrush | BristleBrush;
+/**
+ * Dabs that pick up the drawing under the brush and carry it along the path:
+ * a smudge, or, with `color` above 0, wet paint that mixes with what it crosses.
+ */
+export interface SmearBrush extends BrushCommon {
+  readonly kind: "smear";
+  readonly tip: "hard" | "soft";
+  /** Dab spacing as a fraction of the dab size. */
+  readonly spacing: number;
+  /** Opacity of a single dab, 0..1. */
+  readonly flow: number;
+  /** How much pressure shrinks the dab, 0..1. */
+  readonly sizeByPressure: number;
+  /** How much pressure fades the dab, 0..1. */
+  readonly opacityByPressure: number;
+  /** How long the carried paint lasts, 0..1: at each dab the brush keeps this much of its load and picks up the rest from under it. */
+  readonly strength: number;
+  /** How much of the stroke colour the brush mixes into its load at each dab, 0..1. 0 = smudge only (the stroke colour is not used). */
+  readonly color: number;
+}
+
+export type Brush = InkBrush | StampBrush | BristleBrush | SmearBrush;
 export type BrushKind = Brush["kind"];
 
 /** Fields a preset can be overridden with (each must belong to the preset's kind). */
 export type BrushOverrides = Partial<Omit<InkBrush, "kind">> &
   Partial<Omit<StampBrush, "kind">> &
-  Partial<Omit<BristleBrush, "kind">>;
+  Partial<Omit<BristleBrush, "kind">> &
+  Partial<Omit<SmearBrush, "kind">>;
 
 /**
  * The canvas's paper texture: fixed in canvas space, so it lines up across marks.

@@ -38,7 +38,7 @@
     "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {
-    "@napi-rs/canvas": "1.0.2",
+    "@napi-rs/canvas": "1.1.0",
     "perfect-freehand": "1.2.3",
     "yaml": "^2.7.0"
   },

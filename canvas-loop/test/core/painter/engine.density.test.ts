@@ -16,7 +16,7 @@ const INK = { stroke: "#000000", weight: 4, brush: { preset: "ink", thinning: 0 
 
 function densePainter(): { painter: Painter; alpha: (x: number, y: number) => number } {
   const base = skiaLayer({ width: 200, height: 100 });
-  const painter = new Painter({ ctx: base.ctx, width: 100, height: 50, makeLayer: skiaLayer, pixelRatio: 2 });
+  const painter = new Painter({ surface: base, width: 100, height: 50, makeLayer: skiaLayer, pixelRatio: 2 });
   const alpha = (x: number, y: number): number => base.ctx.getImageData(x, y, 1, 1).data[3] ?? 0;
   return { painter, alpha };
 }
