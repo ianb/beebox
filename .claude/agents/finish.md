@@ -43,7 +43,7 @@ shared dependency, schema, build configuration, or test fixture this work uses.
 Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
 tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named
-tests. A call past 180 s moves to the background: wait for its completion notice, never `sleep` or poll its log.
+tests. In Claude Code a call past 180 s moves to the background: wait for its completion notice, never `sleep` or poll its log.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
@@ -141,7 +141,7 @@ mergeable later — but it MUST appear in `PRIVATE:`. Do not run worktree cleanu
 SessionEnd and the SessionStart sweep own it.
 
 ## 8. Report
-Report the merge hash/count, checks, reused evidence with the delta it spans (and flakes), plan
+Report the merge hash/count, checks, reused evidence (its delta, why it holds, flakes), plan
 MET/PARTIAL/UNMET tally, Track O findings, and scope limits. Passing tests do not
 mean browser-verified. No advice to exit or clean up. Multiple UI screenshots →
 one labeled exhibit URL, captions saying what each figure shows (create an `fyi`

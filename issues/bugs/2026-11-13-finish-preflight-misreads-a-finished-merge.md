@@ -16,10 +16,12 @@ Two finish runs stopped on merge state that needed no judgment:
 - Preflight exited 3 (conflicts) when the conflicts were already resolved in the
   index. The message did not say which state it had read.
 
-Wanted: preflight recognizes a completed merge of the current main and clears
-stale merge metadata, while still stopping on a real in-progress merge; and the
-conflict message names the paths still unmerged (`git diff --diff-filter=U`).
-See `bin/finish-preflight-merge.ts`.
+Preflight already lists unmerged paths when there are some
+(`bin/finish-preflight-merge.ts`, `bin/finish-preflight-errors.ts`). Wanted: it
+tells apart a `MERGE_HEAD` with no unmerged paths (already resolved, or already
+committed as a merge of the current main) from a new conflict, and says which
+state it found. Whether preflight should then clear the merge metadata itself is
+a decision for the boxholder.
 
 Evidence: `box-game/20261112T184024Z-landed.md`,
 `web-guidance-scan/20261112T072110Z-landed.md`.

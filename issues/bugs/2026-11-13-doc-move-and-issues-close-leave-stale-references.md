@@ -19,7 +19,9 @@ A move rewrites link targets but not everything that names the old path:
 
 Wanted: rewrite link text that equals the old path, and have `issues close`
 either stage all its rewrites together or stage nothing and print the paths to
-add.
+add. A move can rewrite files in both the public repo and `private-issues/`
+(`bin/lib/doc-move.ts`), which have separate indexes, so the rule must say what
+happens in each repo and report each repo's paths apart.
 
 Evidence: `chat-presence/20261113T015356Z-landed.md`,
 `canvas-brushes/20261112T132713Z-landed.md`,
