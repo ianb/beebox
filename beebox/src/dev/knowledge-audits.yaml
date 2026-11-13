@@ -3141,10 +3141,11 @@ tests:
     chat_mode: true
     tags: [chat, views, figures]
     notes: >
-      The <activity> child counts the actions logged in views and figures since
-      the last reply (plan docs/plans/activity-log.md). `bbx chat activity`
+      The <activity> child counts the actions logged in companion-pane cards
+      since the last reply (plan docs/plans/activity-log.md). `bbx chat activity`
       lists them for the agent's own session; whats-changed is files.
-      Status 2026-11-13: pass (1 file read) on the worktree test box.
+      Status 2026-11-13: pass (1 file read) on the worktree test box, rerun
+      after the <card-activity> snapshot was removed.
 
   # === Chat Voice ===
   #
