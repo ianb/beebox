@@ -70,7 +70,7 @@ body {
   background: #05070d; border: 1px solid #26304a; border-radius: 8px;
   padding: 10px; display: inline-flex;
 }
-.sketch-canvas { display: block; image-rendering: pixelated; outline: none; cursor: crosshair; }
+.sketch-canvas { display: block; image-rendering: pixelated; outline: none; cursor: default; }
 .sketch-canvas:focus { box-shadow: 0 0 0 2px #2563eb; }
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .frame-readout { font-variant-numeric: tabular-nums; color: #94a3b8; min-width: 84px; }
