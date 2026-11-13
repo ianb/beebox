@@ -55,3 +55,13 @@ From the test box's `hub-child.log` and `client-debug.log`:
 - Successful TTS requests are not logged. So the log cannot show whether the muted replies before 07:04 made requests. In the quota day before the 429, replies on this box held 94 `<speech>` segments, close to the 100-request limit. Other dev boxes may share the key, so this is suggestive, not proof.
 
 So the stale-failure display is not the whole bug: at least one request was made while the chat was muted. The `idle` guard did not apply to it. A composer machine left in `speaking` or `pausedForSpeech` fits the evidence: `SPEECH_QUEUED` there runs `playSpeech` with no mute check, and the failure ends the speech with `SPEECH_DONE`, which returns it to `idle`, where the guard holds for later replies. Not confirmed: how the machine got into that state with mute on.
+
+## Only the last segment (developer, 2026-11-13)
+
+The developer reports that only the last segment of a multi-segment reply is tried, and that it fails. This matches the log: one 429 for a 4-segment reply.
+
+`InteractiveChat/speech.ts` dispatches speech in two places:
+- mid-stream, when each `</speech>` arrives;
+- at the `streaming` → `refreshing` transition, which flushes the segments not yet sent. Usually that is the last one, because its closing tag arrives in the final chunk.
+
+So the segments sent mid-stream were muted correctly, and the end-of-reply flush was not. Both paths send `SPEECH_QUEUED` through the same `dispatch`, and no difference was found by reading the code. A reproduction with logging on the `SPEECH_QUEUED` guard decision (`muted`, voice state) at the flush is the next step. Ruled out by reading: prefetch (only one request went out), replay (`SpeechMenu` only, on a click), and a second chat instance with a stale `useChatMute` state (one `InteractiveChat` is mounted).
