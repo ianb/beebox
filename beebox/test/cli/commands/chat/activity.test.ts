@@ -58,3 +58,21 @@ void test("An empty window prints the empty message.", (t) => {
   t.check(renderActivityText([], { sentAt: undefined }), "No activity since your last reply.");
   t.end();
 });
+
+// One batch shares a server time; the page's time keeps two edits apart. A
+// malformed page time falls back to the server's.
+void test("Each line shows the page's time for the action, or the server's when the page time is unreadable.", (t) => {
+  const base = { card: "Lab.figure.card", kind: "explored" as const, seq: 1, user: null };
+  const at = "2026-11-13T09:13:30.000Z";
+  const local = (iso: string): string => {
+    const d = new Date(iso);
+    return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+  };
+  const text = renderActivityText([
+    { ...base, at, clientAt: "2026-11-13T09:13:21.000Z", detail: "set answer = " },
+    { ...base, at, seq: 2, clientAt: "2026-11-13T09:13:29.000Z", detail: "set answer = 16" },
+    { ...base, at, seq: 3, clientAt: "not a time", detail: "pressed tile-H" },
+  ], { sentAt: undefined }).split("\n").map((line) => line.slice(0, 8));
+  t.check(text, [local("2026-11-13T09:13:21.000Z"), local("2026-11-13T09:13:29.000Z"), local(at)]);
+  t.end();
+});

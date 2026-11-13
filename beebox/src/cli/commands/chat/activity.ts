@@ -26,12 +26,17 @@ function clock(at: string): string {
   return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
 }
 
-/** One line per entry: `HH:MM:SS  card  kind  detail  {activity json}`, marking entries after the turn's message. */
+/**
+ * One line per entry: `HH:MM:SS  card  kind  detail  {activity json}`, marking entries after the turn's message.
+ * The time is when the page saw the action (`clientAt`), since a batch shares one server time; the server time
+ * decides "after your message", since the send time is the server's too.
+ */
 export function renderActivityText(lines: readonly ActivityLine[], opts: { sentAt: string | undefined }): string {
   if (lines.length === 0) return EMPTY;
   const sent = opts.sentAt === undefined ? null : Date.parse(opts.sentAt);
   return lines.map((line) => {
-    const parts = [clock(line.at), line.card, line.kind];
+    const seen = line.clientAt !== undefined && !Number.isNaN(Date.parse(line.clientAt)) ? line.clientAt : line.at;
+    const parts = [clock(seen), line.card, line.kind];
     if (line.detail !== undefined) parts.push(line.detail);
     if (line.activity !== undefined) parts.push(JSON.stringify(line.activity));
     if (sent !== null && Date.parse(line.at) > sent) parts.push("(after your message)");
