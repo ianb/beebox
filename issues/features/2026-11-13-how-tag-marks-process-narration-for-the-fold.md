@@ -19,10 +19,14 @@ The agent marks its narration about how it does the work with a `<how>` tag. Tex
 - Codex progress updates arrive as `thinking` blocks with `progressUpdate: true` (`beebox/src/services/codex-tool-activity.ts`, `beebox/src/cli/lib/session-content.ts`).
 - Tags in chat output are stripped by `stripStructuredOutputTags` in `beebox/src/frontend/src/lib/structured-output-parsing.ts`. The agent learns the tag vocabulary from `beebox/src/core/chat/session/prompts.ts`.
 
+## Decisions (developer, 2026-11-13)
+
+- `<how>` removes the positional rule. Only the text inside `<how>` folds. If a whole text chunk is `<how>`, the whole chunk folds. Untagged text stays visible wherever it occurs.
+- `<speech>` and `<how>` must not mix. If they do, `<speech>` wins and the `<how>` is ignored: the text stays visible and is spoken.
+- This is web-only. The iOS app shows chat in the web view and needs no change.
+
 ## Open questions
 
-- Does `<how>` replace the positional rule, or add to it? Should untagged text before a tool call still fold?
-- How does `<how>` interact with `<speech>` (spoken output in voice mode) and with callouts inside a folded line?
-- How does the collapsed header pick its headline when the turn has several `<how>` notes?
-- iOS and other renderers that read chat output need to strip or fold the tag too (bbx-ios-overlap).
-- Which specific mis-folds did the developer see? Collect examples before the design, so the tag fixes the cases that occur.
+- How does the collapsed header pick its headline when the turn has several `<how>` notes? The developer has no preference.
+- What happens to callouts inside a `<how>`?
+- Which specific mis-folds did the developer see? Collect examples, so the agent guidance for `<how>` covers the cases that occur.
