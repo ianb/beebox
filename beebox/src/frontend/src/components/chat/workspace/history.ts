@@ -1,5 +1,5 @@
 import { isRecord } from "@shared/is-record";
-import { conversationSelectionSchema } from "@shared/chat-composer-binding";
+import { conversationSelectionSchema, type ConversationTarget } from "@shared/chat-composer-binding";
 import { serializeViewUrl } from "../../../lib/view-url.js";
 import type { ViewTarget } from "../../../lib/view-url.js";
 import { oppositePane, paneForPath, projectWorkspace } from "./state-model.js";
@@ -103,9 +103,29 @@ export function workspaceDisplayReady(input: {
     || (input.adoption.to === input.renderedIdentity && input.adoption.from === input.storedIdentity);
 }
 
-/** The workspace may act only after the route owner publishes this identity. */
+/**
+ * The workspace's identity while no conversation could be resolved (a missing
+ * transcript, an unreachable box) and none was shown before. Cards are not a
+ * conversation's property, so the route's `card=` still opens under it; the
+ * chat area says why there is no conversation.
+ */
+export const UNRESOLVED_WORKSPACE_IDENTITY = "unresolved-conversation";
+
+/** Which saved arrangement the workspace shows: the rendered conversation's, or the stand-in while none resolved. */
+export function workspaceIdentity(input: { target: ConversationTarget | undefined; unresolved: boolean }): string {
+  const { target } = input;
+  if (target !== undefined) return target.kind === "session" ? target.sessionId : target.clientConversationId;
+  return input.unresolved ? UNRESOLVED_WORKSPACE_IDENTITY : "";
+}
+
+/**
+ * The workspace may act only after the route owner publishes this identity.
+ * The route owner publishes only a ready conversation, so the stand-in is
+ * bound by itself.
+ */
 export function workspaceRouteBound(selection: unknown, identity: string): boolean {
   if (identity === "") return false;
+  if (identity === UNRESOLVED_WORKSPACE_IDENTITY) return true;
   const parsed = conversationSelectionSchema.safeParse(selection);
   if (!parsed.success || parsed.data.kind !== "ready") return false;
   const target = parsed.data.target;
