@@ -104,18 +104,24 @@ export function workspaceDisplayReady(input: {
 }
 
 /**
- * The workspace's identity while no conversation could be resolved (a missing
- * transcript, an unreachable box) and none was shown before. Cards are not a
+ * The workspace's identity while the selected conversation could not be
+ * resolved (a missing transcript, an unreachable box). Cards are not a
  * conversation's property, so the route's `card=` still opens under it; the
  * chat area says why there is no conversation.
  */
 export const UNRESOLVED_WORKSPACE_IDENTITY = "unresolved-conversation";
 
-/** Which saved arrangement the workspace shows: the rendered conversation's, or the stand-in while none resolved. */
+/**
+ * Which saved arrangement the workspace shows. An unresolved selection takes
+ * the stand-in even when an earlier conversation is still rendered: the route
+ * owner publishes only ready selections, so that conversation's identity would
+ * never be bound to this route. Its arrangement stays saved for its return.
+ */
 export function workspaceIdentity(input: { target: ConversationTarget | undefined; unresolved: boolean }): string {
   const { target } = input;
-  if (target !== undefined) return target.kind === "session" ? target.sessionId : target.clientConversationId;
-  return input.unresolved ? UNRESOLVED_WORKSPACE_IDENTITY : "";
+  if (input.unresolved) return UNRESOLVED_WORKSPACE_IDENTITY;
+  if (target === undefined) return "";
+  return target.kind === "session" ? target.sessionId : target.clientConversationId;
 }
 
 /**

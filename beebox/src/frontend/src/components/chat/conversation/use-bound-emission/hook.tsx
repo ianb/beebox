@@ -141,7 +141,11 @@ export function useBoundEmission(opts: {
       setError(null);
       dispatched = true;
       const complete = (receipt: Receipt): Receipt => {
-        if (binding.target.kind === "session" && sendSpendsReservation(receipt)) conversation?.forgetReservation(binding.target.sessionId);
+        if (binding.target.kind === "session" && sendSpendsReservation(receipt)) {
+          // Storage failure must not turn an accepted send back into a failed row.
+          try { conversation?.forgetReservation(binding.target.sessionId); }
+          catch (cause) { console.warn("Conversation reservation receipt could not be removed", cause); }
+        }
         if (receipt.disposition !== "rejected" && fields.cardActivity !== undefined) acceptCardSend?.(cardFields);
         if (!native) {
           if (receipt.disposition === "rejected") pending?.rejected(emission.id, receipt.reason);

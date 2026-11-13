@@ -147,17 +147,18 @@ void test("During first load the rendered conversation may still belong to the p
   t.check(workspaceRouteBound({ kind: "resolving", requestId: "request-1", contextDir: "" }, "session-1"), false);
 });
 
-// With no conversation resolved and none shown before (a URL naming a chat
-// with no transcript here), the workspace still opens the route's card under a
-// stand-in identity. A shown conversation keeps its own arrangement.
+// With the selected conversation unresolved (a URL naming a chat with no
+// transcript here), the workspace opens the route's card under a stand-in
+// identity, even while an earlier conversation is still rendered.
 void test("An unresolved conversation does not stop the route's card from opening", (t) => {
   const shown = { kind: "session" as const, sessionId: "session-1", contextDir: "" };
   const identities = {
     unresolved: workspaceIdentity({ target: undefined, unresolved: true }),
     resolving: workspaceIdentity({ target: undefined, unresolved: false }),
+    shown: workspaceIdentity({ target: shown, unresolved: false }),
     shownThenUnresolved: workspaceIdentity({ target: shown, unresolved: true }),
   };
-  t.check(identities, { unresolved: "unresolved-conversation", resolving: "", shownThenUnresolved: "session-1" });
+  t.check(identities, { unresolved: "unresolved-conversation", resolving: "", shown: "session-1", shownThenUnresolved: "unresolved-conversation" });
   // No route owner publishes an unavailable selection, so the stand-in binds without one.
   t.check(workspaceRouteBound(undefined, identities.unresolved), true);
   t.end();

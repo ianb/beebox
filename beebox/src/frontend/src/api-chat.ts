@@ -336,14 +336,21 @@ class ConversationStartupPendingError extends Error {
   constructor() { super("Waiting for conversation — retry this send"); this.name = "ConversationStartupPendingError"; }
 }
 
-/** A failed send: 4xx and 503 are refusals before acceptance; anything else may have reached the box. */
-async function rejectSend(response: Response, startup: boolean | undefined): Promise<never> {
-  if (response.status === 404 && startup === true) throw new ConversationStartupPendingError();
-  const error = await response
-    .json()
-    .catch(() => ({ error: response.statusText }));
-  const reason = error.error || "Chat send failed";
-  if ((response.status >= 400 && response.status < 500) || response.status === 503) throw new ChatSendRejectedError(reason);
+const sendFailureBodySchema = z.object({ error: z.string().optional(), message: z.string().optional() });
+
+/**
+ * A failed send: 4xx and 503 are refusals before acceptance; anything else may
+ * have reached the box. A 503 after an attempt whose outcome is unknown (a
+ * network failure) proves nothing about that earlier attempt.
+ */
+async function rejectSend(response: Response, opts: { startup: boolean | undefined; earlierAttemptUncertain: boolean }): Promise<never> {
+  if (response.status === 404 && opts.startup === true) throw new ConversationStartupPendingError();
+  const parsed = sendFailureBodySchema.safeParse(await response.json().catch(() => null));
+  const body = parsed.success ? parsed.data : {};
+  // The hub's 503 carries a code in `error` and the sentence in `message`.
+  const reason = (response.status === 503 ? body.message : undefined) || body.error || response.statusText || "Chat send failed";
+  const refused = (response.status >= 400 && response.status < 500) || (response.status === 503 && !opts.earlierAttemptUncertain);
+  if (refused) throw new ChatSendRejectedError(reason);
   throw new RequestError(reason);
 }
 
@@ -385,6 +392,7 @@ export async function startChatTurn(params: {
   const messageId = params.messageId ?? newMessageId();
 
   let attemptNumber = 0;
+  let earlierAttemptUncertain = false;
   const attempt = async (): Promise<Response> => {
     attemptNumber++;
     recordChatSendEvent(messageId, { event: "post-issued", detail: { attempt: attemptNumber } });
@@ -421,7 +429,7 @@ export async function startChatTurn(params: {
     // The refusal came from the admission hook, so nothing was recorded and
     // the same message id is safe to send again.
     if (response.status === 503 && attemptNumber === 1 && await waitOutMaintenance(messageId, response)) return attempt();
-    if (!response.ok) await rejectSend(response, params.startup);
+    if (!response.ok) await rejectSend(response, { startup: params.startup, earlierAttemptUncertain });
 
     return response;
   };
@@ -433,6 +441,7 @@ export async function startChatTurn(params: {
     // Retry once on network errors (not HTTP errors — those already threw above).
     // fetch() throws TypeError on network failure.
     if (err instanceof TypeError) {
+      earlierAttemptUncertain = true;
       recordChatSendEvent(messageId, { event: "post-retry-scheduled", detail: { reasonKind: "network", delayMs: 2000 } });
       console.warn("[chat] Send failed with network error, retrying...", err.message);
       await new Promise((r) => setTimeout(r, 2000));

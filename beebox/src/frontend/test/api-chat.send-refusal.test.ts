@@ -11,9 +11,15 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { ChatSendRejectedError, startChatTurn } from "../src/api-chat.js";
 
-async function failure(response: Response): Promise<{ refused: boolean; message: string }> {
+/** Each POST takes the next reply; an Error reply is a network failure. */
+async function failure(...replies: Array<Response | Error>): Promise<{ refused: boolean; message: string }> {
   const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => response.clone();
+  let index = 0;
+  globalThis.fetch = async () => {
+    const reply = replies[Math.min(index++, replies.length - 1)];
+    if (reply === undefined || reply instanceof Error) throw new TypeError("Failed to fetch");
+    return reply.clone();
+  };
   try {
     await startChatTurn({ session: "00000000-0000-4000-8000-000000000001", message: "hi", messageId: "m-1" });
     return { refused: false, message: "sent" };
@@ -37,4 +43,15 @@ void test("a 4xx is a refusal and a 500 is not", async (t) => {
     gone: { refused: true, message: "Conversation is not available on this machine" },
     crashed: { refused: false, message: "boom" },
   });
+});
+
+void test("the hub's 503 reads as its sentence, not its code", async (t) => {
+  t.check(await failure(json(503, { error: "box_closed", message: "Box test1 is closed for deployment" })),
+    { refused: true, message: "Box test1 is closed for deployment" });
+});
+
+void test("a 503 after a lost response is not a refusal", async (t) => {
+  // The first POST may have been recorded before its response was lost.
+  t.check(await failure(new Error("lost"), json(503, { error: "Box is closed for deployment" })),
+    { refused: false, message: "Box is closed for deployment" });
 });
