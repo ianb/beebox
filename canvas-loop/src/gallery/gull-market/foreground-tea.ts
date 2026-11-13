@@ -28,10 +28,10 @@ export function castShadows(v: View): void {
       ],
       shadow,
     );
-    v.ellipse(276, 618, 56, 12, shadow);
-    v.ellipse(372, 632, 88, 14, shadow);
-    v.ellipse(322, 548, 60, 10, shadow);
-    v.ellipse(40, 624, 70, 12, shadow);
+    v.ellipse(276, 618, 28, 6, shadow);
+    v.ellipse(372, 632, 44, 7, shadow);
+    v.ellipse(322, 548, 30, 5, shadow);
+    v.ellipse(40, 624, 35, 6, shadow);
     v.polygon(
       [
         [8, 636],
@@ -46,8 +46,8 @@ export function castShadows(v: View): void {
 
 export function shadowAndBunting(v: View): void {
   // the gull's shadow, down and left on the quay
-  v.ellipse(250, 590, 150, 28, {
-    fill: v.ellipseGradient(250, 590, 150, 28, [
+  v.ellipse(250, 590, 75, 14, {
+    fill: v.ellipseGradient(250, 590, 75, 14, [
       [0, "rgba(90,70,50,0.35)"],
       [1, "rgba(90,70,50,0)"],
     ]),
@@ -354,7 +354,7 @@ export function bollardGull(v: View): void {
       seed: 3404,
     },
   );
-  v.circle(40, 487, 5, { fill: INK });
+  v.circle(40, 487, 2.5, { fill: INK });
   mark(
     v,
     [
@@ -420,8 +420,8 @@ export function cat(v: View): void {
     },
   );
   for (const ex of [head[0] - 8, head[0] + 8]) {
-    v.ellipse(ex, head[1] - 2, 9, 10, { fill: "#d9f07a" });
-    v.ellipse(ex - 2.5, head[1] - 5, 3, 5, { fill: INK });
+    v.ellipse(ex, head[1] - 2, 4.5, 5, { fill: "#d9f07a" });
+    v.ellipse(ex - 2.5, head[1] - 5, 1.5, 2.5, { fill: INK });
   }
   for (let i = 0; i < 4; i += 1) {
     mark(
@@ -543,10 +543,10 @@ export function child(v: View): void {
     ],
     { base: "#f7c82e", shade: "#c9951c", depth: 4, weight: 2.2, seed: 3621 },
   );
-  v.circle(332, 429, 4, { fill: INK });
-  v.circle(344, 428, 4, { fill: INK });
-  v.circle(333, 428, 1.5, { fill: "#ffffff" });
-  v.circle(345, 427, 1.5, { fill: "#ffffff" });
+  v.circle(332, 429, 2, { fill: INK });
+  v.circle(344, 428, 2, { fill: INK });
+  v.circle(333, 428, 0.75, { fill: "#ffffff" });
+  v.circle(345, 427, 0.75, { fill: "#ffffff" });
   form(
     v,
     [
@@ -564,7 +564,7 @@ export function child(v: View): void {
     },
   );
   // (the outline of the form just above carries over onto this circle)
-  v.circle(325, 437, 8, {
+  v.circle(325, 437, 4, {
     fill: "rgba(226,92,80,0.35)",
     stroke: "#2b2230",
     weight: 1.4,

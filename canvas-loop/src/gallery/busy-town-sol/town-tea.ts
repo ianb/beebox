@@ -102,20 +102,20 @@ function shop(
 function stars(v: View, dusk: boolean): void {
   if (!dusk) return;
   for (let i = 0; i < 18; i += 1)
-    v.circle(18 + i * 53, 33 + ((i * 43) % 95), 2 + (i % 3), fillOf("#f8e8bc"));
+    v.circle(18 + i * 53, 33 + ((i * 43) % 95), (2 + (i % 3)) / 2, fillOf("#f8e8bc"));
 }
 
 export function paintTown(v: View, dusk: boolean): void {
   v.paper({ scale: 3, contrast: 0.7, seed: 21 });
   v.background(dusk ? "#506984" : "#b8e1d8");
   stars(v, dusk);
-  v.circle(846, 83, 80, fillOf(dusk ? "#f7e2a8" : "#fff0b8"));
+  v.circle(846, 83, 40, fillOf(dusk ? "#f7e2a8" : "#fff0b8"));
   for (let i = 0; i < 8; i += 1)
     v.ellipse(
       i * 147 - 30,
       140 + (i % 2) * 13,
-      165,
-      57,
+      82.5,
+      28.5,
       fillOf(dusk ? "#7295a2" : "#eaf3d7"),
     );
   // Rooflines are staggered so the page reads as a street rather than a grid.
@@ -165,7 +165,7 @@ export function paintTown(v: View, dusk: boolean): void {
   for (const x of [39, 358, 681]) {
     block(v, x + 3, 476, 118, 52, "#e8f2dc");
     for (let i = 0; i < 4; i += 1)
-      v.ellipse(x + 20 + i * 26, 503, 19, 12, fillOf("#d38869"));
+      v.ellipse(x + 20 + i * 26, 503, 9.5, 6, fillOf("#d38869"));
   }
   // Tiny notices, parcels, bread and a signpost break up the long façade.
   for (const [x, y] of [
@@ -198,11 +198,11 @@ export function paintTown(v: View, dusk: boolean): void {
     v.ellipse(
       56 + i * 30,
       490 + (i % 2) * 6,
-      24,
-      13,
+      12,
+      6.5,
       fillOf(i % 2 ? "#e5ad74" : "#b66c55"),
     );
-    v.circle(61 + i * 30, 487 + (i % 2) * 6, 3, fillOf("#f6dda4"));
+    v.circle(61 + i * 30, 487 + (i % 2) * 6, 1.5, fillOf("#f6dda4"));
   }
   for (let i = 0; i < 4; i += 1) {
     block(v, 376 + i * 32, 482 - (i % 2) * 7, 22, 23, "#d2a479");
@@ -220,16 +220,16 @@ export function paintTown(v: View, dusk: boolean): void {
     v.circle(
       702 + i * 34,
       492 + (i % 2) * 7,
-      14,
+      7,
       fillOf(["#f0d18a", "#90b4b0", "#d78b73"][i % 3] ?? "#f0d18a"),
     );
-    v.circle(702 + i * 34, 492 + (i % 2) * 7, 4, fillOf("#4d6567"));
+    v.circle(702 + i * 34, 492 + (i % 2) * 7, 2, fillOf("#4d6567"));
   }
   for (let i = 0; i < 3; i += 1) {
     block(v, 480 + i * 22, 507 - i * 7, 20, 16, "#c9956e");
   }
   block(v, 97, 487, 24, 19, "#e7ad76");
-  v.circle(107, 489, 5, fillOf("#8c614d"));
+  v.circle(107, 489, 2.5, fillOf("#8c614d"));
   mark(
     v,
     [
@@ -255,7 +255,7 @@ export function paintTown(v: View, dusk: boolean): void {
   block(v, 561, 472, 68, 69, "#668d8b");
   block(v, 878, 472, 76, 69, "#789272");
   for (const x of [290, 611, 936])
-    v.circle(x, 505, 5, { ...EDGE, fill: "#f6dfa8" }); // the last block left its inked outline current
+    v.circle(x, 505, 2.5, { ...EDGE, fill: "#f6dfa8" }); // the last block left its inked outline current
   block(v, 0, 537, 1000, 43, "#ead6ab");
   v.rect(0, 580, 1000, 120, fillOf("#7eaaac"));
   mark(
@@ -284,22 +284,22 @@ export function paintTown(v: View, dusk: boolean): void {
       6,
     );
     if (dusk)
-      v.ellipse(x, 398, 104, 104, {
-        fill: v.ellipseGradient(x, 398, 104, 104, [
+      v.ellipse(x, 398, 52, 52, {
+        fill: v.ellipseGradient(x, 398, 52, 52, [
           [0, "#ffe6a4b3"],
           [1, "#ffe6a400"],
         ]),
         blend: "screen",
       });
-    v.circle(x, 395, 17, fillOf("#f4d994"));
+    v.circle(x, 395, 8.5, fillOf("#f4d994"));
     v.rect(x - 12, 383, 24, 4, fillOf("#50615d"));
   }
   for (const x of [122, 432, 757, 964]) {
     block(v, x, 531, 32, 30, "#be896a");
     for (let i = 0; i < 5; i += 1)
-      v.circle(x + 4 + i * 6, 526 - (i % 2) * 8, 14, fillOf("#6d9b74"));
-    v.circle(x + 8, 516, 5, fillOf("#f8c8a2"));
-    v.circle(x + 25, 519, 5, fillOf("#f8c8a2"));
+      v.circle(x + 4 + i * 6, 526 - (i % 2) * 8, 7, fillOf("#6d9b74"));
+    v.circle(x + 8, 516, 2.5, fillOf("#f8c8a2"));
+    v.circle(x + 25, 519, 2.5, fillOf("#f8c8a2"));
   }
   v.paperTexture(0.28);
 }

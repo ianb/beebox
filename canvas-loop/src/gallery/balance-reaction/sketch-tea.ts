@@ -266,8 +266,8 @@ function drawAtom(
     [0.8, look.fill],
     [1, look.edge],
   ]);
-  v.circle(x, y, r * 2, { fill: shade });
-  v.circle(x, y, r * 2, { stroke: look.edge, weight: Math.max(0.8, r * 0.12) });
+  v.circle(x, y, r, { fill: shade });
+  v.circle(x, y, r, { stroke: look.edge, weight: Math.max(0.8, r * 0.12) });
 }
 
 interface Box {
@@ -312,7 +312,7 @@ function drawMolecule(v: View, m: Placed): void {
       v.circle(
         ox + atom.x * scale,
         oy + atom.y * scale,
-        LOOK[atom.el].radius * scale * 2 + 8,
+        (LOOK[atom.el].radius * scale * 2 + 8) / 2,
         { fill: "rgba(200, 64, 47, 0.55)" },
       );
   }
@@ -662,7 +662,7 @@ function drawDots(
     const d = Math.min(pitch * 0.82, 13);
     for (let i = 0; i < n; i += 1) {
       const cx = x + dir * (pitch * i + pitch / 2);
-      v.circle(cx, y, d, { fill: look.fill, stroke: look.edge, weight: 1.2 });
+      v.circle(cx, y, d / 2, { fill: look.fill, stroke: look.edge, weight: 1.2 });
     }
     return;
   }
@@ -714,7 +714,7 @@ function drawTallyRow(v: View, args: { t: Tally; y: number }): void {
     color: look.edge,
   });
   // the comparison in the middle
-  v.circle(CENTER, y, 26, { fill: sideColor });
+  v.circle(CENTER, y, 13, { fill: sideColor });
   say(
     v,
     ok ? "=" : "≠",

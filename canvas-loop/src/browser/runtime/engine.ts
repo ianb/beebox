@@ -14,6 +14,7 @@ import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
+import type { TextMeasure } from "../../core/view.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
@@ -99,12 +100,7 @@ export class Runtime {
     this.#onEvent = deps.onEvent;
     this.#onError = deps.onError;
     this.#onPlace = deps.onPlace;
-    this.#util = new BrowserUtil({
-      random: this.#random,
-      getParams: () => this.#params,
-      log: (args) => this.#recordLog(args),
-      onHandled: (name) => this.#handledNames.push(name),
-    });
+    this.#util = this.#makeUtil();
     this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
@@ -144,6 +140,17 @@ export class Runtime {
     this.start();
   }
 
+  #makeUtil(): BrowserUtil<ParamsDecl> {
+    const text = (): TextMeasure => this.#view.textMeasure;
+    return new BrowserUtil({ random: this.#random, getParams: () => this.#params, log: (args) => this.#recordLog(args), onHandled: (name) => this.#handledNames.push(name), text });
+  }
+
+  /** A web font finished loading: forget measured text widths, then redraw. */
+  fontsLoaded(): void {
+    this.#view.forgetTextWidths();
+    this.invalidate();
+  }
+
   /** Draw again on the next frame though the model is unchanged (e.g. a web font finished loading). */
   invalidate(): void {
     this.#dirty = true;
@@ -168,12 +175,7 @@ export class Runtime {
   restart(seed: number): void {
     this.#seed = seed;
     this.#random = new SeededRandom(seed);
-    this.#util = new BrowserUtil({
-      random: this.#random,
-      getParams: () => this.#params,
-      log: (args) => this.#recordLog(args),
-      onHandled: (name) => this.#handledNames.push(name),
-    });
+    this.#util = this.#makeUtil();
     this.#params = initialParams(this.#decl, this.#overrides);
     this.#pending = [];
     this.#log = [];
@@ -392,7 +394,7 @@ export function watchVisibility(canvas: HTMLCanvasElement, runtime: Runtime): ()
   const resized = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(() => runtime.invalidate());
   resized?.observe(canvas);
   const fonts = typeof document === "undefined" ? undefined : document.fonts;
-  const redraw = (): void => runtime.invalidate();
+  const redraw = (): void => runtime.fontsLoaded();
   fonts?.addEventListener("loadingdone", redraw);
   return () => {
     observer?.disconnect();

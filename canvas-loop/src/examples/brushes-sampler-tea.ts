@@ -54,7 +54,7 @@ export function draw(v: View, _model: DeepReadonly<Model>): void {
     v.line(400, y, 520, y, { ...brushed, gesture: { pressure: "press" } });
     // Small shapes: a dot-sized circle and a short dab.
     const small: Style = { ...brushed, gesture: { pressure: "even" } };
-    v.circle(560, y, 18, small);
+    v.circle(560, y, 9, small);
     v.line(595, y - 10, 615, y + 10, small);
   }
 }

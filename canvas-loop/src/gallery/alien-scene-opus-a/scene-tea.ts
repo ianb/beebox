@@ -115,13 +115,13 @@ export function sky(v: View, scene: DeepReadonly<Scene>): void {
     ]),
   );
   // moon glow and moon
-  v.circle(140, 110, 280, {
+  v.circle(140, 110, 140, {
     fill: v.radialGradient(140, 110, 140, [
       [0, "rgba(255,240,200,0.45)"],
       [1, "rgba(255,240,200,0)"],
     ]),
   });
-  v.circle(140, 110, 70, { fill: "#fbf1d2" });
+  v.circle(140, 110, 35, { fill: "#fbf1d2" });
   v.clip(ellipsePts(140, 110, 35, 35, 16), () => {
     const crater: Style = {
       stroke: "#d8c9a2",
@@ -129,12 +129,12 @@ export function sky(v: View, scene: DeepReadonly<Scene>): void {
       brush: { preset: "wash", opacity: 0.25 },
       gesture: { pressure: "even" },
     };
-    v.circle(150, 118, 14, crater);
-    v.circle(128, 98, 8, crater);
+    v.circle(150, 118, 7, crater);
+    v.circle(128, 98, 4, crater);
   });
   // stars
   for (const star of scene.stars) {
-    v.circle(star.x, star.y, star.r * 2, {
+    v.circle(star.x, star.y, star.r, {
       fill: `rgba(255,248,225,${(0.4 + star.a).toFixed(2)})`,
     });
   }
@@ -168,7 +168,7 @@ export function sky(v: View, scene: DeepReadonly<Scene>): void {
       gesture: taperIn,
     },
   );
-  v.circle(608, 113, 32, {
+  v.circle(608, 113, 16, {
     fill: v.radialGradient(608, 113, 16, [
       [0, "rgba(255,250,230,0.9)"],
       [1, "rgba(255,250,230,0)"],
@@ -262,7 +262,7 @@ export function land(v: View, scene: DeepReadonly<Scene>): void {
     { fill: "#3b3763" },
   );
   v.rect(house.x + 6, house.y - 26, 5, 10, { fill: "#3b3763" });
-  v.circle(house.x - 5, house.y - 6, 24, {
+  v.circle(house.x - 5, house.y - 6, 12, {
     fill: v.radialGradient(house.x - 5, house.y - 6, 12, [
       [0, "rgba(255,214,120,0.7)"],
       [1, "rgba(255,214,120,0)"],
@@ -411,7 +411,7 @@ export function land(v: View, scene: DeepReadonly<Scene>): void {
 
 export function ship(v: View): void {
   // glow on the ground under the ship
-  v.ellipse(SHIP.x - 60, 490, 440, 140, {
+  v.ellipse(SHIP.x - 60, 490, 220, 70, {
     fill: v.radialGradient(SHIP.x - 60, 490, 220, [
       [0, "rgba(255,214,130,0.55)"],
       [1, "rgba(255,214,130,0)"],
@@ -542,14 +542,14 @@ export function ship(v: View): void {
     const t = (i - 3) / 3.4;
     const x = SHIP.x + t * 140;
     const y = SHIP.y + 12 - t * t * 8;
-    v.circle(x, y, 28, {
+    v.circle(x, y, 14, {
       fill: v.radialGradient(x, y, 14, [
         [0, "rgba(255,220,120,0.8)"],
         [1, "rgba(255,220,120,0)"],
       ]),
     });
-    v.circle(x, y, 8, { fill: WARM });
-    v.circle(x - 1, y - 1, 3, { fill: "#fffbe6" });
+    v.circle(x, y, 4, { fill: WARM });
+    v.circle(x - 1, y - 1, 1.5, { fill: "#fffbe6" });
   }
   // outlines
   v.curve(SAUCER, true, outline);
@@ -574,7 +574,7 @@ export function hatch(v: View): void {
     },
   );
   // glowing doorway on the underside
-  v.ellipse(top[0], top[1], 70, 12, { fill: "#fff4c8" });
+  v.ellipse(top[0], top[1], 35, 6, { fill: "#fff4c8" });
   // ramp
   const rampFill = v.linearGradient(top[0], top[1], top[0] - 90, 508, [
     [0, "#d8d0cc"],
@@ -672,11 +672,11 @@ function meadowFlower(
 ): void {
   for (let i = 0; i < 5; i += 1) {
     const a = (i / 5) * Math.PI * 2;
-    v.circle(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7, r * 1.3, {
+    v.circle(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7, (r * 1.3) / 2, {
       fill: color,
     });
   }
-  v.circle(x, y, r * 0.9, { fill: "#f2c94c" });
+  v.circle(x, y, (r * 0.9) / 2, { fill: "#f2c94c" });
 }
 
 export function grass(v: View, scene: DeepReadonly<Scene>): void {
@@ -734,13 +734,13 @@ export function fireflies(v: View): void {
     [40, 330],
   ];
   for (const [x, y] of spots) {
-    v.circle(x, y, 28, {
+    v.circle(x, y, 14, {
       fill: v.radialGradient(x, y, 14, [
         [0, "rgba(255,240,150,0.85)"],
         [1, "rgba(255,240,150,0)"],
       ]),
     });
-    v.circle(x, y, 3, { fill: "#fff8d0" });
+    v.circle(x, y, 1.5, { fill: "#fff8d0" });
   }
 }
 
@@ -748,7 +748,7 @@ export function fireflies(v: View): void {
  * side, screened over everything so it only ever brightens. */
 export function hatchBloom(v: View): void {
   v.group({ opacity: 0.5, blend: "screen" }, () => {
-    v.circle(500, 470, 380, {
+    v.circle(500, 470, 190, {
       fill: v.radialGradient(500, 470, 190, [
         [0, "rgba(255,200,110,0.55)"],
         [0.5, "rgba(255,190,110,0.2)"],

@@ -184,9 +184,9 @@ function drawAtom(v: View, a: { el: El; x: number; y: number; s: number; focus: 
   const info = ELEMENTS[a.el];
   const d = info.r * 2 * a.s;
   const dim = a.focus !== null && a.focus !== a.el;
-  v.circle(a.x, a.y, d, { fill: dim ? PALE[a.el] : info.fill, stroke: dim ? "#d1d5db" : info.edge, weight: 1.4 });
+  v.circle(a.x, a.y, d / 2, { fill: dim ? PALE[a.el] : info.fill, stroke: dim ? "#d1d5db" : info.edge, weight: 1.4 });
   if (dim) return;
-  v.circle(a.x - d * 0.18, a.y - d * 0.2, d * 0.32, { fill: "rgba(255,255,255,0.45)" });
+  v.circle(a.x - d * 0.18, a.y - d * 0.2, (d * 0.32) / 2, { fill: "rgba(255,255,255,0.45)" });
   if (d >= 17) {
     v.text(a.el, { x: a.x, y: a.y + 0.5 }, { ...T, size: d * 0.42, style: "bold", fill: info.text, align: "center", valign: "middle" });
   }
@@ -194,7 +194,7 @@ function drawAtom(v: View, a: { el: El; x: number; y: number; s: number; focus: 
 
 function drawMolecule(v: View, m: Molecule, at: { x: number; y: number; s: number; focus: El | null }): void {
   for (const atom of m.atoms) {
-    if (atom.el === at.focus) v.circle(at.x + atom.x * at.s, at.y + atom.y * at.s, ELEMENTS[atom.el].r * 2 * at.s + 7, { fill: "#facc15" });
+    if (atom.el === at.focus) v.circle(at.x + atom.x * at.s, at.y + atom.y * at.s, (ELEMENTS[atom.el].r * 2 * at.s + 7) / 2, { fill: "#facc15" });
   }
   for (const atom of m.atoms) drawAtom(v, { el: atom.el, x: at.x + atom.x * at.s, y: at.y + atom.y * at.s, s: at.s, focus: at.focus });
 }
@@ -359,7 +359,7 @@ function drawTallyRow(v: View, t: Tally, at: { i: number; unit: number; frame: F
   if (focused) v.roundRect(row.x, row.y, row.w, row.h, 10, { fill: "#fef9c3", stroke: "#facc15", weight: 1.5 });
   const info = ELEMENTS[t.el];
   const cy = row.y + row.h / 2;
-  v.circle(row.x + 26, cy, 30, { fill: info.fill, stroke: info.edge, weight: 1.5 });
+  v.circle(row.x + 26, cy, 15, { fill: info.fill, stroke: info.edge, weight: 1.5 });
   v.text(t.el, { x: row.x + 26, y: cy + 0.5 }, { ...T, size: 13, style: "bold", fill: info.text, align: "center", valign: "middle" });
   v.text(info.name, { x: row.x + 50, y: cy }, { ...T, size: 15, style: "bold", valign: "middle" });
   if (model.pinned === t.el) v.text("(kept lit)", { x: row.x + 50, y: cy + 16 }, { ...T, size: 11, fill: MUTED, valign: "middle" });

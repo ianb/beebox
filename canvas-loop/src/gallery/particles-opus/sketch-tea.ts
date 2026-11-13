@@ -224,7 +224,7 @@ function drawParticles(a: {
     const remaining = 1 - p.age / p.life;
     const alpha = Math.max(0, Math.min(1, remaining));
     const size = 2.5 + remaining * 3.5;
-    v.circle(p.x, p.y, size, {
+    v.circle(p.x, p.y, size / 2, {
       fill: particleColor({ tint: p.tint, palette, alpha }),
     });
   }
@@ -232,16 +232,16 @@ function drawParticles(a: {
 
 function drawEmitter(v: View, frame: number): void {
   const ex = emitterX(frame);
-  v.circle(ex, EMIT_Y, 10, { fill: "rgba(226, 232, 240, 0.85)" });
-  v.circle(ex, EMIT_Y, 20, { fill: "rgba(148, 163, 184, 0.35)" });
+  v.circle(ex, EMIT_Y, 5, { fill: "rgba(226, 232, 240, 0.85)" });
+  v.circle(ex, EMIT_Y, 10, { fill: "rgba(148, 163, 184, 0.35)" });
 }
 
 const RETICLE: Style = { stroke: "#f472b6", weight: 2 };
 
 function drawAttractor(v: View, mode: Mode): void {
   if (mode.type !== "attract") return;
-  v.circle(mode.x, mode.y, 34, RETICLE);
-  v.circle(mode.x, mode.y, 14, RETICLE);
+  v.circle(mode.x, mode.y, 17, RETICLE);
+  v.circle(mode.x, mode.y, 7, RETICLE);
   v.line(mode.x - 22, mode.y, mode.x + 22, mode.y, RETICLE);
   v.line(mode.x, mode.y - 22, mode.x, mode.y + 22, RETICLE);
 }

@@ -202,22 +202,22 @@ function drawStopwatch(v: View, a: { mode: DeepReadonly<Mode>; frame: number }):
   // dial: one turn per 10 s
   const cx = x0 + 26;
   const cy = CONTROLS.y + 64;
-  v.circle(cx, cy - 27, 8, { fill: "#4b4f5a" });
-  v.circle(cx, cy, 50, { fill: "#ffffff", stroke: done ? GOOD : INK, weight: 2.5 });
+  v.circle(cx, cy - 27, 4, { fill: "#4b4f5a" });
+  v.circle(cx, cy, 25, { fill: "#ffffff", stroke: done ? GOOD : INK, weight: 2.5 });
   for (let i = 0; i < 10; i += 1) {
     const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
     v.line(cx + 19 * Math.cos(ang), cy + 19 * Math.sin(ang), cx + 22 * Math.cos(ang), cy + 22 * Math.sin(ang), { stroke: SOFT, weight: 1 });
   }
   const hand = (t / 10) * Math.PI * 2 - Math.PI / 2;
   v.line(cx, cy, cx + 18 * Math.cos(hand), cy + 18 * Math.sin(hand), { stroke: "#c03a2b", weight: 2 });
-  v.circle(cx, cy, 4, { fill: "#c03a2b" });
+  v.circle(cx, cy, 2, { fill: "#c03a2b" });
   // reading
   const fill = done ? GOOD : running ? INK : FAINT;
   say(v, `${t.toFixed(2)} s`, { x: x0 + 62, y: cy + 2 }, { size: 24, bold: true, fill, valign: "middle" });
   // ten swing pips
   for (let i = 0; i < SWINGS_PER_TRIAL; i += 1) {
     const filled = i < swings;
-    v.circle(x0 + 6 + i * 15, CONTROLS.y + 106, 10, filled ? { fill: done ? GOOD : "#d9a43a" } : { stroke: FAINT, weight: 1.25 });
+    v.circle(x0 + 6 + i * 15, CONTROLS.y + 106, 5, filled ? { fill: done ? GOOD : "#d9a43a" } : { stroke: FAINT, weight: 1.25 });
   }
   const caption = done ? "10 swings: done" : running ? `swing ${Math.min(swings + 1, SWINGS_PER_TRIAL)} of 10` : "ready";
   say(v, caption, { x: x0, y: CONTROLS.y + 128 }, { size: 12, fill: SOFT });

@@ -291,7 +291,7 @@ function drawChip(v: View, p: Params): void {
   const x = canvas.width - 150;
   const y = 12;
   v.rect(x, y, 138, 30, { fill: "rgba(255,255,255,0.7)" });
-  v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3), {
+  v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3) / 2, {
     fill: HEX[p.colour],
   });
   v.text(

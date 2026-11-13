@@ -3,7 +3,7 @@ import { scaleNote } from "../core/sound/notes.js";
 import type { ScaleName } from "../core/sound/notes.js";
 import { controlModels } from "../browser/controls-model.js";
 import type { ControlModel } from "../browser/controls-model.js";
-import type { Style } from "../core/paint.js";
+import type { Style, TextBounds, TextBox, TextOptions } from "../core/paint.js";
 import type { Painter } from "../core/painter/engine.js";
 import { PainterView } from "../core/view.js";
 import { recordOf } from "../core/records.js";
@@ -23,6 +23,8 @@ function shown(model: ControlModel): string {
       return String(model.value);
     case "select":
       return model.value;
+    case "text":
+      return model.value === "" ? (model.placeholder ?? "") : model.value;
     case "trigger":
       return model.label;
     case "boolean":
@@ -52,14 +54,17 @@ function drawStandIn(painter: Painter, at: { box: ControlBox; model: ControlMode
   const cx = box.x + box.w - 12;
   const cy = box.y + h / 2;
   if (select) painter.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
-  painter.text(shown(model), { x: box.x + 6, y: box.y, w: box.w - 6 - (select ? 22 : 6), h }, {
+  // A text box shows its placeholder in grey while empty; a multi-line one wraps from the top.
+  const placeholder = model.kind === "text" && model.value === "";
+  const lines = model.kind === "text" && model.multiline;
+  painter.text(shown(model), { x: box.x + 6, y: box.y + (lines ? 4 : 0), w: box.w - 6 - (select ? 22 : 6), h: h - (lines ? 8 : 0) }, {
     align: button ? "center" : (box.align ?? "left"),
-    valign: "middle",
-    wrap: false,
+    valign: lines ? "top" : "middle",
+    wrap: lines,
     fit: true,
     size: box.size ?? DEFAULT_SIZE,
     style: box.bold === true ? "bold" : "normal",
-    fill: "#111111",
+    fill: placeholder ? "#767676" : "#111111",
   });
 }
 
@@ -154,5 +159,13 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string {
     return scaleNote(step, options);
+  }
+
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#surface.painter.textWidth(content, options);
+  }
+
+  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    return this.#surface.painter.plainTextBounds(...args);
   }
 }

@@ -338,7 +338,7 @@ export function bucket(v: View): Sprite {
       ],
       inked("#d6d6dc", 1.8),
     );
-    v.ellipse(16, 9, 26, 7, inked("#f7d65c", 1.4));
+    v.ellipse(16, 9, 13, 3.5, inked("#f7d65c", 1.4));
     v.rect(5, 12, 7, 10, { fill: "#f7d65c" });
     label(v, "PAINT", 16, 24, 6.5);
   });
@@ -405,8 +405,8 @@ export function lamp(v: View, on: boolean): Sprite {
 
 export function apple(v: View): Sprite {
   return v.sprite({ key: "apple", width: 14, height: 15 }, () => {
-    v.circle(7, 9, 11, inked("#d8443a", 1.2));
-    v.ellipse(9, 2.5, 5, 3, { fill: "#3f7a3a" });
+    v.circle(7, 9, 5.5, inked("#d8443a", 1.2));
+    v.ellipse(9, 2.5, 2.5, 1.5, { fill: "#3f7a3a" });
   });
 }
 
@@ -430,8 +430,8 @@ export function mole(v: View): Sprite {
 
 export function manhole(v: View): Sprite {
   return v.sprite({ key: "manhole", width: 62, height: 20 }, () => {
-    v.ellipse(31, 10, 58, 16, inked("#55545e", 1.8));
-    v.ellipse(31, 10, 42, 10, ink(1));
+    v.ellipse(31, 10, 29, 8, inked("#55545e", 1.8));
+    v.ellipse(31, 10, 21, 5, ink(1));
     v.line(14, 10, 48, 10, ink(1));
   });
 }
@@ -447,8 +447,8 @@ export function letter(v: View): Sprite {
 
 export function wheel(v: View): Sprite {
   return v.sprite({ key: "wheel", width: 30, height: 30 }, () => {
-    v.circle(15, 15, 27, inked("#2b2b33", 1.8));
-    v.circle(15, 15, 12, inked("#c9c9d2", 1.2));
+    v.circle(15, 15, 13.5, inked("#2b2b33", 1.8));
+    v.circle(15, 15, 6, inked("#c9c9d2", 1.2));
     v.rect(14, 9, 2, 12, { fill: "#2b2b33" });
   });
 }
@@ -465,9 +465,9 @@ export function bus(v: View): Sprite {
       ["#8e8a9a", 148],
     ] as const;
     for (const [c, x] of heads) {
-      v.circle(x, 40, 22, inked(c, 1.4));
-      v.circle(x - 4, 38, 2.5, { fill: INK });
-      v.circle(x + 4, 38, 2.5, { fill: INK });
+      v.circle(x, 40, 11, inked(c, 1.4));
+      v.circle(x - 4, 38, 1.25, { fill: INK });
+      v.circle(x + 4, 38, 1.25, { fill: INK });
     }
     v.at({ translate: [176, 8], scale: 0.55 }, () =>
       paintFolk(v, { ...DRIVER, plain: true }),
@@ -492,7 +492,7 @@ export function bus(v: View): Sprite {
     for (const x of [56, 96, 134, 168]) v.line(x, 14, x, 48, ink(1.6));
     v.rect(2, 60, 216, 8, inked("#3a5a9a", 1.4));
     label(v, "5  ACORN LANE", 92, 80, 11, "#7a3b1a");
-    v.circle(212, 78, 10, inked("#fff3b0", 1.4));
+    v.circle(212, 78, 5, inked("#fff3b0", 1.4));
     v.rect(2, 72, 6, 10, inked("#d8443a", 1.2));
   });
 }
@@ -507,7 +507,7 @@ export function benchSeat(v: View): Sprite {
 /** A soft glint star for hover cues. */
 export function glint(v: View): Sprite {
   return v.sprite({ key: "glint", width: 24, height: 24 }, () => {
-    v.circle(12, 12, 24, {
+    v.circle(12, 12, 12, {
       fill: v.radialGradient(12, 12, 12, [
         [0, "rgba(255,255,220,0.95)"],
         [1, "rgba(255,255,220,0)"],
@@ -532,7 +532,7 @@ export function glint(v: View): Sprite {
 /** A warm glow for lamps and windows, drawn with a screen blend. */
 export function glow(v: View): Sprite {
   return v.sprite({ key: "glow", width: 160, height: 160 }, () => {
-    v.circle(80, 80, 160, {
+    v.circle(80, 80, 80, {
       fill: v.radialGradient(80, 80, 80, [
         [0, "rgba(255,226,140,0.9)"],
         [0.4, "rgba(255,210,120,0.35)"],

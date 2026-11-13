@@ -164,15 +164,16 @@ nor stroke.
 ```ts
 v.background(paint)
 v.rect(x, y, w, h, style)               v.roundRect(x, y, w, h, radius, style)
-v.circle(x, y, diameter, style)         v.ellipse(x, y, w, h, style)
+v.circle(x, y, radius, style)           v.ellipse(x, y, rx, ry, style)
 v.line(x1, y1, x2, y2, style)           v.triangle(x1, y1, x2, y2, x3, y3, style)
 v.arc(x, y, radius, start, end, style)  v.polygon(points, style)
 v.path(commands, style)                 v.curve(points, closed, style)
 ```
 
 - Points are `Vec2` tuples, `[x, y]`.
-- `rect` and `roundRect` take the top-left corner. `circle`, `ellipse` and
-  `arc` take the centre.
+- `rect` and `roundRect` take the top-left corner and a width and height.
+  `circle`, `ellipse` and `arc` take the centre and radii, as Canvas2D and SVG
+  do (not p5's diameter): `v.circle(50, 50, 10, …)` is 20 across.
 - `path` takes data-encoded commands: `["move", x, y]`, `["line", x, y]`,
   `["quad", cx, cy, x, y]`, `["bezier", c1x, c1y, c2x, c2y, x, y]`,
   `["close"]`.
@@ -181,7 +182,7 @@ v.path(commands, style)                 v.curve(points, closed, style)
 - `v.tube(points, { width, profile? })` and `v.offset(points, distance)` return
   outlines as data (see [BRUSHES.md](./BRUSHES.md#shape-helpers)).
 - `v.linearGradient(x1, y1, x2, y2, stops)`, `v.radialGradient(x, y, radius,
-  stops)` and `v.ellipseGradient(x, y, w, h, stops)` return gradient handles.
+  stops)` and `v.ellipseGradient(x, y, rx, ry, stops)` return gradient handles.
   Use a handle anywhere a color goes: `{ fill: v.radialGradient(…) }`.
 
 ### Text
@@ -190,6 +191,8 @@ v.path(commands, style)                 v.curve(points, closed, style)
 v.text(s, { x, y, w?, h? }, options)    // returns the bounds drawn
 v.textBounds(s, { x, y, w?, h? }, options) // the same bounds, nothing drawn
 v.textWidth(s, options)                 // width in logical pixels
+u.textBounds(s, { x, y, w?, h? }, options) // in init and update: the same, without v.at
+u.textWidth(s, options)
 ```
 
 | Option | Default |
@@ -209,13 +212,20 @@ v.textWidth(s, options)                 // width in logical pixels
 
 - One line with no `w` draws at (x, y): `align` places it about `x` and
   `valign` about `y`. `"baseline"` puts the alphabetic baseline on `y`.
-- With `w`, lines wrap at word breaks to the box width. With `h`, `valign`
-  places the lines inside the box.
+- With `w`, `x` is the box's left edge (not an anchor) and lines wrap at word
+  breaks to the box width; `align` places each line inside the box. With `h`,
+  `valign` places the lines inside the box.
 - The bounds are `{ x, y, w, h, lines, size, overflow }`. `overflow` is true
   when the text does not fit the box.
 - Which fonts exist depends on the machine. Use common families.
 - Use `textBounds` to place a label before drawing it, for example to move it
-  clear of another label or to size a backing box. A `halo` in the background
+  clear of another label or to size a backing box.
+- `u.textBounds` and `u.textWidth` measure in `init` and `update`, so a hit
+  area or tile can be sized to its label instead of a guessed constant. They
+  give exactly what `draw` then gets for the same text at no `v.at` transform.
+  Measure when you need it rather than storing widths in the model: widths
+  are cached, and a web font that loads later changes them. Headless runs and
+  a browser can measure the same font slightly differently. A `halo` in the background
   color keeps a label readable where it crosses a line.
 - The run warns, once per pair of texts, when two different texts overlap in
   a frame (the same text twice, as for a shadow, is not reported). A rotated
@@ -421,13 +431,14 @@ variants the name has.
 
 ## Params reference
 
-`params` is a record of declarations. Four types:
+`params` is a record of declarations. Five types:
 
 | Type | Declaration | `p` value |
 | --- | --- | --- |
 | number | `{ type: "number", min, max, default, step?, control? }` | `number` — a slider, or with `control: "field"` a box the person types into (only a valid, in-range value is sent; `step: 1` requires a whole number) |
 | boolean | `{ type: "boolean", default }` | `boolean` |
 | select | `{ type: "select", options: [...] as const, default }` | union of `options` |
+| text | `{ type: "text", default, placeholder?, multiline?, maxLength? }` | `string`, empty allowed — a text box (a textarea with `multiline`) for typed answers, formulas, predictions |
 | trigger | `{ type: "trigger" }` | — (arrives only as a `trigger` msg) |
 
 Declare with `as const satisfies ParamsDecl` so selects narrow to their option
@@ -441,11 +452,15 @@ keeps the param out of the side panel.
 
 `v.control(name, { x, y, w, h?, size?, align?, bold? })` in `draw` puts the
 param's native input over the canvas at that box (logical pixels) for this
-frame. Browser figures place the real `<input>`/`<select>` there and take it out
+frame: a slider or number field, checkbox, select, text box or button. Browser
+figures place the real `<input>`/`<select>`/`<textarea>` there and take it out
 of the panel; headless renders draw a stand-in showing the current value, so
 frames show the layout. Call it every frame the input should show: an input not
 placed in a frame is hidden (a three-species equation places three boxes).
-Scripted `param` events drive it headless as before. Only `mountSketch` figures
+Scripted `param` events drive it headless as before. A text box sends every
+edit (empty included) as a `param` msg, so `update` sees the answer as it is
+typed; keys typed into it are not `keydown` msgs. Use `u.handled` and a check
+button, or check on each edit, as the exercise needs. Only `mountSketch` figures
 place inputs so far; the React figure and the playground keep the panel.
 
 ## Events file
@@ -568,9 +583,9 @@ case "trigger":
 const ORBIT_RING: Style = { stroke: "#1e293b", weight: 1 };
 const SELECTION_RING: Style = { stroke: "#f8fafc", weight: 2 };
 
-v.circle(CENTER_X, CENTER_Y, SUN_RADIUS * 2, { fill: "#facc15" });
-v.circle(pos.x, pos.y, planet.size, { fill: planet.color });
-if (selected) v.circle(pos.x, pos.y, planet.size + HIT_PADDING * 2 + 4, SELECTION_RING);
+v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
+v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
+if (selected) v.circle(pos.x, pos.y, planet.size / 2 + HIT_PADDING + 2, SELECTION_RING);
 v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
 ```
 

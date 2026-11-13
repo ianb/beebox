@@ -5,6 +5,24 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Text params.** `{ type: "text", default, placeholder?, multiline?,
+  maxLength? }`: a native text box (a textarea with `multiline`) in the panel
+  or over the canvas with `v.control`. Every edit, empty included, arrives as
+  a `param` msg. Links, `bbx figure run --params` and events files set it like
+  any other param; `maxLength` is checked at every door. A figure card's
+  `string` param maps to `text` or `select`.
+
+- **Text measurement in `update`.** `u.textWidth` and `u.textBounds` measure
+  without drawing and give exactly what `v.text` then draws (at no `v.at`
+  transform). One cached throw-away context per painter does all text
+  measuring; a web font that loads clears the cache.
+
+- **Breaking: round shapes take radii.** `v.circle(x, y, radius)`,
+  `v.ellipse(x, y, rx, ry)` and `v.ellipseGradient(x, y, rx, ry, stops)`, as
+  `v.arc` and `v.radialGradient` already did (Canvas2D and SVG do the same).
+  An old call draws twice as big: halve the size arguments. Every call in this
+  repo was rewritten by script, with renders byte-identical.
+
 - **Colour variation, smudge and wet paint.** Stamp and bristle brushes take
   `hueJitter` (degrees) and `lightJitter` (0..1): each dab or bristle gets its
   own nearby shade, seeded by the mark. A new brush kind, `smear`, with

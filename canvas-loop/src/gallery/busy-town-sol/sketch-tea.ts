@@ -153,19 +153,19 @@ function actEffectA(v: View, t: Thing, age: number): void {
     s = Math.sin(age * 0.2);
   switch (t.act) {
     case "loaf":
-      v.ellipse(x + 28, y - 46 - age * 0.08, 31, 16, fillOf("#e6ad69"));
+      v.ellipse(x + 28, y - 46 - age * 0.08, 15.5, 8, fillOf("#e6ad69"));
       for (let i = 0; i < 3; i += 1) {
         v.circle(
           x + 23 + i * 8,
           y - 66 - ((age + i * 13) % 28),
-          4,
+          2,
           fillOf("#fff4d8"),
         );
       }
       break;
     case "sweep":
       v.line(x + 25, y - 38, x + 35 + s * 14, y + 5, lineOf("#8a644d", 3));
-      v.ellipse(x + 35 + s * 14, y + 5, 22, 7, fillOf("#e1cf9e"));
+      v.ellipse(x + 35 + s * 14, y + 5, 11, 3.5, fillOf("#e1cf9e"));
       break;
     case "letters":
       for (let i = 0; i < 4; i += 1) {
@@ -179,7 +179,7 @@ function actEffectA(v: View, t: Thing, age: number): void {
       }
       break;
     case "wave":
-      v.circle(x + 34, y - 72 + s * 8, 8, fillOf("#f1dbab"));
+      v.circle(x + 34, y - 72 + s * 8, 4, fillOf("#f1dbab"));
       break;
     case "ladder": {
       const rail = lineOf("#956c54", 4);
@@ -200,7 +200,7 @@ function actEffectA(v: View, t: Thing, age: number): void {
         v.circle(
           x + 20 + i * 7,
           y - 30 + ((age + i * 9) % 40),
-          4,
+          2,
           fillOf("#85afc9"),
         );
       break;
@@ -244,7 +244,7 @@ function actEffectB(v: View, t: Thing, age: number, frame: number): void {
         v.circle(
           x - 44 + i * 19,
           y - 89 + Math.sin(frame * 0.12 + i) * 9,
-          4 + (i % 2) * 3,
+          (4 + (i % 2) * 3) / 2,
           fillOf("#f9e5a0"),
         );
       }
@@ -254,8 +254,8 @@ function actEffectB(v: View, t: Thing, age: number, frame: number): void {
       break;
     case "wheel": {
       const rim = lineOf("#4c6266", 3);
-      v.circle(x + 20, y - 4, 30 + age * 0.3, rim);
-      v.circle(x - 24, y - 4, 30 + age * 0.3, rim);
+      v.circle(x + 20, y - 4, (30 + age * 0.3) / 2, rim);
+      v.circle(x - 24, y - 4, (30 + age * 0.3) / 2, rim);
       break;
     }
     case "spin":
@@ -270,17 +270,17 @@ function actEffectB(v: View, t: Thing, age: number, frame: number): void {
       break;
     case "drive":
       for (let i = 0; i < 3; i += 1)
-        v.ellipse(x - 90 - i * 14, y + 16, 19, 8, fillOf("#e8ddc4"));
+        v.ellipse(x - 90 - i * 14, y + 16, 9.5, 4, fillOf("#e8ddc4"));
       break;
     case "flutter":
-      v.circle(x + 61, y - 50 + s * 8, 5, fillOf("#f2c36f"));
+      v.circle(x + 61, y - 50 + s * 8, 2.5, fillOf("#f2c36f"));
       break;
     case "chime":
-      v.circle(x, y - 27, 65 + age * 0.8, lineOf("#eecb7e", 3));
+      v.circle(x, y - 27, (65 + age * 0.8) / 2, lineOf("#eecb7e", 3));
       break;
     case "bloom":
       for (let i = 0; i < 5; i += 1)
-        v.circle(x - 24 + i * 12, y - 59 - age * 0.38, 4, fillOf("#f8dfa1"));
+        v.circle(x - 24 + i * 12, y - 59 - age * 0.38, 2, fillOf("#f8dfa1"));
       break;
     default:
       break;
@@ -336,7 +336,7 @@ function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
     v.circle(
       t.x + shift,
       t.y - height * 0.56,
-      Math.min(width, 66) + 8 + Math.sin(model.frame * 0.25) * 4,
+      (Math.min(width, 66) + 8 + Math.sin(model.frame * 0.25) * 4) / 2,
       lineOf("#fff6ce", 2),
     );
     label(

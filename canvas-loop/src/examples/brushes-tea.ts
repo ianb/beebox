@@ -97,11 +97,11 @@ export function draw(
     ],
     true,
   );
-  const glow = v.ellipseGradient(410, 240, 140, 100, [
+  const glow = v.ellipseGradient(410, 240, 70, 50, [
     [0, "rgba(255,214,120,0.9)"],
     [1, "rgba(255,214,120,0)"],
   ]);
-  v.ellipse(410, 240, 140, 100, { fill: glow });
+  v.ellipse(410, 240, 70, 50, { fill: glow });
   v.clip(blob, () => {
     const hatch: Style = {
       ...strokes,

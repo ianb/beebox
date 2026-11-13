@@ -64,14 +64,14 @@ export function sky(v: View): void {
     );
   }
   // sun and its glow
-  v.circle(SUN[0], SUN[1], 300, {
+  v.circle(SUN[0], SUN[1], 150, {
     fill: v.radialGradient(SUN[0], SUN[1], 150, [
       [0, "rgba(255,250,214,0.95)"],
       [0.35, "rgba(255,244,200,0.45)"],
       [1, "rgba(255,244,200,0)"],
     ]),
   });
-  v.circle(SUN[0], SUN[1], 64, { fill: "#fff6c8" });
+  v.circle(SUN[0], SUN[1], 32, { fill: "#fff6c8" });
   for (let k = 0; k < 12; k += 1) {
     const a = (k / 12) * Math.PI * 2 + 0.13;
     mark(

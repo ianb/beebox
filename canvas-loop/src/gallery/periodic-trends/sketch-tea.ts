@@ -315,7 +315,7 @@ function drawCell(c: Ctx, e: Element): void {
     });
   }
   if (c.odd.includes(e.sym))
-    v.circle(b.x + b.w - 8, b.y + 8, 8, { fill: ACCENT });
+    v.circle(b.x + b.w - 8, b.y + 8, 4, { fill: ACCENT });
   v.debugBox(e.sym, b.x, b.y, b.w, b.h);
 }
 
@@ -509,7 +509,7 @@ function drawOthers(c: Ctx, a: { line: Line; axis: Range }): void {
     const pts = linePoints(o, prop, a.axis);
     strokeRuns(v, pts, { stroke: FAINT, weight: 1.5 });
     for (const pt of pts)
-      if (pt !== null) v.circle(pt.x, pt.y, 4, { fill: FAINT });
+      if (pt !== null) v.circle(pt.x, pt.y, 2, { fill: FAINT });
     const last = pts.findLast((pt) => pt !== null);
     if (last !== undefined) ends.push({ n: o.n, x: last.x, y: last.y });
   }
@@ -603,13 +603,13 @@ function drawChart(c: Ctx): void {
   for (const pt of pts) {
     if (pt === null) continue;
     const val = valueOf(pt.e, prop) ?? 0;
-    v.circle(pt.x, pt.y, 11, {
+    v.circle(pt.x, pt.y, 5.5, {
       fill: rampColor(shade(val, c.range)),
       stroke: LINE_INK,
       weight: 1.5,
     });
     if (odd.includes(pt.e.sym))
-      v.circle(pt.x, pt.y, 22, { stroke: ACCENT, weight: 2 });
+      v.circle(pt.x, pt.y, 11, { stroke: ACCENT, weight: 2 });
   }
 
   // x-axis labels: the element symbols, with a dash where there is no value.
@@ -667,7 +667,7 @@ function drawChartFocus(
   const x = chartX(a.line, e);
   const y = chartY(val, a.axis);
   v.line(x, y + 8, x, CHART.y + CHART.h, { stroke: ACCENT, weight: 1 });
-  v.circle(x, y, 14, { fill: ACCENT });
+  v.circle(x, y, 7, { fill: ACCENT });
   // Near the top of the plot the label goes beside the point, clear of the caption above.
   const nearTop = y < CHART.y + 24;
   label(c, {

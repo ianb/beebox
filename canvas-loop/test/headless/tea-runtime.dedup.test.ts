@@ -12,7 +12,7 @@ const staticSketch = toTeaModule({
   update: (model: object) => model,
   draw: (v: View) => {
     v.background("#000000");
-    v.circle(15, 15, 12, { fill: "#ff0000" });
+    v.circle(15, 15, 6, { fill: "#ff0000" });
   },
 });
 

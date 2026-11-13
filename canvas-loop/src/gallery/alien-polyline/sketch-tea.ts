@@ -371,7 +371,7 @@ function drawAntennae(v: View): void {
           brush: { preset: "bristle", opacity: 0.8 },
           gesture: { pressure: "taper" },
         });
-        v.circle(c[0] - 3, c[1] - 3, 6, { fill: "#fffbe6" });
+        v.circle(c[0] - 3, c[1] - 3, 3, { fill: "#fffbe6" });
       },
     });
   }
@@ -541,8 +541,8 @@ export function draw(v: View): void {
             gesture: { pressure: "taper" },
           },
         );
-        v.circle(px, py, 24, { fill: INK });
-        v.circle(px + 6, py - 6, 8, { fill: "#ffffff" });
+        v.circle(px, py, 12, { fill: INK });
+        v.circle(px + 6, py - 6, 4, { fill: "#ffffff" });
       },
     });
   }

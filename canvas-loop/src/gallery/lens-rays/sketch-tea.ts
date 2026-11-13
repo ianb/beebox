@@ -468,7 +468,7 @@ function drawFoci(v: View, s: Solution): void {
     if (x < DIAG.x + 4 || x > DIAG.x + DIAG.w - 4) continue;
     const isF = Math.abs(m.cm) === g;
     v.line(x, A - 6, x, A + 6, { stroke: INK, weight: 1.5 });
-    if (isF) v.circle(x, A, 6, { fill: INK });
+    if (isF) v.circle(x, A, 3, { fill: INK });
     const up = below !== null && Math.abs(below - x) < 16;
     tag(v, m.label, { x, y: up ? A - 10 : A + 10 }, {
       size: isF ? 15 : 13,
@@ -527,7 +527,7 @@ function drawObject(v: View, model: DeepReadonly<Model>): void {
   const ring: Style = tipHot
     ? { fill: "rgba(255, 212, 59, 0.45)", stroke: "#f08c00", weight: 1.5 }
     : { stroke: "#adb5bd", weight: 1.5 };
-  v.circle(tx, ty + 2, tipHot ? 26 : 20, ring);
+  v.circle(tx, ty + 2, (tipHot ? 26 : 20) / 2, ring);
   v.line(tx, A, tx, ty + 10, { stroke: INK, weight: hot ? 4 : 3 });
   arrowHead(v, [tx, ty], [0, -1], { color: INK, size: 14 });
   // Grip at the foot: drag left / right.

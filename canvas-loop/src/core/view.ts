@@ -29,11 +29,28 @@ import type { Painter } from "./painter/engine.js";
 import { ease, tween, tweenPoint } from "./ease.js";
 import type { EaseName, Keyframe } from "./ease.js";
 
+/** Text measuring without drawing, for `Util`. */
+export interface TextMeasure {
+  width(content: string, options?: TextOptions): number;
+  bounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+}
+
 export class PainterView {
   protected readonly painter: Painter;
 
   constructor(painter: Painter) {
     this.painter = painter;
+  }
+
+  /** Fonts changed (a web font loaded): measure text afresh. */
+  forgetTextWidths(): void {
+    this.painter.measurer.clear();
+  }
+
+  /** The text measuring `update` gets as `u.textWidth` / `u.textBounds`: the same layout, no transform. */
+  get textMeasure(): TextMeasure {
+    const painter = this.painter;
+    return { width: (...args) => painter.textWidth(...args), bounds: (...args) => painter.plainTextBounds(...args) };
   }
 
   get width(): number {

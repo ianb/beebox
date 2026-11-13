@@ -227,15 +227,15 @@ function flower(v: View, base: Vec2): void {
     const px = top[0] + Math.cos(a) * 8;
     const py = top[1] + Math.sin(a) * 8;
     v.at({ translate: [px, py], rotate: a }, () => {
-      v.ellipse(0, 0, 16, 9, { fill: "#f6b9cf" });
+      v.ellipse(0, 0, 8, 4.5, { fill: "#f6b9cf" });
     });
   }
-  v.circle(top[0], top[1], 8, { fill: "#f2c94c" });
+  v.circle(top[0], top[1], 4, { fill: "#f2c94c" });
 }
 
 function alien(v: View): void {
   // cast shadow, thrown away from the hatch light toward the left
-  v.ellipse(AX - 50, 524, 260, 30, {
+  v.ellipse(AX - 50, 524, 130, 15, {
     fill: v.radialGradient(AX - 40, 524, 120, [
       [0, "rgba(14,26,34,0.5)"],
       [0.7, "rgba(14,26,34,0.3)"],
@@ -261,7 +261,7 @@ function alien(v: View): void {
       let glintGesture: Gesture = { pressure: "taper-out" };
       for (const tip of [ANT_L[2], ANT_R[2]]) {
         if (tip === undefined) continue;
-        v.circle(tip[0], tip[1], 52, {
+        v.circle(tip[0], tip[1], 26, {
           fill: v.radialGradient(tip[0], tip[1], 26, [
             [0, "rgba(255,230,120,0.7)"],
             [1, "rgba(255,230,120,0)"],
@@ -339,16 +339,16 @@ function alien(v: View): void {
           3,
           false,
         );
-        v.circle(e.x + 3, e.y + 6, 26, { fill: "#1e2a26" });
-        v.circle(e.x + 8, e.y, 9, { fill: "#fefefe" });
-        v.circle(e.x - 2, e.y + 12, 4, { fill: "#fefefe" });
+        v.circle(e.x + 3, e.y + 6, 13, { fill: "#1e2a26" });
+        v.circle(e.x + 8, e.y, 4.5, { fill: "#fefefe" });
+        v.circle(e.x - 2, e.y + 12, 2, { fill: "#fefefe" });
       }
       // cheeks
       for (const [x, y] of [
         [EYE_L.x - 14, 282],
         [EYE_R.x + 14, 282],
       ] as const) {
-        v.ellipse(x, y, 34, 22, {
+        v.ellipse(x, y, 17, 11, {
           fill: v.radialGradient(x, y, 15, [
             [0, "rgba(255,120,140,0.6)"],
             [1, "rgba(255,120,140,0)"],

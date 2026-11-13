@@ -121,7 +121,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
 export function draw(v: View, model: DeepReadonly<Model>): void {
   v.background("#0f172a");
   const fill = model.hold.type === "grabbed" ? "#f59e0b" : "#38bdf8";
-  v.circle(model.ball.x, model.ball.y, RADIUS * 2, { fill });
+  v.circle(model.ball.x, model.ball.y, RADIUS, { fill });
   v.text(
     `frame ${model.frame}`,
     { x: 8, y: 8 },

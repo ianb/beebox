@@ -19,6 +19,7 @@ export type ControlModel =
   | (ControlText & { kind: "number"; min: number; max: number; step: number | "any"; value: number; control: "slider" | "field" })
   | (ControlText & { kind: "boolean"; value: boolean })
   | (ControlText & { kind: "select"; options: readonly string[]; value: string })
+  | (ControlText & { kind: "text"; value: string; placeholder: string | undefined; multiline: boolean; maxLength: number | undefined })
   | (ControlText & { kind: "trigger" });
 
 function modelFor(deps: { name: string; param: ParamDecl; value: number | boolean | string | undefined }): ControlModel {
@@ -39,6 +40,15 @@ function modelFor(deps: { name: string; param: ParamDecl; value: number | boolea
       return { kind: "boolean", ...text, value: typeof value === "boolean" ? value : param.default };
     case "select":
       return { kind: "select", ...text, options: param.options, value: typeof value === "string" ? value : param.default };
+    case "text":
+      return {
+        kind: "text",
+        ...text,
+        value: typeof value === "string" ? value : param.default,
+        placeholder: param.placeholder,
+        multiline: param.multiline ?? false,
+        maxLength: param.maxLength,
+      };
     case "trigger":
       return { kind: "trigger", ...text };
   }

@@ -102,5 +102,5 @@ export function draw(v: View, model: DeepReadonly<Model>): void {
     v.roundRect(BAR_X0 + i * (BAR_W + 3), FLOOR - height, BAR_W, height, 4, { fill: lit ? "#f2b84b" : model.played[i] === true ? "#b5793a" : "#8a5a2b" });
   }
   v.rect(0, FLOOR, 400, 30, { fill: "#6b4a2b" });
-  for (const ball of model.balls) v.circle(ball.x, ball.y, 8, { fill: "#3b6ea8" });
+  for (const ball of model.balls) v.circle(ball.x, ball.y, 4, { fill: "#3b6ea8" });
 }

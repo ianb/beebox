@@ -361,7 +361,7 @@ function drawNeckAndHead(v: View): void {
     [HEAD.x + 8, HEAD.y + 10],
   ];
   litShape(v, head, H.body, () => {
-    v.ellipse(HEAD.x + 6, HEAD.y + 6, 22, 9, { fill: H.belly });
+    v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
   });
   // Bill.
   v.polygon(
@@ -421,8 +421,8 @@ function drawNeckAndHead(v: View): void {
   );
   v.curve(head, true, { ...fine, weight: 2.2 });
   // Eye.
-  v.circle(HEAD.x + 6, HEAD.y - 2, 7, { fill: "#fff2c8" });
-  v.circle(HEAD.x + 7, HEAD.y - 2, 3.5, { fill: H.ink });
+  v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" });
+  v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink });
 }
 
 function drawScarf(v: View): void {
@@ -507,13 +507,13 @@ function drawPole(v: View): void {
     gesture: { pressure: "even", wobble: 0.4 },
   });
   // Taper flame.
-  v.circle(tx, ty - 4, 36, {
+  v.circle(tx, ty - 4, 18, {
     fill: v.radialGradient(tx, ty - 4, 18, [
       [0, "rgba(255,240,180,0.95)"],
       [1, "rgba(255,160,80,0)"],
     ]),
   });
-  v.ellipse(tx, ty - 6, 5, 11, { fill: "#fff3c0" });
+  v.ellipse(tx, ty - 6, 2.5, 5.5, { fill: "#fff3c0" });
 }
 
 function drawGrip(v: View): void {
@@ -563,15 +563,15 @@ function drawShadow(v: View): void {
   ];
   v.clip(deck, () => {
     v.group({ opacity: 0.85, blend: "multiply" }, () => {
-      v.ellipse(FEET_X - 80, FEET_Y - 5, 210, 24, {
-        fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 210, 24, [
+      v.ellipse(FEET_X - 80, FEET_Y - 5, 105, 12, {
+        fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 105, 12, [
           [0, "#5a3a58"],
           [0.55, "rgba(90,58,88,0.7)"],
           [1, "rgba(90,58,88,0)"],
         ]),
       });
-      v.ellipse(FEET_X + 2, FEET_Y + 2, 54, 10, {
-        fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 54, 10, [
+      v.ellipse(FEET_X + 2, FEET_Y + 2, 27, 5, {
+        fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 27, 5, [
           [0, "#3a2236"],
           [1, "rgba(58,34,54,0)"],
         ]),

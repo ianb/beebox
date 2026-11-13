@@ -233,12 +233,12 @@ function head(v: View): void {
     );
   }
   // cheeks
-  v.circle(hx - 22, hy + 14, 18, { fill: "rgba(226,92,80,0.35)" });
-  v.circle(hx + 22, hy + 14, 18, { fill: "rgba(226,92,80,0.35)" });
+  v.circle(hx - 22, hy + 14, 9, { fill: "rgba(226,92,80,0.35)" });
+  v.circle(hx + 22, hy + 14, 9, { fill: "rgba(226,92,80,0.35)" });
   // eyes wide, looking up and left after the gull
   for (const ex of [hx - 15, hx + 14]) {
-    v.ellipse(ex, hy - 8, 17, 19, { fill: "#ffffff", stroke: INK, weight: 2 });
-    v.circle(ex - 4, hy - 12, 7, { fill: INK });
+    v.ellipse(ex, hy - 8, 8.5, 9.5, { fill: "#ffffff", stroke: INK, weight: 2 });
+    v.circle(ex - 4, hy - 12, 3.5, { fill: INK });
     mark(
       v,
       [
@@ -264,7 +264,7 @@ function head(v: View): void {
     weight: 2.2,
     seed: 1131,
   });
-  v.ellipse(hx + 1, hy + 37, 10, 6, { fill: "#d9606a" });
+  v.ellipse(hx + 1, hy + 37, 5, 3, { fill: "#d9606a" });
   const tache: Vec2[] = [
     [hx - 26, hy + 22],
     [hx - 14, hy + 12],

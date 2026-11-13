@@ -505,8 +505,8 @@ export function draw(v: View): void {
       },
     });
     outline(v, { pts: eye, weight: 3 });
-    v.circle(px, 172, 26, { fill: INK });
-    v.circle(px + 6, 165, 8, { fill: "#ffffff" });
+    v.circle(px, 172, 13, { fill: INK });
+    v.circle(px + 6, 165, 4, { fill: "#ffffff" });
   }
 
   // cheeks: a soft pink oval with a few pencil marks over it

@@ -8,12 +8,12 @@
 // through, and `style.ts` the style state.
 import type { Contour } from "../contours.js";
 import { curveCommands, ellipseContour, pathContours } from "../contours.js";
-import type { Ctx2D, Paint, PathCommand, Style, TextBounds, TextBox, TextOptions, TextStyle, Vec2 } from "../paint.js";
+import type { Ctx2D, Paint, PathCommand, Style, TextBounds, TextBox, TextOptions, Vec2 } from "../paint.js";
 import { resolveStyle } from "./style.js";
 import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { PainterCore } from "./core.js";
-import { layoutText } from "./text-layout.js";
-import type { TextLayout } from "./text-layout.js";
+import { fontString, haloWidth, TextMeasurer } from "./text-measure.js";
+import type { LaidText } from "./text-measure.js";
 
 /**
  * The shared drawing surface over a structural `Ctx2D`. Drawing is
@@ -38,23 +38,17 @@ function roundedRect(b: { x: number; y: number; w: number; h: number; r: number 
   ];
 }
 
-/** What `text(s, box, options)` uses for options left out. */
-const TEXT_DEFAULTS = { size: 12, font: "sans-serif", style: "normal", fill: "#000000", align: "left", valign: "top" } as const satisfies TextOptions;
-
-/** Text laid out for one call, ready to draw. */
-interface LaidText {
-  box: TextBox;
-  options: TextOptions & Required<Pick<TextOptions, "size" | "font" | "style" | "fill" | "align" | "valign">>;
-  layout: TextLayout | undefined;
-  bounds: TextBounds;
-}
-
-/** Width of a halo's band around text of `size`. */
-const haloWidth = (size: number): number => Math.max(2, size / 4);
-
 const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
 
 export class Painter extends PainterCore {
+  /** Measures text for layout here and for `u.textWidth` / `u.textBounds` in `update`. */
+  readonly measurer: TextMeasurer;
+
+  constructor(options: ConstructorParameters<typeof PainterCore>[0]) {
+    super(options);
+    this.measurer = new TextMeasurer(options.makeLayer);
+  }
+
   background(paint: Paint): void {
     const ctx = this.ctx;
     withSaved(ctx, () => {
@@ -86,16 +80,16 @@ export class Painter extends PainterCore {
   }
 
   circle(...args: [number, number, number, Style]): void {
-    const [x, y, diameter, style] = args;
-    this.ellipse(x, y, diameter, diameter, style);
+    const [x, y, radius, style] = args;
+    this.ellipse(x, y, radius, radius, style);
   }
 
   ellipse(...args: [number, number, number, number, Style]): void {
-    const [x, y, w, h, style] = args;
+    const [x, y, rx, ry, style] = args;
     this.#closed((ctx) => {
       ctx.beginPath();
-      ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
-    }, { contours: () => [ellipseContour({ x, y, rx: w / 2, ry: h / 2, start: 0, end: Math.PI * 2, step: this.step() })], style, call: "ellipse" });
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    }, { contours: () => [ellipseContour({ x, y, rx, ry, start: 0, end: Math.PI * 2, step: this.step() })], style, call: "ellipse" });
   }
 
   line(...args: [number, number, number, number, Style]): void {
@@ -159,82 +153,21 @@ export class Painter extends PainterCore {
 
   /** The width `text` would take with these options, in logical pixels. */
   textWidth(content: string, options?: TextOptions): number {
-    const ctx = this.ctx;
-    const previous = ctx.font;
-    ctx.font = this.#font({ ...TEXT_DEFAULTS, ...options });
-    const { width } = ctx.measureText(content);
-    ctx.font = previous;
-    return width;
+    return this.measurer.width(content, options);
   }
 
-  /** Lay text out; with `keepInside`, move it so its bounds stay inside the canvas. */
-  #placeText(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
-    const laid = this.#layText(content, at);
-    if (at.options.keepInside !== true) return laid;
-    const shift = this.#insideShift(laid.bounds);
-    if (shift === undefined) return laid;
-    return this.#layText(content, { ...at, box: { ...at.box, x: at.box.x + shift.x, y: at.box.y + shift.y } });
-  }
-
-  /**
-   * The move, in the current coordinates, that brings `b` inside the canvas
-   * less a margin. Measured in canvas space, so it holds under `at`. Text
-   * larger than the canvas keeps its left/top edge inside. Undefined when no
-   * move is needed or the transform cannot be inverted.
-   */
-  #insideShift(b: TextBounds): { x: number; y: number } | undefined {
-    const MARGIN = 4;
-    const m = this.ctx.getTransform();
+  /** `textBounds` as text drawn with no `v.at` transform would have them: what `update` measures. */
+  plainTextBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    const [content, box, options] = args;
     const pr = this.pixelRatio;
-    const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]] as const;
-    const xs = corners.map(([x, y]) => (m.a * x + m.c * y + m.e) / pr);
-    const ys = corners.map(([x, y]) => (m.b * x + m.d * y + m.f) / pr);
-    const fit = (...[lo, hi, size]: [number, number, number]): number => {
-      if (lo < MARGIN || hi - lo > size - 2 * MARGIN) return MARGIN - lo;
-      return hi > size - MARGIN ? size - MARGIN - hi : 0;
-    };
-    const dx = fit(Math.min(...xs), Math.max(...xs), this.width);
-    const dy = fit(Math.min(...ys), Math.max(...ys), this.height);
-    if (dx === 0 && dy === 0) return undefined;
-    const det = m.a * m.d - m.b * m.c;
-    if (Math.abs(det) < 1e-12) return undefined;
-    // Undo the linear part: canvas-space move (times the pixel ratio) → local move.
-    const cx = dx * pr;
-    const cy = dy * pr;
-    return { x: (m.d * cx - m.c * cy) / det, y: (-m.b * cx + m.a * cy) / det };
+    const where = { transform: { a: pr, b: 0, c: 0, d: pr, e: 0, f: 0 }, pixelRatio: pr, canvas: { width: this.width, height: this.height } };
+    return this.measurer.place(content, { box, options: options ?? {}, where }).bounds;
   }
 
-  /**
-   * Lay text out without drawing. One line with no box is placed by the
-   * context's own alignment and baseline (`layout` undefined); anything else
-   * is laid out line by line.
-   */
-  #layText(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
-    const options = { ...TEXT_DEFAULTS, ...at.options };
-    const { box } = at;
-    const measureCtx = this.ctx;
-    const measure = (text: string, size: number): number => withSaved(measureCtx, () => {
-      measureCtx.font = this.#font({ ...options, size });
-      return measureCtx.measureText(text).width;
-    });
-    const native = box.w === undefined && box.h === undefined && !content.includes("\n");
-    const layout = native ? undefined : layoutText(content, { size: options.size, box, options, measure });
-    // A halo widens the ink by half its band on every side.
-    const grow = (b: TextBounds): TextBounds => {
-      if (options.halo === undefined) return b;
-      const pad = haloWidth(b.size) / 2;
-      return { ...b, x: b.x - pad, y: b.y - pad, w: b.w + 2 * pad, h: b.h + 2 * pad };
-    };
-    if (layout !== undefined) {
-      const bounds = { x: layout.x, y: layout.y, w: layout.w, h: layout.h, lines: layout.lines.length, size: layout.size, overflow: layout.overflow };
-      return { box, options, layout, bounds: grow(bounds) };
-    }
-    const size = options.size;
-    const w = measure(content, size);
-    const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
-    const h = size * 1.25;
-    const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
-    return { box, options, layout, bounds: grow({ x, y: top, w, h, lines: 1, size, overflow: false }) };
+  /** Lay text out where it will be drawn: under the current transform, inside this canvas. */
+  #placeText(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
+    const where = { transform: this.ctx.getTransform(), pixelRatio: this.pixelRatio, canvas: { width: this.width, height: this.height } };
+    return this.measurer.place(content, { ...at, where });
   }
 
   #drawText(content: string, laid: LaidText): void {
@@ -246,7 +179,7 @@ export class Painter extends PainterCore {
     const draw = (op: string): void => {
       const ctx = this.ctx;
       withSaved(ctx, () => {
-        ctx.font = this.#font({ ...options, size });
+        ctx.font = fontString({ ...options, size });
         ctx.fillStyle = this.resolvePaint(options.fill);
         ctx.globalCompositeOperation = op;
         const halo = options.halo;
@@ -274,9 +207,6 @@ export class Painter extends PainterCore {
     this.drawComposited(mode, draw);
   }
 
-  #font(over: { size: number; font: string; style: TextStyle }): string {
-    return `${over.style} ${over.size}px ${over.font}`;
-  }
 
   /** A fillable shape: fill and stroke what `trace` lays down. */
   #closed(trace: (ctx: Ctx2D) => void, shape: { contours: () => Contour[]; style: Style; call: string }): void {

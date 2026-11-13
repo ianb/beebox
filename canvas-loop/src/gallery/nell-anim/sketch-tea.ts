@@ -474,7 +474,7 @@ function glow(
   color: string,
   a: number,
 ): void {
-  v.circle(x, y, r * 2, {
+  v.circle(x, y, r, {
     fill: v.radialGradient(x, y, r, [
       [0, `rgba(${color},${a})`],
       [1, `rgba(${color},0)`],
@@ -491,8 +491,8 @@ function glowEllipse(
   color: string,
   a: number,
 ): void {
-  v.ellipse(x, y, w, h, {
-    fill: v.ellipseGradient(x, y, w, h, [
+  v.ellipse(x, y, w / 2, h / 2, {
+    fill: v.ellipseGradient(x, y, w / 2, h / 2, [
       [0, `rgba(${color},${a})`],
       [1, `rgba(${color},0)`],
     ]),
@@ -784,8 +784,8 @@ function fishBody(v: View): void {
       { fill: "#2a2a20" },
     );
   });
-  v.ellipse(690, 800, 360, 440, {
-    fill: v.ellipseGradient(690, 800, 360, 440, [
+  v.ellipse(690, 800, 180, 220, {
+    fill: v.ellipseGradient(690, 800, 180, 220, [
       [0, "rgba(14,28,40,0.75)"],
       [0.6, "rgba(14,28,40,0.4)"],
       [1, "rgba(14,28,40,0)"],
@@ -812,13 +812,13 @@ function stars(v: View, f: number, d: number): void {
     const out = Math.min(1, Math.max(0, d * 2.2 - i * 0.18));
     const a = out * (0.55 + 0.3 * wave(f, 3 + (i % 4), i * 1.7));
     if (a <= 0.02) continue;
-    v.circle(x, y, r * (1 + d * 0.6), {
+    v.circle(x, y, (r * (1 + d * 0.6)) / 2, {
       fill: `rgba(240,236,255,${a.toFixed(3)})`,
     });
   }
   const evening = 0.35 + 0.4 * Math.min(1, d * 2);
   glow(v, 612, 66, 16, "255,240,210", evening * (0.85 + 0.15 * wave(f, 4)));
-  v.circle(612, 66, 3.5, { fill: "#fff4d8" });
+  v.circle(612, 66, 1.75, { fill: "#fff4d8" });
 }
 
 function waterGlints(v: View, f: number, wind: number): void {
@@ -1104,24 +1104,24 @@ function carpFace(
   const greet = since < 60 ? Math.sin((since / 60) * Math.PI) : 0;
   // mouth: a round "o" that breathes, and opens wide when greeted
   const o = 1 + 0.12 * wave(f, 2) + 0.45 * greet + 0.3 * near;
-  v.ellipse(538, 504, 18 * (0.9 + 0.1 * o), 22 * o, { fill: "#e8c48a" });
-  v.ellipse(537, 503, 11 * (0.85 + 0.15 * o), 15 * o, { fill: "#3a2216" });
-  v.ellipse(538, 505, 5, 8 * (0.7 + 0.3 * o), { fill: "#b0603e" });
+  v.ellipse(538, 504, (18 * (0.9 + 0.1 * o)) / 2, (22 * o) / 2, { fill: "#e8c48a" });
+  v.ellipse(537, 503, (11 * (0.85 + 0.15 * o)) / 2, (15 * o) / 2, { fill: "#3a2216" });
+  v.ellipse(538, 505, 2.5, (8 * (0.7 + 0.3 * o)) / 2, { fill: "#b0603e" });
   // eye: follows the lantern, or the reader
   const dx = look[0] - EYE[0];
   const dy = look[1] - EYE[1];
   const dl = Math.max(1, Math.hypot(dx, dy));
   const px = EYE[0] + (dx / dl) * 3.2;
   const py = EYE[1] + (dy / dl) * 3.2;
-  v.circle(EYE[0], EYE[1], 20, { fill: "#f2e2b4" });
-  v.circle(px, py, 13, { fill: "#20160e" });
-  v.circle(px - 3, py - 3, 4, { fill: "#fff6dc" });
+  v.circle(EYE[0], EYE[1], 10, { fill: "#f2e2b4" });
+  v.circle(px, py, 6.5, { fill: "#20160e" });
+  v.circle(px - 3, py - 3, 2, { fill: "#fff6dc" });
   // with the light close, the old fish half-closes its eye, content
   const shut = Math.max(blinkAt(f, greeted), 0.55 * near);
   if (shut > 0) {
     // the lid comes down from above, darker than the lit cheek, its lashline dark
     v.clip(ellipseArc(EYE[0], EYE[1], 11, 11, 0, TAU, 20), () => {
-      v.ellipse(EYE[0], EYE[1] - 26 + 22 * shut, 26, 30, { fill: "#b48a4a" });
+      v.ellipse(EYE[0], EYE[1] - 26 + 22 * shut, 13, 15, { fill: "#b48a4a" });
     });
     ribbon(
       v,
@@ -1171,10 +1171,10 @@ function chinDrops(v: View, f: number): void {
   const t = f % (LOOP / 2);
   const drop: Style = { fill: "#ffe2b0" };
   if (t < 30) {
-    v.circle(CHIN[0], CHIN[1], 1.5 + t / 15, drop);
+    v.circle(CHIN[0], CHIN[1], (1.5 + t / 15) / 2, drop);
   } else if (t < 42) {
     const k = (t - 30) / 12;
-    v.circle(CHIN[0] - 2 * k, CHIN[1] + 22 * k * k, 3.5, drop);
+    v.circle(CHIN[0] - 2 * k, CHIN[1] + 22 * k * k, 1.75, drop);
   } else if (t < 80) {
     const k = (t - 42) / 38;
     ribbon(
@@ -1518,9 +1518,9 @@ function girl(v: View): void {
       { fill: "#c9967a" },
     );
     glow(v, 470, 440, 56, "255,196,120", 0.8);
-    v.circle(428, 408, 10, { fill: "rgba(214,110,90,0.45)" });
+    v.circle(428, 408, 5, { fill: "rgba(214,110,90,0.45)" });
   });
-  v.circle(433, 395, 3.6, { fill: "#1c140c" });
+  v.circle(433, 395, 1.8, { fill: "#1c140c" });
   const brow: Style = {
     brush: "ink",
     stroke: "#3a2214",
@@ -1537,7 +1537,7 @@ function girl(v: View): void {
     brow,
   );
   v.curve(FACE.slice(2, 8), false, brow);
-  v.ellipse(441, 411, 4, 5, { fill: "#5a2418" });
+  v.ellipse(441, 411, 2, 2.5, { fill: "#5a2418" });
   v.curve(HAT, true, { fill: "#c4402e" });
   v.clip(v.curvePath(HAT, true), () => {
     v.curve(shift(HAT, -10, -4), true, { fill: "#8e2a20" });
@@ -1566,7 +1566,7 @@ function girl(v: View): void {
     };
     for (let x = 400; x < 446; x += 5) v.line(x, 376, x + 1, 396, stitch);
   });
-  v.circle(400, 362, 13, { fill: "#efe0c8" });
+  v.circle(400, 362, 6.5, { fill: "#efe0c8" });
   const line: Style = {
     brush: "ink",
     stroke: "#14100c",
@@ -1582,7 +1582,7 @@ function nellBlink(v: View, f: number): void {
   const t = (f % LOOP) - 70;
   if (t < 0 || t > 8) return;
   const shut = Math.sin((t / 8) * Math.PI);
-  v.ellipse(433, 395 - 2 + 2 * shut, 5.5, 2 + 4 * shut, { fill: "#e9b48e" });
+  v.ellipse(433, 395 - 2 + 2 * shut, 2.75, (2 + 4 * shut) / 2, { fill: "#e9b48e" });
   ribbon(
     v,
     seg(430.5, 394 + 1.5 * shut, 436, 394.5 + 1.5 * shut, 4),
@@ -1613,7 +1613,7 @@ function arm(v: View, mitten: Pt): void {
     weight: 2,
     gesture: { pressure: "taper", wobble: 0.4, seed: 21 },
   });
-  v.circle(mx, my, 14, { fill: "#c4402e" });
+  v.circle(mx, my, 7, { fill: "#c4402e" });
 }
 
 // ── the lantern (moving) ────────────────────────────────────────────
@@ -1641,13 +1641,13 @@ function lantern(v: View, mitten: Pt, lamp: Vec2, f: number, d: number): void {
   v.line(mitten.x + 6, mitten.y + 4, top[0] + 6, top[1], bail);
   v.at({ translate: [x, y], rotate: Math.atan2(HANG[0], HANG[1]) - a }, () => {
     v.rect(-8, -12, 16, 22, { fill: "#fff2c4" });
-    v.circle(0, 0, 18, {
+    v.circle(0, 0, 9, {
       fill: v.radialGradient(0, 0, 9 * fl, [
         [0, "#ffffff"],
         [1, "rgba(255,240,190,0)"],
       ]),
     });
-    v.ellipse(0, 1 - 2 * fl, 4, 7 + 3 * fl, { fill: "#ffd27a" });
+    v.ellipse(0, 1 - 2 * fl, 2, (7 + 3 * fl) / 2, { fill: "#ffd27a" });
     const frame: Style = { fill: "#2a1c12" };
     v.triangle(-11, -12, 11, -12, 0, -20, frame);
     v.rect(-10, 9, 20, 4, frame);
@@ -1681,7 +1681,7 @@ function moths(v: View, lamp: Vec2, f: number, side: "behind" | "front"): void {
         { fill: "#f8ead0" },
       );
     }
-    v.ellipse(x, y, 2.6, 7, { fill: "#4a3826" });
+    v.ellipse(x, y, 1.3, 3.5, { fill: "#4a3826" });
   }
 }
 
@@ -1807,8 +1807,8 @@ function reeds(v: View, f: number, wind: number): void {
   const c2 = lean(712, 580);
   reed(v, [56, 820], [57 + c1 * 0.3, 720], [58 + c1, 620], 2.6, 40);
   reed(v, [712, 820], [709 + c2 * 0.3, 700], [706 + c2, 580], 2.6, 41);
-  v.ellipse(58 + c1, 640, 10, 36, { fill: "#2a1a10" });
-  v.ellipse(706 + c2, 600, 10, 34, { fill: "#2a1a10" });
+  v.ellipse(58 + c1, 640, 5, 18, { fill: "#2a1a10" });
+  v.ellipse(706 + c2, 600, 5, 17, { fill: "#2a1a10" });
 }
 
 /** The dark gathering everywhere the lantern does not reach. */
@@ -1846,7 +1846,7 @@ function fireflies(v: View, f: number, d: number): void {
     const on = Math.max(0, wave(f, 2 + (i % 2), ph * 1.3)) ** 2;
     if (on < 0.02) continue;
     glow(v, x, y, 14, "214,255,140", 0.55 * on * (0.5 + d));
-    v.circle(x, y, 2.4, { fill: `rgba(240,255,200,${(0.9 * on).toFixed(3)})` });
+    v.circle(x, y, 1.2, { fill: `rgba(240,255,200,${(0.9 * on).toFixed(3)})` });
   }
 }
 

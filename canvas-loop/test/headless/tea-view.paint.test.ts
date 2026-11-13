@@ -73,7 +73,7 @@ test("a group that contains a smudge still composites (the group layer is read w
   h.v.background("#ffffff");
   h.v.at({ translate: [0, 0] }, () => {
     h.v.group({ opacity: 1 }, () => {
-      h.v.circle(30, 30, 20, { fill: "#8e44ad" });
+      h.v.circle(30, 30, 10, { fill: "#8e44ad" });
       h.v.line(30, 30, 90, 25, { stroke: "#000000", weight: 16, brush: "smudge" });
     });
   });

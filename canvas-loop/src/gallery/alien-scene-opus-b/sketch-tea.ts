@@ -311,13 +311,13 @@ function sky(v: View, model: DeepReadonly<Model>): void {
     );
   }
   // moon glow
-  v.circle(140, 108, 80, {
+  v.circle(140, 108, 40, {
     stroke: "#fff1c9",
     weight: 90,
     brush: { preset: "airbrush", opacity: 0.22 },
     gesture: { pressure: "even" },
   });
-  v.circle(140, 108, 70, { fill: "#fbf0cf" });
+  v.circle(140, 108, 35, { fill: "#fbf0cf" });
   v.clip(v.curvePath(oval(140, 108, 35, 35, 12), true), () => {
     const crater: Style = {
       stroke: "#d9c79a",
@@ -354,7 +354,7 @@ function sky(v: View, model: DeepReadonly<Model>): void {
   });
   // stars
   for (const star of model.stars) {
-    v.circle(star.x, star.y, star.r, {
+    v.circle(star.x, star.y, star.r / 2, {
       fill: `rgba(255,248,220,${(0.35 + star.a).toFixed(2)})`,
     });
   }
@@ -524,10 +524,10 @@ function saucer(v: View): void {
       brush: { preset: "airbrush", opacity: 0.7 },
       gesture: { pressure: "even" },
     });
-    v.circle(x, y, 3, { fill: "#ffffff" });
+    v.circle(x, y, 1.5, { fill: "#ffffff" });
   }
   // dome
-  v.ellipse(cx, cy - 20, 112, 82, {
+  v.ellipse(cx, cy - 20, 56, 41, {
     fill: v.radialGradient(cx - 16, cy - 40, 64, [
       [0, "#f4ffff"],
       [0.6, "#a9dde4"],
@@ -535,7 +535,7 @@ function saucer(v: View): void {
     ]),
   });
   // disc
-  v.ellipse(cx, cy, 224, 54, {
+  v.ellipse(cx, cy, 112, 27, {
     fill: v.linearGradient(cx, cy - 27, cx, cy + 27, [
       [0, "#dfe2ee"],
       [0.5, "#a3a9c0"],
@@ -543,11 +543,11 @@ function saucer(v: View): void {
     ]),
   });
   // underside
-  v.ellipse(cx, cy + 18, 120, 20, { fill: "#3f4260" });
-  v.ellipse(cx, cy + 20, 60, 10, { fill: "#ffe7a8" });
+  v.ellipse(cx, cy + 18, 60, 10, { fill: "#3f4260" });
+  v.ellipse(cx, cy + 20, 30, 5, { fill: "#ffe7a8" });
   // windows
   for (let i = -2; i <= 2; i += 1) {
-    v.circle(cx + i * 38, cy + 2 - Math.abs(i) * 2, 12, { fill: "#ffe08a" });
+    v.circle(cx + i * 38, cy + 2 - Math.abs(i) * 2, 6, { fill: "#ffe08a" });
   }
   // rim highlight
   const rim: Style = {
@@ -562,7 +562,7 @@ function saucer(v: View): void {
     false,
     rim,
   );
-  v.ellipse(cx, cy, 224, 54, ink(LINE, 3));
+  v.ellipse(cx, cy, 112, 27, ink(LINE, 3));
   v.curve(
     arcPts(cx, cy - 20, 56, 41, Math.PI * 1.04, Math.PI * 1.96, 12),
     false,
@@ -641,7 +641,7 @@ function meadow(v: View, model: DeepReadonly<Model>): void {
 function grassTufts(v: View, model: DeepReadonly<Model>): void {
   // flowers
   for (const f of model.flowers) {
-    v.circle(f.x, f.y, 4 + (f.y - 470) * 0.03, { fill: f.color });
+    v.circle(f.x, f.y, (4 + (f.y - 470) * 0.03) / 2, { fill: f.color });
   }
 }
 
@@ -969,20 +969,20 @@ function alien(v: View): void {
           brush: { preset: "airbrush", opacity: 0.45 },
           gesture: { pressure: "even" },
         });
-        v.circle(x, y, 20, { fill: "#ffd84a" });
-        v.circle(x - 3, y - 3, 6, { fill: "#fff6c0" });
-        v.circle(x, y, 20, ink(LINE, 3));
+        v.circle(x, y, 10, { fill: "#ffd84a" });
+        v.circle(x - 3, y - 3, 3, { fill: "#fff6c0" });
+        v.circle(x, y, 10, ink(LINE, 3));
       }
 
       // face
-      v.ellipse(290, 276, 54, 62, { fill: "#ffffff" });
-      v.ellipse(372, 276, 54, 62, { fill: "#ffffff" });
-      v.circle(294, 282, 26, { fill: LINE });
-      v.circle(368, 282, 26, { fill: LINE });
-      v.circle(299, 276, 8, { fill: "#ffffff" });
-      v.circle(373, 276, 8, { fill: "#ffffff" });
-      v.ellipse(290, 276, 54, 62, ink(LINE, 3, 0.2));
-      v.ellipse(372, 276, 54, 62, ink(LINE, 3, 0.2));
+      v.ellipse(290, 276, 27, 31, { fill: "#ffffff" });
+      v.ellipse(372, 276, 27, 31, { fill: "#ffffff" });
+      v.circle(294, 282, 13, { fill: LINE });
+      v.circle(368, 282, 13, { fill: LINE });
+      v.circle(299, 276, 4, { fill: "#ffffff" });
+      v.circle(373, 276, 4, { fill: "#ffffff" });
+      v.ellipse(290, 276, 27, 31, ink(LINE, 3, 0.2));
+      v.ellipse(372, 276, 27, 31, ink(LINE, 3, 0.2));
       // heavier line on the shadow side of the head
       v.curve(
         arcPts(330, 278, 100, 76, Math.PI * 0.55, Math.PI * 1.1, 8),
@@ -997,7 +997,7 @@ function alien(v: View): void {
           brush: { preset: "airbrush", opacity: 0.55 },
           gesture: { pressure: "even" },
         });
-        v.ellipse(cx, 314, 20, 10, { fill: "#f4a0a4" });
+        v.ellipse(cx, 314, 10, 5, { fill: "#f4a0a4" });
       }
       // smile
       v.curve(
@@ -1038,7 +1038,7 @@ function fireflies(v: View): void {
       brush: { preset: "airbrush", opacity: 0.55, blend: "screen" },
       gesture: { pressure: "even" },
     });
-    v.circle(x, y, 5, { fill: "#fffbe0" });
+    v.circle(x, y, 2.5, { fill: "#fffbe0" });
   }
 }
 

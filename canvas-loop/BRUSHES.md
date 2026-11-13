@@ -15,7 +15,7 @@ const INK: Style = {
 
 v.background("#f6f2e7");
 v.curve([[40, 80], [120, 40], [200, 90]], false, INK);         // a smooth curve through the points
-v.circle(260, 70, 40, INK);                                    // any stroked shape takes the brush
+v.circle(260, 70, 20, INK);                                    // any stroked shape takes the brush
 v.line(40, 120, 300, 120, { stroke: "#1d2a44", weight: 4 });   // no brush: a plain Canvas2D stroke
 ```
 
@@ -240,8 +240,8 @@ Safari 18 ignore effects.
 
 ## Gradients and paper texture
 
-- `ellipseGradient(x, y, w, h, stops)` is a radial gradient that fills an
-  ellipse of width `w` and height `h` (like `ellipse`), for flat pools of
+- `ellipseGradient(x, y, rx, ry, stops)` is a radial gradient that fills an
+  ellipse with radii `rx` and `ry` (like `ellipse`), for flat pools of
   light and oval glows. `radialGradient` is always circular.
 - `paperTexture(amount)` shows the paper's tooth across everything drawn so
   far, so flat fills and gradients look printed on paper. Call it last;

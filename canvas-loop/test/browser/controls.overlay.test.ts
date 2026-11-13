@@ -62,3 +62,31 @@ test("showing the param's value clears a stale invalid mark", () => {
   assert.equal(input.attributes.has("aria-invalid"), false);
   teardown();
 });
+
+test("a text param places a native text box that sends every edit, empty included", () => {
+  const mount = new FakeElement("div");
+  const seen: string[] = [];
+  const module = {
+    params: { answer: { type: "text", default: "", placeholder: "number or calculation", maxLength: 20, panel: false } },
+    canvas: { width: 200, height: 100 },
+    init: () => ({ answer: "" }),
+    update: (model: { answer: string }, msg: { type: string; name?: string; value?: unknown }) => {
+      if (msg.type === "param" && typeof msg.value === "string") seen.push(msg.value);
+      return { ...model };
+    },
+    draw: (v: View) => v.control("answer", { x: 20, y: 40, w: 120, h: 24 }),
+  };
+  const teardown = mountSketch(asHTMLElement(mount), { module });
+  const input = mount.find((el) => el.className.includes("cl-overlay-input"));
+  assert.ok(input !== null);
+  assert.equal(input.tagName, "input");
+  assert.equal(input.type, "text");
+  assert.equal(input.attributes.get("aria-label"), "answer");
+  for (const typed of ["3", "30/4", ""]) {
+    input.value = typed;
+    for (const fn of input.listeners.get("input") ?? []) fn({});
+  }
+  runFrames(2);
+  assert.deepEqual(seen, ["3", "30/4", ""]);
+  teardown();
+});

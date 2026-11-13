@@ -214,7 +214,7 @@ function drawCell(v: View, a: { e: ElementData; info: PropInfo }): void {
   v.text(a.e.symbol, { x: x + 6, y: y + 5 }, { size: 18, style: "bold", fill: fg });
   v.text(String(a.e.z), { x: x + CELL - 5, y: y + 6 }, { size: 9, fill: dark ? "#dbeafe" : "#475569", align: "right" });
   v.text(formatValue(value, a.info), { x: x + CELL / 2, y: y + CELL - 6 }, { size: 11, fill: fg, align: "center", valign: "bottom" });
-  if (hasNote) v.circle(x + CELL - 8, y + CELL - 9, 7, { fill: HOVER, stroke: PAGE, weight: 1 });
+  if (hasNote) v.circle(x + CELL - 8, y + CELL - 9, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
 }
 
 function drawDBlock(v: View): void {
@@ -274,7 +274,7 @@ function drawLegend(v: View, info: PropInfo): void {
   }
   const unit = info.unit === "" ? "" : ` (${info.unit})`;
   v.text(`${info.label}${unit}: darker = larger`, { x, y: y - 6 }, { ...SMALL, valign: "bottom" });
-  v.circle(x + w - 190, y - 13, 7, { fill: HOVER, stroke: PAGE, weight: 1 });
+  v.circle(x + w - 190, y - 13, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
   v.text("note: hover to read", { x: x + w - 182, y: y - 13 }, { ...SMALL, valign: "middle" });
   v.rect(x + w - 70, y - 18, 10, 10, { fill: NO_VALUE });
   v.text("no value", { x: x + w - 56, y: y - 13 }, { ...SMALL, valign: "middle" });
@@ -376,9 +376,9 @@ function drawChart(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byP
     }
     const y = valueY(value, a.info);
     const i = ELEMENTS.indexOf(e);
-    if (i === a.model.selected) v.circle(x, y, 20, { stroke: INK, weight: 2.5 });
-    if (i === a.model.hover && i !== a.model.selected) v.circle(x, y, 20, { stroke: HOVER, weight: 2.5 });
-    v.circle(x, y, 11, { fill: rampAt(norm(value, a.info)), stroke: INK, weight: 1.5 });
+    if (i === a.model.selected) v.circle(x, y, 10, { stroke: INK, weight: 2.5 });
+    if (i === a.model.hover && i !== a.model.selected) v.circle(x, y, 10, { stroke: HOVER, weight: 2.5 });
+    v.circle(x, y, 5.5, { fill: rampAt(norm(value, a.info)), stroke: INK, weight: 1.5 });
   }
   const axisName = a.byPeriod ? "group" : "period";
   v.text(axisName, { x: PLOT.x + PLOT.w / 2, y: PLOT.y + PLOT.h + 40 }, { ...SMALL, align: "center" });

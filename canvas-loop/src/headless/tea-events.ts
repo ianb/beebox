@@ -1,3 +1,4 @@
+import { checkParam } from "../browser/param-validate.js";
 import { EventScriptError } from "./errors.js";
 import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 
@@ -82,6 +83,11 @@ function validateParamValue(params: { param: ParamDecl; name: string; value: unk
         });
       }
       return value;
+    case "text": {
+      const check = typeof value === "string" ? checkParam(param, value) : { ok: false as const, reason: "expects a string" };
+      if (!check.ok) throw new EventScriptError({ detail: `${where}: param "${name}" ${check.reason}` });
+      return check.value;
+    }
   }
 }
 

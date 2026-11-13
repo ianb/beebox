@@ -58,7 +58,7 @@ function wiggle(s: Scene, id: Id): number {
 }
 
 function puff(v: View, x: number, y: number, r: number, alpha: number): void {
-  v.circle(x, y, r * 2, { fill: `rgba(250,250,250,${alpha.toFixed(3)})` });
+  v.circle(x, y, r, { fill: `rgba(250,250,250,${alpha.toFixed(3)})` });
 }
 
 function drops(
@@ -66,7 +66,7 @@ function drops(
   color: string,
   pts: readonly (readonly [number, number])[],
 ): void {
-  for (const [x, y] of pts) v.ellipse(x, y, 4, 6, { fill: color });
+  for (const [x, y] of pts) v.ellipse(x, y, 2, 3, { fill: color });
 }
 
 const bell = (t: number, a: number, b: number): number =>
@@ -93,7 +93,7 @@ export function chimney(v: View, s: Scene): void {
     for (let i = 0; i < 3; i += 1) {
       const k = t * 1.6 - i * 0.25;
       if (k <= 0 || k >= 1) continue;
-      v.ellipse(186 + k * 20, 190 - k * 150, 18 + k * 50, 8 + k * 20, {
+      v.ellipse(186 + k * 20, 190 - k * 150, (18 + k * 50) / 2, (8 + k * 20) / 2, {
         stroke: `rgba(90,80,90,${(0.8 * (1 - k)).toFixed(3)})`,
         weight: 5 * (1 - k) + 1,
       });
@@ -170,10 +170,10 @@ export function windowAndGoat(v: View, s: Scene): void {
       stroke: "#3f7a3a",
       weight: 2,
     });
-    v.circle(fx + sway, y + 67 - tall, 9 + grow * 3 + s.bloom, {
+    v.circle(fx + sway, y + 67 - tall, (9 + grow * 3 + s.bloom) / 2, {
       fill: colors[i] ?? "#e84a6a",
     });
-    v.circle(fx + sway, y + 67 - tall, 3, { fill: "#fff3b0" });
+    v.circle(fx + sway, y + 67 - tall, 1.5, { fill: "#fff3b0" });
   }
 }
 
@@ -335,7 +335,7 @@ export function painter(v: View, s: Scene): void {
   if (!hang) {
     // idle: the brush arm dabs, leaving a dab of yellow on the wall
     const dab = Math.sin(s.frame * 0.12);
-    v.ellipse(592 + dab * 2, 382 + dab * 7, 7, 10, {
+    v.ellipse(592 + dab * 2, 382 + dab * 7, 3.5, 5, {
       fill: "rgba(247,214,92,0.9)",
     });
   }
@@ -358,12 +358,12 @@ export function bucket(v: View, s: Scene): void {
     const k = Math.min(1, (t - 0.12) / 0.2);
     const fade = t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
     const splash = { fill: `rgba(247,214,92,${(0.95 * fade).toFixed(3)})` };
-    v.ellipse(618, 580, 10 + k * 56, 6 + k * 12, splash);
+    v.ellipse(618, 580, (10 + k * 56) / 2, (6 + k * 12) / 2, splash);
     for (let i = 0; i < 6; i += 1)
       v.circle(
         600 + i * 8 + k * 10,
         572 - Math.sin(i * 2.1) * 6 * k,
-        4 + (i % 2) * 2,
+        (4 + (i % 2) * 2) / 2,
         splash,
       );
   }
@@ -462,8 +462,8 @@ export function lamp(v: View, s: Scene): void {
       v.ellipse(
         609 + Math.cos(a) * (18 + i * 6),
         398 + Math.sin(a * 1.3) * 12,
-        5,
-        3,
+        2.5,
+        1.5,
         { fill: "#5a4a3a" },
       );
     }
@@ -532,7 +532,7 @@ export function clockHands(v: View, s: Scene): void {
     stroke: "#3b2a24",
     weight: 3,
   });
-  v.circle(cx, cy, 6, { fill: "#c23b3b" });
+  v.circle(cx, cy, 3, { fill: "#c23b3b" });
   if (s.hover === "clock" && t === null) {
     v.image(S.glint(v), cx + 16, cy - 30, {
       opacity: 0.6 + Math.sin(s.frame * 0.3) * 0.4,
@@ -609,7 +609,7 @@ export function flag(v: View, s: Scene): void {
     weight: 1.5,
   });
   const mid = Math.sin(s.frame * speed - 2.5) * amp * 0.5;
-  v.circle(902 + len * 0.5, 60 + mid, 13, { fill: "#f2c84b" });
+  v.circle(902 + len * 0.5, 60 + mid, 6.5, { fill: "#f2c84b" });
   v.rect(898 + len * 0.5, 50 + mid, 8, 4, { fill: "#8a5a3a" });
 }
 
@@ -640,8 +640,8 @@ export function duck(v: View, s: Scene): void {
   );
   put(v, S.benchSeat(v), { x: 880, y: 538, px: 0, py: 0 });
   const kick = Math.sin(s.frame * (quack ? 0.5 : 0.08)) * 3;
-  v.ellipse(x - 8 + kick, 556 + Math.min(0, jump), 13, 6, { fill: "#f29a2e" });
-  v.ellipse(x + 8 - kick, 556 + Math.min(0, jump), 13, 6, { fill: "#f29a2e" });
+  v.ellipse(x - 8 + kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" });
+  v.ellipse(x + 8 - kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" });
 }
 
 // ── The road ───────────────────────────────────────────────────────
@@ -669,7 +669,7 @@ export function manhole(v: View, s: Scene): void {
     return;
   }
   const up = bell(t, 0.05, 0.92);
-  v.ellipse(cx, cy, 54, 14, { fill: "#1f1f26" });
+  v.ellipse(cx, cy, 27, 7, { fill: "#1f1f26" });
   v.clip(
     [
       [cx - 40, cy - 80],
@@ -726,7 +726,7 @@ export function bus(v: View, s: Scene): void {
     put(v, S.wheel(v), { x: x + wx, y: y + 98, px: 15, py: 15, rot: turn });
   if (t !== null && t > 0.6) {
     // a passenger waves out of the window on the way back
-    v.circle(x + 34 + Math.sin(s.frame * 0.4) * 4, y + 8, 8, {
+    v.circle(x + 34 + Math.sin(s.frame * 0.4) * 4, y + 8, 4, {
       fill: "#f4b6b4",
     });
   }
@@ -888,7 +888,7 @@ export function rain(v: View, frame: number): void {
   }
   for (let i = 0; i < 8; i += 1) {
     const k = ((frame + i * 13) % 40) / 40;
-    v.ellipse(60 + i * 123, i % 2 === 0 ? 590 : 728, 6 + k * 22, 2 + k * 6, {
+    v.ellipse(60 + i * 123, i % 2 === 0 ? 590 : 728, (6 + k * 22) / 2, (2 + k * 6) / 2, {
       stroke: "rgba(220,235,250,0.5)",
       weight: 1.5,
     });

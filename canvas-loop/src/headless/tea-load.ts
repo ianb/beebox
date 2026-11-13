@@ -72,6 +72,27 @@ function selectParam(record: Record<string, unknown>, where: string): ParamDecl 
   return { type: "select", options, default: fallback };
 }
 
+function textParam(record: Record<string, unknown>, where: string): ParamDecl {
+  const fallback = record["default"];
+  if (typeof fallback !== "string") throw new CliError({ detail: `${where}: text param "default" must be a string ("" for empty)` });
+  const decl: ParamDecl = { type: "text", default: fallback };
+  const { placeholder, multiline, maxLength } = record;
+  if (placeholder !== undefined) {
+    if (typeof placeholder !== "string") throw new CliError({ detail: `${where}: "placeholder" must be a string` });
+    decl.placeholder = placeholder;
+  }
+  if (multiline !== undefined) {
+    if (typeof multiline !== "boolean") throw new CliError({ detail: `${where}: "multiline" must be a boolean` });
+    decl.multiline = multiline;
+  }
+  if (maxLength !== undefined) {
+    if (typeof maxLength !== "number" || !Number.isInteger(maxLength) || maxLength < 1) throw new CliError({ detail: `${where}: "maxLength" must be a whole number of at least 1` });
+    if (fallback.length > maxLength) throw new CliError({ detail: `${where}: "default" is longer than "maxLength"` });
+    decl.maxLength = maxLength;
+  }
+  return decl;
+}
+
 function parseParam(raw: unknown, name: string): ParamDecl {
   const where = `params.${name}`;
   if (!isRecord(raw)) throw new CliError({ detail: `${where} must be an object` });
@@ -98,10 +119,12 @@ function parseParamKind(raw: Record<string, unknown>, where: string): ParamDecl 
       return booleanParam(raw, where);
     case "select":
       return selectParam(raw, where);
+    case "text":
+      return textParam(raw, where);
     case "trigger":
       return { type: "trigger" };
     default:
-      throw new CliError({ detail: `${where}: "type" must be number|boolean|select|trigger` });
+      throw new CliError({ detail: `${where}: "type" must be number|boolean|select|text|trigger` });
   }
 }
 

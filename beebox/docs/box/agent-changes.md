@@ -11,6 +11,7 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-13 (6e657a83d): canvas-loop `v.circle` and `v.ellipse` take radii, so older figures draw them twice as big. `text` params give a typed box; `u.textBounds` measures in `update`. See `canvas-loop.md`.
 - 2026-11-12 (339551c2a): canvas-loop brushes vary their colour per dab or bristle (`hueJitter`, `lightJitter`), and two new presets move paint already drawn: `smudge` and `wet`. See `canvas-loop.md`.
 - 2026-11-12 (d2fad3a5f): canvas-loop figures play recorded sounds by name (`kind: "sample"`, `name: "ding"`) and instrument notes (`kind: "note"`, `instrument: "marimba"`, `u.scaleNote(step)`). "Choosing sounds" says which to use. See `canvas-loop.md`.
 - 2026-11-12 (5af9fc687): Views and figures import shared code as `@/src/lib/…` from the box root. A view shows a figure with `<CardRef cardRef=… embed />`. See `views.md`.

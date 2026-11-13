@@ -74,17 +74,31 @@ export interface SelectParam extends ParamText {
   options: readonly string[];
   default: string;
 }
+/**
+ * Typed text: `{ type: "text", default, placeholder?, multiline?, maxLength? }`.
+ * A native text box (a textarea with `multiline`); empty is allowed. Each edit
+ * arrives as a `param` msg, and a link can set it like any other param.
+ */
+export interface TextParam extends ParamText {
+  type: "text";
+  default: string;
+  /** Grey words shown while the box is empty. */
+  placeholder?: string;
+  multiline?: boolean;
+  /** The longest value accepted; the box stops typing there and a longer value is rejected. */
+  maxLength?: number;
+}
 /** A fire-and-forget button — no value, arrives only as a `trigger` Msg. */
 export interface TriggerParam extends ParamText {
   type: "trigger";
 }
-export type ParamDecl = NumberParam | BooleanParam | SelectParam | TriggerParam;
+export type ParamDecl = NumberParam | BooleanParam | SelectParam | TextParam | TriggerParam;
 
 /** A sketch's `params` export: a record of named parameter declarations. */
 export type ParamsDecl = Record<string, ParamDecl>;
 
 // Value type for a single declaration: number→number, boolean→boolean,
-// select→the union of its options (literal when declared `as const`), and
+// select→the union of its options (literal when declared `as const`), text→string, and
 // triggers carry no value (filtered out of ParamValues below).
 type ParamValue<P extends ParamDecl> = P extends NumberParam
   ? number
@@ -92,7 +106,9 @@ type ParamValue<P extends ParamDecl> = P extends NumberParam
     ? boolean
     : P extends SelectParam
       ? P["options"][number]
-      : never;
+      : P extends TextParam
+        ? string
+        : never;
 
 /**
  * The resolved parameter values a sketch reads: `u.params` in `update` and the
@@ -163,6 +179,17 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * a `note` voice: `u.scaleNote(model.count)`.
    */
   scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string;
+  /**
+   * The width `v.text` gives `content` with these options, measured without
+   * drawing (cached), so hit areas and layout in `update` match what `draw` shows.
+   */
+  textWidth(content: string, options?: TextOptions): number;
+  /**
+   * The bounds `v.text(content, box, options)` would draw, measured without
+   * drawing: wrapping, `fit` and `keepInside` included, as for text drawn
+   * without a `v.at` transform.
+   */
+  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
 }
 
 /**
@@ -178,8 +205,10 @@ export interface View {
   rect(x: number, y: number, w: number, h: number, style: Style): void;
   /** A rectangle with corners rounded to `radius`. */
   roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): void;
-  circle(x: number, y: number, diameter: number, style: Style): void;
-  ellipse(x: number, y: number, w: number, h: number, style: Style): void;
+  /** A circle of `radius` around (x, y). Round shapes take radii: `circle`, `ellipse`, `arc`, the gradients. */
+  circle(x: number, y: number, radius: number, style: Style): void;
+  /** An ellipse with radii `rx` (across) and `ry` (down) around (x, y). */
+  ellipse(x: number, y: number, rx: number, ry: number, style: Style): void;
   line(x1: number, y1: number, x2: number, y2: number, style: Style): void;
   triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style: Style): void;
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style: Style): void;
@@ -199,8 +228,8 @@ export interface View {
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
-  /** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
-  ellipseGradient(x: number, y: number, w: number, h: number, stops: readonly ColorStop[]): RadialGradient;
+  /** A radial gradient filling an ellipse with radii `rx` and `ry` around (x, y), like `ellipse`. */
+  ellipseGradient(x: number, y: number, rx: number, ry: number, stops: readonly ColorStop[]): RadialGradient;
   /**
    * Write text at a point (`{x, y}`) or in a box (`{x, y, w, h}`: wrap, align,
    * valign, fit). Options left out take the defaults: size 12, sans-serif,

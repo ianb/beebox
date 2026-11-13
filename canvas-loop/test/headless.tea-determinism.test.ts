@@ -79,7 +79,7 @@ test("a different seed changes the output", () => {
     update: (model: { x: number }) => model,
     draw: (v: View, model: { x: number }) => {
       v.background("#000000");
-      v.circle(model.x, 10, 8, { fill: "#ffffff" });
+      v.circle(model.x, 10, 4, { fill: "#ffffff" });
     },
   });
   const dir42 = tmpDir();

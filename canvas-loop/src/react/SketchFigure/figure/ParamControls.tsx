@@ -44,6 +44,38 @@ function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onP
   );
 }
 
+/**
+ * A text box: keeps what the person typed as its own draft and sends every
+ * edit. The runtime echoes values back a frame later, so showing `model.value`
+ * would undo keystrokes typed in between. A value that is not one of those
+ * echoes came from elsewhere (a controlling host) and replaces the draft.
+ */
+function TextRow(props: { model: Extract<ControlModel, { kind: "text" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+  const { model } = props;
+  const [draft, setDraft] = useState(model.value);
+  const [seen, setSeen] = useState(model.value);
+  const [sent, setSent] = useState<readonly string[]>([]);
+  if (model.value !== seen) {
+    setSeen(model.value);
+    const echo = sent.indexOf(model.value);
+    setSent(echo === -1 ? [] : sent.slice(echo + 1));
+    if (echo === -1) setDraft(model.value);
+  }
+  const onChange = (value: string): void => {
+    setDraft(value);
+    setSent((before) => [...before, value]);
+    props.onParam(model.name, value);
+  };
+  const shared = { className: "cl-text", value: draft, placeholder: model.placeholder, maxLength: model.maxLength, spellCheck: false };
+  return (
+    <label className="cl-param-row">
+      <span className="cl-param-name">{model.label}</span>
+      {model.multiline ? <textarea {...shared} onChange={(e) => onChange(e.target.value)} /> : <input type="text" {...shared} onChange={(e) => onChange(e.target.value)} />}
+      <Hint hint={model.hint} />
+    </label>
+  );
+}
+
 function Hint(props: { hint: string | undefined }): JSX.Element | null {
   return props.hint === undefined ? null : <span className="cl-param-hint">{props.hint}</span>;
 }
@@ -118,6 +150,8 @@ function ControlRow(props: { model: ControlModel; onParam: ParamControlsProps["o
       return <BooleanRow model={model} onParam={props.onParam} />;
     case "select":
       return <SelectRow model={model} onParam={props.onParam} />;
+    case "text":
+      return <TextRow model={model} onParam={props.onParam} />;
     case "trigger":
       return <TriggerRow model={model} onTrigger={props.onTrigger} />;
   }

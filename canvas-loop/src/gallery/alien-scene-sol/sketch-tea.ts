@@ -34,7 +34,7 @@ function mark(
 }
 
 function dot(v: View, x: number, y: number, r: number, color: string): void {
-  v.circle(x, y, r * 2, { fill: color });
+  v.circle(x, y, r, { fill: color });
 }
 
 export const canvas = { width: 700, height: 700 };
@@ -99,7 +99,7 @@ export function draw(v: View): void {
     });
   });
   dot(v, 542, 133, 55, "#ffe1ad");
-  v.circle(542, 133, 108, { stroke: "#fff2cf", weight: 3, brush: "chalk" });
+  v.circle(542, 133, 54, { stroke: "#fff2cf", weight: 3, brush: "chalk" });
   v.group({ opacity: 0.28 }, () => {
     mark(v, [P(513, 114), P(527, 106), P(545, 109)], "#dfac8e", 8, "wash");
     mark(v, [P(548, 154), P(563, 145), P(579, 148)], "#dfac8e", 10, "wash");
@@ -290,7 +290,7 @@ export function draw(v: View): void {
   dot(v, 597, 230, 3, "#b9d67b");
 
   // Cast shadow, legs, and a little satchel precede the body.
-  v.ellipse(266, 615, 218, 31, { fill: "#304f51" });
+  v.ellipse(266, 615, 109, 15.5, { fill: "#304f51" });
   shape(
     v,
     [P(214, 545), P(242, 543), P(243, 591), P(234, 605), P(214, 598)],

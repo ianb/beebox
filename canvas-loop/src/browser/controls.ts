@@ -1,6 +1,6 @@
 // Auto-generated control panel — the design's core claim that data flow is data.
 // Given a sketch's `params` declaration, this emits plain HTML inputs (range /
-// checkbox / select / button); no widget library, no two-way binding. A widget
+// checkbox / select / text / button); no widget library, no two-way binding. A widget
 // edit calls back into the runtime's `setParam`/`trigger` — the SAME path a
 // scripted event takes — so widgets dispatch, they never touch model state. The
 // declaration → control resolution lives in controls-model.ts, shared with the
@@ -102,6 +102,19 @@ function selectInput(deps: Deps<"select">): HTMLSelectElement {
   return select;
 }
 
+/** A text box (a textarea when multi-line): sends every edit, empty included. */
+function textInput(deps: Deps<"text">): HTMLInputElement | HTMLTextAreaElement {
+  const { model } = deps;
+  const input = model.multiline ? document.createElement("textarea") : Object.assign(document.createElement("input"), { type: "text" });
+  input.className = `${deps.prefix}text`;
+  input.value = model.value;
+  if (model.placeholder !== undefined) input.placeholder = model.placeholder;
+  if (model.maxLength !== undefined) input.maxLength = model.maxLength;
+  input.spellcheck = false;
+  input.addEventListener("input", () => deps.onParam(model.name, input.value));
+  return input;
+}
+
 function triggerButton(deps: { model: Extract<ControlModel, { kind: "trigger" }>; onTrigger: ControlDeps["onTrigger"]; prefix: string }): HTMLButtonElement {
   const { model } = deps;
   const button = document.createElement("button");
@@ -133,10 +146,10 @@ export interface BareInput {
   show: (model: ControlModel) => void;
 }
 
-function shower(element: HTMLInputElement | HTMLSelectElement): BareInput["show"] {
+function shower(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): BareInput["show"] {
   return (model) => {
     if (document.activeElement === element) return;
-    if (model.kind !== "number" && model.kind !== "select") return;
+    if (model.kind !== "number" && model.kind !== "select" && model.kind !== "text") return;
     const value = String(model.value);
     if (element.value !== value) element.value = value;
     element.removeAttribute("aria-invalid");
@@ -166,6 +179,10 @@ export function bareInput(deps: { model: ControlModel; onParam: ControlDeps["onP
         const select = selectInput({ model, onParam, prefix });
         return { element: select, show: shower(select) };
       }
+      case "text": {
+        const input = textInput({ model, onParam, prefix });
+        return { element: input, show: shower(input) };
+      }
       case "trigger":
         return { element: triggerButton({ model, onTrigger: deps.onTrigger, prefix }), show: () => {} };
     }
@@ -184,6 +201,8 @@ function controlFor(deps: { model: ControlModel; onParam: ControlDeps["onParam"]
       return row(model, { control: checkboxInput({ model, onParam: deps.onParam, prefix }), prefix });
     case "select":
       return row(model, { control: selectInput({ model, onParam: deps.onParam, prefix }), prefix });
+    case "text":
+      return row(model, { control: textInput({ model, onParam: deps.onParam, prefix }), prefix });
     case "trigger": {
       const wrap = document.createElement("div");
       wrap.className = `${prefix}param-row`;
