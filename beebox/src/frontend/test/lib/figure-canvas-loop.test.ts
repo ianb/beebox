@@ -12,6 +12,7 @@ import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import type { EmittedEvent, MountSketchOptions } from "@ianbicking/canvas-loop/browser";
 import { wrapCanvasLoopLib } from "../../src/lib/figure-canvas-loop.js";
+import type { ActivityReport } from "../../src/lib/activity/page-queue.js";
 
 /** A stand-in canvas-loop namespace that records each `mountSketch` call's options. */
 function fakeLib() {
@@ -83,4 +84,33 @@ void test("a long detail is capped at 200 characters", async (t) => {
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["n".repeat(300)] });
   t.check(details, [`pressed ${"n".repeat(191)}…`]);
+});
+
+// The figure's own card is the entry's `card`; the card that shows it (a view
+// embedding the figure) is `via`; the sketch's `activity(model)` value rides
+// along as `activity`. Events with nothing handled log nothing.
+void test("activity entries carry card, via and the sketch's activity", async (t) => {
+  const pushed: ActivityReport[] = [];
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], activityLog: { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", push: (report) => { pushed.push(report); } } });
+  wrapped.mountSketch(mount, { module: {} });
+  calls[0]?.onEvent?.({ frame: 1, type: "mousedown", x: 4, y: 5, handled: ["add H"], changed: true, activity: { molecules: ["H2"] } });
+  calls[0]?.onEvent?.({ frame: 2, type: "mousemove", x: 4, y: 6 });
+  calls[0]?.onEvent?.({ frame: 3, type: "param", name: "mass", value: 2 });
+  t.check(pushed, [
+    { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", kind: "explored", detail: "pressed add H", activity: { molecules: ["H2"] } },
+    { card: "Chem/Molecules.figure.card", via: "Chem/Lab.view.card", kind: "explored", detail: "set mass = 2" },
+  ]);
+});
+
+void test("a figure shown on its own page logs without via and keeps the latest-wins report", async (t) => {
+  const pushed: ActivityReport[] = [];
+  const reported: string[] = [];
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [],
+    reportActivity: (kind, detail) => { reported.push(`${kind}: ${detail ?? ""}`); },
+    activityLog: { card: "Molecules.figure.card", push: (report) => { pushed.push(report); } } });
+  wrapped.mountSketch(mount, { module: {} });
+  calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["tare"] });
+  t.check({ pushed, reported }, { pushed: [{ card: "Molecules.figure.card", kind: "explored", detail: "pressed tare" }], reported: ["explored: pressed tare"] });
 });

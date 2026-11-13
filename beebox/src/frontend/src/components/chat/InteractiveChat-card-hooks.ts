@@ -9,7 +9,7 @@ import { useRef, useCallback } from "react";
 import { systemCardAttentionRef } from "../../lib/system-card-navigation";
 import type { ViewTarget } from "../../lib/view-url";
 import { CardActivityStore } from "./conversation/card-activity-store";
-import type { ActivityKind, ChatSendContext } from "@core/chat/card-activity.js";
+import type { ActivityKind, ChatSendContext, ReportActivity } from "@core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 
 /** What `useCardSend` carries on a SEND event: `ChatSendContext` (open card +
@@ -32,8 +32,10 @@ export function cardActivitySource(target: ViewTarget): string {
  * its own, so a background card (the other pane, a figure still running)
  * reports under its own name and never under the focused card's.
  */
-export function bindCardActivity(report: CardActivityReport, target: ViewTarget): (kind: ActivityKind, detail?: string) => void {
+export function bindCardActivity(report: CardActivityReport, target: ViewTarget): ReportActivity {
   const source = cardActivitySource(target);
+  // The third argument (`activity`) is for the log, which the view's own
+  // wrapper (AgentViewRenderer) writes; this bound reporter is the snapshot.
   return (kind, detail) => { report(source, { kind, ...(detail === undefined ? {} : { detail }) }); };
 }
 

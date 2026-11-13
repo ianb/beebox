@@ -125,7 +125,7 @@ The default export receives a \`ViewProps\` object:
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
 | \`viewHistory\` | { state, canPush, pushState, replaceState } | Explicit JSON-safe navigation state. Read \`state\`; use \`pushState(next)\` for a new Back/Forward entry or \`replaceState(next)\` to normalize the current entry. Check \`canPush\` when the UI depends on browser history. Do not call \`window.history\` directly. |
-| \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card; see "Reporting Card Activity". A no-op elsewhere, so always safe to call. |
+| \`reportActivity\` | (kind, detail?, activity?) => void | When open in the chat companion pane, tell the agent the user touched this card; see "Reporting Card Activity". A no-op elsewhere, so always safe to call. |
 
 \`viewHistory\` is opt-in persistence for meaningful view navigation, not a
 snapshot of React state. Values must be JSON-safe objects. Validate members
@@ -258,28 +258,31 @@ If your view is meant to be opened beside the chat — a companion view the user
 
 The signal reaches the agent as read-only \`<card-activity kind="…">\` child elements of the per-turn snapshot — one per kind (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), with the element text being your optional free-text **detail** for that kind. \`reportActivity\` is a no-op outside the companion pane, so it's always safe to call.
 
+**Every call is also kept.** Besides that latest-per-kind snapshot, each call is appended to the activity log, and the agent lists the actions with \`bbx chat activity\` when it wants them. The optional third argument is a small JSON object kept with the action (\`reportActivity("explored", "added H", { atoms: ["C", "H"] })\`). Report meaningful actions, not every keystroke: a call per keystroke fills the log.
+
 **What's automatic vs. what you wire:**
 - \`modified\` — automatic. A successful \`writeFile\`/\`appendFile\`/\`commitFile\` reports it with the path; don't call it yourself.
-- \`scrolled\` — automatic (the pane watches its own scroll).
+- \`scrolled\` — automatic (the pane watches its own scroll). The log keeps only the topmost visible heading (h1–h4) once scrolling settles, so give long content headings.
 - \`explored\` — **you call it.** This is the important one: fire it when the user changes what the view is *showing* without changing data — the query they typed, a filter, a selected tab, a slider — and pass a detail describing the new state.
 - \`navigated\` — automatic when a link inside the view opens another card.
 
 **How to write the detail.** Report \`explored\` from your *primary* inputs, not every control. The detail is a short, human-legible line of what the user is now looking at — the input plus the salient result — because that exact string is what the agent reads (the \`<card-activity>\` element text). Keep it terse (a hint, not a dump): \`boat-water+road -> boats (0.568)\`, not the whole result list.
 
-**Pattern: report from a text input as the user types.** Reporting on every keystroke is fine — details overwrite per kind, so \`b\`,\`bo\`,\`boat\` collapse to the final state; no debounce needed.
+**Pattern: report from a text input once the user pauses.** The snapshot keeps only the last detail per kind, but the log keeps every call, so debounce (about a second) rather than reporting each keystroke.
 
 \`\`\`tsx
 function NearestNeighbors({ reportActivity }) {
   const [query, setQuery] = useState("king");
   const results = useNearest(query); // your computation
 
-  // Tell the chat agent what the user is exploring + the top hit.
+  // Tell the chat agent what the user is exploring + the top hit, once they pause.
   useEffect(() => {
     const q = query.trim();
     if (!q) return;
     const top = results[0];
     const detail = top ? q + " -> " + top.word + " (" + top.sim.toFixed(3) + ")" : q;
-    reportActivity("explored", detail);
+    const timer = setTimeout(() => reportActivity("explored", detail), 1000);
+    return () => clearTimeout(timer);
   }, [query, results, reportActivity]);
 
   return <input value={query} onChange={(e) => setQuery(e.target.value)} />;

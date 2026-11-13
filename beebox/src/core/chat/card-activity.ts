@@ -33,6 +33,13 @@ import { ACTIVITY_KINDS, type ActivityKind } from "../../shared/card-activity-ki
 
 export { type ActivityKind };
 
+/**
+ * What a view calls to say the person touched its card: the kind, a short
+ * detail for the next message's snapshot, and an optional small JSON object
+ * kept in the activity log for the agent (plan `docs/plans/activity-log.md`).
+ */
+export type ReportActivity = (...args: [kind: ActivityKind, detail?: string, activity?: Record<string, unknown>]) => void;
+
 const ACTIVITY_KIND_SET: ReadonlySet<string> = new Set(ACTIVITY_KINDS);
 
 /** True if the string is one of the four recognized activity kinds. */

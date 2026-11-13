@@ -10,7 +10,7 @@ import { useCardIdentities } from "../../../../hooks/useCardIdentities";
 import { cardTypeFromName } from "@shared/card-name";
 import { CardVisibilityProvider } from "../../everywhere/card-context/context";
 import { useWorkspace } from "../WorkspaceProvider/provider";
-import { WorkspacePaneContext } from "../use-open-beside/hook";
+import { PaneScope } from "./PaneScope";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
 import { isWorkspacePdf } from "./pdf-pane-view";
 import { workspacePanelId, workspaceTabId } from "../address";
@@ -24,6 +24,8 @@ import { withoutFragment } from "../../../../lib/view-url";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
+import { useActivityLogger } from "../../../../lib/activity/scope";
+import { useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
@@ -33,6 +35,8 @@ interface CardCallbacks {
 
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity: reportBySource }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
   const reportActivity = bindCardActivity(reportBySource, tab.target);
+  const logActivity = useActivityLogger();
+  const logScrollHeading = useHeadingScrollLog(tab.target.path);
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
   const { boxSlug } = useParams({ strict: false });
@@ -48,7 +52,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
     onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
     onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
     onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
-    onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
+    onNavigate={(target, hint) => { reportActivity("navigated", target.path); logActivity({ card: tab.target.path, kind: "navigated", detail: target.path }); workspace.open(target, { ...hint, originatingPane: pane }); }}
     onAddSelection={onAddSelection} reportActivity={reportActivity} />;
   // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
@@ -68,11 +72,12 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
         if (!visible) return;
         const node = event.currentTarget;
         reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
+        logScrollHeading(node);
       }}>
       {/* A neutral desk is a material the system theme may ink; a card sets its own. */}
-      <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
+      <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><PaneScope pane={pane} card={tab.target.path}>
         {fileView}
-      </WorkspacePaneContext.Provider></CardVisibilityProvider></MaterialContext.Provider>
+      </PaneScope></CardVisibilityProvider></MaterialContext.Provider>
     </div>
     {/* Always mounted so a screen reader hears the text appear. Out of flow:
         the tab strip measures its row, and a child there would resize it. */}

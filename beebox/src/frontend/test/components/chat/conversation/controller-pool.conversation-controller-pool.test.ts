@@ -147,6 +147,7 @@ void test("An unrelated assignment cannot release a fresh conversation's follow-
         messageId: "first-start",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",
@@ -194,6 +195,7 @@ void test("Reload never turns a follow-up into a second fresh start", async (t) 
         messageId: "accepted-first",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",
@@ -261,6 +263,7 @@ void test("A first send during loading waits for the owning stream", async (t) =
         messageId: "early-first",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",
@@ -335,6 +338,7 @@ void test("Suspension releases a locally held follow-up without dispatch", async
         messageId: "before-suspend",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",
@@ -488,6 +492,7 @@ void test("Uncertain rejection releases waiters but keeps restart recovery-only"
         messageId: "uncertain-first",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",
@@ -576,6 +581,7 @@ void test("Accepted startup without init has a bounded visible wait and releases
         messageId: "no-init-first",
         contextDir: "_content",
         engine: "codex",
+        pendingChat: "logical-new",
         startup: false,
         binding: {
           boxSlug: "test1",

@@ -264,6 +264,7 @@ export const chatMachine = setup({
             ...(context.sessionInput === "new" && context.seedFeatures ? { seedFeatures: context.seedFeatures } : {}),
             ...(context.sessionInput === "new" && context.startEngine !== undefined ? { engine: context.startEngine } : {}),
             ...(context.sessionInput === "new" && context.startModel !== undefined ? { model: context.startModel } : {}),
+            ...(context.sessionInput === "new" && context.pendingChat !== undefined ? { pendingChat: context.pendingChat } : {}),
             ...cardFieldsFromEvent(event),
           };
         },

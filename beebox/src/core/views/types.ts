@@ -5,7 +5,7 @@
  * server-side with esbuild and rendered in the browser.
  */
 
-import type { ActivityKind } from "../chat/card-activity.js";
+import type { ReportActivity } from "../chat/card-activity.js";
 import type { ViewState } from "../../shared/view-state.js";
 
 export type { ViewState, ViewStateValue } from "../../shared/view-state.js";
@@ -87,7 +87,7 @@ export interface ViewProps {
    * with an optional free-text detail. A no-op outside the companion pane
    * (inline/page renders), so always safe to call.
    */
-  reportActivity: (kind: ActivityKind, detail?: string) => void;
+  reportActivity: ReportActivity;
 }
 
 export interface ViewCard {

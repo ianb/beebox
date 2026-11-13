@@ -10,7 +10,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
-import type { ActivityKind } from "@core/chat/card-activity.js";
+import type { ReportActivity } from "@core/chat/card-activity.js";
+import { usePaneCard, useActivityLogger } from "../../lib/activity/scope";
 import type { RealtimeEvent } from "../../hooks/useBusSubscription";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
@@ -70,7 +71,7 @@ interface ViewProps extends ViewFileHelpers {
    * `reportActivity("explored", "<what they're looking at>")`. A no-op outside
    * the companion pane (inline/page renders don't accumulate).
    */
-  reportActivity: (kind: ActivityKind, detail?: string) => void;
+  reportActivity: ReportActivity;
   /** `"strip"` when drawn in the conversation strip, else `"page"`. */
   mode: "page" | "strip";
 }
@@ -83,7 +84,7 @@ interface ViewProps extends ViewFileHelpers {
  */
 function withModifiedReporting(
   helpers: ViewFileHelpers,
-  report: (kind: ActivityKind, detail?: string) => void,
+  report: ReportActivity,
 ): ViewFileHelpers {
   return {
     ...helpers,
@@ -133,7 +134,7 @@ interface AgentViewRendererProps {
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** Companion-pane activity reporter; omitted for inline/page renders. */
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
+  reportActivity?: ReportActivity;
   /**
    * The surface's "open a card here" primitive — companion → onZoomView,
    * browse → swap the detail pane, page → push a route. Lifted into the view
@@ -333,7 +334,16 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   useLiveRefresh({ when: cardsChanged, refresh: refreshCards });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  const report = useCallback((kind: ActivityKind, detail?: string) => { reportActivity?.(kind, detail); }, [reportActivity]);
+  // The view's reporter keeps the latest-wins snapshot and, in the companion
+  // pane, logs every call except `scrolled` (the pane logs that itself).
+  const paneCard = usePaneCard();
+  const logActivity = useActivityLogger();
+  const report = useCallback<ReportActivity>((...[kind, detail, activity]) => {
+    if (reportActivity === undefined) return;
+    reportActivity(kind, detail, activity);
+    if (paneCard === null || kind === "scrolled") return;
+    logActivity({ card: paneCard, kind, ...(detail !== undefined ? { detail } : {}), ...(activity !== undefined ? { activity } : {}) });
+  }, [reportActivity, paneCard, logActivity]);
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewHistory = useViewHistory({ slug, state: viewState, canPush: canPushViewState, onChange: onViewStateChange });

@@ -30,6 +30,7 @@ import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { newMessageId } from "./components/chat/InteractiveChat-helpers";
 import { trpcClient } from "./lib/trpc/client";
+import { flushActivity } from "./lib/activity/page-queue";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";
@@ -37,6 +38,9 @@ import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnos
 import { maintenanceRetryDelayMs } from "./lib/maintenance-retry";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type AddedModel, type ChatAgentEngine } from "@shared/chat-models.js";
+
+/** Longest a send waits for queued activity to reach the box. */
+const ACTIVITY_FLUSH_MS = 1_000;
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -388,10 +392,18 @@ export async function startChatTurn(params: {
    */
   engine?: string;
   model?: string;
+  /**
+   * The page's key for this new conversation (session `"new"`), the same key
+   * it put on its activity entries; the box binds it to the session id.
+   */
+  pendingChat?: string;
 } & ChatSendContext): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, pendingChat, openCard, cardActivity, cardState } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? newMessageId();
+  // What the person just did in a view or figure reaches the box before the
+  // message, so it counts toward this turn; a slow box never holds the send past a second.
+  await flushActivity(ACTIVITY_FLUSH_MS);
 
   let attemptNumber = 0;
   let earlierAttemptUncertain = false;
@@ -412,6 +424,7 @@ export async function startChatTurn(params: {
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
         ...(engine !== undefined ? { engine } : {}),
         ...(model !== undefined ? { model } : {}),
+        ...(pendingChat !== undefined ? { pendingChat } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),

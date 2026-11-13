@@ -13,7 +13,7 @@ import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../../hooks/useViewFileHelpers";
 import type { FigureParamDecl } from "../../lib/figure-params";
-import { wrapCanvasLoopLib, type FigureActivityReporter } from "../../lib/figure-canvas-loop";
+import { wrapCanvasLoopLib, type FigureActivityLog, type FigureActivityReporter } from "../../lib/figure-canvas-loop";
 
 export type FigureRuntime = "p5js" | "three" | "d3" | "canvas-loop";
 
@@ -86,6 +86,7 @@ async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness
 interface CanvasLoopHarness {
   declared: readonly FigureParamDecl[];
   reportActivity?: FigureActivityReporter;
+  activityLog?: FigureActivityLog;
 }
 
 interface FigureMountProps {
@@ -97,9 +98,11 @@ interface FigureMountProps {
   declaredParams?: readonly FigureParamDecl[];
   /** Companion-pane activity for this card; absent elsewhere. */
   reportActivity?: FigureActivityReporter;
+  /** Where this figure's actions are logged; absent outside the companion pane. */
+  activityLog?: FigureActivityLog;
 }
 
-export function FigureMount({ runtime, sketch, figure, onError, declaredParams, reportActivity }: FigureMountProps) {
+export function FigureMount({ runtime, sketch, figure, onError, declaredParams, reportActivity, activityLog }: FigureMountProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   // Hold the latest figure context in a ref so the mount effect can read it at
   // mount time without taking it as a dependency — rebuilding the context object
@@ -113,10 +116,10 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
   // Same pattern for the mount-time harness inputs: a new reporter or param
   // list identity must not remount the sketch. The reporter is called through
   // the ref, so a re-bound reporter takes effect without a remount.
-  const harnessRef = useRef({ declaredParams, reportActivity });
+  const harnessRef = useRef({ declaredParams, reportActivity, activityLog });
   useEffect(() => {
-    harnessRef.current = { declaredParams, reportActivity };
-  }, [declaredParams, reportActivity]);
+    harnessRef.current = { declaredParams, reportActivity, activityLog };
+  }, [declaredParams, reportActivity, activityLog]);
 
   useEffect(() => {
     const el = mountRef.current;
@@ -131,10 +134,11 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
 
     void (async () => {
       try {
-        const { declaredParams: declared, reportActivity: reporter } = harnessRef.current;
+        const { declaredParams: declared, reportActivity: reporter, activityLog: log } = harnessRef.current;
         const lib = await loadRuntimeLib(runtime, {
           declared: declared ?? [],
           ...(reporter !== undefined ? { reportActivity: (kind, detail) => { harnessRef.current.reportActivity?.(kind, detail); } } : {}),
+          ...(log !== undefined ? { activityLog: { ...log, push: (report) => { harnessRef.current.activityLog?.push(report); } } } : {}),
         });
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });

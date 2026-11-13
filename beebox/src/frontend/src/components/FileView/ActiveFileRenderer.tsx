@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ActivityKind } from "@core/chat/card-activity.js";
+import type { ReportActivity } from "@core/chat/card-activity.js";
 import type { FileData, FileRenderer } from "../../file-type-registry";
 import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
@@ -18,7 +18,7 @@ interface ActiveFileRendererProps {
   viewState?: ViewState | null;
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
+  reportActivity?: ReportActivity;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   renderInline: RenderInline<ViewTarget>;
   caption?: string;

@@ -1,4 +1,4 @@
-import type { ActivityKind } from "@core/chat/card-activity.js";
+import type { ReportActivity } from "@core/chat/card-activity.js";
 import type { AddSelectionInput } from "../lib/selection/position";
 import type { NavigateHint, ViewState, ViewTarget } from "../lib/view-url";
 
@@ -32,7 +32,7 @@ export interface FileViewProps {
   pointMode?: boolean;
   onExitPointMode?: () => void;
   /** Report companion-pane activity; absent elsewhere. */
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
+  reportActivity?: ReportActivity;
   onOpenInPanel?: () => void;
   /** External renderer configuration, excluding reserved view state. */
   params?: Record<string, string>;

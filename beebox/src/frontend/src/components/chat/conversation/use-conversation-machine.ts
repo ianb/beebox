@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSelector } from "@xstate/react";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { parseChatAgentEngine } from "@shared/chat-models.js";
-import type { ChatMachineInput } from "../../../machines/chat-types";
+import type { ChatEvent, ChatMachineInput } from "../../../machines/chat-types";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
 import { ConversationControllerPool, conversationKey, type SessionAssignment } from "./controller-pool/pool";
@@ -60,5 +60,11 @@ export function useConversationMachine(opts: {
     if (assigned !== null) pool.markReady(assigned.sessionId);
   } });
   const snapshot = useSelector(controller, (value) => value);
-  return { snapshot, send: controller.send, pool, target, recoveryNotice };
+  // The last message this page sent, which its activity entries name (`afterMessage`).
+  const [lastSentId, setLastSentId] = useState<string | undefined>(undefined);
+  const send = useCallback((event: ChatEvent) => {
+    if (event.type === "SEND") setLastSentId(event.messageId);
+    controller.send(event);
+  }, [controller]);
+  return { snapshot, send, pool, target, recoveryNotice, lastSentId };
 }
