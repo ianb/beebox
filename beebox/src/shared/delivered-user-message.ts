@@ -1,7 +1,7 @@
 /**
  * Shared codec for first-class user messages delivered by the server.
  *
- * Capture, bulk-upload, and question-handoff messages are persisted as
+ * Capture, bulk-upload, question-handoff, and call messages are persisted as
  * pseudo-XML because the agent consumes that vocabulary directly. The transcript UI needs the inverse
  * operation. Keeping both directions behind one closed kind registry makes a
  * new supported kind fail typechecking until it has a parser.
@@ -11,6 +11,7 @@ import { assertNever, invariant } from "./invariant.js";
 import { humanBytes } from "./human-bytes.js";
 import { stripChatAppTags } from "./chat-tags.js";
 import { decodeXmlAttr, escapeXmlAttr } from "./self-note.js";
+import { parseCall, serializeCall, type CallUserMessage } from "./delivered-call-message.js";
 
 export interface CaptureUserMessage {
   kind: "capture";
@@ -54,6 +55,7 @@ interface DeliveredUserMessageByKind {
   capture: CaptureUserMessage;
   upload: UploadUserMessage;
   "question-handoff": QuestionHandoffUserMessage;
+  call: CallUserMessage;
 }
 
 export type DeliveredUserMessageKind = keyof DeliveredUserMessageByKind;
@@ -132,6 +134,7 @@ const DELIVERED_MESSAGE_CODECS = {
   capture: { parse: parseCapture },
   upload: { parse: parseUpload },
   "question-handoff": { parse: parseQuestionHandoff },
+  call: { parse: parseCall },
 } satisfies { [K in DeliveredUserMessageKind]: DeliveredMessageCodec<K> };
 
 const DELIVERED_BLOCK_RE = /<([a-z][a-z-]*)\b([^>]*)>([\S\s]*?)<\/\1>/gi;
@@ -158,6 +161,8 @@ function parseDeliveredBlock(opts: {
       return DELIVERED_MESSAGE_CODECS.upload.parse(opts.attrs, opts.body);
     case "question-handoff":
       return DELIVERED_MESSAGE_CODECS["question-handoff"].parse(opts.attrs);
+    case "call":
+      return DELIVERED_MESSAGE_CODECS.call.parse(opts.attrs, opts.body);
     default:
       return assertNever(opts.kind);
   }
@@ -229,7 +234,7 @@ export function parseDeliveredUserMessageParts(text: string): DeliveredUserMessa
   return parts;
 }
 
-function validateDocPath(message: DeliveredUserMessage): void {
+function validateDocPath(message: Exclude<DeliveredUserMessage, CallUserMessage>): void {
   invariant(
     !/[\n\r">]/.test(message.doc),
     `Delivered message doc path contains a tag delimiter: ${JSON.stringify(message.doc)}`,
@@ -238,6 +243,7 @@ function validateDocPath(message: DeliveredUserMessage): void {
 
 /** Serialize one canonical delivered message into the agent-facing wire form. */
 export function serializeDeliveredUserMessage(message: DeliveredUserMessage): string {
+  if (message.kind === "call") return serializeCall(message);
   validateDocPath(message);
   switch (message.kind) {
     case "capture": {

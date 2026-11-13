@@ -326,3 +326,43 @@ void test("If a process restart interrupts a retrying job, runHqJob's backoff mu
     "{\"resumedAttempt\":6}",
   );
 });
+
+// ## A call recording asks for word timing and stores words on the recording's timeline
+//
+// docs/plans/chat-calls.md, Track F: the call fold places words by time, so a
+// recording sealed with `call` is transcribed with word timing and each piece's
+// words shift by that piece's start (here the second piece starts at 300 s).
+void test("A call recording stores words timed across pieces", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await configureBox(box);
+  const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 32_000 * 301 });
+  await sealVoiceSession({
+    boxRoot: box.root, id: session.id, emissionId: null,
+    hq: { emissionId: null, sessionId: null, service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
+    call: { callId: "call-0001", firstAudioAtMs: 1_794_510_120_000 },
+  });
+  const asked: boolean[] = [];
+  const transcribePiece: TranscribePieceFn = async (_params, { wordTimestamps }) => {
+    asked.push(wordTimestamps);
+    return { text: `piece ${String(asked.length)}`, words: [{ word: `w${String(asked.length)}`, start: 0.25, end: 0.5 }] };
+  };
+  await runHqJob({ boxRoot: box.root, id: session.id, eventBus: createEventBus(box.root), clock: fakeClock("2026-09-10T18:01:00.000Z"), transcribePiece });
+  const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+  t.check({ asked, hq: after?.voice?.hq }, {
+    asked: [true, true],
+    hq: {
+      state: "ready",
+      result: {
+        text: "piece 1\n\npiece 2",
+        diarized: false,
+        service: "whisper",
+        pieces: 2,
+        words: [
+          { start: 0.25, end: 0.5, text: "w1" },
+          { start: 300.25, end: 300.5, text: "w2" },
+        ],
+      },
+    },
+  });
+});

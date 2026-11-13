@@ -67,10 +67,9 @@ function peersOf(call: Call): CallPeer[] {
   return [...call.members.values()].toSorted((a, b) => a.seq - b.seq).map(({ peerId, person }) => ({ peerId, person }));
 }
 
-function tell(place: Place, { call, change }: { call: Call; change: CallChange }): void {
-  const observer = place.onCallChange;
-  if (observer === undefined) return;
-  const snapshot: CallSnapshot = {
+/** The call as an observer (the transcript fold) sees it. */
+export function snapshotOf(place: Place, call: Call): CallSnapshot {
+  return {
     boxRoot: place.boxRoot,
     sessionId: place.sessionId,
     callId: call.callId,
@@ -79,6 +78,12 @@ function tell(place: Place, { call, change }: { call: Call; change: CallChange }
     members: peersOf(call),
     transcribing: call.transcribing,
   };
+}
+
+function tell(place: Place, { call, change }: { call: Call; change: CallChange }): void {
+  const observer = place.onCallChange;
+  if (observer === undefined) return;
+  const snapshot = snapshotOf(place, call);
   warnOnThrow("the call observer", () => observer(snapshot, change));
 }
 

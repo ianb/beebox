@@ -10,8 +10,14 @@
  * `window.beeboxShellShown` and the `beebox:shell-shown` event.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import type { ChatPresenceFrame } from "@core/chat/presence/types.js";
 import { trpc } from "../../lib/trpc/client";
+import { callEngine } from "../../lib/call/engine";
+import { callOffer } from "../../lib/call-state";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { CallButtonFace } from "../app-bar-faces/CallButtonFace";
+import { CallAudio } from "../call/CallAudio";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { isNativeShell } from "../chat/native-post";
 import { PresenceHeadsFace, type PresenceHead } from "../app-bar-faces/PresenceHeadsFace";
@@ -99,11 +105,14 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
     {
       enabled: watched !== null,
       // A new or restarted subscription starts from nobody until its first frame.
-      onStarted: useCallback(() => setReport(null), []),
+      onStarted: useCallback(() => {
+        setReport(null);
+        callEngine.reportPresence(null);
+      }, []),
       // The hook calls the latest options, so a frame is labelled with the chat its subscription watches.
-      onData: useCallback((frame: { t: "others"; people: PresenceHead[] } | { t: "call" }) => {
-        if (frame.t !== "others") return;
-        setReport(watched === null ? null : { sessionId: watched, people: frame.people });
+      onData: useCallback((frame: ChatPresenceFrame) => {
+        if (frame.t === "call") callEngine.reportPresence(watched === null ? null : { sessionId: watched, call: frame.call });
+        else setReport(watched === null ? null : { sessionId: watched, people: frame.people });
       }, [watched]),
       onError: useCallback((err: { message: string }) => {
         // wsLink reconnects on its own; with no live subscription no heads show.
@@ -111,7 +120,12 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
       }, []),
     },
   );
-  return headsToShow({ live: sub.status === "pending", inChat, report });
+  const live = sub.status === "pending";
+  // Not present, so the chat's call is not this tab's to see (docs/plans/chat-calls.md).
+  useEffect(() => {
+    if (!live) callEngine.reportPresence(null);
+  }, [live]);
+  return headsToShow({ live, inChat, report });
 }
 
 export function PresenceHeads() {
@@ -123,5 +137,17 @@ export function PresenceHeads() {
   // else can know its id.
   const sessionId = target?.kind === "session" ? target.sessionId : null;
   const people = useChatPresence(active ? sessionId : null);
-  return <PresenceHeadsFace people={people} />;
+  const { ui, presence } = useSyncExternalStore(callEngine.subscribe, callEngine.getSnapshot);
+  const selfEmail = useCurrentUser()?.email ?? null;
+  const offer = callOffer({ others: people.length, presence, ui, selfEmail });
+  const onCall = useCallback(async () => {
+    if (presence === null) return;
+    await callEngine.start(presence.sessionId, presence.call?.callId ?? null);
+  }, [presence]);
+  return (
+    <>
+      <PresenceHeadsFace people={people} action={offer === null ? null : <CallButtonFace offer={offer} onCall={onCall} />} />
+      <CallAudio />
+    </>
+  );
 }

@@ -111,7 +111,7 @@ async function runScript(script: string): Promise<MediaStream> {
 /**
  * Drop-in replacement for `navigator.mediaDevices.getUserMedia({ audio:
  * true })` at the transcription mic's capture/reacquire call sites
- * (`machines/transcription-mic.ts`). Scripted only when `fakemic` is set;
+ * (`./core.ts`). Scripted only when `fakemic` is set;
  * otherwise this is the real call, unmodified.
  */
 export async function getMicStream(): Promise<MediaStream> {

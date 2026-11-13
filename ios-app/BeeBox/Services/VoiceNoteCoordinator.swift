@@ -210,6 +210,11 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
             throw Failure.liveActivitiesDisabled
         }
         guard let directory else { phase = .failed; throw Failure.storageUnavailable }
+        // A call can start while the permission prompt is up; its audio session must not be replaced.
+        guard !AudioSessionCallHold.shared.isHeld else {
+            phase = .failed
+            throw Failure.callActive
+        }
         do {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.protectionKey: box.requiresDeviceUnlock ? FileProtectionType.complete : FileProtectionType.completeUntilFirstUserAuthentication])
             let newDraft = Draft(id: UUID(), boxID: box.id, boxLabel: box.label, startedAt: Date(), interrupted: false, requiresDeviceUnlock: box.requiresDeviceUnlock)

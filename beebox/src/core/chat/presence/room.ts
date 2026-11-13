@@ -11,7 +11,7 @@
 
 import type { ChatPresence, ChatPresenceFrame, ChatPresenceOptions, MemberRef, PresentPerson } from "./types.js";
 import { othersFor, type Watcher } from "./others.js";
-import { callSummary, forwardSignal, joinCall, memberOf, removeMember, setTranscribing, warnOnThrow, type Call, type Place } from "./call.js";
+import { callSummary, forwardSignal, joinCall, memberOf, removeMember, setTranscribing, snapshotOf, warnOnThrow, type Call, type Place } from "./call.js";
 
 export type * from "./types.js";
 export { CALL_MEMBER_CAP, NO_ANSWER_MS } from "./types.js";
@@ -121,6 +121,11 @@ export function createChatPresence(options?: ChatPresenceOptions): ChatPresence 
       if (found === null) return false;
       setTranscribing(place, { by: found, on });
       return true;
+    },
+    callOf(ref) {
+      const { place, found } = member(ref);
+      const call = place.getCall();
+      return found === null || call === null ? null : snapshotOf(place, call);
     },
     leaveCall(ref) {
       const { place, found } = member(ref);

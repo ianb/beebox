@@ -14,6 +14,7 @@ import type { CallMemberFrame, MemberRef } from "../../../core/chat/presence/roo
 import { CLOUDFLARE_TURN_SECRET_NAME, getCloudflareTurnKey } from "../../../core/cloudflare-turn-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
 import { errorMessage } from "../../../shared/error-guards.js";
+import { registerCallRecording } from "../../../core/chat/call-transcript/record.js";
 import { chatRoom, personFor, SESSION_ID_RE } from "../chat-room.js";
 import type { TrpcContext } from "../context.js";
 
@@ -75,12 +76,17 @@ async function mintTurn(ctx: TrpcContext): Promise<IceServer[] | null> {
 export const chatCallRouter = router({
   /**
    * The servers a call's peer connections use. `relay` says whether a TURN relay
-   * is among them, so a failed connection can say why.
+   * is among them, so a failed connection can say why; `serverNowMs` lets the
+   * caller estimate its clock offset from the round trip.
    */
-  iceServers: authedProcedure.query(async ({ ctx }): Promise<{ iceServers: IceServer[]; relay: boolean }> => {
+  iceServers: authedProcedure.query(async ({ ctx }): Promise<{ iceServers: IceServer[]; relay: boolean; serverNowMs: number }> => {
     requirePerson(ctx);
+    const enteredAtMs = Date.now();
     const turn = await mintTurn(ctx);
-    return turn === null ? { iceServers: STUN_ONLY, relay: false } : { iceServers: turn, relay: true };
+    // Real clock at the middle of this request's own handling: the caller compares
+    // it with the middle of its round trip, so a slow mint is not read as skew.
+    const serverNowMs = Math.round((enteredAtMs + Date.now()) / 2);
+    return turn === null ? { iceServers: STUN_ONLY, relay: false, serverNowMs } : { iceServers: turn, relay: true, serverNowMs };
   }),
 
   /** Be on the chat's call, starting one when `callId` is null and there is none. */
@@ -149,6 +155,25 @@ export const chatCallRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Not on this call." });
       }
       return { on };
+    }),
+
+  /**
+   * Name the voice staging session this member is about to record into, before
+   * capture starts, so the fold waits for it even if the tab closes and the
+   * staging queue uploads it later (docs/plans/chat-calls.md, Track F).
+   * `clockOffsetMs` is the member's real clock minus the server's at join.
+   */
+  registerRecording: authedProcedure
+    .input(memberInput.extend({ voiceSessionId: z.string().regex(ID_RE), clockOffsetMs: z.number().finite() }))
+    .mutation(async ({ ctx, input }) => {
+      const { voiceSessionId, clockOffsetMs, ...member } = input;
+      const snapshot = chatRoom.callOf(memberRef(ctx, member));
+      if (snapshot === null) throw new TRPCError({ code: "NOT_FOUND", message: "Not on this call." });
+      if (!snapshot.transcribing) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Transcription is off." });
+      const person = requirePerson(ctx);
+      // Real time, never the box's shifted clock: the fold compares it with device clocks.
+      await registerCallRecording(ctx.boxRoot, { snapshot, recording: { voiceSessionId, person, clockOffsetMs }, nowMs: Date.now() });
+      return { registered: true };
     }),
 
   /** Leave explicitly as well as by ending the subscription; see docs/chat-calls.md on the tRPC early-stop race. */

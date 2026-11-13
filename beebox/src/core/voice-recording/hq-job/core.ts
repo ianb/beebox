@@ -28,7 +28,7 @@ import {
   relabelDiarizedSpeakers,
 } from "../../transcription/voxtral/core.js";
 import { readSessionLogTail } from "../../chat/session/log-tail.js";
-import { transcribeAudioHq, extractHqErrorInput } from "../../transcription/dispatch/core.js";
+import { transcribeAudioHq, extractHqErrorInput, type WordTimestamp } from "../../transcription/dispatch/core.js";
 import type { HqTranscriptionService } from "../../../shared/transcription-services.js";
 import {
   readStagingSession,
@@ -37,7 +37,7 @@ import {
 } from "../../capture/staging-store/core.js";
 import type { HqFailure, VoiceHqResult } from "../../capture/staging-schema.js";
 import { applyVoiceEvent } from "../voice-staging/core.js";
-import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS } from "./pieces.js";
+import { planPieces, nextPieceSeconds, joinPieceWords, HQ_PIECE_SECONDS } from "./pieces.js";
 import { classifyHqError } from "../classify.js";
 import * as fs from "node:fs/promises";
 
@@ -47,10 +47,11 @@ const HQ_RETRY_BOUND_MS = 24 * 60 * 60 * 1000; // 24h
 /** Backoff shape for a transient piece failure — shared idiom, box-specific bounds. */
 const HQ_BACKOFF = { baseMs: 5_000, capMs: 5 * 60_000 };
 
-/** One transcribed piece, before joining. */
+/** One transcribed piece, before joining. `words` are timed from the piece's own start. */
 interface PieceTranscription {
   text: string;
   diarized?: boolean;
+  words?: WordTimestamp[];
 }
 
 /** The injectable clock + wait seam (inert in prod — real clock, real sleep-immune wait). */
@@ -68,15 +69,19 @@ function realWait(ms: number): Promise<void> {
 /** The piece-transcription call, injectable so a test can script failures without a real HQ service. */
 export type TranscribePieceFn = (
   params: { audioBuffer: Buffer; filename: string; boxRoot: string },
-  opts: { service: HqTranscriptionService },
+  opts: { service: HqTranscriptionService; wordTimestamps: boolean },
 ) => Promise<PieceTranscription>;
 
 async function realTranscribePiece(
   params: { audioBuffer: Buffer; filename: string; boxRoot: string },
-  opts: { service: HqTranscriptionService },
+  opts: { service: HqTranscriptionService; wordTimestamps: boolean },
 ): Promise<PieceTranscription> {
-  const result = await transcribeAudioHq(params, { service: opts.service });
-  return { text: result.text, ...(result.diarized !== undefined && { diarized: result.diarized }) };
+  const result = await transcribeAudioHq({ ...params, options: { wordTimestamps: opts.wordTimestamps } }, { service: opts.service });
+  return {
+    text: result.text,
+    ...(result.diarized !== undefined && { diarized: result.diarized }),
+    ...(opts.wordTimestamps && "words" in result && { words: result.words }),
+  };
 }
 
 export interface RunHqJobDeps {
@@ -159,6 +164,18 @@ function buildFailure(opts: { error: unknown; input: { status?: number; body?: s
  * so lettering starts fresh.
  */
 async function joinPieceResults(opts: {
+  pieces: (PieceTranscription & { startByte: number })[];
+  boxRoot: string;
+  targetSessionId: string | null;
+  service: string;
+}): Promise<VoiceHqResult> {
+  const result = await joinPieceTexts(opts);
+  const timed = opts.pieces.flatMap(({ startByte, words }) => (words === undefined ? [] : [{ startByte, words }]));
+  // Words only when every piece has them: a partial timeline would misplace the untimed pieces' speech.
+  return timed.length === opts.pieces.length && timed.length > 0 ? { ...result, words: joinPieceWords(timed) } : result;
+}
+
+async function joinPieceTexts(opts: {
   pieces: PieceTranscription[];
   boxRoot: string;
   targetSessionId: string | null;
@@ -222,7 +239,7 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
     }
 
     const pieces = planPieces(buffer.length, pieceSeconds);
-    const results: PieceTranscription[] = [];
+    const results: (PieceTranscription & { startByte: number })[] = [];
     let restartWithNewPieceLength = false;
 
     let pieceIndex = 0;
@@ -250,9 +267,10 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
       try {
         const result = await transcribePiece(
           { audioBuffer: wavBuffer, filename: `piece-${String(pieceIndex + 1)}.wav`, boxRoot },
-          { service: hqRequest.service },
+          // A call recording is folded by word time (docs/plans/chat-calls.md, Track F).
+          { service: hqRequest.service, wordTimestamps: session.voice.call !== undefined },
         );
-        results.push(result);
+        results.push({ ...result, startByte: piece.startByte });
         pieceIndex++;
         continue;
       } catch (error) {

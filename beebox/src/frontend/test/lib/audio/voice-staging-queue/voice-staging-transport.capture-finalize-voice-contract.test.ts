@@ -65,6 +65,23 @@ void test("Unconsumed/cancel/unmount seal: both null", async (t) => {
   });
 });
 
+// ## Call recording: `call` set, `hq` and `emissionId` null
+//
+// A member's recording during a transcribed call (docs/plans/chat-calls.md,
+// Track F) waits on the call fold, not a composer message.
+void test("A call recording carries its call and no hq request", async (t) => {
+  const { body, ok } = parse({ kind: "finalize", chunkCount: 4, emissionId: null, hq: null, call: { callId: "call-0001", firstAudioAtMs: 1_794_510_120_000 } });
+  t.check({ ok, body }, {
+    ok: true,
+    body: {
+      chunkCount: 4,
+      emissionId: null,
+      hq: null,
+      call: { callId: "call-0001", firstAudioAtMs: 1_794_510_120_000 },
+    },
+  });
+});
+
 // ## A body missing `emissionId` entirely is rejected
 //
 // Guards against exactly the drift this test exists to catch: a client that

@@ -112,6 +112,8 @@ export interface ChatPresence {
   signal(from: MemberRef, opts: { to: string; data: unknown }): boolean;
   /** Turn transcription on or off for the whole call. False when `member` is not the caller's. */
   setTranscribing(member: MemberRef, on: boolean): boolean;
+  /** The call `member` is on, as an observer sees it; null when `member` is not the caller's. */
+  callOf(member: MemberRef): CallSnapshot | null;
   /** Leave the call. False when `member` is not the caller's. */
   leaveCall(member: MemberRef): boolean;
   /** How many rooms have a watcher or a call. */

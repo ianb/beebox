@@ -14,7 +14,7 @@
  * box one seal or discard.
  */
 
-import { VOICE_UPLOAD_BATCH_SECONDS } from "./voice-staging-queue-core";
+import { VOICE_UPLOAD_BATCH_SECONDS, type VoiceCallLink } from "./voice-staging-queue-core";
 
 /** The worklet's format: 16 kHz mono s16le (`pcm-processor.worklet.js`). */
 const PCM_BYTES_PER_SECOND = 16_000 * 2;
@@ -43,9 +43,16 @@ export interface VoiceHqRequest {
  * segment produced no message (unconsumed/cancel/unmount seals), so a non-HQ
  * send is still findable by `get-last-audio`.
  */
+/** `call` marks a call recording, which always seals with `hq: null` (docs/plans/chat-calls.md, Track F). */
+interface SealOpts {
+  emissionId: string | null;
+  hq: VoiceHqRequest | null;
+  call?: VoiceCallLink;
+}
+
 export interface PendingRecording {
   readonly recordingId: string;
-  seal: (opts: { emissionId: string | null; hq: VoiceHqRequest | null }) => void;
+  seal: (opts: SealOpts) => void;
   discard: () => void;
 }
 
@@ -53,7 +60,7 @@ export interface PendingRecording {
 export interface VoiceStagingSink {
   enqueueCreate: (recordingId: string, opts: { targetSessionId: string | null }) => void;
   enqueueChunk: (recordingId: string, bytes: ArrayBuffer) => void;
-  enqueueFinalize: (recordingId: string, opts: { emissionId: string | null; hq: VoiceHqRequest | null }) => void;
+  enqueueFinalize: (recordingId: string, opts: SealOpts) => void;
   enqueueDiscard: (recordingId: string) => void;
 }
 
@@ -139,14 +146,14 @@ export function startStagedRecording(opts: {
       if (settled === "open") stager.push(frame);
     },
     hasAudio: () => stager.bytesSeen() > 0,
-    seal: ({ emissionId, hq }) => {
+    seal: (sealOpts) => {
       if (settled !== "open") {
         refuse("seal");
         return;
       }
       settled = "sealed";
       stager.flush();
-      sink.enqueueFinalize(recordingId, { emissionId, hq });
+      sink.enqueueFinalize(recordingId, sealOpts);
     },
     discard: () => {
       if (settled !== "open") {

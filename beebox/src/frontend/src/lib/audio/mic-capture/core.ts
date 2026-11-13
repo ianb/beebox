@@ -19,11 +19,16 @@
  * caller surfaces the degraded/restored transitions and bounds the recovery
  * window; an aborted recovery ends the segment loudly with everything
  * captured so far preserved.
+ *
+ * Borrowed mode (docs/plans/chat-calls.md, Track F) records a stream someone
+ * else owns, the call's own microphone: it never stops or re-acquires that
+ * stream's tracks and never recovers. When the track ends, `onMicLost` fires
+ * once and the owner of the recording finalizes it.
  */
 
 import { delay, jitteredBackoff } from "@shared/backoff.js";
-import { setMicLevelSource, clearMicLevelSource } from "../../lib/audio/mic-level";
-import { getMicStream } from "../../lib/audio/fake-mic";
+import { setMicLevelSource, clearMicLevelSource } from "../mic-level";
+import { getMicStream } from "./fake-mic";
 
 /**
  * How long the mic track may sit muted before we treat it as taken away.
@@ -45,7 +50,7 @@ class MicReacquireError extends Error {
 interface MicCaptureCallbacks {
   /** A ~300ms PCM s16le frame from the worklet (ownership transferred). */
   onPcm: (samples: ArrayBuffer) => void;
-  /** Mic interruption detected; a recovery loop is starting. */
+  /** Mic interruption detected; a recovery loop is starting. Borrowed mode: the track ended, and no recovery follows. */
   onMicLost: () => void;
   /** Recovery succeeded: a fresh stream is feeding the same audio graph. */
   onMicRestored: () => void;
@@ -78,9 +83,21 @@ export class MicCapture {
   private readonly callbacks: MicCaptureCallbacks;
   /** Stable identity for register/clear with the mic-level bridge. */
   private readonly levelSource = () => this.readLevel();
+  /** The stream this capture records but does not own (borrowed mode), else null. */
+  private readonly borrowed: MediaStream | null;
+  private readonly onBorrowedEnded = () => {
+    console.warn("[call-recording] borrowed mic track ended");
+    this.callbacks.onMicLost();
+  };
 
-  constructor(callbacks: MicCaptureCallbacks) {
+  constructor(callbacks: MicCaptureCallbacks, opts?: { borrowed: MediaStream }) {
     this.callbacks = callbacks;
+    this.borrowed = opts?.borrowed ?? null;
+    if (this.borrowed !== null) {
+      this.stream = this.borrowed;
+      // A listener, not `onended`: the owner keeps its own handler on the same track.
+      this.borrowed.getAudioTracks().at(0)?.addEventListener("ended", this.onBorrowedEnded, { once: true });
+    }
   }
 
   /**
@@ -104,7 +121,7 @@ export class MicCapture {
    * caller's disposed check handles teardown).
    */
   async start() {
-    this.stream = await getMicStream();
+    this.stream = this.borrowed ?? (await getMicStream());
     if (this.stopped) return;
 
     this.audioContext = new AudioContext();
@@ -116,7 +133,7 @@ export class MicCapture {
     // (issues/closed/code-quality/2026-08-15-transcription-machine-untestable-worklet-import.md).
     // Deferring it to mic start means Node only ever resolves it if a test
     // actually opens a microphone, which no test does.
-    const { default: pcmProcessorUrl } = await import("../../lib/audio/pcm-processor.worklet.js?url");
+    const { default: pcmProcessorUrl } = await import("./pcm-processor.worklet.js?url");
     await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
     if (this.isStopped()) return;
 
@@ -130,6 +147,7 @@ export class MicCapture {
     this.analyser.fftSize = 256;
     this.sourceNode.connect(this.analyser);
     this.levelData = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
+    if (this.borrowed !== null) return;
     setMicLevelSource(this.levelSource);
     this.watchTrack(this.stream);
   }
@@ -159,7 +177,7 @@ export class MicCapture {
    * the segment on expiry). Idempotent while a loop is already running.
    */
   async beginRecovery() {
-    if (this.recovering || this.stopped) return;
+    if (this.recovering || this.stopped || this.borrowed !== null) return;
     this.recovering = true;
     this.clearMuteGrace();
     console.warn("[realtime-transcription] mic lost — attempting recovery");
@@ -229,6 +247,12 @@ export class MicCapture {
   }
 
   private stopTracks() {
+    if (this.borrowed !== null) {
+      // Not ours to stop: the call keeps using it.
+      this.borrowed.getAudioTracks().at(0)?.removeEventListener("ended", this.onBorrowedEnded);
+      this.stream = null;
+      return;
+    }
     if (this.stream) {
       for (const track of this.stream.getTracks()) {
         track.stop();

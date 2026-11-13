@@ -44,6 +44,14 @@ export interface VoiceFinalizeOp {
   chunkCount: number;
   emissionId: string | null;
   hq: { emissionId: string; sessionId: string | null } | null;
+  /** Set for a call recording, which sends `hq: null` (docs/plans/chat-calls.md, Track F). */
+  call?: VoiceCallLink;
+}
+
+/** Which call a recording belongs to, and the device's real clock when its first audio arrived. */
+export interface VoiceCallLink {
+  callId: string;
+  firstAudioAtMs: number;
 }
 
 /** Cancels an unsealed recording. A 404 on send means it is already gone — success. */

@@ -10,6 +10,7 @@ import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
+import { readFoldRecord } from "../../../src/core/chat/call-transcript/record.js";
 
 // Mutations take box-work admission, which needs a Git box.
 const box = await makeTmpBox({ git: true });
@@ -78,8 +79,27 @@ void test("the agent cannot be on a call", async (t) => {
   await t.checkThrows(() => caller({ user: priya, actor: "agent" }).chatCall.iceServers(), "TRPCError: Only a box member can be on a call.");
 });
 
+// docs/plans/chat-calls.md, Track F: a member registers its recording before
+// capture starts. Only the peer's own person may, and only while transcribing.
+void test("a member registers its own recording, only while transcription is on", async (t) => {
+  const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));
+  const joined = await p.next();
+  if (joined.t !== "joined") throw new Error("expected joined");
+  const { callId, peerId } = joined;
+  const register = (user: typeof priya) => caller({ user }).chatCall.registerRecording({ sessionId, callId, peerId, voiceSessionId: "3f1d2c4b-5a6e-4f70-8b9c-0d1e2f3a4b5c", clockOffsetMs: 1_500 });
+
+  await t.checkThrows(() => register(priya), "TRPCError: Transcription is off.");
+  await caller({ user: priya }).chatCall.setTranscribing({ sessionId, callId, peerId, on: true });
+  await t.checkThrows(() => register(tomas), "TRPCError: Not on this call.");
+  t.check(await register(priya), { registered: true });
+  t.check((await readFoldRecord(boxRoot, callId))?.recordings, [
+    { voiceSessionId: "3f1d2c4b-5a6e-4f70-8b9c-0d1e2f3a4b5c", person: priya, clockOffsetMs: 1_500 },
+  ]);
+  await p.close();
+});
+
 void test("a box with no TURN key gets STUN only", async (t) => {
   // Tests run in order; the last one removes the shared box.
   t.teardown(() => box.cleanup());
-  t.check(await caller({ user: priya }).chatCall.iceServers(), { iceServers: [{ urls: ["stun:stun.cloudflare.com:3478"] }], relay: false });
+  t.check(await caller({ user: priya }).chatCall.iceServers(), { iceServers: [{ urls: ["stun:stun.cloudflare.com:3478"] }], relay: false, serverNowMs: any(Number) });
 });

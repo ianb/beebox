@@ -6,6 +6,7 @@
  * render it with fixed props.
  */
 
+import type { ReactNode } from "react";
 import { Avatar } from "../ui/Avatar";
 import { List } from "../ui/List";
 
@@ -19,7 +20,8 @@ const MAX_HEADS = 2;
 
 const RING = "ring-2 ring-white shadow-md";
 
-export function PresenceHeadsFace({ people }: { people: readonly PresenceHead[] }) {
+/** `action`: a control under the heads (the call button), shown only when someone is here. */
+export function PresenceHeadsFace({ people, action }: { people: readonly PresenceHead[]; action?: ReactNode }) {
   if (people.length === 0) return null;
   const shown = people.slice(0, MAX_HEADS);
   const rest = people.slice(MAX_HEADS);
@@ -45,6 +47,7 @@ export function PresenceHeadsFace({ people }: { people: readonly PresenceHead[] 
           +{rest.length}
         </li>
       ) : null}
+      {action ? <li className="pointer-events-auto">{action}</li> : null}
     </List>
   );
 }
