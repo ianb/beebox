@@ -13,6 +13,8 @@ export interface PlaygroundModule {
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
   sound?(model: unknown, p: ParamValues<ParamsDecl>): readonly Voice[];
+  /** What the state means now, as data; added to handled events (see core/activity.ts). */
+  activity?(model: unknown): Record<string, unknown>;
 }
 
 /** One selectable sketch in the playground's tab bar. */

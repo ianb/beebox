@@ -31,8 +31,19 @@ export interface FigureContext {
   data: Record<string, unknown>;
   /** The card's validated frontmatter. */
   meta: Record<string, unknown>;
-  /** Box file helpers (read/url/write/…), reused from the views system. */
-  file: ViewFileHelpers;
+  /**
+   * Read-only box file helpers. Figures cannot write, commit or call
+   * connected services; a figure that must save lives inside a view.
+   */
+  file: FigureFileHelpers;
+}
+
+/** The read half of the views' file helpers: what a figure may use. */
+export type FigureFileHelpers = Pick<ViewFileHelpers, "readFile" | "fileUrl" | "imageUrl">;
+
+/** Pick the read helpers, so the figure object never carries a write function. */
+export function figureFileHelpers(helpers: ViewFileHelpers): FigureFileHelpers {
+  return { readFile: helpers.readFile, fileUrl: helpers.fileUrl, imageUrl: helpers.imageUrl };
 }
 
 /**

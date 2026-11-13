@@ -15,6 +15,7 @@ import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
 import type { TextMeasure } from "../../core/view.js";
+import { ActivityReporter, streamWithActivity } from "../../core/activity.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
@@ -97,7 +98,7 @@ export class Runtime {
     this.#player = deps.module.sound === undefined ? undefined : new SoundPlayer((message) => console.info(message));
     this.#onVoice = deps.onVoice ?? ((voice) => this.#player?.play(voice));
     this.#onLog = deps.onLog;
-    this.#onEvent = deps.onEvent;
+    this.#onEvent = streamWithActivity({ onEvent: deps.onEvent, reporter: new ActivityReporter(deps.module.activity, (m) => console.warn(m)), model: () => this.#model });
     this.#onError = deps.onError;
     this.#onPlace = deps.onPlace;
     this.#util = this.#makeUtil();

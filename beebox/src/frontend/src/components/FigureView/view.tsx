@@ -26,6 +26,7 @@ import type { RendererProps } from "../../file-type-registry";
 import { StatusMessage } from "../ui/StatusMessage";
 import {
   FigureMount,
+  figureFileHelpers,
   type FigureContext,
   type FigureRuntime,
   type FigureSketch,
@@ -102,7 +103,7 @@ export function FigureView({ data, onNavigate, params, mode, caption, reportActi
     params: figureParams,
     data: isRecord(frontmatter.data) ? frontmatter.data : {},
     meta: frontmatter,
-    file: fileHelpers,
+    file: figureFileHelpers(fileHelpers),
   };
 
   if (runtime === null) {

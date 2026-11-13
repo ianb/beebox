@@ -7,7 +7,7 @@
 
 import { mountSketch } from "@ianbicking/canvas-loop/browser";
 import type { DeepReadonly, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
-import { FigureMount, type FigureContext, type FigureSketch } from "../../../../components/FigureView/FigureMount";
+import { FigureMount, figureFileHelpers, type FigureContext, type FigureSketch } from "../../../../components/FigureView/FigureMount";
 import { useViewFileHelpers } from "../../../../hooks/useViewFileHelpers";
 
 const params = {
@@ -35,6 +35,6 @@ function reportError(message: string) { console.error("theme studio figure faile
 
 export function StudioFigure() {
   const file = useViewFileHelpers("/api");
-  const figure: FigureContext = { params: {}, data: {}, meta: {}, file };
+  const figure: FigureContext = { params: {}, data: {}, meta: {}, file: figureFileHelpers(file) };
   return <FigureMount runtime="canvas-loop" sketch={sketch} figure={figure} onError={reportError} />;
 }

@@ -324,6 +324,7 @@ function coerceModule(raw: unknown): PlaygroundModule {
     update: loaded.update,
     draw: loaded.draw,
     ...(loaded.sound === undefined ? {} : { sound: loaded.sound }),
+    ...(loaded.activity === undefined ? {} : { activity: loaded.activity }),
   };
 }
 

@@ -1,6 +1,6 @@
 ---
 title: "Activity log: what a person did in views and figures, on demand for the chat agent; figures lose file writes"
-status: draft
+status: active
 workstream: canvas-brushes
 issues:
   - ../../../issues/decisions/2026-11-13-view-file-writes-too-broad.md
