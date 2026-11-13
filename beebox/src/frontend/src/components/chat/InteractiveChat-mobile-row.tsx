@@ -7,10 +7,9 @@
 import { useRef } from "react";
 import { CloseButton } from "../ui/CloseButton";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
+import { joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
-import { useComposerCaret } from "./composer-caret";
-import { ComposerSendButton } from "./InteractiveChat-composer/view";
+import { ComposerSendButton, ComposerTextarea, DictationEditButton } from "./InteractiveChat-composer/view";
 import type { ComposerRowProps } from "./composer-row-props";
 import { segmentCapturing } from "../../machines/transcription-events";
 
@@ -33,28 +32,25 @@ export function MobileTextareaRow({
   // This textarea is separate from the desktop composer's (which has its own
   // ref + autoscroll wired in useChatActions), so it needs its own pinning.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const noteTyped = useComposerCaret({ textareaRef, text: input });
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
   const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="flex gap-2 items-center">
-      <textarea
+      <ComposerTextarea
         // `-mobile`, not the desktop row's address: this row and the button
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
         // Recorded in docs/plans/agent-points-at-ui.md, Track 1.
         id={hasControlIds ? "bbx-composer-input-mobile" : undefined}
-        ref={textareaRef}
-        value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
-        onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
+        mobile
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        isTranscribing={isTranscribing}
+        transcript={transcription.transcript}
         onPaste={onPaste}
         onDrop={onDrop}
-        readOnly={isTranscribing}
-        enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
-        className={composerTextareaClasses({ mobile: true, isTranscribing })}
-        autoFocus
       />
       {isTranscribing ? (
         <>
@@ -65,7 +61,7 @@ export function MobileTextareaRow({
             ink
             className="flex-shrink-0"
           />
-          <button
+          <DictationEditButton
             id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {
               onStopDictation();
@@ -78,14 +74,7 @@ export function MobileTextareaRow({
               // Now editable typed text, not voice — drop the dictation draft.
               clearDraft();
             }}
-            className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
-            aria-label="Edit before sending"
-            title="Edit before sending"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
+          />
         </>
       ) : null}
       {/* One send control for both branches, same as the button bar's row —

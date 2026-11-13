@@ -14,6 +14,7 @@ import { parseDiff } from "./CommitDetail-diff";
 import { stripTrailers, trailerString } from "@shared/commit-trailers";
 import { CommitTab } from "./CommitDetail-commit";
 import { DiffTab, MovedTab, NewFilesTab } from "./CommitDetail-tabs";
+import { MaterialContext } from "../../ui/material";
 
 interface CommitDetailProps {
   commit: HistoryCommit;
@@ -35,7 +36,7 @@ function SessionSection({ sessionId, idPrefix }: { sessionId: string; idPrefix: 
 
   return (
     <div className="border-t border-warm-200">
-      <button
+      <button type="button"
         id={`${idPrefix}-session-log-toggle`}
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-2 text-xs text-warm-700 hover:text-warm-900 text-left"
@@ -60,7 +61,12 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 
 // --- Main component ---
 
-export function CommitDetail({
+/** A white app panel: on a card it keeps app ink. */
+export function CommitDetail(props: CommitDetailProps) {
+  return <MaterialContext.Provider value={false}><CommitDetailPanel {...props} /></MaterialContext.Provider>;
+}
+
+function CommitDetailPanel({
   commit,
   onBack,
   onFilterSession,
@@ -110,7 +116,7 @@ export function CommitDetail({
 
       {/* Files */}
       {diffLoading ? (
-        <StatusMessage>Loading diff...</StatusMessage>
+        <StatusMessage busy>Loading diff...</StatusMessage>
       ) : null}
 
       {newFiles.length > 0 ? (

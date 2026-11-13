@@ -13,7 +13,9 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import {
   ensureQuarantineDir,
   quarantineDir,
@@ -116,8 +118,14 @@ void test("The file's bytes are still on disk and a re-PUT rewrites the verdict,
   await fs.writeFile(path.join(dir, `${HASH_B}.json`), "{ not json at all");
   await fs.writeFile(path.join(dir, `${"c".repeat(64)}.json`), JSON.stringify({ sha256: "c", state: "nonsense" }));
 
+  const errors = consoleLines(t, "error");
   const all = await readAllQuarantineEntries(box.root);
   t.check(all, [entry(HASH_A)]);
+  // The server log names each skipped sidecar and what is wrong with it (the JSON parser's wording varies by Node version):
+  t.check(errors(), [
+    str`[scan] Quarantine sidecar ${path.join(dir, `${HASH_B}.json`)} is not valid JSON: SyntaxError: ${any(String)}`,
+    `[scan] Quarantine sidecar ${path.join(dir, `${"c".repeat(64)}.json`)} does not match the entry schema (bad fields: state, storedFilename, originalFilename, tokenName, receivedAt)`,
+  ]);
 
   // The stored file itself sits beside the sidecar under its hash name — the promote
   // worker materializes it under `originalFilename` later, because scan-import's

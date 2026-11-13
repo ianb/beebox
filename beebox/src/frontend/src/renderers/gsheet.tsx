@@ -7,7 +7,6 @@ import { isRecord } from "@shared/is-record";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
-import { Hint } from "../components/ui/Hint";
 import { Heading } from "../components/ui/Heading";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
@@ -17,6 +16,7 @@ import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { friendlyDate } from "../components/ui/FriendlyDate";
+import { StatusMessage } from "../components/ui/StatusMessage";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
@@ -136,9 +136,9 @@ function SheetView({ data }: RendererProps) {
 
       {/* Table */}
       {loading ? (
-        <Hint>Loading spreadsheet data...</Hint>
+        <StatusMessage variant="inline" busy>Loading spreadsheet data…</StatusMessage>
       ) : (
-        <SheetTable rows={currentRows} />
+        <SheetTable rows={currentRows} caption={currentTab?.title ?? sheet.title} />
       )}
 
       <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />

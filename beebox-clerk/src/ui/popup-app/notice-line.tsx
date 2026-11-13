@@ -27,7 +27,7 @@ export function NoticeLine({ notice, onOpenBox }: NoticeLineProps) {
     return (
       <p className="text-sm text-red-700">
         {notice.text}{" "}
-        <button onClick={onOpenBox} className="underline">
+        <button type="button" onClick={onOpenBox} className="underline">
           Open box
         </button>
       </p>

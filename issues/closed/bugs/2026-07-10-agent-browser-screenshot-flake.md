@@ -167,3 +167,14 @@ library, so it is worth checking whether the merge gate is affected the same way
 The stopgap this issue previously sketched — an outer retry with a longer budget
 in `browse/src/cli.ts` — does not help this mode. The read is not losing a race;
 five consecutive 30s attempts each expire, so a longer budget just fails slower.
+
+## Re-encountered 2026-11-12
+
+`beebox/test/core/browser/card-shot/run.e2e.test.ts` ("A card in a scrolling
+panel is captured whole at both widths…") failed three times in a row with
+`bbx browser: screenshot … failed: ✗ Failed to read: Resource temporarily
+unavailable (os error 35)`, in the full suite and twice alone, while the host
+sat at memory-pressure level 2 (load under 12). The card-shot code changed the
+day before (`e7f843274`). Seen by the sdk-update schedule; not reopened, since
+the 2026-09-15 close attributes this to contention. Reopen if it repeats on a
+quiet host.

@@ -1,0 +1,694 @@
+// Balance a chemical equation, for a learner of about 12–15.
+//
+//   - `reaction` (select) picks one of five reactions; boxes A–D are typed
+//     number fields, one coefficient per species in the order the equation is
+//     written. A three-species reaction ignores box D, and the canvas says so.
+//   - the picture: the equation with the typed coefficients; each side's
+//     molecules drawn as atoms, repeated by coefficient; a tally per element with
+//     one dot per atom on each side, green when the two sides match, red when not.
+//   - when every element matches, the page says "Balanced!" and celebrates
+//     (confetti, molecules bobbing). When not, it names the elements that do not
+//     match and how many of each there are, without saying which box to change.
+//
+// The model holds only what the params cannot: the frame, when the equation
+// last became balanced (for the celebration's clock), and which box was last
+// edited (for a short highlight). Everything else is derived from params in draw.
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+
+import {
+  commonFactor,
+  LOOK,
+  MOLECULES,
+  REACTION_IDS,
+  REACTIONS,
+  SLOTS,
+  tally,
+  type Element,
+  type MoleculeId,
+  type Reaction,
+  type Slot,
+  type Tally,
+} from "./chem-tea.js";
+
+const COEF = { type: "number", min: 1, max: 12, default: 1, step: 1, control: "field" } as const;
+
+export const params = {
+  reaction: { type: "select", options: REACTION_IDS, default: "water" },
+  A: COEF,
+  B: COEF,
+  C: COEF,
+  D: COEF,
+} as const satisfies ParamsDecl;
+
+export const canvas = { width: 800, height: 600 };
+
+type Params = ParamValues<typeof params>;
+
+export interface Model {
+  frame: number;
+  /** Frame at which the equation became balanced; null while it is not. */
+  balancedAt: number | null;
+  /** The box most recently typed into, and when (drives a short highlight). */
+  edit: { slot: Slot; frame: number } | null;
+}
+
+// ---------- derived state (shared by update and draw) ----------
+
+interface ParamView {
+  reaction: Params["reaction"];
+  A: number;
+  B: number;
+  C: number;
+  D: number;
+}
+
+function speciesCount(r: Reaction): number {
+  return r.left.length + r.right.length;
+}
+
+/** The coefficients that apply to this reaction (box D dropped for three species). */
+function coefsOf(p: ParamView): number[] {
+  const all = [p.A, p.B, p.C, p.D];
+  return all.slice(0, speciesCount(REACTIONS[p.reaction]));
+}
+
+function isBalanced(p: ParamView): boolean {
+  return tally(REACTIONS[p.reaction], coefsOf(p)).every((t) => t.left === t.right);
+}
+
+function slotNamed(name: string): Slot | undefined {
+  return SLOTS.find((s) => s === name);
+}
+
+// ---------- update ----------
+
+export function init(u: Util<typeof params>): Model {
+  return { frame: 0, balancedAt: isBalanced(u.params) ? 0 : null, edit: null };
+}
+
+function onParam(args: { model: DeepReadonly<Model>; name: string; u: Util<typeof params> }): Model {
+  const { model, name, u } = args;
+  const balanced = isBalanced(u.params);
+  const balancedAt = balanced ? (model.balancedAt ?? model.frame) : null;
+  if (balanced && model.balancedAt === null) u.log(`balanced: ${coefsOf(u.params).join(", ")}`);
+  const slot = slotNamed(name);
+  const edit = slot === undefined ? model.edit : { slot, frame: model.frame };
+  return { ...model, balancedAt, edit };
+}
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch (msg.type) {
+    case "tick":
+      return { ...model, frame: msg.frame };
+    case "param":
+      return onParam({ model, name: msg.name, u });
+    case "mousedown":
+    case "mouseup":
+    case "mousemove":
+    case "keydown":
+    case "keyup":
+    case "trigger":
+      return model;
+  }
+}
+
+// ---------- drawing helpers ----------
+
+const W = canvas.width;
+const PAPER = "#f6f1e4";
+const INK = "#2b2a33";
+const SOFT_INK = "#6b6676";
+const CARD = "#fffdf7";
+const GOOD = "#2f8a4a";
+const GOOD_TINT = "#e2f3df";
+const BAD = "#c8402f";
+const BAD_TINT = "#fbe2dc";
+const FONT = "Avenir Next, Helvetica Neue, Helvetica, Arial, sans-serif";
+
+type Style = "normal" | "bold";
+
+function setText(v: View, size: number, style: Style = "normal"): void {
+  v.textFont(FONT);
+  v.textSize(size);
+  v.textStyle(style);
+}
+
+/** Text width at a size: View has no textWidth, so measure on the raw context with the font `text` would set. */
+function textW(v: View, args: { s: string; size: number; style?: Style }): number {
+  v.ctx.font = `${args.style ?? "normal"} ${args.size}px ${FONT}`;
+  return v.ctx.measureText(args.s).width;
+}
+
+function roundRect(v: View, box: { x: number; y: number; w: number; h: number; r: number }): void {
+  const { x, y, w, h, r } = box;
+  v.path([
+    ["move", x + r, y],
+    ["line", x + w - r, y],
+    ["quad", x + w, y, x + w, y + r],
+    ["line", x + w, y + h - r],
+    ["quad", x + w, y + h, x + w - r, y + h],
+    ["line", x + r, y + h],
+    ["quad", x, y + h, x, y + h - r],
+    ["line", x, y + r],
+    ["quad", x, y, x + r, y],
+    ["close"],
+  ]);
+}
+
+const SUB_SCALE = 0.62;
+
+/** Width of a formula written with subscripts at `size`. */
+function formulaW(v: View, args: { id: MoleculeId; size: number }): number {
+  let w = 0;
+  for (const [el, n] of MOLECULES[args.id].formula) {
+    w += textW(v, { s: el, size: args.size, style: "bold" });
+    if (n > 1) w += textW(v, { s: String(n), size: args.size * SUB_SCALE, style: "bold" }) + 1;
+  }
+  return w;
+}
+
+/** Write a formula with real subscripts; (x, y) is the left end of the baseline. */
+function drawFormula(v: View, args: { id: MoleculeId; x: number; y: number; size: number; color: string }): void {
+  const { id, y, size, color } = args;
+  let x = args.x;
+  v.noStroke();
+  v.fill(color);
+  v.textAlign("left", "alphabetic");
+  for (const [el, n] of MOLECULES[id].formula) {
+    setText(v, size, "bold");
+    v.text(el, x, y);
+    x += textW(v, { s: el, size, style: "bold" });
+    if (n > 1) {
+      const sub = size * SUB_SCALE;
+      setText(v, sub, "bold");
+      v.text(String(n), x + 1, y + size * 0.22);
+      x += textW(v, { s: String(n), size: sub, style: "bold" }) + 1;
+    }
+  }
+}
+
+/** One atom: a shaded ball with a soft highlight up and to the left. */
+function drawAtom(v: View, args: { el: Element; x: number; y: number; r: number }): void {
+  const { el, x, y, r } = args;
+  const look = LOOK[el];
+  v.noStroke();
+  v.fill(
+    v.radialGradient(x - r * 0.35, y - r * 0.4, r * 1.45, [
+      [0, "#ffffff"],
+      [0.28, look.fill],
+      [0.8, look.fill],
+      [1, look.edge],
+    ]),
+  );
+  v.circle(x, y, r * 2);
+  v.noFill();
+  v.stroke(look.edge);
+  v.strokeWeight(Math.max(0.8, r * 0.12));
+  v.circle(x, y, r * 2);
+}
+
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function moleculeBounds(id: MoleculeId): Box {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const atom of MOLECULES[id].atoms) {
+    const r = LOOK[atom.el].radius;
+    x0 = Math.min(x0, atom.x - r);
+    y0 = Math.min(y0, atom.y - r);
+    x1 = Math.max(x1, atom.x + r);
+    y1 = Math.max(y1, atom.y + r);
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+interface Placed {
+  id: MoleculeId;
+  cx: number;
+  cy: number;
+  scale: number;
+  /** Elements that do not balance: their atoms get a red ring so the eye finds them. */
+  off: ReadonlySet<Element>;
+}
+
+function drawMolecule(v: View, m: Placed): void {
+  const { id, cx, cy, scale, off } = m;
+  const b = moleculeBounds(id);
+  const ox = cx - (b.x + b.w / 2) * scale;
+  const oy = cy - (b.y + b.h / 2) * scale;
+  // a soft red halo behind each atom of an element that does not balance
+  v.noStroke();
+  v.fill("rgba(200, 64, 47, 0.55)");
+  for (const atom of MOLECULES[id].atoms) {
+    if (off.has(atom.el)) v.circle(ox + atom.x * scale, oy + atom.y * scale, LOOK[atom.el].radius * scale * 2 + 8);
+  }
+  for (const atom of MOLECULES[id].atoms) {
+    drawAtom(v, { el: atom.el, x: ox + atom.x * scale, y: oy + atom.y * scale, r: LOOK[atom.el].radius * scale });
+  }
+}
+
+interface Grid {
+  cols: number;
+  rows: number;
+  scale: number;
+}
+
+const MAX_SCALE = 24;
+const GAP = 0.45; // gap between molecules, in molecule units
+
+/** The column count that lets `n` molecules fill the cell at the largest size. */
+function bestGrid(args: { id: MoleculeId; n: number; w: number; h: number }): Grid {
+  const { id, n, w, h } = args;
+  const b = moleculeBounds(id);
+  let best: Grid = { cols: 1, rows: n, scale: 0 };
+  for (let cols = 1; cols <= n; cols += 1) {
+    const rows = Math.ceil(n / cols);
+    const scale = Math.min(MAX_SCALE, w / (cols * (b.w + GAP)), h / (rows * (b.h + GAP)));
+    if (scale > best.scale + 0.01) best = { cols, rows, scale };
+  }
+  return best;
+}
+
+// ---------- celebration stars (fixed placement around the equation) ----------
+
+interface Star {
+  /** Which end of the equation strip, and how far above (-) or below (+) its middle. */
+  at: { end: "left" | "right"; dy: number };
+  size: number;
+  delay: number;
+  color: string;
+}
+
+const STARS: readonly Star[] = [
+  { at: { end: "left", dy: -22 }, size: 16, delay: 0, color: "#f2c14e" },
+  { at: { end: "left", dy: 8 }, size: 11, delay: 6, color: "#4f7fe0" },
+  { at: { end: "left", dy: 32 }, size: 8, delay: 12, color: "#e5483c" },
+  { at: { end: "right", dy: -24 }, size: 15, delay: 3, color: "#e5483c" },
+  { at: { end: "right", dy: 6 }, size: 9, delay: 9, color: "#f2c14e" },
+  { at: { end: "right", dy: 30 }, size: 12, delay: 15, color: "#3fa45b" },
+  { at: { end: "left", dy: -2 }, size: 5, delay: 20, color: "#f2c14e" },
+  { at: { end: "right", dy: 40 }, size: 6, delay: 24, color: "#9b6bd3" },
+];
+
+function drawStar(v: View, args: { x: number; y: number; size: number; color: string }): void {
+  const { x, y, size, color } = args;
+  const pts: [number, number][] = [];
+  for (let k = 0; k < 8; k += 1) {
+    const r = k % 2 === 0 ? size : size * 0.32;
+    const ang = (k * Math.PI) / 4 - Math.PI / 2;
+    pts.push([x + Math.cos(ang) * r, y + Math.sin(ang) * r]);
+  }
+  v.noStroke();
+  v.fill(color);
+  v.polygon(pts);
+}
+
+/** Stars pop out around the equation strip, one after another, then twinkle gently. */
+function drawStars(v: View, args: { strip: Box; t: number }): void {
+  const { strip, t } = args;
+  for (const [i, st] of STARS.entries()) {
+    const age = t - st.delay;
+    if (age < 0) continue;
+    const pop = age < 12 ? age / 12 : age < 24 ? 1.25 - ((age - 12) / 12) * 0.25 : 1;
+    const twinkle = age < 24 ? 1 : 0.8 + 0.2 * Math.sin(age * 0.08 + i * 1.7);
+    const pos = { x: st.at.end === "left" ? strip.x - 18 : strip.x + strip.w + 18, y: strip.y + strip.h / 2 + st.at.dy };
+    drawStar(v, { x: pos.x, y: pos.y, size: st.size * pop * twinkle, color: st.color });
+  }
+}
+
+// ---------- layout ----------
+
+const EQ_Y = 118; // baseline of the written equation
+const BOX = 46;
+const PANEL_TOP = 168;
+const PANEL_H = 214;
+const TALLY_TOP = 398;
+const STATUS_TOP = 540;
+
+// ---------- scene parts ----------
+
+function drawBackground(v: View, p: ParamView): void {
+  const r = REACTIONS[p.reaction];
+  v.background(PAPER);
+  setText(v, 26, "bold");
+  v.noStroke();
+  v.fill(INK);
+  v.textAlign("left", "alphabetic");
+  v.text("Balance the equation", 28, 44);
+  setText(v, 15);
+  v.fill(SOFT_INK);
+  v.text(r.title, 30, 66);
+
+  // the two picture panels
+  for (const [x, label] of [
+    [24, "Before: reactants"],
+    [424, "After: products"],
+  ] as const) {
+    v.fill(CARD);
+    v.stroke("#d9cfb8");
+    v.strokeWeight(1.5);
+    roundRect(v, { x, y: PANEL_TOP, w: 352, h: PANEL_H, r: 14 });
+    v.noStroke();
+    v.fill(SOFT_INK);
+    setText(v, 12, "bold");
+    v.textAlign("left", "alphabetic");
+    v.text(label.toUpperCase(), x + 14, PANEL_TOP + 20);
+  }
+  // the arrow between the panels
+  v.noFill();
+  v.stroke(SOFT_INK);
+  v.strokeWeight(4);
+  v.brush("ink");
+  v.gesture({ pressure: "even", wobble: 0.8, seed: 3 });
+  v.line(384, PANEL_TOP + PANEL_H / 2, 414, PANEL_TOP + PANEL_H / 2);
+  v.line(404, PANEL_TOP + PANEL_H / 2 - 9, 415, PANEL_TOP + PANEL_H / 2);
+  v.line(404, PANEL_TOP + PANEL_H / 2 + 9, 415, PANEL_TOP + PANEL_H / 2);
+  v.noBrush();
+
+  // tally card
+  v.fill(CARD);
+  v.stroke("#d9cfb8");
+  v.strokeWeight(1.5);
+  roundRect(v, { x: 24, y: TALLY_TOP, w: 752, h: STATUS_TOP - TALLY_TOP - 12, r: 14 });
+  v.noStroke();
+  v.fill(SOFT_INK);
+  setText(v, 12, "bold");
+  v.textAlign("left", "alphabetic");
+  v.text("ATOM COUNT", 38, TALLY_TOP + 20);
+  setText(v, 12);
+  v.textAlign("center", "alphabetic");
+  v.text("left side", 290, TALLY_TOP + 20);
+  v.text("right side", 510, TALLY_TOP + 20);
+  v.paperTexture(0.12);
+}
+
+interface EqPart {
+  kind: "coef" | "formula" | "plus" | "arrow";
+  w: number;
+  slot?: Slot;
+  id?: MoleculeId;
+}
+
+const EQ_SIZE = 30;
+
+function equationParts(v: View, r: Reaction): EqPart[] {
+  const parts: EqPart[] = [];
+  const species = [...r.left, ...r.right];
+  for (const [i, id] of species.entries()) {
+    if (i === r.left.length) parts.push({ kind: "arrow", w: 60 });
+    else if (i > 0) parts.push({ kind: "plus", w: 38 });
+    parts.push({ kind: "coef", w: BOX + 8, slot: SLOTS[i] ?? "A" });
+    parts.push({ kind: "formula", w: formulaW(v, { id, size: EQ_SIZE }), id });
+  }
+  return parts;
+}
+
+function coefValue(p: ParamView, slot: Slot): number {
+  return p[slot];
+}
+
+function drawCoefBox(v: View, args: { slot: Slot; x: number; value: number; glow: number }): void {
+  const { slot, x, value, glow } = args;
+  const y = EQ_Y - BOX + 10;
+  if (glow > 0) {
+    v.noStroke();
+    v.fill(`rgba(242, 193, 78, ${(0.55 * glow).toFixed(3)})`);
+    roundRect(v, { x: x - 6, y: y - 6, w: BOX + 12, h: BOX + 12, r: 12 });
+  }
+  v.fill("#ffffff");
+  v.stroke("#8a83a0");
+  v.strokeWeight(2);
+  roundRect(v, { x, y, w: BOX, h: BOX, r: 8 });
+  v.noStroke();
+  v.fill("#3b3487");
+  setText(v, 28, "bold");
+  v.textAlign("center", "middle");
+  v.text(String(value), x + BOX / 2, y + BOX / 2 + 1);
+  // the box's letter, matching the typed field's name
+  v.fill("#8a83a0");
+  setText(v, 12, "bold");
+  v.textAlign("center", "top");
+  v.text(`box ${slot}`, x + BOX / 2, y + BOX + 5);
+}
+
+function drawEquation(v: View, args: { p: ParamView; model: DeepReadonly<Model> }): void {
+  const { p, model } = args;
+  const r = REACTIONS[p.reaction];
+  const parts = equationParts(v, r);
+  const total = parts.reduce((s, part) => s + part.w, 0);
+  let x = (W - total) / 2;
+  if (model.balancedAt !== null) {
+    const strip = { x: x - 18, y: EQ_Y - BOX + 2, w: total + 36, h: BOX + 32 };
+    v.noStroke();
+    v.fill(GOOD_TINT);
+    roundRect(v, { ...strip, r: 14 });
+    drawStars(v, { strip, t: model.frame - model.balancedAt });
+  }
+  for (const part of parts) {
+    if (part.kind === "coef" && part.slot !== undefined) {
+      const since = model.edit?.slot === part.slot ? model.frame - model.edit.frame : Infinity;
+      const glow = since < 45 ? 1 - since / 45 : 0;
+      drawCoefBox(v, { slot: part.slot, x, value: coefValue(p, part.slot), glow });
+    } else if (part.kind === "formula" && part.id !== undefined) {
+      drawFormula(v, { id: part.id, x, y: EQ_Y, size: EQ_SIZE, color: INK });
+    } else {
+      v.noStroke();
+      v.fill(SOFT_INK);
+      setText(v, 30, "bold");
+      v.textAlign("center", "alphabetic");
+      v.text(part.kind === "plus" ? "+" : "→", x + part.w / 2, EQ_Y);
+    }
+    x += part.w;
+  }
+}
+
+function drawUnusedNote(v: View, p: ParamView): void {
+  if (speciesCount(REACTIONS[p.reaction]) >= 4) return;
+  const x = 572;
+  const y = 22;
+  v.noFill();
+  v.stroke("#b9b2c7");
+  v.strokeWeight(1.5);
+  roundRect(v, { x, y, w: 30, h: 30, r: 6 });
+  v.line(x + 6, y + 24, x + 24, y + 6);
+  v.noStroke();
+  v.fill("#9a93ab");
+  setText(v, 13, "bold");
+  v.textAlign("left", "alphabetic");
+  v.text(`box D (${p.D}): not used`, x + 38, y + 13);
+  setText(v, 12);
+  v.text("this reaction has only 3 boxes", x + 38, y + 28);
+}
+
+function bob(args: { model: DeepReadonly<Model>; index: number }): number {
+  const { model, index } = args;
+  if (model.balancedAt === null) return 0;
+  const t = model.frame - model.balancedAt;
+  return Math.sin(t * 0.09 + index * 0.9) * 3;
+}
+
+interface SideArgs {
+  ids: readonly MoleculeId[];
+  coefs: readonly number[];
+  firstSlot: number;
+  x: number;
+  model: DeepReadonly<Model>;
+  off: ReadonlySet<Element>;
+}
+
+function drawSide(v: View, args: SideArgs): void {
+  const { ids, coefs, firstSlot, x, model, off } = args;
+  const cellW = 352 / ids.length;
+  for (const [i, id] of ids.entries()) {
+    const n = coefs[i] ?? 1;
+    const cx = x + cellW * i;
+    // the cell's caption: "box B: 2 × O₂"
+    const capY = PANEL_TOP + 46;
+    const capSize = 17;
+    setText(v, capSize, "bold");
+    const head = `${n} × `;
+    const headW = textW(v, { s: head, size: capSize, style: "bold" });
+    const capW = headW + formulaW(v, { id, size: capSize });
+    const capX = cx + (cellW - capW) / 2;
+    v.noStroke();
+    v.fill("#3b3487");
+    v.textAlign("left", "alphabetic");
+    v.text(head, capX, capY);
+    drawFormula(v, { id, x: capX + headW, y: capY, size: capSize, color: INK });
+    if (i > 0) {
+      v.stroke("#e6dcc6");
+      v.strokeWeight(1.5);
+      v.line(cx, PANEL_TOP + 30, cx, PANEL_TOP + PANEL_H - 14);
+    }
+    // the molecules, n of them, as large as the cell allows
+    const area = { x: cx + 10, y: PANEL_TOP + 58, w: cellW - 20, h: PANEL_H - 70 };
+    const g = bestGrid({ id, n, w: area.w, h: area.h });
+    const pitchX = area.w / g.cols;
+    const pitchY = Math.min(area.h / g.rows, (moleculeBounds(id).h + GAP) * g.scale * 1.25);
+    const top = area.y + (area.h - pitchY * g.rows) / 2;
+    for (let k = 0; k < n; k += 1) {
+      const row = Math.floor(k / g.cols);
+      const col = k % g.cols;
+      const inRow = Math.min(g.cols, n - row * g.cols);
+      const rowLeft = area.x + (area.w - inRow * pitchX) / 2;
+      drawMolecule(v, {
+        id,
+        cx: rowLeft + pitchX * (col + 0.5),
+        cy: top + pitchY * (row + 0.5) + bob({ model, index: firstSlot * 13 + k }),
+        scale: g.scale,
+        off,
+      });
+    }
+  }
+}
+
+function drawDots(v: View, args: { el: Element; n: number; pitch: number; x: number; y: number; dir: 1 | -1; color: string }): void {
+  const { el, n, pitch, x, y, dir, color } = args;
+  if (n === 0) return;
+  const look = LOOK[el];
+  if (pitch >= 5) {
+    const d = Math.min(pitch * 0.82, 13);
+    for (let i = 0; i < n; i += 1) {
+      const cx = x + dir * (pitch * i + pitch / 2);
+      v.fill(look.fill);
+      v.stroke(look.edge);
+      v.strokeWeight(1.2);
+      v.circle(cx, y, d);
+    }
+    return;
+  }
+  // too many to show one by one: a bar of the same length
+  const len = pitch * n;
+  v.noStroke();
+  v.fill(color);
+  v.rect(dir === 1 ? x : x - len, y - 5, len, 10);
+}
+
+const DOTS_SPAN = 150;
+const CENTER = 400;
+
+function drawTallyRow(v: View, args: { t: Tally; y: number }): void {
+  const { t, y } = args;
+  const ok = t.left === t.right;
+  const look = LOOK[t.el];
+  v.noStroke();
+  v.fill(ok ? GOOD_TINT : BAD_TINT);
+  roundRect(v, { x: 34, y: y - 17, w: 732, h: 34, r: 10 });
+  // element: ball + name
+  drawAtom(v, { el: t.el, x: 54, y, r: 9 });
+  v.noStroke();
+  v.fill(INK);
+  setText(v, 15, "bold");
+  v.textAlign("left", "middle");
+  v.text(`${look.name} (${t.el})`, 70, y);
+  // counts, one dot per atom, both sides at the same spacing so lengths compare
+  const most = Math.max(t.left, t.right, 1);
+  const pitch = Math.min(14, DOTS_SPAN / most);
+  const sideColor = ok ? GOOD : BAD;
+  drawDots(v, { el: t.el, n: t.left, pitch, x: CENTER - 22, y, dir: -1, color: look.edge });
+  drawDots(v, { el: t.el, n: t.right, pitch, x: CENTER + 22, y, dir: 1, color: look.edge });
+  // the comparison in the middle
+  v.noStroke();
+  v.fill(sideColor);
+  v.circle(CENTER, y, 26);
+  v.fill("#ffffff");
+  setText(v, 20, "bold");
+  v.textAlign("center", "middle");
+  v.text(ok ? "=" : "≠", CENTER, y + 1);
+  // the numbers at the outer ends
+  setText(v, 20, "bold");
+  v.fill(sideColor);
+  v.textAlign("right", "middle");
+  v.text(String(t.left), CENTER - 30 - DOTS_SPAN, y + 1);
+  v.textAlign("left", "middle");
+  v.text(String(t.right), CENTER + 30 + DOTS_SPAN, y + 1);
+  setText(v, 13, ok ? "bold" : "normal");
+  v.textAlign("right", "middle");
+  v.text(ok ? "matches" : t.left > t.right ? "more on the left" : "more on the right", 756, y);
+}
+
+function drawTally(v: View, rows: readonly Tally[]): void {
+  const span = STATUS_TOP - 12 - (TALLY_TOP + 30);
+  const step = Math.min(42, span / rows.length);
+  const top = TALLY_TOP + 30 + (span - step * rows.length) / 2;
+  for (const [i, t] of rows.entries()) drawTallyRow(v, { t, y: top + step * (i + 0.5) });
+}
+
+function nameList(els: readonly Element[]): string {
+  const names = els.map((e) => LOOK[e].name.toLowerCase());
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
+}
+
+function drawStatus(v: View, args: { rows: readonly Tally[]; coefs: readonly number[]; model: DeepReadonly<Model> }): void {
+  const { rows, coefs, model } = args;
+  const off = rows.filter((t) => t.left !== t.right).map((t) => t.el);
+  const y = STATUS_TOP;
+  if (off.length > 0 || model.balancedAt === null) {
+    v.noStroke();
+    v.fill("#fff6e0");
+    v.stroke("#e7c879");
+    v.strokeWeight(1.5);
+    roundRect(v, { x: 24, y, w: 752, h: 48, r: 12 });
+    v.noStroke();
+    v.fill(BAD);
+    setText(v, 17, "bold");
+    v.textAlign("left", "alphabetic");
+    const verb = off.length === 1 ? "does not match" : "do not match";
+    v.text(`Not balanced yet: ${nameList(off)} ${verb}.`, 40, y + 21);
+    v.fill(SOFT_INK);
+    setText(v, 13);
+    v.text("Change the big numbers in the boxes. The small numbers inside a formula stay the same.", 40, y + 39);
+    return;
+  }
+  const t = model.frame - model.balancedAt;
+  const pop = Math.min(1, t / 14);
+  const ease = 1 - (1 - pop) ** 3;
+  v.noStroke();
+  v.fill(`rgba(47, 138, 74, ${(0.35 + 0.65 * ease).toFixed(3)})`);
+  roundRect(v, { x: 24, y, w: 752, h: 48, r: 12 });
+  v.fill("#ffffff");
+  setText(v, 22, "bold");
+  v.textAlign("left", "alphabetic");
+  v.text("Balanced!", 40, y + 22);
+  setText(v, 14);
+  const factor = commonFactor(coefs);
+  const line =
+    factor > 1
+      ? `Every atom is accounted for. Every box can be divided by ${factor}: can you find smaller numbers that also work?`
+      : "Every atom on the left is still there on the right. Nothing appears or disappears.";
+  v.text(line, 40, y + 40);
+  // a hand-drawn tick at the right end
+  v.noFill();
+  v.stroke("#ffffff");
+  v.strokeWeight(5);
+  v.brush("ink");
+  v.gesture({ pressure: "taper-out", wobble: 0.6, seed: 11 });
+  v.path([
+    ["move", 724, y + 24],
+    ["line", 735, y + 35],
+    ["line", 756, y + 12],
+  ]);
+  v.noBrush();
+}
+
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+  const r = REACTIONS[p.reaction];
+  const coefs = coefsOf(p);
+  v.cache(`bg-${p.reaction}`, () => drawBackground(v, p));
+  drawUnusedNote(v, p);
+  drawEquation(v, { p, model });
+  const rows = tally(r, coefs);
+  const off: ReadonlySet<Element> = new Set(rows.filter((t) => t.left !== t.right).map((t) => t.el));
+  drawSide(v, { ids: r.left, coefs: coefs.slice(0, r.left.length), firstSlot: 0, x: 24, model, off });
+  drawSide(v, { ids: r.right, coefs: coefs.slice(r.left.length), firstSlot: r.left.length, x: 424, model, off });
+  drawTally(v, rows);
+  drawStatus(v, { rows, coefs, model });
+}

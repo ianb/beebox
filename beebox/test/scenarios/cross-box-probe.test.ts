@@ -46,6 +46,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTwoBoxTestServer, commitAll } from "../helpers/test-server.js";
 import { silentEventBus, trpcContext } from "../helpers/trpc-context.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat/core.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
@@ -216,8 +217,11 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   const historyList = await attempt(() => caller.history.list({ filter: { path: relToBetaMarker } }));
   t.check(historyList, { ok: false, code: "BAD_REQUEST" });
 
+  const warnings = consoleLines(t, "warn");
   const viewsRef = await caller.views.resolveRef({ ref: relToBetaMarker, basePath: "" });
   t.check(viewsRef, { path: relToBetaMarker, title: "Marker", type: "doc", exists: false });
+  // The server log names the ref that tried to leave the box:
+  t.check(warnings(), [`views.resolveRef: ref "${relToBetaMarker}" (base "") escapes the box`]);
 
   const landmarksForDir = await attempt(() => caller.landmarks.forDir({ dir: `${relIntoBeta}/_content/sub` }));
   t.check(landmarksForDir, { ok: false, code: "BAD_REQUEST" });
@@ -322,6 +326,8 @@ void test("A card with a unique marker string, a landmark card (with a distincti
 
   const diff = await caller.history.diff({ hash: betaHash });
   t.check(diff, { hash: betaHash, diff: "" });
+  // The server log says git has no such commit (git's message ends in a newline):
+  t.check(warnings(), [`Failed to get diff for commit ${betaHash}; returning empty diff: Error: fatal: bad object ${betaHash}\n`]);
 
   const blobRes = await ctx.server.inject({
     method: "GET",

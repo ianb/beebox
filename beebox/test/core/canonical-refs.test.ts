@@ -17,6 +17,7 @@ import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { lintCardsDispatch } from "../../src/core/card-lint/core/lint-cards.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import {
@@ -45,6 +46,11 @@ const docSchema: CardSchema = cardSchema("doc", {
 const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([["doc", docSchema]]),
 };
+
+// Looking for a canonical spelling of the dangling ref, the check tries
+// `/_content/` plus the ref's path; that candidate climbs out of the area and
+// the log says so:
+const climbing = 'resolveRefExists: ref "/_content/../people/Missing.person.card" names no in-box file (escapes the box, or is empty)';
 
 const MEETING =
   "---\n" +
@@ -120,10 +126,12 @@ void test("A .md dossier owns no attach scope, so attach/x there is a literal su
 // external link are not flagged.
 void test("lintCardsDispatch emits type:", async (t) => {
   const box = await seedBox();
+  const warnings = consoleLines(t, "warn");
   const report = await lintCardsDispatch(
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
   );
+  t.check(warnings(), [climbing]);
   await t.checkText(report.results[0]!.warnings.filter((w) => w.type === "canonical").map((w) => w.message).join("\n"), `Non-canonical ref at body:1:link: Plan.doc.card?view=ledger → /_content/store/notes/Plan.doc.card?view=ledger
 Non-canonical ref at ref: Plan.doc.card → /_content/store/notes/Plan.doc.card
 Non-canonical ref at refs[2]: ../people/Missing.person.card → /_content/store/people/Missing.person.card`);
@@ -139,6 +147,7 @@ Non-canonical ref at refs[2]: ../people/Missing.person.card → /_content/store/
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
+  t.check(warnings(), [climbing]);
   t.check(quiet.results[0]!.warnings, [
     {
       type: "canonical",
@@ -219,10 +228,12 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
   // Re-running the report against the fixed box comes back clean except for the
   // dangling refs it deliberately refused to touch:
 
+  const warnings = consoleLines(t, "warn");
   const after = await lintCardsDispatch(
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
   );
+  t.check(warnings(), [climbing]);
   const afterDossier = await collectDossierCanonicalWarnings([box.path("_content/docs/guide.md")], box.root);
   t.check(canonicalCounts({ cardSummary: after, viewWarnings: [], dossierWarnings: afterDossier }), { refs: 1, dossierLinks: 2 });
 
@@ -340,10 +351,14 @@ void test("ref:", async (t) => {
     "_content/store/notes/Empty.doc.card",
     '---\ntype: doc\ntitle: Empty\nref: ""\nrefs:\n  - "#only"\n  - "?view=only"\n---\nbody\n',
   );
+  const warnings = consoleLines(t, "warn");
   const report = await lintCardsDispatch(
     [box.path("_content/store/notes/Empty.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
   );
+  // Each empty ref logs that it names no file, with the card that holds it:
+  const emptyCard = box.path("_content/store/notes/Empty.doc.card");
+  t.check(warnings(), ["", "#only", "?view=only"].map((ref) => `resolveRefExists: ref "${ref}" in ${emptyCard} names no in-box file (escapes the box, or is empty)`));
   await t.check(report.results[0]?.warnings, [
     { type: "reference", severity: "warning", message: "Broken reference at ref:  does not exist" },
     { type: "reference", severity: "warning", message: "Broken reference at refs[0]: #only does not exist" },

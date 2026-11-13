@@ -38,3 +38,10 @@ dry-run names the token grant and who runs the pull, a test in
 `beebox/test/deploy/` checks that dry-run text for a new box, and a test with
 stubbed `git`/`sudo` checks that a re-run on an existing box pulls as the box
 owner (or skips the pull).
+
+## Note 2026-11-11
+
+The token half is fixed: `add-box.sh` now grants `claude-oauth-token` to the
+box whenever the master store holds it and the box has no grant yet, and the
+dry run says so. The re-run pull as root is still open. No test was added;
+the script still has no test harness.

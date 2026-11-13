@@ -9,6 +9,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
+import { StatusMessage } from "../ui/StatusMessage";
 
 type UploaderToken = RouterOutput["scanTokens"]["list"][number];
 function UploaderRow({ uploader }: { uploader: UploaderToken }) {
@@ -68,7 +69,7 @@ export function ScanUploaderSection() {
         </Stack>
 
         {listQuery.isLoading ? (
-          <Hint>Loading uploaders...</Hint>
+          <StatusMessage variant="inline" busy>Loading uploaders…</StatusMessage>
         ) : listQuery.error ? (
           <ErrorText>{listQuery.error.message}</ErrorText>
         ) : listQuery.data && listQuery.data.length > 0 ? (

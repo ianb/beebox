@@ -1,6 +1,6 @@
 /**
  * The hub's per-box credential checks: a mobile device, a scan uploader, the
- * box's own agent. Each used to be verified against the box's secret store on
+ * box's own agent, and the box's own browser pass. Each used to be verified against the box's secret store on
  * disk. On a unit host the hub runs outside every box's group and reads only
  * what the box publishes for it (`core/hub-meta.ts`): SHA-256 hashes of the
  * live tokens. A bearer is hashed and compared; a junk bearer is refused here
@@ -24,6 +24,8 @@ import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { deriveMobileSessionKey, MOBILE_COOKIE_NAME, verifyMobileSessionWithKey } from "../../core/mobile/session.js";
 import { resolveScanRequestAuth } from "../../core/scan/tokens.js";
 import { parseCookieHeaderAll } from "../../lib/cookies.js";
+import { appOrigin } from "../../core/browser/app-url.js";
+import { boxPassVerifyKey, passKeyFromHubSecret, passValueValid, stripForeignBrowserPasses, verifyBrowserPassWithKey } from "../../core/browser/pass.js";
 
 /** Headers in the shape both Fastify and raw Node give. */
 export type GateHeaders = http.IncomingHttpHeaders;
@@ -71,4 +73,51 @@ export function agentAuthed(boxRoot: string, authorization: string | undefined):
   if (!hubMetaReadsEnabled()) return verifyAgentBearer(boxRoot, authorization);
   const agent = readHubMeta(boxRoot)?.tokenHashes.agent;
   return agent !== undefined && agent !== null && bearerMatchesHashes(authorization, [agent]);
+}
+
+/** The pass key the hub checks this box's box-browser passes with; null when the box has none. */
+function boxPassKey(box: { boxRoot: string; hubSecret: string }): string | null {
+  return hubMetaReadsEnabled() ? passKeyFromHubSecret(box.hubSecret) : boxPassVerifyKey(box.boxRoot);
+}
+
+/**
+ * Does the request carry this box's own browser pass, from the box's own pages
+ * or a typed navigation (`core/browser/pass.ts`)? On a unit host the key is
+ * derived from the box's hub secret, as the mobile cookie's is.
+ */
+export function browserPassAuthed(box: { boxRoot: string; hubSecret: string }, headers: GateHeaders): boolean {
+  return verifyBrowserPassWithKey(boxPassKey(box), { appOrigin: appOrigin(process.env), headers, now: Date.now() });
+}
+
+/**
+ * Forward only the target box's own pass. A pass at path `/` rides every box
+ * path on the origin; a sibling box must never receive one it could replay.
+ * With no target box, every pass is removed. Mutates `headers.cookie`.
+ */
+export function stripForeignPasses(headers: GateHeaders, box: { boxRoot: string; hubSecret: string } | undefined): void {
+  const key = box === undefined ? null : boxPassKey(box);
+  const now = Date.now();
+  const kept = stripForeignBrowserPasses(cookieHeader(headers), (value) => passValueValid(key, { value, now }));
+  if (kept === undefined) delete headers.cookie;
+  else headers.cookie = kept;
+}
+
+/** The box a pass on a request to `slug` must belong to: undefined for no known box. */
+export type PassBoxLookup = (slug: string | null) => { boxRoot: string; hubSecret: string } | undefined;
+
+export function passBoxLookup(boxRootBySlug: ReadonlyMap<string, string>, secretFor: (slug: string | null) => string): PassBoxLookup {
+  return (slug) => {
+    const boxRoot = slug === null ? undefined : boxRootBySlug.get(slug);
+    return boxRoot === undefined ? undefined : { boxRoot, hubSecret: secretFor(slug) };
+  };
+}
+
+/**
+ * Check a proxied request's browser pass for its target box, then forward only
+ * that box's own pass: true when the pass admits the request.
+ */
+export function takeBrowserPass(headers: GateHeaders, box: { boxRoot: string; hubSecret: string } | undefined): boolean {
+  const ok = box !== undefined && browserPassAuthed(box, headers);
+  stripForeignPasses(headers, box);
+  return ok;
 }

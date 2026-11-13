@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { isRecord } from "./card-io.js";
 import { parseYaml } from "../lib/read-yaml.js";
 import { splitCardContent } from "../exports/cards.js";
+import { gitEnvironment } from "../lib/git/env.js";
 
 /** Parse a card's frontmatter into an object + body, or null if it isn't a card. */
 export function parseCard(content: string): { fm: Record<string, unknown>; body: string } | null {
@@ -24,7 +25,7 @@ export async function mergeWithoutConflict({ local, base, upstream, card }: { lo
   try {
     await Promise.all([fs.writeFile(basePath, base), fs.writeFile(upstreamPath, upstream)]);
     try {
-      const result = await promisify(execFile)("git", ["merge-file", "-p", "--", local, basePath, upstreamPath], { maxBuffer: 10 * 1024 * 1024 });
+      const result = await promisify(execFile)("git", ["merge-file", "-p", "--", local, basePath, upstreamPath], { maxBuffer: 10 * 1024 * 1024, env: gitEnvironment() });
       // A clean line merge can still create duplicate YAML keys. Keep such
       // cards parked instead of writing an invalid active card.
       if (card && parseCard(base) !== null) {

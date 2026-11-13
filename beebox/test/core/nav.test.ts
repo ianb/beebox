@@ -9,6 +9,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { resolveNav } from "../../src/core/nav.js";
 import { parseNavFields } from "../../src/schemas/nav.js";
 import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
@@ -204,7 +205,14 @@ entries:
   - { ref: /_content/Leak.doc.card }
 ---
 `);
+  const warnings = consoleLines(t, "warn");
   const result = await resolveNav(box.root);
+  // The server log names each ref it refused:
+  t.check(warnings(), [
+    'resolveNav: ref "../outside/Secret.doc.card" escapes the box',
+    'resolveNav: ref "/../outside/Secret.doc.card" escapes the box',
+    'resolveNav: ref "/_content/Leak.doc.card" resolves outside the box via symlink',
+  ]);
   t.check(result.status === "ok" ? result.problems : null, [
     "ref \"../outside/Secret.doc.card\" must be box-relative (must not escape the box via ..)",
     "ref \"/../outside/Secret.doc.card\" must be box-relative (must not escape the box via ..)",

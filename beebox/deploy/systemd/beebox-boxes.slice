@@ -1,0 +1,19 @@
+# One memory ceiling for every box's work together: the engines
+# (beebox-box@), scheduler passes (beebox-pass@) and backups (beebox-backup@)
+# all run in this slice (Slice= in box-sandbox.conf). Each unit has its own
+# limit, but several boxes at their limits at once can still exhaust the host.
+# On 2026-11-11 one box's eval filled all of RAM and swap; the host thrashed
+# for an hour, and ssh and nginx stopped answering. With this ceiling the
+# kernel kills inside the boxes' cgroups first, and the hub, scheduler, nginx
+# and ssh keep the remaining memory.
+#
+# Percentages are of physical RAM, so the limit follows the host's size.
+# Swap is in bytes: the host's swap file is 4G (cloud-init.yaml), and half of
+# it stays free for the rest of the host.
+[Unit]
+Description=Bee Box per-box units (shared memory ceiling)
+
+[Slice]
+MemoryHigh=75%
+MemoryMax=85%
+MemorySwapMax=2G

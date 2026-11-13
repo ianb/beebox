@@ -133,3 +133,27 @@ export function hasRenderableAssistantContent(entries: SessionEntry[], debugView
 export function hasProgressUpdate(entries: SessionEntry[]): boolean {
   return entries.some((e) => e.content.some((b) => b.progressUpdate === true && Boolean(b.text?.trim())));
 }
+
+/**
+ * A stretch of an activity group's work: a note and the steps after it, up to
+ * the next note. The first stage has no note when steps come before any note.
+ */
+export interface Stage {
+  note: string | null;
+  parts: Exclude<ActivityPart, { type: "note" }>[];
+}
+
+/** Split an activity group's parts into stages, one per note. */
+export function splitStages(parts: ActivityPart[]): Stage[] {
+  const stages: Stage[] = [];
+  for (const part of parts) {
+    if (part.type === "note") {
+      stages.push({ note: part.text, parts: [] });
+      continue;
+    }
+    const current = stages.at(-1);
+    if (current) current.parts.push(part);
+    else stages.push({ note: null, parts: [part] });
+  }
+  return stages;
+}

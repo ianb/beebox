@@ -13,6 +13,7 @@ import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { migrationQuestions, repairMigration } from "../../src/core/migration-repair.js";
 import { pendingMigrationsCheck } from "../../src/webapp/trpc/routers/health/checks/migrations.js";
 import { createFakeAgent } from "./fake-agent.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const CARD = "_bookkeeping/questions/Migration_probe-0.question.card";
 // `answer` must be an object; a hand edit that writes a bare string fails QuestionSchema.
@@ -30,6 +31,7 @@ async function currentBoxWithMalformedQuestion(): Promise<TmpBox> {
 void test("a malformed question card is an attention item for the sweep and the health check", async (t) => {
   const box = await currentBoxWithMalformedQuestion();
   t.teardown(() => box.cleanup());
+  const warnings = consoleLines(t, "warn");
   const sweep = await sweepMigrations({ boxRoot: box.root, repair: true });
   const health = await pendingMigrationsCheck(box.root);
   // Nothing is pending, so the only attention item is the unreadable card, named by path.
@@ -39,6 +41,9 @@ void test("a malformed question card is an attention item for the sweep and the 
     healthOk: false,
     named: true,
   });
+  // The card scan logs the unreadable card and why, then lists it as unknown:
+  const path = join(box.root, CARD);
+  t.check(warnings(), [`Could not load card ${path}, listing as unknown: CardIOError: ${path}: invalid question frontmatter:\n  - answer: expected object, got string`]);
 });
 
 void test("a malformed question card stops a repair attempt as unanswered", async (t) => {
@@ -63,6 +68,7 @@ for (const [label, card] of [["unanswered", UNANSWERED], ["malformed", MALFORMED
     await box.write(MANIFEST_PATH, lines.join("\n") + "\n");
     await box.write(`_bookkeeping/questions/Migration_${PENDING}-0.question.card`, card);
     await box.commitAll("seed");
+    const warnings = consoleLines(t, "warn");
     let agents = 0;
     const repairAgent = createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: () => { agents += 1; return { status: "failed", reason: "x" }; } });
     const result = await sweepMigrations({ boxRoot: box.root, repair: true, repairAgent,
@@ -70,5 +76,12 @@ for (const [label, card] of [["unanswered", UNANSWERED], ["malformed", MALFORMED
     const manifest = await readFile(join(box.root, MANIFEST_PATH), "utf8");
     // The open question holds no record of these leftovers, so the migration stays pending for the next pass.
     t.check({ status: result.status, recorded: manifest.includes(PENDING), agents }, { status: "deferred-repair", recorded: false, agents: 0 });
+    if (label === "malformed") {
+      // The card scan logs the unreadable card and why, then lists it as unknown:
+      const path = join(box.root, `_bookkeeping/questions/Migration_${PENDING}-0.question.card`);
+      t.check(warnings(), [`Could not load card ${path}, listing as unknown: CardIOError: ${path}: invalid question frontmatter:\n  - answer: expected object, got string`]);
+    } else {
+      t.check(warnings(), []);
+    }
   });
 }

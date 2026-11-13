@@ -35,13 +35,13 @@ export function TargetStrip(props: {
   return (
     <div className="bbx-chat-target-strip px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
       <div className="flex-1 flex items-center gap-3">
-        {catchingUp ? <span role="status">Catching up…</span> : status.state === "busy" ? <span>Thinking…</span> : null}
+        {catchingUp ? <span>Catching up…</span> : status.state === "busy" ? <span>Thinking…</span> : null}
         {pendingCount > 0 ? (
           <span>{pendingCount === 1 ? "1 message queued" : `${pendingCount} messages queued`}</span>
         ) : null}
       </div>
       {speechPlaying ? (
-        <button
+        <button type="button"
           id={includeControlIds ? "bbx-chat-stop-speech" : undefined}
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
@@ -55,7 +55,7 @@ export function TargetStrip(props: {
         </button>
       ) : null}
       {isStreaming ? (
-        <button
+        <button type="button"
           id={includeControlIds ? "bbx-chat-stop-agent" : undefined}
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}

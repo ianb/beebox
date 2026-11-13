@@ -41,7 +41,7 @@ function parseRuntime(value: unknown): FigureRuntime | null {
 }
 
 
-export function FigureView({ data, onNavigate, params, mode, caption }: RendererProps) {
+export function FigureView({ data, onNavigate, params, mode, caption, reportActivity }: RendererProps) {
   const apiBase = getApiBase();
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
@@ -112,7 +112,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <StatusMessage className="p-4">Loading figure…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading figure…</StatusMessage>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
@@ -121,15 +121,17 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
 
   const figureEl = (
     <ViewErrorBoundary onRetry={() => void loadModule()}>
-      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
+      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} declaredParams={declared}
+        {...(reportActivity !== undefined ? { reportActivity } : {})} />
     </ViewErrorBoundary>
   );
 
-  // Embedded (chat/companion): just the interactive — minimal chrome — with the
-  // `![caption]` shown beneath, mirroring a captioned image. On the full page,
-  // show the card's description below it. (FileView's page header already offers
-  // the Source toggle.)
-  if (mode === "page") {
+  // Embedded (in a message): just the interactive — minimal chrome — with the
+  // `![caption]` shown beneath, mirroring a captioned image. As a card of its
+  // own (the full page, or a tab beside the chat), inset it and show the card's
+  // description below it. (FileView's page header already offers the Source
+  // toggle.)
+  if (mode === "page" || mode === "companion") {
     const description = typeof data.body === "string" ? data.body : "";
     return (
       <div className="p-4">

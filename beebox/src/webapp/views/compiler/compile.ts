@@ -4,7 +4,8 @@
  * Uses esbuild to bundle each view into an ES module with React and
  * `react-dom` externalized via shims that delegate to `window.__bbxReact` and
  * `window.__bbxReactDOM`.
- * Caches compiled output keyed by file mtime.
+ * Caches compiled output keyed by the mtime and size of every bundled file.
+ * `@/…` imports resolve from the box root (see box-imports.ts).
  */
 
 import type * as esbuild from "esbuild";
@@ -16,6 +17,8 @@ import { glob } from "glob";
 import type { ViewMeta } from "../../../core/views/types.js";
 import { getBoxShape, boxCodePaths, type BoxShape } from "../../../lib/box-shape.js";
 import { importViewMetadata } from "./meta-import.js";
+import { boxRootImportsPlugin, bundleInputs, inputsUnchanged, type BundleInput } from "./box-imports.js";
+import { findBoxRoot } from "../../../lib/paths/core.js";
 import { boxPackageHost, type ViewHostContext } from "../node-view-runtime.js";
 
 /**
@@ -40,6 +43,8 @@ interface CacheEntry {
   // edits.
   size: number;
   output: string;
+  /** Every on-disk file the bundle inlined; an edit to any of them is a miss. */
+  inputs: BundleInput[];
 }
 
 /** Cached metadata, keyed by the view file's own path, invalidated by a
@@ -48,6 +53,8 @@ interface CacheEntry {
 interface MetaCacheEntry {
   hash: string;
   meta: Omit<ViewMeta, "lastModified">;
+  /** The bundle's on-disk inputs: metadata can come from an imported file. */
+  inputs: BundleInput[];
 }
 
 class EmptyEsbuildOutputError extends Error {
@@ -202,14 +209,13 @@ function slugFromFilename(filename: string): string {
 export async function bundleView(
   viewPath: string,
   opts?: { target?: ViewCompileTarget; external?: string[]; cache?: boolean }
-): Promise<{ output: string }> {
+): Promise<{ output: string; inputs: BundleInput[] }> {
   const target = opts?.target ?? "browser";
   // The mtime+size cache is a freshness heuristic, not a guarantee: it misses a
-  // same-length rewrite within one clock tick, and — because `bundle: true`
-  // inlines imports — it never notices an edited *imported* file (the key is the
-  // entry's stat only). Callers that must always reflect current disk state pass
-  // `cache: false`; a tiny single-file compile (a figure sketch) is cheap enough
-  // to redo per request, and it's strictly correct.
+  // same-length rewrite within one clock tick. It covers imported files too:
+  // the entry records every on-disk input from esbuild's metafile. Callers that
+  // must always reflect current disk state pass `cache: false`; a figure
+  // sketch is cheap enough to redo per request, and that is strictly correct.
   const useCache = opts?.cache ?? true;
   // Extra bare specifiers to leave unbundled. Figure sketches receive their
   // runtime library (p5/three/d3) as an argument from the harness; marking
@@ -229,8 +235,8 @@ export async function bundleView(
   const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
   if (useCache) {
     const cached = cache.get(cacheKey);
-    if (cached && cached.mtime === mtime && cached.size === size) {
-      return { output: cached.output };
+    if (cached && cached.mtime === mtime && cached.size === size && (await inputsUnchanged(cached.inputs))) {
+      return { output: cached.output, inputs: cached.inputs };
     }
   }
 
@@ -261,7 +267,9 @@ export async function bundleView(
       : { plugins: [reactExternalPlugin, viewWidgetsExternalPlugin], external: extraExternal };
   const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
 
+  const boxRootPlugin = boxRootImportsPlugin(await findBoxRoot(path.dirname(viewPath)));
   const { build } = await import("esbuild");
+  const workingDir = process.cwd();
   const result = await build({
     stdin: {
       contents: source,
@@ -275,6 +283,9 @@ export async function bundleView(
     jsx: "automatic",
     write: false,
     ...reactConfig,
+    plugins: [boxRootPlugin, ...(reactConfig.plugins ?? [])],
+    metafile: true,
+    absWorkingDir: workingDir,
     // Surfacing compile errors is the caller's job (the route returns an
     // ErrorView module; the CLI prints the message); esbuild's own stderr
     // printout is redundant noise here.
@@ -286,8 +297,9 @@ export async function bundleView(
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  if (useCache) cache.set(cacheKey, { mtime, size, output });
-  return { output };
+  const inputs = await bundleInputs(result.metafile, workingDir);
+  if (useCache) cache.set(cacheKey, { mtime, size, output, inputs });
+  return { output, inputs };
 }
 
 /**
@@ -316,6 +328,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
   };
 
   let mtimeIso: string;
@@ -332,16 +345,19 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
 
   const hash = createHash("sha256").update(source).digest("hex");
   const cached = metaCache.get(viewPath);
-  if (cached && cached.hash === hash) {
+  if (cached && cached.hash === hash && (await inputsUnchanged(cached.inputs))) {
     return { ...cached.meta, lastModified: mtimeIso };
   }
 
   let meta: Omit<ViewMeta, "lastModified">;
+  let inputs: BundleInput[] = [];
   try {
-    const { output } = await bundleView(viewPath, { target: "node" });
+    const bundled = await bundleView(viewPath, { target: "node" });
+    inputs = bundled.inputs;
+    const output = bundled.output;
     const result = await importViewMetadata(output, viewHost);
     if (result === null) meta = fallback;
-    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}` };
+    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}`, metadataError: `${result.invalid}` };
     else {
       const imported = result.meta;
       meta = {
@@ -352,6 +368,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
         modes: imported.modes ?? ["page"],
         layout: imported.layout ?? "inset",
         rendersCardTypes: imported.rendersCardTypes ?? [],
+        checkStates: imported.checkStates ?? [],
       };
     }
   } catch (_e) {
@@ -360,7 +377,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     meta = fallback;
   }
 
-  metaCache.set(viewPath, { hash, meta });
+  metaCache.set(viewPath, { hash, meta, inputs });
   return { ...meta, lastModified: mtimeIso };
 }
 

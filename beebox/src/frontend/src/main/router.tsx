@@ -19,7 +19,7 @@ import { trpcClient } from "../lib/trpc/client";
 import { boxScreenRouteOptions } from "../pages/box-screen/route";
 import { BoxScreenPage } from "../pages/box-screen/BoxScreenPage";
 import { ChatPage } from "../pages/ChatPage";
-import { chatSearchSchema } from "../lib/chat-route-search";
+import { chatSearchSchema, notificationChatSearch, placeLookups } from "../lib/chat-route-search";
 import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
@@ -129,9 +129,9 @@ const chatRoute = createRoute({
   getParentRoute: () => productLayoutRoute,
   path: "/chat",
   component: ChatPage,
-  // A `chat:new` notification links `?new=1&notification=<id>`: a fresh conversation (`session=new`).
-  beforeLoad: ({ params, search: { new: fresh, ...rest } }) => {
-    if (fresh !== undefined) throw redirect({ to: href(`/${params.boxSlug}/chat`), search: toSearch({ ...rest, session: "new" }), replace: true });
+  // A notification links `?new=1` or `?place=<dir>` with `&notification=<id>`; it redirects to the chat it names.
+  beforeLoad: async ({ params, search }) => {
+    const next = await notificationChatSearch(search, placeLookups); if (next !== null) throw redirect({ to: href(`/${params.boxSlug}/chat`), search: toSearch(next), replace: true });
   },
   validateSearch: chatSearchSchema,
 });

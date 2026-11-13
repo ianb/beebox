@@ -141,6 +141,19 @@ const guides: Record<string, SecretGuide> = {
       "Paste both below as JSON: {\"apiKey\": \"…\", \"projectId\": \"…\"}",
     ],
   },
+  "cloudflare-turn": {
+    title: "Cloudflare TURN key",
+    what:
+      "A Cloudflare Realtime TURN key id and its API token, stored together as JSON. During a call in a chat the box "
+      + "mints short-lived relay credentials from it, so people on networks that block a direct connection can still "
+      + "hear each other; the token itself never leaves the server.",
+    obtainUrl: "https://dash.cloudflare.com/?to=/:account/calls",
+    obtainSteps: [
+      "Sign in to the Cloudflare dashboard and open Realtime, then TURN",
+      "Create a TURN key and copy its key id and API token — the token is shown once",
+      "Paste both below as JSON: {\"keyId\": \"…\", \"apiToken\": \"…\"}",
+    ],
+  },
   anthropic: {
     title: "Anthropic API key",
     what:

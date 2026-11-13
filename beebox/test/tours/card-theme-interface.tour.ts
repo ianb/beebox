@@ -30,9 +30,10 @@ tour(
       selection.addRange(range);
       paragraph.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     })()`);
-    await t.expect.button("Add selection to message");
+    // Outside Select mode, a text selection is for copying: no attachment `+`
+    // (issues/features/2026-11-01-point-to-comment.md).
     const selectionButtons = await t.eval('document.querySelectorAll("#bbx-selection-add").length');
-    await t.expect.custom("workspace card owns one selection button", () => selectionButtons.trim() === "1");
+    await t.expect.custom("text selection outside Select mode shows no attachment button", () => selectionButtons.trim() === "0");
     await t.eval("getSelection()?.removeAllRanges()");
     await t.expect.noPageErrors();
   },

@@ -3,7 +3,7 @@
  * the same face with fixed props (see `chat/everywhere/InteractiveChat/SessionChip.tsx`).
  */
 
-import type { DropdownTriggerProps } from "../ui/Dropdown";
+import type { MenuTriggerProps } from "../ui/Menu";
 import { CaretIcon } from "./PlacePillFace";
 
 /**
@@ -53,8 +53,8 @@ export function SessionChipFace({ label, drift, offEngine, accessibleName, onCli
   drift: "above" | "below" | "same" | null;
   offEngine: boolean;
   accessibleName: string;
-  onClick: DropdownTriggerProps["toggle"];
-  ariaProps: DropdownTriggerProps["ariaProps"];
+  onClick: MenuTriggerProps["toggle"];
+  ariaProps: MenuTriggerProps["ariaProps"];
 }) {
   // Keep the editorial title when available; the persistent "Chat" label
   // identifies the menu even without a title or at narrow widths.

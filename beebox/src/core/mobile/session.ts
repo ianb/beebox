@@ -159,6 +159,21 @@ function getOrCreateSecret(boxRoot: string): string {
   return generated;
 }
 
+/**
+ * The box's cookie key, for another signed cookie that must verify wherever
+ * this one does (the box browser pass, `core/browser/pass.ts`). The caller
+ * derives its own subkey from it; never sign with it directly. The signing
+ * form creates the secret file when none exists, as minting does.
+ */
+export function boxCookieSigningKey(boxRoot: string): string {
+  return getOrCreateSecret(boxRoot);
+}
+
+/** The same key for verifying: null when the box never minted one. */
+export function boxCookieVerifyKey(boxRoot: string): string | null {
+  return readSecret(boxRoot);
+}
+
 function signature(key: string, payload: string): string {
   return crypto.createHmac("sha256", key).update(payload).digest("hex");
 }

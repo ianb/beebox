@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
   createStagingSession,
@@ -53,6 +54,10 @@ async function makeBulk(
   }
   return staged;
 }
+
+// What the sweep log says for the abandoned batches it surfaced, in the order it listed them.
+const abandonedWarning = (ids: string[]) =>
+  `[bulk] Sweep found ${ids.length} abandoned open bulk batch(es) (not auto-finalized — the uploader must finish them): ${ids.join(", ")}`;
 
 async function seedTranscript({ boxRoot, sessionId, text }: { boxRoot: string; sessionId: string; text: string }) {
   await appendHistory(boxRoot, { sessionId });
@@ -117,9 +122,12 @@ void test("An open batch idle past the window is surfaced (never auto-finalized)
   const nonEmptyOld = await makeBulk(box.root, { state: "open", aged: true, withFile: true });
   const recent = await makeBulk(box.root, { state: "open", withFile: true });
 
+  const warnings = consoleLines(t, "warn");
   const result = await sweepBulkBatches({ boxRoot: box.root });
   t.check(result.discarded, []);
   t.check(result.abandoned, unordered([emptyOld.id, nonEmptyOld.id]));
+  // The sweep log names both batches for the uploader to finish:
+  t.check(warnings(), [abandonedWarning(result.abandoned)]);
   t.check(await readStagingSession({ boxRoot: box.root, id: recent.id }), not(null));
 
   // Both aged batches are surfaced, and both are still on disk — the sweep reports
@@ -236,9 +244,12 @@ void test("A batch that registered items but committed no bytes is not empty —
   });
   const box = await makeTmpBox();
   const registered = await makeBulk(box.root, { state: "open", aged: true });
+  const warnings = consoleLines(t, "warn");
   const result = await sweepBulkBatches({ boxRoot: box.root });
   t.check(result.discarded, []);
   t.check(result.abandoned, [registered.id]);
+  // Every sweep that keeps an abandoned batch says so in the log:
+  t.check(warnings(), [abandonedWarning([registered.id])]);
 
   // A batch with a note is kept too — the boxholder typed it and pressed send:
 
@@ -253,6 +264,8 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   const second = await sweepBulkBatches({ boxRoot: box.root });
   t.check(second.discarded, []);
+  t.check(second.abandoned, unordered([registered.id, noted.id]));
+  t.check(warnings(), [abandonedWarning(second.abandoned)]);
 
   // A genuinely empty batch — nothing registered, nothing uploaded, nothing said — is
   // still discarded:
@@ -267,6 +280,8 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   const third = await sweepBulkBatches({ boxRoot: box.root });
   t.check(third.discarded, [empty.id]);
+  t.check(third.abandoned, unordered([registered.id, noted.id]));
+  t.check(warnings(), [abandonedWarning(third.abandoned)]);
 
   // A sealed batch is never discarded by the sweep, even if it looks empty — the
   // worker owns it, and the locked discard refuses:
@@ -282,6 +297,8 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   const fourth = await sweepBulkBatches({ boxRoot: box.root });
   t.check(fourth.discarded, []);
+  t.check(fourth.abandoned, unordered([registered.id, noted.id]));
+  t.check(warnings(), [abandonedWarning(fourth.abandoned)]);
   t.check(await readStagingSession({ boxRoot: box.root, id: sealed.id }), not(null));
 });
 

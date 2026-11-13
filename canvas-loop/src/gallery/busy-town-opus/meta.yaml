@@ -1,0 +1,23 @@
+slug: busy-town-opus
+title: "Acorn Lane: a busy street of 20 clickable townsfolk"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 17
+tier: tea
+harness-commit: 9018dc4c
+frames: 240
+seed: 42
+fps: 60
+every: 40
+reconstructed: false
+audit: >
+  Busy-town round. Boxholder review pending. 20 clickable things with chain reactions (window drips set off the cat, bell scatters pigeons and wakes the owl, the duck scolds the late bus); time-of-day and rain params; about 2-3 ms per frame with one cache and sprites.
+self-report-summary: >
+  Wanted sprite keys in faint-mark warnings, a debug outline of sprite and clip boxes, a font on text(), a typed fromKeys helper, per-image light that survives a night shade, and a per-frame cost readout.
+features-exercised:
+  - TEA tier with pointer input, hover cues, params and triggers
+  - sprites for characters and poses
+  - cache for the painted town
+  - sibling -tea helper files
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

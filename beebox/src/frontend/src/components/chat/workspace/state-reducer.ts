@@ -20,12 +20,15 @@ function openCard(state: WorkspaceState, action: Action<"openCard">): WorkspaceT
     next = { ...next, tabs, panes: { ...next.panes, [destination]: { ...next.panes[destination],
       paths: orderedWorkspacePaths([...next.panes[destination].paths, action.target.path], tabs) } } };
   } else {
-    const explicitView = action.target.viewer !== null || action.target.viewState !== null || Object.keys(action.target.params).length > 0;
+    const { viewer, params, viewState, fragment } = action.target;
+    const explicitView = viewer !== null || Object.keys(params).length > 0;
     // A fragment names a place in the card. A plain open keeps the tab's view
-    // but takes the incoming fragment, so it clears an old one.
-    const { fragment } = action.target;
+    // but takes the incoming fragment, so it clears an old one. A link that
+    // carries only `viewState` (a chat "show me" link) also keeps the tab's
+    // viewer and params, so the mounted view stays mounted and only its state moves.
     const kept = withoutFragment(existing.target);
-    const target = explicitView ? action.target : fragment === undefined ? kept : { ...kept, fragment };
+    const base = explicitView ? withoutFragment(action.target) : viewState === null ? kept : { ...kept, viewState };
+    const target = fragment === undefined ? base : { ...base, fragment };
     if (serializeViewUrl(existing.target) !== serializeViewUrl(target)) {
       next = { ...next, tabs: { ...next.tabs,
         [action.target.path]: { ...existing, target, label: explicitView ? action.label : existing.label } } };

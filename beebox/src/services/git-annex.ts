@@ -19,6 +19,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { gitEnvironment } from "../lib/git/env.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -92,6 +93,7 @@ async function runAnnex(repoRoot: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", ["annex", ...args], {
     cwd: repoRoot,
     maxBuffer: 16 * 1024 * 1024,
+    env: gitEnvironment(),
   });
   return stdout.trim();
 }
@@ -102,7 +104,7 @@ async function runAnnex(repoRoot: string, args: string[]): Promise<string> {
  */
 async function readConfig(repoRoot: string, args: string[]): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync("git", args, { cwd: repoRoot });
+    const { stdout } = await execFileAsync("git", args, { cwd: repoRoot, env: gitEnvironment() });
     const value = stdout.trim();
     return value === "" ? null : value;
   } catch (e) {
@@ -119,7 +121,7 @@ export function createGitAnnexService(): GitAnnexService {
   return {
     async version(): Promise<string | null> {
       try {
-        const { stdout } = await execFileAsync("git", ["annex", "version"]);
+        const { stdout } = await execFileAsync("git", ["annex", "version"], { env: gitEnvironment() });
         const first = stdout.split("\n", 1)[0] ?? "";
         return first.replace(/^git-annex version:\s*/, "").trim() || null;
       } catch (e) {
@@ -163,7 +165,7 @@ export function createGitAnnexService(): GitAnnexService {
     },
 
     async setGitConfig(repoRoot: string, { key, value }: ConfigEntry): Promise<void> {
-      await execFileAsync("git", ["config", key, value], { cwd: repoRoot });
+      await execFileAsync("git", ["config", key, value], { cwd: repoRoot, env: gitEnvironment() });
     },
 
     async fix(repoRoot: string): Promise<void> {
@@ -201,6 +203,7 @@ export function createGitAnnexService(): GitAnnexService {
         const { stdout, stderr } = await execFileAsync("git", ["annex", ...args], {
           cwd: repoRoot,
           maxBuffer: 16 * 1024 * 1024,
+          env: gitEnvironment(),
         });
         output = `${stdout}${stderr}`;
         clean = true;

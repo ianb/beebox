@@ -68,7 +68,7 @@ const CONSULTED_ICON = '<svg class="w-[13px] h-[13px]" viewBox="0 0 24 24" aria-
 function badgeCluster(badge: { label: string; icon: string } | null): string {
   const button = badge === null
     ? ""
-    : `<span class="inline-flex items-center gap-0.5"><span class="relative inline-flex"><button type="button" aria-label="${badge.label}" aria-haspopup="dialog" aria-expanded="false" class="${BADGE_CLASS}"><span aria-hidden="true" class="inline-flex">${badge.icon}</span></button></span></span>`;
+    : `<span class="inline-flex items-center gap-0.5"><span class="contents"><button type="button" aria-label="${badge.label}" aria-haspopup="dialog" aria-expanded="false" class="${BADGE_CLASS}"><span aria-hidden="true" class="inline-flex">${badge.icon}</span></button></span></span>`;
   return `<span class="absolute -top-1 -left-1 inline-flex items-center gap-0.5">${button}</span>`;
 }
 
@@ -86,7 +86,7 @@ function bobBubble(parts: { badge: { label: string; icon: string } | null; text:
 }
 
 const hqMarker = (service: string): string =>
-  `<span role="img" aria-label="HQ transcript — ${service}" title="HQ transcript — ${service}" class="text-white/40 text-[9px] font-medium leading-none tracking-wide">HQ</span>`;
+  `<span role="img" aria-label="HQ transcript — ${service}" title="HQ transcript — ${service}" class="text-white/40 text-[0.5625rem] font-medium leading-none tracking-wide">HQ</span>`;
 const LIVE_STATUS = '<div role="status" class="bbx-chat-user-status text-xs mt-1 italic">Live text — HQ transcript unavailable</div>';
 
 // ## Retranscription: label includes the resolved service
@@ -98,7 +98,7 @@ void test("Retranscription: label includes the resolved service", async (t) => {
   t.check(specs.map((s) => s.label), ["Retranscribed — deepgram-hq"]);
 
   // The popover shows the ORIGINAL bubble text, never the overlay.
-  t.check(renderToStaticMarkup(specs[0]?.detail), '<div class="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">two large legs</div>');
+  t.check(renderToStaticMarkup(specs[0]?.detail), '<div class="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">two large legs</div>');
 });
 
 // ## Retranscription: no service known → label omits the placeholder
@@ -115,10 +115,10 @@ void test("Consulted: fixed label; detail carries the question(s) asked", async 
   const consultedSpecs = buildAudioBadgeSpecs({ consulted: { questions: ["did I sound annoyed?"] } }, "irrelevant");
   t.check(consultedSpecs.map((s) => s.label), ["This recording was analyzed"]);
 
-  t.check(renderToStaticMarkup(consultedSpecs[0]?.detail), '<div class="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">question asked</div><div class="mt-0.5 whitespace-pre-wrap">did I sound annoyed?</div>');
+  t.check(renderToStaticMarkup(consultedSpecs[0]?.detail), '<div class="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">question asked</div><div class="mt-0.5 whitespace-pre-wrap">did I sound annoyed?</div>');
 
   const multi = buildAudioBadgeSpecs({ consulted: { questions: ["q one?", "q two?"] } }, "x");
-  t.check(renderToStaticMarkup(multi[0]?.detail), '<div class="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">questions asked</div><div class="mt-0.5 whitespace-pre-wrap">q one?</div><div class="mt-0.5 whitespace-pre-wrap">q two?</div>');
+  t.check(renderToStaticMarkup(multi[0]?.detail), '<div class="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">questions asked</div><div class="mt-0.5 whitespace-pre-wrap">q one?</div><div class="mt-0.5 whitespace-pre-wrap">q two?</div>');
 });
 
 // ## Both present: retranscription badge first, consulted appended after
@@ -249,5 +249,5 @@ void test("originalDisplayText (user-entry-content.tsx) feeds the popover's \"re
   );
   const unsurePopover = renderToStaticMarkup(unsureSpecs[0]?.detail);
   // React escapes the apostrophe in static markup.
-  t.check(unsurePopover, '<div class="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">they&#x27;re all cloud code in different ways</div>');
+  t.check(unsurePopover, '<div class="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">they&#x27;re all cloud code in different ways</div>');
 });

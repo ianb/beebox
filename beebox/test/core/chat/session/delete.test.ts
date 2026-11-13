@@ -4,7 +4,7 @@
 // permanently deletes the owned husk card. The SDK deletion function is
 // injected here so the fixture never touches the developer's real Claude data.
 
-import { test } from "tap";
+import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { access, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -17,6 +17,22 @@ import { ChatScheduleManager } from "../../../../src/core/chat/schedules/core.js
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { piSessionsDir } from "../../../../src/core/pi-sessions.js";
+import { isRecord } from "../../../../src/shared/is-record.js";
+
+/** The console.error calls made while `t` runs, with each logged `error` reduced to `Name: message` so the expected value holds no stack. */
+function loggedErrors(t: Test) {
+  const calls = t.capture(console, "error");
+  return () => calls.args().map((args: unknown[]) => {
+    const [message, detail] = args;
+    if (typeof message !== "string" || !isRecord(detail) || !(detail["error"] instanceof Error)) throw new Error("unexpected console.error arguments");
+    const sessionId = detail["sessionId"];
+    return {
+      message,
+      ...(typeof sessionId === "string" ? { sessionId } : {}),
+      error: `${detail["error"].name}: ${detail["error"].message}`,
+    };
+  });
+}
 
 async function missing(target: string): Promise<boolean> {
   try { await access(target); return false; } catch (_error) { return true; }
@@ -205,6 +221,7 @@ void test("If the git commit fails after permanent storage deletion, a fresh reg
   const fx = await chatFixture({ digit: "4", git: true, transcript: true, history: {} });
   const { box, sessionId, projectDir, registry, scheduleManager } = fx;
   await box.commitAll("seed retry chat");
+  const errors = loggedErrors(t);
   const first = await deleteChatSession({
     boxRoot: box.root,
     sessionId,
@@ -212,6 +229,8 @@ void test("If the git commit fails after permanent storage deletion, a fresh reg
     sdkDelete: async (id) => rm(join(projectDir, `${id}.jsonl`), { force: true }),
     commitHusks: async () => { throw new Error("fixture commit failure"); },
   });
+  // The log tells an operator the transcript is gone but the card commit still has to be retried:
+  t.check(errors(), [{ message: "chat-delete: card deletion commit failed after transcript deletion", error: "Error: fixture commit failure" }]);
   registry.shutdown();
   const restartedRegistry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
   const second = await deleteChatSession({ boxRoot: box.root, sessionId, runtime: { registry: restartedRegistry, scheduleManager } });
@@ -275,6 +294,7 @@ void test("SDK no-change failure restores beebox state", async (t) => {
     label: "restore-me", alarm: false, announce: null, content: "later",
     durationMs: 60_000, sessionId,
   });
+  const errors = loggedErrors(t);
   t.check(
     await deletionErrorName({
       boxRoot: box.root,
@@ -284,6 +304,8 @@ void test("SDK no-change failure restores beebox state", async (t) => {
     }),
     "TypeError",
   );
+  // The log says nothing was deleted and the beebox state is back:
+  t.check(errors(), [{ message: "chat-delete: failed before transcript deletion; state restored", sessionId, error: "TypeError: fixture SDK failure" }]);
 
   t.check(
     {

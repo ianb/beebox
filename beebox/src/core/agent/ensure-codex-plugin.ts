@@ -33,6 +33,7 @@ import { z } from "zod";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { assertNever } from "../../shared/invariant.js";
 import { codexBinaryPath, codexCliArgs } from "../../services/codex-binary.js";
+import { agentAllowlistEnv } from "../script-env/core.js";
 
 const execFileAsync = promisify(execFile);
 // Only the entry we look for has to carry a local `path`: since codex-cli
@@ -70,7 +71,7 @@ export class CodexPluginInstallError extends Error {
 /** One `codex` invocation, resolving to its stdout. Injected so tests can watch. */
 export type CodexCommand = (args: string[]) => Promise<string>;
 
-const runCodex: CodexCommand = async (args) => (await execFileAsync(codexBinaryPath(), codexCliArgs(args))).stdout;
+const runCodex: CodexCommand = async (args) => (await execFileAsync(codexBinaryPath(), codexCliArgs(args), { env: agentAllowlistEnv() })).stdout;
 
 /**
  * What Codex says about our plugin. The three answers need three responses, and

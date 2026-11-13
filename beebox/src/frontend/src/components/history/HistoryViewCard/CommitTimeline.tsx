@@ -18,6 +18,7 @@ import { StatusMessage } from "../../ui/StatusMessage";
 import { phaseTone } from "../phase-tone";
 import { useBoxNow } from "../../../lib/box-clock";
 import { agoOnClock } from "../../../lib/relative-time";
+import { commitGap } from "./commit-gap";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -61,19 +62,6 @@ function groupBySession(commits: HistoryCommit[]): CommitGroup[] {
   }
 
   return groups;
-}
-
-/**
- * Format duration between two dates as MM:SS.
- */
-function formatDuration(fromDate: string, toDate: string): string | null {
-  const from = new Date(fromDate).getTime();
-  const to = new Date(toDate).getTime();
-  const diff = to - from;
-  if (diff < 0 || diff > 3600000) return null; // Skip if negative or > 1 hour
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 /**
@@ -129,7 +117,7 @@ function CommitRow({
   // distinction this timeline exists to draw.
   const triggers = commitTriggers(commit.trailers);
   const step = commitStep(commit.trailers);
-  const duration = prevCommitDate ? formatDuration(prevCommitDate, commit.date) : null;
+  const duration = prevCommitDate ? commitGap(prevCommitDate, commit.date) : null;
 
   const ariaLabel = [
     `Commit ${commit.hash.substring(0, 7)}`,
@@ -141,7 +129,7 @@ function CommitRow({
   ].filter((v): v is string => v !== null).join(", ");
 
   return (
-    <button
+    <button type="button"
       onClick={onSelect}
       {...bbxSource("commit", commit.hash)}
       aria-label={ariaLabel}
@@ -151,14 +139,14 @@ function CommitRow({
       }`}
     >
       <div className="flex items-center gap-1.5 mb-0.5">
-        <code className="text-[10px] text-warm-700">
+        <code className="text-[0.625rem] text-warm-700">
           {commit.hash.substring(0, 7)}
         </code>
-        <span className="text-[10px] text-warm-700">
+        <span className="text-[0.625rem] text-warm-700">
           {agoOnClock(commit.date, "box")}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
-        {duration ? <span className="text-[10px] text-warm-700 font-mono">{duration}</span> : null}
+        {duration ? <span className="text-[0.625rem] text-warm-700 font-mono">{duration}</span> : null}
       </div>
       <div className="text-sm text-warm-800 truncate">
         {commit.subject}
@@ -166,12 +154,12 @@ function CommitRow({
       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
         {commit.fileStat ? <FileStatBadges stat={commit.fileStat} /> : null}
         {triggers.map((trigger) => (
-          <span key={trigger.id} className="text-[10px] text-warm-700">
+          <span key={trigger.id} className="text-[0.625rem] text-warm-700">
             {triggerLabel(trigger)}
           </span>
         ))}
         {step === undefined ? null : (
-          <span className="text-[10px] text-warm-700">step {step}</span>
+          <span className="text-[0.625rem] text-warm-700">step {step}</span>
         )}
       </div>
     </button>
@@ -209,7 +197,7 @@ export function CommitTimeline({
           const isActive = activeSession === sessionId;
           const canFilter = onFilterSession !== undefined && !isActive;
           const headerClasses =
-            "w-full text-left px-3 py-1 bg-indigo-50/50 text-[10px] text-indigo-500 font-medium flex items-baseline gap-1";
+            "w-full text-left px-3 py-1 bg-indigo-50/50 text-[0.625rem] text-indigo-500 font-medium flex items-baseline gap-1";
           const headerContent = (
             <>
               <span>Session {sessionId.substring(0, 8)}...</span>
@@ -257,9 +245,9 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading ? <StatusMessage>Loading...</StatusMessage> : null}
+      {loading ? <StatusMessage busy>Loading...</StatusMessage> : null}
 
-      {hasMore && !loading ? <button
+      {hasMore && !loading ? <button type="button"
           id={`${idPrefix}-load-more`}
           onClick={onLoadMore}
           className="w-full p-2 text-sm text-primary hover:bg-info-50"

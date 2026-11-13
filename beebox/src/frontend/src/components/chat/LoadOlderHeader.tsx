@@ -7,13 +7,13 @@ export function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   if (!hasOlder) return null;
   return (
     <div className="text-center py-2">
-      <button
+      <button type="button"
         id="bbx-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
         className="bbx-chat-meta-material text-sm text-card-pen hover:text-card-ink disabled:text-warm-400"
       >
-        {loadingOlder ? "Loading..." : "Show earlier messages"}
+        {loadingOlder ? "Loading…" : "Show earlier messages"}
       </button>
     </div>
   );

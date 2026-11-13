@@ -87,7 +87,7 @@ export function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
                   } else if (line.startsWith("-")) {
                     className = "text-danger-dark bg-danger-50";
                   } else if (line.startsWith("@@")) {
-                    className = "text-info text-[10px]";
+                    className = "text-info text-[0.625rem]";
                   }
                   return (
                     <div key={i} className={className}>

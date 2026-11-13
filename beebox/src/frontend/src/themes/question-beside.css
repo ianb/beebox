@@ -5,13 +5,17 @@
    pinned row's notch points at the chat (below, toward the composer, on the
    phone). Colors come from the card theme's tokens. */
 
+/* The stub owns the surface's background (!important): a theme that sets
+   its own surface `background-image` (Deck's weave, Night atlas's sheen,
+   Ribbon's top rule) would otherwise replace these layers and take their
+   sizes, leaving the title on the desk's artwork. The stub is plain paper. */
 .bbx-card-surface:has([data-question-beside]) {
   --bbx-question-stub: 6.5rem;
   background:
     linear-gradient(var(--bbx-edge), var(--bbx-edge)) left top / 1px var(--bbx-question-stub) no-repeat,
     linear-gradient(var(--bbx-edge), var(--bbx-edge)) right top / 1px var(--bbx-question-stub) no-repeat,
     linear-gradient(var(--bbx-edge), var(--bbx-edge)) left top / 100% 1px no-repeat,
-    linear-gradient(var(--bbx-paper), var(--bbx-paper)) left top / 100% var(--bbx-question-stub) no-repeat;
+    linear-gradient(var(--bbx-paper), var(--bbx-paper)) left top / 100% var(--bbx-question-stub) no-repeat !important;
   border-color: transparent;
   box-shadow: none;
 }
@@ -23,7 +27,13 @@
 }
 
 [data-question-beside] {
-  --bbx-question-patch: color-mix(in srgb, var(--bbx-paper, #fff) 80%, #d9b26f);
+  /* A tan patch on light paper. On a dark paper (a theme that declares
+     `color-scheme: dark`) tan muddies, so the patch lifts the paper toward
+     the theme's pen instead. Text on the patch takes the card's ink. */
+  --bbx-question-patch: light-dark(
+    color-mix(in srgb, var(--bbx-paper, #fff) 80%, #d9b26f),
+    color-mix(in oklab, var(--bbx-paper) 82%, var(--bbx-pen))
+  );
   position: relative;
   background: var(--bbx-question-patch);
   border-radius: 18px;

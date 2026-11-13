@@ -27,6 +27,8 @@ import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { appendFile, mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { any, str } from "@ianbicking/tap-check/check";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 async function errorName(fn: () => Promise<unknown>): Promise<string> {
   try { await fn(); return "no error"; }
@@ -77,17 +79,23 @@ void test("Round-trips through disk", async (t) => {
   // A malformed state file must not stop the night's run — re-reviewing is
   // recoverable, refusing to run is not.
 
+  const warnings = consoleLines(t, "warn");
   await box.write(".beebox/chat-review/state.json", "{not json at all");
   t.check(await loadReviewState(box.root), {
     lastRunAt: null,
     sessions: {},
   });
 
+  // Each fallback tells an operator why the journal was dropped (the JSON
+  // parser's own wording varies with the Node version):
+  t.check(warnings(), [str`chat-review: .beebox/chat-review/state.json is not valid JSON, starting fresh: SyntaxError: ${any(String)}`]);
+
   await box.write(".beebox/chat-review/state.json", JSON.stringify({ sessions: "wrong shape" }));
   t.check(await loadReviewState(box.root), {
     lastRunAt: null,
     sessions: {},
   });
+  t.check(warnings(), ["chat-review: .beebox/chat-review/state.json did not match the expected shape, starting fresh"]);
 
   const fresh = await makeTmpBox();
   t.check(await loadReviewState(fresh.root), {
@@ -181,6 +189,7 @@ void test("A session whose reviewer fails MAXREVIEWATTEMPTS times on one span is
     async review() { reviewerCalls += 1; throw new Error("model unavailable"); },
     async title() { throw new Error("unexpected title call"); },
   };
+  const warnings = consoleLines(t, "warn");
   const run = () => runChatReview(box.root, { reviewer: failing, maxSessions: 10, now: NOW, ownerEmail: null });
 
   // MAX_REVIEW_ATTEMPTS failing runs on span A, then one more that must skip it.
@@ -203,4 +212,6 @@ void test("A session whose reviewer fails MAXREVIEWATTEMPTS times on one span is
       failures: 1,
     },
   });
+  // Every failing pass logs the reviewer's error; the skipped pass logs nothing:
+  t.check(warnings(), Array.from({ length: 3 }, () => `chat-review: reviewer failed for ${sessionId}: Error: model unavailable`));
 });

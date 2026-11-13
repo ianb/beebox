@@ -1,0 +1,23 @@
+slug: library-anim
+title: "The Library That Crossed the Flood, awake"
+created: 2026-11-11
+model: gpt-6-sol
+driver: opus-5.5
+cycles: 4
+tier: tea
+harness-commit: 604cb8c3
+frames: 120
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Animation round (from gallery/open-sol). Boxholder review pending. Turtle blinks, lantern breathes, fireflies drift; hover the lantern to draw its light, click to dim the books, drag the water for ripples; one cached painting, 4-6 ms per frame.
+self-report-summary: >
+  Wanted cached layers that can move (the turtle could bob) and separate painted layers; TEA lint forced one file.
+features-exercised:
+  - TEA tier with pointer input, params and triggers
+  - cache for static painted layers
+  - brushes in motion (seeded marks)
+  - events file with snapshot entries
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

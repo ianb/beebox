@@ -8,12 +8,19 @@
 // replays byte-for-byte through the CLI.
 import { SeededRandom } from "../../core/prng.js";
 import { UnhandledMsgError } from "../../headless/errors.js";
-import type { Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
+import type { Voice, ControlBox, Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
+import { Score } from "../../core/sound/voice.js";
+import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
-import { sanitizeParamChange } from "../param-validate.js";
+import type { TextMeasure } from "../../core/view.js";
+import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
+import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
+import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
+
+export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -39,55 +46,6 @@ function frozen(value: unknown): unknown {
   return value;
 }
 
-/** A partial override of declared param defaults, applied at construct/restart. */
-export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
-
-function initialParams(decl: ParamsDecl, overrides: ParamOverrides | undefined): ParamValues<ParamsDecl> {
-  const values: Record<string, number | boolean | string> = {};
-  for (const [name, param] of Object.entries(decl)) {
-    if (param.type === "trigger") continue;
-    const override = overrides?.[name];
-    values[name] = override ?? param.default;
-  }
-  return Object.freeze(values);
-}
-
-/** A frame-tagged log line surfaced to the transcript panel. */
-export interface RuntimeLog {
-  frame: number;
-  message: string;
-}
-
-/**
- * A streamed event carries the same engagement verdict the headless transcript
- * shows, as structured data rather than a rendered string: `handled` (the names
- * `u.handled(...)` acknowledged) and `changed` (did `update` return a new model
- * reference). Both are present on interaction events (mouse/key/trigger), absent
- * on `param` (a param change is definitionally applied — no separate verdict).
- * Hosts render the verdict however they like; the on-disk events log
- * (`eventsJSON`) stays the clean `TeaScriptEvent` shape.
- */
-export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean };
-
-export interface RuntimeDeps {
-  module: PlaygroundModule;
-  ctx: CanvasRenderingContext2D;
-  width: number;
-  height: number;
-  seed: number;
-  onFrame: (frame: number) => void;
-  onLog: (entry: RuntimeLog) => void;
-  /** Partial override of declared param defaults — the initial values init() sees. */
-  initialParams?: ParamOverrides;
-  /** Streams every recorded input entry (the `{frame, type, …}` events-file line, plus the engagement verdict) as it is dispatched. */
-  onEvent?: (entry: EmittedEvent) => void;
-  /**
-   * Called once if a frame (update/draw) throws: the loop stops and the error
-   * surfaces here instead of throwing uncaught on every subsequent rAF tick.
-   * Default when omitted: `console.error` (still exactly once).
-   */
-  onError?: (error: unknown) => void;
-}
 
 export class Runtime {
   #module: PlaygroundModule;
@@ -105,12 +63,23 @@ export class Runtime {
   #mouseY = 0;
   #paused = false;
   #raf: number | undefined;
+  // Off screen: the loop is stopped until `resume` (see `suspend`).
+  #suspended = false;
+  // The canvas no longer shows the current model and params; the next frame draws.
+  #dirty = true;
   #acc = 0;
   #last: number | undefined;
   #onFrame: (frame: number) => void;
+  #onVoice: ((voice: Voice) => void) | undefined;
+  // Plays the sketch's voices, when it has a `sound` export.
+  #player: SoundPlayer | undefined;
+  #score = new Score();
+  // Voices declared ahead of their `at` frame, waiting for it.
+  #waiting: Voice[] = [];
   #onLog: (entry: RuntimeLog) => void;
   #onEvent: ((entry: EmittedEvent) => void) | undefined;
   #onError: ((error: unknown) => void) | undefined;
+  #onPlace: ((placements: ReadonlyMap<string, ControlBox>) => void) | undefined;
   #errored = false;
   #overrides: ParamOverrides | undefined;
   // Per-event engagement accumulator (mirrors the headless runners); reset
@@ -125,16 +94,14 @@ export class Runtime {
     this.#overrides = deps.initialParams;
     this.#params = initialParams(this.#decl, this.#overrides);
     this.#onFrame = deps.onFrame;
+    this.#player = deps.module.sound === undefined ? undefined : new SoundPlayer((message) => console.info(message));
+    this.#onVoice = deps.onVoice ?? ((voice) => this.#player?.play(voice));
     this.#onLog = deps.onLog;
     this.#onEvent = deps.onEvent;
     this.#onError = deps.onError;
-    this.#util = new BrowserUtil({
-      random: this.#random,
-      getParams: () => this.#params,
-      log: (args) => this.#recordLog(args),
-      onHandled: (name) => this.#handledNames.push(name),
-    });
-    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, log: (args) => this.#recordLog(args) });
+    this.#onPlace = deps.onPlace;
+    this.#util = this.#makeUtil();
+    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }
@@ -149,10 +116,55 @@ export class Runtime {
   stop(): void {
     if (this.#raf !== undefined) cancelAnimationFrame(this.#raf);
     this.#raf = undefined;
+    // Stopped is final: coming back on screen does not restart it.
+    this.#suspended = false;
+    this.#player?.close();
+  }
+
+  /**
+   * Stop the loop while the canvas is off screen, silencing any sound. Time
+   * stops with it: `resume` continues from the same frame, as after a pause.
+   */
+  suspend(): void {
+    if (this.#raf === undefined) return;
+    cancelAnimationFrame(this.#raf);
+    this.#raf = undefined;
+    this.#suspended = true;
+    this.#player?.stopAll();
+  }
+
+  /** Restart a loop `suspend` stopped (a stopped or failed sketch stays stopped). */
+  resume(): void {
+    if (!this.#suspended) return;
+    this.#suspended = false;
+    this.start();
+  }
+
+  #makeUtil(): BrowserUtil<ParamsDecl> {
+    const text = (): TextMeasure => this.#view.textMeasure;
+    return new BrowserUtil({ random: this.#random, getParams: () => this.#params, log: (args) => this.#recordLog(args), onHandled: (name) => this.#handledNames.push(name), text });
+  }
+
+  /** A web font finished loading: forget measured text widths, then redraw. */
+  fontsLoaded(): void {
+    this.#view.forgetTextWidths();
+    this.invalidate();
+  }
+
+  /** Draw again on the next frame though the model is unchanged (e.g. a web font finished loading). */
+  invalidate(): void {
+    this.#dirty = true;
+  }
+
+  /** Allow sound; call from a user gesture's handler (browsers start audio only then). */
+  enableSound(): void {
+    this.#player?.enable();
   }
 
   setPaused(paused: boolean): void {
     this.#paused = paused;
+    // Resume from now, not from when the loop last ran.
+    if (!paused) this.#last = undefined;
   }
 
   get paused(): boolean {
@@ -163,18 +175,16 @@ export class Runtime {
   restart(seed: number): void {
     this.#seed = seed;
     this.#random = new SeededRandom(seed);
-    this.#util = new BrowserUtil({
-      random: this.#random,
-      getParams: () => this.#params,
-      log: (args) => this.#recordLog(args),
-      onHandled: (name) => this.#handledNames.push(name),
-    });
+    this.#util = this.#makeUtil();
     this.#params = initialParams(this.#decl, this.#overrides);
     this.#pending = [];
     this.#log = [];
     this.#frame = 0;
     this.#acc = 0;
     this.#last = undefined;
+    this.#score.clear();
+    this.#waiting = [];
+    this.#player?.stopAll();
     this.#model = frozen(this.#module.init(this.#util));
     this.#onFrame(this.#frame);
     this.#draw();
@@ -239,10 +249,8 @@ export class Runtime {
     const last = this.#last ?? now;
     this.#last = now;
     if (this.#paused) {
-      if (this.#pending.length > 0) {
-        this.#flushPending();
-        this.#draw();
-      }
+      this.#flushPending();
+      if (this.#dirty) this.#draw();
       return;
     }
     let dt = now - last;
@@ -255,7 +263,9 @@ export class Runtime {
       steps += 1;
     }
     if (steps > 0) {
-      this.#draw();
+      // `draw` depends only on the model and params, so an unchanged pair
+      // means an unchanged picture: a still figure costs almost nothing.
+      if (this.#dirty) this.#draw();
       this.#onFrame(this.#frame);
     }
   }
@@ -270,13 +280,30 @@ export class Runtime {
   #doFrame(): void {
     this.#flushPending();
     this.#fold({ type: "tick", frame: this.#frame });
+    this.#collectSound();
     this.#frame += 1;
+  }
+
+  // After a fold, as headless does: new voices join the score; any whose frame
+  // has come start now, the rest wait for it.
+  #collectSound(): void {
+    const sound = this.#module.sound;
+    if (sound === undefined) return;
+    const frame = this.#frame;
+    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame));
+    const due = this.#waiting.filter((voice) => voice.at <= frame);
+    if (due.length === 0) return;
+    this.#waiting = this.#waiting.filter((voice) => voice.at > frame);
+    for (const voice of due) this.#onVoice?.(voice);
   }
 
   #flushPending(): void {
     if (this.#pending.length === 0) return;
     const intents = this.#pending;
     this.#pending = [];
+    // Input redraws even when the model is unchanged, so what draw derives from
+    // the moment (the cursor, over-canvas inputs) never lags an interaction.
+    this.#dirty = true;
     for (const intent of intents) {
       const entry: TeaScriptEvent = { frame: this.#frame, ...intent };
       this.#log.push(entry);
@@ -314,6 +341,7 @@ export class Runtime {
         return { type: intent.type, key: intent.key ?? "" };
       case "param":
         this.#params = Object.freeze({ ...this.#params, [intent.name]: intent.value });
+        this.#dirty = true;
         return { type: "param", name: intent.name, value: intent.value };
       case "trigger":
         return { type: "trigger", name: intent.name };
@@ -330,15 +358,47 @@ export class Runtime {
     // Reference-change is the free engagement signal — compute before freezing
     // (frozen() returns the same reference it froze, so it must run first).
     const changed = next !== this.#model;
+    if (changed) this.#dirty = true;
     this.#model = frozen(next);
     return changed;
   }
 
   #draw(): void {
+    this.#dirty = false;
     this.#module.draw(this.#view, this.#model, this.#params);
+    this.#view.finishFrame();
+    const placements = this.#view.takePlacements();
+    this.#onPlace?.(placements);
   }
 
   #recordLog(args: readonly unknown[]): void {
     this.#onLog({ frame: this.#frame, message: args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") });
   }
+}
+
+/**
+ * Sleep while off screen: suspend the runtime's loop when the canvas leaves
+ * the viewport (with a margin, so it wakes just before it scrolls in) and
+ * resume it on return. Also redraw once when a web font finishes loading,
+ * since a still figure otherwise keeps the fallback font it first drew with.
+ * Hosts without these APIs (bare Node) get no watching. Returns a teardown.
+ */
+export function watchVisibility(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
+  const observer = typeof IntersectionObserver === "undefined" ? undefined : new IntersectionObserver((entries) => {
+    const onScreen = entries.at(-1)?.isIntersecting;
+    if (onScreen === true) runtime.resume();
+    else if (onScreen === false) runtime.suspend();
+  }, { rootMargin: "200px" });
+  observer?.observe(canvas);
+  // A resized canvas (rotation, a narrower pane) redraws, so over-canvas inputs resize with it.
+  const resized = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(() => runtime.invalidate());
+  resized?.observe(canvas);
+  const fonts = typeof document === "undefined" ? undefined : document.fonts;
+  const redraw = (): void => runtime.fontsLoaded();
+  fonts?.addEventListener("loadingdone", redraw);
+  return () => {
+    observer?.disconnect();
+    resized?.disconnect();
+    fonts?.removeEventListener("loadingdone", redraw);
+  };
 }

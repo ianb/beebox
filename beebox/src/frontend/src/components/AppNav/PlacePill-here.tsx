@@ -13,7 +13,7 @@
  */
 
 import { LandmarkGroupRows } from "../landmarks/LandmarkGroupRows";
-import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../ui/menu-item";
 import { href } from "../../lib/routing";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";

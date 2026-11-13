@@ -15,6 +15,7 @@ import { engineHealthChecks, boxSchemaFieldsCheck } from "../../../../../../src/
 import { cardSchema } from "../../../../../../src/exports/cards.js";
 import { invalidateBoxSchemas } from "../../../../../../src/schemas.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../../../helpers/console-lines.js";
 
 // Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json
 // declaring a beebox dependency and recording the shape, beside `_config/`.
@@ -109,6 +110,7 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // The registry caches per-box schema snapshots; in the server a change
   // trigger invalidates on schema edits, so the test does the same.
   invalidateBoxSchemas(boxRoot);
+  const warnings = consoleLines(t, "warn");
   const withBroken = await engineHealthChecks(boxRoot);
   const schemas = byName(withBroken, "box-schemas");
   t.check(schemas, {
@@ -117,6 +119,8 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
     message: "1 box-local schema file(s) failed to load — their card types are missing or stale: widget.ts: does not export a default cardSchema()",
     severity: "error",
   });
+  // The load log names the same file and reason:
+  t.check(warnings(), ["Warning: widget.ts does not export a default cardSchema(), skipping"]);
 
   // ## Box-local schema with a reserved field name: box-schema-fields warns
   //

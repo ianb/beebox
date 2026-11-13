@@ -43,8 +43,7 @@ shared dependency, schema, build configuration, or test fixture this work uses.
 Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
 tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named
-tests. Wait on a backgrounded run's PID; `pgrep -f` loops match themselves.
-Report the reused evidence, the intervening delta, and why it still applies.
+tests. In Claude Code a call past 180 s moves to the background: wait for its completion notice, never `sleep` or poll its log.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
@@ -122,10 +121,9 @@ under step 3 (recheck only affected coverage); and, private leg only,
 `git -C private-issues status --porcelain`
 empty (deletions count) plus the private PRIMARY checkout (`repo=` in the sheet)
 clean and on `main`. Any failure → BLOCKED, nothing merged.
-Then run `bin/land` bare — no `$(…)`. It enforces the main-checkout preflight and
-refuses with a precise message; treat a refusal as the BLOCKED reason (refused
-because `main` moved → step 1, assess the delta under step 3, then return here;
-no automatic full rerun). It prints the hash and log the report quotes.
+Then run `bin/land` bare — no `$(…)`; it prints the hash and log the report quotes.
+A refusal is BLOCKED, except: main has only unstaged or untracked changes → rerun once
+with `--allow-dirty-main` (it checks overlap); `main` moved → step 1, step 3 on the delta, then here.
 
 **Private leg**, right after the public merge (skip when the private branch has no
 commits beyond private main → `PRIVATE: no changes`):
@@ -143,7 +141,7 @@ mergeable later — but it MUST appear in `PRIVATE:`. Do not run worktree cleanu
 SessionEnd and the SessionStart sweep own it.
 
 ## 8. Report
-Report the merge hash/count, checks and reused evidence (including flakes), plan
+Report the merge hash/count, checks, reused evidence (its delta, why it holds, flakes), plan
 MET/PARTIAL/UNMET tally, Track O findings, and scope limits. Passing tests do not
 mean browser-verified. No advice to exit or clean up. Multiple UI screenshots →
 one labeled exhibit URL, captions saying what each figure shows (create an `fyi`

@@ -53,7 +53,27 @@ box. Chat is the everyday way you talk to it.
   rather than overnight, retitling as they grow, and keeps a title you set by
   hand.
 - Shows the agent's short progress remarks between its tool steps, live and
-  later in the transcript, so a long turn does not look silent.
+  later in the transcript, so a long turn does not look silent. The
+  collapsed activity row names the newest remark and the step count; opened,
+  each remark heads a stage with the steps it led to under it. Steps of a
+  Codex turn are named from what the command did (read, searched, listed) once
+  the turn has finished, and a command with no known meaning reads "Took a
+  step".
+- Sets math as math: `$E = mc^2$` in a line, `$$ … $$` as a displayed formula,
+  and chemistry such as `$\ce{2H2 + O2 -> 2H2O}$`, in chat and in card
+  bodies. Dollar amounts ("$5 and $10") stay text, and TeX that does not parse
+  shows its source in code style. Pages published from the box render the same
+  math ([publishing.md](publishing.md)).
+- Lets the agent link to a view in a particular state (a filter, a tab, a
+  date). If that view is already open beside the chat, the link moves it in
+  place instead of reloading it.
+- Can dock one card across the top of the page, the strip, that stays put
+  whichever of the cards or the messages you are looking at. The first card
+  type built for it is a tour, a list of steps with one marked current, which
+  the agent keeps current while you present your box or are walked through it;
+  a box can add its own types. The agent sets it only when you ask for a
+  walk-through, a presentation, or the strip by name, and one click dismisses
+  it. The card stays in the box.
 - Keeps an image you paste or upload as a file the agent can use (crop it,
   read text from it, file it into a card), as well as showing it to the agent.
 - Lets you pick the model for one chat, from the engines the box has enabled
@@ -94,7 +114,10 @@ Chat search matches the words as typed and does not understand meaning, by
 choice, so that your transcripts are not sent to an outside service to build
 it; it covers only chats on the machine the box runs on, and only the text you
 and the agent wrote, not tool output or attachments. Searching chats from the
-box-wide search is not built.
+box-wide search is not built. The strip is new (2026-11-12): a
+card type supplied by a box is covered only by unit tests, and the iPhone
+app's shell around the strip and a presenter driving it with spoken
+checkpoints have not been tried.
 
 **Go deeper**
 

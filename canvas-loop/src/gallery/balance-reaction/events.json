@@ -1,0 +1,241 @@
+[
+ {
+  "frame": 5,
+  "type": "snapshot",
+  "label": "water: all ones"
+ },
+ {
+  "frame": 15,
+  "type": "param",
+  "name": "A",
+  "value": 2
+ },
+ {
+  "frame": 15,
+  "type": "snapshot",
+  "label": "water: A=2"
+ },
+ {
+  "frame": 30,
+  "type": "param",
+  "name": "C",
+  "value": 2
+ },
+ {
+  "frame": 30,
+  "type": "snapshot",
+  "label": "water: balanced"
+ },
+ {
+  "frame": 45,
+  "type": "snapshot",
+  "label": "water: celebrating"
+ },
+ {
+  "frame": 60,
+  "type": "param",
+  "name": "reaction",
+  "value": "methane"
+ },
+ {
+  "frame": 61,
+  "type": "snapshot",
+  "label": "methane: numbers left over"
+ },
+ {
+  "frame": 75,
+  "type": "param",
+  "name": "A",
+  "value": 1
+ },
+ {
+  "frame": 75,
+  "type": "param",
+  "name": "C",
+  "value": 1
+ },
+ {
+  "frame": 76,
+  "type": "snapshot",
+  "label": "methane: 1,1,1,1"
+ },
+ {
+  "frame": 90,
+  "type": "param",
+  "name": "D",
+  "value": 2
+ },
+ {
+  "frame": 90,
+  "type": "snapshot",
+  "label": "methane: D=2"
+ },
+ {
+  "frame": 105,
+  "type": "param",
+  "name": "B",
+  "value": 3
+ },
+ {
+  "frame": 105,
+  "type": "snapshot",
+  "label": "methane: B=3 (too many O)"
+ },
+ {
+  "frame": 120,
+  "type": "param",
+  "name": "B",
+  "value": 2
+ },
+ {
+  "frame": 121,
+  "type": "snapshot",
+  "label": "methane: balanced"
+ },
+ {
+  "frame": 160,
+  "type": "snapshot",
+  "label": "methane: celebrating"
+ },
+ {
+  "frame": 170,
+  "type": "param",
+  "name": "A",
+  "value": 2
+ },
+ {
+  "frame": 170,
+  "type": "param",
+  "name": "B",
+  "value": 4
+ },
+ {
+  "frame": 170,
+  "type": "param",
+  "name": "C",
+  "value": 2
+ },
+ {
+  "frame": 170,
+  "type": "param",
+  "name": "D",
+  "value": 4
+ },
+ {
+  "frame": 185,
+  "type": "snapshot",
+  "label": "methane: doubled"
+ },
+ {
+  "frame": 200,
+  "type": "param",
+  "name": "reaction",
+  "value": "rust"
+ },
+ {
+  "frame": 200,
+  "type": "snapshot",
+  "label": "rust: 2,4,2"
+ },
+ {
+  "frame": 215,
+  "type": "param",
+  "name": "A",
+  "value": 4
+ },
+ {
+  "frame": 215,
+  "type": "param",
+  "name": "B",
+  "value": 3
+ },
+ {
+  "frame": 216,
+  "type": "snapshot",
+  "label": "rust: balanced"
+ },
+ {
+  "frame": 240,
+  "type": "snapshot",
+  "label": "rust: celebrating"
+ },
+ {
+  "frame": 260,
+  "type": "param",
+  "name": "reaction",
+  "value": "propane"
+ },
+ {
+  "frame": 270,
+  "type": "param",
+  "name": "A",
+  "value": 1
+ },
+ {
+  "frame": 270,
+  "type": "param",
+  "name": "B",
+  "value": 1
+ },
+ {
+  "frame": 270,
+  "type": "param",
+  "name": "C",
+  "value": 1
+ },
+ {
+  "frame": 270,
+  "type": "param",
+  "name": "D",
+  "value": 1
+ },
+ {
+  "frame": 270,
+  "type": "snapshot",
+  "label": "propane: all ones"
+ },
+ {
+  "frame": 285,
+  "type": "param",
+  "name": "C",
+  "value": 3
+ },
+ {
+  "frame": 285,
+  "type": "param",
+  "name": "D",
+  "value": 4
+ },
+ {
+  "frame": 285,
+  "type": "snapshot",
+  "label": "propane: C=3 D=4"
+ },
+ {
+  "frame": 300,
+  "type": "param",
+  "name": "B",
+  "value": 12
+ },
+ {
+  "frame": 300,
+  "type": "snapshot",
+  "label": "propane: B=12"
+ },
+ {
+  "frame": 315,
+  "type": "param",
+  "name": "B",
+  "value": 5
+ },
+ {
+  "frame": 316,
+  "type": "snapshot",
+  "label": "propane: balanced"
+ },
+ {
+  "frame": 345,
+  "type": "snapshot",
+  "label": "propane: celebrating"
+ }
+]

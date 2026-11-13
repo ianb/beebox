@@ -223,5 +223,5 @@ Views are React (\`.tsx\`) components that render box data in the browser. **Rea
 
 A view always gives a **card type** a custom interface; there is no card-less standalone view.
 
-When the user says a view "looks wrong" and the source doesn't tell you why — a broken layout, a visual glitch, something rendering unexpectedly — run \`bbx chat screenshot\` to see what's actually on their screen right now instead of guessing from the code. It asks the user's browser, so it may come back declined or unavailable; reach for it when appearance is genuinely the question, not by reflex. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
+To see a view you built or changed, follow "Testing a View" in views.md. Do not use \`bbx chat screenshot\` for this: it shows only what the person has on their screen. When the question is *where* a control is rather than how something looks, \`bbx chat ui\` lists the controls on screen and the \`control:\` links that point at them — same rule: reach for it when interface location is genuinely the question, not by reflex.
 `;

@@ -12,7 +12,7 @@
 import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { glob } from "glob";
-import { parseCardText } from "./card-io.js";
+import { CardIOError, parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas.js";
 import { DEFAULT_PLACE_RADIUS_M, type PlaceCircle } from "./geo.js";
 
@@ -46,7 +46,9 @@ export async function loadPlaces(boxRoot: string): Promise<PlaceCircle[]> {
       const radius = num(fields["radius"]) ?? DEFAULT_PLACE_RADIUS_M;
       places.push({ name, lat, lng, radius });
     } catch (e) {
-      console.warn(`[place-cards] skipping ${rel}: ${e instanceof Error ? e.message : String(e)}`);
+      // A CardIOError's message already starts with the path; its detail does not.
+      const reason = e instanceof CardIOError ? e.detail : e instanceof Error ? e.message : String(e);
+      console.warn(`[place-cards] skipping ${rel}: ${reason}`);
     }
   }
   return places;

@@ -2,47 +2,103 @@
 // imports. Everything here is a type — capability objects (View, Util) are
 // constructed by the runtime and handed in, never imported. See TEA.md.
 import type { SKRSContext2D } from "@napi-rs/canvas";
-// Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
-// sketch — which imports only this module — can name them.
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+// Drawing-data types, re-exported (below) so a sketch, which imports only this
+// module, can name them.
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
+import type { Paper } from "./brush/types.js";
+import type { ScaleName } from "./sound/notes.js";
+import type { Voice } from "./sound/voice.js";
+import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
-export type { ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { TubeOptions } from "./shapes.js";
+import type { EaseName, Keyframe } from "./ease.js";
 
-// Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
-export type TextAlign = "center" | "end" | "left" | "right" | "start";
-export type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+/** Where a param's input sits over the canvas: logical pixels; `h` defaults to the input's natural height. */
+export interface ControlBox {
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  /** The input's text size in logical pixels (default 14). */
+  size?: number;
+  /** The input's text alignment (default left). */
+  align?: "left" | "center" | "right";
+  /** Bold input text. */
+  bold?: boolean;
+}
+export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
+export type { BrushName } from "./brush/presets.js";
+export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shadow, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { EaseName, Keyframe } from "./ease.js";
+export type { Sprite } from "./paint.js";
+export type { TubeOptions } from "./shapes.js";
+export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
+export type { Instrument } from "./sound/instruments.js";
+export type { SampleName } from "./sound/library/catalog.js";
+export type { ScaleName } from "./sound/notes.js";
+
+export type { TextStyle } from "./paint.js";
+/** Pointer shapes for `cursor`. */
+export type CursorKind = "default" | "pointer" | "grab" | "grabbing" | "crosshair" | "move" | "text" | "not-allowed";
 
 // ── Parameter declarations ───────────────────────────────────────────
-/** A number slider: `{ type: "number", min, max, default, step? }`. */
-export interface NumberParam {
+/**
+ * A number: `{ type: "number", min, max, default, step?, control? }`. Shown as a
+ * slider, or with `control: "field"` as a box the person types into (only a
+ * valid, in-range value is sent; `step: 1` also requires a whole number).
+ */
+/** Words for a param's control: a human `label` (default: the param's name) and a short `hint` shown with it. */
+export interface ParamText {
+  label?: string;
+  hint?: string;
+  /** `false`: no input in the side panel; the param shows only where `v.control` places it. */
+  panel?: boolean;
+}
+export interface NumberParam extends ParamText {
   type: "number";
   min: number;
   max: number;
   default: number;
   step?: number;
+  control?: "slider" | "field";
 }
 /** A boolean toggle: `{ type: "boolean", default }`. */
-export interface BooleanParam {
+export interface BooleanParam extends ParamText {
   type: "boolean";
   default: boolean;
 }
 /** A choice from a fixed list: `{ type: "select", options, default }`. */
-export interface SelectParam {
+export interface SelectParam extends ParamText {
   type: "select";
   options: readonly string[];
   default: string;
 }
+/**
+ * Typed text: `{ type: "text", default, placeholder?, multiline?, maxLength? }`.
+ * A native text box (a textarea with `multiline`); empty is allowed. Each edit
+ * arrives as a `param` msg, and a link can set it like any other param.
+ */
+export interface TextParam extends ParamText {
+  type: "text";
+  default: string;
+  /** Grey words shown while the box is empty. */
+  placeholder?: string;
+  multiline?: boolean;
+  /** The longest value accepted; the box stops typing there and a longer value is rejected. */
+  maxLength?: number;
+}
 /** A fire-and-forget button — no value, arrives only as a `trigger` Msg. */
-export interface TriggerParam {
+export interface TriggerParam extends ParamText {
   type: "trigger";
 }
-export type ParamDecl = NumberParam | BooleanParam | SelectParam | TriggerParam;
+export type ParamDecl = NumberParam | BooleanParam | SelectParam | TextParam | TriggerParam;
 
 /** A sketch's `params` export: a record of named parameter declarations. */
 export type ParamsDecl = Record<string, ParamDecl>;
 
 // Value type for a single declaration: number→number, boolean→boolean,
-// select→the union of its options (literal when declared `as const`), and
+// select→the union of its options (literal when declared `as const`), text→string, and
 // triggers carry no value (filtered out of ParamValues below).
 type ParamValue<P extends ParamDecl> = P extends NumberParam
   ? number
@@ -50,7 +106,9 @@ type ParamValue<P extends ParamDecl> = P extends NumberParam
     ? boolean
     : P extends SelectParam
       ? P["options"][number]
-      : never;
+      : P extends TextParam
+        ? string
+        : never;
 
 /**
  * The resolved parameter values a sketch reads: `u.params` in `update` and the
@@ -65,8 +123,10 @@ export type ParamValues<D extends ParamsDecl> = {
 /** Recursively `readonly` — the Model type `update`/`draw` see, so mutation is a compile error. */
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
-  : T extends readonly (infer E)[]
-    ? ReadonlyArray<DeepReadonly<E>>
+  : T extends readonly unknown[]
+    ? number extends T["length"]
+      ? ReadonlyArray<DeepReadonly<T[number]>>
+      : { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T extends object
       ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
       : T;
@@ -111,6 +171,25 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * handles and may change nothing. See TEA.md "Engagement verdicts".
    */
   handled(name: string): void;
+  /** A record with one entry per key: `u.record(IDS, () => 0)` gives `Record<Id, number>`. */
+  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V>;
+  /**
+   * The note name `step` scale steps above `root` (default "C4"; negative
+   * steps go below) on `scale` (default pentatonic, which never clashes), for
+   * a `note` voice: `u.scaleNote(model.count)`.
+   */
+  scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string;
+  /**
+   * The width `v.text` gives `content` with these options, measured without
+   * drawing (cached), so hit areas and layout in `update` match what `draw` shows.
+   */
+  textWidth(content: string, options?: TextOptions): number;
+  /**
+   * The bounds `v.text(content, box, options)` would draw, measured without
+   * drawing: wrapping, `fit` and `keepInside` included, as for text drawn
+   * without a `v.at` transform.
+   */
+  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
 }
 
 /**
@@ -121,38 +200,84 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
 export interface View {
   readonly width: number;
   readonly height: number;
+  /** Fill the whole canvas, ignoring transforms. */
   background(paint: Paint): void;
-  fill(paint: Paint): void;
-  noFill(): void;
-  stroke(paint: Paint): void;
-  noStroke(): void;
-  strokeWeight(weight: number): void;
-  rect(x: number, y: number, w: number, h: number): void;
-  circle(x: number, y: number, diameter: number): void;
-  ellipse(x: number, y: number, w: number, h: number): void;
-  line(x1: number, y1: number, x2: number, y2: number): void;
-  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
-  /** Closed polygon through `points`, filled/stroked per the current state. */
-  polygon(points: readonly Vec2[]): void;
-  /** Render a data-encoded `PathCommand` list, filled/stroked per the current state. */
-  path(commands: readonly PathCommand[]): void;
+  rect(x: number, y: number, w: number, h: number, style: Style): void;
+  /** A rectangle with corners rounded to `radius`. */
+  roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): void;
+  /** A circle of `radius` around (x, y). Round shapes take radii: `circle`, `ellipse`, `arc`, the gradients. */
+  circle(x: number, y: number, radius: number, style: Style): void;
+  /** An ellipse with radii `rx` (across) and `ry` (down) around (x, y). */
+  ellipse(x: number, y: number, rx: number, ry: number, style: Style): void;
+  line(x1: number, y1: number, x2: number, y2: number, style: Style): void;
+  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style: Style): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style: Style): void;
+  /** Closed polygon through `points`. */
+  polygon(points: readonly Vec2[], style: Style): void;
+  /** Render a data-encoded `PathCommand` list. */
+  path(commands: readonly PathCommand[], style: Style): void;
+  /** A smooth curve through every point (Catmull-Rom). */
+  curve(points: readonly Vec2[], closed: boolean, style: Style): void;
+  /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
+  /** A tube's closed outline around a smooth centreline (limbs, stems, tails). */
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[];
+  /** A closed outline grown (`distance` > 0) or shrunk (< 0) along its normals. */
+  offset(points: readonly Vec2[], distance: number): Vec2[];
   /** Build a linear-gradient handle usable anywhere a `Paint` is accepted. */
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
-  /** Clip to a polygon/path for the duration of `body` (state saved/restored). */
-  clip(shape: ClipShape, body: () => void): void;
-  text(content: string, x: number, y: number): void;
-  textSize(size: number): void;
-  textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;
-  push(): void;
-  pop(): void;
-  translate(x: number, y: number): void;
-  rotate(radians: number): void;
-  scale(x: number, y?: number): void;
+  /** A radial gradient filling an ellipse with radii `rx` and `ry` around (x, y), like `ellipse`. */
+  ellipseGradient(x: number, y: number, rx: number, ry: number, stops: readonly ColorStop[]): RadialGradient;
+  /**
+   * Write text at a point (`{x, y}`) or in a box (`{x, y, w, h}`: wrap, align,
+   * valign, fit). Options left out take the defaults: size 12, sans-serif,
+   * black, left, top. Returns the bounds drawn.
+   */
+  text(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  /** The bounds `text` would return for these arguments, without drawing (to place labels before drawing them). */
+  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  /** How wide `text` would draw with these options (logical pixels). */
+  textWidth(content: string, options?: TextOptions): number;
+  /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. No layer. */
+  at(options: AtOptions, body: () => void): void;
+  /** Draw `body` on its own layer, then composite it once with opacity, blend and effects (blur, glow, shadow, colour adjustments). */
+  group(options: GroupOptions, body: () => void): void;
+  /** Draw `body` kept where `maskBody` paints, in proportion to its alpha (a gradient mask fades it). */
+  mask(maskBody: () => void, body: () => void): void;
+  /** A number between keyframes `[[time, value], …]` at time `t`, eased within each span. */
+  tween(keys: readonly Keyframe<number>[], t: number, ease?: EaseName): number;
+  /** `tween` for tuples (points, colour channels). */
+  tweenPoint(keys: readonly Keyframe<readonly number[]>[], t: number, ease?: EaseName): number[];
+  /** An easing curve at `u` (clamped to 0..1). */
+  ease(name: EaseName, u: number): number;
+  /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
+  /** Draw `body` once into a stored layer; later calls with the same key paste it (with `paste`'s blend or erase). */
+  cache(key: string, body: () => void, paste?: Omit<PasteOptions, "opacity">): void;
+  /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
+  sprite(options: SpriteOptions, body: () => void): Sprite;
+  /** Draw a sprite with its top-left at (x, y) under the current transform. */
+  image(sprite: Sprite, x: number, y: number, paste?: PasteOptions): void;
+  /** The canvas's paper texture, which grainy brushes read. */
+  paper(paper: Paper): void;
+  /** Show the paper's texture across everything drawn so far (0..1). */
+  paperTexture(amount: number): void;
+  /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
+  cursor(kind: CursorKind): void;
+  /**
+   * Put param `name`'s native input over the canvas at `box` (canvas
+   * coordinates in logical pixels; `at` scopes do not move it) for this frame. In a browser figure the real `<input>`/`<select>` sits
+   * there and leaves the side panel; headless renders draw a stand-in showing
+   * the current value. Call it every frame the input should show.
+   */
+  control(name: string, box: ControlBox): void;
+  /** With `run --outline`, a labelled box drawn over the frame (e.g. a hit area); otherwise nothing. */
+  debugBox(label: string, x: number, y: number, w: number, h: number): void;
   log(...args: readonly unknown[]): void;
   snapshot(label?: string): void;
+  /** The raw context drawing lands on now (the canvas, or the innermost group's layer), for what the View does not cover. */
   readonly ctx: SKRSContext2D;
 }
 
@@ -174,4 +299,10 @@ export interface TeaModule<D extends ParamsDecl, M> {
   init(u: Util<D>): M;
   update(model: DeepReadonly<M>, msg: Msg, u: Util<D>): M;
   draw(v: View, model: DeepReadonly<M>, p: ParamValues<D>): void;
+  /**
+   * Optional: the sounds the model holds, as voices. Called after every tick.
+   * A voice is one occurrence (a new id for each new sound), starting at its
+   * `at` frame, which may not be earlier than the frame that first returns it.
+   */
+  sound?(model: DeepReadonly<M>, p: ParamValues<D>): readonly Voice[];
 }

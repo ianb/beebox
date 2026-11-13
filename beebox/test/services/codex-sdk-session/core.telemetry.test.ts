@@ -15,6 +15,7 @@ import { codexCliArgs } from "../../../src/services/codex-binary.js";
 import { clearBoxConfigCache } from "../../../src/core/box/config.js";
 import * as auth from "../../../src/core/agent/auth-preflight.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 async function setTelemetry(boxRoot: string, value: unknown) {
   await mkdir(join(boxRoot, "_config"), { recursive: true });
@@ -69,6 +70,7 @@ void test("Missing, \"off\", and an unrecognized value all mean off.", async (t)
     "../../../src/core/agent/ensure-codex-plugin.ts": { ensureCodexPluginInstalled: async () => {} },
   });
   const seen: boolean[] = [];
+  const warnings = consoleLines(t, "warn");
   for (const value of [undefined, "off", "maybe", "on"]) {
     await setTelemetry(box.root, value);
     await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options: CodexSdkSessionOptions) => {
@@ -82,6 +84,8 @@ void test("Missing, \"off\", and an unrecognized value all mean off.", async (t)
     false,
     true,
   ]);
+  // Only the unrecognized value is logged, so the owner can see it was read as off:
+  t.check(warnings(), ['[box-config] Treating invalid codexTelemetry value as off: "maybe"']);
 
   await box.cleanup();
 });

@@ -4,7 +4,7 @@ import { AllExhibitsLink, ExhibitLinks } from "./ExhibitLinks.js";
 import { ScheduleAlerts } from "./ScheduleAlerts.js";
 import { WorkstreamActions } from "./WorkstreamActions.js";
 import { WorkstreamIssueSummary } from "./WorkstreamIssueSummary.js";
-import { Button, Pill } from "./ui.js";
+import { Button, Badge } from "./ui.js";
 import { relativeTime } from "../lib/format.js";
 import type { Issue, Workstream, WorkstreamListItem } from "../types.js";
 
@@ -46,10 +46,10 @@ export function ScheduleFacts({ schedule, now }: { schedule: NonNullable<Workstr
       <span className="schedule-fact">
         next due {schedule.nextDueAt ? relativeTime(schedule.nextDueAt, now) : "—"}
       </span>
-      {schedule.enabled ? null : <Pill tone="neutral">disabled</Pill>}
-      {schedule.overdue ? <Pill tone="danger">overdue</Pill> : null}
+      {schedule.enabled ? null : <Badge tone="neutral">disabled</Badge>}
+      {schedule.overdue ? <Badge tone="danger">overdue</Badge> : null}
       {schedule.openAlerts > 0
-        ? <Pill tone="warning">{schedule.openAlerts} open alert{schedule.openAlerts === 1 ? "" : "s"}</Pill>
+        ? <Badge tone="warning">{schedule.openAlerts} open alert{schedule.openAlerts === 1 ? "" : "s"}</Badge>
         : null}
     </>
   );
@@ -114,7 +114,7 @@ export function ScheduledSection({ rows, issues, exhibitsOrigin, now }: { rows: 
         </span>
         <Link to="/alerts" className="schedule-all-alerts">all alerts</Link>
       </h2>
-      <ul>
+      <ul role="list">
         {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} exhibitsOrigin={exhibitsOrigin} now={now} />)}
       </ul>
     </section>

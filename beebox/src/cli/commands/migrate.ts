@@ -8,7 +8,8 @@
  * Manual and unattended application share the recovery-backed core runner.
  */
 
-import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance/admission.js";
+import { describeWorkHolders, withBoxWork } from "../../lib/box-maintenance/admission.js";
+import { engineChildEnvironment } from "../../core/script-env/core.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
@@ -94,7 +95,7 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
 function runProcedure(args: { procedure: string; boxRoot: string; json?: boolean | undefined; signal?: AbortSignal | undefined; onOutput: (text: string) => void }): Promise<number> {
   return runMigrationProcess({
     file: BBX_BIN, args: ["procedure", "run", args.procedure], cwd: args.boxRoot,
-    env: { ...process.env, ...boxWorkEnvironment() }, diagnosticsToStderr: args.json, signal: args.signal, onOutput: args.onOutput,
+    env: engineChildEnvironment(), diagnosticsToStderr: args.json, signal: args.signal, onOutput: args.onOutput,
   });
 }
 

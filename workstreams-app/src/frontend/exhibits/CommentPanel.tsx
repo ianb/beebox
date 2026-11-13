@@ -211,7 +211,7 @@ export function CommentPanel({ scope, contentRef }: {
   }
 
   return (
-    <div className="flex flex-col gap-2" aria-label="Comments">
+    <div className="flex flex-col gap-2" role="group" aria-label="Comments">
       <p className="m-0 flex flex-wrap items-center gap-2">
         <button
           className={active ? BUTTON_ON : BUTTON}

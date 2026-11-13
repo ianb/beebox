@@ -85,4 +85,4 @@ card front, the outline root, the headings, and the menu element.
   reader and a failed re-read. On the old code it fails on both. On the new
   code it passes.
 - Not fixed here: a re-read that lands on a half-written file. Filed as
-  [its own issue](../../bugs/2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md).
+  [its own issue](2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md).

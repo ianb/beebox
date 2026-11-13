@@ -26,6 +26,7 @@ import type { EmissionStore } from "../../../../input/emission-store";
 import { runKeywordSend } from "./voice-keyword-send";
 import { requestHqSendLive } from "../../../../lib/audio/await-hq";
 import { useSpeechDispatch } from "./speech";
+import { probeMutedSpeech } from "./muted-speech-probe";
 import { type SelectionItem } from "../../../../lib/selection/serialize";
 import type { SpeechSegment } from "../../../../lib/audio/speech-parsing/parse";
 import type { ReplaySpeechOptions } from "../../ChatMessages/view";
@@ -119,7 +120,8 @@ export function useChatVoice(opts: {
         case "resumeMic": d.transcription?.hold(false); break;
         case "holdMic": d.transcription?.hold(true); break;
         case "stopSpeech": d.speechPlayback?.stop(); break;
-        case "playSpeech": d.speechPlayback?.playSegments({ messageId: command.messageId, segments: command.segments, baseIndex: command.baseIndex }); break;
+        case "playSpeech": probeMutedSpeech({ command, machine: composerActor.getSnapshot() });
+          d.speechPlayback?.playSegments({ messageId: command.messageId, segments: command.segments, baseIndex: command.baseIndex }); break;
         case "markPlayed": d.speechPlayback?.markAsPlayed(command.messageId); break;
         case "sendHqLive": requestHqSendLive(command.id); break;
       }

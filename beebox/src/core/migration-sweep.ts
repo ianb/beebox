@@ -25,6 +25,7 @@ import {
   SOFT_FAILURE_EXIT,
 } from "./migration-run.js";
 import { readManifest } from "./migration-manifest.js";
+import { gitEnvironment } from "../lib/git/env.js";
 /**
  * How long a yielding pass waits for live work to clear. Long enough for the
  * box's server to notice the phase and close idle chat runs (it polls every
@@ -209,7 +210,7 @@ async function closeSupersededQuestions(opts: SweepOptions, owner: Owner): Promi
   } catch (error) {
     // A refused commit must not leave the cards missing: the next pass would see no question and report the box current.
     await withBoxGitLock(boxRoot, async () => {
-      await promisify(execFile)("git", ["checkout", "--quiet", "HEAD", "--", ...superseded], { cwd: boxRoot });
+      await promisify(execFile)("git", ["checkout", "--quiet", "HEAD", "--", ...superseded], { cwd: boxRoot, env: gitEnvironment() });
     });
     throw error;
   }

@@ -1,0 +1,88 @@
+---
+name: refresh-intentions
+description: |-
+  Daily review of each place's intention, the line saying what to do next
+  there. Skips with no agent when no place changed since its last review.
+steps:
+  - id: review
+    description: Rewrite or remove the intention of every place in the brief
+    precheck:
+      shells:
+        - |-
+          bbx engine intentions check
+          # Prints the brief (per place: landmark, changes, todos, questions,
+          # recent cards); exits CHECK_SKIP_CODE (75) when no place changed
+          # since its last review.
+      whys:
+        - |-
+          No need to invoke an agent when no place has a commit since its
+          intention was last reviewed and no intention names a card that is
+          gone.
+      pass-output: true
+    run:
+      agents:
+        - prompt: |-
+            The precheck output above lists places whose `intention` needs a
+            look: for each, its landmark card, the paths changed since the last
+            review, its open todos, questions about its cards, and its most
+            recently changed cards.
+
+            An intention is one line on a landmark saying what the next piece
+            of work in that place is, with an optional prime card (`ref`) that
+            going to the place opens:
+
+            ```yaml
+            intention:
+              text: "Finish the *garden post*: the trellis paragraphs are in, the ending is not"
+              ref: /_content/writing/Garden_Post.doc.card
+            ```
+
+            `text` is a single non-blank line of inline Markdown. `ref` is a
+            box path to an existing card in the place, or absent.
+
+            An intention is a track the person is already on. Write one only
+            from evidence of the person's choice: something they said they
+            would do, a draft they were editing, a todo or question of theirs,
+            or the standing job of a place that exists to process what arrives
+            (its `destinations` rules say so). A card merely being present,
+            incomplete, or newly arrived is not an intention, and work the
+            person set aside on purpose is not either. With no such evidence,
+            remove the field. The intention is "what next"; the landmark body
+            stays "where things stand".
+
+            For each listed place, rewrite, keep, or remove its `intention`.
+            Prefer the current line's wording when it still holds. When its
+            `ref` names a card that is gone, point it at the card the work now
+            happens in or drop `ref`.
+
+            EDIT ONLY the `intention` field of the listed landmarks. Do not
+            touch any other field, the body, or any other card: the validate
+            step fails the run on any other change.
+
+            Changing nothing is a normal outcome: say so and do not commit.
+            Otherwise stage only the landmarks you edited, by explicit path,
+            and commit:
+
+            ```bash
+            git add -- <each landmark path you edited> && git commit -m "$(cat <<'MSG'
+            Intentions: <the places, by name>
+
+            <one line per place: what changed and why>
+
+            Created-By: refresh-intentions
+            MSG
+            )"
+            ```
+
+            Do NOT add Co-Authored-By.
+          max-turns: 15
+    validate:
+      shells:
+        - bbx engine intentions verify
+      whys:
+        - |-
+          The review record is what keeps a place off tomorrow's list; it
+          must not be written over an edit outside the listed intentions, or
+          over landmark edits left uncommitted.
+      severity: abort
+---

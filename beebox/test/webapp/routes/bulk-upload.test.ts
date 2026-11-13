@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { any, isoDate, not, str, uuid } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -17,6 +18,7 @@ import { StagingSessionSchema, type StagingSession } from "../../../src/core/cap
 import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
+import { readRecent } from "../../../src/core/notification/log.js";
 
 // Bind a session→dir in history. The server fires a one-shot history backfill at
 // boot that can clobber a single append; re-append until it sticks (the backfill
@@ -111,16 +113,23 @@ async function uploadItem(ctx: TestServer, opts: {
 // outlives the response. Every test that finalizes waits here for the worker to
 // stop before cleanup deletes the box: a worker still running `git add` (through
 // git-annex) when the box directory vanishes hangs forever, and the file then
-// dies at tap's whole-file timeout instead of failing an assertion. Bounded, and
+// dies at tap's whole-file timeout instead of failing an assertion. A worker that
+// fails records `failed:*` first and then sends the person a failure notice, so
+// for a failure the wait lasts until that notice is in the box's log. Bounded, and
 // the error names the state the worker stalled in.
 async function waitForWorkerToSettle(ctx: TestServer, sessionId: string) {
   let session: StagingSession | null = null;
   for (let i = 0; i < 600; i++) {
     session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
-    if (session === null || session.state === "delivered" || session.state.startsWith("failed:")) return session?.state ?? "gone";
+    if (session === null || session.state === "delivered") return session?.state ?? "gone";
+    if (session.state.startsWith("failed:") && (await failureNoticeSent(ctx, sessionId))) return session.state;
     await new Promise((r) => setTimeout(r, 50));
   }
   throw new Error(`bulk worker for ${sessionId} did not settle within 30s; last state was ${String(session?.state)}`);
+}
+
+async function failureNoticeSent(ctx: TestServer, sessionId: string): Promise<boolean> {
+  return (await readRecent(ctx.boxRoot, { days: 1 })).some(({ intent }) => intent.tag === `bulk-upload:${sessionId}`);
 }
 
 // ## Create requires a target chat, then registers the initial item set
@@ -460,6 +469,7 @@ void test("Finalize returns immediately with staged:", async (t) => {
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
   const sessionId = sessionIdOf(created);
@@ -484,6 +494,10 @@ void test("Finalize returns immediately with staged:", async (t) => {
     statusCode: 409,
     body: { error: str`Session is ${any(String)}; uploads are only accepted while it is open` },
   });
+
+  // "chat-1" has no recorded binding, so the worker logs why it left the batch retryable:
+  await waitForWorkerToSettle(ctx, sessionId);
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-1) no longer exists; leaving retryable`]);
 });
 
 // ## Finalize records the batch's introduction inside the seal
@@ -499,6 +513,7 @@ void test("The composer text the boxholder submitted the batch with rides IN the
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
@@ -537,6 +552,7 @@ void test("The composer text the boxholder submitted the batch with rides IN the
       totalBytes: 4,
     },
   });
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-note) no longer exists; leaving retryable`]);
 });
 
 // ## A whitespace-only note is recorded as no note at all
@@ -552,6 +568,7 @@ void test("An empty composer must produce a batch indistinguishable from one tha
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
@@ -582,6 +599,7 @@ void test("An empty composer must produce a batch indistinguishable from one tha
     contextDir: "",
     totalBytes: 4,
   });
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-blank) no longer exists; leaving retryable`]);
 });
 
 // ## An oversized note is rejected at the boundary

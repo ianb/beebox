@@ -200,7 +200,8 @@ job is in [the house budget](/_content/projects/House_Budget.doc.card).
 
 <!-- rules: about-cards.naming, about-cards.title, about-cards.body-tags -->
 Name a card in **`First_Last`** form: capitalized words joined by underscores
-(`Trip_Report`, `Odette_Marlowe`), not dashes or lowercase slugs; no two cards
+(`Trip_Report`, `Odette_Marlowe`), not spaces (validation rejects them), dashes
+or lowercase slugs; no two cards
 in one directory share a basename. `title:` is
 the human-readable display title, distinct from the filename. The body is
 markdown plus the box's Markdoc tags: `{% quote %}` for the user's verbatim
@@ -258,7 +259,7 @@ Mechanics, in `node_modules/beebox/box-docs/`: `bbx-commands.md` for
 `bbx create` values and `bbx contains`; `prominence.md` before writing any
 `prominence:` value; `card-themes.md` for `theme:` and a symbol's colours;
 `provenance.md` for `ref`/`href` fields and what a ref can reach;
-`markdown.md` for body line breaks, HTML, footnotes. Each type's
+`markdown.md` for body line breaks, HTML, footnotes, math. Each type's
 own fields are in its doc, listed in **CARD_TYPES**, next.
 
 ## CARD_TYPES
@@ -391,6 +392,14 @@ new structure the user will return to, do drop a landmark in it.
 <!-- rules: landmarks.summary-on-change -->
 After you add, move, or change cards in a place, update its landmark's body
 (the place summary) in the same turn, writing one if it has none.
+
+<!-- rules: landmarks.intention -->
+When the person leaves work in a place unfinished, or finishes what its
+`intention` named, set or clear the landmark's `intention` in the same turn:
+one line saying what the next step is, with `ref` on the card it happens in.
+Write one only from evidence they chose that track (their words, a draft they
+were editing, their todo or question); a card merely present, arrived, or set
+aside is not one.
 
 <!-- rules: landmarks.read-first, landmarks.derived-links -->
 Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or

@@ -20,6 +20,7 @@ import { isRecord } from "@shared/is-record";
 import { Accordion } from "./ui/Accordion";
 import { Text } from "./ui/Text";
 import { CommentsThread, parseComments } from "./CommentsThread";
+import { StatusMessage } from "./ui/StatusMessage";
 
 /** Pull a `comments: { ref }` ref string out of card frontmatter, if present. */
 function commentsRefOf(frontmatter: Record<string, unknown> | undefined): string | null {
@@ -68,7 +69,7 @@ export function AttachedComments({
     <div className="mb-4" {...bbxSource("card", cardPath)}>
       <Accordion title={title}>
         {isLoading ? (
-          <Text as="div" size="sm" tone="subtle" italic aria-busy>Loading comments…</Text>
+          <StatusMessage variant="inline" busy>Loading comments…</StatusMessage>
         ) : error !== null ? (
           <Text as="div" size="sm" tone="danger">Couldn’t load comments.</Text>
         ) : (

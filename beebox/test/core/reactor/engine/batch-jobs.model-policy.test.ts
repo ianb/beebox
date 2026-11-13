@@ -15,6 +15,7 @@ import { processBatchJobs } from "../../../../src/core/reactor/engine/batch-jobs
 import type { JobWithContent } from "../../../../src/core/reactor/types.js";
 import { createFakeAgent } from "../../fake-agent.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -73,7 +74,10 @@ void test("An unpinned box keeps today's behavior — no model, so the harness p
   });
 
   await pin(box.root, { agentModel: "not-a-model" });
+  const warnings = consoleLines(t, "warn");
   t.check(await modelUsedBy(box.root), undefined);
+  // The server log says the pin was ignored:
+  t.check(warnings(), ['Box config agentModel "not-a-model" is not a model any engine offers — ignoring it.']);
 
   await box.cleanup();
 });

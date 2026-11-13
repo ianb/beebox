@@ -16,6 +16,7 @@ import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
 import { ROOT_QUESTION_PATH } from "../../../../src/core/box/root-question-path.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
 async function collectTodos(boxRoot: string) {
@@ -94,9 +95,13 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
 
   await box.write("_bookkeeping/questions/Broken.question.card", "---\ninput: not-a-mapping\n---\n");
 
+  const warnings = consoleLines(t, "warn");
   const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
   const dashboardCount = (await caller(box).status()).counts.pendingQuestions;
   t.check(`${navCount} == ${dashboardCount}`, "3 == 3");
+  // The state scan logs the card it could not parse and lists it as unknown:
+  const broken = `${box.root}/_bookkeeping/questions/Broken.question.card`;
+  t.check(warnings(), [`Could not load card ${broken}, listing as unknown: CardIOError: ${broken}: invalid question frontmatter:\n  - prompt: required (expected string)\n  - input: expected object, got string`]);
 
   // ## The root question is not counted while the chat is empty
   //

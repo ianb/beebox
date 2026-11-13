@@ -11,7 +11,11 @@ box. Capture is how content from your phone or browser gets into the box.
 **What it does for you**
 
 - Pairs your iPhone to a box by scanning a QR code or opening a link, so
-  captures are attributed to you without signing in each time.
+  captures are attributed to you without signing in each time. The QR code
+  carries the address of the page that shows it, so on a page opened at
+  `localhost` the code is withheld, with a note saying why and to open the
+  box at an address the phone can reach; the copy-link button stays, for the
+  Mac app on the same computer.
 - Lets you record voice, take photos, or upload files from the native app,
   landing in the box's web chat as a normal message.
 - Keeps an interrupted or backgrounded capture uploading instead of losing
@@ -34,14 +38,14 @@ box. Capture is how content from your phone or browser gets into the box.
   If words arrive within the wait, they are taken as the request and the item is
   not filed on its own.
 - Receives the box's notifications as iPhone push: a tap opens the chat, card,
-  or question the notification is about, on the box that sent it. See
+  question, or place the notification is about, on the box that sent it. See
   [notifications.md](notifications.md).
 - Lets you see and revoke paired devices, and lock a paired box behind Face
   ID or your device passcode.
 
 **What it needs**
 
-An iPhone (iOS 17 or later) for the native app, or Chrome for the extension.
+An iPhone (iOS 18 or later; the app's minimum was raised from 17 on 2026-11-11) for the native app, or Chrome for the extension.
 Both need a box already reachable from your device. See
 [../install/index.md](../install/index.md).
 

@@ -5,7 +5,7 @@
 // raise it — don't quietly switch it off. Burn down debt rule-by-rule instead.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+import { outlineNeedsFocusStyle, vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
@@ -131,6 +131,39 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/ui-scan/resolve.ts",
 ];
 
+// Dismissal (outside press, Escape) belongs to the anchored layer, so every
+// anchored panel is a Menu or a Popover. Only ui/AnchoredLayer.tsx imports it.
+const DISMISS_PATTERN = {
+  group: ["**/hooks/useDismiss"],
+  message: "An anchored panel is <Popover> or <Menu> (components/ui); only ui/AnchoredLayer.tsx uses useDismiss.",
+};
+
+// A modal is <ModalDialog>; only ui/ModalDialog.tsx calls useModalDialog.
+const MODAL_DIALOG_PATTERN = {
+  group: ["**/hooks/useModalDialog"],
+  message: "A modal is <ModalDialog> (components/ui/ModalDialog); only it uses useModalDialog.",
+};
+
+// Files that draw a viewport-fixed layer (`fixed`, inline `position: fixed`),
+// one per line with the reason. Exempt from that entry only.
+const VIEWPORT_LAYER_OWNERS = [
+  // The primitives.
+  "src/components/ui/AnchoredLayer.tsx",
+  "src/components/ui/ModalDialog.tsx",
+  "src/components/ui/ControlRing.tsx",
+  "src/components/ui/ToastViewport.tsx",
+  // The full-screen camera surface, not a layer over the app: a modal would hold every toast.
+  "src/components/capture/CaptureScreen/view.tsx",
+  // A dock at the bottom of the screen.
+  "src/components/DebugLog.tsx",
+  // Draws over the whole app by design.
+  "src/components/SourceInspector.tsx",
+  // The theme studio's floating controls.
+  "src/pages/dev/components/ThemeStudioHarness/controls.tsx",
+];
+const VIEWPORT_LAYER_MESSAGE =
+  "A viewport layer is a ui/ primitive: ModalDialog, Popover, Menu, AnchoredLayer, ControlRing, ToastViewport.";
+
 export default [
   // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
   // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
@@ -150,7 +183,7 @@ export default [
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] },
+        { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN, MODAL_DIALOG_PATTERN] },
       ],
     },
   },
@@ -160,7 +193,23 @@ export default [
     files: OUTSIDE_VITE_SHARED_RAW,
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS] }],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, DISMISS_PATTERN, MODAL_DIALOG_PATTERN] }],
+    },
+  },
+  // The one owner of useDismiss: the base patterns without DISMISS_PATTERN.
+  {
+    files: ["src/components/ui/AnchoredLayer.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, MODAL_DIALOG_PATTERN] }],
+    },
+  },
+  // The one owner of useModalDialog: the base patterns without MODAL_DIALOG_PATTERN.
+  {
+    files: ["src/components/ui/ModalDialog.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN, DISMISS_PATTERN] }],
     },
   },
   // Backend src/lib/ ban by resolved path — see BACKEND_LIB_DIR comment above.
@@ -213,6 +262,199 @@ export default [
     ignores: ["**/components/**"],
     rules: {
       "personal-vibe-check/restrict-component-classes": ["error", { matchAll: true }],
+    },
+  },
+  // 100vh overshoots on mobile Safari: use the dvh forms. Opt-in rule (Tailwind-specific).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: { "personal-vibe-check/no-viewport-height-class": "error" },
+  },
+  // Pixel font sizes ignore the browser's default font size: write rem. Opt-in rule (Tailwind-specific).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: { "personal-vibe-check/no-px-font-size-class": "error" },
+  },
+  // One owner per visual shape: a copy of a primitive's classes elsewhere is
+  // a duplicate. Each entry lists the files that own the shape (`allowIn`,
+  // relative to this config); docs/implemented-plans/ui-primitives-dedup.md adds the rest.
+  {
+    files: ["src/**/*.tsx"],
+    rules: {
+      "personal-vibe-check/restricted-classes": [
+        "error",
+        {
+          entries: [
+            {
+              all: ["animate-spin"],
+              allowIn: ["src/components/ui/Spinner.tsx"],
+              message: "Use <Spinner> from components/ui/Spinner.",
+            },
+            {
+              // The edge positions only: `*-full` would also match `rounded-full`.
+              all: ["absolute", "top-full|bottom-full|left-full|right-full", "z-*"],
+              allowIn: ["src/components/ui/AnchoredLayer.tsx"],
+              message: "An anchored panel is <Popover> or <Menu>.",
+            },
+            outlineNeedsFocusStyle,
+            { all: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
+          ],
+          stylePosition: { values: ["fixed"], allowIn: VIEWPORT_LAYER_OWNERS, message: VIEWPORT_LAYER_MESSAGE },
+        },
+      ],
+    },
+  },
+  // One owner per time format: FriendlyDate and friendlyDate own the browser's
+  // date and time text. The deploy page is a separate script with no React,
+  // so it keeps its call.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/ui/FriendlyDate.tsx", "src/deploy-page/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...["toLocaleTimeString", "toLocaleDateString"].map((property) => ({
+          property,
+          message: "Use friendlyDate(value, mode) or <FriendlyDate> from components/ui/FriendlyDate.",
+        })),
+      ],
+    },
+  },
+  // One owner per control: a raw <input>, <textarea> or <select> skips the
+  // field primitives' label, error and ink; a raw list or table skips List's
+  // role and Table's name and scroll container; a hand-written menu role or
+  // aria-haspopup skips Menu's keys and dismissal. Markdown bodies are Markdoc
+  // output, not JSX, so this does not see them. Each tag lists the files that
+  // render it (`allowIn`, relative to this config), one file per line with the
+  // reason; a new file in ui/fields/ is not exempt until it is listed here.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "personal-vibe-check/require-ui-primitive": [
+        "error",
+        {
+          elements: {
+            input: {
+              allowIn: [
+                // TextField and NumberField.
+                "src/components/ui/fields/field.tsx",
+                // CheckboxField and Checkbox.
+                "src/components/ui/fields/checkbox.tsx",
+                // RadioGroup's radios.
+                "src/components/ui/fields/radio.tsx",
+                // useFilePicker's hidden file input.
+                "src/components/ui/fields/file-picker.tsx",
+                // A visible file input: a browser-automation tool sets files on it (see its header).
+                "src/components/browser-task/SubmissionForm.tsx",
+              ],
+              message:
+                "Use TextField, NumberField, CheckboxField, Checkbox, RadioGroup or useFilePicker (components/ui/fields).",
+            },
+            textarea: {
+              allowIn: [
+                // TextareaField.
+                "src/components/ui/fields/field.tsx",
+                // The chat composer's textarea: autosize, caret tracking, IME-safe Enter.
+                "src/components/chat/InteractiveChat-composer/ComposerTextarea.tsx",
+              ],
+              message: "Use TextareaField (components/ui/fields/field).",
+            },
+            select: {
+              allowIn: [
+                // SelectField.
+                "src/components/ui/fields/field.tsx",
+              ],
+              message: "Use SelectField (components/ui/fields/field); tone=\"dark\" on the capture screen.",
+            },
+            ul: {
+              allowIn: [
+                // List: marker, gap, direction, divided, and role="list" when unmarked.
+                "src/components/ui/List.tsx",
+              ],
+              message: "Use List (components/ui/List) with raw <li> children.",
+            },
+            ol: {
+              allowIn: [
+                // List with marker="decimal" or ordered.
+                "src/components/ui/List.tsx",
+              ],
+              message: "Use List marker=\"decimal\" or List ordered (components/ui/List).",
+            },
+            table: {
+              allowIn: [
+                // Table: the required name and the one scroll container.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Table (components/ui/Table): caption or labelledBy; variant=\"grid\" for document content.",
+            },
+            th: {
+              allowIn: [
+                // Th: required scope, variant classes.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Th (components/ui/Table) with scope=\"col\" or \"row\".",
+            },
+            td: {
+              allowIn: [
+                // Td: variant classes, forwarded cell attributes.
+                "src/components/ui/Table.tsx",
+              ],
+              message: "Use Td (components/ui/Table).",
+            },
+            dialog: {
+              allowIn: [
+                // ModalDialog: showModal(), focus return, toast hold, Escape layer.
+                "src/components/ui/ModalDialog.tsx",
+                // Popover: a non-modal <dialog popover="manual">.
+                "src/components/ui/Popover.tsx",
+              ],
+              message: "Use ModalDialog (a modal) or Popover (an anchored panel) from components/ui.",
+            },
+          },
+          roles: Object.fromEntries(
+            ["menu", "menuitem", "menuitemcheckbox", "menuitemradio"].map((role) => [role, {
+              allowIn: [
+                // Menu: the panel's role="menu".
+                "src/components/ui/Menu.tsx",
+                // MenuItem: rows and their sibling action.
+                "src/components/ui/menu-item.tsx",
+              ],
+              message: "Use Menu and MenuItem (components/ui/Menu, components/ui/menu-item); a row's second button is MenuItem action.",
+            }]),
+          ),
+          attributes: {
+            "aria-haspopup": {
+              allowIn: [
+                // The trigger props of Menu and Popover.
+                "src/components/ui/Menu.tsx",
+                "src/components/ui/Popover.tsx",
+              ],
+              message: "Spread the trigger props of Menu or Popover (ariaProps).",
+            },
+          },
+        },
+      ],
+    },
+  },
+  // One word per overlay kind: a component named ...Modal or ...Popup reads as
+  // a second kind of overlay. Names only; the element, role, class and import
+  // rules above check what a component renders.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "personal-vibe-check/component-name-suffix": [
+        "error",
+        {
+          banned: {
+            Popup: "Name it ...Popover (a <Popover>) or ...Menu (a <Menu>).",
+            Overlay: "Name it ...Dialog (a <ModalDialog>), ...Popover or ...Screen.",
+            Modal: "Name it ...Dialog and render <ModalDialog>.",
+            Sheet: "Name it ...Dialog (a <ModalDialog>) or ...Popover.",
+            Tooltip: "Name it ...Popover (a <Popover>), or use a title attribute.",
+          },
+          // A box drawn over an image: the one meaning "Overlay" keeps.
+          allowIn: ["src/components/ui/BboxOverlay.tsx"],
+        },
+      ],
     },
   },
   {

@@ -1,10 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export function Button({ intent, className, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { intent?: "primary" | "secondary" | "danger" | "quiet"; className?: string }) {
-  return <button className={`button button-${intent ?? "secondary"} ${className ?? ""}`} {...props}>{children}</button>;
+  return <button type="button" className={`button button-${intent ?? "secondary"} ${className ?? ""}`} {...props}>{children}</button>;
 }
 
-export function Pill({ tone, title, children }: { tone?: "neutral" | "info" | "success" | "warning" | "danger" | "accent" | "manual"; title?: string | undefined; children: ReactNode }) {
+export function Badge({ tone, title, children }: { tone?: "neutral" | "info" | "success" | "warning" | "danger" | "accent" | "manual"; title?: string | undefined; children: ReactNode }) {
   return <span className={`pill pill-${tone ?? "neutral"}`} title={title}>{children}</span>;
 }
 

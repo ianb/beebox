@@ -34,6 +34,7 @@ import { loadBoxConfig } from "../box/config.js";
 import { getOrCreateAgentToken } from "../agent/token.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { pickBoxSubprocessEnv } from "./allowlist.js";
+import { packageManagerEnvironment } from "../../lib/package-manager-env.js";
 import type { SpawnProfile } from "../../lib/spawn-profile.js";
 import { pathWithGitShim } from "./git-shim.js";
 import { readServeEndpoint } from "../serve-endpoint.js";
@@ -242,6 +243,27 @@ export async function buildScriptEnv(
  */
 export function agentAllowlistEnv(): NodeJS.ProcessEnv {
   return { ...pickBoxSubprocessEnv(process.env, { connectorCreds: false }), BBX_SPAWN_PROFILE: "agent" };
+}
+
+/**
+ * For the engine's own `bbx` and `tsx` children of `bbx upgrade` and `bbx
+ * migrate`: the tooling allowlist, the box-work permit, and the caller's own
+ * `BBX_SPAWN_PROFILE`. These children are engine code at the caller's trust
+ * level, so the marker passes through unchanged. An operator shell's `unset`
+ * stays `unset`, and setting `tooling` here would widen what a `bbx procedure
+ * run` may do in-process.
+ */
+export function engineChildEnvironment(additions?: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
+  // The package-manager names too: a migrator such as engine-link-spec runs
+  // `pnpm install` itself, and cannot pass on a setting (CI, XDG_*) dropped here.
+  const env: NodeJS.ProcessEnv = {
+    ...packageManagerEnvironment(),
+    ...pickBoxSubprocessEnv(process.env, { connectorCreds: true }),
+    ...boxWorkEnvironment(),
+  };
+  const profile = process.env.BBX_SPAWN_PROFILE;
+  if (profile !== undefined) env.BBX_SPAWN_PROFILE = profile;
+  return { ...env, ...additions };
 }
 
 /**

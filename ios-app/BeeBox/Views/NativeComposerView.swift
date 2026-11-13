@@ -64,6 +64,8 @@ struct NativeComposerView: View {
     var hqDiarizationRequested = false
     var speechPlaybackActive: Bool
     var responseActive: Bool
+    /// The page is on a call, which owns the microphone.
+    var callActive = false
     var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
@@ -654,8 +656,10 @@ struct NativeComposerView: View {
             does: voiceKeywordsEnabled
                 ? "tap to dictate continuously; say a send keyword to send hands-free"
                 : "tap to dictate into the text field",
+            controlDisabled: callActive,
             action: requestMicrophone
         )
+        .disabled(callActive)
         .accessibilityHint(voiceKeywordAccessibilityHint)
     }
 

@@ -18,7 +18,7 @@ interface ChatSendFn {
   (event: { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }): void;
 }
 
-const CHAT_MUTED: StoredFlag = { storage: () => (typeof window === "undefined" ? null : localStorage), key: "chat-muted" };
+export const CHAT_MUTED: StoredFlag = { storage: () => (typeof window === "undefined" ? null : localStorage), key: "chat-muted" };
 
 /**
  * Mute toggle persisted to localStorage (key `chat-muted`). SSR-safe initial

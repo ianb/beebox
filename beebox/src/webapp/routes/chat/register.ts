@@ -11,6 +11,7 @@
  * - chat-send-routes.ts    — POST /api/chat/send, /api/chat/self-note
  * - user-message-sender.ts — delivery shared by /api/chat/send and quickChat
  * - chat-audio-routes.ts   — transcribe-audio, voice-config, tts, transcribe-ws
+ * - strip-routes.ts        — POST /api/chat/strip (`bbx chat strip`)
  *
  * Session controls (history, sessions, status, set-model, set-feature,
  * interrupt, restart, schedules) moved to the chat **tRPC** router; they reach
@@ -50,6 +51,7 @@ import { registerChatLastAudioRoutes } from "./last-audio-routes.js";
 import { registerChatAudioReviewRoutes } from "./audio-review-routes.js";
 import { registerChatScreenshotRoutes } from "./screenshot-routes.js";
 import { registerChatUiRoutes } from "./ui-routes.js";
+import { registerChatStripRoutes } from "./strip-routes.js";
 import { chatModelFileForSession } from "../../../core/chat/session/state.js";
 import { wireAfterTurnTitling } from "../../../core/chat/review/after-turn.js";
 import { createSdkChatReviewer } from "../../../core/chat/review/reviewer.js";
@@ -294,6 +296,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   registerChatAudioReviewRoutes(ctx);
   registerChatScreenshotRoutes(ctx);
   registerChatUiRoutes(ctx);
+  registerChatStripRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a
   // pending "new" send can pick up the real id and update its URL.

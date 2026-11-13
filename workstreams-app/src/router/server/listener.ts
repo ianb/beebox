@@ -330,6 +330,7 @@ async function main(): Promise<void> {
     browseDir: BROWSE_DIR,
     devNoHub: DEV_NO_HUB,
     routerPid: process.pid,
+    appOrigin: `http://localhost:${ROUTER_PORT}`,
     log,
     onStateChange: () => updateTabTitle(core),
   });
@@ -337,7 +338,7 @@ async function main(): Promise<void> {
   // authenticate) and the UDS server (trusted-local, unauthenticated). Both share
   // ONE handler-building function and ONE RouterAuthDeps — the only difference is
   // the `trustedLocal` flag baked into each server instance.
-  const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
+  const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries, appOrigin: `http://localhost:${ROUTER_PORT}` });
   const workstreamsAppLogPath = path.join(LOG_DIR, "workstreams-app.log");
   const workstreamsApp = createWorkstreamsAppSupervisor(
     createRealWorkstreamsAppEffects(STATE_DIR),

@@ -28,7 +28,7 @@
  *
  * The hooks run it on a view and on any `.ts`/`.tsx` under `views/` (helpers
  * such as `views/lib/prose.tsx`), and it follows local relative imports
- * transitively (`local-imports.ts`), so a helper a view imports is held to
+ * transitively (`../local-imports.ts`), so a helper a view imports is held to
  * the same three rules.
  *
  * Not caught: text assembled at run time (`"{" + "%"`, a computed key equal
@@ -43,7 +43,8 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import type * as TS from "../../../lib/typescript/syntax.js";
 import { errorMessage } from "../../../shared/error-guards.js";
-import { localImportClosure } from "./local-imports.js";
+import { fileSpecifiers, importedSpecifier, localImportClosure } from "../local-imports.js";
+import { stringLiteralText } from "../literal-text.js";
 
 type Ts = typeof TS;
 
@@ -76,26 +77,10 @@ function isMarkdownLibrary(specifier: string): boolean {
   });
 }
 
-/** A module specifier this node imports, if it is an import-shaped node with a literal one. */
-function importedSpecifier(ts: Ts, node: TS.Node): string | null {
-  if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier !== undefined) {
-    return ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : null;
-  }
-  if (ts.isCallExpression(node)) {
-    const callee = node.expression;
-    const isLoader = callee.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(callee) && callee.text === "require");
-    const first = node.arguments[0];
-    if (isLoader && first !== undefined && ts.isStringLiteralLikeNode(first)) return first.text;
-  }
-  return null;
-}
-
-/** The literal text a string, template part, or regex node carries; null for anything else. */
+/** The literal text a string, template part, or regex node carries (a regex without its escapes); null for anything else. */
 function literalText(ts: Ts, node: TS.Node): string | null {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) return node.text;
   if (ts.isRegularExpressionLiteral(node)) return node.text.replaceAll("\\", "");
-  return null;
+  return stringLiteralText(ts, node);
 }
 
 /** Local names `Markdown` is imported under from `beebox/view-widgets`. */
@@ -257,19 +242,6 @@ export async function checkViewMarkdown(source: string): Promise<ViewMarkdownPro
   }
 }
 
-/** Every module specifier a source imports (`import`, `export … from`, `import()`, `require()`). */
-function listSpecifiers({ ts, parse }: Syntax, source: string): string[] {
-  const file = parse({ fileName: "view.tsx", sourceText: source });
-  const out: string[] = [];
-  const visit = (node: TS.Node): void => {
-    const specifier = importedSpecifier(ts, node);
-    if (specifier !== null) out.push(specifier);
-    node.forEachChild(visit);
-  };
-  visit(file);
-  return out;
-}
-
 /** One line per problem in the view and the local files it imports. */
 async function problemLines(viewAbsPath: string, root: string): Promise<string[]> {
   const ts = await loadSyntax();
@@ -277,7 +249,7 @@ async function problemLines(viewAbsPath: string, root: string): Promise<string[]
   const syntax = { ts, parse: parser.parse };
   const lines: string[] = [];
   try {
-    const files = await localImportClosure(viewAbsPath, { root, listSpecifiers: (source) => listSpecifiers(syntax, source) });
+    const files = await localImportClosure(viewAbsPath, { root, listSpecifiers: ({ source }) => fileSpecifiers(ts, parser.parse({ fileName: "view.tsx", sourceText: source })) });
     const realRoot = await fs.realpath(root);
     for (const [index, file] of files.entries()) {
       const where = index === 0 ? "" : `${path.relative(realRoot, file.path)} `;

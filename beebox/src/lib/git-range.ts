@@ -7,7 +7,7 @@
  * Split into a sibling module so `git.ts` stays under the 300-line cap.
  */
 
-import { simpleGit } from "simple-git";
+import { boxGit } from "./git/env.js";
 
 /**
  * Resolve HEAD to a full commit sha, or null when the repo has no commits yet.
@@ -15,7 +15,7 @@ import { simpleGit } from "simple-git";
  */
 export async function getHeadSha(boxRoot: string): Promise<string | null> {
   try {
-    return (await simpleGit(boxRoot).revparse(["HEAD"])).trim();
+    return (await boxGit(boxRoot).revparse(["HEAD"])).trim();
   } catch (_e) {
     // revparse HEAD fails when there are no commits — null is the answer.
     return null;
@@ -36,7 +36,7 @@ export async function getOnelineLog(
   if (base !== undefined) args.push(`${base}..HEAD`);
   if (paths && paths.length > 0) args.push("--", ...paths);
   try {
-    return (await simpleGit(boxRoot).raw(args)).trim();
+    return (await boxGit(boxRoot).raw(args)).trim();
   } catch (_e) {
     // Unresolvable range (e.g. a marker sha no longer reachable) → empty.
     return "";
@@ -56,7 +56,7 @@ export async function getDiffStat(
   const args = [range, "--stat"];
   if (paths && paths.length > 0) args.push("--", ...paths);
   try {
-    return (await simpleGit(boxRoot).diff(args)).trim();
+    return (await boxGit(boxRoot).diff(args)).trim();
   } catch (_e) {
     return "";
   }
@@ -77,7 +77,7 @@ export async function getRangeDiff(
   const args = [range];
   if (paths && paths.length > 0) args.push("--", ...paths);
   try {
-    return (await simpleGit(boxRoot).diff(args)).trim();
+    return (await boxGit(boxRoot).diff(args)).trim();
   } catch (_e) {
     return "";
   }
@@ -97,7 +97,7 @@ export async function getRangeChangedPaths(
   boxRoot: string,
   { from, to, filter }: { from: string; to: string; filter: string }
 ): Promise<string[]> {
-  const out = await simpleGit(boxRoot).raw([
+  const out = await boxGit(boxRoot).raw([
     "diff", "--name-only", "-z", "--find-renames", "--no-ext-diff",
     `--diff-filter=${filter}`, from, to, "--",
   ]);
@@ -109,12 +109,12 @@ export async function getRangeSubjects(
   boxRoot: string,
   { from, to }: { from: string; to: string }
 ): Promise<string[]> {
-  const out = await simpleGit(boxRoot).raw(["log", "--reverse", "--format=%s", `${from}..${to}`, "--"]);
+  const out = await boxGit(boxRoot).raw(["log", "--reverse", "--format=%s", `${from}..${to}`, "--"]);
   return out.split("\n").filter((line) => line !== "");
 }
 
 /** Every file in the tree at `rev`, repository-relative. */
 export async function getTreeFiles(boxRoot: string, { rev }: { rev: string }): Promise<string[]> {
-  const out = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "-z", rev]);
+  const out = await boxGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "-z", rev]);
   return out.split("\0").filter((p) => p !== "");
 }

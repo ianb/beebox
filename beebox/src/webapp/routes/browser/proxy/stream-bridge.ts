@@ -15,6 +15,7 @@
  */
 
 import { WebSocket, type RawData } from "ws";
+import { correctKeyCode } from "./key-code.js";
 
 /** Input queued before the upstream opens is capped here, so a slow host start cannot fill memory. */
 export const PENDING_CAP_BYTES = 1024 * 1024;
@@ -49,16 +50,17 @@ function closeQuietly(socket: WebSocket, { code, reason }: { code: number; reaso
  */
 export function bridgeStream(client: WebSocket, target: { relaySocket: Promise<string>; port: number }): void {
   // Input sent before the upstream opens waits here, in order.
-  const pending: { data: RawData; isBinary: boolean }[] = [];
+  const pending: { data: RawData | string; isBinary: boolean }[] = [];
   let pendingBytes = 0;
   let upstream: WebSocket | null = null;
   let clientClosed = false;
-  client.on("message", (data, isBinary) => {
+  client.on("message", (raw, isBinary) => {
+    const data = correctKeyCode(raw, isBinary);
     if (upstream?.readyState === WebSocket.OPEN) {
       upstream.send(data, { binary: isBinary });
       return;
     }
-    pendingBytes += byteLength(data);
+    pendingBytes += byteLength(raw);
     if (pendingBytes > PENDING_CAP_BYTES) {
       pending.length = 0;
       closeQuietly(client, { code: MESSAGE_TOO_BIG, reason: "too much input before the box browser was ready" });
@@ -84,7 +86,7 @@ export function bridgeStream(client: WebSocket, target: { relaySocket: Promise<s
   );
 }
 
-function connectUpstream({ client, relaySocket, port, pending }: { client: WebSocket; relaySocket: string; port: number; pending: { data: RawData; isBinary: boolean }[] }): WebSocket {
+function connectUpstream({ client, relaySocket, port, pending }: { client: WebSocket; relaySocket: string; port: number; pending: { data: RawData | string; isBinary: boolean }[] }): WebSocket {
   const upstream = new WebSocket(`ws+unix://${relaySocket}:/api/session/${String(port)}/stream`, {
     origin: "http://localhost",
     headers: { host: "localhost" },

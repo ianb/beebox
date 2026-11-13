@@ -22,6 +22,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { consoleLines } from "./helpers/console-lines.js";
 import {
   loadBoxSchemas,
   invalidateBoxSchemas,
@@ -115,7 +116,11 @@ void test("Keep-last-good still applies to a broken save", async (t) => {
 
   await fs.writeFile(schemaPath, V2_WIDGET_SCHEMA_BROKEN);
   invalidateBoxSchemas(boxRoot);
+  const warnings = consoleLines(t, "warn");
   const kept = await loadBoxSchemas(boxRoot);
+  // The server log names the schema file and the compile error:
+  t.check(warnings(), [str`Warning: failed to load box schema widget.ts: Transform failed with 1 error:
+${any(String)}:2:26: ERROR: Unexpected end of file`]);
   t.check(kept.cardSchemas.map((s) => s.type), ["widget"]);
 
   // The failure is no longer silent — `bbx status`/`/healthz`'s
@@ -139,8 +144,10 @@ void test("A bare `zod`/`yaml` import fails — only `beebox/*` specifiers resol
   const { root, boxRoot } = await makeV3Box();
   await writeSchema({ root, relPath: "src/schemas/widget.ts", content: V2_SCHEMA_WITH_BARE_ZOD });
 
+  const warnings = consoleLines(t, "warn");
   const loaded = await loadBoxSchemas(boxRoot);
   const failures = listSchemaLoadFailures(boxRoot);
+  t.check(warnings(), [str`Warning: failed to load box schema widget.ts: Cannot find package 'zod' imported from ${any(String)}`]);
   t.check(loaded.cardSchemas, []);
   t.check(failures, [{ file: "widget.ts", message: str`Cannot find package 'zod' imported from ${any(String)}`, at: isoDate() }]);
 });

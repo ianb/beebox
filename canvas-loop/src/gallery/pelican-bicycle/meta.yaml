@@ -35,3 +35,4 @@ features-exercised:
   - pure function of frame + params (no extra pause/resume state)
   - v.ctx escape hatch for organic curves (bill, body, wings)
   - layered composition (bicycle frame, wheels, crank/pedals, rider)
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"

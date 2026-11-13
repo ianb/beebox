@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
+import { Link, type LinkProps } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import { cn } from "../../lib/cn";
 import { useMaterial } from "./material";
+import { Spinner } from "./Spinner";
 
 export type ButtonIntent =
   | "primary"
@@ -48,8 +51,9 @@ interface CommonButtonProps extends NativeButtonPassThrough {
   loadingLabel?: ReactNode | ((elapsedSeconds: number) => ReactNode);
   /**
    * Brief post-click feedback ("Copied" etc.). Fires after `onClick` resolves,
-   * or with `failLabel` after it fails. The button becomes a polite live region
-   * so the swapped label is announced.
+   * or with `failLabel` after it fails. A sibling `role="status"` element
+   * announces the outcome (a live region inside a button is not reliably
+   * announced), and the button's accessible name stays the idle label.
    */
   flash?: FlashSpec;
   /** `true` stretches the button to fill its parent's width. */
@@ -130,27 +134,6 @@ function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra, materia
   const widthClass = fullWidth && shape === "rect" ? "w-full" : "";
   const intentClass = intent === "ghost" && material ? MATERIAL_GHOST : INTENT_CLASSES[intent];
   return cn(BASE_CLASSES, intentClass, shapeClass, sizeClass, widthClass, extra);
-}
-
-// ---------- spinner ----------
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin w-4 h-4"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  );
 }
 
 // ---------- content rendering ----------
@@ -295,22 +278,71 @@ export function Button(props: ButtonProps) {
   });
 
   const material = useMaterial(undefined);
-  const ariaLabel = label !== undefined ? label : undefined;
+  const flashText =
+    flash !== undefined && flashing !== "idle" ? (flashing === "failed" ? flash.failLabel : flash.label) : undefined;
+  // The visible text swaps during a flash; the name does not, so a screen
+  // reader does not hear the button rename itself under the cursor.
+  const ariaLabel =
+    label !== undefined
+      ? label
+      : flashText !== undefined && (typeof children === "string" || typeof children === "number")
+        ? String(children)
+        : undefined;
   const titleFallback = iconOnly && label !== undefined ? label : undefined;
 
   return (
-    <button
-      {...rest}
-      type={type}
-      disabled={isDisabled}
-      aria-label={ariaLabel}
-      aria-busy={loading || undefined}
-      aria-live={rest["aria-live"] ?? (flash !== undefined ? "polite" : undefined)}
-      title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
-      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
-      onClick={(e) => void handleClick(e)}
+    <>
+      <button
+        {...rest}
+        // eslint-disable-next-line react/button-has-type -- type is a typed prop (button | submit | reset) that defaults to "button"
+        type={type}
+        disabled={isDisabled}
+        aria-label={ariaLabel}
+        aria-busy={loading || undefined}
+        title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
+        className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
+        onClick={(e) => void handleClick(e)}
+      >
+        {content}
+      </button>
+      {flash !== undefined ? <span role="status" className="sr-only">{flashText}</span> : null}
+    </>
+  );
+}
+
+/**
+ * A router link that looks like a `Button`: navigation drawn as a button
+ * ("New chat", "Open chat →"). It has no loading, flash or disabled state;
+ * those belong to actions.
+ */
+export function ButtonLink({
+  id,
+  to,
+  search,
+  intent,
+  size,
+  className,
+  children,
+}: {
+  /** Stable `bbx-` control address (see lib/ui-scan). */
+  id?: string;
+  to: string;
+  search?: LinkProps["search"];
+  intent?: ButtonIntent;
+  size?: ButtonSize;
+  /** Outer-layout classes (margin, padding, flex item, sizing, position). */
+  className?: string;
+  children: ReactNode;
+}) {
+  const material = useMaterial(undefined);
+  return (
+    <Link
+      id={id}
+      to={href(to)}
+      search={search}
+      className={buildClasses({ intent: intent ?? "secondary", shape: "rect", size: size ?? "md", iconOnly: false, fullWidth: false, extra: className, material })}
     >
-      {content}
-    </button>
+      {children}
+    </Link>
   );
 }

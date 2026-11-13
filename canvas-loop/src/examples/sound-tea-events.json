@@ -1,0 +1,11 @@
+[
+  { "frame": 10, "type": "mousedown", "x": 50, "y": 200 },
+  { "frame": 25, "type": "mousedown", "x": 93, "y": 200 },
+  { "frame": 40, "type": "mousedown", "x": 136, "y": 200 },
+  { "frame": 55, "type": "mousedown", "x": 300, "y": 60 },
+  { "frame": 70, "type": "mousedown", "x": 179, "y": 200 },
+  { "frame": 80, "type": "mousedown", "x": 222, "y": 210 },
+  { "frame": 90, "type": "mousedown", "x": 265, "y": 215 },
+  { "frame": 100, "type": "mousedown", "x": 308, "y": 220 },
+  { "frame": 110, "type": "mousedown", "x": 351, "y": 222 }
+]

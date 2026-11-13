@@ -1,0 +1,55 @@
+---
+title: "The `claude auth` commands and the gws CLI start with the server's whole environment"
+workstream: child-env-allowlist
+area: beebox
+labels: [security, env]
+filed-by: agent
+discovered-by: agent
+discovered-in: worktree-agent-a80db54b588f8698c — characterizing credential visibility for the credential table
+resolution: implemented
+---
+
+**Closed (implemented, 2026-11-08):** Resolved by 4450a9311 and 0163b6e58: Git, CLI, and engine children get allowlisted environments (plan child-env-allowlist).
+
+Four spawn sites copy all of `process.env` into a CLI instead of building an
+allowlisted environment, so the server's credentials and every unlisted
+variable reach the child (the exceptions are named per site):
+
+- `src/services/claude-cli.ts` `authStatus`: `{ ...process.env }`, minus an
+  ambient `CLAUDE_CODE_OAUTH_TOKEN`, plus the box's token.
+- `authLogin`: `{ ...process.env, BROWSER: "echo" }`.
+- `authLogout`: no `env` option, so Node passes `process.env`.
+- `src/connectors/gmail/gws.ts` `runReadOnlyGws`:
+  `{ ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token }`. gws is a
+  third-party npm CLI.
+
+The cross-model review of the same change (codex gpt-6-astra) found more sites
+with no `env` option, not yet in the matrix: Codex status and logout
+(`src/services/codex-cli/core.ts`), Codex login
+(`src/services/codex-cli/auth-app-server.ts`), plugin commands
+(`src/core/agent/ensure-codex-plugin.ts`), the history server
+(`src/services/codex-history-server.ts`), the prompt logger
+(`src/core/agent/invoke/prompt-logger.ts`), and Docling
+(`src/services/docling/core.ts`).
+
+The server seals its own named secrets (`BBX_HUB_SECRET`, `BBX_DIAG_API_KEY`,
+`BBX_VAPID_PRIVATE_KEY`, `BBX_SESSION_SECRET`, …) out of `process.env` at
+startup (`src/lib/server-secrets.ts`), so a running server no longer passes
+them on. What still reaches these children is provider API keys
+(`ANTHROPIC_API_KEY`, the OpenAI keys, `BBX_MISTRAL_*`, `BBX_DEEPGRAM_*`,
+`BBX_OPENROUTER_API_KEY`, the Gemini keys) and any unlisted variable. The
+matrix test runs without sealing, so it shows every name as inherited. None of these
+processes runs agent-authored code, so this is a defense-in-depth gap, not an
+agent escape. `test/credential-visibility/every-consumer.test.ts` pins what each
+receives today (the `status`, `statusNoBox`, `login`, `logout`, and `gws`
+columns).
+
+The status probe's stated purpose is to answer for the credential an agent run
+uses (`core/claude-oauth-token.ts`); an agent run gets the `agent` allowlist
+(`core/script-env/allowlist.ts`), so the probe would be more faithful on the
+same list. Direction: build these envs from the agent allowlist (the claude
+commands) or the tooling allowlist (gws) plus the one injected value, add
+`claudeAuth` and `gws` consumers to `src/lib/credential-env.ts`, and update
+the matrix. Check on macOS that `claude auth status` still finds the keychain
+login (it needs `USER`, which the allowlist has).
+

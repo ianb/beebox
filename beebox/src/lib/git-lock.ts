@@ -107,7 +107,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "./git/env.js";
 import { LockHeldError, withFileLock } from "./file-lock.js";
 
 /**
@@ -217,7 +217,7 @@ async function computeLockPath(key: string): Promise<string | null> {
 export async function resolveGitDir(dir: string): Promise<string | null> {
   let gitDir: string;
   try {
-    gitDir = (await simpleGit(dir).revparse(["--absolute-git-dir"])).trim();
+    gitDir = (await boxGit(dir).revparse(["--absolute-git-dir"])).trim();
   } catch (_e) {
     // Not a repository, or the directory does not exist.
     return null;

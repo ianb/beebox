@@ -13,6 +13,7 @@ import type { CalendarEvent, GoogleCalendarService } from "../../src/services/go
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
 import ky from "ky";
+import { consoleLines } from "../helpers/console-lines.js";
 
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
@@ -143,7 +144,10 @@ void test("A delete Google rejects has to stay pending — the file and its X-BB
   const file = await editFirst(box, { from: "END:VEVENT", to: "X-BBX-DELETE:no longer happening\r\nEND:VEVENT" });
 
   mode.quiet = true;
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+  // The sync log names the refusal and the file whose marker stays:
+  t.check(warnings(), ["  API error deleting from primary: 503", `  Failed to delete ${file} from Google Calendar`]);
   t.check(
     ({
       success: result.success,
@@ -180,7 +184,10 @@ void test("When the local file changed and Google's copy did not, the connector 
   await connector.sync();
   const file = await editFirst(box, { from: "Lunch", to: "Lunch MINE" });
 
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+  // The sync log names the refusal and the file whose edit stays:
+  t.check(warnings(), ["  API error patching in primary: 503", `  Failed to push local edit for ${file}, keeping the local file`]);
   t.check(
     ({
       success: result.success,
@@ -254,7 +261,10 @@ void test("A full-window list is the whole truth for that window and does not re
   }
   inner.events = inner.events.filter((e) => e.id === "evt-keep");
 
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
+  // The sync log says the locally edited file was moved aside, not deleted:
+  t.check(warnings(), [`  Stranded ${editedFile} — deleted on Google (absent from a full resync); moved to stranded/`]);
   t.check(
     ({
       initial,
@@ -375,10 +385,13 @@ void test("A patch Google refuses leaves the file and its stored hash alone so t
 
   const connector = connect(box, calendar);
   await connector.sync();
-  await editFirst(box, { from: "Dentist", to: "Dentist MINE" });
+  const file = await editFirst(box, { from: "Dentist", to: "Dentist MINE" });
 
   patchFails = true;
+  const warnings = consoleLines(t, "warn");
   const rejected = await connector.sync();
+  // The sync log names the refusal and the file whose edit stays:
+  t.check(warnings(), ["  API error patching in primary: 503", `  Failed to push local edit for ${file}, keeping the local file`]);
   const afterRejected = { success: rejected.success, remote: inner.events[0]?.summary };
 
   mode.quiet = true;

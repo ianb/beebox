@@ -1,0 +1,18 @@
+[
+  { "frame": 0, "type": "snapshot", "label": "start: atomic radius, period 3" },
+  { "frame": 60, "type": "mousemove", "x": 92, "y": 444 },
+  { "frame": 120, "type": "mousedown", "x": 492, "y": 264 },
+  { "frame": 180, "type": "param", "name": "chart", "value": "Down the group" },
+  { "frame": 240, "type": "param", "name": "property", "value": "Electronegativity" },
+  { "frame": 300, "type": "mousemove", "x": 492, "y": 204 },
+  { "frame": 360, "type": "mousemove", "x": 252, "y": 324 },
+  { "frame": 420, "type": "param", "name": "property", "value": "Ionization energy" },
+  { "frame": 420, "type": "param", "name": "chart", "value": "Across the period" },
+  { "frame": 420, "type": "mousedown", "x": 372, "y": 204 },
+  { "frame": 480, "type": "mousemove", "x": 874, "y": 258 },
+  { "frame": 540, "type": "mousemove", "x": 500, "y": 30 },
+  { "frame": 540, "type": "param", "name": "arrows", "value": true },
+  { "frame": 600, "type": "keydown", "key": "ArrowDown" },
+  { "frame": 660, "type": "param", "name": "property", "value": "Atomic radius" },
+  { "frame": 720, "type": "snapshot", "label": "end" }
+]

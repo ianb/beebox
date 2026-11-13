@@ -36,10 +36,11 @@ import { useBoxName } from "../../hooks/useBoxName";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { oneOf } from "../../lib/live-refresh";
 import { trpc } from "../../lib/trpc/client";
-import { Dropdown } from "../ui/Dropdown";
-import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { Menu } from "../ui/Menu";
+import { MenuItem, MenuDivider } from "../ui/menu-item";
 import { AppNavFace } from "../app-bar-faces/AppNavFace";
 import { ProfileButtonFace } from "../app-bar-faces/ProfileButtonFace";
+import { PresenceHeads } from "./PresenceHeads";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { PlacePill } from "./PlacePill";
@@ -90,7 +91,7 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
   const isOnAdmin = activePath === SYSTEM_CARD_PATHS.admin;
 
   return (
-    <Dropdown
+    <Menu
       align="right"
       trigger={({ toggle, ariaProps }) => <ProfileButtonFace user={user} onClick={toggle} ariaProps={ariaProps} />}
     >
@@ -111,7 +112,7 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
       <MenuItem id="bbx-profile-menu-reload" onClick={() => window.location.reload()}>Reload</MenuItem>
       {user ? <MenuItem id="bbx-profile-menu-sign-out" href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
-    </Dropdown>
+    </Menu>
   );
 }
 
@@ -163,7 +164,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView, standalone: stand
       <AppBarChipSlot />
       <PointSelectionButton standalone={standalone} />
       <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
-      <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+      {/* The heads of others in this chat hang below the avatar (docs/chat-presence.md). */}
+      <div className="relative flex">
+        <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+        <PresenceHeads />
+      </div>
     </AppNavFace>
   );
 }

@@ -19,6 +19,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import { bodyField } from "../helpers/test-helpers.js";
 import { invalidateBoxSchemas } from "../../src/schemas.js";
+import { any, str } from "@ianbicking/tap-check/check";
+import { consoleLines } from "../helpers/console-lines.js";
 
 async function writeSchema(file: string, content: string): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
@@ -55,5 +57,8 @@ void test("/healthz reports a schema that stopped loading", async (t) => {
   // call, with no other code path having loaded this box's schemas first.
   await writeSchema(widget, BROKEN_SCHEMA);
   invalidateBoxSchemas(server.boxRoot);
+  const warnings = consoleLines(t, "warn");
   await t.check(healthz(), { total: 1, byBox: { test: 1 } });
+  // The log names the schema file and the syntax error, at the line and column the compiler reports:
+  t.check(warnings(), [str`Warning: failed to load box schema widget.ts: Transform failed with 1 error:\n${any(String)}/src/schemas/widget.ts:2:26: ERROR: Unexpected end of file`]);
 });

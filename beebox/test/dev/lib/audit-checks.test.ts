@@ -77,6 +77,25 @@ void test("Equivalent generated guidance surfaces can satisfy one navigation che
   });
 });
 
+// A Grep aimed at the named file counts as consulting it: a dev agent that
+// searches frontend.md for a primitive and cites the lines read what mattered.
+// A Grep over a directory that holds the file does not.
+void test("A Grep of the named file satisfies should_read_any; a directory Grep does not", async (t) => {
+  const check = (search: { tool: string; summary: string }) => runChecks({ ...auditTest, should_read_any: ["beebox/frontend.md"] }, {
+    behavior: { ...behavior("answer"), searches: [search] },
+    newOrModifiedCards: new Map(),
+  }).shouldReadAnyCheck;
+  t.check({
+    file: check({ tool: "Grep", summary: "Popover in /repo/beebox/frontend.md" }),
+    directory: check({ tool: "Grep", summary: "Popover in /repo/beebox" }),
+    glob: check({ tool: "Glob", summary: "**/frontend.md in /repo/beebox/frontend.md" }),
+  }, {
+    file: { files: ["beebox/frontend.md"], wasRead: true, matched: "beebox/frontend.md" },
+    directory: { files: ["beebox/frontend.md"], wasRead: false, matched: undefined },
+    glob: { files: ["beebox/frontend.md"], wasRead: false, matched: undefined },
+  });
+});
+
 // Regexes are rejected at the YAML schema boundary before an audit spends an
 // agent run. Empty patterns are also invalid because they match every response.
 void test("Regexes are rejected at the YAML schema boundary before an audit spends an ag...", async (t) => {

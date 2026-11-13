@@ -37,13 +37,13 @@ void test("ink takes the surrounding text colour", async (t) => {
   t.check(button.classes.filter((name) => name.startsWith("text-warm") || name.startsWith("hover:bg-warm")), []);
 });
 
-void test("the bubble variant is a 20 px red circle with the caller's name, id and position", async (t) => {
+void test("the bubble variant is a 20 px red circle in a 24 px hit area with the caller's name, id and position", async (t) => {
   const button = await buttonOf({ variant: "bubble", label: "Remove attachment", id: "bbx-x", className: "absolute -top-2 -right-2" });
   t.check(button.name, "Remove attachment");
   t.check(button.title, "Remove attachment");
   t.check(button.id, "bbx-x");
   t.check(button.clicks, 1);
-  t.check(button.classes, containing(["w-5", "h-5", "rounded-full", "bg-danger", "text-white", "absolute", "-top-2", "-right-2"]));
+  t.check(button.classes, containing(["w-6", "h-6", "rounded-full", "text-white", "absolute", "-top-2", "-right-2"]));
   t.check(button.classes.filter((name) => name === "w-9"), []);
 });
 

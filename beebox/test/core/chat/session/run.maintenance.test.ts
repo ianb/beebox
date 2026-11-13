@@ -12,6 +12,8 @@ import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns } from "../../../helpers/chat-session-spawner-helpers.js";
 import { createTaskRecorder, END_CAUSES, pendingRunEndedNote } from "../../../../src/core/chat/session/ended-note.js";
 import { createLiveTasks } from "../../../../src/core/chat/session/run/live-tasks.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 void test("line 13", async (t) => {
   t.teardown(async () => {
@@ -106,15 +108,20 @@ how is it going?` }]);
   run.emitResult();
   await busy;
 
+  const warnings = consoleLines(t, "warn");
   session.pauseForMaintenance("deployment");
   t.check({ aborted: run.aborted, note: JSON.parse(await box.read(NOTE)) }, {
     aborted: true,
     note: { tasks: ["collect sources"], lastSeenAt: isoDate(), writer: uuid(), at: isoDate(), cause: "box maintenance (deployment)", wake: true },
   });
+  // The server log says which run was ended and why:
+  t.check(warnings(), ["[ChatSession] Ending run sess-1 with 1 live background task(s): box maintenance (deployment)"]);
   session.resumeAfterMaintenance();
 
   backend.failNextStart = new Error("provider down");
+  const errors = consoleLines(t, "error");
   await t.checkThrows(async () => session.send("did it finish?"), "Error");
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "provider down" })]);
   t.check(await box.list(".beebox/chat-run-ended"), NOTE);
 
   await session.send("did it finish?");

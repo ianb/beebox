@@ -48,8 +48,10 @@ function useNodeResolvedRef(cardRef: string): ResolvedRef {
 const NODE_HOST: ViewHost = {
   openCard: () => {},
   useResolvedRef: useNodeResolvedRef,
-  renderInline: (cardRef) => (
-    <Text as="div" tone="subtle" size="sm">[inline card: {filenameTitle(cardRef)}]</Text>
+  renderInline: (cardRef, opts) => (
+    <Text as="div" tone="subtle" size="sm">
+      [inline card: {filenameTitle(cardRef)}{opts?.caption === undefined ? "" : ` — ${opts.caption}`}]
+    </Text>
   ),
   basePath: "",
   boxSlug: "",

@@ -1,0 +1,25 @@
+slug: gull-market
+title: "A gull steals a fish at a sunny harbour market"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 8
+tier: tea
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+harness-commit: 834c07b7
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Checkpoint demo (CANVAS_LOOP_CHECKPOINTS with run --note). Boxholder review pending. Clear story
+  (thief, fish, empty spot, fishmonger too late); bright painted sky; figures simple and stiff.
+  Found the @napi-rs/canvas erase-under-transform bug, since worked around in the library.
+self-report-summary: >
+  Story reads in one look; the gull's face is the best part. Shading with group + erase under a
+  rotate left a hard white box (library-side bug); brush texture needs higher contrast to show.
+features-exercised:
+  - brushes (bristle, ink, wash)
+  - clip and group shading
+  - checkpoints with notes

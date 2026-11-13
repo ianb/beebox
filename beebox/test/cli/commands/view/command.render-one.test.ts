@@ -127,6 +127,71 @@ export default function Prose({ cards }) {
   });
 });
 
+// ## Card embeds render in Node
+//
+// A card written as an image, and `<CardRef embed>`, render through the node
+// host's placeholder. They need no FileView, so the Node bundle loads and
+// renders them:
+void test("A card embed in Markdown and a CardRef embed render in Node", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeViewBox();
+  await box.write("_content/inbox/A.doc.card", DOC_CARD);
+  await writeView(box, { rel: "figure.tsx", content: `
+import { Markdown, CardRef } from "beebox/view-widgets";
+export const name = "Figure";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Figure({ cards }) {
+  return (
+    <div>
+      {cards.map((card) => <Markdown key={card.path} card={card}>{"![Hydrogen](/_content/figures/Atom.figure.card?element=H)"}</Markdown>)}
+      <CardRef cardRef="/_content/figures/Atom.figure.card" params={{ element: "H" }} embed caption="Hydrogen" />
+    </div>
+  );
+}
+` });
+
+  const r = await runRenderOne(box.root, ["figure"]);
+  t.check(r, {
+    code: 0,
+    stdout: "",
+    stderr: "",
+  });
+});
+
+// ## A todo's due date renders in Node
+//
+// The todo widget formats its due date with the same code in Node as in the
+// browser, so a view that shows one passes the check.
+void test("A Markdown todo with a due date renders under the view check", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeViewBox();
+  await box.write("_content/inbox/A.doc.card", DOC_CARD.replace("Body\n", "{% todo due=\"2026-08-14\" %}Order lumber{% /todo %}\n"));
+  await writeView(box, { rel: "due.tsx", content: `
+import { Markdown } from "beebox/view-widgets";
+export const name = "Due";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Due({ cards }) {
+  return <div>{cards.map((card) => card.body ? <Markdown key={card.path} card={card}>{card.body}</Markdown> : null)}</div>;
+}
+` });
+
+  t.check(await runRenderOne(box.root, ["due"]), { code: 0, stdout: "", stderr: "" });
+});
+
 // ## Image variants are safe to construct during render
 //
 // The mock exposes the same synchronous `imageUrl` helper as the browser host,
@@ -186,7 +251,7 @@ export default function Boom() {
   t.check(r, {
     code: 1,
     stdout: "",
-    stderr: str`View render failed: TypeError: Cannot read properties of undefined (reading 'map')
+    stderr: str`View render failed [no card, first frame]: TypeError: Cannot read properties of undefined (reading 'map')
 TypeError: Cannot read properties of undefined (reading 'map')
 ${any(String).includes("views/boom.tsx")}
 `,
@@ -254,8 +319,8 @@ export default function Early({ readFile, fileUrl }) {
   t.check(r, {
     code: 1,
     stdout: "",
-    stderr: str`View render failed: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
-ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
+    stderr: str`View render failed [no card, first frame]: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, so call it from one (the check's first frame renders the component body without them).
+ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, so call it from one (the check's first frame renders the component body without them).
 ${any(String)}
 `,
   });

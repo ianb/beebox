@@ -13,7 +13,11 @@ open, and how it stays quiet when you do.
 
 - Reaches you three ways, by how much the thing matters: a badge only, a quiet
   notification with no sound, or a loud one with sound. A tap opens the
-  matching place in the box: a chat, a card, a question, or the dashboard.
+  matching place in the box: a chat, a card, a question, the dashboard, or a
+  place (a landmarked directory of the box, with its own chat), where the tap opens that
+  place's latest chat or starts a new one there. An iPhone app older than
+  2026-11-10 does not understand the place forms; a tap on one only brings the
+  app forward.
 - Delivers to the paired iPhone app and to a browser that has allowed web push.
   A person turns a browser on in Settings, which acts only on a click and says
   plainly when the browser is blocking it; the same section shows whether a

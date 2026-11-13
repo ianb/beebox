@@ -6,7 +6,8 @@
  */
 
 import { useRef, useCallback } from "react";
-import { serializeViewUrl } from "../../lib/view-url";
+import { systemCardAttentionRef } from "../../lib/system-card-navigation";
+import type { ViewTarget } from "../../lib/view-url";
 import { CardActivityStore } from "./conversation/card-activity-store";
 import type { ActivityKind, ChatSendContext } from "@core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
@@ -15,11 +16,32 @@ import type { PanelTab } from "./InteractiveChat-controls";
  *  activity since the last reply + per-kind detail). All omitted when empty. */
 export type CardSendFields = ChatSendContext;
 
+/** Report activity on the card whose activity source is `source`. */
+export type CardActivityReport = (source: string, activity: { kind: ActivityKind; detail?: string }) => void;
+
+/**
+ * A card's activity source key: the same key the focused card's attention
+ * ref uses, so what a card reports is what a send from it captures.
+ */
+export function cardActivitySource(target: ViewTarget): string {
+  return systemCardAttentionRef(target);
+}
+
+/**
+ * A reporter bound to the card at `target`. Every mounted companion card gets
+ * its own, so a background card (the other pane, a figure still running)
+ * reports under its own name and never under the focused card's.
+ */
+export function bindCardActivity(report: CardActivityReport, target: ViewTarget): (kind: ActivityKind, detail?: string) => void {
+  const source = cardActivitySource(target);
+  return (kind, detail) => { report(source, { kind, ...(detail === undefined ? {} : { detail }) }); };
+}
+
 export interface CardSend {
-  /** Report activity on the open card with an optional free-text detail (e.g.
-   *  the query typed). The detail overwrites any prior detail for the same kind
-   *  — typing `b`,`bo`,`boat` collapses to the final state. */
-  report: (kind: ActivityKind, detail?: string) => void;
+  /** Report activity on the card at `source` with an optional free-text detail
+   *  (e.g. the query typed). The detail overwrites any prior detail for the
+   *  same kind — typing `b`,`bo`,`boat` collapses to the final state. */
+  report: CardActivityReport;
   /** Capture without discarding activity; rejection/cancellation leaves it intact. */
   capture: () => CardSendFields;
   /** Consume only the accepted snapshot, preserving later activity per source. */
@@ -29,9 +51,7 @@ export interface CardSend {
 /** Activity follows its content source, independently of the selected conversation. */
 function useCardSend(source: string | undefined): CardSend {
   const store = useRef(new CardActivityStore()).current;
-  const report = useCallback((kind: ActivityKind, detail?: string) => {
-    store.report(source, { kind, ...(detail === undefined ? {} : { detail }) });
-  }, [source, store]);
+  const report = useCallback<CardActivityReport>((at, activity) => { store.report(at, activity); }, [store]);
   const capture = useCallback(() => store.capture(source), [source, store]);
   const accepted = useCallback((fields: CardSendFields) => { store.accepted(fields); }, [store]);
   return { report, capture, accepted };
@@ -47,5 +67,5 @@ export function useCompanionCard(opts: {
   activeView: PanelTab | null;
   focusedRef?: string;
 }): CardSend {
-  return useCardSend(opts.focusedRef ?? (opts.activeView === null ? undefined : serializeViewUrl(opts.activeView.target)));
+  return useCardSend(opts.focusedRef ?? (opts.activeView === null ? undefined : cardActivitySource(opts.activeView.target)));
 }

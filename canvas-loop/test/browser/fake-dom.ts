@@ -20,8 +20,12 @@ export class FakeElement {
   checked = false;
   selected = false;
   tabIndex = -1;
+  title = "";
+  clientWidth = 0;
+  attributes = new Map<string, string>();
   width = 0;
   height = 0;
+  style: Record<string, string> = {};
   children: FakeElement[] = [];
   parent: FakeElement | null = null;
   listeners = new Map<string, Listener[]>();
@@ -55,8 +59,29 @@ export class FakeElement {
     this.removedListeners += 1;
     this.listeners.set(type, (this.listeners.get(type) ?? []).filter((f) => f !== fn));
   }
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+  }
   focus(): void {
     // Focus is irrelevant to these tests; the listener wiring calls it.
+  }
+  /** Pointers captured by this element (pointer ids). */
+  captured = new Set<number>();
+  setPointerCapture(id: number): void {
+    this.captured.add(id);
+  }
+  hasPointerCapture(id: number): boolean {
+    return this.captured.has(id);
+  }
+  releasePointerCapture(id: number): void {
+    this.captured.delete(id);
+  }
+  /** Call this element's listeners for `type` with `event`. */
+  fire(type: string, event: unknown): void {
+    for (const fn of this.listeners.get(type) ?? []) fn(event);
   }
   getBoundingClientRect(): { left: number; top: number; width: number; height: number } {
     return { left: 0, top: 0, width: this.width, height: this.height };
@@ -108,7 +133,7 @@ export const rafState: {
 };
 
 Object.assign(globalThis, {
-  document: { createElement: (tag: string) => new FakeElement(tag) },
+  document: { createElement: (tag: string) => new FakeElement(tag), activeElement: null },
   requestAnimationFrame: (cb: (now: number) => void): number => {
     rafState.pending.set(rafState.next, cb);
     return rafState.next++;
@@ -160,7 +185,8 @@ export function makeModule(): { module: Record<string, unknown>; counters: { dra
     params: decl,
     canvas: { width: 120, height: 90 },
     init: () => ({ t: 0 }),
-    update: (model: unknown) => model,
+    // A moving sketch: each tick is a new model, so each frame draws (a still one draws once).
+    update: (model: { t: number }) => ({ t: model.t + 1 }),
     draw: () => {
       counters.draws += 1;
     },

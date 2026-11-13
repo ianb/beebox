@@ -8,6 +8,7 @@
 
 import { useCallback, useMemo } from "react";
 import { WorkspaceCanvas } from "../../workspace/WorkspaceCanvas/view";
+import { ConversationStrip } from "./ConversationStrip";
 import { MessageList } from "./messages";
 import {
   ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
@@ -29,6 +30,8 @@ import { ChatRenderProfiler } from "./ChatRenderProfiler";
 import { AgentGate } from "../../../agents/AgentReadiness";
 import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
 import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
+import { CallBar } from "../../../call/CallBar";
+import { CallVideoTiles } from "../../../call/CallVideoTiles";
 
 
 /**
@@ -184,7 +187,7 @@ function ComposerRegion(props: ChatBodyProps) {
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled, captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, retryFileUpload, handleAddFiles, handleFileInputChange, addFiles } = attach;
+  const { fileInput, removeAttachment, removeFileAttachment, retryFileUpload, handleAddFiles, addFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -203,8 +206,7 @@ function ComposerRegion(props: ChatBodyProps) {
       onRemoveAttachment={removeAttachment}
       onRemoveFileAttachment={removeFileAttachment}
       onRetryFileAttachment={retryFileUpload}
-      fileInputRef={fileInputRef}
-      onFileInputChange={handleFileInputChange}
+      fileInput={fileInput}
       typingMode={typingMode}
       typingLocked={typingLocked}
       setTypingMode={setTypingMode}
@@ -266,9 +268,11 @@ function ComposerRegion(props: ChatBodyProps) {
  * token does not re-render the cards that read it.
  */
 function usePlaceChat(props: ChatBodyProps): PlaceChat {
-  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, processBusy, actions: { handleSendOpener: sendOpener } } = props;
+  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, processBusy, showAgentWorking, actions: { handleSendOpener: sendOpener } } = props;
   const showsOwnOpeners = unstarted && messages.length === 0 && !isStreaming;
-  const busy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
+  // A turn, not `isStreaming`: that also covers a background history resync
+  // (every socket reconnect), which used to grey the openers out each time.
+  const busy = showAgentWorking || processBusy;
   return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
@@ -288,11 +292,12 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
-      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas strip={<><CallVideoTiles /><ConversationStrip features={props.model.chatFeatures} sessionId={props.sessionId} setChatFeatures={props.model.setChatFeatures} /></>} turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas></PlaceChatContext.Provider>}
       statusBanners={
         <>
+          <CallBar sessionId={props.sessionId} />
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners

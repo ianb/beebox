@@ -21,6 +21,7 @@ import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";
 import { labelSource, type ChatSessionEntry } from "../../../../../src/core/chat/session/list/core.js";
 import { makeTmpBox } from "../../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../../helpers/console-lines.js";
 
 /** The features snapshot the composer prepends to a session's first message. */
 const ENVELOPE = '<chat-app narration="off" prose="on" ' +
@@ -150,9 +151,10 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
   );
 
   // An unreadable transcript is a label problem, not a list problem: it warns and
-  // falls back rather than failing the whole enumeration. (Expect the warning below;
-  // that's the fixture.)
+  // falls back rather than failing the whole enumeration, and the warning names
+  // the session and the file error.
 
+  const warnings = consoleLines(t, "warn");
   t.check(
     await resolveSessionLabel({
       sessionId: "claude01-9c1f",
@@ -161,6 +163,7 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
     }),
     "claude01",
   );
+  t.check(warnings(), [`chat: could not read metadata for session claude01-9c1f, using id prefix: Error: ENOENT: no such file or directory, open '${box.path("gone.jsonl")}'`]);
 });
 
 // A pi chat reads its first user message from its own session file, past the

@@ -82,6 +82,10 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
     VITE_BASE: baseUrl,
     PORT: String(backendPort),
     BBX_DEV_SURFACES: "1",
+    // Where the worktree's box browser opens its own box pages and installs
+    // its pass (beebox/src/core/browser/app-url.ts). Not BBX_PUBLIC_URL: that
+    // would also move OAuth redirects and the agent's API base.
+    BBX_DEV_APP_URL: `${state.config.appOrigin}/${name}`,
     NODE_OPTIONS: nodeOptions,
     // A worktree's box must never touch the boxholder's real secret store:
     // its test keys are its own, its Secrets panel is drivable by an agent,

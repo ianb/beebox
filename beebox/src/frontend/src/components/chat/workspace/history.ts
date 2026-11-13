@@ -1,5 +1,5 @@
 import { isRecord } from "@shared/is-record";
-import { conversationSelectionSchema } from "@shared/chat-composer-binding";
+import { conversationSelectionSchema, type ConversationTarget } from "@shared/chat-composer-binding";
 import { serializeViewUrl } from "../../../lib/view-url.js";
 import type { ViewTarget } from "../../../lib/view-url.js";
 import { oppositePane, paneForPath, projectWorkspace } from "./state-model.js";
@@ -103,9 +103,35 @@ export function workspaceDisplayReady(input: {
     || (input.adoption.to === input.renderedIdentity && input.adoption.from === input.storedIdentity);
 }
 
-/** The workspace may act only after the route owner publishes this identity. */
+/**
+ * The workspace's identity while the selected conversation could not be
+ * resolved (a missing transcript, an unreachable box). Cards are not a
+ * conversation's property, so the route's `card=` still opens under it; the
+ * chat area says why there is no conversation.
+ */
+export const UNRESOLVED_WORKSPACE_IDENTITY = "unresolved-conversation";
+
+/**
+ * Which saved arrangement the workspace shows. An unresolved selection takes
+ * the stand-in even when an earlier conversation is still rendered: the route
+ * owner publishes only ready selections, so that conversation's identity would
+ * never be bound to this route. Its arrangement stays saved for its return.
+ */
+export function workspaceIdentity(input: { target: ConversationTarget | undefined; unresolved: boolean }): string {
+  const { target } = input;
+  if (input.unresolved) return UNRESOLVED_WORKSPACE_IDENTITY;
+  if (target === undefined) return "";
+  return target.kind === "session" ? target.sessionId : target.clientConversationId;
+}
+
+/**
+ * The workspace may act only after the route owner publishes this identity.
+ * The route owner publishes only a ready conversation, so the stand-in is
+ * bound by itself.
+ */
 export function workspaceRouteBound(selection: unknown, identity: string): boolean {
   if (identity === "") return false;
+  if (identity === UNRESOLVED_WORKSPACE_IDENTITY) return true;
   const parsed = conversationSelectionSchema.safeParse(selection);
   if (!parsed.success || parsed.data.kind !== "ready") return false;
   const target = parsed.data.target;

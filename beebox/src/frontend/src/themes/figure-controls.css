@@ -1,0 +1,39 @@
+/* An embedded figure's controls come from canvas-loop's figure.css, which
+   follows the operating system's dark mode. Inside the app they sit on a card
+   or chat material whatever that mode is, so a dark-mode Mac put light labels
+   on a light card and a light one put dark labels on a dark card. Here,
+   unpainted text takes the material's ink, and painted controls (buttons, the
+   select) are the app's white field with a 6.4:1 border in every mode. Two
+   classes outrank figure.css, which loads later. */
+.bbx-figure-mount .cl-figure {
+  color: var(--bbx-ink, #2e2720);
+}
+.bbx-figure-mount :is(.cl-param-name, .cl-frame, .cl-muted) {
+  color: var(--bbx-ink-soft, var(--bbx-ink, #6b5d4b));
+}
+.bbx-figure-mount :is(.cl-param-value, .cl-recorder summary) {
+  color: var(--bbx-ink, #2e2720);
+}
+.bbx-figure-mount :is(.cl-btn, .cl-trigger-btn, select) {
+  background: #fff;
+  color: #2e2720;
+  border: 1px solid #6b5d4b;
+  border-radius: 5px;
+  color-scheme: light;
+}
+.bbx-figure-mount select {
+  padding: 2px 6px;
+}
+.bbx-figure-mount :is(.cl-btn, .cl-trigger-btn):hover {
+  background: #f3ebe0;
+}
+.bbx-figure-mount :is(.cl-btn, .cl-trigger-btn, select):focus-visible {
+  outline: 2px solid #2e2720;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px #fff;
+}
+.bbx-figure-mount .cl-error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+}

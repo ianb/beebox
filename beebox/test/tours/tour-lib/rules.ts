@@ -143,16 +143,19 @@ export function isPrintOnly(media: readonly string[]): boolean {
 
 /**
  * The selectors to look for: each top-level selector of a rule that names
- * one of `themes`, outside print media and not exempt, and each hook member
- * of its `:is()` lists (`listMembers`). Duplicates (the same selector under
- * the same media in the same sheet) collapse to one.
+ * one of `themes`, or that names no theme in a `shared` sheet (theme CSS
+ * every theme wears, such as the question patch), outside print media and
+ * not exempt; and each hook member of its `:is()` lists (`listMembers`).
+ * Duplicates (the same selector under the same media in the same sheet)
+ * collapse to one.
  */
-export function ruleTargets(rules: readonly PageRule[], { themes, exemptions }: { themes: readonly string[]; exemptions: readonly RuleExemption[] }): RuleTarget[] {
+export function ruleTargets(rules: readonly PageRule[], { themes, shared, exemptions }: { themes: readonly string[]; shared: readonly string[]; exemptions: readonly RuleExemption[] }): RuleTarget[] {
   const targets = new Map<string, RuleTarget>();
   for (const rule of rules) {
     if (isPrintOnly(rule.media)) continue;
     for (const original of splitSelectorList(rule.selector)) {
-      if (!themesNamed(original).some((name) => themes.includes(name))) continue;
+      const named = themesNamed(original);
+      if (!(named.some((name) => themes.includes(name)) || named.length === 0 && shared.includes(rule.sheet))) continue;
       if (exemptions.some((e) => original.includes(e.selector))) continue;
       const key = `${rule.sheet}\n${rule.media.join(" and ")}\n${original}`;
       if (targets.has(key)) continue;

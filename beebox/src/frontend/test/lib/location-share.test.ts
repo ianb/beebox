@@ -6,6 +6,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../test/helpers/console-lines.js";
+import { jsonParseMessage } from "../helpers/json-parse-error.js";
 import {
   locationShareKey,
   locationShareKeyFor,
@@ -40,10 +42,13 @@ void test("Parse defaults to disabled for absent / malformed / invalid", async (
     lastCapturedAt: null,
   });
 
+  const warnings = consoleLines(t, "warn");
   t.check(parseLocationShareState("{not json"), {
     enabled: false,
     lastCapturedAt: null,
   });
+  // The console gives the parser's reason for discarding the stored state:
+  t.check(warnings(), [`[location-share] discarding unparseable state: ${jsonParseMessage("{not json")}`]);
 
   t.check(parseLocationShareState(JSON.stringify({ enabled: "yes" })), {
     enabled: false,

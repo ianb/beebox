@@ -30,6 +30,8 @@ export type ViewImageOptions = ViewImageBaseOptions & (
 );
 
 export interface ViewProps {
+  /** `"strip"` when drawn in the conversation strip, else `"page"`. */
+  mode?: "page" | "strip";
   cards: ViewCard[];
   /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
@@ -123,7 +125,7 @@ export interface ViewFile {
   gitStatus?: "dirty" | "untracked";
 }
 
-export type ViewMode = "page" | "chat";
+export type ViewMode = "page" | "chat" | "strip";
 
 /**
  * How the card surface frames a view. `"inset"` (the default) pads the view
@@ -141,5 +143,25 @@ export interface ViewMeta {
   layout: ViewLayout;
   /** Card types this view renders — bound on card pages, peeks, and view: links. */
   rendersCardTypes: string[];
+  /** Named inputs `bbx view check` renders the view with, from its `checkStates` export. */
+  checkStates: DeclaredCheckState[];
+  /**
+   * Set when a metadata export failed validation; the other fields are then
+   * the defaults, and `description` says the same. `bbx view check` fails on it.
+   */
+  metadataError?: string;
   lastModified: string;
+}
+
+/**
+ * One entry of a view's `checkStates` export: a name, and the card path and
+ * view parameters the view is opened with in that state
+ * (docs/implemented-plans/view-declared-check-states.md).
+ */
+export interface DeclaredCheckState {
+  name: string;
+  /** The card the view is opened on, given to it as `params.path`. */
+  path: string;
+  /** Other view parameters. */
+  params?: Record<string, string> | undefined;
 }

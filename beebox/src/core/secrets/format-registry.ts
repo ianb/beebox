@@ -71,6 +71,11 @@ const secretFormats: Record<string, SecretFormat> = {
     pattern: /^{/,
     minLength: 20,
   },
+  "cloudflare-turn": {
+    hint: 'JSON with the TURN key id and its API token: {"keyId": "…", "apiToken": "…"}.',
+    pattern: /^{/,
+    minLength: 20,
+  },
   "google-oauth-client-id": {
     hint: "The OAuth client id, ending in `.apps.googleusercontent.com`.",
     pattern: /\.apps\.googleusercontent\.com$/,

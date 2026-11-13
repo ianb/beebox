@@ -5,13 +5,13 @@
  */
 
 import type { ReactNode } from "react";
-import type { DropdownTriggerProps } from "../ui/Dropdown";
+import type { MenuTriggerProps } from "../ui/Menu";
 
 export function VoiceChipButtonFace({ label, onClick, ariaProps, children }: {
   /** Accessible name and title: the voice state, plus any notice. */
   label: string;
-  onClick: DropdownTriggerProps["toggle"];
-  ariaProps: DropdownTriggerProps["ariaProps"];
+  onClick: MenuTriggerProps["toggle"];
+  ariaProps: MenuTriggerProps["ariaProps"];
   children: ReactNode;
 }) {
   return (

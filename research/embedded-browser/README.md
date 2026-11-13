@@ -1,6 +1,6 @@
 # Embedded shared browser (2026-10-29)
 
-The boxholder's ask: a browser inside beebox that the box agent and the person both work in. The person sees and drives it in a card or panel on desktop and phone. The agent drives the same live session (navigate, read the page, click, fill). Either side hands off to the other: the agent stops at a login or captcha, the person takes over, then hands back. Strong preference for open source. Anchor issue: [agent browser scoped to box](../../issues/features/2026-06-12-agent-browser-scoped-to-box.md); neighbours: [agent cannot see its own visual work](../../issues/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md), [interface screenshots](../../issues/features/2026-10-05-box-agent-interface-screenshots.md).
+The boxholder's ask: a browser inside beebox that the box agent and the person both work in. The person sees and drives it in a card or panel on desktop and phone. The agent drives the same live session (navigate, read the page, click, fill). Either side hands off to the other: the agent stops at a login or captcha, the person takes over, then hands back. Strong preference for open source. Anchor issue: [agent browser scoped to box](../../issues/features/2026-06-12-agent-browser-scoped-to-box.md); neighbours: [agent cannot see its own visual work](../../issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md), [interface screenshots](../../issues/features/2026-10-05-box-agent-interface-screenshots.md).
 
 | Document | Contents |
 |---|---|

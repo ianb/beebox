@@ -1,11 +1,15 @@
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import { answerWithAdmission } from "../../../core/commands/answer.js";
 import * as path from "node:path";
+import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../procedures.js";
 import { runCommand, type CommandContext } from "../../../core/command-runner.js";
 import { deliverUserMessage } from "../../../core/chat/session/deliver-user-message.js";
+import { readCardFrontmatter } from "../../../core/card-io.js";
+import { serializeDeliveredUserMessage } from "../../../shared/delivered-user-message.js";
+import { questionTitle } from "../../../shared/question-title.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import type { TrpcContext } from "../context.js";
@@ -18,6 +22,18 @@ const boxRelativeQuestionPath = z
   .string()
   .min(1)
   .refine((p) => !path.isAbsolute(p), { message: "questionPath must be box-relative, not absolute" });
+
+/**
+ * The title a question card shows: its `title:`, else the start of its prompt.
+ * Read only after the dismiss transition has accepted the path as a question card.
+ */
+async function readQuestionTitle(boxRoot: string, questionPath: string): Promise<string> {
+  const fm = readCardFrontmatter(await readFile(path.join(boxRoot, questionPath), "utf8"));
+  const title = fm?.["title"];
+  if (typeof title === "string" && title.trim() !== "") return title;
+  const prompt = fm?.["prompt"];
+  return typeof prompt === "string" ? questionTitle(prompt) : path.basename(questionPath, ".question.card");
+}
 
 /** Run the dismiss transition and emit `question-dismissed`; a refusal is a `BAD_REQUEST`. */
 async function dismissQuestion(ctx: TrpcContext, questionPath: string): Promise<void> {
@@ -78,7 +94,9 @@ export const actionsRouter = router({
 
   /**
    * "Decide for me": put the question away (the dismiss transition), then start
-   * a background chat that runs the figure-it-out skill on it. A delivery
+   * a background chat that runs the figure-it-out skill on it. The message is a
+   * `<question-handoff>` (`shared/delivered-user-message.ts`): the agent reads
+   * the instruction, and the transcript shows the question's title. A delivery
    * failure after the dismiss leaves the card dismissed (the daily question
    * review picks it up) and returns an error; a non-pending card is refused by
    * the dismiss itself.
@@ -92,13 +110,14 @@ export const actionsRouter = router({
       }
       await dismissQuestion(ctx, input.questionPath);
       try {
+        const title = await readQuestionTitle(ctx.boxRoot, input.questionPath);
         const delivered = await deliverUserMessage({
           boxRoot: ctx.boxRoot,
           registry: runtime.registry,
           eventBus: ctx.eventBus,
           wireSession: runtime.wireSession,
           target: { sessionId: null, contextDir: "" },
-          message: `Figure out the question at ${input.questionPath}, which the person handed to you from the question card. Use the figure-it-out skill.`,
+          message: serializeDeliveredUserMessage({ kind: "question-handoff", doc: input.questionPath, title }),
           logPrefix: "figure-it-out",
         });
         return { sessionId: delivered.sessionId };

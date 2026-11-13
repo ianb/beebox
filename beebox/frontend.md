@@ -4,6 +4,15 @@ UI palette, primitives, data wiring, addressable ids, and the `className` rule. 
 
 Bee Box is an internal app, not a public site chasing Lighthouse scores. Do not optimize before a measurement shows something is slow.
 
+## Browser support
+
+Bee Box targets current Chrome, Safari and Firefox, and the iOS app's
+WKWebView at iOS 18 (Safari 18.0). Use any feature Baseline-available in
+Safari 18.0 without a fallback. A newer feature is progressive enhancement: use
+it only where the page still works without it, with no fallback code over
+about 20 lines and no polyfill. workstreams-app
+and beebox-clerk run in Chrome only.
+
 ## Card themes
 
 Card presentation is theme-driven and independent of view selection. Theme
@@ -141,11 +150,21 @@ next action, and an `<ErrorText>` message with a retry. A blank screen while
 data resolves is a bug. A narrow change keeps the container's existing
 handling and does not add unreachable states.
 
+Dates use `Date` and `Intl.DateTimeFormat`; do not use `Temporal`. A
+date-only `YYYY-MM-DD` value is a calendar day: parse it by its components
+(`parseIsoDate` in `@shared/todo-model` gives its midnight UTC) and format it
+with `timeZone: "UTC"`, so it shows its own day in every zone. Never format
+`new Date("YYYY-MM-DD")` in the viewer's zone. A timestamp is an instant,
+shown in the viewer's zone. The day an instant falls on in a zone is
+`localDay` (`@shared/local-day`).
+
 ## Frontend UI Primitives
 
 Reach for a primitive from `src/frontend/src/components/ui/` before writing appearance classes inline. The primitives own appearance (colors, borders, shadows); callers own outer layout (margin, padding, flex-self, sizing, position) via a `className` prop.
 
 A page's own supporting components live in `pages/<x>/components/`; shared ones go in `src/frontend/src/components/`, and primitives in `components/ui/`. A component that is a nav, region, main area, or list renders its own landmark or role; never wrap another component in one from outside. Each area of a screen has at most one `intent="primary"` action.
+
+Motion respects `prefers-reduced-motion` through one global rule in `src/frontend/src/index.css`: every CSS animation and transition runs near-instantly, except `.bbx-spinner`, which slows. Do not add `motion-safe:` per site. Scripted motion checks `prefersReducedMotion()` (`lib/reduced-motion.ts`).
 
 Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-debug-log.md). When a change can affect the two-pane layout (`<Stack hideOnMobile>`, `<MobileBackButton>`), also check it at phone width (`set viewport 375 800`).
 
@@ -154,19 +173,22 @@ Every static interactive control carries a stable `id="bbx-<area>-<control>"`: k
 Every control also has an accessible name, which screen readers, the box agent, `bin/browse`, tours, and DOM tests all use:
 
 - The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row. When an item repeats several controls (a question card's "Submit", "Later", "Answer in chat"), name the item instead: `role="group"` with `aria-labelledby` its heading (`<Card role="group">`). The box agent's scan reports a named group as the container of those controls.
+- A raw `<input>`, `<textarea>` or `<select>` fails lint outside the files that own it (`personal-vibe-check/require-ui-primitive`; each tag's owners are listed in `src/frontend/eslint.config.ts`). Use the fields primitives, which carry the label. The chat composer's textarea is `ComposerTextarea` (`components/chat/InteractiveChat-composer/`).
 - An icon-only control sets `aria-label`, or the primitive's `label` prop. `title` alone is not enough; `jsx-a11y/control-has-associated-label` enforces this on native elements.
 - A toggle or disclosure keeps one name in both states and exposes the state: `aria-checked` on a switch, `aria-pressed` on a toggle button, `aria-expanded` on a disclosure.
 
 **Actions**
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
+- `<ButtonLink>` — a router link drawn as a `<Button>` (`to`, `search`, `intent`, `size`), for navigation that reads as a button ("New chat"). No loading or flash.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
-- `<CancelButton>` — semantic shortcut for `<Button intent="secondary">Cancel</Button>`.
-- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
+- `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc., and `label` for an accessible name when the visible text needs context ("dismiss" → "Dismiss: …").
 
-**Inputs** (all in `ui/fields.tsx`)
-- `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled.
+**Inputs** (all in `ui/fields/`)
+- `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled. `identifier` on `<TextField>` turns off spellcheck, autocorrect and auto-capitalization for hostnames, ids, URLs and names. `revealable` on a `type="password"` `<TextField>` adds a "Show password" button (`aria-pressed` carries the state); use it on login, setup and change-password.
 - `<CheckboxField>` — inline checkbox with label to the right.
-- `<SelectField>` — dropdown select with options array.
+- `<Checkbox>` — a bare checkbox for a row whose own text names it (a todo) or a display-only marker (a Markdown task). `aria-label` or `aria-labelledby` is required by type; with no `onChange` it renders read-only.
+- `<SelectField>` — dropdown select with options array. `tone="dark"` on the dark capture screen (the field and ink of `ModalDialog`'s dark tone).
+- `useFilePicker({ accept, multiple, onFiles })` — returns `{ open, input }`: render `input` (a hidden file input) and call `open` from the caller's button or menu item.
 - `<RadioGroup>` — stacked (`variant="list"`) or card-style (`variant="cards"`) radios.
 - `<Toggle>` — iOS-style pill switch for immediate-apply settings (distinct from CheckboxField, which is form-bound). Props: `checked`, `onChange`, `disabled`, `label`.
 
@@ -181,31 +203,51 @@ Every control also has an accessible name, which screen readers, the box agent, 
 - `<Image>` — src/alt/size with built-in lightbox, error placeholder, bbox overlay, rotation. Lightbox and onClick are mutually exclusive at the type level. Only `size="thumb"` reserves its box; for larger sizes, set dimensions or an aspect ratio when known so the layout does not shift, and use `loading="lazy"` below the fold.
 - `<VideoEmbed>` — responsive 16:9 lazy-loaded video iframe (privacy-friendly nocookie domain), block-level like a figure; used for embedded video in rendered markdown.
 - `<Avatar>` — user profile image with initial fallback. `fallbackClassName` for dark nav contexts.
-- `<FriendlyDate>` — renders an ISO timestamp as a localized date/time (the browser's locale and zone) in a semantic `<time>` carrying the machine-readable ISO. `mode` prop: `"datetime"` (default) or `"date"`.
+- `<FriendlyDate>` — renders an ISO timestamp as a localized date/time (the browser's locale and zone) in a semantic `<time>` carrying the machine-readable ISO. `mode` prop: `"datetime"` (default), `"date"` or `"time"` (the time of an instant; a date-only value shows its day). `friendlyDate(value, mode)` returns the same text as a string. Do not call `toLocaleTimeString` or `toLocaleDateString` in the frontend (lint). `formatClock` (`M:SS`, `H:MM:SS`), `formatDuration` and `formatTimePassed` live in `shared/relative-time.ts`.
 - `<VisuallyHidden>` — renders content for screen readers/the a11y tree only (`sr-only`), hidden visually; use for page-level headings that live inside a component which can collapse or move off-screen at some viewports. `as` prop picks the rendered tag (e.g. `"h1"`).
+- `<CardMark>` — the one renderer of a card's symbol (an emoji glyph or an image). The caller supplies `fallback` for a card with no usable mark; a glyph is never truncated.
+- `<MetaItem>` — small uppercase label followed by its value, for a document's metadata row.
+- `<BrokenLink>` — a visibly disabled marker with the reason in `title`, for a link that leads nowhere (retired `view:` scheme, escaped path, `control:` pointer whose control is not on screen).
+- `<ControlRing>` — the one viewport-fixed highlight rectangle, drawn just outside its `target` (an element it follows, or a `DOMRect`); non-interactive. `tone` `accent` (default, pulsing; static under `prefers-reduced-motion`) for a `control:` pointer, `subtle` for the block under selection capture's pointer. `durationMs` with `onDone` removes it after a while; without it the ring stays until unmounted.
 - `<Pre>` — preformatted block (code, xml, JSON dumps). Props: `size`, `boxed`, `scroll`, `error`, `muted`.
-- `<HighlightedCode>` — wraps highlight.js output in a `<code class="hljs">`. Use inside a `<Pre boxed>`.
 - `<JsonView>` — human-friendly JSON renderer (keys label indented values, arrays as hanging-indent `0:`/`1:` lists, recursive). Strings keep whitespace and wrap on any character; numbers/booleans/null show via `JSON.stringify` in a distinct color. Use for tool-call args and similar object dumps instead of `JSON.stringify` in a `<Pre>`.
 - `<Badge>` — pill label. Tones: neutral/info/success/warning/danger/accent. Sizes: sm/md.
 - `<StatusBadge>` — card-status badge that maps `status` (new/pending/answered/processing/processed) to the right Badge tone. Pass `children` to override the displayed text (e.g., show a count instead).
 - `<Heading level={2|3}>` — section heading. Renders a real `h2`/`h3`; the level sets the look (2: lg semibold, 3: sm semibold). Pick the level from the page outline, never for size.
 - `<Hint>` — secondary explanatory text under a heading or control: a small muted `<p>`. Inline metadata beside other content (a timestamp in a `Row`) stays `<Text size="xs" tone="muted">`.
 - `<ErrorText>` — an error message: a small danger-colored `<p>`. Not a live region; the component that shows a new error owns any announcement.
-- `<StatusMessage>` — a pane's placeholder while it has nothing to show (loading, empty, not found): padded, `role="status"`. Errors use `<ErrorText>`.
+- `<Spinner>` — the indeterminate progress glyph, decorative (`aria-hidden`); name the work in text, a label or `aria-busy`. `size` (`sm`/`md`), `tone` (`current` takes the text color, `onDark` is white). The only owner of `animate-spin` (`restricted-classes` lint rule). Under reduced motion it turns at a third of its speed.
+- `<LiveDot>` — a pulsing status dot: recording, uploading, still working. Decorative (`aria-hidden`); the adjacent text or label states the same fact. `tone` (`danger`/`warning`/`info`/`accent`/`current`), `size` (`sm`/`md`). Under reduced motion it pulses once and rests solid.
+- `<Skeleton className="h-5 w-48">` — one placeholder bar for content still loading, sized by `className`; compose bars into a component named for the content (`BrowseSkeleton`) that matches its shape. The container that shows skeletons carries `aria-busy` and a label. Do not write `animate-pulse` bars by hand.
+- `<StatusMessage>` — a placeholder while there is nothing to show (loading, empty, not found). `variant` `pane` (default) is padded for a whole pane, `menu` is a compact row in a list panel, `inline` is a small-text line with no padding for a card or section. Write loading text as "Loading X…" (one ellipsis character). `role="status"`. Pass `busy` while loading, so screen readers hold the announcement until the result replaces the loading text. Other progress text ("Saving…") is not a live region. Errors use `<ErrorText>`.
 - `<Text>` — typography primitive for text no role above covers. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 
 **Layout containers**
 - `<Stack>` — vertical flex column with `gap: none/xs/sm/md/lg` (default `md`). Children stretch to the full width; an inline-level child (a `Button`, a `Badge`) that should keep its natural width takes `className="self-start"`. A child's own margin adds to the gap, so space children with `gap`, not margins. Also the page-level scroll container: `overflow` (visible/hidden/auto/scroll), `focusable` (keyboard-scrollable; set it with `overflow="auto"`), `align` (start/center/end/stretch), and `hideOnMobile` (`hidden sm:flex`, for the detail pane of a two-pane layout).
 - `<Row>` — horizontal flex with gap/align/justify/wrap.
-- `<Card>` — bordered box with padding/background/shadow/rounding props. `muted` dims the card to indicate inactive/archived content.
+- `<List>` — every `<ul>`/`<ol>` outside Markdown (a raw one fails `require-ui-primitive`, as do raw `<table>`, `<th>`, `<td>`), with raw `<li>` children. `marker` `none` (default; keeps `role="list"`), `disc` or `decimal` (one outside indent, muted marker); `ordered` for an unnumbered `<ol>`; `gap` (none/xs/sm/md) or `divided` (a rule between items); `direction` (column/row/wrap). Forwards `id`, `aria-label`, `aria-labelledby`, `data-*`.
+- `<Table>` + `<Th>` + `<Td>` — every table outside Markdown; `thead`, `tbody`, `tfoot`, `tr` stay raw. A name is required: `caption` (non-empty; `captionHidden` for screen readers only) or `labelledBy` a visible heading's id. The wrapper is the one scroll container (`scroll` `x` or `both`), a focusable named region; do not wrap a Table in another scroller. `variant` `data` (default) for app-authored rows, `grid` for rendered document content (Docling tables, `SheetTable`). `Th` requires `scope`; `numeric` right-aligns with tabular figures; cells forward `colSpan`, `rowSpan`, `headers`, `id`, `title`, `data-*`. A content renderer with no caption writes a fallback (`Table on page 3`).
+- `<Card>` — bordered box with padding/background/shadow/rounding props. `muted` dims the card to indicate inactive/archived content. `material` paints the enclosing card theme's surface; text primitives inside read `MaterialContext` (`useMaterial(explicit)`) and take the material's ink, so a white app panel inside one (a non-material `Card`, a `Menu` panel) keeps app ink.
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 
 **Overlays & Composite**
 - `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel; `onOpen` makes the title open the file instead of previewing it.
-- `<Dropdown>` + `<MenuItem>` + `<MenuDivider>` — menu with click-outside, escape-to-close, auto-close on select. `<Dropdown>` takes a render-prop `trigger`. A `MenuItem` with `href` also accepts `download` (filename) and `target="_blank"` for file actions.
-- `<TabBar>` — generic tab group with active state.
-- `<ImageLightbox>` — fullscreen image overlay (usually accessed via `<Image lightbox>` rather than directly).
+- `<Menu>` + `<MenuItem>` + `<MenuDivider>` — a popup panel with click-outside, escape-to-close and auto-close on select. `<Menu>` takes a render-prop `trigger`, or `at` a point (a context menu: `open`, `onClose`, `openedBy` `"pointer"` focuses the panel and `"keyboard"` the first item, `returnFocus`; a press outside the panel, a scroll outside it or a resize closes it). `kind` is `"menu"` (default): a command menu with `role="menu"`, `aria-haspopup="menu"` on the trigger, `menuitem` rows and ArrowUp/ArrowDown/Home/End focus movement (also from the focused panel); or `"navigation"`: a list of links, a plain disclosure with no menu roles. A body that renders its own items reads `useMenuClose()` to close the menu and `useMenuItemRole()` for the role its items take; a panel portaled out of the menu wraps its content in `<PortaledMenuScope>` so those hooks still work. `MenuItem` is a button (`onClick`), a router link (`to`, `params`, `search`, `hash`, `state`) or an `href` link (with `download` and `target="_blank"` for file actions); it forwards `title` and `data-*`. `action` adds a second `menuitem` icon button beside the row (the model pin); `keepOpen` on it leaves the menu open. Never write a menu role or `aria-haspopup` by hand (`require-ui-primitive`).
+- `<Popover>` — a non-modal panel anchored to its trigger: a native `<dialog popover="manual">` right after the trigger, in the top layer, so it is never clipped and stays usable inside a `ModalDialog`. Props: render-prop `trigger` (spread `ariaProps`, wire `toggle` to `onClick`), `label` (names the panel), `align`, `vertical`, `width` (`md` 16rem, `lg` 24rem); `children` may be a function of `close`. A keyboard open focuses the first control (or the panel); a pointer open leaves focus on the trigger; Tab is not trapped, and focus leaving the trigger and panel closes it; Escape closes and returns focus. The panel is the one scroll container. It does not hold toasts.
+- `<AnchoredLayer>` — places a free element `at` a viewport point inside the visible viewport (the selection "+" button). `Menu` and `Popover` share its placement (flip to the roomier side, never outside the viewport) and dismissal; a hand-made `absolute top-full z-*` panel fails `restricted-classes`, and only `AnchoredLayer` imports `useDismiss`.
+- `<TabBar>` — generic tab group with active state. `mode`: `"tabs"` (default) is a tablist whose tabs each control a panel (`idPrefix`, `controlsPrefix`); `"buttons"` is for filter or view switches with no panel: a `role="group"` of `aria-pressed` buttons, all in the tab order.
+- `<ModalDialog>` — a modal: a native `<dialog>` opened with `showModal()`, so focus stays inside, the page behind is inert and focus returns to the opener. While open it is the newest Escape layer, so a menu it opened from keeps its Escape. Props: `open`, `labelledBy` (id of the heading that names it) or `label` when there is no heading, `layout` (`card` default; `fullscreen`: the whole viewport, no padding, the children draw everything, `style` for a visual-viewport rect above the iOS keyboard), `tone` (`light`/`dark`/`clear`, transparent with no dimming), `onCancel` (Escape), `onBackdropClick`, `initialFocus`. The caller supplies the heading, body and action row. A raw `<dialog>` or a `useModalDialog` import elsewhere fails lint.
+- `<Notice>` — an inline bordered message about a failed or degraded operation, set in the page flow. `tone="error"` is `role="alert"`, `tone="warning"` is `role="status"`. Not a toast and not a field error (`<ErrorText>`).
+- `<ToastViewport>` — the one mount point (`app-shell.tsx`) for error toasts. Raise one from any code with `toastError(message, { cause })` (`ui/toast-store.ts`); identical messages collapse into a counter. Do not mount a second viewport. An open `ModalDialog` holds toast expiry (`acquireHold`, counted); nothing else does.
+- `ImageLightbox` is not a primitive: it lives at `components/ImageLightbox.tsx` and is reached through `<Image lightbox>`.
 - `<MobileBackButton>` — chevron + label back-navigation button for two-pane mobile layouts. Hidden at `sm+` breakpoints. Used at the top of the detail pane.
+
+Dialog rules, with no exception, since the primitives render a native `<dialog>`:
+- A modal is `ModalDialog`; a non-modal anchored panel is `Popover`; a list of commands is a `Menu`.
+- Never write `role="dialog"` on a `div`.
+- A viewport layer (the `fixed` class or an inline `position: "fixed"`) is a `ui/` primitive; `restricted-classes` lists the few files that own one.
+- Never lock body overflow; the native modal makes the page behind inert.
+- `outline-none` (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or `focus-within:` ring, border, shadow or outline beside it, or the keyboard focus ring is gone (`restricted-classes`; `hover:` does not count). A `tabIndex={-1}` container that takes script focus needs one too: `Popover` and `Menu` panels show `focus-visible:ring-inset` when a keyboard open focuses the panel itself.
 
 **Renderer-specific**
 - `<BboxOverlay>` — bounding box for image renderer (rectangle with color + position).

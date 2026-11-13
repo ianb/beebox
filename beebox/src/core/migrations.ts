@@ -139,7 +139,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // template-ledger entry and parked update with it, root first. Fails closed
   // (exit 1, nothing written) on two instruction files in one directory, a
   // CLAUDE.local.md, or differing ledger/park duplicates. Legacy support to
-  // remove: issues/deferred/2026-10-09-retire-claude-md-box-compat.md.
+  // remove: issues/code-quality/2026-10-09-retire-claude-md-box-compat.md.
   { name: "agents-md-2026-10", script: "src/scripts/migrate/agents-md/run.ts" },
   // Rewrites the retired image/silence/purpose/correction Markdoc tags: image
   // and silence become a link and plain text, a briefing's purpose moves to

@@ -138,3 +138,22 @@ void test("remap maps a resolved absolute path to its new home (or null).", asyn
     text: "<CardLink cardRef=\"/_bookkeeping/archive/Foo.doc.card\" /><CardRef cardRef=\"/_content/Stay.card\" />",
   });
 });
+
+// ## A `cardRef` followed by other props is still tracked
+//
+// `<CardRef cardRef="…" params={{…}} embed caption="…" />` places a figure; the
+// literal `cardRef` is found and rewritten when its target moves.
+void test("a cardRef followed by embed props is extracted and rewritten", async (t) => {
+  const text = '<CardRef cardRef="/_content/figures/Atom.figure.card" params={{ element: "H" }} embed caption="Hydrogen" />';
+  t.check(extractViewRefs(text), [{ path: "view:1:0", ref: "/_content/figures/Atom.figure.card" }]);
+  const result = rewriteViewRefs({
+    boxRoot: "/box",
+    viewAbsPath: "/box/views/v.tsx",
+    text,
+    remap: (abs) => (abs === "/box/_content/figures/Atom.figure.card" ? "/box/_content/figures/Atoms.figure.card" : null),
+  });
+  t.check(result, {
+    count: 1,
+    text: '<CardRef cardRef="/_content/figures/Atoms.figure.card" params={{ element: "H" }} embed caption="Hydrogen" />',
+  });
+});

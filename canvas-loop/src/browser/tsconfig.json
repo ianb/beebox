@@ -4,6 +4,6 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": ["**/*.ts", "../../test/browser/mount.test.ts", "../../test/react/SketchFigure.hardening.test.ts", "../../test/browser/mount.failure-paths.test.ts", "../../test/browser/fake-dom.ts"],
+  "include": ["**/*.ts", "../../test/browser/mount.test.ts", "../../test/react/SketchFigure.hardening.test.ts", "../../test/browser/mount.failure-paths.test.ts", "../../test/browser/fake-dom.ts", "../../test/browser/controls.overlay.test.ts", "../../test/browser/runtime/engine.sound.test.ts", "../../test/browser/runtime.sleep.test.ts", "../../test/browser/runtime/sound-player.library.test.ts"],
   "exclude": ["dist"]
 }

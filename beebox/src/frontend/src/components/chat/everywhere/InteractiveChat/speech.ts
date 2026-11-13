@@ -67,10 +67,13 @@ export function useSpeechDispatch(opts: {
     prevStateRef.current = snapshot.value;
   }, [opts.conversationKey, snapshot.context.streamText, snapshot.value, composerSend]);
 
-  const dispatch = useCallback((segments: ReturnType<typeof parseAllSpeechTags>, baseIndex: number) => {
+  // `source` is in the id (`stream-mid-…` / `stream-flush-…`) so the muted-speech
+  // probe in voice.ts can name which path queued it
+  // (issues/bugs/2026-11-13-speech-is-synthesized-while-the-chat-is-muted.md).
+  const dispatch = useCallback((segments: ReturnType<typeof parseAllSpeechTags>, { baseIndex, source }: { baseIndex: number; source: "mid" | "flush" }) => {
     if (segments.length === 0) return;
     speechPlayedRef.current = true;
-    composerSend({ type: "SPEECH_QUEUED", messageId: `stream-${Date.now()}-${baseIndex}`, segments, baseIndex });
+    composerSend({ type: "SPEECH_QUEUED", messageId: `stream-${source}-${Date.now()}-${baseIndex}`, segments, baseIndex });
   }, [composerSend]);
 
   // Mid-stream: dispatch complete <speech>...</speech> segments as they arrive.
@@ -89,7 +92,7 @@ export function useSpeechDispatch(opts: {
       playedSegmentCountRef.current = closedCount;
       return;
     }
-    dispatch(newSegments, playedSegmentCountRef.current);
+    dispatch(newSegments, { baseIndex: playedSegmentCountRef.current, source: "mid" });
     playedSegmentCountRef.current = closedCount;
   }, [snapshot.value, snapshot.context.streamText, composerSend, dispatch]);
 
@@ -115,7 +118,7 @@ export function useSpeechDispatch(opts: {
       const remaining = allSegments.slice(playedSegmentCountRef.current);
       if (allSegments.length > 0) speechPlayedRef.current = true;
       if (remaining.length > 0) {
-        dispatch(remaining, playedSegmentCountRef.current);
+        dispatch(remaining, { baseIndex: playedSegmentCountRef.current, source: "flush" });
         playedSegmentCountRef.current = allSegments.length;
       }
     }

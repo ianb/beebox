@@ -64,6 +64,25 @@ export interface VibeCheckOptions {
   restrictComponentClasses?: RestrictComponentClassesOptions;
 }
 
+/** One `restricted-classes` entry. Mirrors the rule's `meta.schema`. */
+export interface RestrictedClassesEntry {
+  /** Patterns that must all be present for the entry to fire. */
+  all: string[];
+  /** Patterns any one of which makes the class set acceptable. */
+  none?: string[];
+  /** Files that own the shape, as globs relative to ESLint's working directory. */
+  allowIn?: string[];
+  message: string;
+}
+
+/**
+ * The `restricted-classes` entry for a removed focus outline: `outline-none`
+ * (also `focus:` and `focus-visible:`) needs a `focus:`, `focus-visible:` or
+ * `focus-within:` ring, border, shadow or outline beside it. `hover:` and a
+ * bare `ring-*` do not count.
+ */
+export declare const outlineNeedsFocusStyle: RestrictedClassesEntry;
+
 /** Returns a flat ESLint config array. */
 export declare function vibeCheck(options?: VibeCheckOptions): Linter.Config[];
 

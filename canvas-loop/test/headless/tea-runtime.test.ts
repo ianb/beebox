@@ -153,3 +153,20 @@ test("param values reach draw and update through u.params / p", () => {
   );
   assert.deepEqual(seen, [1, 1, 4, 4], "draw sees the updated param value from the frame it changed");
 });
+
+test("initial params start the run from other values; a bad one is an error", () => {
+  const params = { speed: { type: "number", min: 0, max: 5, default: 1 }, tone: { type: "select", options: ["sky", "moss"], default: "sky" } } as const satisfies ParamsDecl;
+  const seen: string[] = [];
+  const module: LoadedTeaModule = {
+    params,
+    canvas: undefined,
+    init: (u) => `${String(u.params["speed"])} ${String(u.params["tone"])}`,
+    update: (model) => model,
+    draw: (_v: View, model: unknown) => void seen.push(String(model)),
+  };
+  teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 1, initialParams: { speed: 3, tone: "moss" } }));
+  assert.deepEqual(seen, ["3 moss"]);
+  assert.throws(() => teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 1, initialParams: { sped: 3 } })), /initial param "sped": the sketch declares no such param/u);
+  assert.throws(() => teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 1, initialParams: { speed: 9 } })), /outside the declared range/u);
+  assert.throws(() => teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 1, initialParams: { tone: "red" } })), /not one of the declared options/u);
+});

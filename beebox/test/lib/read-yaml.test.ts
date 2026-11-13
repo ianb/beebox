@@ -50,6 +50,7 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
     "{k: a, []}",
     "k: [[a]:]",
   ];
+  const warnings = t.capture(process, "emitWarning");
   t.check(
     inputs.map((text) => parseYaml(text)),
     [
@@ -67,6 +68,20 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
       { a: "" },
       { k: "a", "[]": null },
       { k: [{ "[ a ]": null }] },
+    ],
+  );
+  // The yaml package reports what it had to stringify or could not resolve as
+  // process warnings, one per input that has the problem:
+  const keyWarning = (key: string) =>
+    `Keys with collection values will be stringified due to JS Object restrictions: "${key}". Set mapAsMap: true to use object keys.`;
+  t.check(
+    warnings.args().map(([warning]: unknown[]) => warning instanceof Error && "code" in warning ? `${warning.name} ${String(warning.code)}: ${warning.message}` : warning),
+    [
+      keyWarning("[ a ]"),
+      keyWarning("[ 1, 2 ]"),
+      "YAMLWarning TAG_RESOLVE_FAILED: Unresolved tag: !foo at line 1, column 4:\n\na: !foo bar\n   ^^^^\n",
+      keyWarning("[]"),
+      keyWarning("[ a ]"),
     ],
   );
 });

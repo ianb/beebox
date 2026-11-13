@@ -1,12 +1,12 @@
 // # The `_tmp/` sweep
 //
-// `cleanupOldTmpUploads` runs from `bbx wakeup` housekeeping and removes what
-// the chat composer uploaded a week ago or more. Two layouts live in `_tmp/`:
-// files flat at the top (older clients and other scratch), each aged by its own
-// mtime; and one directory per chat message under `_tmp/chat/<batch>/`, aged
-// by its newest file and removed whole — a message's attachments go together.
-// Other directories belong to someone else (`_tmp/scan-quarantine/` has its
-// own GC) and are never touched.
+// `cleanupOldTmpUploads` runs from `bbx wakeup` housekeeping and removes
+// `_tmp/` scratch a week old or more. Files flat at the top are aged by their
+// own mtime. A chat message's directory (`_tmp/chat/<batch>/`) and any other
+// scratch directory are aged by their newest file and removed whole, so one in
+// use keeps every file. `_tmp/browser/` captures are aged one by one. Two
+// directories own their lifecycle and are never touched: `capture-staging/`
+// and `scan-quarantine/`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -30,7 +30,7 @@ async function exists(p: string) {
   try { await fs.access(p); return true; } catch (_e) { return false; }
 }
 
-void test("line 33", async (t) => {
+void test("Stale _tmp scratch is removed; fresh scratch and owned directories stay", async (t) => {
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -58,12 +58,22 @@ void test("line 33", async (t) => {
   // An empty batch directory ages by its own mtime.
   await fs.mkdir(path.join(tmp, "chat/empty-batch-03"), { recursive: true });
   await ageDir(path.join(tmp, "chat/empty-batch-03"), 30);
-  // Someone else's directory, old, is not ours to remove.
+  // Directories with their own lifecycle, old, are not ours to remove.
   await writeAged(path.join(tmp, "scan-quarantine/old.pdf"), 40);
   await ageDir(path.join(tmp, "scan-quarantine"), 40);
+  await writeAged(path.join(tmp, "capture-staging/session-1/session.json"), 40);
+  // Browser captures go one by one: the old capture, not the fresh one.
+  await writeAged(path.join(tmp, "browser/card-old.png"), 9);
+  await writeAged(path.join(tmp, "browser/card-fresh.png"), 1);
+  // An agent's scratch directory goes whole once nothing in it is fresh; one
+  // with a fresh file keeps its old files too.
+  await writeAged(path.join(tmp, "full-audit/script.ts"), 20);
+  await writeAged(path.join(tmp, "full-audit/out.txt"), 8);
+  await writeAged(path.join(tmp, "reaction-tools/script.ts"), 20);
+  await writeAged(path.join(tmp, "reaction-tools/out.txt"), 1);
 
   const log: string[] = [];
-  t.check(await cleanupOldTmpUploads(box.root, (m) => log.push(m)), 3);
+  t.check(await cleanupOldTmpUploads(box.root, (m) => log.push(m)), 5);
 
   t.check(
     await Promise.all([
@@ -74,6 +84,11 @@ void test("line 33", async (t) => {
       exists(path.join(tmp, "chat/empty-batch-03")),
       exists(path.join(tmp, "chat/nested-batch-04/sub/fresh.txt")),
       exists(path.join(tmp, "scan-quarantine/old.pdf")),
+      exists(path.join(tmp, "capture-staging/session-1/session.json")),
+      exists(path.join(tmp, "browser/card-old.png")),
+      exists(path.join(tmp, "browser/card-fresh.png")),
+      exists(path.join(tmp, "full-audit")),
+      exists(path.join(tmp, "reaction-tools/script.ts")),
     ]),
     [
     false,
@@ -83,11 +98,18 @@ void test("line 33", async (t) => {
     false,
     true,
     true,
+    true,
+    false,
+    true,
+    false,
+    true,
   ],
   );
 
-  await t.checkText(log.filter((l) => l.includes("Removed:")).map((l) => l.trim().replace(/ \(\d+ days old\)/, "")).toSorted().join("\n"), `Removed: _tmp/chat/empty-batch-03/
+  await t.checkText(log.filter((l) => l.includes("Removed:")).map((l) => l.trim().replace(/ \(\d+ days old\)/, "")).toSorted().join("\n"), `Removed: _tmp/browser/card-old.png
+Removed: _tmp/chat/empty-batch-03/
 Removed: _tmp/chat/stale-batch-01/
+Removed: _tmp/full-audit/
 Removed: _tmp/old-flat.pdf`);
 });
 

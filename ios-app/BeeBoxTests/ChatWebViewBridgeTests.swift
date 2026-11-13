@@ -31,6 +31,8 @@ final class ChatWebViewBridgeTests: XCTestCase {
             onHqDictationStateChange: { _ in recorder.calls.append("beeboxHqDictationState") },
             onSpeechPlaybackStateChange: { _ in recorder.calls.append("beeboxSpeechPlaybackState") },
             onResponseStateChange: { _ in recorder.calls.append("beeboxResponseState") },
+            onCallStateChange: { _ in recorder.calls.append("beeboxCallState") },
+            setCallAudio: { _ in },
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in recorder.calls.append("beeboxComposerCommand") },
             onComposerCommandAcknowledgementDelivered: { _ in },
@@ -64,6 +66,8 @@ final class ChatWebViewBridgeTests: XCTestCase {
             return #"{"version":2,"id":"c1","kind":"scan-controls"}"#
         case .lastAudioRequest:
             return #"{"version":1,"requestId":"r1","messageId":"m1"}"#
+        case .callState:
+            return ["active": true]
         }
     }
 

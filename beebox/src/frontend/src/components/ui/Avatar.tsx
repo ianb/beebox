@@ -4,7 +4,7 @@ import { cn } from "../../lib/cn";
 export type AvatarSize = "sm" | "md" | "lg";
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
-  sm: "w-6 h-6 text-[10px]",
+  sm: "w-6 h-6 text-[0.625rem]",
   md: "w-7 h-7 text-xs",
   lg: "w-10 h-10 text-sm",
 };

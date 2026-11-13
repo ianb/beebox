@@ -71,6 +71,9 @@ const builtinUses: Record<string, string[]> = {
     "audio transcription of recordings",
     "minting short-lived transcription keys for the browser (the stored key is the management key and never leaves the server)",
   ],
+  "cloudflare-turn": [
+    "minting short-lived relay (TURN) credentials for calls in a chat; the stored token never leaves the server",
+  ],
   anthropic: [
     "Anthropic API calls from box views, through the server-side adapter (the agent itself uses subscription auth, not this key)",
   ],

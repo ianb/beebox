@@ -22,7 +22,7 @@
  * ANSWER route stays user-session-authed, because the browser tab is what
  * posts it.
  *
- * There is no consent prompt (the screenshot flow's `ScreenshotConsentPopup`
+ * There is no consent prompt (the screenshot flow's `ScreenshotConsentDialog`
  * has no counterpart here) — see the client handler for the reasoning and the
  * open question it is pending on.
  */

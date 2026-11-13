@@ -15,6 +15,7 @@ import { CardActions } from "../../../card-actions/CardActions";
 import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { isCardPath } from "../../../file-view-data";
 import { readCardSymbol } from "@shared/card-symbol";
+import { Skeleton } from "../../../ui/Skeleton";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -37,7 +38,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
   const isCard = isCardPath(data.path);
   const presentationType = data.type ?? "";
   if (presentation !== null && !presentation.data && presentation.error === null) {
-    return <div className="p-6" aria-busy="true"><div className="h-6 w-2/3 bg-warm-100 rounded" /><div className="h-32 mt-4 bg-warm-50 rounded" /><span className="sr-only">Loading card appearance</span></div>;
+    return <div className="p-6" aria-busy="true"><Skeleton className="h-6 w-2/3" /><Skeleton className="h-32 mt-4" /><span className="sr-only">Loading card appearance</span></div>;
   }
   const theme = resolveCardTheme({
     path: data.path.replace(/^\//, ""),

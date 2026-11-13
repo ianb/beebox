@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../test/helpers/console-lines.js";
 import {
   createHqWaiter,
   decideOnStatus,
@@ -255,6 +256,7 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
 
   const unreachable = fakeBox({ fallBackFails: 1 });
   const { req: req2 } = request();
+  const warnings = consoleLines(t, "warn");
   const outcome2 = createHqWaiter(unreachable.deps).wait(req2);
   await flush();
   unreachable.expire();
@@ -263,6 +265,8 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
     reason: "budget",
     service: "mai",
   });
+  // The console records that the fallback request failed:
+  t.check(warnings(), ["[hq-wait] rec: fallBack failed; sending live text now: Error: 502"]);
 });
 
 // ## A permanent failure ends the wait with the reason

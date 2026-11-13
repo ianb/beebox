@@ -97,7 +97,7 @@ export function SendSection({ boxUrl, tabId, blockedReason }: SendSectionProps) 
       />
       {/* The tooltip lives on the wrapper: a disabled button fires no mouse events. */}
       <span className="block" title={blockedReason ?? undefined}>
-        <button
+        <button type="button"
           onClick={handleSend}
           disabled={busy !== null || blocked}
           className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
@@ -162,7 +162,7 @@ function SendOutcomeLine(props: SendOutcomeLineProps) {
     return (
       <p className="text-sm text-red-700">
         {UNCONFIRMED_TEXT}{" "}
-        <button onClick={onRetry} disabled={busy !== null} className={LINK_BUTTON}>
+        <button type="button" onClick={onRetry} disabled={busy !== null} className={LINK_BUTTON}>
           {busy === "retry" ? "Trying again…" : "Try again"}
         </button>
       </p>
@@ -172,7 +172,7 @@ function SendOutcomeLine(props: SendOutcomeLineProps) {
     return (
       <p className="text-sm text-red-700">
         {FORGOTTEN_TEXT}{" "}
-        <button onClick={onSendAgain} disabled={busy !== null} className={LINK_BUTTON}>
+        <button type="button" onClick={onSendAgain} disabled={busy !== null} className={LINK_BUTTON}>
           Send again
         </button>
       </p>
@@ -205,7 +205,7 @@ function AnsweredLine({ view, boxUrl, busy, onChoose }: AnsweredLineProps) {
       <div className="space-y-1.5">
         <p className="text-sm text-gray-800">{text}</p>
         {choices.map((choice) => (
-          <button
+          <button type="button"
             key={choice.candidateId}
             onClick={() => onChoose(choice.candidateId)}
             disabled={busy !== null}
@@ -223,7 +223,7 @@ function AnsweredLine({ view, boxUrl, busy, onChoose }: AnsweredLineProps) {
   return (
     <p className={`break-words text-sm ${tone}`}>
       {text}{" "}
-      <button onClick={handleOpen} className={LINK_BUTTON}>
+      <button type="button" onClick={handleOpen} className={LINK_BUTTON}>
         {chatUrl === null ? "Open box" : "Open chat"}
       </button>
     </p>

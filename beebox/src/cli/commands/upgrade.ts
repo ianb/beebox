@@ -38,6 +38,8 @@ import { isRecord } from "../../shared/is-record.js";
 import * as path from "node:path";
 import { Command } from "commander";
 import { runCollectedChild } from "../../lib/run-child.js";
+import { packageManagerEnvironment } from "../../lib/package-manager-env.js";
+import { engineChildEnvironment } from "../../core/script-env/core.js";
 import { findBoxRoot, NotInBoxError } from "../../lib/paths/core.js";
 import { acquireBoxMaintenance, boxWorkEnvironment, type BoxMaintenance } from "../../lib/box-maintenance/admission.js";
 import { getBoxShape } from "../../lib/box-shape.js";
@@ -126,8 +128,13 @@ export interface RunCommandResult {
  *  directly. */
 export type CommandRunner = (args: RunCommandArgs) => Promise<RunCommandResult>;
 
+/** `pnpm install` runs the box's dependencies' scripts on a package manager's
+ *  allowlist; the `bbx` and `tsc` steps are engine code on the tooling list. */
 function defaultRunner(): CommandRunner {
-  return ({ command, args, cwd }) => runCollectedChild({ command, args, cwd, env: { ...process.env, ...boxWorkEnvironment() } });
+  return ({ command, args, cwd }) => runCollectedChild({
+    command, args, cwd,
+    env: command === "pnpm" ? packageManagerEnvironment(boxWorkEnvironment()) : engineChildEnvironment(),
+  });
 }
 
 /** A `--to` value that names a file rather than a semver range: an explicit

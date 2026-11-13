@@ -1,8 +1,14 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { FieldShell, inputClasses, useFieldInk } from "./shell";
+import { useId, useState, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { cn } from "../../../lib/cn";
+import { RevealButton } from "./reveal-button";
+import { FieldShell, fieldMessageId, inputClasses, isShown, type FieldTone } from "./shell";
 
 export { RadioGroup } from "./radio";
 export type { RadioOption, RadioGroupProps } from "./radio";
+export { Checkbox, CheckboxField } from "./checkbox";
+export type { CheckboxProps, CheckboxFieldProps } from "./checkbox";
+export { useFilePicker } from "./file-picker";
+export type { FilePickerOptions } from "./file-picker";
 
 // ---------- TextField ----------
 
@@ -25,6 +31,14 @@ export interface TextFieldProps extends NativeInputPassThrough {
   className?: string;
   /** When true, the label is visually hidden but remains for screen readers. */
   hideLabel?: boolean;
+  /**
+   * The value is an identifier (hostname, id, URL, name), not prose: turns off
+   * spellcheck, autocorrect, and automatic capitalization, which mangle it on
+   * a phone keyboard.
+   */
+  identifier?: boolean;
+  /** With `type="password"`, adds a "Show password" button that reveals the text. */
+  revealable?: boolean;
 }
 
 export function TextField({
@@ -40,6 +54,8 @@ export function TextField({
   className,
   required,
   hideLabel,
+  identifier,
+  revealable,
   ...rest
 }: TextFieldProps) {
   type = type ?? "text";
@@ -47,20 +63,35 @@ export function TextField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
+  const [revealed, setRevealed] = useState(false);
+  const canReveal = revealable === true && type === "password";
+  const identifierProps = identifier === true ? { spellCheck: false, autoCapitalize: "none", autoCorrect: "off" } : {};
+  const input = (
+    <input
+      id={fieldId}
+      ref={inputRef}
+      type={canReveal && revealed ? "text" : type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      aria-invalid={hasError ? true : undefined}
+      aria-describedby={fieldMessageId(fieldId, { error, helper })}
+      className={inputClasses({ error: hasError }, canReveal ? cn("pr-10", inputClassName) : inputClassName)}
+      {...identifierProps}
+      {...rest}
+    />
+  );
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
-      <input
-        id={fieldId}
-        ref={inputRef}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        aria-invalid={hasError ? true : undefined}
-        className={inputClasses(hasError, inputClassName)}
-        {...rest}
-      />
+      {canReveal ? (
+        <div className="relative">
+          {input}
+          <RevealButton id={`${fieldId}-reveal`} revealed={revealed} onToggle={() => setRevealed((shown) => !shown)} />
+        </div>
+      ) : (
+        input
+      )}
     </FieldShell>
   );
 }
@@ -104,7 +135,7 @@ export function TextareaField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <textarea
@@ -114,7 +145,8 @@ export function TextareaField({
         required={required}
         rows={rows}
         aria-invalid={hasError ? true : undefined}
-        className={inputClasses(hasError, inputClassName)}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
+        className={inputClasses({ error: hasError }, inputClassName)}
         {...rest}
       />
     </FieldShell>
@@ -154,7 +186,7 @@ export function NumberField({
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
     <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
       <input
@@ -167,76 +199,11 @@ export function NumberField({
         }}
         required={required}
         aria-invalid={hasError ? true : undefined}
-        className={inputClasses(hasError, inputClassName)}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
+        className={inputClasses({ error: hasError }, inputClassName)}
         {...rest}
       />
     </FieldShell>
-  );
-}
-
-// ---------- CheckboxField ----------
-
-type NativeCheckboxPassThrough = Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  "checked" | "onChange" | "id" | "className" | "type" | "children" | "value"
->;
-
-export interface CheckboxFieldProps extends NativeCheckboxPassThrough {
-  label: ReactNode;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  error?: ReactNode;
-  helper?: ReactNode;
-  id?: string;
-  /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
-  className?: string;
-}
-
-export function CheckboxField({
-  label,
-  checked,
-  onChange,
-  error,
-  helper,
-  id,
-  required,
-  disabled,
-  className,
-  ...rest
-}: CheckboxFieldProps) {
-  required = required ?? false;
-  const autoId = useId();
-  const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
-  const ink = useFieldInk();
-  const labelClass = disabled === true
-    ? `flex items-center gap-2 text-sm ${ink.label} opacity-50`
-    : `flex items-center gap-2 text-sm ${ink.label} cursor-pointer`;
-  return (
-    <div className={className}>
-      <label htmlFor={fieldId} className={labelClass}>
-        <input
-          id={fieldId}
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          required={required}
-          disabled={disabled}
-          aria-invalid={hasError ? true : undefined}
-          className="rounded border-warm-400 text-primary focus:ring-accent disabled:cursor-not-allowed"
-          {...rest}
-        />
-        <span className="min-w-0 flex-1">
-          {label}
-          {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
-        </span>
-      </label>
-      {error !== undefined ? (
-        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
-      ) : helper !== undefined ? (
-        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
-      ) : null}
-    </div>
   );
 }
 
@@ -265,6 +232,8 @@ export interface SelectFieldProps extends NativeSelectPassThrough {
   /** Outer-layout classes on the field wrapper (margin, padding, flex item, sizing, position). */
   className?: string;
   hideLabel?: boolean;
+  /** `dark` for a select on the dark capture screen, matching `ModalDialog`'s dark tone. */
+  tone?: FieldTone;
 }
 
 export function SelectField({
@@ -279,22 +248,24 @@ export function SelectField({
   className,
   required,
   hideLabel,
+  tone,
   ...rest
 }: SelectFieldProps) {
   required = required ?? false;
   hideLabel = hideLabel ?? false;
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   return (
-    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className}>
+    <FieldShell id={fieldId} label={label} hideLabel={hideLabel} required={required} error={error} helper={helper} className={className} tone={tone}>
       <select
         id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         aria-invalid={hasError ? true : undefined}
-        className={inputClasses(hasError, inputClassName)}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
+        className={inputClasses({ error: hasError, tone }, inputClassName)}
         {...rest}
       >
         {options.map((opt) => (

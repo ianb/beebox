@@ -73,9 +73,11 @@ export async function sealVoiceSession(opts: {
   boxRoot: string;
   id: string;
   emissionId: string | null;
-  hq: { emissionId: string; sessionId: string | null; service: HqTranscriptionService; requestedAt: string } | null;
+  hq: { emissionId: string | null; sessionId: string | null; service: HqTranscriptionService; requestedAt: string } | null;
+  /** A call recording's link to its call, stamped in the same write as the seal. */
+  call?: StagingVoice["call"];
 }): Promise<VoiceSealResult> {
-  const { boxRoot, id, emissionId, hq } = opts;
+  const { boxRoot, id, emissionId, hq, call } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -94,6 +96,7 @@ export async function sealVoiceSession(opts: {
     session.state = "sealed";
     session.voice.sealedAt = getBoxTimeISO(boxRoot);
     session.voice.emissionId = emissionId ?? undefined;
+    if (call !== undefined) session.voice.call = call;
     if (hq !== null) {
       const outcome = nextVoiceState(session.voice, {
         type: "requested",

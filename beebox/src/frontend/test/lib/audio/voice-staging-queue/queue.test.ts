@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../../test/helpers/console-lines.js";
 import { any } from "@ianbicking/tap-check/check";
 import { createVoiceStagingQueue } from "../../../../src/lib/audio/voice-staging-queue/queue.js";
 import { createInMemoryVoiceStagingStorage } from "../../../../src/lib/audio/voice-staging-queue/voice-staging-storage.js";
@@ -153,8 +154,11 @@ void test("enqueueFinalize snapshots the chunk count it assigned so far.", async
   queue7.enqueueFinalize("r7", { emissionId: null, hq: null });
   t.check(queue7.pendingChunkCount("r7"), 1);
 
+  const errors = consoleLines(t, "error");
   queue7.enqueueChunk("r7", new ArrayBuffer(4));
   t.check(queue7.pendingChunkCount("r7"), 1);
+  // The console names the recording whose late chunk was dropped:
+  t.check(errors(), ["[voice-staging] Refusing to enqueue chunk for already-sealed recording r7"]);
 
   await flushMicrotasks();
   t.check(transport7.calls, ["r7#0:create", "r7#1:chunk", "r7#2:finalize"]);

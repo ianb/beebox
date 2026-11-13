@@ -9,7 +9,7 @@
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, eventually, str } from "@ianbicking/tap-check/check";
+import { any, eventually, str, uuid as anyUuid } from "@ianbicking/tap-check/check";
 import { once } from "node:events";
 import { fauxAssistantMessage, fauxProvider, fauxThinking, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -23,6 +23,14 @@ import { boxSlug } from "../../../../src/lib/box-slug.js";
 import { isRecord } from "../../../../src/shared/is-record.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+
+/** The server-log line for a turn that ended in error; the duration varies, and so does the session id when it is not given. */
+function erroredTurn(fields: { session?: string; phase: string; subtype: string; turns: number; result?: string }) {
+  const session = fields.session ?? anyUuid();
+  const detail = fields.result === undefined ? "" : ` result=${JSON.stringify(fields.result)}`;
+  return str`[chat-session] Turn ended with is_error=true (session ${session}). phase=${fields.phase} subtype=${fields.subtype} num_turns=${String(fields.turns)} duration_ms=${any(String)}${detail}`;
+}
 
 const MODEL = "test/faux";
 const faux = fauxProvider({ provider: "openrouter", models: [{ id: MODEL, input: ["text"] }] });
@@ -123,12 +131,15 @@ void test("an image to a text-only model refuses before any call; a resume conti
   await first.turn({ text: "hello" });
   const sessionId = first.session.getSessionId() ?? "";
   const calls = faux.state.callCount;
+  const warnings = consoleLines(t, "warn");
   const refused = await first.turn({ text: "look [image1]", images: [{ id: 1, mimeType: "image/png", dataBase64: "iVBORw0KGgo=" }] });
   t.check(refused.filter((m) => m.type === "result").map(shape), [{
     type: "result", subtype: "failed", session_id: sessionId, is_error: true, phase: "turn", duration_ms: 0, num_turns: 0,
     result: `${MODEL} does not accept images`,
   }]);
   t.check(faux.state.callCount, calls);
+  // The refusal is logged as an errored turn, with its reason:
+  t.check(warnings(), [erroredTurn({ session: sessionId, phase: "turn", subtype: "failed", turns: 0, result: `${MODEL} does not accept images` })]);
   first.session.stop();
 
   let context: string[] = [];
@@ -151,6 +162,7 @@ void test("an interrupt ends the turn as interrupted; an invalid edit fails the 
     if (options?.signal?.aborted === true) aborted();
     options?.signal?.addEventListener("abort", aborted);
   })]);
+  const warnings = consoleLines(t, "warn");
   const stopped = turn({ text: "wait" });
   await eventually(() => faux.state.callCount > calls, { label: "the model call started" });
   void session.interrupt();
@@ -165,6 +177,10 @@ void test("an interrupt ends the turn as interrupted; an invalid edit fails the 
     result: str`Bee Box validation failed:\n${finding}${any(String)}`,
   }]);
   t.check(await box.read("CLAUDE.md"), "# Notes\n");
+  t.check(warnings(), [
+    erroredTurn({ phase: "<unreported>", subtype: "interrupted", turns: 1 }),
+    erroredTurn({ phase: "<unreported>", subtype: "failed", turns: 1, result: `Bee Box validation failed:\n${finding}` }),
+  ]);
 });
 
 // A Claude-engine result on a third-party model loses its cost, because the SDK
@@ -209,8 +225,10 @@ void test("a turn whose reply has no text ends in error", async (t) => {
   const { open } = await piChat(t);
   const { turn } = open();
   faux.setResponses([fauxAssistantMessage(fauxThinking("I should answer."))]);
+  const warnings = consoleLines(t, "warn");
   t.check((await turn({ text: "hello" })).filter((m) => m.type === "result").map(shape), [{
     type: "result", subtype: "failed", session_id: any(String), is_error: true, duration_ms: 0, num_turns: 1, total_cost_usd: 0,
     result: `pi model ${MODEL} ended the run without reply text`,
   }]);
+  t.check(warnings(), [erroredTurn({ phase: "<unreported>", subtype: "failed", turns: 1, result: `pi model ${MODEL} ended the run without reply text` })]);
 });

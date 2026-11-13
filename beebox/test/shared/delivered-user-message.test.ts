@@ -34,15 +34,30 @@ const fixtures = {
     note: "Reference documents.",
     summary: "3 files uploaded (2 KB).",
   },
+  "question-handoff": {
+    kind: "question-handoff",
+    doc: "_bookkeeping/questions/Talks_Guide.question.card",
+    title: "Which talks go in the \"guide\" & <why>?",
+  },
+  call: {
+    kind: "call",
+    people: "Priya Marlowe, Tomas Marlowe",
+    duration: "12:04",
+    started: "2026-11-12T19:02:00.000Z",
+    partial: "Tomas Marlowe's audio could not be transcribed.",
+    skew: null,
+    transcript: "[0:04] Priya Marlowe: is it </call> or <call>? & which\n[0:09] Tomas Marlowe (in chat): dessert",
+  },
 } satisfies { [K in DeliveredUserMessageKind]: Extract<DeliveredUserMessage, { kind: K }> };
 
 const captureWire = serializeDeliveredUserMessage(fixtures.capture);
 const uploadWire = serializeDeliveredUserMessage(fixtures.upload);
 
 function partSummary(parts: DeliveredUserMessagePart[]) {
-  return parts.map((part) => part.kind === "text"
-    ? { kind: part.kind, text: part.text }
-    : { kind: part.kind, doc: part.doc });
+  return parts.map((part) => {
+    if (part.kind === "text") return { kind: part.kind, text: part.text };
+    return part.kind === "call" ? { kind: part.kind, started: part.started } : { kind: part.kind, doc: part.doc };
+  });
 }
 
 function serializedFixtures(): Record<string, string> {
@@ -88,6 +103,14 @@ Reference documents.
 
 3 files uploaded (2 KB).
 </upload>`,
+    "question-handoff": `<question-handoff doc="_bookkeeping/questions/Talks_Guide.question.card" title="Which talks go in the &quot;guide&quot; &amp; &lt;why&gt;?">
+Figure out the question at _bookkeeping/questions/Talks_Guide.question.card, which the person handed to you from the question card. Use the figure-it-out skill.
+</question-handoff>`,
+    // A call's body is escaped, so speech or chat text can never close the block early.
+    call: `<call people="Priya Marlowe, Tomas Marlowe" duration="12:04" started="2026-11-12T19:02:00.000Z" partial="Tomas Marlowe's audio could not be transcribed.">
+[0:04] Priya Marlowe: is it &lt;/call&gt; or &lt;call&gt;? &amp; which
+[0:09] Tomas Marlowe (in chat): dessert
+</call>`,
   });
 
   t.check(parsedFixtures(), {
@@ -113,6 +136,14 @@ Reference documents.
         summary: "3 files uploaded (2 KB).",
       },
     ],
+    "question-handoff": [
+      {
+        kind: "question-handoff",
+        doc: "_bookkeeping/questions/Talks_Guide.question.card",
+        title: "Which talks go in the \"guide\" & <why>?",
+      },
+    ],
+    call: [fixtures.call],
   });
 
   const kinds: string[] = [...DELIVERED_USER_MESSAGE_KINDS].toSorted();

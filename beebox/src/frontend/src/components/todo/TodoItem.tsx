@@ -22,6 +22,7 @@ import type { TodoPlateState, TodoStatus } from "@shared/todo-model";
 import type { TodoLocator } from "@shared/todo-locators";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Checkbox } from "../ui/fields/field";
 import { Text } from "../ui/Text";
 import { checkboxName, dateChips, recheckChip, todoTextClass } from "./item-logic";
 import { runTick, tickInput, TodoActionsContext, type TodoAddress } from "./actions";
@@ -91,17 +92,15 @@ function useControls(props: TodoItemProps): Controls {
   return { status, onToggle, onAddToChat, error };
 }
 
-function Checkbox({ controls, text, className }: { controls: Controls; text: string | null; className: string }) {
+function TodoCheckbox({ controls, text, className }: { controls: Controls; text: string | null; className: string }) {
   const { status, onToggle } = controls;
   return (
-    <input
-      type="checkbox"
+    <Checkbox
       checked={status === "done"}
       disabled={onToggle === null}
-      readOnly={onToggle === null}
-      onChange={onToggle ?? undefined}
+      onChange={onToggle === null ? undefined : () => onToggle()}
       aria-label={checkboxName(status, text)}
-      className={`accent-warm-500 ${className}`}
+      className={className}
     />
   );
 }
@@ -178,7 +177,7 @@ export function TodoItem(props: TodoItemProps): ReactNode {
     case "inline":
       return (
         <span {...data} className="group">
-          <Checkbox controls={controls} text={props.text} className="mr-1 align-middle" />
+          <TodoCheckbox controls={controls} text={props.text} className="mr-1 align-middle" />
           <span className={textClass}>{children}</span>
           {chips}
           {trailing}
@@ -187,7 +186,7 @@ export function TodoItem(props: TodoItemProps): ReactNode {
     case "block":
       return (
         <div {...data} className="group my-3 flex items-start gap-2">
-          <Checkbox controls={controls} text={props.text} className="mt-1.5 shrink-0" />
+          <TodoCheckbox controls={controls} text={props.text} className="mt-1.5 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className={`[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${textClass}`}>{children}</div>
             <div className="-ml-1">{chips}{trailing}</div>
@@ -199,7 +198,7 @@ export function TodoItem(props: TodoItemProps): ReactNode {
       // one box) stay beside the checkbox instead of dropping below it.
       return (
         <span {...data} className="group flex items-start gap-1.5 text-sm">
-          <Checkbox controls={controls} text={props.text} className="mt-0.5 shrink-0" />
+          <TodoCheckbox controls={controls} text={props.text} className="mt-0.5 shrink-0" />
           <span className="min-w-0 flex-1">
             <span className={textClass}>{children}</span>
             {chips}

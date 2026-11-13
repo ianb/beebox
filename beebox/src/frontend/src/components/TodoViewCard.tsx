@@ -194,7 +194,7 @@ export function TodoViewCard(props: RendererProps) {
     onViewStateChange?.({ ...options, ...next }, "replace");
   };
 
-  if (query.isLoading) return <StatusMessage>Loading todos…</StatusMessage>;
+  if (query.isLoading) return <StatusMessage busy>Loading todos…</StatusMessage>;
   if (query.error !== null) return <ErrorText className="p-8">Couldn&rsquo;t load todos: {query.error.message}</ErrorText>;
   if (query.data === undefined) return <ErrorText className="p-8">Couldn&rsquo;t load todos.</ErrorText>;
 

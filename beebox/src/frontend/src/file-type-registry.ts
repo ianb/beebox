@@ -17,6 +17,7 @@
  */
 
 import type { FileSummary } from "@core/file-summary";
+import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CardSchemaFacts } from "@backend/trpc/routers/card.js";
 import type { NavigateHint, ViewState, ViewTarget } from "./lib/view-url";
 import { GenericIcon, type FileIcon } from "./file-types/icons";
@@ -65,7 +66,7 @@ export interface RendererProps {
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
-  mode?: "page" | "chat" | "companion" | "embed";
+  mode?: "page" | "chat" | "companion" | "embed" | "strip";
   /** PDF file actions are hosted by the surrounding workspace pane. */
   workspacePdf?: boolean;
   /**
@@ -74,6 +75,12 @@ export interface RendererProps {
    * a normal captioned image; other renderers ignore it. Absent outside embeds.
    */
   caption?: string;
+  /**
+   * Report learner activity on this card to the companion chat (latest-wins
+   * per kind, seen on the agent's next turn). Bound to the card it renders;
+   * set only in the companion pane, so a renderer must treat it as optional.
+   */
+  reportActivity?: (kind: ActivityKind, detail?: string) => void;
 }
 
 /** A renderer registration: `src/renderers.ts`'s registry contract, one member per registration. */
@@ -90,6 +97,12 @@ export interface FileRenderer {
   Component: React.ComponentType<RendererProps>;
   /** Priority — higher = more specific = shown first. Built-ins: source=0, xml=10, tree=20 */
   priority: number;
+  /**
+   * This renderer draws the card in the conversation strip (`mode="strip"`).
+   * Only such renderers are considered there; `shared/strip-types.ts` lists
+   * their types for the server.
+   */
+  strip?: true;
 }
 
 /** Props passed to a file type's custom list-entry middle slot. */

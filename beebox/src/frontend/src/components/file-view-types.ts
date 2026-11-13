@@ -2,7 +2,16 @@ import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { AddSelectionInput } from "../lib/selection/position";
 import type { NavigateHint, ViewState, ViewTarget } from "../lib/view-url";
 
-export type FileViewMode = "chat" | "companion" | "embed";
+export type FileViewMode = "chat" | "companion" | "embed" | "strip";
+
+/**
+ * A mode with no card frame: no themed card, header, renderer toggle, todo
+ * summary, or selection sink. An `embed` sits inside another card's body; a
+ * `strip` sits in the conversation strip (`docs/implemented-plans/conversation-strip.md`).
+ */
+export function isFrameless(mode: FileViewMode): mode is "embed" | "strip" {
+  return mode === "embed" || mode === "strip";
+}
 
 export interface FileViewProps {
   path: string;

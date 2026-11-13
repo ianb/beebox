@@ -63,7 +63,7 @@ export function PublicationApprovalView({ pubId, cardPath }: { pubId: string; ca
   const site = query.data?.sites.find((publication) => publication.pubId === pubId);
   const sharedHost = query.data?.sharedHost ?? null;
 
-  if (query.isLoading) return <StatusMessage>Loading publication review…</StatusMessage>;
+  if (query.isLoading) return <StatusMessage busy>Loading publication review…</StatusMessage>;
   if (query.error) return <div role="alert"><Card><Stack gap="sm"><ErrorText>{query.error.message}</ErrorText>{query.error.data?.code === "UNAUTHORIZED" || query.error.data?.code === "FORBIDDEN" ? <SignInLink returnTo={window.location.pathname + window.location.search} /> : <Button id={`bbx-publication-review-retry-${pubId}`} intent="secondary" onClick={() => void query.refetch()}>Retry</Button>}</Stack></Card></div>;
   if (site === undefined) return <PublicationNotPrepared cardPath={cardPath} />;
 

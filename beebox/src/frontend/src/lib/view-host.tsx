@@ -42,6 +42,33 @@ export interface OpenCardOptions {
   params?: Record<string, string>;
 }
 
+/** Options for rendering a card inline. */
+export interface InlineRenderOptions {
+  /** Text shown with the card, as a markdown image's alt text is its caption. */
+  caption?: string;
+}
+
+/**
+ * Renders a card expanded in place. The mount sites take a resolved
+ * {@link ViewTarget}; the {@link ViewHost} takes a ref string.
+ */
+export type RenderInline<Subject> = (subject: Subject, opts?: InlineRenderOptions) => ReactNode;
+
+/**
+ * A card ref with a viewer override and extra params added to its own query,
+ * for `renderInline`, which takes a ref string. (`openCard` takes them as
+ * options.) The ref's own query comes first; a later key of the same name wins.
+ */
+export function refWithQuery(cardRef: string, extra: { view?: string; params?: Record<string, string> }): string {
+  const at = cardRef.indexOf("?");
+  const path = at === -1 ? cardRef : cardRef.slice(0, at);
+  const query = new URLSearchParams(at === -1 ? "" : cardRef.slice(at + 1));
+  if (extra.view !== undefined) query.set("view", extra.view);
+  for (const [key, value] of Object.entries(extra.params ?? {})) query.set(key, value);
+  const qs = query.toString();
+  return qs === "" ? path : `${path}?${qs}`;
+}
+
 export interface ViewHost {
   /** Open a card ref in the current surface (the "go"/"follow" affordance). */
   openCard: (cardRef: string, opts?: OpenCardOptions) => void;
@@ -53,11 +80,11 @@ export interface ViewHost {
   useResolvedRef: (cardRef: string) => ResolvedRef | null;
   /**
    * Render a card expanded in place (CardRef's expand-inline). Browser:
-   * a frameless `<FileView mode="embed">`; node: a minimal title/type block.
+   * a frameless `<FileView mode="embed">` (with `opts.caption`); node: a minimal title/type block.
    * Injected by the mount site so this module never imports FileView (which
    * would form a value-import cycle through AgentViewRenderer).
    */
-  renderInline: (cardRef: string) => ReactNode;
+  renderInline: RenderInline<string>;
   /** The view's own box-relative path, for resolving relative refs ("" = root). */
   basePath: string;
   boxSlug: string;

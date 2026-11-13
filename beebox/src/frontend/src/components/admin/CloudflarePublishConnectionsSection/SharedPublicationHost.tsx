@@ -9,6 +9,7 @@ import { Hint } from "../../ui/Hint";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { SelectField, TextField } from "../../ui/fields/field";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type SharedHost = NonNullable<RouterOutput["publications"]["list"]["sharedHost"]>;
 
@@ -54,7 +55,7 @@ export function SharedPublicationHost() {
       </Stack>
       {publications.error ? <div role="alert"><ErrorText>{publications.error.message}</ErrorText></div> : null}
       {connections.error ? <div role="alert"><ErrorText>{connections.error.message}</ErrorText></div> : null}
-      {publications.isLoading || connections.isLoading ? <Text size="sm" tone="muted">Loading shared-host status…</Text> : null}
+      {publications.isLoading || connections.isLoading ? <StatusMessage variant="inline" busy>Loading shared-host status…</StatusMessage> : null}
       {sharedHost ? (
         <SharedPublicationHostSummary host={sharedHost} />
       ) : publications.error || connections.error ? null : availableConnections.length === 0 ? (
@@ -63,7 +64,7 @@ export function SharedPublicationHost() {
         <form onSubmit={submit}>
           <Stack gap="sm">
             <SelectField id="bbx-admin-publish-shared-connection" label="Cloudflare connection" value={connectionName || availableConnections[0] || ""} onChange={setConnectionName} options={availableConnections.map((name) => ({ value: name, label: name }))} required />
-            <TextField id="bbx-admin-publish-shared-hostname" label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
+            <TextField id="bbx-admin-publish-shared-hostname" identifier label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
             <Button id="bbx-admin-publish-shared-setup" type="submit" intent="primary" loading={configure.isPending} loadingLabel="Setting up…">Configure shared host</Button>
           </Stack>
         </form>

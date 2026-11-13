@@ -69,6 +69,7 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
   return (
     <Row gap="md" align="center" justify="between" wrap>
       <TabBar
+        mode="buttons"
         material
         idPrefix="bbx-todo-view-group"
         label="Group todos by"

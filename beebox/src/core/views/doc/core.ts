@@ -4,8 +4,9 @@
  * Emitted into the package docs as views.md (docs-gen/package-docs.ts).
  */
 
-import { dependenciesAndParamsSection } from "./files.js";
+import { controlsSection, datesSection, dependenciesAndParamsSection } from "./files.js";
 import { examplesSection } from "./examples.js";
+import { testingSection } from "./testing.js";
 
 const introSection = `# Views: Agent-Generated React Components
 
@@ -69,7 +70,7 @@ const metadataAndPropsSection = `## Metadata Exports
 | \`name\` | string | Yes | Human-readable name shown in UI |
 | \`description\` | string | Yes | What this view shows |
 | \`dependencies\` | string[] | Yes | Glob patterns for files that affect rendering |
-| \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, or both |
+| \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, \`"strip"\`, or a combination |
 | \`layout\` | string | No | \`"inset"\` (default) or \`"full-bleed"\` — see Styling |
 | \`rendersCardTypes\` | string[] | Yes | Card types this view renders — see below |
 
@@ -100,6 +101,11 @@ renderer toggle. One view per type: if several views claim the same card
 type, the first by slug order wins. Without \`rendersCardTypes\`, custom
 types fall back to the generic built-ins.
 
+A view that lists \`"strip"\` in its exported \`modes\` is also drawn for its
+bound card types in the conversation strip, and then receives the prop
+\`mode: "strip"\` (otherwise \`mode: "page"\`). A strip rendering must be short:
+a few lines high.
+
 ## Component Props
 
 The default export receives a \`ViewProps\` object:
@@ -119,7 +125,7 @@ The default export receives a \`ViewProps\` object:
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
 | \`viewHistory\` | { state, canPush, pushState, replaceState } | Explicit JSON-safe navigation state. Read \`state\`; use \`pushState(next)\` for a new Back/Forward entry or \`replaceState(next)\` to normalize the current entry. Check \`canPush\` when the UI depends on browser history. Do not call \`window.history\` directly. |
-| \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card. Writes auto-report \`"modified"\`; call \`reportActivity("explored", detail)\` when the user changes the view's *parameters* (filters, ranges, a selected tab) without changing data. The optional \`detail\` is a short free-text string surfaced to the agent as the \`<card-activity>\` element's text (e.g. the query the user typed and its top result) — it overwrites any prior detail for the same kind, so calling it on every keystroke is fine. A no-op for inline/page renders, so always safe to call. |
+| \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card; see "Reporting Card Activity". A no-op elsewhere, so always safe to call. |
 
 \`viewHistory\` is opt-in persistence for meaningful view navigation, not a
 snapshot of React state. Values must be JSON-safe objects. Validate members
@@ -128,6 +134,9 @@ the view. Unknown or obsolete values should fall back to the view's default;
 after a user action, a view may normalize them with \`replaceState\`. Do not
 write history during render. Renderer \`params\` remain external configuration,
 while React \`useState\` remains transient interaction state.
+
+A chat "show-me link" can set this state on an open view, which stays mounted
+with its scroll; animate the change (e.g. a CSS transition) to show the move.
 
 ### ViewCard Structure
 
@@ -188,68 +197,60 @@ for the full semantics.`;
 
 const showingFilesSection = `## Showing Files in Chat
 
-To show a file to the user, reference it by its plain box path — like a normal
-markdown link or image:
+To show a file to the user, reference it by its plain box path. Write the path
+with a leading \`/\`: links and embeds in chat resolve from the box root, never
+from your working directory. The \`!\` makes the difference, as it does for an
+image:
 
 \`\`\`
 [Meeting Notes](/_content/notes/meeting.md)
+![Meeting Notes](/_content/notes/meeting.md)
 [Recipe](/_bookkeeping/archive/Pasta.recipe.card)
 \`\`\`
 
-Clicking a link opens the file in the companion pane. The system picks the
-viewer by file type:
+A **link** opens the file in the **companion pane**, a persistent side panel
+beside the chat. An **embed** renders the file inline in the chat message,
+scrolling with the conversation. Use an embed for a quick, one-off display
+within a turn. Use a link when the user needs to reference the file while
+continuing to talk: collaborative editing, storybuilding, reviewing a document,
+exploring data.
+
+The companion pane:
+- Stays visible while the user continues chatting (sticky, does not scroll away)
+- Shows side-by-side with chat on desktop, stacked on mobile
+- Has a close button; the user dismisses it when done
+- Updates live when underlying files change (same SSE mechanism as inline embeds)
+- Is replaced when the agent writes another link and the user clicks it
+
+The system picks the viewer by file type:
 - \`.md\` files render as formatted Markdown
 - \`.card\` files use the card viewer (a card-type-specific renderer if one is registered, otherwise the markdown card view)
 - Directories show a listing of subdirectories and cards
 - Other files show as raw text
 
-To force a specific viewer, add \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
+To force a specific viewer, add \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view). Directory paths work too:
 \`\`\`
 [Raw source](/_bookkeeping/archive/Pasta.recipe.card?view=Source)
-\`\`\`
-
-Directory paths work too:
-\`\`\`
 [Catalog](/_content/catalogs/My_Catalog)
 \`\`\`
 
-Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.`;
-
-const companionViewsSection = `### Link vs Embed
-
-There are two ways to surface a file in chat — the difference is the \`!\`:
-
-**Link \`[label](path)\`** — clicking it opens the file in the **companion pane**, a persistent side panel beside the chat:
+**Show-me links.** \`viewState=\` (percent-encoded JSON) sets a view's
+\`viewHistory.state\`, moving an open view without reloading it; the view's source
+shows which keys it reads.
 \`\`\`
-[Meeting Notes](/_content/notes/meeting.md)
-\`\`\`
+Sodium gives up one electron ([show me](/_content/Periodic_Table.chem.card?viewState=%7B%22select%22%3A%22Na%22%7D)).
+\`\`\``;
 
-**Embed \`![label](path)\`** — renders the file **inline** in the chat message, scrolling with the conversation (the same syntax as an image):
-\`\`\`
-![Meeting Notes](/_content/notes/meeting.md)
-\`\`\`
-
-The companion pane:
-- Stays visible while the user continues chatting (sticky — doesn't scroll away)
-- Shows side-by-side with chat on desktop, stacked on mobile
-- Has a close button — the user dismisses it when done
-- Updates live when underlying files change (same SSE mechanism as inline embeds)
-- If the agent writes another link and the user clicks it, it replaces the current companion
-
-Use an embed for a quick, one-off display within a turn. Use a link when the user needs to reference the file while continuing to talk — collaborative editing, storybuilding, reviewing a document, exploring data.
-
-### How the Agent Knows a Companion View is Open
+const companionViewsSection = `### How the Agent Knows a Companion View is Open
 
 When a companion view is open, every user message includes a \`zoomed-view\` attribute naming the open file (a box path):
 \`\`\`xml
 <typed zoomed-view="_content/notes/meeting.md">What about the furniture?</typed>
 \`\`\`
 
-This tells the agent what the user is looking at, so it can tailor its responses.
+This tells the agent what the user is looking at, so it can tailor its responses. The per-turn \`<chat-app>\` snapshot also carries it as the read-only \`open-card\` attribute (box-relative path), and a \`<card-activity>\` child element per kind of activity since the agent's last reply; a view feeds those (see "Reporting Card Activity"). For the precise change set, the agent runs \`bbx chat whats-changed --card <path>\`.
 
-The per-turn \`<chat-app>\` snapshot also carries this as the read-only \`open-card\` attribute (box-relative path), plus a \`<card-activity kind="…">\` child element per kind of activity since the agent's last reply (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), the element text being the optional free-text detail a view attaches via \`reportActivity(kind, detail)\` (e.g. the query typed). A view contributes the \`explored\` signal by calling \`reportActivity("explored", detail)\` when the user changes its parameters; writes contribute \`modified\` automatically. For the precise change set, the agent runs \`bbx chat whats-changed --card <path>\`.
-
-**Note:** The companion pane is a chat-only feature. The \`zoomed-view\` attribute is only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't surface it.`;
+**Note:** The companion pane is a chat-only feature. The \`zoomed-view\` attribute is only meaningful in the chat frontend; other agent contexts (jobs, wakeup) don't surface it.`;
 
 const reportingActivitySection = `## Reporting Card Activity (\`reportActivity\`)
 
@@ -287,46 +288,21 @@ function NearestNeighbors({ reportActivity }) {
 
 For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`bbx chat whats-changed --card <path>\` for the exact, git-grounded change set — \`<card-activity> detail\` is the cheap live hint, not the source of truth.`;
 
-const testingSection = `## Testing a View
-
-Saving a view runs a compile check automatically, the same way cards are
-validated on save. To see whether a view renders, run:
-
-\`\`\`
-bbx view check
-\`\`\`
-
-This compiles every view in the box, loads the **real cards** each view's
-\`dependencies\` globs select (the same data the running app passes), and renders
-each component once. It prints \`✓ <slug>\` for each view that renders. A view
-that fails prints \`✗ <slug>\` with the error and a stack mapped back to your
-\`.tsx\` source lines, and the command exits non-zero. If a dependency glob
-selects a card that fails to validate, that view fails too (pass
-\`--allow-invalid-cards\` to ignore).
-
-\`bbx view typecheck\` type-checks every view against the real \`ViewProps\`; it
-catches field mistakes a render can miss.
-
-**What it covers (and doesn't).** This is a *synchronous* render: it runs the
-component body once with default \`params\` (no \`params.path\`). It catches the
-common bugs — syntax/JSX errors, \`undefined.map()\`, bad prop access, type
-mistakes. It does **not** run \`useEffect\`, post-mount state, or the async
-helpers (\`readFile\`, \`writeFile\`, \`adapterFetch\`, …) — those run only in
-effects/handlers in the real app. Calling an async helper directly in the render
-body is a bug, and the check throws to tell you so (\`fileUrl\` is synchronous and
-fine to call in render). It does not print the rendered HTML, so look at the view
-in the app to confirm it shows the right thing.`;
-
 const stylingAndErrorsSection = `## Styling
 
 Views render inside the card. By default (\`layout = "inset"\`) the card pads
 the view to line up with its title, so do not add outer padding. For content
-that should reach the card's edges — a map, a wide table, an image grid —
-export \`layout = "full-bleed"\` and pad any text inside the view yourself:
+that should reach the card's edges — a map, an image grid — export
+\`layout = "full-bleed"\` and pad any text inside the view yourself:
 
 \`\`\`tsx
 export const layout = "full-bleed";
 \`\`\`
+
+A table with many columns does not fit a phone. Put it in a scroll wrapper, so
+only the table scrolls sideways:
+\`<div role="region" aria-label="Prices" tabIndex={0} style={{ overflowX: "auto" }}>\`.
+\`layout = "full-bleed"\` does not make a table fit.
 
 You can use:
 - Inline styles (as shown in examples)
@@ -343,6 +319,7 @@ export function generateViewsDoc(): string {
       introSection,
       fileFormatSection,
       metadataAndPropsSection,
+      datesSection,
       linkFieldVocabularySection,
       dependenciesAndParamsSection,
       showingFilesSection,
@@ -350,6 +327,7 @@ export function generateViewsDoc(): string {
       reportingActivitySection,
       examplesSection,
       testingSection,
+      controlsSection,
       stylingAndErrorsSection,
     ].join("\n\n") + "\n"
   );

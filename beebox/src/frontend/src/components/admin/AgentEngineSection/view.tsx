@@ -10,6 +10,7 @@ import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared
 import { AGENT_ENGINES, providerOf, type AgentEngine } from "@shared/agent-models.js";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { piDefaultFor, piMissing } from "./pi";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 const DESCRIPTION =
   "Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine keep using it; legacy chats default to Claude.";
@@ -83,7 +84,7 @@ export function AgentEngineSection() {
   if (config.isLoading) {
     return (
       <AdminSectionCard id="agent-engine" description={DESCRIPTION} busy>
-        <Hint>Loading agent engine…</Hint>
+        <StatusMessage variant="inline" busy>Loading agent engine…</StatusMessage>
       </AdminSectionCard>
     );
   }
@@ -175,7 +176,7 @@ export function AgentEngineSection() {
       ) : null}
 
       {update.isPending ? (
-        <div role="status"><Hint>Saving…</Hint></div>
+        <Hint>Saving…</Hint>
       ) : null}
       {update.isSuccess ? (
         <div role="status"><Text size="sm" tone="emphasis">Saved.</Text></div>

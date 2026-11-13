@@ -18,6 +18,7 @@ import {
 } from "../../../src/core/chat/session/transcript-paths.js";
 import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -58,7 +59,10 @@ void test("No binding is the box root:", async (t) => {
 // plausible — it falls back to the box root, so the transcript it names is simply
 // not found rather than read from somewhere else:
 void test("A row that climbs out of the box does not get clamped into something plausibl...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   t.check(containedSessionCwd("/tmp/test-box", "../../etc"), "/tmp/test-box");
+  // The log names the row that tried to leave the box:
+  t.check(warnings(), ["[chat-history] contextDir ../../etc escapes the box; reading from the box root instead"]);
 });
 
 // A leading slash does not make it absolute — `path.join` reads it as

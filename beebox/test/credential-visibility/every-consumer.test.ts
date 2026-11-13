@@ -23,7 +23,7 @@
 // leave every cell as it is; a change to a cell is a policy change and gets its
 // own commit and reason.
 
-import { test } from "tap";
+import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
@@ -54,6 +54,11 @@ import { compileView } from "../../src/webapp/views/compiler/compile.js";
 import { checkViews } from "../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
+import { createCodexCliService } from "../../src/services/codex-cli/core.js";
+import { packageManagerEnvironment } from "../../src/lib/package-manager-env.js";
+import { engineChildEnvironment } from "../../src/core/script-env/core.js";
+import { browserHostEnvironment } from "../../src/core/browser/host/start.js";
 
 /** Every credential name in the matrix. The last is listed nowhere in `src/`. */
 const NAMES = [
@@ -122,6 +127,14 @@ const COLUMNS = [
   "status", "statusNoBox", "login", "logout",
   // The gws connector CLI.
   "gws",
+  // A box's own Git hook, run by a commit the server makes (`commitPaths`).
+  "hook",
+  // The Codex CLI's own status command.
+  "codexCli",
+  // `pnpm install`/`npx`, and the engine children of `bbx upgrade` and `bbx migrate`.
+  "pkgMgr", "engine",
+  // The box browser host (`core/browser/host/start.ts`), which runs agent-browser.
+  "browserHost",
   "warm",
 ] as const;
 type Column = (typeof COLUMNS)[number];
@@ -163,6 +176,7 @@ function tableCells(): Record<string, Readonly<Record<CredentialConsumer, Creden
 function observedTable(seen: {
   of: (env: Env | null | undefined) => (name: string) => string;
   hubChild: Env; agent: Env; tooling: Env; additions: Array<Env | null>;
+  claudeAuth: Env; gws: Env; git: Env; packageManager: Env; engineChild: Env;
 }): Record<string, Record<CredentialConsumer, CredentialVisibility>> {
   const visibility = (code: string): CredentialVisibility => CODE_VISIBILITY.get(code) ?? "deny";
   const claudeAdded = (name: string): CredentialVisibility => {
@@ -174,6 +188,11 @@ function observedTable(seen: {
     agent: visibility(seen.of(seen.agent)(name)),
     tooling: visibility(seen.of(seen.tooling)(name)),
     claudeEngine: claudeAdded(name),
+    claudeAuth: visibility(seen.of(seen.claudeAuth)(name)),
+    gws: visibility(seen.of(seen.gws)(name)),
+    git: visibility(seen.of(seen.git)(name)),
+    packageManager: visibility(seen.of(seen.packageManager)(name)),
+    engineChild: visibility(seen.of(seen.engineChild)(name)),
   }]));
 }
 
@@ -218,6 +237,32 @@ export default function Env() {
   const reported = /ENV:(.*)/.exec(error)?.[1];
   if (reported === undefined) throw new Error(`the render child did not report its environment: ${error}`);
   return { viewMeta, viewRender: asEnv(JSON.parse(reported)) };
+}
+
+/** The environment gws is spawned with, read from a stand-in `spawn`. */
+async function gwsEnvironment(t: Test): Promise<Env> {
+  let gws: Env = {};
+  const { runReadOnlyGws } = await t.mockImport("../../src/connectors/gmail/gws.ts", {
+    "node:child_process": { spawn: (...args: [string, string[], { env?: unknown }]) => {
+      gws = asEnv(args[2].env);
+      const child = Object.assign(new EventEmitter(), { stdout: new PassThrough(), stderr: new PassThrough() });
+      setImmediate(() => child.emit("close", 0, null));
+      return child;
+    } },
+  });
+  await runReadOnlyGws({ args: ["gmail", "users", "messages", "list"], auth: { getAccessToken: async () => "minted-google-token" } });
+  return gws;
+}
+
+/** The environment a box's own pre-commit hook receives from a commit the server makes. */
+async function hookEnvironment(t: Test, bin: string): Promise<Env> {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await rm(join(box.root, ".git/hooks/pre-commit"), { force: true });
+  await symlink(await envRecorder(bin, { name: "pre-commit" }), join(box.root, ".git/hooks/pre-commit"));
+  await writeFile(join(box.root, "hooked.md"), "x\n");
+  await stageAndCommitPaths(box.root, { paths: ["hooked.md"], message: "hook env" });
+  return recorded(bin, "pre-commit");
 }
 
 void test("Which process sees which credential variable", async (t) => {
@@ -330,16 +375,15 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
   const logout = await recorded(bin, "logout");
 
   // --- gws: its child is replaced by one that records the env it was given. ---
-  let gws: Env = {};
-  const { runReadOnlyGws } = await t.mockImport("../../src/connectors/gmail/gws.ts", {
-    "node:child_process": { spawn: (...args: [string, string[], { env?: unknown }]) => {
-      gws = asEnv(args[2].env);
-      const child = Object.assign(new EventEmitter(), { stdout: new PassThrough(), stderr: new PassThrough() });
-      setImmediate(() => child.emit("close", 0, null));
-      return child;
-    } },
-  });
-  await runReadOnlyGws({ args: ["gmail", "users", "messages", "list"], auth: { getAccessToken: async () => "minted-google-token" } });
+  const gws = await gwsEnvironment(t);
+
+  // --- A pre-commit hook in a box, fired by a server-side commit. ---
+  const hook = await hookEnvironment(t, bin);
+
+  // --- Codex status through the BBX_CODEX_BINARY recorder; the package-manager and engine-child environments. ---
+  await createCodexCliService().authStatus();
+  const codexCli = await recorded(bin, "codex");
+  const [pkgMgr, engine, browserHost] = [packageManagerEnvironment(), engineChildEnvironment(), browserHostEnvironment()];
 
   // --- Warm slot: does a difference in this name alone refuse the slot? ---
   const warm = (name: string) => {
@@ -363,36 +407,40 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
     viewMeta: of(viewMeta), viewRender: ofViewBox(viewRender),
     status: of(status), statusNoBox: of(statusNoBox), login: of(login), logout: of(logout),
     gws: of(gws),
+    hook: of(hook), codexCli: of(codexCli), pkgMgr: of(pkgMgr), engine: of(engine), browserHost: of(browserHost),
     warm,
   }), [
-    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | viewMeta viewRender | status statusNoBox login logout | gws | warm
-    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - - - J - I I I c",
-    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - - - I I I I I -",
-    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - - - I I I I I c",
-    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - - - I I I I I c",
-    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - - - I I I I I -",
-    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J - J I I I I I -",
-    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - - - I I I I I -",
-    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - - - I I I I J -",
-    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
-    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - - - I I I I I -",
-    "GEMINI_KEY                       - - - - - - - - - - - - - - - - - I I I I I -",
-    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - - - I I I I I -",
-    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - - - I I I I I -",
-    "CODEX_API_KEY                    - - - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - - - I I I I I -",
+    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | viewMeta viewRender | status statusNoBox login logout | gws | hook | codexCli | pkgMgr engine | browserHost | warm
+    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - - - J - - - - - - - - - c",
+    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - - - - - - - - - - - - - -",
+    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - - - - - - - - - - - - - c",
+    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - - - - - - - - - - - - - c",
+    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J - J - - - - - - - - - - -",
+    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - - - - - - - J - - - - - -",
+    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GEMINI_KEY                       - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "CODEX_API_KEY                    - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
   ]);
 
   // The table in `lib/credential-env.ts` says what these processes do.
-  t.check(tableCells(), observedTable({ of, hubChild, agent, tooling, additions: [addFirst, addGlm, addOR] }));
+  t.check(tableCells(), observedTable({
+    of, hubChild, agent, tooling, additions: [addFirst, addGlm, addOR],
+    claudeAuth: status, gws, git: hook, packageManager: pkgMgr, engineChild: engine,
+  }));
 });

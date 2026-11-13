@@ -27,8 +27,8 @@ export interface ToggleProps {
 export function Toggle({ checked, id, onChange, disabled, label, className }: ToggleProps) {
   disabled = disabled ?? false;
   const classes = cn(
-    "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-    checked ? "bg-success" : "bg-warm-300",
+    // h-6 keeps the hit area at 24 px; the 20 px pill is the inner span.
+    "group relative inline-flex h-6 w-9 shrink-0 items-center rounded-full -my-0.5",
     disabled ? "opacity-50" : "",
     className,
   );
@@ -45,7 +45,12 @@ export function Toggle({ checked, id, onChange, disabled, label, className }: To
       className={classes}
     >
       <span
-        className="inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
+        aria-hidden="true"
+        className={cn("absolute inset-x-0 top-0.5 h-5 rounded-full transition-colors", checked ? "bg-success" : "bg-warm-300")}
+      />
+      <span
+        aria-hidden="true"
+        className="relative inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
         style={{ transform: checked ? "translateX(18px)" : "translateX(2px)" }}
       />
     </button>

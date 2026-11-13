@@ -9,13 +9,12 @@
  */
 
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { href, toSearch } from "../../lib/routing";
+import { toSearch } from "../../lib/routing";
+import { ButtonLink } from "../ui/Button";
 import { SessionRow, type SessionRowItem } from "../session-pickers/SessionRow";
 import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
 import { Hint } from "../ui/Hint";
-import { ChevronIcon } from "./ChevronIcon";
+import { ExpanderButton } from "./ChevronIcon";
 
 export function LandmarkSessions({
   bucket,
@@ -44,16 +43,7 @@ export function LandmarkSessions({
 
       {hasOlder ? (
         <Stack gap="xs">
-          <button
-            type="button"
-            onClick={() => setShowOlder((v) => !v)}
-            aria-expanded={showOlder}
-            className="flex items-center gap-2 self-start px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
-          >
-            <ChevronIcon open={showOlder} />
-            <Text as="span" size="sm">Show older</Text>
-            <Text as="span" size="xs" tone="muted">{bucket.olderSessions.length}</Text>
-          </button>
+          <ExpanderButton open={showOlder} onToggle={() => setShowOlder((v) => !v)} label="Show older" count={bucket.olderSessions.length} />
           {showOlder ? (
             <Stack gap="xs">
               {bucket.olderSessions.map((s) => (
@@ -64,13 +54,9 @@ export function LandmarkSessions({
         </Stack>
       ) : null}
 
-      <Link
-        to={href(`/${boxSlug}/chat`)}
-        search={toSearch({ session: "new", contextDir: bucket.dir })}
-        className="self-start px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
-      >
+      <ButtonLink to={`/${boxSlug}/chat`} search={toSearch({ session: "new", contextDir: bucket.dir })} size="sm" className="self-start">
         New chat
-      </Link>
+      </ButtonLink>
     </Stack>
   );
 }

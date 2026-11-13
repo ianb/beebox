@@ -6,7 +6,7 @@
  */
 
 import { errorMessage } from "@shared/error-guards";
-import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
@@ -27,15 +27,18 @@ import {
   refToTarget,
   type ViewHost,
   type ResolvedRef,
+  type RenderInline,
 } from "../../lib/view-host";
 import { type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { viewSlugFromSourcePath } from "../../lib/view-source-path";
 import { type ViewState } from "../../lib/view-url";
 import type { ViewHistory, ViewLayout } from "@core/views/types.js";
 import { useViewHistory } from "../../hooks/useViewHistory";
+import { StatusMessage } from "../ui/StatusMessage";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
 import "../view-widgets/window-globals";
+import { Notice } from "../ui/Notice";
 /** View card data from the API */
 interface ViewCard {
   path: string;
@@ -68,6 +71,8 @@ interface ViewProps extends ViewFileHelpers {
    * the companion pane (inline/page renders don't accumulate).
    */
   reportActivity: (kind: ActivityKind, detail?: string) => void;
+  /** `"strip"` when drawn in the conversation strip, else `"page"`. */
+  mode: "page" | "strip";
 }
 
 /**
@@ -120,6 +125,8 @@ interface AgentViewRendererProps {
    * area already supplies the inset — so the view's own layout is not applied.
    */
   embedded: boolean;
+  /** The surface mode the view receives as its `mode` prop. */
+  viewMode: "page" | "strip";
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
   viewState?: ViewState | null;
@@ -139,7 +146,7 @@ interface AgentViewRendererProps {
    * by the mount site (which owns FileView) so AgentAgentViewRenderer never imports
    * FileView (that would form a value-import cycle). Omitted → expand is a no-op.
    */
-  renderInline?: (target: ViewTarget) => ReactNode;
+  renderInline?: RenderInline<ViewTarget>;
 }
 
 /**
@@ -164,19 +171,19 @@ function buildViewHost(args: {
   boxSlug: string | undefined;
   basePath: string;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline?: (target: ViewTarget) => ReactNode;
+  renderInline?: RenderInline<ViewTarget>;
 }): ViewHost {
   const { boxSlug, basePath, onNavigate, renderInline } = args;
   return {
     openCard: makeOpenCard(onNavigate, basePath),
     useResolvedRef: useBrowserResolvedRef,
-    renderInline: (cardRef) => {
+    renderInline: (cardRef, opts) => {
       const target = refToTarget(cardRef, basePath);
       // A box-escaping ref has no file to inline; the chip that owns this
       // expansion already shows its own `missing` badge (the resolver reports
       // exists:false for escapes), so rendering nothing here isn't silent.
       if (target === null || renderInline === undefined) return null;
-      return renderInline(target);
+      return renderInline(target, opts);
     },
     basePath,
     boxSlug: boxSlug || "",
@@ -225,7 +232,7 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -233,11 +240,17 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
   const viewParams = params || {};
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
-  const [mod, setMod] = useState<ViewModule | null>(null);
-  const [cards, setCards] = useState<ViewCard[]>([]);
-  const [files, setFiles] = useState<ViewFile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Each result records the slug it was loaded for. The view mounts once both
+  // match the current slug; a params change then refetches cards behind the
+  // mounted view, which keeps its React state and its scroll position. The
+  // view gets the params its cards were loaded for, so new params never arrive
+  // with the old params' cards.
+  const [loadedModule, setLoadedModule] = useState<{ slug: string; mod: ViewModule } | null>(null);
+  const [loadedCards, setLoadedCards] = useState<{ slug: string; params: Record<string, string>; cards: ViewCard[]; files: ViewFile[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mod = loadedModule?.slug === slug ? loadedModule.mod : null;
+  // The newest cards request; a slower response for older params is dropped.
+  const latestCardsUrl = useRef("");
   // Cache-bust suffix for re-imports — set on first load and bumped per
   // reload. Initial value is 0; the first `loadModule()` writes a real
   // timestamp. Was `useRef(Date.now())` but the react-hooks/purity rule
@@ -257,7 +270,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       const imported = await import(
         /* @vite-ignore */ `${apiBase}/views/${slug}/module.js?v=${versionRef.current}`
       ) as ViewModule;
-      setMod(imported);
+      setLoadedModule({ slug, mod: imported });
       setError(null);
       // Bump *after* the new module is in so the boundary's reset and the
       // fixed component land in the same render — bumping before the await
@@ -270,38 +283,26 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   const paramsString = JSON.stringify(viewParams);
   const loadCards = useCallback(async (opts?: { refetch?: boolean }) => {
+    let url = "";
     try {
       const qs = new URLSearchParams(viewParams).toString();
-      const url = qs ? `${apiBase}/views/${slug}/cards?${qs}` : `${apiBase}/views/${slug}/cards`;
+      url = qs ? `${apiBase}/views/${slug}/cards?${qs}` : `${apiBase}/views/${slug}/cards`;
+      latestCardsUrl.current = url;
       const data = opts?.refetch
         ? await cardsFetchCache.refetch(url, () => fetchCardsJson(url))
         : await cardsFetchCache.load(url, () => fetchCardsJson(url));
-      setCards(data.cards);
-      setFiles(data.files);
+      if (latestCardsUrl.current !== url) return;
+      setLoadedCards({ slug, params: viewParams, cards: data.cards, files: data.files });
     } catch (e) {
-      setError(errorMessage(e));
+      if (latestCardsUrl.current === url) setError(errorMessage(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, slug, paramsString]);
 
-  // Initial load. setLoading(true) is intentionally synchronous here so
-  // the spinner shows before the awaits resolve; the trailing
-  // setLoading(false) lands after Promise.all settles.
-
-  useEffect(() => {
-    setLoading(true);
-    // Both loadModule/loadCards catch their own errors into `error` state, so
-    // this can't actually reject -- but if something unexpected did throw,
-    // failing to clear `loading` here would leave the spinner stuck forever.
-    Promise.all([loadModule(), loadCards()])
-      .then(() => {
-        setLoading(false);
-      })
-      .catch((e: unknown) => {
-        console.error("[AgentViewRenderer] unexpected load failure:", e);
-        setLoading(false);
-      });
-  }, [loadModule, loadCards]);
+  // Both loaders catch their own errors into `error`. The module reloads only
+  // for a new slug; new params refetch only the cards.
+  useEffect(() => { void loadModule(); }, [loadModule]);
+  useEffect(() => { void loadCards(); }, [loadCards]);
 
 
   // Live updates from the box event stream. Cards reload through
@@ -345,28 +346,23 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
     }
   }, [boxSlug, navigate]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8 text-gray-500">
-        Loading view...
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
-        <h3 className="text-danger-dark font-medium mb-2">View Error</h3>
+      <Notice tone="error">
+        <h3 className="font-medium mb-2">View Error</h3>
         <Pre size="sm" error>{error}</Pre>
-      </div>
+      </Notice>
     );
   }
 
-  if (!mod) {
+  if (!mod || loadedCards?.slug !== slug) {
     return (
-      <div className="text-gray-500 p-4">View not found: {slug}</div>
+      <StatusMessage busy className="flex items-center justify-center">
+        Loading view…
+      </StatusMessage>
     );
   }
+  const { params: loadedParams, cards, files } = loadedCards;
 
   const Component = mod.default;
   // The card surface owns chat-mode height and scrolling; this applies only
@@ -377,7 +373,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
   // The view host the card widgets (CardLink/CardRef) consume.
   const viewHost = buildViewHost({
     boxSlug,
-    basePath: viewParams.path ?? "",
+    basePath: loadedParams.path ?? "",
     onNavigate,
     renderInline,
   });
@@ -392,9 +388,10 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
             {...activityHelpers}
             navigate={viewNavigate}
             boxSlug={boxSlug || ""}
-            params={viewParams}
+            params={loadedParams}
             viewHistory={viewHistory}
             reportActivity={report}
+            mode={viewMode}
           />
         </ViewHostProvider>
       </ViewErrorBoundary>

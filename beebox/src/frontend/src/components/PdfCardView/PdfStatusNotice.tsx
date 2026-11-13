@@ -31,7 +31,7 @@ export function PdfStatusNotice({
   if (unusable) {
     return (
       <div className="p-3 bg-warm-100 border border-warm-200 rounded" role="status">
-        <Text as="p" size="sm" tone="subtle">
+        <Text as="p" size="sm" tone="subtle" material={false}>
           This document was marked unusable (corrupt, junk, or an empty scan).
         </Text>
       </div>
@@ -53,7 +53,7 @@ export function PdfStatusNotice({
   if (extracted && !hasBody) {
     return (
       <div className="p-3 bg-warm-100 border border-warm-200 rounded" role="status">
-        <Text as="p" size="sm" tone="subtle">
+        <Text as="p" size="sm" tone="subtle" material={false}>
           No readable text in this document — see the original or the page renders.
         </Text>
       </div>

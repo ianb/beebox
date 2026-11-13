@@ -1,0 +1,22 @@
+slug: periodic-trends-2
+title: "Periodic trends explorer, rerun on per-call styles, text boxes and inputs over the canvas"
+created: 2026-11-12
+model: opus-5.5
+driver: opus-5.5
+cycles: 5
+tier: tea
+harness-commit: 70fcfacb
+frames: 721
+seed: 42
+fps: 60
+every: 1000
+reconstructed: false
+audit: >
+  Rerun of periodic-trends with the improved library and a 16-cycle budget; controls in the drawing, linked hover and selection, keyboard selection, exception notes. Stopped: satisfied. Element values are from memory of the cited tables, not fetched.
+self-report-summary: >
+  Per-call styles and text options removed the alignment leaks of the first run; wanted text-overlap warnings, a typecheck on run, and scale/axis and colour-ramp helpers.
+features-exercised:
+  - v.control
+  - v.text fit
+  - keyboard msgs
+  - sibling -tea helper files
