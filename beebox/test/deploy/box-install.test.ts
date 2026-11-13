@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, readlink, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -40,6 +40,10 @@ async function setup() {
   await mkdir(bin);
   await mkdir(join(engine, "bin"), { recursive: true });
   await mkdir(boxes);
+  // The engine names two bins; box-engine-link is a plain file in bin/.
+  await writeFile(join(engine, "package.json"), JSON.stringify({ name: "beebox", bin: { bbx: "./bin/bbx", tool: "./bin/tool" } }));
+  await mkdir(join(engine, "dist"));
+  for (const name of ["bbx", "tool"]) await writeFile(join(engine, "bin", name), "#!/usr/bin/env bash\n");
   for (const [name, body] of Object.entries(stubs)) {
     const file = name === "box-engine-link" ? join(engine, "bin", name) : join(bin, name);
     await writeFile(file, body);
@@ -70,7 +74,7 @@ async function setup() {
     const past = (Date.now() - seconds * 1000) / 1000;
     await utimes(file, past, past);
   }
-  return { root, boxes, run, box, stampAge, age };
+  return { root, engine, boxes, run, box, stampAge, age };
 }
 
 void test("A box with no install on record is installed once and then left alone", async (t) => {
@@ -130,7 +134,7 @@ void test("A stamp is written only after an install that exited 0 and verified",
     {
       code: 0,
       stamps: { failing: null, unverified: null, fine: true },
-      stderr: "ERROR failing: pnpm install exited nonzero; check for real dependency errors above (a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else is not).\n  ERROR unverified: the box has no usable engine after install.",
+      stderr: "ERROR failing: pnpm install exited nonzero; see its output above.\n  ERROR unverified: the box has no usable engine after install.",
     },
   );
 
@@ -167,6 +171,41 @@ void test("A box without a manifest yet and a box whose link fails are skipped, 
     { code: result.code, calls: result.calls, stderr: result.stderr },
     { code: 0, calls: ["link unlinked as=bbx-unlinked", "link z as=bbx-z", "install z ci=true", "verify z as=bbx-z"], stderr: "ERROR unlinked: could not link .beebox/engine; skipping its install." },
   );
+});
+
+// pnpm chmods each bin target it links, and only the owner may: the engine is
+// owned by another account, so a box links a shim whose named bins are its own
+// scripts and whose other entries are symlinks into the engine.
+void test("Each box links a box-owned engine shim whose named bins exec the engine's", async (t) => {
+  const s = await setup();
+  t.teardown(() => rm(s.root, { recursive: true, force: true }));
+  const a = await s.box("a");
+  await s.run();
+  const shim = join(s.boxes, "a", ".beebox-engine-a");
+  t.check(
+    {
+      entries: (await readdir(shim)).toSorted(),
+      bin: (await readdir(join(shim, "bin"))).toSorted(),
+      dist: await readlink(join(shim, "dist")),
+      linkCheck: await readlink(join(shim, "bin", "box-engine-link")),
+      bbx: await readFile(join(shim, "bin", "bbx"), "utf8"),
+      mode: ((await stat(join(shim, "bin", "bbx"))).mode & 0o777).toString(8),
+    },
+    {
+      entries: ["bin", "dist", "package.json"],
+      bin: ["bbx", "box-engine-link", "tool"],
+      dist: join(s.engine, "dist"),
+      linkCheck: join(s.engine, "bin", "box-engine-link"),
+      bbx: `#!/bin/sh\nexec '${join(s.engine, "bin", "bbx")}' "$@"\n`,
+      mode: "750",
+    },
+  );
+
+  // The next pass builds the other slot, so the live link never points at a half-built shim.
+  await mkdir(join(a, ".beebox"), { recursive: true });
+  await symlink(shim, join(a, ".beebox", "engine"));
+  await s.run();
+  t.check((await readdir(join(s.boxes, "a"))).filter((n) => n.startsWith(".beebox-engine")).toSorted(), [".beebox-engine-a", ".beebox-engine-b"]);
 });
 
 void test("Wrong arguments exit 2 with usage", async (t) => {

@@ -62,8 +62,10 @@ so a v2 box can only come from an old backup and cannot be opened. See
 
 The `beebox` dependency is `"link:.beebox/engine"`, the same value on every
 machine. `.beebox/engine` is a gitignored symlink to the engine this machine
-runs the box with: `bbx init` points it at the running engine, deploy at
-`/opt/beebox/beebox`, worktree setup at the worktree's `beebox/`, and the
+runs the box with: `bbx init` points it at the running engine, deploy at a
+box-owned shim of `/opt/beebox/beebox` beside the box (the box's user cannot
+chmod the engine's bins, which `pnpm install` does; see
+`deploy/server-bin/bbx-box-install`), worktree setup at the worktree's `beebox/`, and the
 docker entrypoint at `/app/node_modules/beebox`. Each install path runs
 `bin/box-engine-link` to make the link before `pnpm install` and to check
 `node_modules/beebox` after. A clone needs the link before its first install

@@ -490,12 +490,9 @@ ssh "$SSH_TARGET" "mkdir -p '$STAGE_DIR'"
 RSYNC_OPTS=(-az --delete
   # rsync runs as root over ssh, and -a preserves the sender's (local dev
   # machine's) numeric uid/gid by default. Without this, /opt/beebox ends
-  # up owned by the deploying laptop's local uid — harmless for reads, but
-  # `beebox` (the account every box's `pnpm install` runs as, via the
-  # box's `.beebox/engine` → /opt/beebox/beebox link — see docs/box-layout.md)
-  # can't chmod a bin file it doesn't own, so pnpm's redundant "make sure
-  # this bin is executable" step during `_linkBins` throws EPERM and the
-  # whole install exits nonzero even though every real package resolved.
+  # up owned by the deploying laptop's local uid; the tree belongs to
+  # `beebox` (the chown pass below). Box installs never chmod it: each box
+  # links a box-owned engine shim (deploy/server-bin/bbx-box-install).
   # --chown isn't available in the local macOS rsync (openrsync, no 3.1+
   # extensions) — --no-owner --no-group plus an explicit chown pass below
   # is the portable equivalent.
