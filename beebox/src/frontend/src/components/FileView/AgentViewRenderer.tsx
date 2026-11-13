@@ -331,8 +331,10 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, viewMode, params, v
   useLiveRefresh({ when: cardsChanged, refresh: refreshCards });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  // In the companion pane every call is logged under the pane's card; elsewhere it is a no-op.
-  const report = useCardActivityReporter(usePaneCard());
+  // In the companion pane every call is logged under the card the view renders
+  // (its bound `path`, else the pane's card), with `via` when embedded; elsewhere a no-op.
+  const paneCard = usePaneCard();
+  const report = useCardActivityReporter(viewParams.path ?? paneCard);
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewHistory = useViewHistory({ slug, state: viewState, canPush: canPushViewState, onChange: onViewStateChange });

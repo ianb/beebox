@@ -23,7 +23,7 @@ import { withoutFragment } from "../../../../lib/view-url";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
-import { useCardActivityReporter } from "../../../../lib/activity/scope";
+import { useActivityLogger } from "../../../../lib/activity/scope";
 import { useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
 
 interface CardCallbacks {
@@ -31,7 +31,8 @@ interface CardCallbacks {
 }
 
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
-  const reportActivity = useCardActivityReporter(tab.target.path);
+  // The card element sits above its own PaneScope, so it logs with its path directly.
+  const logActivity = useActivityLogger();
   const logScrollHeading = useHeadingScrollLog(tab.target.path);
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
@@ -48,7 +49,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
     onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
     onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
     onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
-    onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
+    onNavigate={(target, hint) => { logActivity({ card: tab.target.path, kind: "navigated", detail: target.path }); workspace.open(target, { ...hint, originatingPane: pane }); }}
     onAddSelection={onAddSelection} />;
   // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
