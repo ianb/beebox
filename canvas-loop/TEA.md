@@ -191,6 +191,8 @@ v.path(commands, style)                 v.curve(points, closed, style)
 v.text(s, { x, y, w?, h? }, options)    // returns the bounds drawn
 v.textBounds(s, { x, y, w?, h? }, options) // the same bounds, nothing drawn
 v.textWidth(s, options)                 // width in logical pixels
+u.textBounds(s, { x, y, w?, h? }, options) // in init and update: the same, without v.at
+u.textWidth(s, options)
 ```
 
 | Option | Default |
@@ -210,13 +212,20 @@ v.textWidth(s, options)                 // width in logical pixels
 
 - One line with no `w` draws at (x, y): `align` places it about `x` and
   `valign` about `y`. `"baseline"` puts the alphabetic baseline on `y`.
-- With `w`, lines wrap at word breaks to the box width. With `h`, `valign`
-  places the lines inside the box.
+- With `w`, `x` is the box's left edge (not an anchor) and lines wrap at word
+  breaks to the box width; `align` places each line inside the box. With `h`,
+  `valign` places the lines inside the box.
 - The bounds are `{ x, y, w, h, lines, size, overflow }`. `overflow` is true
   when the text does not fit the box.
 - Which fonts exist depends on the machine. Use common families.
 - Use `textBounds` to place a label before drawing it, for example to move it
-  clear of another label or to size a backing box. A `halo` in the background
+  clear of another label or to size a backing box.
+- `u.textBounds` and `u.textWidth` measure in `init` and `update`, so a hit
+  area or tile can be sized to its label instead of a guessed constant. They
+  give exactly what `draw` then gets for the same text at no `v.at` transform.
+  Measure when you need it rather than storing widths in the model: widths
+  are cached, and a web font that loads later changes them. Headless runs and
+  a browser can measure the same font slightly differently. A `halo` in the background
   color keeps a label readable where it crosses a line.
 - The run warns, once per pair of texts, when two different texts overlap in
   a frame (the same text twice, as for a shadow, is not reported). A rotated

@@ -163,6 +163,17 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * a `note` voice: `u.scaleNote(model.count)`.
    */
   scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string;
+  /**
+   * The width `v.text` gives `content` with these options, measured without
+   * drawing (cached), so hit areas and layout in `update` match what `draw` shows.
+   */
+  textWidth(content: string, options?: TextOptions): number;
+  /**
+   * The bounds `v.text(content, box, options)` would draw, measured without
+   * drawing: wrapping, `fit` and `keepInside` included, as for text drawn
+   * without a `v.at` transform.
+   */
+  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
 }
 
 /**

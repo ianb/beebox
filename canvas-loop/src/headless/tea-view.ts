@@ -3,7 +3,7 @@ import { scaleNote } from "../core/sound/notes.js";
 import type { ScaleName } from "../core/sound/notes.js";
 import { controlModels } from "../browser/controls-model.js";
 import type { ControlModel } from "../browser/controls-model.js";
-import type { Style } from "../core/paint.js";
+import type { Style, TextBounds, TextBox, TextOptions } from "../core/paint.js";
 import type { Painter } from "../core/painter/engine.js";
 import { PainterView } from "../core/view.js";
 import { recordOf } from "../core/records.js";
@@ -154,5 +154,13 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string {
     return scaleNote(step, options);
+  }
+
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#surface.painter.textWidth(content, options);
+  }
+
+  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    return this.#surface.painter.plainTextBounds(...args);
   }
 }

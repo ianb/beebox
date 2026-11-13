@@ -8,19 +8,25 @@ import { recordOf } from "../../core/records.js";
 import { SketchUsageError } from "../../headless/errors.js";
 import type { SeededRandom } from "../../core/prng.js";
 import type { ParamsDecl, ParamValues, Util } from "../../core/tea.js";
+import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
+import type { TextMeasure } from "../../core/view.js";
 
 export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
   #random: SeededRandom;
   #getParams: () => ParamValues<D>;
   #log: (args: readonly unknown[]) => void;
   #onHandled: (name: string) => void;
+  #text: () => TextMeasure;
 
   constructor(deps: {
     random: SeededRandom;
     getParams: () => ParamValues<D>;
     log: (args: readonly unknown[]) => void;
     onHandled: (name: string) => void;
+    /** The view's text measuring (the view is made after this Util). */
+    text: () => TextMeasure;
   }) {
+    this.#text = deps.text;
     this.#random = deps.random;
     this.#getParams = deps.getParams;
     this.#log = deps.log;
@@ -54,6 +60,14 @@ export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
 
   record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> {
     return recordOf(keys, value);
+  }
+
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#text().width(content, options);
+  }
+
+  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
+    return this.#text().bounds(...args);
   }
 
   handled(name: string): void {
