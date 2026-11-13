@@ -18,7 +18,7 @@ import { boxClient } from "../../../cli/lib/box-client.js";
 import { boxServerEnv } from "../../script-env/core.js";
 
 /** Reactor cycles a job-check run asks for: the reactor's own default. */
-export const TRIGGER_MAX_CYCLES = 3;
+const TRIGGER_MAX_CYCLES = 3;
 
 /** The answer a starter gives the pass. */
 export type JobCheckStart = Pick<WakeupStart, "state" | "detail">;

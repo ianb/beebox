@@ -9,13 +9,13 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** A put-away question with no box decision comes back for review after this long. */
-export const DISMISSED_REVIEW_AFTER_MS = 3 * MS_PER_DAY;
+const DISMISSED_REVIEW_AFTER_MS = 3 * MS_PER_DAY;
 /** A question still waiting for the person after this long comes back for review. */
-export const PENDING_REVIEW_AFTER_MS = 14 * MS_PER_DAY;
+const PENDING_REVIEW_AFTER_MS = 14 * MS_PER_DAY;
 /** A question reviewed within this window is not taken up again. */
 export const REVIEW_LATCH_WINDOW_MS = 14 * MS_PER_DAY;
 /** Most questions one brief carries; the rest stay eligible for later runs. */
-export const MAX_QUESTIONS_PER_REVIEW = 5;
+const MAX_QUESTIONS_PER_REVIEW = 5;
 
 /** One valid question card as selection sees it. */
 export interface ReviewCandidate {

@@ -10,7 +10,7 @@ const HOUR_MS = 60 * 60 * 1000;
 export const JOB_CHECK_RUNS_PER_DAY = 24;
 
 /** A job is retried for this long from when the check first saw it, then given up. */
-export const JOB_LIFETIME_MS = 7 * 24 * HOUR_MS;
+const JOB_LIFETIME_MS = 7 * 24 * HOUR_MS;
 
 /** What the check records per job file path. */
 export interface JobEntry {
@@ -99,7 +99,7 @@ export function dueJobs(state: JobCheckState, opts: { waiting: WaitingJob[]; pre
 }
 
 /** Runs the check has started today, counting from zero on a new box-local day. */
-export function runsOn(state: JobCheckState, today: string): number {
+function runsOn(state: JobCheckState, today: string): number {
   return state.day === today ? state.runsToday : 0;
 }
 

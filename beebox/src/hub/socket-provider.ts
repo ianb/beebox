@@ -56,7 +56,7 @@ export interface SocketBox {
 /** Injectable command runner: `systemctl` and `journalctl` in production, a fake in tests. */
 export type CommandRunner = (command: string, args: string[]) => Promise<string>;
 
-export const defaultCommandRunner: CommandRunner = async (command, args) => (await run(command, args, { timeout: 10_000 })).stdout;
+const defaultCommandRunner: CommandRunner = async (command, args) => (await run(command, args, { timeout: 10_000 })).stdout;
 
 export interface SocketProviderOptions {
   config: HubConfig;
@@ -72,7 +72,7 @@ const READY_TIMEOUT_MS = 30_000;
 const PROBE_TIMEOUT_MS = 2_000;
 const READY_POLL_MS = 100;
 
-export async function defaultProbe(endpoint: Endpoint): Promise<boolean> {
+async function defaultProbe(endpoint: Endpoint): Promise<boolean> {
   const key = process.env.BBX_DIAG_API_KEY;
   try {
     const response = await fetchEndpoint(endpoint, {

@@ -43,7 +43,11 @@ visible in its own diff:
 - **Merge `main` first**, then run `pnpm -C beebox test` (the FULL suite, not
   `test:changed` — a deletion's consumer is exactly what change-selection does
   not know about) plus `pnpm -C beebox typecheck` and `pnpm lint`. Land only on
-  green.
+  green, except for a red that `main` already has.
+- **A red that `main` already has does not block.** Rerun the failing test file
+  or lint target in the main checkout. If it fails there with the same error,
+  land anyway. Name the failure in your alert, and find or file one issue for
+  it. Block only on failures your changes cause.
 - **Land with `bin/land`.** It can legitimately refuse (the main checkout must
   be clean and on `main`, the merge a fast-forward). That is not a failure to
   work around: the commits are safe on this branch, so alert `normal`, say so,

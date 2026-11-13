@@ -31,7 +31,7 @@ const PROMPT = [
   "Do not edit any file. Return only the structured result.",
 ].join("\n");
 
-export const defaultCompileAgent: CompileAgent = async ({ boxRoot, snapshotFile }) => {
+const defaultCompileAgent: CompileAgent = async ({ boxRoot, snapshotFile }) => {
   const model = await loadEffectiveBoxModel(boxRoot);
   const result = await createAgent({ name: "triage-compile" }).invokeStructured(compileOutputSchema, {
     // The snapshot file carries the rules; box context would only add cost. Cards are read with tools.

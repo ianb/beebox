@@ -194,12 +194,12 @@ export async function listSnapshots({ repository, passwordFile, backupId, timeou
   }).filter((snapshot) => backupId === undefined || snapshot.tags.includes(`bbx-backup:${backupId}`));
 }
 
-export class BackupMaintenanceError extends Error { constructor(reason: string) { super(`Backup cannot start: unfinished box maintenance (${reason})`); this.name = "BackupMaintenanceError"; } }
+class BackupMaintenanceError extends Error { constructor(reason: string) { super(`Backup cannot start: unfinished box maintenance (${reason})`); this.name = "BackupMaintenanceError"; } }
 export class BackupRepositoryInsideBoxError extends Error { constructor(repository: string) { super(`Backup repository is inside the box being captured: ${repository}`); this.name = "BackupRepositoryInsideBoxError"; } }
 class MissingSecretStageError extends Error { constructor() { super("Backup inventory has no secret staging target"); this.name = "MissingSecretStageError"; } }
 class MissingSnapshotIdError extends Error { constructor() { super("restic backup did not return a snapshot id"); this.name = "MissingSnapshotIdError"; } }
 class InvalidSnapshotListError extends Error { constructor() { super("restic snapshots returned invalid JSON"); this.name = "InvalidSnapshotListError"; } }
-export class BackupRepositoryIdentityError extends Error { constructor() { super("Restic repository is not bound to this box identity; after a reinstall, inspect its snapshots and pass --backup-id <uuid> to adopt it"); this.name = "BackupRepositoryIdentityError"; } }
+class BackupRepositoryIdentityError extends Error { constructor() { super("Restic repository is not bound to this box identity; after a reinstall, inspect its snapshots and pass --backup-id <uuid> to adopt it"); this.name = "BackupRepositoryIdentityError"; } }
 class InvalidBackupIdError extends Error { constructor() { super("Backup identity must be a UUID from this box's restic snapshots"); this.name = "InvalidBackupIdError"; } }
 class UnitHostNetworkRepositoryError extends Error { constructor() { super("A unit-host backup requires a network repository reachable from its sandbox"); this.name = "UnitHostNetworkRepositoryError"; } }
 class UnitHostPasswordLocationError extends Error { constructor() { super("The password file must be under this box user's home on the unit host"); this.name = "UnitHostPasswordLocationError"; } }

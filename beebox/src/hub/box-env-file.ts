@@ -25,7 +25,7 @@ const PER_BOX: ReadonlySet<string> = new Set([
 ]);
 
 /** The host-wide paths a box unit uses (deploy/hetzner/cloud-init.yaml makes the directories). */
-export const BOX_HOST_ENV: Readonly<Record<string, string>> = {
+const BOX_HOST_ENV: Readonly<Record<string, string>> = {
   /** Tells `bbx host install` to record and stop (cli/commands/host.ts). */
   BBX_UNIT_HOST: "1",
   PATH: "/usr/local/bin:/usr/bin:/bin",

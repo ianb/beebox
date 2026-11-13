@@ -63,6 +63,10 @@ const config: KnipConfig = {
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
         "markdown-it",
+        // core/browser/host-process/agent-browser.ts resolves
+        // "agent-browser/package.json" with createRequire to find the pinned
+        // native binary; nothing imports the package.
+        "agent-browser",
       ],
     },
     "beebox/src/frontend": {
@@ -86,6 +90,10 @@ const config: KnipConfig = {
         // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
         // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).
         "happy-dom",
+        // Imported by beebox/src/shared/composition/merge.ts, which the
+        // frontend bundles through @shared/*; knip files that import under the
+        // beebox workspace, but the bundle is the frontend's.
+        "node-diff3",
       ],
     },
   },
@@ -116,6 +124,20 @@ const config: KnipConfig = {
     "du",
     // test/lib/typescript/syntax.test.ts counts its own child processes with `pgrep -P`.
     "pgrep",
+    // maintenance/controller.ts resolves a box owner's home with `getent passwd`.
+    "getent",
+    // box-backup/restic.ts runs the system restic.
+    "restic",
+    // bin/precommit-security.ts and bin/lib/schedules-lint.ts run the system
+    // shellcheck (the npm wrapper was dropped in 792b4cb69).
+    "shellcheck",
+    // triage/evidence/core.ts converts documents with the box-host pandoc
+    // (docker/Dockerfile); its test runs it too.
+    "pandoc",
+    // .husky/pre-commit runs `pnpm exec wxt prepare` inside beebox-clerk,
+    // which declares wxt; beebox-clerk is in ignoreWorkspaces, so knip
+    // attributes the call to the root.
+    "wxt",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // beebox package scripts, invoked across the workspace boundary:

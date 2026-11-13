@@ -25,7 +25,7 @@ import * as v8 from "node:v8";
 import { errnoCode } from "../../shared/error-guards.js";
 
 /** Fractions of the heap limit that write a profile, each once per process. */
-export const HEAP_THRESHOLDS = [0.5, 0.7, 0.85] as const;
+const HEAP_THRESHOLDS = [0.5, 0.7, 0.85] as const;
 
 const CHECK_MS = 10_000;
 const SAMPLE_MS = 60_000;
@@ -47,7 +47,7 @@ export interface MemoryReading {
   resources: number;
 }
 
-export function readMemory(): MemoryReading {
+function readMemory(): MemoryReading {
   const usage = process.memoryUsage();
   return {
     rss: usage.rss,
@@ -72,7 +72,7 @@ export interface HeapProfiler {
 }
 
 /** Start V8's sampling heap profiler in this process, or null when the inspector is unavailable. */
-export async function startHeapProfiler(): Promise<HeapProfiler | null> {
+async function startHeapProfiler(): Promise<HeapProfiler | null> {
   const session = new Session();
   try {
     session.connect();

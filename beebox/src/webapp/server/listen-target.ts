@@ -30,7 +30,7 @@ type ListenTargetProblem =
   | { reason: "fd-without-socket" };
 
 /** The serve options and the passed descriptors disagree; `reason` says how. */
-export class ListenTargetError extends Error {
+class ListenTargetError extends Error {
   readonly reason: ListenTargetProblem["reason"];
   constructor(problem: ListenTargetProblem) {
     super(

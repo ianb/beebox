@@ -24,14 +24,14 @@ import type { Quota } from "../../workstreams-app/src/shared/documents.js";
 type QuotaWindow = Quota["windows"][number];
 
 export const SOL = "gpt-6-sol";
-export const ASTRA = "gpt-6-astra";
+const ASTRA = "gpt-6-astra";
 const WEEK_MINUTES = 10_080;
 /** Room, in percentage points, at which Astra is affordable. */
-export const ASTRA_MIN_ROOM = 15;
+const ASTRA_MIN_ROOM = 15;
 /** Before this much of a window has elapsed, the pace is unknown. */
-export const EARLY_PERCENT = 100 / 7;
+const EARLY_PERCENT = 100 / 7;
 /** An early window with at most this much used still picks Astra. */
-export const EARLY_MAX_USED = 10;
+const EARLY_MAX_USED = 10;
 
 export interface WindowRoom {
   label: string;
@@ -91,7 +91,7 @@ export function pickCodexReviewModel(quota: Quota, now: Date): ModelPick {
 
 // ── review cost ledger ───────────────────────────────────────────────────────
 
-export const OUTCOMES = ["answered", "failed", "timed-out"] as const;
+const OUTCOMES = ["answered", "failed", "timed-out"] as const;
 
 export interface ReviewCostRow {
   at: string;
@@ -118,7 +118,7 @@ export function appendReviewCost(file: string, row: ReviewCostRow): void {
 }
 
 /** A ledger line that is not a review cost row. */
-export class LedgerRowError extends Error {
+class LedgerRowError extends Error {
   override name = "LedgerRowError";
   constructor(readonly line: string) {
     super("cross-model quota ledger has a malformed row");

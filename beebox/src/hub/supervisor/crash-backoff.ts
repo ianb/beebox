@@ -35,7 +35,7 @@ const MAX_BACKOFF_MS = 30_000;
  * is `BASE_BACKOFF_MS` in production and injectable per supervisor — see
  * `SupervisorOptions.baseBackoffMs` for why a test needs to move it.
  */
-export function backoffDelayMs(consecutiveFailures: number, baseMs: number): number {
+function backoffDelayMs(consecutiveFailures: number, baseMs: number): number {
   return Math.min(MAX_BACKOFF_MS, baseMs * 2 ** (consecutiveFailures - 1));
 }
 

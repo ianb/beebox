@@ -113,7 +113,7 @@ interface ResourceInput extends FetchInput {
 }
 
 /** Get bytes over HTTP, following only same-page redirects. The caller decodes. */
-export async function fetchResource({ url, from, fetchImpl, accept, accepts, noun, capBytes, timeoutMs }: ResourceInput): Promise<ResourceOutcome> {
+async function fetchResource({ url, from, fetchImpl, accept, accepts, noun, capBytes, timeoutMs }: ResourceInput): Promise<ResourceOutcome> {
   const request = fetchImpl ?? fetch;
   let current = webUrl(url);
   if (current === null) return { kind: "failed", message: `Not a web address: ${url}` };

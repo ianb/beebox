@@ -32,7 +32,7 @@ const SANDBOXED = /You are adequately sandboxed/;
  * The namespaced command. `$0` is the agent-browser binary; each step runs
  * only if the one before it passed, and `close` runs regardless.
  */
-export const SANDBOX_CHECK_SCRIPT = [
+const SANDBOX_CHECK_SCRIPT = [
   'ab="$0"',
   '"$ab" open chrome://sandbox && "$ab" wait --text "adequately sandboxed" && "$ab" get text body',
   "rc=$?",
