@@ -267,8 +267,10 @@ keys.
 - `v.paper({ scale, contrast, seed })` and `v.paperTexture(amount)`: see
   [BRUSHES.md](./BRUSHES.md#paper).
 - `v.control(name, box)`: see [Inputs over the canvas](#inputs-over-the-canvas).
-- `v.cursor(kind)`: the pointer's look over a browser figure. Headless, it
-  does nothing.
+- `v.cursor(kind)`: the pointer's look over a browser figure. It starts as
+  the normal arrow. Set `pointer` over something a tap acts on, `grab` over
+  something draggable, and back to `default` elsewhere. Headless, it does
+  nothing.
 - `v.debugBox(label, x, y, w, h)`: a labelled box drawn only with
   `run --outline`.
 - `v.log(...args)`: a frame-tagged transcript line. `console.log/warn/error`
