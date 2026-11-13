@@ -492,6 +492,17 @@ case "\$token_state" in
   *) echo "Secrets: the master store has no claude-oauth-token, so this box cannot run its agent until one is set and granted (docs/server/configuration.md)." ;;
 esac
 
+# The host's call relay (docs/plans/self-hosted-turn.md): one coturn for every
+# box, so a new box is granted turn-server whenever the master holds it. No
+# entry means this host runs no relay, and calls use Cloudflare TURN or STUN.
+relay_state=\$(node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{};const n="turn-server";process.stdout.write(!(n in (s.secrets??{}))?"absent":(n in (s.grants?.[process.argv[2]]??{}))?"granted":"grant")' "\$master_store" "$BOX_NAME")
+if [[ "\$relay_state" == grant ]]; then
+  if ! su - $BBX_USER -c "bbx engine secrets grant '$BOX_NAME' turn-server --agent-confirmed"; then
+    echo "Secrets: granting turn-server FAILED — stopping before the box is registered."
+    exit 1
+  fi
+fi
+
 # Re-chown everything (bbx engine init / the writes above ran as root in places).
 chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
 # The box's own secret store: its share of the hub user's master, verified.

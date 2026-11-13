@@ -60,6 +60,12 @@ export interface HealthReport {
   services: Record<string, string>;
 }
 
+/**
+ * The host's call relay (docs/plans/self-hosted-turn.md): whether the master
+ * store holds `turn-server`, coturn's unit state, and its package version.
+ */
+export interface RelayReport { configured: boolean; state: string; version: string | null }
+
 export interface MigrationStatus { box: string; status: Section<{ manifest: boolean; pending: string[]; questions: string[] }> }
 
 export interface DeployStatusReport {
@@ -68,7 +74,21 @@ export interface DeployStatusReport {
   lock: Section<LockState>;
   health: Section<HealthReport>;
   disk: Section<DiskHealth>;
+  relay: Section<RelayReport>;
   migrations: Section<MigrationStatus[]>;
+}
+
+/** The relay section's `configured yes|no`, `state <systemctl is-active>`, `version <dpkg version or empty>` lines. */
+export function parseRelay(text: string): Section<RelayReport> {
+  const fields = new Map(text.trim().split("\n").map((l) => {
+    const space = l.indexOf(" ");
+    return space === -1 ? [l.trim(), ""] : [l.slice(0, space), l.slice(space + 1).trim()];
+  }));
+  const configured = fields.get("configured");
+  const state = fields.get("state");
+  if ((configured !== "yes" && configured !== "no") || state === undefined || state === "") return degraded(`unreadable relay section: ${JSON.stringify(text.trim())}`);
+  const version = fields.get("version") ?? "";
+  return available({ configured: configured === "yes", state, version: version === "" ? null : version });
 }
 
 /** `git rev-list --left-right --count a...b` prints `<left>\t<right>`. */

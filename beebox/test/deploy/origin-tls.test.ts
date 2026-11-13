@@ -98,6 +98,10 @@ const closedRules = [
   { direction: "in", protocol: "tcp", port: "22", source_ips: everyone },
   { direction: "in", protocol: "icmp", source_ips: everyone },
   { direction: "in", protocol: "tcp", port: "443", source_ips: cloudflare },
+  // The call relay is reached on the origin's own address, not through Cloudflare.
+  { direction: "in", protocol: "udp", port: "3478", source_ips: everyone },
+  { direction: "in", protocol: "tcp", port: "3478", source_ips: everyone },
+  { direction: "in", protocol: "udp", port: "49160-49999", source_ips: everyone },
 ];
 
 // ## First run: create, then attach, with SSH open and port 80 closed

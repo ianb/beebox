@@ -35,11 +35,24 @@ subscription registers
 Peers connect directly with WebRTC, one `RTCPeerConnection` per pair, using
 perfect negotiation (the lexically smaller `peerId` is polite). Offers,
 answers and candidates travel as `signal` frames; the server forwards them
-without reading them. `chatCall.iceServers` returns STUN, plus short-lived
-Cloudflare TURN credentials when the box is granted the `cloudflare-turn`
-secret (`{ keyId, apiToken }`, see [secrets.md](secrets.md)). The token
-stays on the server; each mint is logged. Without the key, calls connect
+without reading them. `chatCall.iceServers` returns short-lived TURN
+credentials and STUN from one of two relays, never both:
+
+- The host's own coturn, when the box is granted `turn-server` (a cloud
+  server; [provisioning](server/provisioning.md#call-relay)). The server
+  signs the credentials itself, with no outside call.
+- Otherwise Cloudflare's, when the box is granted `cloudflare-turn`
+  (`{ keyId, apiToken }`, see [secrets.md](secrets.md)), with STUN from
+  `stun.cloudflare.com`.
+
+Secrets stay on the server; each mint is logged. Without either, calls connect
 where a direct path exists, and a failed connection names the missing relay.
+Credentials last three hours and the page fetches them when it joins, so a
+relayed call longer than that fails until someone rejoins.
+
+To check the relay end to end, set `localStorage["bbx.call.forceRelay"] = "1"`
+in both pages: they then use only relay candidates, and
+`chrome://webrtc-internals` shows the selected pair as `relay`.
 
 In the iOS app, the web view grants the microphone and camera to the box's
 own page, and the page reports `beeboxCallState { active }`

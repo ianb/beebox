@@ -36,6 +36,7 @@ import {
   parseHealth,
   parseLastDeployRecord,
   parseMigrations,
+  parseRelay,
   redactHost,
   section,
   sshFailureReason,
@@ -67,6 +68,16 @@ echo "@@section disk"
 df -Pk / 2>&1 || echo "@@error df -Pk / failed"
 echo "@@section services"
 systemctl is-active beebox-hub beebox-scheduler 2>&1 || true
+echo "@@section relay"
+STORE=$(grep -E '^BBX_SECRETS_FILE=' /home/beebox/.env 2>/dev/null | cut -d= -f2- || true)
+[ -n "$STORE" ] || STORE=/home/beebox/.config/beebox/secrets.json
+if [ ! -e "$STORE" ]; then
+  echo "configured no"
+else
+  python3 -I -c 'import json,sys; s=json.load(open(sys.argv[1])); print("configured", "yes" if "value" in (s.get("secrets") or {}).get("turn-server", {}) else "no")' "$STORE" 2>/dev/null || echo "@@error the master secret store is unreadable"
+fi
+echo "state $(systemctl is-active coturn 2>/dev/null || true)"
+echo "version $(dpkg-query -W coturn 2>/dev/null | cut -f2)"
 echo "@@section healthz"
 KEY=$(grep -E '^BBX_DIAG_API_KEY=' /home/beebox/.env 2>/dev/null | cut -d= -f2- || true)
 if [ -z "$KEY" ]; then
@@ -194,14 +205,14 @@ function remoteTranscript(target: { sshTarget: string; host: string }): Section<
 /** Sections that come from the server, each degraded to `reason` when there is no transcript. */
 function remoteSections(transcript: Section<string>): Map<string, Section<string>> {
   if (transcript.ok) return splitSections(transcript.data);
-  return new Map(["deploy-info", "disk", "services", "healthz", "migrations"].map((name) => [name, degraded<string>(transcript.reason)]));
+  return new Map(["deploy-info", "disk", "services", "relay", "healthz", "migrations"].map((name) => [name, degraded<string>(transcript.reason)]));
 }
 
 export function collect(): DeployStatusReport {
   const mainRoot = mainCheckout();
   if (mainRoot === null) {
     const reason = "not inside a git checkout of this repository";
-    return { commits: degraded(reason), lastDeploy: degraded(reason), lock: degraded(reason), health: degraded(reason), disk: degraded(reason), migrations: degraded(reason) };
+    return { commits: degraded(reason), lastDeploy: degraded(reason), lock: degraded(reason), health: degraded(reason), disk: degraded(reason), relay: degraded(reason), migrations: degraded(reason) };
   }
   const target = deployTarget(REPO_ROOT);
   const transcript = target === null
@@ -212,6 +223,7 @@ export function collect(): DeployStatusReport {
   const healthz = section(remote, "healthz");
   const disk = section(remote, "disk");
   const migrations = section(remote, "migrations");
+  const relay = section(remote, "relay");
   const parsedDisk = disk.ok ? parseDf(disk.data) : null;
   return {
     commits: commits({ info: section(remote, "deploy-info"), mainRoot }),
@@ -219,6 +231,7 @@ export function collect(): DeployStatusReport {
     lock: available(lockState(mainRoot)),
     health: !healthz.ok ? degraded(healthz.reason) : parseHealth({ healthz: healthz.data, services: services.ok ? services.data : "" }),
     disk: !disk.ok ? degraded(disk.reason) : parsedDisk === null ? degraded("df output was unparseable") : available(parsedDisk),
+    relay: relay.ok ? parseRelay(relay.data) : degraded(relay.reason),
     migrations: migrations.ok ? available(parseMigrations(migrations.data)) : degraded(migrations.reason),
   };
 }

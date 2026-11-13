@@ -141,6 +141,19 @@ const guides: Record<string, SecretGuide> = {
       "Paste both below as JSON: {\"apiKey\": \"…\", \"projectId\": \"…\"}",
     ],
   },
+  "turn-server": {
+    title: "This server's TURN relay",
+    what:
+      "The shared secret and addresses of the coturn relay that runs on this cloud server, stored together as JSON. "
+      + "During a call in a chat the box signs short-lived relay credentials with it, so people on networks that block "
+      + "a direct connection can still hear each other. Deploy configures coturn from the same value.",
+    obtainUrl: "https://github.com/coturn/coturn",
+    obtainSteps: [
+      "On the server, generate a secret with `openssl rand -hex 32` and list its public addresses with `ip -br addr`",
+      "Set it on the hub user's master store and deploy before granting it to any box (docs/server/provisioning.md, Call relay)",
+      "Paste both below as JSON: {\"secret\": \"…\", \"urls\": [\"turn:<ipv4>:3478?transport=udp\", \"turn:<ipv4>:3478?transport=tcp\"]}",
+    ],
+  },
   "cloudflare-turn": {
     title: "Cloudflare TURN key",
     what:
