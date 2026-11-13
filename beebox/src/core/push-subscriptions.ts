@@ -114,7 +114,9 @@ async function loadStore(): Promise<SubscriptionStore> {
  * window would leave a half-file where every subscription used to be.
  */
 async function saveStore(store: SubscriptionStore): Promise<void> {
-  await writeFileAtomic(storePath(), { content: `${JSON.stringify(store, null, 2)}\n` });
+  // 0600: each record's `keys.auth` is the endpoint's push secret. An explicit
+  // mode also tightens a store an older build left at the umask default.
+  await writeFileAtomic(storePath(), { content: `${JSON.stringify(store, null, 2)}\n`, mode: 0o600 });
 }
 
 const LOCK_WAIT_MS = 5_000;

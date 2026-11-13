@@ -17,6 +17,7 @@ import { describeDeliveries, inProcessSender, notificationSent, type NotifySende
 import { parseTarget, type Target } from "./notification/target.js";
 import type { PushService } from "../services/push.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 import { z } from "zod";
 
 const LATCH_PATH = ".beebox/notified-questions.json";
@@ -55,9 +56,11 @@ export async function loadQuestionLatch(boxRoot: string): Promise<QuestionLatch>
 }
 
 export async function saveQuestionLatch(boxRoot: string, latch: QuestionLatch): Promise<void> {
-  const absPath = path.join(boxRoot, LATCH_PATH);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, `${JSON.stringify(latch, null, 2)}\n`);
+  // 0600: the latch names pending question cards, which is box content. On a
+  // unit host only hub-meta.json and the home snapshot may be readable outside
+  // the box user, and a `bbx finalize` from a login shell (umask 002) would
+  // otherwise leave it 0664. The explicit mode also tightens an existing file.
+  await writeFileAtomic(path.join(boxRoot, LATCH_PATH), { content: `${JSON.stringify(latch, null, 2)}\n`, mode: 0o600 });
 }
 
 export interface QuestionAlertResult {
