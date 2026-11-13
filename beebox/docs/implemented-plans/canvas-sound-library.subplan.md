@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop: instruments, a sample library, and sound guidance"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop: instruments, a sample library, and sound guidance
 
-Subplan of [canvas-brushes.md](canvas-brushes.md). Figures written by box
+Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). Figures written by box
 agents make poor sounds. The agent cannot hear, and canvas-loop gives it three
 raw primitives: a plucked string, a plain tone, and a noise burst. The
 boxholder asked (2026-11-12): "do add some instruments and guidance, and a

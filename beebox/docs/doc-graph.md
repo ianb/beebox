@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-12T19:08:14Z
-Total documents: 646
+Generated: 2026-11-13T01:25:37Z
+Total documents: 647
 
 ## Issues
 
@@ -21,6 +21,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/canvas-brushes-effects.subplan.md** — "canvas-loop: effects, masks, blend modes, easing (klad gaps)" (184 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-sound.md** — "canvas-loop: sound as a view of state" (221 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-styles.md** — "canvas-loop: per-call styles; retire the p5-style tier" (430 lines) · shipped history · implemented
+- **docs/implemented-plans/canvas-sound-library.subplan.md** — "canvas-loop: instruments, a sample library, and sound guidance" (289 lines) · shipped history · implemented
 - **docs/implemented-plans/card-front-material.md** — "Card fronts take the card's ink; the theme audit flags app ink in cards" (161 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
@@ -160,7 +161,7 @@ Referenced by:
 - docs/box-layout.md:9 (mention) — A box is a directory whose tracked `package.json` declares the `beebox` dependency, with `_config/` beside it (`isBoxRoo
 - docs/box-work.md:14 (mention) — inherits this repo's `AGENTS.md`. `bbx engine init` refuses a nested target
 - docs/box-work.md:28 (link) — for that change ([behavioral notes](../AGENTS.md#behavioral-notes)). At a
-- docs/box/agent-changes.md:32 (mention) — - 2026-10-09 (55d385e3a): Box instruction files are `AGENTS.md`. `bbx validate` reports a `CLAUDE.md` in a converted box
+- docs/box/agent-changes.md:33 (mention) — - 2026-10-09 (55d385e3a): Box instruction files are `AGENTS.md`. `bbx validate` reports a `CLAUDE.md` in a converted box
 - docs/cards/schemas.md:365 (mention) — 5. The agent guide is `@`-included in `AGENTS.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `AGENTS.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:33 (mention) — prompts), don't build it. Small additions — an `AGENTS.md` file with custom
@@ -2755,7 +2756,7 @@ References:
 
 #### docs/box/agent-changes.md
 
-Title: "What changed for box agents" | 34 lines | current reference
+Title: "What changed for box agents" | 35 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:145 (link) — [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
@@ -2824,7 +2825,7 @@ Referenced by:
 Title: "Markdown in card bodies" | 142 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:17 (mention) — - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemis
+- docs/box/agent-changes.md:18 (mention) — - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemis
 - docs/implemented-plans/chat-math-rendering.md:73 (mention) — - Docs: `docs/box/markdown.md` (~15 lines), agent-guide ledger/guide line (~2),
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/implemented-plans/published-math.md:142 (mention) — `docs/box/markdown.md`.
@@ -2838,7 +2839,7 @@ Referenced by:
 Title: "Add iPhone photos through an Apple Photos album" | 28 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:23 (mention) — - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Setting
+- docs/box/agent-changes.md:24 (mention) — - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Setting
 - docs/box/what-you-could-do.md:44 (mention) — setup](phone-photos.md).
 - docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 - docs/implemented-plans/scan-uploader-removal.md:66 (mention) — - `docs/box/phone-photos.md`, `what-you-could-do.md`: use Bee Box Desktop's Watched Folders (osxphotos and token steps g
@@ -2872,7 +2873,7 @@ References:
 Title: "Publishing a site from this box" | 626 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:33 (mention) — - 2026-10-06 (6477c8377): A publication is a `.publication.card` with site files in its attach folder. `bbx pub prepare`
+- docs/box/agent-changes.md:34 (mention) — - 2026-10-06 (6477c8377): A publication is a `.publication.card` with site files in its attach folder. `bbx pub prepare`
 - docs/implemented-plans/publication-card-home.md:165 (mention) — - `docs/box/publishing.md`: rewrite sections at lines 14, 80, 82, 129, 542 and 645. One example card plus `static/`; the
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
 - docs/unimplemented-plans/temporal-everywhere.md:537 (mention) — `docs/box/publishing.md:416` (*`new Date().getFullYear()`* →
@@ -2901,7 +2902,7 @@ Title: "Writing Box-Local Schemas" | 319 lines | current reference
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
 - docs/box-layout.md:279 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
-- docs/box/agent-changes.md:31 (mention) — - 2026-10-10 (d2ea7a94c): `recipe`, `course`, `lesson-plan`, `progress`, `concept-map`, and `exposition-plan` are plugin
+- docs/box/agent-changes.md:32 (mention) — - 2026-10-10 (d2ea7a94c): `recipe`, `course`, `lesson-plan`, `progress`, `concept-map`, and `exposition-plan` are plugin
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
@@ -2933,7 +2934,7 @@ Title: "Todos" | 105 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:150 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
-- docs/box/agent-changes.md:26 (mention) — - 2026-10-20 (b28d11ae2): `bbx todos --now` replaces `--on-plate`, and `bbx query todos --group status` replaces `--grou
+- docs/box/agent-changes.md:27 (mention) — - 2026-10-20 (b28d11ae2): `bbx todos --now` replaces `--on-plate`, and `bbx query todos --group status` replaces `--grou
 - docs/glossary.md:87 (mention) — **now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and
 - docs/implemented-plans/agent-changes.md:77 (mention) — - `- 2026-10-20 (b28d11ae2): bbx todos takes --now and --group status. --on-plate and --group plate are gone. See box-do
 - docs/implemented-plans/doc-structure-box-guidance.md:444 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
@@ -4502,6 +4503,13 @@ Title: "canvas-loop: per-call styles; retire the p5-style tier" | 430 lines | sh
 References:
 - → README.md (mention)
 - → AGENTS.md (mention)
+
+#### docs/implemented-plans/canvas-sound-library.subplan.md **[ORPHAN]**
+
+Title: "canvas-loop: instruments, a sample library, and sound guidance" | 289 lines | shipped history | implemented
+
+References:
+- → docs/plans/canvas-brushes.md (link)
 
 #### docs/implemented-plans/capture-mode.md
 
@@ -9289,6 +9297,7 @@ Title: "canvas-loop brushes: an iterative drawing space for agents" | 553 lines 
 
 Referenced by:
 - docs/implemented-plans/canvas-brushes-effects.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The boxholder asked to look
+- docs/implemented-plans/canvas-sound-library.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). Figures written by box
 
 References:
 - → docs/plans/README.md (mention)
