@@ -44,3 +44,14 @@ So a 429 from an earlier spoken reply stays in the machine, and each new reply t
 Not yet confirmed: whether a new TTS request went out while the chat was muted. The box's request log for `/api/chat/tts` would show it. If no request went out, the display bug is the whole issue, and the title should change.
 
 Fix direction: bind the playback status to the reply it belongs to, not "the newest message when the id is a stream id". Also clear sticky failures when speech for a later reply is queued, including a muted `markPlayed`.
+
+## Log evidence (2026-11-13)
+
+From the test box's `hub-child.log` and `client-debug.log`:
+
+- A real TTS request went out. The server logged the 429 at 07:04:06.823Z, 0.1 s after a turn completed (`[ChatSession:done]` at 07:04:06.714Z). The page logged `[speech] segment failed` with the same text.
+- There was one 429 for that reply, although the reply had 4 `<speech>` segments.
+- Replies at 07:13, 07:17, 07:22, 07:25, 07:28 and 07:30 also had `<speech>` segments and logged no 429. The quota window reset at about 08:00Z (07:04 plus 55m53s). So those replies made no TTS request, and mute held for them.
+- Successful TTS requests are not logged. So the log cannot show whether the muted replies before 07:04 made requests. In the quota day before the 429, replies on this box held 94 `<speech>` segments, close to the 100-request limit. Other dev boxes may share the key, so this is suggestive, not proof.
+
+So the stale-failure display is not the whole bug: at least one request was made while the chat was muted. The `idle` guard did not apply to it. A composer machine left in `speaking` or `pausedForSpeech` fits the evidence: `SPEECH_QUEUED` there runs `playSpeech` with no mute check, and the failure ends the speech with `SPEECH_DONE`, which returns it to `idle`, where the guard holds for later replies. Not confirmed: how the machine got into that state with mute on.
