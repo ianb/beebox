@@ -49,10 +49,10 @@ when they run. Nothing re-asserts the modes after that.
 
 1. On the host, as root, remove the "other" bits from these files:
    `chmod o-rwx` on each path above. Run the audit again to confirm.
-2. Decide if `deploy.sh` must re-assert `chmod -R o-rwx` on each box home
-   (except `box/`, `box/.beebox/`, `hub-meta.json` and
-   `quick-chat-home.snapshot.json`) on each deploy, the same way it
-   re-asserts the cache directory mode.
+2. Decided 2026-11-13: no periodic `chmod -R o-rwx` on deploy. A blind
+   re-assert hides the writer that leaked. The weekly cross-box-leak-scan
+   host audit reports a new open mode, and each finding gets its cause
+   fixed (as with `bbx-box-install` and the `deploy.sh` umask).
 
 The group bits (0660, 0640, 0770) that the same run reported are not a
 leak: the group is `bbx-<slug>`, which has one member, and `UMask=0007` is
