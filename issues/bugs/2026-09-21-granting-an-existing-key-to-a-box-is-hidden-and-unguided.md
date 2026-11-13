@@ -86,3 +86,11 @@ grant) and the new-key service picker second.
 
 Complaints 2 (no warning when adding a name the machine already holds) and 3
 (no guidance on server versus agent access) are still open.
+
+## Re-encounter (2026-11-13)
+
+The boxholder wanted to give a production box keys the machine already held (OpenAI, Gemini, OpenRouter): "I couldn't find any way to bring them from the system into the individual box." An agent made the grants with `bbx engine secrets grant` over ssh instead.
+
+The disclosure from section 1 is gone. `GrantExistingForm` now renders open under the "Add a key to this box" heading on the "This box" tab (`beebox/src/frontend/src/components/admin/SecretsSection/view.tsx`), as a select labelled "Grant a key this machine already has". The boxholder still did not find it, so moving it out of the disclosure did not fix section 1. The form grants one name at a time and sits below the box's own key list and above the connect-a-service guides. That layout may be where it gets lost. This is a hypothesis; nobody watched the boxholder look for it.
+
+The `normal` priority may be stale after this report.
