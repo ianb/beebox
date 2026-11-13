@@ -20,6 +20,10 @@
  * missing a piece of itself. A gap answers 409 `missing-chunks` and does not
  * seal. Finalize is idempotent: a repeat once sealed returns the current
  * state (200); a repeat with a different `hq.emissionId` is refused (409).
+ *
+ * A call recording (docs/implemented-plans/chat-calls.md, Track F) sends `call:
+ * { callId, firstAudioAtMs }` and `hq: null`: HQ always runs, with word timing
+ * and no emission, since the call fold waits for it rather than a composer.
  */
 
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -29,6 +33,7 @@ import { pcmChunkFilename } from "../../../core/capture/audio-format.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/dispatch/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import type { StagingSession } from "../../../core/capture/staging-store/core.js";
+import type { HqTranscriptionService } from "../../../shared/transcription-services.js";
 import { sealVoiceSession, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
 import { runHqJob } from "../../../core/voice-recording/hq-job/core.js";
 import { withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
@@ -38,7 +43,22 @@ export const VoiceFinalizeBodySchema = z.object({
   chunkCount: z.number().int().nonnegative(),
   emissionId: z.string().min(1).nullable(),
   hq: z.object({ emissionId: z.string().min(1), sessionId: z.string().min(1).nullable() }).nullable(),
+  call: z.object({ callId: z.string().min(1), firstAudioAtMs: z.number().int().positive() }).optional(),
 });
+type VoiceFinalizeBody = z.infer<typeof VoiceFinalizeBodySchema>;
+
+/** A call recording needs word timing; the whisper-llm variants never return it. */
+function callRecordingService(service: HqTranscriptionService): HqTranscriptionService {
+  return service === "whisper-llm" || service === "whisper-llm-mini" ? "whisper" : service;
+}
+
+async function hqRequestFor(boxRoot: string, { hq, call }: Pick<VoiceFinalizeBody, "hq" | "call">) {
+  if (hq === null && call === undefined) return null;
+  const { hqService } = await loadTranscriptionConfig(boxRoot);
+  const requestedAt = getBoxTimeISO(boxRoot);
+  if (hq === null) return { emissionId: null, sessionId: null, service: callRecordingService(hqService), requestedAt };
+  return { emissionId: hq.emissionId, sessionId: hq.sessionId, service: hqService, requestedAt };
+}
 
 /** The manifest's staged filenames for this recording's one segment, in upload order. */
 function stagedChunkFilenames(session: StagingSession): string[] {
@@ -66,7 +86,10 @@ export async function handleVoiceFinalize(opts: {
   if (!parsedBody.success) {
     return reply.status(400).send({ error: "Invalid voice finalize request" });
   }
-  const { chunkCount, emissionId, hq } = parsedBody.data;
+  const { chunkCount, emissionId, hq, call } = parsedBody.data;
+  if (call !== undefined && hq !== null) {
+    return reply.status(400).send({ error: "A call recording carries no hq request" });
+  }
 
   if (hq !== null && hq.emissionId !== emissionId) {
     return reply.status(409).send({
@@ -86,19 +109,11 @@ export async function handleVoiceFinalize(opts: {
     }
   }
 
-  const hqRequest =
-    hq === null
-      ? null
-      : {
-          emissionId: hq.emissionId,
-          sessionId: hq.sessionId,
-          service: (await loadTranscriptionConfig(boxRoot)).hqService,
-          requestedAt: getBoxTimeISO(boxRoot),
-        };
+  const hqRequest = await hqRequestFor(boxRoot, { hq, call });
 
   let seal;
   try {
-    seal = await sealVoiceSession({ boxRoot, id: session.id, emissionId, hq: hqRequest });
+    seal = await sealVoiceSession({ boxRoot, id: session.id, emissionId, hq: hqRequest, ...(call !== undefined && { call }) });
   } catch (error) {
     if (error instanceof VoiceTransitionRefusedError) {
       return reply.status(409).send({ error: error.message, code: error.refusal.code });

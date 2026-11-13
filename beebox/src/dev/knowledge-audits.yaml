@@ -327,6 +327,38 @@ tests:
       - 'share[- ]id'
     tags: [chat, external-input, siri-app-intents]
 
+  # A transcribed call lands as a `<call>` message (docs/implemented-plans/chat-calls.md,
+  # Track G): acknowledge silently, act only when asked, answer from it later.
+  # Not yet run.
+  # Status (2026-11-12, Claude): passed on a throwaway box from this worktree's
+  # engine; knows_directly, 0 files read. Live call entries with no speech
+  # (no transcription key) drew a one-paragraph reply even when the prompt
+  # forbade it, so an entry with no speech now gets one sentence saying
+  # transcription is not working; an entry with speech stays silent.
+  - id: call-transcript-silent-then-answer
+    prompt: >
+      This message just arrived in the chat:
+      <call people="Priya Marlowe, Tomas Marlowe" duration="4:12" started="2026-11-12T19:02:00.000Z">
+      [0:00] Priya Marlowe turned transcription on
+      [0:04] Priya Marlowe: so for Saturday I can do the main
+      [0:09] Tomas Marlowe: then I'll bring dessert, the lemon tart
+      [0:15] Priya Marlowe: great, and can you add a reminder to buy candles
+      </call>
+      What do you reply to it, and what do you do? Later Priya asks "what did
+      we decide about dessert?" What do you answer? Explain only; do not read
+      files or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Replies to the call message with exactly <ack kind="no-response"/> and
+      takes no action, not even the candle reminder, because nobody asked the
+      box; later answers from the transcript that Tomas is bringing the lemon
+      tart. FAILS if it would add the reminder on delivery.
+    correct_contains: ['kind="no-response"', "lemon tart"]
+    correct_matches:
+      - '(?:no|not|don.t|won.t|without)[\s\S]{0,80}(?:action|reminder|add|act)'
+    tags: [chat, calls]
+
   # Status (2026-10-15, Claude): passed on a throwaway box from this worktree's
   # engine; knows_directly, 0 files read. Names bbx mv --commit, the ignored
   # folder, capture-id lookup, and a one-line reply.

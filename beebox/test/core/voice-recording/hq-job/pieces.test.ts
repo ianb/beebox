@@ -2,11 +2,12 @@
 //
 // `planPieces` cuts a recording's concatenated 16 kHz mono s16le PCM into byte
 // ranges of at most `pieceSeconds` each, on sample (2-byte) boundaries.
-// `nextPieceSeconds` halves the piece length toward the floor.
+// `nextPieceSeconds` halves the piece length toward the floor. `joinPieceWords`
+// puts each piece's word times on the whole recording's timeline.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS, HQ_PIECE_FLOOR_SECONDS, PCM_BYTES_PER_SECOND } from "../../../../src/core/voice-recording/hq-job/pieces.js";
+import { planPieces, nextPieceSeconds, joinPieceWords, HQ_PIECE_SECONDS, HQ_PIECE_FLOOR_SECONDS, PCM_BYTES_PER_SECOND } from "../../../../src/core/voice-recording/hq-job/pieces.js";
 
 // ## A recording shorter than one piece is a single piece
 void test("A recording shorter than one piece is a single piece", async (t) => {
@@ -70,4 +71,19 @@ void test("`nextPieceSeconds` halves toward the floor, then returns null", async
 // moves further from a usable length):
 void test("A piece length already below the floor also yields null (halving only ever mo...", async (t) => {
   t.check(nextPieceSeconds(100), null);
+});
+
+// ## Word times shift by their piece's start
+//
+// A service times each word from the start of the piece it was sent; the
+// second 300 s piece's word at 1.5 s is 301.5 s into the recording.
+void test("Word times shift by their piece's start", async (t) => {
+  const second = PCM_BYTES_PER_SECOND * HQ_PIECE_SECONDS;
+  t.check(joinPieceWords([
+    { startByte: 0, words: [{ word: "hello", start: 0.5, end: 0.9 }] },
+    { startByte: second, words: [{ word: "again", start: 1.5, end: 2 }] },
+  ]), [
+    { start: 0.5, end: 0.9, text: "hello" },
+    { start: 301.5, end: 302, text: "again" },
+  ]);
 });

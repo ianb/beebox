@@ -16,3 +16,5 @@ Options that were named:
 - Let the pre-commit hook skip typecheck when the staged diff in code files is comment-only.
 
 Evidence: `box-feedback-bugs/20261109T204926Z-landed.md`, and the retrospective watch item `closeout-touches-code-forces-checks` (two earlier entries).
+
+2026-11-13 (retrospective 20261113-003305): seen again. Closing one plan rewrote comments in 36 files and reran the full pre-commit typecheck (`chat-presence/20261113T042936Z-landed.md`).

@@ -26,10 +26,13 @@ async function watch(over: Partial<TrpcContext>, room?: string) {
   const caller = appRouter.createCaller(trpcContext({ boxRoot, ...over }), { signal: controller.signal });
   const frames = (await caller.chatPresence.watch({ sessionId: chat }))[Symbol.asyncIterator]();
   return {
+    /** The next `others` frame; `call` frames are covered by routers.chat-call.test.ts. */
     next: async (): Promise<ChatPresenceFrame> => {
-      const r = await frames.next();
-      if (r.done === true) throw new Error("subscription ended");
-      return r.value;
+      for (;;) {
+        const r = await frames.next();
+        if (r.done === true) throw new Error("subscription ended");
+        if (r.value.t === "others") return r.value;
+      }
     },
     // The WebSocket handler aborts and then returns the iterator; a direct caller does both.
     close: async () => {

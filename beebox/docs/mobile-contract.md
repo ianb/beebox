@@ -925,6 +925,21 @@ is not a substitute for it.
   this stayed confusing. The web half is deliberately **not** in the §11 anchor list for that reason:
   its failure is comprehensibility, not behaviour.
 
+### 4.12 Call state (web → native)
+
+- **Wire shape:** `{ active: boolean }` on `beeboxCallState`.
+- **Semantics:** `active:true` means the page holds a WebRTC call. Native takes the call audio role
+  (`playAndRecord`, `voiceChat`, speaker default, Bluetooth HFP) and releases it on `active:false`,
+  web content termination, or the web view going away. While held, native dictation, capture
+  recording and voice notes refuse to start, their stop paths leave the session active, and the
+  composer microphone button is disabled. The page's `getUserMedia` is granted by
+  `webView(_:requestMediaCapturePermissionFor:…)` only for the box's own main-frame origin.
+- **Anchors:** web `lib/call/native-call-state.ts` — `reportCallActive`; native
+  `Views/ChatWebView.swift` — `receiveCallState`, `mediaCaptureDecision`;
+  `Services/AudioSessionRouting.swift` — `SystemAudioSession.setCallActive`.
+- **Drift:** SILENT-degraded — a build without it keeps the default audio session, so a call may
+  lose its microphone to a native dictation start.
+
 ---
 
 ## 5. Direct HTTP calls from native code
@@ -1588,6 +1603,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B8 | Speech playback state | web→native | `{playing}` via `beeboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B15 | Web surface shown | native→web | `window.beeboxShellShown=<bool>` + `beebox:shell-shown` event, sent per change and per loaded document; false while the native box screen covers the web view | `Views/ChatWebView.swift` · `deliverShown`; `Views/RootView.swift` · `webContent(composerShown:)` | `AppNav/PresenceHeads.tsx` · `pageActive` | SILENT-degraded (a person on the box screen shows as present) |
+| B16 | Call state | web→native | `{active}` via `beeboxCallState` | `Views/ChatWebView.swift` · `receiveCallState`; `Services/AudioSessionRouting.swift` · `setCallActive` | `lib/call/native-call-state.ts` · `reportCallActive` | SILENT-degraded |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
 | R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed`/`.dictationWentIdle` | `components/chat/everywhere/InteractiveChat/voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
@@ -1699,7 +1715,8 @@ without the other is a contract break.
   `beeboxLocationResult` / `beeboxLocationState` / `beeboxNarrationState` /
   `beeboxHqDictationState` /
   `beeboxSpeechPlaybackState` / `beeboxResponseState` /
-  `beeboxComposerCommand` / `beeboxLastAudioRequest` / `beeboxComposerBinding` —
+  `beeboxComposerCommand` / `beeboxLastAudioRequest` / `beeboxComposerBinding` /
+  `beeboxCallState` —
   `Views/ChatWebView.swift` (`userContentController.add`) ↔
   `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `beeboxNativePost(channel, payload)` (string payloads) —

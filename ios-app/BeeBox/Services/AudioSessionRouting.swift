@@ -12,6 +12,9 @@ enum AudioSessionRole: String {
     case idle
     /// Dictation or native capture is running.
     case recording
+    /// The web page reports an active WebRTC call. Held until it reports
+    /// otherwise; native recording is refused meanwhile.
+    case call
 }
 
 struct AudioSessionConfiguration: Equatable {
@@ -71,6 +74,13 @@ enum AudioSessionRouting {
                 mode: .default,
                 options: options
             )
+        case .call:
+            // `.voiceChat` enables echo cancellation for the page's WebRTC mic.
+            return AudioSessionConfiguration(
+                category: .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetoothHFP]
+            )
         }
     }
 
@@ -84,6 +94,33 @@ enum AudioSessionRouting {
     }
 }
 
+enum AudioSessionError: LocalizedError {
+    case callActive
+    var errorDescription: String? {
+        "Recording is unavailable during a call."
+    }
+}
+
+/// Whether a call owns the audio session. Process-wide because every
+/// recorder deactivates the one shared `AVAudioSession`.
+final class AudioSessionCallHold: @unchecked Sendable {
+    static let shared = AudioSessionCallHold()
+    private let lock = NSLock()
+    private var held = false
+
+    var isHeld: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return held
+    }
+
+    func set(_ value: Bool) {
+        lock.lock()
+        held = value
+        lock.unlock()
+    }
+}
+
 protocol AudioSessionControlling {
     /// Install the recording configuration and activate the session.
     func activateRecording() throws
@@ -94,7 +131,31 @@ protocol AudioSessionControlling {
 }
 
 struct SystemAudioSession: AudioSessionControlling {
+    var callHold: AudioSessionCallHold = .shared
+
+    /// Take or release the call role. Idempotent.
+    func setCallActive(_ active: Bool) {
+        guard callHold.isHeld != active else {
+            return
+        }
+        callHold.set(active)
+        guard active else {
+            deactivate()
+            return
+        }
+        do {
+            try apply(role: .call, to: AVAudioSession.sharedInstance())
+            try AVAudioSession.sharedInstance().setActive(true)
+            BoxLog.info("audio session role=call", category: .audio)
+        } catch {
+            BoxLog.error("call audio activation failed: \(error.localizedDescription)", category: .audio)
+        }
+    }
+
     func activateRecording() throws {
+        guard !callHold.isHeld else {
+            throw AudioSessionError.callActive
+        }
         let session = AVAudioSession.sharedInstance()
         do {
             try apply(role: .recording, to: session)
@@ -113,6 +174,10 @@ struct SystemAudioSession: AudioSessionControlling {
     }
 
     func deactivate() {
+        // A recorder's stop path must not end the call's session.
+        guard !callHold.isHeld else {
+            return
+        }
         let session = AVAudioSession.sharedInstance()
         // Deactivate while the recording configuration is still installed, so
         // other apps un-duck, then install the idle configuration for the next
@@ -130,6 +195,9 @@ struct SystemAudioSession: AudioSessionControlling {
     }
 
     func prepareIdle() {
+        guard !callHold.isHeld else {
+            return
+        }
         do {
             try apply(role: .idle, to: AVAudioSession.sharedInstance())
             BoxLog.info("audio session role=idle", category: .audio)

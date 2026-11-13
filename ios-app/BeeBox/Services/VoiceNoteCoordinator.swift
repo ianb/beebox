@@ -18,7 +18,7 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
     static let shared = VoiceNoteCoordinator()
     enum Phase: Equatable { case idle, starting, recording, interrupted, saving, failed }
     enum Failure: LocalizedError {
-        case activeElsewhere, interruptedPending(String), alreadyStarting, microphoneDenied, liveActivitiesDisabled, storageUnavailable, retainedUnavailable, noRecording, recordingFailed
+        case activeElsewhere, interruptedPending(String), alreadyStarting, microphoneDenied, liveActivitiesDisabled, storageUnavailable, retainedUnavailable, noRecording, recordingFailed, callActive
         var errorDescription: String? {
             switch self {
             case .interruptedPending(let label): "An interrupted voice note for \(label) is waiting. Open Bee Box to save or discard it."
@@ -29,6 +29,7 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
             case .storageUnavailable: "The recording could not be saved on this phone."
             case .retainedUnavailable: "A retained recording is unavailable. Unlock this phone and open Bee Box to recover it before starting another note."
             case .noRecording: "There is no voice note to save."
+            case .callActive: "Recording is unavailable during a call."
             case .recordingFailed: "Recording did not start. Open Bee Box and try again."
             }
         }
@@ -103,7 +104,7 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
         if current == nil || current?.authToken?.isEmpty != false || becameProtected {
             recorder?.stop(); recorder = nil
             timer?.invalidate(); timer = nil
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            if !AudioSessionCallHold.shared.isHeld { try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
             self.draft?.interrupted = true
             phase = .interrupted
             message = becameProtected ? "The recording's box is now protected. Unlock it before saving the retained audio." : "Reconnect the recording's original box before saving. Its audio remains on this phone."
@@ -187,6 +188,10 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
         completedSeconds = 0
         elapsed = 0
         message = nil
+        guard !AudioSessionCallHold.shared.isHeld else {
+            phase = .failed
+            throw Failure.callActive
+        }
         let allowed = await AVAudioApplication.requestRecordPermission()
         guard allowed else {
             phase = .failed
@@ -205,6 +210,11 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
             throw Failure.liveActivitiesDisabled
         }
         guard let directory else { phase = .failed; throw Failure.storageUnavailable }
+        // A call can start while the permission prompt is up; its audio session must not be replaced.
+        guard !AudioSessionCallHold.shared.isHeld else {
+            phase = .failed
+            throw Failure.callActive
+        }
         do {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.protectionKey: box.requiresDeviceUnlock ? FileProtectionType.complete : FileProtectionType.completeUntilFirstUserAuthentication])
             let newDraft = Draft(id: UUID(), boxID: box.id, boxLabel: box.label, startedAt: Date(), interrupted: false, requiresDeviceUnlock: box.requiresDeviceUnlock)
@@ -289,7 +299,7 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
         timer?.invalidate()
         timer = nil
         await endActivity()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if !AudioSessionCallHold.shared.isHeld { try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
         guard let audioURL else { phase = .interrupted; throw Failure.storageUnavailable }
         do {
             try await assembleRecording()
@@ -393,7 +403,7 @@ final class VoiceNoteCoordinator: NSObject, ObservableObject, AVAudioRecorderDel
         lastSavedBoxLabel = nil
         phase = .idle
         elapsed = 0
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if !AudioSessionCallHold.shared.isHeld { try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
     }
 
     private func persistDraft() throws {
