@@ -29,3 +29,18 @@ A muted chat should not request speech audio. Here it requested audio, which use
 ## Related
 
 The quota of 100 requests a day for the Gemini flash-lite TTS model on Tier 1 is low enough that ordinary dev use runs out. That is a separate decision: change the key's tier, or fall back to another TTS backend on a 429.
+
+## Probable cause: a stale failure moves to the newest reply (2026-11-13)
+
+The developer reports that the failure appeared on an ordinary reply, after several muted replies that showed nothing. A failure that appears reliably points to a fixed path, and the code has one. The failure on screen may not come from a new request.
+
+- `speechPlaybackMachine.ts` keeps failures sticky. When playback ends with a failed segment, `statusMessageId` and `segmentFailures` stay set (around lines 233 and 338). Only the next `PLAY` clears them.
+- Streamed speech gets a message id of the form `stream-<time>-<index>` (`InteractiveChat/speech.ts`, `dispatch`).
+- `InteractiveChat/message-items.tsx` (around line 289) shows the playback status on the newest assistant message whenever the status id starts with `stream`. It does not check which reply the stream belonged to.
+- While the chat is muted, `SPEECH_QUEUED` runs only `markPlayed`, which records the id and sends no `PLAY`. So nothing clears the old failure.
+
+So a 429 from an earlier spoken reply stays in the machine, and each new reply that becomes the newest assistant message shows it. The "retry in 55m53s" text is the provider's answer at the time of the original request.
+
+Not yet confirmed: whether a new TTS request went out while the chat was muted. The box's request log for `/api/chat/tts` would show it. If no request went out, the display bug is the whole issue, and the title should change.
+
+Fix direction: bind the playback status to the reply it belongs to, not "the newest message when the id is a stream id". Also clear sticky failures when speech for a later reply is queued, including a muted `markPlayed`.
