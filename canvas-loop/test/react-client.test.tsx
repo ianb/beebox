@@ -142,8 +142,8 @@ test("a controlled text param's box shows a new value the host sets", () => {
   assert.equal(shown(), "H2O");
   act(() => {
     root.render(render("CO2"));
+    pumpFrames(2);
   });
-  pumpFrames(2);
   assert.equal(shown(), "CO2", "a value that is not an echo of typing replaces the draft");
   act(() => {
     root.unmount();
