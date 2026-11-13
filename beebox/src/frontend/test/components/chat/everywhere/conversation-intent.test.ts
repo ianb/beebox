@@ -126,4 +126,10 @@ void test("A restored start selection is already pinned to its history entry", a
   t.check(routeSelectionUpdate({ ...pin, capture: true, selection: restored, saved: opened }), { session: null, consumeCapture: true });
 
   t.check(routeSelectionUpdate({ ...pin, selection: kitchen, saved: kitchen }), { session: "kitchen-chat", consumeCapture: false });
+
+  // A pending `start` that replaced a missing `?session=` id rewrites the URL to
+  // `new`; otherwise each reload would look up the missing id again.
+  t.check(routeSelectionUpdate({ ...pin, search: { session: "missing-chat" }, selection: restored, saved: restored }), { session: "new", consumeCapture: false });
+
+  t.check(routeSelectionUpdate({ ...pin, search: { session: "new" }, selection: restored, saved: restored }), null);
 });

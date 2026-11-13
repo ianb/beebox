@@ -35,9 +35,8 @@ function explicitChatRequest(input: RouteIntentInput): ConversationRequest | nul
   const target = selection.kind === "ready" ? selection.target : null;
   if (!first && target?.kind === "session" && target.sessionId === search.session) return null;
   if (search.session === "new" && samePendingStartup({ target, remembered, search })) return null;
-  // The one request that names a chat on the user's behalf: `?session=` in
-  // the URL. A remembered or previously-rendered selection is not that.
-  return { kind: search.session === "new" ? "new" : "session", sessionId: search.session, named: true,
+  // `?session=` in the URL names the chat.
+  return { kind: search.session === "new" ? "new" : "session", sessionId: search.session,
     contextDir: search.contextDir, engine: parseChatAgentEngine(search.engine ?? "") ?? undefined, model: search.model };
 }
 
@@ -72,7 +71,12 @@ export function routeSelectionUpdate(input: { chatPage: boolean; search: RouteIn
   selection: ConversationSelection; saved: unknown }): { session: string | null; consumeCapture: boolean } | null {
   const { chatPage, search, selection } = input;
   const target = selection.kind === "ready" ? selection.target : null;
-  const session = chatPage && target?.kind === "session" && search.session !== target.sessionId ? target.sessionId : null;
+  // A new chat that replaced a missing `?session=` id (on an engine that cannot
+  // coin ids, a pending `start`) writes `new`, or the next load replaces it again.
+  const replacedId = target?.kind === "start" && search.session !== undefined && search.session !== "new";
+  const session = !chatPage ? null
+    : target?.kind === "session" && search.session !== target.sessionId ? target.sessionId
+    : replacedId ? "new" : null;
   const consumeCapture = chatPage && input.capture;
   if (session === null && !consumeCapture && deepEqual(selection, input.saved)) return null;
   return { session, consumeCapture };

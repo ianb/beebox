@@ -40,7 +40,7 @@ start.
 | `bbx:render` | Boot work is done and React's first render starts. |
 | `bbx:box-validated` | The box list confirmed the URL's box. |
 | `bbx:shell` | The product shell (nav, chat) committed. |
-| `bbx:composer` | The chat composer committed. Effects run child-first, so this mark can come just before `bbx:shell` in the same commit. The composer is disabled ("Choosing conversation…") until the next mark. |
+| `bbx:composer` | The chat composer committed. Effects run child-first, so this mark can come just before `bbx:shell` in the same commit. Sending is disabled ("Loading conversation…" as the send button's reason) until the next mark. |
 | `bbx:conversation-ready` | The shell chose the conversation (`chat.bootstrap`, or a fresh reservation). The composer is enabled. |
 | `bbx:history` | The chosen conversation's history finished loading and rendered. This is "the page is useful". |
 
