@@ -41,3 +41,13 @@ reports 66 to 84 seconds down per deploy on 2026-11-11. Two problems follow:
   (`beebox/deploy/server-bin/bbx-deploy-window`).
 
 Related: [release discipline and the update story](../decisions/2026-07-20-release-discipline-and-update-story.md).
+
+## Status 2026-11-13
+
+"Install, then switch" shipped on branch `worktree-atomic-deploy` (plan:
+`beebox/docs/plans/atomic-deploy.md`): each deploy installs into its own
+release directory, then switches `/opt/beebox` in one rename. Box agents no
+longer see a partial tree. Still open: the box-docs light path (second
+direction), the "Bee Box is updating" message (third direction; little left
+to explain after the switch), and a `deploy.sh --rollback` command (plan
+Track D, deferred). Issue left open for the light path.

@@ -1,6 +1,6 @@
 ---
 title: "Atomic deploys: install each release beside the live one, then switch"
-status: draft
+status: partial
 workstream: atomic-deploy
 issues:
   - ../../../issues/features/2026-11-11-deploy-without-downtime-or-half-installed-packages.md
