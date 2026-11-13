@@ -1,6 +1,6 @@
 import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../../lib/system-card-navigation";
 import { browseStateToViewState, normalizeBrowseTarget, parseBrowseState, type BrowseState } from "../../../../lib/browse-card-state";
-import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry, type WorkspaceNavigationDecision } from "../history";
+import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, workspaceIdentity, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry, type WorkspaceNavigationDecision } from "../history";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../../../api";
@@ -142,11 +142,11 @@ function routeNavigation(input: { location: ReturnType<typeof useLocation>; spla
 }
 
 export function useWorkspace() { return useContext(Workspace); }
-export function WorkspaceProvider({ target, unstarted, children }: { target: ConversationTarget | undefined; unstarted: boolean; children: ReactNode }) {
-  const value = useWorkspaceController(target, unstarted);
+export function WorkspaceProvider({ target, unresolved, unstarted, children }: { target: ConversationTarget | undefined; unresolved: boolean; unstarted: boolean; children: ReactNode }) {
+  const value = useWorkspaceController({ target, unresolved, unstarted });
   return <Workspace.Provider value={value}>{children}</Workspace.Provider>;
 }
-function useWorkspaceController(conversationTarget: ConversationTarget | undefined, unstarted: boolean) {
+function useWorkspaceController({ target: conversationTarget, unresolved, unstarted }: { target: ConversationTarget | undefined; unresolved: boolean; unstarted: boolean }) {
   const { boxSlug = "", _splat } = useParams({ strict: false });
   const location = useLocation();
   const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
@@ -163,7 +163,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   const contextDir = conversationTarget?.contextDir;
   const arrival = usePlaceArrival({ store, viewport, contextDir, unstarted });
   const dismissOnClose = useDismissOnClose();
-  const identity = conversationTarget?.kind === "session" ? conversationTarget.sessionId : conversationTarget?.clientConversationId ?? "";
+  const identity = workspaceIdentity({ target: conversationTarget, unresolved });
   const scope = storageScopeFor(apiBase);
   const projection = projectWorkspace(state, viewport);
   const routeBound = workspaceRouteBound(location.state.bbxConversation, identity);

@@ -166,7 +166,8 @@ function PointAndCardProviders({ children }: { children: ReactNode }) {
 function WorkspaceShellProvider({ children }: { children: ReactNode }) {
   const conversation = useBoxConversation();
   invariant(conversation, "WorkspaceShellProvider requires BoxConversationProvider");
-  return <WorkspaceProvider target={conversation.rendered?.target} unstarted={conversation.unstarted}>{children}</WorkspaceProvider>;
+  return <WorkspaceProvider target={conversation.rendered?.target} unresolved={conversation.selection.kind === "unavailable"}
+    unstarted={conversation.unstarted}>{children}</WorkspaceProvider>;
 }
 
 /**
