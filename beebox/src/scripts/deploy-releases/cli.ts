@@ -15,7 +15,7 @@
 //
 // deploy.sh installs this file as root from the build checkout and runs it
 // with Node's type stripping, so it imports Node built-ins only. The plan is
-// docs/plans/atomic-deploy.md.
+// docs/implemented-plans/atomic-deploy.md.
 import * as fs from "node:fs";
 import { parseArgs } from "node:util";
 import { ReleaseRefusedError, layoutFor, liveRelease, previousRelease, realOrNull, switchRelease } from "./layout.ts";
