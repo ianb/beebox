@@ -1,9 +1,9 @@
 ---
 title: "Atomic deploys: install each release beside the live one, then switch"
-status: partial
+status: implemented
 workstream: atomic-deploy
 issues:
-  - ../../../issues/features/2026-11-11-deploy-without-downtime-or-half-installed-packages.md
+  - ../../../issues/closed/features/2026-11-11-deploy-without-downtime-or-half-installed-packages.md
 ---
 # Atomic deploys: install each release beside the live one, then switch
 
@@ -15,7 +15,7 @@ restarts. It also adds a one-command rollback to the previous release, and an
 automatic rollback when activation fails after the switch.
 
 **Issues addressed:**
-`issues/features/2026-11-11-deploy-without-downtime-or-half-installed-packages.md`
+`issues/closed/features/2026-11-11-deploy-without-downtime-or-half-installed-packages.md`
 (first direction, "install, then switch"). Related, already closed:
 `issues/closed/bugs/2026-07-11-deploy-pnpm-install-oom-killed.md` (the install
 retry this plan keeps) and
@@ -253,7 +253,11 @@ sees a half-copied source tree, and rollback becomes a symlink switch.
      migration repair, as for the existing restarted-by-trap marker.
 - **First chunk:** items 1–8 in one commit; they are one activation path.
 
-### Track D — `deploy.sh --rollback` (deferred)
+### Track D — `deploy.sh --rollback` (split out)
+
+Split out to [its own issue](../../../issues/features/2026-11-13-deploy-fast-manual-rollback-command.md)
+(2026-11-13); the boxholder is not sure it matters.
+
 
 **Deferred during implementation.** The brief asks for "one command, or one
 automatic step on a failed health check"; Track C's trap is the automatic
