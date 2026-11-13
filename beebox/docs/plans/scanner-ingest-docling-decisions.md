@@ -433,7 +433,7 @@ pattern this entry removes. At most it holds a single column of tiny vertical
 text (cross-model review, round 2).
 
 Still open: the real scan's peak stays near 1.6 GB, from the detector on large
-full-page regions; see `issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md`.
+full-page regions; see `issues/closed/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md`.
 On table-heavy scans the larger cost is TableFormer: turning OCR off left
 1,622 MB on the table scan, and turning table structure off as well left
 660 MB (`issues/bugs/2026-11-03-tableformer-memory-on-scanned-tables.md`).

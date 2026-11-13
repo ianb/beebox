@@ -14,6 +14,7 @@ import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { commit, stageAll } from "../../src/lib/git/core/operations.js";
 import { buildScriptEnv } from "../../src/core/script-env/core.js";
 import { clearTimeCache, getBoxTime } from "../../src/lib/time.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 const IDENTITY = { GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.com", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.com" };
@@ -118,10 +119,13 @@ void test("A malformed offset file leaves the box and the shell on real time:", 
   const box = await makeFixture({ walk: true, offsetText: '{"offsetMs":604800000,' });
   t.teardown(() => box.cleanup());
   const today = expectedDay({ ms: Date.now() });
+  const warnings = consoleLines(t, "warn");
   t.check({ boxDay: getBoxTime(box.root).toISOString().slice(0, 10), shell: dayOf(await shellCommit(box)) }, {
     boxDay: today.slice(0, 10),
     shell: today,
   });
+  // The log names the unreadable file and why, once:
+  t.check(warnings(), [`[time] could not read ${join(box.root, ".beebox/clock-offset.json")}; using no offset: SyntaxError: Expected double-quoted property name in JSON at position 22 (line 1 column 23)`]);
 });
 
 // An offset in exponent form shifts the box and the shell alike:

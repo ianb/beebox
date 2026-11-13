@@ -5,6 +5,7 @@ import { Socket } from "node:net";
 import { EventEmitter } from "node:events";
 import { z } from "zod";
 import { codexBinaryPath, codexCliArgs } from "./codex-binary.js";
+import { agentAllowlistEnv } from "../core/script-env/core.js";
 import { jsonlLines } from "../lib/jsonl-lines.js";
 import { toError } from "../shared/error-guards.js";
 
@@ -88,6 +89,7 @@ export class CodexHistoryServer {
     this.child = spawn(codexBinaryPath(), codexCliArgs(["app-server", "--listen", "stdio://"]), {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
+      env: agentAllowlistEnv(),
     });
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });
     this.readStdout().catch((error: unknown) => { this.failPending(toError(error)); });

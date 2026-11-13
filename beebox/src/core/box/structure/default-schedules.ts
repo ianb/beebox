@@ -135,6 +135,23 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     reason: "Daily early-morning sweep; precheck no-ops when no question needs review",
   },
   {
+    name: "refresh-intentions",
+    description:
+      "Daily intention review: an agent rewrites or removes the next-step line of each place that changed since its last review",
+    cron: "15 6 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    // Seeded ENABLED (docs/implemented-plans/place-intention.md, Track D). Like
+    // todo-review, the precheck exits CHECK_SKIP when no place changed since
+    // its last review, so a quiet box runs no agent. The first run lists every
+    // place once (none has a review record yet): that is the kickoff.
+    enabled: true,
+    // A 15-turn agent; the scheduler's 10m default could cut it short.
+    timeout: "30m",
+    runs: "bbx procedure run refresh-intentions",
+    reason: "Daily early-morning pass; precheck no-ops when no place has changed since its last review",
+  },
+  {
     name: "chat-review",
     description:
       "Nightly chat review: title and summarize chat sessions that have grown enough to be worth re-reading",

@@ -14,6 +14,7 @@ import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
 import type { ChatReviewer, ReviewArgs, ReviewOutput, TitleArgs, TitleOutput } from "../../../../src/core/chat/review/reviewer.js";
 import { MAX_SESSION_ENTRIES } from "../../../../src/cli/lib/session.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 
@@ -152,9 +153,13 @@ void test("Nothing before the journal boundary is retained — the span walk str
   await utimes(logPath, when, when);
 
   const second = fakeReviewer([OUTPUT]);
+  const warnings = consoleLines(t, "warn");
   const summary = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
   });
+  // Each of the two passes (summary and title) says the window was clipped, and that the rest follows:
+  t.check(warnings(), Array.from({ length: 2 }, () =>
+    `chat-review: session ${sid("sesscap")} has more than ${String(MAX_SESSION_ENTRIES)} unread entries; reviewing the first window now and the rest on later runs.`));
   const advanced = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
   t.check({ summary, advanced }, {
     summary: summaryOf({ reviewed: 1 }),

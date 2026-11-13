@@ -9,6 +9,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { FakeChatBackendRun } from "../../../../src/services/claude-chat/fake.js";
 import type { ChatSession } from "../../../../src/core/chat/session/run/core.js";
@@ -91,7 +92,10 @@ void test("Target chat is busy → the message is enqueued, not sent", async (t)
   await setMostActive(box.root, "s-busy");
 
   // The caller resolves the target (→ the busy most-active session) first.
+  const warnings = consoleLines(t, "warn");
   const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, targetSessionId: null });
+  // The log says the capture had no target chat and went to the most-active one:
+  t.check(warnings(), [`[capture] Capture has no target session; falling back to the most-active session for box=${box.root}`]);
   const res = await deliverCaptureMessage({
     boxRoot: box.root, registry, eventBus, target, message: W,
   });

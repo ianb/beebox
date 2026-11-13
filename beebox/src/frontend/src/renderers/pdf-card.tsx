@@ -21,6 +21,7 @@ import {
 } from "../lib/pdf-card";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { lazyComponent } from "../lib/lazy-component";
+import { StatusMessage } from "../components/ui/StatusMessage";
 
 const PdfCardView = lazyComponent(() => import("../components/PdfCardView/view"), (m) => m.PdfCardView);
 
@@ -40,7 +41,7 @@ function OriginalDocumentView({ data, mode }: RendererProps) {
     );
   }
   const name = originalPath.split("/").pop() ?? originalPath;
-  if (src.state === "loading") return <Text as="div" tone="subtle" className="p-4">Loading PDF…</Text>;
+  if (src.state === "loading") return <StatusMessage variant="inline" busy className="p-4">Loading PDF…</StatusMessage>;
   if (src.state === "missing") return <Text as="div" tone="subtle" className="p-4">Original file not found: {toDisplayPath(originalPath)}</Text>;
   return (
     <PdfFrame

@@ -1,0 +1,743 @@
+// "Nell Rows Out" — a picture book about a girl who rows onto the lake at dusk
+// to give back a lantern the old carp lost long ago. This page: "The water went
+// quiet, and something very old came up to see."
+// Dusk lake, far shore with one lit window, the girl kneeling in the bow holding
+// the lantern out, and the great carp lifting its head under it. Reeds frame
+// the foreground.
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+const W = 800;
+const H = 800;
+const HORIZON = 300;
+const WATERLINE = 560; // where the carp's head meets the water
+
+const LANTERN: Vec2 = [498, 490];
+
+export function setup(s: Sketch): void {
+  s.createCanvas(W, H);
+}
+
+export function draw(s: Sketch): void {
+  s.paper({ scale: 3, contrast: 0.6, seed: 7 });
+  sky(s);
+  farShore(s);
+  water(s);
+  fishBody(s);
+  lanternReflection(s);
+  ringsBack(s);
+  boatBack(s);
+  girl(s);
+  boatFront(s);
+  oar(s);
+  fishHead(s);
+  ringsFront(s);
+  lantern(s);
+  reeds(s);
+  s.paperTexture(0.35);
+}
+
+// ── helpers ─────────────────────────────────────────────────────────
+
+function shift(pts: readonly Vec2[], dx: number, dy: number): Vec2[] {
+  return pts.map(([x, y]): Vec2 => [x + dx, y + dy]);
+}
+
+/** Points on part of an ellipse, from angle a0 to a1 (radians). */
+function ellipseArc(cx: number, cy: number, rx: number, ry: number, a0: number, a1: number, n = 12): Vec2[] {
+  const pts: Vec2[] = [];
+  for (let i = 0; i <= n; i += 1) {
+    const a = a0 + ((a1 - a0) * i) / n;
+    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return pts;
+}
+
+/** Linear interpolation through colour stops, as an rgb() string. */
+function sample(stops: readonly (readonly [number, string])[], t: number, dl = 0): string {
+  const rgb = (h: string): number[] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  let i = 0;
+  while (i < stops.length - 2 && t > stops[i + 1][0]) i += 1;
+  const [t0, c0] = stops[i];
+  const [t1, c1] = stops[i + 1];
+  const k = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
+  const a = rgb(c0);
+  const b = rgb(c1);
+  const c = a.map((v, j) => Math.round(Math.min(255, Math.max(0, v + (b[j] - v) * k + dl))));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function glow(s: Sketch, x: number, y: number, r: number, rgb: string, a: number): void {
+  s.noStroke();
+  s.fill(s.radialGradient(x, y, r, [[0, `rgba(${rgb},${a})`], [1, `rgba(${rgb},0)`]]));
+  s.circle(x, y, r * 2);
+}
+
+// ── sky and shore ──────────────────────────────────────────────────
+
+const SKY_STOPS: [number, string][] = [
+  [0, "#181d44"],
+  [0.45, "#3a3a74"],
+  [0.8, "#9c7590"],
+  [1, "#e3ae8a"],
+];
+const WATER_STOPS: [number, string][] = [
+  [0, "#a98896"],
+  [0.1, "#585a84"],
+  [0.38, "#2b3f58"],
+  [1, "#0e1c28"],
+];
+
+function sky(s: Sketch): void {
+  s.noStroke();
+  s.fill(s.linearGradient(0, 0, 0, HORIZON, SKY_STOPS));
+  s.rect(0, 0, W, HORIZON + 4);
+  // paint over the gradient in long loaded strokes, row by row
+  s.noFill();
+  for (let i = 0; i < 24; i += 1) {
+    const y = 6 + i * 12.5;
+    const x0 = ((i * 157) % 300) - 200;
+    s.brush("bristle", { opacity: 0.6, load: 0.7 });
+    s.gesture({ pressure: "even", wobble: 2, seed: i });
+    s.stroke(sample(SKY_STOPS, y / HORIZON, i % 2 === 0 ? 30 : -22));
+    s.strokeWeight(26);
+    s.line(x0, y, x0 + 520, y + 2);
+    s.line(x0 + 470, y + 4, x0 + 1100, y + 2);
+  }
+  s.brush("wash", { opacity: 0.5 });
+  s.gesture({ pressure: "taper", wobble: 3 });
+  s.stroke("#6a5a8c");
+  s.strokeWeight(30);
+  s.curve([[60, 150], [220, 140], [380, 150]]);
+  s.curve([[420, 110], [600, 100], [760, 115]]);
+  s.stroke("#c9919a");
+  s.strokeWeight(18);
+  s.curve([[0, 230], [180, 222], [330, 228]]);
+  s.curve([[480, 215], [650, 210], [800, 220]]);
+  s.noBrush();
+  s.noStroke();
+  glow(s, 612, 66, 16, "255,240,210", 0.5);
+  s.fill("#fff4d8");
+  s.circle(612, 66, 3.5);
+}
+
+const HILLS: Vec2[] = [
+  [-20, 302],
+  [-10, 268],
+  [90, 252],
+  [200, 270],
+  [300, 286],
+  [420, 292],
+  [560, 284],
+  [700, 266],
+  [820, 272],
+  [820, 302],
+];
+
+function farShore(s: Sketch): void {
+  s.noStroke();
+  s.fill("#3d3f66");
+  s.curve(HILLS, true);
+  s.fill("#2e3054");
+  for (let i = 0; i < 26; i += 1) {
+    const x = 20 + i * 11 + (i % 3) * 3;
+    const base = 290 - Math.sin(i * 0.4) * 6 - (x < 200 ? 12 : 0);
+    const h = 12 + (i % 4) * 4;
+    s.triangle(x - 4, base + 4, x + 4, base + 4, x, base - h);
+  }
+  // one lit window: home
+  s.fill("#ffcf7a");
+  s.rect(146, 270, 4, 4);
+  glow(s, 148, 272, 10, "255,200,110", 0.6);
+}
+
+// ── water ──────────────────────────────────────────────────────────
+
+function water(s: Sketch): void {
+  s.noStroke();
+  s.fill(s.linearGradient(0, HORIZON, 0, H, WATER_STOPS));
+  s.rect(0, HORIZON, W, H - HORIZON);
+  s.noFill();
+  for (let i = 0; i < 30; i += 1) {
+    const y = HORIZON + 8 + i * 16.5;
+    const x0 = ((i * 211) % 360) - 260;
+    s.brush("bristle", { opacity: 0.55, load: 0.6 });
+    s.gesture({ pressure: "even", wobble: 1.5, seed: 100 + i });
+    s.stroke(sample(WATER_STOPS, (y - HORIZON) / (H - HORIZON), i % 2 === 0 ? 30 : -18));
+    s.strokeWeight(22 + i * 0.5);
+    s.line(x0, y, x0 + 560, y + 1);
+    s.line(x0 + 520, y + 3, x0 + 1160, y + 1);
+  }
+  // the far shore mirrored, softened
+  s.group({ opacity: 0.4 }, () => {
+    s.fill("#3a3c62");
+    s.curve(HILLS.map(([x, y]): Vec2 => [x, HORIZON + (HORIZON - y) * 0.6 + 1]), true);
+  });
+  // evening mist lying on the far water
+  s.brush("airbrush", { opacity: 0.35 });
+  s.gesture({ pressure: "taper", wobble: 4 });
+  s.stroke("#c8a8b4");
+  s.strokeWeight(28);
+  s.curve([[-40, 300], [200, 304], [420, 298], [640, 302], [840, 298]]);
+  // brushed bands: reflected sky near the horizon, dark swell nearer
+  s.noFill();
+  s.gesture({ pressure: "taper", wobble: 1 });
+  for (let i = 0; i < 30; i += 1) {
+    const t = i / 30;
+    const y = HORIZON + 6 + t * t * 480;
+    const x = (i * 211) % 700;
+    const len = 60 + t * 220 + ((i * 37) % 80);
+    s.brush("wash", { opacity: 0.25 + t * 0.15 });
+    s.stroke(t < 0.25 ? "#d0a2a0" : i % 2 === 0 ? "#536c8c" : "#1a2a3a");
+    s.strokeWeight(3 + t * 16);
+    s.line(x - len / 2, y, x + len / 2, y + 1);
+  }
+  // little light glints on the near water
+  s.brush("ink", { opacity: 0.5 });
+  s.stroke("#8aa0bc");
+  for (let i = 0; i < 8; i += 1) {
+    const x = 60 + ((i * 173) % 680);
+    const y = 600 + ((i * 59) % 180);
+    s.strokeWeight(1.4);
+    s.line(x, y, x + 18 + (i % 4) * 8, y);
+  }
+}
+
+// The carp's whole body, under the water: seen dim and blue-shifted.
+const FISH_BODY: Vec2[] = [
+  [556, 554],
+  [662, 552],
+  [730, 600],
+  [772, 680],
+  [776, 770],
+  [740, 820],
+  [650, 800],
+  [606, 714],
+  [574, 630],
+];
+
+function fishBody(s: Sketch): void {
+  s.group({ opacity: 0.45 }, () => {
+    s.noStroke();
+    s.fill("#a8925a");
+    s.curve(FISH_BODY, true);
+    s.clip(s.curvePath(FISH_BODY, true), () => {
+      s.fill("#5a5a46");
+      s.curve(shift(s.offset(FISH_BODY, 4), 26, 4), true);
+      s.noFill();
+      s.brush("pencil", { opacity: 0.9 });
+      s.stroke("#3f3a2a");
+      s.strokeWeight(3);
+      s.gesture({ pressure: "taper" });
+      for (let r = 0; r < 7; r += 1) {
+        for (let c = 0; c < 5; c += 1) {
+          const cx = 596 + c * 28 + r * 9;
+          const cy = 590 + r * 28;
+          s.curve(ellipseArc(cx, cy, 14, 10, 0.3, Math.PI - 0.3, 6));
+        }
+      }
+    });
+    // dorsal fin, along the back
+    s.fill("#4c4632");
+    s.curve([[690, 584], [744, 600], [790, 660], [770, 690], [736, 640]], true);
+  });
+  // deep water over the lower body
+  s.noStroke();
+  s.fill(s.ellipseGradient(690, 800, 360, 440, [[0, "rgba(14,28,40,0.75)"], [0.6, "rgba(14,28,40,0.4)"], [1, "rgba(14,28,40,0)"]]));
+  s.ellipse(690, 800, 360, 440);
+}
+
+function lanternReflection(s: Sketch): void {
+  glowEllipse(s, LANTERN[0] + 10, 548, 300, 90, "255,176,90", 0.3);
+  s.noFill();
+  s.stroke("#f4b058");
+  // broken glints, wider and fainter as they come toward us
+  const dxs = [0, -6, 5, -3, 8, -9, 2, 10, -12, 4, -6, 13, -2, 7];
+  for (let i = 0; i < dxs.length; i += 1) {
+    const y = 528 + i * 8 + i * i * 0.55;
+    const half = 10 + ((i * 7) % 11) + i * 0.8;
+    const x = LANTERN[0] + 4 + dxs[i];
+    s.brush("ink", { opacity: 0.85 - i * 0.05 });
+    s.gesture({ pressure: "swell", wobble: 1, seed: 300 + i });
+    s.strokeWeight(3 + (i % 3));
+    s.line(x - half, y, x + half * 0.4, y + 1);
+    if (i % 2 === 1) s.line(x + half * 0.6, y + 2, x + half * 1.2, y + 2);
+  }
+  s.brush("wash", { opacity: 0.4 });
+  s.gesture({ pressure: "taper" });
+  s.strokeWeight(26);
+  s.line(LANTERN[0] + 4, 530, LANTERN[0] + 6, 640);
+}
+
+function glowEllipse(s: Sketch, x: number, y: number, w: number, h: number, rgb: string, a: number): void {
+  s.noStroke();
+  s.fill(s.ellipseGradient(x, y, w, h, [[0, `rgba(${rgb},${a})`], [1, `rgba(${rgb},0)`]]));
+  s.ellipse(x, y, w, h);
+}
+
+// Rings spreading from where the carp broke the surface.
+const RINGS = [
+  { rx: 82, ry: 14 },
+  { rx: 116, ry: 21 },
+  { rx: 158, ry: 30 },
+];
+const RING_C: Vec2 = [606, WATERLINE];
+
+function ringsBack(s: Sketch): void {
+  s.noFill();
+  s.brush("ink", { opacity: 0.55 });
+  s.stroke("#e7c49a");
+  s.gesture({ pressure: "taper", wobble: 0.6 });
+  for (const [i, r] of RINGS.entries()) {
+    s.strokeWeight(2 - i * 0.4);
+    s.curve(ellipseArc(RING_C[0], RING_C[1], r.rx, r.ry, Math.PI * 1.05, Math.PI * 1.95));
+  }
+}
+
+function ringsFront(s: Sketch): void {
+  s.noFill();
+  s.brush("ink", { opacity: 0.75 });
+  s.stroke("#f0d2a6");
+  s.gesture({ pressure: "taper", wobble: 0.6 });
+  for (const [i, r] of RINGS.entries()) {
+    s.strokeWeight(2.6 - i * 0.5);
+    s.curve(ellipseArc(RING_C[0], RING_C[1], r.rx, r.ry, Math.PI * 0.08, Math.PI * 0.92));
+  }
+}
+
+// ── the carp's head above water ─────────────────────────────────────
+
+const HEAD_F: Vec2[] = [
+  [538, 496],
+  [558, 478],
+  [600, 468],
+  [642, 482],
+  [664, 520],
+  [672, 566],
+  [566, 568],
+  [550, 532],
+  [534, 512],
+];
+
+function fishHead(s: Sketch): void {
+  const above: Vec2[] = [
+    [500, 440],
+    [700, 440],
+    [700, WATERLINE + 2],
+    [500, WATERLINE + 2],
+  ];
+  s.clip(above, () => {
+    s.noStroke();
+    s.fill("#d6ae62");
+    s.curve(HEAD_F, true);
+    s.clip(s.curvePath(HEAD_F, true), () => {
+      // shade on the far side, away from the lantern
+      s.fill("#7a6034");
+      s.curve(shift(s.offset(HEAD_F, 2), 40, 14), true);
+      // lantern light on the face
+      glow(s, 520, 492, 90, "255,214,150", 0.8);
+      // old colour patches, like a koi's
+      s.noFill();
+      s.brush("wash", { opacity: 0.6 });
+      s.gesture({ pressure: "swell", wobble: 2 });
+      s.stroke("#c0662e");
+      s.strokeWeight(26);
+      s.curve([[596, 476], [624, 486], [648, 512]]);
+      s.strokeWeight(16);
+      s.curve([[640, 540], [656, 556]]);
+      // wet highlight along the crown
+      s.noFill();
+      s.brush("ink", { opacity: 0.85 });
+      s.stroke("#fff0c8");
+      s.strokeWeight(3);
+      s.gesture({ pressure: "taper" });
+      s.curve([[556, 482], [580, 472], [610, 472]]);
+      // gill cover
+      s.stroke("#5e4826");
+      s.strokeWeight(2.6);
+      s.gesture({ pressure: "swell", wobble: 0.5 });
+      s.curve([[614, 474], [630, 512], [630, 566]]);
+      // cheek line under the eye
+      s.strokeWeight(1.8);
+      s.curve([[560, 524], [584, 532], [608, 524]]);
+      // scales begin behind the gill
+      s.brush("pencil", { opacity: 0.8 });
+      s.stroke("#5e4826");
+      s.strokeWeight(2.5);
+      for (let r = 0; r < 3; r += 1) {
+        for (let c = 0; c < 2; c += 1) {
+          s.curve(ellipseArc(644 + c * 16, 506 + r * 18 + c * 8, 9, 7, 0.3, Math.PI - 0.3, 6));
+        }
+      }
+    });
+    // mouth, a round "O" toward the lantern
+    s.noBrush();
+    s.noStroke();
+    s.fill("#e8c48a");
+    s.ellipse(538, 504, 18, 22);
+    s.fill("#3a2216");
+    s.ellipse(537, 503, 11, 15);
+    s.fill("#b0603e");
+    s.ellipse(538, 505, 5, 8);
+    // eye: large and old and kind, looking up at the lantern
+    s.fill("#f2e2b4");
+    s.circle(580, 496, 20);
+    s.fill("#20160e");
+    s.circle(577, 494, 13);
+    s.fill("#fff6dc");
+    s.circle(574, 491, 4);
+    s.noFill();
+    s.brush("ink");
+    s.stroke("#5e4826");
+    s.strokeWeight(1.6);
+    s.gesture({ pressure: "taper" });
+    s.curve([[568, 486], [580, 482], [592, 487]]);
+    // barbels
+    s.noFill();
+    s.brush("ink");
+    s.stroke("#5e4826");
+    s.strokeWeight(2.4);
+    s.gesture({ pressure: "taper-out", wobble: 0.4 });
+    s.curve([[542, 514], [528, 532], [522, 556]]);
+    s.curve([[548, 518], [544, 538], [548, 560]]);
+    // outline
+    s.stroke("#2c1e10");
+    s.strokeWeight(3);
+    s.gesture({ pressure: "swell", wobble: 0.8 });
+    s.curve(HEAD_F.slice(0, 6));
+    s.strokeWeight(2.2);
+    s.curve([HEAD_F[6], HEAD_F[7], HEAD_F[8], HEAD_F[0]]);
+  });
+  // water lapping at the waterline
+  s.noFill();
+  s.brush("ink", { opacity: 0.85 });
+  s.stroke("#e9caa0");
+  s.strokeWeight(2.6);
+  s.gesture({ pressure: "taper", wobble: 1 });
+  s.curve([[540, WATERLINE + 2], [600, WATERLINE - 2], [672, WATERLINE + 2]]);
+}
+
+// ── the boat ───────────────────────────────────────────────────────
+
+const HULL: Vec2[] = [
+  [170, 496],
+  [300, 500],
+  [420, 490],
+  [486, 466],
+  [470, 506],
+  [430, 534],
+  [330, 548],
+  [230, 546],
+  [186, 528],
+];
+const INSIDE: Vec2[] = [
+  [176, 494],
+  [260, 476],
+  [380, 470],
+  [474, 464],
+  [420, 492],
+  [300, 500],
+];
+
+function boatBack(s: Sketch): void {
+  s.group({ opacity: 0.4 }, () => {
+    s.noStroke();
+    s.fill("#120e0c");
+    s.curve([[190, 540], [330, 552], [440, 538], [430, 572], [320, 594], [220, 582]], true);
+  });
+  s.noStroke();
+  s.fill("#3b2618");
+  s.curve(INSIDE, true);
+  s.clip(s.curvePath(INSIDE, true), () => {
+    s.noFill();
+    s.brush("bristle", { opacity: 0.6 });
+    s.stroke("#5c3a22");
+    s.strokeWeight(14);
+    s.gesture({ pressure: "even" });
+    s.curve([[180, 488], [300, 478], [470, 466]]);
+    glow(s, LANTERN[0], LANTERN[1], 90, "255,170,80", 0.45);
+  });
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#22140c");
+  s.strokeWeight(2.2);
+  s.gesture({ pressure: "taper", wobble: 0.6 });
+  s.curve([[176, 494], [260, 476], [380, 470], [474, 464]]);
+}
+
+function oar(s: Sketch): void {
+  // resting in its lock, blade trailing in the water off the stern
+  const shaft = s.tube(
+    [
+      [262, 468],
+      [196, 508],
+      [140, 548],
+    ],
+    { width: 7 },
+  );
+  s.noStroke();
+  s.fill("#9a6a40");
+  s.path(shaft);
+  const blade: Vec2[] = [
+    [148, 540],
+    [120, 552],
+    [92, 572],
+    [104, 582],
+    [134, 566],
+  ];
+  s.fill("#8a5c36");
+  s.curve(blade, true);
+  // the water closes over the lower half of the blade
+  s.fill("rgba(40,58,80,0.65)");
+  s.curve([[160, 556], [120, 562], [86, 578], [110, 590], [150, 570]], true);
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#22140c");
+  s.strokeWeight(1.8);
+  s.gesture({ pressure: "taper", wobble: 0.4 });
+  s.path(shaft);
+  s.curve(blade, true);
+  s.brush("ink", { opacity: 0.6 });
+  s.stroke("#a8b4c8");
+  s.strokeWeight(1.5);
+  s.curve(ellipseArc(124, 566, 42, 8, Math.PI * 0.1, Math.PI * 0.9));
+}
+
+function boatFront(s: Sketch): void {
+  s.noStroke();
+  s.fill("#7a4a2c");
+  s.curve(HULL, true);
+  s.clip(s.curvePath(HULL, true), () => {
+    s.noFill();
+    s.brush("bristle", { opacity: 0.85 });
+    s.gesture({ pressure: "even", wobble: 1 });
+    s.strokeWeight(16);
+    s.stroke("#a8693c");
+    s.curve([[160, 506], [320, 510], [480, 480]]);
+    s.stroke("#4a2a16");
+    s.strokeWeight(20);
+    s.curve([[170, 536], [320, 544], [470, 512]]);
+    s.brush("ink");
+    s.stroke("#3a2214");
+    s.strokeWeight(1.5);
+    s.gesture({ pressure: "taper" });
+    s.curve([[180, 512], [320, 518], [476, 484]]);
+    s.curve([[190, 528], [320, 533], [462, 506]]);
+    glow(s, LANTERN[0], LANTERN[1], 120, "255,170,80", 0.6);
+  });
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#22140c");
+  s.gesture({ pressure: "swell", wobble: 0.8 });
+  s.strokeWeight(3.5);
+  s.curve([[170, 496], [300, 500], [420, 490], [486, 466]]);
+  s.strokeWeight(2.4);
+  s.curve([[486, 466], [470, 506], [430, 534], [330, 548], [230, 546], [186, 528], [170, 496]]);
+}
+
+// ── the girl ───────────────────────────────────────────────────────
+
+const COAT: Vec2[] = [
+  [352, 510],
+  [354, 470],
+  [368, 440],
+  [394, 424],
+  [420, 426],
+  [436, 446],
+  [442, 478],
+  [440, 510],
+];
+const FACE: Vec2[] = [
+  [404, 384],
+  [420, 376],
+  [436, 382],
+  [442, 396],
+  [449, 402],
+  [442, 408],
+  [440, 416],
+  [428, 422],
+  [412, 420],
+  [400, 404],
+];
+const HAT: Vec2[] = [
+  [398, 396],
+  [396, 376],
+  [408, 362],
+  [428, 360],
+  [442, 372],
+  [446, 388],
+];
+
+function girl(s: Sketch): void {
+  // braid hanging down her back
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#3a2416");
+  s.strokeWeight(9);
+  s.gesture({ pressure: "taper-out", wobble: 0.5 });
+  s.curve([[404, 400], [396, 420], [386, 446]]);
+  // coat
+  s.noStroke();
+  s.fill("#2f5a5e");
+  s.curve(COAT, true);
+  s.clip(s.curvePath(COAT, true), () => {
+    s.fill("#1a343c");
+    s.curve(shift(s.offset(COAT, 4), -18, 6), true);
+    glow(s, 470, 470, 60, "240,170,90", 0.7);
+    s.noFill();
+    s.gesture({ pressure: "even", wobble: 1 });
+    s.brush("bristle", { opacity: 0.55, load: 0.9 });
+    s.stroke("#122a30");
+    s.strokeWeight(18);
+    s.curve([[360, 500], [364, 462], [384, 436]]);
+    s.curve([[376, 506], [380, 470], [396, 444]]);
+    s.stroke("#4a8282");
+    s.strokeWeight(16);
+    s.curve([[404, 432], [424, 450], [432, 504]]);
+    s.stroke("#c99a5c");
+    s.strokeWeight(10);
+    s.curve([[426, 440], [438, 466], [440, 504]]);
+  });
+  // scarf
+  s.noStroke();
+  s.fill("#d9a334");
+  s.curve([[402, 416], [420, 418], [434, 424], [430, 432], [412, 432], [400, 428]], true);
+  s.curve([[404, 426], [388, 436], [366, 438], [352, 446], [360, 432], [384, 424]], true);
+  // arm reaching to the lantern
+  const arm = s.tube(
+    [
+      [418, 438],
+      [452, 448],
+      [482, 452],
+    ],
+    { width: 16, profile: [[0, 1], [1, 0.75]] },
+  );
+  s.fill("#2f5a5e");
+  s.path(arm);
+  s.clip(arm, () => {
+    s.fill("#1a343c");
+    s.rect(400, 440, 100, 8);
+    glow(s, 488, 470, 40, "250,180,100", 0.8);
+  });
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#14100c");
+  s.strokeWeight(2);
+  s.gesture({ pressure: "taper", wobble: 0.4 });
+  s.path(arm);
+  // mitten
+  s.noStroke();
+  s.fill("#c4402e");
+  s.circle(486, 452, 14);
+  // face in profile
+  s.fill("#e8b896");
+  s.curve(FACE, true);
+  s.clip(s.curvePath(FACE, true), () => {
+    s.fill("#4a2c1a");
+    s.curve(shift(FACE, -22, -4), true);
+    s.fill("#c9967a");
+    s.curve([[420, 392], [424, 404], [418, 414], [414, 404]], true);
+    glow(s, 470, 440, 56, "255,196,120", 0.8);
+    s.fill("rgba(214,110,90,0.45)");
+    s.circle(428, 408, 10);
+  });
+  s.fill("#1c140c");
+  s.circle(433, 395, 3.6);
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#3a2214");
+  s.strokeWeight(1.6);
+  s.gesture({ pressure: "taper" });
+  s.curve([[430, 389], [434, 388], [437, 390]]);
+  s.curve(FACE.slice(2, 8));
+  // hat with a turned-up band and a pompom
+  s.noStroke();
+  s.fill("#c4402e");
+  s.curve(HAT, true);
+  s.clip(s.curvePath(HAT, true), () => {
+    s.fill("#8e2a20");
+    s.curve(shift(HAT, -10, -4), true);
+    s.noFill();
+    s.brush("chalk", { opacity: 0.6 });
+    s.stroke("#e56a4a");
+    s.strokeWeight(10);
+    s.gesture({ pressure: "even" });
+    s.line(410, 366, 440, 380);
+  });
+  s.fill("#a8322a");
+  s.curve([[396, 384], [420, 378], [446, 382], [446, 392], [420, 388], [398, 394]], true);
+  s.fill("#efe0c8");
+  s.circle(400, 362, 13);
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#14100c");
+  s.strokeWeight(2.2);
+  s.gesture({ pressure: "swell", wobble: 0.5 });
+  s.curve(HAT, true);
+  s.curve(COAT.slice(0, 6));
+}
+
+// ── the lantern ────────────────────────────────────────────────────
+
+function lantern(s: Sketch): void {
+  const [x, y] = LANTERN;
+  glow(s, x, y, 150, "255,190,100", 0.35);
+  glow(s, x, y, 50, "255,220,150", 0.7);
+  // bail from the mitten
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#14100c");
+  s.strokeWeight(1.6);
+  s.gesture({ pressure: "even" });
+  s.curve([[480, 456], [488, 466], [x - 6, y - 16]]);
+  s.curve([[492, 456], [x + 6, y - 16]]);
+  // body: cap, glass, base
+  s.noBrush();
+  s.noStroke();
+  s.fill("#fff2c4");
+  s.rect(x - 8, y - 12, 16, 22);
+  s.fill(s.radialGradient(x, y, 9, [[0, "#ffffff"], [1, "rgba(255,240,190,0)"]]));
+  s.circle(x, y, 18);
+  s.fill("#2a1c12");
+  s.triangle(x - 11, y - 12, x + 11, y - 12, x, y - 20);
+  s.rect(x - 10, y + 9, 20, 4);
+  s.rect(x - 9, y - 12, 2, 22);
+  s.rect(x + 7, y - 12, 2, 22);
+}
+
+// ── foreground reeds ───────────────────────────────────────────────
+
+function reeds(s: Sketch): void {
+  s.noFill();
+  s.brush("ink");
+  s.stroke("#09121a");
+  const left: Vec2[] = [];
+  for (let i = 0; i < 14; i += 1) {
+    const x = 10 + i * 12 + (i % 3) * 5;
+    const top = 600 + ((i * 47) % 120);
+    const tip: Vec2 = [x + 14 + (i % 4) * 6, top];
+    left.push(tip);
+    s.strokeWeight(3 + (i % 3));
+    s.gesture({ pressure: "taper-out", wobble: 1.5 });
+    s.curve([[x, 820], [x + 4, (820 + top) / 2], tip]);
+  }
+  const right: Vec2[] = [];
+  for (let i = 0; i < 9; i += 1) {
+    const x = 722 + i * 10;
+    const top = 570 + ((i * 53) % 140);
+    const tip: Vec2 = [x - 12 - (i % 3) * 5, top];
+    right.push(tip);
+    s.strokeWeight(3 + (i % 3));
+    s.gesture({ pressure: "taper-out", wobble: 1.5 });
+    s.curve([[x, 820], [x - 2, (820 + top) / 2], tip]);
+  }
+  // cattails on stiff stalks
+  s.strokeWeight(2.5);
+  s.gesture({ pressure: "even" });
+  s.line(56, 820, 58, 620);
+  s.line(712, 820, 706, 580);
+  s.noBrush();
+  s.noStroke();
+  s.fill("#2a1a10");
+  s.ellipse(58, 640, 10, 36);
+  s.ellipse(706, 600, 10, 34);
+}

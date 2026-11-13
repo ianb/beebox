@@ -54,10 +54,13 @@ void test("A wait lives through the interval in time order, and resumes after a 
   execFileSync("git", ["-C", box.root, "commit", "-qm", "schedules"]);
   writeFileSync(join(runDir, "before.json"), JSON.stringify({ box: box.root, url: "http://localhost:3210/wt/g-paperwork-3/" }));
   const phone = (...args: string[]) => execFileSync(process.execPath, ["--import", "tsx", resolve(import.meta.dirname, "journeys/phone.ts"), runDir, ...args], {
-    encoding: "utf8", env: { ...process.env, TZ: "UTC" }, timeout: 600_000,
+    // stderr is piped, not inherited: a refusal's text reaches the check below through the thrown error.
+    encoding: "utf8", env: { ...process.env, TZ: "UTC" }, timeout: 600_000, stdio: ["ignore", "pipe", "pipe"],
   });
 
   const waited = phone("--wait", "2d");
+  const ran = readFileSync(join(box.root, ".beebox", "ran.log"), "utf8").trim().split("\n");
+  const ranAt = ran.map((l) => Date.parse(l.slice(l.indexOf(" ") + 1)));
   // Their order depends on the hour the test runs; which ones came does not.
   const titles = [...waited.matchAll(/^(?:Water the plants|Made by a run)$/gmu)].map((m) => m[0]).toSorted();
   const offset: unknown = JSON.parse(readFileSync(join(box.root, ".beebox", "clock-offset.json"), "utf8"));
@@ -66,14 +69,17 @@ void test("A wait lives through the interval in time order, and resumes after a 
     titles,
     failedLine: /^- broken-once@\S+: .+$/mu.exec(waited)?.[0].replace(/@\S+: .+$/u, "@<at>: <error>"),
     deferred: [...waited.matchAll(/^- (nothing-new)@\S+: (.+)$/gmu)].map((m) => `${m[1] ?? ""}: ${m[2] ?? ""}`),
-    runs: readFileSync(join(box.root, ".beebox", "ran.log"), "utf8").trim().split("\n").map((l) => l.replace(/\d{4}-\d\d-\d\dT/u, "<day>T")),
+    // Started between 10:00 and 11:00 UTC, self-off comes first; the log is in time order either way.
+    runs: ran.map((l) => l.replace(/\d{4}-\d\d-\d\dT/u, "<day>T")).toSorted(),
+    runsInTimeOrder: ranAt.every((at, i) => i === 0 || at > (ranAt[i - 1] ?? Infinity)),
     offsetDays,
     stateKeys: Object.keys(z.record(z.string(), z.unknown()).parse(JSON.parse(readFileSync(join(runDir, "phone.json"), "utf8")))),
   }, {
     titles: ["Made by a run", "Water the plants", "Water the plants"],
     failedLine: "- broken-once@<at>: <error>",
     deferred: ["nothing-new: no-change", "nothing-new: no-change"],
-    runs: ["ran <day>T10:00:01.000Z", "self-off <day>T11:00:01.000Z", "ran <day>T10:00:01.000Z"],
+    runs: ["ran <day>T10:00:01.000Z", "ran <day>T10:00:01.000Z", "self-off <day>T11:00:01.000Z"],
+    runsInTimeOrder: true,
     offsetDays: 2,
     stateKeys: ["shown"],
   });

@@ -7,6 +7,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
 import { processCapture } from "../../../src/core/quick-capture/worker.js";
@@ -123,7 +124,10 @@ void test("Explicit human instructions accompanying an audio file still authoriz
   await writeFile(path,"audio");
   const sha256=createHash("sha256").update("audio").digest("hex");
   await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:{...base,source:"apple-app-intents",input:"Explain the recording",material:{kind:"audio",id,mimeType:"audio/mp4",byteLength:5,sha256,fileName:"recording.m4a"}},bytes:{path,size:5,sha256}});
+  const warnings=consoleLines(t,"warn");
   const record=present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:emptyTranscript},id));
+  // The server log carries only the error's name and code, never the captured words or audio:
+  t.check(warnings(), [`[quick-capture] transcription failed for ${id}; supplied words still authorize work: { name: 'QuickCaptureError', code: 'invalid' }`]);
   const routed=present(await readQuickChatRecord(box.root,id));
   t.check(record, {
     id,
@@ -152,8 +156,11 @@ void test("Repeated provider errors update retry metadata without committing the
   const box=await makeTmpBox({git:true});
   await voice(box);
   async function unavailable(): Promise<never> {throw new Error("Transcription service unavailable");}
+  const errors=consoleLines(t,"error");
   await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:unavailable},id);
   await processCapture({boxRoot:box.root,jev:undefined,chat:undefined,transcribe:unavailable,manualRetry:true},id);
+  // The server log carries only the error's name, never its message, which may quote the capture; each attempt logs once:
+  t.check(errors(), [`[quick-capture] ${id} processing failed: { name: 'Error' }`, `[quick-capture] ${id} processing failed: { name: 'Error' }`]);
   t.check(execFileSync("git",["log","--format=%s"],{cwd:box.root,encoding:"utf8"}).split("\n").filter(Boolean), [
     "Record quick capture transcription",
     "Retain quick capture source",

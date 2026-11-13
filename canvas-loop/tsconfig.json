@@ -18,5 +18,5 @@
     "types": ["node"]
   },
   "include": ["eslint.config.ts", "src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "out", "src/gallery/out", "src/react", "src/exports", "src/browser", "src/dev-demo", "**/*.tsx", "test/browser/mount.test.ts", "test/react/SketchFigure.hardening.test.ts", "test/browser/mount.failure-paths.test.ts", "test/browser/fake-dom.ts"]
+  "exclude": ["node_modules", "out", "src/gallery/out", "src/react", "src/exports", "src/browser", "src/dev-demo", "**/*.tsx", "test/browser/mount.test.ts", "test/react/SketchFigure.hardening.test.ts", "test/browser/mount.failure-paths.test.ts", "test/browser/fake-dom.ts", "test/browser/controls.overlay.test.ts", "test/browser/runtime/engine.sound.test.ts", "test/browser/runtime.sleep.test.ts", "test/browser/runtime/sound-player.library.test.ts"]
 }

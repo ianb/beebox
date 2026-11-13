@@ -168,6 +168,15 @@ trap 'on_signal HUP 1' HUP
 BBX_DEPLOY_NO_FALLBACK=1 require_deploy_target "$SCRIPT_DIR"
 SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 INSTALL_DIR="$BBX_DEPLOY_INSTALL_DIR"
+# Keepalives on every connection to the server (ssh here, and rsync's ssh).
+# Without them a dropped connection (laptop sleep, network change) left the
+# control ssh waiting forever with the deploy lock held: the server side had
+# already died, and no later deploy could start (twice on 2026-11-12). Now a
+# dead connection fails within about two minutes, exit 255, and the EXIT trap
+# reports it and releases the lock.
+SSH_KEEPALIVE=(-o ServerAliveInterval=30 -o ServerAliveCountMax=4)
+ssh() { command ssh "${SSH_KEEPALIVE[@]}" "$@"; }
+export RSYNC_RSH="ssh ${SSH_KEEPALIVE[*]}"
 
 
 # The latest-wins lock below is a lock DIRECTORY holding the owner's pid.
@@ -335,9 +344,16 @@ LAYOUTCHECK
 # the cleanup that repairs it. Best-effort here: the hard post-install prune
 # below is authoritative, while this recovery pass may be running on a full
 # filesystem with partially broken tools.
+# The root store is pruned only when disk is low (see ROOT_STORE_PRUNE_BELOW_PCT
+# at the post-install prune for why).
 step "Pruning deploy package caches before disk gate..."
 ssh "$SSH_TARGET" bash -s <<'PREFLIGHTCLEAN'
-pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune' \
   || echo "  WARNING: Bee Box pnpm store preflight prune failed" >&2
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
@@ -513,13 +529,15 @@ RSYNC_OPTS=(-az --delete
 # Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
 # members linked via `workspace:*` deps, so they must all be present alongside
 # beebox on the server for the root `pnpm install` to resolve.
-# personal-vibe-check and tap-check are devDeps of beebox (the server
-# install is non-prod because the runtime uses tsx, itself a devDep).
+# personal-vibe-check, tap-check and canvas-loop are devDeps of beebox (the
+# server install is non-prod because the runtime uses tsx, itself a devDep).
+# canvas-loop is also inlined into dist/cli.mjs (`bbx figure run`); syncing it
+# keeps the frozen workspace install resolvable and the tsx fallback working.
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
 # The agent-browser package itself is a beebox dependency (the box browser,
 # docs/plans/shared-browser.md), so it installs with beebox.
-for repo in personal-vibe-check tap-check beebox; do
+for repo in personal-vibe-check tap-check canvas-loop beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
     # Fatal, not skipped: beebox's frozen install needs every workspace dep,
@@ -751,13 +769,25 @@ queue_remote stdin bash -s /var/lib/beebox /opt/beebox/beebox \
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
 # pnpm 10's `store prune` also deletes every cached registry metadata file, so
-# after this step the server has no warm metadata cache. A migration that runs
+# after a prune the server has no warm metadata cache. A migration that runs
 # pnpm on the server must not assume one: use `--prefer-offline`, never
 # `--offline`.
+# The root store is pruned only when less than 30% of / is free. With
+# `nodeLinker: hoisted`, a frozen install over an existing node_modules fetches
+# every platform's optional binaries (esbuild, sharp, TypeScript 7, oxc) even
+# though it installs only this host's, and prune drops them again because no
+# project links them. Pruning on every deploy made each install refetch several
+# GB with the services stopped; on a slow registry day (2026-11-09) that held
+# production down for half an hour. Keeping them costs about 6.5 GB of disk.
 queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
-pnpm store prune
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune'
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
   sudo -u beebox -H bash -lc 'cd /home/beebox && uv cache clean'
@@ -899,7 +929,7 @@ bash "$install_dir/beebox/deploy/install-restic.sh" /usr/local/bin/restic
 # files, installed whole: a template socket and service, the pass service, and
 # the sandbox drop-in both templates include. The hub and scheduler units are
 # installed whole too; the scheduler runs as the scheduler user.
-units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
+units=(beebox-boxes.slice beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
 for unit in "${units[@]}"; do
   src="$install_dir/beebox/deploy/systemd/$unit"
   dest="/etc/systemd/system/$unit"
@@ -912,6 +942,16 @@ for unit in "${units[@]}"; do
     fi
   fi
 done
+# /run/beebox and the cache directories come back at every boot from
+# tmpfiles.d. A host provisioned before cloud-init carried this entry had none,
+# and its first reboot left the hub unable to start (2026-11-11). --create is
+# idempotent and also repairs a directory with the wrong owner or mode.
+tmpfiles_src="$install_dir/beebox/deploy/systemd/beebox.tmpfiles.conf"
+if ! cmp -s "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf; then
+  install -o root -g root -m 0644 "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf
+  echo "  installed /etc/tmpfiles.d/beebox.conf"
+fi
+systemd-tmpfiles --create /etc/tmpfiles.d/beebox.conf
 # A fresh host has never enabled the hub; an existing one is a no-op.
 systemctl enable beebox-hub.service >/dev/null 2>&1 || true
 # cloud-init makes a system user without a home; the unit's WorkingDirectory
@@ -1247,6 +1287,13 @@ if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
   echo "The TypeScript 7 binary did not run from the staged install; not activating. Uploaded artifacts remain staged." >&2
   exit 1
 fi
+# Fill the store with everything the live install will ask for while the
+# services still run. The stage's node_modules exists by now (a link to the live
+# tree or its own install), and with one present `pnpm fetch` pulls the same
+# all-platform set the hoisted live install fetches; see the cache prune step.
+# Without this, any new package's downloads happen after the services stop.
+echo "  Prefetching packages for activation..."
+(cd "$stage_dir" && HUSKY=0 npm_config_update_notifier=false CI=true pnpm fetch)
 boxes=()
 for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")

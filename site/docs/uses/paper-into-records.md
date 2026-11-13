@@ -21,7 +21,9 @@ page, each carrying the text read off it and a description. The agent then
 extracts one record card per thing: a name, where it is, dates, and links back to
 the photo and to the words it came from. Asides that fit no field stay on the card as your words.
 
-**What it needs.** A phone or a scanner, and a box the device can reach.
+**What it needs.** A phone, or a scanner that saves into a folder the Mac app
+watches ([Mac app](../capabilities/mac-app.md); the separate command-line
+uploader was removed on 2026-10-30), and a box the device can reach.
 [Phone capture](../capabilities/phone-capture.md),
 [triage](../capabilities/triage.md),
 [the scanner contract](../contracts/scan-upload.md),

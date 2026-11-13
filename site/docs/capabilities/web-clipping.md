@@ -14,6 +14,14 @@ things from your browser into your box.
 - Saves a web page you're looking at into a chosen destination in the box
   (a chat, or a landmark you've set up), keeping a readable copy plus a
   frozen snapshot of the page as it looked.
+- Lets the agent save a page without the extension. Given an address it fetches
+  the page as an ordinary browser would, keeps a readable copy, notes when a
+  link redirected, and declines to save a login or "verify you are human"
+  page as if it were the article. It can also save the page open in the box's
+  web browser, or re-read a card from the copy it already holds, and a PDF can
+  be kept with its address and a hash. A box can supply its own text
+  extraction for a site that loses part of the page, and can declare extra
+  fields on the saved cards.
 - Lets you attach a comment to the page you're saving, so your reaction is
   captured alongside the page itself.
 - Sends your current browser tab arrangement to the box, which can propose
@@ -45,7 +53,9 @@ use the extension.
 
 **Limits**
 
-Send to box needs the same OpenRouter key as quick chat; without it the page is
+The agent's own page saving was merged on 2026-11-01 and has not run on a
+production server or at the scale of thousands of saved pages; replacing a
+changed page is covered by automated tests only. Send to box needs the same OpenRouter key as quick chat; without it the page is
 saved and the popup offers recent chats to choose from. The routing model sees the page's
 title, address and site and your note, not the page text.
 Tab arrangements always land in one fixed destination; only the page/comment

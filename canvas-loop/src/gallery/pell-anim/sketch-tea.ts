@@ -1,0 +1,2112 @@
+// "Old Pell Lights the Lamps", animated. The page from open-opus-b: at the end
+// of the pier an old heron reaches his lighting pole up to the last lamp, while
+// one small boat is still out on the water.
+//
+// Here the last lamp starts dark. Click it and Pell lights it; the glow blooms,
+// moths come to it, and the boat turns for home and rows in to the pier. Drag
+// the moon; click the water to drop a ring; move the pointer through the reeds
+// to part them. Params: wind (scarf, reeds, water), dusk (the sky deepens,
+// more stars), fireflies, and "next evening" to put the lamp out again.
+//
+// The painted still is expensive, so every unmoving part goes into `v.cache`
+// layers and only the moving parts are drawn each frame, with cheap marks.
+// A TEA sketch may import nothing but the framework types, so the painting
+// code from open-opus-b is copied into this one file, with `Sketch` → `View`
+// and its `s.random` calls replaced by a seeded generator.
+import type {
+  BrushPreset,
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Style,
+  Util,
+  Vec2,
+  View,
+} from "@ianbicking/canvas-loop";
+
+export const params = {
+  wind: { type: "number", min: 0, max: 1, default: 0.35, step: 0.05 },
+  dusk: { type: "number", min: 0, max: 1, default: 0, step: 0.05 },
+  fireflies: { type: "boolean", default: true },
+  "next-evening": { type: "trigger" },
+} as const satisfies ParamsDecl;
+
+export const canvas = { width: 800, height: 800 };
+
+type P = ParamValues<typeof params>;
+
+// ── Model ────────────────────────────────────────────────────────────
+
+interface Ring {
+  readonly x: number;
+  readonly y: number;
+  readonly born: number;
+}
+
+/** A point in the model. `DeepReadonly` turns a `Vec2` tuple into `readonly number[]`, so model points are objects. */
+interface Pt {
+  readonly x: number;
+  readonly y: number;
+}
+
+type Lamp = { type: "dark" } | { type: "lit"; at: number };
+type Drag = { type: "none" } | { type: "moon"; dx: number; dy: number };
+
+export interface Model {
+  frame: number;
+  lamp: Lamp;
+  moon: Pt;
+  drag: Drag;
+  pointer: Pt | null;
+  /** Where the reeds feel the pointer: it follows the pointer with a lag, and `presence` fades in and out. */
+  stir: { x: number; y: number; presence: number };
+  rings: readonly Ring[];
+}
+
+/** One loop of the idle motion, in frames (4 s at 60 fps). */
+const LOOP = 240;
+const RING_LIFE = 90;
+const BOAT_DELAY = 30;
+const BOAT_TRIP = 420;
+const MOON_R = 29;
+const MOON0: Pt = { x: 190, y: 130 };
+
+export function init(): Model {
+  return {
+    frame: 0,
+    lamp: { type: "dark" },
+    moon: MOON0,
+    drag: { type: "none" },
+    pointer: null,
+    stir: { x: 0, y: 0, presence: 0 },
+    rings: [],
+  };
+}
+
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
+  switch (msg.type) {
+    case "tick":
+      return {
+        ...model,
+        frame: msg.frame,
+        stir: settle(model),
+        rings: model.rings.filter((r) => msg.frame - r.born < RING_LIFE),
+      };
+    case "mousedown":
+      return press(model, [msg.x, msg.y], u);
+    case "mousemove":
+      return move(model, [msg.x, msg.y], u);
+    case "mouseup":
+      if (model.drag.type === "none") return model;
+      u.handled("drop-moon");
+      return { ...model, drag: { type: "none" } };
+    case "keydown":
+    case "keyup":
+    case "param":
+      return model;
+    case "trigger":
+      if (msg.name !== "next-evening") return model;
+      u.handled("next-evening");
+      return { ...model, lamp: { type: "dark" }, rings: [] };
+  }
+}
+
+function press(
+  model: DeepReadonly<Model>,
+  at: Vec2,
+  u: Util<typeof params>,
+): Model {
+  const [x, y] = at;
+  if (Math.hypot(x - model.moon.x, y - model.moon.y) <= MOON_R + 8) {
+    u.handled("grab-moon");
+    return {
+      ...model,
+      drag: { type: "moon", dx: model.moon.x - x, dy: model.moon.y - y },
+    };
+  }
+  if (Math.hypot(x - LANTERN[0], y - LANTERN[1]) <= 34) {
+    if (model.lamp.type === "lit") {
+      u.handled("lamp-already-lit");
+      return model;
+    }
+    u.handled("light-lamp");
+    u.log(`Pell lights the last lamp at frame ${model.frame + 1}`);
+    return { ...model, lamp: { type: "lit", at: model.frame + 1 } };
+  }
+  if (onOpenWater(x, y)) {
+    u.handled("ring");
+    return {
+      ...model,
+      rings: [...model.rings.slice(-5), { x, y, born: model.frame }],
+    };
+  }
+  return model;
+}
+
+/** One tick of the reeds' lag behind the pointer. */
+function settle(model: DeepReadonly<Model>): Model["stir"] {
+  const { stir, pointer } = model;
+  if (pointer === null) return { ...stir, presence: stir.presence * 0.9 };
+  const inReeds = nearReeds(pointer.x, pointer.y);
+  const presence = stir.presence + ((inReeds ? 1 : 0) - stir.presence) * 0.15;
+  const first = stir.presence < 0.01;
+  return {
+    x: first ? pointer.x : stir.x + (pointer.x - stir.x) * 0.25,
+    y: first ? pointer.y : stir.y + (pointer.y - stir.y) * 0.25,
+    presence,
+  };
+}
+
+function move(
+  model: DeepReadonly<Model>,
+  at: Vec2,
+  u: Util<typeof params>,
+): Model {
+  const [x, y] = at;
+  if (model.drag.type === "moon") {
+    u.handled("drag-moon");
+    const moon: Pt = {
+      x: clamp(x + model.drag.dx, 40, 760),
+      y: clamp(y + model.drag.dy, 50, 330),
+    };
+    return { ...model, moon, pointer: { x, y } };
+  }
+  if (nearReeds(x, y)) u.handled("part-reeds");
+  if (
+    model.lamp.type === "dark" &&
+    Math.hypot(x - LANTERN[0], y - LANTERN[1]) < 80
+  )
+    u.handled("lamp-waits");
+  return { ...model, pointer: { x, y } };
+}
+
+/** Water the reader can drop a ring on: below the horizon, off the pier and the near reeds. */
+function onOpenWater(x: number, y: number): boolean {
+  if (y < HORIZON + 12) return false;
+  if (x >= X0 - 10 && x <= X1 + 10 && y <= deckFront(x) + 30) return false;
+  return !nearReeds(x, y);
+}
+
+function nearReeds(x: number, y: number): boolean {
+  return REEDS.some(
+    (r) => Math.abs(x - r.x - r.lean * 0.5) < 40 && y > 815 - r.h - 10,
+  );
+}
+
+// ── Small numeric helpers ────────────────────────────────────────────
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+function smooth(t: number): number {
+  const c = clamp(t, 0, 1);
+  return c * c * (3 - 2 * c);
+}
+
+/** A seeded generator (mulberry32) for the scene's fixed scatter; the state lives in the closure. */
+function rng(seed: number): (lo?: number, hi?: number) => number {
+  let a = seed >>> 0;
+  return (lo = 0, hi = 1) => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    return lo + r * (hi - lo);
+  };
+}
+
+/** Phase of the idle loop at `frame`, times `k` whole turns (so every motion loops). */
+function phase(frame: number, k = 1): number {
+  return (2 * Math.PI * k * frame) / LOOP;
+}
+
+// ── Draw ─────────────────────────────────────────────────────────────
+
+export function draw(v: View, model: DeepReadonly<Model>, p: P): void {
+  const f = model.frame;
+  const bloom = lampBloom(model);
+  // `paper()` rebuilds its texture on every call, so it is set once, inside the
+  // first cache body: whenever the caches are fresh, so is the paper.
+  v.cache("sky-back", () => {
+    v.paper({ scale: 3, contrast: 0.6, seed: 7 });
+    drawSkyBack(v);
+  });
+  drawStars(v, f, p.dusk);
+  drawMoon(v, model.moon);
+  v.cache("sky-front", () => drawSkyFront(v));
+  v.cache("water", () => drawWater(v));
+  drawMoonPath(v, model.moon, f, p.wind);
+  drawShimmer(v, f, p.wind);
+  drawRings(v, model.rings, f);
+  v.cache("village", () => drawVillage(v));
+  if (bloom > 0)
+    v.group({ opacity: bloom }, () =>
+      v.cache("last-reflection", () => drawLampReflection(v, LAMP)),
+    );
+  drawBoat(v, model, f);
+  v.cache("walkway", () => {
+    drawWalkway(v);
+    for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
+    drawPost(v, LAMP);
+  });
+  drawLastLamp(v, bloom, f, invitation(model));
+  const done =
+    model.lamp.type === "lit" ? smooth((f - model.lamp.at - 50) / 70) : 0;
+  drawHeron(v, f, p.wind, { bloom, done });
+  drawReeds(v, f, p.wind, model.stir);
+  drawDusk(v, p.dusk);
+  drawLights(v, f, bloom, p.dusk);
+  drawBoatLight(v, model, f, p.dusk);
+  if (p.fireflies) drawFireflies(v, f);
+  drawMoths(v, f, bloom);
+  drawStory(v, model);
+  v.paperTexture(0.35);
+}
+
+/** 0 while dark, rising to 1 over the first second after the lamp is lit. */
+function lampBloom(model: DeepReadonly<Model>): number {
+  return model.lamp.type === "lit"
+    ? smooth((model.frame - model.lamp.at) / 40)
+    : 0;
+}
+
+// ── Sky ──────────────────────────────────────────────────────────────
+
+const HORIZON = 470;
+
+const C = {
+  skyTop: "#1c2150",
+  skyMid: "#4a3f7d",
+  skyRose: "#b8648a",
+  skyGlow: "#f3a66c",
+  skyLow: "#f8cf8f",
+  hill: "#6a5f92",
+  hillFar: "#8f7aa6",
+  house: "#3b2d4d",
+  roof: "#271f3f",
+  window: "#ffd27a",
+  waterTop: "#e9a77c",
+  waterMid: "#6b5d93",
+  waterLow: "#232650",
+  moon: "#fbf1d0",
+} as const;
+
+function drawSkyBack(v: View): void {
+  v.background(
+    v.linearGradient(0, 0, 0, HORIZON, [
+      [0, C.skyTop],
+      [0.42, C.skyMid],
+      [0.75, C.skyRose],
+      [0.93, C.skyGlow],
+      [1, C.skyLow],
+    ]),
+  );
+}
+
+interface Star {
+  readonly x: number;
+  readonly y: number;
+  readonly d: number;
+  readonly k: number;
+}
+
+const STARS: readonly Star[] = (() => {
+  const r = rng(11);
+  return Array.from({ length: 70 }, () => ({
+    x: r(0, 800),
+    y: r(0, 250),
+    d: r(1, 2.6),
+    k: Math.floor(r(1, 4)),
+  }));
+})();
+
+function drawStars(v: View, f: number, dusk: number): void {
+  const shown = Math.round(36 + dusk * 34);
+  for (let i = 0; i < shown; i += 1) {
+    const st = STARS[i];
+    if (st === undefined) continue;
+    const tw = 0.6 + 0.4 * Math.sin(phase(f, st.k) + i * 1.7);
+    v.circle(st.x, st.y, st.d / 2, {
+      fill: `rgba(255,244,214,${(0.85 * tw).toFixed(3)})`,
+    });
+  }
+}
+
+function drawMoon(v: View, moon: Pt): void {
+  const { x, y } = moon;
+  v.circle(x, y, 110, {
+    fill: v.radialGradient(x, y, 110, [
+      [0, "rgba(251,241,208,0.35)"],
+      [1, "rgba(251,241,208,0)"],
+    ]),
+  });
+  v.circle(x, y, MOON_R, { fill: C.moon });
+  // Faint dark patches, so the disc is a moon and not a lamp.
+  const patch: Style = { fill: "rgba(214,196,170,0.45)" };
+  v.circle(x - 8, y - 6, 7, patch);
+  v.circle(x + 7, y + 8, 5, patch);
+}
+
+/** The rose wash, cloud streaks and hills: a transparent layer over the moon. */
+function drawSkyFront(v: View): void {
+  v.curve(
+    [
+      [-40, 360],
+      [400, 345],
+      [840, 365],
+    ],
+    false,
+    {
+      stroke: "#d77d95",
+      weight: 70,
+      brush: { preset: "wash", opacity: 0.4 },
+      gesture: { pressure: "swell", wobble: 8 },
+    },
+  );
+  const clouds: readonly { x: number; y: number; len: number; w: number }[] = [
+    { x: 420, y: 215, len: 300, w: 16 },
+    { x: 560, y: 248, len: 260, w: 22 },
+    { x: 300, y: 285, len: 340, w: 18 },
+    { x: 610, y: 320, len: 240, w: 14 },
+    { x: -30, y: 300, len: 260, w: 16 },
+    { x: 40, y: 250, len: 180, w: 10 },
+    { x: 500, y: 380, len: 320, w: 10 },
+    { x: 120, y: 385, len: 220, w: 9 },
+  ];
+  const shade: BrushPreset = {
+    preset: "bristle",
+    bristles: 14,
+    load: 0.95,
+    flow: 0.55,
+    spread: 0.6,
+  };
+  const light: BrushPreset = {
+    preset: "bristle",
+    bristles: 10,
+    load: 0.9,
+    flow: 0.6,
+    spread: 0.5,
+  };
+  for (const c of clouds) {
+    const lowGlow = c.y > 300;
+    v.curve(
+      [
+        [c.x, c.y + 3],
+        [c.x + c.len * 0.45, c.y - c.w * 0.3],
+        [c.x + c.len, c.y + 2],
+      ],
+      false,
+      {
+        stroke: lowGlow ? "#9b6a9e" : "#6a5596",
+        weight: c.w,
+        brush: shade,
+        gesture: {
+          pressure: [
+            [0, 0.2],
+            [0.35, 1],
+            [0.8, 0.8],
+            [1, 0.1],
+          ],
+          wobble: 3,
+        },
+      },
+    );
+    v.curve(
+      [
+        [c.x + c.len * 0.15, c.y + c.w * 0.45],
+        [c.x + c.len * 0.5, c.y + c.w * 0.3],
+        [c.x + c.len * 0.9, c.y + c.w * 0.5],
+      ],
+      false,
+      {
+        stroke: lowGlow ? "#f7b58a" : "#de8aa0",
+        weight: c.w * 0.45,
+        brush: light,
+        gesture: { pressure: "taper", wobble: 2 },
+      },
+    );
+  }
+  v.curve(
+    [
+      [-20, HORIZON],
+      [-20, 420],
+      [80, 405],
+      [190, 425],
+      [300, 440],
+      [420, 462],
+      [480, HORIZON],
+    ],
+    true,
+    { fill: C.hillFar },
+  );
+  v.curve(
+    [
+      [-20, HORIZON],
+      [-20, 438],
+      [100, 432],
+      [220, 446],
+      [360, HORIZON],
+    ],
+    true,
+    { fill: C.hill },
+  );
+}
+
+// ── Water ────────────────────────────────────────────────────────────
+
+function drawWater(v: View): void {
+  const r = rng(23);
+  v.rect(0, HORIZON, 800, 330, {
+    fill: v.linearGradient(0, HORIZON, 0, 800, [
+      [0, C.waterTop],
+      [0.18, "#b8708e"],
+      [0.45, C.waterMid],
+      [1, C.waterLow],
+    ]),
+  });
+  const near = ["#f8c99a", "#f2a77e", "#d98a96"];
+  const mid = ["#9d7fb0", "#7c6aa3", "#c48aa0", "#5c5590"];
+  const low = ["#3d3f78", "#2e3068", "#6e64a0", "#4a4a86"];
+  const brush: BrushPreset = {
+    preset: "bristle",
+    bristles: 7,
+    load: 0.85,
+    spread: 0.5,
+    flow: 0.65,
+  };
+  for (let i = 0; i < 150; i += 1) {
+    const t = i / 150;
+    const y = HORIZON + 4 + t * t * 330;
+    const x = r(-60, 780);
+    const len = 30 + t * 160 + r(0, 80);
+    const pal = t < 0.25 ? near : t < 0.6 ? mid : low;
+    const stroke = pal[Math.floor(r(0, pal.length))] ?? "#7c6aa3";
+    v.line(x, y, x + len, y + r(-1.5, 1.5), {
+      stroke,
+      weight: 2.5 + t * 8,
+      brush,
+      gesture: { pressure: "taper", wobble: 1 + t },
+    });
+  }
+}
+
+interface Dab {
+  readonly y: number;
+  readonly half: number;
+  readonly off: number;
+  readonly t: number;
+}
+
+const MOON_DABS: readonly Dab[] = (() => {
+  const r = rng(31);
+  const out: Dab[] = [];
+  for (let y = 498; y < 790; y += 5 + (y - 498) / 18 + r(0, 6)) {
+    const t = (y - 498) / 292;
+    if (r() < 0.2) continue;
+    out.push({ y, half: (6 + t * 30) * r(0.3, 1.1), off: r(-10, 10), t });
+  }
+  return out;
+})();
+
+/** The moon's broken reflection column, under wherever the moon is, each dab sliding on its own swell. */
+function drawMoonPath(v: View, moon: Pt, f: number, wind: number): void {
+  const height = clamp((HORIZON - moon.y) / 340, 0.3, 1.2);
+  for (const [i, d] of MOON_DABS.entries()) {
+    const sway =
+      Math.sin(phase(f, 2) + d.y * 0.07) * (3 + wind * 8) * (0.4 + d.t);
+    const breathe = 0.75 + 0.25 * Math.sin(phase(f, 1) + i * 2.1);
+    const cx = moon.x + d.off * height + sway;
+    const half = d.half * 1.25 * breathe * (0.6 + 0.4 * height);
+    v.line(cx - half, d.y, cx + half, d.y, {
+      stroke: `rgba(251,236,196,${((0.85 - d.t * 0.5) * (0.6 + 0.4 * breathe)).toFixed(3)})`,
+      weight: 2 + d.t * 3,
+      brush: "ink",
+      gesture: { pressure: "taper", wobble: 0.6, seed: i + 1 },
+    });
+  }
+}
+
+interface Glint {
+  readonly x: number;
+  readonly y: number;
+  readonly len: number;
+  readonly k: number;
+  readonly shift: number;
+}
+
+const GLINTS: readonly Glint[] = (() => {
+  const r = rng(41);
+  return Array.from({ length: 28 }, () => {
+    const t = r();
+    return {
+      x: r(0, 800),
+      y: HORIZON + 8 + t * t * 300,
+      len: 10 + t * 40,
+      k: Math.floor(r(1, 3)),
+      shift: r(0, 6.28),
+    };
+  });
+})();
+
+/** Short warm and pale glints that swell and fade on the water, drifting with the wind. */
+function drawShimmer(v: View, f: number, wind: number): void {
+  for (const g of GLINTS) {
+    const a = Math.sin(phase(f, g.k) + g.shift);
+    if (a <= 0.1) continue;
+    const near = (g.y - HORIZON) / 330;
+    const drift = Math.sin(phase(f, 1) + g.shift) * (4 + wind * 14);
+    v.line(g.x + drift, g.y, g.x + drift + g.len * a, g.y, {
+      stroke:
+        near < 0.25
+          ? `rgba(255,214,160,${(0.55 * a).toFixed(3)})`
+          : `rgba(196,178,226,${(0.4 * a).toFixed(3)})`,
+      weight: 1.2 + near * 2.5,
+    });
+  }
+}
+
+/** Rings where the reader touched the water: flattened ellipses that widen and fade. */
+function drawRings(v: View, rings: DeepReadonly<Ring[]>, f: number): void {
+  for (const ring of rings) {
+    const age = (f - ring.born) / RING_LIFE;
+    const depthK = 0.5 + (ring.y - HORIZON) / 330;
+    for (let j = 0; j < 3; j += 1) {
+      const a = age - j * 0.12;
+      if (a <= 0) continue;
+      const w = (14 + a * 190) * depthK;
+      const alpha = (1 - a) * 0.9;
+      if (alpha <= 0) continue;
+      const lit: Style = {
+        stroke: `rgba(255,226,190,${alpha.toFixed(3)})`,
+        weight: 2.2 * depthK,
+        brush: "ink",
+        gesture: { pressure: "swell", wobble: 1, seed: 17 + j },
+      };
+      v.at({ translate: [ring.x, ring.y], scale: [1, 0.22] }, () => {
+        v.arc(0, 0, w / 2, Math.PI * 1.05, Math.PI * 1.95, lit);
+        v.arc(0, 0, w / 2, Math.PI * 0.08, Math.PI * 0.92, {
+          ...lit,
+          stroke: `rgba(30,28,70,${(alpha * 0.7).toFixed(3)})`,
+        });
+      });
+    }
+  }
+}
+
+// ── Village ──────────────────────────────────────────────────────────
+
+interface House {
+  readonly x: number;
+  readonly w: number;
+  readonly base: number;
+  readonly h: number;
+  readonly roof: number;
+}
+
+const HOUSES: readonly House[] = [
+  { x: 22, w: 88, base: 448, h: 66, roof: 40 },
+  { x: 118, w: 70, base: 458, h: 52, roof: 34 },
+  { x: 196, w: 104, base: 476, h: 74, roof: 46 },
+];
+
+function houseShape(h: House): Vec2[] {
+  const top = h.base - h.h;
+  return [
+    [h.x, h.base],
+    [h.x, top],
+    [h.x + h.w / 2, top - h.roof],
+    [h.x + h.w, top],
+    [h.x + h.w, h.base],
+  ];
+}
+
+function windows(h: House): Vec2[] {
+  const wy = h.base - h.h + h.h * 0.3;
+  return [0.28, 0.66].map((fx): Vec2 => [h.x + h.w * fx, wy]);
+}
+
+function drawHouse(v: View, h: House): void {
+  const stake: Style = {
+    stroke: C.roof,
+    weight: 4,
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.6 },
+  };
+  for (let i = 0; i <= 3; i += 1) {
+    const x = h.x + 6 + (i * (h.w - 12)) / 3;
+    v.line(x, h.base, x, h.base + 26, stake);
+  }
+  v.polygon(houseShape(h), { fill: C.house });
+  const top = h.base - h.h;
+  v.polygon(
+    [
+      [h.x - 8, top + 4],
+      [h.x + h.w / 2, top - h.roof - 4],
+      [h.x + h.w + 8, top + 4],
+      [h.x + h.w + 8, top + 10],
+      [h.x + h.w / 2, top - h.roof + 6],
+      [h.x - 8, top + 10],
+    ],
+    { fill: C.roof },
+  );
+  v.clip(houseShape(h), () => {
+    const siding: Style = {
+      weight: 6,
+      brush: {
+        preset: "bristle",
+        bristles: 8,
+        load: 0.95,
+        flow: 0.5,
+        spread: 0.5,
+      },
+      gesture: { pressure: "even", wobble: 0.6 },
+    };
+    for (let x = h.x + 5; x < h.x + h.w; x += 9) {
+      v.line(x, top - h.roof, x + 1, h.base, {
+        ...siding,
+        stroke: x % 2 === 0 ? "#4a3a5c" : "#2f2541",
+      });
+    }
+  });
+  const ridge: Style = {
+    stroke: "#e79aa6",
+    weight: 3,
+    brush: { preset: "ink", opacity: 0.95 },
+    gesture: { pressure: "taper", wobble: 0.4 },
+  };
+  v.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3, ridge);
+  v.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3, {
+    ...ridge,
+    stroke: "#f2a77e",
+  });
+  for (const [wx, wy] of windows(h)) {
+    v.circle(wx, wy + 8, 30, {
+      fill: v.radialGradient(wx, wy + 8, 30, [
+        [0, "rgba(255,200,110,0.45)"],
+        [1, "rgba(255,200,110,0)"],
+      ]),
+    });
+    v.rect(wx - 7, wy, 14, 17, { fill: C.window });
+  }
+}
+
+function drawVillage(v: View): void {
+  const r = rng(53);
+  for (const h of HOUSES) {
+    const water = h.base + 26;
+    const tall = (h.h + h.roof) * 0.95;
+    const bristle: BrushPreset = {
+      preset: "bristle",
+      bristles: 8,
+      load: 0.9,
+      flow: 0.75,
+    };
+    for (let d = 2; d < tall; d += 4.5) {
+      const t = d / tall;
+      const half = d < h.h ? h.w / 2 : (h.w / 2) * (1 - (d - h.h) / h.roof);
+      const cx = h.x + h.w / 2 + r(-4, 4);
+      v.line(cx - half - r(2, 10), water + d, cx + half + r(2, 10), water + d, {
+        stroke: `rgba(44,34,70,${(0.7 - t * 0.45).toFixed(2)})`,
+        weight: 4.5,
+        brush: bristle,
+        gesture: { pressure: "taper", wobble: 1 },
+      });
+    }
+    const glow: Style = {
+      stroke: "#ffc979",
+      weight: 10,
+      brush: { preset: "wash", opacity: 0.55 },
+      gesture: { pressure: "taper-out", wobble: 3 },
+    };
+    const wy = water + (h.base - h.h * 0.7 - water) * -1;
+    for (const fx of [0.28, 0.66]) {
+      const wx = h.x + h.w * fx;
+      v.line(wx, wy - 6, wx + 1, wy + 34, glow);
+    }
+  }
+  for (const h of HOUSES) drawHouse(v, h);
+}
+
+// ── The boat ─────────────────────────────────────────────────────────
+
+/** Where the boat is on its way home: 0 out on the horizon, 1 tied up by the pier. */
+function boatTrip(model: DeepReadonly<Model>): number {
+  if (model.lamp.type === "dark") return 0;
+  return smooth((model.frame - model.lamp.at - BOAT_DELAY) / BOAT_TRIP);
+}
+
+/** The route home: out from behind the pier's end, then round in front of it. */
+const ROUTE: readonly Vec2[] = [
+  [778, 474],
+  [790, 540],
+  [780, 640],
+  [740, 712],
+  [676, 732],
+];
+
+/** 0 until the boat is tied up, then rising to 1 over a second. */
+function boatHome(model: DeepReadonly<Model>): number {
+  if (model.lamp.type === "dark") return 0;
+  return smooth((model.frame - model.lamp.at - BOAT_DELAY - BOAT_TRIP) / 50);
+}
+
+/** The boat's lantern in page coordinates (the boat is drawn mirrored, scaled by `k`, bobbing). */
+function boatLantern(
+  model: DeepReadonly<Model>,
+  f: number,
+): { x: number; y: number; k: number } {
+  const trip = boatTrip(model);
+  const [bx, by] = along(ROUTE, trip);
+  const k = 1 + trip * 1.8;
+  const bob = Math.sin(phase(f, 2)) * 0.6;
+  return { x: bx - 2 * k, y: by + (bob - 20.5) * k, k };
+}
+
+/** The boat's lantern again over the dusk veil, so it stays the warmest point on the water. */
+function drawBoatLight(
+  v: View,
+  model: DeepReadonly<Model>,
+  f: number,
+  dusk: number,
+): void {
+  const { x, y, k } = boatLantern(model, f);
+  const a = (0.2 + dusk * 0.6) * (0.85 + 0.15 * Math.sin(phase(f, 4) + 1));
+  v.circle(x, y, (20 * k) / 2, {
+    fill: v.radialGradient(x, y, 10 * k, [
+      [0, `rgba(255,226,150,${a.toFixed(3)})`],
+      [1, "rgba(255,200,120,0)"],
+    ]),
+  });
+}
+
+function along(route: readonly Vec2[], t: number): Vec2 {
+  const n = route.length - 1;
+  const s = clamp(t, 0, 1) * n;
+  const i = Math.min(n - 1, Math.floor(s));
+  const a = route[i] ?? [0, 0];
+  const b = route[i + 1] ?? a;
+  const k = s - i;
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+}
+
+function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
+  const trip = boatTrip(model);
+  const [bx, by] = along(ROUTE, trip);
+  const k = 1 + trip * 1.8;
+  const moving = trip > 0 && trip < 1;
+  const bob = Math.sin(phase(f, 2)) * 0.6;
+  const row = moving ? Math.sin(phase(f, 4)) : 0;
+  // The boat faces home (left), so its local +x is drawn mirrored.
+  v.at({ translate: [bx, by], scale: [-k, k] }, () => {
+    // Hull shadow on the water, the lantern's broken streak, and a wake while under way.
+    v.ellipse(0, 4, 19, 2.5, { fill: "rgba(36,30,64,0.45)" });
+    for (let j = 0; j < 5; j += 1) {
+      const w = (7 - j) * (0.7 + 0.3 * Math.sin(phase(f, 3) + j));
+      v.rect(2 - w / 2 + Math.sin(phase(f, 2) + j) * 1.2, 6 + j * 4.5, w, 1.3, {
+        fill: `rgba(255,206,120,${(0.55 - j * 0.09).toFixed(3)})`,
+      });
+    }
+    if (moving) {
+      const wake: Style = { stroke: "rgba(255,226,190,0.4)", weight: 0.8 };
+      for (let j = 1; j <= 3; j += 1) {
+        const back = -18 - j * 9 - (row + 1) * 1.5;
+        v.line(-16, 2, back, 2 - j * 1.6, wake);
+        v.line(-16, 3, back, 3 + j * 1.6, wake);
+      }
+    }
+    v.at({ translate: [0, bob] }, () => {
+      v.circle(2, -20, 15, {
+        fill: v.radialGradient(2, -20, 15, [
+          [0, "rgba(255,214,130,0.75)"],
+          [1, "rgba(255,190,110,0)"],
+        ]),
+      });
+      // Hull, with a lit gunwale.
+      v.polygon(
+        [
+          [-19, -5],
+          [-8, -4],
+          [12, -4],
+          [22, -7],
+          [15, 2],
+          [-13, 2],
+        ],
+        { fill: "#3a2c4d" },
+      );
+      v.line(-17, -5, 20, -6.5, {
+        stroke: "rgba(255,206,150,0.85)",
+        weight: 1,
+      });
+      // Mast, arm and hanging lantern.
+      const mast: Style = { stroke: "#3a2c4d", weight: 1.3 };
+      v.line(-4, -4, -4, -28, mast);
+      v.line(-4, -27, 3, -27, { ...mast, weight: 0.9 });
+      v.line(2, -27, 2, -23, { ...mast, weight: 0.9 });
+      // The fisher, hunched at the oar, in a brimmed hat.
+      const fisher: Style = { fill: "#2a1f3d" };
+      v.curve(
+        [
+          [-15, -4],
+          [-15 + row * 0.5, -11],
+          [-11 + row, -15],
+          [-6 + row, -13],
+          [-6, -4],
+        ],
+        true,
+        fisher,
+      );
+      v.circle(-8 + row * 1.3, -15.5, 2.2, fisher);
+      v.polygon(
+        [
+          [-12.5 + row * 1.3, -16.5],
+          [-3.5 + row * 1.3, -16.5],
+          [-6.5 + row * 1.3, -20],
+          [-9 + row * 1.3, -20],
+        ],
+        fisher,
+      );
+      const oar: Style = { stroke: "#2a1f3d", weight: 0.9 };
+      if (boatHome(model) > 0.5) {
+        // Home: the oar shipped along the hull, and a wave up to the pier.
+        const wave = Math.sin(phase(f, 4));
+        v.line(-17, -5, 12, -7, oar);
+        v.line(-10, -12, -17 + wave * 3, -25, { ...oar, weight: 1.1 });
+      } else {
+        v.line(-8 + row, -10, -20 - row * 5, 3 + Math.max(0, row) * 1.5, oar);
+      }
+      v.ellipse(2, -20.5, 1.3, 1.7, { fill: "#fff0b8" });
+    });
+  });
+}
+
+// ── Pier ─────────────────────────────────────────────────────────────
+
+const X0 = 180;
+const X1 = 740;
+
+function deckTop(x: number): number {
+  return 505 + ((x - X0) / (X1 - X0)) * 83;
+}
+
+function deckFront(x: number): number {
+  return 514 + ((x - X0) / (X1 - X0)) * 108;
+}
+
+function depth(x: number): number {
+  return 0.35 + (0.65 * (x - X0)) / (X1 - X0);
+}
+
+interface LampPost {
+  readonly x: number;
+  readonly height: number;
+  readonly hx: number;
+  readonly hy: number;
+  readonly k: number;
+}
+
+function lampAt(x: number, height: number): LampPost {
+  const k = depth(x);
+  const top = deckTop(x) - height;
+  return { x, height, hx: x - 34 * k, hy: top + 8 * k, k };
+}
+
+const LAMP = lampAt(738, 315);
+const LIT_LAMPS: readonly LampPost[] = [
+  lampAt(300, 285 * depth(300)),
+  lampAt(430, 285 * depth(430)),
+];
+/** The last lantern's glass, the reader's click target. */
+const LANTERN: Vec2 = [LAMP.hx, LAMP.hy + 28 * LAMP.k];
+
+const WOOD = {
+  deck: "#8c6b70",
+  deckLit: "#c4917a",
+  beam: "#3f2b38",
+  post: "#2e2131",
+  plank: "#5a4150",
+} as const;
+
+function drawWalkway(v: View): void {
+  const posts: Style = {
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.8 },
+  };
+  for (let x = X0 + 30; x <= X1; x += 62) {
+    const k = depth(x);
+    const y0 = deckFront(x);
+    v.line(x, y0, x, y0 + 50 * k, {
+      ...posts,
+      stroke: WOOD.post,
+      weight: 9 * k,
+    });
+    v.line(x, y0 + 50 * k, x + 1, y0 + 90 * k, {
+      ...posts,
+      stroke: "rgba(30,24,50,0.45)",
+      weight: 7 * k,
+    });
+  }
+  const deck: Vec2[] = [
+    [X0, deckTop(X0)],
+    [X1, deckTop(X1)],
+    [X1, deckFront(X1)],
+    [X0, deckFront(X0)],
+  ];
+  v.polygon(deck, {
+    fill: v.linearGradient(X0, 0, X1, 0, [
+      [0, WOOD.deck],
+      [1, WOOD.deckLit],
+    ]),
+  });
+  v.polygon(
+    [
+      [X0, deckFront(X0)],
+      [X1, deckFront(X1)],
+      [X1, deckFront(X1) + 16],
+      [X0, deckFront(X0) + 5],
+    ],
+    { fill: WOOD.beam },
+  );
+  v.clip(deck, () => {
+    const board: Style = {
+      weight: 5,
+      brush: {
+        preset: "bristle",
+        bristles: 9,
+        load: 0.9,
+        flow: 0.4,
+        spread: 0.6,
+      },
+      gesture: { pressure: "taper", wobble: 0.6 },
+    };
+    for (let i = 0; i < 6; i += 1) {
+      const fr = (i + 0.5) / 6;
+      v.line(
+        X0,
+        deckTop(X0) + fr * (deckFront(X0) - deckTop(X0)),
+        X1,
+        deckTop(X1) + fr * (deckFront(X1) - deckTop(X1)),
+        {
+          ...board,
+          stroke: i % 2 === 0 ? "#6e5060" : "#d8a585",
+        },
+      );
+    }
+    const seam: Style = {
+      stroke: WOOD.plank,
+      brush: { preset: "pencil", opacity: 0.8 },
+      gesture: { pressure: "even", wobble: 0.4 },
+    };
+    for (let x = X0 + 8; x < X1; x += 5 + 16 * depth(x)) {
+      v.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2, {
+        ...seam,
+        weight: 1.5 + 1.5 * depth(x),
+      });
+    }
+  });
+}
+
+/** A lamp's reflection, glow and deck pool, at `glow` strength (0..1). */
+function drawLampLight(
+  v: View,
+  lamp: LampPost,
+  main: boolean,
+  glow: number,
+): void {
+  const { x, hx, hy, k } = lamp;
+  const r = (main ? 230 : 150) * k;
+  v.circle(hx, hy + 26 * k, r, {
+    fill: v.radialGradient(hx, hy + 26 * k, r, [
+      [0, `rgba(255,222,140,${(0.85 * glow).toFixed(3)})`],
+      [0.18, `rgba(255,196,112,${(0.45 * glow).toFixed(3)})`],
+      [0.55, `rgba(255,170,100,${(0.12 * glow).toFixed(3)})`],
+      [1, "rgba(255,170,100,0)"],
+    ]),
+  });
+  if (main) {
+    v.circle(hx, hy + 28 * k, (92 * k) / 2, {
+      fill: v.radialGradient(hx, hy + 28 * k, 46 * k, [
+        [0, `rgba(255,246,210,${(0.95 * glow).toFixed(3)})`],
+        [0.5, `rgba(255,226,150,${(0.5 * glow).toFixed(3)})`],
+        [1, "rgba(255,210,130,0)"],
+      ]),
+    });
+  }
+  const py = (deckTop(x) + deckFront(x)) / 2;
+  v.ellipse(hx, py, (220 * k) / 2, (50 * k) / 2, {
+    fill: v.ellipseGradient(hx, py, (220 * k) / 2, (50 * k) / 2, [
+      [0, `rgba(255,210,140,${(0.6 * glow).toFixed(3)})`],
+      [1, "rgba(255,190,120,0)"],
+    ]),
+  });
+}
+
+function drawLampReflection(v: View, lamp: LampPost): void {
+  const { x, hx, k } = lamp;
+  v.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k, {
+    stroke: "#ffcf7a",
+    weight: 26 * k,
+    brush: { preset: "wash", opacity: 0.5 },
+    gesture: { pressure: "taper-out", wobble: 4 },
+  });
+}
+
+function drawPost(v: View, lamp: LampPost): void {
+  const { x, hx, k } = lamp;
+  const base = deckTop(x);
+  const top = base - lamp.height;
+  const wood: Style = {
+    stroke: WOOD.post,
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.5 },
+  };
+  v.line(x, base + 2, x, top, { ...wood, weight: 8 * k });
+  v.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k, {
+    ...wood,
+    weight: 4 * k,
+  });
+  v.line(hx, top + 2 * k, hx, lamp.hy + 6 * k, { ...wood, weight: 2 * k });
+}
+
+/** The lantern body; `glow` 0 is dark glass, 1 is lit. */
+function drawLanternBody(
+  v: View,
+  lamp: LampPost,
+  glow: number,
+  flame: number,
+): void {
+  const { hx, hy, k } = lamp;
+  v.polygon(
+    [
+      [hx - 11 * k, hy + 14 * k],
+      [hx + 11 * k, hy + 14 * k],
+      [hx + 9 * k, hy + 40 * k],
+      [hx - 9 * k, hy + 40 * k],
+    ],
+    {
+      fill: mix("#4b3c52", "#ffe2a0", glow),
+    },
+  );
+  if (glow > 0) {
+    v.ellipse(hx, hy + (30 - flame) * k, (8 * k) / 2, ((14 + flame * 2) * k) / 2, {
+      fill: `rgba(255,246,214,${glow.toFixed(3)})`,
+    });
+  } else {
+    // Dark glass still catches a little sky.
+    v.polygon(
+      [
+        [hx + 3 * k, hy + 16 * k],
+        [hx + 9 * k, hy + 16 * k],
+        [hx + 7 * k, hy + 36 * k],
+        [hx + 4 * k, hy + 36 * k],
+      ],
+      {
+        fill: "rgba(214,160,170,0.5)",
+      },
+    );
+  }
+  const iron: Style = { fill: "#2a1e2e" };
+  v.triangle(
+    hx - 15 * k,
+    hy + 15 * k,
+    hx + 15 * k,
+    hy + 15 * k,
+    hx,
+    hy + 4 * k,
+    iron,
+  );
+  v.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k, iron);
+  v.line(hx, hy + 15 * k, hx, hy + 40 * k, {
+    stroke: "#2a1e2e",
+    weight: 1.6 * k,
+  });
+}
+
+function drawLantern(v: View, lamp: LampPost, main: boolean): void {
+  drawLampReflection(v, lamp);
+  drawLampLight(v, lamp, main, 1);
+  drawPost(v, lamp);
+  drawLanternBody(v, lamp, 1, 0);
+}
+
+/** How strongly a pointer near the dark lantern invites a click, 0..1. */
+function invitation(model: DeepReadonly<Model>): number {
+  if (model.lamp.type === "lit" || model.pointer === null) return 0;
+  const d = Math.hypot(
+    model.pointer.x - LANTERN[0],
+    model.pointer.y - LANTERN[1],
+  );
+  return clamp(1 - (d - 20) / 60, 0, 1);
+}
+
+function drawLastLamp(v: View, bloom: number, f: number, invite: number): void {
+  if (invite > 0) {
+    // A pointer near the dark lantern: a faint pulse round it, as if it is waiting.
+    const pulse = 0.6 + 0.4 * Math.sin(phase(f, 4));
+    v.circle(LANTERN[0], LANTERN[1] - 6, 70, {
+      fill: v.radialGradient(LANTERN[0], LANTERN[1] - 6, 70, [
+        [0, `rgba(255,224,160,${(0.75 * invite * pulse).toFixed(3)})`],
+        [0.4, `rgba(255,200,130,${(0.3 * invite * pulse).toFixed(3)})`],
+        [1, "rgba(255,200,130,0)"],
+      ]),
+    });
+  }
+  if (bloom > 0) {
+    const flicker =
+      1 + 0.04 * Math.sin(phase(f, 5)) + 0.03 * Math.sin(phase(f, 7) + 1);
+    // A brief flare as the wick catches.
+    const flare = bloom < 1 ? Math.sin(bloom * Math.PI) * 0.35 : 0;
+    drawLampLight(v, LAMP, true, Math.min(1, bloom * flicker + flare));
+  }
+  // A waiting lamp's glass warms a little under the pointer.
+  const glass = Math.max(bloom, invite * (0.25 + 0.15 * Math.sin(phase(f, 4))));
+  drawLanternBody(v, LAMP, glass, Math.sin(phase(f, 6)) * bloom);
+}
+
+function mix(a: string, b: string, t: number): string {
+  const pa = [1, 3, 5].map((i) => Number.parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => Number.parseInt(b.slice(i, i + 2), 16));
+  const c = pa.map((x, i) =>
+    Math.round(x + ((pb[i] ?? x) - x) * clamp(t, 0, 1)),
+  );
+  return `rgb(${c.join(",")})`;
+}
+
+// ── Old Pell ─────────────────────────────────────────────────────────
+
+const FEET_X = 560;
+const FEET_Y = (deckTop(FEET_X) + deckFront(FEET_X)) / 2 - 2;
+const SCALE = 1.2;
+
+const H = {
+  body: "#8593ae",
+  bodyShade: "#4e587a",
+  belly: "#d3d8e2",
+  wing: "#5b6788",
+  wingDark: "#363e5e",
+  rim: "#ffc98c",
+  ink: "#1d1c2c",
+  leg: "#c99e55",
+  bill: "#e3ad45",
+  scarf: "#c63a36",
+  scarfDark: "#7e1f2c",
+  pole: "#4a2f24",
+} as const;
+
+const BODY: readonly Vec2[] = [
+  [52, -150],
+  [48, -110],
+  [22, -84],
+  [-28, -78],
+  [-84, -66],
+  [-68, -116],
+  [-30, -158],
+  [16, -172],
+];
+const WING: readonly Vec2[] = [
+  [30, -148],
+  [32, -114],
+  [6, -92],
+  [-60, -76],
+  [-104, -62],
+  [-64, -104],
+  [-18, -150],
+];
+const NECK: readonly Vec2[] = [
+  [30, -164],
+  [48, -190],
+  [32, -212],
+  [34, -228],
+  [42, -234],
+];
+const HEAD = { x: 48, y: -236 } as const;
+const GRIP: Vec2 = [50, -116];
+const BAND: readonly Vec2[] = [
+  [52, -160],
+  [44, -174],
+  [24, -176],
+  [6, -168],
+  [-14, -158],
+  [-38, -170],
+  [-66, -160],
+];
+
+type Tint = (pts: readonly Vec2[]) => void;
+
+function litShape(
+  v: View,
+  pts: readonly Vec2[],
+  base: string,
+  extra?: Tint,
+): void {
+  v.curve(pts, true, { fill: H.rim });
+  v.clip(v.curvePath(pts, true), () => {
+    v.curve(
+      v.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]),
+      true,
+      { fill: base },
+    );
+    v.group({ opacity: 0.35 }, () => {
+      v.curve(
+        v.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]),
+        true,
+        { fill: H.bodyShade },
+      );
+    });
+    if (extra) extra(pts);
+  });
+}
+
+function inHeronSpace(v: View, body: () => void): void {
+  v.at({ translate: [FEET_X, FEET_Y], scale: SCALE }, body);
+}
+
+function drawHeron(
+  v: View,
+  f: number,
+  wind: number,
+  lamp: { bloom: number; done: number },
+): void {
+  v.cache("heron-legs", () => {
+    drawShadow(v);
+    inHeronSpace(v, () => drawLegs(v));
+  });
+  inHeronSpace(v, () => drawPole(v, lamp.done));
+  v.cache("heron-body", () =>
+    inHeronSpace(v, () => {
+      drawBody(v);
+      drawNeckAndHead(v);
+    }),
+  );
+  inHeronSpace(v, () => {
+    drawBlink(v, f);
+    drawScarf(v, f, wind);
+  });
+  v.cache("grip", () => inHeronSpace(v, () => drawGrip(v)));
+  inHeronSpace(v, () => drawFlame(v, f, lamp, wind));
+}
+
+function drawLegs(v: View): void {
+  const leg: Style = {
+    stroke: H.leg,
+    weight: 4.5,
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.3 },
+  };
+  const legs: Vec2[][] = [
+    [
+      [-8, -84],
+      [-4, -40],
+      [-10, 0],
+    ],
+    [
+      [8, -84],
+      [18, -44],
+      [14, -2],
+    ],
+  ];
+  for (const l of legs) v.curve(l, false, leg);
+  for (const l of legs)
+    v.curve(
+      l.map(([x, y]): Vec2 => [x - 1.6, y]),
+      false,
+      { ...leg, weight: 1.6, stroke: "#6e4e30" },
+    );
+  for (const l of legs)
+    v.curve(
+      l.map(([x, y]): Vec2 => [x + 1.5, y]),
+      false,
+      { ...leg, weight: 1.1, stroke: "#ffe0a0" },
+    );
+  const toe: Style = {
+    ...leg,
+    weight: 2.5,
+    gesture: { pressure: "taper-out" },
+  };
+  for (const [fx, fy] of [
+    [-10, 0],
+    [14, -2],
+  ] as const) {
+    v.line(fx, fy, fx + 16, fy + 3, toe);
+    v.line(fx, fy, fx - 12, fy + 2, toe);
+    v.line(fx, fy, fx + 6, fy + 6, toe);
+  }
+}
+
+function drawBody(v: View): void {
+  litShape(v, BODY, H.body, () => {
+    const barb: Style = {
+      weight: 10,
+      brush: {
+        preset: "bristle",
+        bristles: 10,
+        load: 0.9,
+        flow: 0.45,
+        spread: 0.6,
+      },
+      gesture: { pressure: "taper", wobble: 1.5 },
+    };
+    for (let i = 0; i < 7; i += 1) {
+      v.curve(
+        [
+          [40 - i * 4, -160 + i * 3],
+          [10 - i * 6, -150 + i * 9],
+          [-40 - i * 4, -110 + i * 6],
+          [-80, -72 + i],
+        ],
+        false,
+        {
+          ...barb,
+          stroke: i % 2 === 0 ? "#a4afc6" : "#6f7c9c",
+        },
+      );
+    }
+    v.curve(
+      [
+        [52, -150],
+        [44, -104],
+        [26, -90],
+        [30, -130],
+        [40, -158],
+      ],
+      true,
+      { fill: H.belly },
+    );
+  });
+  litShape(v, WING, H.wing, () => {
+    v.curve(
+      [
+        [20, -100],
+        [-30, -86],
+        [-100, -64],
+      ],
+      false,
+      {
+        stroke: H.wingDark,
+        weight: 22,
+        brush: { preset: "wash", opacity: 0.8 },
+        gesture: { pressure: "swell", wobble: 1 },
+      },
+    );
+    const quill: Style = {
+      stroke: "#8e9abb",
+      weight: 1.3,
+      brush: "ink",
+      gesture: { pressure: "taper", wobble: 0.4 },
+    };
+    for (let i = 0; i < 5; i += 1) {
+      v.curve(
+        [
+          [8 - i * 9, -108 + i * 5],
+          [-44 - i * 6, -88 + i * 4],
+          [-98 + i * 3, -66 + i],
+        ],
+        false,
+        quill,
+      );
+    }
+    const edge: Style = {
+      stroke: "#2e3552",
+      weight: 1.6,
+      brush: "ink",
+      gesture: { pressure: "swell", wobble: 0.3 },
+    };
+    for (let row = 0; row < 3; row += 1) {
+      for (let j = 0; j < 6 - row; j += 1) {
+        const cx = 22 - j * 12 - row * 5;
+        const cy = -142 + j * 7 + row * 12;
+        const fe: Vec2[] = [
+          [cx - 8, cy - 8],
+          [cx + 8, cy - 8],
+          [cx + 7, cy + 3],
+          [cx, cy + 9],
+          [cx - 7, cy + 3],
+        ];
+        v.curve(fe, true, {
+          fill: row === 0 ? "#9aa6c2" : row === 1 ? "#8592b2" : "#7280a2",
+        });
+        v.curve(
+          [
+            [cx - 7, cy + 2],
+            [cx, cy + 9],
+            [cx + 7, cy + 2],
+          ],
+          false,
+          edge,
+        );
+      }
+    }
+  });
+  v.polygon(
+    [
+      [-80, -70],
+      [-112, -58],
+      [-86, -64],
+      [-108, -50],
+      [-80, -60],
+      [-98, -44],
+      [-70, -62],
+    ],
+    { fill: H.wingDark },
+  );
+  v.clip(v.curvePath(BODY, true), () => {
+    v.curve(
+      [
+        [-90, -66],
+        [-40, -76],
+        [20, -80],
+      ],
+      false,
+      {
+        stroke: "#2c3150",
+        weight: 26,
+        brush: { preset: "wash", opacity: 0.45 },
+        gesture: { pressure: "swell", wobble: 2 },
+      },
+    );
+  });
+  const outline: Style = {
+    stroke: H.ink,
+    weight: 3.6,
+    brush: { preset: "ink", thinning: 0.8 },
+    gesture: {
+      pressure: [
+        [0, 0.3],
+        [0.2, 0.7],
+        [0.45, 1],
+        [0.62, 0.9],
+        [0.8, 0.45],
+        [1, 0.3],
+      ],
+      wobble: 0.6,
+    },
+  };
+  v.curve(BODY, true, outline);
+  v.curve(WING, true, outline);
+}
+
+const HEAD_SHAPE: readonly Vec2[] = [
+  [HEAD.x + 18, HEAD.y - 1],
+  [HEAD.x + 4, HEAD.y - 11],
+  [HEAD.x - 14, HEAD.y - 6],
+  [HEAD.x - 12, HEAD.y + 8],
+  [HEAD.x + 8, HEAD.y + 10],
+];
+
+function drawNeckAndHead(v: View): void {
+  const prof: Vec2[] = [
+    [0, 1.4],
+    [1, 0.8],
+  ];
+  const neck = v.tube(NECK, { width: 19, profile: prof });
+  v.path(neck, { fill: H.rim });
+  v.clip(neck, () => {
+    v.path(
+      v.tube(
+        NECK.map(([x, y]): Vec2 => [x - 3, y + 1]),
+        { width: 19, profile: prof },
+      ),
+      { fill: H.belly },
+    );
+    v.path(
+      v.tube(
+        NECK.map(([x, y]): Vec2 => [x - 13, y + 1]),
+        { width: 19, profile: prof },
+      ),
+      { fill: H.body },
+    );
+    const crease: Style = {
+      stroke: "#2b2f48",
+      weight: 2,
+      brush: "ink",
+      gesture: { pressure: "swell", wobble: 0.3 },
+    };
+    const front = NECK.map(([x, y]): Vec2 => [x + 3, y]);
+    for (let i = 0; i < front.length - 1; i += 1) {
+      const [ax, ay] = front[i] ?? [0, 0];
+      const [bx, by] = front[i + 1] ?? [0, 0];
+      v.line(
+        ax + (bx - ax) * 0.2,
+        ay + (by - ay) * 0.2,
+        ax + (bx - ax) * 0.65,
+        ay + (by - ay) * 0.65,
+        crease,
+      );
+    }
+  });
+  litShape(v, HEAD_SHAPE, H.body, () => {
+    v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
+  });
+  v.polygon(
+    [
+      [HEAD.x + 13, HEAD.y - 5],
+      [HEAD.x + 46, HEAD.y + 7],
+      [HEAD.x + 12, HEAD.y + 6],
+    ],
+    { fill: H.bill },
+  );
+  v.polygon(
+    [
+      [HEAD.x + 13, HEAD.y - 5],
+      [HEAD.x + 46, HEAD.y + 7],
+      [HEAD.x + 13, HEAD.y + 1],
+    ],
+    { fill: "#f6d27e" },
+  );
+  const line: Style = {
+    stroke: H.ink,
+    brush: "ink",
+    gesture: { pressure: "taper-out", wobble: 0.5 },
+  };
+  v.curve(
+    [
+      [HEAD.x + 8, HEAD.y - 9],
+      [HEAD.x - 10, HEAD.y - 9],
+      [HEAD.x - 30, HEAD.y - 3],
+      [HEAD.x - 46, HEAD.y + 8],
+    ],
+    false,
+    { ...line, weight: 5 },
+  );
+  v.curve(
+    [
+      [HEAD.x - 4, HEAD.y - 6],
+      [HEAD.x - 22, HEAD.y + 2],
+      [HEAD.x - 38, HEAD.y + 18],
+    ],
+    false,
+    { ...line, weight: 3 },
+  );
+  const fine: Style = { ...line, gesture: { pressure: "taper", wobble: 0.5 } };
+  v.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6, {
+    ...fine,
+    weight: 1.6,
+  });
+  v.curve(
+    NECK.map(([x, y]): Vec2 => [x - 9, y]),
+    false,
+    { ...fine, weight: 2.2 },
+  );
+  v.curve(HEAD_SHAPE, true, { ...fine, weight: 2.2 });
+  v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" });
+  v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink });
+}
+
+/** An old bird's slow blink, twice a loop. */
+function drawBlink(v: View, f: number): void {
+  const t = f % (LOOP / 2);
+  if (t > 9) return;
+  const shut = Math.sin((t / 9) * Math.PI);
+  v.ellipse(HEAD.x + 6, HEAD.y - 2 - 3.5 * (1 - shut), 4.25, (7.5 * shut) / 2, {
+    fill: H.body,
+  });
+  v.line(
+    HEAD.x + 2,
+    HEAD.y - 2 + 3 * shut - 2,
+    HEAD.x + 10,
+    HEAD.y - 2 + 3 * shut - 2,
+    { stroke: H.ink, weight: 1.2 },
+  );
+}
+
+/** The scarf's band, its loose end lifting and rippling in the wind. */
+function scarfBand(f: number, wind: number): Vec2[] {
+  return BAND.map(([x, y], i): Vec2 => {
+    if (i < 3) return [x, y];
+    const reach = (i - 2) / (BAND.length - 3);
+    const amp = (1.5 + wind * 9) * reach;
+    const wave = Math.sin(phase(f, 2) - i * 0.9);
+    return [
+      x - wind * 10 * reach * reach,
+      y + wave * amp - wind * 8 * reach * reach,
+    ];
+  });
+}
+
+function drawScarf(v: View, f: number, wind: number): void {
+  const band = scarfBand(f, wind);
+  const shape = v.tube(band, {
+    width: 14,
+    profile: [
+      [0, 1.2],
+      [0.3, 1],
+      [1, 0.85],
+    ],
+  });
+  v.path(shape, { fill: H.scarf });
+  v.clip(shape, () => {
+    v.cache("scarf-knit", () => {
+      const knit: Style = {
+        stroke: H.scarfDark,
+        weight: 1.6,
+        brush: { preset: "pencil", opacity: 0.9 },
+        gesture: { pressure: "even", wobble: 0.3 },
+      };
+      for (let x = -100; x < 64; x += 4.5) v.line(x, -205, x - 3, -132, knit);
+    });
+    v.curve(
+      band.map(([x, y]): Vec2 => [x - 2, y + 7]),
+      false,
+      { stroke: "rgba(126,31,44,0.55)", weight: 6 },
+    );
+    v.curve(
+      band.slice(0, 4).map(([x, y]): Vec2 => [x + 2, y - 5]),
+      false,
+      { stroke: "rgba(255,154,122,0.45)", weight: 4 },
+    );
+  });
+  const end = band.at(-1) ?? [-66, -160];
+  const prev = band.at(-2) ?? end;
+  const ax = end[0] - prev[0];
+  const ay = end[1] - prev[1];
+  const len = Math.hypot(ax, ay) || 1;
+  const ux = ax / len;
+  const uy = ay / len;
+  for (let i = 0; i < 4; i += 1) {
+    const sx = end[0] - uy * (i - 1.5) * 4;
+    const sy = end[1] + ux * (i - 1.5) * 4;
+    const flick = Math.sin(phase(f, 3) + i) * (1 + wind * 3);
+    v.line(sx, sy, sx + ux * 13 - uy * flick, sy + uy * 13 + ux * flick, {
+      stroke: H.scarf,
+      weight: 2.4,
+    });
+  }
+  v.path(shape, {
+    stroke: H.ink,
+    weight: 1.8,
+    brush: "ink",
+    gesture: { pressure: "taper", wobble: 0.5, seed: 5 },
+  });
+}
+
+/** The pole's tip: at the lamp, or (`done` → 1) drawn back through the grip and lowered a little. */
+function tip(done: number): Vec2 {
+  const reach: Vec2 = [
+    (LAMP.hx - 2 - FEET_X) / SCALE - GRIP[0],
+    (LAMP.hy + 48 - FEET_Y) / SCALE - GRIP[1],
+  ];
+  const a = Math.atan2(reach[1], reach[0]) + done * 0.12;
+  const len = Math.hypot(reach[0], reach[1]) * (1 - done * 0.12);
+  return [GRIP[0] + Math.cos(a) * len, GRIP[1] + Math.sin(a) * len];
+}
+
+function drawPole(v: View, done: number): void {
+  const [tx, ty] = tip(done);
+  const dx = tx - GRIP[0];
+  const dy = ty - GRIP[1];
+  const len = Math.hypot(dx, dy);
+  // The pole's full length is fixed; what is drawn back through the grip goes behind the body.
+  const back = (180 - len) / len;
+  v.line(GRIP[0] - dx * back, GRIP[1] - dy * back, tx, ty, {
+    stroke: H.pole,
+    weight: 3.6,
+    brush: "ink",
+    gesture: { pressure: "even", wobble: 0.4, seed: 3 },
+  });
+}
+
+/** The taper's flame at the pole's tip; it shrinks once the lamp has taken the light. */
+function drawFlame(
+  v: View,
+  f: number,
+  lamp: { bloom: number; done: number },
+  wind: number,
+): void {
+  const [tx, ty] = tip(lamp.done);
+  const lean = -wind * 3;
+  const lick = Math.sin(phase(f, 9)) * 0.8 + Math.sin(phase(f, 13) + 2) * 0.5;
+  const size = 1 - lamp.bloom * 0.45;
+  v.circle(tx, ty - 4, (36 * size) / 2, {
+    fill: v.radialGradient(tx, ty - 4, 18 * size, [
+      [0, "rgba(255,240,180,0.95)"],
+      [1, "rgba(255,160,80,0)"],
+    ]),
+  });
+  v.ellipse(
+    tx + lick * 0.6 + lean,
+    ty - 6 - Math.abs(lick) * 0.5,
+    (5 * size) / 2,
+    ((11 + lick) * size) / 2,
+    { fill: "#fff3c0" },
+  );
+}
+
+function drawGrip(v: View): void {
+  const [gx, gy] = GRIP;
+  const feathers: Vec2[][] = [
+    [
+      [gx - 30, gy - 6],
+      [gx - 8, gy - 12],
+      [gx + 8, gy - 8],
+      [gx + 6, gy - 2],
+      [gx - 10, gy - 3],
+    ],
+    [
+      [gx - 30, gy - 1],
+      [gx - 6, gy - 4],
+      [gx + 10, gy + 1],
+      [gx + 6, gy + 6],
+      [gx - 12, gy + 4],
+    ],
+    [
+      [gx - 28, gy + 4],
+      [gx - 8, gy + 4],
+      [gx + 6, gy + 10],
+      [gx + 1, gy + 14],
+      [gx - 14, gy + 10],
+    ],
+  ];
+  for (const fe of feathers) {
+    litShape(v, fe, H.wing);
+    v.curve(fe, true, {
+      stroke: H.ink,
+      weight: 1.8,
+      brush: "ink",
+      gesture: { pressure: "taper", wobble: 0.3 },
+    });
+  }
+}
+
+function drawShadow(v: View): void {
+  const deck: Vec2[] = [
+    [180, deckTop(180)],
+    [740, deckTop(740)],
+    [740, deckFront(740)],
+    [180, deckFront(180)],
+  ];
+  v.clip(deck, () => {
+    v.group({ opacity: 0.85, blend: "multiply" }, () => {
+      v.ellipse(FEET_X - 80, FEET_Y - 5, 105, 12, {
+        fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 105, 12, [
+          [0, "#5a3a58"],
+          [0.55, "rgba(90,58,88,0.7)"],
+          [1, "rgba(90,58,88,0)"],
+        ]),
+      });
+      v.ellipse(FEET_X + 2, FEET_Y + 2, 27, 5, {
+        fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 27, 5, [
+          [0, "#3a2236"],
+          [1, "rgba(58,34,54,0)"],
+        ]),
+      });
+    });
+  });
+}
+
+// ── Reeds ────────────────────────────────────────────────────────────
+
+interface Reed {
+  readonly x: number;
+  readonly h: number;
+  readonly lean: number;
+  readonly width: number;
+  readonly dir: number;
+  readonly dark: boolean;
+  readonly shift: number;
+  readonly cattail: boolean;
+}
+
+const REEDS: readonly Reed[] = (() => {
+  const r = rng(67);
+  const clumps = [
+    { x: 30, n: 13, spread: 100, h: 250, dir: 1 },
+    { x: 790, n: 9, spread: 60, h: 180, dir: -1 },
+  ];
+  const out: Reed[] = [];
+  for (const c of clumps) {
+    for (let i = 0; i < c.n; i += 1) {
+      out.push({
+        x: c.x + r(-c.spread / 2, c.spread / 2),
+        h: c.h * r(0.5, 1),
+        lean: c.dir * r(-10, 50),
+        width: r(7, 12),
+        dir: c.dir,
+        dark: i % 3 !== 0,
+        shift: r(0, 6.28),
+        cattail: false,
+      });
+    }
+    for (let i = 0; i < 3; i += 1) {
+      out.push({
+        x: c.x + r(-c.spread / 3, c.spread / 3),
+        h: c.h * r(0.8, 1.1),
+        lean: c.dir * 4,
+        width: 3,
+        dir: c.dir,
+        dark: true,
+        shift: r(0, 6.28),
+        cattail: true,
+      });
+    }
+  }
+  return out;
+})();
+
+/** How far a reed's tip is pushed sideways: the wind's sway, and a lean away from a nearby pointer. */
+function reedPush(
+  reed: Reed,
+  f: number,
+  wind: number,
+  stir: DeepReadonly<Model["stir"]>,
+): number {
+  const sway = Math.sin(phase(f, 1) + reed.shift) * (2 + wind * 10) - wind * 8;
+  if (stir.presence < 0.01) return sway;
+  const tipX = reed.x + reed.lean;
+  const dx = tipX - stir.x;
+  const dy = 815 - reed.h * 0.6 - stir.y;
+  const near = Math.exp(
+    -(dx * dx) / (2 * 30 * 30) - (dy * dy) / (2 * 120 * 120),
+  );
+  // Reeds part away from the pointer; the ones it is right on tremble.
+  const tremble = Math.sin(phase(f, 12) + reed.shift) * 3 * near;
+  return sway + (Math.sign(dx || 1) * near * 30 + tremble) * stir.presence;
+}
+
+function reedLine(reed: Reed, push: number): Vec2[] {
+  const { x, h, lean } = reed;
+  const l = lean + push;
+  return [
+    [x, 815],
+    [x + l * 0.15, 815 - h * 0.45],
+    [x + l * 0.5, 815 - h * 0.8],
+    [x + l, 815 - h],
+  ];
+}
+
+function drawReeds(
+  v: View,
+  f: number,
+  wind: number,
+  stir: DeepReadonly<Model["stir"]>,
+): void {
+  for (const reed of REEDS) {
+    const pts = reedLine(reed, reedPush(reed, f, wind, stir));
+    if (reed.cattail) {
+      v.curve(pts, false, { stroke: "#1a172d", weight: 3 });
+      const top = pts.at(-1) ?? [reed.x, 815 - reed.h];
+      const below = pts.at(-2) ?? top;
+      const along2 = (k: number): Vec2 => [
+        top[0] + (below[0] - top[0]) * k,
+        top[1] + (below[1] - top[1]) * k,
+      ];
+      v.polygon(
+        leaf(
+          [along2(0.04), along2(0.15), along2(0.27), along2(0.4)],
+          11,
+          (t) => 0.55 + 0.45 * Math.sin(t * Math.PI),
+        ),
+        { fill: "#4a2f2c" },
+      );
+      const lit = along2(0.2);
+      v.ellipse(lit[0] + 2 * reed.dir, lit[1], 2, 9, {
+        fill: "rgba(196,122,94,0.7)",
+      });
+      continue;
+    }
+    v.polygon(leaf(pts, reed.width, leafProfile), {
+      fill: reed.dark ? "#1a172d" : "#2c2543",
+    });
+    // The leaf's lit side: a narrower leaf shifted toward the light, in place of the still's clipped wash.
+    v.polygon(
+      leaf(
+        pts.map(([px, py]): Vec2 => [px - 2.5 * reed.dir, py]),
+        reed.width * 0.35,
+        leafProfile,
+      ),
+      { fill: "rgba(106,79,120,0.55)" },
+    );
+  }
+}
+
+/** The still's reed profile: full at the root, 0.7 at 60%, a point at the tip. */
+function leafProfile(t: number): number {
+  return t < 0.6 ? 1 - (t / 0.6) * 0.3 : 0.7 * (1 - (t - 0.6) / 0.4);
+}
+
+/**
+ * A leaf outline round a Catmull-Rom centreline, `width` scaled by `profile(t)`.
+ * `v.tube` does this with round ends, but at ~0.2 ms a call it was a third of a
+ * frame's budget for 50 reeds, so this is the cheap version for moving leaves.
+ */
+function leaf(
+  pts: readonly Vec2[],
+  width: number,
+  profile: (t: number) => number,
+): Vec2[] {
+  const centre: Vec2[] = [];
+  const segs = pts.length - 1;
+  const steps = 5;
+  for (let i = 0; i < segs; i += 1) {
+    const p0 = pts[Math.max(0, i - 1)] ?? [0, 0];
+    const p1 = pts[i] ?? p0;
+    const p2 = pts[i + 1] ?? p1;
+    const p3 = pts[Math.min(segs, i + 2)] ?? p2;
+    for (let j = 0; j < steps; j += 1) {
+      const t = j / steps;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const at = (a: number, b: number, c: number, d: number): number =>
+        0.5 *
+        (2 * b +
+          (-a + c) * t +
+          (2 * a - 5 * b + 4 * c - d) * t2 +
+          (-a + 3 * b - 3 * c + d) * t3);
+      centre.push([
+        at(p0[0], p1[0], p2[0], p3[0]),
+        at(p0[1], p1[1], p2[1], p3[1]),
+      ]);
+    }
+  }
+  centre.push(pts.at(-1) ?? [0, 0]);
+  const left: Vec2[] = [];
+  const right: Vec2[] = [];
+  for (const [i, [x, y]] of centre.entries()) {
+    const a = centre[Math.max(0, i - 1)] ?? [x, y];
+    const b = centre[Math.min(centre.length - 1, i + 1)] ?? [x, y];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const nx = -(b[1] - a[1]) / len;
+    const ny = (b[0] - a[0]) / len;
+    const half = (width / 2) * profile(i / (centre.length - 1));
+    left.push([x + nx * half, y + ny * half]);
+    right.push([x - nx * half, y - ny * half]);
+  }
+  return [...left, ...right.reverse()];
+}
+
+// ── Night, lights, small life ────────────────────────────────────────
+
+/** Deepening dusk: a cool veil over the whole page, heavier at the top. */
+function drawDusk(v: View, dusk: number): void {
+  if (dusk <= 0) return;
+  v.rect(0, 0, 800, 800, {
+    fill: v.linearGradient(0, 0, 0, 800, [
+      [0, `rgba(14,16,48,${(0.55 * dusk).toFixed(3)})`],
+      [0.6, `rgba(20,20,56,${(0.42 * dusk).toFixed(3)})`],
+      [1, `rgba(12,12,36,${(0.5 * dusk).toFixed(3)})`],
+    ]),
+  });
+}
+
+/** Lit windows and lanterns, painted again over the veil so they hold their warmth; each breathes a little. */
+function drawLights(v: View, f: number, bloom: number, dusk: number): void {
+  for (const [hi, h] of HOUSES.entries()) {
+    for (const [wi, [wx, wy]] of windows(h).entries()) {
+      const flick = 0.85 + 0.15 * Math.sin(phase(f, 3 + wi) + hi * 2);
+      const a = (0.15 + dusk * 0.5) * flick;
+      v.circle(wx, wy + 8, 26, {
+        fill: v.radialGradient(wx, wy + 8, 26, [
+          [0, `rgba(255,206,120,${a.toFixed(3)})`],
+          [1, "rgba(255,206,120,0)"],
+        ]),
+      });
+      if (dusk > 0) {
+        v.rect(wx - 7, wy, 14, 17, {
+          fill: `rgba(255,214,130,${(dusk * 0.9).toFixed(3)})`,
+        });
+      }
+    }
+  }
+  const lamps: readonly [LampPost, number][] = [
+    [LIT_LAMPS[0] ?? LAMP, 1],
+    [LIT_LAMPS[1] ?? LAMP, 1],
+    [LAMP, bloom],
+  ];
+  for (const [i, [lamp, g]] of lamps.entries()) {
+    if (g <= 0) continue;
+    const flick = 0.8 + 0.2 * Math.sin(phase(f, 5 + i) + i);
+    const a = g * (0.25 + dusk * 0.55) * flick;
+    const r = 40 * lamp.k;
+    v.circle(lamp.hx, lamp.hy + 28 * lamp.k, r, {
+      fill: v.radialGradient(lamp.hx, lamp.hy + 28 * lamp.k, r, [
+        [0, `rgba(255,236,170,${a.toFixed(3)})`],
+        [1, "rgba(255,210,130,0)"],
+      ]),
+    });
+  }
+}
+
+interface Fly {
+  readonly x: number;
+  readonly y: number;
+  readonly rx: number;
+  readonly ry: number;
+  readonly a: number;
+  readonly b: number;
+  readonly shift: number;
+}
+
+const FLIES: readonly Fly[] = (() => {
+  const r = rng(79);
+  return Array.from({ length: 9 }, (_, i) => ({
+    x: i < 6 ? r(20, 170) : r(700, 790),
+    y: i < 6 ? r(560, 760) : r(640, 760),
+    rx: r(10, 30),
+    ry: r(8, 20),
+    a: Math.floor(r(1, 3)),
+    b: Math.floor(r(1, 4)),
+    shift: r(0, 6.28),
+  }));
+})();
+
+/** Fireflies drifting over the reeds, each on a small looping path, each blinking in its own time. */
+function drawFireflies(v: View, f: number): void {
+  for (const fl of FLIES) {
+    const x = fl.x + Math.sin(phase(f, fl.a) + fl.shift) * fl.rx;
+    const y = fl.y + Math.sin(phase(f, fl.b) + fl.shift * 2) * fl.ry;
+    const on = Math.max(0, Math.sin(phase(f, 2) + fl.shift * 3)) ** 3;
+    if (on < 0.05) continue;
+    v.circle(x, y, 9, {
+      fill: v.radialGradient(x, y, 9, [
+        [0, `rgba(230,255,150,${(0.6 * on).toFixed(3)})`],
+        [1, "rgba(200,255,120,0)"],
+      ]),
+    });
+    v.circle(x, y, 1.3, { fill: `rgba(250,255,210,${on.toFixed(3)})` });
+  }
+}
+
+/** Two moths that find the last lamp once it is lit. */
+function drawMoths(v: View, f: number, bloom: number): void {
+  if (bloom < 0.5) return;
+  const arrive = smooth((bloom - 0.5) * 2);
+  const [cx, cy] = LANTERN;
+  const wing: Style = { fill: "rgba(255,240,214,0.9)" };
+  for (let i = 0; i < 2; i += 1) {
+    const ang = phase(f, i === 0 ? 3 : -2) + i * 2.4;
+    const rad = 16 + 8 * Math.sin(phase(f, 5) + i);
+    const far = (1 - arrive) * 120;
+    const x = cx + Math.cos(ang) * (rad + far) + far * 0.6;
+    const y = cy - 4 + Math.sin(ang) * rad * 0.7 - far * 0.4;
+    const flap = Math.abs(Math.sin(phase(f, 24 + i * 6)));
+    v.ellipse(x - 2, y, 2, (2 + 4 * flap) / 2, wing);
+    v.ellipse(x + 2, y, 2, (2 + 4 * flap) / 2, wing);
+  }
+}
+
+/** The page's text, set in the quiet sky. Its second line changes when the lamp is lit; a third comes with the boat. */
+function drawStory(v: View, model: DeepReadonly<Model>): void {
+  const bloom = lampBloom(model);
+  // Plain text each frame: cheaper than a cached layer faded through a group.
+  drawLine(v, "At the very end of the pier,", 92, 1);
+  if (bloom < 1)
+    drawLine(v, "Old Pell reached up to the last lamp.", 126, 1 - bloom);
+  if (bloom > 0) drawLine(v, "Old Pell lit the last lamp of all.", 126, bloom);
+  const home = boatHome(model);
+  if (home > 0) drawLine(v, "And the last boat came home.", 160, home);
+}
+
+function drawLine(v: View, line: string, y: number, alpha: number): void {
+  const ctx = v.ctx;
+  ctx.save();
+  ctx.fillStyle = `rgba(252,240,214,${(0.92 * alpha).toFixed(3)})`;
+  ctx.font = "italic 25px Georgia";
+  ctx.textAlign = "right";
+  ctx.fillText(line, 756, y);
+  ctx.restore();
+}

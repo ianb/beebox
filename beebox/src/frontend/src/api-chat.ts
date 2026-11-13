@@ -30,6 +30,7 @@ import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { newMessageId } from "./components/chat/InteractiveChat-helpers";
 import { trpcClient } from "./lib/trpc/client";
+import { flushActivity } from "./lib/activity/page-queue";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";
@@ -37,6 +38,9 @@ import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnos
 import { maintenanceRetryDelayMs } from "./lib/maintenance-retry";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type AddedModel, type ChatAgentEngine } from "@shared/chat-models.js";
+
+/** Longest a send waits for queued activity to reach the box. */
+const ACTIVITY_FLUSH_MS = 1_000;
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -322,7 +326,12 @@ export interface ChatTurnStart {
  *
  * Retries once on network failure with a stable messageId to prevent dup turns.
  */
-/** An explicit client-error response was refused before route acceptance. */
+/**
+ * The box refused the send and recorded nothing: a 4xx from the route, or a
+ * 503 from the box's admission gate or the hub (closed for maintenance, or not
+ * running). `/chat/send` itself never answers 503, so the same message id is
+ * safe to send again and the target conversation gained nothing from it.
+ */
 export class ChatSendRejectedError extends RequestError {
   constructor(message: string) { super(message); this.name = "ChatSendRejectedError"; }
 }
@@ -331,14 +340,23 @@ class ConversationStartupPendingError extends Error {
   constructor() { super("Waiting for conversation — retry this send"); this.name = "ConversationStartupPendingError"; }
 }
 
-/** A failed send: 4xx is the box's decision, anything else may be retried by the caller. */
-async function rejectSend(response: Response, startup: boolean | undefined): Promise<never> {
-  if (response.status === 404 && startup === true) throw new ConversationStartupPendingError();
-  const error = await response
-    .json()
-    .catch(() => ({ error: response.statusText }));
-  const reason = error.error || "Chat send failed";
-  if (response.status >= 400 && response.status < 500) throw new ChatSendRejectedError(reason);
+const sendFailureBodySchema = z.object({ error: z.string().optional(), message: z.string().optional() });
+
+/**
+ * A failed send: 4xx and 503 are refusals before acceptance; anything else may
+ * have reached the box. After an attempt whose outcome is unknown (a network
+ * failure), no answer to the retry is a refusal: the first attempt may have
+ * been recorded, and a restart since can make the retry fail (a 410 for a
+ * reservation the restart forgot) before deduplication sees it.
+ */
+async function rejectSend(response: Response, opts: { startup: boolean | undefined; earlierAttemptUncertain: boolean }): Promise<never> {
+  if (response.status === 404 && opts.startup === true) throw new ConversationStartupPendingError();
+  const parsed = sendFailureBodySchema.safeParse(await response.json().catch(() => null));
+  const body = parsed.success ? parsed.data : {};
+  // The hub's 503 carries a code in `error` and the sentence in `message`.
+  const reason = (response.status === 503 ? body.message : undefined) || body.error || response.statusText || "Chat send failed";
+  const refused = !opts.earlierAttemptUncertain && ((response.status >= 400 && response.status < 500) || response.status === 503);
+  if (refused) throw new ChatSendRejectedError(reason);
   throw new RequestError(reason);
 }
 
@@ -374,12 +392,21 @@ export async function startChatTurn(params: {
    */
   engine?: string;
   model?: string;
+  /**
+   * The page's key for this new conversation (session `"new"`), the same key
+   * it put on its activity entries; the box binds it to the session id.
+   */
+  pendingChat?: string;
 } & ChatSendContext): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, pendingChat, openCard } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? newMessageId();
+  // What the person just did in a view or figure reaches the box before the
+  // message, so it counts toward this turn; a slow box never holds the send past a second.
+  await flushActivity(ACTIVITY_FLUSH_MS);
 
   let attemptNumber = 0;
+  let earlierAttemptUncertain = false;
   const attempt = async (): Promise<Response> => {
     attemptNumber++;
     recordChatSendEvent(messageId, { event: "post-issued", detail: { attempt: attemptNumber } });
@@ -397,9 +424,8 @@ export async function startChatTurn(params: {
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
         ...(engine !== undefined ? { engine } : {}),
         ...(model !== undefined ? { model } : {}),
+        ...(pendingChat !== undefined ? { pendingChat } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
-        ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
-        ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
         // Ambient, not a caller-supplied field: only the browser can tell the
         // native shell from mobile web, and it is re-read per send because the
         // viewport (and, on an in-app navigation, the shell) can change.
@@ -416,7 +442,7 @@ export async function startChatTurn(params: {
     // The refusal came from the admission hook, so nothing was recorded and
     // the same message id is safe to send again.
     if (response.status === 503 && attemptNumber === 1 && await waitOutMaintenance(messageId, response)) return attempt();
-    if (!response.ok) await rejectSend(response, params.startup);
+    if (!response.ok) await rejectSend(response, { startup: params.startup, earlierAttemptUncertain });
 
     return response;
   };
@@ -428,6 +454,7 @@ export async function startChatTurn(params: {
     // Retry once on network errors (not HTTP errors — those already threw above).
     // fetch() throws TypeError on network failure.
     if (err instanceof TypeError) {
+      earlierAttemptUncertain = true;
       recordChatSendEvent(messageId, { event: "post-retry-scheduled", detail: { reasonKind: "network", delayMs: 2000 } });
       console.warn("[chat] Send failed with network error, retrying...", err.message);
       await new Promise((r) => setTimeout(r, 2000));

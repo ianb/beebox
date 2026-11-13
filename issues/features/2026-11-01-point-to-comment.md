@@ -1,88 +1,106 @@
 ---
-title: "Comment by pointing: tap a comment button, then tap the thing to comment on"
-workstream: unattached
-area: workstreams-app
-labels: [comments, exhibits, mobile, ui]
+title: "Point at box document content to attach it to chat"
+workstream: point-to-comment
+needs: [manual-testing]
+design: ../../beebox/docs/implemented-plans/global-point-selection.md
+area: beebox
+labels: [comments, mobile, ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder request, 2026-11-01"
 ---
 
-Comments on exhibits and documents in the workstreams app start from a text
-selection. With the comment toggle on, a selection opens the composer
-(`workstreams-app/src/frontend/components/CommentLayer.tsx`), and
-`lib/selection-anchor.ts` turns the selection into the quoted text, an
-optional text fragment, and the nearest heading. Text selection is slow on a
-phone, and it cannot point at things that are not text, such as an image, a
-chart, a screenshot in an exhibit, or a whole table.
+> **⏳ Awaiting manual testing** — fix landed in branch commit `92c67aa48`; on a physical phone, select a paragraph in a card and a chat message, confirm each with `+`, and verify each appears in the chat draft. Only the developer clears this.
 
-The boxholder wants the model that claude.ai artifacts use. You click a
-comment button, then point at what you want to comment on. The element under
-the pointer highlights, and a tap or click picks it and opens the composer
-beside it. It works well on mobile.
+**Reopened (2026-11-04):** The shipped Select control is in the card toolbar
+and works only in companion documents. The boxholder wants an icon in the
+global top toolbar, covering card content and chat messages. The top-bar
+button must be the only way into this flow: selecting text for ordinary copy
+must no longer surface the attachment `+`. See the new
+[plan](../../beebox/docs/implemented-plans/global-point-selection.md).
 
-Keep what exists: a picked element still yields an anchor in the current
-shape (quoted text, a text fragment where one can be made, the section), so
-in-page highlights and the agent's `bin/comments` reading are unchanged. Text
-selection stays available for comments on a span smaller than an element.
+The corrected box selection flow is implemented. Physical phone touch remains unverified; image pins, screenshots, standalone browse, and embedded PDFs remain outside the shipped scope.
 
-To settle:
+When a person reads a box document beside chat, the current way to quote part
+of it is to select text and press the floating `+`. The selection appears in
+the ordinary chat composer as a pill and an inline `[selection#N]` token. A
+selection made during transcription is placed in the spoken message. This
+works on a desktop but text selection is slow on a phone and cannot directly
+choose a whole image, chart, or table.
 
-- **What can be picked.** Block elements (a paragraph, a list item, a table
-  or a row, a figure, an image, a code block) or any element, and how a
-  person moves to a larger or smaller target.
-- **Anchors for non-text targets.** An image or chart has no quotable text. It
-  could use its alt text, caption, or source path, plus an element path for
-  in-page highlighting.
-- **Screenshots.** Optionally attach a cropped capture of the picked element,
-  so the agent sees what the person saw. This matters most for visual
-  exhibits, where the text alone does not say what is wrong.
-- **Mobile.** A tap must pick, not follow a link or start a selection, while
-  the mode is on.
+The boxholder wants a visible Select mode in the document's top bar. On
+desktop, hover shows what would be selected and click attaches it immediately.
+On mobile, tap chooses a block and a nearby `+` confirms it. The person can then type or dictate in the
+ordinary composer. The selection pill, source ref, and chat serialization stay
+the same. There is no separate comment input or way to enlarge the target.
+Outside the mode, text selection, links, and other document controls work as
+before. A tap in mode must choose the target without following a link or
+starting native selection.
 
-Neighbors: `issues/features/2026-10-09-mobile-long-press-paragraph-to-comment.md`
-(the same problem on box pages, through a long-press) and
-`beebox/docs/plans/document-comments.md` (the comment store and its anchors).
-The box app's selection-to-chat flow could use the same picker later.
+The first implementation covers rendered `.doc.card` and Markdown in the companion
+pane. Embedded PDFs and opaque frames do not expose their content as DOM
+blocks. A visual block can use its caption, alt text, or source description
+as the quoted selection. A point pin or cropped screenshot would require a
+new attachment representation and remains a later design question.
 
-## How Claude's own comments work (looked up 2026-11-01)
+## Correction (2026-11-04)
 
-From Anthropic's documentation. Neither source describes the touch gestures
-on mobile, so check those by hand.
+The original issue identified `workstreams-app/` document comments and
+`bin/comments` as the destination. That was wrong. The boxholder showed
+the box app's floating `+` and the resulting selection in the chat draft.
+The workstreams implementation made in this branch is being removed. The
+revised [plan](../../beebox/docs/implemented-plans/point-to-comment.md) follows the
+existing box selection-to-chat flow.
 
-Claude.ai artifacts (decks and designs), per
-[Use artifacts with a keyboard or screen reader](https://support.claude.com/en/articles/17457950):
+## Implementation (2026-11-04)
 
-- A **Comment** button in the panel header turns on comment mode. Its label
-  then reads "Done commenting", and it shows the open count ("3 open
-  comments").
-- In comment mode, the pickable targets are a slide and each object on it, or
-  each artboard in a design. Picking one opens an "Add a comment" box next to
-  it. Escape closes the box, and a second Escape leaves comment mode.
-- Each comment has a **marker** on the artifact, labeled with its author.
-  Markers show only while comment mode is on, and opening one shows the
-  comment and a reply field.
-- "More comment options" → "Show all comments" lists them, and choosing a row
-  goes to that comment.
-- A "Send to Claude" checkbox decides whether a comment is also a request to
-  Claude. Comments without it stay as notes between people.
-- In a doc, the header button shows or hides the comment list instead.
-  Commenting on text there starts from a selection.
+The box app now shows one Select icon in the global top bar for chat views. On
+desktop, hover outlines a semantic block and click adds the existing selection
+pill and `[selection#N]` to the ordinary chat draft. On touch, tapping outlines
+the block and shows the existing floating `+` beside it; pressing `+` attaches
+it. A link tap chooses its paragraph without navigating. Outside the mode,
+text selection supports copy and does not open an attachment `+`. Code
+indentation and line breaks are preserved in quoted blocks; a pending pick is
+discarded if its content changes, and its `+` hides when the block scrolls out
+of view.
 
-Claude Science, per [Comments](https://claude.com/docs/claude-science/comments.md):
+Desktop Chromium checks show hover and one-click attachment. At phone width,
+synthetic touch events exercised tap then `+`, but the browser profile did not
+produce native touch events, so a physical touch gesture remains unverified.
+The first pass uses image alt, caption, or source text.
+A point pin, screenshot, standalone browse control, and embedded PDF support
+remain design questions; lean toward keeping them out until this chat
+attachment flow is used.
 
-- You can comment on selected text in text, code, or PDF files, a clicked
-  point on an image (shown as a numbered pin), or a clicked element in a
-  rendered HTML report while Comment is on.
-- Saving a comment does not send it. Saved comments wait above the message
-  box and go to Claude with the next message, so several can go together.
-  Claude gets the filename, the quoted text or marked image, and the note.
-  Once sent, a comment leaves the artifact and shows as a card on the message.
-- There are no threads and no resolve state, and a comment is capped at 1,000
-  characters.
+Related: [mobile paragraph capture](2026-10-09-mobile-long-press-paragraph-to-comment.md)
+proposed a long press tentatively; the visible mode here avoids the conflict
+with native text selection. [Canonical selection anchors](2026-07-08-selection-provenance-canonical-anchors.md)
+remain separate work.
 
-What fits here: the mode button with an open count, element picking, markers
-shown only in comment mode, and a list view. Our comments go to an agent by
-workstream, so a "send" step or checkbox has no equivalent. A Science-style
-point pin on an image would answer the "anchors for non-text targets"
-question above.
+## Global top-bar follow-up (2026-11-04)
+
+The follow-up moves Select to one icon in the global top bar and removes the
+card toolbar. The mode covers card content and chat messages, including
+ordinary user messages and images that open a lightbox. It keeps the existing
+selection pill, source ref, and inline composer token. Selecting text outside
+the mode supports copy and no longer opens an attachment `+`. Desktop click
+attaches a previewed block immediately. At phone width, a synthetic touch tap
+previews the block and a nearby `+` confirms it. A physical phone gesture
+remains unverified; see the manual-testing section.
+
+## One-shot selection follow-up (2026-11-05)
+
+Select now turns off after one card or chat attachment, including after the
+phone's nearby `+` confirmation. A person presses the top-bar icon again to
+choose another item. On desktop, they can instead highlight an exact span of
+text first and press the same icon to attach that span immediately. Native text
+selection alone still only selects text for copy. The attachment uses the
+existing chat draft pill and source locator.
+
+## Manual testing
+
+On a physical phone, open a chat with a card and a chat message visible. Turn on
+Select in the top bar, tap a paragraph in the card, then press the nearby `+`.
+Repeat with a chat message. Each selection should appear in the ordinary chat
+draft with the correct source and quote, and neither tap should navigate or
+start native text selection. The phone's touch behavior has not been verified.

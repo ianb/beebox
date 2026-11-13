@@ -107,7 +107,7 @@ export function CompositionBlock({ children }: { children?: ReactNode }): ReactN
       {plain === null || card === null ? null : (
         <div className="flex items-center justify-end gap-2 rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
           <span className="mr-auto text-sm font-semibold text-card-pen">Composition</span>
-          <Button id={controlAddress("bbx-composition-copy", card.instance)} label={`Copy composition${openMarksSuffix(plain.openMarks)}`} size="sm" intent="secondary" flash={{ label: "Copied" }} aria-live="polite" onClick={() => navigator.clipboard.writeText(plain.text)}>
+          <Button id={controlAddress("bbx-composition-copy", card.instance)} label={`Copy composition${openMarksSuffix(plain.openMarks)}`} size="sm" intent="secondary" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={() => navigator.clipboard.writeText(plain.text)}>
             {`Copy${openMarksSuffix(plain.openMarks)}`}
           </Button>
           {canCompose ? (

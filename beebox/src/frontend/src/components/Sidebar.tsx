@@ -7,6 +7,7 @@
  */
 
 import { useState, type ReactNode } from "react";
+import { MaterialContext } from "./ui/material";
 
 interface SidebarProps {
   /** Header title */
@@ -33,7 +34,12 @@ interface SidebarProps {
   idPrefix?: string;
 }
 
-export function Sidebar({
+/** A white app panel: on a card it keeps app ink. */
+export function Sidebar(props: SidebarProps) {
+  return <MaterialContext.Provider value={false}><SidebarPanel {...props} /></MaterialContext.Provider>;
+}
+
+function SidebarPanel({
   title,
   headingLevel,
   subtitle,
@@ -67,7 +73,7 @@ export function Sidebar({
       {/* Apply desktop width via inline style scoped to sm+ */}
       <style>{"@media (min-width: 640px) { [style*=\"--sidebar-desktop-w\"] { width: var(--sidebar-desktop-w) !important; } }"}</style>
       {collapsed ? (
-        <button
+        <button type="button"
           id={idPrefix !== undefined ? `${idPrefix}-expand` : undefined}
           onClick={() => setCollapsed(false)}
           className="p-2 hover:bg-warm-100 text-warm-600 hover:text-warm-700"
@@ -85,7 +91,7 @@ export function Sidebar({
               <Heading className="text-sm font-medium text-warm-700 truncate">{title}</Heading>
               {subtitle ? <div className="text-xs text-warm-700 truncate">{subtitle}</div> : null}
             </div>
-            {!fill ? <button
+            {!fill ? <button type="button"
               id={idPrefix !== undefined ? `${idPrefix}-collapse` : undefined}
               onClick={() => setCollapsed(true)}
               className="hidden sm:block p-1 hover:bg-warm-200 rounded text-warm-600 hover:text-warm-700 flex-shrink-0"

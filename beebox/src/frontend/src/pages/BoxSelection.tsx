@@ -19,7 +19,7 @@ import {
 
 function CenteredScreen({ children }: { children: React.ReactNode }) {
   return (
-    <Row justify="center" align="center" className="min-h-screen p-4">
+    <Row justify="center" align="center" className="min-h-dvh p-4">
       {children}
     </Row>
   );
@@ -46,7 +46,7 @@ export function BoxRedirect() {
   }, [loading, boxes, navigate]);
 
   if (loading) {
-    return <StatusMessage>Loading...</StatusMessage>;
+    return <StatusMessage busy>Loading...</StatusMessage>;
   }
 
   if (boxes.length === 0 && authRequired) {
@@ -66,7 +66,7 @@ export function BoxRedirect() {
   }
 
   if (boxes.length === 1) {
-    return <StatusMessage>Redirecting...</StatusMessage>;
+    return <StatusMessage busy>Redirecting...</StatusMessage>;
   }
 
   return (

@@ -92,12 +92,12 @@ export function registerChatSendRoutes(
     // the User-Agent guess as the fallback for a client that sends nothing.
     const channel = resolveChannel(body.channel, request.headers["user-agent"]);
 
-    // Companion-pane state for the `open-card`/`card-activity`/`card-state`
-    // snapshot attrs, normalized + filtered at this parse boundary. Rides
+    // Companion-pane state for the `open-card`
+    // snapshot attr, normalized + filtered at this parse boundary. Rides
     // enqueue and send like `channel`.
     const cardFields = extractCardFields(body);
 
-    const outcome = await sendUserMessage({ target, message, messageId, user, channel, images, cardFields });
+    const outcome = await sendUserMessage({ target, message, messageId, user, channel, images, cardFields, pendingChat: body.pendingChat });
     return reply.status(outcome.status).send(outcome.body);
   });
 

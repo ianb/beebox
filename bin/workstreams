@@ -968,12 +968,21 @@ case "$cmd" in
       fi
     done
 
-    # Orphaned browse/log/pid state (no matching worktree, not "main").
+    # Orphaned browse/log/pid state (no matching worktree, not "main"). The
+    # router keeps its own files in the same directories: router.log, and the
+    # workstreams app's workstreams-app.log and _workstreams-app.json. Those
+    # belong to no worktree and are never orphans.
+    router_owned() {
+      case "$1" in
+        main|router|workstreams-app|_workstreams-app) return 0 ;;
+        *) return 1 ;;
+      esac
+    }
     orphan_browse=0; orphan_logs=0; orphan_pids=0
     for d in "$BROWSE_ROOT"/*; do
       [ -d "$d" ] || continue
       name=$(basename "$d")
-      [ "$name" = "main" ] && continue
+      router_owned "$name" && continue
       [ -d "$WT_ROOT/$name" ] && continue
       echo "orphan browse: $d"
       [ "$dry_run" = false ] && rm -rf "$d"
@@ -982,7 +991,7 @@ case "$cmd" in
     for f in "$LOGS_ROOT"/*.log; do
       [ -f "$f" ] || continue
       name=$(basename "$f" .log)
-      [ "$name" = "main" ] && continue
+      router_owned "$name" && continue
       [ -d "$WT_ROOT/$name" ] && continue
       echo "orphan log: $f"
       [ "$dry_run" = false ] && rm -f "$f"
@@ -991,7 +1000,7 @@ case "$cmd" in
     for f in "$PID_DIR"/*.json; do
       [ -f "$f" ] || continue
       name=$(basename "$f" .json)
-      [ "$name" = "main" ] && continue
+      router_owned "$name" && continue
       [ -d "$WT_ROOT/$name" ] && continue
       echo "orphan pidfile: $f"
       [ "$dry_run" = false ] && rm -f "$f"

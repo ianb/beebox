@@ -21,7 +21,7 @@ export function ChatsPicker() {
   const { data, isLoading, error } = trpc.chat.byLandmark.useQuery();
 
   if (isLoading) {
-    return <StatusMessage>Loading…</StatusMessage>;
+    return <StatusMessage busy>Loading…</StatusMessage>;
   }
   if (error) {
     return (

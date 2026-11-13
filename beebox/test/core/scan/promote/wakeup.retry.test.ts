@@ -9,6 +9,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import {
   MAX_WAKEUP_ATTEMPTS,
   clearWakeupFailures,
@@ -90,6 +91,7 @@ void test("The end-to-end property:", async (t) => {
     return Promise.resolve({ ok: false, detail: "invalid_grant" });
   };
 
+  const errors = consoleLines(t, "error");
   const passes = Array.from({ length: 20 }, (_v, i) => i);
   const outcomes: string[] = [];
   await passes.reduce(
@@ -101,6 +103,15 @@ void test("The end-to-end property:", async (t) => {
     Promise.resolve(),
   );
   t.check("calls=" + calls + " last=" + outcomes[outcomes.length - 1], "calls=6 last=abandoned");
+  // The server log counts each attempt with its wait, then says what the boxholder has to do:
+  t.check(errors(), [
+    "[scan] bbx wakeup after promote failed (attempt 1 of 6, retrying in 120s): invalid_grant",
+    "[scan] bbx wakeup after promote failed (attempt 2 of 6, retrying in 240s): invalid_grant",
+    "[scan] bbx wakeup after promote failed (attempt 3 of 6, retrying in 480s): invalid_grant",
+    "[scan] bbx wakeup after promote failed (attempt 4 of 6, retrying in 900s): invalid_grant",
+    "[scan] bbx wakeup after promote failed (attempt 5 of 6, retrying in 900s): invalid_grant",
+    "[scan] bbx wakeup after promote failed 6 time(s); giving up. The intake job stays undrained until this is fixed and _tmp/scan-quarantine/wakeup-abandoned is removed: invalid_grant",
+  ]);
 
   // ## New scan files start the budget over
   //
@@ -113,6 +124,8 @@ void test("The end-to-end property:", async (t) => {
   calls = 0;
   const outcome = await runPendingWakeup({ boxRoot: box.root, runWakeup: alwaysFails });
   t.check("calls=" + calls + " kind=" + outcome.kind, "calls=1 kind=failed");
+  // The new files start the count at attempt 1 again:
+  t.check(errors(), ["[scan] bbx wakeup after promote failed (attempt 1 of 6, retrying in 120s): invalid_grant"]);
 });
 
 // ## A successful wakeup clears the history
@@ -122,9 +135,15 @@ void test("The end-to-end property:", async (t) => {
 void test("A box that failed twice and then recovered starts its next incident with a fu...", async (t) => {
   const box = await makeTmpBox();
   await markWakeupPending(box.root, { reason: "1 scan file(s) entering promote", newWork: true });
+  const errors = consoleLines(t, "error");
   await runPendingWakeup({ boxRoot: box.root, runWakeup: () => Promise.resolve({ ok: false, detail: "x" }) });
   await runPendingWakeup({ boxRoot: box.root, runWakeup: () => Promise.resolve({ ok: false, detail: "x" }) });
   t.check(await readWakeupFailures(box.root), 2);
+  // The server log counts both failed attempts:
+  t.check(errors(), [
+    "[scan] bbx wakeup after promote failed (attempt 1 of 6, retrying in 120s): x",
+    "[scan] bbx wakeup after promote failed (attempt 2 of 6, retrying in 240s): x",
+  ]);
 
   const ok = await runPendingWakeup({ boxRoot: box.root, runWakeup: () => Promise.resolve({ ok: true, detail: "" }) });
   t.check("kind=" + ok.kind + " failures=" + (await readWakeupFailures(box.root)), "kind=ran failures=0");

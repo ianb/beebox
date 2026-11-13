@@ -11,7 +11,7 @@ import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { simpleGit } from "simple-git";
+import { boxGit } from "./env.js";
 import { errnoCode } from "../../shared/error-guards.js";
 
 /** Dirty path (boxRoot-relative) → fingerprint of its working-tree state. */
@@ -26,7 +26,7 @@ export type DirtySnapshot = ReadonlyMap<string, string>;
  * @param boxRoot - Repository root, or a directory below it as in a v2 box
  */
 async function listDirtyPaths(boxRoot: string): Promise<string[]> {
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   // Porcelain paths are repo-root-relative whatever the cwd; strip the prefix
   // to return them in boxRoot's frame, which `stageAndCommitPaths` expects.
   const prefix = (await git.raw(["rev-parse", "--show-prefix"])).replace(/\n$/, "");

@@ -32,8 +32,12 @@ The engine/box separation: the box is your data and survives an engine
 upgrade. A box agent gets a generated guide and a reference set rather than a
 bespoke framework. `bbx` is the agent's own tool, not a user surface.
 
-**Where it is thin.** Two engines is not many; the swap is a design intent
-with one exercised alternative, not a plugin interface. The engine process is also
+**Where it is thin.** The swap is a design intent, not a plugin interface.
+There are now three engines, but the third, pi (added October 2026), is a
+different shape: an open-source agent library that runs inside the box's
+server process and takes only OpenRouter models the owner adds, with no
+subscription login, estimated costs, and no mid-turn steering from the chat. It
+widens the model choice more than it shows the engine is pluggable. The engine process is also
 not silent by itself: Claude Code sends its own usage metrics unless the owner
 turns that off per box, and the page on data says so. Claude requires a
 subscription login, not an API key; a machine with no browser uses a
@@ -44,7 +48,8 @@ three OpenRouter models are recorded as tested through a full agent turn, and
 tool-using turns can fail on others.
 
 **Pages.** `03-why-not-just-a-chatbot.md`, `07-how-it-works.md`,
-`08-what-it-requires.md`, `12-compared-to-alternatives.md`.
+`08-what-it-requires.md`, `12-compared-to-alternatives.md`,
+`concepts/pi-engine.md`, `concepts/model-policy.md`.
 
 ## 2. A knowledge base you own, wiki-like
 
@@ -88,7 +93,10 @@ rather than claiming everything lives in the box. The encrypted-backup feature
 (October 2026) is the plainest evidence: it has to collect that outside state
 (secrets, agent logins, conversation files, a Google grant on some installs)
 beside the box and its git history, and a git push alone does not carry the
-annex object bytes. A restore is only proven by trying one.
+annex object bytes. A restore is only proven by trying one. The
+box's web browser (added 2026-10-30) is a second case: its profile, with the
+logins and cookies the person made in it, lives in the box user's state
+directory, unencrypted, outside git and outside backups.
 
 **Pages.** `07-how-it-works.md`, `contracts/box-layout.md`,
 `capabilities/shape-it-later.md`.
@@ -189,7 +197,12 @@ a box-local type or view would be. A card type can declare its own body tags,
 valid only in that type.
 
 **Where it is thin.** Building these is agent work with real capability, so
-the quality is the agent's. Nothing gates a badly-built view. There are two
+the quality is the agent's. Nothing gates a badly-built view, but the agent
+can now look at its own work: `bbx view check` renders each card type and
+prints advice for patterns the views guide forbids, and the box browser opens
+the box's own pages as the agent and screenshots a card (November 2026). Both
+are checks the agent runs, not gates, and the browser check is partly
+unexercised on a deployed box. There are two
 plugins, both written by the project; the stated position is no registry and
 no marketplace. Recipes and courses stopped being on by default when they
 became plugins, and activation is a manual, agent-run step that no one has

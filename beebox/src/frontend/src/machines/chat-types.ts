@@ -169,6 +169,12 @@ export interface ChatContext {
    */
   startEngine?: string;
   startModel?: string;
+  /**
+   * The page's key for this new conversation (the `start` target's
+   * `clientConversationId`). Sent on the first send and on its activity
+   * entries, so the box ties them to the session once it has an id.
+   */
+  pendingChat?: string;
   /** Subprocess is alive (true once first send has started; stays true between turns). */
   processRunning: boolean;
   /** Subprocess is currently mid-turn — drives the "agent is processing" indicator. */
@@ -251,6 +257,8 @@ export interface ChatMachineInput {
    */
   startEngine?: string | undefined;
   startModel?: string | undefined;
+  /** The `start` target's `clientConversationId`; only honored when `sessionInput === "new"`. */
+  pendingChat?: string | undefined;
 }
 
 export interface SessionInput {

@@ -25,6 +25,10 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     // TypeScript 6+ loads no @types package unless named here. These are the
     // two a box installs (`src/core/box/package.ts`), as 5.x loaded them.
-    "types": ["node", "react"]
+    "types": ["node", "react"],
+    // `@/…` is the box root in views and figures (the engine's esbuild plugin,
+    // src/webapp/views/compiler/box-imports.ts). `${configDir}` is the box's
+    // own tsconfig directory, so this resolves there, not in node_modules.
+    "paths": { "@/*": ["${configDir}/*"] }
   }
 }

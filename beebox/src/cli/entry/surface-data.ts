@@ -111,6 +111,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "agent-context", audience: "agent", smoke: { run: ["agent-context"] } },
   { name: "location", audience: "agent", smoke: { run: ["location", "get"] } },
   { name: "view", audience: "agent", smoke: { run: ["view", "check"] } },
+  { name: "figure", audience: "agent", smoke: { run: ["figure", "run"] } },
   { name: "retro", audience: "agent", smoke: { run: ["retro", "status"] } },
   { name: "doctor", audience: "agent", smoke: { skip: "repairs box configuration by default" } },
 
@@ -191,6 +192,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
     name: "question-review",
     audience: "engine",
     reason: "the stock question-review procedure's precheck and validate; `verify` writes the review latch, and the agent's side is the brief `check` prints",
+  },
+  {
+    name: "intentions",
+    audience: "engine",
+    reason: "the stock refresh-intentions procedure's precheck and validate; `verify` writes the review record, and the agent's side is the brief `check` prints",
   },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

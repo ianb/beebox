@@ -3,7 +3,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
-import { simpleGit } from "simple-git";
+import type { SimpleGit } from "simple-git";
+import { boxGit } from "../../../lib/git/env.js";
 import { parseAnnexPointer } from "../../../lib/annex-pointer.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
@@ -36,7 +37,7 @@ async function readLocalAnnexObject(opts: { annexRoot: string; objectPath: strin
   if (!isWithin(actualRoot, actualTarget)) throw new TriageReceiptError({ detail: `Git-annex object escaped its local store: ${ref}` });
   return fs.readFile(actualTarget);
 }
-async function historicalBlob(opts: { boxRoot: string; git: ReturnType<typeof simpleGit>; revision: string; relative: string }): Promise<Buffer> {
+async function historicalBlob(opts: { boxRoot: string; git: SimpleGit; revision: string; relative: string }): Promise<Buffer> {
   const { boxRoot, git, revision, relative } = opts;
   const bytes = await git.binaryCatFile(["blob", `${revision}:${relative}`]);
   const pointer = parseAnnexPointer(bytes);
@@ -64,7 +65,7 @@ async function prepareAgain(boxRoot: string, receipt: DecisionReceipt): Promise<
   }
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "triage-replay-"));
   try {
-    const git = simpleGit(boxRoot);
+    const git = boxGit(boxRoot);
     let applicationCommits: string[] = [];
     if (receipt.application.state !== "pending") {
       const found = (await git.raw(["log", "--all-match", "--format=%H", "--fixed-strings", "--grep", `Triage-Decision: ${receipt.id}`, "--grep", "Triage-Classifier:"])).trim();

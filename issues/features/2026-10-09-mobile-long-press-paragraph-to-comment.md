@@ -34,5 +34,11 @@ The boxholder is not sure about this. Questions to settle before building:
   range. A block capture can produce a range that covers the block, so the
   existing locator and the chat attachment format can stay the same.
 
+**Related implementation (2026-11-04):** The box companion now has an explicit
+Select mode: tap a rendered block, then confirm with the nearby `+`. This
+addresses block selection on touch without taking over the platform's
+long-press gesture. The long-press proposal and its native WebView behavior
+remain undecided; this issue stays open.
+
 Related: [selection-capture arrow](2026-10-08-selection-capture-arrow-points-at-composer.md),
 [transcript selection](../closed/features/2026-09-11-select-transcript-text-into-the-composer.md).

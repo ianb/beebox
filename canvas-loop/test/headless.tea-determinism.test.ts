@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { toTeaModule } from "../src/headless/tea-load.js";
+import type { View } from "../src/core/tea.js";
 import { parseTeaEvents } from "../src/headless/tea-events.js";
 import { teaRun } from "../src/headless/tea-runtime.js";
 import * as orbitTea from "../src/examples/orbit-tea.js";
@@ -69,4 +70,24 @@ test("param changes are logged and selection hit-tests land on moving planets", 
   assert.ok(transcript.includes("**[frame 70]** param: speed-scale → 2.5"), "param change auto-logged");
   assert.ok(transcript.includes("**[frame 30]** log: selected Venus"), "click hit a moving planet");
   assert.ok(transcript.includes("**[frame 100]** log: selected Mercury"), "click hit under a changed speed-scale");
+});
+
+test("a different seed changes the output", () => {
+  const module = toTeaModule({
+    canvas: { width: 60, height: 20 },
+    init: (u: { random: (min: number, max: number) => number }) => ({ x: u.random(5, 55) }),
+    update: (model: { x: number }) => model,
+    draw: (v: View, model: { x: number }) => {
+      v.background("#000000");
+      v.circle(model.x, 10, 4, { fill: "#ffffff" });
+    },
+  });
+  const dir42 = tmpDir();
+  const dir7 = tmpDir();
+  teaRun(teaRunOptions(module, { outDir: dir42, frames: 3, seed: 42 }));
+  teaRun(teaRunOptions(module, { outDir: dir7, frames: 3, seed: 7 }));
+  const first = readDirBytes(dir42).get("frame-0000.png");
+  const second = readDirBytes(dir7).get("frame-0000.png");
+  assert.ok(first !== undefined && second !== undefined, "both runs captured frame 0");
+  assert.notEqual(Buffer.compare(first, second), 0, "seed changes the seeded start position");
 });

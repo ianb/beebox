@@ -6,78 +6,8 @@
  */
 
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../assistant-parts";
-import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { cardDisplayName } from "@shared/card-name";
-
-type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
-
-/** Tool → summary category, keyed on the shared tool vocabulary. */
-const TOOL_CATEGORIES = {
-  Read: "look",
-  Grep: "look",
-  Glob: "look",
-  // The web is named as the web: "looked up" alone did not say whether the
-  // agent searched the person's box or the internet.
-  WebSearch: "search",
-  WebFetch: "webpage",
-  Edit: "change",
-  Write: "change",
-  Bash: "step",
-  Agent: "handoff",
-  Task: "handoff",
-  // Agent machinery: not counted.
-  TodoWrite: "hidden",
-} satisfies Record<KnownToolName, Category>;
-
-/** Collapsed-summary phrase for a category: one occurrence, or n of them. */
-const CATEGORY_PHRASES = {
-  look: { one: "checked something in your box", many: (n: number) => `checked ${n} things in your box` },
-  search: { one: "searched the web", many: (n: number) => `searched the web ${n} times` },
-  webpage: { one: "read a web page", many: (n: number) => `read ${n} web pages` },
-  change: { one: "made a change", many: (n: number) => `made ${n} changes` },
-  step: { one: "took a step", many: (n: number) => `took ${n} steps` },
-  handoff: { one: "handed off a task", many: (n: number) => `handed off ${n} tasks` },
-} satisfies Record<Exclude<Category, "hidden">, { one: string; many: (n: number) => string }>;
-
-function toolCategory(name: string): Category {
-  // MCP tools and future built-ins count as steps.
-  return isKnownTool(name) ? TOOL_CATEGORIES[name] : "step";
-}
-
-/** Summarize an activity group (thinking, tools, notes) for the collapsed header. */
-export function summarizeActivity(parts: ActivityPart[]): string {
-  let hasThinking = false;
-  let hasNote = false;
-  const counts = new Map<Exclude<Category, "hidden">, number>();
-  for (const part of parts) {
-    switch (part.type) {
-      case "thinking":
-        hasThinking = true;
-        break;
-      case "tools":
-        for (const tool of part.tools) {
-          const category = toolCategory(tool.toolName || "");
-          if (category === "hidden") continue;
-          counts.set(category, (counts.get(category) || 0) + 1);
-        }
-        break;
-      case "note":
-        hasNote = true;
-        break;
-    }
-  }
-
-  const segments: string[] = [];
-  if (hasThinking) segments.push("thought it over");
-  for (const [category, count] of counts) {
-    const phrase = CATEGORY_PHRASES[category];
-    segments.push(count === 1 ? phrase.one : phrase.many(count));
-  }
-  // Notes are not counted as steps; they name a group only when it has nothing else.
-  return segments.join(", ") || (hasNote ? "noted progress" : "working");
-}
 
 const SCHEMA_PATH = /(?:^|\/)schemas\/([^/]+)\.ts$/;
 
@@ -221,7 +151,11 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   }),
   Bash: (input) => {
     const description = stringInput(input, "description");
-    return description ? capitalize(description) : "Took a step";
+    if (description) return capitalize(description);
+    const lookups = commandLookups(input);
+    if (lookups) return describeLookups(lookups);
+    // Command words (`cat`, `ls`) told a person no more than this did.
+    return "Took a step";
   },
   Grep: (input) => describeSearch("Grep", input),
   Glob: (input) => describeSearch("Glob", input),
@@ -237,6 +171,49 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   Agent: (input) => stringInput(input, "description") || "Handed off a task",
   Task: (input) => stringInput(input, "description") || "Handed off a task",
 } satisfies Record<string, ToolDescriber>));
+
+/** One of Codex's command actions that names what it looked at (`input.actions`, `services/codex-tool-activity.ts`). */
+type Lookup =
+  | { type: "read"; path: string }
+  | { type: "search"; query: string }
+  | { type: "listFiles" };
+
+function lookup(action: unknown): Lookup | null {
+  if (typeof action !== "object" || action === null || !("type" in action)) return null;
+  const fields: Record<string, unknown> = { ...action };
+  const text = (key: string) => (typeof fields[key] === "string" ? fields[key] : "");
+  if (fields.type === "read" && text("path")) return { type: "read", path: text("path") };
+  if (fields.type === "search") return { type: "search", query: text("query") };
+  if (fields.type === "listFiles") return { type: "listFiles" };
+  return null;
+}
+
+/**
+ * A Codex command's actions when every one is a read, search, or listing;
+ * null when any is unknown (the command did something Codex could not name)
+ * or there are none.
+ */
+export function commandLookups(input: Record<string, unknown>): Lookup[] | null {
+  const actions = input.actions;
+  if (!Array.isArray(actions) || actions.length === 0) return null;
+  const lookups = actions.map(lookup);
+  return lookups.every((l) => l !== null) ? lookups : null;
+}
+
+/** The line for a command of lookups: the first one, as Read, Grep, or Glob would say it, and how many more. */
+function describeLookups(lookups: Lookup[]): string {
+  const [first, ...rest] = lookups;
+  const more = rest.length > 0 ? ` and ${rest.length} more` : "";
+  if (first === undefined) return "Checked something in your box";
+  switch (first.type) {
+    case "read":
+      return describeToolCall({ type: "tool_use", toolName: "Read", input: { file_path: first.path } }) + more;
+    case "search":
+      return describeSearch("Grep", { pattern: first.query }) + more;
+    case "listFiles":
+      return SEARCH_VERBS.Glob + more;
+  }
+}
 
 /** Plain-language one-line description of a single tool call. */
 export function describeToolCall(block: SessionContentBlock): string {

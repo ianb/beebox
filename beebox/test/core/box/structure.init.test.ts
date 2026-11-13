@@ -65,6 +65,7 @@ check-email.scheduled-script.card
 gc-procedure-runs.scheduled-script.card
 process-retrospective.scheduled-script.card
 question-review.scheduled-script.card
+refresh-intentions.scheduled-script.card
 refresh-maps.scheduled-script.card
 todo-review.scheduled-script.card`);
 
@@ -98,6 +99,7 @@ void test("Procedures and guides are also committed", async (t) => {
   await t.checkText(await listFiles(boxRoot, "_config/procedures"), `browser-task-drain.procedure.card
 process-retrospective.procedure.card
 question-review.procedure.card
+refresh-intentions.procedure.card
 refresh-maps.procedure.card
 todo-review.procedure.card`);
 

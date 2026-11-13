@@ -9,11 +9,12 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { containing } from "@ianbicking/tap-check/check";
+import { any, containing, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas.js";
 import { getTemplate } from "../../src/templates-registry.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
@@ -219,7 +220,11 @@ void test("A long-lived server caches the assembled schema set (and Node permane
 
   await fs.writeFile(wpath, WIDGET_SCHEMA_BROKEN);
   invalidateBoxSchemas(rbox.root);
+  const warnings = consoleLines(t, "warn");
   const kept = await loadBoxSchemas(rbox.root);
+  // The server log names the schema file and the compile error:
+  t.check(warnings(), [str`Warning: failed to load box schema widget.ts: Transform failed with 1 error:
+${any(String)}:2:26: ERROR: Unexpected end of file`]);
   t.check(kept.cardSchemas.map(s => s.type), ["widget"]);
 
   await fs.rm(wpath);

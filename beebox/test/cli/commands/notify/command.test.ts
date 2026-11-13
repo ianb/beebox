@@ -21,6 +21,7 @@ import { createFakePush } from "../../../../src/services/push.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { writePresence } from "../../../../src/core/notification/presence.js";
 import { pairFakePushDevice } from "../../../../src/core/mobile/pairing.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { createFakeApns } from "../../../../src/services/apns.js";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
@@ -205,8 +206,11 @@ exit 0`);
 // Every tried channel failed:
 void test("Every tried channel failed:", async (t) => {
   const failingPush = createFakePush({ failEndpoints: ["https://push.example/phone"] });
+  const warnings = consoleLines(t, "warn");
   await t.checkText(await run({ title: "Will not arrive", options: { target: "dashboard", loudness: "loud", channel: "web-push" }, services: { push: failingPush } }), `stderr: Not delivered: <id>: web-push failed (no device received the push (sent 0, pruned 0, failed 1))
 exit 1`);
+  // The log names the box and the reason the endpoint refused:
+  t.check(warnings(), [`Push send failed for an endpoint in ${await boxSlug(box.root)}: fake transient push failure`]);
 });
 
 // ## Bad flags and bad targets exit 2 before anything is sent
@@ -221,10 +225,12 @@ void test("Bad flags and bad targets exit 2 before anything is sent", async (t) 
       await run({ title: "x", options: { target: "dashboard", body: "a", bodyFile: "b" } }),
       await run({ title: "", options: { target: "dashboard" } }),
       await run({ title: "x", options: { targetsFromStdin: true, body: "b" }, stdin: "dashboard\ncard:../outside.card\n" }),
+      await run({ title: "x", options: { targetsFromStdin: true, body: "b" }, stdin: "dashboard\nchat:new:_content/journal\n" }),
+      await run({ title: "x", options: { target: "chat:new:_content/journal", dryRun: true } }),
     ].join("\n"),
     `stderr: Error: --target is required (or --targets-from-stdin)
 exit 2
-stderr: Error: Invalid notification target "nowhere": no scheme. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+stderr: Error: Invalid notification target "nowhere": no scheme. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard
 exit 2
 stderr: Error: --loudness must be one of dot, quiet, loud (got "shout")
 exit 2
@@ -234,7 +240,11 @@ stderr: Error: give --body or --body-file, not both
 exit 2
 stderr: Error: a title is required
 exit 2
-stderr: Error: Invalid notification target "card:../outside.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+stderr: Error: Invalid notification target "card:../outside.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard
+exit 2
+stderr: Error: chat:new:_content/journal: no place at "_content/journal" (the directory has no landmark card)
+exit 2
+stderr: Error: chat:new:_content/journal: no place at "_content/journal" (the directory has no landmark card)
 exit 2`,
   );
 

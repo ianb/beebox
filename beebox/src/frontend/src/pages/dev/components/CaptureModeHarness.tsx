@@ -20,12 +20,13 @@ import { CaptureBubbleView, type CaptureBubbleModel, type CaptureLiveStatus } fr
 import { RESOLVED_HOLD_MS } from "../../../components/chat/useCaptureBubbles";
 import { CaptureChip } from "../../../components/chat/CaptureChip";
 import { UserMessage } from "../../../components/chat/user-message/view";
-import { CaptureOverlay } from "../../../components/capture/CaptureOverlay/view";
+import { CaptureScreen } from "../../../components/capture/CaptureScreen/view";
 import { CaptureControls } from "../../../components/capture/CaptureControls";
 import type { RetryFeedback } from "../../capture/retry-feedback";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/api-context";
 import { parseCaptureWrapper } from "../../../components/chat/capture-message";
 import { UploadAbortedError } from "../../../lib/binary-upload";
+import { CheckboxField, NumberField } from "../../../components/ui/fields/field";
 import type { SessionEntry } from "../../../api";
 
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
@@ -170,7 +171,7 @@ function ScriptedBubble() {
     <div className="border border-warm-300 rounded-lg p-4 bg-warm-50">
       <div className="mb-2 flex flex-wrap gap-2">
         {SCRIPT.map((s) => (
-          <button
+          <button type="button"
             key={s}
             onClick={() => setStatus(s)}
             className={`px-2 py-1 rounded text-xs ${status === s ? "bg-primary text-white" : "bg-warm-200 text-warm-700 hover:bg-warm-300"}`}
@@ -266,26 +267,21 @@ function OverlayDemo() {
         Press Done mid-flight for the &ldquo;waiting for N uploads / Skip them&rdquo; path.
       </p>
       <div className="flex flex-wrap items-center gap-3 mb-2 text-sm text-warm-700">
-        <label className="flex items-center gap-1.5">
-          seconds per upload
-          <input
-            type="number" min={0} max={60} value={seconds}
-            onChange={(e) => setSeconds(Number(e.target.value))}
-            className="w-16 px-1.5 py-0.5 rounded border border-warm-300"
-          />
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={fail} onChange={(e) => setFail(e.target.checked)} />
-          fail every upload
-        </label>
+        <NumberField
+          label="Seconds per upload"
+          min={0} max={60} value={seconds}
+          onChange={(value) => setSeconds(value ?? 0)}
+          className="w-32"
+        />
+        <CheckboxField label="Fail every upload" checked={fail} onChange={setFail} />
       </div>
-      <button onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
+      <button type="button" onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
         Open capture overlay
       </button>
       <pre className="mt-2 text-xs text-warm-700 whitespace-pre-wrap">{log.join("\n") || "(fake capture-api calls appear here)"}</pre>
       {open ? (
         <CaptureApiProvider value={api}>
-          <CaptureOverlay targetSessionId="dev-chat" onExit={() => setOpen(false)} />
+          <CaptureScreen targetSessionId="dev-chat" onExit={() => setOpen(false)} />
         </CaptureApiProvider>
       ) : null}
     </div>
@@ -294,7 +290,7 @@ function OverlayDemo() {
 
 export function CaptureModeHarness() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 p-6 space-y-8">
+    <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 p-6 space-y-8">
       <div className="max-w-3xl mx-auto space-y-8">
         <section>
           <h2 className="text-sm font-semibold text-warm-700 mb-2">Pending capture bubble — every caption</h2>

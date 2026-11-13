@@ -97,6 +97,7 @@ enum NativeBridgeChannel: String, CaseIterable {
     case responseState = "beeboxResponseState"
     case composerCommand = "beeboxComposerCommand"
     case lastAudioRequest = "beeboxLastAudioRequest"
+    case callState = "beeboxCallState"
 }
 
 struct ChatWebView: UIViewRepresentable {
@@ -140,6 +141,10 @@ struct ChatWebView: UIViewRepresentable {
     var screenshotRequest: NativeScreenshotRequest?
     var speechStopRequest: NativeSpeechStopRequest?
     var navigationRequest: NavigationRequest?
+    /// Whether this web app is the surface on screen. Behind the native box
+    /// screen it stays mounted but is not shown; the page hears this as
+    /// `window.beeboxShellShown` and the `beebox:shell-shown` event.
+    var shown: Bool
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var composerCommandResults: [NativeComposerCommandResult]
     var onComposerBinding: (NativeComposerBinding?) -> Void
@@ -152,6 +157,7 @@ struct ChatWebView: UIViewRepresentable {
     var onHqDictationStateChange: (NativeHqDictationState) -> Void
     var onSpeechPlaybackStateChange: (Bool) -> Void
     var onResponseStateChange: (Bool) -> Void
+    var onCallStateChange: (Bool) -> Void = { _ in }
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -175,6 +181,7 @@ struct ChatWebView: UIViewRepresentable {
         screenshotRequest: NativeScreenshotRequest? = nil,
         speechStopRequest: NativeSpeechStopRequest? = nil,
         navigationRequest: NavigationRequest? = nil,
+        shown: Bool = true,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         composerCommandResults: [NativeComposerCommandResult] = [],
         onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
@@ -187,6 +194,7 @@ struct ChatWebView: UIViewRepresentable {
         onHqDictationStateChange: @escaping (NativeHqDictationState) -> Void = { _ in },
         onSpeechPlaybackStateChange: @escaping (Bool) -> Void = { _ in },
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
+        onCallStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
@@ -206,6 +214,7 @@ struct ChatWebView: UIViewRepresentable {
         self.screenshotRequest = screenshotRequest
         self.speechStopRequest = speechStopRequest
         self.navigationRequest = navigationRequest
+        self.shown = shown
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.composerCommandResults = composerCommandResults
         self.onComposerBinding = onComposerBinding
@@ -218,6 +227,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onHqDictationStateChange = onHqDictationStateChange
         self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
         self.onResponseStateChange = onResponseStateChange
+        self.onCallStateChange = onCallStateChange
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -269,6 +279,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onHqDictationStateChange = onHqDictationStateChange
         context.coordinator.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
         context.coordinator.onResponseStateChange = onResponseStateChange
+        context.coordinator.onCallStateChange = onCallStateChange
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -288,6 +299,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.speechStopRequest = speechStopRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         context.coordinator.composerCommandResults = composerCommandResults
+        context.coordinator.shown = shown
         if loadNavigationRequest(into: webView, coordinator: context.coordinator) == false, webView.url == nil {
             webView.load(request())
         }
@@ -298,6 +310,12 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
         context.coordinator.deliverComposerCommandResults(to: webView)
         context.coordinator.deliverSpeechStopRequest(to: webView)
+        context.coordinator.deliverShown(to: webView)
+    }
+
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        coordinator.setCallAudio(false)
+        coordinator.onCallStateChange(false)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -315,6 +333,7 @@ struct ChatWebView: UIViewRepresentable {
             onHqDictationStateChange: onHqDictationStateChange,
             onSpeechPlaybackStateChange: onSpeechPlaybackStateChange,
             onResponseStateChange: onResponseStateChange,
+            onCallStateChange: onCallStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
@@ -342,6 +361,10 @@ struct ChatWebView: UIViewRepresentable {
         var onHqDictationStateChange: (NativeHqDictationState) -> Void
         var onSpeechPlaybackStateChange: (Bool) -> Void
         var onResponseStateChange: (Bool) -> Void
+        var onCallStateChange: (Bool) -> Void
+        /// Takes or releases the call audio role; injected so tests do not
+        /// touch `AVAudioSession`.
+        var setCallAudio: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -358,6 +381,10 @@ struct ChatWebView: UIViewRepresentable {
         var speechStopRequest: NativeSpeechStopRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         var composerCommandResults: [NativeComposerCommandResult] = []
+        var shown = true
+        /// What the current document was last told about `shown`; nil for a
+        /// new document.
+        private var deliveredShown: Bool?
         /// The delivery attempt currently in flight for each emission ID, keyed
         /// by ID and valued by the attempt's generation. Redelivery abandons an
         /// attempt and starts a new one under the SAME emission ID, so an ID
@@ -402,6 +429,8 @@ struct ChatWebView: UIViewRepresentable {
             onHqDictationStateChange: @escaping (NativeHqDictationState) -> Void = { _ in },
             onSpeechPlaybackStateChange: @escaping (Bool) -> Void,
             onResponseStateChange: @escaping (Bool) -> Void,
+            onCallStateChange: @escaping (Bool) -> Void = { _ in },
+            setCallAudio: @escaping (Bool) -> Void = { SystemAudioSession().setCallActive($0) },
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
@@ -431,6 +460,8 @@ struct ChatWebView: UIViewRepresentable {
             self.onHqDictationStateChange = onHqDictationStateChange
             self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
             self.onResponseStateChange = onResponseStateChange
+            self.onCallStateChange = onCallStateChange
+            self.setCallAudio = setCallAudio
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -446,6 +477,20 @@ struct ChatWebView: UIViewRepresentable {
             self.loadInCurrentContext = loadInCurrentContext
         }
 
+        func webView(
+            _ webView: WKWebView,
+            requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+            initiatedByFrame frame: WKFrameInfo,
+            type: WKMediaCaptureType,
+            decisionHandler: @escaping @MainActor (WKPermissionDecision) -> Void
+        ) {
+            decisionHandler(ChatWebView.mediaCaptureDecision(
+                frameOrigin: ChatWebView.origin(from: origin),
+                isMainFrame: frame.isMainFrame,
+                allowedOrigin: allowedOrigin
+            ))
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
             navigationFailureLogged = false
@@ -458,6 +503,7 @@ struct ChatWebView: UIViewRepresentable {
             captureScreenshot(from: webView)
             deliverComposerCommandAcknowledgements(to: webView)
             deliverComposerCommandResults(to: webView)
+            deliverShown(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -493,6 +539,29 @@ struct ChatWebView: UIViewRepresentable {
             // the same persisted IDs into the new page.
             inflightEmissionGenerations.removeAll()
             refusedBridgeMessages.removeAll()
+            deliveredShown = nil
+        }
+
+        /// Tell the page whether it is on screen (chat presence,
+        /// beebox/docs/chat-presence.md). Sent once per change and once per
+        /// loaded document.
+        func deliverShown(to webView: WKWebView) {
+            guard pageLoaded, deliveredShown != shown else {
+                return
+            }
+            deliveredShown = shown
+            let script = "window.beeboxShellShown=\(shown);window.dispatchEvent(new Event('beebox:shell-shown'));"
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                guard let self, let error else {
+                    return
+                }
+                self.deliveredShown = nil
+                BoxLog.warn(
+                    "shell-shown was not delivered: \(error.localizedDescription)",
+                    category: .webview,
+                    targetBoxID: self.boxID
+                )
+            }
         }
 
         func webView(
@@ -542,6 +611,8 @@ struct ChatWebView: UIViewRepresentable {
             onComposerBinding(nil)
             inflightEmissionGenerations.removeAll()
             webView.reload()
+            setCallAudio(false)
+            onCallStateChange(false)
             onWebContentTerminated()
         }
 
@@ -653,6 +724,8 @@ struct ChatWebView: UIViewRepresentable {
                 receiveComposerCommand(body)
             case .lastAudioRequest:
                 receiveLastAudioRequest(body)
+            case .callState:
+                receiveCallState(body)
             }
         }
 
@@ -876,6 +949,14 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onSpeechPlaybackStateChange(playing)
+        }
+
+        private func receiveCallState(_ body: Any) {
+            guard let active = ChatWebView.callActive(from: body) else {
+                return
+            }
+            setCallAudio(active)
+            onCallStateChange(active)
         }
 
         private func receiveResponseState(_ body: Any) {
@@ -1154,6 +1235,23 @@ struct ChatWebView: UIViewRepresentable {
 
     static func speechPlaybackActive(from body: Any) -> Bool? {
         dictionaryPayload(from: body)?["playing"] as? Bool
+    }
+
+    static func callActive(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["active"] as? Bool
+    }
+
+    /// Whether the page may use the microphone and camera: only the box's own
+    /// main frame (contract §4.11).
+    static func mediaCaptureDecision(
+        frameOrigin: String?,
+        isMainFrame: Bool,
+        allowedOrigin: String?
+    ) -> WKPermissionDecision {
+        guard isMainFrame, let allowedOrigin, frameOrigin == allowedOrigin else {
+            return .deny
+        }
+        return .grant
     }
 
     static func responseActive(from body: Any) -> Bool? {

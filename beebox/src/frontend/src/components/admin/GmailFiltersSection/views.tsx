@@ -6,6 +6,7 @@
 
 import { TextField } from "../../ui/fields/field";
 import { Button } from "../../ui/Button";
+import { isComposing } from "../../../lib/ime";
 
 interface GmailLabelListProps {
   labels: string[];
@@ -39,7 +40,7 @@ export function GmailLabelList({
               className="flex items-center gap-2 p-2 bg-warm-50 border border-warm-200 rounded text-sm"
             >
               <span className="flex-1 text-warm-800">{label}</span>
-              <button
+              <button type="button"
                 onClick={() => onRemove(label)}
                 disabled={busy}
                 className="text-warm-700 hover:text-danger-dark text-xs px-2"
@@ -62,7 +63,7 @@ export function GmailLabelList({
           value={newLabel}
           onChange={onNewLabelChange}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !isComposing(e.nativeEvent)) {
               e.preventDefault();
               onAdd();
             }

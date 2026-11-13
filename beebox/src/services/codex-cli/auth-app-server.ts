@@ -5,6 +5,7 @@ import { z } from "zod";
 import { jsonlLines } from "../../lib/jsonl-lines.js";
 import { toError } from "../../shared/error-guards.js";
 import { codexCliArgs } from "../codex-binary.js";
+import { agentAllowlistEnv } from "../../core/script-env/core.js";
 
 const rpcResponseSchema = z.looseObject({
   id: z.number(),
@@ -60,6 +61,7 @@ export class CodexAuthAppServer {
   constructor(binaryPath: string) {
     this.child = spawn(binaryPath, codexCliArgs(["app-server", "--listen", "stdio://"]), {
       stdio: ["pipe", "pipe", "pipe"],
+      env: agentAllowlistEnv(),
     });
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });
     this.child.stdin.on("error", (error) => { this.failPending(error); });

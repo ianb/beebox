@@ -7,12 +7,13 @@
  * engine validates its commits), so both use the same engine.
  */
 
-import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { fileExists } from "./file-exists.js";
 import { PACKAGE_ROOT } from "./package-root.js";
+import { gitEnvironment } from "./git/env.js";
 
 /** Returns null when the box has no installed engine (`node_modules/beebox`
  *  absent, as before `pnpm install`) or the engine has no `bin/bbx`. */
@@ -43,15 +44,10 @@ export function resolveStableCheckoutBbx(): string {
     // and "not a git repository" leaking out unprompted for something we
     // already handle gracefully is exactly the noise the monorepo's "quiet
     // on success" rule bans.
-    const opts = {
-      cwd: PACKAGE_ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    } satisfies ExecFileSyncOptionsWithStringEncoding;
-    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
-    const commonDir = execFileSync(
-      "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,
-    ).trim();
+    const [top = "", commonDir = ""] = execFileSync(
+      "git", ["rev-parse", "--show-toplevel", "--path-format=absolute", "--git-common-dir"],
+      { cwd: PACKAGE_ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: gitEnvironment() },
+    ).trim().split("\n");
     const mainTop = path.dirname(commonDir); // main worktree root (== `top` unless we're in a linked worktree)
     if (top !== "" && mainTop !== "" && mainTop !== top) {
       // In a linked worktree — rebase PACKAGE_ROOT's repo-relative path onto the main checkout.

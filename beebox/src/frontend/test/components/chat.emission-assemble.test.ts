@@ -122,7 +122,7 @@ void test("Empty text with only an attachment (the send guard allows it):", asyn
 // (`<typed local-time=…${zoomedViewAttr()}${timePassedAttr()}>`).
 void test("Historical order from handleSend's template (<typed local-time=…${zoomedViewA...", async (t) => {
   const e = createTypedEmission({ text: "hi", images: [], files: [], selections: [] });
-  t.check(assembleChatMessage(e, { localTime: "09:05", zoomedView: "view:_content/notes/Foo.md?view=markdown", timePassed: "2d4h" }).message, "<typed local-time=\"09:05\" zoomed-view=\"view:_content/notes/Foo.md?view=markdown\" time-passed=\"2d4h\">hi</typed>");
+  t.check(assembleChatMessage(e, { localTime: "09:05", zoomedView: "view:_content/notes/Foo.md?view=markdown", timePassed: "2d 4h" }).message, "<typed local-time=\"09:05\" zoomed-view=\"view:_content/notes/Foo.md?view=markdown\" time-passed=\"2d 4h\">hi</typed>");
 });
 
 // ## A `chat:new` notification rides along with the first message

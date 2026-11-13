@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ensureCodexPluginInstalled } from "../../../agent/ensure-codex-plugin.js";
 import { CodexHistoryServer } from "../../../../services/codex-history-server.js";
 import { CodexHistoryRpcError } from "../../../../services/codex-history-server.js";
-import { normalizeCodexToolItem } from "../../../../services/codex-tool-activity.js";
+import { codexAgentMessageBlock, normalizeCodexToolItem } from "../../../../services/codex-tool-activity.js";
 import type { SessionEntry, SessionLogSlice } from "../../../../cli/lib/session.js";
 import { userIdentity } from "../../../../cli/lib/session-entry.js";
 import * as path from "node:path";
@@ -25,6 +25,7 @@ const threadReadSchema = z.object({
         id: z.string(),
         type: z.string(),
         text: z.string().optional(),
+        phase: z.string().nullable().optional(),
         content: z.array(z.looseObject({ type: z.string(), text: z.string().optional() })).optional(),
       })),
     })),
@@ -172,12 +173,7 @@ function entriesFromThread(raw: unknown): SessionEntry[] {
           });
         }
       } else if (item.type === "agentMessage" && item.text !== undefined) {
-        entries.push({
-          uuid: item.id,
-          type: "assistant",
-          timestamp: timestamp(turn.startedAt),
-          content: [{ type: "text", text: item.text }],
-        });
+        entries.push({ uuid: item.id, type: "assistant", timestamp: timestamp(turn.startedAt), content: [codexAgentMessageBlock(item.text, item.phase)] });
       } else {
         const tool = normalizeCodexToolItem(item);
         if (tool !== null) {
@@ -253,8 +249,13 @@ export async function readCodexSessionHistoryIfPresent(options: {
   sessionId: string;
   slice: SessionLogSlice;
 }): Promise<{ entries: SessionEntry[]; total: number } | null> {
+  return unlessCodexNotFound(readCodexSessionHistory(options));
+}
+
+/** `null` for the one RPC failure that means Codex does not know the id. */
+async function unlessCodexNotFound<T>(read: Promise<T>): Promise<T | null> {
   try {
-    return await readCodexSessionHistory(options);
+    return await read;
   } catch (error) {
     if (error instanceof CodexHistoryRpcError && error.isNotFound) return null;
     throw error;
@@ -265,6 +266,11 @@ export async function readCodexSessionHistoryIfPresent(options: {
 export async function readCodexSessionUpdatedAt(boxRoot: string, sessionId: string): Promise<Date> {
   const raw = await readThread(boxRoot, sessionId);
   return new Date(threadReadSchema.parse(raw).thread.updatedAt * 1000);
+}
+
+/** `readCodexSessionUpdatedAt`, or `null` when Codex does not know the id. */
+export async function readCodexSessionUpdatedAtIfPresent(boxRoot: string, sessionId: string): Promise<Date | null> {
+  return unlessCodexNotFound(readCodexSessionUpdatedAt(boxRoot, sessionId));
 }
 
 /**
@@ -353,13 +359,7 @@ async function listThreadPages(
 }
 
 export async function codexSessionExists(boxRoot: string, sessionId: string): Promise<boolean> {
-  try {
-    await readThread(boxRoot, sessionId);
-    return true;
-  } catch (error) {
-    if (error instanceof CodexHistoryRpcError && error.isNotFound) return false;
-    throw error;
-  }
+  return (await unlessCodexNotFound(readThread(boxRoot, sessionId).then(() => true))) ?? false;
 }
 
 export async function deleteCodexSession(boxRoot: string, sessionId: string): Promise<void> {

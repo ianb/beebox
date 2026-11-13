@@ -12,7 +12,7 @@ import t, { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { bodyField } from "../../../helpers/test-helpers.js";
-import { resolveChannel } from "../../../../src/webapp/routes/chat/helpers.js";
+import { resolveChannel, sendBodySchema } from "../../../../src/webapp/routes/chat/helpers.js";
 
 const ctx = await makeTestServer();
 const image = (img: Record<string, unknown>) => ({ message: "hi", session: "new", images: [img] });
@@ -45,6 +45,19 @@ void test("A missing or empty message, or a missing session, is a 400.", async (
 400 message is required
 400 session is required (id or 'new')`,
   );
+});
+
+// An old open tab still posts `cardActivity` and `cardState`. The schema strips
+// them: the send is not rejected and the keys never reach the turn.
+void test("A body carrying the removed cardActivity and cardState is accepted and they are dropped.", async (st) => {
+  const parsed = sendBodySchema.safeParse({ message: "hi", session: "new", cardActivity: ["explored"], cardState: { explored: "x" } });
+  st.check(parsed.success ? Object.keys(parsed.data).toSorted() : "rejected", ["message", "session"]);
+  const res = await ctx.request({
+    method: "POST",
+    url: "/api/chat/send",
+    payload: { message: "hi", session: "55555555-5555-4555-8555-555555555555", cardActivity: ["explored"], cardState: { explored: "x" } },
+  });
+  st.check(res.statusCode, 410);
 });
 
 // A concrete session whose local transcript is missing is a named 410, never an

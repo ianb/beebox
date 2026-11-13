@@ -18,6 +18,7 @@ import { getBoxTime } from "../../../src/lib/time.js";
 import { loadRetroState } from "../../../src/core/retro/state.js";
 import type { RetroObserver } from "../../../src/core/retro/observer.js";
 import type { SessionObservation } from "../../../src/core/retro/observations.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -113,6 +114,7 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     agentEntry("Pasta tonight.", "2026-06-09T09:00:05Z"),
   ] });
 
+  const warnings = consoleLines(t, "warn");
   const summary = await runRetroScan(box.root, {
     observer: fakeObserver({ "chat-a": [PROSE_OBSERVATION], "chat-b": "fail" }),
     maxSessions: 20,
@@ -126,6 +128,8 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     observerFailures: 1,
     reportPath: "_content/reviews/retro/2026-06-09T12-00-00.md",
   });
+  // The failed session is named in the log, since it stays eligible for retry:
+  t.check(warnings(), ["retro: observer failed for session chat-b: Error: scripted failure"]);
 
   const ledger = await loadLedgerEntries(box.root);
   t.check(ledger, [LEDGERED]);

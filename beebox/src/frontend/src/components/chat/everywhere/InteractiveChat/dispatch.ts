@@ -22,7 +22,8 @@ import type { ChatWitness } from "../../../../input/targets/chat-assemble";
 import type { Receipt } from "../../../../input/targets/receipts";
 import type { EmissionStore } from "../../../../input/emission-store";
 import type { SelectionItem } from "../../../../lib/selection/serialize";
-import { localTime, formatTimePassed, joinTranscript, type VoiceSegmentMeta } from "../../InteractiveChat-helpers";
+import { formatTimePassed } from "@shared/relative-time";
+import { localTime, joinTranscript, type VoiceSegmentMeta } from "../../InteractiveChat-helpers";
 import type { ChatEvent } from "../../../../machines/chat-types";
 import type { CardSendFields } from "../../InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../../../lib/view-url";
@@ -36,7 +37,6 @@ export function useEmissionDispatch(opts: {
   attention?: AttentionSnapshot;
   send: (event: ChatEvent) => void;
   captureCardSend: () => CardSendFields;
-  acceptCardSend?: (fields: CardSendFields) => void;
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
@@ -72,9 +72,7 @@ export function useEmissionDispatch(opts: {
     };
   }, [activeView, messages]);
 
-  // `captureCardSend` stamps the open card + activity since the last reply
-  // onto every user turn. System sends (e.g. /compact) bypass this funnel,
-  // leaving the accumulator be.
+  // `captureCardSend` stamps the open card onto every user turn. System sends (e.g. /compact) bypass this funnel.
   //
   // Returns the settled Receipt (never rejects the promise itself — a
   // `rejected` disposition is a normal value, not a thrown error). Every
@@ -82,7 +80,7 @@ export function useEmissionDispatch(opts: {
   // so iOS can keep its draft pending until the backend accepts the send.
   const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
     pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
-    emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness,
+    emissionStore, captureCardSend, getWitness,
     // A `chat:new` notification rides along with the first message only.
     onSent: () => { clearOpenedNotification(); onSent(); },
   });

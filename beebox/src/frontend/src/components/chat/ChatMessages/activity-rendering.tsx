@@ -9,9 +9,10 @@ import { InlineAction } from "../../ui/InlineAction";
 import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
 import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../assistant-parts";
+import { type ActivityPart, type Stage, splitStages } from "../assistant-parts";
 import { MarkdownContent } from "../markdown-rendering";
-import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
+import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail } from "./activity-wording";
+import { summarizeOpenStages, summarizeStages } from "./activity-summary";
 
 type ActivityParts = ActivityPart[];
 
@@ -28,7 +29,7 @@ function RawToolDetail({ block }: { block: SessionContentBlock }) {
       ) : null}
       {result ? (
         <>
-          <div className="text-[10px] uppercase tracking-wider text-card-soft ml-3 mt-1">result</div>
+          <div className="text-[0.625rem] uppercase tracking-wider text-card-soft ml-3 mt-1">result</div>
           <Pre size="xs" boxed scroll="sm" className="bbx-chat-plate bbx-scroll-fade-bottom mt-0.5 mb-1 ml-3">
             {result}
           </Pre>
@@ -103,7 +104,7 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
     <details className="group/tool">
       <summary className="cursor-pointer list-none hover:text-card-soft py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
-          <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+          <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
           <ToolSentence description={description} opens={opens} />
           {place ? <span className="text-card-soft">· {place}</span> : null}
           {failed ? <span className="text-card-soft">· didn’t go through</span> : null}
@@ -143,7 +144,7 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
             return (
               <details key={i} className="group/think">
                 <summary className="cursor-pointer list-none flex items-center gap-1 text-card-pen hover:text-card-ink py-0.5">
-                  <span className="text-card-soft group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                  <span className="text-card-soft group-open/think:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
                   <span>thought it over</span>
                 </summary>
                 <div className="mt-0.5 mb-1 ml-3 text-xs text-card-soft italic whitespace-pre-wrap">
@@ -161,9 +162,42 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
   );
 }
 
+/** A note heading a stage: the agent's own words, in ink, above the steps it introduced. */
+function StageNote({ text }: { text: string }) {
+  return <div className="mb-0.5 text-sm text-card-ink"><MarkdownContent text={text} /></div>;
+}
+
+function StageSteps({ parts }: { parts: Stage["parts"] }) {
+  if (parts.length === 0) return null;
+  return (
+    <div className="ml-1 pl-2 border-l border-warm-200">
+      <ActivityGroupInner parts={parts} excerptInline />
+    </div>
+  );
+}
+
+/** The expanded row: each stage's note, then its steps. */
+function Stages({ stages }: { stages: Stage[] }) {
+  return (
+    <>
+      {stages.map((stage, i) =>
+        stage.note === null ? (
+          <ActivityGroupInner key={i} parts={stage.parts} excerptInline />
+        ) : (
+          <div key={i} className="mt-2 first:mt-0">
+            <StageNote text={stage.note} />
+            <StageSteps parts={stage.parts} />
+          </div>
+        ))}
+    </>
+  );
+}
+
 /**
  * Render a collapsible activity group (thinking, tool calls, folded notes).
- * A single step with no notes renders directly without a wrapper.
+ * A single step with no notes renders directly without the collapsible
+ * wrapper. Each note starts a stage: expanded, the note heads the steps
+ * after it.
  */
 export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   if (parts.length === 0) return null;
@@ -180,16 +214,19 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
     );
   }
 
-  const summary = summarizeActivity(parts);
+  const summary = summarizeStages(parts);
+  // Opened, the newest note heads its stage just below, so the line says only the count.
+  const openSummary = summarizeOpenStages(parts);
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
       <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-card-soft hover:text-card-ink">
-        <span className="text-card-soft group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
-        <span>{summary}</span>
+        <span className="text-card-soft group-open:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
+        <span className="group-open:hidden">{summary}</span>
+        <span className="hidden group-open:inline">{openSummary}</span>
       </summary>
       <div className="mt-1 text-xs text-card-soft leading-tight ml-1">
-        <ActivityGroupInner parts={parts} excerptInline />
+        <Stages stages={splitStages(parts)} />
       </div>
     </details>
   );

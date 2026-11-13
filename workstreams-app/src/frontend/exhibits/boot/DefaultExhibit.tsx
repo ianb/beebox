@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Markdown } from "../../components/Markdown.js";
+import { useModalDialog } from "../../components/useModalDialog.js";
 import type { ExhibitBoot, ExhibitFigure } from "../../../shared/exhibits.js";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
@@ -17,12 +18,7 @@ function isImage(file: string): boolean {
  * the dialog scrolls to pan. A click anywhere closes it.
  */
 function EnlargedFigure({ figure, onClose }: { figure: ExhibitFigure; onClose: () => void }): ReactNode {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null || dialog.open) return;
-    dialog.showModal();
-  }, []);
+  const dialogRef = useModalDialog(true);
   return (
     <dialog
       aria-label={`${figure.label} enlarged`}
@@ -35,9 +31,8 @@ function EnlargedFigure({ figure, onClose }: { figure: ExhibitFigure; onClose: (
       <button
         aria-label="Close the enlarged view"
         className="m-0 block min-h-full min-w-full cursor-zoom-out border-0 bg-transparent p-0 text-left"
-        // Closing through the dialog, as Escape does, returns focus to the
-        // figure's button; unmounting directly would drop it on the body.
-        onClick={() => { dialogRef.current?.close(); }}
+        // Unmounting closes the dialog (useModalDialog) and returns focus to the figure's button.
+        onClick={onClose}
         type="button"
       >
         <img

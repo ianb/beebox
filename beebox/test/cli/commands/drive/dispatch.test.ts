@@ -16,6 +16,7 @@ import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { getLog } from "../../../../src/lib/git/core/operations.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../../../src/services/google-drive/core.js";
@@ -218,15 +219,20 @@ title: Recipes
   // A refusal the server raised comes back with its own code and the party who can
   // act on it. A bad URL is the caller's.
 
+  const serverErrors = consoleLines(t, "error");
   t.check(await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" }), {
     ok: false,
     error: { kind: "BAD_REQUEST", message: "Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID", fix: "caller" },
   });
+  // The server logs the refused request:
+  const refusedLog = "[trpc] mutation drive.mount failed: Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID";
+  t.check(serverErrors(), [refusedLog]);
 
   // Under `--json` that refusal is one object too, carrying `fix` as a field rather
   // than as a sentence.
 
   const refused = await mountVerb(ctx.boxRoot, { url: "https://example.com/nope", dir: "_content/drive/x" });
+  t.check(serverErrors(), [refusedLog]);
   const printed = await captureLogs(async () => { if (!refused.ok) reportRefusal(refused.error, true); });
   t.check(JSON.parse(printed), { kind: "BAD_REQUEST", message: "Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID", fix: "caller" });
 

@@ -12,6 +12,7 @@ import { executeAnswer } from "../../../src/core/commands/answer.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { execSync } from "node:child_process";
 
 const QUESTIONS = "_bookkeeping/questions";
@@ -363,6 +364,7 @@ void test("The answered card and its follow-up job are committed in ONE commit, 
 // restores the original card and deletes the job before returning the error. The
 // card is untouched (still pending) and no job file was left behind:
 void test("Because the filesystem writes are not atomic with the commit, a commit failur...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" }, git: "none" });
   t.check(r, {
     success: false,
@@ -372,4 +374,6 @@ void test("Because the filesystem writes are not atomic with the commit, a commi
     jobFiles: [],
     committed: null,
   });
+  // With no repo the unstage step fails too; the log tells an operator the rollback went on without it:
+  t.check(warnings(), [str`Question transition rollback: could not unstage paths in ${any(String)}: GitCommandError: fatal: not a git repository (or any of the parent directories): .git\n`]);
 });

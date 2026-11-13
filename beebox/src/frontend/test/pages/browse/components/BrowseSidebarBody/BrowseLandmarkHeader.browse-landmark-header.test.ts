@@ -23,6 +23,7 @@ const landmark: LandmarkPayload = {
   depth: 0,
   features: {},
   openers: [],
+  intention: null,
   arrival: "Box.landmark.card",
   links: [
     { ref: "_content/Welcome.doc.card", label: "Welcome", title: "Welcome", exists: true, source: "listed" },

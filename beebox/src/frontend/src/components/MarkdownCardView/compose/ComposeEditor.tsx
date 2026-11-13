@@ -184,7 +184,7 @@ export function ComposeEditor({ cardPath, onClose, host, instance }: ComposeEdit
       live = false;
     };
   }, [cardPath]);
-  if (read === null) return <Frame host={host}><StatusMessage>Loading…</StatusMessage></Frame>;
+  if (read === null) return <Frame host={host}><StatusMessage busy>Loading…</StatusMessage></Frame>;
   if ("text" in read) return <Editor cardPath={cardPath} onClose={onClose} host={host} instance={instance} initial={read} />;
   const message = "error" in read ? `The composition could not be loaded: ${read.error}` : saveStateText({ kind: "removed", problem: read.problem });
   return (

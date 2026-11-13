@@ -11,7 +11,8 @@
     "./plugin": "./plugin.ts",
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./knip-base.json": "./knip-base.json",
-    "./prettier": "./prettier.config.ts"
+    "./prettier": "./prettier.config.ts",
+    "./rules/ime-safe-enter.cases": "./rules/test/ime-safe-enter.cases.ts"
   },
   "bin": {
     "vibe-check": "./bin/vibe-check.ts",

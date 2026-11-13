@@ -83,7 +83,14 @@ export interface ChatImage {
   dataBase64: string;
 }
 
+/** Present on a person's send: the turn gets the `<activity>` hint. Absent for scheduled, self-note and capture turns. */
+export interface ActivityTurn {
+  /** The page's key for a conversation that had no session id when it first sent. */
+  pendingChat?: string | undefined;
+}
+
 export interface ChatSendInput extends ChatSendContext {
+  activityTurn?: ActivityTurn;
   /** Send-time presentation context, independent of the conversation directory. */
   viewContext?: AttentionSnapshot;
   text: string;
@@ -95,8 +102,7 @@ export interface ChatSendInput extends ChatSendContext {
    * Omitted when the transport doesn't know.
    */
   channel?: ChatChannel;
-  // `openCard`, `cardActivity`, `cardState`: `ChatSendContext`
-  // (`core/chat/card-activity.ts`), the one list of per-send context fields.
+  // `openCard`: `ChatSendContext` (`core/chat/card-activity.ts`), the per-send context fields.
   /**
    * The turn carries text the person at the composer did not type (a script's
    * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so

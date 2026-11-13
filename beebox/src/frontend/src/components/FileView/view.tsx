@@ -17,6 +17,8 @@
  *                     max-height, scrollable, bordered.
  *     - "companion" — no extra chrome (the surrounding companion pane
  *                     provides its own header).
+ *     - "embed"     — frameless, inside another card's body.
+ *     - "strip"     — frameless, in the conversation strip; `StripFileView`.
  */
 
 import { ThemedFileCard } from "../themes/ThemedFileCard/view/ThemedFileCard";
@@ -31,7 +33,6 @@ import { getRenderers, type FileData, type FileRenderer } from "../../file-type-
 import { rendererDisplayLabel } from "../../lib/renderer-display-label";
 import { toDisplayPath } from "@shared/display-path";
 import { SelectionCapture } from "../SelectionCapture";
-import { extractSelection } from "../../lib/selection/position";
 import { Pre } from "../ui/Pre";
 import { Button } from "../ui/Button";
 import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
@@ -43,11 +44,16 @@ import { MissingCardState } from "../card-actions/MissingCardState";
 import { FileStaleNotice } from "./FileStaleNotice";
 import { CardTodos } from "../todo/CardTodos";
 import { TodoActionsProvider } from "../todo/TodoActionsProvider";
-import type { FileViewProps } from "../file-view-types";
+import { isFrameless, type FileViewProps } from "../file-view-types";
+import { StripFileView } from "./StripFileView";
 import type { ViewTarget } from "../../lib/view-url";
+import type { InlineRenderOptions } from "../../lib/view-host";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
 import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
+import { usePointSelection } from "../point-selection-context";
+import { StatusMessage } from "../ui/StatusMessage";
+import { useCardActivityReporter } from "../../lib/activity/scope";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -66,7 +72,7 @@ function RendererToggle({ renderers, active, onSelect, compact, path }: {
   return (
     <div className={`flex gap-1 bg-warm-100 rounded-lg ${compact ? "p-0.5" : "p-1"}`}>
       {renderers.map(r => (
-        <button
+        <button type="button"
           key={r.name}
           onClick={() => onSelect(r.name)}
           className={`${compact ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"} rounded ${
@@ -159,8 +165,8 @@ function useMovedCardRecovery({
 }
 
 function pendingFileViewLabel({ loading, followingMove }: { loading: boolean; followingMove: boolean }): string | null {
-  if (loading) return "Loading...";
-  if (followingMove) return "Following moved card...";
+  if (loading) return "Loading…";
+  if (followingMove) return "Following moved card…";
   return null;
 }
 
@@ -178,7 +184,7 @@ function fragmentRootFor({ mode, workspacePdf, onRoot }: {
   mode: FileViewProps["mode"]; workspacePdf: boolean | undefined; onRoot: (element: HTMLDivElement | null) => void;
 }, content: ReactNode): ReactNode {
   const attribute = { [FRAGMENT_ROOT_ATTRIBUTE]: "" };
-  if (mode === "embed") return <div {...attribute} className="contents">{content}</div>;
+  if (mode !== undefined && isFrameless(mode)) return <div {...attribute} className="contents">{content}</div>;
   return <div ref={onRoot} {...attribute} className={workspacePdf ? "h-full" : undefined}>{content}</div>;
 }
 
@@ -209,16 +215,22 @@ export function withBodyNotices({ stale, onRefresh, sectionMissed }: {
  * A card's todo summary sits above whichever renderer is active, core or box view; an embed has no chrome for it.
  * The todos inside get their tick and "+ to chat" actions here too (an embed inherits its host's).
  */
+/** The `caption` prop for an inline render's options (none when no caption was given). */
+function captionProp(opts: InlineRenderOptions | undefined): { caption?: string } {
+  return opts?.caption === undefined ? {} : { caption: opts.caption };
+}
+
 function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mode"]; path: string; onAddSelection: FileViewProps["onAddSelection"] }, content: ReactNode): ReactNode {
-  if (mode === "embed" || !isCardPath(path)) return content;
+  if ((mode !== undefined && isFrameless(mode)) || !isCardPath(path)) return content;
   return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
 }
 
-function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
+function captureFileContent({ enabled, onCapture, rendered, workspacePdf, pointMode, onExitPointMode }: {
   enabled: boolean; onCapture: (selection: { text: string; position: string }) => void;
   rendered: ReactNode; workspacePdf: boolean | undefined;
+  pointMode: boolean; onExitPointMode: (() => void) | undefined;
 }) {
-  return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
+  return enabled ? <SelectionCapture onCapture={onCapture} pointMode={pointMode} onExitPointMode={onExitPointMode} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
 /**
@@ -227,20 +239,28 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
  * (`lib/runtime-lint/watched-content.tsx`).
  */
 export function FileView(props: FileViewProps) {
-  return <RuntimeLintViewScope><FileViewContent {...props} /></RuntimeLintViewScope>;
+  const globalPoint = usePointSelection();
+  const pointMode = !props.workspacePdf && (props.pointMode === true || globalPoint?.active === true);
+  const onExitPointMode = props.onExitPointMode ?? (globalPoint ? () => globalPoint.setActive(false) : undefined);
+  if (props.mode === "strip") {
+    const { onNavigate } = props;
+    return <RuntimeLintViewScope><StripFileView path={props.path} onNavigate={onNavigate}
+      renderInline={(target, opts) => <FileView path={target.path} mode="embed" rendererName={target.viewer} params={target.params} viewState={target.viewState} onNavigate={onNavigate} {...captionProp(opts)} />} /></RuntimeLintViewScope>;
+  }
+  return <RuntimeLintViewScope><FileViewContent {...props} pointMode={pointMode} onExitPointMode={onExitPointMode} /></RuntimeLintViewScope>;
 }
 
-function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
+function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, pointMode, onExitPointMode, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();
-  const onAddSelection = selectionReceiver(suppliedAddSelection, mode === "embed" ? undefined : visibleSelectionSink);
+  const onAddSelection = selectionReceiver(suppliedAddSelection, isFrameless(mode) ? undefined : visibleSelectionSink);
   const { data, loading, error, stale, recovery, refresh } = useFileData(path, { recoverMoved: onMoved !== undefined });
   const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
   // Any renderer of the body gets section jumps: the hook resolves against the
   // DOM this view renders (`lib/fragment-target.ts`). Embeds never jump.
   const [fragmentRoot, setFragmentRoot] = useState<HTMLDivElement | null>(null);
-  const sectionMissed = useFragmentJump({ root: fragmentRoot, fragment: mode === "embed" ? undefined : fragment, source: fragmentSource(data), path });
+  const sectionMissed = useFragmentJump({ root: fragmentRoot, fragment: isFrameless(mode) ? undefined : fragment, source: fragmentSource(data), path });
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
@@ -248,10 +268,11 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
+  const reportActivity = useCardActivityReporter(path);
   const selectForPath = useCallback((name: string | null) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
-    // "explored" action. No-op outside the companion pane (reportActivity unset).
-    reportActivity?.("explored", name === null ? "using preferred view" : `viewing as ${name}`);
+    // "explored" action. Logged only in the companion pane.
+    reportActivity("explored", name === null ? "using preferred view" : `viewing as ${name}`);
     if (onSelectRenderer) {
       onSelectRenderer(name);
       return;
@@ -267,7 +288,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
   }, [path, data, binding]);
 
   const pendingLabel = pendingFileViewLabel({ loading, followingMove });
-  if (pendingLabel !== null) return <div className="p-4 text-warm-700">{pendingLabel}</div>;
+  if (pendingLabel !== null) return <StatusMessage variant="inline" busy className="p-4">{pendingLabel}</StatusMessage>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
@@ -291,9 +312,8 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
       active={active} binding={binding} data={data} path={path} mode={mode} workspacePdf={workspacePdf}
       params={params} viewState={ownedViewState} canPushViewState={canPushArg}
       {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
-      {...(reportActivity !== undefined ? { reportActivity } : {})}
       onNavigate={onNavigate} caption={caption}
-      renderInline={(inlineTarget) => (
+      renderInline={(inlineTarget, opts) => (
         <FileView
           path={inlineTarget.path}
           mode="embed"
@@ -301,18 +321,20 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
           params={inlineTarget.params}
           viewState={inlineTarget.viewState}
           onNavigate={onNavigate}
+          onAddSelection={onAddSelection}
+          {...captionProp(opts)}
         />
       )}
     />
   );
-  const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
+  const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf, pointMode: pointMode === true, onExitPointMode });
   const captured = fragmentRootFor({ mode, workspacePdf, onRoot: setFragmentRoot }, withCardTodos({ mode, path: data.path, onAddSelection }, selectable));
   // The markers ride with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,
   // and on its own page.
   const body = withBodyNotices({ stale, onRefresh: refresh, sectionMissed }, captured);
 
-  if (mode === "embed") {
+  if (isFrameless(mode)) {
     // Frameless: just the renderer output, no header/toggle/border. For figures
     // and other media embedded inline in a card body via `![](view:…)`. No
     // stale marker either — an embed has no chrome to carry one, and the card

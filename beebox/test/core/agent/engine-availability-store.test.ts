@@ -18,6 +18,8 @@ import {
   recordEngineUnavailability,
 } from "../../../src/core/agent/engine-availability-store.js";
 import type { EngineUnavailability } from "../../../src/core/agent/engine-unavailability.js";
+import { any, str } from "@ianbicking/tap-check/check";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -72,9 +74,11 @@ void test("Record → live until retryAt, gone after", async (t) => {
   // ## Corrupt store fails open
   //
   // The degraded mode is the pre-store status quo — runs fail noisily — so a
-  // broken store cannot hide anything. (The warning below is the store reporting
-  // the corruption.)
+  // broken store cannot hide anything. The store reports the corruption in the
+  // log (the parser's own wording varies with the Node version).
 
+  const warnings = consoleLines(t, "warn");
   await fs.writeFile(engineAvailabilityFilePath(), "{not json");
   t.check(await liveEngineUnavailability({ provider: "codex", now: t2 }), null);
+  t.check(warnings(), [str`Engine availability store ${engineAvailabilityFilePath()} is invalid; treating as empty: SyntaxError: ${any(String)}`]);
 });

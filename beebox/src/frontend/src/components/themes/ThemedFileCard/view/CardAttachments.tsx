@@ -4,6 +4,8 @@ import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { PropertyLink, PropertyProblem } from "./property-section";
 import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
 import { anyFileChange } from "../../../../lib/live-refresh";
+import { StatusMessage } from "../../../ui/StatusMessage";
+import { List } from "../../../ui/List";
 
 type Listing = RouterOutput["status"]["browse"];
 
@@ -35,13 +37,13 @@ export function CardAttachments({ path, onNavigate }: { path: string; onNavigate
   const entries = query.data ? attachmentEntries(scope, query.data) : null;
   return <section className="mt-6" aria-label="Attachments" data-card-section="attachments">
     <h3 className="text-sm font-semibold mb-2">{entries !== null && entries.length > 0 ? `Attachments (${String(entries.length)})` : "Attachments"}</h3>
-    {query.isLoading ? <p className="text-sm" role="status">Checking attachments…</p> : null}
+    {query.isLoading ? <StatusMessage variant="inline" busy>Checking attachments…</StatusMessage> : null}
     {query.error ? <PropertyProblem message={`Could not list attachments: ${query.error.message}`} onRetry={() => { void query.refetch(); }} /> : null}
     {entries?.length === 0 && !query.error ? <p className="text-sm">No attachments</p> : null}
-    {entries !== null && entries.length > 0 ? <ul className="space-y-2 text-sm">
+    {entries !== null && entries.length > 0 ? <List gap="sm" className="text-sm">
       {entries.map((entry) => <li key={entry.path}>
         <PropertyLink target={{ path: entry.path, viewer: null, params: {}, viewState: null }} onNavigate={onNavigate}>{entry.label}</PropertyLink>
       </li>)}
-    </ul> : null}
+    </List> : null}
   </section>;
 }

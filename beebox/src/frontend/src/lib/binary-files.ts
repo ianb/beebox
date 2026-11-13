@@ -35,6 +35,15 @@ export function isImageFileName(name: string): boolean {
   return IMAGE_EXTS.has(name.slice(dot).toLowerCase());
 }
 
+/**
+ * Whether a path or ref names an image. Strips any ?query / #hash first, so a
+ * cache-busted image (`photo.png?v=1`) is still an image, not an embed.
+ */
+export function isImagePath(path: string): boolean {
+  const [clean = ""] = path.split(/[#?]/, 1);
+  return isImageFileName(clean);
+}
+
 export function pathExt(path: string): string {
   const base = path.split("/").pop();
   if (!base) return "";

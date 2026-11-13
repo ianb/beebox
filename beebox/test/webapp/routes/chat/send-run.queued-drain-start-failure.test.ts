@@ -11,6 +11,8 @@ import { any, eventually } from "@ianbicking/tap-check/check";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 function engineReceived(backend: FakeChatBackend): string[] {
   return backend.runs.flatMap((run) => run.sent.flatMap((blocks) => blocks.flatMap((b) => b.type === "text" ? [b.text] : [])));
@@ -25,6 +27,7 @@ async function setup(t: Test) {
   process.on("unhandledRejection", onUnhandled);
   t.teardown(() => { process.removeListener("unhandledRejection", onUnhandled); for (const l of prior) process.on("unhandledRejection", l); });
 
+  const errors = consoleLines(t, "error");
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
   t.teardown(async () => { await ctx.cleanup(); });
@@ -36,11 +39,11 @@ async function setup(t: Test) {
   const send = (message: string, messageId: string) =>
     runtime.sendUserMessage({ target: resolved.target, message, messageId, user: null, channel: "ios-native" });
   const has = (text: string): boolean => engineReceived(backend).some((m) => m.includes(text));
-  return { unhandled, backend, session, send, has };
+  return { unhandled, errors, backend, session, send, has };
 }
 
 void test("a queued message survives a drain whose run start throws", async (t) => {
-  const { unhandled, backend, session, send, has } = await setup(t);
+  const { unhandled, errors, backend, session, send, has } = await setup(t);
 
   await send("first message", "m1");
   await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
@@ -65,6 +68,8 @@ void test("a queued message survives a drain whose run start throws", async (t) 
     unhandled: [], // the drain's error is logged, not thrown
     busy: false, // the session is back to idle, so the next send is admitted
   });
+  // The drain's failed spawn is logged for the operator:
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "spawn EBADF" })]);
 
   // The next send is admitted and starts a run; its turn result drains the queued message into that run.
   const third = await send("third message", "m3");
@@ -80,7 +85,7 @@ void test("a queued message survives a drain whose run start throws", async (t) 
 });
 
 void test("two queued messages do not alternate drains while every start fails", async (t) => {
-  const { unhandled, backend, session, send, has } = await setup(t);
+  const { unhandled, errors, backend, session, send, has } = await setup(t);
 
   await send("first message", "m1");
   await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
@@ -108,6 +113,7 @@ void test("two queued messages do not alternate drains while every start fails",
     unhandled: [],
     busy: false,
   });
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "spawn EBADF" })]);
 
   // Starts succeed again: the next send starts a run, and its turn result drains A and B together.
   failing = false;

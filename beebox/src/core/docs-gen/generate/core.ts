@@ -51,6 +51,7 @@ import {
 import type { ProcedureSummary } from "../compile/core.js";
 import { ensureAgentContext } from "./agents-md.js";
 import { AGENTS_MD, instructionFileName } from "../../agent-instruction-files.js";
+import { gitEnvironment } from "../../../lib/git/env.js";
 
 export type { ProcedureSummary } from "../compile/core.js";
 export type { GuideSummary } from "../config-cards/core.js";
@@ -119,7 +120,7 @@ async function getBeeBoxVersion(): Promise<string | null> {
     // No deploy-info.json (dev) or unreadable — fall through to git HEAD.
   }
   try {
-    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: PACKAGE_ROOT });
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: PACKAGE_ROOT, env: gitEnvironment() });
     parts.push(`git:${stdout.trim()}`);
   } catch (_e) {
     // Not a git repo / git unavailable — the deploy stamp alone may still pin it.

@@ -43,6 +43,20 @@ what it decided and why. Earlier decisions can be replayed against a proposed
 rule change before the change is kept. A filing destination can also carry a
 follow-up question ("does this need follow-up?"); a yes adds an ordinary todo
 for the agent, and authorizes nothing more.
+When two destinations' rules both cover an item, default tie-breaks decide
+(the more specific destination wins; one with pending work beats an archival
+one; the more consequential obligation, such as a court or tax deadline,
+wins), and any rule you wrote outranks them. With the judging model, the box
+also runs one bounded agent pass over your filing rules that writes a compiled
+copy adding each destination's role and who wins each overlap; an overlap
+neither rules nor tie-breaks settle becomes a question for you, and the
+judging model marks such items unclear until you answer. Word, OpenDocument,
+and similar office files are converted to text for the judging model, an
+oversized part is sent as a leading excerpt with a note of what was left out,
+and parts with no readable text are reported as unread. A separate command
+finds inbox items whose original bytes are already filed or repeat an earlier
+item, and when asked to apply removes only bare files and unedited scan
+imports; rescans are never counted as duplicates.
 
 **Limits**
 

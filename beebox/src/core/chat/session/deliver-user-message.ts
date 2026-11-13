@@ -246,7 +246,10 @@ export function observeAssignedSession(opts: {
     if (session.getSessionId() !== payload.sessionId) return;
     detach();
     void Promise.resolve(opts.onAssigned(payload.sessionId)).catch((error: unknown) => {
-      console.error(`[${opts.logPrefix}] Could not retain assigned chat identity:`, error instanceof Error ? error.name : "UnknownError");
+      // The name and errno code only, as the capture record keeps them: the message can carry a chat's label.
+      const code = errnoCode(error);
+      const name = error instanceof Error ? error.name : "UnknownError";
+      console.error(`[${opts.logPrefix}] Could not retain assigned chat identity: ${name}${code === undefined ? "" : ` (${code})`}`);
     });
   };
   // This bounds background listener retention; it must not keep a finished

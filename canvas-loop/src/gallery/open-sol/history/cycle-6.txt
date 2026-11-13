@@ -1,0 +1,197 @@
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+const P = (points: number[][]): Vec2[] => points.map(([x, y]) => [x, y]);
+
+function blob(s: Sketch, points: number[][], color: string): void {
+  s.noStroke();
+  s.fill(color);
+  s.curve(P(points), true);
+}
+
+function mark(s: Sketch, points: number[][], color: string, width: number, brush = "ink"): void {
+  s.noFill();
+  s.stroke(color);
+  s.strokeWeight(width);
+  s.brush(brush as "ink");
+  s.gesture({ pressure: "taper", wobble: 0.5 });
+  s.curve(P(points));
+}
+
+function glint(s: Sketch, x: number, y: number, r: number): void {
+  s.noStroke();
+  s.fill("#ffdb91");
+  s.circle(x, y, r);
+  mark(s, [[x-r*1.3,y],[x+r*1.3,y]], "#ffe8b4", 1.4);
+  mark(s, [[x,y-r*1.3],[x,y+r*1.3]], "#ffe8b4", 1.4);
+}
+
+export function setup(s: Sketch): void {
+  s.createCanvas(760, 760);
+  s.paper({ scale: 3.2, contrast: 0.68, seed: 11 });
+}
+
+export function draw(s: Sketch): void {
+  s.background(s.linearGradient(0, 0, 0, 760, [
+    [0, "#182d47"], [0.38, "#496b78"], [0.62, "#b38c76"], [1, "#233f58"],
+  ]));
+
+  // A gap in the storm over the library.
+  s.noStroke();
+  s.fill(s.ellipseGradient(388, 250, 550, 460, [[0, "#deb5909c"], [1, "#deb59000"]]));
+  s.ellipse(388, 250, 550, 460);
+  s.fill("#f8dfae");
+  s.circle(590, 117, 55);
+  s.fill("#f1d8a9");
+  s.circle(590, 117, 52);
+
+  // Rain clouds, broken into broad painted bands.
+  for (let i = 0; i < 11; i += 1) {
+    const y = 47 + i * 18;
+    mark(s, [[-30,y+16],[105,y-7],[270,y+7],[430,y-14],[780,y+5]], i % 2 ? "#72939865" : "#102f4c57", 23, "wash");
+  }
+  for (let i = 0; i < 25; i += 1) {
+    const x = 18 + (i * 101) % 735;
+    const y = 35 + (i * 71) % 270;
+    if (i % 4 === 0) glint(s, x, y, 1.8);
+  }
+
+  // Flooded village on the far bank.
+  blob(s, [[0,330],[80,304],[159,318],[230,299],[330,312],[460,295],[570,317],[680,300],[760,318],[760,445],[0,445]], "#355664");
+  for (const [x, y, w] of [[43,339,62],[162,344,48],[583,330,59],[690,345,51]]) {
+    blob(s, [[x-8,y+8],[x+w/2,y-26],[x+w+8,y+8]], "#213d51");
+    s.fill("#294658"); s.noStroke(); s.rect(x,y,w,75);
+    s.fill("#ddaa78"); s.rect(x+w*0.43,y+20,11,13);
+    mark(s, [[x-8,y+8],[x+w/2,y-26],[x+w+8,y+8]], "#173248", 2.3);
+  }
+  for (let i = 0; i < 16; i += 1) {
+    const x = i * 49 - 20 + Math.sin(i * 3.7) * 16;
+    const h = 24 + (i * 17) % 36;
+    mark(s, [[x,405],[x-5,355],[x+6,336-h]], "#243f4e", 4.5, "ink");
+    blob(s, [[x-19,354],[x-25,335-h*.45],[x-8,316-h],[x+13,322-h],[x+27,344-h*.45],[x+17,359]], i % 3 === 0 ? "#395d64" : "#315561");
+  }
+  mark(s, [[0,407],[140,402],[263,410],[384,399],[557,407],[760,403]], "#b5a58a66", 3.2, "bristle");
+
+  // Quiet water behind the principal subject.
+  s.noStroke();
+  s.fill(s.linearGradient(0, 410, 0, 760, [[0,"#536c71"],[0.48,"#284e62"],[1,"#172e49"]]));
+  s.rect(0, 410, 760, 350);
+  for (let row = 0; row < 21; row += 1) {
+    const y = 425 + row * 16;
+    const width = 32 + row * 2;
+    for (let col = 0; col < 9; col += 1) {
+      const x = ((col * 103 + row * 43) % 825) - 35;
+      mark(s, [[x,y],[x+width*0.5,y-2],[x+width,y]], row % 3 === 0 ? "#dcb28a56" : "#8eb2aa55", row % 3 === 0 ? 3.6 : 2.3, "bristle");
+    }
+  }
+
+  // The turtle's feet sit deep in the flood; the neck leads the eye right.
+  blob(s, [[214,567],[158,577],[128,609],[139,644],[222,650],[274,620]], "#254c4d");
+  blob(s, [[494,573],[523,600],[570,612],[597,642],[562,659],[493,646],[458,617]], "#20494b");
+  blob(s, [[174,516],[202,471],[319,441],[464,454],[529,502],[519,567],[444,617],[284,632],[193,585]], "#305b57");
+  blob(s, [[489,495],[537,477],[590,492],[631,481],[668,508],[674,542],[646,562],[602,557],[565,538],[507,545]], "#3b6b61");
+  blob(s, [[618,542],[637,559],[661,559],[653,569],[621,561]], "#31574e");
+  mark(s, [[583,501],[636,492],[661,508]], "#a9b781", 10, "wash");
+  s.noStroke(); s.fill("#142f37"); s.ellipse(629, 511, 7, 9);
+  s.fill("#f6d69c"); s.circle(630, 509, 2.4);
+  mark(s, [[614,500],[627,497],[638,503]], "#264c49", 3.1);
+  mark(s, [[637,539],[649,544],[661,540]], "#183a3b", 2.4);
+  mark(s, [[550,532],[567,547],[587,553]], "#204044", 2.3);
+  mark(s, [[536,510],[559,493],[589,487]], "#91a97c", 8, "bristle");
+  mark(s, [[182,552],[210,570],[242,575]], "#749578", 8, "bristle");
+  mark(s, [[147,610],[169,605],[191,608]], "#83a17c", 6, "bristle");
+  mark(s, [[517,617],[546,627],[570,635]], "#75957a", 6, "bristle");
+
+  // Broad shell: the little library is built into its painted dome.
+  const shell = [[205,507],[237,416],[325,373],[420,390],[492,451],[522,536],[474,588],[355,605],[244,574]];
+  blob(s, shell, "#704f49");
+  s.clip(s.curvePath(P(shell), true), () => {
+    for (let i = 0; i < 23; i += 1) {
+      const y = 392 + i * 9;
+      mark(s, [[211,y+38],[281,y+11],[374,y+23],[487,y+65]], i % 3 === 0 ? "#d2916866" : "#3b544e88", 15, "bristle");
+    }
+    mark(s, [[250,446],[316,412],[398,422],[466,468]], "#e5b78366", 28, "wash");
+    for (let i = 0; i < 8; i += 1) {
+      const x = 240 + i * 31;
+      mark(s, [[x,476],[x+9,463],[x+24,464]], "#f2bf825d", 7, "bristle");
+    }
+  });
+  mark(s, shell.concat([shell[0]]), "#223d42", 5.5);
+  mark(s, [[213,530],[285,557],[372,571],[464,557],[514,525]], "#dfad77", 9, "bristle");
+  mark(s, [[232,531],[297,548],[379,553],[464,531]], "#233e3f", 3.5);
+
+  // The timbered room glows through a wall set into the shell.
+  blob(s, [[292,441],[317,411],[405,407],[440,435],[448,526],[405,552],[300,533]], "#294445");
+  blob(s, [[311,443],[330,426],[393,423],[419,441],[421,517],[395,533],[313,517]], "#bb8060");
+  blob(s, [[303,441],[329,416],[390,413],[425,438],[419,449],[391,431],[332,433],[310,453]], "#503e3d");
+  mark(s, [[307,443],[333,425],[390,423],[419,444]], "#f1c390", 5, "bristle");
+  for (let i = 0; i < 7; i += 1) {
+    const x = 322 + i * 13;
+    mark(s, [[x,427],[x+8,435]], "#ad7258", 2.5, "ink");
+  }
+  s.noStroke(); s.fill("#deb57e"); s.rect(331, 442, 65, 12);
+  s.fill("#604d45"); s.textSize(8); s.textAlign("center"); s.text("BOOKS", 363, 451);
+  s.noStroke(); s.fill("#efc48b"); s.rect(332, 453, 63, 69);
+  s.fill("#a25e4b"); s.rect(339, 462, 49, 58);
+  s.fill("#f9d68e"); s.rect(344, 467, 39, 50);
+  // Book spines in the window, some tilted by the crossing.
+  for (let i = 0; i < 7; i += 1) {
+    const x = 345 + i * 5.5;
+    s.fill(["#703f46","#54716b","#936447","#355769"][i%4]);
+    s.rect(x, 481 + (i%3)*2, 4.2, 24 - (i%3)*2);
+  }
+  mark(s, [[344,506],[383,506]], "#5c493e", 2);
+  mark(s, [[363,467],[363,517]], "#6f4d42", 2);
+  mark(s, [[342,481],[386,481]], "#e8b673", 1.5);
+  mark(s, [[340,519],[387,519]], "#704e45", 3);
+  mark(s, [[325,450],[333,441],[397,439],[409,450]], "#f1c596", 4, "bristle");
+  mark(s, [[300,531],[348,544],[398,541],[440,524]], "#172f35", 5);
+  // Roof shingles climb the turtle's curve.
+  for (let i = 0; i < 9; i += 1) {
+    const x = 277 + i * 19;
+    mark(s, [[x,420-(i<5?i:9-i)*5],[x+16,412-(i<5?i:9-i)*5]], "#d8a879", 3.4, "bristle");
+  }
+
+  // A small keeper on the shell: coat, face, lantern and reaching arm.
+  blob(s, [[257,451],[246,475],[256,505],[283,510],[294,477],[281,454]], "#d19a5d");
+  blob(s, [[255,454],[263,435],[278,435],[287,451],[279,464],[262,464]], "#a75646");
+  s.noStroke(); s.fill("#efd0a2"); s.ellipse(273, 446, 15, 17);
+  s.fill("#273c3e"); s.circle(277, 442, 2.4);
+  s.fill("#ad6253"); s.circle(281, 448, 2.5);
+  mark(s, [[267,453],[274,458],[281,455]], "#823f3a", 2);
+  mark(s, [[260,463],[249,478],[255,499],[281,502]], "#f2c885", 4.5, "bristle");
+  mark(s, [[274,471],[272,498]], "#9f6347", 2);
+  s.noStroke(); s.fill("#8a5b4b"); s.circle(267, 481, 2.3);
+  s.circle(266, 490, 2.3);
+  mark(s, [[279,475],[304,459],[321,449]], "#d5a66d", 7, "ink");
+  s.noStroke(); s.fill("#edc193"); s.circle(318, 450, 5);
+  mark(s, [[259,503],[251,524]], "#463e3b", 5);
+  mark(s, [[280,504],[289,526]], "#463e3b", 5);
+  // Lantern at the end of the keeper's arm.
+  s.noStroke(); s.fill(s.ellipseGradient(327, 455, 125, 125, [[0,"#ffd38a9c"],[1,"#ffd38a00"]])); s.ellipse(327,455,125,125);
+  s.fill("#fce2a3"); s.rect(318, 443, 18, 24);
+  s.noFill(); s.stroke("#243b3e"); s.strokeWeight(3); s.brush("ink");
+  s.rect(316,441,22,27);
+  mark(s, [[321,441],[325,433],[333,441]], "#27383b", 2);
+
+  // Ripples and the wake wrap the crossing in light.
+  for (let i = 0; i < 13; i += 1) {
+    const y = 617 + i * 10;
+    const extent = 145 + i * 15;
+    mark(s, [[380-extent,y+7],[315,y],[419,y-2],[380+extent,y+5]], i % 2 ? "#e0bd8d77" : "#8cb9ad8b", i % 2 ? 5 : 3, "bristle");
+  }
+  mark(s, [[542,573],[610,577],[697,600],[755,593]], "#b1c8ac", 5, "wash");
+  mark(s, [[105,610],[170,592],[230,608]], "#91b1a8", 6, "wash");
+  for (let i = 0; i < 14; i += 1) {
+    const y = 647 + i * 7;
+    const x = 302 + Math.sin(i * 2.6) * 20;
+    mark(s, [[x,y],[x+24+(i%3)*10,y-2]], i % 3 === 0 ? "#f1c48b78" : "#d49c6d65", 4 + (i%3), "bristle");
+  }
+  for (const [x, flip] of [[20,1],[744,-1]]) {
+    mark(s, [[x,766],[x+flip*7,713],[x+flip*28,649]], "#142e3e", 6, "ink");
+    mark(s, [[x+flip*9,757],[x+flip*33,693],[x+flip*42,677]], "#203d46", 3.5, "ink");
+    blob(s, [[x+flip*9,723],[x+flip*34,710],[x+flip*45,715],[x+flip*25,728]], "#254b4c");
+    blob(s, [[x+flip*19,687],[x+flip*38,675],[x+flip*50,680],[x+flip*33,694]], "#31544c");
+    mark(s, [[x+flip*28,649],[x+flip*31,628]], "#806b56", 7, "bristle");
+  }
+  s.paperTexture(0.36);
+}

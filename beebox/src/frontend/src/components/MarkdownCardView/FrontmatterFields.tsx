@@ -9,6 +9,7 @@ import { usePlateState } from "../todo/card-todos-context";
 import { compactValue, fieldLabel, type CompactValue } from "../../lib/readable-fields";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { List } from "../ui/List";
 
 interface FieldsNavCtx {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -96,15 +97,15 @@ function FieldValue({ value }: { value: unknown }): ReactNode {
     if (value.length === 0) return <span className="text-warm-700 italic">empty</span>;
     if (value.every(isScalar)) {
       return (
-        <ul className="min-w-0 list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
+        <List marker="disc" gap="xs" className="min-w-0">
           {value.map((item, index) => <li key={index} className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">{formatScalar(item)}</li>)}
-        </ul>
+        </List>
       );
     }
     return (
-      <ol className="min-w-0 list-decimal list-outside ml-5 marker:text-warm-400 divide-y divide-warm-400 [&>li]:min-w-0 [&>li]:py-2 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
+      <List marker="decimal" divided className="min-w-0 [&>li]:min-w-0">
         {value.map((item, index) => <li key={index}><FieldValue value={item} /></li>)}
-      </ol>
+      </List>
     );
   }
   if (hasRef(value) && Object.keys(value).length === 1) return <RefLink refPath={value.ref} />;
@@ -164,9 +165,9 @@ function FieldRow({ name, value, root }: { name: string; value: unknown; root: b
       <dt className="min-w-0 max-w-32 text-warm-700 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{fieldLabel(name)}</dt>
       <dd className="min-w-0 max-w-full">
         {todos !== null ? (
-          <ul className="min-w-0 space-y-1">
+          <List gap="xs" className="min-w-0">
             {todos.map(({ entry, index }) => <FrontmatterTodo key={index} entry={entry} index={index} />)}
-          </ul>
+          </List>
         ) : name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <FieldValue value={value} />}
       </dd>
     </div>

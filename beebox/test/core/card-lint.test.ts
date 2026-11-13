@@ -20,6 +20,7 @@ import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
 import { ImageSchema } from "../../src/schemas/image/schema.js";
@@ -188,10 +189,13 @@ void test("A ref names a path inside the box.", async (t) => {
     "_content/inbox/email/thread-z/thread.email-thread.card",
     "---\ntype: email-thread\nthread-id: t3\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: \"#exp4\"\n---\n",
   );
+  const warnings = consoleLines(t, "warn");
   const anchorRef = await lintCardsDispatch(
     [box.path("_content/inbox/email/thread-z/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
+  // The server log says the ref names no file, with the card that holds it:
+  t.check(warnings(), [`resolveRefExists: ref "#exp4" in ${box.path("_content/inbox/email/thread-z/thread.email-thread.card")} names no in-box file (escapes the box, or is empty)`]);
   t.check(anchorRef, one(`${box.root}/_content/inbox/email/thread-z/thread.email-thread.card`, warn("reference", "Broken reference at messages[0].ref: #exp4 does not exist")));
 
   await box.cleanup();
@@ -279,10 +283,12 @@ void test("A ref the box namespace fence refuses says so instead.", async (t) =>
     "_content/box/notes/Meeting.doc.card",
     "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/node_modules/beebox/box-docs/card-doc.md\" usage=\"verbatim\" %}{% /source %}\n",
   );
+  const warnings = consoleLines(t, "warn");
   const resultFence = await lintCardsDispatch(
     [boxFence.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: boxFence.root, ctx },
   );
+  t.check(warnings(), [`resolveRefExists: ref "/node_modules/beebox/box-docs/card-doc.md" in ${boxFence.path("_content/box/notes/Meeting.doc.card")} names no in-box file (escapes the box, or is empty)`]);
   t.check(
     resultFence,
     one(`${boxFence.root}/_content/box/notes/Meeting.doc.card`,
@@ -388,5 +394,24 @@ void test("contains is one concise sentence stating what can be found in the car
     result,
     one(`${box.root}/_content/store/notes/Wordy.doc.card`,
       warn("contains", "contains: is 220 chars (budget 200) — tighten it to one sentence stating what can be found in this card"),
+  ));
+});
+
+// ## A landmark's prime card is validated like any other ref
+//
+// `intention.ref` (docs/implemented-plans/place-intention.md, Track A) is a key named
+// `ref`, so the generic walk finds it with no landmark-specific code: a prime
+// card that is gone is a broken-reference warning, never an error.
+void test("A landmark intention's prime card that is gone is a broken-reference warning", async (t) => {
+  const box = await makeTmpBox();
+  await box.write(
+    "_content/writing/Writing.landmark.card",
+    "---\nnavigation:\n  label: Writing\nintention:\n  text: Finish the post\n  ref: /_content/writing/Gone.doc.card\n---\n",
+  );
+  const result = await lintCardsDispatch([box.path("_content/writing/Writing.landmark.card")], { boxRoot: box.root, ctx });
+  t.check(
+    result,
+    one(`${box.root}/_content/writing/Writing.landmark.card`,
+      warn("reference", "Broken reference at intention.ref: /_content/writing/Gone.doc.card does not exist"),
   ));
 });

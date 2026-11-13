@@ -1,0 +1,580 @@
+// "Hello, Earth!" — a friendly green alien has just stepped down the ramp of
+// its landed saucer onto a dusk meadow, and waves to us. Picture-book
+// illustration painted with canvas-loop brushes.
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+const W = 800;
+const H = 600;
+
+const LINE = "#2a2433";
+const GREEN = "#6fbf62";
+const GREEN_DARK = "#3f7f4f";
+const GREEN_LIGHT = "#b8ea8f";
+const WARM = "#ffd98a";
+const SHADE = "#5f6aa0";
+
+// ── helpers ────────────────────────────────────────────────────────────
+function oval(cx: number, cy: number, rx: number, ry: number, n: number, rot = 0): Vec2[] {
+  const pts: Vec2[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2 + rot;
+    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return pts;
+}
+
+/** Closed outline of a tube of `width` around a centerline. */
+function tube(center: readonly Vec2[], width: number, endWidth = width): Vec2[] {
+  const left: Vec2[] = [];
+  const right: Vec2[] = [];
+  const n = center.length;
+  for (let i = 0; i < n; i += 1) {
+    const a = center[Math.max(0, i - 1)];
+    const b = center[Math.min(n - 1, i + 1)];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const t = n === 1 ? 0 : i / (n - 1);
+    const hw = (width + (endWidth - width) * t) / 2;
+    const [x, y] = center[i];
+    left.push([x + nx * hw, y + ny * hw]);
+    right.push([x - nx * hw, y - ny * hw]);
+  }
+  return [...left, ...right.reverse()];
+}
+
+function ink(s: Sketch, color: string, weight: number, wobble = 0.6): void {
+  s.noFill();
+  s.stroke(color);
+  s.strokeWeight(weight);
+  s.brush("ink", { thinning: 0.55 });
+  s.gesture({ pressure: "taper", wobble });
+}
+
+function closedBelow(top: readonly Vec2[]): Vec2[] {
+  return [...top, [W + 20, H + 20], [-20, H + 20]];
+}
+
+// ── geometry ───────────────────────────────────────────────────────────
+const HEAD = oval(330, 278, 100, 76, 14);
+const BODY: Vec2[] = [
+  [294, 348], [274, 392], [262, 445], [266, 492], [296, 508], [364, 508], [394, 492],
+  [398, 445], [386, 392], [366, 348],
+];
+const ARM_WAVE: Vec2[] = [[372, 392], [410, 380], [438, 350], [452, 314]];
+const ARM_DOWN: Vec2[] = [[288, 392], [262, 418], [248, 452], [250, 476]];
+const LEG_L: Vec2[] = [[314, 500], [312, 524], [310, 546]];
+const LEG_R: Vec2[] = [[346, 500], [348, 524], [350, 546]];
+const ANT_L: Vec2[] = [[302, 210], [292, 180], [276, 150]];
+const ANT_R: Vec2[] = [[360, 208], [372, 176], [392, 146]];
+
+const HILL_FAR: Vec2[] = [
+  [-20, 350], [120, 322], [260, 340], [420, 312], [560, 330], [700, 305], [820, 322],
+];
+const HILL_MID: Vec2[] = [
+  [-20, 410], [150, 388], [330, 402], [520, 374], [680, 388], [820, 380],
+];
+const GROUND: Vec2[] = [[-20, 468], [180, 452], [380, 462], [560, 448], [820, 470]];
+
+const SAUCER = { x: 610, y: 335 };
+
+// ── layers ─────────────────────────────────────────────────────────────
+function sky(s: Sketch): void {
+  s.background(
+    s.linearGradient(0, 0, 0, 420, [
+      [0, "#1c2150"],
+      [0.42, "#4a3a7a"],
+      [0.72, "#b06a8e"],
+      [1, "#f5b67c"],
+    ]),
+  );
+  // soft cloud bands, wash
+  s.noFill();
+  s.brush("wash", { opacity: 0.35 });
+  s.gesture({ pressure: "swell", wobble: 6 });
+  s.stroke("#e9a0a6");
+  s.strokeWeight(34);
+  s.curve([[380, 230], [520, 214], [700, 226], [830, 210]]);
+  s.stroke("#7a5a9a");
+  s.strokeWeight(26);
+  s.curve([[-20, 200], [120, 186], [300, 196]]);
+  // two soft clouds near the horizon, lit pink from below
+  for (const [cx, cy, w] of [[120, 246, 190], [690, 228, 210]] as const) {
+    const bumps: Vec2[] = [
+      [cx - w / 2, cy + 10], [cx - w / 2 + 10, cy - 4], [cx - w / 4, cy - 14], [cx - w / 10, cy - 26],
+      [cx + w / 8, cy - 20], [cx + w / 4, cy - 12], [cx + w / 2 - 12, cy - 4], [cx + w / 2, cy + 10],
+      [cx + w / 4, cy + 16], [cx - w / 4, cy + 16],
+    ];
+    s.noStroke();
+    s.fill("rgba(122,86,150,0.85)");
+    s.curve(bumps, true);
+    s.clip(s.curvePath(bumps, true), () => {
+      s.noFill();
+      s.stroke("#f2a7a0");
+      s.brush("wash", { opacity: 0.8 });
+      s.gesture({ pressure: "swell", wobble: 1 });
+      s.strokeWeight(22);
+      s.line(cx - w / 2, cy + 18, cx + w / 2, cy + 16);
+      s.stroke("#9a6fb0");
+      s.brush("wash", { opacity: 0.6 });
+      s.strokeWeight(18);
+      s.line(cx - w / 4, cy - 18, cx + w / 5, cy - 18);
+    });
+  }
+  s.noFill();
+  // moon glow
+  s.stroke("#fff1c9");
+  s.brush("airbrush", { opacity: 0.22 });
+  s.strokeWeight(90);
+  s.gesture({ pressure: "even" });
+  s.circle(140, 108, 80);
+  s.noBrush();
+  s.noStroke();
+  s.fill("#fbf0cf");
+  s.circle(140, 108, 70);
+  s.clip(s.curvePath(oval(140, 108, 35, 35, 12), true), () => {
+    s.noFill();
+    s.stroke("#d9c79a");
+    s.brush("wash", { opacity: 0.45 });
+    s.gesture({ pressure: "swell", wobble: 4 });
+    s.strokeWeight(16);
+    s.curve([[112, 92], [128, 100], [140, 96]]);
+    s.curve([[146, 124], [160, 120], [168, 128]]);
+    s.curve([[124, 128], [132, 136]]);
+  });
+  s.noBrush();
+  s.noStroke();
+  // stars
+  for (let i = 0; i < 80; i += 1) {
+    const x = s.random(W);
+    const y = s.random(250) * s.random(0.3, 1);
+    const r = s.random(0.8, 2.6);
+    s.fill(`rgba(255,248,220,${(0.35 + s.random(0.65)).toFixed(2)})`);
+    s.circle(x, y, r);
+  }
+}
+
+function hills(s: Sketch): void {
+  s.noStroke();
+  s.fill("#6a5490");
+  s.curve(closedBelow(HILL_FAR), true);
+  s.clip(s.curvePath(closedBelow(HILL_FAR), true), () => {
+    s.noFill();
+    s.stroke("#8a6aa2");
+    s.brush("wash", { opacity: 0.5 });
+    s.strokeWeight(40);
+    s.gesture({ pressure: "taper", wobble: 4 });
+    s.curve([[-20, 345], [120, 318], [260, 336], [420, 308], [560, 326], [700, 300], [820, 318]]);
+  });
+  s.noStroke();
+  s.fill("#3d5872");
+  s.curve(closedBelow(HILL_MID), true);
+  s.clip(s.curvePath(closedBelow(HILL_MID), true), () => {
+    s.noFill();
+    s.stroke("#55708a");
+    s.brush("chalk", { opacity: 0.45 });
+    s.strokeWeight(14);
+    s.gesture({ pressure: "taper", wobble: 3 });
+    for (let i = 0; i < 6; i += 1) {
+      const y = 400 + i * 10;
+      s.curve([[-20 + i * 30, y], [200, y - 14], [420, y - 6], [640, y - 20], [820, y - 10]]);
+    }
+  });
+  // dark rounded trees along the middle hill, left
+  for (const [x, h] of [[24, 46], [58, 34], [92, 54], [130, 40], [168, 30]] as const) {
+    const base = 398 - x * 0.05;
+    s.noStroke();
+    s.fill("#263649");
+    s.curve(oval(x, base - h / 2, h * 0.38, h / 2, 9), true);
+    s.fill("#1d2a3a");
+    s.rect(x - 2, base - 4, 4, 10);
+    s.noFill();
+    s.stroke("#3d5470");
+    s.brush("chalk", { opacity: 0.6 });
+    s.gesture({ pressure: "taper", wobble: 1 });
+    s.strokeWeight(6);
+    s.curve(arcPts(x, base - h / 2, h * 0.3, h * 0.4, Math.PI * 1.1, Math.PI * 1.6, 4));
+    s.noBrush();
+  }
+  // a tiny cottage on the far hill, one lit window
+  s.noStroke();
+  s.fill("#3a2f55");
+  s.polygon([[742, 312], [770, 312], [770, 296], [756, 284], [742, 296]]);
+  s.fill("#ffd36e");
+  s.rect(752, 300, 7, 7);
+  s.noFill();
+  s.stroke("#ffd36e");
+  s.brush("airbrush", { opacity: 0.4 });
+  s.gesture({ pressure: "even" });
+  s.strokeWeight(22);
+  s.line(755, 303, 756, 303);
+  s.noBrush();
+  // ground
+  s.noStroke();
+  s.fill("#3e6a45");
+  s.curve(closedBelow(GROUND), true);
+}
+
+function arcPts(cx: number, cy: number, rx: number, ry: number, a0: number, a1: number, n: number): Vec2[] {
+  const pts: Vec2[] = [];
+  for (let i = 0; i <= n; i += 1) {
+    const a = a0 + ((a1 - a0) * i) / n;
+    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  return pts;
+}
+
+const BEAM_FOOT = 456;
+
+function saucer(s: Sketch): void {
+  const { x: cx, y: cy } = SAUCER;
+  // beam of warm light from the underside down to the grass
+  s.group({ opacity: 0.55 }, () => {
+    s.noFill();
+    s.stroke("#ffd27a");
+    s.brush("wash", { opacity: 0.45 });
+    s.gesture({ pressure: [[0, 0.45], [1, 1]], wobble: 1 });
+    s.strokeWeight(34);
+    for (let i = -3; i <= 3; i += 1) {
+      s.line(cx + i * 7, cy + 20, cx + i * 26, BEAM_FOOT);
+    }
+    s.stroke("#ffe7a0");
+    s.strokeWeight(26);
+    s.line(cx, cy + 20, cx, BEAM_FOOT);
+    // sparkles drifting in the beam
+  });
+  for (const [x, y] of [[596, 380], [628, 398], [612, 424], [582, 436], [642, 440], [606, 404]] as const) {
+    s.noFill();
+    s.stroke("#fff6d0");
+    s.brush("airbrush", { opacity: 0.7 });
+    s.gesture({ pressure: "even" });
+    s.strokeWeight(14);
+    s.line(x, y, x + 1, y);
+    s.noBrush();
+    s.noStroke();
+    s.fill("#ffffff");
+    s.circle(x, y, 3);
+  }
+  s.noBrush();
+  s.noStroke();
+  // dome
+  s.fill(s.radialGradient(cx - 16, cy - 40, 64, [[0, "#f4ffff"], [0.6, "#a9dde4"], [1, "#6fa9bd"]]));
+  s.ellipse(cx, cy - 20, 112, 82);
+  // disc
+  s.fill(s.linearGradient(cx, cy - 27, cx, cy + 27, [[0, "#dfe2ee"], [0.5, "#a3a9c0"], [1, "#565b78"]]));
+  s.ellipse(cx, cy, 224, 54);
+  // underside
+  s.fill("#3f4260");
+  s.ellipse(cx, cy + 18, 120, 20);
+  s.fill("#ffe7a8");
+  s.ellipse(cx, cy + 20, 60, 10);
+  // windows
+  for (let i = -2; i <= 2; i += 1) {
+    s.fill("#ffe08a");
+    s.circle(cx + i * 38, cy + 2 - Math.abs(i) * 2, 12);
+  }
+  // rim highlight
+  s.noFill();
+  s.stroke("#ffffff");
+  s.brush("ink", { opacity: 0.7 });
+  s.strokeWeight(3);
+  s.gesture({ pressure: "taper" });
+  s.curve(arcPts(cx, cy, 104, 22, Math.PI * 1.1, Math.PI * 1.6, 8));
+  s.curve(arcPts(cx - 10, cy - 30, 34, 26, Math.PI * 1.15, Math.PI * 1.45, 6));
+  ink(s, LINE, 3);
+  s.ellipse(cx, cy, 224, 54);
+  s.curve(arcPts(cx, cy - 20, 56, 41, Math.PI * 1.04, Math.PI * 1.96, 12));
+  s.noBrush();
+}
+
+function meadow(s: Sketch): void {
+  s.clip(s.curvePath(closedBelow(GROUND), true), () => {
+    // value variation: soft wash bands, darker toward the front
+    s.noFill();
+    s.gesture({ pressure: "even", wobble: 6 });
+    const bands: [number, string, number][] = [
+      [470, "#5a8f55", 0.6], [500, "#2f5236", 0.5], [540, "#4a7d48", 0.5], [585, "#24402c", 0.6],
+    ];
+    for (const [y, c, o] of bands) {
+      s.stroke(c);
+      s.brush("wash", { opacity: o });
+      s.strokeWeight(46);
+      s.curve([[-60, y], [220, y - 10], [480, y + 6], [860, y - 6]]);
+    }
+    // pool of light where the beam lands
+    s.group({ blend: "screen", opacity: 0.9 }, () => {
+      s.noFill();
+      s.stroke("#d9b860");
+      s.gesture({ pressure: "swell", wobble: 3 });
+      s.brush("wash", { opacity: 0.55 });
+      for (const [w, dy, half] of [[60, 0, 200], [40, 14, 150], [30, -4, 100]] as const) {
+        s.strokeWeight(w);
+        s.line(SAUCER.x - half, BEAM_FOOT + dy, SAUCER.x + half, BEAM_FOOT + dy);
+      }
+    });
+    // grass blades
+    const blades = ["#2c4a31", "#3d6a40", "#5e9455", "#86b46a"];
+    for (let i = 0; i < 520; i += 1) {
+      const x = s.random(-10, W + 10);
+      const y = s.random(452, 605);
+      const depth = (y - 450) / 150;
+      const h = 5 + depth * 20 + s.random(4);
+      const lean = s.random(-4, 4) + depth * 2;
+      const lit = Math.hypot(x - SAUCER.x, (y - BEAM_FOOT) * 2.5) < 150;
+      s.stroke(lit ? s.randomChoice(["#b9c86a", "#d8d07a", "#7fae5e"]) : s.randomChoice(blades));
+      s.brush("ink", { thinning: 0.8 });
+      s.gesture({ pressure: "taper-out", wobble: 0.5 });
+      s.strokeWeight(1.2 + depth * 2.4);
+      s.curve([[x, y], [x + lean * 0.4, y - h * 0.5], [x + lean, y - h]]);
+    }
+  });
+}
+
+function grassTufts(s: Sketch): void {
+  // flowers
+  s.noBrush();
+  s.noStroke();
+  for (let i = 0; i < 24; i += 1) {
+    const x = s.random(W);
+    const y = s.random(480, 595);
+    if (x > 250 && x < 420 && y < 560) continue;
+    s.fill(s.randomChoice(["#f6d6e0", "#fff3c4", "#c9d8ff"]));
+    s.circle(x, y, 4 + (y - 470) * 0.03);
+  }
+}
+
+/** Fill a shape, shade inside it, then outline it. */
+function part(s: Sketch, shape: readonly Vec2[], shade: () => void, outline = 3.5): void {
+  s.noBrush();
+  s.noStroke();
+  s.fill(GREEN);
+  s.curve(shape, true);
+  s.clip(s.curvePath(shape, true), () => {
+    shade();
+    // scene light over every part: violet sky side, warm beam side
+    s.noBrush();
+    s.noStroke();
+    s.blendMode("multiply");
+    s.fill(s.linearGradient(220, 0, 470, 0, [[0, "#c2bbe8"], [0.5, "#f1edf6"], [1, "#fff4dc"]]));
+    s.rect(0, 0, W, H);
+    s.blendMode("normal");
+  });
+  ink(s, LINE, outline);
+  s.curve(shape, true);
+}
+
+function shadeStroke(s: Sketch, weight: number, pts: readonly Vec2[], opacity = 0.75): void {
+  s.noFill();
+  s.stroke(SHADE);
+  s.brush("wash", { opacity, blend: "multiply" });
+  s.strokeWeight(weight);
+  s.gesture({ pressure: "swell", wobble: 2 });
+  s.curve(pts);
+}
+
+function rimStroke(s: Sketch, weight: number, pts: readonly Vec2[], opacity = 0.7): void {
+  s.noFill();
+  s.stroke(WARM);
+  s.brush("wash", { opacity, blend: "screen" });
+  s.strokeWeight(weight);
+  s.gesture({ pressure: "swell", wobble: 1 });
+  s.curve(pts);
+}
+
+function alien(s: Sketch): void {
+  // ground shadow
+  s.noFill();
+  s.stroke("#1b2a20");
+  s.brush("wash", { opacity: 0.85, blend: "multiply" });
+  s.strokeWeight(30);
+  s.gesture({ pressure: "swell", wobble: 2 });
+  s.line(250, 552, 420, 552);
+
+  const legL = tube(LEG_L, 24);
+  const legR = tube(LEG_R, 24);
+  for (const leg of [legL, legR]) {
+    part(s, leg, () => {
+      shadeStroke(s, 16, [[leg[0][0] - 14, 500], [leg[0][0] - 12, 550]]);
+    });
+  }
+  // feet
+  for (const fx of [304, 356]) {
+    const foot = oval(fx, 548, 24, 10, 10);
+    part(s, foot, () => shadeStroke(s, 12, [[fx - 26, 556], [fx + 26, 556]]));
+  }
+  // lowered arm (behind body)
+  const armDown = tube(ARM_DOWN, 26, 20);
+  part(s, armDown, () => shadeStroke(s, 18, [[262, 392], [236, 440], [238, 480]]));
+  part(s, oval(250, 482, 16, 15, 10), () => shadeStroke(s, 14, [[236, 486], [256, 500]]));
+  // waving arm (behind body)
+  const armWave = tube(ARM_WAVE, 26, 20);
+  part(s, armWave, () => {
+    shadeStroke(s, 16, [[372, 404], [420, 392], [452, 350], [466, 316]]);
+    rimStroke(s, 8, [[380, 382], [420, 368], [440, 336]], 0.6);
+  });
+
+  // body
+  part(s, BODY, () => {
+    shadeStroke(s, 60, [[256, 360], [262, 440], [296, 516]], 0.8);
+    shadeStroke(s, 40, [[280, 350], [330, 366], [380, 350]], 0.7);
+    shadeStroke(s, 30, [[270, 512], [330, 520], [400, 506]], 0.6);
+    rimStroke(s, 10, [[392, 380], [398, 440], [390, 500]], 0.95);
+    rimStroke(s, 22, [[396, 390], [404, 444], [396, 496]], 0.5);
+    // tummy: a lighter soft oval
+    s.noFill();
+    s.stroke(GREEN_LIGHT);
+    s.brush("airbrush", { opacity: 0.55, blend: "screen" });
+    s.strokeWeight(46);
+    s.gesture({ pressure: "even" });
+    s.line(338, 430, 338, 470);
+  }, 4);
+
+  // hand that waves, with three little fingers
+  const HX = 456;
+  const HY = 302;
+  for (const [dx, dy, a] of [[-12, -18, -0.5], [0, -22, 0], [12, -17, 0.5]] as const) {
+    part(s, oval(HX + dx, HY + dy, 6, 10, 8, a), () => undefined, 2.5);
+  }
+  part(s, oval(HX, HY, 18, 16, 10), () => {
+    shadeStroke(s, 14, [[440, 314], [460, 320], [472, 306]]);
+    rimStroke(s, 6, [[466, 290], [474, 302]], 0.7);
+  });
+
+  s.push();
+  s.translate(330, 352);
+  s.rotate(0.08);
+  s.translate(-330, -352);
+  // heavier line on the shadow side of body and lowered arm
+  ink(s, LINE, 7, 0.3);
+  s.curve(BODY.slice(0, 5));
+  // head over the body
+  part(s, HEAD, () => {
+    shadeStroke(s, 70, [[220, 240], [242, 330], [330, 368], [432, 330]], 0.75);
+    s.noFill();
+    s.stroke(GREEN_LIGHT);
+    s.brush("airbrush", { opacity: 0.7 });
+    s.strokeWeight(60);
+    s.gesture({ pressure: "swell" });
+    s.curve([[280, 226], [340, 216], [392, 236]]);
+    rimStroke(s, 12, [[416, 232], [428, 270], [418, 312]], 0.95);
+    rimStroke(s, 30, [[410, 228], [430, 272], [416, 322]], 0.5);
+  }, 4);
+
+  // antennae
+  ink(s, LINE, 4, 0.4);
+  s.curve(ANT_L);
+  s.curve(ANT_R);
+  for (const [x, y] of [[274, 146], [394, 142]] as const) {
+    s.noFill();
+    s.stroke("#ffe27a");
+    s.brush("airbrush", { opacity: 0.45 });
+    s.strokeWeight(40);
+    s.gesture({ pressure: "even" });
+    s.line(x, y, x + 1, y);
+    s.noBrush();
+    s.noStroke();
+    s.fill("#ffd84a");
+    s.circle(x, y, 20);
+    s.fill("#fff6c0");
+    s.circle(x - 3, y - 3, 6);
+    ink(s, LINE, 3);
+    s.circle(x, y, 20);
+  }
+
+  // face
+  s.noBrush();
+  s.noStroke();
+  s.fill("#ffffff");
+  s.ellipse(290, 276, 54, 62);
+  s.ellipse(372, 276, 54, 62);
+  s.fill(LINE);
+  s.circle(294, 282, 26);
+  s.circle(368, 282, 26);
+  s.fill("#ffffff");
+  s.circle(299, 276, 8);
+  s.circle(373, 276, 8);
+  ink(s, LINE, 3, 0.2);
+  s.ellipse(290, 276, 54, 62);
+  s.ellipse(372, 276, 54, 62);
+  // heavier line on the shadow side of the head
+  ink(s, LINE, 7, 0.3);
+  s.curve(arcPts(330, 278, 100, 76, Math.PI * 0.55, Math.PI * 1.1, 8));
+  // cheeks
+  s.noBrush();
+  s.noStroke();
+  for (const cx of [254, 408]) {
+    s.noFill();
+    s.stroke("#f5939b");
+    s.brush("airbrush", { opacity: 0.55 });
+    s.gesture({ pressure: "even" });
+    s.strokeWeight(22);
+    s.line(cx - 6, 314, cx + 6, 314);
+    s.noBrush();
+    s.noStroke();
+    s.fill("#f4a0a4");
+    s.ellipse(cx, 314, 20, 10);
+  }
+  // smile
+  ink(s, LINE, 4, 0);
+  s.curve([[310, 318], [320, 328], [331, 331], [342, 328], [352, 318]]);
+
+  s.pop();
+
+  // wave motion lines
+  ink(s, "#fff3d0", 3, 0.2);
+  s.curve(arcPts(456, 296, 42, 42, -1.6, -1.0, 4));
+  s.curve(arcPts(456, 296, 42, 42, -0.75, -0.2, 4));
+  s.curve(arcPts(456, 296, 42, 42, -2.5, -1.95, 4));
+  s.noBrush();
+}
+
+function fireflies(s: Sketch): void {
+  const flies: Vec2[] = [[180, 420], [482, 430], [530, 250], [90, 505], [700, 525], [210, 330], [745, 430]];
+  for (const [x, y] of flies) {
+    s.noFill();
+    s.stroke("#fff3a0");
+    s.brush("airbrush", { opacity: 0.55, blend: "screen" });
+    s.strokeWeight(34);
+    s.gesture({ pressure: "even" });
+    s.line(x, y, x + 1, y);
+    s.noBrush();
+    s.noStroke();
+    s.fill("#fffbe0");
+    s.circle(x, y, 5);
+  }
+}
+
+/** A few blades in front of the feet so he stands in the grass, not on it. */
+function foreGrass(s: Sketch): void {
+  const blades = ["#2c4a31", "#3d6a40", "#5e9455"];
+  for (let i = 0; i < 46; i += 1) {
+    const x = s.random(262, 400);
+    const y = s.random(553, 566);
+    const h = s.random(8, 20);
+    const lean = s.random(-5, 5);
+    s.stroke(s.randomChoice(blades));
+    s.brush("ink", { thinning: 0.8 });
+    s.gesture({ pressure: "taper-out", wobble: 0.5 });
+    s.strokeWeight(2.2);
+    s.noFill();
+    s.curve([[x, y], [x + lean * 0.4, y - h * 0.5], [x + lean, y - h]]);
+  }
+  s.noBrush();
+}
+
+export function setup(s: Sketch): void {
+  s.createCanvas(W, H);
+}
+
+export function draw(s: Sketch): void {
+  sky(s);
+  hills(s);
+  saucer(s);
+  meadow(s);
+  grassTufts(s);
+  alien(s);
+  foreGrass(s);
+  fireflies(s);
+}

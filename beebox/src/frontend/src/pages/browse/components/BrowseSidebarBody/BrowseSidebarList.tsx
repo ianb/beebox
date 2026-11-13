@@ -24,7 +24,9 @@ import { attachDirFor } from "@shared/attach-path";
 import { areaDisplayLabel } from "@shared/display-path";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
 import type { BrowseListingMode } from "./hook";
+import type { FileContextMenuEvent } from "../BrowseContextMenu";
 import { BROWSE_DEFAULT_DIRECTORY, type BrowseMissingKind } from "../../../../lib/browse-card-state";
+import { StatusMessage } from "../../../../components/ui/StatusMessage";
 
 type BrowseData = RouterOutput["status"]["browse"];
 type BrowseDirData = BrowseData["dirs"][number];
@@ -59,7 +61,7 @@ function DirRow({
   // The number counts every card below the folder, subfolders included, so it says so: the listing inside shows fewer.
   const cardCount = `${String(dir.fileCount)} card${dir.fileCount === 1 ? "" : "s"}, including subfolders`;
   return (
-    <button
+    <button type="button"
       {...bbxSource("dir", target)}
       onClick={() => onNavigate(target, "directory")}
       aria-label={dir.fileCount > 0 ? `${label} directory, ${cardCount}` : `${label} directory`}
@@ -98,7 +100,7 @@ function CardRow({
   const attachPath = card.hasAttachments ? attachDirFor(card.relativePath) : null;
   return (
     <div className={`flex items-stretch border-b border-warm-200 ${selected ? "bg-info-50" : ""} ${dimmed ? "opacity-60" : ""}`}>
-      <button
+      <button type="button"
         onClick={() => onNavigate(card.relativePath, "file")}
         {...bbxSource("card", card.relativePath)}
         {...(card.type === "image" ? {
@@ -119,7 +121,7 @@ function CardRow({
         </div>
       </button>
       {attachPath ? (
-        <button
+        <button type="button"
           onClick={() => onNavigate(attachPath, "directory")}
           aria-label={`Open ${card.name} attachments`}
           title="Open attachments"
@@ -145,12 +147,13 @@ function FileRow({
   dimmed: boolean;
   selected: boolean;
   onNavigate: (path: string, kind: BrowseMissingKind) => void;
-  onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
+  onFileContextMenu: (event: FileContextMenuEvent, path: string) => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={() => onNavigate(file.relativePath, "file")}
       onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
+      onKeyDown={(event) => onFileContextMenu(event, file.relativePath)}
       {...(imageDataAttrs(file.relativePath, file.name) ?? {})}
       className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${selected ? "bg-info-50" : ""} ${dimmed ? "opacity-60" : ""}`}
     >
@@ -172,7 +175,7 @@ function FoldRow({
   selectedFilePath: string | null;
   showLandmark: boolean;
   onNavigate: (path: string, kind: BrowseMissingKind) => void;
-  onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
+  onFileContextMenu: (event: FileContextMenuEvent, path: string) => void;
 }) {
   if (entry.kind === "dir") {
     return <DirRow dir={entry.dir} dirPath={dirPath} dimmed={entry.dimmed} showLandmark={showLandmark} onNavigate={onNavigate} />;
@@ -186,7 +189,7 @@ function FoldRow({
 /** The quiet last row of the content root's listing: out to the box root and its areas. */
 function WholeBoxRow({ onNavigate }: { onNavigate: (path: string, kind: BrowseMissingKind) => void }) {
   return (
-    <button
+    <button type="button"
       id="bbx-browse-whole-box"
       data-bbx-does="goes to the whole box"
       onClick={() => onNavigate("", "directory")}
@@ -214,7 +217,7 @@ interface BrowseSidebarListProps {
    */
   onNavigate: (path: string, kind: BrowseMissingKind) => void;
   selectedFilePath: string | null;
-  onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
+  onFileContextMenu: (event: FileContextMenuEvent, path: string) => void;
   omitCardPath?: string;
   /** Compact (fold behind "N more") or raw (today's full listing). */
   mode: BrowseListingMode;
@@ -231,7 +234,7 @@ export function BrowseSidebarList({
   mode,
 }: BrowseSidebarListProps) {
   if (loading) {
-    return <div className="p-4 text-warm-700 text-sm">Loading...</div>;
+    return <StatusMessage variant="inline" busy className="p-4">Loading…</StatusMessage>;
   }
 
   const cards = data.cards.filter((card) => card.relativePath !== omitCardPath);

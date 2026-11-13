@@ -65,6 +65,8 @@ export interface UserMessageSendArgs {
   channel: ChatChannel | undefined;
   images?: ChatSendInput["images"];
   cardFields?: ChatSendContextWithView;
+  /** The page's key for a new chat, from the send body. */
+  pendingChat?: string | undefined;
 }
 
 /** The send route's body after target and identity resolution (routes/chat/user-message-sender.ts). */

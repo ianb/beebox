@@ -26,7 +26,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "../../../../lib/trpc/client";
-import { PortaledMenuScope } from "../../../ui/Dropdown";
+import { PortaledMenuScope } from "../../../ui/Menu";
 import { useAppBarHereMenuClaim, useAppBarPlace, useAppBarSlots } from "../../../app-bar-chrome";
 import { contextChipLabel } from "./context-chip-label";
 import { ContextMenuBody } from "./ContextMenuBody";
@@ -159,7 +159,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     <>
       {chipSlot === null ? null : createPortal(chips, chipSlot)}
       {hereSlot === null || !transcriptVisible ? null : createPortal(
-        <PortaledMenuScope close={hereSlot.close}>
+        <PortaledMenuScope close={hereSlot.close} menu={hereSlot.menu}>
           <ContextMenuBody
             dir={contextDir}
             boxSlug={boxSlug ?? ""}

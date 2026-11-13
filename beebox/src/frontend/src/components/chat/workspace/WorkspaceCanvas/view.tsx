@@ -10,7 +10,7 @@ import { useCardIdentities } from "../../../../hooks/useCardIdentities";
 import { cardTypeFromName } from "@shared/card-name";
 import { CardVisibilityProvider } from "../../everywhere/card-context/context";
 import { useWorkspace } from "../WorkspaceProvider/provider";
-import { WorkspacePaneContext } from "../use-open-beside/hook";
+import { PaneScope } from "./PaneScope";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
 import { isWorkspacePdf } from "./pdf-pane-view";
 import { workspacePanelId, workspaceTabId } from "../address";
@@ -19,16 +19,21 @@ import { isMarkdownPath } from "../../../file-view-data";
 import type { SidecarTab } from "../../sidecar-tabs";
 import type { PaneId } from "../state-types.js";
 import type { AddSelectionInput } from "../../../../lib/selection/position";
-import type { ActivityKind } from "@core/chat/card-activity";
 import { withoutFragment } from "../../../../lib/view-url";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
+import { IntentionStrip } from "../../../intention/IntentionStrip";
+import { useActivityLogger } from "../../../../lib/activity/scope";
+import { useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
-  reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
-function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
+
+function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
+  // The card element sits above its own PaneScope, so it logs with its path directly.
+  const logActivity = useActivityLogger();
+  const logScrollHeading = useHeadingScrollLog(tab.target.path);
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
   const { boxSlug } = useParams({ strict: false });
@@ -44,12 +49,12 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
     onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
     onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
     onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
-    onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
-    onAddSelection={onAddSelection} reportActivity={reportActivity} />;
+    onNavigate={(target, hint) => { logActivity({ card: tab.target.path, kind: "navigated", detail: target.path }); workspace.open(target, { ...hint, originatingPane: pane }); }}
+    onAddSelection={onAddSelection} />;
   // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
     role="group" aria-label={pane === "left" ? "Left pane" : "Right pane"}
-    style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 1 }}
+    style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 2 }}
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>
     {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={workspace.mobile ? "bbx-panel-tabs-mobile" : pane === "left" ? "bbx-panel-tabs" : "bbx-panel-tabs-right"} tabs={tabs} activePath={tab.target.path} identities={identities} boxSlug={boxSlug}
@@ -62,13 +67,12 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
       onFocus={() => workspace.activate(tab.target.path)}
       onScroll={(event) => {
         if (!visible) return;
-        const node = event.currentTarget;
-        reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
+        logScrollHeading(event.currentTarget);
       }}>
       {/* A neutral desk is a material the system theme may ink; a card sets its own. */}
-      <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
+      <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><PaneScope pane={pane} card={tab.target.path}>
         {fileView}
-      </WorkspacePaneContext.Provider></CardVisibilityProvider></MaterialContext.Provider>
+      </PaneScope></CardVisibilityProvider></MaterialContext.Provider>
     </div>
     {/* Always mounted so a screen reader hears the text appear. Out of flow:
         the tab strip measures its row, and a child there would resize it. */}
@@ -84,8 +88,13 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
  * and re-render each open card per token (`components/chat/AGENTS.md`,
  * "Workspace card roots survive presentation changes").
  */
-export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelection, reportActivity }: CardCallbacks & {
+export function WorkspaceCanvas({ children, strip, turnActive, turnTools, onAddSelection }: CardCallbacks & {
   children: ReactNode;
+  /**
+   * The conversation strip (`ConversationStrip`): its own full-width row
+   * above the grid, so it tops the cards and the messages in every layout.
+   */
+  strip: ReactNode;
   /** A chat turn is running; with `turnTools`, marks the documents it is editing. */
   turnActive: boolean;
   turnTools: readonly SessionContentBlock[];
@@ -97,19 +106,21 @@ export function WorkspaceCanvas({ children, turnActive, turnTools, onAddSelectio
   useEffect(() => {
     setVisited((old) => visiblePaths.every((path) => old.has(path)) ? old : new Set([...old, ...visiblePaths]));
   }, [visiblePaths]);
-  if (!workspace) return children;
+  if (!workspace) return <>{strip}{children}</>;
   const { projection, mobile } = workspace;
   const transcript = projection.transcript;
   const split = !mobile && workspace.state.layout.kind === "split" && transcript !== "full";
-  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden><div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "minmax(0, 1fr)" }}>
+  return <><VisuallyHidden as="h1">Workspace</VisuallyHidden>{strip}<div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "auto minmax(0, 1fr)" }}>
+    {/* Row 1 holds only the intention strip, above the cards (or above the chat when no card is open). */}
+    <IntentionStrip split={split} />
     {Object.values(workspace.state.tabs).map((tab) => {
       const path = tab.target.path;
       if (!visited.has(path) && !visiblePaths.includes(path)) return null;
       const pane = workspace.state.panes.left.paths.includes(path) ? "left" : "right";
-      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} editing={edited.has(path)} onAddSelection={onAddSelection} reportActivity={reportActivity} />;
+      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} editing={edited.has(path)} onAddSelection={onAddSelection} />;
     })}
     <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "bbx-conversation-desk flex flex-col min-h-0 min-w-0 relative" : "hidden"}
-      style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1" }}>
+      style={{ gridRow: split && (transcript === "left" || transcript === "right") ? "1 / -1" : 2, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1" }}>
       <TranscriptFloatingControls restore={projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
     </div>
   </div></>;

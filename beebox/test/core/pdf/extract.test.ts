@@ -27,6 +27,7 @@ import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
@@ -382,7 +383,10 @@ void test("Nothing is lost:", async (t) => {
   });
   const box = await makeTmpBox({ git: true });
   const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
+  const warnings = consoleLines(t, "warn");
   const result = await importPdf(box, { docling });
+  // The server log names the PDF and why extraction failed:
+  t.check(warnings(), ["[scan-import] Docling extraction failed for incoming.pdf: Docling exited 1: killed by the OOM killer"]);
   t.check({ success: result.success, data: importData(result) }, {
     success: true,
     data: { extracted: false, sessionCardPath, intakeJobPaths },
@@ -585,6 +589,8 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
   const attachAbsDir = join(scratch, "attach");
   await mkdir(workDir, { recursive: true });
   await mkdir(attachAbsDir, { recursive: true });
+  // The source is a real PDF so the text-layer step reads a file that exists.
+  await writeFile(join(scratch, "source.pdf"), textPdf());
 
   const tooMany = await extractPdf({
     docling: createFakeDocling({ pageCount: MAX_EXTRACTION_ARTIFACTS + 1 }),
@@ -615,7 +621,8 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
     ok: true,
     value: {
       body: "# Fake Document\n\nExtracted body.\n",
-      assetNames: ["docling.json.gz", "page-001.webp", "page-002.webp", "page-003.webp", "figure-001.webp", "figure-002.webp"],
+      // The text layer is stored beside the renders when poppler is installed.
+      assetNames: ["docling.json.gz", ...(havePdftotext ? ["text-layer.txt"] : []), "page-001.webp", "page-002.webp", "page-003.webp", "figure-001.webp", "figure-002.webp"],
       doclingFilename: "docling.json.gz",
       doclingVersion: "2.117.0-fake",
       pageCount: 3,

@@ -9,6 +9,7 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
+import { useCardActivityReporter } from "../../lib/activity/scope";
 import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -26,6 +27,7 @@ import type { RendererProps } from "../../file-type-registry";
 import { StatusMessage } from "../ui/StatusMessage";
 import {
   FigureMount,
+  figureFileHelpers,
   type FigureContext,
   type FigureRuntime,
   type FigureSketch,
@@ -95,6 +97,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
   useLiveRefresh({ when: fileChangeAt(entryPath), refresh: () => { void loadModule(); } });
 
   const fileHelpers = useViewFileHelpers(apiBase);
+  const report = useCardActivityReporter(data.path);
   // Built inline (not memoized): FigureMount reads it via a ref and remounts on
   // `paramsKey`, so a fresh object identity each render is harmless — and it
   // avoids a stale-deps disable.
@@ -102,7 +105,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     params: figureParams,
     data: isRecord(frontmatter.data) ? frontmatter.data : {},
     meta: frontmatter,
-    file: fileHelpers,
+    file: figureFileHelpers(fileHelpers),
   };
 
   if (runtime === null) {
@@ -112,7 +115,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <StatusMessage className="p-4">Loading figure…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading figure…</StatusMessage>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
@@ -121,15 +124,17 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
 
   const figureEl = (
     <ViewErrorBoundary onRetry={() => void loadModule()}>
-      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
+      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} declaredParams={declared}
+        report={report} />
     </ViewErrorBoundary>
   );
 
-  // Embedded (chat/companion): just the interactive — minimal chrome — with the
-  // `![caption]` shown beneath, mirroring a captioned image. On the full page,
-  // show the card's description below it. (FileView's page header already offers
-  // the Source toggle.)
-  if (mode === "page") {
+  // Embedded (in a message): just the interactive — minimal chrome — with the
+  // `![caption]` shown beneath, mirroring a captioned image. As a card of its
+  // own (the full page, or a tab beside the chat), inset it and show the card's
+  // description below it. (FileView's page header already offers the Source
+  // toggle.)
+  if (mode === "page" || mode === "companion") {
     const description = typeof data.body === "string" ? data.body : "";
     return (
       <div className="p-4">

@@ -239,7 +239,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string } & ChatSendContext;
+    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; pendingChat?: string } & ChatSendContext;
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -283,10 +283,8 @@ export const streamActor = fromCallback(
       ...(input.contextDir ? { contextDir: input.contextDir } : {}),
       ...(input.seedFeatures ? { seedFeatures: input.seedFeatures } : {}),
       ...(input.engine !== undefined ? { engine: input.engine } : {}),
-      ...(input.model !== undefined ? { model: input.model } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}), ...(input.pendingChat !== undefined ? { pendingChat: input.pendingChat } : {}),
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
-      ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
-      ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
       ...boundTurnFields(input.binding),
       startup: input.startup,
     })
@@ -399,15 +397,13 @@ export function rollupStreamToEntry(
  * arrive. A network failure may have reached the box, so it is not one.
  */
 export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; onRefused?: () => void } & ChatSendContext): void {
-  const { session, message, messageId, images, openCard, cardActivity, cardState, onRefused } = opts;
+  const { session, message, messageId, images, openCard, onRefused } = opts;
   startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
-    ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...boundTurnFields(opts.binding),
     startup: opts.startup,
   })

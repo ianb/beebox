@@ -48,7 +48,8 @@ const palette = {
   success: {
     DEFAULT: "#4F9E5E",
     light: "#7BBC87",
-    dark: "#3C7F49",
+    // Text on success-100 (5:1) and warm-50.
+    dark: "#306B3C",
     50: "#EBF5ED",
     100: "#D6EADD",
   },
@@ -123,25 +124,25 @@ export default {
           danger: `var(--bbx-danger, ${palette.rose.dark})`,
         },
       },
-      // ─── Dropdown sub-panel transitions ─────────────────────────
-      // The panel-swap idiom (Dropdown.tsx) keys its content wrapper on
-      // `panelIndex` and picks one of these based on whether the new panel
+      // ─── Menu sub-panel transitions ─────────────────────────
+      // The panel-swap idiom (Menu.tsx) keys its content wrapper on
+      // `pageIndex` and picks one of these based on whether the new panel
       // is deeper (slides in from the right) or shallower (from the left).
       // Gated behind `motion-safe:` at the call site so reduced-motion users
       // get an instant swap instead.
       keyframes: {
-        "dropdown-panel-in-right": {
+        "menu-page-in-right": {
           "0%": { opacity: "0", transform: "translateX(1rem)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
-        "dropdown-panel-in-left": {
+        "menu-page-in-left": {
           "0%": { opacity: "0", transform: "translateX(-1rem)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
       },
       animation: {
-        "dropdown-panel-in-right": "dropdown-panel-in-right 150ms ease-out forwards",
-        "dropdown-panel-in-left": "dropdown-panel-in-left 150ms ease-out forwards",
+        "menu-page-in-right": "menu-page-in-right 150ms ease-out forwards",
+        "menu-page-in-left": "menu-page-in-left 150ms ease-out forwards",
       },
       // The plugin's ordered-list indent fits a one-digit marker. From "10."
       // on, the marker overhangs the container and an `overflow-hidden`

@@ -1,0 +1,23 @@
+slug: alien-scene-opus-a
+title: "Alien picture-book scene (opus-a)"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 10
+tier: tea
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+harness-commit: 69002fd6
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 2 (own scene, guide fixes the character only). Boxholder review pending. Dusk meadow, alien holding a flower, landed saucer with ramp and beam, farmhouse window, moon, shooting star, fireflies. Strong background and meadow; the alien keeps the guide's stiff construction and reads as the most digital element.
+self-report-summary: >
+  Ten cycles took it from clip-art to an illustrated scene. Shaded form by stroking a shape's own outline shifted inside its clip; wanted an inset/offset primitive, whole-page paper texture, and fill textures. Wash default grain read as moss on skin; short airbrush marks deposit almost nothing. Split the sketch into three files to fit max-lines. Opened 60 lines of a round-1 sketch it was told not to read; says it used nothing from it.
+features-exercised:
+  - brushes (ink, wash, airbrush, chalk, pencil, bristle)
+  - groups with blend modes
+  - clip with curvePath
+  - zoomed crops (--zoom)

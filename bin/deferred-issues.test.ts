@@ -7,6 +7,7 @@ import { execa } from "execa";
 
 import {
   activateDeferredRoot,
+  activationChanges,
   activatedSource,
   isCalendarDate,
   parseDeferredIssue,
@@ -100,9 +101,45 @@ void test("a failed activation transaction restores tracked and untracked files"
   await assert.rejects(runActivationTransaction(repoRoot, async () => {
     await fs.writeFile(destination, "activated\n");
     await fs.unlink(source);
+    // Activation stages the move before link repair; the restore must still
+    // remove the staged copy once it is unstaged.
+    await execa("git", ["add", "-A"], { cwd: repoRoot });
     throw new TestTransactionFailureError();
   }), TestTransactionFailureError);
   assert.equal(await fs.readFile(source, "utf8"), "original\n");
   await assert.rejects(fs.stat(destination));
   assert.equal((await execa("git", ["status", "--porcelain"], { cwd: repoRoot })).stdout, "");
+});
+
+async function moveFixture(): Promise<{ repoRoot: string; moves: Array<{ source: string; destination: string }> }> {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "deferred-changes-"));
+  await fs.mkdir(path.join(repoRoot, "issues", "deferred"), { recursive: true });
+  await fs.writeFile(path.join(repoRoot, "issues", "deferred", "later.md"), "issue\n");
+  await fs.writeFile(path.join(repoRoot, "code.ts"), "// remove: issues/deferred/later.md.\nconst x = 1;\n");
+  await execa("git", ["init", "-q", "-b", "main"], { cwd: repoRoot });
+  await execa("git", ["config", "user.email", "test@example.com"], { cwd: repoRoot });
+  await execa("git", ["config", "user.name", "Test"], { cwd: repoRoot });
+  await execa("git", ["add", "."], { cwd: repoRoot });
+  await execa("git", ["commit", "-qm", "fixture"], { cwd: repoRoot });
+  await fs.mkdir(path.join(repoRoot, "issues", "bugs"));
+  await fs.rename(path.join(repoRoot, "issues", "deferred", "later.md"), path.join(repoRoot, "issues", "bugs", "later.md"));
+  return {
+    repoRoot,
+    moves: [{ source: path.join(repoRoot, "issues", "deferred", "later.md"), destination: path.join(repoRoot, "issues", "bugs", "later.md") }],
+  };
+}
+
+void test("a code comment naming a moved issue may be rewritten to its new path", async () => {
+  const { repoRoot, moves } = await moveFixture();
+  await fs.writeFile(path.join(repoRoot, "code.ts"), "// remove: issues/bugs/later.md.\nconst x = 1;\n");
+  assert.deepEqual(await activationChanges(repoRoot, moves), ["code.ts", "issues/bugs/later.md", "issues/deferred/later.md"]);
+});
+
+void test("any other non-Markdown change is refused", async () => {
+  const { repoRoot, moves } = await moveFixture();
+  await fs.writeFile(path.join(repoRoot, "code.ts"), "// remove: issues/bugs/later.md.\nconst x = 2;\n");
+  await assert.rejects(activationChanges(repoRoot, moves), { name: "NonMarkdownActivationChangeError" });
+  await fs.writeFile(path.join(repoRoot, "code.ts"), "// remove: issues/deferred/later.md.\nconst x = 1;\n");
+  await fs.writeFile(path.join(repoRoot, "new.ts"), "issues/bugs/later.md\n");
+  await assert.rejects(activationChanges(repoRoot, moves), { name: "NonMarkdownActivationChangeError" });
 });

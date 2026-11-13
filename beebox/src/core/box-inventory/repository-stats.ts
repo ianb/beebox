@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { isAnnexInitialized } from "../annex/is-annex-box.js";
 import { isWithin } from "../../lib/box-containment.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 const execFileAsync = promisify(execFile);
 const annexFindLine = z.object({ file: z.string(), bytesize: z.string().optional() });
@@ -75,6 +76,7 @@ async function annexedFiles(boxRoot: string): Promise<{
     const { stdout } = await execFileAsync("git", ["annex", "find", "--anything", "--json"], {
       cwd: boxRoot,
       maxBuffer: 64 * 1024 * 1024,
+      env: gitEnvironment(),
     });
     const result = new Map<string, AnnexedFile>();
     for (const line of stdout.split("\n")) {

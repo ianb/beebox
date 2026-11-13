@@ -7,7 +7,6 @@
  * inside the size cap and makes the item rendering readable on its own.
  */
 
-import { cn } from "../../lib/cn";
 import type { DoclingItem, DoclingTableCell } from "../../lib/docling/parse";
 import { Badge } from "../ui/Badge";
 import { Image } from "../ui/Image/view";
@@ -16,6 +15,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
+import { Table, Td, Th } from "../ui/Table";
 
 /** Sibling renders this page section can link to, resolved by the container. */
 export interface PageSectionAssets {
@@ -29,14 +29,19 @@ function Cell({ cell }: { cell: DoclingTableCell }) {
   const props = {
     colSpan: cell.colSpan === 1 ? undefined : cell.colSpan,
     rowSpan: cell.rowSpan === 1 ? undefined : cell.rowSpan,
-    className: "border border-warm-200 px-2 py-1 align-top text-sm",
   };
   return cell.header
-    ? <th scope="col" {...props} className={cn(props.className, "bg-warm-100 font-medium text-left")}>{cell.text}</th>
-    : <td {...props}>{cell.text}</td>;
+    ? <Th scope="col" {...props}>{cell.text}</Th>
+    : <Td {...props}>{cell.text}</Td>;
 }
 
-function TableItem({ rows, caption }: { rows: DoclingTableCell[][]; caption: string | null }) {
+/** The table's name: docling's caption, or its page when docling recorded none. */
+function tableName(caption: string | null, page: number | null): { caption: string; captionHidden: boolean } {
+  if (caption !== null && caption.trim() !== "") return { caption, captionHidden: false };
+  return { caption: page === null ? "Table with no page recorded" : `Table on page ${String(page)}`, captionHidden: true };
+}
+
+function TableItem({ rows, caption, page }: { rows: DoclingTableCell[][]; caption: string | null; page: number | null }) {
   if (rows.length === 0) {
     return (
       <Text as="p" size="sm" tone="muted">
@@ -45,22 +50,19 @@ function TableItem({ rows, caption }: { rows: DoclingTableCell[][]; caption: str
     );
   }
   return (
-    // Wide tables scroll inside their own box rather than widening the page.
-    <div className="overflow-x-auto">
-      <table className="border-collapse">
-        {caption === null ? null : <caption className="text-left text-sm text-warm-700 pb-1">{caption}</caption>}
-        <tbody>
-          {rows.map((cells, rowIndex) => (
-            // Row/cell order IS the identity here: docling gives cells offsets, not ids.
-            <tr key={rowIndex}>
-              {cells.map((cell, cellIndex) => (
-                <Cell key={cellIndex} cell={cell} />
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    // Wide tables scroll inside the Table's own box rather than widening the page.
+    <Table variant="grid" {...tableName(caption, page)} className="text-sm">
+      <tbody>
+        {rows.map((cells, rowIndex) => (
+          // Row/cell order IS the identity here: docling gives cells offsets, not ids.
+          <tr key={rowIndex}>
+            {cells.map((cell, cellIndex) => (
+              <Cell key={cellIndex} cell={cell} />
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 
@@ -128,7 +130,7 @@ export function DoclingPageSection({ page, items, assets }: DoclingPageSectionPr
             item.kind === "text" ? (
               <TextItem key={item.ref} label={item.label} text={item.text} level={item.level} />
             ) : item.kind === "table" ? (
-              <TableItem key={item.ref} rows={item.rows} caption={item.caption} />
+              <TableItem key={item.ref} rows={item.rows} caption={item.caption} page={page} />
             ) : (
               <PictureItem
                 key={item.ref}

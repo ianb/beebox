@@ -1,11 +1,12 @@
 /**
- * Breadcrumb strip for the browse sidebar. Wraps links around the `/`
- * separators with no whitespace so the rendered path copies cleanly.
+ * Breadcrumb strip for the browse sidebar. A labelled `<nav>` list whose items are
+ * inline, with no whitespace around the `/` separators, so the rendered path
+ * copies cleanly.
  */
 
-import { Fragment } from "react";
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { areaDisplayLabel } from "@shared/display-path";
+import { List } from "../../../components/ui/List";
 
 interface BrowseBreadcrumbsProps {
   dirPath: string;
@@ -42,32 +43,36 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
   const underRoot = dirPath === rootPath || dirPath.startsWith(`${rootPath}/`);
 
   return (
-    <div className="px-3 py-2 border-b text-sm break-words">
-      <button
-        id="bbx-browse-crumb-root"
-        data-bbx-does={underRoot ? "goes to the top of the content" : "goes to the whole box"}
-        onClick={() => onNavigate(underRoot ? rootPath : "")}
-        className="text-primary hover:text-primary-dark hover:underline px-0.5"
-      >{underRoot ? "/" : "Whole box"}</button>
-      {segments.map((seg, i) => {
-        const segPath = rawSegments.slice(0, pathOffset + i + 1).join("/");
-        const isLast = i === segments.length - 1;
-        const label = i === 0 && !isContentArea ? areaDisplayLabel(seg) : segmentLabel(seg);
-        return (
-          <Fragment key={segPath}>
-            <wbr />
-            {i > 0 || !underRoot ? <span className="text-warm-700 px-0.5">/</span> : null}
-            {isLast ? (
-              <span className="text-warm-700 font-medium px-0.5">{label}</span>
-            ) : (
-              <button
-                onClick={() => onNavigate(segPath)}
-                className="text-primary hover:text-primary-dark hover:underline px-0.5"
-              >{label}</button>
-            )}
-          </Fragment>
-        );
-      })}
-    </div>
+    <nav aria-label="Breadcrumbs" className="px-3 py-2 border-b text-sm break-words">
+      <List ordered direction="wrap" className="[&>li]:min-w-0">
+        <li>
+          <button type="button"
+            id="bbx-browse-crumb-root"
+            data-bbx-does={underRoot ? "goes to the top of the content" : "goes to the whole box"}
+            onClick={() => onNavigate(underRoot ? rootPath : "")}
+            className="text-primary hover:text-primary-dark hover:underline px-0.5"
+          >{underRoot ? "/" : "Whole box"}</button>
+        </li>
+        {segments.map((seg, i) => {
+          const segPath = rawSegments.slice(0, pathOffset + i + 1).join("/");
+          const isLast = i === segments.length - 1;
+          const label = i === 0 && !isContentArea ? areaDisplayLabel(seg) : segmentLabel(seg);
+          return (
+            <li key={segPath}>
+              <wbr />
+              {i > 0 || !underRoot ? <span aria-hidden="true" className="text-warm-700 px-0.5">/</span> : null}
+              {isLast ? (
+                <span aria-current="page" className="text-warm-700 font-medium px-0.5">{label}</span>
+              ) : (
+                <button type="button"
+                  onClick={() => onNavigate(segPath)}
+                  className="text-primary hover:text-primary-dark hover:underline px-0.5"
+                >{label}</button>
+              )}
+            </li>
+          );
+        })}
+      </List>
+    </nav>
   );
 }

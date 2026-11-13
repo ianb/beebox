@@ -7,11 +7,18 @@
 
 A deterministic, browser-less, frame-stepped **Canvas2D sandbox for agent programming**.
 
-You write a p5-style sketch, run one CLI command, and get back a single
-interleaved **transcript**: frame-tagged log lines with rendered PNG frames
-inline. Synthetic input events are injected from a JSON script and dispatched
-through the same handler path a real UI would use — so one events file is
-simultaneously a test, a reproduction, and a demo.
+You write a sketch, run one CLI command, and get back a single interleaved
+**transcript**: frame-tagged log lines with rendered PNG frames inline.
+Synthetic input events come from a JSON script and reach the sketch as
+messages, the same path a real UI uses. So one events file is a test, a
+reproduction, and a demo.
+
+A sketch has one form: The Elm Architecture (TEA). `init` builds a model,
+`update` folds each message into a new model, and `draw` paints it. Each
+drawing call takes its style as an argument, so no drawing state carries from
+one call to the next. [TEA.md](./TEA.md) is the sketch reference: the
+contract, the drawing API, params and events. Brushes are in
+[BRUSHES.md](./BRUSHES.md).
 
 It renders with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas)
 (Skia, no browser). Two identical runs produce byte-identical output: time is a
@@ -23,8 +30,35 @@ fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
 ```sh
 pnpm --dir canvas-loop run cli run <sketch.ts> \
   [--frames 120] [--events events.json] [--out out/] \
-  [--seed 42] [--fps 60] [--every 30]
+  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]... [--outline] [--timing] [--note text]
 ```
+
+`--outline` draws sprite, clip and `debugBox` outlines over each captured
+frame; `--timing` adds a per-frame draw-time line to the transcript (see
+[BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
+
+`--zoom` (repeatable) also writes an enlarged crop of that region beside every
+captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and
+lists it under the frame in the transcript. Use it to judge brush texture and
+edges, which a whole frame at 1× hides. To crop a frame you already have:
+`pnpm --dir canvas-loop run cli zoom out/frame-0000.png 90,80,160,120@4`.
+
+**Checkpoints.** With `CANVAS_LOOP_CHECKPOINTS=<dir>` in the environment,
+every `run` also saves a numbered checkpoint there: the sketch directory's
+`.ts` files, the events file, the rendered frames and transcript, and
+`meta.json` (time, arguments, errors, and `run --note "what I changed"`).
+`cli checkpoints <dir> [--out page.html] [--title text]` turns them into one
+self-contained page with a slider: each render's picture, note, changed lines
+per file, and source. It records how a drawing was developed, one look at a
+time.
+
+`cli diff <before.png> <after.png> [--out dir]` (experimental) writes views of
+what changed between two frames: `highlight.png` (the after frame greyed,
+magenta where pixels got darker, green where they got lighter),
+`change-N.png` (each separate changed region cropped and enlarged, before and
+after), `side-by-side.png`, and `stats.txt` (pixel counts and where each
+change crop is). Look at the highlight first to find the edits, then the
+change crops to judge them.
 
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 overwritten each run. On success it prints only the transcript path and frame
@@ -34,76 +68,12 @@ still written, with the error frame-tagged).
 Read `transcript.md` — the inline `![frame N](frame-NNNN.png)` images render
 directly in tools that display markdown images (including Claude Code's `Read`).
 
-## Writing a sketch
-
-Two tiers. This section covers the **mutable tier** (p5-style `setup`/`draw`).
-For the **TEA tier** — a pure `init`/`update`/`draw` fold with declared params,
-enforced immutability, and an exhaustive `Msg` switch — see [TEA.md](./TEA.md).
-
-A sketch is a TypeScript module exporting `setup` and `draw`, plus optional input
-handlers. Instance mode — no globals; everything hangs off the `Sketch` object `s`:
-
-```ts
-import type { Sketch, SketchInputEvent } from "@ianbicking/canvas-loop";
-
-export function setup(s: Sketch): void {
-  s.createCanvas(400, 300); // setup only
-}
-
-export function draw(s: Sketch): void {
-  s.background("#0f172a");
-  s.fill("#38bdf8");
-  s.noStroke();
-  s.circle(s.width / 2, s.height / 2, 48);
-  if (s.frameCount % 30 === 0) s.log("tick", s.frameCount, s.millis());
-}
-
-export function mousePressed(s: Sketch): void {
-  s.log("clicked at", s.mouseX, s.mouseY);
-}
-```
-
-Handlers (all optional, all `(s: Sketch, e: SketchInputEvent)`):
-`mousePressed`, `mouseReleased`, `mouseMoved`, `mouseDragged`, `keyPressed`,
-`keyReleased`. A `mousemove` while the mouse is pressed fires `mouseDragged`,
-otherwise `mouseMoved`. `e` carries `{ type, x, y, key }`.
-
-Each scripted input gets an **engagement verdict** on its transcript line
-(`mousedown (5,5) → grab`): whether a handler fired is a free signal — a fired
-handler reads `handled`, no matching handler reads `(unhandled)`; call
-`s.handled("name")` inside a handler to name the engagement instead
-(`… → grab`). (The TEA tier adds a `Δmodel` verdict from reducer state changes;
-see [TEA.md](./TEA.md#engagement-verdicts).)
-
-### The `Sketch` API
-
-| Group | Members |
-| --- | --- |
-| Canvas & time | `createCanvas(w, h)`, `width`, `height`, `frameCount`, `millis()` (= `frameCount / fps * 1000`) |
-| Drawing | `background`, `fill`, `noFill`, `stroke`, `noStroke`, `strokeWeight`, `rect`, `circle`, `ellipse`, `line`, `triangle`, `arc`, `text`, `textSize`, `textAlign` |
-| Organic shapes | `polygon(points)`, `path(commands)` (data-encoded `["move"/"line"/"quad"/"bezier"/"close", …]`), `clip(shape, () => …)` (polygon/path region for the callback) |
-| Gradients | `linearGradient(x1,y1,x2,y2, stops)`, `radialGradient(x,y,radius, stops)` → an opaque handle `fill`/`stroke`/`background` accept anywhere a color string is |
-| Transform | `push`, `pop`, `translate`, `rotate`, `scale` |
-| Randomness | `random()`, `random(max)`, `random(min, max)`, `randomChoice(arr)` — seeded (`--seed`) |
-| Input state | `mouseX`, `mouseY`, `mouseIsPressed`, `keysDown` (`Set<string>`) |
-| Output | `log(...args)` (frame-tagged into the transcript), `snapshot(label?)` (force-capture the frame), `handled(name)` (name this input's engagement verdict) |
-
-Colors are **CSS color strings only** (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`) —
-no p5 numeric color overloads. Habitual `console.log/warn/error` also work; they
-route into the frame-tagged transcript.
-
-**Escape hatch:** `s.ctx` is the raw `@napi-rs/canvas` `SKRSContext2D` — still
-available for anything the subset doesn't cover (`drawImage`, shadows, `lineJoin`,
-…). But the `polygon`/`path`/`arc`/gradient/`clip` primitives above should now
-cover organic shapes; prefer them so a sketch stays serializable-in-principle
-(the primitives are declarative data, `ctx` calls are not).
-
 ## Events file
 
 A JSON array of events, each stamped with the frame it fires on. **Guarantee:
-all events for frame N dispatch, in file order, before frame N's `draw`** — so
+all events for frame N dispatch, in file order, before frame N's `draw`.** So
 the world state a click sees is exactly the state after frame N−1's draw, and
-hit-testing a moving target is a pure calculation, never trial and error:
+hit-testing a moving target is a calculation, not trial and error:
 
 ```json
 [
@@ -111,17 +81,24 @@ hit-testing a moving target is a pure calculation, never trial and error:
   { "frame": 8, "type": "mousemove", "x": 212, "y": 144 },
   { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
   { "frame": 40, "type": "snapshot", "label": "mid-arc" },
-  { "frame": 90, "type": "keydown", "key": "r" }
+  { "frame": 55, "type": "param", "name": "speed", "value": 2.5 },
+  { "frame": 90, "type": "keydown", "key": "r" },
+  { "frame": 110, "type": "trigger", "name": "reset" }
 ]
 ```
 
-Input types: `mousedown`, `mouseup`, `mousemove`, `keydown`, `keyup`. `x`/`y`
-update the mouse position; `key` names the key for `keysDown` and the handler
-event. A `snapshot` entry (`{ "frame", "type": "snapshot", "label"? }`) is not
-input — it forces a capture of that frame without dispatching to any handler or
-touching state, and its optional `label` flows to the transcript frame heading
-(`### frame 40 — mid-arc`). Use it to pin a frame in the transcript that the
-capture policy would otherwise skip, the scriptable twin of `s.snapshot(label?)`.
+- Input types are `mousedown`, `mouseup`, `mousemove`, `keydown` and `keyup`.
+  Each becomes a `Msg` of the same type.
+- `param` sets a declared param and becomes a `param` msg. `trigger` becomes a
+  `trigger` msg. Both are checked against the sketch's `params` before frame
+  0: an unknown name or a wrong value type is an error.
+- `snapshot` (`{ "frame", "type": "snapshot", "label"? }`) is not input. It
+  captures that frame without a msg, and its `label` goes to the frame heading
+  (`### frame 40 — mid-arc`). It is the scriptable twin of `v.snapshot(label?)`.
+
+Each input line in the transcript gets an engagement verdict
+(`mousedown (200,150) → grab`); see
+[TEA.md](./TEA.md#engagement-verdicts).
 
 ## Capture policy
 
@@ -133,26 +110,28 @@ a duplicate.
 
 ## Worked example
 
-`src/examples/bounce.ts` + `src/examples/bounce-events.json` — a bouncing ball you can
-grab (mousedown within its radius), drag, and throw (release with the drag
-velocity); `r` resets it. It exercises `setup`/`draw`, all the mouse handlers,
-`keyPressed`, seeded `random()` for the launch velocity, frame-tagged `log()`,
-and `snapshot("released")`:
+`src/examples/bounce-tea.ts` + `src/examples/bounce-tea-events.json` — a
+bouncing ball you can grab (mousedown within its radius), drag, and throw
+(release with the drag velocity); `r` resets it. It uses pointer and key msgs,
+seeded `u.random` in `init`, `u.log`, `u.handled`, and a labelled `snapshot`
+event:
 
 ```sh
-pnpm --dir canvas-loop run cli run src/examples/bounce.ts \
-  --events src/examples/bounce-events.json --out out
+pnpm --dir canvas-loop run cli run src/examples/bounce-tea.ts \
+  --events src/examples/bounce-tea-events.json --out out
 ```
 
-Produces a ~13-image transcript for 120 frames:
+Produces a 13-image transcript for 120 frames:
 
 ```md
-**[frame 6]** log: grabbed ball at 200 150
+**[frame 16]** mousemove (260,120) → drag
 
 ### frame 16
 ![frame 16](frame-0016.png)
 
 **[frame 17]** log: released with velocity 12 -6
+
+**[frame 17]** mouseup (260,120) → release
 
 ### frame 17 — released
 ![frame 17 — released](frame-0017.png)

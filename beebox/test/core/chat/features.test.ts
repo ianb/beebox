@@ -13,6 +13,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import {
   composeChatAppSnapshot,
+  isValidValue,
   mergeSeedFeatures,
   parseChatAppDeltas,
   resolveFeatures,
@@ -32,16 +33,19 @@ void test("resolveFeatures() merges stored values over defaults, dropping unknow
   t.check(resolveFeatures(), {
     narration: "off",
     prose: "on",
+    strip: "none",
   });
 
   t.check(resolveFeatures({ narration: "on" }), {
     narration: "on",
     prose: "on",
+    strip: "none",
   });
 
   t.check(resolveFeatures({ narration: "on", bogus: "yes", prose: "wrong" }), {
     narration: "on",
     prose: "on",
+    strip: "none",
   });
 });
 
@@ -52,6 +56,7 @@ void test("A retired feature still stored by older sessions — hq-dictation, fr
   t.check(resolveFeatures({ narration: "on", "hq-dictation": "on" }), {
     narration: "on",
     prose: "on",
+    strip: "none",
   });
 });
 
@@ -163,19 +168,16 @@ void test("The companion-pane open-card attribute (box-relative path) rides on e
   );
 });
 
-// Companion-pane activity rides as `<card-activity>` child elements (rendered by
-// `renderActivityChildren`), turning `<chat-app>` into a paired tag. Children
-// rather than attributes so a detail can be long or multi-line.
-void test("Companion-pane activity rides as <card-activity> child elements (rendered by...", async (t) => {
+// Child elements (here the `<activity>` hint) turn `<chat-app>` into a paired tag.
+void test("Child elements make <chat-app> a paired tag", async (t) => {
   await t.checkText(
     composeChatAppSnapshot({
       features: {},
       openCard: "_content/notes/Trip.doc.card",
-      activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
+      activityChildren: '<activity entries="3" cards="1"/>',
     }),
     `<chat-app narration="off" prose="on" open-card="_content/notes/Trip.doc.card">
-<card-activity kind="scrolled"/>
-<card-activity kind="explored">boat-water+road -> boats</card-activity>
+<activity entries="3" cards="1"/>
 </chat-app>`,
   );
 });
@@ -223,4 +225,32 @@ void test("Multiple tags in one response yield multiple deltas, in document orde
 // No tags → no deltas, content unchanged.
 void test("No tags → no deltas, content unchanged.", async (t) => {
   t.check(parseChatAppDeltas("Hello world"), { deltas: [], cleaned: "Hello world" });
+});
+
+// ## The `strip` feature
+//
+// `docs/implemented-plans/conversation-strip.md`, Track A. The value is `none`,
+// `dismissed`, or a box path to a `.card`. A command sets it; the agent's
+// `<chat-app>` tag cannot, and the snapshot leaves it out at `none`.
+void test("strip accepts none, dismissed, and box card paths only", async (t) => {
+  t.check(
+    ["none", "dismissed", "/a/b.tour.card", "x.card", "/a/../b.card", "/a/b.md"].map((value) => isValidValue("strip", value)),
+    [true, true, true, false, false, false],
+  );
+});
+
+void test("an agent <chat-app strip> tag yields no delta", async (t) => {
+  t.check(parseChatAppDeltas("<chat-app strip=\"/a.tour.card\"/>"), { deltas: [], cleaned: "" });
+});
+
+void test("the snapshot omits strip at none and shows it for a path and for dismissed", async (t) => {
+  t.check(composeChatAppSnapshot({ features: { strip: "none" } }), "<chat-app narration=\"off\" prose=\"on\"/>");
+  t.check(
+    composeChatAppSnapshot({ features: { strip: "/a.tour.card" } }),
+    "<chat-app narration=\"off\" prose=\"on\" strip=\"/a.tour.card\"/>",
+  );
+  t.check(
+    composeChatAppSnapshot({ features: { strip: "dismissed" } }),
+    "<chat-app narration=\"off\" prose=\"on\" strip=\"dismissed\"/>",
+  );
 });

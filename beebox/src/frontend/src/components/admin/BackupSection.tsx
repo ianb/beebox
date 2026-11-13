@@ -15,6 +15,7 @@
 import { humanBytes } from "@shared/human-bytes";
 import { trpc } from "../../lib/trpc/client";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { StatusMessage } from "../ui/StatusMessage";
 
 const DESCRIPTION =
   "Git and git-annex copies of this box. History and attachments travel separately. This section does not check encrypted backups.";
@@ -34,7 +35,7 @@ export function BackupSection() {
 
   return (
     <AdminSectionCard id="backup" description={DESCRIPTION} busy={query.isLoading}>
-      {query.isLoading ? <p className="text-sm text-warm-700">Checking…</p> : null}
+      {query.isLoading ? <StatusMessage variant="inline" busy>Checking backup status…</StatusMessage> : null}
 
       {query.error != null ? (
         <p className="text-sm text-danger">Could not read backup status: {query.error.message}</p>

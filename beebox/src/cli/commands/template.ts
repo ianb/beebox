@@ -7,6 +7,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { readTemplateUpdate, resolveTemplateUpdate } from "../../core/template-update.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 export const templateCommand = new Command("template")
   .description("Inspect and resolve parked template updates");
@@ -18,7 +19,7 @@ async function unifiedDiff({ before, after, leftLabel, rightLabel }: { before: s
   try {
     await Promise.all([fs.writeFile(left, before), fs.writeFile(right, after)]);
     try {
-      await promisify(execFile)("git", ["diff", "--no-index", "--", left, right]);
+      await promisify(execFile)("git", ["diff", "--no-index", "--", left, right], { env: gitEnvironment() });
       return "(identical)";
     } catch (error) {
       if (error !== null && typeof error === "object" && "code" in error && error.code === 1 && "stdout" in error && typeof error.stdout === "string") {

@@ -7,20 +7,23 @@
  * in-app: `markdocConfig` + `makeHeadingNode` from
  * `src/shared/markdoc-config/tags/core.ts` (the same config the frontend React renderer
  * wires up in `src/frontend/src/components/Markdown.tsx`'s `buildRenderConfig`).
- * Parsing goes through the shared `parseMarkdown` (raw-HTML allow-list,
- * comments, footnotes) without bare-URL autolinking: an autolink would turn
- * prose into outbound links the author never wrote.
+ * Parsing goes through the shared parser (raw-HTML allow-list, comments,
+ * footnotes) with dollar math on and without bare-URL autolinking: an autolink
+ * would turn prose into outbound links the author never wrote. A `$…$` or
+ * `$$…$$` formula publishes as MathML (`math.ts`).
  *
  * Pure and deterministic given the source: no wall-clock reads, no file access.
  */
 
 import Markdoc from "@markdoc/markdoc";
 import { parseYaml } from "../../../lib/read-yaml.js";
-import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
+import type { Config, Node, RenderableTreeNode, RenderableTreeNodes, Schema } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../../shared/markdoc-config/tags/core.js";
-import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
+import { headingText } from "../../../shared/markdoc-config/heading-ids.js";
+import { createMarkdownParser } from "../../../shared/markdoc-config/parse/core.js";
 import { escapeHtml } from "../../../lib/escape-html.js";
+import { texToMathml } from "./math.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from
 // this CommonJS module under Node's ESM loader (the test/CLI backend path);
@@ -29,15 +32,13 @@ import { escapeHtml } from "../../../lib/escape-html.js";
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
 const { transform, renderers, validate, Tag } = Markdoc;
 
+const parser = createMarkdownParser({ linkify: false, math: true });
+
 /** The first level-1 heading's text becomes the document title. */
 function extractTitle(ast: Node): string | null {
   for (const node of ast.walk()) {
     if (node.type !== "heading" || node.attributes["level"] !== 1) continue;
-    const parts: string[] = [];
-    for (const child of node.walk()) {
-      if ((child.type === "text" || child.type === "code") && typeof child.attributes["content"] === "string") parts.push(child.attributes["content"]);
-    }
-    const text = parts.join("").trim();
+    const text = headingText(node).trim();
     if (text !== "") return text;
   }
   return null;
@@ -78,6 +79,7 @@ summary { cursor: pointer; }
 .footnotes { font-size: 0.875em; }
 .footnote-ref a, .footnote-backref { text-decoration: none; }
 .footnote-backref { margin-left: 0.25em; }
+math[display="block"] { overflow-x: auto; }
 @media (prefers-color-scheme: dark) {
   body { color: #e6e6e6; background: #16171a; }
   a { color: #7aa7ff; }
@@ -85,10 +87,39 @@ summary { cursor: pointer; }
 }
 `.trim();
 
-/** The reused Markdoc render config: shared box config plus heading anchors (as in-app). */
-function docRenderConfig(): Config {
+interface Formula {
+  tex: string;
+  display: boolean;
+}
+
+/**
+ * The parser's render-only `math` tag. Markdoc's HTML renderer escapes text, so
+ * the tag renders a numbered `<bbx-math>` placeholder and `placeFormulas`
+ * swaps in the MathML after the body is HTML.
+ */
+function mathTag(formulas: Formula[]): Schema {
+  return {
+    selfClosing: true,
+    attributes: { tex: { type: String, required: true }, display: { type: Boolean } },
+    transform(node) {
+      const n = formulas.push({ tex: String(node.attributes["tex"]), display: node.attributes["display"] === true }) - 1;
+      return new Tag("bbx-math", { n }, []);
+    },
+  };
+}
+
+function placeFormulas(body: string, formulas: readonly Formula[]): string {
+  return body.replace(/<bbx-math n="(\d+)"><\/bbx-math>/g, (placeholder, n: string) => {
+    const formula = formulas[Number(n)];
+    return formula === undefined ? placeholder : texToMathml(formula.tex, formula.display);
+  });
+}
+
+/** The reused Markdoc render config: shared box config plus heading anchors (as in-app) and math. */
+function docRenderConfig(formulas: Formula[]): Config {
   return {
     ...markdocConfig,
+    tags: { ...markdocConfig.tags, math: mathTag(formulas) },
     nodes: {
       ...markdocConfig.nodes,
       // Fresh per render so the duplicate-slug set is scoped to this pass
@@ -100,7 +131,7 @@ function docRenderConfig(): Config {
 
 /** Error- and critical-level Markdoc problems (unknown tags, bad attributes) in a source; 1-based lines. */
 export function markdownValidationErrors(source: string): { line: number | null; message: string }[] {
-  return validate(parseMarkdown(source), docRenderConfig())
+  return validate(parser.parse(source), docRenderConfig([]))
     .filter(({ error }) => error.level === "error" || error.level === "critical")
     .map(({ error, lines }) => ({ line: lines[0] === undefined ? null : lines[0] + 1, message: error.message }));
 }
@@ -128,11 +159,13 @@ export function renderMarkdownPage(
     rewriteHtml?: (body: string) => string;
   },
 ): string {
-  const ast = parseMarkdown(source);
-  const transformed = transform(ast, docRenderConfig());
+  const ast = parser.parse(source);
+  const formulas: Formula[] = [];
+  const transformed = transform(ast, docRenderConfig(formulas));
   const tree = Array.isArray(transformed) ? transformed.map(omitRedacted) : omitRedacted(transformed);
   const body = renderers.html(options.rewriteTree === undefined ? tree : options.rewriteTree(tree));
-  const rewritten = options.rewriteHtml === undefined ? body : options.rewriteHtml(body);
+  // Formulas go in after link rewriting, so it never sees MathML.
+  const rewritten = placeFormulas(options.rewriteHtml === undefined ? body : options.rewriteHtml(body), formulas);
   const title = escapeHtml(frontmatterTitle(ast.attributes["frontmatter"]) ?? extractTitle(ast) ?? options.fallbackTitle);
   return `<!doctype html>
 <html lang="en">

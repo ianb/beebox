@@ -1,0 +1,250 @@
+[
+ {
+  "frame": 2,
+  "type": "mousedown",
+  "x": 700,
+  "y": 640
+ },
+ {
+  "frame": 6,
+  "type": "mousedown",
+  "x": 900,
+  "y": 200
+ },
+ {
+  "frame": 10,
+  "type": "mousedown",
+  "x": 55,
+  "y": 590
+ },
+ {
+  "frame": 12,
+  "type": "mousedown",
+  "x": 90,
+  "y": 320
+ },
+ {
+  "frame": 18,
+  "type": "mousedown",
+  "x": 114,
+  "y": 520
+ },
+ {
+  "frame": 20,
+  "type": "snapshot",
+  "label": "bus pulls away; clock spins"
+ },
+ {
+  "frame": 24,
+  "type": "mousedown",
+  "x": 550,
+  "y": 450
+ },
+ {
+  "frame": 30,
+  "type": "mousedown",
+  "x": 292,
+  "y": 520
+ },
+ {
+  "frame": 36,
+  "type": "mousedown",
+  "x": 434,
+  "y": 550
+ },
+ {
+  "frame": 42,
+  "type": "mousedown",
+  "x": 609,
+  "y": 450
+ },
+ {
+  "frame": 45,
+  "type": "snapshot",
+  "label": "goat waters, pigeons fly, painter wobbles"
+ },
+ {
+  "frame": 48,
+  "type": "mousedown",
+  "x": 762,
+  "y": 520
+ },
+ {
+  "frame": 54,
+  "type": "mousedown",
+  "x": 930,
+  "y": 60
+ },
+ {
+  "frame": 60,
+  "type": "mousedown",
+  "x": 185,
+  "y": 225
+ },
+ {
+  "frame": 62,
+  "type": "snapshot",
+  "label": "baker's loaf, hydrant, mail toss"
+ },
+ {
+  "frame": 66,
+  "type": "mousedown",
+  "x": 303,
+  "y": 662
+ },
+ {
+  "frame": 72,
+  "type": "mousedown",
+  "x": 928,
+  "y": 520
+ },
+ {
+  "frame": 80,
+  "type": "snapshot",
+  "label": "mailbox burps, mole"
+ },
+ {
+  "frame": 100,
+  "type": "snapshot",
+  "label": "grocer juggles, dog chases tail"
+ },
+ {
+  "frame": 112,
+  "type": "snapshot",
+  "label": "cat leaps from the drips"
+ },
+ {
+  "frame": 130,
+  "type": "snapshot",
+  "label": "bucket splosh"
+ },
+ {
+  "frame": 150,
+  "type": "snapshot",
+  "label": "bus comes back round the corner"
+ },
+ {
+  "frame": 150,
+  "type": "mousemove",
+  "x": 120,
+  "y": 650
+ },
+ {
+  "frame": 154,
+  "type": "snapshot",
+  "label": "hover: the bus, mid-drive, under the pointer"
+ },
+ {
+  "frame": 170,
+  "type": "mousemove",
+  "x": 292,
+  "y": 520
+ },
+ {
+  "frame": 176,
+  "type": "snapshot",
+  "label": "hover: mail carrier hops"
+ },
+ {
+  "frame": 186,
+  "type": "mousemove",
+  "x": 900,
+  "y": 200
+ },
+ {
+  "frame": 190,
+  "type": "snapshot",
+  "label": "hover: the clock glints"
+ },
+ {
+  "frame": 192,
+  "type": "mousemove",
+  "x": 20,
+  "y": 740
+ },
+ {
+  "frame": 200,
+  "type": "mousedown",
+  "x": 468,
+  "y": 265
+ },
+ {
+  "frame": 205,
+  "type": "mousedown",
+  "x": 380,
+  "y": 540
+ },
+ {
+  "frame": 210,
+  "type": "mousedown",
+  "x": 488,
+  "y": 560
+ },
+ {
+  "frame": 215,
+  "type": "mousedown",
+  "x": 600,
+  "y": 565
+ },
+ {
+  "frame": 219,
+  "type": "mousedown",
+  "x": 77,
+  "y": 392
+ },
+ {
+  "frame": 220,
+  "type": "snapshot",
+  "label": "duck scolds the bus; owl, dog, bucket"
+ },
+ {
+  "frame": 225,
+  "type": "mousedown",
+  "x": 830,
+  "y": 325
+ },
+ {
+  "frame": 226,
+  "type": "param",
+  "name": "time",
+  "value": "dusk"
+ },
+ {
+  "frame": 230,
+  "type": "snapshot",
+  "label": "dusk; the cat, clicked on its own, leaps"
+ },
+ {
+  "frame": 232,
+  "type": "trigger",
+  "name": "reset"
+ },
+ {
+  "frame": 233,
+  "type": "snapshot",
+  "label": "after reset: everyone settles"
+ },
+ {
+  "frame": 234,
+  "type": "param",
+  "name": "time",
+  "value": "night"
+ },
+ {
+  "frame": 234,
+  "type": "param",
+  "name": "rain",
+  "value": true
+ },
+ {
+  "frame": 234,
+  "type": "mousedown",
+  "x": 468,
+  "y": 265
+ },
+ {
+  "frame": 239,
+  "type": "snapshot",
+  "label": "night, raining; the owl objects"
+ }
+]

@@ -1,0 +1,23 @@
+slug: alien-curve
+title: "Alien, outlines as smooth curves through points"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 6
+tier: tea
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+harness-commit: 30859a84
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 1 (path-form condition: curve). Boxholder review pending. Clean, faithful to the guide; varied ink weight; bristle/pencil shading clipped inside parts gives volume. Reads as tidy textured clip-art over flat fills. Final change (hatched ground shadow) looks mechanical.
+self-report-summary: >
+  Curve through points worked well for a rounded character; reshaping was editing a point list. Wanted clip() to accept curve points (copied curve-to-bezier into the sketch), a soft-edged shading stroke, and a CLI zoom; could not judge texture at 1x.
+features-exercised:
+  - brushes (ink, pencil, bristle)
+  - gesture pressure envelopes and wobble
+  - clip for shading inside shapes
+  - "path form: curve"

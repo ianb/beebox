@@ -21,6 +21,7 @@ import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../../lib/s
 import { isBinaryPath } from "../../lib/binary-files";
 import { ExternalDocument, useExternalTarget } from "./ExternalDocument";
 import { AttachedCommentary, type JumpToQuote } from "../AttachedCommentary";
+import { StatusMessage } from "../ui/StatusMessage";
 
 /** The `sha256:<hex>` value from a version-markers string, or null. */
 function sha256Of(markers: string): string | null {
@@ -51,13 +52,13 @@ function ExtfileLiveFile({
   return (
     <div>
       {stale ? (
-        <ErrorText className="mb-2 rounded-md border border-danger-dark/30 bg-danger-light/40 px-3 py-1.5">
+        <ErrorText material={false} className="mb-2 rounded-md border border-danger-dark/30 bg-danger-light/40 px-3 py-1.5">
           ⚠ Stale — the file changed since the card was last stamped. Run{" "}
           <code className="font-mono">bbx extfile sync</code> to refresh.
         </ErrorText>
       ) : null}
       {isLoading ? (
-        <Text as="div" tone="subtle" className="p-2 italic">Loading file…</Text>
+        <StatusMessage variant="inline" busy className="p-2">Loading file…</StatusMessage>
       ) : error !== null ? (
         <ErrorText className="p-2">
           Couldn’t load the file. It may be missing, outside the allowed roots, or

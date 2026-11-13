@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, mountSketch, sanitizeInitialParams, type EmittedEvent } from "@ianbicking/canvas-loop/browser";
 import type { Msg, Util } from "@ianbicking/canvas-loop";
-import { isTeaModule, toTeaModule } from "../../src/headless/tea-load.js";
+import { toTeaModule } from "../../src/headless/tea-load.js";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
 import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
 
@@ -114,11 +114,11 @@ test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", (
   const canvas = container?.find((el) => el.tagName === "canvas");
   assert.ok(canvas !== null && canvas !== undefined, "canvas present before teardown");
   assert.ok(rafState.pending.size > 0, "the loop has a pending frame before teardown");
-  assert.equal(canvas.addedListeners, 6, "input wiring attached its listeners");
+  assert.equal(canvas.addedListeners, 7, "input wiring attached its listeners");
 
   teardown();
   assert.equal(rafState.pending.size, 0, "teardown cancels the pending animation frame");
-  assert.equal(canvas.removedListeners, 6, "teardown removes every input listener");
+  assert.equal(canvas.removedListeners, 7, "teardown removes every input listener");
   assert.equal(mount.children.length, 0, "teardown removes the container from the mount");
 });
 
@@ -179,7 +179,6 @@ test("onEvent carries the engagement verdict (handled names + model-reference ch
 test("the headless loader ignores a default export (dual-export entries)", () => {
   const { module } = makeModule();
   const dual = { ...module, default: (): null => null };
-  assert.equal(isTeaModule(dual), true, "TEA detection keys on the named update export");
   const loaded = toTeaModule(dual);
   assert.equal(typeof loaded.update, "function", "the named exports load normally");
   assert.equal("default" in loaded, false, "the loaded module carries no default export");
@@ -218,4 +217,104 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
   assert.ok(thrown !== undefined && thrown.name === "UnhandledMsgError", "an UnhandledMsgError was surfaced");
   assert.ok(thrown.message.includes("tick"), "the error names the unhandled msg type");
   teardown();
+});
+
+test("mountSketch keeps a module's sound export, so its runtime collects voices", () => {
+  const mount = new FakeElement("div");
+  const { module } = makeModule();
+  let calls = 0;
+  const teardown = mountSketch(asHTMLElement(mount), {
+    module: {
+      ...module,
+      sound: () => {
+        calls += 1;
+        return [];
+      },
+    },
+  });
+  runFrames(3);
+  assert.ok(calls > 0, "sound() ran after ticks");
+  teardown();
+});
+
+test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, page scrolling is off, a second finger is ignored", () => {
+  const seen: string[] = [];
+  const raw = {
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: (): null => null,
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: null, msg: Msg, _u: Util): null => {
+      if (msg.type !== "tick") seen.push(`${msg.type} ${"x" in msg ? `${msg.x},${msg.y}` : ""}`.trim());
+      return model;
+    },
+    draw: (): void => {},
+  };
+  const canvas = new FakeElement("canvas");
+  canvas.width = 50;
+  canvas.height = 50;
+  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {} });
+  assert.ok(attached !== null, "attached to the fake canvas");
+  assert.equal(canvas.style["touchAction"], "none", "a drag on the canvas does not scroll the page");
+
+  const touch = (pointerId: number, at: { x: number; y: number; isPrimary?: boolean }): object => ({ pointerId, isPrimary: at.isPrimary ?? true, pointerType: "touch", clientX: at.x, clientY: at.y });
+  canvas.fire("pointerdown", touch(7, { x: 10, y: 10 }));
+  assert.deepEqual([...canvas.captured], [7], "the finger is captured, so sliding off the canvas still reports");
+  canvas.fire("pointerdown", touch(8, { x: 40, y: 40, isPrimary: false }));
+  canvas.fire("pointermove", touch(8, { x: 41, y: 41, isPrimary: false }));
+  canvas.fire("pointermove", touch(7, { x: 20, y: 15 }));
+  // The browser takes the touch (e.g. a system gesture): the press still ends.
+  canvas.fire("pointercancel", touch(7, { x: 20, y: 15 }));
+  canvas.fire("lostpointercapture", touch(7, { x: 20, y: 15 }));
+  runFrames(2);
+  assert.deepEqual(seen, ["mousedown 10,10", "mousemove 20,15", "mouseup 20,15"]);
+  assert.deepEqual([...canvas.captured], [], "capture released");
+  attached.teardown();
+});
+
+test("a handled event carries the sketch's activity(model) after the fold; a throwing activity warns once and the sketch runs on", () => {
+  interface Model {
+    hits: number;
+  }
+  const make = (activity: (model: Model) => Record<string, unknown>) => ({
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: (): Model => ({ hits: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: Model, msg: Msg, u: Util): Model => {
+      if (msg.type !== "mousedown") return model;
+      u.handled("pick");
+      return { hits: model.hits + 1 };
+    },
+    draw: (): void => {},
+    activity,
+  });
+  const run = (raw: object): EmittedEvent[] => {
+    const canvas = new FakeElement("canvas");
+    canvas.width = 50;
+    canvas.height = 50;
+    const emitted: EmittedEvent[] = [];
+    const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, onEvent: (entry) => emitted.push(entry) });
+    assert.ok(attached !== null);
+    for (const x of [10, 20]) {
+      attached.runtime.pointer({ type: "mousedown", x, y: 10 });
+      runFrames(2);
+    }
+    attached.runtime.pointer({ type: "mousemove", x: 12, y: 12 });
+    runFrames(2);
+    return emitted;
+  };
+  const emitted = run(make((model) => ({ hits: model.hits })));
+  assert.deepEqual(emitted.filter((e) => e.type === "mousedown").map((e) => e.activity), [{ hits: 1 }, { hits: 2 }], "the model after each fold");
+  assert.equal(emitted.find((e) => e.type === "mousemove")?.activity, undefined, "an unhandled input carries none");
+
+  let failing: EmittedEvent[] = [];
+  const warnings = captureWarnings(() => {
+    failing = run(make(() => {
+      throw new Error("bad summary");
+    }));
+  });
+  assert.equal(failing.filter((e) => e.type === "mousedown").length, 2, "both clicks still stream");
+  assert.ok(failing.every((e) => e.activity === undefined));
+  assert.equal(warnings.filter((w) => w.includes("activity(model) threw")).length, 1, "one warning");
 });

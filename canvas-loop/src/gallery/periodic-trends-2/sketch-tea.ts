@@ -1,0 +1,439 @@
+// Periodic trends explorer, for a learner of about 14-16.
+//
+// One property at a time (atomic radius, electronegativity, first ionization
+// energy), shown two ways: a main-group periodic table with each cell shaded
+// by the value, and a line chart of the value across the selected element's
+// period or down its group. Hover an element (in either view) to read it;
+// click to select it, which also picks the period or group the chart shows.
+// Arrow keys move the selection. Data and sources: ./elements-tea.ts.
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, TextOptions, Util, View } from "@ianbicking/canvas-loop";
+import type { ElementData, PropInfo, PropKey } from "./elements-tea.js";
+import { ELEMENTS, GROUPS, element, NOTES, PERIODS, PROPS, formatValue, valueOf } from "./elements-tea.js";
+
+export const params = {
+  property: {
+    type: "select",
+    options: ["Atomic radius", "Electronegativity", "Ionization energy"],
+    default: "Atomic radius",
+    label: "Property",
+  },
+  chart: {
+    type: "select",
+    options: ["Across the period", "Down the group"],
+    default: "Across the period",
+    label: "Line chart",
+  },
+  arrows: { type: "boolean", default: false, label: "Show trend arrows" },
+} as const satisfies ParamsDecl;
+
+export const canvas = { width: 980, height: 620 };
+
+type Params = ParamValues<typeof params>;
+
+export interface Model {
+  /** Index into ELEMENTS under the pointer, or null. */
+  hover: number | null;
+  /** Index into ELEMENTS of the selected element. */
+  selected: number;
+}
+
+// ── Layout ───────────────────────────────────────────────────────────
+const TABLE_X = 64;
+const TABLE_Y = 116;
+const CELL = 56;
+const PITCH = 60;
+const STUB = 40; // the gap where the d-block would sit
+const PLOT = { x: 712, y: 146, w: 236, h: 236 };
+const POINT_HIT = 12;
+
+function propKey(p: Params): PropKey {
+  switch (p.property) {
+    case "Atomic radius":
+      return "radius";
+    case "Electronegativity":
+      return "en";
+    case "Ionization energy":
+      return "ie";
+  }
+}
+
+function colX(groupIndex: number): number {
+  return TABLE_X + groupIndex * PITCH + (groupIndex >= 2 ? STUB : 0);
+}
+
+function rowY(periodIndex: number): number {
+  return TABLE_Y + periodIndex * PITCH;
+}
+
+function cellOf(e: ElementData): { x: number; y: number } {
+  return { x: colX(GROUPS.indexOf(e.group)), y: rowY(e.period - 1) };
+}
+
+function elementAt(x: number, y: number): number | null {
+  const i = ELEMENTS.findIndex((e) => {
+    const c = cellOf(e);
+    return x >= c.x && x < c.x + CELL && y >= c.y && y < c.y + CELL;
+  });
+  return i === -1 ? null : i;
+}
+
+/** The elements the chart shows, in order, for the selected element and chart choice. */
+function series(selected: ElementData, byPeriod: boolean): readonly ElementData[] {
+  if (byPeriod) return GROUPS.flatMap((g) => ELEMENTS.filter((e) => e.period === selected.period && e.group === g));
+  return PERIODS.flatMap((n) => ELEMENTS.filter((e) => e.group === selected.group && e.period === n));
+}
+
+/** Chart slots: a period has 8 group slots (period 1 leaves gaps); a group has 6 period slots. */
+function slotX(e: ElementData, byPeriod: boolean): number {
+  const n = byPeriod ? GROUPS.length : PERIODS.length;
+  const i = byPeriod ? GROUPS.indexOf(e.group) : e.period - 1;
+  return PLOT.x + ((i + 0.5) * PLOT.w) / n;
+}
+
+function valueY(value: number, info: PropInfo): number {
+  return PLOT.y + PLOT.h - ((value - info.min) / (info.max - info.min)) * PLOT.h;
+}
+
+function chartPointAt(a: { x: number; y: number; selected: ElementData; p: Params }): number | null {
+  const info = PROPS[propKey(a.p)];
+  const byPeriod = a.p.chart === "Across the period";
+  const hit = series(a.selected, byPeriod).find((e) => {
+    const v = valueOf(e, info.key);
+    if (v === null) return false;
+    return Math.hypot(a.x - slotX(e, byPeriod), a.y - valueY(v, info)) <= POINT_HIT;
+  });
+  return hit === undefined ? null : ELEMENTS.indexOf(hit);
+}
+
+// ── Update ───────────────────────────────────────────────────────────
+export function init(): Model {
+  return { hover: null, selected: ELEMENTS.findIndex((e) => e.symbol === "Na") };
+}
+
+function pick(model: DeepReadonly<Model>, x: number, y: number, p: Params): number | null {
+  return elementAt(x, y) ?? chartPointAt({ x, y, selected: element(model.selected), p });
+}
+
+function move(model: DeepReadonly<Model>, key: string): Model {
+  const cur = element(model.selected);
+  let g = GROUPS.indexOf(cur.group);
+  let n = cur.period;
+  if (key === "ArrowLeft") g -= 1;
+  else if (key === "ArrowRight") g += 1;
+  else if (key === "ArrowUp") n -= 1;
+  else if (key === "ArrowDown") n += 1;
+  else return model;
+  const next = ELEMENTS.findIndex((e) => e.group === GROUPS[g] && e.period === n);
+  return next === -1 ? model : { ...model, selected: next };
+}
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch (msg.type) {
+    case "mousemove": {
+      const hover = pick(model, msg.x, msg.y, u.params);
+      if (hover !== null) u.handled(`hover ${element(hover).symbol}`);
+      return hover === model.hover ? model : { ...model, hover };
+    }
+    case "mousedown": {
+      const hit = pick(model, msg.x, msg.y, u.params);
+      if (hit === null) return model;
+      u.handled(`select ${element(hit).symbol}`);
+      return { ...model, selected: hit };
+    }
+    case "keydown": {
+      const next = move(model, msg.key);
+      if (next !== model) u.handled(`select ${element(next.selected).symbol}`);
+      return next;
+    }
+    case "tick":
+    case "mouseup":
+    case "keyup":
+    case "param":
+    case "trigger":
+      return model;
+  }
+}
+
+// ── Colour ───────────────────────────────────────────────────────────
+// A light-to-dark sequential ramp (yellow-green-blue): darker means larger.
+const RAMP: readonly (readonly [number, number, number])[] = [
+  [255, 255, 217],
+  [199, 233, 180],
+  [65, 182, 196],
+  [34, 94, 168],
+  [8, 29, 88],
+];
+
+function rampAt(t: number): string {
+  const s = Math.min(1, Math.max(0, t)) * (RAMP.length - 1);
+  const i = Math.min(RAMP.length - 2, Math.floor(s));
+  const f = s - i;
+  const a = RAMP[i] ?? [0, 0, 0];
+  const b = RAMP[i + 1] ?? a;
+  const mix = (k: 0 | 1 | 2): number => Math.round(a[k] + (b[k] - a[k]) * f);
+  return `rgb(${mix(0)}, ${mix(1)}, ${mix(2)})`;
+}
+
+function norm(value: number, info: PropInfo): number {
+  return (value - info.min) / (info.max - info.min);
+}
+
+const INK = "#1e293b";
+const MUTED = "#64748b";
+const HOVER = "#ea580c";
+const PAGE = "#ffffff";
+const NO_VALUE = "#e2e8f0";
+
+const H1: TextOptions = { size: 22, style: "bold", fill: INK };
+const BODY: TextOptions = { size: 13, fill: INK };
+const SMALL: TextOptions = { size: 11, fill: MUTED };
+const AXIS: TextOptions = { size: 11, fill: MUTED, align: "right", valign: "middle" };
+const AXIS_LINE: Style = { stroke: "#cbd5e1", weight: 1 };
+const GRID: Style = { stroke: "#eef2f7", weight: 1 };
+
+// ── Draw: header ─────────────────────────────────────────────────────
+function drawHeader(v: View): void {
+  v.text("Periodic trends", { x: 24, y: 16 }, H1);
+  v.text("Property", { x: 24, y: 64 }, { ...BODY, valign: "middle", style: "bold" });
+  v.control("property", { x: 92, y: 52, w: 180, h: 26, size: 13 });
+  v.text("Line chart", { x: 296, y: 64 }, { ...BODY, valign: "middle", style: "bold" });
+  v.control("chart", { x: 372, y: 52, w: 170, h: 26, size: 13 });
+  v.control("arrows", { x: 566, y: 55, w: 20, h: 20 });
+  v.text("Show trend arrows", { x: 592, y: 64 }, { ...BODY, valign: "middle" });
+}
+
+// ── Draw: table ──────────────────────────────────────────────────────
+function drawCell(v: View, a: { e: ElementData; info: PropInfo }): void {
+  const hasNote = NOTES[a.info.key][a.e.symbol] !== undefined;
+  const { x, y } = cellOf(a.e);
+  const value = valueOf(a.e, a.info.key);
+  const t = value === null ? 0 : norm(value, a.info);
+  const dark = value !== null && t > 0.55;
+  const fg = dark ? "#ffffff" : INK;
+  v.roundRect(x, y, CELL, CELL, 4, { fill: value === null ? NO_VALUE : rampAt(t) });
+  v.text(a.e.symbol, { x: x + 6, y: y + 5 }, { size: 18, style: "bold", fill: fg });
+  v.text(String(a.e.z), { x: x + CELL - 5, y: y + 6 }, { size: 9, fill: dark ? "#dbeafe" : "#475569", align: "right" });
+  v.text(formatValue(value, a.info), { x: x + CELL / 2, y: y + CELL - 6 }, { size: 11, fill: fg, align: "center", valign: "bottom" });
+  if (hasNote) v.circle(x + CELL - 8, y + CELL - 9, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
+}
+
+function drawDBlock(v: View): void {
+  const x = colX(1) + CELL + 6;
+  const y = rowY(3);
+  const h = 3 * PITCH - 4;
+  v.roundRect(x, y, STUB - 8, h, 4, { fill: "#f1f5f9", stroke: "#e2e8f0" });
+  v.at({ translate: [x + (STUB - 8) / 2, y + h / 2], rotate: -Math.PI / 2 }, () => {
+    v.text("transition metals (not shown)", { x: 0, y: 0 }, { size: 10, fill: "#94a3b8", align: "center", valign: "middle" });
+  });
+}
+
+function drawTableLabels(v: View): void {
+  for (const [i, g] of GROUPS.entries()) {
+    v.text(String(g), { x: colX(i) + CELL / 2, y: TABLE_Y - 8 }, { ...SMALL, align: "center", valign: "bottom" });
+  }
+  v.text("group", { x: TABLE_X - 8, y: TABLE_Y - 8 }, { ...SMALL, align: "right", valign: "bottom" });
+  for (const [i, n] of PERIODS.entries()) {
+    v.text(String(n), { x: TABLE_X - 10, y: rowY(i) + CELL / 2 }, { ...SMALL, align: "right", valign: "middle" });
+  }
+  v.at({ translate: [TABLE_X - 30, TABLE_Y + 3 * PITCH - 2], rotate: -Math.PI / 2 }, () => {
+    v.text("period", { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" });
+  });
+}
+
+/** Outline the row or column the chart is showing. */
+function drawSeriesBand(v: View, a: { selected: ElementData; byPeriod: boolean }): void {
+  const pad = 3;
+  if (a.byPeriod) {
+    const y = rowY(a.selected.period - 1) - pad;
+    v.roundRect(TABLE_X - pad, y, colX(7) + CELL - TABLE_X + 2 * pad, CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 });
+  } else {
+    const x = colX(GROUPS.indexOf(a.selected.group)) - pad;
+    v.roundRect(x, TABLE_Y - pad, CELL + 2 * pad, 5 * PITCH + CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 });
+  }
+}
+
+function drawMarks(v: View, a: { model: DeepReadonly<Model> }): void {
+  const sel = cellOf(element(a.model.selected));
+  v.roundRect(sel.x - 1, sel.y - 1, CELL + 2, CELL + 2, 5, { stroke: INK, weight: 3 });
+  if (a.model.hover !== null && a.model.hover !== a.model.selected) {
+    const h = cellOf(element(a.model.hover));
+    v.roundRect(h.x - 1, h.y - 1, CELL + 2, CELL + 2, 5, { stroke: HOVER, weight: 3 });
+  }
+}
+
+function drawLegend(v: View, info: PropInfo): void {
+  const x = TABLE_X;
+  const y = rowY(5) + CELL + 52;
+  const w = colX(7) + CELL - TABLE_X;
+  const stops = RAMP.map((_, i): [number, string] => [i / (RAMP.length - 1), rampAt(i / (RAMP.length - 1))]);
+  v.rect(x, y, w, 12, { fill: v.linearGradient(x, 0, x + w, 0, stops) });
+  for (let t = info.min; t <= info.max + 1e-9; t += info.tick) {
+    const tx = x + norm(t, info) * w;
+    v.line(tx, y + 12, tx, y + 16, AXIS_LINE);
+    v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: tx, y: y + 18 }, { ...SMALL, align: "center" });
+  }
+  const unit = info.unit === "" ? "" : ` (${info.unit})`;
+  v.text(`${info.label}${unit}: darker = larger`, { x, y: y - 6 }, { ...SMALL, valign: "bottom" });
+  v.circle(x + w - 190, y - 13, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
+  v.text("note: hover to read", { x: x + w - 182, y: y - 13 }, { ...SMALL, valign: "middle" });
+  v.rect(x + w - 70, y - 18, 10, 10, { fill: NO_VALUE });
+  v.text("no value", { x: x + w - 56, y: y - 13 }, { ...SMALL, valign: "middle" });
+}
+
+function arrowHead(v: View, a: { x: number; y: number; dx: number; dy: number }): void {
+  const s = 7;
+  v.triangle(
+    a.x,
+    a.y,
+    a.x - a.dx * s - a.dy * s * 0.6,
+    a.y - a.dy * s + a.dx * s * 0.6,
+    a.x - a.dx * s + a.dy * s * 0.6,
+    a.y - a.dy * s - a.dx * s * 0.6,
+    { fill: HOVER },
+  );
+}
+
+function drawTrendArrows(v: View, info: PropInfo): void {
+  const style: Style = { stroke: HOVER, weight: 2.5 };
+  const label: TextOptions = { size: 12, style: "bold", fill: HOVER, align: "center" };
+  // Across: below the table.
+  const y = rowY(5) + CELL + 18;
+  const x1 = TABLE_X + 10;
+  const x2 = colX(7) + CELL - 10;
+  const [from, to] = info.across > 0 ? [x1, x2] : [x2, x1];
+  v.line(from, y, to, y, style);
+  arrowHead(v, { x: to, y, dx: Math.sign(to - from), dy: 0 });
+  v.rect((x1 + x2) / 2 - 60, y - 9, 120, 18, { fill: PAGE });
+  v.text("increases", { x: (x1 + x2) / 2, y }, { ...label, valign: "middle" });
+  // Down: right of the table.
+  const x = colX(7) + CELL + 22;
+  const y1 = TABLE_Y + 6;
+  const y2 = rowY(5) + CELL - 6;
+  const [top, bottom] = info.down > 0 ? [y1, y2] : [y2, y1];
+  v.line(x, top, x, bottom, style);
+  arrowHead(v, { x, y: bottom, dx: 0, dy: Math.sign(bottom - top) });
+  v.at({ translate: [x, (y1 + y2) / 2], rotate: -Math.PI / 2 }, () => {
+    v.rect(-40, -8, 80, 16, { fill: PAGE });
+    v.text("increases", { x: 0, y: 0 }, { ...label, valign: "middle" });
+  });
+}
+
+// ── Draw: chart ──────────────────────────────────────────────────────
+function drawAxes(v: View, info: PropInfo): void {
+  for (let t = info.min; t <= info.max + 1e-9; t += info.tick) {
+    const y = valueY(t, info);
+    v.line(PLOT.x, y, PLOT.x + PLOT.w, y, GRID);
+    v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: PLOT.x - 6, y }, AXIS);
+  }
+  v.line(PLOT.x, PLOT.y, PLOT.x, PLOT.y + PLOT.h, AXIS_LINE);
+  v.line(PLOT.x, PLOT.y + PLOT.h, PLOT.x + PLOT.w, PLOT.y + PLOT.h, AXIS_LINE);
+  v.at({ translate: [PLOT.x - 46, PLOT.y + PLOT.h / 2], rotate: -Math.PI / 2 }, () => {
+    const unit = info.unit === "" ? "Pauling scale" : info.unit;
+    v.text(`${info.label} (${unit})`, { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" });
+  });
+}
+
+/** Draw a polyline through consecutive slots that have values; a missing value breaks it. */
+function drawLine(v: View, a: { items: readonly ElementData[]; info: PropInfo; byPeriod: boolean; style: Style }): void {
+  let prev: readonly [number, number, number] | null = null; // slot index, x, y
+  for (const e of a.items) {
+    const value = valueOf(e, a.info.key);
+    const slot = a.byPeriod ? GROUPS.indexOf(e.group) : e.period - 1;
+    if (value === null) {
+      prev = null;
+      continue;
+    }
+    const pt = [slot, slotX(e, a.byPeriod), valueY(value, a.info)] as const;
+    if (prev !== null && prev[0] === slot - 1) v.line(prev[1], prev[2], pt[1], pt[2], a.style);
+    prev = pt;
+  }
+}
+
+function drawChart(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): void {
+  const sel = element(a.model.selected);
+  const items = series(sel, a.byPeriod);
+  const title = a.byPeriod ? `across period ${sel.period}` : `down group ${sel.group}`;
+  v.text(`${a.info.label} ${title}`, { x: PLOT.x - 56, y: PLOT.y - 46 }, { size: 15, style: "bold", fill: INK });
+  const othersName = a.byPeriod ? "other periods" : "other groups";
+  v.line(PLOT.x - 56, PLOT.y - 22, PLOT.x - 40, PLOT.y - 22, { stroke: "#cbd5e1", weight: 2 });
+  v.text(othersName, { x: PLOT.x - 36, y: PLOT.y - 22 }, { ...SMALL, valign: "middle" });
+  drawAxes(v, a.info);
+  // Other periods or groups, faint, for comparison.
+  const others = a.byPeriod
+    ? PERIODS.filter((n) => n !== sel.period).map((n) => ELEMENTS.find((e) => e.period === n) ?? sel)
+    : GROUPS.filter((g) => g !== sel.group).map((g) => ELEMENTS.find((e) => e.group === g) ?? sel);
+  for (const o of others) drawLine(v, { items: series(o, a.byPeriod), info: a.info, byPeriod: a.byPeriod, style: { stroke: "#e2e8f0", weight: 1.5 } });
+  drawLine(v, { items, info: a.info, byPeriod: a.byPeriod, style: { stroke: INK, weight: 2 } });
+  for (const e of items) {
+    const value = valueOf(e, a.info.key);
+    const x = slotX(e, a.byPeriod);
+    v.text(e.symbol, { x, y: PLOT.y + PLOT.h + 8 }, { size: 12, style: "bold", fill: INK, align: "center" });
+    const sub = a.byPeriod ? `g${e.group}` : `p${e.period}`;
+    v.text(sub, { x, y: PLOT.y + PLOT.h + 24 }, { ...SMALL, size: 10, align: "center" });
+    if (value === null) {
+      v.text("—", { x, y: PLOT.y + PLOT.h - 10 }, { ...SMALL, align: "center", valign: "bottom" });
+      continue;
+    }
+    const y = valueY(value, a.info);
+    const i = ELEMENTS.indexOf(e);
+    if (i === a.model.selected) v.circle(x, y, 10, { stroke: INK, weight: 2.5 });
+    if (i === a.model.hover && i !== a.model.selected) v.circle(x, y, 10, { stroke: HOVER, weight: 2.5 });
+    v.circle(x, y, 5.5, { fill: rampAt(norm(value, a.info)), stroke: INK, weight: 1.5 });
+  }
+  const axisName = a.byPeriod ? "group" : "period";
+  v.text(axisName, { x: PLOT.x + PLOT.w / 2, y: PLOT.y + PLOT.h + 40 }, { ...SMALL, align: "center" });
+}
+
+// ── Draw: readout ────────────────────────────────────────────────────
+/** "Before it in period 3: Si 111. After it: S 105." for the hovered element's own period or group. */
+function neighbours(e: ElementData, a: { info: PropInfo; byPeriod: boolean }): string {
+  const items = series(e, a.byPeriod);
+  const k = items.indexOf(e);
+  const where = a.byPeriod ? `period ${e.period}` : `group ${e.group}`;
+  const say = (n: ElementData): string => `${n.symbol} ${formatValue(valueOf(n, a.info.key), a.info)}`;
+  const [before, after] = a.byPeriod ? ["before it", "after it"] : ["above it", "below it"];
+  const prev = items[k - 1];
+  const next = items[k + 1];
+  const parts = [...(prev === undefined ? [] : [`${before}: ${say(prev)}`]), ...(next === undefined ? [] : [`${after}: ${say(next)}`])];
+  return `In ${where}, ${parts.join("; ")}.`;
+}
+
+function drawReadout(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): void {
+  const i = a.model.hover ?? a.model.selected;
+  const e = element(i);
+  const value = valueOf(e, a.info.key);
+  const x = 656;
+  const y = 448;
+  const w = 300;
+  v.roundRect(x, y, w, 140, 8, { fill: "#f8fafc", stroke: i === a.model.selected ? "#cbd5e1" : HOVER, weight: i === a.model.selected ? 1 : 2 });
+  v.text(`${e.name} (${e.symbol})`, { x: x + 14, y: y + 12 }, { size: 16, style: "bold", fill: INK });
+  v.text(`Z = ${e.z} · group ${e.group} · period ${e.period}`, { x: x + w - 14, y: y + 15 }, { ...SMALL, align: "right" });
+  const unit = a.info.unit === "" ? "" : ` ${a.info.unit}`;
+  const shown = value === null ? "no value" : `${formatValue(value, a.info)}${unit}`;
+  v.text(`${a.info.label}: ${shown}`, { x: x + 14, y: y + 38 }, { size: 14, fill: INK });
+  const note = NOTES[a.info.key][e.symbol];
+  if (note === undefined) v.text(neighbours(e, a), { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: MUTED, fit: true });
+  else v.text(note, { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: "#9a3412", fit: true });
+  const hint = i === a.model.selected ? "Selected. Hover another element, or use the arrow keys." : `Click to chart its ${a.byPeriod ? "period" : "group"}.`;
+  v.text(hint, { x: x + 14, y: y + 140 - 10 }, { ...SMALL, valign: "bottom" });
+}
+
+const SOURCE =
+  "Data: covalent radii, Cordero et al. (2008); Pauling electronegativity, CRC Handbook; first ionization energy, NIST / CRC Handbook.";
+
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+  const info = PROPS[propKey(p)];
+  const byPeriod = p.chart === "Across the period";
+  v.background(PAGE);
+  drawHeader(v);
+  drawTableLabels(v);
+  drawDBlock(v);
+  drawSeriesBand(v, { selected: element(model.selected), byPeriod });
+  for (const e of ELEMENTS) drawCell(v, { e, info });
+  drawMarks(v, { model });
+  drawLegend(v, info);
+  if (p.arrows) drawTrendArrows(v, info);
+  drawChart(v, { model, info, byPeriod });
+  drawReadout(v, { model, info, byPeriod });
+  v.text(SOURCE, { x: 24, y: canvas.height - 14 }, { ...SMALL, size: 10, valign: "bottom" });
+}

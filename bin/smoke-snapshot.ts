@@ -155,7 +155,9 @@ export function readPlaceMenu(snapshot: string): PlaceMenuReading {
   const landmarks: LandmarkRow[] = [];
   if (start !== -1) {
     for (const line of lines.slice(start + 1)) {
-      const rawName = /\bmenuitem\s+"([^"]*)"/.exec(line)?.[1];
+      // Rows are `menuitem` in a role="menu" popup and `button` in a
+      // navigation-kind popup (link lists drop menu roles).
+      const rawName = /\b(?:menuitem|button)\s+"([^"]*)"/.exec(line)?.[1];
       if (rawName === undefined) continue;
       landmarks.push({
         label: stripRowDecorations(rawName),

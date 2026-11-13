@@ -8,6 +8,7 @@
   --tempest-art: url("./tempest-surge.webp");
 }
 .bbx-box-presentation[data-chrome-theme="tempest"] {
+  color-scheme: dark;
   background: var(--tempest-art) center bottom / cover, #041039;
   color: var(--tempest-ink);
   --bbx-selection: #edb49f;
@@ -74,7 +75,8 @@
   --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: #0b1b2b;
   --bbx-ink: #e0eef4;
-  --bbx-danger: #ff8093;
+  /* 4.5:1 on the lightest of the surge behind the text. */
+  --bbx-danger: #ff9cab;
   --bbx-ink-soft: #a4bac8;
   --bbx-pen: #bacdff;
   --bbx-edge: #456477;

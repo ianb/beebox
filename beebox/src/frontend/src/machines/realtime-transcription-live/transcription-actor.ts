@@ -35,7 +35,7 @@
  * ## Mic resilience
  *
  * The input side can die independently — the OS takes the mic for a call,
- * Siri, an app switch. MicCapture (transcription-mic.ts) detects and
+ * Siri, an app switch. MicCapture (lib/audio/mic-capture/core.ts) detects and
  * re-acquires it; the watchdog adds a no-PCM-frames catch-all. When the mic
  * comes back the session reports CONNECTION_RESTORED if a socket is live, or
  * MIC_LIVE if only the recording is.
@@ -46,7 +46,7 @@ import { delay, jitteredBackoff } from "@shared/backoff.js";
 import { enqueueChunk, enqueueCreate, enqueueDiscard, enqueueFinalize } from "../../lib/audio/voice-staging-queue/queue";
 import { startStagedRecording, type StagedRecording } from "../../lib/audio/voice-stager";
 import { TranscriptionServiceResolver } from "../../lib/audio/transcription-config-cache";
-import { MicCapture } from "./transcription-mic";
+import { MicCapture } from "../../lib/audio/mic-capture/core";
 import { startBrowserSpeech, type BrowserSpeechLink } from "./transcription-browser-speech";
 import {
   type ConnectionHandle,

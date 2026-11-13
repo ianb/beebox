@@ -10,7 +10,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { workspaceRouteTarget } from "../../lib/system-card-navigation";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { href } from "../../lib/routing";
-import { MenuItem } from "../ui/dropdown-menu-item";
+import { MenuItem } from "../ui/menu-item";
 
 const BOX_PAGES = [
   { id: "bbx-box-menu-dashboard", path: SYSTEM_CARD_PATHS.dashboard, label: "Dashboard" },

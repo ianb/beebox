@@ -3,7 +3,7 @@
 // dynamically-loaded) modules. A sketch's own `update`/`draw` are typed against
 // `DeepReadonly<Model>`; the runtime treats the model as opaque `unknown`, so the
 // registry adapts each module across that one variance boundary (see registry.ts).
-import type { CanvasSize, Msg, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+import type { CanvasSize, Msg, ParamsDecl, ParamValues, Util, View, Voice } from "../core/tea.js";
 
 /** A sketch module as the runtime folds it: params/canvas optional, model opaque. */
 export interface PlaygroundModule {
@@ -12,6 +12,9 @@ export interface PlaygroundModule {
   init(u: Util<ParamsDecl>): unknown;
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+  sound?(model: unknown, p: ParamValues<ParamsDecl>): readonly Voice[];
+  /** What the state means now, as data; added to handled events (see core/activity.ts). */
+  activity?(model: unknown): Record<string, unknown>;
 }
 
 /** One selectable sketch in the playground's tab bar. */

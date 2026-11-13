@@ -31,13 +31,15 @@
     "cli": "node --import tsx src/headless/cli.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
     "lint": "eslint .",
-    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "build:playground": "node --import tsx src/browser/build.ts",
     "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
-    "gallery:check": "node --import tsx src/headless/cli.ts gallery check"
+    "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
+    "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {
-    "@napi-rs/canvas": "1.0.2",
+    "@napi-rs/canvas": "1.1.0",
+    "perfect-freehand": "1.2.3",
     "yaml": "^2.7.0"
   },
   "peerDependencies": {

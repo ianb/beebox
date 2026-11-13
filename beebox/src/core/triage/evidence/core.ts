@@ -19,6 +19,7 @@ import { packEvidence, scanRepresentations } from "./packing.js";
 import { isWithin } from "../../../lib/box-containment.js";
 import { sha256Hex } from "../../../lib/content-hash.js";
 import { pathExistsStrict } from "../../../lib/file-exists.js";
+import { gitEnvironment } from "../../../lib/git/env.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
@@ -253,7 +254,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
   // authority order. A duplicate points only to a copy already retained.
   const source = parts[0];
   invariant(source !== undefined, "Preparation must include source");
-  const revision = await execa("git", ["rev-parse", "HEAD"], { cwd: options.boxRoot, reject: false });
+  const revision = await execa("git", ["rev-parse", "HEAD"], { cwd: options.boxRoot, reject: false, env: gitEnvironment(), extendEnv: false });
   const evidence: Evidence = {
     version: 1,
     source: { ref: sourceRef, digest: source.digest, gitRevision: revision.exitCode === 0 ? revision.stdout.trim() : null, attachmentRef: attachmentPath === null ? null : `/${path.relative(options.boxRoot, attachmentPath)}` },

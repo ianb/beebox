@@ -18,7 +18,7 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
   const { data: browse, isLoading, error } = useDirectoryListing(dirPath);
 
-  if (isLoading) return <StatusMessage className="p-4">Loading...</StatusMessage>;
+  if (isLoading) return <StatusMessage className="p-4" busy>Loading...</StatusMessage>;
   if (error) return <div className="p-4"><ErrorText>Error: {error.message}</ErrorText></div>;
   if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
 

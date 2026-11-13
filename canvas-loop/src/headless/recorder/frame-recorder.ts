@@ -2,6 +2,8 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { encodePng, frameFileName, hashPixels } from "./capture.js";
 import type { Pixels } from "./capture.js";
+import { encodeZoomPng, zoomFileName, zoomLabel } from "./zoom.js";
+import type { Zoom } from "./zoom.js";
 import { formatArgs } from "../../core/format.js";
 import { renderTranscript } from "../transcript.js";
 import type { RunMeta, TranscriptEntry } from "../transcript.js";
@@ -21,8 +23,13 @@ export interface RecorderDeps {
   every: number;
   /** Raw pixels of the current frame, for capture. */
   readPixels: () => Pixels;
-  /** Whether the canvas exists yet (setup ran) — gates error-frame capture. */
-  canvasReady: () => boolean;
+  /** Regions to write as enlarged crops beside every captured frame. */
+  zooms?: readonly Zoom[];
+}
+
+interface ZoomImage {
+  readonly file: string;
+  readonly label: string;
 }
 
 function normalizeError(error: unknown): { name: string; message: string; stack: string } {
@@ -34,14 +41,16 @@ function normalizeError(error: unknown): { name: string; message: string; stack:
 
 /**
  * Accumulates the transcript across a frame loop: log lines, param changes,
- * captured/deduped frames, and errors — then writes out/. Both the mutable tier
- * (runtime.ts) and the TEA tier (tea-runtime.ts) drive it, so capture policy,
- * dedup, and the on-disk format are defined once.
+ * captured/deduped frames, and errors — then writes out/. tea-runtime.ts drives
+ * it; capture policy, dedup, and the on-disk format are defined here.
  */
 export class FrameRecorder implements SketchHost {
   #deps: RecorderDeps;
   #entries: TranscriptEntry[] = [];
   #toEncode = new Map<string, Pixels>();
+  #files = new Map<string, Uint8Array>();
+  #zoomsToEncode = new Map<string, { pixels: Pixels; zoom: Zoom }>();
+  #lastZooms: readonly ZoomImage[] = [];
   #currentFrame = 0;
   #framesAttempted = 0;
   #frameHadLog = false;
@@ -106,7 +115,7 @@ export class FrameRecorder implements SketchHost {
 
   recordError(error: unknown): void {
     const { name, message, stack } = normalizeError(error);
-    if (this.#deps.canvasReady() && !this.#frameCaptured) {
+    if (!this.#frameCaptured) {
       this.#capture(this.#currentFrame);
     }
     this.#entries.push({ kind: "error", frame: this.#currentFrame, name, message, stack });
@@ -131,12 +140,18 @@ export class FrameRecorder implements SketchHost {
     const labels = this.#frameLabels.slice();
     this.#frameCaptured = true;
     if (hash === this.#lastHash && this.#lastFile !== undefined) {
-      this.#entries.push({ kind: "image", frame, labels, file: this.#lastFile, unchanged: true });
+      this.#entries.push({ kind: "image", frame, labels, file: this.#lastFile, unchanged: true, zooms: this.#lastZooms });
       return;
     }
     const file = frameFileName(frame);
     this.#toEncode.set(file, pixels);
-    this.#entries.push({ kind: "image", frame, labels, file, unchanged: false });
+    const zooms = (this.#deps.zooms ?? []).map((zoom, index) => {
+      const zoomFile = zoomFileName(frame, index);
+      this.#zoomsToEncode.set(zoomFile, { pixels, zoom });
+      return { file: zoomFile, label: zoomLabel(zoom) };
+    });
+    this.#lastZooms = zooms;
+    this.#entries.push({ kind: "image", frame, labels, file, unchanged: false, zooms });
     this.#lastHash = hash;
     this.#lastFile = file;
   }
@@ -149,12 +164,21 @@ export class FrameRecorder implements SketchHost {
     return this.#errors;
   }
 
+  /** Write `bytes` as `file` beside the frames (e.g. `sound.wav`). */
+  addFile(file: string, bytes: Uint8Array): void {
+    this.#files.set(file, bytes);
+  }
+
   writeOutput(outDir: string, meta: RunMeta): RunResult {
     rmSync(outDir, { recursive: true, force: true });
     mkdirSync(outDir, { recursive: true });
     for (const [file, pixels] of this.#toEncode) {
       writeFileSync(join(outDir, file), encodePng(pixels));
     }
+    for (const [file, { pixels, zoom }] of this.#zoomsToEncode) {
+      writeFileSync(join(outDir, file), encodeZoomPng(pixels, zoom));
+    }
+    for (const [file, bytes] of this.#files) writeFileSync(join(outDir, file), bytes);
     const transcriptPath = join(outDir, "transcript.md");
     writeFileSync(transcriptPath, renderTranscript(meta, this.#entries));
     return {

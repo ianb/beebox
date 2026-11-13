@@ -1,0 +1,38 @@
+---
+title: "Server-side commits run the box's Git hooks with the server's whole environment"
+workstream: child-env-allowlist
+area: beebox
+labels: [security, env]
+filed-by: agent
+discovered-by: agent
+discovered-in: worktree-agent-ad8cceee119235ca5 — cross-model security review (codex gpt-6-astra) of the view metadata env fix
+resolution: implemented
+---
+
+**Closed (implemented, 2026-11-08):** Resolved by 4450a9311 and 0163b6e58: Git, CLI, and engine children get allowlisted environments (plan child-env-allowlist).
+
+`src/lib/git/core/commit-env.ts` `commitEnvironment` starts from `process.env`
+and removes only Git override keys. `commitPaths`
+(`src/lib/git/core/operations.ts:335`) passes the result to `git commit` with
+hooks enabled, and `src/webapp/routes/api/register/files-write.ts:159` reaches
+it from the server. An agent can write `.git/hooks/pre-commit` in its box, so
+the hook receives the server's environment on the next commit made through the
+app. The server seals its own named secrets out of `process.env` at startup
+(`src/lib/server-secrets.ts`), so what the hook still receives is every other
+server variable: provider API keys (Anthropic, OpenAI, Mistral, Deepgram,
+OpenRouter, Gemini) and any unlisted name.
+
+Other Git calls that use `simpleGit` without an `env` also inherit the whole
+environment. Those that fire hooks need the same audit.
+
+This comes from reading the source; no exploit was run. The fix was left out of
+the view metadata work for two reasons: the hook environment must keep what the
+validation hook needs (`src/core/install-validation-hooks.ts`), and
+[box schemas load inside the server](../../bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)
+gives box code the same values until that is decided.
+
+Direction: build the commit environment from an allowlist, keep the Git variables
+hooks depend on, and add a column to
+`test/credential-visibility/every-consumer.test.ts` that reads the environment
+from a real hook.
+

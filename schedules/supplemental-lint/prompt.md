@@ -18,11 +18,19 @@ including the one that stopped the sweep from faking its own findings).
 
 - **Merge `main` first**, then run the checks your changes touch plus
   `pnpm --dir beebox typecheck` and `pnpm lint:changed`. Land only on green.
-- **Land with `bin/land`.** It can legitimately refuse (the main checkout must
-  be clean and on `main`, the merge a fast-forward). That is not a failure to
-  work around: the commits are safe on this branch, so alert `normal`, say so,
-  and stop. Next week's run merges `main` and re-lands them. Never push, never
-  force.
+- **Land with `bin/land`.** When it refuses, try to resolve the cause before
+  giving up:
+  - Main moved: merge `main` again, re-verify, and retry.
+  - Main is dirty: run `git -C <main checkout> status --short` and find out
+    whose each path is (`git log` on it, the workstream that names it, a
+    schedule's leftover output). Leftover output from a failed scheduled
+    job, such as a half-done issue activation, can be cleaned up when it is
+    an exact derived copy of tracked content; then retry. Someone's
+    in-progress edit is not yours: never commit, stash, or discard it, and
+    do not use `--allow-dirty-main`.
+  - Still refused: the commits are safe on this branch. Alert `normal`, name
+    each dirty path and its likely owner, and stop. Next week's run re-lands
+    them. Never push, never force.
 - **Do not land a red branch, and do not land what you did not verify.** A
   finding you left alone, or a fix whose tests you could not run, is a `normal`
   alert describing the branch — not a landing.

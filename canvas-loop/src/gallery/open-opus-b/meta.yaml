@@ -1,0 +1,22 @@
+slug: open-opus-b
+title: "Old Pell Lights the Lamps: an old heron in a scarf lights the last lamp at the end of a pier"
+created: 2026-11-11
+model: opus-5.5
+driver: opus-5.5
+cycles: 10
+tier: tea
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+harness-commit: fb867ca9
+frames: 1
+seed: 42
+fps: 60
+every: 30
+reconstructed: false
+audit: >
+  Brush round 3 (open brief, no reference). Boxholder review pending. Clear story moment with set text, warm lamps against dusk, painted water and cloud streaks. Heron and deck are fills with marks inside; tube caps came out square (library bug).
+self-report-summary: >
+  Wanted a font on text(), a way to mark a fade as intended, a lit-shape helper, a water reflection helper, and union outlines. Stats and change crops showed when work did not reach the picture at 1x.
+features-exercised:
+  - brushes, gestures, paper texture
+  - tube, offset, multi-shape clip, ellipseGradient
+  - zoomed crops and cli diff between cycles

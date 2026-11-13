@@ -57,7 +57,7 @@ class DirtyActivationRepositoryError extends DeferredIssueError {
   constructor(root: string) { super(`${root}: refusing to activate into a dirty repository`); this.name = "DirtyActivationRepositoryError"; }
 }
 class NonMarkdownActivationChangeError extends DeferredIssueError {
-  constructor(root: string, files: string[]) { super(`${root}: activation changed non-Markdown files: ${files.join(", ")}`); this.name = "NonMarkdownActivationChangeError"; }
+  constructor(root: string, files: string[]) { super(`${root}: activation changed non-Markdown files beyond the moved issues' paths: ${files.join(", ")}`); this.name = "NonMarkdownActivationChangeError"; }
 }
 export function isCalendarDate(value: string): boolean {
   const match = DATE_RE.exec(value);
@@ -182,10 +182,13 @@ async function assertClean(repoRoot: string): Promise<void> {
 }
 
 async function restoreCleanRepository(repoRoot: string): Promise<void> {
-  const untracked = await execa("git", ["ls-files", "--others", "--exclude-standard"], { cwd: repoRoot });
-  const untrackedMarkdown = untracked.stdout.split("\n").filter((file) => file.endsWith(".md"));
+  // Unstage first: an activated copy that was already staged becomes untracked
+  // only after the reset, and listing before it left the copy behind
+  // (2026-11-06, every later hourly run then failed on the leftover).
   await execa("git", ["reset", "-q"], { cwd: repoRoot });
   await execa("git", ["restore", "--worktree", "--", "."], { cwd: repoRoot });
+  const untracked = await execa("git", ["ls-files", "--others", "--exclude-standard"], { cwd: repoRoot });
+  const untrackedMarkdown = untracked.stdout.split("\n").filter((file) => file.endsWith(".md"));
   await Promise.all(untrackedMarkdown.map(async (file) => {
     try {
       await fs.unlink(path.join(repoRoot, file));
@@ -206,7 +209,30 @@ export async function runActivationTransaction<T>(repoRoot: string, operation: (
   }
 }
 
-async function changedMarkdown(repoRoot: string): Promise<string[]> {
+/**
+ * Whether a changed non-Markdown file differs from HEAD only by the moved
+ * issues' repo-relative paths. Link repair rewrites a code comment that names
+ * a deferred issue; any other change outside Markdown is refused.
+ */
+async function onlyRewritesMovedPaths(repoRoot: string, change: { file: string; moves: ActivatedIssue[] }): Promise<boolean> {
+  const { file, moves } = change;
+  const head = await execa("git", ["show", `HEAD:${file}`], { cwd: repoRoot, reject: false, stripFinalNewline: false });
+  if (head.exitCode !== 0) return false;
+  let expected = head.stdout;
+  for (const move of moves) {
+    expected = expected.replaceAll(path.relative(repoRoot, move.source), path.relative(repoRoot, move.destination));
+  }
+  if (expected === head.stdout) return false;
+  try {
+    return await fs.readFile(path.join(repoRoot, file), "utf8") === expected;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/** Every file the activation changed; refuses a non-Markdown change other than a moved-path rewrite. */
+export async function activationChanges(repoRoot: string, moves: ActivatedIssue[]): Promise<string[]> {
   const [tracked, staged, untracked] = await Promise.all([
     execa("git", ["diff", "--name-only", "--diff-filter=ACDMRTUXB"], { cwd: repoRoot }),
     execa("git", ["diff", "--cached", "--name-only", "--diff-filter=ACDMRTUXB"], { cwd: repoRoot }),
@@ -215,13 +241,18 @@ async function changedMarkdown(repoRoot: string): Promise<string[]> {
   const changed = [
     ...tracked.stdout.split("\n"), ...staged.stdout.split("\n"), ...untracked.stdout.split("\n"),
   ].filter(Boolean);
-  const nonMarkdown = changed.filter((file) => !file.endsWith(".md"));
-  if (nonMarkdown.length > 0) throw new NonMarkdownActivationChangeError(repoRoot, nonMarkdown);
+  const nonMarkdown = [...new Set(changed.filter((file) => !file.endsWith(".md")))];
+  const refused = [];
+  for (const file of nonMarkdown) {
+    if (!await onlyRewritesMovedPaths(repoRoot, { file, moves })) refused.push(file);
+  }
+  if (refused.length > 0) throw new NonMarkdownActivationChangeError(repoRoot, refused);
   return [...new Set(changed)].toSorted();
 }
 
-async function commitChanges(repoRoot: string, message: string): Promise<void> {
-  const changed = await changedMarkdown(repoRoot);
+async function commitChanges(options: { repoRoot: string; moves: ActivatedIssue[]; message: string }): Promise<void> {
+  const { repoRoot, message } = options;
+  const changed = await activationChanges(repoRoot, options.moves);
   if (changed.length === 0) return;
   await execa("git", ["add", "-A", "--", ...changed], { cwd: repoRoot });
   // The commit's stdout goes to OUR stderr, never inherited: this runs under
@@ -274,7 +305,7 @@ export async function activateDueRepositories(options: {
     : [];
   if (!options.dryRun && publicDue.length > 0) {
     await runActivationTransaction(options.repoRoot, async () => {
-      await activateDeferredRoot({ issuesRoot: publicIssues, today, dryRun: false });
+      const moves = await activateDeferredRoot({ issuesRoot: publicIssues, today, dryRun: false });
       // doc-check's basename lookup is index-backed. Stage the rename first so
       // the destination is the issue's current location during link repair.
       await execa("git", ["add", "-A", "--", "issues"], { cwd: options.repoRoot });
@@ -286,7 +317,7 @@ export async function activateDueRepositories(options: {
         cwd: options.repoRoot, stderr: "inherit",
       });
       if (repair.stdout !== "") process.stderr.write(`${repair.stdout}\n`);
-      await commitChanges(options.repoRoot, "Activate deferred issues");
+      await commitChanges({ repoRoot: options.repoRoot, moves, message: "Activate deferred issues" });
     });
   }
   const privateDue = includePrivate && await directoryExists(privateIssues)
@@ -296,9 +327,9 @@ export async function activateDueRepositories(options: {
     const { stdout } = await execa("git", ["rev-parse", "--show-toplevel"], { cwd: privateIssues });
     const privateRepo = stdout.trim();
     await runActivationTransaction(privateRepo, async () => {
-      await activateDeferredRoot({ issuesRoot: privateIssues, today, dryRun: false });
+      const moves = await activateDeferredRoot({ issuesRoot: privateIssues, today, dryRun: false });
       await repairPrivateLinks(privateRepo);
-      await commitChanges(privateRepo, "Activate deferred issues");
+      await commitChanges({ repoRoot: privateRepo, moves, message: "Activate deferred issues" });
     });
   }
   return { public: publicDue, private: privateDue };

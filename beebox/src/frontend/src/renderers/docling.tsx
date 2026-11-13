@@ -48,7 +48,7 @@ function DoclingRawView({ data }: RendererProps) {
   const basename = data.path.split("/").pop() ?? data.path;
   const downloadUrl = apiRawFileUrl(getApiBase(), data.path);
 
-  if (isLoading) return <StatusMessage className="p-4">Loading extraction…</StatusMessage>;
+  if (isLoading) return <StatusMessage busy className="p-4">Loading extraction…</StatusMessage>;
   if (error !== null || loaded === undefined) {
     return (
       <Stack gap="sm" className="p-4">

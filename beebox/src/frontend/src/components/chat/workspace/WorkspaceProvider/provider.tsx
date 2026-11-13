@@ -1,7 +1,7 @@
 import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../../lib/system-card-navigation";
 import { browseStateToViewState, normalizeBrowseTarget, parseBrowseState, type BrowseState } from "../../../../lib/browse-card-state";
-import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry, type WorkspaceNavigationDecision } from "../history";
-import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, type ReactNode } from "react";
+import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, workspaceIdentity, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry, type WorkspaceNavigationDecision } from "../history";
+import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../../../api";
 import { href, toSearch } from "../../../../lib/routing";
@@ -89,14 +89,22 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
  * enables the place query on the desktop layout. It uses the same input as the
  * chat's openers query (`useChatBinding`), so one request serves both. At the
  * root of a new chat it also enables the questions query on both layouts, for
- * the arrival question (docs/implemented-plans/questions-beside-the-chat.md, Track A).
+ * the arrival question (docs/implemented-plans/questions-beside-the-chat.md, Track A),
+ * unless a notification opened the chat: the person came for that notification.
  */
 function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined; unstarted: boolean }) {
   const { store, viewport, contextDir } = input;
   const candidate = useSyncExternalStore(store.subscribe, store.hasArrival, store.hasArrival);
+  // `?notification=` marks the chat a notification tap opened (`ChatNotificationBanner`). Dismissing
+  // the banner drops it from the URL, so it is latched until this arrival is taken.
+  const notified = useLocation().search.notification !== undefined;
+  const [latched, setLatched] = useState(false);
+  if (candidate && notified && !latched) setLatched(true);
+  if (!candidate && latched) setLatched(false);
+  const fromNotification = notified || latched;
   const placeEnabled = viewport === "desktop" && candidate && contextDir !== undefined;
   // Only a new chat: an existing one opened in a new tab has no saved arrangement either.
-  const questionsEnabled = candidate && contextDir === "" && input.unstarted;
+  const questionsEnabled = candidate && contextDir === "" && input.unstarted && !fromNotification;
   const query = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: placeEnabled });
   const questions = trpc.status.questions.useQuery(undefined, { enabled: questionsEnabled });
   const done = (q: { isSuccess: boolean; isError: boolean }, enabled: boolean) => !enabled || q.isSuccess || q.isError;
@@ -134,11 +142,11 @@ function routeNavigation(input: { location: ReturnType<typeof useLocation>; spla
 }
 
 export function useWorkspace() { return useContext(Workspace); }
-export function WorkspaceProvider({ target, unstarted, children }: { target: ConversationTarget | undefined; unstarted: boolean; children: ReactNode }) {
-  const value = useWorkspaceController(target, unstarted);
+export function WorkspaceProvider({ target, unresolved, unstarted, children }: { target: ConversationTarget | undefined; unresolved: boolean; unstarted: boolean; children: ReactNode }) {
+  const value = useWorkspaceController({ target, unresolved, unstarted });
   return <Workspace.Provider value={value}>{children}</Workspace.Provider>;
 }
-function useWorkspaceController(conversationTarget: ConversationTarget | undefined, unstarted: boolean) {
+function useWorkspaceController({ target: conversationTarget, unresolved, unstarted }: { target: ConversationTarget | undefined; unresolved: boolean; unstarted: boolean }) {
   const { boxSlug = "", _splat } = useParams({ strict: false });
   const location = useLocation();
   const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
@@ -155,7 +163,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   const contextDir = conversationTarget?.contextDir;
   const arrival = usePlaceArrival({ store, viewport, contextDir, unstarted });
   const dismissOnClose = useDismissOnClose();
-  const identity = conversationTarget?.kind === "session" ? conversationTarget.sessionId : conversationTarget?.clientConversationId ?? "";
+  const identity = workspaceIdentity({ target: conversationTarget, unresolved });
   const scope = storageScopeFor(apiBase);
   const projection = projectWorkspace(state, viewport);
   const routeBound = workspaceRouteBound(location.state.bbxConversation, identity);

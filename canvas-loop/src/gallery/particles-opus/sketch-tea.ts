@@ -14,13 +14,25 @@
 // discriminated-union `mode` field. All state lives in Model; the only way it
 // changes is `update` returning a new Model; the switch on `msg.type` is
 // exhaustive; `draw` only paints. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type {
+  DeepReadonly,
+  Msg,
+  ParamsDecl,
+  ParamValues,
+  Style,
+  Util,
+  View,
+} from "@ianbicking/canvas-loop";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },
   gravity: { type: "number", min: -0.4, max: 1, default: 0.15, step: 0.05 },
   trails: { type: "boolean", default: false },
-  palette: { type: "select", options: ["warm", "cool", "mono"], default: "warm" },
+  palette: {
+    type: "select",
+    options: ["warm", "cool", "mono"],
+    default: "warm",
+  },
   burst: { type: "trigger" },
 } as const satisfies ParamsDecl;
 
@@ -96,7 +108,10 @@ function spawnCount(a: { rate: number; u: Util<typeof params> }): number {
 }
 
 // ── Physics ──────────────────────────────────────────────────────────
-function attractorPull(a: { mode: Mode; x: number; y: number }): { ax: number; ay: number } {
+function attractorPull(a: { mode: Mode; x: number; y: number }): {
+  ax: number;
+  ay: number;
+} {
   if (a.mode.type !== "attract") return { ax: 0, ay: 0 };
   const dx = a.mode.x - a.x;
   const dy = a.mode.y - a.y;
@@ -114,10 +129,16 @@ function step(a: { p: Particle; gravity: number; mode: Mode }): Particle {
 }
 
 function alive(p: Particle): boolean {
-  return p.age < p.life && p.y < CANVAS_H + 30 && p.x > -30 && p.x < CANVAS_W + 30;
+  return (
+    p.age < p.life && p.y < CANVAS_H + 30 && p.x > -30 && p.x < CANVAS_W + 30
+  );
 }
 
-function advance(a: { model: DeepReadonly<Model>; frame: number; u: Util<typeof params> }): Model {
+function advance(a: {
+  model: DeepReadonly<Model>;
+  frame: number;
+  u: Util<typeof params>;
+}): Model {
   const { model, frame, u } = a;
   const ex = emitterX(frame);
   const count = spawnCount({ rate: u.params.rate, u });
@@ -129,10 +150,15 @@ function advance(a: { model: DeepReadonly<Model>; frame: number; u: Util<typeof 
   return { ...model, frame, particles: stepped };
 }
 
-function spawnBurst(a: { model: DeepReadonly<Model>; u: Util<typeof params> }): Model {
+function spawnBurst(a: {
+  model: DeepReadonly<Model>;
+  u: Util<typeof params>;
+}): Model {
   const { model, u } = a;
   const ex = emitterX(model.frame);
-  const born = Array.from({ length: BURST_COUNT }, () => burstParticle({ ex, u }));
+  const born = Array.from({ length: BURST_COUNT }, () =>
+    burstParticle({ ex, u }),
+  );
   u.log(`burst: +${BURST_COUNT} particles`);
   return { ...model, particles: [...model.particles, ...born] };
 }
@@ -141,8 +167,11 @@ export function init(): Model {
   return { particles: [], frame: 0, mode: { type: "idle" } };
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
-export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+export function update(
+  model: DeepReadonly<Model>,
+  msg: Msg,
+  u: Util<typeof params>,
+): Model {
   switch (msg.type) {
     case "tick":
       return advance({ model, frame: msg.frame, u });
@@ -151,7 +180,9 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
       return { ...model, mode: { type: "attract", x: msg.x, y: msg.y } };
     case "mousemove":
       // Treat a move as a drag only while the attractor is held.
-      return model.mode.type === "attract" ? { ...model, mode: { type: "attract", x: msg.x, y: msg.y } } : model;
+      return model.mode.type === "attract"
+        ? { ...model, mode: { type: "attract", x: msg.x, y: msg.y } }
+        : model;
     case "mouseup":
       if (model.mode.type === "attract") u.log("attractor off");
       return { ...model, mode: { type: "idle" } };
@@ -166,7 +197,11 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
 }
 
 // ── Rendering ────────────────────────────────────────────────────────
-function particleColor(a: { tint: number; palette: Params["palette"]; alpha: number }): string {
+function particleColor(a: {
+  tint: number;
+  palette: Params["palette"];
+  alpha: number;
+}): string {
   const { tint, palette, alpha } = a;
   const al = alpha.toFixed(2);
   switch (palette) {
@@ -179,59 +214,65 @@ function particleColor(a: { tint: number; palette: Params["palette"]; alpha: num
   }
 }
 
-function drawParticles(a: { v: View; model: DeepReadonly<Model>; palette: Params["palette"] }): void {
+function drawParticles(a: {
+  v: View;
+  model: DeepReadonly<Model>;
+  palette: Params["palette"];
+}): void {
   const { v, model, palette } = a;
-  v.noStroke();
   for (const p of model.particles) {
     const remaining = 1 - p.age / p.life;
     const alpha = Math.max(0, Math.min(1, remaining));
-    v.fill(particleColor({ tint: p.tint, palette, alpha }));
     const size = 2.5 + remaining * 3.5;
-    v.circle(p.x, p.y, size);
+    v.circle(p.x, p.y, size / 2, {
+      fill: particleColor({ tint: p.tint, palette, alpha }),
+    });
   }
 }
 
 function drawEmitter(v: View, frame: number): void {
   const ex = emitterX(frame);
-  v.noStroke();
-  v.fill("rgba(226, 232, 240, 0.85)");
-  v.circle(ex, EMIT_Y, 10);
-  v.fill("rgba(148, 163, 184, 0.35)");
-  v.circle(ex, EMIT_Y, 20);
+  v.circle(ex, EMIT_Y, 5, { fill: "rgba(226, 232, 240, 0.85)" });
+  v.circle(ex, EMIT_Y, 10, { fill: "rgba(148, 163, 184, 0.35)" });
 }
+
+const RETICLE: Style = { stroke: "#f472b6", weight: 2 };
 
 function drawAttractor(v: View, mode: Mode): void {
   if (mode.type !== "attract") return;
-  v.noFill();
-  v.stroke("#f472b6");
-  v.strokeWeight(2);
-  v.circle(mode.x, mode.y, 34);
-  v.circle(mode.x, mode.y, 14);
-  v.line(mode.x - 22, mode.y, mode.x + 22, mode.y);
-  v.line(mode.x, mode.y - 22, mode.x, mode.y + 22);
+  v.circle(mode.x, mode.y, 17, RETICLE);
+  v.circle(mode.x, mode.y, 7, RETICLE);
+  v.line(mode.x - 22, mode.y, mode.x + 22, mode.y, RETICLE);
+  v.line(mode.x, mode.y - 22, mode.x, mode.y + 22, RETICLE);
 }
 
 function drawHud(a: { v: View; model: DeepReadonly<Model>; p: Params }): void {
   const { v, model, p } = a;
   // Opaque backing so the HUD stays crisp even under translucent trails.
-  v.noStroke();
-  v.fill("#090c18");
-  v.rect(0, 0, 300, 46);
-  v.fill("#e2e8f0");
-  v.textSize(14);
-  v.textAlign("left", "top");
-  v.text(`frame ${model.frame}   particles ${model.particles.length}`, 10, 10);
+  v.rect(0, 0, 300, 46, { fill: "#090c18" });
+  const label = {
+    size: 14,
+    fill: "#e2e8f0",
+    align: "left",
+    valign: "top",
+  } as const;
+  v.text(
+    `frame ${model.frame}   particles ${model.particles.length}`,
+    { x: 10, y: 10 },
+    label,
+  );
   const attractor = model.mode.type === "attract" ? "on" : "off";
-  v.text(`palette ${p.palette}   attractor ${attractor}`, 10, 28);
+  v.text(
+    `palette ${p.palette}   attractor ${attractor}`,
+    { x: 10, y: 28 },
+    label,
+  );
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   if (p.trails) {
     // Translucent overlay preserves prior frames → motion trails.
-    v.noStroke();
-    v.fill("rgba(9, 12, 24, 0.20)");
-    v.rect(0, 0, v.width, v.height);
+    v.rect(0, 0, v.width, v.height, { fill: "rgba(9, 12, 24, 0.20)" });
   } else {
     v.background("#090c18");
   }

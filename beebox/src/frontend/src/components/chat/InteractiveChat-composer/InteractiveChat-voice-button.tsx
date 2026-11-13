@@ -9,7 +9,8 @@ import { unlockAudioContext } from "../../../lib/audio/context";
 import { NarrationMicIcon } from "../InteractiveChat-controls";
 import type { TranscriptionHandle } from "./view";
 
-const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
+/** The round 56px frame of the composer's voice, attach and menu buttons (also used by `view.tsx`). */
+export const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
 
 export function VoiceToggleButton({
   voicePaused, isTranscribing, narrationEnabled, transcription, onStopDictation, setInput, clearDraft, onUnpause, onVoice, includeControlId,
@@ -27,7 +28,7 @@ export function VoiceToggleButton({
 }) {
   const hasControlId = includeControlId !== false;
   return (
-    <button
+    <button type="button"
       id={hasControlId ? "bbx-composer-mic" : undefined}
       // The state as data, so a theme styles the idle mic without keying on
       // a utility class (themes/*.css, `[data-mic="idle"]`).

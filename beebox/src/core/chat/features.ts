@@ -13,6 +13,7 @@
 
 import type { AttentionSnapshot } from "../../shared/chat-composer-binding.js";
 import type { ChatChannel } from "../../shared/chat-channel.js";
+import { isBoxCardPath, STRIP_DISMISSED, STRIP_NONE } from "../../shared/strip-types.js";
 
 export type FeatureValue = string;
 export type FeatureMap = Record<string, FeatureValue>;
@@ -22,6 +23,15 @@ export interface FeatureDescriptor {
   readonly name: string;
   /** Closed set of legal values. */
   readonly allowedValues: readonly FeatureValue[];
+  /** Further legal values that cannot be listed, such as a box path. Absent for a closed set. */
+  readonly accepts?: (value: FeatureValue) => boolean;
+  /**
+   * `false` when the agent cannot set this with a `<chat-app>` tag, because
+   * the value needs a check a dropped tag could not report. A command sets it.
+   */
+  readonly agentDelta?: false;
+  /** `true` to leave the attribute out of the snapshot while the value is the default. */
+  readonly omitDefault?: true;
   /** Default value when no override is in effect. */
   readonly default: FeatureValue;
   /** Hint for the settings UI — toggle for binary on/off, select for enums. */
@@ -45,7 +55,21 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
     uiKind: "toggle",
     label: "Show agent prose",
   },
-] as const;
+  {
+    // The conversation's strip (docs/implemented-plans/conversation-strip.md): no card,
+    // closed by the person, or the box path of the card it shows. Set by
+    // `bbx chat strip`, which checks the card; the person's dismiss sets
+    // `dismissed`.
+    name: "strip",
+    allowedValues: [STRIP_NONE, STRIP_DISMISSED],
+    default: STRIP_NONE,
+    accepts: isBoxCardPath,
+    agentDelta: false,
+    omitDefault: true,
+    uiKind: "select",
+    label: "Conversation strip",
+  },
+];
 
 /**
  * Features that no longer exist but may still sit in stored session state or
@@ -67,7 +91,7 @@ export function isKnownFeature(name: string): boolean {
 export function isValidValue(name: string, value: string): boolean {
   const f = FEATURE_INDEX.get(name);
   if (!f) return false;
-  return f.allowedValues.includes(value);
+  return f.allowedValues.includes(value) || f.accepts?.(value) === true;
 }
 
 /** Map of all features in their default state. */
@@ -128,9 +152,8 @@ export function mergeSeedFeatures(input: {
  * `open-card` (companion-pane state), ride on every message; so does
  * `todos` (Track 5a's ambient count — recomputed fresh each send, only
  * present when nonzero); `last-activity`/`health` only on the first
- * message of a new session (see `session-context.ts`). Companion-pane
- * activity rides as `<card-activity>` child elements, not attributes
- * (see `card-activity.ts`).
+ * message of a new session (see `session-context.ts`). The activity hint
+ * and the run-ended note ride as child elements, not attributes.
  */
 const READ_ONLY_ATTRS = new Set([
   "local-time",
@@ -156,9 +179,8 @@ export const SIMULATED_CLOCK_NOTE = "simulated: local-time is the date; the date
  * Serialize the system → agent snapshot: the optional read-only context
  * attributes plus all current feature states.
  *
- * Companion-pane activity, when present, rides as `<card-activity>` child
- * elements (so `<chat-app>` becomes a paired tag); otherwise it's
- * self-closing.
+ * Child elements (the `<activity>` hint, the run-ended note), when present,
+ * make `<chat-app>` a paired tag; otherwise it's self-closing.
  *
  * Example output:
  *   <chat-app narration="on" prose="off"
@@ -175,7 +197,7 @@ export function composeChatAppSnapshot(input: {
   todos?: string;
   openCard?: string;
   viewContext?: AttentionSnapshot;
-  /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
+  /** Pre-rendered child elements. */
   activityChildren?: string;
 }): string {
   const attrs: string[] = [];
@@ -184,6 +206,7 @@ export function composeChatAppSnapshot(input: {
     for (const f of FEATURE_LIST) {
       const val = resolved[f.name];
       if (val === undefined) continue;
+      if (f.omitDefault === true && val === f.default) continue;
       attrs.push(`${f.name}="${escapeAttr(val)}"`);
     }
   }
@@ -245,6 +268,10 @@ export function parseChatAppDeltas(content: string): {
       if (RETIRED_FEATURES.has(name)) continue;
       if (!isKnownFeature(name)) {
         console.warn(`[chat-features] Ignoring unknown feature in agent delta: ${name}`);
+        continue;
+      }
+      if (FEATURE_INDEX.get(name)?.agentDelta === false) {
+        console.warn(`[chat-features] Ignoring agent delta for ${name}: a command sets it`);
         continue;
       }
       if (!isValidValue(name, value)) {

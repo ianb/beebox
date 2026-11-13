@@ -16,6 +16,8 @@ import type { ChatRoutesContext } from "./context.js";
 import { type TurnCapture, captureTurn, startAckedRun } from "./send-run.js";
 import { type InFlightSends, claimMessageId, recordDurableClaim } from "./send-dedup.js";
 import { buildSendInput, injectUserAttr } from "./helpers.js";
+import { observeAssignedSession } from "../../../core/chat/session/deliver-user-message.js";
+import { bindPendingChat } from "../../../core/activity/cursor.js";
 
 export function createUserMessageSender(
   deps: Pick<ChatRoutesContext, "boxRoot" | "eventBus" | "registry" | "scheduleManager" | "wireSession" | "processedMessageIds"> & {
@@ -23,9 +25,18 @@ export function createUserMessageSender(
   },
 ): UserMessageSender {
   const { boxRoot, eventBus, registry, scheduleManager, wireSession, processedMessageIds, inFlightSends } = deps;
-  return async ({ target, message, messageId, user, channel, images, cardFields }) => {
+  return async ({ target, message, messageId, user, channel, images, cardFields, pendingChat }) => {
     const { session: chatSession, id: knownId } = target;
     wireSession(chatSession);
+    // Every message from this path is a person's, so it gets the activity hint.
+    const activityTurn = { ...(pendingChat !== undefined ? { pendingChat } : {}) };
+    // A new chat has no id yet: bind the page's key to it once it is assigned.
+    if (knownId === null && pendingChat !== undefined) {
+      observeAssignedSession({
+        registry, session: chatSession, logPrefix: "chat",
+        onAssigned: (sessionId) => bindPendingChat(boxRoot, { sessionId, pendingChat }),
+      });
+    }
     // Slash commands (e.g. /compact) are parsed by the claude CLI when they
     // appear at the very start of the user text — any prefix/suffix would
     // break detection, so skip user-attr and pending-schedules injection.
@@ -96,7 +107,7 @@ export function createUserMessageSender(
       if (chatSession.isBusy()) {
         recordUserMessage();
         // The id rides on the queued input so a `stop()` that drops it can say which message it lost.
-        chatSession.enqueue({ ...buildSendInput({ text: attributed, images, channel, cardFields: fields }), ...(messageId ? { messageId } : {}) });
+        chatSession.enqueue({ ...buildSendInput({ text: attributed, images, channel, cardFields: fields, activityTurn }), ...(messageId ? { messageId } : {}) });
         return respond({ status: 200, body: { queued: true } });
       }
 
@@ -144,7 +155,7 @@ export function createUserMessageSender(
       const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
       const admission = await startAckedRun(chatSession, {
         work,
-        input: buildSendInput({ text: fullMessage, images, channel, cardFields: fields }),
+        input: buildSendInput({ text: fullMessage, images, channel, cardFields: fields, activityTurn }),
         capture,
         onAdmitted: recordUserMessage,
       });

@@ -37,7 +37,7 @@ export function update(model, msg, u) {
 }
 export function draw(v, model, p) {
   v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 24);
+  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
 }
 
 export default (cl, { mount, figure }) =>
@@ -135,7 +135,7 @@ function update(model, msg, u) {
 }
 function draw(v, model, p) {
   v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 24);
+  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
 }
 var sketch_default = (cl, { mount, figure }) => cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
 export {

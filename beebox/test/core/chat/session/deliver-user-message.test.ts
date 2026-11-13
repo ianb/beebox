@@ -13,6 +13,8 @@ import { observeAssignedSession } from "../../../../src/core/chat/session/delive
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { eventually } from "@ianbicking/tap-check/check";
 
 const exec = promisify(execFile);
 
@@ -58,4 +60,28 @@ console.log('pending:' + registry.listenerCount('session-assigned'));
   ]);
 
   t.check(registry.listenerCount("session-assigned"), 0);
+});
+
+// ## A retention that fails is logged by error name and errno code
+//
+// The chat's identity is kept in the background, so a failure reaches only the
+// server log. The line names the error and its errno code; the message is left
+// out, as it can carry a chat's label.
+void test("A retention that fails is logged by error name and errno code", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
+  const session = new ChatSession(box.root, { backend: createFakeChatBackend(), sessionFile: null, initialSessionId: "target" });
+  const errors = consoleLines(t, "error");
+  observeAssignedSession({ registry, session, onAssigned: () => Promise.reject(Object.assign(new Error("Label: Garden"), { code: "ENOENT" })), logPrefix: "test" });
+  registry.emit("session-assigned", { sessionId: "target" });
+  const logged: string[] = [];
+  await eventually(() => { logged.push(...errors()); return logged.length > 0; }, { label: "the retention failure is logged" });
+  t.check(logged, ["[test] Could not retain assigned chat identity: Error (ENOENT)"]);
 });

@@ -1,0 +1,90 @@
+# canvas-loop transcript
+
+- sketch: `src/gallery/periodic-trends/sketch-tea.ts`
+- seed: 42
+- fps: 60
+- frames: 300
+- events: `src/gallery/periodic-trends/events.json`
+- canvas: 1000x660
+
+### frame 0
+![frame 0](frame-0000.png)
+
+**[frame 10]** mousemove (90,250) → Δmodel
+
+### frame 10 — hover Na: radius across period 3
+![frame 10 — hover Na: radius across period 3](frame-0010.png)
+
+**[frame 20]** mousemove (466,250) → Δmodel
+
+### frame 20 — hover Cl
+![frame 20 — hover Cl](frame-0020.png)
+
+**[frame 30]** mousedown (90,99) → group 1
+
+**[frame 30]** mousemove (300,620) → Δmodel
+
+### frame 30 — click group 1 header
+![frame 30 — click group 1 header](frame-0030.png)
+
+**[frame 40]** mousemove (940,200) → Δmodel
+
+### frame 40 — hover Cs on the chart
+![frame 40 — hover Cs on the chart](frame-0040.png)
+
+**[frame 50]** param: property → electronegativity
+
+### frame 50
+![frame 50](frame-0050.png)
+
+**[frame 55]** mousedown (43,194) → period 2
+
+**[frame 55]** mousemove (300,620) → Δmodel
+
+### frame 55 — electronegativity across period 2
+![frame 55 — electronegativity across period 2](frame-0055.png)
+
+**[frame 60]** param: mark exceptions → true
+
+### frame 60
+![frame 60](frame-0060.png)
+
+**[frame 70]** param: property → ionization energy
+
+### frame 70
+![frame 70](frame-0070.png)
+
+**[frame 80]** mousedown (410,194) → select O
+
+**[frame 80]** mousemove (410,194) → Δmodel
+
+### frame 80 — click O: ionization energy, period 2
+![frame 80 — click O: ionization energy, period 2](frame-0080.png)
+
+**[frame 90]** mousemove (300,620) → Δmodel
+
+### frame 90 (unchanged)
+![frame 90](frame-0080.png)
+
+**[frame 100]** param: show values → true
+
+### frame 100
+![frame 100](frame-0100.png)
+
+**[frame 110]** mousedown (43,250) → period 3
+
+### frame 110
+![frame 110](frame-0110.png)
+
+**[frame 120]** mousedown (242,155) → group 13
+
+### frame 120 — group 13 ionization energy
+![frame 120 — group 13 ionization energy](frame-0120.png)
+
+**[frame 130]** param: property → atomic radius
+
+### frame 130 — group 13 radius
+![frame 130 — group 13 radius](frame-0130.png)
+
+### frame 299 (unchanged)
+![frame 299](frame-0130.png)

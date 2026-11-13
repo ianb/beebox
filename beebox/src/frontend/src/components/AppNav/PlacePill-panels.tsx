@@ -15,7 +15,7 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { MenuItem, MenuDivider } from "../ui/menu-item";
 import { Button } from "../ui/Button";
 import { Text } from "../ui/Text";
 import { href } from "../../lib/routing";

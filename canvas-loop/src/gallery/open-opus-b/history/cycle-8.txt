@@ -1,0 +1,887 @@
+// ===== sketch.ts =====
+// "Old Pell Lights the Lamps" — a picture-book page. Every dusk an old heron
+// walks the long boardwalk out from the stilt village, lighting the lamps one
+// by one so the fishing boats can find their way home. This page: the last
+// lamp, at the very end of the pier, with one small boat still out on the water.
+import type { Sketch } from "@ianbicking/canvas-loop";
+
+import { drawHeron } from "./heron.js";
+import { drawLantern, drawWalkway, LAMP, LIT_LAMPS } from "./pier.js";
+import { drawReeds, drawSky, drawVillage, drawWater, HORIZON } from "./scene.js";
+
+export function setup(s: Sketch): void {
+  s.createCanvas(800, 800);
+  s.paper({ scale: 3, contrast: 0.6, seed: 7 });
+}
+
+export function draw(s: Sketch): void {
+  drawSky(s);
+  drawWater(s);
+  drawVillage(s);
+  drawWalkway(s);
+  for (const lamp of LIT_LAMPS) drawLantern(s, lamp, false);
+  drawLantern(s, LAMP, true);
+  drawHeron(s);
+  drawReeds(s);
+  drawText(s);
+  s.log("horizon", HORIZON);
+  s.paperTexture(0.35);
+}
+
+/** The page's line of text, set in the quiet sky at upper right. */
+function drawText(s: Sketch): void {
+  const ctx = s.ctx;
+  ctx.save();
+  ctx.fillStyle = "rgba(252,240,214,0.92)";
+  ctx.font = "italic 25px Georgia";
+  ctx.textAlign = "right";
+  ctx.fillText("At the very end of the pier,", 756, 92);
+  ctx.fillText("Old Pell lit the last lamp of all.", 756, 126);
+  ctx.restore();
+}
+// ===== scene.ts =====
+// Backdrop: dusk sky, moon, far hills, the stilt village, and the water.
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+export const HORIZON = 470;
+
+export const C = {
+  skyTop: "#1c2150",
+  skyMid: "#4a3f7d",
+  skyRose: "#b8648a",
+  skyGlow: "#f3a66c",
+  skyLow: "#f8cf8f",
+  hill: "#6a5f92",
+  hillFar: "#8f7aa6",
+  house: "#3b2d4d",
+  houseLit: "#5a4060",
+  roof: "#271f3f",
+  window: "#ffd27a",
+  waterTop: "#e9a77c",
+  waterMid: "#6b5d93",
+  waterLow: "#232650",
+  moon: "#fbf1d0",
+} as const;
+
+export function drawSky(s: Sketch): void {
+  s.background(
+    s.linearGradient(0, 0, 0, HORIZON, [
+      [0, C.skyTop],
+      [0.42, C.skyMid],
+      [0.75, C.skyRose],
+      [0.93, C.skyGlow],
+      [1, C.skyLow],
+    ]),
+  );
+  // Moon and its halo.
+  s.noStroke();
+  s.fill(s.radialGradient(190, 130, 110, [
+    [0, "rgba(251,241,208,0.35)"],
+    [1, "rgba(251,241,208,0)"],
+  ]));
+  s.circle(190, 130, 220);
+  s.fill(C.moon);
+  s.circle(190, 130, 58);
+  // Stars.
+  s.fill("rgba(255,244,214,0.85)");
+  for (let i = 0; i < 40; i += 1) {
+    const x = s.random(0, 800);
+    const y = s.random(0, 230);
+    s.circle(x, y, s.random(1, 2.6));
+  }
+  // A broad rose wash low in the sky.
+  s.noFill();
+  s.brush("wash", { opacity: 0.4 });
+  s.gesture({ pressure: "swell", wobble: 8 });
+  s.stroke("#d77d95");
+  s.strokeWeight(70);
+  s.curve([[-40, 360], [400, 345], [840, 365]]);
+  // Cloud streaks: a lavender body, its underside lit rose and peach by the set sun.
+  const clouds: readonly { x: number; y: number; len: number; w: number }[] = [
+    { x: 420, y: 215, len: 300, w: 16 },
+    { x: 560, y: 248, len: 260, w: 22 },
+    { x: 300, y: 285, len: 340, w: 18 },
+    { x: 610, y: 320, len: 240, w: 14 },
+    { x: -30, y: 300, len: 260, w: 16 },
+    { x: 40, y: 250, len: 180, w: 10 },
+    { x: 500, y: 380, len: 320, w: 10 },
+    { x: 120, y: 385, len: 220, w: 9 },
+  ];
+  for (const c of clouds) {
+    const lowGlow = c.y > 300;
+    s.brush("bristle", { bristles: 14, load: 0.95, flow: 0.55, spread: 0.6 });
+    s.gesture({ pressure: [[0, 0.2], [0.35, 1], [0.8, 0.8], [1, 0.1]], wobble: 3 });
+    s.stroke(lowGlow ? "#9b6a9e" : "#6a5596");
+    s.strokeWeight(c.w);
+    s.curve([[c.x, c.y + 3], [c.x + c.len * 0.45, c.y - c.w * 0.3], [c.x + c.len, c.y + 2]]);
+    s.brush("bristle", { bristles: 10, load: 0.9, flow: 0.6, spread: 0.5 });
+    s.gesture({ pressure: "taper", wobble: 2 });
+    s.stroke(lowGlow ? "#f7b58a" : "#de8aa0");
+    s.strokeWeight(c.w * 0.45);
+    s.curve([[c.x + c.len * 0.15, c.y + c.w * 0.45], [c.x + c.len * 0.5, c.y + c.w * 0.3], [c.x + c.len * 0.9, c.y + c.w * 0.5]]);
+  }
+  s.noBrush();
+  // Far hills behind the village.
+  s.noStroke();
+  s.fill(C.hillFar);
+  s.curve([[-20, HORIZON], [-20, 420], [80, 405], [190, 425], [300, 440], [420, 462], [480, HORIZON]], true);
+  s.fill(C.hill);
+  s.curve([[-20, HORIZON], [-20, 438], [100, 432], [220, 446], [360, HORIZON]], true);
+}
+
+export function drawWater(s: Sketch): void {
+  s.noStroke();
+  s.fill(
+    s.linearGradient(0, HORIZON, 0, 800, [
+      [0, C.waterTop],
+      [0.18, "#b8708e"],
+      [0.45, C.waterMid],
+      [1, C.waterLow],
+    ]),
+  );
+  s.rect(0, HORIZON, 800, 330);
+  // Ripples: bristle strokes in several values, the sky's colours mirrored.
+  s.noFill();
+  const near = ["#f8c99a", "#f2a77e", "#d98a96"];
+  const mid = ["#9d7fb0", "#7c6aa3", "#c48aa0", "#5c5590"];
+  const low = ["#3d3f78", "#2e3068", "#6e64a0", "#4a4a86"];
+  for (let i = 0; i < 150; i += 1) {
+    const t = i / 150;
+    const y = HORIZON + 4 + t * t * 330;
+    const x = s.random(-60, 780);
+    const len = 30 + t * 160 + s.random(0, 80);
+    const pal = t < 0.25 ? near : t < 0.6 ? mid : low;
+    s.brush("bristle", { bristles: 7, load: 0.85, spread: 0.5, flow: 0.65 });
+    s.stroke(s.randomChoice(pal));
+    s.strokeWeight(2.5 + t * 8);
+    s.gesture({ pressure: "taper", wobble: 1 + t });
+    s.line(x, y, x + len, y + s.random(-1.5, 1.5));
+  }
+  // The moon's reflection: a broken, drifting column of pale dabs.
+  s.brush("ink");
+  for (let y = 498; y < 790; y += 5 + (y - 498) / 18 + s.random(0, 6)) {
+    const t = (y - 498) / 292;
+    if (s.random() < 0.2) continue;
+    const half = (6 + t * 30) * s.random(0.3, 1.1);
+    const cx = 190 + s.random(-10, 10) + Math.sin(y * 0.07) * 6;
+    s.stroke(`rgba(251,236,196,${(0.85 - t * 0.5).toFixed(2)})`);
+    s.strokeWeight(1.5 + t * 2.5);
+    s.gesture({ pressure: "taper", wobble: 0.6 });
+    s.line(cx - half, y, cx + half, y + s.random(-0.8, 0.8));
+  }
+  s.noBrush();
+}
+
+interface House {
+  readonly x: number;
+  readonly w: number;
+  readonly base: number;
+  readonly h: number;
+  readonly roof: number;
+}
+
+const HOUSES: readonly House[] = [
+  { x: 22, w: 88, base: 448, h: 66, roof: 40 },
+  { x: 118, w: 70, base: 458, h: 52, roof: 34 },
+  { x: 196, w: 104, base: 476, h: 74, roof: 46 },
+];
+
+function houseShape(h: House): Vec2[] {
+  const top = h.base - h.h;
+  return [
+    [h.x, h.base],
+    [h.x, top],
+    [h.x + h.w / 2, top - h.roof],
+    [h.x + h.w, top],
+    [h.x + h.w, h.base],
+  ];
+}
+
+function drawHouse(s: Sketch, h: House): void {
+  // Stilts.
+  s.stroke(C.roof);
+  s.strokeWeight(4);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.6 });
+  for (let i = 0; i <= 3; i += 1) {
+    const x = h.x + 6 + (i * (h.w - 12)) / 3;
+    s.line(x, h.base, x, h.base + 26);
+  }
+  s.noBrush();
+  s.noStroke();
+  s.fill(C.house);
+  s.polygon(houseShape(h));
+  const top = h.base - h.h;
+  s.fill(C.roof);
+  s.polygon([
+    [h.x - 8, top + 4],
+    [h.x + h.w / 2, top - h.roof - 4],
+    [h.x + h.w + 8, top + 4],
+    [h.x + h.w + 8, top + 10],
+    [h.x + h.w / 2, top - h.roof + 6],
+    [h.x - 8, top + 10],
+  ]);
+  // Board texture on the walls, and the sky's light along the roof's upper edge.
+  s.clip(houseShape(h), () => {
+    s.noFill();
+    s.brush("bristle", { bristles: 8, load: 0.95, flow: 0.5, spread: 0.5 });
+    s.gesture({ pressure: "even", wobble: 0.6 });
+    for (let x = h.x + 5; x < h.x + h.w; x += 9) {
+      s.stroke(x % 2 === 0 ? "#4a3a5c" : "#2f2541");
+      s.strokeWeight(6);
+      s.line(x, top - h.roof, x + 1, h.base);
+    }
+    s.noBrush();
+  });
+  s.noFill();
+  s.stroke("#d98a9c");
+  s.brush("ink", { opacity: 0.8 });
+  s.gesture({ pressure: "taper", wobble: 0.4 });
+  s.strokeWeight(2);
+  s.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3);
+  s.stroke("#f2a77e");
+  s.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3);
+  s.noBrush();
+  s.noStroke();
+  // Windows with glow.
+  const wy = top + h.h * 0.3;
+  for (const fx of [0.28, 0.66]) {
+    const wx = h.x + h.w * fx;
+    s.fill(s.radialGradient(wx, wy + 8, 30, [
+      [0, "rgba(255,200,110,0.45)"],
+      [1, "rgba(255,200,110,0)"],
+    ]));
+    s.circle(wx, wy + 8, 60);
+    s.fill(C.window);
+    s.rect(wx - 7, wy, 14, 17);
+  }
+}
+
+export function drawVillage(s: Sketch): void {
+  // Reflections first, painted as broken horizontal strokes, then the houses.
+  s.noFill();
+  for (const h of HOUSES) {
+    const water = h.base + 26;
+    const tall = (h.h + h.roof) * 0.95;
+    s.brush("bristle", { bristles: 8, load: 0.9, flow: 0.75 });
+    s.gesture({ pressure: "taper", wobble: 1 });
+    for (let d = 2; d < tall; d += 4.5) {
+      const t = d / tall;
+      const half = d < h.h ? h.w / 2 : (h.w / 2) * (1 - (d - h.h) / h.roof);
+      const cx = h.x + h.w / 2 + s.random(-4, 4);
+      s.stroke(`rgba(44,34,70,${(0.7 - t * 0.45).toFixed(2)})`);
+      s.strokeWeight(4.5);
+      s.line(cx - half - s.random(2, 10), water + d, cx + half + s.random(2, 10), water + d);
+    }
+    // Window light, stretched by the ripples.
+    s.brush("wash", { opacity: 0.55 });
+    s.gesture({ pressure: "taper-out", wobble: 3 });
+    s.stroke("#ffc979");
+    s.strokeWeight(10);
+    const wy = water + (h.base - h.h * 0.7 - water) * -1;
+    for (const fx of [0.28, 0.66]) {
+      const wx = h.x + h.w * fx;
+      s.line(wx, wy - 6, wx + 1, wy + 34);
+    }
+  }
+  s.noBrush();
+  for (const h of HOUSES) drawHouse(s, h);
+  drawBoat(s);
+}
+
+/** The last boat still out, far off on the right, with its own small light. */
+function drawBoat(s: Sketch): void {
+  const bx = 778;
+  const by = HORIZON + 4;
+  s.noStroke();
+  s.fill(s.radialGradient(bx + 4, by - 12, 22, [
+    [0, "rgba(255,214,130,0.7)"],
+    [1, "rgba(255,190,110,0)"],
+  ]));
+  s.circle(bx + 4, by - 12, 44);
+  s.fill("#3a2c4d");
+  s.polygon([[bx - 16, by - 4], [bx + 18, by - 4], [bx + 12, by + 2], [bx - 12, by + 2]]);
+  s.stroke("#3a2c4d");
+  s.strokeWeight(1.4);
+  s.line(bx - 2, by - 4, bx - 2, by - 26);
+  s.noStroke();
+  s.fill("#fff0b8");
+  s.circle(bx + 5, by - 12, 3.4);
+}
+
+/** Dark reeds in the near corners, for depth: filled tapering leaves. */
+export function drawReeds(s: Sketch): void {
+  const clumps: readonly { x: number; n: number; spread: number; h: number; dir: number }[] = [
+    { x: 30, n: 13, spread: 100, h: 250, dir: 1 },
+    { x: 790, n: 9, spread: 60, h: 180, dir: -1 },
+  ];
+  for (const c of clumps) {
+    for (let i = 0; i < c.n; i += 1) {
+      const x = c.x + s.random(-c.spread / 2, c.spread / 2);
+      const h = c.h * s.random(0.5, 1);
+      const lean = c.dir * s.random(-10, 50);
+      const pts: Vec2[] = [[x, 815], [x + lean * 0.15, 815 - h * 0.45], [x + lean * 0.5, 815 - h * 0.8], [x + lean, 815 - h]];
+      const leaf = s.tube(pts, { width: s.random(7, 12), profile: [[0, 1], [0.6, 0.7], [1, 0]] });
+      s.noStroke();
+      s.fill(i % 3 === 0 ? "#2c2543" : "#1a172d");
+      s.path(leaf);
+      s.clip(leaf, () => {
+        s.noFill();
+        s.stroke("#6a4f78");
+        s.brush("wash", { opacity: 0.6 });
+        s.strokeWeight(5);
+        s.gesture({ pressure: "taper-in" });
+        s.curve(pts.map(([px, py]): Vec2 => [px - 5 * c.dir, py]));
+        s.noBrush();
+      });
+    }
+    // A few cattail heads on stems.
+    for (let i = 0; i < 3; i += 1) {
+      const x = c.x + s.random(-c.spread / 3, c.spread / 3);
+      const y = 815 - c.h * s.random(0.8, 1.1);
+      s.noFill();
+      s.stroke("#1a172d");
+      s.brush("ink");
+      s.strokeWeight(3);
+      s.gesture({ pressure: "even", wobble: 1 });
+      s.line(x, 815, x + 4 * c.dir, y);
+      s.noBrush();
+      s.noStroke();
+      s.fill("#3a2a30");
+      s.path(s.tube([[x + 4 * c.dir, y + 6], [x + 5 * c.dir, y + 34]], { width: 9 }));
+    }
+  }
+}
+// ===== pier.ts =====
+// The boardwalk out from the village, its posts, and the lamps along it.
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+const X0 = 180;
+const X1 = 740;
+
+/** Top (far) edge of the deck at x. */
+export function deckTop(x: number): number {
+  return 505 + ((x - X0) / (X1 - X0)) * 83;
+}
+
+/** Front (near) edge of the deck at x. */
+export function deckFront(x: number): number {
+  return 514 + ((x - X0) / (X1 - X0)) * 108;
+}
+
+/** Perspective scale at x: 1 at the pier's end. */
+export function depth(x: number): number {
+  return 0.35 + (0.65 * (x - X0)) / (X1 - X0);
+}
+
+export interface Lamp {
+  readonly x: number;
+  readonly height: number;
+  /** Where the lantern hangs. */
+  readonly hx: number;
+  readonly hy: number;
+  readonly k: number;
+}
+
+function lampAt(x: number, height: number): Lamp {
+  const k = depth(x);
+  const top = deckTop(x) - height;
+  return { x, height, hx: x - 34 * k, hy: top + 8 * k, k };
+}
+
+export const LAMP = lampAt(738, 315);
+export const LIT_LAMPS: readonly Lamp[] = [lampAt(300, 285 * depth(300)), lampAt(430, 285 * depth(430))];
+
+const WOOD = { deck: "#8c6b70", deckLit: "#c4917a", beam: "#3f2b38", post: "#2e2131", plank: "#5a4150" } as const;
+
+export function drawWalkway(s: Sketch): void {
+  // Posts down into the water, with short dark reflections.
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.8 });
+  for (let x = X0 + 30; x <= X1; x += 62) {
+    const k = depth(x);
+    const y0 = deckFront(x);
+    s.stroke(WOOD.post);
+    s.strokeWeight(9 * k);
+    s.line(x, y0, x, y0 + 50 * k);
+    s.stroke("rgba(30,24,50,0.45)");
+    s.strokeWeight(7 * k);
+    s.line(x, y0 + 50 * k, x + 1, y0 + 90 * k);
+  }
+  s.noBrush();
+  // Deck surface.
+  s.noStroke();
+  const deck: Vec2[] = [
+    [X0, deckTop(X0)],
+    [X1, deckTop(X1)],
+    [X1, deckFront(X1)],
+    [X0, deckFront(X0)],
+  ];
+  s.fill(s.linearGradient(X0, 0, X1, 0, [
+    [0, WOOD.deck],
+    [1, WOOD.deckLit],
+  ]));
+  s.polygon(deck);
+  // Side beam under the front edge.
+  s.fill(WOOD.beam);
+  s.polygon([
+    [X0, deckFront(X0)],
+    [X1, deckFront(X1)],
+    [X1, deckFront(X1) + 16],
+    [X0, deckFront(X0) + 5],
+  ]);
+  // Plank seams, over brushed wood grain.
+  s.clip(deck, () => {
+    s.noFill();
+    s.brush("bristle", { bristles: 9, load: 0.9, flow: 0.4, spread: 0.6 });
+    s.gesture({ pressure: "taper", wobble: 0.6 });
+    for (let i = 0; i < 6; i += 1) {
+      const f = (i + 0.5) / 6;
+      s.stroke(i % 2 === 0 ? "#6e5060" : "#d8a585");
+      s.strokeWeight(5);
+      s.line(X0, deckTop(X0) + f * (deckFront(X0) - deckTop(X0)), X1, deckTop(X1) + f * (deckFront(X1) - deckTop(X1)));
+    }
+    s.noFill();
+    s.stroke(WOOD.plank);
+    s.brush("pencil", { opacity: 0.8 });
+    s.gesture({ pressure: "even", wobble: 0.4 });
+    for (let x = X0 + 8; x < X1; x += 5 + 16 * depth(x)) {
+      s.strokeWeight(1.5 + 1.5 * depth(x));
+      s.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2);
+    }
+    s.noBrush();
+  });
+}
+
+export function drawLantern(s: Sketch, lamp: Lamp, main: boolean): void {
+  const { x, hx, hy, k } = lamp;
+  const base = deckTop(x);
+  const top = base - lamp.height;
+  // Reflection of the light in the water.
+  s.noFill();
+  s.brush("wash", { opacity: 0.5 });
+  s.gesture({ pressure: "taper-out", wobble: 4 });
+  s.stroke("#ffcf7a");
+  s.strokeWeight(26 * k);
+  s.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k);
+  s.noBrush();
+  // Glow, and a pool of light on the deck below.
+  s.noStroke();
+  const r = (main ? 230 : 150) * k;
+  s.fill(s.radialGradient(hx, hy + 26 * k, r, [
+    [0, "rgba(255,222,140,0.85)"],
+    [0.18, "rgba(255,196,112,0.45)"],
+    [0.55, "rgba(255,170,100,0.12)"],
+    [1, "rgba(255,170,100,0)"],
+  ]));
+  s.circle(hx, hy + 26 * k, 2 * r);
+  if (main) {
+    s.fill(s.radialGradient(hx, hy + 28 * k, 46 * k, [
+      [0, "rgba(255,246,210,0.95)"],
+      [0.5, "rgba(255,226,150,0.5)"],
+      [1, "rgba(255,210,130,0)"],
+    ]));
+    s.circle(hx, hy + 28 * k, 92 * k);
+  }
+  s.fill(s.ellipseGradient(hx, (deckTop(x) + deckFront(x)) / 2, 220 * k, 50 * k, [
+    [0, "rgba(255,210,140,0.6)"],
+    [1, "rgba(255,190,120,0)"],
+  ]));
+  s.ellipse(hx, (deckTop(x) + deckFront(x)) / 2, 220 * k, 50 * k);
+  // Post and arm.
+  s.stroke(WOOD.post);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.5 });
+  s.strokeWeight(8 * k);
+  s.line(x, base + 2, x, top);
+  s.strokeWeight(4 * k);
+  s.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k);
+  s.strokeWeight(2 * k);
+  s.line(hx, top + 2 * k, hx, hy + 6 * k);
+  s.noBrush();
+  // Lantern: cap, glass, base.
+  s.noStroke();
+  s.fill("#ffe2a0");
+  s.polygon([
+    [hx - 11 * k, hy + 14 * k],
+    [hx + 11 * k, hy + 14 * k],
+    [hx + 9 * k, hy + 40 * k],
+    [hx - 9 * k, hy + 40 * k],
+  ]);
+  s.fill("#fff6d6");
+  s.ellipse(hx, hy + 30 * k, 8 * k, 14 * k);
+  s.fill("#2a1e2e");
+  s.triangle(hx - 15 * k, hy + 15 * k, hx + 15 * k, hy + 15 * k, hx, hy + 4 * k);
+  s.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k);
+  s.stroke("#2a1e2e");
+  s.strokeWeight(1.6 * k);
+  s.line(hx, hy + 15 * k, hx, hy + 40 * k);
+}
+// ===== heron.ts =====
+// Old Pell the heron, in a red knitted scarf, reaching the lighting pole up to
+// the last lamp. Local coordinates: origin between the feet, facing +x.
+import type { Sketch, Vec2 } from "@ianbicking/canvas-loop";
+
+import { deckFront, deckTop, LAMP } from "./pier.js";
+
+const FEET_X = 560;
+const FEET_Y = (deckTop(FEET_X) + deckFront(FEET_X)) / 2 - 2;
+const SCALE = 1.2;
+
+const H = {
+  body: "#8593ae",
+  bodyShade: "#4e587a",
+  belly: "#d3d8e2",
+  wing: "#5b6788",
+  wingDark: "#363e5e",
+  rim: "#ffc98c",
+  ink: "#1d1c2c",
+  leg: "#c99e55",
+  bill: "#e3ad45",
+  scarf: "#c63a36",
+  scarfDark: "#7e1f2c",
+  pole: "#4a2f24",
+} as const;
+
+const BODY: readonly Vec2[] = [
+  [52, -150],
+  [48, -110],
+  [22, -84],
+  [-28, -78],
+  [-84, -66],
+  [-68, -116],
+  [-30, -158],
+  [16, -172],
+];
+
+const WING: readonly Vec2[] = [
+  [30, -148],
+  [32, -114],
+  [6, -92],
+  [-60, -76],
+  [-104, -62],
+  [-64, -104],
+  [-18, -150],
+];
+
+const NECK: readonly Vec2[] = [
+  [30, -164],
+  [48, -190],
+  [32, -212],
+  [34, -228],
+  [42, -234],
+];
+
+const HEAD = { x: 48, y: -236 } as const;
+const GRIP: Vec2 = [50, -116];
+
+type Tint = (pts: readonly Vec2[]) => void;
+
+/** Fill a shape, then inside it a warm rim on the lamp side and a cool shade on the far side. */
+function litShape(s: Sketch, pts: readonly Vec2[], base: string, extra?: Tint): void {
+  s.noStroke();
+  s.fill(H.rim);
+  s.curve(pts, true);
+  s.clip(s.curvePath(pts, true), () => {
+    s.fill(base);
+    s.curve(s.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]), true);
+    s.fill(H.bodyShade);
+    s.group({ opacity: 0.35 }, () => {
+      s.curve(s.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]), true);
+    });
+    if (extra) extra(pts);
+  });
+}
+
+export function drawHeron(s: Sketch): void {
+  drawShadow(s);
+  s.push();
+  s.translate(FEET_X, FEET_Y);
+  s.scale(SCALE);
+  drawLegs(s);
+  drawPole(s);
+  drawBody(s);
+  drawNeckAndHead(s);
+  drawScarf(s);
+  drawGrip(s);
+  s.pop();
+}
+
+function drawLegs(s: Sketch): void {
+  s.noFill();
+  s.stroke(H.leg);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.3 });
+  s.strokeWeight(4);
+  s.curve([[-8, -84], [-4, -40], [-10, 0]]);
+  s.curve([[8, -84], [18, -44], [14, -2]]);
+  s.strokeWeight(2.5);
+  s.gesture({ pressure: "taper-out" });
+  for (const [fx, fy] of [[-10, 0], [14, -2]] as const) {
+    s.line(fx, fy, fx + 16, fy + 3);
+    s.line(fx, fy, fx - 12, fy + 2);
+    s.line(fx, fy, fx + 6, fy + 6);
+  }
+  s.noBrush();
+}
+
+function drawBody(s: Sketch): void {
+  litShape(s, BODY, H.body, () => {
+    // Brushed feather tone following the body's curve.
+    s.noFill();
+    s.brush("bristle", { bristles: 10, load: 0.9, flow: 0.45, spread: 0.6 });
+    s.gesture({ pressure: "taper", wobble: 1.5 });
+    for (let i = 0; i < 7; i += 1) {
+      s.stroke(i % 2 === 0 ? "#a4afc6" : "#6f7c9c");
+      s.strokeWeight(10);
+      s.curve([[40 - i * 4, -160 + i * 3], [10 - i * 6, -150 + i * 9], [-40 - i * 4, -110 + i * 6], [-80, -72 + i]]);
+    }
+    s.noBrush();
+    s.noStroke();
+    s.fill(H.belly);
+    s.curve([[52, -150], [44, -104], [26, -90], [30, -130], [40, -158]], true);
+    // Pencil hatching in the shadow under the belly.
+    s.noFill();
+    s.stroke("#434b6c");
+    s.brush("pencil", { opacity: 0.85 });
+    s.gesture({ pressure: "taper", wobble: 0.4 });
+    s.strokeWeight(1.8);
+    for (let x = -50; x < 40; x += 4) s.line(x, -78, x + 10, -100);
+    s.noBrush();
+  });
+  litShape(s, WING, H.wing, () => {
+    s.noFill();
+    // A dark band of flight feathers along the lower wing.
+    s.stroke(H.wingDark);
+    s.brush("wash", { opacity: 0.8 });
+    s.gesture({ pressure: "swell", wobble: 1 });
+    s.strokeWeight(22);
+    s.curve([[20, -100], [-30, -86], [-100, -64]]);
+    // Feather edges inside the band.
+    s.brush("ink");
+    s.gesture({ pressure: "taper", wobble: 0.4 });
+    s.stroke("#8e9abb");
+    s.strokeWeight(1.3);
+    for (let i = 0; i < 5; i += 1) {
+      s.curve([[8 - i * 9, -108 + i * 5], [-44 - i * 6, -88 + i * 4], [-98 + i * 3, -66 + i]]);
+    }
+    s.noBrush();
+    // Pale covert feathers in rows across the shoulder, back rows first.
+    for (let row = 0; row < 3; row += 1) {
+      for (let j = 0; j < 6 - row; j += 1) {
+        const cx = 22 - j * 12 - row * 5;
+        const cy = -142 + j * 7 + row * 12;
+        const f: Vec2[] = [[cx - 8, cy - 8], [cx + 8, cy - 8], [cx + 7, cy + 3], [cx, cy + 9], [cx - 7, cy + 3]];
+        s.noStroke();
+        s.fill(row === 0 ? "#9aa6c2" : row === 1 ? "#8592b2" : "#7280a2");
+        s.curve(f, true);
+        s.noFill();
+        s.stroke("#2e3552");
+        s.brush("ink");
+        s.gesture({ pressure: "swell", wobble: 0.3 });
+        s.strokeWeight(1.6);
+        s.curve([[cx - 7, cy + 2], [cx, cy + 9], [cx + 7, cy + 2]]);
+        s.noBrush();
+      }
+    }
+  });
+  // Split primary tips at the wing's end.
+  s.noStroke();
+  s.fill(H.wingDark);
+  s.polygon([[-80, -70], [-112, -58], [-86, -64], [-108, -50], [-80, -60], [-98, -44], [-70, -62]]);
+  // Cool shadow over the lower body, away from the lamp.
+  s.clip(s.curvePath(BODY, true), () => {
+    s.noFill();
+    s.stroke("#2c3150");
+    s.brush("wash", { opacity: 0.45 });
+    s.gesture({ pressure: "swell", wobble: 2 });
+    s.strokeWeight(26);
+    s.curve([[-90, -66], [-40, -76], [20, -80]]);
+    s.noBrush();
+  });
+  s.noFill();
+  s.stroke(H.ink);
+  s.strokeWeight(2.4);
+  s.brush("ink");
+  s.gesture({ pressure: "taper", wobble: 0.6 });
+  s.curve(BODY, true);
+  s.curve(WING, true);
+  s.noBrush();
+}
+
+function drawNeckAndHead(s: Sketch): void {
+  const neck = s.tube(NECK, { width: 19, profile: [[0, 1.4], [1, 0.8]] });
+  s.noStroke();
+  s.fill(H.rim);
+  s.path(neck);
+  s.clip(neck, () => {
+    s.fill(H.belly);
+    s.path(s.tube(NECK.map(([x, y]): Vec2 => [x - 3, y + 1]), { width: 19, profile: [[0, 1.4], [1, 0.8]] }));
+    s.fill(H.body);
+    s.path(s.tube(NECK.map(([x, y]): Vec2 => [x - 13, y + 1]), { width: 19, profile: [[0, 1.4], [1, 0.8]] }));
+    // The dark dashed streak down the front of a heron's neck.
+    s.noFill();
+    s.stroke("#2b2f48");
+    s.brush("ink");
+    s.gesture({ pressure: "swell", wobble: 0.3 });
+    s.strokeWeight(2);
+    const front = NECK.map(([x, y]): Vec2 => [x + 3, y]);
+    for (let i = 0; i < front.length - 1; i += 1) {
+      const [ax, ay] = front[i] ?? [0, 0];
+      const [bx, by] = front[i + 1] ?? [0, 0];
+      s.line(ax + (bx - ax) * 0.2, ay + (by - ay) * 0.2, ax + (bx - ax) * 0.65, ay + (by - ay) * 0.65);
+    }
+    s.noBrush();
+  });
+  // Head.
+  const head: Vec2[] = [
+    [HEAD.x + 18, HEAD.y - 1],
+    [HEAD.x + 4, HEAD.y - 11],
+    [HEAD.x - 14, HEAD.y - 6],
+    [HEAD.x - 12, HEAD.y + 8],
+    [HEAD.x + 8, HEAD.y + 10],
+  ];
+  litShape(s, head, H.body, () => {
+    s.fill(H.belly);
+    s.ellipse(HEAD.x + 6, HEAD.y + 6, 22, 9);
+  });
+  // Bill.
+  s.noStroke();
+  s.fill(H.bill);
+  s.polygon([
+    [HEAD.x + 13, HEAD.y - 5],
+    [HEAD.x + 46, HEAD.y + 7],
+    [HEAD.x + 12, HEAD.y + 6],
+  ]);
+  s.fill("#f6d27e");
+  s.polygon([
+    [HEAD.x + 13, HEAD.y - 5],
+    [HEAD.x + 46, HEAD.y + 7],
+    [HEAD.x + 13, HEAD.y + 1],
+  ]);
+  s.noFill();
+  s.stroke(H.ink);
+  s.brush("ink");
+  s.gesture({ pressure: "taper-out", wobble: 0.5 });
+  // Black crest stripe and plume.
+  s.strokeWeight(5);
+  s.curve([[HEAD.x + 8, HEAD.y - 9], [HEAD.x - 10, HEAD.y - 9], [HEAD.x - 30, HEAD.y - 3], [HEAD.x - 46, HEAD.y + 8]]);
+  s.strokeWeight(3);
+  s.curve([[HEAD.x - 4, HEAD.y - 6], [HEAD.x - 22, HEAD.y + 2], [HEAD.x - 38, HEAD.y + 18]]);
+  s.gesture({ pressure: "taper", wobble: 0.5 });
+  s.strokeWeight(1.6);
+  s.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6);
+  s.strokeWeight(2.2);
+  s.curve(NECK.map(([x, y]): Vec2 => [x - 9, y]));
+  s.curve(head, true);
+  s.noBrush();
+  // Eye.
+  s.noStroke();
+  s.fill("#fff2c8");
+  s.circle(HEAD.x + 6, HEAD.y - 2, 7);
+  s.fill(H.ink);
+  s.circle(HEAD.x + 7, HEAD.y - 2, 3.5);
+}
+
+function drawScarf(s: Sketch): void {
+  // One band: knot at the front of the neck, round the back, out into the wind.
+  const band: Vec2[] = [[52, -160], [44, -174], [24, -176], [6, -168], [-14, -158], [-38, -170], [-66, -160]];
+  const shape = s.tube(band, { width: 14, profile: [[0, 1.2], [0.3, 1], [1, 0.85]] });
+  s.noStroke();
+  s.fill(H.scarf);
+  s.path(shape);
+  s.clip(shape, () => {
+    // Knit ribs, and a shadow along the lower edge.
+    s.noFill();
+    s.stroke(H.scarfDark);
+    s.brush("pencil", { opacity: 0.9 });
+    s.gesture({ pressure: "even", wobble: 0.3 });
+    s.strokeWeight(1.6);
+    for (let x = -74; x < 64; x += 4.5) s.line(x, -192, x - 3, -146);
+    s.brush("wash", { opacity: 0.6 });
+    s.strokeWeight(8);
+    s.curve(band.map(([x, y]): Vec2 => [x - 2, y + 7]));
+    s.stroke("#ff9a7a");
+    s.brush("wash", { opacity: 0.5 });
+    s.strokeWeight(5);
+    s.curve(band.slice(0, 4).map(([x, y]): Vec2 => [x + 2, y - 5]));
+    s.noBrush();
+  });
+  // Fringe.
+  s.noFill();
+  s.stroke(H.scarf);
+  s.brush("ink");
+  s.gesture({ pressure: "taper-out", wobble: 0.6 });
+  s.strokeWeight(2.4);
+  for (let i = 0; i < 4; i += 1) s.line(-64, -166 + i * 4, -78, -164 + i * 6);
+  s.stroke(H.ink);
+  s.strokeWeight(1.8);
+  s.gesture({ pressure: "taper", wobble: 0.5 });
+  s.path(shape);
+  s.noBrush();
+}
+
+function tip(): Vec2 {
+  return [(LAMP.hx - 2 - FEET_X) / SCALE, (LAMP.hy + 48 - FEET_Y) / SCALE];
+}
+
+function drawPole(s: Sketch): void {
+  const [tx, ty] = tip();
+  const dx = tx - GRIP[0];
+  const dy = ty - GRIP[1];
+  const back: Vec2 = [GRIP[0] - dx * 0.45, GRIP[1] - dy * 0.45];
+  s.noFill();
+  s.stroke(H.pole);
+  s.brush("ink");
+  s.gesture({ pressure: "even", wobble: 0.4 });
+  s.strokeWeight(3.6);
+  s.line(back[0], back[1], tx, ty);
+  s.noBrush();
+  // Taper flame.
+  s.noStroke();
+  s.fill(s.radialGradient(tx, ty - 4, 18, [
+    [0, "rgba(255,240,180,0.95)"],
+    [1, "rgba(255,160,80,0)"],
+  ]));
+  s.circle(tx, ty - 4, 36);
+  s.fill("#fff3c0");
+  s.ellipse(tx, ty - 6, 5, 11);
+}
+
+function drawGrip(s: Sketch): void {
+  // Three primary feathers curled round the pole, like fingers.
+  const [gx, gy] = GRIP;
+  const feathers: Vec2[][] = [
+    [[gx - 30, gy - 6], [gx - 8, gy - 12], [gx + 8, gy - 8], [gx + 6, gy - 2], [gx - 10, gy - 3]],
+    [[gx - 30, gy - 1], [gx - 6, gy - 4], [gx + 10, gy + 1], [gx + 6, gy + 6], [gx - 12, gy + 4]],
+    [[gx - 28, gy + 4], [gx - 8, gy + 4], [gx + 6, gy + 10], [gx + 1, gy + 14], [gx - 14, gy + 10]],
+  ];
+  for (const f of feathers) {
+    litShape(s, f, H.wing);
+    s.noFill();
+    s.stroke(H.ink);
+    s.brush("ink");
+    s.gesture({ pressure: "taper", wobble: 0.3 });
+    s.strokeWeight(1.8);
+    s.curve(f, true);
+    s.noBrush();
+  }
+}
+
+/** Cast shadow on the deck, thrown back and left by the lamp, and a contact shadow under the feet. */
+function drawShadow(s: Sketch): void {
+  s.noStroke();
+  s.group({ opacity: 0.5, blend: "multiply" }, () => {
+    s.fill(s.ellipseGradient(FEET_X - 70, FEET_Y - 4, 190, 26, [
+      [0, "#4a3048"],
+      [0.6, "rgba(74,48,72,0.5)"],
+      [1, "rgba(74,48,72,0)"],
+    ]));
+    s.ellipse(FEET_X - 70, FEET_Y - 4, 190, 26);
+    s.fill(s.ellipseGradient(FEET_X + 2, FEET_Y + 2, 60, 12, [
+      [0, "#3a2236"],
+      [1, "rgba(58,34,54,0)"],
+    ]));
+    s.ellipse(FEET_X + 2, FEET_Y + 2, 60, 12);
+  });
+}

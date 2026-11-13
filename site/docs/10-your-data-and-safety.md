@@ -10,7 +10,7 @@ full history there. Encrypted backups, if you set them up, go to a destination
 you pick (see "What leaves the machine"). Credentials are kept in a machine-level store outside
 every box, and a box holds a grant to the ones you allow it to use.
 
-**What the agent may do.** The agent that runs a box (Claude Code or Codex)
+**What the agent may do.** The agent that runs a box (Claude Code, Codex, or pi)
 has full permissions: nothing restricts it to a fixed list of allowed
 actions. It can run any command on the machine, as the same user the box
 runs as, and read or write any file in the box. On a server or in the Docker
@@ -34,7 +34,7 @@ without a human present.
 
 **What leaves the machine.** Every agent turn sends its context to the model
 provider; there is no opt-out, because that is the product. If the owner
-chooses a GLM or OpenRouter model, that vendor is the provider for those
+chooses a GLM or OpenRouter model (the pi engine runs only OpenRouter models), that vendor is the provider for those
 turns, and its account settings govern retention (for OpenRouter, the
 upstream host can change per request and the box cannot pin it). Voice goes to a
 transcription vendor you configure. Quick chat, the thought box on the box
@@ -80,7 +80,14 @@ unless the owner turns them on, because they include hashes of the lines each
 change adds.
 
 **Authentication is always on.** Every route sits behind a login wall, with
-no flag that disables it. A box with no member list is owner-only.
+no flag that disables it. A box with no member list is owner-only. Pages the
+web app serves refuse to be shown inside another site's frame. The processes a
+box starts (the agent, git, command-line tools) receive a reduced environment
+that leaves out the server's session-signing secret and other boxes'
+credentials. The security documentation calls that a guard against accidents
+and lazy exfiltration, not a boundary against a hostile agent, since the
+secret file is readable by anything running as the same user. One gap it lists
+as open: a box's own card-type definitions load inside the server process.
 
 Read [security/overview.md](security/overview.md) for the threat model,
 accepted risks, and known limitations, including that boxes served by one hub share a

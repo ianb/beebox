@@ -16,6 +16,7 @@ import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } fro
 import { createAudioOverlayStore } from "../../audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "../../conversation/use-conversation-machine";
+import { ActivityScopeProvider, useChatActivityScope } from "../../../../lib/activity/scope";
 import type { ConversationTarget, ConversationSelection, AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import type { ChatInitialLoad } from "../../../../machines/chat-types";
 import { groupMessages } from "../../ChatMessages/view";
@@ -54,7 +55,7 @@ import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
 /** Bus events after which the pending-question list may have changed (the Questions page watches the same set). */
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
-  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
+  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Loading conversation…" : selection.reason;
 }
 
 /**
@@ -153,7 +154,7 @@ interface InteractiveChatProps {
  * (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
 // Capture mode is rare and opens full screen; its code loads when it opens.
-const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
+const CaptureScreen = lazyOverlay(() => import("../../../capture/CaptureScreen/view"), (m) => m.CaptureScreen);
 
 function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
@@ -162,7 +163,7 @@ function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCaptu
   onExitCapture: (outcome: CaptureExit) => void;
 }) {
   if (!captureMode || usesNativeShell) return null;
-  return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
+  return <CaptureScreen targetSessionId={sessionId} onExit={onExitCapture} />;
 }
 
 /** Presentation toggles stay with the box input, independently of session actors. */
@@ -193,19 +194,23 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
+function useConversationLoadMarks(ready: boolean, loading: boolean): void {
+  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, ready);
+  useFirstLoadMark(FIRST_LOAD_MARKS.history, ready && !loading);
+}
+
 export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
-  const { snapshot, send, pool, target, recoveryNotice } = useConversationMachine({
+  const { snapshot, send, pool, target, recoveryNotice, lastSentId } = useConversationMachine({
     boxSlug: boxSlug ?? "default", target: conversationTarget,
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
   const { messages, pendingMessages, streamText, streamTools, error, replyLost, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
-  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
+  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const getActivityScope = useChatActivityScope({ sessionId, target, lastSentId }); // a new conversation's activity carries the page's key for it
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
-  useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
-  useFirstLoadMark(FIRST_LOAD_MARKS.history, conversationSelection?.kind === "ready" && !snapshot.matches("loading"));
+  useConversationLoadMarks(conversationSelection?.kind === "ready", snapshot.matches("loading"));
   // Put the turn in the tab title, so a chat left in a background tab says
   // whether the box is still working on it. The deps are one boolean, so this
   // publishes once per turn rather than once per streamed token.
@@ -256,7 +261,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { captureEmissionDispatch, dispatchNativeEmission, sendVoiceSegment, sendStopSend, failedRegion } = useEmissionDispatch({
     send, pool, target, selection: conversationSelection, attention,
-    captureCardSend: cardSend.capture, acceptCardSend: cardSend.accepted, boxSlug, activeView, messages, emissionStore,
+    captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
     resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
@@ -318,7 +323,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   });
 
   return (
-    <InputStoreProvider value={inputStore}>
+    <InputStoreProvider value={inputStore}><ActivityScopeProvider getScope={getActivityScope}>
       <InteractiveChatBody
       conversationKey={logicalConversation}
       sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
@@ -365,7 +370,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       setTypingLocked={setTypingLocked}
       onVoiceSegmentSend={sendStopSend}
       send={send}
-      reportCardActivity={cardSend.report}
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
@@ -374,6 +378,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       openers={openers} unstarted={unstarted}
       />
       <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={exitCapture} />
-    </InputStoreProvider>
+    </ActivityScopeProvider></InputStoreProvider>
   );
 }

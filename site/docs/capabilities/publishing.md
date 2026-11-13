@@ -44,7 +44,9 @@ Each box gets one hostname and one small server program on Cloudflare that
 serves it. Public sites live at `/<name>/` and secret-link sites at
 `/s/<identifier>/` on that hostname. The agent asks the box server to prepare a
 site by its publication card; the server builds it if needed, scans it, and
-uploads it as a release. Pages render at that point, content marked redacted
+uploads it as a release. Pages render at that point, TeX math written between dollar signs becomes
+MathML (the browser draws the formula, with no script, font, or style file
+added; a browser without MathML shows the formula's text), content marked redacted
 is left out entirely, and the scan runs over the rendered result. A finished page runs only in the visitor's browser, never in
 the box.
 

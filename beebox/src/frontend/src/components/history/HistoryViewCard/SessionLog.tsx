@@ -5,6 +5,8 @@
 import { useState, useMemo } from "react";
 import type { SessionContentBlock } from "../../../api";
 import { trpc } from "../../../lib/trpc/client";
+import { StatusMessage } from "../../ui/StatusMessage";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 interface SessionLogProps {
   sessionId: string;
@@ -26,7 +28,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
   if (block.type === "tool_use") {
     return (
       <div className="my-1">
-        <button
+        <button type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-1.5 text-xs font-mono text-warm-700 hover:text-warm-900 bg-warm-100 rounded px-2 py-1"
         >
@@ -82,7 +84,7 @@ function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: 
           {isUser ? "User" : "Assistant"}
         </span>
         <span className="text-xs text-warm-700">
-          {new Date(entry.timestamp).toLocaleTimeString()}
+          {friendlyDate(entry.timestamp, "time")}
         </span>
       </div>
       <div className="space-y-1">
@@ -132,8 +134,8 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
           <EntryView key={entry.uuid} entry={entry} />
         ))}
       </div>
-      {loading ? <div className="p-3 text-sm text-warm-700">Loading...</div> : null}
-      {hasNextPage && !loading ? <button
+      {loading ? <StatusMessage variant="inline" busy className="p-3">Loading…</StatusMessage> : null}
+      {hasNextPage && !loading ? <button type="button"
           id={`${idPrefix}-session-log-load-more`}
           // fetchNextPage's failure surfaces via the query's own error state.
           onClick={() => void fetchNextPage()}

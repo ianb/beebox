@@ -7,6 +7,8 @@
 
 import React from "react";
 import { Pre } from "./ui/Pre";
+import { InlineAction } from "./ui/InlineAction";
+import { Notice } from "./ui/Notice";
 
 interface Props {
   children: React.ReactNode;
@@ -52,21 +54,18 @@ export class ViewErrorBoundary extends React.Component<Props, State> {
   render(): React.ReactNode {
     if (this.state.error) {
       return (
-        <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+        <Notice tone="error">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-danger-dark font-medium">View Error</h3>
-            <button
-              onClick={this.handleReset}
-              className="text-sm text-danger-dark hover:text-danger-dark underline"
-            >
+            <h3 className="font-medium">View Error</h3>
+            <InlineAction intent="danger" onClick={this.handleReset}>
               Retry
-            </button>
+            </InlineAction>
           </div>
           <Pre size="sm" error scroll="md">
             {this.state.error.message}
             {this.state.error.stack ? "\n\n" + this.state.error.stack : ""}
           </Pre>
-        </div>
+        </Notice>
       );
     }
     return this.props.children;

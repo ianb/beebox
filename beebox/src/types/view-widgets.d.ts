@@ -25,8 +25,17 @@ declare module "beebox/view-widgets" {
   export type ViewFile = import("../core/views/types.js").ViewFile;
 
   export const CardLink: ComponentType<{ cardRef: string; view?: string; params?: Record<string, string>; children?: ReactNode }>;
-  export const CardRef: ComponentType<{ cardRef: string; view?: string; params?: Record<string, string>; children?: ReactNode }>;
-  /** The app's Markdown renderer for card text: `<Markdown card={card}>{card.body}</Markdown>`. */
+  /**
+   * A reference chip with Open and Expand. `embed` renders the card frameless and inline instead
+   * (a live figure), with `caption` shown beneath; keep `cardRef` a literal attribute so `bbx mv` tracks it.
+   */
+  export const CardRef: ComponentType<{ cardRef: string; view?: string; params?: Record<string, string>; children?: ReactNode; embed?: boolean; caption?: string }>;
+  /**
+   * The app's Markdown renderer for card text: `<Markdown card={card}>{card.body}</Markdown>`.
+   * An image-syntax embed of a card, `![Caption](/_content/figures/Atom.figure.card?element=H)`,
+   * renders that card inline (a live figure) with the alt text as its caption; images and
+   * external URLs stay images.
+   */
   export const Markdown: ComponentType<{
     children: string;
     card: { path: string; bodyLineOffset: number };

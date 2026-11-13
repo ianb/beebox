@@ -91,12 +91,21 @@ const HqFailureSchema = z.object({
 });
 export type HqFailure = z.infer<typeof HqFailureSchema>;
 
-/** The finished HQ transcript, once every piece has succeeded. */
+/** One transcribed word; `start`/`end` are seconds from the start of the whole recording. */
+const VoiceHqWordSchema = z.object({ start: z.number(), end: z.number(), text: z.string() });
+export type VoiceHqWord = z.infer<typeof VoiceHqWordSchema>;
+
+/**
+ * The finished HQ transcript, once every piece has succeeded. `words` is set
+ * only for a call recording (`voice.call`), and only when every piece came
+ * back with word timing.
+ */
 const VoiceHqResultSchema = z.object({
   text: z.string(),
   diarized: z.boolean(),
   service: z.string(),
   pieces: z.number(),
+  words: z.array(VoiceHqWordSchema).optional(),
 });
 export type VoiceHqResult = z.infer<typeof VoiceHqResultSchema>;
 
@@ -151,7 +160,8 @@ export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
 const VoiceHqRequestSchema = z.object({
   requestedAt: z.string(),
   service: z.enum(HQ_TRANSCRIPTION_SERVICES),
-  emissionId: z.string(),
+  /** Null for a call recording: no composer message waits on it (docs/implemented-plans/chat-calls.md, Track F). */
+  emissionId: z.string().nullable(),
   sessionId: z.string().nullable(),
 });
 
@@ -182,6 +192,13 @@ const StagingVoiceSchema = z.object({
   emissionId: z.string().optional(),
   hq: VoiceHqStateSchema,
   handoff: VoiceHandoffSchema,
+  /**
+   * Set when the recording is one member's microphone during a transcribed
+   * call (docs/implemented-plans/chat-calls.md, Track F). `firstAudioAtMs` is the device's
+   * real wall clock (never the box's shifted clock) when its first audio
+   * arrived; the call fold places words at `firstAudioAtMs + word.start`.
+   */
+  call: z.object({ callId: z.string(), firstAudioAtMs: z.number() }).optional(),
   /**
    * Set (server clock) the moment the recording first reaches a
    * GC-eligible terminal condition — `handoff.mode` becoming `claimed` or

@@ -13,6 +13,7 @@ import { searchResultTarget } from "../components/search/target";
 import { heldBackText, pathsBadgeText } from "../components/search/held-back";
 import { trpc } from "../lib/trpc/client";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { StatusMessage } from "../components/ui/StatusMessage";
 
 interface SearchState { query: string; paths: string[]; types: string[]; limit: number }
 function stateFrom(fieldsInput: Record<string, unknown> | undefined, viewState: RendererProps["viewState"]): SearchState {
@@ -42,7 +43,7 @@ function SearchCardBody(props: RendererProps) {
     <Text as="h1" size="xl" weight="bold" className="mb-4">Search</Text>
     <TextField label="Search this box" type="search" hideLabel value={state.query} onChange={(query) => change({ query })} placeholder="Search cards and markdown…" autoFocus />
     <Row className="mt-2"><Badge tone="neutral">{pathsBadgeText({ paths: state.paths, heldBack: result.data?.heldBack ?? [] })}</Badge><Badge tone="neutral">{state.types.length > 0 ? `types: ${state.types.join(", ")}` : "all types"}</Badge></Row>
-    {result.isLoading ? <Text tone="muted" className="py-6">Searching…</Text> : null}
+    {result.isLoading ? <StatusMessage variant="inline" busy className="py-6">Searching…</StatusMessage> : null}
     {result.error ? <ErrorText className="py-6">Could not search: {result.error.message}</ErrorText> : null}
     {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Hint className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Hint> : null}{heldNote ? <Hint className="mt-2">{heldNote}. Add its folder under paths to search it.</Hint> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
   </Stack>;

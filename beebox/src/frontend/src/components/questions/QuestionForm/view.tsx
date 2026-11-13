@@ -24,6 +24,7 @@ import { Row } from "../../ui/Row";
 import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Heading } from "../../ui/Heading";
+import { useMaterial } from "../../ui/material";
 import { QuestionMemo } from "./memo";
 import { LATER } from "../question-close";
 import type { RouterOutput } from "../../../lib/trpc/client";
@@ -60,6 +61,8 @@ interface QuestionFormProps extends FormPlace {
 export function QuestionContext({ question, headingId }: { question: QuestionInfo; headingId?: string }) {
   const hasMemo = question.memo !== undefined && question.memo !== "";
   const hasLearning = question.learning?.proposal !== undefined;
+  // On a material (the question patch) the panel is the material's tint.
+  const material = useMaterial(undefined);
   return (
     <>
       <Heading level={2} id={headingId} className="mb-2">
@@ -73,7 +76,7 @@ export function QuestionContext({ question, headingId }: { question: QuestionInf
             </Text>
           ) : null}
           {hasLearning ? (
-            <Card padding="sm" background="info" border="none">
+            <Card padding="sm" background="info" border="none" material={material}>
               <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
                 What the box is trying to learn
               </Text>
@@ -90,9 +93,9 @@ export function QuestionContext({ question, headingId }: { question: QuestionInf
 
 /** The submit/dismiss row, pinned to the bottom of whatever scrolls the
  *  card: even a long option list never scrolls the answer buttons out of
- *  reach (the second fold the field-test operator hit). Card backgrounds
- *  are white, so the pinned row paints over content sliding beneath it. */
-const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
+ *  reach (the second fold the field-test operator hit). It paints the
+ *  card's paper over content sliding beneath it. */
+const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-card-paper py-2 -mb-2";
 
 /**
  * The row's secondary actions: "Answer in chat" where a list offers it, then

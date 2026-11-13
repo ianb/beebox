@@ -14,13 +14,7 @@ export class DeterminismError extends Error {
   }
 }
 
-/** Thrown when a sketch misuses the Sketch API (draws before createCanvas, double createCanvas, …). */
-export class SketchUsageError extends Error {
-  name = "SketchUsageError";
-  constructor(options: { detail: string }) {
-    super(`Sketch API misuse: ${options.detail}`);
-  }
-}
+export { SketchUsageError } from "../core/errors.js";
 
 /** Thrown when the events JSON file is missing, malformed, or has an invalid entry. */
 export class EventScriptError extends Error {

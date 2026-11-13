@@ -12,6 +12,9 @@
 import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../../hooks/useViewFileHelpers";
+import type { FigureParamDecl } from "../../lib/figure-params";
+import { wrapCanvasLoopLib } from "../../lib/figure-canvas-loop";
+import type { ReportActivity } from "@core/chat/card-activity.js";
 
 export type FigureRuntime = "p5js" | "three" | "d3" | "canvas-loop";
 
@@ -29,8 +32,19 @@ export interface FigureContext {
   data: Record<string, unknown>;
   /** The card's validated frontmatter. */
   meta: Record<string, unknown>;
-  /** Box file helpers (read/url/write/…), reused from the views system. */
-  file: ViewFileHelpers;
+  /**
+   * Read-only box file helpers. Figures cannot write, commit or call
+   * connected services; a figure that must save lives inside a view.
+   */
+  file: FigureFileHelpers;
+}
+
+/** The read half of the views' file helpers: what a figure may use. */
+export type FigureFileHelpers = Pick<ViewFileHelpers, "readFile" | "fileUrl" | "imageUrl">;
+
+/** Pick the read helpers, so the figure object never carries a write function. */
+export function figureFileHelpers(helpers: ViewFileHelpers): FigureFileHelpers {
+  return { readFile: helpers.readFile, fileUrl: helpers.fileUrl, imageUrl: helpers.imageUrl };
 }
 
 /**
@@ -54,7 +68,7 @@ export type FigureSketch = (
  * `optimizeDeps`) plus its stylesheet (real CSS import, not a runtime <style>,
  * so the prod CSP's style-src stays clean).
  */
-async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
+async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness): Promise<unknown> {
   if (runtime === "p5js") {
     const mod = await import("p5");
     return mod.default;
@@ -64,9 +78,15 @@ async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   }
   if (runtime === "canvas-loop") {
     await import("@ianbicking/canvas-loop/browser/figure.css");
-    return import("@ianbicking/canvas-loop/browser");
+    return wrapCanvasLoopLib(await import("@ianbicking/canvas-loop/browser"), harness);
   }
   return import("d3");
+}
+
+/** What the canvas-loop `mountSketch` wrapper adds for this figure (`lib/figure-canvas-loop.ts`). */
+interface CanvasLoopHarness {
+  declared: readonly FigureParamDecl[];
+  report?: ReportActivity;
 }
 
 interface FigureMountProps {
@@ -74,9 +94,13 @@ interface FigureMountProps {
   sketch: FigureSketch;
   figure: FigureContext;
   onError: (message: string) => void;
+  /** The card's declared `params:`, checked against a canvas-loop module's own. Default none. */
+  declaredParams?: readonly FigureParamDecl[];
+  /** Logs this figure's actions (a no-op outside the companion pane). */
+  report?: ReportActivity;
 }
 
-export function FigureMount({ runtime, sketch, figure, onError }: FigureMountProps) {
+export function FigureMount({ runtime, sketch, figure, onError, declaredParams, report }: FigureMountProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   // Hold the latest figure context in a ref so the mount effect can read it at
   // mount time without taking it as a dependency — rebuilding the context object
@@ -87,6 +111,13 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
   useEffect(() => {
     figureRef.current = figure;
   }, [figure]);
+  // Same pattern for the mount-time harness inputs: a new reporter or param
+  // list identity must not remount the sketch. The reporter is called through
+  // the ref, so a re-bound reporter takes effect without a remount.
+  const harnessRef = useRef({ declaredParams, report });
+  useEffect(() => {
+    harnessRef.current = { declaredParams, report };
+  }, [declaredParams, report]);
 
   useEffect(() => {
     const el = mountRef.current;
@@ -101,7 +132,11 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
 
     void (async () => {
       try {
-        const lib = await loadRuntimeLib(runtime);
+        const { declaredParams: declared, report: reporter } = harnessRef.current;
+        const lib = await loadRuntimeLib(runtime, {
+          declared: declared ?? [],
+          ...(reporter !== undefined ? { report: (...args: Parameters<ReportActivity>) => { harnessRef.current.report?.(...args); } } : {}),
+        });
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
         // Legacy backstop: an <svg> without a viewBox *crops* instead of
@@ -147,7 +182,7 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
   return (
     <div
       ref={mountRef}
-      className="w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
+      className="bbx-figure-mount w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
     />
   );
 }

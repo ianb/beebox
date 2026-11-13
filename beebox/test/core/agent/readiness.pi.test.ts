@@ -17,6 +17,7 @@ import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../src/lib/box-slug.js";
 import { resolveProcedureModel } from "../../../src/shared/agent-models.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const qwen = { id: "qwen/qwen3-coder", label: "Qwen3 Coder" };
 
@@ -32,11 +33,14 @@ void test("a pi default needs an added default model, then the key", async (t) =
 
   // No default, a Claude default left from the box's claude days, and a
   // default the owner has since removed from the list: none is a pi default.
+  const warnings = consoleLines(t, "warn");
   t.check([
     await configure({ openrouterModels: [qwen] }),
     await configure({ openrouterModels: [qwen], agentModel: resolveProcedureModel({ engine: "claude", model: "strong" }) }),
     await configure({ agentModel: qwen.id }),
   ], ["needs-default-model", "needs-default-model", "needs-default-model"]);
+  // Only the removed default is logged, since the config loader no longer accepts it:
+  t.check(warnings(), ['Box config agentModel "qwen/qwen3-coder" is not a model any engine offers — ignoring it.']);
 
   t.check(await configure({ openrouterModels: [qwen], agentModel: qwen.id }), "needs-key");
 

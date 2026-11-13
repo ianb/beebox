@@ -13,7 +13,10 @@
  *    links are off: in a Markdown-centric box, `README.md` would otherwise
  *    become a link (`.md` is a TLD), and `i.e.`-style prose could misfire.
  *    The publish renderer leaves autolinking off so a bundle gains no
- *    external references it did not ask for.
+ *    external references it did not ask for;
+ *  - optionally, dollar-delimited TeX math (`math-rule.ts`) as render-only
+ *    `math` tags. Only the frontend renderer turns it on; backend walkers and
+ *    publishing see the dollar text as written.
  */
 
 import Markdoc from "@markdoc/markdoc";
@@ -22,6 +25,8 @@ import type MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 import { rewriteHtmlTokens } from "./html-tokens.js";
 import { rewriteFootnoteTokens } from "./footnote-tokens.js";
+import { mathPlugin } from "./math-rule.js";
+import { rewriteMathTokens } from "./math-tokens.js";
 
 // Named value imports don't resolve from this CommonJS module under Node's
 // ESM loader; destructure off the default import (same as `core.ts`).
@@ -43,19 +48,23 @@ interface ExposedTokenizer {
   parser: MarkdownIt;
 }
 
-export function createMarkdownParser({ linkify }: { linkify: boolean }): MarkdownParser {
+export function createMarkdownParser({ linkify, math }: { linkify: boolean; math: boolean }): MarkdownParser {
   const tokenizer = new Tokenizer({ html: true, allowComments: true, linkify });
   // eslint-disable-next-line no-restricted-syntax -- Tokenizer.parser is private and no public Markdoc API exposes the markdown-it instance; centralized one-time cast (see interface docstring above).
   const md = (tokenizer as unknown as ExposedTokenizer).parser;
   md.linkify.set({ fuzzyLink: false, fuzzyEmail: false, fuzzyIP: false });
   md.use(footnote);
+  if (math) md.use(mathPlugin);
   return {
     md,
-    parse: (source) => parse(rewriteFootnoteTokens(rewriteHtmlTokens(tokenizer.tokenize(source), md))),
+    parse: (source) => {
+      const tokens = rewriteFootnoteTokens(rewriteHtmlTokens(tokenizer.tokenize(source), md));
+      return parse(math ? rewriteMathTokens(tokens) : tokens);
+    },
   };
 }
 
-const plain = createMarkdownParser({ linkify: false });
+const plain = createMarkdownParser({ linkify: false, math: false });
 
 /** Parse a Markdown body without bare-URL autolinking (backend walkers, publishing). */
 export function parseMarkdown(source: string): Node {

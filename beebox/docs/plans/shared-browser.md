@@ -15,7 +15,7 @@ Each box gets one web browser session. The box agent drives it with `bbx browser
 - `issues/features/2026-06-12-agent-browser-scoped-to-box.md` (workstream `shared-browser`): the box agent looks at its own box's pages. This plan gives the agent a browser but not a box credential inside it; that half stays open (see NOT in scope).
 - `issues/exploration/2026-10-29-shared-browser-site-probe.md`: which sites block the server IP. Decides later whether the browser should run on the person's network.
 - `private-issues/security/2026-10-29-box-user-network-egress-unfiltered.md`: box users have no egress filter. Track F closes the browser's path to host loopback; the rest of that issue stays open.
-- `issues/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md`: a server-side browser is one of its directions; not resolved here.
+- `issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md`: a server-side browser is one of its directions; not resolved here.
 
 Searched the queue for `browser`, `chromium`, `captcha`, `login`, `agent-browser`, `dashboard`: no duplicate of a shared agent-and-person browser.
 

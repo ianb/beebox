@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { MenuItem } from "../../ui/dropdown-menu-item";
+import { MenuItem } from "../../ui/menu-item";
 import { toastError } from "../../ui/toast-store";
 import {
   browserSpeechAvailability,

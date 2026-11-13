@@ -139,7 +139,7 @@ function TabCloseButton({ title, pinned, closing, onClose }: { title: string; pi
       title={closing ?? "Close tab"}
       data-close-kind={closing === null ? undefined : "not-now"}
       className={cn(
-        "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "bbx-interface-tab-action inline-flex items-center justify-center min-w-6 min-h-6 flex-shrink-0 mr-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         // On a pinned tab the close button is the thing you did not ask
         // for; it stays out of the way until you reach for it.
         pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
@@ -263,11 +263,11 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
           aria-pressed={tab.pinned}
           title={tab.pinned ? "Unpin tab" : "Pin tab"}
           className={cn(
-            "bbx-interface-tab-action flex-shrink-0 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "bbx-interface-tab-action inline-flex items-center justify-center min-w-6 min-h-6 flex-shrink-0 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
             // Pinned: always shown, because it is the only thing that says the
             // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
             // a row of tabs is not a row of icons.
-            tab.pinned ? "bbx-interface-tab-pin" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            tab.pinned ? "bbx-interface-tab-pin" : "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
           )}
         >
           <PinIcon filled={tab.pinned} />

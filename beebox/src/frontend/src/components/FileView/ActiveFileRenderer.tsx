@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
-import type { ActivityKind } from "@core/chat/card-activity.js";
+import { useState } from "react";
 import type { FileData, FileRenderer } from "../../file-type-registry";
+import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
-import type { FileViewMode } from "../file-view-types";
+import { isFrameless, type FileViewMode } from "../file-view-types";
 import { BoundAgentViewRenderer } from "./BoundAgentViewRenderer";
+import { CaptionedFigure } from "../FigureView/view";
 
 interface ActiveFileRendererProps {
   active: FileRenderer;
@@ -16,14 +17,13 @@ interface ActiveFileRendererProps {
   viewState?: ViewState | null;
   canPushViewState?: boolean;
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline: (target: ViewTarget) => ReactNode;
+  renderInline: RenderInline<ViewTarget>;
   caption?: string;
 }
 
 export function ActiveFileRenderer(props: ActiveFileRendererProps) {
-  const { active, binding, data, path, mode, params, viewState, canPushViewState, onViewStateChange, reportActivity, onNavigate, renderInline, caption } = props;
+  const { active, binding, data, path, mode, params, viewState, canPushViewState, onViewStateChange, onNavigate, renderInline, caption } = props;
   const stateKey = JSON.stringify(viewState ?? null);
   const [local, setLocal] = useState<{ path: string; stateKey: string; state: ViewState } | null>(null);
   const builtinState = local?.path === path && local.stateKey === stateKey ? local.state : viewState;
@@ -32,20 +32,23 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
     else setLocal({ path, stateKey, state: next });
   }
   if (binding !== null && active.name === binding.name) {
-    return (
+    const bound = (
       <BoundAgentViewRenderer
         slug={binding.slug}
-        embedded={mode === "embed"}
+        embedded={isFrameless(mode)}
+        strip={mode === "strip"}
         path={path}
         params={params}
         ownedViewState={viewState}
         canPushViewState={canPushViewState}
         {...(onViewStateChange !== undefined ? { onViewStateChange } : {})}
-        {...(reportActivity !== undefined ? { reportActivity } : {})}
         onNavigate={onNavigate}
         renderInline={renderInline}
       />
     );
+    // An authored view draws no caption of its own; an embed's `![caption]`
+    // goes beneath it, as a built-in renderer shows it.
+    return caption !== undefined && caption.trim() !== "" ? <CaptionedFigure caption={caption}>{bound}</CaptionedFigure> : bound;
   }
   return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} workspacePdf={props.workspacePdf}
     viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState} />;

@@ -39,6 +39,7 @@ struct RootView: View {
     @State private var hqDiarizationRequested = false
     @State private var speechPlaybackActive = false
     @State private var responseActive = false
+    @State private var callActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -511,6 +512,7 @@ struct RootView: View {
             screenshotRequest: screenshotRequest,
             speechStopRequest: speechStopRequest,
             navigationRequest: navigationRequest,
+            shown: composerShown,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             composerCommandResults: composerCommandResults,
             onComposerBinding: { publication in
@@ -579,6 +581,12 @@ struct RootView: View {
                     )
                 }
                 responseActive = active
+            },
+            onCallStateChange: { active in
+                if callActive != active {
+                    BoxLog.info("call active=\(active)", category: .lifecycle, targetBoxID: box.id)
+                }
+                callActive = active
             },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
@@ -658,6 +666,7 @@ struct RootView: View {
                 hqDiarizationRequested: hqDiarizationRequested,
                 speechPlaybackActive: speechPlaybackActive,
                 responseActive: responseActive,
+                callActive: callActive,
                 locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,

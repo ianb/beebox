@@ -11,6 +11,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
@@ -54,8 +55,11 @@ void test("Even with another chat sitting in the most-active pointer — the cha
   // the same staged capture goes to the wrong chat, which is the bug this test
   // pins down:
 
+  const warnings = consoleLines(t, "warn");
   const blind = await resolveCaptureDeliveryTarget({ boxRoot: box.root, targetSessionId: COINED });
   t.check(blind.sessionId, "88888888-9999-4aaa-8bbb-cccccccccccc");
+  // The log says the target chat was not found and the capture went elsewhere:
+  t.check(warnings(), [`[capture] Target chat ${COINED} no longer exists; falling back to the most-active session for box=${box.root}`]);
 });
 
 // ## A reserved landmark chat delivers under its landmark

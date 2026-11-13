@@ -8,6 +8,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { prepareItem } from "../../../../src/core/triage/evidence/core.js";
 import { runJevTriage } from "../../../../src/core/triage/auto/core.js";
 import { TriageBudgetError } from "../../../../src/core/triage/judge.js";
@@ -173,12 +174,15 @@ void test("Wholly unavailable evidence skips Jev and remains held", async (t) =>
 // ## Only quota failures defer; operational errors remain visible
 void test("Only quota failures defer; operational errors remain visible", async (t) => {
   const quotaBox = await harnessBox("txt");
+  const warnings = consoleLines(t, "warn");
   const quota = await runJevTriage({ boxRoot: quotaBox.root, compile: skipCompile, prepare: prepareItem,
     judge: async () => { throw new TriageBudgetError(); }, research: async () => null,
   });
   const quotaState = { deferred: quota.deferred.length, decisions: quota.decisions.length,
     sourceRemains: await fs.readFile(quotaBox.path("_content/inbox/staged/Document.txt"), "utf8") };
   await quotaBox.cleanup();
+  // The triage log says the item stays staged for the next run:
+  t.check(warnings(), ["[triage] Jev daily budget exhausted; 1 item(s) remain staged"]);
 
   const errorBox = await harnessBox("txt");
   const operational = await runJevTriage({ boxRoot: errorBox.root, compile: skipCompile, prepare: prepareItem,

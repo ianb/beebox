@@ -17,6 +17,7 @@ import { Heading } from "../ui/Heading";
 import { InlineAction } from "../ui/InlineAction";
 import { Accordion } from "../ui/Accordion";
 import { JsonView } from "../ui/JsonView";
+import { Table, Td, Th } from "../ui/Table";
 import { isRecord } from "@shared/is-record";
 import type { RendererProps } from "../../file-type-registry";
 import type { BatchSummary } from "./data";
@@ -105,20 +106,18 @@ function BatchTable({ batch, schemaJson, onNavigate }: { batch: BatchSummary; sc
         {batch.coverage?.notes !== undefined ? <Text as="span" size="sm" tone="subtle">Executor notes: {batch.coverage.notes}</Text> : null}
         {openFile}
       </Row>
-      <div className="overflow-x-auto">
-        <RecordsGrid rows={batch.rows} columns={columns} filed={filed} open={open} onToggle={(i) => setOpen(open === i ? null : i)} />
-      </div>
+      <RecordsGrid rows={batch.rows} columns={columns} filed={filed} open={open} onToggle={(i) => setOpen(open === i ? null : i)} />
     </Stack>
   );
 }
 
 function RecordsGrid({ rows, columns, filed, open, onToggle }: { rows: unknown[]; columns: string[]; filed: Set<number>; open: number | null; onToggle: (i: number) => void }) {
   return (
-    <table className="w-full text-sm">
+    <Table caption="Batch records" captionHidden className="text-sm">
       <thead>
         <tr>
-          <th className="text-left pr-2">#</th>
-          {columns.map((c) => <th key={c} className="text-left pr-2">{c}</th>)}
+          <Th scope="col">#</Th>
+          {columns.map((c) => <Th key={c} scope="col">{c}</Th>)}
         </tr>
       </thead>
       <tbody>
@@ -126,7 +125,7 @@ function RecordsGrid({ rows, columns, filed, open, onToggle }: { rows: unknown[]
           <RecordRow key={i} index={i} row={row} columns={columns} filed={filed.has(i)} open={open === i} onToggle={() => onToggle(i)} />
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
@@ -134,17 +133,17 @@ function RecordRow({ index, row, columns, filed, open, onToggle }: { index: numb
   const rec = isRecord(row) ? row : {};
   return (
     <>
-      <tr className="align-top">
-        <td className="pr-2">
+      <tr>
+        <Td>
           <InlineAction intent="subtle" onClick={onToggle}>{open ? "▾" : "▸"} {String(index)}{filed ? " ✓" : ""}</InlineAction>
-        </td>
-        {columns.map((c) => <td key={c} className="pr-2">{cell(rec[c])}</td>)}
+        </Td>
+        {columns.map((c) => <Td key={c}>{cell(rec[c])}</Td>)}
       </tr>
       {open ? (
         <tr>
-          <td colSpan={columns.length + 1} className="pb-2">
+          <Td colSpan={columns.length + 1} className="pt-0">
             <JsonView value={row} />
-          </td>
+          </Td>
         </tr>
       ) : null}
     </>

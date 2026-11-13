@@ -30,9 +30,9 @@ void test("Two Text spans in a Stack are flex items, so each takes its own line 
   t.check(html(h(Stack, { gap: "xs", children: h(React.Fragment, null, h(Text, null, "Label"), h(Text, null, "Description")) })), "<div class=\"flex flex-col gap-1\"><span class=\"text-warm-900 text-base\">Label</span><span class=\"text-warm-900 text-base\">Description</span></div>");
 });
 
-// The default gap is `md`, and `as` still selects the element:
+// The default gap is `md`, and `as` still selects the element (lists are `List`):
 void test("The default gap is md, and as still selects the element:", async (t) => {
-  t.check(html(h(Stack, { as: "ul", children: h("li", null, "a") })), "<ul class=\"flex flex-col gap-3\"><li>a</li></ul>");
+  t.check(html(h(Stack, { as: "section", children: "a" })), "<section class=\"flex flex-col gap-3\">a</section>");
 });
 
 // `Stack` also serves as a page-level scroll container (it absorbed `Column`).
@@ -47,9 +47,9 @@ void test("Stack also serves as a page-level scroll container (it absorbed Colum
 
 // ## Heading renders a real heading; the level decides the look
 void test("Heading renders a real heading; the level decides the look", async (t) => {
-  t.check(html(h(Heading, { level: 2, children: "This box" })), "<h2 class=\"text-lg font-semibold text-warm-900\">This box</h2>");
+  t.check(html(h(Heading, { level: 2, children: "This box" })), "<h2 class=\"text-lg font-semibold text-balance text-warm-900\">This box</h2>");
 
-  t.check(html(h(Heading, { level: 3, className: "mb-2", children: "Engines" })), "<h3 class=\"text-sm font-semibold text-warm-900 mb-2\">Engines</h3>");
+  t.check(html(h(Heading, { level: 3, className: "mb-2", children: "Engines" })), "<h3 class=\"text-sm font-semibold text-balance text-warm-900 mb-2\">Engines</h3>");
 });
 
 // ## StatusMessage announces a pane's placeholder

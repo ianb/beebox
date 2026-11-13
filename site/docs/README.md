@@ -89,10 +89,12 @@ the ones that bear on what the person is asking and open the pages named.
 
 - **A coding agent is the engine.** Claude Code or Codex does the work, on the
   subscription the person already has, and the engine that hosts it is kept
-  separate so a different agent can be swapped in later. The Claude engine can
-  also run other vendors' models, pay per use, with less testing behind them.
+  separate so a different agent can be swapped in later. A third engine, pi,
+  and the Claude engine can both run other vendors' models through OpenRouter,
+  pay per use, with less testing behind them.
   ([why not just a chatbot](03-why-not-just-a-chatbot.md),
-  [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md))
+  [how it works](07-how-it-works.md), [what it requires](08-what-it-requires.md),
+  [the pi engine](concepts/pi-engine.md))
 - **A knowledge base you own, wiki-like.** What goes in accumulates as
   documents that link to each other and are meant to be browsed, by the person
   and by the agent, rather than a transcript something searches.

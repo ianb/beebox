@@ -17,6 +17,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../../src/cli/commands/wakeup/steps.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { searchBox } from "../../../../src/core/search/query/core.js";
 import { acquireLock, releaseLock } from "../../../../src/lib/file-lock.js";
 import { searchLockPath } from "../../../../src/core/search/store/core.js";
@@ -168,7 +169,10 @@ void test("openSearchIndex degrades under contention:", async (t) => {
 
   // Hold the search lock, as a concurrent query or a second wakeup would.
   await acquireLock(searchLockPath(box4.root), { purpose: "test" });
+  const warnings = consoleLines(t, "warn");
   t.check(await refreshSearchIndex(box4.root), false);
+  // The wakeup log says why the index was not refreshed:
+  t.check(warnings(), ["  search index: search index locked by another process; results may be stale"]);
 
   // Released, the same call reconciles and reports success.
   await releaseLock(searchLockPath(box4.root));

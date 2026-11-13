@@ -226,7 +226,7 @@ composer with fabricated props. Behaviour is documented from the code.
 
 Mic button becomes a **red stop square** ("Stop recording"). The textarea goes
 read-only showing the live transcript, with Cancel (✕) / Edit (✎) / Send
-controls. All mic status lives in the `MicOverlay` floating above the voice
+controls. All mic status lives in the `MicStatus` floating above the voice
 button: live volume bars (flat = no audio reaching the recorder, e.g. wrong
 mic selected) over a rotating voice-keyword hint, filtered to actions valid
 for the current text — only `"mic off"` until words arrive. In `reconnecting`

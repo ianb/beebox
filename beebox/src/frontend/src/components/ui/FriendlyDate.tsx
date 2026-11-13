@@ -5,42 +5,62 @@
  *
  *   <FriendlyDate iso={card.captured} />            → "Jun 14, 2026, 10:36 AM"
  *   <FriendlyDate iso={card.captured} mode="date" /> → "Jun 14, 2026"
+ *   <FriendlyDate iso={card.captured} mode="time" /> → "10:36 AM"
+ *   <FriendlyDate iso="2026-08-14" />               → "Aug 14, 2026"
  */
+import { parseIsoDate } from "@shared/todo-model";
+
+export type FriendlyDateMode = "datetime" | "date" | "time";
+
 interface FriendlyDateProps {
   iso: string;
-  /** "datetime" (default) shows date + time; "date" shows the day only. */
-  mode?: "datetime" | "date";
+  /**
+   * "datetime" (default) shows date + time; "date" shows the day only; "time"
+   * shows the time only (a date-only value has no time, so it shows the day).
+   */
+  mode?: FriendlyDateMode;
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * A date-only string ("2026-08-14") is a calendar day, not an instant: the
- * Date constructor parses it as UTC midnight, so formatting it in the
- * browser's zone shows the *previous* day anywhere behind UTC (a todo due
- * `2026-08-14` rendered as "Aug 13, 2026" in the US). Format such values in
- * UTC — and never with a time — so the day shown is the day written.
+ * What a value names: a calendar day or an instant, as epoch milliseconds. A
+ * date-only string ("2026-08-14") is a day, with no time and no zone, kept as
+ * its UTC midnight and always formatted in UTC; formatting it in the browser's
+ * zone shows the previous day anywhere behind UTC, as a todo due `2026-08-14`
+ * once showed "Aug 13, 2026" in the US. Anything else — an ISO timestamp,
+ * epoch milliseconds, or another form `Date` reads, such as a timestamp with
+ * no offset — is an instant, read as `Date` reads it.
  */
-export function formatOptions({ iso, mode }: FriendlyDateProps): Intl.DateTimeFormatOptions {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return { dateStyle: "medium", timeZone: "UTC" };
-  if (mode === "date") return { dateStyle: "medium" };
-  return { dateStyle: "medium", timeStyle: "short" };
+function parse(value: string | number): { kind: "day" | "instant"; epoch: number } | null {
+  if (typeof value === "string" && DATE_ONLY.test(value)) {
+    // null for a well-shaped string that names no day, such as "2026-02-30".
+    const epoch = parseIsoDate(value);
+    return epoch === null ? null : { kind: "day", epoch };
+  }
+  const epoch = new Date(value).getTime();
+  return Number.isNaN(epoch) ? null : { kind: "instant", epoch };
 }
 
 /**
  * The text {@link FriendlyDate} shows, for places that need a string (titles,
- * sentences). Takes an ISO string or epoch milliseconds. A value that does not
- * parse comes back as written rather than "Invalid Date".
+ * sentences). Takes an ISO string or epoch milliseconds. A day is shown as
+ * that day, never with a time; an instant in the browser's zone, with the time
+ * unless `mode` is "date", and the time alone when `mode` is "time". A value
+ * that does not parse comes back as written rather than "Invalid Date".
  */
-export function friendlyDate(value: string | number, mode?: "datetime" | "date"): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  const iso = typeof value === "string" ? value : parsed.toISOString();
-  return parsed.toLocaleString(undefined, formatOptions({ iso, mode }));
+export function friendlyDate(value: string | number, mode?: FriendlyDateMode): string {
+  const parsed = parse(value);
+  if (parsed === null) return String(value);
+  const date = new Date(parsed.epoch);
+  if (parsed.kind === "day") return date.toLocaleString(undefined, { dateStyle: "medium", timeZone: "UTC" });
+  if (mode === "date") return date.toLocaleString(undefined, { dateStyle: "medium" });
+  if (mode === "time") return date.toLocaleString(undefined, { timeStyle: "short" });
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function FriendlyDate({ iso, mode }: FriendlyDateProps) {
-  if (Number.isNaN(new Date(iso).getTime())) {
-    // Not a parseable timestamp — show the raw value rather than "Invalid Date".
-    return <span>{iso}</span>;
-  }
+  // Not a parseable date — show the raw value rather than "Invalid Date".
+  if (parse(iso) === null) return <span>{iso}</span>;
   return <time dateTime={iso}>{friendlyDate(iso, mode)}</time>;
 }

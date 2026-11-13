@@ -270,6 +270,7 @@ test("pidfile serialization: a write cannot be clobbered by a concurrent stale r
     frontendPort: 1,
     backendPort: 2,
     routerPid: 9,
+    appOrigin: "http://localhost:3210",
     startedAt: 0,
   });
 

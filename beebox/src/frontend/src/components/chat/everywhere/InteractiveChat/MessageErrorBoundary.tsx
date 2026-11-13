@@ -7,6 +7,7 @@
  */
 
 import React from "react";
+import { Notice } from "../../../ui/Notice";
 
 interface Props {
   children: React.ReactNode;
@@ -36,10 +37,10 @@ export class MessageErrorBoundary extends React.Component<Props, State> {
     const { error } = this.state;
     if (error) {
       return (
-        <div className="mx-3 sm:mx-6 my-1 px-3 py-2 rounded border border-danger-light bg-danger-50 text-xs text-danger-dark">
+        <Notice tone="error" className="mx-3 sm:mx-6 my-1">
           <span className="font-medium">Message render error:</span>{" "}
           <span className="font-mono">{error.message}</span>
-        </div>
+        </Notice>
       );
     }
     return this.props.children;

@@ -71,6 +71,55 @@ test("agent guidance files do not ship unless they sit in a shipped box-facing t
   }
 });
 
+test("tests do not ship; source beside them does", () => {
+  for (const path of [
+    "beebox/test/deploy/host-memory.test.ts",
+    "beebox/test/tours/card-theme-interface.tour.ts",
+    "beebox/test/helpers/isolate-user-home.ts",
+    "beebox/src/frontend/test/components/settings/x.test.ts",
+    "beebox/src/core/foo.test.ts",
+    "tap-check/src/rules/check-whole-value.test.ts",
+    "personal-vibe-check/src/rule.test.tsx",
+  ]) {
+    assert.equal(isDeployedPath(path), false, path);
+  }
+  for (const path of ["beebox/src/core/foo.ts", "beebox/src/frontend/src/lib/test-ids.ts", "beebox/src/testing/x.ts", "tap-check/src/tap.ts"]) {
+    assert.equal(isDeployedPath(path), true, path);
+  }
+});
+
+test("operator tools, the container image, and root docs do not ship; server files do", () => {
+  for (const path of [
+    "beebox/deploy/add-box.sh",
+    "beebox/deploy/prod-ssh",
+    "beebox/deploy/prod-session-cookie",
+    "beebox/deploy/deploy-target.sh",
+    "beebox/deploy/check-origin-tls-ref.sh",
+    "beebox/deploy/hetzner/cloud-init.yaml",
+    "beebox/deploy/launchd/README.md",
+    "beebox/deploy/README.md",
+    "beebox/docker/Dockerfile",
+    "beebox/tools/slopo/slopo.conf.yaml",
+    "beebox/README.md",
+    "beebox/frontend.md",
+  ]) {
+    assert.equal(isDeployedPath(path), false, path);
+  }
+  for (const path of [
+    "beebox/deploy/deploy.sh",
+    "beebox/deploy/systemd/box-sandbox.conf",
+    "beebox/deploy/server-bin/bbx-box-run",
+    "beebox/deploy/nginx/beebox.conf",
+    "beebox/deploy/apparmor/beebox-codex",
+    "beebox/deploy/install-restic.sh",
+    "beebox/deploy/claude-update.sh",
+    "beebox/package.json",
+    "beebox/tsconfig.json",
+  ]) {
+    assert.equal(isDeployedPath(path), true, path);
+  }
+});
+
 test("every docs/ entry in beebox's package files list still ships", () => {
   // The package `files` list is what reaches a box; a docs/ entry added there
   // must not fall under NOT_SHIPPED_PATTERN, or its edits would never deploy.

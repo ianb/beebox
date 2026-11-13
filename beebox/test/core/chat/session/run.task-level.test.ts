@@ -15,6 +15,7 @@ import type { LiveTaskEntry } from "../../../../src/core/chat/message-types.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick } from "../../../helpers/chat-session-spawner-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 void test("A run reports an empty set when it opens and when it closes, and the CLI's set between", async (t) => {
   const box = await makeTmpBox({ git: true });
@@ -44,8 +45,10 @@ void test("A run reports an empty set when it opens and when it closes, and the 
   t.check(levels, [[], [{ taskId: "t1", description: "npm test" }]]);
 
   // The run ends without any task_notification for t1. The set still empties:
+  const warnings = consoleLines(t, "warn");
   const closed = once(session, "close");
   session.stop();
   await closed;
   t.check(levels, [[], [{ taskId: "t1", description: "npm test" }], []]);
+  t.check(warnings(), ["[ChatSession] Ending run s1 with 1 live background task(s)"]);
 });

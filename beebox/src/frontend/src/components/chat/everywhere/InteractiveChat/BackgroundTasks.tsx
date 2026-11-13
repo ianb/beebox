@@ -10,6 +10,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { trpcClient } from "../../../../lib/trpc/client";
 import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
+import { LiveDot } from "../../../ui/LiveDot";
+import { StatusPill } from "./StatusPill";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus
@@ -51,8 +53,8 @@ export function useBackgroundTasks(sessionId: string | null): {
 
 function TaskPill({ task }: { task: LiveTask }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
-      <span className="inline-block w-2 h-2 rounded-full bg-info animate-pulse flex-shrink-0" />
+    <StatusPill>
+      <LiveDot tone="info" />
       <span className="font-medium truncate">{task.description}</span>
       {task.lastToolName ? (
         <span className="text-warm-400 flex-shrink-0">· {task.lastToolName}</span>
@@ -60,14 +62,14 @@ function TaskPill({ task }: { task: LiveTask }) {
       {task.elapsedMs !== undefined ? (
         <span className="text-warm-400 ml-auto flex-shrink-0 tabular-nums">{formatDuration(task.elapsedMs)}</span>
       ) : null}
-    </div>
+    </StatusPill>
   );
 }
 
 export function BackgroundTasks({ tasks }: { tasks: LiveTask[] }) {
   if (tasks.length === 0) return null;
   return (
-    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" aria-label="Background tasks">
+    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" role="group" aria-label="Background tasks">
       {tasks.map((task) => (
         <TaskPill key={task.taskId} task={task} />
       ))}

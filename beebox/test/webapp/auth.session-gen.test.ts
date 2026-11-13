@@ -26,6 +26,7 @@ import { makeTestServer } from "../helpers/test-route-server.js";
 import { signSession, verifySession, resolveRequestIdentity, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { createFirstUser, addUser, setPassword, removeUser } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 // Fast scrypt (test-only work-factor seam); exercise REAL auth (clear any
 // configured owner email / hub secret so the resolver takes its cookie path).
@@ -180,6 +181,7 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
   await writeFile(AUTH_FILE, "{ this is not valid json");
   resetLocalUserCache();
 
+  const errors = consoleLines(t, "error");
   const corruptIdentity = resolveRequestIdentity(reqWithCookie(cookie2), { openAccess: false });
   t.check(
     // Distinct fail-closed outcome (→ 503), NOT source:null (which is the 401 case)
@@ -187,6 +189,8 @@ void test("Login mints a `gen`-bearing cookie for an email with a local record",
     corruptIdentity,
     { email: null, name: null, source: "unavailable" },
   );
+  // The server log names the corrupt file, so an operator knows what to fix:
+  t.check(errors(), [`[auth] auth store unavailable while verifying a session cookie; failing closed (503): AuthFileCorruptError: Auth file at ${AUTH_FILE} is corrupt: Expected property name or '}' in JSON at position 2 (line 1 column 3). Refusing to load — fix or remove it by hand.`]);
 
   // At the request boundary that outcome answers `503`, not `401`: `GET /auth/me`
   // with a signature-valid cookie against the corrupt store returns 503.

@@ -110,7 +110,7 @@ function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; si
       <BrokenImageIcon />
       <div className="text-center break-words max-w-full font-medium">Failed to load</div>
       {alt.trim() !== "" ? (
-        <div className="text-center break-words max-w-full opacity-75 text-[10px] leading-tight line-clamp-2">
+        <div className="text-center break-words max-w-full opacity-75 text-[0.625rem] leading-tight line-clamp-2">
           {alt}
         </div>
       ) : null}

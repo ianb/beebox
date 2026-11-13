@@ -22,6 +22,7 @@ import { CHECK_SKIP_CODE } from "../procedure/shell.js";
 import { buildToolingScriptEnv } from "../script-env/core.js";
 import { notificationReached, notifyBoxholder, type NotificationInput } from "../notify-boxholder.js";
 import { parseTarget } from "../notification/target.js";
+import { UnsendableTargetError } from "../notification/target-check.js";
 import type { Loudness } from "../notification/intent.js";
 import { DEFAULT_RUN_WINDOW_MS, recordOutcome, saveScriptState, type ScriptState } from "./state.js";
 import { classifyScheduleFailure, type ScheduleOutcomeResult } from "./engine-wait.js";
@@ -117,7 +118,8 @@ export type RecordedRun = (
  * Classify a failed action. A `notify:` send that failed is a `failure`: it
  * runs no agent, so an engine-wait record written during it (a chat's quota
  * episode) says nothing about it, and `deferred` would hide a send that did
- * not get through. It is `final` when no channel was tried. A command goes
+ * not get through. It is `final` when no channel was tried, or when the
+ * target names a place that is not there (a retry cannot help). A command goes
  * through the engine-wait classifier.
  */
 export async function classifyActionFailure(
@@ -125,7 +127,7 @@ export async function classifyActionFailure(
   options: { boxRoot: string; runStartedAt: Date; error: unknown },
 ): Promise<{ result: ScheduleOutcomeResult; error: string; final?: boolean | undefined }> {
   if (parsed.action.kind === "notify") {
-    const final = options.error instanceof ScheduledNotificationUndeliveredError && options.error.final;
+    const final = (options.error instanceof ScheduledNotificationUndeliveredError && options.error.final) || options.error instanceof UnsendableTargetError;
     return { result: "failure", error: errorMessage(options.error), final };
   }
   return classifyScheduleFailure(options);

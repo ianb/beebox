@@ -126,6 +126,13 @@ export interface WorkstreamsAppSupervisorConfig {
   killGraceMs?: number;
   /** Wait between attempts to bind the exhibits port after a child releases it. */
   exhibitsHoldRetryMs?: number;
+  /**
+   * Waits before automatic retries of a failed start, one per attempt. A start
+   * fails mostly under transient load (a router cold start launches several
+   * Vite servers at once), so a few spaced retries recover it; after the last
+   * one the app stays failed until a source change or a manual retry.
+   */
+  startRetryDelaysMs?: readonly number[];
 }
 
 export interface Generation extends WorkstreamsAppGenerationRecord {

@@ -70,6 +70,7 @@ one in this table; see "Google client credentials" below.
 |---|---|---|---|
 | `mistral` | `core/mistral-key.ts`, `/api/adapters/mistral` | `mistral.secret.json` | `BBX_MISTRAL_API_KEY` |
 | `deepgram` | `core/deepgram-key.ts` | `deepgram.secret.json` | `BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT` |
+| `cloudflare-turn` | `core/cloudflare-turn-key.ts` (`{keyId, apiToken}`; relay credentials for calls, `trpc/routers/chat-call.ts`) | — | — (store-only) |
 | `openai` | `core/search/embeddings-key.ts`, `/api/adapters/openai` | `openai.secret.json` | `BBX_OPENAI_API_KEY` |
 | `openai-thinking` | chat TTS, Whisper, the realtime mint | — | `THINKING_OPENAI_API_KEY` |
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |

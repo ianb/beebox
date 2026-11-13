@@ -30,15 +30,17 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  */
 
 import { useParams, useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { useCurrentUser, type CurrentUser } from "../../hooks/useCurrentUser";
 import { useBoxName } from "../../hooks/useBoxName";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { oneOf } from "../../lib/live-refresh";
 import { trpc } from "../../lib/trpc/client";
-import { Dropdown } from "../ui/Dropdown";
-import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import { Menu } from "../ui/Menu";
+import { MenuItem, MenuDivider } from "../ui/menu-item";
 import { AppNavFace } from "../app-bar-faces/AppNavFace";
 import { ProfileButtonFace } from "../app-bar-faces/ProfileButtonFace";
+import { PresenceHeads } from "./PresenceHeads";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { PlacePill } from "./PlacePill";
@@ -46,6 +48,35 @@ import { BoxPageMenuItems } from "./BoxPageMenuItems";
 import { AttentionBadges } from "./app-nav-badges";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "../app-bar-chrome";
 import { placeLabel } from "../../lib/place-label";
+import { usePointSelection } from "../point-selection-context";
+import { captureSelectedText } from "../SelectionCapture";
+
+function PointSelectionButton({ standalone }: { standalone: boolean }) {
+  const mode = usePointSelection();
+  const capturedOnPress = useRef(false);
+  useEffect(() => { if (standalone) mode?.setActive(false); }, [standalone, mode]);
+  if (standalone || !mode) return null;
+  return <button id="bbx-point-select" type="button" aria-label={mode.active ? "Done selecting" : "Select content"}
+    title={mode.active ? "Done selecting" : "Select content"} aria-pressed={mode.active}
+    onPointerDown={(event) => {
+      if (event.pointerType === "mouse" && !mode.active && captureSelectedText()) {
+        event.preventDefault();
+        capturedOnPress.current = true;
+      }
+    }}
+    onClick={(event) => {
+      if (capturedOnPress.current) { capturedOnPress.current = false; return; }
+      if (event.detail === 0 && !mode.active && captureSelectedText()) return;
+      mode.setActive(!mode.active);
+    }}
+    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${mode.active ? "bg-white/30" : "hover:bg-white/20"}`}>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m5 3 12 9-5.7.8-2.6 5.1L5 3Z" />
+      <circle cx="18" cy="18" r="3.5" />
+      <path d="M18 16.8v2.4m-1.2-1.2h2.4" />
+    </svg>
+  </button>;
+}
 
 /**
  * Profile avatar + dropdown menu — the bar's "meta" corner: Settings,
@@ -60,7 +91,7 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
   const isOnAdmin = activePath === SYSTEM_CARD_PATHS.admin;
 
   return (
-    <Dropdown
+    <Menu
       align="right"
       trigger={({ toggle, ariaProps }) => <ProfileButtonFace user={user} onClick={toggle} ariaProps={ariaProps} />}
     >
@@ -81,11 +112,12 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
       <MenuItem id="bbx-profile-menu-reload" onClick={() => window.location.reload()}>Reload</MenuItem>
       {user ? <MenuItem id="bbx-profile-menu-sign-out" href={withBase("/auth/logout")}>Sign out</MenuItem> : null}
-    </Dropdown>
+    </Menu>
   );
 }
 
-export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
+export function AppNav({ onToggleDebugLog, onToggleSourceView, standalone: standaloneProp }: { onToggleDebugLog: () => void; onToggleSourceView: () => void; standalone?: boolean }) {
+  const standalone = standaloneProp ?? false;
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
   const currentUser = useCurrentUser();
@@ -130,8 +162,13 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     <AppNavFace pill={<PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />}>
       {/* Chat's session + voice chips portal in here (Track C2). */}
       <AppBarChipSlot />
+      <PointSelectionButton standalone={standalone} />
       <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
-      <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+      {/* The heads of others in this chat hang below the avatar (docs/chat-presence.md). */}
+      <div className="relative flex">
+        <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+        <PresenceHeads />
+      </div>
     </AppNavFace>
   );
 }

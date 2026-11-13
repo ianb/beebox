@@ -100,7 +100,7 @@ function JsonRenderer({ data }: RendererProps) {
   }, [text]);
 
   if (metaLoading) {
-    return <StatusMessage className="p-4">Loading file info…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading file info…</StatusMessage>;
   }
   if (meta?.absent === true) {
     return (
@@ -132,7 +132,7 @@ function JsonRenderer({ data }: RendererProps) {
     return <ErrorText className="p-4">Failed to load {basename}: {message}</ErrorText>;
   }
   if (bodyLoading || parsed === null) {
-    return <StatusMessage className="p-4">Loading JSON…</StatusMessage>;
+    return <StatusMessage busy className="p-4">Loading JSON…</StatusMessage>;
   }
   if (!parsed.ok) {
     // Not valid JSON — show the parse error and the raw text so it's still useful.

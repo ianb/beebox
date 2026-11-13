@@ -8,6 +8,7 @@ import type { EmissionStore } from "../../../../input/emission-store";
 import type { Receipt } from "../../../../input/targets/receipts";
 import type { CardSendFields } from "../../InteractiveChat-card-hooks";
 import { createPendingSendsStore } from "./pending-sends";
+import { sendSpendsReservation } from "./reservation-after-send";
 import { PendingSendStorageRecovery } from "./PendingSendStorageRecovery";
 import { FailedConversationSends } from "./FailedConversationSends";
 import { PendingHqSends } from "./PendingHqSends";
@@ -78,12 +79,11 @@ export function useBoundEmission(opts: {
   attention?: AttentionSnapshot;
   emissionStore: EmissionStore;
   captureCardSend: () => CardSendFields;
-  acceptCardSend?: (fields: CardSendFields) => void;
   getWitness: () => ChatWitness;
   onSent: () => void;
 }) {
   const conversation = useBoxConversation();
-  const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
+  const { pool, target, selection, attention, emissionStore, captureCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
     try { return createPendingSendsStore(sessionStorage, { boxSlug: pool.boxSlug, storageScope: pool.storageScope }); }
     catch (_cause) {
@@ -117,8 +117,7 @@ export function useBoundEmission(opts: {
       ? { ...witnessed, zoomedView: focused === undefined ? null : `view:${focused.startsWith("/") ? focused.slice(1) : focused}` }
       : witnessed;
     const fields = attention !== undefined || nativeBinding !== undefined
-      ? { ...cardFields, openCard: focused === undefined ? undefined : parseRef(focused).path,
-        ...(focused !== undefined && parseRef(focused).path === cardFields.openCard ? {} : { cardActivity: undefined, cardState: undefined }) }
+      ? { ...cardFields, openCard: focused === undefined ? undefined : parseRef(focused).path }
       : cardFields;
     let preparedId: string | undefined;
     let dispatched = false;
@@ -135,17 +134,16 @@ export function useBoundEmission(opts: {
     };
     const dispatch = (emission: Emission): Promise<Receipt> => {
       // Synchronous durable stage: callers clear only after this returns.
-      try {
-        // Once sending is attempted, missing history is no longer proof of an
-        // unused reservation. Never recreate a used (possibly deleted) chat.
-        if (binding.target.kind === "session") conversation?.forgetReservation(binding.target.sessionId);
-        if (!native) pending?.stage(emission, binding);
-      }
+      try { if (!native) pending?.stage(emission, binding); }
       catch (cause) { setError(failureReason(cause)); release(); throw cause; }
       setError(null);
       dispatched = true;
       const complete = (receipt: Receipt): Receipt => {
-        if (receipt.disposition !== "rejected" && fields.cardActivity !== undefined) acceptCardSend?.(cardFields);
+        if (binding.target.kind === "session" && sendSpendsReservation(receipt)) {
+          // Storage failure must not turn an accepted send back into a failed row.
+          try { conversation?.forgetReservation(binding.target.sessionId); }
+          catch (cause) { console.warn("Conversation reservation receipt could not be removed", cause); }
+        }
         if (!native) {
           if (receipt.disposition === "rejected") pending?.rejected(emission.id, receipt.reason);
           else pending?.accepted(emission.id);
@@ -204,7 +202,11 @@ export function useBoundEmission(opts: {
       onRecovered={(store) => { setPending(store); setError(null); }} />
     {pending !== null && <PendingHqSends store={pending} capture={(binding) => capture(binding)} />}
     {pending !== null && <FailedConversationSends store={pending}
-      onRetry={async (row) => { await capture(row.binding)(row.emission); }}
+      onRetry={async (row) => {
+        // A restart since the refusal forgets the box's reservation; this tab's receipt restores it.
+        if (row.binding.target.kind === "session") await conversation?.ensureReservation(row.binding.target.sessionId);
+        await capture(row.binding)(row.emission);
+      }}
       onRestore={(row) => { applyRestorePlan(emissionStore.editor, planRestore(emissionStore.get(), row.emission)); }} />}
   </>;
   return { captureEmissionDispatch: capture, dispatchNativeEmission, failedRegion };

@@ -70,7 +70,7 @@ body {
   background: #05070d; border: 1px solid #26304a; border-radius: 8px;
   padding: 10px; display: inline-flex;
 }
-.sketch-canvas { display: block; image-rendering: pixelated; outline: none; cursor: crosshair; }
+.sketch-canvas { display: block; image-rendering: pixelated; outline: none; cursor: default; }
 .sketch-canvas:focus { box-shadow: 0 0 0 2px #2563eb; }
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .frame-readout { font-variant-numeric: tabular-nums; color: #94a3b8; min-width: 84px; }
@@ -94,6 +94,8 @@ body {
 .trigger-btn { background: #3b2a5a; color: #e9d5ff; border: 1px solid #5b3fa0; border-radius: 6px; padding: 5px 12px; cursor: pointer; font: inherit; }
 .trigger-btn:hover { background: #4a357099; }
 select, input[type="range"] { accent-color: #2563eb; }
+.text { width: 100%; box-sizing: border-box; background: #10141f; color: #e2e8f0; border: 1px solid #35406a; border-radius: 5px; padding: 4px 6px; font: inherit; }
+textarea.text { min-height: 3.5em; resize: vertical; }
 select { background: #10141f; color: #e2e8f0; border: 1px solid #35406a; border-radius: 5px; padding: 4px; font: inherit; }
 .muted { color: #64748b; font-style: italic; margin: 0; }
 .events-area { width: 100%; background: #05070d; color: #cbd5e1; border: 1px solid #26304a; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; margin-top: 8px; resize: vertical; }

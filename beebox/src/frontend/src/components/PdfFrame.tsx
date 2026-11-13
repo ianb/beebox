@@ -15,8 +15,9 @@
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { ExternalLink } from "./ui/ExternalLink";
 import { Text } from "./ui/Text";
+import { MaterialContext } from "./ui/material";
 
-export type PdfFrameMode = "page" | "chat" | "companion" | "embed";
+export type PdfFrameMode = "page" | "chat" | "companion" | "embed" | "strip";
 
 export interface PdfFrameProps {
   /** URL of the raw PDF bytes. */
@@ -42,6 +43,7 @@ const OUTER_CLASSES: Record<PdfFrameMode, string> = {
   chat: "flex flex-col",
   companion: "flex flex-col h-full min-h-0",
   embed: "flex flex-col h-full min-h-0",
+  strip: "flex flex-col",
 };
 
 const FRAME_CLASSES: Record<PdfFrameMode, string> = {
@@ -53,6 +55,8 @@ const FRAME_CLASSES: Record<PdfFrameMode, string> = {
   // content-sized, so without the floor a PDF collapses to ~150px there.
   companion: "w-full flex-1 min-h-[70vh]",
   embed: "w-full flex-1 min-h-[70vh]",
+  // No PDF renderer declares a strip rendering; this keeps the map total.
+  strip: "w-full h-40",
 };
 
 function PdfActions({ src, downloadName }: { src: string; downloadName: string }) {
@@ -66,7 +70,12 @@ function PdfActions({ src, downloadName }: { src: string; downloadName: string }
   );
 }
 
-export function PdfFrame({ src, title, downloadName, mode, workspacePdf }: PdfFrameProps) {
+/** The frame's header and fallback paint app panels, so they keep app ink. */
+export function PdfFrame(props: PdfFrameProps) {
+  return <MaterialContext.Provider value={false}><PdfFrameBody {...props} /></MaterialContext.Provider>;
+}
+
+function PdfFrameBody({ src, title, downloadName, mode, workspacePdf }: PdfFrameProps) {
   const surface = mode ?? "page";
   return (
     <div className={workspacePdf ? "flex flex-col h-full min-h-0" : OUTER_CLASSES[surface]}>
