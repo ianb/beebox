@@ -18,6 +18,14 @@ Chat calls need a TURN relay when two browsers cannot connect directly. Today th
 - deploy-status gets its own Relay section instead of a third line in `services`.
 - Existing boxes get the grant by re-running `add-box.sh`, which already re-exports safely; no separate loop.
 
+**Rollout (2026-11-13, boxholder: "yes, do the roll out. The cloud init should automatically do these things too"):**
+- Production had no `cloudflare-turn` secret (decision 2), so before this rollout its calls had no relay.
+- Set `turn-server` on the master store (secret generated on the server, piped through stdin); ran `bbx-turn-install`, which installed coturn 4.6.1-1build4 and passed its two-client relay check; deploy-status shows the relay active. No host firewall is active; the only other public UDP listener is the DHCP client.
+- Granted and re-exported every box but one, with add-box.sh's guard, instead of re-running add-box.sh (which restarts the hub per box). One box was skipped: its own store holds entries the master lacks; the boxholder decides.
+- End to end from outside the server: two relay-only peer connections in one browser page on the owner's box connected through the production relay (UDP, relay/relay pair) and passed a message.
+- Not yet done: a call with a phone on cellular. Decision 3 (Ubuntu Pro) is still open.
+- `hetzner/provision.sh` now writes `turn-server` on a new host from its public addresses.
+
 **Issues addressed:** none. `bin/issues similar "self-hosted TURN coturn relay calls"` found no match. The closed `issues/closed/features/2026-11-11-voice-and-video-calls-in-a-shared-chat.md:30` named the option this plan picks up: *"run coturn on the box host (a new public port and service)"*.
 
 ## Design

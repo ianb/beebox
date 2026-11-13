@@ -8,7 +8,7 @@
 # deploy/deploy.sh. create-server.sh uploads and runs it. It covers the root
 # steps between the two that cloud-config does not express: GitHub host keys,
 # git identity, the hub's .env skeleton, Claude Code retention and its nightly
-# updater, and the Docling model pre-fetch.
+# updater, the call relay secret, and the Docling model pre-fetch.
 #
 # deploy.sh owns everything repo-shaped: /opt/beebox ownership, the hub,
 # scheduler and per-box units, sudoers, helpers, and the nginx site. Nothing
@@ -172,6 +172,51 @@ systemctl daemon-reload
 # Until the first deploy puts the script at $UPDATE_SCRIPT, a run would fail;
 # the timer fires at 04:00, after which that deploy has happened.
 systemctl enable --now claude-update.timer
+
+# ── Call relay secret ───────────────────────────────────────────────
+# One coturn serves every box's calls (docs/server/provisioning.md, "Call
+# relay"). This writes the master store's `turn-server` entry: a fresh secret
+# and this host's public addresses. The first deploy's bbx-turn-install then
+# starts coturn from it, and add-box.sh grants it to each box. An existing
+# entry is left alone, so a re-run never rotates the secret. Written directly:
+# the bbx CLI arrives with the first deploy, and nothing else runs yet.
+echo "Writing the call relay's turn-server secret..."
+SECRETS_STORE=$(grep -E '^BBX_SECRETS_FILE=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+SECRETS_STORE="${SECRETS_STORE:-$BBX_HOME/.config/beebox/secrets.json}"
+install -d -o "$BBX_USER" -g "$BBX_USER" -m 0700 "$(dirname "$SECRETS_STORE")"
+STORE="$SECRETS_STORE" ADDRS="$(ip -j addr)" python3 -I - <<'RELAY'
+import datetime, ipaddress, json, os, secrets, sys
+path = os.environ["STORE"]
+store = json.load(open(path)) if os.path.exists(path) else {"secrets": {}, "grants": {}}
+if "turn-server" in store.setdefault("secrets", {}):
+    print("  turn-server already set; leaving it")
+    sys.exit(0)
+public = []
+for link in json.loads(os.environ["ADDRS"]):
+    for a in link.get("addr_info", []):
+        ip = ipaddress.ip_address(a["local"])
+        if a.get("scope") == "global" and ip.is_global and ip not in public:
+            public.append(ip)
+v4 = [ip for ip in public if ip.version == 4]
+v6 = [ip for ip in public if ip.version == 6]
+if not v4:
+    print("  no public IPv4 address on this host, so no call relay; see docs/server/provisioning.md, Call relay", file=sys.stderr)
+    sys.exit(0)
+urls = [f"turn:{v4[0]}:3478?transport=udp", f"turn:{v4[0]}:3478?transport=tcp"]
+if v6:
+    urls.append(f"turn:[{v6[0]}]:3478?transport=udp")
+value = json.dumps({"secret": secrets.token_hex(32), "urls": urls})
+now = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+store["secrets"]["turn-server"] = {"value": value, "updated": now, "note": "call relay (provision.sh)"}
+store.setdefault("grants", {})
+tmp = path + ".tmp"
+with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+    f.write(json.dumps(store, indent=2) + "\n")
+os.replace(tmp, path)
+print("  turn-server: " + ", ".join(urls))
+RELAY
+chown "$BBX_USER:$BBX_USER" "$SECRETS_STORE"
+chmod 0600 "$SECRETS_STORE"
 
 # ── Docling model pre-fetch ─────────────────────────────────────────
 # `bbx scan-import`'s document mode shells out to `uvx docling` (see
