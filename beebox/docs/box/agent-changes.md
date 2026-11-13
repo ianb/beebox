@@ -11,6 +11,7 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-12 (d2fad3a5f): canvas-loop figures play recorded sounds by name (`kind: "sample"`, `name: "ding"`) and instrument notes (`kind: "note"`, `instrument: "marimba"`, `u.scaleNote(step)`). "Choosing sounds" says which to use. See `canvas-loop.md`.
 - 2026-11-12 (5af9fc687): Views and figures import shared code as `@/src/lib/…` from the box root. A view shows a figure with `<CardRef cardRef=… embed />`. See `views.md`.
 - 2026-11-12 (8942fdb9e): `bbx figure run <card>` renders a canvas-loop figure headlessly: transcript and frames. Shared figure and view code goes in `src/lib/`. See `card-figure.md`.
 - 2026-11-10 (f92ece238): `bbx notify --target` takes `chat:new:<place directory>` (a new chat there) and `place:<place directory>` (its latest chat); the place needs its landmark card. See **REACHING_THE_BOXHOLDER**.

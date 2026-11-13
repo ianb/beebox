@@ -5,6 +5,17 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Instruments and recorded sounds.** Two voice kinds. `note` plays a named
+  note (`"C4"`, `"F#5"`) on a synthesized `marimba`, `bell`, `kalimba`,
+  `epiano` or `pad`, scaled so its peak is `gain`. `sample` plays a recorded
+  sound by name (`ding`, `chime`, `click`, `knock`, `step-grass`, … 34 names
+  from Kenney's CC0 packs), with `variant` and `rate`. `u.scaleNote(step)`
+  maps a count to pentatonic notes. TEA.md "Sound" now says which sound to use
+  for which event. `renderVoice` and `mix` take `{ sampleRate, library }`.
+  In a browser the recorded sounds load as a separate chunk (about 700 KB)
+  only for a sketch with `sound`; `pnpm sounds:build` rebuilds them from
+  `sounds/kenney/`.
+
 - **Lighter on phones.** In a browser, `draw` runs only when the model is a
   new object or a param changed, so a still figure costs almost nothing. A
   figure sleeps while scrolled off screen (frames stop, sound stops) and

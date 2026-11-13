@@ -6,6 +6,7 @@ import type { SKRSContext2D } from "@napi-rs/canvas";
 // module, can name them.
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
 import type { Paper } from "./brush/types.js";
+import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
 import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
@@ -32,7 +33,10 @@ export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shado
 export type { EaseName, Keyframe } from "./ease.js";
 export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
-export type { NoiseVoice, PluckVoice, ToneVoice, Voice } from "./sound/voice.js";
+export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
+export type { Instrument } from "./sound/instruments.js";
+export type { SampleName } from "./sound/library/catalog.js";
+export type { ScaleName } from "./sound/notes.js";
 
 export type { TextStyle } from "./paint.js";
 /** Pointer shapes for `cursor`. */
@@ -153,6 +157,12 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
   handled(name: string): void;
   /** A record with one entry per key: `u.record(IDS, () => 0)` gives `Record<Id, number>`. */
   record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V>;
+  /**
+   * The note name `step` scale steps above `root` (default "C4"; negative
+   * steps go below) on `scale` (default pentatonic, which never clashes), for
+   * a `note` voice: `u.scaleNote(model.count)`.
+   */
+  scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string;
 }
 
 /**

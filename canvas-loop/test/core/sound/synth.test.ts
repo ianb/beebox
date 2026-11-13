@@ -11,14 +11,14 @@ import type { Voice } from "../../../src/core/sound/voice.js";
 const pluck: Voice = { id: "a", at: 0, kind: "pluck", freq: 220 };
 
 test("a voice renders the same samples every time, and its id seeds the noise", () => {
-  const one = renderVoice(pluck, SAMPLE_RATE);
-  assert.deepEqual(renderVoice(pluck, SAMPLE_RATE), one);
-  assert.notDeepEqual(renderVoice({ ...pluck, id: "b" }, SAMPLE_RATE), one);
+  const one = renderVoice(pluck, { sampleRate: SAMPLE_RATE });
+  assert.deepEqual(renderVoice(pluck, { sampleRate: SAMPLE_RATE }), one);
+  assert.notDeepEqual(renderVoice({ ...pluck, id: "b" }, { sampleRate: SAMPLE_RATE }), one);
   assert.equal(one.length, 2 * SAMPLE_RATE, "default decay is 2 s");
 });
 
 test("a pluck fades away and has the pitch's period", () => {
-  const samples = renderVoice({ ...pluck, freq: 441 }, SAMPLE_RATE);
+  const samples = renderVoice({ ...pluck, freq: 441 }, { sampleRate: SAMPLE_RATE });
   const peak = (from: number, to: number): number =>
     Math.max(...samples.slice(from, to).map(Math.abs));
   assert.ok(peak(0, 4410) > 0.1);
@@ -39,12 +39,12 @@ test("tones and noise last their duration", () => {
   assert.equal(
     renderVoice(
       { id: "t", at: 0, kind: "tone", freq: 440, duration: 0.5 },
-      SAMPLE_RATE,
+      { sampleRate: SAMPLE_RATE },
     ).length,
     SAMPLE_RATE / 2,
   );
   assert.equal(
-    renderVoice({ id: "n", at: 0, kind: "noise", duration: 0.1 }, SAMPLE_RATE)
+    renderVoice({ id: "n", at: 0, kind: "noise", duration: 0.1 }, { sampleRate: SAMPLE_RATE })
       .length,
     SAMPLE_RATE / 10,
   );

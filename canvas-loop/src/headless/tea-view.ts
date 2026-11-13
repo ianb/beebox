@@ -1,4 +1,6 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
+import { scaleNote } from "../core/sound/notes.js";
+import type { ScaleName } from "../core/sound/notes.js";
 import { controlModels } from "../browser/controls-model.js";
 import type { ControlModel } from "../browser/controls-model.js";
 import type { Style } from "../core/paint.js";
@@ -148,5 +150,9 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   handled(name: string): void {
     this.#onHandled(name);
+  }
+
+  scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string {
+    return scaleNote(step, options);
   }
 }
