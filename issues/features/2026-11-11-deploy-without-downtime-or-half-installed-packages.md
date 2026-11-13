@@ -1,6 +1,6 @@
 ---
 title: "Deploys stop the services for over a minute and leave box agents a half-installed package tree"
-workstream: unattached
+workstream: atomic-deploy
 area: beebox
 labels: [deploy, production]
 filed-by: agent

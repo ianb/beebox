@@ -1292,8 +1292,19 @@ fi
 # tree or its own install), and with one present `pnpm fetch` pulls the same
 # all-platform set the hoisted live install fetches; see the cache prune step.
 # Without this, any new package's downloads happen after the services stop.
-echo "  Prefetching packages for activation..."
-(cd "$stage_dir" && HUSKY=0 npm_config_update_notifier=false CI=true pnpm fetch)
+#
+# Never through the link to the live tree. With an existing hoisted
+# node_modules, `CI=true pnpm fetch` removes and recreates the modules
+# directory, so through the link it deleted and rewrote the live 2.4 GB tree
+# under the running services; box agents' `bbx` then failed with "Cannot find
+# package" until activation finished (2026-11-11). When the lockfiles match,
+# the live install already holds every package, so there is nothing to fetch.
+if [[ -L "$stage_dir/node_modules" ]]; then
+  echo "  Lockfile unchanged: no packages to prefetch."
+else
+  echo "  Prefetching packages for activation..."
+  (cd "$stage_dir" && HUSKY=0 npm_config_update_notifier=false CI=true pnpm fetch)
+fi
 boxes=()
 for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")
