@@ -69,25 +69,41 @@ export const composing = {
   },
 };
 
+/** The chat this tab last reported to; typing done before a switch belongs to that chat. */
+let reportedChat: string | null = null;
+/** One send in flight at a time, across every report; only the newest waiting send goes next. */
+let inFlight = false;
+let waiting: { sessionId: string; doing: Composing | null } | null = null;
+
+async function drain(): Promise<void> {
+  if (inFlight) return;
+  inFlight = true;
+  while (waiting !== null) {
+    const next = waiting;
+    waiting = null;
+    try {
+      await trpcClient.chatPresence.setComposing.mutate(next);
+    } catch (err) {
+      console.warn(`[chat-presence] composing state not sent: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  inFlight = false;
+}
+
 /**
- * Send what this person is composing to a chat's room while they are present in it:
- * on each change, again every few seconds while there is one (the server
- * forgets one that stops coming), and null when this ends with one set. Sends
- * are chained so a "stopped" never overtakes the "typing" before it. Returns
- * the stop.
+ * Send what this person is composing to a chat's room while they are present
+ * in it: on each change, again every few seconds while there is one (the
+ * server forgets one that stops coming), and null when this ends with one
+ * set. One send is in flight at a time and a newer state replaces any not yet
+ * sent, so a stale "typing" never lands after a "stopped". Returns the stop.
  */
 export function reportComposingTo(sessionId: string): () => void {
-  composing.forgetTyping();
+  if (reportedChat !== sessionId) composing.forgetTyping();
+  reportedChat = sessionId;
   let sent: Composing | null = null;
-  let chain = Promise.resolve();
   const send = (doing: Composing | null): void => {
-    chain = chain.then(async () => {
-      try {
-        await trpcClient.chatPresence.setComposing.mutate({ sessionId, doing });
-      } catch (err) {
-        console.warn(`[chat-presence] composing state not sent: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    });
+    waiting = { sessionId, doing };
+    void drain();
   };
   const sync = (): void => {
     const doing = composing.get();
@@ -98,7 +114,7 @@ export function reportComposingTo(sessionId: string): () => void {
   sync();
   const unsubscribe = composing.subscribe(sync);
   const refresh = setInterval(() => {
-    if (sent !== null) send(sent);
+    if (sent !== null && waiting === null) send(sent);
   }, REFRESH_MS);
   return () => {
     unsubscribe();

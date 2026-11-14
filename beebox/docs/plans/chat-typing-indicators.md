@@ -99,21 +99,21 @@ refresh while active, server expiry) is the common typing-indicator shape.
 
 ## Ontology
 
-- **Composer activity** (new): `"typing" | "dictating"`; what one person is
+- **Composing** (new, `Composing`): `"typing" | "dictating"`; what one person is
   doing in a chat's composer now. Not stored. Not the message text.
-- **Activity frame** (new `ChatPresenceFrame` kind): `{ t: "composing",
-  active: { email, doing }[] }`, everyone else in the room with an activity.
+- **Composing frame** (new `ChatPresenceFrame` kind): `{ t: "composing",
+  active: { email, doing }[] }`, everyone else in the room composing. Named "composing", not "activity", so it is never mistaken for the activity log (`docs/implemented-plans/activity-log.md`).
 - `PresentPerson`, watcher, room: existing (`presence/types.ts`, `room.ts`).
 
 ## Tracks / scope
 
-### A. Server: activity in the room
+### A. Server: composing in the room
 
-- **Direction.** `Room` gains `activity: Map<emailLower, { doing, cancel }>`.
+- **Direction.** `Room` gains `composing: Map<emailLower, { doing, cancel }>`.
   `ChatPresence.setComposing({ boxRoot, sessionId, email, doing: Composing | null }): boolean`
   is false unless the email has a watcher in that room. A non-null value
   arms an expiry (`COMPOSING_TTL_MS = 8000`, through `setTimer`) that clears
-  it. A person's activity clears when their last watcher in the room leaves.
+  it. A person's state clears when their last watcher in the room leaves.
   `notifyWatchers` sends each watcher `{ t: "composing", active }` for
   everyone except itself, only when it changed (`lastSent.composing`).
   Router: `chatPresence.setComposing` mutation, input
@@ -133,7 +133,7 @@ refresh while active, server expiry) is the common typing-indicator shape.
   into `setDictating`.
   `PresenceHeads` while watching a session: sends `setComposing` on each
   change and every `ACTIVITY_REFRESH_MS = 3000` while non-null; sends null
-  when it stops watching with an activity set. Activity frames merge into
+  when it stops watching with a state set. Composing frames merge into
   heads by email; `PresenceHead` gains `doing?: Composing`.
   `PresenceHeadsFace` draws the badge and names it.
 
@@ -142,7 +142,7 @@ refresh while active, server expiry) is the common typing-indicator shape.
 Simplest: no expiry, send on change only. Fails when the "stopped" message is
 lost (tab frozen, network drop without socket close): the badge sticks until
 the socket dies, up to ~35 s (`docs/chat-presence.md`). The expiry plus
-refresh costs ~20 lines. Simpler still: carry activity inside the `others`
+refresh costs ~20 lines. Simpler still: carry the state inside the `others`
 frame. Rejected: `others` entries are `PresentPerson` used by calls and by
 every room test; a separate kind changes nothing existing.
 
@@ -167,8 +167,30 @@ none
   shows as typing. ADDRESSED (`personFor`).
 - Partial rollout: an old client ignores an unknown frame kind
   (`PresenceHeads` switches on `t`; the `else` branch must not treat
-  `activity` as `others`). ADDRESSED in track B.
+  `composing` as `others`). ADDRESSED in track B.
 - Other edge cases (tags, cards, migration) do not apply: no stored data.
+
+## Plan review (Codex, gpt-6-sol)
+
+- Draft carried across a chat switch would show "typing" in the new chat:
+  fixed; `reportComposingTo` forgets typing on arrival.
+- First send could beat the watch join: fixed; sending starts after the
+  watch's first frame, and the 3 s refresh retries a refused state.
+- An older send could revive a stopped badge: fixed; sends are chained.
+- One tab can clear another tab's state: accepted and documented; a per-tab
+  lease costs more than the brief wrong badge it prevents.
+- Box switch leaving the watch (WebSocket) and the mutation (HTTP) on
+  different boxes: accepted and documented; the room refuses the state, so
+  the failure is a missing badge, and calls' `signal` already has the same
+  shape.
+
+## Code review (Codex, gpt-6-sol)
+
+- Typing during the 1 s join delay was forgotten when the watch became
+  ready: fixed; typing is forgotten only when the chat changes.
+- Queued sends could deliver a stale state late, across effect lifetimes:
+  fixed; one module-wide sender keeps only the newest waiting state.
+- A paste counts as typing: kept; a paste is composing. Docs say "an edit".
 
 ## NOT in scope
 

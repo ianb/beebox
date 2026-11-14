@@ -56,16 +56,18 @@ dictating (a mic); its tooltip says "Tomas is typing". Nobody sees their own.
 The text itself is never sent, and nothing is stored or logged: this is not
 the activity log (`docs/implemented-plans/activity-log.md`).
 
-- **Typing** is a keystroke in the composer (`ComposerTextarea`'s `onChange`)
-  that leaves text, until 5 seconds pass without one or the text empties (a
-  send or a clear). Draft restores and dictated text do not count, and typing
-  done in another chat is forgotten on arrival.
+- **Typing** is an edit by the person in the composer (`ComposerTextarea`'s
+  `onChange`: a keystroke or a paste) that leaves text, until 5 seconds pass
+  without one or the text empties (a send or a clear). Draft restores and
+  dictated text do not count, and typing done in another chat is forgotten
+  on arrival in a new one.
 - **Dictating** is the web composer's mic recording (`voice.isTranscribing`).
 - `frontend/src/lib/composing.ts` holds the state. Once the tab's watch has
   its first frame, `PresenceHeads` sends the state with the
   `chatPresence.setComposing` mutation on each change and every 3 seconds
-  while it is set, and sends null when the tab leaves the chat. Sends are
-  chained, so they arrive in order.
+  while it is set, and sends null when the tab leaves the chat. One send is
+  in flight at a time and a newer state replaces one not yet sent, so they
+  arrive in order and a stale state is never sent late.
 - The room accepts a state only from a person with a watcher in that room.
   One not re-sent within 8 seconds clears, and so does one whose person's
   last watcher leaves. Watchers hear `{ t: "composing", active: [{ email,
