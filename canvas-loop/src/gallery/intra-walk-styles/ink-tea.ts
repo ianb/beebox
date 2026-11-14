@@ -1,6 +1,6 @@
 // Drawing by hand, seen from the side: wobbly outlines, inked edges, washes and
 // hatching, and rim light painted on the edges that face a light.
-import type { BrushPreset, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export function hash(x: number, y: number, salt = 0): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483587);
@@ -77,12 +77,16 @@ export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: s
     // Hatching on the side away from the light.
     if (a.shadeSide !== undefined && a.dark !== undefined) {
       const spacing = 4.5;
+      // Every hatch line is one stroke of a single mark: the lines never cross,
+      // so this looks the same as a mark per line and costs one layer, not dozens.
+      const hatch: PathCommand[] = [];
       for (let x = x0 - (y1 - y0); x < x1; x += spacing) {
         const frac = a.shadeSide === "left" ? 1 - (x - x0) / (x1 - x0) : a.shadeSide === "right" ? (x - x0) / (x1 - x0) : 0.6;
         if (frac < 0.55 || hash(Math.round(x), a.seed, 4) > frac) continue;
         const top = a.shadeSide === "bottom" ? y0 + (y1 - y0) * 0.55 : y0;
-        v.line(x, y1 + 2, x + (y1 - top) * 0.55, top, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed + Math.round(x), faint: true } });
+        hatch.push(["move", x, y1 + 2], ["line", x + (y1 - top) * 0.55, top]);
       }
+      if (hatch.length > 0) v.path(hatch, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed, faint: true } });
     }
   });
   if (a.rim) rimLight(v, outline, a.rim);

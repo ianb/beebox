@@ -2,7 +2,8 @@
 // mark's layer in device pixels; the pipeline in render.ts then cuts the paper
 // grain out of it, colours it, and composites it once.
 import { getStroke } from "perfect-freehand";
-import type { Ctx2D } from "../../paint.js";
+import type { Ctx2D, LayerImage } from "../../paint.js";
+import { SOFT_DAB_RADIUS } from "./dab.js";
 import { noise1, rand } from "../random.js";
 import type { Sample } from "../sample.js";
 import type { BristleBrush, InkBrush, StampBrush } from "../types.js";
@@ -17,6 +18,8 @@ export interface KindInput {
   readonly seed: number;
   /** The colour of dab or bristle `index` at `alpha`: black coverage, or each one's own colour when the brush varies it. */
   readonly ink: (index: number, alpha: number) => string;
+  /** A pre-drawn soft dab (see dab.ts), when every dab is plain black coverage. */
+  readonly dab?: LayerImage | undefined;
 }
 
 /** Variable-width ink: perfect-freehand's outline of the pressure-tagged samples, filled. */
@@ -58,6 +61,11 @@ export function paintStamp(input: KindInput, brush: StampBrush): void {
     const x = s.x + s.nx * off;
     const y = s.y + s.ny * off;
     ctx.globalAlpha = alpha;
+    if (brush.tip === "soft" && input.dab !== undefined) {
+      const d = SOFT_DAB_RADIUS * 2;
+      ctx.drawImage(input.dab, 0, 0, d, d, x - radius, y - radius, radius * 2, radius * 2);
+      continue;
+    }
     if (brush.tip === "soft") {
       const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
       g.addColorStop(0, input.ink(k, 1));

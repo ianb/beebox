@@ -9,7 +9,7 @@
 // is also where the paper lives, so grain stays fixed to the canvas.
 import type { Contour } from "../../contours.js";
 import { SketchUsageError } from "../../errors.js";
-import type { Ctx2D, CtxTransform, Layer, Paint, Vec2 } from "../../paint.js";
+import type { Ctx2D, CtxTransform, Layer, LayerImage, Paint, Vec2 } from "../../paint.js";
 import { inPaintSpace, resolveGradient, withSaved } from "../../paint.js";
 import { evalEnvelope, validateEnvelope } from "../envelope.js";
 import { bristleReach, paintBristle, paintInk, paintStamp } from "./kinds.js";
@@ -17,12 +17,14 @@ import type { Rgba } from "./colour.js";
 import { hashNumbers, noise1 } from "../random.js";
 import { BLACK, jitterBase, jitteredInk, jitterOf } from "./ink.js";
 import { renderSmear } from "./smear.js";
+import { softDab } from "./dab.js";
+import { peakAlpha } from "./peak.js";
 import type { Sample } from "../sample.js";
 import { resample } from "../sample.js";
 import type { Brush, Gesture } from "../types.js";
 
 /** The scratch layers a mark may use: coverage, a gradient or a smear's load, a smear's copy of the drawing. */
-export type ScratchName = "mark" | "paint" | "before";
+export type ScratchName = "mark" | "paint" | "before" | "dab";
 
 export interface MarkRequest {
   /** The surface the mark lands on; a smear brush also picks up what is already drawn there. */
@@ -136,7 +138,7 @@ function shapeSamples(
   return samples;
 }
 
-interface Bounds {
+export interface Bounds {
   x: number;
   y: number;
   w: number;
@@ -173,6 +175,7 @@ function paintKind(
     width: number;
     seed: number;
     base: Rgba | undefined;
+    dab: LayerImage | undefined;
   },
 ): void {
   const jitter = jitterOf(args.brush);
@@ -183,6 +186,7 @@ function paintKind(
     width: args.width,
     seed: args.seed,
     ink: jitter === undefined || args.base === undefined ? BLACK : jitteredInk(args.base, { jitter, seed: args.seed }),
+    dab: jitter === undefined || args.base === undefined ? args.dab : undefined,
   };
   switch (args.brush.kind) {
     case "ink":
@@ -251,13 +255,6 @@ function colorize(
   ctx.drawImage(args.paintScratch.image, 0, 0, b.w, b.h, 0, 0, b.w, b.h);
 }
 
-/** The strongest pixel's alpha (0..1) on a layer, sampling every other pixel. */
-function peakAlpha(layer: Layer, b: Bounds): number {
-  const { data } = layer.ctx.getImageData(0, 0, b.w, b.h);
-  let peak = 0;
-  for (let i = 3; i < data.length; i += 8) peak = Math.max(peak, data[i] ?? 0);
-  return peak / 255;
-}
 
 /**
  * Paint one brushed mark onto `req.target`. Returns how strong it landed (its
@@ -315,6 +312,7 @@ export function renderMark(
         width,
         seed: hashNumbers([i], seed),
         base,
+        dab: softDab(req.brush, { canvas: req.canvas, scratch: req.scratch }),
       });
     }
     if (req.brush.grain > 0) {
