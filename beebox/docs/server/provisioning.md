@@ -252,9 +252,9 @@ added.
 **To turn it off:** on each box, as its user, remove the box's copy
 (`bbx engine secrets rm turn-server`), so its calls go back to Cloudflare or
 STUN. Then remove the entry from the master and deploy, which stops coturn.
-`add-box.sh` cannot do the first step: it refuses to re-export a box whose
-copy holds an entry the master lacks, and while the master holds the entry it
-grants it again.
+`add-box.sh` cannot do the first step: while the master holds the entry it
+grants it again, and once the master drops it a re-export keeps the box's copy
+as the box's own entry.
 
 **To change the secret or the addresses:** set the new value, deploy, then
 re-run `add-box.sh` for every box. Relayed calls that start between the deploy and a box's

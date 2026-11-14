@@ -9,7 +9,8 @@
  * IME composition (`lib/ime`).
  */
 
-import type { RefObject } from "react";
+import { useEffect, type RefObject } from "react";
+import { composing } from "../../../lib/composing";
 import { joinTranscript } from "../InteractiveChat-helpers";
 import { useComposerCaret } from "./composer-caret";
 import type { ComposerRowProps } from "../composer-row-props";
@@ -41,6 +42,10 @@ export function ComposerTextarea({
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
+  // A send or clear empties the text without a keystroke; the others stop seeing "typing".
+  useEffect(() => {
+    if (input === "") composing.noteCleared();
+  }, [input]);
   return (
     <textarea
       id={id}
@@ -49,7 +54,7 @@ export function ComposerTextarea({
       enterKeyHint={mobile ? "enter" : "send"}
       aria-label="Message"
       value={isTranscribing ? joinTranscript(input, transcript) : input}
-      onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
+      onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); composing.noteTyped(e.target.value); setInput(e.target.value); } }}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
       onDrop={onDrop}

@@ -32,7 +32,6 @@ import { AgentGate } from "../../../agents/AgentReadiness";
 import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
 import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
 import { CallBar } from "../../../call/CallBar";
-import { CallVideoTiles } from "../../../call/CallVideoTiles";
 
 
 /**
@@ -294,7 +293,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
-      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas strip={<><CallVideoTiles /><ConversationStrip features={props.model.chatFeatures} sessionId={props.sessionId} setChatFeatures={props.model.setChatFeatures} /></>} turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection}>
+      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas strip={<ConversationStrip features={props.model.chatFeatures} sessionId={props.sessionId} setChatFeatures={props.model.setChatFeatures} />} turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas></PlaceChatContext.Provider>}
       statusBanners={

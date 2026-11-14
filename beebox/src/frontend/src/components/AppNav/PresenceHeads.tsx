@@ -11,13 +11,15 @@
  */
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import type { ChatPresenceFrame } from "@core/chat/presence/types.js";
+import type { ComposingFrame, ChatPresenceFrame } from "@core/chat/presence/types.js";
 import { trpc } from "../../lib/trpc/client";
 import { callEngine } from "../../lib/call/engine";
+import { reportComposingTo } from "../../lib/composing";
 import { callOffer } from "../../lib/call-state";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { CallButtonFace } from "../app-bar-faces/CallButtonFace";
 import { CallAudio } from "../call/CallAudio";
+import { CallVideoTiles } from "../call/CallVideoTiles";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { isNativeShell } from "../chat/native-post";
 import { PresenceHeadsFace, type PresenceHead } from "../app-bar-faces/PresenceHeadsFace";
@@ -79,10 +81,11 @@ function useSettled(value: string | null, ms: number): string | null {
   return settled === value ? settled : null;
 }
 
-/** The people one subscription last reported, and the chat they are in. */
+/** The people one subscription last reported, what they are doing in the composer, and the chat they are in. */
 interface Report {
   sessionId: string;
   people: readonly PresenceHead[];
+  active?: ComposingFrame["active"];
 }
 
 /**
@@ -93,7 +96,12 @@ interface Report {
 export function headsToShow(opts: { live: boolean; inChat: string | null; report: Report | null }): readonly PresenceHead[] {
   const { live, inChat, report } = opts;
   if (!live || inChat === null || report === null || report.sessionId !== inChat) return NO_ONE;
-  return report.people;
+  const active = report.active ?? [];
+  if (active.length === 0) return report.people;
+  return report.people.map((p) => {
+    const doing = active.find((a) => a.email.toLowerCase() === p.email.toLowerCase())?.doing;
+    return doing === undefined ? p : { ...p, doing };
+  });
 }
 
 /** The other people present in the chat the person is in, or none. */
@@ -112,7 +120,9 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
       // The hook calls the latest options, so a frame is labelled with the chat its subscription watches.
       onData: useCallback((frame: ChatPresenceFrame) => {
         if (frame.t === "call") callEngine.reportPresence(watched === null ? null : { sessionId: watched, call: frame.call });
-        else setReport(watched === null ? null : { sessionId: watched, people: frame.people });
+        else if (watched === null) setReport(null);
+        else if (frame.t === "others") setReport((prev) => ({ sessionId: watched, people: frame.people, active: prev?.sessionId === watched ? prev.active : undefined }));
+        else setReport((prev) => ({ sessionId: watched, people: prev?.sessionId === watched ? prev.people : [], active: frame.active }));
       }, [watched]),
       onError: useCallback((err: { message: string }) => {
         // wsLink reconnects on its own; with no live subscription no heads show.
@@ -125,6 +135,10 @@ function useChatPresence(inChat: string | null): readonly PresenceHead[] {
   useEffect(() => {
     if (!live) callEngine.reportPresence(null);
   }, [live]);
+  // Present: the others see whether this person is typing or dictating. Start
+  // after the room's first frame, so the server has this tab as a watcher.
+  const joined = live && watched !== null && report?.sessionId === watched ? watched : null;
+  useEffect(() => (joined === null ? undefined : reportComposingTo(joined)), [joined]);
   return headsToShow({ live, inChat, report });
 }
 
@@ -148,6 +162,7 @@ export function PresenceHeads() {
     <>
       <PresenceHeadsFace people={people} action={offer === null ? null : <CallButtonFace offer={offer} onCall={onCall} />} />
       <CallAudio />
+      <CallVideoTiles />
     </>
   );
 }

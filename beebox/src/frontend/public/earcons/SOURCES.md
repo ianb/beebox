@@ -14,6 +14,8 @@ Authored here (synthesized with sox; no attribution needed):
 
 - `mic-lost.wav` — two falling pairs, 880→659 Hz sine with a quiet octave,
   15 ms attack, 0.16 s gaps (1.1 s).
+- `call-ring.wav` — a phone ring: two 0.4 s bursts of 440 + 480 Hz sine with a
+  0.2 s gap (1.2 s); played every 3 s while a call rings.
 - `live-text-paused.wav` / `live-text-resumed.wav` — a quiet two-note pair,
   659→523 Hz sine, and its rising mirror (0.23 s each).
 

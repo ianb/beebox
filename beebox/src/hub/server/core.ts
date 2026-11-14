@@ -55,6 +55,7 @@ import {
   getOwnerEmail,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
+  hubNameHeader,
   HUB_AUTH_OFF_HEADER,
 } from "../../webapp/auth.js";
 import { invariant } from "../../shared/invariant.js";
@@ -269,7 +270,7 @@ function decideHubAuth({
   if (identity.source === "cookie" && identity.email) {
     return {
       authorized: true,
-      headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_EMAIL_HEADER]: identity.email },
+      headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_EMAIL_HEADER]: identity.email, ...hubNameHeader({ email: identity.email, name: identity.name }) },
     };
   }
   // Not authenticated, or the store is unavailable — fail closed either way. The

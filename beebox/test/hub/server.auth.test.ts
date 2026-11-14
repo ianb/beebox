@@ -47,6 +47,7 @@ process.env.BBX_AUTH_SCRYPT_N = "1024";
 const BoxEcho = z.object({
   url: z.string(),
   xBbxAuthenticatedEmail: z.string().nullable(),
+  xBbxAuthenticatedName: z.string().nullable(),
   xBbxHubSecret: z.string().nullable(),
 });
 
@@ -71,6 +72,7 @@ async function startFakeBox() {
     res.end(JSON.stringify({
       url: req.url,
       xBbxAuthenticatedEmail: req.headers["x-bbx-authenticated-email"] ?? null,
+      xBbxAuthenticatedName: req.headers["x-bbx-authenticated-name"] ?? null,
       xBbxHubSecret: req.headers["x-bbx-hub-secret"] ?? null,
     }));
   });
@@ -348,8 +350,10 @@ async function discovery(t: Test) {
   t.check(authedResponse.status, 200);
 
   const authedBody = BoxEcho.parse(await authedResponse.json());
-  t.check({ email: authedBody.xBbxAuthenticatedEmail, secret: authedBody.xBbxHubSecret }, {
+  // The person's name rides along, URI-encoded, so a box shows a name rather than the email.
+  t.check({ email: authedBody.xBbxAuthenticatedEmail, name: authedBody.xBbxAuthenticatedName, secret: authedBody.xBbxHubSecret }, {
     email: "person@example.com",
+    name: "Person",
     secret: "test-hub-secret-for-auth-test",
   });
 

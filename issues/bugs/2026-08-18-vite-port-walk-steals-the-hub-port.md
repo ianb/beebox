@@ -46,6 +46,14 @@ Error: listen EADDRINUSE: address already in use 127.0.0.1:52037   ← the hub
 > second smoke run allocated new ports and passed. Priority `normal` may be
 > stale: any local VM or tool that forwards ports can now trigger it.
 
+> **Re-encountered 2026-11-14** (main, router start 15:01:19Z). Vite for
+> `main` exited at startup with "Port 49171 is already in use"; `lsof` showed
+> the Ollama app listening on 127.0.0.1:49171. `main` sat `failed` and served
+> 503 `worktree-unavailable` until `bin/workstreams down main` returned it to
+> cold. A minute later a fresh bind of 49171 on both `::` and 127.0.0.1
+> succeeded, so the holder is not exclusive at all times; the router's
+> "worktree port taken at spawn" case, now from a third outside process.
+
 ## Why the collision is structural, not bad luck
 
 `bin/router-core.ts:373-377` allocates three ports in parallel:
