@@ -42,14 +42,43 @@ sessionId)`. Nothing is written to disk, and there is no "last seen".
 lifetime. Identity comes from `ctx.user`, never from the client. The box's own
 agent (`ctx.actor === "agent"`) and a caller with no identity never join.
 
-Each subscriber receives `ChatPresenceFrame`s. Today there is one kind:
-`{ t: "others", people: [{ email, name }] }`, everyone present except the
-subscriber, one entry per person, earliest arrival first. It is sent on join
-and whenever that list changes.
+Each subscriber receives `ChatPresenceFrame`s. `{ t: "others", people:
+[{ email, name }] }` is everyone present except the subscriber, one entry per
+person, earliest arrival first. It is sent on join and whenever that list
+changes. The `call` kind is in `docs/chat-calls.md`; the `composing` kind is
+below. Each kind is sent on join and then only when it changes; their order
+relative to each other is not fixed.
+
+## Composing
+
+A head shows a small badge while that person is typing (three dots) or
+dictating (a mic); its tooltip says "Tomas is typing". Nobody sees their own.
+The text itself is never sent, and nothing is stored or logged: this is not
+the activity log (`docs/implemented-plans/activity-log.md`).
+
+- **Typing** is a keystroke in the composer (`ComposerTextarea`'s `onChange`)
+  that leaves text, until 5 seconds pass without one or the text empties (a
+  send or a clear). Draft restores and dictated text do not count, and typing
+  done in another chat is forgotten on arrival.
+- **Dictating** is the web composer's mic recording (`voice.isTranscribing`).
+- `frontend/src/lib/composing.ts` holds the state. Once the tab's watch has
+  its first frame, `PresenceHeads` sends the state with the
+  `chatPresence.setComposing` mutation on each change and every 3 seconds
+  while it is set, and sends null when the tab leaves the chat. Sends are
+  chained, so they arrive in order.
+- The room accepts a state only from a person with a watcher in that room.
+  One not re-sent within 8 seconds clears, and so does one whose person's
+  last watcher leaves. Watchers hear `{ t: "composing", active: [{ email,
+  doing }] }`, everyone else composing, on each change.
+- One person's tabs share one state: the latest send wins.
+- The mutation goes over HTTP to the box the page names, while the watch is
+  on the WebSocket. Should the two ever name different boxes, the room
+  refuses the state and nobody sees a badge.
+- The iOS native composer does not report yet; iOS shows the others' badges.
 
 ## Adding to the channel
 
-Later work (typing indicators, call signaling, ringing) adds frame kinds to
+New work adds frame kinds to
 the `ChatPresenceFrame` union, and an upstream message gets its own
 `authedProcedure` mutation that names a recipient in the same room. Two rules
 hold for any addition:

@@ -47,7 +47,9 @@ async function open<T>(start: (signal: AbortSignal) => Promise<AsyncIterable<T>>
 void test("two people on a call pass signals, and someone present sees the call", async (t) => {
   const odette = await open((signal) => caller({ user: { email: "odette@example.com", name: "Odette Marlowe" } }, signal).chatPresence.watch({ sessionId }));
   t.check(await odette.next(), { t: "others", people: [] });
-  t.check(await odette.next(), { t: "call", call: null });
+  // The call and composing states arrive in either order.
+  const states = [await odette.next(), await odette.next()];
+  t.check(states.toSorted((a, b) => a.t.localeCompare(b.t)), [{ t: "call", call: null }, { t: "composing", active: [] }]);
 
   const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));
   const joined = await p.next();
