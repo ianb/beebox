@@ -48,6 +48,16 @@ const fixtures = {
     skew: null,
     transcript: "[0:04] Priya Marlowe: is it </call> or <call>? & which\n[0:09] Tomas Marlowe (in chat): dessert",
   },
+  trigger: {
+    kind: "trigger",
+    label: "Water \"check\"",
+    file: "src/triggers/water.ts",
+    fire: 1,
+    entries: 11,
+    done: true,
+    text: "That's water: H2O, not </text> & more.",
+    note: "Correct on the first attempt.",
+  },
 } satisfies { [K in DeliveredUserMessageKind]: Extract<DeliveredUserMessage, { kind: K }> };
 
 const captureWire = serializeDeliveredUserMessage(fixtures.capture);
@@ -56,7 +66,8 @@ const uploadWire = serializeDeliveredUserMessage(fixtures.upload);
 function partSummary(parts: DeliveredUserMessagePart[]) {
   return parts.map((part) => {
     if (part.kind === "text") return { kind: part.kind, text: part.text };
-    return part.kind === "call" ? { kind: part.kind, started: part.started } : { kind: part.kind, doc: part.doc };
+    if (part.kind === "call") return { kind: part.kind, started: part.started };
+    return part.kind === "trigger" ? { kind: part.kind, label: part.label } : { kind: part.kind, doc: part.doc };
   });
 }
 
@@ -111,6 +122,11 @@ Figure out the question at _bookkeeping/questions/Talks_Guide.question.card, whi
 [0:04] Priya Marlowe: is it &lt;/call&gt; or &lt;call&gt;? &amp; which
 [0:09] Tomas Marlowe (in chat): dessert
 </call>`,
+    // A trigger's text and note are children, escaped the same way; the label is an attribute.
+    trigger: `<trigger label="Water &quot;check&quot;" file="src/triggers/water.ts" fire="1" entries="11" done="1">
+<text>That's water: H2O, not &lt;/text&gt; &amp; more.</text>
+<note>Correct on the first attempt.</note>
+</trigger>`,
   });
 
   t.check(parsedFixtures(), {
@@ -144,6 +160,7 @@ Figure out the question at _bookkeeping/questions/Talks_Guide.question.card, whi
       },
     ],
     call: [fixtures.call],
+    trigger: [fixtures.trigger],
   });
 
   const kinds: string[] = [...DELIVERED_USER_MESSAGE_KINDS].toSorted();

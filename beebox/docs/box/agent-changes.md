@@ -11,6 +11,7 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-14 (05a1a80de): New: activity triggers. A function in `src/triggers/` watches what the person does in a view or figure and answers in the chat; `bbx chat trigger arm` arms it. See `triggers.md`.
 - 2026-11-13 (057d9030a): `<card-activity>` is gone from the chat snapshot. `<activity entries="N" cards="M"/>` is a count; `bbx chat activity` lists the person's actions. See `views.md`.
 - 2026-11-13 (6e657a83d): canvas-loop `v.circle` and `v.ellipse` take radii, so older figures draw them twice as big. `text` params give a typed box; `u.textBounds` measures in `update`. See `canvas-loop.md`.
 - 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, across the person's page. Only when asked. See `conversation-strip.md`.

@@ -42,6 +42,7 @@ import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./uploads.js";
 import type { ChatRoutesContext } from "./context.js";
 import { setChatRuntime, clearChatRuntime } from "../../chat-runtime.js";
+import { startTriggerRunner } from "./triggers.js";
 import { registerChatSendRoutes } from "./send-routes.js";
 import { createInFlightSends, loadProcessedMessageIds } from "./send-dedup.js";
 import { createUserMessageSender } from "./user-message-sender.js";
@@ -285,6 +286,8 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     sendUserMessage,
   });
 
+  const stopTriggerRunner = startTriggerRunner({ boxRoot, eventBus, registry, wireSession });
+
   server.get("/api/chat/default", async () => {
     const sessionId = await getMostActive(boxRoot);
     return { sessionId };
@@ -306,6 +309,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
 
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
+    stopTriggerRunner();
     clearChatRuntime(boxRoot);
     stopInterruptedWakes();
     await registry.shutdown();

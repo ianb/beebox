@@ -33,6 +33,7 @@ import type { ChatSessionOptions } from "../options.js";
 import { buildLandmarkBoxContext } from "../landmark-context.js";
 import { UnsafeAgentContextIncludeError } from "../../../agent-context-includes.js";
 import { pendingRunEndedNote } from "../ended-note.js";
+import { countPersonTurn, triggersHint } from "../../../triggers/hint.js";
 
 const log = makeLog("ChatSession");
 
@@ -212,8 +213,11 @@ export async function composeTurnContent(
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
+  // Person turns are counted before the cursor is attempted: the cursor advance can be skipped (below), the count cannot.
+  if (rawInput.activityTurn !== undefined && chatId !== null) await countPersonTurn(boxRoot, chatId);
   const activityHint = await activityHintFor(boxRoot, { rawInput, chatId });
-  const activityChildren = [activityHint, runEnded.element ?? ""].filter((child) => child !== "").join("\n");
+  const triggers = chatId === null ? { element: "", noticed: () => Promise.resolve() } : await triggersHint(boxRoot, chatId);
+  const activityChildren = [activityHint, triggers.element, runEnded.element ?? ""].filter((child) => child !== "").join("\n");
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     ...(rawInput.viewContext !== undefined ? { viewContext: rawInput.viewContext } : {}),
@@ -230,7 +234,11 @@ export async function composeTurnContent(
   const content = buildContentBlocks(input);
   const imgCount = (input.images ?? []).length;
   log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
-  return { content: toBackendContent(content), dispatched: runEnded.clear };
+  const dispatched = (): void => {
+    runEnded.clear();
+    void triggers.noticed().catch((e: unknown) => { console.warn("[chat] could not mark expired triggers as noticed:", e); });
+  };
+  return { content: toBackendContent(content), dispatched };
 }
 
 /** The `<activity>` snapshot child for a person's turn; "" for any other turn or when the cursor cannot be advanced. */

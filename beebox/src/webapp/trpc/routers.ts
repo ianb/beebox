@@ -61,6 +61,7 @@ import { chatPresenceRouter } from "./routers/chat-presence.js";
 import { chatCallRouter } from "./routers/chat-call.js";
 import { notificationsRouter } from "./routers/notifications.js";
 import { activityRouter } from "./routers/activity.js";
+import { triggersRouter } from "./routers/triggers.js";
 
 const routerMembers = {
   quickChat: quickChatRouter,
@@ -110,6 +111,7 @@ const routerMembers = {
   chatCall: chatCallRouter,
   notifications: notificationsRouter,
   activity: activityRouter,
+  triggers: triggersRouter,
 };
 
 export const routers = defineRegistry<AnyRouter>({

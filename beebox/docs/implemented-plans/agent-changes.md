@@ -221,7 +221,7 @@ No critical gap remains: each silent row is accepted above with its reason.
 
 ## Open design questions
 
-None remain for the boxholder. The limits start at 30 words, 10 entries in 10 days (raised from 6 by the boxholder after the rehearsal: "6 seems too low"), 40 in the doc, and a 3-day cadence. The boxholder is unsure of them, so the curator's pushback alert is how they get revised.
+None remain for the boxholder. The limits start at 30 words, 10 entries in 10 days (raised from 6 by the boxholder after the rehearsal: "6 seems too low"; raised again to 12 on 2026-11-14 when a busy fortnight filled it), 40 in the doc, and a 3-day cadence. The boxholder is unsure of them, so the curator's pushback alert is how they get revised.
 
 ## Knowledge audits
 

@@ -52,7 +52,7 @@ export type { BusEventName, EventMap } from "./schemas.js";
  * (see `reconcileSchemaGeneration`). All processes of one deploy
  * share this constant, so a startup race converges regardless.
  */
-export const EVENT_SCHEMA_GENERATION = 11;
+export const EVENT_SCHEMA_GENERATION = 12;
 
 /**
  * The box's events.db carries an event-schema generation newer than this
@@ -403,8 +403,13 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
       createdAt: new Date().toISOString(),
     });
 
-    // Update high-water mark so the poll loop doesn't re-dispatch this
-    highWaterMark = id;
+    // Rows another process inserted since the last poll sit between the mark and our id: dispatch them
+    // first, or moving the mark past them skips them for good (a CLI `trigger-changed` just before a server emit).
+    if (listeners.size > 0 && id > highWaterMark + 1) {
+      for (const missed of parseRows(readSinceStmt.all(storedEventRow, highWaterMark)).filter((m) => m.id < id)) { if (missed.id > highWaterMark) { highWaterMark = missed.id; notifyListeners(missed); } }
+    }
+    if (id <= highWaterMark) return id; // a listener's own emit already dispatched this row and moved the mark past it
+    highWaterMark = id; // so the poll loop doesn't re-dispatch this
     notifyListeners(busEvent);
     return id;
   }

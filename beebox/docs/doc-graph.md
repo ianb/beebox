@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-14T05:10:53Z
-Total documents: 658
+Generated: 2026-11-14T22:54:34Z
+Total documents: 660
 
 ## Issues
 
@@ -162,7 +162,7 @@ Referenced by:
 - docs/box-layout.md:9 (mention) — A box is a directory whose tracked `package.json` declares the `beebox` dependency, with `_config/` beside it (`isBoxRoo
 - docs/box-work.md:14 (mention) — inherits this repo's `AGENTS.md`. `bbx engine init` refuses a nested target
 - docs/box-work.md:28 (link) — for that change ([behavioral notes](../AGENTS.md#behavioral-notes)). At a
-- docs/box/agent-changes.md:35 (mention) — - 2026-10-09 (55d385e3a): Box instruction files are `AGENTS.md`. `bbx validate` reports a `CLAUDE.md` in a converted box
+- docs/box/agent-changes.md:36 (mention) — - 2026-10-09 (55d385e3a): Box instruction files are `AGENTS.md`. `bbx validate` reports a `CLAUDE.md` in a converted box
 - docs/cards/schemas.md:365 (mention) — 5. The agent guide is `@`-included in `AGENTS.md`, so agents always see the card type list
 - docs/cards/validation.md:32 (mention) — A box `AGENTS.md` size warning appears once per file and size tier in each
 - docs/design/extensibility.md:33 (mention) — prompts), don't build it. Small additions — an `AGENTS.md` file with custom
@@ -975,6 +975,7 @@ Referenced by:
 - AGENTS.md:43 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc
 - docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 - docs/implemented-plans/activity-log.md:122 (mention) — - `beebox/docs/adding-api-endpoints.md`: tRPC is the default. The record
+- docs/implemented-plans/activity-triggers.md:213 (mention) — - `beebox/docs/adding-api-endpoints.md`: tRPC is the default. `triggers.list`
 - docs/implemented-plans/docs-reorg.gap-analysis.md:166 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:151 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
 - docs/plans/chat-search.md:218 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
@@ -1422,6 +1423,7 @@ Referenced by:
 - AGENTS.md:71 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/guides.md:29 (link) — | Engineering principles | [engineering-principles](engineering-principles.md) |
+- docs/implemented-plans/activity-triggers.md:209 (mention) — - `beebox/docs/engineering-principles.md` §4 (never silent): a failing trigger
 - docs/implemented-plans/agent-browsing-owner.md:32 (mention) — - `docs/engineering-principles.md` #8 *One way to do each thing* — identity is
 - docs/implemented-plans/agent-field-tests.md:37 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below;
 - docs/implemented-plans/annex-at-init.md:169 (mention) — **Principle 4 — resilient AND never silent** (`docs/engineering-principles.md:49`):
@@ -2806,7 +2808,7 @@ References:
 
 #### docs/box/agent-changes.md
 
-Title: "What changed for box agents" | 37 lines | current reference
+Title: "What changed for box agents" | 38 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:145 (link) — [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
@@ -2814,6 +2816,7 @@ Referenced by:
 - docs/implemented-plans/agent-changes.md:88 (mention) — - **`agent-changes.md`:** `docs/box/agent-changes.md`, a prose box doc holding every entry. Existing kind.
 
 References:
+- → docs/box/triggers.md (mention)
 - → docs/box/conversation-strip.md (mention)
 - → docs/box/markdown.md (mention)
 - → docs/box/phone-photos.md (mention)
@@ -2838,7 +2841,7 @@ Referenced by:
 Title: "Conversation strip" | 40 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:16 (mention) — - 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, ac
+- docs/box/agent-changes.md:17 (mention) — - 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, ac
 - docs/implemented-plans/conversation-strip.md:363 (mention) — - Box doc `docs/box/conversation-strip.md` with a `read-when`, mapped in
 
 #### docs/box/history.md
@@ -2877,7 +2880,7 @@ Referenced by:
 Title: "Markdown in card bodies" | 142 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:20 (mention) — - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemis
+- docs/box/agent-changes.md:21 (mention) — - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemis
 - docs/implemented-plans/chat-math-rendering.md:73 (mention) — - Docs: `docs/box/markdown.md` (~15 lines), agent-guide ledger/guide line (~2),
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/implemented-plans/published-math.md:142 (mention) — `docs/box/markdown.md`.
@@ -2891,7 +2894,7 @@ Referenced by:
 Title: "Add iPhone photos through an Apple Photos album" | 28 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:26 (mention) — - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Setting
+- docs/box/agent-changes.md:27 (mention) — - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Setting
 - docs/box/what-you-could-do.md:44 (mention) — setup](phone-photos.md).
 - docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
 - docs/implemented-plans/scan-uploader-removal.md:66 (mention) — - `docs/box/phone-photos.md`, `what-you-could-do.md`: use Bee Box Desktop's Watched Folders (osxphotos and token steps g
@@ -2925,7 +2928,7 @@ References:
 Title: "Publishing a site from this box" | 626 lines | current reference
 
 Referenced by:
-- docs/box/agent-changes.md:36 (mention) — - 2026-10-06 (6477c8377): A publication is a `.publication.card` with site files in its attach folder. `bbx pub prepare`
+- docs/box/agent-changes.md:37 (mention) — - 2026-10-06 (6477c8377): A publication is a `.publication.card` with site files in its attach folder. `bbx pub prepare`
 - docs/implemented-plans/publication-card-home.md:165 (mention) — - `docs/box/publishing.md`: rewrite sections at lines 14, 80, 82, 129, 542 and 645. One example card plus `static/`; the
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
 - docs/unimplemented-plans/temporal-everywhere.md:537 (mention) — `docs/box/publishing.md:416` (*`new Date().getFullYear()`* →
@@ -2954,7 +2957,7 @@ Title: "Writing Box-Local Schemas" | 319 lines | current reference
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
 - docs/box-layout.md:281 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
-- docs/box/agent-changes.md:34 (mention) — - 2026-10-10 (d2ea7a94c): `recipe`, `course`, `lesson-plan`, `progress`, `concept-map`, and `exposition-plan` are plugin
+- docs/box/agent-changes.md:35 (mention) — - 2026-10-10 (d2ea7a94c): `recipe`, `course`, `lesson-plan`, `progress`, `concept-map`, and `exposition-plan` are plugin
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
@@ -2986,7 +2989,7 @@ Title: "Todos" | 105 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:150 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
-- docs/box/agent-changes.md:29 (mention) — - 2026-10-20 (b28d11ae2): `bbx todos --now` replaces `--on-plate`, and `bbx query todos --group status` replaces `--grou
+- docs/box/agent-changes.md:30 (mention) — - 2026-10-20 (b28d11ae2): `bbx todos --now` replaces `--on-plate`, and `bbx query todos --group status` replaces `--grou
 - docs/glossary.md:87 (mention) — **now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and
 - docs/implemented-plans/agent-changes.md:77 (mention) — - `- 2026-10-20 (b28d11ae2): bbx todos takes --now and --group status. --on-plate and --group plate are gone. See box-do
 - docs/implemented-plans/doc-structure-box-guidance.md:444 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
@@ -3030,6 +3033,14 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:160 (mention) — `beebox/docs/box/tricks.md`.
 - ../issues/closed/docs-and-chores/2026-09-21-trick-smoke-test-exit-code-masking.md:12 (mention) — **Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: the premise is gone. The trick engine commits only the path
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
+
+#### docs/box/triggers.md
+
+Title: "Activity triggers" | 135 lines | current reference
+
+Referenced by:
+- docs/box/agent-changes.md:14 (mention) — - 2026-11-14 (05a1a80de): New: activity triggers. A function in `src/triggers/` watches what the person does in a view o
+- docs/implemented-plans/activity-triggers.md:183 (mention) — Docs about 220 lines (`box-docs/triggers.md`, views and figure instruction
 
 #### docs/box/what-you-could-do.md
 
@@ -3862,6 +3873,19 @@ Referenced by:
 
 References:
 - → ../issues/decisions/2026-11-13-view-file-writes-too-broad.md (frontmatter)
+- → docs/adding-api-endpoints.md (mention)
+
+#### docs/implemented-plans/activity-triggers.md
+
+Title: "Activity triggers: agent-written functions that watch what a person does and respond" | 919 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/exploration/2026-11-14-make-figure-driven-triggers-testable-end-to-end.md:12 (mention) — The live check of activity triggers (`docs/implemented-plans/activity-triggers.md`,
+
+References:
+- → ../issues/exploration/2026-10-18-interactive-triggers-in-educational-material.md (frontmatter)
+- → docs/box/triggers.md (mention)
+- → docs/engineering-principles.md (mention)
 - → docs/adding-api-endpoints.md (mention)
 
 #### docs/implemented-plans/agent-applied-migrations.md
