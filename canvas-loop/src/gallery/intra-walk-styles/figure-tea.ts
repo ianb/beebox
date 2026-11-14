@@ -2,7 +2,7 @@
 // segments), a trunk with a back and a belly, a face in profile, and clothes that
 // hang from their own small skeletons, which follow the legs a moment late.
 import type { Vec2, View } from "@ianbicking/canvas-loop";
-import { INK, blob, stroke } from "./ink-tea.js";
+import { INK, blob, stroke, wobble } from "./ink-tea.js";
 import { pose } from "./gait-tea.js";
 import { REFERENCE } from "./body-tea.js";
 import type { Build } from "./body-tea.js";
@@ -33,6 +33,8 @@ export interface Outfit {
   limbless?: boolean;
   /** Overlay the garments' own skeletons. */
   rig?: boolean;
+  /** Flat fills and plain outlines: no brush ink, washes or hatching. Much cheaper. */
+  fast?: boolean;
   seed: number;
 }
 
@@ -42,6 +44,23 @@ export interface Place {
   /** px per metre. */
   s: number;
   facing: 1 | -1;
+}
+
+// --- Ink, or fast -----------------------------------------------------------------------
+
+type BlobOpts = Parameters<typeof blob>[2];
+/** A filled shape: hand-inked, or (fast) a wobbly flat fill with a plain outline. */
+function shape(v: View, o: Outfit, pts: readonly Vec2[], a: BlobOpts): void {
+  if (o.fast !== true) {
+    blob(v, pts, a);
+    return;
+  }
+  v.curve(wobble(pts, { seed: a.seed, amp: a.amp ?? 1.4, step: 24 }), true, { fill: a.fill, stroke: INK, weight: (a.line ?? 2.2) * 0.75 });
+}
+type StrokeOpts = Parameters<typeof stroke>[2];
+function line(v: View, o: Outfit, pts: readonly Vec2[], a: StrokeOpts): void {
+  if (o.fast !== true) stroke(v, pts, a);
+  else v.curve(pts, false, { stroke: a.colour ?? INK, weight: a.weight ?? 2 });
 }
 
 // --- Geometry in body space (metres, y up, facing +x) -----------------------------------
@@ -75,12 +94,12 @@ function centre(a: Vec, b: Vec, c: Vec): Vec[] {
 
 /** A limb outline round a centre line: `front(t)` and `back(t)` give the half-widths
  * at fraction t along it; the far end gets a rounded cap. */
-function sausage(line: readonly Vec[], front: (t: number) => number, back: (t: number) => number): Vec[] {
-  const n = line.length;
+function sausage(spine: readonly Vec[], front: (t: number) => number, back: (t: number) => number): Vec[] {
+  const n = spine.length;
   const L: Vec[] = [], R: Vec[] = [];
   for (let i = 0; i < n; i++) {
-    const p = line[i] ?? [0, 0];
-    const q = line[Math.min(n - 1, i + 1)] ?? p, o = line[Math.max(0, i - 1)] ?? p;
+    const p = spine[i] ?? [0, 0];
+    const q = spine[Math.min(n - 1, i + 1)] ?? p, o = spine[Math.max(0, i - 1)] ?? p;
     const d = norm(sub(q, o));
     // For a limb hanging down, this normal points forward.
     const nf: Vec = [-d[1], d[0]];
@@ -88,8 +107,8 @@ function sausage(line: readonly Vec[], front: (t: number) => number, back: (t: n
     L.push(add(p, scl(nf, front(t))));
     R.push(add(p, scl(nf, -back(t))));
   }
-  const end = line[n - 1] ?? [0, 0];
-  const d = norm(sub(end, line[n - 2] ?? end));
+  const end = spine[n - 1] ?? [0, 0];
+  const d = norm(sub(end, spine[n - 2] ?? end));
   const r = (front(1) + back(1)) / 2;
   const cap: Vec[] = [];
   for (let i = 1; i < 6; i++) {
@@ -132,13 +151,35 @@ function shoeOutline(l: Leg, b: Build): Vec[] {
   return [up, add(l.heel, scl(nf, 0.03 * k)), add(l.heel, [-0.005, -0.004]), l.ball, l.toe, add(l.toe, scl(d, 0.015 * k)), toeTop, add(lerp(l.ankle, l.ball, 0.5), scl(nf, 0.04 * k)), add(l.ankle, [0.045 * k, 0.03 * k])];
 }
 
+/** A bump that rises gently on one side and falls more quickly on the other. */
+const swell = (u: number, at: number, above: number, below: number): number => Math.exp(-(((u - at) / (u > at ? above : below)) ** 2));
+
+/** The trunk from the side. The front is one profile, sampled top to bottom: a base
+ * shape plus a belly and a chest that blend into each other, so no shelf forms
+ * where one ends and the other begins. */
 function trunkOutline(ps: Pose, b: Build, puff = 0): Vec[] {
   const p = ps.pelvis, lean = ps.lean, T = b.torso, D = b.depth * (1 + puff), U = T / 0.475;
   const at = (f: number, u: number): Vec => tipped(p, lean * (u / T), f, u);
-  const c = b.chest, bl = b.belly, st = b.seat;
+  const bl = b.belly, st = b.seat;
+  // Base depth of the front, by height above the pelvis (fractions of the torso).
+  const base: readonly (readonly [number, number])[] = [[-0.21, 0.07], [0.04, 0.112], [0.3, 0.104], [0.55, 0.112], [0.75, 0.118], [0.9, 0.105], [0.97, 0.08]];
+  const baseAt = (t: number): number => {
+    for (let i = 1; i < base.length; i++) {
+      const [t0, d0] = base[i - 1] ?? [0, 0], [t1, d1] = base[i] ?? [1, 0];
+      if (t <= t1) return d0 + ((d1 - d0) * (t - t0)) / (t1 - t0);
+    }
+    return 0.08;
+  };
+  const front: Vec[] = [];
+  for (let t = -0.21; t <= 0.971; t += 0.06) {
+    const u = t * T;
+    // Belly: centred low on the trunk, wide; chest: centred about two thirds up,
+    // falling more steeply below than above.
+    const d = baseAt(t) * D + bl * swell(t, 0.3, 0.32, 0.3) + b.chest * swell(t, 0.66, 0.2, 0.1);
+    front.push(at(d, u));
+  }
   return [
-    at(0.07 * D, -0.1 * U), at(0.115 * D + bl * 0.4, 0.02 * U), at(0.105 * D + bl * 0.9, 0.14 * U), at(0.11 * D + bl, 0.24 * U),
-    at(0.108 * D + bl * 0.5 + c * 0.45, T - 0.2 * U), at(0.122 * D + c, T - 0.13 * U), at(0.112 * D + c * 0.45, T - 0.06 * U), at(0.08 * D, T - 0.02 * U),
+    ...front,
     at(0.045 * D, T + 0.07 * U), at(-0.045 * D, T + 0.08 * U),
     at(-0.11 * D, T - 0.01 * U), at(-0.125 * D, T - 0.12 * U), at(-0.105 * D - bl * 0.15, 0.2 * U), at(-0.095 * D, 0.12 * U), at(-0.118 * D - st, 0.0), at(-0.11 * D - st * 0.7, -0.09 * U), at(-0.05 * D, -0.13 * U),
   ];
@@ -255,16 +296,16 @@ function head(v: View, ps: Pose, lag: Pose, o: Outfit, P: (v: Vec) => Vec2, spee
   // Local (forward, up) in head units, tipped by the nod.
   const at = (f: number, u: number): Vec => tipped(c, nod, f * R, u * R);
   const face: Vec[] = [[-0.95, 0.1], [-0.82, 0.68], [-0.25, 1.05], [0.45, 0.95], [0.82, 0.5], [0.86, 0.15], [1.12, -0.18], [0.9, -0.3], [0.94, -0.5], [0.82, -0.78], [0.42, -0.98], [-0.05, -0.75], [-0.5, -0.5], [-0.85, -0.25]].map(([f, u]) => at(f ?? 0, u ?? 0));
-  blob(v, face.map(P), { fill: o.skin, light: light(o.skin, 0.18), seed: o.seed + 50, line: 1.7, amp: 0.35 });
+  shape(v, o, face.map(P), { fill: o.skin, light: light(o.skin, 0.18), seed: o.seed + 50, line: 1.7, amp: 0.35 });
   // Ear, eye with a lid, brow.
-  blob(v, [at(-0.18, 0.12), at(-0.02, 0.1), at(0.0, -0.22), at(-0.18, -0.25)].map(P), { fill: dark(o.skin, 0.1), seed: o.seed + 51, line: 1.1, amp: 0.2 });
+  shape(v, o, [at(-0.18, 0.12), at(-0.02, 0.1), at(0.0, -0.22), at(-0.18, -0.25)].map(P), { fill: dark(o.skin, 0.1), seed: o.seed + 51, line: 1.1, amp: 0.2 });
   const [ex, ey] = P(at(0.6, 0.1));
   v.circle(ex, ey, Math.max(1.3, R * 0.07 * Math.abs(P([1, 0])[0] - P([0, 0])[0])), { fill: "#1a1010" });
-  stroke(v, [at(0.45, 0.28), at(0.75, 0.3)].map(P), { seed: o.seed + 52, weight: 1.6, colour: dark(o.hair, 0.2), amp: 0.2 });
+  line(v, o, [at(0.45, 0.28), at(0.75, 0.3)].map(P), { seed: o.seed + 52, weight: 1.6, colour: dark(o.hair, 0.2), amp: 0.2 });
   // Hair: a cap over the crown and the back; a bun or a ponytail that swings.
   const cap: Vec[] = [at(-0.98, -0.2), at(-0.95, 0.4), at(-0.6, 0.95), at(0, 1.18), at(0.6, 1.0), at(0.88, 0.55), at(0.5, 0.62), at(0.1, 0.48), at(-0.25, 0.3), at(-0.55, -0.1)];
-  blob(v, cap.map(P), { fill: o.hair, light: light(o.hair, 0.15), seed: o.seed + 53, line: 1.3, amp: 0.35 });
-  if (o.hairdo === "bun") blob(v, [at(-1.25, 0.55), at(-1.0, 0.9), at(-0.7, 0.85), at(-0.75, 0.4), at(-1.1, 0.3)].map(P), { fill: o.hair, seed: o.seed + 54, line: 1.3, amp: 0.3 });
+  shape(v, o, cap.map(P), { fill: o.hair, light: light(o.hair, 0.15), seed: o.seed + 53, line: 1.3, amp: 0.35 });
+  if (o.hairdo === "bun") shape(v, o, [at(-1.25, 0.55), at(-1.0, 0.9), at(-0.7, 0.85), at(-0.75, 0.4), at(-1.1, 0.3)].map(P), { fill: o.hair, seed: o.seed + 54, line: 1.3, amp: 0.3 });
   if (o.hairdo === "ponytail") {
     // The tail follows the head's bob a moment late, and streams back with speed.
     const bob = (ps.pelvis[1] - lag.pelvis[1]) * 9;
@@ -272,7 +313,7 @@ function head(v: View, ps: Pose, lag: Pose, o: Outfit, P: (v: Vec) => Vec2, spee
     const tail = chain(root, 0.3, -0.25 - Math.min(1.1, speed * 0.3) - bob, 0.1 - bob * 0.5, 4);
     const left = tail.map((p, i) => add(p, [0, 0.022 * (1 - i / 5)]));
     const right = tail.map((p, i) => add(p, [0, -0.022 * (1 - i / 5)]));
-    blob(v, [...left, ...right.reverse()].map(P), { fill: o.hair, seed: o.seed + 55, line: 1.2, amp: 0.3 });
+    shape(v, o, [...left, ...right.reverse()].map(P), { fill: o.hair, seed: o.seed + 55, line: 1.2, amp: 0.3 });
   }
 }
 
@@ -297,7 +338,7 @@ function clothRig(v: View, ps: Pose, lag: Pose, speed: number, o: Outfit, P: (v:
 
 // --- The person --------------------------------------------------------------------------
 
-function crease(v: View, a: Vec, b: Vec, c: Vec, P: (v: Vec) => Vec2, seed: number, colour: string): void {
+function crease(v: View, o: Outfit, a: Vec, b: Vec, c: Vec, P: (v: Vec) => Vec2, seed: number, colour: string): void {
   const bend = Math.abs(hang(a, b) - hang(b, c));
   if (bend < 0.35) return;
   const back = norm(add(norm(sub(a, b)), norm(sub(c, b))));
@@ -305,7 +346,7 @@ function crease(v: View, a: Vec, b: Vec, c: Vec, P: (v: Vec) => Vec2, seed: numb
   for (let i = 0; i < n; i++) {
     const s = add(b, scl(back, 0.03 + i * 0.012));
     const side: Vec = [-back[1] * 0.025, back[0] * 0.025];
-    stroke(v, [add(s, side), add(s, scl(side, -1))].map(P), { seed: seed + i, weight: 1, colour, amp: 0.2 });
+    line(v, o, [add(s, side), add(s, scl(side, -1))].map(P), { seed: seed + i, weight: 1, colour, amp: 0.2 });
   }
 }
 
@@ -319,21 +360,21 @@ export function person(v: View, g: Gait, phase: number, speed: number, q: Place,
   const coat = o.coat === undefined ? undefined : coatSkirt(ps, lag, speed, b);
 
   // Far side: arm, leg, shoe; then the back of a coat.
-  if (o.limbless !== true) blob(v, armOutline(ps.farArm, b).map(P), { fill: dark(sleeve, far), seed: o.seed + 1, line: 1.4, amp: 0.4 });
-  blob(v, handOutline(ps.farArm, b).map(P), { fill: skinFar, seed: o.seed + 2, line: 1.2, amp: 0.25 });
-  if (o.limbless !== true) blob(v, legOutline(ps.far, b).map(P), { fill: dark(o.legs, far), seed: o.seed + 3, line: 1.5, amp: 0.4 });
-  blob(v, shoeOutline(ps.far, b).map(P), { fill: dark(o.shoes, 0.2), seed: o.seed + 4, line: 1.2, amp: 0.25 });
+  if (o.limbless !== true) shape(v, o, armOutline(ps.farArm, b).map(P), { fill: dark(sleeve, far), seed: o.seed + 1, line: 1.4, amp: 0.4 });
+  shape(v, o, handOutline(ps.farArm, b).map(P), { fill: skinFar, seed: o.seed + 2, line: 1.2, amp: 0.25 });
+  if (o.limbless !== true) shape(v, o, legOutline(ps.far, b).map(P), { fill: dark(o.legs, far), seed: o.seed + 3, line: 1.5, amp: 0.4 });
+  shape(v, o, shoeOutline(ps.far, b).map(P), { fill: dark(o.shoes, 0.2), seed: o.seed + 4, line: 1.2, amp: 0.25 });
 
   // Trunk, then the near leg.
-  blob(v, trunkOutline(ps, b, coat ? 0.12 : 0).map(P), { fill: sleeve, light: light(sleeve, 0.2), dark: dark(sleeve, 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: o.seed + 6, line: 1.9, amp: 0.5 });
+  shape(v, o, trunkOutline(ps, b, coat ? 0.12 : 0).map(P), { fill: sleeve, light: light(sleeve, 0.2), dark: dark(sleeve, 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: o.seed + 6, line: 1.9, amp: 0.5 });
   if (o.limbless !== true) {
-    blob(v, legOutline(ps.near, b).map(P), { fill: o.legs, light: light(o.legs, 0.15), seed: o.seed + 7, line: 1.6, amp: 0.4 });
-    crease(v, ps.near.hip, ps.near.knee, ps.near.ankle, P, o.seed + 8, dark(o.legs, 0.45));
+    shape(v, o, legOutline(ps.near, b).map(P), { fill: o.legs, light: light(o.legs, 0.15), seed: o.seed + 7, line: 1.6, amp: 0.4 });
+    crease(v, o, ps.near.hip, ps.near.knee, ps.near.ankle, P, o.seed + 8, dark(o.legs, 0.45));
   }
-  blob(v, shoeOutline(ps.near, b).map(P), { fill: o.shoes, light: light(o.shoes, 0.25), seed: o.seed + 9, line: 1.3, amp: 0.25 });
+  shape(v, o, shoeOutline(ps.near, b).map(P), { fill: o.shoes, light: light(o.shoes, 0.25), seed: o.seed + 9, line: 1.3, amp: 0.25 });
 
   // Garments over the legs.
-  if (o.skirt !== undefined) blob(v, skirtShape(ps, lag, speed, b).map(P), { fill: o.skirt, light: light(o.skirt, 0.2), dark: dark(o.skirt, 0.3), shadeSide: "bottom", seed: o.seed + 10, line: 1.7, amp: 0.5 });
+  if (o.skirt !== undefined) shape(v, o, skirtShape(ps, lag, speed, b).map(P), { fill: o.skirt, light: light(o.skirt, 0.2), dark: dark(o.skirt, 0.3), shadeSide: "bottom", seed: o.seed + 10, line: 1.7, amp: 0.5 });
   if (coat && o.coat !== undefined) {
     // One cloth over both legs: shoulders, down the front panel, along the hem,
     // up the back panel.
@@ -341,46 +382,46 @@ export function person(v: View, g: Gait, phase: number, speed: number, q: Place,
     const hemF = coat.front.at(-1) ?? sh, hemB = coat.back.at(-1) ?? sh;
     const sag = add(lerp(hemB, hemF, 0.5), [0, 0.02]);
     const body: Vec[] = [tipped(sh, ps.lean, 0.0, 0.08), tipped(sh, ps.lean, 0.11, 0.0), tipped(sh, ps.lean, 0.135, -0.18), ...coat.front, sag, ...[...coat.back].reverse(), tipped(sh, ps.lean, -0.135, -0.16), tipped(sh, ps.lean, -0.1, 0.02)];
-    blob(v, body.map(P), { fill: o.coat, light: light(o.coat, 0.18), dark: dark(o.coat, 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: o.seed + 11, line: 1.9, amp: 0.5 });
+    shape(v, o, body.map(P), { fill: o.coat, light: light(o.coat, 0.18), dark: dark(o.coat, 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: o.seed + 11, line: 1.9, amp: 0.5 });
     // The back vent: a fold line up from the hem.
-    stroke(v, [hemB, lerp(hemB, coat.back[1] ?? hemB, 0.9)].map(P), { seed: o.seed + 18, weight: 1.1, colour: dark(o.coat, 0.5), amp: 0.3 });
+    line(v, o, [hemB, lerp(hemB, coat.back[1] ?? hemB, 0.9)].map(P), { seed: o.seed + 18, weight: 1.1, colour: dark(o.coat, 0.5), amp: 0.3 });
     // Lapel and buttons.
-    stroke(v, [tipped(sh, ps.lean, 0.08, 0.05), tipped(sh, ps.lean, 0.02, -0.2), tipped(ps.pelvis, ps.lean, 0.11, 0.12)].map(P), { seed: o.seed + 12, weight: 1.2, colour: dark(o.coat, 0.5), amp: 0.3 });
+    line(v, o, [tipped(sh, ps.lean, 0.08, 0.05), tipped(sh, ps.lean, 0.02, -0.2), tipped(ps.pelvis, ps.lean, 0.11, 0.12)].map(P), { seed: o.seed + 12, weight: 1.2, colour: dark(o.coat, 0.5), amp: 0.3 });
     for (const u of [0.05, 0.18]) {
       const [bx, by] = P(tipped(ps.pelvis, ps.lean, 0.125, u));
       v.circle(bx, by, 0.012 * q.s, { fill: "#d8c890" });
     }
   }
-  if (o.collar !== undefined && !coat) blob(v, [tipped(ps.shoulder, ps.lean, -0.07, 0.07), tipped(ps.shoulder, ps.lean, 0.06, 0.07), tipped(ps.shoulder, ps.lean, 0.08, -0.01), tipped(ps.shoulder, ps.lean, -0.08, -0.01)].map(P), { fill: o.collar, seed: o.seed + 13, line: 1.2, amp: 0.25 });
-  if (o.skirt === undefined && !coat) stroke(v, [tipped(ps.pelvis, ps.lean, -0.12, 0.09), tipped(ps.pelvis, ps.lean, 0.11, 0.1)].map(P), { seed: o.seed + 14, weight: 2.4, colour: "#2a2420", amp: 0.2 });
+  if (o.collar !== undefined && !coat) shape(v, o, [tipped(ps.shoulder, ps.lean, -0.07, 0.07), tipped(ps.shoulder, ps.lean, 0.06, 0.07), tipped(ps.shoulder, ps.lean, 0.08, -0.01), tipped(ps.shoulder, ps.lean, -0.08, -0.01)].map(P), { fill: o.collar, seed: o.seed + 13, line: 1.2, amp: 0.25 });
+  if (o.skirt === undefined && !coat) line(v, o, [tipped(ps.pelvis, ps.lean, -0.12, 0.09), tipped(ps.pelvis, ps.lean, 0.11, 0.1)].map(P), { seed: o.seed + 14, weight: 2.4, colour: "#2a2420", amp: 0.2 });
 
   head(v, ps, lag, o, P, speed, b);
   if (o.rig === true) clothRig(v, ps, lag, speed, o, P, b);
 
   // Near arm on top.
   if (o.limbless !== true) {
-    blob(v, armOutline(ps.nearArm, b).map(P), { fill: sleeve, light: light(sleeve, 0.15), seed: o.seed + 15, line: 1.5, amp: 0.4 });
-    crease(v, ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist, P, o.seed + 16, dark(sleeve, 0.45));
+    shape(v, o, armOutline(ps.nearArm, b).map(P), { fill: sleeve, light: light(sleeve, 0.15), seed: o.seed + 15, line: 1.5, amp: 0.4 });
+    crease(v, o, ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist, P, o.seed + 16, dark(sleeve, 0.45));
   }
-  blob(v, handOutline(ps.nearArm, b).map(P), { fill: o.skin, seed: o.seed + 17, line: 1.2, amp: 0.25 });
+  shape(v, o, handOutline(ps.nearArm, b).map(P), { fill: o.skin, seed: o.seed + 17, line: 1.2, amp: 0.25 });
 }
 
 /** The pose's bones, for checking the drawing against the rig. */
 export function bones(v: View, g: Gait, phase: number, q: Place, colour: string): void {
   const ps = pose(g, phase);
   const P = (p: Vec): Vec2 => [q.x + p[0] * q.s * q.facing, q.y - p[1] * q.s];
-  const line = (pts: readonly Vec[]): void => {
+  const chainOf = (pts: readonly Vec[]): void => {
     v.curve(pts.map(P), false, { stroke: colour, weight: 1.2 });
     for (const p of pts) {
       const [x, y] = P(p);
       v.circle(x, y, 1.8, { fill: colour });
     }
   };
-  line([ps.far.hip, ps.far.knee, ps.far.ankle, ps.far.heel, ps.far.ball]);
-  line([ps.farArm.shoulder, ps.farArm.elbow, ps.farArm.wrist]);
-  line([ps.pelvis, ps.shoulder, ps.neck, ps.head]);
-  line([ps.near.hip, ps.near.knee, ps.near.ankle, ps.near.heel, ps.near.ball]);
-  line([ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist]);
+  chainOf([ps.far.hip, ps.far.knee, ps.far.ankle, ps.far.heel, ps.far.ball]);
+  chainOf([ps.farArm.shoulder, ps.farArm.elbow, ps.farArm.wrist]);
+  chainOf([ps.pelvis, ps.shoulder, ps.neck, ps.head]);
+  chainOf([ps.near.hip, ps.near.knee, ps.near.ankle, ps.near.heel, ps.near.ball]);
+  chainOf([ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist]);
 }
 export { INK };
 
@@ -402,52 +443,54 @@ export function personFront(v: View, q: Place, o: Outfit, b: Build = REFERENCE):
   v.ellipse(q.x, q.y, 0.26 * q.s * s, 0.045 * q.s, { fill: "rgba(0,0,0,0.3)" });
   const sleeve = o.coat ?? o.top;
   for (const side of [-1, 1]) {
-    const hip: Vec = [side * b.hips * 0.5, hipY], ankle: Vec = [side * stance, b.ankleHigh];
+    const hip: Vec = [side * b.hips * 0.5, hipY - 0.03 * s], ankle: Vec = [side * stance, b.ankleHigh];
     const knee = lerp(hip, ankle, 0.5);
-    if (o.limbless !== true) blob(v, band(hip, knee, ankle, 0.07 * k, 0.05 * k, 0.035 * k).map(P), { fill: side < 0 ? dark(o.legs, 0.12) : o.legs, seed: o.seed + 70 + side, line: 1.5, amp: 0.4 });
+    if (o.limbless !== true) shape(v, o, band(hip, knee, ankle, Math.max(0.07 * k, b.hips * 0.5), 0.05 * k, 0.035 * k).map(P), { fill: side < 0 ? dark(o.legs, 0.12) : o.legs, seed: o.seed + 70 + side, line: 1.5, amp: 0.4 });
     // A shoe seen toe-on: a rounded toe cap under the ankle.
-    blob(v, [[side * stance - 0.055 * s, 0], [side * stance + 0.055 * s, 0], [side * stance + 0.05 * s, 0.05 * s], [side * stance, 0.075 * s], [side * stance - 0.05 * s, 0.05 * s]].map((p): Vec2 => P([p[0] ?? 0, p[1] ?? 0])), { fill: o.shoes, seed: o.seed + 72 + side, line: 1.2, amp: 0.25 });
+    shape(v, o, [[side * stance - 0.055 * s, 0], [side * stance + 0.055 * s, 0], [side * stance + 0.05 * s, 0.05 * s], [side * stance, 0.075 * s], [side * stance - 0.05 * s, 0.05 * s]].map((p): Vec2 => P([p[0] ?? 0, p[1] ?? 0])), { fill: o.shoes, seed: o.seed + 72 + side, line: 1.2, amp: 0.25 });
   }
   if (o.skirt !== undefined) {
     const top = hipY + 0.1 * s, hem = top - 0.52 * s;
-    blob(v, ([[-b.waist, top], [b.waist, top], [b.hips * 1.55, hem], [0, hem - 0.02], [-b.hips * 1.55, hem]] satisfies Vec[]).map(P), { fill: o.skirt, light: light(o.skirt, 0.2), dark: dark(o.skirt, 0.3), shadeSide: "left", seed: o.seed + 74, line: 1.7, amp: 0.5 });
+    shape(v, o, ([[-b.waist, top], [b.waist, top], [b.hips * 1.55, hem], [0, hem - 0.02], [-b.hips * 1.55, hem]] satisfies Vec[]).map(P), { fill: o.skirt, light: light(o.skirt, 0.2), dark: dark(o.skirt, 0.3), shadeSide: "left", seed: o.seed + 74, line: 1.7, amp: 0.5 });
   }
   // Trunk: hips, waist, chest, shoulders, a neck.
   const coatHem = 0.3 * s;
-  const low = o.coat === undefined ? hipY - 0.1 * s : coatHem;
+  const low = coatHem;
   const flare = o.coat === undefined ? b.hips : b.hips * 1.35;
-  const trunk: Vec[] = [[-flare, low], [flare, low], [b.hips, hipY], [b.waist, hipY + 0.17 * s], [b.shoulders * 0.88 + b.chest * 0.4, shY - 0.17 * s], [b.shoulders, shY - 0.03 * s], [0.05 * s, shY + 0.03 * s], [-0.05 * s, shY + 0.03 * s], [-b.shoulders, shY - 0.03 * s], [-(b.shoulders * 0.88 + b.chest * 0.4), shY - 0.17 * s], [-b.waist, hipY + 0.17 * s], [-b.hips, hipY]];
-  blob(v, trunk.map(P), { fill: sleeve, light: light(sleeve, 0.2), dark: dark(sleeve, 0.3), shadeSide: "left", seed: o.seed + 75, line: 1.9, amp: 0.5 });
-  if (b.chest > 0.02) for (const side of [-1, 1]) stroke(v, [[side * 0.03 * s, shY - 0.2 * s], [side * 0.08 * s, shY - 0.21 * s - b.chest * 0.3], [side * 0.13 * s, shY - 0.18 * s]].map((p): Vec2 => P([p[0] ?? 0, p[1] ?? 0])), { seed: o.seed + 76 + side, weight: 1.1, colour: dark(sleeve, 0.4), amp: 0.2 });
+  // Seen from the front the trunk ends at the crotch (a coat carries on down).
+  const bottom: Vec[] = o.coat === undefined ? [[-b.hips, hipY - 0.03 * s], [-b.hips * 0.4, hipY - 0.1 * s], [0, hipY - 0.13 * s], [b.hips * 0.4, hipY - 0.1 * s], [b.hips, hipY - 0.03 * s]] : [[-flare, low], [flare, low]];
+  const flank = (x: number): Vec[] => [[x * b.hips, hipY + 0.04 * s], [x * b.waist, hipY + 0.17 * s], [x * (b.shoulders * 0.86 + b.chest * 0.3), shY - 0.17 * s], [x * b.shoulders * 0.98, shY - 0.08 * s], [x * b.shoulders * 0.8, shY - 0.005 * s], [x * 0.06 * s, shY + 0.03 * s]];
+  const trunk: Vec[] = [...bottom, ...flank(1), ...flank(-1).reverse()];
+  shape(v, o, trunk.map(P), { fill: sleeve, light: light(sleeve, 0.2), dark: dark(sleeve, 0.3), shadeSide: "left", seed: o.seed + 75, line: 1.9, amp: 0.5 });
   if (o.coat !== undefined) {
-    stroke(v, [P([0, shY - 0.05 * s]), P([0, coatHem])], { seed: o.seed + 78, weight: 1.3, colour: dark(o.coat, 0.5), amp: 0.3 });
+    line(v, o, [P([0, shY - 0.05 * s]), P([0, coatHem])], { seed: o.seed + 78, weight: 1.3, colour: dark(o.coat, 0.5), amp: 0.3 });
     for (const u of [0.15, 0.3, 0.45]) {
       const [bx, by] = P([0.025 * s, hipY + u * s - 0.1 * s]);
       v.circle(bx, by, 0.012 * q.s, { fill: "#d8c890" });
     }
-  } else if (o.skirt === undefined) stroke(v, [P([-b.waist * 1.02, hipY + 0.08 * s]), P([b.waist * 1.02, hipY + 0.08 * s])], { seed: o.seed + 79, weight: 2.4, colour: "#2a2420", amp: 0.2 });
-  if (o.collar !== undefined && o.coat === undefined) blob(v, [P([-0.1 * s, shY + 0.01 * s]), P([0.1 * s, shY + 0.01 * s]), P([0.05 * s, shY - 0.07 * s]), P([0, shY - 0.03 * s]), P([-0.05 * s, shY - 0.07 * s])], { fill: o.collar, seed: o.seed + 80, line: 1.2, amp: 0.25 });
+  } else if (o.skirt === undefined) line(v, o, [P([-b.waist * 1.02, hipY + 0.08 * s]), P([b.waist * 1.02, hipY + 0.08 * s])], { seed: o.seed + 79, weight: 2.4, colour: "#2a2420", amp: 0.2 });
+  if (o.collar !== undefined && o.coat === undefined) shape(v, o, [P([-0.1 * s, shY + 0.01 * s]), P([0.1 * s, shY + 0.01 * s]), P([0.05 * s, shY - 0.07 * s]), P([0, shY - 0.03 * s]), P([-0.05 * s, shY - 0.07 * s])], { fill: o.collar, seed: o.seed + 80, line: 1.2, amp: 0.25 });
   // Arms hang clear of the hips.
   for (const side of [-1, 1]) {
-    const x0 = side * b.shoulders * 0.95, x1 = side * Math.max(b.shoulders * 0.98, b.hips * 1.05 + 0.04 * k);
-    const sh: Vec = [x0, shY - 0.04 * s], el: Vec = [x1, shY - b.upperArm], wr: Vec = [x1 - side * 0.01, shY - b.upperArm - b.forearm];
-    if (o.limbless !== true) blob(v, band(sh, el, wr, 0.05 * k, 0.04 * k, 0.032 * k).map(P), { fill: side < 0 ? dark(sleeve, 0.1) : sleeve, seed: o.seed + 82 + side, line: 1.5, amp: 0.4 });
-    blob(v, ellipsePts2(P([wr[0], wr[1] - 0.045 * s]), 0.032 * q.s * s, 0.05 * q.s * s), { fill: o.skin, seed: o.seed + 84 + side, line: 1.2, amp: 0.25 });
+    const x0 = side * b.shoulders * 0.88, x1 = side * Math.max(b.shoulders * 0.98, b.hips * 1.05 + 0.04 * k);
+    const sh: Vec = [x0, shY - 0.06 * s], el: Vec = [x1, shY - b.upperArm], wr: Vec = [x1 - side * 0.01, shY - b.upperArm - b.forearm];
+    if (o.limbless !== true) shape(v, o, band(sh, el, wr, 0.05 * k, 0.04 * k, 0.032 * k).map(P), { fill: side < 0 ? dark(sleeve, 0.1) : sleeve, seed: o.seed + 82 + side, line: 1.5, amp: 0.4 });
+    shape(v, o, ellipsePts2(P([wr[0], wr[1] - 0.045 * s]), 0.032 * q.s * s, 0.05 * q.s * s), { fill: o.skin, seed: o.seed + 84 + side, line: 1.2, amp: 0.25 });
   }
   // Head: oval face, ears, eyes, a nose and a small mouth, hair framing it.
   const [hx, hy] = P([0, headY]);
   const r = R * q.s;
-  blob(v, [P([-0.05 * s, shY + 0.04 * s]), P([0.05 * s, shY + 0.04 * s]), P([0.045 * s, headY - R * 0.6]), P([-0.045 * s, headY - R * 0.6])], { fill: dark(o.skin, 0.12), seed: o.seed + 86, line: 1.2, amp: 0.2 });
-  if (o.hairdo === "bun") blob(v, ellipsePts2([hx, hy - r * 1.05], r * 0.42, r * 0.32), { fill: o.hair, seed: o.seed + 87, line: 1.3, amp: 0.3 });
-  for (const side of [-1, 1]) blob(v, ellipsePts2([hx + side * r * 0.8, hy + r * 0.05], r * 0.14, r * 0.22), { fill: dark(o.skin, 0.08), seed: o.seed + 88 + side, line: 1.1, amp: 0.2 });
-  blob(v, [[-0.78, -0.2], [-0.8, 0.35], [-0.5, 0.85], [0, 0.98], [0.5, 0.85], [0.8, 0.35], [0.78, -0.2], [0.55, -0.7], [0, -0.98], [-0.55, -0.7]].map(([fx, fy]): Vec2 => [hx + (fx ?? 0) * r, hy - (fy ?? 0) * r]), { fill: o.skin, light: light(o.skin, 0.18), seed: o.seed + 90, line: 1.7, amp: 0.35 });
-  blob(v, [[-0.86, 0.1], [-0.82, 0.62], [-0.45, 1.02], [0.1, 1.08], [0.6, 0.95], [0.86, 0.55], [0.84, 0.1], [0.65, 0.42], [0.2, 0.62], [-0.35, 0.58], [-0.68, 0.4]].map(([fx, fy]): Vec2 => [hx + (fx ?? 0) * r, hy - (fy ?? 0) * r]), { fill: o.hair, light: light(o.hair, 0.15), seed: o.seed + 91, line: 1.3, amp: 0.35 });
+  shape(v, o, [P([-0.05 * s, shY + 0.04 * s]), P([0.05 * s, shY + 0.04 * s]), P([0.045 * s, headY - R * 0.6]), P([-0.045 * s, headY - R * 0.6])], { fill: dark(o.skin, 0.12), seed: o.seed + 86, line: 1.2, amp: 0.2 });
+  if (o.hairdo === "bun") shape(v, o, ellipsePts2([hx, hy - r * 1.05], r * 0.42, r * 0.32), { fill: o.hair, seed: o.seed + 87, line: 1.3, amp: 0.3 });
+  for (const side of [-1, 1]) shape(v, o, ellipsePts2([hx + side * r * 0.8, hy + r * 0.05], r * 0.14, r * 0.22), { fill: dark(o.skin, 0.08), seed: o.seed + 88 + side, line: 1.1, amp: 0.2 });
+  shape(v, o, [[-0.78, -0.2], [-0.8, 0.35], [-0.5, 0.85], [0, 0.98], [0.5, 0.85], [0.8, 0.35], [0.78, -0.2], [0.55, -0.7], [0, -0.98], [-0.55, -0.7]].map(([fx, fy]): Vec2 => [hx + (fx ?? 0) * r, hy - (fy ?? 0) * r]), { fill: o.skin, light: light(o.skin, 0.18), seed: o.seed + 90, line: 1.7, amp: 0.35 });
+  shape(v, o, [[-0.86, 0.1], [-0.82, 0.62], [-0.45, 1.02], [0.1, 1.08], [0.6, 0.95], [0.86, 0.55], [0.84, 0.1], [0.65, 0.42], [0.2, 0.62], [-0.35, 0.58], [-0.68, 0.4]].map(([fx, fy]): Vec2 => [hx + (fx ?? 0) * r, hy - (fy ?? 0) * r]), { fill: o.hair, light: light(o.hair, 0.15), seed: o.seed + 91, line: 1.3, amp: 0.35 });
   for (const side of [-1, 1]) {
     v.circle(hx + side * r * 0.34, hy - r * 0.05, Math.max(1.3, r * 0.08), { fill: "#1a1010" });
-    stroke(v, [[hx + side * r * 0.2, hy - r * 0.25], [hx + side * r * 0.5, hy - r * 0.27]], { seed: o.seed + 93 + side, weight: 1.4, colour: dark(o.hair, 0.2), amp: 0.15 });
+    line(v, o, [[hx + side * r * 0.2, hy - r * 0.25], [hx + side * r * 0.5, hy - r * 0.27]], { seed: o.seed + 93 + side, weight: 1.4, colour: dark(o.hair, 0.2), amp: 0.15 });
   }
-  stroke(v, [[hx, hy + r * 0.05], [hx - r * 0.06, hy + r * 0.3], [hx + r * 0.05, hy + r * 0.33]], { seed: o.seed + 95, weight: 1.2, colour: dark(o.skin, 0.45), amp: 0.1 });
-  stroke(v, [[hx - r * 0.2, hy + r * 0.55], [hx, hy + r * 0.6], [hx + r * 0.2, hy + r * 0.55]], { seed: o.seed + 96, weight: 1.3, colour: dark(o.skin, 0.5), amp: 0.1 });
+  line(v, o, [[hx, hy + r * 0.05], [hx - r * 0.06, hy + r * 0.3], [hx + r * 0.05, hy + r * 0.33]], { seed: o.seed + 95, weight: 1.2, colour: dark(o.skin, 0.45), amp: 0.1 });
+  line(v, o, [[hx - r * 0.2, hy + r * 0.55], [hx, hy + r * 0.6], [hx + r * 0.2, hy + r * 0.55]], { seed: o.seed + 96, weight: 1.3, colour: dark(o.skin, 0.5), amp: 0.1 });
 }
 
 function ellipsePts2(c: Vec2, rx: number, ry: number): Vec2[] {

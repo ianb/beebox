@@ -21,6 +21,7 @@ export const params = {
   height: { type: "number", min: -1, max: 1, step: 0.1, default: 0, label: "Height" },
   weight: { type: "number", min: -1, max: 1, step: 0.1, default: 0, label: "Weight" },
   chest: { type: "number", min: -1, max: 1, step: 0.1, default: 0, label: "Chest" },
+  quality: { type: "select", options: ["ink", "fast"], default: "ink", label: "Drawing" },
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: 1280, height: 1000 };
@@ -69,8 +70,8 @@ export function gaitAt(level: number): Gait {
   return [["confident", 2 - level], ["run", level - 1]];
 }
 
-/** Frames in a turn; the middle third faces the camera. */
-export const TURN = 15;
+/** Frames in a turn (0.6 s); the middle half faces the camera. */
+export const TURN = 36;
 const ROOM_MIN = 0.6, ROOM_MAX = canvas.width / 145 - 0.6;
 function tick(m: DeepReadonly<Model>): Model {
   const frame = m.frame + 1;
@@ -159,7 +160,7 @@ const CELLS: Cell[] = [
   { label: "run", gait: one("run"), body: { kind: "man", weight: -0.5 }, outfit: { top: "#e8b83a", legs: "#2a2a40" } },
 ];
 
-function cell(v: View, c: Cell, i: number, sec: number): void {
+function cell(v: View, c: Cell, i: number, sec: number, fast: boolean): void {
   const w = 320, h = 250, x0 = (i % 4) * w, y0 = Math.floor(i / 4) * h;
   const g = c.gait(sec);
   const b = buildOf(c.body ?? { kind: "woman" });
@@ -171,7 +172,7 @@ function cell(v: View, c: Cell, i: number, sec: number): void {
     // The floor slides back under them at exactly the speed their feet push it.
     const off = (pr.x * s) % (0.5 * s);
     for (let gx = -off; gx < w; gx += 0.5 * s) v.line(x0 + gx, ground, x0 + gx - 14, ground + 22, { stroke: "rgba(60,40,20,0.35)", weight: 1.5 });
-    person(v, g, pr.phase, speedOf(g, b), { x: cx, y: ground, s, facing: 1 }, { ...JUMPSUIT, ...c.outfit, seed: 900 + i * 40 }, b);
+    person(v, g, pr.phase, speedOf(g, b), { x: cx, y: ground, s, facing: 1 }, { ...JUMPSUIT, ...c.outfit, seed: 900 + i * 40, fast }, b);
   });
   v.line(x0, y0, x0, y0 + h, { stroke: "rgba(0,0,0,0.25)", weight: 1 });
   v.line(x0, y0, x0 + w, y0, { stroke: "rgba(0,0,0,0.25)", weight: 1 });
@@ -181,8 +182,8 @@ function cell(v: View, c: Cell, i: number, sec: number): void {
   if (take) v.text(`CMU ${take}`, { x: x0 + w - 8, y: y0 + h - 8 }, { size: 9, fill: "#5a4e44", align: "right", valign: "bottom" });
 }
 
-function styles(v: View, sec: number): void {
-  for (const [i, c] of CELLS.entries()) cell(v, c, i, sec);
+function styles(v: View, sec: number, fast: boolean): void {
+  for (const [i, c] of CELLS.entries()) cell(v, c, i, sec, fast);
 }
 
 // --- Clothes -----------------------------------------------------------------------------
@@ -203,17 +204,17 @@ const WALKERS: Walker[] = [
   { label: "long coat, running", gait: [["run", 1]], depth: 3.6, start: 2, body: { kind: "woman", height: 0.4, weight: -0.3 }, outfit: { top: "#c84a3a", legs: "#2a2a40", shoes: "#1e1812", skin: "#d8a070", hair: "#8a3a1a", hairdo: "ponytail", coat: "#3a5a7a", seed: 1420 } },
 ];
 
-function walkerInRoom(v: View, w: Walker, sec: number): void {
+function walkerInRoom(v: View, w: Walker, sec: number, fast: boolean): void {
   const wrap = canvas.width + 300;
   const b = buildOf(w.body);
   const pr = progress(w.gait, sec, b);
   const ux = w.start * PXM + pr.x * PXM;
   const x = ((ux + 150) % wrap) - 150, y = WALL + w.depth * 34;
-  person(v, w.gait, pr.phase, speedOf(w.gait, b), { x, y, s: PXM, facing: 1 }, w.outfit, b);
+  person(v, w.gait, pr.phase, speedOf(w.gait, b), { x, y, s: PXM, facing: 1 }, { ...w.outfit, fast }, b);
   v.text(w.label, { x, y: y - 1.95 * PXM }, { size: 12, fill: "#1a2a3a", align: "center", valign: "bottom", style: "bold" });
 }
 
-function closeUp(v: View, x: number, label: string, g: Gait, outfit: Outfit, sec: number, body: BodySpec): void {
+function closeUp(v: View, x: number, label: string, g: Gait, outfit: Outfit, sec: number, body: BodySpec, fast: boolean): void {
   const y0 = 560, w = 420, h = 440, s = 150, ground = y0 + h - 30;
   const b = buildOf(body);
   const pr = progress(g, sec, b);
@@ -224,22 +225,22 @@ function closeUp(v: View, x: number, label: string, g: Gait, outfit: Outfit, sec
     const off = (pr.x * s) % (0.5 * s);
     for (let gx = -off; gx < w; gx += 0.5 * s) v.line(x + gx, ground, x + gx - 12, ground + 18, { stroke: "rgba(240,230,210,0.4)", weight: 1.5 });
     v.line(x, ground, x + w, ground, { stroke: "#e8dcc0", weight: 1 });
-    person(v, g, pr.phase, speedOf(g, b), { x: x + w / 2, y: ground, s, facing: 1 }, { ...outfit, rig: true }, b);
+    person(v, g, pr.phase, speedOf(g, b), { x: x + w / 2, y: ground, s, facing: 1 }, { ...outfit, rig: true, fast }, b);
   });
   v.text(label, { x: x + 10, y: y0 + 8 }, { size: 13, fill: "#e8dcc0", align: "left", valign: "top" });
 }
 
-function clothes(v: View, sec: number): void {
+function clothes(v: View, sec: number, fast: boolean): void {
   v.rect(0, 0, canvas.width, WALL, { fill: "#8a8a6e" });
   for (let x = 0; x < canvas.width; x += 1.2 * PXM) v.line(x, 30, x, WALL, { stroke: "rgba(0,0,0,0.18)", weight: 2 });
   v.rect(0, WALL - 46, canvas.width, 46, { fill: "#6e6e58" });
   v.rect(0, WALL, canvas.width, 260, { fill: "#b9ab8e" });
   v.text("At the rooms' scale (145 px per metre).", { x: 16, y: 12 }, { size: 13, fill: "#f4ecd8", align: "left", valign: "top" });
-  for (const w of WALKERS) walkerInRoom(v, w, sec);
+  for (const w of WALKERS) walkerInRoom(v, w, sec, fast);
   const coat = WALKERS[0]?.outfit, skirt = WALKERS[1]?.outfit;
-  if (coat) closeUp(v, 0, "Coat: front and back panels (pink) hang from the hips", [["confident", 1]], coat, sec, { kind: "man", height: 0.5 });
-  if (skirt) closeUp(v, 430, "Skirt on a bold stride: the legs push the panels", [["stride", 1]], skirt, sec, { kind: "woman" });
-  if (skirt) closeUp(v, 860, "Skirt running: legs never come out the front", [["run", 1]], skirt, sec, { kind: "woman" });
+  if (coat) closeUp(v, 0, "Coat: front and back panels (pink) hang from the hips", [["confident", 1]], coat, sec, { kind: "man", height: 0.5 }, fast);
+  if (skirt) closeUp(v, 430, "Skirt on a bold stride: the legs push the panels", [["stride", 1]], skirt, sec, { kind: "woman" }, fast);
+  if (skirt) closeUp(v, 860, "Skirt running: legs never come out the front", [["run", 1]], skirt, sec, { kind: "woman" }, fast);
 }
 
 // --- Bodies -----------------------------------------------------------------------------
@@ -259,7 +260,7 @@ const BODIES: readonly { label: string; body: BodySpec }[] = [
   { label: "tall heavy child", body: { kind: "child", height: 1, weight: 0.7 } },
 ];
 
-function bodies(v: View, sec: number): void {
+function bodies(v: View, sec: number, fast: boolean): void {
   const w = canvas.width / 6, h = canvas.height / 2, s = 118;
   for (const [i, c] of BODIES.entries()) {
     const x0 = (i % 6) * w, y0 = Math.floor(i / 6) * h, ground = y0 + h - 40;
@@ -270,7 +271,7 @@ function bodies(v: View, sec: number): void {
     v.rect(x0, ground, w, h - (ground - y0), { fill: "#b9ab8e" });
     // A 10 cm ruler, so heights read.
     for (let m = 0; m <= 2; m += 0.1) v.line(x0 + 4, ground - m * s, x0 + (Math.round(m * 10) % 5 === 0 ? 14 : 9), ground - m * s, { stroke: "rgba(0,0,0,0.35)", weight: 1 });
-    const outfit: Outfit = { ...JUMPSUIT, hairdo: c.body.kind === "man" ? "short" : "ponytail", seed: 2000 + i * 40 };
+    const outfit: Outfit = { ...JUMPSUIT, hairdo: c.body.kind === "man" ? "short" : "ponytail", seed: 2000 + i * 40, fast };
     person(v, g, pr.phase, speedOf(g, b), { x: x0 + w * 0.32, y: ground, s, facing: 1 }, outfit, b);
     personFront(v, { x: x0 + w * 0.76, y: ground, s, facing: 1 }, outfit, b);
     v.text(c.label, { x: x0 + 10, y: y0 + 10 }, { size: 13, fill: "#2a2420", align: "left", valign: "top", style: "bold" });
@@ -287,7 +288,7 @@ const PLAY_OUTFITS: Record<string, Outfit> = {
   coat: { top: "#d8d0c0", legs: "#2a2a30", shoes: "#3a2418", skin: "#b07850", hair: "#1a1410", coat: "#6a5040", seed: 1580 },
 };
 
-function play(v: View, m: DeepReadonly<Model>, outfit: string): void {
+function play(v: View, m: DeepReadonly<Model>, outfit: string, fast: boolean): void {
   v.rect(0, 0, canvas.width, PLAY_FLOOR - 40, { fill: "#8a8a6e" });
   for (let x = 0; x < canvas.width; x += 1.2 * PXM) v.line(x, 60, x, PLAY_FLOOR - 40, { stroke: "rgba(0,0,0,0.18)", weight: 2 });
   v.rect(0, PLAY_FLOOR - 86, canvas.width, 46, { fill: "#6e6e58" });
@@ -296,10 +297,10 @@ function play(v: View, m: DeepReadonly<Model>, outfit: string): void {
   v.text("← → to walk. Tap twice and hold to run. Turning: press the other way.", { x: 20, y: 16 }, { size: 16, fill: "#f4ecd8", align: "left", valign: "top", style: "bold" });
   const g = gaitAt(m.level);
   const b = buildOf(m.body);
-  const look = PLAY_OUTFITS[outfit] ?? JUMPSUIT;
+  const look = { ...(PLAY_OUTFITS[outfit] ?? JUMPSUIT), fast };
   const place = { x: m.x * PXM, y: PLAY_FLOOR, s: PXM, facing: m.facing };
-  // The middle third of a turn looks out at us.
-  if (m.turn > TURN / 3 && m.turn <= (2 * TURN) / 3) personFront(v, place, look, b);
+  // The middle half of a turn looks out at us.
+  if (m.turn > TURN / 4 && m.turn <= (3 * TURN) / 4) personFront(v, place, look, b);
   else person(v, g, m.phase, Math.abs(m.v) * 60, place, look, b);
   // The mix: how much stand, walk and run is in this frame's gait.
   const mix = [["stand", Math.max(0, 1 - m.level)], ["walk", 1 - Math.abs(1 - m.level)], ["run", Math.max(0, m.level - 1)]] as const;
@@ -317,8 +318,9 @@ function play(v: View, m: DeepReadonly<Model>, outfit: string): void {
 export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
   const sec = model.frame / 60;
   v.rect(0, 0, canvas.width, canvas.height, { fill: "#d8ccb0" });
-  if (p.sheet === "clothes") clothes(v, sec);
-  else if (p.sheet === "play") play(v, model, p.outfit);
-  else if (p.sheet === "bodies") bodies(v, sec);
-  else styles(v, sec);
+  const fast = p.quality === "fast";
+  if (p.sheet === "clothes") clothes(v, sec, fast);
+  else if (p.sheet === "play") play(v, model, p.outfit, fast);
+  else if (p.sheet === "bodies") bodies(v, sec, fast);
+  else styles(v, sec, fast);
 }

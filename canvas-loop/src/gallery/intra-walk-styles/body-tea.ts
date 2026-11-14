@@ -69,8 +69,8 @@ interface Proportions {
 }
 
 const ARCHETYPES: Record<Archetype, Proportions> = {
-  man: { heights: [1.62, 1.76, 1.92], hip: 0.53, torso: 0.288, head: 0.13, upperArm: 0.188, forearm: 0.146, foot: 0.152, neck: 0.03, shoulders: 0.205, waist: 0.15, hips: 0.165, seat: 0.008, chest: [0.0, 0.025], belly: 0 },
-  woman: { heights: [1.5, 1.63, 1.78], hip: 0.53, torso: 0.285, head: 0.13, upperArm: 0.183, forearm: 0.143, foot: 0.148, neck: 0.033, shoulders: 0.18, waist: 0.125, hips: 0.185, seat: 0.028, chest: [0.006, 0.075], belly: 0 },
+  man: { heights: [1.62, 1.76, 1.92], hip: 0.525, torso: 0.29, head: 0.13, upperArm: 0.188, forearm: 0.146, foot: 0.152, neck: 0.03, shoulders: 0.205, waist: 0.15, hips: 0.165, seat: 0.008, chest: [0.0, 0.01], belly: 0 },
+  woman: { heights: [1.5, 1.63, 1.78], hip: 0.51, torso: 0.3, head: 0.13, upperArm: 0.183, forearm: 0.143, foot: 0.148, neck: 0.033, shoulders: 0.18, waist: 0.125, hips: 0.185, seat: 0.028, chest: [0.008, 0.065], belly: 0 },
   child: { heights: [1.05, 1.25, 1.45], hip: 0.47, torso: 0.3, head: 0.17, upperArm: 0.17, forearm: 0.135, foot: 0.15, neck: 0.025, shoulders: 0.145, waist: 0.12, hips: 0.125, seat: 0.01, chest: [0, 0.004], belly: 0.012 },
 };
 
@@ -106,7 +106,8 @@ export function buildOf(spec: BodySpec): Build {
     head: a.head * H,
     limb: (spec.kind === "child" ? 0.8 : 1) * Math.max(0.75, size) * girth,
     depth: Math.max(0.72, size) * (0.92 + 0.08 * girth) * (wt < 0 ? 1 + 0.1 * wt : 1),
-    chest: (a.chest[0] + (a.chest[1] - a.chest[0]) * (ch + 1) / 2) * size + heavy * 0.012,
+    // Weight fills the chest along with the belly, so the two stay one shape.
+    chest: ((a.chest[0] + (a.chest[1] - a.chest[0]) * (ch + 1) / 2) * (1 + heavy * 0.6) + heavy * (spec.kind === "child" ? 0.02 : 0.035)) * size,
     belly: (a.belly + heavy * 0.11 + (spec.kind === "man" ? heavy * 0.03 : 0)) * size,
     seat: (a.seat + heavy * 0.03) * size,
     shoulders: a.shoulders * size * (0.93 + 0.12 * girth),
