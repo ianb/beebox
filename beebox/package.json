@@ -16,6 +16,10 @@
       "types": "./dist/exports/server.d.ts",
       "default": "./dist/exports/server.js"
     },
+    "./triggers": {
+      "types": "./dist/exports/triggers.d.ts",
+      "default": "./dist/exports/triggers.js"
+    },
     "./view-widgets": {
       "types": "./dist/view-widgets/index.d.ts",
       "default": "./dist/view-widgets/index.js"

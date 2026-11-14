@@ -215,8 +215,9 @@ boxholder approved this size on 2026-11-14 ("go ahead and implement").
 - Trade: evaluation spawns a process per settled batch, and each child
   compiles the trigger file cold: `bundleView`'s cache is a process-local
   `Map` (`src/webapp/views/compiler/compile.ts:69`), so nothing carries over.
-  The cost is a node start plus an esbuild bundle per evaluation, measured in
-  the first chunk of Track B, not promised here. Chosen over in-process
+  The cost is a node start plus an esbuild bundle per evaluation: about
+  850 to 900 ms for a trivial trigger on the development machine
+  (`test/core/triggers/eval.test.ts` prints it). Chosen over in-process
   execution so a throwing or looping trigger cannot take down `bbx serve`;
   precedent `src/webapp/views/compiler/meta-import.ts:111` runs box view code
   the same way with a 3 s timeout and `SIGKILL`. A cache that survives child

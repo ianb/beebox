@@ -17,6 +17,7 @@ import { getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "
 import { uiCommand } from "./ui.js";
 import { stripCommand } from "./strip.js";
 import { activityCommand } from "./activity.js";
+import { triggerCommand } from "./trigger/command.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -283,6 +284,7 @@ export const chatCommand = new Command("chat")
   .addCommand(selfNoteCommand)
   .addCommand(whatsChangedCommand)
   .addCommand(activityCommand)
+  .addCommand(triggerCommand)
   .addCommand(screenshotCommand)
   .addCommand(uiCommand)
   .addCommand(stripCommand)
