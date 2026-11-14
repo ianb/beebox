@@ -14,6 +14,7 @@ import { invariant } from "@shared/invariant";
 
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "../../audio-overlay-store";
+import { useReportDictating } from "../../../../lib/composing";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "../../conversation/use-conversation-machine";
 import { ActivityScopeProvider, useChatActivityScope } from "../../../../lib/activity/scope";
@@ -279,6 +280,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
     speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
+  useReportDictating(voice.isTranscribing);
 
   // Persisted in-flight transcript recovery widget + the expired-attachments
   // notice; see InteractiveChat-recovery.tsx (combined there to keep this

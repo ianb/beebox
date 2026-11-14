@@ -9,24 +9,28 @@
  * See docs/chat-presence.md and docs/chat-calls.md.
  */
 
-import type { ChatPresence, ChatPresenceFrame, ChatPresenceOptions, MemberRef, PresentPerson } from "./types.js";
+import { COMPOSING_TTL_MS, type ChatPresence, type ChatPresenceFrame, type ChatPresenceOptions, type Composing, type MemberRef, type PresentPerson } from "./types.js";
 import { othersFor, type Watcher } from "./others.js";
 import { callSummary, forwardSignal, joinCall, memberOf, removeMember, setTranscribing, snapshotOf, warnOnThrow, type Call, type Place } from "./call.js";
 
 export type * from "./types.js";
-export { CALL_MEMBER_CAP, NO_ANSWER_MS } from "./types.js";
+export { COMPOSING_TTL_MS, CALL_MEMBER_CAP, NO_ANSWER_MS } from "./types.js";
 export { othersFor, type Watcher } from "./others.js";
 
 interface LiveWatcher extends Watcher {
   onFrame: (frame: ChatPresenceFrame) => void;
   /** Each kind's last sent value, to skip sends that change nothing. */
-  lastSent: { others: string | null; call: string | null };
+  lastSent: { others: string | null; call: string | null; composing: string | null };
 }
 
 interface Room {
   watchers: Map<number, LiveWatcher>;
   call: Call | null;
+  /** What each person is composing, by lowercased email; `cancel` stops its expiry. */
+  composing: Map<string, { doing: Composing; cancel: () => void }>;
 }
+
+const emailKey = (email: string): string => email.toLowerCase();
 
 function notifyWatchers(room: Room): void {
   const all = [...room.watchers.values()];
@@ -38,6 +42,15 @@ function notifyWatchers(room: Room): void {
     if (othersKey !== w.lastSent.others) {
       w.lastSent.others = othersKey;
       warnOnThrow("a watcher's update", () => w.onFrame({ t: "others", people: others }));
+    }
+    const active = others.flatMap((p) => {
+      const doing = room.composing.get(emailKey(p.email))?.doing;
+      return doing === undefined ? [] : [{ email: p.email, doing }];
+    });
+    const composingKey = JSON.stringify(active);
+    if (composingKey !== w.lastSent.composing) {
+      w.lastSent.composing = composingKey;
+      warnOnThrow("a watcher's update", () => w.onFrame({ t: "composing", active }));
     }
     if (callKey !== w.lastSent.call) {
       w.lastSent.call = callKey;
@@ -64,7 +77,7 @@ export function createChatPresence(options?: ChatPresenceOptions): ChatPresence 
     const key = `${boxRoot}\0${sessionId}`;
     let room = rooms.get(key);
     if (room === undefined) {
-      room = { watchers: new Map(), call: null };
+      room = { watchers: new Map(), call: null, composing: new Map() };
       rooms.set(key, room);
     }
     const held = room;
@@ -99,13 +112,18 @@ export function createChatPresence(options?: ChatPresenceOptions): ChatPresence 
     join({ boxRoot, sessionId, person, onFrame }: { boxRoot: string; sessionId: string; person: PresentPerson; onFrame: (frame: ChatPresenceFrame) => void }) {
       const { room, place } = placeFor(boxRoot, sessionId);
       const id = nextSeq();
-      room.watchers.set(id, { seq: id, person, onFrame, lastSent: { others: null, call: null } });
+      room.watchers.set(id, { seq: id, person, onFrame, lastSent: { others: null, call: null, composing: null } });
       place.roomChanged();
       let left = false;
       return () => {
         if (left) return;
         left = true;
         room.watchers.delete(id);
+        const key = emailKey(person.email);
+        if (![...room.watchers.values()].some((w) => emailKey(w.person.email) === key)) {
+          room.composing.get(key)?.cancel();
+          room.composing.delete(key);
+        }
         place.roomChanged();
       };
     },
@@ -130,6 +148,29 @@ export function createChatPresence(options?: ChatPresenceOptions): ChatPresence 
     leaveCall(ref) {
       const { place, found } = member(ref);
       return found !== null && removeMember(place, ref);
+    },
+    setComposing({ boxRoot, sessionId, email, doing }) {
+      const { room, place } = placeFor(boxRoot, sessionId);
+      const key = emailKey(email);
+      if (![...room.watchers.values()].some((w) => emailKey(w.person.email) === key)) {
+        place.roomChanged();
+        return false;
+      }
+      room.composing.get(key)?.cancel();
+      room.composing.delete(key);
+      if (doing !== null) {
+        const entry = {
+          doing,
+          cancel: setTimer(() => {
+            if (room.composing.get(key) !== entry) return;
+            room.composing.delete(key);
+            place.roomChanged();
+          }, COMPOSING_TTL_MS),
+        };
+        room.composing.set(key, entry);
+      }
+      place.roomChanged();
+      return true;
     },
     size() {
       return rooms.size;
