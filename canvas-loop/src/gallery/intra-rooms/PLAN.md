@@ -79,11 +79,22 @@ Ama's eye and the walker animate.
 
 ## Status
 
-- Kit, skies, props, citizen, sketch (room param, panning by sprite strips): done.
-- Hollow Atrium, Hallway: drawn (driver).
-- Batch A (Intake, Foyer, Activity Hub, Joyous Cafe, Tranquil Pool, Archive Console),
-  batch B (Yellow Room, Solitude Cubes, Waiting Room, Static Garden, Ill-Fitting
-  Lounge, Feedback Booth), batch C (Quiet Plaza, Nursery, Reflection Chamber,
-  Utility Closet, Archive Lounge, Quarters ×12): with helper agents, per ROOM-GUIDE.md.
-- Lessons: a `cache` cannot pan (it pastes where first drawn), so the still room is
-  a strip of sprites; each render empties `--out`, so events live in out/room-events/.
+All 19 rooms and 12 quarters drawn and rendering (driver: kit, Atrium, Hallway;
+helper agents: the rest, per ROOM-GUIDE.md). Shared helpers per batch live in
+parts-a/b/c-tea.ts. Exhibit: "Intra, every room, from the side".
+
+Rough edges noted by the batches: seated citizens sit a little high; there is no
+lying pose (nappers are drawn as heads under blankets); some small text is tiny;
+the Archive Lounge copies the intra-lounge-side painters rather than sharing them
+(a sketch may import only sibling files).
+
+## canvas-loop gaps this exposed
+
+- `v.cache` pastes where it was first drawn, so a cached scene cannot pan; the
+  rooms cache as a strip of sprites instead.
+- Sprites cannot be larger than the canvas, and render at device pixel ratio,
+  ignoring the current zoom.
+- A sprite strip's edge cuts marks, which then trip the faint-mark warning.
+- No supported per-pixel drawing (several sketches use v.ctx putImageData) and no
+  affine/skew `at` (slanted screens use v.ctx.transform).
+- Each `run` empties `--out`, so an events file kept there disappears.
