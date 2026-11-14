@@ -100,7 +100,8 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
     }
   }
   const written = next;
-  await updateActivationsLocked(who, { now, announce: false, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
+  // Announcing stays with the store here: this write can also persist another activation's expiry, which the runner's `changed` would not report.
+  await updateActivationsLocked(who, { now, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
   return admission;
 }
 
@@ -128,7 +129,6 @@ export async function settleDelivery(who: TriggerSession, args: { activationId: 
   let ended = false;
   await updateActivationsLocked(who, {
     now: args.now,
-    announce: false,
     fn: (activations) => activations.map((a) => {
       if (a.id !== args.activationId || a.state === "disarmed") return a;
       ended = true;
