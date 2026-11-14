@@ -146,7 +146,6 @@ function planted(cs: readonly Vec[], was: readonly Vec[]): { at: number; lo: num
 }
 
 interface Table {
-  lift: number[];
   travel: number[];
   stride: number;
 }
@@ -159,14 +158,14 @@ const key = (g: Gait): string => g.map(([n, w]) => `${n}:${w}`).join(",");
 function table(g: Gait): Table {
   const hit = tables.get(key(g));
   if (hit) return hit;
-  const lift: number[] = [], travel: number[] = [];
+  const travel: number[] = [];
   let x = 0, v = 0;
   let prev = raw(g, 0);
   for (let i = 0; i <= N; i++) {
     const o = raw(g, i / N);
     const cs = contacts(o);
     const was = contacts(prev);
-    const { at, lo } = planted(cs, i === 0 ? cs : was);
+    const { at } = planted(cs, i === 0 ? cs : was);
     const air = Math.max(0, value(g, "air", i / N) - 0.02);
     if (i > 0) {
       if (air > 0.004) x += v;
@@ -175,14 +174,10 @@ function table(g: Gait): Table {
         x += v;
       }
     }
-    lift.push(-lo + air);
     travel.push(x);
     prev = o;
   }
-  // Close the loop: spread any jump in lift over the stride.
-  const gap = (lift[N] ?? 0) - (lift[0] ?? 0);
-  for (let i = 0; i <= N; i++) lift[i] = (lift[i] ?? 0) - (gap * i) / N;
-  const t = { lift, travel, stride: x };
+  const t = { travel, stride: x };
   tables.set(key(g), t);
   return t;
 }
@@ -208,9 +203,30 @@ export function progress(g: Gait, sec: number): { x: number; phase: number } {
 export function pose(g: Gait, p: number): Pose {
   const q = ((p % 1) + 1) % 1;
   const o = raw(g, q);
-  const up = sample(table(g).lift, q);
+  // Lowest point of either foot on the floor, plus any flight from the take.
+  let lo = Infinity;
+  for (const c of contacts(o)) lo = Math.min(lo, c[1]);
+  const up = -lo + Math.max(0, value(g, "air", q) - 0.02);
   const L = (v: Vec): Vec => [v[0], v[1] + up];
   const leg2 = (l: Leg): Leg => ({ hip: L(l.hip), knee: L(l.knee), ankle: L(l.ankle), heel: L(l.heel), ball: L(l.ball), toe: L(l.toe) });
   const arm2 = (a: Arm): Arm => ({ shoulder: L(a.shoulder), elbow: L(a.elbow), wrist: L(a.wrist), hand: L(a.hand) });
   return { near: leg2(o.near), far: leg2(o.far), nearArm: arm2(o.nearArm), farArm: arm2(o.farArm), pelvis: [0, up], lean: o.lean, shoulder: L(o.shoulder), neck: L(o.neck), head: L(o.head), nod: o.nod };
+}
+
+/** Where the four sole points (heels and balls) are, relative to the pelvis. */
+export type Soles = readonly number[];
+
+/** One live step for a controlled character whose gait changes as it goes: how
+ * far the body moves this frame so that the planted foot stays put. `was` is
+ * the soles last frame (undefined on the first), `v` the last frame's travel,
+ * used to coast through a run's flight. */
+export function stepBody(was: Soles | undefined, g: Gait, p: number, v: number): { dx: number; soles: Soles } {
+  const cs = contacts(raw(g, ((p % 1) + 1) % 1));
+  const soles = cs.flatMap((c) => [c[0], c[1]]);
+  if (!was) return { dx: 0, soles };
+  const prev: Vec[] = [0, 1, 2, 3].map((i): Vec => [was[i * 2] ?? 0, was[i * 2 + 1] ?? 0]);
+  const air = Math.max(0, value(g, "air", p) - 0.02);
+  if (air > 0.004) return { dx: v, soles };
+  const { at } = planted(cs, prev);
+  return { dx: (prev[at]?.[0] ?? 0) - (cs[at]?.[0] ?? 0), soles };
 }

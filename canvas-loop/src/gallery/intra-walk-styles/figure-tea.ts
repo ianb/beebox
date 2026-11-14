@@ -181,15 +181,54 @@ function drape(ps: Pose, lag: Pose, top: number, len: number, speed: number, fla
   return { front, back };
 }
 
-function skirtShape(ps: Pose, lag: Pose, speed: number): Vec[] {
+/** Legs at height y: the front-most and back-most surface, or undefined if no leg is there. */
+function legSpan(ps: Pose, y: number): { front: number; back: number } | undefined {
+  const r = legReach(ps, y);
+  return r.front === 0.1 && r.back === -0.1 ? undefined : r;
+}
+
+/** Push a hanging chain out of the legs: each link that would sit inside a leg is
+ * moved out, with the links below it, so no leg ever pokes through. */
+function contain(c: readonly Vec[], ps: Pose, side: "front" | "back"): Vec[] {
+  const out = [...c];
+  for (let i = 1; i < out.length; i++) {
+    const p = out[i] ?? [0, 0];
+    const span = legSpan(ps, p[1]);
+    if (!span) continue;
+    const dx = side === "front" ? Math.max(0, span.front - p[0]) : Math.min(0, span.back - p[0]);
+    if (dx === 0) continue;
+    for (let j = i; j < out.length; j++) out[j] = add(out[j] ?? [0, 0], [dx, 0]);
+  }
+  // A bent knee is a corner that can fall between two links: tilt the link past it.
+  for (const knee of [ps.near.knee, ps.far.knee]) {
+    for (let i = 1; i < out.length; i++) {
+      const a = out[i - 1] ?? [0, 0], b = out[i] ?? [0, 0];
+      if ((a[1] - knee[1]) * (b[1] - knee[1]) > 0) continue;
+      const t = (knee[1] - a[1]) / (b[1] - a[1] || 1e-6);
+      const x = a[0] + (b[0] - a[0]) * t;
+      const need = side === "front" ? Math.max(0, knee[0] + 0.075 - x) : Math.min(0, knee[0] - 0.085 - x);
+      if (need === 0) continue;
+      for (let j = i; j < out.length; j++) out[j] = add(out[j] ?? [0, 0], [need / Math.max(t, 0.3), 0]);
+    }
+  }
+  return out;
+}
+
+/** A skirt's two panels: like a coat's, but held closed, so they stay outside the legs. */
+export function skirtPanels(ps: Pose, lag: Pose, speed: number): { front: Vec[]; back: Vec[]; waist: Vec } {
   const waist = tipped(ps.pelvis, ps.lean * 0.3, 0, 0.1);
   const len = 0.52;
   const d = drape(ps, lag, waist[1], len, speed, 0.12);
-  const front = chain(tipped(waist, ps.lean * 0.3, 0.11, 0), len, d.front, 0.15, 3);
-  const back = chain(tipped(waist, ps.lean * 0.3, -0.125, -0.04), len - 0.02, d.back, -0.15, 3);
+  const front = contain(chain(tipped(waist, ps.lean * 0.3, 0.11, 0), len, d.front, 0.15, 6), ps, "front");
+  const back = contain(chain(tipped(waist, ps.lean * 0.3, -0.125, -0.04), len - 0.02, d.back, -0.15, 6), ps, "back");
+  return { front, back, waist };
+}
+
+function skirtShape(ps: Pose, lag: Pose, speed: number): Vec[] {
+  const { front, back, waist } = skirtPanels(ps, lag, speed);
   const hemF = front.at(-1) ?? waist, hemB = back.at(-1) ?? waist;
   const mid = add(lerp(hemB, hemF, 0.5), [0, 0.03]);
-  return [...front, add(lerp(hemF, mid, 0.5), [0, -0.01]), mid, add(lerp(mid, hemB, 0.5), [0, -0.01]), ...back.reverse()];
+  return [...front, add(lerp(hemF, mid, 0.5), [0, -0.01]), mid, add(lerp(mid, hemB, 0.5), [0, -0.01]), ...[...back].reverse()];
 }
 
 function coatSkirt(ps: Pose, lag: Pose, speed: number): { front: Vec[]; back: Vec[] } {
@@ -235,9 +274,8 @@ function clothRig(v: View, ps: Pose, lag: Pose, speed: number, o: Outfit, P: (v:
     chains.push(c.front, c.back);
   }
   if (o.skirt !== undefined) {
-    const waist = tipped(ps.pelvis, ps.lean * 0.3, 0, 0.1);
-    const d = drape(ps, lag, waist[1], 0.52, speed, 0.12);
-    chains.push(chain(tipped(waist, ps.lean * 0.3, 0.11, 0), 0.52, d.front, 0.15, 3), chain(tipped(waist, ps.lean * 0.3, -0.125, -0.04), 0.5, d.back, -0.15, 3));
+    const k = skirtPanels(ps, lag, speed);
+    chains.push(k.front, k.back);
   }
   for (const c of chains) {
     v.curve(c.map(P), false, { stroke: "#e0306a", weight: 2 });
