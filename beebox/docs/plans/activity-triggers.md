@@ -812,7 +812,7 @@ courseware box's use is the boxholder's call.
    Accepted: admission under the per-session lock; stale results dropped.
 3. Delivery failure undefined; walkthrough and Track C disagreed on order.
    Accepted: deliver, then write; refused or thrown both set `failed` with
-   no retry; `lastEvalSeq` advances at admission regardless of outcome.
+   no retry (round 2 made it the terminal `delivery-failed`); `lastEvalSeq` advances at admission regardless of outcome.
 4. Continuous batches postpone the settle forever. Accepted: a 3 s cap from
    the first pending batch.
 5. Time expiry only checked at evaluation; `{}` admitted. Accepted: a
