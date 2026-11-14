@@ -328,13 +328,16 @@ pattern and debounce are ordinary; the judge is in-house.
   `expires` is `{ turns?: number, minutes?: number }` with at least one
   positive finite limit, or the string `"never"`; `{}` is rejected at arm.
   The default is `{ turns: 20, minutes: 120 }`. `deadline` is `armedAt` plus
-  `minutes`, or null for `"never"`. `state` is `armed`, `done` (the function
-  returned `done: true`), `expired` (`turns`, `time`), `disarmed`, or `failed`
-  (the last evaluation threw, timed out, the file is missing, or delivery
-  failed; retried on the next evaluation except after a delivery failure,
-  which stays `failed` until the agent disarms or re-arms). `noticed` is
-  whether the agent's turn has carried this activation's terminal state in a
-  hint. Stored in `.beebox/triggers/<session>.json` as
+  `minutes`, or null when `minutes` is absent (a turns-only limit, or
+  `"never"`). `state` is one of: `armed`; `failed` (the last evaluation threw,
+  timed out, or the file is missing; still scheduled, and a later evaluation
+  that returns normally restores `armed` and clears `error`); and the
+  terminal states `done` (the function returned `done: true`), `expired`
+  (`turns` or `time`), `disarmed`, and `delivery-failed` (the fire could not
+  be delivered; never scheduled or admitted again; the agent disarms or
+  re-arms). `noticed` is whether the agent's turn has carried this
+  activation's `expired` state in a hint; `delivery-failed` shows in the
+  `failed` count instead. Stored in `.beebox/triggers/<session>.json` as
   `{ activations: [...] }`, written under a per-session trigger lock.
   Machine-local, gitignored. NOT a card. Points at a trigger file and a chat
   session.
@@ -345,10 +348,14 @@ pattern and debounce are ordinary; the judge is in-house.
   with `seq` above `armedAtSeq`, capped at the most recent 500, so a fresh
   child on a tick can still see what happened since arming. Runs in a child
   process with a 20 s deadline.
-- **admission** (new): the runner's check, under the session's trigger lock,
-  when a child returns: the activation still exists, is `armed` or `failed`,
-  and is unexpired; otherwise the result is discarded as `stale`. Admission
-  also advances `lastEvalSeq` to the highest `seq` the child was given.
+- **admission** (new): the runner's check when a child returns, inside one
+  hold of the session's trigger lock that lasts through the delivery and the
+  state write: the activation still exists, is `armed` or `failed`, and is
+  unexpired; otherwise the result is discarded as `stale`. Admission also
+  advances `lastEvalSeq` to the highest `seq` the child was given. `disarm`
+  takes the same lock, so it runs either before admission (the result is
+  stale) or after the write (the message is already in the chat, and the
+  activation then becomes `disarmed`).
 - **trigger context** (new): `ctx` = `{ config, boxRoot, reason, judge, log }`.
   `judge(input)` takes `JudgeInput` (instructions, questions, state), or
   `{ card: string, state }` for a judgment card, and returns
@@ -362,8 +369,9 @@ pattern and debounce are ordinary; the judge is in-house.
   agent; `done: true` ends the activation.
 - **fire** (new): the delivery of one result as a `<trigger>` message, with
   three outcomes: delivered (sent or queued), refused (`sent === false`), or
-  uncertain (the send threw). Refused and uncertain both set `failed` with
-  the error; nothing redelivers.
+  uncertain (the send threw). Refused and uncertain both set the terminal
+  state `delivery-failed` with the error; nothing redelivers and nothing
+  evaluates that activation again.
 - **`<trigger>` message** (new delivered-user-message kind):
   `<trigger label="Water check" file="src/triggers/water-check.ts" fire="1" entries="11" done?="1">\n<text>…</text>\n<note>…</note>\n</trigger>`.
   Sits in the user slot with `user: null`, like `<call>`. NOT user input.
@@ -377,10 +385,15 @@ pattern and debounce are ordinary; the judge is in-house.
   evaluation: `{ at, session, activation, label, reason, entries, records, outcome: "none" | "fired" | "suppressed" | "stale" | "error" | "delivery-failed" | "skipped", error?, ms, dryRun? }`.
   Rotates like the notification log.
 - **`<triggers>` hint** (new): `<triggers armed="N" failed="F" expired="E"/>`
-  child of `<chat-app>`: `armed` and `failed` are the current counts;
-  `expired` counts activations in a terminal state the agent has not been
-  shown (`noticed: false`), which the turn start then marks noticed. Omitted
-  when all zero. Sibling of `<activity>`. Not a delta since the last turn.
+  child of `<chat-app>`: `armed` is the current count; `failed` counts
+  `failed` and `delivery-failed` activations; `expired` counts `expired`
+  activations with `noticed: false`. They are marked noticed only when the
+  turn is dispatched, through the same `dispatched` callback the run-ended
+  note uses (`src/core/chat/session/run/start.ts:207` *"Removed only once the
+  turn is dispatched (`dispatched`): a failed start keeps it for the next
+  turn."*). `done` and `disarmed` need no notice: the fire message and the
+  agent's own command already told it. Omitted when all zero. Sibling of
+  `<activity>`. Not a delta since the last turn.
 - **`trigger-changed`** (new event): `{ sessionId }`. The status line
   refetches `triggers.list`. Emitted on arm, disarm, expiry, fire, and any
   `state` or `error` change; not on a quiet evaluation.
@@ -429,6 +442,11 @@ pattern and debounce are ordinary; the judge is in-house.
   validates the exports, builds `ctx`, and calls `trigger`. It writes trace
   records to stdout as JSON lines as they happen: every `ctx.log`, every
   judge call with its verdict, then one `result` or `error` record last.
+  Before importing the module it points `console.log`, `info`, `warn`,
+  `error` and `debug` at stderr, so a trigger's own printing cannot sit
+  between records; the parent keeps every stderr line and any stdout line
+  that is not a record as a `log` record, so nothing the function printed is
+  lost and one stray line cannot hide a later judge or result record.
   `ctx.judge` resolves the service (`resolveJudgeService`), reserves one call
   (`reserveJevCalls`), judges, and writes the `judge` record; on
   `unconfigured`, a failed reservation, or a thrown error it returns
@@ -473,24 +491,31 @@ pattern and debounce are ordinary; the judge is in-house.
   - Deadlines: one timer per activation at `deadline`; it marks `expired`
     under the lock and emits `trigger-changed`, so the status line ends on
     time whether or not anything ran.
-  - Admission: when a child returns, under the lock: reread the activation;
-    if it is gone, `disarmed`, `done`, or `expired` by `expiryOf`, the result
-    is traced `stale` and dropped; otherwise `lastEvalSeq` advances. An
-    `error` record sets `failed`. A result inside 5 s of `lastFireAt` is
-    traced `suppressed`. Otherwise fire.
+  - Scheduling: only `armed` and `failed` activations are evaluated on
+    activity or tick; terminal states (`done`, `expired`, `disarmed`,
+    `delivery-failed`) never are.
+  - Admission, fire and write happen inside one hold of the session's
+    trigger lock. Reread the activation; if it is gone or terminal, or
+    `expiryOf` says expired, the result is traced `stale` and dropped;
+    otherwise `lastEvalSeq` advances. An `error` record sets `failed` with
+    the error. A normal return (result or none) from a `failed` activation
+    restores `armed`, clears `error`, and emits `trigger-changed`. A result
+    inside 5 s of `lastFireAt` is traced `suppressed`. Otherwise fire.
   - Fire: truncate `text`, serialize the `<trigger>` message,
-    `deliverUserMessage` to the session (target `sessionId`, never new).
-    Delivered (sent or queued): write `fires + 1`, `lastFireAt`, `done` when
-    asked, trace `fired`. Refused (`UserMessageDeliveryError`) or thrown:
-    write `failed` with the error, trace `delivery-failed`, no retry; a
-    thrown send may have gone out, and the agent sees both the message and
-    the failed state, which is visible rather than duplicated
+    `deliverUserMessage` to the session (target `sessionId`, never new),
+    still under the lock. Delivered (sent or queued): write `fires + 1`,
+    `lastFireAt`, `done` when asked, trace `fired`. Refused
+    (`UserMessageDeliveryError`) or thrown: write `delivery-failed` with the
+    error, trace `delivery-failed`, no retry; a thrown send may have gone
+    out, and the agent sees both the message and the failed state, which is
+    visible rather than duplicated
     (`src/core/chat/session/deliver-user-message.ts:221`, the comment on
-    why a throw is not retried).
+    why a throw is not retried). The lock wait for `disarm` and `arm` is the
+    activity lock's 5 s; a send or enqueue completes well inside it.
   - Hint: `src/core/chat/session/run/start.ts:216` gets a `<triggers>` child
-    computed from the activation file at turn start: `armed`, `failed`, and
-    unnoticed terminal activations, which the turn start then marks
-    `noticed`.
+    computed from the activation file at turn start; the unnoticed `expired`
+    activations are marked `noticed` in the `dispatched` callback, not at
+    composition.
   - Boot: on server start, scan `.beebox/triggers/*.json`, apply `expiryOf`,
     and start tick and deadline timers for armed activations. On
     `trigger-changed` from another process (the CLI), reload that session's
@@ -617,7 +642,12 @@ none
 | The child hangs (infinite loop, awaiting forever) | to add (C, fake child) | 20 s deadline, `SIGKILL`, treated as `error`; records already streamed are kept | clear |
 | A child logs, judges, then loops | to add (B/C: the fake child yields two records then never ends) | the `judge` record is in the trace line with the timeout | clear |
 | Disarm, expiry or chat deletion while a child runs | to add (C: disarm between spawn and return) | admission rereads under the lock; result traced `stale`, nothing delivered | clear in trace |
-| Delivery refused or the send throws | to add (C, fake delivery) | activation `failed` with the error; no retry; hint and status line | clear |
+| Delivery refused or the send throws | to add (C, fake delivery) | activation `delivery-failed` with the error; no retry; hint and status line | clear |
+| Delivery throws, then another batch arrives | to add (C: the example is one fire, a thrown send, a second batch, no second child) | `delivery-failed` is terminal and never scheduled | clear |
+| Disarm between admission and the send | to add (C: disarm requested while the fake delivery is pending) | one lock hold covers admission, send and write; disarm waits, then marks `disarmed` | n/a |
+| A turn composes the hint and then fails to dispatch | to add (C) | `noticed` is set in `dispatched`; the next turn carries the expiry again | n/a |
+| A `failed` activation returns normally | to add (C) | `armed` restored, `error` cleared, `trigger-changed` emitted | clear: line reads "Watching" again |
+| The function calls `console.log` | to add (B: a module that prints, then judges) | console routed to stderr; stray stdout kept as `log` records; the judge record survives | clear in trace |
 | Batches every 500 ms for a minute | to add (C, fake timers) | settle cap of 3 s from the first pending batch | n/a |
 | Deadline passes with no activity and no tick | to add (C) | the deadline timer marks `expired`; `list` applies `expiryOf` at read as well | clear: line goes |
 | `expires: {}` or `{ turns: 0 }` | to add (A) | rejected at arm with the rule in the message | clear |
@@ -805,3 +835,26 @@ courseware box's use is the boxholder's call.
     emitted on quiet evaluations is kept, since the line shows state only.
 11. The compile cache is process-local. Accepted: claim removed; cold compile
     measured in Track B's first chunk; a durable cache NOT in scope.
+
+## Plan review (codex gpt-6-sol, round 2)
+
+Verified eight of the eleven round-1 fixes as holding; three needed more, plus
+six fresh findings. All accepted:
+
+1. One `failed` state covered both a retryable evaluation error and a
+   terminal delivery failure, and `failed` was scheduled and admitted, so a
+   thrown send could fire again. Fixed: `delivery-failed` is its own terminal
+   state, never scheduled or admitted.
+2. Admission and delivery were separate lock holds, so a disarm between them
+   still delivered. Fixed: one hold covers admission, send and write; disarm
+   takes the same lock.
+3. The hint's `expired` attribute counted every terminal state, and `noticed`
+   was set at composition, so a failed turn start lost the notice. Fixed:
+   `expired` counts only `expired`; `noticed` is set in the turn's
+   `dispatched` callback, the run-ended note's pattern.
+4. A later normal evaluation never restored a `failed` activation. Fixed:
+   normal return restores `armed`, clears `error`, emits `trigger-changed`.
+5. `deadline` was null only for `"never"`, undefined for a turns-only limit.
+   Fixed: null whenever `minutes` is absent.
+6. A trigger's `console.log` would corrupt the stdout record stream. Fixed:
+   console routed to stderr before import; stray lines kept as `log` records.
