@@ -1,0 +1,21 @@
+slug: intra-walk-study
+title: "Walking from measured gait"
+created: 2026-11-14
+model: opus-5.5
+driver: opus-5.5
+cycles: 2
+tier: tea
+harness-commit: 5364ecbcc
+frames: 120
+seed: 42
+fps: 60
+every: 40
+reconstructed: true
+audit: >
+  Leg angles from the UCI Multivariate Gait Data mean (CC BY 4.0) as five-harmonic Fourier series; body rolls over the lowest foot point. Checked numerically that a planted foot holds within a millimetre through stance.
+self-report-summary: >
+  The rooms' walker skated and scissored; this replaces invented motion with measured joint curves and compares them on one floor.
+features-exercised:
+  - "animation"
+  - "ink helpers"
+  - "text labels"
