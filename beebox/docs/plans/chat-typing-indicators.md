@@ -1,11 +1,13 @@
 ---
 title: "A shared chat shows who is typing or dictating"
-status: draft
+status: partial
 workstream: self-hosted-turn
 issues:
   - ../../../issues/features/2026-11-12-chat-shows-who-is-typing-or-speaking.md
 ---
 # A shared chat shows who is typing or dictating
+
+**Status:** the web half is implemented (`beebox/src/core/chat/presence/room.ts`, `beebox/src/frontend/src/lib/composing.ts`, `beebox/docs/chat-presence.md`). Reporting from the iOS native composer is not built; see NOT in scope.
 
 When two people have the same chat open, each sees the other's head under the
 profile avatar. This plan adds what the other person is doing in the
