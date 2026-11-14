@@ -111,7 +111,8 @@ void test("Activity settles into one evaluation; the fire is delivered and done 
   await runner.onActivity(["s1"]);
   await timers.advance(1000);
   t.check(child.jobs.at(1)?.entries.map((e) => e.detail), ["bond"]);
-  t.check(delivered, ["<trigger label=\"Water check\" file=\"src/triggers/water.ts\" fire=\"1\" entries=\"1\" done=\"1\">\n<text>That's water.</text>\n<note>n</note>\n</trigger>"]);
+  // The notice links to the card the latest entry came from.
+  t.check(delivered, ["<trigger label=\"Water check\" file=\"src/triggers/water.ts\" card=\"Lab.figure.card\" fire=\"1\" entries=\"1\" done=\"1\">\n<text>That's water.</text>\n<note>n</note>\n</trigger>"]);
   t.check((await listActivations({ boxRoot: box.root, sessionId: "s1" }, { now: timers.now() })).map((a) => [a.state, a.fires, a.lastFireAt]), [["done", 1, "2026-11-14T10:00:02.600Z"]]);
   t.check(emitted, ["s1"]);
   t.check((await readTrace(box.root)).map((l) => [l.reason, l.entries, l.outcome]), [["activity", 2, "none"], ["activity", 1, "fired"]]);
@@ -121,6 +122,27 @@ void test("Activity settles into one evaluation; the fire is delivered and done 
   await runner.onActivity(["s1"]);
   await timers.advance(5000);
   t.check(child.jobs.map((j) => j.entries.length), [2, 1]);
+});
+
+void test("A result with done and no text ends the activation quietly: nothing delivered, traced as done.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const timers = new FakeTimers();
+  const delivered: string[] = [];
+  const emitted: string[] = [];
+  const child = fakeChild([() => ({ kind: "result", at: at("01"), done: true })]);
+  const runner = new TriggerRunner({ boxRoot: box.root, evaluate: child.evaluate, deliver: async ({ message }) => { delivered.push(message); }, presence: async () => 1, emit: (s) => emitted.push(s), timers, now: timers.now });
+  timers.idle = () => runner.idle();
+  t.teardown(() => { runner.stop(); });
+  await armActivation(box.root, { sessionId: "s1", file: "stuck.ts", config: null, label: "Stuck watch", expires: "never", now: timers.now() });
+  await runner.reload("s1");
+  await act(box.root, "solved it");
+  await runner.onActivity(["s1"]);
+  await timers.advance(1000);
+  t.check(delivered, []);
+  t.check((await listActivations({ boxRoot: box.root, sessionId: "s1" }, { now: timers.now() })).map((a) => [a.state, a.fires, a.noticed]), [["done", 0, false]]);
+  t.check((await readTrace(box.root)).map((l) => l.outcome), ["done"]);
+  t.check(emitted, ["s1"]);
 });
 
 void test("Continuous batches evaluate within the settle cap, and a batch during an evaluation re-arms it.", async (t) => {

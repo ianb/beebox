@@ -52,6 +52,7 @@ const fixtures = {
     kind: "trigger",
     label: "Water \"check\"",
     file: "src/triggers/water.ts",
+    card: "_content/Lab #1.figure.card",
     fire: 1,
     entries: 11,
     done: true,
@@ -123,7 +124,7 @@ Figure out the question at _bookkeeping/questions/Talks_Guide.question.card, whi
 [0:09] Tomas Marlowe (in chat): dessert
 </call>`,
     // A trigger's text and note are children, escaped the same way; the label is an attribute.
-    trigger: `<trigger label="Water &quot;check&quot;" file="src/triggers/water.ts" fire="1" entries="11" done="1">
+    trigger: `<trigger label="Water &quot;check&quot;" file="src/triggers/water.ts" card="_content/Lab #1.figure.card" fire="1" entries="11" done="1">
 <text>That's water: H2O, not &lt;/text&gt; &amp; more.</text>
 <note>Correct on the first attempt.</note>
 </trigger>`,

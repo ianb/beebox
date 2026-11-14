@@ -24,15 +24,18 @@ void test("The hint counts states and marks expiries noticed only on dispatch.",
   await patchActivation({ ...who, id: b.id }, { fn: (x) => ({ ...x, state: "delivery-failed", error: "refused" }) });
   // Expired long ago: the plain deadline, applied at read.
   const c = await armActivation(box.root, { sessionId: "s1", file: "c.ts", config: null, label: "C", expires: { minutes: 1 }, now: T0 });
+  // D ended with a fire (noticed at the fire), E ended quietly (the hint tells the agent once).
   const d = await armActivation(box.root, { sessionId: "s1", file: "d.ts", config: null, label: "D", expires: "never", now: T0 });
-  await patchActivation({ ...who, id: d.id }, { fn: (x) => ({ ...x, state: "done" }) });
+  await patchActivation({ ...who, id: d.id }, { fn: (x) => ({ ...x, state: "done", fires: 1, noticed: true }) });
+  const e = await armActivation(box.root, { sessionId: "s1", file: "e.ts", config: null, label: "E", expires: "never", now: T0 });
+  await patchActivation({ ...who, id: e.id }, { fn: (x) => ({ ...x, state: "done" }) });
 
   const first = await triggersHint(box.root, "s1");
-  t.check(first.element, "<triggers armed=\"1\" failed=\"1\" expired=\"1\"/>");
+  t.check(first.element, "<triggers armed=\"1\" failed=\"1\" expired=\"1\" done=\"1\"/>");
   // Not dispatched: the next turn says it again.
-  t.check((await triggersHint(box.root, "s1")).element, "<triggers armed=\"1\" failed=\"1\" expired=\"1\"/>");
+  t.check((await triggersHint(box.root, "s1")).element, "<triggers armed=\"1\" failed=\"1\" expired=\"1\" done=\"1\"/>");
   await first.noticed();
-  t.check((await triggersHint(box.root, "s1")).element, "<triggers armed=\"1\" failed=\"1\" expired=\"0\"/>");
+  t.check((await triggersHint(box.root, "s1")).element, "<triggers armed=\"1\" failed=\"1\" expired=\"0\" done=\"0\"/>");
   t.check((await listActivations(who)).filter((a) => a.id === c.id).map((a) => [a.state, a.noticed]), [["expired", true]]);
   t.check(renderTriggersHint([]), "");
 });

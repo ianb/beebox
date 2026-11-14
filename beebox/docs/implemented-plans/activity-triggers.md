@@ -829,6 +829,27 @@ clicks there; the check posted the figure's activity entry from the page
 instead, and the figure's own reporting was checked headlessly with
 `bbx figure run`.
 
+## Follow-ups after landing (2026-11-14)
+
+Boxholder, after watching the courseware box use it:
+
+- A trigger can end itself without a notice: `{ done: true }` alone. The
+  hint gained `done="D"` for quiet endings not yet told; a notice that
+  ends its activation is marked noticed at the fire.
+- A notice links back to the card it is about (`card` on the result, or the
+  card the latest entry came from, the pane card when the figure sat inside
+  one), so the person can return to what the chat is about.
+- A notice renders as a system row ("WATER CHECK · noticed"), not a user
+  bubble: it is the watcher reporting, not the person speaking. The chip
+  inside a bubble remains only for a message that mixes typed text with a
+  notice. `triggers.md` says the notice is not the agent's voice, that the
+  help comes in the agent's turn, and that a trigger watches one situation
+  and ends itself; the courseware box's "Chemistry coach" wrote notices in
+  the tutor's voice and never ended, so the same remark recurred after a
+  re-arm.
+- A figure embedded in a chat message now reports activity as one in the
+  pane does (`PaneCardProvider` around chat embeds).
+
 ## Implementation review (codex gpt-6-astra, 2026-11-14)
 
 Twelve findings on the first implementation commit, all accepted and fixed:

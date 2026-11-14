@@ -4,7 +4,7 @@
  * `<text>` under the trigger's label; `<note>` is for the agent. The
  * registry in `delivered-user-message.ts` dispatches to this codec.
  *
- *   <trigger label="Water check" file="src/triggers/water.ts" fire="1" entries="11" done="1">
+ *   <trigger label="Water check" file="src/triggers/water.ts" card="_content/Lab.figure.card" fire="1" entries="11" done="1">
  *   <text>That's water.</text>
  *   <note>Correct on the first attempt.</note>
  *   </trigger>
@@ -21,6 +21,8 @@ export interface TriggerUserMessage {
   label: string;
   /** Box-relative path of the trigger file. */
   file: string;
+  /** The card the notice is about, which it links to; null when unknown. */
+  card: string | null;
   /** Which fire of this activation this is, from 1. */
   fire: number;
   /** How many new entries the evaluation was given. */
@@ -35,6 +37,7 @@ export interface TriggerUserMessage {
 
 const LABEL_RE = /\blabel="([^"]*)"/i;
 const FILE_RE = /\bfile="([^"]*)"/i;
+const CARD_RE = /\bcard="([^"]*)"/i;
 const FIRE_RE = /\bfire="([^"]*)"/i;
 const ENTRIES_RE = /\bentries="([^"]*)"/i;
 const DONE_RE = /\bdone="([^"]*)"/i;
@@ -70,6 +73,7 @@ export function parseTrigger(attrs: string, body: string): TriggerUserMessage | 
     kind: "trigger",
     label,
     file,
+    card: attr(attrs, CARD_RE),
     fire: intAttr(attrs, FIRE_RE),
     entries: intAttr(attrs, ENTRIES_RE),
     done: attr(attrs, DONE_RE) === "1",
@@ -82,6 +86,7 @@ export function serializeTrigger(message: TriggerUserMessage): string {
   const attrs = [
     `label="${escapeXmlAttr(message.label)}"`,
     `file="${escapeXmlAttr(message.file)}"`,
+    ...(message.card === null ? [] : [`card="${escapeXmlAttr(message.card)}"`]),
     `fire="${String(message.fire)}"`,
     `entries="${String(message.entries)}"`,
   ];

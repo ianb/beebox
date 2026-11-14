@@ -292,14 +292,15 @@ export class TriggerRunner {
     };
     const output = await this.deps.evaluate(job);
     const maxSeq = Math.max(activation.lastEvalSeq, ...entries.map((l) => l.seq));
-    await this.admit({ sessionId, activationId: activation.id, output, maxSeq, reason, entries: entries.length });
+    const card = latest === undefined ? null : latest.via ?? latest.card;
+    await this.admit({ sessionId, activationId: activation.id, output, maxSeq, reason, entries: entries.length, card });
   }
 
   /** Admission, fire and the state write, under one hold of the session's trigger lock. */
-  private async admit(args: { sessionId: string; activationId: string; output: EvalOutput; maxSeq: number; reason: TriggerReason; entries: number }): Promise<void> {
+  private async admit(args: { sessionId: string; activationId: string; output: EvalOutput; maxSeq: number; reason: TriggerReason; entries: number; card: string | null }): Promise<void> {
     const { sessionId, activationId, output, maxSeq, reason } = args;
     const who = { boxRoot: this.deps.boxRoot, sessionId };
-    const admission = await withTriggerLock(who, () => admitResult({ who, activationId, output, maxSeq, entries: args.entries, now: this.deps.now(), deliver: this.deps.deliver }));
+    const admission = await withTriggerLock(who, () => admitResult({ who, activationId, output, maxSeq, entries: args.entries, card: args.card, now: this.deps.now(), deliver: this.deps.deliver }));
     let { outcome, error, ended } = admission;
     if (admission.pending !== undefined) {
       // Admitted, so the lock is released; a cold engine start may still fail the send.

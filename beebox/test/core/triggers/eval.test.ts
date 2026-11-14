@@ -96,6 +96,7 @@ export async function trigger(input, ctx) { ctx.log("before the loop"); for (;;)
 `);
   await box.write("src/triggers/throws.ts", "export function label() { return \"T\"; }\nexport function trigger() { throw new Error(\"nope\"); }\n");
   await box.write("src/triggers/bad-result.ts", "export function label() { return \"B\"; }\nexport function trigger() { return { nope: 1 }; }\n");
+  await box.write("src/triggers/quiet-done.ts", "export function label() { return \"Q\"; }\nexport function trigger() { return { done: true }; }\n");
 
   t.check(validateTriggerModule({ label: () => "x" }), { invalid: "the file exports no `trigger` function (export async function trigger(input, ctx): Promise<TriggerResult | null>)" });
   t.check(validateTriggerModule({ label: () => "x", trigger: () => null, tick: 5 }), { invalid: "`tick` must be a number of seconds, at least 10 (got 5)" });
@@ -111,5 +112,7 @@ export async function trigger(input, ctx) { ctx.log("before the loop"); for (;;)
   ]);
   // The stack rides along, so the trace names the line in the trigger file.
   t.check((await evaluateInChild(job(box.root, { file: "src/triggers/throws.ts" }))).final, { kind: "error", at: isoDate(), message: any(String).startsWith("trigger() threw: nope\n    at ") });
-  t.check((await evaluateInChild(job(box.root, { file: "src/triggers/bad-result.ts" }))).final, { kind: "error", at: isoDate(), message: "trigger() returned something other than null or { text, note?, done? }" });
+  t.check((await evaluateInChild(job(box.root, { file: "src/triggers/bad-result.ts" }))).final, { kind: "error", at: isoDate(), message: "trigger() returned something other than null, { text, note?, done?, card? } or { done: true }" });
+  // `{ done: true }` alone is the quiet end: a result with no text.
+  t.check((await evaluateInChild(job(box.root, { file: "src/triggers/quiet-done.ts" }))).final, { kind: "result", at: isoDate(), done: true });
 });

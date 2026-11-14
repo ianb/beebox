@@ -56,13 +56,25 @@ export interface TriggerContext {
   log: (message: string) => void;
 }
 
+/**
+ * What a trigger returns when it has something to say or wants to stop.
+ * `{ text }` fires a notice; `{ done: true }` alone ends the activation
+ * quietly (a watcher for failed attempts that sees success); `{ text, done }`
+ * does both.
+ */
 export interface TriggerResult {
-  /** What the person sees, under the trigger's label. Cut at {@link TEXT_CAP} characters. */
-  text: string;
+  /** The notice the person sees, under the trigger's label. Cut at {@link TEXT_CAP} characters. Absent with `done: true`: end quietly. */
+  text?: string;
   /** For the agent only; not shown to the person. */
   note?: string;
-  /** End the activation after this fire. */
+  /** End the activation, after the fire if there is one. */
   done?: boolean;
+  /**
+   * The card the notice is about; the notice links to it so the person can
+   * return to it. Default: the card the latest entry came from (the pane
+   * card when the figure sat inside one).
+   */
+  card?: string;
 }
 
 export interface TriggerModule {
