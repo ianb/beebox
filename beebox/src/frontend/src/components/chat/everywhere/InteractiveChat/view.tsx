@@ -27,6 +27,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
 import { ChatRenderProfiler } from "./ChatRenderProfiler";
+import { TriggerStatusLine } from "./TriggerStatusLine";
 import { AgentGate } from "../../../agents/AgentReadiness";
 import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
 import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
@@ -197,6 +198,7 @@ function ComposerRegion(props: ChatBodyProps) {
   const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
   return (
     <ChatRenderProfiler id="composer">
+      <TriggerStatusLine sessionId={props.sessionId} />
       <ChatComposerSection
       attachments={attachments}
       pendingImageCount={pendingImageCount}

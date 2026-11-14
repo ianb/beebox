@@ -294,6 +294,13 @@ export const eventSchemas = {
    * Track A).
    */
   notification: notificationEventSchema,
+  /**
+   * A chat session's trigger activations changed (armed, disarmed, fired,
+   * expired, failed): the status line refetches `triggers.list`, and the
+   * server's runner reloads the session's timers when the CLI armed or
+   * disarmed from another process (docs/plans/activity-triggers.md, Track C).
+   */
+  "trigger-changed": z.object({ sessionId: z.string().min(1) }),
 } satisfies Record<string, z.ZodType>;
 
 /** A known event name. */

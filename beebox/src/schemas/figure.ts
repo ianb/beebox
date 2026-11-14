@@ -216,6 +216,9 @@ that is what you read. Each entry carries the value of the sketch's optional
 \`export function activity(model)\` (a small JSON object of the state after
 the action), so the log can say what the learner built, not only what they
 pressed. Your message shows only a count; \`bbx chat activity\` lists them.
+A trigger (\`triggers.md\`) reads the same entries as they land and can
+answer the moment the learner builds the right thing, so put what a trigger
+would need to decide into \`activity(model)\`: the current state, small.
 
 ### Checking a canvas-loop figure
 

@@ -67,6 +67,12 @@ async function writeCursor(boxRoot: string, to: { sessionId: string; cursor: Act
   await writeFileAtomic(cursorPath(boxRoot, to.sessionId), { content: `${JSON.stringify(to.cursor)}\n` });
 }
 
+/** The lines that belong to a session: `chat` is its id, or `pendingChat` is one of its cursor's keys. For the trigger runner. */
+export function entriesForSession(lines: readonly ActivityLine[], who: { sessionId: string; cursor: ActivityCursor | null }): ActivityLine[] {
+  const keys = who.cursor?.pendingKeys ?? [];
+  return lines.filter((line) => inSession(line, { sessionId: who.sessionId, keys }));
+}
+
 function inSession(line: ActivityLine, who: { sessionId: string | null; keys: readonly string[] }): boolean {
   const { sessionId, keys } = who;
   if (sessionId !== null && line.chat === sessionId) return true;

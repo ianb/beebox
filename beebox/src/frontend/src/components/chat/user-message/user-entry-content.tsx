@@ -20,6 +20,7 @@ import { CaptureChip } from "../CaptureChip";
 import { UploadChip } from "./UploadChip";
 import { QuestionHandoffChip } from "./QuestionHandoffChip";
 import { CallChip } from "./CallChip";
+import { TriggerChip } from "./TriggerChip";
 import { UserMessageText } from "../user-message-text";
 
 /**
@@ -68,6 +69,8 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
       return <QuestionHandoffChip model={part} />;
     case "call":
       return <CallChip model={part} />;
+    case "trigger":
+      return <TriggerChip model={part} />;
     default:
       return assertNever(part);
   }

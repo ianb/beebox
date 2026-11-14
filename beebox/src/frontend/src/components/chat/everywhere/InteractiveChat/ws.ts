@@ -32,6 +32,7 @@ import type { LiveTaskEntry, TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "../../capture-bubble";
 import type { ScreenshotRequest } from "./screenshot-request-handler";
 import { recordChatSendEnvironmentEvent } from "../../../../lib/chat-send-diagnostics";
+import { noteTriggerChanged } from "./trigger-status-store";
 
 /**
  * Server response shape of GET /api/chat/voice-config (mirrors the backend's
@@ -277,6 +278,11 @@ export function useChatWs(opts: {
       const userMessage = busEventData(event, "chat-user-message");
       const undelivered = busEventData(event, "chat-user-message-undelivered");
       const discarded = busEventData(event, "chat-user-message-discarded");
+      const triggerChanged = busEventData(event, "trigger-changed");
+      if (triggerChanged) {
+        if (forSession(triggerChanged.sessionId, sessionId) && sessionId) noteTriggerChanged(sessionId);
+        return;
+      }
       if (scheduleFired) {
         if (scheduleFired.alarm) {
           alarm.play();
@@ -298,6 +304,8 @@ export function useChatWs(opts: {
         send({ type: "REFRESH" });
       } else if (userMessage) {
         if (!forSession(userMessage.sessionId, sessionId)) return;
+        // A person's turn can expire a trigger by its turn count with no event of its own; the status line rechecks.
+        if (sessionId) noteTriggerChanged(sessionId);
         if (userMessage.user === null && !holdsInjectedMessage(userMessage.sessionId, sessionId)) return;
         if (userMessage.user === null) {
           // SERVER-INJECTED message — a delivered `<upload>` batch or `<capture>`
