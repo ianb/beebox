@@ -12,7 +12,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { recordActivity } from "../../../src/core/activity/log.js";
-import { armActivation, disarmActivations, listActivations } from "../../../src/core/triggers/activation.js";
+import { armActivation, disarmActivations, listActivations, patchActivation } from "../../../src/core/triggers/activation.js";
 import type { EvalJob } from "../../../src/core/triggers/eval-child/core.js";
 import type { EvalOutput } from "../../../src/core/triggers/eval.js";
 import { TriggerRunner, type RunnerTimers } from "../../../src/core/triggers/runner/core.js";
@@ -198,6 +198,7 @@ void test("A disarm during an evaluation drops the result as stale; delivery fai
     () => ({ kind: "result", at: at("04"), text: "first" }),
     () => ({ kind: "result", at: at("05"), text: "too soon" }),
     () => ({ kind: "result", at: at("06"), text: "undeliverable" }),
+    () => ({ kind: "result", at: at("07"), text: "resolved, too soon", done: true }),
   ]);
   const emitted: string[] = [];
   const runner = new TriggerRunner({
@@ -256,6 +257,15 @@ void test("A disarm during an evaluation drops the result as stale; delivery fai
   t.check((await readTrace(box.root, { session: "s1" })).map((l) => l.outcome), ["stale", "error", "none", "fired", "suppressed", "delivery-failed"]);
   t.check(emitted, ["s1", "s1", "s1", "s1"]);
   t.check((await listActivations(who, { now: timers.now() })).map((x) => x.id), [a.id, b.id]);
+
+  // 7: a `done` inside the fire floor: the notice is dropped, the activation still ends, and the hint will say so.
+  refuse = "ok";
+  const c = await armActivation(box.root, { sessionId: "s1", file: "t.ts", config: null, label: "T", expires: "never", now: timers.now() });
+  await patchActivation({ ...who, id: c.id }, { fn: (x) => ({ ...x, lastFireAt: timers.now().toISOString(), fires: 1 }) });
+  await runner.reload("s1");
+  await run("s");
+  t.check((await listActivations(who, { now: timers.now() })).filter((x) => x.id === c.id).map((x) => [x.state, x.fires, x.noticed]), [["done", 1, false]]);
+  t.check((await readTrace(box.root, { session: "s1" })).map((l) => l.outcome).at(-1), "suppressed");
 });
 
 void test("Ticks run while someone is present and the deadline ends an activation on time.", async (t) => {

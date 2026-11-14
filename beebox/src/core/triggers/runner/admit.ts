@@ -91,7 +91,9 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
         next = { ...next, state: "done" };
         admission = { ...admission, outcome: "done", changed: true, ended: true };
       } else if (next.lastFireAt !== undefined && now.getTime() - Date.parse(next.lastFireAt) < FIRE_FLOOR_MS) {
-        admission = { ...admission, outcome: "suppressed" };
+        // The notice is dropped, but a `done` with it still ends the activation, quietly.
+        if (final.done === true) next = { ...next, state: "done" };
+        admission = { ...admission, outcome: "suppressed", ...(final.done === true ? { changed: true, ended: true } : {}) };
       } else {
         const fired = await fire(args, { current, next, text, note: final.note, done: final.done === true, card: final.card });
         next = fired.next;

@@ -849,6 +849,11 @@ Boxholder, after watching the courseware box use it:
   re-arm.
 - A figure embedded in a chat message now reports activity as one in the
   pane does (`PaneCardProvider` around chat embeds).
+- Review (codex gpt-6-sol): a `done` whose notice fell inside the fire floor
+  left the activation armed; it now ends it quietly. An activation that
+  ended with a fire before this change has `noticed: false` and is counted
+  once as `done` in the next hint; accepted (boxholder: the only use is the
+  courseware box, whose trigger can be recreated).
 
 ## Implementation review (codex gpt-6-astra, 2026-11-14)
 
