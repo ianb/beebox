@@ -12,8 +12,13 @@ A call belongs to one chat room (`core/chat/presence/`), at most one per
 room, held in memory. Holding a `chatCall.join` subscription is being on the
 call; it does not depend on focus, so switching tabs keeps you on. People
 present in the chat see the call on their `chatPresence.watch` stream
-(`{ t: "call", call }`), which is how they are rung. Nobody who does not have
-the chat open is rung.
+(`{ t: "call", call }`), which is how they are rung: the call bar plays a
+phone ring every 3 seconds for up to 20 seconds, until someone answers or the
+call ends. Nobody who does not have the chat open is rung.
+
+People are shown by name: the hub passes the signed-in person's name to the
+box (`x-bbx-authenticated-name`), and a person with no name on record shows as
+the part of their email before the @. The `<call>` entry uses the same names.
 
 - `join({ sessionId, callId: null })` starts a call, or joins the one going,
   so two people pressing call at once land in one call.
@@ -31,6 +36,11 @@ subscription registers
 (`issues/bugs/2026-11-12-trpc-ws-drops-early-subscription-stop.md`).
 
 ## Media
+
+The call bar's buttons name what pressing them does (Mute or Unmute, Start
+video or Stop video), and a muted person sees "You're muted". Video floats
+under the top-right avatar, beside the heads of others in the chat, on every
+page while the call lasts.
 
 Peers connect directly with WebRTC, one `RTCPeerConnection` per pair, using
 perfect negotiation (the lexically smaller `peerId` is polite). Offers,

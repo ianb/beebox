@@ -201,12 +201,15 @@ class CallEngine {
     }
   }
 
-  private sendSignal(to: string, data: SignalData): void {
+  /** Resolves once the server has the signal, or it failed; never rejects. */
+  private async sendSignal(to: string, data: SignalData): Promise<void> {
     const call = this.inCall();
     if (call?.callId == null || call.selfPeerId === null) return;
-    trpcClient.chatCall.signal
-      .mutate({ sessionId: call.sessionId, callId: call.callId, peerId: call.selfPeerId, to, data })
-      .catch((e: unknown) => console.warn(`[call] signal to ${to} failed: ${errorText(e)}`));
+    try {
+      await trpcClient.chatCall.signal.mutate({ sessionId: call.sessionId, callId: call.callId, peerId: call.selfPeerId, to, data });
+    } catch (e) {
+      console.warn(`[call] signal to ${to} failed: ${errorText(e)}`);
+    }
   }
 
   private watchMic(track: MediaStreamTrack): void {

@@ -33,6 +33,13 @@ export const SESSION_ID_RE = /^[\w-]{8,64}$/;
 export function personFor(ctx: TrpcContext): PresentPerson | null {
   if (ctx.user === null || ctx.actor === "agent") return null;
   const { email, name } = ctx.user;
-  // A paired device carries only the email; the local-user store may know the name.
-  return { email, name: name === email ? (localUserName(email) ?? email) : name };
+  // A paired device carries only the email; the local-user store may know the
+  // name. Failing both, the part before the @ stands in, so no email is shown.
+  return { email, name: name === email ? (localUserName(email) ?? emailName(email)) : name };
+}
+
+/** The part of an email before the @, as a stand-in name. */
+function emailName(email: string): string {
+  const at = email.indexOf("@");
+  return at > 0 ? email.slice(0, at) : email;
 }

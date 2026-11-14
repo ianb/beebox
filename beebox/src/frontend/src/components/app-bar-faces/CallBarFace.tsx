@@ -100,11 +100,13 @@ function InCallBar({ call, actions }: { call: InCall; actions: CallBarActions })
         <List aria-label="On the call" direction="row" gap="sm">
           {others.map((m) => <MemberHead key={m.peerId} name={m.person.name} email={m.person.email} link={call.links[m.peerId]} />)}
         </List>
+        {call.mic === "muted" ? <Badge tone="danger" size="sm">You&apos;re muted</Badge> : null}
         {call.transcribing ? <TranscribingMarker /> : null}
         <Row gap="xs" className="ml-auto">
-          <Button id="bbx-call-mute" size="sm" intent={call.mic === "muted" ? "accent" : "secondary"} aria-pressed={call.mic === "muted"} disabled={!micUsable} onClick={actions.handleMute}>Mute</Button>
-          <Button id="bbx-call-camera" size="sm" intent={call.camera === "on" ? "accent" : "secondary"} aria-pressed={call.camera === "on"} disabled={call.phase !== "in-call"} onClick={actions.handleCamera}>Camera</Button>
-          <Button id="bbx-call-transcribe" size="sm" intent={call.transcribing ? "accent" : "secondary"} aria-pressed={call.transcribing} disabled={call.phase !== "in-call"} onClick={() => actions.handleTranscribe(!call.transcribing)}>Transcribe</Button>
+          {/* Each button names what pressing it does; the state shows beside the names. */}
+          <Button id="bbx-call-mute" size="sm" intent={call.mic === "muted" ? "destructive" : "secondary"} disabled={!micUsable} onClick={actions.handleMute}>{call.mic === "muted" ? "Unmute" : "Mute"}</Button>
+          <Button id="bbx-call-camera" size="sm" intent="secondary" disabled={call.phase !== "in-call"} onClick={actions.handleCamera}>{call.camera === "on" ? "Stop video" : "Start video"}</Button>
+          <Button id="bbx-call-transcribe" size="sm" intent="secondary" disabled={call.phase !== "in-call"} onClick={() => actions.handleTranscribe(!call.transcribing)}>{call.transcribing ? "Stop transcribing" : "Transcribe"}</Button>
           <Button id="bbx-call-leave" size="sm" intent="destructive" onClick={actions.handleLeave}>Leave</Button>
         </Row>
       </Row>
