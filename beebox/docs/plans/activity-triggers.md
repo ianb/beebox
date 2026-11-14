@@ -187,8 +187,8 @@ evaluation with its own command), the evaluation lifecycle (settle,
 admission under a lock, defined delivery outcomes, deadlines), and the CLI
 with five subcommands. The boxholder asked for durable files, per-session
 activation with config, default expiry, ticks, and debugging in the
-2026-11-13 and 2026-11-14 discussion; each is a track or part of one. Approval
-for this size is requested with the plan.
+2026-11-13 and 2026-11-14 discussion; each is a track or part of one. The
+boxholder approved this size on 2026-11-14 ("go ahead and implement").
 
 ## Stated preferences this plan trades against
 
@@ -735,6 +735,15 @@ No critical gap: every row has handling and a visible face.
 - Per-session presence for ticks. Box-wide presence is accepted above.
 - Trigger-local state across evaluations. `history` covers the stuck case
   without a new store.
+- A probe channel from the server to the page (the trigger asks the figure
+  for its current state). A trigger sees only what the figure logged, after
+  the fact: a `detail` of up to 500 characters and an `activity` object, in a
+  4,000-byte line. The convention instead is that a figure logs a compact
+  state summary in `activity` on each `modified` entry, so the trigger can
+  read the current state from the last entry; the agent that writes the
+  trigger can add such entries to the figure. Boxholder, 2026-11-14: "adding
+  activity probes is also something the agent can do, and then hopefully
+  they build up to be useful." Taught in `box-docs/triggers.md`.
 
 ## Open design questions
 

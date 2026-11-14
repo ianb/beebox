@@ -21,6 +21,7 @@ import type { AgentEngine } from "../../../../box/config.js";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession } from "../../state.js";
+import { removeActivationFile } from "../../../../triggers/activation.js";
 import { deletePiSession, piSessionFiles } from "../../pi-transcript.js";
 import { assertNever } from "../../../../../shared/invariant.js";
 import { resolveRecordedChatEngine } from "../../engine.js";
@@ -149,6 +150,7 @@ async function retryMarkedHuskDeletion(options: { boxRoot: string; sessionId: st
     if (!cleanup.complete) return { status: "cleanup-required", sessionId: options.sessionId, storage: "absent", retry: cleanup.retry };
     await rm(options.markerPath, { force: true });
     await rm(join(options.boxRoot, chatModelFileForSession(options.sessionId)), { force: true });
+    await removeActivationFile({ boxRoot: options.boxRoot, sessionId: options.sessionId });
     return { status: "deleted", sessionId: options.sessionId, schedulesCancelled: 0 };
   } finally {
     await releaseReview();
@@ -253,6 +255,7 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
       };
     }
     await rm(join(options.boxRoot, chatModelFileForSession(sessionId)), { force: true });
+    await removeActivationFile({ boxRoot: options.boxRoot, sessionId });
     logDeletePhase({ sessionId, phase: "husk", detail: { complete: true } });
     return { status: "deleted", sessionId, schedulesCancelled };
     } catch (error) {
