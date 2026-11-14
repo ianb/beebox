@@ -95,6 +95,16 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
     source: "hub",
   });
 
+  // The hub's name header, URI-encoded, is the person's name; a malformed one falls back to the email.
+  const namedHubRequest = fakeRequest({
+    headers: { "x-bbx-hub-secret": "hub-secret-abc123", "x-bbx-authenticated-email": "person@example.com", "x-bbx-authenticated-name": encodeURIComponent("Zoë Person") },
+  });
+  t.check(resolveRequestIdentity(namedHubRequest, { openAccess: false }), { email: "person@example.com", name: "Zoë Person", source: "hub" });
+  const badNameHubRequest = fakeRequest({
+    headers: { "x-bbx-hub-secret": "hub-secret-abc123", "x-bbx-authenticated-email": "person@example.com", "x-bbx-authenticated-name": "%E0%A4%A" },
+  });
+  t.check(resolveRequestIdentity(badNameHubRequest, { openAccess: false }), { email: "person@example.com", name: "person@example.com", source: "hub" });
+
   const mixedCaseHubRequest = fakeRequest({
     headers: { "x-bbx-hub-secret": "hub-secret-abc123", "x-bbx-authenticated-email": " Person@Example.COM " },
   });

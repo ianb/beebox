@@ -18,6 +18,7 @@ import { callOffer } from "../../lib/call-state";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { CallButtonFace } from "../app-bar-faces/CallButtonFace";
 import { CallAudio } from "../call/CallAudio";
+import { CallVideoTiles } from "../call/CallVideoTiles";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { isNativeShell } from "../chat/native-post";
 import { PresenceHeadsFace, type PresenceHead } from "../app-bar-faces/PresenceHeadsFace";
@@ -148,6 +149,7 @@ export function PresenceHeads() {
     <>
       <PresenceHeadsFace people={people} action={offer === null ? null : <CallButtonFace offer={offer} onCall={onCall} />} />
       <CallAudio />
+      <CallVideoTiles />
     </>
   );
 }

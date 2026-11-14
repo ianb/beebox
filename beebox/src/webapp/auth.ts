@@ -151,6 +151,24 @@ export interface SessionUser {
 export const HUB_EMAIL_HEADER = "x-bbx-authenticated-email";
 export const HUB_SECRET_HEADER = "x-bbx-hub-secret";
 export const HUB_AUTH_OFF_HEADER = "x-bbx-hub-auth";
+/** The person's display name from the hub's user store, URI-encoded (a header carries ASCII only). */
+export const HUB_NAME_HEADER = "x-bbx-authenticated-name";
+
+/** The hub's name header for a verified identity: none when the name is only the email. */
+export function hubNameHeader(identity: { email: string; name: string | null }): Record<string, string> {
+  return identity.name === null || identity.name === identity.email ? {} : { [HUB_NAME_HEADER]: encodeURIComponent(identity.name) };
+}
+
+/** A hub-sent name, or the email when the hub sent none or a malformed one. */
+function hubName(header: string | string[] | undefined, email: string): string {
+  if (typeof header !== "string" || header.length === 0) return email;
+  try {
+    const name = decodeURIComponent(header).trim();
+    return name.length > 0 ? name : email;
+  } catch (_error) {
+    return email;
+  }
+}
 
 /**
  * True when this box process is running behind a hub (Track D, chunk D2).
@@ -452,7 +470,7 @@ export function resolveRequestIdentity(
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
     if (typeof emailHeader === "string" && emailHeader.length > 0) {
       const email = canonicalizeEmail(emailHeader);
-      return { email, name: email, source: "hub" };
+      return { email, name: hubName(request.headers[HUB_NAME_HEADER], email), source: "hub" };
     }
     if (request.headers[HUB_AUTH_OFF_HEADER] === "off") {
       return { email: null, name: null, source: "open" };
