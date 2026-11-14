@@ -8,8 +8,6 @@
  */
 
 import { getBoxTime } from "../../lib/time.js";
-import { emitTriggerChanged } from "./events.js";
-import { appendTrace } from "./trace.js";
 import {
   countPersonTurn as countTurn,
   listActivations,
@@ -18,16 +16,10 @@ import {
   type Activation,
 } from "./activation.js";
 
-/** Count one person turn against the session's activations; an expiry is traced and announced. Never throws. */
+/** Count one person turn against the session's activations; the store traces and announces an expiry. Never throws. */
 export async function countPersonTurn(boxRoot: string, sessionId: string): Promise<void> {
   try {
-    const { expired } = await countTurn({ boxRoot, sessionId });
-    if (expired.length === 0) return;
-    const at = getBoxTime(boxRoot).toISOString();
-    for (const a of expired) {
-      await appendTrace(boxRoot, { at, session: sessionId, activation: a.id, label: a.label, reason: "turns", entries: 0, records: [], outcome: "expired", error: a.error ?? "reached its turn limit", ms: 0 });
-    }
-    emitTriggerChanged(boxRoot, sessionId);
+    await countTurn({ boxRoot, sessionId });
   } catch (e) {
     console.warn("[triggers] could not count the person turn:", e);
   }

@@ -573,13 +573,14 @@ pattern and debounce are ordinary; the judge is in-house.
   malformed one parses as text like the others). A chip
   `TriggerChip.tsx`: a labeled aside modeled on the self-note aside, eyebrow
   "Water check", body the text, nothing else; the note is not rendered until
-  the open question on its visibility is settled. The prompt paragraph: a
-  `<trigger>` message means a trigger you armed fired; the person has already
-  seen `<text>`; `<note>` is yours; `bbx chat activity` lists what the person
-  did since their last message, which includes the actions that fired it;
-  add something only if it helps, otherwise `<ack kind="no-response"/>`;
-  never write a `<trigger>` yourself. The `<triggers>` hint paragraph beside
-  the `<activity>` one, naming `bbx chat trigger list` and `log`.
+  the open question on its visibility is settled. The prompt carries one
+  sentence per tag: a `<trigger>` message means a trigger you armed fired and
+  the person has already seen its text; a `<triggers>` child counts them;
+  both point at `triggers.md`. Everything else (the contract, the commands,
+  what to do when one fires or fails) lives in `triggers.md` and is read when
+  needed. Boxholder, 2026-11-14: the feature is for interactives and
+  educational boxes; "outside of knowing that the feature exists, and where
+  to look it up, nothing else should be loaded into context automatically."
 - Why: without a kind, the raw tag would show; without the paragraph, the
   agent would repeat the text.
 - Direction: codec and chip tests mirror the `<call>` ones.

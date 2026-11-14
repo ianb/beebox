@@ -65,7 +65,7 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
   const current = stored === undefined ? undefined : applyExpiry(stored, now);
   if (current === undefined || TERMINAL_STATES.includes(current.state)) {
     // An expiry the clock shows is written through so the status line agrees.
-    if (current?.state === "expired" && stored?.state !== "expired") await updateActivationsLocked(who, { now, fn: (a) => a });
+    if (current?.state === "expired" && stored?.state !== "expired") await updateActivationsLocked(who, { now, announce: false, fn: (a) => a });
     return { outcome: "stale", error: undefined, changed: current?.state === "expired" && stored?.state !== "expired", label: current?.label ?? "", ended: false };
   }
   const wasFailed = current.state === "failed";
@@ -100,7 +100,7 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
     }
   }
   const written = next;
-  await updateActivationsLocked(who, { now, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
+  await updateActivationsLocked(who, { now, announce: false, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
   return admission;
 }
 
@@ -128,6 +128,7 @@ export async function settleDelivery(who: TriggerSession, args: { activationId: 
   let ended = false;
   await updateActivationsLocked(who, {
     now: args.now,
+    announce: false,
     fn: (activations) => activations.map((a) => {
       if (a.id !== args.activationId || a.state === "disarmed") return a;
       ended = true;

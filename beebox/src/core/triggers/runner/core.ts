@@ -225,17 +225,14 @@ export class TriggerRunner {
         const read = await readActivationFile(who);
         if (read.invalid) return;
         expired = read.activations.filter((a) => a.state !== "expired" && expiryOf(a, now) !== null);
-        if (expired.length > 0) await updateActivationsLocked(who, { now, fn: (a) => a });
+        // The store traces the expiry; this runner announces it through its own bus.
+        if (expired.length > 0) await updateActivationsLocked(who, { now, announce: false, fn: (a) => a });
       });
     } catch (e) {
       console.warn(`[triggers] could not write expiry for ${sessionId}:`, e);
       return;
     }
-    for (const a of expired) {
-      this.dropTimers(a.id);
-      const why = expiryOf(a, now);
-      await this.trace({ sessionId, activation: a, reason: why === "turns" ? "turns" : "time", entries: 0, records: [], outcome: "expired", error: why === "turns" ? "reached its turn limit" : "reached its deadline", ms: 0 });
-    }
+    for (const a of expired) this.dropTimers(a.id);
     if (expired.length > 0) this.deps.emit(sessionId);
   }
 

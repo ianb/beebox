@@ -20,6 +20,8 @@ import { withFileLock } from "../../lib/file-lock.js";
 import { getBoxTime } from "../../lib/time.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { lastActivitySeq } from "../activity/log.js";
+import { emitTriggerChanged } from "./events.js";
+import { appendTrace } from "./trace.js";
 
 /** The default expiry: whichever of these comes first. */
 export const DEFAULT_EXPIRES = { turns: 20, minutes: 120 } as const;
@@ -247,15 +249,28 @@ export async function updateActivations(who: TriggerSession, update: ActivationU
 export interface ActivationUpdate {
   fn: (activations: Activation[]) => Activation[] | Promise<Activation[]>;
   now?: Date | undefined;
+  /** `false` when the caller emits `trigger-changed` itself (the runner); an expiry this write persists is then traced here but announced there. */
+  announce?: boolean | undefined;
 }
 
-/** `updateActivations` for a caller that already holds the session's trigger lock. */
+/**
+ * `updateActivations` for a caller that already holds the session's trigger
+ * lock. Whichever write first persists an expiry (a turn count, a deadline
+ * timer, an admission that saw the clock) records it once in the trace and,
+ * unless `announce` is false, emits `trigger-changed`.
+ */
 export async function updateActivationsLocked(who: TriggerSession, update: ActivationUpdate): Promise<Activation[]> {
   const now = update.now ?? getBoxTime(who.boxRoot);
   const read = await readActivationFile(who);
   if (read.invalid) throw new TriggerFileInvalidError(who.sessionId);
   const next = await update.fn(read.activations.map((a) => applyExpiry(a, now)));
   await writeActivations(who, next);
+  const expired = next.filter((a) => a.state === "expired" && !TERMINAL_STATES.includes(read.activations.find((s) => s.id === a.id)?.state ?? "expired"));
+  for (const a of expired) {
+    const byTurns = a.expires !== "never" && a.expires.turns !== undefined && a.turnsSeen >= a.expires.turns;
+    await appendTrace(who.boxRoot, { at: now.toISOString(), session: who.sessionId, activation: a.id, label: a.label, reason: byTurns ? "turns" : "time", entries: 0, records: [], outcome: "expired", error: a.error ?? "expired", ms: 0 });
+  }
+  if (expired.length > 0 && update.announce !== false) emitTriggerChanged(who.boxRoot, who.sessionId);
   return next;
 }
 
