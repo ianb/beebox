@@ -335,8 +335,8 @@ pattern and debounce are ordinary; the judge is in-house.
   that returns normally restores `armed` and clears `error`); and the
   terminal states `done` (the function returned `done: true`), `expired`
   (`turns` or `time`), `disarmed`, and `delivery-failed` (the fire could not
-  be delivered; never scheduled or admitted again; the agent disarms or
-  re-arms). `noticed` is whether the agent's turn has carried this
+  be delivered; never scheduled or admitted again; `disarm` moves it to
+  `disarmed`, the one terminal state that can still change). `noticed` is whether the agent's turn has carried this
   activation's `expired` state in a hint; `delivery-failed` shows in the
   `failed` count instead. Stored in `.beebox/triggers/<session>.json` as
   `{ activations: [...] }`, written under a per-session trigger lock.
@@ -350,13 +350,17 @@ pattern and debounce are ordinary; the judge is in-house.
   child on a tick can still see what happened since arming. Runs in a child
   process with a 20 s deadline.
 - **admission** (new): the runner's check when a child returns, inside one
-  hold of the session's trigger lock that lasts through the delivery and the
-  state write: the activation still exists, is `armed` or `failed`, and is
-  unexpired; otherwise the result is discarded as `stale`. Admission also
-  advances `lastEvalSeq` to the highest `seq` the child was given. `disarm`
-  takes the same lock, so it runs either before admission (the result is
-  stale) or after the write (the message is already in the chat, and the
-  activation then becomes `disarmed`).
+  hold of the session's trigger lock that lasts through the message's
+  admission to the chat and the state write: the activation still exists,
+  is `armed` or `failed`, and is unexpired; otherwise the result is
+  discarded as `stale`. Admission also advances `lastEvalSeq` to the highest
+  `seq` the child was given. `disarm` takes the same lock, so it runs either
+  before admission (the result is stale) or after the write (the message is
+  already in the chat, and the activation then becomes `disarmed`). The lock
+  is not held through a cold engine start (30 s against a 5 s lock wait):
+  once the chat has taken the message (`onAdmitted`), the fire is written and
+  the lock released; a send that then fails is written as `delivery-failed`
+  in a second short hold, unless a disarm landed in between.
 - **trigger context** (new): `ctx` = `{ config, boxRoot, reason, judge, log }`.
   `judge(input)` takes `JudgeInput` (instructions, questions, state), or
   `{ card: string, state }` for a judgment card, and returns
@@ -383,8 +387,10 @@ pattern and debounce are ordinary; the judge is in-house.
   record it received, so a child killed at the deadline still leaves its
   judge calls behind.
 - **trace log** (new): `.beebox/triggers.jsonl` plus `.1`. One line per
-  evaluation: `{ at, session, activation, label, reason, entries, records, outcome: "none" | "fired" | "suppressed" | "stale" | "error" | "delivery-failed" | "skipped", error?, ms, dryRun? }`.
-  Rotates like the notification log.
+  evaluation: `{ at, session, activation, label, reason, entries, records, outcome: "none" | "fired" | "suppressed" | "stale" | "error" | "delivery-failed" | "skipped" | "expired", error?, ms, dryRun? }`.
+  An `expired` line (reason `turns` or `time`) records each expiry once, so
+  the log says when and why evaluations stopped. Rotates like the
+  notification log.
 - **`<triggers>` hint** (new): `<triggers armed="N" failed="F" expired="E"/>`
   child of `<chat-app>`: `armed` is the current count; `failed` counts
   `failed` and `delivery-failed` activations; `expired` counts `expired`
@@ -812,6 +818,47 @@ Tests named above, written with each chunk. Done when they pass, the two
 knowledge audits pass on test1, and the browser check shows a fire and the
 status line. No data migration: activation and trace files start empty. The
 courseware box's use is the boxholder's call.
+
+Status, 2026-11-14: the tests pass; both knowledge audits passed on the
+worktree's test1 clone (the agent opened `triggers.md` and named the
+commands); the browser check on that clone showed the status line, the
+fire's chip and the agent's follow-up turn. The headless browser `bin/browse`
+drives never fires `requestAnimationFrame`, so the figure could not take
+clicks there; the check posted the figure's activity entry from the page
+instead, and the figure's own reporting was checked headlessly with
+`bbx figure run`.
+
+## Implementation review (codex gpt-6-astra, 2026-11-14)
+
+Twelve findings on the first implementation commit, all accepted and fixed:
+
+1. The event bus's `emit` moved its poll mark past rows another process had
+   inserted, so a CLI `trigger-changed` landing just before a server emit was
+   never dispatched (a pre-existing bus bug; fixed in the bus).
+2. A trigger in a logging loop filled the parent's memory until the deadline
+   and truncation was quadratic. Fixed: output capped at 1 MB (the child is
+   killed and the trace says so); truncation is one pass from the end.
+3. The lock was held through a cold engine start. Fixed as described under
+   admission (`onAdmitted`); `deliverUserMessage` gained the callback and an
+   `independent` permit, since a fire runs from a timer, not a request (the
+   end-to-end check found the inherited permit expired).
+4. Chat deletion removed the activation file outside the lock, so a write in
+   flight could recreate it. Fixed: removal under the lock.
+5. Turn-count expiry emitted no event, so the status line kept "Watching".
+   Fixed: the turn counter emits `trigger-changed` and traces the expiry.
+6. `delivery-failed` vanished from the status line. Fixed: it reads "not
+   working" like `failed`.
+7. A disarm during another activation's evaluation did not stop the next
+   one's child. Fixed: each activation is reread just before its child.
+8. `ctx.judge` could throw from the budget lock. Fixed: every failure is an
+   `unavailable` result with a record.
+9. `arm` overwrote an invalid activation file. Fixed: it refuses like the
+   other writers.
+10. `delivery-failed` could not be disarmed. Fixed: it is the one terminal
+    state `disarm` changes.
+11. Error records lost the stack. Fixed: the first frames ride in the message.
+12. Expiry left no trace line. Fixed: `expired` outcome, reasons `turns` and
+    `time`.
 
 ## Plan review (codex gpt-6-astra, round 1)
 

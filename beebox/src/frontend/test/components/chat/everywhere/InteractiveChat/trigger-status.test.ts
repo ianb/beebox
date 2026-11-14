@@ -1,8 +1,8 @@
 // # The trigger status line's words
 //
-// "Watching: …" names the armed triggers; a failed one reads "not working";
-// done, expired, disarmed and delivery-failed ones say nothing, so the line
-// disappears when nothing is live.
+// "Watching: …" names the armed triggers; a failed one, or one whose fire
+// could not be delivered, reads "not working"; done, expired and disarmed
+// ones say nothing, so the line disappears when nothing is live.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -17,7 +17,7 @@ void test("The status line names armed triggers and failed ones, nothing else.",
     { label: "Old one", state: "expired" },
     { label: "Ammonia", state: "armed" },
     { label: "Gone", state: "delivery-failed" },
-  ]), ["Watching: Water check, Ammonia", "Stuck check: not working"]);
+  ]), ["Watching: Water check, Ammonia", "Stuck check: not working", "Gone: not working"]);
   t.check(triggerStatusLines([{ label: "Done", state: "done" }, { label: "Off", state: "disarmed" }]), []);
   t.end();
 });

@@ -227,8 +227,9 @@ export async function armActivation(boxRoot: string, opts: ArmOptions): Promise<
       state: "armed",
       noticed: false,
     };
-    const current = (await readActivationFile(who)).activations;
-    await writeActivations(who, [...current, activation]);
+    const read = await readActivationFile(who);
+    if (read.invalid) throw new TriggerFileInvalidError(who.sessionId);
+    await writeActivations(who, [...read.activations, activation]);
     return activation;
   });
 }
@@ -277,7 +278,8 @@ export async function patchActivation(
 
 /**
  * Disarm by id, label or all. Returns the activations that changed state.
- * One already terminal is left as it is (a done trigger is not "disarmed").
+ * One already terminal is left as it is (a done trigger is not "disarmed"),
+ * except `delivery-failed`, which the agent clears this way.
  */
 export async function disarmActivations(
   who: TriggerSession,
@@ -288,7 +290,7 @@ export async function disarmActivations(
     now: which.now,
     fn: (activations) => activations.map((a) => {
       const matches = "all" in which ? true : "id" in which ? a.id === which.id : a.label === which.label;
-      if (!matches || TERMINAL_STATES.includes(a.state)) return a;
+      if (!matches || (TERMINAL_STATES.includes(a.state) && a.state !== "delivery-failed")) return a;
       const { error: _error, ...rest } = a;
       const next: Activation = { ...rest, state: "disarmed" };
       changed.push(next);
@@ -322,9 +324,9 @@ export async function countPersonTurn(who: TriggerSession, opts?: { now?: Date }
   return { expired };
 }
 
-/** Remove the session's activation file (and lock sidecar), for chat deletion. */
+/** Remove the session's activation file, under its lock so a write in flight cannot recreate it; for chat deletion. */
 export async function removeActivationFile(who: TriggerSession): Promise<void> {
-  await fsp.rm(activationFilePath(who), { force: true });
+  await withTriggerLock(who, () => fsp.rm(activationFilePath(who), { force: true }));
   await fsp.rm(lockPath(who), { force: true });
 }
 

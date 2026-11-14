@@ -11835,6 +11835,22 @@ test1:
       peak: 46129
       added: 590
       turns: 4
+  trigger-arm-for-water:
+    - date: 2026-11-14T22:00:54.579Z
+      boxCommit: 92c41aff83b9c39c2bdf65754968aa91788c4cfb
+      repoCommit: 05a1a80de25f5768be4a8c9fab291db2ca658737
+      initial: 35176
+      peak: 50366
+      added: 15190
+      turns: 11
+  trigger-did-not-fire:
+    - date: 2026-11-14T22:00:54.579Z
+      boxCommit: 92c41aff83b9c39c2bdf65754968aa91788c4cfb
+      repoCommit: 05a1a80de25f5768be4a8c9fab291db2ca658737
+      initial: 35105
+      peak: 39703
+      added: 4598
+      turns: 8
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -39,7 +39,7 @@ export const traceRecordSchema = z.discriminatedUnion("kind", [
 ]);
 export type TraceRecord = z.infer<typeof traceRecordSchema>;
 
-export const TRACE_OUTCOMES = ["none", "fired", "suppressed", "stale", "error", "delivery-failed", "skipped"] as const;
+export const TRACE_OUTCOMES = ["none", "fired", "suppressed", "stale", "error", "delivery-failed", "skipped", "expired"] as const;
 export type TraceOutcome = (typeof TRACE_OUTCOMES)[number];
 
 export const traceLineSchema = z.object({
@@ -47,7 +47,8 @@ export const traceLineSchema = z.object({
   session: z.string(),
   activation: z.string(),
   label: z.string(),
-  reason: z.enum(["activity", "tick"]),
+  /** What started it: new activity, a tick, or (for an `expired` line) the turn count or the deadline. */
+  reason: z.enum(["activity", "tick", "turns", "time"]),
   /** How many new entries the evaluation was given. */
   entries: z.number().int().nonnegative(),
   records: z.array(traceRecordSchema),
@@ -78,12 +79,21 @@ export class TraceLineTooLongError extends Error {
   }
 }
 
-/** Serialize under the line cap: drop records from the front (the oldest) until it fits, marking `truncated`. */
+/** Serialize under the line cap: keep the newest records that fit (one pass from the end), marking `truncated`. */
 export function serializeTraceLine(line: TraceLine): string {
   let current = line;
   let text = JSON.stringify(current);
-  while (Buffer.byteLength(text) >= MAX_LINE_BYTES && current.records.length > 0) {
-    current = { ...current, records: current.records.slice(1), truncated: true };
+  if (Buffer.byteLength(text) >= MAX_LINE_BYTES && current.records.length > 0) {
+    const base = Buffer.byteLength(JSON.stringify({ ...current, records: [], truncated: true }));
+    let budget = MAX_LINE_BYTES - 1 - base;
+    const kept: TraceRecord[] = [];
+    for (const record of current.records.toReversed()) {
+      const size = Buffer.byteLength(JSON.stringify(record)) + 1;
+      if (size > budget) break;
+      budget -= size;
+      kept.unshift(record);
+    }
+    current = { ...current, records: kept, truncated: true };
     text = JSON.stringify(current);
   }
   if (Buffer.byteLength(text) >= MAX_LINE_BYTES && current.error !== undefined) {

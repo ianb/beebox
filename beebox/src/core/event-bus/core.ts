@@ -403,6 +403,11 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
       createdAt: new Date().toISOString(),
     });
 
+    // Rows another process inserted since the last poll sit between the mark and our id: dispatch them
+    // first, or moving the mark past them skips them for good (a CLI `trigger-changed` just before a server emit).
+    if (listeners.size > 0 && id > highWaterMark + 1) {
+      for (const missed of parseRows(readSinceStmt.all(storedEventRow, highWaterMark)).filter((m) => m.id < id)) { highWaterMark = missed.id; notifyListeners(missed); }
+    }
     // Update high-water mark so the poll loop doesn't re-dispatch this
     highWaterMark = id;
     notifyListeners(busEvent);

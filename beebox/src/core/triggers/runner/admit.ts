@@ -6,6 +6,12 @@
  * `error` sets `failed`, a normal return restores a `failed` activation to
  * `armed`, a result inside the fire floor is `suppressed`, and a fire that
  * cannot be delivered ends the activation as `delivery-failed`.
+ *
+ * The lock is held through the message's admission, not through a cold
+ * engine start (which can take 30 s while a disarm waits 5 s): once the chat
+ * has taken the message, the fire is written and the lock released; a send
+ * that then fails is written as `delivery-failed` in a second short hold
+ * (`settleDelivery`).
  */
 
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -28,8 +34,11 @@ export interface AdmitArgs {
   /** How many new entries the evaluation was given. */
   entries: number;
   now: Date;
-  deliver: (args: { sessionId: string; message: string }) => Promise<void>;
+  deliver: Deliver;
 }
+
+/** Deliver a fire; `onAdmitted` fires once the chat has taken the message. Throws `UserMessageDeliveryError` when refused, anything else when the send is uncertain. */
+export type Deliver = (args: { sessionId: string; message: string; onAdmitted: () => void }) => Promise<void>;
 
 export interface Admission {
   outcome: TraceOutcome;
@@ -39,6 +48,8 @@ export interface Admission {
   label: string;
   /** The activation reached a terminal state here, so its timers can go. */
   ended: boolean;
+  /** A send admitted but not yet finished; the caller awaits it outside the lock and calls `settleDelivery` if it fails. */
+  pending?: Promise<void> | undefined;
 }
 
 function withoutError(activation: Activation): Activation {
@@ -76,14 +87,14 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
       } else {
         const text = final.text.length > TEXT_CAP ? `${final.text.slice(0, TEXT_CAP - 1)}…` : final.text;
         const message = serializeTrigger({ kind: "trigger", label: current.label, file: current.file, fire: next.fires + 1, entries: args.entries, done: final.done === true, text, note: final.note ?? null });
-        try {
-          await args.deliver({ sessionId: who.sessionId, message });
-          next = { ...next, fires: next.fires + 1, lastFireAt: now.toISOString(), ...(final.done === true ? { state: "done" } : {}) };
-          admission = { ...admission, outcome: "fired", changed: true, ended: final.done === true };
-        } catch (e) {
-          const error = e instanceof UserMessageDeliveryError ? "the chat refused the message" : `the send failed: ${errorMessage(e)}`;
+        const sent = await startDelivery(args.deliver, { sessionId: who.sessionId, message });
+        if (sent.kind === "failed") {
+          const error = deliveryError(sent.error);
           next = { ...next, state: "delivery-failed", error };
           admission = { ...admission, outcome: "delivery-failed", error, changed: true, ended: true };
+        } else {
+          next = { ...next, fires: next.fires + 1, lastFireAt: now.toISOString(), ...(final.done === true ? { state: "done" } : {}) };
+          admission = { ...admission, outcome: "fired", changed: true, ended: final.done === true, pending: sent.kind === "admitted" ? sent.pending : undefined };
         }
       }
     }
@@ -91,4 +102,37 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
   const written = next;
   await updateActivationsLocked(who, { now, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
   return admission;
+}
+
+type DeliveryStart = { kind: "delivered" } | { kind: "admitted"; pending: Promise<void> } | { kind: "failed"; error: unknown };
+
+/** Start the send and wait only until it is admitted or finished, whichever comes first. */
+function startDelivery(deliver: Deliver, args: { sessionId: string; message: string }): Promise<DeliveryStart> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const once = (start: DeliveryStart): void => { if (!settled) { settled = true; resolve(start); } };
+    const pending = deliver({ ...args, onAdmitted: () => { once({ kind: "admitted", pending }); } })
+      .then(() => { once({ kind: "delivered" }); }, (error: unknown) => { once({ kind: "failed", error }); if (settled) throw error; });
+    // A rejection after admission is for `settleDelivery`; the extra handler above keeps it from being unhandled only when nobody awaits `pending`.
+    pending.catch(() => {});
+  });
+}
+
+function deliveryError(e: unknown): string {
+  return e instanceof UserMessageDeliveryError ? "the chat refused the message" : `the send failed: ${errorMessage(e)}`;
+}
+
+/** A send that failed after admission: write `delivery-failed` unless the activation was disarmed meanwhile. Call under the lock. */
+export async function settleDelivery(who: TriggerSession, args: { activationId: string; error: unknown; now: Date }): Promise<{ error: string; ended: boolean }> {
+  const error = deliveryError(args.error);
+  let ended = false;
+  await updateActivationsLocked(who, {
+    now: args.now,
+    fn: (activations) => activations.map((a) => {
+      if (a.id !== args.activationId || a.state === "disarmed") return a;
+      ended = true;
+      return { ...a, state: "delivery-failed", error };
+    }),
+  });
+  return { error, ended };
 }

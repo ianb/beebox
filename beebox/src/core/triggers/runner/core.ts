@@ -32,7 +32,7 @@ import { evaluateInChild, type Evaluate, type EvalOutput } from "../eval.js";
 import type { EvalJob } from "../eval-child/core.js";
 import { appendTrace, type TraceLine, type TraceOutcome } from "../trace.js";
 import { HISTORY_CAP, type TriggerReason } from "../types.js";
-import { admitResult } from "./admit.js";
+import { admitResult, settleDelivery, type Deliver } from "./admit.js";
 
 export { FIRE_FLOOR_MS } from "./admit.js";
 
@@ -57,8 +57,8 @@ export interface RunnerDeps {
   boxRoot: string;
   /** Run one evaluation (a child process, or a fake). */
   evaluate?: Evaluate;
-  /** Deliver a fire to the session; throws `UserMessageDeliveryError` when refused, anything else when the send is uncertain. */
-  deliver: (args: { sessionId: string; message: string }) => Promise<void>;
+  /** Deliver a fire to the session; see {@link Deliver}. */
+  deliver: Deliver;
   /** How many web sessions are live in the box. */
   presence?: () => Promise<number>;
   /** Emit `trigger-changed` for the session. */
@@ -219,20 +219,24 @@ export class TriggerRunner {
   private async expire(sessionId: string): Promise<void> {
     const who = { boxRoot: this.deps.boxRoot, sessionId };
     const now = this.deps.now();
-    let ended: string[] = [];
+    let expired: Activation[] = [];
     try {
       await withTriggerLock(who, async () => {
         const read = await readActivationFile(who);
         if (read.invalid) return;
-        ended = read.activations.filter((a) => a.state !== "expired" && expiryOf(a, now) !== null).map((a) => a.id);
-        if (ended.length > 0) await updateActivationsLocked(who, { now, fn: (a) => a });
+        expired = read.activations.filter((a) => a.state !== "expired" && expiryOf(a, now) !== null);
+        if (expired.length > 0) await updateActivationsLocked(who, { now, fn: (a) => a });
       });
     } catch (e) {
       console.warn(`[triggers] could not write expiry for ${sessionId}:`, e);
       return;
     }
-    for (const id of ended) this.dropTimers(id);
-    if (ended.length > 0) this.deps.emit(sessionId);
+    for (const a of expired) {
+      this.dropTimers(a.id);
+      const why = expiryOf(a, now);
+      await this.trace({ sessionId, activation: a, reason: why === "turns" ? "turns" : "time", entries: 0, records: [], outcome: "expired", error: why === "turns" ? "reached its turn limit" : "reached its deadline", ms: 0 });
+    }
+    if (expired.length > 0) this.deps.emit(sessionId);
   }
 
   private dropTimers(activationId: string): void {
@@ -257,7 +261,12 @@ export class TriggerRunner {
         .filter((a) => opts.activationId === undefined || a.id === opts.activationId);
       if (activations.length === 0) return;
       const lines = entriesForSession(await this.deps.readLog(), { sessionId, cursor: await readCursor(this.deps.boxRoot, sessionId) });
-      for (const activation of activations) await this.evaluateOne({ sessionId, activation, lines, reason: opts.reason });
+      for (const snapshot of activations) {
+        // Reread just before the child starts: a disarm or expiry while an earlier activation ran must not start this one's code.
+        const activation = (await listActivations(who, { now: this.deps.now() })).find((a) => a.id === snapshot.id);
+        if (activation === undefined || TERMINAL_STATES.includes(activation.state)) continue;
+        await this.evaluateOne({ sessionId, activation, lines, reason: opts.reason });
+      }
     } catch (e) {
       console.warn(`[triggers] evaluation failed for ${sessionId}:`, e);
     } finally {
@@ -294,12 +303,24 @@ export class TriggerRunner {
     const { sessionId, activationId, output, maxSeq, reason } = args;
     const who = { boxRoot: this.deps.boxRoot, sessionId };
     const admission = await withTriggerLock(who, () => admitResult({ who, activationId, output, maxSeq, entries: args.entries, now: this.deps.now(), deliver: this.deps.deliver }));
-    await this.trace({ sessionId, activation: { id: activationId, label: admission.label }, reason, entries: args.entries, records: output.records, outcome: admission.outcome, error: admission.error, ms: output.ms });
-    if (admission.changed) this.deps.emit(sessionId);
-    if (admission.ended) this.dropTimers(activationId);
+    let { outcome, error, ended } = admission;
+    if (admission.pending !== undefined) {
+      // Admitted, so the lock is released; a cold engine start may still fail the send.
+      try {
+        await admission.pending;
+      } catch (e) {
+        const settled = await withTriggerLock(who, () => settleDelivery(who, { activationId, error: e, now: this.deps.now() }));
+        outcome = "delivery-failed";
+        error = settled.error;
+        ended = ended || settled.ended;
+      }
+    }
+    await this.trace({ sessionId, activation: { id: activationId, label: admission.label }, reason, entries: args.entries, records: output.records, outcome, error, ms: output.ms });
+    if (admission.changed || outcome === "delivery-failed") this.deps.emit(sessionId);
+    if (ended) this.dropTimers(activationId);
   }
 
-  private trace(args: { sessionId: string; activation: Pick<Activation, "id" | "label">; reason: TriggerReason; entries: number; records: TraceLine["records"]; outcome: TraceOutcome; error?: string | undefined; ms: number }): Promise<void> {
+  private trace(args: { sessionId: string; activation: Pick<Activation, "id" | "label">; reason: TraceLine["reason"]; entries: number; records: TraceLine["records"]; outcome: TraceOutcome; error?: string | undefined; ms: number }): Promise<void> {
     return appendTrace(this.deps.boxRoot, {
       at: this.deps.now().toISOString(),
       session: args.sessionId,

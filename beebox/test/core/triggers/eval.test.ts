@@ -109,6 +109,7 @@ export async function trigger(input, ctx) { ctx.log("before the loop"); for (;;)
     { kind: "log", at: isoDate(), message: "before the loop" },
     { kind: "error", at: isoDate(), message: "stopped after 3 s: trigger() never returned (an endless loop, or an await that never settles?)" },
   ]);
-  t.check((await evaluateInChild(job(box.root, { file: "src/triggers/throws.ts" }))).final, { kind: "error", at: isoDate(), message: "trigger() threw: nope" });
+  // The stack rides along, so the trace names the line in the trigger file.
+  t.check((await evaluateInChild(job(box.root, { file: "src/triggers/throws.ts" }))).final, { kind: "error", at: isoDate(), message: any(String).startsWith("trigger() threw: nope\n    at ") });
   t.check((await evaluateInChild(job(box.root, { file: "src/triggers/bad-result.ts" }))).final, { kind: "error", at: isoDate(), message: "trigger() returned something other than null or { text, note?, done? }" });
 });

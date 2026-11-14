@@ -124,8 +124,21 @@ async function judgeRequest(boxRoot: string, input: TriggerJudgeInput): Promise<
   }
 }
 
-/** The `ctx.judge` the function calls: resolve, reserve, judge, record. Never throws. */
+/** The `ctx.judge` the function calls: resolve, reserve, judge, record. Never throws: any failure is an `unavailable` result with a record. */
 function makeJudge(job: EvalJob): TriggerContext["judge"] {
+  const judge = makeJudgeUnguarded(job);
+  return async (input): Promise<TriggerJudgeResult> => {
+    try {
+      return await judge(input);
+    } catch (e) {
+      const reason = `the judge failed: ${errorMessage(e)}`;
+      writeRecord({ kind: "judge", at: now(job.boxRoot), questions: [], verdict: { unavailable: reason }, ms: 0 });
+      return { kind: "unavailable", reason };
+    }
+  };
+}
+
+function makeJudgeUnguarded(job: EvalJob): TriggerContext["judge"] {
   return async (input): Promise<TriggerJudgeResult> => {
     const at = now(job.boxRoot);
     const started = Date.now();
@@ -151,6 +164,13 @@ function makeJudge(job: EvalJob): TriggerContext["judge"] {
       return unavailable(errorMessage(e));
     }
   };
+}
+
+/** The error's message with the top of its stack, so the trace names the throwing line in the trigger file. */
+function describeThrow(e: unknown): string {
+  if (!(e instanceof Error) || e.stack === undefined) return errorMessage(e);
+  const frames = e.stack.split("\n").slice(1).filter((line) => !line.includes("node:internal")).slice(0, 6);
+  return frames.length === 0 ? e.message : `${e.message}\n${frames.join("\n")}`;
 }
 
 function checkResult(value: unknown): TriggerResult | null | { error: string } {
@@ -198,7 +218,7 @@ export async function runEvalChild(raw: unknown): Promise<void> {
   try {
     returned = await loaded.module.trigger(input, ctx);
   } catch (e) {
-    writeRecord({ kind: "error", at: now(job.boxRoot), message: `trigger() threw: ${errorMessage(e)}` });
+    writeRecord({ kind: "error", at: now(job.boxRoot), message: `trigger() threw: ${describeThrow(e)}` });
     return;
   }
   const result = checkResult(returned);

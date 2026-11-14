@@ -21,6 +21,8 @@ import { traceRecordSchema, type TraceRecord } from "./trace.js";
 
 /** How long one evaluation may run before the child is killed. */
 export const EVAL_DEADLINE_MS = 20_000;
+/** The most output (stdout plus stderr) a child may write before it is killed; a logging loop stops here, not at the deadline. */
+export const OUTPUT_CAP_BYTES = 1024 * 1024;
 
 export interface EvalOutput {
   /** Every record the child wrote, in order, plus `log` records for its stray output. */
@@ -38,6 +40,8 @@ interface ChildRun {
   signal: NodeJS.Signals | null;
   stdoutLines: string[];
   stderr: string;
+  /** The child wrote more than {@link OUTPUT_CAP_BYTES} and was killed. */
+  overflow: boolean;
 }
 
 function runChild(args: string[], opts: { stdin: string; cwd: string; timeoutMs: number }): Promise<ChildRun> {
@@ -52,17 +56,27 @@ function runChild(args: string[], opts: { stdin: string; cwd: string; timeoutMs:
     const stdoutLines: string[] = [];
     let partial = "";
     let stderr = "";
+    let bytes = 0;
+    let overflow = false;
+    const count = (chunk: Buffer): boolean => {
+      bytes += chunk.length;
+      if (bytes <= OUTPUT_CAP_BYTES || overflow) return !overflow;
+      overflow = true;
+      proc.kill("SIGKILL");
+      return false;
+    };
     proc.stdout.on("data", (chunk: Buffer) => {
+      if (!count(chunk)) return;
       partial += chunk.toString();
       const lines = partial.split("\n");
       partial = lines.pop() ?? "";
       stdoutLines.push(...lines);
     });
-    proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+    proc.stderr.on("data", (chunk: Buffer) => { if (count(chunk)) stderr += chunk.toString(); });
     proc.on("error", (e) => { stderr += e.message; });
     proc.on("close", (code, signal) => {
       if (partial !== "") stdoutLines.push(partial);
-      resolve({ code, signal, stdoutLines, stderr });
+      resolve({ code, signal, stdoutLines, stderr, overflow });
     });
     proc.stdin.on("error", () => { /* the child exited before reading the job; `close` reports it */ });
     proc.stdin.end(opts.stdin);
@@ -109,9 +123,11 @@ export async function evaluateInChild(job: EvalJob, opts?: { timeoutMs?: number 
   const records = parseRecords(run, at);
   const last = records.findLast(isFinal);
   if (last !== undefined) return { records, final: last, ms: Date.now() - started };
-  const message = run.signal === "SIGKILL" && run.code === null
-    ? `stopped after ${String(timeoutMs / 1000)} s: trigger() never returned (an endless loop, or an await that never settles?)`
-    : `eval-one exited ${String(run.code ?? run.signal)} without a result`;
+  const message = run.overflow
+    ? `stopped: trigger() wrote more than ${String(OUTPUT_CAP_BYTES / 1024)} KB of logs (a logging loop?)`
+    : run.signal === "SIGKILL" && run.code === null
+      ? `stopped after ${String(timeoutMs / 1000)} s: trigger() never returned (an endless loop, or an await that never settles?)`
+      : `eval-one exited ${String(run.code ?? run.signal)} without a result`;
   const final: TraceRecord = { kind: "error", at, message };
   return { records: [...records, final], final, ms: Date.now() - started };
 }

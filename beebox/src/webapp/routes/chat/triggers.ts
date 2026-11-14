@@ -23,9 +23,10 @@ export function startTriggerRunner(args: {
   const { boxRoot, eventBus, registry, wireSession } = args;
   const runner = new TriggerRunner({
     boxRoot,
-    deliver: async ({ sessionId, message }) => {
+    deliver: async ({ sessionId, message, onAdmitted }) => {
       const target = { sessionId, contextDir: await getDirectoryForSession(boxRoot, sessionId) };
-      await deliverUserMessage({ boxRoot, registry, eventBus, wireSession, target, message, logPrefix: "trigger" });
+      // A fire runs from the runner's timers, not from a request: it needs its own box-work permit.
+      await deliverUserMessage({ boxRoot, registry, eventBus, wireSession, target, message, logPrefix: "trigger", onAdmitted, independent: true });
     },
     emit: (sessionId) => { eventBus.emit("trigger-changed", { sessionId }); },
   });
