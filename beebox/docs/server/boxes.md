@@ -131,7 +131,8 @@ then re-exports the box's copy.
 A re-export keeps what the box saved on its own Admin page: a value or grant
 in the box's copy that the master lacks is laid back over the master's share,
 and `add-box.sh` names each one it kept. To drop one, remove it on the box's
-Admin page.
+Admin page. The script cannot tell a box's own grant from one the master
+revoked, so revoking a grant on the master also takes removing it there.
 
 Legacy `_config/connectors/*.secret.json` API-key files no longer work as a
 fallback; the machine secret store is the only source a connector reads a key

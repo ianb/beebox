@@ -5,7 +5,7 @@
  * wires the controls to the call engine.
  */
 
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { callEngine } from "../../lib/call/engine";
 import { callBarView } from "../../lib/call-state";
 import { callRing } from "../../lib/audio/earcons";
@@ -14,18 +14,19 @@ import { CallBarFace, type CallBarActions } from "../app-bar-faces/CallBarFace";
 
 const RING_PERIOD_MS = 3000;
 const RING_FOR_MS = 20_000;
+/** The call this page last rang, kept outside the component so leaving and returning to the chat does not restart it. */
+let rung: { callId: string; sinceMs: number } | null = null;
 
 export function CallBar({ sessionId }: { sessionId: string | null }) {
   const { ui, presence } = useSyncExternalStore(callEngine.subscribe, callEngine.getSnapshot);
   const selfEmail = useCurrentUser()?.email ?? null;
   const view = callBarView({ ui, presence, sessionId, selfEmail });
   const ringingCallId = view.kind === "ringing" ? view.callId : null;
-  const rung = useRef<{ callId: string; sinceMs: number } | null>(null);
   useEffect(() => {
     if (ringingCallId === null) return;
-    if (rung.current?.callId !== ringingCallId) rung.current = { callId: ringingCallId, sinceMs: Date.now() };
-    // A call rings for RING_FOR_MS from when this page first heard it, so a remount only finishes that time.
-    const left = RING_FOR_MS - (Date.now() - rung.current.sinceMs);
+    if (rung?.callId !== ringingCallId) rung = { callId: ringingCallId, sinceMs: Date.now() };
+    // A call rings for RING_FOR_MS from when this page first heard it, so coming back to the chat only finishes that time.
+    const left = RING_FOR_MS - (Date.now() - rung.sinceMs);
     if (left <= 0) return;
     // Stops when the call stops ringing here: answered, joined, or ended.
     return callRing.repeatPlay(RING_PERIOD_MS, left);
