@@ -1,0 +1,23 @@
+slug: game-world-tiles
+title: "game-world tiles, painted in code"
+created: 2026-11-14
+model: opus-5.5
+driver: opus-5.5
+cycles: 8
+tier: tea
+harness-commit: 3b5aabed6
+frames: 2
+seed: 42
+fps: 60
+every: 1
+reconstructed: true
+audit: >
+  Ground three ways (painted cells, brushed paths, a per-pixel dab field); painted foliage clumps; tiles proven seamless by drawing whole and tile-by-tile. Reviewed by the boxholder by eye across the session; no independent audit.
+self-report-summary: >
+  Built in one long session with the boxholder steering the style. Judged by frames throughout.
+features-exercised:
+  - "per-pixel field through v.ctx putImageData"
+  - "brush presets (bristle, chalk, ink)"
+  - "sprites painted at zoom"
+  - "wind-driven looping animation"
+  - "select and boolean params"

@@ -1,0 +1,21 @@
+slug: intra-map
+title: "Intra floor plan with depth layers"
+created: 2026-11-14
+model: opus-5.5
+driver: opus-5.5
+cycles: 3
+tier: tea
+harness-commit: 3b5aabed6
+frames: 44
+seed: 42
+fps: 60
+every: 43
+reconstructed: true
+audit: >
+  Rooms, exits and props as data; floor / standing / over layers sorted by base y; the same pieces draw the picture, a depth map and a walk map. Reviewed by the boxholder by eye across the session; no independent audit.
+self-report-summary: >
+  Built in one long session with the boxholder steering the style. Judged by frames throughout.
+features-exercised:
+  - "masks for depth-map rendering"
+  - "select params"
+  - "walkers on routes"

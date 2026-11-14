@@ -1,0 +1,22 @@
+slug: intra-rooms
+title: "Every Intra room, from the side, in one kit"
+created: 2026-11-14
+model: opus-5.5
+driver: opus-5.5
+cycles: 3
+tier: tea
+harness-commit: 3b5aabed6
+frames: 91
+seed: 42
+fps: 60
+every: 90
+reconstructed: true
+audit: >
+  A shared kit (shell, sky screens, exits, props, citizens) and one file per room; 19 rooms and 12 quarters; drawn by the driver and three helper agents from PLAN.md and ROOM-GUIDE.md. Reviewed by the boxholder by eye across the session; no independent audit.
+self-report-summary: >
+  Built in one long session with the boxholder steering the style. Judged by frames throughout.
+features-exercised:
+  - "room param over 31 rooms"
+  - "sprite strips so wide rooms pan"
+  - "animated sky screens"
+  - "shared prop kit"

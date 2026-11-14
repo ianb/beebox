@@ -1,0 +1,20 @@
+slug: intra-scale-reference
+title: "Scale reference for side-view rooms"
+created: 2026-11-14
+model: opus-5.5
+driver: opus-5.5
+cycles: 3
+tier: tea
+harness-commit: 3b5aabed6
+frames: 1
+seed: 42
+fps: 60
+every: 1
+reconstructed: true
+audit: >
+  People and furniture from sizes-tea.ts drawn at 145 px/m against a metre ruler, with a diagram of how depth shows. Reviewed by the boxholder by eye.
+self-report-summary: >
+  Written after the boxholder noticed a walker drawn far too small; every side-view room now sizes itself from the same table.
+features-exercised:
+  - "text labels"
+  - "ink helpers"
