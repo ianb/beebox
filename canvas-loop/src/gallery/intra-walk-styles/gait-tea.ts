@@ -6,25 +6,12 @@
 // clips' coefficients is a walk in between (60% sad, 40% normal).
 import { CLIPS } from "./clips-tea.js";
 import type { Clip, ClipName } from "./clips-tea.js";
+import { REFERENCE } from "./body-tea.js";
+import type { Build } from "./body-tea.js";
 
 export type Vec = readonly [number, number];
 
-const H = 1.65;
-export const BODY = {
-  height: H,
-  thigh: 0.245 * H,
-  shank: 0.246 * H,
-  ankleHigh: 0.039 * H,
-  heelBack: 0.045,
-  ball: 0.15,
-  toe: 0.2,
-  torso: (0.818 - 0.53) * H,
-  upperArm: 0.186 * H,
-  forearm: 0.146 * H,
-  hand: 0.08,
-  neck: 0.06,
-  head: 0.13 * H,
-};
+export type { Build };
 
 /** Clip weights, e.g. [["sad", 0.6], ["normal", 0.4]]. */
 export type Gait = readonly (readonly [ClipName, number])[];
@@ -47,13 +34,13 @@ function value(g: Gait, ch: Channel, p: number): number {
   }
   return y / (total || 1);
 }
-export function cadence(g: Gait): number {
+export function cadence(g: Gait, b: Build = REFERENCE): number {
   let y = 0, total = 0;
   for (const [name, w] of g) {
     y += CLIPS[name].cadence * w;
     total += w;
   }
-  return y / (total || 1);
+  return (y / (total || 1)) * b.pace;
 }
 
 const RAD = Math.PI / 180;
@@ -91,42 +78,42 @@ export interface Pose {
   nod: number;
 }
 
-function leg(g: Gait, p: number, side: "L" | "R"): Leg {
+function leg(g: Gait, p: number, side: "L" | "R", b: Build): Leg {
   const tt = value(g, side === "L" ? "thighL" : "thighR", p) * RAD;
   const ts = value(g, side === "L" ? "shankL" : "shankR", p) * RAD;
   const f = (value(g, side === "L" ? "footL" : "footR", p) - FLAT) * RAD;
   const kd = down(tt), sd = down(ts);
-  const knee: Vec = [BODY.thigh * kd[0], BODY.thigh * kd[1]];
-  const ankle: Vec = [knee[0] + BODY.shank * sd[0], knee[1] + BODY.shank * sd[1]];
+  const knee: Vec = [b.thigh * kd[0], b.thigh * kd[1]];
+  const ankle: Vec = [knee[0] + b.shank * sd[0], knee[1] + b.shank * sd[1]];
   const dir: Vec = [Math.cos(f), Math.sin(f)];
   const dn: Vec = [Math.sin(f), -Math.cos(f)];
-  const sole = (d: number): Vec => [ankle[0] + dn[0] * BODY.ankleHigh + dir[0] * d, ankle[1] + dn[1] * BODY.ankleHigh + dir[1] * d];
-  const ball = sole(BODY.ball);
-  const toeLen = BODY.toe - BODY.ball;
+  const sole = (d: number): Vec => [ankle[0] + dn[0] * b.ankleHigh + dir[0] * d, ankle[1] + dn[1] * b.ankleHigh + dir[1] * d];
+  const ball = sole(b.ball);
+  const toeLen = b.toe - b.ball;
   // Toes bend at the ball: when the heel is up they stay along the floor.
   const toe: Vec = dir[1] < 0 ? [ball[0] + toeLen * Math.max(0.3, Math.cos(f * 0.4)), ball[1] + toeLen * Math.sin(f * 0.4)] : [ball[0] + dir[0] * toeLen, ball[1] + dir[1] * toeLen];
-  return { hip: [0, 0], knee, ankle, heel: sole(-BODY.heelBack), ball, toe };
+  return { hip: [0, 0], knee, ankle, heel: sole(-b.heelBack), ball, toe };
 }
 
-function arm(g: Gait, p: number, side: "L" | "R", shoulder: Vec): Arm {
+function arm(g: Gait, p: number, side: "L" | "R", shoulder: Vec, b: Build): Arm {
   const a = value(g, side === "L" ? "armL" : "armR", p) * RAD;
   const f = value(g, side === "L" ? "foreL" : "foreR", p) * RAD;
   const ad = down(a), fd = down(f);
-  const elbow: Vec = [shoulder[0] + BODY.upperArm * ad[0], shoulder[1] + BODY.upperArm * ad[1]];
-  const wrist: Vec = [elbow[0] + BODY.forearm * fd[0], elbow[1] + BODY.forearm * fd[1]];
-  const hand: Vec = [wrist[0] + BODY.hand * fd[0], wrist[1] + BODY.hand * fd[1]];
+  const elbow: Vec = [shoulder[0] + b.upperArm * ad[0], shoulder[1] + b.upperArm * ad[1]];
+  const wrist: Vec = [elbow[0] + b.forearm * fd[0], elbow[1] + b.forearm * fd[1]];
+  const hand: Vec = [wrist[0] + b.hand * fd[0], wrist[1] + b.hand * fd[1]];
   return { shoulder, elbow, wrist, hand };
 }
 
 type Raw = Omit<Pose, "pelvis">;
-function raw(g: Gait, p: number): Raw {
+function raw(g: Gait, p: number, b: Build): Raw {
   const lean = value(g, "trunk", p) * RAD;
-  const shoulder: Vec = [BODY.torso * Math.sin(lean), BODY.torso * Math.cos(lean)];
-  const neck: Vec = [shoulder[0] + BODY.neck * Math.sin(lean * 1.3), shoulder[1] + BODY.neck * Math.cos(lean * 1.3)];
+  const shoulder: Vec = [b.torso * Math.sin(lean), b.torso * Math.cos(lean)];
+  const neck: Vec = [shoulder[0] + b.neck * Math.sin(lean * 1.3), shoulder[1] + b.neck * Math.cos(lean * 1.3)];
   const nod = (value(g, "head", p) - HEAD_NEUTRAL) * RAD;
-  const r = BODY.head * 0.45;
-  const head: Vec = [neck[0] + r * Math.sin(nod * 0.6) + 0.03, neck[1] + r * Math.cos(nod * 0.6)];
-  return { near: leg(g, p, "L"), far: leg(g, p, "R"), nearArm: arm(g, p, "L", shoulder), farArm: arm(g, p, "R", shoulder), lean, shoulder, neck, head, nod };
+  const r = b.head * 0.45;
+  const head: Vec = [neck[0] + r * Math.sin(nod * 0.6) + b.head * 0.14, neck[1] + r * Math.cos(nod * 0.6)];
+  return { near: leg(g, p, "L", b), far: leg(g, p, "R", b), nearArm: arm(g, p, "L", shoulder, b), farArm: arm(g, p, "R", shoulder, b), lean, shoulder, neck, head, nod };
 }
 
 const contacts = (o: Raw): Vec[] => [o.near.heel, o.near.ball, o.far.heel, o.far.ball];
@@ -151,18 +138,18 @@ interface Table {
 }
 const N = 240;
 const tables = new Map<string, Table>();
-const key = (g: Gait): string => g.map(([n, w]) => `${n}:${w}`).join(",");
+const key = (g: Gait, b: Build): string => `${b.id}|${g.map(([n, w]) => `${n}:${w}`).join(",")}`;
 
 /** Roll the body over the lowest point of either foot (no skating); when the take
  * says both feet are off the floor, rise by that much and coast. */
-function table(g: Gait): Table {
-  const hit = tables.get(key(g));
+function table(g: Gait, b: Build): Table {
+  const hit = tables.get(key(g, b));
   if (hit) return hit;
   const travel: number[] = [];
   let x = 0, v = 0;
-  let prev = raw(g, 0);
+  let prev = raw(g, 0, b);
   for (let i = 0; i <= N; i++) {
-    const o = raw(g, i / N);
+    const o = raw(g, i / N, b);
     const cs = contacts(o);
     const was = contacts(prev);
     const { at } = planted(cs, i === 0 ? cs : was);
@@ -178,7 +165,7 @@ function table(g: Gait): Table {
     prev = o;
   }
   const t = { travel, stride: x };
-  tables.set(key(g), t);
+  tables.set(key(g, b), t);
   return t;
 }
 
@@ -187,22 +174,22 @@ function sample(a: readonly number[], p: number): number {
   return (a[i] ?? 0) * (1 - k) + (a[i + 1] ?? 0) * k;
 }
 
-export function strideLength(g: Gait): number {
-  return table(g).stride;
+export function strideLength(g: Gait, b: Build = REFERENCE): number {
+  return table(g, b).stride;
 }
 
 /** Metres walked after `sec` seconds, and the stride phase there. */
-export function progress(g: Gait, sec: number): { x: number; phase: number } {
-  const strides = sec * cadence(g);
+export function progress(g: Gait, sec: number, b: Build = REFERENCE): { x: number; phase: number } {
+  const strides = sec * cadence(g, b);
   const c = Math.floor(strides), p = strides - c;
-  const tb = table(g);
+  const tb = table(g, b);
   return { x: c * tb.stride + sample(tb.travel, p), phase: p };
 }
 
 /** The whole body at stride phase p, feet on y = 0, pelvis above x = 0. */
-export function pose(g: Gait, p: number): Pose {
+export function pose(g: Gait, p: number, b: Build = REFERENCE): Pose {
   const q = ((p % 1) + 1) % 1;
-  const o = raw(g, q);
+  const o = raw(g, q, b);
   // Lowest point of either foot on the floor, plus any flight from the take.
   let lo = Infinity;
   for (const c of contacts(o)) lo = Math.min(lo, c[1]);
@@ -220,8 +207,8 @@ export type Soles = readonly number[];
  * far the body moves this frame so that the planted foot stays put. `was` is
  * the soles last frame (undefined on the first), `v` the last frame's travel,
  * used to coast through a run's flight. */
-export function stepBody(was: Soles | undefined, g: Gait, p: number, v: number): { dx: number; soles: Soles } {
-  const cs = contacts(raw(g, ((p % 1) + 1) % 1));
+export function stepBody(was: Soles | undefined, g: Gait, p: number, v: number, b: Build = REFERENCE): { dx: number; soles: Soles } {
+  const cs = contacts(raw(g, ((p % 1) + 1) % 1, b));
   const soles = cs.flatMap((c) => [c[0], c[1]]);
   if (!was) return { dx: 0, soles };
   const prev: Vec[] = [0, 1, 2, 3].map((i): Vec => [was[i * 2] ?? 0, was[i * 2 + 1] ?? 0]);

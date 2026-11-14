@@ -1,2 +1,3 @@
 {"date": "2026-11-14", "commit": "d85447669", "model": "opus-5.5", "action": "authored", "cycles": 3, "outcome": "pass", "notes": "CMU mocap walk styles, blends, run; skirt and coat on chain skeletons; limbless variant."}
 {"date": "2026-11-14", "commit": "539f5bb36", "model": "opus-5.5", "action": "revised", "cycles": 2, "outcome": "pass", "notes": "Skirt kept outside the legs; bold walks; keyboard play sheet."}
+{"date": "2026-11-14", "commit": "ca4a57333", "model": "opus-5.5", "action": "revised", "cycles": 2, "outcome": "pass", "notes": "Body archetypes with bounded modifiers; front view; turn through the camera."}
