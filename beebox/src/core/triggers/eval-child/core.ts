@@ -175,12 +175,15 @@ function describeThrow(e: unknown): string {
 
 function checkResult(value: unknown): TriggerResult | null | { error: string } {
   if (value === null || value === undefined) return null;
-  if (!isRecord(value) || typeof value["text"] !== "string") return { error: "trigger() returned something other than null or { text, note?, done? }" };
-  const note = value["note"];
-  const done = value["done"];
+  const shape = "trigger() returned something other than null, { text, note?, done?, card? } or { done: true }";
+  if (!isRecord(value)) return { error: shape };
+  const { text, note, done, card } = value;
+  if (text !== undefined && typeof text !== "string") return { error: "trigger() returned a `text` that is not a string" };
   if (note !== undefined && typeof note !== "string") return { error: "trigger() returned a `note` that is not a string" };
   if (done !== undefined && typeof done !== "boolean") return { error: "trigger() returned a `done` that is not a boolean" };
-  return { text: value["text"], ...(note === undefined ? {} : { note }), ...(done === undefined ? {} : { done }) };
+  if (card !== undefined && typeof card !== "string") return { error: "trigger() returned a `card` that is not a string" };
+  if (text === undefined && done !== true) return { error: shape };
+  return { ...(text === undefined ? {} : { text }), ...(note === undefined ? {} : { note }), ...(done === undefined ? {} : { done }), ...(card === undefined ? {} : { card }) };
 }
 
 /** Run one evaluation; the last stdout line is a `result`, `none` or `error` record. */
@@ -225,6 +228,7 @@ export async function runEvalChild(raw: unknown): Promise<void> {
   if (result === null) writeRecord({ kind: "none", at: now(job.boxRoot) });
   else if ("error" in result) writeRecord({ kind: "error", at: now(job.boxRoot), message: result.error });
   else writeRecord({ kind: "result", at: now(job.boxRoot), ...result });
+  // (`result` may be `{ done: true }` alone: the quiet end.)
 }
 
 /** `--inspect`: import and print `{ label, tick }` or `{ error }` as the last stdout line. */

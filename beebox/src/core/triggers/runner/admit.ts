@@ -5,7 +5,8 @@
  * `stale` and nothing is delivered. Otherwise `lastEvalSeq` advances, an
  * `error` sets `failed`, a normal return restores a `failed` activation to
  * `armed`, a result inside the fire floor is `suppressed`, and a fire that
- * cannot be delivered ends the activation as `delivery-failed`.
+ * cannot be delivered ends the activation as `delivery-failed`. A result with
+ * `done` and no text ends the activation quietly: nothing is delivered.
  *
  * The lock is held through the message's admission, not through a cold
  * engine start (which can take 30 s while a disarm waits 5 s): once the chat
@@ -33,6 +34,8 @@ export interface AdmitArgs {
   maxSeq: number;
   /** How many new entries the evaluation was given. */
   entries: number;
+  /** The card the latest entry came from (its pane card when inside one): the notice's default link. */
+  card: string | null;
   now: Date;
   deliver: Deliver;
 }
@@ -82,20 +85,19 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
       admission = { ...admission, changed: true };
     }
     if (final.kind === "result") {
-      if (next.lastFireAt !== undefined && now.getTime() - Date.parse(next.lastFireAt) < FIRE_FLOOR_MS) {
-        admission = { ...admission, outcome: "suppressed" };
+      const text = final.text;
+      if (text === undefined) {
+        // Quiet end: nothing to say, nothing delivered; the agent hears of it through the hint.
+        next = { ...next, state: "done" };
+        admission = { ...admission, outcome: "done", changed: true, ended: true };
+      } else if (next.lastFireAt !== undefined && now.getTime() - Date.parse(next.lastFireAt) < FIRE_FLOOR_MS) {
+        // The notice is dropped, but a `done` with it still ends the activation, quietly.
+        if (final.done === true) next = { ...next, state: "done" };
+        admission = { ...admission, outcome: "suppressed", ...(final.done === true ? { changed: true, ended: true } : {}) };
       } else {
-        const text = final.text.length > TEXT_CAP ? `${final.text.slice(0, TEXT_CAP - 1)}…` : final.text;
-        const message = serializeTrigger({ kind: "trigger", label: current.label, file: current.file, fire: next.fires + 1, entries: args.entries, done: final.done === true, text, note: final.note ?? null });
-        const sent = await startDelivery(args.deliver, { sessionId: who.sessionId, message });
-        if (sent.kind === "failed") {
-          const error = deliveryError(sent.error);
-          next = { ...next, state: "delivery-failed", error };
-          admission = { ...admission, outcome: "delivery-failed", error, changed: true, ended: true };
-        } else {
-          next = { ...next, fires: next.fires + 1, lastFireAt: now.toISOString(), ...(final.done === true ? { state: "done" } : {}) };
-          admission = { ...admission, outcome: "fired", changed: true, ended: final.done === true, pending: sent.kind === "admitted" ? sent.pending : undefined };
-        }
+        const fired = await fire(args, { current, next, text, note: final.note, done: final.done === true, card: final.card });
+        next = fired.next;
+        admission = { ...admission, ...fired.admission };
       }
     }
   }
@@ -103,6 +105,26 @@ export async function admitResult(args: AdmitArgs): Promise<Admission> {
   // Announcing stays with the store here: this write can also persist another activation's expiry, which the runner's `changed` would not report.
   await updateActivationsLocked(who, { now, fn: (activations) => activations.map((a) => (a.id === activationId ? written : a)) });
   return admission;
+}
+
+/** Serialize and send one notice; the activation's next state and the admission fields for the outcome. */
+async function fire(
+  args: AdmitArgs,
+  result: { current: Activation; next: Activation; text: string; note: string | undefined; done: boolean; card: string | undefined },
+): Promise<{ next: Activation; admission: Partial<Admission> }> {
+  const { current, next, done } = result;
+  const text = result.text.length > TEXT_CAP ? `${result.text.slice(0, TEXT_CAP - 1)}…` : result.text;
+  const message = serializeTrigger({ kind: "trigger", label: current.label, file: current.file, card: result.card ?? args.card, fire: next.fires + 1, entries: args.entries, done, text, note: result.note ?? null });
+  const sent = await startDelivery(args.deliver, { sessionId: args.who.sessionId, message });
+  if (sent.kind === "failed") {
+    const error = deliveryError(sent.error);
+    return { next: { ...next, state: "delivery-failed", error }, admission: { outcome: "delivery-failed", error, changed: true, ended: true } };
+  }
+  // A fire that ends the activation has told the agent itself; only a quiet end waits for the hint.
+  return {
+    next: { ...next, fires: next.fires + 1, lastFireAt: args.now.toISOString(), ...(done ? { state: "done", noticed: true } : {}) },
+    admission: { outcome: "fired", changed: true, ended: done, pending: sent.kind === "admitted" ? sent.pending : undefined },
+  };
 }
 
 type DeliveryStart = { kind: "delivered" } | { kind: "admitted"; pending: Promise<void> } | { kind: "failed"; error: unknown };

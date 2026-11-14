@@ -12,7 +12,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { recordActivity } from "../../../src/core/activity/log.js";
-import { armActivation, disarmActivations, listActivations } from "../../../src/core/triggers/activation.js";
+import { armActivation, disarmActivations, listActivations, patchActivation } from "../../../src/core/triggers/activation.js";
 import type { EvalJob } from "../../../src/core/triggers/eval-child/core.js";
 import type { EvalOutput } from "../../../src/core/triggers/eval.js";
 import { TriggerRunner, type RunnerTimers } from "../../../src/core/triggers/runner/core.js";
@@ -111,7 +111,8 @@ void test("Activity settles into one evaluation; the fire is delivered and done 
   await runner.onActivity(["s1"]);
   await timers.advance(1000);
   t.check(child.jobs.at(1)?.entries.map((e) => e.detail), ["bond"]);
-  t.check(delivered, ["<trigger label=\"Water check\" file=\"src/triggers/water.ts\" fire=\"1\" entries=\"1\" done=\"1\">\n<text>That's water.</text>\n<note>n</note>\n</trigger>"]);
+  // The notice links to the card the latest entry came from.
+  t.check(delivered, ["<trigger label=\"Water check\" file=\"src/triggers/water.ts\" card=\"Lab.figure.card\" fire=\"1\" entries=\"1\" done=\"1\">\n<text>That's water.</text>\n<note>n</note>\n</trigger>"]);
   t.check((await listActivations({ boxRoot: box.root, sessionId: "s1" }, { now: timers.now() })).map((a) => [a.state, a.fires, a.lastFireAt]), [["done", 1, "2026-11-14T10:00:02.600Z"]]);
   t.check(emitted, ["s1"]);
   t.check((await readTrace(box.root)).map((l) => [l.reason, l.entries, l.outcome]), [["activity", 2, "none"], ["activity", 1, "fired"]]);
@@ -121,6 +122,27 @@ void test("Activity settles into one evaluation; the fire is delivered and done 
   await runner.onActivity(["s1"]);
   await timers.advance(5000);
   t.check(child.jobs.map((j) => j.entries.length), [2, 1]);
+});
+
+void test("A result with done and no text ends the activation quietly: nothing delivered, traced as done.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const timers = new FakeTimers();
+  const delivered: string[] = [];
+  const emitted: string[] = [];
+  const child = fakeChild([() => ({ kind: "result", at: at("01"), done: true })]);
+  const runner = new TriggerRunner({ boxRoot: box.root, evaluate: child.evaluate, deliver: async ({ message }) => { delivered.push(message); }, presence: async () => 1, emit: (s) => emitted.push(s), timers, now: timers.now });
+  timers.idle = () => runner.idle();
+  t.teardown(() => { runner.stop(); });
+  await armActivation(box.root, { sessionId: "s1", file: "stuck.ts", config: null, label: "Stuck watch", expires: "never", now: timers.now() });
+  await runner.reload("s1");
+  await act(box.root, "solved it");
+  await runner.onActivity(["s1"]);
+  await timers.advance(1000);
+  t.check(delivered, []);
+  t.check((await listActivations({ boxRoot: box.root, sessionId: "s1" }, { now: timers.now() })).map((a) => [a.state, a.fires, a.noticed]), [["done", 0, false]]);
+  t.check((await readTrace(box.root)).map((l) => l.outcome), ["done"]);
+  t.check(emitted, ["s1"]);
 });
 
 void test("Continuous batches evaluate within the settle cap, and a batch during an evaluation re-arms it.", async (t) => {
@@ -176,6 +198,7 @@ void test("A disarm during an evaluation drops the result as stale; delivery fai
     () => ({ kind: "result", at: at("04"), text: "first" }),
     () => ({ kind: "result", at: at("05"), text: "too soon" }),
     () => ({ kind: "result", at: at("06"), text: "undeliverable" }),
+    () => ({ kind: "result", at: at("07"), text: "resolved, too soon", done: true }),
   ]);
   const emitted: string[] = [];
   const runner = new TriggerRunner({
@@ -234,6 +257,15 @@ void test("A disarm during an evaluation drops the result as stale; delivery fai
   t.check((await readTrace(box.root, { session: "s1" })).map((l) => l.outcome), ["stale", "error", "none", "fired", "suppressed", "delivery-failed"]);
   t.check(emitted, ["s1", "s1", "s1", "s1"]);
   t.check((await listActivations(who, { now: timers.now() })).map((x) => x.id), [a.id, b.id]);
+
+  // 7: a `done` inside the fire floor: the notice is dropped, the activation still ends, and the hint will say so.
+  refuse = "ok";
+  const c = await armActivation(box.root, { sessionId: "s1", file: "t.ts", config: null, label: "T", expires: "never", now: timers.now() });
+  await patchActivation({ ...who, id: c.id }, { fn: (x) => ({ ...x, lastFireAt: timers.now().toISOString(), fires: 1 }) });
+  await runner.reload("s1");
+  await run("s");
+  t.check((await listActivations(who, { now: timers.now() })).filter((x) => x.id === c.id).map((x) => [x.state, x.fires, x.noticed]), [["done", 1, false]]);
+  t.check((await readTrace(box.root, { session: "s1" })).map((l) => l.outcome).at(-1), "suppressed");
 });
 
 void test("Ticks run while someone is present and the deadline ends an activation on time.", async (t) => {

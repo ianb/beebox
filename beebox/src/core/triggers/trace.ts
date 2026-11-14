@@ -33,13 +33,13 @@ export const traceRecordSchema = z.discriminatedUnion("kind", [
     verdict: z.unknown(),
     ms: z.number(),
   }),
-  z.object({ kind: z.literal("result"), at: z.string(), text: z.string(), note: z.string().optional(), done: z.boolean().optional() }),
+  z.object({ kind: z.literal("result"), at: z.string(), text: z.string().optional(), note: z.string().optional(), done: z.boolean().optional(), card: z.string().optional() }),
   z.object({ kind: z.literal("none"), at: z.string() }),
   z.object({ kind: z.literal("error"), at: z.string(), message: z.string() }),
 ]);
 export type TraceRecord = z.infer<typeof traceRecordSchema>;
 
-export const TRACE_OUTCOMES = ["none", "fired", "suppressed", "stale", "error", "delivery-failed", "skipped", "expired"] as const;
+export const TRACE_OUTCOMES = ["none", "fired", "done", "suppressed", "stale", "error", "delivery-failed", "skipped", "expired"] as const;
 export type TraceOutcome = (typeof TRACE_OUTCOMES)[number];
 
 export const traceLineSchema = z.object({

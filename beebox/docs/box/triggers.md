@@ -63,12 +63,40 @@ What the function receives:
   judge is unconfigured, over the daily budget, or fails, you get
   `{ kind: "unavailable", reason }` and decide what to do.
 
-What it returns: `null` (nothing to say), or `{ text, note?, done? }`.
-`text` is what the person sees (up to 2,000 characters); `note` is for you
-only; `done: true` ends the activation after this fire. A second result
-within 5 seconds of a fire is suppressed. The function runs in its own
-process with a 20-second limit; a throw or a hang marks the activation
-"not working" until an evaluation returns normally.
+What it returns:
+
+- `null`: nothing to say, keep watching.
+- `{ text, note?, done?, card? }`: a notice. `text` is what the person sees
+  (up to 2,000 characters); `note` is for you only; `done: true` ends the
+  activation after this notice; `card` is the card the notice links to
+  (default: the card the latest entry came from).
+- `{ done: true }` alone: end quietly. Nothing is shown; your next turn's
+  `<triggers done="1"/>` says it ended. A watcher for failed attempts ends
+  itself this way when it sees success.
+
+A second notice within 5 seconds of one is suppressed. The function runs in
+its own process with a 20-second limit; a throw or a hang marks the
+activation "not working" until an evaluation returns normally.
+
+## The notice is not you
+
+A notice shows in the chat as a system row under the trigger's label, like
+"WATER CHECK · noticed", with a link back to the card. It is the watcher
+reporting what it saw, not you speaking, so write `text` as an observation
+in the watcher's voice: "Two checks and H and O still do not match." Not
+"I can walk through it with you" or "Which side looks short to you?":
+offers, questions and the help itself come from you, in the turn the notice
+starts, where the person can answer. Keep it to a sentence or two. Name the
+trigger for what it watches ("Balance check", "Stuck watch"), not as a
+persona ("Chemistry coach"): the label is the eyebrow of the notice, and a
+persona there reads as a second tutor.
+
+A trigger watches one situation and ends itself when that situation is
+over: `done: true` with the notice that resolves it, or `{ done: true }`
+alone when success needs no notice. A trigger that never ends fires again
+every time the situation recurs, and again from scratch if you re-arm it,
+since its history starts at arming. Several small triggers, each with an
+end, beat one coach that watches everything.
 
 ## Arming, watching, stopping
 
@@ -100,11 +128,13 @@ with
 </trigger>
 ```
 
-The person has already read `<text>`: do not repeat it. Add something only
-if it helps; otherwise `<ack kind="no-response"/>`. `bbx chat activity`
-lists what the person did since their last message, including the actions
-that fired it. Your chat snapshot carries `<triggers armed="N" failed="F"
-expired="E"/>` while any activation is live or has something to tell you.
+The person has already read `<text>`: do not repeat it. This turn is where
+the help goes, if any: an offer, a question, a next step; otherwise
+`<ack kind="no-response"/>`. `bbx chat activity` lists what the person did
+since their last message, including the actions that fired it. Your chat
+snapshot carries `<triggers armed="N" failed="F" expired="E" done="D"/>`
+while any activation is live or has something to tell you: `expired` and
+`done` count endings you have not been told of yet.
 
 ## Debugging
 
@@ -126,6 +156,8 @@ file of activity lines (what `bbx chat activity --json` prints);
 - Triggers read the activity log, so they see what views and figures
   logged and nothing else: not the live state of a figure, not the page.
   If a trigger needs to know something, make the figure or view log it.
+  A figure embedded in a chat message (`![…](…figure.card)`) logs like one
+  in the companion pane.
 - Ticks run while anyone in the box has a tab open, not only this chat's
   person, until the activation expires.
 - One evaluation per chat at a time; batches that land during one are

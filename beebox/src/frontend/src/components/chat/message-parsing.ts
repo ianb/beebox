@@ -14,6 +14,8 @@ import { stripChatAppTags } from "@shared/chat-tags";
 import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
 import { getApiBase } from "../../api-core";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
+import type { TriggerUserMessage } from "@shared/delivered-trigger-message";
+import { entryTriggerNotices } from "./trigger-notice";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -235,7 +237,8 @@ export function stripSpeechTags(content: string): string {
  */
 export type MessageGroup =
   | { type: "user" | "assistant" | "compaction" | "interrupted"; entries: SessionEntry[] }
-  | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] };
+  | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] }
+  | { type: "trigger"; entries: SessionEntry[]; notices: TriggerUserMessage[] };
 
 /**
  * Local-command entries are injected by the Claude CLI when slash commands
@@ -271,6 +274,12 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
     const notes = entrySelfNotes(entry);
     if (notes) {
       groups.push({ type: "self-note", entries: [entry], notes });
+      continue;
+    }
+    // A trigger notice alone is a system row, not the person speaking.
+    const notices = entryTriggerNotices(entry);
+    if (notices) {
+      groups.push({ type: "trigger", entries: [entry], notices });
       continue;
     }
     if (entry.type === "assistant") {
