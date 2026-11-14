@@ -3,7 +3,7 @@
  * exports, what each evaluation receives, and what it may return. A box
  * imports these as types from `beebox/triggers` (src/exports/triggers.ts);
  * the evaluation child (`eval-child.ts`) validates a module against them.
- * See docs/plans/activity-triggers.md, Ontology.
+ * See docs/implemented-plans/activity-triggers.md, Ontology.
  */
 
 import type { ActivityLine } from "../activity/entry.js";

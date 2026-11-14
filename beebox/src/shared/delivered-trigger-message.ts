@@ -1,5 +1,5 @@
 /**
- * The `<trigger>` delivered user message (docs/plans/activity-triggers.md,
+ * The `<trigger>` delivered user message (docs/implemented-plans/activity-triggers.md,
  * Track E): a trigger the agent armed fired. The person has already seen
  * `<text>` under the trigger's label; `<note>` is for the agent. The
  * registry in `delivered-user-message.ts` dispatches to this codec.

@@ -1,6 +1,6 @@
 /**
  * The words of the chat column's trigger status line
- * (docs/plans/activity-triggers.md, Track F): "Watching: Water check" while
+ * (docs/implemented-plans/activity-triggers.md, Track F): "Watching: Water check" while
  * triggers are armed, "Water check: not working" for one whose last
  * evaluation failed, nothing when none is live. Principle: the line shows the
  * state the system is in, never "watching" while the last run failed.

@@ -9,7 +9,7 @@ discovered-by: Ian
 discovered-in: "activity-triggers workstream, the live check of the first fire, 2026-11-14"
 ---
 
-The live check of activity triggers (`docs/plans/activity-triggers.md`,
+The live check of activity triggers (`docs/implemented-plans/activity-triggers.md`,
 Rollout shape) could not click the figure: the headless Chromium that
 `bin/browse` drives never fires `requestAnimationFrame`, and a canvas-loop
 figure flushes its input on frames. The check posted the figure's activity

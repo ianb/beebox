@@ -1,5 +1,5 @@
 /**
- * The box's trigger runner (docs/plans/activity-triggers.md, Track C): one
+ * The box's trigger runner (docs/implemented-plans/activity-triggers.md, Track C): one
  * per box, fed by the activity route, delivering fires through the same path
  * as captures and calls. The CLI arms and disarms from another process; its
  * `trigger-changed` arrives over the bus's poll and reloads the session's

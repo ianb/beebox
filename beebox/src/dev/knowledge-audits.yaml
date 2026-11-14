@@ -1,5 +1,5 @@
 tests:
-  # === Activity triggers (docs/plans/activity-triggers.md) ===
+  # === Activity triggers (docs/implemented-plans/activity-triggers.md) ===
   # Status (2026-11-14, Claude): both passed on the activity-triggers test1
   # clone, twice: with the first prompt text and again after the boxholder had
   # it cut to a pointer (the feature is look-up knowledge for interactives and

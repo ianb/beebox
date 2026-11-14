@@ -1,6 +1,6 @@
 ---
 title: "Activity triggers: agent-written functions that watch what a person does and respond"
-status: active
+status: implemented
 workstream: activity-triggers
 issues:
   - ../../../issues/exploration/2026-10-18-interactive-triggers-in-educational-material.md
