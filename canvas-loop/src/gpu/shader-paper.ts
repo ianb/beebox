@@ -3,13 +3,16 @@
 // whole paper pixels it equals today's paper layer. `q` is a paper pixel; the
 // result is the valley alpha a grainy brush loses pigment to; `paperTooth` is
 // the height before thresholding, which a wash's pigment settles by.
-export const PAPER_WGSL = /* wgsl */ `
+/** core/brush/random.ts's `mix` (lowbias32); u32 multiplication wraps as `Math.imul` does. */
+export const MIX_WGSL = /* wgsl */ `
 fn mix32(v0: u32) -> u32 {
   var x = v0;
   x ^= x >> 16u; x *= 0x7feb352du; x ^= x >> 15u; x *= 0x846ca68bu; x ^= x >> 16u;
   return x;
 }
-fn rnd(seed: u32, ch: u32, idx: u32) -> f32 {
+`;
+
+export const PAPER_WGSL = /* wgsl */ `${MIX_WGSL}fn rnd(seed: u32, ch: u32, idx: u32) -> f32 {
   return f32(mix32(seed ^ mix32(ch * 0x9e3779b1u + mix32(idx)))) / 4294967296.0;
 }
 fn lattice(seed: u32, ch: u32, x: i32, y: i32) -> f32 {

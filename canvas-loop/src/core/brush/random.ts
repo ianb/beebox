@@ -3,8 +3,8 @@
 // before (insertion stability), and a feature read by arc length stays put when
 // a later part of the mark is edited.
 
-/** 32-bit integer mix (lowbias32). */
-function mix(input: number): number {
+/** 32-bit integer mix (lowbias32); the GPU's `mix32` (gpu/shader-paper.ts) is the same, bit for bit. */
+export function mix(input: number): number {
   let x = input >>> 0;
   x ^= x >>> 16;
   x = Math.imul(x, 0x7feb352d);

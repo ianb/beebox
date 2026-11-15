@@ -4,6 +4,7 @@
 // children first (one texture each), and submits once. Brush expansions,
 // rasterised glyphs and `pixels` images are kept between frames while used.
 import { BrushExpander } from "../scene/brush/expand.js";
+import type { Prepared } from "../scene/brush/expand.js";
 import type { GpuHandle } from "../device/open.js";
 import { GpuRenderError } from "../scene/errors.js";
 import type { Scene } from "../scene/nodes.js";
@@ -23,6 +24,7 @@ import type { Pipelines } from "./pipelines.js";
 import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
+import { BrushPass } from "./brush-pass.js";
 import { PainterlyPasses } from "./painterly.js";
 import { LightPass } from "./light.js";
 import type { GpuTimes } from "./timing.js";
@@ -107,6 +109,7 @@ export class GpuRenderer {
   readonly #atlas: CoverageAtlas;
   readonly #marks: MarkAtlas;
   readonly #smear: SmearPass;
+  readonly #brushes: BrushPass;
   readonly #painterly: PainterlyPasses;
   readonly #light: LightPass;
   readonly #expander: BrushExpander;
@@ -146,6 +149,7 @@ export class GpuRenderer {
     this.#atlas = new CoverageAtlas(gpu.device, gpu.atlasFormat);
     this.#marks = new MarkAtlas(gpu.device);
     this.#smear = new SmearPass(gpu.device);
+    this.#brushes = new BrushPass(gpu.device);
     this.#painterly = new PainterlyPasses(gpu.device);
     this.#light = new LightPass(gpu.device);
     this.#glyphs = new GlyphCache(gpu.raster);
@@ -167,10 +171,13 @@ export class GpuRenderer {
     this.#expander.beginFrame();
     this.#kept.beginFrame();
     this.#rasters.beginFrame();
-    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters }).lower(scene);
+    const drawn: Prepared[] = [];
+    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, drawn, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters }).lower(scene);
     const jobs = postOrder(root, []);
     const { pieces, marks, cells, clips } = packablesOf(jobs);
     const enc = device.createCommandEncoder();
+    // The GPU sample pass for every brushed stroke drawn. Nothing reads the samples yet; the stamp dabs will (canvas-loop-gpu-brushes.subplan.md, chunk 3).
+    this.#brushes.encode(drawn, { enc, temp: a.temp, timer: this.#timer });
     const stats = { ...emptyStats(), strokes: this.#expander.stats.strokes, expanded: this.#expander.stats.expanded, cacheHits: this.#expander.stats.hits, glyphs: cells.length };
     const t1 = performance.now();
     const timer = this.#timer;

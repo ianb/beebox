@@ -51,7 +51,8 @@ function apply(m: CtxTransform, p: Vec2): Vec2 {
 /** Wobble noise wavelength, in device pixels. */
 const WOBBLE_CELL = 28;
 
-function stepFor(brush: Brush, width: number): number {
+/** The sample spacing of `brush` at `width` device pixels. */
+export function stepFor(brush: Brush, width: number): number {
   switch (brush.kind) {
     case "ink":
       return Math.max(0.5, width / 6);
@@ -105,6 +106,16 @@ function markSeed(req: MarkRequest, device: readonly Contour[]): number {
   );
 }
 
+/**
+ * The wobble noise's lattice for a contour whose last sample is at arc length
+ * `total`. A closed loop gets a whole number of noise cells around it,
+ * wrapping, so the wobble at the end meets the wobble at the start.
+ */
+export function wobbleLattice(...[closed, total]: [boolean, number]): { period: number | undefined; cell: number } {
+  const period = closed ? Math.max(1, Math.round(total / WOBBLE_CELL)) : undefined;
+  return { period, cell: period === undefined ? WOBBLE_CELL : total / period };
+}
+
 /** A contour resampled at the brush's step, with the gesture's pressure and wobble (device pixels in, device pixels out). */
 export function shapeSamples(
   req: Pick<MarkRequest, "brush" | "gesture">,
@@ -117,13 +128,7 @@ export function shapeSamples(
   const pressure =
     req.gesture.pressure ?? (args.contour.closed ? "even" : "taper");
   const wobble = req.gesture.wobble ?? 0;
-  const total = samples.at(-1)?.s ?? 0;
-  // A closed loop gets a whole number of noise cells around it, wrapping, so
-  // the wobble at the end meets the wobble at the start.
-  const period = args.contour.closed
-    ? Math.max(1, Math.round(total / WOBBLE_CELL))
-    : undefined;
-  const cell = period === undefined ? WOBBLE_CELL : total / period;
+  const { period, cell } = wobbleLattice(args.contour.closed, samples.at(-1)?.s ?? 0);
   const pressureAt = envelopeAt(pressure);
   const noise = noiseOf(1, period);
   for (const s of samples) {

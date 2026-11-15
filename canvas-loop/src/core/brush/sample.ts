@@ -28,7 +28,7 @@ function segmentLengths(points: readonly Vec2[]): number[] {
 }
 
 /** Remove consecutive duplicate points; close the loop by repeating the start. */
-function prepare(points: readonly Vec2[], closed: boolean): Vec2[] {
+export function preparePoints(points: readonly Vec2[], closed: boolean): Vec2[] {
   const out: Vec2[] = [];
   for (const p of points) {
     const prev = out.at(-1);
@@ -47,7 +47,7 @@ function prepare(points: readonly Vec2[], closed: boolean): Vec2[] {
  * a contour shorter than one step (a dot) returns its single start point.
  */
 export function resample(points: readonly Vec2[], args: { closed: boolean; step: number }): Sample[] {
-  const pts = prepare(points, args.closed);
+  const pts = preparePoints(points, args.closed);
   const lengths = segmentLengths(pts);
   const total = lengths.reduce((a, b) => a + b, 0);
   const first = pts[0];
@@ -77,4 +77,20 @@ export function resample(points: readonly Vec2[], args: { closed: boolean; step:
     samples.push({ x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, nx: dy, ny: -dx, s, t: s / total, p: 1 });
   }
   return samples;
+}
+
+/**
+ * How many samples `resample` gives a prepared contour of `points` points and
+ * arc length `total`: its own loop (repeated addition of `step`, the last
+ * sample at `total`), run without placing anything. The GPU sample pass sizes
+ * its output by this, so the count must be the loop's, not a formula's.
+ */
+export function sampleCount(...[total, step, points]: [number, number, number]): number {
+  if (total < step || points < 2) return 1;
+  let n = 0;
+  for (let last = false, s = 0; !last; s += step) {
+    if (!(s < total - step * 0.5)) last = true;
+    n += 1;
+  }
+  return n;
 }

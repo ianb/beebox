@@ -7,7 +7,7 @@
 // partition the frame's span (an attribution, not an exact cost).
 
 /** What a pass does, for attribution. */
-export type PassKind = "coverage" | "marks" | "clip" | "draw" | "effect" | "painterly" | "smear" | "light" | "raster";
+export type PassKind = "coverage" | "marks" | "clip" | "draw" | "effect" | "painterly" | "smear" | "light" | "raster" | "brush";
 
 const CAPACITY = 4096;
 
