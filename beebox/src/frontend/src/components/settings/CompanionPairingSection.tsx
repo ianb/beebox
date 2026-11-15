@@ -36,7 +36,7 @@ function boxBaseUrl(): string {
  * given. The Mac app on the same computer can still use the link.
  */
 export function loopbackHost(hostname: string): boolean {
-  return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "[::1]" || /^127\./.test(hostname);
+  return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "[::1]" || hostname.startsWith("127.");
 }
 
 /**

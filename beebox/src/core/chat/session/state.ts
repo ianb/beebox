@@ -245,7 +245,7 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const pendingChat = turns.findLast((t) => t.pendingChat !== undefined)?.pendingChat;
   return {
     text: combinedTextParts.join("\n\n"),
-    ...(turns.length > 0 ? { activityTurn: { ...(pendingChat !== undefined ? { pendingChat } : {}) } } : {}),
+    ...(turns.length > 0 ? { activityTurn: pendingChat !== undefined ? { pendingChat } : {} } : {}),
     images: combinedImages,
     ...(channel !== undefined ? { channel } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),

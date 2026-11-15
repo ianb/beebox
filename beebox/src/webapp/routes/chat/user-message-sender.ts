@@ -29,7 +29,7 @@ export function createUserMessageSender(
     const { session: chatSession, id: knownId } = target;
     wireSession(chatSession);
     // Every message from this path is a person's, so it gets the activity hint.
-    const activityTurn = { ...(pendingChat !== undefined ? { pendingChat } : {}) };
+    const activityTurn = pendingChat !== undefined ? { pendingChat } : {};
     // A new chat has no id yet: bind the page's key to it once it is assigned.
     if (knownId === null && pendingChat !== undefined) {
       observeAssignedSession({
