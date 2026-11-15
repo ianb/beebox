@@ -1,28 +1,34 @@
 /**
  * Move one Markdown doc and rewrite every reference to it — the shared
- * operation behind closing an issue (`bin/issues close`) and landing a plan
- * (`bin/doc-move`).
+ * operation behind closing an issue (`bin/issues close`), confirming a manual
+ * test (`bin/workstreams confirm-tested`), and landing a plan (`bin/doc-move`).
  *
  * `doc-check --fix` repairs any broken link anywhere by unique basename, a
  * guess run over the whole working tree. A move knows exactly which file
  * moved, so it rewrites only references that resolve to that file's old path:
  * Markdown links and frontmatter paths, backticked repo paths in Markdown, and
- * `.md` mentions in code and YAML, test files included. The moved file's own
- * relative links are re-expressed from its new directory. Which files are read
- * for which kind of reference follows doc-check (beebox/src/dev/doc-check/scan-scope.ts).
+ * `.md` mentions in code and YAML, test files included, then any remaining
+ * path token that resolves only to the old path: a link label, a prose path,
+ * an HTML href. The moved file's own relative links are re-expressed from its
+ * new directory. Which files are read for which kind of reference follows
+ * doc-check (beebox/src/dev/doc-check/scan-scope.ts).
  *
- * Whatever it cannot rewrite with certainty it reports as a notice: an own
- * link to a missing file, a path token that two files could answer to, and any
- * remaining token that still resolves to the old path in a form the scanners
- * do not parse (a reference-style link, an HTML href). doc-check is no safety
- * net for those: its graph resolves a stale link by basename.
+ * A reference it cannot rewrite safely (a token two files could answer to, a
+ * public file linking into private-issues/) is a blocking notice: the move
+ * refuses before it writes anything. An own link to a missing file is
+ * reported and does not block; path arithmetic keeps it naming the same file.
+ *
+ * The move never stages. A worktree's index is shared by parallel workers
+ * (root AGENTS.md), and a staged rename in the main checkout blocks bin/land,
+ * so the move renames on disk and returns, per repository, the paths to
+ * `git add`.
  *
  * `private-issues/` is a separate repository mounted at the monorepo root. A
  * move never crosses repositories. A private move reads only private files;
  * a public move also reads private Markdown, since a private file may link to
  * a public one (never the reverse).
  *
- * `planDocMove` is pure (reads injected); `moveDoc` adds `git mv` and writes.
+ * `planDocMove` is pure (reads injected); `moveDoc` adds the rename and writes.
  * Every refusal happens before anything is written.
  */
 
@@ -31,14 +37,21 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { relocateLinks, type LinkRewrite } from "../../beebox/src/dev/doc-check/link-repair.js";
 import { findMentionsOf, repairFilePaths } from "../../beebox/src/dev/doc-check/file-paths.js";
+import { findPrivateLinkViolations } from "../../beebox/src/dev/doc-check/private-link.js";
 import { AGENT_DOCS_PREFIX, isFilePathExempt, isLinkScanned } from "../../beebox/src/dev/doc-check/scan-scope.js";
+
+import {
+  CrossRepositoryError, DestinationExistsError, DirtyFilesError, MissingSourceError, NotMarkdownError,
+  OutsideRepositoryError, SamePathError, UnsafeReferencesError, UntrackedSourceError, noticeLine,
+} from "./doc-move-errors.js";
 
 const PRIVATE_PREFIX = "private-issues/";
 
 export type Repository = "public" | "private";
 
 export interface DocMoveRewrite extends LinkRewrite {
-  kind: "link" | "path";
+  /** `label`: link text naming the old path; `prose`: any other path token. */
+  kind: "link" | "path" | "label" | "prose";
 }
 
 export interface FileRewrite {
@@ -53,6 +66,8 @@ export interface DocMoveNotice {
   path: string;
   line: number | null;
   message: string;
+  /** A reference the move cannot rewrite safely; the move refuses. */
+  blocking: boolean;
 }
 
 export interface DocMovePlan {
@@ -65,32 +80,13 @@ export interface DocMovePlan {
   notices: DocMoveNotice[];
 }
 
-export class DocMoveError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DocMoveError";
-  }
-}
-class NotMarkdownError extends DocMoveError {
-  constructor(p: string) { super(`${p}: only a .md file can be moved`); this.name = "NotMarkdownError"; }
-}
-class MissingSourceError extends DocMoveError {
-  constructor(from: string) { super(`${from}: no such file`); this.name = "MissingSourceError"; }
-}
-class DestinationExistsError extends DocMoveError {
-  constructor(to: string) { super(`${to}: destination already exists`); this.name = "DestinationExistsError"; }
-}
-class SamePathError extends DocMoveError {
-  constructor(from: string) { super(`${from}: source and destination are the same`); this.name = "SamePathError"; }
-}
-class CrossRepositoryError extends DocMoveError {
-  constructor(from: string, to: string) { super(`${from} -> ${to}: a move cannot cross between the monorepo and private-issues/ (separate repositories)`); this.name = "CrossRepositoryError"; }
-}
-class UntrackedSourceError extends DocMoveError {
-  constructor(from: string) { super(`${from}: not tracked by git; git add it first`); this.name = "UntrackedSourceError"; }
-}
-class OutsideRepositoryError extends DocMoveError {
-  constructor(p: string) { super(`${p}: path is outside the repository`); this.name = "OutsideRepositoryError"; }
+/** Paths to `git add -A --`, by repository, in that repository's own terms. */
+export type StagePaths = Record<Repository, string[]>;
+
+export interface DocMoveResult extends DocMovePlan {
+  stage: StagePaths;
+  /** Repo-relative files in the move that already had uncommitted changes. */
+  dirtyBefore: string[];
 }
 
 function repositoryOf(rel: string): Repository {
@@ -123,13 +119,18 @@ export function planDocMove({ from, to, sources, read, exists, editMoved }: {
       return target;
     },
   });
-  for (const target of missing) notices.push({ path: to, line: null, message: `own link to a missing file: ${target}` });
+  for (const target of missing) notices.push({ path: to, line: null, message: `own link to a missing file: ${target}`, blocking: false });
   const moved: FileRewrite = {
     path: to,
     repository: repositoryOf(to),
     rewrites: own.rewrites.map((r) => ({ ...r, kind: "link" })),
     content: editMoved ? editMoved(own.content) : own.content,
   };
+  if (moved.repository === "public") {
+    for (const v of findPrivateLinkViolations(to, moved.content)) {
+      notices.push({ path: to, line: v.line, message: `public file links into private-issues/: ${v.target}`, blocking: true });
+    }
+  }
 
   const basename = path.posix.basename(from);
   const files: FileRewrite[] = [];
@@ -141,11 +142,15 @@ export function planDocMove({ from, to, sources, read, exists, editMoved }: {
     notices.push(...result.notices);
     if (result.rewrites.length > 0) files.push({ path: rel, repository: repositoryOf(rel), content: result.content, rewrites: result.rewrites });
   }
-  return { from, to, moved, files, notices };
+  const seen = new Set<string>();
+  const unique = notices.filter((n) => {
+    const key = JSON.stringify(n);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { from, to, moved, files, notices: unique };
 }
-
-// A reference-style definition line (`[label]: target`).
-const DEFINITION_RE = /^\s{0,3}\[[^\]]+]:\s/;
 
 // Code, YAML, and shell sources whose `.md` mentions a move rewrites; doc-check
 // itself does not scan shell.
@@ -174,51 +179,92 @@ function rewriteReferences({ rel, content, from, to, exists }: {
     const bare = !markdown;
     const mentions = findMentionsOf({ docRel: rel, content: out, target: from, newPath: to, bare, fileExists: exists });
     for (const m of mentions.filter((p) => p.kind === "ambiguous")) {
-      notices.push({ path: rel, line: m.line, message: `ambiguous path \`${m.token}\` (matches ${(m.candidates ?? []).join(", ")}); not rewritten` });
+      notices.push({ path: rel, line: m.line, message: ambiguousMessage(m.token, m.candidates ?? []), blocking: true });
     }
     const moved = mentions.filter((p) => p.kind === "moved");
     out = repairFilePaths({ content: out, problems: moved, bare });
     rewrites.push(...moved.map((m) => ({ line: m.line, from: m.token, to: m.suggestion ?? m.token, kind: "path" as const })));
-    if (!markdown || linksMaintained) notices.push(...residualReferences({ rel, content: out, from }));
+    if (!markdown || linksMaintained) out = residuals({ rel, content: out, from, to, exists, linkFormsOnly: false, rewrites, notices });
   } else if (linksMaintained) {
-    // A historical record keeps its backticked paths, but its links follow.
-    notices.push(...residualReferences({ rel, content: out, from, linkFormsOnly: true }));
+    // A historical record keeps its backticked paths, but its links, their
+    // labels, and HTML hrefs follow.
+    out = residuals({ rel, content: out, from, to, exists, linkFormsOnly: true, rewrites, notices });
   }
   return { content: out, rewrites: rewrites.toSorted((a, b) => a.line - b.line), notices };
 }
 
-const PATH_CHAR = /[\w./~-]/;
+function ambiguousMessage(token: string, candidates: readonly string[]): string {
+  return `ambiguous path \`${token}\` (matches ${candidates.join(", ")}); not rewritten`;
+}
 
-// Each path-like token in `line` that ends with `basename`.
-function tokensEndingWith(line: string, basename: string): string[] {
-  const tokens: string[] = [];
+const PATH_CHAR = /[\w./~-]/;
+// A character after the basename that makes the token a different path
+// (`a.md.bak`, `a.mdx`, `a.md/x`, `a.md-old`). A `#anchor`, `:L3`, or
+// sentence punctuation ends it.
+const PATH_CONTINUES = /^(?:[\w/-]|\.\w)/;
+
+interface PathToken { start: number; end: number; text: string }
+
+// Each complete path-like token in `line` that ends with `basename`.
+function tokensEndingWith(line: string, basename: string): PathToken[] {
+  const tokens: PathToken[] = [];
   for (let at = line.indexOf(basename); at !== -1; at = line.indexOf(basename, at + basename.length)) {
+    const end = at + basename.length;
+    if (PATH_CONTINUES.test(line.slice(end, end + 2))) continue;
     let start = at;
     while (start > 0 && PATH_CHAR.test(line[start - 1] ?? "")) start--;
-    tokens.push(line.slice(start, at + basename.length));
+    tokens.push({ start, end, text: line.slice(start, end) });
   }
   return tokens;
 }
 
-// Tokens left in a maintained file that still name `from`: a path ending in
+// Half-open ranges of inline-link labels: the text of `[label](`.
+function inlineLabelRanges(line: string): Array<[number, number]> {
+  return [...line.matchAll(/\[([^\]]*)]\(/g)].map((m) => [m.index + 1, m.index + 1 + (m[1] ?? "").length]);
+}
+
+// Path tokens left in a maintained file that name `from`: a token ending in
 // its basename that resolves to it from the file's directory, its package
-// root, beebox/, or the repo root. A bare basename is a name, not a path.
-// With `linkFormsOnly`, only reference definitions and HTML `href`s count.
-function residualReferences({ rel, content, from, linkFormsOnly }: {
-  rel: string; content: string; from: string; linkFormsOnly?: boolean;
-}): DocMoveNotice[] {
+// root, beebox/, or the repo root (a bare basename is a name, not a path).
+// When `from` is the only existing file the token could name, it is
+// rewritten to name `to` from the same base; otherwise it blocks the move.
+// With `linkFormsOnly` (a historical record), only inline-link labels and
+// HTML `href`s are read; a reference definition's target was already
+// rewritten and its identifier is never touched.
+function residuals({ rel, content, from, to, exists, linkFormsOnly, rewrites, notices }: {
+  rel: string; content: string; from: string; to: string; exists: (rel: string) => boolean;
+  linkFormsOnly: boolean; rewrites: DocMoveRewrite[]; notices: DocMoveNotice[];
+}): string {
   const basename = path.posix.basename(from);
   const bases = [...new Set([path.posix.dirname(rel), rel.split("/")[0] ?? ".", "beebox", "."])];
-  const notices: DocMoveNotice[] = [];
-  for (const [i, line] of content.split("\n").entries()) {
-    if (linkFormsOnly === true && !DEFINITION_RE.test(line) && !line.includes("href=")) continue;
-    for (const token of tokensEndingWith(line, basename)) {
-      if (!token.includes("/")) continue;
-      if (!bases.some((base) => path.posix.normalize(path.posix.join(base, token)) === from)) continue;
-      notices.push({ path: rel, line: i + 1, message: `still names the old path: ${token}` });
+  return content.split("\n").map((line, i) => {
+    if (!line.includes(basename)) return line;
+    const labels = inlineLabelRanges(line);
+    const inLabel = (t: PathToken): boolean => labels.some(([s, e]) => t.start >= s && t.end <= e);
+    let out = line;
+    const found: DocMoveRewrite[] = [];
+    // Right to left, so earlier offsets stay valid as tokens change length.
+    for (const token of tokensEndingWith(line, basename).toReversed()) {
+      if (!token.text.includes("/")) continue;
+      const label = inLabel(token);
+      if (linkFormsOnly && !label && !line.slice(0, token.start).endsWith('href="')) continue;
+      const absolute = token.text.startsWith("/");
+      const resolve = (base: string): string => path.posix.normalize(absolute ? token.text.slice(1) : path.posix.join(base, token.text));
+      const tokenBases = absolute ? ["."] : bases;
+      const base = tokenBases.find((b) => resolve(b) === from);
+      if (base === undefined) continue;
+      const named = [...new Set(tokenBases.map(resolve))].filter((r) => r === from || exists(r));
+      if (named.length > 1) {
+        notices.push({ path: rel, line: i + 1, message: ambiguousMessage(token.text, named), blocking: true });
+        continue;
+      }
+      const replacement = absolute ? `/${to}` : path.posix.relative(base, to);
+      out = out.slice(0, token.start) + replacement + out.slice(token.end);
+      found.push({ line: i + 1, from: token.text, to: replacement, kind: label ? "label" : "prose" });
     }
-  }
-  return notices;
+    rewrites.push(...found.toReversed());
+    return out;
+  }).join("\n");
 }
 
 // ─── I/O ─────────────────────────────────────────────────────────────────────
@@ -266,13 +312,36 @@ function isTracked({ cwd, local }: { cwd: string; local: string }): boolean {
   return result.split("\0").includes(local);
 }
 
-export function moveDoc({ repoRoot, from: fromArg, to: toArg, dryRun, editMoved }: {
+// Repo-relative paths among `rels` with uncommitted changes, staged or not.
+function dirtyPaths(repoRoot: string, rels: readonly string[]): string[] {
+  const dirty = new Set<string>();
+  for (const repository of ["public", "private"] as const) {
+    const mine = rels.filter((rel) => repositoryOf(rel) === repository);
+    if (mine.length === 0) continue;
+    const { cwd } = gitCwd(repoRoot, mine[0] ?? "");
+    const prefix = repository === "private" ? PRIVATE_PREFIX : "";
+    const locals = mine.map((rel) => gitCwd(repoRoot, rel).local);
+    const out = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ...locals], { cwd, encoding: "utf8" });
+    // Each entry is `XY path`; a rename or copy adds its source as the next field.
+    const fields = out.split("\0").filter((f) => f.length > 0);
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i] ?? "";
+      dirty.add(`${prefix}${field.slice(3)}`);
+      if (/^[CR]/.test(field)) dirty.add(`${prefix}${fields[++i] ?? ""}`);
+    }
+  }
+  return rels.filter((rel) => dirty.has(rel));
+}
+
+export function moveDoc({ repoRoot, from: fromArg, to: toArg, dryRun, editMoved, refuseDirty }: {
   repoRoot: string;
   from: string;
   to: string;
   dryRun: boolean;
   editMoved?: EditMoved;
-}): DocMovePlan {
+  /** Refuse, before any write, when a file in the move has uncommitted changes. */
+  refuseDirty?: boolean;
+}): DocMoveResult {
   const { from, to } = resolveMove({ repoRoot, from: fromArg, to: toArg });
   const source = gitCwd(repoRoot, from);
   if (!isTracked(source)) throw new UntrackedSourceError(from);
@@ -293,31 +362,50 @@ export function moveDoc({ repoRoot, from: fromArg, to: toArg, dryRun, editMoved 
     exists: (rel) => fs.existsSync(abs(rel)),
     ...(editMoved ? { editMoved } : {}),
   });
-  if (dryRun) return plan;
+  const stage: StagePaths = { public: [], private: [] };
+  for (const rel of [from, to, ...plan.files.map((f) => f.path)]) stage[repositoryOf(rel)].push(gitCwd(repoRoot, rel).local);
+  const dirtyBefore = dirtyPaths(repoRoot, [from, ...plan.files.map((f) => f.path)]);
+  const result: DocMoveResult = { ...plan, stage, dirtyBefore };
+  if (dryRun) return result;
 
+  const blocking = plan.notices.filter((n) => n.blocking);
+  if (blocking.length > 0) throw new UnsafeReferencesError(from, blocking);
+  if (refuseDirty === true && dirtyBefore.length > 0) throw new DirtyFilesError(from, dirtyBefore);
   fs.mkdirSync(path.dirname(abs(to)), { recursive: true });
-  execFileSync("git", ["mv", "--", source.local, gitCwd(repoRoot, to).local], { cwd: source.cwd, stdio: ["ignore", "ignore", "inherit"] });
+  fs.renameSync(abs(from), abs(to));
   fs.writeFileSync(abs(to), plan.moved.content, "utf8");
   for (const file of plan.files) fs.writeFileSync(abs(file.path), file.content, "utf8");
-  return plan;
+  return result;
 }
 
 function rewriteLines(file: FileRewrite): string[] {
   return file.rewrites.map((r) => `  L${String(r.line)} ${r.kind} ${r.from} -> ${r.to}`);
 }
 
-/** The report both CLIs print: the move, each rewritten file and line, a total, and notices for stderr. */
-export function formatDocMove(plan: DocMovePlan, { dryRun }: { dryRun: boolean }): { stdout: string; stderr: string } {
+/**
+ * The report every caller prints: the move, each rewritten file and line, a
+ * total, and the `git add` line for each repository; notices for stderr. A
+ * dry run lists blocking notices as what would refuse the move.
+ */
+export function formatDocMove(result: DocMoveResult, { dryRun }: { dryRun: boolean }): { stdout: string; stderr: string } {
   const verb = dryRun ? "would rewrite" : "rewrote";
-  const out = [`${dryRun ? "would move" : "moved"} ${plan.from} -> ${plan.to}`];
+  const out = [`${dryRun ? "would move" : "moved"} ${result.from} -> ${result.to}`];
   // Own links are rewritten before a caller's edit (a closing note) shifts lines.
-  if (plan.moved.rewrites.length > 0) out.push(`  own links, by line in ${plan.from}:`, ...rewriteLines(plan.moved));
-  for (const file of plan.files) {
-    const label = file.repository === "private" && repositoryOf(plan.from) === "public" ? "private-issues (commit inside that repo): " : "";
+  if (result.moved.rewrites.length > 0) out.push(`  own links, by line in ${result.from}:`, ...rewriteLines(result.moved));
+  for (const file of result.files) {
+    const label = file.repository === "private" && repositoryOf(result.from) === "public" ? "private-issues (commit inside that repo): " : "";
     out.push(`${label}${verb} ${file.path}`, ...rewriteLines(file));
   }
-  const count = plan.files.reduce((n, f) => n + f.rewrites.length, 0);
-  out.push(`${String(count)} reference(s) ${dryRun ? "to rewrite" : "rewritten"} in ${String(plan.files.length)} file(s)`);
-  const err = plan.notices.map((n) => `check by hand: ${n.path}${n.line === null ? "" : `:L${String(n.line)}`}: ${n.message}`);
+  const count = result.files.reduce((n, f) => n + f.rewrites.length, 0);
+  out.push(`${String(count)} reference(s) ${dryRun ? "to rewrite" : "rewritten"} in ${String(result.files.length)} file(s)`);
+  if (!dryRun) {
+    out.push("not staged; stage this move with:");
+    if (result.stage.public.length > 0) out.push(`  git add -A -- ${result.stage.public.join(" ")}`);
+    if (result.stage.private.length > 0) out.push(`  git -C private-issues add -A -- ${result.stage.private.join(" ")}`);
+  }
+  if (result.dirtyBefore.length > 0) {
+    out.push(`other uncommitted changes ${dryRun ? "are" : "were"} already in: ${result.dirtyBefore.join(", ")}; stage those files by hunk (git add -p)`);
+  }
+  const err = result.notices.map((n) => `${n.blocking ? (dryRun ? "would refuse" : "refused") : "check by hand"}: ${noticeLine(n)}`);
   return { stdout: `${out.join("\n")}\n`, stderr: err.length > 0 ? `${err.join("\n")}\n` : "" };
 }

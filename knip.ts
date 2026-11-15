@@ -141,9 +141,8 @@ const config: KnipConfig = {
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // beebox package scripts, invoked across the workspace boundary:
-    // bin/deferred-issues.ts and bin/lib/manual-testing.sh run
-    // `pnpm --dir beebox doc-check`, and the root postinstall runs
-    // `pnpm --dir beebox exec tap build`. Knip reads the command word as a
+    // bin/deferred-issues.ts runs `pnpm --dir beebox doc-check`, and the
+    // root postinstall runs `pnpm --dir beebox exec tap build`. Knip reads the command word as a
     // binary this workspace must declare; the declaring package is beebox.
     "doc-check",
     "tap",

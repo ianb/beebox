@@ -95,7 +95,9 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
   duplicate prose line; renames follow `beebox/docs/README.md`. Move with
   `bin/doc-move <plan> <destination-dir>/`: it rewrites every
-  reference, tests included, and prints each; fix any `check by hand` line.
+  reference, tests included, prints each, and stages nothing; run the
+  `git add` lines it prints. Fix any `check by hand` line; a `refused` move
+  changed nothing.
   Then run `pnpm --dir beebox doc-graph`.
 
 ## 6. Close resolved issues
@@ -107,7 +109,8 @@ specific evidence of a missing related issue; search that symptom or identifier,
 not every file and symbol in the diff, nor a reconciled candidate unless later work
 affects it. For each issue this work **actually resolves**: `bin/issues close <issue>
 --resolution implemented|wontfix|superseded --workstream <name> --note "<resolving
-commit; any divergence from what the issue proposed>"`; fix any `check by hand` line.
+commit; any divergence from what the issue proposed>"`; stage the paths it prints and
+fix any `check by hand` line.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
 issues** close with the same command; commit them inside `private-issues/`.
