@@ -280,3 +280,26 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
   assert.match(hints[0] ?? "", /^frame 3: hint: picture "badge" was placed at a new scale or rotation in each of the last 3 frames .*\(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
   assert.deepEqual(out.warnings, []);
 });
+
+onGpu("off the canvas: only what is off on every frame warns, once; unboxed text crossing the edge warns; a glow reaching in does not", async (handle) => {
+  const fill = { fill: "#2a9d8f" };
+  const out = await runCase({
+    id: "off-canvas-rule",
+    mistake: "a label past the right edge, beside a ball that leaves the canvas on one frame",
+    channel: "warning",
+    names: [],
+    frames: 3,
+    draw: (v, m) => {
+      // On the canvas on frames 0 and 1, off it on frame 2: moving, so not reported.
+      v.circle(m.t * 40 - 20, 30, 5, fill);
+      // Off the canvas, but its glow reaches 30 px in.
+      v.group({ effects: { glow: { blur: 10, color: "#ffd166" } } }, () => v.rect(-30, 10, 25, 10, fill));
+      // A boxed label wraps inside its box; it is not checked for crossing.
+      v.text("a long boxed label", { x: 60, y: 30, w: 15 }, { size: 10 });
+      v.text("Period: 2.00 s", { x: 60, y: 10 }, { size: 12 });
+    },
+  }, handle);
+  assert.equal(out.error, undefined);
+  assert.equal(out.warnings.length, 1, out.warnings.join("\n"));
+  assert.match(out.warnings[0] ?? "", /^end of run: warning: text "Period: 2\.00 s" crosses the edge of the 80×60 canvas on every frame \(0–2\), .* \(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
+});

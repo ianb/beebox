@@ -19,12 +19,14 @@ what the row expects.
 - **Channels:** *error* is the error the run throws (a `SketchRunError` naming
   the frame, the step and the sketch's line) and its `error in <step>` line
   in the transcript; *warning* is a `frame N: warning:` line in the
-  transcript; *none* means no error and no warning.
+  transcript, or an `end of run: warning:` line for a check over the whole
+  run; *none* means no error and no warning.
 
 ## Result
 
-46 rows: **18 pass** as they were, **22 gaps fixed**, **6 gaps left** with
-proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
+46 rows: **18 pass** as they were, **23 gaps fixed**, **5 gaps left** with
+proposals. All 46 tests run in the one GPU test process; the 5 left are todo.
+Row 38 was fixed after the drawing round (finding 6).
 
 ## Fixes that apply to every row
 
@@ -86,7 +88,7 @@ proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
 | 35 | Picture with zero width (`zero-size-picture`) | error: the picture, `width`, "> 0", 0 | pass | — |
 | 36 | One key at two sizes in a frame (`same-key-sizes`) | none: two versions, by design (section 5); the outline shows both | pass | — |
 | 37 | Clip with no area (`empty-clip`) | warning: the clip, "no area", the line | gap left | Proposal below. |
-| 38 | Drawing entirely off the canvas (`offscreen`) | warning: "off the canvas" | gap left | Proposal below. |
+| 38 | Drawing entirely off the canvas (`offscreen`) | warning, at the end of the run: the call, "entirely off the canvas", the frames, the line | gap fixed | Was silent. A sketch line warns once per run when everything it draws is off the canvas on every frame; unboxed text that crosses the edge on every frame warns too. |
 | 39 | Point light without `at` (`point-light-no-at`) | error: `light (point)`, `at: [x, y]` | pass | — |
 | 40 | Hatching without `amount` (`hatching-no-amount`) | error: `effects.hatching.amount`, the range | pass | — |
 | 41 | Hatching over one flat tone (`flat-hatching`) | warning: hatching, tone | gap left | Proposal below. |
@@ -102,9 +104,6 @@ Each needs a decision before it is built.
 
 - **`empty-clip`:** warn when a clip has no area on every frame of a run.
   One frame is not a mistake: an animated wipe starts at zero width.
-- **`offscreen`:** after the run, warn about captured frames where nothing
-  drawn lands on the canvas, using the bounds the renderer already culls by.
-  Proposal: report it once per run, listing the frames.
 - **`flat-hatching`:** the draft's "no tone variation" warning. Read back the
   histogram pass that hatching already runs, and warn when its tone range is
   empty. This costs one readback per hatched group in testing mode.
@@ -390,7 +389,7 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "label": wi
 **offscreen**
 
 ```
-  at [1, 0, 0, 1, 1000, 1000]
+end of run: warning: rect lands entirely off the 80×60 canvas on frame 0, the first at (1000,1000)–(1040,1040) in canvas coordinates; check the translate, the units or the sign of its position (or, under a moving camera, run enough frames to reach it) (at test/scene-spike/dev-loop/cases.ts:358:60)
 ```
 
 **point-light-no-at**

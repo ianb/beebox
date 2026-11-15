@@ -22,6 +22,7 @@ import { PictureTable, placedVersion } from "./pictures.js";
 import { recordPicture, recordPixels } from "./picture-calls.js";
 import type { PictureScope } from "./picture-calls.js";
 import { RecorderNotes } from "./notes.js";
+import { OffCanvas } from "./off-canvas.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolvePlace, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
 import { keyOf } from "../hash.js";
@@ -30,8 +31,8 @@ import { PureHelpers } from "./helpers.js";
 import { hasOpenLight, lightWarning, noLightWarning, resolveLight } from "./light.js";
 import { valueNoise } from "./noise.js";
 import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
-import type { ControlParams, ControlPlacement } from "./controls.js";
-import type { FrameRecord } from "./frame.js";
+import type { ControlParams } from "./controls.js";
+import type { FrameOutputs, FrameRecord } from "./frame.js";
 
 export class SceneRecorder extends PureHelpers implements View {
   readonly #canvas: { width: number; height: number };
@@ -42,6 +43,8 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly #table = new PictureTable();
   readonly #checks: { colors?: ColorParser; fontKnown?: (family: string) => boolean };
   readonly #notes = new RecorderNotes();
+  /** Testing mode: drawings off the canvas on every frame. */
+  readonly #offCanvas: OffCanvas | undefined;
   /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
   #lit = 0;
   /** Inside a mask's artwork, where lights do nothing (R8). */
@@ -52,10 +55,8 @@ export class SceneRecorder extends PureHelpers implements View {
   #size: { width: number; height: number };
   /** The picture whose body is recording, for messages; undefined at the top level. */
   #picture: string | undefined;
-  #logs: string[] = [];
-  #snapshots: (string | undefined)[] = [];
-  #cursor: CursorKind | undefined;
-  #controls: ControlPlacement[] = [];
+  /** The frame's outputs that are not drawing (section 8). */
+  #out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
 
   /**
    * `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. `params` resolve `control` calls.
@@ -68,6 +69,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#size = size;
     this.#text = options?.text;
     this.#audit = options?.audit ?? false;
+    this.#offCanvas = this.#audit ? new OffCanvas(size) : undefined;
     this.#seed = options?.seed ?? 0;
     this.#params = options?.params;
     this.#checks = { ...options };
@@ -81,6 +83,9 @@ export class SceneRecorder extends PureHelpers implements View {
     return this.#size.height;
   }
 
+  /** After a run (testing mode): drawings off the canvas, or unboxed text crossing its edge, on every frame. */
+  readonly offCanvasWarnings = (): string[] => this.#offCanvas?.warnings() ?? [];
+
   /** Forget every picture version, so each body records again (a web font finished loading, draft section 20). */
   readonly forgetPictures = (): void => this.#table.clear();
 
@@ -92,27 +97,26 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#paper = DEFAULT_PAPER;
     this.#size = this.#canvas;
     this.#picture = undefined;
-    this.#logs = [];
-    this.#snapshots = [];
-    this.#cursor = undefined;
-    this.#controls = [];
+    const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
+    this.#out = out;
     this.#lit = 0;
     this.#inMask = false;
     this.#table.beginFrame();
     this.#notes.begin();
+    this.#offCanvas?.begin();
     let standIns: SceneNode[];
     let notes: { warnings: string[]; hints: string[] };
-    const controls = this.#controls;
     try {
       draw(this);
+      this.#offCanvas?.end();
       this.#paper = DEFAULT_PAPER;
       // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
-      standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, controls));
+      standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, out.controls));
     } finally {
       notes = this.#notes.end();
       this.#open = [];
     }
-    return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(controls)], cursor: this.#cursor, controls, standIns, ...notes };
+    return { scene: { ...this.#canvas, children: root }, ...out, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(out.controls)], standIns, ...notes };
   }
 
   #add(node: SceneNode): void {
@@ -143,6 +147,8 @@ export class SceneRecorder extends PureHelpers implements View {
     // Structural keys, hashed while recording: what the renderer keeps geometry and expansions under (draft section 6).
     for (const v of [args.geom, style.brush?.brush, style.brush?.gesture]) if (v !== undefined) keyOf(v);
     this.#add({ kind: "shape", call, geom: args.geom, style });
+    // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
+    if (this.#picture === undefined && !this.#inMask) this.#offCanvas?.shape(call, { geom: args.geom, style, matrix: this.#matrix, lit: this.#lit > 0 });
   }
   /** Where a light here does nothing (R8): inside a mask's artwork, or outside any lit group (a picture body may be placed lit). */
   #unlit(): "mask" | "unlit" | undefined {
@@ -203,6 +209,7 @@ export class SceneRecorder extends PureHelpers implements View {
   text(...args: [string, TextBox, TextOptions?]): TextBounds {
     const { node, bounds } = this.#layText(...args);
     this.#add(node);
+    if (this.#picture === undefined && !this.#inMask) this.#offCanvas?.text(`text ${JSON.stringify(node.content.slice(0, 24))}`, { bounds, matrix: this.#matrix, unboxed: args[1].w === undefined && args[2]?.keepInside !== true });
     const font = fontWarning(node, this.#checks.fontKnown);
     if (font !== undefined) this.#notes.warn(`font ${node.family}`, font);
     return bounds;
@@ -239,6 +246,7 @@ export class SceneRecorder extends PureHelpers implements View {
     let paper = this.#paper;
     const lit = g.lighting === undefined ? 0 : 1;
     this.#lit += lit;
+    const outer = this.#offCanvas?.enter(g.effects, this.#matrix) ?? 0;
     try {
       const children = this.#inside(() => {
         body();
@@ -248,6 +256,7 @@ export class SceneRecorder extends PureHelpers implements View {
       this.#add({ kind: "group", ...g, paper, children });
     } finally {
       this.#lit -= lit;
+      this.#offCanvas?.leave(outer);
     }
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
@@ -278,11 +287,7 @@ export class SceneRecorder extends PureHelpers implements View {
   /** Record `body` as a picture's nodes: its own coordinates and box, the paper in scope. */
   #recordBody(name: string, a: { size: { width: number; height: number }; body: () => void }): SceneNode[] {
     const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask };
-    this.#open = [];
-    this.#matrix = IDENTITY;
-    this.#size = a.size;
-    this.#picture = name;
-    this.#inMask = false;
+    ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = { open: [], matrix: IDENTITY, size: a.size, picture: name, inMask: false });
     try {
       return this.#inside(a.body);
     } finally {
@@ -312,15 +317,15 @@ export class SceneRecorder extends PureHelpers implements View {
   // ── outputs that are not drawing ──
   log(...args: readonly unknown[]): void {
     this.#notInPicture("log");
-    this.#logs.push(formatArgs(args));
+    this.#out.logs.push(formatArgs(args));
   }
   snapshot(label?: string): void {
     this.#notInPicture("snapshot");
-    this.#snapshots.push(label);
+    this.#out.snapshots.push(label);
   }
   cursor(kind: CursorKind): void {
     this.#notInPicture("cursor");
-    this.#cursor = kind;
+    this.#out.cursor = kind;
   }
   debugBox(...[label, x, y, w, h]: [string, number, number, number, number]): void {
     if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h))) checkNumbers("debugBox", { values: { x, y, w, h } });
@@ -341,6 +346,6 @@ export class SceneRecorder extends PureHelpers implements View {
   /** Section 8: a kept placement, in canvas coordinates whatever scope it is called in; headless stand-ins draw above the scene. */
   control(name: string, box: ControlBox): void {
     this.#notInPicture("control");
-    this.#controls.push(placeControl(name, box, this.#params));
+    this.#out.controls.push(placeControl(name, box, this.#params));
   }
 }

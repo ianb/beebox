@@ -175,6 +175,7 @@ class SpikeRun {
       if (this.#o.scene) this.#lines.push("```", sceneOutline(rec.scene), "```");
       this.#lines.push("");
     }
+    for (const w of recorder.offCanvasWarnings()) this.#lines.push(`end of run: warning: ${w}`);
     return captured;
   }
 

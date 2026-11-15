@@ -354,8 +354,7 @@ export const CASES: readonly DevLoopCase[] = [
     id: "offscreen",
     mistake: "drawing entirely off the canvas (a translate in the wrong units)",
     channel: "warning",
-    names: [/off the canvas/],
-    gap: "after the run, warn about captured frames where nothing drawn lands on the canvas, from the bounds the renderer already culls by",
+    names: [/^end of run: warning: rect lands entirely off the 80×60 canvas on frame 0/m, /\(1000,1000\)–\(1040,1040\)/, CASE_FILE],
     draw: (v) => v.at({ translate: [1000, 1000] }, () => v.rect(0, 0, 40, 40, fill)),
   },
   {

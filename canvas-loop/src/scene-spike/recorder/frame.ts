@@ -5,6 +5,14 @@ import type { Scene, SceneNode } from "../scene.js";
 import type { ControlPlacement } from "./controls.js";
 import type { DebugBox } from "./debug.js";
 
+/** The outputs of one `draw` that are not drawing (section 8), as the recorder collects them. */
+export interface FrameOutputs {
+  logs: string[];
+  snapshots: (string | undefined)[];
+  cursor: CursorKind | undefined;
+  controls: ControlPlacement[];
+}
+
 /** Everything one `draw` produced (draft section 8), and testing-mode warnings. */
 export interface FrameRecord {
   readonly scene: Scene;
