@@ -1,10 +1,12 @@
 // Structural keys for plain data (draft section 6: what a renderer may keep).
-// The recorder keys each shape's geometry and each brushed stroke's brush and
-// gesture as it records them; the renderer keys what it keeps by these. A key
-// is two independent 32-bit hashes over the exact bits of every number, so
+// The renderer keys what it keeps (shape geometry, brush expansions) by these,
+// and computes each key when a cache first asks for it, not while recording. A
+// key is two independent 32-bit hashes over the exact bits of every number, so
 // equal data gives equal keys and a collision needs both lanes to collide
 // (about one in 2^64 per pair). Keys are memoised by object identity, so a
-// picture's nodes, kept across frames, are hashed once.
+// picture's nodes, kept across frames, are hashed once. Keys live only in this
+// process: strings are hashed by an id given on first sight.
+import type { Geom } from "./nodes.js";
 
 const f64 = new Float64Array(1);
 const u32 = new Uint32Array(f64.buffer);
@@ -22,38 +24,64 @@ function word(w: number): void {
   laneB = Math.imul(b, 0x27d4eb2d);
 }
 
-function num(x: number): void {
+/** A number's two words, untagged: callers tag it, or its place in a fixed layout says it is a number. */
+function bits(x: number): void {
   f64[0] = x;
   word(u32[0] ?? 0);
   word(u32[1] ?? 0);
 }
 
+// Short strings (object keys, path command names, preset names) get an id on
+// first sight; a long string, or any once the table is full, is hashed by its
+// characters under its own tag.
+const ids = new Map<string, number>();
+const MAX_ID_LENGTH = 32;
+const MAX_IDS = 4096;
+
 function str(s: string): void {
+  let id = ids.get(s);
+  if (id === undefined && s.length <= MAX_ID_LENGTH && ids.size < MAX_IDS) {
+    id = ids.size;
+    ids.set(s, id);
+  }
+  if (id !== undefined) {
+    word(2);
+    word(id);
+    return;
+  }
+  word(9);
   word(s.length);
   for (let i = 0; i < s.length; i++) word(s.codePointAt(i) ?? 0);
+}
+
+/** An array: its length, then per run of 32 elements a mask of which are numbers; numbers untagged, others as values. */
+function array(v: readonly unknown[]): void {
+  word(7);
+  const n = v.length;
+  word(n);
+  for (let s = 0; s < n; s += 32) {
+    const e = Math.min(n, s + 32);
+    let mask = 0;
+    for (let i = s; i < e; i++) if (typeof v[i] === "number") mask |= 1 << (i - s);
+    word(mask);
+    for (let i = s; i < e; i++) {
+      const x = v[i];
+      if (typeof x === "number") bits(x);
+      else value(x);
+    }
+  }
 }
 
 function value(v: unknown): void {
   if (typeof v === "number") {
     word(1);
-    num(v);
-  } else if (typeof v === "string") {
-    word(2);
-    str(v);
-  } else if (typeof v === "boolean") word(v ? 3 : 4);
+    bits(v);
+  } else if (typeof v === "string") str(v);
+  else if (typeof v === "boolean") word(v ? 3 : 4);
   else if (v === undefined) word(5);
   else if (v === null) word(6);
-  else if (Array.isArray(v)) {
-    word(7);
-    word(v.length);
-    // Numbers inline (the same words `value` gives them): geometry is mostly long runs of numbers.
-    for (const x of v) {
-      if (typeof x === "number") {
-        word(1);
-        num(x);
-      } else value(x);
-    }
-  } else if (typeof v === "object") {
+  else if (Array.isArray(v)) array(v);
+  else if (typeof v === "object") {
     word(8);
     const keys = Object.keys(v);
     word(keys.length);
@@ -64,6 +92,65 @@ function value(v: unknown): void {
   } else str(`?${typeof v}`);
 }
 
+/** Numbers at fixed places of a geometry: each untagged. */
+function numbers(...xs: number[]): void {
+  for (const x of xs) bits(x);
+}
+
+/** Whether every point is a pair of numbers (so the pair layout holds). */
+function pairs(points: readonly (readonly unknown[])[]): boolean {
+  for (const p of points) if (!(Array.isArray(p) && p.length === 2 && typeof p[0] === "number" && typeof p[1] === "number")) return false;
+  return true;
+}
+
+/**
+ * A geometry in a fixed layout per kind (its kind's word, then its numbers, untagged): the structure of `Geom` is
+ * known, so the generic walk's tags and key names are not needed. Anything outside the layout (a point that is not a
+ * pair, a command whose elements are not numbers) is hashed as plain data under its own word.
+ */
+function geom(g: Geom): void {
+  switch (g.kind) {
+    case "rect":
+      word(101);
+      numbers(g.x, g.y, g.w, g.h);
+      return;
+    case "ellipse":
+      word(102);
+      numbers(g.x, g.y, g.rx, g.ry);
+      return;
+    case "arc":
+      word(103);
+      numbers(g.x, g.y, g.r, g.start, g.end);
+      return;
+    case "poly":
+      if (!pairs(g.points)) break;
+      word(104);
+      word(g.closed ? 1 : 0);
+      word(g.points.length);
+      for (const p of g.points) {
+        bits(p[0]);
+        bits(p[1]);
+      }
+      return;
+    case "path":
+      if (!g.commands.every((c) => c.every((x, i) => i === 0 || typeof x === "number"))) break;
+      word(105);
+      word(g.commands.length);
+      for (const c of g.commands) {
+        str(c[0]);
+        word(c.length);
+        // Every element after the name is a number (checked above).
+        for (let i = 1; i < c.length; i++) {
+          const x = c[i];
+          if (typeof x === "number") bits(x);
+        }
+      }
+      return;
+  }
+  word(100);
+  value(g);
+}
+
 function fin(h: number): number {
   let x = h ^ (h >>> 16);
   x = Math.imul(x, 0x85ebca6b);
@@ -72,21 +159,33 @@ function fin(h: number): number {
   return (x ^ (x >>> 16)) >>> 0;
 }
 
-const memo = new WeakMap<object, string>();
+const plainKeys = new WeakMap<object, string>();
+const geomKeys = new WeakMap<object, string>();
 
-/** The structural key of plain data `v` (numbers by their exact bits; object keys in order), memoised by identity. */
-export function keyOf(v: object): string {
+/** Hash `v` with `walk` on fresh lanes, the outer hash's lanes kept, memoised by identity in `memo`. */
+function keyed<T extends object>(v: T, a: { walk: (v: T) => void; memo: WeakMap<object, string> }): string {
+  const { walk, memo } = a;
   const hit = memo.get(v);
   if (hit !== undefined) return hit;
   const outerA = laneA, outerB = laneB;
   laneA = 0x811c9dc5;
   laneB = 0x9747b28c;
-  value(v);
+  walk(v);
   const key = `${fin(laneA).toString(36)}.${fin(laneB).toString(36)}`;
   laneA = outerA;
   laneB = outerB;
   memo.set(v, key);
   return key;
+}
+
+/** The structural key of plain data `v` (numbers by their exact bits; object keys in order), memoised by identity. */
+export function keyOf(v: object): string {
+  return keyed(v, { walk: value, memo: plainKeys });
+}
+
+/** The structural key of a shape's geometry: what the geometry cache and brush expansions keep it under. */
+export function geomKey(g: Geom): string {
+  return keyed(g, { walk: geom, memo: geomKeys });
 }
 
 /** A transform's linear part as a key: its four numbers, exactly. */

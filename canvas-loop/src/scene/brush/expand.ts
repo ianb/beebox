@@ -33,7 +33,7 @@ import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../nodes.js";
 import { geomContours } from "./contours.js";
-import { keyOf, linearKey } from "../hash.js";
+import { geomKey, keyOf, linearKey } from "../hash.js";
 import { RecordingCtx, SoftDabImage } from "./record-ctx.js";
 import type { Dab, Run } from "./record-ctx.js";
 
@@ -324,9 +324,9 @@ export class BrushExpander {
     const { b, q } = brushSpace(req.linear);
     const { brush, gesture } = req.stroke;
     const tinted = brush.kind !== "smear" && jitterOf(brush) !== undefined;
-    // The geometry, brush and gesture by their structural keys (hashed when recorded); the paint only where it is expanded in.
+    // The geometry, brush and gesture by their structural keys (hashed when first asked for); the paint only where it is expanded in.
     const paint = tinted || brush.kind === "smear" ? JSON.stringify(req.paint) : "";
-    const key = `${keyOf(req.geom)}|${req.weight}|${keyOf(brush)}|${keyOf(gesture)}|${linearKey(b)}|${paint}`;
+    const key = `${geomKey(req.geom)}|${req.weight}|${keyOf(brush)}|${keyOf(gesture)}|${linearKey(b)}|${paint}`;
     this.stats.strokes++;
     let entry = this.#enabled ? this.#cache.get(key) : undefined;
     if (entry === undefined) {

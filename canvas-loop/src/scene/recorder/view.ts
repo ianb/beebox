@@ -26,7 +26,6 @@ import { RecorderNotes } from "./notes.js";
 import type { NoteSink } from "./notes.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolvePlace, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
-import { keyOf } from "../hash.js";
 import { recordText } from "./text.js";
 import type { GlyphMissing } from "./text-checks.js";
 import { Audit } from "./audit.js";
@@ -143,8 +142,6 @@ export class SceneRecorder extends PureHelpers implements View {
     checkGeom(call, args.geom);
     const style = resolveStyle(args.style, { call, paper: this.#paper });
     if (style.effects !== undefined) axisScales(this.#matrix, call);
-    // Structural keys, hashed while recording: what the renderer keeps geometry and expansions under (draft section 6).
-    for (const v of [args.geom, style.brush?.brush, style.brush?.gesture]) if (v !== undefined) keyOf(v);
     const node: ShapeNode = { kind: "shape", call, geom: args.geom, style };
     this.#add(node);
     this.#audit?.shape(node, !this.#inMask);
@@ -261,9 +258,7 @@ export class SceneRecorder extends PureHelpers implements View {
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#notes.live("clip");
-    const shapes = clipGeoms(shape);
-    for (const g of shapes) keyOf(g);
-    this.#add({ kind: "clip", shapes, children: this.#inside(body, true) });
+    this.#add({ kind: "clip", shapes: clipGeoms(shape), children: this.#inside(body, true) });
   }
   mask(maskBody: () => void, body: () => void): void {
     this.#notes.live("mask");
