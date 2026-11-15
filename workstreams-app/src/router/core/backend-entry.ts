@@ -14,7 +14,7 @@
 // The second candidate in any list exists ONLY for checkouts (worktree
 // branches) that predate that commit. Delete it, and the fallback plumbing
 // below, once no `worktree-*` branch predates it — see
-// issues/deferred/2026-09-27-retire-router-pre-rename-backend-paths.md for
+// issues/code-quality/2026-09-27-retire-router-pre-rename-backend-paths.md for
 // the exact check and an expiry date backed by a test in
 // workstreams-app/test/router/core/backend-entry.test.ts.
 import path from "node:path";
@@ -71,7 +71,7 @@ export async function resolveBackendEntryPath(params: {
         warn(
           `[router] ${checkoutBackendCwd}: ${key} not found at ${candidates[0]}; ` +
             `falling back to pre-rename path ${candidate} ` +
-            "(see issues/deferred/2026-09-27-retire-router-pre-rename-backend-paths.md)",
+            "(see issues/code-quality/2026-09-27-retire-router-pre-rename-backend-paths.md)",
         );
       }
       return candidate;

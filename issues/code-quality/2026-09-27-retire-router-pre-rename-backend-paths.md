@@ -1,8 +1,6 @@
 ---
 title: "Retire the shared router's pre-rename backend-path fallback"
 workstream: unattached
-activate-on: 2026-11-15
-category: code-quality
 area: router
 filed-by: agent
 discovered-by: agent
