@@ -3,7 +3,7 @@
 // their own speed), twelve acted walks, a jog, a run and two blends.
 // sheet=clothes: a skirt, a long coat walking and running, a person drawn without
 // limbs, crossing a room at the rooms' scale; below, the garments' skeletons.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
 import { CLIPS } from "./clips-tea.js";
 import type { ClipName } from "./clips-tea.js";
 import { cadence, progress, stepBody, strideLength } from "./gait-tea.js";
@@ -13,6 +13,9 @@ import { person, personFront } from "./figure-tea.js";
 import { buildOf } from "./body-tea.js";
 import type { Archetype, BodySpec, Build } from "./body-tea.js";
 import type { Outfit } from "./figure-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   sheet: { type: "select", options: ["styles", "clothes", "bodies", "play"], default: "styles", label: "Sheet" },

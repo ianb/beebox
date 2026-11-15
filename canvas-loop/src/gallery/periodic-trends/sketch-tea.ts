@@ -14,15 +14,7 @@
 //     elements on the chart whose step goes against the usual trend.
 //
 // Data and sources: ./elements-tea.ts.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
 
 import {
   bySymbol,
@@ -57,6 +49,9 @@ import {
   tableRight,
   type Box,
 } from "./layout-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   property: { type: "select", options: PROPERTY_IDS, default: "atomic radius" },

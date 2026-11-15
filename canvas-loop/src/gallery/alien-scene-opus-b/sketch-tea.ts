@@ -1,13 +1,7 @@
 // "Hello, Earth!" — a friendly green alien has just stepped down the ramp of
 // its landed saucer onto a dusk meadow, and waves to us. Picture-book
 // illustration painted with canvas-loop brushes.
-import type {
-  DeepReadonly,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 const W = 800;
 const H = 600;
@@ -182,6 +176,9 @@ export interface Model {
 
 const MEADOW_GREENS = ["#2c4a31", "#3d6a40", "#5e9455", "#86b46a"];
 const FORE_GREENS = ["#2c4a31", "#3d6a40", "#5e9455"];
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: W, height: H };
 

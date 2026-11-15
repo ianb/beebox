@@ -1,6 +1,6 @@
 // Drawing a pose from gait-tea.ts: a citizen in a jumpsuit, hand-inked, with the
 // far-side limbs a shade darker and behind the body. Also the bare skeleton.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts } from "./ink-tea.js";
 import type { Arm, Leg, Pose, Vec } from "./gait-tea.js";
 

@@ -3,7 +3,7 @@
 // smoothness comes from sampling ellipses and Catmull-Rom splines into dense
 // point lists here, in the sketch. Shading uses pencil and bristle marks clipped
 // to the shapes.
-import type { PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { PathCommand, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 const INK = "#1f2a1c";
 const GREEN = "#78c96a";
@@ -376,6 +376,9 @@ function drawAntennae(v: View): void {
     });
   }
 }
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 400, height: 500 };
 

@@ -1,13 +1,16 @@
 // Walk study: the rooms' old walker beside three walkers driven by measured gait
 // (gait-tea.ts), crossing one floor at the rooms' scale with their footprints
 // left behind; a Muybridge-style strip of one stride; and the measured curves.
-import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, stroke } from "./ink-tea.js";
 import { CURVES, STYLES, footprints, pose, progress, strideLength } from "./gait-tea.js";
 import type { Style } from "./gait-tea.js";
 import { LOOK, mixHex, skeleton, walker } from "./figure-tea.js";
 import type { Look } from "./figure-tea.js";
 import { DEPTH_PX_PER_M, PX_PER_M, m } from "./sizes-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 1280, height: 1000 };
 

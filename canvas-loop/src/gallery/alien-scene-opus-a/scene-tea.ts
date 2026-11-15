@@ -1,11 +1,4 @@
-import type {
-  DeepReadonly,
-  Gesture,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Gesture, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { AX, ellipsePts, H, INK, W, WARM } from "./common-tea.js";
 
 // The setting: dusk sky, hills, the landed saucer, the meadow.

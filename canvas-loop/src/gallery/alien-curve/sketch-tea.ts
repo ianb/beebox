@@ -1,4 +1,4 @@
-import type { PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { PathCommand, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 // A friendly green alien, picture-book style: ink outlines drawn with s.curve,
 // bristle and pencil shading clipped inside each shape. One frame, no state:
@@ -183,6 +183,9 @@ function greenPart(v: View, part: Part): void {
   shade(v, part);
   outline(v, part);
 }
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 // ── draw ─────────────────────────────────────────────────────────────
 export const canvas = { width: 400, height: 500 };

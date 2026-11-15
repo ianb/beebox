@@ -1,11 +1,6 @@
 // Friendly green alien, picture-book style: ink outlines drawn as hand-placed
 // bezier/quad paths, with bristle and pencil shading clipped inside each shape.
-import type {
-  Envelope,
-  PathCommand,
-  Style,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { Envelope, PathCommand, SceneStyle as Style, SceneView as View } from "@ianbicking/canvas-loop";
 
 type Path = readonly PathCommand[];
 
@@ -259,6 +254,9 @@ function ball(
     },
   });
 }
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 400, height: 500 };
 

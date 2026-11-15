@@ -1,4 +1,4 @@
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 const P = (x: number, y: number): Vec2 => [x, y];
 
@@ -36,6 +36,9 @@ function mark(
 function dot(v: View, x: number, y: number, r: number, color: string): void {
   v.circle(x, y, r, { fill: color });
 }
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 700, height: 700 };
 

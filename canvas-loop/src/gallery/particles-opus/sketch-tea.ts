@@ -14,15 +14,10 @@
 // discriminated-union `mode` field. All state lives in Model; the only way it
 // changes is `update` returning a new Model; the switch on `msg.type` is
 // exhaustive; `draw` only paints. See TEA.md.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },

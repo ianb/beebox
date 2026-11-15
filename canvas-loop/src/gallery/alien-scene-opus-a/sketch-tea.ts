@@ -1,11 +1,4 @@
-import type {
-  DeepReadonly,
-  Gesture,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Gesture, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import {
   ALIEN_LINE,
   AX,
@@ -101,6 +94,9 @@ const ANT_R: Pts = [
 ];
 const EYE_L = { x: AX - 36, y: 244 };
 const EYE_R = { x: AX + 36, y: 244 };
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: W, height: H };
 

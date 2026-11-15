@@ -1,1 +1,2 @@
 {"date": "2026-11-11", "commit": "69002fd6", "model": "gpt-6-sol", "action": "authored", "cycles": 3, "outcome": "pass", "notes": "brush round 2, own scene; full record in history/"}
+{"date":"2026-11-15","commit":"51b090a0e","action":"rerun","outcome":"pass","notes":"Scene core chunk 5: re-rendered on the scene renderer; source unchanged except the transition marker (SceneView as View, renderer = \"scene\"). Judged against the Stage 0 frames (beebox/docs/plans/canvas-loop-scene/stage5/gallery-parity.md): pass, same character by eye."}
