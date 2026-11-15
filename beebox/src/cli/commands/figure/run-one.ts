@@ -1,10 +1,10 @@
 /**
  * The child half of `bbx figure run`: import a compiled figure entry, run it
- * with canvas-loop's headless runner, and print one JSON result line. Runs in
+ * with canvas-loop's headless runner (`teaRun`, on the surface the entry's
+ * `renderer` export picks), and print one JSON result line. Runs in
  * its own process so the parent can kill a sketch that never returns.
  */
 import { promises as fs } from "node:fs";
-import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseTeaEvents, teaRun, toTeaModule } from "@ianbicking/canvas-loop/headless";
 import type { ParamsDecl } from "@ianbicking/canvas-loop";
@@ -31,27 +31,6 @@ function initialParams(decl: ParamsDecl, job: FigureJob): Record<string, string 
     else out[name] = raw;
   }
   return out;
-}
-
-/** A figure entry's `renderer` export names no renderer this command runs. */
-export class FigureRendererError extends Error {
-  constructor(options: { detail: string }) {
-    super(options.detail);
-    this.name = "FigureRendererError";
-  }
-}
-
-/**
- * Which renderer a figure entry asks for: `export const renderer = "scene"`
- * opts into the GPU scene spike (canvas-loop `scene-headless`, Dawn); no
- * export keeps today's Canvas2D runner. Any other value is an error, so a typo
- * cannot fall back to the wrong renderer.
- */
-export function figureRenderer(imported: Record<string, unknown>): "canvas" | "scene" {
-  const marker = imported["renderer"];
-  if (marker === undefined) return "canvas";
-  if (marker === "scene") return "scene";
-  throw new FigureRendererError({ detail: `export const renderer must be "scene" or absent; got ${JSON.stringify(marker)}` });
 }
 
 function isJob(value: unknown): value is FigureJob {
@@ -86,14 +65,8 @@ export async function runFigureOne(jobFile: string): Promise<void> {
     const events = parseTeaEvents(rawEvents, module.params);
     const last = Math.max(-1, ...events.map((event) => event.frame));
     const frames = job.frames ?? (events.length > 0 ? last + 1 + TAIL_FRAMES : DEFAULT_FRAMES);
-    if (figureRenderer(imported) === "scene") {
-      // Loaded only here: the runner opens Dawn, a native module (`webgpu`).
-      const { runSpike } = await import("@ianbicking/canvas-loop/scene-headless");
-      const captured = await runSpike({ sketchPath: job.sketchPath, module, outDir: job.outDir, frames, every: job.every, seed: 42, ratio: 1, scene: false, events, initialParams: initialParams(module.params, job) });
-      process.stdout.write(`${JSON.stringify({ transcript: path.join(job.outDir, "transcript.md"), framesRun: frames, imageCount: captured.length, errors: [] })}\n`);
-      return;
-    }
-    const result = teaRun({
+    // The entry's `renderer` export (read by toTeaModule) picks the Canvas2D or the scene (Dawn) surface.
+    const result = await teaRun({
       module,
       sketchPath: job.sketchPath,
       outDir: job.outDir,

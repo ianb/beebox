@@ -1,14 +1,12 @@
 // The headless canvas a TEA run draws on: a @napi-rs/canvas canvas, the
-// shared Painter over it, the run's seeded random stream, pixel readback for
-// capture, and the log/snapshot channel to the recorder.
+// shared Painter over it, pixel readback for capture, and the log/snapshot
+// channel to the recorder.
 import { createCanvas } from "@napi-rs/canvas";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import { formatArgs } from "../core/format.js";
 import type { Ctx2D, Layer, LayerImage } from "../core/paint.js";
 import { Painter } from "../core/painter/engine.js";
-import { SeededRandom } from "../core/prng.js";
 import type { SketchHost } from "../core/types.js";
-import { SketchUsageError } from "./errors.js";
 
 /** An offscreen Skia canvas of `size`, as a Painter layer (groups, brush marks, paper). */
 function makeSkiaLayer(size: { width: number; height: number }): Layer {
@@ -27,14 +25,12 @@ export class Surface {
   readonly painter: Painter;
   #canvasCtx: SKRSContext2D;
   #host: SketchHost;
-  #random: SeededRandom;
 
-  constructor(options: { width: number; height: number; host: SketchHost; seed: number; outline?: boolean }) {
+  constructor(options: { width: number; height: number; host: SketchHost; outline?: boolean }) {
     const { width, height } = options;
     this.width = width;
     this.height = height;
     this.#host = options.host;
-    this.#random = new SeededRandom(options.seed);
     const canvas = createCanvas(width, height);
     this.#canvasCtx = canvas.getContext("2d");
     this.painter = new Painter({
@@ -63,17 +59,6 @@ export class Surface {
   /** Draw this frame's `--outline` overlay (the runtime calls it after `draw`). */
   finishFrame(): void {
     this.painter.finishFrame();
-  }
-
-  /** The next number from the run's seeded stream, in [0, 1). */
-  random(): number {
-    return this.#random.next();
-  }
-
-  randomChoice<T>(items: readonly T[]): T {
-    const picked = items[Math.floor(this.#random.next() * items.length)];
-    if (picked === undefined) throw new SketchUsageError({ detail: "randomChoice() requires a non-empty array" });
-    return picked;
   }
 
   log(...args: readonly unknown[]): void {

@@ -1,4 +1,4 @@
-// Pictures on the GPU, run by gpu.test.ts: placement replays the recording
+// Pictures on the GPU, run by renderer.gpu.test.ts: placement replays the recording
 // under the placement transform (R7), placement options, and `pixels` images.
 import assert from "node:assert/strict";
 import type { View } from "../../src/scene/api.js";

@@ -1,13 +1,10 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
-import { scaleNote } from "../core/sound/notes.js";
-import type { ScaleName } from "../core/sound/notes.js";
 import { controlModels } from "../browser/controls-model.js";
 import type { ControlModel } from "../browser/controls-model.js";
-import type { Style, TextBounds, TextBox, TextOptions } from "../core/paint.js";
+import type { Style } from "../core/paint.js";
 import type { Painter } from "../core/painter/engine.js";
 import { PainterView } from "../core/view.js";
-import { recordOf } from "../core/records.js";
-import type { ControlBox, CursorKind, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+import type { ControlBox, CursorKind, ParamsDecl, ParamValues, View } from "../core/tea.js";
 import { SketchUsageError } from "./errors.js";
 import type { Surface } from "./surface.js";
 
@@ -107,65 +104,5 @@ export class TeaView extends PainterView implements View {
   }
   snapshot(label?: string): void {
     this.#surface.snapshot(label);
-  }
-}
-
-/**
- * The capability handed to `init` and `update`: seeded randomness (shared with
- * the run's single PRNG stream, so it stays deterministic and replayable),
- * `log`, and a live view of the resolved parameter values. No drawing surface —
- * `update` cannot paint.
- */
-export class TeaUtil<D extends ParamsDecl> implements Util<D> {
-  #surface: Surface;
-  #getParams: () => ParamValues<D>;
-  #onHandled: (name: string) => void;
-
-  constructor(deps: { surface: Surface; getParams: () => ParamValues<D>; onHandled: (name: string) => void }) {
-    this.#surface = deps.surface;
-    this.#getParams = deps.getParams;
-    this.#onHandled = deps.onHandled;
-  }
-
-  random(): number;
-  random(max: number): number;
-  random(min: number, max: number): number;
-  random(a?: number, b?: number): number {
-    const r = this.#surface.random();
-    if (a === undefined) return r;
-    if (b === undefined) return r * a;
-    return a + r * (b - a);
-  }
-
-  randomChoice<T>(items: readonly T[]): T {
-    return this.#surface.randomChoice(items);
-  }
-
-  get params(): ParamValues<D> {
-    return this.#getParams();
-  }
-
-  log(...args: readonly unknown[]): void {
-    this.#surface.log(...args);
-  }
-
-  record<K extends string, V>(keys: readonly K[], value: (key: K) => V): Record<K, V> {
-    return recordOf(keys, value);
-  }
-
-  handled(name: string): void {
-    this.#onHandled(name);
-  }
-
-  scaleNote(step: number, options?: { root?: string; scale?: ScaleName }): string {
-    return scaleNote(step, options);
-  }
-
-  textWidth(content: string, options?: TextOptions): number {
-    return this.#surface.painter.textWidth(content, options);
-  }
-
-  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#surface.painter.plainTextBounds(...args);
   }
 }

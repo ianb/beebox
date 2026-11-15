@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { parseZoom } from "../../../src/headless/recorder/zoom.js";
 import { toTeaModule } from "../../../src/headless/tea-load.js";
-import { teaRun } from "../../../src/headless/tea-runtime.js";
+import { teaRun } from "../../../src/headless/tea-runtime/runner.js";
 import type { View } from "../../../src/core/tea.js";
 import { readTranscript, teaRunOptions, tmpDir } from "../../helpers.js";
 
@@ -16,7 +16,7 @@ test("parseZoom reads x,y,w,h with an optional @scale", () => {
   assert.throws(() => parseZoom("0,0,1000,1000@3"), /over 2400px/);
 });
 
-test("a run with zooms writes a crop beside each captured frame and lists it in the transcript", () => {
+test("a run with zooms writes a crop beside each captured frame and lists it in the transcript", async () => {
   const outDir = tmpDir();
   const module = toTeaModule({
     canvas: { width: 40, height: 40 },
@@ -24,7 +24,7 @@ test("a run with zooms writes a crop beside each captured frame and lists it in 
     update: (model: object) => model,
     draw: (v: View): void => v.background("#336699"),
   });
-  teaRun(teaRunOptions(module, { outDir, frames: 1, zooms: [parseZoom("5,5,10,10@4")] }));
+  await teaRun(teaRunOptions(module, { outDir, frames: 1, zooms: [parseZoom("5,5,10,10@4")] }));
   assert.ok(existsSync(join(outDir, "frame-0000-zoom1.png")));
   assert.match(readTranscript(outDir), /zoom 5,5 10×10 ×4\n!\[frame 0 zoom 5,5 10×10 ×4]\(frame-0000-zoom1\.png\)/);
 });

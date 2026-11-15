@@ -1,4 +1,4 @@
-// Text on the GPU, run by gpu.test.ts: labels against today's Skia render of
+// Text on the GPU, run by renderer.gpu.test.ts: labels against today's Skia render of
 // the same calls. Glyph rasterisation may differ by eye; where each label's ink
 // sits and how big it is must match (within a pixel), and `v.text` must return
 // today's bounds.

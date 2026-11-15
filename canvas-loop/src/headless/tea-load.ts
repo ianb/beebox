@@ -3,7 +3,7 @@ import type { Voice, CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, 
 
 /**
  * A TEA sketch module after validation; the model is opaque to the runtime.
- * Defined HERE (the loader that produces it) rather than in tea-runtime.ts so
+ * Defined HERE (the loader that produces it) rather than in tea-runtime/runner.ts so
  * that consumers of the validator — including the browser mount, whose type
  * graph must stay free of the node/napi-typed runner — never pull tea-runtime
  * into their program.
@@ -16,6 +16,12 @@ export interface LoadedTeaModule {
   draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
   sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
   activity?: (model: unknown) => Record<string, unknown>;
+  /**
+   * `export const renderer = "scene"`: `draw` takes the scene View and the run
+   * renders on the GPU. Absent: today's Canvas2D View. A marker for the move to
+   * the scene renderer; it goes when the Canvas2D surface does.
+   */
+  renderer?: "scene";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -167,8 +173,12 @@ export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
     throw new CliError({ detail: "the \"activity\" export must be a function activity(model) returning an object" });
   }
   const activity = readFn<NonNullable<LoadedTeaModule["activity"]>>(mod, "activity");
+  const renderer = mod["renderer"];
+  if (renderer !== undefined && renderer !== "scene") {
+    throw new CliError({ detail: `export const renderer must be "scene" or absent; got ${JSON.stringify(renderer)}` });
+  }
   return {
     params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw,
-    ...(sound === undefined ? {} : { sound }), ...(activity === undefined ? {} : { activity }),
+    ...(sound === undefined ? {} : { sound }), ...(activity === undefined ? {} : { activity }), ...(renderer === undefined ? {} : { renderer }),
   };
 }

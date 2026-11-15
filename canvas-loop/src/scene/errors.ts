@@ -19,6 +19,23 @@ export class GpuRenderError extends Error {
   }
 }
 
+/**
+ * Headless: Dawn found no GPU adapter, so the scene renderer cannot draw. The
+ * run wrote its transcript first (the header and the failure line), at
+ * `transcriptPath`. A caller catches this by class; it is never in
+ * `RunResult.errors`.
+ */
+export class NoGpuAdapterError extends Error {
+  name = "NoGpuAdapterError";
+  readonly transcriptPath: string;
+  constructor(options: { transcriptPath: string }) {
+    super(
+      "no GPU adapter: Dawn (WebGPU for Node) found none, so the scene renderer cannot draw. Possible causes: no Vulkan driver is installed (on Linux, Mesa's lavapipe is a software one); a driver is installed but this user cannot open it; a sandbox hides the GPU",
+    );
+    this.transcriptPath = options.transcriptPath;
+  }
+}
+
 /** A scene figure cannot mount in this browser (no WebGPU, no adapter) or was handed a bad module. */
 export class SceneMountError extends Error {
   name = "SceneMountError";

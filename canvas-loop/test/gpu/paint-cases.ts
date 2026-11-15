@@ -1,4 +1,4 @@
-// Wash, hatching and paper on the GPU (R5 step 2), run by gpu.test.ts:
+// Wash, hatching and paper on the GPU (R5 step 2), run by renderer.gpu.test.ts:
 // determinism, bounds (bleed grows the layer; nothing else touches alpha),
 // pigment that moves and turns with the group's transform (section 4), and
 // hatching revealed by tone relative to the group's own range.

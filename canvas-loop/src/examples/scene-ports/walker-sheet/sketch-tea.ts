@@ -25,6 +25,8 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: 1280, height: 1000 };
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 type Dir = "left" | "right";
 export interface Model {

@@ -406,6 +406,45 @@ then the switch that deletes the old code; then docs.
   and `gallery:check` pass, and `scene-spike/run/runner.ts` and `util.ts`
   are deleted.
 
+- **As built (chunk 2).** Paths: `layout-check` makes the runner and its
+  guards one unit, and `max-lines` (300) refuses them as one file, so the
+  runner is `headless/tea-runtime/runner.ts` with `tea-runtime/guards.ts`;
+  the CLI is `headless/cli/main.ts` with `cli/args.ts` (`--scene [first]`);
+  the seam is `headless/frame-surface.ts` (`FrameSurface`, and
+  `CanvasFrameSurface` over today's `Surface`); the scene surface is
+  `headless/scene/surface.ts` with `scene/outlines.ts` (clip and placement
+  outlines for `--outline`); `TeaUtil` is `headless/tea-util.ts`. Later tracks
+  read with these paths. Details settled here:
+  - The surface has, beside `draw` and `capture`, `text` (what `u.textWidth`
+    and `u.textBounds` measure with), `adapter`, `finish` (end-of-run
+    warnings) and `close`. `capture` returns the pixels, the `--timing` lines
+    and the `--scene` outline.
+  - One transcript format on both surfaces. The error line is
+    `frame N: error in <step>: Name: message (at <sketch line>)`, then a
+    fenced block of the sketch's stack lines; `RunResult.errors` holds the
+    same line. It replaces `**[frame N]** ERROR Name: message` with the full
+    stack. No surface captures the failed frame. Recorder warnings are
+    `**[frame N]** warn:`, hints use a new log level (`**[frame N]** hint:`),
+    and the off-canvas warnings are tagged with the last frame (the spike's
+    `end of run: warning:` prefix is gone). The `--scene` outline is a fenced
+    block after the frame's image. A scene run's header adds `- ratio:` and
+    `- adapter:`.
+  - The undeclared-param guard and the spike's starting-param check (`refused,
+    since it would be clamped …`) apply on both surfaces.
+  - `--ratio` other than 1 and `--scene` on the Canvas2D surface are errors.
+  - The process's device is opened with timestamps asked for (`--timing` pass
+    times) and is never destroyed; Dawn does not keep Node from exiting.
+  - beebox: `figureRenderer` and `FigureRendererError` are deleted; the check
+    is in `toTeaModule`, and its test moved to canvas-loop
+    (`test/headless/tea-load.test.ts`). `run.ts` reads only the
+    `**[frame N]** warn:` form.
+  - Tests: today's `tea-runtime.*` files are `tea-runtime.*.gpu.test.ts`, each
+    test once per surface; `test/gpu/renderer.gpu.test.ts`; the no-adapter
+    test (`tea-runtime.no-adapter.test.ts`) uses a stand-in GPU entry and opens
+    no device. The three ports export `renderer = "scene"` so `cli run`
+    renders them; their PNGs are byte-identical to chunk 1's, and chemistry's
+    three frames that equalled frame 0 are now written once (frame dedup).
+
 ### Track 3: dev-loop completion (chunk 3)
 
 - **What:** port today's checks that the spike lacks (faint marks, missing

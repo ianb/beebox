@@ -1,22 +1,25 @@
-// Everything that needs a GPU, in one file so one process holds one Dawn
-// device: the scene renderer against today's Skia renderer, judged by
+// The scene renderer against today's Skia renderer, judged by
 // beebox/docs/plans/canvas-loop-scene/parity-criteria.md section 2, and the
-// headless runner. Skipped, with a message, where Dawn finds no adapter.
+// headless runner on the scene surface. One Dawn device for the file: the
+// runner's own (`sharedGpu`). Skipped, with a message, where Dawn finds no
+// adapter.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { after, before, test } from "node:test";
+import { before, test } from "node:test";
 import type { TestContext } from "node:test";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
-import { openGpu, openTextMeasurer } from "../../src/device/open.js";
+import { openTextMeasurer } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
-import { runSpike } from "../../src/headless/scene/runner.js";
+import { sharedGpu } from "../../src/headless/scene/surface.js";
+import { toTeaModule } from "../../src/headless/tea-load.js";
+import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import type { Picture, View } from "../../src/scene/api.js";
 import type { Model } from "./dev-loop/cases.js";
-import { readDirBytes, teaView, tmpDir } from "../helpers.js";
+import { readDirBytes, readTranscript, teaRunOptions, teaView, tmpDir } from "../helpers.js";
 import { parity, premultiplied } from "./compare.js";
 import { CASE_NAMES, drawDraft, drawToday, fixtures } from "./fixtures.js";
 import { brushBlends, brushParity, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
@@ -30,6 +33,7 @@ import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js"
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
+import * as sceneSketchModule from "./scene-sketch.js";
 import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
 import * as hallwayPort from "../../src/examples/scene-ports/hallway/sketch-tea.js";
 import * as chemistryPort from "../../src/examples/scene-ports/chemistry/sketch-tea.js";
@@ -37,10 +41,9 @@ import * as chemistryPort from "../../src/examples/scene-ports/chemistry/sketch-
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;
 before(async () => {
-  gpu = await openGpu();
+  gpu = await sharedGpu();
   text = await openTextMeasurer();
 });
-after(() => gpu?.destroy());
 
 async function renderTwice(scene: Scene, handle: GpuHandle): Promise<Uint8Array> {
   const renderer = new GpuRenderer(handle);
@@ -92,29 +95,30 @@ test("shapes, strokes, dashes, gradients and transforms match today's Skia rende
   assert.ok((rows.find((r) => r.name === "dash-closed")?.maxFlat ?? 255) < 20, "closed dashes join at the seam");
 });
 
-const sketchPath = join(import.meta.dirname, "scene-sketch.ts");
+const sceneSketch = toTeaModule({ ...sceneSketchModule, renderer: "scene" });
 
-test("runs a draft-View sketch, renders only captured frames, and repeats exactly", async (t) => {
-  const handle = needGpu(t);
-  if (handle === undefined) return;
-  const options = { sketchPath, frames: 7, every: 3, seed: 1, ratio: 1, scene: true, events: [{ frame: 4, type: "snapshot" as const }, { frame: 4, type: "param" as const, name: "speed", value: 2 }] };
+test("runs a scene-View sketch, renders only captured frames, and repeats exactly", async (t) => {
+  if (needGpu(t) === undefined) return;
+  const events = [{ frame: 4, type: "snapshot" as const }, { frame: 4, type: "param" as const, name: "speed", value: 2 }];
+  const options = { frames: 7, every: 3, seed: 1, scene: true, timing: true, events };
   const a = tmpDir();
   const b = tmpDir();
   // Every 3rd (0, 3, 6), the logged frame (1) and the snapshot (4); frames 2 and 5 are skipped.
-  assert.deepEqual(await runSpike({ ...options, outDir: a }, handle), [0, 1, 3, 4, 6]);
-  await runSpike({ ...options, outDir: b }, handle);
+  assert.deepEqual((await teaRun(teaRunOptions(sceneSketch, { ...options, outDir: a }))).errors, []);
+  await teaRun(teaRunOptions(sceneSketch, { ...options, outDir: b }));
   assert.deepEqual(readdirSync(a).toSorted(), ["frame-0000.png", "frame-0001.png", "frame-0003.png", "frame-0004.png", "frame-0006.png", "transcript.md"]);
-  const transcript = readFileSync(join(a, "transcript.md"), "utf8");
-  assert.match(transcript, /frame 1: t 2/);
-  // A scripted param change has its line, in today's transcript wording.
-  assert.match(transcript, /^frame 4: param: speed → 2$/m);
-  assert.match(transcript, /!\[frame 4]\(frame-0004\.png\)/);
+  const transcript = readTranscript(a);
+  assert.match(transcript, /^- adapter: ./m);
+  assert.match(transcript, /^\*\*\[frame 1]\*\* log: t 2$/m);
+  assert.match(transcript, /^\*\*\[frame 4]\*\* param: speed → 2$/m);
+  assert.match(transcript, /^### frame 4\n!\[frame 4]\(frame-0004\.png\)/m);
   assert.match(transcript, /group opacity 1 blend normal effects glow\n {4}circle/);
-  assert.match(transcript, /## frame 0\n.*\n.*\nbrushed strokes 1: expanded 1, expansion cache hits 0/);
-  assert.match(transcript, /## frame 1\n.*\n.*\nbrushed strokes 1: expanded 0, expansion cache hits 1/);
+  // `--timing`: the renderer's counts under each captured frame; the cached brush expansion is reused on frame 1.
+  assert.match(transcript, /### frame 0\n.*\n\n\*\*\[frame 0]\*\* log: render: passes \d+, .*brushed strokes 1 \(expanded 1, cache hits 0\)/);
+  assert.match(transcript, /### frame 1\n.*\n\n\*\*\[frame 1]\*\* log: render: passes \d+, .*brushed strokes 1 \(expanded 0, cache hits 1\)/);
   assert.match(transcript, /text "t 4" 12px sans-serif/);
   assert.match(transcript, /picture "badge" 30×16\n {2}rect/);
-  assert.doesNotMatch(transcript, /warning/);
+  assert.doesNotMatch(transcript, /warn:/);
   const bytesA = readDirBytes(a);
   const bytesB = readDirBytes(b);
   for (const name of ["frame-0000.png", "frame-0004.png"]) assert.ok(bytesA.get(name)?.equals(bytesB.get(name) ?? Buffer.alloc(0)), `${name} is byte-identical across runs`);
@@ -122,13 +126,23 @@ test("runs a draft-View sketch, renders only captured frames, and repeats exactl
 });
 
 test("--scene first writes the outline for the first captured frame only", async (t) => {
-  const handle = needGpu(t);
-  if (handle === undefined) return;
+  if (needGpu(t) === undefined) return;
   const outDir = tmpDir();
-  assert.deepEqual(await runSpike({ sketchPath, outDir, frames: 4, every: 2, seed: 1, ratio: 1, scene: "first", events: [] }, handle), [0, 1, 2, 3]);
-  const transcript = readFileSync(join(outDir, "transcript.md"), "utf8");
+  assert.deepEqual((await teaRun(teaRunOptions(sceneSketch, { outDir, frames: 4, every: 2, seed: 1, scene: "first" }))).framesRun, 4);
+  const transcript = readTranscript(outDir);
   assert.equal(transcript.match(/^scene 160×120$/gm)?.length, 1);
-  assert.match(transcript, /## frame 0\n(.*\n){3}```\nscene 160×120\n/);
+  assert.match(transcript, /### frame 0\n!\[frame 0]\(frame-0000\.png\)\n\n```\nscene 160×120\n/);
+});
+
+test("--outline draws debug boxes, clips and placed pictures over the frame; without it the frame has none", async (t) => {
+  if (needGpu(t) === undefined) return;
+  const plain = tmpDir();
+  const outlined = tmpDir();
+  await teaRun(teaRunOptions(sceneSketch, { outDir: plain, frames: 1 }));
+  await teaRun(teaRunOptions(sceneSketch, { outDir: outlined, frames: 1, outline: true }));
+  const a = readFileSync(join(plain, "frame-0000.png"));
+  const b = readFileSync(join(outlined, "frame-0000.png"));
+  assert.ok(!a.equals(b), "the placed badge is outlined");
 });
 
 test("a group just above the canvas still casts its shadow onto it (R5 bounds)", async (t) => {
@@ -249,7 +263,7 @@ for (const c of CASES) {
   test(`dev loop, ${c.id}: ${c.mistake}`, c.gap === undefined ? {} : { todo: c.gap }, async (t) => {
     const handle = needGpu(t);
     if (handle === undefined) return;
-    const out = await runCase(c, handle);
+    const out = await runCase(c);
     switch (c.channel) {
       case "error": {
         assert.ok(out.error !== undefined, `the run throws (transcript warnings: ${out.warnings.join("; ") || "none"})`);
@@ -278,7 +292,7 @@ for (const c of CASES) {
   });
 }
 
-onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async (handle) => {
+onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async () => {
   const out = await runCase({
     id: "turning-picture",
     mistake: "a picture placed under a rotation that changes every frame",
@@ -292,14 +306,14 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
       const dot = v.picture({ key: "dot", width: 6, height: 6 }, () => v.circle(3, 3, 3, { fill: "#e63946" }));
       for (const s of [1, 2]) v.at({ scale: s }, () => v.place(dot, 2, 2));
     },
-  }, handle);
+  });
   const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
   assert.equal(hints.length, 1, hints.join("\n"));
-  assert.match(hints[0] ?? "", /^frame 3: hint: picture "badge" was placed at a scale or rotation it has no kept image for in each of the last 3 frames .*\(at test\/gpu\/renderer\.test\.ts:\d+:\d+\)$/);
+  assert.match(hints[0] ?? "", /^\*\*\[frame 3]\*\* hint: picture "badge" was placed at a scale or rotation it has no kept image for in each of the last 3 frames .*\(at test\/gpu\/renderer\.gpu\.test\.ts:\d+:\d+\)$/);
   assert.deepEqual(out.warnings, []);
   // As the raster cache keys them: fixed scales placed in turn reuse their images (kept two frames); a change
   // too small to see in six decimals is still a new key every frame.
-  const hintsFor = async (draw: (v: View, m: Model) => void): Promise<string[]> => (await runCase({ id: "scales", mistake: "", channel: "none", names: [], frames: 8, draw }, handle)).transcript.split("\n").filter((l) => l.includes("hint:"));
+  const hintsFor = async (draw: (v: View, m: Model) => void): Promise<string[]> => (await runCase({ id: "scales", mistake: "", channel: "none", names: [], frames: 8, draw })).transcript.split("\n").filter((l) => l.includes("hint:"));
   const tile = (v: View): Picture => v.picture({ key: "tile", width: 6, height: 6 }, () => v.rect(0, 0, 6, 6, { fill: "#2a9d8f" }));
   assert.deepEqual(await hintsFor((v, m) => {
     const p = tile(v);
@@ -311,7 +325,7 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
   })).length, 1, "a scale growing by 1e-9 a frame");
 });
 
-onGpu("off the canvas: only what is off on every frame warns, once; unboxed text crossing the edge warns; a glow reaching in does not", async (handle) => {
+onGpu("off the canvas: only what is off on every frame warns, once; unboxed text crossing the edge warns; a glow reaching in does not", async () => {
   const fill = { fill: "#2a9d8f" };
   const out = await runCase({
     id: "off-canvas-rule",
@@ -328,13 +342,13 @@ onGpu("off the canvas: only what is off on every frame warns, once; unboxed text
       v.text("a long boxed label", { x: 60, y: 30, w: 15 }, { size: 10 });
       v.text("Period: 2.00 s", { x: 60, y: 10 }, { size: 12 });
     },
-  }, handle);
+  });
   assert.equal(out.error, undefined);
   assert.equal(out.warnings.length, 1, out.warnings.join("\n"));
-  assert.match(out.warnings[0] ?? "", /^end of run: warning: text "Period: 2\.00 s" crosses the edge of the 80×60 canvas on every frame \(0–2\), .* \(at test\/gpu\/renderer\.test\.ts:\d+:\d+\)$/);
+  assert.match(out.warnings[0] ?? "", /^\*\*\[frame 2]\*\* warn: text "Period: 2\.00 s" crosses the edge of the 80×60 canvas on every frame \(0–2\), .* \(at test\/gpu\/renderer\.gpu\.test\.ts:\d+:\d+\)$/);
 });
 
-onGpu("off the canvas: a loop that grows onto the canvas stays quiet; a picture placed off it, and an arc whose circle reaches it but whose sweep does not, warn", async (handle) => {
+onGpu("off the canvas: a loop that grows onto the canvas stays quiet; a picture placed off it, and an arc whose circle reaches it but whose sweep does not, warn", async () => {
   const fill = { fill: "#2a9d8f" };
   const out = await runCase({
     id: "off-canvas-more",
@@ -349,7 +363,7 @@ onGpu("off the canvas: a loop that grows onto the canvas stays quiet; a picture 
       v.place(p, 1000, 1000);
       v.arc(150, 30, 100, -0.2, 0.2, { stroke: "#000000", weight: 2 });
     },
-  }, handle);
+  });
   assert.equal(out.error, undefined);
   const warnings = out.warnings.join("\n");
   assert.equal(out.warnings.length, 2, warnings);

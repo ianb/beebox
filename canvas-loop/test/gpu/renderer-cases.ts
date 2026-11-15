@@ -1,4 +1,4 @@
-// Renderer cases from the chunk 1–2 review, run by gpu.test.ts (one Dawn
+// Renderer cases from the chunk 1–2 review, run by renderer.gpu.test.ts (one Dawn
 // device per process): culling and cutting shapes to what can be seen, clip
 // unions as geometric unions, effects under non-uniform transforms, and frames
 // that fail cleanly.

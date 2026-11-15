@@ -33,6 +33,8 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: W, height: H };
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export type Params = ParamValues<typeof params>;
 

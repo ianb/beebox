@@ -1,4 +1,4 @@
-// Kept picture rasters and clips, run by gpu.test.ts: memory stays inside the
+// Kept picture rasters and clips, run by renderer.gpu.test.ts: memory stays inside the
 // raster budget, a picture that reads its surroundings draws as one layer, a
 // tile placed twice in a frame is drawn once, and a clip to a path whose
 // contours overlap keeps winding coverage.

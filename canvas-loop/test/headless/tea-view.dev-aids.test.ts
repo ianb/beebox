@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { DeepReadonly, Vec2, View } from "../../src/core/tea.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
-import { teaRun } from "../../src/headless/tea-runtime.js";
+import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import { readTranscript, teaRunOptions, teaView, tmpDir } from "../helpers.js";
 
 test("debugBox draws only with outlines on, after the frame finishes", () => {
@@ -27,7 +27,7 @@ test("a faint mark in a sprite names the sprite; gesture({ faint: true }) silenc
   assert.equal(logs.length, 1);
 });
 
-test("--timing adds one timing line to the transcript", () => {
+test("--timing adds one timing line to the transcript", async () => {
   const outDir = tmpDir();
   const module = toTeaModule({
     canvas: { width: 10, height: 10 },
@@ -35,7 +35,7 @@ test("--timing adds one timing line to the transcript", () => {
     update: (model: object) => model,
     draw: (v: View): void => v.background("#000"),
   });
-  teaRun(teaRunOptions(module, { outDir, frames: 5, timing: true }));
+  await teaRun(teaRunOptions(module, { outDir, frames: 5, timing: true }));
   assert.match(readTranscript(outDir), /timing: draw avg [\d.]+ ms, p95 [\d.]+ ms, max [\d.]+ ms \(frame \d+\); update avg [^;]+; frame 0 draw/);
 });
 

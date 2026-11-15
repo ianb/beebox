@@ -146,13 +146,13 @@ export async function prepareFigureJob(args: {
   };
 }
 
-/** Lines the transcript logged at warn or error level, for the summary (`**[frame N]** warn:`; the scene runner writes `frame N: warning:`). */
+/** Lines the transcript logged at warn level (`**[frame N]** warn:`), for the summary. */
 async function transcriptWarnings(transcript: string): Promise<string[]> {
   const text = await fs.readFile(transcript, "utf8").catch(() => "");
-  const warning = /^(?:\*\*\[frame (\d+)\]\*\* warn|frame (\d+): warning): /u;
+  const warning = /^\*\*\[frame (\d+)\]\*\* warn: /u;
   return text.split("\n").flatMap((line) => {
     const m = warning.exec(line);
-    return m === null ? [] : [`frame ${m[1] ?? m[2] ?? "?"}: ${line.slice(m[0].length)}`];
+    return m === null ? [] : [`frame ${m[1] ?? "?"}: ${line.slice(m[0].length)}`];
   });
 }
 

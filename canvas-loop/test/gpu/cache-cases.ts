@@ -1,4 +1,4 @@
-// Cache equivalence (draft section 6), run by gpu.test.ts: the same recorded
+// Cache equivalence (draft section 6), run by renderer.gpu.test.ts: the same recorded
 // frames rendered by a renderer that keeps what it may (warm), by one that
 // keeps nothing (caches off), and by a fresh renderer for each frame (cold, as
 // after waking) give the same bytes. The frames move things by whole and by
@@ -13,7 +13,8 @@ import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import type { Vec2 } from "../../src/core/paint.js";
-import { SceneUtil } from "../../src/headless/scene/runner.js";
+import { SeededRandom } from "../../src/core/prng.js";
+import { TeaUtil } from "../../src/headless/tea-util.js";
 import type { ParamsDecl } from "../../src/core/tea.js";
 
 /** Render each scene warm, with caches off, and cold; assert equal bytes. Returns what the warm renderer reused. */
@@ -107,7 +108,9 @@ interface PortModule {
 export function portFrames(mod: PortModule, a: { at: readonly number[]; text: TextMeasurer }): Scene[] {
   const params: Record<string, number | boolean | string> = {};
   for (const [k, p] of Object.entries(mod.params)) if (p.type !== "trigger") params[k] = p.default;
-  const util = new SceneUtil({ seed: 42, params: () => params, text: a.text, canvas: mod.canvas });
+  const where = { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: mod.canvas };
+  const text = { width: a.text.width.bind(a.text), bounds: (...[content, box, options]: Parameters<TeaUtil<ParamsDecl>["textBounds"]>) => a.text.place(content, { box, options: options ?? {}, where }).bounds };
+  const util = new TeaUtil({ random: new SeededRandom(42), getParams: () => params, onHandled: () => {}, log: () => {}, text });
   const rec = new SceneRecorder(mod.canvas, { text: a.text, seed: 42, params: { decl: mod.params, values: () => params } });
   const call = (n: "init" | "update" | "draw", args: unknown[]): unknown => Reflect.apply(mod[n], undefined, args);
   let model = call("init", [util]);

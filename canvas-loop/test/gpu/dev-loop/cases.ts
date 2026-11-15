@@ -1,7 +1,7 @@
 // The dev-loop checklist (beebox/docs/plans/canvas-loop-scene/stage4/dev-loop.md)
 // as runnable sketches: each makes one mistake an agent really makes, and names
 // the channel its message should come out on and what the text must name.
-// `run-case.ts` runs them through the headless runner; gpu.test.ts asserts.
+// `run-case.ts` runs them through the headless runner; renderer.gpu.test.ts asserts.
 // A row with `gap` is not met yet: its proposal needs a decision, and its test
 // is marked todo.
 import type { Msg, ParamValues, ParamsDecl, Picture, View } from "../../../src/scene/api.js";
@@ -354,7 +354,7 @@ export const CASES: readonly DevLoopCase[] = [
     id: "offscreen",
     mistake: "drawing entirely off the canvas (a translate in the wrong units)",
     channel: "warning",
-    names: [/^end of run: warning: rect lands entirely off the 80×60 canvas on frame 0/m, /\(1000,1000\)–\(1040,1040\)/, CASE_FILE],
+    names: [/^\*\*\[frame 0]\*\* warn: rect lands entirely off the 80×60 canvas on frame 0/m, /\(1000,1000\)–\(1040,1040\)/, CASE_FILE],
     draw: (v) => v.at({ translate: [1000, 1000] }, () => v.rect(0, 0, 40, 40, fill)),
   },
   {

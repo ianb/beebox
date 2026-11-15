@@ -8,7 +8,7 @@
 const SRC = new URL("../", import.meta.url).pathname;
 const RUNTIME = ["scene/", "gpu/", "device/", "core/", "headless/"].map((dir) => SRC + dir);
 // The runner and the browser surface call the sketch: frames below them are their callers, not the sketch.
-const ROOTS = ["headless/scene/runner.ts", "browser/scene/"].map((dir) => SRC + dir);
+const ROOTS = ["headless/tea-runtime/runner.ts", "browser/scene/"].map((dir) => SRC + dir);
 
 function workingDir(): string | undefined {
   const proc: unknown = Reflect.get(globalThis, "process");

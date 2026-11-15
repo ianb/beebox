@@ -13,7 +13,7 @@ import { CliError } from "./errors.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { toTeaModule } from "./tea-load.js";
-import { teaRun } from "./tea-runtime.js";
+import { teaRun } from "./tea-runtime/runner.js";
 
 const PACKAGE_ROOT = new URL("../../", import.meta.url);
 const GALLERY_DIR = new URL("src/gallery/", PACKAGE_ROOT);

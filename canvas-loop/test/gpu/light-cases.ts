@@ -1,4 +1,4 @@
-// Lit groups on the GPU (R8), run by gpu.test.ts: shadows by casting amount
+// Lit groups on the GPU (R8), run by renderer.gpu.test.ts: shadows by casting amount
 // (partial alpha and erase) and by caster and light height, nesting, lights
 // in placed pictures, a placement's material, materials ignored outside a lit
 // group, and exposure with the tone curve.

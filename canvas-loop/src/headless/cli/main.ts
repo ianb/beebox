@@ -3,17 +3,18 @@ import { basename, dirname, join, resolve } from "node:path";
 import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { CliError } from "./errors.js";
-import { checkGallery } from "./gallery.js";
-import type { GalleryCheckResult } from "./gallery.js";
-import type { RunResult } from "./recorder/frame-recorder.js";
-import { toTeaModule } from "./tea-load.js";
-import { parseTeaEvents } from "./tea-events.js";
-import { teaRun } from "./tea-runtime.js";
-import { encodeZoomPng, parseZoom } from "./recorder/zoom.js";
-import { statsLine, writeDiff } from "./diff.js";
-import { CHECKPOINT_ENV, saveCheckpoint } from "./checkpoint/save.js";
-import { checkpointPage } from "./checkpoint/page.js";
+import { CliError } from "../errors.js";
+import { checkGallery } from "../gallery.js";
+import type { GalleryCheckResult } from "../gallery.js";
+import type { RunResult } from "../recorder/frame-recorder.js";
+import { toTeaModule } from "../tea-load.js";
+import { parseTeaEvents } from "../tea-events.js";
+import { teaRun } from "../tea-runtime/runner.js";
+import { encodeZoomPng, parseZoom } from "../recorder/zoom.js";
+import { sceneArgs } from "./args.js";
+import { statsLine, writeDiff } from "../diff.js";
+import { CHECKPOINT_ENV, saveCheckpoint } from "../checkpoint/save.js";
+import { checkpointPage } from "../checkpoint/page.js";
 
 function intOption(params: { value: string | undefined; fallback: number; name: string }): number {
   const { value, fallback, name } = params;
@@ -23,6 +24,20 @@ function intOption(params: { value: string | undefined; fallback: number; name: 
     throw new CliError({ detail: `--${name} must be an integer, got "${value}"` });
   }
   return parsed;
+}
+
+function ratioOption(value: string | undefined): number {
+  if (value === undefined) return 1;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) throw new CliError({ detail: `--ratio must be a positive number, got "${value}"` });
+  return parsed;
+}
+
+function sceneOption(value: string | undefined): boolean | "first" {
+  if (value === undefined) return false;
+  if (value === "first") return "first";
+  if (value === "all") return true;
+  throw new CliError({ detail: `--scene takes no value or "first", got "${value}"` });
 }
 
 function readEventsJson(path: string): unknown {
@@ -74,7 +89,7 @@ async function zoomFile(args: readonly string[]): Promise<void> {
 
 async function main(): Promise<void> {
   const parsed = parseArgs({
-    args: process.argv.slice(2),
+    args: sceneArgs(process.argv.slice(2)),
     allowPositionals: true,
     options: {
       frames: { type: "string" },
@@ -86,6 +101,8 @@ async function main(): Promise<void> {
       zoom: { type: "string", multiple: true },
       timing: { type: "boolean" },
       outline: { type: "boolean" },
+      ratio: { type: "string" },
+      scene: { type: "string" },
       note: { type: "string" },
       title: { type: "string" },
     },
@@ -124,7 +141,7 @@ async function main(): Promise<void> {
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
     });
   }
   if (sketchArg === undefined) {
@@ -138,14 +155,14 @@ async function main(): Promise<void> {
   const outDir = resolve(values.out ?? "out");
   const eventsPath = values.events;
   const zooms = (values.zoom ?? []).map((spec) => parseZoom(spec));
-  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms, timing: values.timing === true, outline: values.outline === true };
+  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms, timing: values.timing === true, outline: values.outline === true, ratio: ratioOption(values.ratio), scene: sceneOption(values.scene) };
 
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);
 
   const module = toTeaModule(imported);
   const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
-  finishRun(teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
+  finishRun(await teaRun({ module, events, ...common }), { sketchPath, eventsPath, outDir, note: values.note });
 }
 
 /** Report the run, and save a checkpoint when CANVAS_LOOP_CHECKPOINTS names a directory. */

@@ -1,4 +1,4 @@
-// Brushed strokes on the GPU, run by renderer.test.ts: parity with today's Skia
+// Brushed strokes on the GPU, run by renderer.gpu.test.ts: parity with today's Skia
 // marks by crop, R1 blends and erase, the expansion cache, texture that moves
 // with a translated shape, and paper scoped by R9.
 import assert from "node:assert/strict";
