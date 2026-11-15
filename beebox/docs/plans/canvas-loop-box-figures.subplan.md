@@ -5,7 +5,7 @@ workstream: canvas-brushes
 issues:
   - ../../../issues/decisions/2026-11-13-isolate-view-and-figure-code.md
   - ../../../issues/decisions/2026-11-13-view-file-writes-too-broad.md
-  - ../../../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md
+  - ../../../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md
 ---
 # canvas-loop scene, subplan (c): box figures
 
@@ -21,7 +21,7 @@ finish step sees them, and **not to be closed** by it:
 `issues/decisions/2026-11-13-isolate-view-and-figure-code.md` (session risk of
 figure code; see "Interaction with figure isolation" below),
 `issues/decisions/2026-11-13-view-file-writes-too-broad.md` (views, not
-figures), and `issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md`
+figures), and `issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md`
 (older verification list for the Canvas2D figure runtime; its item 1 is
 already handled by the CSS in `FigureMount.tsx:196`, and its other items
 describe the runtime this plan replaces). Searched `issues/` for `webgpu`,

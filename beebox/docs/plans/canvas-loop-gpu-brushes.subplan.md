@@ -21,7 +21,7 @@ Draft 2, after review round 1 (see "Review round 1" near the end).
 `webgpu`, `compute pass`, `brush expan`, `perfect-freehand`, `walker`,
 `brush`, `canvas-loop`: no open item covers brush expansion speed. The hits
 (`issues/exploration/2026-11-11-look-at-klad-shared-human-agent-painting.md`,
-`issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md`) are about
+`issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md`) are about
 other things.
 
 ## Design

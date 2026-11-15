@@ -1,11 +1,14 @@
 ---
 title: "canvas-loop figure runtime: post-merge follow-up — responsive overflow + verification punch-list"
-workstream: quick-seeing-p5js
+workstream: canvas-brushes
 area: beebox
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — after merging the canvas-loop library + figure runtime to main (f57eb12c)
 priority: backlog
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Item 1 (overflow at phone width) fixed by 8942fdb9e (2026-11-12): .cl-canvas has max-width: 100%; height: auto, and the figure instructions say the figure scales down to a narrow column. Items 2 and 5 were overtaken; items 3, 4 and 6 were optional checks, and subplan canvas-loop-box-figures (C5) re-checks the card in a browser.
 
 The canvas-loop library + figure runtime landed on `main` (merge `f57eb12c`,
 2026-07-18). It shipped with several verification debts (documented honestly in
@@ -59,8 +62,8 @@ The demo `Orbit.figure.card` (in the test box at
 `~/src/box-worktrees/…/test1/content/store/figures/`) was verified at the DOM
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
-([agent-browser-screenshot-flake](../closed/bugs/2026-07-10-agent-browser-screenshot-flake.md),
-[browse-daemon-wedges-on-animated-canvas](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
+([agent-browser-screenshot-flake](2026-07-10-agent-browser-screenshot-flake.md),
+[browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the
 speed slider / show-orbits toggle / focus select / reset button work, a planet
@@ -103,9 +106,9 @@ agents at the headless loop (a box cannot resolve the package).
 
 ## Already filed separately (not part of this, cross-linked)
 
-- [knowledge-audit-box-nesting](../closed/bugs/2026-07-15-knowledge-audit-box-nesting.md)
+- [knowledge-audit-box-nesting](2026-07-15-knowledge-audit-box-nesting.md)
   — `--box` crashes on a shape-2 box package root. (Resolved.)
-- [figure-compile-cache-and-attach-guard](../code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md)
+- [figure-compile-cache-and-attach-guard](../../code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md)
   — loose `.attach` gate, unbounded compile caches, views-side dep-staleness.
 
 Re-reviewed 2026-10-30: item 1 (fixed-size canvas overflows at phone width) is unchanged. Items 2 and 5 (post-merge install and the July deploy) are long past and many deploys have run since.

@@ -19,7 +19,7 @@ guidance. This plan leaves a clear seam for each.
 **Issues addressed:** none. Searched `issues/` and `private-issues/` for
 canvas-loop, Canvas2D, painter, WebGPU, Dawn, gallery and scene: nothing open
 is about the renderer. Related, not closed by this plan:
-`issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md` (item 1,
+`issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md` (item 1,
 canvas overflow at phone width). Its fix is already in the stylesheet that the
 scene mount keeps: `canvas-loop/src/browser/figure.css:12` *".cl-canvas {
 display: block; max-width: 100%; height: auto; …"*. Confirming it at 390 px
