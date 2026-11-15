@@ -25,14 +25,14 @@ import type { Paint } from "../../core/paint.js";
 import { hashNumbers } from "../../core/brush/random.js";
 import { BLACK, jitterOf, jitteredInk } from "../../core/brush/render/ink.js";
 import { paintBristle, paintInk, paintStamp } from "../../core/brush/render/kinds.js";
-import { shapeSamples, stepFor, wobbleLattice } from "../../core/brush/render/mark/render.js";
+import { shapeSamples } from "../../core/brush/render/mark/render.js";
 import type { Sample } from "../../core/brush/sample.js";
-import { preparePoints, sampleSegments } from "../../core/brush/sample.js";
 import type { BristleBrush, BrushKind, Envelope, InkBrush, SmearBrush, StampBrush } from "../../core/brush/types.js";
 import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../nodes.js";
 import { geomContours } from "./contours.js";
+import { prepareContour } from "./prepare.js";
 import { geomKey, gestureKey, keyOf, linearKey } from "../hash.js";
 import { RecordingCtx, SoftDabImage } from "./record-ctx.js";
 import type { Dab, Run } from "./record-ctx.js";
@@ -93,8 +93,7 @@ export interface Expanded {
   readonly prepared: () => Prepared;
 }
 
-/** Words per prepared point in `PreparedContour.geom`. */
-export const POINT_WORDS = 4;
+export { POINT_WORDS } from "./prepare.js";
 
 /**
  * One contour after `sample.ts`'s `preparePoints`, in brush space: what fixes
@@ -189,16 +188,22 @@ function baseColour(paint: Paint, colors: ColorParser): { r: number; g: number; 
   return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a };
 }
 
-/** The stroke's contours in brush space, each with its own seed, and the brush width there; undefined for a degenerate transform. */
-function brushContours(req: ExpandRequest, b: Mat): { contours: { contour: Contour; seed: number }[]; width: number } | undefined {
+/** The stroke's contours in its call's coordinates, each with its own seed, and the brush width in brush space; undefined for a degenerate transform. */
+function brushLocal(req: ExpandRequest, b: Mat): { local: { contour: Contour; seed: number }[]; width: number } | undefined {
   const s = Math.sqrt(Math.abs(det(b)));
   if (!(s > 0) || !Number.isFinite(s)) return undefined;
   const local = geomContours(req.geom, 0.5 / s);
   checkFinite(local);
   const { gesture } = req.stroke;
   const seed = gesture.seed === undefined ? hashNumbers(geomNumbers(req.geom), 0x811c9dc5) : gesture.seed >>> 0;
-  const contours = local.map((c, i) => ({ contour: { points: c.points.map((p) => applyLinear(b, p)), closed: c.closed }, seed: hashNumbers([i], seed) }));
-  return { contours, width: req.weight * s };
+  return { local: local.map((contour, i) => ({ contour, seed: hashNumbers([i], seed) })), width: req.weight * s };
+}
+
+/** The stroke's contours in brush space, each with its own seed, and the brush width there; undefined for a degenerate transform. */
+function brushContours(req: ExpandRequest, b: Mat): { contours: { contour: Contour; seed: number }[]; width: number } | undefined {
+  const c = brushLocal(req, b);
+  if (c === undefined) return undefined;
+  return { contours: c.local.map(({ contour, seed }) => ({ contour: { points: contour.points.map((p) => applyLinear(b, p)), closed: contour.closed }, seed })), width: c.width };
 }
 
 type Sampled = { samples: Sample[]; closed: boolean; seed: number }[];
@@ -217,41 +222,17 @@ export function brushSamples(req: ExpandRequest): Sampled | undefined {
   return sampledIn(req, brushSpace(req.linear).b)?.all;
 }
 
-function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandRequest; width: number; box: Prepared["box"] }): PreparedContour {
-  const pts = preparePoints(c.contour.points, c.contour.closed);
-  const origin = [pts[0]?.[0] ?? 0, pts[0]?.[1] ?? 0] as const;
-  const { brush, gesture } = a.req.stroke;
-  const step = stepFor(brush, a.width);
-  const { lengths, total, count, first } = sampleSegments(pts, step);
-  const geom = new Float32Array(pts.length * POINT_WORDS);
-  const words = new Uint32Array(geom.buffer);
-  let arc = 0;
-  for (const [i, p] of pts.entries()) {
-    geom[i * POINT_WORDS] = p[0] - origin[0];
-    geom[i * POINT_WORDS + 1] = p[1] - origin[1];
-    geom[i * POINT_WORDS + 2] = arc;
-    words[i * POINT_WORDS + 3] = first[i] ?? count;
-    arc += lengths[i] ?? 0;
-    a.box.x0 = Math.min(a.box.x0, p[0]);
-    a.box.y0 = Math.min(a.box.y0, p[1]);
-    a.box.x1 = Math.max(a.box.x1, p[0]);
-    a.box.y1 = Math.max(a.box.y1, p[1]);
-  }
-  const { period, cell } = wobbleLattice(c.contour.closed, count === 1 ? 0 : total);
-  return { geom, origin, count, step, total, seed: c.seed, pressure: gesture.pressure ?? (c.contour.closed ? "even" : "taper"), period, cell };
-}
-
 /** The stroke prepared for the GPU sample pass (brush space, as `expand`); undefined for a degenerate transform. */
 export function prepare(req: ExpandRequest): Prepared | undefined {
   return prepareIn(req, brushSpace(req.linear).b);
 }
 
 function prepareIn(req: ExpandRequest, b: Mat): Prepared | undefined {
-  const c = brushContours(req, b);
+  const c = brushLocal(req, b);
   if (c === undefined) return undefined;
   const { brush, gesture } = req.stroke;
   const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  const contours = c.contours.map((k) => prepareContour(k, { req, width: c.width, box }));
+  const contours = c.local.map((k) => prepareContour(k, { b, brush, gesture, width: c.width, box }));
   const wobble = gesture.wobble ?? 0;
   const grown = { x0: box.x0 - wobble, y0: box.y0 - wobble, x1: box.x1 + wobble, y1: box.y1 + wobble };
   const base = brush.kind !== "smear" && jitterOf(brush) !== undefined ? baseColour(req.paint, req.colors) : undefined;

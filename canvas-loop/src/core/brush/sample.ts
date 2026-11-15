@@ -92,8 +92,19 @@ export function sampleSegments(pts: readonly Vec2[], step: number): { lengths: n
   const lengths = segmentLengths(pts);
   const total = lengths.reduce((a, b) => a + b, 0);
   const first = lengths.map(() => 0);
-  if (pts.length === 0) return { lengths, total, count: 0, first };
-  if (total < step || pts.length < 2) return { lengths, total, count: 1, first };
+  const count = firstSamples(lengths, { n: lengths.length, points: pts.length, total, step, first });
+  return { lengths, total, count, first };
+}
+
+/**
+ * `sampleSegments` over `n` segment lengths already measured, between `points` prepared points (`total` their sum, in
+ * order from 0): writes `first[0..n)` and returns the sample count. For callers that keep points in flat arrays.
+ */
+export function firstSamples(lengths: ArrayLike<number>, a: { n: number; points: number; total: number; step: number; first: { [i: number]: number } }): number {
+  const { n, points, total, step, first } = a;
+  for (let j = 0; j < n; j += 1) first[j] = 0;
+  if (points === 0) return 0;
+  if (total < step || points < 2) return 1;
   let seg = 0;
   let segStart = 0;
   let k = 0;
@@ -102,13 +113,13 @@ export function sampleSegments(pts: readonly Vec2[], step: number): { lengths: n
       s = total;
       last = true;
     }
-    while (seg < lengths.length - 1 && segStart + (lengths[seg] ?? 0) < s) {
+    while (seg < n - 1 && segStart + (lengths[seg] ?? 0) < s) {
       segStart += lengths[seg] ?? 0;
       seg += 1;
       first[seg] = k;
     }
     k += 1;
   }
-  for (let j = seg + 1; j < first.length; j += 1) first[j] = k;
-  return { lengths, total, count: k, first };
+  for (let j = seg + 1; j < n; j += 1) first[j] = k;
+  return k;
 }
