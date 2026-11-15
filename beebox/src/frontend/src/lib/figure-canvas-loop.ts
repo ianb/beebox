@@ -58,15 +58,41 @@ export function paramMismatches(declared: readonly FigureParamDecl[], module: un
   return out;
 }
 
-/** Return `lib` with its `mountSketch` wrapped for this figure (see the module comment). */
+type MountSketch = CanvasLoopLib["mountSketch"];
+
+/**
+ * `mountSceneSketch` for a figure whose `draw` takes the scene View (canvas-loop
+ * scene spike, GPU). The renderer loads on the first call, as its own chunk, so
+ * Canvas2D figures never fetch it; the teardown works before it arrives.
+ */
+const mountSceneSketch: MountSketch = (mount, opts) => {
+  const state: { torn: boolean; teardown?: () => void } = { torn: false };
+  import("@ianbicking/canvas-loop/scene-browser")
+    .then((scene) => {
+      if (!state.torn) state.teardown = scene.mountSceneSketch(mount, opts);
+    })
+    .catch((error: unknown) => {
+      if (opts.onError === undefined) console.error("canvas-loop: loading the scene renderer failed", error);
+      else opts.onError(error);
+    });
+  return () => {
+    state.torn = true;
+    state.teardown?.();
+  };
+};
+
+/**
+ * Return `lib` with its `mountSketch` wrapped for this figure (see the module
+ * comment), plus `mountSceneSketch`, wrapped the same way.
+ */
 export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(lib: L, harness: {
   declared: readonly FigureParamDecl[];
   /** Logs the figure's actions (`useCardActivityReporter`); absent means none. */
   report?: ReportActivity;
-}): L {
+}): L & { mountSceneSketch: MountSketch } {
   const warned = new Set<string>();
   const { report } = harness;
-  const mountSketch: CanvasLoopLib["mountSketch"] = (mount, opts) => {
+  const wrap = (inner: MountSketch): MountSketch => (mount, opts) => {
     for (const warning of paramMismatches(harness.declared, opts.module)) {
       if (warned.has(warning)) continue;
       warned.add(warning);
@@ -79,10 +105,10 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
       if (detail === null) return;
       report("explored", detail, event.activity);
     };
-    return lib.mountSketch(mount, {
+    return inner(mount, {
       ...opts,
       ...(onEvent !== undefined ? { onEvent } : {}),
     });
   };
-  return { ...lib, mountSketch };
+  return { ...lib, mountSketch: wrap(lib.mountSketch), mountSceneSketch: wrap(mountSceneSketch) };
 }

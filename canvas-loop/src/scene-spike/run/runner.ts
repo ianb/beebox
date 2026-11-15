@@ -14,6 +14,7 @@ import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { openGpu, openTextMeasurer } from "../device.js";
 import type { TextMeasurer } from "../../core/painter/text/measure.js";
 import type { GpuHandle } from "../device.js";
+import { SketchUsageError } from "../../core/errors.js";
 import { GpuRenderError } from "../errors.js";
 import { GpuRenderer } from "../gpu/renderer.js";
 import { encodePng } from "./png.js";
@@ -32,11 +33,17 @@ export interface SpikeRunOptions {
   /** Write each captured frame's scene outline into the transcript. */
   readonly scene: boolean;
   readonly events: readonly TeaScriptEvent[];
+  /** The sketch, already loaded (beebox's `figure run-one` imports the compiled entry itself); else `sketchPath` is imported. */
+  readonly module?: LoadedTeaModule;
+  /** Starting param values over the declared defaults, as `teaRun`'s `initialParams`; a name the module does not declare is an error. */
+  readonly initialParams?: Readonly<Record<string, number | boolean | string>>;
 }
 
-function defaults(decl: ParamsDecl): ParamValues<ParamsDecl> {
+function defaults(decl: ParamsDecl, initial: Readonly<Record<string, number | boolean | string>>): ParamValues<ParamsDecl> {
   const values: Record<string, number | boolean | string> = {};
-  for (const [name, p] of Object.entries(decl)) if (p.type !== "trigger") values[name] = p.default;
+  for (const [name, p] of Object.entries(decl)) if (p.type !== "trigger") values[name] = initial[name] ?? p.default;
+  // As `teaRun`: a starting value for a param the sketch does not declare is an error.
+  for (const name of Object.keys(initial)) if (decl[name] === undefined) throw new SketchUsageError({ detail: `initial param "${name}": the sketch declares no such param` });
   return values;
 }
 
@@ -75,7 +82,7 @@ class SpikeRun {
     this.#mod = a.mod;
     this.#renderer = a.renderer;
     this.#text = a.text;
-    this.#params = defaults(a.mod.params);
+    this.#params = defaults(a.mod.params, o.initialParams ?? {});
     this.#util = new SpikeUtil({ seed: o.seed, params: () => this.#params, text: a.text, canvas: a.mod.canvas ?? { width: 400, height: 300 } });
   }
 
@@ -127,10 +134,14 @@ class SpikeRun {
   }
 }
 
+async function importRecord(path: string): Promise<Record<string, unknown>> {
+  const raw: unknown = await import(pathToFileURL(resolve(path)).href);
+  return typeof raw === "object" && raw !== null ? Object.fromEntries(Object.entries(raw)) : {};
+}
+
 /** Run a sketch headless under Dawn. Throws `GpuRenderError` when no adapter is found. */
 export async function runSpike(o: SpikeRunOptions, gpu?: GpuHandle): Promise<number[]> {
-  const raw: unknown = await import(pathToFileURL(resolve(o.sketchPath)).href);
-  const mod = toTeaModule(typeof raw === "object" && raw !== null ? Object.fromEntries(Object.entries(raw)) : {});
+  const mod = o.module ?? toTeaModule(await importRecord(o.sketchPath));
   const handle = gpu ?? (await openGpu());
   if (handle === undefined) throw new GpuRenderError({ detail: "no GPU adapter (Dawn found none)" });
   const renderer = new GpuRenderer(handle);
@@ -151,7 +162,7 @@ async function main(): Promise<void> {
   } });
   const sketchPath = positionals[0];
   if (sketchPath === undefined) throw new GpuRenderError({ detail: "usage: runner.ts <sketch.ts> [--out dir] [--frames N] [--every N] [--seed N] [--ratio R] [--scene] [--events file]" });
-  const raw = await import(pathToFileURL(resolve(sketchPath)).href).then((m: unknown) => (typeof m === "object" && m !== null ? Object.fromEntries(Object.entries(m)) : {}));
+  const raw = await importRecord(sketchPath);
   const events = values.events === undefined ? [] : parseTeaEvents(JSON.parse(readFileSync(values.events, "utf8")), toTeaModule(raw).params);
   const outDir = values.out ?? "out-spike";
   const captured = await runSpike({ sketchPath, outDir, frames: Number(values.frames ?? "60"), every: Number(values.every ?? "30"), seed: Number(values.seed ?? "42"), ratio: Number(values.ratio ?? "1"), scene: values.scene === true, events });

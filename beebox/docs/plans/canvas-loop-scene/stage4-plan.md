@@ -196,3 +196,23 @@ starts.
   Hallway with wash 1280×760 6.7 → 8.3 ms, 13.6 → 18.5 ms; still life
   hatching 2.8 → 2.9 ms, 8.2 → 8.3 ms; night room 640×380 19.3 → 20.5 ms,
   20.3 → 22.3 ms.
+
+## Chunk 6b: one scene figure through beebox (2026-11-15)
+
+- **Opt-in:** the figure entry exports `renderer = "scene"` and its factory
+  calls `cl.mountSceneSketch`. `bbx figure run-one` reads the export (absent:
+  today's runner; any other value: an error) and runs `runSpike` with the
+  loaded module, card defaults and `--params`; the result line has the same
+  shape. The browser namespace's `mountSceneSketch` gets the same param
+  warnings and activity reports as `mountSketch` and loads the GPU code on
+  first use. canvas-loop exports `./scene-browser` and `./scene-headless`.
+- **Checked:** a synthetic Orbits card in the worktree's test box draws in the
+  real card with WebGPU, redraws when a slider changes, stops while scrolled
+  off and resumes on return; `bbx figure run` writes frames and a transcript.
+- **Production would need:** `webgpu` declared by beebox (as `@napi-rs/canvas`
+  is) for a packed install, since the bundled runner imports it; a Vulkan
+  driver on the Linux server (a software one, lavapipe, without a GPU). The
+  GPU-only browser code is about 155 KB minified; the rest of the scene chunk
+  is shared with today's canvas-loop chunk.
+- **Gaps:** the scene transcript does not list scripted inputs or snapshot
+  labels as today's does; a draw that throws leaves no transcript.

@@ -22,6 +22,14 @@
       "default": "./src/browser/mount.ts"
     },
     "./browser/figure.css": "./src/browser/figure.css",
+    "./scene-browser": {
+      "types": "./src/scene-spike/browser/mount.ts",
+      "default": "./src/scene-spike/browser/mount.ts"
+    },
+    "./scene-headless": {
+      "types": "./src/scene-spike/run/runner.ts",
+      "default": "./src/scene-spike/run/runner.ts"
+    },
     "./eslint": {
       "types": "./src/eslint/plugin.ts",
       "default": "./src/eslint/plugin.ts"

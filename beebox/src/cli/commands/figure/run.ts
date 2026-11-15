@@ -146,10 +146,14 @@ export async function prepareFigureJob(args: {
   };
 }
 
-/** Lines the transcript logged at warn or error level, for the summary. */
+/** Lines the transcript logged at warn or error level, for the summary (`**[frame N]** warn:`; the scene runner writes `frame N: warning:`). */
 async function transcriptWarnings(transcript: string): Promise<string[]> {
   const text = await fs.readFile(transcript, "utf8").catch(() => "");
-  return text.split("\n").filter((line) => /^\*\*\[frame \d+\]\*\* warn: /u.test(line)).map((line) => line.replace(/^\*\*\[frame (\d+)\]\*\* warn: /u, "frame $1: "));
+  const warning = /^(?:\*\*\[frame (\d+)\]\*\* warn|frame (\d+): warning): /u;
+  return text.split("\n").flatMap((line) => {
+    const m = warning.exec(line);
+    return m === null ? [] : [`frame ${m[1] ?? m[2] ?? "?"}: ${line.slice(m[0].length)}`];
+  });
 }
 
 /** Run one prepared job in a child `bbx figure run-one`, killed after `timeoutMs`. */
