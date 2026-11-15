@@ -9,9 +9,9 @@ mistake an agent makes, written as a deliberately bad sketch. Each sketch runs
 through the headless runner, as `run` does, and its output is compared with
 what the row expects.
 
-- **Sketches:** `canvas-loop/test/scene-spike/dev-loop/cases.ts`, one entry per
+- **Sketches:** `canvas-loop/test/gpu/dev-loop/cases.ts`, one entry per
   row, with the channel and the patterns the text must match.
-- **Test:** `canvas-loop/test/scene-spike/gpu.test.ts`, one test per row
+- **Test:** `canvas-loop/test/gpu/renderer.gpu.test.ts`, one test per row
   (`dev loop, <id>: …`). An error row's names are checked in both the thrown
   error and the transcript's error part, with the sketch's line; a row about
   the recorded scene also checks the `--scene` outline. A row whose gap is
@@ -27,6 +27,15 @@ what the row expects.
 46 rows: **18 pass** as they were, **23 gaps fixed**, **5 gaps left** with
 proposals. All 46 tests run in the one GPU test process; the 5 left are todo.
 Row 38 was fixed after the drawing round (finding 6).
+
+**Chunk 3 of the scene core plan** (`beebox/docs/plans/canvas-loop-scene-core.subplan.md`,
+Track 3): rows 42 and 43 fixed, rows 47–56 added and passing (label overlap,
+removed calls, the off-canvas fold, node paths in render errors, a canvas at
+the texture limit, browser colours, three more faint-mark rows and one that
+must not warn). Now 56 rows: **20 pass** (the 18, and rows 54 and 55, which
+must stay quiet), **33 gaps fixed**, **3 gaps left** (rows 37, 41, 45), which are follow-ups: see "Follow-ups"
+below. Since chunk 2 a transcript warning reads `**[frame N]** warn: …`; an
+end-of-run warning carries the last frame's number.
 
 ## Fixes that apply to every row
 
@@ -92,33 +101,49 @@ Row 38 was fixed after the drawing round (finding 6).
 | 39 | Point light without `at` (`point-light-no-at`) | error: `light (point)`, `at: [x, y]` | pass | — |
 | 40 | Hatching without `amount` (`hatching-no-amount`) | error: `effects.hatching.amount`, the range | pass | — |
 | 41 | Hatching over one flat tone (`flat-hatching`) | warning: hatching, tone | gap left | Proposal below. |
-| 42 | A brushed mark too faint to see (`faint-mark`) | warning: faint | gap left | Proposal below. |
-| 43 | A character the font has no glyph for (`missing-glyph`) | warning: glyph, the code point | gap left | Proposal below. |
+| 42 | A brushed mark too faint to see (`faint-mark`) | warning: faint, the percentage, `gesture({ faint: true })`, the line | gap fixed | Chunk 3: in testing mode a variant of each mark's composite draw keeps its peak alpha in a storage buffer, read back per captured frame; group opacities multiply on the CPU. Today's rule: under 8%, at most 8 warnings. |
+| 43 | A character the font has no glyph for (`missing-glyph`) | warning: glyph, the code point, the line | gap fixed | Chunk 3: checked at the `v.text` call by the glyph atlas's rasteriser. Headless only, as today. |
 | 44 | Blur under a skew (`skewed-effects`) | error: skew, group, "not supported", the line | gap fixed | Failed at render with no line. Now checked at the call too; a picture placed under a skew still fails at render. |
 | 45 | Effect groups nested 30 deep (`deep-nesting`) | warning: passes, cost | gap left | Proposal below. |
 | 46 | Group opacity 50 for 50% (`opacity-out-of-range`) | error: opacity, 0..1, 50 | pass | — |
+| 47 | Two labels drawn over each other (`label-overlap`) | warning: both texts, "overlaps", the later text's line | gap fixed | Chunk 3: today's check, missing from the spike. Text bounds under their transform (a picture's labels where each placement puts them), each pair once per run, at most 10 pairs. |
+| 48 | An old figure calls `v.cache` (`removed-call`) | error: `RemovedCallError`, `v.cache was removed`, `v.picture`, `v.place`, the doc section, the line | gap fixed | Chunk 3: was `v.cache is not a function`. `v.ctx`, `v.sprite`, `v.image` and `v.paperTexture` answer the same way with their replacements. |
+| 49 | A panning camera never reaches two drawings (`moving-offscreen`) | warning, at the end of the run: "2 lines draw only off … while moving", the lines, "a camera that has not reached them, or a wrong sign" | gap fixed | Chunk 3: was one warning per line (7 on the drawer's night room); lines whose box moved now join one summary. Row 38's line, which never moves, still warns on its own. |
+| 50 | A picture with a blurred group placed under a skew (`render-node-path`) | error: render, `GpuRenderError`, skew, the node path; no sketch line | gap fixed | Chunk 3: was the error with no node. Lowering keeps the node path: `(at at #1 > place picture "badge" > group "glow")`. |
+| 51 | A canvas exactly 8192 px wide with a stroke across it (`canvas-at-texture-limit`) | none | gap fixed | Chunk 3: the atlas piece is cut at the atlas side, and an atlas page no longer adds its gap past a piece at its edge. |
+| 52 | A translucent ink line (`faint-ink`) | warning: faint, the line | gap fixed | Chunk 3: ink is a coverage piece, not a dab mark; measured in the same draw. |
+| 53 | An opaque ink line in a group at 5% (`faint-in-group`) | warning: faint, 5%, the line | gap fixed | Chunk 3: group opacity multiplies the peak. |
+| 54 | An opaque marker (`opaque-marker`) | none | pass | Must not warn: it peaks at 70%, the marker preset's opacity. |
+| 55 | A translucent pencil line with `gesture({ faint: true })` (`faint-on-purpose`) | none | pass | The gesture marks it as intended. |
+| 56 | A bad colour in the browser (browser colours) | error at the call: the call, the field, the colour | gap fixed | Chunk 3: the browser recorder parses colours at the call with a parser made at mount. The case is in `canvas-loop/test/browser/scene/surface.test.ts`; `cases.ts` runs headless only. |
 
 ## Gaps left, with proposals
 
-Each needs a decision before it is built.
+Each needs a decision before it is built. Chunk 3 built `faint-mark` and
+`missing-glyph` (today's checks); the other three are its follow-ups.
 
 - **`empty-clip`:** warn when a clip has no area on every frame of a run.
   One frame is not a mistake: an animated wipe starts at zero width.
 - **`flat-hatching`:** the draft's "no tone variation" warning. Read back the
   histogram pass that hatching already runs, and warn when its tone range is
   empty. This costs one readback per hatched group in testing mode.
-- **`faint-mark`:** port today's faint-mark check (`core/painter/faint.ts`).
-  It needs each mark's peak alpha, which the spike computes on the GPU. In
-  testing mode, read back a per-mark maximum.
-- **`missing-glyph`:** port today's missing-glyph check
-  (`core/painter/text-watch.ts`) to the glyph atlas, which already draws each
-  glyph on the CPU.
+- **`faint-mark`:** built in chunk 3 (row 42).
+- **`missing-glyph`:** built in chunk 3 (row 43).
 - **`deep-nesting`:** the transcript prints `passes N` for each captured
   frame (91 here), but does not mark it as high. Proposal: warn above a pass
   budget per frame (a number to choose, for example 64) and name the deepest
   group path.
 
+## Follow-ups
+
+Rows 37 (`empty-clip`), 41 (`flat-hatching`) and 45 (`deep-nesting`) stay
+`todo`. They are new policies, not today's checks, and are out of scope of
+the scene core plan (its "NOT in scope", "New diagnostics (follow-ups)");
+their proposals are above.
+
 ## Other finds
+
+All three were fixed in chunk 3 (rows 50, 51 and 56).
 
 - **Render errors do not name the node.** Draft section 10 says a message
   names the node by its path (`group "room" > place "citizen" … > circle #4`).
@@ -136,7 +161,7 @@ Each needs a decision before it is built.
 
 ## Actual output, verbatim
 
-Captured with the runner at this commit. Paths are relative to `canvas-loop/`;
+Captured with the runner at this commit (the transcript forms of Stage 4). Paths are relative to `canvas-loop/`;
 line numbers are those of `cases.ts`.
 
 **stale-picture**
@@ -413,16 +438,16 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: effects.hatching.am
 (nothing: no warning, no error)
 ```
 
-**faint-mark**
+**faint-mark** (chunk 3)
 
 ```
-(nothing: no warning, no error)
+**[frame 0]** warn: faint mark (line): it reaches only 2% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:387:20)
 ```
 
-**missing-glyph**
+**missing-glyph** (chunk 3)
 
 ```
-(nothing: no warning, no error)
+**[frame 0]** warn: text: the font "normal sans-serif" has no glyph for "" (U+E000); it draws as an empty box or nothing (at test/gpu/dev-loop/cases.ts:394:20)
 ```
 
 **skewed-effects**
@@ -444,4 +469,61 @@ passes 91, effect passes 60, copies 0, draws 31
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: group opacity must be a number in 0..1, got 50
   at test/scene-spike/dev-loop/cases.ts:425:20
+```
+
+Chunk 3 rows, captured with the runner at that commit (the transcript's warning form since chunk 2):
+
+**label-overlap**
+
+```
+**[frame 0]** warn: text "right" overlaps text "left" near (16, 24); move one, or place them with v.textBounds first (at test/gpu/dev-loop/cases.ts:432:9)
+```
+
+**removed-call**
+
+```
+frame 0: error in draw: RemovedCallError: Sketch API misuse: v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (draft sections 2 and 5) (at test/gpu/dev-loop/cases.ts:440:26)
+  at test/gpu/dev-loop/cases.ts:440:26
+```
+
+**moving-offscreen**
+
+```
+**[frame 2]** warn: 2 lines draw only off the 80×60 canvas while moving, on every frame 0–2: lines 450:11 (rect), 451:11 (circle) in test/gpu/dev-loop/cases.ts; a camera that has not reached them, or a wrong sign
+```
+
+**render-node-path**
+
+```
+frame 0: error in render: GpuRenderError: GPU renderer: UnsupportedCallError: glow effects under a rotated non-uniform scale or a skew is not supported yet (effects follow axis-aligned scales and rotations with a uniform scale only) (at at #1 > place picture "badge" > group "glow")
+```
+
+**canvas-at-texture-limit**
+
+```
+(nothing: no warning, no error)
+```
+
+**faint-ink**
+
+```
+**[frame 0]** warn: faint mark (line): it reaches only 4% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:478:20)
+```
+
+**faint-in-group**
+
+```
+**[frame 0]** warn: faint mark (line): it reaches only 5% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:485:53)
+```
+
+**opaque-marker**
+
+```
+(nothing: no warning, no error)
+```
+
+**faint-on-purpose**
+
+```
+(nothing: no warning, no error)
 ```

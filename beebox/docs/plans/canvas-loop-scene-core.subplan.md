@@ -494,6 +494,42 @@ then the switch that deletes the old code; then docs.
   pass, the 41 rows that pass today still pass, and rows 37, 41 and 45 stay
   `todo` with a pointer to the follow-up list.
 
+- **As built (chunk 3).** Paths: `scene/recorder/audit.ts` (testing mode's
+  checks made together: off-canvas, text, and each brushed mark's call site),
+  `scene/recorder/text-checks.ts` (label overlap, missing glyphs, the
+  unknown-font check moved here), `scene/recorder/removed.ts`,
+  `gpu/node-path.ts`, `gpu/peaks.ts`, `headless/scene/faint.ts`; `GlyphWatch`
+  is in `gpu/glyphs.ts` beside the glyph atlas, reached through
+  `GpuRenderer.glyphMissing` (a separate `gpu/` module made `layout-check`
+  call `gpu/` two units). Details settled here:
+  - Faint marks: `GpuRenderer({ peaks: true })` measures in every `render`;
+    the headless surface always asks for it, the browser never. A mark's slot
+    index rides in the draw record's spare word (`clipA.z`); the peak is taken
+    before any clip, so a clipped mark is judged by what its brush and paint
+    give it. The message is today's, with the call in place of a position:
+    `faint mark (line): it reaches only 3% opacity and will barely show
+    (gesture({ faint: true }) marks it as intended) (at …)`. The marker
+    preset peaks at 70%, its brush opacity.
+  - Warnings found after the call (overlap at the frame's end, faint marks
+    after the render) name the line through a kept stack (`callSite()` in
+    `call-site.ts`), formatted only when a warning is given.
+  - Missing glyphs are checked at the `v.text` call, through the glyph
+    atlas's rasteriser, not when the atlas is built: the call gives the line,
+    and frames that are not captured are checked too.
+  - Render errors: `UnsupportedCallError` and `GpuRenderError` raised while
+    lowering become a `GpuRenderError` with `path` and the original as
+    `cause`; other errors (a `SketchUsageError` for a colour) pass through.
+  - 8192 px: besides the cut's padding, an atlas page also added its 1 px
+    gap past a piece at the page's edge (8193 wide); the page is now capped
+    at the atlas side. `failedFrames` fails late through a blurred group
+    instead, whose mark is wider than the atlas.
+  - Browser colours: `SceneSurfaceDeps.colors`, made at mount from
+    `browser2d()`; its case is in `test/browser/scene/surface.test.ts`, as
+    `cases.ts` runs headless only.
+- **Follow-ups (chunk 3).** Rows 37 (`empty-clip`), 41 (`flat-hatching`) and
+  45 (`deep-nesting`) stay `todo`; they are the new diagnostics under "NOT
+  in scope", with their proposals in `stage4/dev-loop.md` ("Gaps left").
+
 ### Track 4: `material.receivesShadow` (chunk 4)
 
 - **What:** draft 2.9, section 21: `receivesShadow: false` on a material
