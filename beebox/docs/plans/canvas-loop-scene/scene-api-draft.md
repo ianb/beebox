@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.9
+# Stage 1: the scene API, draft 2.10
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -284,8 +284,14 @@ does not call `draw`, so events neither repeat nor go missing.
 ## 9. Brushes
 
 - A brushed stroke is a node with its brush and gesture. A shared CPU step
-  expands it into dabs, outlines or bristle runs. Both renderers draw those, so
-  a mark's random character is the same in both.
+  prepares it: the path flattened into contours with their arc lengths, the
+  pressure envelope's keyframes, the wobble. A compute pass on the GPU then
+  places the stroke's samples; a stamp brush draws one dab per sample and ink
+  one round-ended segment (a capsule) per sample. Bristle and smear brushes
+  (`smudge`, `wet`) still expand on the CPU into bristle runs and smear dabs
+  (GPU brushes subplan, chunks 7 and 8, move them). The GPU computes the same
+  random numbers as the CPU, bit for bit, so a mark's random character does
+  not depend on where it was expanded; positions differ only in `f32` detail.
 - Backdrop-reading strokes (`smudge`, `wet`, non-`normal` blends) make the
   renderer finish everything before them on the same target first. They limit
   batching; Stage 3 measures how much.
@@ -603,3 +609,18 @@ From the Stage 4 builder (chunks 1–2):
   lit groups is not planned until box agents need it.
 - **Hatching** keeps covering its group's whole layer (Checkpoint 4, decision
   6).
+
+## 22. Draft 2.10: brushes on the GPU (GPU brushes subplan, chunks 2–6)
+
+- **Ink is drawn as capsules** (section 9), one per sample, with
+  perfect-freehand's width for the pressure. The line keeps its character
+  (an independent visual read found the same brush character); stroke ends
+  are slightly fuller. Ink thinner than a pixel is about 4–7% darker than the
+  Skia reference, which loses tone by sampling a pixel at 4 × 4 points.
+- **Limits.** A frame's brushes are split into batches when they exceed one
+  GPU buffer, with the same pixels. One contour larger than a buffer (about
+  4 million points) fails at the call: *"a brushed contour of … points
+  needs …; split the path into shorter ones"*.
+- **Measurement.** `stats.cpu.brush` is the CPU time spent on brushed
+  strokes: expansion, preparation and placement at lowering, and packing and
+  upload for the GPU pass.

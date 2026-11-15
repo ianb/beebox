@@ -924,6 +924,141 @@ by the same WebGPU renderer.
   what we're doing." Chunks 7–9 go ahead; chunk 6 still records the numbers,
   but the stop point is no longer a decision.
 
+- **As built (chunk 6).** Scripts, logs and renders are in `scratch/stage5/b6/`.
+  - **Readback fix (from the chunk 5 review).** `readBrushPass` reads back
+    into buffers of at most the brush limit (never above `maxBufferSize`),
+    cutting a batch's copy where a buffer ends (`readCopies`, unit-tested),
+    and joins them on the CPU. At a 64 KiB limit the walker's samples come
+    back through 53 buffers and its instances through 80, the same bytes as
+    one.
+  - **`stats.cpu.brush`** is the part of `lower` and `atlas` spent on
+    brushed strokes: `brushDraw` at lowering (CPU expansion of bristle and
+    smear, preparation, placement) and the brush pass's packing, upload and
+    encoding (its draws excluded). The headless transcript prints it.
+  - **Chromium, this Mac, under the GPU lock** (`measure.sh`; ms are medians
+    unless marked). Target 1 is the chunk 4 walker page rebuilt (`b6-walker`):
+    10 s of rAF (372 frames), 300 frames waited to GPU completion, 60 timed.
+    Target 3 is a new page (`six-page.ts`, `b6-six`): the Stage 4 six-figure
+    page on the current modules (two each of walker, chemistry, Hallway, all
+    animated, in view), 18 s of presents per figure (about 300 frames), at
+    device scale 1 and 2.
+
+    | | Stage 4 checkpoint | Today |
+    |---|---|---|
+    | Target 1: walker, ratio 2, fps (rAF) | 22.8 | 37.2 |
+    | Target 3: six figures, fps each, ratio 1 | 11.0 | 17.7 |
+    | Target 3: six figures, fps each, ratio 2 | 10.8 | 16.1 |
+
+    | Walker, ratio 2 | Target 1 page | In the six-figure page (scale 1 / 2) |
+    |---|---|---|
+    | frame interval (rAF), median / p95 | 25.2 / 32.2 | 56.5 / 62.1 mean (1000 ÷ fps, all six) |
+    | frame waited to GPU completion, median / p95 | 31.4 / 36.2 | |
+    | record (the sketch's `draw`) | 11.0 | 11.7 / 11.9 |
+    | lower | 9.0 | 8.3 / 10.1 |
+    | brush (inside lower and atlas) | 4.6 (p95 6.0) | 4.7 / 5.1 |
+    | atlas | 1.9 | 1.8 / 2.1 |
+    | encode | 1.0 | 1.1 / 1.2 |
+    | GPU span (mean; walker 1 of the page) | 6.9 | 5.0 / 4.7 |
+    | GPU: coverage, marks, clip, draw (mean) | 1.5, 1.6, 1.9, 2.0 | 0.7, 2.0, 0.9, 0.7 / 1.0, 1.0, 1.3, 1.4 |
+
+    The brush pass shows about 0 ms on the GPU at ratio 2 (Chromium
+    quantizes timestamps to 0.1 ms) and 0.3–0.5 ms at ratio 1. On the
+    six-figure page each chemistry figure costs record 0.3, lower 0.4, atlas
+    0.5, encode 0.3 and each Hallway 0.8, 0.5, 0.2, 0.2: the two walkers set
+    the pace, and all six present in step. GPU times there are taken with
+    the figures asleep, each kept scene drawn 30 times on a second device.
+    No dropped input: five changes to chemistry's coefficient field all
+    showed, 58 ms median (max 63) at scale 1, 20 ms (max 63) at scale 2.
+    A closed laptop lid stops rAF in the headless browser (0 fps); the runs
+    above were taken with it open.
+  - **Acceptance table, against today.** Brush CPU on the walker 4.6 ms
+    median, over the 3.5 ms aim. Brush GPU passes under 0.1 ms, within 2 ms.
+    Walker frame minus record: 31.4 − 11.0 = 20.4 ms waited to GPU
+    completion and 14.2 ms of rAF interval, both over the 12 ms aim; the
+    renderer's own CPU (lower, atlas, encode) is 11.9 ms.
+  - **What stands between the walker and 60 fps** (16.7 ms a frame; ratio 2,
+    medians): record 11.0, lower 9.0 (brush 4.6 of it; the rest is fill,
+    clip and text lowering), atlas 1.9, encode 1.0, so about 23 ms of main
+    thread CPU a frame before the GPU's 6.9 ms. The sketch's own `draw`
+    alone is two thirds of the budget; 60 fps needs record and lower both
+    roughly halved, or record moved off the frame (open question 1).
+  - **Node, Dawn on Metal** (`headless.ts`: each frame recorded and rendered
+    to pixels, frame 0 not counted; mean / median / p95 ms, or one value:
+    the mean for record and render, the median for the CPU split):
+
+    | | Record | Render | Total | Lower | Brush | Atlas | Encode |
+    |---|---|---|---|---|---|---|---|
+    | Walker, ratio 1 (119 frames) | 7.7 / 6.8 / 12.9 | 25.9 / 24.0 / 38.6 | 33.6 / 31.0 / 49.6 | 11.9 | 6.3 | 4.1 | 2.9 |
+    | Walker, ratio 2 | 9.6 / 8.7 / 13.4 | 36.3 / 33.6 / 49.4 | 45.8 / 41.7 / 65.0 | 13.5 | 7.5 | 5.2 | 4.6 |
+    | Hallway, ratio 1 (299 frames) | 0.8 | 5.8 | 6.6 / 6.2 / 9.4 | 0.8 | 0.4 | 0.6 | 0.8 |
+    | Hallway, ratio 2 | 1.0 | 11.0 | 12.0 / 11.7 / 15.4 | 1.1 | 0.4 | 0.7 | 1.0 |
+
+    The Stage 4 headless walker frame was 59.1 ms; today 33.6 ms (mean).
+  - **Lavapipe** (Lima VM `cl-dawn`, 2 CPUs, Mesa llvmpipe 26.0.8, LLVM
+    21.1.8; the worktree mounted read-only, run with `node --import tsx` and
+    Linux builds of esbuild and `@napi-rs/canvas` from `~/vmdeps`,
+    `vm-env.sh`). `brush-pass.gpu.test.ts` and
+    `mark-atlas.ink.gpu.test.ts`: 25 of 25 pass in 25.6 s, including the
+    fresh-process walker repeat and every split-equals-unsplit case.
+    `renderer.gpu.test.ts`: 114 pass, 3 todo, 5 fail; the five are text (the
+    VM has no fonts: labels draw no ink, and a run's capture policy takes
+    extra frames). Walker (mean / median / p95 ms per frame): ratio 1, 30
+    frames, 353.6 / 355.6 / 382.3 (record 10.3, render 343.2; lower 17.3,
+    brush 9.8, means); ratio 2, 12 frames, 902.1 / 906.9 / 980.9. Hallway ratio 1:
+    219.3. Walker frames 0 and 30 against Metal: 98.6% (ratio 1) and 98.9%
+    (ratio 2) of pixels within 4/255, mean difference 0.85–0.94 levels; the
+    larger differences sit in the label rows.
+  - **Crops** (`crops/`, `exhibit/`). The brush sheet, smear scene, Stage 3
+    stress frame and walker (frame 0), Hallway (frame 60) and chemistry
+    (frame 0), at ratio 1 and 2, today against the tree at `b8ae16fd2` (the
+    renderer before chunk 3, every brush expanded on the CPU: the Stage 4
+    checkpoint pixels). Changed pixels: sheet 1.16% / 0.59% (ratio 1 / 2),
+    smear 1.37% / 0.74%, stress 2.90% / 1.47%, walker 1.69% / 0.85%,
+    Hallway 1.23% / 0.63%, chemistry 0.01% / 0.01%; mean luminance moves by
+    at most 0.01. Astra (`gpt-6-astra`, eleven windows shown as A and B,
+    sides drawn per window, key in `crops/key.json`; `astra.out`): *"A and
+    B have the same brush character across these scenes."* Its one local
+    exception, a marker end "abruptly cut off" in image 1, is on the
+    baseline side; in that window today's render differs from the baseline
+    by at most 41 levels on 135 pixels.
+  - **Bristle and smear CPU cost: the baseline for chunks 7 and 8**
+    (`cpu-left.ts`, Node, medians over 40 frames, ms per frame). The stress
+    frame: 500 strokes, 63 bristle. Smear scene: the Stage 3 one (stripes,
+    two ink lines, one smudge, one wet).
+
+    | | Ratio | Lower | Brush | Atlas | Encode |
+    |---|---|---|---|---|---|
+    | Stress, strokes new each frame | 1 | 19.8 | 20.2 | 82.6 | 2.1 |
+    | the same without bristle | 1 | 6.0 | 6.4 | 1.4 | 1.5 |
+    | Stress, still (caches warm) | 1 | 1.8 | 2.1 | 82.1 | 2.0 |
+    | the same without bristle | 1 | 1.3 | 1.7 | 1.4 | 1.6 |
+    | Stress, strokes new each frame | 2 | 20.2 | 20.2 | 82.2 | 1.9 |
+    | the same without bristle | 2 | 6.3 | 6.6 | 1.8 | 1.6 |
+    | Smear, strokes new each frame | 1 | 0.33 | 0.37 | 0.27 | 0.32 |
+    | the same without smudge and wet | 1 | 0.15 | 0.21 | 0.22 | 0.09 |
+
+    Bristle on the stress frame costs about 14 ms of lowering a frame when
+    its strokes change (expansion alone 5.8 ms for the 63 strokes; ink 2.7
+    for 229, stamps 2.6 for 208), and about 81 ms in the mark atlas every
+    frame, changed or not: `#lay` rebuilds every bristle run's strip on the
+    CPU (`runStrip`, which allocates arrays per vertex; 1.3 s self time of
+    1.9 s over 20 frames in a profile). That code predates this subplan
+    (Stage 4 speed round). Smudge and wet cost about 0.2 ms (expansion 0.09
+    ms for the two strokes); their cost is on the GPU (frame wall time 4.7 ms
+    with them, 1.3 ms without, ratio 1, pixels read back).
+  - **Maintenance of two expansion paths, until chunk 9.** Bristle and smear
+    expand through `RecordingCtx` (`record-ctx.ts`, 177 lines) and the kind
+    painters (`core/brush/render/`, 376 lines with `kinds.ts`), are placed by
+    `linMarks` and drawn from CPU data in `#lay`; stamps and ink go through
+    the GPU pass, with `expandOnCpu` kept only as the tests' reference. Two
+    samplers (`shapeSamples` and the WGSL `samples` entry) must agree, and
+    the readback tests hold them to 4.7e-4 device px. perfect-freehand is
+    used only by `expandOnCpu`'s ink.
+  - **Docs.** Draft section 9 now says how a stroke is prepared on the CPU
+    and placed on the GPU, and which kinds still expand on the CPU; draft
+    2.10 (section 22) records capsule ink, the limits and
+    `stats.cpu.brush`. `BRUSHES.md` gains one line on capsule ink.
+
 ### Chunk 7: bristle on the GPU (after the stop point)
 
 - **What.** The `bristles` entry: one thread per (contour, bristle). It makes

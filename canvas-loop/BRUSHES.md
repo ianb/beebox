@@ -83,6 +83,8 @@ A style's `brush` is a preset name or a preset with fields changed. The presets:
 
 To stop a marker multiplying, override its blend: `brush: { preset: "marker", blend: "normal" }`.
 
+A scene sketch (drawn on the GPU) draws ink as a chain of round-ended segments with the same widths: the line looks the same, and lines under 1 px come out a few percent darker than on Canvas2D.
+
 Texture needs size and contrast. A brush in a colour close to the colour under
 it, or a bristle or chalk mark shorter than a few widths, reads as flat tone
 or as noise. Use `--zoom` (below) to see what a mark really looks like.
