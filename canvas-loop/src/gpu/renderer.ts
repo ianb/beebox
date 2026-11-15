@@ -25,6 +25,8 @@ import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
 import { BrushPass } from "./brush-pass.js";
+import type { BrushOutputs } from "./brush-pass.js";
+import { SAMPLE_FLOATS } from "./shader-brush.js";
 import { PainterlyPasses } from "./painterly.js";
 import { LightPass } from "./light.js";
 import type { GpuTimes } from "./timing.js";
@@ -109,7 +111,7 @@ export class GpuRenderer {
   readonly #atlas: CoverageAtlas;
   readonly #marks: MarkAtlas;
   readonly #smear: SmearPass;
-  readonly #brushes: BrushPass;
+  #brushes: BrushPass | undefined;
   readonly #painterly: PainterlyPasses;
   readonly #light: LightPass;
   readonly #expander: BrushExpander;
@@ -149,7 +151,6 @@ export class GpuRenderer {
     this.#atlas = new CoverageAtlas(gpu.device, gpu.atlasFormat);
     this.#marks = new MarkAtlas(gpu.device);
     this.#smear = new SmearPass(gpu.device);
-    this.#brushes = new BrushPass(gpu.device);
     this.#painterly = new PainterlyPasses(gpu.device);
     this.#light = new LightPass(gpu.device);
     this.#glyphs = new GlyphCache(gpu.raster);
@@ -171,13 +172,10 @@ export class GpuRenderer {
     this.#expander.beginFrame();
     this.#kept.beginFrame();
     this.#rasters.beginFrame();
-    const drawn: Prepared[] = [];
-    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, drawn, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters }).lower(scene);
+    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters }).lower(scene);
     const jobs = postOrder(root, []);
     const { pieces, marks, cells, clips } = packablesOf(jobs);
     const enc = device.createCommandEncoder();
-    // The GPU sample pass for every brushed stroke drawn. Nothing reads the samples yet; the stamp dabs will (canvas-loop-gpu-brushes.subplan.md, chunk 3).
-    this.#brushes.encode(drawn, { enc, temp: a.temp, timer: this.#timer });
     const stats = { ...emptyStats(), strokes: this.#expander.stats.strokes, expanded: this.#expander.stats.expanded, cacheHits: this.#expander.stats.hits, glyphs: cells.length };
     const t1 = performance.now();
     const timer = this.#timer;
@@ -313,6 +311,44 @@ export class GpuRenderer {
       this.#pool.releaseAll();
       this.#pool.trim();
       this.#images.endFrame();
+    }
+  }
+
+  /**
+   * Verification and measurement only, until a drawing pass reads the samples
+   * (canvas-loop-gpu-brushes.subplan.md, chunk 3): run the GPU sample pass
+   * over `strokes` on its own and read the samples back (`SAMPLE_FLOATS`
+   * floats each, the eighth a u32), with each stroke's contour ranges, the CPU
+   * time to pack, upload and encode, and the pass's GPU time when timing.
+   */
+  async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; encodeMs: number; gpuMs: number | undefined }> {
+    const device = this.#gpu.device;
+    this.#brushes ??= new BrushPass(device);
+    const temp: GPUBuffer[] = [];
+    try {
+      this.#timer?.begin();
+      const enc = device.createCommandEncoder();
+      const t0 = performance.now();
+      const out = this.#brushes.encode(strokes, { enc, temp, timer: this.#timer });
+      const encodeMs = performance.now() - t0;
+      const size = out.count * SAMPLE_FLOATS * 4;
+      const read = out.samples === undefined ? undefined : device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+      if (read !== undefined && out.samples !== undefined) {
+        temp.push(read);
+        enc.copyBufferToBuffer(out.samples, 0, read, 0, size);
+      }
+      const times = this.#timer?.resolve(enc, temp);
+      device.queue.submit([enc.finish()]);
+      let data = new ArrayBuffer(0);
+      if (read !== undefined) {
+        await read.mapAsync(GPUMapMode.READ);
+        data = read.getMappedRange().slice(0);
+        read.unmap();
+      }
+      const gpu = times === undefined || this.#timer === undefined ? undefined : await this.#timer.read(times);
+      return { data, count: out.count, ranges: out.ranges, encodeMs, gpuMs: gpu?.kinds.brush?.ms };
+    } finally {
+      for (const b of temp) b.destroy();
     }
   }
 

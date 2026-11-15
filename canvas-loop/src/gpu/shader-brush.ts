@@ -3,18 +3,19 @@
 // CPU fixed every contour's sample count and offsets (brush-pass.ts), so a
 // thread finds its contour by a binary search over the offsets, places sample
 // k at k × step (the last at the contour's end point; a one-sample contour at
-// its start), finds its segment by a binary search over the arc-length prefix,
+// its start), finds its segment by a binary search over the integer index of
+// each segment's first sample (fixed on the CPU by resample's loop, so a sample
+// at a corner takes the CPU's segment and normal),
 // and adds pressure and wobble as core/brush/render/mark/render.ts's
 // `shapeSamples` does. Hashes are core/brush/random.ts's, bit for bit; a random
 // value keeps the hash's 24 high bits, which f32 holds exactly. Positions are
 // brush space, as the CPU expansion's.
+import { POINT_WORDS } from "../scene/brush/expand.js";
 import { MIX_WGSL } from "./shader-paper.js";
 
 /** Words in the records buffer's header, and per contour record (u32; floats bitcast). */
 export const RECORD_HEAD = 4;
 export const CONTOUR_WORDS = 16;
-/** Words per prepared point in the geometry buffer: x, y, arc length to it. */
-export const POINT_FLOATS = 3;
 /** Floats per sample: x, y, nx, ny, s, t, p, and its contour's index (u32). */
 export const SAMPLE_FLOATS = 8;
 export const SAMPLES_WORKGROUP = 64;
@@ -27,14 +28,16 @@ ${MIX_WGSL}
 struct U { first: u32, count: u32, contours: u32, pad: u32 };
 struct Sample { x: f32, y: f32, nx: f32, ny: f32, s: f32, t: f32, p: f32, contour: u32 };
 @group(0) @binding(0) var<storage, read> rec: array<u32>;
-@group(0) @binding(1) var<storage, read> geo: array<f32>;
+@group(0) @binding(1) var<storage, read> geo: array<u32>;
 @group(0) @binding(2) var<storage, read_write> out: array<Sample>;
 @group(0) @binding(4) var<uniform> u: U;
 
 fn cw(c: u32, w: u32) -> u32 { return rec[${RECORD_HEAD}u + c * ${CONTOUR_WORDS}u + w]; }
 fn cf(c: u32, w: u32) -> f32 { return bitcast<f32>(cw(c, w)); }
-fn pt(i: u32) -> vec2f { return vec2f(geo[3u * i], geo[3u * i + 1u]); }
-fn arc(i: u32) -> f32 { return geo[3u * i + 2u]; }
+const PW = ${POINT_WORDS}u;
+fn pt(i: u32) -> vec2f { return vec2f(bitcast<f32>(geo[PW * i]), bitcast<f32>(geo[PW * i + 1u])); }
+fn arc(i: u32) -> f32 { return bitcast<f32>(geo[PW * i + 2u]); }
+fn firstOn(i: u32) -> u32 { return geo[PW * i + 3u]; }
 
 // random.ts \`rand\`: the same hash; its 24 high bits, converted exactly.
 fn rand1(seed: u32, ch: u32, idx: u32) -> f32 {
@@ -114,18 +117,13 @@ fn pressure(c: u32, t: f32) -> f32 {
   if (n > 1u) {
     let total = cf(c, 6u);
     let last = k + 1u == n;
-    var seg = np - 2u;
-    if (last) {
-      s = total;
-    } else {
-      s = f32(k) * cf(c, 5u);
-      var a = 0u;
-      var b = np - 2u;
-      while (a < b) {
-        let m = (a + b) / 2u;
-        if (arc(p0 + m + 1u) >= s) { b = m; } else { a = m + 1u; }
-      }
-      seg = a;
+    s = select(f32(k) * cf(c, 5u), total, last);
+    // The last segment whose first sample is at or before k.
+    var seg = 0u;
+    var hi = np - 2u;
+    while (seg < hi) {
+      let m = (seg + hi + 1u) / 2u;
+      if (firstOn(p0 + m) <= k) { seg = m; } else { hi = m - 1u; }
     }
     let pa = pt(p0 + seg);
     let d = pt(p0 + seg + 1u) - pa;
@@ -139,8 +137,7 @@ fn pressure(c: u32, t: f32) -> f32 {
   let p = pressure(c, t);
   let wobble = cf(c, 9u);
   if (wobble > 0.0) {
-    let cell = cf(c, 7u);
-    pos += nrm * (wobble * noise1(cw(c, 4u), select(0.0, s / cell, cell > 0.0), cw(c, 8u)));
+    pos += nrm * (wobble * noise1(cw(c, 4u), s / cf(c, 7u), cw(c, 8u)));
   }
   out[i] = Sample(pos.x, pos.y, nrm.x, nrm.y, s, t, p, c);
 }

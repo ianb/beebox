@@ -21,7 +21,7 @@ import { BLACK, jitterOf, jitteredInk } from "../../core/brush/render/ink.js";
 import { paintBristle, paintInk, paintStamp } from "../../core/brush/render/kinds.js";
 import { shapeSamples, stepFor, wobbleLattice } from "../../core/brush/render/mark/render.js";
 import type { Sample } from "../../core/brush/sample.js";
-import { preparePoints, sampleCount } from "../../core/brush/sample.js";
+import { preparePoints, sampleSegments } from "../../core/brush/sample.js";
 import type { BrushKind, Envelope } from "../../core/brush/types.js";
 import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
@@ -57,13 +57,20 @@ export interface Expanded {
   readonly prepared: () => Prepared | undefined;
 }
 
+/** Words per prepared point in `PreparedContour.geom`. */
+export const POINT_WORDS = 4;
+
 /**
  * One contour after `sample.ts`'s `preparePoints`, in brush space: what fixes
  * its sample indices, decided on the CPU (the contour contract,
  * canvas-loop-gpu-brushes.subplan.md).
  */
 export interface PreparedContour {
-  /** Per prepared point: x, y, and the arc length to it (summed in f64, stored f32). */
+  /**
+   * Per prepared point, `POINT_WORDS` words: x, y, the arc length to it
+   * (summed in f64, stored f32), and (a u32) the first sample on or past the
+   * segment that starts there.
+   */
   readonly geom: Float32Array;
   /** Samples, by `resample`'s own loop. */
   readonly count: number;
@@ -172,22 +179,23 @@ export function brushSamples(req: ExpandRequest): Sampled | undefined {
 
 function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandRequest; width: number; box: Prepared["box"] }): PreparedContour {
   const pts = preparePoints(c.contour.points, c.contour.closed);
-  const geom = new Float32Array(pts.length * 3);
-  let total = 0;
+  const { brush, gesture } = a.req.stroke;
+  const step = stepFor(brush, a.width);
+  const { lengths, total, count, first } = sampleSegments(pts, step);
+  const geom = new Float32Array(pts.length * POINT_WORDS);
+  const words = new Uint32Array(geom.buffer);
+  let arc = 0;
   for (const [i, p] of pts.entries()) {
-    const prev = pts[i - 1];
-    if (prev !== undefined) total += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
-    geom[i * 3] = p[0];
-    geom[i * 3 + 1] = p[1];
-    geom[i * 3 + 2] = total;
+    geom[i * POINT_WORDS] = p[0];
+    geom[i * POINT_WORDS + 1] = p[1];
+    geom[i * POINT_WORDS + 2] = arc;
+    words[i * POINT_WORDS + 3] = first[i] ?? count;
+    arc += lengths[i] ?? 0;
     a.box.x0 = Math.min(a.box.x0, p[0]);
     a.box.y0 = Math.min(a.box.y0, p[1]);
     a.box.x1 = Math.max(a.box.x1, p[0]);
     a.box.y1 = Math.max(a.box.y1, p[1]);
   }
-  const { brush, gesture } = a.req.stroke;
-  const step = stepFor(brush, a.width);
-  const count = sampleCount(total, step, pts.length);
   const { period, cell } = wobbleLattice(c.contour.closed, count === 1 ? 0 : total);
   return { geom, count, step, total, seed: c.seed, pressure: gesture.pressure ?? (c.contour.closed ? "even" : "taper"), period, cell };
 }

@@ -8,7 +8,7 @@
 // fourth for the non-receiving layer when it holds `receivesShadow: false`.
 import { BLEND_MODES } from "../core/compose.js";
 import type { BlendMode } from "../core/paint.js";
-import type { BrushExpander, Prepared } from "../scene/brush/expand.js";
+import type { BrushExpander } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { det, invert, mul } from "../scene/mat.js";
 import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
@@ -75,14 +75,13 @@ export class Lowering {
   /** Picture tiles lowered this frame, shared by every placement that needs them. */
   readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
 
-  /** `drawn` receives the brushed strokes drawn this frame, prepared for the GPU sample pass. */
-  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; drawn: Prepared[]; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache }) {
+  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache }) {
     this.#geo = new ShapeGeometry(options.kept);
     this.#rasters = options.rasters;
     this.#colors = options.colors;
     this.#base = [options.ratio, 0, 0, options.ratio, 0, 0];
     this.#canvas = { x0: 0, y0: 0, x1: Math.round(options.width * options.ratio), y1: Math.round(options.height * options.ratio) };
-    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept, drawn: options.drawn };
+    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept };
     this.#glyphs = options.glyphs;
   }
 

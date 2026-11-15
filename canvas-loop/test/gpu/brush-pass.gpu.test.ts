@@ -11,12 +11,12 @@ import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import type { BrushOutputs } from "../../src/gpu/brush-pass.js";
-import { BrushPass } from "../../src/gpu/brush-pass.js";
 import { MIX_WGSL } from "../../src/gpu/shader-paper.js";
-import { POINT_FLOATS, SAMPLE_FLOATS } from "../../src/gpu/shader-brush.js";
+import { SAMPLE_FLOATS } from "../../src/gpu/shader-brush.js";
+import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { sharedGpu } from "../../src/headless/scene/surface.js";
 import type { ExpandRequest, Prepared } from "../../src/scene/brush/expand.js";
-import { brushSamples, prepare } from "../../src/scene/brush/expand.js";
+import { POINT_WORDS, brushSamples, prepare } from "../../src/scene/brush/expand.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
@@ -36,6 +36,19 @@ function needGpu(t: TestContext): GpuHandle | undefined {
   return gpu;
 }
 
+/** Run the sample pass over `reqs` once (the renderer's verification path); the samples as floats (and words, for the contour index). */
+async function gpuSamples(handle: GpuHandle, reqs: readonly ExpandRequest[]): Promise<{ prepared: Prepared[]; out: { count: number; ranges: BrushOutputs["ranges"] }; f: Float32Array; u: Uint32Array }> {
+  const prepared = reqs.map((r) => prepare(r)).filter((p) => p !== undefined);
+  assert.equal(prepared.length, reqs.length);
+  const renderer = new GpuRenderer(handle);
+  try {
+    const out = await renderer.sampleBrushes(prepared);
+    return { prepared, out, f: new Float32Array(out.data), u: new Uint32Array(out.data) };
+  } finally {
+    renderer.destroy();
+  }
+}
+
 /** Copy `size` bytes of `src` back to the CPU after the work encoded on `enc`. */
 async function readBack(device: GPUDevice, a: { enc: GPUCommandEncoder; src: GPUBuffer; size: number }): Promise<ArrayBuffer> {
   const read = device.createBuffer({ size: a.size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
@@ -45,23 +58,6 @@ async function readBack(device: GPUDevice, a: { enc: GPUCommandEncoder; src: GPU
   const out = read.getMappedRange().slice(0);
   read.destroy();
   return out;
-}
-
-/** Run the sample pass over `reqs` once; the samples as floats (and words, for the contour index). */
-async function gpuSamples(handle: GpuHandle, reqs: readonly ExpandRequest[]): Promise<{ prepared: Prepared[]; out: BrushOutputs; f: Float32Array; u: Uint32Array }> {
-  const { device } = handle;
-  const prepared = reqs.map((r) => prepare(r)).filter((p) => p !== undefined);
-  assert.equal(prepared.length, reqs.length);
-  const temp: GPUBuffer[] = [];
-  try {
-    const enc = device.createCommandEncoder();
-    const out = new BrushPass(device).encode(prepared, { enc, temp, timer: undefined });
-    assert.ok(out.samples !== undefined);
-    const bytes = await readBack(device, { enc, src: out.samples, size: out.count * SAMPLE_FLOATS * 4 });
-    return { prepared, out, f: new Float32Array(bytes), u: new Uint32Array(bytes) };
-  } finally {
-    for (const b of temp) b.destroy();
-  }
 }
 
 interface Worst {
@@ -100,7 +96,7 @@ async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[])
       // Without wobble, the last sample is the contour's end point, and a one-sample contour's is its start (f32).
       const geom = prep?.contours[c]?.geom;
       if (prep?.wobble === 0 && geom !== undefined && r.count > 0) {
-        const end = r.count === 1 ? 0 : geom.length - POINT_FLOATS;
+        const end = r.count === 1 ? 0 : geom.length - POINT_WORDS;
         const at = (r.first + r.count - 1) * SAMPLE_FLOATS;
         if (g.f[at] !== geom[end] || g.f[at + 1] !== geom[end + 1]) fail(`stroke ${i} contour ${c}: last sample (${g.f[at]}, ${g.f[at + 1]}) is not the end point (${geom[end]}, ${geom[end + 1]})`);
       }
@@ -133,6 +129,7 @@ test("the sample pass places focused contours as shapeSamples does", async (t) =
   const counts = reqs.map((r) => prepare(r)?.contours.map((c) => c.count));
   assert.deepEqual(counts[0], [1], "shorter than one step: one sample");
   assert.deepEqual(counts[5], [11], "2.85 at step 0.3: eleven samples");
+  assert.deepEqual(counts.slice(-3), [[17], [0], [1]], "the corner path, the empty contour, the closed dot");
 });
 
 test("the sample pass places the walker's first frame as shapeSamples does, and repeats exactly", async (t) => {

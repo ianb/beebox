@@ -3,17 +3,37 @@
 // sample, and the expander keeps the prepared stroke with its expansion.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sampleCount } from "../../src/core/brush/sample.js";
+import { sampleSegments } from "../../src/core/brush/sample.js";
 import { BrushExpander, brushSamples, prepare } from "../../src/scene/brush/expand.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { NO_COLORS, brushRequests } from "../brushes/requests.js";
 
 test("the sample count is resample's loop, not a closed form", () => {
-  assert.equal(sampleCount(2.85, 0.3, 2), 11);
+  assert.equal(sampleSegments([[0, 0], [2.85, 0]], 0.3).count, 11);
   assert.equal(Math.ceil(2.85 / 0.3 - 0.5) + 1, 10, "the formula the contract rejects");
-  assert.equal(sampleCount(0.2, 0.3, 2), 1, "shorter than one step");
-  assert.equal(sampleCount(5, 0.3, 1), 1, "one prepared point");
+  assert.equal(sampleSegments([[0, 0], [0.2, 0]], 0.3).count, 1, "shorter than one step");
+  assert.equal(sampleSegments([[5, 5]], 0.3).count, 1, "one prepared point");
+  assert.equal(sampleSegments([], 0.3).count, 0, "no points");
+});
+
+test("each segment's first sample is the loop's, so a sample at a corner keeps the incoming segment", () => {
+  // Samples at 0, 0.3, …, 1.8 (sample 6, exactly the corner) lie on the first segment; 2.1 … 4.8 on the second.
+  assert.deepEqual(sampleSegments([[0, 0], [1.8, 0], [1.8, 3]], 0.3).first, [0, 7]);
+  // A segment the loop steps over gets the next sample's index, as its successor does.
+  assert.deepEqual(sampleSegments([[0, 0], [1, 0], [1.05, 0], [3, 0]], 0.5).first, [0, 3, 3]);
+});
+
+test("a closed dot with wobble gets a finite sample, its wobble read at 0", () => {
+  const scene = new SceneRecorder({ width: 50, height: 50 }).record((v) => v.rect(10, 10, 0.1, 0.1, { stroke: "#000", weight: 4, brush: "ink", gesture: { wobble: 1 } })).scene;
+  const [req] = brushRequests(scene, NO_COLORS);
+  assert.ok(req !== undefined);
+  const [c] = brushSamples(req) ?? [];
+  assert.equal(c?.samples.length, 1);
+  const s = c?.samples[0];
+  assert.ok(s !== undefined && Number.isFinite(s.x) && Number.isFinite(s.y), `got (${s?.x}, ${s?.y})`);
+  assert.equal(s.x, 10, "the wobble moves along the normal (0, -1)");
+  assert.notEqual(s.y, 10, "the wobble moves it");
 });
 
 test("prepared contours have the CPU sampling's counts, and the box holds every sample", () => {

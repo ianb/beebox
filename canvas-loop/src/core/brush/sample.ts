@@ -80,17 +80,35 @@ export function resample(points: readonly Vec2[], args: { closed: boolean; step:
 }
 
 /**
- * How many samples `resample` gives a prepared contour of `points` points and
- * arc length `total`: its own loop (repeated addition of `step`, the last
- * sample at `total`), run without placing anything. The GPU sample pass sizes
- * its output by this, so the count must be the loop's, not a formula's.
+ * What `resample` decides for prepared points before placing anything: its
+ * segment lengths and total (the same f64 sums), the sample count from its
+ * own loop (repeated addition of `step`, the last sample at the total), and
+ * for each segment the index of the first sample the loop puts on it or past
+ * it. The GPU sample pass takes a sample's segment from `first`, integers, so
+ * a sample at a corner gets the same segment, and normal, as on the CPU. No
+ * points give no samples; one point, or a total under one step, gives one.
  */
-export function sampleCount(...[total, step, points]: [number, number, number]): number {
-  if (total < step || points < 2) return 1;
-  let n = 0;
+export function sampleSegments(pts: readonly Vec2[], step: number): { lengths: number[]; total: number; count: number; first: number[] } {
+  const lengths = segmentLengths(pts);
+  const total = lengths.reduce((a, b) => a + b, 0);
+  const first = lengths.map(() => 0);
+  if (pts.length === 0) return { lengths, total, count: 0, first };
+  if (total < step || pts.length < 2) return { lengths, total, count: 1, first };
+  let seg = 0;
+  let segStart = 0;
+  let k = 0;
   for (let last = false, s = 0; !last; s += step) {
-    if (!(s < total - step * 0.5)) last = true;
-    n += 1;
+    if (!(s < total - step * 0.5)) {
+      s = total;
+      last = true;
+    }
+    while (seg < lengths.length - 1 && segStart + (lengths[seg] ?? 0) < s) {
+      segStart += lengths[seg] ?? 0;
+      seg += 1;
+      first[seg] = k;
+    }
+    k += 1;
   }
-  return n;
+  for (let j = seg + 1; j < first.length; j += 1) first[j] = k;
+  return { lengths, total, count: k, first };
 }

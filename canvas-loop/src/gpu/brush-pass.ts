@@ -10,7 +10,8 @@ import type { Envelope } from "../core/brush/types.js";
 import type { Prepared, PreparedContour } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
-import { BRUSH_WGSL, CONTOUR_WORDS, ENVELOPE_KINDS, POINT_FLOATS, RECORD_HEAD, SAMPLE_FLOATS, SAMPLES_WORKGROUP } from "./shader-brush.js";
+import { POINT_WORDS } from "../scene/brush/expand.js";
+import { BRUSH_WGSL, CONTOUR_WORDS, ENVELOPE_KINDS, RECORD_HEAD, SAMPLE_FLOATS, SAMPLES_WORKGROUP } from "./shader-brush.js";
 import type { PassTimer } from "./timing.js";
 
 const MAX_BINDING = 64 * 1024 * 1024;
@@ -40,7 +41,7 @@ function envelopeWords(env: Envelope): { kind: number; value: number; keys: numb
 }
 
 /** The records and geometry buffers' contents for `strokes`' contours (in order), and their sample ranges. */
-function pack(strokes: readonly Prepared[]): { records: ArrayBuffer; geometry: Float32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
+function pack(strokes: readonly Prepared[]): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
   const all: { c: PreparedContour; wobble: number }[] = strokes.flatMap((s) => s.contours.map((c) => ({ c, wobble: s.wobble })));
   const envs = all.map((a) => envelopeWords(a.c.pressure));
   const keyWords = envs.reduce((n, e) => n + e.keys.length, 0);
@@ -48,15 +49,16 @@ function pack(strokes: readonly Prepared[]): { records: ArrayBuffer; geometry: F
   const records = new ArrayBuffer((keyAt + keyWords) * 4);
   const ru = new Uint32Array(records);
   const rf = new Float32Array(records);
-  const geometry = new Float32Array(all.reduce((n, a) => n + a.c.geom.length, 0));
+  const geometry = new Uint32Array(all.reduce((n, a) => n + a.c.geom.length, 0));
   let point = 0;
   let sample = 0;
   let key = keyAt;
   for (const [i, { c, wobble }] of all.entries()) {
     const at = RECORD_HEAD + i * CONTOUR_WORDS;
     const env = envs[i] ?? { kind: 1, value: 0, keys: [] };
-    const points = c.geom.length / POINT_FLOATS;
-    geometry.set(c.geom, point * POINT_FLOATS);
+    const points = c.geom.length / POINT_WORDS;
+    // Copied as words: the fourth word of each point is a u32.
+    geometry.set(new Uint32Array(c.geom.buffer, c.geom.byteOffset, c.geom.length), point * POINT_WORDS);
     ru.set([point, points, sample, c.count, c.seed], at);
     rf.set([c.step, c.total, c.cell], at + 5);
     ru[at + 8] = c.period ?? 0;

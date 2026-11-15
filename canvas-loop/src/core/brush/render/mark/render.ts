@@ -113,7 +113,8 @@ function markSeed(req: MarkRequest, device: readonly Contour[]): number {
  */
 export function wobbleLattice(...[closed, total]: [boolean, number]): { period: number | undefined; cell: number } {
   const period = closed ? Math.max(1, Math.round(total / WOBBLE_CELL)) : undefined;
-  return { period, cell: period === undefined ? WOBBLE_CELL : total / period };
+  // A closed dot (total 0) reads the noise at 0, as an open one does: a cell of 0 would give 0 / 0.
+  return { period, cell: period === undefined || total === 0 ? WOBBLE_CELL : total / period };
 }
 
 /** A contour resampled at the brush's step, with the gesture's pressure and wobble (device pixels in, device pixels out). */

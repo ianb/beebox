@@ -2,7 +2,8 @@
 // (canvas-loop-gpu-brushes.subplan.md): shorter than one step, a closed
 // rectangle, duplicate consecutive points, a closed polygon that already ends
 // at its start, a length of 2.85 at step 0.3, every pressure form, wobble
-// on open and closed contours, and a rotated, scaled call.
+// on open and closed contours, a rotated, scaled call, a sample at a corner,
+// an empty contour, and a closed dot with wobble.
 import type { View } from "../../src/scene/api.js";
 
 export const FOCUSED_SIZE = { width: 200, height: 160 };
@@ -26,4 +27,10 @@ export function drawFocused(v: View): void {
     v.curve([[-20, 0], [0, -15], [20, 5]], false, { stroke: "#000", weight: 2, brush: "bristle", gesture: { wobble: 1 } });
     v.ellipse(0, 10, 12, 5, { stroke: "#000", weight: 1.5, brush: "airbrush" });
   });
+  // A sample exactly at a corner (1.8 = 6 × 0.3 on the CPU; f32 arithmetic lands past the f32 corner): it takes the incoming segment's normal.
+  v.at({ translate: [150, 60] }, () => v.path([["move", 0, 0], ["line", 1.8, 0], ["line", 1.8, 3]], { stroke: "#000", weight: 1, brush: "pencil", gesture: { wobble: 1, seed: 42 } }));
+  // No points: no samples, beside the others in one batch.
+  v.polygon([], { stroke: "#000", weight: 1, brush: "pencil" });
+  // A closed dot with wobble: one sample, its wobble read at 0.
+  v.rect(170, 100, 0.1, 0.1, { stroke: "#000", weight: 4, brush: "ink", gesture: { wobble: 1 } });
 }

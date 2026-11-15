@@ -4,12 +4,10 @@
 // runs become a mark in the mark atlas; smudge and wet become a smear that
 // reads the target (smear.ts). Grain is cut against paper anchored to the
 // picture or the scene (`toPaper`), then the brush opacity applies once.
-// Every stroke drawn is also prepared for the GPU sample pass (brush-pass.ts).
-import type { BrushExpander, Expanded, MarkSet, Prepared, SmearSet } from "../scene/brush/expand.js";
+import type { BrushExpander, MarkSet, SmearSet } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
-import type { BrushStroke, Mat, ShapeNode } from "../scene/nodes.js";
-import type { Paint } from "../core/paint.js";
+import type { Mat, ShapeNode } from "../scene/nodes.js";
 import type { BrushRec, MarkSource, PaperRec, R, SmearRec } from "./jobs.js";
 import { EMPTY, cutOf, inter, isEmpty, pad } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
@@ -27,8 +25,6 @@ export interface BrushFrame {
   readonly colors: ColorParser;
   readonly ratio: number;
   readonly kept: KeptValues;
-  /** Brushed strokes drawn this frame, prepared for the GPU sample pass (brush-pass.ts). */
-  readonly drawn: Prepared[];
 }
 
 
@@ -120,7 +116,7 @@ function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: Pap
   return { k: "smear", smear: { dabs, size, brush, paint: straight, paper: a.paper }, box };
 }
 
-/** The draw for brushed stroke `n` under device transform `matrix`, or undefined when nothing can be seen; a drawn stroke joins `frame.drawn`. */
+/** The draw for brushed stroke `n` under device transform `matrix`, or undefined when nothing can be seen. */
 export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; visible: R }): BrushDraw | undefined {
   const stroke = n.style.brush;
   const paint = n.style.stroke;
@@ -129,17 +125,6 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   const m = a.matrix;
   const ex = a.frame.expander.expand({ geom: n.geom, weight: n.style.weight, stroke, paint, linear: [m[0] / ratio, m[1] / ratio, m[2] / ratio, m[3] / ratio, 0, 0], colors });
   if (ex === undefined) return undefined;
-  const d = placed(n, { ...a, ex, stroke, paint });
-  const prepared = d === undefined ? undefined : ex.prepared();
-  if (prepared !== undefined) a.frame.drawn.push(prepared);
-  return d;
-}
-
-/** An expanded stroke placed under `matrix`: a mark or a smear, cut to what can be seen. */
-function placed(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; visible: R; ex: Expanded; stroke: BrushStroke; paint: Paint }): BrushDraw | undefined {
-  const { ex, stroke, paint } = a;
-  const { ratio, colors } = a.frame;
-  const m = a.matrix;
   const q = ex.q;
   const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], m[4], m[5]];
   // Paper pixels are the call's own coordinates times the pixel ratio, so grain moves with the stroke (draft 2.4).
