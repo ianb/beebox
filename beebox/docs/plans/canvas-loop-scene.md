@@ -76,6 +76,32 @@ Each checkpoint below names the evidence it needs under each principle.
 - **Headless fonts:** watch for wrapping differences between Skia and the
   browser; no design work until a spike shows a problem.
 
+## Checkpoint 0 decisions (2026-11-14)
+
+The boxholder, on the Stage 0 notes:
+- **Targets accepted** (`canvas-loop-scene/browser-profile.md`). Headless must
+  not be "desperately bad": about 1 second per frame is acceptable.
+- **WebGPU is fine as the baseline.** "I'm not expecting to support old
+  computers." Chromebooks are a valid destination. Chrome has shipped WebGPU on
+  ChromeOS devices with Vulkan since Chrome 113
+  (https://developer.chrome.com/blog/webgpu-release); a low-end Chromebook's
+  GPU is the performance risk. No such device is on hand, so Stage 3 names how
+  to approximate one, and the targets get a Chromebook-class check before
+  Checkpoint 4. A WebGL2 fallback is not required.
+- **WebAssembly is allowed in production.** The policy keeps it off while
+  nothing uses it; a renderer that needs it gets `'wasm-unsafe-eval'` when it
+  ships. CanvasKit stays a candidate.
+- **Unused API is not dead API.** Calls such as `textBounds` were added on
+  request and have not been used yet; they stay unless the design has a reason
+  to drop them.
+- **Brushes are not fixed.** "This is not some sort of platonic ideal of all
+  the brushes." A brush may be reimplemented differently on the GPU and still
+  be valid, judged by eye, not by matching today's pixels.
+
+Backend candidates carried to Stage 3: our own WebGPU renderer; PixiJS v8 on
+WebGPU; CanvasKit (WebAssembly; WebGL backend). Also probed: Dawn (`webgpu` on
+npm) running effect shaders headless.
+
 ## Smallest fix and budget
 
 The smallest fix for speed alone is already shipped (commit `2e0720f1a`: one
@@ -227,7 +253,8 @@ matrices and probe results go in `beebox/docs/plans/canvas-loop-scene/`.
 - **Prior art.** One paragraph per item in Prior art: what it does, what we'd
   borrow, what an agent would recognise.
 - **Checkpoint 0:** the boxholder confirms the targets and reads the notes.
-  Backend candidates are only shortlisted here.
+  Backend candidates are only shortlisted here. Done 2026-11-14; see
+  Checkpoint 0 decisions.
 
 ### Stage 1: the scene vocabulary on paper
 
