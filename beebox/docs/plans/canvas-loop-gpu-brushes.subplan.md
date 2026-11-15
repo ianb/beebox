@@ -15,6 +15,8 @@ CPU keeps only a small, cacheable preparation step. The boxholder chose this
 at Checkpoint 4 (`canvas-loop-scene/stage4/checkpoint4.md`, "The boxholder's
 answers", item 2): *"isn't that the whole point of what we've done?"*
 
+Draft 2, after review round 1 (see "Review round 1" near the end).
+
 **Issues addressed:** none filed. Searched `issues/` (not `closed/`) for
 `webgpu`, `compute pass`, `brush expan`, `perfect-freehand`, `walker`,
 `brush`, `canvas-loop`: no open item covers brush expansion speed. The hits
@@ -25,11 +27,11 @@ other things.
 ## Design
 
 No design section: canvas-loop is a developer library, and this subplan
-changes no API. A person sees brush marks drawn faster and ink edges that
-differ slightly in detail. The parity criteria
-(`canvas-loop-scene/parity-criteria.md`) judge those edges, as the boxholder
-agreed at Checkpoint 4 ("Ink outlines change slightly, held to the parity
-criteria instead of identical pixels").
+changes no API. A person sees brush marks drawn faster. Stamp, bristle and
+smear marks change only in floating-point detail. Ink may change shape at
+corners, tight curves and short tapers (chunk 4). The ink look is not
+settled by this plan: chunk 1 is a gate where the boxholder judges it on
+real walker details before the new ink goes in.
 
 ## Smallest fix and budget
 
@@ -40,65 +42,73 @@ figures at 30 fps each. The spike reaches 22.8 fps and 11 fps
 (`canvas-loop-scene/stage4-plan.md:209`: *"walker sheet 16.8–18.6 → 22.8 fps
 (record 11.4, lower 23.5, atlas 4.0)"*).
 
-**Where the CPU time goes now** (from the Stage 4 profile and this subplan's
-probe, `scratch/stage5/brushes/prep.ts`, walker sheet, 30 frames, Node):
+**Measured CPU time per frame, by source.** The numbers come from different
+runs and are not one breakdown of one frame.
 
-| Step | Code | ms per frame |
-|---|---|---|
-| Record (sketch code and structural hashing) | `recorder/view.ts` | 6.7 Node, 11.4 Chromium |
-| Brush expansion, all of it | `brush/expand.ts:106` `expandIn` | 14.6–16.5 Node |
-| …resampling, pressure, wobble | `core/brush/render/mark/render.ts:109` `shapeSamples`, `core/brush/sample.ts:49` `resample` | about 6 (before the Stage 4 speed round) |
-| …stamp dabs | `core/brush/render/kinds.ts:58` `paintStamp` | about 4 |
-| …ink outlines | `core/brush/render/kinds.ts:26` `paintInk` (perfect-freehand) | about 5 |
-| Mark placement (each dab mapped to device pixels) | `gpu/marks.ts:59` `linMarks` | about 6 before the speed round |
-| Atlas data (dab floats, ink outline edges) | `gpu/mark-atlas.ts:131` `#lay`, `gpu/atlas.ts:61` `edgeData` | 4.0 Chromium in all, about 5 of it ink edges per `stage4-plan.md:218` |
-| What would stay on the CPU (brush space, flattening, seed, arc length, sample counts, bounds) | probe | **1.79** (full expansion in the same run: 16.51) |
+| Step | Code | Source | ms per frame |
+|---|---|---|---|
+| Record | `recorder/view.ts` | Stage 4, after the speed round | 6.7 Node; 11.4 Chromium |
+| Lower (all) | `gpu/lower.ts` | Stage 4, after | 23.5 Chromium |
+| Atlas (all) | `gpu/atlas.ts`, `gpu/mark-atlas.ts` | Stage 4, after | 4.0 Chromium |
+| Brush expansion | `brush/expand.ts:106` `expandIn` | Stage 4, after | 14.6 Node |
+| …resampling and pressure; stamp dabs; ink outlines | `shapeSamples`, `paintStamp`, `paintInk` | Stage 4, **before** the speed round (`stage4-plan.md:194-195`) | 6; 4; 5 Node |
+| Mark placement | `gpu/marks.ts:59` `linMarks` | Stage 4, before | 6 Node |
+| Brush expansion, cache off | `expandIn` | this subplan's probe, revision 2 | median 16.7–17.0, p95 17.6–18.0 Node |
+| What would stay on the CPU | probe, revision 2 | median 2.9–3.1, p95 5.8–10.2 Node | |
 
-The walker's work per frame (probe): 526 brushed strokes (286 ink, 240
-stamp, no bristle or smear), 776 contours, 40,119 flattened input points,
-35,434 ink samples and 71,335 stamp samples.
+The probe (`scratch/stage5/brushes/prep.ts`, outputs `prep2.out` and
+`prep3.out`) runs the walker's brushed strokes for 30 frames in Node. Its
+"what would stay on the CPU" step: brush space, flattening, `sample.ts`'s
+`prepare` (dedupe, closing point), seed, the `f64` arc-length prefix, the
+exact sample count of `resample`'s loop, bounds, and packing the typed arrays
+an upload would send. It does not upload, and it allocates its arrays each
+frame; the p95 is likely garbage collection (not checked). Per frame: 526
+brushed strokes (286 ink, 240 stamp, no bristle or smear), 776 contours,
+40,119 input points, 35,434 ink samples, 71,335 stamp samples, no
+single-sample contours, 544 KB of packed input.
 
-**The smallest fix** moves only what the walker uses: stamp dabs and ink, plus
-the shared sampling (chunks 1–4, about 1,450 changed lines). Bristle and
-smear keep the CPU path, so two expansion paths exist side by side.
+**Projections are hypotheses until chunk 6 measures them.** Hypothesis: the
+walker frame in Chromium drops by the brush expansion, mark placement and
+most atlas data (together about 20 ms), and gains about 3 ms of preparation
+and upload. The record step (11.4 ms) does not change. If that holds, the
+walker frame is still over the 12 ms budget, and targets 1 and 3 are not met
+by (b) alone. The six-figure page and lavapipe are not projected; chunk 6
+measures them.
 
-**The chosen scope** also moves bristle and smear samples to the GPU and
-deletes the CPU expansion once subplan (a) retires the Canvas2D painter
-(chunks 5–7). Estimated changed lines (additions plus deletions):
+**The smallest fix** moves only what the walker uses: the shared sampling,
+stamp dabs and ink (chunks 1–6, through the stop point, about 1,830 changed
+lines). Bristle and smear stay CPU-expanded and drawn by the same WebGPU
+renderer.
+
+**The chosen scope** continues past the stop point only if the boxholder
+chooses to (chunks 7–9). Estimated changed lines (additions plus deletions):
 
 | Chunk | Source | Tests | Notes |
 |---|---|---|---|
-| 1. Stroke preparation and the sample pass | 350 | 200 | |
-| 2. Stamp dabs on the GPU | 300 | 150 | |
-| 3. Ink as a chain of capsules | 230 | 120 | |
-| 4. Measurement and visual review | 60 | 20 | plus doc lines below |
-| 5. Bristle on the GPU | 250 | 100 | |
-| 6. Smudge and wet from GPU samples | 110 | 40 | |
-| 7. Retire the CPU expansion | 650 deleted, 60 added | 80 | after subplan (a) |
-| **Total** | **about 2,010** | **about 710** | **about 2,700** |
+| 1. Ink gate (prototype, crops, Astra, boxholder) | 0 tracked | 0 | about 300 lines in `scratch/stage5/brushes/` |
+| 2. Stroke preparation and the sample pass | 420 | 260 | |
+| 3. Stamp dabs on the GPU | 300 | 220 | |
+| 4. Ink on the GPU (capsules, or the fallback) | 250 | 200 | the fallback is about 320 + 180 |
+| 5. Batching and limits | 120 | 80 | |
+| 6. Measurement, visual review; **stop point** | 60 | 20 | plus doc lines below |
+| 7. Bristle on the GPU | 280 | 150 | after the stop point |
+| 8. Smudge and wet from GPU samples | 130 | 70 | after the stop point |
+| 9. Retire the CPU expansion; final verification | 650 deleted, 60 added | 140 | after the stop point and after subplan (a) |
+| **Through the stop point (1–6)** | **1,150** | **780** | **about 1,930** |
+| **All chunks** | **about 2,270** | **about 1,140** | **about 3,410** |
 
-**BIG CHANGE.** About 2,700 changed lines, a quarter of them deletions. What
-drives the size: a WGSL port of the sampling and three brush kinds (the
-dab, capsule and bristle kernels), numeric tests that compare GPU output with
-the CPU expansion while both exist, and the deletion of the CPU path. The
-boxholder's approval of the scale is needed at Checkpoint 5
-(`canvas-loop-scene.md`, Stage 5: *"the boxholder approves the order and each
-BIG CHANGE"*).
+**BIG CHANGE** at both sizes. Through the stop point, about 1,930 lines; the
+size comes from a WGSL port of the sampling and two brush kinds, numeric
+readback tests against the CPU expansion, and the batching rules. All
+chunks, about 3,410, a fifth of them deletions. Approval of the scale is
+needed at Checkpoint 5 (`canvas-loop-scene.md`, Stage 5: *"the boxholder
+approves the order and each BIG CHANGE"*), and again at the stop point for
+chunks 7–9.
 
 Authored docs, counted apart: draft section 9 and a draft 2.10 note
 (`canvas-loop-scene/scene-api-draft.md`), one line in `canvas-loop/BRUSHES.md`,
-the `ACKNOWLEDGEMENTS.md` entries; about 60 lines. Generated output: frozen
-reference PNG crops and golden expansion numbers (chunk 1 and 7), binary or
-JSON test fixtures.
-
-**What (b) buys and what it does not.** Projected walker frame in Chromium
-after (b), from the table: record 11.4 + lowering without brushes 6–9 +
-atlas 1–2 + encode 1.1 + preparation and upload about 2, so **about 21–25 ms,
-40–48 fps**. Six figures (two walker sheets, two chemistry, two Hallways;
-`scratch/stage4/mount-page.ts:3`): about 20–23 fps each. **(b) alone does not
-meet targets 1 or 3 on this evidence.** The record step in Chromium (11.4 ms)
-is by itself about the whole 12 ms budget. See "Open design questions",
-question 1.
+`ACKNOWLEDGEMENTS.md` entries; about 70 lines. Generated output: frozen
+reference PNG crops, golden expansion numbers (JSON), the gate's crops.
 
 ## Stated preferences this plan trades against
 
@@ -106,23 +116,24 @@ question 1.
   reasonable and works. In the browser."*). This subplan's reason to exist.
 - **Brushes are not fixed** (`canvas-loop-scene.md:98-99`: *"A brush may be
   reimplemented differently on the GPU and still be valid, judged by eye, not
-  by matching today's pixels."*). This permits the ink change in chunk 3.
-- **Principle 2, art that does not look like lazy digital art.** The risk of
-  this subplan: a GPU ink that reads as a uniform vector line. The Astra read
-  in chunk 4 judges it.
+  by matching today's pixels."*). This permits an ink change, judged at the
+  chunk 1 gate.
+- **Principle 2, art that does not look like lazy digital art.** The risk:
+  GPU ink with swollen corners, scalloped tight curves or different short
+  tapers. Capsules keep the authored pressure and wobble (today's ink uses
+  `smoothing: 0.08`, `streamline: 0`, `kinds.ts:37-38`), so the risk is in
+  the details, which the gate examines at 4×.
 - **Determinism.** Draft section 6 and its 2.8 note: *"Cache equivalence in
   the browser is byte-identical within one browser on one machine"*
   (`scene-api-draft.md:584-586`). Headless stays byte-identical run to run
-  (`parity-criteria.md`, section 1). Every kernel here writes to an index
-  fixed before the dispatch; no atomics decide output order.
+  (`parity-criteria.md`, section 1). This plan treats both as requirements
+  that tests check, not as consequences of the design.
 - **Bias toward strict** (boxholder memory). Limits are checked before a
-  dispatch, and a stroke that exceeds a limit is split, never dropped.
+  dispatch. A split never changes pixels; a stroke that cannot be split
+  without changing pixels is an error that names the call.
 - **Minimize invented concepts.** No new API. The kernels write the instance
   layouts the existing dab and bristle pipelines read
-  (`gpu/mark-atlas.ts:17-18`), so the draw side stays as it is.
-- **One renderer** (`canvas-loop-scene.md`, Stage 5 (a): *"the spike becomes
-  canvas-loop's one API and renderer"*). This is why the chosen scope deletes
-  the CPU expansion instead of keeping it as a fallback.
+  (`gpu/mark-atlas.ts:17-18`).
 
 ## What already exists
 
@@ -133,413 +144,534 @@ question 1.
   keeps `brushSpace` (`expand.ts:66`) and the seed (`expand.ts:112`).
 - **The expansion cache and its key.** `expand.ts:161`:
   *"const key = `${keyOf(req.geom)}|${req.weight}|${keyOf(brush)}|${keyOf(gesture)}|${linearKey(b)}|${paint}`"*.
-  Reuse the key for the cached preparation (chunk 1).
+  Reuse the key for the cached preparation.
 - **Contour flattening.** `brush/contours.ts` `geomContours`, called at
-  `expand.ts:109`: *"const local = geomContours(req.geom, 0.5 / s);"*. Reuse on
-  the CPU.
+  `expand.ts:109`: *"const local = geomContours(req.geom, 0.5 / s);"*. Reuse.
+- **Contour preparation and the sample loop.** `core/brush/sample.ts:31-43`
+  `prepare` (drops consecutive duplicates; a closed contour repeats its start)
+  and `sample.ts:62-78`, the loop that adds `step` to `s` in `f64` until `s`
+  is not below `total − step × 0.5`, then places the last sample at `total`.
+  A contour shorter than one step gives one start sample (`sample.ts:55`).
+  Reuse on the CPU for counts; port the placement.
 - **The hash randomness.** `core/brush/random.ts:7-15` `mix` (lowbias32 with
   `Math.imul`) and `random.ts:18-20` `rand`. Port to WGSL bit for bit.
 - **The shared sampling** `core/brush/render/mark/render.ts:109-138`
-  `shapeSamples` and `core/brush/sample.ts:49-80` `resample` (*"Fixed spacing
-  from the start (plus the exact end point)"*, `sample.ts:56`). Port to WGSL.
+  `shapeSamples` (pressure, wobble). Port.
 - **The kind painters.** `core/brush/render/kinds.ts:58-89` `paintStamp`,
-  `:179-210` `paintBristle`, `:26-52` `paintInk`. Port stamp and bristle; ink
-  gets a new form (chunk 3).
+  `:179-210` `paintBristle`, `:26-52` `paintInk` (perfect-freehand). Port
+  stamp and bristle; ink depends on the gate.
+- **Colour jitter.** `core/brush/render/ink.ts:22-30` `jitteredInk` and
+  `colour.ts:79-82` `shiftColour` (HSL). Port.
 - **The mark atlas.** `gpu/mark-atlas.ts:108-128` packs marks into slots and
   lays dabs (one instanced draw) and bristle runs (one triangle-list draw) per
   page. `gpu/shader-mark.ts:7-9`: *"Tips and distances are computed in the
   mark's own pixels (the fragment's page pixel less the slot corner), so a mark
-  looks the same wherever it is packed."* Reuse unchanged: the kernels fill its
-  vertex buffers.
+  looks the same wherever it is packed."* Reuse unchanged.
 - **The coverage atlas** draws ink outlines today as exact-area pieces
   (`gpu/marks.ts:61`: *"if (set.polys.length > 0) {"* returns `kind: "piece"`).
-  Chunk 3 moves ink to the mark atlas.
+  The ink fallback writes edges into it.
 - **The smear compute pass.** `gpu/smear.ts:81`
-  *"cp.dispatchWorkgroups(1);"*, one workgroup running the dabs in order.
-  Reuse; chunk 6 changes only where its dabs come from.
-- **GPU pass timing.** `gpu/frame.ts` `timed(f, …)` works on compute passes
-  (`smear.ts:78`: *"f.enc.beginComputePass(timed(f, "smear"))"*). Reuse for
-  the acceptance numbers.
-- **Kept picture tiles.** A kept tile has no items, so nothing in it is
-  expanded again (`gpu/lower.ts:333`: *"if (kept !== undefined) return { name:
-  `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [] …"*). No change
-  needed.
+  *"cp.dispatchWorkgroups(1);"*; its shader carries the paint load and, for
+  wet paint, a copy of the backdrop from dab to dab (`shader-smear.ts:41-58`).
+  Reuse; chunk 8 changes only where its dabs come from.
+- **GPU pass timing.** `timed(f, …)` works on compute passes (`smear.ts:78`:
+  *"f.enc.beginComputePass(timed(f, "smear"))"*).
+- **Kept picture tiles** have no items, so nothing in them is expanded again
+  (`gpu/lower.ts:333`: *"if (kept !== undefined) return { name: `kept tile
+  ${key} of "${v.key}"`, rect: kept.rect, items: [] …"*).
 - **Tests:** `canvas-loop/test/scene-spike/brush-cases.ts` (parity crops
   against today's Skia, blends and erase, expansion cache, stability under
   translation, paper scopes) and `gpu.test.ts` (cache equivalence on the three
-  ports, repeatability). Reuse all; they run on the new path unchanged.
-- **The walker-speed harness**, `scratch/stage4/walker-speed/` (`bench.ts`,
-  `measure.sh`, `bpage.sh` with the GPU lock). Not tracked. Reuse for chunk 4.
+  ports, repeatability). They share one device opened in `before`
+  (`gpu.test.ts:39`: *"gpu = await openGpu();"*).
+- **The walker-speed harness**, `scratch/stage4/walker-speed/` (`measure.sh`,
+  `bpage.sh` with the GPU lock). Not tracked. Reuse for chunk 6.
 
 ## Prior art (external)
 
 - **GPU stroke expansion with prefix sums.** Levien and Uguray, "GPU-friendly
-  Stroke Expansion" (2024), https://arxiv.org/abs/2405.00127, as used in
-  Vello. Evaluated only. It expands plain strokes (joins, caps) fully on the
-  GPU. This subplan keeps the arc-length prefix on the CPU instead, because
-  the walker has 40,119 input points against 106,769 samples, and the probe
-  measures the CPU part at 1.79 ms.
-- **Distance to a tapered capsule** (a segment with a different radius at
-  each end), Inigo Quilez, "2D distance functions", "Uneven Capsule",
-  https://iquilezles.org/articles/distfunctions2d/. Adopted in chunk 3:
-  `ACKNOWLEDGEMENTS.md` entry in that chunk.
-- **perfect-freehand's radius formula** (`radius = size × (0.5 − thinning ×
-  (0.5 − pressure))` with linear easing), already acknowledged
-  (`ACKNOWLEDGEMENTS.md:31-35`). Chunk 3 keeps the formula; chunk 7 updates the
-  entry's "Where it landed".
+  Stroke Expansion" (2024), https://arxiv.org/abs/2405.00127. Evaluated only.
+  This subplan keeps the arc-length prefix on the CPU, because the walker
+  has 40,119 input points against 106,769 samples.
+- **Distance to a tapered capsule**, Inigo Quilez, "2D distance functions",
+  "Uneven Capsule", https://iquilezles.org/articles/distfunctions2d/ (the
+  reviewer got a 403; not re-read). Evaluated only: chunk 4 uses the
+  projected axis distance defined below, not the exact hull distance.
+- **perfect-freehand 1.2.3**: its radius formula (`size × (0.5 − thinning ×
+  (0.5 − pressure))`) is adopted by the capsule ink and already acknowledged
+  (`ACKNOWLEDGEMENTS.md:31-35`). Its outline code
+  (`getStrokeOutlinePoints.ts`, `getStrokePoints.ts`, tag v1.2.3 on GitHub)
+  is what the fallback ports.
 - **WebGPU limits** (https://www.w3.org/TR/webgpu/#limits). Defaults as
   reported by a reading of the spec, not checked verbatim:
   `maxComputeWorkgroupsPerDimension` 65535, `maxStorageBufferBindingSize`
-  128 MiB, `maxBufferSize` 256 MiB, `maxStorageBuffersPerShaderStage` 8,
-  `maxComputeInvocationsPerWorkgroup` 256. The design reads the device's
-  actual limits at run time, so a wrong default changes nothing.
-- **WGSL integer overflow wraps.** WGSL §6.2.3
-  (https://www.w3.org/TR/WGSL/#integer-types): *"Expressions on concrete
-  integer types that overflow produce a result that is modulo
-  2^bitwidth."* So `mix` ports to `u32` exactly.
-- **Unverified, avoided:** the rounding rule for `u32` → `f32` conversion
-  (WGSL §15.7.6 was not read). The port converts `h >> 8u`, which is under
-  2^24 and exact, so no rounding rule is involved. The rule for `min`/`max`
-  blend factors was not read; chunk 3 sets both factors to `"one"`, which is
-  valid under any reading.
+  128 MiB, `maxBufferSize` 256 MiB, `maxStorageBuffersPerShaderStage` 8.
+  The design reads the device's limits at run time.
+- **WGSL integer overflow wraps** (§6.2.3,
+  https://www.w3.org/TR/WGSL/#integer-types): *"Expressions on concrete
+  integer types that overflow produce a result that is modulo 2^bitwidth."*
+- **WGSL permits floating-point reassociation and fusion**
+  (https://www.w3.org/TR/WGSL/#floating-point-reassociation), per the
+  reviewer. So determinism across compilers is not assumed; repeatability on
+  one device and one build is tested.
+- **Unverified, avoided:** the `u32` → `f32` conversion rounding rule (the
+  port converts `h >> 8u`, under 2^24 and exact) and the `min`/`max` blend
+  factor rule (chunk 4 sets both factors to `"one"`).
 
 ## Ontology
 
 Existing names are kept. New nouns:
 
-- **Prepared stroke** (new). The CPU part of a brushed stroke's expansion:
-  brush space `b` and `q` (`expand.ts:66`), each contour's points in brush
-  space (`f32`), its cumulative arc lengths, its sample count and step, its
-  seed (`hashNumbers([i], seed)`, `expand.ts:116`), its jitter base colour,
-  and a conservative brush-space box. Identified by today's expansion key
-  (`expand.ts:161`). Kept by `BrushExpander` as `MarkSet` is today. It is not
-  dabs: it holds no per-sample data.
-- **Sample** (existing CPU type, `core/brush/sample.ts:5`: x, y, nx, ny, s,
-  t, p). On the GPU, one 32-byte record per sample in a frame-wide storage
-  buffer, wobble applied, as `shapeSamples` returns it.
-- **Stroke table** (new). The frame's storage buffer of prepared strokes that
-  are drawn this frame: per contour its point range, sample range, step,
-  seed, kind and brush numbers; per mark its device map `e` (linear part),
-  the fractional offset (below), its slot and its output ranges. Rebuilt every
-  frame; never kept.
-- **Fractional offset** (new). For a mark at box corner `(x0, y0)` and
-  device translation `(tx, ty)`: `(tx − x0, ty − y0)`, computed in `f64` on the
-  CPU. A mark's pixel is `L·p + offset` in `f32`. A move by whole device
-  pixels leaves the offset unchanged, so the texture moves exactly with the
-  shape (parity criteria section 3).
-- **Expansion pass** (new). One compute pass per frame, before the atlas
-  render passes: entry points `samples`, `dabs`, `capsules`, `bristles`.
-  Writes the mark atlas's instance and vertex buffers.
-- **Capsule** (new). One ink segment between consecutive samples: two
-  centres and two radii, drawn into the mark atlas with `max` blending. Not a
-  piece: ink stops being coverage-atlas geometry.
-- **Dab** and **Run** (existing, `brush/record-ctx.ts:10-24`). Their GPU
-  instance layouts (`DAB_FLOATS = 12`, `RUN_FLOATS = 24`,
-  `gpu/mark-atlas.ts:17-18`) stay as they are; the kernels write them.
-- **TexMark** (existing, `gpu/jobs.ts`). Gains a `gpu` field (its prepared
-  stroke, `e`, offset, output ranges) in place of `dabs` and `runs` once its
-  kind runs on the GPU.
+- **Prepared contour** (new). One contour after `prepare`, in brush space:
+  its points (`f32`), its cumulative arc lengths (computed in `f64`, stored
+  `f32`), its exact sample count from `resample`'s loop, its step, its seed
+  (`hashNumbers([i], seed)`, `expand.ts:116`). Not samples.
+- **Prepared stroke** (new). A stroke's prepared contours, brush space `b`
+  and `q` (`expand.ts:66`), its jitter base colour and a conservative
+  brush-space box. Identified by today's expansion key (`expand.ts:161`).
+  Kept by `BrushExpander` as `MarkSet` is today.
+- **Sample** (existing CPU type, `core/brush/sample.ts:5`). On the GPU, one
+  32-byte record per sample, wobble applied.
+- **Records buffer** (new). One storage buffer per frame: a header, then
+  contour records, then mark records (device map `e`, fractional offset,
+  slot, output ranges, brush numbers). Rebuilt every frame.
+- **Geometry buffer** (new). One storage buffer per frame: every prepared
+  point as (x, y, cumulative length), 12 bytes.
+- **Fractional offset** (new). For a mark at box corner `(x0, y0)` and device
+  translation `(tx, ty)`: `(tx − x0, ty − y0)` in `f64` on the CPU. A mark's
+  pixel is `L·p + offset` in `f32`, so a whole-pixel move leaves it unchanged.
+- **Batch** (new). A range of one atlas page's work whose outputs fit the
+  output buffers: one compute dispatch per entry point, then the page's draws
+  for that range. Batches of a page run in order.
+- **Expansion pass** (new). The compute work of one batch: entry points
+  `samples`, `dabs`, `capsules`, `bristles`.
+- **Capsule** (new, if the gate passes). One ink segment between consecutive
+  samples: two centres and two radii, drawn into the mark atlas with `max`
+  blending.
+- **Dab** and **Run** (existing, `brush/record-ctx.ts:10-24`); their instance
+  layouts stay (`DAB_FLOATS = 12`, `RUN_FLOATS = 24`, `mark-atlas.ts:17-18`).
+- **TexMark** (existing, `gpu/jobs.ts`). Gains a `gpu` field in place of
+  `dabs` and `runs` once its kind runs on the GPU.
 
 ## Tracks / scope
 
-One track, in seven chunks. Every chunk keeps the spike's tests green.
+One track in nine chunks, with a gate at chunk 1 and a stop point after
+chunk 6.
 
 ### Per brush kind: where it runs and why
 
 | Kind (presets) | Today | Decision | Why |
 |---|---|---|---|
-| Sampling: resample, pressure, wobble (all kinds) | CPU, `shapeSamples` | **compute**, entry `samples`, one thread per sample | 106,769 samples on the walker; each is independent once the contour's arc-length prefix is known (`sample.ts:62-77` places sample k at s = k × step) |
-| Arc-length prefix, sample counts, seed, flattening, bounds | CPU | **stays on CPU** | 1.79 ms for the walker (probe); sample counts must be fixed before the dispatch so that every output index is fixed; `f64` there keeps counts the same as today's |
-| `stamp` (pencil, chalk, airbrush, wash) | CPU `paintStamp`, then `linMarks`, then `#lay` | **compute**, entry `dabs`, one thread per sample, writes `DAB_FLOATS` instances | 71,335 dabs on the walker; the existing `dabVs`/`dabFs` pipeline draws them unchanged; a skipped dab (`kinds.ts:66`: *"if (radius <= 0.05 \|\| alpha <= 0) continue;"*) is written with alpha 0, which leaves source-over unchanged |
-| `ink` (ink, marker) | CPU perfect-freehand outline, a coverage piece | **compute**, entry `capsules`, one thread per segment; **new instanced capsule draw** with `max` blend in the mark atlas | perfect-freehand builds its outline sequentially; a union of tapered capsules is order-independent (`max` is exact and commutative), and needs no outline or edge list |
-| `bristle` (bristle) | CPU `paintBristle` | **compute**, entry `bristles`, **one thread per bristle**, walking its samples in order | runs break where the alpha level changes and take the run's average width (`kinds.ts:160`); a sequential walk per bristle keeps that rule exactly; bristles of all strokes run in parallel |
-| `smear` (smudge, wet) | CPU samples; compute pass with one workgroup per stroke | **samples from the `samples` entry**; the smear pass stays as it is | the smear is order-dependent by nature (`coverage-matrix.md:61`); only its dab list moves |
-| Hue and light jitter (stamp, bristle) | CPU `jitteredInk` (`core/brush/render/ink.ts:22-30`), HSL shift | **in the `dabs` and `bristles` entries** | a WGSL `shiftColour`; per dab or bristle index, as today |
-| Hatching effect | fragment shader (`gpu/shader-painterly.ts:249` `hatch`) | **no change** | not brush expansion |
-| Hatch marks drawn with a brush (the walker's pencil hatching, `walker-sheet/ink-tea.ts:89`) | stamp | as stamp | a brushed path |
-| Dashes on plain strokes | CPU, `geometry/dash.ts` | **no change** | not brush expansion; a dashed brushed stroke is an error today (`stage4-plan.md`, drawing-round fix 1) |
+| Sampling: resample, pressure, wobble | CPU `shapeSamples` | **compute**, entry `samples`, one thread per sample | 106,769 samples on the walker; each depends only on its contour's prefix, step and seed |
+| `prepare`, arc-length prefix, sample counts, seed, flattening, bounds | CPU | **stays on CPU** | 2.9–3.1 ms median (probe); the counts must be fixed before the dispatch so every output index is fixed; `f64` there keeps counts equal to today's |
+| `stamp` (pencil, chalk, airbrush, wash) | CPU `paintStamp`, `linMarks`, `#lay` | **compute**, entry `dabs`, one thread per sample, writes `DAB_FLOATS` instances | 71,335 dabs on the walker; the existing `dabVs`/`dabFs` pipeline draws them; a skipped dab (`kinds.ts:66`: *"if (radius <= 0.05 \|\| alpha <= 0) continue;"*) is written with alpha 0, which leaves source-over unchanged |
+| `ink` (ink, marker) | CPU perfect-freehand, a coverage piece | **decided at the chunk 1 gate**: capsules (compute, entry `capsules`, plus a capsule draw) or the fallback (one GPU thread per contour runs perfect-freehand's outline) | the capsule union is order-independent; perfect-freehand's outline is sequential per stroke |
+| `bristle` (bristle) | CPU `paintBristle` | after the stop point: **compute**, entry `bristles`, one thread per bristle walking its samples | runs break where the alpha level changes and take the run's average width (`kinds.ts:160`); a sequential walk per bristle keeps that rule exactly |
+| `smear` (smudge, wet) | CPU samples; one workgroup per stroke | after the stop point: **samples from the `samples` entry**; the smear pass stays | the smear is order-dependent (`coverage-matrix.md:61`) |
+| Hue and light jitter (stamp, bristle) | CPU `jitteredInk` | **in the `dabs` and `bristles` entries** | a WGSL `shiftColour` per dab or bristle index |
+| Hatching effect | fragment shader (`gpu/shader-painterly.ts:249`) | **no change** | not brush expansion |
+| Hatch marks drawn with a brush (`walker-sheet/ink-tea.ts:89`) | stamp | as stamp | a brushed path |
+| Dashes on plain strokes | CPU `geometry/dash.ts` | **no change** | not brush expansion |
 | Paper grain, opacity, blend, erase | the mark's composite draw (`gpu/records.ts:76`) | **no change** | applied once per mark after expansion |
 
 **Compute writing instance buffers, not vertex-shader instancing.** A vertex
-shader could compute each dab from `(stroke, k)` directly. That runs the
-sample and hash code six times per dab (one per quad corner), needs a new dab
-pipeline that reads storage in the vertex stage, and leaves nothing to read
-back. Compute writes the existing layouts once, the existing pipelines draw
-them, and a test can read the buffers back and compare them with the CPU
-expansion number by number while both exist (chunks 1–3).
+shader could compute each dab from `(stroke, k)`. That runs the sample and
+hash code six times per dab, needs a new dab pipeline, and leaves nothing to
+read back. Compute writes the existing layouts once, and a test reads them
+back and compares them with the CPU expansion while both exist.
 
-### Determinism
+### The contour contract
 
-- **Fixed output indices.** The CPU computes every contour's sample count
-  (in `f64`, as `resample` does) and every mark's output range before the
-  dispatch. A thread writes only its own index. No atomics, no compaction.
-  Draw order within a slot is the instance order, which is sample order, as
-  the CPU's dab order is today.
-- **Hashes bit for bit.** `mix` is `u32` multiply, xor and shift; WGSL wraps
-  on overflow (above). `rand` becomes `f32(mix(...) >> 8u) / 16777216.0`: the
-  same 24 high bits as the CPU's value, converted exactly. The seed stays
-  CPU-side (`hashNumbers` rounds to 1/1000 in `f64`, `random.ts:71-79`).
-- **Float differences against the CPU, not run to run.** Positions, pressure
-  and noise are `f32` on the GPU. Noise lattice cells (`floor(s / cell)`) and
-  bristle gaps (`kinds.ts:139`: *"Math.floor(c.s / 2.5)"*) can fall on the
-  other side of an integer than the CPU's `f64`. Within one device and one
-  Tint build, the same inputs give the same bits every run. This is the
-  "detail may differ, character must match" allowance (`parity-criteria.md`,
-  brush row).
+The CPU decides, per contour and once, everything that sets an index:
+1. `prepare` exactly as `sample.ts:31-43` (consecutive duplicates dropped; a
+   closed contour of more than two points repeats its start).
+2. Segment lengths and the cumulative prefix in `f64`, from the prepared
+   points, so a closed contour's closing edge is counted once.
+3. The sample count by running `resample`'s own loop (`sample.ts:62-66`):
+   repeated `f64` addition of `step`, the last sample at `total`. A closed-form
+   formula is not used: for `total = 2.85`, `step = 0.3` the loop gives 11
+   samples and `ceil(total / step − 0.5) + 1` gives 10. A contour with
+   `total < step` or fewer than two prepared points has one sample at its
+   start (`sample.ts:55`).
+4. A contour with one sample (step 3's short case) is placed first, before
+   any endpoint rule: at its start, `s = t = 0`, normal `(0, −1)`, pressure
+   1, as `sample.ts:55` does. Otherwise the GPU places sample `k < n − 1` at
+   `s_k`, uploaded per contour as the `f64` value of `step` and computed as
+   `k × step` in `f32`, and places the last sample at the contour's end
+   point. `s_k` on the GPU can differ from
+   the CPU's repeated sum in the last bits; the count cannot.
+
+Per kind, short and closed contours:
+- **Stamp:** one sample, one dab, as today.
+- **Ink, one sample:** a disc of radius `r(p)` at the sample. Today
+  perfect-freehand draws a single point as an off-centre dot (measured: for
+  one point of size 4 at pressure 1, outline distances from the point run
+  from 1.62 to 4.41). The gate shows this case.
+- **Ink, closed:** the samples already end at the start (step 1), so no extra
+  closing segment is added. (Draft 1 added one; that was wrong.)
+- **Ink, a zero-length segment:** a disc of the larger radius.
+- **Bristle, one sample:** a dab (`kinds.ts:181-191`), written by `dabs`.
+
+### Ink: capsule geometry (if the gate passes)
+
+For a segment from `A` (radius `rA`) to `B` (radius `rB`), length `L`, and a
+pixel centre `q` in the mark's own pixels:
+- `t = clamp(dot(q − A, B − A) / L², 0, 1)`; `c = A + t (B − A)`;
+- `d = |q − c|`, the **unsigned** distance from the axis segment, `d ≥ 0`;
+- `r = rA + t (rB − rA)`;
+- coverage `= max(0, min(d + 0.5, r) − max(d − 0.5, −r))`: the length of the
+  pixel's span `[d − 0.5, d + 0.5]` inside the band `[−r, r]`, the 1-D box
+  filter the bristle run shader uses across its centreline
+  (`shader-mark.ts:68`). Examples: `r = 2, d = 3` gives 0; `r = 2, d = 2`
+  gives 0.5; `r = 0.3, d = 0` gives 0.6, so lines under one pixel keep their
+  tone.
+- At `t = 0` or `t = 1` the shape is the end disc of that radius.
+- **What the taper does.** With `rA ≠ rB`, this field is not the distance to
+  the convex hull of the two end discs. The hull's sides lean by an angle
+  `θ` with `sin θ = (rB − rA) / L`; the projected field puts the edge at
+  `r(t)` measured square to the axis, which is out by about `r (1 − cos θ)`.
+  On ink, `L` is the sample step (at least 0.5 brush px) and `rB − rA` comes
+  from the pressure envelope: for a 2.2-wide walker line tapering over 5 px,
+  `sin θ ≈ 0.15` and the edge moves about 1% of the radius. When
+  `|rB − rA| ≥ L`, one end disc contains the other; the capsule is drawn as
+  the larger disc alone.
+- **The union.** The blend is `max` on every channel, both factors `"one"`.
+  `max` of each capsule's filtered coverage is not the filtered coverage of
+  the union: inside a joint or a crossing, two partial coverages in one pixel
+  give a value below the true one. The gate measures this against a 16×16
+  supersampled reference on straight segments, round ends, sharp bends,
+  subpixel crossings and varying radii. Pass: mean edge error under 0.05
+  coverage and no pixel over 0.25 (the parity criterion for edges is a mean
+  under 0.15).
+
+What else changes against perfect-freehand: joins are round, there is no
+outline smoothing or short-start filtering, caps are the end discs, and
+edges are 8-bit coverage in the `rgba8unorm` mark atlas.
+
+### The ink fallback (if the gate fails)
+
+One GPU thread per ink contour runs a port of perfect-freehand 1.2.3's
+`getStrokePoints` and `getStrokeOutlinePoints` over that contour's GPU
+samples, with today's options (`kinds.ts:32-41`). It writes the outline as
+edges into the coverage atlas's edge buffer at a fixed range per contour:
+the CPU reserves the outline's upper bound, and unused edges are zero-length,
+which add no area. Two points per sample plus the caps is not a bound:
+perfect-freehand emits extra points at each sharp corner (its corner loop,
+`getStrokeOutlinePoints.ts` lines 296–316 at v1.2.3). In the round-2 review,
+100 samples alternating between `(0,0)` and `(0.5,0)` with today's options
+gave 2,594 outline points against 242 under that rule. The bound is derived
+from the port's own loop (points per sample including the corner arc, plus
+the caps and `getStrokePoints`' added points), checked in batching and the
+limits, and tested on that repeated-sharp-turn case. Ink stays a
+coverage piece; its look stays today's up to `f32`. Cost: a sequential walk
+per contour (286 contours of up to a few hundred samples on the walker) and
+a larger edge buffer. Tests compare the outline points with perfect-freehand's
+on the CPU. If the boxholder rejects both, ink stays CPU-expanded and only
+stamps move.
+
+### Determinism, as tested requirements
+
+- **Fixed output indices.** Every output range is fixed on the CPU before the
+  dispatch; a thread writes only its own indices; no atomics or compaction.
+  Draw order within a slot is instance order, which is sample order.
+- **Hashes bit for bit.** `rand` becomes `f32(mix(...) >> 8u) / 16777216.0`:
+  the same 24 high bits as the CPU's value, converted exactly. The seed stays
+  on the CPU (`random.ts:71-79`).
+- **Floats against the CPU.** Positions, pressure and noise are `f32`. Noise
+  cells (`floor(s / cell)`) and bristle gaps (`kinds.ts:139`: *"Math.floor(c.s
+  / 2.5)"*) can fall on the other side of an integer from the CPU's `f64`.
+  That is the parity criteria's allowance for brush detail.
+- **Run to run.** Fixed indices remove scheduling races; they do not prove
+  repeatability, because the compiler may reassociate and fuse (WGSL spec,
+  above). Tests check it: the same frame twice in one process, in a fresh
+  process with a new device, after `release()` and wake, and after a batch's
+  output buffers are reused within a frame (chunks 3, 5, 9).
 - **Device-space seeding** (`canvas-loop-scene.md:342-344`: *"Brush seeds
   depend on device-space geometry today … so a change of pixel ratio or
-  transform changes texture"*). Decision 7 already fixed this on the CPU
-  (`expand.ts:10-12`). The GPU keeps it: the uploaded points are in brush
-  space, which has no ratio and no translation; `e = ratio · q` and the
-  fractional offset are applied only when a dab is written. Ratio 1 and 2 get
-  the same dabs, scaled, as `brush-cases.ts:63` checks: *"a translation and
-  another pixel ratio keep the expansion"*.
+  transform changes texture"*). Decision 7 fixed this on the CPU
+  (`expand.ts:10-12`). The uploaded points are in brush space; `e = ratio · q`
+  and the fractional offset apply only when an instance is written. So ratio
+  1 and 2 get the same dabs, scaled (`brush-cases.ts:63`: *"a translation and
+  another pixel ratio keep the expansion"*).
 - **Cross-backend.** Dawn under Node and Chromium on this Mac give
-  byte-identical output today (Checkpoint 4, decision 1). This holds while
-  their Dawn and Tint builds match; a Chrome update can break it, as it can
-  for every other pass. Lavapipe differs in the last bits (`stage3/dawn-linux.md`:
-  99.99–100% of pixels within 4/255).
+  byte-identical output today (Checkpoint 4, decision 1), while their Dawn
+  builds match. Lavapipe differs in the last bits (`stage3/dawn-linux.md`).
 
-### Data per frame
+### Buffers, bindings and batches
 
-| Buffer | Walker, per frame | Kept? |
-|---|---|---|
-| Points in brush space (`f32` x, y) | 40,119 × 8 B = 321 KB | uploaded every frame |
-| Cumulative arc lengths (`f32`) | 40,119 × 4 B = 160 KB | uploaded every frame |
-| Contour records | 776 × 32 B = 25 KB | uploaded every frame |
-| Mark records (e, offset, slot, ranges, brush numbers) | 526 × 96 B = 50 KB | uploaded every frame |
-| Samples (GPU only) | 106,769 × 32 B = 3.4 MB | frame-temporary |
-| Dab instances (GPU only) | 71,335 × 48 B = 3.4 MB | frame-temporary |
-| Capsule instances (GPU only) | 35,434 × 32 B = 1.1 MB | frame-temporary |
+**Bindings.** Each entry point binds at most four storage buffers and one
+uniform:
 
-About 0.56 MB uploaded per frame with one `writeBuffer` per buffer. The
-GPU-only buffers come from a size-classed pool, as textures do
-(`gpu/pool.ts`).
+| Binding | `samples` | `dabs`, `capsules` | `bristles` |
+|---|---|---|---|
+| 0 records (read) | yes | yes | yes |
+| 1 geometry (read) | yes | no | no |
+| 2 samples | write | read | read |
+| 3 output (`STORAGE \| VERTEX`) | no | write | write |
+| uniform: the batch's ranges | yes | yes | yes |
+
+**Inputs.** The records and geometry buffers are written once per frame with
+`queue.writeBuffer` (walker: 544 KB packed). `writeBuffer` runs before the
+frame's command buffer, so an input buffer is never rewritten within a
+frame. If either input exceeds `B = min(maxStorageBufferBindingSize,
+maxBufferSize, 64 MiB)`, it is split at contour boundaries into several
+buffers, each bound by the batches that need it. A single contour over `B`
+(about 5.6 million points) is an error that names the call.
+
+**Outputs.** The samples buffer and the output buffer are sized to `B` and
+are frame-temporary, as the spike's buffers are (`f.temp`, freed at frame
+end, `renderer.ts`). No pool. They are reused from batch to batch inside the
+frame's one command encoder: batch `i`'s draws are encoded before batch
+`i + 1`'s dispatch, and command order within an encoder is execution order.
+A page with more than one batch uses `loadOp: "load"` for its second and
+later render passes. Frame memory for brushes is then at most two buffers of
+`B`, plus the inputs.
+
+**Where a batch may split, per kind.** A split must not change any pixel.
+- **Samples:** at any sample index; a sample depends only on its contour's
+  prefix, step and seed.
+- **Stamp:** at any sample index; dab `k` depends only on sample `k`.
+- **Capsule:** at any segment; the batch also holds the segment's second
+  sample (one sample of overlap).
+- **Fallback ink outline:** only between contours; one contour must fit.
+- **Bristle:** only between bristles or contours; a bristle's whole run list
+  depends on its whole contour (run breaks, average width per run,
+  `kinds.ts:160`; mitres need the neighbours, `mark-atlas.ts:23-53`). Its
+  output is `(n − 1) × 6 × 96` bytes for `n` samples, so one bristle fits in
+  64 MiB up to about 116,000 samples. A bristle over that is an error that
+  names the call. (A 64-bristle stroke of 4,000 samples, 141 MiB in all,
+  splits into batches by bristle.)
+- **Smear:** never split. A smear's dabs carry the load and, for wet paint,
+  the backdrop copy from dab to dab (`shader-smear.ts:41-58`). A smear whose
+  samples exceed `B / 32` bytes is an error that names the call.
+
+Each kind gets a test that renders with `B` forced small (so every split
+point is used) and checks the bytes equal an unsplit render.
+
+**Dispatch size.** Workgroups of 64 threads; past `65535 × 64` threads, a 2-D
+dispatch with a linearized index.
+
+**Lavapipe.** Dawn there printed *"a storage-buffer limit was reduced"*
+(`stage3/dawn-linux.md:22`); the value was not recorded. Chunk 6 runs the
+GPU tests in the Lima VM after chunks 2–5, and chunk 9 runs them again after
+chunks 7–8.
 
 ### Caches and picture keys
 
 - The prepared stroke replaces the `MarkSet` in `BrushExpander`'s cache, under
-  the same key. It is ratio-independent, so a ratio change keeps it (as now).
-- The second cache, `kept.get(`m|${ex.key}|${linearKey(e)}`, …)`
-  (`gpu/marks.ts:139`), goes: there is no CPU mark placement left to keep.
+  the same key; it is ratio-independent, so a ratio change keeps it.
+- The cache of placed marks, `kept.get(`m|${ex.key}|${linearKey(e)}`, …)`
+  (`gpu/marks.ts:139`), goes for GPU kinds.
 - Nothing per stroke is kept on the GPU. A stroke drawn every frame is
-  expanded every frame on the GPU. A static stroke inside a picture is drawn
-  once into a kept tile and then not expanded again (`lower.ts:333`).
-- Picture versions, their keys and `deps` do not change: expansion depends only
-  on recorded data, the linear transform and the ratio.
-- `release()` (`gpu/renderer.ts`, sleep) clears the prepared strokes with the
-  rest; wake prepares again with the same bytes.
-- Cache equivalence holds by construction: the expansion pass is a pure
-  function of the stroke table, and the stroke table is a pure function of
-  the prepared strokes and their placement. Slot positions on the page differ
-  between frames, and do not change pixels (`gpu/shader-mark.ts:7-9`, above).
+  expanded every frame; a static stroke inside a picture is drawn once into a
+  kept tile and not expanded again (`lower.ts:333`).
+- Picture versions, keys and `deps` do not change.
+- `release()` clears the prepared strokes; wake prepares them again.
+- Cache equivalence: the expansion is a function of the records and geometry
+  buffers, which are a function of the prepared strokes and their placement.
+  Slot positions differ between frames and do not change pixels
+  (`shader-mark.ts:7-9`). Tests check it (existing cache-equivalence test).
 
-### Limits and fallback
+### No CPU fallback for the renderer
 
-- **No CPU fallback.** WebGPU compute is part of core WebGPU; a device that
-  runs the scene renderer runs compute. Checkpoint 0 needs no WebGL2 fallback
-  (`canvas-loop-scene.md:90`: *"A WebGL2 fallback is not required."*).
-- **Dispatch size.** Workgroups of 64 threads. A pass with more than
-  `65535 × 64` threads dispatches in 2-D and linearizes the index.
-- **Buffer size.** Before the pass, the CPU sums each mark's output size per
-  atlas page. When a page's samples or instances exceed the device's
-  `maxStorageBufferBindingSize`, the page's marks are split into batches in
-  order, each with its own dispatch and draw. A single stroke larger than one
-  batch is split by contour, then by sample range; nothing is dropped.
-  Today the CPU expansion has no such limit either; the flattening cap stays
-  (`core/contours.ts:14`: *"const MAX_SEGMENTS = 4000;"*).
-- **Storage buffers per stage.** At most 4 per entry point. Dawn on lavapipe
-  printed *"a storage-buffer limit was reduced"* (`stage3/dawn-linux.md:22`);
-  the reduced value was not recorded. Chunk 4 runs the GPU tests in the Lima
-  VM to check.
-- **Lavapipe cost.** About 107,000 short threads per walker frame on CPU
-  cores; small next to the 1.3–1.5 s lit frame there. Chunk 4 measures it.
-
-### Ink: a chain of capsules
-
-Each ink contour's samples become segments `k → k+1` (closed contours add the
-last → first segment, as `kinds.ts:30` closes the points). Each segment is a
-tapered capsule with radius `r(p) = width / (1 + thinning) × (0.5 − thinning
-× (0.5 − p))` at each end, perfect-freehand's formula with the size set at
-`kinds.ts:33`. The capsule draw writes coverage `max(0, min(d + 0.5, r) −
-max(d − 0.5, −r))` across the signed distance `d` (the 1-D box filter the
-bristle run shader already uses, `shader-mark.ts:68`), so lines under one
-pixel keep their tone (Checkpoint 3's thin-line finding). The blend is `max`
-on every channel with both factors `"one"`. The union's coverage is then the
-coverage of the nearest capsule, the same in any draw order.
-
-What changes against perfect-freehand: joins are always round, the outline
-has no smoothing step, and caps are the end discs. Edges become 8-bit
-coverage in the `rgba8unorm` mark atlas instead of the float exact-area
-coverage atlas.
+WebGPU compute is core WebGPU, and the renderer needs WebGPU already
+(`canvas-loop-scene.md:90`: *"A WebGL2 fallback is not required."*). The CPU
+expansion that remains for bristle and smear before the stop point is drawn
+by the same WebGPU renderer.
 
 ### Seams with the other subplans
 
-- **(a) scene core** (`canvas-loop-scene-core.subplan.md`, written in
-  parallel). Decision: **(b) chunks 1–6 build on the spike first**, in
-  `canvas-loop/src/scene-spike/`, or on (a)'s renamed files if (a)'s first
-  chunk moves them. Reasons: the walker-speed harness and the three ports run
-  on the spike now; and (a)'s gallery migration takes new PNG baselines, so
-  (b)'s pixel changes (chunk 3 above all) should land before those baselines,
-  or the baselines are taken twice. Chunk 7 waits for (a) to retire the
-  Canvas2D painter, because `core/brush/render/` is still that painter's code.
+- **(a) scene core** (`canvas-loop-scene-core.subplan.md`). Decision:
+  **(b) builds on the spike first**, in `canvas-loop/src/scene-spike/`, or on
+  (a)'s renamed files if (a)'s first chunk moves them. Reasons: the
+  walker-speed harness and the three ports run on the spike now; and (a)'s
+  gallery migration takes new PNG baselines, so (b)'s ink change (chunk 4)
+  should land before those baselines, or they are taken twice. Chunk 9 waits
+  for (a) to retire the Canvas2D painter, because `core/brush/render/` is
+  still that painter's code.
 - The parity test's reference is today's Skia through `teaView`
   (`brush-cases.ts:17`: *"const ref = teaView(s.size);"*). Whichever subplan
-  lands first freezes those reference renders as fixtures; chunk 1 does it if
+  lands first freezes those reference renders as fixtures; chunk 2 does it if
   (a) has not.
-- **(c) box figures.** Not in scope. (c) depends on (b) only through the
-  renderer's speed and the server's lavapipe; chunk 4 reports the lavapipe
-  number for (c).
+- **The frame budget beyond brushes** (record, non-brush lowering) is
+  unowned. See open question 1.
+- **(c) box figures.** Not in scope; chunk 6 reports the lavapipe number for
+  (c).
 
-### Chunk 1: stroke preparation and the sample pass
+### Chunk 1: the ink gate
 
-- **What.** `BrushExpander.expand` returns a prepared stroke for every brush
-  kind (it still returns a `MarkSet` beside it while the CPU path draws). A new
-  `gpu/brush-pass.ts` builds the stroke table and runs the `samples` entry of
-  a new `gpu/shader-brush.ts`: per thread, find its contour by binary search
-  over the contour sample offsets, find its segment by binary search over the
-  cumulative lengths, interpolate position and normal, evaluate pressure
-  (the six presets of `envelope.ts:5-12` and keyframes), and add wobble
-  (`noiseOf(1, period)`, `render.ts:123-135`). The last sample is the
-  contour's end point, as `sample.ts:63-66` sets it. WGSL `mix`, `rand`,
-  `noise1`.
-- **Why.** Every later chunk reads these samples.
-- **Direction.** Signatures:
-  `prepare(req: ExpandRequest): Prepared | undefined` in `brush/expand.ts`;
-  `class BrushPass { encode(marks: readonly TexMark[], f: { enc; temp; timer }): BrushOutputs }`.
-- **Vocabulary lock-ins.** `Prepared`, `BrushPass`, the entry point names.
-- **Tests.** A GPU test reads the sample buffer back for the brush sheet and
-  the walker's first frame and compares with `shapeSamples`: same count per
-  contour, positions within 1e-3 brush px, pressure within 1e-5, the end
-  sample equal to the end point within 1e-4. A second test checks the WGSL
-  `mix` against JS `mix` on 65,536 inputs, bit for bit. The frozen Skia
-  reference crops are written if (a) has not written them.
-- **Checkpoint.** No pixel changes (samples are computed, not yet drawn).
-  **Measurement:** CPU preparation ms per frame on the walker in Node (target:
-  under 2.5 ms; probe 1.79) and the `samples` pass GPU time from
-  `timed(f, "brush")`.
+- **What.** A prototype in `scratch/stage5/brushes/` (CPU only, TypeScript,
+  `f64`): it takes the walker's own ink strokes (samples from today's
+  `shapeSamples`) and rasterizes them by the capsule rule above, then cuts the
+  same crops from today's perfect-freehand render (the spike renderer, run
+  under the GPU lock, or today's Skia through `teaView`). Crops: a head
+  outline, a hand (tight curves), a foot (a sharp corner), a long tapered
+  limb outline, a short tapered stroke, a single-point dot; at ratio 2, at
+  normal size and at 4×. Also the supersampled checks of the union (above).
+  Astra reads the pairs through `codex exec` (model `gpt-6-astra`, crops
+  attached); the boxholder then judges.
+- **Why.** The ink look is a principle 2 question that the crop averages in
+  `brush-sheet.ts:85` (luminance and contrast) cannot answer.
+- **Pass:** the boxholder accepts the capsule ink. **Fail:** chunk 4 builds
+  the fallback. The boxholder may also choose to leave ink on the CPU.
+- **Checkpoint.** The boxholder's decision, recorded in this plan.
+  **Measurement:** the supersampled union errors; the crops.
 
-### Chunk 2: stamp dabs on the GPU
+### Chunk 2: stroke preparation and the sample pass
+
+- **What.** `BrushExpander` returns a prepared stroke for every kind (still
+  with the `MarkSet` beside it while the CPU path draws). A new
+  `gpu/brush-pass.ts` packs the records and geometry buffers and runs the
+  `samples` entry of a new `gpu/shader-brush.ts`: find the contour (binary
+  search over contour sample offsets), place the sample by the contour
+  contract, find its segment (binary search over the prefix), interpolate
+  position and normal, evaluate pressure (the presets of `envelope.ts:5-12`
+  and keyframes), add wobble (`noiseOf(1, period)`, `render.ts:123-135`).
+  WGSL `mix`, `rand`, `noise1`. Freeze the Skia reference crops if (a) has
+  not.
+- **Signatures.** `prepare(req: ExpandRequest): Prepared | undefined` in
+  `brush/expand.ts`; `class BrushPass { encode(marks: readonly TexMark[], f:
+  { enc; temp; timer }): BrushOutputs }`.
+- **Tests.** Sample readback against `shapeSamples` for the brush sheet, the
+  walker's first frame and focused contours: a contour shorter than one
+  step, a closed rectangle, a polygon with duplicate consecutive points, a
+  closed polygon whose last point already equals its first, and a contour of
+  length `2.85` at step `0.3`. Same count per contour; positions within 1e-3
+  brush px; pressure within 1e-5; the last sample equal to the end point, except a
+  one-sample contour, whose sample is its start. The
+  WGSL `mix` against JS `mix` on 65,536 inputs, bit for bit.
+- **Checkpoint.** No pixel changes. **Measurement:** preparation and upload
+  ms per frame on the walker, Node and Chromium, median and p95; the
+  `samples` pass GPU time.
+
+### Chunk 3: stamp dabs on the GPU
 
 - **What.** The `dabs` entry writes one `DAB_FLOATS` instance per stamp
-  sample at its fixed index: size jitter and scatter (`randOf(11)`,
-  `randOf(12)`, `kinds.ts:54-55`), radius and alpha (`kinds.ts:64-65`), soft
-  or hard tip, jitter colour (channels 13 and 14). Positions are `e · p +
-  offset` in the mark's own pixels. Stamp marks get a conservative box from
-  the prepared stroke: the contour box grown by `width / 2 × (1 + sizeJitter /
-  2) + scatter × width / 2 + wobble + 1`, mapped by `e` and translated. The
-  mark atlas draws the GPU-written instance range instead of `#lay`'s floats
-  for these marks.
-- **Why.** 71,335 of the walker's dabs; `paintStamp`, `linMarks` and `#lay`
-  leave the frame for stamps.
-- **Tests.** Read back dab instances for the brush sheet and compare with the
-  CPU dabs after `linMarks`: same count, centres within 2e-3 device px,
-  radius and alpha within 1e-4, the same zero-alpha dabs. A bounds test draws
-  strokes at the extremes of `scatter`, `sizeJitter` and `wobble` and checks
-  that no coverage reaches a box edge. Existing: `brushParity`,
-  `brushStability`, `expansionCache`, the cache-equivalence test on the three
-  ports, repeatability.
-- **Checkpoint.** Pixels within the brush criteria (crops); headless
-  byte-identical run to run. **Measurement:** walker lowering and atlas CPU
-  ms in Node, before and after.
+  sample: size jitter and scatter (`randOf(11)`, `randOf(12)`,
+  `kinds.ts:54-55`), radius and alpha (`kinds.ts:64-65`), tip, and jitter
+  colour (channels 13 and 14). Positions are `e · p + offset` in the mark's
+  own pixels. A stamp mark's box is the prepared stroke's box grown by
+  `width / 2 × (1 + sizeJitter / 2) + scatter × width / 2 + wobble + 1`,
+  mapped by `e` and translated.
+- **Tests.** Dab readback against the CPU dabs after `linMarks`: same count,
+  centres within 2e-3 device px, radius and alpha within 1e-4, the same
+  zero-alpha dabs, and **RGB within 1/255 for a stamp with nonzero
+  `hueJitter` and `lightJitter`** (a new case; the brush sheet has none). A
+  bounds test at the extremes of `scatter`, `sizeJitter` and `wobble`.
+  Existing: `brushParity`, `brushStability`, `expansionCache`, cache
+  equivalence on the three ports. New: the walker frame byte-identical in a
+  fresh process with a new device.
+- **Checkpoint.** Crops within the brush criteria. **Measurement:** walker
+  lowering and atlas CPU ms, Node and Chromium.
 
-### Chunk 3: ink as a chain of capsules
+### Chunk 4: ink on the GPU
 
-- **What.** The `capsules` entry writes one instance per ink segment. A new
-  capsule pipeline in `gpu/mark-atlas.ts` (vertex: the segment's bounding
-  quad grown by one pixel; fragment: distance to the tapered capsule, box
-  filtered, `max` blend) draws them into the ink marks' slots. Ink marks
-  become `kind: "tex"` (`gpu/marks.ts:101`) and are drawn by the mark draw as
-  coverage (`records.ts:76`, `src` 3). `ACKNOWLEDGEMENTS.md` gains the capsule
-  distance entry.
-- **Why.** The walker's 286 ink strokes, 35,434 segments; `paintInk`, the
-  ink rings and their `edgeData` leave the frame.
-- **Tests.** The existing `brushBlends` (marker multiplies; ink erase, half
-  erase) and `brushParity` ink and marker crops. New: a thin-line test (ink at
-  width 0.6 and 1.0 device px; mean tone per row within 3% of the frozen
-  Skia reference); a self-crossing loop draws no darker at the crossing
-  (opacity applies once); a draw-order test (the same capsules in reverse
-  order give the same bytes).
-- **Checkpoint.** Ink edges change; judged by crops. **Measurement:** the
-  walker sheet in Chromium at ratio 2 (`scratch/stage4/walker-speed/measure.sh`,
-  under the GPU lock): fps, record, lower, atlas, encode, and GPU pass times.
+- **What, capsules.** The `capsules` entry writes one instance per segment
+  (and one disc per single-sample contour). A capsule pipeline in
+  `gpu/mark-atlas.ts` (vertex: the bounding quad of both end discs grown by
+  one pixel; fragment: the capsule rule above; `max` blend) draws them into
+  ink marks' slots. Ink marks become `kind: "tex"` (`gpu/marks.ts:101`) and
+  draw as coverage (`records.ts:76`, `src` 3).
+- **What, fallback.** As described above, into the coverage atlas.
+- **Tests, capsules.** The supersampled checks from the gate, as tests;
+  `brushBlends` (marker multiplies; ink erase, half erase); the ink and
+  marker crops; a thin-line case (width 0.6 and 1.0 device px, mean tone per
+  row within 3% of the frozen Skia reference); a self-crossing loop no darker
+  at the crossing; the same capsules in reverse order give the same bytes.
+- **Tests, fallback.** Outline points against perfect-freehand on the CPU,
+  within 1e-3 px; the same crops.
+- **Checkpoint.** Ink crops; Astra reads the walker at 4× again.
+  **Measurement:** the walker in Chromium at ratio 2 (`measure.sh`, under the
+  GPU lock): fps, record, lower, atlas, encode, GPU pass times.
 
-### Chunk 4: measurement and visual review (a checkpoint for the boxholder)
+### Chunk 5: batching and limits
 
-- **What.** A `brush` field in `stats.cpu` (preparation and upload), so the
-  harness splits the frame. Run targets 1 and 3 in Chromium; headless walker
-  and Hallway timing in Node; the GPU tests and a walker run in the Lima VM on
-  lavapipe. Crops of the brush sheet, stress frame and three ports at ratio 1
-  and 2, today's Skia beside the GPU brushes; an Astra read through
-  `codex exec` (model `gpt-6-astra`, crops attached), then an exhibit for the
-  boxholder. Update draft section 9 and add a draft 2.10 note; one line in
-  `canvas-loop/BRUSHES.md` about ink joins.
-- **Why.** Targets 1 and 3 are this subplan's acceptance, and principle 2 is
-  judged by eye.
-- **Checkpoint.** Boxholder reads the exhibit and the target table.
-  **Measurement:** see "Rollout shape".
+- **What.** The batch rules above: `B` from the device's limits, input
+  splits at contours, output reuse within the encoder, `loadOp: "load"` for
+  later passes, 2-D dispatch, the named errors.
+- **Tests.** For samples, stamp and ink: `B` forced small, bytes equal to an
+  unsplit render. Inputs split. The over-limit errors name the call. The
+  walker byte-identical after `release()` and wake.
+- **Checkpoint.** **Measurement:** none beyond the tests; batching adds no
+  pass on the walker at the real `B`.
 
-### Chunk 5: bristle on the GPU
+### Chunk 6: measurement and visual review; the stop point
+
+- **What.** A `brush` field in `stats.cpu`. Run targets 1 and 3 in Chromium;
+  record the six-figure page directly. Headless walker and Hallway timing in
+  Node. The GPU tests and a walker run on lavapipe in the Lima VM. Crops of
+  the brush sheet, stress frame and three ports at ratio 1 and 2; Astra read;
+  an exhibit. Measure the CPU expansion that is left: bristle on the Stage 3
+  stress frame (12% bristle) and smear on the smear scene, so the boxholder
+  can weigh chunks 7–9. Update draft section 9 (*"A shared CPU step expands
+  it"*, `scene-api-draft.md:285`) and add a draft 2.10 note; one line in
+  `canvas-loop/BRUSHES.md` if ink changed.
+- **Stop point.** The boxholder decides whether chunks 7–9 go ahead, on these
+  facts: (1) the measured CPU time of bristle and smear expansion on scenes
+  that use them; (2) maintenance: before chunk 9, two expansion paths exist
+  (CPU for bristle and smear, GPU for the rest), with two sampling
+  implementations whose outputs differ in `f32` detail; chunk 9 removes about
+  650 lines (`RecordingCtx`, the kind painters, `linMarks`, the CPU parts of
+  `#lay`). Both paths draw through the one WebGPU renderer, so stopping here
+  does not break "one renderer". perfect-freehand is ink-only
+  (`kinds.ts:4`); whether it stays depends on the ink decision, not on
+  chunks 7–9. Lean: continue only if bristle or smear expansion is a
+  measurable share of a scene box agents draw.
+
+### Chunk 7: bristle on the GPU (after the stop point)
 
 - **What.** The `bristles` entry: one thread per (contour, bristle). It makes
   the bristle (`kinds.ts:104-118`), walks the samples (`kinds.ts:132-153`),
   splits runs where the level changes and shares the boundary point
-  (`kinds.ts:199-204`), and writes each run's mitred strip vertices
-  (`mark-atlas.ts:23-86`, ported) at a fixed range of `(samples − 1) × 6`
-  vertices per bristle. Unused vertices are degenerate. A one-sample contour
-  is a dab (`kinds.ts:181-191`), written by the `dabs` entry.
-- **Tests.** Read back the strip vertices for the brush sheet's bristle row
-  and compare with the CPU runs (positions within 2e-3 px, levels equal
-  except where a gap index lies within 1e-3 of an integer). `brushStability`
-  already moves a bristle stroke.
-- **Checkpoint.** Bristle crops within criteria. **Measurement:** the Stage 3
-  stress frame (500 marks, 12% bristle), CPU and GPU ms.
+  (`kinds.ts:199-204`), and writes each run's mitred strip
+  (`mark-atlas.ts:23-86`, ported) in a fixed range of `(n − 1) × 6`
+  vertices; unused vertices are degenerate.
+- **Tests.** Strip readback against the CPU runs (positions within 2e-3 px;
+  levels equal except where a gap index is within 1e-3 of an integer); RGB
+  for a bristle with jitter; `B` forced small splits by bristle with equal
+  bytes; the over-limit error. `brushStability` moves a bristle stroke.
+- **Checkpoint.** Bristle crops. **Measurement:** the stress frame, CPU and
+  GPU ms.
 
-### Chunk 6: smudge and wet from GPU samples
+### Chunk 8: smudge and wet from GPU samples (after the stop point)
 
 - **What.** The smear pass reads its dabs from the sample buffer (radius and
-  alpha from `p`, as `expand.ts:120` computes them) instead of the CPU's
-  `SmearRec.dabs`. `SmearPass.region` (`smear.ts:26-37`) uses the conservative
-  box, clamped to the layer as it is now.
-- **Tests.** Existing smear crops in `brushParity`;
-  `smudgeAcrossTiles` in `gpu.test.ts`.
-- **Checkpoint.** Smear crops within criteria; no CPU sampling is left in the
-  scene renderer. **Measurement:** the smear scene time, before and after.
+  alpha from `p`, as `expand.ts:120`) in place of `SmearRec.dabs`.
+  `SmearPass.region` (`smear.ts:26-37`) uses the conservative box, clamped as
+  now. A smear is never split.
+- **Tests.** Smear crops in `brushParity`; `smudgeAcrossTiles`; the
+  over-limit error.
+- **Checkpoint.** **Measurement:** the smear scene, before and after.
 
-### Chunk 7: retire the CPU expansion (after subplan (a) retires the Canvas2D painter)
+### Chunk 9: retire the CPU expansion; final verification (after the stop point and subplan (a))
 
 - **What.** Delete `brush/record-ctx.ts`, `expandIn`'s kind painters,
-  `linMarks` and the dab and run parts of `#lay`, the ink piece path, and what
-  (a) has left of `core/brush/render/` and `core/brush/sample.ts`. Remove the
-  `perfect-freehand` dependency (`canvas-loop/package.json:50`) and update its
-  `ACKNOWLEDGEMENTS.md` entry (formula kept). The numeric tests of chunks 1, 2
-  and 5 switch from the live CPU expansion to golden numbers recorded from it
-  before deletion (a few small strokes, JSON).
-- **Checkpoint.** `pnpm typecheck`, lint and the scene tests pass; the three
-  ports render the same bytes as at the end of chunk 6.
-  **Measurement:** changed-line count against the estimate.
+  `linMarks`, the CPU parts of `#lay`, and what (a) has left of
+  `core/brush/render/` and the CPU sampling. If ink moved to capsules, remove
+  the `perfect-freehand` dependency (`canvas-loop/package.json:50`) and update
+  its `ACKNOWLEDGEMENTS.md` entry (formula kept). The readback tests switch
+  to golden numbers recorded from the CPU path before deletion.
+- **Final verification.** Fresh-process repeatability, wake, and batch-reuse
+  tests across all kinds; the GPU tests on lavapipe again.
+- **Checkpoint.** Typecheck, lint, scene tests; the three ports render the
+  same bytes as after chunk 8. **Measurement:** changed lines against the
+  estimate.
 
 ## Could this be simpler?
 
-- **Simplest: Web Workers, option (b) at Checkpoint 4.** Same pixels, no
-  WGSL. It costs a transfer of about 155,000 primitives a frame
-  (`stage4-plan.md:219-221`) and still runs `linMarks` and `#lay` on the main
-  thread. The boxholder chose the GPU.
-- **Simpler GPU: chunks 1–4 only** (stamp and ink, about 1,450 lines). It
-  meets the walker's brush share. It fails on "one renderer": bristle and
-  smear keep the CPU expansion, `RecordingCtx` and `perfect-freehand`, and
-  two expansions of one stroke kind could differ by `f32` against `f64`. The
-  full scope buys one code path per kind. If the boxholder declines the BIG
-  CHANGE, this is the fallback.
-- **Simpler still: keep perfect-freehand and build its outline on the
-  GPU.** Its outline is sequential (a running list of left and right points,
-  corner handling); a GPU port needs a scan or one thread per stroke and
-  still needs edge data for the coverage atlas. The capsule union is
-  order-independent and reuses the mark atlas. This is why chunk 3 changes
-  ink pixels.
-- **Simpler: no stroke table, one dispatch per stroke.** 526 dispatches a
-  frame; draw-call count was the dominant cost in Stage 3 (`stage3/brushes.md`:
-  *"Draw-call count matters more than pixels"*). One pass per frame instead.
+- **Web Workers** (option (b) at Checkpoint 4). Same pixels, no WGSL; about
+  155,000 primitives a frame to transfer (`stage4-plan.md:219-221`), and
+  `linMarks` and `#lay` stay on the main thread. The boxholder chose the GPU.
+- **Stop after chunk 6.** It moves everything the walker, Hallway and
+  chemistry use. Bristle and smear stay CPU-expanded through the same
+  renderer. What chunks 7–9 buy is the measured CPU time of those kinds on
+  scenes that use them, and the removal of a second expansion path; the stop
+  point weighs both.
+- **Keep ink on the CPU.** The walker's ink outlines cost about 5 ms (before
+  the speed round) plus their edge data; this leaves most of a target's gap.
+  It is the floor if both GPU inks fail the gate.
+- **No records buffer, one dispatch per stroke.** 526 dispatches a frame;
+  draw-call count dominated cost in Stage 3 (`stage3/brushes.md:226`).
 
 ## Subplans
 
@@ -549,105 +681,94 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| The WGSL `mix` uses a signed shift or `i32` multiply and gives other bits | new (chunk 1, 65,536 inputs bit for bit) | no | silent: plausible but different randomness |
-| The CPU's sample count and the GPU's last sample disagree (an end dab missing or doubled) | new (chunk 1 sample readback, end sample) | the count is uploaded, never recomputed on the GPU | silent |
-| A conservative box is smaller than the dabs' reach; `inSlot` discards the overflow | new (chunk 2 bounds test at parameter extremes) | the reach formula | silent clipping of a mark's edge |
-| A page's buffers exceed `maxStorageBufferBindingSize` | new (chunk 1, with the batch limit lowered in the test) | batching per page | clear: a validation error becomes `GpuRenderError` if batching is wrong |
-| An output index is written twice or not at all (bad offset arithmetic) | the readback comparisons (chunks 1, 2, 5) | no | silent: stale data from a pooled buffer; buffers are cleared on acquire to make it visible |
-| Run-to-run difference from a race | existing repeatability and cache-equivalence tests | no atomics by design | clear in tests |
-| Ink below one pixel too light or too dark | new (chunk 3 thin-line test) | the box filter | silent visually |
-| Capsule `max` blend applied to a dab slot | new (chunk 3 draw-order test) and slot discard | separate pipelines per kind | silent |
-| Lavapipe's reduced storage-buffer limit below the pass's need | chunk 4 run in the VM | at most 4 per entry point | clear: pipeline creation throws |
-| The fractional offset is computed in `f32` and the texture crawls under a whole-pixel move | existing `brushStability` | `f64` offset on the CPU | clear in tests |
-| A smear's region from the conservative box reaches outside the layer | existing `smudgeAcrossTiles` | the clamp in `SmearPass.region` | clear |
+| The WGSL `mix` uses a signed shift or `i32` multiply | new (chunk 2, bit for bit) | no | silent |
+| The sample count differs from `resample`'s loop (closed-form drift, missing closing edge) | new (chunk 2, focused contours incl. 2.85/0.3) | the CPU runs the loop | silent |
+| A one-sample ink contour draws nothing | new (chunk 4, gate crop) | a disc per single-sample contour | silent |
+| A closed ink contour gets a doubled closing segment | new (chunk 2 count, chunk 4 crops) | no extra segment | silent |
+| The capsule union is too light at joints or crossings | new (gate and chunk 4, supersampled reference) | none beyond the bound | silent visually |
+| A conservative box is smaller than the dabs' reach; `inSlot` discards the overflow | new (chunk 3 bounds test) | the reach formula | silent |
+| An input or output exceeds a device limit | new (chunk 5, forced small `B`) | batching; named errors | clear |
+| A split changes pixels (bristle runs, smear state) | new (chunks 5, 7, 8: split equals unsplit) | split points restricted per kind; smear never split | silent without the test |
+| An output index written twice or not at all | readback tests (chunks 2, 3, 7) | no | silent |
+| A rewritten input buffer within a frame | chunk 5 split test | inputs written once per frame | silent |
+| Run-to-run difference from compiler or resource reuse | new (chunks 3, 5, 9: fresh device, wake, reuse) | fixed indices | clear in tests |
+| Colour jitter wrong | new (chunks 3, 7: RGB readback) | no | silent |
+| Lavapipe's reduced storage limit below four | chunk 6 and 9 VM runs | four per entry | clear: pipeline creation throws |
+| The fractional offset rounds and the texture crawls under a whole-pixel move | existing `brushStability` | `f64` offset | clear in tests |
 
 No critical gap: every silent row has a test in the chunk that adds the code.
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field:** ADDRESSED. No API changes; brush validation
-  stays at record time (`core/brush/presets.ts:179` `resolveBrush`).
-- **Stale ref:** ADDRESSED. Prepared strokes are keyed by recorded data
-  (`expand.ts:161`); a picture version re-recorded gets new keys.
-- **Two agents touching the same card:** not applicable: a renderer instance
-  serves one figure; figures on one page share a device, and the error scopes
-  are popped per frame already (`renderer.ts`, `#frame`).
-- **Hand-edit drift:** not applicable: no hand-written data.
-- **Fabricated free-form value:** not applicable.
-- **Validation error UX:** ADDRESSED. Limits never surface to the sketch
-  (batching); a GPU error names the pass (`GpuRenderError`).
-- **Partial migration / transition state:** ADDRESSED. Between chunks 2 and
-  6, a frame mixes CPU-expanded and GPU-expanded kinds. The mark atlas draws
-  both; each mark is one kind. A sketch's ink look changes once, at chunk 3.
-  The transcript line *"brushed strokes N: expanded X, expansion cache hits
-  Y"* (`gpu.test.ts:113`) keeps its wording; "expanded" means prepared on the
-  CPU from chunk 1 on, and draft 2.10 says so.
+- **Wrong tag / wrong field:** ADDRESSED. No API changes; validation stays at
+  record time (`core/brush/presets.ts:179` `resolveBrush`).
+- **Stale ref:** ADDRESSED. Prepared strokes are keyed by recorded data.
+- **Two agents touching the same card:** not applicable; figures on one page
+  share a device and pop their error scopes per frame already.
+- **Hand-edit drift; fabricated free-form value:** not applicable.
+- **Validation error UX:** ADDRESSED. A stroke over a limit raises an error
+  naming the call and the limit; other GPU errors name the pass.
+- **Partial migration / transition state:** ADDRESSED. Between chunks 3 and 9
+  a frame mixes CPU- and GPU-expanded kinds; each mark is one kind. Ink
+  changes once, at chunk 4. The transcript line *"brushed strokes N: expanded
+  X, expansion cache hits Y"* (`gpu.test.ts:113`) keeps its wording;
+  "expanded" means prepared on the CPU, and draft 2.10 says so.
 
 ## NOT in scope
 
-- **The record step's cost** (11.4 ms in Chromium on the walker). It belongs to
-  the recorder, which subplan (a) promotes. See open question 1.
-- **Moving curve flattening to the GPU.** 40,119 input points at 0.5 brush px
-  are cheap enough on the CPU (inside the 1.79 ms).
-- **A GPU-side expansion cache.** The upload is 0.56 MB a frame; kept tiles
-  already cover static drawing.
-- **The faint-mark warning** (dev-loop row "faint marks", left for a decision
-  at Checkpoint 4). The spike does not have it; GPU expansion does not change
-  that.
-- **Plain-stroke geometry, dashes, fills and clips on the GPU.** Not brush
-  expansion; they are about 4 ms of lowering (`stage4-plan.md:195`).
+- **The record step's cost** (11.4 ms in Chromium on the walker) and
+  non-brush lowering. Unowned; open question 1.
+- **Curve flattening on the GPU.** Inside the 2.9–3.1 ms CPU step.
+- **A GPU-side expansion cache or a buffer pool.** Frame-temporary buffers as
+  now; revisit only if chunk 6 measures allocation cost.
+- **The faint-mark warning.** Left for a decision at Checkpoint 4.
+- **Plain-stroke geometry, dashes, fills and clips on the GPU.**
 - **Box figures, the server driver, deployment.** Subplan (c).
-- **New brush looks** (for example Astra's "straight, even hatch marks"
-  finding at Checkpoint 4). This subplan keeps each kind's character.
-- **A Chromebook-class device check.** The boxholder accepted desktop numbers
-  (Checkpoint 4, answer 7).
+- **New brush looks** (for example radius noise on ink). A separate decision.
+- **A Chromebook-class check.** Desktop numbers accepted (Checkpoint 4,
+  answer 7).
 
 ## Open design questions
 
-1. **Who owns the rest of the frame budget?** After (b), the walker frame is
-   projected at 21–25 ms; the record step alone is 11.4 ms in Chromium.
-   Targets 1 and 3 need the recorder (sketch code plus structural hashing)
-   at roughly 5 ms or less, and lowering without brushes under about 4 ms.
-   Lean: a short "frame budget" chunk in subplan (a), since (a) owns the
-   recorder; (b)'s acceptance is then its own share (below) plus the measured
-   target numbers, reported.
-2. **Ink look.** Round joins everywhere and no outline smoothing. Lean:
-   accept, judged at chunk 4 by Astra and the boxholder; if the joins read as
-   too uniform, vary the radius along the stroke with a seeded noise channel,
-   which is a brush look change and a separate decision.
-3. **Full scope or chunks 1–4 only** (the BIG CHANGE). Lean: full scope, for
-   one expansion path.
+1. **Who owns the rest of the frame budget?** If chunk 6 confirms the
+   hypothesis, targets 1 and 3 need the record step and non-brush lowering
+   cut as well. Nobody owns that yet. A candidate owner is subplan (a),
+   which promotes the recorder; the boxholder or (a)'s author decides.
+2. **The ink look.** Decided at the chunk 1 gate by the boxholder.
+3. **Chunks 7–9.** Decided at the stop point after chunk 6.
 
 ## Knowledge audits
 
-Skip: no agent-facing concept changes. The brush API, its presets and its
-errors stay the same. Box-agent figure guidance is subplan (c)'s.
+Skip: no agent-facing concept changes. The brush API, presets and errors
+stay the same, apart from the new over-limit errors, which name the call.
 
 ## What will hold this after it ships
 
-- **Numeric readback tests** (chunks 1, 2, 5): the GPU's samples, dabs and
-  strips against the CPU expansion while it exists, then against golden
-  numbers. They catch porting errors that crops would pass. They use the
-  existing GPU test tier (`onGpu` in `gpu.test.ts`); no new tier.
-- **The WGSL hash test**: bit-for-bit, so randomness cannot drift silently.
-- **Existing pixel tests**: brush crops (parity criteria), blends and erase,
-  stability under translation, cache equivalence on the three ports,
-  repeatability. They run on the new path unchanged.
-- **Speed** is not held by a test (timings vary by machine). Chunk 4 records
-  the numbers in the plan doc; the walker-speed harness stays in scratch, as
-  in Stage 4.
+- **Readback tests** (chunks 2, 3, 7): GPU samples, dabs and strips against
+  the CPU expansion while it exists, then against golden numbers. They catch
+  porting errors that crops pass. Existing GPU test tier (`onGpu`).
+- **Contract tests** for counts, short and closed contours.
+- **Split-equals-unsplit tests** per kind.
+- **Repeatability tests** with a fresh device, after wake, and with buffer
+  reuse.
+- **The WGSL hash test**, bit for bit.
+- **Existing pixel tests**: brush crops, blends and erase, stability, cache
+  equivalence on the three ports.
+- **Speed** is not held by a test. Chunk 6 records the numbers in this plan;
+  the harness stays in scratch, as in Stage 4.
 
 ## Implementation order
 
-1. Chunk 1: stroke preparation and the sample pass. No dependency.
-2. Chunk 2: stamp dabs. Needs 1.
-3. Chunk 3: ink capsules. Needs 1. Lands before (a) takes its gallery
-   baselines.
-4. Chunk 4: measurement and visual review. Needs 2 and 3. Checkpoint for the
-   boxholder.
-5. Chunk 5: bristle. Needs 1.
-6. Chunk 6: smudge and wet. Needs 1.
-7. Chunk 7: retire the CPU expansion. Needs 5, 6 and (a)'s retirement of the
+1. Chunk 1: the ink gate. No dependency; can run beside chunk 2.
+2. Chunk 2: preparation and the sample pass.
+3. Chunk 3: stamp dabs. Needs 2.
+4. Chunk 4: ink, capsules or fallback. Needs 1 and 2; lands before (a) takes
+   its gallery baselines.
+5. Chunk 5: batching and limits. Needs 3 and 4.
+6. Chunk 6: measurement and review. Needs 5. **Stop point.**
+7. Chunk 7: bristle. Needs 6 and the boxholder's go-ahead.
+8. Chunk 8: smudge and wet. Needs 6 and the go-ahead.
+9. Chunk 9: retire the CPU expansion. Needs 7, 8 and (a)'s retirement of the
    Canvas2D painter.
 
 Each chunk is a commit or a few. The subplan ships with the rest of the
@@ -656,29 +777,85 @@ redesign, when the boxholder says so.
 ## Rollout shape
 
 **Done when** these pass:
-- Chunk 1: sample readback, WGSL hash, existing scene tests.
-- Chunk 2: dab readback, bounds at extremes, `brushParity`,
-  `brushStability`, `expansionCache`, cache equivalence on the three ports.
-- Chunk 3: `brushBlends`, ink and marker crops, thin-line, self-crossing,
-  draw order.
-- Chunk 5: strip readback, bristle crops.
-- Chunk 6: smear crops, `smudgeAcrossTiles`.
-- Chunk 7: all of the above against golden numbers and frozen crops;
-  typecheck, lint.
+- Chunk 1: the boxholder's decision; the supersampled union bounds.
+- Chunk 2: sample readback and the contour cases; the WGSL hash.
+- Chunk 3: dab readback with RGB; bounds; existing brush and
+  cache-equivalence tests; fresh-device repeatability.
+- Chunk 4: the capsule or fallback tests above.
+- Chunk 5: split-equals-unsplit for samples, stamp and ink; over-limit
+  errors; wake.
+- Chunks 7–8: their readback, split and crop tests.
+- Chunk 9: all of the above against golden numbers and frozen crops;
+  repeatability across all kinds; lavapipe.
 
-**Acceptance measurements** (chunk 4, Chromium on this machine, ratio 2,
-under the GPU lock):
+**Acceptance measurements** (chunk 6, Chromium on this machine, ratio 2,
+under the GPU lock; median and p95 over at least 300 frames):
 
 | Measure | Now | Acceptance |
 |---|---|---|
-| Brush CPU on the walker (preparation, upload; `stats.cpu.brush`) | about 15 ms expansion plus placement and atlas data | under 2.5 ms |
+| Brush CPU on the walker (`stats.cpu.brush`: preparation, packing, upload) | about 15 ms expansion plus placement and atlas data | under 3.5 ms median |
 | Brush GPU passes on the walker (timestamp queries) | the dab pass only | under 2 ms |
 | Walker frame minus record | 32.8 ms (44.2 − 11.4) | under 12 ms |
 | Target 1, walker sheet fps | 22.8 | reported; 60 needs open question 1 |
-| Target 3, six figures fps each | 11.0 (ratio 1), 10.8 (ratio 2) | reported; 30 needs open question 1 |
+| Target 3, six figures fps each | 11.0 (ratio 1), 10.8 (ratio 2) | reported directly |
 | Headless walker frame (Node, Dawn) | 59.1 ms | reported |
 | Lavapipe walker frame (Lima VM, ratio 1) | not measured | reported, for subplan (c) |
 | Brush crops (sheet, stress, smear, three ports) | pass today | pass: luminance within 3%, contrast within 15%; Astra: same character |
-| Repeatability, cache equivalence | byte-identical | byte-identical |
+| Repeatability, cache equivalence | byte-identical | byte-identical, including a fresh device |
 
-No migration: the scene data does not change. Knowledge audits: none.
+No migration: the scene data does not change.
+
+## Review round 1
+
+Codex (`gpt-6-astra`), `scratch/cross-model/2026-11-15T13-32-47-840Z-codex.md`,
+8 findings, each checked against the source.
+
+1. **Capsule coverage formula.** Held, as an ambiguity: the formula is right
+   only for the unsigned distance from the axis segment. Now specified, with
+   the taper's effect and the contained-disc case. The sub-point that `max`
+   of filtered coverages is not the union's filtered coverage also holds;
+   kept as a bounded approximation, measured against a supersampled
+   reference at the gate, rather than replaced.
+2. **Ink look unproved.** Held. The ink gate is now chunk 1, before any
+   capsule pipeline, with a named fallback. The reviewer's suggestion of
+   radius noise is out of scope.
+3. **Buffer limits.** Held: there was no per-stroke cap (`MAX_SEGMENTS` is
+   per curve segment, `core/contours.ts:14-18`), bristles reach 64
+   (`presets.ts:149`), and draft 1 needed five storage bindings. Now: packed
+   bindings (four), inputs written once, outputs reused in encoder order, no
+   pool.
+4. **Splitting changes appearance.** Held for bristle (`kinds.ts:160`) and
+   smear (`shader-smear.ts:41-58`). Split points are now restricted per kind,
+   smear is never split, and each kind has a split-equals-unsplit test.
+   Lavapipe is run again after chunks 7–8.
+5. **Projections beyond the probe.** Held: the probe did not store or pack,
+   reported a minimum, and the table mixed runs. The probe now packs the
+   arrays and reports median and p95 (2.9–3.1 ms median, 5.8–10.2 ms p95, up
+   from 1.79 ms minimum); the table names each number's source; projections
+   are labelled hypotheses; the frame budget beyond brushes is unowned.
+6. **Short and closed contours.** Held: `resample` returns one start sample
+   (`sample.ts:55`); draft 1's extra closing capsule doubled an edge; the
+   probe missed `prepare`'s closing point; the count formula was wrong
+   (checked: 11 against 10 for 2.85 and 0.3). Now a contour contract with
+   focused tests. On the walker the corrected probe gives the same counts.
+7. **"One renderer" justification.** Held: CPU-expanded bristles drawn by
+   WebGPU are one renderer, and perfect-freehand is ink-only (`kinds.ts:4`).
+   Chunks 7–9 are now justified by measured benefit and maintenance cost,
+   behind a stop point after chunk 6.
+8. **Verification gaps.** Held: the tests share one device
+   (`gpu.test.ts:39`), and no test exercised colour jitter. Determinism is
+   now a tested requirement (fresh device, wake, buffer reuse), with RGB
+   readback for jitter.
+
+Rejected: no finding outright. Partly rejected: in finding 1, replacing the
+`max` union with an exact union coverage; the bound is tested instead,
+because an exact union needs an outline or a per-pixel list of capsules,
+which is the sequential work this plan removes.
+
+## Review round 2
+
+Codex (gpt-6-astra) verified the round-1 fixes. Six held; two were partly
+open and are fixed above: the ink fallback's outline bound now counts
+perfect-freehand's corner points, and a one-sample contour is placed at its
+start before the endpoint rule. The rejected exact-union point was accepted as
+a gated approximation whose thresholds chunk 1 must demonstrate.
