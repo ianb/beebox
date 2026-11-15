@@ -162,7 +162,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#shape("rect", { geom: { kind: "rect", x, y, w, h }, style });
   }
   roundRect(...[x, y, w, h, radius, style]: [number, number, number, number, number, Style]): void {
-    checkNumbers("roundRect", { values: { x, y, w, h, radius } });
+    if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h) && Number.isFinite(radius))) checkNumbers("roundRect", { values: { x, y, w, h, radius } });
     const r = Math.max(0, Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2));
     this.#shape("roundRect", { geom: { kind: "path", commands: roundedRect({ x, y, w, h, r }) }, style });
   }
@@ -302,7 +302,7 @@ export class SceneRecorder extends PureHelpers implements View {
   }
   place(...[picture, x, y, options]: [Picture, number, number, PlaceOptions?]): void {
     const v = placedVersion(picture, this.#notes.frame);
-    checkNumbers("place", { values: { x, y } });
+    if (!(Number.isFinite(x) && Number.isFinite(y))) checkNumbers("place", { values: { x, y } });
     const unlit = this.#unlit();
     if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
     this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
@@ -322,7 +322,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#cursor = kind;
   }
   debugBox(...[label, x, y, w, h]: [string, number, number, number, number]): void {
-    checkNumbers("debugBox", { values: { x, y, w, h } });
+    if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h))) checkNumbers("debugBox", { values: { x, y, w, h } });
     this.#add({ kind: "debug", label, x, y, w, h });
   }
 

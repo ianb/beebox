@@ -21,6 +21,10 @@ export interface DevLoopCase {
   readonly channel: Channel;
   /** What the message must name, each as a pattern over the error message or the warning lines (with the sketch line). */
   readonly names: readonly RegExp[];
+  /** What the scene outline (`--scene`) must show, for a row whose claim is about the recorded scene. */
+  readonly outline?: readonly RegExp[];
+  /** An error the sketch's stack cannot place: why its transcript has no `at` line. */
+  readonly noSketchLine?: string;
   /** Not met yet: the proposal, for a decision. */
   readonly gap?: string;
   readonly frames?: number;
@@ -206,6 +210,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "an async draw (returns a Promise)",
     channel: "error",
     names: [/draw/, /Promise/, /synchronous/],
+    noSketchLine: "the Promise is found after draw has returned, so no sketch frame is on the stack",
     draw: loose(async (v: View): Promise<void> => {
       await Promise.resolve();
       v.rect(0, 0, 10, 10, fill);
@@ -309,6 +314,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a canvas wider than the GPU's largest texture (9000 px)",
     channel: "error",
     names: [/render/, /canvas/, /9000/, /8192/],
+    noSketchLine: "the render runs after draw has returned",
     canvas: { width: 9000, height: 20 },
     draw: (v) => v.rect(0, 0, 9000, 20, fill),
   },
@@ -331,6 +337,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "one picture key asked for at two sizes in a frame (two versions, by design)",
     channel: "none",
     names: [],
+    outline: [/place picture "tile" at \(10,0\)/, /place picture "tile" at \(20,0\)/, /^picture "tile" 10×10\n {2}rect \(0,0\) 10×10/m, /^picture "tile" 20×10\n {2}rect \(0,0\) 20×10/m],
     draw: (v) => {
       for (const w of [10, 20]) v.place(v.picture({ key: "tile", width: w, height: 10 }, () => v.rect(0, 0, w, 10, fill)), w, 0);
     },

@@ -12,8 +12,10 @@ what the row expects.
 - **Sketches:** `canvas-loop/test/scene-spike/dev-loop/cases.ts`, one entry per
   row, with the channel and the patterns the text must match.
 - **Test:** `canvas-loop/test/scene-spike/gpu.test.ts`, one test per row
-  (`dev loop, <id>: …`). A row whose gap is left is a `todo` test with its
-  proposal as the reason.
+  (`dev loop, <id>: …`). An error row's names are checked in both the thrown
+  error and the transcript's error part, with the sketch's line; a row about
+  the recorded scene also checks the `--scene` outline. A row whose gap is
+  left is a `todo` test with its proposal as the reason.
 - **Channels:** *error* is the error the run throws (a `SketchRunError` naming
   the frame, the step and the sketch's line) and its `error in <step>` line
   in the transcript; *warning* is a `frame N: warning:` line in the
@@ -32,7 +34,10 @@ proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
   `frame N: error in <step>: <Name>: <message>` and the sketch's own stack
   lines (`at path:line:col`), and the run throws `SketchRunError` with the
   same text and the first sketch line. beebox's `figure run-one` reports that
-  message unchanged.
+  message unchanged. Two error rows have no sketch line, and their tests
+  check that: an async `draw` (row 20), found only after `draw` has
+  returned, and a render error (row 33), raised after `draw`. Placing those
+  would need a source-location mechanism; none is built.
 - **Warnings name the sketch's line** (`… (at path:line:col)`), found from the
   stack (`canvas-loop/src/scene-spike/call-site.ts`), and each is given once
   per run instead of every frame.
@@ -45,8 +50,8 @@ proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
 | # | Mistake (id) | Expected: channel, and what the text must name | Result | Fix |
 |---|---|---|---|---|
 | 1 | Picture body reads model state not in `deps` (`stale-picture`) | warning: the picture, its deps, the first differing node, the line | gap fixed | Warned every frame, without a line, with one message for two causes. Now once, with the line, and the message says the kept version is stale. |
-| 2 | Two drawings under one key with equal deps (`shared-key`) | warning: the picture, "two drawings share the key", the line | gap fixed | Now told apart from row 1: a key asked for twice in one frame that draws differently. |
-| 3 | Deps or size change every frame (`deps-every-frame`) | warning: the picture, "every frame", the line | gap fixed | Was silent (the draft's deferred warning). Now warns once when a key records a new version three frames running. |
+| 2 | Two drawings under one key with equal deps (`shared-key`) | warning: the picture, "two drawings share the key", the line | gap fixed | Now told apart from row 1: a key asked for twice in one frame that draws differently. Each cause is given once per run, so this one does not hide a later row-1 warning from the same call. |
+| 3 | Deps or size change every frame (`deps-every-frame`) | warning: the picture, "every frame", the line | gap fixed | Was silent (the draft's deferred warning). Now warns once when a key records a new version three frames running; it says each new version is used once, since other versions of the key may be reused. |
 | 4 | NaN coordinate (`nan-coordinate`) | error: the call, the argument, NaN | gap fixed | Drew nothing, silently. Shape calls now check every number and name the argument, with a hint that NaN comes from `undefined`. |
 | 5 | Infinity size (`infinite-radius`) | error: the call, `radius`, Infinity | gap fixed | Was `RangeError: Invalid array length` from deep in the geometry code. |
 | 6 | NaN in a point list (`nan-point`) | error: the call, `points[1]`, NaN | gap fixed | Was silent. |
@@ -63,9 +68,9 @@ proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
 | 17 | `place` of a Picture kept from an earlier frame (`old-picture`) | error: `place`, the picture, "earlier frame", what to do | gap fixed | Was accepted, bypassing deps. |
 | 18 | A group body throws (`throw-in-group`) | error: the frame, the step, the message, the line | gap fixed | No transcript; see "Fixes that apply to every row". |
 | 19 | `update` throws (`throw-in-update`) | error: the frame, `update`, the message, the line | gap fixed | As row 18. |
-| 20 | `async draw` (`async-draw`) | error: `draw`, "Promise", "synchronous" | gap fixed | Was accepted, and the body after its first `await` drew into a finished frame. |
+| 20 | `async draw` (`async-draw`) | error: `draw`, "Promise", "synchronous"; no sketch line | gap fixed | Was accepted, and the body after its first `await` drew into a finished frame. |
 | 21 | `draw` changes the model (`mutate-model`) | error: `draw`, the property, "model is frozen", the line | gap fixed | Was allowed (today's runtime freezes the model). |
-| 22 | Reads an undeclared param (`undeclared-param`) | error: `params.speed`, the declared params, the line | gap fixed | Was `undefined`, then NaN. |
+| 22 | Reads an undeclared param (`undeclared-param`) | error: `params.speed`, the declared params, the line | gap fixed | Was `undefined`, then NaN. Names an object inherits (`toString`) are refused too. |
 | 23 | `control` for an undeclared param (`undeclared-control`) | error: the control and the param | pass | — |
 | 24 | `v.log` in a picture body (`log-in-picture`) | error: `v.log`, the picture, why | pass | — |
 | 25 | A function in `deps` (`function-dep`) | error: the picture, `deps[0]`, "function" | pass | — |
@@ -76,10 +81,10 @@ proposals. All 46 tests run in the one GPU test process; the 6 left are todo.
 | 30 | Text in a font that is not installed (`unknown-font`) | warning: the font, the line | gap fixed | Drew in a fallback font, silently. Headless only: the browser loads web fonts later. |
 | 31 | `pixels` fill leaves alpha 0 (`transparent-pixels`) | warning: the pixels key, "transparent", the line | pass | Now also names the line and where alpha is. |
 | 32 | `pixels` fill replaces `image.data` (`pixels-replaced`) | error: the pixels key, `data`, "write into" | gap fixed | Was a Dawn error about texture data layout. |
-| 33 | Canvas wider than the GPU's largest texture (`huge-canvas`) | error: render, the canvas, its size, the limit | gap fixed | Was "a shape 9000×20 device px is larger than the atlas", which named neither the canvas nor the limit. |
+| 33 | Canvas wider than the GPU's largest texture (`huge-canvas`) | error: render, the canvas, its size, the limit; no sketch line | gap fixed | Was "a shape 9000×20 device px is larger than the atlas", which named neither the canvas nor the limit. |
 | 34 | A 40000×40000 picture mostly off the canvas (`huge-picture`) | none: tiles only where seen | pass | — |
 | 35 | Picture with zero width (`zero-size-picture`) | error: the picture, `width`, "> 0", 0 | pass | — |
-| 36 | One key at two sizes in a frame (`same-key-sizes`) | none: two versions, by design (section 5) | pass | — |
+| 36 | One key at two sizes in a frame (`same-key-sizes`) | none: two versions, by design (section 5); the outline shows both | pass | — |
 | 37 | Clip with no area (`empty-clip`) | warning: the clip, "no area", the line | gap left | Proposal below. |
 | 38 | Drawing entirely off the canvas (`offscreen`) | warning: "off the canvas" | gap left | Proposal below. |
 | 39 | Point light without `at` (`point-light-no-at`) | error: `light (point)`, `at: [x, y]` | pass | — |
@@ -138,54 +143,54 @@ line numbers are those of `cases.ts`.
 **stale-picture**
 
 ```
-frame 1: warning: picture "swatch" drew differently from its kept version with the same key and no deps: the body reads a value (a model field, a param, the frame) that is not in deps, so the kept version is stale; first difference at picture "swatch" > rect #1 (at test/scene-spike/dev-loop/cases.ts:51:31)
+frame 1: warning: picture "swatch" drew differently from its kept version with the same key and no deps: the body reads a value (a model field, a param, the frame) that is not in deps, so the kept version is stale; first difference at picture "swatch" > rect #1 (at test/scene-spike/dev-loop/cases.ts:55:31)
 ```
 
 **shared-key**
 
 ```
-frame 0: warning: picture "icon" was asked for twice this frame with the same key and no deps and drew differently: two drawings share the key, or the body reads a value (such as a loop variable) that is not in deps; first difference at picture "icon" > rect #1 (at test/scene-spike/dev-loop/cases.ts:60:17)
+frame 0: warning: picture "icon" was asked for twice this frame with the same key and no deps and drew differently: two drawings share the key, or the body reads a value (such as a loop variable) that is not in deps; first difference at picture "icon" > rect #1 (at test/scene-spike/dev-loop/cases.ts:64:17)
 ```
 
 **deps-every-frame**
 
 ```
-frame 2: warning: picture "bar" recorded a new version in each of the last 3 frames (now deps [3], 23×10): its deps or size change every frame, so it is never reused; keep per-frame values out of the picture and apply them with at, place or a drawing beside it (at test/scene-spike/dev-loop/cases.ts:69:31)
+frame 2: warning: picture "bar" recorded a new version in each of the last 3 frames (now deps [3], 23×10): its deps or size change every frame, so each new version is used once; keep per-frame values out of the picture and apply them with at, place or a drawing beside it (at test/scene-spike/dev-loop/cases.ts:73:31)
 ```
 
 **nan-coordinate**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: rect: y must be a finite number, got NaN (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
-  at test/scene-spike/dev-loop/cases.ts:76:23
+  at test/scene-spike/dev-loop/cases.ts:80:23
 ```
 
 **infinite-radius**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: circle: radius must be a finite number ≥ 0, got Infinity
-  at test/scene-spike/dev-loop/cases.ts:83:23
+  at test/scene-spike/dev-loop/cases.ts:87:23
 ```
 
 **nan-point**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: curve: points[1] must be [x, y] with finite numbers, got [NaN, 4] (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
-  at test/scene-spike/dev-loop/cases.ts:90:20
+  at test/scene-spike/dev-loop/cases.ts:94:20
 ```
 
 **nan-transform**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: at: rotate must be a finite number, got NaN (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
-  at test/scene-spike/dev-loop/cases.ts:97:20
+  at test/scene-spike/dev-loop/cases.ts:101:20
 ```
 
 **negative-radius**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: circle: radius must be a finite number ≥ 0, got -5
-  at test/scene-spike/dev-loop/cases.ts:104:20
+  at test/scene-spike/dev-loop/cases.ts:108:20
 ```
 
 **zero-size**
@@ -198,71 +203,71 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: circle: radius must
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: unknown brush "pen" (presets: ink, marker, pencil, chalk, airbrush, wash, bristle, smudge, wet)
-  at test/scene-spike/dev-loop/cases.ts:118:20
+  at test/scene-spike/dev-loop/cases.ts:122:20
 ```
 
 **unknown-blend**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: blend "lighter-ish" is not one of: normal, multiply, screen, overlay, darken, lighten, soft-light, hard-light, color-dodge, color-burn, add, difference, exclusion, hue, saturation, color, luminosity
-  at test/scene-spike/dev-loop/cases.ts:125:20
+  at test/scene-spike/dev-loop/cases.ts:129:20
 ```
 
 **unknown-effect**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: group effects: unknown effect "blurr" (hue, saturation, brightness, contrast, grayscale, sepia, invert, blur, glow, shadow, wash, hatching, paper)
-  at test/scene-spike/dev-loop/cases.ts:132:20
+  at test/scene-spike/dev-loop/cases.ts:136:20
 ```
 
 **unknown-style-key**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: rect: unknown style key "colour" (fill, stroke, weight, brush, gesture, blend, erase, dash, cap, join, material, effects)
-  at test/scene-spike/dev-loop/cases.ts:139:20
+  at test/scene-spike/dev-loop/cases.ts:143:20
 ```
 
 **bad-colour**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: rect fill "#ggg" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)" or "teal")
-  at test/scene-spike/dev-loop/cases.ts:146:20
+  at test/scene-spike/dev-loop/cases.ts:150:20
 ```
 
 **bad-effect-colour**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: group effects.glow.color "warm yellow" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)" or "teal")
-  at test/scene-spike/dev-loop/cases.ts:153:20
+  at test/scene-spike/dev-loop/cases.ts:157:20
 ```
 
 **view-after-draw**
 
 ```
 frame 1: error in update: SketchUsageError: Sketch API misuse: v.rect called outside draw: the View records only while draw runs; keep what you need in the model and draw it from draw
-  at test/scene-spike/dev-loop/cases.ts:162:57
+  at test/scene-spike/dev-loop/cases.ts:166:57
 ```
 
 **old-picture**
 
 ```
 frame 1: error in draw: SketchUsageError: Sketch API misuse: place(picture "dot"): this Picture came from an earlier frame; call v.picture in each draw (it hands back the kept version without recording again) and place what it returns
-  at test/scene-spike/dev-loop/cases.ts:178:9
+  at test/scene-spike/dev-loop/cases.ts:182:9
 ```
 
 **throw-in-group**
 
 ```
 frame 0: error in draw: RangeError: boom in group
-  at test/scene-spike/dev-loop/cases.ts:188:28
-  at test/scene-spike/dev-loop/cases.ts:187:23
+  at test/scene-spike/dev-loop/cases.ts:192:28
+  at test/scene-spike/dev-loop/cases.ts:191:23
 ```
 
 **throw-in-update**
 
 ```
 frame 2: error in update: TypeError: boom in update
-  at test/scene-spike/dev-loop/cases.ts:199:57
+  at test/scene-spike/dev-loop/cases.ts:203:57
 ```
 
 **async-draw**
@@ -275,55 +280,55 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: draw() returned a P
 
 ```
 frame 0: error in draw: TypeError: Cannot assign to read only property 't' of object '#<Object>' (the model is frozen: update returns a new model, and draw only reads it)
-  at test/scene-spike/dev-loop/cases.ts:221:16
+  at test/scene-spike/dev-loop/cases.ts:226:16
 ```
 
 **undeclared-param**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: params.speed: the sketch declares no param "speed" (declared: size); add it to the params export
-  at test/scene-spike/dev-loop/cases.ts:231:56
+  at test/scene-spike/dev-loop/cases.ts:236:56
 ```
 
 **undeclared-control**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: control("speed"): no param named "speed" is declared
-  at test/scene-spike/dev-loop/cases.ts:238:20
+  at test/scene-spike/dev-loop/cases.ts:243:20
 ```
 
 **log-in-picture**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: v.log inside the body of picture "p": a body runs only when its version records, so log would come and go with the cache (draft section 8)
-  at test/scene-spike/dev-loop/cases.ts:245:81
-  at test/scene-spike/dev-loop/cases.ts:245:28
+  at test/scene-spike/dev-loop/cases.ts:250:81
+  at test/scene-spike/dev-loop/cases.ts:250:28
 ```
 
 **function-dep**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "p": deps must be plain data compared by value, but deps[0] is a function
-  at test/scene-spike/dev-loop/cases.ts:252:28
+  at test/scene-spike/dev-loop/cases.ts:257:28
 ```
 
 **smudge-with-effects**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: line: a smudge brush with effects has nothing to read (R2): draw it without effects, or put it in a group
-  at test/scene-spike/dev-loop/cases.ts:259:20
+  at test/scene-spike/dev-loop/cases.ts:264:20
 ```
 
 **light-unlit**
 
 ```
-frame 0: warning: light point at (20,20) is outside any lit group and does nothing (R8); put it inside group({ lighting: {} }, …) (at test/scene-spike/dev-loop/cases.ts:266:20)
+frame 0: warning: light point at (20,20) is outside any lit group and does nothing (R8); put it inside group({ lighting: {} }, …) (at test/scene-spike/dev-loop/cases.ts:271:20)
 ```
 
 **lit-no-light**
 
 ```
-frame 0: warning: lit group has no light inside it, so only its ambient (#4d4d4d) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group (at test/scene-spike/dev-loop/cases.ts:273:20)
+frame 0: warning: lit group has no light inside it, so only its ambient (#4d4d4d) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group (at test/scene-spike/dev-loop/cases.ts:278:20)
 ```
 
 **material-unlit**
@@ -335,20 +340,20 @@ frame 0: warning: lit group has no light inside it, so only its ambient (#4d4d4d
 **unknown-font**
 
 ```
-frame 0: warning: text "hello": no font family in "Comic Neuee" is installed here, so it draws in a fallback font; name an installed family or end the list with a generic one (sans-serif, serif, monospace) (at test/scene-spike/dev-loop/cases.ts:287:20)
+frame 0: warning: text "hello": no font family in "Comic Neuee" is installed here, so it draws in a fallback font; name an installed family or end the list with a generic one (sans-serif, serif, monospace) (at test/scene-spike/dev-loop/cases.ts:292:20)
 ```
 
 **transparent-pixels**
 
 ```
-frame 0: warning: pixels "field": the fill left every pixel transparent (alpha is every 4th byte, data[i + 3]; 255 is opaque) (at test/scene-spike/dev-loop/cases.ts:294:28)
+frame 0: warning: pixels "field": the fill left every pixel transparent (alpha is every 4th byte, data[i + 3]; 255 is opaque) (at test/scene-spike/dev-loop/cases.ts:299:28)
 ```
 
 **pixels-replaced**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: pixels "field": the fill replaced image.data; write into the array it is given (data[(y * width + x) * 4 + channel] = …), which holds 4×4×4 bytes
-  at test/scene-spike/dev-loop/cases.ts:303:28
+  at test/scene-spike/dev-loop/cases.ts:308:28
 ```
 
 **huge-canvas**
@@ -367,7 +372,7 @@ frame 0: error in render: GpuRenderError: GPU renderer: the canvas 9000×20 at p
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "label": width must be a number > 0, got 0
-  at test/scene-spike/dev-loop/cases.ts:327:28
+  at test/scene-spike/dev-loop/cases.ts:333:28
 ```
 
 **same-key-sizes**
@@ -385,22 +390,22 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "label": wi
 **offscreen**
 
 ```
-(nothing: no warning, no error)
+  at [1, 0, 0, 1, 1000, 1000]
 ```
 
 **point-light-no-at**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: light (point): needs at: [x, y]
-  at test/scene-spike/dev-loop/cases.ts:359:52
-  at test/scene-spike/dev-loop/cases.ts:359:20
+  at test/scene-spike/dev-loop/cases.ts:366:52
+  at test/scene-spike/dev-loop/cases.ts:366:20
 ```
 
 **hatching-no-amount**
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: effects.hatching.amount: must be a number in 0..1, got undefined
-  at test/scene-spike/dev-loop/cases.ts:366:20
+  at test/scene-spike/dev-loop/cases.ts:373:20
 ```
 
 **flat-hatching**
@@ -425,8 +430,8 @@ frame 0: error in draw: SketchUsageError: Sketch API misuse: effects.hatching.am
 
 ```
 frame 0: error in draw: UnsupportedCallError: scene spike: group effects under a rotated non-uniform scale or a skew is not supported yet (effects follow axis-aligned scales and rotations with a uniform scale only)
-  at test/scene-spike/dev-loop/cases.ts:397:51
-  at test/scene-spike/dev-loop/cases.ts:397:20
+  at test/scene-spike/dev-loop/cases.ts:404:51
+  at test/scene-spike/dev-loop/cases.ts:404:20
 ```
 
 **deep-nesting**
@@ -439,5 +444,5 @@ passes 91, effect passes 60, copies 0, draws 31
 
 ```
 frame 0: error in draw: SketchUsageError: Sketch API misuse: group opacity must be a number in 0..1, got 50
-  at test/scene-spike/dev-loop/cases.ts:418:20
+  at test/scene-spike/dev-loop/cases.ts:425:20
 ```

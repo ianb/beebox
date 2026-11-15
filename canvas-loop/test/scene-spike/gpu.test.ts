@@ -231,11 +231,20 @@ for (const c of CASES) {
     if (handle === undefined) return;
     const out = await runCase(c, handle);
     switch (c.channel) {
-      case "error":
+      case "error": {
         assert.ok(out.error !== undefined, `the run throws (transcript warnings: ${out.warnings.join("; ") || "none"})`);
-        assert.match(out.transcript, /error in (init|update|draw|render): /, "the transcript has the error line");
-        for (const name of c.names) assert.match(out.error, name);
+        // The transcript's last part: the error line and the sketch's stack lines.
+        const at = out.transcript.search(/^(frame \d+: )?error in (init|update|draw|render): /m);
+        assert.ok(at >= 0, "the transcript has the error line");
+        const tail = out.transcript.slice(at);
+        for (const name of c.names) {
+          assert.match(out.error, name);
+          assert.match(tail, name, "the transcript names it too");
+        }
+        if (c.noSketchLine === undefined) assert.match(tail, /\n {2}at test\/scene-spike\/dev-loop\/cases\.ts:\d+:\d+/, "the transcript gives the sketch's line");
+        else assert.doesNotMatch(tail, /\n {2}at /, `no sketch line: ${c.noSketchLine}`);
         break;
+      }
       case "warning":
         assert.equal(out.error, undefined);
         for (const name of c.names) assert.match(out.warnings.join("\n"), name);
@@ -243,6 +252,7 @@ for (const c of CASES) {
       case "none":
         assert.equal(out.error, undefined);
         assert.deepEqual(out.warnings, []);
+        for (const shown of c.outline ?? []) assert.match(out.transcript, shown);
         break;
     }
   });

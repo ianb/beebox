@@ -29,8 +29,8 @@ export function assertSync(result: unknown, step: string): void {
   throw new SketchUsageError({ detail: `${step}() returned a Promise: sketches must be synchronous (no async, no await)` });
 }
 
-// Names a runtime or library may probe on any object.
-const PROBES = new Set(["toJSON", "then", "constructor", "valueOf", "toString"]);
+// Names `await` and `JSON.stringify` probe on any object; a sketch does not read them as params.
+const PROBES = new Set(["toJSON", "then"]);
 
 /** `values` frozen, behind a guard that throws on reading a param `decl` does not declare. */
 export function guardParams(decl: ParamsDecl, values: ParamValues<ParamsDecl>): ParamValues<ParamsDecl> {
@@ -38,7 +38,7 @@ export function guardParams(decl: ParamsDecl, values: ParamValues<ParamsDecl>): 
   const declared = Object.keys(decl);
   return new Proxy(frozen, {
     get(target, key): unknown {
-      if (typeof key === "string" && !PROBES.has(key) && !Object.hasOwn(decl, key)) {
+      if (typeof key === "string" && !Object.hasOwn(decl, key) && !PROBES.has(key)) {
         throw new SketchUsageError({ detail: `params.${key}: the sketch declares no param "${key}" (declared: ${declared.length === 0 ? "none" : declared.join(", ")}); add it to the params export` });
       }
       return Reflect.get(target, key);

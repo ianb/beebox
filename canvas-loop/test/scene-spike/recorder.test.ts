@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { LinearGradient, PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { Effects } from "../../src/scene-draft/scene-api.js";
+import type { Effects, View } from "../../src/scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../../src/scene-spike/errors.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
 import { sceneOutline } from "../../src/scene-spike/outline.js";
@@ -95,4 +95,15 @@ test("misuse fails at the call, as today", () => {
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", blend: "plus" })), usage(/blend "plus" is not one of/));
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: -1 } })), usage(/group effects: blur must be a number ≥ 0/));
   assert.throws(() => recorder().record((v) => v.group({ opacity: 2 }, () => {})), /group opacity must be a number in 0..1/);
+});
+
+test("a number that is not finite is an error naming the call's argument", () => {
+  const cases: readonly [(v: View) => void, RegExp][] = [
+    [(v) => v.line(0, 0, Number.NaN, 4, { stroke: "#000" }), /line: x2 must be a finite number, got NaN/],
+    [(v) => v.triangle(0, 0, 1, 1, 2, Infinity, { fill: "#000" }), /triangle: y3 must be a finite number, got Infinity/],
+    [(v) => v.path([["move", 0, 0], ["line", 1, Number.NaN]], { stroke: "#000" }), /path: command 1 \(line\) must hold finite numbers/],
+    [(v) => v.ellipse(0, 0, 3, -1, { fill: "#000" }), /ellipse: ry must be a finite number ≥ 0, got -1/],
+    [(v) => v.at({ scale: [1, Number.NaN] }, () => {}), /at: scale\[1] must be a finite number, got NaN/],
+  ];
+  for (const [draw, message] of cases) assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof SketchUsageError && message.test(e.message));
 });

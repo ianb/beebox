@@ -30,7 +30,7 @@ export async function runCase(c: DevLoopCase, handle: GpuHandle): Promise<CaseOu
   });
   let error: string | undefined;
   try {
-    await runSpike({ sketchPath: `dev-loop/${c.id}`, module, outDir, frames: c.frames ?? 1, every: 1, seed: 1, ratio: 1, scene: false, events: [] }, handle);
+    await runSpike({ sketchPath: `dev-loop/${c.id}`, module, outDir, frames: c.frames ?? 1, every: 1, seed: 1, ratio: 1, scene: true, events: [] }, handle);
   } catch (e) {
     error = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   }

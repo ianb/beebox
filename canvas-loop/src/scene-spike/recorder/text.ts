@@ -39,7 +39,7 @@ export function fontWarning(node: TextNode, known: ((family: string) => boolean)
 /** Lay out `content` where it is called: under `matrix` (logical), keeping inside `canvas` (the scene, or the picture's box). */
 export function recordText(content: string, at: { box: TextBox; options: TextOptions; measurer: TextMeasurer; matrix: Mat; canvas: { width: number; height: number } }): { node: TextNode; bounds: TextBounds } {
   const box = at.box;
-  checkNumbers("text box", { values: { x: box.x, y: box.y, ...(box.w === undefined ? {} : { w: box.w }), ...(box.h === undefined ? {} : { h: box.h }) } });
+  if (!(Number.isFinite(box.x) && Number.isFinite(box.y) && (box.w === undefined || Number.isFinite(box.w)) && (box.h === undefined || Number.isFinite(box.h)))) checkNumbers("text box", { values: { x: box.x, y: box.y, ...(box.w === undefined ? {} : { w: box.w }), ...(box.h === undefined ? {} : { h: box.h }) } });
   const [a, b, c, d, e, f] = at.matrix;
   const laid = at.measurer.place(content, { box: at.box, options: at.options, where: { transform: { a, b, c, d, e, f }, pixelRatio: 1, canvas: at.canvas } });
   const o = laid.options;

@@ -17,7 +17,9 @@ function bad(call: string, what: { name: string; want: string; got: unknown }): 
   return new SketchUsageError({ detail: `${call}: ${what.name} must be ${what.want}, got ${got}${hint}` });
 }
 
-/** Each named argument a finite number; those in `nonNegative` also ≥ 0. */
+const fin = Number.isFinite;
+
+/** Each named argument a finite number; those in `nonNegative` also ≥ 0. The slow path: callers test the numbers directly first. */
 export function checkNumbers(call: string, args: { values: Readonly<Record<string, number>>; nonNegative?: readonly string[] }): void {
   for (const [name, v] of Object.entries(args.values)) {
     const positive = args.nonNegative?.includes(name) === true;
@@ -28,9 +30,11 @@ export function checkNumbers(call: string, args: { values: Readonly<Record<strin
 
 /** Every point two finite numbers. */
 export function checkPoints(call: string, points: readonly Vec2[]): void {
-  for (const [i, p] of points.entries()) {
+  let i = -1;
+  for (const p of points) {
+    i++;
     const parts: unknown = p;
-    if (!Array.isArray(parts) || parts.length < 2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
+    if (!Array.isArray(parts) || parts.length < 2 || !fin(p[0]) || !fin(p[1])) {
       const nan = Array.isArray(parts) && parts.some((v) => typeof v === "number" && Number.isNaN(v));
       throw new SketchUsageError({ detail: `${call}: points[${i}] must be [x, y] with finite numbers, got ${Array.isArray(parts) ? `[${parts.map(String).join(", ")}]` : String(parts)}${nan ? NAN_HINT : ""}` });
     }
@@ -39,30 +43,51 @@ export function checkPoints(call: string, points: readonly Vec2[]): void {
 
 /** Every number in every path command finite. */
 export function checkCommands(call: string, commands: readonly PathCommand[]): void {
-  for (const [i, c] of commands.entries()) {
-    const [, ...nums] = c;
-    if (nums.every((v) => Number.isFinite(v))) continue;
-    const nan = nums.some((v) => Number.isNaN(v));
+  let i = -1;
+  for (const c of commands) {
+    i++;
+    if (commandFinite(c)) continue;
+    const nan = c.some((v) => typeof v === "number" && Number.isNaN(v));
     throw new SketchUsageError({ detail: `${call}: command ${i} (${c[0]}) must hold finite numbers, got [${c.map(String).join(", ")}]${nan ? NAN_HINT : ""}` });
   }
 }
 
-/** A shape's geometry, by the names of its call's arguments. */
+function commandFinite(c: PathCommand): boolean {
+  let first = true;
+  for (const v of c) {
+    if (!first && !fin(v)) return false;
+    first = false;
+  }
+  return true;
+}
+
+/** `line` and `triangle` points, named as their arguments (x1, y1, …). */
+function checkNamedPoints(call: string, points: readonly Vec2[]): void {
+  let i = 0;
+  for (const p of points) {
+    i++;
+    if (!fin(p[0])) throw bad(call, { name: `x${i}`, want: "a finite number", got: p[0] });
+    if (!fin(p[1])) throw bad(call, { name: `y${i}`, want: "a finite number", got: p[1] });
+  }
+}
+
+/** A shape's geometry, by the names of its call's arguments. The numbers are tested directly; only a bad one builds a message. */
 export function checkGeom(call: string, g: Geom): void {
   switch (g.kind) {
     case "rect":
-      checkNumbers(call, { values: { x: g.x, y: g.y, w: g.w, h: g.h } });
+      if (!(fin(g.x) && fin(g.y) && fin(g.w) && fin(g.h))) checkNumbers(call, { values: { x: g.x, y: g.y, w: g.w, h: g.h } });
       return;
     case "ellipse":
+      if (fin(g.x) && fin(g.y) && fin(g.rx) && fin(g.ry) && g.rx >= 0 && g.ry >= 0) return;
       if (call === "circle") checkNumbers(call, { values: { x: g.x, y: g.y, radius: g.rx }, nonNegative: ["radius"] });
       else checkNumbers(call, { values: { x: g.x, y: g.y, rx: g.rx, ry: g.ry }, nonNegative: ["rx", "ry"] });
       return;
     case "arc":
-      checkNumbers(call, { values: { x: g.x, y: g.y, radius: g.r, startAngle: g.start, endAngle: g.end }, nonNegative: ["radius"] });
+      if (!(fin(g.x) && fin(g.y) && fin(g.r) && g.r >= 0 && fin(g.start) && fin(g.end))) checkNumbers(call, { values: { x: g.x, y: g.y, radius: g.r, startAngle: g.start, endAngle: g.end }, nonNegative: ["radius"] });
       return;
     case "poly":
-      if (call !== "line" && call !== "triangle") checkPoints(call, g.points);
-      else checkNumbers(call, { values: Object.fromEntries(g.points.flatMap(([x, y], i) => [[`x${i + 1}`, x], [`y${i + 1}`, y]])) });
+      if (call === "line" || call === "triangle") checkNamedPoints(call, g.points);
+      else checkPoints(call, g.points);
       return;
     case "path":
       checkCommands(call, g.commands);
@@ -72,6 +97,10 @@ export function checkGeom(call: string, g: Geom): void {
 
 /** `at` options: every number finite (a NaN transform hides everything inside it). */
 export function checkAt(at: AtOptions): void {
+  const { matrix, translate, rotate, skew, scale } = at;
+  const ok = (matrix === undefined || matrix.every(fin)) && (translate === undefined || (fin(translate[0]) && fin(translate[1]))) && (rotate === undefined || fin(rotate))
+    && (skew === undefined || (fin(skew[0]) && fin(skew[1]))) && (scale === undefined || (typeof scale === "number" ? fin(scale) : fin(scale[0]) && fin(scale[1])));
+  if (ok) return;
   const values: Record<string, number> = {};
   const add = (name: string, v: number | readonly number[] | undefined): void => {
     if (v === undefined) return;

@@ -28,17 +28,18 @@ const depsText = (v: Version): string => (v.deps === undefined ? "no deps" : `de
 
 function added(s: PictureScope, version: Version): PictureHandle {
   if (s.table.add(version) === 3) {
-    s.warn(`every ${version.key}`, `${version.kind} "${version.key}" recorded a new version in each of the last 3 frames (now ${depsText(version)}, ${version.width}×${version.height}): its deps or size change every frame, so it is never reused; keep per-frame values out of the ${version.kind} and apply them with at, place or a drawing beside it`);
+    s.warn(`every ${version.key}`, `${version.kind} "${version.key}" recorded a new version in each of the last 3 frames (now ${depsText(version)}, ${version.width}×${version.height}): its deps or size change every frame, so each new version is used once; keep per-frame values out of the ${version.kind} and apply them with at, place or a drawing beside it`);
   }
   return new PictureHandle(version, s.frame);
 }
 
 function warnStale(s: PictureScope, a: { name: string; version: Version; diff: string }): void {
   const deps = depsText(a.version);
-  const why = s.table.madeThisFrame(a.version)
+  const shared = s.table.madeThisFrame(a.version);
+  const why = shared
     ? `was asked for twice this frame with the same key and ${deps} and drew differently: two drawings share the key, or the body reads a value (such as a loop variable) that is not in deps`
     : `drew differently from its kept version with the same key and ${deps}: the body reads a value (a model field, a param, the frame) that is not in deps, so the kept version is stale`;
-  s.warn(`stale ${a.version.key}`, `${a.name} ${why}; first difference at ${a.diff}`);
+  s.warn(`${shared ? "shared" : "stale"} ${a.version.key}`, `${a.name} ${why}; first difference at ${a.diff}`);
 }
 
 export function recordPicture(s: PictureScope, a: { options: PictureOptions; body: () => void }): PictureHandle {

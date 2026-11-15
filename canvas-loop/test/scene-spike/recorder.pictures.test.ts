@@ -129,3 +129,25 @@ test("a debug box inside a picture belongs to its recording and moves with each 
     assert.deepEqual(boxes.map((b) => [b.label, b.corners[0], b.corners[2]]), [["hit", [11, 2], [14, 6]], ["hit", [21, 52], [24, 56]]], frame);
   }
 });
+
+test("a shared key and a later stale capture at one call each warn: the cause is part of the once-per-run key", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  const draw = (colors: readonly string[]) => (v: View): void => {
+    for (const fill of colors) v.place(v.picture({ key: "chip", width: 4, height: 4 }, () => v.rect(0, 0, 4, 4, { fill })), 0, 0);
+  };
+  assert.match(rec.record(draw(["#000", "#111"])).warnings.join("\n"), /asked for twice this frame/);
+  assert.match(rec.record(draw(["#222"])).warnings.join("\n"), /kept version is stale/);
+});
+
+test("a key that records a new version every frame says each new version is used once, not that the picture is never reused", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  const warnings: string[] = [];
+  for (let t = 0; t < 3; t++) {
+    warnings.push(...rec.record((v) => {
+      v.place(v.picture({ key: "bar", width: 10, height: 10 }, () => v.rect(0, 0, 10, 10, { fill: "#000" })), 0, 0);
+      v.place(v.picture({ key: "bar", width: 20 + t, height: 10 }, () => v.rect(0, 0, 20 + t, 10, { fill: "#000" })), 0, 20);
+    }).warnings);
+  }
+  assert.match(warnings.join("\n"), /picture "bar" recorded a new version in each of the last 3 frames .* so each new version is used once/);
+  assert.doesNotMatch(warnings.join("\n"), /never reused/);
+});
