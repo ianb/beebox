@@ -4,7 +4,7 @@
 // Depth runs down the screen: the back wall stands on the floor line at FLOOR, the
 // sofa a little nearer, the walker's path nearer still, and dark foreground shapes
 // along the bottom edge in front of everything.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, type Rim, blob, ellipsePts, hash, ink, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 import { PLANES, SIZES, footY, m } from "./sizes-tea.js";
 
@@ -352,22 +352,25 @@ export function foreground(v: View): void {
 
 /** The still room, back to front, without the foreground. */
 export function paintRoom(v: View): void {
-  v.background("#121016");
-  wall(v);
-  pipes(v);
-  placed(v, PLACES.arch, () => atriumArch(v));
-  placed(v, PLACES.poolDoor, () => poolDoor(v));
-  placed(v, PLACES.shelves, () => shelves(v, rimFor(PLACES.shelves)));
-  placed(v, PLACES.cabinet, () => {
-    cabinet(v, rimFor(PLACES.cabinet));
-    cables(v);
+  // Port: `v.paperTexture(0.4)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.4 } }, () => {
+    v.background("#121016");
+    wall(v);
+    pipes(v);
+    placed(v, PLACES.arch, () => atriumArch(v));
+    placed(v, PLACES.poolDoor, () => poolDoor(v));
+    placed(v, PLACES.shelves, () => shelves(v, rimFor(PLACES.shelves)));
+    placed(v, PLACES.cabinet, () => {
+      cabinet(v, rimFor(PLACES.cabinet));
+      cables(v);
+    });
+    placed(v, PLACES.tellies, () => {
+      for (const [i, t] of TELLIES.entries()) leaning(v, t, () => telly(v, t, 500 + i * 20, rimFor(PLACES.tellies)));
+    });
+    ceiling(v);
+    floor(v);
+    placed(v, PLACES.vending, () => vending(v, rimFor(PLACES.vending)));
+    placed(v, PLACES.sofa, () => sofa(v, rimFor(PLACES.sofa)));
   });
-  placed(v, PLACES.tellies, () => {
-    for (const [i, t] of TELLIES.entries()) leaning(v, t, () => telly(v, t, 500 + i * 20, rimFor(PLACES.tellies)));
-  });
-  ceiling(v);
-  floor(v);
-  placed(v, PLACES.vending, () => vending(v, rimFor(PLACES.vending)));
-  placed(v, PLACES.sofa, () => sofa(v, rimFor(PLACES.sofa)));
-  v.paperTexture(0.4);
 }

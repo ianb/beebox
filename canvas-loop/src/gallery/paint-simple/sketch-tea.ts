@@ -8,15 +8,7 @@
 //     thinner), with a short taper at the start and, once finished, at the end.
 //   - finished strokes are drawn once into a cache keyed on (page, count); each
 //     frame pastes it and draws only the stroke in progress.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
 
 const BRUSHES = ["ink", "pencil", "marker", "bristle", "wash"] as const;
 const COLOURS = ["black", "red", "blue", "green", "ochre"] as const;
@@ -25,6 +17,9 @@ const SIZES = ["S", "M", "L"] as const;
 type BrushChoice = (typeof BRUSHES)[number];
 type ColourName = (typeof COLOURS)[number];
 type SizeName = (typeof SIZES)[number];
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   brush: { type: "select", options: BRUSHES, default: "ink" },
@@ -275,7 +270,7 @@ function paintStroke(
  * rebuilds from the nearest one still kept.
  */
 function drawLayer(v: View, model: DeepReadonly<Model>, count: number): void {
-  v.cache(`page-${model.page}-${count}`, () => {
+  v.place(v.picture({ key: `page-${model.page}-${count}`, width: v.width, height: v.height }, () => {
     const stroke = model.strokes[count - 1];
     if (stroke === undefined) {
       v.background(PAPER);
@@ -283,7 +278,7 @@ function drawLayer(v: View, model: DeepReadonly<Model>, count: number): void {
     }
     drawLayer(v, model, count - 1);
     paintStroke(v, stroke, true);
-  });
+  }), 0, 0);
 }
 
 /** Current brush, colour and size, as a small chip in the top-right corner. */

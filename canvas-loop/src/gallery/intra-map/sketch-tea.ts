@@ -2,10 +2,13 @@
 // (plan-tea.ts). Every piece belongs to a depth layer, and standing pieces sort by
 // where they meet the floor, so people pass behind statues and under door lintels.
 // The same pieces also draw the depth map an engine would use, and the walk map.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
 import { MAP_H, MAP_W, type Room, T, VISITED, WALKERS, type Walker } from "./plan-tea.js";
 import { STATIC_PIECES, WALK, WALK_GRID, WALK_W, type Piece, ceilingPieces, roomLabels } from "./pieces-tea.js";
 import { paintPerson } from "./props-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   view: {
@@ -101,13 +104,13 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   v.background("#17191f");
   v.at({ scale: ZOOM }, () => v.at({ translate: [MARGIN, MARGIN] }, () => {
     // Bedrock around the rooms.
-    v.cache("rock", () => {
+    v.place(v.picture({ key: "rock", width: v.width, height: v.height }, () => {
       for (let i = 0; i < 260; i++) {
         const s = Math.sin(i * 91.7) * 43758.5;
         const r = Math.sin(i * 12.3) * 9631.1;
         v.circle((s - Math.floor(s)) * MAP_W * T, (r - Math.floor(r)) * MAP_H * T, 3 + ((i * 7) % 9), { fill: i % 2 === 0 ? "#1d2027" : "#14161b" });
       }
-    });
+    }), 0, 0);
     const ceilingShown = (room: Room): boolean => (p.ceilings === "all on" ? true : p.ceilings === "fog of war" ? !VISITED.includes(room.id) : false);
     const people = p.people ? peoplePieces(t) : [];
     const all = sorted([...STATIC_PIECES, ...people, ...(p.view === "picture" ? ceilingPieces(ceilingShown) : [])]);

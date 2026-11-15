@@ -1,7 +1,7 @@
 // Turns the plan into pieces: each one a layer, a base y for sorting, and a painter.
 // Walls are derived from the rooms (merged where rooms share a wall), doors from the
 // exits, and the walkable floor from both plus the props' footprints.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { MAP_H, MAP_W, OFF_PLAN, PROPS, QUARTERS, ROOMS, type Room, type Sky, T } from "./plan-tea.js";
 import { onWall, paintProp } from "./props-tea.js";
 

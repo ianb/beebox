@@ -12,17 +12,10 @@
 // Performance: the painted page is drawn once into cached layers (keyed on the
 // params they depend on); each frame pastes them and draws only the moving
 // parts with gradients, plain shapes and a few seeded ink marks.
-import type {
-  DeepReadonly,
-  Gesture,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Gesture, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   dusk: { type: "number", min: 0, max: 1, step: 0.05, default: 0.35 },
@@ -261,60 +254,63 @@ export function draw(
   model: DeepReadonly<Model>,
   p: ParamValues<typeof params>,
 ): void {
-  const f = model.frame;
-  const lamp = lanternAt(model, f, p.wind);
-  const d = p.dusk;
-  background(v, d);
-  mist(v, f, d);
-  waterGlints(v, f, p.wind);
-  lanternReflection(v, lamp, f, p.wind);
-  touchRipples(v, model.ripples, f);
-  carpRings(v, f, "back");
-  v.cache("boat-back", () => {
-    boatBack(v);
-    girl(v);
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    const f = model.frame;
+    const lamp = lanternAt(model, f, p.wind);
+    const d = p.dusk;
+    background(v, d);
+    mist(v, f, d);
+    waterGlints(v, f, p.wind);
+    lanternReflection(v, lamp, f, p.wind);
+    touchRipples(v, model.ripples, f);
+    carpRings(v, f, "back");
+    v.place(v.picture({ key: "boat-back", width: v.width, height: v.height }, () => {
+      boatBack(v);
+      girl(v);
+    }), 0, 0);
+    nellBlink(v, f);
+    arm(v, model.mitten);
+    v.place(v.picture({ key: "boat-front", width: v.width, height: v.height }, () => {
+      boatFront(v);
+      oar(v);
+    }), 0, 0);
+    // the lantern lights the bow wherever it is held
+    v.clip(v.curvePath(HULL, true), () =>
+      glow(v, lamp[0], lamp[1], 120, "255,170,80", 0.7 * flicker(f)),
+    );
+    v.place(v.picture({ key: "head", width: v.width, height: v.height }, () => fishHead(v)), 0, 0);
+    // how close the light has been brought to the carp's mouth, 0..1
+    // (zero at rest, even in a strong wind: the resting lantern comes no nearer than 37 px)
+    const near = Math.min(
+      1,
+      Math.max(
+        0,
+        1 - (Math.hypot(lamp[0] - MOUTH[0], lamp[1] - MOUTH[1]) - 20) / 16,
+      ),
+    );
+    carpFace(
+      v,
+      f,
+      model.watching === null ? lamp : [model.watching.x, model.watching.y],
+      model.greeted,
+      near,
+    );
+    greetRings(v, f, model.greeted);
+    chinDrops(v, f);
+    carpRings(v, f, "front");
+    if (p.moths) moths(v, lamp, f, "behind");
+    lantern(v, model.mitten, lamp, f, d);
+    if (p.moths) moths(v, lamp, f, "front");
+    v.place(v.picture({ key: "lilies", width: v.width, height: v.height }, () => lilyPads(v)), 0, 0);
+    reeds(v, f, p.wind);
+    dark(v, lamp, d);
+    // lights in the dark come after the darkening, so it does not dim them
+    stars(v, f, d);
+    homeWindow(v, f, d);
+    fireflies(v, f, d);
   });
-  nellBlink(v, f);
-  arm(v, model.mitten);
-  v.cache("boat-front", () => {
-    boatFront(v);
-    oar(v);
-  });
-  // the lantern lights the bow wherever it is held
-  v.clip(v.curvePath(HULL, true), () =>
-    glow(v, lamp[0], lamp[1], 120, "255,170,80", 0.7 * flicker(f)),
-  );
-  v.cache("head", () => fishHead(v));
-  // how close the light has been brought to the carp's mouth, 0..1
-  // (zero at rest, even in a strong wind: the resting lantern comes no nearer than 37 px)
-  const near = Math.min(
-    1,
-    Math.max(
-      0,
-      1 - (Math.hypot(lamp[0] - MOUTH[0], lamp[1] - MOUTH[1]) - 20) / 16,
-    ),
-  );
-  carpFace(
-    v,
-    f,
-    model.watching === null ? lamp : [model.watching.x, model.watching.y],
-    model.greeted,
-    near,
-  );
-  greetRings(v, f, model.greeted);
-  chinDrops(v, f);
-  carpRings(v, f, "front");
-  if (p.moths) moths(v, lamp, f, "behind");
-  lantern(v, model.mitten, lamp, f, d);
-  if (p.moths) moths(v, lamp, f, "front");
-  v.cache("lilies", () => lilyPads(v));
-  reeds(v, f, p.wind);
-  dark(v, lamp, d);
-  // lights in the dark come after the darkening, so it does not dim them
-  stars(v, f, d);
-  homeWindow(v, f, d);
-  fireflies(v, f, d);
-  v.paperTexture(0.35);
 }
 
 /**
@@ -327,13 +323,13 @@ function background(v: View, d: number): void {
   const [lo, hi] = d <= 0.35 ? [0, 0.35] : [0.35, 1];
   const t = (d - lo) / (hi - lo);
   const paint = (at: number): void =>
-    v.cache(`bg-${at}`, () => {
+    v.place(v.picture({ key: `bg-${at}`, width: v.width, height: v.height }, () => {
       v.paper({ scale: 3, contrast: 0.6, seed: 7 });
       sky(v, at);
       farShore(v, at);
       water(v, at);
       fishBody(v);
-    });
+    }), 0, 0);
   if (t < 1) paint(lo);
   if (t >= 1) paint(hi);
   else if (t > 0) v.group({ opacity: t }, () => paint(hi));

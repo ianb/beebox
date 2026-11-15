@@ -14,15 +14,7 @@
 // The model holds only what the params cannot: the frame, when the equation
 // last became balanced (for the celebration's clock), and which box was last
 // edited (for a short highlight). Everything else is derived from params in draw.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
 
 import {
   commonFactor,
@@ -48,6 +40,9 @@ const COEF = {
   control: "field",
   panel: false,
 } as const;
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   reaction: {
@@ -426,65 +421,68 @@ const STATUS_TOP = 540;
 // ---------- scene parts ----------
 
 function drawBackground(v: View, p: ParamView): void {
-  const r = REACTIONS[p.reaction];
-  v.background(PAPER);
-  say(
-    v,
-    "Balance the equation",
-    { x: 28, y: 44 },
-    { size: 26, fill: INK, style: "bold" },
-  );
-  say(v, r.title, { x: 30, y: 66 }, { size: 15, fill: SOFT_INK });
-
-  // the two picture panels
-  for (const [x, label] of [
-    [24, "Before: reactants"],
-    [424, "After: products"],
-  ] as const) {
-    roundRect(v, { x, y: PANEL_TOP, w: 352, h: PANEL_H, r: 14 }, CARD_EDGE);
+  // Port: `v.paperTexture(0.12)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.12 } }, () => {
+    const r = REACTIONS[p.reaction];
+    v.background(PAPER);
     say(
       v,
-      label.toUpperCase(),
-      { x: x + 14, y: PANEL_TOP + 20 },
+      "Balance the equation",
+      { x: 28, y: 44 },
+      { size: 26, fill: INK, style: "bold" },
+    );
+    say(v, r.title, { x: 30, y: 66 }, { size: 15, fill: SOFT_INK });
+
+    // the two picture panels
+    for (const [x, label] of [
+      [24, "Before: reactants"],
+      [424, "After: products"],
+    ] as const) {
+      roundRect(v, { x, y: PANEL_TOP, w: 352, h: PANEL_H, r: 14 }, CARD_EDGE);
+      say(
+        v,
+        label.toUpperCase(),
+        { x: x + 14, y: PANEL_TOP + 20 },
+        { size: 12, fill: SOFT_INK, style: "bold" },
+      );
+    }
+    // the arrow between the panels
+    const arrow: Style = {
+      stroke: SOFT_INK,
+      weight: 4,
+      brush: "ink",
+      gesture: { pressure: "even", wobble: 0.8, seed: 3 },
+    };
+    v.line(384, PANEL_TOP + PANEL_H / 2, 414, PANEL_TOP + PANEL_H / 2, arrow);
+    v.line(404, PANEL_TOP + PANEL_H / 2 - 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
+    v.line(404, PANEL_TOP + PANEL_H / 2 + 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
+
+    // tally card
+    roundRect(
+      v,
+      { x: 24, y: TALLY_TOP, w: 752, h: STATUS_TOP - TALLY_TOP - 12, r: 14 },
+      CARD_EDGE,
+    );
+    say(
+      v,
+      "ATOM COUNT",
+      { x: 38, y: TALLY_TOP + 20 },
       { size: 12, fill: SOFT_INK, style: "bold" },
     );
-  }
-  // the arrow between the panels
-  const arrow: Style = {
-    stroke: SOFT_INK,
-    weight: 4,
-    brush: "ink",
-    gesture: { pressure: "even", wobble: 0.8, seed: 3 },
-  };
-  v.line(384, PANEL_TOP + PANEL_H / 2, 414, PANEL_TOP + PANEL_H / 2, arrow);
-  v.line(404, PANEL_TOP + PANEL_H / 2 - 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
-  v.line(404, PANEL_TOP + PANEL_H / 2 + 9, 415, PANEL_TOP + PANEL_H / 2, arrow);
-
-  // tally card
-  roundRect(
-    v,
-    { x: 24, y: TALLY_TOP, w: 752, h: STATUS_TOP - TALLY_TOP - 12, r: 14 },
-    CARD_EDGE,
-  );
-  say(
-    v,
-    "ATOM COUNT",
-    { x: 38, y: TALLY_TOP + 20 },
-    { size: 12, fill: SOFT_INK, style: "bold" },
-  );
-  say(
-    v,
-    "left side",
-    { x: 290, y: TALLY_TOP + 20 },
-    { size: 12, fill: SOFT_INK, align: "center" },
-  );
-  say(
-    v,
-    "right side",
-    { x: 510, y: TALLY_TOP + 20 },
-    { size: 12, fill: SOFT_INK, align: "center" },
-  );
-  v.paperTexture(0.12);
+    say(
+      v,
+      "left side",
+      { x: 290, y: TALLY_TOP + 20 },
+      { size: 12, fill: SOFT_INK, align: "center" },
+    );
+    say(
+      v,
+      "right side",
+      { x: 510, y: TALLY_TOP + 20 },
+      { size: 12, fill: SOFT_INK, align: "center" },
+    );
+  });
 }
 
 interface EqPart {
@@ -850,7 +848,7 @@ function drawStatus(
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   const r = REACTIONS[p.reaction];
   const coefs = coefsOf(p);
-  v.cache(`bg-${p.reaction}`, () => drawBackground(v, p));
+  v.place(v.picture({ key: `bg-${p.reaction}`, width: v.width, height: v.height }, () => drawBackground(v, p)), 0, 0);
   v.control("reaction", { x: 596, y: 22, w: 180, h: 30, size: 15 });
   drawEquation(v, { p, model });
   const rows = tally(r, coefs);

@@ -1,6 +1,6 @@
 // The stage: a place to stand (Earth, Moon, Mars, Jupiter's cloud tops), a lab
 // stand with a metre rule, and the pendulum itself.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 import { card, FONT, INK, say, sayWidth } from "./look-tea.js";
 import type { Planet } from "./physics-tea.js";
@@ -122,7 +122,7 @@ function stand(v: View): void {
 }
 
 export function drawBackdrop(v: View, planet: Planet): void {
-  v.cache(`stage-${planet}`, () => {
+  v.place(v.picture({ key: `stage-${planet}`, width: v.width, height: v.height }, () => {
     card(v, STAGE);
     const outline: Vec2[] = [
       [STAGE.x, STAGE.y],
@@ -147,7 +147,7 @@ export function drawBackdrop(v: View, planet: Planet): void {
       }
       stand(v);
     });
-  });
+  }), 0, 0);
 }
 
 export function bobAt(a: { theta: number; length: number }): { x: number; y: number } {

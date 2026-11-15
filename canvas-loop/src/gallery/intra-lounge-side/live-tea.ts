@@ -3,7 +3,7 @@
 // messages; the sets show unreadable data and throw their light; the archive reels
 // turn; the vending window hums; the doorways glow with the rooms beyond; the bulb
 // stutters; someone walks through. Most of it repeats every PERIOD frames.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { blob, ellipsePts, hash, ink } from "./ink-tea.js";
 import { DEAD_PANEL, FLOOR, H, PANELS, PLACES, TELLIES, type Telly, VENDING, W, leaning, onScreen, placed, screenOf, sitter } from "./scene-tea.js";
 import { PLANES, SIZES, footY, m } from "./sizes-tea.js";
@@ -180,7 +180,7 @@ export function paintLive(v: View, t: number): void {
   placed(v, PLACES.tellies, () => {
     for (const [i, tl] of TELLIES.entries()) leaning(v, tl, () => picture(v, tl, i, t));
   });
-  v.cache("sitter", () => placed(v, PLACES.sofa, () => sitter(v)));
+  v.place(v.picture({ key: "sitter", width: v.width, height: v.height }, () => placed(v, PLACES.sofa, () => sitter(v))), 0, 0);
   // The archive reels, turning in fits.
   placed(v, PLACES.shelves, () => v.at({ translate: [280, FLOOR], rotate: -0.025 }, () => v.at({ translate: [-280, -FLOOR] }, () => {
     for (const [k, cx] of [228, 300].entries()) {
