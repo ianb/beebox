@@ -234,27 +234,41 @@ function gestureLayout(g: Gesture): boolean {
   return true;
 }
 
+/** Whether a layout is being written into the scratch buffer (a getter in the data can ask for another key meanwhile). */
+let laying = false;
+
 /** Hash the scratch buffer's words written by a layout, or `v` as plain data under `fallback` when it did not fit. */
 function laid<T>(v: T, a: { layout: (v: T) => boolean; fallback: number }): void {
-  used = 0;
-  if (!a.layout(v)) {
-    word(a.fallback);
-    value(v);
-    return;
+  // A nested layout keeps the outer one's words so far and puts them back after.
+  const outer = laying ? scratch.slice(0, used) : undefined;
+  laying = true;
+  try {
+    used = 0;
+    if (!a.layout(v)) {
+      word(a.fallback);
+      value(v);
+      return;
+    }
+    const words = scratchWords;
+    const n = used * 2;
+    let la = laneA;
+    let lb = laneB;
+    for (let i = 0; i < n; i++) {
+      const w = words[i] ?? 0;
+      la = Math.imul(la ^ w, 0x01000193);
+      lb = Math.imul(lb ^ w, 0x5bd1e995);
+      lb ^= lb >>> 15;
+      lb = Math.imul(lb, 0x27d4eb2d);
+    }
+    laneA = la;
+    laneB = lb;
+  } finally {
+    laying = outer !== undefined;
+    if (outer !== undefined) {
+      used = 0;
+      for (const x of outer) put(x);
+    }
   }
-  const words = scratchWords;
-  const n = used * 2;
-  let la = laneA;
-  let lb = laneB;
-  for (let i = 0; i < n; i++) {
-    const w = words[i] ?? 0;
-    la = Math.imul(la ^ w, 0x01000193);
-    lb = Math.imul(lb ^ w, 0x5bd1e995);
-    lb ^= lb >>> 15;
-    lb = Math.imul(lb, 0x27d4eb2d);
-  }
-  laneA = la;
-  laneB = lb;
 }
 
 function fin(h: number): number {

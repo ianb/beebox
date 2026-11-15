@@ -54,3 +54,22 @@ test("a gesture's key: equal fields share it in any order; each field, and the e
   const keys = gestures.map((g) => gestureKey(g));
   assert.equal(new Set(keys).size, keys.length);
 });
+
+test("a getter that asks for another geometry's or gesture's key does not change the outer key", () => {
+  // Two polygons that differ only in their first point; a later coordinate's getter keys a fresh rectangle.
+  const poly = (x: number): Geom => {
+    const last: [number, number] = [0, 0];
+    Object.defineProperty(last, 1, { get: () => (geomKey({ kind: "rect", x: 0, y: 0, w: 1, h: 1 }), 2) });
+    return { kind: "poly", points: [[x, 0], [5, 5], last], closed: true };
+  };
+  const plain = (x: number): Geom => ({ kind: "poly", points: [[x, 0], [5, 5], [0, 2]], closed: true });
+  assert.notEqual(geomKey(poly(10)), geomKey(poly(20)));
+  assert.equal(geomKey(poly(10)), geomKey(plain(10)));
+  const gesture = (pressure: number): Gesture => {
+    const g: Gesture = { pressure };
+    Object.defineProperty(g, "seed", { enumerable: true, get: () => (gestureKey({ pressure: [[0, 1]] }), 3) });
+    return g;
+  };
+  assert.notEqual(gestureKey(gesture(0.25)), gestureKey(gesture(0.75)));
+  assert.equal(gestureKey(gesture(0.25)), gestureKey({ pressure: 0.25, seed: 3 }));
+});
