@@ -34,8 +34,14 @@ export interface FrameStats {
   /** Picture tiles reused, and drawn this frame. */
   tileHits: number;
   tilesDrawn: number;
-  /** CPU milliseconds: lowering the scene, building atlases, encoding jobs, submitting. */
-  cpu: { lower: number; atlas: number; encode: number; submit: number };
+  /**
+   * CPU milliseconds: lowering the scene, building atlases, encoding jobs,
+   * submitting. `brush` is the part of `lower` and `atlas` spent on brushed
+   * strokes: expansion (bristle and smear on the CPU), preparation and
+   * placement at lowering, and the brush pass's packing, upload and encoding
+   * in the mark atlas (its draws excluded).
+   */
+  cpu: { lower: number; atlas: number; encode: number; submit: number; brush: number };
 }
 
 export interface Frame {
@@ -62,7 +68,7 @@ export interface Frame {
 }
 
 export function emptyStats(): FrameStats {
-  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, brushBatches: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0 } };
+  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, brushBatches: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0, brush: 0 } };
 }
 
 /** A read-only storage buffer holding `data`, freed after the frame. */

@@ -174,7 +174,7 @@ export class SceneSurface implements FrameSurface {
     const s = this.#renderer.stats;
     const held = this.#renderer.held;
     const lines = [
-      `render: passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}; brushed strokes ${s.strokes} (expanded ${s.expanded}, cache hits ${s.cacheHits}); kept rasters ${held.tiles} (${held.tileBytes} bytes); cpu lower ${round(s.cpu.lower)} ms, encode ${round(s.cpu.encode)} ms`,
+      `render: passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}; brushed strokes ${s.strokes} (expanded ${s.expanded}, cache hits ${s.cacheHits}); kept rasters ${held.tiles} (${held.tileBytes} bytes); cpu lower ${round(s.cpu.lower)} ms (brush ${round(s.cpu.brush)} ms), encode ${round(s.cpu.encode)} ms`,
     ];
     const times = this.#renderer.gpuTimes;
     if (times !== undefined) {

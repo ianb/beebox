@@ -525,6 +525,25 @@ test("with the buffer limit forced small, the walker's samples and instances rea
   }
 });
 
+test("stats.cpu.brush counts brush work inside lowering and the atlas, and none on a frame without brushes", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined || text === undefined) return;
+  const [scene] = portFrames(walkerSheet, { at: [0], text });
+  assert.ok(scene !== undefined);
+  const plain = new SceneRecorder({ width: 64, height: 64 }).record((v) => v.line(4, 4, 60, 60, { stroke: "#000", weight: 2 })).scene;
+  const renderer = new GpuRenderer(handle);
+  try {
+    await renderer.render(scene, 2);
+    const c = renderer.stats.cpu;
+    t.diagnostic(`walker frame 0 at ratio 2: brush ${c.brush.toFixed(2)} ms of lower ${c.lower.toFixed(2)} + atlas ${c.atlas.toFixed(2)} ms`);
+    assert.ok(c.brush > 0 && c.brush <= c.lower + c.atlas);
+    await renderer.render(plain, 2);
+    assert.equal(renderer.stats.cpu.brush, 0);
+  } finally {
+    renderer.destroy();
+  }
+});
+
 test("a brushed contour larger than one buffer fails, naming its call", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;

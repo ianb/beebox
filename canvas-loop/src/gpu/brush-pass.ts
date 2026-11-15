@@ -46,6 +46,8 @@ export interface BrushOutputs {
   readonly ranges: readonly (readonly SampleRange[])[];
   readonly batches: number;
   readonly inputs: number;
+  /** CPU milliseconds to pack, upload and encode the pass, without the time in `each`. */
+  readonly ms: number;
 }
 
 /**
@@ -60,6 +62,8 @@ export interface InstanceOutputs {
   readonly stamps: number;
   readonly batches: number;
   readonly inputs: number;
+  /** CPU milliseconds to pack, upload and encode the pass, without the time in `each`. */
+  readonly ms: number;
 }
 
 interface Pipes {
@@ -136,6 +140,8 @@ export class BrushPass {
    * order. Buffers are frame-temporary (in `f.temp`) and can be copied from.
    */
   #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[]; each: (b: Batch, ranges: readonly (readonly SampleRange[])[]) => void }): BrushOutputs & { stamps: number } {
+    const t0 = performance.now();
+    let drawing = 0;
     const { jobs } = f;
     const isInk = (i: number): number => (jobs?.[i]?.brush.kind === "ink" ? 1 : 0);
     const order = [...strokes.keys()].toSorted((x, y) => isInk(x) - isInk(y));
@@ -148,7 +154,7 @@ export class BrushPass {
       if (isInk(i) === 0) stamps += ranges[i].reduce((m, c) => m + c.count, 0);
     }
     const { count, inputs } = packed;
-    if (count === 0) return { count, ranges, stamps, batches: 0, inputs: 0 };
+    if (count === 0) return { count, ranges, stamps, batches: 0, inputs: 0, ms: performance.now() - t0 };
     const cap = this.#cap(jobs !== undefined);
     // A capsule batch also computes the sample after its last (in its input), its last capsule's far end.
     const plan = inputs.flatMap((input) => planBatches(input.spans, cap).map((b) => ({ input, ...b, samples: jobs === undefined ? b.count : Math.min(b.first + b.count + 1, input.first + input.count) - b.first })));
@@ -186,9 +192,11 @@ export class BrushPass {
         }
       }
       cp.end();
+      const t1 = performance.now();
       f.each({ buffer: out ?? samples, first: b.first, count: b.count, total: count }, ranges);
+      drawing += performance.now() - t1;
     }
-    return { count, ranges, stamps, batches: plan.length, inputs: inputs.length };
+    return { count, ranges, stamps, batches: plan.length, inputs: inputs.length, ms: performance.now() - t0 - drawing };
   }
 
   /** The `samples` dispatch alone, for `strokes` of any kind (verification and measurement); `each` reads each batch's samples. */
@@ -206,7 +214,7 @@ export class BrushPass {
     const strokesOf = (ranges: readonly (readonly SampleRange[])[]): SampleRange[] => ranges.map((r) => ({ first: r[0]?.first ?? 0, count: r.reduce((n, c) => n + c.count, 0) }));
     let strokes: SampleRange[] | undefined;
     const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs, each: (b, ranges) => f.each(b, (strokes ??= strokesOf(ranges))) });
-    return { count: out.count, strokes: strokes ?? strokesOf(out.ranges), stamps: out.stamps, batches: out.batches, inputs: out.inputs };
+    return { count: out.count, strokes: strokes ?? strokesOf(out.ranges), stamps: out.stamps, batches: out.batches, inputs: out.inputs, ms: out.ms };
   }
 }
 

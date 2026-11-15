@@ -173,7 +173,8 @@ export class GpuRenderer {
     this.#expander.beginFrame();
     this.#kept.beginFrame();
     this.#rasters.beginFrame();
-    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters, brushLimit: this.#marks.brushes.limit }).lower(scene);
+    const lowering = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters, brushLimit: this.#marks.brushes.limit });
+    const root = lowering.lower(scene);
     const jobs = postOrder(root, []);
     const { pieces, marks, cells, clips } = packablesOf(jobs);
     const enc = device.createCommandEncoder();
@@ -207,7 +208,7 @@ export class GpuRenderer {
     stats.tilesDrawn = a.tiles.length;
     stats.keptHits = this.#kept.hits;
     stats.keptMisses = this.#kept.misses;
-    stats.cpu = { lower: t1 - t0, atlas: t2 - t1, encode: t3 - t2, submit: 0 };
+    stats.cpu = { lower: t1 - t0, atlas: t2 - t1, encode: t3 - t2, submit: 0, brush: lowering.brushMs + stats.cpu.brush };
     const times = timer?.resolve(enc, a.temp);
     const peakRead = plan === undefined ? undefined : { read: peaks === undefined ? undefined : copyPeaks(peaks.buffer, { enc, device, temp: a.temp }), plan };
     const submit = (): void => {

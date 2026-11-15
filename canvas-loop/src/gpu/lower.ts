@@ -67,6 +67,7 @@ export class Lowering {
   readonly #canvas: R;
   readonly #base: Mat;
   readonly #brush: BrushFrame;
+  #brushMs = 0;
   readonly #glyphs: GlyphCache;
   readonly #geo: ShapeGeometry;
   readonly #rasters: RasterCache;
@@ -86,6 +87,11 @@ export class Lowering {
   }
 
   /** The root job: the canvas. */
+  /** CPU milliseconds this lowering spent on brushed strokes: expansion, preparation and placement (`FrameStats.cpu.brush`). */
+  get brushMs(): number {
+    return this.#brushMs;
+  }
+
   lower(scene: Scene): Job {
     const root: Job = { name: "canvas", rect: this.#canvas, items: [], clips: [], fx: undefined };
     const c = this.#canvas;
@@ -222,7 +228,9 @@ export class Lowering {
 
   #brushed(n: ShapeNode, a: { here: Here; mode: number; erase: boolean; mat: Rgba | undefined }): void {
     const { here } = a;
+    const t0 = performance.now();
     const d = brushDraw(n, { frame: this.#brush, matrix: here.matrix, visible: here.visible });
+    this.#brushMs += performance.now() - t0;
     if (d === undefined) return;
     const box = clipBox(here.clip, d.box);
     if (isEmpty(box)) return;

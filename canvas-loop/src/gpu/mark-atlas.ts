@@ -172,9 +172,11 @@ export class MarkAtlas {
       }
       p.end();
     };
-    f.stats.brushBatches = this.#gpuMarks(marks, { ...f, each: (gpu) => {
+    const brushed = this.#gpuMarks(marks, { ...f, each: (gpu) => {
       for (const page of texs.keys()) if (!begun.has(page) || within(gpu.stamps.get(page), gpu.batch) !== undefined || within(gpu.inks.get(page), gpu.batch) !== undefined) pass(page, gpu);
     } });
+    f.stats.brushBatches = brushed.batches;
+    f.stats.cpu.brush += brushed.ms;
     for (const page of texs.keys()) if (!begun.has(page)) pass(page, undefined);
     return texs.map((tex) => ({ tex, width: tex.width, height: tex.height }));
   }
@@ -182,11 +184,12 @@ export class MarkAtlas {
   /**
    * Encode the stamp marks' dabs and the ink marks' capsules (stamps first,
    * each kind ordered by page), calling `each` after each batch with each
-   * page's range of instances per kind; returns the number of batches.
+   * page's range of instances per kind; returns the number of batches and
+   * the CPU milliseconds to pack, upload and encode them (draws excluded).
    */
-  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges }) => void }): number {
+  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges }) => void }): { batches: number; ms: number } {
     const placed = marks.flatMap((m): GpuMark[] => (m.gpu === undefined || m.slot === undefined ? [] : [{ ...m, gpu: m.gpu, slot: m.slot }]));
-    if (placed.length === 0) return 0;
+    if (placed.length === 0) return { batches: 0, ms: 0 };
     const ink = (m: GpuMark): number => (m.gpu.brush.kind === "ink" ? 1 : 0);
     const sorted = placed.toSorted((a, b) => ink(a) - ink(b) || a.slot.page - b.slot.page);
     let pages: { stamps: PageRanges; inks: PageRanges } | undefined;
@@ -201,7 +204,8 @@ export class MarkAtlas {
       }
       return { stamps, inks };
     };
-    return this.brushes.encodeMarks(sorted.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, ...(pages ??= pagesOf(strokes)) }) }).batches;
+    const out = this.brushes.encodeMarks(sorted.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, ...(pages ??= pagesOf(strokes)) }) });
+    return { batches: out.batches, ms: out.ms };
   }
 
   /** Verification: draw capsule instances into `tex` (cleared first), in their order. */
