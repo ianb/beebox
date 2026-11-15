@@ -39,7 +39,7 @@ export interface BrushJob {
   /** Brush space → device pixels, linear part (pixel ratio included). */
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
-  /** Added to a dab's linearly mapped position: the mark's translation less its box corner (the stroke's origin is added in stampWords). */
+  /** Added to a dab's linearly mapped position: the mark's translation less its box corner (each contour's origin is added in `pack`, in f64). */
   readonly offset: readonly [number, number];
   /** The mark's slot on its page: x0, y0, x1, y1. */
   readonly slot: readonly [number, number, number, number];
@@ -71,19 +71,23 @@ function envelopeWords(env: Envelope): { kind: number; value: number; keys: numb
 /** A stamp or ink stroke's record (shader-brush.ts lists the words). */
 function strokeWords(j: BrushJob): number[] {
   const b = j.brush;
-  // The samples are relative to the stroke's origin: its mapped position joins the offset here, in f64.
-  const [l0, l1, l2, l3] = j.lin;
-  const [ox, oy] = j.prepared.origin;
-  const offset = [j.offset[0] + l0 * ox + l2 * oy, j.offset[1] + l1 * ox + l3 * oy];
-  const head = [...j.lin, ...offset, ...j.slot, j.prepared.width, j.ratio];
+  // Words 4-5 are unused: each contour's offset is in its own record (`pack`).
+  const head = [...j.lin, 0, 0, ...j.slot, j.prepared.width, j.ratio];
   if (b.kind === "ink") return [...head, b.thinning];
   const base = j.prepared.base;
   const soft = b.tip === "soft" ? 1 : 0;
   return [...head, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
 }
 
-/** The records and geometry buffers' contents for `strokes`' contours (in order), with a record per stroke when `words` gives one, and their sample ranges. */
-function pack(strokes: readonly Prepared[], words: readonly (readonly number[])[] | undefined): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
+/**
+ * The records and geometry buffers' contents for `strokes`' contours (in
+ * order), with a record per stroke when `jobs` gives one, and their sample
+ * ranges. A contour's samples are relative to its own origin; given a job, its
+ * record holds where that origin lands in the mark's own pixels, `offset + lin
+ * · origin`, summed in f64, so a far contour of the same stroke moves no other.
+ */
+function pack(strokes: readonly Prepared[], jobs: readonly BrushJob[] | undefined): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
+  const words = jobs?.map(strokeWords);
   const all: { c: PreparedContour; wobble: number; si: number }[] = strokes.flatMap((s, si) => s.contours.map((c) => ({ c, wobble: s.wobble, si })));
   const envs = all.map((a) => envelopeWords(a.c.pressure));
   const keyWords = envs.reduce((n, e) => n + e.keys.length, 0);
@@ -110,6 +114,12 @@ function pack(strokes: readonly Prepared[], words: readonly (readonly number[])[
     if (env.kind === ENVELOPE_KINDS.keyframes) ru.set([key, env.keys.length / 2], at + 11);
     else rf[at + 11] = env.value;
     ru[at + 13] = strokeAt + si * STROKE_WORDS;
+    const job = jobs?.[si];
+    if (job !== undefined) {
+      const [l0, l1, l2, l3] = job.lin;
+      const [ox, oy] = c.origin;
+      rf.set([job.offset[0] + l0 * ox + l2 * oy, job.offset[1] + l1 * ox + l3 * oy], at + 14);
+    }
     rf.set(env.keys, key);
     key += env.keys.length;
     point += points;
@@ -199,7 +209,7 @@ export class BrushPass {
     const { jobs } = f;
     const isInk = (i: number): number => (jobs?.[i]?.brush.kind === "ink" ? 1 : 0);
     const order = [...strokes.keys()].toSorted((x, y) => isInk(x) - isInk(y));
-    const packed = pack(order.flatMap((i) => strokes[i] ?? []), jobs === undefined ? undefined : order.flatMap((i) => (jobs[i] === undefined ? [] : [strokeWords(jobs[i])])));
+    const packed = pack(order.flatMap((i) => strokes[i] ?? []), jobs === undefined ? undefined : order.flatMap((i) => jobs[i] ?? []));
     const ranges: SampleRange[][] = [];
     let stamps = 0;
     for (const [k, i] of order.entries()) {

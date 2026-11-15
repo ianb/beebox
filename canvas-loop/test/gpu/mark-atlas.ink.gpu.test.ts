@@ -285,3 +285,22 @@ test("a self-crossing ink loop is no darker where it crosses itself", async (t) 
     assert.ok(darkest >= body, `${what}: no pixel near the crossing is darker than the side`);
   }
 });
+
+test("a far contour of the same ink stroke does not move a near one (per-contour f32 coordinates)", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  // At x = 67108864, f32 steps by 8: a near contour stored relative to it would land up to 4 px off.
+  const scene = new SceneRecorder({ width: 40, height: 40 }).record((v) => {
+    v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 2, brush: "ink", gesture: { pressure: "even" } });
+  }).scene;
+  const [p] = placeInk(brushRequests(scene, handle.colors), { ratio: 1 });
+  assert.ok(p !== undefined);
+  const renderer = new GpuRenderer(handle);
+  const g = await renderer.brushInstances([p.job]).finally(() => renderer.destroy());
+  const caps = capsulesIn(new Float32Array(g.data), { first: 0, count: g.count });
+  assert.equal(caps.length, 2, "one disc per contour");
+  const [far, near] = caps.map((c) => c[0] + p.box.x0);
+  t.diagnostic(`box x0 ${p.box.x0}; disc centres at device x ${far} and ${near}`);
+  assert.ok(Math.abs((near ?? NaN) - 10.25) <= 2e-3, `the near disc lands at x 10.25 (got ${near})`);
+  assert.equal(far, 67108864);
+});

@@ -86,12 +86,15 @@ export const POINT_WORDS = 4;
  */
 export interface PreparedContour {
   /**
-   * Per prepared point, `POINT_WORDS` words: x, y (less the stroke's
-   * `origin`, so f32 keeps their precision far from 0), the arc length to it
+   * Per prepared point, `POINT_WORDS` words: x, y (less the contour's
+   * `origin`, so f32 keeps their precision far from 0, whatever the stroke's
+   * other contours hold), the arc length to it
    * (summed in f64, stored f32), and (a u32) the first sample on or past the
    * segment that starts there.
    */
   readonly geom: Float32Array;
+  /** The contour-local origin (brush space, f64): its first prepared point. Its points and GPU samples are relative to it. */
+  readonly origin: readonly [number, number];
   /** Samples, by `resample`'s own loop. */
   readonly count: number;
   readonly step: number;
@@ -108,8 +111,6 @@ export interface PreparedContour {
 /** A brushed stroke prepared for the GPU: its contours, width and wobble in brush space, jitter base colour, and a conservative box. */
 export interface Prepared {
   readonly kind: BrushKind;
-  /** The stroke-local origin (brush space, f64): its first point. Contour points and GPU samples are relative to it. */
-  readonly origin: readonly [number, number];
   readonly contours: readonly PreparedContour[];
   readonly width: number;
   readonly wobble: number;
@@ -199,8 +200,9 @@ export function brushSamples(req: ExpandRequest): Sampled | undefined {
   return sampledIn(req, brushSpace(req.linear).b)?.all;
 }
 
-function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandRequest; width: number; box: Prepared["box"]; origin: readonly [number, number] }): PreparedContour {
+function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandRequest; width: number; box: Prepared["box"] }): PreparedContour {
   const pts = preparePoints(c.contour.points, c.contour.closed);
+  const origin = [pts[0]?.[0] ?? 0, pts[0]?.[1] ?? 0] as const;
   const { brush, gesture } = a.req.stroke;
   const step = stepFor(brush, a.width);
   const { lengths, total, count, first } = sampleSegments(pts, step);
@@ -208,8 +210,8 @@ function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandR
   const words = new Uint32Array(geom.buffer);
   let arc = 0;
   for (const [i, p] of pts.entries()) {
-    geom[i * POINT_WORDS] = p[0] - a.origin[0];
-    geom[i * POINT_WORDS + 1] = p[1] - a.origin[1];
+    geom[i * POINT_WORDS] = p[0] - origin[0];
+    geom[i * POINT_WORDS + 1] = p[1] - origin[1];
     geom[i * POINT_WORDS + 2] = arc;
     words[i * POINT_WORDS + 3] = first[i] ?? count;
     arc += lengths[i] ?? 0;
@@ -219,7 +221,7 @@ function prepareContour(c: { contour: Contour; seed: number }, a: { req: ExpandR
     a.box.y1 = Math.max(a.box.y1, p[1]);
   }
   const { period, cell } = wobbleLattice(c.contour.closed, count === 1 ? 0 : total);
-  return { geom, count, step, total, seed: c.seed, pressure: gesture.pressure ?? (c.contour.closed ? "even" : "taper"), period, cell };
+  return { geom, origin, count, step, total, seed: c.seed, pressure: gesture.pressure ?? (c.contour.closed ? "even" : "taper"), period, cell };
 }
 
 /** The stroke prepared for the GPU sample pass (brush space, as `expand`); undefined for a degenerate transform. */
@@ -232,13 +234,11 @@ function prepareIn(req: ExpandRequest, b: Mat): Prepared | undefined {
   if (c === undefined) return undefined;
   const { brush, gesture } = req.stroke;
   const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  const first = c.contours.find((k) => k.contour.points.length > 0)?.contour.points[0];
-  const origin = [first?.[0] ?? 0, first?.[1] ?? 0] as const;
-  const contours = c.contours.map((k) => prepareContour(k, { req, width: c.width, box, origin }));
+  const contours = c.contours.map((k) => prepareContour(k, { req, width: c.width, box }));
   const wobble = gesture.wobble ?? 0;
   const grown = { x0: box.x0 - wobble, y0: box.y0 - wobble, x1: box.x1 + wobble, y1: box.y1 + wobble };
   const base = brush.kind !== "smear" && jitterOf(brush) !== undefined ? baseColour(req.paint, req.colors) : undefined;
-  return { kind: brush.kind, origin, contours, width: c.width, wobble, base, box: grown };
+  return { kind: brush.kind, contours, width: c.width, wobble, base, box: grown };
 }
 
 /** The CPU expansion of every kind, in brush space (stamps and ink included): what the GPU expansion is checked against. */

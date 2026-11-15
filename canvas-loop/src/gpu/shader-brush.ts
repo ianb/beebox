@@ -106,7 +106,8 @@ fn pressure(c: u32, t: f32) -> f32 {
 // Contour record words: 0 first point, 1 points, 2 first sample, 3 samples,
 // 4 seed, 5 step, 6 arc length, 7 wobble cell, 8 wobble period (0: open),
 // 9 wobble, 10 envelope kind, 11 its value or keyframe word, 12 keyframes,
-// 13 the stroke's record word (stamp and ink strokes; read by \`dabs\` and \`capsules\`).
+// 13 the stroke's record word (stamp and ink strokes; read by \`dabs\` and \`capsules\`),
+// 14-15 where the contour's origin lands in the mark's own pixels (its samples are relative to it).
 @compute @workgroup_size(${SAMPLES_WORKGROUP}) fn samples(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= u.count) { return; }
   let i = u.first + gid.x;
@@ -192,8 +193,8 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // The `dabs` entry: kinds.ts `paintStamp` for sample i, written as dab instance i
 // (mark-atlas.ts's layout: x, y, radius, alpha; soft, r, g, b; the slot) in the
 // mark's own device pixels. A dab paintStamp skips is written with alpha 0.
-// Stroke record words: 0-3 brush space → device (linear), 4-5 the offset to
-// the mark's own pixels, 6-9 the slot, 10 width (brush space), 11 pixel ratio;
+// Stroke record words: 0-3 brush space → device (linear), 4-5 unused (the
+// offset to the mark's own pixels is per contour, words 14-15), 6-9 the slot, 10 width (brush space), 11 pixel ratio;
 // a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
 // 16 scatter, 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour
 // (0..255), 23 jittered; ink: 12 thinning.
@@ -228,7 +229,7 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
   let off = sf(st, 16u) * width * (rand1(seed, 12u, k) - 0.5);
   let q = vec2f(s.x + s.nx * off, s.y + s.ny * off);
   let e = sv(st, 0u);
-  let at = vec2f(e.x * q.x + e.z * q.y, e.y * q.x + e.w * q.y) + vec2f(sf(st, 4u), sf(st, 5u));
+  let at = vec2f(e.x * q.x + e.z * q.y, e.y * q.x + e.w * q.y) + vec2f(cf(c, 14u), cf(c, 15u));
   var rgb = vec3f(0.0);
   if (sf(st, 23u) > 0.5) {
     let hue = sf(st, 18u) * (2.0 * rand1(seed, 13u, k) - 1.0);
@@ -248,7 +249,7 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
 
 fn placed(st: u32, s: Sample) -> vec2f {
   let e = sv(st, 0u);
-  return vec2f(e.x * s.x + e.z * s.y, e.y * s.x + e.w * s.y) + vec2f(sf(st, 4u), sf(st, 5u));
+  return vec2f(e.x * s.x + e.z * s.y, e.y * s.x + e.w * s.y) + vec2f(cf(s.contour, 14u), cf(s.contour, 15u));
 }
 fn inkRadius(st: u32, p: f32) -> f32 {
   let thin = sf(st, 12u);

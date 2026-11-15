@@ -78,7 +78,7 @@ interface Worst {
   failures: string[];
 }
 
-/** GPU sample `at`'s position in brush space: the GPU samples are relative to the stroke's origin. */
+/** GPU sample `at`'s position in brush space: the GPU samples are relative to their contour's origin. */
 function absolute(f: Float32Array, a: { at: number; origin: readonly [number, number] | undefined }): [number, number] {
   const [ox, oy] = a.origin ?? [NaN, NaN];
   return [(f[a.at] ?? NaN) + ox, (f[a.at + 1] ?? NaN) + oy];
@@ -100,7 +100,7 @@ async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[])
       if (r.count !== contour.samples.length) fail(`stroke ${i} contour ${c}: ${r.count} samples on the GPU, ${contour.samples.length} on the CPU`);
       for (const [k, s] of contour.samples.entries()) {
         const at = (r.first + k) * SAMPLE_FLOATS;
-        const [x, y] = absolute(g.f, { at, origin: prep?.origin });
+        const [x, y] = absolute(g.f, { at, origin: prep?.contours[c]?.origin });
         const p = g.f[at + 6] ?? NaN;
         const d = Math.hypot(x - s.x, y - s.y);
         worst.pos = Math.max(worst.pos, d);
@@ -361,4 +361,23 @@ test("a stamp far from the origin, translated back, lands where the CPU puts it 
   t.diagnostic(`box x0 ${p.box.x0}; dab centre at device x ${x}`);
   assert.ok(Math.abs(x - 10) <= 2e-3, `the dab's centre lands at device x 10 (got ${x})`);
   reportDabs(t, { w: await compareDabs(handle, { reqs, ratio: 1 }), what: "far stamp" });
+});
+
+test("a far contour of the same stamp stroke does not move a near one (per-contour f32 coordinates)", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  // At x = 67108864, f32 steps by 8: a near contour stored relative to it would land up to 4 px off.
+  const scene = new SceneRecorder({ width: 40, height: 40 }).record((v) => {
+    v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } });
+  }).scene;
+  const reqs = brushRequests(scene, handle.colors);
+  const [p] = placeStamps(reqs, { ratio: 1, translate: [0, 0] });
+  assert.ok(p !== undefined);
+  const renderer = new GpuRenderer(handle);
+  const g = await renderer.brushInstances([p.job]).finally(() => renderer.destroy());
+  const f = new Float32Array(g.data);
+  assert.equal(g.count, 2, "one dab per contour");
+  const near = (f[DAB_FLOATS] ?? NaN) + p.box.x0;
+  t.diagnostic(`box x0 ${p.box.x0}; the near dab's centre at device x ${near}`);
+  assert.ok(Math.abs(near - 10.25) <= 2e-3, `the near dab lands at x 10.25 (got ${near})`);
 });

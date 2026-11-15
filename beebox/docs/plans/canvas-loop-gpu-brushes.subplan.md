@@ -746,6 +746,13 @@ by the same WebGPU renderer.
     inks'. `capsules` is a second entry in the dabs module (`INSTANCES_WGSL`).
     The radius is perfect-freehand's, `width / (1 + thinning) × (0.5 −
     thinning × (0.5 − p))`, times the ratio.
+  - **Per-contour origins** (from the cross-model review). Chunk 3's one
+    origin per stroke let a far contour move a near one: a path with moves
+    to x = 67,108,864 and x = 10.25 put the near ink disc at x = 12. Each
+    prepared contour now keeps its own origin (its first point, f64), and
+    its record holds where that origin lands in the mark's own pixels,
+    summed in f64 (contour words 14–15; stroke words 4–5 are unused).
+    Regression tests for ink and for a stamp place the near mark at 10.25.
   - **The box.** Ink grows the prepared box by `width / 2` in brush space
     (pressure 1), then adds 1 device px after mapping, as stamps do
     (`gpuBox`, was `stampBox`). On the brush sheet and the walker the nearest
