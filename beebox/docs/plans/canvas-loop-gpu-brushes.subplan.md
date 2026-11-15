@@ -543,6 +543,60 @@ by the same WebGPU renderer.
 - **Checkpoint.** No pixel changes. **Measurement:** preparation and upload
   ms per frame on the walker, Node and Chromium, median and p95; the
   `samples` pass GPU time.
+- **As built (chunk 2).** `prepare` and `brushSamples` (the CPU reference)
+  are in `scene/brush/expand.ts`; `Expanded.prepared()` makes the prepared
+  stroke on first use and keeps it in the expansion cache. `gpu/brush-pass.ts`
+  and `gpu/shader-brush.ts` hold the pass. Details settled here:
+  - `BrushPass.encode` takes the frame's drawn strokes as `Prepared[]`, not
+    `TexMark[]`: ink is a coverage piece until chunk 4 and smear a
+    `SmearRec` until chunk 8, and the sample pass serves every kind.
+    `brushDraw` adds each drawn stroke to `BrushFrame.drawn`.
+  - The renderer runs the pass in every frame, and nothing reads its output
+    until chunk 3. This also keeps `brush-pass.ts` in the renderer's unit
+    for `layout-check`. A frame whose samples or inputs exceed one buffer
+    (`min(maxStorageBufferBindingSize, maxBufferSize, 64 MiB)`, about two
+    million samples) now fails with a `GpuRenderError` that gives the sizes,
+    until chunk 5 splits batches.
+  - A sample is 8 words: x, y, nx, ny, s, t, p, and its contour's index.
+    Contour records are 16 words after a 4-word header, and keyframes follow
+    them (a keyframe followed by one at the same t is dropped, as
+    `envelope.ts` skips it). The uniform is binding 4; binding 3 stays for
+    the output.
+  - A one-sample contour's pressure is the envelope at `t = 0`, as
+    `shapeSamples` gives it, not 1 (contract step 4 quotes `resample`,
+    whose 1 `shapeSamples` overwrites). A closed one-sample contour with
+    wobble gives NaN on the CPU (its wobble cell is 0); the GPU reads the
+    noise at 0. Filed as
+    `issues/bugs/2026-11-15-closed-brush-dot-with-wobble-gives-nan-samples.md`;
+    the readback tests leave that case out.
+  - `sample.ts` exports `preparePoints` and `sampleCount` (the loop, run
+    without placing samples); `render.ts` exports `stepFor` and
+    `wobbleLattice`; `MIX_WGSL` is split out of `PAPER_WGSL` with the same
+    shader text.
+  - The brush sheet's and smear sheet's Skia renders are frozen in
+    `canvas-loop/test/fixtures/scene-parity/` (`brush-sheet.png`,
+    `brush-smear.png`, 176 KB), and `brushParity` reads them. The other
+    parity tests still read Skia live; (a)'s chunk 6 freezes those.
+  - Readback (Metal): the brush and smear sheets, 5,842 samples, largest
+    position difference 7.6e-5 brush px, pressure 6.9e-7; focused contours,
+    1,977 samples, 3.2e-5 and 2.5e-7; walker frame 0, 108,099 samples over
+    775 contours, 2.9e-4 and 1.1e-6. Counts are equal everywhere, and no
+    wobbled sample at a corner took the other segment's normal. The hash
+    matches on all 65,536 inputs.
+  - **Measurement** (Node, Dawn on Metal, walker frames 0–59, three passes
+    after a warm-up; `scratch/stage5/b2/measure.ts`): per frame 529 strokes,
+    779 contours, 107,237 samples, about 519 KB uploaded. Preparation of
+    every stroke: median 2.54 ms, p95 2.87. Preparation through the
+    expansion cache, as the renderer calls it: median 2.62 ms, p95 3.20,
+    because every walker stroke changes every frame (530 of 530 expanded),
+    so the cache saves nothing here. Packing, upload and encoding: median
+    0.42 ms, p95 0.52. The `samples` pass on the GPU: median 0.066 ms, p95
+    0.131. Chromium was not measured: the walker-speed browser pages need
+    a new bundle and the router; chunk 6 measures Chromium.
+  - No pixel changes: the walker at ratio 1 and 2, Hallway and chemistry
+    (21 PNGs) hash the same before and after, and `gallery:check` passes
+    with the same output (`scratch/stage5/b2/before.sha256`,
+    `after.sha256`).
 
 ### Chunk 3: stamp dabs on the GPU
 
