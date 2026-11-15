@@ -16,3 +16,7 @@ expects that directory to exist. It fails the same way on `main` (1548362b6)
 on macOS, so it predates the branch where it was seen. Not investigated
 further: whether the helper skips the stubbed `pnpm` on macOS or runs it in
 another directory.
+
+## Note 2026-11-15
+
+Still fails on main at `ccae6c351`. This is the same failure as [the 2026-11-14 report](2026-11-14-cross-box-probe-install-test-fails-on-main.md); the two issues are one defect. The hourly full-suite run also reports it red on main. That run is on this Mac too, so whether it fails on Linux is still unchecked.

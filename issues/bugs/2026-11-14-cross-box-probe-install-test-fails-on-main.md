@@ -21,3 +21,7 @@ selected it. The test stubs `pnpm` with a script that runs
 `mkdir -p node_modules/.pnpm` and then expects `node_modules` under the box;
 either the helper `deploy/server-bin/bbx-box-install` no longer runs the
 stub where the test looks, or the stub's working directory moved.
+
+## Note 2026-11-15
+
+Still fails on main at `ccae6c351`. Same defect as [the 2026-11-13 report](2026-11-13-cross-box-probe-box-install-test-fails-on-mac.md).

@@ -29,3 +29,7 @@ The SDK bump that surfaced these touches neither file. Related, already filed:
 
 Reproduce, from `beebox/`:
 `npx tap --disable-coverage test/deploy/window.test.ts test/deploy/codex-runtime.test.ts`.
+
+## Note 2026-11-15
+
+Still red on main at `ccae6c351`: 6 of 22 subtests fail in `window.test.ts`, with the same `INSTALL_DIR` and `RELEASE` unbound errors. Real deploys after `3e7cb127f` succeed; the deploy of `446e19c88` on 2026-11-15 finished ok. `deploy.sh:683` writes `INSTALL_DIR` and `RELEASE` into the activation prelude. The test most likely builds `activate.sh` without that prelude, so the failure is probably in the test. The hourly full-suite run also reports this file red with no attributable landing.
