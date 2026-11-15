@@ -86,25 +86,36 @@ export function copyEffects(effects: Effects | undefined, where: string): Effect
   return structuredClone(effects);
 }
 
+/** `style.dash`, checked as today's (core/painter/style.ts) and copied; a brushed stroke cannot be dashed. */
+function copyDash(style: Style, call: string): readonly number[] | undefined {
+  const { dash } = style;
+  if (dash === undefined) return undefined;
+  const ok = Array.isArray(dash) && dash.length > 0 && dash.every((n) => Number.isFinite(n) && n >= 0) && dash.some((n) => n > 0);
+  if (!ok) throw new SketchUsageError({ detail: `${call}: style.dash must be lengths ≥ 0, at least one over 0 (got ${JSON.stringify(dash)})` });
+  if (style.brush !== undefined) throw new SketchUsageError({ detail: `${call}: style.dash works on plain strokes; a brushed stroke cannot be dashed, so draw each dash as its own line or curve with the brush` });
+  return [...dash];
+}
+
 /** Check a draft 2.2 Style at the call and fill in its defaults. */
 export function resolveStyle(style: Style, at: { call: string; paper: PaperSettings }): ShapeStyle {
   const { call } = at;
   for (const key of Object.keys(style)) {
     if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (${[...STYLE_KEYS].join(", ")})` });
   }
-  if (style.dash !== undefined) throw new UnsupportedCallError({ call: `${call} with style.dash` });
   const { weight, cap, join } = style;
   if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) throw new SketchUsageError({ detail: `${call}: style.weight must be a number ≥ 0 (got ${String(weight)})` });
   if (cap !== undefined && !CAPS.has(cap)) throw new SketchUsageError({ detail: `${call}: style.cap must be butt, round or square (got ${String(cap)})` });
   if (join !== undefined && !JOINS.has(join)) throw new SketchUsageError({ detail: `${call}: style.join must be miter, round or bevel (got ${String(join)})` });
   compositeOp(style.blend ?? "normal");
   const effects = copyEffects(style.effects, call);
+  const dash = copyDash(style, call);
   return {
     fill: style.fill === undefined ? undefined : copyPaint(style.fill, call),
     stroke: style.stroke === undefined ? undefined : copyPaint(style.stroke, call),
     weight: weight ?? 1,
     cap: cap ?? "butt",
     join: join ?? "miter",
+    dash,
     blend: style.blend ?? "normal",
     erase: style.erase ?? false,
     effects,

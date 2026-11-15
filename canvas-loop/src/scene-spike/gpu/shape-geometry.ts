@@ -5,7 +5,8 @@
 // coverage atlas; any other clip sums windings per pixel).
 import { polylines as flatten } from "../geometry/flatten.js";
 import type { Poly } from "../geometry/flatten.js";
-import { strokeRings } from "../geometry/stroke.js";
+import { dotRings, strokeRings } from "../geometry/stroke.js";
+import { dashPolys } from "../geometry/dash.js";
 import { keyOf, linearKey } from "../hash.js";
 import { maxScale } from "../mat.js";
 import type { Geom, Mat, ShapeStyle } from "../scene.js";
@@ -35,9 +36,14 @@ export class ShapeGeometry {
   /** `g`'s plain stroke rings under the linear part of `m`. */
   stroke(g: Geom, a: { style: ShapeStyle; m: Mat }): LinShape {
     const { style: s, m } = a;
-    return this.#kept.get(`s|${keyOf(g)}|${s.weight}|${s.cap}|${s.join}|${linearKey(m)}`, () => {
-      const sc = maxScale(m);
-      return linShape(linearRings(this.#polys(g, m).flatMap((p) => strokeRings(p, { style: s, scale: sc })), m));
+    return this.#kept.get(`s|${keyOf(g)}|${s.weight}|${s.cap}|${s.join}|${s.dash?.join(",") ?? ""}|${linearKey(m)}`, () => {
+      const at = { style: s, scale: maxScale(m) };
+      const rings = this.#polys(g, m).flatMap((p) => {
+        if (s.dash === undefined) return strokeRings(p, at);
+        const { pieces, dots } = dashPolys(p, s.dash);
+        return [...pieces.flatMap((q) => strokeRings(q, at)), ...dots.flatMap((d) => dotRings(d, at))];
+      });
+      return linShape(linearRings(rings, m));
     });
   }
 

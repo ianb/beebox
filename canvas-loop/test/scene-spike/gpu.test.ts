@@ -74,10 +74,10 @@ test("compositing fixtures match today's Skia renderer (1280×760)", async (t) =
   assert.deepEqual(rows.filter((r) => !r.pass).map((r) => r.name), []);
 });
 
-test("shapes, strokes, gradients and transforms match today's Skia renderer (640×480)", async (t) => {
+test("shapes, strokes, dashes, gradients and transforms match today's Skia renderer (640×600)", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
-  const size = { width: 640, height: 480 };
+  const size = { width: 640, height: 600 };
   const ref = teaView(size);
   drawShapesToday(ref.v);
   const scene = new SceneRecorder(size).record((v) => drawShapesDraft(v));

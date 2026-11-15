@@ -2,7 +2,8 @@
 // coordinates (so a squashed shape gets a squashed outline, as Canvas2D does):
 // one quad per segment, a wedge per join on the outer side, a cap per open end.
 // Coverage of a union is the clamped sum, which is exact where pieces abut.
-// Ported from the Stage 3 geometry probe (scratch/stage3/geometry/tess.ts). No dashes yet.
+// Ported from the Stage 3 geometry probe (scratch/stage3/geometry/tess.ts).
+// Dashes are split off first (dash.ts) and each outlined here.
 import type { ShapeStyle } from "../scene.js";
 import type { Poly } from "./flatten.js";
 import { arcPoints } from "./flatten.js";
@@ -110,6 +111,15 @@ function capAt(out: number[][], c: { p: V; d: V; hw: number; cap: ShapeStyle["ca
     arcPoints(r, { cx: p[0], cy: p[1], rx: hw, ry: hw, a0, a1: a0 - Math.PI, scale: c.scale });
     pushRing(out, r);
   }
+}
+
+/** A dash of zero length at `p` along direction `d`: only its two caps (nothing for butt caps), as Canvas2D draws it. */
+export function dotRings(dot: { p: V; d: V }, s: { style: ShapeStyle; scale: number }): number[][] {
+  const out: number[][] = [];
+  const hw = s.style.weight / 2;
+  capAt(out, { p: dot.p, d: dot.d, hw, cap: s.style.cap, scale: s.scale });
+  capAt(out, { p: dot.p, d: [-dot.d[0], -dot.d[1]], hw, cap: s.style.cap, scale: s.scale });
+  return out;
 }
 
 /** The stroke of one polyline as closed rings in the shape's coordinates. `scale` is device pixels per unit. */

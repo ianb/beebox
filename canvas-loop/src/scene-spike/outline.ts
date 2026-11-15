@@ -34,7 +34,8 @@ function shapeLine(n: ShapeNode): string {
   const s = n.style;
   const brush = s.brush === undefined ? "" : ` brush ${s.brush.brush.kind} blend ${s.brush.blend}`;
   const material = s.material === undefined ? "" : ` material ${Object.keys(s.material).join(",")}`;
-  const extra = [s.blend === "normal" ? "" : ` blend ${s.blend}`, s.erase ? " erase" : "", s.effects === undefined ? "" : ` effects ${Object.keys(s.effects).join(",")}`, brush, material].join("");
+  const dash = s.dash === undefined ? "" : ` dash ${s.dash.join(",")}`;
+  const extra = [s.blend === "normal" ? "" : ` blend ${s.blend}`, s.erase ? " erase" : "", s.effects === undefined ? "" : ` effects ${Object.keys(s.effects).join(",")}`, brush, material, dash].join("");
   return `${n.call} ${geomText(n.geom)} fill ${paintText(s.fill)} stroke ${paintText(s.stroke)}${extra}`;
 }
 

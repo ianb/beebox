@@ -44,6 +44,8 @@ export interface ShapeStyle {
   readonly weight: number;
   readonly cap: "butt" | "round" | "square";
   readonly join: "miter" | "round" | "bevel";
+  /** A plain stroke's dash lengths, on, off, … (Canvas2D `setLineDash`); undefined for a solid stroke. */
+  readonly dash: readonly number[] | undefined;
   readonly blend: BlendMode;
   readonly erase: boolean;
   /** R2: the shape draws into its own layer, these apply, then the layer composites with `blend` or `erase`. */

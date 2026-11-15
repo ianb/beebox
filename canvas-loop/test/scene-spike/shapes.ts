@@ -1,5 +1,5 @@
-// A 640×480 sheet of plain shapes for the parity test: fills, strokes with
-// caps and joins, arcs, curves, gradients, and shapes under rotation,
+// A 640×600 sheet of plain shapes for the parity test: fills, strokes with
+// caps, joins and dashes, arcs, curves, gradients, and shapes under rotation,
 // non-uniform scale, skew and a full matrix. Drawn with draft 2.2 calls and,
 // for the reference, with today's calls (caps, joins and skew through `v.ctx`).
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
@@ -57,6 +57,23 @@ const CELLS: readonly Cell[] = [
   { name: "skew-matrix", matrix: mul([0.9, 0.15, -0.2, 1.1, 10, 4], matrixOf({ skew: [0.5, 0.1] })), body: (v) => {
     v.rect(20, 20, 80, 70, { fill: "#cdb4db", stroke: "#3c096c", weight: 5 });
     v.curve(loop, false, { stroke: "rgba(0,0,0,0.5)", weight: 6 });
+  } },
+  // Dashes (drawing-round finding 1): Canvas2D's setLineDash, so today's renderer is the reference.
+  { name: "dash-open", body: (v) => {
+    v.line(20, 25, 140, 25, { stroke: "#264653", weight: 6, dash: [12, 6] });
+    v.curve(zigzag, false, { stroke: "#9b2226", weight: 3, dash: [10, 4, 2] });
+  } },
+  { name: "dash-dots", pen: { cap: "round", join: "round" }, body: (v, pen) => {
+    v.line(20, 30, 140, 30, { stroke: "#e76f51", weight: 8, dash: [0, 14], ...pen });
+    v.path(sharp, { stroke: "#2a9d8f", weight: 5, dash: [18, 7], ...pen });
+  } },
+  { name: "dash-closed", body: (v) => {
+    v.rect(20, 18, 80, 50, { fill: "#cdb4db", stroke: "#3c096c", weight: 5, dash: [16, 8] });
+    v.circle(115, 78, 30, { stroke: "#1d3557", weight: 3, dash: [9, 5] });
+  } },
+  { name: "dash-scaled", matrix: matrixOf({ translate: [10, 20], scale: [2, 0.8] }), body: (v) => {
+    v.line(5, 20, 65, 20, { stroke: "#6d597a", weight: 6, dash: [8, 4] });
+    v.rect(10, 50, 50, 50, { stroke: "#000000", weight: 4, dash: [6, 3] });
   } },
 ];
 

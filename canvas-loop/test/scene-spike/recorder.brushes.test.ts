@@ -46,6 +46,14 @@ test("smudge and wet: no effects (R2), no blend or erase; wet needs a solid colo
   assert.throws(() => record((v) => v.line(0, 0, 1, 1, { stroke: "#000", brush: "nib" })), usage(/unknown brush "nib"/));
 });
 
+test("a brushed stroke cannot be dashed: the error says to draw each dash as its own line or curve; bad dash lists are refused as today", () => {
+  const rec = new SceneRecorder({ width: 40, height: 40 });
+  assert.throws(() => rec.record((v) => v.line(0, 0, 30, 30, { stroke: "#000", brush: "pencil", dash: [4, 2] })), usage(/line: style\.dash works on plain strokes; a brushed stroke cannot be dashed, so draw each dash as its own line or curve with the brush/));
+  assert.throws(() => rec.record((v) => v.line(0, 0, 30, 30, { stroke: "#000", dash: [0, 0] })), usage(/style\.dash must be lengths ≥ 0, at least one over 0/));
+  const scene = rec.record((v) => v.line(0, 0, 30, 30, { stroke: "#000", dash: [4, 2] })).scene;
+  assert.deepEqual(shapes(scene.children)[0]?.style.dash, [4, 2]);
+});
+
 test("paper lasts to the end of its group, picture or scene; at and clip do not end it (R9)", () => {
   const line = (v: View): void => v.line(0, 0, 1, 0, { stroke: "#000", brush: "pencil" });
   const seeds = record((v) => {
