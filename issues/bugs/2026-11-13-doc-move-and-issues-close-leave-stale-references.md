@@ -1,6 +1,6 @@
 ---
 title: "bin/doc-move leaves link text and prose paths stale; bin/issues close leaves its rewrites unstaged"
-workstream: unattached
+workstream: doc-move-references
 area: bin
 filed-by: agent
 discovered-by: agent
