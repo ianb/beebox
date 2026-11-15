@@ -215,7 +215,7 @@ onGpu("R8: a caster made taller than 1024 by a transform keeps its height", scal
 onGpu("R8: shadow grain is keyed to canvas pixels, not the layer's bounds", stableShadowGrain);
 onGpu("R8: a soft shadow's penumbra is smooth, not speckled by the march", smoothPenumbra);
 onGpu("R8: a caster's outline on its shadowed side is not lit like open floor", casterOutlineFringe);
-onGpu("R8: --scene reports each light's peak, and a white floor below it as rendered", lightPeaks);
+onGpu("R8: --scene reports each light's peak and where it is, as rendered; a spot peaks on its beam", lightPeaks);
 onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);
 
 onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {

@@ -164,10 +164,11 @@ only where the result matches (section 6).
 - **Starting values.** A lamp that shows as a pool on the first render:
   ambient `"#2e3448"` and a point light at `height: 120`, `energy: 1.5`, with
   the default reach (400). `run --scene` prints each light's peak added
-  brightness and what a white floor below it shows, ambient alone and lit;
-  for this lamp, `peak +0.83 over ambient 0.20 (a white floor below it: 0.49
-  → 1.00)`. A peak several times the ambient reads as a pool; a peak near the
-  ambient barely shows.
+  brightness, where it peaks (below a point light; beside a spot on its
+  beam) and what a white floor there shows, ambient alone and lit; for this
+  lamp, `peak +0.83 below (240,110), over ambient 0.20 (a white floor there:
+  0.49 → 1.00)`. A peak several times the ambient reads as a pool; a peak
+  near the ambient barely shows.
 - Lighting happens before the group's effects (R5), so a wash paints over the
   lit result.
 

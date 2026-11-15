@@ -3,8 +3,8 @@
 //
 // A light's line says how bright it makes the floor at its brightest (drawing-
 // round finding 3): its added term in the lit group's sum (shader-light.ts
-// `light`) on a flat matte floor, where it peaks. A point or spot light peaks
-// right below it: energy × the window at height ÷ reach, falloff included; a
+// `light`) on a flat matte floor, where it peaks: below a point light, beside a
+// spot on its beam (`peakPlace`): energy × the window at height ÷ reach; a
 // directional light adds the same everywhere: energy × its slope's cosine.
 // With the lit group's ambient, exposure and tone curve, it also gives what a
 // white floor shows there, ambient alone and with this light.
@@ -43,12 +43,24 @@ function peakOf(l: LightRec): number {
   return (l.energy * win * win) / (1 + 6 * x * x);
 }
 
-/** ` peak +X` and, inside a known lit group, what a white floor under the light shows. */
+/**
+ * Where the light peaks on the floor, in words. A point light peaks right below it. A spot's cone is an angle
+ * around its direction in the plane: along that direction the cone lets all of it through, so it peaks just
+ * beside the light on its beam (the same value as a point light's), and behind the light it adds nothing.
+ */
+function peakPlace(l: LightRec): string {
+  if (l.kind === "directional") return "everywhere";
+  const at = `(${r(l.at[0])},${r(l.at[1])})`;
+  if (l.kind === "point" || l.cone >= Math.PI) return `below ${at}`;
+  return `beside ${at} on its beam, toward ${r(l.direction)} rad`;
+}
+
+/** ` peak +X` where it peaks and, inside a known lit group, what a white floor there shows. */
 function peakText(l: LightRec, a: { colors: ColorParser | undefined; lighting: LightingRec | undefined }): string {
   if (a.colors === undefined) return "";
   const c = a.colors(l.color);
   const added = peakOf(l) * lum(c) * c[3];
-  const head = ` peak +${r2(added)}`;
+  const head = ` peak +${r2(added)} ${peakPlace(l)}`;
   if (a.lighting === undefined) return head;
   const amb = a.colors(a.lighting.ambient);
   const base = lum(amb) * amb[3];
@@ -56,7 +68,7 @@ function peakText(l: LightRec, a: { colors: ColorParser | undefined; lighting: L
   const exp = 2 ** a.lighting.exposure;
   const before = toSrgb(tone(base * exp, k));
   const after = toSrgb(tone((base + added) * exp, k));
-  return `${head} over ambient ${r2(base)} (a white floor below it: ${r2(before)} → ${r2(after)})`;
+  return `${head}, over ambient ${r2(base)} (a white floor there: ${r2(before)} → ${r2(after)})`;
 }
 
 function geomText(g: Geom): string {

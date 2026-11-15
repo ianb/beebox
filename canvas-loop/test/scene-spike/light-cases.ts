@@ -4,7 +4,7 @@
 // group, and exposure with the tone curve.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { Lighting, Material, View } from "../../src/scene-draft/scene-api.js";
+import type { Light, Lighting, Material, View } from "../../src/scene-draft/scene-api.js";
 import type { GpuHandle } from "../../src/scene-spike/device.js";
 import type { Pixels } from "../../src/scene-spike/gpu/renderer.js";
 import { GpuRenderer } from "../../src/scene-spike/gpu/renderer.js";
@@ -357,33 +357,42 @@ export async function fullCone(handle: GpuHandle): Promise<void> {
 }
 
 /**
- * Drawing-round finding 3: `--scene` reports each light's peak, and what a white floor below it shows. The
- * report must agree with the renderer: the pixel under the light, and one beyond every light's reach.
+ * Drawing-round finding 3: `--scene` reports each light's peak, where it is, and what a white floor there shows.
+ * The report must agree with the renderer: at the place it names, and beyond every light's reach. A narrow spot
+ * peaks beside the light on its beam, and adds nothing behind it.
  */
 export async function lightPeaks(handle: GpuHandle, t: TestContext): Promise<void> {
   const lighting: Lighting = { ambient: "#2e3448", exposure: 0.3, toneCurve: 0.6 };
-  const scene = new SceneRecorder({ width: 200, height: 120 }).record((v) => v.group({ lighting }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#ffffff" });
-    v.light({ kind: "point", at: [50, 60], height: 40, color: "#ffd8a0", energy: 0.6, reach: 60 });
-  })).scene;
-  const line = sceneOutline(scene, handle.colors).split("\n").find((l) => l.includes("light point")) ?? "";
-  t.diagnostic(line.trim());
-  const m = /peak \+([\d.]+) over ambient ([\d.]+) \(a white floor below it: ([\d.]+) → ([\d.]+)\)$/.exec(line);
-  assert.ok(m !== null, `the light's line reports its peak: ${line}`);
-  const renderer = new GpuRenderer(handle);
-  try {
-    const px = await renderer.render(scene, 1);
-    const grey = (at: readonly [number, number]): number => {
-      const [r = 0, g = 0, b = 0] = rgbaAt(px, at);
-      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-    };
-    const below = grey([50, 60]);
-    const away = grey([180, 60]);
-    t.diagnostic(`rendered: ${away.toFixed(3)} beyond its reach, ${below.toFixed(3)} below it`);
-    assert.ok(Math.abs(away - Number(m[3])) < 0.02, `ambient alone: reported ${m[3]}, rendered ${away.toFixed(3)}`);
-    assert.ok(Math.abs(below - Number(m[4])) < 0.02, `below the light: reported ${m[4]}, rendered ${below.toFixed(3)}`);
-  } finally {
-    renderer.destroy();
+  const cases = [
+    { light: { kind: "point", at: [50, 60], height: 40, color: "#ffd8a0", energy: 0.6, reach: 60 }, peak: [50, 60], place: /below \(50,60\)/ },
+    { light: { kind: "spot", at: [50, 60], height: 40, color: "#ffd8a0", energy: 0.6, reach: 60, direction: 0, cone: 0.25 }, peak: [52, 60], behind: [47, 60], place: /beside \(50,60\) on its beam, toward 0 rad/ },
+  ] satisfies { light: Light; peak: [number, number]; behind?: [number, number]; place: RegExp }[];
+  for (const c of cases) {
+    const scene = new SceneRecorder({ width: 200, height: 120 }).record((v) => v.group({ lighting }, () => {
+      v.rect(0, 0, 200, 120, { fill: "#ffffff" });
+      v.light(c.light);
+    })).scene;
+    const line = sceneOutline(scene, handle.colors).split("\n").find((l) => l.includes(`light ${c.light.kind}`)) ?? "";
+    t.diagnostic(line.trim());
+    assert.match(line, c.place);
+    const m = /peak \+([\d.]+) .*, over ambient ([\d.]+) \(a white floor there: ([\d.]+) → ([\d.]+)\)$/.exec(line);
+    assert.ok(m !== null, `the light's line reports its peak: ${line}`);
+    const renderer = new GpuRenderer(handle);
+    try {
+      const px = await renderer.render(scene, 1);
+      const grey = (at: readonly [number, number]): number => {
+        const [r = 0, g = 0, b = 0] = rgbaAt(px, at);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      };
+      const peak = grey(c.peak);
+      const away = grey([180, 60]);
+      t.diagnostic(`${c.light.kind}: rendered ${away.toFixed(3)} beyond its reach, ${peak.toFixed(3)} at its peak`);
+      assert.ok(Math.abs(away - Number(m[3])) < 0.02, `ambient alone: reported ${m[3]}, rendered ${away.toFixed(3)}`);
+      assert.ok(Math.abs(peak - Number(m[4])) < 0.02, `at the peak: reported ${m[4]}, rendered ${peak.toFixed(3)}`);
+      if ("behind" in c) assert.ok(Math.abs(grey(c.behind) - away) < 0.01, "behind the spot: ambient only");
+    } finally {
+      renderer.destroy();
+    }
   }
 }
 
