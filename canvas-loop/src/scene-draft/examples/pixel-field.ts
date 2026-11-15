@@ -5,12 +5,12 @@ import type { View } from "./scene-api.js";
 
 export function draw(v: View, model: { wavelength: number; frame: number }): void {
   const w = 160, h = 100;
-  const field = v.pixels({ key: "interference", deps: [model.wavelength], width: w, height: h }, (data) => {
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
+  const field = v.pixels({ key: "interference", deps: [model.wavelength], width: w, height: h }, ({ data, width, height }) => {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
         const d1 = Math.hypot(x - 50, y - 50), d2 = Math.hypot(x - 110, y - 50);
         const a = 0.5 + 0.25 * (Math.cos((d1 / model.wavelength) * Math.PI * 2) + Math.cos((d2 / model.wavelength) * Math.PI * 2));
-        const i = (y * w + x) * 4;
+        const i = (y * width + x) * 4;
         data[i] = 40;
         data[i + 1] = Math.round(120 + 120 * a);
         data[i + 2] = Math.round(200 * a);

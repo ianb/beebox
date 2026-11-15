@@ -43,14 +43,15 @@ export interface Hatching {
   readonly color?: string;
 }
 /**
- * Effects on a group, applied in this fixed order, as CSS `filter` lists are
- * usually written: colour adjustments, blur, wash, hatching; then glow and
- * shadow are drawn beneath the result. For another order, nest groups.
+ * Effects on a group, applied in this fixed order (draft 2, R5): colour
+ * adjustments, blur, wash, hatching, paper; then glow and shadow are drawn
+ * beneath the result. Lengths are in the coordinates where the group is
+ * called. For another order, nest groups.
  */
 export interface Effects extends EffectsToday {
   readonly wash?: Wash;
   readonly hatching?: Hatching;
-  /** Paper texture biting into what the group drew, 0..1 (replaces `v.paperTexture`). */
+  /** Paper texture over what the group drew, only where it drew, 0..1 (replaces `v.paperTexture`). */
   readonly paper?: number;
 }
 
@@ -96,6 +97,10 @@ export interface Lighting {
 // --- Styles and groups ----------------------------------------------------------------
 
 export interface Style extends StyleToday {
+  /** Line ends of a plain stroke, as Canvas2D `lineCap`. */
+  readonly cap?: "butt" | "round" | "square";
+  /** Corners of a plain stroke, as Canvas2D `lineJoin`. */
+  readonly join?: "miter" | "round" | "bevel";
   /** How the shape takes light (only inside a lit group). */
   readonly material?: Material;
   /** Shorthand: the shape alone in a group with these effects. */
@@ -117,12 +122,14 @@ export interface Picture {
   readonly width: number;
   readonly height: number;
 }
+/** Plain data, compared by value. */
+export type Dep = string | number | boolean | null | readonly Dep[] | { readonly [k: string]: Dep };
 export interface PictureOptions {
-  /** Names the picture. Same key and equal `deps` reuse the last recording without running `body`. */
+  /** With width, height and deps, identifies a version; an existing version is reused without running `body`. */
   readonly key: string;
-  /** Plain values the drawing depends on, compared by value (React `useMemo`). */
-  readonly deps?: readonly unknown[];
-  /** Size of the picture's own coordinates (0..width, 0..height). */
+  /** Everything the body reads that can change. Omitted: never changes. Testing mode re-records to catch missing deps. */
+  readonly deps?: readonly Dep[];
+  /** The picture's layout box (0..width, 0..height); drawing outside it is kept. */
   readonly width: number;
   readonly height: number;
 }
@@ -154,8 +161,8 @@ export interface View extends Omit<ViewToday, Removed> {
   group(options: GroupOptions, body: () => void): void;
   /** Record a reusable drawing (see PictureOptions); place it with `place`. */
   picture(options: PictureOptions, body: () => void): Picture;
-  /** A picture made from pixel values: `fill` runs when `key` or `deps` change and writes RGBA into `data` (width × height × 4). */
-  pixels(options: PictureOptions, fill: (data: Uint8ClampedArray) => void): Picture;
+  /** A fixed-resolution image: `fill` writes RGBA bytes into `data` (width × height × 4, zeroed) when the version is new. */
+  pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture;
   /** Draw a picture with its top-left at (x, y) under the current transform. */
   place(picture: Picture, x: number, y: number, options?: PlaceOptions): void;
   /** A light, in the current coordinates; it lights the nearest enclosing lit group. */

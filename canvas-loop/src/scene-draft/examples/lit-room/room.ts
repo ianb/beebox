@@ -1,14 +1,16 @@
 // A lit Intra room that pans. Shows: a lit group with ambient light and shadows,
 // lights that flicker, materials (bevel, emissive screens, shadow casters),
-// a camera as a transform, and a wash over the room's layer that moves with it
-// (effects work in the group's own coordinates, so the pigment pans too).
+// a camera as a transform outside the lit group, and a wash whose pigment
+// moves with the world.
 import type { View } from "../scene-api.js";
 import { citizenPicture } from "./citizen.js";
 
 export function draw(v: View, model: { frame: number; cameraX: number; walkerX: number }): void {
   v.background("#1a1612");
-  v.group({ lighting: { ambient: "#2a2833", shadows: "soft" }, effects: { wash: { granulate: 0.4, edges: 0.5 }, paper: 0.3 } }, () => {
-    v.at({ translate: [-model.cameraX, 0] }, () => {
+  // The camera is outside the group, so the wash's pigment moves with the world
+  // (draft 2, section 4).
+  v.at({ translate: [-model.cameraX, 0] }, () => {
+    v.group({ lighting: { ambient: "#2a2833", shadows: "soft" }, effects: { wash: { granulate: 0.4, edges: 0.5 }, paper: 0.3 } }, () => {
       // The room: wall and floor take light; the sofa rounds at its edges.
       v.rect(0, 0, 2400, 600, { fill: "#8a8a6e", material: { relief: 0.1 } });
       v.rect(0, 600, 2400, 160, { fill: "#b9ab8e" });
