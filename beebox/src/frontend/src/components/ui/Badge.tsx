@@ -34,9 +34,11 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
 export function Badge({ children, tone, size, className, title, material }: BadgeProps) {
   tone = tone ?? "neutral";
   size = size ?? "md";
+  const usesMaterial = material === true && tone === "neutral";
   const classes = cn(
     "inline-block rounded font-medium",
-    material === true && tone === "neutral" ? MATERIAL_NEUTRAL_CLASSES : TONE_CLASSES[tone],
+    usesMaterial ? MATERIAL_NEUTRAL_CLASSES : TONE_CLASSES[tone],
+    !usesMaterial && "bbx-badge-tone",
     SIZE_CLASSES[size],
     className,
   );

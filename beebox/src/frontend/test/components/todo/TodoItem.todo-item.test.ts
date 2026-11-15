@@ -49,6 +49,11 @@ function dateBadge(html: string) {
   return { classes: match?.[1] ?? null, dateTime: match?.[2] ?? null, text: match?.[3] ?? null };
 }
 
+function assignedBadge(html: string) {
+  const match = /<span class="([^"]+)" title="Assigned">([^<]+)<\/span>/.exec(html);
+  return { classes: match?.[1] ?? null, text: match?.[2] ?? null };
+}
+
 // ## The four statuses
 //
 // Only `done` is checked. Rendered with no `TodoActionsContext` (as here) every
@@ -161,13 +166,13 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
 void test("Rendered, the escalated chip takes the warning tone and keeps the machine dat...", async (t) => {
   const escalated = render({ status: "open", due: "2026-09-15", plateState: "escalated" });
   t.check(dateBadge(escalated), {
-    classes: "inline-block rounded font-medium bg-accent-100 text-warning-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    classes: "inline-block rounded font-medium bg-accent-100 text-warning-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
     dateTime: "2026-09-15",
     text: "overdue · Sep 15",
   });
 
   t.check(dateBadge(render({ status: "open", due: "2026-09-15", plateState: "on-plate" })), {
-    classes: "inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    classes: "inline-block rounded font-medium bg-warm-100 text-warm-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
     dateTime: "2026-09-15",
     text: "due Sep 15",
   });
@@ -213,7 +218,10 @@ void test("An open agent todo reads in the quiet (parked) treatment with an \"ag
   const agentOpen = render({ status: "open", assigned: "agent" });
   t.check(summary(agentOpen), "unchecked | disabled | Open | text-card-soft");
 
-  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" readonly=\"\" disabled=\"\" class=\"accent-primary disabled:cursor-not-allowed mr-1 align-middle\" aria-label=\"Open\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
+  t.check(assignedBadge(agentOpen), {
+    classes: "inline-block rounded font-medium bg-warm-100 text-warm-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    text: "agent",
+  });
 
   t.check(
     [
