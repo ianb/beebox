@@ -5,7 +5,10 @@ area: bin
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261113-003305
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [doc-move-references](../../../beebox/docs/plans/doc-move-references.md). bin/doc-move, bin/issues close, and bin/workstreams confirm-tested share bin/lib/doc-move.ts, which rewrites link labels and prose paths, refuses an ambiguous reference before writing, and stages nothing (it prints a git add line per repository). confirm-tested commits exactly the returned paths in each repository.
 
 A move rewrites link targets but not everything that names the old path:
 
