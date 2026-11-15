@@ -386,3 +386,72 @@ export async function lightPeaks(handle: GpuHandle, t: TestContext): Promise<voi
     renderer.destroy();
   }
 }
+
+/** Mean |luminance − mean of its 3×3 neighbourhood| over the pixels `where` picks: pixel-scale noise. */
+function pixelNoise(px: Pixels, where: (x: number, y: number) => boolean): { noise: number; count: number } {
+  const lum = (x: number, y: number): number => {
+    const [r = 0, g = 0, b = 0] = rgbaAt(px, [x, y]);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  let sum = 0;
+  let count = 0;
+  for (let y = 1; y < px.height - 1; y++) {
+    for (let x = 1; x < px.width - 1; x++) {
+      if (!where(x, y)) continue;
+      let m = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) m += lum(x + dx, y + dy);
+      sum += Math.abs(lum(x, y) - m / 9);
+      count++;
+    }
+  }
+  return { noise: sum / count, count };
+}
+
+/** Checkpoint 4 visual read, B1: a soft shadow's penumbra is smooth, not speckled by the march's sampling. */
+export async function smoothPenumbra(handle: GpuHandle, t: TestContext): Promise<void> {
+  const draw = (v: View): void => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, () => {
+    v.rect(0, 0, 200, 120, { fill: "#c0b090" });
+    v.rect(70, 30, 30, 50, { fill: "#604030", material: { castsShadow: 40 } });
+    v.light({ kind: "point", at: [40, 55], height: 70, energy: 2.5, reach: 600 });
+  });
+  for (const ratio of [1, 2]) {
+    const px = await renderOnce(handle, { size, draw, ratio });
+    // The floor right of the caster, away from its outline: the shadow and its soft sides.
+    const { noise, count } = pixelNoise(px, (x, y) => x > 104 * ratio && x < 190 * ratio && y > 4 * ratio && y < 116 * ratio);
+    t.diagnostic(`ratio ${ratio}: pixel noise ${noise.toFixed(3)} over ${count} floor pixels`);
+    assert.ok(noise < 1.2, `ratio ${ratio}: the shadow and its penumbra are smooth (noise ${noise.toFixed(3)})`);
+  }
+}
+
+/**
+ * Checkpoint 4 visual read, B2: a caster's outline pixel on its shadowed side is partly the floor below, which the
+ * caster shadows, so it is never brighter than both the caster and the shadowed floor beside it.
+ */
+export async function casterOutlineFringe(handle: GpuHandle, t: TestContext): Promise<void> {
+  const draw = (v: View): void => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, () => {
+    v.rect(0, 0, 200, 120, { fill: "#d8c8a8" });
+    // A slanted right side, so its outline pixels take every coverage.
+    v.polygon([[60, 20], [100, 20], [112, 100], [60, 100]], { fill: "#3a4658", material: { bevel: 7, castsShadow: 70 } });
+    v.light({ kind: "point", at: [20, 60], height: 150, energy: 3, reach: 600 });
+  });
+  for (const ratio of [1, 2]) {
+    const px = await renderOnce(handle, { size, draw, ratio });
+    const lum = (x: number, y: number): number => {
+      const [r = 0, g = 0, b = 0] = rgbaAt(px, [x, y]);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    let bright = 0;
+    let worst = 0;
+    for (let y = 25 * ratio; y < 95 * ratio; y++) {
+      // The outline's x on this row, then its two pixels against the caster 3 px in and the floor 3 px out.
+      const edge = (100 + (12 * (y / ratio - 20)) / 80) * ratio;
+      for (const x of [Math.floor(edge), Math.floor(edge) + 1]) {
+        const over = lum(x, y) - Math.max(lum(x - 3 * ratio, y), lum(x + 3 * ratio, y));
+        worst = Math.max(worst, over);
+        if (over > 4) bright++;
+      }
+    }
+    t.diagnostic(`ratio ${ratio}: ${bright} outline pixels brighter than both sides, worst by ${worst.toFixed(1)}`);
+    assert.equal(bright, 0, `ratio ${ratio}: no bright fringe along the shadowed side`);
+  }
+}

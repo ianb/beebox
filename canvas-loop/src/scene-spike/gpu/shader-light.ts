@@ -40,7 +40,7 @@ fn inO(t: texture_2d<f32>, p: vec2i, o: vec4f) -> vec4f {
 
 export const LIGHT_WGSL = /* wgsl */ `
 struct LU {
-  size: vec4f,    // the target texture's size; this layer's origin in canvas device px (for the shadow jitter)
+  size: vec4f,    // the target texture's size; this layer's origin in canvas device px (shading works in canvas px)
   region: vec4f,  // the colour layer's valid texels
   aO: vec4f,      // material layer 0: where its texel 0 sits in this layer, and its size
   bO: vec4f,      // material layer 1
@@ -58,8 +58,8 @@ struct Lt { pos: vec4f, col: vec4f, p: vec4f };
 @group(0) @binding(4) var matB: texture_2d<f32>;
 @group(0) @binding(5) var matBs: texture_2d<f32>;
 ${QUAD}
-fn pcg(v: u32) -> u32 { let s = v * 747796405u + 2891336453u; let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
-fn jitter(p: vec2i) -> f32 { return f32(pcg(bitcast<u32>(p.x) ^ pcg(bitcast<u32>(p.y) ^ 77u)) >> 8u) / 16777216.0; }
+// Interleaved gradient noise (Jimenez 2014): a deterministic per-pixel offset in 0..1 whose neighbours differ evenly.
+fn ign(p: vec2i) -> f32 { return fract(52.9829189 * fract(0.06711056 * f32(p.x) + 0.00583715 * f32(p.y))); }
 fn s2l(c: vec3f) -> vec3f { return select(pow((c + 0.055) / 1.055, vec3f(2.4)), c / 12.92, c <= vec3f(0.04045)); }
 fn l2s(c: vec3f) -> vec3f { return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308)); }
 // Shading works in canvas device px (positions stay the same whatever the layer's bounds);
@@ -95,6 +95,31 @@ fn inCasters(P: vec2f, D: vec2f, tmax: f32) -> vec2f {
 // sits in a caster, whose own run must be seen to its end. Samples are 2 device px per pixel
 // ratio apart, at most 8 px; past 256 samples (a march over 2048 px at the widest spacing)
 // the spacing grows instead, and casters thinner than it can be missed.
+// The march's caster layer read bilinearly at canvas position c (texel centres at half-integers), so a
+// sample between texels does not snap to one: the penumbra varies smoothly with the pixel.
+fn castersAt(c: vec2f) -> vec4f {
+  // Weights from the canvas position alone (the layer's origin is whole pixels, taken off as integers), so the
+  // result does not depend on the layer's bounds.
+  let g = c - 0.5; let i = floor(g); let f = g - i; let q = vec2i(i) - vec2i(U.size.zw);
+  return mix(mix(inO(matBs, q, U.bO), inO(matBs, q + vec2i(1, 0), U.bO), f.x), mix(inO(matBs, q + vec2i(0, 1), U.bO), inO(matBs, q + vec2i(1, 1), U.bO), f.x), f.y);
+}
+// How much a caster sample at ray parameter t blocks the light (0..1).
+fn blockAt(P: vec3f, L: vec3f, t: f32) -> f32 {
+  let S = castersAt(P.xy + (L.xy - P.xy) * t);
+  if (S.g <= 0.02) { return 0.0; }
+  let ratio = U.misc.z;
+  let soft = select(1.0, 1.0 + 0.03 * length(L.xy - P.xy) * t / ratio, U.ambient.w > 1.5) * ratio;
+  return S.g * smoothstep(0.0, soft, topOf(S) - mix(P.z, L.z, t));
+}
+// How much of the light at L reaches P: 1 unblocked, 0 in full shadow.
+// The march covers only where a caster could block: inside the caster layer, and (for a light
+// above every caster) only until the ray has risen past the tallest caster, unless the light
+// sits in a caster, whose own run must be seen to its end. Samples are 2 device px per pixel
+// ratio apart, at most 8 px; past 256 samples (a march over 2048 px at the widest spacing)
+// the spacing grows instead, and casters thinner than it can be missed. Within each run of
+// samples on casters, the strongest block is refined around its sample by a halving search, so neighbouring pixels find nearly the same maximum: the penumbra is smooth, not
+// speckled by where each pixel's samples happen to fall. The start offset is interleaved
+// gradient noise by canvas pixel (deterministic, low-discrepancy), against banding.
 fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
   let D = L.xy - P.xy; let len = length(D);
   let ratio = U.misc.z; let H = U.misc.w;
@@ -105,27 +130,44 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
   let span = inCasters(P.xy, D, tmax);
   if (span.x > span.y) { return 1.0; }
   let n = clamp(i32(ceil((span.y - span.x) * len / min(2.0 * ratio, 8.0))), 2, 256);
-  // Jitter by canvas device pixel, so a shadow's grain does not change when the layer's bounds do.
-  let j = jitter(vec2i(floor(P.xy)));
-  var vis = 1.0; var run = 1.0; var inSelf = recvIn;
+  let dt = (span.y - span.x) / f32(n);
+  let j = ign(vec2i(floor(P.xy)));
+  var vis = 1.0; var best = 0.0; var bestT = -1.0; var inSelf = recvIn;
   for (var i = 0; i < n; i++) {
     let t = mix(span.x, span.y, (f32(i) + j) / f32(n));
     let S = inO(matBs, texel(P.xy + D * t), U.bO);
     let c = S.g;
-    if (c <= 0.02) { inSelf = false; vis *= run; run = 1.0; continue; }
+    if (c <= 0.02) {
+      inSelf = false;
+      if (bestT >= 0.0) { vis *= 1.0 - refine(P, L, vec2f(bestT, best), dt); }
+      best = 0.0; bestT = -1.0;
+      continue;
+    }
     let top = topOf(S);
     // Still on the receiving caster: its own surface never shadows it, but a taller caster
     // touching it does, gap or not. Heights are read as blue ÷ green of 8-bit texels, so near an
     // outline (little coverage) they are rough: only a clearly taller, well-covered sample counts.
     if (inSelf && (c < 0.25 || top <= P.z + max(2.0 * ratio, 0.05 * P.z))) { continue; }
     inSelf = false;
-    let soft = select(1.0, 1.0 + 0.03 * len * t / ratio, U.ambient.w > 1.5) * ratio;
-    run = min(run, 1.0 - c * smoothstep(0.0, soft, top - mix(P.z, L.z, t)));
+    let b = blockAt(P, L, t);
+    if (b > best || bestT < 0.0) { best = b; bestT = t; }
   }
-  if (!lightIn || span.y < 1.0) { vis *= run; }
+  if ((!lightIn || span.y < 1.0) && bestT >= 0.0) { vis *= 1.0 - refine(P, L, vec2f(bestT, best), dt); }
   return vis;
 }
-
+// The strongest block near a run's best sample (t, block): a search that halves its step four times,
+// from half a step either side, so the maximum is found to a sixteenth of a step.
+fn refine(P: vec3f, L: vec3f, tb: vec2f, dt: f32) -> f32 {
+  var t = tb.x; var m = tb.y; var h = 0.5 * dt;
+  for (var k = 0; k < 4; k++) {
+    let a = clamp(t - h, 0.0, 1.0); let b = clamp(t + h, 0.0, 1.0);
+    let ma = blockAt(P, L, a); let mb = blockAt(P, L, b);
+    if (ma > m) { m = ma; t = a; }
+    if (mb > m) { m = mb; t = b; }
+    h *= 0.5;
+  }
+  return m;
+}
 @fragment fn light(i: VOut) -> @location(0) vec4f {
   let p = vec2i(floor(i.pos.xy));
   let C = textureLoad(colT, p, 0);
@@ -137,8 +179,31 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
   let shine = select(0.0, A.b / A.a, A.a > 1e-4);
   let e = select(0.0, clamp(B.r / B.a, 0.0, 1.0), B.a > 1e-4);
   let recvIn = B.g > 0.02;
+  // How much of this pixel's material is the caster (its casting amount per unit of material coverage).
+  let onCaster = select(1.0, clamp(B.g / B.a, 0.0, 1.0), B.a > 1e-4);
   let P = vec3f(vec2f(p) + 0.5 + U.size.zw, select(0.0, topOf(B), recvIn));
   let albedo = s2l(C.rgb / C.a);
+  // A caster's outline pixel is partly the caster and partly what lies below it, which the caster can
+  // shadow. Each light's visibility is taken at both heights and mixed by each part's share of the
+  // pixel's colour (per channel), with the two colours read from the most and least covered of the
+  // eight neighbours. Shading the whole pixel at the caster's height lit the part below where its
+  // neighbours are in shadow: bright flecks along a figure's shadowed side.
+  let edge = recvIn && onCaster < 0.98;
+  var share = vec3f(1);
+  if (edge) {
+    var hi = B.g; var lo = B.g; var cHi = albedo; var cLo = albedo;
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        let q = p + vec2i(dx, dy);
+        let g = inO(matB, q, U.bO).g; let Cq = textureLoad(colT, q, 0);
+        if (Cq.a <= 0) { continue; }
+        if (g > hi) { hi = g; cHi = s2l(Cq.rgb / Cq.a); }
+        if (g < lo) { lo = g; cLo = s2l(Cq.rgb / Cq.a); }
+      }
+    }
+    let a = onCaster * cHi; let b = (1.0 - onCaster) * cLo;
+    share = select(vec3f(onCaster), a / (a + b), a + b > vec3f(1e-4));
+  }
   var sum = U.ambient.rgb; var spec = vec3f(0);
   for (var k = 0u; k < u32(U.misc.x); k++) {
     let li = lights[k]; let kind = u32(li.pos.w);
@@ -159,8 +224,12 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
     }
     let ndl = max(dot(N, Ld), 0.0);
     if (att * ndl < 1e-4) { continue; }
-    var vis = 1.0;
-    if (U.ambient.w > 0.5) { vis = shadow(P, Lp, recvIn); }
+    var vis = vec3f(1);
+    if (U.ambient.w > 0.5) {
+      let top = shadow(P, Lp, recvIn);
+      vis = vec3f(top);
+      if (edge) { vis = mix(vec3f(shadow(vec3f(P.xy, 0.0), Lp, false)), vis, share); }
+    }
     sum += li.col.rgb * att * ndl * vis;
     let Hv = normalize(Ld + vec3f(0, 0, 1));
     spec += li.col.rgb * att * vis * shine * pow(max(dot(N, Hv), 0.0), 6.0 + 70.0 * shine);
