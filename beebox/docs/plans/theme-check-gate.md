@@ -3,7 +3,7 @@ title: "Make theme-check a landing gate"
 status: active
 workstream: theme-check-gate
 issues:
-  - ../../../issues/bugs/2026-11-13-theme-check-runs-are-fragile.md
+  - ../../../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md
   - ../../../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md
   - ../../../issues/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
   - ../../../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md
@@ -161,3 +161,7 @@ Claude fable reviewed the plan on 2026-11-15. Accepted the single atomic failure
 Claude `claude-opus-5-5` reviewed the implementation. Accepted the misplaced Updating indicator, shared gold-token side effect, and misleading browser-death diagnostic; these are corrected. The disabled card swatch now reuses its production component. Figure error and inset-view wrappers remain exact small fixtures because mounting their full owners requires a throwing sketch or a running authored view; their production owners are named beside the fixtures. They are not evidence of those owners' behavior.
 
 Kept the specified last-completed-run semantics, including previews and concurrent last-completion wins, rather than adding per-run retry history. The CLI identifies preview versus full-catalog provenance and case count; the authoring guide explains separate output roots for independent histories. Added capture-retention guidance rather than deleting evidence automatically. Corrected the plan's test claims to distinguish unit tests from real-browser diagnostics.
+
+## Coverage exposed a hidden status
+
+The first full catalog attempt after moving the workspace status to its real position reported that Updating was never measured. A focused phone hit test confirmed that the card at z-index 1 covered its sibling status at z-index auto. The shared status rule now paints at z-index 2 and provides neutral ink, paper, and border fallbacks, since it cannot inherit the child card's material. Before/after status captures join the visual exhibit. No contrast or occlusion check was weakened.

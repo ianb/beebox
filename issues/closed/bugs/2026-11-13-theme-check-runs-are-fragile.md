@@ -6,7 +6,10 @@ labels: [themes, theme-check]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261113-003305
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Implemented in 5631c13ae: bounded studio readiness, process-scoped sessions and captures, clear source/reload errors, and last-completed-run failure retries. A cold first open and two concurrent one-job runs passed; an edit after the first capture exited 2 and preserved the previous retry record. Claude reviewed the opening and failure diagnostics.
 
 A full `bin/theme-check --all` run takes 15 to 20 minutes. One workstream lost
 a run to each of these:
