@@ -2,7 +2,8 @@
 // (`setLineDash`, offset 0): lengths on, off, on, … in the shape's own
 // coordinates; an odd list is repeated to make it even; the pattern starts
 // again at the start of each subpath; a closed subpath is dashed along its
-// closing segment too, and its first and last dashes are not joined. Each
+// closing segment too, and a dash running on through its start is one dash
+// joined at the seam (Skia's dash effect, which Canvas2D uses). Each
 // dash becomes an open polyline the stroke code outlines with its joins and
 // caps; a dash of zero length is a point that draws only its caps (a dotted
 // line with round caps).
@@ -61,6 +62,15 @@ export function dashPolys(poly: Poly, dash: readonly number[]): { pieces: Poly[]
       if (t >= len && left > 0) break;
     }
   }
-  if (cur !== undefined && cur.length >= 4) pieces.push({ pts: cur, closed: false });
+  if (cur !== undefined && cur.length >= 4) {
+    // A closed subpath whose last dash runs on through the seam, as Skia's dash effect does: one dash
+    // over the whole loop is the closed outline (joined all round); otherwise the last dash continues
+    // into the first, so the seam takes a join, not two caps.
+    const seam = poly.closed && (pat[0] ?? 0) > 0;
+    const first = pieces[0];
+    if (seam && first === undefined && dots.length === 0) pieces.push({ pts: cur, closed: true });
+    else if (seam && first !== undefined) pieces[0] = { pts: [...cur, ...first.pts.slice(2)], closed: false };
+    else pieces.push({ pts: cur, closed: false });
+  }
   return { pieces, dots };
 }

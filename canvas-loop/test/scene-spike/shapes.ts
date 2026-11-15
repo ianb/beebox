@@ -70,6 +70,9 @@ const CELLS: readonly Cell[] = [
   { name: "dash-closed", body: (v) => {
     v.rect(20, 18, 80, 50, { fill: "#cdb4db", stroke: "#3c096c", weight: 5, dash: [16, 8] });
     v.circle(115, 78, 30, { stroke: "#1d3557", weight: 3, dash: [9, 5] });
+    // A dash over the whole loop, and one that wraps through the start corner: both mitered there.
+    v.rect(108, 8, 20, 20, { stroke: "#9b2226", weight: 5, dash: [150, 10] });
+    v.rect(135, 8, 20, 20, { stroke: "#9b2226", weight: 5, dash: [64, 6] });
   } },
   { name: "dash-scaled", matrix: matrixOf({ translate: [10, 20], scale: [2, 0.8] }), body: (v) => {
     v.line(5, 20, 65, 20, { stroke: "#6d597a", weight: 6, dash: [8, 4] });

@@ -88,6 +88,8 @@ test("shapes, strokes, dashes, gradients and transforms match today's Skia rende
   const rows = SHAPE_CELLS.map((c) => ({ name: c.name, ...parity({ ref: refPx, gpu: gpuPx }, { ...size, rect: c.rect }) }));
   for (const r of rows) t.diagnostic(`${r.pass ? "pass" : "FAIL"} ${r.name.padEnd(18)} flat ${r.flat}% edge ${r.edgeMean} max ${r.maxFlat}`);
   assert.deepEqual(rows.filter((r) => !r.pass).map((r) => r.name), []);
+  // A dash through a closed path's start is joined there, as Skia's: two caps instead differ by 200+ at the corner.
+  assert.ok((rows.find((r) => r.name === "dash-closed")?.maxFlat ?? 255) < 20, "closed dashes join at the seam");
 });
 
 const sketchPath = join(import.meta.dirname, "spike-sketch.ts");
