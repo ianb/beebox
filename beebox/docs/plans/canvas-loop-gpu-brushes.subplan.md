@@ -494,7 +494,7 @@ by the same WebGPU renderer.
   lands first freezes those reference renders as fixtures; chunk 2 does it if
   (a) has not.
 - **The frame budget beyond brushes** (record, non-brush lowering) is
-  unowned. See open question 1.
+  owned by subplan (a), chunk 4b. See open question 1.
 - **(c) box figures.** Not in scope; chunk 6 reports the lavapipe number for
   (c).
 
@@ -730,10 +730,9 @@ No critical gap: every silent row has a test in the chunk that adds the code.
 
 ## Open design questions
 
-1. **Who owns the rest of the frame budget?** If chunk 6 confirms the
-   hypothesis, targets 1 and 3 need the record step and non-brush lowering
-   cut as well. Nobody owns that yet. A candidate owner is subplan (a),
-   which promotes the recorder; the boxholder or (a)'s author decides.
+1. **The rest of the frame budget** (recording and non-brush lowering) is
+   owned by subplan (a), chunk 4b, which closes on whole-frame browser
+   measurements taken after this plan's chunk 6.
 2. **The ink look.** Decided at the chunk 1 gate by the boxholder.
 3. **Chunks 7–9.** Decided at the stop point after chunk 6.
 
