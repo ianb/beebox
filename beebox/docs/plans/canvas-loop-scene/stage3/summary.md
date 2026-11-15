@@ -51,6 +51,13 @@ quoted below where they bear on a decision.
    will not agree byte for byte. `gallery:check` (two runs on one machine)
    still works; any "before" baseline compares within one machine.
 
+## Gate 1 result (after Checkpoint 3)
+
+Dawn runs on a GPU-less Linux VM with Mesa's software Vulkan: byte-identical
+run to run, and within 0.002 levels of the Mac GPU's output; 1.3–1.5 s per lit
+frame at ratio 1 on 2 CPUs (`dawn-linux.md`). The recommendation holds without
+a Skia fallback.
+
 ## Decisions for the boxholder at Checkpoint 3
 
 1. **Backend:** our own WebGPU renderer, with Dawn headless (recommended), or
