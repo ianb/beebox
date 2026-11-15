@@ -1,8 +1,9 @@
 /**
- * The box-subprocess env allowlist — the data half of `core/script-env/core.ts`,
- * split out (and kept in `lib/` so `lib/git/env.ts` can use it without an import cycle) so that file stays under the 300-line cap (the same split
- * `src/hub/supervisor/child-env.ts` made out of `supervisor.ts`, for the same reason and
- * with the same fail-closed posture).
+ * The box-subprocess env allowlist: the data half of `core/script-env/core.ts`,
+ * split out so that file stays under the 300-line cap (as
+ * `src/hub/supervisor/child-env.ts` was split out of `supervisor.ts`, with the
+ * same fail-closed posture). It lives in `lib/` so `lib/git/env.ts` can use it
+ * without an import cycle through `script-env/core.ts`.
  */
 
 import { inheritedCredentials } from "./credential-env.js";
