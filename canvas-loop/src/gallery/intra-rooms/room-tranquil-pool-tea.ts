@@ -3,7 +3,7 @@
 // vibrant. Sky: pink and orange sunset, horizon flickering as though struggling
 // to hold together."
 // Exits (2): Archive Lounge (edge-left), Joyous Cafe (door).
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { amaEye, amaSpeaker, bench, citizen, plant, poster } from "./props-tea.js";
 import { footY, m } from "./sizes-tea.js";

@@ -1,6 +1,6 @@
 // Shared brush helpers and the townsfolk painter. Everything here paints in
 // sprite-local coordinates; nothing here keeps state.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 export const INK = "#3b2a24";
 

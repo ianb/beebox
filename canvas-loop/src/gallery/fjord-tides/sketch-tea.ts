@@ -9,16 +9,12 @@
 // the frame (wet strip at the waterline, drier below), and a wet-rock band
 // widens along the cliff bases. High tide submerges both.
 //
-// No polygon/path/clip/gradient primitive in the View subset, so this uses
-// `v.ctx` (the documented escape hatch) for path fills, clipping, gradients.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+// Written with `v.ctx` for path fills, clipping and gradients; ported to
+// polygons, paths, `v.clip` and `v.linearGradient` in scene core chunk 5.
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   tide: { type: "number", min: -1, max: 1, default: 0, step: 0.05 },
@@ -258,22 +254,29 @@ const DAY_PALETTE: Palette = {
   beach: "#7a7168",
 };
 
-function ridgePath(a: {
-  ctx: View["ctx"];
-  layer: CliffLayer;
-  side: "left" | "right";
-}): void {
-  const { ctx, layer, side } = a;
+// Port (scene core chunk 5): the `v.ctx` paths, clips and gradients became
+// polygons, `v.clip` and `v.linearGradient` (draft section 2).
+function ridgePath(layer: CliffLayer, side: "left" | "right"): Vec2[] {
   const topRidge = side === "left" ? layer.topRidgeLeft : layer.topRidgeRight;
   const innerEdge =
     side === "left" ? layer.innerEdgeLeft : layer.innerEdgeRight;
   const cornerX = side === "left" ? 0 : WIDTH;
-  ctx.moveTo(cornerX, HEIGHT);
+  const pts: Vec2[] = [[cornerX, HEIGHT]];
   const firstRidge = topRidge[0];
-  if (firstRidge !== undefined) ctx.lineTo(cornerX, firstRidge.y);
-  for (const p of [...topRidge, ...innerEdge]) ctx.lineTo(p.x, p.y);
-  ctx.lineTo(cornerX, HEIGHT);
-  ctx.closePath();
+  if (firstRidge !== undefined) pts.push([cornerX, firstRidge.y]);
+  for (const p of [...topRidge, ...innerEdge]) pts.push([p.x, p.y]);
+  pts.push([cornerX, HEIGHT]);
+  return pts;
+}
+
+/** Both ridges of a layer as one path, filled and clipped with nonzero winding as the canvas path was. */
+function ridgesPath(layer: CliffLayer): PathCommand[] {
+  const out: PathCommand[] = [];
+  for (const side of ["left", "right"] as const) {
+    for (const [i, [x, y]] of ridgePath(layer, side).entries()) out.push([i === 0 ? "move" : "line", x, y]);
+    out.push(["close"]);
+  }
+  return out;
 }
 
 // Fills the cliff mass, then a top-lit/base-shadowed gradient over the same
@@ -285,29 +288,23 @@ function fillLayer(a: {
   topY: number;
 }): void {
   const { v, layer, color, topY } = a;
-  const { ctx } = v;
-  ctx.save();
-  ctx.beginPath();
-  ridgePath({ ctx, layer, side: "left" });
-  ridgePath({ ctx, layer, side: "right" });
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.clip();
-  const grad = ctx.createLinearGradient(0, topY, 0, HEIGHT);
-  grad.addColorStop(0, "rgba(255,255,255,0.15)");
-  grad.addColorStop(1, "rgba(0,0,0,0.32)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, topY, WIDTH, HEIGHT - topY);
-  ctx.restore();
+  const shape = ridgesPath(layer);
+  v.path(shape, { fill: color });
+  v.clip(shape, () => {
+    const grad = v.linearGradient(0, topY, 0, HEIGHT, [
+      [0, "rgba(255,255,255,0.15)"],
+      [1, "rgba(0,0,0,0.32)"],
+    ]);
+    v.rect(0, topY, WIDTH, HEIGHT - topY, { fill: grad });
+  });
 }
 
 function drawSky(v: View, palette: Palette): void {
-  const { ctx } = v;
-  const grad = ctx.createLinearGradient(0, 0, 0, HORIZON_Y + 40);
-  grad.addColorStop(0, palette.skyTop);
-  grad.addColorStop(1, palette.skyBottom);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  const grad = v.linearGradient(0, 0, 0, HORIZON_Y + 40, [
+    [0, palette.skyTop],
+    [1, palette.skyBottom],
+  ]);
+  v.rect(0, 0, WIDTH, HEIGHT, { fill: grad });
 }
 
 function drawHazeSkyline(a: {
@@ -316,24 +313,20 @@ function drawHazeSkyline(a: {
   palette: Palette;
 }): void {
   const { v, skyline, palette } = a;
-  const { ctx } = v;
-  ctx.fillStyle = palette.haze;
-  ctx.beginPath();
-  ctx.moveTo(0, HORIZON_Y + 6);
-  for (const p of skyline) ctx.lineTo(p.x, p.y);
-  ctx.lineTo(WIDTH, HORIZON_Y + 6);
-  ctx.closePath();
-  ctx.fill();
+  v.polygon(
+    [
+      [0, HORIZON_Y + 6],
+      ...skyline.map((p): Vec2 => [p.x, p.y]),
+      [WIDTH, HORIZON_Y + 6],
+    ],
+    { fill: palette.haze },
+  );
 }
 
 // Region between the near cliffs' inner edges from `topY` down to the frame
 // bottom — used for both the water sheet and the exposed beach.
-function channelPath(a: {
-  ctx: View["ctx"];
-  near: CliffLayer;
-  topY: number;
-}): void {
-  const { ctx, near, topY } = a;
+function channelPath(a: { near: CliffLayer; topY: number }): Vec2[] {
+  const { near, topY } = a;
   const pts = [
     { x: xAtY(near.innerEdgeLeft, topY), y: topY },
     ...near.innerEdgeLeft.filter((p) => p.y >= topY),
@@ -342,9 +335,7 @@ function channelPath(a: {
     ...near.innerEdgeRight.filter((p) => p.y >= topY).toReversed(),
     { x: xAtY(near.innerEdgeRight, topY), y: topY },
   ];
-  ctx.beginPath();
-  for (const p of pts) ctx.lineTo(p.x, p.y);
-  ctx.closePath();
+  return pts.map((p): Vec2 => [p.x, p.y]);
 }
 
 function drawWater(a: {
@@ -354,28 +345,22 @@ function drawWater(a: {
   palette: Palette;
 }): void {
   const { v, near, frame, palette } = a;
-  const { ctx } = v;
-  ctx.save();
-  channelPath({ ctx, near, topY: WATER_TOP_Y });
-  ctx.clip();
-  const grad = ctx.createLinearGradient(0, WATER_TOP_Y, 0, HEIGHT);
-  grad.addColorStop(0, palette.waterNear);
-  grad.addColorStop(1, palette.waterFar);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, WATER_TOP_Y, WIDTH, HEIGHT - WATER_TOP_Y);
-  // Gentle animated ripple lines double as light glints scrolling on the water.
-  ctx.strokeStyle = palette.ripple;
-  ctx.lineWidth = 1;
-  for (let y0 = WATER_TOP_Y + 6; y0 < HEIGHT; y0 += 13) {
-    ctx.beginPath();
-    for (let x = 0; x <= WIDTH; x += 10) {
-      const y = y0 + Math.sin(x * 0.05 + frame * 0.05 + y0 * 0.1) * 2.5;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+  v.clip(channelPath({ near, topY: WATER_TOP_Y }), () => {
+    const grad = v.linearGradient(0, WATER_TOP_Y, 0, HEIGHT, [
+      [0, palette.waterNear],
+      [1, palette.waterFar],
+    ]);
+    v.rect(0, WATER_TOP_Y, WIDTH, HEIGHT - WATER_TOP_Y, { fill: grad });
+    // Gentle animated ripple lines double as light glints scrolling on the water.
+    for (let y0 = WATER_TOP_Y + 6; y0 < HEIGHT; y0 += 13) {
+      const line: PathCommand[] = [];
+      for (let x = 0; x <= WIDTH; x += 10) {
+        const y = y0 + Math.sin(x * 0.05 + frame * 0.05 + y0 * 0.1) * 2.5;
+        line.push([x === 0 ? "move" : "line", x, y]);
+      }
+      v.path(line, { stroke: palette.ripple, weight: 1 });
     }
-    ctx.stroke();
-  }
-  ctx.restore();
+  });
 }
 
 // Wet-rock rim along the cliff bases: a stroke centered on each inner edge,
@@ -388,21 +373,13 @@ function drawWetBands(a: {
   palette: Palette;
 }): void {
   const { v, near, tide, palette } = a;
-  const { ctx } = v;
-  ctx.save();
-  ctx.beginPath();
-  ridgePath({ ctx, layer: near, side: "left" });
-  ridgePath({ ctx, layer: near, side: "right" });
-  ctx.clip();
-  ctx.strokeStyle = palette.wetBand;
-  ctx.lineWidth = 2 * (1.5 + ((1 - tide) / 2) * 9);
-  ctx.lineJoin = "round";
-  for (const edge of [near.innerEdgeLeft, near.innerEdgeRight]) {
-    ctx.beginPath();
-    for (const p of edge) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-  }
-  ctx.restore();
+  v.clip(ridgesPath(near), () => {
+    const weight = 2 * (1.5 + ((1 - tide) / 2) * 9);
+    for (const edge of [near.innerEdgeLeft, near.innerEdgeRight]) {
+      const line = edge.map((p, i): PathCommand => [i === 0 ? "move" : "line", p.x, p.y]);
+      v.path(line, { stroke: palette.wetBand, weight, join: "round" });
+    }
+  });
 }
 
 // The exposed foreshore at the bottom of the frame: wet strip at the
@@ -414,22 +391,15 @@ function drawBeach(a: {
   palette: Palette;
 }): void {
   const { v, near, beachY, palette } = a;
-  const { ctx } = v;
   if (beachY >= HEIGHT) return;
-  ctx.save();
-  channelPath({ ctx, near, topY: beachY });
-  ctx.clip();
-  ctx.fillStyle = palette.beach;
-  ctx.fillRect(0, beachY, WIDTH, HEIGHT - beachY);
-  ctx.fillStyle = palette.wetBand;
-  ctx.fillRect(0, beachY, WIDTH, 9);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, beachY + 1);
-  ctx.lineTo(WIDTH, beachY + 1);
-  ctx.stroke();
-  ctx.restore();
+  v.clip(channelPath({ near, topY: beachY }), () => {
+    v.rect(0, beachY, WIDTH, HEIGHT - beachY, { fill: palette.beach });
+    v.rect(0, beachY, WIDTH, 9, { fill: palette.wetBand });
+    v.line(0, beachY + 1, WIDTH, beachY + 1, {
+      stroke: "rgba(255, 255, 255, 0.45)",
+      weight: 1.5,
+    });
+  });
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
@@ -440,8 +410,9 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   drawHazeSkyline({ v, skyline: model.hazeSkyline, palette });
   // Distant hazy water fills everything below the horizon — the channel gap
   // between the cliffs reads as fjord, not sky; layers painted next cover it.
-  v.ctx.fillStyle = palette.distantWater;
-  v.ctx.fillRect(0, HORIZON_Y + 5, WIDTH, HEIGHT - HORIZON_Y - 5);
+  v.rect(0, HORIZON_Y + 5, WIDTH, HEIGHT - HORIZON_Y - 5, {
+    fill: palette.distantWater,
+  });
   fillLayer({
     v,
     layer: model.far,

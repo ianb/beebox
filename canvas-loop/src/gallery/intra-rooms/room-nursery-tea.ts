@@ -5,7 +5,7 @@
 // with a teddy each; a mobile that turns over an empty crib; a rocket rocking
 // horse that rocks by itself; blocks spelling AMA; a counter of days the room
 // has been ready; a framed certificate of baby's first clearance.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { frame, slab, stencil } from "./parts-c-tea.js";
 import { amaEye, amaSpeaker, citizen } from "./props-tea.js";

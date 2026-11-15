@@ -1,7 +1,7 @@
 // Pieces shared by the Quiet Plaza, Nursery, Reflection Chamber, Utility Closet,
 // Archive Lounge and the quarters: boxes in metres, metal shelving, picture frames,
 // stencilled lettering, a bare bulb, frayed wire and its sparks.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, at, blob, ellipsePts, glow, hash, mixHex, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { PLANES, m } from "./sizes-tea.js";
 

@@ -3,7 +3,7 @@
 // Rows of identical plastic plants (one mould, one seed), a moulded tree with its
 // part number showing, a birdhouse with a speaker in it that skips, a gnome
 // giving the thumbs-up, and a gardener watering plants that will never need it.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { placard, speech } from "./parts-b-tea.js";
 import { amaEye, amaSpeaker, citizen, crate, pacing, pipe } from "./props-tea.js";

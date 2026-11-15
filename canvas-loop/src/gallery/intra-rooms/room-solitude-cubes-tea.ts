@@ -3,7 +3,7 @@
 // Two tiers of moulded-plastic capsules along the back wall, rungs up to the top
 // row, OCCUPIED lamps, voices leaking through the walls, and an amber ticker that
 // announces shooting stars (wishes are logged).
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { placard, pulse, speech } from "./parts-b-tea.js";
 import { amaEye, amaSpeaker, citizen, pacing, vent } from "./props-tea.js";

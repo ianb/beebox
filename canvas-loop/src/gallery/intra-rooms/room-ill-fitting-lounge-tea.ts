@@ -3,7 +3,7 @@
 // Shrunken shell chairs, a tulip table at chin height, a sofa for one and a half,
 // a standard lamp too tall for the room and bent against the ceiling. A height
 // chart that no one passes, and a notice inviting the wrong-sized to report.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, roundRectPts, stroke } from "./kit-tea.js";
 import { mouldedChair, placard, speech } from "./parts-b-tea.js";
 import { amaEye, amaSpeaker, citizen, couch, tulipTable } from "./props-tea.js";

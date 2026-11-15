@@ -43,6 +43,10 @@ From the accepted draft decisions:
   canvas edge and captured those frames; the scene renderer's faint-mark
   check (chunk 3: the peak is taken before any clip) gives no warning there,
   so those frames are not captured. Nothing is drawn differently.
+- **H, hints:** testing mode now gives hints the painter did not, for
+  example a picture placed turning a little each frame ("drawn again every
+  frame; draw it as a group instead"). Hints add captured frames; they change
+  no pixels.
 - **A1, trails (accepted):** a sketch that draws a translucent rectangle
   instead of a background, to leave motion trails over the last frame, now
   draws over an empty canvas. Each scene frame starts clear; the painter's
@@ -70,11 +74,15 @@ chunk, with a test).
 | `alien-scene-sol` | unchanged | 1 | 0/1 | 81.86 | 0.188 | 0.18 / 0.45 | brush texture (7) | pass: same character by eye |
 | `balance-reaction` | ported: cache, paper | 27 | 27/27 | 99.87 | 0.045 | 0.28 / 1.87 | paper scoped (10) | pass |
 | `balance-reaction-2` | ported: paper | 35 | 35/35 | 99.11 | 0.046 | 0.12 / 2.82 | paper scoped (10) | pass |
+| `busy-town-opus` | ported: sprite, cache, paper | 50 | 0/50 | 86.37 | 0.175 | 0.09 / 0.32 | brush texture (7), paper scoped (10) | pass: same character by eye; text (T); new hints for pictures placed turning (H) |
+| `busy-town-sol` | ported: sprite, cache, paper | 44 | 0/44 | 94.66 | 0.133 | 0.09 / 0.12 | brush texture (7), paper scoped (10) | pass: same character by eye; new hints for pictures placed turning (H) |
 | `clock` | unchanged | 12 | 12/12 | 99.99 | 0.047 | 2.33 / 5.64 | none | pass: light text on dark draws lighter (T) |
+| `fjord-tides` | ported: ctx | 18 | 18/18 | 99.97 | 0.05 | 0.23 / 1.7 | none | pass |
 | `guitar-strings` | ported: cache, paper | 18 | 0/18 | 96.75 | 0.051 | 0.78 / 2.59 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `gull-market` | ported: paper | 1 | 0/1 | 88.57 | 0.053 | 0 / 0.1 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `intra-lounge-side` | ported: cache, paper | 2 | 2/2 | 99.66 | 0.037 | 0.24 / 0.06 | brush texture (7), paper scoped (10) | pass |
 | `intra-map` | ported: cache | 5 | 5/5 | 99.95 | 0.034 | 0.32 / 0.45 | none | pass |
+| `intra-rooms` | ported: sprite, cache, paper | 2 | 0/2 | 95.17 | 0.046 | 0.11 / 0.13 | brush texture (7), paper scoped (10) | pass: the strip of sprites is one picture, as in the Hallway port |
 | `intra-scale-reference` | ported: paper | 1 | 0/1 | 92.87 | 0.026 | 0.08 / 0.08 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `intra-walk-study` | unchanged | 4 of 12 | 4/4 | 100 | 0.029 | 0.08 / 0.12 | brush texture (7) | pass: 8 frames the painter captured for edge faint-mark warnings are not captured (F) |
 | `intra-walk-styles` | unchanged | 2 | 2/2 | 99.99 | 0.024 | 0.06 / 0.84 | brush texture (7) | pass |

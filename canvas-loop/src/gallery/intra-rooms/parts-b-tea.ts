@@ -1,6 +1,6 @@
 // Pieces shared by the Yellow Room, Solitude Cubes, Waiting Room, Static Garden,
 // Ill-Fitting Lounge and Feedback Booth: moulded chairs, placards, speech bubbles.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { at, blob, ellipsePts, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { m } from "./sizes-tea.js";
 

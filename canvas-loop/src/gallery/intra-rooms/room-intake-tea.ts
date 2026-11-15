@@ -2,7 +2,7 @@
 // The walls are lined with inscrutable equipment and screens, many of them
 // non-functioning." The player wakes here.
 // Exits (1): Foyer (edge-right).
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { cabinet, cable, crackedScreen, dial, lamps, reel, screenFrame, trace } from "./parts-a-tea.js";
 import { amaEye, amaSpeaker, citizen, pacing } from "./props-tea.js";

@@ -1,11 +1,14 @@
 // Intra (intra-game), room by room, from the side: one shared kit (kit-tea.ts,
 // props-tea.ts, sky-tea.ts), one file per room. Pick the room with the `room`
 // param. Rooms wider than the view pan with their walker.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, dim, exitGlows, paintShell } from "./kit-tea.js";
 import { ROOMS, ROOM_IDS } from "./rooms-tea.js";
 import { VIEW_H, VIEW_W, m } from "./sizes-tea.js";
 import { paintSky } from "./sky-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   room: { type: "select", options: ROOM_IDS, default: ROOM_IDS[0], label: "Room" },
@@ -45,18 +48,17 @@ function cameraX(r: RoomSpec, focus: number): number {
   return -Math.max(0, Math.min(w - VIEW_W, focus - VIEW_W / 2));
 }
 
-/** The still room, kept as a strip of sprites (a cache stays where it was first
- * drawn, so it cannot pan; sprites are placed under the camera's transform). */
-const CHUNK = 1200;
+/** The still room, kept as one picture. Port (scene core chunk 5): the strip of
+ * 1200 px sprites becomes one picture as wide as the room plus its margins. A
+ * picture keeps what it draws outside its box (draft decision 3), so a strip of
+ * chunks would each draw the whole room; nothing needs chunking once placement
+ * replays. */
 function paintCached(v: View, r: RoomSpec): void {
   const x0 = -300, x1 = m(r.width) + 300;
-  for (let i = 0; x0 + i * CHUNK < x1; i++) {
-    const left = x0 + i * CHUNK;
-    const sp = v.sprite({ key: `room-${r.id}-${i}`, width: CHUNK, height: VIEW_H }, () => {
-      v.at({ translate: [-left, 0] }, () => paintShell(v, r));
-    });
-    v.image(sp, left, 0);
-  }
+  const pic = v.picture({ key: `room-${r.id}`, width: x1 - x0, height: VIEW_H }, () => {
+    v.at({ translate: [-x0, 0] }, () => paintShell(v, r));
+  });
+  v.place(pic, x0, 0);
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {

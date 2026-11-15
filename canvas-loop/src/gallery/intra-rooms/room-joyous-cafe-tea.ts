@@ -3,7 +3,7 @@
 // playing. Sky of drifting clouds whose speed changes without warning, sometimes
 // halting mid-drift."
 // Exits (2): Activity Hub (edge-left), Tranquil Pool (door).
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, roundRectPts, stroke } from "./kit-tea.js";
 import { hueHex, notes, signBox } from "./parts-a-tea.js";
 import { amaEye, amaSpeaker, citizen, pacing, shellChair, tulipTable } from "./props-tea.js";

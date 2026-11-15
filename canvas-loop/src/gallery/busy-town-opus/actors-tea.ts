@@ -1,5 +1,5 @@
 // Every moving thing, drawn each frame from sprites and a few cheap marks.
-import type { BlendMode, Sprite, View } from "@ianbicking/canvas-loop";
+import type { BlendMode, ScenePicture as Picture, SceneView as View } from "@ianbicking/canvas-loop";
 import type { Clock, Id } from "./things-tea.js";
 import { BUS_Y, FEET, IDS, W, act, boxOf, busX, snailX } from "./things-tea.js";
 import * as S from "./folk-tea.js";
@@ -26,7 +26,7 @@ interface Place {
 }
 
 /** Draw a sprite with its pivot (px, py) at (x, y), turned, flipped and scaled about the pivot. */
-export function put(v: View, s: Sprite, at: Place): void {
+export function put(v: View, s: Picture, at: Place): void {
   const k = at.scale ?? 1;
   const scaled = at.flip === true || at.scale !== undefined;
   v.at(
@@ -36,7 +36,7 @@ export function put(v: View, s: Sprite, at: Place): void {
       ...(scaled ? { scale: [at.flip === true ? -k : k, k] as const } : {}),
     },
     () =>
-      v.image(s, -at.px, -at.py, {
+      v.place(s, -at.px, -at.py, {
         opacity: at.alpha ?? 1,
         ...(at.blend === undefined ? {} : { blend: at.blend }),
       }),
@@ -408,7 +408,7 @@ export function dog(v: View, s: Scene): void {
         translate: [x - 19, 584],
         rotate: -0.55 + Math.sin(s.frame * 0.3) * 0.05,
       },
-      () => v.image(S.dog(v, "stand"), -18, -50),
+      () => v.place(S.dog(v, "stand"), -18, -50),
     );
     return;
   }
@@ -436,7 +436,7 @@ export function dog(v: View, s: Scene): void {
         false,
         { stroke: "#d9a25f", weight: 5 },
       );
-      v.image(S.dog(v, wet ? "wet" : "stand"), -37, -52);
+      v.place(S.dog(v, wet ? "wet" : "stand"), -37, -52);
     },
   );
 }
@@ -454,7 +454,7 @@ export function lamp(v: View, s: Scene): void {
   });
   if (!flick) return;
   if (!s.evening) {
-    v.image(S.glow(v), 609 - 80, 400 - 80, { opacity: 0.7, blend: "screen" });
+    v.place(S.glow(v), 609 - 80, 400 - 80, { opacity: 0.7, blend: "screen" });
   }
   if (t !== null) {
     for (let i = 0; i < 2; i += 1) {
@@ -534,7 +534,7 @@ export function clockHands(v: View, s: Scene): void {
   });
   v.circle(cx, cy, 3, { fill: "#c23b3b" });
   if (s.hover === "clock" && t === null) {
-    v.image(S.glint(v), cx + 16, cy - 30, {
+    v.place(S.glint(v), cx + 16, cy - 30, {
       opacity: 0.6 + Math.sin(s.frame * 0.3) * 0.4,
     });
   }
@@ -720,7 +720,7 @@ export function bus(v: View, s: Scene): void {
       (1 - age) * 0.45,
     );
   }
-  v.image(S.bus(v), x, y);
+  v.place(S.bus(v), x, y);
   const turn = x * 0.07;
   for (const wx of [48, 172])
     put(v, S.wheel(v), { x: x + wx, y: y + 98, px: 15, py: 15, rot: turn });
@@ -871,7 +871,7 @@ export function lights(v: View, s: Scene): void {
       blend: "screen",
     });
   if (s.evening || act(s, "lamp") !== null)
-    v.image(g, 609 - 80, 400 - 80, {
+    v.place(g, 609 - 80, 400 - 80, {
       opacity: s.night ? 1 : 0.8,
       blend: "screen",
     });

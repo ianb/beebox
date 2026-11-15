@@ -1,7 +1,7 @@
 // Pieces shared by Intake, the Foyer, the Activity Hub, the Joyous Cafe, the
 // Tranquil Pool and the Archive Console: equipment cabinets, tape reels, little
 // screens and their pictures, blinking lamps, lit signs, music notes.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, at, blob, ellipsePts, glow, hash, mixHex, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { m } from "./sizes-tea.js";
 

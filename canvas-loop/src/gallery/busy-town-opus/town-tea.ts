@@ -1,5 +1,5 @@
 // The still town: sky, buildings, sidewalk, road. Painted once into a cache.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, ellipsePts, hash, ink, inked, label } from "./paint-tea.js";
 import { CURB, H, ROAD_END, STREET, W } from "./things-tea.js";
 
@@ -524,16 +524,19 @@ function jokes(v: View): void {
 
 /** The whole still town, for `v.cache`. */
 export function paintTown(v: View): void {
-  sky(v);
-  bakery(v);
-  postOffice(v);
-  paintersHouse(v);
-  grocer(v);
-  townHall(v);
-  street(v);
-  fruitStand(v);
-  jokes(v);
-  v.paperTexture(0.35);
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    sky(v);
+    bakery(v);
+    postOffice(v);
+    paintersHouse(v);
+    grocer(v);
+    townHall(v);
+    street(v);
+    fruitStand(v);
+    jokes(v);
+  });
 }
 
 /** Window centres that light up after dark (the goat's window lights only when its shutters are open). */

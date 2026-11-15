@@ -1,14 +1,9 @@
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
 import { paintOccupiedWindowTrim, paintTown } from "./town-tea.js";
 import { THINGS, paintSprite, type Thing } from "./people-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 1000, height: 700 };
 export const params = {
@@ -310,7 +305,7 @@ function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
   const width = bus ? 152 : flag ? 70 : special ? 72 : 56;
   const height = bus ? 78 : flag ? 76 : special ? 72 : 84;
   const pose = active && age % 28 < 18;
-  const sprite = v.sprite(
+  const sprite = v.picture(
     { key: `town-${t.id}-${pose ? "act" : "idle"}`, width, height },
     () => paintSprite(v, t, pose),
   );
@@ -325,7 +320,7 @@ function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
       ...(t.y < 300 && !special ? { scale: 0.75 } : {}),
     },
     () => {
-      v.image(sprite, -width / 2, -height);
+      v.place(sprite, -width / 2, -height);
     },
   );
   if (active) {
@@ -349,7 +344,7 @@ function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.cache(`busy-town-${p.dusk}`, () => paintTown(v, p.dusk));
+  v.place(v.picture({ key: `busy-town-${p.dusk}`, width: v.width, height: v.height }, () => paintTown(v, p.dusk)), 0, 0);
   v.cursor(model.hover ? "pointer" : "default");
   for (const t of THINGS) drawThing(v, t, model);
   paintOccupiedWindowTrim(v);

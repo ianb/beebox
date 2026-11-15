@@ -5,7 +5,7 @@
 // Coordinates: metres. x from the room's left edge; h up from the floor; depth out
 // from the back wall (see sizes-tea.ts). `at(x, h, depth)` gives the screen point
 // in the room's own pixels (before the camera pans).
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, type Rim, blob, ellipsePts, hash, ink, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 import { BACK_FOOT_Y, PLANES, VIEW_H, footY, m } from "./sizes-tea.js";
 
@@ -378,16 +378,19 @@ function paintExitsFloor(v: View, r: RoomSpec): void {
 /** The still room: rock, wall, wall pieces, back exits, ceiling, floor, floor exits,
  * furniture, ends. */
 export function paintShell(v: View, r: RoomSpec): void {
-  bedrock(v, r);
-  wall(v, r);
-  r.paintWall?.(v);
-  paintExitsBack(v, r);
-  ceiling(v, r);
-  floor(v, r);
-  paintExitsFloor(v, r);
-  r.paintFurniture?.(v);
-  ends(v, r);
-  v.paperTexture(0.35);
+  // Port: `v.paperTexture(0.35)` after the shell becomes the shell drawn in a
+  // group with `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    bedrock(v, r);
+    wall(v, r);
+    r.paintWall?.(v);
+    paintExitsBack(v, r);
+    ceiling(v, r);
+    floor(v, r);
+    paintExitsFloor(v, r);
+    r.paintFurniture?.(v);
+    ends(v, r);
+  });
 }
 
 // --- Light ---------------------------------------------------------------------------------

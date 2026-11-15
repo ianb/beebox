@@ -1,18 +1,14 @@
 // Acorn Lane: a busy picture-book street. Every townsperson idles; click one
 // and it performs its little act, sometimes setting off a neighbour.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamValues,
-  ParamsDecl,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, SceneView as View } from "@ianbicking/canvas-loop";
 import type { Id } from "./things-tea.js";
 import { CHAIN, H, IDS, W, act, boxOf, hit } from "./things-tea.js";
 import { paintNightSky, paintTown } from "./town-tea.js";
 import * as A from "./actors-tea.js";
 import * as S from "./folk-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   time: {
@@ -127,7 +123,7 @@ export function draw(
 ): void {
   const night = p.time === "night";
   const s: A.Scene = { ...model, night, evening: p.time !== "morning" };
-  v.cache("town", () => paintTown(v));
+  v.place(v.picture({ key: "town", width: v.width, height: v.height }, () => paintTown(v)), 0, 0);
   S.warm(v);
   // back to front
   A.chimney(v, s);
@@ -158,7 +154,7 @@ export function draw(
     v.rect(0, 0, W, H, { fill: shade, blend: "multiply" });
     // lights go on after the shade, with a screen blend, so they glow through it
     if (night)
-      v.cache("night-sky", () => paintNightSky(v), { blend: "screen" });
+      v.place(v.picture({ key: "night-sky", width: v.width, height: v.height }, () => paintNightSky(v)), 0, 0, { blend: "screen" });
     A.lights(v, s);
   }
   if (p.rain) A.rain(v, model.frame);

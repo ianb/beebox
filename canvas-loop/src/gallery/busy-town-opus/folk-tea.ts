@@ -1,5 +1,5 @@
 // Sprites: every character, pose and prop, painted once and placed every frame.
-import type { Sprite, View } from "@ianbicking/canvas-loop";
+import type { ScenePicture as Picture, SceneView as View } from "@ianbicking/canvas-loop";
 import type { Folk } from "./paint-tea.js";
 import {
   FOLK_H,
@@ -193,14 +193,14 @@ function poseBody(v: View, pose: Pose): void {
   }
 }
 
-export function folk(v: View, pose: Pose): Sprite {
-  return v.sprite({ key: pose, width: FOLK_W, height: FOLK_H }, () =>
+export function folk(v: View, pose: Pose): Picture {
+  return v.picture({ key: pose, width: FOLK_W, height: FOLK_H }, () =>
     poseBody(v, pose),
   );
 }
 
-export function loaf(v: View): Sprite {
-  return v.sprite({ key: "loaf", width: 44, height: 26 }, () => {
+export function loaf(v: View): Picture {
+  return v.picture({ key: "loaf", width: 44, height: 26 }, () => {
     v.curve(ellipsePts(22, 14, 18, 9, 10), true, inked("#d58b42", 1.8));
     for (const x of [14, 22, 30])
       v.line(x - 3, 9, x + 3, 18, { ...ink(1.4), stroke: "#9a5a26" });
@@ -208,8 +208,8 @@ export function loaf(v: View): Sprite {
 }
 
 /** Watering can, 30×22; handle (the pivot) at (6, 10), spout tip at (29, 2). */
-export function wateringCan(v: View): Sprite {
-  return v.sprite({ key: "can", width: 30, height: 22 }, () => {
+export function wateringCan(v: View): Picture {
+  return v.picture({ key: "can", width: 30, height: 22 }, () => {
     v.polygon(
       [
         [18, 12],
@@ -233,8 +233,8 @@ export function wateringCan(v: View): Sprite {
   });
 }
 
-export function chimney(v: View): Sprite {
-  return v.sprite({ key: "chimney", width: 34, height: 56 }, () => {
+export function chimney(v: View): Picture {
+  return v.picture({ key: "chimney", width: 34, height: 56 }, () => {
     v.rect(4, 8, 26, 46, inked("#b85a40", 2));
     v.rect(1, 3, 32, 9, inked("#8a3b2a", 2));
     for (let r = 0; r < 4; r += 1)
@@ -243,8 +243,8 @@ export function chimney(v: View): Sprite {
 }
 
 /** The goat's window: shutters shut, or flung open on a dark room. 80×86, sill at y 66. */
-export function windowSprite(v: View, open: boolean): Sprite {
-  return v.sprite(
+export function windowSprite(v: View, open: boolean): Picture {
+  return v.picture(
     { key: open ? "window-open" : "window-shut", width: 80, height: 86 },
     () => {
       if (open) {
@@ -263,14 +263,14 @@ export function windowSprite(v: View, open: boolean): Sprite {
   );
 }
 
-export function cat(v: View, mode: "sit" | "arch"): Sprite {
-  return v.sprite({ key: `cat-${mode}`, width: 50, height: 56 }, () =>
+export function cat(v: View, mode: "sit" | "arch"): Picture {
+  return v.picture({ key: `cat-${mode}`, width: 50, height: 56 }, () =>
     paintCat(v, mode),
   );
 }
 
-export function mailbox(v: View, open: boolean): Sprite {
-  return v.sprite(
+export function mailbox(v: View, open: boolean): Picture {
+  return v.picture(
     { key: open ? "mailbox-open" : "mailbox", width: 40, height: 66 },
     () => {
       v.line(20, 40, 20, 64, ink(3));
@@ -304,8 +304,8 @@ export function mailbox(v: View, open: boolean): Sprite {
 }
 
 /** Ladder with the fox on it, 80×240; foot pivot at (16, 236). */
-export function ladder(v: View, hang: boolean): Sprite {
-  return v.sprite(
+export function ladder(v: View, hang: boolean): Picture {
+  return v.picture(
     { key: hang ? "ladder-hang" : "ladder-paint", width: 80, height: 240 },
     () => {
       const rail = { ...ink(3), stroke: "#8a5a3a" };
@@ -327,8 +327,8 @@ export function ladder(v: View, hang: boolean): Sprite {
   );
 }
 
-export function bucket(v: View): Sprite {
-  return v.sprite({ key: "bucket", width: 32, height: 34 }, () => {
+export function bucket(v: View): Picture {
+  return v.picture({ key: "bucket", width: 32, height: 34 }, () => {
     v.polygon(
       [
         [3, 8],
@@ -344,15 +344,15 @@ export function bucket(v: View): Sprite {
   });
 }
 
-export function owl(v: View, awake: boolean): Sprite {
-  return v.sprite(
+export function owl(v: View, awake: boolean): Picture {
+  return v.picture(
     { key: awake ? "owl-awake" : "owl-asleep", width: 54, height: 60 },
     () => paintOwlWindow(v, awake),
   );
 }
 
-export function hydrant(v: View): Sprite {
-  return v.sprite({ key: "hydrant", width: 28, height: 44 }, () => {
+export function hydrant(v: View): Picture {
+  return v.picture({ key: "hydrant", width: 28, height: 44 }, () => {
     v.path(
       [
         ["move", 6, 42],
@@ -369,15 +369,15 @@ export function hydrant(v: View): Sprite {
   });
 }
 
-export function dog(v: View, mode: "stand" | "wet"): Sprite {
-  return v.sprite({ key: `dog-${mode}`, width: 74, height: 52 }, () =>
+export function dog(v: View, mode: "stand" | "wet"): Picture {
+  return v.picture({ key: `dog-${mode}`, width: 74, height: 52 }, () =>
     paintDog(v, mode),
   );
 }
 
 /** Lamp post, 30×190, bulb centre at (15, 16). */
-export function lamp(v: View, on: boolean): Sprite {
-  return v.sprite(
+export function lamp(v: View, on: boolean): Picture {
+  return v.picture(
     { key: on ? "lamp-on" : "lamp-off", width: 30, height: 190 },
     () => {
       v.line(15, 30, 15, 186, { ...ink(4), stroke: "#2f3a4a" });
@@ -403,41 +403,41 @@ export function lamp(v: View, on: boolean): Sprite {
   );
 }
 
-export function apple(v: View): Sprite {
-  return v.sprite({ key: "apple", width: 14, height: 15 }, () => {
+export function apple(v: View): Picture {
+  return v.picture({ key: "apple", width: 14, height: 15 }, () => {
     v.circle(7, 9, 5.5, inked("#d8443a", 1.2));
     v.ellipse(9, 2.5, 2.5, 1.5, { fill: "#3f7a3a" });
   });
 }
 
-export function pigeon(v: View, flap: boolean): Sprite {
-  return v.sprite(
+export function pigeon(v: View, flap: boolean): Picture {
+  return v.picture(
     { key: flap ? "pigeon-flap" : "pigeon", width: 26, height: 22 },
     () => paintPigeon(v, flap),
   );
 }
 
-export function snail(v: View, tucked: boolean): Sprite {
-  return v.sprite(
+export function snail(v: View, tucked: boolean): Picture {
+  return v.picture(
     { key: tucked ? "snail-tucked" : "snail", width: 36, height: 24 },
     () => paintSnail(v, tucked),
   );
 }
 
-export function mole(v: View): Sprite {
-  return v.sprite({ key: "mole", width: 40, height: 40 }, () => paintMole(v));
+export function mole(v: View): Picture {
+  return v.picture({ key: "mole", width: 40, height: 40 }, () => paintMole(v));
 }
 
-export function manhole(v: View): Sprite {
-  return v.sprite({ key: "manhole", width: 62, height: 20 }, () => {
+export function manhole(v: View): Picture {
+  return v.picture({ key: "manhole", width: 62, height: 20 }, () => {
     v.ellipse(31, 10, 29, 8, inked("#55545e", 1.8));
     v.ellipse(31, 10, 21, 5, ink(1));
     v.line(14, 10, 48, 10, ink(1));
   });
 }
 
-export function letter(v: View): Sprite {
-  return v.sprite({ key: "letter", width: 18, height: 13 }, () => {
+export function letter(v: View): Picture {
+  return v.picture({ key: "letter", width: 18, height: 13 }, () => {
     v.rect(1, 1, 16, 11, inked("#ffffff", 1.2));
     v.line(1, 1, 9, 7, ink(0.9));
     v.line(17, 1, 9, 7, ink(0.9));
@@ -445,8 +445,8 @@ export function letter(v: View): Sprite {
   });
 }
 
-export function wheel(v: View): Sprite {
-  return v.sprite({ key: "wheel", width: 30, height: 30 }, () => {
+export function wheel(v: View): Picture {
+  return v.picture({ key: "wheel", width: 30, height: 30 }, () => {
     v.circle(15, 15, 13.5, inked("#2b2b33", 1.8));
     v.circle(15, 15, 6, inked("#c9c9d2", 1.2));
     v.rect(14, 9, 2, 12, { fill: "#2b2b33" });
@@ -454,8 +454,8 @@ export function wheel(v: View): Sprite {
 }
 
 /** The number 5 bus, 220×100 body (wheels drawn separately), facing right. */
-export function bus(v: View): Sprite {
-  return v.sprite({ key: "bus", width: 220, height: 100 }, () => {
+export function bus(v: View): Picture {
+  return v.picture({ key: "bus", width: 220, height: 100 }, () => {
     // passengers behind the glass
     v.rect(12, 14, 196, 34, inked("#bfe2ee", 2));
     const heads = [
@@ -498,15 +498,15 @@ export function bus(v: View): Sprite {
 }
 
 /** The bench's seat plank, 96×10, drawn over a sitting duck. */
-export function benchSeat(v: View): Sprite {
-  return v.sprite({ key: "bench-seat", width: 98, height: 12 }, () =>
+export function benchSeat(v: View): Picture {
+  return v.picture({ key: "bench-seat", width: 98, height: 12 }, () =>
     v.rect(1, 2, 96, 8, inked("#8a5a3a", 1.8)),
   );
 }
 
 /** A soft glint star for hover cues. */
-export function glint(v: View): Sprite {
-  return v.sprite({ key: "glint", width: 24, height: 24 }, () => {
+export function glint(v: View): Picture {
+  return v.picture({ key: "glint", width: 24, height: 24 }, () => {
     v.circle(12, 12, 12, {
       fill: v.radialGradient(12, 12, 12, [
         [0, "rgba(255,255,220,0.95)"],
@@ -530,8 +530,8 @@ export function glint(v: View): Sprite {
 }
 
 /** A warm glow for lamps and windows, drawn with a screen blend. */
-export function glow(v: View): Sprite {
-  return v.sprite({ key: "glow", width: 160, height: 160 }, () => {
+export function glow(v: View): Picture {
+  return v.picture({ key: "glow", width: 160, height: 160 }, () => {
     v.circle(80, 80, 80, {
       fill: v.radialGradient(80, 80, 80, [
         [0, "rgba(255,226,140,0.9)"],

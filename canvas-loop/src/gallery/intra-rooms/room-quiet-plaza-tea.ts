@@ -4,7 +4,7 @@
 // A dry tiered fountain topped with a chrome atom, its basin heaped with bottle
 // caps; a dry wall fountain with a smiling mask; a fake rock that is the water's
 // only source (a speaker); a plaque naming tonight's constellations.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { stencil } from "./parts-c-tea.js";
 import { amaEye, amaSpeaker, bench, citizen, pacing, plant, poster } from "./props-tea.js";
