@@ -22,6 +22,7 @@ import { PictureTable, placedVersion } from "./pictures.js";
 import { recordPicture, recordPixels } from "./picture-calls.js";
 import type { PictureScope } from "./picture-calls.js";
 import { RecorderNotes } from "./notes.js";
+import type { NoteSink } from "./notes.js";
 import { OffCanvas } from "./off-canvas.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolvePlace, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
@@ -42,7 +43,7 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly #params: ControlParams | undefined;
   readonly #table = new PictureTable();
   readonly #checks: { colors?: ColorParser; fontKnown?: (family: string) => boolean };
-  readonly #notes = new RecorderNotes();
+  readonly #notes: RecorderNotes;
   /** Testing mode: drawings off the canvas on every frame. */
   readonly #offCanvas: OffCanvas | undefined;
   /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
@@ -61,10 +62,12 @@ export class SceneRecorder extends PureHelpers implements View {
   /**
    * `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. `params` resolve `control` calls.
    * With `colors`, colours are parsed at the call (an unparsable one is an error there); with `fontKnown`, text in a
-   * font family the runtime does not have warns.
+   * font family the runtime does not have warns. With `onNote`, each log, warning and hint is also given to it as it
+   * happens, including in a `draw` that then throws.
    */
-  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number; params?: ControlParams; colors?: ColorParser; fontKnown?: (family: string) => boolean }) {
+  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number; params?: ControlParams; colors?: ColorParser; fontKnown?: (family: string) => boolean; onNote?: NoteSink }) {
     super();
+    this.#notes = new RecorderNotes(options?.onNote);
     this.#canvas = size;
     this.#size = size;
     this.#text = options?.text;
@@ -312,7 +315,7 @@ export class SceneRecorder extends PureHelpers implements View {
   // ── outputs that are not drawing ──
   log(...args: readonly unknown[]): void {
     this.#notInPicture("log");
-    this.#out.logs.push(formatArgs(args));
+    this.#out.logs.push(this.#notes.log(formatArgs(args)));
   }
   snapshot(label?: string): void {
     this.#notInPicture("snapshot");

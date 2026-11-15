@@ -101,7 +101,9 @@ export class SceneSurface implements FrameSurface {
     this.adapter = a.gpu.description;
     const size = { width: o.width, height: o.height };
     // Headless rendering is testing mode: pictures are re-recorded and compared every frame.
-    this.#recorder = new SceneRecorder(size, { text: a.text, audit: true, seed: o.seed, params: { decl: o.decl, values: o.getParams }, colors: a.gpu.colors, fontKnown: a.fontKnown });
+    // Logs, warnings and hints reach the transcript as they happen, in call order with console output, and before a failing `draw` ends the run.
+    const onNote = (note: { kind: "log" | "warn" | "hint"; message: string }): void => o.host.recordLog({ level: note.kind, message: note.message });
+    this.#recorder = new SceneRecorder(size, { text: a.text, audit: true, seed: o.seed, params: { decl: o.decl, values: o.getParams }, colors: a.gpu.colors, fontKnown: a.fontKnown, onNote });
     this.#overlay = new SceneRecorder(size, { text: a.text });
     this.#renderer = new GpuRenderer(a.gpu, { timing: o.timing });
     const where = { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: size };
@@ -113,14 +115,10 @@ export class SceneSurface implements FrameSurface {
   }
 
   draw(paint: (v: unknown) => void): void {
-    const host = this.#o.host;
     this.#last = undefined;
     const rec = this.#recorder.record((v) => paint(v));
     this.#last = rec;
-    for (const message of rec.logs) host.recordLog({ level: "log", message });
-    for (const message of rec.warnings) host.recordLog({ level: "warn", message });
-    for (const message of rec.hints) host.recordLog({ level: "hint", message });
-    for (const label of rec.snapshots) host.requestSnapshot(label);
+    for (const label of rec.snapshots) this.#o.host.requestSnapshot(label);
   }
 
   async capture(): Promise<Capture> {

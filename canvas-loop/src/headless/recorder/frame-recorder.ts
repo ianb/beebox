@@ -23,8 +23,10 @@ export interface RunResult {
 export interface RecorderDeps {
   frames: number;
   every: number;
-  /** Regions to write as enlarged crops beside every captured frame. */
+  /** Regions to write as enlarged crops beside every captured frame, in canvas pixels. */
   zooms?: readonly Zoom[];
+  /** Device pixels per canvas pixel in the captured frames (the scene renderer's `--ratio`); default 1. */
+  ratio?: number;
 }
 
 interface ZoomImage {
@@ -173,7 +175,7 @@ export class FrameRecorder implements SketchHost {
       writeFileSync(join(outDir, file), encodePng(pixels));
     }
     for (const [file, { pixels, zoom }] of this.#zoomsToEncode) {
-      writeFileSync(join(outDir, file), encodeZoomPng(pixels, zoom));
+      writeFileSync(join(outDir, file), encodeZoomPng(pixels, { zoom, ratio: this.#deps.ratio ?? 1 }));
     }
     for (const [file, bytes] of this.#files) writeFileSync(join(outDir, file), bytes);
     const transcriptPath = join(outDir, "transcript.md");

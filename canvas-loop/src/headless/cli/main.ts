@@ -82,7 +82,7 @@ async function zoomFile(args: readonly string[]): Promise<void> {
   const pixels = ctx.getImageData(0, 0, image.width, image.height);
   for (const [index, spec] of specs.entries()) {
     const out = join(dirname(resolve(file)), `${basename(file, ".png")}-crop${index + 1}.png`);
-    writeFileSync(out, encodeZoomPng(pixels, parseZoom(spec)));
+    writeFileSync(out, encodeZoomPng(pixels, { zoom: parseZoom(spec), ratio: 1 }));
     console.log(out);
   }
 }

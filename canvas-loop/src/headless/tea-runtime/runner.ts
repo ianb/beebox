@@ -6,8 +6,8 @@
 // guards; the render between them is awaited outside them.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CliError, UnhandledMsgError } from "../errors.js";
-import { assertSync, deepFreeze, guardParams, startParams, withGuards } from "./guards.js";
+import { CliError, SketchUsageError, UnhandledMsgError } from "../errors.js";
+import { asSketch, assertSync, deepFreeze, guardParams, installGuards, startParams } from "./guards.js";
 import { ActivityReporter } from "../../core/activity.js";
 import { SeededRandom } from "../../core/prng.js";
 import { FrameRecorder, patchConsole } from "../recorder/frame-recorder.js";
@@ -61,6 +61,9 @@ export interface TeaRunOptions {
   openGpu?: () => Promise<GpuHandle | undefined>;
 }
 
+/** A run is in progress in this process (its guards and console capture are process-wide). */
+let running = false;
+
 // A scripted INTERACTION event: everything but snapshot (a forced capture) and
 // param (which keeps its own `param:` line). These earn an engagement verdict.
 type TeaInputEvent = Exclude<TeaScriptEvent, { type: "snapshot" } | { type: "param" }>;
@@ -91,6 +94,8 @@ class TeaRunner {
   #timer: FrameTimer | undefined;
   #score = new Score();
   #step: Step = { frame: undefined, name: "init" };
+  /** An error thrown by a callback the sketch scheduled (it runs between steps, while the run awaits). */
+  #escaped: Error | undefined;
 
   constructor(options: TeaRunOptions, a: { recorder: FrameRecorder; state: { params: ParamValues<ParamsDecl> }; surface: FrameSurface }) {
     this.#options = options;
@@ -111,11 +116,23 @@ class TeaRunner {
 
   async run(): Promise<RunResult> {
     const restoreConsole = patchConsole(this.#recorder);
+    // A callback the sketch scheduled that throws or rejects (a guarded global, or anything else) would end the process; it ends the run
+    // instead. Other rejection listeners are set aside for the run, as the capture callback sets aside 'uncaughtException'.
+    const escaped = (error: unknown): void => {
+      this.#escaped ??= error instanceof Error ? error : new SketchUsageError({ detail: `a callback the sketch scheduled threw ${formatArgs([error])}` });
+    };
+    process.setUncaughtExceptionCaptureCallback(escaped);
+    const rejectionListeners = process.listeners("unhandledRejection");
+    process.removeAllListeners("unhandledRejection");
+    process.on("unhandledRejection", escaped);
     try {
       await this.#execute();
       for (const message of this.#unhandled.summary()) this.#recorder.recordLog({ level: "log", message });
       if (this.#timer !== undefined) this.#recorder.recordLog({ level: "log", message: this.#timer.report() });
     } finally {
+      process.setUncaughtExceptionCaptureCallback(null);
+      process.removeListener("unhandledRejection", escaped);
+      for (const listener of rejectionListeners) process.on("unhandledRejection", listener);
       restoreConsole();
       this.#surface.close();
     }
@@ -127,7 +144,11 @@ class TeaRunner {
       this.#model = this.#sketch("init", () => this.#options.module.init(this.#util));
       for (let frame = 0; frame < this.#options.frames; frame++) {
         await this.#runFrame(frame);
+        this.#throwEscaped();
       }
+      // Let what the last frame scheduled run, under the guards.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      this.#throwEscaped();
       this.#surface.finish();
       for (const [file, bytes] of soundFiles(this.#score.voices(), { frames: this.#options.frames, fps: this.#options.fps })) {
         this.#recorder.addFile(file, bytes);
@@ -137,12 +158,25 @@ class TeaRunner {
     }
   }
 
-  /** Call a sketch function under the guards; its result must not be a Promise. `init`'s and `update`'s results are frozen. */
+  /** A callback the sketch scheduled threw: end the run with its error, at the frame it surfaced in. */
+  #throwEscaped(): void {
+    if (this.#escaped === undefined) return;
+    this.#step = { frame: this.#step.frame, name: "a callback the sketch scheduled" };
+    throw this.#escaped;
+  }
+
+  /**
+   * Call a sketch function as sketch code (the guards apply); its result must
+   * not be a Promise. `init`'s, `update`'s and `sound`'s results are frozen,
+   * also as sketch code, so a getter they run is guarded too.
+   */
   #sketch<T>(name: "init" | "update" | "sound" | "draw", call: () => T): T {
-    const result = withGuards(call);
-    assertSync(result, name);
-    if (name === "init" || name === "update") deepFreeze(result);
-    return result;
+    return asSketch(() => {
+      const result = call();
+      assertSync(result, name);
+      if (name !== "draw") deepFreeze(result);
+      return result;
+    });
   }
 
   async #runFrame(frame: number): Promise<void> {
@@ -224,7 +258,7 @@ class TeaRunner {
   /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive). */
   #recordActivity(): void {
     const model = this.#model;
-    const json = withGuards(() => this.#activity.json(model));
+    const json = asSketch(() => this.#activity.json(model));
     if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}` });
   }
 
@@ -319,10 +353,19 @@ function noAdapter(options: TeaRunOptions): never {
  * would not show) and, after writing the transcript, `NoGpuAdapterError`.
  */
 export async function teaRun(options: TeaRunOptions): Promise<RunResult> {
-  const { module } = options;
-  const state = { params: guardParams(module.params, startParams(module.params, options.initialParams ?? {})) };
-  const recorder = new FrameRecorder({ frames: options.frames, every: options.every, ...(options.zooms === undefined ? {} : { zooms: options.zooms }) });
-  const surface = await openSurface(options, { recorder, getParams: () => state.params });
-  if (surface === undefined) noAdapter(options);
-  return new TeaRunner(options, { recorder, state, surface }).run();
+  if (running) throw new CliError({ detail: "teaRun is already running in this process: a run holds process-wide determinism guards and console capture until it ends, so runs go one at a time (await the first, or use a child process)" });
+  running = true;
+  const restoreGuards = installGuards();
+  try {
+    const { module } = options;
+    const state = { params: guardParams(module.params, startParams(module.params, options.initialParams ?? {})) };
+    const ratio = module.renderer === "scene" ? (options.ratio ?? 1) : 1;
+    const recorder = new FrameRecorder({ frames: options.frames, every: options.every, ratio, ...(options.zooms === undefined ? {} : { zooms: options.zooms }) });
+    const surface = await openSurface(options, { recorder, getParams: () => state.params });
+    if (surface === undefined) noAdapter(options);
+    return await new TeaRunner(options, { recorder, state, surface }).run();
+  } finally {
+    restoreGuards();
+    running = false;
+  }
 }

@@ -47,4 +47,70 @@ for (const surface of SURFACES) {
     assert.equal(typeof Math.random(), "number", "Math.random works again");
     assert.equal(typeof Date.now(), "number", "Date.now works again");
   });
+
+  test(`a callback the sketch scheduled is guarded too, and its error ends the run (${surface})`, async () => {
+    let seen: number | undefined;
+    const module = onSurface(toTeaModule({
+      canvas: { width: 20, height: 20 },
+      init: () => {
+        queueMicrotask(() => {
+          seen = Math.random();
+        });
+        return {};
+      },
+      update: (model: object) => model,
+      draw: (v: View) => v.background("#000000"),
+    }), surface);
+    const dir = tmpDir();
+    const result = await teaRun(teaRunOptions(module, { outDir: dir, frames: 3 }));
+    assert.equal(seen, undefined, "the callback did not get a random number");
+    assert.equal(result.errors.length, 1, result.errors.join("\n"));
+    assert.match(result.errors[0] ?? "", /error in a callback the sketch scheduled: DeterminismError: Math\.random\(\) is unavailable.* \(at test\/headless\/tea-runtime\.guards\.gpu\.test\.ts:\d+:\d+\)$/u);
+    assert.ok(readTranscript(dir).includes("error in a callback the sketch scheduled: DeterminismError"));
+    assert.equal(typeof Math.random(), "number", "Math.random works again after the run");
+  });
+
+  test(`a promise callback the sketch scheduled is guarded, and its rejection ends the run (${surface})`, async () => {
+    const module = onSurface(toTeaModule({
+      canvas: { width: 20, height: 20 },
+      init: () => {
+        void Promise.resolve().then(() => Math.random());
+        return {};
+      },
+      update: (model: object) => model,
+      draw: (v: View) => v.background("#000000"),
+    }), surface);
+    const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
+    assert.equal(result.errors.length, 1);
+    assert.match(result.errors[0] ?? "", /error in a callback the sketch scheduled: DeterminismError: Math\.random\(\)/u);
+  });
+
+  test(`a getter in the model runs under the guards when the runner freezes it (${surface})`, async () => {
+    let cached: number | undefined;
+    const module = onSurface(toTeaModule({
+      canvas: { width: 20, height: 20 },
+      init: () => ({
+        get x(): number {
+          cached ??= Math.random();
+          return cached;
+        },
+      }),
+      update: (model: object) => model,
+      draw: (v: View) => v.background("#000000"),
+    }), surface);
+    const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
+    assert.equal(cached, undefined);
+    assert.equal(result.errors.length, 1);
+    assert.match(result.errors[0] ?? "", /^error in init: DeterminismError: Math\.random\(\)/u);
+  });
 }
+
+test("a second teaRun while one is running is refused, and the first restores the console", async () => {
+  const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m: object) => m, draw: (v: View) => v.background("#000000") });
+  const log = console.log;
+  const [first, second] = await Promise.allSettled([teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 3 })), teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 3 }))]);
+  assert.equal(first.status, "fulfilled");
+  assert.equal(second.status, "rejected");
+  assert.match(second.status === "rejected" ? String(second.reason) : "", /teaRun is already running in this process/u);
+  assert.equal(console.log, log, "console.log is restored");
+});

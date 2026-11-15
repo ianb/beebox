@@ -1,9 +1,10 @@
 // Testing-mode guards for a headless run: the model is frozen, so a `draw` or
 // `update` that changes it in place fails at the line; sketch functions must
-// be synchronous; the ambient nondeterministic globals throw while a sketch
-// function runs; reading a param the sketch does not declare is an error
+// be synchronous; the ambient nondeterministic globals throw for sketch code
+// for the whole run, including callbacks the sketch scheduled; reading a param the sketch does not declare is an error
 // naming the declared ones (it would be `undefined`, then NaN in arithmetic);
 // and starting params are checked against the declaration.
+import { AsyncLocalStorage } from "node:async_hooks";
 import { checkParam } from "../../browser/param-validate.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { ParamsDecl, ParamValues } from "../../core/tea.js";
@@ -32,61 +33,67 @@ export function assertSync(result: unknown, step: string): void {
   throw new SketchUsageError({ detail: `${step}() returned a Promise: sketches must be synchronous (no async, no await)` });
 }
 
+// Sketch code, and everything it schedules (a microtask, a promise callback, a
+// timer), runs in this context; the runtime's own work (the render) does not.
+const sketchContext = new AsyncLocalStorage<true>();
+
+/** Run `body` (a sketch call, with what checks its result) as sketch code: the guarded globals throw inside it and inside anything it schedules. */
+export function asSketch<T>(body: () => T): T {
+  return sketchContext.run(true, body);
+}
+
+/** `real` for the runtime; a DeterminismError for sketch code. */
+function guarded<A extends unknown[], R>(real: (...args: A) => R, error: () => DeterminismError): (...args: A) => R {
+  return (...args) => {
+    if (sketchContext.getStore() === true) throw error();
+    return real(...args);
+  };
+}
+
 /**
- * Run `body` (one sketch call) with the ambient nondeterministic globals
- * virtualized: Math.random, Date.now, performance.now, and argless `new Date()`
- * / `Date()` throw a DeterminismError pointing at the sketch's seeded
- * `random()` or the tick msg. Originals are restored even if `body` throws.
- *
- * `body` must be synchronous: the guards are process-wide while it runs, so the
- * runner wraps each sketch call and never awaits under them (the GPU render
- * reads the clock).
+ * Install the determinism guards for a whole run and return what restores the
+ * originals: Math.random, Date.now, performance.now, and argless `new Date()`
+ * / `Date()` throw a DeterminismError, pointing at the sketch's seeded
+ * `random()` or the tick msg, when sketch code calls them (`asSketch`), also
+ * from a callback the sketch scheduled that runs while the run awaits its
+ * render. The runtime's own calls (the renderer reads the clock) get the real
+ * functions. Decided by async context, not by file, so it holds when
+ * canvas-loop is bundled.
  */
-export function withGuards<T>(body: () => T): T {
+export function installGuards(): () => void {
   const realRandom = Math.random;
   const realDateNow = Date.now;
   const realPerfNow = performance.now;
   const realDate = globalThis.Date;
+  const tick = (api: string) => () => new DeterminismError({ api, use: "a frame count from the tick msg" });
 
+  const guardedNow = guarded(() => realDateNow(), tick("Date.now"));
   const guardedDate = new Proxy(realDate, {
     construct(target, args) {
-      if (args.length === 0) {
-        throw new DeterminismError({ api: "new Date", use: "a frame count from the tick msg" });
-      }
+      if (args.length === 0 && sketchContext.getStore() === true) throw tick("new Date")();
       return Reflect.construct(target, args);
     },
-    apply() {
-      throw new DeterminismError({ api: "Date", use: "a frame count from the tick msg" });
+    apply(...call: [typeof realDate, unknown, unknown[]]) {
+      if (sketchContext.getStore() === true) throw tick("Date")();
+      return Reflect.apply(...call);
     },
     get(target, property) {
-      if (property === "now") {
-        return () => {
-          throw new DeterminismError({ api: "Date.now", use: "a frame count from the tick msg" });
-        };
-      }
+      if (property === "now") return guardedNow;
       return Reflect.get(target, property);
     },
   });
 
-  Math.random = () => {
-    throw new DeterminismError({ api: "Math.random", use: "u.random() in init/update" });
-  };
-  Date.now = () => {
-    throw new DeterminismError({ api: "Date.now", use: "a frame count from the tick msg" });
-  };
-  performance.now = () => {
-    throw new DeterminismError({ api: "performance.now", use: "a frame count from the tick msg" });
-  };
+  Math.random = guarded(() => realRandom(), () => new DeterminismError({ api: "Math.random", use: "u.random() in init/update" }));
+  Date.now = guardedNow;
+  performance.now = guarded(() => realPerfNow.call(performance), tick("performance.now"));
   globalThis.Date = guardedDate;
 
-  try {
-    return body();
-  } finally {
+  return () => {
     Math.random = realRandom;
     Date.now = realDateNow;
     performance.now = realPerfNow;
     globalThis.Date = realDate;
-  }
+  };
 }
 
 // Names `await` and `JSON.stringify` probe on any object; a sketch does not read them as params.
