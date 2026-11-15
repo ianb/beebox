@@ -1104,9 +1104,11 @@ by the same WebGPU renderer.
   - **One-sample contours** are dabs laid by `dabs`, as the plan says:
     `bristleDots` turns them into a stamp job (sizeByPressure 0.65, flow,
     opacityByPressure 0, no jitter of size or place, a hard tip), which gives
-    `width / 2 × (0.35 + 0.65 p)`, bristle 0's colour, and alpha `flow`. One
-    difference: the stamp skip rule (radius at most 0.05 brush px) now applies
-    to them; it needs a brush under 0.15 brush px wide.
+    `width / 2 × (0.35 + 0.65 p)`, bristle 0's colour, and alpha `flow`. The
+    job's `dot` flag (stroke word 4) turns off the stamp skip rule, since
+    `paintBristle` draws every dot: from the cross-model review, a dot of
+    weight 0.1 at ratio 32 (radius 0.05 brush px, 1.6 device px) was skipped.
+    A regression test draws it.
   - **The box.** `gpuBox` grows the prepared box by `bristleReach` (the
     outermost bristle and half the thickest) plus the other half of the
     thickest bristle, since a strip's mitre reaches up to twice its half width
@@ -1201,6 +1203,19 @@ by the same WebGPU renderer.
     binds that batch's output as its dabs. The smear is placed when its layer
     is drawn, since the dabs need the layer's corner, so its packing, upload
     and dispatch count in `encode`, not in `stats.cpu.brush`.
+  - **One scratch pair a frame** (from the cross-model review). Each smear
+    and the bristle sequence had allocated their own sample and output
+    buffers, so two smears of a million dabs each took 160 MB, over the
+    plan's two buffers of `B`. The renderer now reserves one sample buffer and
+    one output buffer for the frame before the mark atlas (`MarkAtlas.reserve`,
+    `scratchNeed`: an upper bound of the stamp and ink, bristle and largest
+    smear needs, each at most `B`), and every sequence and smear uses them in
+    turn; each output is read before the next dispatch overwrites it, in the
+    frame's one command encoder. A batch the pair cannot hold is an error.
+    `stats.brushScratch` gives its bytes. A test with two smears and a bristle
+    stroke at a limit that holds only the larger smear checks the pair stays
+    within twice the limit (separate pairs would exceed it) and the pixels
+    match the device's limit.
   - **The limit is the dab size, not `B / 32`.** A smear's samples and dabs
     must each fit one buffer, and a dab is 48 bytes, so the bound is about
     `B / 48` dabs; its records and geometry must also fit one input.

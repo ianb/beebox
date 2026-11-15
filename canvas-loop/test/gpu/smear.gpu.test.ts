@@ -147,3 +147,41 @@ test("a smear larger than one buffer fails, naming its call", async (t) => {
     renderer.destroy();
   }
 });
+
+test("two large smears and bristles share one sample buffer and one output buffer, within two of the limit", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  const scene = new SceneRecorder({ width: 400, height: 120 }).record((v) => {
+    v.background("#f4efe2");
+    v.line(10, 30, 390, 40, { stroke: "#000", weight: 2, brush: "smudge" });
+    v.line(10, 70, 390, 60, { stroke: "#f2f2f2", weight: 2, brush: "wet" });
+    v.curve([[10, 100], [30, 95], [50, 105]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle" });
+    v.line(70, 100, 70, 100, { stroke: "#3b5d8a", weight: 12, brush: "bristle" });
+  }).scene;
+  const expander = new BrushExpander({ enabled: false });
+  const sets = brushRequests(scene, handle.colors).map((r) => expander.expand(r)?.set);
+  const counts = sets.flatMap((s) => (s?.kind === "smear" ? [s.prepared.contours.reduce((n, c) => n + c.count, 0)] : []));
+  // The limit holds the larger smear's dabs and one bristle's strip, nothing more.
+  const strip = Math.max(...sets.flatMap((s) => (s?.kind === "bristle" ? s.prepared.contours.map((c) => (c.count - 1) * 6 * 24 * 4) : [])));
+  const limit = Math.ceil(Math.max(Math.max(...counts) * DAB_FLOATS * 4, strip) / 256) * 256;
+  // A pair per smear (samples and dabs) would alone exceed two buffers of the limit.
+  const separate = counts.reduce((n, c) => n + c * (8 + DAB_FLOATS) * 4, 0);
+  assert.equal(counts.length, 2);
+  assert.ok(separate > 2 * limit, `separate smear pairs, ${separate} bytes, exceed ${2 * limit}`);
+  const whole = new GpuRenderer(handle);
+  const split = new GpuRenderer(handle, { brushLimit: limit });
+  try {
+    for (const ratio of [1, 2]) {
+      const a = await whole.render(scene, ratio);
+      const b = await split.render(scene, ratio);
+      t.diagnostic(`ratio ${ratio}: limit ${limit} bytes; scratch ${split.stats.brushScratch} bytes, ${split.stats.smears} smears, ${split.stats.brushBatches} mark batches`);
+      assert.equal(split.stats.smears, 2);
+      assert.ok(split.stats.brushBatches > 1);
+      assert.ok(split.stats.brushScratch > 0 && split.stats.brushScratch <= 2 * limit, "one sample buffer and one output buffer, each at most the limit");
+      assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), `ratio ${ratio}: the same pixels as at the device's limit`);
+    }
+  } finally {
+    whole.destroy();
+    split.destroy();
+  }
+});

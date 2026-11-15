@@ -183,6 +183,7 @@ export class GpuRenderer {
     const t1 = performance.now();
     const timer = this.#timer;
     const atlas = this.#atlas.build(pieces, { enc, pool: this.#pool, temp: a.temp, minWidth: widthOf(root.rect), timer });
+    stats.brushScratch = this.#marks.reserve(marks, { smears: jobs.flatMap((j) => j.items.flatMap((it) => (it.k === "smear" ? [it.smear.prepared] : []))), temp: a.temp });
     const markPages = this.#marks.build(marks, { enc, pool: this.#pool, temp: a.temp, timer, stats });
     const glyphPages = this.#glyphs.build(cells, { device, pool: this.#pool });
     stats.pieces = pieces.length;

@@ -21,6 +21,8 @@ import type { PassTimer } from "./timing.js";
 import { MARK_WGSL } from "./shader-mark.js";
 import { BrushPass } from "./brush-pass.js";
 import type { Batch, BrushJob, SampleRange } from "./brush-pass.js";
+import { scratchNeed } from "./brush-pack.js";
+import type { Prepared } from "../scene/brush/expand.js";
 import type { FrameStats } from "./frame.js";
 import { DAB_FLOATS } from "./shader-brush.js";
 import { RUN_FLOATS } from "./shader-bristle.js";
@@ -108,13 +110,14 @@ function brushJob(m: GpuMark): BrushJob {
  * `paintBristle` paints such a contour as one hard dab of radius
  * `width / 2 × (0.35 + 0.65 p)` at the brush flow, in bristle 0's colour, which
  * is the `dabs` entry's dab 0 with sizeByPressure 0.65 and nothing else
- * varied. Undefined when the stroke has none.
+ * varied; `dot` keeps the stamp skip rule off, since `paintBristle` draws every
+ * dot. Undefined when the stroke has none.
  */
 export function bristleDots(job: BrushJob, brush: BristleBrush): BrushJob | undefined {
   const contours = job.prepared.contours.filter((c) => c.count === 1);
   if (contours.length === 0) return undefined;
   const dot = { kind: "stamp", opacity: brush.opacity, grain: brush.grain, tip: "hard", spacing: 1, flow: brush.flow, sizeByPressure: 0.65, opacityByPressure: 0, scatter: 0, sizeJitter: 0, hueJitter: brush.hueJitter ?? 0, lightJitter: brush.lightJitter ?? 0 } as const;
-  return { ...job, prepared: { ...job.prepared, contours }, brush: dot };
+  return { ...job, prepared: { ...job.prepared, contours }, brush: dot, dot: true };
 }
 
 /** Each page's range of instances or vertices, for one kind. */
@@ -246,6 +249,12 @@ export class MarkAtlas {
     let runs: BatchDraws["draws"] | undefined;
     const strips = bristles.length === 0 ? { batches: 0, ms: 0 } : this.brushes.encodeBristles(bristles.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, draws: (runs ??= [{ pipe: this.#run, ranges: pageRanges(bristles.map((m) => m.slot.page), strokes), instanced: false }]) }) });
     return { batches: out.batches + strips.batches, ms: out.ms + strips.ms };
+  }
+
+  /** Reserve the frame's one brush sample buffer and output buffer, shared by this atlas's batches and every smear (`smears`, drawn later); returns its bytes, 0 when the frame has no brushes. */
+  reserve(marks: readonly TexMark[], f: { smears: readonly Prepared[]; temp: GPUBuffer[] }): number {
+    const need = scratchNeed({ gpu: marks.flatMap((m) => m.gpu ?? []), smears: f.smears, limit: this.brushes.limit });
+    return need.samples > 0 || need.out > 0 ? this.brushes.reserve(f, need) : 0;
   }
 
   /** Verification: draw capsule instances into `tex` (cleared first), in their order. */

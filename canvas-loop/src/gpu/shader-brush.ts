@@ -207,7 +207,7 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // The `dabs` entry: kinds.ts `paintStamp` for sample i, written as dab instance i
 // (mark-atlas.ts's layout: x, y, radius, alpha; soft, r, g, b; the slot) in the
 // mark's own device pixels. A dab paintStamp skips is written with alpha 0.
-// Stroke record words: 0-3 brush space → device (linear), 4-5 unused (the
+// Stroke record words: 0-3 brush space → device (linear), 4 a bristle dot (no dab skipped), 5 unused (the
 // offset to the mark's own pixels is per contour, words 14-15), 6-9 the slot, 10 width (brush space), 11 pixel ratio;
 // a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
 // 16 scatter, 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour
@@ -252,7 +252,8 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
     let light = sf(st, 19u) * (2.0 * rand1(seed, 14u, k) - 1.0);
     rgb = shiftColour(vec3f(sf(st, 20u), sf(st, 21u), sf(st, 22u)), hue, light) / 255.0;
   }
-  let shown = radius > 0.05 && alpha > 0.0;
+  // A bristle dot (stroke word 4) is never skipped, as kinds.ts paintBristle draws it.
+  let shown = (radius > 0.05 && alpha > 0.0) || sf(st, 4u) > 0.5;
   let o = (i - u.base) * ${DAB_FLOATS}u;
   let slot = sv(st, 6u);
   dab[o] = at.x; dab[o + 1u] = at.y;

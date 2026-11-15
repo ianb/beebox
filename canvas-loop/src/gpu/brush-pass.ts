@@ -130,6 +130,36 @@ export class BrushPass {
     return buf;
   }
 
+  /** Each frame's scratch pair (keyed by the frame's `temp`), and whether it was reserved for the whole frame. */
+  readonly #frames = new WeakMap<GPUBuffer[], { samples: GPUBuffer; out: GPUBuffer; reserved: boolean }>();
+
+  #allocate(f: { temp: GPUBuffer[] }, need: { samples: number; out: number; reserved: boolean }): { samples: GPUBuffer; out: GPUBuffer; reserved: boolean } {
+    const S = GPUBufferUsage.STORAGE;
+    const pair = { samples: this.#buffer(f, { size: need.samples, usage: S | GPUBufferUsage.COPY_SRC }), out: this.#buffer(f, { size: need.out, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC }), reserved: need.reserved };
+    this.#frames.set(f.temp, pair);
+    return pair;
+  }
+
+  /**
+   * Reserve the frame's one sample buffer and one output buffer, each at most
+   * the limit: every sequence of the frame (stamps and ink, bristles, each
+   * smear) uses this pair in turn, each consuming its output before the next
+   * dispatch overwrites it (one command encoder, in order). `need` is an upper
+   * bound (`scratchNeed`). Returns the pair's bytes.
+   */
+  reserve(f: { temp: GPUBuffer[] }, need: { samples: number; out: number }): number {
+    const pair = this.#allocate(f, { ...need, reserved: true });
+    return pair.samples.size + pair.out.size;
+  }
+
+  /** The frame's pair, if it holds `need`; a reserved pair that does not is an error; an unreserved frame (verification) gets a pair of its own. */
+  #pair(f: { temp: GPUBuffer[] }, need: { samples: number; out: number }): { samples: GPUBuffer; out: GPUBuffer } {
+    const held = this.#frames.get(f.temp);
+    if (held !== undefined && held.samples.size >= need.samples && held.out.size >= need.out) return held;
+    if (held?.reserved === true) throw new GpuRenderError({ detail: `the frame's brush scratch (${held.samples.size} and ${held.out.size} bytes) is smaller than a batch needs (${need.samples} and ${need.out})` });
+    return this.#allocate(f, { ...need, reserved: false });
+  }
+
   #bind(pipe: GPUComputePipeline, entries: readonly (readonly [number, GPUBuffer])[]): GPUBindGroup {
     return this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: entries.map(([binding, buffer]) => ({ binding, resource: { buffer } })) });
   }
@@ -179,8 +209,9 @@ export class BrushPass {
     // A capsule batch also computes the sample after its last (in its input), its last capsule's far end.
     const plan = inputs.flatMap((input) => planBatches(spans(input), cap).map((b) => ({ input, ...b, samples: jobs === undefined ? b.count : Math.min(b.first + b.count + 1, input.first + input.count) - b.first })));
     const S = GPUBufferUsage.STORAGE;
-    const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
-    const out = jobs === undefined ? undefined : this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * DAB_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
+    const pair = this.#pair(f, { samples: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, out: jobs === undefined ? 0 : Math.max(...plan.map((b) => b.count)) * DAB_FLOATS * 4 });
+    const { samples } = pair;
+    const out = jobs === undefined ? undefined : pair.out;
     const uniform = (input: Input, a: { first: number; count: number; base: number }): GPUBuffer => this.#uniform(f, { input, ...a, sbase: 0 });
     const pipes = this.#pipelines;
     const first = f.smear === true ? pipes.smears : pipes.dabs;
@@ -280,8 +311,7 @@ export class BrushPass {
       });
     });
     const S = GPUBufferUsage.STORAGE;
-    const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
-    const out = this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * RUN_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
+    const { samples, out } = this.#pair(f, { samples: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, out: Math.max(...plan.map((b) => b.count)) * RUN_FLOATS * 4 });
     const pipes = this.#pipelines;
     let bound: { input: Input; records: GPUBuffer; geometry: GPUBuffer } | undefined;
     for (const b of plan) {

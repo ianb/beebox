@@ -30,6 +30,8 @@ export interface BrushJob {
   readonly offset: readonly [number, number];
   /** The mark's slot on its page: x0, y0, x1, y1 (unused for a smear). */
   readonly slot: readonly [number, number, number, number];
+  /** A bristle stroke's one-sample dots as a stamp job: no dab is skipped (kinds.ts `paintBristle` draws every dot). */
+  readonly dot?: boolean;
 }
 
 /** The keyframes as the CPU reads them: a frame followed by one at the same t is skipped (envelope.ts). */
@@ -52,8 +54,8 @@ function envelopeWords(env: Envelope): EnvelopeWords {
 /** A stroke's record (shader-brush.ts lists the words). */
 function strokeWords(j: BrushJob): number[] {
   const b = j.brush;
-  // Words 4-5 are unused: each contour's offset is in its own record (`pack`).
-  const head = [...j.lin, 0, 0, ...j.slot, j.prepared.width, j.ratio];
+  // Word 4: a bristle dot (no dab skipped). Word 5 is unused: each contour's offset is in its own record (`pack`).
+  const head = [...j.lin, j.dot === true ? 1 : 0, 0, ...j.slot, j.prepared.width, j.ratio];
   if (b.kind === "ink") return [...head, b.thinning];
   if (b.kind === "smear") return [...head, b.sizeByPressure, b.flow, b.opacityByPressure];
   const base = j.prepared.base;
@@ -107,6 +109,34 @@ export function checkSmear(p: Prepared, limit: number): void {
   const geometry = p.contours.reduce((m, c) => m + c.geom.length, 0) * 4;
   const dabs = n * Math.max(DAB_FLOATS, SAMPLE_FLOATS) * 4;
   if (Math.max(records, geometry, dabs) > limit) throw new GpuRenderError({ detail: `a smudge or wet stroke of ${n} dabs needs ${kib(dabs)} of dabs, ${kib(geometry)} of geometry and ${kib(records)} of records, and must stay in one brush buffer (${kib(limit)}); split it into shorter strokes` });
+}
+
+/**
+ * An upper bound of the bytes one frame's brush batches need in its shared
+ * sample buffer and output buffer (brush-pass.ts `reserve`), each at most
+ * `limit`: the stamp, ink and bristle-dot samples and instances, the bristle
+ * samples and strip vertices, and the largest smear's samples and dabs.
+ */
+export function scratchNeed(a: { gpu: readonly Pick<BrushJob, "prepared" | "brush">[]; smears: readonly Prepared[]; limit: number }): { samples: number; out: number } {
+  let instances = 0;
+  let bristleSamples = 0;
+  let vertices = 0;
+  for (const g of a.gpu) {
+    for (const c of g.prepared.contours) {
+      if (g.brush.kind !== "bristle" || c.count < 2) instances += c.count;
+      if (g.brush.kind !== "bristle") continue;
+      // A bristle batch computes every sample between its first and last contour, one-sample contours included.
+      bristleSamples += c.count;
+      vertices += Math.max(0, c.count - 1) * RUN_VERTICES * Math.round(g.brush.bristles);
+    }
+  }
+  const smear = Math.max(0, ...a.smears.map((p) => p.contours.reduce((n, c) => n + c.count, 0)));
+  const fit = (n: number, bytes: number): number => Math.min(n, Math.floor(a.limit / bytes)) * bytes;
+  const s = SAMPLE_FLOATS * 4;
+  return {
+    samples: Math.max(fit(instances, s), fit(bristleSamples, s), smear * s),
+    out: Math.max(fit(instances, DAB_FLOATS * 4), fit(vertices, RUN_FLOATS * 4), smear * DAB_FLOATS * 4),
+  };
 }
 
 /** A run of samples a batch holds: `whole`, it must not be split between batches. */

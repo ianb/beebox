@@ -363,3 +363,24 @@ test("a bristle larger than one buffer fails, naming its call", async (t) => {
     renderer.destroy();
   }
 });
+
+test("a one-sample bristle dot far below 0.05 brush px is drawn at a high pixel ratio, as the CPU draws it", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  // Weight 0.1, even pressure: radius 0.05 brush px, 1.6 device px at ratio 32. The stamp rule would skip it.
+  const draw = (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]): void => v.line(5, 5, 5, 5, { stroke: "#000", weight: 0.1, brush: "bristle", gesture: { pressure: "even" } });
+  const s = scene({ width: 10, height: 10 }, draw);
+  const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio: 32 });
+  reportStrips(t, { w, what: "dot, ratio 32" });
+  assert.equal(w.dots, 1);
+  const renderer = new GpuRenderer(handle);
+  try {
+    // The canvas has no background: alpha there is the dot's.
+    const px = await renderer.render(s, 32);
+    const at = (160 * px.width + 160) * 4 + 3;
+    t.diagnostic(`alpha at the dot's centre: ${px.data[at]}`);
+    assert.ok((px.data[at] ?? 0) > 0, "the dot is drawn");
+  } finally {
+    renderer.destroy();
+  }
+});
