@@ -34,7 +34,7 @@ import { BrushExpander, POINT_WORDS, brushSamples, expandOnCpu, prepare } from "
 import type { Mat } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
-import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
+import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { brushRequests } from "../brushes/requests.js";
 import { STAMPS_SIZE, drawExtremes, drawJitter } from "./stamps.js";

@@ -3,6 +3,9 @@
 // edges and faint granulation.
 import type { Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
 
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
+
 export const params = {
   look: { type: "select", options: ["plain", "wash"], default: "wash", label: "Look" },
 } as const satisfies ParamsDecl;

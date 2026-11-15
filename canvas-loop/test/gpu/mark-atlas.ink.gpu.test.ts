@@ -21,7 +21,7 @@ import { sharedGpu } from "../../src/headless/scene/surface.js";
 import { BrushExpander, brushSamples, expandOnCpu } from "../../src/scene/brush/expand.js";
 import type { Mat } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
-import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
+import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
 import type { PlacedRequest } from "../brushes/requests.js";
 import { brushRequests } from "../brushes/requests.js";
 import { frozen } from "./brush-cases.js";

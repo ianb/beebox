@@ -104,10 +104,11 @@ interface PortModule {
   draw(...a: never[]): void;
 }
 
-/** A ported sketch's frames `at` (ticks run for the frames between), recorded as the browser records them, with default params. */
-export function portFrames(mod: PortModule, a: { at: readonly number[]; text: TextMeasurer }): Scene[] {
+/** A ported sketch's frames `at` (ticks run for the frames between), recorded as the browser records them, with default params except `params`. */
+export function portFrames(mod: PortModule, a: { at: readonly number[]; text: TextMeasurer; params?: Readonly<Record<string, number | boolean | string>> }): Scene[] {
   const params: Record<string, number | boolean | string> = {};
   for (const [k, p] of Object.entries(mod.params)) if (p.type !== "trigger") params[k] = p.default;
+  Object.assign(params, a.params);
   const where = { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: mod.canvas };
   const text = { width: a.text.width.bind(a.text), bounds: (...[content, box, options]: Parameters<TeaUtil<ParamsDecl>["textBounds"]>) => a.text.place(content, { box, options: options ?? {}, where }).bounds };
   const util = new TeaUtil({ random: new SeededRandom(42), getParams: () => params, onHandled: () => {}, log: () => {}, text });

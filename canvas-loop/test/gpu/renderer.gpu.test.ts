@@ -36,9 +36,9 @@ import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-ca
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
 import * as sceneSketchModule from "./scene-sketch.js";
-import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
-import * as hallwayPort from "../../src/examples/scene-ports/hallway/sketch-tea.js";
-import * as chemistryPort from "../../src/examples/scene-ports/chemistry/sketch-tea.js";
+import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
+import * as hallwayPort from "../../src/gallery/intra-rooms/sketch-tea.js";
+import * as chemistryPort from "../../src/gallery/balance-reaction-2/sketch-tea.js";
 
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;
@@ -243,16 +243,16 @@ onGpu("hatching amount sets how many lines show at a tone, not only how dark", h
 onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {
   await cacheEquivalence(handle, { t, text });
 });
-onGpu("cached, uncached and cold renders give the same bytes: the three ports", async (handle, t) => {
+onGpu("cached, uncached and cold renders give the same bytes: the walker sheet, the Hallway and chemistry exercises", async (handle, t) => {
   if (text === undefined) return;
   const ports = [
     { name: "walker sheet", mod: walkerSheet, at: [1, 2, 3] },
     // The Hallway pans from frame 301: still frames, then panning ones.
-    { name: "Hallway", mod: hallwayPort, at: [1, 2, 330, 331, 332] },
+    { name: "Hallway", mod: hallwayPort, at: [1, 2, 330, 331, 332], params: { room: "hallway" } },
     { name: "chemistry", mod: chemistryPort, at: [1, 2, 3] },
   ];
   for (const p of ports) {
-    const scenes = portFrames(p.mod, { at: p.at, text });
+    const scenes = portFrames(p.mod, { at: p.at, text, ...("params" in p ? { params: p.params } : {}) });
     const used = await sameWarmColdOff(handle, { scenes, ratio: 1, what: p.name });
     t.diagnostic(`${p.name}: warm renderer reused ${used.kept} geometry entries, ${used.tiles} picture tiles, ${used.strokes} brush expansions`);
   }

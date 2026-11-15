@@ -100,8 +100,46 @@ chunk, with a test).
 | `paint-simple` | ported: cache | 249 | 238/249 | 98.66 | 0.059 | 0.01 / 7.03 | brush texture (7) | pass: nested pictures replay the page stroke by stroke |
 | `particles-opus` | unchanged | 22 | 4/22 | 4.64 | 1.201 | 1092.57 / 94.5 | none | accepted: trails (A1): frames from 84 on lose the dark background |
 | `particles-sonnet` | unchanged | 20 | 3/20 | 0 | 1.353 | 894.88 / 90.33 | none | accepted: trails (A1): frames from 60 on lose the dark background |
+| `pelican-bicycle` | deferred to chunk 6 | — | — | — | — | — | — | deferred: v.ctx; the playground imports it (Track 5) |
 | `pell-anim` | ported: ctx text, cache, paper | 21 of 27 | 0/21 | 84.02 | 0.137 | 0.25 / 0.8 | brush texture (7), paper scoped (10) | pass: same character by eye; 6 frames captured by the painter for faint-mark warnings are not captured (F); text (T) |
 | `pendulum-lab` | ported: cache | 55 | 55/55 | 99.68 | 0.052 | 0.09 / 1.33 | none | pass |
 | `periodic-trends` | unchanged | 16 | 16/16 | 99.99 | 0.034 | 0.15 / 1.28 | none | pass |
 | `periodic-trends-2` | unchanged | 12 | 12/12 | 99.87 | 0.055 | 0.08 / 0.7 | none | pass |
+| `scene-market-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-market-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-market-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-night-room-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-night-room-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-night-room-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-pendulum-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-pendulum-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-pendulum-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 <!-- table:end -->
+
+## Examples
+
+The top-level examples have no Stage 0 frames. Each was rendered on the
+painter before its marker and on the scene renderer after (90 frames, every
+30, its events file), and the two compared the same way. None calls a removed
+member; each changed only by the transition marker.
+
+| Example | Frames | Parity pass | Min flat % | Max edge | Max lum / contrast Δ % | Verdict |
+|---|---|---|---|---|---|---|
+| `alien-reference-tea.ts` | 1 | 1/1 | 99.95 | 0.02 | 0.02 / 0.1 | pass |
+| `answer-box-tea.ts` | 5 | 5/5 | 99.62 | 0.031 | 0.06 / 0.69 | pass |
+| `bounce-tea.ts` | 12 | 12/12 | 100 | 0.096 | 0.42 / 3.41 | pass |
+| `brushes-sampler-tea.ts` | 1 | 0/1 | 95.28 | 0.274 | 0.12 / 0.98 | pass: brush texture (7), same character by eye |
+| `effects-tea.ts` | 4 | 4/4 | 99.82 | 0.014 | 0.32 / 0.08 | pass |
+| `paint-mixing-tea.ts` | 1 | 0/1 | 76.97 | 0.191 | 0.41 / 1.76 | pass: brush texture (7); the bristle hairs along the hill tops are darker and more distinct |
+| `sound-tea.ts` | 9 | 9/9 | 100 | 0.028 | 0.06 / 0.17 | pass |
+
+- `night-room-tea.ts`, `still-life-tea.ts`, `washed-shapes-tea.ts` moved from
+  `examples/scene-looks/`; they were written for the scene API, so they have
+  no painter frames. They gain the `renderer` export.
+- **Deferred to chunk 6:** `brushes-tea.ts` (calls `v.paperTexture`; the
+  playground imports it), and `orbit-tea.ts` and `fjord-tea.ts`. These two
+  call no removed member, but the dev demo mounts them on Canvas2D and
+  `test/headless.tea-determinism.test.ts` runs `orbit-tea.ts` through
+  `teaRun` in the test phase that opens no GPU. With the marker that test
+  would open a GPU device in parallel with other tests. Chunk 6 switches all
+  three with the dev demo and the playground.

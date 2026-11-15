@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import type { GpuHandle } from "../../src/device/open.js";
 import { openGpu, openTextMeasurer } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
-import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
+import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
 import { portFrames } from "./cache-cases.js";
 
 /** The walker's first frame at ratio 1 and 2, each frame's bytes hashed, on `gpu`. */

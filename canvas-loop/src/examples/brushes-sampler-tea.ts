@@ -1,13 +1,6 @@
 // Brush sampler: every preset with two gestures, plus a small-shape row.
 // Renders the reference images for BRUSHES.md.
-import type {
-  BrushName,
-  DeepReadonly,
-  Msg,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { BrushName, DeepReadonly, Msg, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
 
 const PRESETS: [BrushName, string, number][] = [
   ["ink", "#1d2a44", 6],
@@ -18,6 +11,9 @@ const PRESETS: [BrushName, string, number][] = [
   ["wash", "#2f7d8c", 34],
   ["bristle", "#2f6b3a", 26],
 ];
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 640, height: 70 * PRESETS.length + 20 };
 
