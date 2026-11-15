@@ -312,6 +312,16 @@ then the switch that deletes the old code; then docs.
   `pnpm layout-check`, the tests and `gallery:check` pass, and the three
   ports render the same PNG bytes as before the move.
 
+- **As built (commit `64f107a74`).** The table failed `pnpm layout-check`
+  (unit directories; names that repeat their directory), so the paths are:
+  `scene/nodes.ts` (was `scene.ts`), `scene/api.ts`; `device/open.ts` and
+  `device/browser.ts` (were `device.ts`, `browser-device.ts`);
+  `headless/scene/` (`runner`, `guards`, `png`, `util`);
+  `browser/scene/` (`mount`, `surface`, `shared-gpu`, `sleep`);
+  `core/text/`. Tests: `test/scene/`, `test/gpu/` (`renderer.test.ts`),
+  `test/headless/scene/`, `test/browser/scene/`. The paths subplan (b) names
+  are unchanged. Later tracks read with these paths.
+
 ### Track 2: one headless runner (chunk 2)
 
 - **What:** `teaRun` becomes the only headless runner. It runs a sketch
