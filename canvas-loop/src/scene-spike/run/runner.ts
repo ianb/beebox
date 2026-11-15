@@ -18,6 +18,7 @@ import { openGpu, openTextMeasurer } from "../device.js";
 import type { TextMeasurer } from "../../core/painter/text/measure.js";
 import type { GpuHandle } from "../device.js";
 import { SketchUsageError } from "../../core/errors.js";
+import { formatValue } from "../../core/format.js";
 import { checkParam } from "../../browser/param-validate.js";
 import { GpuRenderError, SketchRunError, describeError } from "../errors.js";
 import { sketchFrames } from "../call-site.js";
@@ -143,7 +144,11 @@ class SpikeRun {
       this.#step = { frame, name: "update" };
       for (const e of events) {
         if (e.type === "snapshot") snapshot = true;
-        if (e.type === "param") this.#params = guardParams(this.#mod.params, { ...this.#params, [e.name]: e.value });
+        if (e.type === "param") {
+          this.#params = guardParams(this.#mod.params, { ...this.#params, [e.name]: e.value });
+          // As today's transcript (headless/transcript.ts).
+          this.#lines.push(`frame ${frame}: param: ${e.name} → ${formatValue(e.value)}`);
+        }
         const msg = msgOf(e, mouse);
         if (msg !== undefined) model = this.#call("update", [model, msg, this.#util]);
       }
@@ -154,6 +159,7 @@ class SpikeRun {
       const logs = [...this.#util.logs, ...rec.logs];
       for (const line of logs) this.#lines.push(`frame ${frame}: ${line}`);
       for (const w of rec.warnings) this.#lines.push(`frame ${frame}: warning: ${w}`);
+      for (const h of rec.hints) this.#lines.push(`frame ${frame}: hint: ${h}`);
       this.#util.logs = [];
       // As today: every Nth, the last, and frames with a snapshot, an event or a log.
       if (!(snapshot || events.length > 0 || logs.length > 0 || rec.snapshots.length > 0 || frame % this.#o.every === 0 || frame === this.#o.frames - 1)) continue;

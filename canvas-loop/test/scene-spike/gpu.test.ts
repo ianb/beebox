@@ -93,7 +93,7 @@ const sketchPath = join(import.meta.dirname, "spike-sketch.ts");
 test("runs a draft-View sketch, renders only captured frames, and repeats exactly", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
-  const options = { sketchPath, frames: 7, every: 3, seed: 1, ratio: 1, scene: true, events: [{ frame: 4, type: "snapshot" as const }] };
+  const options = { sketchPath, frames: 7, every: 3, seed: 1, ratio: 1, scene: true, events: [{ frame: 4, type: "snapshot" as const }, { frame: 4, type: "param" as const, name: "speed", value: 2 }] };
   const a = tmpDir();
   const b = tmpDir();
   // Every 3rd (0, 3, 6), the logged frame (1) and the snapshot (4); frames 2 and 5 are skipped.
@@ -102,6 +102,8 @@ test("runs a draft-View sketch, renders only captured frames, and repeats exactl
   assert.deepEqual(readdirSync(a).toSorted(), ["frame-0000.png", "frame-0001.png", "frame-0003.png", "frame-0004.png", "frame-0006.png", "transcript.md"]);
   const transcript = readFileSync(join(a, "transcript.md"), "utf8");
   assert.match(transcript, /frame 1: t 2/);
+  // A scripted param change has its line, in today's transcript wording.
+  assert.match(transcript, /^frame 4: param: speed → 2$/m);
   assert.match(transcript, /!\[frame 4]\(frame-0004\.png\)/);
   assert.match(transcript, /group opacity 1 blend normal effects glow\n {4}circle/);
   assert.match(transcript, /## frame 0\n.*\n.*\nbrushed strokes 1: expanded 1, expansion cache hits 0/);
@@ -257,3 +259,24 @@ for (const c of CASES) {
     }
   });
 }
+
+onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async (handle) => {
+  const out = await runCase({
+    id: "turning-picture",
+    mistake: "a picture placed under a rotation that changes every frame",
+    channel: "none",
+    names: [],
+    frames: 6,
+    draw: (v, m) => {
+      const badge = v.picture({ key: "badge", width: 20, height: 20 }, () => v.rect(0, 0, 20, 20, { fill: "#2a9d8f" }));
+      v.at({ translate: [30, 30], rotate: m.t * 0.1 }, () => v.place(badge, -10, -10));
+      // Two fixed scales of one key, every frame: two kept versions, nothing to hint.
+      const dot = v.picture({ key: "dot", width: 6, height: 6 }, () => v.circle(3, 3, 3, { fill: "#e63946" }));
+      for (const s of [1, 2]) v.at({ scale: s }, () => v.place(dot, 2, 2));
+    },
+  }, handle);
+  const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(hints.length, 1, hints.join("\n"));
+  assert.match(hints[0] ?? "", /^frame 3: hint: picture "badge" was placed at a new scale or rotation in each of the last 3 frames .*\(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
+  assert.deepEqual(out.warnings, []);
+});

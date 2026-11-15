@@ -1,15 +1,19 @@
 // The recorder's bookkeeping for messages: whether `draw` is running (a View
 // kept past `draw` must refuse to record), the frame's identity (a Picture
 // handle from another frame is refused by `place`), and testing-mode warnings,
-// each naming the sketch's line and given once per run.
+// each naming the sketch's line and given once per run, and performance hints.
 import { SketchUsageError } from "../../core/errors.js";
 import { atSketchLine } from "../call-site.js";
+import type { Mat } from "../scene.js";
+import { PlacementScales } from "./placement-scales.js";
 
 export class RecorderNotes {
   /** Warnings already given this run. */
   readonly #warned = new Set<string>();
   #drawing = false;
   #warnings: string[] = [];
+  #hints: string[] = [];
+  readonly #scales = new PlacementScales();
   /** This frame's identity. */
   frame: object = {};
 
@@ -17,13 +21,15 @@ export class RecorderNotes {
   begin(): void {
     this.#drawing = true;
     this.#warnings = [];
+    this.#hints = [];
+    this.#scales.beginFrame();
     this.frame = {};
   }
 
-  /** `draw` returned (or threw): the frame's warnings. */
-  end(): string[] {
+  /** `draw` returned (or threw): the frame's warnings and performance hints. */
+  end(): { warnings: string[]; hints: string[] } {
     this.#drawing = false;
-    return this.#warnings;
+    return { warnings: this.#warnings, hints: this.#hints };
   }
 
   /** Throw unless `draw` is running: a View kept past `draw` (in the model, a module variable or a timer) records nothing. */
@@ -33,9 +39,24 @@ export class RecorderNotes {
 
   /** A warning naming the sketch's line, given once per run for each `once` key and line. */
   warn(once: string, message: string): void {
+    this.#note(this.#warnings, { once, message });
+  }
+
+  /** A performance hint (draft section 10): nothing is wrong, but something costs every frame. Once per run, as `warn`. */
+  hint(once: string, message: string): void {
+    this.#note(this.#hints, { once: `hint ${once}`, message });
+  }
+
+  /** A top-level placement of a picture (testing mode): hints when its scale or rotation is new every frame. */
+  placed(key: string, matrix: Mat): void {
+    const hint = this.#scales.placed(key, matrix);
+    if (hint !== undefined) this.hint(`scale ${key}`, hint);
+  }
+
+  #note(into: string[], a: { once: string; message: string }): void {
     const at = atSketchLine();
-    if (this.#warned.has(once + at)) return;
-    this.#warned.add(once + at);
-    this.#warnings.push(message + at);
+    if (this.#warned.has(a.once + at)) return;
+    this.#warned.add(a.once + at);
+    into.push(a.message + at);
   }
 }

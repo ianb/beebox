@@ -101,7 +101,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#table.beginFrame();
     this.#notes.begin();
     let standIns: SceneNode[];
-    let warnings: string[];
+    let notes: { warnings: string[]; hints: string[] };
     const controls = this.#controls;
     try {
       draw(this);
@@ -109,10 +109,10 @@ export class SceneRecorder extends PureHelpers implements View {
       // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
       standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, controls));
     } finally {
-      warnings = this.#notes.end();
+      notes = this.#notes.end();
       this.#open = [];
     }
-    return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(controls)], cursor: this.#cursor, controls, standIns, warnings };
+    return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(controls)], cursor: this.#cursor, controls, standIns, ...notes };
   }
 
   #add(node: SceneNode): void {
@@ -306,6 +306,7 @@ export class SceneRecorder extends PureHelpers implements View {
     const unlit = this.#unlit();
     if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
     this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
+    if (this.#audit && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v.key, this.#matrix);
   }
 
   // ── outputs that are not drawing ──

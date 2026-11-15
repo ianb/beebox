@@ -18,4 +18,6 @@ export interface FrameRecord {
   /** Headless stand-ins for `controls`, in canvas coordinates, to draw above the scene (decision 9). */
   readonly standIns: readonly SceneNode[];
   readonly warnings: readonly string[];
+  /** Testing-mode performance hints (draft section 10): costs, not mistakes. */
+  readonly hints: readonly string[];
 }

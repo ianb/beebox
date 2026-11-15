@@ -2,6 +2,7 @@
 import type { Msg, View } from "../../src/scene-draft/scene-api.js";
 
 export const canvas = { width: 160, height: 120 };
+export const params = { speed: { type: "number", min: 0, max: 2, default: 1 } } as const;
 
 export function init(): { t: number } {
   return { t: 0 };
