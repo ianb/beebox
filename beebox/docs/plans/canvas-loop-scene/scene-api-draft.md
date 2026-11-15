@@ -132,9 +132,8 @@ only where the result matches (section 6).
   changes what is below), `erase` removes material coverage with colour
   coverage, and `clip`, `mask` and `opacity` cut both alike.
 - **Effects touch colour, not material.** Blur, wash, hatching and paper change
-  colour only. Pixels that glow and shadow add have no material of their own:
-  they are emissive if the group that made them is emissive, otherwise flat
-  matte. A smudge moves colour, not material.
+  colour only. Pixels that a glow adds are emissive (a glow is light); pixels
+  that a shadow adds are flat matte. A smudge moves colour, not material.
 - **Lights.** Every `light` inside the body, at any depth and inside placed
   pictures, lights the group, transformed by its placement: a picture holding
   a lamp brings its light wherever it is placed. A `light` inside a mask body
