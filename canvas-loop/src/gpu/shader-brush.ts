@@ -18,7 +18,7 @@ import { MIX_WGSL } from "./shader-paper.js";
 /** Words in the records buffer's header, and per contour record (u32; floats bitcast). */
 export const RECORD_HEAD = 4;
 export const CONTOUR_WORDS = 16;
-/** Floats per sample: x, y, nx, ny, s, t, p, and its contour's index (u32). */
+/** Floats per sample: x, y, nx, ny, s, t, p, and its contour's index in the frame (u32). */
 export const SAMPLE_FLOATS = 8;
 export const SAMPLES_WORKGROUP = 64;
 
@@ -29,10 +29,16 @@ export const ENVELOPE_KINDS = { constant: 0, even: 1, taper: 2, "taper-in": 3, "
 export const STROKE_WORDS = 24;
 export const DAB_FLOATS = 12;
 
+/** Words in a dispatch's uniform (`U` below). */
+export const UNIFORM_WORDS = 8;
+
 // What both entries share: the uniform, the sample, the records and the hash.
+// A dispatch covers samples [first, first + count) of the frame; its records
+// buffer holds `contours` whole contours, the first of them the frame's contour
+// `cbase`; its output buffers start at sample `base` (brush-pass.ts batches).
 const PRELUDE = /* wgsl */ `
 ${MIX_WGSL}
-struct U { first: u32, count: u32, contours: u32, pad: u32 };
+struct U { first: u32, count: u32, contours: u32, base: u32, cbase: u32, pad0: u32, pad1: u32, pad2: u32 };
 struct Sample { x: f32, y: f32, nx: f32, ny: f32, s: f32, t: f32, p: f32, contour: u32 };
 @group(0) @binding(0) var<storage, read> rec: array<u32>;
 @group(0) @binding(4) var<uniform> u: U;
@@ -151,7 +157,7 @@ fn pressure(c: u32, t: f32) -> f32 {
   if (wobble > 0.0) {
     pos += nrm * (wobble * noise1(cw(c, 4u), s / cf(c, 7u), cw(c, 8u)));
   }
-  out[i] = Sample(pos.x, pos.y, nrm.x, nrm.y, s, t, p, c);
+  out[i - u.base] = Sample(pos.x, pos.y, nrm.x, nrm.y, s, t, p, u.cbase + c);
 }
 `;
 
@@ -217,8 +223,8 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
 @compute @workgroup_size(${SAMPLES_WORKGROUP}) fn dabs(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= u.count) { return; }
   let i = u.first + gid.x;
-  let s = smp[i];
-  let c = s.contour;
+  let s = smp[i - u.base];
+  let c = s.contour - u.cbase;
   let st = cw(c, 13u);
   let k = i - cw(c, 2u);
   let seed = cw(c, 4u);
@@ -237,7 +243,7 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
     rgb = shiftColour(vec3f(sf(st, 20u), sf(st, 21u), sf(st, 22u)), hue, light) / 255.0;
   }
   let shown = radius > 0.05 && alpha > 0.0;
-  let o = i * ${DAB_FLOATS}u;
+  let o = (i - u.base) * ${DAB_FLOATS}u;
   let slot = sv(st, 6u);
   dab[o] = at.x; dab[o + 1u] = at.y;
   dab[o + 2u] = select(0.0, radius * sf(st, 11u), shown);
@@ -249,7 +255,8 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
 
 fn placed(st: u32, s: Sample) -> vec2f {
   let e = sv(st, 0u);
-  return vec2f(e.x * s.x + e.z * s.y, e.y * s.x + e.w * s.y) + vec2f(cf(s.contour, 14u), cf(s.contour, 15u));
+  let c = s.contour - u.cbase;
+  return vec2f(e.x * s.x + e.z * s.y, e.y * s.x + e.w * s.y) + vec2f(cf(c, 14u), cf(c, 15u));
 }
 fn inkRadius(st: u32, p: f32) -> f32 {
   let thin = sf(st, 12u);
@@ -258,8 +265,8 @@ fn inkRadius(st: u32, p: f32) -> f32 {
 @compute @workgroup_size(${SAMPLES_WORKGROUP}) fn capsules(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= u.count) { return; }
   let i = u.first + gid.x;
-  let s = smp[i];
-  let c = s.contour;
+  let s = smp[i - u.base];
+  let c = s.contour - u.cbase;
   let st = cw(c, 13u);
   let k = i - cw(c, 2u);
   let n = cw(c, 3u);
@@ -268,14 +275,14 @@ fn inkRadius(st: u32, p: f32) -> f32 {
   var b = a;
   var rb = ra;
   if (k + 1u < n) {
-    let s1 = smp[i + 1u];
+    let s1 = smp[i + 1u - u.base];
     b = placed(st, s1);
     rb = inkRadius(st, s1.p);
   } else if (n > 1u) {
     ra = 0.0;
     rb = 0.0;
   }
-  let o = i * ${DAB_FLOATS}u;
+  let o = (i - u.base) * ${DAB_FLOATS}u;
   let slot = sv(st, 6u);
   dab[o] = a.x; dab[o + 1u] = a.y; dab[o + 2u] = ra; dab[o + 3u] = b.x;
   dab[o + 4u] = b.y; dab[o + 5u] = rb; dab[o + 6u] = 0.0; dab[o + 7u] = 0.0;

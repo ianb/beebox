@@ -7,133 +7,59 @@
 // `dabs` entry then writes one dab instance per sample, and for ink strokes the
 // `capsules` entry one capsule instance per sample, into one instance buffer
 // (stamps first, then inks), which the mark atlas draws. Every output index is
-// fixed here, before the dispatch. One batch: inputs and outputs must each fit
-// one storage binding (at most 64 MiB), else the frame fails naming the sizes.
-import type { Envelope, InkBrush, StampBrush } from "../core/brush/types.js";
-import type { Prepared, PreparedContour } from "../scene/brush/expand.js";
+// fixed here, before the dispatch.
+//
+// Batches. No buffer exceeds `limit` (the device's storage binding and buffer
+// limits, at most 64 MiB). Inputs past it are split between contours into
+// several records and geometry buffers; a contour that alone exceeds it is an
+// error naming the call (`checkContours`, at lowering). The samples are cut
+// into batches inside each input; a batch's samples and instances go into the
+// same two output buffers, reused from batch to batch within the frame's one
+// command encoder: batch i's draws (`each`) are encoded before batch i + 1's
+// dispatch. Samples, stamps and capsules may split at any sample (a capsule
+// batch also computes the next sample, one of overlap). `planBatches` takes
+// spans that must not split, for bristle (one per bristle) and smear (one per
+// smear) when they move to the GPU. Packing and planning are in brush-pack.ts.
+import type { Prepared } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
-import { POINT_WORDS } from "../scene/brush/expand.js";
-import { CONTOUR_WORDS, DAB_FLOATS, INSTANCES_WGSL, ENVELOPE_KINDS, RECORD_HEAD, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, STROKE_WORDS } from "./shader-brush.js";
+import { pack, planBatches } from "./brush-pack.js";
+import type { BrushJob, Input, SampleRange } from "./brush-pack.js";
+import { DAB_FLOATS, INSTANCES_WGSL, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, UNIFORM_WORDS } from "./shader-brush.js";
 import type { PassTimer } from "./timing.js";
+
+export type { BrushJob, SampleRange } from "./brush-pack.js";
 
 const MAX_BINDING = 64 * 1024 * 1024;
 
-/** A contour's samples: the first index in the samples buffer, and how many. */
-export interface SampleRange {
+/** A batch's output: `buffer` holds items [first, first + count) of the frame's `total`, from its start. */
+export interface Batch {
+  readonly buffer: GPUBuffer;
   readonly first: number;
   readonly count: number;
+  readonly total: number;
 }
 
-/** What one frame's brush pass wrote: the samples buffer (undefined with no strokes), its sample count, and each stroke's contour ranges. */
+/** What one frame's brush pass wrote: its sample count, each stroke's contour ranges, and how many batches and input buffers it used. */
 export interface BrushOutputs {
-  readonly samples: GPUBuffer | undefined;
   readonly count: number;
   readonly ranges: readonly (readonly SampleRange[])[];
-}
-
-/** A stamp or ink stroke placed in the mark atlas: what the `dabs` or `capsules` entry needs besides its prepared stroke. */
-export interface BrushJob {
-  readonly prepared: Prepared;
-  readonly brush: StampBrush | InkBrush;
-  /** Brush space → device pixels, linear part (pixel ratio included). */
-  readonly lin: readonly [number, number, number, number];
-  readonly ratio: number;
-  /** Added to a dab's linearly mapped position: the mark's translation less its box corner (each contour's origin is added in `pack`, in f64). */
-  readonly offset: readonly [number, number];
-  /** The mark's slot on its page: x0, y0, x1, y1. */
-  readonly slot: readonly [number, number, number, number];
+  readonly batches: number;
+  readonly inputs: number;
 }
 
 /**
  * The instances of a frame's stamp and ink strokes (`DAB_FLOATS` floats each,
  * one per sample: dabs, then capsules), each stroke's first instance and
- * count, and the number of stamp instances (the capsules start there).
+ * count, the number of stamp instances (the capsules start there), and how
+ * many batches and input buffers they took.
  */
 export interface InstanceOutputs {
-  readonly instances: GPUBuffer | undefined;
   readonly count: number;
   readonly strokes: readonly SampleRange[];
   readonly stamps: number;
-}
-
-/** The keyframes as the CPU reads them: a frame followed by one at the same t is skipped (envelope.ts). */
-function keyframesOf(env: readonly (readonly [number, number])[]): number[] {
-  return env.flatMap((f, i) => (env[i + 1]?.[0] === f[0] ? [] : [f[0], f[1]]));
-}
-
-function envelopeWords(env: Envelope): { kind: number; value: number; keys: number[] } {
-  if (typeof env === "number") return { kind: ENVELOPE_KINDS.constant, value: env, keys: [] };
-  if (typeof env === "string") return { kind: ENVELOPE_KINDS[env], value: 0, keys: [] };
-  return { kind: ENVELOPE_KINDS.keyframes, value: 0, keys: keyframesOf(env) };
-}
-
-/** A stamp or ink stroke's record (shader-brush.ts lists the words). */
-function strokeWords(j: BrushJob): number[] {
-  const b = j.brush;
-  // Words 4-5 are unused: each contour's offset is in its own record (`pack`).
-  const head = [...j.lin, 0, 0, ...j.slot, j.prepared.width, j.ratio];
-  if (b.kind === "ink") return [...head, b.thinning];
-  const base = j.prepared.base;
-  const soft = b.tip === "soft" ? 1 : 0;
-  return [...head, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
-}
-
-/**
- * The records and geometry buffers' contents for `strokes`' contours (in
- * order), with a record per stroke when `jobs` gives one, and their sample
- * ranges. A contour's samples are relative to its own origin; given a job, its
- * record holds where that origin lands in the mark's own pixels, `offset + lin
- * · origin`, summed in f64, so a far contour of the same stroke moves no other.
- */
-function pack(strokes: readonly Prepared[], jobs: readonly BrushJob[] | undefined): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
-  const words = jobs?.map(strokeWords);
-  const all: { c: PreparedContour; wobble: number; si: number }[] = strokes.flatMap((s, si) => s.contours.map((c) => ({ c, wobble: s.wobble, si })));
-  const envs = all.map((a) => envelopeWords(a.c.pressure));
-  const keyWords = envs.reduce((n, e) => n + e.keys.length, 0);
-  const keyAt = RECORD_HEAD + all.length * CONTOUR_WORDS;
-  const strokeAt = keyAt + keyWords;
-  const records = new ArrayBuffer((strokeAt + (words?.length ?? 0) * STROKE_WORDS) * 4);
-  const ru = new Uint32Array(records);
-  const rf = new Float32Array(records);
-  const geometry = new Uint32Array(all.reduce((n, a) => n + a.c.geom.length, 0));
-  let point = 0;
-  let sample = 0;
-  let key = keyAt;
-  for (const [i, { c, wobble, si }] of all.entries()) {
-    const at = RECORD_HEAD + i * CONTOUR_WORDS;
-    const env = envs[i] ?? { kind: 1, value: 0, keys: [] };
-    const points = c.geom.length / POINT_WORDS;
-    // Copied as words: the fourth word of each point is a u32.
-    geometry.set(new Uint32Array(c.geom.buffer, c.geom.byteOffset, c.geom.length), point * POINT_WORDS);
-    ru.set([point, points, sample, c.count, c.seed], at);
-    rf.set([c.step, c.total, c.cell], at + 5);
-    ru[at + 8] = c.period ?? 0;
-    rf[at + 9] = wobble;
-    ru[at + 10] = env.kind;
-    if (env.kind === ENVELOPE_KINDS.keyframes) ru.set([key, env.keys.length / 2], at + 11);
-    else rf[at + 11] = env.value;
-    ru[at + 13] = strokeAt + si * STROKE_WORDS;
-    const job = jobs?.[si];
-    if (job !== undefined) {
-      const [l0, l1, l2, l3] = job.lin;
-      const [ox, oy] = c.origin;
-      rf.set([job.offset[0] + l0 * ox + l2 * oy, job.offset[1] + l1 * ox + l3 * oy], at + 14);
-    }
-    rf.set(env.keys, key);
-    key += env.keys.length;
-    point += points;
-    sample += c.count;
-  }
-  for (const [i, w] of (words ?? []).entries()) rf.set(w, strokeAt + i * STROKE_WORDS);
-  ru.set([all.length, sample], 0);
-  let first = 0;
-  const ranges = strokes.map((s) => s.contours.map((c) => {
-    const r = { first, count: c.count };
-    first += c.count;
-    return r;
-  }));
-  return { records, geometry, count: sample, contours: all.length, ranges };
+  readonly batches: number;
+  readonly inputs: number;
 }
 
 interface Pipes {
@@ -150,10 +76,13 @@ interface Encoding {
 
 export class BrushPass {
   readonly #device: GPUDevice;
+  readonly #forced: number | undefined;
   #pipes: Pipes | undefined;
 
-  constructor(device: GPUDevice) {
+  /** `limit` (tests) forces a smaller buffer limit than the device's, so batches split. */
+  constructor(device: GPUDevice, options?: { limit?: number | undefined }) {
     this.#device = device;
+    this.#forced = options?.limit;
   }
 
   /** The pipelines, made on first use (a frame with no stamp or ink strokes never compiles them). */
@@ -167,10 +96,10 @@ export class BrushPass {
     return this.#pipes;
   }
 
-  /** The largest buffer one batch binds: the device's storage binding and buffer limits, capped at 64 MiB. */
+  /** The largest buffer one batch binds: the device's storage binding and buffer limits, capped at 64 MiB (or the forced limit). */
   get limit(): number {
     const l = this.#device.limits;
-    return Math.min(l.maxStorageBufferBindingSize, l.maxBufferSize, MAX_BINDING);
+    return Math.min(l.maxStorageBufferBindingSize, l.maxBufferSize, MAX_BINDING, this.#forced ?? Infinity);
   }
 
   #buffer(f: { temp: GPUBuffer[] }, a: { size: number; usage: number; data?: ArrayBuffer | ArrayBufferView<ArrayBuffer> }): GPUBuffer {
@@ -184,106 +113,134 @@ export class BrushPass {
     return this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: entries.map(([binding, buffer]) => ({ binding, resource: { buffer } })) });
   }
 
-  /** Fail the frame, naming the sizes, when one batch cannot hold it (until chunk 5 splits batches). */
-  #check(p: { count: number; contours: number; buffers: readonly (readonly [string, number])[] }): number {
-    const groups = Math.ceil(p.count / SAMPLES_WORKGROUP);
+  /**
+   * Samples per batch: the instances (and the one sample of overlap a capsule
+   * batch computes) or the samples fit one buffer, and one dispatch stays
+   * within the device's workgroups per dimension.
+   */
+  #cap(instances: boolean): number {
     const most = this.limit;
-    const over = p.buffers.filter(([, n]) => n > most);
-    const perDim = this.#device.limits.maxComputeWorkgroupsPerDimension;
-    if (over.length > 0 || groups > perDim) {
-      const sizes = over.map(([name, n]) => `${name} ${(n / 1048576).toFixed(1)} MiB`).join(", ");
-      throw new GpuRenderError({ detail: `this frame's brushed strokes need ${p.count} samples over ${p.contours} contours${sizes === "" ? "" : ` (${sizes})`}, more than one brush batch holds (${(most / 1048576).toFixed(0)} MiB a buffer, ${perDim * SAMPLES_WORKGROUP} samples)` });
-    }
-    return groups;
+    const threads = this.#device.limits.maxComputeWorkgroupsPerDimension * SAMPLES_WORKGROUP;
+    const cap = instances ? Math.min(Math.floor(most / (DAB_FLOATS * 4)), Math.floor(most / (SAMPLE_FLOATS * 4)) - 1, threads - 1) : Math.min(Math.floor(most / (SAMPLE_FLOATS * 4)), threads);
+    if (cap < 1) throw new GpuRenderError({ detail: `a brush buffer of ${most} bytes holds no batch` });
+    return cap;
   }
 
   /**
-   * Upload `strokes` (prepared, in brush space) and encode the `samples`
-   * dispatch on `f.enc`, then, given `jobs` (one per stroke), the `dabs`
+   * Upload `strokes` (prepared, in brush space) and encode, batch by batch,
+   * the `samples` dispatch, then, given `jobs` (one per stroke), the `dabs`
    * dispatch over the stamps' samples and the `capsules` dispatch over the
-   * inks'. Stamp strokes are packed before ink strokes (a stable reorder);
-   * the ranges are returned in `strokes` order. Output buffers are
-   * frame-temporary (in `f.temp`) and can be copied from.
+   * inks'; after each batch, `each` encodes what reads its output (the
+   * instances with jobs, else the samples). Stamp strokes are packed before
+   * ink strokes (a stable reorder); the ranges are returned in `strokes`
+   * order. Buffers are frame-temporary (in `f.temp`) and can be copied from.
    */
-  #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[] }): BrushOutputs & { instances: GPUBuffer | undefined; stamps: number } {
+  #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[]; each: (b: Batch, ranges: readonly (readonly SampleRange[])[]) => void }): BrushOutputs & { stamps: number } {
     const { jobs } = f;
     const isInk = (i: number): number => (jobs?.[i]?.brush.kind === "ink" ? 1 : 0);
     const order = [...strokes.keys()].toSorted((x, y) => isInk(x) - isInk(y));
-    const packed = pack(order.flatMap((i) => strokes[i] ?? []), jobs === undefined ? undefined : order.flatMap((i) => jobs[i] ?? []));
+    const limit = this.limit;
+    const packed = pack(order.flatMap((i) => strokes[i] ?? []), { jobs: jobs === undefined ? undefined : order.flatMap((i) => jobs[i] ?? []), limit });
     const ranges: SampleRange[][] = [];
     let stamps = 0;
     for (const [k, i] of order.entries()) {
       ranges[i] = packed.ranges[k] ?? [];
       if (isInk(i) === 0) stamps += ranges[i].reduce((m, c) => m + c.count, 0);
     }
-    const p = { ...packed, ranges };
-    if (p.count === 0) return { samples: undefined, instances: undefined, count: 0, ranges: p.ranges, stamps };
-    const bytes = p.count * SAMPLE_FLOATS * 4;
-    const instanceBytes = f.jobs === undefined ? 0 : p.count * DAB_FLOATS * 4;
-    const groups = this.#check({ count: p.count, contours: p.contours, buffers: [["records", p.records.byteLength], ["geometry", p.geometry.byteLength], ["samples", bytes], ["instances", instanceBytes]] });
+    const { count, inputs } = packed;
+    if (count === 0) return { count, ranges, stamps, batches: 0, inputs: 0 };
+    const cap = this.#cap(jobs !== undefined);
+    // A capsule batch also computes the sample after its last (in its input), its last capsule's far end.
+    const plan = inputs.flatMap((input) => planBatches(input.spans, cap).map((b) => ({ input, ...b, samples: jobs === undefined ? b.count : Math.min(b.first + b.count + 1, input.first + input.count) - b.first })));
     const S = GPUBufferUsage.STORAGE;
-    const records = this.#buffer(f, { size: p.records.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: p.records });
-    const geometry = this.#buffer(f, { size: p.geometry.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: p.geometry });
-    const samples = this.#buffer(f, { size: bytes, usage: S | GPUBufferUsage.COPY_SRC });
-    const range = (first: number, count: number): GPUBuffer => this.#buffer(f, { size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: new Uint32Array([first, count, p.contours, 0]) });
+    const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
+    const out = jobs === undefined ? undefined : this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * DAB_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
+    const uniform = (input: Input, a: { first: number; count: number; base: number }): GPUBuffer => {
+      const words = new Uint32Array(UNIFORM_WORDS);
+      words.set([a.first, a.count, input.contours, a.base, input.cbase]);
+      return this.#buffer(f, { size: words.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: words });
+    };
     const pipes = this.#pipelines;
-    const cp = f.enc.beginComputePass(timed(f, "brush"));
-    cp.setPipeline(pipes.samples);
-    cp.setBindGroup(0, this.#bind(pipes.samples, [[0, records], [1, geometry], [2, samples], [4, range(0, p.count)]]));
-    cp.dispatchWorkgroups(groups);
-    let instances: GPUBuffer | undefined;
-    if (f.jobs !== undefined) {
-      const out = this.#buffer(f, { size: instanceBytes, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
-      for (const [pipe, first, count] of [[pipes.dabs, 0, stamps], [pipes.capsules, stamps, p.count - stamps]] as const) {
-        if (count === 0) continue;
-        cp.setPipeline(pipe);
-        cp.setBindGroup(0, this.#bind(pipe, [[0, records], [2, samples], [3, out], [4, range(first, count)]]));
-        cp.dispatchWorkgroups(Math.ceil(count / SAMPLES_WORKGROUP));
+    let bound: { input: Input; records: GPUBuffer; geometry: GPUBuffer } | undefined;
+    for (const b of plan) {
+      const { input } = b;
+      if (bound?.input !== input) {
+        bound = {
+          input,
+          records: this.#buffer(f, { size: input.records.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: input.records }),
+          geometry: this.#buffer(f, { size: input.geometry.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: input.geometry }),
+        };
       }
-      instances = out;
+      const { records, geometry } = bound;
+      const cp = f.enc.beginComputePass(timed(f, "brush"));
+      cp.setPipeline(pipes.samples);
+      cp.setBindGroup(0, this.#bind(pipes.samples, [[0, records], [1, geometry], [2, samples], [4, uniform(input, { first: b.first, count: b.samples, base: b.first })]]));
+      cp.dispatchWorkgroups(Math.ceil(b.samples / SAMPLES_WORKGROUP));
+      if (out !== undefined) {
+        const end = b.first + b.count;
+        for (const [pipe, lo, hi] of [[pipes.dabs, b.first, Math.min(end, stamps)], [pipes.capsules, Math.max(b.first, stamps), end]] as const) {
+          if (hi <= lo) continue;
+          cp.setPipeline(pipe);
+          cp.setBindGroup(0, this.#bind(pipe, [[0, records], [2, samples], [3, out], [4, uniform(input, { first: lo, count: hi - lo, base: b.first })]]));
+          cp.dispatchWorkgroups(Math.ceil((hi - lo) / SAMPLES_WORKGROUP));
+        }
+      }
+      cp.end();
+      f.each({ buffer: out ?? samples, first: b.first, count: b.count, total: count }, ranges);
     }
-    cp.end();
-    return { samples, instances, count: p.count, ranges: p.ranges, stamps };
+    return { count, ranges, stamps, batches: plan.length, inputs: inputs.length };
   }
 
-  /** The `samples` dispatch alone, for `strokes` of any kind (verification and measurement). */
-  encode(strokes: readonly Prepared[], f: Encoding): BrushOutputs {
+  /** The `samples` dispatch alone, for `strokes` of any kind (verification and measurement); `each` reads each batch's samples. */
+  encode(strokes: readonly Prepared[], f: Encoding & { each: (b: Batch) => void }): BrushOutputs {
     return this.#encode(strokes, f);
   }
 
-  /** The stamp and ink strokes' samples and instances: stroke i's instances are `strokes[i]`; every stamp's come before every ink's, otherwise in `jobs` order. */
-  encodeMarks(jobs: readonly BrushJob[], f: Encoding): InstanceOutputs {
-    const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs });
-    const strokes = out.ranges.map((r) => ({ first: r[0]?.first ?? 0, count: r.reduce((n, c) => n + c.count, 0) }));
-    return { instances: out.instances, count: out.count, strokes, stamps: out.stamps };
+  /**
+   * The stamp and ink strokes' samples and instances: stroke i's instances
+   * are `strokes[i]`; every stamp's come before every ink's, otherwise in
+   * `jobs` order. `each` draws (or reads) each batch's instances; it is
+   * given the strokes' ranges too.
+   */
+  encodeMarks(jobs: readonly BrushJob[], f: Encoding & { each: (b: Batch, strokes: readonly SampleRange[]) => void }): InstanceOutputs {
+    const strokesOf = (ranges: readonly (readonly SampleRange[])[]): SampleRange[] => ranges.map((r) => ({ first: r[0]?.first ?? 0, count: r.reduce((n, c) => n + c.count, 0) }));
+    let strokes: SampleRange[] | undefined;
+    const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs, each: (b, ranges) => f.each(b, (strokes ??= strokesOf(ranges))) });
+    return { count: out.count, strokes: strokes ?? strokesOf(out.ranges), stamps: out.stamps, batches: out.batches, inputs: out.inputs };
   }
 }
 
 /**
  * Verification and measurement: encode with `encode` on a new command
- * encoder, copy the buffer it names back, and report the CPU time to encode
- * and the brush pass's GPU time when timing.
+ * encoder, copying each batch's output (`bytes` per item) back into one
+ * buffer, and report the CPU time to encode and the brush passes' GPU time
+ * when timing.
  */
-export async function readBrushPass<T extends { buffer: GPUBuffer | undefined; bytes: number }>(device: GPUDevice, a: { timer: PassTimer | undefined; encode: (f: Encoding) => T }): Promise<{ out: T; data: ArrayBuffer; encodeMs: number; gpuMs: number | undefined }> {
+export async function readBrushPass<T>(device: GPUDevice, a: { timer: PassTimer | undefined; bytes: number; encode: (f: Encoding & { each: (b: Batch) => void }) => T }): Promise<{ out: T; data: ArrayBuffer; encodeMs: number; gpuMs: number | undefined }> {
   const temp: GPUBuffer[] = [];
   try {
     a.timer?.begin();
     const enc = device.createCommandEncoder();
+    // Made at the first batch, which gives the total.
+    const held: { read?: GPUBuffer } = {};
+    const each = (b: Batch): void => {
+      if (held.read === undefined) {
+        held.read = device.createBuffer({ size: b.total * a.bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+        temp.push(held.read);
+      }
+      enc.copyBufferToBuffer(b.buffer, 0, held.read, b.first * a.bytes, b.count * a.bytes);
+    };
     const t0 = performance.now();
-    const out = a.encode({ enc, temp, timer: a.timer });
+    const out = a.encode({ enc, temp, timer: a.timer, each });
     const encodeMs = performance.now() - t0;
-    const read = out.buffer === undefined ? undefined : device.createBuffer({ size: out.bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
-    if (read !== undefined && out.buffer !== undefined) {
-      temp.push(read);
-      enc.copyBufferToBuffer(out.buffer, 0, read, 0, out.bytes);
-    }
     const times = a.timer?.resolve(enc, temp);
     device.queue.submit([enc.finish()]);
     let data = new ArrayBuffer(0);
-    if (read !== undefined) {
-      await read.mapAsync(GPUMapMode.READ);
-      data = read.getMappedRange().slice(0);
-      read.unmap();
+    const r = held.read;
+    if (r !== undefined) {
+      await r.mapAsync(GPUMapMode.READ);
+      data = r.getMappedRange().slice(0);
+      r.unmap();
     }
     const gpu = times === undefined || a.timer === undefined ? undefined : await a.timer.read(times);
     return { out, data, encodeMs, gpuMs: gpu?.kinds.brush?.ms };

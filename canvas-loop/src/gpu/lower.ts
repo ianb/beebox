@@ -75,13 +75,13 @@ export class Lowering {
   /** Picture tiles lowered this frame, shared by every placement that needs them. */
   readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
 
-  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache }) {
+  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache; brushLimit: number }) {
     this.#geo = new ShapeGeometry(options.kept);
     this.#rasters = options.rasters;
     this.#colors = options.colors;
     this.#base = [options.ratio, 0, 0, options.ratio, 0, 0];
     this.#canvas = { x0: 0, y0: 0, x1: Math.round(options.width * options.ratio), y1: Math.round(options.height * options.ratio) };
-    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept };
+    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept, brushLimit: options.brushLimit };
     this.#glyphs = options.glyphs;
   }
 

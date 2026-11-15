@@ -20,6 +20,7 @@ import type { KeptValues, LinShape } from "./geometry-cache.js";
 import { linShape, placePiece } from "./geometry-cache.js";
 import { linearKey } from "../scene/hash.js";
 import type { Dab, Run } from "../scene/brush/expand.js";
+import { checkContours } from "./brush-pack.js";
 
 /** What lowering a brushed stroke needs from the frame. */
 export interface BrushFrame {
@@ -27,6 +28,8 @@ export interface BrushFrame {
   readonly colors: ColorParser;
   readonly ratio: number;
   readonly kept: KeptValues;
+  /** The brush pass's largest buffer (brush-pass.ts): a GPU stroke with a contour that cannot fit one fails here, naming the call. */
+  readonly brushLimit: number;
 }
 
 
@@ -123,7 +126,8 @@ export function gpuBox(set: GpuSet, e: Mat): R | undefined {
   return { x0: Math.floor(Math.min(...xs) - 1), y0: Math.floor(Math.min(...ys) - 1), x1: Math.ceil(Math.max(...xs) + 1), y1: Math.ceil(Math.max(...ys) + 1) };
 }
 
-function gpuMark(set: GpuSet, a: { e: Mat; ratio: number; visible: R }): MarkSource | undefined {
+function gpuMark(set: GpuSet, a: { e: Mat; ratio: number; visible: R; limit: number }): MarkSource | undefined {
+  checkContours(set.prepared, a.limit);
   const reach = gpuBox(set, a.e);
   if (reach === undefined) return undefined;
   const box = inter(reach, cutOf(a.visible));
@@ -167,7 +171,7 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
   if (rec === undefined) return undefined;
   const set = ex.set;
-  const source = set.kind === "stamp" || set.kind === "ink" ? gpuMark(set, { e, ratio, visible: a.visible }) : marks(a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio })), { tx: e[4], ty: e[5], visible: a.visible });
+  const source = set.kind === "stamp" || set.kind === "ink" ? gpuMark(set, { e, ratio, visible: a.visible, limit: a.frame.brushLimit }) : marks(a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio })), { tx: e[4], ty: e[5], visible: a.visible });
   if (source === undefined) return undefined;
   const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
   const box = source.kind === "piece" ? source.piece.box : source.mark.box;

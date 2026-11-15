@@ -24,6 +24,8 @@ export interface FrameStats {
   expanded: number;
   cacheHits: number;
   markPages: number;
+  /** Brush pass batches (brush-pass.ts): 0 with no stamp or ink marks, 1 while a frame's brushes fit one batch. */
+  brushBatches: number;
   smears: number;
   glyphs: number;
   /** Kept coverage geometry and linear marks: reused, and made this frame. */
@@ -60,7 +62,7 @@ export interface Frame {
 }
 
 export function emptyStats(): FrameStats {
-  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0 } };
+  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, brushBatches: 0, smears: 0, glyphs: 0, keptHits: 0, keptMisses: 0, tileHits: 0, tilesDrawn: 0, cpu: { lower: 0, atlas: 0, encode: 0, submit: 0 } };
 }
 
 /** A read-only storage buffer holding `data`, freed after the frame. */

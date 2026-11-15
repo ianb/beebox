@@ -3,10 +3,15 @@
 // against `shapeSamples` for the brush sheet, the walker's first frame and
 // focused contours; the WGSL hash against random.ts's, bit for bit; stamp dab
 // readback against the CPU dabs after `linMarks`, with hue and light jitter;
-// the stamp mark's box at the extremes; and the walker frame in a fresh
-// process. One Dawn device for the file; skipped, with a message, where Dawn
-// finds no adapter.
+// the stamp mark's box at the extremes; the walker frame in a fresh
+// process; and (chunk 5) batches: with the buffer limit forced small, so that
+// inputs split between contours and batches inside contours, samples,
+// instances and pixels equal an unsplit render; a contour over the limit
+// fails naming its call; the walker repeats after `release()` and wake. One
+// Dawn device for the file; skipped, with a message, where Dawn finds no
+// adapter.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { before, test } from "node:test";
@@ -26,11 +31,13 @@ import type { ExpandRequest, Prepared } from "../../src/scene/brush/expand.js";
 import { BrushExpander, POINT_WORDS, brushSamples, expandOnCpu, prepare } from "../../src/scene/brush/expand.js";
 import type { Mat } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
+import { GpuRenderError } from "../../src/scene/errors.js";
 import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { brushRequests } from "../brushes/requests.js";
 import { STAMPS_SIZE, drawExtremes, drawJitter } from "./stamps.js";
 import { drawSheet, drawSmear } from "./brush-sheet.js";
+import { THIN_SIZE, drawThin } from "./ink-sheet.js";
 import { portFrames } from "./cache-cases.js";
 import { walkerHashes } from "./walker-frame.js";
 
@@ -380,4 +387,183 @@ test("a far contour of the same stamp stroke does not move a near one (per-conto
   const near = (f[DAB_FLOATS] ?? NaN) + p.box.x0;
   t.diagnostic(`box x0 ${p.box.x0}; the near dab's centre at device x ${near}`);
   assert.ok(Math.abs(near - 10.25) <= 2e-3, `the near dab lands at x 10.25 (got ${near})`);
+});
+
+/** Stamp and ink strokes placed as the lowering places them (as `placeStamps`, without the CPU reference). */
+function placeJobs(reqs: readonly ExpandRequest[], ratio: number): BrushJob[] {
+  const expander = new BrushExpander({ enabled: false });
+  return reqs.flatMap((req, i) => {
+    const ex = expander.expand(req);
+    if (ex?.set.kind !== "stamp" && ex?.set.kind !== "ink") return [];
+    const { q } = ex;
+    const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], 13.25 + i * 0.37, 7.5 + i * 0.11];
+    const box = gpuBox(ex.set, e);
+    if (box === undefined) return [];
+    return [{ prepared: ex.set.prepared, brush: ex.set.brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset: [e[4] - box.x0, e[5] - box.y0], slot: [3, 5, 3 + box.x1 - box.x0, 5 + box.y1 - box.y0] }];
+  });
+}
+
+/** The smallest buffer limit (a multiple of 256 bytes) that holds every contour of `prepared` on its own: its geometry, and its records with keyframes and a stroke record. */
+function smallLimit(prepared: readonly Prepared[]): number {
+  const words = Math.max(...prepared.flatMap((p) => p.contours.map((c) => Math.max(c.geom.length, 4 + 16 + 24 + (Array.isArray(c.pressure) ? 2 * c.pressure.length : 0)))));
+  return Math.ceil((words * 4) / 256) * 256;
+}
+
+/** Scenes with stamps and ink, long and short contours: the brush sheet, the thin ink sheet and the focused contours. */
+function batchScenes(): { what: string; scene: ReturnType<SceneRecorder["record"]>["scene"] }[] {
+  return [
+    { what: "brush sheet", scene: new SceneRecorder({ width: 640, height: 480 }).record((v) => drawSheet(v)).scene },
+    { what: "thin ink", scene: new SceneRecorder(THIN_SIZE).record((v) => drawThin(v)).scene },
+    { what: "focused", scene: new SceneRecorder(FOCUSED_SIZE).record(drawFocused).scene },
+  ];
+}
+
+test("with the buffer limit forced small, the sample pass splits inputs and batches and writes the same bytes", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  const smear = new SceneRecorder({ width: 320, height: 160 }).record((v) => drawSmear(v)).scene;
+  const reqs = [...batchScenes().flatMap((s) => brushRequests(s.scene, handle.colors)), ...brushRequests(smear, handle.colors)];
+  const prepared = reqs.map((r) => prepare(r)).filter((p) => p !== undefined);
+  const limit = smallLimit(prepared);
+  const cap = Math.floor(limit / (SAMPLE_FLOATS * 4));
+  const whole = new GpuRenderer(handle);
+  const split = new GpuRenderer(handle, { brushLimit: limit });
+  try {
+    const [a, b] = [await whole.sampleBrushes(prepared), await split.sampleBrushes(prepared)];
+    t.diagnostic(`${a.count} samples; limit ${limit} bytes (${cap} samples a batch): ${b.inputs} input buffers, ${b.batches} batches (unsplit: ${a.inputs}, ${a.batches})`);
+    assert.equal(a.batches, 1);
+    assert.ok(b.inputs > 1, "the inputs split");
+    assert.ok(b.batches > b.inputs, "an input holds several batches");
+    assert.ok(prepared.some((p) => p.contours.some((c) => c.count > cap)), "a contour splits between batches");
+    assert.deepEqual(b.ranges, a.ranges);
+    assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), "the same bytes, split and unsplit");
+  } finally {
+    whole.destroy();
+    split.destroy();
+  }
+});
+
+test("with the buffer limit forced small, the stamps' and inks' instances are the same bytes", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  for (const ratio of [1, 2]) {
+    const jobs = placeJobs(batchScenes().flatMap((s) => brushRequests(s.scene, handle.colors)), ratio);
+    const limit = smallLimit(jobs.map((j) => j.prepared));
+    const cap = Math.floor(limit / (DAB_FLOATS * 4));
+    const long = (kind: string): boolean => jobs.some((j) => j.brush.kind === kind && j.prepared.contours.some((c) => c.count > cap));
+    assert.ok(long("stamp") && long("ink"), "a stamp contour and an ink contour each split between batches");
+    const whole = new GpuRenderer(handle);
+    const split = new GpuRenderer(handle, { brushLimit: limit });
+    try {
+      const [a, b] = [await whole.brushInstances(jobs), await split.brushInstances(jobs)];
+      t.diagnostic(`ratio ${ratio}: ${jobs.length} strokes, ${a.count} instances; limit ${limit} bytes (${cap} instances a batch): ${b.inputs} input buffers, ${b.batches} batches`);
+      assert.equal(a.batches, 1);
+      assert.ok(b.inputs > 1 && b.batches > b.inputs);
+      assert.deepEqual(b.strokes, a.strokes);
+      assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), "the same bytes, split and unsplit");
+    } finally {
+      whole.destroy();
+      split.destroy();
+    }
+  }
+});
+
+test("with the buffer limit forced small, frames draw the same pixels over several batches", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined || text === undefined) return;
+  const [walker] = portFrames(walkerSheet, { at: [0], text });
+  assert.ok(walker !== undefined);
+  const cases = [...batchScenes().map((c) => ({ ...c, limit: 1024 })), { what: "walker frame 0", scene: walker, limit: 64 * 1024 }];
+  for (const c of cases) {
+    const limit = Math.max(c.limit, smallLimit(brushRequests(c.scene, handle.colors).map((r) => prepare(r)).filter((p) => p !== undefined)));
+    const whole = new GpuRenderer(handle);
+    const split = new GpuRenderer(handle, { brushLimit: limit });
+    try {
+      for (const ratio of [1, 2]) {
+        const a = await whole.render(c.scene, ratio);
+        const batches = whole.stats.brushBatches;
+        const b = await split.render(c.scene, ratio);
+        t.diagnostic(`${c.what}, ratio ${ratio}: ${batches} batch unsplit; ${split.stats.brushBatches} batches at ${limit} bytes, over ${split.stats.markPages} mark pages`);
+        assert.equal(batches, 1, "at the device's limit, one batch");
+        assert.ok(split.stats.brushBatches > 1);
+        assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), `${c.what}, ratio ${ratio}: the same pixels, split and unsplit`);
+      }
+    } finally {
+      whole.destroy();
+      split.destroy();
+    }
+  }
+});
+
+test("a brushed contour larger than one buffer fails, naming its call", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  const points = Array.from({ length: 400 }, (_, i) => [10 + i * 0.5, 20 + (i % 2)] as const);
+  const scene = new SceneRecorder({ width: 240, height: 40 }).record((v) => {
+    v.line(4, 4, 30, 4, { stroke: "#000", weight: 2, brush: "ink" });
+    v.curve(points, false, { stroke: "#000", weight: 2, brush: "ink" });
+  }).scene;
+  const renderer = new GpuRenderer(handle, { brushLimit: 4096 });
+  try {
+    await assert.rejects(renderer.render(scene, 1), (e: unknown) => {
+      assert.ok(e instanceof GpuRenderError);
+      t.diagnostic(e.message);
+      assert.equal(e.path, "curve #2");
+      assert.match(e.message, /brushed contour of \d+ points needs .* of geometry/);
+      return true;
+    });
+  } finally {
+    renderer.destroy();
+  }
+});
+
+test("the walker frame is byte-identical after release() and wake, split and unsplit", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined || text === undefined) return;
+  const [scene] = portFrames(walkerSheet, { at: [0], text });
+  assert.ok(scene !== undefined);
+  const hashes: string[] = [];
+  for (const brushLimit of [undefined, 64 * 1024]) {
+    const renderer = new GpuRenderer(handle, { brushLimit });
+    try {
+      for (const ratio of [1, 2]) {
+        const asleep: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
+        renderer.release();
+        assert.equal(renderer.held.strokes, 0, "release() forgets the prepared strokes");
+        const woken: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
+        assert.equal(woken, asleep, `ratio ${ratio}, limit ${brushLimit ?? "the device's"}: the same bytes after release() and wake`);
+        hashes.push(`${ratio}:${woken}`);
+      }
+    } finally {
+      renderer.destroy();
+    }
+  }
+  t.diagnostic(hashes.join(" "));
+  assert.deepEqual(hashes.slice(2), hashes.slice(0, 2), "split and unsplit give the same bytes");
+});
+
+test("with the buffer limit forced small, marks over several atlas pages draw the same pixels", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  // Six marks about 2,900 px square: an 8,192 px page holds few of them, so the batches draw into several pages, later passes loading what an earlier batch drew.
+  const scene = new SceneRecorder({ width: 3000, height: 3000 }).record((v) => {
+    for (let i = 0; i < 6; i++) {
+      const style = { stroke: "#1d2a44", weight: 3 + i, brush: i % 2 === 0 ? "pencil" : "ink" } as const;
+      v.line(40 + i * 10, 40, 2950 - i * 10, 2950, style);
+    }
+  }).scene;
+  const whole = new GpuRenderer(handle);
+  const split = new GpuRenderer(handle, { brushLimit: 4096 });
+  try {
+    const a = await whole.render(scene, 1);
+    const b = await split.render(scene, 1);
+    t.diagnostic(`${split.stats.markPages} mark pages; ${whole.stats.brushBatches} batch unsplit, ${split.stats.brushBatches} split`);
+    assert.ok(split.stats.markPages > 1, "more than one page");
+    assert.equal(whole.stats.brushBatches, 1);
+    assert.ok(split.stats.brushBatches > 1);
+    assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), "the same pixels, split and unsplit");
+  } finally {
+    whole.destroy();
+    split.destroy();
+  }
 });

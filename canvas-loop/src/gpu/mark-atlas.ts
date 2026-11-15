@@ -1,8 +1,8 @@
 // The mark atlas: every dab-and-run mark of a frame gets a slot on an rgba8
 // page; per page, one instanced draw lays every dab and one draw every bristle
 // run (shader-mark.ts). Stamp marks' dabs and ink marks' capsules are written
-// on the GPU (brush-pass.ts) into one buffer, dabs then capsules, each ordered
-// by page, before the pages are drawn; each page draws its range of each. A
+// on the GPU (brush-pass.ts) into one buffer per batch, dabs then capsules,
+// each ordered by page; after each batch, each page draws its part of it. A
 // mark's draw then reads its slot (src 3 or 4 in the draw shader), so a mark's
 // opacity applies once however many dabs or capsules overlap.
 import type { Run } from "../scene/brush/expand.js";
@@ -15,7 +15,8 @@ import { timed } from "./frame.js";
 import type { PassTimer } from "./timing.js";
 import { MARK_WGSL } from "./shader-mark.js";
 import { BrushPass } from "./brush-pass.js";
-import type { BrushJob } from "./brush-pass.js";
+import type { Batch, BrushJob, SampleRange } from "./brush-pass.js";
+import type { FrameStats } from "./frame.js";
 import { DAB_FLOATS } from "./shader-brush.js";
 
 const MAX = ATLAS_MAX;
@@ -109,9 +110,10 @@ export class MarkAtlas {
   /** The GPU brush expansion: stamp marks' dabs and ink marks' capsules. */
   readonly brushes: BrushPass;
 
-  constructor(device: GPUDevice) {
+  /** `brushLimit` (tests) forces the brush pass's buffer limit down, so its batches split. */
+  constructor(device: GPUDevice, options?: { brushLimit?: number | undefined }) {
     this.#device = device;
-    this.brushes = new BrushPass(device);
+    this.brushes = new BrushPass(device, { limit: options?.brushLimit });
     const module = device.createShaderModule({ code: MARK_WGSL });
     const over: GPUBlendState = { color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }, alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" } };
     const target: GPUColorTargetState = { format: "rgba8unorm", blend: over };
@@ -127,57 +129,79 @@ export class MarkAtlas {
     this.#capsule = device.createRenderPipeline({ layout: "auto", vertex: { module, entryPoint: "capVs", buffers: [attrs("instance", DAB_FLOATS / 4)] }, fragment: { module, entryPoint: "capFs", targets: [{ format: "rgba8unorm", blend: { color: most, alpha: most } }] } });
   }
 
-  /** Pack `marks`, lay their dabs and runs, and return the pages (pool textures the caller releases). */
-  build(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; timer: PassTimer | undefined }): AtlasPage[] {
+  /**
+   * Pack `marks`, lay their dabs and runs, and return the pages (pool
+   * textures the caller releases). Each page's first render pass clears it
+   * and draws its CPU dabs and runs; the GPU strokes' instances come in
+   * batches (brush-pass.ts), and after each batch's dispatch, each page with
+   * instances in it draws them, in a later pass with `loadOp: "load"`. With
+   * one batch, each page has one pass.
+   */
+  build(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; timer: PassTimer | undefined; stats: FrameStats }): AtlasPage[] {
     const widest = marks.reduce((w, m) => Math.max(w, widthOf(m.box) + 1), 0);
     const sizes = shelfPack(marks, Math.min(MAX, Math.max(widest, 1024)));
-    const gpu = this.#gpuMarks(marks, f);
-    return sizes.map((size, page) => {
-      const tex = f.pool.acquire({ w: size.w, h: size.h, format: "rgba8unorm" });
-      const mine = marks.filter((m) => m.slot?.page === page);
-      const { dabs, runs } = this.#lay(mine);
-      const pass = f.enc.beginRenderPass({ colorAttachments: [{ view: tex.createView(), loadOp: "clear", clearValue: [0, 0, 0, 0], storeOp: "store" }], ...timed(f, "marks") });
+    const texs = sizes.map((size) => f.pool.acquire({ w: size.w, h: size.h, format: "rgba8unorm" }));
+    const begun = new Set<number>();
+    const pass = (page: number, gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges } | undefined): void => {
+      const tex = texs[page];
+      if (tex === undefined) return;
+      const first = !begun.has(page);
+      begun.add(page);
+      const p = f.enc.beginRenderPass({ colorAttachments: [{ view: tex.createView(), loadOp: first ? "clear" : "load", clearValue: [0, 0, 0, 0], storeOp: "store" }], ...timed(f, "marks") });
       const uni = this.#buffer(new Float32Array([tex.width, tex.height, 0, 0]), { usage: GPUBufferUsage.UNIFORM, temp: f.temp });
       const bind = (pipe: GPURenderPipeline): void => {
-        pass.setPipeline(pipe);
-        pass.setBindGroup(0, this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uni } }] }));
+        p.setPipeline(pipe);
+        p.setBindGroup(0, this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uni } }] }));
       };
-      for (const [pipe, data] of [[this.#dab, dabs], [this.#run, runs]] as const) {
-        if (data.length === 0) continue;
-        bind(pipe);
-        pass.setVertexBuffer(0, this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp }));
-        if (pipe === this.#dab) pass.draw(6, data.length / DAB_FLOATS);
-        else pass.draw(data.length / RUN_FLOATS);
+      if (first) {
+        const { dabs, runs } = this.#lay(marks.filter((m) => m.slot?.page === page));
+        for (const [pipe, data] of [[this.#dab, dabs], [this.#run, runs]] as const) {
+          if (data.length === 0) continue;
+          bind(pipe);
+          p.setVertexBuffer(0, this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp }));
+          if (pipe === this.#dab) p.draw(6, data.length / DAB_FLOATS);
+          else p.draw(data.length / RUN_FLOATS);
+        }
       }
       for (const [pipe, ranges] of [[this.#dab, gpu?.stamps], [this.#capsule, gpu?.inks]] as const) {
-        const range = ranges?.get(page);
-        if (gpu === undefined || range === undefined || range.count === 0) continue;
+        const r = gpu === undefined ? undefined : within(ranges?.get(page), gpu.batch);
+        if (gpu === undefined || r === undefined) continue;
         bind(pipe);
-        pass.setVertexBuffer(0, gpu.instances);
-        pass.draw(6, range.count, 0, range.first);
+        p.setVertexBuffer(0, gpu.batch.buffer);
+        p.draw(6, r.count, 0, r.first - gpu.batch.first);
       }
-      pass.end();
-      return { tex, width: tex.width, height: tex.height };
-    });
+      p.end();
+    };
+    f.stats.brushBatches = this.#gpuMarks(marks, { ...f, each: (gpu) => {
+      for (const page of texs.keys()) if (!begun.has(page) || within(gpu.stamps.get(page), gpu.batch) !== undefined || within(gpu.inks.get(page), gpu.batch) !== undefined) pass(page, gpu);
+    } });
+    for (const page of texs.keys()) if (!begun.has(page)) pass(page, undefined);
+    return texs.map((tex) => ({ tex, width: tex.width, height: tex.height }));
   }
 
-  /** Encode the stamp marks' dabs and the ink marks' capsules (stamps first, each kind ordered by page), and each page's range of instances per kind; undefined with no samples. */
-  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined }): { instances: GPUBuffer; stamps: PageRanges; inks: PageRanges } | undefined {
+  /**
+   * Encode the stamp marks' dabs and the ink marks' capsules (stamps first,
+   * each kind ordered by page), calling `each` after each batch with each
+   * page's range of instances per kind; returns the number of batches.
+   */
+  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges }) => void }): number {
     const placed = marks.flatMap((m): GpuMark[] => (m.gpu === undefined || m.slot === undefined ? [] : [{ ...m, gpu: m.gpu, slot: m.slot }]));
-    if (placed.length === 0) return undefined;
+    if (placed.length === 0) return 0;
     const ink = (m: GpuMark): number => (m.gpu.brush.kind === "ink" ? 1 : 0);
     const sorted = placed.toSorted((a, b) => ink(a) - ink(b) || a.slot.page - b.slot.page);
-    const out = this.brushes.encodeMarks(sorted.map(brushJob), f);
-    if (out.instances === undefined) return undefined;
-    const stamps: PageRanges = new Map();
-    const inks: PageRanges = new Map();
-    for (const [i, m] of sorted.entries()) {
-      const r = out.strokes[i] ?? { first: 0, count: 0 };
-      const pages = ink(m) === 1 ? inks : stamps;
-      const at = pages.get(m.slot.page);
-      pages.set(m.slot.page, at === undefined ? { ...r } : { first: at.first, count: at.count + r.count });
-    }
-    return { instances: out.instances, stamps, inks };
+    let pages: { stamps: PageRanges; inks: PageRanges } | undefined;
+    const pagesOf = (strokes: readonly SampleRange[]): { stamps: PageRanges; inks: PageRanges } => {
+      const stamps: PageRanges = new Map();
+      const inks: PageRanges = new Map();
+      for (const [i, m] of sorted.entries()) {
+        const r = strokes[i] ?? { first: 0, count: 0 };
+        const by = ink(m) === 1 ? inks : stamps;
+        const at = by.get(m.slot.page);
+        by.set(m.slot.page, at === undefined ? { ...r } : { first: at.first, count: at.count + r.count });
+      }
+      return { stamps, inks };
+    };
+    return this.brushes.encodeMarks(sorted.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, ...(pages ??= pagesOf(strokes)) }) }).batches;
   }
 
   /** Verification: draw capsule instances into `tex` (cleared first), in their order. */
@@ -231,6 +255,14 @@ export class MarkAtlas {
     b.temp.push(buf);
     return buf;
   }
+}
+
+/** The part of a page's range of instances in `batch`, or undefined when none is. */
+function within(r: { first: number; count: number } | undefined, batch: Batch): { first: number; count: number } | undefined {
+  if (r === undefined) return undefined;
+  const first = Math.max(r.first, batch.first);
+  const end = Math.min(r.first + r.count, batch.first + batch.count);
+  return end > first ? { first, count: end - first } : undefined;
 }
 
 function slotRect(box: R, s: { x: number; y: number }): number[] {

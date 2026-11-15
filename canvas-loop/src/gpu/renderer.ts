@@ -135,9 +135,11 @@ export class GpuRenderer {
    * expansions, coverage geometry, picture rasters): cache-equivalence checks
    * compare its frames with a caching renderer's. `peaks` (testing mode)
    * measures each brushed mark's peak alpha in every frame `render` draws, for
-   * the faint-mark check; its colour output is the same.
+   * the faint-mark check; its colour output is the same. `brushLimit` (tests)
+   * forces the brush pass's buffer limit below the device's, in bytes, so its
+   * inputs and batches split; the pixels are the same.
    */
-  constructor(gpu: GpuHandle, options?: { timing?: boolean; caches?: boolean; peaks?: boolean }) {
+  constructor(gpu: GpuHandle, options?: { timing?: boolean; caches?: boolean; peaks?: boolean; brushLimit?: number | undefined }) {
     const caches = options?.caches ?? true;
     this.#measurePeaks = options?.peaks ?? false;
     this.#expander = new BrushExpander({ enabled: caches });
@@ -148,7 +150,7 @@ export class GpuRenderer {
     this.#pool = new TexturePool(gpu.device);
     this.#pipes = makePipelines(gpu.device);
     this.#atlas = new CoverageAtlas(gpu.device, gpu.atlasFormat);
-    this.#marks = new MarkAtlas(gpu.device);
+    this.#marks = new MarkAtlas(gpu.device, { brushLimit: options?.brushLimit });
     this.#smear = new SmearPass(gpu.device);
     this.#painterly = new PainterlyPasses(gpu.device);
     this.#light = new LightPass(gpu.device);
@@ -171,7 +173,7 @@ export class GpuRenderer {
     this.#expander.beginFrame();
     this.#kept.beginFrame();
     this.#rasters.beginFrame();
-    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters }).lower(scene);
+    const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs, kept: this.#kept, rasters: this.#rasters, brushLimit: this.#marks.brushes.limit }).lower(scene);
     const jobs = postOrder(root, []);
     const { pieces, marks, cells, clips } = packablesOf(jobs);
     const enc = device.createCommandEncoder();
@@ -179,7 +181,7 @@ export class GpuRenderer {
     const t1 = performance.now();
     const timer = this.#timer;
     const atlas = this.#atlas.build(pieces, { enc, pool: this.#pool, temp: a.temp, minWidth: widthOf(root.rect), timer });
-    const markPages = this.#marks.build(marks, { enc, pool: this.#pool, temp: a.temp, timer });
+    const markPages = this.#marks.build(marks, { enc, pool: this.#pool, temp: a.temp, timer, stats });
     const glyphPages = this.#glyphs.build(cells, { device, pool: this.#pool });
     stats.pieces = pieces.length;
     stats.atlasPages = atlas.length;
@@ -319,21 +321,15 @@ export class GpuRenderer {
    * eighth a u32), with each stroke's contour ranges, the CPU time to pack,
    * upload and encode, and the pass's GPU time when timing.
    */
-  async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; encodeMs: number; gpuMs: number | undefined }> {
-    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, encode: (f) => {
-      const out = this.#marks.brushes.encode(strokes, f);
-      return { ...out, buffer: out.samples, bytes: out.count * SAMPLE_FLOATS * 4 };
-    } });
-    return { data: r.data, count: r.out.count, ranges: r.out.ranges, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
+  async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; batches: number; inputs: number; encodeMs: number; gpuMs: number | undefined }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: SAMPLE_FLOATS * 4, encode: (f) => this.#marks.brushes.encode(strokes, f) });
+    return { data: r.data, count: r.out.count, ranges: r.out.ranges, batches: r.out.batches, inputs: r.out.inputs, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
   }
 
-  /** Verification: the `dabs` and `capsules` entries' instances for `jobs` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, and each stroke's range. */
-  async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"] }> {
-    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, encode: (f) => {
-      const out = this.#marks.brushes.encodeMarks(jobs, f);
-      return { ...out, buffer: out.instances, bytes: out.count * DAB_FLOATS * 4 };
-    } });
-    return { data: r.data, count: r.out.count, strokes: r.out.strokes };
+  /** Verification: the `dabs` and `capsules` entries' instances for `jobs` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, each stroke's range, and the batches and input buffers they took. */
+  async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"]; batches: number; inputs: number }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, encode: (f) => this.#marks.brushes.encodeMarks(jobs, f) });
+    return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, inputs: r.out.inputs };
   }
 
   /** Verification: draw capsule instances (the `capsules` entry's layout, slots on one page of `size`) in their order with the mark atlas's capsule pipeline, and read the page's alpha back, row by row. */
