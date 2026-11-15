@@ -36,7 +36,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { relocateLinks, type LinkRewrite } from "../../beebox/src/dev/doc-check/link-repair.js";
-import { findMentionsOf, repairFilePaths } from "../../beebox/src/dev/doc-check/file-paths.js";
+import { BOX_FACING_PREFIXES, findMentionsOf, repairFilePaths } from "../../beebox/src/dev/doc-check/file-paths.js";
 import { findPrivateLinkViolations } from "../../beebox/src/dev/doc-check/private-link.js";
 import { AGENT_DOCS_PREFIX, isFilePathExempt, isLinkScanned } from "../../beebox/src/dev/doc-check/scan-scope.js";
 
@@ -109,12 +109,16 @@ export function planDocMove({ from, to, sources, read, exists, editMoved }: {
   // Own links keep naming the same repo path, by path arithmetic, whether or
   // not the target exists; a missing one is reported, not guessed.
   const missing = new Set<string>();
+  // Every own target (links, definitions, frontmatter paths) of a public file
+  // that resolves into private-issues/ blocks the move.
+  const privateTargets = new Set<string>();
   const own = relocateLinks({
     resolveFrom: from,
     writeFrom: to,
     content: read(from),
     relocate: (target) => {
       if (target === from) return to;
+      if (repositoryOf(to) === "public" && repositoryOf(target) === "private") privateTargets.add(target);
       if (!exists(target)) missing.add(target);
       return target;
     },
@@ -127,6 +131,8 @@ export function planDocMove({ from, to, sources, read, exists, editMoved }: {
     content: editMoved ? editMoved(own.content) : own.content,
   };
   if (moved.repository === "public") {
+    for (const target of privateTargets) notices.push({ path: to, line: null, message: `public file links into private-issues/: ${target}`, blocking: true });
+    // A caller's edit (a closing note) is checked as written.
     for (const v of findPrivateLinkViolations(to, moved.content)) {
       notices.push({ path: to, line: v.line, message: `public file links into private-issues/: ${v.target}`, blocking: true });
     }
@@ -235,6 +241,8 @@ function residuals({ rel, content, from, to, exists, linkFormsOnly, rewrites, no
   rel: string; content: string; from: string; to: string; exists: (rel: string) => boolean;
   linkFormsOnly: boolean; rewrites: DocMoveRewrite[]; notices: DocMoveNotice[];
 }): string {
+  // Paths in box-facing docs name files in a box, not in this repository.
+  if (BOX_FACING_PREFIXES.some((p) => rel.startsWith(p))) return content;
   const basename = path.posix.basename(from);
   const bases = [...new Set([path.posix.dirname(rel), rel.split("/")[0] ?? ".", "beebox", "."])];
   return content.split("\n").map((line, i) => {

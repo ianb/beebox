@@ -103,6 +103,10 @@ Adopted: token boundary after the basename; refuse-before-write for dirty files 
 
 Rejected: "confirm-tested must also stage nothing". Its purpose is the commit on a clean main checkout, called from the workstreams app; the shared move stages nothing and confirm-tested commits exactly the paths the move returns. Rejected: rollback of a write that fails midway, a mid-operation I/O window in a one-shot operator tool. Deferred to NOT in scope: the moved file's own prose self-paths.
 
+## Branch review (codex gpt-6-astra, 2026-11-15)
+
+Fixed: a public moved file's own frontmatter path into `private-issues/` now blocks the move (the link scanner saw only Markdown links); the label and prose pass skips box-facing docs, whose paths name box files (`file-paths.ts` `BOX_FACING_PREFIXES`). Rejected: confirm-tested staging (decided above; raised with the developer). Rejected: angle-bracket reference definitions in historical records (a form not found in the tree). Deferred: the moved file's own labels naming itself (NOT in scope, self-references).
+
 ## Subplans
 
 none

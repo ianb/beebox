@@ -44,7 +44,7 @@ const OPEN_ISSUE_RE = /^issues\/(?!closed\/)([^/]+)\/([^/]+\.md)$/;
 // Box-facing docs (the docs/box/ sources and the box-docs/ build output) are
 // read by box agents inside a box: their `src/`, `.claude/rules/`, and
 // `.claude/skills/` paths name the box's own tree, never the repo's.
-const BOX_FACING_PREFIXES = ["beebox/docs/box/", "beebox/box-docs/"];
+export const BOX_FACING_PREFIXES = ["beebox/docs/box/", "beebox/box-docs/"];
 
 // beebox is the main package; repo-root docs (skills, schedules, issues)
 // conventionally name its files package-relative (`src/core/x.ts`).

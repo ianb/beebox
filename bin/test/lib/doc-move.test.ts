@@ -119,6 +119,8 @@ void test("A plan path named in prose follows a plan move", async (t) => {
     "canvas-loop/src/gallery/g/task.md": "Example for the sound plan (beebox/docs/plans/s.md): six strings.\n",
     "beebox/docs/secrets.md": "Rationale: [`plans/s.md`](plans/s.md).\n",
     // Longer paths that start with the old one name other files.
+    // A box-facing doc's paths name files inside a box.
+    "beebox/docs/box/guide.md": "In the box, see docs/plans/s.md.\n",
     "beebox/docs/backups.md": "Kept: beebox/docs/plans/s.md.bak, beebox/docs/plans/s.mdx, and beebox/docs/plans/s.md/notes.\n",
   };
   const p = planDocMove({
@@ -133,6 +135,22 @@ void test("A plan path named in prose follows a plan move", async (t) => {
     ["beebox/docs/secrets.md", "Rationale: [`implemented-plans/s.md`](implemented-plans/s.md).\n"],
   ]);
   t.check(p.notices, []);
+});
+
+// ## A public file's own path into private-issues/ blocks the move, frontmatter included
+void test("A public file's own path into private-issues/ blocks the move, frontmatter included", async (t) => {
+  const files: Record<string, string> = {
+    "issues/bugs/a.md": "---\ntitle: A\ndesign: ../../private-issues/bugs/secret.md\n---\nBody.\n",
+    "private-issues/bugs/secret.md": "secret",
+  };
+  const p = planDocMove({
+    from: "issues/bugs/a.md",
+    to: "issues/closed/bugs/a.md",
+    sources: Object.keys(files),
+    read: (rel) => files[rel] ?? "",
+    exists: (rel) => rel in files,
+  });
+  t.check(p.notices, [{ path: "issues/closed/bugs/a.md", line: null, message: "public file links into private-issues/: private-issues/bugs/secret.md", blocking: true }]);
 });
 
 // ## A path token two files could answer to blocks the move
