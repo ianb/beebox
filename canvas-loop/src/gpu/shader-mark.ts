@@ -6,7 +6,10 @@
 // fragment outside its slot is discarded, so a mark cut to what can be seen
 // never spills into a neighbour. Tips and distances are computed in the mark's
 // own pixels (the fragment's page pixel less the slot corner), so a mark looks
-// the same wherever it is packed.
+// the same wherever it is packed. Ink capsules (canvas-loop-gpu-brushes.subplan.md,
+// "Ink: capsule geometry") are drawn by their own pipeline with a \`max\` blend:
+// each pixel keeps the largest coverage of any capsule over it, whatever the
+// order, so a mark does not darken where it crosses itself.
 export const MARK_WGSL = /* wgsl */ `
 struct U { size: vec4f };
 @group(0) @binding(0) var<uniform> u: U;
@@ -68,5 +71,48 @@ fn cross2(a: vec2f, b: vec2f) -> f32 { return a.x * b.y - a.y * b.x; }
   let cov = max(0.0, min(u + 0.5, hw) - max(u - 0.5, -hw));
   let a = i.c.w * cov;
   return vec4f(i.c.rgb * a, a);
+}
+
+struct CapOut {
+  @builtin(position) pos: vec4f,
+  @location(0) @interpolate(flat) ab: vec4f,
+  @location(1) @interpolate(flat) r: vec2f,
+  @location(2) @interpolate(flat) slot: vec4f,
+};
+// c: a.x, a.y, ra, b.x; d: b.y, rb (the ends in the mark's pixels, and their radii). The quad
+// bounds both end discs grown by one pixel; a capsule of radius 0 collapses to nothing.
+@vertex fn capVs(@builtin(vertex_index) vi: u32, @location(0) c: vec4f, @location(1) d: vec4f, @location(2) slot: vec4f) -> CapOut {
+  var corners = array(vec2f(0,0), vec2f(1,0), vec2f(0,1), vec2f(0,1), vec2f(1,0), vec2f(1,1));
+  let a = c.xy; let b = vec2f(c.w, d.x);
+  let lo = min(a - c.z, b - d.y) - 1.0;
+  let hi = max(a + c.z, b + d.y) + 1.0;
+  var o: CapOut;
+  let shown = max(c.z, d.y) > 0.0;
+  o.pos = ndc(select(slot.xy, lo + (hi - lo) * corners[vi] + slot.xy, shown));
+  o.ab = vec4f(a, b); o.r = vec2f(c.z, d.y); o.slot = slot;
+  return o;
+}
+// The capsule rule: the unsigned distance d from the axis segment, the radius r interpolated
+// along it (the larger end disc alone when one holds the other, or the segment has no length),
+// and the length of the pixel's span [d - 0.5, d + 0.5] inside [-r, r].
+@fragment fn capFs(i: CapOut) -> @location(0) vec4f {
+  if (!inSlot(i.pos.xy, i.slot)) { discard; }
+  let q = local(i.pos.xy, i.slot);
+  let a = i.ab.xy; let b = i.ab.zw; let ra = i.r.x; let rb = i.r.y;
+  let e = b - a;
+  let l2 = dot(e, e);
+  var d: f32;
+  var r: f32;
+  if (l2 == 0.0 || abs(rb - ra) >= sqrt(l2)) {
+    let big = ra >= rb;
+    d = distance(q, select(b, a, big));
+    r = select(rb, ra, big);
+  } else {
+    let t = clamp(dot(q - a, e) / l2, 0.0, 1.0);
+    d = distance(q, a + e * t);
+    r = ra + t * (rb - ra);
+  }
+  let cov = max(0.0, min(d + 0.5, r) - max(d - 0.5, -r));
+  return vec4f(0.0, 0.0, 0.0, cov);
 }
 `;

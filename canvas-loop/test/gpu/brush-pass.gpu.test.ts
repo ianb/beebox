@@ -15,8 +15,8 @@ import { mix, randOf } from "../../src/core/brush/random.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { openTextMeasurer } from "../../src/device/open.js";
-import type { BrushOutputs, StampJob } from "../../src/gpu/brush-pass.js";
-import { linMarks, stampBox } from "../../src/gpu/marks.js";
+import type { BrushJob, BrushOutputs } from "../../src/gpu/brush-pass.js";
+import { gpuBox, linMarks } from "../../src/gpu/marks.js";
 import type { R } from "../../src/gpu/jobs.js";
 import { MIX_WGSL } from "../../src/gpu/shader-paper.js";
 import { DAB_FLOATS, SAMPLE_FLOATS } from "../../src/gpu/shader-brush.js";
@@ -201,7 +201,7 @@ test("the WGSL hash equals random.ts's on 65,536 inputs, bit for bit", async (t)
 });
 
 /** Stamp strokes placed as the lowering places them (brush-space q times the ratio, a fractional translation), with their CPU dabs after `linMarks`. */
-function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; translate?: readonly [number, number] }): { job: StampJob; box: R; cpu: { x: number; y: number; r: number; a: number; soft: boolean; rgb: readonly number[] }[]; skip: boolean[] }[] {
+function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; translate?: readonly [number, number] }): { job: BrushJob; box: R; cpu: { x: number; y: number; r: number; a: number; soft: boolean; rgb: readonly number[] }[]; skip: boolean[] }[] {
   const expander = new BrushExpander({ enabled: false });
   const SIZE_JITTER = randOf(11);
   const { ratio } = at;
@@ -210,7 +210,7 @@ function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; transl
     if (ex?.set.kind !== "stamp") return [];
     const { q } = ex;
     const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], at.translate?.[0] ?? 13.25 + i * 0.37, at.translate?.[1] ?? 7.5 + i * 0.11];
-    const box = stampBox(ex.set, e);
+    const box = gpuBox(ex.set, e);
     const cpu = expandOnCpu(req);
     if (box === undefined || cpu?.kind !== "marks") return [];
     const l = linMarks(cpu, { e, ratio });
@@ -241,7 +241,7 @@ interface DabWorst {
 async function compareDabs(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number }): Promise<DabWorst> {
   const placed = placeStamps(a.reqs, { ratio: a.ratio });
   const renderer = new GpuRenderer(handle);
-  const g = await renderer.stampBrushes(placed.map((p) => p.job)).finally(() => renderer.destroy());
+  const g = await renderer.brushInstances(placed.map((p) => p.job)).finally(() => renderer.destroy());
   const f = new Float32Array(g.data);
   const w: DabWorst = { dabs: g.count, skipped: 0, pos: 0, r: 0, a: 0, rgb: 0, failures: [] };
   const fail = (m: string): void => void (w.failures.length < 12 && w.failures.push(m));
@@ -312,7 +312,7 @@ test("a stamp mark's box holds every dab at the extremes of scatter, sizeJitter 
     const placed = placeStamps(brushRequests(scene, handle.colors), { ratio });
     assert.equal(placed.length, 3);
     const renderer = new GpuRenderer(handle);
-    const g = await renderer.stampBrushes(placed.map((p) => p.job)).finally(() => renderer.destroy());
+    const g = await renderer.brushInstances(placed.map((p) => p.job)).finally(() => renderer.destroy());
     const f = new Float32Array(g.data);
     let outside = 0;
     let slack = Infinity;
@@ -354,7 +354,7 @@ test("a stamp far from the origin, translated back, lands where the CPU puts it 
   const [p] = placeStamps(reqs, { ratio: 1, translate: [-16777207, 0] });
   assert.ok(p !== undefined);
   const renderer = new GpuRenderer(handle);
-  const g = await renderer.stampBrushes([p.job]).finally(() => renderer.destroy());
+  const g = await renderer.brushInstances([p.job]).finally(() => renderer.destroy());
   const f = new Float32Array(g.data);
   assert.equal(g.count, 1);
   const x = (f[0] ?? NaN) + p.box.x0;

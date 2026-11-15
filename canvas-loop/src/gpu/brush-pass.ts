@@ -1,19 +1,20 @@
 // Brushed strokes expanded on the GPU (canvas-loop-gpu-brushes.subplan.md):
 // the prepared strokes' contours are packed into a records buffer (a header,
-// one record per contour, pressure keyframes, and for stamps one record per
+// one record per contour, pressure keyframes, and one record per stamp or ink
 // stroke) and a geometry buffer (every prepared point with its arc length),
 // uploaded once per frame. The `samples` entry of shader-brush.ts writes one
 // sample per thread into a frame-temporary buffer; for stamp strokes the
-// `dabs` entry then writes one dab instance per sample, which the mark atlas
-// draws. Every output index is fixed here, before the dispatch. One batch:
-// inputs and outputs must each fit one storage binding (at most 64 MiB), else
-// the frame fails naming the sizes.
-import type { Envelope, StampBrush } from "../core/brush/types.js";
+// `dabs` entry then writes one dab instance per sample, and for ink strokes the
+// `capsules` entry one capsule instance per sample, into one instance buffer
+// (stamps first, then inks), which the mark atlas draws. Every output index is
+// fixed here, before the dispatch. One batch: inputs and outputs must each fit
+// one storage binding (at most 64 MiB), else the frame fails naming the sizes.
+import type { Envelope, InkBrush, StampBrush } from "../core/brush/types.js";
 import type { Prepared, PreparedContour } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
 import { POINT_WORDS } from "../scene/brush/expand.js";
-import { CONTOUR_WORDS, DABS_WGSL, DAB_FLOATS, ENVELOPE_KINDS, RECORD_HEAD, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, STROKE_WORDS } from "./shader-brush.js";
+import { CONTOUR_WORDS, DAB_FLOATS, INSTANCES_WGSL, ENVELOPE_KINDS, RECORD_HEAD, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, STROKE_WORDS } from "./shader-brush.js";
 import type { PassTimer } from "./timing.js";
 
 const MAX_BINDING = 64 * 1024 * 1024;
@@ -31,10 +32,10 @@ export interface BrushOutputs {
   readonly ranges: readonly (readonly SampleRange[])[];
 }
 
-/** A stamp stroke placed in the mark atlas: what the `dabs` entry needs besides its prepared stroke. */
-export interface StampJob {
+/** A stamp or ink stroke placed in the mark atlas: what the `dabs` or `capsules` entry needs besides its prepared stroke. */
+export interface BrushJob {
   readonly prepared: Prepared;
-  readonly brush: StampBrush;
+  readonly brush: StampBrush | InkBrush;
   /** Brush space → device pixels, linear part (pixel ratio included). */
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
@@ -44,11 +45,16 @@ export interface StampJob {
   readonly slot: readonly [number, number, number, number];
 }
 
-/** The dab instances of a frame's stamp strokes (`DAB_FLOATS` floats each, one per sample), and each stroke's first instance and count. */
-export interface DabOutputs {
-  readonly dabs: GPUBuffer | undefined;
+/**
+ * The instances of a frame's stamp and ink strokes (`DAB_FLOATS` floats each,
+ * one per sample: dabs, then capsules), each stroke's first instance and
+ * count, and the number of stamp instances (the capsules start there).
+ */
+export interface InstanceOutputs {
+  readonly instances: GPUBuffer | undefined;
   readonly count: number;
   readonly strokes: readonly SampleRange[];
+  readonly stamps: number;
 }
 
 /** The keyframes as the CPU reads them: a frame followed by one at the same t is skipped (envelope.ts). */
@@ -62,26 +68,28 @@ function envelopeWords(env: Envelope): { kind: number; value: number; keys: numb
   return { kind: ENVELOPE_KINDS.keyframes, value: 0, keys: keyframesOf(env) };
 }
 
-/** A stamp stroke's record (shader-brush.ts lists the words). */
-function stampWords(j: StampJob): number[] {
+/** A stamp or ink stroke's record (shader-brush.ts lists the words). */
+function strokeWords(j: BrushJob): number[] {
   const b = j.brush;
-  const base = j.prepared.base;
-  const soft = b.tip === "soft" ? 1 : 0;
   // The samples are relative to the stroke's origin: its mapped position joins the offset here, in f64.
   const [l0, l1, l2, l3] = j.lin;
   const [ox, oy] = j.prepared.origin;
   const offset = [j.offset[0] + l0 * ox + l2 * oy, j.offset[1] + l1 * ox + l3 * oy];
-  return [...j.lin, ...offset, ...j.slot, j.prepared.width, j.ratio, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
+  const head = [...j.lin, ...offset, ...j.slot, j.prepared.width, j.ratio];
+  if (b.kind === "ink") return [...head, b.thinning];
+  const base = j.prepared.base;
+  const soft = b.tip === "soft" ? 1 : 0;
+  return [...head, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
 }
 
-/** The records and geometry buffers' contents for `strokes`' contours (in order), with a record per stroke when `stamps` gives one, and their sample ranges. */
-function pack(strokes: readonly Prepared[], stamps: readonly (readonly number[])[] | undefined): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
+/** The records and geometry buffers' contents for `strokes`' contours (in order), with a record per stroke when `words` gives one, and their sample ranges. */
+function pack(strokes: readonly Prepared[], words: readonly (readonly number[])[] | undefined): { records: ArrayBuffer; geometry: Uint32Array<ArrayBuffer>; count: number; contours: number; ranges: SampleRange[][] } {
   const all: { c: PreparedContour; wobble: number; si: number }[] = strokes.flatMap((s, si) => s.contours.map((c) => ({ c, wobble: s.wobble, si })));
   const envs = all.map((a) => envelopeWords(a.c.pressure));
   const keyWords = envs.reduce((n, e) => n + e.keys.length, 0);
   const keyAt = RECORD_HEAD + all.length * CONTOUR_WORDS;
   const strokeAt = keyAt + keyWords;
-  const records = new ArrayBuffer((strokeAt + (stamps?.length ?? 0) * STROKE_WORDS) * 4);
+  const records = new ArrayBuffer((strokeAt + (words?.length ?? 0) * STROKE_WORDS) * 4);
   const ru = new Uint32Array(records);
   const rf = new Float32Array(records);
   const geometry = new Uint32Array(all.reduce((n, a) => n + a.c.geom.length, 0));
@@ -107,7 +115,7 @@ function pack(strokes: readonly Prepared[], stamps: readonly (readonly number[])
     point += points;
     sample += c.count;
   }
-  for (const [i, words] of (stamps ?? []).entries()) rf.set(words, strokeAt + i * STROKE_WORDS);
+  for (const [i, w] of (words ?? []).entries()) rf.set(w, strokeAt + i * STROKE_WORDS);
   ru.set([all.length, sample], 0);
   let first = 0;
   const ranges = strokes.map((s) => s.contours.map((c) => {
@@ -118,6 +126,12 @@ function pack(strokes: readonly Prepared[], stamps: readonly (readonly number[])
   return { records, geometry, count: sample, contours: all.length, ranges };
 }
 
+interface Pipes {
+  readonly samples: GPUComputePipeline;
+  readonly dabs: GPUComputePipeline;
+  readonly capsules: GPUComputePipeline;
+}
+
 interface Encoding {
   readonly enc: GPUCommandEncoder;
   readonly temp: GPUBuffer[];
@@ -126,17 +140,20 @@ interface Encoding {
 
 export class BrushPass {
   readonly #device: GPUDevice;
-  #pipes: { samples: GPUComputePipeline; dabs: GPUComputePipeline } | undefined;
+  #pipes: Pipes | undefined;
 
   constructor(device: GPUDevice) {
     this.#device = device;
   }
 
-  /** The pipelines, made on first use (a frame with no stamp strokes never compiles them). */
-  get #pipelines(): { samples: GPUComputePipeline; dabs: GPUComputePipeline } {
+  /** The pipelines, made on first use (a frame with no stamp or ink strokes never compiles them). */
+  get #pipelines(): Pipes {
     const d = this.#device;
-    const make = (code: string, entryPoint: string): GPUComputePipeline => d.createComputePipeline({ layout: "auto", compute: { module: d.createShaderModule({ code }), entryPoint } });
-    this.#pipes ??= { samples: make(SAMPLES_WGSL, "samples"), dabs: make(DABS_WGSL, "dabs") };
+    if (this.#pipes === undefined) {
+      const instances = d.createShaderModule({ code: INSTANCES_WGSL });
+      const make = (module: GPUShaderModule, entryPoint: string): GPUComputePipeline => d.createComputePipeline({ layout: "auto", compute: { module, entryPoint } });
+      this.#pipes = { samples: make(d.createShaderModule({ code: SAMPLES_WGSL }), "samples"), dabs: make(instances, "dabs"), capsules: make(instances, "capsules") };
+    }
     return this.#pipes;
   }
 
@@ -172,35 +189,51 @@ export class BrushPass {
 
   /**
    * Upload `strokes` (prepared, in brush space) and encode the `samples`
-   * dispatch on `f.enc`, then, given `stamps` (one per stroke), the `dabs`
-   * dispatch. Output buffers are frame-temporary (in `f.temp`) and can be
-   * copied from.
+   * dispatch on `f.enc`, then, given `jobs` (one per stroke), the `dabs`
+   * dispatch over the stamps' samples and the `capsules` dispatch over the
+   * inks'. Stamp strokes are packed before ink strokes (a stable reorder);
+   * the ranges are returned in `strokes` order. Output buffers are
+   * frame-temporary (in `f.temp`) and can be copied from.
    */
-  #encode(strokes: readonly Prepared[], f: Encoding & { stamps?: readonly StampJob[] }): BrushOutputs & { dabs: GPUBuffer | undefined } {
-    const p = pack(strokes, f.stamps?.map(stampWords));
-    if (p.count === 0) return { samples: undefined, dabs: undefined, count: 0, ranges: p.ranges };
+  #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[] }): BrushOutputs & { instances: GPUBuffer | undefined; stamps: number } {
+    const { jobs } = f;
+    const isInk = (i: number): number => (jobs?.[i]?.brush.kind === "ink" ? 1 : 0);
+    const order = [...strokes.keys()].toSorted((x, y) => isInk(x) - isInk(y));
+    const packed = pack(order.flatMap((i) => strokes[i] ?? []), jobs === undefined ? undefined : order.flatMap((i) => (jobs[i] === undefined ? [] : [strokeWords(jobs[i])])));
+    const ranges: SampleRange[][] = [];
+    let stamps = 0;
+    for (const [k, i] of order.entries()) {
+      ranges[i] = packed.ranges[k] ?? [];
+      if (isInk(i) === 0) stamps += ranges[i].reduce((m, c) => m + c.count, 0);
+    }
+    const p = { ...packed, ranges };
+    if (p.count === 0) return { samples: undefined, instances: undefined, count: 0, ranges: p.ranges, stamps };
     const bytes = p.count * SAMPLE_FLOATS * 4;
-    const dabBytes = f.stamps === undefined ? 0 : p.count * DAB_FLOATS * 4;
-    const groups = this.#check({ count: p.count, contours: p.contours, buffers: [["records", p.records.byteLength], ["geometry", p.geometry.byteLength], ["samples", bytes], ["dabs", dabBytes]] });
+    const instanceBytes = f.jobs === undefined ? 0 : p.count * DAB_FLOATS * 4;
+    const groups = this.#check({ count: p.count, contours: p.contours, buffers: [["records", p.records.byteLength], ["geometry", p.geometry.byteLength], ["samples", bytes], ["instances", instanceBytes]] });
     const S = GPUBufferUsage.STORAGE;
     const records = this.#buffer(f, { size: p.records.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: p.records });
     const geometry = this.#buffer(f, { size: p.geometry.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: p.geometry });
     const samples = this.#buffer(f, { size: bytes, usage: S | GPUBufferUsage.COPY_SRC });
-    const uniform = this.#buffer(f, { size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: new Uint32Array([0, p.count, p.contours, 0]) });
+    const range = (first: number, count: number): GPUBuffer => this.#buffer(f, { size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: new Uint32Array([first, count, p.contours, 0]) });
     const pipes = this.#pipelines;
     const cp = f.enc.beginComputePass(timed(f, "brush"));
     cp.setPipeline(pipes.samples);
-    cp.setBindGroup(0, this.#bind(pipes.samples, [[0, records], [1, geometry], [2, samples], [4, uniform]]));
+    cp.setBindGroup(0, this.#bind(pipes.samples, [[0, records], [1, geometry], [2, samples], [4, range(0, p.count)]]));
     cp.dispatchWorkgroups(groups);
-    let dabs: GPUBuffer | undefined;
-    if (f.stamps !== undefined) {
-      dabs = this.#buffer(f, { size: dabBytes, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
-      cp.setPipeline(pipes.dabs);
-      cp.setBindGroup(0, this.#bind(pipes.dabs, [[0, records], [2, samples], [3, dabs], [4, uniform]]));
-      cp.dispatchWorkgroups(groups);
+    let instances: GPUBuffer | undefined;
+    if (f.jobs !== undefined) {
+      const out = this.#buffer(f, { size: instanceBytes, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
+      for (const [pipe, first, count] of [[pipes.dabs, 0, stamps], [pipes.capsules, stamps, p.count - stamps]] as const) {
+        if (count === 0) continue;
+        cp.setPipeline(pipe);
+        cp.setBindGroup(0, this.#bind(pipe, [[0, records], [2, samples], [3, out], [4, range(first, count)]]));
+        cp.dispatchWorkgroups(Math.ceil(count / SAMPLES_WORKGROUP));
+      }
+      instances = out;
     }
     cp.end();
-    return { samples, dabs, count: p.count, ranges: p.ranges };
+    return { samples, instances, count: p.count, ranges: p.ranges, stamps };
   }
 
   /** The `samples` dispatch alone, for `strokes` of any kind (verification and measurement). */
@@ -208,11 +241,11 @@ export class BrushPass {
     return this.#encode(strokes, f);
   }
 
-  /** The stamp strokes' samples and dab instances, in `stamps` order: stroke i's dabs are instances `strokes[i]`. */
-  encodeStamps(stamps: readonly StampJob[], f: Encoding): DabOutputs {
-    const out = this.#encode(stamps.map((s) => s.prepared), { ...f, stamps });
+  /** The stamp and ink strokes' samples and instances: stroke i's instances are `strokes[i]`; every stamp's come before every ink's, otherwise in `jobs` order. */
+  encodeMarks(jobs: readonly BrushJob[], f: Encoding): InstanceOutputs {
+    const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs });
     const strokes = out.ranges.map((r) => ({ first: r[0]?.first ?? 0, count: r.reduce((n, c) => n + c.count, 0) }));
-    return { dabs: out.dabs, count: out.count, strokes };
+    return { instances: out.instances, count: out.count, strokes, stamps: out.stamps };
   }
 }
 

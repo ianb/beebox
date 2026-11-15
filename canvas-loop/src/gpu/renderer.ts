@@ -25,7 +25,7 @@ import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
 import { readBrushPass } from "./brush-pass.js";
-import type { BrushOutputs, DabOutputs, StampJob } from "./brush-pass.js";
+import type { BrushJob, BrushOutputs, InstanceOutputs } from "./brush-pass.js";
 import { DAB_FLOATS, SAMPLE_FLOATS } from "./shader-brush.js";
 import { PainterlyPasses } from "./painterly.js";
 import { LightPass } from "./light.js";
@@ -327,13 +327,38 @@ export class GpuRenderer {
     return { data: r.data, count: r.out.count, ranges: r.out.ranges, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
   }
 
-  /** Verification: the `dabs` entry's instances for `stamps` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, and each stroke's range. */
-  async stampBrushes(stamps: readonly StampJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: DabOutputs["strokes"] }> {
+  /** Verification: the `dabs` and `capsules` entries' instances for `jobs` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, and each stroke's range. */
+  async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"] }> {
     const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, encode: (f) => {
-      const out = this.#marks.brushes.encodeStamps(stamps, f);
-      return { ...out, buffer: out.dabs, bytes: out.count * DAB_FLOATS * 4 };
+      const out = this.#marks.brushes.encodeMarks(jobs, f);
+      return { ...out, buffer: out.instances, bytes: out.count * DAB_FLOATS * 4 };
     } });
     return { data: r.data, count: r.out.count, strokes: r.out.strokes };
+  }
+
+  /** Verification: draw capsule instances (the `capsules` entry's layout, slots on one page of `size`) in their order with the mark atlas's capsule pipeline, and read the page's alpha back, row by row. */
+  async capsulePage(capsules: Float32Array<ArrayBuffer>, size: { width: number; height: number }): Promise<Uint8Array> {
+    const device = this.#gpu.device;
+    const temp: GPUBuffer[] = [];
+    const tex = device.createTexture({ size: [size.width, size.height], format: "rgba8unorm", usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
+    try {
+      const enc = device.createCommandEncoder();
+      this.#marks.drawCapsules(capsules, { enc, tex, temp });
+      const bytesPerRow = Math.ceil((size.width * 4) / 256) * 256;
+      const read = device.createBuffer({ size: bytesPerRow * size.height, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+      temp.push(read);
+      enc.copyTextureToBuffer({ texture: tex }, { buffer: read, bytesPerRow }, [size.width, size.height]);
+      device.queue.submit([enc.finish()]);
+      await read.mapAsync(GPUMapMode.READ);
+      const src = new Uint8Array(read.getMappedRange());
+      const alpha = new Uint8Array(size.width * size.height);
+      for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) alpha[y * size.width + x] = src[y * bytesPerRow + x * 4 + 3] ?? 0;
+      read.unmap();
+      return alpha;
+    } finally {
+      for (const b of temp) b.destroy();
+      tex.destroy();
+    }
   }
 
   /** Free every texture the renderer made. The device stays open. */

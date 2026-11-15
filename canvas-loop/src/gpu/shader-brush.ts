@@ -9,8 +9,9 @@
 // and adds pressure and wobble as core/brush/render/mark/render.ts's
 // `shapeSamples` does. Hashes are core/brush/random.ts's, bit for bit; a random
 // value keeps the hash's 24 high bits, which f32 holds exactly. Positions are
-// brush space, as the CPU expansion's. The `dabs` entry (its own module, below)
-// turns each sample of a stamp stroke into one dab instance in device pixels.
+// brush space, as the CPU expansion's. The `dabs` and `capsules` entries (their
+// own module, below) turn each sample of a stamp stroke into one dab instance,
+// and each sample of an ink stroke into one capsule instance, in device pixels.
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { MIX_WGSL } from "./shader-paper.js";
 
@@ -24,7 +25,7 @@ export const SAMPLES_WORKGROUP = 64;
 /** Pressure envelope kinds in a contour record; keyframes are pairs of (t, value) in the records buffer. */
 export const ENVELOPE_KINDS = { constant: 0, even: 1, taper: 2, "taper-in": 3, "taper-out": 4, swell: 5, press: 6, keyframes: 7 } as const;
 
-/** Words per stamp stroke record (the `dabs` entry's parameters), and floats per dab instance (mark-atlas.ts's layout). */
+/** Words per stroke record (the `dabs` and `capsules` entries' parameters), and floats per dab or capsule instance (mark-atlas.ts's layouts). */
 export const STROKE_WORDS = 24;
 export const DAB_FLOATS = 12;
 
@@ -105,7 +106,7 @@ fn pressure(c: u32, t: f32) -> f32 {
 // Contour record words: 0 first point, 1 points, 2 first sample, 3 samples,
 // 4 seed, 5 step, 6 arc length, 7 wobble cell, 8 wobble period (0: open),
 // 9 wobble, 10 envelope kind, 11 its value or keyframe word, 12 keyframes,
-// 13 the stroke's record word (stamp strokes; read by \`dabs\`).
+// 13 the stroke's record word (stamp and ink strokes; read by \`dabs\` and \`capsules\`).
 @compute @workgroup_size(${SAMPLES_WORKGROUP}) fn samples(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= u.count) { return; }
   let i = u.first + gid.x;
@@ -192,10 +193,19 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // (mark-atlas.ts's layout: x, y, radius, alpha; soft, r, g, b; the slot) in the
 // mark's own device pixels. A dab paintStamp skips is written with alpha 0.
 // Stroke record words: 0-3 brush space → device (linear), 4-5 the offset to
-// the mark's own pixels, 6-9 the slot, 10 width (brush space), 11 pixel ratio,
-// 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure, 16 scatter,
-// 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour (0..255), 23 jittered.
-export const DABS_WGSL = /* wgsl */ `
+// the mark's own pixels, 6-9 the slot, 10 width (brush space), 11 pixel ratio;
+// a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
+// 16 scatter, 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour
+// (0..255), 23 jittered; ink: 12 thinning.
+//
+// The \`capsules\` entry: sample i of an ink contour of n samples is written as
+// capsule instance i, from sample i to sample i + 1 (mark-atlas.ts's layout: ax,
+// ay, ra, bx; by, rb, 0, 0; the slot), in the mark's own device pixels. Its last
+// sample writes radius 0, which draws nothing; a one-sample contour writes a disc
+// (both ends at the sample). The radius is perfect-freehand's for the pressure,
+// \`size × (0.5 − thinning × (0.5 − p))\` with \`size = width / (1 + thinning)\`
+// (kinds.ts \`paintInk\`), so a full-pressure line keeps today's width.
+export const INSTANCES_WGSL = /* wgsl */ `
 ${PRELUDE}
 ${COLOUR_WGSL}
 @group(0) @binding(2) var<storage, read> smp: array<Sample>;
@@ -233,6 +243,41 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
   dab[o + 3u] = select(0.0, alpha, shown);
   dab[o + 4u] = sf(st, 17u);
   dab[o + 5u] = rgb.r; dab[o + 6u] = rgb.g; dab[o + 7u] = rgb.b;
+  dab[o + 8u] = slot.x; dab[o + 9u] = slot.y; dab[o + 10u] = slot.z; dab[o + 11u] = slot.w;
+}
+
+fn placed(st: u32, s: Sample) -> vec2f {
+  let e = sv(st, 0u);
+  return vec2f(e.x * s.x + e.z * s.y, e.y * s.x + e.w * s.y) + vec2f(sf(st, 4u), sf(st, 5u));
+}
+fn inkRadius(st: u32, p: f32) -> f32 {
+  let thin = sf(st, 12u);
+  return sf(st, 10u) / (1.0 + thin) * (0.5 - thin * (0.5 - p)) * sf(st, 11u);
+}
+@compute @workgroup_size(${SAMPLES_WORKGROUP}) fn capsules(@builtin(global_invocation_id) gid: vec3u) {
+  if (gid.x >= u.count) { return; }
+  let i = u.first + gid.x;
+  let s = smp[i];
+  let c = s.contour;
+  let st = cw(c, 13u);
+  let k = i - cw(c, 2u);
+  let n = cw(c, 3u);
+  let a = placed(st, s);
+  var ra = inkRadius(st, s.p);
+  var b = a;
+  var rb = ra;
+  if (k + 1u < n) {
+    let s1 = smp[i + 1u];
+    b = placed(st, s1);
+    rb = inkRadius(st, s1.p);
+  } else if (n > 1u) {
+    ra = 0.0;
+    rb = 0.0;
+  }
+  let o = i * ${DAB_FLOATS}u;
+  let slot = sv(st, 6u);
+  dab[o] = a.x; dab[o + 1u] = a.y; dab[o + 2u] = ra; dab[o + 3u] = b.x;
+  dab[o + 4u] = b.y; dab[o + 5u] = rb; dab[o + 6u] = 0.0; dab[o + 7u] = 0.0;
   dab[o + 8u] = slot.x; dab[o + 9u] = slot.y; dab[o + 10u] = slot.z; dab[o + 11u] = slot.w;
 }
 `;

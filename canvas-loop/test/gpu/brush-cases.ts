@@ -15,7 +15,7 @@ import { parity, premultiplied } from "./compare.js";
 import { alphaAt, renderOnce, rgbaAt, shiftedDiff } from "./render.js";
 
 /** Today's Skia render of a sheet, frozen as a fixture (opaque, so straight and premultiplied agree). */
-async function frozen(name: string, size: { width: number; height: number }): Promise<Uint8Array> {
+export async function frozen(name: string, size: { width: number; height: number }): Promise<Uint8Array> {
   const image = await loadImage(fileURLToPath(new URL(`../fixtures/scene-parity/${name}.png`, import.meta.url)));
   assert.deepEqual([image.width, image.height], [size.width, size.height], `${name}.png is the sheet's size`);
   const ctx = new Canvas(size.width, size.height).getContext("2d");

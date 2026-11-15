@@ -1,6 +1,7 @@
 // The brushed strokes of a recorded scene, as the renderer's lowering asks the
 // expander for them (gpu/marks.ts `brushDraw`): one request per brushed shape,
-// under the logical transform of its call. Pictures are walked where placed.
+// under the logical transform of its call, with that transform's translation.
+// Pictures are walked where placed.
 import type { ExpandRequest } from "../../src/scene/brush/expand.js";
 import type { ColorParser } from "../../src/scene/colors.js";
 import { mul } from "../../src/scene/mat.js";
@@ -11,12 +12,15 @@ export const NO_COLORS: ColorParser = (css) => {
   throw new Error(`no colour parser in this test (asked for ${css})`);
 };
 
-export function brushRequests(scene: Scene, colors: ColorParser): ExpandRequest[] {
-  const out: ExpandRequest[] = [];
+/** An expand request and where its call's transform puts the stroke (logical px). */
+export type PlacedRequest = ExpandRequest & { readonly translate: readonly [number, number] };
+
+export function brushRequests(scene: Scene, colors: ColorParser): PlacedRequest[] {
+  const out: PlacedRequest[] = [];
   const walk = (nodes: readonly SceneNode[], m: Mat): void => {
     for (const n of nodes) {
       if (n.kind === "shape" && n.style.brush !== undefined && n.style.stroke !== undefined && n.style.weight > 0) {
-        out.push({ geom: n.geom, weight: n.style.weight, stroke: n.style.brush, paint: n.style.stroke, linear: [m[0], m[1], m[2], m[3], 0, 0], colors });
+        out.push({ geom: n.geom, weight: n.style.weight, stroke: n.style.brush, paint: n.style.stroke, linear: [m[0], m[1], m[2], m[3], 0, 0], colors, translate: [m[4], m[5]] });
       }
       if (n.kind === "at") walk(n.children, mul(m, n.matrix));
       else if (n.kind === "group" || n.kind === "clip") walk(n.children, m);

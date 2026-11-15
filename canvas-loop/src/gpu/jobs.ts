@@ -2,7 +2,7 @@
 // canvas, a group, a mask body or artwork, a shape with effects, a placed
 // picture) in canvas device pixels; its items draw into it in order.
 // Rectangles are integer device pixels with exclusive ends.
-import type { SmearBrush, StampBrush } from "../core/brush/types.js";
+import type { InkBrush, SmearBrush, StampBrush } from "../core/brush/types.js";
 import type { Dab, Prepared, Run } from "../scene/brush/expand.js";
 import type { Rgba } from "../scene/colors.js";
 import type { Mat, PictureVersion, ShapeNode } from "../scene/nodes.js";
@@ -63,18 +63,18 @@ export interface Piece {
   slot?: Slot;
 }
 
-/** A stamp stroke whose dabs the GPU lays (brush-pass.ts): its prepared stroke and brush, and brush space → device pixels (linear part, pixel ratio included). */
-export interface StampSource {
+/** A stamp or ink stroke the GPU expands (brush-pass.ts) into dabs or capsules: its prepared stroke and brush, and brush space → device pixels (linear part, pixel ratio included). */
+export interface GpuSource {
   readonly prepared: Prepared;
-  readonly brush: StampBrush;
+  readonly brush: StampBrush | InkBrush;
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
 }
 
 /**
  * A brushed mark's dabs and bristle runs, accumulated in the mark atlas
- * inside `box`; a point plus (ox, oy) is in device pixels. A stamp mark has
- * no CPU dabs or runs: its `stamp` is expanded on the GPU.
+ * inside `box`; a point plus (ox, oy) is in device pixels. A stamp or ink
+ * mark has no CPU dabs or runs: its `gpu` stroke is expanded on the GPU.
  */
 export interface TexMark {
   readonly box: R;
@@ -82,7 +82,7 @@ export interface TexMark {
   readonly runs: readonly Run[];
   readonly ox: number;
   readonly oy: number;
-  readonly stamp?: StampSource | undefined;
+  readonly gpu?: GpuSource | undefined;
   slot?: Slot;
 }
 
