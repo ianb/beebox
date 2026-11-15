@@ -286,10 +286,11 @@ does not call `draw`, so events neither repeat nor go missing.
 - A brushed stroke is a node with its brush and gesture. A shared CPU step
   prepares it: the path flattened into contours with their arc lengths, the
   pressure envelope's keyframes, the wobble. A compute pass on the GPU then
-  places the stroke's samples; a stamp brush draws one dab per sample and ink
-  one round-ended segment (a capsule) per sample. Bristle and smear brushes
-  (`smudge`, `wet`) still expand on the CPU into bristle runs and smear dabs
-  (GPU brushes subplan, chunks 7 and 8, move them). The GPU computes the same
+  places the stroke's samples; a stamp brush draws one dab per sample, ink
+  one round-ended segment (a capsule) per sample, and a bristle brush each
+  bristle's runs as strips, one walk per bristle. Smear brushes (`smudge`,
+  `wet`) still expand on the CPU into smear dabs (GPU brushes subplan, chunk
+  8, moves them). The GPU computes the same
   random numbers as the CPU, bit for bit, so a mark's random character does
   not depend on where it was expanded; positions differ only in `f32` detail.
 - Backdrop-reading strokes (`smudge`, `wet`, non-`normal` blends) make the

@@ -1073,6 +1073,108 @@ by the same WebGPU renderer.
   bytes; the over-limit error. `brushStability` moves a bristle stroke.
 - **Checkpoint.** Bristle crops. **Measurement:** the stress frame, CPU and
   GPU ms.
+- **As built (chunk 7).** Bristle strokes are no longer expanded on the CPU:
+  the expander keeps a `BristleSet` (the prepared stroke, the brush, the tint),
+  and `expandOnCpu` keeps `paintBristle` as the tests' reference. Scripts, logs
+  and renders are in `scratch/stage5/b7/`. Details settled here:
+  - **The entry.** `bristles` is in `gpu/shader-bristle.ts`, included in the
+    instances module. One thread per unit (a contour of two or more samples
+    and one of its bristles) makes the bristle, walks the samples, breaks runs
+    where the level changes, and writes each drawn run's mitred strip at
+    vertices `6j` to `6j + 5` for segment `j`; segments of undrawn runs (level
+    0, or one point) are zeros. A point is computed again for its neighbours'
+    mitres, from a window of three. `Math.round` of the level is
+    `floor(x + 0.5)` (WGSL `round` rounds half to even).
+  - **Units and batches.** `bristleUnits` lists the units in packing order
+    with each one's first vertex; `planBatches` cuts them as whole spans, so a
+    batch holds whole bristles. Each batch uploads its units (contour, bristle,
+    first vertex: 16 bytes each) at binding 1, the binding `samples` uses for
+    geometry; it computes the samples of the contours its units walk, then
+    dispatches `bristles`. Uniform word 5 (`sbase`) is the sample buffer's first
+    sample. Bristle strokes are a second batch sequence after the stamps' and
+    inks' (`BrushPass.encodeBristles`), so an unsplit frame with both has two
+    batches, and a page with both gets a second render pass with `loadOp:
+    "load"`. Draw order on a page is unchanged: dabs, then runs.
+  - **Workgroups of 4.** A frame has few bristles (the stress frame 882),
+    each a long sequential walk. At 64 threads a workgroup the stress frame's
+    bristle pass took 2.7 ms; at 32, 2.4; at 16, 2.1; at 8, 1.4; at 4, 0.85;
+    at 1, 0.26 (ratio 1, timestamps, medians). At 4, a batch's units (at most
+    116,508 at 64 MiB) stay within 65,535 workgroups; a larger batch is an
+    error.
+  - **One-sample contours** are dabs laid by `dabs`, as the plan says:
+    `bristleDots` turns them into a stamp job (sizeByPressure 0.65, flow,
+    opacityByPressure 0, no jitter of size or place, a hard tip), which gives
+    `width / 2 × (0.35 + 0.65 p)`, bristle 0's colour, and alpha `flow`. One
+    difference: the stamp skip rule (radius at most 0.05 brush px) now applies
+    to them; it needs a brush under 0.15 brush px wide.
+  - **The box.** `gpuBox` grows the prepared box by `bristleReach` (the
+    outermost bristle and half the thickest) plus the other half of the
+    thickest bristle, since a strip's mitre reaches up to twice its half width
+    plus one pixel; then 2 device px after mapping. The nearest strip vertex
+    stays 4.9–5.5 px inside its slot at ratio 1 and 8.9–11.2 px at ratio 2.
+  - **The named error.** `checkBristles` runs in `gpuMark` at lowering: *"a
+    bristle of 774 samples needs 434.8 KiB of strip vertices, more than one
+    brush buffer holds (16.0 KiB); split the path into shorter ones (at line
+    #2)"*. At 64 MiB one bristle holds 116,509 samples.
+  - **Removed.** Lowering no longer places any CPU-expanded mark: `marks()`,
+    the placed-marks cache (`m|…`) and `BrushFrame.kept` are gone. `linMarks`
+    stays for the tests. `kinds.ts` exports `makeBristles` and `bristlePoints`
+    and `mark-atlas.ts` exports `runStrip`, for the readback tests.
+  - **Tests** (`test/gpu/mark-atlas.bristle.gpu.test.ts`, scenes in
+    `test/gpu/bristles.ts`). Strips against the CPU, bristle by bristle: the
+    test runs `makeBristles` and `bristlePoints`, splits runs as
+    `paintBristle` does, checks that the drawn runs are the CPU expansion's
+    recorded runs in order, and compares each with `runStrip`'s vertices.
+    Brush sheet (70 bristles, 650 runs), a focused sheet (149 bristles, 1,332
+    runs, two dots: closed loop, sharp corners, a dry stroke, 1 and 64
+    bristles, wobble, rotation and non-uniform scale) and a jitter sheet (168
+    bristles, 1,608 runs, hue and light jitter on grey, wrap-around hue, near
+    white and near black), at ratio 1 and 2. Largest differences: position
+    1.8e-4 px, half width and distance across 7.6e-6, alpha 3.0e-8, RGB 0.
+    The level allowance is narrower than the plan's: a bristle is excused only
+    where a gap index within 1e-3 of an integer falls in its drying zone and
+    the cells on either side give different gaps (7, 44 and 56 bristles);
+    excused bristles are compared too, and none differs. With the limit
+    forced to the largest bristle (70–92 KiB): 159 batches, every one starting
+    at a bristle, 12 contours' bristles in more than one batch, the same
+    bytes; the three sheets draw the same pixels in 52–169 batches. The
+    chunk 5 frame test now allows two unsplit batches where the frame has
+    bristles, and its limit holds one bristle. `brushStability` already moves
+    a bristle stroke and passes. `brushParity`'s bristle rows: luminance
+    0.73% and 0.99%, contrast 10.37% and 6.7% (the frozen Skia reference).
+  - **Pixels.** Against chunk 6 (`before/`, `after7/`): the brush sheet
+    changes 0.02% of pixels at ratio 1 (by at most 1 level) and 0.04% at
+    ratio 2 (at most 19); the stress frame 0.01% and 0.05% (at most 8 and
+    17); the smear scene, walker, Hallway and chemistry not at all. Crops
+    (`crops7/`): the sheet's bristle row and crossing, and three windows of
+    the stress frame. I see no difference between the columns at either
+    ratio. Astra (`gpt-6-astra`, sides drawn per window, key in
+    `crops7/key.json`; `astra7.out`): *"A and B have the same brush character
+    across all five images; none breaks that equivalence"*; it names only
+    "slight local differences in the broken streaks and speckling" at
+    enlargement.
+  - **Measurement** (Node, Dawn on Metal; the Stage 3 stress frame, 500
+    strokes, 63 bristle; `measure.ts`, 40 frames after 5 of warm-up; medians,
+    ms per frame; GPU times from timestamps, which step by about 0.066 ms):
+
+    | Stress frame | Ratio | Lower | Brush | Atlas | Encode | Wall | GPU span | GPU brush | GPU marks |
+    |---|---|---|---|---|---|---|---|---|---|
+    | strokes new each frame, before | 1 | 18.61 | 18.79 | 75.07 | 1.95 | 101.99 | 5.31 | 0.13 | 2.56 |
+    | after | 1 | 6.81 | 7.66 | 1.87 | 1.58 | 16.94 | 4.13 | 0.92 | 1.77 |
+    | before | 2 | 18.00 | 18.38 | 74.95 | 1.81 | 107.05 | 9.70 | 0.00 | 3.80 |
+    | after | 2 | 6.21 | 6.95 | 2.43 | 1.61 | 21.16 | 6.69 | 0.26 | 2.49 |
+    | still (caches warm), before | 1 | 1.53 | 1.74 | 74.98 | 1.78 | 84.52 | 5.31 | 0.13 | 2.56 |
+    | after | 1 | 1.13 | 1.61 | 1.34 | 1.44 | 10.23 | 4.26 | 0.85 | 1.77 |
+    | before | 2 | 1.62 | 1.83 | 75.06 | 1.74 | 91.56 | 9.70 | 0.00 | 3.87 |
+    | after | 2 | 1.35 | 2.00 | 2.01 | 1.48 | 15.41 | 6.49 | 0.26 | 2.62 |
+
+    Without its bristle strokes the frame takes 11.3–12.3 ms of wall time at
+    ratio 1, so bristle now costs about 6 ms of it, where it cost about 90.
+    `runStrip`'s 75 ms in the atlas is gone. The brush pass's GPU time grew
+    by 0.1–0.8 ms and the marks pass shrank by 0.8–1.3 ms; the CPU no longer
+    builds and uploads the frame's 301,980 strip vertices (29 MB, 882
+    bristles; `strip-bytes.ts`). The smear scene does
+    not change (`measure-after7.txt`).
 
 ### Chunk 8: smudge and wet from GPU samples (after the stop point)
 

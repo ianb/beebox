@@ -11,9 +11,12 @@
 // value keeps the hash's 24 high bits, which f32 holds exactly. Positions are
 // brush space, as the CPU expansion's. The `dabs` and `capsules` entries (their
 // own module, below) turn each sample of a stamp stroke into one dab instance,
-// and each sample of an ink stroke into one capsule instance, in device pixels.
+// and each sample of an ink stroke into one capsule instance, in device pixels;
+// `bristles` walks one bristle of one contour and writes its runs as mitred
+// strips, `(n − 1) × 6` run vertices.
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { MIX_WGSL } from "./shader-paper.js";
+import { BRISTLES_WGSL } from "./shader-bristle.js";
 
 /** Words in the records buffer's header, and per contour record (u32; floats bitcast). */
 export const RECORD_HEAD = 4;
@@ -25,9 +28,10 @@ export const SAMPLES_WORKGROUP = 64;
 /** Pressure envelope kinds in a contour record; keyframes are pairs of (t, value) in the records buffer. */
 export const ENVELOPE_KINDS = { constant: 0, even: 1, taper: 2, "taper-in": 3, "taper-out": 4, swell: 5, press: 6, keyframes: 7 } as const;
 
-/** Words per stroke record (the `dabs` and `capsules` entries' parameters), and floats per dab or capsule instance (mark-atlas.ts's layouts). */
+/** Words per stroke record (the `dabs`, `capsules` and `bristles` entries' parameters), and floats per dab or capsule instance (mark-atlas.ts's layouts). */
 export const STROKE_WORDS = 24;
 export const DAB_FLOATS = 12;
+
 
 /** Words in a dispatch's uniform (`U` below). */
 export const UNIFORM_WORDS = 8;
@@ -36,9 +40,11 @@ export const UNIFORM_WORDS = 8;
 // A dispatch covers samples [first, first + count) of the frame; its records
 // buffer holds `contours` whole contours, the first of them the frame's contour
 // `cbase`; its output buffers start at sample `base` (brush-pass.ts batches).
+// For `bristles`, `first` and `count` are units, `base` is the output's first
+// vertex in the frame, and `sbase` the sample buffer's first sample.
 const PRELUDE = /* wgsl */ `
 ${MIX_WGSL}
-struct U { first: u32, count: u32, contours: u32, base: u32, cbase: u32, pad0: u32, pad1: u32, pad2: u32 };
+struct U { first: u32, count: u32, contours: u32, base: u32, cbase: u32, sbase: u32, pad1: u32, pad2: u32 };
 struct Sample { x: f32, y: f32, nx: f32, ny: f32, s: f32, t: f32, p: f32, contour: u32 };
 @group(0) @binding(0) var<storage, read> rec: array<u32>;
 @group(0) @binding(4) var<uniform> u: U;
@@ -203,7 +209,8 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // offset to the mark's own pixels is per contour, words 14-15), 6-9 the slot, 10 width (brush space), 11 pixel ratio;
 // a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
 // 16 scatter, 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour
-// (0..255), 23 jittered; ink: 12 thinning.
+// (0..255), 23 jittered; ink: 12 thinning; bristle: 12 bristles (rounded),
+// 13 flow, 14 load, 15 spread, 18-23 as a stamp's.
 //
 // The \`capsules\` entry: sample i of an ink contour of n samples is written as
 // capsule instance i, from sample i to sample i + 1 (mark-atlas.ts's layout: ax,
@@ -288,4 +295,6 @@ fn inkRadius(st: u32, p: f32) -> f32 {
   dab[o + 4u] = b.y; dab[o + 5u] = rb; dab[o + 6u] = 0.0; dab[o + 7u] = 0.0;
   dab[o + 8u] = slot.x; dab[o + 9u] = slot.y; dab[o + 10u] = slot.z; dab[o + 11u] = slot.w;
 }
+
+${BRISTLES_WGSL}
 `;

@@ -13,9 +13,11 @@
 // they are asked for (draft section 6); `stats` counts hits. `prepare` is the
 // CPU part of the GPU expansion (gpu/brush-pass.ts): the same contours and
 // seeds, with each contour's sample count fixed by `resample`'s own loop.
-// Stamp and ink strokes are not expanded on the CPU: the expander keeps their
-// prepared stroke, and the GPU's `dabs` entry lays their dabs (chunk 3) and
-// its `capsules` entry draws ink as a union of capsules (chunk 4).
+// Stamp, ink and bristle strokes are not expanded on the CPU: the expander
+// keeps their prepared stroke, and the GPU's `dabs` entry lays stamp dabs
+// (chunk 3), its `capsules` entry draws ink as a union of capsules (chunk 4)
+// and its `bristles` entry writes bristle strips (chunk 7). `expandOnCpu` keeps
+// the CPU expansion as the tests' reference until chunk 9.
 import type { Contour } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { Paint } from "../../core/paint.js";
@@ -25,7 +27,7 @@ import { paintBristle, paintInk, paintStamp } from "../../core/brush/render/kind
 import { shapeSamples, stepFor, wobbleLattice } from "../../core/brush/render/mark/render.js";
 import type { Sample } from "../../core/brush/sample.js";
 import { preparePoints, sampleSegments } from "../../core/brush/sample.js";
-import type { BrushKind, Envelope, InkBrush, StampBrush } from "../../core/brush/types.js";
+import type { BristleBrush, BrushKind, Envelope, InkBrush, StampBrush } from "../../core/brush/types.js";
 import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../nodes.js";
@@ -64,8 +66,15 @@ export interface InkSet {
   readonly brush: InkBrush;
   readonly tint: undefined;
 }
-/** A stroke the GPU expands: stamp or ink. */
-export type GpuSet = StampSet | InkSet;
+/** A bristle stroke: prepared for the GPU, which writes each bristle's strips. `tint` as for `MarkSet`. */
+export interface BristleSet {
+  readonly kind: "bristle";
+  readonly prepared: Prepared;
+  readonly brush: BristleBrush;
+  readonly tint: number | undefined;
+}
+/** A stroke the GPU expands into the mark atlas: stamp, ink or bristle. */
+export type GpuSet = StampSet | InkSet | BristleSet;
 export interface Expanded {
   readonly set: MarkSet | SmearSet | GpuSet;
   /** What the expansion is kept under: equal keys, equal expansions. */
@@ -241,17 +250,24 @@ function prepareIn(req: ExpandRequest, b: Mat): Prepared | undefined {
   return { kind: brush.kind, contours, width: c.width, wobble, base, box: grown };
 }
 
-/** The CPU expansion of every kind, in brush space (stamps and ink included): what the GPU expansion is checked against. */
+/** The CPU expansion of every kind, in brush space: what the GPU expansion is checked against. */
 export function expandOnCpu(req: ExpandRequest): MarkSet | SmearSet | undefined {
   return cpuIn(req, brushSpace(req.linear).b);
 }
 
 function expandIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | GpuSet | undefined {
   const { brush } = req.stroke;
-  if (brush.kind !== "stamp" && brush.kind !== "ink") return cpuIn(req, b);
+  if (brush.kind === "smear") return cpuIn(req, b);
   const prepared = prepareIn(req, b);
   if (prepared === undefined) return undefined;
-  return brush.kind === "stamp" ? { kind: "stamp", prepared, brush, tint: prepared.base?.a } : { kind: "ink", prepared, brush, tint: undefined };
+  switch (brush.kind) {
+    case "stamp":
+      return { kind: "stamp", prepared, brush, tint: prepared.base?.a };
+    case "ink":
+      return { kind: "ink", prepared, brush, tint: undefined };
+    case "bristle":
+      return { kind: "bristle", prepared, brush, tint: prepared.base?.a };
+  }
 }
 
 function cpuIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | undefined {
@@ -314,7 +330,7 @@ export class BrushExpander {
     }
     if (entry.set === undefined) return undefined;
     const kept = entry;
-    const prepared = (): Prepared | undefined => (kept.prep ??= kept.set?.kind === "stamp" || kept.set?.kind === "ink" ? kept.set.prepared : prepareIn(req, b));
+    const prepared = (): Prepared | undefined => (kept.prep ??= kept.set !== undefined && "prepared" in kept.set ? kept.set.prepared : prepareIn(req, b));
     return { set: entry.set, key, q, prepared };
   }
 

@@ -1,11 +1,12 @@
 // A brushed stroke (R1, draft section 9) as draws: the shared expansion
-// (brush/expand.ts, cached across frames) placed in device pixels. Bristle
-// runs become a mark in the mark atlas, and a stamp or ink stroke becomes a
-// mark whose dabs or capsules the GPU lays (brush-pass.ts); smudge and wet
-// become a smear that reads the target (smear.ts). `linMarks` still turns the
-// CPU expansion's ink outlines into a coverage piece, for the tests. Grain is
-// cut against paper anchored to the picture or the scene (`toPaper`), then the
+// (brush/expand.ts, cached across frames) placed in device pixels. A stamp,
+// ink or bristle stroke becomes a mark whose dabs, capsules or strips the GPU
+// lays (brush-pass.ts); smudge and wet become a smear that reads the target
+// (smear.ts). `linMarks` still places the CPU
+// expansion (dabs, ink outlines, bristle runs), for the tests. Grain is cut
+// against paper anchored to the picture or the scene (`toPaper`), then the
 // brush opacity applies once.
+import { bristleReach } from "../core/brush/render/kinds.js";
 import type { BrushExpander, GpuSet, MarkSet, SmearSet } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
@@ -16,18 +17,16 @@ import type { PaintRec } from "./paint.js";
 import { paintRec } from "./paint.js";
 import { PAPER_ROW, paperParams } from "./painterly.js";
 import { orientShape } from "./rings.js";
-import type { KeptValues, LinShape } from "./geometry-cache.js";
-import { linShape, placePiece } from "./geometry-cache.js";
-import { linearKey } from "../scene/hash.js";
+import type { LinShape } from "./geometry-cache.js";
+import { linShape } from "./geometry-cache.js";
 import type { Dab, Run } from "../scene/brush/expand.js";
-import { checkContours } from "./brush-pack.js";
+import { checkBristles, checkContours } from "./brush-pack.js";
 
 /** What lowering a brushed stroke needs from the frame. */
 export interface BrushFrame {
   readonly expander: BrushExpander;
   readonly colors: ColorParser;
   readonly ratio: number;
-  readonly kept: KeptValues;
   /** The brush pass's largest buffer (brush-pass.ts): a GPU stroke with a contour that cannot fit one fails here, naming the call. */
   readonly brushLimit: number;
 }
@@ -52,6 +51,15 @@ function bounds(points: readonly { x: number; y: number; reach: number }[]): R {
     y1 = Math.max(y1, p.y + p.reach);
   }
   return { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
+}
+
+/** Box `b` (brush space) grown by `g` on each side and mapped by `e`: the box of its four corners, unrounded. */
+function mappedBox(b: { x0: number; y0: number; x1: number; y1: number }, a: { e: Mat; g: number }): R {
+  const { e, g } = a;
+  const corners = [map(e, b.x0 - g, b.y0 - g), map(e, b.x1 + g, b.y0 - g), map(e, b.x0 - g, b.y1 + g), map(e, b.x1 + g, b.y1 + g)];
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
 }
 
 /** A mark set under a linear map (no translation): ink outlines as one shape, or dabs and runs with the bounds they reach. */
@@ -93,41 +101,42 @@ export function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
   return { kind: "tex", dabs, runs, reach };
 }
 
-/** A kept linear mark set moved by the transform's translation and cut to what can be seen. */
-function marks(l: LinMarks, a: { tx: number; ty: number; visible: R }): MarkSource | undefined {
-  const cut = cutOf(a.visible);
-  if (l.kind === "piece") {
-    const piece = placePiece(l.shape, { tx: a.tx, ty: a.ty, cut });
-    return piece === undefined ? undefined : { kind: "piece", piece };
+/** How far past the prepared box (brush space) a stroke's marks reach before the quad or strip edge: see `gpuBox`. */
+function growth(set: GpuSet): number {
+  const w = set.prepared.width;
+  switch (set.kind) {
+    case "ink":
+      return w / 2;
+    case "stamp":
+      return (w / 2) * (1 + set.brush.sizeJitter / 2) + (set.brush.scatter * w) / 2;
+    case "bristle":
+      // The outermost bristle point and half the thickest bristle (kinds.ts), and the other half again for the mitre.
+      return bristleReach(w, set.brush) + (w / Math.max(1, Math.round(set.brush.bristles))) * 1.1 * (1 + set.brush.spread / 2);
   }
-  const r = l.reach;
-  if (!(r.x1 >= r.x0)) return undefined;
-  const box = inter({ x0: Math.floor(r.x0 + a.tx), y0: Math.floor(r.y0 + a.ty), x1: Math.ceil(r.x1 + a.tx), y1: Math.ceil(r.y1 + a.ty) }, cut);
-  return isEmpty(box) ? undefined : { kind: "tex", mark: { box, dabs: l.dabs, runs: l.runs, ox: a.tx, oy: a.ty } };
 }
 
 /**
- * Where a stamp or ink stroke's marks can reach under `e` (brush space →
- * device pixels, translation included): the prepared box (wobble included)
- * grown, for a stamp, by the largest dab, `width / 2 × (1 + sizeJitter / 2)`,
- * and the largest scatter, `scatter × width / 2`, or, for ink, by the largest
- * capsule radius, `width / 2` (pressure 1); mapped by `e`, plus the one-pixel
- * edge of a dab's or capsule's quad. Undefined when the stroke has no samples.
+ * Where a stamp, ink or bristle stroke's marks can reach under `e` (brush
+ * space → device pixels, translation included): the prepared box (wobble
+ * included) grown, for a stamp, by the largest dab, `width / 2 × (1 +
+ * sizeJitter / 2)`, and the largest scatter, `scatter × width / 2`; for ink,
+ * by the largest capsule radius, `width / 2` (pressure 1); for bristle, by the
+ * outermost bristle and its whole thickness, since a strip's mitre reaches up
+ * to twice its half width plus one pixel; mapped by `e`, plus the edge of a
+ * dab's or capsule's quad, one pixel, or a strip's, two. Undefined when the
+ * stroke has no samples.
  */
 export function gpuBox(set: GpuSet, e: Mat): R | undefined {
   const p = set.prepared;
   if (!p.contours.some((c) => c.count > 0)) return undefined;
-  const w = p.width;
-  const g = set.kind === "ink" ? w / 2 : (w / 2) * (1 + set.brush.sizeJitter / 2) + (set.brush.scatter * w) / 2;
-  const { x0, y0, x1, y1 } = p.box;
-  const corners = [map(e, x0 - g, y0 - g), map(e, x1 + g, y0 - g), map(e, x0 - g, y1 + g), map(e, x1 + g, y1 + g)];
-  const xs = corners.map((c) => c[0]);
-  const ys = corners.map((c) => c[1]);
-  return { x0: Math.floor(Math.min(...xs) - 1), y0: Math.floor(Math.min(...ys) - 1), x1: Math.ceil(Math.max(...xs) + 1), y1: Math.ceil(Math.max(...ys) + 1) };
+  const edge = set.kind === "bristle" ? 2 : 1;
+  const b = mappedBox(p.box, { e, g: growth(set) });
+  return { x0: Math.floor(b.x0 - edge), y0: Math.floor(b.y0 - edge), x1: Math.ceil(b.x1 + edge), y1: Math.ceil(b.y1 + edge) };
 }
 
 function gpuMark(set: GpuSet, a: { e: Mat; ratio: number; visible: R; limit: number }): MarkSource | undefined {
   checkContours(set.prepared, a.limit);
+  if (set.kind === "bristle") checkBristles(set.prepared, a.limit);
   const reach = gpuBox(set, a.e);
   if (reach === undefined) return undefined;
   const box = inter(reach, cutOf(a.visible));
@@ -169,9 +178,8 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   const paper: PaperRec = { toPaper, ...paperParams(stroke.paper, ratio), width: PAPER_ROW };
   const rec = paintRec(paint, { matrix: m, colors });
   if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
-  if (rec === undefined) return undefined;
-  const set = ex.set;
-  const source = set.kind === "stamp" || set.kind === "ink" ? gpuMark(set, { e, ratio, visible: a.visible, limit: a.frame.brushLimit }) : marks(a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio })), { tx: e[4], ty: e[5], visible: a.visible });
+  if (rec === undefined || ex.set.kind === "marks") return undefined;
+  const source = gpuMark(ex.set, { e, ratio, visible: a.visible, limit: a.frame.brushLimit });
   if (source === undefined) return undefined;
   const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
   const box = source.kind === "piece" ? source.piece.box : source.mark.box;

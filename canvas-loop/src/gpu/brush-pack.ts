@@ -2,12 +2,16 @@
 // the prepared strokes' contours, in order, go into input buffers of at most
 // the pass's limit, split only between contours (`pack`); each input's samples
 // are cut into batches (`planBatches`). A contour that alone exceeds the limit
-// is an error, raised at lowering so it names the call (`checkContours`).
-import type { Envelope, InkBrush, StampBrush } from "../core/brush/types.js";
+// is an error, raised at lowering so it names the call (`checkContours`), as is
+// a bristle whose strip exceeds it (`checkBristles`). A bristle stroke's
+// batches are cut between bristles (`bristleUnits`, then `planBatches` over
+// whole units).
+import type { BristleBrush, Envelope, InkBrush, StampBrush } from "../core/brush/types.js";
 import type { Prepared, PreparedContour } from "../scene/brush/expand.js";
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { CONTOUR_WORDS, ENVELOPE_KINDS, RECORD_HEAD, STROKE_WORDS } from "./shader-brush.js";
+import { RUN_FLOATS, RUN_VERTICES } from "./shader-bristle.js";
 
 /** A contour's samples: the first index in the frame's samples, and how many. */
 export interface SampleRange {
@@ -15,10 +19,10 @@ export interface SampleRange {
   readonly count: number;
 }
 
-/** A stamp or ink stroke placed in the mark atlas: what the `dabs` or `capsules` entry needs besides its prepared stroke. */
+/** A stroke placed in the mark atlas: what the `dabs`, `capsules` or `bristles` entry needs besides its prepared stroke. */
 export interface BrushJob {
   readonly prepared: Prepared;
-  readonly brush: StampBrush | InkBrush;
+  readonly brush: StampBrush | InkBrush | BristleBrush;
   /** Brush space → device pixels, linear part (pixel ratio included). */
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
@@ -45,15 +49,17 @@ function envelopeWords(env: Envelope): EnvelopeWords {
   return { kind: ENVELOPE_KINDS.keyframes, value: 0, keys: keyframesOf(env) };
 }
 
-/** A stamp or ink stroke's record (shader-brush.ts lists the words). */
+/** A stroke's record (shader-brush.ts lists the words). */
 function strokeWords(j: BrushJob): number[] {
   const b = j.brush;
   // Words 4-5 are unused: each contour's offset is in its own record (`pack`).
   const head = [...j.lin, 0, 0, ...j.slot, j.prepared.width, j.ratio];
   if (b.kind === "ink") return [...head, b.thinning];
   const base = j.prepared.base;
+  const colour = [b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
+  if (b.kind === "bristle") return [...head, Math.round(b.bristles), b.flow, b.load, b.spread, 0, 0, ...colour];
   const soft = b.tip === "soft" ? 1 : 0;
-  return [...head, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
+  return [...head, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, ...colour];
 }
 
 /** The input bytes one contour needs on its own: a records buffer with its record, keyframes and stroke record, and a geometry buffer with its points. */
@@ -62,7 +68,6 @@ function contourBytes(c: PreparedContour, env: EnvelopeWords): { records: number
 }
 
 function tooLarge(c: PreparedContour, a: { bytes: { records: number; geometry: number }; limit: number }): GpuRenderError {
-  const kib = (n: number): string => `${(n / 1024).toFixed(1)} KiB`;
   return new GpuRenderError({ detail: `a brushed contour of ${c.geom.length / POINT_WORDS} points needs ${kib(a.bytes.geometry)} of geometry and ${kib(a.bytes.records)} of records, more than one brush buffer holds (${kib(a.limit)}); split the path into shorter ones` });
 }
 
@@ -71,6 +76,21 @@ export function checkContours(p: Prepared, limit: number): void {
   for (const c of p.contours) {
     const bytes = contourBytes(c, envelopeWords(c.pressure));
     if (bytes.records > limit || bytes.geometry > limit) throw tooLarge(c, { bytes, limit });
+  }
+}
+
+const kib = (n: number): string => `${(n / 1024).toFixed(1)} KiB`;
+
+/** Bytes of run vertices one bristle of a contour of `count` samples writes. */
+export function bristleBytes(count: number): number {
+  return Math.max(0, count - 1) * RUN_VERTICES * RUN_FLOATS * 4;
+}
+
+/** Throw, naming the sizes, when one bristle of `p` (a bristle stroke) cannot fit one output buffer of `limit` bytes: a bristle never splits. Lowering calls it, so the error names the call. */
+export function checkBristles(p: Prepared, limit: number): void {
+  for (const c of p.contours) {
+    const bytes = bristleBytes(c.count);
+    if (bytes > limit) throw new GpuRenderError({ detail: `a bristle of ${c.count} samples needs ${kib(bytes)} of strip vertices, more than one brush buffer holds (${kib(limit)}); split the path into shorter ones` });
   }
 }
 
@@ -255,4 +275,46 @@ export function readCopies(b: { first: number; count: number }, per: number): Re
     i += n;
   }
   return out;
+}
+
+/** One thread of the `bristles` entry: a contour (its index in its input) and one of its bristles, with its run vertices' first index in the frame and count. */
+export interface BristleUnit {
+  readonly input: number;
+  readonly contour: number;
+  readonly bristle: number;
+  readonly first: number;
+  readonly count: number;
+  /** The contour's samples in the frame. */
+  readonly samples: SampleRange;
+}
+
+/**
+ * The bristle strokes' units, in packing order (input, contour, bristle), with
+ * each stroke's range of run vertices: a contour of `n > 1` samples gives each
+ * of the stroke's bristles `(n − 1) × 6` vertices; a one-sample contour gives
+ * none (its dab is laid with the stamps').
+ */
+export function bristleUnits(packed: { inputs: readonly Input[]; ranges: readonly (readonly SampleRange[])[] }, bristles: readonly number[]): { units: BristleUnit[]; strokes: SampleRange[]; count: number } {
+  const units: BristleUnit[] = [];
+  const strokes: SampleRange[] = [];
+  let input = 0;
+  let g = 0;
+  let first = 0;
+  for (const [si, contours] of packed.ranges.entries()) {
+    const start = first;
+    for (const r of contours) {
+      while ((packed.inputs[input]?.cbase ?? 0) + (packed.inputs[input]?.contours ?? 0) <= g) input++;
+      const contour = g - (packed.inputs[input]?.cbase ?? 0);
+      const count = Math.max(0, r.count - 1) * RUN_VERTICES;
+      if (count > 0) {
+        for (let b = 0; b < (bristles[si] ?? 0); b++) {
+          units.push({ input, contour, bristle: b, first, count, samples: r });
+          first += count;
+        }
+      }
+      g++;
+    }
+    strokes.push({ first: start, count: first - start });
+  }
+  return { units, strokes, count: first };
 }

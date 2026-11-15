@@ -93,7 +93,7 @@ function smoothstep(edge: readonly [number, number], x: number): number {
   return f * f * (3 - 2 * f);
 }
 
-interface Bristle {
+export interface Bristle {
   readonly offset: number;
   /** This bristle's share of the brush flow, 0.55..1. */
   readonly strength: number;
@@ -101,7 +101,11 @@ interface Bristle {
   readonly dryAt: number;
 }
 
-function makeBristles(input: KindInput, brush: BristleBrush): Bristle[] {
+/** What `makeBristles` and `bristlePoints` read of a contour's input. */
+type BristleInput = Pick<KindInput, "samples" | "width" | "seed">;
+
+/** The bristles of a contour (exported for the GPU expansion's readback tests). */
+export function makeBristles(input: BristleInput, brush: BristleBrush): Bristle[] {
   const total = input.samples.at(-1)?.s ?? 0;
   const n = Math.round(brush.bristles);
   return Array.from({ length: n }, (_, i) => {
@@ -117,7 +121,7 @@ function makeBristles(input: KindInput, brush: BristleBrush): Bristle[] {
   });
 }
 
-interface BristlePoint {
+export interface BristlePoint {
   readonly x: number;
   readonly y: number;
   /** Alpha bucket (0 = no paint); a run breaks when it changes. */
@@ -129,7 +133,8 @@ const LEVELS = 5;
 /** How far a bristle wanders sideways, as a fraction of the brush's half-width. */
 const BRISTLE_DRIFT = 0.12;
 
-function bristlePoints(input: KindInput, args: { b: Bristle; index: number }): BristlePoint[] {
+/** One bristle's points along the contour's samples (exported for the GPU expansion's readback tests). */
+export function bristlePoints(input: BristleInput, args: { b: Bristle; index: number }): BristlePoint[] {
   const { b } = args;
   const reach = Math.abs(b.offset) * 0.7;
   return input.samples.map((c) => {

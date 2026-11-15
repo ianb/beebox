@@ -2,9 +2,14 @@
 // page; per page, one instanced draw lays every dab and one draw every bristle
 // run (shader-mark.ts). Stamp marks' dabs and ink marks' capsules are written
 // on the GPU (brush-pass.ts) into one buffer per batch, dabs then capsules,
-// each ordered by page; after each batch, each page draws its part of it. A
-// mark's draw then reads its slot (src 3 or 4 in the draw shader), so a mark's
-// opacity applies once however many dabs or capsules overlap.
+// each ordered by page; after each batch, each page draws its part of it.
+// Bristle marks' strips follow, in batches of their own (cut between
+// bristles), and a bristle contour of one sample is a dab laid with the
+// stamps'. A mark's draw then reads its slot (src 3 or 4 in the draw shader),
+// so a mark's opacity applies once however many dabs, capsules or strips
+// overlap. The CPU dabs and runs (`#lay`, `runStrip`) remain for the tests'
+// reference until chunk 9; no mark has them in normal rendering.
+import type { BristleBrush } from "../core/brush/types.js";
 import type { Run } from "../scene/brush/expand.js";
 import type { AtlasPage } from "./atlas.js";
 import { shelfPack } from "./atlas.js";
@@ -18,10 +23,9 @@ import { BrushPass } from "./brush-pass.js";
 import type { Batch, BrushJob, SampleRange } from "./brush-pass.js";
 import type { FrameStats } from "./frame.js";
 import { DAB_FLOATS } from "./shader-brush.js";
+import { RUN_FLOATS } from "./shader-bristle.js";
 
 const MAX = ATLAS_MAX;
-/** Floats per run vertex (a dab instance is `DAB_FLOATS`). */
-const RUN_FLOATS = 24;
 /** A strip quad's two triangles, as offsets into the per-point [left x, left y, right x, right y] list: (L_i, R_i, L_i+1), (L_i+1, R_i, R_i+1). */
 const TRIS = [[0, 2, 4], [4, 2, 6]] as const;
 
@@ -65,7 +69,7 @@ function stripSides(pts: readonly number[], a: { e: number; local: readonly [num
  * pixels) and their signed distances across, so the fragment shader finds the
  * distance at a pixel from the mark's own pixels, wherever the mark is packed.
  */
-function runStrip(out: Float32Array, a: { o: number; run: Run; local: readonly [number, number, number, number]; slot: readonly number[] }): number {
+export function runStrip(out: Float32Array, a: { o: number; run: Run; local: readonly [number, number, number, number]; slot: readonly number[] }): number {
   const { pts, width } = a.run;
   const hw = width / 2;
   const e = hw + 1;
@@ -93,14 +97,46 @@ function runStrip(out: Float32Array, a: { o: number; run: Run; local: readonly [
 
 type GpuMark = TexMark & { gpu: NonNullable<TexMark["gpu"]>; slot: NonNullable<TexMark["slot"]> };
 
-/** A stamp or ink mark (packed) as the `dabs` or `capsules` entry takes it. */
+/** A stamp, ink or bristle mark (packed) as the `dabs`, `capsules` or `bristles` entry takes it. */
 function brushJob(m: GpuMark): BrushJob {
   const [x0, y0, x1, y1] = slotRect(m.box, m.slot);
   return { ...m.gpu, offset: [m.ox - m.box.x0, m.oy - m.box.y0], slot: [x0 ?? 0, y0 ?? 0, x1 ?? 0, y1 ?? 0] };
 }
 
-/** Each page's range of instances, for one kind. */
+/**
+ * A bristle stroke's contours of one sample, as a stamp job: kinds.ts
+ * `paintBristle` paints such a contour as one hard dab of radius
+ * `width / 2 × (0.35 + 0.65 p)` at the brush flow, in bristle 0's colour, which
+ * is the `dabs` entry's dab 0 with sizeByPressure 0.65 and nothing else
+ * varied. Undefined when the stroke has none.
+ */
+export function bristleDots(job: BrushJob, brush: BristleBrush): BrushJob | undefined {
+  const contours = job.prepared.contours.filter((c) => c.count === 1);
+  if (contours.length === 0) return undefined;
+  const dot = { kind: "stamp", opacity: brush.opacity, grain: brush.grain, tip: "hard", spacing: 1, flow: brush.flow, sizeByPressure: 0.65, opacityByPressure: 0, scatter: 0, sizeJitter: 0, hueJitter: brush.hueJitter ?? 0, lightJitter: brush.lightJitter ?? 0 } as const;
+  return { ...job, prepared: { ...job.prepared, contours }, brush: dot };
+}
+
+/** Each page's range of instances or vertices, for one kind. */
 type PageRanges = Map<number, { first: number; count: number }>;
+
+/** What one batch draws on each page: per pipeline, the pages' ranges; instanced (six vertices per dab or capsule) or a vertex range (bristle strips). */
+interface BatchDraws {
+  readonly batch: Batch;
+  readonly draws: readonly { readonly pipe: GPURenderPipeline; readonly ranges: PageRanges; readonly instanced: boolean }[];
+}
+
+/** Each page's range of items: stroke i's range is `strokes[i]` and its page `pages[i]` (undefined: not this kind); a page's strokes are consecutive. */
+function pageRanges(pages: readonly (number | undefined)[], strokes: readonly SampleRange[]): PageRanges {
+  const by: PageRanges = new Map();
+  for (const [i, page] of pages.entries()) {
+    const r = strokes[i] ?? { first: 0, count: 0 };
+    if (page === undefined) continue;
+    const at = by.get(page);
+    by.set(page, at === undefined ? { ...r } : { first: at.first, count: at.count + r.count });
+  }
+  return by;
+}
 
 export class MarkAtlas {
   readonly #device: GPUDevice;
@@ -142,7 +178,7 @@ export class MarkAtlas {
     const sizes = shelfPack(marks, Math.min(MAX, Math.max(widest, 1024)));
     const texs = sizes.map((size) => f.pool.acquire({ w: size.w, h: size.h, format: "rgba8unorm" }));
     const begun = new Set<number>();
-    const pass = (page: number, gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges } | undefined): void => {
+    const pass = (page: number, gpu: BatchDraws | undefined): void => {
       const tex = texs[page];
       if (tex === undefined) return;
       const first = !begun.has(page);
@@ -163,17 +199,18 @@ export class MarkAtlas {
           else p.draw(data.length / RUN_FLOATS);
         }
       }
-      for (const [pipe, ranges] of [[this.#dab, gpu?.stamps], [this.#capsule, gpu?.inks]] as const) {
-        const r = gpu === undefined ? undefined : within(ranges?.get(page), gpu.batch);
+      for (const d of gpu?.draws ?? []) {
+        const r = gpu === undefined ? undefined : within(d.ranges.get(page), gpu.batch);
         if (gpu === undefined || r === undefined) continue;
-        bind(pipe);
+        bind(d.pipe);
         p.setVertexBuffer(0, gpu.batch.buffer);
-        p.draw(6, r.count, 0, r.first - gpu.batch.first);
+        if (d.instanced) p.draw(6, r.count, 0, r.first - gpu.batch.first);
+        else p.draw(r.count, 1, r.first - gpu.batch.first);
       }
       p.end();
     };
     const brushed = this.#gpuMarks(marks, { ...f, each: (gpu) => {
-      for (const page of texs.keys()) if (!begun.has(page) || within(gpu.stamps.get(page), gpu.batch) !== undefined || within(gpu.inks.get(page), gpu.batch) !== undefined) pass(page, gpu);
+      for (const page of texs.keys()) if (!begun.has(page) || gpu.draws.some((d) => within(d.ranges.get(page), gpu.batch) !== undefined)) pass(page, gpu);
     } });
     f.stats.brushBatches = brushed.batches;
     f.stats.cpu.brush += brushed.ms;
@@ -182,30 +219,33 @@ export class MarkAtlas {
   }
 
   /**
-   * Encode the stamp marks' dabs and the ink marks' capsules (stamps first,
-   * each kind ordered by page), calling `each` after each batch with each
-   * page's range of instances per kind; returns the number of batches and
-   * the CPU milliseconds to pack, upload and encode them (draws excluded).
+   * Encode the stamp marks' dabs (with bristle marks' one-sample dots) and
+   * the ink marks' capsules (stamps first, each kind ordered by page), then
+   * the bristle marks' strips (ordered by page), calling `each` after each
+   * batch with what each page draws from it; returns the number of batches
+   * and the CPU milliseconds to pack, upload and encode them (draws excluded).
    */
-  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: { batch: Batch; stamps: PageRanges; inks: PageRanges }) => void }): { batches: number; ms: number } {
+  #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: BatchDraws) => void }): { batches: number; ms: number } {
     const placed = marks.flatMap((m): GpuMark[] => (m.gpu === undefined || m.slot === undefined ? [] : [{ ...m, gpu: m.gpu, slot: m.slot }]));
     if (placed.length === 0) return { batches: 0, ms: 0 };
-    const ink = (m: GpuMark): number => (m.gpu.brush.kind === "ink" ? 1 : 0);
-    const sorted = placed.toSorted((a, b) => ink(a) - ink(b) || a.slot.page - b.slot.page);
-    let pages: { stamps: PageRanges; inks: PageRanges } | undefined;
-    const pagesOf = (strokes: readonly SampleRange[]): { stamps: PageRanges; inks: PageRanges } => {
-      const stamps: PageRanges = new Map();
-      const inks: PageRanges = new Map();
-      for (const [i, m] of sorted.entries()) {
-        const r = strokes[i] ?? { first: 0, count: 0 };
-        const by = ink(m) === 1 ? inks : stamps;
-        const at = by.get(m.slot.page);
-        by.set(m.slot.page, at === undefined ? { ...r } : { first: at.first, count: at.count + r.count });
-      }
-      return { stamps, inks };
+    const items = placed.flatMap((m): { m: GpuMark; job: BrushJob }[] => {
+      const job = brushJob(m);
+      if (m.gpu.brush.kind !== "bristle") return [{ m, job }];
+      const dots = bristleDots(job, m.gpu.brush);
+      return dots === undefined ? [] : [{ m, job: dots }];
+    });
+    const ink = (it: { job: BrushJob }): number => (it.job.brush.kind === "ink" ? 1 : 0);
+    const sorted = items.toSorted((a, b) => ink(a) - ink(b) || a.m.slot.page - b.m.slot.page);
+    let draws: BatchDraws["draws"] | undefined;
+    const drawsOf = (strokes: readonly SampleRange[]): BatchDraws["draws"] => {
+      const at = (k: number): (number | undefined)[] => sorted.map((it) => (ink(it) === k ? it.m.slot.page : undefined));
+      return [{ pipe: this.#dab, ranges: pageRanges(at(0), strokes), instanced: true }, { pipe: this.#capsule, ranges: pageRanges(at(1), strokes), instanced: true }];
     };
-    const out = this.brushes.encodeMarks(sorted.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, ...(pages ??= pagesOf(strokes)) }) });
-    return { batches: out.batches, ms: out.ms };
+    const out = sorted.length === 0 ? { batches: 0, ms: 0 } : this.brushes.encodeMarks(sorted.map((it) => it.job), { ...f, each: (batch, strokes) => f.each({ batch, draws: (draws ??= drawsOf(strokes)) }) });
+    const bristles = placed.filter((m) => m.gpu.brush.kind === "bristle").toSorted((a, b) => a.slot.page - b.slot.page);
+    let runs: BatchDraws["draws"] | undefined;
+    const strips = bristles.length === 0 ? { batches: 0, ms: 0 } : this.brushes.encodeBristles(bristles.map(brushJob), { ...f, each: (batch, strokes) => f.each({ batch, draws: (runs ??= [{ pipe: this.#run, ranges: pageRanges(bristles.map((m) => m.slot.page), strokes), instanced: false }]) }) });
+    return { batches: out.batches + strips.batches, ms: out.ms + strips.ms };
   }
 
   /** Verification: draw capsule instances into `tex` (cleared first), in their order. */

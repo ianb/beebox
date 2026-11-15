@@ -17,15 +17,18 @@
 // same two output buffers, reused from batch to batch within the frame's one
 // command encoder: batch i's draws (`each`) are encoded before batch i + 1's
 // dispatch. Samples, stamps and capsules may split at any sample (a capsule
-// batch also computes the next sample, one of overlap). `planBatches` takes
-// spans that must not split, for bristle (one per bristle) and smear (one per
-// smear) when they move to the GPU. Packing and planning are in brush-pack.ts.
+// batch also computes the next sample, one of overlap). Bristle strokes go in
+// their own batches (`encodeBristles`), cut only between bristles: each batch
+// computes the samples of the contours its bristles walk, then the `bristles`
+// entry writes their strips into a run-vertex buffer. Packing and planning are
+// in brush-pack.ts.
 import type { Prepared } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
-import { pack, planBatches, readCopies } from "./brush-pack.js";
-import type { BrushJob, Input, SampleRange } from "./brush-pack.js";
+import { bristleUnits, pack, planBatches, readCopies } from "./brush-pack.js";
+import type { BristleUnit, BrushJob, Input, SampleRange } from "./brush-pack.js";
 import { DAB_FLOATS, INSTANCES_WGSL, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, UNIFORM_WORDS } from "./shader-brush.js";
+import { BRISTLES_WORKGROUP, RUN_FLOATS, UNIT_WORDS } from "./shader-bristle.js";
 import type { PassTimer } from "./timing.js";
 
 export type { BrushJob, SampleRange } from "./brush-pack.js";
@@ -66,10 +69,22 @@ export interface InstanceOutputs {
   readonly ms: number;
 }
 
+/** The bristle strokes' run vertices (`RUN_FLOATS` floats each): each stroke's range, the batches and input buffers they took, and each batch's range. */
+export interface StripOutputs {
+  readonly count: number;
+  readonly strokes: readonly SampleRange[];
+  readonly batches: number;
+  readonly inputs: number;
+  readonly plan: readonly SampleRange[];
+  /** CPU milliseconds to pack, upload and encode the pass, without the time in `each`. */
+  readonly ms: number;
+}
+
 interface Pipes {
   readonly samples: GPUComputePipeline;
   readonly dabs: GPUComputePipeline;
   readonly capsules: GPUComputePipeline;
+  readonly bristles: GPUComputePipeline;
 }
 
 interface Encoding {
@@ -95,7 +110,7 @@ export class BrushPass {
     if (this.#pipes === undefined) {
       const instances = d.createShaderModule({ code: INSTANCES_WGSL });
       const make = (module: GPUShaderModule, entryPoint: string): GPUComputePipeline => d.createComputePipeline({ layout: "auto", compute: { module, entryPoint } });
-      this.#pipes = { samples: make(d.createShaderModule({ code: SAMPLES_WGSL }), "samples"), dabs: make(instances, "dabs"), capsules: make(instances, "capsules") };
+      this.#pipes = { samples: make(d.createShaderModule({ code: SAMPLES_WGSL }), "samples"), dabs: make(instances, "dabs"), capsules: make(instances, "capsules"), bristles: make(instances, "bristles") };
     }
     return this.#pipes;
   }
@@ -161,11 +176,7 @@ export class BrushPass {
     const S = GPUBufferUsage.STORAGE;
     const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
     const out = jobs === undefined ? undefined : this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * DAB_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
-    const uniform = (input: Input, a: { first: number; count: number; base: number }): GPUBuffer => {
-      const words = new Uint32Array(UNIFORM_WORDS);
-      words.set([a.first, a.count, input.contours, a.base, input.cbase]);
-      return this.#buffer(f, { size: words.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: words });
-    };
+    const uniform = (input: Input, a: { first: number; count: number; base: number }): GPUBuffer => this.#uniform(f, { input, ...a, sbase: 0 });
     const pipes = this.#pipelines;
     let bound: { input: Input; records: GPUBuffer; geometry: GPUBuffer } | undefined;
     for (const b of plan) {
@@ -199,6 +210,12 @@ export class BrushPass {
     return { count, ranges, stamps, batches: plan.length, inputs: inputs.length, ms: performance.now() - t0 - drawing };
   }
 
+  #uniform(f: Encoding, a: { input: Input; first: number; count: number; base: number; sbase: number }): GPUBuffer {
+    const words = new Uint32Array(UNIFORM_WORDS);
+    words.set([a.first, a.count, a.input.contours, a.base, a.input.cbase, a.sbase]);
+    return this.#buffer(f, { size: words.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: words });
+  }
+
   /** The `samples` dispatch alone, for `strokes` of any kind (verification and measurement); `each` reads each batch's samples. */
   encode(strokes: readonly Prepared[], f: Encoding & { each: (b: Batch) => void }): BrushOutputs {
     return this.#encode(strokes, f);
@@ -215,6 +232,68 @@ export class BrushPass {
     let strokes: SampleRange[] | undefined;
     const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs, each: (b, ranges) => f.each(b, (strokes ??= strokesOf(ranges))) });
     return { count: out.count, strokes: strokes ?? strokesOf(out.ranges), stamps: out.stamps, batches: out.batches, inputs: out.inputs, ms: out.ms };
+  }
+
+  /**
+   * The bristle strokes' samples and run vertices (`RUN_FLOATS` floats each):
+   * stroke i's vertices are `strokes[i]`, in `jobs` order; every contour of
+   * `n > 1` samples gives each bristle `(n − 1) × 6`. Batches are cut between
+   * bristles: each holds whole bristles, its contours' samples and its
+   * vertices within the limit. `each` draws (or reads) each batch's vertices.
+   */
+  encodeBristles(jobs: readonly BrushJob[], f: Encoding & { each: (b: Batch, strokes: readonly SampleRange[]) => void }): StripOutputs {
+    const t0 = performance.now();
+    let drawing = 0;
+    const limit = this.limit;
+    const packed = pack(jobs.map((j) => j.prepared), { jobs, limit });
+    const { units, strokes, count } = bristleUnits(packed, jobs.map((j) => (j.brush.kind === "bristle" ? Math.round(j.brush.bristles) : 0)));
+    if (count === 0) return { count, strokes, batches: 0, inputs: 0, plan: [], ms: performance.now() - t0 };
+    const capV = Math.floor(limit / (RUN_FLOATS * 4));
+    const groups = this.#device.limits.maxComputeWorkgroupsPerDimension;
+    const plan = packed.inputs.flatMap((input, ii) => {
+      const mine = units.filter((u) => u.input === ii);
+      let at = 0;
+      return planBatches(mine.map((u) => ({ first: u.first, count: u.count, whole: true })), capV).map((b) => {
+        // The batch's units: whole ones, consecutive, ending where the batch ends.
+        const from = at;
+        while (at < mine.length && (mine[at]?.first ?? Infinity) < b.first + b.count) at++;
+        const us: readonly BristleUnit[] = mine.slice(from, at);
+        const s0 = us[0]?.samples.first ?? 0;
+        const last = us.at(-1)?.samples;
+        return { input, ...b, units: us, s0, samples: (last === undefined ? s0 : last.first + last.count) - s0 };
+      });
+    });
+    const S = GPUBufferUsage.STORAGE;
+    const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
+    const out = this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * RUN_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
+    const pipes = this.#pipelines;
+    let bound: { input: Input; records: GPUBuffer; geometry: GPUBuffer } | undefined;
+    for (const b of plan) {
+      const { input } = b;
+      if (bound?.input !== input) {
+        bound = {
+          input,
+          records: this.#buffer(f, { size: input.records.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: input.records }),
+          geometry: this.#buffer(f, { size: input.geometry.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: input.geometry }),
+        };
+      }
+      if (b.units.length > groups * BRISTLES_WORKGROUP) throw new GpuRenderError({ detail: `a bristle batch of ${b.units.length} bristles is more than one dispatch holds (${groups * BRISTLES_WORKGROUP})` });
+      const words = new Uint32Array(b.units.length * UNIT_WORDS);
+      for (const [k, u] of b.units.entries()) words.set([u.contour, u.bristle, u.first], k * UNIT_WORDS);
+      const unitBuf = this.#buffer(f, { size: words.byteLength, usage: S | GPUBufferUsage.COPY_DST, data: words });
+      const cp = f.enc.beginComputePass(timed(f, "brush"));
+      cp.setPipeline(pipes.samples);
+      cp.setBindGroup(0, this.#bind(pipes.samples, [[0, bound.records], [1, bound.geometry], [2, samples], [4, this.#uniform(f, { input, first: b.s0, count: b.samples, base: b.s0, sbase: 0 })]]));
+      cp.dispatchWorkgroups(Math.ceil(b.samples / SAMPLES_WORKGROUP));
+      cp.setPipeline(pipes.bristles);
+      cp.setBindGroup(0, this.#bind(pipes.bristles, [[0, bound.records], [1, unitBuf], [2, samples], [3, out], [4, this.#uniform(f, { input, first: 0, count: b.units.length, base: b.first, sbase: b.s0 })]]));
+      cp.dispatchWorkgroups(Math.ceil(b.units.length / BRISTLES_WORKGROUP));
+      cp.end();
+      const t1 = performance.now();
+      f.each({ buffer: out, first: b.first, count: b.count, total: count }, strokes);
+      drawing += performance.now() - t1;
+    }
+    return { count, strokes, batches: plan.length, inputs: packed.inputs.length, plan: plan.map((b) => ({ first: b.first, count: b.count })), ms: performance.now() - t0 - drawing };
   }
 }
 

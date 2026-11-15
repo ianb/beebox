@@ -25,8 +25,9 @@ import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
 import { readBrushPass } from "./brush-pass.js";
-import type { BrushJob, BrushOutputs, InstanceOutputs } from "./brush-pass.js";
+import type { BrushJob, BrushOutputs, InstanceOutputs, StripOutputs } from "./brush-pass.js";
 import { DAB_FLOATS, SAMPLE_FLOATS } from "./shader-brush.js";
+import { RUN_FLOATS } from "./shader-bristle.js";
 import { PainterlyPasses } from "./painterly.js";
 import { LightPass } from "./light.js";
 import type { GpuTimes } from "./timing.js";
@@ -331,6 +332,12 @@ export class GpuRenderer {
   async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"]; batches: number; inputs: number; reads: number }> {
     const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encodeMarks(jobs, f) });
     return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, inputs: r.out.inputs, reads: r.reads };
+  }
+
+  /** Verification: the `bristles` entry's run vertices for bristle `jobs` (`RUN_FLOATS` floats each), as the mark atlas draws them, each stroke's range, and the batches (each one's range) and input buffers they took. */
+  async bristleStrips(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: StripOutputs["strokes"]; batches: number; plan: StripOutputs["plan"]; inputs: number; reads: number }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: RUN_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encodeBristles(jobs, f) });
+    return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, plan: r.out.plan, inputs: r.out.inputs, reads: r.reads };
   }
 
   /** Verification: draw capsule instances (the `capsules` entry's layout, slots on one page of `size`) in their order with the mark atlas's capsule pipeline, and read the page's alpha back, row by row. */

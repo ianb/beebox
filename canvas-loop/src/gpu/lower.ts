@@ -82,7 +82,7 @@ export class Lowering {
     this.#colors = options.colors;
     this.#base = [options.ratio, 0, 0, options.ratio, 0, 0];
     this.#canvas = { x0: 0, y0: 0, x1: Math.round(options.width * options.ratio), y1: Math.round(options.height * options.ratio) };
-    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept, brushLimit: options.brushLimit };
+    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, brushLimit: options.brushLimit };
     this.#glyphs = options.glyphs;
   }
 

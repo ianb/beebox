@@ -21,6 +21,7 @@ import { mix, randOf } from "../../src/core/brush/random.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { openTextMeasurer } from "../../src/device/open.js";
+import { bristleBytes } from "../../src/gpu/brush-pack.js";
 import type { BrushJob, BrushOutputs } from "../../src/gpu/brush-pass.js";
 import { gpuBox, linMarks } from "../../src/gpu/marks.js";
 import type { R } from "../../src/gpu/jobs.js";
@@ -404,10 +405,11 @@ function placeJobs(reqs: readonly ExpandRequest[], ratio: number): BrushJob[] {
   });
 }
 
-/** The smallest buffer limit (a multiple of 256 bytes) that holds every contour of `prepared` on its own: its geometry, and its records with keyframes and a stroke record. */
-function smallLimit(prepared: readonly Prepared[]): number {
+/** The smallest buffer limit (a multiple of 256 bytes) that holds every contour of `prepared` on its own: its geometry, and its records with keyframes and a stroke record; and, for a bristle stroke, one bristle's strip, when `strips` (a frame draws them). */
+function smallLimit(prepared: readonly Prepared[], strips?: "strips"): number {
   const words = Math.max(...prepared.flatMap((p) => p.contours.map((c) => Math.max(c.geom.length, 4 + 16 + 24 + (Array.isArray(c.pressure) ? 2 * c.pressure.length : 0)))));
-  return Math.ceil((words * 4) / 256) * 256;
+  const strip = Math.max(0, ...prepared.flatMap((p) => (strips === "strips" && p.kind === "bristle" ? p.contours.map((c) => bristleBytes(c.count)) : [])));
+  return Math.ceil(Math.max(words * 4, strip) / 256) * 256;
 }
 
 /** Scenes with stamps and ink, long and short contours: the brush sheet, the thin ink sheet and the focused contours. */
@@ -476,7 +478,7 @@ test("with the buffer limit forced small, frames draw the same pixels over sever
   assert.ok(walker !== undefined);
   const cases = [...batchScenes().map((c) => ({ ...c, limit: 1024 })), { what: "walker frame 0", scene: walker, limit: 64 * 1024 }];
   for (const c of cases) {
-    const limit = Math.max(c.limit, smallLimit(brushRequests(c.scene, handle.colors).map((r) => prepare(r)).filter((p) => p !== undefined)));
+    const limit = Math.max(c.limit, smallLimit(brushRequests(c.scene, handle.colors).map((r) => prepare(r)).filter((p) => p !== undefined), "strips"));
     const whole = new GpuRenderer(handle);
     const split = new GpuRenderer(handle, { brushLimit: limit });
     try {
@@ -485,8 +487,10 @@ test("with the buffer limit forced small, frames draw the same pixels over sever
         const batches = whole.stats.brushBatches;
         const b = await split.render(c.scene, ratio);
         t.diagnostic(`${c.what}, ratio ${ratio}: ${batches} batch unsplit; ${split.stats.brushBatches} batches at ${limit} bytes, over ${split.stats.markPages} mark pages`);
-        assert.equal(batches, 1, "at the device's limit, one batch");
-        assert.ok(split.stats.brushBatches > 1);
+        // Dabs and capsules take one batch, and bristle strips (the brush sheet's last row) one more.
+        const bristles = brushRequests(c.scene, handle.colors).some((r) => r.stroke.brush.kind === "bristle");
+        assert.equal(batches, bristles ? 2 : 1, "at the device's limit, one batch per sequence");
+        assert.ok(split.stats.brushBatches > batches);
         assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), `${c.what}, ratio ${ratio}: the same pixels, split and unsplit`);
       }
     } finally {
