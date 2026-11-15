@@ -118,6 +118,16 @@ export function resolveLight(light: Light): LightRec {
   };
 }
 
+/** The warning for a light (or a placed picture holding one) where it does nothing (R8). */
+export function lightWarning(where: "mask" | "unlit", what: string): string {
+  return where === "mask" ? `${what} is inside a mask's artwork and does nothing (R8)` : `${what} is outside any lit group and does nothing (R8); put it inside group({ lighting: {} }, …)`;
+}
+
+/** The warning for a lit group with no light inside it (R8). */
+export function noLightWarning(name: string | undefined, lighting: LightingRec): string {
+  return `lit group${name === undefined ? "" : ` "${name}"`} has no light inside it, so only its ambient (${lighting.ambient}) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group`;
+}
+
 /** Whether `nodes` hold a light that would light an enclosing lit group: outside nested lit groups and mask artwork, through placements. */
 export function hasOpenLight(nodes: readonly SceneNode[]): boolean {
   return nodes.some((n) => {

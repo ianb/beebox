@@ -26,6 +26,8 @@ import { casterHeights, casterOnCaster, castingAmount, featheredCoverage, fullCo
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
+import { CASES } from "./dev-loop/cases.js";
+import { runCase } from "./dev-loop/run-case.js";
 import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
 import * as hallwayPort from "../../src/examples/scene-ports/hallway/sketch-tea.js";
 import * as chemistryPort from "../../src/examples/scene-ports/chemistry/sketch-tea.js";
@@ -219,3 +221,29 @@ onGpu("a tile placed twice in a frame is drawn once and kept once", tilePlacedTw
 onGpu("a clip to a path whose contours overlap keeps winding coverage", overlappingContourClip);
 onGpu("a wide picture that reads its surroundings is one layer over what can be seen of it", wideReadingPicture);
 onGpu("pixels images and pictures in a lit group snap to whole device pixels (draft 2.6)", everyPlacementSnaps);
+
+// The dev-loop checklist (beebox/docs/plans/canvas-loop-scene/stage4/dev-loop.md): each deliberately bad
+// sketch runs through the headless runner, and its message must come out on the expected channel naming
+// what the row says. A row with a gap is todo: its proposal needs a decision.
+for (const c of CASES) {
+  test(`dev loop, ${c.id}: ${c.mistake}`, c.gap === undefined ? {} : { todo: c.gap }, async (t) => {
+    const handle = needGpu(t);
+    if (handle === undefined) return;
+    const out = await runCase(c, handle);
+    switch (c.channel) {
+      case "error":
+        assert.ok(out.error !== undefined, `the run throws (transcript warnings: ${out.warnings.join("; ") || "none"})`);
+        assert.match(out.transcript, /error in (init|update|draw|render): /, "the transcript has the error line");
+        for (const name of c.names) assert.match(out.error, name);
+        break;
+      case "warning":
+        assert.equal(out.error, undefined);
+        for (const name of c.names) assert.match(out.warnings.join("\n"), name);
+        break;
+      case "none":
+        assert.equal(out.error, undefined);
+        assert.deepEqual(out.warnings, []);
+        break;
+    }
+  });
+}

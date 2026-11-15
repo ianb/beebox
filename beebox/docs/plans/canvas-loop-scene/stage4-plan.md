@@ -216,3 +216,25 @@ starts.
   is shared with today's canvas-loop chunk.
 - **Gaps:** the scene transcript does not list scripted inputs or snapshot
   labels as today's does; a draw that throws leaves no transcript.
+
+## Chunk 7: the dev-loop checklist (2026-11-15)
+
+- `stage4/dev-loop.md`: 46 deliberately bad sketches
+  (`canvas-loop/test/scene-spike/dev-loop/cases.ts`), each run through the
+  headless runner in `gpu.test.ts` and checked for the channel and what its
+  message names. 18 passed as they were, 22 gaps were fixed, 6 are left with
+  proposals.
+- **Fixed:** a throwing step now leaves a transcript that ends with the
+  frame, the step and the sketch's lines, and the run throws
+  `SketchRunError`. Warnings name the sketch's line and are given once per
+  run. The recorder checks numbers (NaN, Infinity, negative radii), parses
+  colours at the call (headless), refuses calls after `draw` and Pictures
+  from an earlier frame, and checks effects under a skew at the call.
+  New warnings: picture keys recorded every frame, stale captures told apart
+  from shared keys, lit groups with no light, fonts that are not installed.
+  The runner freezes the model, refuses async steps and undeclared params,
+  and names a canvas larger than the GPU's largest texture.
+- **Left, for a decision:** clips with no area, frames with nothing on the
+  canvas, hatching over a flat tone, faint marks, missing glyphs, and a pass
+  budget per frame; render errors do not name the node path, and the
+  browser parses colours at render.

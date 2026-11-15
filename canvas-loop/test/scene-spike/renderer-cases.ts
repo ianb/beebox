@@ -42,7 +42,7 @@ export async function offscreenShapes(handle: GpuHandle): Promise<void> {
   assert.equal(alpha(huge, [99, 20]), 255, "a shape wider than the atlas is cut to the canvas and drawn");
   const near = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 4 } }, () => v.rect(-12, 10, 10, 80, { fill: "#000" })) });
   assert.ok(alpha(near, [0, 50]) > 0, "a shape just off the canvas still blurs onto it (R5 reach)");
-  await assert.rejects(render(handle, { size: { width: 9000, height: 4 }, draw: (v) => v.rect(0, 0, 9000, 4, { fill: "#000" }) }), (e: unknown) => e instanceof GpuRenderError && /larger than the atlas/.test(e.message));
+  await assert.rejects(render(handle, { size: { width: 9000, height: 4 }, draw: (v) => v.rect(0, 0, 9000, 4, { fill: "#000" }) }), (e: unknown) => e instanceof GpuRenderError && /the canvas 9000×4 .* larger than this GPU's largest texture/.test(e.message));
 }
 
 export async function clipUnions(handle: GpuHandle): Promise<void> {
@@ -91,10 +91,11 @@ export async function anisotropicEffects(handle: GpuHandle): Promise<void> {
 export async function failedFrames(handle: GpuHandle): Promise<void> {
   const renderer = new GpuRenderer(handle);
   try {
-    // Fails during encoding, after the coverage atlas has taken a page and its buffers: a brushed mark wider than the mark atlas.
-    const late = new SceneRecorder({ width: 9000, height: 8 }).record((v) => {
+    // Fails during encoding, after the coverage atlas has taken a page and its buffers: a canvas as wide as the
+    // largest texture, and a brushed mark across it whose atlas piece (the canvas plus its padding) is wider still.
+    const late = new SceneRecorder({ width: 8192, height: 8 }).record((v) => {
       v.rect(0, 0, 10, 8, { fill: "#000" });
-      v.line(0, 4, 9000, 4, { stroke: "#000", weight: 3, brush: "pencil" });
+      v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" });
     }).scene;
     await assert.rejects(renderer.render(late, 1), (e: unknown) => e instanceof GpuRenderError && /larger than the atlas/.test(e.message));
     assert.ok(renderer.held.textures > 0, "the failed frame had allocated textures");

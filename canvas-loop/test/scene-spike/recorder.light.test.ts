@@ -76,7 +76,7 @@ test("effects.paper uses the paper at the end of the group's body; a shape's, th
 test("a light outside any lit group, or in a mask's artwork, warns; a picture's light warns where it is placed unlit", () => {
   const lamp = (v: View): ReturnType<View["picture"]> => v.picture({ key: "lamp", width: 10, height: 10 }, () => v.light({ kind: "point", at: [5, 5] }));
   assert.match(record((v) => v.light({ kind: "point", at: [1, 2] })).warnings.join("\n"), /light point at \(1,2\) is outside any lit group and does nothing/);
-  assert.match(record((v) => v.group({ lighting: {} }, () => v.mask(() => v.light({ kind: "directional" }), () => {}))).warnings.join("\n"), /inside a mask's artwork does nothing/);
+  assert.match(record((v) => v.group({ lighting: {} }, () => v.mask(() => v.light({ kind: "directional" }), () => {}))).warnings.join("\n"), /inside a mask's artwork and does nothing/);
   assert.deepEqual(record((v) => v.group({ lighting: {} }, () => v.group({}, () => v.light({ kind: "point", at: [0, 0] })))).warnings, [], "any depth inside a lit group");
   assert.deepEqual(record((v) => lamp(v)).warnings, [], "a light in a picture body warns only where the picture is placed");
   assert.match(record((v) => v.place(lamp(v), 0, 0)).warnings.join("\n"), /place picture "lamp": its light is outside any lit group/);

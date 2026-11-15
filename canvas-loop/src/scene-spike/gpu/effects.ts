@@ -7,8 +7,7 @@
 // Glow and shadow are made from the layer before the other effects (R5).
 import type { Effects } from "../../scene-draft/scene-api.js";
 import type { ColorParser, Rgba } from "../colors.js";
-import { UnsupportedCallError } from "../errors.js";
-import { applyLinear, invert, maxScale } from "../mat.js";
+import { applyLinear, axisScales, invert, maxScale } from "../mat.js";
 import type { Mat, PaperSettings } from "../scene.js";
 import { premultiply } from "./paint.js";
 import type { PainterlyPlan } from "./painterly.js";
@@ -30,23 +29,6 @@ export interface FxPlan {
   readonly shadow: { readonly dx: number; readonly dy: number; readonly sigma: Sigma; readonly color: Rgba } | undefined;
   /** Wash, hatching and paper, after the blur. */
   readonly painterly: PainterlyPlan | undefined;
-}
-
-/** Device pixels per unit along each device axis, for a round blur in the effect's own coordinates. */
-export function axisScales(m: Mat, where: string): Sigma {
-  const [a, b, c, d] = m;
-  const p = a * a + b * b;
-  const q = c * c + d * d;
-  const eps = 1e-9 * Math.max(p, q, 1);
-  if (b * b <= eps && c * c <= eps) return { x: Math.abs(a), y: Math.abs(d) };
-  // A quarter turn: the effect's y axis lies along the device's x axis.
-  if (a * a <= eps && d * d <= eps) return { x: Math.abs(c), y: Math.abs(b) };
-  const r = a * c + b * d;
-  if (Math.abs(p - q) <= 1e-6 * Math.max(p, q) && Math.abs(r) <= 1e-6 * Math.max(p, q)) {
-    const s = Math.sqrt(p);
-    return { x: s, y: s };
-  }
-  throw new UnsupportedCallError({ call: `${where} effects under a rotated non-uniform scale or a skew`, detail: "effects follow axis-aligned scales and rotations with a uniform scale only" });
 }
 
 const times = (s: Sigma, k: number): Sigma => ({ x: s.x * k, y: s.y * k });

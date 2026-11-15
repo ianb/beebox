@@ -249,6 +249,9 @@ export class GpuRenderer {
 
   async #frame<T>(...[scene, a, finish]: [Scene, { ratio: number; target?: GPUTexture; read?: boolean }, (out: Encoded) => Promise<T>]): Promise<T> {
     const device = this.#gpu.device;
+    const most = device.limits.maxTextureDimension2D;
+    const [w, h] = [Math.ceil(scene.width * a.ratio), Math.ceil(scene.height * a.ratio)];
+    if (w > most || h > most) throw new GpuRenderError({ detail: `the canvas ${scene.width}×${scene.height} at pixel ratio ${a.ratio} is ${w}×${h} device px, larger than this GPU's largest texture (${most} px a side)` });
     const temp: GPUBuffer[] = [];
     const tiles: NewTile[] = [];
     let kept = false;

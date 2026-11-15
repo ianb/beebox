@@ -26,3 +26,20 @@ export class SceneMountError extends Error {
     super(`mountSceneSketch: ${options.detail}`);
   }
 }
+
+/** `Name: message`, with a hint for a change to the frozen model (a TypeError from the engine names only the property). */
+export function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const frozen = error instanceof TypeError && /read only property|not extensible|Cannot add property|Cannot delete property/.test(error.message);
+  return `${error.name}: ${error.message}${frozen ? " (the model is frozen: update returns a new model, and draw only reads it)" : ""}`;
+}
+
+/** A sketch's `init`, `update` or `draw`, or the frame's render, threw: the frame, the step and the sketch's line; `cause` is the original error. */
+export class SketchRunError extends Error {
+  name = "SketchRunError";
+  constructor(options: { frame: number | undefined; step: string; error: unknown; at: string | undefined }) {
+    const { frame, step, error, at } = options;
+    const what = describeError(error);
+    super(`${frame === undefined ? step : `frame ${frame}, ${step}`}: ${what}${at === undefined ? "" : ` (at ${at})`}`, { cause: error });
+  }
+}

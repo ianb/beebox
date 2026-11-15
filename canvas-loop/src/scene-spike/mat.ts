@@ -2,6 +2,7 @@
 import type { Vec2 } from "../core/paint.js";
 import type { AtOptions } from "../scene-draft/scene-api.js";
 import type { Mat } from "./scene.js";
+import { UnsupportedCallError } from "./errors.js";
 
 export const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
 
@@ -64,4 +65,24 @@ export function matrixOf(at: AtOptions): Mat {
     m = mul(m, [sx, 0, 0, sy, 0, 0]);
   }
   return m;
+}
+
+/**
+ * Device pixels per unit along each device axis, for a round blur in the effect's own coordinates.
+ * The recorder calls it at the call too, so an unsupported transform fails at the sketch's line.
+ */
+export function axisScales(m: Mat, where: string): { readonly x: number; readonly y: number } {
+  const [a, b, c, d] = m;
+  const p = a * a + b * b;
+  const q = c * c + d * d;
+  const eps = 1e-9 * Math.max(p, q, 1);
+  if (b * b <= eps && c * c <= eps) return { x: Math.abs(a), y: Math.abs(d) };
+  // A quarter turn: the effect's y axis lies along the device's x axis.
+  if (a * a <= eps && d * d <= eps) return { x: Math.abs(c), y: Math.abs(b) };
+  const r = a * c + b * d;
+  if (Math.abs(p - q) <= 1e-6 * Math.max(p, q) && Math.abs(r) <= 1e-6 * Math.max(p, q)) {
+    const s = Math.sqrt(p);
+    return { x: s, y: s };
+  }
+  throw new UnsupportedCallError({ call: `${where} effects under a rotated non-uniform scale or a skew`, detail: "effects follow axis-aligned scales and rotations with a uniform scale only" });
 }

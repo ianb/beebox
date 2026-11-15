@@ -50,7 +50,7 @@ test("testing mode records each version again and warns when the body draws diff
   assert.deepEqual(rec.record(draw("red")).warnings, []);
   assert.deepEqual(rec.record(draw("red")).warnings, [], "the same drawing does not warn");
   const [warning] = rec.record(draw("blue")).warnings;
-  assert.match(warning ?? "", /picture "card" \[1] recorded differently with the same deps/);
+  assert.match(warning ?? "", /picture "card" \[1] drew differently from its kept version with the same key and deps \[1]/);
   assert.match(warning ?? "", /first difference at picture "card" \[1] > group #2 > circle #1/);
 });
 

@@ -8,6 +8,7 @@ import { fontString, haloWidth } from "../../core/painter/text/measure.js";
 import type { TextMeasurer } from "../../core/painter/text/measure.js";
 import type { Mat, TextLine, TextNode } from "../scene.js";
 import { copyPaint } from "./style.js";
+import { checkNumbers } from "./checks.js";
 
 const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
 
@@ -22,8 +23,23 @@ function glyphLine(text: string, at: { x: number; y: number; font: string; measu
   return { glyphs, xs, y: at.y };
 }
 
+const GENERIC_FONTS = new Set(["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "emoji", "math"]);
+
+/** A warning when no family in the node's font list is generic or one the runtime has (`known`), so it draws in a fallback font. */
+export function fontWarning(node: TextNode, known: ((family: string) => boolean) | undefined): string | undefined {
+  if (known === undefined) return undefined;
+  const found = node.family.split(",").some((f) => {
+    const name = f.trim().replace(/^["']|["']$/g, "");
+    return GENERIC_FONTS.has(name) || known(name);
+  });
+  if (found) return undefined;
+  return `text ${JSON.stringify(node.content.slice(0, 24))}: no font family in "${node.family}" is installed here, so it draws in a fallback font; name an installed family or end the list with a generic one (sans-serif, serif, monospace)`;
+}
+
 /** Lay out `content` where it is called: under `matrix` (logical), keeping inside `canvas` (the scene, or the picture's box). */
 export function recordText(content: string, at: { box: TextBox; options: TextOptions; measurer: TextMeasurer; matrix: Mat; canvas: { width: number; height: number } }): { node: TextNode; bounds: TextBounds } {
+  const box = at.box;
+  checkNumbers("text box", { values: { x: box.x, y: box.y, ...(box.w === undefined ? {} : { w: box.w }), ...(box.h === undefined ? {} : { h: box.h }) } });
   const [a, b, c, d, e, f] = at.matrix;
   const laid = at.measurer.place(content, { box: at.box, options: at.options, where: { transform: { a, b, c, d, e, f }, pixelRatio: 1, canvas: at.canvas } });
   const o = laid.options;

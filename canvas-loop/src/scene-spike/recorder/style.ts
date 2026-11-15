@@ -5,7 +5,7 @@ import { compositeOp } from "../../core/compose.js";
 import { SketchUsageError, assertUnit } from "../../core/errors.js";
 import type { BlendMode, ClipShape, Paint, PathCommand, Vec2 } from "../../core/paint.js";
 import { isPathShape } from "../../core/paint.js";
-import type { Effects, GroupOptions, Style } from "../../scene-draft/scene-api.js";
+import type { Effects, GroupOptions, Material, PlaceOptions, Style } from "../../scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../errors.js";
 import type { Geom, LightingRec, PaperSettings, ShapeStyle } from "../scene.js";
 import { resolveBrushStroke } from "./brush-style.js";
@@ -135,6 +135,16 @@ export function resolveGroup(options: GroupOptions): { name: string | undefined;
   const blend = options.blend ?? "normal";
   compositeOp(blend);
   return { name: options.name, opacity, blend, effects: copyEffects(options.effects, "group"), lighting: resolveLighting(options.lighting), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
+}
+
+/** Placement options (R7), checked and copied. */
+export function resolvePlace(options: PlaceOptions | undefined): { opacity: number; blend: BlendMode; erase: boolean; material: Material | undefined } {
+  const o = options ?? {};
+  const opacity = o.opacity ?? 1;
+  assertUnit(opacity, "place opacity");
+  const blend = o.blend ?? "normal";
+  compositeOp(blend);
+  return { opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place") };
 }
 
 /** A rounded rectangle as path commands (corner arcs as quadratic curves), as today's `roundRect`. */

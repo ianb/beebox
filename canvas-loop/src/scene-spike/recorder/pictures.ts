@@ -82,12 +82,15 @@ export function firstDifference(pair: { a: readonly unknown[]; b: readonly unkno
 
 interface Entry {
   readonly version: Version;
+  readonly made: number;
   lastAsked: number;
 }
 
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {
   readonly #entries = new Map<string, Entry[]>();
+  /** Per key: the last frame a new version was added, and how many frames running had one. */
+  readonly #runs = new Map<string, { frame: number; run: number }>();
   #frame = 0;
 
   /** A new frame: drop versions not asked for in the last two. */
@@ -111,10 +114,20 @@ export class PictureTable {
     return hit.version;
   }
 
-  add(version: Version): void {
+  /** Add a new version; returns how many frames running (this one included) its key has added a new version. */
+  add(version: Version): number {
     const list = this.#entries.get(version.key) ?? [];
-    list.push({ version, lastAsked: this.#frame });
+    list.push({ version, made: this.#frame, lastAsked: this.#frame });
     this.#entries.set(version.key, list);
+    const last = this.#runs.get(version.key);
+    const run = last === undefined ? 1 : last.frame === this.#frame ? last.run : last.frame === this.#frame - 1 ? last.run + 1 : 1;
+    this.#runs.set(version.key, { frame: this.#frame, run });
+    return run;
+  }
+
+  /** Whether `version` was added this frame (so asking for it again this frame was a second call). */
+  madeThisFrame(version: Version): boolean {
+    return this.#entries.get(version.key)?.some((e) => e.version === version && e.made === this.#frame) === true;
   }
 
   /** Forget every version, so each picture records again (a web font loaded). */
@@ -133,8 +146,11 @@ export class PictureTable {
 /** What `v.picture` and `v.pixels` hand back: the version, behind the draft's opaque `Picture`. */
 export class PictureHandle {
   readonly version: Version;
-  constructor(version: Version) {
+  /** The recorder's frame it was handed out in; `place` refuses it in another frame. */
+  readonly frame: object;
+  constructor(version: Version, frame: object) {
     this.version = version;
+    this.frame = frame;
   }
   get width(): number {
     return this.version.width;
@@ -146,6 +162,13 @@ export class PictureHandle {
   get pictureBrand(): never {
     throw new SketchUsageError({ detail: "a Picture is opaque: place it with v.place" });
   }
+}
+
+/** The version behind a Picture `place` was given: one from `v.picture` or `v.pixels`, this frame (`frame`). */
+export function placedVersion(picture: unknown, frame: object): Version {
+  if (!(picture instanceof PictureHandle)) throw new SketchUsageError({ detail: "place: the picture must come from v.picture or v.pixels" });
+  if (picture.frame !== frame) throw new SketchUsageError({ detail: `place(${picture.version.kind} "${picture.version.key}"): this Picture came from an earlier frame; call v.picture in each draw (it hands back the kept version without recording again) and place what it returns` });
+  return picture.version;
 }
 
 /** A picture's key and size, checked; `pixels` needs whole pixels. */
