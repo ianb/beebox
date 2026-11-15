@@ -15,6 +15,7 @@ import { openGpu, openTextMeasurer } from "../device.js";
 import type { TextMeasurer } from "../../core/painter/text/measure.js";
 import type { GpuHandle } from "../device.js";
 import { SketchUsageError } from "../../core/errors.js";
+import { checkParam } from "../../browser/param-validate.js";
 import { GpuRenderError } from "../errors.js";
 import { GpuRenderer } from "../gpu/renderer.js";
 import { encodePng } from "./png.js";
@@ -39,11 +40,21 @@ export interface SpikeRunOptions {
   readonly initialParams?: Readonly<Record<string, number | boolean | string>>;
 }
 
-function defaults(decl: ParamsDecl, initial: Readonly<Record<string, number | boolean | string>>): ParamValues<ParamsDecl> {
+/**
+ * The params the first frame sees: each declared default, or its starting
+ * value. As `teaRun`, a name the sketch does not declare is an error; so is a
+ * value `checkParam` would refuse or adjust (a clamped number, a trigger).
+ */
+export function startParams(decl: ParamsDecl, initial: Readonly<Record<string, number | boolean | string>>): ParamValues<ParamsDecl> {
+  for (const [name, value] of Object.entries(initial)) {
+    const param = decl[name];
+    if (param === undefined) throw new SketchUsageError({ detail: `initial param "${name}": the sketch declares no such param` });
+    const check = checkParam(param, value);
+    if (!check.ok) throw new SketchUsageError({ detail: `initial param "${name}": ${check.reason}` });
+    if (check.note !== undefined) throw new SketchUsageError({ detail: `initial param "${name}": refused, since it would be ${check.note}` });
+  }
   const values: Record<string, number | boolean | string> = {};
   for (const [name, p] of Object.entries(decl)) if (p.type !== "trigger") values[name] = initial[name] ?? p.default;
-  // As `teaRun`: a starting value for a param the sketch does not declare is an error.
-  for (const name of Object.keys(initial)) if (decl[name] === undefined) throw new SketchUsageError({ detail: `initial param "${name}": the sketch declares no such param` });
   return values;
 }
 
@@ -82,7 +93,7 @@ class SpikeRun {
     this.#mod = a.mod;
     this.#renderer = a.renderer;
     this.#text = a.text;
-    this.#params = defaults(a.mod.params, o.initialParams ?? {});
+    this.#params = startParams(a.mod.params, o.initialParams ?? {});
     this.#util = new SpikeUtil({ seed: o.seed, params: () => this.#params, text: a.text, canvas: a.mod.canvas ?? { width: 400, height: 300 } });
   }
 

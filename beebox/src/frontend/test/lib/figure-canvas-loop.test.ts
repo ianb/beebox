@@ -100,3 +100,26 @@ void test("reports carry the sketch's activity", async (t) => {
     ["explored", "set mass = 2", undefined],
   ]);
 });
+
+// The entry's `renderer` export and the mount the factory calls must agree,
+// since `bbx figure run` picks its runner from the export. Today's figures
+// (no export, `mountSketch`) mount as before; every mismatch throws, which
+// FigureMount shows as the card's figure error.
+void test("the renderer export must match the mount call", async (t) => {
+  const outcome = (renderer: unknown, call: "mountSketch" | "mountSceneSketch"): string => {
+    const { calls, lib } = fakeLib();
+    const wrapped = wrapCanvasLoopLib(lib, { declared: [], renderer });
+    try {
+      wrapped[call](mount, { module: {} });
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+    return `mounted (${calls.length} Canvas2D)`;
+  };
+  t.check([outcome(undefined, "mountSketch"), outcome("scene", "mountSketch"), outcome(undefined, "mountSceneSketch"), outcome("gpu", "mountSketch")], [
+    "mounted (1 Canvas2D)",
+    'figure entry: renderer is "scene" but the factory calls cl.mountSketch; call cl.mountSceneSketch',
+    'figure entry: the factory calls cl.mountSceneSketch but the entry does not export renderer = "scene"',
+    'figure entry: export const renderer must be "scene" or absent; got "gpu"',
+  ]);
+});

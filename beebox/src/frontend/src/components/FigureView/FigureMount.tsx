@@ -87,6 +87,10 @@ async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness
 interface CanvasLoopHarness {
   declared: readonly FigureParamDecl[];
   report?: ReportActivity;
+  /** The entry's `renderer` export, checked against the mount call. */
+  renderer?: unknown;
+  /** Where a scene renderer that fails to load reports. */
+  onError: (message: string) => void;
 }
 
 interface FigureMountProps {
@@ -98,9 +102,11 @@ interface FigureMountProps {
   declaredParams?: readonly FigureParamDecl[];
   /** Logs this figure's actions (a no-op outside the companion pane). */
   report?: ReportActivity;
+  /** The entry module's `renderer` export (canvas-loop: `"scene"` or absent). */
+  renderer?: unknown;
 }
 
-export function FigureMount({ runtime, sketch, figure, onError, declaredParams, report }: FigureMountProps) {
+export function FigureMount({ runtime, sketch, figure, onError, declaredParams, report, renderer }: FigureMountProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   // Hold the latest figure context in a ref so the mount effect can read it at
   // mount time without taking it as a dependency — rebuilding the context object
@@ -114,10 +120,11 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
   // Same pattern for the mount-time harness inputs: a new reporter or param
   // list identity must not remount the sketch. The reporter is called through
   // the ref, so a re-bound reporter takes effect without a remount.
-  const harnessRef = useRef({ declaredParams, report });
+  // `renderer` comes from the same module as `sketch`, whose change remounts.
+  const harnessRef = useRef({ declaredParams, report, renderer });
   useEffect(() => {
-    harnessRef.current = { declaredParams, report };
-  }, [declaredParams, report]);
+    harnessRef.current = { declaredParams, report, renderer };
+  }, [declaredParams, report, renderer]);
 
   useEffect(() => {
     const el = mountRef.current;
@@ -132,9 +139,13 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
 
     void (async () => {
       try {
-        const { declaredParams: declared, report: reporter } = harnessRef.current;
+        const { declaredParams: declared, report: reporter, renderer: marker } = harnessRef.current;
         const lib = await loadRuntimeLib(runtime, {
           declared: declared ?? [],
+          renderer: marker,
+          onError: (message) => {
+            if (!state.cancelled) onError(message);
+          },
           ...(reporter !== undefined ? { report: (...args: Parameters<ReportActivity>) => { harnessRef.current.report?.(...args); } } : {}),
         });
         if (state.cancelled) return;
