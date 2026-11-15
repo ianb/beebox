@@ -23,12 +23,12 @@
     },
     "./browser/figure.css": "./src/browser/figure.css",
     "./scene-browser": {
-      "types": "./src/scene-spike/browser/mount.ts",
-      "default": "./src/scene-spike/browser/mount.ts"
+      "types": "./src/browser/scene/mount.ts",
+      "default": "./src/browser/scene/mount.ts"
     },
     "./scene-headless": {
-      "types": "./src/scene-spike/run/runner.ts",
-      "default": "./src/scene-spike/run/runner.ts"
+      "types": "./src/headless/scene/runner.ts",
+      "default": "./src/headless/scene/runner.ts"
     },
     "./eslint": {
       "types": "./src/eslint/plugin.ts",
@@ -37,7 +37,7 @@
   },
   "scripts": {
     "cli": "node --import tsx src/headless/cli.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json && tsc --noEmit -p src/scene-spike/browser/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
     "lint": "eslint .",
     "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "build:playground": "node --import tsx src/browser/build.ts",

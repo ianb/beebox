@@ -29,7 +29,7 @@ export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; chang
 
 /**
  * What draws a frame for the runtime. Today's is a Canvas2D view over the
- * figure's canvas; the scene spike's records the frame and draws it on the GPU.
+ * figure's canvas; the scene surface records the frame and draws it on the GPU.
  */
 export interface DrawSurface {
   /** The text measuring `u.textWidth` and `u.textBounds` answer with. */

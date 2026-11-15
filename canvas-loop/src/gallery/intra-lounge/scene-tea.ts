@@ -513,15 +513,15 @@ function bake(): Baked {
         const lx = light.p[0] - p[0], ly = light.p[1] - p[1], lz = light.p[2] - p[2];
         const dist = Math.hypot(lx, ly, lz);
         const ux = lx / dist, uy = ly / dist, uz = lz / dist;
-        const facing = hit.n[0] * ux + hit.n[1] * uy + hit.n[2] * uz;
-        if (facing <= 0) continue;
+        const cos = hit.n[0] * ux + hit.n[1] * uy + hit.n[2] * uz;
+        if (cos <= 0) continue;
         const out = -(ux * light.dir[0] + uy * light.dir[1] + uz * light.dir[2]);
         if (out <= 0) continue;
         const spread = out ** light.focus;
         const fall = 1 / (1 + (dist / light.reach) ** 2) ** 1.6;
         const start: [number, number, number] = [p[0] + hit.n[0] * 2e-3, p[1] + hit.n[1] * 2e-3, p[2] + hit.n[2] * 2e-3];
         if (blocked(start, [ux, uy, uz], dist - 0.06)) continue;
-        gain[k * NL + l] = facing * spread * fall;
+        gain[k * NL + l] = cos * spread * fall;
       }
     }
   }

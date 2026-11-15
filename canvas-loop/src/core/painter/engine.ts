@@ -12,8 +12,8 @@ import type { Ctx2D, Paint, PathCommand, Style, TextBounds, TextBox, TextOptions
 import { resolveStyle } from "./style.js";
 import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../paint.js";
 import { PainterCore } from "./core.js";
-import { fontString, haloWidth, TextMeasurer } from "./text/measure.js";
-import type { LaidText } from "./text/measure.js";
+import { fontString, haloWidth, TextMeasurer } from "../text/measure.js";
+import type { LaidText } from "../text/measure.js";
 
 /**
  * The shared drawing surface over a structural `Ctx2D`. Drawing is
