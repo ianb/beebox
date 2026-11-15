@@ -1,13 +1,16 @@
 ---
 title: "Rose Trellis nav labels are below AA (3.1-3.75:1) at the bar's warm end"
-workstream: unattached
+workstream: theme-check-gate
 needs: [decision]
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-audit — bin/theme-check --all
 labels: [theme-contrast, do-not-apply-without-asking]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Resolved in 5631c13ae and cacbff1a7. The original Rose Trellis gradient remains intact; only labeled chips receive a deeper translucent fill. The boxholder approved this treatment in the before/after exhibit on 2026-11-15.
 
 White nav labels on the Rose Trellis bar measure 3.1-3.75:1 where the bar is
 warm. `bin/theme-check --all` therefore exits 1.
@@ -28,3 +31,7 @@ or revisit the look later.
 Pointer drift. The bar gradient is no longer in `chrome.css`. The stop `#933b58d9` is at `beebox/src/frontend/src/themes/textiles.css:150`. The revert is commit d9dcceee6. The decision is still open.
 
 Re-reviewed 2026-10-30: the gradient line moved to textiles.css:155. Still undecided.
+
+## Proposed chip treatment 2026-11-15
+
+The theme-check-gate workstream keeps the original bar gradient and adds a translucent deeper fill only to its labeled chips. Targeted phone and laptop contrast checks pass. The before/after exhibit presents this alternative for the boxholder's visual approval; the decision remains open and the change is not landed.

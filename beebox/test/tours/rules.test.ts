@@ -45,6 +45,13 @@ void test("print rules are left out; a screen query is not print", (t) => {
   t.end();
 });
 
+// Shared chrome highlights apply to any element. Removing their pseudo-element
+// must leave a valid universal selector, not an unparsable empty query.
+void test("bare highlight pseudo-elements target every element", (t) => {
+  t.check([reduceSelector("::selection"), reduceSelector("::highlight(bbx-selection-preview)")], ["*", "*"]);
+  t.end();
+});
+
 void test("targets: each selector of a rule naming a theme under test, deduplicated, minus exemptions", (t) => {
   const targets = ruleTargets([
     { sheet: "gilt-chrome.css", selector: "[data-chrome-theme=\"gilt\"] .bbx-app-nav, [data-chrome-theme=\"deck\"] .bbx-app-nav, .bbx-app-nav", media: [] },

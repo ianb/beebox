@@ -1,12 +1,15 @@
 ---
 title: "Theme audit: nine shared theme sheets are not yet held to rule coverage"
-workstream: unattached
+workstream: theme-check-gate
 area: beebox
 labels: [themes, theme-check]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-ink-dark-themes — extending bin/theme-check rule coverage to sheets that name no theme
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Implemented in 5631c13ae with follow-up material fixes in 118ca155a and cacbff1a7. The complete 25-case theme-check --all run passed contrast, material, backdrop, and rule coverage on 2026-11-15. All nine shared sheets are included; only transient card-turn transforms and busy opacity have new reasoned selector exemptions.
 
 `bin/theme-check` checks that each theme rule matches something in the theme
 studio. It used to count only rules that name a theme, so a sheet every theme

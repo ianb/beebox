@@ -7,6 +7,7 @@
 #   bin/theme-check --system deck --system-stock panels
 #   bin/theme-check --system plain --card post-it --card-stock rose
 #   bin/theme-check --all                            # every catalog theme; exit 1 on a miss
+#   bin/theme-check --failed                         # retry misses from the last completed run
 
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"

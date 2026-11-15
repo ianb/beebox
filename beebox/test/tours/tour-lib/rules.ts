@@ -93,11 +93,13 @@ function withoutNegatedActions(selector: string): string {
  * like style a part of their element.
  */
 export function reduceSelector(selector: string): string {
-  return withoutNegatedActions(selector)
+  const reduced = withoutNegatedActions(selector)
     .replace(USER_ACTION, ":where(*)")
     .replace(/::[\w-]+(?:\([^)]*\))?|:(?:before|after|first-line|first-letter)\b/g, "")
     .replace(/\s*([+>~])\s*$/, "")
     .trim();
+  // A bare ::selection or ::highlight has an implicit universal element.
+  return reduced === "" ? "*" : reduced;
 }
 
 /** The `:is()` and `:where()` lists in a selector, outside `:not()`, nested ones included. */

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-14T22:54:34Z
-Total documents: 660
+Generated: 2026-11-15T21:55:59Z
+Total documents: 661
 
 ## Issues
 
@@ -283,6 +283,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/staged-commit-checks.md:44 (mention) — - Docs: root `AGENTS.md` "Commit and land", `bin/AGENTS.md` "Commit safety",
+- docs/implemented-plans/theme-check-gate.md:28 (mention) — The package `AGENTS.md` says, *"Work only on the requested problem"* (`beebox/AGENTS.md:9`); limit changes to the gate a
 - docs/implemented-plans/todo-annotation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/todos-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/top-nav-ia.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -2590,7 +2591,7 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 104 lines | current reference
+Title: "Authoring themes" | 118 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
@@ -2832,7 +2833,7 @@ Title: "Card themes" | 285 lines | current reference
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:89 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
+- docs/theme-authoring.md:103 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:22 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 - ../research/modern-web-guidance/audit/visual-js-pwa.md:50 (mention) — - Applies here: partly — card `symbol:` takes author `background:`/`foreground:` colours (`beebox/docs/box/card-themes.m
 
@@ -3036,7 +3037,7 @@ Referenced by:
 
 #### docs/box/triggers.md
 
-Title: "Activity triggers" | 135 lines | current reference
+Title: "Activity triggers" | 167 lines | current reference
 
 Referenced by:
 - docs/box/agent-changes.md:14 (mention) — - 2026-11-14 (05a1a80de): New: activity triggers. A function in `src/triggers/` watches what the person does in a view o
@@ -3877,7 +3878,7 @@ References:
 
 #### docs/implemented-plans/activity-triggers.md
 
-Title: "Activity triggers: agent-written functions that watch what a person does and respond" | 919 lines | shipped history | implemented
+Title: "Activity triggers: agent-written functions that watch what a person does and respond" | 945 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/exploration/2026-11-14-make-figure-driven-triggers-testable-end-to-end.md:12 (mention) — The live check of activity triggers (`docs/implemented-plans/activity-triggers.md`,
@@ -8577,6 +8578,22 @@ Title: "Theme authoring studio" | 171 lines | shipped history | implemented
 References:
 - → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
 - → frontend.md (mention)
+
+#### docs/implemented-plans/theme-check-gate.md
+
+Title: "Make theme-check a landing gate" | 178 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md:22 (link) — The contrast changes are committed in 5631c13ae; they are not landed. Review the “Theme contrast before and after” exhib
+- ../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md:28 (link) — The contrast changes are committed in 5631c13ae; they are not landed. Review the “Theme contrast before and after” exhib
+
+References:
+- → ../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md (frontmatter)
+- → ../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md (frontmatter)
+- → ../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md (frontmatter)
+- → ../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md (frontmatter)
+- → ../issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md (frontmatter)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/theme-contrast-audit.md
 

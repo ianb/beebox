@@ -96,10 +96,12 @@
 /* "Updating…" while a chat turn edits the open document. Empty otherwise,
    so the live region stays mounted without showing a blank pill. */
 .bbx-companion-updating[data-editing] {
+  /* The card is at z-index 1. This sibling cannot inherit its material. */
+  z-index: 2;
   padding: 4px 12px;
-  color: var(--bbx-ink-soft);
-  background: var(--bbx-paper);
-  border: 1px solid var(--bbx-edge);
+  color: var(--bbx-ink-soft, #6b5d4b);
+  background: var(--bbx-paper, #fff);
+  border: 1px solid var(--bbx-edge, #e8ddd0);
 }
 
 /* A selected card's tab grows from the sheet's top edge. The desk surrounds
