@@ -1,6 +1,7 @@
 ---
 title: "bin/theme-check --all fails on chrome and chat misses unrelated to cards"
 workstream: theme-check-gate
+needs: [manual-testing]
 area: beebox
 labels: [themes, theme-check, contrast]
 filed-by: agent
@@ -21,3 +22,7 @@ discovered-in: worktree-card-ink-dark-themes — full catalog runs on 2026-11-12
   renders inside that material, or never did.
 
 Until these are fixed, `--all` cannot serve as a landing gate for theme work.
+
+## Manual testing
+
+The contrast changes are committed in 5631c13ae; they are not landed. Review the “Theme contrast before and after” exhibit in the theme-check-gate workstream. Confirm that the adjusted text and chip colors preserve the intended appearance. The full catalog check passed with exit 0 across all 25 cases; evidence is recorded in the [implementation plan](../../beebox/docs/plans/theme-check-gate.md); visual approval remains a separate gate.

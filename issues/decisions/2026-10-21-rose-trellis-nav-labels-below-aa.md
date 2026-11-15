@@ -28,3 +28,7 @@ or revisit the look later.
 Pointer drift. The bar gradient is no longer in `chrome.css`. The stop `#933b58d9` is at `beebox/src/frontend/src/themes/textiles.css:150`. The revert is commit d9dcceee6. The decision is still open.
 
 Re-reviewed 2026-10-30: the gradient line moved to textiles.css:155. Still undecided.
+
+## Proposed chip treatment 2026-11-15
+
+The theme-check-gate workstream keeps the original bar gradient and adds a translucent deeper fill only to its labeled chips. Targeted phone and laptop contrast checks pass. The before/after exhibit presents this alternative for the boxholder's visual approval; the decision remains open and the change is not landed.

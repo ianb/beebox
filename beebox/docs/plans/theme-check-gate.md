@@ -5,7 +5,7 @@ workstream: theme-check-gate
 issues:
   - ../../../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md
   - ../../../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md
-  - ../../../issues/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
+  - ../../../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
   - ../../../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md
   - ../../../issues/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md
 ---
@@ -154,7 +154,7 @@ Claude fable reviewed the plan on 2026-11-15. Accepted the single atomic failure
 - Figure errors retain their existing red fill and text; declaring their own semantic ink makes that intentional material explicit. Their text contrast remains measured.
 - The cold-open diagnostic passed after stopping only this worktree's process. Two concurrent one-job diagnostic processes passed. A source edit after the first screenshot caused exit 2 with a source-change message and preserved the previous failure record.
 - Targeted phone and laptop captures pass for Rose Trellis, Veil, Overprint, Phosphor, and all Badge tones. Rose keeps its original gradient; only chip fills deepen.
-- Selected tests: nine files, 63 checks passed. Typecheck, layout-check, and changed-file ESLint passed. Full catalog and implementation review results are pending.
+- Change-selected tests ran 51 files and 413 assertions. Three assertions in the todo rendering test needed the new Badge class; that file then passed all 29 assertions. No other files failed. Typecheck, layout-check, and changed-file ESLint passed. Retry-state tests also rejected deliberately removed malformed-state and partial-coverage guards, then passed after restoration. The final `bin/theme-check --all --jobs 2` run exited 0: 25 catalog cases, 50 contrast jobs, and 150 backdrop/coverage jobs passed. Its completed record has no failed jobs and no pending coverage.
 
 ## Implementation review adjudication
 
@@ -165,3 +165,13 @@ Kept the specified last-completed-run semantics, including previews and concurre
 ## Coverage exposed a hidden status
 
 The first full catalog attempt after moving the workspace status to its real position reported that Updating was never measured. A focused phone hit test confirmed that the card at z-index 1 covered its sibling status at z-index auto. The shared status rule now paints at z-index 2 and provides neutral ink, paper, and border fallbacks, since it cannot inherit the child card's material. Before/after status captures join the visual exhibit. No contrast or occlusion check was weakened.
+
+## Semantic badges on dark cards
+
+The next catalog attempt exposed six false surface-inversion reports for the newly visible Badge tones on Night Atlas. These badges have their own solid palette rather than inheriting the card material. They now declare that material explicitly with `--bbx-ink: currentColor`; the material-neutral Badge retains its card inheritance. A targeted Night Atlas and Phosphor probe passed, while deliberately restoring the old warning text color still failed at 2.46:1. No text threshold changed.
+
+Claude verified the status stacking/fallback fix and the narrow Badge material boundary in a final follow-up. It found no counterexamples, and confirmed that material-neutral and all badge text checks remain active. The visible status correction joins the human approval gate.
+
+## Ready for visual approval
+
+The final full run was `25502-c65f0559`; local evidence is in `scratch/theme-gate/full-complete.log` and `scratch/theme-gate/full/last-run.json`. Runner and shared-sheet coverage issues are closed. The two contrast issues retain their manual-testing gates, and the Rose Trellis decision remains open. The single “Theme contrast before and after” exhibit shows Rose Trellis, Phosphor, Veil, Overprint, Badge tones, and the now-visible Updating status. Implementation and Claude review are complete; human visual approval and a later finish request remain before landing.
