@@ -418,6 +418,7 @@ reactions change the design.
 
 Stage 5 writes them: `canvas-loop-scene-core.subplan.md`,
 `canvas-loop-gpu-brushes.subplan.md`, `canvas-loop-box-figures.subplan.md`.
+Later: `canvas-loop-returned-scene.subplan.md` (`draw` returns its scene as values).
 
 ## Failure modes
 
