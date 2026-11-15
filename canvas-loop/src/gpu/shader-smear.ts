@@ -4,8 +4,37 @@
 // between), and the result is copied back, kept only inside the clip. The
 // arithmetic is core/brush/render/mark/smear.ts's, in float. Coordinates are
 // texels of the target layer; pick-up near its edge reads the nearest patch
-// inside it, as today. The clip is read from its box on its clip page.
+// inside it, as today. The clip is read from its box on its clip page. The
+// dabs come from the brush pass's `smears` entry (`smearDabsWgsl`, below),
+// which writes them in this layout from the stroke's GPU samples.
 import { PAPER_WGSL } from "./shader-paper.js";
+
+/**
+ * The `smears` entry of shader-brush.ts's instances module (chunk 8): sample i
+ * of a smudge or wet stroke as dab i of the layout `Dab` below (x, y, radius,
+ * alpha, first of its contour, then zeros; `floats` each), in the target
+ * layer's texels (the contour's offset holds the layer's corner): expand.ts's
+ * CPU dab, placed as marks.ts placed it. It uses that module's prelude,
+ * samples, output and `placed`.
+ */
+export function smearDabsWgsl(a: { floats: number; workgroup: number }): string {
+  return /* wgsl */ `
+@compute @workgroup_size(${a.workgroup}) fn smears(@builtin(global_invocation_id) gid: vec3u) {
+  if (gid.x >= u.count) { return; }
+  let i = u.first + gid.x;
+  let s = smp[i - u.base];
+  let c = s.contour - u.cbase;
+  let st = cw(c, 13u);
+  let at = placed(st, s);
+  let o = (i - u.base) * ${a.floats}u;
+  dab[o] = at.x; dab[o + 1u] = at.y;
+  dab[o + 2u] = (sf(st, 10u) / 2.0) * (1.0 - sf(st, 12u) * (1.0 - s.p)) * sf(st, 11u);
+  dab[o + 3u] = sf(st, 13u) * (1.0 - sf(st, 14u) * (1.0 - s.p));
+  dab[o + 4u] = select(0.0, 1.0, i == cw(c, 2u));
+  for (var w = 5u; w < ${a.floats}u; w++) { dab[o + w] = 0.0; }
+}
+`;
+}
 
 export const SMEAR_WGSL = /* wgsl */ `
 ${PAPER_WGSL}
@@ -19,7 +48,7 @@ struct U {
   seed: u32, pwidth: i32, origin: vec2f,
   clipBox: vec4i, clipSlot: vec2i, pad: vec2i,
 };
-struct Dab { x: f32, y: f32, r: f32, a: f32, first: f32, p0: f32, p1: f32, p2: f32 };
+struct Dab { x: f32, y: f32, r: f32, a: f32, first: f32, p0: f32, p1: f32, p2: f32, p3: f32, p4: f32, p5: f32, p6: f32 };
 @group(0) @binding(0) var<storage, read_write> pix: array<u32>;
 @group(0) @binding(1) var<storage, read_write> fb: array<vec4f>;
 @group(0) @binding(2) var<storage, read_write> before: array<vec4f>;

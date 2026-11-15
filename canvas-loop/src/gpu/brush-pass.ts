@@ -20,8 +20,9 @@
 // batch also computes the next sample, one of overlap). Bristle strokes go in
 // their own batches (`encodeBristles`), cut only between bristles: each batch
 // computes the samples of the contours its bristles walk, then the `bristles`
-// entry writes their strips into a run-vertex buffer. Packing and planning are
-// in brush-pack.ts.
+// entry writes their strips into a run-vertex buffer. A smudge or wet stroke
+// (`encodeSmear`) is one batch, never split. Packing and planning are in
+// brush-pack.ts.
 import type { Prepared } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
@@ -84,6 +85,7 @@ interface Pipes {
   readonly samples: GPUComputePipeline;
   readonly dabs: GPUComputePipeline;
   readonly capsules: GPUComputePipeline;
+  readonly smears: GPUComputePipeline;
   readonly bristles: GPUComputePipeline;
 }
 
@@ -110,7 +112,7 @@ export class BrushPass {
     if (this.#pipes === undefined) {
       const instances = d.createShaderModule({ code: INSTANCES_WGSL });
       const make = (module: GPUShaderModule, entryPoint: string): GPUComputePipeline => d.createComputePipeline({ layout: "auto", compute: { module, entryPoint } });
-      this.#pipes = { samples: make(d.createShaderModule({ code: SAMPLES_WGSL }), "samples"), dabs: make(instances, "dabs"), capsules: make(instances, "capsules"), bristles: make(instances, "bristles") };
+      this.#pipes = { samples: make(d.createShaderModule({ code: SAMPLES_WGSL }), "samples"), dabs: make(instances, "dabs"), capsules: make(instances, "capsules"), smears: make(instances, "smears"), bristles: make(instances, "bristles") };
     }
     return this.#pipes;
   }
@@ -154,7 +156,7 @@ export class BrushPass {
    * ink strokes (a stable reorder); the ranges are returned in `strokes`
    * order. Buffers are frame-temporary (in `f.temp`) and can be copied from.
    */
-  #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[]; each: (b: Batch, ranges: readonly (readonly SampleRange[])[]) => void }): BrushOutputs & { stamps: number } {
+  #encode(strokes: readonly Prepared[], f: Encoding & { jobs?: readonly BrushJob[]; smear?: boolean; each: (b: Batch, ranges: readonly (readonly SampleRange[])[]) => void }): BrushOutputs & { stamps: number } {
     const t0 = performance.now();
     let drawing = 0;
     const { jobs } = f;
@@ -171,13 +173,17 @@ export class BrushPass {
     const { count, inputs } = packed;
     if (count === 0) return { count, ranges, stamps, batches: 0, inputs: 0, ms: performance.now() - t0 };
     const cap = this.#cap(jobs !== undefined);
+    // A smear is one span that must not split, in one input (lowering's `checkSmear` names the call first).
+    if (f.smear === true && inputs.length > 1) throw new GpuRenderError({ detail: `a smudge or wet stroke needs ${inputs.length} brush input buffers; it must fit one` });
+    const spans = (input: Input): Input["spans"] => (f.smear === true ? [{ first: input.first, count: input.count, whole: true }] : input.spans);
     // A capsule batch also computes the sample after its last (in its input), its last capsule's far end.
-    const plan = inputs.flatMap((input) => planBatches(input.spans, cap).map((b) => ({ input, ...b, samples: jobs === undefined ? b.count : Math.min(b.first + b.count + 1, input.first + input.count) - b.first })));
+    const plan = inputs.flatMap((input) => planBatches(spans(input), cap).map((b) => ({ input, ...b, samples: jobs === undefined ? b.count : Math.min(b.first + b.count + 1, input.first + input.count) - b.first })));
     const S = GPUBufferUsage.STORAGE;
     const samples = this.#buffer(f, { size: Math.max(...plan.map((b) => b.samples)) * SAMPLE_FLOATS * 4, usage: S | GPUBufferUsage.COPY_SRC });
     const out = jobs === undefined ? undefined : this.#buffer(f, { size: Math.max(...plan.map((b) => b.count)) * DAB_FLOATS * 4, usage: S | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
     const uniform = (input: Input, a: { first: number; count: number; base: number }): GPUBuffer => this.#uniform(f, { input, ...a, sbase: 0 });
     const pipes = this.#pipelines;
+    const first = f.smear === true ? pipes.smears : pipes.dabs;
     let bound: { input: Input; records: GPUBuffer; geometry: GPUBuffer } | undefined;
     for (const b of plan) {
       const { input } = b;
@@ -195,7 +201,7 @@ export class BrushPass {
       cp.dispatchWorkgroups(Math.ceil(b.samples / SAMPLES_WORKGROUP));
       if (out !== undefined) {
         const end = b.first + b.count;
-        for (const [pipe, lo, hi] of [[pipes.dabs, b.first, Math.min(end, stamps)], [pipes.capsules, Math.max(b.first, stamps), end]] as const) {
+        for (const [pipe, lo, hi] of [[first, b.first, Math.min(end, stamps)], [pipes.capsules, Math.max(b.first, stamps), end]] as const) {
           if (hi <= lo) continue;
           cp.setPipeline(pipe);
           cp.setBindGroup(0, this.#bind(pipe, [[0, records], [2, samples], [3, out], [4, uniform(input, { first: lo, count: hi - lo, base: b.first })]]));
@@ -232,6 +238,16 @@ export class BrushPass {
     let strokes: SampleRange[] | undefined;
     const out = this.#encode(jobs.map((s) => s.prepared), { ...f, jobs, each: (b, ranges) => f.each(b, (strokes ??= strokesOf(ranges))) });
     return { count: out.count, strokes: strokes ?? strokesOf(out.ranges), stamps: out.stamps, batches: out.batches, inputs: out.inputs, ms: out.ms };
+  }
+
+  /**
+   * A smudge or wet stroke's dabs (`DAB_FLOATS` floats each, one per sample,
+   * shader-smear.ts's layout) in one batch; `each` encodes the smear pass that
+   * reads them. The job's offset places them in the target layer's texels.
+   */
+  encodeSmear(job: BrushJob, f: Encoding & { each: (b: Batch) => void }): InstanceOutputs {
+    const out = this.#encode([job.prepared], { ...f, jobs: [job], smear: true, each: (b) => f.each(b) });
+    return { count: out.count, strokes: [{ first: 0, count: out.count }], stamps: out.stamps, batches: out.batches, inputs: out.inputs, ms: out.ms };
   }
 
   /**

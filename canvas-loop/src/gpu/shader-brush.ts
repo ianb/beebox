@@ -12,11 +12,13 @@
 // brush space, as the CPU expansion's. The `dabs` and `capsules` entries (their
 // own module, below) turn each sample of a stamp stroke into one dab instance,
 // and each sample of an ink stroke into one capsule instance, in device pixels;
-// `bristles` walks one bristle of one contour and writes its runs as mitred
-// strips, `(n − 1) × 6` run vertices.
+// `smears` (shader-smear.ts) turns each sample of a smudge or wet stroke into
+// one smear dab; `bristles` walks one bristle of one contour and writes its runs
+// as mitred strips, `(n − 1) × 6` run vertices.
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { MIX_WGSL } from "./shader-paper.js";
 import { BRISTLES_WGSL } from "./shader-bristle.js";
+import { smearDabsWgsl } from "./shader-smear.js";
 
 /** Words in the records buffer's header, and per contour record (u32; floats bitcast). */
 export const RECORD_HEAD = 4;
@@ -209,8 +211,9 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // offset to the mark's own pixels is per contour, words 14-15), 6-9 the slot, 10 width (brush space), 11 pixel ratio;
 // a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
 // 16 scatter, 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour
-// (0..255), 23 jittered; ink: 12 thinning; bristle: 12 bristles (rounded),
-// 13 flow, 14 load, 15 spread, 18-23 as a stamp's.
+// (0..255), 23 jittered; ink: 12 thinning; smear: 12 sizeByPressure, 13 flow,
+// 14 opacityByPressure; bristle: 12 bristles (rounded), 13 flow, 14 load,
+// 15 spread, 18-23 as a stamp's.
 //
 // The \`capsules\` entry: sample i of an ink contour of n samples is written as
 // capsule instance i, from sample i to sample i + 1 (mark-atlas.ts's layout: ax,
@@ -296,5 +299,6 @@ fn inkRadius(st: u32, p: f32) -> f32 {
   dab[o + 8u] = slot.x; dab[o + 9u] = slot.y; dab[o + 10u] = slot.z; dab[o + 11u] = slot.w;
 }
 
+${smearDabsWgsl({ floats: DAB_FLOATS, workgroup: SAMPLES_WORKGROUP })}
 ${BRISTLES_WGSL}
 `;

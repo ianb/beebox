@@ -37,9 +37,10 @@ export interface FrameStats {
   /**
    * CPU milliseconds: lowering the scene, building atlases, encoding jobs,
    * submitting. `brush` is the part of `lower` and `atlas` spent on brushed
-   * strokes: expansion (bristle and smear on the CPU), preparation and
-   * placement at lowering, and the brush pass's packing, upload and encoding
-   * in the mark atlas (its draws excluded).
+   * strokes: preparation and placement at lowering, and the brush pass's
+   * packing, upload and encoding in the mark atlas (its draws excluded). A
+   * smudge's or wet stroke's brush pass is encoded with its layer and counts
+   * in `encode`.
    */
   cpu: { lower: number; atlas: number; encode: number; submit: number; brush: number };
 }

@@ -287,10 +287,10 @@ does not call `draw`, so events neither repeat nor go missing.
   prepares it: the path flattened into contours with their arc lengths, the
   pressure envelope's keyframes, the wobble. A compute pass on the GPU then
   places the stroke's samples; a stamp brush draws one dab per sample, ink
-  one round-ended segment (a capsule) per sample, and a bristle brush each
-  bristle's runs as strips, one walk per bristle. Smear brushes (`smudge`,
-  `wet`) still expand on the CPU into smear dabs (GPU brushes subplan, chunk
-  8, moves them). The GPU computes the same
+  one round-ended segment (a capsule) per sample, a bristle brush each
+  bristle's runs as strips, one walk per bristle, and a smear brush
+  (`smudge`, `wet`) one smear dab per sample, which the smear pass then runs
+  in order. The GPU computes the same
   random numbers as the CPU, bit for bit, so a mark's random character does
   not depend on where it was expanded; positions differ only in `f32` detail.
 - Backdrop-reading strokes (`smudge`, `wet`, non-`normal` blends) make the
@@ -611,7 +611,7 @@ From the Stage 4 builder (chunks 1–2):
 - **Hatching** keeps covering its group's whole layer (Checkpoint 4, decision
   6).
 
-## 22. Draft 2.10: brushes on the GPU (GPU brushes subplan, chunks 2–6)
+## 22. Draft 2.10: brushes on the GPU (GPU brushes subplan, chunks 2–8)
 
 - **Ink is drawn as capsules** (section 9), one per sample, with
   perfect-freehand's width for the pressure. The line keeps its character
@@ -621,7 +621,11 @@ From the Stage 4 builder (chunks 1–2):
 - **Limits.** A frame's brushes are split into batches when they exceed one
   GPU buffer, with the same pixels. One contour larger than a buffer (about
   4 million points) fails at the call: *"a brushed contour of … points
-  needs …; split the path into shorter ones"*.
+  needs …; split the path into shorter ones"*. A bristle's strip is never
+  split: one bristle of more than about 116,000 samples fails at the call
+  (*"a bristle of … samples needs … of strip vertices"*). A smudge or wet
+  stroke is never split, since its paint carries from dab to dab: one of more
+  than about 1.4 million dabs fails at the call.
 - **Measurement.** `stats.cpu.brush` is the CPU time spent on brushed
   strokes: expansion, preparation and placement at lowering, and packing and
   upload for the GPU pass.

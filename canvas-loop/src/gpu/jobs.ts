@@ -104,9 +104,19 @@ export interface BrushRec {
   readonly paper: PaperRec;
 }
 
-/** A smudge or wet stroke: its dabs in device pixels (first of each contour flagged), its patch size, brush and paint. */
+/**
+ * A smudge or wet stroke: prepared for the GPU's `smears` entry, which writes
+ * its dabs (brush-pass.ts `encodeSmear`); brush space → device pixels (`lin`,
+ * pixel ratio included, then `tx`, `ty`); `reach`, a box in device pixels that
+ * holds every dab centre; its patch size, brush and paint.
+ */
 export interface SmearRec {
-  readonly dabs: readonly { readonly x: number; readonly y: number; readonly r: number; readonly a: number; readonly first: boolean }[];
+  readonly prepared: Prepared;
+  readonly lin: readonly [number, number, number, number];
+  readonly tx: number;
+  readonly ty: number;
+  readonly ratio: number;
+  readonly reach: R;
   readonly size: number;
   readonly brush: SmearBrush;
   /** The wet paint, straight alpha (unused for a smudge). */

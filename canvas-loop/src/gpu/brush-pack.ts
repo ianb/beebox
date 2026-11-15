@@ -3,14 +3,14 @@
 // the pass's limit, split only between contours (`pack`); each input's samples
 // are cut into batches (`planBatches`). A contour that alone exceeds the limit
 // is an error, raised at lowering so it names the call (`checkContours`), as is
-// a bristle whose strip exceeds it (`checkBristles`). A bristle stroke's
-// batches are cut between bristles (`bristleUnits`, then `planBatches` over
-// whole units).
-import type { BristleBrush, Envelope, InkBrush, StampBrush } from "../core/brush/types.js";
+// a bristle whose strip exceeds it (`checkBristles`) and a smear that cannot be
+// one batch (`checkSmear`). A bristle stroke's batches are cut between
+// bristles (`bristleUnits`, then `planBatches` over whole units).
+import type { BristleBrush, Envelope, InkBrush, SmearBrush, StampBrush } from "../core/brush/types.js";
 import type { Prepared, PreparedContour } from "../scene/brush/expand.js";
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
-import { CONTOUR_WORDS, ENVELOPE_KINDS, RECORD_HEAD, STROKE_WORDS } from "./shader-brush.js";
+import { CONTOUR_WORDS, DAB_FLOATS, ENVELOPE_KINDS, RECORD_HEAD, SAMPLE_FLOATS, STROKE_WORDS } from "./shader-brush.js";
 import { RUN_FLOATS, RUN_VERTICES } from "./shader-bristle.js";
 
 /** A contour's samples: the first index in the frame's samples, and how many. */
@@ -19,16 +19,16 @@ export interface SampleRange {
   readonly count: number;
 }
 
-/** A stroke placed in the mark atlas: what the `dabs`, `capsules` or `bristles` entry needs besides its prepared stroke. */
+/** A stroke placed for the GPU: what the `dabs`, `capsules`, `bristles` or `smears` entry needs besides its prepared stroke. */
 export interface BrushJob {
   readonly prepared: Prepared;
-  readonly brush: StampBrush | InkBrush | BristleBrush;
+  readonly brush: StampBrush | InkBrush | BristleBrush | SmearBrush;
   /** Brush space → device pixels, linear part (pixel ratio included). */
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
-  /** Added to a dab's linearly mapped position: the mark's translation less its box corner (each contour's origin is added in `pack`, in f64). */
+  /** Added to a dab's linearly mapped position: the mark's translation less its box corner, or for a smear the layer's (each contour's origin is added in `pack`, in f64). */
   readonly offset: readonly [number, number];
-  /** The mark's slot on its page: x0, y0, x1, y1. */
+  /** The mark's slot on its page: x0, y0, x1, y1 (unused for a smear). */
   readonly slot: readonly [number, number, number, number];
 }
 
@@ -55,6 +55,7 @@ function strokeWords(j: BrushJob): number[] {
   // Words 4-5 are unused: each contour's offset is in its own record (`pack`).
   const head = [...j.lin, 0, 0, ...j.slot, j.prepared.width, j.ratio];
   if (b.kind === "ink") return [...head, b.thinning];
+  if (b.kind === "smear") return [...head, b.sizeByPressure, b.flow, b.opacityByPressure];
   const base = j.prepared.base;
   const colour = [b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
   if (b.kind === "bristle") return [...head, Math.round(b.bristles), b.flow, b.load, b.spread, 0, 0, ...colour];
@@ -92,6 +93,20 @@ export function checkBristles(p: Prepared, limit: number): void {
     const bytes = bristleBytes(c.count);
     if (bytes > limit) throw new GpuRenderError({ detail: `a bristle of ${c.count} samples needs ${kib(bytes)} of strip vertices, more than one brush buffer holds (${kib(limit)}); split the path into shorter ones` });
   }
+}
+
+/**
+ * Throw, naming the sizes, when smear stroke `p` cannot be one batch under
+ * `limit`: its records and geometry must fit one input, and its samples and
+ * dabs one output buffer each. A smear never splits (its load carries from
+ * dab to dab). Lowering calls it, so the error names the call.
+ */
+export function checkSmear(p: Prepared, limit: number): void {
+  const n = p.contours.reduce((m, c) => m + c.count, 0);
+  const records = (RECORD_HEAD + STROKE_WORDS + p.contours.reduce((m, c) => m + CONTOUR_WORDS + envelopeWords(c.pressure).keys.length, 0)) * 4;
+  const geometry = p.contours.reduce((m, c) => m + c.geom.length, 0) * 4;
+  const dabs = n * Math.max(DAB_FLOATS, SAMPLE_FLOATS) * 4;
+  if (Math.max(records, geometry, dabs) > limit) throw new GpuRenderError({ detail: `a smudge or wet stroke of ${n} dabs needs ${kib(dabs)} of dabs, ${kib(geometry)} of geometry and ${kib(records)} of records, and must stay in one brush buffer (${kib(limit)}); split it into shorter strokes` });
 }
 
 /** A run of samples a batch holds: `whole`, it must not be split between batches. */

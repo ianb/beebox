@@ -1185,6 +1185,68 @@ by the same WebGPU renderer.
 - **Tests.** Smear crops in `brushParity`; `smudgeAcrossTiles`; the
   over-limit error.
 - **Checkpoint.** **Measurement:** the smear scene, before and after.
+- **As built (chunk 8).** Smudge and wet strokes are no longer expanded on
+  the CPU: the expander keeps a `SmearSet` (the prepared stroke and the brush),
+  and the CPU expansion stays as `SmearDabs` in `expandOnCpu`, the tests'
+  reference. Scripts, logs and renders are in `scratch/stage5/b7/`. Details
+  settled here:
+  - **The dabs are instances.** A `smears` entry (its WGSL in
+    `gpu/shader-smear.ts`, included in the instances module) writes sample `i`
+    as smear dab `i` in the target layer's texels: position by the stroke's
+    linear part and the contour's offset (the translation less the layer's
+    corner, added in `pack` in f64), radius and alpha from `p` as `expand.ts`
+    does, a first-of-contour flag, then zeros. The smear shader's `Dab` grows
+    from 8 to 12 floats to read that layout. `SmearPass.encode` calls
+    `BrushPass.encodeSmear` (one input, one whole span, so one batch) and
+    binds that batch's output as its dabs. The smear is placed when its layer
+    is drawn, since the dabs need the layer's corner, so its packing, upload
+    and dispatch count in `encode`, not in `stats.cpu.brush`.
+  - **The limit is the dab size, not `B / 32`.** A smear's samples and dabs
+    must each fit one buffer, and a dab is 48 bytes, so the bound is about
+    `B / 48` dabs; its records and geometry must also fit one input.
+    `checkSmear` runs at lowering: *"a smudge or wet stroke of 968 dabs needs
+    45.4 KiB of dabs, 0.0 KiB of geometry and 0.2 KiB of records, and must
+    stay in one brush buffer (4.0 KiB); split it into shorter strokes (at line
+    #2)"*. At 64 MiB a smear holds about 1.4 million dabs.
+  - **The box.** `SmearRec` keeps `reach`, the prepared box mapped by `e`
+    (every sample, wobble included); the item's box and `SmearPass.region`
+    grow it by the patch size and 2 px and clamp it as before, where they
+    used the dab centres.
+  - **Tests** (`test/gpu/smear.gpu.test.ts`). Dabs against the CPU's on the
+    smear sheet with a rotated, scaled, wobbled smudge and a two-contour wet
+    stroke (one a single sample): 673 dabs at ratio 1 and 2, position within
+    8.2e-5 px, radius 2.0e-6, alpha 2.1e-7, first flags equal, one batch. With
+    the limit forced to the largest smear's dabs, the ink lines split into 6
+    batches and the frame draws the same pixels. The over-limit error names
+    the call. `brushParity`'s smear crops (smudge 0.03% and 0.09% luminance,
+    0.1% and 0.05% contrast; wet 0.4% and 0.43%, 0.62% and 0.66%) and
+    `smudgeAcrossTiles` pass.
+  - **Pixels.** Against chunk 7 (`after7/`, `after8/`): the smear scene at
+    ratio 2 changes 2 pixels by 1 level; nothing else changes. Crops
+    (`crops8/`): the smudge and the wet stroke. I see no difference. Astra
+    (`astra8.out`, sides drawn per window, key in `crops8/key.json`): *"A and
+    B preserve the same brush character in both images"*. It also describes
+    "slight differences in the fine vertical streaks" and colour bands at
+    enlargement; the pixels do not differ there (0 pixels at ratio 1, 2 at
+    ratio 2).
+  - **Measurement** (the Stage 3 smear scene: stripes, two ink lines, one
+    smudge, one wet; `measure.ts`, as chunk 7; ms per frame, medians):
+
+    | Smear scene | Ratio | Lower | Brush | Atlas | Encode | Wall | GPU span | GPU smear | GPU brush |
+    |---|---|---|---|---|---|---|---|---|---|
+    | strokes new each frame, before | 1 | 0.27 | 0.30 | 0.18 | 0.24 | 7.54 | 5.64 | 5.37 | 0.00 |
+    | after | 1 | 0.31 | 0.35 | 0.29 | 0.43 | 6.72 | 6.49 | 6.16 | 0.07 |
+    | before | 2 | 0.24 | 0.28 | 0.18 | 0.25 | 9.36 | 7.60 | 7.41 | 0.00 |
+    | after | 2 | 0.22 | 0.26 | 0.18 | 0.35 | 9.50 | 7.67 | 7.41 | 0.00 |
+    | still (caches warm), before | 1 | 0.05 | 0.10 | 0.15 | 0.21 | 4.36 | 3.34 | 3.15 | 0.00 |
+    | after | 1 | 0.03 | 0.08 | 0.14 | 0.31 | 4.38 | 3.41 | 3.21 | 0.00 |
+
+    The smear's CPU cost was 0.2 ms and stays about that: its expansion
+    (0.09 ms for the two strokes) left lowering, and `encode` grew by about
+    0.1 ms for the two smears' packing, upload and brush dispatch. The smear
+    pass itself is unchanged; its GPU time at ratio 1 with strokes new each
+    frame varies between runs (5.83 ms after chunk 7, with the same smear
+    code as before).
 
 ### Chunk 9: retire the CPU expansion; final verification (after the stop point and subplan (a))
 

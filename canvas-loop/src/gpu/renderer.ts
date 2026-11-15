@@ -152,7 +152,7 @@ export class GpuRenderer {
     this.#pipes = makePipelines(gpu.device);
     this.#atlas = new CoverageAtlas(gpu.device, gpu.atlasFormat);
     this.#marks = new MarkAtlas(gpu.device, { brushLimit: options?.brushLimit });
-    this.#smear = new SmearPass(gpu.device);
+    this.#smear = new SmearPass(gpu.device, this.#marks.brushes);
     this.#painterly = new PainterlyPasses(gpu.device);
     this.#light = new LightPass(gpu.device);
     this.#glyphs = new GlyphCache(gpu.raster);
@@ -332,6 +332,12 @@ export class GpuRenderer {
   async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"]; batches: number; inputs: number; reads: number }> {
     const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encodeMarks(jobs, f) });
     return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, inputs: r.out.inputs, reads: r.reads };
+  }
+
+  /** Verification: the `smears` entry's dabs for one smudge or wet stroke `job` (`DAB_FLOATS` floats each, one per sample, shader-smear.ts's layout), as the smear pass reads them, and the batches it took. */
+  async smearDabs(job: BrushJob): Promise<{ data: ArrayBuffer; count: number; batches: number }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encodeSmear(job, f) });
+    return { data: r.data, count: r.out.count, batches: r.out.batches };
   }
 
   /** Verification: the `bristles` entry's run vertices for bristle `jobs` (`RUN_FLOATS` floats each), as the mark atlas draws them, each stroke's range, and the batches (each one's range) and input buffers they took. */

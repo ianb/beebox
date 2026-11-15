@@ -2,7 +2,7 @@
 // (brush/expand.ts, cached across frames) placed in device pixels. A stamp,
 // ink or bristle stroke becomes a mark whose dabs, capsules or strips the GPU
 // lays (brush-pass.ts); smudge and wet become a smear that reads the target
-// (smear.ts). `linMarks` still places the CPU
+// (smear.ts), its dabs written on the GPU. `linMarks` still places the CPU
 // expansion (dabs, ink outlines, bristle runs), for the tests. Grain is cut
 // against paper anchored to the picture or the scene (`toPaper`), then the
 // brush opacity applies once.
@@ -12,7 +12,7 @@ import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
 import type { Mat, ShapeNode } from "../scene/nodes.js";
 import type { BrushRec, MarkSource, PaperRec, R, SmearRec } from "./jobs.js";
-import { EMPTY, cutOf, inter, isEmpty, pad } from "./jobs.js";
+import { cutOf, inter, isEmpty, pad } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
 import { paintRec } from "./paint.js";
 import { PAPER_ROW, paperParams } from "./painterly.js";
@@ -20,7 +20,7 @@ import { orientShape } from "./rings.js";
 import type { LinShape } from "./geometry-cache.js";
 import { linShape } from "./geometry-cache.js";
 import type { Dab, Run } from "../scene/brush/expand.js";
-import { checkBristles, checkContours } from "./brush-pack.js";
+import { checkBristles, checkContours, checkSmear } from "./brush-pack.js";
 
 /** What lowering a brushed stroke needs from the frame. */
 export interface BrushFrame {
@@ -37,21 +37,6 @@ export type BrushDraw =
   | { readonly k: "smear"; readonly smear: SmearRec; readonly box: R };
 
 const map = (...[e, x, y]: [Mat, number, number]): [number, number] => [e[0] * x + e[2] * y + e[4], e[1] * x + e[3] * y + e[5]];
-
-function bounds(points: readonly { x: number; y: number; reach: number }[]): R {
-  if (points.length === 0) return EMPTY;
-  let x0 = Infinity;
-  let y0 = Infinity;
-  let x1 = -Infinity;
-  let y1 = -Infinity;
-  for (const p of points) {
-    x0 = Math.min(x0, p.x - p.reach);
-    y0 = Math.min(y0, p.y - p.reach);
-    x1 = Math.max(x1, p.x + p.reach);
-    y1 = Math.max(y1, p.y + p.reach);
-  }
-  return { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
-}
 
 /** Box `b` (brush space) grown by `g` on each side and mapped by `e`: the box of its four corners, unrounded. */
 function mappedBox(b: { x0: number; y0: number; x1: number; y1: number }, a: { e: Mat; g: number }): R {
@@ -145,19 +130,25 @@ function gpuMark(set: GpuSet, a: { e: Mat; ratio: number; visible: R; limit: num
   return { kind: "tex", mark: { box, dabs: [], runs: [], ox: e[4], oy: e[5], gpu: { prepared: set.prepared, brush: set.brush, lin: [e[0], e[1], e[2], e[3]], ratio: a.ratio } } };
 }
 
-function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: PaperRec; paint: PaintRec | undefined; node: ShapeNode }): BrushDraw | undefined {
-  const brush = a.node.style.brush?.brush;
-  if (brush?.kind !== "smear") return undefined;
-  const dabs = set.contours.flatMap((c) => c.map((d, k) => {
-    const [x, y] = map(a.e, d.x, d.y);
-    return { x, y, r: d.r * a.ratio, a: d.a, first: k === 0 };
-  }));
-  const size = 2 * Math.ceil((set.width * a.ratio) / 2) + 4;
-  const box = inter(bounds(dabs.map((d) => ({ x: d.x, y: d.y, reach: size + 2 }))), pad(a.visible, 2));
-  if (isEmpty(box) || dabs.length === 0) return undefined;
+/**
+ * A smudge or wet stroke as a smear: its dabs are written on the GPU when the
+ * smear is encoded (smear.ts), so its box is the prepared box's (every sample,
+ * wobble included) mapped by `e`, grown by the patch size and 2 px.
+ */
+function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: PaperRec; paint: PaintRec | undefined; limit: number }): BrushDraw | undefined {
+  const p = set.prepared;
+  checkContours(p, a.limit);
+  checkSmear(p, a.limit);
+  if (!p.contours.some((c) => c.count > 0)) return undefined;
+  const reach = mappedBox(p.box, { e: a.e, g: 0 });
+  const size = 2 * Math.ceil((p.width * a.ratio) / 2) + 4;
+  const r = size + 2;
+  const box = inter({ x0: Math.floor(reach.x0 - r), y0: Math.floor(reach.y0 - r), x1: Math.ceil(reach.x1 + r), y1: Math.ceil(reach.y1 + r) }, pad(a.visible, 2));
+  if (isEmpty(box)) return undefined;
   const color = a.paint?.color ?? [0, 0, 0, 0];
   const straight = color[3] > 0 ? [color[0] / color[3], color[1] / color[3], color[2] / color[3], color[3]] as const : color;
-  return { k: "smear", smear: { dabs, size, brush, paint: straight, paper: a.paper }, box };
+  const { e } = a;
+  return { k: "smear", smear: { prepared: p, lin: [e[0], e[1], e[2], e[3]], tx: e[4], ty: e[5], ratio: a.ratio, reach, size, brush: set.brush, paint: straight, paper: a.paper }, box };
 }
 
 /** The draw for brushed stroke `n` under device transform `matrix`, or undefined when nothing can be seen. */
@@ -177,8 +168,8 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   const toPaper: Mat = [inv[0] * ratio, inv[1] * ratio, inv[2] * ratio, inv[3] * ratio, inv[4] * ratio, inv[5] * ratio];
   const paper: PaperRec = { toPaper, ...paperParams(stroke.paper, ratio), width: PAPER_ROW };
   const rec = paintRec(paint, { matrix: m, colors });
-  if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
-  if (rec === undefined || ex.set.kind === "marks") return undefined;
+  if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, limit: a.frame.brushLimit });
+  if (rec === undefined) return undefined;
   const source = gpuMark(ex.set, { e, ratio, visible: a.visible, limit: a.frame.brushLimit });
   if (source === undefined) return undefined;
   const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
