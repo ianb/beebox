@@ -1,12 +1,15 @@
 ---
 title: "A closed brushed shape shorter than one step, with wobble, gives NaN samples on the CPU"
-workstream: unattached
+workstream: canvas-brushes
 area: canvas-loop
 labels: [brushes]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-canvas-brushes — GPU brushes chunk 2 (sample pass)
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** 4537ae4b6
 
 `shapeSamples` (`canvas-loop/src/core/brush/render/mark/render.ts`) divides
 arc length by the wobble cell. For a closed contour with one sample (shorter
