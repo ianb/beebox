@@ -62,7 +62,8 @@ No decision depends on an external premise. `git add <deleted path>` stages the 
 
 - **What:** after the existing link, frontmatter, and backticked-path rewrites, one pass over remaining tokens in each maintained file rewrites a token that names `from`.
 - **Why:** link labels and prose paths stay stale (issue evidence: `chat-presence`, `canvas-brushes`), and every finish fixes them with `sed`.
-- **Direction:** `residualReferences` becomes `rewriteResiduals({ rel, content, from, to, exists, scope })`. For each token from `tokensEndingWith` that contains `/`: resolve it from each base (`dirname(rel)`, package root, `beebox`, `.`). Let `hits` be the distinct resolutions that equal `from` or exist. If `hits` is exactly `{from}`, replace the token with `relative(base, to)` for the first base that resolved it to `from`, keeping any `./` prefix out. If `hits` holds `from` and another file, add a blocking notice `ambiguous path`. `scope: "all"` for maintained files; `scope: "links"` for historical records (`isFilePathExempt`) limits the pass to link labels, reference definitions, and `href=` lines, the forms whose targets already follow. Kinds: `label` for a token inside `[...]` immediately followed by `(` or `]:`, else `prose`.
+- **Direction:** `residualReferences` becomes `rewriteResiduals({ rel, content, from, to, exists, scope })`. For each token from `tokensEndingWith` that contains `/` and is not followed by a path character (`a.md.bak`, `a.md/` are other paths): resolve it from each base (`dirname(rel)`, package root, `beebox`, `.`). Let `hits` be the distinct resolutions that equal `from` or exist. If `hits` is exactly `{from}`, replace the token with `relative(base, to)` for the first base that resolved it to `from`, keeping any `./` prefix out. If `hits` holds `from` and another file, add a blocking notice `ambiguous path`. `scope: "all"` for maintained files; `scope: "links"` for historical records (`isFilePathExempt`) limits the pass to link labels, reference definitions, and `href=` lines, the forms whose targets already follow. Kinds: `label` for a token inside an inline link's `[...]` (followed by `(`), else `prose`. In historical scope a reference definition's identifier (`[id]: target`) is never touched: renaming it would orphan its uses; `relocateLinks` already rewrites the target.
+- **Privacy:** a public move whose moved file would link into `private-issues/` (`findPrivateLinkViolations`, `beebox/src/dev/doc-check/private-link.ts`) adds a blocking notice. Referrers cannot gain such a link: a public referrer is rewritten only to the public new path.
 - **Refusal:** `moveDoc` throws `UnsafeReferencesError` listing every blocking notice (`path:Lline: message`) before rename or write. `--dry-run` prints them and exits 1.
 - **Vocabulary lock-ins:** rewrite kinds `label`, `prose`; `DocMoveNotice.blocking`.
 - **First chunk:** the pass, the refusal, unit tests in `bin/test/lib/doc-move.test.ts`.
@@ -85,9 +86,9 @@ No decision depends on an external premise. `git add <deleted path>` stages the 
 
 ### Track 3 — confirm-tested uses the shared move
 
-- **What:** `bin/confirm-tested.ts` gains `applyConfirmTested({ repoRoot, issue, date })`. When the issue closes, it calls `moveDoc` with `editMoved: (c) => confirmTestedContent(c, date).content`; otherwise it writes the edited content in place. It refuses when `dirtyBefore` is non-empty. It prints JSON `{ close, workstream, stage }`.
+- **What:** `bin/confirm-tested.ts` gains `applyConfirmTested({ repoRoot, issue, date })`. When the issue closes, it calls `moveDoc` with `editMoved: (c) => confirmTestedContent(c, date).content`; otherwise it writes the edited content in place. It validates the workstream name and passes `refuseDirty: true`, so `moveDoc` refuses a dirty file in either repository before any write. It prints JSON `{ close, workstream, stage }`.
 - **Why:** the 2026-11-15 re-encounter: the move skipped inbound rewrites, so the commit hook rejected it.
-- **Direction:** the shell replaces the inline `node -e`, `mv`, and `doc-check --fix` with: run the entry, `git add -A -- <public>`, `git commit --only -- <public>`, then for private paths `git -C private-issues add -A` and `commit --only`. On failure before the public commit: the existing public restore, plus `git -C private-issues restore --staged --worktree -- <private>`, plus removal of the untracked target. A private commit failure after the public commit succeeded: report it with the private paths and leave them uncommitted (the public side is already consistent; the private files only hold link rewrites). The workstream name is read before the move from the original content, as today.
+- **Direction:** the shell replaces the inline `node -e`, `mv`, and `doc-check --fix` with: run the entry, `git add -A -- <public>`, `git commit --only -- <public>`, then for private paths `git -C private-issues add -A` and `commit --only`. On failure before the public commit: restore only the move's paths (today's `git restore --worktree -- .` would also discard edits another process made in main after preflight), plus `git -C private-issues restore --staged --worktree -- <private>`, plus removal of the untracked target. A private commit failure after the public commit succeeded: report it with the private paths and leave them uncommitted (the public side is already consistent; the private files only hold link rewrites). The workstream name is read before the move from the original content, as today.
 - **First chunk:** the entry, the shell change, the existing restore test adapted (failure now from a pre-commit hook that exits 23), and a new test where a plan's `issues:` entry names the issue and the commit succeeds with the rewrite.
 
 ## Could this be simpler?
@@ -95,6 +96,12 @@ No decision depends on an external premise. `git add <deleted path>` stages the 
 The simplest version stages with `git add` inside `moveDoc` and leaves residual tokens as notices. It fails the reported parallel-worker case: the next worker's `git commit` takes the staged move with it, per the root `AGENTS.md` shared-index rule, and it fails `bin/land` in the main checkout. Converting residual notices to rewrites reuses an existing resolver; the only new rule is "exactly one target", which is the ambiguity rule `findMentionsOf` already applies (`file-paths.ts:266-270`).
 
 `confirm-tested` could call `bin/issues close` as a process. It cannot: `closedSource` writes a closing note and resolution text different from `confirmTestedContent`, and `issues close` refuses an issue with `manual-testing` needs (`ManualTestingCloseError`). The shared layer is `moveDoc`, which both call.
+
+## Plan review (codex gpt-6-astra, 2026-11-15)
+
+Adopted: token boundary after the basename; refuse-before-write for dirty files and the workstream check in confirm-tested; rollback limited to the move's paths; inline-link labels only, never reference identifiers; a private-link check on the moved file.
+
+Rejected: "confirm-tested must also stage nothing". Its purpose is the commit on a clean main checkout, called from the workstreams app; the shared move stages nothing and confirm-tested commits exactly the paths the move returns. Rejected: rollback of a write that fails midway, a mid-operation I/O window in a one-shot operator tool. Deferred to NOT in scope: the moved file's own prose self-paths.
 
 ## Subplans
 
@@ -127,6 +134,7 @@ The `git commit -a` row is accepted: `git commit -a` is not the repo's commit id
 
 - `bin/deferred-issues.ts` activation moves: they leave `deferred/` with `doc-check --fix` and commit in a dedicated run, not in a shared worktree; a move-aware rewrite there is a separate change.
 - Whether code cites plans by path (issue 2026-11-10): an open developer decision; this plan keeps rewriting code citations until it is made.
+- The moved file's prose naming its own path: both lifecycle destinations (`implemented-plans/`, `issues/closed/`) are historical records whose prose paths are not maintained (`scan-scope.ts` `FILE_PATH_EXEMPT_PREFIXES`).
 - Teaching `doc-check --fix` the label and prose rules: `--fix` guesses by basename over the whole tree; extending its guess surface is what the 2026-10-19 close moved away from.
 
 ## Open design questions
