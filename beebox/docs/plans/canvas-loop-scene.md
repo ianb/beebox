@@ -108,6 +108,22 @@ The boxholder accepted all thirteen behaviour changes listed in section 12 of
 `canvas-loop-scene/scene-api-draft.md` (draft 2.1), deferring to the planner on
 the ones it had no view on. Stage 2 probes draft 2.1.
 
+## Checkpoint 3 decisions (2026-11-15)
+
+From `canvas-loop-scene/stage3/summary.md`; the boxholder: "Your general
+recommendation seems good."
+- **Backend:** our own WebGPU renderer in the browser, the same code headless
+  under Dawn, provided Dawn runs on a GPU-less Linux host (a Lima VM probe,
+  approved). Fallback if it does not: Skia headless plus CPU versions of the
+  new effects.
+- **Parity bar** as written; thin-line rendering and the two compositing
+  details (shadow before blur; full-value shadow blur) accepted as recommended.
+- **Lighting is lower priority.** The boxholder: "Lighting was kind of a
+  stretch, so I'm not even really sure what it means!" It stays in the draft
+  as designed, but Stage 4 does not depend on it: the spike-through covers it
+  with one small lit example at most, and the lighting API additions wait
+  until lighting is wanted.
+
 ## Smallest fix and budget
 
 The smallest fix for speed alone is already shipped (commit `2e0720f1a`: one
