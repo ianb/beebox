@@ -1,8 +1,9 @@
 ---
 title: "canvas-loop: a painted medium on the GPU"
-status: draft
+status: superseded
 workstream: canvas-brushes
 issues: []
+superseded-by: ../plans/canvas-loop-scene.md
 ---
 # canvas-loop: a painted medium on the GPU
 
