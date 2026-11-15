@@ -55,13 +55,15 @@ export function resample(points: readonly Vec2[], args: { closed: boolean; step:
   if (total < args.step || pts.length < 2) return [{ x: first[0], y: first[1], nx: 0, ny: -1, s: 0, t: 0, p: 1 }];
   // Fixed spacing from the start (plus the exact end point), so editing the end
   // of a mark leaves the samples before the edit where they were.
-  const positions: number[] = [];
-  for (let s = 0; s < total - args.step * 0.5; s += args.step) positions.push(s);
-  positions.push(total);
   const samples: Sample[] = [];
   let seg = 0;
   let segStart = 0;
-  for (const s of positions) {
+  let s = 0;
+  for (let last = false; !last; s += args.step) {
+    if (!(s < total - args.step * 0.5)) {
+      s = total;
+      last = true;
+    }
     while (seg < lengths.length - 1 && segStart + (lengths[seg] ?? 0) < s) {
       segStart += lengths[seg] ?? 0;
       seg += 1;

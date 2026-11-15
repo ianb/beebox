@@ -61,15 +61,16 @@ function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
   if (set.polys.length > 0) {
     const rings = set.polys.map((p) => {
       const out: number[] = [];
-      for (let i = 0; i + 1 < p.length; i += 2) out.push(...lin(e, p[i] ?? 0, p[i + 1] ?? 0));
+      for (let i = 0; i + 1 < p.length; i += 2) {
+        const x = p[i] ?? 0;
+        const y = p[i + 1] ?? 0;
+        out.push(e[0] * x + e[2] * y, e[1] * x + e[3] * y);
+      }
       return orientShape([out])[0] ?? out;
     });
     return { kind: "piece", shape: linShape(rings) };
   }
-  const dabs = set.dabs.map((d) => {
-    const [x, y] = lin(e, d.x, d.y);
-    return { ...d, x, y, r: d.r * ratio };
-  });
+  const dabs = set.dabs.map((d) => ({ x: e[0] * d.x + e[2] * d.y, y: e[1] * d.x + e[3] * d.y, r: d.r * ratio, a: d.a, soft: d.soft, rgb: d.rgb }));
   const runs = set.runs.map((r) => {
     const pts: number[] = [];
     for (let i = 0; i + 1 < r.pts.length; i += 2) pts.push(...lin(e, r.pts[i] ?? 0, r.pts[i + 1] ?? 0));

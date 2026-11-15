@@ -15,7 +15,8 @@ export function jitterOf(brush: Brush): { hue: number; light: number } | undefin
   return hue > 0 || light > 0 ? { hue, light } : undefined;
 }
 
-export const BLACK = (_index: number, alpha: number): string => `rgba(0, 0, 0, ${alpha})`;
+const OPAQUE_BLACK = "rgba(0, 0, 0, 1)";
+export const BLACK = (_index: number, alpha: number): string => (alpha === 1 ? OPAQUE_BLACK : `rgba(0, 0, 0, ${alpha})`);
 
 /** Dab or bristle `index`'s own colour: the paint shifted by seeded amounts within the jitter. */
 export function jitteredInk(base: Rgba, args: { jitter: { hue: number; light: number }; seed: number }): (index: number, alpha: number) => string {

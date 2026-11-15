@@ -19,8 +19,23 @@ export function copyPoints(points: readonly Vec2[]): Vec2[] {
   return points.map((p): Vec2 => [p[0], p[1]]);
 }
 
+/** One command, element by element (a command is a flat tuple, and structuredClone per command was most of a recording's copying cost). */
+function copyCommand(c: PathCommand): PathCommand {
+  switch (c[0]) {
+    case "move":
+    case "line":
+      return [c[0], c[1], c[2]];
+    case "quad":
+      return [c[0], c[1], c[2], c[3], c[4]];
+    case "bezier":
+      return [c[0], c[1], c[2], c[3], c[4], c[5], c[6]];
+    case "close":
+      return [c[0]];
+  }
+}
+
 export function copyCommands(commands: readonly PathCommand[]): PathCommand[] {
-  return commands.map((c): PathCommand => structuredClone(c));
+  return commands.map(copyCommand);
 }
 
 /** A paint, checked and copied. Gradients the renderer cannot draw yet are errors here, at the call. */

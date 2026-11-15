@@ -26,7 +26,10 @@ function copyGesture(g: Gesture | undefined, call: string): Gesture {
   if (g.pressure !== undefined) validateEnvelope(g.pressure, "gesture pressure");
   if (g.wobble !== undefined && !(Number.isFinite(g.wobble) && g.wobble >= 0)) throw new SketchUsageError({ detail: "gesture wobble must be a finite number ≥ 0" });
   if (g.seed !== undefined && !Number.isFinite(g.seed)) throw new SketchUsageError({ detail: "gesture seed must be a finite number" });
-  return structuredClone(g);
+  // A field-by-field copy in the call's key order (the structural key hashes keys in order); keyframes are copied one level down.
+  const copy: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(g)) copy[key] = Array.isArray(v) ? v.map((f: unknown) => (Array.isArray(f) ? [...f] : f)) : v;
+  return copy;
 }
 
 /** The brushed stroke of `style`, or undefined when its stroke is plain. */

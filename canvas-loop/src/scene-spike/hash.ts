@@ -9,63 +9,66 @@
 const f64 = new Float64Array(1);
 const u32 = new Uint32Array(f64.buffer);
 
-class Hasher {
-  #a = 0x811c9dc5;
-  #b = 0x9747b28c;
+// The two lanes, as module state: hashing is synchronous and not re-entrant, and
+// plain variables keep the per-word cost to a few integer operations.
+let laneA = 0;
+let laneB = 0;
 
-  word(w: number): void {
-    this.#a = Math.imul(this.#a ^ w, 0x01000193);
-    let b = Math.imul(this.#b ^ w, 0x5bd1e995);
-    b ^= b >>> 15;
-    this.#b = Math.imul(b, 0x27d4eb2d);
-  }
+function word(w: number): void {
+  laneA = Math.imul(laneA ^ w, 0x01000193);
+  let b = Math.imul(laneB ^ w, 0x5bd1e995);
+  b ^= b >>> 15;
+  laneB = Math.imul(b, 0x27d4eb2d);
+}
 
-  num(x: number): void {
-    f64[0] = x;
-    this.word(u32[0] ?? 0);
-    this.word(u32[1] ?? 0);
-  }
+function num(x: number): void {
+  f64[0] = x;
+  word(u32[0] ?? 0);
+  word(u32[1] ?? 0);
+}
 
-  str(s: string): void {
-    this.word(s.length);
-    for (let i = 0; i < s.length; i++) this.word(s.codePointAt(i) ?? 0);
-  }
+function str(s: string): void {
+  word(s.length);
+  for (let i = 0; i < s.length; i++) word(s.codePointAt(i) ?? 0);
+}
 
-  value(v: unknown): void {
-    if (typeof v === "number") {
-      this.word(1);
-      this.num(v);
-    } else if (typeof v === "string") {
-      this.word(2);
-      this.str(v);
-    } else if (typeof v === "boolean") this.word(v ? 3 : 4);
-    else if (v === undefined) this.word(5);
-    else if (v === null) this.word(6);
-    else if (Array.isArray(v)) {
-      this.word(7);
-      this.word(v.length);
-      for (const x of v) this.value(x);
-    } else if (typeof v === "object") {
-      this.word(8);
-      const keys = Object.keys(v);
-      this.word(keys.length);
-      for (const k of keys) {
-        this.str(k);
-        this.value(Reflect.get(v, k));
-      }
-    } else this.str(`?${typeof v}`);
-  }
+function value(v: unknown): void {
+  if (typeof v === "number") {
+    word(1);
+    num(v);
+  } else if (typeof v === "string") {
+    word(2);
+    str(v);
+  } else if (typeof v === "boolean") word(v ? 3 : 4);
+  else if (v === undefined) word(5);
+  else if (v === null) word(6);
+  else if (Array.isArray(v)) {
+    word(7);
+    word(v.length);
+    // Numbers inline (the same words `value` gives them): geometry is mostly long runs of numbers.
+    for (const x of v) {
+      if (typeof x === "number") {
+        word(1);
+        num(x);
+      } else value(x);
+    }
+  } else if (typeof v === "object") {
+    word(8);
+    const keys = Object.keys(v);
+    word(keys.length);
+    for (const k of keys) {
+      str(k);
+      value(Reflect.get(v, k));
+    }
+  } else str(`?${typeof v}`);
+}
 
-  done(): string {
-    const fin = (h: number): number => {
-      let x = h ^ (h >>> 16);
-      x = Math.imul(x, 0x85ebca6b);
-      x ^= x >>> 13;
-      x = Math.imul(x, 0xc2b2ae35);
-      return (x ^ (x >>> 16)) >>> 0;
-    };
-    return `${fin(this.#a).toString(36)}.${fin(this.#b).toString(36)}`;
-  }
+function fin(h: number): number {
+  let x = h ^ (h >>> 16);
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  return (x ^ (x >>> 16)) >>> 0;
 }
 
 const memo = new WeakMap<object, string>();
@@ -74,9 +77,10 @@ const memo = new WeakMap<object, string>();
 export function keyOf(v: object): string {
   const hit = memo.get(v);
   if (hit !== undefined) return hit;
-  const h = new Hasher();
-  h.value(v);
-  const key = h.done();
+  laneA = 0x811c9dc5;
+  laneB = 0x9747b28c;
+  value(v);
+  const key = `${fin(laneA).toString(36)}.${fin(laneB).toString(36)}`;
   memo.set(v, key);
   return key;
 }

@@ -178,6 +178,49 @@ starts.
   depend on what else a frame draws), with slot offsets applied as integers
   (Metal's fast math reassociated them).
 
+## Walker speed (2026-11-15)
+
+Targets 1 and 3 (`browser-profile.md`), against the walker sheet. Scratch:
+`scratch/stage4/walker-speed/`.
+- **The work per frame:** 527 brushed strokes, which expand to 71k dabs and
+  286 ink outlines of 84k points in all. None repeats from the frame
+  before. With translation removed from the key, none repeats either, and
+  only 5.5% would at a 0.01 px tolerance: the limbs bend and the wobbled
+  outlines change shape. So idea (a), keying the expansion in each limb's
+  own frame, gains nothing here.
+- **Profile before** (headless, Node, bundled as the browser pages are,
+  ms per frame, ratio 2): record 17.2 (structural hashing 5.6,
+  `structuredClone` of path commands 3.6, the sketch's own code about 2);
+  lower 39.2 (brush expansion 18.3: resampling and pressure 6, stamp dabs
+  4, ink outlines 5; mark placement 6; fill and clip geometry 4); atlas 6.6;
+  encode 2.5. In Chromium: record 13–15, lower 30–33, atlas 4.3, encode 1.3.
+- **What changed** (CPU only, same arithmetic): path commands are copied
+  element by element, a gesture field by field; the structural hasher keeps
+  its two lanes in plain variables (same words, same keys); pressure
+  envelopes no longer filter their keyframes per sample; noise and dab
+  randomness no longer build a closure or an object per sample; resampling
+  builds no position array; plain black ink is one constant string; mark
+  placement maps points without a tuple per point.
+- **Output:** byte-identical. The expansion of 30 walker frames hashes the
+  same, keys included; the walker (ratio 1 and 2), Hallway and chemistry
+  render the same PNG bytes as before; cache equivalence passes.
+- **After:** record 6.7 ms and expansion 14.6 ms in Node (were 13.6 and
+  17.6 under the same load); headless frame 78.6 → 59.1 ms. Chromium, ratio 2:
+  walker sheet 16.8–18.6 → 22.8 fps (record 11.4, lower 23.5, atlas 4.0);
+  six figures 9.0–9.8 → 11.0 fps each at device ratio 1, 8.8–9.5 → 10.8
+  at ratio 2.
+- **Targets not met.** Expansion alone is over the 12 ms budget. Reaching
+  it needs the expansion off the main thread's CPU: either (b), a compute
+  pass that resamples (a prefix sum of arc length) and places stamp dabs
+  per sample, with an ink outline built for the GPU in place of
+  perfect-freehand's sequential one (that changes ink pixels, so it would
+  be held to the parity criteria, not to bytes), and the ink coverage edges
+  built there too (the atlas's CPU edge data is about 5 ms); or the
+  expansion spread over workers (it is pure), which needs lowering to
+  gather the frame's brushed strokes first and await them, and costs a
+  transfer of about 155k primitives a frame. Either is a redesign of
+  `brush/expand.ts` and the lowering of brushed strokes.
+
 ## Look round (2026-11-15, not yet committed)
 
 - **Wash:** fine granulation made faint; pooling patches, occasional blooms

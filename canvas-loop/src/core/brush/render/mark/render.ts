@@ -11,10 +11,10 @@ import type { Contour } from "../../../contours.js";
 import { SketchUsageError } from "../../../errors.js";
 import type { Ctx2D, CtxTransform, Layer, LayerImage, Paint, Vec2 } from "../../../paint.js";
 import { inPaintSpace, resolveGradient, withSaved } from "../../../paint.js";
-import { evalEnvelope, validateEnvelope } from "../../envelope.js";
+import { envelopeAt, validateEnvelope } from "../../envelope.js";
 import { bristleReach, paintBristle, paintInk, paintStamp } from "../kinds.js";
 import type { Rgba } from "../colour.js";
-import { hashNumbers, noise1 } from "../../random.js";
+import { hashNumbers, noiseOf } from "../../random.js";
 import { BLACK, jitterBase, jitteredInk, jitterOf } from "../ink.js";
 import { renderSmear } from "./smear.js";
 import { softDab } from "../dab.js";
@@ -124,14 +124,12 @@ export function shapeSamples(
     ? Math.max(1, Math.round(total / WOBBLE_CELL))
     : undefined;
   const cell = period === undefined ? WOBBLE_CELL : total / period;
+  const pressureAt = envelopeAt(pressure);
+  const noise = noiseOf(1, period);
   for (const s of samples) {
-    s.p = evalEnvelope(pressure, s.t);
+    s.p = pressureAt(s.t);
     if (wobble > 0) {
-      const at =
-        period === undefined
-          ? { channel: 1, x: s.s / cell }
-          : { channel: 1, x: s.s / cell, period };
-      const w = wobble * noise1(args.seed, at);
+      const w = wobble * noise(args.seed, s.s / cell);
       s.x += s.nx * w;
       s.y += s.ny * w;
     }

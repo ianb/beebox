@@ -4,7 +4,7 @@
 import { getStroke } from "perfect-freehand";
 import type { Ctx2D, LayerImage } from "../../paint.js";
 import { SOFT_DAB_RADIUS } from "./dab.js";
-import { noise1, rand } from "../random.js";
+import { noise1, rand, randOf } from "../random.js";
 import type { Sample } from "../sample.js";
 import type { BristleBrush, InkBrush, StampBrush } from "../types.js";
 
@@ -41,23 +41,30 @@ export function paintInk(input: KindInput, brush: InkBrush): void {
   });
   if (outline.length < 3) return;
   ctx.beginPath();
-  for (const [i, [x, y]] of outline.entries()) {
-    if (i === 0) ctx.moveTo(x, y);
+  let start = true;
+  for (const [x, y] of outline) {
+    if (start) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
+    start = false;
   }
   ctx.closePath();
   ctx.fill();
 }
 
+const SIZE_JITTER = randOf(11);
+const SCATTER = randOf(12);
+
 /** Dabs along the samples (the samples are already spaced at the dab spacing). */
 export function paintStamp(input: KindInput, brush: StampBrush): void {
   const { ctx, width, seed } = input;
-  for (const [k, s] of input.samples.entries()) {
-    const jitter = 1 + brush.sizeJitter * (rand(seed, { channel: 11, index: k }) - 0.5);
+  let k = -1;
+  for (const s of input.samples) {
+    k++;
+    const jitter = 1 + brush.sizeJitter * (SIZE_JITTER(seed, k) - 0.5);
     const radius = (width / 2) * (1 - brush.sizeByPressure * (1 - s.p)) * jitter;
     const alpha = brush.flow * (1 - brush.opacityByPressure * (1 - s.p));
     if (radius <= 0.05 || alpha <= 0) continue;
-    const off = brush.scatter * width * (rand(seed, { channel: 12, index: k }) - 0.5);
+    const off = brush.scatter * width * (SCATTER(seed, k) - 0.5);
     const x = s.x + s.nx * off;
     const y = s.y + s.ny * off;
     ctx.globalAlpha = alpha;

@@ -19,17 +19,40 @@ export function rand(seed: number, at: { channel: number; index: number }): numb
   return mix(seed ^ mix(at.channel * 0x9e3779b1 + mix(at.index))) / 4294967296;
 }
 
+/** `rand` on one channel, as a function of (seed, index): for per-sample loops, with no argument object per call. */
+export function randOf(channel: number): (seed: number, index: number) => number {
+  const c = channel * 0x9e3779b1;
+  return (seed, index) => mix(seed ^ mix(c + mix(index))) / 4294967296;
+}
+
+/** `noise1` on one channel and period (undefined for no wrap), as a function of (seed, x). */
+export function noiseOf(channel: number, period: number | undefined): (seed: number, x: number) => number {
+  const at = randOf(channel);
+  const wrap = (k: number): number => (period === undefined ? k : ((k % period) + period) % period);
+  return (seed, x) => {
+    const i = Math.floor(x);
+    const f = x - i;
+    const a = at(seed, wrap(i));
+    const b = at(seed, wrap(i + 1));
+    const s = f * f * (3 - 2 * f);
+    return (a + (b - a) * s) * 2 - 1;
+  };
+}
+
 /**
  * Smooth 1-D value noise in [-1, 1] at position `x` (lattice spacing 1). With a
  * `period`, the lattice wraps, so the noise at `period` equals the noise at 0
  * (a closed loop has no seam).
  */
 export function noise1(seed: number, at: { channel: number; x: number; period?: number }): number {
+  const { channel, period } = at;
   const i = Math.floor(at.x);
   const f = at.x - i;
-  const wrap = (k: number): number => (at.period === undefined ? k : ((k % at.period) + at.period) % at.period);
-  const a = rand(seed, { channel: at.channel, index: wrap(i) });
-  const b = rand(seed, { channel: at.channel, index: wrap(i + 1) });
+  // The lattice index, wrapped (no closure per call: this runs once per brush sample).
+  const k0 = period === undefined ? i : ((i % period) + period) % period;
+  const k1 = period === undefined ? i + 1 : (((i + 1) % period) + period) % period;
+  const a = rand(seed, { channel, index: k0 });
+  const b = rand(seed, { channel, index: k1 });
   const s = f * f * (3 - 2 * f);
   return (a + (b - a) * s) * 2 - 1;
 }

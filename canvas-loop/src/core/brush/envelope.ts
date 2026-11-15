@@ -43,11 +43,11 @@ export function validateEnvelope(env: Envelope, field: string): void {
   }
 }
 
+/** The keyframes' value at `t`. A duplicate t keeps the last value: earlier frames at the same t are skipped (without building a filtered copy per call). */
 function keyframes(raw: readonly (readonly [number, number])[], t: number): number {
-  // A duplicate t keeps the last value: drop earlier frames at the same t.
-  const env = raw.filter((frame, i) => raw[i + 1]?.[0] !== frame[0]);
   let before: readonly [number, number] | undefined;
-  for (const frame of env) {
+  for (const [i, frame] of raw.entries()) {
+    if (raw[i + 1]?.[0] === frame[0]) continue;
     if (frame[0] > t) {
       if (before === undefined) return frame[1];
       const span = frame[0] - before[0];
@@ -58,6 +58,17 @@ function keyframes(raw: readonly (readonly [number, number])[], t: number): numb
     before = frame;
   }
   return before?.[1] ?? 1;
+}
+
+/** `evalEnvelope(env, ·)` with the envelope's form resolved once, for a mark's many samples. */
+export function envelopeAt(env: Envelope): (t: number) => number {
+  const clamp = (v: number): number => Math.min(1, Math.max(0, v));
+  if (typeof env === "number") return () => clamp(env);
+  if (typeof env === "string") {
+    const preset = isPreset(env) ? PRESETS[env] : undefined;
+    return preset === undefined ? () => clamp(1) : (t) => clamp(preset(t));
+  }
+  return (t) => clamp(keyframes(env, t));
 }
 
 /** The envelope's value at `t` (0..1), clamped to 0..1. */

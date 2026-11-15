@@ -89,9 +89,10 @@ export class RecordingCtx implements Ctx2D {
     this.#arc = { x, y, r: radius };
   }
   fill(): void {
-    if (this.#arc !== undefined) {
+    const arc = this.#arc;
+    if (arc !== undefined) {
       const ink = parseInk(this.fillStyle);
-      this.dabs.push({ ...this.#arc, a: this.globalAlpha * ink.a, soft: this.fillStyle instanceof RecordedGradient, rgb: ink.rgb });
+      this.dabs.push({ x: arc.x, y: arc.y, r: arc.r, a: this.globalAlpha * ink.a, soft: this.fillStyle instanceof RecordedGradient, rgb: ink.rgb });
       return;
     }
     for (const p of this.#path) if (p.length >= 6) this.polys.push(p);
