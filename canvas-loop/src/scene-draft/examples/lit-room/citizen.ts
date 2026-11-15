@@ -1,7 +1,7 @@
 // A reusable character drawn with brushes, placed three times. Shows: a
 // component as a plain function, a picture memoised on its look (not on the
 // animation frame), a glow on one stroke, and per-instance placement.
-import type { Picture, View } from "../scene-api.js";
+import type { Picture, View } from "../../scene-api.js";
 
 export interface Look {
   readonly suit: string;

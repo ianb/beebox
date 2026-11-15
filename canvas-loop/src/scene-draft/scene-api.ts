@@ -2,8 +2,12 @@
 // Types only: nothing here runs. It is today's View with the changes the draft
 // proposes, so the example sketches beside it type-check. Read it as a diff:
 // what is removed from today's View, what changes, what is new.
-import type { BlendMode, Effects as EffectsToday, GroupOptions as GroupToday, Paint, Style as StyleToday, Vec2 } from "../../core/paint.js";
-import type { View as ViewToday } from "../../core/tea.js";
+import type { BlendMode, Effects as EffectsToday, GroupOptions as GroupToday, Paint, Style as StyleToday, Vec2 } from "../core/paint.js";
+import type { View as ViewToday } from "../core/tea.js";
+
+// Everything a sketch needs comes from this module (draft 2.2).
+export type { BrushPreset, TextOptions } from "../core/paint.js";
+export type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util } from "../core/tea.js";
 
 // --- Transforms ------------------------------------------------------------------------
 
@@ -74,14 +78,14 @@ export interface Light {
   readonly kind: "point" | "spot" | "directional";
   /** Position (point, spot) in the current coordinates. */
   readonly at?: Vec2;
-  /** Height above the page in logical pixels: low lights rake across relief. */
+  /** Height above the picture plane in logical pixels: higher gives a wider, softer pool and shorter shadows; low lights rake across relief. */
   readonly height?: number;
   readonly color?: string;
   /** Brightness, 0.. (1 is a normal lamp). */
   readonly energy?: number;
   /** Distance where it fades out, logical pixels. */
   readonly reach?: number;
-  /** Spot and directional: the direction it points, radians. */
+  /** Spot and directional: the direction it points, radians from +x, clockwise (y down), as `arc`. */
   readonly direction?: number;
   /** Spot: half-angle of the cone, radians. */
   readonly cone?: number;
@@ -124,18 +128,18 @@ export interface Picture {
   readonly width: number;
   readonly height: number;
 }
-/** Plain data, compared by value. */
-export type Dep = string | number | boolean | null | readonly Dep[] | { readonly [k: string]: Dep };
 export interface PictureOptions {
   /** With width, height and deps, identifies a version; an existing version is reused without running `body`. */
   readonly key: string;
   /** Everything the body reads that can change. Omitted: never changes. Testing mode re-records to catch missing deps. */
-  readonly deps?: readonly Dep[];
+  readonly deps?: readonly unknown[];
   /** The picture's layout box (0..width, 0..height); drawing outside it is kept. */
   readonly width: number;
   readonly height: number;
 }
 export interface PlaceOptions {
+  /** A material for the picture's shapes that have none (used only inside a lit group). */
+  readonly material?: Material;
   readonly opacity?: number;
   readonly blend?: BlendMode;
   readonly erase?: boolean;
@@ -169,6 +173,10 @@ export interface View extends Omit<ViewToday, Removed> {
   place(picture: Picture, x: number, y: number, options?: PlaceOptions): void;
   /** A light, in the current coordinates; it lights the nearest enclosing lit group. */
   light(light: Light): void;
+  /** A point in canvas coordinates under the current transform (Canvas2D `getTransform` applied to it). */
+  toCanvas(point: Vec2): Vec2;
+  /** Seeded value noise of coordinates, 0..1: a pure function, as p5 `noise`. */
+  noise(x: number, y?: number, z?: number): number;
 }
 
 export type { Paint, Vec2 };

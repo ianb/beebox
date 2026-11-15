@@ -1,7 +1,7 @@
 // A screen seen at an angle, glowing. Shows `at` with skew (what used to need
 // v.ctx.transform), text under the same transform, and an emissive material
 // that a lit group leaves bright.
-import type { View } from "./scene-api.js";
+import type { View } from "../scene-api.js";
 
 export function draw(v: View, model: { frame: number }): void {
   v.background("#14110e");

@@ -2,7 +2,7 @@
 // lights that flicker, materials (bevel, emissive screens, shadow casters),
 // a camera as a transform outside the lit group, and a wash whose pigment
 // moves with the world.
-import type { View } from "../scene-api.js";
+import type { View } from "../../scene-api.js";
 import { citizenPicture } from "./citizen.js";
 
 export function draw(v: View, model: { frame: number; cameraX: number; walkerX: number }): void {

@@ -1,7 +1,7 @@
 // An interactive chemistry figure. Shows: params with a control over the
 // canvas (unchanged), text measured immediately to size a label box, a
 // label-sized hit target, and molecules as pictures memoised on their formula.
-import type { View } from "./scene-api.js";
+import type { View } from "../scene-api.js";
 
 interface Molecule {
   readonly formula: string;

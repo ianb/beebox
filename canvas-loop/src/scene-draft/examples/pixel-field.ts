@@ -1,7 +1,7 @@
 // A computed field shown as pixels (the rare case that used putImageData).
 // Shows `pixels`: the fill runs only when its deps change, then the picture is
 // placed and scaled like any other.
-import type { View } from "./scene-api.js";
+import type { View } from "../scene-api.js";
 
 export function draw(v: View, model: { wavelength: number; frame: number }): void {
   const w = 160, h = 100;

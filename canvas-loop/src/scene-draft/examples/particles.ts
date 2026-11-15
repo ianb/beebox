@@ -1,7 +1,7 @@
 // Many small things that all move: no pictures (nothing repeats), additive
 // light. Shows the case where the scene is rebuilt every frame; the renderer
 // must keep that cheap (Stage 3 measures it).
-import type { View } from "./scene-api.js";
+import type { View } from "../scene-api.js";
 
 export function draw(v: View, model: { sparks: readonly { readonly x: number; readonly y: number; readonly life: number }[] }): void {
   v.background("#0b0b14");

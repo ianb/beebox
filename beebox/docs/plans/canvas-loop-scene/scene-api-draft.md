@@ -1,11 +1,12 @@
-# Stage 1: the scene API, draft 2.1
+# Stage 1: the scene API, draft 2.2
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
 type-check against them: `canvas-loop/src/scene-draft/examples/`. Nothing runs
 yet. Draft 1 (commit `882c1300e`) was reviewed by Codex (gpt-6-sol); draft 2
 replaced its informal rules with the lowering contract in section 3. Draft 2.1
-answers the second review round (section 13).
+answers the second review round (section 13). Draft 2.2 makes the changes the
+Stage 2 drawers asked for (`stage2-findings.md`; section 14).
 
 ## 1. The stance: same calls, recorded
 
@@ -144,16 +145,25 @@ only where the result matches (section 6).
   or half-erased caster blocks half as much.
 - **Nesting.** A lit group inside a lit group is lit only by its own lights. To
   the outer lighting its result counts as emissive: it is not lit twice.
-- **Outside a lit group,** `light` does nothing and `material` is ignored; both
-  warn in testing mode, and the shape still draws, unlit.
+- **Outside a lit group,** `material` is ignored silently, so one picture can be
+  placed both lit and unlit. A `light` outside any lit group does nothing and
+  warns in testing mode.
+- **A placement can supply a material:** `place(picture, x, y, { material })`
+  gives that material to the picture's shapes that have none (so an unlit
+  drawing can cast shadows in a lit room).
+- **Conventions.** Angles are radians from +x, clockwise (y down), as `arc`.
+  `height` is the light's distance above the picture plane: higher lights
+  give wider, softer pools and shorter shadows. A caster never blocks a light
+  that sits inside it. `background` inside a lit group is lit like any shape.
 - Lighting happens before the group's effects (R5), so a wash paints over the
   lit result.
 
 **R9, paper.** `v.paper(settings)` applies to brushes drawn after it in the same
 group, picture or scene, and in their children. It ends with that scope. A
-picture's brushes use the paper set inside the picture, else the default
-paper, never the paper of the scope where it is placed. So a picture never
-depends on hidden outer state.
+picture's brushes use the paper in effect where `v.picture` is called (or a
+`v.paper` inside its body), and that paper is part of the picture's version,
+as if it were in `deps`. A picture never depends on where it is placed.
+`effects.paper` uses the paper in effect at the end of the group's body.
 
 ## 4. Coordinate spaces
 
@@ -179,8 +189,10 @@ pigment stays on the screen. `lit-room/room.ts` uses the first.
   it if it does not exist. Several versions of one key can live at once: the
   citizens in `lit-room/citizen.ts` (looks A, B, A) make two versions.
 - **`deps` hold plain data** (numbers, strings, booleans, `null`, and arrays
-  and plain objects of these). They are compared by value, deeply. A function,
-  class instance or cycle in `deps` is an error. React's `useMemo` compares
+  and plain objects of these). They are compared by value, deeply. The type is
+  `readonly unknown[]`, so sketch interfaces pass; the check happens when the
+  picture is recorded, and a function, class instance or cycle is an error
+  naming the value. React's `useMemo` compares
   with `Object.is`; canvas-loop models are plain data, so value comparison is
   the safer default here. Omitting `deps` means "never changes".
 - **Key scope** is the sketch. Two unrelated drawings under one key with equal
@@ -282,7 +294,8 @@ placed.
 | Characters the font has no glyph for | kept |
 | Picture recorded differently with the same deps (stale capture) | new warning |
 | Picture recorded every frame because its deps change every frame | new warning |
-| `light` or `material` outside a lit group | new warning |
+| `light` outside a lit group | new warning |
+| picture re-expanded every frame because its placement scale or rotation changes | new performance hint |
 | Wash or hatching over a group with no tone variation | new warning |
 | `pixels` fill left fully transparent | new warning |
 | `smudge`/`wet` with `effects`; `control`, `cursor`, `log`, `snapshot` in a picture body; non-plain `deps` | new errors |
@@ -384,3 +397,25 @@ Round 2 (draft 2) findings and their answers in draft 2.1:
 | cache equivalence vs cross-renderer tolerance | section 6 |
 | argument ownership | section 6 |
 | section 12 incomplete | decisions 8–13 added; 1, 2, 4, 5, 6 corrected |
+
+## 14. Draft 2.2: changes from the Stage 2 drawers
+
+From `stage2-findings.md`:
+- The API module exports every type a sketch uses.
+- `deps` are typed `readonly unknown[]` and checked as plain data when
+  recorded (section 5).
+- Pictures take the paper of the scope where `v.picture` is called, as part of
+  their version (R9).
+- Materials outside a lit group are ignored silently; `place` can supply a
+  default material; light conventions are stated (R8).
+- A performance hint when a placement's scale or rotation changes every frame
+  (section 10).
+- New calls:
+  - `v.toCanvas(point)`: a point in canvas coordinates under the current
+    transform, for drawing something in another scope at the right place.
+  - `v.noise(x, y?, z?)`: seeded value noise of coordinates, 0..1, for
+    flicker and texture. It is a pure function, so `draw` stays pure; it
+    rhymes with p5 `noise`.
+- Docs to write with the implementation: "Making something glow" (emissive,
+  light, glow, and a lamp that uses all three), where shape and group glows sit
+  relative to a group's wash, and `v.width` inside a picture.

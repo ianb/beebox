@@ -2,7 +2,7 @@
 // before it inside its nearest isolated group, never outside it. Here the sky
 // and the smudge share a group, so the smudge drags sky colour; the sign
 // drawn after the group is untouched.
-import type { View } from "./scene-api.js";
+import type { View } from "../scene-api.js";
 
 export function draw(v: View): void {
   v.background("#f4ecd8");
