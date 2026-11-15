@@ -18,8 +18,8 @@ export interface LightOut {
   readonly matrix: Mat;
 }
 
-/** How tall every shadow caster stands above the page, in the lit group's own units (the draft has no caster height). */
-const CASTER_HEIGHT = 32;
+/** How much the shadow march's caster layer is blurred, in logical pixels. */
+const CASTER_SOFTEN = 3;
 const KIND = { point: 0, spot: 1, directional: 2 } as const;
 const SHADOWS = { none: 0, hard: 1, soft: 2 } as const;
 
@@ -28,12 +28,23 @@ export interface LightPlan {
   readonly lights: readonly (readonly number[])[];
   readonly ambient: Rgba;
   readonly shadows: number;
-  readonly casterHeight: number;
+  /** Device pixels a caster stands per unit of its squared encoded height (material.ts). */
+  readonly heightScale: number;
+  /** The tallest caster, device pixels: how far a directional light's shadow can reach. */
+  readonly tallest: number;
+  /** 2^exposure, and the tone curve's strength. */
+  readonly exposure: number;
+  readonly toneCurve: number;
   readonly ratio: number;
 }
 
-/** The plan for a lit group called under device transform `matrix`, from the lights its body held. */
-export function lightPlanOf(outs: readonly LightOut[], a: { lighting: LightingRec; matrix: Mat; colors: ColorParser; ratio: number }): LightPlan {
+/**
+ * The plan for a lit group called under device transform `matrix`, from the lights its body
+ * held; `tallest` is its tallest caster and `encodeMax` the height its material layer encodes
+ * as 1, both in its own units.
+ */
+export function lightPlanOf(outs: readonly LightOut[], a: { lighting: LightingRec; matrix: Mat; colors: ColorParser; ratio: number; tallest: number; encodeMax: number }): LightPlan {
+  const unit = Math.sqrt(Math.abs(det(a.matrix)));
   const lights = outs.map(({ light: l, matrix: m }) => {
     const s = Math.sqrt(Math.abs(det(m)));
     const [x, y] = apply(m, l.at);
@@ -46,7 +57,10 @@ export function lightPlanOf(outs: readonly LightOut[], a: { lighting: LightingRe
     lights,
     ambient: [amb[0] * amb[3], amb[1] * amb[3], amb[2] * amb[3], 1],
     shadows: SHADOWS[a.lighting.shadows],
-    casterHeight: CASTER_HEIGHT * Math.sqrt(Math.abs(det(a.matrix))),
+    heightScale: a.encodeMax * unit,
+    tallest: a.tallest * unit,
+    exposure: 2 ** a.lighting.exposure,
+    toneCurve: a.lighting.toneCurve,
     ratio: a.ratio,
   };
 }
@@ -97,26 +111,35 @@ export class LightPass {
     return out;
   }
 
-  /** Shade lit group `job`'s colour layer `tex` from its material layers; frees them and `tex`. */
-  light(job: Job, a: { f: Frame; tex: GPUTexture; plan: LightPlan; mats: readonly [Job, Job] }): GPUTexture {
+  /**
+   * Shade lit group `job`'s colour layer `tex` from its material layers; frees them and `tex`.
+   * Soft shadows march through layer 1 blurred a little, so a shadow's sides soften and its
+   * samples do not show as grain; hard shadows read it as drawn.
+   */
+  light(job: Job, a: { f: Frame; tex: GPUTexture; plan: LightPlan; mats: readonly [Job, Job]; blur: (tex: GPUTexture, a: { sigma: Sigma; w: number; h: number }) => GPUTexture }): GPUTexture {
     const { f, plan } = a;
+    const casters = a.mats[1];
+    const s = CASTER_SOFTEN * plan.ratio;
+    const soft = plan.shadows !== SHADOWS.soft || casters.tex === undefined || isEmpty(casters.rect) ? undefined : a.blur(casters.tex, { sigma: { x: s, y: s }, w: widthOf(casters.rect), h: heightOf(casters.rect) });
     const { x0, y0 } = job.rect;
     const offset = (m: Job): number[] => (m.tex === undefined || isEmpty(m.rect) ? [0, 0, 0, 0] : [m.rect.x0 - x0, m.rect.y0 - y0, widthOf(m.rect), heightOf(m.rect)]);
     const u = new Float32Array([
-      a.tex.width, a.tex.height, 0, 0, 0, 0, widthOf(job.rect), heightOf(job.rect),
+      a.tex.width, a.tex.height, x0, y0, 0, 0, widthOf(job.rect), heightOf(job.rect),
       ...offset(a.mats[0]), ...offset(a.mats[1]),
       ...plan.ambient.slice(0, 3), plan.shadows,
-      plan.lights.length, plan.casterHeight, plan.ratio, 0,
+      plan.lights.length, plan.heightScale, plan.ratio, plan.tallest,
+      plan.exposure, plan.toneCurve, 0, 0,
     ]);
     const lights = new Float32Array(Math.max(1, plan.lights.length) * 12);
-    // Light positions in this layer's texels.
-    for (const [k, l] of plan.lights.entries()) lights.set([(l[0] ?? 0) - x0, (l[1] ?? 0) - y0, ...l.slice(2)], k * 12);
+    // Light positions in canvas device px, as the shader shades (its origin is whole pixels).
+    for (const [k, l] of plan.lights.entries()) lights.set(l, k * 12);
     const tex = (m: Job): GPUTexture => m.tex ?? f.pipes.dummy;
     const out = this.#run(this.#light, { f, job, entries: [
       this.#buffer(f, { usage: GPUBufferUsage.UNIFORM, data: u.buffer }),
       this.#buffer(f, { usage: GPUBufferUsage.STORAGE, data: lights.buffer }),
-      a.tex, tex(a.mats[0]), tex(a.mats[1]),
+      a.tex, tex(a.mats[0]), tex(a.mats[1]), soft ?? tex(a.mats[1]),
     ] });
+    if (soft !== undefined) f.pool.release(soft);
     for (const m of [...a.mats, { tex: a.tex }]) {
       if (m.tex !== undefined) f.pool.release(m.tex);
     }

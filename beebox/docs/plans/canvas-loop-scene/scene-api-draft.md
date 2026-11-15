@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.6
+# Stage 1: the scene API, draft 2.7
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -517,3 +517,36 @@ From the Stage 4 builder (chunks 1–2):
 - **Hashes:** cache keys are 64-bit hashes of recorded data; a collision
   (about 2^-64 per pair) is accepted as the only way two different inputs can
   share a cached result.
+
+## 19. Draft 2.7: details settled in the look round
+
+- **Caster height:** `material.castsShadow` takes `true` (32 logical pixels,
+  as before) or a height, 0..1024, in the coordinates where the shape is
+  drawn. A shadow ends where the ray from the floor to the light clears the
+  caster's top, so a taller caster or a lower light casts a longer one. A
+  pixel on a caster sits at its height, so only taller casters shadow it
+  (replaces "a caster does not shadow another caster" in section 17). One
+  number on the existing key was chosen over a separate `material.height`:
+  a height on a shape that casts nothing would mean nothing.
+- **Exposure and tone curve:** `lighting.exposure` in stops (default 0) and
+  `lighting.toneCurve` 0..1 (default 0, the old clip at white). Toward 1, an
+  S-curve in linear light: deeper shadows, highlights that roll off below
+  white, middle tones about unchanged. Emissive light is not exposed or
+  toned. The curve is monotonic at every strength.
+- **Height 0** casts nothing (a floor can say `castsShadow: 0`). A caster
+  scaled taller than 1024 by a transform keeps its full height.
+- **Soft shadows** march through the caster layer blurred by 3 logical
+  pixels, so a shadow's sides soften; hard shadows read it unblurred. The
+  march covers only the caster layer and, for a light above every caster,
+  only until the ray clears the tallest; samples are at most 8 device px
+  apart, up to 256, then spaced wider. Its jitter is keyed to canvas
+  pixels, so shadows do not change when unrelated shapes move the layer.
+- **Wash:** granulation is faint and has no per-pixel term. `blotch` adds
+  pooling at a shape's scale and, above about 0.2, occasional blooms;
+  `edges` adds a drying line whose strength wanders, more pigment toward a
+  region's edges and bottom, less in its middle.
+- **Hatching:** default spacing 6. The lightest third of the group's tone
+  range stays bare; half tones take single lines, shadows crossed lines,
+  the darkest a third family near the first. Lines turn toward the tone's
+  contours (up to 0.35 rad) only where the tone changes strongly, and under
+  them the colour lifts toward paper, so the lines carry the tone.

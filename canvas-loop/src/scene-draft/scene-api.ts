@@ -27,22 +27,27 @@ export interface AtOptions {
 
 /** Watercolour wash over what the group drew (Bousseau et al. 2006). */
 export interface Wash {
-  /** Pigment settling into the paper's valleys, 0..1. */
+  /** Pigment settling faintly into the paper's tooth, 0..1 (default 0.5). */
   readonly granulate?: number;
-  /** Darker pigment where colours meet, 0..1. */
+  /** Pigment gathering at edges, 0..1 (default 0.5): a dark drying line where a colour meets paper or another colour, heavier near a region's edges and bottom, lighter in its middle. */
   readonly edges?: number;
-  /** Blotchy pigment density, 0..1. */
+  /** Uneven pigment, 0..1 (default 0.4): pooling in patches about a shape's size and, above about 0.2, occasional blooms (lighter backruns with a hard dark rim). */
   readonly blotch?: number;
   /** Edges wander, in logical pixels. */
   readonly bleed?: number;
 }
-/** Pencil hatching revealed by darkness (Praun et al. 2001). */
+/**
+ * Pencil hatching revealed by darkness (Praun et al. 2001), by tone relative
+ * to the group's own range: the lightest part bare, half tones single lines,
+ * shadows crossed lines. Under the lines the colour lifts toward paper, so the
+ * lines carry the tone.
+ */
 export interface Hatching {
   /** Hatch strength, 0..1. */
   readonly amount: number;
   /** Line angle in radians (default π/4); a second layer crosses it in the darkest tones. */
   readonly angle?: number;
-  /** Line spacing in logical pixels (default 4.5). */
+  /** Line spacing in logical pixels (default 6). */
   readonly spacing?: number;
   readonly color?: string;
 }
@@ -71,8 +76,13 @@ export interface Material {
   readonly shine?: number;
   /** Glows by itself: lights don't darken it (screens, lamps), 0..1. */
   readonly emissive?: number;
-  /** Blocks light from lights behind it, casting a 2D shadow. */
-  readonly castsShadow?: boolean;
+  /**
+   * Blocks light, casting a 2D shadow. `true` stands 32 logical pixels above
+   * the page; a number is the caster's height (0..1024), so a taller caster
+   * casts a longer shadow, and a lower light a longer one still. A pixel on a
+   * caster sits at its height: only taller casters shadow it.
+   */
+  readonly castsShadow?: boolean | number;
 }
 export interface Light {
   readonly kind: "point" | "spot" | "directional";
@@ -96,6 +106,14 @@ export interface Lighting {
   readonly ambient?: string;
   /** Soft or hard shadows from `castsShadow` shapes. */
   readonly shadows?: "none" | "hard" | "soft";
+  /** Brightness of the lit result in stops (default 0): +1 doubles the light, −1 halves it. */
+  readonly exposure?: number;
+  /**
+   * How light maps to colour, 0..1 (default 0: lit colour clips at white).
+   * Toward 1, a film-like curve: shadows go deeper and highlights roll off
+   * softly instead of clipping. Middle tones stay about where they were.
+   */
+  readonly toneCurve?: number;
 }
 
 // --- Styles and groups ----------------------------------------------------------------

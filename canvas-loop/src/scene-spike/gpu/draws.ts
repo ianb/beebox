@@ -175,6 +175,6 @@ export function encodeJob(job: Job, f: Frame): void {
   let out = tex;
   if (job.bevel !== undefined) out = f.light.bevel(job, { f, tex: out, plan: job.bevel, blur: (t, sigma) => blur2(t, { ...size, sigma }) });
   // R5: lighting first, then the group's effects.
-  if (job.light !== undefined) out = f.light.light(job, { f, tex: out, plan: job.light.plan, mats: job.light.mats });
+  if (job.light !== undefined) out = f.light.light(job, { f, tex: out, plan: job.light.plan, mats: job.light.mats, blur: (t, a) => blur2(t, { f, ...a }) });
   job.tex = job.fx === undefined ? out : encodeFx(job, { tex: out, f });
 }

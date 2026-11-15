@@ -10,14 +10,15 @@ import type { BlendMode } from "../../core/paint.js";
 import type { BrushExpander } from "../brush/expand.js";
 import type { ColorParser } from "../colors.js";
 import { polylines as flatten } from "../geometry/flatten.js";
-import { invert, maxScale, mul } from "../mat.js";
+import { det, invert, maxScale, mul } from "../mat.js";
 import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene.js";
+import { MAX_CASTER_HEIGHT } from "../scene.js";
 import type { Effects, Material } from "../../scene-draft/scene-api.js";
 import type { Rgba } from "../colors.js";
 import type { LightOut } from "./light.js";
 import { lightPlanOf } from "./light.js";
 import type { MatMode } from "./material.js";
-import { LIT_RESULT, bevelOf, materialColor, materialOf, materialPlan } from "./material.js";
+import { LIT_RESULT, bevelOf, casterHeight, materialColor, materialOf, materialPlan } from "./material.js";
 import { fxPlanOf } from "./effects.js";
 import type { GlyphCache } from "./glyphs.js";
 import type { ClipMask, Item, Job, R } from "./jobs.js";
@@ -181,18 +182,31 @@ export class Lowering {
     const inner = lighting === undefined ? here : nested ? { ...here, lights: undefined, mat: undefined } : { ...here, lights };
     const job = this.#job(name, { effects: n.effects, paper: n.paper, here: inner, body: (i) => this.#nodes(n.children, i) });
     if (lighting !== undefined && here.mat === undefined) {
-      const mat = (layer: 0 | 1): Job => this.#job(`${name} material ${layer}`, { effects: undefined, here: { ...here, visible: job.rect, lights: undefined, mat: { layer, fallback: undefined } }, body: (i) => this.#nodes(n.children, i) });
-      job.light = { plan: lightPlanOf(lights, { lighting, matrix: here.matrix, colors: this.#colors, ratio: this.#brush.ratio }), mats: [mat(0), mat(1)] };
+      const unit = Math.sqrt(Math.abs(det(here.matrix)));
+      const tallest = { height: 0 };
+      const mat = (layer: 0 | 1, encodeMax: number): Job => this.#job(`${name} material ${layer}`, { effects: undefined, here: { ...here, visible: job.rect, lights: undefined, mat: { layer, fallback: undefined, unit, tallest, encodeMax } }, body: (i) => this.#nodes(n.children, i) });
+      const layer0 = mat(0, MAX_CASTER_HEIGHT);
+      let layer1 = mat(1, MAX_CASTER_HEIGHT);
+      // A transform can make a caster taller than the encoding holds: encode against the tallest instead.
+      const encodeMax = Math.max(MAX_CASTER_HEIGHT, tallest.height);
+      if (encodeMax > MAX_CASTER_HEIGHT) layer1 = mat(1, encodeMax);
+      job.light = { plan: lightPlanOf(lights, { lighting, matrix: here.matrix, colors: this.#colors, ratio: this.#brush.ratio, tallest: tallest.height, encodeMax }), mats: [layer0, layer1] };
     }
     const clip = n.clip === undefined ? here.clip : this.#clip(n.clip, here);
     const outer = here.mat;
-    const mat = lighting !== undefined && outer !== undefined ? materialColor(LIT_RESULT, outer.layer) : undefined;
+    const mat = lighting !== undefined && outer !== undefined ? materialColor(LIT_RESULT, { layer: outer.layer }) : undefined;
     this.#layer({ job, mask: undefined, opacity: n.opacity, mode: here.mat === undefined ? modeOf(n.blend) : 0, erase: false, mat }, { ...here, clip });
   }
 
   /** In a material layer, the colour standing for `material` (or the placement's); undefined when drawing colour. */
   #matColor(here: Here, material: Material | undefined): Rgba | undefined {
-    return here.mat === undefined ? undefined : materialColor(materialOf(material, here.mat), here.mat.layer);
+    if (here.mat === undefined) return undefined;
+    const m = materialOf(material, here.mat);
+    if (here.mat.layer === 0) return materialColor(m, { layer: 0 });
+    // A caster's height is in its own coordinates; the shading measures it in the lit group's.
+    const height = (casterHeight(m) * Math.sqrt(Math.abs(det(here.matrix)))) / here.mat.unit;
+    here.mat.tallest.height = Math.max(here.mat.tallest.height, height);
+    return materialColor(m, { layer: 1, height, encodeMax: here.mat.encodeMax });
   }
 
   /** R1, or R2 when the style has effects: the fill, then the stroke (plain or brushed). */

@@ -114,8 +114,9 @@ starts.
   hatching 4.9 and 7.8 ms, the lit room with a moving lamp 5.8 and 9.3 ms.
 - **Deferred from chunk 4:** the "no tone variation" warning (needs a
   readback); a jump-flood bevel (bevels come from blurred coverage); caster
-  heights (every caster stands 32 units); keeping a static lit subtree's
-  material layers between frames; painterly blurs and bevels under skew.
+  heights (every caster stands 32 units; done in the look round); keeping a
+  static lit subtree's material layers between frames; painterly blurs and
+  bevels under skew.
 
 ## Boxholder feedback on chunk 4 (2026-11-15)
 
@@ -176,3 +177,22 @@ starts.
   and mark coverage computed in each piece's own pixels (slot positions
   depend on what else a frame draws), with slot offsets applied as integers
   (Metal's fast math reassociated them).
+
+## Look round (2026-11-15, not yet committed)
+
+- **Wash:** fine granulation made faint; pooling patches, occasional blooms
+  with hard dark rims, pigment heavier toward edges and bottoms, and a
+  wandering drying edge, from a second, shape-scale blur. Examples:
+  `canvas-loop/src/examples/scene-looks/washed-shapes-tea.ts`, the Hallway's
+  wash look.
+- **Hatching:** one still life under a side light
+  (`scene-looks/still-life-tea.ts`); fewer, thinner, longer strokes; light
+  areas bare; single then crossed lines; colour lifted under the lines.
+- **Lighting:** caster heights and exposure with a tone curve (draft 2.7,
+  section 19); a night room with a lamp, a figure and a bookshelf
+  (`scene-looks/night-room-tea.ts`).
+- **Headless timing** (Dawn, mean of 30 warm renders, before → after):
+  washed shapes 640×480 2.5 → 3.8 ms (ratio 1), 4.4 → 6.5 ms (ratio 2);
+  Hallway with wash 1280×760 6.7 → 8.3 ms, 13.6 → 18.5 ms; still life
+  hatching 2.8 → 2.9 ms, 8.2 → 8.3 ms; night room 640×380 19.3 → 20.5 ms,
+  20.3 → 22.3 ms.

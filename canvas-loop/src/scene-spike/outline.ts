@@ -49,7 +49,8 @@ function nodeLine(n: SceneNode): string {
     case "group": {
       const name = n.name === undefined ? "" : ` "${n.name}"`;
       const fx = n.effects === undefined ? "" : ` effects ${Object.keys(n.effects).join(",")}`;
-      const lit = n.lighting === undefined ? "" : ` lit ambient ${n.lighting.ambient} shadows ${n.lighting.shadows}`;
+      const l = n.lighting;
+      const lit = l === undefined ? "" : ` lit ambient ${l.ambient} shadows ${l.shadows}${l.exposure === 0 ? "" : ` exposure ${l.exposure}`}${l.toneCurve === 0 ? "" : ` toneCurve ${l.toneCurve}`}`;
       return `group${name} opacity ${n.opacity} blend ${n.blend}${fx}${lit}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
     }
     case "clip":

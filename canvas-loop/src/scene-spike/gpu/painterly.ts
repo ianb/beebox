@@ -30,7 +30,8 @@ export function paperParams(paper: PaperSettings, ratio: number): PaperParams {
 }
 
 export interface PainterlyPlan {
-  readonly wash: { readonly granulate: number; readonly edges: number; readonly blotch: number; readonly bleed: number; readonly sigma: Sigma } | undefined;
+  /** `sigma` is the small blur (edges, abstraction), `wide` the shape-scale one (pooling toward edges), both device pixels. */
+  readonly wash: { readonly granulate: number; readonly edges: number; readonly blotch: number; readonly bleed: number; readonly sigma: Sigma; readonly wide: Sigma } | undefined;
   readonly hatching: { readonly amount: number; readonly angle: number; readonly spacing: number; readonly color: Rgba | undefined; readonly sigma: Sigma } | undefined;
   readonly paper: number | undefined;
   /** Device pixel → the coordinates where the group is called. */
@@ -39,6 +40,11 @@ export interface PainterlyPlan {
   readonly paperParams: PaperParams;
 }
 
+/** The wash's shape-scale blur, in the group's units: how far in from an outline pigment gathers. */
+const WIDE = 14;
+/** Hatching line spacing when unset, in the group's units. */
+const HATCH_SPACING = 6;
+type Pipe = "wash" | "wideX" | "wideY" | "hatch" | "paperFx";
 const DEFAULT_PAPER: PaperSettings = { scale: 3, contrast: 0.7, seed: 1 };
 const times = (s: Sigma, k: number): Sigma => ({ x: s.x * k, y: s.y * k });
 
@@ -47,13 +53,13 @@ export function painterlyPlanOf(effects: Effects, a: { scale: Sigma; toLocal: Ma
   const { wash, hatching, paper } = effects;
   if (wash === undefined && hatching === undefined && paper === undefined) return undefined;
   return {
-    wash: wash === undefined ? undefined : { granulate: wash.granulate ?? 0.5, edges: wash.edges ?? 0.5, blotch: wash.blotch ?? 0.4, bleed: wash.bleed ?? 0, sigma: times(a.scale, 2) },
+    wash: wash === undefined ? undefined : { granulate: wash.granulate ?? 0.5, edges: wash.edges ?? 0.5, blotch: wash.blotch ?? 0.4, bleed: wash.bleed ?? 0, sigma: times(a.scale, 2), wide: times(a.scale, WIDE) },
     hatching: hatching === undefined ? undefined : {
       amount: hatching.amount,
       angle: hatching.angle ?? Math.PI / 4,
-      spacing: hatching.spacing ?? 4.5,
+      spacing: hatching.spacing ?? HATCH_SPACING,
       color: hatching.color === undefined ? undefined : a.colors(hatching.color),
-      sigma: times(a.scale, 0.8 * (hatching.spacing ?? 4.5)),
+      sigma: times(a.scale, 0.8 * (hatching.spacing ?? HATCH_SPACING)),
     },
     paper,
     toLocal: a.toLocal,
@@ -66,7 +72,7 @@ export function painterlyPlanOf(effects: Effects, a: { scale: Sigma; toLocal: Ma
 export class PainterlyPasses {
   readonly #device: GPUDevice;
   readonly #layout: GPUBindGroupLayout;
-  readonly #pipes: Readonly<Record<"wash" | "hatch" | "paperFx", GPURenderPipeline>>;
+  readonly #pipes: Readonly<Record<Pipe, GPURenderPipeline>>;
   readonly #histogram: GPUComputePipeline;
   readonly #range: GPUComputePipeline;
 
@@ -74,11 +80,11 @@ export class PainterlyPasses {
     this.#device = device;
     const F = GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX;
     const tex = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "unfilterable-float" } });
-    this.#layout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: F, buffer: { type: "uniform" } }, tex(1), tex(2), { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "read-only-storage" } }] });
+    this.#layout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: F, buffer: { type: "uniform" } }, tex(1), tex(2), { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "read-only-storage" } }, tex(4)] });
     const layout = device.createPipelineLayout({ bindGroupLayouts: [this.#layout] });
     const module = device.createShaderModule({ code: PAINTERLY_WGSL });
     const mk = (entryPoint: string): GPURenderPipeline => device.createRenderPipeline({ layout, vertex: { module, entryPoint: "vs" }, fragment: { module, entryPoint, targets: [{ format: "rgba8unorm" }] } });
-    this.#pipes = { wash: mk("wash"), hatch: mk("hatch"), paperFx: mk("paperFx") };
+    this.#pipes = { wash: mk("wash"), wideX: mk("wideX"), wideY: mk("wideY"), hatch: mk("hatch"), paperFx: mk("paperFx") };
     const tone = device.createShaderModule({ code: TONE_WGSL });
     this.#histogram = device.createComputePipeline({ layout: "auto", compute: { module: tone, entryPoint: "histogram" } });
     this.#range = device.createComputePipeline({ layout: "auto", compute: { module: tone, entryPoint: "range" } });
@@ -106,17 +112,17 @@ export class PainterlyPasses {
     const w = plan.wash;
     const h = plan.hatching;
     const p = plan.paperParams;
-    v.set([a.size[0], a.size[1], 0, 0, 0, 0, widthOf(a.rect), heightOf(a.rect)], 0);
+    v.set([a.size[0], a.size[1], w?.wide.x ?? 0, w?.wide.y ?? 0, 0, 0, widthOf(a.rect), heightOf(a.rect)], 0);
     v.set([t[0], t[1], t[2], t[3], e, g, plan.ratio, Math.sqrt(Math.abs(d))], 8);
     v.set(inv, 16);
     v.set([w?.granulate ?? 0, w?.edges ?? 0, w?.blotch ?? 0, w?.bleed ?? 0], 20);
-    v.set([h?.amount ?? 0, h?.angle ?? 0, h?.spacing ?? 4.5, h?.color === undefined ? 0 : 1, ...(h?.color ?? [0, 0, 0, 0])], 24);
+    v.set([h?.amount ?? 0, h?.angle ?? 0, h?.spacing ?? HATCH_SPACING, h?.color === undefined ? 0 : 1, ...(h?.color ?? [0, 0, 0, 0])], 24);
     v.set([plan.paper ?? 0, p.scale, p.lo, p.hi], 32);
     u.set([p.seed, PAPER_ROW], 36);
     return this.#buffer(a.f, { size: 160, usage: GPUBufferUsage.UNIFORM, data });
   }
 
-  #pass(pipe: "wash" | "hatch" | "paperFx", a: { f: Frame; uniform: GPUBuffer; src: GPUTexture; aux?: GPUTexture; tone?: GPUBuffer; w: number; h: number }): GPUTexture {
+  #pass(pipe: Pipe, a: { f: Frame; uniform: GPUBuffer; src: GPUTexture; aux?: GPUTexture; wide?: GPUTexture; tone?: GPUBuffer; w: number; h: number }): GPUTexture {
     const { f } = a;
     const out = f.pool.acquire({ w: a.w, h: a.h, format: "rgba8unorm" });
     const tone = a.tone ?? this.#buffer(f, { size: 264, usage: GPUBufferUsage.STORAGE });
@@ -125,6 +131,7 @@ export class PainterlyPasses {
       { binding: 1, resource: a.src.createView() },
       { binding: 2, resource: (a.aux ?? f.pipes.dummy).createView() },
       { binding: 3, resource: { buffer: tone } },
+      { binding: 4, resource: (a.wide ?? f.pipes.dummy).createView() },
     ] });
     const pass = beginPass(f, { tex: out, clear: true, kind: "painterly" });
     pass.setPipeline(this.#pipes[pipe]);
@@ -168,8 +175,10 @@ export class PainterlyPasses {
       const uniform = this.#uniform(plan, { f, rect: a.rect, size: [a.src.width, a.src.height] });
       if (plan.wash !== undefined) {
         const blurred = a.blur(cur, plan.wash.sigma);
-        step(this.#pass("wash", { ...base, uniform, src: cur, aux: blurred }));
-        temps.push(blurred);
+        const across = this.#pass("wideX", { ...base, uniform, src: blurred });
+        const wide = this.#pass("wideY", { ...base, uniform, src: across });
+        step(this.#pass("wash", { ...base, uniform, src: cur, aux: blurred, wide }));
+        temps.push(blurred, across, wide);
       }
       if (plan.hatching !== undefined) {
         const blurred = a.blur(cur, plan.hatching.sigma);

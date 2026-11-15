@@ -3,11 +3,13 @@
 // paint's alpha kept, so materials composite by coverage, erase, clip, mask
 // and fade exactly as colour does. Premultiplied, with 0.5 as a flat normal:
 // - layer 0: surface normal x, y (as 0.5 + n/2), shine, coverage;
-// - layer 1: emissive, shadow-casting amount, 0, coverage.
+// - layer 1: emissive, shadow-casting amount, caster height (as
+//   √(height ÷ 1024), so low casters keep precision), coverage.
 // A shape without a material is flat matte (zeros apart from the flat normal).
 import type { Material } from "../../scene-draft/scene-api.js";
 import type { Rgba } from "../colors.js";
 import type { FxPlan, Sigma } from "./effects.js";
+import { MAX_CASTER_HEIGHT } from "../scene.js";
 import { premultiply } from "./paint.js";
 
 export type MaterialLayer = 0 | 1;
@@ -17,6 +19,21 @@ export interface MatMode {
   readonly layer: MaterialLayer;
   /** From `place(…, { material })`: for the picture's shapes that have none. */
   readonly fallback: Material | undefined;
+  /** Device pixels per unit of the lit group's coordinates, where caster heights are measured. */
+  readonly unit: number;
+  /** The tallest caster met so far, in the lit group's units (layer 1 only). */
+  readonly tallest: { height: number };
+  /** The height layer 1 encodes as 1, in the lit group's units: 1024, or the tallest caster when a transform makes one taller. */
+  readonly encodeMax: number;
+}
+
+/** A caster's height when `castsShadow` is `true`, in logical pixels. */
+export const CASTER_HEIGHT = 32;
+
+/** The height `castsShadow` gives, in its own coordinates (0 for none). */
+export function casterHeight(m: Material | undefined): number {
+  const c = m?.castsShadow;
+  return c === true ? CASTER_HEIGHT : typeof c === "number" ? c : 0;
 }
 
 /** A nested lit group, to the enclosing lighting: emissive, so it is not lit twice (R8). */
@@ -27,10 +44,18 @@ export function materialOf(own: Material | undefined, mode: MatMode): Material |
   return own ?? mode.fallback;
 }
 
-/** The straight colour standing for `m` in layer `layer` (bevel normals come from their own pass). */
-export function materialColor(m: Material | undefined, layer: MaterialLayer): Rgba {
-  if (layer === 0) return [0.5, 0.5, m?.shine ?? 0, 1];
-  return [m?.emissive ?? 0, m?.castsShadow === true ? 1 : 0, 0, 1];
+/**
+ * The straight colour standing for `m` in layer `a.layer` (bevel normals come
+ * from their own pass). `a.height` is the caster's height in the lit group's
+ * units, already scaled from the shape's own coordinates (default: as given),
+ * encoded against `a.encodeMax` (default 1024). A height of 0 casts nothing.
+ */
+export function materialColor(m: Material | undefined, a: { layer: MaterialLayer; height?: number; encodeMax?: number }): Rgba {
+  if (a.layer === 0) return [0.5, 0.5, m?.shine ?? 0, 1];
+  const height = a.height ?? casterHeight(m);
+  const max = a.encodeMax ?? MAX_CASTER_HEIGHT;
+  const casts = height > 0;
+  return [m?.emissive ?? 0, casts ? 1 : 0, casts ? Math.sqrt(Math.min(height, max) / max) : 0, 1];
 }
 
 /** A bevelled shape's normals in layer 0: its coverage blurred by half the bevel, shaped into a rounded rim. */
@@ -57,7 +82,7 @@ export function bevelOf(m: Material | undefined, scale: Sigma): BevelPlan | unde
 export function materialPlan(plan: FxPlan | undefined, layer: MaterialLayer): FxPlan | undefined {
   if (plan === undefined || (plan.glow === undefined && plan.shadow === undefined)) return undefined;
   const as = (c: Rgba, m: Material): Rgba => {
-    const v = materialColor(m, layer);
+    const v = materialColor(m, { layer });
     // `c` is premultiplied: its alpha is the coverage the glow or shadow adds.
     return premultiply([v[0], v[1], v[2], c[3]]);
   };

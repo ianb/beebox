@@ -8,11 +8,18 @@
 //   the casting amount. Lighting is in linear light and clips at 1. The
 //   result is colour × ((1 − e)(ambient + lights) + e) for emissive e, so an
 //   emissive pixel keeps its colour: a nested lit group is not lit twice.
-//   Shadows: every caster stands `casterHeight` above the page; a pixel on a
-//   caster sits on top of it, so a caster never shadows itself, and samples
-//   in the caster that holds the light are skipped. Within one caster the
-//   strongest block counts (not the product), so a caster at half alpha
-//   blocks half.
+//   Shadows: each caster stands at its own height (material layer 1); a
+//   sample blocks where its caster's top is above the ray from the pixel to
+//   the light, so taller casters and lower lights cast longer shadows. A
+//   pixel on a caster sits on top of it, so a caster never shadows itself
+//   and only taller casters shadow it; samples in the caster that holds the
+//   light are skipped. Within one caster the strongest block counts (not the
+//   product), so a caster at half alpha blocks half.
+//   Then exposure (2^stops) and the tone curve: `tone` blends from a clip at
+//   white toward an S-curve in linear light, x^p / (x^p + m^p) scaled so 4
+//   maps to white (p 1.4, m 0.6): deeper shadows, highlights that roll off,
+//   middle tones about where they were. Both parts rise with x, so the curve
+//   is monotonic at every strength.
 // - BEVEL_WGSL: a bevelled shape's normals from its coverage blurred by half
 //   the bevel, shaped into a round rim (the probe used a jump-flood distance;
 //   see the stage 4 notes).
@@ -33,12 +40,13 @@ fn inO(t: texture_2d<f32>, p: vec2i, o: vec4f) -> vec4f {
 
 export const LIGHT_WGSL = /* wgsl */ `
 struct LU {
-  size: vec4f,    // the target texture's size
+  size: vec4f,    // the target texture's size; this layer's origin in canvas device px (for the shadow jitter)
   region: vec4f,  // the colour layer's valid texels
   aO: vec4f,      // material layer 0: where its texel 0 sits in this layer, and its size
   bO: vec4f,      // material layer 1
   ambient: vec4f, // rgb; shadows (0 none, 1 hard, 2 soft)
-  misc: vec4f,    // light count, caster height (device px), pixel ratio
+  misc: vec4f,    // light count, height scale (device px per squared encoded height), pixel ratio, tallest caster (device px)
+  tone: vec4f,    // 2^exposure, tone curve strength
 };
 // pos: x, y (texels), height (device px), kind (0 point, 1 spot, 2 directional)
 // col: rgb, energy; p: reach (device px), direction (radians), cone half-angle, directional slope
@@ -48,30 +56,73 @@ struct Lt { pos: vec4f, col: vec4f, p: vec4f };
 @group(0) @binding(2) var colT: texture_2d<f32>;
 @group(0) @binding(3) var matA: texture_2d<f32>;
 @group(0) @binding(4) var matB: texture_2d<f32>;
+@group(0) @binding(5) var matBs: texture_2d<f32>;
 ${QUAD}
 fn pcg(v: u32) -> u32 { let s = v * 747796405u + 2891336453u; let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
 fn jitter(p: vec2i) -> f32 { return f32(pcg(bitcast<u32>(p.x) ^ pcg(bitcast<u32>(p.y) ^ 77u)) >> 8u) / 16777216.0; }
 fn s2l(c: vec3f) -> vec3f { return select(pow((c + 0.055) / 1.055, vec3f(2.4)), c / 12.92, c <= vec3f(0.04045)); }
 fn l2s(c: vec3f) -> vec3f { return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308)); }
-fn casts(p: vec2i) -> f32 { return inO(matB, p, U.bO).g; }
+// Shading works in canvas device px (positions stay the same whatever the layer's bounds);
+// a canvas position's texel in this layer is its floor less the layer's whole-pixel origin.
+fn texel(c: vec2f) -> vec2i { return vec2i(floor(c)) - vec2i(U.size.zw); }
+fn casts(c: vec2f) -> f32 { return inO(matB, texel(c), U.bO).g; }
+// A caster's height in device px from its material texel (per unit of casting amount).
+fn topOf(B: vec4f) -> f32 { let e = select(0.0, B.b / B.g, B.g > 1e-4); return e * e * U.misc.y; }
+fn tone(x: f32) -> f32 {
+  let p = 1.4; let m = pow(0.6, p); let w = pow(4.0, p);
+  let film = min(1.0, pow(max(x, 0.0), p) / (pow(max(x, 0.0), p) + m) * (w + m) / w);
+  return mix(min(x, 1.0), film, U.tone.y);
+}
+
+// The part [t0, t1] of the ray P + D·t (0 ≤ t ≤ tmax) inside the caster layer; empty when t0 > t1.
+fn inCasters(P: vec2f, D: vec2f, tmax: f32) -> vec2f {
+  let lo = U.bO.xy + U.size.zw; let hi = lo + U.bO.zw;
+  var t0 = 0.0; var t1 = tmax;
+  for (var k = 0; k < 2; k++) {
+    if (abs(D[k]) < 1e-6) {
+      if (P[k] < lo[k] || P[k] > hi[k]) { return vec2f(1, 0); }
+    } else {
+      let a = (lo[k] - P[k]) / D[k]; let b = (hi[k] - P[k]) / D[k];
+      t0 = max(t0, min(a, b)); t1 = min(t1, max(a, b));
+    }
+  }
+  return vec2f(t0, t1);
+}
 
 // How much of the light at L reaches P: 1 unblocked, 0 in full shadow.
+// The march covers only where a caster could block: inside the caster layer, and (for a light
+// above every caster) only until the ray has risen past the tallest caster, unless the light
+// sits in a caster, whose own run must be seen to its end. Samples are 2 device px per pixel
+// ratio apart, at most 8 px; past 256 samples (a march over 2048 px at the widest spacing)
+// the spacing grows instead, and casters thinner than it can be missed.
 fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
   let D = L.xy - P.xy; let len = length(D);
-  let ratio = U.misc.z; let H = U.misc.y;
-  let n = clamp(i32(len / (2.0 * ratio)), 2, 64);
+  let ratio = U.misc.z; let H = U.misc.w;
+  if (H <= 0.0) { return 1.0; }
+  let lightIn = casts(L.xy) > 0.02;
+  var tmax = 1.0;
+  if (!lightIn && L.z > H) { tmax = clamp((H + ratio - P.z) / (L.z - P.z), 0.0, 1.0); }
+  let span = inCasters(P.xy, D, tmax);
+  if (span.x > span.y) { return 1.0; }
+  let n = clamp(i32(ceil((span.y - span.x) * len / min(2.0 * ratio, 8.0))), 2, 256);
+  // Jitter by canvas device pixel, so a shadow's grain does not change when the layer's bounds do.
   let j = jitter(vec2i(floor(P.xy)));
-  let lightIn = casts(vec2i(floor(L.xy))) > 0.02;
   var vis = 1.0; var run = 1.0; var inSelf = recvIn;
   for (var i = 0; i < n; i++) {
-    let t = (f32(i) + j) / f32(n);
-    let c = casts(vec2i(floor(P.xy + D * t)));
+    let t = mix(span.x, span.y, (f32(i) + j) / f32(n));
+    let S = inO(matBs, texel(P.xy + D * t), U.bO);
+    let c = S.g;
     if (c <= 0.02) { inSelf = false; vis *= run; run = 1.0; continue; }
-    if (inSelf) { continue; }
+    let top = topOf(S);
+    // Still on the receiving caster: its own surface never shadows it, but a taller caster
+    // touching it does, gap or not. Heights are read as blue ÷ green of 8-bit texels, so near an
+    // outline (little coverage) they are rough: only a clearly taller, well-covered sample counts.
+    if (inSelf && (c < 0.25 || top <= P.z + max(2.0 * ratio, 0.05 * P.z))) { continue; }
+    inSelf = false;
     let soft = select(1.0, 1.0 + 0.03 * len * t / ratio, U.ambient.w > 1.5) * ratio;
-    run = min(run, 1.0 - c * smoothstep(0.0, soft, H - mix(P.z, L.z, t)));
+    run = min(run, 1.0 - c * smoothstep(0.0, soft, top - mix(P.z, L.z, t)));
   }
-  if (!lightIn) { vis *= run; }
+  if (!lightIn || span.y < 1.0) { vis *= run; }
   return vis;
 }
 
@@ -86,7 +137,7 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
   let shine = select(0.0, A.b / A.a, A.a > 1e-4);
   let e = select(0.0, clamp(B.r / B.a, 0.0, 1.0), B.a > 1e-4);
   let recvIn = B.g > 0.02;
-  let P = vec3f(vec2f(p) + 0.5, select(0.0, U.misc.y, recvIn));
+  let P = vec3f(vec2f(p) + 0.5 + U.size.zw, select(0.0, topOf(B), recvIn));
   let albedo = s2l(C.rgb / C.a);
   var sum = U.ambient.rgb; var spec = vec3f(0);
   for (var k = 0u; k < u32(U.misc.x); k++) {
@@ -94,7 +145,7 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
     var Ld: vec3f; var Lp: vec3f; var att = li.col.w;
     if (kind == 2u) {
       Ld = normalize(vec3f(-cos(li.p.y), -sin(li.p.y), li.p.w));
-      let far = clamp(U.misc.y / max(li.p.w, 0.02) + 4.0 * U.misc.z, 4.0, 4000.0);
+      let far = clamp(U.misc.w / max(li.p.w, 0.02) + 4.0 * U.misc.z, 4.0, 4000.0);
       Lp = P + Ld * (far / max(length(Ld.xy), 1e-3));
     } else {
       Lp = li.pos.xyz; let Lv = Lp - P; let d = length(Lv);
@@ -114,8 +165,10 @@ fn shadow(P: vec3f, L: vec3f, recvIn: bool) -> f32 {
     let Hv = normalize(Ld + vec3f(0, 0, 1));
     spec += li.col.rgb * att * vis * shine * pow(max(dot(N, Hv), 0.0), 6.0 + 70.0 * shine);
   }
-  let lin = albedo * ((1.0 - e) * sum + e) + spec * 0.6 * (1.0 - e);
-  return vec4f(l2s(clamp(lin, vec3f(0), vec3f(1))) * C.a, C.a);
+  // Emissive light passes as it is; only the lit part takes exposure and the tone curve.
+  let lit = (albedo * sum + spec * 0.6) * U.tone.x;
+  let shaded = (1.0 - e) * vec3f(tone(lit.r), tone(lit.g), tone(lit.b)) + e * albedo;
+  return vec4f(l2s(clamp(shaded, vec3f(0), vec3f(1))) * C.a, C.a);
 }
 `;
 

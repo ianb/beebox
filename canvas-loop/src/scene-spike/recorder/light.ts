@@ -6,6 +6,7 @@ import { SketchUsageError } from "../../core/errors.js";
 import type { Vec2 } from "../../core/paint.js";
 import type { Effects, Light, Lighting, Material } from "../../scene-draft/scene-api.js";
 import type { LightRec, LightingRec, SceneNode } from "../scene.js";
+import { MAX_CASTER_HEIGHT } from "../scene.js";
 
 type Range = readonly [number, number];
 const UNIT: Range = [0, 1];
@@ -54,6 +55,7 @@ export function checkPainterly(effects: Effects): void {
 
 const MATERIAL_KEYS = ["bevel", "relief", "shine", "emissive", "castsShadow"];
 
+
 /** A material, checked and copied (R8). It is kept even outside a lit group, where the renderer ignores it. */
 export function copyMaterial(material: Material | undefined, where: string): Material | undefined {
   if (material === undefined) return undefined;
@@ -62,18 +64,20 @@ export function copyMaterial(material: Material | undefined, where: string): Mat
   onlyKeys(material, { where: w, keys: MATERIAL_KEYS });
   optNum(material.bevel, { where: `${w}.bevel`, range: NON_NEGATIVE });
   for (const key of ["relief", "shine", "emissive"] as const) optNum(material[key], { where: `${w}.${key}`, range: UNIT });
-  if (material.castsShadow !== undefined && typeof material.castsShadow !== "boolean") throw fail(`${w}.castsShadow`, "must be true or false");
+  if (material.castsShadow !== undefined && typeof material.castsShadow !== "boolean") optNum(material.castsShadow, { where: `${w}.castsShadow`, range: [0, MAX_CASTER_HEIGHT] });
   return { ...material };
 }
 
-/** `group({ lighting })`, checked, with defaults (R8): a dim neutral ambient and soft shadows. */
+/** `group({ lighting })`, checked, with defaults (R8): a dim neutral ambient, soft shadows, exposure 0, no tone curve. */
 export function resolveLighting(lighting: Lighting | undefined): LightingRec | undefined {
   if (lighting === undefined) return undefined;
-  onlyKeys(lighting, { where: "group lighting", keys: ["ambient", "shadows"] });
+  onlyKeys(lighting, { where: "group lighting", keys: ["ambient", "shadows", "exposure", "toneCurve"] });
   if (lighting.ambient !== undefined) color(lighting.ambient, "group lighting.ambient");
   const shadows = lighting.shadows ?? "soft";
   if (!["none", "hard", "soft"].includes(shadows)) throw fail("group lighting.shadows", `must be none, hard or soft (got ${String(shadows)})`);
-  return { ambient: lighting.ambient ?? "#4d4d4d", shadows };
+  optNum(lighting.exposure, { where: "group lighting.exposure", range: [-16, 16] });
+  optNum(lighting.toneCurve, { where: "group lighting.toneCurve", range: UNIT });
+  return { ambient: lighting.ambient ?? "#4d4d4d", shadows, exposure: lighting.exposure ?? 0, toneCurve: lighting.toneCurve ?? 0 };
 }
 
 const KINDS = new Set(["point", "spot", "directional"]);

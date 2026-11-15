@@ -23,8 +23,11 @@ test("painterly effects, lighting, lights and materials are checked at the call"
     [/effects.paper: must be a number in 0..1/, (v) => v.group({ effects: { paper: -1 } }, () => {})],
     // @ts-expect-error -- not a shadow kind
     [/lighting.shadows: must be none, hard or soft/, (v) => v.group({ lighting: { shadows: "deep" } }, () => {})],
-    // @ts-expect-error -- castsShadow is a boolean
-    [/material.castsShadow: must be true or false/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { castsShadow: 1 } })],
+    // @ts-expect-error -- castsShadow is a boolean or a height
+    [/material.castsShadow: must be a number in 0..1024/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { castsShadow: "tall" } })],
+    [/material.castsShadow: must be a number in 0..1024/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { castsShadow: 2000 } })],
+    [/lighting.exposure: must be a number in -16..16/, (v) => v.group({ lighting: { exposure: Number.NaN } }, () => {})],
+    [/lighting.toneCurve: must be a number in 0..1/, (v) => v.group({ lighting: { toneCurve: 1.5 } }, () => {})],
     [/material.relief: must be a number in 0..1/, (v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => {}), 0, 0, { material: { relief: 3 } })],
     // @ts-expect-error -- not a light kind
     [/light kind: must be point, spot or directional/, (v) => v.light({ kind: "area", at: [0, 0] })],
@@ -46,7 +49,7 @@ test("a lit group, its lights and materials are recorded with their defaults; ou
   assert.deepEqual(warnings, []);
   const [g] = scene.children;
   assert.ok(g?.kind === "group");
-  assert.deepEqual(g.lighting, { ambient: "#4d4d4d", shadows: "soft" });
+  assert.deepEqual(g.lighting, { ambient: "#4d4d4d", shadows: "soft", exposure: 0, toneCurve: 0 });
   const [shape, at] = g.children;
   assert.ok(shape?.kind === "shape");
   assert.deepEqual(shape.style.material, { bevel: 4, castsShadow: true });

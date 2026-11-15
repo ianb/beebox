@@ -22,7 +22,7 @@ import { pictureBackground, pixelImages, placeOptions, placementReplays } from "
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves } from "./paint-cases.js";
-import { castingAmount, featheredCoverage, fullCone, lightsInPictures, materialScopes, nestedLighting, translucentMaterial } from "./light-cases.js";
+import { casterHeights, casterOnCaster, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
@@ -184,6 +184,16 @@ onGpu("R8: a placement supplies a material; materials are ignored outside a lit 
 onGpu("R8: shading takes material per unit of coverage, so a translucent emissive shape is not dimmed twice", translucentMaterial);
 onGpu("R8: a feathered mask and a blurred nested lit group cut colour and material alike", featheredCoverage);
 onGpu("R8: a spot with a full-angle cone lights as a point light", fullCone);
+onGpu("R8: caster and light heights set a shadow's length", casterHeights);
+onGpu("R8: a pixel on a caster is shadowed only by taller casters", casterOnCaster);
+onGpu("R8: heights, exposure and the tone curve repeat byte for byte, at ratio 1 and 2", litRepeats);
+onGpu("R8: the tone curve is monotonic; at full strength highlights roll off and darks deepen", toneCurve);
+onGpu("R8: a zero-height caster casts nothing, so a floor at height 0 still receives shadows", zeroHeightFloor);
+onGpu("R8: a taller caster shadows a shorter one it touches", touchingCasters);
+onGpu("R8: a thin, very tall caster under a low directional light is not skipped by the march", thinTallCaster);
+onGpu("R8: hard shadows read casters unblurred; soft ones blur them", hardEdges);
+onGpu("R8: a caster made taller than 1024 by a transform keeps its height", scaledTallCaster);
+onGpu("R8: shadow grain is keyed to canvas pixels, not the layer's bounds", stableShadowGrain);
 onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);
 
 onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {

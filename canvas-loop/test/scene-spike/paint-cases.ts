@@ -111,15 +111,21 @@ export async function pigmentMoves(handle: GpuHandle, t: TestContext): Promise<v
   assert.ok(fx.differ <= base.differ + 0.02 * 200 * 200, "wash, hatching and paper turn with the group");
 }
 
-/** The share of a patch's pixels the hatching darkened by more than a fifth. */
+/**
+ * The share of a patch's pixels the hatching inked: darker by more than a fifth than the plain
+ * colour and than the paper between its lines (the patch's lightest hatched value, which lifts
+ * toward paper where lines carry the tone).
+ */
 function inkShare(pair: { plain: Pixels; hatched: Pixels }, rect: readonly [number, number, number, number]): number {
   const [rx, ry, rw, rh] = rect;
+  const at = (px: Pixels, p: readonly [number, number]): number => px.data[(p[1] * px.width + p[0]) * 4 + 1] ?? 0;
+  let paper = 0;
+  for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) paper = Math.max(paper, at(pair.hatched, [x, y]));
   let inked = 0;
   for (let y = ry; y < ry + rh; y++) {
     for (let x = rx; x < rx + rw; x++) {
-      const i = (y * pair.plain.width + x) * 4;
-      const before = pair.plain.data[i + 1] ?? 0;
-      if (before - (pair.hatched.data[i + 1] ?? 0) > 0.2 * before) inked++;
+      const level = Math.max(at(pair.plain, [x, y]), paper);
+      if (level - at(pair.hatched, [x, y]) > 0.2 * level) inked++;
     }
   }
   return inked / (rw * rh);

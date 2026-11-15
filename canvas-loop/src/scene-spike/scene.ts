@@ -79,7 +79,13 @@ export interface LightingRec {
   /** CSS colour; its channels multiply the surface colour everywhere, before any lamp. */
   readonly ambient: string;
   readonly shadows: "none" | "hard" | "soft";
+  /** Stops: the lit result is multiplied by 2^exposure before the tone curve. */
+  readonly exposure: number;
+  /** 0 clips at white; toward 1, the film curve (shader-light.ts `tone`). */
+  readonly toneCurve: number;
 }
+/** The tallest a shadow caster can stand, in logical pixels (the material layer encodes heights up to it). */
+export const MAX_CASTER_HEIGHT = 1024;
 /** R5: the children as one isolated layer; with `lighting`, a lit group (R8). */
 export interface GroupNode {
   readonly kind: "group";
