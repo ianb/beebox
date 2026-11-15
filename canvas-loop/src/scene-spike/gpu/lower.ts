@@ -44,6 +44,11 @@ interface Here {
   readonly clip: ClipMask | null;
   /** Where this job's drawing can still be seen: the canvas grown by every enclosing effect's reach. */
   readonly visible: R;
+  /**
+   * Where drawing can be seen, not grown by effects: the canvas, or a picture tile's extent (a kept tile must
+   * not depend on where the canvas edge falls). A wash reads past it as continuous (`Job.seen`).
+   */
+  readonly seen: R;
   /** What `background` fills, as device rings: the canvas, or inside a picture its box under the placement. */
   readonly ground: readonly (readonly number[])[];
   /** The transform `background`'s paint uses: the base at the top level, the placement inside a picture. */
@@ -109,13 +114,13 @@ export class Lowering {
     const root: Job = { name: "canvas", rect: this.#canvas, items: [], clips: [], fx: undefined };
     const c = this.#canvas;
     const ground = [[c.x0, c.y0, c.x1, c.y0, c.x1, c.y1, c.x0, c.y1]];
-    this.#nodes(scene.children, { job: root, matrix: this.#base, clip: null, visible: this.#canvas, ground, groundMatrix: this.#base, lights: undefined, mat: undefined });
+    this.#nodes(scene.children, { job: root, matrix: this.#base, clip: null, visible: this.#canvas, seen: this.#canvas, ground, groundMatrix: this.#base, lights: undefined, mat: undefined });
     return root;
   }
 
   #job(name: string, a: { effects: Effects | undefined; paper?: PaperSettings | undefined; here: Here; body: (inner: Here) => void }): Job {
     const { plan, reach } = fxPlanOf(a.effects, { matrix: a.here.matrix, colors: this.#colors, where: name, ratio: this.#brush.ratio, paper: a.paper });
-    const job: Job = { name, rect: EMPTY, items: [], clips: [], fx: a.here.mat === undefined ? plan : materialPlan(plan, a.here.mat.layer), seen: a.here.visible };
+    const job: Job = { name, rect: EMPTY, items: [], clips: [], fx: a.here.mat === undefined ? plan : materialPlan(plan, a.here.mat.layer), seen: a.here.seen };
     const visible = pad(a.here.visible, reach);
     a.body({ ...a.here, job, clip: null, visible });
     let content = EMPTY;
@@ -328,7 +333,7 @@ export class Lowering {
     if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex };
     const drawing = this.#drawing.get(v)?.get(key);
     if (drawing !== undefined) return drawing;
-    const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });
+    const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, seen: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });
     if (isEmpty(job.rect)) this.#rasters.store(v, { key, rect: EMPTY, tex: undefined });
     else job.keep = { version: v, key };
     const map = this.#drawing.get(v) ?? new Map<string, Job>();

@@ -184,11 +184,13 @@ export async function hatchingAmount(handle: GpuHandle, t: TestContext): Promise
  */
 export async function washCanvasEdge(handle: GpuHandle, t: TestContext): Promise<void> {
   const size = { width: 200, height: 150 };
-  const draw = (edges: number) => (v: View): void => v.group({ effects: { wash: { edges, blotch: 0, granulate: 0, bleed: 3 } } }, () => {
+  const washed = (edges: number) => (v: View): void => v.group({ effects: { wash: { edges, blotch: 0, granulate: 0, bleed: 3 } } }, () => {
     v.rect(0, 0, 200, 150, { fill: "#7d8a86" });
     v.rect(70, 50, 60, 50, { fill: "#4f78a8" });
   });
-  for (const ratio of [1, 2]) {
+  // Also inside a group whose glow reaches past the canvas: the wash still treats the canvas edge as continuous.
+  const inGlow = (edges: number) => (v: View): void => v.group({ effects: { glow: { blur: 4, color: "#000000" } } }, () => washed(edges)(v));
+  for (const [ratio, draw] of [[1, washed], [2, washed], [1, inGlow]] as const) {
     const dried = await renderOnce(handle, { size, draw: draw(0.8), ratio });
     const flat = await renderOnce(handle, { size, draw: draw(0), ratio });
     const lum = (px: Pixels, at: readonly [number, number]): number => {
