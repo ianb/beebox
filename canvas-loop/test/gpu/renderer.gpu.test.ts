@@ -1,4 +1,5 @@
-// The scene renderer against today's Skia renderer, judged by
+// The scene renderer against the Skia painter's renders (frozen in
+// test/fixtures/scene-parity/ before the painter was deleted), judged by
 // beebox/docs/plans/canvas-loop-scene/parity-criteria.md section 2, and the
 // headless runner on the scene surface. One Dawn device for the file: the
 // runner's own (`sharedGpu`). Skipped, with a message, where Dawn finds no
@@ -19,17 +20,17 @@ import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import type { Picture, View } from "../../src/scene/api.js";
 import type { Model } from "./dev-loop/cases.js";
-import { readDirBytes, readTranscript, teaRunOptions, teaView, tmpDir } from "../helpers.js";
-import { parity, premultiplied } from "./compare.js";
-import { CASE_NAMES, drawDraft, drawToday, fixtures } from "./fixtures.js";
-import { brushBlends, brushParity, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
+import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
+import { parity } from "./compare.js";
+import { CASE_NAMES, drawDraft, fixtures } from "./fixtures.js";
+import { brushBlends, brushParity, frozen, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
 import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
 import { casterHeights, casterOnCaster, casterOutlineFringe, lightPeaks, smoothPenumbra, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonReceiver, skyKeepsLight, translucentNonReceiver } from "./receives-shadow-cases.js";
-import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
+import { SHAPE_CELLS, drawShapesDraft } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
 import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-cases.js";
@@ -71,11 +72,9 @@ test("compositing fixtures match today's Skia renderer (1280×760)", async (t) =
   const list = fixtures(names, 6);
   const size = { width: 1280, height: 760 };
   const nodes = list.flatMap((f) => f.nodes);
-  const ref = teaView(size);
-  drawToday(ref.v, nodes);
   const scene = new SceneRecorder(size).record((v) => drawDraft(v, nodes)).scene;
   const gpuPx = await renderTwice(scene, handle);
-  const refPx = premultiplied(ref.pixels());
+  const refPx = await frozen("compositing", size);
   const rows = list.map((f) => ({ name: f.name, ...parity({ ref: refPx, gpu: gpuPx }, { ...size, rect: f.rect }) }));
   for (const r of rows) t.diagnostic(`${r.pass ? "pass" : "FAIL"} ${r.name.padEnd(18)} flat ${r.flat}% edge ${r.edgeMean} max ${r.maxFlat}`);
   assert.deepEqual(rows.filter((r) => !r.pass).map((r) => r.name), []);
@@ -85,11 +84,9 @@ test("shapes, strokes, dashes, gradients and transforms match today's Skia rende
   const handle = needGpu(t);
   if (handle === undefined) return;
   const size = { width: 640, height: 600 };
-  const ref = teaView(size);
-  drawShapesToday(ref.v);
   const scene = new SceneRecorder(size).record((v) => drawShapesDraft(v));
   const gpuPx = await renderTwice(scene.scene, handle);
-  const refPx = premultiplied(ref.pixels());
+  const refPx = await frozen("shapes", size);
   const rows = SHAPE_CELLS.map((c) => ({ name: c.name, ...parity({ ref: refPx, gpu: gpuPx }, { ...size, rect: c.rect }) }));
   for (const r of rows) t.diagnostic(`${r.pass ? "pass" : "FAIL"} ${r.name.padEnd(18)} flat ${r.flat}% edge ${r.edgeMean} max ${r.maxFlat}`);
   assert.deepEqual(rows.filter((r) => !r.pass).map((r) => r.name), []);

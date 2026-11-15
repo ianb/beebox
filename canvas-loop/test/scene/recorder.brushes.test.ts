@@ -10,7 +10,6 @@ import { openTextMeasurer } from "../../src/device/open.js";
 import { UnsupportedCallError } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import type { SceneNode, ShapeNode } from "../../src/scene/nodes.js";
-import { teaView } from "../helpers.js";
 
 const usage = (message: RegExp) => (e: unknown): boolean => e instanceof SketchUsageError && message.test(e.message);
 
@@ -92,7 +91,6 @@ before(async () => {
 
 test("text is measured at the call with today's numbers, inside a picture against the picture's box", (t) => {
   if (text === undefined) return t.skip("no text measurer");
-  const today = teaView({ width: 200, height: 100 });
   const rec = new SceneRecorder({ width: 200, height: 100 }, { text });
   const cases: [string, { x: number; y: number; w?: number }, { size?: number; align?: "center"; keepInside?: boolean }][] = [
     ["Hello", { x: 10, y: 10 }, {}],
@@ -109,8 +107,13 @@ test("text is measured at the call with today's numbers, inside a picture agains
       inside = v.textBounds("Off the edge", { x: 55, y: 0 }, { keepInside: true });
     });
   }).scene;
-  assert.deepEqual(got, cases.map(([s, box, o]) => today.v.text(s, box, o)));
-  assert.equal(width, today.v.textWidth("Hello", { size: 20 }));
+  // The Skia painter's numbers for the same calls, recorded before it was deleted.
+  assert.deepEqual(got, [
+    { x: 10, y: 10, w: 27.345703125, h: 15, lines: 1, size: 12, overflow: false },
+    { x: 10, y: 40, w: 37.3447265625, h: 52.5, lines: 3, size: 14, overflow: false },
+    { x: 130.169921875, y: 50, w: 65.830078125, h: 15, lines: 1, size: 12, overflow: false },
+  ]);
+  assert.equal(width, 45.576171875);
   assert.ok(inside.x < 55 - 20, `keepInside keeps the text inside the picture's 60 px box (x ${inside.x})`);
   const node = scene.children[1];
   assert.ok(node?.kind === "text");

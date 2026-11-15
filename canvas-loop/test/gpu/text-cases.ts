@@ -1,17 +1,18 @@
-// Text on the GPU, run by renderer.gpu.test.ts: labels against today's Skia render of
-// the same calls. Glyph rasterisation may differ by eye; where each label's ink
+// Text on the GPU, run by renderer.gpu.test.ts: labels against the Skia painter's
+// render of the same calls (frozen in test/fixtures/scene-parity/). Glyph rasterisation may differ by eye; where each label's ink
 // sits and how big it is must match (within a pixel), and `v.text` must return
 // today's bounds.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { TextBox, TextOptions } from "../../src/core/paint.js";
+import type { TextBounds, TextBox, TextOptions } from "../../src/core/paint.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
-import { teaView } from "../helpers.js";
-import { parity, premultiplied } from "./compare.js";
+import { readFileSync } from "node:fs";
+import { frozen } from "./brush-cases.js";
+import { parity } from "./compare.js";
 import { renderOnce } from "./render.js";
 
-const LABELS: readonly (readonly [string, TextBox, TextOptions])[] = [
+export const LABELS: readonly (readonly [string, TextBox, TextOptions])[] = [
   ["Hello world", { x: 20, y: 20 }, { size: 12 }],
   ["Centred label", { x: 320, y: 50 }, { size: 18, align: "center" }],
   ["Right, middle", { x: 620, y: 100 }, { size: 14, align: "right", valign: "middle" }],
@@ -25,7 +26,7 @@ const LABELS: readonly (readonly [string, TextBox, TextOptions])[] = [
   ["Centred in a box", { x: 400, y: 360, w: 200, h: 60 }, { size: 16, align: "center", valign: "middle" }],
 ];
 
-const BG = "#fdfcf8";
+export const BG = "#fdfcf8";
 
 /** The box of pixels inside `rect` that differ from the ground by more than 40 luminance levels. */
 function inkBox(d: Uint8Array, at: { width: number; rect: readonly [number, number, number, number] }): readonly [number, number, number, number] | undefined {
@@ -50,16 +51,15 @@ function inkBox(d: Uint8Array, at: { width: number; rect: readonly [number, numb
 
 export async function textParity(handle: GpuHandle, a: { t: TestContext; text: TextMeasurer }): Promise<void> {
   const size = { width: 640, height: 440 };
-  const ref = teaView(size);
-  ref.v.background(BG);
-  const refBounds = LABELS.map(([s, box, o]) => ref.v.text(s, box, o));
+  // The painter's bounds for LABELS and its render of them, frozen before it was deleted.
+  const refBounds: readonly TextBounds[] = JSON.parse(readFileSync(new URL("../fixtures/scene-parity/text-bounds.json", import.meta.url), "utf8"));
   const sceneBounds: unknown[] = [];
   const gpu = await renderOnce(handle, { size, text: a.text, draw: (v) => {
     v.background(BG);
     for (const [s, box, o] of LABELS) sceneBounds.push(v.text(s, box, o));
   } });
   assert.deepEqual(sceneBounds, refBounds, "v.text returns today's bounds");
-  const refPx = premultiplied(ref.pixels());
+  const refPx = await frozen("text", size);
   const worst = { shift: 0, size: 0 };
   for (const [i, b] of refBounds.entries()) {
     const rect = [Math.floor(b.x) - 6, Math.floor(b.y) - 6, Math.ceil(b.w) + 12, Math.ceil(b.h) + 12] as const;
