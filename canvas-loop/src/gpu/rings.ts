@@ -155,7 +155,7 @@ function runsOf(lo: Float64Array): { ids: Int32Array; starts: number[] } {
 function sweepOrder(lo: Float64Array): Int32Array {
   const n = lo.length;
   let { ids, starts: runs } = runsOf(lo);
-  let into = new Int32Array(n);
+  let into: Int32Array = new Int32Array(n);
   while (runs.length > 2) {
     const next: number[] = [];
     for (let k = 0; k + 1 < runs.length; k += 2) {
