@@ -116,3 +116,16 @@ starts.
   readback); a jump-flood bevel (bevels come from blurred coverage); caster
   heights (every caster stands 32 units); keeping a static lit subtree's
   material layers between frames; painterly blurs and bevels under skew.
+
+## Boxholder feedback on chunk 4 (2026-11-15)
+
+- **Wash:** "too even maybe? Feels speckled." The granulation is fine uniform
+  noise. Next: larger-scale variation (pooling patches, blooms, wandering
+  darker edges, density varying across a shape), fine grain much fainter.
+- **Hatching key series (B2–B4):** read as "just gets darker". The exhibit
+  should show one image with a tone range, so lines visibly appear with tone.
+- **Wash + hatching + paper together (B5):** disliked. Not a default look.
+- **Lighting:** "Lighting is cool!" Priority raised from Checkpoint 3's
+  "lower": caster heights and a tone curve come next for it.
+- A look-iteration round on wash and hatching follows chunk 5, before the
+  drawing round.
