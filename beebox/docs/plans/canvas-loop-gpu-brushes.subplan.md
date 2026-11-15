@@ -517,6 +517,16 @@ by the same WebGPU renderer.
 - **Checkpoint.** The boxholder's decision, recorded in this plan.
   **Measurement:** the supersampled union errors; the crops.
 
+- **Gate result (2026-11-15).** The prototype's crops, the union errors (mean
+  0.022, worst pixel 0.447 at near-reversing bends and subpixel crossings;
+  the walker's own crops 0.017 and 0.399) and Astra's pass are in
+  `scratch/stage5/brushes/gate/` and the exhibit "Ink: today's outline beside
+  the faster capsule ink". The boxholder: "they both basically look the same
+  to me, so if there's one that's more efficient or something then choose
+  that." **Decision: capsules as specified, with no special dot rule.** The
+  fallback is not built. The max-pixel threshold is not met at those
+  geometries; the boxholder's visual judgement replaces it.
+
 ### Chunk 2: stroke preparation and the sample pass
 
 - **What.** `BrushExpander` returns a prepared stroke for every kind (still
@@ -693,6 +703,15 @@ by the same WebGPU renderer.
     where before it fell in lowering; the step it lands in varies, and in one
     case it was `shelfPack`, normally 0.1 ms. The p95 of lowering plus atlas
     together fell. Chromium was not measured; chunk 6 measures it.
+  - **Stroke-local coordinates** (from the cross-model review). Converting
+    absolute brush-space points to `f32` moved a stamp at x = 16,777,217
+    one device pixel when it was translated back near 0. The CPU path keeps
+    doubles until placement. A prepared stroke now keeps an `origin` (its
+    first point, f64), and its points and GPU samples are relative to it.
+    `stampWords` adds `lin · origin` to the placement offset in f64. A
+    regression test places that stamp at device x = 10. Readback
+    differences shrank (walker samples 2.9e-4 → 1.3e-5 brush px, dabs
+    4.7e-4 → 3.6e-5 device px). The walker frame hashes changed by rounding.
 
 ### Chunk 4: ink on the GPU
 
