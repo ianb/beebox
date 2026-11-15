@@ -15,5 +15,8 @@ export function draw(v: View, model: { t: number }): void {
   v.background("#f4efe4");
   v.at({ translate: [80, 60], rotate: model.t * 0.1 }, () => v.rect(-30, -20, 60, 40, { fill: "#2a9d8f", stroke: "#264653", weight: 3 }));
   v.group({ effects: { glow: { blur: 4, color: "#ffd166" } } }, () => v.circle(30, 30, 12, { fill: "#e63946" }));
+  v.curve([[10, 100], [60, 90], [110, 108]], false, { stroke: "#1d2a44", weight: 5, brush: "pencil" });
+  v.place(v.picture({ key: "badge", width: 30, height: 16 }, () => v.rect(0, 0, 30, 16, { fill: "#2a9d8f" })), 120, 96);
+  v.text(`t ${model.t}`, { x: 120, y: 10 }, { size: 12 });
   v.log("t", model.t);
 }

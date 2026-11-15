@@ -7,7 +7,8 @@ import type { BlendMode, ClipShape, Paint, PathCommand, Vec2 } from "../../core/
 import { isPathShape } from "../../core/paint.js";
 import type { Effects, GroupOptions, Style } from "../../scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../errors.js";
-import type { Geom, ShapeStyle } from "../scene.js";
+import type { Geom, PaperSettings, ShapeStyle } from "../scene.js";
+import { resolveBrushStroke } from "./brush-style.js";
 
 const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects"]);
 const CAPS = new Set(["butt", "round", "square"]);
@@ -86,11 +87,11 @@ export function copyEffects(effects: Effects | undefined, where: string): Effect
 }
 
 /** Check a draft 2.2 Style at the call and fill in its defaults. */
-export function resolveStyle(style: Style, call: string): ShapeStyle {
+export function resolveStyle(style: Style, at: { call: string; paper: PaperSettings }): ShapeStyle {
+  const { call } = at;
   for (const key of Object.keys(style)) {
     if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (${[...STYLE_KEYS].join(", ")})` });
   }
-  if (style.brush !== undefined) throw new UnsupportedCallError({ call: `${call} with style.brush`, detail: "brushed strokes come in chunk 3" });
   if (style.dash !== undefined) throw new UnsupportedCallError({ call: `${call} with style.dash` });
   const { weight, cap, join } = style;
   if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) throw new SketchUsageError({ detail: `${call}: style.weight must be a number ≥ 0 (got ${String(weight)})` });
@@ -107,6 +108,7 @@ export function resolveStyle(style: Style, call: string): ShapeStyle {
     blend: style.blend ?? "normal",
     erase: style.erase ?? false,
     effects: copyEffects(style.effects, call),
+    brush: resolveBrushStroke(style, at),
   };
 }
 
@@ -132,4 +134,15 @@ export function resolveGroup(options: GroupOptions): { name: string | undefined;
   const blend = options.blend ?? "normal";
   compositeOp(blend);
   return { name: options.name, opacity, blend, effects: copyEffects(options.effects, "group"), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
+}
+
+/** A rounded rectangle as path commands (corner arcs as quadratic curves), as today's `roundRect`. */
+export function roundedRect(b: { x: number; y: number; w: number; h: number; r: number }): PathCommand[] {
+  const { x, y, w, h, r } = b;
+  return [
+    ["move", x + r, y], ["line", x + w - r, y], ["quad", x + w, y, x + w, y + r],
+    ["line", x + w, y + h - r], ["quad", x + w, y + h, x + w - r, y + h],
+    ["line", x + r, y + h], ["quad", x, y + h, x, y + h - r],
+    ["line", x, y + r], ["quad", x, y, x + r, y], ["close"],
+  ];
 }

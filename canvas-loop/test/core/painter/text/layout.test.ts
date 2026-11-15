@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { layoutText } from "../../../src/core/painter/text-layout.js";
+import { layoutText } from "../../../../src/core/painter/text/layout.js";
 
 // Every character is half the size wide: easy arithmetic.
 const measure = (text: string, size: number): number => text.length * size * 0.5;

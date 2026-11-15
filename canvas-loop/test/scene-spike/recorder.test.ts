@@ -7,7 +7,7 @@ import type { LinearGradient, PathCommand, Vec2 } from "../../src/core/paint.js"
 import type { Effects } from "../../src/scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../../src/scene-spike/errors.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
-import { sceneOutline } from "../../src/scene-spike/scene.js";
+import { sceneOutline } from "../../src/scene-spike/outline.js";
 
 const recorder = (): SceneRecorder => new SceneRecorder({ width: 100, height: 80 });
 
@@ -78,11 +78,9 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
 
 test("a call or option the spike does not support yet throws, naming it", () => {
   const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => void][] = [
-    ["v.text", (v) => v.text("hi", { x: 0, y: 0 })],
-    ["v.picture", (v) => v.picture({ key: "a", width: 4, height: 4 }, () => {})],
     ["v.light", (v) => v.light({ kind: "point" })],
     ["v.noise", (v) => v.noise(1)],
-    ["rect with style.brush", (v) => v.rect(0, 0, 1, 1, { stroke: "#000", brush: "ink" })],
+    ["v.control", (v) => v.control("c", { x: 0, y: 0, w: 1, h: 1 })],
     ["line with style.dash", (v) => v.line(0, 0, 1, 1, { stroke: "#000", dash: [2, 2] })],
     ["group effects.wash", (v) => v.group({ effects: { wash: {} } }, () => {})],
     ["group({ lighting })", (v) => v.group({ lighting: {} }, () => {})],

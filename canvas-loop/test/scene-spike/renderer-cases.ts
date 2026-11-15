@@ -88,6 +88,15 @@ export async function anisotropicEffects(handle: GpuHandle): Promise<void> {
 export async function failedFrames(handle: GpuHandle): Promise<void> {
   const renderer = new GpuRenderer(handle);
   try {
+    // Fails during encoding, after the coverage atlas has taken a page and its buffers: a brushed mark wider than the mark atlas.
+    const late = new SceneRecorder({ width: 9000, height: 8 }).record((v) => {
+      v.rect(0, 0, 10, 8, { fill: "#000" });
+      v.line(0, 4, 9000, 4, { stroke: "#000", weight: 3, brush: "pencil" });
+    }).scene;
+    await assert.rejects(renderer.render(late, 1), (e: unknown) => e instanceof GpuRenderError && /larger than the atlas/.test(e.message));
+    assert.ok(renderer.held.textures > 0, "the failed frame had allocated textures");
+    assert.equal(renderer.held.inUse, 0, "a frame that fails after allocating holds no textures");
+    await assert.rejects(handle.device.popErrorScope(), "no error scope is left open after a late failure");
     const bad = new SceneRecorder({ width: 40, height: 40 }).record((v) => v.rect(0, 0, 10, 10, { fill: "not-a-color" })).scene;
     for (let i = 0; i < 3; i++) await assert.rejects(renderer.render(bad, 1), SketchUsageError);
     await assert.rejects(handle.device.popErrorScope(), "no error scope is left open");

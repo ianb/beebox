@@ -4,7 +4,7 @@
 // scaled, for every dab after that.
 import type { Ctx2D, Layer, LayerImage } from "../../paint.js";
 import type { Brush } from "../types.js";
-import type { ScratchName } from "./mark.js";
+import type { ScratchName } from "./mark/render.js";
 
 /** Radius, in pixels, of the pre-drawn soft dab. */
 export const SOFT_DAB_RADIUS = 64;

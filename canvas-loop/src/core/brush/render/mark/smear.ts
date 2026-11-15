@@ -11,12 +11,12 @@
 // device pixels with identity transforms, so a browser never reads pixels
 // back. Mixing is an exact premultiplied lerp: scale by `destination-in`
 // with a uniform alpha, then add with `lighter`.
-import { SketchUsageError } from "../../errors.js";
-import { cssColour, parseColour } from "./colour.js";
-import type { Ctx2D, Layer, LayerImage } from "../../paint.js";
-import { withSaved } from "../../paint.js";
-import type { Sample } from "../sample.js";
-import type { SmearBrush } from "../types.js";
+import { SketchUsageError } from "../../../errors.js";
+import { cssColour, parseColour } from "../colour.js";
+import type { Ctx2D, Layer, LayerImage } from "../../../paint.js";
+import { withSaved } from "../../../paint.js";
+import type { Sample } from "../../sample.js";
+import type { SmearBrush } from "../../types.js";
 
 export interface SmearRequest {
   /** The surface the mark lands on, and its image, which the brush picks up from. */

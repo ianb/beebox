@@ -4,7 +4,7 @@
 // slot: min(|area|, 1).
 import { GpuRenderError } from "../errors.js";
 import { EDGE_WGSL } from "./shader-draw.js";
-import type { Piece } from "./jobs.js";
+import type { Piece, R, Slot } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import type { PoolFormat, TexturePool } from "./pool.js";
 
@@ -17,8 +17,8 @@ export interface AtlasPage {
   readonly height: number;
 }
 
-/** Shelf-pack pieces (tallest first) into pages; sets each piece's slot. Returns each page's used size. */
-function pack(pieces: readonly Piece[], pageWidth: number): { w: number; h: number }[] {
+/** Shelf-pack boxes (tallest first) into pages; sets each one's slot. Returns each page's used size. */
+export function shelfPack(pieces: readonly { readonly box: R; slot?: Slot }[], pageWidth: number): { w: number; h: number }[] {
   const pages: { w: number; h: number }[] = [];
   let x = 0;
   let y = 0;
@@ -90,7 +90,7 @@ export class CoverageAtlas {
   /** Pack `pieces`, accumulate their coverage, and return the pages (pool textures the caller releases). */
   build(pieces: readonly Piece[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; minWidth: number }): AtlasPage[] {
     const widest = pieces.reduce((w, p) => Math.max(w, widthOf(p.box) + GAP), 0);
-    const sizes = pack(pieces, Math.min(MAX, Math.max(f.minWidth, widest, 256)));
+    const sizes = shelfPack(pieces, Math.min(MAX, Math.max(f.minWidth, widest, 256)));
     return sizes.map((size, page) => {
       const tex = f.pool.acquire({ w: size.w, h: size.h, format: this.#format });
       const data = edgeData(pieces, page);

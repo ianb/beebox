@@ -7,8 +7,9 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { TestContext } from "node:test";
+import type { TextMeasurer } from "../../src/core/painter/text/measure.js";
 import type { GpuHandle } from "../../src/scene-spike/device.js";
-import { openGpu } from "../../src/scene-spike/device.js";
+import { openGpu, openTextMeasurer } from "../../src/scene-spike/device.js";
 import { GpuRenderer } from "../../src/scene-spike/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
 import { runSpike } from "../../src/scene-spike/run/runner.js";
@@ -16,12 +17,17 @@ import type { Scene } from "../../src/scene-spike/scene.js";
 import { readDirBytes, teaView, tmpDir } from "../helpers.js";
 import { parity, premultiplied } from "./compare.js";
 import { CASE_NAMES, drawDraft, drawToday, fixtures } from "./fixtures.js";
+import { brushBlends, brushParity, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
+import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
+import { rotatedText, textParity } from "./text-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 
 let gpu: GpuHandle | undefined;
+let text: TextMeasurer | undefined;
 before(async () => {
   gpu = await openGpu();
+  text = await openTextMeasurer();
 });
 after(() => gpu?.destroy());
 
@@ -88,6 +94,11 @@ test("runs a draft-View sketch, renders only captured frames, and repeats exactl
   assert.match(transcript, /frame 1: t 2/);
   assert.match(transcript, /!\[frame 4]\(frame-0004\.png\)/);
   assert.match(transcript, /group opacity 1 blend normal effects glow\n {4}circle/);
+  assert.match(transcript, /## frame 0\n.*\n.*\nbrushed strokes 1: expanded 1, expansion cache hits 0/);
+  assert.match(transcript, /## frame 2\n.*\n.*\nbrushed strokes 1: expanded 0, expansion cache hits 1/);
+  assert.match(transcript, /text "t 4" 12px sans-serif/);
+  assert.match(transcript, /picture "badge" 30×16\n {2}rect/);
+  assert.doesNotMatch(transcript, /warning/);
   const bytesA = readDirBytes(a);
   const bytesB = readDirBytes(b);
   for (const name of ["frame-0000.png", "frame-0004.png"]) assert.ok(bytesA.get(name)?.equals(bytesB.get(name) ?? Buffer.alloc(0)), `${name} is byte-identical across runs`);
@@ -129,4 +140,28 @@ test("effects follow an axis-aligned non-uniform scale; rotated non-uniform scal
 test("a failed frame closes its error scopes and frees its resources", async (t) => {
   const handle = needGpu(t);
   if (handle !== undefined) await failedFrames(handle);
+});
+
+/** Run a case that needs the device. */
+function onGpu(name: string, run: (handle: GpuHandle, t: TestContext) => Promise<void>): void {
+  test(name, async (t) => {
+    const handle = needGpu(t);
+    if (handle !== undefined) await run(handle, t);
+  });
+}
+
+onGpu("brushed strokes match today's Skia marks by crop: luminance within 3%, contrast within 15%", brushParity);
+onGpu("a brushed stroke takes the brush's blend unless the style sets one; a brush erases by its mark", brushBlends);
+onGpu("unchanged strokes reuse their expansion, byte-identically; a new scale expands again", expansionCache);
+onGpu("a brushed picture moved by whole pixels moves its texture with it", brushStability);
+onGpu("paper is scoped to its group; a picture keeps the paper where it was recorded", paperScopes);
+onGpu("placing a picture replays it under the placement transform (R7)", placementReplays);
+onGpu("placement opacity, erase and blend apply to the picture's layer", placeOptions);
+onGpu("background inside a picture fills the picture's box, not the canvas", pictureBackground);
+onGpu("pixels images are sampled bilinearly at their own resolution", pixelImages);
+onGpu("text sits where today's does, at today's size, through the glyph atlas", async (handle, t) => {
+  if (text !== undefined) await textParity(handle, { t, text });
+});
+onGpu("text under a rotation draws through the glyph atlas", async (handle) => {
+  if (text !== undefined) await rotatedText(handle, text);
 });

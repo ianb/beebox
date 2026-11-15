@@ -5,9 +5,9 @@
 //
 // Widths depend on the fonts the runtime has: headless and a browser can differ,
 // and a browser web font that loads later changes them (`clear()` on load).
-import type { Ctx2D, CtxTransform, MakeLayer, TextBounds, TextBox, TextOptions, TextStyle } from "../paint.js";
-import { layoutText } from "./text-layout.js";
-import type { TextLayout } from "./text-layout.js";
+import type { Ctx2D, CtxTransform, MakeLayer, TextBounds, TextBox, TextOptions, TextStyle } from "../../paint.js";
+import { layoutText } from "./layout.js";
+import type { TextLayout } from "./layout.js";
 
 /** What `text(s, box, options)` uses for options left out. */
 export const TEXT_DEFAULTS = { size: 12, font: "sans-serif", style: "normal", fill: "#000000", align: "left", valign: "top" } as const satisfies TextOptions;

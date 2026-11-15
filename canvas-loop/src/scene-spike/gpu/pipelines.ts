@@ -10,7 +10,7 @@ export interface Pipelines {
   readonly fx: Readonly<Record<FxPipe, GPURenderPipeline>>;
   /** Draw records, gradient stops, clip edges. */
   readonly g0: GPUBindGroupLayout;
-  /** Source layer, mask layer, clip mask, backdrop copy, coverage atlas. */
+  /** Source layer, mask layer, clip mask, backdrop copy, coverage atlas, mark or glyph page, image. */
   readonly g1: GPUBindGroupLayout;
   /** Effect records and blur kernels. */
   readonly f0: GPUBindGroupLayout;
@@ -30,7 +30,7 @@ export function makePipelines(device: GPUDevice): Pipelines {
   const tex = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "unfilterable-float" } });
   const sto = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: "read-only-storage" } });
   const g0 = device.createBindGroupLayout({ entries: [sto(0), sto(1), sto(2)] });
-  const g1 = device.createBindGroupLayout({ entries: [tex(0), tex(1), tex(2), tex(3), tex(4)] });
+  const g1 = device.createBindGroupLayout({ entries: [0, 1, 2, 3, 4, 5, 6].map((i) => tex(i)) });
   const f0 = device.createBindGroupLayout({ entries: [sto(0), sto(1)] });
   const f1 = device.createBindGroupLayout({ entries: [tex(0), tex(1), tex(2)] });
   const drawLayout = device.createPipelineLayout({ bindGroupLayouts: [g0, g1] });

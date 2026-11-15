@@ -10,7 +10,7 @@
 // the browser runtime for the playground), which also supplies `makeLayer` for
 // offscreen surfaces.
 import { PaperSheet, paperOverlay } from "../brush/paper.js";
-import { renderMark } from "../brush/render/mark.js";
+import { renderMark } from "../brush/render/mark/render.js";
 import type { Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
 import { SketchUsageError, assertUnit } from "../errors.js";

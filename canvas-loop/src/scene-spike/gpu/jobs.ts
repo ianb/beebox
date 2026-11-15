@@ -1,8 +1,13 @@
 // The renderer's plan for one frame: a tree of jobs. A job is one layer (the
-// canvas, a group, a mask body or artwork, a shape with effects) in canvas
-// device pixels; its items draw into it in order. Rectangles are integer
-// device pixels with exclusive ends.
+// canvas, a group, a mask body or artwork, a shape with effects, a placed
+// picture) in canvas device pixels; its items draw into it in order.
+// Rectangles are integer device pixels with exclusive ends.
+import type { SmearBrush } from "../../core/brush/types.js";
+import type { Dab, Run } from "../brush/expand.js";
+import type { Rgba } from "../colors.js";
+import type { Mat } from "../scene.js";
 import type { FxPlan } from "./effects.js";
+import type { GlyphCell } from "./glyphs.js";
 import type { PaintRec } from "./paint.js";
 
 export interface R {
@@ -20,12 +25,79 @@ export const pad = (a: R, p: number): R => ({ x0: a.x0 - p, y0: a.y0 - p, x1: a.
 export const widthOf = (r: R): number => r.x1 - r.x0;
 export const heightOf = (r: R): number => r.y1 - r.y0;
 
+/** Where something packed into an atlas page sits. */
+export interface Slot {
+  readonly page: number;
+  readonly x: number;
+  readonly y: number;
+}
+
 /** Closed rings in device pixels whose nonzero union is one coverage; `box` bounds them. `slot` is set when packed into the atlas. */
 export interface Piece {
   readonly rings: readonly (readonly number[])[];
   readonly box: R;
-  slot?: { readonly page: number; readonly x: number; readonly y: number };
+  slot?: Slot;
 }
+
+/** A brushed mark's dabs and bristle runs in device pixels, accumulated in the mark atlas inside `box`. */
+export interface TexMark {
+  readonly box: R;
+  readonly dabs: readonly Dab[];
+  readonly runs: readonly Run[];
+  slot?: Slot;
+}
+
+/** The paper a grainy mark bites into (R9): device pixel → paper pixel (the stroke's call coordinates × ratio), and the paper's settings in paper pixels. */
+export interface PaperRec {
+  readonly toPaper: Mat;
+  readonly scale: number;
+  readonly lo: number;
+  readonly hi: number;
+  readonly seed: number;
+  /** The row width the paper's per-pixel hash uses (a constant). */
+  readonly width: number;
+}
+
+/** What a brushed mark applies once, in its draw (brushes probe): grain, then opacity. */
+export interface BrushRec {
+  readonly grain: number;
+  readonly opacity: number;
+  readonly paper: PaperRec;
+}
+
+/** A smudge or wet stroke: its dabs in device pixels (first of each contour flagged), its patch size, brush and paint. */
+export interface SmearRec {
+  readonly dabs: readonly { readonly x: number; readonly y: number; readonly r: number; readonly a: number; readonly first: boolean }[];
+  readonly size: number;
+  readonly brush: SmearBrush;
+  /** The wet paint, straight alpha (unused for a smudge). */
+  readonly paint: Rgba;
+  readonly paper: PaperRec;
+}
+
+/** One glyph cell: device pixel → texel in its cell (`a` linear, `t` offset), and the cell. */
+export interface GlyphQuad {
+  readonly box: R;
+  readonly a: readonly [number, number, number, number];
+  readonly t: readonly [number, number];
+  readonly cell: GlyphCell;
+}
+
+export type MarkSource = { readonly kind: "piece"; readonly piece: Piece } | { readonly kind: "tex"; readonly mark: TexMark };
+
+interface Common {
+  readonly box: R;
+  readonly mode: number;
+  readonly erase: boolean;
+  readonly clip: ClipMask | null;
+}
+
+export type Item =
+  | (Common & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
+  | (Common & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number })
+  | (Common & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec })
+  | (Common & { readonly k: "smear"; readonly smear: SmearRec })
+  | (Common & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
 
 /**
  * A clip region in its job: every shape's rings (each shape oriented positive),
@@ -38,10 +110,6 @@ export interface ClipMask {
   readonly box: R;
   tex?: GPUTexture | undefined;
 }
-
-export type Item =
-  | { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec; readonly box: R; readonly mode: number; readonly erase: boolean; readonly clip: ClipMask | null }
-  | { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly box: R; readonly opacity: number; readonly mode: number; readonly erase: boolean; readonly clip: ClipMask | null };
 
 export interface Job {
   readonly name: string;

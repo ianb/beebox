@@ -1,7 +1,7 @@
 // Lay text out in a box: explicit line breaks, greedy word wrap, alignment, and
 // shrink-to-fit. Pure over a `measure` function, so the engine supplies the
 // context's measureText and tests can supply a fake.
-import type { TextBox, TextOptions } from "../paint.js";
+import type { TextBox, TextOptions } from "../../paint.js";
 
 const LINE_HEIGHT = 1.25;
 const MIN_FIT_SIZE = 4;

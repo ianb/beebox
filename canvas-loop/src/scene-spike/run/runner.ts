@@ -11,13 +11,14 @@ import { toTeaModule } from "../../headless/tea-load.js";
 import type { LoadedTeaModule } from "../../headless/tea-load.js";
 import { bucketTeaByFrame, parseTeaEvents } from "../../headless/tea-events.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
-import { openGpu } from "../device.js";
+import { openGpu, openTextMeasurer } from "../device.js";
+import type { TextMeasurer } from "../../core/painter/text/measure.js";
 import type { GpuHandle } from "../device.js";
 import { GpuRenderError } from "../errors.js";
 import { GpuRenderer } from "../gpu/renderer.js";
 import { encodePng } from "./png.js";
 import { SceneRecorder } from "../recorder/view.js";
-import { sceneOutline } from "../scene.js";
+import { sceneOutline } from "../outline.js";
 import { SpikeUtil } from "./util.js";
 
 export interface SpikeRunOptions {
@@ -67,17 +68,21 @@ class SpikeRun {
   readonly #util: SpikeUtil;
   readonly #lines: string[] = [];
 
-  constructor(o: SpikeRunOptions, a: { mod: LoadedTeaModule; renderer: GpuRenderer }) {
+  readonly #text: TextMeasurer;
+
+  constructor(o: SpikeRunOptions, a: { mod: LoadedTeaModule; renderer: GpuRenderer; text: TextMeasurer }) {
     this.#o = o;
     this.#mod = a.mod;
     this.#renderer = a.renderer;
+    this.#text = a.text;
     this.#params = defaults(a.mod.params);
-    this.#util = new SpikeUtil({ seed: o.seed, params: () => this.#params });
+    this.#util = new SpikeUtil({ seed: o.seed, params: () => this.#params, text: a.text, canvas: a.mod.canvas ?? { width: 400, height: 300 } });
   }
 
   async run(header: string): Promise<number[]> {
     const size = this.#mod.canvas ?? { width: 400, height: 300 };
-    const recorder = new SceneRecorder(size);
+    // Headless rendering is testing mode: pictures are re-recorded and compared every frame (draft section 5).
+    const recorder = new SceneRecorder(size, { text: this.#text, audit: true });
     const byFrame = bucketTeaByFrame(this.#o.events);
     const mouse = { x: 0, y: 0 };
     const captured: number[] = [];
@@ -95,13 +100,16 @@ class SpikeRun {
       const params = this.#params;
       const rec = recorder.record((v) => this.#call("draw", [v, model, params]));
       for (const line of [...this.#util.logs, ...rec.logs]) this.#lines.push(`frame ${frame}: ${line}`);
+      for (const w of rec.warnings) this.#lines.push(`frame ${frame}: warning: ${w}`);
       this.#util.logs = [];
       if (!(snapshot || rec.snapshots.length > 0 || frame % this.#o.every === 0 || frame === this.#o.frames - 1)) continue;
       const px = await this.#renderer.render(rec.scene, this.#o.ratio);
       const file = `frame-${String(frame).padStart(4, "0")}.png`;
       writeFileSync(join(this.#o.outDir, file), encodePng(px));
       captured.push(frame);
-      this.#lines.push(`## frame ${frame}`, `![frame ${frame}](${file})`, `passes ${this.#renderer.stats.passes}, effect passes ${this.#renderer.stats.effectPasses}, copies ${this.#renderer.stats.copies}, draws ${this.#renderer.stats.draws}`);
+      const s = this.#renderer.stats;
+      this.#lines.push(`## frame ${frame}`, `![frame ${frame}](${file})`, `passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}`);
+      if (s.strokes > 0) this.#lines.push(`brushed strokes ${s.strokes}: expanded ${s.expanded}, expansion cache hits ${s.cacheHits}; mark pages ${s.markPages}, smears ${s.smears}`);
       if (this.#o.scene) this.#lines.push("```", sceneOutline(rec.scene), "```");
       this.#lines.push("");
     }
@@ -125,7 +133,7 @@ export async function runSpike(o: SpikeRunOptions, gpu?: GpuHandle): Promise<num
   rmSync(o.outDir, { recursive: true, force: true });
   mkdirSync(o.outDir, { recursive: true });
   try {
-    return await new SpikeRun(o, { mod, renderer }).run(`# scene spike: ${o.sketchPath}\nadapter: ${handle.description}`);
+    return await new SpikeRun(o, { mod, renderer, text: await openTextMeasurer() }).run(`# scene spike: ${o.sketchPath}\nadapter: ${handle.description}`);
   } finally {
     renderer.destroy();
     if (gpu === undefined) handle.destroy();

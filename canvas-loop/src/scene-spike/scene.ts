@@ -1,9 +1,11 @@
-// The scene that one `draw` records (draft 2.2, beebox/docs/plans/canvas-loop-scene/scene-api-draft.md):
+// The scene that one `draw` records (draft 2.3, beebox/docs/plans/canvas-loop-scene/scene-api-draft.md):
 // plain data, captured by value at each call. A renderer draws it by the
 // lowering contract (R1–R9). Transforms are `at` nodes; every other node's
-// geometry is in the coordinates of its enclosing `at` scopes.
-import type { BlendMode, Paint, PathCommand, Vec2 } from "../core/paint.js";
-import type { Effects } from "../scene-draft/scene-api.js";
+// geometry is in the coordinates of its enclosing `at` scopes. Pictures are
+// versions shared by reference between the frames that place them.
+import type { Brush, Gesture } from "../core/brush/types.js";
+import type { BlendMode, Paint, PathCommand, TextStyle, Vec2 } from "../core/paint.js";
+import type { Effects, Material } from "../scene-draft/scene-api.js";
 
 /** A 2D affine transform `[a, b, c, d, e, f]`: x' = a·x + c·y + e, y' = b·x + d·y + f (Canvas2D order). */
 export type Mat = readonly [number, number, number, number, number, number];
@@ -17,7 +19,25 @@ export type Geom =
   | { readonly kind: "poly"; readonly points: readonly Vec2[]; readonly closed: boolean }
   | { readonly kind: "path"; readonly commands: readonly PathCommand[] };
 
-/** A style with its defaults filled in (draft 2.2 `Style`, minus what the spike does not draw yet). */
+/** The paper a brushed stroke's grain bites into (R9), defaults filled in. */
+export interface PaperSettings {
+  readonly scale: number;
+  readonly contrast: number;
+  readonly seed: number;
+}
+
+/** A brushed stroke: the brush, the gesture, its blends and the paper in scope at the call. */
+export interface BrushStroke {
+  readonly brush: Brush;
+  readonly gesture: Gesture;
+  /** R1: the style's `blend` when the style sets one (including "normal"), else the brush's. */
+  readonly blend: BlendMode;
+  /** R2: the brush's own blend, used inside a shape's effects layer. */
+  readonly own: BlendMode;
+  readonly paper: PaperSettings;
+}
+
+/** A style with its defaults filled in (draft 2.3 `Style`, minus what the spike does not draw yet). */
 export interface ShapeStyle {
   readonly fill: Paint | undefined;
   readonly stroke: Paint | undefined;
@@ -28,6 +48,8 @@ export interface ShapeStyle {
   readonly erase: boolean;
   /** R2: the shape draws into its own layer, these apply, then the layer composites with `blend` or `erase`. */
   readonly effects: Effects | undefined;
+  /** The stroke is brushed (draft section 9). */
+  readonly brush: BrushStroke | undefined;
 }
 
 export interface ShapeNode {
@@ -72,77 +94,77 @@ export interface MaskNode {
   readonly body: readonly SceneNode[];
 }
 
-export type SceneNode = ShapeNode | BackgroundNode | AtNode | GroupNode | ClipNode | MaskNode;
+/** One laid-out line: each glyph and its pen position, in the call's coordinates. */
+export interface TextLine {
+  readonly glyphs: readonly string[];
+  readonly xs: readonly number[];
+  /** Where the line's `baseline` sits. */
+  readonly y: number;
+}
+/** `text`: measured and laid out when recorded (draft section 7); drawn through a glyph atlas. */
+export interface TextNode {
+  readonly kind: "text";
+  readonly content: string;
+  readonly family: string;
+  readonly style: TextStyle;
+  readonly size: number;
+  /** The Canvas2D `textBaseline` each line's `y` is measured to. */
+  readonly baseline: "top" | "middle" | "bottom" | "alphabetic";
+  readonly lines: readonly TextLine[];
+  readonly fill: Paint;
+  readonly halo: { readonly paint: Paint; readonly width: number } | undefined;
+  readonly blend: BlendMode;
+  readonly erase: boolean;
+}
+
+/** A recorded picture (section 5): its body as nodes in its own coordinates. */
+export interface PictureVersion {
+  readonly kind: "picture";
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+  readonly deps: readonly unknown[] | undefined;
+  /** The paper in scope where `v.picture` was called (R9), part of the version. */
+  readonly paper: PaperSettings;
+  readonly children: readonly SceneNode[];
+}
+/** A fixed-resolution image (`v.pixels`): `width × height` unpremultiplied RGBA bytes. */
+export interface PixelsVersion {
+  readonly kind: "pixels";
+  readonly key: string;
+  readonly width: number;
+  readonly height: number;
+  readonly deps: readonly unknown[] | undefined;
+  readonly data: Uint8Array;
+}
+/** R7: a picture replayed under the current transform plus (x, y), into its own layer. */
+export interface PlaceNode {
+  readonly kind: "place";
+  readonly picture: PictureVersion | PixelsVersion;
+  readonly x: number;
+  readonly y: number;
+  readonly opacity: number;
+  readonly blend: BlendMode;
+  readonly erase: boolean;
+  /** Recorded for lit groups (R8); the spike has none yet. */
+  readonly material: Material | undefined;
+}
+
+/** `debugBox`: drawn only with `run --outline`; inside a picture it is part of the recording and moves with each placement (section 8). */
+export interface DebugNode {
+  readonly kind: "debug";
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+export type SceneNode = ShapeNode | BackgroundNode | AtNode | GroupNode | ClipNode | MaskNode | TextNode | PlaceNode | DebugNode;
 
 /** What one `draw` recorded: the canvas size in logical pixels and the top-level nodes. */
 export interface Scene {
   readonly width: number;
   readonly height: number;
   readonly children: readonly SceneNode[];
-}
-
-function geomText(g: Geom): string {
-  const r = (n: number): string => String(Math.round(n * 100) / 100);
-  switch (g.kind) {
-    case "rect":
-      return `(${r(g.x)},${r(g.y)}) ${r(g.w)}×${r(g.h)}`;
-    case "ellipse":
-      return `(${r(g.x)},${r(g.y)}) r ${r(g.rx)}×${r(g.ry)}`;
-    case "arc":
-      return `(${r(g.x)},${r(g.y)}) r ${r(g.r)} ${r(g.start)}..${r(g.end)}`;
-    case "poly":
-      return `${g.points.length} points${g.closed ? "" : " open"}`;
-    case "path":
-      return `${g.commands.length} commands`;
-  }
-}
-
-function paintText(p: Paint | undefined): string {
-  if (p === undefined) return "none";
-  return typeof p === "string" ? p : p.kind;
-}
-
-function nodeLine(n: SceneNode): string {
-  switch (n.kind) {
-    case "shape": {
-      const s = n.style;
-      const extra = [s.blend === "normal" ? "" : ` blend ${s.blend}`, s.erase ? " erase" : "", s.effects === undefined ? "" : ` effects ${Object.keys(s.effects).join(",")}`].join("");
-      return `${n.call} ${geomText(n.geom)} fill ${paintText(s.fill)} stroke ${paintText(s.stroke)}${extra}`;
-    }
-    case "background":
-      return `background ${paintText(n.paint)}`;
-    case "at":
-      return `at [${n.matrix.map((v) => Math.round(v * 1000) / 1000).join(", ")}]`;
-    case "group": {
-      const name = n.name === undefined ? "" : ` "${n.name}"`;
-      const fx = n.effects === undefined ? "" : ` effects ${Object.keys(n.effects).join(",")}`;
-      return `group${name} opacity ${n.opacity} blend ${n.blend}${fx}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
-    }
-    case "clip":
-      return `clip ${n.shapes.length} shape${n.shapes.length === 1 ? "" : "s"}`;
-    case "mask":
-      return "mask";
-  }
-}
-
-function outlineInto(out: string[], args: { nodes: readonly SceneNode[]; depth: number }): void {
-  const pad = "  ".repeat(args.depth);
-  for (const n of args.nodes) {
-    out.push(pad + nodeLine(n));
-    if (n.kind === "mask") {
-      out.push(`${pad}  mask body:`);
-      outlineInto(out, { nodes: n.mask, depth: args.depth + 2 });
-      out.push(`${pad}  drawn:`);
-      outlineInto(out, { nodes: n.body, depth: args.depth + 2 });
-    } else if (n.kind === "at" || n.kind === "group" || n.kind === "clip") {
-      outlineInto(out, { nodes: n.children, depth: args.depth + 1 });
-    }
-  }
-}
-
-/** The scene as an indented outline, one node per line (`run --scene`). */
-export function sceneOutline(scene: Scene): string {
-  const out = [`scene ${scene.width}×${scene.height}`];
-  outlineInto(out, { nodes: scene.children, depth: 1 });
-  return out.join("\n");
 }

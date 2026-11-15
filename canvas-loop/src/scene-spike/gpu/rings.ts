@@ -1,6 +1,6 @@
 // Device-space rings (closed polygons, flat [x0, y0, x1, y1, …]): cut to a
 // rectangle before they reach the atlas, and oriented for clip unions.
-import type { R } from "./jobs.js";
+import type { Piece, R } from "./jobs.js";
 
 function ringArea(r: readonly number[]): number {
   let a = 0;
@@ -74,4 +74,24 @@ function reversed(r: readonly number[]): number[] {
 export function orientShape(rings: readonly (readonly number[])[]): number[][] {
   const net = rings.reduce((a, r) => a + ringArea(r), 0);
   return rings.map((r) => (net < 0 ? reversed(r) : [...r]));
+}
+
+/** Rings as a coverage piece with integer bounds, or undefined when they cover nothing. */
+export function pieceOf(rings: number[][]): Piece | undefined {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const r of rings) {
+    for (let i = 0; i + 1 < r.length; i += 2) {
+      const x = r[i] ?? 0;
+      const y = r[i + 1] ?? 0;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+  }
+  if (!(x1 > x0 && y1 > y0) || !Number.isFinite(x0 + x1 + y0 + y1)) return undefined;
+  return { rings, box: { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) } };
 }

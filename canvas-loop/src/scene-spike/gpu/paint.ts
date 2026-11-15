@@ -4,11 +4,11 @@
 import type { Paint } from "../../core/paint.js";
 import type { ColorParser, Rgba } from "../colors.js";
 import { invert } from "../mat.js";
-import type { Mat } from "../scene.js";
+import type { Mat, PixelsVersion } from "../scene.js";
 
 export interface PaintRec {
-  /** 0 solid, 1 linear gradient, 2 radial gradient. */
-  readonly kind: 0 | 1 | 2;
+  /** 0 solid, 1 linear gradient, 2 radial gradient, 3 a `pixels` image (bilinear, in local coordinates). */
+  readonly kind: 0 | 1 | 2 | 3;
   /** Solid colour, premultiplied. */
   readonly color: Rgba;
   /** Linear: x1, y1, x2, y2. Radial: cx, cy, r1, r2. Local coordinates. */
@@ -18,6 +18,14 @@ export interface PaintRec {
   /** Radial: the ellipse's height ÷ width (1 for a circle). */
   readonly scaleY: number;
   readonly stops: readonly { readonly offset: number; readonly color: Rgba }[];
+  readonly image?: PixelsVersion;
+}
+
+/** A `pixels` image as paint: its pixel (i, j) covers local [i, i+1) × [j, j+1). */
+export function imageRec(image: PixelsVersion, matrix: Mat): PaintRec | undefined {
+  const inv = invert(matrix);
+  if (inv === undefined) return undefined;
+  return { kind: 3, color: [0, 0, 0, 0], grad: [0, 0, 0, 0], inv, scaleY: 1, stops: [], image };
 }
 
 export function premultiply(c: Rgba): Rgba {

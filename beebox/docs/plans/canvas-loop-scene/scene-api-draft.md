@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.3
+# Stage 1: the scene API, draft 2.4
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -70,8 +70,9 @@ back to the brush's blend (`canvas-loop/src/core/painter/core.ts:410`);
 by the shape's coverage times its paint's alpha (an `rgba(0,0,0,0.5)` erase
 removes half), as today. `weight: 0` draws no stroke. A colour the runtime
 cannot parse is an error when the call is recorded. `smudge` and `wet` read the target as it is when the
-stroke starts (and, for `smudge`, as it changes along the stroke). A sample
-outside the target's drawn area reads transparent.
+stroke starts (and, for `smudge`, as it changes along the stroke). Near an
+edge of the target, the pickup patch is moved inside the target, as today, so
+a smudge that starts past an edge drags nearby paint instead of erasing.
 
 **R2, shape with effects.** The shape draws with `normal` blend into a new
 transparent layer; inside it, a brushed stroke still uses its own blend over
@@ -176,7 +177,7 @@ as if it were in `deps`. A picture never depends on where it is placed.
 | Brush widths | current coordinates; under a non-uniform scale the tip stays round, its width scaled by √\|det\| | same | none |
 | Effect lengths and directions (blur, glow, shadow offset, wash bleed, hatch spacing and angle) | the coordinates where the group is called | canvas pixels and canvas directions (`canvas-loop/BRUSHES.md:234`) | **decision 1**: effects scale, rotate and skew with their group; a picture placed at half size blurs half as much, and a rotated picture's shadow rotates with it |
 | Wash pigment, hatching lines, paper-effect texture | the coordinates where the group is called | new | none |
-| Brush paper grain | the nearest picture's coordinates, else the scene's | canvas pixels | a picture carries its grain like a paper cut-out |
+| Brush paper grain | the coordinates in effect at the brushed call (draft 2.4) | canvas pixels | a shape moved by `at` or placed as a picture keeps its grain |
 | Brush randomness seed | the stroke's own geometry as passed to the call (its points in the coordinates of the call), or `gesture.seed` if given; never its order among other marks | device-pixel geometry (`mark.ts:100`) | **decision 7**: texture no longer changes with pixel ratio or placement; adding or removing other marks still never changes a mark (as `canvas-loop/BRUSHES.md:168` promises); brushed baselines change once |
 | Light positions | current coordinates at the `light` call, then the placement | new | none |
 
@@ -440,3 +441,25 @@ From the Stage 4 builder (chunks 1–2):
 - **Gradients** interpolate unpremultiplied colours, as Canvas2D and Skia do.
 - **`noise`** is seeded by the run's seed (the same seed as `u.random`), so
   `--seed` changes it and two runs with one seed agree.
+
+## 16. Draft 2.4: details settled in chunk 3
+
+- **Smudge at an edge:** the pickup patch moves inside the target (R1), as
+  today.
+- **Brush seed:** a hash of the call's own numbers (points, widths, brush and
+  gesture data as passed), never of the flattened outline, so zooming never
+  re-rolls texture.
+- **Brush paper grain** is anchored to the coordinates in effect at the brushed
+  call (after `at`, before any placement), replacing "the nearest picture's
+  coordinates" in section 4. A brushed shape moved with `at` keeps its
+  texture. The paper's per-pixel hash no longer uses the canvas width, so grain
+  never depends on canvas size (today's paper changes once).
+- **Paper scope** (R9) also ends with a mask body; it does not end with `at` or
+  `clip`.
+- **`background` inside a picture** fills the picture's box under the
+  placement.
+- **The expansion cache key** omits pixel ratio (expansion no longer depends on
+  it) and uses exact values.
+- `toCanvas` inside a picture body is an error. `undefined` is allowed in
+  `deps`. `pixels` bytes are straight (unpremultiplied) RGBA, as `ImageData`.
+  `smudge` and `wet` with a blend or erase are errors, as today.

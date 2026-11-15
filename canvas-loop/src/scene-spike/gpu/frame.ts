@@ -1,8 +1,11 @@
 // What encoding one frame shares: the command encoder, the texture pool, the
-// pipelines, the atlas pages, buffers to free after submit, and counts.
+// pipelines, the atlas pages (coverage, marks, glyphs), images, the smear
+// pass, buffers to free after submit, and counts.
+import type { PixelsVersion } from "../scene.js";
 import type { AtlasPage } from "./atlas.js";
 import type { Pipelines } from "./pipelines.js";
 import type { TexturePool } from "./pool.js";
+import type { SmearPass } from "./smear.js";
 
 export interface FrameStats {
   jobs: number;
@@ -12,6 +15,13 @@ export interface FrameStats {
   effectPasses: number;
   copies: number;
   draws: number;
+  /** Brushed strokes asked for, expanded afresh, and taken from the expansion cache. */
+  strokes: number;
+  expanded: number;
+  cacheHits: number;
+  markPages: number;
+  smears: number;
+  glyphs: number;
 }
 
 export interface Frame {
@@ -20,13 +30,17 @@ export interface Frame {
   readonly pool: TexturePool;
   readonly pipes: Pipelines;
   readonly atlas: readonly AtlasPage[];
+  readonly markPages: readonly AtlasPage[];
+  readonly glyphPages: readonly AtlasPage[];
+  readonly image: (version: PixelsVersion) => GPUTexture;
+  readonly smear: SmearPass;
   /** Buffers made for this frame, destroyed once it is submitted. */
   readonly temp: GPUBuffer[];
   readonly stats: FrameStats;
 }
 
 export function emptyStats(): FrameStats {
-  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0 };
+  return { jobs: 0, pieces: 0, atlasPages: 0, passes: 0, effectPasses: 0, copies: 0, draws: 0, strokes: 0, expanded: 0, cacheHits: 0, markPages: 0, smears: 0, glyphs: 0 };
 }
 
 /** A read-only storage buffer holding `data`, freed after the frame. */

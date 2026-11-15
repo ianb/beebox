@@ -1,8 +1,8 @@
 // How strong a mark landed, for the faint-mark warning. It reads pixels back,
 // which is cheap headless and stalls the GPU in a browser, so only a painter
 // with a warning sink asks for it.
-import type { Layer } from "../../paint.js";
-import type { Bounds } from "./mark.js";
+import type { Layer } from "../../../paint.js";
+import type { Bounds } from "./render.js";
 
 /** The strongest pixel's alpha (0..1) on a layer, sampling every other pixel. */
 export function peakAlpha(layer: Layer, b: Bounds): number {

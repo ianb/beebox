@@ -1,6 +1,6 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
-import type { ScratchName } from "../brush/render/mark.js";
+import type { ScratchName } from "../brush/render/mark/render.js";
 import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, MakeLayer } from "../paint.js";
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 

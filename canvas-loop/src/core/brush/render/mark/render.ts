@@ -7,21 +7,21 @@
 // strokeWeight × sqrt(|det|), so a non-uniform scale gives a round brush, not an
 // elliptical one. Everything after the transform runs in device pixels, which
 // is also where the paper lives, so grain stays fixed to the canvas.
-import type { Contour } from "../../contours.js";
-import { SketchUsageError } from "../../errors.js";
-import type { Ctx2D, CtxTransform, Layer, LayerImage, Paint, Vec2 } from "../../paint.js";
-import { inPaintSpace, resolveGradient, withSaved } from "../../paint.js";
-import { evalEnvelope, validateEnvelope } from "../envelope.js";
-import { bristleReach, paintBristle, paintInk, paintStamp } from "./kinds.js";
-import type { Rgba } from "./colour.js";
-import { hashNumbers, noise1 } from "../random.js";
-import { BLACK, jitterBase, jitteredInk, jitterOf } from "./ink.js";
+import type { Contour } from "../../../contours.js";
+import { SketchUsageError } from "../../../errors.js";
+import type { Ctx2D, CtxTransform, Layer, LayerImage, Paint, Vec2 } from "../../../paint.js";
+import { inPaintSpace, resolveGradient, withSaved } from "../../../paint.js";
+import { evalEnvelope, validateEnvelope } from "../../envelope.js";
+import { bristleReach, paintBristle, paintInk, paintStamp } from "../kinds.js";
+import type { Rgba } from "../colour.js";
+import { hashNumbers, noise1 } from "../../random.js";
+import { BLACK, jitterBase, jitteredInk, jitterOf } from "../ink.js";
 import { renderSmear } from "./smear.js";
-import { softDab } from "./dab.js";
+import { softDab } from "../dab.js";
 import { peakAlpha } from "./peak.js";
-import type { Sample } from "../sample.js";
-import { resample } from "../sample.js";
-import type { Brush, Gesture } from "../types.js";
+import type { Sample } from "../../sample.js";
+import { resample } from "../../sample.js";
+import type { Brush, Gesture } from "../../types.js";
 
 /** The scratch layers a mark may use: coverage, a gradient or a smear's load, a smear's copy of the drawing. */
 export type ScratchName = "mark" | "paint" | "before" | "dab";
@@ -105,8 +105,9 @@ function markSeed(req: MarkRequest, device: readonly Contour[]): number {
   );
 }
 
-function shapeSamples(
-  req: MarkRequest,
+/** A contour resampled at the brush's step, with the gesture's pressure and wobble (device pixels in, device pixels out). */
+export function shapeSamples(
+  req: Pick<MarkRequest, "brush" | "gesture">,
   args: { contour: Contour; width: number; seed: number },
 ): Sample[] {
   const samples = resample(args.contour.points, {

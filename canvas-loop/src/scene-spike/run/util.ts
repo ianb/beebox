@@ -1,5 +1,6 @@
 // The `Util` a spike run hands to `init` and `update`: seeded randomness,
-// params and log. Text measurement waits for text (chunk 3).
+// params, log, and text measured by the recorder's own measurer, as text with
+// no transform inside the canvas (draft section 7).
 import { formatArgs } from "../../core/format.js";
 import { SeededRandom } from "../../core/prng.js";
 import { recordOf } from "../../core/records.js";
@@ -7,17 +8,21 @@ import { scaleNote } from "../../core/sound/notes.js";
 import type { ScaleName } from "../../core/sound/notes.js";
 import type { ParamsDecl, ParamValues, TextBounds, TextBox, TextOptions, Util } from "../../core/tea.js";
 import { SketchUsageError } from "../../core/errors.js";
-import { UnsupportedCallError } from "../errors.js";
+import type { TextMeasurer } from "../../core/painter/text/measure.js";
 
 export class SpikeUtil implements Util {
   readonly #random: SeededRandom;
   readonly #params: () => ParamValues<ParamsDecl>;
+  readonly #text: TextMeasurer;
+  readonly #canvas: { width: number; height: number };
   /** Lines logged since the runner last took them. */
   logs: string[] = [];
 
-  constructor(options: { seed: number; params: () => ParamValues<ParamsDecl> }) {
+  constructor(options: { seed: number; params: () => ParamValues<ParamsDecl>; text: TextMeasurer; canvas: { width: number; height: number } }) {
     this.#random = new SeededRandom(options.seed);
     this.#params = options.params;
+    this.#text = options.text;
+    this.#canvas = options.canvas;
   }
 
   random(): number;
@@ -54,11 +59,12 @@ export class SpikeUtil implements Util {
     return scaleNote(step, options);
   }
 
-  textWidth(_content: string, _options?: TextOptions): number {
-    throw new UnsupportedCallError({ call: "u.textWidth" });
+  textWidth(content: string, options?: TextOptions): number {
+    return this.#text.width(content, options);
   }
 
-  textBounds(..._args: [string, TextBox, TextOptions?]): TextBounds {
-    throw new UnsupportedCallError({ call: "u.textBounds" });
+  textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
+    const where = { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: this.#canvas };
+    return this.#text.place(content, { box, options: options ?? {}, where }).bounds;
   }
 }

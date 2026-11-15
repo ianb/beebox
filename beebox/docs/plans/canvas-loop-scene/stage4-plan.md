@@ -89,3 +89,18 @@ starts.
   clip edges (for example nine overlapping thin shapes in one union) gets too
   much coverage. Effects under a rotated non-uniform scale or a skew are
   refused with an error.
+- **Chunk 3:** brushes for every preset (today's expansion reused, dabs
+  instanced, mark opacity once, an expansion cache), paper grain anchored to
+  the call's coordinates, smudge and wet as compute passes, pictures with
+  versions and the testing-mode stale-capture audit, fixed-resolution pixel
+  images, and text through a glyph atlas. Brush crops within parity limits
+  (worst: bristle, 1% luminance, 10.4% contrast); text positions and sizes
+  identical to today; a brushed shape moved by `at` or placement keeps its
+  texture. 500 brushed marks: 36 ms headless with the cache warm (today's Skia:
+  373 ms). Core brush and text modules moved into folders to satisfy the
+  layout check; all 736 gallery frames are byte-identical to the Stage 0
+  baselines. Codex review: five findings fixed; draft 2.4 records the decisions.
+- **Deferred from chunk 3:** faint-mark, missing-glyph and overlap checks; the
+  "deps change every frame" warning and placement-scale hint;
+  `effects.paper`; caching picture rasters and bristle vertices; ligatures and
+  complex scripts; browser font-load re-recording.
