@@ -430,6 +430,9 @@ void test("a deploy's box install leaves node_modules without other-access", asy
     [join(bin, "sudo")]: "#!/usr/bin/env bash\nshift 3\nexec \"$@\"\n",
     [join(bin, "pnpm")]: "#!/usr/bin/env bash\nmkdir -p node_modules/.pnpm\n",
     [join(engine, "bin", "box-engine-link")]: "#!/usr/bin/env bash\nexit 0\n",
+    // The helper reads the engine's bins from its package.json to build each
+    // box's engine shim; without one it skips the box before `pnpm` runs.
+    [join(engine, "package.json")]: '{"name":"beebox","bin":{"box-engine-link":"bin/box-engine-link"}}\n',
   };
   for (const [file, body] of Object.entries(stubs)) {
     await fs.mkdir(path.dirname(file), { recursive: true });

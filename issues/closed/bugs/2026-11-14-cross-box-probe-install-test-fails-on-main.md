@@ -1,12 +1,15 @@
 ---
 title: "cross-box-probe: the box-install permission test fails on main"
-workstream: unattached
+workstream: main-green
 area: beebox
 labels: [tests, deploy]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-activity-triggers — the change-selected suite, 2026-11-14
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-11-15):** Duplicate of 2026-11-13-cross-box-probe-box-install-test-fails-on-mac.
 
 `test/scenarios/cross-box-probe.test.ts`, "a deploy's box install leaves
 node_modules without other-access", fails with

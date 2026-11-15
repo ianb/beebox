@@ -1,12 +1,15 @@
 ---
 title: "cross-box-probe: the box-install node_modules mode check fails locally"
-workstream: unattached
+workstream: main-green
 area: beebox
 labels: [tests, deploy]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-self-hosted-turn
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** Cause: since 0820e6640 the helper builds each box's engine shim from the engine's package.json, and the test's stub engine had none, so the helper skipped the box with an ERROR before running pnpm (exit 0, stderr piped away). The helper is right; the test stub engine now has a package.json.
 
 `beebox/test/scenarios/cross-box-probe.test.ts`, "a deploy's box install
 leaves node_modules without other-access", fails with `ENOENT` on

@@ -146,7 +146,9 @@ void test("The estimate is the median of the last ten successful windows.", asyn
 // `deploy.sh` writes an EXIT trap and signal traps at the top of the server-side
 // activation script. Here the same lines, taken from `deploy.sh`, run around a
 // step that fails: the window closes, and the script keeps its own exit code, so
-// the deploy still fails.
+// the deploy still fails. `deploy.sh` writes `INSTALL_DIR`, `RELEASE` and
+// `RELEASES_CLI` just before the traps; here no switch has happened (the install
+// directory does not point at the release), so the trap takes no rollback path.
 void test("deploy.sh writes an EXIT trap and signal traps at the top of the server-side...", async (t) => {
   t.teardown(async () => {
     try {
@@ -162,6 +164,9 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
     const script = join(f.root, "activate.sh");
     await writeFile(script, [
       "set -euo pipefail",
+      `INSTALL_DIR=${join(f.root, "install")}`,
+      `RELEASE=${join(f.root, "install.releases/next")}`,
+      `RELEASES_CLI=${join(f.root, "releases-cli.ts")}`,
       trapLines.replaceAll("/usr/local/sbin/bbx-deploy-window", helper),
       `${helper} open ${f.template}`,
       `${helper} down`,
