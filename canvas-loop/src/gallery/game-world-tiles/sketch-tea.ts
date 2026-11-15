@@ -1,11 +1,14 @@
 // game-world's sample map, drawn by canvas-loop instead of the LPC tile atlas.
 // Ground is painted by per-cell passes (ground-tea.ts) that can run over the whole
 // map or one 32 px cell at a time; props are sprites (objects-tea.ts).
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
 import { type GroundStyle, type Pass, passesFor } from "./ground-tea.js";
 import { paintField } from "./field-tea.js";
 import { H, PERIOD, S, W } from "./map-tea.js";
 import { paintObjects } from "./objects-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   ground: {
@@ -95,15 +98,15 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   const tiles = p.render === "tile by tile";
   v.at({ scale: ZOOM }, () => {
     if (p.ground === "field") {
-      v.cache(`field-${p.render}`, () => {
+      v.place(v.picture({ key: `field-${p.render}`, width: W * S, height: H * S }, () => {
         if (!tiles) paintField(v, { x: 0, y: 0, w: W * S, h: H * S });
         else for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) paintField(v, { x: x * S, y: y * S, w: S, h: S });
-      });
+      }), 0, 0);
     }
     for (const [i, run] of RUNS[p.ground].entries()) {
       const paint = (): void => (tiles ? paintRunTiles(v, run, t) : paintRunWhole(v, run, t));
       if (run[0]?.animated === true) paint();
-      else v.cache(`ground-${p.ground}-${i}-${p.render}`, paint);
+      else v.place(v.picture({ key: `ground-${p.ground}-${i}-${p.render}`, width: W * S, height: H * S }, paint), 0, 0);
     }
     if (p.props) paintObjects(v, t);
     if (p.grid) {

@@ -1,21 +1,21 @@
 // Painted pieces shared by the ground and the props: irregular blobs, brushed
 // foliage, and sprites painted at the map's zoom so they stay sharp.
-import type { BrushPreset, Sprite, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, ScenePicture as Picture, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { hash } from "./map-tea.js";
 
 /** The map is drawn at this multiple of game-world's pixel size. */
 export const ZOOM = 2;
 
 /** A sprite painted at ZOOM× its logical size. `body` draws in logical units. */
-export function paintedSprite(v: View, a: { key: string; w: number; h: number }, body: () => void): Sprite {
-  return v.sprite({ key: a.key, width: Math.ceil(a.w * ZOOM), height: Math.ceil(a.h * ZOOM) }, () => {
+export function paintedSprite(v: View, a: { key: string; w: number; h: number }, body: () => void): Picture {
+  return v.picture({ key: a.key, width: Math.ceil(a.w * ZOOM), height: Math.ceil(a.h * ZOOM) }, () => {
     v.at({ scale: ZOOM }, body);
   });
 }
 
 /** Draws a paintedSprite with its top-left at (x, y) in logical units. */
-export function placeSprite(v: View, sprite: Sprite, x: number, y: number): void {
-  v.at({ scale: 1 / ZOOM }, () => v.image(sprite, x * ZOOM, y * ZOOM));
+export function placeSprite(v: View, sprite: Picture, x: number, y: number): void {
+  v.at({ scale: 1 / ZOOM }, () => v.place(sprite, x * ZOOM, y * ZOOM));
 }
 
 /** An irregular closed outline around (cx, cy): `n` points at jittered radii,

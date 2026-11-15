@@ -1,7 +1,7 @@
 // What moves in the drawn lounge, each frame: the room dims, every set glows with
 // what it shows (and the glow spills onto what is in front of it), the vending
 // machine's window hums, the archive machine's lights blink. Repeats every PERIOD.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { hash, iso } from "./ink-tea.js";
 import { RU, RW, TELLIES, type Telly, VENDING_AT, WALL, leaning, screenRect } from "./room-tea.js";
 
@@ -30,10 +30,8 @@ function onScreen(v: View, tl: Telly, body: (w: number, h: number) => void): voi
   const s = screenRect(tl);
   const [e, f] = iso(s.u0, tl.depth + 1, s.h1);
   leaning(v, tl, () => {
-    v.ctx.save();
-    v.ctx.transform(0.894, 0.447, 0, 1, e, f);
-    body(s.w, s.h);
-    v.ctx.restore();
+    // Port (scene core chunk 5): `v.ctx.transform` became `at({ matrix })`.
+    v.at({ matrix: [0.894, 0.447, 0, 1, e, f] }, () => body(s.w, s.h));
   });
 }
 

@@ -3,7 +3,7 @@
 // paint the whole map at once, or paint one cell at a time clipped to its square
 // (drawing the marks of its neighbours too): both give the same pixels, and the
 // per-cell version is a tile that could be baked into an atlas.
-import type { Style, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, SceneView as View } from "@ianbicking/canvas-loop";
 import { type Ground, PERIOD, S, groundAt, hash, wind } from "./map-tea.js";
 import { LEAVES, foliage } from "./paint-tea.js";
 

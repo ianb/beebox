@@ -1,7 +1,7 @@
 // A citizen walking through the lounge: along a loop on the floor, tinted by the
 // light where they are, and hidden wherever the room is nearer to the camera
 // (the sofa, the table), using the depth the room was rendered with.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { SCALE, depthOf, lightAt, project, sceneDepth } from "./scene-tea.js";
 
 type RGB = [number, number, number];
@@ -68,15 +68,17 @@ export function paintWalker(v: View, a: { t: number; lights: readonly RGB[]; sky
   // upright, so each row of the figure is a different height, and so a different
   // depth: the feet are further along the view than the head.
   const x0 = Math.floor(fx - h * 0.3), y0 = Math.floor(fy - h * 1.1), bw = Math.ceil(h * 0.6), bh = Math.ceil(h * 1.2);
+  // Port (scene core chunk 5): the mask's `putImageData` became `v.pixels`.
   v.mask(() => {
-    const img = v.ctx.createImageData(bw, bh);
-    for (let j = 0; j < bh; j++) {
-      const height = Math.max(0, (fy - (y0 + j)) / (SCALE * Math.cos(Math.PI / 6)));
-      const depth = depthOf(w.x, height, w.z) - 0.08;
-      for (let i = 0; i < bw; i++) {
-        if (sceneDepth(x0 + i, y0 + j) > depth) img.data[(j * bw + i) * 4 + 3] = 255;
+    const visible = v.pixels({ key: "walker-mask", width: bw, height: bh, deps: [w.x, w.z, fx, fy, h] }, (img) => {
+      for (let j = 0; j < bh; j++) {
+        const height = Math.max(0, (fy - (y0 + j)) / (SCALE * Math.cos(Math.PI / 6)));
+        const depth = depthOf(w.x, height, w.z) - 0.08;
+        for (let i = 0; i < bw; i++) {
+          if (sceneDepth(x0 + i, y0 + j) > depth) img.data[(j * bw + i) * 4 + 3] = 255;
+        }
       }
-    }
-    v.ctx.putImageData(img, x0, y0);
+    });
+    v.place(visible, x0, y0);
   }, body);
 }

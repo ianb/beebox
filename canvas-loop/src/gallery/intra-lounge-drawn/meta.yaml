@@ -5,6 +5,7 @@ model: opus-5.5
 driver: opus-5.5
 cycles: 5
 tier: tea
+migrated: "2026-11-15: ported to the scene API (scene core chunk 5; the removed calls replaced as draft section 2's table says)"
 harness-commit: 3b5aabed6
 frames: 2
 seed: 42

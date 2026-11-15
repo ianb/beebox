@@ -1,6 +1,6 @@
 // Props drawn as free sprites over the ground: each anchored at the bottom centre of
 // its cell, drawn back to front, and moving with the same wind as the grass.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { H, PERIOD, S, W, hash, objectAt, wind } from "./map-tea.js";
 import { LEAVES, foliage, paintedSprite, placeSprite } from "./paint-tea.js";
 

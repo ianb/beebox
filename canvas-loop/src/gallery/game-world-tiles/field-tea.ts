@@ -9,8 +9,9 @@
 //
 // Because the colour depends only on position, any rectangle of the map can be
 // computed on its own: a tile is just the field over its square.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { type Ground, H, S, W, groundAt, hash } from "./map-tea.js";
+import { ZOOM } from "./paint-tea.js";
 
 /** Dab grid spacing, in map pixels. */
 const DAB = 5;
@@ -204,25 +205,26 @@ function colourAt(x: number, y: number): RGB {
   return mix(second.rgb, own, 0.5 + 0.5 * smooth(Math.min(1, gap / 1.1)));
 }
 
-/** Paints the field over a rectangle of the map (map pixels), straight into the
- * current layer's pixels at device resolution. */
+/** Paints the field over a rectangle of the map (map pixels) as an image of
+ * computed pixels at the map's zoom. Port (scene core chunk 5):
+ * `putImageData` at device resolution became `v.pixels`, placed under the
+ * inverse scale so one image pixel is one canvas pixel (draft decision 12). */
 export function paintField(v: View, rect: { x: number; y: number; w: number; h: number }): void {
-  const ctx = v.ctx;
-  const m = ctx.getTransform();
-  const k = m.a;
-  const dx0 = Math.round(rect.x * k + m.e), dy0 = Math.round(rect.y * k + m.f);
+  // The map is drawn at ZOOM (a picture body cannot ask where it is placed).
+  const k = ZOOM;
   const dw = Math.round(rect.w * k), dh = Math.round(rect.h * k);
-  const img = ctx.createImageData(dw, dh);
-  const px = img.data;
-  for (let j = 0; j < dh; j++) {
-    for (let i = 0; i < dw; i++) {
-      const [r, g, b] = colourAt(rect.x + (i + 0.5) / k, rect.y + (j + 0.5) / k);
-      const o = (j * dw + i) * 4;
-      px[o] = r;
-      px[o + 1] = g;
-      px[o + 2] = b;
-      px[o + 3] = 255;
+  const field = v.pixels({ key: `field-${rect.x}-${rect.y}-${rect.w}-${rect.h}-${k}`, width: dw, height: dh }, (img) => {
+    const px = img.data;
+    for (let j = 0; j < dh; j++) {
+      for (let i = 0; i < dw; i++) {
+        const [r, g, b] = colourAt(rect.x + (i + 0.5) / k, rect.y + (j + 0.5) / k);
+        const o = (j * dw + i) * 4;
+        px[o] = r;
+        px[o + 1] = g;
+        px[o + 2] = b;
+        px[o + 3] = 255;
+      }
     }
-  }
-  ctx.putImageData(img, dx0, dy0);
+  });
+  v.at({ scale: 1 / k }, () => v.place(field, Math.round(rect.x * k), Math.round(rect.y * k)));
 }

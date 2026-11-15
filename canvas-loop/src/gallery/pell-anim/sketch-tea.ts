@@ -13,17 +13,10 @@
 // A TEA sketch may import nothing but the framework types, so the painting
 // code from open-opus-b is copied into this one file, with `Sketch` → `View`
 // and its `s.random` calls replaced by a seeded generator.
-import type {
-  BrushPreset,
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { BrushPreset, DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const params = {
   wind: { type: "number", min: 0, max: 1, default: 0.35, step: 0.05 },
@@ -230,44 +223,49 @@ function phase(frame: number, k = 1): number {
 // ── Draw ─────────────────────────────────────────────────────────────
 
 export function draw(v: View, model: DeepReadonly<Model>, p: P): void {
-  const f = model.frame;
-  const bloom = lampBloom(model);
-  // `paper()` rebuilds its texture on every call, so it is set once, inside the
-  // first cache body: whenever the caches are fresh, so is the paper.
-  v.cache("sky-back", () => {
-    v.paper({ scale: 3, contrast: 0.6, seed: 7 });
-    drawSkyBack(v);
+  v.paper({ scale: 3, contrast: 0.6, seed: 7 });
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    const f = model.frame;
+    const bloom = lampBloom(model);
+    // Port (scene core chunk 5): paper is scoped (draft decision 10), so it is set
+    // for the frame above and again inside the first picture, which does not
+    // inherit it.
+    v.place(v.picture({ key: "sky-back", width: v.width, height: v.height }, () => {
+      v.paper({ scale: 3, contrast: 0.6, seed: 7 });
+      drawSkyBack(v);
+    }), 0, 0);
+    drawStars(v, f, p.dusk);
+    drawMoon(v, model.moon);
+    v.place(v.picture({ key: "sky-front", width: v.width, height: v.height }, () => drawSkyFront(v)), 0, 0);
+    v.place(v.picture({ key: "water", width: v.width, height: v.height }, () => drawWater(v)), 0, 0);
+    drawMoonPath(v, model.moon, f, p.wind);
+    drawShimmer(v, f, p.wind);
+    drawRings(v, model.rings, f);
+    v.place(v.picture({ key: "village", width: v.width, height: v.height }, () => drawVillage(v)), 0, 0);
+    if (bloom > 0)
+      v.group({ opacity: bloom }, () =>
+        v.place(v.picture({ key: "last-reflection", width: v.width, height: v.height }, () => drawLampReflection(v, LAMP)), 0, 0),
+      );
+    drawBoat(v, model, f);
+    v.place(v.picture({ key: "walkway", width: v.width, height: v.height }, () => {
+      drawWalkway(v);
+      for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
+      drawPost(v, LAMP);
+    }), 0, 0);
+    drawLastLamp(v, bloom, f, invitation(model));
+    const done =
+      model.lamp.type === "lit" ? smooth((f - model.lamp.at - 50) / 70) : 0;
+    drawHeron(v, f, p.wind, { bloom, done });
+    drawReeds(v, f, p.wind, model.stir);
+    drawDusk(v, p.dusk);
+    drawLights(v, f, bloom, p.dusk);
+    drawBoatLight(v, model, f, p.dusk);
+    if (p.fireflies) drawFireflies(v, f);
+    drawMoths(v, f, bloom);
+    drawStory(v, model);
   });
-  drawStars(v, f, p.dusk);
-  drawMoon(v, model.moon);
-  v.cache("sky-front", () => drawSkyFront(v));
-  v.cache("water", () => drawWater(v));
-  drawMoonPath(v, model.moon, f, p.wind);
-  drawShimmer(v, f, p.wind);
-  drawRings(v, model.rings, f);
-  v.cache("village", () => drawVillage(v));
-  if (bloom > 0)
-    v.group({ opacity: bloom }, () =>
-      v.cache("last-reflection", () => drawLampReflection(v, LAMP)),
-    );
-  drawBoat(v, model, f);
-  v.cache("walkway", () => {
-    drawWalkway(v);
-    for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
-    drawPost(v, LAMP);
-  });
-  drawLastLamp(v, bloom, f, invitation(model));
-  const done =
-    model.lamp.type === "lit" ? smooth((f - model.lamp.at - 50) / 70) : 0;
-  drawHeron(v, f, p.wind, { bloom, done });
-  drawReeds(v, f, p.wind, model.stir);
-  drawDusk(v, p.dusk);
-  drawLights(v, f, bloom, p.dusk);
-  drawBoatLight(v, model, f, p.dusk);
-  if (p.fireflies) drawFireflies(v, f);
-  drawMoths(v, f, bloom);
-  drawStory(v, model);
-  v.paperTexture(0.35);
 }
 
 /** 0 while dark, rising to 1 over the first second after the lamp is lit. */
@@ -1273,22 +1271,21 @@ function drawHeron(
   wind: number,
   lamp: { bloom: number; done: number },
 ): void {
-  v.cache("heron-legs", () => {
+  v.place(v.picture({ key: "heron-legs", width: v.width, height: v.height }, () => {
     drawShadow(v);
     inHeronSpace(v, () => drawLegs(v));
-  });
+  }), 0, 0);
   inHeronSpace(v, () => drawPole(v, lamp.done));
-  v.cache("heron-body", () =>
+  v.place(v.picture({ key: "heron-body", width: v.width, height: v.height }, () =>
     inHeronSpace(v, () => {
       drawBody(v);
       drawNeckAndHead(v);
-    }),
-  );
+    })), 0, 0);
   inHeronSpace(v, () => {
     drawBlink(v, f);
     drawScarf(v, f, wind);
   });
-  v.cache("grip", () => inHeronSpace(v, () => drawGrip(v)));
+  v.place(v.picture({ key: "grip", width: v.width, height: v.height }, () => inHeronSpace(v, () => drawGrip(v))), 0, 0);
   inHeronSpace(v, () => drawFlame(v, f, lamp, wind));
 }
 
@@ -1641,7 +1638,7 @@ function drawScarf(v: View, f: number, wind: number): void {
   });
   v.path(shape, { fill: H.scarf });
   v.clip(shape, () => {
-    v.cache("scarf-knit", () => {
+    v.place(v.picture({ key: "scarf-knit", width: v.width, height: v.height }, () => {
       const knit: Style = {
         stroke: H.scarfDark,
         weight: 1.6,
@@ -1649,7 +1646,7 @@ function drawScarf(v: View, f: number, wind: number): void {
         gesture: { pressure: "even", wobble: 0.3 },
       };
       for (let x = -100; x < 64; x += 4.5) v.line(x, -205, x - 3, -132, knit);
-    });
+    }), 0, 0);
     v.curve(
       band.map(([x, y]): Vec2 => [x - 2, y + 7]),
       false,
@@ -2102,11 +2099,6 @@ function drawStory(v: View, model: DeepReadonly<Model>): void {
 }
 
 function drawLine(v: View, line: string, y: number, alpha: number): void {
-  const ctx = v.ctx;
-  ctx.save();
-  ctx.fillStyle = `rgba(252,240,214,${(0.92 * alpha).toFixed(3)})`;
-  ctx.font = "italic 25px Georgia";
-  ctx.textAlign = "right";
-  ctx.fillText(line, 756, y);
-  ctx.restore();
+  // Port (scene core chunk 5): `ctx.fillText` became `v.text` on the baseline.
+  v.text(line, { x: 756, y }, { size: 25, font: "Georgia", style: "italic", fill: `rgba(252,240,214,${(0.92 * alpha).toFixed(3)})`, align: "right", valign: "baseline" });
 }

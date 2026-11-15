@@ -78,8 +78,12 @@ chunk, with a test).
 | `busy-town-sol` | ported: sprite, cache, paper | 44 | 0/44 | 94.66 | 0.133 | 0.09 / 0.12 | brush texture (7), paper scoped (10) | pass: same character by eye; new hints for pictures placed turning (H) |
 | `clock` | unchanged | 12 | 12/12 | 99.99 | 0.047 | 2.33 / 5.64 | none | pass: light text on dark draws lighter (T) |
 | `fjord-tides` | ported: ctx | 18 | 18/18 | 99.97 | 0.05 | 0.23 / 1.7 | none | pass |
+| `game-world-tiles` | ported: ctx pixels, sprite, cache | 2 | 0/2 | 83.96 | 0.085 | 0.7 / 1.84 | brush texture (7) | pass: same character by eye; the field is a v.pixels image at the map zoom |
 | `guitar-strings` | ported: cache, paper | 18 | 0/18 | 96.75 | 0.051 | 0.78 / 2.59 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `gull-market` | ported: paper | 1 | 0/1 | 88.57 | 0.053 | 0 / 0.1 | brush texture (7), paper scoped (10) | pass: same character by eye |
+| `intra-atrium` | ported: ctx pixels, sprite, cache | 2 | 2/2 | 99.36 | 0.034 | 0.02 / 0.05 | none | pass: the hand-lit room is a v.pixels image |
+| `intra-lounge` | ported: ctx pixels and transform | 2 | 2/2 | 99.99 | 0.007 | 0.07 / 0.05 | none | pass: the hand-lit room and the walker mask are v.pixels images |
+| `intra-lounge-drawn` | ported: ctx transform, cache, paper | 2 | 2/2 | 99.87 | 0.028 | 0.32 / 0.2 | paper scoped (10) | pass |
 | `intra-lounge-side` | ported: cache, paper | 2 | 2/2 | 99.66 | 0.037 | 0.24 / 0.06 | brush texture (7), paper scoped (10) | pass |
 | `intra-map` | ported: cache | 5 | 5/5 | 99.95 | 0.034 | 0.32 / 0.45 | none | pass |
 | `intra-rooms` | ported: sprite, cache, paper | 2 | 0/2 | 95.17 | 0.046 | 0.11 / 0.13 | brush texture (7), paper scoped (10) | pass: the strip of sprites is one picture, as in the Hallway port |
@@ -96,6 +100,7 @@ chunk, with a test).
 | `paint-simple` | ported: cache | 249 | 238/249 | 98.66 | 0.059 | 0.01 / 7.03 | brush texture (7) | pass: nested pictures replay the page stroke by stroke |
 | `particles-opus` | unchanged | 22 | 4/22 | 4.64 | 1.201 | 1092.57 / 94.5 | none | accepted: trails (A1): frames from 84 on lose the dark background |
 | `particles-sonnet` | unchanged | 20 | 3/20 | 0 | 1.353 | 894.88 / 90.33 | none | accepted: trails (A1): frames from 60 on lose the dark background |
+| `pell-anim` | ported: ctx text, cache, paper | 21 of 27 | 0/21 | 84.02 | 0.137 | 0.25 / 0.8 | brush texture (7), paper scoped (10) | pass: same character by eye; 6 frames captured by the painter for faint-mark warnings are not captured (F); text (T) |
 | `pendulum-lab` | ported: cache | 55 | 55/55 | 99.68 | 0.052 | 0.09 / 1.33 | none | pass |
 | `periodic-trends` | unchanged | 16 | 16/16 | 99.99 | 0.034 | 0.15 / 1.28 | none | pass |
 | `periodic-trends-2` | unchanged | 12 | 12/12 | 99.87 | 0.055 | 0.08 / 0.7 | none | pass |

@@ -11,7 +11,7 @@
 // the light's spread, and whether the sofa or the table is in the way). Each
 // frame: multiply in each light's colour and brightness for that frame and sum.
 // That is a deferred renderer with baked visibility, in plain code.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 
 export const W = 1200;
 export const H = 860;
@@ -552,18 +552,20 @@ export function toneMap(c: number): number {
 
 /** Paints the room for one frame as a plain render: each pixel lit on its own. */
 export function paintRoom(v: View, a: { lights: readonly RGB[]; sky: RGB }): void {
-  const ctx = v.ctx;
-  const img = ctx.createImageData(W, H);
-  const px = img.data;
-  for (let k = 0; k < W * H; k++) {
-    const [r, g, b] = litAt(k, a);
-    const q = k * 4;
-    px[q] = toneMap(r);
-    px[q + 1] = toneMap(g);
-    px[q + 2] = toneMap(b);
-    px[q + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
+  // Port (scene core chunk 5): `putImageData` became `v.pixels`, a W × H image
+  // whose version follows the frame's light (draft decision 12).
+  const room = v.pixels({ key: "lounge-room", width: W, height: H, deps: [a.lights, a.sky] }, (img) => {
+    const px = img.data;
+    for (let k = 0; k < W * H; k++) {
+      const [r, g, b] = litAt(k, a);
+      const q = k * 4;
+      px[q] = toneMap(r);
+      px[q + 1] = toneMap(g);
+      px[q + 2] = toneMap(b);
+      px[q + 3] = 255;
+    }
+  });
+  v.place(room, 0, 0);
 }
 
 /** How far along the view a world point is, comparable with the depth buffer. */

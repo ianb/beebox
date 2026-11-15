@@ -7,7 +7,7 @@
 // the east wall glows, the west wall throws a band of shadow on the floor, and every
 // statue throws a long shadow east. Everything else is lit by the purple of the
 // upper sky.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 
 export const W = 1200;
 export const H = 860;
@@ -349,27 +349,26 @@ function pixel(x: number, y: number, figures: readonly Figure[]): RGB {
   return rock(x, y);
 }
 
-/** Paints the room straight into the canvas pixels. */
+/** Paints the room as a fixed-resolution image of computed pixels. Port (scene
+ * core chunk 5): `putImageData` at device resolution became `v.pixels`, W × H
+ * pixels placed at the origin (draft decision 12). */
 export function paintRoom(v: View, figures: readonly Figure[]): void {
-  const ctx = v.ctx;
-  const m = ctx.getTransform();
-  const k = m.a;
-  const dw = Math.round(W * k), dh = Math.round(H * k);
   // Only figures standing in the sun cast a shadow: one inside the west wall's
   // shadow is lit by nothing the wall has not already blocked.
   const casters = figures.filter((f) => wallShadow(f.x - CX, (f.y - CY) * SQ) < 0.5);
-  const img = ctx.createImageData(dw, dh);
-  const px = img.data;
-  for (let j = 0; j < dh; j++) {
-    for (let i = 0; i < dw; i++) {
-      const c = pixel((i + 0.5) / k, (j + 0.5) / k, casters);
-      const o = (j * dw + i) * 4;
-      // A gentle filmic curve keeps the hot light from clipping flat.
-      px[o] = 255 * (1 - Math.exp(-c[0] * 1.6));
-      px[o + 1] = 255 * (1 - Math.exp(-c[1] * 1.6));
-      px[o + 2] = 255 * (1 - Math.exp(-c[2] * 1.6));
-      px[o + 3] = 255;
+  const room = v.pixels({ key: "atrium-room", width: W, height: H }, (img) => {
+    const px = img.data;
+    for (let j = 0; j < H; j++) {
+      for (let i = 0; i < W; i++) {
+        const c = pixel(i + 0.5, j + 0.5, casters);
+        const o = (j * W + i) * 4;
+        // A gentle filmic curve keeps the hot light from clipping flat.
+        px[o] = 255 * (1 - Math.exp(-c[0] * 1.6));
+        px[o + 1] = 255 * (1 - Math.exp(-c[1] * 1.6));
+        px[o + 2] = 255 * (1 - Math.exp(-c[2] * 1.6));
+        px[o + 3] = 255;
+      }
     }
-  }
-  ctx.putImageData(img, Math.round(m.e), Math.round(m.f));
+  });
+  v.place(room, 0, 0);
 }

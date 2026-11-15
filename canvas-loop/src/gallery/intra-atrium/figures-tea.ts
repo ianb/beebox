@@ -1,7 +1,7 @@
 // The statues and the one visitor, painted with brushes and lit from the west like
 // the room. Statues are citizens in sandstone worn faceless: soft outlines, no
 // features, dust on every upward surface.
-import type { BrushPreset, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { CX, CY, type Figure, SQ, hash, rimPoint, wallShadow } from "./room-tea.js";
 
 interface Palette { shadow: string; mid: string; light: string; glint: string; dust: string; pit: string }
@@ -138,8 +138,8 @@ export function paintFigures(v: View): void {
       y: f.y,
       draw: () => {
         const w = Math.ceil(f.h * 0.7 + 40), h = Math.ceil(f.h * 1.35 + 30);
-        const sp = v.sprite({ key: `statue-${f.seed}`, width: w, height: h }, () => v.at({ translate: [w / 2, h - 16] }, () => paintStatue(v, f)));
-        v.image(sp, f.x - w / 2, f.y - (h - 16));
+        const sp = v.picture({ key: `statue-${f.seed}`, width: w, height: h }, () => v.at({ translate: [w / 2, h - 16] }, () => paintStatue(v, f)));
+        v.place(sp, f.x - w / 2, f.y - (h - 16));
       },
     })),
     { y: VISITOR.y, draw: () => v.at({ translate: [VISITOR.x, VISITOR.y] }, () => paintVisitor(v, VISITOR)) },

@@ -1,9 +1,12 @@
 // The Hollow Atrium (intra-game): "A vast, empty space beneath a frozen sunset."
 // The room and its light are computed per pixel (room-tea.ts); the statues and the
 // one visitor are painted (figures-tea.ts); dust drifts in the light.
-import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
 import { STATUES, VISITOR, paintFigures, paintMotes } from "./figures-tea.js";
 import { H, W, paintRoom } from "./room-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: W, height: H };
 
@@ -29,8 +32,8 @@ export function update(model: DeepReadonly<Model>, msg: Msg): Model {
 }
 
 export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.cache("room", () => paintRoom(v, [...STATUES, VISITOR]));
-  v.cache("figures", () => paintFigures(v));
+  v.place(v.picture({ key: "room", width: v.width, height: v.height }, () => paintRoom(v, [...STATUES, VISITOR])), 0, 0);
+  v.place(v.picture({ key: "figures", width: v.width, height: v.height }, () => paintFigures(v)), 0, 0);
   // Warm haze in the air where the screen's light falls, drifting very slowly.
   const drift = Math.sin(model.frame * 0.01) * 12;
   v.ellipse(560 + drift, 430, 420, 260, { fill: v.ellipseGradient(560 + drift, 430, 420, 260, [[0, "rgba(255,170,100,0.13)"], [1, "rgba(255,170,100,0)"]]), blend: "screen" });

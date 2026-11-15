@@ -8,7 +8,7 @@
 // streaks. That map is worked out once. Each frame, every dab takes the colour the
 // render gives at its centre for that frame's light, so the flicker survives while
 // every edge in the room becomes ragged paint.
-import type { View } from "@ianbicking/canvas-loop";
+import type { SceneView as View } from "@ianbicking/canvas-loop";
 import { BAKED, H, W, hash, litAt, project, toneMap } from "./scene-tea.js";
 
 type RGB = [number, number, number];
@@ -105,17 +105,20 @@ export function paintDabs(v: View, a: { lights: readonly RGB[]; sky: RGB }): voi
     colours[n * 3 + 1] = g * vary;
     colours[n * 3 + 2] = b * (0.96 + hash(n, 0, 10) * 0.08) * vary;
   }
-  const img = v.ctx.createImageData(W, H);
-  const px = img.data;
-  const { near, next, weight, streak } = OWNERS;
-  for (let k = 0; k < W * H; k++) {
-    const n1 = (near[k] ?? 0) * 3, n2 = (next[k] ?? 0) * 3, w = weight[k] ?? 1, s = streak[k] ?? 1;
-    const q = k * 4;
-    for (let ch = 0; ch < 3; ch++) {
-      const c = ((colours[n1 + ch] ?? 0) * w + (colours[n2 + ch] ?? 0) * (1 - w)) * s;
-      px[q + ch] = toneMap(c);
+  // Port (scene core chunk 5): `putImageData` became `v.pixels`, a W × H image
+  // whose version follows the frame's light (draft decision 12).
+  const room = v.pixels({ key: "lounge-dabs", width: W, height: H, deps: [a.lights, a.sky] }, (img) => {
+    const px = img.data;
+    const { near, next, weight, streak } = OWNERS;
+    for (let k = 0; k < W * H; k++) {
+      const n1 = (near[k] ?? 0) * 3, n2 = (next[k] ?? 0) * 3, w = weight[k] ?? 1, s = streak[k] ?? 1;
+      const q = k * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        const c = ((colours[n1 + ch] ?? 0) * w + (colours[n2 + ch] ?? 0) * (1 - w)) * s;
+        px[q + ch] = toneMap(c);
+      }
+      px[q + 3] = 255;
     }
-    px[q + 3] = 255;
-  }
-  v.ctx.putImageData(img, 0, 0);
+  });
+  v.place(room, 0, 0);
 }

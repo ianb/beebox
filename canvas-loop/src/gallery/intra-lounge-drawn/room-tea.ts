@@ -2,7 +2,7 @@
 // skirting and pipes, sagging plank floor and a worn rug, a teetering pile of old
 // television sets, a sagging tape shelf, a lumpy sofa, a tank of a vending machine.
 // Everything here is still; screens and light are drawn per frame (light-tea.ts).
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, hash, ink, iso, isoBox, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 
 /** Room size along the two walls, and wall height. */
@@ -336,21 +336,24 @@ function bulb(v: View): void {
 
 /** The still part of the room, back to front. */
 export function paintRoom(v: View): void {
-  v.background("#14121a");
-  walls(v);
-  pipes(v);
-  consoleDoor(v);
-  floor(v);
-  shelves(v);
-  cabinet(v);
-  for (const [i, t] of TELLIES.entries()) leaning(v, t, () => telly(v, t, 500 + i * 20));
-  cables(v);
-  table(v);
-  sofa(v);
-  vending(v);
-  grime(v);
-  bulb(v);
-  v.paperTexture(0.4);
+  // Port: `v.paperTexture(0.4)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.4 } }, () => {
+    v.background("#14121a");
+    walls(v);
+    pipes(v);
+    consoleDoor(v);
+    floor(v);
+    shelves(v);
+    cabinet(v);
+    for (const [i, t] of TELLIES.entries()) leaning(v, t, () => telly(v, t, 500 + i * 20));
+    cables(v);
+    table(v);
+    sofa(v);
+    vending(v);
+    grime(v);
+    bulb(v);
+  });
 }
 
 export { iso };
