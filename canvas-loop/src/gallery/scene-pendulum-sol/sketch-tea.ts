@@ -1,5 +1,8 @@
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneView as View, Util } from "@ianbicking/canvas-loop";
 
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
+
 export const canvas = { width: 620, height: 460 };
 export const params = {
   length: { type: "number", min: 0.5, max: 2, default: 1.2, step: 0.05,

@@ -4,6 +4,9 @@
 // bob leaves a fading trail of where it has been.
 import type { DeepReadonly, Msg, ParamValues, ParamsDecl, SceneStyle as Style, TextOptions, Util, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
 
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
+
 export const params = {
   length: { type: "number", min: 0.3, max: 2, step: 0.05, default: 1, label: "Length (m)" },
 } as const satisfies ParamsDecl;
