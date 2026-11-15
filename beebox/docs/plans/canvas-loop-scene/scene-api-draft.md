@@ -161,6 +161,13 @@ only where the result matches (section 6).
   `height` is the light's distance above the picture plane: higher lights
   give wider, softer pools and shorter shadows. A caster never blocks a light
   that sits inside it. `background` inside a lit group is lit like any shape.
+- **Starting values.** A lamp that shows as a pool on the first render:
+  ambient `"#2e3448"` and a point light at `height: 120`, `energy: 1.5`, with
+  the default reach (400). `run --scene` prints each light's peak added
+  brightness and what a white floor below it shows, ambient alone and lit;
+  for this lamp, `peak +0.83 over ambient 0.20 (a white floor below it: 0.49
+  → 1.00)`. A peak several times the ambient reads as a pool; a peak near the
+  ambient barely shows.
 - Lighting happens before the group's effects (R5), so a wash paints over the
   lit result.
 
@@ -308,7 +315,9 @@ placed.
 
 Tools:
 - `run --scene` writes each captured frame's scene, as an indented outline, into
-  the transcript, with picture versions and placements.
+  the transcript, with picture versions and placements; `run --scene first`
+  writes only the first captured frame's. Each light's line gives its peak
+  added brightness (R8, "Starting values").
 - `cli diff` adds a scene diff beside the pixel diff: pictures added or
   re-recorded and why (which dep changed), and changed nodes. Siblings are
   aligned as sequences (longest common subsequence on node kind and data), so

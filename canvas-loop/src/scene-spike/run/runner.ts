@@ -172,7 +172,7 @@ class SpikeRun {
       const s = this.#renderer.stats;
       this.#lines.push(`## frame ${frame}`, `![frame ${frame}](${file})`, `passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}`);
       if (s.strokes > 0) this.#lines.push(`brushed strokes ${s.strokes}: expanded ${s.expanded}, expansion cache hits ${s.cacheHits}; mark pages ${s.markPages}, smears ${s.smears}`);
-      if (this.#o.scene === true || (this.#o.scene === "first" && captured.length === 1)) this.#lines.push("```", sceneOutline(rec.scene), "```");
+      if (this.#o.scene === true || (this.#o.scene === "first" && captured.length === 1)) this.#lines.push("```", sceneOutline(rec.scene, this.#gpu.colors), "```");
       this.#lines.push("");
     }
     for (const w of recorder.offCanvasWarnings()) this.#lines.push(`end of run: warning: ${w}`);

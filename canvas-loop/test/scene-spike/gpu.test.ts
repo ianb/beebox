@@ -22,7 +22,7 @@ import { pictureBackground, pixelImages, placeOptions, placementReplays } from "
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
-import { casterHeights, casterOnCaster, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
+import { casterHeights, casterOnCaster, lightPeaks, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
@@ -209,6 +209,7 @@ onGpu("R8: a thin, very tall caster under a low directional light is not skipped
 onGpu("R8: hard shadows read casters unblurred; soft ones blur them", hardEdges);
 onGpu("R8: a caster made taller than 1024 by a transform keeps its height", scaledTallCaster);
 onGpu("R8: shadow grain is keyed to canvas pixels, not the layer's bounds", stableShadowGrain);
+onGpu("R8: --scene reports each light's peak, and a white floor below it as rendered", lightPeaks);
 onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);
 
 onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {

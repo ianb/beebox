@@ -10,6 +10,7 @@ import type { Pixels } from "../../src/scene-spike/gpu/renderer.js";
 import { GpuRenderer } from "../../src/scene-spike/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
 import { renderOnce, rgbaAt } from "./gpu-render.js";
+import { sceneOutline } from "../../src/scene-spike/outline.js";
 
 const size = { width: 200, height: 120 };
 const CASTER: Material = { castsShadow: true };
@@ -353,4 +354,35 @@ export async function fullCone(handle: GpuHandle): Promise<void> {
   const spot = await renderOnce(handle, { size, draw: lamp(true) });
   const point = await renderOnce(handle, { size, draw: lamp(false) });
   assert.ok(Buffer.from(spot.data).equals(Buffer.from(point.data)), "a full-angle spot equals a point light");
+}
+
+/**
+ * Drawing-round finding 3: `--scene` reports each light's peak, and what a white floor below it shows. The
+ * report must agree with the renderer: the pixel under the light, and one beyond every light's reach.
+ */
+export async function lightPeaks(handle: GpuHandle, t: TestContext): Promise<void> {
+  const lighting: Lighting = { ambient: "#2e3448", exposure: 0.3, toneCurve: 0.6 };
+  const scene = new SceneRecorder({ width: 200, height: 120 }).record((v) => v.group({ lighting }, () => {
+    v.rect(0, 0, 200, 120, { fill: "#ffffff" });
+    v.light({ kind: "point", at: [50, 60], height: 40, color: "#ffd8a0", energy: 0.6, reach: 60 });
+  })).scene;
+  const line = sceneOutline(scene, handle.colors).split("\n").find((l) => l.includes("light point")) ?? "";
+  t.diagnostic(line.trim());
+  const m = /peak \+([\d.]+) over ambient ([\d.]+) \(a white floor below it: ([\d.]+) → ([\d.]+)\)$/.exec(line);
+  assert.ok(m !== null, `the light's line reports its peak: ${line}`);
+  const renderer = new GpuRenderer(handle);
+  try {
+    const px = await renderer.render(scene, 1);
+    const grey = (at: readonly [number, number]): number => {
+      const [r = 0, g = 0, b = 0] = rgbaAt(px, at);
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    };
+    const below = grey([50, 60]);
+    const away = grey([180, 60]);
+    t.diagnostic(`rendered: ${away.toFixed(3)} beyond its reach, ${below.toFixed(3)} below it`);
+    assert.ok(Math.abs(away - Number(m[3])) < 0.02, `ambient alone: reported ${m[3]}, rendered ${away.toFixed(3)}`);
+    assert.ok(Math.abs(below - Number(m[4])) < 0.02, `below the light: reported ${m[4]}, rendered ${below.toFixed(3)}`);
+  } finally {
+    renderer.destroy();
+  }
 }
