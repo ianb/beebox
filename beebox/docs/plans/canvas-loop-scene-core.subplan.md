@@ -432,16 +432,20 @@ then the switch that deletes the old code; then docs.
   - The undeclared-param guard and the spike's starting-param check (`refused,
     since it would be clamped …`) apply on both surfaces.
   - `--ratio` other than 1 and `--scene` on the Canvas2D surface are errors.
-  - Guards (after review): installed for the whole run, not per call. They
-    throw only in an async context the sketch's calls start (an
-    `AsyncLocalStorage`), so a microtask or promise callback the sketch
-    schedules is guarded, and the renderer's own `performance.now` is not.
-    The decision does not depend on file paths because beebox inlines
-    canvas-loop into `dist/cli.mjs`. Freezing and result checks run in that
-    context. While a run is active, the run takes an error thrown or rejected
-    in a callback, and the transcript ends with
-    `error in a callback the sketch scheduled`. A second `teaRun` in the same
-    process during a run is refused.
+  - Guards (after two review rounds): each synchronous sketch call (`init`,
+    each `update`, `draw`, `sound`, `activity`, and the check and freeze of
+    its result) runs with `Math.random`, `Date.now`, `performance.now` and
+    argless `Date` replaced. Scheduling is replaced too: the timers,
+    `queueMicrotask`, `process.nextTick`, `Promise.prototype.then` and
+    `requestAnimationFrame`. Each stub throws a `DeterminismError` at the
+    call ("sketch code runs synchronously; it cannot schedule work"). All of
+    it is restored synchronously in a `finally` around the call. No process
+    handlers are touched. Console capture is per run, and a second concurrent
+    `teaRun` in the process is refused.
+    *Accepted limitation:* an `async` function the sketch starts and does not
+    return. Native `await` does not call `Promise.prototype.then`, so its
+    continuation runs after the call, unguarded. A test in
+    `tea-runtime.guards.gpu.test.ts` shows this; nothing more is built for it.
   - The process's device is opened with timestamps asked for (`--timing` pass
     times) and is never destroyed; Dawn does not keep Node from exiting.
   - beebox: `figureRenderer` and `FigureRendererError` are deleted; the check
