@@ -4,7 +4,8 @@
 // and placed pictures become jobs sized to their content grown by their
 // effects' reach (R5 bounds, R7), clips become coverage masks in their job.
 // A lit group (R8) lowers its body three times: colour, gathering its lights,
-// and its two material layers (material.ts), which the light pass shades.
+// and its two material layers (material.ts), which the light pass shades; a
+// fourth for the non-receiving layer when it holds `receivesShadow: false`.
 import { BLEND_MODES } from "../core/compose.js";
 import type { BlendMode } from "../core/paint.js";
 import type { BrushExpander } from "../scene/brush/expand.js";
@@ -17,7 +18,7 @@ import type { Effects, Material } from "../scene/api.js";
 import type { Rgba } from "../scene/colors.js";
 import type { LightOut } from "./light.js";
 import { lightPlanOf } from "./light.js";
-import type { MatMode } from "./material.js";
+import type { MatMode, MaterialLayer } from "./material.js";
 import { LIT_RESULT, bevelOf, casterHeight, materialColor, materialOf, materialPlan } from "./material.js";
 import { fxPlanOf } from "./effects.js";
 import type { GlyphCache } from "./glyphs.js";
@@ -189,13 +190,14 @@ export class Lowering {
     if (lighting !== undefined && here.mat === undefined) {
       const unit = Math.sqrt(Math.abs(det(here.matrix)));
       const tallest = { height: 0 };
-      const mat = (layer: 0 | 1, encodeMax: number): Job => this.#job(`${name} material ${layer}`, { effects: undefined, here: { ...here, visible: job.rect, lights: undefined, mat: { layer, fallback: undefined, unit, tallest, encodeMax } }, body: (i) => this.#nodes(n.children, i) });
+      const mat = (layer: MaterialLayer, encodeMax: number): Job => this.#job(`${name} material ${layer}`, { effects: undefined, here: { ...here, visible: job.rect, lights: undefined, mat: { layer, fallback: undefined, unit, tallest, encodeMax } }, body: (i) => this.#nodes(n.children, i) });
       const layer0 = mat(0, MAX_CASTER_HEIGHT);
       let layer1 = mat(1, MAX_CASTER_HEIGHT);
       // A transform can make a caster taller than the encoding holds: encode against the tallest instead.
       const encodeMax = Math.max(MAX_CASTER_HEIGHT, tallest.height);
       if (encodeMax > MAX_CASTER_HEIGHT) layer1 = mat(1, encodeMax);
-      job.light = { plan: lightPlanOf(lights, { lighting, matrix: here.matrix, colors: this.#colors, ratio: this.#brush.ratio, tallest: tallest.height, encodeMax }), mats: [layer0, layer1] };
+      // Only a group that holds `receivesShadow: false` pays for the non-receiving layer.
+      job.light = { plan: lightPlanOf(lights, { lighting, matrix: here.matrix, colors: this.#colors, ratio: this.#brush.ratio, tallest: tallest.height, encodeMax }), mats: n.nonReceiving ? [layer0, layer1, mat(2, encodeMax)] : [layer0, layer1] };
     }
     const clip = n.clip === undefined ? here.clip : this.#clip(n.clip, here);
     const outer = here.mat;
@@ -207,7 +209,7 @@ export class Lowering {
   #matColor(here: Here, material: Material | undefined): Rgba | undefined {
     if (here.mat === undefined) return undefined;
     const m = materialOf(material, here.mat);
-    if (here.mat.layer === 0) return materialColor(m, { layer: 0 });
+    if (here.mat.layer !== 1) return materialColor(m, { layer: here.mat.layer });
     // A caster's height is in its own coordinates; the shading measures it in the lit group's.
     const height = (casterHeight(m) * Math.sqrt(Math.abs(det(here.matrix)))) / here.mat.unit;
     here.mat.tallest.height = Math.max(here.mat.tallest.height, height);

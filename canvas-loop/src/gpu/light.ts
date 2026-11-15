@@ -1,5 +1,5 @@
 // Lit groups (R8) on the GPU: the lights a group gathered while lowering, in
-// device pixels, and the passes that shade its colour layer from its two
+// device pixels, and the passes that shade its colour layer from its
 // material layers (shader-light.ts) and give a bevelled shape its normals.
 import type { ColorParser, Rgba } from "../scene/colors.js";
 import { apply, applyLinear, det } from "../scene/mat.js";
@@ -7,7 +7,7 @@ import type { LightRec, LightingRec, Mat } from "../scene/nodes.js";
 import type { Sigma } from "./effects.js";
 import type { Frame } from "./frame.js";
 import { beginPass } from "./frame.js";
-import type { Job } from "./jobs.js";
+import type { Job, Mats } from "./jobs.js";
 import { heightOf, isEmpty, widthOf } from "./jobs.js";
 import type { BevelPlan } from "./material.js";
 import { BEVEL_WGSL, LIGHT_WGSL } from "./shader-light.js";
@@ -116,7 +116,7 @@ export class LightPass {
    * Soft shadows march through layer 1 blurred a little, so a shadow's sides soften and its
    * samples do not show as grain; hard shadows read it as drawn.
    */
-  light(job: Job, a: { f: Frame; tex: GPUTexture; plan: LightPlan; mats: readonly [Job, Job]; blur: (tex: GPUTexture, a: { sigma: Sigma; w: number; h: number }) => GPUTexture }): GPUTexture {
+  light(job: Job, a: { f: Frame; tex: GPUTexture; plan: LightPlan; mats: Mats; blur: (tex: GPUTexture, a: { sigma: Sigma; w: number; h: number }) => GPUTexture }): GPUTexture {
     const { f, plan } = a;
     const casters = a.mats[1];
     const s = CASTER_SOFTEN * plan.ratio;
@@ -129,6 +129,7 @@ export class LightPass {
       ...plan.ambient.slice(0, 3), plan.shadows,
       plan.lights.length, plan.heightScale, plan.ratio, plan.tallest,
       plan.exposure, plan.toneCurve, 0, 0,
+      ...(a.mats[2] === undefined ? [0, 0, 0, 0] : offset(a.mats[2])),
     ]);
     const lights = new Float32Array(Math.max(1, plan.lights.length) * 12);
     // Light positions in canvas device px, as the shader shades (its origin is whole pixels).
@@ -138,6 +139,7 @@ export class LightPass {
       this.#buffer(f, { usage: GPUBufferUsage.UNIFORM, data: u.buffer }),
       this.#buffer(f, { usage: GPUBufferUsage.STORAGE, data: lights.buffer }),
       a.tex, tex(a.mats[0]), tex(a.mats[1]), soft ?? tex(a.mats[1]),
+      a.mats[2] === undefined ? f.pipes.dummy : tex(a.mats[2]),
     ] });
     if (soft !== undefined) f.pool.release(soft);
     for (const m of [...a.mats, { tex: a.tex }]) {

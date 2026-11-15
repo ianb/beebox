@@ -28,7 +28,7 @@ import { debugBoxesOf } from "./debug.js";
 import { keyOf } from "../hash.js";
 import { fontWarning, recordText } from "./text.js";
 import { PureHelpers } from "./helpers.js";
-import { hasOpenLight, lightWarning, noLightWarning, resolveLight } from "./light.js";
+import { hasOpenLight, holdsNonReceiving, lightWarning, noLightWarning, resolveLight } from "./light.js";
 import { valueNoise } from "./noise.js";
 import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
@@ -246,7 +246,7 @@ export class SceneRecorder extends PureHelpers implements View {
         paper = this.#paper;
       });
       if (g.lighting !== undefined && !hasOpenLight(children)) this.#notes.warn(`unlit ${g.name ?? ""}`, noLightWarning(g.name, g.lighting));
-      this.#add({ kind: "group", ...g, paper, children });
+      this.#add({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(children), paper, children });
     } finally {
       this.#lit -= lit;
       this.#offCanvas?.leave(outer);

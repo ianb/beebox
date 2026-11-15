@@ -1,10 +1,12 @@
-// A lit group's two material layers (R8), drawn by lowering its body a second
-// and third time with each draw's colour replaced by its material and the
-// paint's alpha kept, so materials composite by coverage, erase, clip, mask
-// and fade exactly as colour does. Premultiplied, with 0.5 as a flat normal:
+// A lit group's material layers (R8), drawn by lowering its body again for
+// each, with each draw's colour replaced by its material and the paint's alpha
+// kept, so materials composite by coverage, erase, clip, mask and fade exactly
+// as colour does. Premultiplied, with 0.5 as a flat normal:
 // - layer 0: surface normal x, y (as 0.5 + n/2), shine, coverage;
 // - layer 1: emissive, shadow-casting amount, caster height (as
-//   √(height ÷ 1024), so low casters keep precision), coverage.
+//   √(height ÷ 1024), so low casters keep precision), coverage;
+// - layer 2, only in a group that holds `receivesShadow: false`: the
+//   non-receiving amount (1 for such a shape, 0 for every other), coverage.
 // A shape without a material is flat matte (zeros apart from the flat normal).
 import type { Material } from "../scene/api.js";
 import type { Rgba } from "../scene/colors.js";
@@ -12,7 +14,7 @@ import type { FxPlan, Sigma } from "./effects.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";
 import { premultiply } from "./paint.js";
 
-export type MaterialLayer = 0 | 1;
+export type MaterialLayer = 0 | 1 | 2;
 
 /** How a subtree draws into a material layer. */
 export interface MatMode {
@@ -52,6 +54,7 @@ export function materialOf(own: Material | undefined, mode: MatMode): Material |
  */
 export function materialColor(m: Material | undefined, a: { layer: MaterialLayer; height?: number; encodeMax?: number }): Rgba {
   if (a.layer === 0) return [0.5, 0.5, m?.shine ?? 0, 1];
+  if (a.layer === 2) return [m?.receivesShadow === false ? 1 : 0, 0, 0, 1];
   const height = a.height ?? casterHeight(m);
   const max = a.encodeMax ?? MAX_CASTER_HEIGHT;
   const casts = height > 0;

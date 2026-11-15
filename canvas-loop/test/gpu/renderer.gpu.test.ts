@@ -28,6 +28,7 @@ import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from ".
 import { rotatedText, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
 import { casterHeights, casterOnCaster, casterOutlineFringe, lightPeaks, smoothPenumbra, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
+import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonReceiver, skyKeepsLight, translucentNonReceiver } from "./receives-shadow-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
@@ -230,6 +231,12 @@ onGpu("R8: shadow grain is keyed to canvas pixels, not the layer's bounds", stab
 onGpu("R8: a soft shadow's penumbra is smooth, not speckled by the march", smoothPenumbra);
 onGpu("R8: a caster's outline on its shadowed side is not lit like open floor", casterOutlineFringe);
 onGpu("R8: --scene reports each light's peak and where it is, as rendered; a spot peaks on its beam", lightPeaks);
+onGpu("section 21: a non-receiving sky behind a caster keeps its lit pixels; the floor below still takes the shadow", skyKeepsLight);
+onGpu("section 21: a half-transparent non-receiving shape alone receives no shadow, its antialiased edge included", translucentNonReceiver);
+onGpu("section 21: a half-transparent non-receiving shape over an opaque receiver receives half the shadow", halfOverReceiver);
+onGpu("section 21: a placement's material supplies receivesShadow", placedNonReceiver);
+onGpu("section 21: a non-receiving caster still casts", nonReceivingCaster);
+onGpu("section 21: a lit group without receivesShadow: false draws two material layers, as before", materialLayerCount);
 onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);
 
 onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {

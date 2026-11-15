@@ -513,6 +513,15 @@ then the switch that deletes the old code; then docs.
   shadow on any pixel, its antialiased edge included; the same shape over an
   opaque receiving rect receives half the shadow; a placement's `material` supplies it; a non-receiving caster still
   casts; a group without the value draws two material layers, as before.
+- **As built (chunk 4).** The mark is `GroupNode.nonReceiving`, set by
+  `holdsNonReceiving` (`scene/recorder/light.ts`); it looks through
+  placements, unlit groups and mask bodies, and skips nested lit groups and
+  mask artwork, which add no material of their own to the outer group. A
+  placement's `material` with the value marks the group even when every shape
+  in the picture has its own material; the extra layer then holds zeros. A
+  pixel that is wholly non-receiving skips the shadow march. Cases:
+  `test/gpu/receives-shadow-cases.ts`. The night-room drawers and the Hallway
+  port render the same bytes as before.
 
 ### Track 4b: frame budget (chunk 4b)
 

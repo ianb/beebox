@@ -132,6 +132,9 @@ export interface ClipMask {
   page?: GPUTexture | undefined;
 }
 
+/** A lit group's material layers (material.ts): normals and shine; emissive and casters; and, where needed, non-receiving. */
+export type Mats = readonly [Job, Job] | readonly [Job, Job, Job];
+
 export interface Job {
   readonly name: string;
   rect: R;
@@ -140,8 +143,8 @@ export interface Job {
   readonly fx: FxPlan | undefined;
   /** Where the job's drawing can be seen (device px; the canvas, or a picture's tile): a wash reads its layer as continuous past it. */
   readonly seen?: R | undefined;
-  /** A lit group (R8): shaded from its two material layers before its effects. */
-  light?: { readonly plan: LightPlan; readonly mats: readonly [Job, Job] } | undefined;
+  /** A lit group (R8): shaded from its material layers before its effects (the third only where a shape receives no shadow). */
+  light?: { readonly plan: LightPlan; readonly mats: Mats } | undefined;
   /** A bevelled shape in material layer 0: its coverage becomes rim normals. */
   bevel?: BevelPlan | undefined;
   /** The finished layer once encoded; texel (0, 0) is device pixel (rect.x0, rect.y0). Set when lowered for a kept picture tile. */

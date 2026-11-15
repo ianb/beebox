@@ -83,6 +83,12 @@ export interface Material {
    * caster sits at its height: only taller casters shadow it.
    */
   readonly castsShadow?: boolean | number;
+  /**
+   * `false`: no light's shadow falls on this shape, for a backdrop in a side
+   * view (a sky behind a figure). It is still lit, and still casts if it has
+   * `castsShadow`. Default `true`.
+   */
+  readonly receivesShadow?: boolean;
 }
 export interface Light {
   readonly kind: "point" | "spot" | "directional";

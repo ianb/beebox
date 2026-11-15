@@ -14,7 +14,9 @@
 //   pixel on a caster sits on top of it, so a caster never shadows itself
 //   and only taller casters shadow it; samples in the caster that holds the
 //   light are skipped. Within one caster the strongest block counts (not the
-//   product), so a caster at half alpha blocks half.
+//   product), so a caster at half alpha blocks half. Where material layer 2
+//   is drawn, its non-receiving amount (per unit of material coverage) lifts
+//   each light's shadow toward none: a backdrop with `receivesShadow: false`.
 //   Then exposure (2^stops) and the tone curve: `tone` blends from a clip at
 //   white toward an S-curve in linear light, x^p / (x^p + m^p) scaled so 4
 //   maps to white (p 1.4, m 0.6): deeper shadows, highlights that roll off,
@@ -47,6 +49,7 @@ struct LU {
   ambient: vec4f, // rgb; shadows (0 none, 1 hard, 2 soft)
   misc: vec4f,    // light count, height scale (device px per squared encoded height), pixel ratio, tallest caster (device px)
   tone: vec4f,    // 2^exposure, tone curve strength
+  cO: vec4f,      // material layer 2 (non-receiving), or zero size where the group has none
 };
 // pos: x, y (texels), height (device px), kind (0 point, 1 spot, 2 directional)
 // col: rgb, energy; p: reach (device px), direction (radians), cone half-angle, directional slope
@@ -57,6 +60,7 @@ struct Lt { pos: vec4f, col: vec4f, p: vec4f };
 @group(0) @binding(3) var matA: texture_2d<f32>;
 @group(0) @binding(4) var matB: texture_2d<f32>;
 @group(0) @binding(5) var matBs: texture_2d<f32>;
+@group(0) @binding(6) var matC: texture_2d<f32>;
 ${QUAD}
 // Interleaved gradient noise (Jimenez 2014): a deterministic per-pixel offset in 0..1 whose neighbours differ evenly.
 fn ign(p: vec2i) -> f32 { return fract(52.9829189 * fract(0.06711056 * f32(p.x) + 0.00583715 * f32(p.y))); }
@@ -179,6 +183,9 @@ fn refine(P: vec3f, L: vec3f, tb: vec2f, dt: f32) -> f32 {
   let shine = select(0.0, A.b / A.a, A.a > 1e-4);
   let e = select(0.0, clamp(B.r / B.a, 0.0, 1.0), B.a > 1e-4);
   let recvIn = B.g > 0.02;
+  // How much of this pixel's material receives no shadow (receivesShadow: false), per unit of material coverage.
+  let Cn = inO(matC, p, U.cO);
+  let nonRecv = select(0.0, clamp(Cn.r / Cn.a, 0.0, 1.0), Cn.a > 1e-4);
   // How much of this pixel's material is the caster (its casting amount per unit of material coverage).
   let onCaster = select(1.0, clamp(B.g / B.a, 0.0, 1.0), B.a > 1e-4);
   let P = vec3f(vec2f(p) + 0.5 + U.size.zw, select(0.0, topOf(B), recvIn));
@@ -225,10 +232,11 @@ fn refine(P: vec3f, L: vec3f, tb: vec2f, dt: f32) -> f32 {
     let ndl = max(dot(N, Ld), 0.0);
     if (att * ndl < 1e-4) { continue; }
     var vis = vec3f(1);
-    if (U.ambient.w > 0.5) {
+    if (U.ambient.w > 0.5 && nonRecv < 1.0) {
       let top = shadow(P, Lp, recvIn);
       vis = vec3f(top);
       if (edge) { vis = mix(vec3f(shadow(vec3f(P.xy, 0.0), Lp, false)), vis, share); }
+      if (nonRecv > 0.0) { vis = mix(vis, vec3f(1), nonRecv); }
     }
     sum += li.col.rgb * att * ndl * vis;
     let Hv = normalize(Ld + vec3f(0, 0, 1));

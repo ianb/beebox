@@ -53,8 +53,7 @@ export function checkPainterly(effects: Effects): void {
   if (paper !== undefined) num(paper, { where: "effects.paper", range: UNIT });
 }
 
-const MATERIAL_KEYS = ["bevel", "relief", "shine", "emissive", "castsShadow"];
-
+const MATERIAL_KEYS = ["bevel", "relief", "shine", "emissive", "castsShadow", "receivesShadow"];
 
 /** A material, checked and copied (R8). It is kept even outside a lit group, where the renderer ignores it. */
 export function copyMaterial(material: Material | undefined, where: string): Material | undefined {
@@ -65,6 +64,8 @@ export function copyMaterial(material: Material | undefined, where: string): Mat
   optNum(material.bevel, { where: `${w}.bevel`, range: NON_NEGATIVE });
   for (const key of ["relief", "shine", "emissive"] as const) optNum(material[key], { where: `${w}.${key}`, range: UNIT });
   if (material.castsShadow !== undefined && typeof material.castsShadow !== "boolean") optNum(material.castsShadow, { where: `${w}.castsShadow`, range: [0, MAX_CASTER_HEIGHT] });
+  const receives: unknown = material.receivesShadow;
+  if (receives !== undefined && typeof receives !== "boolean") throw fail(`${w}.receivesShadow`, `must be true or false, got ${String(receives)}`);
   return { ...material };
 }
 
@@ -126,6 +127,47 @@ export function lightWarning(where: "mask" | "unlit", what: string): string {
 /** The warning for a lit group with no light inside it (R8). */
 export function noLightWarning(name: string | undefined, lighting: LightingRec): string {
   return `lit group${name === undefined ? "" : ` "${name}"`} has no light inside it, so only its ambient (${lighting.ambient}) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group`;
+}
+
+/** A placed picture's answer to `holdsNonReceiving`, kept per picture body: a picture is placed many times. */
+const nonReceivingPictures = new WeakMap<readonly SceneNode[], boolean>();
+
+/**
+ * Whether `nodes` draw a material with `receivesShadow: false` into an enclosing lit group's
+ * material layers (a shape's style or a placement's `material`): outside nested lit groups,
+ * which are emissive to it, and mask artwork, which draws no material. Only a lit group that
+ * holds one draws its third material layer.
+ */
+export function holdsNonReceiving(nodes: readonly SceneNode[]): boolean {
+  return nodes.some((n) => {
+    switch (n.kind) {
+      case "shape":
+        return n.style.material?.receivesShadow === false;
+      case "group":
+        return n.lighting === undefined && holdsNonReceiving(n.children);
+      case "at":
+      case "clip":
+        return holdsNonReceiving(n.children);
+      case "mask":
+        return holdsNonReceiving(n.body);
+      case "place": {
+        if (n.material?.receivesShadow === false) return true;
+        if (n.picture.kind !== "picture") return false;
+        const body = n.picture.children;
+        let held = nonReceivingPictures.get(body);
+        if (held === undefined) {
+          held = holdsNonReceiving(body);
+          nonReceivingPictures.set(body, held);
+        }
+        return held;
+      }
+      case "background":
+      case "text":
+      case "light":
+      case "debug":
+        return false;
+    }
+  });
 }
 
 /** Whether `nodes` hold a light that would light an enclosing lit group: outside nested lit groups and mask artwork, through placements. */

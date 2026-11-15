@@ -96,6 +96,8 @@ export interface GroupNode {
   readonly blend: BlendMode;
   readonly effects: Effects | undefined;
   readonly lighting: LightingRec | undefined;
+  /** A lit group whose body holds a material with `receivesShadow: false`: only it draws a third material layer. */
+  readonly nonReceiving: boolean;
   /** The paper at the end of the body (R9), for `effects.wash` and `effects.paper`. */
   readonly paper: PaperSettings;
   /** The group's `clip` option (after its effects), as a union of shapes. */

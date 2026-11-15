@@ -26,6 +26,10 @@ test("painterly effects, lighting, lights and materials are checked at the call"
     // @ts-expect-error -- castsShadow is a boolean or a height
     [/material.castsShadow: must be a number in 0..1024/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { castsShadow: "tall" } })],
     [/material.castsShadow: must be a number in 0..1024/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { castsShadow: 2000 } })],
+    // @ts-expect-error -- receivesShadow is a boolean
+    [/material.receivesShadow: must be true or false, got 0/, (v) => v.rect(0, 0, 1, 1, { fill: "#000", material: { receivesShadow: 0 } })],
+    // @ts-expect-error -- receivesShadow is a boolean
+    [/place material.receivesShadow: must be true or false, got no/, (v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => {}), 0, 0, { material: { receivesShadow: "no" } })],
     [/lighting.exposure: must be a number in -16..16/, (v) => v.group({ lighting: { exposure: Number.NaN } }, () => {})],
     [/lighting.toneCurve: must be a number in 0..1/, (v) => v.group({ lighting: { toneCurve: 1.5 } }, () => {})],
     [/material.relief: must be a number in 0..1/, (v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => {}), 0, 0, { material: { relief: 3 } })],
@@ -59,6 +63,28 @@ test("a lit group, its lights and materials are recorded with their defaults; ou
   assert.match(outline, /group "room" opacity 1 blend normal lit ambient #4d4d4d shadows soft/);
   assert.match(outline, /rect \(0,0\) 10×10 fill #888 stroke none material bevel,castsShadow/);
   assert.match(outline, /light spot at \(1,2\) height 80 #f{6} energy 1/);
+});
+
+test("a lit group is marked when its body draws a material with receivesShadow: false (section 21)", () => {
+  const SKY = { receivesShadow: false } as const;
+  const marked = (body: (v: View) => void): boolean => {
+    const [g] = record((v) => v.group({ lighting: {} }, () => {
+      body(v);
+      v.light({ kind: "point", at: [0, 0] });
+    })).scene.children;
+    assert.ok(g?.kind === "group");
+    return g.nonReceiving;
+  };
+  const sky = (v: View): ReturnType<View["picture"]> => v.picture({ key: "sky", width: 10, height: 10 }, () => v.rect(0, 0, 10, 10, { fill: "#88f", material: SKY }));
+  assert.equal(marked((v) => v.rect(0, 0, 10, 10, { fill: "#888" })), false, "no material: unmarked");
+  assert.equal(marked((v) => v.rect(0, 0, 10, 10, { fill: "#888", material: { receivesShadow: true } })), false, "receivesShadow: true: unmarked");
+  assert.equal(marked((v) => v.at({ translate: [1, 1] }, () => v.group({}, () => v.rect(0, 0, 10, 10, { fill: "#888", material: SKY })))), true, "a shape in a nested unlit group marks it");
+  assert.equal(marked((v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => v.rect(0, 0, 1, 1, { fill: "#888" })), 0, 0, { material: SKY })), true, "a placement's material marks it");
+  assert.equal(marked((v) => v.place(sky(v), 0, 0)), true, "a placed picture's shape marks it");
+  assert.equal(marked((v) => v.mask(() => v.rect(0, 0, 10, 10, { fill: "#000", material: SKY }), () => v.rect(0, 0, 10, 10, { fill: "#888" }))), false, "mask artwork draws no material");
+  assert.equal(marked((v) => v.group({ lighting: {} }, () => v.rect(0, 0, 10, 10, { fill: "#888", material: SKY }))), false, "a nested lit group is emissive to the outer one");
+  const [g] = record((v) => v.group({}, () => v.rect(0, 0, 10, 10, { fill: "#888", material: SKY }))).scene.children;
+  assert.ok(g?.kind === "group" && !g.nonReceiving, "an unlit group is never marked");
 });
 
 test("effects.paper uses the paper at the end of the group's body; a shape's, the paper at its call (R9)", () => {
