@@ -6,6 +6,7 @@
 // (about one in 2^64 per pair). Keys are memoised by object identity, so a
 // picture's nodes, kept across frames, are hashed once. Keys live only in this
 // process: strings are hashed by an id given on first sight.
+import type { Gesture } from "../core/brush/types.js";
 import type { Geom } from "./nodes.js";
 
 const f64 = new Float64Array(1);
@@ -38,12 +39,18 @@ const ids = new Map<string, number>();
 const MAX_ID_LENGTH = 32;
 const MAX_IDS = 4096;
 
-function str(s: string): void {
+/** `s`'s id, given on first sight; undefined for a long string, or once the table is full. */
+function idOf(s: string): number | undefined {
   let id = ids.get(s);
   if (id === undefined && s.length <= MAX_ID_LENGTH && ids.size < MAX_IDS) {
     id = ids.size;
     ids.set(s, id);
   }
+  return id;
+}
+
+function str(s: string): void {
+  const id = idOf(s);
   if (id !== undefined) {
     word(2);
     word(id);
@@ -175,25 +182,79 @@ function layout(g: Geom): boolean {
  * command that is not a path command of numbers) is hashed as plain data under its own word.
  */
 function geom(g: Geom): void {
+  laid(g, { layout, fallback: 100 });
+}
+
+/** A gesture in its layout (`gestureLayout`), or as plain data under its own word. */
+function gesture(g: Gesture): void {
+  laid(g, { layout: gestureLayout, fallback: 200 });
+}
+
+/** An envelope in the layout: a number, a preset name by its id, or keyframe pairs; false when it does not fit. */
+function putEnvelope(env: unknown): boolean {
+  if (env === undefined) put(0);
+  else if (typeof env === "number") {
+    put(1);
+    put(env);
+  } else if (typeof env === "string") {
+    const id = idOf(env);
+    if (id === undefined) return false;
+    put(2);
+    put(id);
+  } else if (Array.isArray(env)) {
+    put(3);
+    put(env.length);
+    for (const k of env) {
+      const pair: unknown = k;
+      if (!(Array.isArray(pair) && pair.length === 2 && typeof pair[0] === "number" && typeof pair[1] === "number")) return false;
+      put(pair[0]);
+      put(pair[1]);
+    }
+  } else return false;
+  return true;
+}
+
+const GESTURE_FIELDS = new Set(["pressure", "wobble", "seed", "faint"]);
+
+/** A gesture in a fixed layout (its four fields in one order, an absent or undefined field as 0); false when it does not fit. */
+function gestureLayout(g: Gesture): boolean {
+  for (const k of Object.keys(g)) if (!GESTURE_FIELDS.has(k)) return false;
+  put(201);
+  if (!putEnvelope(g.pressure)) return false;
+  for (const x of [g.wobble, g.seed]) {
+    if (x === undefined) put(0);
+    else if (typeof x === "number") {
+      put(1);
+      put(x);
+    } else return false;
+  }
+  const faint: unknown = g.faint;
+  if (faint !== undefined && typeof faint !== "boolean") return false;
+  put(faint === undefined ? 0 : faint ? 1 : 2);
+  return true;
+}
+
+/** Hash the scratch buffer's words written by a layout, or `v` as plain data under `fallback` when it did not fit. */
+function laid<T>(v: T, a: { layout: (v: T) => boolean; fallback: number }): void {
   used = 0;
-  if (!layout(g)) {
-    word(100);
-    value(g);
+  if (!a.layout(v)) {
+    word(a.fallback);
+    value(v);
     return;
   }
   const words = scratchWords;
   const n = used * 2;
-  let a = laneA;
-  let b = laneB;
+  let la = laneA;
+  let lb = laneB;
   for (let i = 0; i < n; i++) {
     const w = words[i] ?? 0;
-    a = Math.imul(a ^ w, 0x01000193);
-    b = Math.imul(b ^ w, 0x5bd1e995);
-    b ^= b >>> 15;
-    b = Math.imul(b, 0x27d4eb2d);
+    la = Math.imul(la ^ w, 0x01000193);
+    lb = Math.imul(lb ^ w, 0x5bd1e995);
+    lb ^= lb >>> 15;
+    lb = Math.imul(lb, 0x27d4eb2d);
   }
-  laneA = a;
-  laneB = b;
+  laneA = la;
+  laneB = lb;
 }
 
 function fin(h: number): number {
@@ -206,6 +267,7 @@ function fin(h: number): number {
 
 const plainKeys = new WeakMap<object, string>();
 const geomKeys = new WeakMap<object, string>();
+const gestureKeys = new WeakMap<object, string>();
 
 /** Hash `v` with `walk` on fresh lanes, the outer hash's lanes kept, memoised by identity in `memo`. */
 function keyed<T extends object>(v: T, a: { walk: (v: T) => void; memo: WeakMap<object, string> }): string {
@@ -235,6 +297,11 @@ export function keyOf(v: object): string {
 /** The structural key of a shape's geometry: what the geometry cache and brush expansions keep it under. */
 export function geomKey(g: Geom): string {
   return keyed(g, { walk: geom, memo: geomKeys });
+}
+
+/** The structural key of a brushed stroke's gesture: what brush expansions keep it under. */
+export function gestureKey(g: Gesture): string {
+  return keyed(g, { walk: gesture, memo: gestureKeys });
 }
 
 /** A transform's linear part as a key: its four numbers, exactly. */

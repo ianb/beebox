@@ -1,8 +1,9 @@
 // Structural keys: equal data gives equal keys, even when hashing re-enters.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { geomKey, keyOf } from "../../src/scene/hash.js";
+import { geomKey, gestureKey, keyOf } from "../../src/scene/hash.js";
 import type { Geom } from "../../src/scene/nodes.js";
+import type { Gesture } from "../../src/core/brush/types.js";
 
 test("a getter that hashes other data does not change the outer key", () => {
   const plain = { x: 2, y: 3 };
@@ -40,4 +41,13 @@ test("a geometry outside the fixed layout is keyed as plain data, apart from eve
   assert.equal(geomKey(odd), geomKey(same));
   assert.notEqual(geomKey(odd), geomKey({ kind: "poly", points: [[0, 0], [1, 0]], closed: true }));
   assert.notEqual(geomKey(odd), keyOf(same));
+});
+
+test("a gesture's key: equal fields share it in any order; each field, and the envelope's form, changes it", () => {
+  const frames = [[0, 0.6], [0.3, 1], [1, 0.6]] as const;
+  assert.equal(gestureKey({ wobble: 0.8, seed: 3, pressure: frames }), gestureKey({ pressure: [[0, 0.6], [0.3, 1], [1, 0.6]], seed: 3, wobble: 0.8 }));
+  assert.equal(gestureKey({}), gestureKey({ wobble: undefined }));
+  const gestures: Gesture[] = [{}, { seed: 3 }, { seed: 4 }, { wobble: 3 }, { faint: true }, { faint: false }, { pressure: 0.5 }, { pressure: "taper" }, { pressure: "swell" }, { pressure: [[0, 0.5]] }, { pressure: [[0, 0.5], [1, 0.5]] }];
+  const keys = gestures.map((g) => gestureKey(g));
+  assert.equal(new Set(keys).size, keys.length);
 });
