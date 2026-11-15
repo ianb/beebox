@@ -19,8 +19,12 @@ export function copyPoints(points: readonly Vec2[]): Vec2[] {
   return points.map((p): Vec2 => [p[0], p[1]]);
 }
 
+const ARITY: Record<PathCommand[0], number> = { move: 3, line: 3, quad: 5, bezier: 7, close: 1 };
+
 /** One command, element by element (a command is a flat tuple, and structuredClone per command was most of a recording's copying cost). */
 function copyCommand(c: PathCommand): PathCommand {
+  // A command of the wrong length is kept whole, so `checkCommands` reports it.
+  if (c.length !== ARITY[c[0]]) return structuredClone(c);
   switch (c[0]) {
     case "move":
     case "line":

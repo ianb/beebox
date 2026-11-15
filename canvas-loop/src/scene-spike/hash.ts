@@ -9,8 +9,9 @@
 const f64 = new Float64Array(1);
 const u32 = new Uint32Array(f64.buffer);
 
-// The two lanes, as module state: hashing is synchronous and not re-entrant, and
-// plain variables keep the per-word cost to a few integer operations.
+// The two lanes, as module state: plain variables keep the per-word cost to a
+// few integer operations. A getter in the data can call `keyOf` again, so
+// `keyOf` saves and restores the lanes around its own hash.
 let laneA = 0;
 let laneB = 0;
 
@@ -77,10 +78,13 @@ const memo = new WeakMap<object, string>();
 export function keyOf(v: object): string {
   const hit = memo.get(v);
   if (hit !== undefined) return hit;
+  const outerA = laneA, outerB = laneB;
   laneA = 0x811c9dc5;
   laneB = 0x9747b28c;
   value(v);
   const key = `${fin(laneA).toString(36)}.${fin(laneB).toString(36)}`;
+  laneA = outerA;
+  laneB = outerB;
   memo.set(v, key);
   return key;
 }
