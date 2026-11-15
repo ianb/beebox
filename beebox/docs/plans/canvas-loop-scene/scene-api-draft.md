@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.2
+# Stage 1: the scene API, draft 2.3
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -67,7 +67,9 @@ style's `blend` when the style sets one, including `"normal"`; otherwise the
 brush preset's (`marker` multiplies). Today an explicit `"normal"` still falls
 back to the brush's blend (`canvas-loop/src/core/painter/core.ts:410`);
 **decision 8** changes that, so `blend: "normal"` means normal. `erase` removes target alpha
-by the shape's coverage. `smudge` and `wet` read the target as it is when the
+by the shape's coverage times its paint's alpha (an `rgba(0,0,0,0.5)` erase
+removes half), as today. `weight: 0` draws no stroke. A colour the runtime
+cannot parse is an error when the call is recorded. `smudge` and `wet` read the target as it is when the
 stroke starts (and, for `smudge`, as it changes along the stroke). A sample
 outside the target's drawn area reads transparent.
 
@@ -419,3 +421,22 @@ From `stage2-findings.md`:
 - Docs to write with the implementation: "Making something glow" (emissive,
   light, glow, and a lamp that uses all three), where shape and group glows sit
   relative to a group's wash, and `v.width` inside a picture.
+
+## 15. Draft 2.3: details settled while building the spike
+
+From the Stage 4 builder (chunks 1–2):
+- **Erase** removes coverage times paint alpha (R1). `weight: 0` means no
+  stroke. An unparsable colour is an error at the call.
+- **`at` order:** the options compose as Canvas2D calls in this order:
+  `matrix`, `translate`, `rotate`, `skew`, `scale`. So `scale` acts on points
+  first and `matrix` last.
+- **Effects under non-uniform transforms** (section 4, decision 1): an
+  axis-aligned scale gives blur, glow and shadow separate horizontal and
+  vertical sizes; a rotation with uniform scale keeps them round. Rotated
+  non-uniform scale and skew transform the kernel too (the spike defers
+  these and says so with an error).
+- **`background`** inside a group or clip fills the canvas rectangle into the
+  current layer, inside any clip, as today.
+- **Gradients** interpolate unpremultiplied colours, as Canvas2D and Skia do.
+- **`noise`** is seeded by the run's seed (the same seed as `u.random`), so
+  `--seed` changes it and two runs with one seed agree.
