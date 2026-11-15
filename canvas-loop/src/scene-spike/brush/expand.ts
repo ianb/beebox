@@ -176,4 +176,9 @@ export class BrushExpander {
   get size(): number {
     return this.#cache.size;
   }
+
+  /** Forget every kept stroke (sleep). */
+  clear(): void {
+    this.#cache.clear();
+  }
 }

@@ -44,6 +44,12 @@ export class ImageCache {
     return this.#tex.size;
   }
 
+  get bytes(): number {
+    let total = 0;
+    for (const e of this.#tex.values()) total += e.tex.width * e.tex.height * 4;
+    return total;
+  }
+
   destroy(): void {
     for (const e of this.#tex.values()) e.tex.destroy();
     this.#tex.clear();

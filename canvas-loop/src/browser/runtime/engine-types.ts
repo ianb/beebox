@@ -1,5 +1,6 @@
 // The browser runtime's data types: what it is built from and what it reports.
-import type { ControlBox, Voice } from "../../core/tea.js";
+import type { ControlBox, ParamsDecl, ParamValues, Voice } from "../../core/tea.js";
+import type { TextMeasure } from "../../core/view.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 
@@ -26,13 +27,35 @@ export interface RuntimeLog {
  */
 export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean; activity?: Record<string, unknown> };
 
-export interface RuntimeDeps {
-  module: PlaygroundModule;
+/**
+ * What draws a frame for the runtime. Today's is a Canvas2D view over the
+ * figure's canvas; the scene spike's records the frame and draws it on the GPU.
+ */
+export interface DrawSurface {
+  /** The text measuring `u.textWidth` and `u.textBounds` answer with. */
+  readonly textMeasure: TextMeasure;
+  /** Fonts changed (a web font loaded): measure text afresh. */
+  forgetTextWidths(): void;
+  /** Call the sketch's `draw` once; returns where `v.control` placed param inputs. */
+  draw(model: unknown, params: ParamValues<ParamsDecl>): ReadonlyMap<string, ControlBox>;
+}
+
+/** Today's surface: a 2D context the runtime draws into with its Canvas2D view. */
+export interface CanvasDeps {
   ctx: CanvasRenderingContext2D;
   width: number;
   height: number;
   /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
   pixelRatio?: number;
+}
+
+/** Another surface, made once the runtime exists; `log` is the runtime's frame-tagged log. */
+export interface SurfaceDeps {
+  surface: (log: (args: readonly unknown[]) => void) => DrawSurface;
+}
+
+export type RuntimeDeps = (CanvasDeps | SurfaceDeps) & {
+  module: PlaygroundModule;
   seed: number;
   onFrame: (frame: number) => void;
   /** A voice whose frame has come (default: the runtime's own `SoundPlayer` plays it). */

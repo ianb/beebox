@@ -29,7 +29,7 @@
   },
   "scripts": {
     "cli": "node --import tsx src/headless/cli.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json && tsc --noEmit -p src/scene-spike/browser/tsconfig.json",
     "lint": "eslint .",
     "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "build:playground": "node --import tsx src/browser/build.ts",

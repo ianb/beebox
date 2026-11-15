@@ -124,4 +124,9 @@ export class KeptValues {
   get size(): number {
     return this.#map.size;
   }
+
+  /** Forget every kept value (sleep). */
+  clear(): void {
+    this.#map.clear();
+  }
 }

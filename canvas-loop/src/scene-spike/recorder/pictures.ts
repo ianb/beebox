@@ -117,6 +117,11 @@ export class PictureTable {
     this.#entries.set(version.key, list);
   }
 
+  /** Forget every version, so each picture records again (a web font loaded). */
+  clear(): void {
+    this.#entries.clear();
+  }
+
   /** How many versions are kept (for transcripts and tests). */
   get size(): number {
     let n = 0;

@@ -74,6 +74,9 @@ export class SceneRecorder extends PureHelpers implements View {
     return this.#size.height;
   }
 
+  /** Forget every picture version, so each body records again (a web font finished loading, draft section 20). */
+  readonly forgetPictures = (): void => this.#table.clear();
+
   /** Run `draw` against a fresh scene and return what it recorded. */
   record(draw: (v: View) => void): FrameRecord {
     const root: SceneNode[] = [];

@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.7
+# Stage 1: the scene API, draft 2.8
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -550,3 +550,23 @@ From the Stage 4 builder (chunks 1–2):
   the darkest a third family near the first. Lines turn toward the tone's
   contours (up to 0.35 rad) only where the tone changes strongly, and under
   them the colour lifts toward paper, so the lines carry the tone.
+
+## 20. Draft 2.8: browser mount and sleep (chunk 6a)
+
+- **Sleep in two steps.** Offscreen, a figure stops its loop at once (as
+  today). After two seconds still offscreen it releases its GPU resources
+  (kept rasters, pooled textures, caches), keeping the model, params, frame
+  counter, randomness and the last recorded scene. A brief scroll therefore
+  wakes instantly; a figure left offscreen frees its memory. Waking after a
+  release re-renders the kept scene without calling `draw`; for a figure built
+  on a large picture this costs a full redraw of it (measured: 160–175 ms for
+  the Hallway), so the "wake under 100 ms" target applies to waking within the
+  release delay.
+- **Resize** re-places controls without calling `draw`.
+- **Web fonts finishing loading** call `draw` again, as today; that frame's logs
+  can repeat. Pictures that measured text are recorded again.
+- **Cache equivalence in the browser** is byte-identical within one browser on
+  one machine, including after a new GPU device (measured), not only "up to the
+  GPU's rounding".
+- **One GPU device per page,** shared by every figure and destroyed with the last
+  one. A lost device shows a notice and is recreated on the next wake or click.

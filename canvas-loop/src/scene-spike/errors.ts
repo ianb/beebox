@@ -18,3 +18,11 @@ export class GpuRenderError extends Error {
     super(`GPU renderer: ${options.detail}`);
   }
 }
+
+/** A scene figure cannot mount in this browser (no WebGPU, no adapter) or was handed a bad module. */
+export class SceneMountError extends Error {
+  name = "SceneMountError";
+  constructor(options: { detail: string }) {
+    super(`mountSceneSketch: ${options.detail}`);
+  }
+}

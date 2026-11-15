@@ -44,6 +44,13 @@ export class GlyphCache {
     this.#make = make;
   }
 
+  /** Forget every rasterised glyph and the 2D canvas they were drawn on (sleep). */
+  clear(): void {
+    this.#cells.clear();
+    this.#ctx = undefined;
+    this.#cap = 0;
+  }
+
   #canvas(w: number, h: number): RasterCtx {
     const need = Math.max(w, h);
     if (this.#ctx === undefined || need > this.#cap) {

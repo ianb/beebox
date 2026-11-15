@@ -1,13 +1,14 @@
 // One way to get a GPU device in either runtime: the browser's `navigator.gpu`,
-// or Dawn (the `webgpu` package) in Node. Dawn's GPU object must stay
+// or Dawn (the `webgpu` package) in Node. A browser bundle imports
+// `browser/device.ts` instead, which has no Node imports. Dawn's GPU object must stay
 // referenced for as long as its devices live (collecting it crashes the
 // process), so it is kept at module level.
 import type { create as CreateDawn } from "webgpu";
-import type { Ctx2D, LayerImage } from "../core/paint.js";
+import type { Ctx2D } from "../core/paint.js";
 import { TextMeasurer } from "../core/painter/text/measure.js";
-import { GpuRenderError } from "./errors.js";
 import type { ColorParser } from "./colors.js";
 import { colorsFrom } from "./colors.js";
+import { browser2d, browserRaster, NoImage, openOn } from "./browser-device.js";
 
 /** The part of a runtime 2D canvas context that rasterises glyphs (napi-rs canvas headless, OffscreenCanvas in a browser). */
 export interface RasterCtx {
@@ -70,43 +71,11 @@ async function nodeRaster(): Promise<MakeRaster> {
   return (size) => createCanvas(size.width, size.height).getContext("2d");
 }
 
-function isRasterCtx(x: unknown): x is RasterCtx {
-  return typeof x === "object" && x !== null && ["fillText", "strokeText", "measureText", "getImageData"].every((k) => typeof Reflect.get(x, k) === "function");
-}
-
-function browserRaster(): MakeRaster {
-  const Offscreen: unknown = Reflect.get(globalThis, "OffscreenCanvas");
-  if (typeof Offscreen !== "function") throw new GpuRenderError({ detail: "no OffscreenCanvas to draw glyphs with" });
-  return (size) => {
-    const canvas: unknown = Reflect.construct(Offscreen, [size.width, size.height]);
-    const getContext: unknown = typeof canvas === "object" && canvas !== null ? Reflect.get(canvas, "getContext") : undefined;
-    const ctx: unknown = typeof getContext === "function" ? Reflect.apply(getContext, canvas, ["2d", { willReadFrequently: true }]) : undefined;
-    if (!isRasterCtx(ctx)) throw new GpuRenderError({ detail: "OffscreenCanvas gave no 2D context" });
-    return ctx;
-  };
-}
-
-function browser2d(): Ctx2D {
-  const Offscreen: unknown = Reflect.get(globalThis, "OffscreenCanvas");
-  if (typeof Offscreen !== "function") throw new GpuRenderError({ detail: "no OffscreenCanvas for colours and text" });
-  const canvas: unknown = Reflect.construct(Offscreen, [1, 1]);
-  const getContext: unknown = typeof canvas === "object" && canvas !== null ? Reflect.get(canvas, "getContext") : undefined;
-  if (typeof getContext !== "function") throw new GpuRenderError({ detail: "OffscreenCanvas has no getContext" });
-  // eslint-disable-next-line no-restricted-syntax -- runtime boundary: the browser's 2D context satisfies the structural Ctx2D, as the browser runtime's makeLayer does
-  return Reflect.apply(getContext, canvas, ["2d"]) as Ctx2D;
-}
-
 /** A 2D context of the runtime: napi-rs canvas in Node, an OffscreenCanvas in a browser. */
 async function runtime2d(): Promise<Ctx2D> {
   const nav: unknown = Reflect.get(globalThis, "navigator");
   const browser = typeof nav === "object" && nav !== null && typeof Reflect.get(globalThis, "OffscreenCanvas") === "function";
   return browser ? browser2d() : node2d();
-}
-
-class NoImage implements LayerImage {
-  get layerImageBrand(): never {
-    throw new GpuRenderError({ detail: "a measuring layer has no image" });
-  }
 }
 
 /** Today's text measurer over one of the runtime's 2D contexts: what the recorder lays text out with (draft section 7). */
@@ -119,20 +88,5 @@ export async function openTextMeasurer(): Promise<TextMeasurer> {
 /** A GPU device, or undefined when the runtime has no adapter (a machine without a GPU and without a software fallback). */
 export async function openGpu(options?: { timestamps?: boolean }): Promise<GpuHandle | undefined> {
   const { gpu, node } = await gpuEntry();
-  const adapter = await gpu.requestAdapter();
-  if (adapter === null) return undefined;
-  const blendable = adapter.features.has("float32-blendable");
-  const timestamps = options?.timestamps === true && adapter.features.has("timestamp-query");
-  const features: GPUFeatureName[] = [...(blendable ? ["float32-blendable" as const] : []), ...(timestamps ? ["timestamp-query" as const] : [])];
-  const device = await adapter.requestDevice({ requiredFeatures: features });
-  const info = adapter.info;
-  return {
-    device,
-    atlasFormat: blendable ? "r32float" : "r16float",
-    timestamps,
-    colors: colorsFrom(node ? await node2d() : browser2d()),
-    raster: node ? await nodeRaster() : browserRaster(),
-    description: [info.vendor, info.architecture, info.description].filter((s) => s !== "").join(" ") || "unknown adapter",
-    destroy: () => device.destroy(),
-  };
+  return openOn(gpu, { colors: colorsFrom(node ? await node2d() : browser2d()), raster: node ? await nodeRaster() : browserRaster(), timestamps: options?.timestamps === true });
 }

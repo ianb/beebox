@@ -31,6 +31,7 @@ import { KeptValues } from "./geometry-cache.js";
 import { RasterCache } from "./rasters.js";
 import type { PictureVersion } from "../scene.js";
 import type { R } from "./jobs.js";
+import { ErrorScopes } from "./error-scopes.js";
 
 /** A picture tile drawn this frame, kept once the frame has succeeded. */
 interface NewTile {
@@ -81,6 +82,18 @@ interface Encoded {
   readonly times: GPUBuffer | undefined;
 }
 
+/** Map a frame's readback buffer and copy out its rows. */
+async function readPixels(out: Encoded): Promise<Pixels> {
+  const { read, width, height, bytesPerRow } = out;
+  if (read === undefined) throw new GpuRenderError({ detail: "no readback buffer" });
+  await read.mapAsync(GPUMapMode.READ);
+  const src = new Uint8Array(read.getMappedRange());
+  const data = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) data.set(src.subarray(y * bytesPerRow, y * bytesPerRow + width * 4), y * width * 4);
+  read.unmap();
+  return { width, height, data };
+}
+
 export class GpuRenderer {
   readonly #gpu: GpuHandle;
   readonly #pool: TexturePool;
@@ -126,13 +139,13 @@ export class GpuRenderer {
   }
 
   /** Textures the renderer holds between frames, and their size. */
-  get held(): { textures: number; bytes: number; inUse: number; images: number; strokes: number; geometry: number; tiles: number; tileBytes: number } {
+  get held(): { textures: number; bytes: number; inUse: number; images: number; imageBytes: number; strokes: number; geometry: number; tiles: number; tileBytes: number } {
     const r = this.#rasters.held;
-    return { textures: this.#pool.count, bytes: this.#pool.bytes, inUse: this.#pool.inUse, images: this.#images.count, strokes: this.#expander.size, geometry: this.#kept.size, tiles: r.tiles, tileBytes: r.bytes };
+    return { textures: this.#pool.count, bytes: this.#pool.bytes, inUse: this.#pool.inUse, images: this.#images.count, imageBytes: this.#images.bytes, strokes: this.#expander.size, geometry: this.#kept.size, tiles: r.tiles, tileBytes: r.bytes };
   }
 
-  /** Lower, encode and submit one frame; the canvas is copied into `target` when given, else into `read`. Throws before submitting on a bad scene. */
-  #encode(scene: Scene, a: { ratio: number; temp: GPUBuffer[]; tiles: NewTile[]; target?: GPUTexture }): Encoded {
+  /** Lower, encode and submit one frame; the canvas is copied into `target` when given, and into `read` without a target or when `read` is asked for. Throws before submitting on a bad scene. */
+  #encode(scene: Scene, a: { ratio: number; temp: GPUBuffer[]; tiles: NewTile[]; target?: GPUTexture; read?: boolean }): Encoded {
     const device = this.#gpu.device;
     const t0 = performance.now();
     this.#timer?.begin();
@@ -186,8 +199,10 @@ export class GpuRenderer {
       // A WebGPU canvas must be configured with format rgba8unorm and COPY_DST usage to receive the frame.
       if (a.target.format !== "rgba8unorm" || (a.target.usage & GPUTextureUsage.COPY_DST) === 0) throw new GpuRenderError({ detail: `present needs a canvas configured with format "rgba8unorm" and COPY_DST usage; got ${a.target.format}` });
       enc.copyTextureToTexture({ texture: out }, { texture: a.target }, [Math.min(width, a.target.width), Math.min(height, a.target.height)]);
-      submit();
-      return { read: undefined, width, height, bytesPerRow, stats, times };
+      if (a.read !== true) {
+        submit();
+        return { read: undefined, width, height, bytesPerRow, stats, times };
+      }
     }
     const read = device.createBuffer({ size: bytesPerRow * height, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     a.temp.push(read);
@@ -202,39 +217,47 @@ export class GpuRenderer {
    * error), its error scopes are popped and its buffers and textures freed.
    */
   async render(scene: Scene, ratio: number): Promise<Pixels> {
-    return this.#frame(scene, { ratio }, async ({ read, width, height, bytesPerRow }) => {
-      if (read === undefined) throw new GpuRenderError({ detail: "no readback buffer" });
-      await read.mapAsync(GPUMapMode.READ);
-      const src = new Uint8Array(read.getMappedRange());
-      const data = new Uint8Array(width * height * 4);
-      for (let y = 0; y < height; y++) data.set(src.subarray(y * bytesPerRow, y * bytesPerRow + width * 4), y * width * 4);
-      read.unmap();
-      return { width, height, data };
-    });
+    return this.#frame(scene, { ratio }, readPixels);
   }
 
-  /** Render `scene` into `target` (an rgba8unorm texture, such as a WebGPU canvas's), with no readback. */
-  async present(scene: Scene, a: { ratio: number; target: GPUTexture }): Promise<void> {
-    await this.#frame(scene, a, async () => {});
+  /**
+   * Render `scene` into `target` (an rgba8unorm texture, such as a WebGPU
+   * canvas's). With `read`, the same frame is also read back (the bytes the
+   * target received), else nothing is.
+   */
+  async present(scene: Scene, a: { ratio: number; target: GPUTexture; read?: boolean }): Promise<Pixels | undefined> {
+    return this.#frame(scene, a, async (out) => (out.read === undefined ? undefined : readPixels(out)));
   }
 
-  async #frame<T>(...[scene, a, finish]: [Scene, { ratio: number; target?: GPUTexture }, (out: Encoded) => Promise<T>]): Promise<T> {
+  /**
+   * Free every texture and forget every kept value (brush expansions, coverage
+   * geometry, picture rasters, glyphs, images, pooled textures and atlas
+   * pages): a figure going to sleep (draft section 8). Pipelines and the
+   * device stay; the next frame is drawn cold, with the same pixels. With
+   * `keepCpu`, brush expansions, coverage geometry and glyph bitmaps (CPU
+   * memory) are kept, and only GPU textures are freed.
+   */
+  release(options?: { keepCpu?: boolean }): void {
+    this.#pool.destroy();
+    this.#images.destroy();
+    this.#rasters.destroy();
+    if (options?.keepCpu === true) return;
+    this.#expander.clear();
+    this.#kept.clear();
+    this.#glyphs.clear();
+  }
+
+  async #frame<T>(...[scene, a, finish]: [Scene, { ratio: number; target?: GPUTexture; read?: boolean }, (out: Encoded) => Promise<T>]): Promise<T> {
     const device = this.#gpu.device;
     const temp: GPUBuffer[] = [];
     const tiles: NewTile[] = [];
     let kept = false;
-    let open = 0;
+    const scopes = new ErrorScopes(device);
     try {
-      device.pushErrorScope("validation");
-      open++;
-      device.pushErrorScope("out-of-memory");
-      open++;
+      scopes.push(["validation", "out-of-memory"]);
       const out = this.#encode(scene, { ...a, temp, tiles });
-      const errors: GPUError[] = [];
-      for (; open > 0; open--) {
-        const e = await device.popErrorScope();
-        if (e !== null) errors.push(e);
-      }
+      // Popped in the same synchronous step as the pushes and the encode, so no other figure on the device can take this frame's scopes.
+      const errors = await scopes.popAll();
       if (errors.length > 0) throw new GpuRenderError({ detail: errors.map((e) => e.message).join("; ") });
       for (const t of tiles) this.#rasters.store(t.version, t);
       kept = true;
@@ -243,7 +266,7 @@ export class GpuRenderer {
       this.gpuTimes = out.times === undefined || this.#timer === undefined ? undefined : await this.#timer.read(out.times);
       return result;
     } finally {
-      for (; open > 0; open--) await device.popErrorScope();
+      await scopes.popAll();
       for (const b of temp) b.destroy();
       if (!kept) for (const t of tiles) this.#rasters.discard(t.tex);
       this.#rasters.endFrame();

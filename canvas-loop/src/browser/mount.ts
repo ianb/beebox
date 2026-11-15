@@ -280,7 +280,7 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
 }
 
 /** The transport toolbar: frame readout + play/pause + restart. */
-function buildTransport(deps: { runtime: Runtime; frameLabel: HTMLElement; renderPanel: () => void }): HTMLElement {
+export function buildTransport(deps: { runtime: Runtime; frameLabel: HTMLElement; renderPanel: () => void }): HTMLElement {
   const { runtime } = deps;
   const toolbar = document.createElement("div");
   toolbar.className = "cl-toolbar";
@@ -311,7 +311,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Validate an untrusted module value against the TEA contract. */
-function coerceModule(raw: unknown): PlaygroundModule {
+export function coerceModule(raw: unknown): PlaygroundModule {
   if (!isRecord(raw)) {
     throw new SketchMountError({ detail: "module must be a TEA sketch module object (named exports: init, update, draw)" });
   }
