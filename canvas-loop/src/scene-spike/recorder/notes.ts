@@ -4,7 +4,7 @@
 // each naming the sketch's line and given once per run, and performance hints.
 import { SketchUsageError } from "../../core/errors.js";
 import { atSketchLine } from "../call-site.js";
-import type { Mat } from "../scene.js";
+import type { Mat, PictureVersion } from "../scene.js";
 import { PlacementScales } from "./placement-scales.js";
 
 export class RecorderNotes {
@@ -48,9 +48,9 @@ export class RecorderNotes {
   }
 
   /** A top-level placement of a picture (testing mode): hints when its scale or rotation is new every frame. */
-  placed(key: string, matrix: Mat): void {
-    const hint = this.#scales.placed(key, matrix);
-    if (hint !== undefined) this.hint(`scale ${key}`, hint);
+  placed(version: PictureVersion, matrix: Mat): void {
+    const hint = this.#scales.placed(version, matrix);
+    if (hint !== undefined) this.hint(`scale ${version.key}`, hint);
   }
 
   #note(into: string[], a: { once: string; message: string }): void {

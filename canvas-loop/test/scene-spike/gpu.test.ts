@@ -14,6 +14,8 @@ import { GpuRenderer } from "../../src/scene-spike/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
 import { runSpike } from "../../src/scene-spike/run/runner.js";
 import type { Scene } from "../../src/scene-spike/scene.js";
+import type { Picture, View } from "../../src/scene-draft/scene-api.js";
+import type { Model } from "./dev-loop/cases.js";
 import { readDirBytes, teaView, tmpDir } from "../helpers.js";
 import { parity, premultiplied } from "./compare.js";
 import { CASE_NAMES, drawDraft, drawToday, fixtures } from "./fixtures.js";
@@ -291,8 +293,20 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
   }, handle);
   const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
   assert.equal(hints.length, 1, hints.join("\n"));
-  assert.match(hints[0] ?? "", /^frame 3: hint: picture "badge" was placed at a new scale or rotation in each of the last 3 frames .*\(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
+  assert.match(hints[0] ?? "", /^frame 3: hint: picture "badge" was placed at a scale or rotation it has no kept image for in each of the last 3 frames .*\(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
   assert.deepEqual(out.warnings, []);
+  // As the raster cache keys them: fixed scales placed in turn reuse their images (kept two frames); a change
+  // too small to see in six decimals is still a new key every frame.
+  const hintsFor = async (draw: (v: View, m: Model) => void): Promise<string[]> => (await runCase({ id: "scales", mistake: "", channel: "none", names: [], frames: 8, draw }, handle)).transcript.split("\n").filter((l) => l.includes("hint:"));
+  const tile = (v: View): Picture => v.picture({ key: "tile", width: 6, height: 6 }, () => v.rect(0, 0, 6, 6, { fill: "#2a9d8f" }));
+  assert.deepEqual(await hintsFor((v, m) => {
+    const p = tile(v);
+    for (const s of [1, m.t % 2 === 0 ? 2 : 3]) v.at({ scale: s }, () => v.place(p, 2, 2));
+  }), [], "scales {1, 2} and {1, 3} in turn");
+  assert.equal((await hintsFor((v, m) => {
+    const p = tile(v);
+    v.at({ scale: 1 + m.t * 1e-9 }, () => v.place(p, 2, 2));
+  })).length, 1, "a scale growing by 1e-9 a frame");
 });
 
 onGpu("off the canvas: only what is off on every frame warns, once; unboxed text crossing the edge warns; a glow reaching in does not", async (handle) => {

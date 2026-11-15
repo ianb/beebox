@@ -311,7 +311,7 @@ export class SceneRecorder extends PureHelpers implements View {
     const unlit = this.#unlit();
     if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
     this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
-    if (this.#audit && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v.key, this.#matrix);
+    if (this.#audit && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v, this.#matrix);
   }
 
   // ── outputs that are not drawing ──
