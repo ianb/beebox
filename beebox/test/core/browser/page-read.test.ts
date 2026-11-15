@@ -1,6 +1,6 @@
 // # Reading a page from the box browser's output
 //
-// docs/plans/webpage-capture-tools.md, Track C. `eval` prints a JSON string
+// plan:webpage-capture-tools, Track C. `eval` prints a JSON string
 // holding JSON. Cut-off output must never become a saved page.
 
 import { test } from "tap";

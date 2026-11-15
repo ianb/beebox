@@ -105,7 +105,7 @@ export function RecentView({ feed, quotas, quotaError, workstream }: { feed: Rec
 }
 
 /**
- * The browser's front door (`docs/plans/general-browser.md`, Track 3).
+ * The browser's front door (`plan:general-browser`, Track 3).
  *
  * A feed, not a file tree: "a file is interesting if it has been modified
  * recently, IN ANY WORKSTREAM." The tree is still reachable by browsing into a

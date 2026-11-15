@@ -1,6 +1,6 @@
 /**
  * Which card types can be shown in a conversation's strip
- * (`docs/implemented-plans/conversation-strip.md`).
+ * (`plan:conversation-strip`).
  *
  * A type is strip-capable when a built-in renderer declares a strip
  * rendering (listed here) or a box view bound to the type lists `"strip"`

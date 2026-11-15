@@ -1,6 +1,6 @@
 /**
  * TodoViewCard — card renderer for `todo-view` cards
- * (`docs/implemented-plans/todo-collection.md`, Track 4).
+ * (`plan:todo-collection`, Track 4).
  *
  * A `todo-view` card is a live query, not authored content: its own directory
  * is the query's `here`, its frontmatter supplies `glob`/`todo-status`/`assigned`,

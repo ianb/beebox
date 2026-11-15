@@ -7,7 +7,7 @@
  * which is an order of magnitude cheaper than starting Docling just to ask a
  * yes/no question. Decisions D8 (detection method + threshold) and D9 (page
  * renderer for the textless branch) in
- * `docs/plans/scanner-ingest-docling-decisions.md`.
+ * `plan:scanner-ingest-docling-decisions`.
  */
 
 import { execa } from "execa";

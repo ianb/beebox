@@ -1,6 +1,6 @@
 // # A real box browser host: start, drive through the relay, stop, recover
 //
-// docs/plans/shared-browser.md, "What will hold this after it ships". On the
+// plan:shared-browser, "What will hold this after it ships". On the
 // dev machine (no private network), the engine-side `ensureBrowserHost`
 // starts a real `bbx engine browser-host`, and the test drives the dashboard
 // only through the relay socket, as the engine's routes will. It records the

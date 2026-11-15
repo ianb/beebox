@@ -4,7 +4,7 @@
  * states, etc.) are allowed on raw elements.
  *
  * Session rows themselves are shared with the Landmarks page — see
- * `SessionRow` (docs/implemented-plans/top-nav-ia.md Track D).
+ * `SessionRow` (plan:top-nav-ia Track D).
  */
 
 import { useState } from "react";

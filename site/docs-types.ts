@@ -1,5 +1,5 @@
 // Shared types for the agent-docs corpus module (site/docs*.ts). See
-// beebox/docs/plans/agent-docs.md ("Sources", "Comparisons") and the
+// plan:agent-docs ("Sources", "Comparisons") and the
 // workstream's file contract for the full spec.
 
 import { z } from "zod";

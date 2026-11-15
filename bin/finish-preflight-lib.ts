@@ -7,7 +7,7 @@
  * `.claude/agents/finish.md` until now; {@link verificationCommands} is the
  * one place it lives.
  *
- * See beebox/docs/plans/change-based-test-selection.md, "Revision
+ * See plan:change-based-test-selection, "Revision
  * 2026-08-25 — test economics", mechanisms E and E2.
  */
 

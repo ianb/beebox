@@ -1,6 +1,6 @@
 /**
  * Hourly full-suite run on pinned `main`; mechanism D of
- * beebox/docs/plans/change-based-test-selection.md. It runs in a detached
+ * plan:change-based-test-selection. It runs in a detached
  * worktree, triages red files, bisects only landings that can reach the
  * failing file through the import graph, and files issues from the main
  * checkout (red.ts). It refuses to run elsewhere, and always removes the

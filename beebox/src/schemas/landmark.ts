@@ -106,7 +106,7 @@ export const OpenerEntry = z
 /**
  * The root place's onboarding opener, installed on a new box's root landmark
  * (`installRootLandmark`). It sits under the box's first question in the
- * empty root chat (docs/implemented-plans/front-door.md, Track A) and is phrased from the
+ * empty root chat (plan:front-door, Track A) and is phrased from the
  * person's side; the agent rewrites and eventually removes it as the box
  * comes into regular use. Talking is the box's least obvious input, so the
  * one stock opener is a walkthrough of it (the `what-can-you-do` skill).
@@ -158,7 +158,7 @@ export const IntentionText = z
   .refine((s) => !s.includes("\n"), "an intention must be a single line");
 
 /**
- * `intention` on a landmark (docs/implemented-plans/place-intention.md): `text` is the
+ * `intention` on a landmark (plan:place-intention): `text` is the
  * line; `ref` is the optional prime card, a box path to the card the work
  * happens in, which arrival opens in place of the landmark. A hand-written
  * bare string means `{ text }`; serialization writes the object form.
@@ -205,7 +205,7 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   category: "authored",
   // A landmark stands for its directory: it never lists in a fold, and the
   // directory's identity is drawn from it instead
-  // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
+  // (plan:card-prominence, "Type defaults"). A written `prominence`
   // still means something — see LandmarkObject above — but it describes the
   // place, not this file.
   prominence: "background",

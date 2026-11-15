@@ -1,5 +1,5 @@
 /**
- * Which Chromium the box browser runs (docs/plans/shared-browser.md, Track B).
+ * Which Chromium the box browser runs (plan:shared-browser, Track B).
  *
  * On a unit host the deploy installs Chrome for Testing once for every box and
  * keeps `/opt/beebox-browser/chrome` pointing at it (Track F); a box cannot

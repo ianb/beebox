@@ -1,4 +1,4 @@
-// Track 2 of docs/plans/router-transient-failure-resilience.md: a load-induced
+// Track 2 of plan:router-transient-failure-resilience: a load-induced
 // startup failure retries, bounded; everything else parks on the first failure.
 //
 // The bound is the load-bearing part. Nothing retries forever, and a stranded

@@ -156,7 +156,7 @@ void test("A link may carry a ?query or #fragment addressing a location within t
 // pattern `resolveInternalLink` classifies as "not internal" — before this
 // guard, such a link was silently never checked at all. It is now flagged
 // BEFORE that classification, with a message naming the canonical form
-// (`docs/plans/display-path-guard.subplan.md`):
+// (`plan:display-path-guard.subplan`):
 void test("Config:box.json (the boxholder's display form) matches the external-scheme pa...", async (t) => {
   const dbox = await makeTmpBox();
   const ddoc = join(dbox.root, "_content/store/docs/saoirse.md");

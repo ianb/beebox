@@ -1,6 +1,6 @@
 // # Links from a list open in the other pane
 //
-// A list is read beside what it leads to (`docs/plans/todos-ui.md`, Track 5).
+// A list is read beside what it leads to (`plan:todos-ui`, Track 5).
 // A card title, a dated-strip card name, or a todo's words in the todo list,
 // and "N open" on a directory's todo line, open their card through
 // `useOpenBeside`, which asks `listLinkRoute` where it goes.

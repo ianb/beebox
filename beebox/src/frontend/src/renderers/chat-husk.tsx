@@ -1,6 +1,6 @@
 /**
  * Chat husk renderer — registers the ChatHuskView component for `chat`
- * cards (web chat session husks; docs/plans/chat-husks.md).
+ * cards (web chat session husks; plan:chat-husks).
  */
 
 import { lazyComponent } from "../lib/lazy-component";

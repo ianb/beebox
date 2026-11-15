@@ -147,7 +147,7 @@ function singleHeader(request: FastifyRequest, name: string): string | undefined
  * access — the key never reaches the browser, so `server` is the right level.
  * The store is the only source; the `_config/connectors/<adapter>.secret.json`
  * file this was migrated from is gone
- * (`docs/implemented-plans/secret-custody.md`).
+ * (`plan:secret-custody`).
  *
  * Store name == adapter name, deliberately: these are the same credentials the
  * dedicated readers use (`core/mistral-key.ts`,

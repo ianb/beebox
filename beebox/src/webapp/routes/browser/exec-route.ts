@@ -1,6 +1,6 @@
 /**
  * `POST /<slug>/api/browser/exec`: the agent's way into the box browser
- * (docs/plans/shared-browser.md, Track C, and the "Exec route" ontology entry).
+ * (plan:shared-browser, Track C, and the "Exec route" ontology entry).
  *
  * `bbx browser <args>` posts `{ args }` here. The route checks the arguments
  * against the refused-flag list (a flag that picks another profile or browser
@@ -14,7 +14,7 @@
  * not be able to drive it.
  *
  * `POST /<slug>/api/browser/ask` is `bbx browser ask`, under the same rule
- * (docs/plans/shared-browser-ask.subplan.md).
+ * (plan:shared-browser-ask.subplan).
  */
 
 import type { FastifyInstance } from "fastify";

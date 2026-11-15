@@ -1,6 +1,6 @@
 /**
  * Starting, finding and stopping the browser host for a box, from the engine
- * (docs/plans/shared-browser.md, Track B).
+ * (plan:shared-browser, Track B).
  *
  * The engine owns the host so that the agent never starts agent-browser
  * itself: whichever process runs agent-browser first starts its daemon and

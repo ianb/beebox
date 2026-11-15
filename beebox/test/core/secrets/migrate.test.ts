@@ -2,7 +2,7 @@
 //
 // `bbx secrets migrate` is the one-time move from every box's
 // `_config/connectors/*.secret.json` into the machine store
-// (`docs/implemented-plans/secret-custody.md`, "Rollout shape"). Three boxes below stand in
+// (`plan:secret-custody`, "Rollout shape"). Three boxes below stand in
 // for a real machine: two that share one Mistral key, one that has a *different*
 // one, a Deepgram file (multi-field), an
 // OAuth *token* file that must not be migrated at all, and a malformed file.

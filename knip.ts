@@ -31,7 +31,7 @@ const config: KnipConfig = {
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
         // Declarative-only `defineRegistry` completeness declaration
-        // (docs/implemented-plans/file-layout.md rule 1/4): `appRouter` is built from the
+        // (plan:file-layout rule 1/4): `appRouter` is built from the
         // same `routerMembers` object, but nothing imports the registry
         // module for its own sake.
         "src/webapp/trpc/routers.ts",
@@ -88,7 +88,7 @@ const config: KnipConfig = {
         "react-compiler-runtime",
         // Never imported: test/helpers/dom-globals.ts imports
         // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
-        // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).
+        // Listing it here pins the shim itself (plan:frontend-dom-harness).
         "happy-dom",
         // Imported by beebox/src/shared/composition/merge.ts, which the
         // frontend bundles through @shared/*; knip files that import under the

@@ -3,9 +3,9 @@
  * chats *and* its links, plus a trailing bucket for chats bound to a
  * directory with no landmark. Self-sufficient (fetches its own data), so it
  * serves both the canonical Landmarks card and authored `view: landmarks` cards
- * (docs/plans/interface-as-cards.md) — a `view: landmarks` card shows the
+ * (plan:interface-as-cards) — a `view: landmarks` card shows the
  * sessions too, which is the point: one full picture of the box's activity
- * (docs/implemented-plans/top-nav-ia.md Track D).
+ * (plan:top-nav-ia Track D).
  *
  * Two queries: `landmarks.list` for link data, `chat.byLandmark` for the
  * chat buckets, joined by directory. Order and nesting come from `list`

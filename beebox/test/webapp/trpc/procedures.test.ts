@@ -57,7 +57,7 @@ async function attempt(fn: () => Promise<unknown>) {
 // owner surfaces that is right. The machine-level secret store is the exception:
 // its router is the only user of the strict gate, so an open-access box reaches
 // every other owner surface and none of the secrets ones
-// (`docs/implemented-plans/secret-custody.md`). A real signed-in owner passes
+// (`plan:secret-custody`). A real signed-in owner passes
 // both.
 void test("Each line is procedure caller → result.", async (t) => {
   const cases: Array<["pub" | "authed" | "owner" | "strictOwner", string, Partial<TrpcContext>]> = [

@@ -67,7 +67,7 @@ export function DictationEditButton({ id, onClick }: { id: string | undefined; o
  * One `id` covers both of a row's branches — the dictation segment-send and the
  * plain send are the same role in the interface and are never in the DOM at
  * once, which is exactly the case an authored address is allowed to span
- * (docs/plans/agent-points-at-ui.md, "an id names a role in the interface, not
+ * (plan:agent-points-at-ui, "an id names a role in the interface, not
  * a component"). The two *rows* are a different story: they can coexist in the
  * DOM, so the mobile row passes its own address.
  */
@@ -177,7 +177,7 @@ function DesktopComposerRow({
           });
         }}
         // A live segment can always be sent: with live text paused its words
-        // arrive only from the HQ pass (docs/implemented-plans/resilient-voice-recording.md).
+        // arrive only from the HQ pass (plan:resilient-voice-recording).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
         label={sendLabel}
         title={sendDisabledReason ?? sendLabel}

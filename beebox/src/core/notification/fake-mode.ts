@@ -2,11 +2,11 @@
  * Fake notifications: every channel sends through its fake service to a
  * synthetic audience, so a dev box exercises the whole delivery path with no
  * phone or browser, and the log records each delivery as
- * `sent (fake)`. See docs/implemented-plans/notifications.md ("Testability").
+ * `sent (fake)`. See plan:notifications ("Testability").
  *
  * On for every box in the process with `BBX_NOTIFY_FAKE=1`, or for one box
  * with `fakeNotifications: true` in its `_config/box.json` (journey walk
- * boxes; docs/implemented-plans/journey-simulated-notifications.md).
+ * boxes; plan:journey-simulated-notifications).
  *
  * `BBX_PUSH_FAKE=1`, the web-push-only switch this replaced, is read as an
  * alias for one release, with a warning.

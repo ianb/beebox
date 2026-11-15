@@ -6,7 +6,7 @@
 // `lastDeferReason`, neither counting nor clearing failures, and `once` does not
 // delete the card: only `success` does. Exit 75 without a marker is not evidence
 // (any command may exit 75), so it is a `failure`. The reason moves the change
-// cursor or holds it. See docs/implemented-plans/notifications.md (Track D).
+// cursor or holds it. See plan:notifications (Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,6 +1,6 @@
 /**
  * How a delivered `<trigger>` renders in the transcript
- * (docs/implemented-plans/activity-triggers.md, Track E): a labeled aside, the trigger's
+ * (plan:activity-triggers, Track E): a labeled aside, the trigger's
  * label as the eyebrow and its text as the body. Modeled on the self-note
  * aside: it is a message nobody typed. The note is for the agent and is not
  * rendered (an open design question in the plan).

@@ -1,5 +1,5 @@
 /**
- * Rule typescript-imports (`docs/implemented-plans/typescript-7.md`, Track C): only
+ * Rule typescript-imports (`plan:typescript-7`, Track C): only
  * `src/lib/typescript/` imports `typescript`, `@typescript/native`, or a
  * subpath of either, type-only imports included. It is the one TypeScript 7
  * boundary, in the beebox package only.

@@ -206,7 +206,7 @@ void test("A ref names a path inside the box.", async (t) => {
 // `Config:box.json` (the boxholder's CONVERSATION vocabulary — never a
 // canonical path) written into a `ref:`/`refs:` field is a lint ERROR, not a
 // broken-ref warning: the message names the canonical form so the fix is
-// obvious (`docs/plans/display-path-guard.subplan.md`).
+// obvious (`plan:display-path-guard.subplan`).
 void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a canonical...", async (t) => {
   const box = await makeTmpBox();
   await box.write(
@@ -233,7 +233,7 @@ void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a 
 // content-root-relative, so a ref hand-typed that way can silently mean the
 // wrong thing and break. When the ordinary resolution fails, the broken-ref
 // message probes `/_content/<path>` and appends a suggestion when THAT
-// resolves (`docs/plans/display-path-guard.subplan.md`):
+// resolves (`plan:display-path-guard.subplan`):
 void test("A ref's bare form is DOCUMENT-relative, not box-root-relative — but a boxhold...", async (t) => {
   const box = await makeTmpBox();
   await box.write("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
@@ -399,7 +399,7 @@ void test("contains is one concise sentence stating what can be found in the car
 
 // ## A landmark's prime card is validated like any other ref
 //
-// `intention.ref` (docs/implemented-plans/place-intention.md, Track A) is a key named
+// `intention.ref` (plan:place-intention, Track A) is a key named
 // `ref`, so the generic walk finds it with no landmark-specific code: a prime
 // card that is gone is a broken-reference warning, never an error.
 void test("A landmark intention's prime card that is gone is a broken-reference warning", async (t) => {

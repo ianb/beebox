@@ -1,6 +1,6 @@
 /**
  * The question bar's markup and script, added to the dashboard's page
- * (docs/plans/shared-browser-ask.subplan.md).
+ * (plan:shared-browser-ask.subplan).
  *
  * The script runs first in `<head>`, before the dashboard's own, and hangs the
  * bar from `<html>` rather than `<body>`, so the dashboard's React root never

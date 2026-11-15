@@ -1,5 +1,5 @@
 // Turning a selection into something a comment can carry, and finding it again
-// (`docs/plans/document-comments.md`, Track 3).
+// (`plan:document-comments`, Track 3).
 //
 // TWO HALVES OF ONE ALREADY-INSTALLED LIBRARY. `generateFragment` is Chrome's
 // own "Copy link to highlight" implementation: it walks the selection and

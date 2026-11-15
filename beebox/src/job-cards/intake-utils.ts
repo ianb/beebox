@@ -7,7 +7,7 @@
  * room; one job holds at most `INTAKE_JOB_MAX_ITEMS`, and the rest start new
  * jobs of the same key. A job that grew without limit once held 300 items, and
  * its batch prompt passed the model's limit
- * (docs/implemented-plans/bounded-reactor-batches.md).
+ * (plan:bounded-reactor-batches).
  *
  * `connector` is set only by a connector-scoped wakeup, and is the reactor's
  * connector filter key: use the connector's canonical name (e.g. "gmail"), or
@@ -265,7 +265,7 @@ export interface IntakeSplit {
  * Accepted: a process killed after the original is deleted and before the
  * commit leaves uncommitted chunks that hold the items while the job check
  * skips them. The window is one unlink and one commit inside a wakeup; nothing
- * recovers it (docs/implemented-plans/bounded-reactor-batches.md, Failure modes).
+ * recovers it (plan:bounded-reactor-batches, Failure modes).
  */
 export async function splitOversizedIntakeJobs(boxRoot: string): Promise<IntakeSplit[]> {
   const jobsDir = getBoxDir(boxRoot, "jobs");

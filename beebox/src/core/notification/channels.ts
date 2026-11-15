@@ -13,7 +13,7 @@
  *
  * Every candidate channel not tried gets a `skipped` delivery (`present` or
  * `no-audience`) for the caller to log. `web-push` is not a
- * candidate for a `dot`, so it gets no line. See docs/implemented-plans/notifications.md
+ * candidate for a `dot`, so it gets no line. See plan:notifications
  * (Track A).
  */
 

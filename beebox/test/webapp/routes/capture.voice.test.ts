@@ -138,7 +138,7 @@ function finalize(ctx: TestServer, { sessionId, payload, headers }: { sessionId:
 
 // ## Voice sessions: idempotent client-generated create, and a fenced-off owner/kind
 //
-// A voice recording (`docs/plans/resilient-voice-recording.md`) creates its
+// A voice recording (`plan:resilient-voice-recording`) creates its
 // staging session with a client-generated UUID v4, so the browser can start
 // staging before the box confirms the session exists. A repeat of the same id,
 // kind and owner is a no-op that returns the existing session:

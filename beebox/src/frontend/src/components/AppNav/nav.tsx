@@ -1,7 +1,7 @@
 import { workspaceRouteTarget } from "../../lib/system-card-navigation";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
- * The unified app bar (docs/implemented-plans/top-nav-ia.md Track C) — one gradient row,
+ * The unified app bar (plan:top-nav-ia Track C) — one gradient row,
  * every page, every width.
  *
  * There is no link row, box `<select>`, or hamburger any more: navigation
@@ -103,7 +103,7 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
-      {/* The box browser the agent also drives, in its own tab (docs/plans/shared-browser.md, Track E). */}
+      {/* The box browser the agent also drives, in its own tab (plan:shared-browser, Track E). */}
       <MenuItem id="bbx-profile-menu-browser" href={withBase(`/${boxSlug}/browser/`)} target="_blank">Web browser</MenuItem>
       <MenuDivider />
       <BoxPageMenuItems boxSlug={boxSlug} />
@@ -125,7 +125,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView, standalone: stand
   const base = `/${boxSlug}`;
 
   // Open on-plate todo count (escalated + on-plate) — the plan's one
-  // app-level todo affordance (docs/implemented-plans/todo-annotation.md
+  // app-level todo affordance (plan:todo-annotation
   // Track 4), and the only query the bar makes at rest.
   // `status.navStatus`, not `status.status`: the bar renders this one count
   // and nothing else, and it mounts on EVERY page — the fuller dashboard

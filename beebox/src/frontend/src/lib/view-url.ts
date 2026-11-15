@@ -296,7 +296,7 @@ function classifyControlHref(href: string): ControlHref | { kind: "external" } {
  * dead `<a href="control:…">`.
  *
  * `box-browser:` is the box's Browser page, written by the agent after `bbx
- * browser ask` (docs/plans/shared-browser-ask.subplan.md). The agent cannot
+ * browser ask` (plan:shared-browser-ask.subplan). The agent cannot
  * know the page's address under a dev router's outer prefix, and a root-absolute
  * path would be read as a box file.
  *

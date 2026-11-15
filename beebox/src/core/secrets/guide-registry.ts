@@ -1,7 +1,7 @@
 /**
  * What each built-in secret IS, and where a person gets one — the guidance
  * layer secret custody named and left to agents at capture time
- * (`docs/implemented-plans/secret-custody.md`, "Guided entry + validation":
+ * (`plan:secret-custody`, "Guided entry + validation":
  * *where to obtain the key, what it looks like, what it will be used for*).
  *
  * The third of those is deliberately NOT here. "What it is used for" lives in

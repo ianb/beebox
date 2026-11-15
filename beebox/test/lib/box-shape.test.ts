@@ -2,7 +2,7 @@
 //
 // `getBoxShape` reads a box's recorded shape (the `package.json` `beebox` block,
 // else the `.beebox/box.json` marker) and resolves it.
-// shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`)
+// shapeVersion 3 (the one-root layout — `plan:one-root-box-layout`)
 // has ONE root: `package.json`, `src/`, and every underscore-prefixed
 // operational area (`_content/`, `_config/`, …) all live at the same directory
 // — validated fail-closed against the box's own `package.json` declaring a

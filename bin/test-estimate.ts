@@ -10,7 +10,7 @@
  * The estimate is the sum of per-file median times divided by the jobs
  * count, and never less than the slowest file. Replayed over 148 selected
  * runs, actual time was 1.06x the estimate at the median and 1.73x at p90. See
- * beebox/docs/plans/change-based-test-selection.md, "Revision 2026-10-12 —
+ * plan:change-based-test-selection, "Revision 2026-10-12 —
  * broad selections".
  */
 

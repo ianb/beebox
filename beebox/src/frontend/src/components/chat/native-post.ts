@@ -5,7 +5,7 @@
  * each shell's document-start script; payloads always cross as strings.
  * Shells that predate the neutral function (older installed iOS builds) get
  * the legacy WKScriptMessageHandler object form instead. Contract:
- * docs/mobile-contract.md (Track 0 of docs/plans/android-companion-app.md).
+ * docs/mobile-contract.md (Track 0 of plan:android-companion-app).
  */
 
 export type NativeShellChannel =

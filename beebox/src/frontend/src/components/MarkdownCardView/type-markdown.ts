@@ -3,7 +3,7 @@
  * `CardBody`, keyed by card type. The tags match the type's
  * `CardSchemaConfig.markdocTags`; a type with none is absent. Every map here
  * is a module constant: a component map made per render remounts the body
- * (`docs/implemented-plans/stable-card-body.md`).
+ * (`plan:stable-card-body`).
  */
 
 import type { ComponentType } from "react";

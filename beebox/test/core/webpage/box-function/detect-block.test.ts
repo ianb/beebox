@@ -1,6 +1,6 @@
 // # Does a response look like a site refusing the box?
 //
-// docs/plans/webpage-capture-tools.md. A status that means "not for you", a
+// plan:webpage-capture-tools. A status that means "not for you", a
 // challenge header, or a short page with a challenge marker or phrase. A long
 // article that quotes such a phrase is an article, and with no status (the box
 // browser) only the page itself counts.

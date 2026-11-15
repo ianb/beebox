@@ -1,6 +1,6 @@
 /**
  * The box screen's input, pinned below the scrolling sections
- * (docs/plans/box-screen.md, track 2). It edits the new-thought draft, which
+ * (plan:box-screen, track 2). It edits the new-thought draft, which
  * is stored apart from the chat composer's draft. Enter sends; Shift+Enter
  * adds a line. While a thought is unsent, the line under the input says so.
  *

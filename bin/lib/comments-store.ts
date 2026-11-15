@@ -6,13 +6,13 @@
  * leaves a remark on a document, an agent reads it, acts, and clears it. They
  * never reach git, and they must survive a worktree cull — the third
  * persistence class the exhibits store established
- * (`beebox/docs/implemented-plans/workstream-exhibits.md`), so the root derivation,
+ * (`plan:workstream-exhibits`), so the root derivation,
  * marker guard, and containment posture here deliberately mirror
  * `workstreams-app/src/server/exhibits/store.ts` without importing it (the
  * resident-app precedent is to share patterns, not source, and `bin/` and the
  * app do not import across their package boundary at all).
  *
- * Design: `beebox/docs/plans/document-comments.md`.
+ * Design: `plan:document-comments`.
  *
  * THREE NAMESPACES, because a repository-relative path is not a unique document:
  *   tracked/<repo-relative>.comments.yaml            — follows the file everywhere
@@ -22,7 +22,7 @@
  * be found wherever it is next opened. An untracked one is not: two worktrees
  * routinely hold entirely different `scratch/notes.md`, and one namespace would
  * silently merge their comments. An exhibit lives in the exhibits store
- * outside every checkout (`docs/implemented-plans/exhibit-comments.md`), so it is named,
+ * outside every checkout (`plan:exhibit-comments`), so it is named,
  * not pathed.
  *
  * The store is untrusted input (an agent, a human, and an app all write here),
@@ -100,7 +100,7 @@ export type CommentsFile = z.infer<typeof commentsFileSchema>;
 
 /**
  * Which namespace a document lives in. Two are repository paths; the third is
- * an exhibit (`docs/implemented-plans/exhibit-comments.md`), which lives in the exhibits
+ * an exhibit (`plan:exhibit-comments`), which lives in the exhibits
  * store outside every checkout and is named by workstream and exhibit name.
  */
 export type Subject =

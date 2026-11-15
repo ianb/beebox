@@ -4,7 +4,7 @@
  * goes through the session's trigger lock (`.beebox/triggers/<session>.lock`),
  * which the runner also holds through a fire's admission, delivery and state
  * write, so a disarm runs either before admission or after the write. See
- * docs/implemented-plans/activity-triggers.md (Track A).
+ * plan:activity-triggers (Track A).
  *
  * Expiry is a pure decision (`expiryOf`) applied at read as well as by the
  * runner's timers, so a deadline that passed while nothing ran still reads as

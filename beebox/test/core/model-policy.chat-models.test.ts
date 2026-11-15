@@ -58,7 +58,7 @@ void test("line 29", async (t) => {
 
 // ## pi runs only the box's added models
 //
-// pi has no models of its own and no tier table (docs/plans/pi-box-engine.md,
+// pi has no models of its own and no tier table (plan:pi-box-engine,
 // Track 2): its menu is the owner's added OpenRouter list with no "Default" row,
 // a removed added pick is kept for the spawn to refuse, and asking it for a tier
 // is a broken invariant.

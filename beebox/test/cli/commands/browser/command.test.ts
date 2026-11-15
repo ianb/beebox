@@ -1,6 +1,6 @@
 // # `bbx browser`: agent-browser arguments go to the box's exec route untouched
 //
-// docs/plans/shared-browser.md, Track D. The command posts its arguments to
+// plan:shared-browser, Track D. The command posts its arguments to
 // `POST /<slug>/api/browser/exec` with the agent bearer and prints what came
 // back, with agent-browser's exit code; a refusal from the server goes to
 // stderr with exit code 1. The server here is a real box server with the auth

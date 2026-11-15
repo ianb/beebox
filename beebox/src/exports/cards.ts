@@ -1,7 +1,7 @@
 /**
  * Card primitive layer — the frontmatter-schema building blocks beebox
  * uses to declare and parse `.card` files. Absorbed from the former
- * `cardworks` package (see docs/implemented-plans/remove-cardworks-package.md).
+ * `cardworks` package (see plan:remove-cardworks-package).
  *
  * Box-local schemas (`src/schemas/*.ts`) import these via the public
  * `beebox/cards` specifier; internal code imports from `../cards/`.

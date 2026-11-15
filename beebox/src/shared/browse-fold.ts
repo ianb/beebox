@@ -1,5 +1,5 @@
 /**
- * The Browse fold decision — `docs/implemented-plans/card-prominence.md`, Track C.
+ * The Browse fold decision — `plan:card-prominence`, Track C.
  *
  * Pure function over a plain listing shape: given a directory's cards
  * (carrying an effective `prominence`), plain files, and subdirectories
@@ -18,7 +18,7 @@
  *   (`seeded`), with no landmark of its own and no `.card` anywhere below
  *   it (`summary.cardCount === 0`; `null`, a failed count, never folds).
  *   It is not dimmed. A person's own folder is never seeded
- *   (`docs/implemented-plans/front-door.md`, Track D).
+ *   (`plan:front-door`, Track D).
  * - A listing with nothing prominent anywhere (no lead candidates, and the
  *   listing's own directory isn't itself background) returns `lead: []`
  *   and `more` in TODAY'S order — dirs, then cards, then files, each

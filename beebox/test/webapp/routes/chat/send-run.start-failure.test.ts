@@ -3,7 +3,7 @@
 // Acceptance is the durable record, not the engine spawn. Once the session takes
 // the turn, the route persists the user message + the message-id claim and
 // answers `{turnId}`; the run starts afterwards, with nothing awaiting it
-// (`docs/implemented-plans/emission-model.md`, Track A).
+// (`plan:emission-model`, Track A).
 //
 // So a run that fails to start (an SDK spawn hitting the file-descriptor ceiling —
 // `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md`) can no longer

@@ -22,7 +22,7 @@
  * output carries over from an earlier commit.
  *
  * Fails closed: any git or filesystem error exits nonzero and the hook stops
- * the commit. Plan: beebox/docs/implemented-plans/staged-commit-checks.md.
+ * the commit. Plan: plan:staged-commit-checks.
  */
 
 import { createHash } from "node:crypto";

@@ -103,7 +103,7 @@ void test("The word is worth about 70px, which at phone width is most of the pla
 
 // ## Diarization changes people, not the floor or answer channel
 //
-// Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the
+// Every dictated message gets the HQ pass (plan:hq-always), so the
 // chip shows speaker labels exactly when the box's HQ service diarizes.
 void test("Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the chi...", async (t) => {
   const services: Parameters<typeof voiceChipDiarizationEnabled>[0][] = ["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null];

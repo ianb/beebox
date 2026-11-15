@@ -5,7 +5,7 @@
 // reserves its calls all at once, so a batch never half-runs. Over the cap
 // `bbx judge` defers with the reason `budget`, which keeps a schedule's change
 // cursor; the health check counts those deferrals over the last 24 hours. See
-// docs/implemented-plans/notifications.md (Track D).
+// plan:notifications (Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

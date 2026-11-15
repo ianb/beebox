@@ -9,7 +9,7 @@
  * `noteEngineUnavailability` is the variant for the chat path, where no
  * AgentResult exists and the human sees the message inline.
  *
- * Design: docs/implemented-plans/deferred-recoverable-agent-failures.md
+ * Design: plan:deferred-recoverable-agent-failures
  */
 
 import { getBoxTime } from "../../lib/time.js";

@@ -116,7 +116,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
 
   // Detects what's already at `targetPath`: an existing box (a beebox
   // package.json beside `_config/`, which a clone of a box has) or nothing yet. A fresh init always scaffolds the
-  // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
+  // one-root layout — see `plan:one-root-box-layout`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
   if (isFresh) await refuseNestedBox(boxRoot);
@@ -210,7 +210,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   }
 
   // A new box starts with one question, which its first chat asks
-  // (docs/implemented-plans/front-door.md, Track A). Fresh init only: a re-init is not a
+  // (plan:front-door, Track A). Fresh init only: a re-init is not a
   // new box, and the seed never asks a box that already holds any question.
   if (isFresh) {
     const rootQuestion = await installRootQuestion(boxRoot);

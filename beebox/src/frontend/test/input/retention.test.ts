@@ -1,6 +1,6 @@
 // # RetentionStore — emission-keyed audio retention
 //
-// `createRetentionStore` (docs/plans/input-extraction.md, chunk 5) replaces
+// `createRetentionStore` (plan:input-extraction, chunk 5) replaces
 // the old single-slot "last message audio" cache with one keyed by emission
 // id, so a send never has to clear anything — `latest()` is well-defined by
 // construction. v1 policy: memory-only, oldest evicted first once past

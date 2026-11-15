@@ -1,13 +1,13 @@
 /**
  * The metadata pass — the original whole review: title, `contains`, and the
  * running account for one session's unread summary-journal span
- * (`docs/implemented-plans/chat-review.md` § Track C).
+ * (`plan:chat-review` § Track C).
  *
  * Also advances the **title** journal: the pass refreshed the title against
  * this span, so the cheap gate should not re-ask about the same material —
  * except when it offered no title for a chat that had none, which reconciled
  * nothing and retries on the title pass
- * (`docs/implemented-plans/chat-titles.md` § Track A).
+ * (`plan:chat-titles` § Track A).
  */
 
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../../transcript-render.js";

@@ -1,7 +1,7 @@
 /**
  * A box's own `webpage.ts`: one function that can refuse a page or make its
  * card's content, by itself or through `standard`
- * (docs/plans/webpage-capture-tools.md).
+ * (plan:webpage-capture-tools).
  *
  * It is box code, so it runs as tricks do: its own process, the box's script
  * environment, from the tricks directory so its own imports resolve. A hang or

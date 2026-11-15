@@ -1,6 +1,6 @@
 /**
  * `POST /api/capture/sessions/:id/finalize` — the voice-recording branch
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). Split out of
+ * (`plan:resilient-voice-recording`, Track 1). Split out of
  * `capture.ts` to keep its route-registration function under the line budget,
  * mirroring `capture-create.ts`.
  *
@@ -21,7 +21,7 @@
  * seal. Finalize is idempotent: a repeat once sealed returns the current
  * state (200); a repeat with a different `hq.emissionId` is refused (409).
  *
- * A call recording (docs/implemented-plans/chat-calls.md, Track F) sends `call:
+ * A call recording (plan:chat-calls, Track F) sends `call:
  * { callId, firstAudioAtMs }` and `hq: null`: HQ always runs, with word timing
  * and no emission, since the call fold waits for it rather than a composer.
  */

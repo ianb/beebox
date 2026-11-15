@@ -3,7 +3,7 @@
  * and pass parsed entries in.
  *
  * What gets indexed is the whole design decision (see
- * `docs/plans/chat-search.md` Track 2): user and assistant TEXT, in chunks
+ * `plan:chat-search` Track 2): user and assistant TEXT, in chunks
  * that point back at a position in the conversation. Tool calls and tool
  * results contribute nothing — noise for "which chat said X". User text is
  * wrapper-stripped so speech/typed envelopes don't pollute matches, the same

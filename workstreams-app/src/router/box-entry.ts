@@ -2,7 +2,7 @@
 // worktree's default box path) into the box's content dir and URL slug.
 //
 // An entry can point at any of three things (see "The box repository" and
-// Track G in docs/implemented-plans/boxes-as-packages-v2.md):
+// Track G in plan:boxes-as-packages-v2):
 //   - a legacy (shapeVersion 1) box dir — content and package root are the
 //     same directory.
 //   - a v2 box's PACKAGE root (has `content/.beebox/box.json` inside it).

@@ -3,10 +3,10 @@
  * `nav.card` href validation (schema) and href label defaults (nav
  * resolver). Shared by backend and frontend. There is no builtin fallback
  * nav any more: the app bar's switch menu carries these destinations itself
- * (docs/implemented-plans/top-nav-ia.md Track C3), so a box without a `nav.card` needs
+ * (plan:top-nav-ia Track C3), so a box without a `nav.card` needs
  * no substitute list.
  *
- * As interface surfaces convert to cards (docs/plans/interface-as-cards.md),
+ * As interface surfaces convert to cards (plan:interface-as-cards),
  * nav entries migrate from `href:` to `ref:`; this table only ever names
  * routes the shell itself owns.
  */

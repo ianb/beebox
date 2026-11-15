@@ -1,7 +1,7 @@
 // # TodoItem — one rendering of a todo
 //
 // `TodoItem` is how a todo reads in a card body, in a card's frontmatter
-// `todos:`, and in the todo list (`docs/plans/todos-ui.md`, Track 2). A
+// `todos:`, and in the todo list (`plan:todos-ui`, Track 2). A
 // checkbox leads, named by the todo's words; the words carry the status
 // treatment; date and assignment chips follow. Plate state comes from the
 // server, so only a todo the server calls `escalated` reads as overdue.
@@ -180,7 +180,7 @@ void test("Rendered, the escalated chip takes the warning tone and keeps the mac
 
 // ## `recheck`: a quiet chip in the list only
 //
-// `recheck` is the todo-review's bookkeeping (`docs/plans/todos-ui.md`, Track
+// `recheck` is the todo-review's bookkeeping (`plan:todos-ui`, Track
 // 7). The list shows it as a quiet note, never a date chip; a finished todo
 // shows none.
 void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Track 7).", async (t) => {

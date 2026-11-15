@@ -1,6 +1,6 @@
 /**
  * What the browser proxy sends back to the person's browser
- * (docs/plans/shared-browser.md, Track C): the dashboard's response with its
+ * (plan:shared-browser, Track C): the dashboard's response with its
  * paths rewritten under the box prefix, and the pages the proxy writes itself
  * when there is no dashboard to show.
  *

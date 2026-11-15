@@ -10,7 +10,7 @@
 // Scope note: this file tests **the predicate only**, not the gates that call it.
 // Each gate's own wiring — that it consults this at all, and in the right place —
 // is not covered here; the end-to-end check that it is lives in
-// `docs/implemented-plans/agent-token-browser-auth.md`.
+// `plan:agent-token-browser-auth`.
 //
 // It is header-shaped rather than Fastify-shaped precisely so every call site —
 // several of which see a raw `http.IncomingMessage` — shares one implementation.

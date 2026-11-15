@@ -9,7 +9,7 @@
  * a granted `gemini` secret, or an `openrouter` one standing in for it
  * (`core/openrouter.ts`). It wraps the engines in `scan-import-gemini.ts` and
  * `scan-import-openrouter.ts` unchanged.
- * Design + measured evidence: `docs/plans/scan-vision-claude.md`.
+ * Design + measured evidence: `plan:scan-vision-claude`.
  *
  * Both implementations enforce the batch-alignment post-condition
  * (`assertBatchAlignment`) before returning, so a schema-valid-but-wrong
@@ -99,7 +99,7 @@ export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; r
  * — the box's own Gemini key (`core/gemini-key.ts`, the machine secret store)
  * when it has one, OpenRouter otherwise. This function never reads a credential
  * out of the environment itself, so there is exactly one place a Gemini key is
- * resolved (`docs/implemented-plans/secret-custody.md`).
+ * resolved (`plan:secret-custody`).
  *
  * The `gemini` backend name stays the backend's name because it names the
  * MODEL, which is the same either way; `route.via` says how it is reached.

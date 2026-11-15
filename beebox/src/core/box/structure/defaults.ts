@@ -243,9 +243,9 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
   // The root place carries the box's onboarding opener; the agent fades it
-  // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
+  // as the box comes into use (plan:landmark-arrival, Track B).
   // Its body (the place summary) starts empty: the agent writes it once the
-  // root question is answered (docs/implemented-plans/front-door.md, Track A).
+  // root question is answered (plan:front-door, Track A).
   const template = { label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS };
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
@@ -300,7 +300,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
 
 /**
  * Install the box-wide `todo-view` stock instance if missing
- * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
+ * (`plan:todo-annotation` Track 4's "provisioned, not just
  * templated" pin): `_content/plate.todo-view.card`, explicit `glob: "**"` so
  * it stays box-wide even though it doesn't live at the box root (an omitted
  * `glob` would scope to `store/**` per the query's directory-subtree

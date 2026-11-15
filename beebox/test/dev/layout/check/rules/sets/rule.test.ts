@@ -2,7 +2,7 @@
 //
 // Rules 1, 2, and 4 (set purity, registry placement/naming, record-form keys)
 // plus the side-effect-registration check that backs rule 4's "nothing else
-// constructs the list". `beebox/docs/plans/file-layout.md`.
+// constructs the list". `plan:file-layout`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

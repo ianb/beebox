@@ -1,6 +1,6 @@
 /**
  * Load the OpenAI embeddings API key: the machine store's `openai` entry at
- * `server` access (`docs/implemented-plans/secret-custody.md`), and nothing
+ * `server` access (`plan:secret-custody`), and nothing
  * else. The transition window's in-tree `openai.secret.json` file and
  * `BBX_OPENAI_API_KEY` env var are gone, and with them the typed error that
  * reported a malformed file — a store entry is an opaque key string, so there

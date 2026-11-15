@@ -6,7 +6,7 @@
 // this fix, several routes checked `isInBoxNamespace` on the raw, un-normalized
 // request string instead — a traversal form like `_content/../package.json`
 // starts with `_content` (so the raw-string check passed) but *resolves* to
-// `package.json`, outside the namespace (`docs/implemented-plans/one-root-box-layout.md`
+// `package.json`, outside the namespace (`plan:one-root-box-layout`
 // Track B).
 //
 // A normal HTTP client (including Fastify's own `inject()`) collapses a literal
@@ -177,7 +177,7 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // vocabulary) names nothing inside any underscore area, so `card.get`'s
   // canonical `path` input refuses it as an escape — but when
   // `/_content/<path>` genuinely exists, the refusal message suggests it
-  // (`docs/plans/display-path-guard.subplan.md`):
+  // (`plan:display-path-guard.subplan`):
 
   await server.seed("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "recipes/Soup.recipe.card" })), "Invalid card path — did you mean `/_content/recipes/Soup.recipe.card`?");
@@ -186,7 +186,7 @@ void test("A traversal form that starts inside content/ but resolves to package.
 
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "nowhere/at/all.card" })), "Invalid card path");
 
-  // ## Display-form paths (`docs/plans/display-path-guard.subplan.md`)
+  // ## Display-form paths (`plan:display-path-guard.subplan`)
   //
   // `Config:box.json` (the boxholder's CONVERSATION vocabulary — never a
   // canonical path) is rejected with 400 / `BAD_REQUEST` and a message naming

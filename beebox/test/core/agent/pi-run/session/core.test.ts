@@ -1,6 +1,6 @@
 // # The pi session factory
 //
-// One factory makes every pi session (docs/plans/pi-box-engine.md, Track 3):
+// One factory makes every pi session (plan:pi-box-engine, Track 3):
 // the box's guidance in its prompt, the run's tools and never grep/find, a
 // shell with the box agent's environment rather than the server's, and a
 // model built from OpenRouter's listing when pi's catalog lacks it. pi's

@@ -75,7 +75,7 @@ third queued before closure` }],
 // `.beebox/chat-run-ended/`; the server stamps a cause when it ends the run.
 // The next turn carries a `<run-ended>` element inside the `<chat-app>`
 // snapshot, which the person's message display strips
-// (`docs/implemented-plans/chat-termination-notes.md`). A turn that fails to start keeps the
+// (`plan:chat-termination-notes`). A turn that fails to start keeps the
 // note for the one after it; a dispatched turn removes it.
 
 const NOTE = ".beebox/chat-run-ended/sess-1.json";

@@ -7,7 +7,7 @@
 //
 // The state lives with the credential (`google-token-store.ts`), not in
 // per-connector state: one refresh token is shared by gmail/calendar/drive across
-// every box on the server. See `docs/plans/google-auth-reauth-health.md`.
+// every box on the server. See `plan:google-auth-reauth-health`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

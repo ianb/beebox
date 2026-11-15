@@ -69,7 +69,7 @@ export interface ValidationResults extends CollectedResults {
    */
   legacySchemaErrors: string[];
   /**
-   * Closed-vocabulary root check (Track C, `docs/implemented-plans/one-root-box-layout.md`):
+   * Closed-vocabulary root check (Track C, `plan:one-root-box-layout`):
    * every box-root entry outside `BOX_ROOT_VOCABULARY`, formatted. Same
    * box-wide, checked-once-regardless-of-scope treatment as
    * `legacySchemaErrors` above.

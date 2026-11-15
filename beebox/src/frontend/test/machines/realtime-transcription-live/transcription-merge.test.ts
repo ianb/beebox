@@ -6,7 +6,7 @@
 // segment's committed prefix across a reconnect. They're called at the *same*
 // call sites with the *same* shape, so the word list can never drift out of
 // step with the text it describes — the Track 2 reconnect direction detail in
-// `docs/plans/transcript-confidence.md`.
+// `plan:transcript-confidence`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

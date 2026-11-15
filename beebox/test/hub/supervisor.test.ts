@@ -246,7 +246,7 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   reloadChildren[1]?.fireMessage({ type: "reload-request" });
 
   // When the replacement fails readiness, the box is unhealthy and the controller
-  // releases its owner lock. Per `docs/implemented-plans/box-maintenance-no-wedge.md`, a
+  // releases its owner lock. Per `plan:box-maintenance-no-wedge`, a
   // failed reload must not leave the box refusing work: the phase record stays as
   // unfinished maintenance, with no owner, and new work is admitted. Wait for
   // the release itself; the brief window where the owner still holds `exclusive`

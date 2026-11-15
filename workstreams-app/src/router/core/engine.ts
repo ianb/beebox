@@ -48,7 +48,7 @@ import {
  * so the router itself must never listen on a routable interface. There is
  * deliberately no host override; tailnet/remote access goes through
  * `tailscale serve` fronting a dedicated auth-gated `bbx serve`/`bbx hub`,
- * never the router (docs/implemented-plans/tailscale-expose-and-protect.md, Track A).
+ * never the router (plan:tailscale-expose-and-protect, Track A).
  */
 export function listenLoopback(server: net.Server, { port, onListening }: { port: number; onListening: () => void }): void {
   server.listen(port, "127.0.0.1", onListening);

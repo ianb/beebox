@@ -243,7 +243,7 @@ void test("The cap applies only to the deadline path.", async (t) => {
 
 // ## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever
 //
-// The wakeup `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b) is
+// The wakeup `todo-review` sweep (`plan:todo-annotation` Track 5b) is
 // meant to be a "deterministic hook, not a hope" — but `bbx wakeup` always runs
 // the reactor with `skipLowPriority: true`, and the discover stage above skips
 // a cycle entirely when every pending job is low-priority. A `todo-review-job`
@@ -301,7 +301,7 @@ void test("The processed count is a set difference against the jobs the cycle se
 // Five jobs of about 70 KB each: a batch prompt (160 KB) holds two. The agent
 // finishes nothing, but its session succeeds, so the run goes on, and cycle 2
 // sends the next two jobs instead of resending the first two. `maxCycles`
-// still caps the run. (docs/implemented-plans/bounded-reactor-batches.md, Track C.)
+// still caps the run. (plan:bounded-reactor-batches, Track C.)
 void test("Rotation: each cycle of a run sends jobs it has not sent", async (t) => {
   const box3 = await makeTmpBox({ git: true });
   t.teardown(() => box3.cleanup());

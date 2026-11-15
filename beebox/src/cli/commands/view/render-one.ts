@@ -3,7 +3,7 @@
  * child `bbx view check` spawns (`command.ts`). It compiles the view for the
  * node target, loads the cards the app would pass it, and renders it in each
  * check state: the first frame with renderToString, then the settled render
- * (docs/implemented-plans/view-check-settled-render.md).
+ * (plan:view-check-settled-render).
  */
 
 import * as path from "node:path";

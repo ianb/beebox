@@ -112,7 +112,7 @@ export async function consumeAgentStream(
     // `core/commands` graph that nearly every `bbx` command pulls in — so a
     // static import made the SDK load for commands that never run an agent
     // (the pre-commit hook among them). Node caches the module, so a real
-    // agent run pays the load once. (docs/plans/commit-performance.md, 1b.)
+    // agent run pays the load once. (plan:commit-performance, 1b.)
     const { query } = await import("@anthropic-ai/claude-agent-sdk");
     const q = query({
       prompt: options.prompt,

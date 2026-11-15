@@ -5,7 +5,7 @@
 // and returns the exit code. One Jev call per state, one JSON line per state;
 // `--min`, `--choice`, and `--decide` make the decision. Every test here uses the
 // fake Jev, whose scripted answers go through the real response parser. See
-// docs/implemented-plans/notifications.md (Track D).
+// plan:notifications (Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

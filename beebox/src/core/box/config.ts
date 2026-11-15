@@ -55,7 +55,7 @@ export interface BoxConfig {
   /**
    * OpenRouter models the owner added in admin. The only way one becomes
    * selectable: they bill per use, and holding an `openrouter` key enables
-   * nothing for chat on its own (`docs/implemented-plans/openrouter-chat-models.md`).
+   * nothing for chat on its own (`plan:openrouter-chat-models`).
    * Missing means none.
    */
   openrouterModels?: AddedModel[];

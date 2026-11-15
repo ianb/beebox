@@ -11,8 +11,8 @@
  * `metadata:` (pages/title/author).
  *
  * The type is `pdf` because that is the only format the pipeline reads
- * today; `format:` still records it. See `docs/implemented-plans/scanner-ingest.md`
- * (Track 4) and `docs/plans/scanner-ingest-docling-decisions.md`.
+ * today; `format:` still records it. See `plan:scanner-ingest`
+ * (Track 4) and `plan:scanner-ingest-docling-decisions`.
  *
  * Example file layout:
  *   inbox/scan-XX.attach/source.pdf.card

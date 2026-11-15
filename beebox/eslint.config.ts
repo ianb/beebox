@@ -47,7 +47,7 @@ const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
 const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
 const LIST_ENTRY_IMPORT_MESSAGE =
   "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.";
-// A plugin (`src/plugins/<name>/`, docs/implemented-plans/plugins.md) is a library a box
+// A plugin (`src/plugins/<name>/`, plan:plugins) is a library a box
 // completes through stubs, published as `beebox/plugins/<name>`. Its files
 // import only `src/exports/*`, `src/cards/plugin-definition.ts`, their own
 // directory, and packages — the editor-side mirror of the `plugin-imports`

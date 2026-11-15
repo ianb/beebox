@@ -1,7 +1,7 @@
 // # The exhibits CLI (bin/exhibits)
 //
 // `bin/exhibits` is the agent-facing surface of the exhibit medium
-// (`docs/implemented-plans/workstream-exhibits.md` Track D): it creates an exhibit directory
+// (`plan:workstream-exhibits` Track D): it creates an exhibit directory
 // in the store, writes a manifest the app's Zod schemas accept, and prints one
 // line — the URL — on stdout so it is pasteable into chat.
 //

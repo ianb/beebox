@@ -1,7 +1,7 @@
 /**
  * Card path resolution shared by more than one `trpc/routers/` member
  * (`card.ts` and `todos.ts`) — set infrastructure, so it lives at the set's
- * parent (rule 3, `docs/implemented-plans/file-layout.md`) rather than inside either
+ * parent (rule 3, `plan:file-layout`) rather than inside either
  * member.
  */
 import * as fs from "node:fs/promises";
@@ -17,7 +17,7 @@ import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../.
  * and its siblings (`inboundRefs`, `trash`) all resolve through here, and a
  * traversal form like `_content/../package.json` must not read
  * `package.json` just because the raw string starts with an underscore area
- * (`docs/implemented-plans/one-root-box-layout.md` Track B).
+ * (`plan:one-root-box-layout` Track B).
  */
 export async function resolveCardPath({
   boxRoot,
@@ -35,7 +35,7 @@ export async function resolveCardPath({
   });
   if (!ns.ok) {
     if (ns.reason === "display-form") {
-      // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+      // Display-form leak (plan:display-path-guard.subplan): a
       // caller-visible message naming the canonical form.
       throw new TRPCError({ code: "BAD_REQUEST", message: ns.message });
     }

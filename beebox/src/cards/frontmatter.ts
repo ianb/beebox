@@ -16,7 +16,7 @@
  * lineOffset 0.
  *
  * (Absorbed from the former `cardworks` package — see
- * docs/implemented-plans/remove-cardworks-package.md.)
+ * plan:remove-cardworks-package.)
  */
 
 import type { Document } from "yaml";

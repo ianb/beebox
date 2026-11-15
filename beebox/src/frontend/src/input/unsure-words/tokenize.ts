@@ -1,6 +1,6 @@
 /**
  * Body tokenization + words-to-body matching for `unsure-words.ts`'s span
- * marking (Track 3, docs/implemented-plans/transcript-confidence.md). Split
+ * marking (Track 3, plan:transcript-confidence). Split
  * out to keep `unsure-words.ts` under the file line budget — this module is
  * pure body-shape mechanics, no threshold/span logic.
  */

@@ -11,7 +11,7 @@
  * something else (revoked scope, wrong account, API not enabled) and must not
  * produce a "click here to re-authorize" call to action that can't fix it.
  *
- * See docs/implemented-plans/google-auth-reauth-health.md.
+ * See plan:google-auth-reauth-health.
  */
 
 import type { OAuth2Client } from "google-auth-library";

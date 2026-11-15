@@ -703,7 +703,7 @@ Run by [Dana](../../../_content/box/people/dana.person.card); the [scan](scan.ca
 // `Config:box.json` and `Bookkeeping:jobs/x.job.card` (the boxholder's display
 // vocabulary) are rejected with a message naming the canonical form, whether
 // written as the source or the destination
-// (`docs/plans/display-path-guard.subplan.md`):
+// (`plan:display-path-guard.subplan`):
 void test("Config:box.json and Bookkeeping:jobs/x.job.card (the boxholder's display voca...", async (t) => {
   t.check(
     ({

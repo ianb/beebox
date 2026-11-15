@@ -1,6 +1,6 @@
 // # `collections.query` — the `todo-view` card's data source
 //
-// Route-tier tests for `docs/plans/todo-collection.md` Track 4.
+// Route-tier tests for `plan:todo-collection` Track 4.
 // `collections.query` names a collection and hands it a `CollectionQuery`; the
 // runner (`core/collection/run.ts`) owns what a scope, a reference pass, and a
 // grouping mean, so the router's own job is small: validate the input, refuse a
@@ -105,7 +105,7 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
 
 // ## A card as `here`: the card summary's one-file query
 //
-// A card's todo summary (`docs/plans/todos-ui.md`, Track 4) asks about the card
+// A card's todo summary (`plan:todos-ui`, Track 4) asks about the card
 // itself with no reference pass. `here` is a literal path, so a card whose name
 // holds glob metacharacters still scopes to itself — and only itself, not a
 // sibling that a `[2]` character class would otherwise match.

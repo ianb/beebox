@@ -97,7 +97,7 @@ export interface ModelRoute {
  *
  * The machine store's `openrouter` entry at `server` access, and nothing else.
  * No legacy file arm and no env var: secret custody retired both for every
- * other provider key (`docs/implemented-plans/secret-custody.md`), and this
+ * other provider key (`plan:secret-custody`), and this
  * credential is new enough that giving it a fallback would be inventing a
  * deprecated path rather than keeping one alive.
  */

@@ -46,7 +46,7 @@ export interface BodyRef {
  * is NOT external — it names an in-box path the boxholder wrote in the wrong
  * vocabulary, and must reach card-lint's ref walk (which reports it as a
  * display-form ERROR) rather than being silently dropped here. See
- * `docs/plans/display-path-guard.subplan.md`.
+ * `plan:display-path-guard.subplan`.
  */
 function isGenuinelyExternal(ref: string): boolean {
   return isExternalRef(ref) && detectDisplayFormPath(ref) === null;

@@ -2,7 +2,7 @@
  * SessionListMenuBody — the "Recent chats" sub-panel body.
  *
  * Rendered by `SessionChip`'s "Recent chats ›" row. The unified bar briefly
- * retired it (docs/implemented-plans/top-nav-ia.md Track C2) on the theory
+ * retired it (plan:top-nav-ia Track C2) on the theory
  * that the place pill's switch menu covered finding a session — it doesn't:
  * that menu switches *landmarks* and resumes each one's newest chat, so a
  * sibling session in the landmark you're already in had no route back short
@@ -15,7 +15,7 @@
  * ChatPage can route into it.
  *
  * A search field across the top searches WHAT WAS SAID — the transcripts,
- * not the labels (`chat.search`, docs/plans/chat-search.md). A result row
+ * not the labels (`chat.search`, plan:chat-search). A result row
  * opens the chat at the matching message (`&m=<entry uuid>`). While a query
  * is active it replaces the grouped list; Escape (or clearing the field)
  * restores it. The field and result rows live in `session-search.tsx`.
@@ -204,7 +204,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
 
 /**
  * The chats that no longer have a transcript here, after every live one and
- * under a heading saying why (`docs/implemented-plans/chat-session-identity.md`, Track 3).
+ * under a heading saying why (`plan:chat-session-identity`, Track 3).
  * They were invisible before — a chat whose transcript expired simply left the
  * list, so the box looked like it had forgotten the conversation entirely.
  *

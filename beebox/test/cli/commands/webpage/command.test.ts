@@ -1,6 +1,6 @@
 // # `bbx webpage save`: one command, one box function
 //
-// docs/plans/webpage-capture-tools.md. A real local HTTP server and a real box.
+// plan:webpage-capture-tools. A real local HTTP server and a real box.
 // A saved page is one commit, with the HTML as the card's annexable attachment.
 // The box's `webpage.ts` can refuse a page or change it, and when it breaks,
 // nothing is saved.

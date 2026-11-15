@@ -49,7 +49,7 @@ void test("A doc has a body field and is ordinary by default:", async (t) => {
 // ## `card.get` returns the type's summary line
 //
 // `detail` is the line the card's type writes about itself (`summarize`), shown
-// under the title on the card page (docs/implemented-plans/place-shows-cards.md, Track B).
+// under the title on the card page (plan:place-shows-cards, Track B).
 // A record's line is where it is and how many; a doc writes none.
 void test("detail is the line the card's type writes about itself (summarize), shown und...", async (t) => {
   t.teardown(async () => {

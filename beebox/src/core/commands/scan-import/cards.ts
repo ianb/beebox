@@ -135,7 +135,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
       context: [{ ref: `${sessionAttachRelDir}/${cardFilename}` }],
       // Identification ambiguities are where durable scanner priors surface;
       // one-off dispositions (orphan-back/unsure questions) deliberately
-      // carry no learning: — see docs/plans/scan-guide-card.md.
+      // carry no learning: — see plan:scan-guide-card.
       learning: {
         sink: "guide",
         ref: SCAN_GUIDE_REL_PATH,

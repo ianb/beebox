@@ -1,6 +1,6 @@
 /**
  * Reading the whole page from the box browser for `bbx webpage --browser`
- * (docs/plans/webpage-capture-tools.md, Track C).
+ * (plan:webpage-capture-tools, Track C).
  *
  * One evaluation returns the URL and the HTML, so they always come from one
  * page, even with a person using the browser. Script elements are left out:

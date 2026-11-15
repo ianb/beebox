@@ -3,7 +3,7 @@
 // OpenRouter models bill per use, so a box never runs one because a key
 // happens to exist. The owner adds each model in admin (`openrouterModels` in
 // box config), and every spawn checks both that list and the key
-// (`docs/plans/openrouter-chat-models.md`). These tests are the gate.
+// (`plan:openrouter-chat-models`). These tests are the gate.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

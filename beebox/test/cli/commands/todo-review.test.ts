@@ -1,6 +1,6 @@
 // # `bbx engine todo-review` — the todo-review procedure's check and verify
 //
-// The stock `todo-review` procedure (`docs/plans/todos-ui.md`, Track 7) runs
+// The stock `todo-review` procedure (`plan:todos-ui`, Track 7) runs
 // daily. Its precheck is `bbx engine todo-review check`: sweep the box, save
 // the items, and print the brief the agent works from, or exit
 // `CHECK_SKIP_CODE` (75) so no agent runs. No job card is written, so the

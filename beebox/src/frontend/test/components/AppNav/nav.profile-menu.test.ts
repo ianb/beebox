@@ -1,7 +1,7 @@
 // # The Web browser row in the avatar menu
 //
 // The avatar menu has a "Web browser" row after Admin that opens the box's shared
-// browser at `/<box>/browser/` in a new tab (docs/plans/shared-browser.md,
+// browser at `/<box>/browser/` in a new tab (plan:shared-browser,
 // Track E). The page is served by the engine, not the app's router, so the row
 // is a plain link: a router link would try to render the path inside the app.
 

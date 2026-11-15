@@ -1,6 +1,6 @@
 // # Browse's compact/raw listing modes
 //
-// `BrowseSidebarList`'s `mode` prop (`docs/implemented-plans/card-prominence.md`, Track C):
+// `BrowseSidebarList`'s `mode` prop (`plan:card-prominence`, Track C):
 // compact leads with `foldListing`'s `lead` tier and folds the rest behind one
 // "N more" disclosure; raw ignores prominence and renders today's flat
 // listing. A listing with nothing prominent renders identically in both
@@ -106,7 +106,7 @@ void test("Nothing prominent: compact renders identically to raw, no disclosure"
 
 // ## The content root ends with a quiet "Whole box" row; other folders do not
 //
-// `docs/implemented-plans/front-door.md`, Track D: Browse opens on `_content`, and the box
+// `plan:front-door`, Track D: Browse opens on `_content`, and the box
 // root's areas are one row away at the bottom, in both modes. Seeded empty
 // folders fold behind "N more" while the cards lead.
 void test("The content root ends with a quiet Whole box row; other folders do not", async (t) => {

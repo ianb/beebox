@@ -53,7 +53,7 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       // non-root path outside the namespace — src/, node_modules/, .git/,
       // package.json's siblings, or a traversal form like
       // `_content/../src` — 403s rather than browsing the npm/agent-identity
-      // machinery (`docs/implemented-plans/one-root-box-layout.md` Track B).
+      // machinery (`plan:one-root-box-layout` Track B).
       let resolved: string;
       if (reqPath === "") {
         resolved = path.resolve(boxRoot);

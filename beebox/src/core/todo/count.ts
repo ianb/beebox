@@ -2,7 +2,7 @@
  * Box-wide count of the BOXHOLDER's todos that are on the plate NOW —
  * `escalated` (past due) plus `on-plate` (started, or undated). This is the
  * number behind the app nav's plate badge
- * (`docs/implemented-plans/todo-annotation.md` Track 4), which every page's
+ * (`plan:todo-annotation` Track 4), which every page's
  * first request pays for.
  *
  * Todos assigned to the agent or to another person are excluded: a badge that

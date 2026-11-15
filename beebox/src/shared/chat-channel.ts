@@ -3,7 +3,7 @@
  * surfaced to the agent as the read-only `<chat-app channel>` snapshot
  * attribute so it can shape its answer for the surface.
  *
- * Closed on purpose (`docs/plans/agent-points-at-ui.md`, Track 5): the agent
+ * Closed on purpose (`plan:agent-points-at-ui`, Track 5): the agent
  * reasons about the answer's *shape* from this value, and `ios-native` means
  * something structural — the composer, mic and capture are native chrome, not
  * elements of the web page. Lives in `shared/` so the frontend (which decides

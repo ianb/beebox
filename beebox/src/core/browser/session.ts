@@ -1,5 +1,5 @@
 /**
- * Starting the box session (docs/plans/shared-browser.md, Track C).
+ * Starting the box session (plan:shared-browser, Track C).
  *
  * Every launch of the box browser goes through here: the command socket runs
  * it before any command that finds the session missing

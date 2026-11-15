@@ -6,7 +6,7 @@
 // visible. Alerts are read and acknowledged through `bin/schedules`; the app never
 // writes the schedule store.
 //
-// Design: `beebox/docs/plans/scheduled-workstreams.md` (Track D).
+// Design: `plan:scheduled-workstreams` (Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

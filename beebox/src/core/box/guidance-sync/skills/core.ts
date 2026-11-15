@@ -3,7 +3,7 @@
  * managed box skills into `<box>/.claude/skills/<name>/SKILL.md` so the box
  * agent (which auto-discovers project-level `.claude/skills/` via the SDK's
  * `settingSources`) can invoke them. Verified: a box-level skill is discovered
- * with no SDK-option change (see docs/implemented-plans/courseware-phase1.md, Track 1).
+ * with no SDK-option change (see plan:courseware-phase1, Track 1).
  *
  * Called from `syncBoxGuidance` when the `generateDocs` template sync runs it
  * (`initBox` runs the walk without generators), so managed skills refresh wherever card rules do — `bbx

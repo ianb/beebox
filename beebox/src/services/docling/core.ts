@@ -13,7 +13,7 @@
  *
  * Every choice encoded here (the version pin, the flags, the timeouts, the
  * page-image handling) has a numbered entry in
- * `docs/plans/scanner-ingest-docling-decisions.md`. Change one, append there.
+ * `plan:scanner-ingest-docling-decisions`. Change one, append there.
  */
 
 import { execa } from "execa";

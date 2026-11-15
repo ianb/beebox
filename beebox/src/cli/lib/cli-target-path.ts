@@ -3,7 +3,7 @@
  * card/file path, not a glob-only pattern) — `validate`, `ls`, `mv`, `rm`,
  * `create` all take one and independently hand-rolled the same
  * `path.isAbsolute(p) ? p : <join>` resolution, which mis-handles two
- * things the same way everywhere (`docs/plans/display-path-guard.subplan.md`):
+ * things the same way everywhere (`plan:display-path-guard.subplan`):
  *
  *  - A boxholder DISPLAY-FORM path (`Config:box.json`) is the boxholder's
  *    CONVERSATION vocabulary, never a canonical path — rejected outright

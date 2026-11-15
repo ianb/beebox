@@ -12,7 +12,7 @@ import type { NativeShellWindow } from "../../../../src/components/chat/native-p
 // The HQ state channel carries `diarized`: the box's HQ service labels
 // speakers, which keeps native's HQ pass on the box instead of on the device.
 // `enabled` is always true — every dictated message gets the HQ pass
-// (docs/plans/hq-always.md) — and is still sent for native builds that read it:
+// (plan:hq-always) — and is still sent for native builds that read it:
 void test("The HQ state channel carries diarized:", async (t) => {
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {

@@ -1,6 +1,6 @@
 // # The box browser's server install
 //
-// docs/plans/shared-browser.md, Track F. The engine looks for Chrome and the
+// plan:shared-browser, Track F. The engine looks for Chrome and the
 // launcher at fixed paths (`src/core/browser/install.ts`,
 // `src/core/browser/host/namespace.ts`); the deploy helper installs them there
 // and the AppArmor file grants them user namespaces by path. A path that drifts

@@ -3,7 +3,7 @@
  * `server` access, a JSON string `{"secret": "<64 hex>", "urls": ["turn:…"]}`.
  * One value serves every box on the host; `deploy/server-bin/bbx-turn-install`
  * renders coturn's config from the same entry in the master store
- * (docs/plans/self-hosted-turn.md). The server signs short-lived credentials
+ * (plan:self-hosted-turn). The server signs short-lived credentials
  * with the secret using coturn's TURN REST scheme (`use-auth-secret`), so a
  * call start makes no outside request.
  */

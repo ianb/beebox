@@ -1,5 +1,5 @@
 /**
- * The command socket, host side (docs/plans/shared-browser.md, "Command
+ * The command socket, host side (plan:shared-browser, "Command
  * socket"): runs the agent's `bbx browser` commands with the same binary and
  * the same fixed environment as the dashboard.
  *

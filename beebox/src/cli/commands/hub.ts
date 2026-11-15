@@ -1,6 +1,6 @@
 /**
  * `bbx hub` — the multi-box parent process (Track D, chunk D1 in
- * `docs/implemented-plans/boxes-as-packages-v2.md`): supervision + routing + health, no
+ * `plan:boxes-as-packages-v2`): supervision + routing + health, no
  * auth changes (children keep doing their own in-process auth exactly as
  * today — this works because cookies ride the same origin through the
  * proxy, precisely how the monorepo dev router already behaves for
@@ -225,7 +225,7 @@ async function startSpawning(config: HubConfig): Promise<HubEndpoints> {
 }
 
 /**
- * A unit host (docs/implemented-plans/per-box-units.md): systemd owns every box process.
+ * A unit host (plan:per-box-units): systemd owns every box process.
  * The hub reads boxes only through their published metadata, holds one secret
  * per box per boot, writes the env file the units load, and routes to sockets.
  */

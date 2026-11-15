@@ -116,7 +116,7 @@ export const noBrokenInternalLinks: Rule = {
     const fileDir = path.dirname(params.name);
 
     for (const link of extractInlineLinks(params.lines)) {
-      // Display-form leak (docs/plans/display-path-guard.subplan.md): a link
+      // Display-form leak (plan:display-path-guard.subplan): a link
       // written as `Config:box.json` (the boxholder's CONVERSATION
       // vocabulary) matches `isExternalRef`'s scheme pattern, so
       // `resolveInternalLink` below would classify it as `internal: false`

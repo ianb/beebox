@@ -1,6 +1,6 @@
 /**
  * `standard`: the built-in way to turn a response into a card's content
- * (docs/plans/webpage-capture-tools.md). It refuses what looks blocked or
+ * (plan:webpage-capture-tools). It refuses what looks blocked or
  * failed, then runs the one readable-page pipeline over jsdom.
  *
  * jsdom runs no page script and loads no resource with these options: the page

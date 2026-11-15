@@ -1,6 +1,6 @@
 /**
  * The quick chat record: one submitted thought, its routing evidence, and the
- * state of its delivery (docs/plans/box-screen.md, track 1).
+ * state of its delivery (plan:box-screen, track 1).
  *
  * A record is `needs-choice` (stored, no destination), `sending` (destination
  * fixed, delivery not acknowledged), `sent`, or `discarded`. Records written
@@ -23,11 +23,11 @@ export type QuickChatReason = (typeof QUICK_CHAT_REASONS)[number];
 /** How the person entered the thought. External inputs are neither keyboard text nor a recording. */
 export const QUICK_CHAT_ORIGINS = ["typed", "voice", "external"] as const;
 export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
-/** The phone's capture sources, and the Clerk browser extension (docs/implemented-plans/clerk-quick-send.md). */
+/** The phone's capture sources, and the Clerk browser extension (plan:clerk-quick-send). */
 export const QUICK_CHAT_SOURCES = [...QUICK_CAPTURE_SOURCES, "browser-clerk"] as const;
 /**
  * The engine that produced a dictated thought's HQ text on the phone
- * (docs/implemented-plans/ios-quick-chat-hq.md); the same name as the native emission's
+ * (plan:ios-quick-chat-hq); the same name as the native emission's
  * `hqService`. A short token, since it is framed into a wrapper attribute.
  */
 export const quickChatHqServiceSchema = z.string().regex(/^[\da-z-]{1,64}$/);

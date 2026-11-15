@@ -4,7 +4,7 @@
 // generated wire schema, and `parseClaudeScanBatch` — the boundary from a raw
 // `structured_output` value to post-conditioned `RawScanAnalysis[]` (Zod
 // validation, slot invariant, legibility→flag folding, batch alignment).
-// Design: `docs/plans/scan-vision-claude.md`.
+// Design: `plan:scan-vision-claude`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

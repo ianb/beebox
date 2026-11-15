@@ -22,7 +22,7 @@ export const activityRouter = router({
     .input(z.object({ entries: z.array(z.unknown()).min(1).max(200) }))
     .mutation(async ({ input, ctx }): Promise<{ accepted: number }> => {
       const accepted = await recordActivity(ctx.boxRoot, { entries: input.entries, user: ctx.user?.email ?? null });
-      // After the append: the runner reads the log when the session's activity settles (docs/implemented-plans/activity-triggers.md, Track C).
+      // After the append: the runner reads the log when the session's activity settles (plan:activity-triggers, Track C).
       if (accepted > 0) {
         void getTriggerRunner(ctx.boxRoot)?.onActivity(sessionsIn(input.entries)).catch((e: unknown) => { console.warn("[triggers] could not schedule an evaluation:", e); });
       }

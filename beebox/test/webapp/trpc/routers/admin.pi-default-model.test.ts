@@ -2,7 +2,7 @@
 //
 // pi has no model of its own, so the admin write refuses a pi box whose
 // default is not one of its added OpenRouter models
-// (docs/plans/pi-box-engine.md, Track 2), in the save that selects pi and in
+// (plan:pi-box-engine, Track 2), in the save that selects pi and in
 // every later save of the model.
 
 import { test } from "tap";

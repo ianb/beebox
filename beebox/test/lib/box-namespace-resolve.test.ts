@@ -3,7 +3,7 @@
 // Every fenced HTTP/tRPC route resolves a client-supplied box path through
 // `resolveBoxNamespacePath` (`src/lib/box-namespace-resolve.ts`), which checks
 // the box namespace fence (`isInBoxNamespace`, Track B,
-// `docs/implemented-plans/one-root-box-layout.md`) against the RESOLVED filesystem path —
+// `plan:one-root-box-layout`) against the RESOLVED filesystem path —
 // not the raw request string. Checking the raw string is a traversal bypass:
 // `_content/../package.json` starts with `_content` (passes a naive raw-string
 // check) but *resolves* to `package.json`, outside the namespace.
@@ -12,7 +12,7 @@
 // `{ ok: true, resolved, relativePath }` on success, or `{ ok: false, reason:
 // "escaped" }` / `{ ok: false, reason: "display-form", message }` on failure —
 // the two failure reasons are distinguished so a caller can respond
-// differently (`docs/plans/display-path-guard.subplan.md`).
+// differently (`plan:display-path-guard.subplan`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -117,7 +117,7 @@ void test("A traversal form that stays inside the SAME underscore area after nor
 // canonical path) is rejected before any escape/namespace check, with a
 // caller-VISIBLE message naming the canonical form — an HTTP route maps this
 // to 400, a tRPC procedure to `TRPCError({ code: "BAD_REQUEST" })`
-// (`docs/plans/display-path-guard.subplan.md`):
+// (`plan:display-path-guard.subplan`):
 void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a canonical...", async (t) => {
   t.check(describe(resolveBoxNamespacePath("/box", "Config:box.json")), "display-form: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 

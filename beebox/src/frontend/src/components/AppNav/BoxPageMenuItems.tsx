@@ -1,7 +1,7 @@
 /**
  * The box-wide pages as profile-menu rows: Dashboard, Browse, History, and
  * Storage summary. They moved here from the box screen, where the boxholder
- * never used them (docs/plans/box-screen.md, "Box-wide pages move to the
+ * never used them (plan:box-screen, "Box-wide pages move to the
  * avatar menu"). The ids are the ones the old box panel used, so smoke
  * snapshots and docs keep one name for each row.
  */

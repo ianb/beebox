@@ -1,6 +1,6 @@
 // # The prefix the dashboard's paths are rewritten under
 //
-// docs/plans/shared-browser.md, Track C. The box's part, `/<slug>/browser`,
+// plan:shared-browser, Track C. The box's part, `/<slug>/browser`,
 // is always there; a dev router's outer segment comes from the
 // `X-Forwarded-Prefix` header that Vite's proxy rule adds. The hub replaces
 // the router's base-prefix header with its own `/<slug>` (dev smoke run,

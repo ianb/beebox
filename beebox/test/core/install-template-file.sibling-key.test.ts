@@ -8,7 +8,7 @@
 // between those steps leaves the file under one name and its records under the
 // other. The sibling-key rule keeps that state working: a lookup for either name
 // finds whichever key exists, and a write keeps that key. Plan:
-// `docs/implemented-plans/box-agents-md.md`, Track A and Track B "Intermediate states".
+// `plan:box-agents-md`, Track A and Track B "Intermediate states".
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

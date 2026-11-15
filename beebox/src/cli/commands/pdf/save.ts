@@ -1,6 +1,6 @@
 /**
  * `bbx pdf save`: make a pdf card, at a path the caller chooses, from a URL or
- * a PDF file with its address (docs/plans/knowledge-base-tools.md, Track B).
+ * a PDF file with its address (plan:knowledge-base-tools, Track B).
  *
  * It runs in the agent's shell, so a URL reaches only what `curl` could. Exit
  * codes: 0 saved, 1 failed, 3 refused (the bytes are not a PDF), 4 a redirect

@@ -18,7 +18,7 @@ import { ThemeChoiceSchema, validateThemeChoice, type ThemeChoice } from "../sha
  * metadata.
  *
  * (Absorbed from the former `cardworks` package — see
- * docs/implemented-plans/remove-cardworks-package.md.)
+ * plan:remove-cardworks-package.)
  */
 
 const BODY_FIELD_TAG = Symbol("beebox.bodyField");

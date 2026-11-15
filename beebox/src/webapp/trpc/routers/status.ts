@@ -60,13 +60,13 @@ export interface BrowseDir {
   name: string;
   fileCount: number;
   /**
-   * The pruned-subtree rollup (`docs/implemented-plans/card-prominence.md`, Track B): does anything under it lead?
+   * The pruned-subtree rollup (`plan:card-prominence`, Track B): does anything under it lead?
    * `cardCount` is the same recursive `.card` count as `fileCount`, `null` when the count failed.
    */
   summary: DirectorySummary & { cardCount: number | null };
   /** This subdirectory's OWN landmark identity, when it holds a landmark card directly. */
   landmark?: BrowseDirLandmark | undefined;
-  /** The path is a `_content` folder the box layout creates (`docs/implemented-plans/front-door.md`, Track D). */
+  /** The path is a `_content` folder the box layout creates (`plan:front-door`, Track D). */
   seeded: boolean;
 }
 
@@ -107,7 +107,7 @@ const BOX_AREA_NAMES: ReadonlySet<string> = new Set(
 );
 
 /**
- * Display-form leak (docs/plans/display-path-guard.subplan.md): unlike every
+ * Display-form leak (plan:display-path-guard.subplan): unlike every
  * other namespace-fenced choke point, `status.browse` doesn't go through
  * `resolveBoxNamespacePathOnDisk` (it hand-rolls its own containment +
  * namespace check, which degrades to an empty listing BEFORE any existence
@@ -281,7 +281,7 @@ export const statusRouter = router({
       // node_modules/, .git/, and any other root entry are not browsable
       // through this endpoint either), and a traversal form like
       // `_content/../src` can't hide behind its raw-string prefix
-      // (`docs/implemented-plans/one-root-box-layout.md` Track B). The root listing
+      // (`plan:one-root-box-layout` Track B). The root listing
       // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
       const contained = containWithinBox(ctx.boxRoot, resolved);
@@ -293,7 +293,7 @@ export const statusRouter = router({
       // On-disk re-check for a non-root target: a symlinked directory or leaf
       // partway down the path could otherwise walk the fence into the
       // package internals even though the lexical check above passed
-      // (one-root layout — `docs/implemented-plans/one-root-box-layout.md` Track B). The
+      // (one-root layout — `plan:one-root-box-layout` Track B). The
       // root itself (`contained === ""`) has no walk to verify.
       if (
         contained !== "" &&

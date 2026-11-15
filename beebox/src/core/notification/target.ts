@@ -5,7 +5,7 @@
  * `chat:new:<place>`, `place:<dir>`, `card:<path>`, `question:<path>`, `admin:<section>`,
  * `dashboard`), parsed once into a
  * discriminated union and rendered to a root-relative deep link per box. It is
- * never a raw URL. See docs/implemented-plans/notifications.md ("Ontology", Track A).
+ * never a raw URL. See plan:notifications ("Ontology", Track A).
  */
 
 import { resolveRefPath } from "../../shared/ref-path/core.js";

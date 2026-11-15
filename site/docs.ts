@@ -1,6 +1,6 @@
 // Agent-docs corpus orchestrator: builds the /docs/ tree from three source
 // kinds (authored, promoted, generated) and hands back what build.ts needs to
-// render the combined llms.txt. See beebox/docs/plans/agent-docs.md and the
+// render the combined llms.txt. See plan:agent-docs and the
 // workstream's file contract for the full spec.
 
 import fs from "node:fs/promises";

@@ -5,7 +5,7 @@
 // session's features; the user can still toggle afterward.
 //
 // See `src/core/landmark/features.ts` for the readers and
-// `docs/plans/narration-mode.md` for the design.
+// `plan:narration-mode` for the design.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -68,7 +68,7 @@ void test("readLandmarkFeaturesForDir — find the landmark in a directory", asy
 // The shared resolver applies root-landmark values, then explicit chat values.
 // Root landmarks use the empty context directory rather than being silently
 // skipped by one creation path. A retired `hq-dictation` key on an older card
-// (every dictated message gets the HQ pass now, docs/plans/hq-always.md) and a
+// (every dictated message gets the HQ pass now, plan:hq-always) and a
 // stale `hqDictation` in `box.json` are ignored.
 void test("The shared resolver applies root-landmark values, then explicit chat values.", async (t) => {
   t.teardown(async () => {

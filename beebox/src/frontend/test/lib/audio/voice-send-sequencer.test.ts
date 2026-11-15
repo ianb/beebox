@@ -1,6 +1,6 @@
 // # Voice sends dispatch in segment order
 //
-// `voice-send-sequencer.ts` (`docs/plans/resilient-voice-recording.md`,
+// `voice-send-sequencer.ts` (`plan:resilient-voice-recording`,
 // Track 4): each voice segment reserves a slot when it ends, and its dispatch
 // waits until every earlier slot is released. The HQ waits behind the slots run
 // concurrently, so a later segment's fast HQ result waits for an earlier

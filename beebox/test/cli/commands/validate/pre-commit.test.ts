@@ -2,7 +2,7 @@
 //
 // `runPreCommitChecks` is what the per-box pre-commit hook invokes. It replaced
 // three separate `bbx` calls, each of which paid the full CLI startup floor for a
-// fraction of a second of work — see `docs/plans/commit-performance.md`.
+// fraction of a second of work — see `plan:commit-performance`.
 //
 // Blocking findings (staged card/markdown validation, the unlisted-binary guard)
 // go to stdout and set the exit code; the box-wide link scan is warn-only on

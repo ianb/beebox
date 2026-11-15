@@ -328,7 +328,7 @@ void test("The span walk streams the transcript in pages, so a session that grew
 // ~500 chars) clears the 400-char title threshold but not the 6,000-char summary
 // threshold, so the session is `qualified` with `needsMetadata: false` and the
 // run titles it without paying for an account
-// (`docs/implemented-plans/chat-titles.md` § Track A).
+// (`plan:chat-titles` § Track A).
 void test("Titling is decoupled from the summary gate:", async (t) => {
   t.teardown(async () => {
     try {

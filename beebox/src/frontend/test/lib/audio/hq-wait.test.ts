@@ -1,6 +1,6 @@
 // # Waiting for a voice message's HQ transcript
 //
-// `lib/audio/hq-wait.ts` (`docs/plans/resilient-voice-recording.md`, Track 4)
+// `lib/audio/hq-wait.ts` (`plan:resilient-voice-recording`, Track 4)
 // decides how a voice send's HQ wait ends: claim a ready result, fall back to the
 // realtime text when the budget runs out or the user asks, or stop on a
 // permanent failure. These examples drive the waiter with a fake box — a status

@@ -26,7 +26,7 @@ function PendingHqBubble({ pending }: { pending: PendingHq }) {
 
 /**
  * A voice message waiting for its HQ transcript
- * (docs/implemented-plans/resilient-voice-recording.md, Track 4): the realtime text as a
+ * (plan:resilient-voice-recording, Track 4): the realtime text as a
  * queued user bubble with the HQ job's status line inside it, and below it a
  * control to stop waiting and send the live text now.
  */

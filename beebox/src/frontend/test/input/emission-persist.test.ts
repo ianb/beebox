@@ -2,7 +2,7 @@
 //
 // Whole-emission persistence under `bbx-input-emission:<box>` — the
 // composition survives reloads and session switches (the singleton-draft
-// decision). See docs/plans/input-extraction.md chunk 4.
+// decision). See plan:input-extraction chunk 4.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,6 +1,6 @@
 /**
  * The live view's WebSocket, bridged from the person's browser to the
- * dashboard (docs/plans/shared-browser.md, Track C).
+ * dashboard (plan:shared-browser, Track C).
  *
  * The dashboard's viewport opens `/api/session/<port>/stream` on its own
  * origin: frames come down it and mouse and key input goes up it. The box

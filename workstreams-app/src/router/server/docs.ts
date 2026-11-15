@@ -404,7 +404,7 @@ export async function serveDev(params: {
     res.end(await renderDevManifest(name, { base, devRoot }));
     return;
   }
-  // RETIRED into the general browser (docs/plans/general-browser.md, Track 5).
+  // RETIRED into the general browser (plan:general-browser, Track 5).
   //
   // The doc browser's job — read any markdown in this worktree — is now
   // `/workstreams/browse?file=…`, which does it for every file kind, with the

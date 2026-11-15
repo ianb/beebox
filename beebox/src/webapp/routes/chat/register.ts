@@ -96,7 +96,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // hasn't finished writing and leave those sessions card-less. Both stay off
   // the boot critical path; the reconcile is idempotent and repeats each boot,
   // so a session that misses this pass is picked up by the next one.
-  // See docs/plans/chat-husks.md.
+  // See plan:chat-husks.
   const maintenance = runBackfillIfNeeded(boxRoot).then(() => reconcileChatHusks(boxRoot)).catch((e: unknown) => {
     console.error("[chat] session backfill failed:", e instanceof Error ? e.message : e);
   });

@@ -8,7 +8,7 @@
  * decisions are unit-testable without spawning a process or waiting a second.
  *
  * Why two slots, why a barrier, and what the ledger measured to justify both:
- * beebox/docs/plans/change-based-test-selection.md, "Revision 2026-08-25
+ * plan:change-based-test-selection, "Revision 2026-08-25
  * — test economics", mechanism A.
  */
 

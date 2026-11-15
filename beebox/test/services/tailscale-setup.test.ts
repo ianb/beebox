@@ -7,7 +7,7 @@
 // ones), and re-verifies. `bbx tailscale stop` removes only that target's mapping(s)
 // and clears intent ONLY after a readback proves removal. Everything runs against a
 // stateful fake modeling `tailscale serve`'s incremental semantics — no tailnet, no
-// TTY. See `docs/implemented-plans/tailscale-expose-and-protect.md` Track B chunk 2.
+// TTY. See `plan:tailscale-expose-and-protect` Track B chunk 2.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

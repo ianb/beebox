@@ -221,7 +221,7 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
 // The context knows how the request authenticated, so the commit says so. Without
 // this, a mount an agent made in chat and one the boxholder made on the settings
 // page are the same anonymous commit, and "who mounted this" has no answer
-// (`docs/plans/agent-capability-delegation.md`).
+// (`plan:agent-capability-delegation`).
 void test("The context knows how the request authenticated, so the commit says so.", async (t) => {
   t.teardown(async () => {
     try {

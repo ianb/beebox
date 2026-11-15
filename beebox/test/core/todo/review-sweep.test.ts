@@ -1,10 +1,10 @@
 // # The todo-review sweep (`core/todo/review-sweep.ts`)
 //
-// Filesystem-tier tests for `docs/implemented-plans/todo-annotation.md` Track 5b:
+// Filesystem-tier tests for `plan:todo-annotation` Track 5b:
 // `computeTodoReviewSets` computes four sets of open todos (escalated /
 // stirring / actionable / stale). Only `stirring` needs a baseline (the day of the last
 // review); escalated and stale are recomputed fresh every pass. Since
-// `docs/plans/todos-ui.md` Track 7 the sweep writes nothing: `bbx engine
+// `plan:todos-ui` Track 7 the sweep writes nothing: `bbx engine
 // todo-review check` owns the baseline and the brief
 // (`test/cli/commands/todo-review.test.ts`).
 
@@ -145,7 +145,7 @@ void test("Pacific/Kiritimati is UTC+14 — far enough ahead of UTC that a BBXTI
 // ## A `recheck` still ahead, or `never`, keeps a todo out of every set
 //
 // `recheck` is when the review said it would look again
-// (`docs/plans/todos-ui.md`, Track 7). Until that day the todo is left out of
+// (`plan:todos-ui`, Track 7). Until that day the todo is left out of
 // whichever set it would otherwise be in; on the day, it is back. `never` keeps
 // it out for good. A done todo is out regardless.
 void test("recheck is when the review said it would look again (docs/plans/todos-ui.md,...", async (t) => {

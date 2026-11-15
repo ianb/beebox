@@ -1,5 +1,5 @@
 /**
- * The HQ transcription job's IO shell (`docs/implemented-plans/resilient-voice-recording.md`,
+ * The HQ transcription job's IO shell (`plan:resilient-voice-recording`,
  * Track 1). Concatenates a voice recording's staged PCM chunks, cuts pieces
  * with `planPieces`, transcribes each piece in order via `transcribeAudioHq`,
  * retries a transient/piece-too-long failure with backoff or a halved piece
@@ -267,7 +267,7 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
       try {
         const result = await transcribePiece(
           { audioBuffer: wavBuffer, filename: `piece-${String(pieceIndex + 1)}.wav`, boxRoot },
-          // A call recording is folded by word time (docs/implemented-plans/chat-calls.md, Track F).
+          // A call recording is folded by word time (plan:chat-calls, Track F).
           { service: hqRequest.service, wordTimestamps: session.voice.call !== undefined },
         );
         results.push({ ...result, startByte: piece.startByte });

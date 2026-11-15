@@ -1,6 +1,6 @@
 /**
  * The Browser page's question bar and its two routes
- * (docs/plans/shared-browser-ask.subplan.md).
+ * (plan:shared-browser-ask.subplan).
  *
  * `GET /browser/_box/question` lists what the agent is waiting for, and
  * `POST /browser/_box/answer` sends the person's answer to the chat that asked,

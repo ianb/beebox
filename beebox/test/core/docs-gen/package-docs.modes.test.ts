@@ -2,7 +2,7 @@
 //
 // `ensurePackageDocs` (`src/core/docs-gen/package-docs/core.ts`) builds the
 // directory with `mkdtemp`, which is 0700, then opens it: on a unit host
-// (docs/plans/per-box-units.md) the deploy's build is read by each box user,
+// (plan:per-box-units) the deploy's build is read by each box user,
 // and a box user's `bbx engine init` must not die on the fingerprint file.
 
 import { test } from "tap";

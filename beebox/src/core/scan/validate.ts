@@ -117,7 +117,7 @@ async function checkImage(filePath: string): Promise<ScanValidation> {
   try {
     // Dynamic — `sharp` loads a native binding and is one of the heaviest
     // modules in the graph; only the image paths need it, and every `bbx`
-    // invocation was paying for it (docs/plans/commit-performance.md, 1b).
+    // invocation was paying for it (plan:commit-performance, 1b).
     const { default: Sharp } = await import("sharp");
     const image = Sharp(filePath, { failOn: "error" });
     await image.resize({ width: 32, height: 32, fit: "inside" }).raw().toBuffer();

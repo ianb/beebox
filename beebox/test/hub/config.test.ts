@@ -305,7 +305,7 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
 
 // ## Socket entries (a unit host) are all or nothing, and own the idle rules
 //
-// docs/plans/per-box-units.md, Track D: a hub routes either to systemd socket
+// plan:per-box-units, Track D: a hub routes either to systemd socket
 // units or to children it spawns; a half-migrated file must not load, and
 // `lazy`/`idleMs`/`keepRecent` have no process to act on when systemd owns them.
 void test("Socket entries are all or nothing, and refuse the hub's own idle rules", async (t) => {

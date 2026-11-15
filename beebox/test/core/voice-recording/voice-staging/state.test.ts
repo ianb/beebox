@@ -2,7 +2,7 @@
 //
 // `nextVoiceState(voice, event)` is the pure transition function over one
 // recording's `hq` progress and `handoff` decision
-// (`docs/plans/resilient-voice-recording.md`, Track 1). It returns the next
+// (`plan:resilient-voice-recording`, Track 1). It returns the next
 // `voice` object, the SAME object unchanged for an idempotent no-op, or a typed
 // refusal for an event that doesn't apply from the current state.
 

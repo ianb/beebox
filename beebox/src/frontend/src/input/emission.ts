@@ -1,7 +1,7 @@
 /**
  * The Emission — the message-being-composed as a value
- * (docs/plans/input-widget.md; implementation plan
- * docs/implemented-plans/input-extraction.md, chunk 1).
+ * (plan:input-widget; implementation plan
+ * plan:input-extraction, chunk 1).
  *
  * One serializable noun bundling everything the input accumulates: text,
  * images, file references, selections, and voice metadata. Every send site
@@ -68,7 +68,7 @@ export interface Emission {
   readonly spokenStart?: number;
   /**
    * Set when the committed text came from an HQ transcription pass, which
-   * every dictated message gets when it can (docs/implemented-plans/hq-always.md). A
+   * every dictated message gets when it can (plan:hq-always). A
    * voice emission without it is live text — HQ failed, timed out, was
    * skipped, or never ran — and the assembler stamps `stt="live"` on it.
    * Mutually exclusive with `words`: an HQ pass drops the realtime words it

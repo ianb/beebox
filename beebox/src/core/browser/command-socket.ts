@@ -1,6 +1,6 @@
 /**
  * The command socket's wire format and its engine-side client
- * (docs/plans/shared-browser.md, "Command socket" and Track C's exec route).
+ * (plan:shared-browser, "Command socket" and Track C's exec route).
  *
  * The agent's `bbx browser` commands run inside the browser host, not in the
  * engine: on a unit host the host is inside the box's private network

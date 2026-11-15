@@ -1,6 +1,6 @@
 // # The call relay on a cloud server
 //
-// One coturn per host (docs/plans/self-hosted-turn.md). Every deploy runs
+// One coturn per host (plan:self-hosted-turn). Every deploy runs
 // bbx-turn-install, and the ports the config uses are the ports the origin
 // firewall opens. A drifted relay range is a relay whose media the firewall
 // drops. The helper itself is exercised against a real coturn by

@@ -3,7 +3,7 @@
 // Two scripts protect the Cloudflare-to-origin leg. `check-origin-tls-ref.sh`
 // refuses to deploy a commit whose nginx site has no 443 listener, because
 // Cloudflare connects on 443 and that deploy would take the site offline.
-// It is not wired into deploy.sh until origin TLS is activated (docs/unimplemented-plans/origin-tls.md).
+// It is not wired into deploy.sh until origin TLS is activated (plan:origin-tls).
 // `hetzner/origin-firewall.sh` writes the origin's firewall from Cloudflare's
 // published ranges. These examples run both scripts for real, with fake `curl`
 // and `hcloud` commands first on the PATH.

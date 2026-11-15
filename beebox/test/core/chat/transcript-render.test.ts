@@ -67,7 +67,7 @@ Checked — it's paid.`);
   await t.checkText(renderEntries([userEntry("u2", "<typed user=\"Ian\">plain words</typed>"), userEntry("u3", "")]), `**User** (2026-07-28T03:00:00Z)
 plain words`);
 
-  // `<unsure>` low-confidence marks (Track 4, docs/plans/transcript-confidence.md)
+  // `<unsure>` low-confidence marks (Track 4, plan:transcript-confidence)
   // unwrap to their plain word too — this reader wants clean human text, not the
   // agent-facing marker.
 

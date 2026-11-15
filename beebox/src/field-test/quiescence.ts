@@ -1,6 +1,6 @@
 /**
  * Box quiescence — "has everything this activity kicked off actually finished?"
- * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
+ * (`plan:agent-field-tests`, Track 2).
  *
  * The harness waits here between an operator activity and the item's hard
  * checks, and before every `pre` action, so a check never races the reactor and

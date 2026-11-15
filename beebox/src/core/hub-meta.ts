@@ -22,7 +22,7 @@
  * the file by path and nothing else under them. The rewrite is skipped when
  * nothing but the timestamp would change.
  *
- * Plan: docs/implemented-plans/per-box-units.md, Track D.
+ * Plan: plan:per-box-units, Track D.
  */
 
 import * as crypto from "node:crypto";

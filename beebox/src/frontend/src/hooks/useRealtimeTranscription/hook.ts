@@ -39,7 +39,7 @@ export interface UseRealtimeTranscriptionOptions {
   targetSessionId: () => string | null;
   /**
    * The four spoken commands the keyword spotter recognizes, as one
-   * `VoiceIntent` stream (docs/implemented-plans/input-extraction.md, chunk 5).
+   * `VoiceIntent` stream (plan:input-extraction, chunk 5).
    * `submit`'s `text` is the processed transcript, `matchedPhrase` the
    * trigger phrase the realtime pass matched (so a later transcription pass
    * that drops it can re-inject), and `recording` the segment's staged
@@ -83,14 +83,14 @@ export interface UseRealtimeTranscriptionResult {
   start: (opts?: { earcon?: boolean }) => void;
   /**
    * Stop recording and wait for the final transcript and its words (Fix D,
-   * docs/implemented-plans/transcript-confidence.md). The segment's recording is sealed
+   * plan:transcript-confidence). The segment's recording is sealed
    * with `hq: null`: this path hands over text only.
    */
   stop: () => Promise<{ text: string; words: FinalWord[] | null }>;
   /**
    * End the segment and treat it as a submit — the same path a spoken send
    * keyword takes, triggered from a manual UI control
-   * (docs/implemented-plans/hq-dictation-switch.md, chunk 2). Parks the
+   * (plan:hq-dictation-switch, chunk 2). Parks the
    * current combined transcript with an empty `matchedPhrase` and STOPs the
    * machine; the idle-transition effect fires the "submit" intent with the
    * segment's recording. Returns false when nothing is recording.

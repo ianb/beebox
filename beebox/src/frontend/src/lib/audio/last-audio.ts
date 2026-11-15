@@ -9,7 +9,7 @@
  * this tab still holds are tombstones: a voice send with no recording marks
  * its emission absent, so the relay answers "none" for it.
  *
- * Replaces the old single-slot cache (docs/implemented-plans/input-extraction.md,
+ * Replaces the old single-slot cache (plan:input-extraction,
  * chunk 5): recordings are now retained per emission id in a
  * `RetentionStore` (`input/retention.ts`), so a send never has to clear
  * anything — `latest()` is well-defined by construction. Recordings live
@@ -45,7 +45,7 @@ export interface VoiceAudioPayload {
  */
 const MAX_TEXT_CHARS = 1500;
 
-/** v1 policy (docs/implemented-plans/input-extraction.md, chunk 5): memory-only, 5 most recent. */
+/** v1 policy (plan:input-extraction, chunk 5): memory-only, 5 most recent. */
 const RETENTION_CAPACITY = 5;
 
 // `null` is a tombstone: a voice send that had NO recording (stop-and-send,

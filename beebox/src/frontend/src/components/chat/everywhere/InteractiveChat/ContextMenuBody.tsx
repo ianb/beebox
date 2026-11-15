@@ -1,6 +1,6 @@
 /**
  * The chat's "here" menu body — the full form of the app bar's here menu
- * (docs/implemented-plans/top-nav-ia.md Track C2). Lifted verbatim out of the retired
+ * (plan:top-nav-ia Track C2). Lifted verbatim out of the retired
  * `ContextChip`: its trigger and Menu died with the chat header row, but
  * its body is still the richest here menu we have, and it can only be built
  * from chat state — `messages` feeds "Recent files", and rows open in the
@@ -15,7 +15,7 @@
  * Rows: "Open <dir>/" (only with a context dir), "Search", "Recent files ›"
  * leading to the `RecentFilesMenuBody` sub-panel, then the landmark's links and
  * groups after a divider (`LandmarkLinksMenuBody`, absent when there are none) — the
- * folder menu's order in docs/plans/box-screen.md track 3.
+ * folder menu's order in plan:box-screen track 3.
  *
  * The panel swap is local state here rather than the `Menu`'s
  * `pageIndex`, which lives on the far side of the portal: the rows still

@@ -1,6 +1,6 @@
 /**
  * Type-check one tsconfig project with the TypeScript 7 compiler, in its Go
- * process (`docs/implemented-plans/typescript-7.md`, Track C). One API instance per call:
+ * process (`plan:typescript-7`, Track C). One API instance per call:
  * a check is a one-shot command, not a hot path.
  */
 import * as fs from "node:fs";

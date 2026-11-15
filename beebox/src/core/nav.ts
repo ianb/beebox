@@ -3,7 +3,7 @@
  * render-ready entries. Consumed by the nav tRPC router (the app bar's
  * switch menu) and by the health check (an invalid nav card is a health
  * warning, not a broken nav — the menu keeps its builtin rows either way).
- * See docs/implemented-plans/nav-card.md.
+ * See plan:nav-card.
  */
 
 import * as fs from "node:fs/promises";

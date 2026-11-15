@@ -7,7 +7,7 @@
  * points at the SDK session (transcripts live outside the box), and
  * activity/freshness stays in runtime bookkeeping, never on the card.
  * Created automatically at session-id assignment; see
- * docs/plans/chat-husks.md and src/core/chat-husk.ts.
+ * plan:chat-husks and src/core/chat-husk.ts.
  */
 
 import { z } from "zod";
@@ -19,7 +19,7 @@ const chatFields = {
   /**
    * Engine session id — the pointer to the live session/transcript, and the
    * husk's only key (the filename is a naming convention; see
-   * docs/implemented-plans/chat-session-identity.md). Validated as the same strict UUID
+   * plan:chat-session-identity). Validated as the same strict UUID
    * shape `chat.delete` parses before it builds a path, via the one
    * `sdkSessionIdSchema` definition: Claude Agent SDK ids are UUIDv4 and Codex
    * thread ids are UUIDv7, so a single UUID check covers both engines.
@@ -73,7 +73,7 @@ export const ChatSchema: CardSchema = cardSchema("chat", {
   category: "synced",
   // Staging and session logs, for the agent rather than the reader: kept out
   // of a place's "Also here" list and folded in Browse
-  // (docs/implemented-plans/place-shows-cards.md, Track A).
+  // (plan:place-shows-cards, Track A).
   prominence: "background",
   instructions: `# Chat Husk Cards
 

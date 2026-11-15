@@ -6,7 +6,7 @@
  *
  * A failed extraction is a return value: the card is still written, with an
  * `error:` and the original as its only asset, so a Docling problem never
- * blocks the caller (`docs/implemented-plans/scanner-ingest.md`, Track 4).
+ * blocks the caller (`plan:scanner-ingest`, Track 4).
  */
 
 import { randomUUID } from "node:crypto";

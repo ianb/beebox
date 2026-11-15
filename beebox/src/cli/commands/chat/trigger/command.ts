@@ -1,6 +1,6 @@
 /**
  * `bbx chat trigger`: arm, list, disarm, dry-run and read the trace of
- * activity triggers for your own chat session (docs/implemented-plans/activity-triggers.md,
+ * activity triggers for your own chat session (plan:activity-triggers,
  * Track D). `eval-one` is the internal child the server and `run` spawn.
  */
 

@@ -9,7 +9,7 @@
  * to fix, under the new engine.
  *
  * See "Upgrade lifecycle (decision 4)" in
- * `docs/implemented-plans/boxes-as-packages-v2.md` — the step list there is this file's
+ * `plan:boxes-as-packages-v2` — the step list there is this file's
  * spec. The critical property is the **Ghost lesson**: code and data revert
  * as ONE unit. `ghost update --rollback` used to revert only the code symlink
  * while the database stayed migrated forward, silently corrupting data

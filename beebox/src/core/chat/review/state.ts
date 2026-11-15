@@ -9,7 +9,7 @@
  * past the threshold, so what's recorded is the boundary of what has already
  * been read, not a finished flag.
  *
- * See docs/implemented-plans/chat-review.md § Track A.
+ * See plan:chat-review § Track A.
  */
 
 import * as fs from "node:fs/promises";
@@ -31,7 +31,7 @@ export const METADATA_CONSUMER = "metadata";
  * The titling consumer. Separate from the metadata journal so a chat can be
  * titled after a couple of exchanges without waiting for summary-sized
  * growth, and re-titled when its drift is smaller than a full review span
- * (`docs/implemented-plans/chat-titles.md` § Track A).
+ * (`plan:chat-titles` § Track A).
  */
 export const TITLE_CONSUMER = "title";
 

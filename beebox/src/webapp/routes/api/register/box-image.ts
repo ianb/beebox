@@ -54,7 +54,7 @@ export async function resolveBoxImage(boxRoot: string, requestedPath: string): P
   if (requestedPath === "") throw new BoxImageError(400, { error: "Path required" });
 
   // Box containment + namespace fence, checked on the RESOLVED path
-  // (`docs/implemented-plans/one-root-box-layout.md` Track B).
+  // (`plan:one-root-box-layout` Track B).
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: requestedPath, mode: "read" });
   if (!ns.ok) {
     if (ns.reason === "display-form") throw new BoxImageError(400, { error: ns.message });

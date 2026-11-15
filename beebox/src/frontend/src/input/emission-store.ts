@@ -1,7 +1,7 @@
 /**
  * The emission draft store — one mutation surface for everything the
- * composer accumulates before send (docs/implemented-plans/input-extraction.md,
- * chunk 2; design in docs/plans/input-widget.md's `EmissionEditor`).
+ * composer accumulates before send (plan:input-extraction,
+ * chunk 2; design in plan:input-widget's `EmissionEditor`).
  *
  * Replaces three scattered homes for composition state: `input-store.ts`
  * (text only), `useChatAttachments` (images/files, InteractiveChat-attachments.ts),

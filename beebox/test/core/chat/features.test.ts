@@ -6,7 +6,7 @@
 // the server prepends to user messages, and parses agent-emitted
 // `<chat-app>` mutation tags out of assistant responses.
 //
-// See `docs/plans/narration-mode.md` for the bigger picture; this file
+// See `plan:narration-mode` for the bigger picture; this file
 // covers the registry primitives.
 
 import { test } from "tap";
@@ -50,7 +50,7 @@ void test("resolveFeatures() merges stored values over defaults, dropping unknow
 });
 
 // A retired feature still stored by older sessions — `hq-dictation`, from before
-// every dictated message got the HQ pass (docs/plans/hq-always.md) — is dropped
+// every dictated message got the HQ pass (plan:hq-always) — is dropped
 // without a warning:
 void test("A retired feature still stored by older sessions — hq-dictation, from before...", async (t) => {
   t.check(resolveFeatures({ narration: "on", "hq-dictation": "on" }), {
@@ -229,7 +229,7 @@ void test("No tags → no deltas, content unchanged.", async (t) => {
 
 // ## The `strip` feature
 //
-// `docs/implemented-plans/conversation-strip.md`, Track A. The value is `none`,
+// `plan:conversation-strip`, Track A. The value is `none`,
 // `dismissed`, or a box path to a `.card`. A command sets it; the agent's
 // `<chat-app>` tag cannot, and the snapshot leaves it out at `none`.
 void test("strip accepts none, dismissed, and box card paths only", async (t) => {

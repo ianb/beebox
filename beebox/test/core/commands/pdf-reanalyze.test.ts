@@ -1,6 +1,6 @@
 // # `bbx pdf reanalyze` on a card from `bbx pdf save`
 //
-// docs/plans/knowledge-base-tools.md, Track B. Re-extraction replaces the body,
+// plan:knowledge-base-tools, Track B. Re-extraction replaces the body,
 // and the body is third-party text, so it is neutralized the way `writePdfCard`
 // neutralizes it. The card's `sources` and `capture` are the save's record of
 // where the file came from; they stay.

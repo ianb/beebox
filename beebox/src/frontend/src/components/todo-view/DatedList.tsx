@@ -1,6 +1,6 @@
 /**
  * The "By date" tab of a `todo-view` list
- * (`docs/implemented-plans/todo-collection.md`, Track 4).
+ * (`plan:todo-collection`, Track 4).
  *
  * Every open dated todo, in date order, out of whatever card it was written
  * in. Each line says whether its date is a deadline or a start, because
@@ -27,7 +27,7 @@ import { cardUrl } from "@shared/card-url";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
   const cardHref = boxSlug === undefined ? undefined : href(cardUrl(boxSlug, dated.cardPath));
-  // In a workspace pane the card opens in the other pane (`docs/implemented-plans/todos-ui.md`, Track 5).
+  // In a workspace pane the card opens in the other pane (`plan:todos-ui`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
   const word = dated.kind === "due" ? dueWord(dated.item.plateState) : startPrefix({ plateState: dated.item.plateState, startIso: dated.date, todayIso: localIsoDate(new Date(boxNow())) });

@@ -196,7 +196,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   // absolute path becomes a nested box-relative lookup
   // (`<boxRoot>/tmp/.../_content/Marker...`) — but `resolveCardPath` then runs
   // that through the box namespace fence
-  // (`resolveBoxNamespacePathOnDisk`, `docs/implemented-plans/one-root-box-layout.md` Track
+  // (`resolveBoxNamespacePathOnDisk`, `plan:one-root-box-layout` Track
   // B), and a path whose first segment is `tmp` rather than an underscore area
   // fails the namespace check before any filesystem read, so this shape 400s
   // (`BAD_REQUEST`) same as the relative-`..` shape. Still fail-closed either way

@@ -78,7 +78,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       // Box containment + namespace fence, checked on the RESOLVED path
-      // (`docs/implemented-plans/one-root-box-layout.md` Track B).
+      // (`plan:one-root-box-layout` Track B).
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (!ns.ok) {
         const error = ns.reason === "display-form" ? ns.message : "Path outside box";

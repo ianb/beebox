@@ -1,7 +1,7 @@
 // # Emission assembly — the pinned wire format for every send site
 //
 // `assembleChatMessage` is the one place an Emission becomes a chat payload
-// (docs/plans/input-extraction.md, chunk 1). These examples pin the exact
+// (plan:input-extraction, chunk 1). These examples pin the exact
 // historical output of each of the five send sites it replaces — the
 // refactor's zero-behavior-change guarantee is these strings.
 
@@ -162,7 +162,7 @@ void test("Historical builder: (line 155)", async (t) => {
 
   // Equivalence with the historical helper (same inputs → same bytes, modulo the
   // `message-id` and `stt` stamps `buildSpeechMessage` predates and never grew —
-  // Track 1, retranscription-in-chat plan; docs/plans/hq-always.md), while it
+  // Track 1, retranscription-in-chat plan; plan:hq-always), while it
   // still exists:
 
   const legacy = buildSpeechMessage({ text: "add that to the list", diarized: true, selections: sel, attrs: " local-time=\"14:23\"" });
@@ -541,7 +541,7 @@ void test("null/undefined (a service that never captured confidence — Voxtral,
 
 // ## Site 2 — keyword voice send: inline `<unsure>` marks on live text
 //
-// Every dictated message gets the HQ pass when it can (docs/plans/hq-always.md),
+// Every dictated message gets the HQ pass when it can (plan:hq-always),
 // so the wrapper marks the exception: `stt="live"` on any voice emission without
 // `hqText`. Realtime words, when captured, mark `<unsure>` spans in place — they
 // only ever describe live text. `stt` leads `diarized` in attribute order.
@@ -588,7 +588,7 @@ void test("Captured but none unsure, or no confidence data at all (a non-Deepgra
 // ## A live gap marker is sent as unsure
 //
 // `[…]` in live text marks speech the live pass never transcribed
-// (`docs/implemented-plans/live-gap-marker.md`). It goes to the agent wrapped in
+// (`plan:live-gap-marker`). It goes to the agent wrapped in
 // `<unsure>`, anywhere in a live voice message — a marker can sit in the
 // prefix when an earlier segment's text was folded into the composer. Realtime
 // words on either side still mark their own spans; the marker matches no word.

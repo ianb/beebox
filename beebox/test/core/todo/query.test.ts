@@ -1,8 +1,8 @@
 // # Scanning a box for todos (`core/todo/query.ts`)
 //
-// Filesystem-tier tests for `docs/implemented-plans/todo-annotation.md`
+// Filesystem-tier tests for `plan:todo-annotation`
 // Track 3, carried forward onto the collection runner
-// (`docs/plans/todo-collection.md`, Track 4). A box-wide query globs every card,
+// (`plan:todo-collection`, Track 4). A box-wide query globs every card,
 // parses each body once against the shared Markdoc vocabulary, and merges both
 // capture forms (`{% todo %}` tags, frontmatter `todos:` entries) into one
 // deterministically ordered list — reporting parse/validate/load failures and

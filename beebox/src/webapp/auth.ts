@@ -399,7 +399,7 @@ export function getOwnerEmail(): string | null {
  * `agentBrowsing: "owner"`. It carries the owner's email, so it is a person for
  * box-scoped purposes — but it is still a machine credential, so a gate over the
  * MACHINE-level secret store must exclude it explicitly (see
- * `docs/implemented-plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
+ * `plan:secret-custody`). `resolveRequestIdentity` itself never returns
  * it.
  */
 export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | "browse" | null;
@@ -414,7 +414,7 @@ export interface RequestIdentity {
  * Resolve the authenticated identity for a request through ONE path,
  * consumed by both the box auth preHandler (`server-box-scope.ts`) and the
  * tRPC context creation, so the two can never diverge (Track D, chunk D2 —
- * `docs/implemented-plans/boxes-as-packages-v2.md` calls this out explicitly: identity
+ * `plan:boxes-as-packages-v2` calls this out explicitly: identity
  * used to be recomputed separately in both places).
  *
  * In hub mode (`isHubMode()`), identity comes ONLY from hub-injected

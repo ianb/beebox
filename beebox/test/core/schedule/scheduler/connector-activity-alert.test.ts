@@ -4,10 +4,10 @@
 // brings each connector's episode up to date (a connector that has gone quiet or
 // keeps failing) and records a new episode once, for the scheduler log. The
 // dashboard shows a warning until the condition clears or the owner dismisses
-// it. A quiet episode sends nothing (docs/implemented-plans/notifications.md,
+// it. A quiet episode sends nothing (plan:notifications,
 // Track E). A new failing episode sends one `quiet` notice: the connector has
 // stopped doing what it was connected for (boxholder decision 2026-10-22,
-// docs/implemented-plans/connector-failing-reaches-people.md). See
+// plan:connector-failing-reaches-people). See
 // `connectors/activity-verdict.ts` for the rule and
 // `test/connector-activity.verdict.test.ts` for its cases.
 

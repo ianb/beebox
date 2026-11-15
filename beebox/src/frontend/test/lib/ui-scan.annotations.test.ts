@@ -182,7 +182,7 @@ void test("The spread above is only evidence if Menu puts the attributes in it."
 
 // ## Every id in the plan's table exists exactly once
 //
-// The table in `docs/plans/agent-points-at-ui.md` (Track 4) is the contract — the
+// The table in `plan:agent-points-at-ui` (Track 4) is the contract — the
 // same strings are the iOS `accessibilityIdentifier`s — so this reads the plan
 // rather than restating it. A `—` in the web column means the platform has no
 // counterpart and is skipped here; the iOS column is Track 5's to check.

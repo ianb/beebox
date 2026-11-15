@@ -4,7 +4,7 @@
 // When the box is not sure where it goes, or cannot judge it at all, the thought
 // is stored as `needs-choice` and the person picks with `quickChat.choose`.
 // Nothing is lost when a step fails: the record holds the message, and a repeat
-// `submit` with the same id finishes the job (docs/plans/box-screen.md, track 1).
+// `submit` with the same id finishes the job (plan:box-screen, track 1).
 //
 // These tests use a synthetic box, the fake Jev service, and a scripted chat
 // runtime. The runtime stands in for the send route's target resolution and its
@@ -320,7 +320,7 @@ void test("origin says how the thought was entered.", async (t) => {
 
 // ## A voice thought the phone ran HQ on
 //
-// When the phone ran its own HQ pass (docs/plans/ios-quick-chat-hq.md), it sends
+// When the phone ran its own HQ pass (plan:ios-quick-chat-hq), it sends
 // `hqService`, and the thought is framed with `stt-service` instead of
 // `stt="live"`. The record keeps it through a choice and a repeated submit.
 void test("When the phone ran its own HQ pass (docs/plans/ios-quick-chat-hq.md), it send...", async (t) => {

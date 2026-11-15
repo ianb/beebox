@@ -180,7 +180,7 @@ void test("An auth-on server (openAccess:", async (t) => {
 // machine-wide browse key arrives as a `user` and clears `ownerProcedure`. The one
 // owner surface it must NOT clear **on the shared store** is the secret panel:
 // the machine-level store holds every box's real keys, so one test box's opt-in
-// cannot unlock them (`docs/implemented-plans/secret-custody.md`) —
+// cannot unlock them (`plan:secret-custody`) —
 // `authenticatedOwnerProcedure` excludes `source: "browse"` there. Earlier
 // sections gave themselves a tmp store, so this block explicitly clears the
 // override to stand on the default, shared path — and puts it back after.

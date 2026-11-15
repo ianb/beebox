@@ -1,6 +1,6 @@
 /**
  * The external path prefix of the box browser page, for rewriting the
- * dashboard's root-absolute paths (docs/plans/shared-browser.md, Track C).
+ * dashboard's root-absolute paths (plan:shared-browser, Track C).
  *
  * The box's own part, `/<slug>/browser`, is in the request path: the hub
  * forwards box paths unchanged. A dev router in front of the hub adds an outer

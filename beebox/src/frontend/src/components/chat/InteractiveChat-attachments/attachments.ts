@@ -25,7 +25,7 @@
  * is removed or the composer resets.
  *
  * State itself lives in the emission store (`../../input/emission-store.ts`,
- * docs/implemented-plans/input-extraction.md chunk 2). `useChatAttachments`
+ * plan:input-extraction chunk 2). `useChatAttachments`
  * (called at the `InteractiveChat` root) is a thin, NON-reactive binding —
  * action methods only, closing over `emissionStore.get()` for their
  * point-in-time reads. It deliberately does NOT subscribe to the store: like

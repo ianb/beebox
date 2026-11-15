@@ -1,7 +1,7 @@
 // # Field-test run lifecycle
 //
 // A field run owns a disposable box and a dedicated server
-// (`docs/implemented-plans/agent-field-tests.md`, Track 2). This exercises the real thing —
+// (`plan:agent-field-tests`, Track 2). This exercises the real thing —
 // a real `bbx init`, a real `bbx serve` on a real free port — because the failures
 // this module exists to catch (a server that never comes up, a child left
 // running after teardown) are all invisible to a mocked version.

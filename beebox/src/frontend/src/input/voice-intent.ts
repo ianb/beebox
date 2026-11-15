@@ -1,6 +1,6 @@
 /**
  * VoiceIntent — the four spoken commands the realtime-transcription
- * keyword spotter recognizes (docs/implemented-plans/input-extraction.md, chunk 5;
+ * keyword spotter recognizes (plan:input-extraction, chunk 5;
  * vocabulary locked in as `submit | cancel | mic-off | erase`). The feeder
  * (`useRealtimeTranscription`) emits these through one `onVoiceIntent`
  * handler instead of four separate callbacks; the input side
@@ -12,7 +12,7 @@
  * with one narrow exception — `submit.recording` carries the segment's
  * staged recording as a live handle (`PendingRecording`: its id plus the
  * seal/discard obligation), by reference. The audio itself is on the box
- * (`docs/implemented-plans/resilient-voice-recording.md`), never in this shape.
+ * (`plan:resilient-voice-recording`), never in this shape.
  */
 
 import type { ChatImageAttachment } from "../api-chat";
@@ -114,7 +114,7 @@ export interface VoiceSendKeyword {
 /**
  * The keyword to restore on a submit's HQ text. A manual stop-and-send
  * synthesizes the intent with an empty `matchedPhrase`
- * (docs/implemented-plans/hq-dictation-switch.md, chunk 2): nothing was
+ * (plan:hq-dictation-switch, chunk 2): nothing was
  * spoken to match, so there is no trigger phrase to restore.
  */
 export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>): VoiceSendKeyword | null {
@@ -129,7 +129,7 @@ export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>):
 /**
  * The emission a voice send finally dispatches, from the realtime emission
  * staged when its segment ended and the outcome of its HQ wait
- * (docs/implemented-plans/resilient-voice-recording.md, Track 4). The id and the frozen
+ * (plan:resilient-voice-recording, Track 4). The id and the frozen
  * composer context (typed prefix, selections, attachments) never change;
  * composer input added during the wait belongs to the next message.
  *

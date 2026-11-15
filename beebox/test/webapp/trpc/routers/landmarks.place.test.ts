@@ -2,7 +2,7 @@
 //
 // A landmark card renders as the place page: the place's links in tiers, then
 // each `expand` as a group that says in words what it lists
-// (docs/implemented-plans/landmark-arrival.md, Track C). The page asks `landmarks.forDir`
+// (plan:landmark-arrival, Track C). The page asks `landmarks.forDir`
 // with `expandsAsGroups: true`; the menus omit the flag and keep today's flat
 // list. The same payload names the place's arrival target (Track D): the card
 // that arriving at the place opens.
@@ -176,7 +176,7 @@ void test("With two entry points arrival does not guess; with none there is noth
 // The root is the logical directory `""`; its landmark lives under `_content/`.
 // The front door is the root's page, so a root with exactly one entry point
 // still arrives on its landmark card; the entry point leads the page instead
-// (docs/implemented-plans/front-door.md, Track B). A nested place with one entry point
+// (plan:front-door, Track B). A nested place with one entry point
 // keeps the rule and opens that card.
 void test("The front door is the root's page, so a root with exactly one entry point sti...", async (t) => {
   const box = await makeTmpBox();
@@ -207,7 +207,7 @@ void test("A background landmark's cards are not listed by level, so it has no e
 // ## "Also here" lists the place's other cards, most recently changed first
 //
 // With `expandsAsGroups`, the last group is "Also here": the place's ordinary
-// cards that no tier or other group shows (docs/implemented-plans/place-shows-cards.md,
+// cards that no tier or other group shows (plan:place-shows-cards,
 // Track A). A pinned card, an entry point, an expand group's cards, a chat husk
 // (background by type) and a nested place's card are not in it.
 void test("With expandsAsGroups, the last group is \"Also here\":", async (t) => {
@@ -425,7 +425,7 @@ void test("Every card here is already in a tier, so the page adds no empty group
 // ## A tile carries its card type's summary line
 //
 // Each row carries `detail`, the line the card's type writes about itself
-// through `summarize` (docs/implemented-plans/place-shows-cards.md, Track B). A box-authored
+// through `summarize` (plan:place-shows-cards, Track B). A box-authored
 // `loan` type writes who has it and when it is due. The loan cards do not
 // write `type:` on disk; the type comes from the filename, as loading a card
 // does, so the line is still there. A card whose type writes no line, a
@@ -508,7 +508,7 @@ void test("The landmark's body is the place summary (Track C).", async (t) => {
 //
 // A place's `intention` comes back trimmed, with its prime card resolved to a
 // box-relative path when the ref names an existing card inside the box
-// (docs/implemented-plans/place-intention.md, Track A). The prime card is then the
+// (plan:place-intention, Track A). The prime card is then the
 // arrival target, ahead of a single entry point.
 void test("The prime card is the arrival target, ahead of a single entry point", async (t) => {
   const box = await makeTmpBox();

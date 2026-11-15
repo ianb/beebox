@@ -2,7 +2,7 @@
 //
 // A reload keeps a voice send that was waiting for its HQ transcript as an
 // `awaitingHq` row (`pending-sends.ts`); it is never sent on its own
-// (`docs/plans/resilient-voice-recording.md`, Track 4). `resolveAwaitingHq`
+// (`plan:resilient-voice-recording`, Track 4). `resolveAwaitingHq`
 // turns the user's choice into the emission to dispatch through the row's
 // original destination. These examples use a fake box for `claim`/`fallBack`.
 

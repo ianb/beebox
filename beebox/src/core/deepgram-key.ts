@@ -1,7 +1,7 @@
 /**
  * Resolve the Deepgram management credentials for a box: the machine store's
  * `deepgram` entry at `server` access
- * (`docs/implemented-plans/secret-custody.md`). Deepgram needs TWO fields, so
+ * (`plan:secret-custody`). Deepgram needs TWO fields, so
  * the entry's value is a JSON string `{"apiKey": "…", "projectId": "…"}` that
  * this module parses (see `secrets/json-secret.ts` for why the store keeps
  * values opaque).

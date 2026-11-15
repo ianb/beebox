@@ -6,7 +6,7 @@
 //
 // That probe used to check one thing: does `_config/connectors/<name>.secret.json`
 // exist? Credentials now live in the machine store
-// (`docs/implemented-plans/secret-custody.md`), so the probe asks about a grant
+// (`plan:secret-custody`), so the probe asks about a grant
 // with a value instead. A leftover file is not an answer either way: nothing reads
 // those files, so counting one would start a script that then fails for want of a
 // credential.

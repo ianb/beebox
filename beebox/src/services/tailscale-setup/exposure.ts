@@ -1,6 +1,6 @@
 /**
  * Persisted Tailscale exposure intent (Track B chunk 2 of
- * `docs/implemented-plans/tailscale-expose-and-protect.md`).
+ * `plan:tailscale-expose-and-protect`).
  *
  * `bbx tailscale setup` records which loopback ports it has fronted with
  * `tailscale serve`; `bbx tailscale stop` clears them. The record is durable and

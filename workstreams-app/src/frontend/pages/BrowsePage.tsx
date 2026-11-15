@@ -12,7 +12,7 @@ import { usePageIdentity } from "../lib/page-identity.js";
 import type { BrowsedDocument, DirectoryEntry } from "../types.js";
 
 /**
- * The general browser's document view (`docs/plans/general-browser.md`).
+ * The general browser's document view (`plan:general-browser`).
  *
  * THE ADDRESS IS THE FILE: `?file=<repo-relative>` with `?workstream=` as a
  * lens over it, following the issues browser, which holds its selection in a

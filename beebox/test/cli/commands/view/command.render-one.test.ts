@@ -94,7 +94,7 @@ export default function Count({ cards }) {
 // ## Card text through `Markdown`
 //
 // A view renders a card's body with `Markdown` from `beebox/view-widgets`, the
-// app's own renderer (`docs/plans/todos-ui.md`, Track 6). It renders here with
+// app's own renderer (`plan:todos-ui`, Track 6). It renders here with
 // no app router: the node view host supplies the box slug. A relative link
 // resolves against the card, and a todo carries the collector's locator (file
 // line 7: four frontmatter lines, then the body's third line):

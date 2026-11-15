@@ -1,6 +1,6 @@
 /**
  * Running the pinned agent-browser for the box browser host
- * (docs/plans/shared-browser.md, Track B).
+ * (plan:shared-browser, Track B).
  *
  * The binary is the native one inside the installed `agent-browser` package,
  * not its Node wrapper, so the host's children are the processes the stale

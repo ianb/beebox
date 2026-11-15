@@ -1,6 +1,6 @@
 // # Which workstreams changed which files (src/server/workstream-changes.ts)
 //
-// The cross-workstream lens (`docs/plans/general-browser.md`, Track 3a). One scan,
+// The cross-workstream lens (`plan:general-browser`, Track 3a). One scan,
 // read both ways: a file says which workstreams have touched it — so you learn it
 // from the file rather than from a merge conflict — and a workstream lists what it
 // touched, which is the `?workstream=` filter.

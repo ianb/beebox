@@ -6,7 +6,7 @@
  * and nothing else. There is no escape to the full suite: an unaccounted
  * changed path contributes nothing, and an empty selection is the honest
  * statement that no test imports what changed. That inversion is the
- * 2026-08-25 revision of beebox/docs/plans/change-based-test-selection.md
+ * 2026-08-25 revision of plan:change-based-test-selection
  * (mechanism B), which replaced Track 2's `FULL` fallback after sixteen days of
  * ledger data found no case of a full run catching an unimplicated bug.
  *

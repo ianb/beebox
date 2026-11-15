@@ -1,7 +1,7 @@
 /**
  * A `{% todo %}` tag's identity within one card's body, and the one pass
  * that assigns it — moved here (from `core/todo/extract-body.ts`,
- * `docs/implemented-plans/todos-ui.md` Track 2) so the render path (the frontend's
+ * `plan:todos-ui` Track 2) so the render path (the frontend's
  * `Markdoc.transform`, `Markdown.tsx`) and the collector
  * (`core/todo/extract-body.ts`) number a line's todos with the SAME
  * algorithm. If each walked and counted separately they could disagree

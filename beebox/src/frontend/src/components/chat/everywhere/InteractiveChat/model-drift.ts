@@ -5,7 +5,7 @@
  * The chip shows a mark for the answer, so the boxholder can see at a glance
  * that a conversation is off their usual model — burning the expensive one on
  * small talk, or quietly running dumb after a cost-saving switch
- * (`docs/implemented-plans/model-engine-policy.md`).
+ * (`plan:model-engine-policy`).
  *
  * Split from `SessionChip.tsx` so the comparison can be tested without
  * rendering a menu.

@@ -22,7 +22,7 @@ import * as path from "node:path";
 // ### No absolute filesystem paths
 //
 // The system prompt must never embed the box's absolute path — agent-visible
-// text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
+// text stays box-relative (`plan:one-root-box-layout`, criterion 4).
 void test("The system prompt must never embed the box's absolute path — agent-visible te...", async (t) => {
   // The prompt is large generated text, so the check is on what it must not hold.
   t.check(buildReactorSystemPrompt(), not(any(String).matches(/\/(Users|home|tmp|private)\//)));

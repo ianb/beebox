@@ -12,7 +12,7 @@
  * before this store existed, so a broken store cannot hide anything. Records
  * self-expire at `retryAt`; no sweeper. Concurrent writers last-write-win.
  *
- * Design: docs/implemented-plans/deferred-recoverable-agent-failures.md
+ * Design: plan:deferred-recoverable-agent-failures
  */
 
 import * as fs from "node:fs/promises";
