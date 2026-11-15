@@ -4,9 +4,7 @@ status: implemented
 workstream: theme-check-gate
 issues:
   - ../../../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md
-  - ../../../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md
   - ../../../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
-  - ../../../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md
   - ../../../issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md
 ---
 # Make theme-check a landing gate
@@ -75,7 +73,7 @@ Fix pseudo-only selector reduction in `tour-lib/rules.ts` so `::selection` and `
 
 ### 3. Existing contrast misses
 
-**What and why.** The issue reports Rose Trellis nav at 3.1–3.8:1, Phosphor placeholder at 2.75:1, and Veil/Overprint near 4.5:1 (`issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md:11-20`). The warning badge pair is reported at 2.5:1 (`issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md:11-16`).
+**What and why.** The reported misses were Rose Trellis nav at 3.1–3.8:1, the Phosphor placeholder at 2.75:1, Veil/Overprint near 4.5:1, and warning badge text at 2.5:1.
 
 **Direction.** Put every `Badge` tone and material-neutral variant in the studio, measure every actual fill/ink pair, and change only pairs below 4.5:1. The initial palette calculation found warning about 2.46:1 and danger about 2.55:1; the other named pairs are at least 5.06:1. Confirm these with the rendered audit. Prefer a local Badge pair if a shared palette token has other uses. For Rose Trellis, do not darken the preserved nav gradient; try the smallest chip fill that passes over its warm end. Adjust Phosphor, Veil, and Overprint at the narrowest CSS selector. Compare before/after screenshots of every changed theme in one labeled exhibit, with captions naming what a person sees. Obtain the boxholder's visual approval before landing; do not treat a passing ratio as approval of appearance.
 

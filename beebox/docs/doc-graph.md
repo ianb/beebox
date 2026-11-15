@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-15T21:55:59Z
-Total documents: 661
+Generated: 2026-11-15T21:59:58Z
+Total documents: 662
 
 ## Issues
 
@@ -116,6 +116,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -283,7 +284,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/staged-commit-checks.md:44 (mention) — - Docs: root `AGENTS.md` "Commit and land", `bin/AGENTS.md` "Commit safety",
-- docs/implemented-plans/theme-check-gate.md:28 (mention) — The package `AGENTS.md` says, *"Work only on the requested problem"* (`beebox/AGENTS.md:9`); limit changes to the gate a
+- docs/implemented-plans/theme-check-gate.md:26 (mention) — The package `AGENTS.md` says, *"Work only on the requested problem"* (`beebox/AGENTS.md:9`); limit changes to the gate a
 - docs/implemented-plans/todo-annotation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/todos-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/top-nav-ia.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -8581,7 +8582,7 @@ References:
 
 #### docs/implemented-plans/theme-check-gate.md
 
-Title: "Make theme-check a landing gate" | 178 lines | shipped history | implemented
+Title: "Make theme-check a landing gate" | 176 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md:22 (link) — The contrast changes are committed in 5631c13ae; they are not landed. Review the “Theme contrast before and after” exhib
@@ -8589,9 +8590,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md (frontmatter)
-- → ../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md (frontmatter)
 - → ../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md (frontmatter)
-- → ../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md (frontmatter)
 - → ../issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md (frontmatter)
 - → AGENTS.md (mention)
 
@@ -12164,6 +12163,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 14 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 
