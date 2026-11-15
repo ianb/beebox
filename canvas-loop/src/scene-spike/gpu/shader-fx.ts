@@ -2,7 +2,8 @@
 // Each pass draws one quad over a layer's valid region (v[0], in a texture of
 // size v[9]); reads stay inside that region.
 // - fxMatrix: colour adjustments one by one, clamped after each (CSS filter definitions).
-// - fxBlur: one direction of a separable blur with Skia's kernel (three boxes).
+// - fxBlur: one direction of a separable blur with Skia's kernel (three boxes),
+//   optionally holding reads inside a rectangle (the wash's canvas edge).
 // - fxCombine: the effected layer over its shadow over its glow (R5).
 
 export const FX_WGSL = /* wgsl */ `
@@ -27,8 +28,14 @@ fn tl(t: texture_2d<f32>, p: vec2i, slot: vec4f) -> vec4f {
 @fragment fn fxBlur(i: FOut) -> @location(0) vec4f {
   let f = fx[i.id]; let p = vec2i(floor(i.pos.xy)); let dir = vec2i(f.v[1].xy);
   let k0 = u32(f.v[1].z); let r = i32(f.v[1].w);
+  // v[2]: a hold rectangle (texels); reads past it take the nearest texel inside it. Empty: none.
+  let h = f.v[2];
   var acc = vec4f(0);
-  for (var j = -r; j <= r; j++) { acc += kern[k0 + u32(abs(j))] * tl(t0, p + dir * j, f.v[0]); }
+  for (var j = -r; j <= r; j++) {
+    var q = p + dir * j;
+    if (h.z > h.x && h.w > h.y) { q = clamp(q, vec2i(h.xy), vec2i(h.zw) - 1); }
+    acc += kern[k0 + u32(abs(j))] * tl(t0, q, f.v[0]);
+  }
   return acc;
 }
 fn adjust(kind: u32, v: f32, c: vec3f) -> vec3f {

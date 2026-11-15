@@ -28,6 +28,7 @@ struct P {
   ink: vec4f,      // hatching colour, straight alpha
   paper: vec4f,    // effects.paper amount; paper scale, lo, hi (paper pixels)
   ids: vec4u,      // paper seed, paper row width
+  hold: vec4f,     // texels x0, y0, x1, y1: reads past it take the nearest texel inside (the canvas edge); empty for none
 };
 @group(0) @binding(0) var<uniform> pu: P;
 @group(0) @binding(1) var srcT: texture_2d<f32>;
@@ -41,7 +42,10 @@ struct VOut { @builtin(position) pos: vec4f };
   let p = (pu.region.xy + c[vi] * pu.region.zw) / pu.size.xy;
   var o: VOut; o.pos = vec4f(p.x * 2 - 1, 1 - p.y * 2, 0, 1); return o;
 }
-fn at(t: texture_2d<f32>, p: vec2i) -> vec4f {
+fn at(t: texture_2d<f32>, p0: vec2i) -> vec4f {
+  var p = p0;
+  let h = pu.hold;
+  if (h.z > h.x && h.w > h.y) { p = clamp(p, vec2i(h.xy), vec2i(h.zw) - 1); }
   let q = vec2f(p) - pu.region.xy;
   if (q.x < 0 || q.y < 0 || q.x >= pu.region.z || q.y >= pu.region.w) { return vec4f(0); }
   return textureLoad(t, p, 0);

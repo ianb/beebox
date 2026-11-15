@@ -6,7 +6,7 @@ import { blurKernel } from "./effects.js";
 import type { FxPlan, Sigma } from "./effects.js";
 import type { Frame } from "./frame.js";
 import { beginPass, storage } from "./frame.js";
-import type { Job } from "./jobs.js";
+import type { Job, R } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import type { FxPipe } from "./pipelines.js";
 
@@ -41,12 +41,16 @@ function runStage(s: Stage, a: { f: Frame; w: number; h: number }): GPUTexture {
   return out;
 }
 
-/** A separable blur: horizontal (σx) into a temporary layer, then vertical (σy). */
-export function blur2(src: GPUTexture, a: { sigma: Sigma; f: Frame; w: number; h: number }): GPUTexture {
+/**
+ * A separable blur: horizontal (σx) into a temporary layer, then vertical (σy). With `hold` (texels), reads
+ * past it take the nearest texel inside it: the layer continues past the edge of what can be seen.
+ */
+export function blur2(src: GPUTexture, a: { sigma: Sigma; f: Frame; w: number; h: number; hold?: R | undefined }): GPUTexture {
   const kx = blurKernel(a.sigma.x);
   const ky = blurKernel(a.sigma.y);
-  const across = runStage({ pipe: "fxBlur", fields: [1, 0, 0, kx.length - 1], inputs: [src], kernel: kx }, a);
-  const down = runStage({ pipe: "fxBlur", fields: [0, 1, 0, ky.length - 1], inputs: [across], kernel: ky }, a);
+  const hold = a.hold === undefined ? [0, 0, 0, 0] : [a.hold.x0, a.hold.y0, a.hold.x1, a.hold.y1];
+  const across = runStage({ pipe: "fxBlur", fields: [1, 0, 0, kx.length - 1, ...hold], inputs: [src], kernel: kx }, a);
+  const down = runStage({ pipe: "fxBlur", fields: [0, 1, 0, ky.length - 1, ...hold], inputs: [across], kernel: ky }, a);
   a.f.pool.release(across);
   return down;
 }
@@ -75,7 +79,10 @@ export function encodeFx(job: Job, a: { tex: GPUTexture; f: Frame }): GPUTexture
     temps.push(effected);
   }
   if (plan.painterly !== undefined) {
-    effected = f.painterly.encode(plan.painterly, { f, src: effected, rect: job.rect, blur: (t, sigma) => blur2(t, { ...size, sigma }) });
+    // The wash and hatching read their layer as continuous past the edge of what can be seen (the canvas edge), so a
+    // layer cut there gets no drying edge along it; edges inside the canvas still dry.
+    const hold = job.seen === undefined ? undefined : { x0: job.seen.x0 - job.rect.x0, y0: job.seen.y0 - job.rect.y0, x1: job.seen.x1 - job.rect.x0, y1: job.seen.y1 - job.rect.y0 };
+    effected = f.painterly.encode(plan.painterly, { f, src: effected, rect: job.rect, hold, blur: (t, sigma) => blur2(t, { ...size, sigma, hold }) });
     temps.push(effected);
   }
   let result = effected;

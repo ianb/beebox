@@ -21,7 +21,7 @@ import { brushBlends, brushParity, brushStability, expansionCache, paperScopes }
 import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, textParity } from "./text-cases.js";
-import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves } from "./paint-cases.js";
+import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
 import { casterHeights, casterOnCaster, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
@@ -190,6 +190,7 @@ onGpu("text under a rotation draws through the glyph atlas", async (handle) => {
 onGpu("wash, hatching and paper repeat byte for byte, at ratio 1 and 2", painterlyRepeats);
 onGpu("a wash's bleed grows the group's layer; hatching and paper never change alpha (R5)", painterlyBounds);
 onGpu("pigment, hatching lines and paper texture move and turn with the group (section 4)", pigmentMoves);
+onGpu("a wash is continuous past the canvas edge: no rim along the border; edges inside the canvas still dry", washCanvasEdge);
 onGpu("hatching follows tone relative to the group: light bare, mid hatched, dark cross-hatched", hatchingTones);
 onGpu("R8: a caster blocks by its casting amount; half alpha blocks half; an erased part casts nothing", castingAmount);
 onGpu("R8: a nested lit group is lit only by its own lights, and not lit again", nestedLighting);

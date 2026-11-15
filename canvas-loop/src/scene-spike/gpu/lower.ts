@@ -115,7 +115,7 @@ export class Lowering {
 
   #job(name: string, a: { effects: Effects | undefined; paper?: PaperSettings | undefined; here: Here; body: (inner: Here) => void }): Job {
     const { plan, reach } = fxPlanOf(a.effects, { matrix: a.here.matrix, colors: this.#colors, where: name, ratio: this.#brush.ratio, paper: a.paper });
-    const job: Job = { name, rect: EMPTY, items: [], clips: [], fx: a.here.mat === undefined ? plan : materialPlan(plan, a.here.mat.layer) };
+    const job: Job = { name, rect: EMPTY, items: [], clips: [], fx: a.here.mat === undefined ? plan : materialPlan(plan, a.here.mat.layer), seen: a.here.visible };
     const visible = pad(a.here.visible, reach);
     a.body({ ...a.here, job, clip: null, visible });
     let content = EMPTY;

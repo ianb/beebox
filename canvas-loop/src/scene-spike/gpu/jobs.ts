@@ -138,6 +138,8 @@ export interface Job {
   readonly items: Item[];
   readonly clips: ClipMask[];
   readonly fx: FxPlan | undefined;
+  /** Where the job's drawing can be seen (device px; the canvas, or a picture's tile): a wash reads its layer as continuous past it. */
+  readonly seen?: R | undefined;
   /** A lit group (R8): shaded from its two material layers before its effects. */
   light?: { readonly plan: LightPlan; readonly mats: readonly [Job, Job] } | undefined;
   /** A bevelled shape in material layer 0: its coverage becomes rim normals. */

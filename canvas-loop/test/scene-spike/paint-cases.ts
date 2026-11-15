@@ -9,7 +9,7 @@ import type { GpuHandle } from "../../src/scene-spike/device.js";
 import { GpuRenderer } from "../../src/scene-spike/gpu/renderer.js";
 import type { Pixels } from "../../src/scene-spike/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene-spike/recorder/view.js";
-import { alphaAt, renderOnce, shiftedDiff } from "./gpu-render.js";
+import { alphaAt, renderOnce, rgbaAt, shiftedDiff } from "./gpu-render.js";
 
 const ALL: Effects = { wash: { granulate: 0.6, edges: 0.7, blotch: 0.5, bleed: 3 }, hatching: { amount: 1 }, paper: 1 };
 
@@ -175,4 +175,49 @@ export async function hatchingAmount(handle: GpuHandle, t: TestContext): Promise
   const half = await at(0.5);
   t.diagnostic(`mid patch, pixels touched: amount 1 ${full}, amount 0.5 ${half}`);
   assert.ok(half < 0.75 * full, "half the amount shows fewer lines");
+}
+
+/**
+ * Finding 2 of the drawing round: a wash reads its layer as continuous past the canvas edge, so a background that
+ * fills the canvas exactly gets no holes and no drying line along the border, while a region edge inside the
+ * canvas still dries. Drying is measured as how much darker the wash is with `edges` than without.
+ */
+export async function washCanvasEdge(handle: GpuHandle, t: TestContext): Promise<void> {
+  const size = { width: 200, height: 150 };
+  const draw = (edges: number) => (v: View): void => v.group({ effects: { wash: { edges, blotch: 0, granulate: 0, bleed: 3 } } }, () => {
+    v.rect(0, 0, 200, 150, { fill: "#7d8a86" });
+    v.rect(70, 50, 60, 50, { fill: "#4f78a8" });
+  });
+  for (const ratio of [1, 2]) {
+    const dried = await renderOnce(handle, { size, draw: draw(0.8), ratio });
+    const flat = await renderOnce(handle, { size, draw: draw(0), ratio });
+    const lum = (px: Pixels, at: readonly [number, number]): number => {
+      const [r = 0, g = 0, b = 0] = rgbaAt(px, at);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    /** Mean drying (luminance lost to `edges`) and holes over the device pixels where `inBand` holds. */
+    const band = (inBand: (x: number, y: number) => boolean): { dry: number; holes: number } => {
+      let sum = 0;
+      let n = 0;
+      let holes = 0;
+      for (let y = 0; y < dried.height; y++) {
+        for (let x = 0; x < dried.width; x++) {
+          if (!inBand(x / ratio, y / ratio)) continue;
+          sum += lum(flat, [x, y]) - lum(dried, [x, y]);
+          n++;
+          if (alphaAt(dried, [x, y]) < 255) holes++;
+        }
+      }
+      return { dry: sum / n, holes };
+    };
+    const fromEdge = (x: number, y: number): number => Math.min(x, y, 200 - x, 150 - y);
+    const inner = (x: number, y: number): number => Math.max(70 - x, x - 130, 50 - y, y - 100);
+    const rim = band((x, y) => fromEdge(x, y) < 4);
+    const wall = band((x, y) => fromEdge(x, y) >= 20 && fromEdge(x, y) < 30 && inner(x, y) > 20);
+    const blueEdge = band((x, y) => Math.abs(inner(x, y)) <= 3);
+    t.diagnostic(`ratio ${ratio}: drying at the canvas rim ${rim.dry.toFixed(1)} (holes ${rim.holes}), on the wall ${wall.dry.toFixed(1)}, at the inner edge ${blueEdge.dry.toFixed(1)}`);
+    assert.equal(rim.holes, 0, `ratio ${ratio}: no holes along the canvas edge`);
+    assert.ok(Math.abs(rim.dry - wall.dry) < 2, `ratio ${ratio}: the canvas edge dries no more than the wall`);
+    assert.ok(blueEdge.dry > wall.dry + 6, `ratio ${ratio}: the inner region's edge dries`);
+  }
 }

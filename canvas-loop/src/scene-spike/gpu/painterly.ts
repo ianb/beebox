@@ -98,8 +98,8 @@ export class PainterlyPasses {
   }
 
   /** The shaders' record for `plan` over a layer at device rectangle `rect`. */
-  #uniform(plan: PainterlyPlan, a: { f: Frame; rect: R; size: readonly [number, number] }): GPUBuffer {
-    const data = new ArrayBuffer(160);
+  #uniform(plan: PainterlyPlan, a: { f: Frame; rect: R; size: readonly [number, number]; hold: R | undefined }): GPUBuffer {
+    const data = new ArrayBuffer(176);
     const v = new Float32Array(data);
     const u = new Uint32Array(data);
     const t = plan.toLocal;
@@ -119,7 +119,9 @@ export class PainterlyPasses {
     v.set([h?.amount ?? 0, h?.angle ?? 0, h?.spacing ?? HATCH_SPACING, h?.color === undefined ? 0 : 1, ...(h?.color ?? [0, 0, 0, 0])], 24);
     v.set([plan.paper ?? 0, p.scale, p.lo, p.hi], 32);
     u.set([p.seed, PAPER_ROW], 36);
-    return this.#buffer(a.f, { size: 160, usage: GPUBufferUsage.UNIFORM, data });
+    const hold = a.hold;
+    v.set(hold === undefined ? [0, 0, 0, 0] : [hold.x0, hold.y0, hold.x1, hold.y1], 40);
+    return this.#buffer(a.f, { size: 176, usage: GPUBufferUsage.UNIFORM, data });
   }
 
   #pass(pipe: Pipe, a: { f: Frame; uniform: GPUBuffer; src: GPUTexture; aux?: GPUTexture; wide?: GPUTexture; tone?: GPUBuffer; w: number; h: number }): GPUTexture {
@@ -159,8 +161,11 @@ export class PainterlyPasses {
     return hist;
   }
 
-  /** Apply `plan` to layer `src` (device rectangle `rect`); `blur` is the frame's separable blur. Returns the result; `src` stays the caller's. */
-  encode(plan: PainterlyPlan, a: { f: Frame; src: GPUTexture; rect: R; blur: (tex: GPUTexture, sigma: Sigma) => GPUTexture }): GPUTexture {
+  /**
+   * Apply `plan` to layer `src` (device rectangle `rect`); `blur` is the frame's separable blur. Reads past `hold`
+   * (texels: where the layer can be seen) take the nearest texel inside it. Returns the result; `src` stays the caller's.
+   */
+  encode(plan: PainterlyPlan, a: { f: Frame; src: GPUTexture; rect: R; hold: R | undefined; blur: (tex: GPUTexture, sigma: Sigma) => GPUTexture }): GPUTexture {
     const { f } = a;
     const w = widthOf(a.rect);
     const h = heightOf(a.rect);
@@ -172,7 +177,7 @@ export class PainterlyPasses {
     };
     const base = { f, w, h };
     if (plan.wash !== undefined || plan.hatching !== undefined || plan.paper !== undefined) {
-      const uniform = this.#uniform(plan, { f, rect: a.rect, size: [a.src.width, a.src.height] });
+      const uniform = this.#uniform(plan, { f, rect: a.rect, size: [a.src.width, a.src.height], hold: a.hold });
       if (plan.wash !== undefined) {
         const blurred = a.blur(cur, plan.wash.sigma);
         const across = this.#pass("wideX", { ...base, uniform, src: blurred });
