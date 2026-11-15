@@ -659,6 +659,93 @@ then the switch that deletes the old code; then docs.
   then the levers in order. Done when targets 1 and 3 are met, or the
   boxholder has decided on the miss; output stays byte-identical either way.
 
+- **As built (chunk 4b): targets 1 and 3 missed; the boxholder decides.**
+  Scripts, logs and profiles are in `scratch/stage5/a4b/` (`measure.sh`
+  and `run.sh` for the pages, `profile.sh` for DevTools CPU profiles,
+  `compare.sh` for output bytes). Measured in Chromium on this Mac at
+  ratio 2 under the GPU lock, after the brushes subplan's chunks 7 and 8
+  and their review fixes (`e4db1f99c`). The walker page is chunk 6's
+  (`walker-page.ts`, 10 s of rAF, then 300 frames waited to GPU
+  completion); the six-figure page is chunk 6's at device scale 2, with
+  120 scripted pointer moves at 60 Hz on a chemistry figure. A game was
+  running on the machine for most runs, so fps varies by about ±2 between
+  equal builds; the per-step CPU medians are steadier. Medians, ms:
+
+  | Step | Walker fps | Record | Lower | Brush (in lower) | Atlas | Encode | Six figures, fps each | Pointer p95 |
+  |---|---|---|---|---|---|---|---|---|
+  | Before (`5dd04b53e` + `e4db1f99c`) | 37.5 | 11.3 | 8.5 | 4.5 | 2.0 | 1.0 | 17.0 | 110 |
+  | Lever 1: testing-mode work out of the browser | no change: already gated | | | | | | | |
+  | Lever 2a: hash when a cache asks | 34.4 | 2.2 | 18.3 | 8.7 | 2.1 | 1.1 | 16.5 | 93 |
+  | Lever 2b: geometry keys in a fixed layout (`9423cd94a`, with 2a) | 39.9 | 2.2 | 14.1 | 7.2 | 2.1 | 1.0 | 19.8 | 81 |
+  | Lever 2c: one flat buffer per key (`c7ef43bde`) | 38.9 | 2.0 | 12.9 | 7.2 | 2.3 | 1.1 | 19.9 | 82 |
+  | Lever 2d: keys as four code units (`d8afddfd3`) | 44.0 | 2.1 | 11.2 | 6.1 | 2.0 | 1.0 | 22.1 | 95 |
+  | Lever 3: brush presets resolved once per value | 43.0 | 2.3 | 11.2 | 6.0 | 2.2 | 1.0 | 21.5 | 72 |
+  | Lever 4: clip simplicity test without per-edge objects | 38.0 | 2.2 | 13.9 | 7.4 | 2.4 | 1.1 | 18.6 | 86 |
+  | Lever 5: gesture keys in a fixed layout (`bf4ea4d8b`) | 46.9 | 2.1 | 10.7 | 5.7 | 2.0 | 1.0 | 21.7 | 181 |
+
+  Lever 3 and lever 4 changed nothing outside noise and are not kept. The
+  record step alone (no rendering) went from 10.6 to 1.9 ms. Every pointer
+  move reached `update` in every run (120 of 120); the input-to-frame
+  time follows the six figures' frame time.
+  - **The record step's profile** (before): structural hashing was 8 of
+    its 11.8 ms (the generic walk 5.7, key strings by code point 2.2), the
+    sketch's own code about 1.5. Testing-mode work (call-site stacks,
+    off-canvas tracking, audits, warning bookkeeping) does not appear: it
+    is gated by `audit`, which only the headless surface sets.
+  - **Lever 2.** The recorder no longer hashes; the geometry cache and the
+    brush expander ask for keys, and lowering asks for every shape's key
+    every frame, so 2a alone moved the cost (Track 4b predicted this).
+    What cut it was cheaper keys: `geomKey` and `gestureKey` write a fixed
+    layout per kind into one buffer and hash its words in one loop, short
+    strings get an id on first sight, and a key is four UTF-16 code units
+    (base-36 text was most of a key's cost once hashing was cheap). In a
+    Chromium bench over one walker frame's 1187 geometries
+    (`hash-page.ts`): 6.0 ms before, 1.4 ms after, of it 0.2 ms the memo
+    and key text.
+  - **Lever 4.** The walker's caches miss by design: of about 1470 geometry
+    lookups a frame 540 hit, and none of its 529 brushed strokes
+    (`hits.ts`); every figure moves. `isSimpleRing` on the 228 clip rings
+    (25,500 points) costs about 2 ms; a version with flat arrays and a
+    native sort was no faster (the sort and 54,000 edge pairs are its
+    floor). Bind groups are already made per frame only for the frame's
+    textures; encode is 1.0 ms in all.
+  - **Output** is byte-identical at every kept step: raw RGBA of the three
+    ports over 15–16 frames each, the cache cases' moving frames and the
+    brush, smear and stress scenes at ratio 1 and 2, and the CLI's PNGs and
+    transcripts for the ports (`hash-<step>-ref.txt` against
+    `hash-<step>-new.txt`, where `ref` is the same tree with this chunk's
+    files from the commit before).
+  - **Where the walker's frame goes now** (profile `frame8-top.txt`, ms
+    per frame, self time; the profiler adds about 15%): garbage collection
+    2.2; clip simplicity 2.1; brush preparation 3.5 (`prepareContour` 1.4,
+    `sampleSegments` 1.0, path flattening 0.5, the rest of `brushContours`
+    0.6); key memo and text 1.1; geometry hashing 1.4; atlas edges 0.6;
+    brush packing 0.8; the sketch's own drawing about 1.1. Main-thread CPU
+    is record 2.1 + lower 10.7 + atlas 2.0 + encode 1.0 = 15.8 ms against
+    the 16.7 ms of a 60 fps frame, with the GPU's 6.4 ms after it.
+  - **Acceptance.** Target 1: 46.9 fps (rAF interval median 20.4 ms, p95
+    25.5), short of 60. Target 3: 21.7 fps each, short of 30; no dropped
+    input, but input-to-frame p95 72–181 ms against 33. Brush CPU 5.7 ms,
+    over (b)'s 2.5 ms aim.
+  - **What further steps would buy** (estimates from the profile):
+    - Lowering, atlas and encode in a worker (an `OffscreenCanvas` and the
+      device there): the main thread keeps the record step, about 2 ms a
+      walker frame; the worker's 14 ms fits a 16.7 ms frame. Target 1
+      becomes the worker's budget, and target 3's six figures need more
+      than one worker or about 7 ms of lowering per walker.
+    - Recording off the main thread: about 2 ms a walker frame now; it no
+      longer buys a target on its own.
+    - A lowered-job cache: little for the walker or the six figures,
+      which move every frame; it would help scenes whose groups stand
+      still.
+    - Brush preparation on the GPU (contour flattening, segment lengths
+      and sample placement): up to about 3.5 ms a walker frame, which with
+      a cheaper clip test (about 2 ms, if an exact test can skip most of
+      the sort) brings the main thread near 10 ms, enough for target 1 and
+      near enough for target 3 to measure.
+    - Or relax the targets to what is measured: the walker at 45 fps and
+      six figures at 20.
+
 ### Track 5: gallery and examples (chunk 5)
 
 - **What:** every gallery exercise and example runs on the scene renderer
