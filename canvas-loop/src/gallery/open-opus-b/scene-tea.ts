@@ -1,5 +1,5 @@
 // Backdrop: dusk sky, moon, far hills, the stilt village, and the water.
-import type { Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 export const HORIZON = 470;
 

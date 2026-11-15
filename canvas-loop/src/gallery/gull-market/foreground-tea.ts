@@ -1,7 +1,7 @@
 // Things around the theft: the gull's flight trail from the gap, drips and a
 // loose feather, its shadow on the quay, bunting, crates of fish, a jealous
 // gull on a bollard and a cat who saw everything.
-import type { View, Vec2 } from "@ianbicking/canvas-loop";
+import type { SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
 import { fish } from "./fish-tea.js";
 import { GULL_AT } from "./gull-tea.js";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";

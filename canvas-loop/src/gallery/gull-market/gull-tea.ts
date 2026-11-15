@@ -1,6 +1,6 @@
 // The hero: a herring gull flapping away to the left with a mackerel in its
 // beak, one eye half-lidded and glancing back at the fishmonger.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { fish } from "./fish-tea.js";
 import { form, INK, mark, ring } from "./kit-tea.js";
 

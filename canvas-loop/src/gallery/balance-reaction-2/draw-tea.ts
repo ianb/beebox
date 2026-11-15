@@ -1,6 +1,6 @@
 // Painting for the balancing sketch. `paint` draws one frame from the model
 // and the analysis of the current numbers.
-import type { DeepReadonly, Style, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, SceneStyle as Style, TextOptions, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { ELEMENTS, formulaParts } from "./chem-tea.js";
 import type { Analysis, El, Molecule, Slot, Tally } from "./chem-tea.js";
 import { ARROW_GAP, BANNER, EQUATION, HEADER, PICTURE, TALLY, tallyRow, W } from "./layout-tea.js";
@@ -464,8 +464,9 @@ function drawSparkles(v: View, model: DeepReadonly<Model>): void {
 }
 
 export function paint(v: View, frame: Frame): void {
-  v.background(PAGE);
-  v.paperTexture(0.22);
+  // Port: `v.paperTexture(0.22)` right after the background becomes the
+  // background drawn in a group with `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.22 } }, () => v.background(PAGE));
   drawHeader(v, frame.analysis);
   drawEquation(v, frame);
   drawPicture(v, frame);

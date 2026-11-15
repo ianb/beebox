@@ -1,1 +1,2 @@
 {"date": "2026-11-11", "commit": "834c07b7", "model": "opus-5.5", "action": "authored", "cycles": 8, "outcome": "pass", "notes": "checkpoint demo; the checkpoint page is the round-6 exhibit"}
+{"date":"2026-11-15","commit":"51b090a0e","action":"ported","outcome":"pass","notes":"Scene core chunk 5: v.paperTexture(n) became a group with effects.paper around what it darkened, plus the transition marker. Judged against the Stage 0 frames (beebox/docs/plans/canvas-loop-scene/stage5/gallery-parity.md): pass, same character by eye."}

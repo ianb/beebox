@@ -1,7 +1,7 @@
 // The fish stall: posts, striped awning, the dim interior behind the
 // fishmonger, and (drawn after him) the counter with its tray of fish on ice
 // and the fish-shaped gap where the stolen mackerel lay.
-import type { View, Vec2 } from "@ianbicking/canvas-loop";
+import type { SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
 import { fish } from "./fish-tea.js";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";
 

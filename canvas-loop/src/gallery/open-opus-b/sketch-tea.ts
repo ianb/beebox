@@ -2,7 +2,7 @@
 // walks the long boardwalk out from the stilt village, lighting the lamps one
 // by one so the fishing boats can find their way home. This page: the last
 // lamp, at the very end of the pier, with one small boat still out on the water.
-import type { DeepReadonly, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Util, SceneView as View } from "@ianbicking/canvas-loop";
 
 import { drawHeron } from "./heron-tea.js";
 import { drawLantern, drawWalkway, LAMP, LIT_LAMPS } from "./pier-tea.js";
@@ -15,6 +15,9 @@ import {
   rollScene,
 } from "./scene-tea.js";
 import type { SceneRandom } from "./scene-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 800, height: 800 };
 
@@ -32,17 +35,20 @@ export function update(model: DeepReadonly<Model>): Model {
 
 export function draw(v: View, model: DeepReadonly<Model>): void {
   v.paper({ scale: 3, contrast: 0.6, seed: 7 });
-  drawSky(v, model.rolls);
-  drawWater(v, model.rolls);
-  drawVillage(v, model.rolls);
-  drawWalkway(v);
-  for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
-  drawLantern(v, LAMP, true);
-  drawHeron(v);
-  drawReeds(v, model.rolls);
-  drawText(v);
-  v.log("horizon", HORIZON);
-  v.paperTexture(0.35);
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    drawSky(v, model.rolls);
+    drawWater(v, model.rolls);
+    drawVillage(v, model.rolls);
+    drawWalkway(v);
+    for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
+    drawLantern(v, LAMP, true);
+    drawHeron(v);
+    drawReeds(v, model.rolls);
+    drawText(v);
+    v.log("horizon", HORIZON);
+  });
 }
 
 /** The page's line of text, set in the quiet sky at upper right. */

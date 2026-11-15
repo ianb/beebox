@@ -4,7 +4,7 @@
 // Dusk lake, far shore with one lit window, the girl kneeling in the bow holding
 // the lantern out, and the great carp lifting its head under it. Reeds frame
 // the foreground.
-import type { Gesture, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Gesture, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 const W = 800;
 const H = 800;
@@ -12,6 +12,9 @@ const HORIZON = 300;
 const WATERLINE = 560; // where the carp's head meets the water
 
 const LANTERN: Vec2 = [498, 490];
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: W, height: H };
 
@@ -27,24 +30,27 @@ export function update(model: Model): Model {
 
 export function draw(v: View): void {
   v.paper({ scale: 3, contrast: 0.6, seed: 7 });
-  sky(v);
-  farShore(v);
-  water(v);
-  fishBody(v);
-  lanternReflection(v);
-  ringsBack(v);
-  boatBack(v);
-  girl(v);
-  boatFront(v);
-  oar(v);
-  fishHead(v);
-  ringsFront(v);
-  lantern(v);
-  moths(v);
-  lilyPads(v);
-  reeds(v);
-  vignette(v);
-  v.paperTexture(0.35);
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.35 } }, () => {
+    sky(v);
+    farShore(v);
+    water(v);
+    fishBody(v);
+    lanternReflection(v);
+    ringsBack(v);
+    boatBack(v);
+    girl(v);
+    boatFront(v);
+    oar(v);
+    fishHead(v);
+    ringsFront(v);
+    lantern(v);
+    moths(v);
+    lilyPads(v);
+    reeds(v);
+    vignette(v);
+  });
 }
 
 // ── helpers ─────────────────────────────────────────────────────────

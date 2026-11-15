@@ -1,7 +1,7 @@
 // Shared painting helpers for the gull-market page: point utilities, the
 // palette, and a "paint a form" routine (flat base, light/shadow inside a
 // clip, a brushed outline last). Light comes from the sun, upper right.
-import type { BrushName, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushName, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 export const INK = "#2b2230";
 /** Unit vector toward the sun (upper right). */

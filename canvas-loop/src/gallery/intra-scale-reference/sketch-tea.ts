@@ -1,9 +1,12 @@
 // The scale reference sheet for side-view rooms (the standard lives in
 // sizes-tea.ts, a copy of intra-lounge-side's): people and furniture from sizes-tea.ts, drawn at the
 // scenes' true scale against a metre ruler, and a diagram of how depth shows.
-import type { DeepReadonly, Msg, Vec2, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, roundRectPts } from "./ink-tea.js";
 import { DEPTH_PX_PER_M, PLANES, PX_PER_M, SIZES, m } from "./sizes-tea.js";
+
+/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
+export const renderer = "scene";
 
 export const canvas = { width: 1500, height: 960 };
 
@@ -160,10 +163,13 @@ function depthDiagram(v: View, x0: number, wallFoot: number): void {
 }
 
 export function draw(v: View): void {
-  v.background("#f1ebe0");
-  v.text(`Scale: ${PX_PER_M} px per metre, the same at every depth`, { x: 70, y: 22 }, { size: 18, fill: "#2a2420", align: "left", valign: "top", style: "bold" });
-  rowTall(v, 520);
-  rowLow(v, 880);
-  depthDiagram(v, 1180, 520);
-  v.paperTexture(0.3);
+  // Port: `v.paperTexture(0.3)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  v.group({ effects: { paper: 0.3 } }, () => {
+    v.background("#f1ebe0");
+    v.text(`Scale: ${PX_PER_M} px per metre, the same at every depth`, { x: 70, y: 22 }, { size: 18, fill: "#2a2420", align: "left", valign: "top", style: "bold" });
+    rowTall(v, 520);
+    rowLow(v, 880);
+    depthDiagram(v, 1180, 520);
+  });
 }

@@ -1,6 +1,6 @@
 // Old Pell the heron, in a red knitted scarf, reaching the lighting pole up to
 // the last lamp. Local coordinates: origin between the feet, facing +x.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
 
 import { deckFront, deckTop, LAMP } from "./pier-tea.js";
 
