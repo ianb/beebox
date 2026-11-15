@@ -53,7 +53,7 @@ No external premise controls the design. The runner uses existing `bin/browse` c
 
 **What and why.** The first open reads geometry before the studio appears (`theme-check.ts:105-109`), and sessions use fixed names (`:170`). A reload during a long run invalidates measurements. A failed full run currently requires rerunning every job.
 
-**Direction.** Wait with `bin/browse wait --fn` for `#bbx-theme-studio-scroll` after each `open`, with a bounded timeout and a clear readiness error. Give each process a random run ID and use it in session names and a default per-run artifact directory; preserve explicit `--out`. Snapshot a deterministic fingerprint of every path, mtime and size under `beebox/src/frontend/src` and `beebox/src/shared` before the first job and check it before and after every job. A changed fingerprint aborts with a clear source-edit/reload message. Existing dirty edits are allowed, so theme iteration remains possible. Also attach a marker on the studio scroller after readiness and verify it after each job, so an HMR reload between source scans cannot silently continue. Treat both as a run error, exit 2, and close sessions in `finally`. Keep only one process's artifacts in its own directory.
+**Direction.** Wait with `bin/browse wait --fn` for `#bbx-theme-studio-scroll` after each `open`, with a bounded timeout and a clear readiness error. Give each process a random run ID and use it in session names and a default per-run artifact directory; preserve explicit `--out`. Snapshot a deterministic fingerprint of every path, mtime and size under `beebox/src/frontend/src` and `beebox/src/shared`, plus the Tailwind palette configuration before the first job and check it before and after every job. A changed fingerprint aborts with a clear source-edit/reload message. Existing dirty edits are allowed, so theme iteration remains possible. Also attach a marker on the studio scroller after readiness and verify it after each job, so an HMR reload between source scans cannot silently continue. Treat both as a run error, exit 2, and close sessions in `finally`. Keep only one process's artifacts in its own directory.
 
 Write one `last-run.json` at the output root by temporary file and atomic rename only after a completed run. It stores failed jobs and whether rule coverage failed. An interrupted run writes nothing. Concurrent runs write separate temporary files; the last completed rename wins. Store screenshots in a run-ID subdirectory beneath the output root to prevent collisions even when callers share `--out`. On `--failed`, rerun the last completed run's failed jobs; if it had uncovered rules, rerun every catalog screen job because matching is aggregated across cases. Completed failure-only runs replace the record so retries shrink. Validate persisted jobs against the current catalog/screens. A partial rerun reports "rule coverage not checked" and never calls the full coverage reporter. No prior record, malformed state, or `--failed --all` is a clear error. Only a complete `--all` exit zero is a landing pass.
 
@@ -95,12 +95,12 @@ None: the runner, studio, and CSS changes have narrow dependencies and no separa
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Cold router returns before studio scroll mounts | Add readiness test / cold open | Bounded wait, exit 2 | Clear |
-| Two processes start together | Add session-name and failure-record tests | Random IDs, isolated artifacts, atomic record | Clear |
-| Frontend changes or HMR reloads mid-job | Add fingerprint/marker test | Abort run, preserve previous record, exit 2 | Clear |
-| A worker throws while peers are active | Add cleanup test | Stop taking jobs, await peers, close all sessions | Clear |
-| Process dies before the run completes | Add interrupted-run test | Previous record unchanged | Clear |
-| `--failed` is run without a prior completed run | Add CLI selection test | Exit 2 with instruction to run an initial check | Clear |
+| Cold router returns before studio scroll mounts | Real cold-open diagnostic | Bounded wait, exit 2 | Clear |
+| Two processes start together | Concurrent one-job browser diagnostics | Random IDs, isolated artifacts, atomic record | Clear |
+| Frontend changes or HMR reloads mid-job | Real source edit during a browser job | Abort run, preserve previous record, exit 2 | Clear |
+| A worker throws while peers are active | Real interrupted-run session cleanup | Stop taking jobs, await peers, close all sessions | Clear |
+| Process dies before the run completes | Record preserved in source-edit diagnostic | Previous record unchanged | Clear |
+| `--failed` is run without a prior completed run | Focused retry-state tests | Exit 2 with instruction to run an initial check | Clear |
 | A shared selector matches only another case | Existing all-case coverage aggregation (`theme-check.ts:154-156`) | Full coverage for rule misses | Clear |
 | A new specimen is visually outside the measured scroll | Full audit and screenshot review | Offscreen/unmeasured count fails (`theme-check.ts:115-118`) | Clear |
 
@@ -130,7 +130,7 @@ No box-agent concept changes. This is developer tooling and studio coverage, so 
 
 ## What will hold this after it ships
 
-Focused `.test.ts` tests with `t.check` cover failure-record/job selection, run completion, and reload detection decisions. The real `--all` browser gate verifies coverage, contrast, and the cold-open behavior. The browser run is the landing check, not a substitute for tests of runner decisions. No new test tier is introduced.
+Focused `.test.ts` tests with `t.check` cover failure-record replacement, parsing, stale catalog validation, and retry selection. Real browser diagnostics cover cold opening, concurrent processes, and source-edit interruption; marker-only reload and browser-daemon death remain source-reviewed paths. The real `--all` browser gate verifies coverage, contrast, and the cold-open behavior. The browser run is the landing check, not a substitute for tests of runner decisions. No new test tier is introduced.
 
 ## Implementation order
 
@@ -146,3 +146,18 @@ No data migration. Run focused tests first, targeted theme checks during iterati
 ## Plan review adjudication
 
 Claude fable reviewed the plan on 2026-11-15. Accepted the single atomic failure-record design, explicit omission of partial coverage reports, scroller marker checked after each job, broad source fingerprint, and pseudo-only selector fix. Kept per-run screenshot subdirectories to prevent concurrent screenshot collisions; they remain beneath the documented artifact root. The older Rose Trellis decision permits a human-approved exemption, but this implementation will first present a small chip fill. Rejection leaves the gate goal pending a human decision; it does not silently weaken contrast enforcement.
+
+## Implementation evidence
+
+- The queued user message and pending HQ transcription are different production states. The studio now renders both; `PendingHqMessage` moved to the shared chat component directory without changing its production markup.
+- All nine shared-sheet exclusions were removed. Live quote, card-back, disabled-swatch, tab-overflow, updating, and figure-error states have specimens. No production selectors were deleted. Only card-turn transforms and their busy opacity are newly exempted because settled screenshots cannot show their 140–180ms transition; both final faces are measured.
+- Figure errors retain their existing red fill and text; declaring their own semantic ink makes that intentional material explicit. Their text contrast remains measured.
+- The cold-open diagnostic passed after stopping only this worktree's process. Two concurrent one-job diagnostic processes passed. A source edit after the first screenshot caused exit 2 with a source-change message and preserved the previous failure record.
+- Targeted phone and laptop captures pass for Rose Trellis, Veil, Overprint, Phosphor, and all Badge tones. Rose keeps its original gradient; only chip fills deepen.
+- Selected tests: nine files, 63 checks passed. Typecheck, layout-check, and changed-file ESLint passed. Full catalog and implementation review results are pending.
+
+## Implementation review adjudication
+
+Claude `claude-opus-5-5` reviewed the implementation. Accepted the misplaced Updating indicator, shared gold-token side effect, and misleading browser-death diagnostic; these are corrected. The disabled card swatch now reuses its production component. Figure error and inset-view wrappers remain exact small fixtures because mounting their full owners requires a throwing sketch or a running authored view; their production owners are named beside the fixtures. They are not evidence of those owners' behavior.
+
+Kept the specified last-completed-run semantics, including previews and concurrent last-completion wins, rather than adding per-run retry history. The CLI identifies preview versus full-catalog provenance and case count; the authoring guide explains separate output roots for independent histories. Added capture-retention guidance rather than deleting evidence automatically. Corrected the plan's test claims to distinguish unit tests from real-browser diagnostics.

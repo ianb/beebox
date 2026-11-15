@@ -1,9 +1,9 @@
-import type { PendingHq } from "../../../../machines/composerMachine";
-import { Button } from "../../../ui/Button";
-import { MaterialContext } from "../../../ui/material";
-import { UserMessageText } from "../../user-message-text";
-import { QUEUED_EDGE } from "../../user-message/view";
-import { LiveDot } from "../../../ui/LiveDot";
+import type { PendingHq } from "../../machines/composerMachine";
+import { Button } from "../ui/Button";
+import { MaterialContext } from "../ui/material";
+import { UserMessageText } from "./user-message-text";
+import { QUEUED_EDGE } from "./user-message/view";
+import { LiveDot } from "../ui/LiveDot";
 
 /** The queued user bubble: the realtime text and the HQ job's status line. */
 function PendingHqBubble({ pending }: { pending: PendingHq }) {

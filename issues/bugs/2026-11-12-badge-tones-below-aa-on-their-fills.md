@@ -1,6 +1,6 @@
 ---
 title: "Badge text is below AA on its own fill for some tones"
-workstream: unattached
+workstream: theme-check-gate
 area: beebox
 labels: [frontend, contrast]
 filed-by: agent

@@ -25,6 +25,7 @@ import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
 import { useActivityLogger } from "../../../../lib/activity/scope";
 import { useHeadingScrollLog } from "../../../../lib/activity/scroll-heading";
+import { WorkspaceUpdating } from "../../WorkspaceUpdating";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
@@ -76,7 +77,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
     </div>
     {/* Always mounted so a screen reader hears the text appear. Out of flow:
         the tab strip measures its row, and a child there would resize it. */}
-    {visible ? <span role="status" className="bbx-companion-updating pointer-events-none absolute bottom-3 right-4 rounded-full text-xs" data-editing={editing || undefined}>{editing ? "Updating…" : ""}</span> : null}
+    {visible ? <WorkspaceUpdating editing={editing} /> : null}
   </div>;
 }
 /**

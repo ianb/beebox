@@ -17,6 +17,7 @@ import { BrowseSession } from "./tour-lib/browse.js";
 import { auditBackdrops, describeBackdropFailure } from "./tour-lib/backdrop.js";
 import { auditContrast, describeContrastFailure, mergeContrastSteps, type ContrastStep } from "./tour-lib/contrast.js";
 import { collectRules, describeUncoveredRule, matchRules, ruleTargets, type RuleExemption, type RuleTarget } from "./tour-lib/rules.js";
+import { jobKey, loadLastRun, retryJobs, runId, saveLastRun, sourceFingerprint, ThemeCheckError, validateLastRun, type ThemeJob } from "./theme-check-run.js";
 
 /**
  * Theme rules the studio cannot show, by a part of their selector. Each needs
@@ -27,18 +28,8 @@ const RULE_EXEMPTIONS: readonly RuleExemption[] = [
   { selector: "#bbx-nav-profile img", reason: "a profile photo has no text to fail; the studio shows the initial, which can" },
   { selector: ".bbx-system-control", reason: "the selection capture button shows only over a text selection" },
   { selector: "#bbx-chat-load-older:disabled", reason: "disabled only while older messages load, and the contrast audit skips disabled text" },
-];
-
-/**
- * Theme sheets whose rules that name no theme are not yet held to coverage:
- * on 2026-11-12 each had rules for states the studio does not show (a card
- * turning over, a disabled swatch, inset and plain quote treatments, a
- * figure's error). Shrink this list as specimens land; a new sheet is
- * covered from the start.
- */
-const SHARED_NOT_YET_COVERED: readonly string[] = [
-  "materials.css", "card-themes.css", "quote-sheets.css", "card-turn.css", "figure-controls.css",
-  "stock-textures.css", "chrome.css", "system-theme-picker.css", "interface.css",
+  { selector: ".bbx-card-surface[data-card-turn", reason: "the 140–180ms turn transform is absent from settled captures; both settled faces are studio specimens" },
+  { selector: ".bbx-card-properties[aria-busy=\"true\"]", reason: "busy only during the card-turn transition; text faces are measured at rest" },
 ];
 
 /**
@@ -47,7 +38,7 @@ const SHARED_NOT_YET_COVERED: readonly string[] = [
  */
 async function sharedSheets(): Promise<string[]> {
   return (await readdir(path.join(import.meta.dirname, "../../src/frontend/src/themes")))
-    .filter((name) => name.endsWith(".css") && !SHARED_NOT_YET_COVERED.includes(name));
+    .filter((name) => name.endsWith(".css"));
 }
 
 /** Every catalog theme in the studio: each system theme and stock with its paired card, then each card stock not yet covered under Flat. */
@@ -78,6 +69,8 @@ const STEP_OVERLAP = 160;
 /** The card contents label shows while its card scrolls, and on load, rests 1.2s after and fades for 0.25s (card-themes.css); audit it at rest. */
 const SETTLE_MS = 1600;
 const SCROLLER = "document.getElementById(\"bbx-theme-studio-scroll\")";
+const SOURCE_CHANGED = "frontend or shared source changed during the run; restart theme-check after edits settle";
+const STUDIO_RELOADED = "theme studio reloaded during the run; restart theme-check after edits settle";
 const GEOMETRY_SCRIPT = `JSON.stringify((() => {
   const s = ${SCROLLER};
   if (s === null) throw new Error("theme-check: the studio has no #bbx-theme-studio-scroll");
@@ -102,8 +95,30 @@ function studioPath(c: StudioCase): string {
   return `/dev/theme-studio?${new URLSearchParams({ ...c, controls: "0" }).toString()}`;
 }
 
-async function checkContrast(session: BrowseSession, { c, screen, outDir }: { c: StudioCase; screen: Screen; outDir: string }): Promise<number> {
+async function openStudio(session: BrowseSession, { c, marker }: { c: StudioCase; marker: string }): Promise<void> {
   await session.open(studioPath(c));
+  try {
+    await session.run(["wait", "--fn", `${SCROLLER} !== null`, "--timeout", "30000"]);
+  } catch (cause) {
+    throw new ThemeCheckError(`theme studio did not render #bbx-theme-studio-scroll for ${caseName(c)} within 30 seconds: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+  }
+  await session.eval(`${SCROLLER}.dataset.themeCheckRun = ${JSON.stringify(marker)}`);
+}
+
+async function checkMarker(session: BrowseSession, marker: string): Promise<void> {
+  const actual = (await session.eval(`${SCROLLER}?.dataset.themeCheckRun ?? null`)).trim();
+  if (actual !== JSON.stringify(marker)) throw new ThemeCheckError(STUDIO_RELOADED);
+}
+
+async function assertSourceUnchanged(fingerprint: string): Promise<void> {
+  try {
+    if (await sourceFingerprint() !== fingerprint) throw new ThemeCheckError(SOURCE_CHANGED);
+  } catch (cause) {
+    throw new ThemeCheckError(SOURCE_CHANGED, { cause });
+  }
+}
+
+async function checkContrast(session: BrowseSession, { c, screen, outDir, marker }: { c: StudioCase; screen: Screen; outDir: string; marker: string }): Promise<number> {
   const steps: ContrastStep[] = [];
   for (const [n, top] of (await scrollSteps(session)).entries()) {
     const before = `${SCROLLER}.scrollTop = ${String(top)}; await new Promise((settle) => setTimeout(settle, ${String(SETTLE_MS)}));`;
@@ -118,6 +133,7 @@ async function checkContrast(session: BrowseSession, { c, screen, outDir }: { c:
   const misses = result.failures.length + result.offscreen.length + result.unmeasured.length;
   const shots = path.join(outDir, `${caseName(c)}.${screen.name}.{0..${String(steps.length - 1)}}.png`);
   process.stdout.write(`${caseName(c)} ${screen.name}: ${misses === 0 ? "ok" : `${String(misses)} to fix`} (${String(result.runs)} text runs)\n${lines.join("")}  → ${shots}\n`);
+  await checkMarker(session, marker);
   return misses;
 }
 
@@ -130,8 +146,7 @@ interface Coverage {
   unparsable: Set<string>;
 }
 
-async function checkScreen(session: BrowseSession, { c, screen, coverage }: { c: StudioCase; screen: Screen; coverage: Coverage }): Promise<number> {
-  await session.open(studioPath(c));
+async function checkScreen(session: BrowseSession, { c, screen, coverage, marker }: { c: StudioCase; screen: Screen; coverage: Coverage; marker: string }): Promise<number> {
   const result = await auditBackdrops(session);
   const lines = result.failures.map((f) => `  ${describeBackdropFailure(f)}\n`);
   for (const image of result.unloaded) lines.push(`  ${image} did not load, so it was not measured\n`);
@@ -148,6 +163,7 @@ async function checkScreen(session: BrowseSession, { c, screen, coverage }: { c:
     if (matches[i] === true) coverage.matched.add(target.key);
     if (matches[i] === null) coverage.unparsable.add(target.key);
   }
+  await checkMarker(session, marker);
   return lines.length;
 }
 
@@ -160,30 +176,58 @@ function reportCoverage(coverage: Coverage): number {
   return uncovered.length;
 }
 
-interface Job { kind: "contrast" | "screen"; screen: Screen; c: StudioCase }
-
 /** Run the jobs on `workers` browser sessions at once; each browse call mostly waits. */
-async function runJobs(jobs: readonly Job[], { workers, run }: { workers: number; run: (session: BrowseSession, job: Job) => Promise<number> }): Promise<number> {
+async function runJobs(jobs: readonly ThemeJob[], { workers, id, fingerprint, run }: { workers: number; id: string; fingerprint: string; run: (session: BrowseSession, options: { job: ThemeJob; marker: string }) => Promise<number> }): Promise<{ misses: number; failed: string[] }> {
   let next = 0;
   let misses = 0;
-  await Promise.all(Array.from({ length: Math.min(workers, jobs.length) }, async (_, i) => {
-    const session = new BrowseSession(`theme-check-${String(i + 1)}`);
+  let stopped = false;
+  const failed: string[] = [];
+  const results = await Promise.allSettled(Array.from({ length: Math.min(workers, jobs.length) }, async (_, i) => {
+    const session = new BrowseSession(`theme-check-${id}-${String(i + 1)}`);
     let viewport = "";
     try {
-      for (let job = jobs[next++]; job !== undefined; job = jobs[next++]) {
+      while (!stopped) {
+        const job = jobs[next++];
+        if (job === undefined) break;
+        await assertSourceUnchanged(fingerprint);
         const size = `${String(job.screen.width)}×${String(job.screen.height)}`;
         if (size !== viewport) await session.setViewport(job.screen.width, job.screen.height);
         viewport = size;
-        // Await first: `misses += await …` reads `misses` before the await and
-        // drops counts other sessions add meanwhile.
-        const found = await run(session, job);
-        misses += found;
+        const marker = `${id}-${String(next)}`;
+        try { await openStudio(session, { c: job.c, marker }); }
+        catch (error) { await assertSourceUnchanged(fingerprint); throw error; }
+        try {
+          const found = await run(session, { job, marker });
+          await assertSourceUnchanged(fingerprint);
+          misses += found;
+          if (found > 0) failed.push(jobKey(job));
+        } catch (error) {
+          await assertSourceUnchanged(fingerprint);
+          // A readable changed marker proves a reload. A dead browser cannot
+          // establish that: retain the original operation's diagnostic.
+          try { await checkMarker(session, marker); }
+          catch (markerError) { if (markerError instanceof ThemeCheckError) throw markerError; }
+          throw error;
+        }
       }
+    } catch (error) {
+      stopped = true;
+      throw error;
     } finally {
       await session.close();
     }
   }));
-  return misses;
+  const error = results.find((result) => result.status === "rejected");
+  if (error?.status === "rejected") throw error.reason;
+  return { misses, failed };
+}
+
+function validateModes(all: boolean, failed: boolean): void {
+  if (all && failed) throw new ThemeCheckError("choose either --all or --failed");
+}
+
+function reportRetry(last: { fullCatalog: boolean; cases: readonly StudioCase[] }): void {
+  process.stdout.write(`Retrying the last completed ${last.fullCatalog ? "full-catalog" : "preview"} run (${String(last.cases.length)} cases). A later preview replaces this record; use a separate --out to keep runs independent.\n`);
 }
 
 async function main(): Promise<number> {
@@ -194,33 +238,49 @@ async function main(): Promise<number> {
       card: { type: "string" },
       "card-stock": { type: "string" },
       all: { type: "boolean", default: false },
+      failed: { type: "boolean", default: false },
       out: { type: "string" },
       jobs: { type: "string", default: "3" },
     },
   });
-  const outDir = path.resolve(values.out ?? path.join(import.meta.dirname, ".artifacts", "theme-check"));
+  validateModes(values.all, values.failed);
+  const outRoot = path.resolve(values.out ?? path.join(import.meta.dirname, ".artifacts", "theme-check"));
+  const id = runId();
+  const outDir = path.join(outRoot, id);
   await mkdir(outDir, { recursive: true });
+  const last = values.failed ? await loadLastRun(outRoot) : null;
+  if (last !== null) validateLastRun(last, { catalog: catalogCases(), themes: THEME_CATALOG });
+  if (last !== null) reportRetry(last);
   const systemStock = values["system-stock"] ?? defaultStockOf(values.system);
-  const cases = values.all ? catalogCases() : [{
+  const cases = last?.cases ?? (values.all ? catalogCases() : [{
     system: values.system,
     systemStock,
     card: values.card ?? values.system,
     cardStock: values["card-stock"] ?? (values.card === undefined ? systemStock : defaultStockOf(values.card)),
-  }];
+  }]);
   const workers = Number(values.jobs);
-  if (!Number.isInteger(workers) || workers < 1) throw new Error(`--jobs must be a whole number of browser sessions, got ${values.jobs}`);
+  if (!Number.isInteger(workers) || workers < 1) throw new ThemeCheckError(`--jobs must be a whole number of browser sessions, got ${values.jobs}`);
   const coverage: Coverage = { shared: await sharedSheets(), targets: new Map(), all: new Map(), matched: new Set(), unparsable: new Set() };
-  const jobs: Job[] = [
+  const available: ThemeJob[] = [
     ...CONTRAST_SCREENS.flatMap((screen) => cases.map((c) => ({ kind: "contrast" as const, screen, c }))),
     ...SCREENS.flatMap((screen) => cases.map((c) => ({ kind: "screen" as const, screen, c }))),
   ];
-  let misses = await runJobs(jobs, {
-    workers,
-    run: (session, { kind, screen, c }) => kind === "contrast" ? checkContrast(session, { c, screen, outDir }) : checkScreen(session, { c, screen, coverage }),
+  const selected = last === null ? { jobs: available, completeCoverage: true } : retryJobs(last, available);
+  const fingerprint = await sourceFingerprint();
+  const result = await runJobs(selected.jobs, {
+    workers, id, fingerprint,
+    run: (session, { job: { kind, screen, c }, marker }) => kind === "contrast" ? checkContrast(session, { c, screen, outDir, marker }) : checkScreen(session, { c, screen, coverage, marker }),
   });
-  misses += reportCoverage(coverage);
-  process.stdout.write(misses === 0 ? "No contrast, material, backdrop or rule coverage misses measured.\n" : `${String(misses)} misses.\n`);
-  return values.all && misses > 0 ? 1 : 0;
+  let misses = result.misses;
+  const coverageMisses = selected.completeCoverage ? reportCoverage(coverage) : 0;
+  misses += coverageMisses;
+  if (!selected.completeCoverage) process.stdout.write("Rule coverage not checked in this partial retry.\n");
+  await saveLastRun(outRoot, { version: 1, fullCatalog: last?.fullCatalog ?? values.all, cases, failed: result.failed, coverageNeeded: coverageMisses > 0 });
+  process.stdout.write(misses === 0
+    ? `No contrast, material or backdrop misses measured${selected.completeCoverage ? "; rule coverage passed" : "; rule coverage not checked"}.\n`
+    : `${String(misses)} misses.\n`);
+  if (values.failed) process.stdout.write("Diagnostic retry only; run --all for the landing gate.\n");
+  return (values.all || values.failed) && misses > 0 ? 1 : 0;
 }
 
 main().then((code) => process.exit(code)).catch((e: unknown) => {

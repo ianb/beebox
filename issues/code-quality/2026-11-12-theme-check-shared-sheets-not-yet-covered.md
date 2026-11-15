@@ -1,6 +1,6 @@
 ---
 title: "Theme audit: nine shared theme sheets are not yet held to rule coverage"
-workstream: unattached
+workstream: theme-check-gate
 area: beebox
 labels: [themes, theme-check]
 filed-by: agent

@@ -19,8 +19,8 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-warm-100 text-warm-700",
   info: "bg-info-50 text-info-dark",
   success: "bg-success-100 text-success-dark",
-  warning: "bg-accent-100 text-accent-dark",
-  danger: "bg-danger-100 text-danger",
+  warning: "bg-accent-100 text-warning-700",
+  danger: "bg-danger-100 text-danger-700",
   accent: "bg-primary-50 text-primary-dark",
 };
 

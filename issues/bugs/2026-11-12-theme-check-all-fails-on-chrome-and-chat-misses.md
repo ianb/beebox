@@ -1,6 +1,6 @@
 ---
 title: "bin/theme-check --all fails on chrome and chat misses unrelated to cards"
-workstream: unattached
+workstream: theme-check-gate
 area: beebox
 labels: [themes, theme-check, contrast]
 filed-by: agent
