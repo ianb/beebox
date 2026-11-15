@@ -34,6 +34,12 @@ From the accepted draft decisions:
 - **paper scoped (10):** paper is scoped to its group, picture or scene.
 - **snap (2.6):** placements snap to whole device pixels.
 
+Also seen, from accepted draft decisions not on that list:
+
+- **pictures keep overflow (3):** a sprite cut what it drew outside its
+  box; a picture keeps it. In `busy-town-sol` the ear tips that stuck out of
+  the townsfolk's sprite boxes now show.
+
 ## Other differences seen
 
 - **T, text:** light text on a dark ground draws a little lighter and thinner
@@ -55,6 +61,30 @@ From the accepted draft decisions:
   sleep and cache equivalence depend on it. A sketch that wants trails keeps
   its recent positions in its model and draws them. TEA.md should say each
   frame starts clear (chunk 7).
+- **A2, control labels (accepted):** headless control stand-ins draw the
+  param's label beside a checkbox or before a field's value. This was added
+  after the Stage 4 drawing round (`stage4/drawing-findings.md`, row 9), so
+  a stand-in says what it is. A sketch that draws its own label beside the
+  control now shows the label twice, and a checkbox label is printed over
+  the sketch's own (`pendulum-lab`, `periodic-trends-2`). The browser figure
+  shows only the bare input. Seen in the six exercises with `v.control` and
+  in two drawers' pendulums. Accepted here; whether stand-ins keep the label
+  is for the boxholder at the hand-off.
+
+## Astra's read
+
+Astra (gpt-6-astra) opened the exhibit's 73 images
+(`scratch/cross-model/a5-eyes.answer.md`, not committed) and found no
+difference outside the expected list except these, each checked here
+against the frames:
+
+- Doubled and overlapping control labels in six exercises and two drawers'
+  pendulums: confirmed; A2 above.
+- Taller ear tips in `busy-town-sol`: confirmed; decision 3 above.
+- The seated person in `scene-night-room-sol` reads as a torso on the
+  floor: the drawer's drawing; no earlier frame to compare. Not a renderer
+  change.
+- `particles-sonnet` is hard to read on its light ground: A1.
 
 ## Table
 
@@ -72,14 +102,14 @@ chunk, with a test).
 | `alien-scene-opus-a` | unchanged | 1 | 0/1 | 94.42 | 0.124 | 0.14 / 0.24 | brush texture (7) | pass: same character by eye |
 | `alien-scene-opus-b` | unchanged | 1 | 0/1 | 92.85 | 0.107 | 0.22 / 0.03 | brush texture (7) | pass: same character by eye |
 | `alien-scene-sol` | unchanged | 1 | 0/1 | 81.86 | 0.188 | 0.18 / 0.45 | brush texture (7) | pass: same character by eye |
-| `balance-reaction` | ported: cache, paper | 27 | 27/27 | 99.87 | 0.045 | 0.28 / 1.87 | paper scoped (10) | pass |
-| `balance-reaction-2` | ported: paper | 35 | 35/35 | 99.11 | 0.046 | 0.12 / 2.82 | paper scoped (10) | pass |
+| `balance-reaction` | ported: cache, paper | 27 | 27/27 | 99.87 | 0.045 | 0.28 / 1.87 | paper scoped (10) | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
+| `balance-reaction-2` | ported: paper | 35 | 35/35 | 99.11 | 0.046 | 0.12 / 2.82 | paper scoped (10) | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
 | `busy-town-opus` | ported: sprite, cache, paper | 50 | 0/50 | 86.37 | 0.175 | 0.09 / 0.32 | brush texture (7), paper scoped (10) | pass: same character by eye; text (T); new hints for pictures placed turning (H) |
-| `busy-town-sol` | ported: sprite, cache, paper | 44 | 0/44 | 94.66 | 0.133 | 0.09 / 0.12 | brush texture (7), paper scoped (10) | pass: same character by eye; new hints for pictures placed turning (H) |
+| `busy-town-sol` | ported: sprite, cache, paper | 44 | 0/44 | 94.66 | 0.133 | 0.09 / 0.12 | brush texture (7), paper scoped (10), pictures keep overflow (3) | pass: same character by eye; ear tips that the sprite box cut off now show (3); new hints (H) |
 | `clock` | unchanged | 12 | 12/12 | 99.99 | 0.047 | 2.33 / 5.64 | none | pass: light text on dark draws lighter (T) |
 | `fjord-tides` | ported: ctx | 18 | 18/18 | 99.97 | 0.05 | 0.23 / 1.7 | none | pass |
 | `game-world-tiles` | ported: ctx pixels, sprite, cache | 2 | 0/2 | 83.96 | 0.085 | 0.7 / 1.84 | brush texture (7) | pass: same character by eye; the field is a v.pixels image at the map zoom |
-| `guitar-strings` | ported: cache, paper | 18 | 0/18 | 96.75 | 0.051 | 0.78 / 2.59 | brush texture (7), paper scoped (10) | pass: same character by eye |
+| `guitar-strings` | ported: cache, paper | 18 | 0/18 | 96.75 | 0.051 | 0.78 / 2.59 | brush texture (7), paper scoped (10) | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
 | `gull-market` | ported: paper | 1 | 0/1 | 88.57 | 0.053 | 0 / 0.1 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `intra-atrium` | ported: ctx pixels, sprite, cache | 2 | 2/2 | 99.36 | 0.034 | 0.02 / 0.05 | none | pass: the hand-lit room is a v.pixels image |
 | `intra-lounge` | ported: ctx pixels and transform | 2 | 2/2 | 99.99 | 0.007 | 0.07 / 0.05 | none | pass: the hand-lit room and the walker mask are v.pixels images |
@@ -90,7 +120,7 @@ chunk, with a test).
 | `intra-scale-reference` | ported: paper | 1 | 0/1 | 92.87 | 0.026 | 0.08 / 0.08 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `intra-walk-study` | unchanged | 4 of 12 | 4/4 | 100 | 0.029 | 0.08 / 0.12 | brush texture (7) | pass: 8 frames the painter captured for edge faint-mark warnings are not captured (F) |
 | `intra-walk-styles` | unchanged | 2 | 2/2 | 99.99 | 0.024 | 0.06 / 0.84 | brush texture (7) | pass |
-| `lens-rays` | unchanged | 15 | 15/15 | 99.86 | 0.039 | 0.09 / 3.16 | none | pass |
+| `lens-rays` | unchanged | 15 | 15/15 | 99.86 | 0.039 | 0.09 / 3.16 | none | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
 | `library-anim` | ported: cache, paper | 22 | 0/22 | 93.5 | 0.164 | 0.42 / 0.37 | brush texture (7), paper scoped (10) | pass: same character by eye |
 | `nell-anim` | ported: cache, paper | 29 | 0/29 | 78.92 | 0.108 | 1.74 / 0.52 | brush texture (7), paper scoped (10) | pass: the sky grain is finer: the paper set inside the cached background no longer reaches the frame-wide paper effect |
 | `open-opus-a` | ported: paper | 1 | 0/1 | 92.77 | 0.131 | 0.9 / 0.13 | brush texture (7), paper scoped (10) | pass: same character by eye |
@@ -102,17 +132,17 @@ chunk, with a test).
 | `particles-sonnet` | unchanged | 20 | 3/20 | 0 | 1.353 | 894.88 / 90.33 | none | accepted: trails (A1): frames from 60 on lose the dark background |
 | `pelican-bicycle` | deferred to chunk 6 | — | — | — | — | — | — | deferred: v.ctx; the playground imports it (Track 5) |
 | `pell-anim` | ported: ctx text, cache, paper | 21 of 27 | 0/21 | 84.02 | 0.137 | 0.25 / 0.8 | brush texture (7), paper scoped (10) | pass: same character by eye; 6 frames captured by the painter for faint-mark warnings are not captured (F); text (T) |
-| `pendulum-lab` | ported: cache | 55 | 55/55 | 99.68 | 0.052 | 0.09 / 1.33 | none | pass |
+| `pendulum-lab` | ported: cache | 55 | 55/55 | 99.68 | 0.052 | 0.09 / 1.33 | none | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
 | `periodic-trends` | unchanged | 16 | 16/16 | 99.99 | 0.034 | 0.15 / 1.28 | none | pass |
-| `periodic-trends-2` | unchanged | 12 | 12/12 | 99.87 | 0.055 | 0.08 / 0.7 | none | pass |
+| `periodic-trends-2` | unchanged | 12 | 12/12 | 99.87 | 0.055 | 0.08 / 0.7 | none | accepted: control stand-ins show the param label, so labels drawn by the sketch beside a control show twice (A2) |
 | `scene-market-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 | `scene-market-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 | `scene-market-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 | `scene-night-room-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 | `scene-night-room-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 | `scene-night-room-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
-| `scene-pendulum-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
-| `scene-pendulum-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
+| `scene-pendulum-opus-a` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye; the slider label shows twice (A2) |
+| `scene-pendulum-opus-b` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye; the slider label shows twice (A2) |
 | `scene-pendulum-sol` | authored (Stage 4 drawer) | — | — | — | — | — | no Stage 0 frames | new: renders on the scene renderer, deterministic; checked by eye |
 <!-- table:end -->
 

@@ -880,6 +880,55 @@ then the switch that deletes the old code; then docs.
   recorded (no source change beyond the transition marker), and the table
   started. The 18 ported exercises follow in batches of a few, one commit
   each.
+- **As built (chunk 5).** Every gallery exercise except `pelican-bicycle`
+  renders on the scene renderer and has a verdict in
+  `canvas-loop-scene/stage5/gallery-parity.md`.
+  - **Counts.** 15 exercises used no removed call, not 21: six of the 21
+    call `v.paperTexture` (`balance-reaction-2`, `gull-market`,
+    `intra-scale-reference`, `open-opus-a`, `open-opus-b`, `open-sol`) and
+    were ported. 23 were ported in all; `pelican-bicycle` waits.
+  - **Replacements.** `cache(key, body)` became a canvas-sized picture
+    placed at the origin (a paste option becomes the placement's); `sprite`
+    and `image` became `picture` and `place`; a `paperTexture(n)` at the end
+    of a function became that function's drawing in a group with
+    `effects.paper`, with `v.paper` kept before the group. `intra-rooms`
+    and `balance-reaction-2` took the ports' edits. The hand-lit rooms
+    (`intra-atrium`, `intra-lounge`, `game-world-tiles`' field) write their
+    pixels through `v.pixels`; the lounge's per-frame images are versioned
+    by the frame's lights. `ctx.transform` became `at({ matrix })`;
+    `fjord-tides`' paths, clips and gradients became polygons, paths,
+    `v.clip` and `v.linearGradient`; `pell-anim`'s `fillText` became
+    `v.text` on the baseline. A picture body cannot call `v.toCanvas`, so
+    `game-world-tiles` reads its zoom from its own constant.
+  - **Table.** Of 38 judged exercises: 30 pass, 8 accepted differences, no
+    renderer bug found. The nine drawers' exercises are new (no Stage 0
+    frames) and render cleanly. Examples: 7 compared with their painter
+    renders, all pass.
+  - **Accepted differences.** A1: the two particle fountains drew trails by
+    a translucent rectangle over the last frame; each scene frame starts
+    clear, so their ground turns light grey once trails are on. A2: the
+    headless control stand-ins draw the param's label (added after the
+    Stage 4 drawing round), so a sketch that labels its own control shows
+    the label twice (six exercises, two drawers' pendulums). Also seen,
+    within the parity measures: light text on a dark ground is thinner;
+    frames the painter captured for edge faint-mark warnings are not
+    captured; new picture hints add captured frames; sprites' cut-off
+    overflow now shows (decision 3).
+  - **Examples.** The top-level examples carry the marker; `scene-looks/`
+    moved into `examples/`; the drawers' sketches are gallery exercises
+    `scene-<scene>-<drawer>`; `scene-ports/` is deleted, and the GPU tests
+    read `gallery/intra-walk-styles`, `gallery/intra-rooms` (room
+    `hallway`, through a `portFrames` params override) and
+    `gallery/balance-reaction-2`.
+  - **Eyes.** One exhibit, "Gallery on the new renderer: before and after"
+    (73 figures). Astra's read found A2 and decision 3's overflow, both
+    confirmed; nothing else outside the expected list.
+  - **Left for chunk 6.** `pelican-bicycle` and `brushes-tea.ts`, as
+    planned; also `orbit-tea.ts` and `fjord-tea.ts`, which call no removed
+    member but run in the dev demo on Canvas2D, and `orbit-tea.ts` runs in
+    the CPU-phase determinism test, which would open a GPU device with the
+    marker. Decisions for the boxholder: whether stand-ins keep the label
+    (A2), and TEA.md's statement that each frame starts clear (A1, chunk 7).
 
 ### Track 6: the switch (chunk 6)
 
