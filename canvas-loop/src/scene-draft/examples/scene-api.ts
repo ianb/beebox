@@ -103,11 +103,13 @@ export interface Style extends StyleToday {
   readonly join?: "miter" | "round" | "bevel";
   /** How the shape takes light (only inside a lit group). */
   readonly material?: Material;
-  /** Shorthand: the shape alone in a group with these effects. */
+  /** Effects on this shape alone: it draws into its own layer, the effects apply, then the layer composites with `blend` or `erase` (draft 2.1, R2). */
   readonly effects?: Effects;
 }
 
 export interface GroupOptions extends Omit<GroupToday, "effects"> {
+  /** Names the group in warnings, scene outlines and diffs; draws nothing. */
+  readonly name?: string;
   readonly effects?: Effects;
   readonly lighting?: Lighting;
   /** Clip the group's drawing (applied after its effects, as CSS `clip-path`). */
