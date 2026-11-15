@@ -4,7 +4,9 @@ status: implemented
 workstream: theme-check-gate
 issues:
   - ../../../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md
+  - ../../../issues/closed/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md
   - ../../../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
+  - ../../../issues/closed/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md
   - ../../../issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md
 ---
 # Make theme-check a landing gate

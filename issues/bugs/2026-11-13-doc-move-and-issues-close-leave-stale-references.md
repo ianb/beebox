@@ -28,3 +28,13 @@ Evidence: `chat-presence/20261113T015356Z-landed.md`,
 `schema-watcher-flake/20261112T135353Z-landed.md`,
 `web-guidance-scan/20261111T100011Z-implemented.md`, and the retrospective
 watch item `issues-close-staging-and-references`.
+
+## Re-encounter 2026-11-15
+
+`bin/workstreams confirm-tested` moves an approved issue into `issues/closed/`
+but does not rewrite inbound paths. During the theme-check-gate landing, its
+commit hook rejected the move because the implemented plan's `issues:` entry
+still named the open path. The helper restored the issue after the failed
+commit. The plan references had to be removed temporarily, the confirmation
+committed, then the references restored to the closed path. Confirmation should
+rewrite inbound references before its commit check, as `bin/issues close` does.
