@@ -23,7 +23,7 @@
 import type { Prepared } from "../scene/brush/expand.js";
 import { GpuRenderError } from "../scene/errors.js";
 import { timed } from "./frame.js";
-import { pack, planBatches } from "./brush-pack.js";
+import { pack, planBatches, readCopies } from "./brush-pack.js";
 import type { BrushJob, Input, SampleRange } from "./brush-pack.js";
 import { DAB_FLOATS, INSTANCES_WGSL, SAMPLES_WGSL, SAMPLE_FLOATS, SAMPLES_WORKGROUP, UNIFORM_WORDS } from "./shader-brush.js";
 import type { PassTimer } from "./timing.js";
@@ -212,38 +212,46 @@ export class BrushPass {
 
 /**
  * Verification and measurement: encode with `encode` on a new command
- * encoder, copying each batch's output (`bytes` per item) back into one
- * buffer, and report the CPU time to encode and the brush passes' GPU time
- * when timing.
+ * encoder, copying each batch's output (`bytes` per item) back into readback
+ * buffers of at most `limit` bytes each (a frame's items can exceed the
+ * device's `maxBufferSize`), and join them on the CPU. Reports the CPU time to
+ * encode, the brush passes' GPU time when timing, and how many readback
+ * buffers it used.
  */
-export async function readBrushPass<T>(device: GPUDevice, a: { timer: PassTimer | undefined; bytes: number; encode: (f: Encoding & { each: (b: Batch) => void }) => T }): Promise<{ out: T; data: ArrayBuffer; encodeMs: number; gpuMs: number | undefined }> {
+export async function readBrushPass<T>(device: GPUDevice, a: { timer: PassTimer | undefined; bytes: number; limit: number; encode: (f: Encoding & { each: (b: Batch) => void }) => T }): Promise<{ out: T; data: ArrayBuffer; reads: number; encodeMs: number; gpuMs: number | undefined }> {
   const temp: GPUBuffer[] = [];
+  const per = Math.floor(Math.min(a.limit, device.limits.maxBufferSize) / a.bytes);
   try {
     a.timer?.begin();
     const enc = device.createCommandEncoder();
     // Made at the first batch, which gives the total.
-    const held: { read?: GPUBuffer } = {};
+    const held: { reads?: GPUBuffer[]; total?: number } = {};
     const each = (b: Batch): void => {
-      if (held.read === undefined) {
-        held.read = device.createBuffer({ size: b.total * a.bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
-        temp.push(held.read);
+      const reads = (held.reads ??= Array.from({ length: Math.ceil(b.total / per) }, (_, i) => device.createBuffer({ size: Math.min(per, b.total - i * per) * a.bytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST })));
+      if (held.total === undefined) {
+        held.total = b.total;
+        temp.push(...reads);
       }
-      enc.copyBufferToBuffer(b.buffer, 0, held.read, b.first * a.bytes, b.count * a.bytes);
+      for (const c of readCopies(b, per)) {
+        const r = reads[c.chunk];
+        if (r === undefined) throw new GpuRenderError({ detail: `a brush batch reads back past its frame's ${b.total} items` });
+        enc.copyBufferToBuffer(b.buffer, c.src * a.bytes, r, c.dst * a.bytes, c.count * a.bytes);
+      }
     };
     const t0 = performance.now();
     const out = a.encode({ enc, temp, timer: a.timer, each });
     const encodeMs = performance.now() - t0;
     const times = a.timer?.resolve(enc, temp);
     device.queue.submit([enc.finish()]);
-    let data = new ArrayBuffer(0);
-    const r = held.read;
-    if (r !== undefined) {
+    const reads = held.reads ?? [];
+    const data = new Uint8Array((held.total ?? 0) * a.bytes);
+    for (const [i, r] of reads.entries()) {
       await r.mapAsync(GPUMapMode.READ);
-      data = r.getMappedRange().slice(0);
+      data.set(new Uint8Array(r.getMappedRange()), i * per * a.bytes);
       r.unmap();
     }
     const gpu = times === undefined || a.timer === undefined ? undefined : await a.timer.read(times);
-    return { out, data, encodeMs, gpuMs: gpu?.kinds.brush?.ms };
+    return { out, data: data.buffer, reads: reads.length, encodeMs, gpuMs: gpu?.kinds.brush?.ms };
   } finally {
     for (const b of temp) b.destroy();
   }

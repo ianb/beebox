@@ -7,7 +7,8 @@
 // process; and (chunk 5) batches: with the buffer limit forced small, so that
 // inputs split between contours and batches inside contours, samples,
 // instances and pixels equal an unsplit render; a contour over the limit
-// fails naming its call; the walker repeats after `release()` and wake. One
+// fails naming its call; the walker repeats after `release()` and wake; the
+// readback splits into buffers no larger than the limit. One
 // Dawn device for the file; skipped, with a message, where Dawn finds no
 // adapter.
 import assert from "node:assert/strict";
@@ -492,6 +493,35 @@ test("with the buffer limit forced small, frames draw the same pixels over sever
       whole.destroy();
       split.destroy();
     }
+  }
+});
+
+test("with the buffer limit forced small, the walker's samples and instances read back through several buffers, the same bytes", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined || text === undefined) return;
+  const [scene] = portFrames(walkerSheet, { at: [0], text });
+  assert.ok(scene !== undefined);
+  const reqs = brushRequests(scene, handle.colors);
+  const prepared = reqs.map((r) => prepare(r)).filter((p) => p !== undefined);
+  const jobs = placeJobs(reqs, 2);
+  const limit = 64 * 1024;
+  const whole = new GpuRenderer(handle);
+  const split = new GpuRenderer(handle, { brushLimit: limit });
+  try {
+    const [a, b] = [await whole.sampleBrushes(prepared), await split.sampleBrushes(prepared)];
+    const [c, d] = [await whole.brushInstances(jobs), await split.brushInstances(jobs)];
+    t.diagnostic(`limit ${limit} bytes: ${b.count} samples in ${b.reads} readback buffers (unsplit: ${a.reads}); ${d.count} instances in ${d.reads} (unsplit: ${c.reads})`);
+    assert.equal(a.reads, 1);
+    assert.equal(c.reads, 1);
+    assert.equal(b.reads, Math.ceil(b.count / Math.floor(limit / (SAMPLE_FLOATS * 4))));
+    assert.equal(d.reads, Math.ceil(d.count / Math.floor(limit / (DAB_FLOATS * 4))));
+    assert.ok(b.reads > 1 && d.reads > 1, "the readback splits");
+    assert.equal(b.data.byteLength, a.data.byteLength);
+    assert.ok(Buffer.from(b.data).equals(Buffer.from(a.data)), "the same samples, one readback buffer or several");
+    assert.ok(Buffer.from(d.data).equals(Buffer.from(c.data)), "the same instances, one readback buffer or several");
+  } finally {
+    whole.destroy();
+    split.destroy();
   }
 });
 

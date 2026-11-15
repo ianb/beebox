@@ -231,3 +231,28 @@ export function pack(strokes: readonly Prepared[], a: { jobs: readonly BrushJob[
   return { inputs, count: first, ranges };
 }
 
+/** One copy of a batch's readback: `count` items from item `src` of the batch's buffer to item `dst` of readback buffer `chunk`. */
+export interface ReadCopy {
+  readonly chunk: number;
+  readonly src: number;
+  readonly dst: number;
+  readonly count: number;
+}
+
+/**
+ * The copies that read items [first, first + count) of a frame back into
+ * readback buffers of `per` items each (the last may be shorter), so that no
+ * readback buffer exceeds the device's buffer limit. A batch that crosses a
+ * buffer's end is copied in two or more pieces.
+ */
+export function readCopies(b: { first: number; count: number }, per: number): ReadCopy[] {
+  if (!(per >= 1)) throw new GpuRenderError({ detail: `a readback buffer must hold at least one item (it holds ${per})` });
+  const out: ReadCopy[] = [];
+  for (let i = b.first, end = b.first + b.count; i < end; ) {
+    const chunk = Math.floor(i / per);
+    const n = Math.min(end, (chunk + 1) * per) - i;
+    out.push({ chunk, src: i - b.first, dst: i - chunk * per, count: n });
+    i += n;
+  }
+  return out;
+}

@@ -321,15 +321,15 @@ export class GpuRenderer {
    * eighth a u32), with each stroke's contour ranges, the CPU time to pack,
    * upload and encode, and the pass's GPU time when timing.
    */
-  async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; batches: number; inputs: number; encodeMs: number; gpuMs: number | undefined }> {
-    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: SAMPLE_FLOATS * 4, encode: (f) => this.#marks.brushes.encode(strokes, f) });
-    return { data: r.data, count: r.out.count, ranges: r.out.ranges, batches: r.out.batches, inputs: r.out.inputs, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
+  async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; batches: number; inputs: number; reads: number; encodeMs: number; gpuMs: number | undefined }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: SAMPLE_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encode(strokes, f) });
+    return { data: r.data, count: r.out.count, ranges: r.out.ranges, batches: r.out.batches, inputs: r.out.inputs, reads: r.reads, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
   }
 
   /** Verification: the `dabs` and `capsules` entries' instances for `jobs` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, each stroke's range, and the batches and input buffers they took. */
-  async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"]; batches: number; inputs: number }> {
-    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, encode: (f) => this.#marks.brushes.encodeMarks(jobs, f) });
-    return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, inputs: r.out.inputs };
+  async brushInstances(jobs: readonly BrushJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: InstanceOutputs["strokes"]; batches: number; inputs: number; reads: number }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, bytes: DAB_FLOATS * 4, limit: this.#marks.brushes.limit, encode: (f) => this.#marks.brushes.encodeMarks(jobs, f) });
+    return { data: r.data, count: r.out.count, strokes: r.out.strokes, batches: r.out.batches, inputs: r.out.inputs, reads: r.reads };
   }
 
   /** Verification: draw capsule instances (the `capsules` entry's layout, slots on one page of `size`) in their order with the mark atlas's capsule pipeline, and read the page's alpha back, row by row. */
