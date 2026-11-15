@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.8
+# Stage 1: the scene API, draft 2.9
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -586,3 +586,19 @@ From the Stage 4 builder (chunks 1–2):
   GPU's rounding".
 - **One GPU device per page,** shared by every figure and destroyed with the last
   one. A lost device shows a notice and is recreated on the next wake or click.
+
+## 21. Draft 2.9: Checkpoint 4 answers
+
+- **`material.receivesShadow`** (default `true`). `false` marks a shape on
+  which no light's shadow falls, for a backdrop in a side view (a sky behind
+  a figure, where top-down shadows would otherwise climb it). The shape is
+  still lit and still casts if it has `castsShadow`. It composites through
+  the material layer like the other material values, so a placement's
+  `material` can supply it.
+- **One light, several washed groups.** A light lights only the nearest lit
+  group around it. To light neighbouring parts that each have their own
+  wash, draw one lit group around them and give each part its wash as an
+  inner group; the lights go in the outer lit group. A light across separate
+  lit groups is not planned until box agents need it.
+- **Hatching** keeps covering its group's whole layer (Checkpoint 4, decision
+  6).

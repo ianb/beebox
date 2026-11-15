@@ -380,11 +380,22 @@ matrices and probe results go in `beebox/docs/plans/canvas-loop-scene/`.
 ### Stage 5: subplans
 
 - **What:** implementation plans, each through `bbx-plan` with cross-model
-  review: (a) scene core and Skia renderer, gallery migrated; (b) WebGL2
-  renderer; (c) brushes and effects on the GPU; (d) lighting; (e) caching and
-  offscreen sleep; (f) box figures: the figure guidance and starters for box
-  agents, the deployment order, and what an old figure sketch shows until the
-  courseware agent regenerates it (a clear error on the card, not a blank).
+  review. Revised after Checkpoint 4 (`canvas-loop-scene/stage4/checkpoint4.md`):
+  the backend is our own WebGPU renderer with Dawn headless, so there is no
+  Skia or WebGL2 renderer to plan, and the spike's renderer, mount, sleep,
+  lighting and caching are promoted rather than rewritten.
+  - (a) **Scene core:** the spike becomes canvas-loop's one API and renderer;
+    the Canvas2D painter and `v.ctx` retire; headless runs on Dawn; the
+    gallery is migrated; the dev-loop tools run on the new renderer
+    (`canvas-loop-scene-core.subplan.md`).
+  - (b) **Brushes on the GPU:** brush expansion in a compute pass, for the
+    walker (60 fps) and six-figure (30 fps) targets
+    (`canvas-loop-gpu-brushes.subplan.md`).
+  - (c) **Box figures:** beebox's figure card and `bbx figure run` on the
+    new renderer, the server's software Vulkan driver, the figure guidance
+    and starters for box agents, the deployment order, and what an old
+    figure sketch shows until the courseware agent regenerates it (a clear
+    error on the card, not a blank) (`canvas-loop-box-figures.subplan.md`).
 - **Checkpoint 5:** the boxholder approves the order and each BIG CHANGE.
 
 ## Could this be simpler?
@@ -405,7 +416,8 @@ reactions change the design.
 
 ## Subplans
 
-Stage 5 writes them. None yet.
+Stage 5 writes them: `canvas-loop-scene-core.subplan.md`,
+`canvas-loop-gpu-brushes.subplan.md`, `canvas-loop-box-figures.subplan.md`.
 
 ## Failure modes
 

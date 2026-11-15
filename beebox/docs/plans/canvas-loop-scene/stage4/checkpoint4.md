@@ -107,6 +107,17 @@ Chromebook-class check: not done; no such device is on hand.
 7. **Chromebook check.** Borrow or buy a low-end Chromebook, or accept
    desktop numbers for now? This costs money if bought.
 
+## The boxholder's answers (2026-11-15)
+
+1. Backend: our own WebGPU renderer, with Dawn headless. Confirmed.
+2. Brush speed: (a), brush expansion in a GPU compute pass. The boxholder:
+   "isn't that the whole point of what we've done?"
+3. Placement snapping: keep.
+4. Side-view shadows: add `material.receivesShadow` (draft 2.9).
+5. A light across washed groups: document the pattern (draft 2.9).
+6. Hatching coverage: leave it as it is.
+7. Chromebook check: accept desktop numbers for now.
+
 ## Production needs (not done; nothing deployed)
 
 - beebox declares `webgpu` as a dependency, for `bbx figure run` on the
