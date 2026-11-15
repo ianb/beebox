@@ -28,10 +28,12 @@ void test("The CLI and SDK versions are one lockstep contract.", async (t) => {
   const result = await execFileAsync(codexBinaryPath(), ["--version"]);
   t.check(result.stdout.trim(), `codex-cli ${packageJson.dependencies["@openai/codex"]}`);
 
-  // The deploy refreshes the operator command from that dependency.
+  // The deploy refreshes the operator command from that dependency. The link
+  // goes through the install directory (`/opt/beebox`, itself a link to the live
+  // release), not the release directory, so it follows a later switch or rollback.
 
   // `deploy` is a whole shell script: a narrow check on the one line under test.
-  t.check(deploy, any(String).includes("ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex"));
+  t.check(deploy, any(String).includes('ln -sf "$INSTALL_DIR/node_modules/.bin/codex" /usr/local/bin/codex'));
 
   // The deployment gate uses a scratch home and checks plugin-command
   // compatibility. It does not run `plugin list` against repairable global state.

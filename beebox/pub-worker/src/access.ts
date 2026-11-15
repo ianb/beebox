@@ -152,8 +152,8 @@ async function verifySignature({
 }: {
   jwks: readonly Jwk[];
   kid: string;
-  signature: Uint8Array;
-  data: Uint8Array;
+  signature: Uint8Array<ArrayBuffer>;
+  data: Uint8Array<ArrayBuffer>;
 }): Promise<boolean> {
   const jwk = jwks.find((k) => k.kid === kid);
   if (jwk === undefined) return false;
@@ -195,7 +195,7 @@ function decodeJson<T>(segment: string, schema: z.ZodType<T>): T | null {
   return parsed.success ? parsed.data : null;
 }
 
-function base64UrlToBytes(input: string): Uint8Array | null {
+function base64UrlToBytes(input: string): Uint8Array<ArrayBuffer> | null {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
   let binary: string;

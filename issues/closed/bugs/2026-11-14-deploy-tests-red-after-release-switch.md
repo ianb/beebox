@@ -1,12 +1,15 @@
 ---
 title: "`window.test.ts` and `codex-runtime.test.ts` are red after the install-then-switch deploy change"
-workstream: unattached
+workstream: main-green
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.325 bump
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** window.test.ts built the activation script from the WINDOW heredoc alone; deploy.sh always prints INSTALL_DIR, RELEASE and RELEASES_CLI in the same block just before it, so real deploys cannot reach the trap without them. The test now sets them. codex-runtime.test.ts now expects the codex link through "$INSTALL_DIR", which is the stable link to the live release and so follows a switch or rollback.
 
 Two deploy tests fail on current main every run, alone and in the full suite:
 
@@ -25,7 +28,7 @@ deploy, not only the test; the owner of that change should check which. The
 Codex test only needs its expected line updated if the symlink is right.
 
 The SDK bump that surfaced these touches neither file. Related, already filed:
-`issues/bugs/2026-11-13-cross-box-probe-box-install-test-fails-on-mac.md`.
+`issues/closed/bugs/2026-11-13-cross-box-probe-box-install-test-fails-on-mac.md`.
 
 Reproduce, from `beebox/`:
 `npx tap --disable-coverage test/deploy/window.test.ts test/deploy/codex-runtime.test.ts`.
