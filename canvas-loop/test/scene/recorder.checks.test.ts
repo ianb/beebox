@@ -55,7 +55,10 @@ test("off canvas, through the recorder: a drawing that moves joins the summary; 
   assert.match(out[1] ?? "", /^1 line draws only off the 80×60 canvas while moving, on every frame 0–2: line \d+:\d+ \(rect\) in test\/scene\/recorder\.checks\.test\.ts; a camera/);
 });
 
-const rect = (content: string, at: { x: number; y: number; w?: number; h?: number }): TextRect => ({ content, x: at.x, y: at.y, w: at.w ?? 30, h: at.h ?? 10, site: site(`${content}.ts:1:1`) });
+const rect = (content: string, at: { x: number; y: number; w?: number; h?: number }): TextRect => {
+  const [w, h] = [at.w ?? 30, at.h ?? 10];
+  return { content, x: at.x, y: at.y, w, h, corners: [[at.x, at.y], [at.x + w, at.y], [at.x, at.y + h], [at.x + w, at.y + h]], site: site(`${content}.ts:1:1`) };
+};
 
 test("label overlap: a pair overlapping by more than 2 px is reported once, naming the later text first; touching, equal and blank texts are not", () => {
   const reported = new Set<string>();
@@ -107,6 +110,18 @@ test("label overlap, through the recorder: top-level labels, labels inside a pla
   assert.equal(placed.length, 1, "the placement at (100, 50) overlaps; the one at (10, 10) does not");
   assert.match(placed[0] ?? "", /text "in a picture" overlaps text "over it"/);
   assert.deepEqual(warningsOf((v) => v.mask(() => v.text("stencil", { x: 10, y: 20 }, { size: 14 }), () => v.text("seen", { x: 12, y: 22 }, { size: 14 }))), []);
+});
+
+test("label overlap: a rotation inside a picture undone by its placement leaves the label upright, not a box around a box (review probe)", () => {
+  const r = textRect("a", { bounds: { x: 0, y: 0, w: 100, h: 10, size: 10 }, matrix: [Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, 0, 0], site: site("x") });
+  const back = placedRect(r, [Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, Math.SQRT1_2, 0, 0]);
+  assert.deepEqual([back.x, back.y, back.w, back.h].map((n) => Math.round(n * 100) / 100), [0, 1.2, 100, 7.6]);
+  const out = warningsOf((v) => {
+    const tag = v.picture({ key: "tag", width: 200, height: 200 }, () => v.at({ rotate: Math.PI / 4 }, () => v.text("a long label in a turned picture", { x: 0, y: 0 }, { size: 14 })));
+    v.at({ rotate: -Math.PI / 4 }, () => v.place(tag, 0, 0));
+    v.text("below it", { x: 20, y: 30 }, { size: 14 });
+  });
+  assert.deepEqual(out, []);
 });
 
 test("missing glyph, through the recorder: once per font and character, naming the code point and the line", () => {

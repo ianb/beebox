@@ -11,6 +11,7 @@ import type { LightPlan } from "./light.js";
 import type { BevelPlan } from "./material.js";
 import type { GlyphCell } from "./glyphs.js";
 import type { PaintRec } from "./paint.js";
+import type { MarkPeak } from "./peaks.js";
 
 export interface R {
   readonly x0: number;
@@ -165,6 +166,8 @@ export interface Job {
   bevel?: BevelPlan | undefined;
   /** The finished layer once encoded; texel (0, 0) is device pixel (rect.x0, rect.y0). Set when lowered for a kept picture tile. */
   tex?: GPUTexture | undefined;
+  /** A kept picture tile reused this frame: its marks' strengths relative to the tile, measured when it was drawn (testing mode, peaks.ts). */
+  keptPeaks?: readonly MarkPeak[] | undefined;
   /** A picture tile to keep once drawn (rasters.ts), in raster space. */
   keep?: { readonly version: PictureVersion; readonly key: string } | undefined;
 }

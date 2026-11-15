@@ -526,6 +526,16 @@ then the switch that deletes the old code; then docs.
   - Browser colours: `SceneSurfaceDeps.colors`, made at mount from
     `browser2d()`; its case is in `test/browser/scene/surface.test.ts`, as
     `cases.ts` runs headless only.
+- **Review fixes (chunk 3).** Each peak slot is one mark item, multiplied by
+  its own layer's opacity before the largest per mark is taken. A picture
+  tile drawn while measuring keeps its marks' strengths (relative to the
+  tile) beside its kept raster; a frame that reuses the tile takes them times
+  the opacity around the reuse, so raster reuse and its hit counts are
+  unchanged. (Bypassing raster reuse while measuring was smaller, but every
+  headless run would then skip the tile cache the browser uses.)
+  `shelfPack` caps the packing width at the atlas side before fitting. A
+  label in a picture keeps its four corners through placements; the upright
+  box is taken once, after the transforms compose.
 - **Follow-ups (chunk 3).** Rows 37 (`empty-clip`), 41 (`flat-hatching`) and
   45 (`deep-nesting`) stay `todo`; they are the new diagnostics under "NOT
   in scope", with their proposals in `stage4/dev-loop.md` ("Gaps left").

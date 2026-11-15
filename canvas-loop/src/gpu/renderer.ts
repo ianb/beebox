@@ -33,7 +33,7 @@ import type { PictureVersion } from "../scene/nodes.js";
 import type { R } from "./jobs.js";
 import { ErrorScopes } from "./error-scopes.js";
 import type { MarkPeak, PeakPlan } from "./peaks.js";
-import { bindPeaks, copyPeaks, planPeaks, readPeaks } from "./peaks.js";
+import { bindPeaks, copyPeaks, peaksOf, planPeaks, readPeaks } from "./peaks.js";
 
 
 export type { MarkPeak } from "./peaks.js";
@@ -85,7 +85,7 @@ interface Encoded {
   /** The pass timestamps to read once the frame is done, when timing. */
   readonly times: GPUBuffer | undefined;
   /** Testing mode: the marks' peak slots to read once the frame is done, when measuring them. */
-  readonly peaks: { readonly read: GPUBuffer; readonly plan: PeakPlan } | undefined;
+  readonly peaks: { readonly read: GPUBuffer | undefined; readonly plan: PeakPlan } | undefined;
 }
 
 /** Map a frame's readback buffer and copy out its rows. */
@@ -181,7 +181,7 @@ export class GpuRenderer {
     stats.atlasPages = atlas.length;
     stats.markPages = markPages.length;
     const plan = this.#measurePeaks ? planPeaks(jobs) : undefined;
-    const peaks = plan === undefined || plan.marks.length === 0 ? undefined : bindPeaks(plan, { device, pipes: this.#pipes.peak(), temp: a.temp });
+    const peaks = plan === undefined || plan.slots.size === 0 ? undefined : bindPeaks(plan, { device, pipes: this.#pipes.peak(), temp: a.temp });
     const f: Frame = { device, enc, pool: this.#pool, pipes: this.#pipes, atlas, markPages, glyphPages, image: (v) => this.#images.get(v), smear: this.#smear, painterly: this.#painterly, light: this.#light, temp: a.temp, stats, timer, bindGroups: new Map(), peaks: peaks?.binding };
     buildClipPages(clips, f);
     const t2 = performance.now();
@@ -203,7 +203,7 @@ export class GpuRenderer {
     stats.keptMisses = this.#kept.misses;
     stats.cpu = { lower: t1 - t0, atlas: t2 - t1, encode: t3 - t2, submit: 0 };
     const times = timer?.resolve(enc, a.temp);
-    const peakRead = peaks === undefined || plan === undefined ? undefined : { read: copyPeaks(peaks.buffer, { enc, device, temp: a.temp }), plan };
+    const peakRead = plan === undefined ? undefined : { read: peaks === undefined ? undefined : copyPeaks(peaks.buffer, { enc, device, temp: a.temp }), plan };
     const submit = (): void => {
       device.queue.submit([enc.finish()]);
       stats.cpu.submit = performance.now() - t3;
@@ -237,9 +237,16 @@ export class GpuRenderer {
   async render(scene: Scene, ratio: number): Promise<Pixels> {
     return this.#frame(scene, { ratio }, async (out) => {
       const pixels = await readPixels(out);
-      if (this.#measurePeaks) this.peaks = out.peaks === undefined ? [] : await readPeaks(out.peaks.read, out.peaks.plan);
+      if (out.peaks !== undefined) this.peaks = await this.#peaksOf(out.peaks);
       return pixels;
     });
+  }
+
+  /** Testing mode: the frame's marks' strengths; each tile drawn this frame keeps its own beside its raster. */
+  async #peaksOf(p: { read: GPUBuffer | undefined; plan: PeakPlan }): Promise<MarkPeak[]> {
+    const raw = p.read === undefined ? [] : await readPeaks(p.read);
+    for (const t of p.plan.tiles) if (t.job.keep !== undefined) this.#rasters.notePeaks(t.job.keep.version, { key: t.job.keep.key, peaks: peaksOf(t.parts, raw) });
+    return peaksOf(p.plan.frame, raw);
   }
 
   /**

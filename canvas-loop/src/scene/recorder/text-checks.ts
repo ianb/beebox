@@ -18,6 +18,8 @@ export interface TextRect {
   readonly y: number;
   readonly w: number;
   readonly h: number;
+  /** The letter box's four corners, transformed: a placement moves these, so a rotation undone by an outer one gives an upright box again. */
+  readonly corners: readonly (readonly [number, number])[];
   /** Where the sketch drew it. */
   readonly site: CallSite;
 }
@@ -34,11 +36,15 @@ const SLACK = 2;
 
 const quote = (s: string): string => JSON.stringify(s.length > 30 ? `${s.slice(0, 29)}…` : s);
 
-/** The upright box around four corners under `m`. */
-function boxUnder(m: Mat, b: { x0: number; y0: number; x1: number; y1: number }): { x: number; y: number; w: number; h: number } {
-  const corners = [[b.x0, b.y0], [b.x1, b.y0], [b.x0, b.y1], [b.x1, b.y1]] as const;
-  const xs = corners.map(([x, y]) => m[0] * x + m[2] * y + m[4]);
-  const ys = corners.map(([x, y]) => m[1] * x + m[3] * y + m[5]);
+type Corners = readonly (readonly [number, number])[];
+
+/** `corners` under `m`. */
+const mapped = (m: Mat, corners: Corners): Corners => corners.map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]] as const);
+
+/** The upright box around `corners`. */
+function upright(corners: Corners): { x: number; y: number; w: number; h: number } {
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
   const x = Math.min(...xs);
   const y = Math.min(...ys);
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
@@ -48,12 +54,15 @@ function boxUnder(m: Mat, b: { x0: number; y0: number; x1: number; y1: number })
 export function textRect(content: string, a: { bounds: Pick<TextBounds, "x" | "y" | "w" | "h" | "size">; matrix: Mat; site: CallSite }): TextRect {
   const b = a.bounds;
   const trim = b.size * 0.12;
-  return { content, ...boxUnder(a.matrix, { x0: b.x, y0: b.y + trim, x1: b.x + b.w, y1: b.y + b.h - trim }), site: a.site };
+  const [y0, y1] = [b.y + trim, b.y + b.h - trim];
+  const corners = mapped(a.matrix, [[b.x, y0], [b.x + b.w, y0], [b.x, y1], [b.x + b.w, y1]]);
+  return { content, ...upright(corners), corners, site: a.site };
 }
 
-/** A picture body's text box where a placement under `matrix` puts it. */
+/** A picture body's text where a placement under `matrix` puts it: its corners move, and the upright box is taken around them once. */
 export function placedRect(r: TextRect, matrix: Mat): TextRect {
-  return { ...r, ...boxUnder(matrix, { x0: r.x, y0: r.y, x1: r.x + r.w, y1: r.y + r.h }) };
+  const corners = mapped(matrix, r.corners);
+  return { ...r, ...upright(corners), corners };
 }
 
 /** A pair to report: the earlier-drawn text, the later one (whose line the warning names), and where they meet. */

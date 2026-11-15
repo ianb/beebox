@@ -32,7 +32,7 @@ import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonRece
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
 import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
-import { peakVariantSameBytes, peaksMeasured } from "./peak-cases.js";
+import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-cases.js";
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
 import * as sceneSketchModule from "./scene-sketch.js";
@@ -266,6 +266,7 @@ onGpu("pixels images and pictures in a lit group snap to whole device pixels (dr
 
 onGpu("testing mode's faint-mark readback leaves the colour output byte-identical", peakVariantSameBytes);
 onGpu("a mark's measured peak is its resolved alpha times its groups' opacities; erasing marks are not measured", peaksMeasured);
+onGpu("a picture tile reused from an earlier frame keeps its marks' peaks, times the opacity it is placed at now", keptPictureFaint);
 
 // The dev-loop checklist (beebox/docs/plans/canvas-loop-scene/stage4/dev-loop.md): each deliberately bad
 // sketch runs through the headless runner, and its message must come out on the expected channel naming

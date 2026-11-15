@@ -7,7 +7,7 @@ import { shelfPack } from "../../src/gpu/atlas.js";
 import type { Item, Job } from "../../src/gpu/jobs.js";
 import { ATLAS_MAX, cutOf } from "../../src/gpu/jobs.js";
 import { NodePath, atPath, nodeName } from "../../src/gpu/node-path.js";
-import { planPeaks } from "../../src/gpu/peaks.js";
+import { peaksOf, planPeaks } from "../../src/gpu/peaks.js";
 import { GpuRenderError, UnsupportedCallError } from "../../src/scene/errors.js";
 import type { SceneNode, ShapeNode } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
@@ -61,6 +61,11 @@ test("the atlas cut: 2 px past what can be seen, except on an axis where that pa
   assert.deepEqual(cutOf({ x0: 0, y0: 0, x1: ATLAS_MAX, y1: 8 }), { x0: 0, y0: -2, x1: ATLAS_MAX, y1: 10 });
   const pages = shelfPack([{ box: { x0: 0, y0: 0, x1: ATLAS_MAX, y1: 8 } }], ATLAS_MAX);
   assert.deepEqual(pages, [{ w: ATLAS_MAX, h: 9 }], "a piece as wide as the atlas fits on its page, with no gap after it");
+  // Review probe: a caller asking for a page one wider than the atlas (a clip page) must not place a piece past the atlas side.
+  const probe: { box: { x0: number; y0: number; x1: number; y1: number }; slot?: { page: number; x: number; y: number } }[] = [{ box: { x0: 0, y0: 0, x1: 1, y1: 10 } }, { box: { x0: 0, y0: 0, x1: ATLAS_MAX - 1, y1: 8 } }, { box: { x0: 0, y0: 0, x1: ATLAS_MAX, y1: 4 } }];
+  const sizes = shelfPack(probe, ATLAS_MAX + 1);
+  for (const p of probe) assert.ok((p.slot?.x ?? 0) + p.box.x1 <= ATLAS_MAX, `a ${p.box.x1} px piece at x ${String(p.slot?.x)} ends inside the atlas`);
+  for (const size of sizes) assert.ok(size.w <= ATLAS_MAX);
 });
 
 const job = (name: string, items: Item[]): Job => ({ name, rect: { x0: 0, y0: 0, x1: 100, y1: 100 }, items, clips: [], fx: undefined });
@@ -71,7 +76,7 @@ const shape = (call: string): ShapeNode => ({ kind: "shape", call, geom: { kind:
 const mark = (node: ShapeNode | undefined, a?: { erase?: boolean; box?: Item["box"] }): Item => ({ ...common, ...(a?.box === undefined ? {} : { box: a.box }), erase: a?.erase ?? false, k: "mark", source: { kind: "tex", mark: { box: common.box, dabs: [], runs: [], ox: 0, oy: 0 } }, tinted: false, paint, brush, node });
 const layer = (child: Job, opacity: number): Item => ({ ...common, erase: false, k: "layer", job: child, mask: undefined, opacity });
 
-test("peak slots: one per colour mark's node, with the largest product of opacities along any path from the canvas", () => {
+test("peak slots: one per drawn colour mark item; each item's peak times the largest product of opacities to its layer", () => {
   const a = shape("line");
   const b = shape("curve");
   const c = shape("arc");
@@ -81,6 +86,31 @@ test("peak slots: one per colour mark's node, with the largest product of opacit
   const body = job("body", []);
   const root = job("canvas", [layer(faded, 0.2), layer(tile, 0.8), { ...common, erase: false, k: "layer", job: body, mask, opacity: 1 }, mark(undefined), mark(c, { erase: true }), mark(c, { box: { x0: 200, y0: 0, x1: 210, y1: 10 } })]);
   const plan = planPeaks([tile, faded, mask, body, root]);
-  assert.deepEqual(plan.marks.map((m) => [m.node.call, m.groups]), [["line", 0.8], ["curve", 0.2]], "the tile is reached at 0.2 × 0.5 and at 0.8; marks in a mask, erasing, without a node or outside the layer get no slot");
-  assert.equal(plan.slots.get(tile.items[0] ?? mark(undefined)), 1);
+  assert.equal(plan.slots.size, 3, "erasing, nodeless and undrawn marks get no slot; a mask's mark gets one but no part");
+  const raw = [0, 1, 0.5, 1];
+  assert.deepEqual(peaksOf(plan.frame, raw).map((m) => [m.node.call, m.alpha]).toSorted(), [["curve", 0.1], ["line", 0.8]], "the tile is reached at 0.2 × 0.5 and at 0.8; the arc in the mask is not measured");
+});
+
+test("peak aggregation: each item takes its own layer's opacity before the largest per mark is taken (review probe)", () => {
+  // One stroke across two tiles of a picture: its opaque end in a tile placed at 1%, its 1% end in a tile placed at 100%.
+  const stroke = shape("line");
+  const opaqueEnd = job("tile 0,0", [mark(stroke)]);
+  const faintEnd = job("tile 1,0", [mark(stroke)]);
+  const root = job("canvas", [layer(opaqueEnd, 0.01), layer(faintEnd, 1)]);
+  const plan = planPeaks([opaqueEnd, faintEnd, root]);
+  // Slots follow the jobs' order: the opaque end's item is 1, the faint end's 2.
+  const raw = [0, 1, 0.01];
+  const [only] = peaksOf(plan.frame, raw);
+  assert.ok(only !== undefined && Math.abs(only.alpha - 0.01) < 1e-9, `both visible ends are about 1% (${String(only?.alpha)})`);
+});
+
+test("peak slots: a kept tile reused this frame brings its marks' strengths, times the opacity around the reuse", () => {
+  const kept = shape("line");
+  const drawn = shape("curve");
+  const reused: Job = { ...job("kept tile", []), tex: undefined, keptPeaks: [{ node: kept, alpha: 0.9 }] };
+  const fresh: Job = { ...job("new tile", [mark(drawn)]), keep: undefined };
+  const group = job("group", [layer(fresh, 0.5)]);
+  const root = job("canvas", [layer(reused, 0.05), layer(group, 1)]);
+  const plan = planPeaks([fresh, group, root]);
+  assert.deepEqual(peaksOf(plan.frame, [0, 0.6]).map((m) => [m.node.call, Math.round(m.alpha * 1000) / 1000]).toSorted(), [["curve", 0.3], ["line", 0.045]]);
 });

@@ -1,12 +1,16 @@
 // Testing mode's faint-mark readback (dev-loop row 42). Each brushed mark
-// drawn in colour gets a slot; its draws run the peak-writing variant of the
-// draw shader (shader-draw.ts), which keeps the largest alpha the mark's
+// item drawn in colour gets a slot; its draws run the peak-writing variant of
+// the draw shader (shader-draw.ts), which keeps the largest alpha the item's
 // composite draw resolves (paint alpha × coverage × paper grain × brush
 // opacity) with an atomic max. The slots are read back once per rendered
-// frame. The opacity of the groups and placements around a mark is applied on
-// the CPU: the largest product along any path from the canvas to the mark's
-// layer. Mask layers are stencils and material layers are not colour, so
-// neither is measured.
+// frame. Each item's peak is multiplied by the opacity of the groups and
+// placements around its own layer (the largest product along any path from
+// the canvas), then a mark's strength is the largest over its items. A
+// picture tile drawn this frame keeps its marks' strengths, relative to the
+// tile, beside its kept raster (rasters.ts); a later frame that reuses the
+// tile takes them times the opacity around the reuse, so a kept picture
+// placed fainter still warns. Mask layers are stencils and material layers
+// are not colour, so neither is measured.
 import type { ShapeNode } from "../scene/nodes.js";
 import type { Item, Job } from "./jobs.js";
 import { inter, isEmpty } from "./jobs.js";
@@ -18,44 +22,69 @@ export interface MarkPeak {
   readonly alpha: number;
 }
 
-/** The frame's marks: each mark item's slot (1 and up), and per slot its node and the opacity around it. */
+/** One contribution to a mark's strength: an item measured this frame (its slot), or a kept tile's mark; times the opacity around it. */
+export type PeakPart = { readonly node: ShapeNode; readonly factor: number } & ({ readonly slot: number } | { readonly alpha: number });
+
+/** The frame's peak slots (one per mark item, 1 and up), what the canvas's marks are made of, and each tile drawn this frame to keep with its marks. */
 export interface PeakPlan {
   readonly slots: ReadonlyMap<Item, number>;
-  readonly marks: readonly { readonly node: ShapeNode; groups: number }[];
+  readonly frame: readonly PeakPart[];
+  readonly tiles: readonly { readonly job: Job; readonly parts: readonly PeakPart[] }[];
 }
 
-/** Plan the slots for `jobs` (children first, as `postOrder` gives them; the canvas last). */
-export function planPeaks(jobs: readonly Job[]): PeakPlan {
-  // Parents before children: the canvas first, then each layer's opacity times its parent's, the largest over every path.
-  const opacity = new Map<Job, number>();
-  const root = jobs.at(-1);
-  if (root !== undefined) opacity.set(root, 1);
-  for (const job of jobs.toReversed()) {
-    const outer = opacity.get(job);
-    if (outer === undefined) continue;
-    for (const it of job.items) if (it.k === "layer") opacity.set(it.job, Math.max(opacity.get(it.job) ?? 0, outer * it.opacity));
-  }
-  const slots = new Map<Item, number>();
-  const byNode = new Map<ShapeNode, number>();
-  const marks: { node: ShapeNode; groups: number }[] = [];
-  for (const job of jobs) {
-    const groups = opacity.get(job);
-    if (groups === undefined) continue;
+/** The largest product of layer opacities from `start` to each layer below it (kept tiles included). */
+function opacityFrom(start: Job): Map<Job, number> {
+  const opacity = new Map<Job, number>([[start, 1]]);
+  const work = [start];
+  for (let job = work.pop(); job !== undefined; job = work.pop()) {
+    const outer = opacity.get(job) ?? 0;
     for (const it of job.items) {
-      // Only what encoding draws (encodeJob drops an item outside its job's layer): a mark with no draw would read 0.
-      if (it.k !== "mark" || it.node === undefined || it.erase || isEmpty(inter(it.box, job.rect))) continue;
-      let slot = byNode.get(it.node);
-      if (slot === undefined) {
-        marks.push({ node: it.node, groups });
-        slot = marks.length;
-        byNode.set(it.node, slot);
-      }
-      const mark = marks[slot - 1];
-      if (mark !== undefined) mark.groups = Math.max(mark.groups, groups);
-      slots.set(it, slot);
+      if (it.k !== "layer" || outer * it.opacity <= (opacity.get(it.job) ?? -1)) continue;
+      opacity.set(it.job, outer * it.opacity);
+      work.push(it.job);
     }
   }
-  return { slots, marks };
+  return opacity;
+}
+
+/** The parts of the marks under `start`: items drawn this frame (in `slots`) and kept tiles' marks. */
+function partsUnder(start: Job, slots: ReadonlyMap<Item, number>): PeakPart[] {
+  const parts: PeakPart[] = [];
+  for (const [job, factor] of opacityFrom(start)) {
+    for (const it of job.items) {
+      const slot = slots.get(it);
+      if (slot !== undefined && it.k === "mark" && it.node !== undefined) parts.push({ node: it.node, factor, slot });
+    }
+    for (const p of job.keptPeaks ?? []) parts.push({ node: p.node, factor, alpha: p.alpha });
+  }
+  return parts;
+}
+
+/** Plan the slots for `jobs` (the jobs encoded this frame, children first, as `postOrder` gives them; the canvas last). */
+export function planPeaks(jobs: readonly Job[]): PeakPlan {
+  const slots = new Map<Item, number>();
+  for (const job of jobs) {
+    for (const it of job.items) {
+      // Only what encoding draws (encodeJob drops an item outside its job's layer): a mark with no draw would read 0.
+      if (it.k === "mark" && it.node !== undefined && !it.erase && !isEmpty(inter(it.box, job.rect))) slots.set(it, slots.size + 1);
+    }
+  }
+  const root = jobs.at(-1);
+  return {
+    slots,
+    frame: root === undefined ? [] : partsUnder(root, slots),
+    tiles: jobs.filter((j) => j.keep !== undefined).map((job) => ({ job, parts: partsUnder(job, slots) })),
+  };
+}
+
+/** Each mark's strength: the largest over its parts of the part's peak (`raw[slot]`, 0..1, or a kept tile's) times its factor. */
+export function peaksOf(parts: readonly PeakPart[], raw: readonly number[]): MarkPeak[] {
+  const best = new Map<ShapeNode, number>();
+  for (const p of parts) {
+    const alpha = ("slot" in p ? (raw[p.slot] ?? 0) : p.alpha) * p.factor;
+    best.set(p.node, Math.max(best.get(p.node) ?? 0, alpha));
+  }
+  return [...best].map(([node, alpha]) => ({ node, alpha }));
 }
 
 /** What encoding needs for a frame that measures peaks: each mark item's slot, the pipelines and the slots' bind group. */
@@ -67,7 +96,7 @@ export interface PeakBinding {
 
 /** The slots' storage buffer (zeroed) and its bind group; the buffer joins `temp`. */
 export function bindPeaks(plan: PeakPlan, a: { device: GPUDevice; pipes: PeakPipelines; temp: GPUBuffer[] }): { binding: PeakBinding; buffer: GPUBuffer } {
-  const size = 4 * (plan.marks.length + 1);
+  const size = 4 * (plan.slots.size + 1);
   const buffer = a.device.createBuffer({ size: Math.max(16, size), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
   a.temp.push(buffer);
   const group = a.device.createBindGroup({ layout: a.pipes.g2, entries: [{ binding: 0, resource: { buffer } }] });
@@ -82,10 +111,10 @@ export function copyPeaks(buffer: GPUBuffer, a: { enc: GPUCommandEncoder; device
   return read;
 }
 
-/** Map the copied slots: each mark's peak alpha times its groups' opacity. */
-export async function readPeaks(read: GPUBuffer, plan: PeakPlan): Promise<MarkPeak[]> {
+/** Map the copied slots: each slot's peak alpha, 0..1, by slot index (index 0 is unused). */
+export async function readPeaks(read: GPUBuffer): Promise<number[]> {
   await read.mapAsync(GPUMapMode.READ);
   const words = new Uint32Array(read.getMappedRange().slice(0));
   read.unmap();
-  return plan.marks.map((m, i) => ({ node: m.node, alpha: ((words[i + 1] ?? 0) / 65535) * m.groups }));
+  return Array.from(words, (w) => w / 65535);
 }

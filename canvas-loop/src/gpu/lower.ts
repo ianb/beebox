@@ -307,7 +307,7 @@ export class Lowering {
   #tileJob(v: PictureVersion, a: { key: string; tile: R; rm: Mat; ground: readonly (readonly number[])[]; here: Here }): Job {
     const { key, tile, rm } = a;
     const kept = this.#rasters.kept(v, key);
-    if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex };
+    if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex, keptPeaks: kept.peaks };
     const drawing = this.#drawing.get(v)?.get(key);
     if (drawing !== undefined) return drawing;
     const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, seen: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });

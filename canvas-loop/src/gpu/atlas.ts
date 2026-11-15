@@ -23,6 +23,8 @@ export interface AtlasPage {
 
 /** Shelf-pack boxes (tallest first) into pages; sets each one's slot. Returns each page's used size. */
 export function shelfPack(pieces: readonly { readonly box: R; slot?: Slot }[], pageWidth: number): { w: number; h: number }[] {
+  // A page is never wider than the atlas, whatever width the caller asks for.
+  const width = Math.min(pageWidth, MAX);
   const pages: { w: number; h: number }[] = [];
   let x = 0;
   let y = 0;
@@ -32,7 +34,7 @@ export function shelfPack(pieces: readonly { readonly box: R; slot?: Slot }[], p
     const w = widthOf(p.box);
     const h = heightOf(p.box);
     if (w > MAX || h > MAX) throw new GpuRenderError({ detail: `a shape ${w}×${h} device px is larger than the atlas (${MAX}); tiling is not built` });
-    if (x + w > pageWidth) {
+    if (x + w > width) {
       x = 0;
       y += shelf + GAP;
       shelf = 0;

@@ -11,6 +11,7 @@
 // last two frames are destroyed, and past 256 MB the least recently placed go
 // first; no texture is held outside that count.
 import type { PictureVersion } from "../scene/nodes.js";
+import type { MarkPeak } from "./peaks.js";
 import type { R } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import { GpuRenderError } from "../scene/errors.js";
@@ -51,6 +52,8 @@ export interface KeptTile {
   readonly rect: R;
   readonly tex: GPUTexture | undefined;
   frame: number;
+  /** Testing mode: its marks' strengths relative to the tile, from the frame it was drawn (peaks.ts). */
+  peaks?: readonly MarkPeak[];
 }
 
 export class RasterCache {
@@ -99,6 +102,12 @@ export class RasterCache {
     if (replaced !== undefined && replaced !== a.tex) replaced.destroy();
     map.set(a.key, { rect: a.rect, tex: a.tex, frame: this.#frame });
     this.#tiles.set(version, map);
+  }
+
+  /** Keep the marks' strengths measured in a tile drawn this frame beside it, for frames that reuse it. */
+  notePeaks(version: PictureVersion, a: { key: string; peaks: readonly MarkPeak[] }): void {
+    const t = this.#tiles.get(version)?.get(a.key);
+    if (t !== undefined) t.peaks = a.peaks;
   }
 
   /** A texture made by `texture` that will not be kept (a failed frame). */

@@ -59,3 +59,26 @@ export async function peaksMeasured(handle: GpuHandle): Promise<void> {
   assert.ok(half !== undefined && Math.abs(half - 0.5) < 0.02, `paint alpha 0.5 peaks at 0.5 (${String(half)})`);
   assert.ok(nested !== undefined && Math.abs(nested - 0.125) < 0.01, `nested group opacities multiply: 0.25 × 0.5 (${String(nested)})`);
 }
+
+// Review probe: a picture kept from an earlier frame, placed fainter, still has its marks judged (and is still reused).
+export async function keptPictureFaint(handle: GpuHandle): Promise<void> {
+  const recorder = new SceneRecorder({ width: 80, height: 60 });
+  const frame = (opacity: number): Scene =>
+    recorder.record((v) => {
+      const sign = v.picture({ key: "sign", width: 60, height: 20 }, () => v.line(4, 10, 56, 10, { stroke: "#000", weight: 4, brush: "ink" }));
+      v.place(sign, 10, 20, { opacity });
+    }).scene;
+  const renderer = new GpuRenderer(handle, { peaks: true });
+  try {
+    await renderer.render(frame(1), 1);
+    const [first] = renderer.peaks;
+    assert.ok(first !== undefined && first.alpha > 0.9, `drawn at full opacity, the ink peaks near 1 (${String(first?.alpha)})`);
+    await renderer.render(frame(0.01), 1);
+    assert.ok(renderer.stats.tileHits > 0, "the picture's tile is reused");
+    assert.equal(renderer.stats.tilesDrawn, 0);
+    const [again] = renderer.peaks;
+    assert.ok(again !== undefined && again.node === first.node && Math.abs(again.alpha - 0.01) < 0.002, `reused at 1%, the kept peak times 0.01 (${String(again?.alpha)})`);
+  } finally {
+    renderer.destroy();
+  }
+}
