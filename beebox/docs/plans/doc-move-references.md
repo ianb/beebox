@@ -9,7 +9,7 @@ issues:
 
 Three tools move a document: `bin/doc-move` (a plan at close-out), `bin/issues close`, and `bin/workstreams confirm-tested`. Each leaves some reference to the old path stale or leaves the git index half staged. This plan makes all three run one shared move in `bin/lib/doc-move.ts` that rewrites every path token naming the old file, refuses when it cannot, and leaves both indexes untouched, printing the exact `git add` line for each repository.
 
-**Issues addressed:** `issues/closed/bugs/2026-11-13-doc-move-and-issues-close-leave-stale-references.md`. Related, decided separately: `issues/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md` (whether code should cite plans by path at all; see Open design questions). Prior art this must not undo: `issues/closed/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md`, `issues/closed/code-quality/2026-10-10-doc-check-fix-misses-moved-file-paths.md`, `issues/closed/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md`.
+**Issues addressed:** `issues/closed/bugs/2026-11-13-doc-move-and-issues-close-leave-stale-references.md`. Related, decided separately: `issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md` (whether code should cite plans by path at all; see Open design questions). Prior art this must not undo: `issues/closed/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md`, `issues/closed/code-quality/2026-10-10-doc-check-fix-misses-moved-file-paths.md`, `issues/closed/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md`.
 
 ## Design
 
