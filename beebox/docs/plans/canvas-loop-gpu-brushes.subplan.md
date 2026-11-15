@@ -732,6 +732,94 @@ by the same WebGPU renderer.
 - **Checkpoint.** Ink crops; Astra reads the walker at 4× again.
   **Measurement:** the walker in Chromium at ratio 2 (`measure.sh`, under the
   GPU lock): fps, record, lower, atlas, encode, GPU pass times.
+- **As built (chunk 4).** Ink strokes are no longer expanded on the CPU: the
+  expander keeps an `InkSet` (the prepared stroke and the brush), and ink
+  marks are `tex` marks drawn as coverage (src 3). perfect-freehand stays only
+  in `expandOnCpu`, for the tests, until chunk 9. Details settled here:
+  - **One capsule per sample, not per segment.** Sample `i` writes capsule
+    `i`, from it to sample `i + 1` of its contour. The contour's last sample
+    writes radius 0, which the vertex shader collapses to nothing. A
+    one-sample contour writes a disc. A capsule instance has the dab's 12
+    floats (ax, ay, ra, bx; by, rb, 0, 0; the slot). Stamps and inks share
+    one instance buffer: the pass packs stamp strokes first (a stable
+    reorder), runs `dabs` over the stamps' samples and `capsules` over the
+    inks'. `capsules` is a second entry in the dabs module (`INSTANCES_WGSL`).
+    The radius is perfect-freehand's, `width / (1 + thinning) × (0.5 −
+    thinning × (0.5 − p))`, times the ratio.
+  - **The box.** Ink grows the prepared box by `width / 2` in brush space
+    (pressure 1), then adds 1 device px after mapping, as stamps do
+    (`gpuBox`, was `stampBox`). On the brush sheet and the walker the nearest
+    capsule quad stays 0.06–0.15 px inside its box.
+  - **Renames.** `StampJob` → `BrushJob`, `TexMark.stamp` → `gpu`,
+    `encodeStamps` → `encodeMarks`, `GpuRenderer.stampBrushes` →
+    `brushInstances`. A new verification path, `GpuRenderer.capsulePage`,
+    draws given capsule instances with the atlas's capsule pipeline and reads
+    the page back. `brushRequests` (tests) now keeps each call's translation.
+  - **Tests** (`test/gpu/mark-atlas.ink.gpu.test.ts`; the layout check wants
+    the name of a module):
+    - Capsule readback against the CPU samples (brush sheet, walker frame 0,
+      ratio 1 and 2, 35,444 walker capsules): ends within 6.4e-5 device px,
+      radius within 2.3e-6.
+    - The gate's union checks against a 16×16 supersampled union. On the 69
+      cases: mean edge error 0.0218, worst pixel 0.4471. The gate measured
+      0.0218 and 0.4468. On the walker's ink in the gate's windows, each mark
+      on its own: mean 0.0165, worst pixel 0.400. The gate measured 0.0172 and
+      0.399. The test asserts the mean under 0.05 and within 0.003 of the
+      gate's. The worst-pixel limit of 0.25 was waived by the boxholder at the
+      gate, so the test holds the worst pixel within 0.01 of the gate's
+      measurement instead.
+    - 1,944 capsules in one cell, drawn forward and in reverse: the same
+      bytes.
+    - A closed bowtie in half-alpha ink and in a marker without grain: the
+      crossing has the side's colour, and no nearby pixel is darker.
+    - `brushBlends` and the ink and marker crops of `brushParity` pass
+      unchanged. Ink: luminance 0.01%, contrast 0.07%. Marker: 0.05% and
+      0.63%.
+    - The walker frame is byte-identical in a fresh process.
+  - **Thin lines: the Skia reference does not hold at 0.6 px.** The frozen
+    Skia sheet is `test/fixtures/scene-parity/ink-thin.png`. Rows at 1.0 px
+    are within 0.75% of it. Rows at 0.6 px are 7.2% darker (even pressure)
+    and 4.3% darker (taper). Skia antialiases by sampling a pixel at 4 × 4
+    points, and that loses tone on lines thinner than a pixel. Today's
+    perfect-freehand outline filled by exact area, which is what the GPU
+    renderer drew before this chunk, is as dark as the capsules: 4.460
+    against 4.449, where Skia gives 4.144. The same outline sampled at 4 × 4
+    points gives 4.153 (`scratch/stage5/b4/thin.log`). No exact-area
+    renderer can meet 3% against Skia at 0.6 px. The test asserts every row
+    within 3% of today's outline by exact area (worst 0.5%), the 1.0 px rows
+    within 3% of Skia, and the 0.6 px rows within 8% of Skia.
+  - **Pixels.** The walker frame at ratio 2 changes only along ink. In the
+    gate's crop windows, 6–17% of pixels change, and mean luminance moves by
+    at most 0.7 (eyebrow: 117.83 → 117.12). Crops:
+    `scratch/stage5/b4/crops/`. Astra, with the two methods shown only as A
+    and B (`scratch/stage5/b4/astra.out`), found the same line character:
+    *"They share the same irregular, hand-drawn line character. B has a
+    modest tendency toward fuller small marks and harder terminations"*
+    (B is capsules). It notes a blunter eyebrow start and a squarer heel, and
+    says they are subtle at normal size. Gallery output does not change.
+  - **Measurement**, the walker at ratio 2, before and after (ms per frame;
+    `scratch/stage5/b4/`):
+
+    | | Chromium, before | Chromium, after | Node, before | Node, after |
+    |---|---|---|---|---|
+    | fps (rAF) | 27.4 | 34.8 | | |
+    | frame, waited to GPU completion (mean) | 41.4 | 33.0 | | |
+    | record (mean) | 12.2 | 11.7 | | |
+    | lower (median) | 16.8 | 9.3 | 20.6 | 10.2 |
+    | atlas (median) | 2.3 | 2.1 | 3.7 | 3.4 |
+    | encode (median) | 1.1 | 1.1 | 2.6 | 3.2 |
+    | GPU span (mean) | 7.8 | 7.0 | | |
+    | GPU: coverage, marks, clip, draw (mean) | 2.4, 0.9, 2.3, 2.1 | 1.5, 1.8, 1.8, 2.0 | | |
+
+    Chromium runs the walker page (`scratch/stage5/b4/walker-page.ts`, the
+    Stage 4 browser entry moved to the current modules) built with the
+    walker-speed `build.ts` and served at the exhibit path on port 3230
+    (`measure.sh`). The "before" page is the same entry bundled from HEAD's
+    source extracted into scratch. The brush pass shows about 0 ms because
+    Chromium quantizes timestamps to 0.1 ms and the pass is shorter than
+    that. Ink moved GPU time from the coverage pass to the marks pass. Node
+    is `scratch/stage5/b3/measure.ts`, frames 0–59, three passes after a
+    warm-up.
 
 ### Chunk 5: batching and limits
 
