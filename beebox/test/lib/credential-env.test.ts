@@ -10,7 +10,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { CREDENTIAL_ENV, inheritedCredentials, type CredentialConsumer } from "../../src/lib/credential-env.js";
 import { CHILD_ENV_ALLOWLIST } from "../../src/hub/supervisor/child-env.js";
-import { SCRIPT_ENV_ALLOWLIST, TOOLING_ENV_ALLOWLIST } from "../../src/core/script-env/allowlist.js";
+import { SCRIPT_ENV_ALLOWLIST, TOOLING_ENV_ALLOWLIST } from "../../src/lib/subprocess-allowlist.js";
 import { SECRET_ENV_NAMES } from "../../src/lib/env.js";
 
 const LISTS: ReadonlyArray<[CredentialConsumer, readonly string[]]> = [

@@ -5,7 +5,7 @@
  * consumer, so an exclusion is written down rather than implied by absence
  * from a list. The allowlists that build each consumer's environment take
  * their credential entries from here (`hub/supervisor/child-env.ts`,
- * `core/script-env/allowlist.ts`), and the warm-slot comparison takes its
+ * `lib/subprocess-allowlist.ts`), and the warm-slot comparison takes its
  * credential keys from here (`services/claude-chat/core.ts`). Their other
  * entries are paths, flags and config, each listed there with its reason.
  *

@@ -90,7 +90,7 @@ What the fuller design buys over the smallest fix: a same-origin path through be
 - **Engineering principles** (`docs/engineering-principles.md`): **3** (validate at boundaries: the exec route filters agent arguments; the rewrite runs on a known content-type set); **4** (resilient and never silent: "not installed" and "rewrite drift" are visible); **6** (right-sized defensiveness: no arbitration, no handoff state machine, per the boxholder); **8** (one way to do each thing: the agent reaches the browser only through `bbx browser`, never a raw `agent-browser`); **11** (enforcement beats convention: a test pins the rewrite against the real bundle).
 - **Agent guide budget.** `docs/agent-guide.md` test 3: *"Does it apply only when touching one thing (a field, a command, a card type)? **`indirect`**: it lives on that thing's surface ... and the guide keeps at most a pointer."* Mechanics go in a box skill and `box-docs/bbx-commands.md`; the guide gets one pointer line.
 - **Tools are `bbx` commands, not MCP** (`src/core/agent/invoke/run.ts:110`, `skipMcpDiscovery: true`). Track D follows it.
-- **Script env is fail-closed** (`src/core/script-env/allowlist.ts:60-128`: *"Widen this list only by adding a named entry with a reasoned comment"*). The plan adds no allowlist entries: the agent never runs agent-browser itself, so it needs no `AGENT_BROWSER_*` variables.
+- **Script env is fail-closed** (`src/lib/subprocess-allowlist.ts`: *"Widen this list only by adding a named entry with a reasoned comment"*). The plan adds no allowlist entries: the agent never runs agent-browser itself, so it needs no `AGENT_BROWSER_*` variables.
 
 ## What already exists
 

@@ -7,7 +7,7 @@
 import { Command } from "commander";
 import { readTrace, type TraceLine, type TraceRecord } from "../../../../core/triggers/trace.js";
 import { requireBoxRoot } from "../../../../lib/paths/core.js";
-import { requireSession, runCli } from "./command.js";
+import { requireSession, runCli } from "./shared.js";
 
 function clock(at: string): string {
   const d = new Date(at);

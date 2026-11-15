@@ -17,7 +17,7 @@ import { HISTORY_CAP } from "../../../../core/triggers/types.js";
 import { getBoxTime } from "../../../../lib/time.js";
 import { requireBoxRoot } from "../../../../lib/paths/core.js";
 import { renderTraceLine } from "./log.js";
-import { parseConfig, requireSession, runCli, TriggerUsageError } from "./command.js";
+import { parseConfig, requireSession, runCli, TriggerUsageError } from "./shared.js";
 
 /** Lines from a JSONL file of `ActivityLine`s (what `bbx chat activity --json` prints). */
 export async function readActivityFile(file: string): Promise<ActivityLine[]> {
