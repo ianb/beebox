@@ -13,7 +13,8 @@ Stage 2 drawers asked for (`stage2-findings.md`; section 14).
 A sketch looks almost the same as today. `draw(v, model, params)` calls
 `v.rect`, `v.curve`, `v.text`, `v.at`, `v.group`, with a style on every call.
 Each call adds a node to a **scene** instead of painting. When `draw` returns,
-a renderer draws the scene: Skia headless, the GPU in a browser.
+a renderer draws the scene: our WebGPU renderer, in a browser and
+headless through Dawn (Checkpoint 4).
 
 The calls stay because agents already write them well (principle 5): 39
 gallery exercises and the path-form experiment use this vocabulary, and

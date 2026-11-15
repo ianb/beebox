@@ -1,0 +1,957 @@
+---
+title: "canvas-loop scene core: the spike becomes the one API and renderer"
+status: draft
+workstream: canvas-brushes
+issues: []
+---
+# canvas-loop scene core: the spike becomes the one API and renderer
+
+Stage 5 subplan (a) of `beebox/docs/plans/canvas-loop-scene.md`. The Stage 4
+spike (`canvas-loop/src/scene-spike/`) records each `draw` as a scene and
+renders it with our own WebGPU renderer, in the browser and headless through
+Dawn. This subplan promotes that spike into canvas-loop's only API and
+renderer. The Canvas2D painter and `v.ctx` retire, the headless CLI and the
+gallery run on Dawn, the dev-loop tools run on the new renderer, and the docs
+describe the new API. Subplan (b) moves brush expansion to the GPU; subplan
+(c) moves beebox's figure card, `bbx figure run`, the server and the box
+guidance. This plan leaves a clear seam for each.
+
+**Issues addressed:** none. Searched `issues/` and `private-issues/` for
+canvas-loop, Canvas2D, painter, WebGPU, Dawn, gallery and scene: nothing open
+is about the renderer. Related, not closed by this plan:
+`issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md` (item 1,
+canvas overflow at phone width). Its fix is already in the stylesheet that the
+scene mount keeps: `canvas-loop/src/browser/figure.css:12` *".cl-canvas {
+display: block; max-width: 100%; height: auto; …"*. Confirming it at 390 px
+is subplan (c)'s card work.
+
+## Design
+
+No design section: this plan changes a developer library and its reference
+docs. A person meets canvas-loop only through beebox's figure card, which
+subplan (c) owns. canvas-loop's `TEA.md` and `BRUSHES.md` ship to boxes as
+docs (`beebox/src/core/docs-gen/package-docs/canvas-loop-doc.ts:41`
+*`return shipped("TEA.md", "canvas-loop.md");`* and `:45`), so the rewritten
+docs reach box agents, but only when (c) lands, because this plan does not
+merge without (c) (Rollout shape).
+
+## Smallest fix and budget
+
+**Smallest change that meets the boxholder's decisions.** Make the spike's
+runner and mount the defaults, delete the painter, and fix whatever the
+gallery breaks. That leaves two runners' worth of features half-merged: the
+spike runner has no determinism guards, no engagement verdicts, no sound, no
+`--zoom`, `--outline` or `--timing` (What already exists). It also leaves the
+gallery unjudged against the Stage 0 baselines, and docs that describe an API
+that no longer exists. Each of those fails principle 1 (agent DX) or 2 (art
+that does not look lazy) directly.
+
+**The chosen design**, in chunks (Implementation order):
+
+| Chunk | What | Authored source | Authored tests | Whole-file deletes | Moves (renames) |
+|---|---|---|---|---|---|
+| 1 | Final module layout, names cleaned | ~600 | ~150 | ~1,370 (`scene-draft/` sketches) | ~13,000 |
+| 2 | One headless runner | ~1,000 | ~600 | ~550 (spike runner, util) | — |
+| 3 | Dev-loop completion | ~800 | ~500 | — | — |
+| 4 | `material.receivesShadow` | ~150 | ~150 | — | — |
+| 4b | Frame budget: recording and non-brush lowering | ~400 | ~150 | — | — |
+| 5 | Gallery and examples migrated and judged | ~1,500 (sketches, meta) | ~100 | ~3,900 (`scene-ports/`) | ~1,400 (`scene-drawers/`) |
+| 6 | The switch: painter and `v.ctx` retire | ~1,000 | ~800 | ~4,500 (painter, Canvas2D surfaces, old tests) | — |
+| 7 | Docs | — | ~50 | — | — |
+| 8 | Baselines and hand-off | — | — | — | — |
+
+- **Authored source and tests:** about 8,000 changed lines (additions plus
+  deletions), including about 150 in beebox (chunks 2 and 6).
+- **Whole-file deletions:** about 10,300 lines. They are mechanical, but they
+  count.
+- **Moves:** about 14,400 lines renamed with import-path edits; the import
+  edits are counted in chunk 1.
+- **Authored docs:** about 1,500 lines (`TEA.md`, `BRUSHES.md`, `README.md`,
+  `AGENTS.md`, a new `RENDERER.md`, `CHANGELOG.md`, the gallery README, the
+  gallery judging table).
+- **Generated output:** none committed except the frozen parity references
+  (chunk 6, under 2 MB of PNG).
+
+**BIG CHANGE.** About 19,500 changed lines in all, about 9,500 of them
+authored. What drives the size:
+- the painter, its tests and the Canvas2D surfaces are deleted (about 4,500
+  lines);
+- two runners become one, with every feature of both (chunk 2);
+- 18 gallery exercises use calls that are removed, and each is ported and
+  judged by eye against its Stage 0 frames (chunk 5);
+- the 46-row dev-loop checklist is completed, plus two checks the checklist
+  missed (chunk 3);
+- the whole drawing reference is rewritten (chunk 7);
+- the recorder and the non-brush lowering are cut to a measured frame budget
+  (chunk 4b).
+
+The spike itself (9,456 lines) moves, it is not rewritten. Implementation
+needs the boxholder's approval at this size.
+
+## Stated preferences this plan trades against
+
+- **The boxholder's Checkpoint 4 answers**
+  (`beebox/docs/plans/canvas-loop-scene/stage4/checkpoint4.md:131-140`): our
+  own WebGPU renderer with Dawn headless, confirmed; placement snapping kept;
+  `material.receivesShadow` added; hatching coverage left as it is; desktop
+  numbers accepted. No Skia fallback and no WebGL2: this plan deletes the
+  painter outright instead of keeping it as a reference renderer.
+- **"Don't worry about backward compatibility."** No compatibility layer for
+  the old `View`. The one concession is a clear error for a removed call
+  (chunk 3), because box figures written for the old API will meet the new
+  runtime until their agent regenerates them (subplan c).
+- **Principle 1, agent DX** (`canvas-loop-scene.md`, "The principles"):
+  "Testing, diffs, warnings, etc." Every dev-loop tool of today's runner
+  survives (chunk 2), and the five open checklist rows are built (chunk 3).
+- **Principle 4, speed in the browser.** Checkpoint 4 says targets 1 and 3
+  miss "for one reason: brush expansion runs on the CPU"
+  (`checkpoint4.md:72`). That is incomplete. The Stage 4 profile gives
+  the walker's record step as 11.4 ms per frame in Chromium
+  (`stage4-plan.md:209` *"walker sheet 16.8–18.6 → 22.8 fps (record 11.4,
+  lower 23.5, atlas 4.0)"*), nearly the whole 12 ms budget of target 1
+  (`canvas-loop-scene/browser-profile.md:76-77`). Subplan (b) projects the
+  walker frame after GPU expansion at "about 21–25 ms, 40–48 fps"
+  (`canvas-loop-gpu-brushes.subplan.md:95-96`) and assigns the recorder and
+  the non-brush lowering to this plan (its open question 1). Chunk 4b takes
+  them.
+- **Principle 2, art.** The gallery is judged against the Stage 0 baselines by
+  eye and by the parity criteria (chunk 5), with an Astra read first
+  (main plan, "Visual reviews use Astra").
+- **Engineering principles** (`beebox/docs/engineering-principles.md`):
+  - §8 *One way to do each thing*: one runner, one mount, one `View`, one
+    error class per kind. The transition marker (chunks 2–5) reuses the
+    spike's existing `renderer` export instead of a new mechanism, and chunk 6
+    deletes it.
+  - §4 *Resilient AND never silent*: a removed call, a render error and a
+    missing GPU adapter each fail with a message that names the cause.
+  - §10 *Testability is architectural*: the decisions in the new warnings
+    (off-canvas folding, pass budget, empty clip) are pure functions over
+    recorded data, tested without a GPU.
+- **Repo rule on dependencies** (root `AGENTS.md`, "Implement and verify"): no
+  new dependency. `webgpu` and `@webgpu/types` are already in
+  `canvas-loop/package.json` (lines 50 and 66 of the dependency lists).
+  `@napi-rs/canvas` stays: the recorder measures text with it, the glyph atlas
+  rasterises with it, and PNG encoding and `cli zoom` use it
+  (`canvas-loop/src/scene-spike/device.ts:64` *`const { createCanvas } = await
+  import("@napi-rs/canvas");`*).
+- **Precedent for migrating the gallery:** retired sketch forms were
+  "rewritten mechanically", with `meta.yaml` saying so in `migrated`
+  (`canvas-loop/src/gallery/README.md`, "Some exercises were first written…"),
+  and `runs.jsonl` has a `ported` action
+  (`canvas-loop/src/gallery/README.md:72` *"or `ported` (rewritten for a new
+  tier or API shape)"*). This plan follows that precedent.
+- **GPU load.** The machine crashed once under parallel GPU load during
+  Stage 4. The spike already keeps GPU tests in one process
+  (`canvas-loop/test/scene-spike/gpu.test.ts:1-2` *"Everything that needs a
+  GPU, in one file so one process holds one Dawn device"*). When every
+  headless test needs Dawn, that rule needs a mechanism (chunk 2).
+
+## What already exists
+
+Reused (moved, renamed, kept):
+- **Recorder** (`canvas-loop/src/scene-spike/recorder/view.ts`, 346 lines,
+  plus 17 modules): the scene `View`, checks at the call, picture versions,
+  the stale-capture audit, off-canvas tracking, stand-ins, light checks.
+  Reuse.
+- **GPU renderer** (`canvas-loop/src/scene-spike/gpu/`, 37 modules): coverage
+  atlas, marks, smear, clips on shared pages, effects, wash, hatching, paper,
+  lighting, kept rasters, pass timing. Reuse.
+- **Brush expansion** (`canvas-loop/src/scene-spike/brush/expand.ts:1-3` *"The
+  shared CPU step for brushed strokes (draft section 9): a stroke becomes
+  dabs, ink outlines or bristle runs by canvas-loop's own sampling and kind
+  painters (core/brush)"*), through a recording context
+  (`brush/record-ctx.ts:1-4` *"A Ctx2D that records what canvas-loop's brush
+  kinds … paint instead of rasterising it"*). Reuse unchanged; subplan (b)
+  replaces it.
+- **Browser mount and sleep** (`scene-spike/browser/mount.ts`, `surface.ts`,
+  `sleep.ts`, `shared-gpu.ts`) on today's fixed-step runtime
+  (`canvas-loop/src/browser/runtime/engine.ts`, through its `DrawSurface`
+  interface, `runtime/engine-types.ts:34`). Reuse.
+- **Dev-loop cases** (`canvas-loop/test/scene-spike/dev-loop/cases.ts`, 46
+  rows) and the cache-equivalence, raster, light, paint, picture, text and
+  brush cases under `canvas-loop/test/scene-spike/`. Reuse.
+
+Reused from today's runtime, with the Canvas2D surface swapped out:
+- **The headless runner** (`canvas-loop/src/headless/tea-runtime.ts`): event
+  dispatch, engagement verdicts, activity lines, sound, frame dedup through
+  `FrameRecorder`, checkpoints, and the determinism guards
+  (`tea-runtime.ts:198` *`withGuards(() => this.#execute());`*). Keep it as
+  the one runner. The spike runner lacks these: its `#call`
+  (`scene-spike/run/runner.ts:183`) installs no guard against `Math.random`
+  or `Date.now`, and its `Util.handled` is empty
+  (`scene-spike/util.ts:52` *`handled(_name: string): void {}`*), so it gives
+  no engagement verdicts.
+- **CLI, gallery check, diff, zoom, checkpoints** (`headless/cli.ts`,
+  `gallery.ts`, `diff.ts`, `recorder/zoom.ts`, `checkpoint/`): they read PNGs
+  or call `teaRun`, so they keep working once `teaRun` is async. Reuse.
+- **Text measurement** (`canvas-loop/src/core/painter/text/measure.ts`,
+  `layout.ts`): the recorder already uses them. Move to `core/text/`.
+- **Text checks** (`canvas-loop/src/core/painter/text-watch.ts`): label overlap
+  and missing glyphs. Port into the recorder (chunk 3); the spike has
+  neither.
+- **Faint-mark rule** (`canvas-loop/src/core/painter/faint.ts:6` *`const FAINT
+  = 0.08;`*). Port the rule; the measurement moves to the GPU (chunk 3).
+
+Rebuilt, with the reason:
+- **The spike runner's transcript writer** (`runner.ts:120-131`): replaced by
+  `FrameRecorder`, which already writes the transcript format agents know.
+- **`SpikeUtil`** (`scene-spike/util.ts`): replaced by today's `TeaUtil`
+  (`headless/tea-view.ts:119`), rebuilt on a seeded random stream and the text
+  measurer, because `TeaUtil` reports `handled` names.
+
+Deleted (chunk 6): `core/painter/` (except `text/`), `core/view.ts`,
+`headless/surface.ts`, `headless/tea-view.ts`'s `TeaView`,
+`browser/runtime/{canvas-surface,browser-view,layer}.ts`, `scene-spike/run/`,
+`scene-draft/`, `examples/scene-ports/`, and the exports `./scene-browser`
+and `./scene-headless` (`canvas-loop/package.json:25,29`).
+
+beebox's current use (`beebox/src/cli/commands/figure/run-one.ts:89-92`
+branches on `figureRenderer(imported) === "scene"` to `runSpike`;
+`beebox/src/frontend/src/lib/figure-canvas-loop.ts:77` `rendererMismatch`
+checks the same export against `mountSceneSketch`). Chunk 6 removes both
+branches, because one renderer remains.
+
+## Prior art (external)
+
+No design decision here depends on a new external premise. Dawn
+(`webgpu` 0.6.2) was chosen and probed in Stages 3 and 4; its fit is
+recorded in `canvas-loop-scene/stage3/dawn-linux.md` and
+`stage4/checkpoint4.md`. One premise is checked, evaluated only: Node's test
+runner serialises test files with `--test-concurrency=1`
+(https://nodejs.org/api/cli.html#--test-concurrency); this machine runs Node
+24.18.0, where the flag exists. Chunk 2 uses it to keep Dawn processes from
+running in parallel.
+
+## Ontology
+
+Every noun exists in the spike or today's runtime; this plan adds one value
+(`receivesShadow`) and renames none of the sketch-facing nouns.
+- **View:** what `draw(v, model, params)` receives. After chunk 6 it is the
+  scene View, the type now in `canvas-loop/src/scene-draft/scene-api.ts`
+  (`View`), exported from the package root as `View`. It is not the Canvas2D
+  View in `canvas-loop/src/core/tea.ts:200` (which has
+  `readonly ctx: SKRSContext2D;` at `:281`).
+- **Scene:** one frame's recorded nodes (`scene-spike/scene.ts`). Plain data,
+  kept for waking and re-rendering.
+- **Recorder:** the class that implements View and builds a scene
+  (`SceneRecorder`, `recorder/view.ts`).
+- **Renderer:** `GpuRenderer` (`gpu/renderer.ts`), one per run or per figure,
+  over a **GPU handle** (`GpuHandle`, `device.ts`): one device per process
+  headless, one per page in the browser.
+- **Testing mode:** a headless run. The recorder audits pictures, parses
+  colours at the call, and gives warnings; the renderer may read back for
+  checks (faint marks, flat hatching).
+- **Transcript:** `transcript.md` written by `FrameRecorder`. One format for
+  every run.
+- **Surface:** what a runtime draws a frame through. Browser: `DrawSurface`
+  (`browser/runtime/engine-types.ts:34`), implemented by `SceneSurface`.
+  Headless: chunk 2 adds the same seam to `TeaRunner` for the transition; after
+  chunk 6 only the scene surface remains, and the seam stays as the place
+  subplan (b) does not need to touch.
+- **Transition marker:** `export const renderer = "scene"` in a sketch module
+  (`beebox/src/cli/commands/figure/run-one.ts:44-49` describes it). It exists
+  only between chunks 2 and 6 and only on the branch.
+- **Stage 0 baselines:** the gallery's frames from the Canvas2D renderer at
+  commit `570e8ef21`, in `canvas-loop/out/baselines/570e8ef21/` (untracked;
+  present on this machine; the script to recreate them is in
+  `beebox/docs/plans/canvas-loop-scene/README.md`).
+- **Scene baselines:** the same frames from the GPU renderer at the end of
+  chunk 8, in `canvas-loop/out/baselines/<commit>/`, with (b)'s GPU
+  expansion in. The reference for renderer work after this redesign.
+- **`material.receivesShadow`:** a material value, default `true`; `false`
+  means no light's shadow falls on that shape (draft 2.9, section 21). It
+  composites by coverage like the other material values. It is not
+  `castsShadow`, which says whether the shape blocks light.
+
+## Tracks / scope
+
+Ordered by dependency: layout first, so subplan (b) can start on final paths;
+then the runner, which every later chunk runs through; then checks and
+`receivesShadow`, which the gallery migration benefits from; then the gallery;
+then the switch that deletes the old code; then docs.
+
+### Track 1: final module layout (chunk 1)
+
+- **What:** move the spike to its final paths and remove "spike" from names.
+  No behaviour change.
+- **Why:** subplan (b) edits brush expansion and lowering; it needs final
+  paths before it starts, or both subplans edit moving files.
+  `scene-spike/` and `SpikeRun` describe a phase that ends.
+- **Direction:** the layout after chunk 6:
+
+  | Directory | Holds | GPU? |
+  |---|---|---|
+  | `src/core/` | the authoring types (`tea.ts`, `paint.ts`), brush presets and kinds, sound, ease, shapes, contours, prng, format, errors, `text/` (from `core/painter/text/`) | no |
+  | `src/scene/` | `scene.ts`, `recorder/`, `hash.ts`, `mat.ts`, `colors.ts`, `call-site.ts`, `outline.ts`, `geometry/`, `brush/` (`expand.ts`, `record-ctx.ts`, `contours.ts`), `errors.ts` | no |
+  | `src/gpu/` | `renderer.ts`, `lower.ts`, passes, shaders, `device.ts`, `browser-device.ts` | yes |
+  | `src/headless/` | one runner (`tea-runtime.ts`), `tea-util.ts`, CLI, gallery check, diff, checkpoints, `recorder/` | via `gpu/` |
+  | `src/browser/` | `mount.ts` (`attachSketch`, `mountSketch`), `runtime/engine.ts`, `scene-surface.ts`, `sleep.ts`, `shared-gpu.ts`, controls | via `gpu/` |
+
+  In chunk 1 the draft types move from `scene-draft/scene-api.ts` to
+  `scene/api.ts`; chunk 6 merges them into `core/paint.ts` and `core/tea.ts`.
+  Renames: `runSpike` → deleted in chunk 2; `SpikeRunOptions` → deleted;
+  `SceneMountError` → `SketchMountError` in chunk 6; messages that say
+  "scene spike:" (for example `scene-spike/mat.ts:87`) say what is not
+  supported, without the word "spike". Comments that cite "draft section N"
+  cite `RENDERER.md` or `TEA.md`/`BRUSHES.md` sections after chunk 7.
+  `scene-draft/examples/` and `scene-draft/probe/` are deleted: they were
+  written against types with no runtime, and git keeps them.
+  `test/scene-spike/` moves to `test/scene/` and `test/gpu/`.
+- **Vocabulary lock-ins:** directory names `scene/`, `gpu/`; file names
+  `scene/brush/expand.ts`, `gpu/lower.ts`, `gpu/marks.ts`,
+  `gpu/mark-atlas.ts`, `gpu/shader-mark.ts`, which subplan (b) names.
+- **First implementation chunk:** `git mv` per the table, fix imports, rename
+  as listed, delete `scene-draft/examples/` and `probe/`, update the
+  `scene-browser`/`scene-headless` export paths and the `typecheck` script's
+  `-p src/scene-spike/browser/tsconfig.json`. Done when typecheck, lint,
+  `pnpm layout-check`, the tests and `gallery:check` pass, and the three
+  ports render the same PNG bytes as before the move.
+
+### Track 2: one headless runner (chunk 2)
+
+- **What:** `teaRun` becomes the only headless runner. It runs a sketch
+  through the recorder and the GPU renderer, with every feature of today's
+  runner and every fix of the spike runner.
+- **Why:** each runner lacks what the other has. The spike runner has no
+  determinism guards (`runner.ts:183`), no engagement verdicts
+  (`util.ts:52`), no sound, no `--zoom`, `--outline`, `--timing` or `--fps`,
+  no frame dedup, and does not list scripted inputs or snapshot labels
+  (`stage4-plan.md`, chunk 6b, "Gaps"). Today's runner has no scene, no
+  `SketchRunError`, no once-per-run warnings with the sketch's line, no
+  undeclared-param guard and no `--scene`.
+- **Direction:**
+  - `teaRun(options): Promise<RunResult>`; `RunResult` keeps its shape
+    (`headless/recorder/frame-recorder.ts`, `transcriptPath`, `framesRun`,
+    `imageCount`, `errors`), so beebox's result line does not change.
+  - `TeaRunner` takes a headless surface with two methods, `draw(view
+    callback)` and `capture(): Promise<Pixels>`. During the transition the
+    Canvas2D `Surface` and a new scene surface both implement it; the module's
+    `renderer` export picks one, as beebox does today. Chunk 6 deletes the
+    Canvas2D one.
+  - Guards: today's `withGuards` wraps the whole run synchronously
+    (`tea-runtime.ts:198`). With an async render it wraps each sketch call
+    (`init`, each `update`, `draw`, `sound`, `activity`) instead, so no await
+    happens under it.
+  - Capture: `FrameRecorder` decides whether frame N is captured, as now
+    (`frame-recorder.ts:125-135`); the runner then awaits the render and hands
+    the pixels to `FrameRecorder` for dedup and encoding. Only captured frames
+    are rendered, as in the spike.
+  - A step that throws: the transcript ends with the spike's error line
+    (`frame N: error in <step>: …` and the sketch's stack lines), and
+    `RunResult.errors` holds the same text. The failed frame has no image;
+    the frames before it stay. Today's runner captures the half-painted
+    canvas (`frame-recorder.ts:118-120`); the scene equivalent would need
+    the recorder to close open scopes mid-throw, and the line already says
+    where it stopped.
+  - Kept from the spike: undeclared-param guard (`run/guards.ts`
+    `guardParams`), once-per-run warnings and hints with the line, the
+    `param:` line, control stand-ins above the scene, `--scene [first]`,
+    `--ratio` (default 1).
+  - `--outline`: the recorder's debug boxes (`recorder/debug.ts`), clip
+    outlines and picture placements are appended to the captured scene as
+    plain strokes with labels, the way stand-ins are appended
+    (`runner.ts:159`). `--timing`: one summary line as today
+    (`headless/recorder/timing.ts`) plus, per captured frame, the renderer's
+    counts (passes, effect passes, copies, draws, strokes expanded, cache
+    hits, kept-raster bytes) and pass times when the device grants
+    timestamps. Without `--timing`, the per-frame counts line is not
+    written (the spike writes it every frame, `runner.ts:155`).
+  - One GPU handle per process, opened on first use and kept; `gallery check`
+    runs every exercise twice on it.
+  - Tests: every test file that opens Dawn is named `*.gpu.test.ts`. The
+    `test` script runs the other files in parallel, then the GPU files with
+    `--test-concurrency=1`, one process at a time.
+  - beebox: `run-one.ts` calls `await teaRun(…)` for both renderers and stops
+    importing `./scene-headless`.
+- **Vocabulary lock-ins:** `teaRun` is async; `--ratio`, `--scene [first]`
+  join the CLI; `*.gpu.test.ts`.
+- **First implementation chunk:** the async `teaRun` with the two surfaces,
+  per-step guards, the merged features above, the CLI flags, the test-script
+  split, the beebox `run-one.ts` change, and today's `tea-runtime.*.test.ts`
+  files run against both surfaces. Done when those tests, the spike's runner
+  tests (`run.guards`, `run.params`, `--scene first`, the 46 dev-loop rows)
+  and `gallery:check` pass, and `scene-spike/run/runner.ts` and `util.ts`
+  are deleted.
+
+### Track 3: dev-loop completion (chunk 3)
+
+- **What:** build the five open checklist rows, the two checks the checklist
+  missed, and the three "other finds" in `stage4/dev-loop.md`; fold the
+  off-canvas warning under a moving camera; give old sketches a clear error.
+- **Why:** principle 1. Today's runtime has a faint-mark check and a
+  label-overlap check (`canvas-loop/TEA.md:231-235`), and draft section 10
+  lists both as "kept"; the spike has neither. The checklist has no row for
+  label overlap, so its 46/46 accounting does not show that gap.
+- **Direction** (each warning is once per run, with the sketch's line):
+
+  | Item | Decision |
+  |---|---|
+  | `empty-clip` (row 37) | End-of-run warning when a `clip` line's shape has no area on every frame. Area from the recorded, transformed geometry (shoelace on flattened contours). One empty frame is allowed: a wipe starts at zero width. |
+  | `flat-hatching` (row 41) | Testing mode reads back the hatching tone-range pass for each hatched group on captured frames and warns when the range is empty. |
+  | `faint-mark` (row 42) | Today's rule (`faint.ts:6`, 8% peak opacity after group opacities; `gesture({ faint: true })` silences it; at most 8 warnings). Testing mode reads back one maximum per mark from the mark coverage atlas on captured frames. |
+  | `missing-glyph` (row 43) | Port `text-watch.ts`'s glyph check to the glyph atlas, which already rasterises each glyph on the CPU (`gpu/glyphs.ts:1-4`). Headless only, as today. |
+  | `deep-nesting` (row 45) | Warn when a captured frame takes more than 64 render passes, naming the deepest group path. If a migrated gallery exercise that draws well exceeds 64 (chunk 5), the budget rises to that exercise's count plus a quarter, and the plan records it. |
+  | Label overlap (missing row) | Port `text-watch.ts`'s overlap check to the recorder: text bounds under their transform, once per pair, at most 10 pairs, as `TEA.md:231-233` says. |
+  | Render errors name the node | `lower.ts` keeps the node path while lowering (`group "room" > place "citizen" … > circle #4`, draft section 10) and `GpuRenderError` carries it. |
+  | Browser parses colours at render | The browser recorder gets a colour parser from an `OffscreenCanvas` 2D context made at mount, before the GPU code loads (`browser-device.ts` `browser2d`). |
+  | Canvas exactly 8192 px wide | The atlas piece for a shape is clamped to the device canvas, so the 4 px padding no longer pushes it past the texture limit. |
+  | Off-canvas under a moving camera | A candidate line whose canvas box changed during the run joins one summary warning ("N lines draw only off the canvas while moving, on every frame 0–89: lines …; a camera that has not reached them, or a wrong sign"). A line whose box never moved warns on its own, as now (`recorder/off-canvas.ts:157`). The drawer's room that gave 7 warnings (`checkpoint4.md:41-43`) gives one. |
+  | Removed calls | The recorder answers `v.ctx`, `v.cache`, `v.sprite`, `v.image` and `v.paperTexture` with a `RemovedCallError` (a `SketchUsageError`, with `call` and `replacement` fields) that names the replacement and the doc section (`v.picture` and `v.place`; `group({ effects: { paper } })`; `at({ matrix })`, `v.pixels`, `lighting` for `ctx`). These members are not in the `View` type; they exist so an old compiled figure fails with a message instead of `v.cache is not a function`. |
+
+  The folding, budget, area and message decisions are pure functions with
+  their own tests; only the readbacks need the GPU.
+- **Vocabulary lock-ins:** the warning texts above, which agents will read.
+  The readbacks happen only in testing mode, never in the browser.
+- **First implementation chunk:** all rows in the table, each with a
+  dev-loop case in `cases.ts` and its expected text. Done when the five
+  `todo` rows pass, three new rows (label overlap, removed call, moving
+  off-canvas) pass, and the 46 existing rows still pass.
+
+### Track 4: `material.receivesShadow` (chunk 4)
+
+- **What:** draft 2.9, section 21: `receivesShadow: false` on a material
+  stops every light's shadow on that shape; the shape is still lit and still
+  casts.
+- **Why:** side views (Checkpoint 4, decision 4): casters throw shadows up a
+  sky.
+- **Direction:** the two material layers have no spare channel
+  (`gpu/material.ts:4-7`: layer 0 holds normal x, y, shine and coverage;
+  layer 1 holds emissive, casting amount, caster height and coverage). A third
+  layer holds the non-receiving amount, premultiplied, with coverage, so it
+  composites through erase, clip, mask and opacity like the others. The
+  recorder marks a lit group that contains `receivesShadow: false` (in a
+  style or a placement's `material`); only those groups draw the third layer,
+  so other scenes pay nothing. In the shading shader each light's shadow
+  factor becomes `mix(shadow, 1, nonReceiving)`. The recorder checks the value
+  is a boolean and names the field otherwise.
+- **Vocabulary lock-ins:** `material.receivesShadow?: boolean`, default
+  `true`.
+- **First implementation chunk:** the field in the types and recorder, the
+  third layer and the shader change, tests: a sky behind a caster keeps its
+  lit pixels; a half-transparent non-receiving shape receives half the
+  shadow; a placement's `material` supplies it; a non-receiving caster still
+  casts; a group without the value draws two material layers, as before.
+
+### Track 4b: frame budget (chunk 4b)
+
+- **What:** cut the CPU time of recording and of lowering everything except
+  brushed strokes, on the walker sheet, to a measured budget.
+- **Why:** principle 4. Targets 1 and 3 cannot be met by subplan (b) alone
+  (Stated preferences). The walker's frame in Chromium at ratio 2 is
+  record 11.4 + lower 23.5 + atlas 4.0 + encode 1.3 ms
+  (`stage4-plan.md:209`; encode 1.3 from `:196`). (b) takes brush expansion, mark placement
+  and mark atlas data (about 15 + 6 + 4 ms before the speed round,
+  `canvas-loop-gpu-brushes.subplan.md:48-56`) to under 2.5 ms of CPU. What
+  is left is this plan's: the record step and the rest of lowering (fill and
+  clip geometry, about 4 ms in Node, `stage4-plan.md:195`; "lowering without
+  brushes 6–9" in Chromium, `canvas-loop-gpu-brushes.subplan.md:95`).
+- **What the record step is made of** (Node, before the Stage 4 speed round,
+  `stage4-plan.md:191-196`): 17.2 ms, of it structural hashing 5.6,
+  `structuredClone` of path commands 3.6, the sketch's own code about 2.
+  After that round: 6.7 ms in Node, 11.4 in Chromium. The Chromium figure has
+  no breakdown; the profiles in `scratch/stage4/walker-speed/`
+  (`browser-main.cpuprofile`, `cpu*.txt`) are Node profiles of the whole
+  frame, where garbage collection is the largest self entry (13.8% in
+  `cpu1.txt`). The first step of this chunk is a Chromium profile of the
+  record step alone.
+- **Direction.** Levers, in the order they are tried, each measured before
+  the next:
+  1. Testing-mode work stays out of the browser: stack reads for call sites
+     (`scene/call-site.ts`), off-canvas tracking, the picture audit and
+     warning bookkeeping run only headless. Check each is gated.
+  2. Structural hashing only where a key is read: a subtree's hash is
+     computed when a cache asks for it (picture versions, shape geometry
+     keys), not for every node while recording.
+  3. Fewer allocations per call: argument capture writes into the scene's
+     own arrays (draft section 6 allows avoiding copies "only where it keeps
+     this meaning"); number checks without building option objects.
+  4. Non-brush lowering: reuse last frame's lowered list for a subtree whose
+     hash is unchanged (the geometry cache already keys shapes,
+     `gpu/geometry-cache.ts`); no per-frame bind-group rebuild for unchanged
+     pipelines.
+  Output must not change: the three ports and the cache cases stay
+  byte-identical, as in the Stage 4 speed round.
+- **Acceptance** (Chromium on this machine, ratio 2, walker sheet, the
+  Stage 4 speed page, one heavy GPU process at a time):
+
+  | Measure | Now | Acceptance |
+  |---|---|---|
+  | Record step | 11.4 ms | at most 4 ms |
+  | Lowering without brushed strokes | 6–9 ms (projected by (b)) | at most 4 ms |
+  | Walker fps, before (b) | 22.8 | reported |
+  | Six figures, fps each | 11.0 | reported |
+  | Headless frame (Node, Dawn) | 59.1 ms | reported |
+
+- **Projection to 60 fps.** After (b) and this chunk: record 4 + non-brush
+  lowering 4 + brushes 2.5 ((b)'s acceptance) + atlas 1–2 + encode 1.1, about
+  13 ms of main-thread CPU per walker frame. That fits a 16.7 ms frame, so
+  target 1 (60 fps) is reachable, but it is about 1 ms over the Stage 0
+  "about 12 ms" draw-and-render budget. Target 3 (six figures at 30 fps,
+  33 ms shared on one main thread) needs about two walker frames (26 ms) plus
+  four lighter figures; the chemistry figure and the still Hallway run at
+  60 fps today, so this is at the edge. If the record step does not reach
+  4 ms with the four levers, the chunk reports where the time goes, and the
+  boxholder decides whether to move recording work off the main thread,
+  which is a design change and not part of this plan.
+- **Vocabulary lock-ins:** none; no API change.
+- **First implementation chunk:** the Chromium profile of the record step,
+  then the levers in order. Done when the acceptance rows are met or
+  reported as above, and output stays byte-identical.
+
+### Track 5: gallery and examples (chunk 5)
+
+- **What:** every gallery exercise and example runs on the scene renderer
+  and is judged against its Stage 0 frames.
+- **Why:** the gallery is the test corpus for every stage (main plan, "What
+  already exists"), and principle 2 is judged on it.
+- **Direction:**
+  - **Which exercises change source.** 21 of 39 use no removed call
+    (`scratch/stage5/core/notes.md`, from a grep of each exercise). The ports
+    show that such an exercise changes only its type import
+    (`diff -r src/gallery/intra-walk-styles src/examples/scene-ports/walker-sheet`
+    shows only `SceneView as View` lines), so after chunk 6 it changes not at
+    all. The 18 others use: `v.ctx` (6: `fjord-tides`, `game-world-tiles`,
+    `intra-atrium`, `intra-lounge`, `intra-lounge-drawn`, `pelican-bicycle`,
+    `pell-anim`), `cache`/`sprite`/`image` (16), `paperTexture` (19 files).
+    The replacements are draft section 2's table: `cache` and `sprite` →
+    `picture` and `place`; `paperTexture(n)` → a group with
+    `effects: { paper: n }` around what it darkened; `ctx` skew → `at({ skew
+    })` or `matrix`; `putImageData` fields → `v.pixels`; `lineCap` → `cap`.
+    The hand-built lit rooms keep their look through `v.pixels`; rewriting
+    them with `lighting` is a drawing change, not a migration.
+  - **During the transition** each migrated exercise imports `SceneView as
+    View` and exports `renderer = "scene"`, as the ports do; chunk 6 removes
+    both with one mechanical edit.
+  - **Judging.** For each exercise, render the gallery's frames, seed, `every`
+    and events, and compare each frame with
+    `out/baselines/570e8ef21/<slug>/` by `cli diff` and the parity measures
+    (`canvas-loop-scene/parity-criteria.md` section 2, the functions in
+    `test/scene-spike/compare.ts`). Expected differences, from the accepted
+    draft decisions: brush texture changes once (decision 7), effect lengths
+    follow their group (decision 1), `effects.paper` leaves transparent areas
+    alone (decision 4), paper is scoped (decision 10), placements snap to
+    device pixels (draft 2.6). A difference outside those is a renderer bug to
+    fix, or an accepted difference written in the table with its reason. The
+    table goes in `beebox/docs/plans/canvas-loop-scene/stage5/gallery-parity.md`:
+    one row per exercise with the frames compared, the parity numbers, the
+    expected differences seen, and the verdict.
+  - **Eyes.** One exhibit with baseline and new frames side by side for every
+    exercise, and 4× crops for brushed and papered ones. Astra reads it first;
+    the boxholder reads it at the hand-off (chunk 8).
+  - **Records.** Each exercise gets a `runs.jsonl` line: `ported` where the
+    source changed, `rerun` where it did not. Changed ones get a `migrated`
+    line in `meta.yaml`.
+  - **Examples.** The top-level examples (`fjord-tea.ts` uses `v.ctx`) are
+    migrated the same way. `examples/scene-looks/` moves to
+    `examples/` (`washed-shapes-tea.ts`, `still-life-tea.ts`,
+    `night-room-tea.ts`). The three drawers' sketches
+    (`examples/scene-drawers/`, 9 sketches) become nine gallery exercises
+    with `task.md` from `stage4/drawing-brief.md`, the account as
+    `history/account.md`, `meta.yaml` and an `authored` line: they are the
+    only corpus that uses lighting, wash and hatching, so `gallery check`
+    holds those effects. `examples/scene-ports/` is deleted once the tests
+    that use it (`cache-cases.ts` `portFrames`, the speed pages) point at
+    `gallery/intra-walk-styles`, `gallery/intra-rooms` and
+    `gallery/balance-reaction-2`.
+  - **Effects under skew.** Effects under a rotated non-uniform scale or a
+    skew stay an error (`mat.ts:87`). An exercise that meets it moves the
+    effect outside the skewed scope, and the table records it.
+- **Vocabulary lock-ins:** the gallery-parity table's columns; the nine new
+  slugs (`scene-<scene>-<drawer>`, for example `scene-market-opus-a`).
+- **First implementation chunk:** the 21 unchanged exercises judged and
+  recorded (no source change beyond the transition marker), and the table
+  started. The 18 ported exercises follow in batches of a few, one commit
+  each.
+
+### Track 6: the switch (chunk 6)
+
+- **What:** the scene View becomes the package's `View`; the painter, the
+  Canvas2D surfaces, `v.ctx` and the transition marker are deleted; the
+  browser mount, React and the playground run on the scene surface; beebox
+  compiles against the result.
+- **Why:** the boxholder's decision (WebGPU and Dawn only) and §8 (one way to
+  do each thing).
+- **Direction:**
+  - **Frozen parity references first.** The spike's parity tests compare the
+    GPU renderer with today's painter (`gpu.test.ts:62` *"compositing fixtures
+    match today's Skia renderer"*, `:79`, and the brush and text parity
+    cases). Subplan (b)'s chunk 1 freezes the brush crops
+    (`canvas-loop-gpu-brushes.subplan.md`, "Seams"); this chunk freezes
+    whatever is still read live. Before the painter is deleted, its renders of those fixtures are
+    written once to `canvas-loop/test/fixtures/scene-parity/*.png`, and the
+    tests compare against the files with the same parity measure. The measure
+    has tolerances, so the files hold on Metal and on Linux. A
+    `canvas-loop/test/fixtures/**/*.png` binary line joins `.gitattributes`.
+    If the files exceed 2 MB, they are cropped to the fixture cells.
+  - **Types.** `scene/api.ts` merges into `core/paint.ts` (Style, Effects,
+    GroupOptions, Material, Light, Lighting, AtOptions) and `core/tea.ts`
+    (View). The draft's "diff on today's View" form
+    (`scene-draft/scene-api.ts:1-4`) becomes one flat interface. Package root
+    exports drop `Painter`, `Ctx2D`, `tracePath`, `tracePolygon`,
+    `resolveGradient` and the `Scene*` aliases (`src/exports/core.ts:11-21`).
+    `Ctx2D` stays an internal type for `scene/brush/record-ctx.ts` until
+    subplan (b) removes CPU expansion.
+  - **Headless.** `TeaRunner` keeps only the scene surface; `TeaView`,
+    `headless/surface.ts` and the `renderer` export check go.
+  - **Browser.** `attachSketch(canvas, opts)` becomes the scene attach: the
+    runtime, the scene surface, input wiring and teardown on a given canvas;
+    the device opens asynchronously and the figure draws when it is ready.
+    `mountSketch` builds the shell and calls it, as today
+    (`browser/mount.ts:1-7`). The spike's `mountSceneSketch` merges into
+    them. React's `SketchFigure` keeps calling `attachSketch` and
+    `setDensity`, so it needs only type changes. The playground and dev demo
+    build on `mountSketch`. Without WebGPU the mount reports `NoWebGpuError`,
+    and without an adapter `NoGpuAdapterError`, both through `onError`, once;
+    a bad module stays `SketchMountError`. Headless, a missing adapter is
+    `NoGpuAdapterError` in `RunResult.errors` and the transcript. The spike's
+    `SceneMountError` (`scene-spike/errors.ts:23`) splits into these.
+  - **Deleted:** `core/painter/` except `text/` (moved in chunk 1),
+    `core/view.ts`, `headless/surface.ts`, `TeaView`,
+    `browser/runtime/{canvas-surface,browser-view,layer}.ts`, modules that no
+    longer have an importer (checked by grepping each file's path), the
+    `./scene-browser` and `./scene-headless` exports, and painter tests
+    (`test/headless/tea-view.*.test.ts`, `test/core/painter/`, 1,432 lines).
+    A painter test that asserts behaviour the new API keeps (dashes,
+    `textBounds`, `keepInside`, halo bounds, `debugBox` with `--outline`,
+    the timing line, style errors) is ported to the scene runner first; the
+    rest are deleted with a one-line reason each in the commit message.
+  - **beebox** (compile and tests only): `run-one.ts` drops `figureRenderer`
+    and `FigureRendererError`; `figure-canvas-loop.ts` drops the
+    `mountSceneSketch` wrapper and `rendererMismatch`; `FigureMount.tsx`
+    drops the `renderer` prop; their tests follow. An entry that still
+    exports `renderer` is ignored. Starters, card errors, server and
+    guidance are subplan (c).
+  - `package.json` `description` no longer says "Canvas2D sandbox"
+    (`canvas-loop/package.json:4`).
+- **Vocabulary lock-ins:** `View` is the scene View; `attachSketch`,
+  `mountSketch`, `SketchMountError` keep their names; `RemovedCallError`,
+  `NoWebGpuError`, `NoGpuAdapterError` are new error names that beebox
+  matches on; `./browser`,
+  `./headless`, `./react`, `./eslint`, `.` are the exports.
+- **First implementation chunk:** the frozen references and the tests that
+  read them, committed while the painter still exists. Then the type merge,
+  the mechanical import edit across migrated sketches, and the deletions.
+
+### Track 7: docs (chunk 7)
+
+- **What:** rewrite `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md` for
+  the new API; add `RENDERER.md`; add a `CHANGELOG.md` entry; update the
+  gallery README's commands.
+- **Direction:**
+  - `TEA.md` keeps its anchors (`#events-file` is rewritten by
+    `canvas-loop-doc.ts:29`) and gains "Pictures" (`picture`, `place`,
+    `pixels`, `deps`, versions) and `toCanvas`, `noise`. Text gets the glyph
+    atlas's limits (no ligatures or complex-script shaping).
+  - `BRUSHES.md` keeps its file name, since beebox ships it by that name
+    (`canvas-loop-doc.ts:45`), and adds wash, hatching, `effects.paper`,
+    lighting (lights, materials, the starting values from draft R8,
+    `receivesShadow`, one light across washed groups), and the docs draft 2.2
+    asked for: "Making something glow", where glows sit relative to a wash,
+    and `v.width` inside a picture. "Seeing what you made" covers `--scene`,
+    `--outline`, `--timing`, `--zoom`, `--ratio`.
+  - `README.md`: what renders (WebGPU in the browser, Dawn headless), what a
+    machine needs (a GPU adapter or a software Vulkan driver), determinism
+    per runtime ("byte-identical within one runtime on one machine";
+    parity-criteria.md for across runtimes), and the CLI flags.
+  - `RENDERER.md` (developer reference; not shipped to boxes): the lowering
+    contract R1–R9, coordinate spaces, picture versions and what a renderer
+    may cache, cache equivalence, the sleep contract, testing-mode checks,
+    and the parity criteria, moved from the draft so code comments can cite
+    them.
+  - `AGENTS.md`: the `*.gpu.test.ts` rule and "one heavy GPU process at a
+    time".
+  - `CHANGELOG.md`: version 0.2.0 with every behaviour change of draft
+    section 12 and the removed calls.
+  - **Doc probe:** one fresh agent draws one brief from
+    `stage4/drawing-brief.md` using only `TEA.md` and `BRUSHES.md`, with
+    render cycles, and writes an account. Docs change where it stumbles.
+  - A test lists the recorder's View members and checks each is named in
+    `TEA.md` or `BRUSHES.md` as `v.<name>`, so a new call cannot ship
+    undocumented.
+
+### Track 8: baselines and hand-off (chunk 8)
+
+- **What:** render the gallery with the final renderer into
+  `out/baselines/<commit>/` with a `manifest.json` (the Stage 0 script,
+  adapted); re-run the Stage 4 speed pages once and report walker,
+  Hallway panning, chemistry and six-figure fps against Checkpoint 4 (22.8,
+  58.8, 60, 11.0) and chunk 4b's acceptance, and headless time per 90 frames; one exhibit; Astra's read; a short
+  checkpoint summary for the boxholder in
+  `beebox/docs/plans/canvas-loop-scene/stage5/`.
+
+### Seams for subplans (b) and (c)
+
+**Order across the three subplans**, serial, one heavy GPU process at a time:
+
+1. (a) chunks 1–4: layout, runner, checks, `receivesShadow`.
+2. (b) chunks 1–6 on (a)'s paths: GPU expansion, ink capsules included.
+3. (a) chunk 4b: frame budget, measured with (b)'s expansion in place.
+4. (a) chunk 5: the gallery judged against the Stage 0 baselines once, with
+   (b)'s ink already in, so no exercise is judged twice
+   (`canvas-loop-gpu-brushes.subplan.md:382-384` asks for this).
+5. (a) chunk 6: the switch.
+6. (b) chunk 7: CPU expansion retired.
+7. (a) chunks 7–8: docs, scene baselines, hand-off.
+8. (c), then one merge of (a) and (c), with (b) in the same merge or before
+   it, only on the boxholder's go-ahead.
+
+- **(b), GPU brush expansion.** Starts after chunk 1. Its surface is
+  `scene/brush/expand.ts` (the CPU expansion and its cache), the brushed-stroke
+  lowering in `gpu/lower.ts`, and `gpu/marks.ts`, `gpu/mark-atlas.ts`,
+  `gpu/shader-mark.ts`. This plan changes those files only by the chunk 1
+  move, the node path in `lower.ts` (chunk 3) and the per-mark maximum for the
+  faint-mark readback (chunk 3), which (b) must keep producing. This plan
+  leaves `core/brush/render/kinds.ts`, `record-ctx.ts` and the internal
+  `Ctx2D` type in place; (b) deletes them when CPU expansion goes. (b) judges
+  its ink against the frozen Skia references; its chunk 1 freezes them, since
+  it runs before this plan's chunk 6 (Track 6 then reuses them).
+- **(c), box figures.** (c) lists eight needs
+  (`canvas-loop-box-figures.subplan.md`, "What (c) needs from (a), and the
+  order"). This plan meets each:
+
+  | (c)'s need | Where here |
+  |---|---|
+  | 1. One `mountSketch` in `./browser` with today's options (`module`, `initialParams`, `autoplay`, `seed`, `panel`, `transport`, `onParamsChange`, `onEvent`, `onError`), GPU code loaded lazily | Track 6, Browser; the spike's `mountSceneSketch` already takes `MountSketchOptions` (`scene-spike/browser/mount.ts:35-36`) |
+  | 2. Every failure after mount goes to `onError`, once | Track 6: no WebGPU, no adapter, a lost device that cannot be recreated, a throwing frame, a removed call; a test per case with a fake lease |
+  | 3. Stable error names | `RemovedCallError` (with `call` and `replacement` fields; its message names the replacement and the section heading of `TEA.md` or `BRUSHES.md`), `NoWebGpuError`, `NoGpuAdapterError`; Track 3 and Track 6 |
+  | 4. A headless entry shaped like `teaRun` | `teaRun` itself, async, taking a loaded `module`; `RunResult` unchanged (Track 2) |
+  | 5. Transcript parity: input lines with verdicts, `Δmodel`, `(unhandled)`, `activity {…}`, snapshot labels, overlap and font warnings, a transcript when `draw` throws | Track 2 (today's `FrameRecorder` and `TeaUtil`), Track 3 (overlap); held by beebox's `test/cli/commands/figure/run.test.ts:53-56` and the ported `tea-runtime.*` tests |
+  | 6. Docs for the scene API in `TEA.md` and `BRUSHES.md` | Track 7 |
+  | 7. No `GPUDevice` reaches sketch code | the recorder, `TeaUtil` and the browser `Util` expose no GPU object; the View-members test (Track 7) also checks that no member returns one |
+  | 8. A Dawn no-adapter error beebox can reword | `NoGpuAdapterError` from `teaRun`, by name (Track 6) |
+
+  The merge order matches: (a) and (c) land on `main` in one merge. beebox
+  changes here are limited to what compiles and passes its tests (chunks 2
+  and 6). (c) owns: `webgpu`
+  as a beebox dependency for a packed install, the server's software Vulkan
+  driver, what an old figure shows on its card, the starters, `card-figure.md`,
+  box knowledge audits, and the deployment order.
+
+## Could this be simpler?
+
+- **Simplest version:** flip the defaults to the spike runner and mount,
+  delete the painter, fix the compile errors, regenerate nothing, judge
+  nothing. It fails on principle 1: the spike runner drops determinism guards
+  (`runner.ts:183`), engagement verdicts (`util.ts:52`), sound, `--zoom`,
+  `--outline`, `--timing` and frame dedup, which agents use today. It fails
+  on principle 2: no one checks that the 39 exercises still look as they did.
+- **Skip the transition marker (chunks 2–5) and switch in one commit.** That
+  commit would hold the runner merge, 18 ported exercises and the deletions
+  together, and could not be judged exercise by exercise. The marker already
+  exists in beebox, so it adds no concept; chunk 6 deletes it.
+- **Skip the dev-loop completion (chunk 3).** The five rows and the two
+  missing checks are today's warnings; dropping them makes the new runtime
+  quieter than the old one about the same mistakes (principle 1, and §4
+  "never silent"). The off-canvas fold answers a measured complaint (7
+  warnings on one room). The removed-call errors are the only thing an old box
+  figure shows until (c)'s card error, and they cost about 60 lines.
+- **Keep the React component out.** `./react` has no user outside canvas-loop
+  (searched the repo for `canvas-loop/react`: `README.md`,
+  `test/react-ssr.test.tsx`, `src/dev-demo/main.tsx`). Retiring it would save
+  about 900 lines of code and tests. It is kept because it sits on
+  `attachSketch`, which `mountSketch` needs anyway, so keeping it costs only
+  type changes; retiring it is a separate decision.
+- **Do not bank the drawers' sketches.** Saves about 400 lines of metadata.
+  Then nothing in `gallery check` uses lighting, wash or hatching, and the
+  only regression test for those looks is the spike's cases.
+- **Skip the frame budget (chunk 4b).** Then targets 1 and 3 stay missed
+  after (b): its own projection is 21–25 ms per walker frame
+  (`canvas-loop-gpu-brushes.subplan.md:95-96`), and the record step is the
+  largest remaining part. The chunk is levers inside code this plan already
+  moves, with a measured stop.
+- **Over-builds avoided:** no scene diff in `cli diff` (the `--scene` outline
+  is text and diffs with any diff tool); no GPU lock across processes (the
+  test script serialises; other renders are short); no Web Worker or GPU
+  expansion (subplan b).
+
+## Subplans
+
+None below this one. This file is subplan (a) of
+`beebox/docs/plans/canvas-loop-scene.md`; its siblings are
+`canvas-loop-gpu-brushes.subplan.md` (b) and
+`canvas-loop-box-figures.subplan.md` (c).
+
+## Failure modes
+
+> **Critical gap (accepted risk):** two Dawn processes at once outside the
+> test runner, for example `gallery:check` in one worktree while an agent
+> renders in another. The test script serialises its own GPU files, but
+> nothing serialises separate commands. The crash in Stage 4 came from heavy
+> parallel GPU load (several agents rendering large scenes). Accepted with
+> documentation (`AGENTS.md`: one heavy GPU process at a time), because a
+> cross-process lock adds stale-lock handling for a load that agents control.
+
+| What can fail | Test exists? | Handling exists? | Clear-or-silent? |
+|---|---|---|---|
+| A sketch calls `Math.random` or `Date.now` in `draw` after the runner becomes async | port `tea-runtime.guards.test.ts` (chunk 2) | per-step `withGuards` | clear: `DeterminismError` naming the seeded call |
+| The runner awaits a render while guards are installed, and the renderer's own timing calls throw | chunk 2 test: `--timing` run with guards | guards wrap sketch calls only | clear |
+| An engagement verdict or `activity` line goes missing for scene sketches | port `tea-runtime.events` and `.activity` tests to the scene surface (chunk 2) | `TeaUtil.handled` | clear (expected lines checked) |
+| Frame dedup marks a changed frame "unchanged" because pixels came from a reused buffer | port `tea-runtime.dedup.test.ts` (chunk 2) | runner copies readback pixels before `FrameRecorder` hashes them | clear |
+| Several test files open Dawn in parallel | none (test-script shape) | `*.gpu.test.ts` with `--test-concurrency=1` | silent until the machine stalls; see the critical gap |
+| `gallery check` gives different bytes on the second run because caches are warm | cache-equivalence cases (`test/scene-spike/cache-cases.ts`) | each run makes its own renderer | clear: `gallery check` FAIL names the file |
+| A migrated exercise looks different beyond the accepted decisions, and nobody sees it | gallery-parity table, exhibit, Astra read (chunk 5) | fix or record with reason | clear when the table is complete |
+| An old box figure calls `v.cache` | dev-loop row "removed call" (chunk 3) | `SketchUsageError` naming `picture` and `place` | clear |
+| The off-canvas fold hides a real wrong-sign mistake that also moves | chunk 3 test: a moving off-canvas line appears in the summary with its line | the summary names every line | clear |
+| A legitimate scene trips the pass budget | gallery run in chunk 5 | budget rule in Track 3 | clear (a warning with the group path) |
+| A faint-mark readback adds a stall in the browser | test: browser surface makes no readback (`test/scene-spike/browser/surface.test.ts`) | readbacks only in testing mode | clear |
+| `receivesShadow` set inside a placed picture is lost | chunk 4 test through `place(…, { material })` | third layer composites like the others | clear |
+| A lit group without `receivesShadow` pays for a third layer | chunk 4 test: pass count unchanged | recorder flag per lit group | clear |
+| A render error points at nothing | dev-loop rows 33 and 44 extended (chunk 3) | node path in `GpuRenderError` | clear |
+| A bad colour in the browser fails only at render | browser surface test with a parser (chunk 3) | parser from `OffscreenCanvas` at mount | clear |
+| Frozen parity references drift from what the painter drew | written once from the painter in chunk 6, before deletion | parity tolerances | clear |
+| Stage 0 baselines missing on the implementer's machine | none | recreate at `570e8ef21` with the script in `canvas-loop-scene/README.md` | clear (the judging script stops) |
+| beebox's figure run test opens Dawn in beebox's parallel suite after chunk 6 | `beebox/test/cli/commands/figure/run.test.ts` | figures there are 60×40, one process at a time within the file | clear |
+| Docs describe a call the recorder does not have, or miss one | View-members doc test (chunk 7) | test fails | clear |
+| Subplan (b) works on old paths | none | (b) starts after chunk 1 | clear (merge conflict) |
+| The gallery is judged before (b)'s ink lands and must be judged again | none | cross-subplan order: chunk 5 runs after (b) chunks 1–6 | clear |
+| Chunk 4b speeds recording but changes a recorded value (a dropped copy lets a later mutation leak into the scene) | captured-by-value tests (`recorder.test.ts`), the three ports byte-identical, cache equivalence | levers keep draft section 6's meaning | clear |
+| The record step stays above 4 ms | the acceptance measurement | chunk 4b reports the profile; the boxholder decides on off-thread recording | clear |
+| This plan merges without (c): production has no Vulkan driver, old courseware figures error, box docs describe the new API | none | Rollout shape: no merge without (c) and the boxholder's go-ahead | clear |
+
+## Agent-flow / user-flow edge cases
+
+- **Wrong call, from memory of the old API** (`v.cache`, `v.ctx`,
+  `paperTexture`). ADDRESSED: a type error when typechecked; at runtime the
+  removed-call error names the replacement (Track 3).
+- **Wrong one of two similar things** (`castsShadow` vs `receivesShadow`).
+  ADDRESSED: the recorder checks types per field; `BRUSHES.md` shows both in
+  one side-view example (Track 7).
+- **Stale ref.** ADDRESSED: a Picture kept from an earlier frame is an error
+  (dev-loop row 17), unchanged.
+- **Two agents touching the same card.** Not applicable here: this plan
+  writes no cards. Two agents rendering at once on one machine is the
+  critical gap above.
+- **Hand-edit drift.** ADDRESSED: misspelt style, gesture and material keys
+  are errors naming the valid keys (dev-loop row 13; `recorder/light.ts:56`
+  `MATERIAL_KEYS` gains `receivesShadow`).
+- **Fabricated free-form value.** Not applicable: no free-form fields.
+- **Validation error UX.** ADDRESSED: errors name the call, the rule, the value
+  and the line (dev-loop.md, "Actual output"); chunk 3 adds node paths to
+  render errors.
+- **Partial migration / transition state.** ADDRESSED: between chunks 2 and 6
+  the branch has two headless surfaces chosen by the `renderer` export; every
+  commit passes its checks; nothing merges to `main` mid-way (Rollout shape).
+  Box figures are untouched until (c) lands.
+
+## NOT in scope
+
+- **GPU brush expansion:** subplan (b). Targets 1 and 3 are shared: (b)
+  takes brush CPU time, chunk 4b takes recording and non-brush lowering.
+- **Moving recording off the main thread** (workers): a design change, raised
+  only if chunk 4b's levers miss the record budget.
+- **beebox's figure card behaviour, starters, server driver, `webgpu` as a
+  beebox dependency, box guidance and audits, deployment order:** subplan
+  (c). This plan changes beebox only to compile and pass tests.
+- **Scene diff in `cli diff`** (draft section 10): considered; deferred until
+  agents ask for it. `--scene` writes the outline as text, which any diff
+  tool compares. The draft's section 10 is amended in `RENDERER.md`.
+- **A light across separate lit groups:** the boxholder chose to document the
+  pattern (Checkpoint 4, answer 5).
+- **Hatching gated by each pixel's tone:** the boxholder chose to leave it
+  (answer 6).
+- **Chromebook-class check:** the boxholder accepted desktop numbers
+  (answer 7).
+- **Effects under a rotated non-uniform scale or a skew:** they stay an error
+  (`mat.ts:87`); building them waits for a sketch that needs them.
+- **Two-centre radial gradients:** stay an error
+  (`recorder/style.ts:47-49`); no View call makes one, and no gallery sketch
+  writes one by hand (searched `src/gallery` and `src/examples` for
+  `"radial-gradient"`: none).
+- **Ligatures and complex-script shaping in the glyph atlas:** documented as a
+  limit; deferred from Stage 4 chunk 3.
+- **A cross-process GPU lock:** see the critical gap.
+- **Rewriting the hand-built lit rooms with `lighting`:** a drawing change,
+  not a migration (Track 5).
+- **Production deploy of anything:** needs the boxholder's go-ahead and (c).
+
+## Open design questions
+
+- **When to build the scene diff in `cli diff`.** Lean: after box agents have
+  used the new API for a while, if their accounts show they diff outlines by
+  hand.
+- **Whether `./react` stays.** Lean: keep it, since it costs only type changes
+  (Could this be simpler?). The boxholder may prefer to retire it.
+
+Neither question touches chunk 1.
+
+## Knowledge audits
+
+None in this plan. Box agents read canvas-loop through `canvas-loop.md` and
+`canvas-loop-brushes.md` in box docs; subplan (c) carries the box knowledge
+audits for figure guidance, after these docs are rewritten. For dev agents,
+`canvas-loop/AGENTS.md` keeps its loop and gains one rule; the doc probe in
+chunk 7 tests the drawing docs with a fresh agent, which tells more than a
+`knows_directly` entry about an API reference.
+
+## What will hold this after it ships
+
+- **The GPU test files** (`*.gpu.test.ts`, serial): renderer cases (paint,
+  light, raster, cache equivalence), the dev-loop rows, the runner's
+  transcript tests, `receivesShadow` cases, and parity against the frozen
+  references. This is the spike's existing tier (`gpu.test.ts`), split into
+  files and run serially; the serial phase is a norm future agents follow,
+  stated in `AGENTS.md`.
+- **Pure-function tests without a GPU:** the off-canvas fold, the pass budget,
+  empty-clip area, label overlap, removed-call messages, colour parsing.
+- **`gallery:check`:** two runs per exercise, byte-identical, lint clean, now
+  on Dawn and including the nine drawer exercises.
+- **The gallery-parity table and the scene baselines:** a record for this
+  change and the reference for later renderer work. They are evidence, not
+  regression anchors; behaviour that must stay true lives in the tests above.
+- **The View-members doc test:** keeps `TEA.md` and `BRUSHES.md` complete.
+
+## Implementation order
+
+Chunks run serially, one heavy GPU process at a time, interleaved with
+subplan (b) as in "Seams for subplans (b) and (c)". Each ends at a
+checkpoint where `pnpm --dir canvas-loop typecheck`, `lint` and `test` pass,
+`pnpm typecheck` and `pnpm layout-check` pass from `beebox/`, and the listed
+check holds.
+
+1. **Layout.** Move and rename (Track 1). Checkpoint: the three ports render
+   the same bytes as before; `gallery:check` passes on the painter.
+2. **One runner.** Track 2, with beebox `run-one.ts`. Checkpoint: today's
+   runner tests on both surfaces, the spike's runner and dev-loop tests, and
+   `gallery:check`; Codex review of the diff.
+3. **Dev-loop completion.** Track 3. Checkpoint: 46 + 3 rows pass, none
+   `todo`; Codex review.
+4. **`receivesShadow`.** Track 4. Checkpoint: its cases pass; a side-view
+   render of the opus-b night room with a non-receiving sky, read by eye.
+
+   *Subplan (b) chunks 1–6 run here, on (a)'s paths.*
+
+4b. **Frame budget.** Track 4b, after (b)'s chunks 1–6. Checkpoint: the
+   acceptance table met or reported with the profile; output byte-identical.
+5. **Gallery.** Track 5: the 21 unchanged exercises, then the 18 ported in
+   batches, then the drawers' exercises, then `scene-ports/` deleted.
+   Checkpoint: every exercise in the parity table with a verdict; exhibit;
+   Astra read; `gallery:check` passes with every exercise on the scene
+   surface.
+6. **The switch.** Track 6: frozen references first (own commit), then the
+   type merge, the browser and React port, deletions, beebox edits.
+   Checkpoint: no file imports `core/painter/` except `core/text/`; no
+   `renderer` export remains; beebox tests pass; Codex review.
+
+   *Subplan (b) chunk 7 (CPU expansion retired) runs here.*
+7. **Docs.** Track 7, including the doc probe. Checkpoint: the doc probe's
+   account; the View-members doc test passes; `pnpm doc-check` passes.
+8. **Baselines and hand-off.** Track 8. Checkpoint: the boxholder's read of
+   the exhibit and the summary.
+
+No chunk merges to `main`; see Rollout shape. No external source is adopted,
+so no ACKNOWLEDGEMENTS.md entry.
+
+## Rollout shape
+
+- **Tests first:** each track names its tests above; done when they pass, the
+  five `todo` dev-loop rows are gone, every gallery exercise has a verdict in
+  the parity table, and `gallery:check` passes on Dawn.
+- **No data migration in this plan.** Box figure sketches change by
+  regeneration by the box's agent, which subplan (c) plans.
+- **Merge:** canvas-loop is a shipped path
+  (`bin/deployed-paths.ts:22` includes `canvas-loop` in the deploy pattern),
+  so merging this plan deploys it. It must not merge before subplan (c) is
+  done: production has no Vulkan driver yet, and old courseware figures would
+  fail with no card-level message. (a) and (c) merge together, only when the
+  boxholder says so. (b) may merge with them or after them; it changes no
+  sketch-facing API.

@@ -266,7 +266,7 @@ Targets 1 and 3 (`browser-profile.md`), against the walker sheet. Scratch:
   (`canvas-loop/test/scene-spike/dev-loop/cases.ts`), each run through the
   headless runner in `gpu.test.ts` and checked for the channel and what its
   message names. 18 passed as they were, 22 gaps were fixed, 6 are left with
-  proposals.
+  proposals (later 23 and 5; see `stage4/dev-loop.md`).
 - **Fixed:** a throwing step now leaves a transcript that ends with the
   frame, the step and the sketch's lines, and the run throws
   `SketchRunError`. Warnings name the sketch's line and are given once per

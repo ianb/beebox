@@ -126,17 +126,15 @@ Chromebook-class check: not done; no such device is on hand.
   (Mesa lavapipe). In the Lima VM test, a lit frame took about 1.3–1.5 s at
   ratio 1 on 2 CPUs.
 - The browser GPU chunk is about 155 KB minified and loads lazily.
-- Box-agent docs and starters (Stage 5 subplan f). The courseware box agent
+- Box-agent docs and starters (Stage 5 subplan c). The courseware box agent
   regenerates its figures.
 
 ## Next
 
 Stage 5 writes the subplans, each through bbx-plan with cross-model review:
-- scene core with a Skia fallback, or retired;
-- the WebGPU renderer;
-- brushes and effects on the GPU;
-- lighting;
-- caching and sleep;
-- box figures.
+(a) scene core, (b) brushes on the GPU, (c) box figures. The list is in the
+Stage 5 section of `../../canvas-loop-scene.md`.
 
-They wait for your decisions above.
+Correction found while writing (b): targets 1 and 3 miss for two reasons.
+Recording the walker's scene also takes about 11.4 ms per frame in
+Chromium; subplan (a) owns that cost.
