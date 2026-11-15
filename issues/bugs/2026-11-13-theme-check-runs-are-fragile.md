@@ -1,6 +1,6 @@
 ---
 title: "bin/theme-check runs fail on first open, on a parallel run, and on a source edit"
-workstream: unattached
+workstream: theme-check-gate
 area: beebox
 labels: [themes, theme-check]
 filed-by: agent
