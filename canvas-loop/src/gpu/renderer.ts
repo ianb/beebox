@@ -24,9 +24,9 @@ import type { Pipelines } from "./pipelines.js";
 import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
-import { BrushPass } from "./brush-pass.js";
-import type { BrushOutputs } from "./brush-pass.js";
-import { SAMPLE_FLOATS } from "./shader-brush.js";
+import { readBrushPass } from "./brush-pass.js";
+import type { BrushOutputs, DabOutputs, StampJob } from "./brush-pass.js";
+import { DAB_FLOATS, SAMPLE_FLOATS } from "./shader-brush.js";
 import { PainterlyPasses } from "./painterly.js";
 import { LightPass } from "./light.js";
 import type { GpuTimes } from "./timing.js";
@@ -111,7 +111,6 @@ export class GpuRenderer {
   readonly #atlas: CoverageAtlas;
   readonly #marks: MarkAtlas;
   readonly #smear: SmearPass;
-  #brushes: BrushPass | undefined;
   readonly #painterly: PainterlyPasses;
   readonly #light: LightPass;
   readonly #expander: BrushExpander;
@@ -315,41 +314,26 @@ export class GpuRenderer {
   }
 
   /**
-   * Verification and measurement only, until a drawing pass reads the samples
-   * (canvas-loop-gpu-brushes.subplan.md, chunk 3): run the GPU sample pass
-   * over `strokes` on its own and read the samples back (`SAMPLE_FLOATS`
-   * floats each, the eighth a u32), with each stroke's contour ranges, the CPU
-   * time to pack, upload and encode, and the pass's GPU time when timing.
+   * Verification and measurement: run the GPU sample pass over `strokes` on
+   * its own and read the samples back (`SAMPLE_FLOATS` floats each, the
+   * eighth a u32), with each stroke's contour ranges, the CPU time to pack,
+   * upload and encode, and the pass's GPU time when timing.
    */
   async sampleBrushes(strokes: readonly Prepared[]): Promise<{ data: ArrayBuffer; count: number; ranges: BrushOutputs["ranges"]; encodeMs: number; gpuMs: number | undefined }> {
-    const device = this.#gpu.device;
-    this.#brushes ??= new BrushPass(device);
-    const temp: GPUBuffer[] = [];
-    try {
-      this.#timer?.begin();
-      const enc = device.createCommandEncoder();
-      const t0 = performance.now();
-      const out = this.#brushes.encode(strokes, { enc, temp, timer: this.#timer });
-      const encodeMs = performance.now() - t0;
-      const size = out.count * SAMPLE_FLOATS * 4;
-      const read = out.samples === undefined ? undefined : device.createBuffer({ size, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
-      if (read !== undefined && out.samples !== undefined) {
-        temp.push(read);
-        enc.copyBufferToBuffer(out.samples, 0, read, 0, size);
-      }
-      const times = this.#timer?.resolve(enc, temp);
-      device.queue.submit([enc.finish()]);
-      let data = new ArrayBuffer(0);
-      if (read !== undefined) {
-        await read.mapAsync(GPUMapMode.READ);
-        data = read.getMappedRange().slice(0);
-        read.unmap();
-      }
-      const gpu = times === undefined || this.#timer === undefined ? undefined : await this.#timer.read(times);
-      return { data, count: out.count, ranges: out.ranges, encodeMs, gpuMs: gpu?.kinds.brush?.ms };
-    } finally {
-      for (const b of temp) b.destroy();
-    }
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, encode: (f) => {
+      const out = this.#marks.brushes.encode(strokes, f);
+      return { ...out, buffer: out.samples, bytes: out.count * SAMPLE_FLOATS * 4 };
+    } });
+    return { data: r.data, count: r.out.count, ranges: r.out.ranges, encodeMs: r.encodeMs, gpuMs: r.gpuMs };
+  }
+
+  /** Verification: the `dabs` entry's instances for `stamps` (`DAB_FLOATS` floats each, one per sample), as the mark atlas draws them, and each stroke's range. */
+  async stampBrushes(stamps: readonly StampJob[]): Promise<{ data: ArrayBuffer; count: number; strokes: DabOutputs["strokes"] }> {
+    const r = await readBrushPass(this.#gpu.device, { timer: this.#timer, encode: (f) => {
+      const out = this.#marks.brushes.encodeStamps(stamps, f);
+      return { ...out, buffer: out.dabs, bytes: out.count * DAB_FLOATS * 4 };
+    } });
+    return { data: r.data, count: r.out.count, strokes: r.out.strokes };
   }
 
   /** Free every texture the renderer made. The device stays open. */

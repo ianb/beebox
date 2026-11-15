@@ -1,6 +1,8 @@
 // The mark atlas: every dab-and-run mark of a frame gets a slot on an rgba8
 // page; per page, one instanced draw lays every dab and one draw every bristle
-// run (shader-mark.ts). A mark's draw then reads its slot (src 3 or 4 in the
+// run (shader-mark.ts). Stamp marks' dabs are written on the GPU (brush-pass.ts)
+// into one buffer, ordered by page, before the pages are drawn; each page draws
+// its range of them. A mark's draw then reads its slot (src 3 or 4 in the
 // draw shader), so a mark's opacity applies once however many dabs overlap.
 import type { Run } from "../scene/brush/expand.js";
 import type { AtlasPage } from "./atlas.js";
@@ -11,10 +13,12 @@ import type { TexturePool } from "./pool.js";
 import { timed } from "./frame.js";
 import type { PassTimer } from "./timing.js";
 import { MARK_WGSL } from "./shader-mark.js";
+import { BrushPass } from "./brush-pass.js";
+import type { StampJob } from "./brush-pass.js";
+import { DAB_FLOATS } from "./shader-brush.js";
 
 const MAX = ATLAS_MAX;
-/** Floats per dab instance and per run vertex. */
-const DAB_FLOATS = 12;
+/** Floats per run vertex (a dab instance is `DAB_FLOATS`). */
 const RUN_FLOATS = 24;
 /** A strip quad's two triangles, as offsets into the per-point [left x, left y, right x, right y] list: (L_i, R_i, L_i+1), (L_i+1, R_i, R_i+1). */
 const TRIS = [[0, 2, 4], [4, 2, 6]] as const;
@@ -85,13 +89,22 @@ function runStrip(out: Float32Array, a: { o: number; run: Run; local: readonly [
   return o;
 }
 
+/** A stamp mark (packed) as the `dabs` entry takes it. */
+function stampJob(m: TexMark & { stamp: NonNullable<TexMark["stamp"]>; slot: NonNullable<TexMark["slot"]> }): StampJob {
+  const [x0, y0, x1, y1] = slotRect(m.box, m.slot);
+  return { ...m.stamp, offset: [m.ox - m.box.x0, m.oy - m.box.y0], slot: [x0 ?? 0, y0 ?? 0, x1 ?? 0, y1 ?? 0] };
+}
+
 export class MarkAtlas {
   readonly #device: GPUDevice;
   readonly #dab: GPURenderPipeline;
   readonly #run: GPURenderPipeline;
+  /** The GPU brush expansion: stamp marks' dabs. */
+  readonly brushes: BrushPass;
 
   constructor(device: GPUDevice) {
     this.#device = device;
+    this.brushes = new BrushPass(device);
     const module = device.createShaderModule({ code: MARK_WGSL });
     const over: GPUBlendState = { color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" }, alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" } };
     const target: GPUColorTargetState = { format: "rgba8unorm", blend: over };
@@ -108,23 +121,49 @@ export class MarkAtlas {
   build(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; timer: PassTimer | undefined }): AtlasPage[] {
     const widest = marks.reduce((w, m) => Math.max(w, widthOf(m.box) + 1), 0);
     const sizes = shelfPack(marks, Math.min(MAX, Math.max(widest, 1024)));
+    const stamped = this.#stamps(marks, f);
     return sizes.map((size, page) => {
       const tex = f.pool.acquire({ w: size.w, h: size.h, format: "rgba8unorm" });
       const mine = marks.filter((m) => m.slot?.page === page);
       const { dabs, runs } = this.#lay(mine);
       const pass = f.enc.beginRenderPass({ colorAttachments: [{ view: tex.createView(), loadOp: "clear", clearValue: [0, 0, 0, 0], storeOp: "store" }], ...timed(f, "marks") });
       const uni = this.#buffer(new Float32Array([tex.width, tex.height, 0, 0]), { usage: GPUBufferUsage.UNIFORM, temp: f.temp });
-      for (const [pipe, data] of [[this.#dab, dabs], [this.#run, runs]] as const) {
-        if (data.length === 0) continue;
+      const bind = (pipe: GPURenderPipeline): void => {
         pass.setPipeline(pipe);
         pass.setBindGroup(0, this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uni } }] }));
+      };
+      for (const [pipe, data] of [[this.#dab, dabs], [this.#run, runs]] as const) {
+        if (data.length === 0) continue;
+        bind(pipe);
         pass.setVertexBuffer(0, this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp }));
         if (pipe === this.#dab) pass.draw(6, data.length / DAB_FLOATS);
         else pass.draw(data.length / RUN_FLOATS);
       }
+      const range = stamped?.pages.get(page);
+      if (stamped !== undefined && range !== undefined && range.count > 0) {
+        bind(this.#dab);
+        pass.setVertexBuffer(0, stamped.dabs);
+        pass.draw(6, range.count, 0, range.first);
+      }
       pass.end();
       return { tex, width: tex.width, height: tex.height };
     });
+  }
+
+  /** Encode the stamp marks' dabs (ordered by page), and each page's range of instances; undefined with no stamp samples. */
+  #stamps(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined }): { dabs: GPUBuffer; pages: Map<number, { first: number; count: number }> } | undefined {
+    const stamps = marks.flatMap((m) => (m.stamp === undefined || m.slot === undefined ? [] : [{ ...m, stamp: m.stamp, slot: m.slot }]));
+    if (stamps.length === 0) return undefined;
+    stamps.sort((a, b) => a.slot.page - b.slot.page);
+    const out = this.brushes.encodeStamps(stamps.map(stampJob), f);
+    if (out.dabs === undefined) return undefined;
+    const pages = new Map<number, { first: number; count: number }>();
+    for (const [i, m] of stamps.entries()) {
+      const r = out.strokes[i] ?? { first: 0, count: 0 };
+      const at = pages.get(m.slot.page);
+      pages.set(m.slot.page, at === undefined ? { ...r } : { first: at.first, count: at.count + r.count });
+    }
+    return { dabs: out.dabs, pages };
   }
 
   /** Every dab (one instance each) and every run's strip vertices of `marks`, in each mark's own pixels with its slot. */

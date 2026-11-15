@@ -13,6 +13,8 @@
 // they are asked for (draft section 6); `stats` counts hits. `prepare` is the
 // CPU part of the GPU expansion (gpu/brush-pass.ts): the same contours and
 // seeds, with each contour's sample count fixed by `resample`'s own loop.
+// Stamp strokes are not expanded on the CPU: the expander keeps their
+// prepared stroke, and the GPU's `dabs` entry lays their dabs (chunk 3).
 import type { Contour } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { Paint } from "../../core/paint.js";
@@ -22,7 +24,7 @@ import { paintBristle, paintInk, paintStamp } from "../../core/brush/render/kind
 import { shapeSamples, stepFor, wobbleLattice } from "../../core/brush/render/mark/render.js";
 import type { Sample } from "../../core/brush/sample.js";
 import { preparePoints, sampleSegments } from "../../core/brush/sample.js";
-import type { BrushKind, Envelope } from "../../core/brush/types.js";
+import type { BrushKind, Envelope, StampBrush } from "../../core/brush/types.js";
 import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../nodes.js";
@@ -47,8 +49,15 @@ export interface SmearSet {
   readonly contours: readonly (readonly { x: number; y: number; r: number; a: number }[])[];
   readonly width: number;
 }
+/** A stamp stroke: prepared for the GPU, which lays its dabs. `tint` as for `MarkSet`. */
+export interface StampSet {
+  readonly kind: "stamp";
+  readonly prepared: Prepared;
+  readonly brush: StampBrush;
+  readonly tint: number | undefined;
+}
 export interface Expanded {
-  readonly set: MarkSet | SmearSet;
+  readonly set: MarkSet | SmearSet | StampSet;
   /** What the expansion is kept under: equal keys, equal expansions. */
   readonly key: string;
   /** Brush space → the stroke's logical coordinates (linear part only; orthogonal). */
@@ -217,7 +226,19 @@ function prepareIn(req: ExpandRequest, b: Mat): Prepared | undefined {
   return { kind: brush.kind, contours, width: c.width, wobble, base, box: grown };
 }
 
-function expandIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | undefined {
+/** The CPU expansion of every kind, in brush space (stamps included): what the GPU expansion is checked against. */
+export function expandOnCpu(req: ExpandRequest): MarkSet | SmearSet | undefined {
+  return cpuIn(req, brushSpace(req.linear).b);
+}
+
+function expandIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | StampSet | undefined {
+  const { brush } = req.stroke;
+  if (brush.kind !== "stamp") return cpuIn(req, b);
+  const prepared = prepareIn(req, b);
+  return prepared === undefined ? undefined : { kind: "stamp", prepared, brush, tint: prepared.base?.a };
+}
+
+function cpuIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | undefined {
   const sampled = sampledIn(req, b);
   if (sampled === undefined) return undefined;
   const { brush } = req.stroke;
@@ -240,7 +261,7 @@ function expandIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | undefined {
 }
 
 export class BrushExpander {
-  readonly #cache = new Map<string, { set: MarkSet | SmearSet | undefined; frame: number; prep?: Prepared | undefined }>();
+  readonly #cache = new Map<string, { set: MarkSet | SmearSet | StampSet | undefined; frame: number; prep?: Prepared | undefined }>();
   readonly #enabled: boolean;
   #frame = 0;
 
@@ -277,7 +298,7 @@ export class BrushExpander {
     }
     if (entry.set === undefined) return undefined;
     const kept = entry;
-    const prepared = (): Prepared | undefined => (kept.prep ??= prepareIn(req, b));
+    const prepared = (): Prepared | undefined => (kept.prep ??= kept.set?.kind === "stamp" ? kept.set.prepared : prepareIn(req, b));
     return { set: entry.set, key, q, prepared };
   }
 

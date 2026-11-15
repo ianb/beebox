@@ -9,7 +9,8 @@
 // and adds pressure and wobble as core/brush/render/mark/render.ts's
 // `shapeSamples` does. Hashes are core/brush/random.ts's, bit for bit; a random
 // value keeps the hash's 24 high bits, which f32 holds exactly. Positions are
-// brush space, as the CPU expansion's.
+// brush space, as the CPU expansion's. The `dabs` entry (its own module, below)
+// turns each sample of a stamp stroke into one dab instance in device pixels.
 import { POINT_WORDS } from "../scene/brush/expand.js";
 import { MIX_WGSL } from "./shader-paper.js";
 
@@ -23,26 +24,34 @@ export const SAMPLES_WORKGROUP = 64;
 /** Pressure envelope kinds in a contour record; keyframes are pairs of (t, value) in the records buffer. */
 export const ENVELOPE_KINDS = { constant: 0, even: 1, taper: 2, "taper-in": 3, "taper-out": 4, swell: 5, press: 6, keyframes: 7 } as const;
 
-export const BRUSH_WGSL = /* wgsl */ `
+/** Words per stamp stroke record (the `dabs` entry's parameters), and floats per dab instance (mark-atlas.ts's layout). */
+export const STROKE_WORDS = 24;
+export const DAB_FLOATS = 12;
+
+// What both entries share: the uniform, the sample, the records and the hash.
+const PRELUDE = /* wgsl */ `
 ${MIX_WGSL}
 struct U { first: u32, count: u32, contours: u32, pad: u32 };
 struct Sample { x: f32, y: f32, nx: f32, ny: f32, s: f32, t: f32, p: f32, contour: u32 };
 @group(0) @binding(0) var<storage, read> rec: array<u32>;
-@group(0) @binding(1) var<storage, read> geo: array<u32>;
-@group(0) @binding(2) var<storage, read_write> out: array<Sample>;
 @group(0) @binding(4) var<uniform> u: U;
-
 fn cw(c: u32, w: u32) -> u32 { return rec[${RECORD_HEAD}u + c * ${CONTOUR_WORDS}u + w]; }
 fn cf(c: u32, w: u32) -> f32 { return bitcast<f32>(cw(c, w)); }
+// random.ts \`rand\`: the same hash; its 24 high bits, converted exactly.
+fn rand1(seed: u32, ch: u32, idx: u32) -> f32 {
+  return f32(mix32(seed ^ mix32(ch * 0x9e3779b1u + mix32(idx))) >> 8u) / 16777216.0;
+}
+`;
+
+export const SAMPLES_WGSL = /* wgsl */ `
+${PRELUDE}
+@group(0) @binding(1) var<storage, read> geo: array<u32>;
+@group(0) @binding(2) var<storage, read_write> out: array<Sample>;
 const PW = ${POINT_WORDS}u;
 fn pt(i: u32) -> vec2f { return vec2f(bitcast<f32>(geo[PW * i]), bitcast<f32>(geo[PW * i + 1u])); }
 fn arc(i: u32) -> f32 { return bitcast<f32>(geo[PW * i + 2u]); }
 fn firstOn(i: u32) -> u32 { return geo[PW * i + 3u]; }
 
-// random.ts \`rand\`: the same hash; its 24 high bits, converted exactly.
-fn rand1(seed: u32, ch: u32, idx: u32) -> f32 {
-  return f32(mix32(seed ^ mix32(ch * 0x9e3779b1u + mix32(idx))) >> 8u) / 16777216.0;
-}
 // random.ts \`noiseOf(1, period)\` at x ≥ 0; period 0 does not wrap.
 fn noise1(seed: u32, x: f32, period: u32) -> f32 {
   let i = floor(x);
@@ -95,7 +104,8 @@ fn pressure(c: u32, t: f32) -> f32 {
 
 // Contour record words: 0 first point, 1 points, 2 first sample, 3 samples,
 // 4 seed, 5 step, 6 arc length, 7 wobble cell, 8 wobble period (0: open),
-// 9 wobble, 10 envelope kind, 11 its value or keyframe word, 12 keyframes.
+// 9 wobble, 10 envelope kind, 11 its value or keyframe word, 12 keyframes,
+// 13 the stroke's record word (stamp strokes; read by \`dabs\`).
 @compute @workgroup_size(${SAMPLES_WORKGROUP}) fn samples(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= u.count) { return; }
   let i = u.first + gid.x;
@@ -140,5 +150,89 @@ fn pressure(c: u32, t: f32) -> f32 {
     pos += nrm * (wobble * noise1(cw(c, 4u), s / cf(c, 7u), cw(c, 8u)));
   }
   out[i] = Sample(pos.x, pos.y, nrm.x, nrm.y, s, t, p, c);
+}
+`;
+
+// colour.ts `shiftColour`: hue and HSL lightness shifted, channels rounded to 0..255.
+const COLOUR_WGSL = /* wgsl */ `
+fn toHsl(c: vec3f) -> vec3f {
+  let mx = max(c.r, max(c.g, c.b));
+  let mn = min(c.r, min(c.g, c.b));
+  let l = (mx + mn) / 2.0;
+  let d = mx - mn;
+  if (d == 0.0) { return vec3f(0.0, 0.0, l); }
+  let s = d / (1.0 - abs(2.0 * l - 1.0));
+  var h: f32;
+  if (mx == c.r) { h = ((c.g - c.b) / d) % 6.0; } else if (mx == c.g) { h = (c.b - c.r) / d + 2.0; } else { h = (c.r - c.g) / d + 4.0; }
+  return vec3f((h * 60.0 + 360.0) % 360.0, s, l);
+}
+fn fromHsl(hsl: vec3f) -> vec3f {
+  let h = hsl.x;
+  let c = (1.0 - abs(2.0 * hsl.z - 1.0)) * hsl.y;
+  let x = c * (1.0 - abs((h / 60.0) % 2.0 - 1.0));
+  let m = hsl.z - c / 2.0;
+  var v = vec3f(0.0);
+  switch (u32(floor(h / 60.0)) % 6u) {
+    case 0u: { v = vec3f(c, x, 0.0); }
+    case 1u: { v = vec3f(x, c, 0.0); }
+    case 2u: { v = vec3f(0.0, c, x); }
+    case 3u: { v = vec3f(0.0, x, c); }
+    case 4u: { v = vec3f(x, 0.0, c); }
+    default: { v = vec3f(c, 0.0, x); }
+  }
+  return floor((v + m) * 255.0 + 0.5);
+}
+fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
+  let hsl = toHsl(base / 255.0);
+  return fromHsl(vec3f((((hsl.x + hue) % 360.0) + 360.0) % 360.0, hsl.y, clamp(hsl.z + light, 0.0, 1.0)));
+}
+`;
+
+// The `dabs` entry: kinds.ts `paintStamp` for sample i, written as dab instance i
+// (mark-atlas.ts's layout: x, y, radius, alpha; soft, r, g, b; the slot) in the
+// mark's own device pixels. A dab paintStamp skips is written with alpha 0.
+// Stroke record words: 0-3 brush space → device (linear), 4-5 the offset to
+// the mark's own pixels, 6-9 the slot, 10 width (brush space), 11 pixel ratio,
+// 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure, 16 scatter,
+// 17 soft, 18 hueJitter, 19 lightJitter, 20-22 the base colour (0..255), 23 jittered.
+export const DABS_WGSL = /* wgsl */ `
+${PRELUDE}
+${COLOUR_WGSL}
+@group(0) @binding(2) var<storage, read> smp: array<Sample>;
+@group(0) @binding(3) var<storage, read_write> dab: array<f32>;
+fn sf(st: u32, w: u32) -> f32 { return bitcast<f32>(rec[st + w]); }
+fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st, w + 2u), sf(st, w + 3u)); }
+
+@compute @workgroup_size(${SAMPLES_WORKGROUP}) fn dabs(@builtin(global_invocation_id) gid: vec3u) {
+  if (gid.x >= u.count) { return; }
+  let i = u.first + gid.x;
+  let s = smp[i];
+  let c = s.contour;
+  let st = cw(c, 13u);
+  let k = i - cw(c, 2u);
+  let seed = cw(c, 4u);
+  let width = sf(st, 10u);
+  let jitter = 1.0 + sf(st, 12u) * (rand1(seed, 11u, k) - 0.5);
+  let radius = (width / 2.0) * (1.0 - sf(st, 13u) * (1.0 - s.p)) * jitter;
+  let alpha = sf(st, 14u) * (1.0 - sf(st, 15u) * (1.0 - s.p));
+  let off = sf(st, 16u) * width * (rand1(seed, 12u, k) - 0.5);
+  let q = vec2f(s.x + s.nx * off, s.y + s.ny * off);
+  let e = sv(st, 0u);
+  let at = vec2f(e.x * q.x + e.z * q.y, e.y * q.x + e.w * q.y) + vec2f(sf(st, 4u), sf(st, 5u));
+  var rgb = vec3f(0.0);
+  if (sf(st, 23u) > 0.5) {
+    let hue = sf(st, 18u) * (2.0 * rand1(seed, 13u, k) - 1.0);
+    let light = sf(st, 19u) * (2.0 * rand1(seed, 14u, k) - 1.0);
+    rgb = shiftColour(vec3f(sf(st, 20u), sf(st, 21u), sf(st, 22u)), hue, light) / 255.0;
+  }
+  let shown = radius > 0.05 && alpha > 0.0;
+  let o = i * ${DAB_FLOATS}u;
+  let slot = sv(st, 6u);
+  dab[o] = at.x; dab[o + 1u] = at.y;
+  dab[o + 2u] = select(0.0, radius * sf(st, 11u), shown);
+  dab[o + 3u] = select(0.0, alpha, shown);
+  dab[o + 4u] = sf(st, 17u);
+  dab[o + 5u] = rgb.r; dab[o + 6u] = rgb.g; dab[o + 7u] = rgb.b;
+  dab[o + 8u] = slot.x; dab[o + 9u] = slot.y; dab[o + 10u] = slot.z; dab[o + 11u] = slot.w;
 }
 `;

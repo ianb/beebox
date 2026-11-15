@@ -1,10 +1,11 @@
-// A brushed stroke (R1, draft section 9) as draws: the shared CPU expansion
+// A brushed stroke (R1, draft section 9) as draws: the shared expansion
 // (brush/expand.ts, cached across frames) placed in device pixels. Ink
 // outlines become coverage pieces (exact area, as fills); dabs and bristle
-// runs become a mark in the mark atlas; smudge and wet become a smear that
+// runs become a mark in the mark atlas, and a stamp stroke becomes a mark
+// whose dabs the GPU lays (brush-pass.ts); smudge and wet become a smear that
 // reads the target (smear.ts). Grain is cut against paper anchored to the
 // picture or the scene (`toPaper`), then the brush opacity applies once.
-import type { BrushExpander, MarkSet, SmearSet } from "../scene/brush/expand.js";
+import type { BrushExpander, MarkSet, SmearSet, StampSet } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
 import type { Mat, ShapeNode } from "../scene/nodes.js";
@@ -56,7 +57,7 @@ type LinMarks =
 
 const lin = (...[e, x, y]: [Mat, number, number]): [number, number] => [e[0] * x + e[2] * y, e[1] * x + e[3] * y];
 
-function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
+export function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
   const { e, ratio } = a;
   if (set.polys.length > 0) {
     const rings = set.polys.map((p) => {
@@ -101,6 +102,34 @@ function marks(l: LinMarks, a: { tx: number; ty: number; visible: R }): MarkSour
   return isEmpty(box) ? undefined : { kind: "tex", mark: { box, dabs: l.dabs, runs: l.runs, ox: a.tx, oy: a.ty } };
 }
 
+/**
+ * Where a stamp stroke's dabs can reach under `e` (brush space → device
+ * pixels, translation included): the prepared box (wobble included) grown by
+ * the largest dab, `width / 2 × (1 + sizeJitter / 2)`, and the largest
+ * scatter, `scatter × width / 2`, mapped by `e`, plus the dab's one-pixel
+ * edge. Undefined when the stroke has no samples.
+ */
+export function stampBox(set: StampSet, e: Mat): R | undefined {
+  const p = set.prepared;
+  if (!p.contours.some((c) => c.count > 0)) return undefined;
+  const w = p.width;
+  const g = (w / 2) * (1 + set.brush.sizeJitter / 2) + (set.brush.scatter * w) / 2;
+  const { x0, y0, x1, y1 } = p.box;
+  const corners = [map(e, x0 - g, y0 - g), map(e, x1 + g, y0 - g), map(e, x0 - g, y1 + g), map(e, x1 + g, y1 + g)];
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  return { x0: Math.floor(Math.min(...xs) - 1), y0: Math.floor(Math.min(...ys) - 1), x1: Math.ceil(Math.max(...xs) + 1), y1: Math.ceil(Math.max(...ys) + 1) };
+}
+
+function stamp(set: StampSet, a: { e: Mat; ratio: number; visible: R }): MarkSource | undefined {
+  const reach = stampBox(set, a.e);
+  if (reach === undefined) return undefined;
+  const box = inter(reach, cutOf(a.visible));
+  if (isEmpty(box)) return undefined;
+  const { e } = a;
+  return { kind: "tex", mark: { box, dabs: [], runs: [], ox: e[4], oy: e[5], stamp: { prepared: set.prepared, brush: set.brush, lin: [e[0], e[1], e[2], e[3]], ratio: a.ratio } } };
+}
+
 function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: PaperRec; paint: PaintRec | undefined; node: ShapeNode }): BrushDraw | undefined {
   const brush = a.node.style.brush?.brush;
   if (brush?.kind !== "smear") return undefined;
@@ -136,8 +165,7 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
   if (rec === undefined) return undefined;
   const set = ex.set;
-  const l = a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio }));
-  const source = marks(l, { tx: e[4], ty: e[5], visible: a.visible });
+  const source = set.kind === "stamp" ? stamp(set, { e, ratio, visible: a.visible }) : marks(a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio })), { tx: e[4], ty: e[5], visible: a.visible });
   if (source === undefined) return undefined;
   const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
   const box = source.kind === "piece" ? source.piece.box : source.mark.box;
