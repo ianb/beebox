@@ -838,6 +838,63 @@ by the same WebGPU renderer.
   walker byte-identical after `release()` and wake.
 - **Checkpoint.** **Measurement:** none beyond the tests; batching adds no
   pass on the walker at the real `B`.
+- **As built (chunk 5).** The one-batch `GpuRenderError` is gone. Packing
+  and planning moved to `gpu/brush-pack.ts`; `brush-pass.ts` encodes.
+  Details settled here:
+  - **Inputs.** `pack` groups contours, in order, into records and geometry
+    buffers of at most `B` each. A stroke whose contours fall in two inputs
+    has its stroke record in both. Contour word 2 (first sample) stays the
+    frame's index. The uniform grows to 8 words: `base` (the sample at the
+    output buffers' start) and `cbase` (the input's first contour). A
+    sample's contour index is the frame's (`cbase` + local), so split
+    samples are the same bytes as unsplit ones.
+  - **Batches.** `planBatches(spans, cap)` cuts each input's samples. A
+    span may split anywhere unless it is `whole`; a whole span over the cap
+    is an error. Today every span is a contour that may split. Bristle (one
+    whole span per bristle) and smear (one per smear) only need their spans.
+    A capsule batch computes one more sample, its last capsule's far end.
+  - **Output buffers** are sized to the largest batch, at most `B`, not
+    to `B`. With one batch they have the sizes they had before.
+  - **No 2-D dispatch.** A batch is also capped at
+    `maxComputeWorkgroupsPerDimension × 64` threads. At `B` ≤ 64 MiB a batch
+    holds at most 2,097,152 samples (32,768 workgroups), so that cap never
+    binds and a 2-D dispatch is never needed.
+  - **The mark atlas.** After each batch's compute pass, `each` draws it.
+    The first batch draws every page in page order (clear, CPU dabs and
+    runs, its instances); later batches draw only the pages they touch,
+    with `loadOp: "load"`. With one batch the passes are the same as
+    before. `stats.brushBatches` counts batches.
+  - **The named error.** `checkContours` runs in `gpuMark` at lowering, so
+    the node path names the call: *"a brushed contour of 1198 points needs
+    18.7 KiB of geometry and 0.2 KiB of records, more than one brush buffer
+    holds (4.0 KiB); split the path into shorter ones (at curve #2)"*. A
+    point is 16 bytes, so at 64 MiB one contour holds about 4.2 million
+    points, not 5.6 million.
+  - **Tests** (`brush-pass.gpu.test.ts`; `brush-pack.test.ts` for the
+    planner). `GpuRenderer` takes `brushLimit` (tests) to force `B` down.
+    The limit is the smallest that holds every contour, so inputs and
+    batches split:
+    - samples of the brush, smear, thin-ink and focused sheets: 39 inputs,
+      52 batches;
+    - stamp and ink instances at ratio 1 and 2: 42 inputs, 85 batches,
+      with stamp and ink contours split mid-contour.
+
+    These frames give the same pixels, split and unsplit, at ratio 1 and 2:
+    - the brush sheet: 47 batches;
+    - thin ink: 36 batches;
+    - focused: 24 batches;
+    - walker frame 0 at 64 KiB: 84 batches;
+    - six long marks over 3 mark pages at 4 KiB: 265 batches.
+
+    Every unsplit frame is one batch. The over-limit error names the call.
+    The walker is byte-identical after `release()` and wake, split and
+    unsplit.
+  - **No pixel changes at the real `B`.** The walker at ratio 1 and 2,
+    Hallway and chemistry (21 PNGs), and the brush, smear, thin-ink, focused,
+    jitter and extremes sheets and walker frames 0 and 30 at ratio 1 and 2
+    (16 raw frames) hash the same before and after. `gallery:check` passes
+    (`scratch/stage5/b5/{before,after}.sha256`,
+    `{before,after}-sheets.txt`).
 
 ### Chunk 6: measurement and visual review; the stop point
 
