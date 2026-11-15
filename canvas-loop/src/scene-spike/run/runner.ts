@@ -4,7 +4,7 @@
 // frozen, colours are parsed at the call and unknown fonts and params are
 // caught. A step that throws ends the run with an error line in the
 // transcript (the frame, the step, the sketch's lines) and a `SketchRunError`.
-//   node --import tsx src/scene-spike/run/runner.ts <sketch.ts> [--out dir] [--frames 60] [--every 30] [--seed 42] [--ratio 1] [--scene] [--events events.json]
+//   node --import tsx src/scene-spike/run/runner.ts <sketch.ts> [--out dir] [--frames 60] [--every 30] [--seed 42] [--ratio 1] [--scene [first]] [--events events.json]
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -37,8 +37,8 @@ export interface SpikeRunOptions {
   readonly every: number;
   readonly seed: number;
   readonly ratio: number;
-  /** Write each captured frame's scene outline into the transcript. */
-  readonly scene: boolean;
+  /** Write each captured frame's scene outline into the transcript (true), only the first captured frame's ("first"), or none. */
+  readonly scene: boolean | "first";
   readonly events: readonly TeaScriptEvent[];
   /** The sketch, already loaded (beebox's `figure run-one` imports the compiled entry itself); else `sketchPath` is imported. */
   readonly module?: LoadedTeaModule;
@@ -172,7 +172,7 @@ class SpikeRun {
       const s = this.#renderer.stats;
       this.#lines.push(`## frame ${frame}`, `![frame ${frame}](${file})`, `passes ${s.passes}, effect passes ${s.effectPasses}, copies ${s.copies}, draws ${s.draws}`);
       if (s.strokes > 0) this.#lines.push(`brushed strokes ${s.strokes}: expanded ${s.expanded}, expansion cache hits ${s.cacheHits}; mark pages ${s.markPages}, smears ${s.smears}`);
-      if (this.#o.scene) this.#lines.push("```", sceneOutline(rec.scene), "```");
+      if (this.#o.scene === true || (this.#o.scene === "first" && captured.length === 1)) this.#lines.push("```", sceneOutline(rec.scene), "```");
       this.#lines.push("");
     }
     for (const w of recorder.offCanvasWarnings()) this.#lines.push(`end of run: warning: ${w}`);
@@ -209,17 +209,27 @@ export async function runSpike(o: SpikeRunOptions, gpu?: GpuHandle): Promise<num
   }
 }
 
+/** `--scene` alone is every captured frame's outline; `--scene first` is the first captured frame's only. */
+export function sceneArgs(argv: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const [i, arg] of argv.entries()) {
+    if (arg === "first" && argv[i - 1] === "--scene") continue;
+    out.push(arg !== "--scene" ? arg : argv[i + 1] === "first" ? "--scene=first" : "--scene=all");
+  }
+  return out;
+}
+
 async function main(): Promise<void> {
-  const { values, positionals } = parseArgs({ allowPositionals: true, options: {
+  const { values, positionals } = parseArgs({ args: sceneArgs(process.argv.slice(2)), allowPositionals: true, options: {
     out: { type: "string" }, frames: { type: "string" }, every: { type: "string" }, seed: { type: "string" },
-    ratio: { type: "string" }, scene: { type: "boolean" }, events: { type: "string" },
+    ratio: { type: "string" }, scene: { type: "string" }, events: { type: "string" },
   } });
   const sketchPath = positionals[0];
-  if (sketchPath === undefined) throw new GpuRenderError({ detail: "usage: runner.ts <sketch.ts> [--out dir] [--frames N] [--every N] [--seed N] [--ratio R] [--scene] [--events file]" });
+  if (sketchPath === undefined) throw new GpuRenderError({ detail: "usage: runner.ts <sketch.ts> [--out dir] [--frames N] [--every N] [--seed N] [--ratio R] [--scene [first]] [--events file]" });
   const raw = await importRecord(sketchPath);
   const events = values.events === undefined ? [] : parseTeaEvents(JSON.parse(readFileSync(values.events, "utf8")), toTeaModule(raw).params);
   const outDir = values.out ?? "out-spike";
-  const captured = await runSpike({ sketchPath, outDir, frames: Number(values.frames ?? "60"), every: Number(values.every ?? "30"), seed: Number(values.seed ?? "42"), ratio: Number(values.ratio ?? "1"), scene: values.scene === true, events });
+  const captured = await runSpike({ sketchPath, outDir, frames: Number(values.frames ?? "60"), every: Number(values.every ?? "30"), seed: Number(values.seed ?? "42"), ratio: Number(values.ratio ?? "1"), scene: values.scene === "first" ? "first" : values.scene !== undefined, events });
   console.log(`wrote ${captured.length} frames and transcript.md to ${outDir}`);
 }
 

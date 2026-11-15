@@ -117,6 +117,16 @@ test("runs a draft-View sketch, renders only captured frames, and repeats exactl
   assert.ok(!existsSync(join(a, "frame-0002.png")), "frame 2 is not captured");
 });
 
+test("--scene first writes the outline for the first captured frame only", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  const outDir = tmpDir();
+  assert.deepEqual(await runSpike({ sketchPath, outDir, frames: 4, every: 2, seed: 1, ratio: 1, scene: "first", events: [] }, handle), [0, 1, 2, 3]);
+  const transcript = readFileSync(join(outDir, "transcript.md"), "utf8");
+  assert.equal(transcript.match(/^scene 160×120$/gm)?.length, 1);
+  assert.match(transcript, /## frame 0\n(.*\n){3}```\nscene 160×120\n/);
+});
+
 test("a group just above the canvas still casts its shadow onto it (R5 bounds)", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;

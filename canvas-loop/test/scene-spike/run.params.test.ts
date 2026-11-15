@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ParamsDecl } from "../../src/core/tea.js";
-import { startParams } from "../../src/scene-spike/run/runner.js";
+import { sceneArgs, startParams } from "../../src/scene-spike/run/runner.js";
 
 const decl = {
   level: { type: "number", min: 0, max: 10, default: 2 },
@@ -29,4 +29,9 @@ test("starting params: defaults, an in-range value, and each refusal", () => {
     'Sketch API misuse: initial param "go": a trigger param takes no value',
     'Sketch API misuse: initial param "lvl": the sketch declares no such param',
   ]);
+});
+
+test("--scene alone outlines every captured frame; --scene first only the first", () => {
+  assert.deepEqual(sceneArgs(["s.ts", "--scene", "--frames", "4"]), ["s.ts", "--scene=all", "--frames", "4"]);
+  assert.deepEqual(sceneArgs(["s.ts", "--scene", "first", "--frames", "4"]), ["s.ts", "--scene=first", "--frames", "4"]);
 });
