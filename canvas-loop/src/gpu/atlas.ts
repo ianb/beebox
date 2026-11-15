@@ -5,12 +5,12 @@
 import { GpuRenderError } from "../scene/errors.js";
 import { EDGE_WGSL } from "./shader-draw.js";
 import type { Piece, R, Slot } from "./jobs.js";
-import { heightOf, widthOf } from "./jobs.js";
+import { ATLAS_MAX, heightOf, widthOf } from "./jobs.js";
 import type { PoolFormat, TexturePool } from "./pool.js";
 import { timed } from "./frame.js";
 import type { PassTimer } from "./timing.js";
 
-const MAX = 8192;
+const MAX = ATLAS_MAX;
 const GAP = 1;
 /** Floats per edge instance. */
 const FLOATS = 8;
@@ -45,7 +45,8 @@ export function shelfPack(pieces: readonly { readonly box: R; slot?: Slot }[], p
     }
     p.slot = { page, x, y };
     const used = pages[page] ?? { w: 0, h: 0 };
-    pages[page] = { w: Math.max(used.w, x + w + GAP), h: Math.max(used.h, y + h + GAP) };
+    // The gap after a piece at the page's edge is left out, so a piece as wide as the atlas fits.
+    pages[page] = { w: Math.max(used.w, Math.min(MAX, x + w + GAP)), h: Math.max(used.h, Math.min(MAX, y + h + GAP)) };
     x += w + GAP;
     shelf = Math.max(shelf, h);
   }

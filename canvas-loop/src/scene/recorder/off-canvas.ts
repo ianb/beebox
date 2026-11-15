@@ -17,7 +17,9 @@
 // artwork and shadow casters in a lit group (their shadow can land on the
 // canvas) are not checked; a placement counts the version's whole body
 // (bounds.ts). One warning per run for each line, naming the
-// frames.
+// frames. Under a moving camera the lines whose drawings moved but never
+// reached the canvas join one summary warning (`offCanvasMessages`); a line
+// whose drawing stayed put warns on its own.
 import type { Effects } from "../api.js";
 import { maxScale } from "../mat.js";
 import { sketchLine } from "../call-site.js";
@@ -35,6 +37,48 @@ interface Seen {
   count: number;
 }
 
+/** A line all of whose drawings were off the canvas on every frame: its latest frame's drawings, and whether its first drawing's box changed during the run. */
+export interface OffLine extends Readonly<Seen> {
+  readonly line: string;
+  readonly moved: boolean;
+}
+
+const sameBox = (a: Box, b: Box): boolean => a.x0 === b.x0 && a.y0 === b.y0 && a.x1 === b.x1 && a.y1 === b.y1;
+const at = (line: string): string => (line === "" ? "" : ` (at ${line})`);
+
+/** `89:5 (rect), 90:5 (circle) in path` for each file's lines, in the order first seen; a line not known is "an unknown line". */
+function linesByFile(lines: readonly OffLine[]): string[] {
+  const files = new Map<string, string[]>();
+  for (const l of lines) {
+    const m = /^(.*):(\d+:\d+)$/.exec(l.line);
+    const [file, place] = m === null ? ["", l.line === "" ? "an unknown line" : l.line] : [m[1] ?? "", m[2] ?? ""];
+    files.set(file, [...(files.get(file) ?? []), `${place} (${l.what})`]);
+  }
+  return [...files].map(([file, places]) => `${places.join(", ")}${file === "" ? "" : ` in ${file}`}`);
+}
+
+/**
+ * The warnings for the lines drawn only off the canvas over a run of `frames`
+ * frames: each line that never moved on its own, and the lines that moved
+ * folded into one summary (a camera that has not reached them, or a wrong sign).
+ */
+export function offCanvasMessages(lines: readonly OffLine[], a: { canvas: { width: number; height: number }; frames: number }): string[] {
+  const { width, height } = a.canvas;
+  const span = a.frames === 1 ? "on frame 0" : `on every frame (0–${a.frames - 1})`;
+  const out: string[] = [];
+  for (const s of lines.filter((l) => !l.moved)) {
+    const count = s.count === 1 ? `${s.what} lands` : `${s.count} drawings (${s.what}, …) land`;
+    out.push(`${count} entirely off the ${width}×${height} canvas ${span}, the first at ${boxText(s.box)} in canvas coordinates; check the translate, the units or the sign of its position (or, under a moving camera, run enough frames to reach it)${at(s.line)}`);
+  }
+  const moving = lines.filter((l) => l.moved);
+  if (moving.length > 0) {
+    const one = moving.length === 1;
+    const list = linesByFile(moving).join("; ");
+    out.push(`${moving.length} ${one ? "line draws" : "lines draw"} only off the ${width}×${height} canvas while moving, on every frame 0–${a.frames - 1}: ${one ? "line" : "lines"} ${list}; a camera that has not reached ${one ? "it" : "them"}, or a wrong sign`);
+  }
+  return out;
+}
+
 export class OffCanvas {
   readonly #canvas: { readonly width: number; readonly height: number };
   /** Lines all off the canvas on every frame so far, and lines with text across its edge on every frame; undefined before the first frame. */
@@ -42,6 +86,9 @@ export class OffCanvas {
   #crossing: Set<string> | undefined;
   /** Lines that drew something on the canvas, on any frame. */
   readonly #onCanvas = new Set<string>();
+  /** Each off line's first drawing's box on the first frame it was off, and the lines whose box has changed since. */
+  readonly #firstBox = new Map<string, Box>();
+  readonly #moved = new Set<string>();
   /** This frame: lines with a drawing off the canvas, and with text across its edge, with their first drawing. */
   #offNow = new Map<string, Seen>();
   #crossingNow = new Map<string, Seen>();
@@ -88,6 +135,13 @@ export class OffCanvas {
     const keep = (was: Set<string> | undefined, now: Map<string, Seen>): Set<string> => new Set([...now.keys()].filter((l) => was === undefined || was.has(l)));
     this.#off = new Set([...keep(this.#off, this.#offNow)].filter((l) => !this.#onCanvas.has(l)));
     this.#crossing = keep(this.#crossing, this.#crossingNow);
+    for (const line of this.#off) {
+      const box = this.#offNow.get(line)?.box;
+      const first = this.#firstBox.get(line);
+      if (box === undefined) continue;
+      if (first === undefined) this.#firstBox.set(line, box);
+      else if (!sameBox(first, box)) this.#moved.add(line);
+    }
     this.#frames++;
   }
 
@@ -144,18 +198,16 @@ export class OffCanvas {
     return line;
   }
 
-  /** After the run: one warning per line whose drawings were all off the canvas on every frame, and per line with text across its edge on every frame. */
+  /** After the run: the warnings for lines whose drawings were all off the canvas on every frame (`offCanvasMessages`), and one per line with text across its edge on every frame. */
   warnings(): string[] {
     const frames = this.#frames === 1 ? "on frame 0" : `on every frame (0–${this.#frames - 1})`;
     const { width, height } = this.#canvas;
-    const at = (line: string): string => (line === "" ? "" : ` (at ${line})`);
-    const out: string[] = [];
+    const off: OffLine[] = [];
     for (const line of this.#off ?? []) {
       const s = this.#offNow.get(line);
-      if (s === undefined || this.#onCanvas.has(line)) continue;
-      const count = s.count === 1 ? `${s.what} lands` : `${s.count} drawings (${s.what}, …) land`;
-      out.push(`${count} entirely off the ${width}×${height} canvas ${frames}, the first at ${boxText(s.box)} in canvas coordinates; check the translate, the units or the sign of its position (or, under a moving camera, run enough frames to reach it)${at(line)}`);
+      if (s !== undefined && !this.#onCanvas.has(line)) off.push({ ...s, line, moved: this.#moved.has(line) });
     }
+    const out = offCanvasMessages(off, { canvas: this.#canvas, frames: this.#frames });
     for (const line of this.#crossing ?? []) {
       const s = this.#crossingNow.get(line);
       if (s === undefined) continue;

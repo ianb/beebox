@@ -1,6 +1,8 @@
 // The scene surface of a headless run: each `draw` is recorded as a scene
 // (testing mode: pictures audited, colours parsed at the call, unknown fonts
-// warned), and a captured frame is rendered by the GPU renderer on Dawn. One
+// warned, characters with no glyph warned), and a captured frame is rendered
+// by the GPU renderer on Dawn, measuring each brushed mark for the faint-mark
+// warning. One
 // GPU device per process, opened on first use and kept. Loaded only when a
 // sketch exports `renderer = "scene"`, so a Canvas2D run never loads Dawn.
 import type { TextMeasurer } from "../../core/text/measure.js";
@@ -16,6 +18,7 @@ import { GpuRenderError } from "../../scene/errors.js";
 import type { Capture, FrameSurface } from "../frame-surface.js";
 import type { UtilText } from "../tea-util.js";
 import { outlinesOf } from "./outlines.js";
+import { faintState, faintWarnings } from "./faint.js";
 import type { Outline } from "./outlines.js";
 
 /** What one `draw` recorded. */
@@ -90,6 +93,7 @@ export class SceneSurface implements FrameSurface {
   readonly #recorder: SceneRecorder;
   readonly #overlay: SceneRecorder;
   readonly #renderer: GpuRenderer;
+  readonly #faint = faintState();
   #last: FrameRecord | undefined;
   #captures = 0;
   readonly text: UtilText;
@@ -103,9 +107,9 @@ export class SceneSurface implements FrameSurface {
     // Headless rendering is testing mode: pictures are re-recorded and compared every frame.
     // Logs, warnings and hints reach the transcript as they happen, in call order with console output, and before a failing `draw` ends the run.
     const onNote = (note: { kind: "log" | "warn" | "hint"; message: string }): void => o.host.recordLog({ level: note.kind, message: note.message });
-    this.#recorder = new SceneRecorder(size, { text: a.text, audit: true, seed: o.seed, params: { decl: o.decl, values: o.getParams }, colors: a.gpu.colors, fontKnown: a.fontKnown, onNote });
+    this.#renderer = new GpuRenderer(a.gpu, { timing: o.timing, peaks: true });
+    this.#recorder = new SceneRecorder(size, { text: a.text, audit: true, seed: o.seed, params: { decl: o.decl, values: o.getParams }, colors: a.gpu.colors, fontKnown: a.fontKnown, glyphMissing: this.#renderer.glyphMissing, onNote });
     this.#overlay = new SceneRecorder(size, { text: a.text });
-    this.#renderer = new GpuRenderer(a.gpu, { timing: o.timing });
     const where = { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: size };
     // As `draw` measures text with no transform inside the canvas.
     this.text = {
@@ -128,6 +132,7 @@ export class SceneSurface implements FrameSurface {
     const overlay = this.#o.outline ? this.#outlines(rec.debugBoxes, outlinesOf(rec.scene.children)) : [];
     const px = await this.#renderer.render({ ...rec.scene, children: [...rec.scene.children, ...rec.standIns, ...overlay] }, this.#o.ratio);
     this.#captures++;
+    this.#warnFaint();
     const first = this.#captures === 1;
     const block = this.#o.scene === true || (this.#o.scene === "first" && first) ? sceneOutline(rec.scene, this.#gpu.colors) : undefined;
     return { pixels: { width: px.width, height: px.height, data: unpremultiply(px.data) }, lines: this.#o.timing ? this.#timingLines() : [], block };
@@ -139,6 +144,15 @@ export class SceneSurface implements FrameSurface {
 
   close(): void {
     this.#renderer.destroy();
+  }
+
+  /** Brushed marks the frame drew too faint to see (faint.ts); marks the recorder does not watch (erased, in mask artwork, `faint: true`) are skipped. */
+  #warnFaint(): void {
+    const marks = this.#renderer.peaks.flatMap((p) => {
+      const site = this.#recorder.markSite(p.node);
+      return site === undefined ? [] : [{ call: p.node.call, alpha: p.alpha, get line() { return site.line; } }];
+    });
+    for (const message of faintWarnings(marks, this.#faint)) this.#o.host.recordLog({ level: "warn", message });
   }
 
   /** `--outline`: each box, clip and placement as a stroke with a see-through label, as today's painter draws them. */

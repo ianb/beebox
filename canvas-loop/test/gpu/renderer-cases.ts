@@ -92,10 +92,11 @@ export async function failedFrames(handle: GpuHandle): Promise<void> {
   const renderer = new GpuRenderer(handle);
   try {
     // Fails during encoding, after the coverage atlas has taken a page and its buffers: a canvas as wide as the
-    // largest texture, and a brushed mark across it whose atlas piece (the canvas plus its padding) is wider still.
+    // largest texture, and a brushed mark across it in a blurred group, which can be seen past the canvas by the
+    // blur's reach, so its piece in the mark atlas is wider than the atlas.
     const late = new SceneRecorder({ width: 8192, height: 8 }).record((v) => {
       v.rect(0, 0, 10, 8, { fill: "#000" });
-      v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" });
+      v.group({ effects: { blur: 4 } }, () => v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" }));
     }).scene;
     await assert.rejects(renderer.render(late, 1), (e: unknown) => e instanceof GpuRenderError && /larger than the atlas/.test(e.message));
     assert.ok(renderer.held.textures > 0, "the failed frame had allocated textures");

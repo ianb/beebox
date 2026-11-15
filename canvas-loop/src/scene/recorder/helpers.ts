@@ -1,5 +1,6 @@
 // The View's pure helpers, which compute values and record nothing: curve
 // paths, tubes, offsets, gradients, tweens and easing, as today's View has them.
+// Below them, the members the scene API removed (removed.ts).
 import { curveCommands } from "../../core/contours.js";
 import { ease, tween, tweenPoint } from "../../core/ease.js";
 import type { EaseName, Keyframe } from "../../core/ease.js";
@@ -7,8 +8,9 @@ import { ellipseGradient, linearGradient, radialGradient } from "../../core/pain
 import type { ColorStop, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../../core/paint.js";
 import { offsetPoints, tubePath } from "../../core/shapes.js";
 import type { TubeOptions } from "../../core/shapes.js";
+import { RemovedCalls } from "./removed.js";
 
-export class PureHelpers {
+export class PureHelpers extends RemovedCalls {
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
     return curveCommands(points, closed ?? false);
   }

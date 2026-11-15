@@ -14,7 +14,8 @@ import { buildTransport, coerceModule, DEFAULT_CANVAS, pixelRatioOf, sizeCanvas,
 import { sanitizeInitialParams } from "../param-validate.js";
 import { Runtime, watchVisibility } from "../runtime/engine.js";
 import type { PlaygroundModule } from "../sketch-types.js";
-import { browserTextMeasurer } from "../../device/browser.js";
+import { browser2d, browserTextMeasurer } from "../../device/browser.js";
+import { colorsFrom } from "../../scene/colors.js";
 import { leaseGpu } from "./shared-gpu.js";
 import { FigureSleep } from "./sleep.js";
 import { SceneSurface } from "./surface.js";
@@ -247,7 +248,7 @@ export function mountSceneSketch(mount: HTMLElement, opts: MountSceneSketchOptio
     }
     let surface: SceneSurface;
     try {
-      surface = new SceneSurface({ canvas: shell.canvas, size: module.canvas ?? DEFAULT_CANVAS, ratio: pixelRatioOf(shell.canvas), seed: opts.seed ?? DEFAULT_SEED, decl: module.params ?? {}, draw: module.draw, text: browserTextMeasurer(), lease, onError: report });
+      surface = new SceneSurface({ canvas: shell.canvas, size: module.canvas ?? DEFAULT_CANVAS, ratio: pixelRatioOf(shell.canvas), seed: opts.seed ?? DEFAULT_SEED, decl: module.params ?? {}, draw: module.draw, text: browserTextMeasurer(), colors: colorsFrom(browser2d()), lease, onError: report });
     } catch (error) {
       lease.release();
       throw error;

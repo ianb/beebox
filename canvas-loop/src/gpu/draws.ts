@@ -9,11 +9,11 @@ import type { Frame } from "./frame.js";
 import { beginPass, storage } from "./frame.js";
 import type { Item, Job } from "./jobs.js";
 import { heightOf, inter, isEmpty, widthOf } from "./jobs.js";
-import type { DrawPipe } from "./pipelines.js";
+import type { ItemPipe } from "./pipelines.js";
 import type { Rec } from "./records.js";
 import { itemRecs, pack } from "./records.js";
 
-const FIXED: Readonly<Partial<Record<number, DrawPipe>>> = { 0: "normal", 10: "add", 2: "screen" };
+const FIXED: Readonly<Partial<Record<number, ItemPipe>>> = { 0: "normal", 10: "add", 2: "screen" };
 
 interface Textures {
   src?: GPUTexture | undefined;
@@ -80,8 +80,18 @@ function itemTextures(it: Item, f: Frame): { page: number; t: Textures }[] {
 const TEXTURE_KEYS = ["src", "mask", "clip", "bd", "atlas", "aux", "image"] as const;
 const sameTextures = (a: Textures, b: Textures): boolean => TEXTURE_KEYS.every((k) => a[k] === b[k]);
 
-function pipeOf(it: Item): DrawPipe {
+function pipeOf(it: Item): ItemPipe {
   return it.erase ? "erase" : (FIXED[it.mode] ?? "backdrop");
+}
+
+/** The pipeline for `pipe`: testing mode's peak-writing one when the frame measures peaks. */
+function drawPipe(f: Frame, pipe: ItemPipe): GPURenderPipeline {
+  return f.peaks === undefined ? f.pipes.draw[pipe] : f.peaks.pipes.draw[pipe];
+}
+
+/** A mark's records, carrying its peak slot when the frame measures peaks. */
+function withPeak(recs: Rec[], peak: number | undefined): Rec[] {
+  return peak === undefined ? recs : recs.map((r) => ({ ...r, peak }));
 }
 
 /** Release what `job`'s items held once the job is encoded; a drawn picture tile is kept (another placement may read it). */
@@ -102,7 +112,8 @@ export function encodeJob(job: Job, f: Frame): void {
   const w = widthOf(job.rect);
   const h = heightOf(job.rect);
   const tex = f.pool.acquire({ w, h, format: "rgba8unorm" });
-  const items = job.items.map((it) => ({ it, recs: itemRecs(it, job.rect), box: inter(it.box, job.rect) })).filter((x) => !isEmpty(x.box));
+  const peakOf = (it: Item): number | undefined => f.peaks?.slots.get(it);
+  const items = job.items.map((it) => ({ it, recs: withPeak(itemRecs(it, job.rect), peakOf(it)), box: inter(it.box, job.rect) })).filter((x) => !isEmpty(x.box));
   // Backdrop draws carry their copy's box.
   const itemRecsAll = items.map((x) => (pipeOf(x.it) === "backdrop" ? x.recs.map((r) => ({ ...r, bd: x.box })) : x.recs));
   const all: Rec[] = itemRecsAll.flat();
@@ -112,6 +123,7 @@ export function encodeJob(job: Job, f: Frame): void {
   const draw = (pass: GPURenderPassEncoder, a: { t: Textures; count: number }): void => {
     pass.setBindGroup(0, g0);
     pass.setBindGroup(1, textures(f, a.t));
+    if (f.peaks !== undefined) pass.setBindGroup(2, f.peaks.group);
     pass.draw(6, a.count, 0, index);
     index += a.count;
     f.stats.draws++;
@@ -119,10 +131,10 @@ export function encodeJob(job: Job, f: Frame): void {
   const held: GPUTexture[] = [];
   let pass = beginPass(f, { tex, clear: true, kind: "draw" });
   // Consecutive draws with one fixed-function pipeline and the same textures go out as one instanced draw.
-  let pending: { pipe: DrawPipe; t: Textures; count: number } | undefined;
+  let pending: { pipe: ItemPipe; t: Textures; count: number } | undefined;
   const flush = (): void => {
     if (pending === undefined) return;
-    pass.setPipeline(f.pipes.draw[pending.pipe]);
+    pass.setPipeline(drawPipe(f, pending.pipe));
     draw(pass, pending);
     pending = undefined;
   };
@@ -156,7 +168,7 @@ export function encodeJob(job: Job, f: Frame): void {
       held.push(bd);
       pass = beginPass(f, { tex, clear: false, kind: "draw" });
     }
-    pass.setPipeline(f.pipes.draw[pipe]);
+    pass.setPipeline(drawPipe(f, pipe));
     if (only !== undefined || it.k !== "glyphs") {
       draw(pass, { t: { ...only?.t, bd }, count: recs.length });
       continue;

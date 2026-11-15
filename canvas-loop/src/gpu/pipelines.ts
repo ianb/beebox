@@ -1,9 +1,17 @@
 // Render pipelines and bind group layouts for drawing and effects, made once per device.
-import { DRAW_WGSL } from "./shader-draw.js";
+import { DRAW_WGSL, drawWgsl } from "./shader-draw.js";
 import { FX_WGSL } from "./shader-fx.js";
 
 export type DrawPipe = "normal" | "add" | "screen" | "erase" | "backdrop" | "clipPage";
+/** The pipelines an item's draws use (every one but the clip page's). */
+export type ItemPipe = Exclude<DrawPipe, "clipPage">;
 export type FxPipe = "fxBlur" | "fxMatrix" | "fxCombine";
+
+/** Testing mode's draw pipelines, which also write each marked draw's peak alpha (shader-draw.ts), and the peak buffer's layout. */
+export interface PeakPipelines {
+  readonly draw: Readonly<Record<ItemPipe, GPURenderPipeline>>;
+  readonly g2: GPUBindGroupLayout;
+}
 
 export interface Pipelines {
   readonly draw: Readonly<Record<DrawPipe, GPURenderPipeline>>;
@@ -18,6 +26,8 @@ export interface Pipelines {
   readonly f1: GPUBindGroupLayout;
   /** A 1×1 texture bound where a draw has no source. */
   readonly dummy: GPUTexture;
+  /** Testing mode's peak-writing pipelines, made on first use. */
+  readonly peak: () => PeakPipelines;
 }
 
 function blendOf(colour: readonly [GPUBlendFactor, GPUBlendFactor], alpha?: readonly [GPUBlendFactor, GPUBlendFactor]): GPUBlendState {
@@ -37,20 +47,33 @@ export function makePipelines(device: GPUDevice): Pipelines {
   const fxLayout = device.createPipelineLayout({ bindGroupLayouts: [f0, f1] });
   const drawModule = device.createShaderModule({ code: DRAW_WGSL });
   const fxModule = device.createShaderModule({ code: FX_WGSL });
-  const mk = (fs: string, target: GPUColorTargetState): GPURenderPipeline =>
-    device.createRenderPipeline({ layout: drawLayout, vertex: { module: drawModule, entryPoint: "vs" }, fragment: { module: drawModule, entryPoint: fs, targets: [target] } });
   const rgba = (blend?: GPUBlendState): GPUColorTargetState => ({ format: "rgba8unorm", ...(blend === undefined ? {} : { blend }) });
+  const drawPipes = (a: { layout: GPUPipelineLayout; module: GPUShaderModule }): Record<ItemPipe, GPURenderPipeline> => {
+    const mk = (fs: string, target: GPUColorTargetState): GPURenderPipeline =>
+      device.createRenderPipeline({ layout: a.layout, vertex: { module: a.module, entryPoint: "vs" }, fragment: { module: a.module, entryPoint: fs, targets: [target] } });
+    return {
+      normal: mk("fsFixed", rgba(blendOf(["one", "one-minus-src-alpha"]))),
+      add: mk("fsFixed", rgba(blendOf(["one", "one"]))),
+      screen: mk("fsFixed", rgba(blendOf(["one-minus-dst", "one"], ["one-minus-dst-alpha", "one"]))),
+      erase: mk("fsFixed", rgba(blendOf(["zero", "one-minus-src-alpha"]))),
+      backdrop: mk("fsBackdrop", rgba()),
+    };
+  };
   const draw: Record<DrawPipe, GPURenderPipeline> = {
-    normal: mk("fsFixed", rgba(blendOf(["one", "one-minus-src-alpha"]))),
-    add: mk("fsFixed", rgba(blendOf(["one", "one"]))),
-    screen: mk("fsFixed", rgba(blendOf(["one-minus-dst", "one"], ["one-minus-dst-alpha", "one"]))),
-    erase: mk("fsFixed", rgba(blendOf(["zero", "one-minus-src-alpha"]))),
-    backdrop: mk("fsBackdrop", rgba()),
-    clipPage: mk("fsClipPage", { format: "r8unorm" }),
+    ...drawPipes({ layout: drawLayout, module: drawModule }),
+    clipPage: device.createRenderPipeline({ layout: drawLayout, vertex: { module: drawModule, entryPoint: "vs" }, fragment: { module: drawModule, entryPoint: "fsClipPage", targets: [{ format: "r8unorm" }] } }),
+  };
+  let peak: PeakPipelines | undefined;
+  const peakPipes = (): PeakPipelines => {
+    if (peak !== undefined) return peak;
+    const g2 = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "storage" } }] });
+    const layout = device.createPipelineLayout({ bindGroupLayouts: [g0, g1, g2] });
+    peak = { draw: drawPipes({ layout, module: device.createShaderModule({ code: drawWgsl(true) }) }), g2 };
+    return peak;
   };
   const fxPipe = (entryPoint: FxPipe): GPURenderPipeline =>
     device.createRenderPipeline({ layout: fxLayout, vertex: { module: fxModule, entryPoint: "fxVs" }, fragment: { module: fxModule, entryPoint, targets: [{ format: "rgba8unorm" }] } });
   const fx: Record<FxPipe, GPURenderPipeline> = { fxBlur: fxPipe("fxBlur"), fxMatrix: fxPipe("fxMatrix"), fxCombine: fxPipe("fxCombine") };
   const dummy = device.createTexture({ size: [1, 1], format: "rgba8unorm", usage: GPUTextureUsage.TEXTURE_BINDING });
-  return { draw, fx, g0, g1, f0, f1, dummy };
+  return { draw, fx, g0, g1, f0, f1, dummy, peak: peakPipes };
 }

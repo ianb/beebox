@@ -1,13 +1,16 @@
 // The scene surface after a lost device: a figure torn down while its new
 // device is still opening stays torn down, and a failed reopen can be tried
-// again. The GPU, canvas and lease are stand-ins.
+// again. A colour the page cannot parse fails at the call. The GPU, canvas,
+// lease and colour parser are stand-ins.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { openTextMeasurer } from "../../../src/device/open.js";
 import type { GpuHandle } from "../../../src/device/open.js";
 import type { GpuLease } from "../../../src/browser/scene/shared-gpu.js";
 import { SceneSurface } from "../../../src/browser/scene/surface.js";
-import type { SurfaceRenderer } from "../../../src/browser/scene/surface.js";
+import type { SurfaceRenderer, SceneSurfaceDeps } from "../../../src/browser/scene/surface.js";
+import type { ColorParser } from "../../../src/scene/colors.js";
+import { SketchUsageError } from "../../../src/core/errors.js";
 
 class NoAdapterError extends Error {
   name = "NoAdapterError";
@@ -52,13 +55,19 @@ const renderer = (): SurfaceRenderer => ({
   stats: {} as SurfaceRenderer["stats"],
 });
 
-async function surface(openLease: () => Promise<GpuLease>): Promise<{ s: SceneSurface; first: FakeLease; unconfigured: () => number }> {
+// The page's parser knows six-digit hex colours only.
+const colors: ColorParser = (css) => {
+  if (!/^#[\da-f]{6}$/i.test(css)) throw new SketchUsageError({ detail: `"${css}" is not a CSS colour` });
+  return [0, 0, 0, 1];
+};
+
+async function surface(openLease: () => Promise<GpuLease>, draw?: SceneSurfaceDeps["draw"]): Promise<{ s: SceneSurface; first: FakeLease; unconfigured: () => number }> {
   let unconfigured = 0;
   const ctx = { configure: () => {}, unconfigure: () => unconfigured++, getCurrentTexture: () => ({}) };
   // eslint-disable-next-line no-restricted-syntax -- test stand-in: the surface uses only getContext("webgpu") and style
   const canvas = { getContext: () => ctx, style: {} } as unknown as HTMLCanvasElement;
   const first = fakeLease();
-  const s = new SceneSurface({ canvas, size: { width: 40, height: 30 }, ratio: 1, seed: 1, decl: {}, draw: () => {}, text: await openTextMeasurer(), lease: first, onError: () => {}, openLease, makeRenderer: renderer });
+  const s = new SceneSurface({ canvas, size: { width: 40, height: 30 }, ratio: 1, seed: 1, decl: {}, draw: draw ?? (() => {}), text: await openTextMeasurer(), colors, lease: first, onError: () => {}, openLease, makeRenderer: renderer });
   return { s, first, unconfigured: () => unconfigured };
 }
 
@@ -92,5 +101,11 @@ test("a reopen that fails leaves the figure lost, and the next wake tries again"
   await s.wake();
   assert.equal(attempts, 2);
   assert.equal(s.state, "awake");
+  await s.destroy();
+});
+
+test("a colour the page cannot parse fails at the call, naming the call and the field (dev-loop: browser colours)", async () => {
+  const { s } = await surface(async () => fakeLease(), (v) => v.rect(0, 0, 10, 10, { fill: "#ggg" }));
+  assert.throws(() => s.draw({}, {}), (e: unknown) => e instanceof SketchUsageError && /rect fill "#ggg" is not a CSS colour/.test(e.message));
   await s.destroy();
 });

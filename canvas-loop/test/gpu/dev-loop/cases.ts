@@ -383,16 +383,14 @@ export const CASES: readonly DevLoopCase[] = [
     id: "faint-mark",
     mistake: "a brushed mark too faint to see",
     channel: "warning",
-    names: [/faint/],
-    gap: "port today's faint-mark check (core/painter/faint.ts): it needs the mark's peak alpha, which the spike computes on the GPU; read back a per-mark maximum in testing mode",
+    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only [0-7]% opacity and will barely show/m, /gesture\({ faint: true }\)/, CASE_FILE],
     draw: (v) => v.line(5, 5, 70, 50, { stroke: "rgba(0,0,0,0.03)", weight: 3, brush: "pencil" }),
   },
   {
     id: "missing-glyph",
     mistake: "text with a character the font has no glyph for",
     channel: "warning",
-    names: [/glyph/, /U\+E000/],
-    gap: "port today's missing-glyph check (core/painter/text-watch.ts) to the glyph atlas, which already rasterises each glyph on the CPU",
+    names: [/no glyph for "\uE000"/, /U\+E000/, CASE_FILE],
     draw: (v) => v.text("a\uE000b", { x: 10, y: 20 }, { size: 14 }),
   },
   {
@@ -422,5 +420,82 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "error",
     names: [/opacity/, /0\.\.1/, /50/],
     draw: (v) => v.group({ opacity: 50 }, () => v.rect(0, 0, 10, 10, fill)),
+  },
+  // Chunk 3 (canvas-loop-scene-core.subplan.md, Track 3): rows 47 on.
+  {
+    id: "label-overlap",
+    mistake: "two labels drawn over each other",
+    channel: "warning",
+    names: [/^\*\*\[frame 0]\*\* warn: text "right" overlaps text "left" near \(\d+, \d+\); move one, or place them with v\.textBounds first/m, CASE_FILE],
+    draw: (v) => {
+      v.text("left", { x: 10, y: 20 }, { size: 14 });
+      v.text("right", { x: 16, y: 22 }, { size: 14 });
+    },
+  },
+  {
+    id: "removed-call",
+    mistake: "an old figure calls v.cache, which the scene API removed",
+    channel: "error",
+    names: [/RemovedCallError/, /v\.cache was removed/, /v\.picture/, /v\.place/, /draft sections 2 and 5/],
+    draw: (v) => Reflect.apply(Reflect.get(v, "cache"), v, ["key", () => v.rect(0, 0, 10, 10, fill)]),
+  },
+  {
+    id: "moving-offscreen",
+    mistake: "a camera pans toward drawings it never reaches in the run",
+    channel: "warning",
+    names: [/^\*\*\[frame 2]\*\* warn: 2 lines draw only off the 80×60 canvas while moving, on every frame 0–2: lines \d+:\d+ \(rect\), \d+:\d+ \(circle\) in test\/gpu\/dev-loop\/cases\.ts; a camera that has not reached them, or a wrong sign$/m],
+    frames: 3,
+    draw: (v, m) =>
+      v.at({ translate: [-10 * m.t, 0] }, () => {
+        v.rect(200, 10, 20, 20, fill);
+        v.circle(260, 30, 8, fill);
+      }),
+  },
+  {
+    id: "render-node-path",
+    mistake: "a picture with a blurred group placed under a skew (fails at render)",
+    channel: "error",
+    names: [/GpuRenderError/, /skew/, /not supported/, /\(at at #1 > place picture "badge" > group "glow"\)/],
+    noSketchLine: "raised while lowering, after draw returned; the node path names where",
+    draw: (v) => {
+      const badge = v.picture({ key: "badge", width: 20, height: 20 }, () => v.group({ name: "glow", effects: { blur: 2 } }, () => v.rect(4, 4, 12, 12, fill)));
+      v.at({ skew: [0.4, 0] }, () => v.place(badge, 10, 10));
+    },
+  },
+  {
+    id: "canvas-at-texture-limit",
+    mistake: "a canvas exactly as wide as the largest texture, with a stroke across it",
+    channel: "none",
+    names: [],
+    canvas: { width: 8192, height: 8 },
+    draw: (v) => v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" }),
+  },
+  {
+    id: "faint-ink",
+    mistake: "a translucent ink line too faint to see",
+    channel: "warning",
+    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only [0-7]% opacity/m, CASE_FILE],
+    draw: (v) => v.line(5, 5, 70, 50, { stroke: "rgba(0,0,0,0.04)", weight: 3, brush: "ink" }),
+  },
+  {
+    id: "faint-in-group",
+    mistake: "an opaque ink line inside a group at 5% opacity",
+    channel: "warning",
+    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only 5% opacity/m, CASE_FILE],
+    draw: (v) => v.group({ opacity: 0.05 }, () => v.line(5, 5, 70, 50, { stroke: "#000", weight: 3, brush: "ink" })),
+  },
+  {
+    id: "opaque-marker",
+    mistake: "none: an opaque marker line is plainly visible",
+    channel: "none",
+    names: [],
+    draw: (v) => v.line(5, 5, 70, 50, { stroke: "#000", weight: 6, brush: "marker" }),
+  },
+  {
+    id: "faint-on-purpose",
+    mistake: "none: a translucent pencil line marked gesture({ faint: true })",
+    channel: "none",
+    names: [],
+    draw: (v) => v.line(5, 5, 70, 50, { stroke: "rgba(0,0,0,0.03)", weight: 3, brush: "pencil", gesture: { faint: true } }),
   },
 ];

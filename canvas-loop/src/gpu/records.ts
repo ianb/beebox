@@ -37,6 +37,8 @@ export interface Rec {
   readonly rings?: readonly (readonly number[])[];
   /** In a material layer (R8): the material, straight, drawn in place of the colour. */
   readonly mat?: Rgba | undefined;
+  /** Testing mode: the slot (1 and up) the peak-writing draw keeps this mark's largest alpha in (peaks.ts). */
+  readonly peak?: number;
 }
 
 const rectO = (r: R): number[] => [r.x0, r.y0, widthOf(r), heightOf(r)];
@@ -147,6 +149,7 @@ export function pack(recs: readonly Rec[], tgt: { rect: R; tex: GPUTexture }): {
     i32[o + 66] = r.pwidth ?? 0;
     f[o + 67] = r.opacity ?? 1;
     if (r.mat !== undefined) f.set([r.mat[0], r.mat[1], r.mat[2], 1], o + 68);
+    if (r.peak !== undefined) f[o + 74] = r.peak;
   }
   return { draws: buf, stops: new Float32Array(stops).buffer, edges: new Float32Array(edges).buffer };
 }

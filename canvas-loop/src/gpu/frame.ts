@@ -5,6 +5,7 @@ import type { PixelsVersion } from "../scene/nodes.js";
 import type { AtlasPage } from "./atlas.js";
 import type { LightPass } from "./light.js";
 import type { PainterlyPasses } from "./painterly.js";
+import type { PeakBinding } from "./peaks.js";
 import type { Pipelines } from "./pipelines.js";
 import type { TexturePool } from "./pool.js";
 import type { SmearPass } from "./smear.js";
@@ -54,6 +55,8 @@ export interface Frame {
   readonly bindGroups: Map<string, GPUBindGroup>;
   /** Timestamp queries per pass, when the renderer times passes. */
   readonly timer: PassTimer | undefined;
+  /** Testing mode: draws of marks keep their peak alpha (peaks.ts); undefined when not measuring, or with no marks. */
+  readonly peaks: PeakBinding | undefined;
 }
 
 export function emptyStats(): FrameStats {

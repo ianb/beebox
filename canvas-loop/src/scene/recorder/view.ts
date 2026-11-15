@@ -16,18 +16,20 @@ import { IDENTITY, apply, axisScales, matrixOf, mul } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
 import { versionName } from "../outline.js";
-import type { Geom, Mat, PaperSettings, SceneNode } from "../nodes.js";
+import type { Geom, Mat, PaperSettings, SceneNode, ShapeNode } from "../nodes.js";
+import type { CallSite } from "../call-site.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import { PictureTable, placedVersion } from "./pictures.js";
 import { recordPicture, recordPixels } from "./picture-calls.js";
 import type { PictureScope } from "./picture-calls.js";
 import { RecorderNotes } from "./notes.js";
 import type { NoteSink } from "./notes.js";
-import { OffCanvas } from "./off-canvas.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolvePlace, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
 import { keyOf } from "../hash.js";
-import { fontWarning, recordText } from "./text.js";
+import { recordText } from "./text.js";
+import type { GlyphMissing } from "./text-checks.js";
+import { Audit } from "./audit.js";
 import { PureHelpers } from "./helpers.js";
 import { hasOpenLight, holdsNonReceiving, lightWarning, noLightWarning, resolveLight } from "./light.js";
 import { valueNoise } from "./noise.js";
@@ -38,14 +40,13 @@ import type { FrameOutputs, FrameRecord } from "./frame.js";
 export class SceneRecorder extends PureHelpers implements View {
   readonly #canvas: { width: number; height: number };
   readonly #text: TextMeasurer | undefined;
-  readonly #audit: boolean;
+  /** Testing mode's checks (audit.ts); undefined when not testing. */
+  readonly #audit: Audit | undefined;
   readonly #seed: number;
   readonly #params: ControlParams | undefined;
   readonly #table = new PictureTable();
-  readonly #checks: { colors?: ColorParser; fontKnown?: (family: string) => boolean };
+  readonly #colors: ColorParser | undefined;
   readonly #notes: RecorderNotes;
-  /** Testing mode: drawings off the canvas on every frame. */
-  readonly #offCanvas: OffCanvas | undefined;
   /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
   #lit = 0;
   /** Inside a mask's artwork, where lights do nothing (R8). */
@@ -62,20 +63,19 @@ export class SceneRecorder extends PureHelpers implements View {
   /**
    * `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. `params` resolve `control` calls.
    * With `colors`, colours are parsed at the call (an unparsable one is an error there); with `fontKnown`, text in a
-   * font family the runtime does not have warns. With `onNote`, each log, warning and hint is also given to it as it
+   * font family the runtime does not have warns; with `glyphMissing`, a character the font has no glyph for warns. With `onNote`, each log, warning and hint is also given to it as it
    * happens, including in a `draw` that then throws.
    */
-  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number; params?: ControlParams; colors?: ColorParser; fontKnown?: (family: string) => boolean; onNote?: NoteSink }) {
+  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number; params?: ControlParams; colors?: ColorParser; fontKnown?: (family: string) => boolean; glyphMissing?: GlyphMissing; onNote?: NoteSink }) {
     super();
     this.#notes = new RecorderNotes(options?.onNote);
     this.#canvas = size;
     this.#size = size;
     this.#text = options?.text;
-    this.#audit = options?.audit ?? false;
-    this.#offCanvas = this.#audit ? new OffCanvas(size) : undefined;
+    this.#audit = options?.audit === true ? new Audit(size, { glyphMissing: options.glyphMissing, fontKnown: options.fontKnown, warn: (once, a) => this.#notes.warnAt(once, a) }) : undefined;
     this.#seed = options?.seed ?? 0;
     this.#params = options?.params;
-    this.#checks = { ...options };
+    this.#colors = options?.colors;
   }
 
   /** The canvas size, or the picture's inside a picture body (section 5). */
@@ -87,7 +87,10 @@ export class SceneRecorder extends PureHelpers implements View {
   }
 
   /** After a run (testing mode): drawings off the canvas, or unboxed text crossing its edge, on every frame. */
-  readonly offCanvasWarnings = (): string[] => this.#offCanvas?.warnings() ?? [];
+  readonly offCanvasWarnings = (): string[] => this.#audit?.offCanvas.warnings() ?? [];
+
+  /** Testing mode: where the sketch drew brushed mark `node`, when the faint-mark check judges it (audit.ts). */
+  readonly markSite = (node: ShapeNode): CallSite | undefined => this.#audit?.markSite(node);
 
   /** Forget every picture version, so each body records again (a web font finished loading, draft section 20). */
   readonly forgetPictures = (): void => this.#table.clear();
@@ -99,12 +102,12 @@ export class SceneRecorder extends PureHelpers implements View {
     ({ open: this.#open, matrix: this.#matrix, paper: this.#paper, size: this.#size, picture: this.#picture, out: this.#out, lit: this.#lit, inMask: this.#inMask } = { open: [root], matrix: IDENTITY, paper: DEFAULT_PAPER, size: this.#canvas, picture: undefined, out, lit: 0, inMask: false });
     this.#table.beginFrame();
     this.#notes.begin();
-    this.#offCanvas?.begin();
+    this.#audit?.begin();
     let standIns: SceneNode[];
     let notes: { warnings: string[]; hints: string[] };
     try {
       draw(this);
-      this.#offCanvas?.end();
+      this.#audit?.end();
       this.#paper = DEFAULT_PAPER;
       // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
       standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, out.controls));
@@ -117,7 +120,7 @@ export class SceneRecorder extends PureHelpers implements View {
 
   #add(node: SceneNode): void {
     this.#notes.live(node.kind === "shape" ? node.call : node.kind);
-    if (this.#checks.colors !== undefined) checkColours(node, this.#checks.colors);
+    if (this.#colors !== undefined) checkColours(node, this.#colors);
     const top = this.#open.at(-1);
     if (top === undefined) throw new UnsupportedCallError({ call: "drawing outside draw()" });
     top.push(node);
@@ -142,9 +145,11 @@ export class SceneRecorder extends PureHelpers implements View {
     if (style.effects !== undefined) axisScales(this.#matrix, call);
     // Structural keys, hashed while recording: what the renderer keeps geometry and expansions under (draft section 6).
     for (const v of [args.geom, style.brush?.brush, style.brush?.gesture]) if (v !== undefined) keyOf(v);
-    this.#add({ kind: "shape", call, geom: args.geom, style });
+    const node: ShapeNode = { kind: "shape", call, geom: args.geom, style };
+    this.#add(node);
+    this.#audit?.shape(node, !this.#inMask);
     // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
-    if (this.#picture === undefined && !this.#inMask) this.#offCanvas?.shape(call, { geom: args.geom, style, matrix: this.#matrix, lit: this.#lit > 0 });
+    if (this.#picture === undefined && !this.#inMask) this.#audit?.offCanvas.shape(call, { geom: args.geom, style, matrix: this.#matrix, lit: this.#lit > 0 });
   }
   /** Where a light here does nothing (R8): inside a mask's artwork, or outside any lit group (a picture body may be placed lit). */
   #unlit(): "mask" | "unlit" | undefined {
@@ -205,9 +210,8 @@ export class SceneRecorder extends PureHelpers implements View {
   text(...args: [string, TextBox, TextOptions?]): TextBounds {
     const { node, bounds } = this.#layText(...args);
     this.#add(node);
-    if (this.#picture === undefined && !this.#inMask) this.#offCanvas?.text(`text ${JSON.stringify(node.content.slice(0, 24))}`, { bounds, matrix: this.#matrix, unboxed: args[1].w === undefined && args[2]?.keepInside !== true });
-    const font = fontWarning(node, this.#checks.fontKnown);
-    if (font !== undefined) this.#notes.warn(`font ${node.family}`, font);
+    if (this.#picture === undefined && !this.#inMask) this.#audit?.offCanvas.text(`text ${JSON.stringify(node.content.slice(0, 24))}`, { bounds, matrix: this.#matrix, unboxed: args[1].w === undefined && args[2]?.keepInside !== true });
+    this.#audit?.text.text(node, { bounds, matrix: this.#matrix, seen: !this.#inMask });
     return bounds;
   }
   textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
@@ -242,7 +246,7 @@ export class SceneRecorder extends PureHelpers implements View {
     let paper = this.#paper;
     const lit = g.lighting === undefined ? 0 : 1;
     this.#lit += lit;
-    const outer = this.#offCanvas?.enter(g.effects, this.#matrix) ?? 0;
+    const outer = this.#audit?.offCanvas.enter(g.effects, this.#matrix) ?? 0;
     try {
       const children = this.#inside(() => {
         body();
@@ -252,7 +256,7 @@ export class SceneRecorder extends PureHelpers implements View {
       this.#add({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(children), paper, children });
     } finally {
       this.#lit -= lit;
-      this.#offCanvas?.leave(outer);
+      this.#audit?.offCanvas.leave(outer);
     }
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
@@ -285,7 +289,7 @@ export class SceneRecorder extends PureHelpers implements View {
     const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask };
     ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = { open: [], matrix: IDENTITY, size: a.size, picture: name, inMask: false });
     try {
-      return this.#inside(a.body);
+      return this.#audit?.text.body(() => this.#inside(a.body)) ?? this.#inside(a.body);
     } finally {
       ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = saved);
     }
@@ -293,7 +297,7 @@ export class SceneRecorder extends PureHelpers implements View {
   /** What a picture call needs from the recorder; `call` must be made while `draw` runs. */
   #scope(call: string): PictureScope {
     this.#notes.live(call);
-    return { table: this.#table, audit: this.#audit, frame: this.#notes.frame, paper: this.#paper, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message) };
+    return { table: this.#table, audit: this.#audit !== undefined, frame: this.#notes.frame, paper: this.#paper, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message) };
   }
   picture(options: PictureOptions, body: () => void): Picture {
     return recordPicture(this.#scope("picture"), { options, body });
@@ -308,8 +312,9 @@ export class SceneRecorder extends PureHelpers implements View {
     if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
     const placed = { kind: "place", picture: v, x, y, ...resolvePlace(options) } as const;
     this.#add(placed);
-    if (this.#picture === undefined && !this.#inMask && !(this.#lit > 0 && (placed.material?.castsShadow ?? false) !== false)) this.#offCanvas?.place(`place ${versionName(v)}`, { version: v, matrix: mul(this.#matrix, [1, 0, 0, 1, x, y]) });
-    if (this.#audit && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v, this.#matrix);
+    if (v.kind === "picture" && !this.#inMask) this.#audit?.text.placed(v.children, mul(this.#matrix, [1, 0, 0, 1, x, y]));
+    if (this.#picture === undefined && !this.#inMask && !(this.#lit > 0 && (placed.material?.castsShadow ?? false) !== false)) this.#audit?.offCanvas.place(`place ${versionName(v)}`, { version: v, matrix: mul(this.#matrix, [1, 0, 0, 1, x, y]) });
+    if (this.#audit !== undefined && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v, this.#matrix);
   }
 
   // ── outputs that are not drawing ──

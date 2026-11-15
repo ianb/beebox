@@ -46,16 +46,38 @@ class CallSiteError extends Error {
   }
 }
 
-/** Where the sketch made the current call, as `path:line:col`, or undefined when no frame of the stack is the sketch's. */
-export function sketchLine(): string | undefined {
+/** A stack captured at the current call. */
+function capture(): CallSiteError {
   // The recorder can be a dozen frames deep (groups, picture bodies); V8 keeps 10 by default.
   const limit: unknown = Reflect.get(Error, "stackTraceLimit");
   Reflect.set(Error, "stackTraceLimit", 64);
   try {
-    return sketchFrames(new CallSiteError().stack)[0];
+    return new CallSiteError();
   } finally {
     Reflect.set(Error, "stackTraceLimit", limit);
   }
+}
+
+/** Where the sketch made the current call, as `path:line:col`, or undefined when no frame of the stack is the sketch's. */
+export function sketchLine(): string | undefined {
+  return sketchFrames(capture().stack)[0];
+}
+
+/** The current call's place, found only when `line` is read: V8 formats a stack on first read, so keeping one is cheap. */
+export interface CallSite {
+  readonly line: string | undefined;
+}
+
+/** The current call's stack, kept for a check that decides later (after the frame, or after its render) whether to warn. */
+export function callSite(): CallSite {
+  const error = capture();
+  let line: { at: string | undefined } | undefined;
+  return {
+    get line() {
+      line ??= { at: sketchFrames(error.stack)[0] };
+      return line.at;
+    },
+  };
 }
 
 /** ` (at path:line:col)` for a message, or "" when the sketch's line is not known. */

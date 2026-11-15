@@ -9,7 +9,7 @@ import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
 import type { Mat, ShapeNode } from "../scene/nodes.js";
 import type { BrushRec, MarkSource, PaperRec, R, SmearRec } from "./jobs.js";
-import { EMPTY, inter, isEmpty, pad } from "./jobs.js";
+import { EMPTY, cutOf, inter, isEmpty, pad } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
 import { paintRec } from "./paint.js";
 import { PAPER_ROW, paperParams } from "./painterly.js";
@@ -90,7 +90,7 @@ function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
 
 /** A kept linear mark set moved by the transform's translation and cut to what can be seen. */
 function marks(l: LinMarks, a: { tx: number; ty: number; visible: R }): MarkSource | undefined {
-  const cut = pad(a.visible, 2);
+  const cut = cutOf(a.visible);
   if (l.kind === "piece") {
     const piece = placePiece(l.shape, { tx: a.tx, ty: a.ty, cut });
     return piece === undefined ? undefined : { kind: "piece", piece };

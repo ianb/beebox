@@ -1,7 +1,8 @@
 // The glyph atlas (draft section 7): each glyph is rasterised once by the
 // runtime's own 2D canvas, at its device size, baseline, halo width and
 // quarter-pixel offset, and its coverage kept on the CPU. Each frame packs the
-// glyphs it uses onto r8 pages.
+// glyphs it uses onto r8 pages. Headless testing mode also asks the same
+// rasteriser which characters a font has no glyph for (`GlyphWatch`).
 import type { MakeRaster, RasterCtx } from "../device/open.js";
 import type { AtlasPage } from "./atlas.js";
 import { shelfPack } from "./atlas.js";
@@ -116,5 +117,57 @@ export class GlyphCache {
       }
       return { tex, width: tex.width, height: tex.height };
     });
+  }
+}
+
+// Characters a font has no glyph for (today's check, core/painter/text-watch.ts):
+// a character whose pixels and box match the font's missing-glyph mark draws
+// as an empty box or nothing. Headless only, as today: a browser loads web
+// fonts later. Each (font, character) is drawn once.
+const PROBE = 48;
+// A private-use character no common font draws: what "no glyph" looks like in a font.
+const MISSING = "\u{10FFFD}";
+
+export class GlyphWatch {
+  readonly #make: MakeRaster;
+  #ctx: RasterCtx | undefined;
+  readonly #answers = new Map<string, boolean>();
+  readonly #missingMark = new Map<string, string>();
+
+  constructor(make: MakeRaster) {
+    this.#make = make;
+  }
+
+  /** Whether `font` (its style and family list) has no glyph for `char`. */
+  readonly missing = (char: string, font: { readonly style: string; readonly family: string }): boolean => {
+    const name = `${font.style} 24px ${font.family}`;
+    const key = `${name}\u0000${char}`;
+    const known = this.#answers.get(key);
+    if (known !== undefined) return known;
+    let mark = this.#missingMark.get(name);
+    if (mark === undefined) {
+      mark = this.#ink(MISSING, name);
+      this.#missingMark.set(name, mark);
+    }
+    const answer = this.#ink(char, name) === mark;
+    this.#answers.set(key, answer);
+    return answer;
+  };
+
+  /** A fingerprint of `char`'s pixels and box in CSS font `font`. */
+  #ink(char: string, font: string): string {
+    this.#ctx ??= this.#make({ width: PROBE, height: PROBE });
+    const ctx = this.#ctx;
+    ctx.clearRect(0, 0, PROBE, PROBE);
+    ctx.font = font;
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(char, 8, PROBE / 2);
+    const { data } = ctx.getImageData(0, 0, PROBE, PROBE);
+    let hash = 0;
+    for (let i = 3; i < data.length; i += 4) hash = (Math.imul(hash, 31) + (data[i] ?? 0)) >>> 0;
+    const m = ctx.measureText(char);
+    return `${[m.actualBoundingBoxLeft, m.actualBoundingBoxRight, m.actualBoundingBoxAscent, m.actualBoundingBoxDescent].join(",")}:${String(hash)}`;
   }
 }

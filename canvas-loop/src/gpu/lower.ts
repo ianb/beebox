@@ -10,8 +10,7 @@ import { BLEND_MODES } from "../core/compose.js";
 import type { BlendMode } from "../core/paint.js";
 import type { BrushExpander } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
-import { polylines as flatten } from "../scene/geometry/flatten.js";
-import { det, invert, maxScale, mul } from "../scene/mat.js";
+import { det, invert, mul } from "../scene/mat.js";
 import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";
 import type { Effects, Material } from "../scene/api.js";
@@ -23,12 +22,13 @@ import { LIT_RESULT, bevelOf, casterHeight, materialColor, materialOf, materialP
 import { fxPlanOf } from "./effects.js";
 import type { GlyphCache } from "./glyphs.js";
 import type { ClipMask, Item, Job, R } from "./jobs.js";
-import { EMPTY, inter, isEmpty, pad, union } from "./jobs.js";
+import { EMPTY, cutOf, inter, isEmpty, pad, union } from "./jobs.js";
 import type { BrushFrame } from "./marks.js";
 import { brushDraw } from "./marks.js";
 import type { PaintRec } from "./paint.js";
 import { imageRec, paintRec } from "./paint.js";
-import { pieceOf } from "./rings.js";
+import { boundsOf, clipBox, fillRings } from "./rings.js";
+import { NodePath } from "./node-path.js";
 import type { KeptValues, LinShape } from "./geometry-cache.js";
 import { linShape, placePiece } from "./geometry-cache.js";
 import { linearKey } from "../scene/hash.js";
@@ -62,33 +62,6 @@ interface Here {
 
 const modeOf = (b: BlendMode): number => BLEND_MODES.indexOf(b);
 
-function toDevice(rings: readonly (readonly number[])[], m: Mat): number[][] {
-  return rings.map((r) => {
-    const o: number[] = [];
-    for (let i = 0; i + 1 < r.length; i += 2) {
-      const x = r[i] ?? 0;
-      const y = r[i + 1] ?? 0;
-      o.push(m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
-    }
-    return o;
-  });
-}
-
-function fillRings(g: Geom, m: Mat): number[][] {
-  return toDevice(flatten(g, maxScale(m)).map((p) => p.pts).filter((r) => r.length >= 6), m);
-}
-
-/** Device-space rings' bounds, as integer pixels. */
-function boundsOf(rings: readonly (readonly number[])[]): R {
-  return pieceOf(rings.map((r) => [...r]))?.box ?? EMPTY;
-}
-
-function clipBox(clip: ClipMask | null, r: R): R {
-  let b = r;
-  for (let c = clip; c !== null; c = c.parent) b = inter(b, c.box);
-  return b;
-}
-
 export class Lowering {
   readonly #colors: ColorParser;
   readonly #canvas: R;
@@ -97,6 +70,8 @@ export class Lowering {
   readonly #glyphs: GlyphCache;
   readonly #geo: ShapeGeometry;
   readonly #rasters: RasterCache;
+  /** The node being lowered, for render errors. */
+  readonly #path = new NodePath();
   /** Picture tiles lowered this frame, shared by every placement that needs them. */
   readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
 
@@ -131,7 +106,7 @@ export class Lowering {
   }
 
   #nodes(nodes: readonly SceneNode[], here: Here): void {
-    for (const n of nodes) this.#node(n, here);
+    for (const [i, n] of nodes.entries()) this.#path.inside(n, { index: i + 1, lower: () => this.#node(n, here) });
   }
 
   #node(n: SceneNode, here: Here): void {
@@ -255,7 +230,7 @@ export class Lowering {
     if (d.k === "smear") {
       if (a.mat === undefined) here.job.items.push({ ...d, box, mode: 0, erase: false, clip: here.clip });
     }
-    else here.job.items.push({ ...d, box, mode: a.mode, erase: a.erase, clip: here.clip, mat: a.mat });
+    else here.job.items.push({ ...d, box, mode: a.mode, erase: a.erase, clip: here.clip, mat: a.mat, node: a.mat === undefined ? n : undefined });
   }
 
   /** Text: per line, the halo's glyphs and then the fill's, as today's strokeText then fillText. */
@@ -347,7 +322,7 @@ export class Lowering {
   /** A shape's fill or stroke (linear rings moved by tx, ty), cut to where it can be seen; nothing when it cannot be. */
   #draw(d: { shape: LinShape; tx: number; ty: number; paint: PaintRec | undefined; mode: number; erase: boolean; mat?: Rgba | undefined }, here: Here): void {
     if (d.paint === undefined) return;
-    const p = placePiece(d.shape, { tx: d.tx, ty: d.ty, cut: pad(here.visible, 2) });
+    const p = placePiece(d.shape, { tx: d.tx, ty: d.ty, cut: cutOf(here.visible) });
     if (p === undefined) return;
     const box = clipBox(here.clip, p.box);
     if (isEmpty(box)) return;
@@ -364,7 +339,7 @@ export class Lowering {
   #clip(shapes: readonly Geom[], here: Here): ClipMask {
     const parent = here.clip;
     const depth = parent === null ? 0 : parent.depth + 1;
-    const cov = this.#geo.clip(shapes, { m: here.matrix, cut: pad(here.visible, 2) });
+    const cov = this.#geo.clip(shapes, { m: here.matrix, cut: cutOf(here.visible) });
     const c: ClipMask = "piece" in cov
       ? { rings: [], piece: cov.piece, parent, depth, box: cov.piece === undefined ? EMPTY : clipBox(parent, cov.piece.box) }
       : { rings: cov.rings, piece: undefined, parent, depth, box: clipBox(parent, boundsOf(cov.rings)) };

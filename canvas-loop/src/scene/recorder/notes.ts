@@ -56,6 +56,11 @@ export class RecorderNotes {
     this.#note(this.#warnings, { once, message, kind: "warn" });
   }
 
+  /** A warning found after the call that made it (at the frame's end), naming the line `line` that call kept; once per run, as `warn`. */
+  warnAt(once: string, a: { message: string; line: string | undefined }): void {
+    this.#note(this.#warnings, { once, message: a.message, kind: "warn", at: a.line === undefined ? "" : ` (at ${a.line})` });
+  }
+
   /** A performance hint (draft section 10): nothing is wrong, but something costs every frame. Once per run, as `warn`. */
   hint(once: string, message: string): void {
     this.#note(this.#hints, { once: `hint ${once}`, message, kind: "hint" });
@@ -67,8 +72,8 @@ export class RecorderNotes {
     if (hint !== undefined) this.hint(`scale ${version.key}`, hint);
   }
 
-  #note(into: string[], a: { once: string; message: string; kind: "warn" | "hint" }): void {
-    const at = atSketchLine();
+  #note(into: string[], a: { once: string; message: string; kind: "warn" | "hint"; at?: string }): void {
+    const at = a.at ?? atSketchLine();
     if (this.#warned.has(a.once + at)) return;
     this.#warned.add(a.once + at);
     into.push(a.message + at);

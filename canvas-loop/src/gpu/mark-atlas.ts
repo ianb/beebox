@@ -6,13 +6,13 @@ import type { Run } from "../scene/brush/expand.js";
 import type { AtlasPage } from "./atlas.js";
 import { shelfPack } from "./atlas.js";
 import type { R, TexMark } from "./jobs.js";
-import { heightOf, widthOf } from "./jobs.js";
+import { ATLAS_MAX, heightOf, widthOf } from "./jobs.js";
 import type { TexturePool } from "./pool.js";
 import { timed } from "./frame.js";
 import type { PassTimer } from "./timing.js";
 import { MARK_WGSL } from "./shader-mark.js";
 
-const MAX = 8192;
+const MAX = ATLAS_MAX;
 /** Floats per dab instance and per run vertex. */
 const DAB_FLOATS = 12;
 const RUN_FLOATS = 24;

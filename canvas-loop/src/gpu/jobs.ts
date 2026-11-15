@@ -5,7 +5,7 @@
 import type { SmearBrush } from "../core/brush/types.js";
 import type { Dab, Run } from "../scene/brush/expand.js";
 import type { Rgba } from "../scene/colors.js";
-import type { Mat, PictureVersion } from "../scene/nodes.js";
+import type { Mat, PictureVersion, ShapeNode } from "../scene/nodes.js";
 import type { FxPlan } from "./effects.js";
 import type { LightPlan } from "./light.js";
 import type { BevelPlan } from "./material.js";
@@ -26,6 +26,21 @@ export const union = (a: R, b: R): R => (isEmpty(a) ? b : isEmpty(b) ? a : { x0:
 export const pad = (a: R, p: number): R => ({ x0: a.x0 - p, y0: a.y0 - p, x1: a.x1 + p, y1: a.y1 + p });
 export const widthOf = (r: R): number => r.x1 - r.x0;
 export const heightOf = (r: R): number => r.y1 - r.y0;
+
+/** The side of a coverage, mark or clip atlas page: the largest texture this renderer asks for. */
+export const ATLAS_MAX = 8192;
+
+/**
+ * Where a shape, mark or clip is cut before it reaches an atlas: what can be
+ * seen plus 2 px, except on an axis where the padding would pass the atlas
+ * side (a canvas exactly as wide as the largest texture).
+ */
+export function cutOf(visible: R): R {
+  const p = pad(visible, 2);
+  const [x0, x1] = widthOf(p) > ATLAS_MAX ? [visible.x0, visible.x1] : [p.x0, p.x1];
+  const [y0, y1] = heightOf(p) > ATLAS_MAX ? [visible.y0, visible.y1] : [p.y0, p.y1];
+  return { x0, y0, x1, y1 };
+}
 
 /** Where something packed into an atlas page sits. */
 export interface Slot {
@@ -111,7 +126,8 @@ export type Item =
   | (Common & Mat4 & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
   /** A layer; `shift` (whole device pixels) moves a picture tile from raster space to the target's. */
   | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number; readonly shift?: readonly [number, number] })
-  | (Common & Mat4 & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec })
+  /** A brushed mark; `node` (in colour, not material layers) is the stroke it draws, for testing mode's faint-mark check. */
+  | (Common & Mat4 & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly node?: ShapeNode | undefined })
   | (Common & { readonly k: "smear"; readonly smear: SmearRec })
   | (Common & Mat4 & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
 

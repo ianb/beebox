@@ -1,6 +1,11 @@
 // Device-space rings (closed polygons, flat [x0, y0, x1, y1, …]): cut to a
-// rectangle before they reach the atlas, and oriented for clip unions.
-import type { Piece, R } from "./jobs.js";
+// rectangle before they reach the atlas, and oriented for clip unions; a
+// shape's rings under a matrix, and their bounds.
+import { polylines as flatten } from "../scene/geometry/flatten.js";
+import { maxScale } from "../scene/mat.js";
+import type { Geom, Mat } from "../scene/nodes.js";
+import type { ClipMask, Piece, R } from "./jobs.js";
+import { EMPTY, inter } from "./jobs.js";
 
 export function ringArea(r: readonly number[]): number {
   let a = 0;
@@ -142,4 +147,32 @@ export function isSimpleRing(ring: readonly number[]): boolean {
     }
   }
   return true;
+}
+
+export function toDevice(rings: readonly (readonly number[])[], m: Mat): number[][] {
+  return rings.map((r) => {
+    const o: number[] = [];
+    for (let i = 0; i + 1 < r.length; i += 2) {
+      const x = r[i] ?? 0;
+      const y = r[i + 1] ?? 0;
+      o.push(m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
+    }
+    return o;
+  });
+}
+
+export function fillRings(g: Geom, m: Mat): number[][] {
+  return toDevice(flatten(g, maxScale(m)).map((p) => p.pts).filter((r) => r.length >= 6), m);
+}
+
+/** Device-space rings' bounds, as integer pixels. */
+export function boundsOf(rings: readonly (readonly number[])[]): R {
+  return pieceOf(rings.map((r) => [...r]))?.box ?? EMPTY;
+}
+
+/** `r` inside `clip` and every clip around it. */
+export function clipBox(clip: ClipMask | null, r: R): R {
+  let b = r;
+  for (let c = clip; c !== null; c = c.parent) b = inter(b, c.box);
+  return b;
 }

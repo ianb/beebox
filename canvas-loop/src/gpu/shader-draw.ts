@@ -14,6 +14,11 @@
 //   In a lit group's material layers (R8) a draw's colour is replaced by its
 //   material (`mat`), keeping the paint's alpha, so material composites by
 //   coverage exactly as colour does.
+// - drawWgsl(true): the same shader for testing mode's faint-mark check. A draw
+//   whose record carries a peak index (clipA.z, 1 and up) also writes its
+//   resolved alpha (paint alpha × coverage × paper grain × brush opacity, before
+//   any clip) into that slot of a storage buffer with an atomic max. Its colour
+//   output is the plain shader's.
 import { COMPOSE_WGSL } from "./shader-compose.js";
 import { PAPER_WGSL } from "./shader-paper.js";
 
@@ -53,7 +58,13 @@ fn G(f: f32) -> f32 { if (f <= 0) { return 0.0; } if (f >= 1) { return f - 0.5; 
 }
 `;
 
-export const DRAW_WGSL = /* wgsl */ `
+// Testing mode: the peak slots, and the write into them.
+const PEAK_BINDING = /* wgsl */ "@group(2) @binding(0) var<storage, read_write> peaks: array<atomic<u32>>;";
+const PEAK_WRITE = /* wgsl */ "if (d.clipA.z > 0) { atomicMax(&peaks[u32(d.clipA.z)], u32(round(clamp(s.a * *cov, 0.0, 1.0) * 65535.0))); }";
+
+/** The draw shader; with `peaks`, the testing-mode variant that also writes each marked draw's peak alpha. */
+export function drawWgsl(peaks: boolean): string {
+  return /* wgsl */ `
 struct Draw {
   box: vec4f, tgt: vec4f, color: vec4f, inv0: vec4f, inv1: vec4f, grad: vec4f,
   covO: vec4f, covA: vec4f, srcO: vec4f, maskO: vec4f, clipO: vec4f, bdO: vec4f,
@@ -73,6 +84,7 @@ struct Draw {
 @group(1) @binding(4) var atlasT: texture_2d<f32>;
 @group(1) @binding(5) var auxT: texture_2d<f32>;
 @group(1) @binding(6) var imgT: texture_2d<f32>;
+${peaks ? PEAK_BINDING : ""}
 
 struct VOut { @builtin(position) pos: vec4f, @location(0) @interpolate(flat) id: u32 };
 @vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> VOut {
@@ -161,6 +173,7 @@ fn source(d: Draw, pix: vec2f, cov: ptr<function, f32>) -> vec4f {
     *cov = *cov * (1.0 - d.pap1.w * paperAt(vec3f(d.pap1.z, d.pap2.xy), d.seed, d.pwidth, q));
   }
   *cov = *cov * d.pap2.z;
+  ${peaks ? PEAK_WRITE : ""}
   if (d.clipO.z > 0) { *cov = *cov * clipAt(d, pix); }
   return s;
 }
@@ -184,3 +197,6 @@ ${PAPER_WGSL}
   return mix(D, blend(d.mode, s, D), cov);
 }
 `;
+}
+
+export const DRAW_WGSL = drawWgsl(false);

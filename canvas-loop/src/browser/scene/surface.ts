@@ -12,6 +12,7 @@ import { SceneMountError } from "../../scene/errors.js";
 import type { TextMeasure } from "../../core/view.js";
 import type { DrawSurface } from "../runtime/engine.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
+import type { ColorParser } from "../../scene/colors.js";
 import { GpuRenderer } from "../../gpu/renderer.js";
 import type { Pixels } from "../../gpu/renderer.js";
 import { SceneRecorder } from "../../scene/recorder/view.js";
@@ -39,6 +40,8 @@ export interface SceneSurfaceDeps {
   /** The sketch's `draw`, called with the recorder as its View (a scene sketch's `draw` takes the draft View). */
   readonly draw: PlaygroundModule["draw"];
   readonly text: TextMeasurer;
+  /** Parses colours at the call (`colorsFrom(browser2d())`, made at mount), so a bad colour fails there, naming the call. */
+  readonly colors: ColorParser;
   readonly lease: GpuLease;
   /** A frame failed to draw on the GPU: the figure stops and reports it. */
   readonly onError: (error: unknown) => void;
@@ -88,7 +91,7 @@ export class SceneSurface implements DrawSurface {
     const ctx = d.canvas.getContext("webgpu");
     if (ctx === null) throw new SceneMountError({ detail: "the canvas gave no WebGPU context (it may already have another context)" });
     this.#context = ctx;
-    this.#recorder = new SceneRecorder(d.size, { text: d.text, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
+    this.#recorder = new SceneRecorder(d.size, { text: d.text, colors: d.colors, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
     this.textMeasure = {
       width: (content, options) => d.text.width(content, options),
       bounds: (...[content, box, options]: [string, TextBox, TextOptions?]) => d.text.place(content, { box, options: options ?? {}, where: { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: d.size } }).bounds,

@@ -11,7 +11,7 @@ import { CoverageAtlas } from "./atlas.js";
 import { encodeJob } from "./draws.js";
 import type { Frame, FrameStats } from "./frame.js";
 import { emptyStats } from "./frame.js";
-import { GlyphCache } from "./glyphs.js";
+import { GlyphCache, GlyphWatch } from "./glyphs.js";
 import type { GlyphCell } from "./glyphs.js";
 import { ImageCache } from "./images.js";
 import type { ClipMask, Job, Piece, TexMark } from "./jobs.js";
@@ -32,7 +32,11 @@ import { RasterCache } from "./rasters.js";
 import type { PictureVersion } from "../scene/nodes.js";
 import type { R } from "./jobs.js";
 import { ErrorScopes } from "./error-scopes.js";
+import type { MarkPeak, PeakPlan } from "./peaks.js";
+import { bindPeaks, copyPeaks, planPeaks, readPeaks } from "./peaks.js";
 
+
+export type { MarkPeak } from "./peaks.js";
 /** A picture tile drawn this frame, kept once the frame has succeeded. */
 interface NewTile {
   readonly version: PictureVersion;
@@ -80,6 +84,8 @@ interface Encoded {
   readonly stats: FrameStats;
   /** The pass timestamps to read once the frame is done, when timing. */
   readonly times: GPUBuffer | undefined;
+  /** Testing mode: the marks' peak slots to read once the frame is done, when measuring them. */
+  readonly peaks: { readonly read: GPUBuffer; readonly plan: PeakPlan } | undefined;
 }
 
 /** Map a frame's readback buffer and copy out its rows. */
@@ -109,6 +115,11 @@ export class GpuRenderer {
   readonly #glyphs: GlyphCache;
   readonly #images: ImageCache;
   readonly #timer: PassTimer | undefined;
+  readonly #measurePeaks: boolean;
+  /** Headless testing mode: whether a font has no glyph for a character, asked of the glyph atlas's rasteriser. */
+  readonly glyphMissing: GlyphWatch["missing"];
+  /** Testing mode (`peaks`): each brushed mark's strength in the last frame `render` drew. */
+  peaks: readonly MarkPeak[] = [];
   /** Counts from the last frame. */
   stats: FrameStats = emptyStats();
   /** GPU time per pass kind in the last frame, when timing. */
@@ -118,10 +129,13 @@ export class GpuRenderer {
    * `timing` times every pass (the device must have been opened with
    * timestamps). `caches: false` keeps nothing between frames (brush
    * expansions, coverage geometry, picture rasters): cache-equivalence checks
-   * compare its frames with a caching renderer's.
+   * compare its frames with a caching renderer's. `peaks` (testing mode)
+   * measures each brushed mark's peak alpha in every frame `render` draws, for
+   * the faint-mark check; its colour output is the same.
    */
-  constructor(gpu: GpuHandle, options?: { timing?: boolean; caches?: boolean }) {
+  constructor(gpu: GpuHandle, options?: { timing?: boolean; caches?: boolean; peaks?: boolean }) {
     const caches = options?.caches ?? true;
+    this.#measurePeaks = options?.peaks ?? false;
     this.#expander = new BrushExpander({ enabled: caches });
     this.#kept = new KeptValues(caches);
     this.#rasters = new RasterCache(gpu.device, caches);
@@ -135,6 +149,7 @@ export class GpuRenderer {
     this.#painterly = new PainterlyPasses(gpu.device);
     this.#light = new LightPass(gpu.device);
     this.#glyphs = new GlyphCache(gpu.raster);
+    this.glyphMissing = new GlyphWatch(gpu.raster).missing;
     this.#images = new ImageCache(gpu.device);
   }
 
@@ -165,7 +180,9 @@ export class GpuRenderer {
     stats.pieces = pieces.length;
     stats.atlasPages = atlas.length;
     stats.markPages = markPages.length;
-    const f: Frame = { device, enc, pool: this.#pool, pipes: this.#pipes, atlas, markPages, glyphPages, image: (v) => this.#images.get(v), smear: this.#smear, painterly: this.#painterly, light: this.#light, temp: a.temp, stats, timer, bindGroups: new Map() };
+    const plan = this.#measurePeaks ? planPeaks(jobs) : undefined;
+    const peaks = plan === undefined || plan.marks.length === 0 ? undefined : bindPeaks(plan, { device, pipes: this.#pipes.peak(), temp: a.temp });
+    const f: Frame = { device, enc, pool: this.#pool, pipes: this.#pipes, atlas, markPages, glyphPages, image: (v) => this.#images.get(v), smear: this.#smear, painterly: this.#painterly, light: this.#light, temp: a.temp, stats, timer, bindGroups: new Map(), peaks: peaks?.binding };
     buildClipPages(clips, f);
     const t2 = performance.now();
     for (const j of jobs) {
@@ -186,6 +203,7 @@ export class GpuRenderer {
     stats.keptMisses = this.#kept.misses;
     stats.cpu = { lower: t1 - t0, atlas: t2 - t1, encode: t3 - t2, submit: 0 };
     const times = timer?.resolve(enc, a.temp);
+    const peakRead = peaks === undefined || plan === undefined ? undefined : { read: copyPeaks(peaks.buffer, { enc, device, temp: a.temp }), plan };
     const submit = (): void => {
       device.queue.submit([enc.finish()]);
       stats.cpu.submit = performance.now() - t3;
@@ -201,14 +219,14 @@ export class GpuRenderer {
       enc.copyTextureToTexture({ texture: out }, { texture: a.target }, [Math.min(width, a.target.width), Math.min(height, a.target.height)]);
       if (a.read !== true) {
         submit();
-        return { read: undefined, width, height, bytesPerRow, stats, times };
+        return { read: undefined, width, height, bytesPerRow, stats, times, peaks: peakRead };
       }
     }
     const read = device.createBuffer({ size: bytesPerRow * height, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     a.temp.push(read);
     enc.copyTextureToBuffer({ texture: out }, { buffer: read, bytesPerRow }, [width, height]);
     submit();
-    return { read, width, height, bytesPerRow, stats, times };
+    return { read, width, height, bytesPerRow, stats, times, peaks: peakRead };
   }
 
   /**
@@ -217,7 +235,11 @@ export class GpuRenderer {
    * error), its error scopes are popped and its buffers and textures freed.
    */
   async render(scene: Scene, ratio: number): Promise<Pixels> {
-    return this.#frame(scene, { ratio }, readPixels);
+    return this.#frame(scene, { ratio }, async (out) => {
+      const pixels = await readPixels(out);
+      if (this.#measurePeaks) this.peaks = out.peaks === undefined ? [] : await readPeaks(out.peaks.read, out.peaks.plan);
+      return pixels;
+    });
   }
 
   /**
