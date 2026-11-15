@@ -92,63 +92,108 @@ function value(v: unknown): void {
   } else str(`?${typeof v}`);
 }
 
-/** Numbers at fixed places of a geometry: each untagged. */
-function numbers(...xs: number[]): void {
-  for (const x of xs) bits(x);
+// A geometry's layout is written as doubles into one scratch buffer, then its words are hashed in one tight loop.
+let scratch = new Float64Array(1024);
+let scratchWords = new Uint32Array(scratch.buffer);
+let used = 0;
+
+function put(x: number): void {
+  if (used === scratch.length) {
+    const grown = new Float64Array(scratch.length * 2);
+    grown.set(scratch);
+    scratch = grown;
+    scratchWords = new Uint32Array(scratch.buffer);
+  }
+  scratch[used++] = x;
 }
 
-/** Whether every point is a pair of numbers (so the pair layout holds). */
-function pairs(points: readonly (readonly unknown[])[]): boolean {
-  for (const p of points) if (!(Array.isArray(p) && p.length === 2 && typeof p[0] === "number" && typeof p[1] === "number")) return false;
-  return true;
+/** A path command's name as a number, or -1 for a name outside the layout. */
+function commandCode(name: unknown): number {
+  switch (name) {
+    case "move":
+      return 1;
+    case "line":
+      return 2;
+    case "quad":
+      return 3;
+    case "bezier":
+      return 4;
+    case "close":
+      return 5;
+    default:
+      return -1;
+  }
+}
+
+/** Write `g` in its kind's layout into the scratch buffer; false when it does not fit the layout. */
+function layout(g: Geom): boolean {
+  switch (g.kind) {
+    case "rect":
+      for (const x of [101, g.x, g.y, g.w, g.h]) put(x);
+      return true;
+    case "ellipse":
+      for (const x of [102, g.x, g.y, g.rx, g.ry]) put(x);
+      return true;
+    case "arc":
+      for (const x of [103, g.x, g.y, g.r, g.start, g.end]) put(x);
+      return true;
+    case "poly":
+      put(104);
+      put(g.closed ? 1 : 0);
+      put(g.points.length);
+      for (const p of g.points) {
+        // A hand-built scene can hold a point that is not a pair; the recorder refuses one at the call.
+        const q: readonly unknown[] = p;
+        if (!(q.length === 2 && typeof p[0] === "number" && typeof p[1] === "number")) return false;
+        put(p[0]);
+        put(p[1]);
+      }
+      return true;
+    case "path":
+      put(105);
+      put(g.commands.length);
+      for (const c of g.commands) {
+        const code = commandCode(c[0]);
+        if (code < 0) return false;
+        put(code);
+        put(c.length);
+        for (let i = 1; i < c.length; i++) {
+          const x = c[i];
+          if (typeof x !== "number") return false;
+          put(x);
+        }
+      }
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**
- * A geometry in a fixed layout per kind (its kind's word, then its numbers, untagged): the structure of `Geom` is
- * known, so the generic walk's tags and key names are not needed. Anything outside the layout (a point that is not a
- * pair, a command whose elements are not numbers) is hashed as plain data under its own word.
+ * A geometry in a fixed layout per kind (its kind's number, then its numbers; a path command's name as a number and
+ * its length, then its numbers), hashed word by word. Anything outside the layout (a point that is not a pair, a
+ * command that is not a path command of numbers) is hashed as plain data under its own word.
  */
 function geom(g: Geom): void {
-  switch (g.kind) {
-    case "rect":
-      word(101);
-      numbers(g.x, g.y, g.w, g.h);
-      return;
-    case "ellipse":
-      word(102);
-      numbers(g.x, g.y, g.rx, g.ry);
-      return;
-    case "arc":
-      word(103);
-      numbers(g.x, g.y, g.r, g.start, g.end);
-      return;
-    case "poly":
-      if (!pairs(g.points)) break;
-      word(104);
-      word(g.closed ? 1 : 0);
-      word(g.points.length);
-      for (const p of g.points) {
-        bits(p[0]);
-        bits(p[1]);
-      }
-      return;
-    case "path":
-      if (!g.commands.every((c) => c.every((x, i) => i === 0 || typeof x === "number"))) break;
-      word(105);
-      word(g.commands.length);
-      for (const c of g.commands) {
-        str(c[0]);
-        word(c.length);
-        // Every element after the name is a number (checked above).
-        for (let i = 1; i < c.length; i++) {
-          const x = c[i];
-          if (typeof x === "number") bits(x);
-        }
-      }
-      return;
+  used = 0;
+  if (!layout(g)) {
+    word(100);
+    value(g);
+    return;
   }
-  word(100);
-  value(g);
+  const words = scratchWords;
+  const n = used * 2;
+  let a = laneA;
+  let b = laneB;
+  for (let i = 0; i < n; i++) {
+    const w = words[i] ?? 0;
+    a = Math.imul(a ^ w, 0x01000193);
+    b = Math.imul(b ^ w, 0x5bd1e995);
+    b ^= b >>> 15;
+    b = Math.imul(b, 0x27d4eb2d);
+  }
+  laneA = a;
+  laneB = b;
 }
 
 function fin(h: number): number {
