@@ -278,3 +278,37 @@ recorder test. Findings 4 and 5 wait for the boxholder.
   peak added brightness and what a white floor below it shows; a test checks
   this against the rendered pixels. The draft's R8 has a starting pair.
 
+### Review and visual-read fixes (2026-11-15)
+
+From the Codex review of the fixes above (`scratch/cross-model/fixes.answer.md`)
+and the Checkpoint 4 visual read of the night room and still life.
+- **Off the canvas:** candidates are sketch lines, not a drawing's index in
+  the frame, so a loop that grows onto the canvas no longer warns. A
+  placement counts its version's whole body (`recorder/bounds.ts`); an arc
+  is bounded by its sweep. Under a camera, parts of the world not reached
+  in the run warn (the Hallway's eye at 90 frames, opus-b's window).
+- **Wash inside an effected group:** the wash holds its reads at the canvas
+  (or a picture tile's extent), not at the area grown by the group's
+  effects. A washed picture cut by the canvas still dries at the cut: its
+  kept image must not depend on where the canvas edge falls.
+- **Scale hint:** keyed as the raster cache is (exact linear part, kept two
+  frames), so fixed scales placed in turn give no hint and changes below
+  six decimals do.
+- **Closed dashes:** a dash through a closed path's start joins there, as
+  Skia does.
+- **Light peaks:** the outline says where each light peaks; a spot's value
+  was right, but it peaks beside the light on its beam, not below it.
+- **Soft-shadow speckle:** each run of the shadow march is refined to its
+  strongest block by a halving search on a bilinear read, with interleaved
+  gradient noise for the start offset. Pixel noise in a test penumbra:
+  1.83 → 0.41.
+- **Bright flecks on casters' shadowed sides:** an outline pixel was shaded
+  wholly at the caster's height, so the floor showing through it was lit.
+  Its visibility is now mixed between the caster's height and the floor by
+  each part's share of the pixel's colour.
+- **Hatching outside silhouettes (still life):** not a clip bug. Hatching
+  covers the group's whole layer by design, so the dark wall and the cast
+  shadows are hatched. Lines also overshoot a light silhouette by a few
+  pixels, because the tone they follow is blurred (0.8 × spacing); gating
+  by the pixel's own tone would stop that. Not changed: a look decision.
+

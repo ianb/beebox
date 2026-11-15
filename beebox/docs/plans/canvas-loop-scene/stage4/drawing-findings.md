@@ -59,7 +59,8 @@ All under `scratch/stage4/draw/<name>/`; scratch output is not kept in git.
 | 13 | `render.sh` resolved `--events` from `canvas-loop/` | opus-b, sol | Fixed in the script. | Fixed in the script. |
 | 14 | `--scene` is long (939 lines for 4 frames) | opus-a | `--scene first` writes the outline for the first captured frame only. | Fixed: `--scene first`. |
 
-Fixes are described in `../stage4-plan.md`, "Drawing-round fixes".
+Fixes are described in `../stage4-plan.md`, "Drawing-round fixes", with
+the review and visual-read fixes after them.
 
 ## Silent failures found by eye
 

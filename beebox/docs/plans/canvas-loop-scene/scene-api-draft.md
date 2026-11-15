@@ -549,8 +549,14 @@ From the Stage 4 builder (chunks 1–2):
   pixels, so a shadow's sides soften; hard shadows read it unblurred. The
   march covers only the caster layer and, for a light above every caster,
   only until the ray clears the tallest; samples are at most 8 device px
-  apart, up to 256, then spaced wider. Its jitter is keyed to canvas
-  pixels, so shadows do not change when unrelated shapes move the layer.
+  apart, up to 256, then spaced wider. Each run of samples on casters is
+  refined to its strongest block by a halving search on a bilinear read, so
+  a penumbra is smooth; the start offset is interleaved gradient noise keyed
+  to canvas pixels, so shadows do not change when unrelated shapes move the
+  layer.
+- **A caster's outline pixel** is partly the caster and partly what lies
+  below it: each light's visibility is taken at both heights and mixed by
+  each part's share of the pixel's colour.
 - **Wash:** granulation is faint and has no per-pixel term. `blotch` adds
   pooling at a shape's scale and, above about 0.2, occasional blooms;
   `edges` adds a drying line whose strength wanders, more pigment toward a
