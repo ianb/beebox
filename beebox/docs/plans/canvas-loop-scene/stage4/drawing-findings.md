@@ -42,22 +42,24 @@ All under `scratch/stage4/draw/<name>/`; scratch output is not kept in git.
 
 ## Findings
 
-| # | Finding | Who | Proposal |
-|---|---|---|---|
-| 1 | `style.dash` throws "not supported yet" although the draft lists it as unchanged | opus-a, opus-b | Implement dashes in the spike: outline split into dash segments before coverage. |
-| 2 | A wash treats the canvas edge as a region edge: a ragged rim along every side unless the scene is drawn 30–40 px past the canvas | opus-a, opus-b | The wash samples its region as continuous across the canvas edge (clamp-to-edge region field). No API change. |
-| 3 | Light `energy` has no calibration: 1 is barely visible over a mid ambient; each drawer needed 2–3 renders | all three | Document a starting pair (ambient and energy) with a worked lamp. With `--scene`, report each light's peak added brightness. |
-| 4 | Side-view scenes: casters throw shadows up into the sky, because lighting is top-down | opus-b | `material.receivesShadow: false` for a backdrop. Draft change, for Checkpoint 4. |
-| 5 | A light in a picture lights only its nearest lit group, so a lantern cannot light neighbouring stalls that have their own wash | sol | Document it; the pattern is one lit group around the stalls with the washes inside it. A cross-group light is a draft question for Stage 5. |
-| 6 | No warning for a shape or label entirely off the canvas, or for unboxed text that crosses the edge | opus-a, sol | Already a chunk 7 gap (dev-loop row "drawing entirely off the canvas"): one warning per run with the frames. Add unboxed text crossing the edge. |
-| 7 | The section 10 performance hint for a placement whose scale changes every frame never appears | opus-a, opus-b | Emit the hint in testing mode. |
-| 8 | Scripted `param` events have no transcript line | opus-a, opus-b | Write `param: name → value` as today's transcript does. |
-| 9 | Headless control stand-ins draw a bare value box: no label, a number box for a slider | opus-a, opus-b, sol | Draw the label and a slider stand-in for `number` params. |
-| 10 | `paper` 0.6 looks like paper at ratio 1 and coarse stucco at ratio 2; granulation speckle is strong at ratio 2 | opus-a, opus-b | Check whether paper grain scales with device ratio. It should be anchored to sketch coordinates, so the same picture at ratio 2 is the same paper, sharper. |
-| 11 | Brush texture inside fills mostly disappears under wash and lighting | opus-a, opus-b | Look at in the Astra read; no change proposed yet. |
-| 12 | Lamp shades with emissive and wash read almost paper-white | opus-a | Look at in the Astra read. Possible cause: emissive plus the wash lifts light colours toward paper. |
-| 13 | `render.sh` resolved `--events` from `canvas-loop/` | opus-b, sol | Fixed in the script. |
-| 14 | `--scene` is long (939 lines for 4 frames) | opus-a | `--scene first` writes the outline for the first captured frame only. |
+| # | Finding | Who | Proposal | Status |
+|---|---|---|---|---|
+| 1 | `style.dash` throws "not supported yet" although the draft lists it as unchanged | opus-a, opus-b | Implement dashes in the spike: outline split into dash segments before coverage. | Fixed: plain strokes dash with Canvas2D semantics; a brushed stroke with a dash is an error that says to draw each dash as its own line or curve. |
+| 2 | A wash treats the canvas edge as a region edge: a ragged rim along every side unless the scene is drawn 30–40 px past the canvas | opus-a, opus-b | The wash samples its region as continuous across the canvas edge (clamp-to-edge region field). No API change. | Fixed: the wash, its blurs and hatching read past the canvas edge as the edge pixel. |
+| 3 | Light `energy` has no calibration: 1 is barely visible over a mid ambient; each drawer needed 2–3 renders | all three | Document a starting pair (ambient and energy) with a worked lamp. With `--scene`, report each light's peak added brightness. | Fixed: `--scene` gives each light's peak and a white floor below it; the draft's R8 has a starting pair. |
+| 4 | Side-view scenes: casters throw shadows up into the sky, because lighting is top-down | opus-b | `material.receivesShadow: false` for a backdrop. Draft change, for Checkpoint 4. | Waits for the boxholder. |
+| 5 | A light in a picture lights only its nearest lit group, so a lantern cannot light neighbouring stalls that have their own wash | sol | Document it; the pattern is one lit group around the stalls with the washes inside it. A cross-group light is a draft question for Stage 5. | Waits for the boxholder. |
+| 6 | No warning for a shape or label entirely off the canvas, or for unboxed text that crosses the edge | opus-a, sol | Already a chunk 7 gap (dev-loop row "drawing entirely off the canvas"): one warning per run with the frames. Add unboxed text crossing the edge. | Fixed: an end-of-run warning per sketch line whose drawings are all off the canvas on every frame, and for unboxed text crossing the edge on every frame. |
+| 7 | The section 10 performance hint for a placement whose scale changes every frame never appears | opus-a, opus-b | Emit the hint in testing mode. | Fixed: a `hint:` line once per run, after three frames running at a new scale or rotation. |
+| 8 | Scripted `param` events have no transcript line | opus-a, opus-b | Write `param: name → value` as today's transcript does. | Fixed: `frame N: param: name → value`. |
+| 9 | Headless control stand-ins draw a bare value box: no label, a number box for a slider | opus-a, opus-b, sol | Draw the label and a slider stand-in for `number` params. | Fixed: the label in grey, and a slider stand-in for `number` params. |
+| 10 | `paper` 0.6 looks like paper at ratio 1 and coarse stucco at ratio 2; granulation speckle is strong at ratio 2 | opus-a, opus-b | Check whether paper grain scales with device ratio. It should be anchored to sketch coordinates, so the same picture at ratio 2 is the same paper, sharper. | Checked, no change: paper grain and granulation are anchored to sketch coordinates. |
+| 11 | Brush texture inside fills mostly disappears under wash and lighting | opus-a, opus-b | Look at in the Astra read; no change proposed yet. | Open (Astra read). |
+| 12 | Lamp shades with emissive and wash read almost paper-white | opus-a | Look at in the Astra read. Possible cause: emissive plus the wash lifts light colours toward paper. | Open (Astra read). |
+| 13 | `render.sh` resolved `--events` from `canvas-loop/` | opus-b, sol | Fixed in the script. | Fixed in the script. |
+| 14 | `--scene` is long (939 lines for 4 frames) | opus-a | `--scene first` writes the outline for the first captured frame only. | Fixed: `--scene first`. |
+
+Fixes are described in `../stage4-plan.md`, "Drawing-round fixes".
 
 ## Silent failures found by eye
 

@@ -78,7 +78,8 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
 
 test("a call or option the spike does not support yet throws, naming it", () => {
   const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => void][] = [
-    ["line with style.dash", (v) => v.line(0, 0, 1, 1, { stroke: "#000", dash: [2, 2] })],
+    // style.dash was here until the drawing-round fixes; a blur under a skew is the one left.
+    ["group effects under a rotated non-uniform scale or a skew", (v) => v.at({ skew: [0.4, 0] }, () => v.group({ effects: { blur: 2 } }, () => v.rect(0, 0, 1, 1, { fill: "#000" })))],
   ];
   for (const [call, draw] of cases) {
     assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof UnsupportedCallError && e.call === call && e.message.includes("not supported yet"), call);

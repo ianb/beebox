@@ -238,3 +238,43 @@ starts.
   canvas, hatching over a flat tone, faint marks, missing glyphs, and a pass
   budget per frame; render errors do not name the node path, and the
   browser parses colours at render.
+
+## Drawing-round fixes (2026-11-15)
+
+From `stage4/drawing-findings.md`; each has a test in `gpu.test.ts` or a
+recorder test. Findings 4 and 5 wait for the boxholder.
+- **Param lines (8):** a scripted param writes `frame N: param: name →
+  value`, as today's transcript does.
+- **Placement-scale hint (7):** a picture placed at a new scale or rotation
+  three frames running gets one `hint:` line per run, with its key and the
+  sketch's line. A key placed at several fixed scales gets none.
+- **Off the canvas (6, dev-loop row 38):** a sketch line whose drawings are
+  all entirely off the canvas on every frame warns once, at the end of the
+  run, with the frames and the first box. Unboxed text that crosses the edge
+  on every frame warns too. A thing that moves off and back, or a loop that
+  draws past the edge, stays quiet. Bounds count stroke width, brush spread
+  and the reach of effects around the shape; picture bodies, mask artwork
+  and shadow casters in a lit group are not checked. Under a camera that
+  has not reached part of the world yet, that part warns; the message says
+  so.
+- **`--scene first` (14):** the outline of the first captured frame only.
+- **Control stand-ins (9):** the param's label in grey; a `number` param
+  without `control: "field"` draws a track and a thumb at the value.
+- **Canvas-edge rim (2):** a group job records where its drawing can be seen.
+  The wash, its blurs and hatching read past that edge as the nearest pixel
+  inside it, so a background that fills the canvas gets no holes and no
+  drying line along the border. Edges inside the canvas still dry. The
+  drawers' re-renders change only within about 70 device px of the edge.
+- **Paper against ratio (10):** checked, no change. Rendered at ratio 1 and 2
+  and box-downsampled, the texture correlates 0.87 (`effects.paper`) and
+  0.996 (wash granulation); the part that differs is the paper's per-pixel
+  term, which is per device pixel by design. Side by side, the drawers'
+  rooms show the same blotches at both ratios.
+- **Dashes (1):** plain strokes dash with Canvas2D's semantics, split before
+  coverage; four parity cells match today's Skia. A brushed stroke with a
+  dash is an error that says to draw each dash as its own line or curve, as
+  today's runtime refuses it.
+- **Light calibration (3):** in the `--scene` outline each light gives its
+  peak added brightness and what a white floor below it shows; a test checks
+  this against the rendered pixels. The draft's R8 has a starting pair.
+
