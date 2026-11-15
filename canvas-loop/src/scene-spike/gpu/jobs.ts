@@ -7,6 +7,8 @@ import type { Dab, Run } from "../brush/expand.js";
 import type { Rgba } from "../colors.js";
 import type { Mat } from "../scene.js";
 import type { FxPlan } from "./effects.js";
+import type { LightPlan } from "./light.js";
+import type { BevelPlan } from "./material.js";
 import type { GlyphCell } from "./glyphs.js";
 import type { PaintRec } from "./paint.js";
 
@@ -92,12 +94,17 @@ interface Common {
   readonly clip: ClipMask | null;
 }
 
+/** In a lit group's material layer (R8): the material drawn in place of the paint's colour, straight. */
+interface Mat4 {
+  readonly mat?: Rgba | undefined;
+}
+
 export type Item =
-  | (Common & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
-  | (Common & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number })
-  | (Common & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec })
+  | (Common & Mat4 & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
+  | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number })
+  | (Common & Mat4 & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec })
   | (Common & { readonly k: "smear"; readonly smear: SmearRec })
-  | (Common & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
+  | (Common & Mat4 & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
 
 /**
  * A clip region in its job: every shape's rings (each shape oriented positive),
@@ -117,6 +124,10 @@ export interface Job {
   readonly items: Item[];
   readonly clips: ClipMask[];
   readonly fx: FxPlan | undefined;
+  /** A lit group (R8): shaded from its two material layers before its effects. */
+  light?: { readonly plan: LightPlan; readonly mats: readonly [Job, Job] } | undefined;
+  /** A bevelled shape in material layer 0: its coverage becomes rim normals. */
+  bevel?: BevelPlan | undefined;
   /** The finished layer once encoded; texel (0, 0) is device pixel (rect.x0, rect.y0). */
   tex?: GPUTexture | undefined;
 }
@@ -128,6 +139,7 @@ export function postOrder(j: Job, out: Job[]): Job[] {
     if (!isEmpty(it.job.rect)) postOrder(it.job, out);
     if (it.mask !== undefined && !isEmpty(it.mask.rect)) postOrder(it.mask, out);
   }
+  for (const m of j.light?.mats ?? []) if (!isEmpty(m.rect)) postOrder(m, out);
   out.push(j);
   return out;
 }

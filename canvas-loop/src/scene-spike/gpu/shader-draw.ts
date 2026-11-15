@@ -9,11 +9,14 @@
 //   is a coverage piece (0), a layer (1, with a mask 2), a brushed mark in the
 //   mark atlas painted (3) or carrying its own colours (4), or a glyph cell (5).
 //   Brushed marks lose grain to the paper and take their opacity here, once.
+//   In a lit group's material layers (R8) a draw's colour is replaced by its
+//   material (`mat`), keeping the paint's alpha, so material composites by
+//   coverage exactly as colour does.
 import { COMPOSE_WGSL } from "./shader-compose.js";
 import { PAPER_WGSL } from "./shader-paper.js";
 
 /** 32-bit words per draw record (the WGSL `Draw` struct). */
-export const WORDS = 68;
+export const WORDS = 72;
 
 export const EDGE_WGSL = /* wgsl */ `
 struct U { size: vec4f };
@@ -52,6 +55,7 @@ struct Draw {
   pap0: vec4f, pap1: vec4f, pap2: vec4f,
   kind: u32, mode: u32, stopStart: u32, stopCount: u32,
   src: u32, seed: u32, pwidth: i32, opacity: f32,
+  mat: vec4f,
 };
 @group(0) @binding(0) var<storage, read> draws: array<Draw>;
 @group(0) @binding(1) var<storage, read> stops: array<vec4f>;
@@ -144,6 +148,8 @@ fn source(d: Draw, pix: vec2f, cov: ptr<function, f32>) -> vec4f {
     case 4u: { *cov = 1.0; s = markAt(d, pix); }
     default: { *cov = bilinear(auxT, mapped(d, pix), vec4f(d.covA.xy, d.covO.zw), false).r; s = paint(d, pix); }
   }
+  // A lit group's material layer (R8): the material in place of the colour, with the paint's alpha.
+  if (d.mat.w > 0) { s = vec4f(d.mat.rgb * s.a, s.a); }
   if (d.pap1.w > 0) {
     let q = vec2i(floor(mapped(d, pix)));
     *cov = *cov * (1.0 - d.pap1.w * paperAt(vec3f(d.pap1.z, d.pap2.xy), d.seed, d.pwidth, q));

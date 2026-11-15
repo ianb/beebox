@@ -21,6 +21,8 @@ import { brushBlends, brushParity, brushStability, expansionCache, paperScopes }
 import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, textParity } from "./text-cases.js";
+import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves } from "./paint-cases.js";
+import { castingAmount, featheredCoverage, fullCone, lightsInPictures, materialScopes, nestedLighting, translucentMaterial } from "./light-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
 
 let gpu: GpuHandle | undefined;
@@ -165,3 +167,15 @@ onGpu("text sits where today's does, at today's size, through the glyph atlas", 
 onGpu("text under a rotation draws through the glyph atlas", async (handle) => {
   if (text !== undefined) await rotatedText(handle, text);
 });
+onGpu("wash, hatching and paper repeat byte for byte, at ratio 1 and 2", painterlyRepeats);
+onGpu("a wash's bleed grows the group's layer; hatching and paper never change alpha (R5)", painterlyBounds);
+onGpu("pigment, hatching lines and paper texture move and turn with the group (section 4)", pigmentMoves);
+onGpu("hatching follows tone relative to the group: light bare, mid hatched, dark cross-hatched", hatchingTones);
+onGpu("R8: a caster blocks by its casting amount; half alpha blocks half; an erased part casts nothing", castingAmount);
+onGpu("R8: a nested lit group is lit only by its own lights, and not lit again", nestedLighting);
+onGpu("R8: a light in a placed picture lights the room wherever it is placed", lightsInPictures);
+onGpu("R8: a placement supplies a material; materials are ignored outside a lit group", materialScopes);
+onGpu("R8: shading takes material per unit of coverage, so a translucent emissive shape is not dimmed twice", translucentMaterial);
+onGpu("R8: a feathered mask and a blurred nested lit group cut colour and material alike", featheredCoverage);
+onGpu("R8: a spot with a full-angle cone lights as a point light", fullCone);
+onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);

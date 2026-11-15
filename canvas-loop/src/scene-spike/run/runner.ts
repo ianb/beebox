@@ -82,7 +82,7 @@ class SpikeRun {
   async run(header: string): Promise<number[]> {
     const size = this.#mod.canvas ?? { width: 400, height: 300 };
     // Headless rendering is testing mode: pictures are re-recorded and compared every frame (draft section 5).
-    const recorder = new SceneRecorder(size, { text: this.#text, audit: true });
+    const recorder = new SceneRecorder(size, { text: this.#text, audit: true, seed: this.#o.seed });
     const byFrame = bucketTeaByFrame(this.#o.events);
     const mouse = { x: 0, y: 0 };
     const captured: number[] = [];

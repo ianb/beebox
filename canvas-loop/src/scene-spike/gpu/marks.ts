@@ -12,6 +12,7 @@ import type { BrushRec, MarkSource, PaperRec, R, SmearRec } from "./jobs.js";
 import { EMPTY, inter, isEmpty, pad } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
 import { paintRec } from "./paint.js";
+import { PAPER_ROW, paperParams } from "./painterly.js";
 import { cutRings, orientShape, pieceOf } from "./rings.js";
 
 /** What lowering a brushed stroke needs from the frame. */
@@ -21,8 +22,6 @@ export interface BrushFrame {
   readonly ratio: number;
 }
 
-/** The row width of the paper's per-pixel hash: a constant, so grain never depends on the canvas size. */
-const PAPER_ROW = 4096;
 
 export type BrushDraw =
   | { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly box: R }
@@ -96,12 +95,11 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   if (ex === undefined) return undefined;
   const q = ex.q;
   const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], m[4], m[5]];
-  const c = stroke.paper.contrast;
   // Paper pixels are the call's own coordinates times the pixel ratio, so grain moves with the stroke (draft 2.4).
   const inv = invert(m);
   if (inv === undefined) return undefined;
   const toPaper: Mat = [inv[0] * ratio, inv[1] * ratio, inv[2] * ratio, inv[3] * ratio, inv[4] * ratio, inv[5] * ratio];
-  const paper: PaperRec = { toPaper, scale: stroke.paper.scale * ratio, lo: 0.5 - 0.35 * c, hi: 0.5 + 0.15 * (1 - c), seed: stroke.paper.seed >>> 0, width: PAPER_ROW };
+  const paper: PaperRec = { toPaper, ...paperParams(stroke.paper, ratio), width: PAPER_ROW };
   const rec = paintRec(paint, { matrix: m, colors });
   if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
   if (rec === undefined) return undefined;

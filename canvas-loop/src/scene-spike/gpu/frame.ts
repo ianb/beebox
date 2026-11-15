@@ -3,6 +3,8 @@
 // pass, buffers to free after submit, and counts.
 import type { PixelsVersion } from "../scene.js";
 import type { AtlasPage } from "./atlas.js";
+import type { LightPass } from "./light.js";
+import type { PainterlyPasses } from "./painterly.js";
 import type { Pipelines } from "./pipelines.js";
 import type { TexturePool } from "./pool.js";
 import type { SmearPass } from "./smear.js";
@@ -34,6 +36,8 @@ export interface Frame {
   readonly glyphPages: readonly AtlasPage[];
   readonly image: (version: PixelsVersion) => GPUTexture;
   readonly smear: SmearPass;
+  readonly painterly: PainterlyPasses;
+  readonly light: LightPass;
   /** Buffers made for this frame, destroyed once it is submitted. */
   readonly temp: GPUBuffer[];
   readonly stats: FrameStats;

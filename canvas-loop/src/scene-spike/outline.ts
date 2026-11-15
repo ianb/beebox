@@ -33,7 +33,8 @@ export function versionName(v: Pick<PictureVersion | PixelsVersion, "kind" | "ke
 function shapeLine(n: ShapeNode): string {
   const s = n.style;
   const brush = s.brush === undefined ? "" : ` brush ${s.brush.brush.kind} blend ${s.brush.blend}`;
-  const extra = [s.blend === "normal" ? "" : ` blend ${s.blend}`, s.erase ? " erase" : "", s.effects === undefined ? "" : ` effects ${Object.keys(s.effects).join(",")}`, brush].join("");
+  const material = s.material === undefined ? "" : ` material ${Object.keys(s.material).join(",")}`;
+  const extra = [s.blend === "normal" ? "" : ` blend ${s.blend}`, s.erase ? " erase" : "", s.effects === undefined ? "" : ` effects ${Object.keys(s.effects).join(",")}`, brush, material].join("");
   return `${n.call} ${geomText(n.geom)} fill ${paintText(s.fill)} stroke ${paintText(s.stroke)}${extra}`;
 }
 
@@ -48,7 +49,8 @@ function nodeLine(n: SceneNode): string {
     case "group": {
       const name = n.name === undefined ? "" : ` "${n.name}"`;
       const fx = n.effects === undefined ? "" : ` effects ${Object.keys(n.effects).join(",")}`;
-      return `group${name} opacity ${n.opacity} blend ${n.blend}${fx}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
+      const lit = n.lighting === undefined ? "" : ` lit ambient ${n.lighting.ambient} shadows ${n.lighting.shadows}`;
+      return `group${name} opacity ${n.opacity} blend ${n.blend}${fx}${lit}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
     }
     case "clip":
       return `clip ${n.shapes.length} shape${n.shapes.length === 1 ? "" : "s"}`;
@@ -58,6 +60,10 @@ function nodeLine(n: SceneNode): string {
       return `text ${JSON.stringify(n.content)} ${n.size}px ${n.family} fill ${paintText(n.fill)}${n.erase ? " erase" : ""}`;
     case "debug":
       return `debugBox "${n.label}" (${r(n.x)},${r(n.y)}) ${r(n.w)}×${r(n.h)}`;
+    case "light": {
+      const l = n.light;
+      return `light ${l.kind} at (${r(l.at[0])},${r(l.at[1])}) height ${r(l.height)} ${l.color} energy ${r(l.energy)}`;
+    }
     case "place":
       return `place ${versionName(n.picture)} at (${r(n.x)},${r(n.y)}) opacity ${n.opacity} blend ${n.blend}${n.erase ? " erase" : ""}`;
   }

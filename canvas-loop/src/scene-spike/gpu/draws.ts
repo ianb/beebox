@@ -3,7 +3,7 @@
 // and erase) ends the pass, copies its box of the layer, and blends in the
 // shader (W3C formulas); the others are fixed-function blends. A smudge or wet
 // stroke ends the pass and runs as a compute dispatch on the layer (R1).
-import { encodeFx } from "./fx.js";
+import { blur2, encodeFx } from "./fx.js";
 import type { Frame } from "./frame.js";
 import { beginPass, storage } from "./frame.js";
 import type { ClipMask, Item, Job } from "./jobs.js";
@@ -177,5 +177,10 @@ export function encodeJob(job: Job, f: Frame): void {
   pass.end();
   for (const t of held) f.pool.release(t);
   releaseSources(job, f);
-  job.tex = job.fx === undefined ? tex : encodeFx(job, { tex, f });
+  const size = { f, w, h };
+  let out = tex;
+  if (job.bevel !== undefined) out = f.light.bevel(job, { f, tex: out, plan: job.bevel, blur: (t, sigma) => blur2(t, { ...size, sigma }) });
+  // R5: lighting first, then the group's effects.
+  if (job.light !== undefined) out = f.light.light(job, { f, tex: out, plan: job.light.plan, mats: job.light.mats });
+  job.tex = job.fx === undefined ? out : encodeFx(job, { tex: out, f });
 }

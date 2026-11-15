@@ -1,7 +1,8 @@
 // The paper texture computed per pixel in WGSL: a port of core/brush/paper.ts
 // (`makePaper`) with the same 32-bit integer hash (core/brush/random.ts), so at
 // whole paper pixels it equals today's paper layer. `q` is a paper pixel; the
-// result is the valley alpha a grainy brush loses pigment to.
+// result is the valley alpha a grainy brush loses pigment to; `paperTooth` is
+// the height before thresholding, which a wash's pigment settles by.
 export const PAPER_WGSL = /* wgsl */ `
 fn mix32(v0: u32) -> u32 {
   var x = v0;
@@ -22,12 +23,16 @@ fn noise2(seed: u32, ch: u32, p: vec2f) -> f32 {
   let d = lattice(seed, ch, ix, iy + 1); let e = lattice(seed, ch, ix + 1, iy + 1);
   return a + (b - a) * s.x + (d - a) * s.y + (a - b - d + e) * s.x * s.y;
 }
+// The paper's height at paper pixel q, about 0..1 (mean 0.5); high is a valley.
 // paper: (scale, lo, hi) in paper pixels; seed; width = the row width of the per-pixel term.
-fn paperAt(paper: vec3f, seed: u32, width: i32, q: vec2i) -> f32 {
+fn paperTooth(paper: vec3f, seed: u32, width: i32, q: vec2i) -> f32 {
   let p = vec2f(q);
-  let tooth = 0.55 * noise2(seed, 1u, p / paper.x)
-            + 0.3 * noise2(seed, 2u, p / (paper.x * 0.45))
-            + 0.15 * rnd(seed, 3u, bitcast<u32>(q.y * width + q.x));
+  return 0.55 * noise2(seed, 1u, p / paper.x)
+       + 0.3 * noise2(seed, 2u, p / (paper.x * 0.45))
+       + 0.15 * rnd(seed, 3u, bitcast<u32>(q.y * width + q.x));
+}
+fn paperAt(paper: vec3f, seed: u32, width: i32, q: vec2i) -> f32 {
+  let tooth = paperTooth(paper, seed, width, q);
   let f = clamp((tooth - paper.y) / (paper.z - paper.y), 0.0, 1.0);
   return round(255.0 * f * f * (3.0 - 2.0 * f)) / 255.0;
 }

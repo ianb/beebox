@@ -104,3 +104,15 @@ starts.
   "deps change every frame" warning and placement-scale hint;
   `effects.paper`; caching picture rasters and bristle vertices; ligatures and
   complex scripts; browser font-load re-recording.
+- **Chunk 4** (not yet committed): `effects.wash`, `effects.hatching` and
+  `effects.paper` in R5's order, in the coordinates where the group is
+  called; a lit group with point, spot and directional lights, materials
+  composited by coverage, 2D shadows and nesting (R8); `v.noise`. Hatching
+  measures tone against the group's own range (a histogram pass) and draws
+  strokes in patches with their own angle and spacing, turned toward the
+  shading. Under Dawn at 640×480: wash 5.5 ms (ratio 1) and 7.9 ms (ratio 2),
+  hatching 4.9 and 7.8 ms, the lit room with a moving lamp 5.8 and 9.3 ms.
+- **Deferred from chunk 4:** the "no tone variation" warning (needs a
+  readback); a jump-flood bevel (bevels come from blurred coverage); caster
+  heights (every caster stands 32 units); keeping a static lit subtree's
+  material layers between frames; painterly blurs and bevels under skew.

@@ -1,6 +1,6 @@
 // Effect passes over one finished layer (R5 step 2): colour adjustments, blur,
-// then glow and shadow drawn beneath, both made from the layer as it was before
-// the effects. One texture per pass; the compositing probe's shared pages are
+// wash, hatching and paper (painterly.ts), then glow and shadow drawn beneath,
+// both made from the layer as it was before the effects. One texture per pass; the compositing probe's shared pages are
 // not built yet.
 import { blurKernel } from "./effects.js";
 import type { FxPlan, Sigma } from "./effects.js";
@@ -42,7 +42,7 @@ function runStage(s: Stage, a: { f: Frame; w: number; h: number }): GPUTexture {
 }
 
 /** A separable blur: horizontal (σx) into a temporary layer, then vertical (σy). */
-function blur2(src: GPUTexture, a: { sigma: Sigma; f: Frame; w: number; h: number }): GPUTexture {
+export function blur2(src: GPUTexture, a: { sigma: Sigma; f: Frame; w: number; h: number }): GPUTexture {
   const kx = blurKernel(a.sigma.x);
   const ky = blurKernel(a.sigma.y);
   const across = runStage({ pipe: "fxBlur", fields: [1, 0, 0, kx.length - 1], inputs: [src], kernel: kx }, a);
@@ -72,6 +72,10 @@ export function encodeFx(job: Job, a: { tex: GPUTexture; f: Frame }): GPUTexture
   }
   if (plan.blur.x > 0 || plan.blur.y > 0) {
     effected = blur2(effected, { ...size, sigma: plan.blur });
+    temps.push(effected);
+  }
+  if (plan.painterly !== undefined) {
+    effected = f.painterly.encode(plan.painterly, { f, src: effected, rect: job.rect, blur: (t, sigma) => blur2(t, { ...size, sigma }) });
     temps.push(effected);
   }
   let result = effected;

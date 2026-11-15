@@ -22,6 +22,8 @@ import type { Pipelines } from "./pipelines.js";
 import { makePipelines } from "./pipelines.js";
 import { TexturePool } from "./pool.js";
 import { SmearPass } from "./smear.js";
+import { PainterlyPasses } from "./painterly.js";
+import { LightPass } from "./light.js";
 
 /** Pixels read back: premultiplied RGBA bytes, row by row. */
 export interface Pixels {
@@ -55,6 +57,8 @@ export class GpuRenderer {
   readonly #atlas: CoverageAtlas;
   readonly #marks: MarkAtlas;
   readonly #smear: SmearPass;
+  readonly #painterly: PainterlyPasses;
+  readonly #light: LightPass;
   readonly #expander = new BrushExpander();
   readonly #glyphs: GlyphCache;
   readonly #images: ImageCache;
@@ -68,6 +72,8 @@ export class GpuRenderer {
     this.#atlas = new CoverageAtlas(gpu.device, gpu.atlasFormat);
     this.#marks = new MarkAtlas(gpu.device);
     this.#smear = new SmearPass(gpu.device);
+    this.#painterly = new PainterlyPasses(gpu.device);
+    this.#light = new LightPass(gpu.device);
     this.#glyphs = new GlyphCache(gpu.raster);
     this.#images = new ImageCache(gpu.device);
   }
@@ -92,7 +98,7 @@ export class GpuRenderer {
     stats.pieces = pieces.length;
     stats.atlasPages = atlas.length;
     stats.markPages = markPages.length;
-    const f: Frame = { device, enc, pool: this.#pool, pipes: this.#pipes, atlas, markPages, glyphPages, image: (v) => this.#images.get(v), smear: this.#smear, temp: a.temp, stats };
+    const f: Frame = { device, enc, pool: this.#pool, pipes: this.#pipes, atlas, markPages, glyphPages, image: (v) => this.#images.get(v), smear: this.#smear, painterly: this.#painterly, light: this.#light, temp: a.temp, stats };
     for (const j of jobs) encodeJob(j, f);
     const out = root.tex;
     if (out === undefined) throw new GpuRenderError({ detail: "the canvas job produced no layer" });

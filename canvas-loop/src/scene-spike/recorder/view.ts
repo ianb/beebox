@@ -5,15 +5,10 @@
 // version is recorded again and compared, and a difference warns.
 import { compositeOp } from "../../core/compose.js";
 import { curveCommands } from "../../core/contours.js";
-import { ease, tween, tweenPoint } from "../../core/ease.js";
-import type { EaseName, Keyframe } from "../../core/ease.js";
 import { SketchUsageError, assertUnit } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
-import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import type { ClipShape, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/painter/text/measure.js";
-import { offsetPoints, tubePath } from "../../core/shapes.js";
-import type { TubeOptions } from "../../core/shapes.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, View } from "../../scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../errors.js";
@@ -26,6 +21,9 @@ import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolveSt
 import { debugBoxesOf } from "./debug.js";
 import type { DebugBox } from "./debug.js";
 import { recordText } from "./text.js";
+import { PureHelpers } from "./helpers.js";
+import { copyMaterial, hasOpenLight, resolveLight } from "./light.js";
+import { valueNoise } from "./noise.js";
 
 /** Everything one `draw` produced (draft section 8), and testing-mode warnings. */
 export interface FrameRecord {
@@ -42,11 +40,16 @@ function unsupported(call: string, detail?: string): never {
   throw new UnsupportedCallError({ call: `v.${call}`, ...(detail === undefined ? {} : { detail }) });
 }
 
-export class SceneRecorder implements View {
+export class SceneRecorder extends PureHelpers implements View {
   readonly #canvas: { width: number; height: number };
   readonly #text: TextMeasurer | undefined;
   readonly #audit: boolean;
+  readonly #seed: number;
   readonly #table = new PictureTable();
+  /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
+  #lit = 0;
+  /** Inside a mask's artwork, where lights do nothing (R8). */
+  #inMask = false;
   #open: SceneNode[][] = [];
   #matrix: Mat = IDENTITY;
   #paper: PaperSettings = DEFAULT_PAPER;
@@ -58,11 +61,14 @@ export class SceneRecorder implements View {
   #warnings: string[] = [];
   #cursor: CursorKind | undefined;
 
-  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean }) {
+  /** `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. */
+  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number }) {
+    super();
     this.#canvas = size;
     this.#size = size;
     this.#text = options?.text;
     this.#audit = options?.audit ?? false;
+    this.#seed = options?.seed ?? 0;
   }
 
   /** The canvas size, or the picture's inside a picture body (section 5). */
@@ -85,6 +91,8 @@ export class SceneRecorder implements View {
     this.#snapshots = [];
     this.#warnings = [];
     this.#cursor = undefined;
+    this.#lit = 0;
+    this.#inMask = false;
     this.#table.beginFrame();
     draw(this);
     return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: debugBoxesOf(root), cursor: this.#cursor, warnings: this.#warnings };
@@ -171,34 +179,6 @@ export class SceneRecorder implements View {
     return this.#measurer("textWidth").width(content, options);
   }
 
-  // ── pure helpers ──
-  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
-    return curveCommands(points, closed ?? false);
-  }
-  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
-    return tubePath(points, options);
-  }
-  offset(points: readonly Vec2[], distance: number): Vec2[] {
-    return offsetPoints(points, distance);
-  }
-  linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    return linearGradient(...args);
-  }
-  radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    return radialGradient(...args);
-  }
-  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
-    return ellipseGradient(...args);
-  }
-  tween(...args: [readonly Keyframe<number>[], number, EaseName?]): number {
-    return tween(...args);
-  }
-  tweenPoint(...args: [readonly Keyframe<readonly number[]>[], number, EaseName?]): number[] {
-    return tweenPoint(...args);
-  }
-  ease(name: EaseName, u: number): number {
-    return ease(name, u);
-  }
   toCanvas(point: Vec2): Vec2 {
     if (this.#picture !== undefined) throw new SketchUsageError({ detail: `v.toCanvas inside the body of ${this.#picture}: a picture never depends on where it is placed` });
     return apply(this.#matrix, point);
@@ -217,14 +197,32 @@ export class SceneRecorder implements View {
   }
   group(options: GroupOptions, body: () => void): void {
     const g = resolveGroup(options);
-    this.#add({ kind: "group", ...g, children: this.#inside(body) });
+    let paper = this.#paper;
+    const lit = g.lighting === undefined ? 0 : 1;
+    this.#lit += lit;
+    try {
+      const children = this.#inside(() => {
+        body();
+        paper = this.#paper;
+      });
+      this.#add({ kind: "group", ...g, paper, children });
+    } finally {
+      this.#lit -= lit;
+    }
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     const shapes = clipGeoms(shape);
     this.#add({ kind: "clip", shapes, children: this.#inside(body, true) });
   }
   mask(maskBody: () => void, body: () => void): void {
-    const mask = this.#inside(maskBody);
+    const outer = this.#inMask;
+    this.#inMask = true;
+    let mask: SceneNode[];
+    try {
+      mask = this.#inside(maskBody);
+    } finally {
+      this.#inMask = outer;
+    }
     this.#add({ kind: "mask", mask, body: this.#inside(body) });
   }
   /** R9: the paper for brushes drawn after this in the current group, picture or scene. */
@@ -235,15 +233,16 @@ export class SceneRecorder implements View {
   // ── pictures (section 5, R7) ──
   /** Record `body` as a picture's nodes: its own coordinates and box, the paper in scope. */
   #recordBody(name: string, a: { size: { width: number; height: number }; body: () => void }): SceneNode[] {
-    const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture };
+    const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask };
     this.#open = [];
     this.#matrix = IDENTITY;
     this.#size = a.size;
     this.#picture = name;
+    this.#inMask = false;
     try {
       return this.#inside(a.body);
     } finally {
-      ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture } = saved);
+      ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = saved);
     }
   }
   picture(options: PictureOptions, body: () => void): Picture {
@@ -288,7 +287,12 @@ export class SceneRecorder implements View {
     assertUnit(opacity, "place opacity");
     const blend = o.blend ?? "normal";
     compositeOp(blend);
-    this.#add({ kind: "place", picture: picture.version, x, y, opacity, blend, erase: o.erase ?? false, material: o.material === undefined ? undefined : structuredClone(o.material) });
+    const v = picture.version;
+    if (v.kind === "picture" && hasOpenLight(v.children)) {
+      if (this.#inMask) this.#warnings.push(`place ${versionName(v)}: its light is inside a mask's artwork and does nothing (R8)`);
+      else if (this.#lit === 0 && this.#picture === undefined) this.#warnings.push(`place ${versionName(v)}: its light is outside any lit group and does nothing (R8)`);
+    }
+    this.#add({ kind: "place", picture: v, x, y, opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place") });
   }
 
   // ── outputs that are not drawing ──
@@ -308,15 +312,20 @@ export class SceneRecorder implements View {
     this.#add({ kind: "debug", label, x, y, w, h });
   }
 
-  // ── not yet ──
-  light(_light: Light): void {
-    unsupported("light");
+  /** R8: a light for the nearest enclosing lit group, here or wherever this picture is placed. */
+  light(light: Light): void {
+    const rec = resolveLight(light);
+    if (this.#inMask) this.#warnings.push(`light ${rec.kind} at (${rec.at.join(",")}) inside a mask's artwork does nothing (R8)`);
+    else if (this.#lit === 0 && this.#picture === undefined) this.#warnings.push(`light ${rec.kind} at (${rec.at.join(",")}) is outside any lit group and does nothing (R8)`);
+    this.#add({ kind: "light", light: rec });
   }
+  noise(...[x, y, z]: [number, number?, number?]): number {
+    return valueNoise(this.#seed, { x, y: y ?? 0, z: z ?? 0 });
+  }
+
+  // ── not yet ──
   control(_name: string, _box: ControlBox): void {
     this.#notInPicture("control");
     unsupported("control", "control stand-ins come with the browser mount");
-  }
-  noise(..._args: [number, number?, number?]): number {
-    return unsupported("noise");
   }
 }

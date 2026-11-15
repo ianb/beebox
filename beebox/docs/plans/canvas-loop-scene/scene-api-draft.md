@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.4
+# Stage 1: the scene API, draft 2.5
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -142,8 +142,11 @@ only where the result matches (section 6).
   pictures, lights the group, transformed by its placement: a picture holding
   a lamp brings its light wherever it is placed. A `light` inside a mask body
   does nothing and warns; mask artwork contributes no material.
-- **Shading.** After the body, each pixel is lit: colour × (ambient + the lights'
-  sum, each blocked by casters between it and the pixel) + colour × emissive.
+- **Shading.** After the body, each pixel is lit: colour × ((1 − e)(ambient +
+  the lights' sum, each blocked by casters between it and the pixel) + e),
+  where e is the pixel's emissive amount. A fully emissive pixel keeps its
+  colour whatever the lighting; this is what makes a nested lit group's result
+  (emissive to the outer group) not lit twice.
   Casters are the material layer's shadow-casting amount, so a half-transparent
   or half-erased caster blocks half as much.
 - **Nesting.** A lit group inside a lit group is lit only by its own lights. To
@@ -463,3 +466,29 @@ From the Stage 4 builder (chunks 1–2):
 - `toCanvas` inside a picture body is an error. `undefined` is allowed in
   `deps`. `pixels` bytes are straight (unpremultiplied) RGBA, as `ImageData`.
   `smudge` and `wet` with a blend or erase are errors, as today.
+
+## 17. Draft 2.5: lighting and effect details settled in chunk 4
+
+- **Shading** is colour × ((1 − e)(ambient + lights) + e) (R8, corrected: the
+  earlier `+ colour × emissive` lit emissive pixels twice).
+- **Material values** used for shading are per unit of material coverage, so
+  a half-transparent emissive or shiny shape keeps its full emission or shine
+  at half coverage; the shadow-casting amount stays coverage-weighted.
+- **Masks** cut material by the mask artwork's colour alpha (including its
+  effects), exactly as they cut colour.
+- **A nested lit group's** emissive coverage is its finished colour alpha
+  (effects included).
+- **Material composites with normal blend,** whatever the shape's blend.
+- **Units:** light and ambient colours are sRGB values applied to linear
+  surface colour; the result clips at 1. There is no tone curve yet.
+- **Directional lights:** `height` is an elevation slope (height ÷ 100).
+- **Casters** all stand at one fixed height (32 units in the lit group's
+  coordinates); a caster does not shadow itself or another caster. Caster
+  height and object identity are deferred until lighting is wanted.
+- **Spot cones** accept up to π; a full cone lights every direction.
+- **Hatching `amount`** scales line density and ink together: more amount makes
+  more lines appear at a given tone. Three line families (single, cross,
+  dense), each line with its own tone threshold.
+- **`effects.paper`** keeps today's `paperTexture` strength (at most 18% darker
+  in the paper's valleys) per unit of amount.
+- **`noise`** sums p5's four halving octaves, scaled to [0, 1).

@@ -7,8 +7,9 @@ import type { BlendMode, ClipShape, Paint, PathCommand, Vec2 } from "../../core/
 import { isPathShape } from "../../core/paint.js";
 import type { Effects, GroupOptions, Style } from "../../scene-draft/scene-api.js";
 import { UnsupportedCallError } from "../errors.js";
-import type { Geom, PaperSettings, ShapeStyle } from "../scene.js";
+import type { Geom, LightingRec, PaperSettings, ShapeStyle } from "../scene.js";
 import { resolveBrushStroke } from "./brush-style.js";
+import { checkPainterly, copyMaterial, resolveLighting } from "./light.js";
 
 const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects"]);
 const CAPS = new Set(["butt", "round", "square"]);
@@ -37,7 +38,7 @@ const RANGES: readonly (readonly [string, number, number])[] = [
   ["hue", -Infinity, Infinity], ["saturation", 0, Infinity], ["brightness", 0, Infinity], ["contrast", 0, Infinity],
   ["grayscale", 0, 1], ["sepia", 0, 1], ["invert", 0, 1], ["blur", 0, Infinity],
 ];
-const EFFECT_KEYS = new Set([...RANGES.map(([k]) => k), "glow", "shadow"]);
+const EFFECT_KEYS = new Set([...RANGES.map(([k]) => k), "glow", "shadow", "wash", "hatching", "paper"]);
 
 function effectError(detail: string): SketchUsageError {
   return new SketchUsageError({ detail: `group effects: ${detail}` });
@@ -79,10 +80,9 @@ function checkEffects(effects: Effects): void {
 /** Effects, checked (as today's group effects, plus the draft's new ones) and copied. */
 export function copyEffects(effects: Effects | undefined, where: string): Effects | undefined {
   if (effects === undefined) return undefined;
-  for (const key of ["wash", "hatching", "paper"] as const) {
-    if (effects[key] !== undefined) throw new UnsupportedCallError({ call: `${where} effects.${key}` });
-  }
+  if (typeof effects !== "object") throw effectError(`${where}: effects must be an object`);
   checkEffects(effects);
+  checkPainterly(effects);
   return structuredClone(effects);
 }
 
@@ -98,7 +98,7 @@ export function resolveStyle(style: Style, at: { call: string; paper: PaperSetti
   if (cap !== undefined && !CAPS.has(cap)) throw new SketchUsageError({ detail: `${call}: style.cap must be butt, round or square (got ${String(cap)})` });
   if (join !== undefined && !JOINS.has(join)) throw new SketchUsageError({ detail: `${call}: style.join must be miter, round or bevel (got ${String(join)})` });
   compositeOp(style.blend ?? "normal");
-  // `material` is ignored outside a lit group (R8), and the spike has no lit groups yet.
+  const effects = copyEffects(style.effects, call);
   return {
     fill: style.fill === undefined ? undefined : copyPaint(style.fill, call),
     stroke: style.stroke === undefined ? undefined : copyPaint(style.stroke, call),
@@ -107,8 +107,10 @@ export function resolveStyle(style: Style, at: { call: string; paper: PaperSetti
     join: join ?? "miter",
     blend: style.blend ?? "normal",
     erase: style.erase ?? false,
-    effects: copyEffects(style.effects, call),
+    effects,
     brush: resolveBrushStroke(style, at),
+    material: copyMaterial(style.material, call),
+    effectsPaper: effects === undefined ? undefined : at.paper,
   };
 }
 
@@ -127,13 +129,12 @@ export function clipGeoms(shape: ClipShape | readonly ClipShape[]): Geom[] {
 }
 
 /** Group options, checked and copied. */
-export function resolveGroup(options: GroupOptions): { name: string | undefined; opacity: number; blend: BlendMode; effects: Effects | undefined; clip: Geom[] | undefined } {
-  if (options.lighting !== undefined) throw new UnsupportedCallError({ call: "group({ lighting })" });
+export function resolveGroup(options: GroupOptions): { name: string | undefined; opacity: number; blend: BlendMode; effects: Effects | undefined; lighting: LightingRec | undefined; clip: Geom[] | undefined } {
   const opacity = options.opacity ?? 1;
   assertUnit(opacity, "group opacity");
   const blend = options.blend ?? "normal";
   compositeOp(blend);
-  return { name: options.name, opacity, blend, effects: copyEffects(options.effects, "group"), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
+  return { name: options.name, opacity, blend, effects: copyEffects(options.effects, "group"), lighting: resolveLighting(options.lighting), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
 }
 
 /** A rounded rectangle as path commands (corner arcs as quadratic curves), as today's `roundRect`. */

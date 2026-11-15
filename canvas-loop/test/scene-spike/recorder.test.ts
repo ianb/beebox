@@ -78,12 +78,8 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
 
 test("a call or option the spike does not support yet throws, naming it", () => {
   const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => void][] = [
-    ["v.light", (v) => v.light({ kind: "point" })],
-    ["v.noise", (v) => v.noise(1)],
     ["v.control", (v) => v.control("c", { x: 0, y: 0, w: 1, h: 1 })],
     ["line with style.dash", (v) => v.line(0, 0, 1, 1, { stroke: "#000", dash: [2, 2] })],
-    ["group effects.wash", (v) => v.group({ effects: { wash: {} } }, () => {})],
-    ["group({ lighting })", (v) => v.group({ lighting: {} }, () => {})],
   ];
   for (const [call, draw] of cases) {
     assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof UnsupportedCallError && e.call === call && e.message.includes("not supported yet"), call);

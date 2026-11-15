@@ -1,5 +1,6 @@
 // Draw records: one per quad the draw shader runs (the WGSL `Draw` struct in
 // shader-draw.ts), packed with their gradient stops and clip edges.
+import type { Rgba } from "../colors.js";
 import type { BrushRec, GlyphQuad, Item, Job, R } from "./jobs.js";
 import { heightOf, inter, widthOf } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
@@ -24,6 +25,8 @@ export interface Rec {
   readonly pwidth?: number;
   /** A clip's rings: coverage from their summed winding, computed per pixel. */
   readonly rings?: readonly (readonly number[])[];
+  /** In a material layer (R8): the material, straight, drawn in place of the colour. */
+  readonly mat?: Rgba | undefined;
 }
 
 const rectO = (r: R): number[] => [r.x0, r.y0, widthOf(r), heightOf(r)];
@@ -44,6 +47,12 @@ export function itemRecs(it: Item, rect: R): Rec[] {
   const box = inter(it.box, rect);
   const clip = it.clip !== null;
   const mode = it.mode;
+  const mat = it.k === "smear" ? undefined : it.mat;
+  return itemRecsOf(it, { box, clip, mode, rect }).map((r) => (mat === undefined ? r : { ...r, mat }));
+}
+
+function itemRecsOf(it: Item, a: { box: R; clip: boolean; mode: number; rect: R }): Rec[] {
+  const { box, clip, mode, rect } = a;
   switch (it.k) {
     case "shape": {
       const p = it.piece;
@@ -106,6 +115,7 @@ export function pack(recs: readonly Rec[], tgt: { rect: R; tex: GPUTexture }): {
     u[o + 65] = r.seed ?? 0;
     i32[o + 66] = r.pwidth ?? 0;
     f[o + 67] = r.opacity ?? 1;
+    if (r.mat !== undefined) f.set([r.mat[0], r.mat[1], r.mat[2], 1], o + 68);
   }
   return { draws: buf, stops: new Float32Array(stops).buffer, edges: new Float32Array(edges).buffer };
 }

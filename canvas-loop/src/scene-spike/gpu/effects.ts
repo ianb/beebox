@@ -8,9 +8,11 @@
 import type { Effects } from "../../scene-draft/scene-api.js";
 import type { ColorParser, Rgba } from "../colors.js";
 import { UnsupportedCallError } from "../errors.js";
-import { applyLinear } from "../mat.js";
-import type { Mat } from "../scene.js";
+import { applyLinear, invert, maxScale } from "../mat.js";
+import type { Mat, PaperSettings } from "../scene.js";
 import { premultiply } from "./paint.js";
+import type { PainterlyPlan } from "./painterly.js";
+import { painterlyPlanOf } from "./painterly.js";
 
 const ADJUSTMENTS = ["hue", "saturation", "brightness", "contrast", "grayscale", "sepia", "invert"] as const;
 
@@ -26,6 +28,8 @@ export interface FxPlan {
   readonly blur: Sigma;
   readonly glow: { readonly sigma: Sigma; readonly color: Rgba; readonly passes: number } | undefined;
   readonly shadow: { readonly dx: number; readonly dy: number; readonly sigma: Sigma; readonly color: Rgba } | undefined;
+  /** Wash, hatching and paper, after the blur. */
+  readonly painterly: PainterlyPlan | undefined;
 }
 
 /** Device pixels per unit along each device axis, for a round blur in the effect's own coordinates. */
@@ -48,10 +52,12 @@ export function axisScales(m: Mat, where: string): Sigma {
 const times = (s: Sigma, k: number): Sigma => ({ x: s.x * k, y: s.y * k });
 const widest = (s: Sigma): number => Math.max(s.x, s.y);
 
-/** The plan for `effects` called under device transform `matrix` (by `where`), and how far it reaches past the layer's content (device px). */
-export function fxPlanOf(effects: Effects | undefined, a: { matrix: Mat; colors: ColorParser; where: string }): { plan: FxPlan | undefined; reach: number } {
+/** The plan for `effects` called under device transform `matrix` (by `where`), and how far it reaches past the layer's content (device px). `paper` is the scope's (R9), `ratio` the pixel ratio. */
+export function fxPlanOf(effects: Effects | undefined, a: { matrix: Mat; colors: ColorParser; where: string; ratio: number; paper: PaperSettings | undefined }): { plan: FxPlan | undefined; reach: number } {
   if (effects === undefined) return { plan: undefined, reach: 0 };
   const scale = axisScales(a.matrix, a.where);
+  const toLocal = invert(a.matrix);
+  const painterly = toLocal === undefined ? undefined : painterlyPlanOf(effects, { ...a, scale, toLocal });
   const adjust: (readonly [number, number])[] = [];
   for (const [i, key] of ADJUSTMENTS.entries()) {
     const v = effects[key];
@@ -73,8 +79,10 @@ export function fxPlanOf(effects: Effects | undefined, a: { matrix: Mat; colors:
     shadow = { dx: Math.round(ox), dy: Math.round(oy), sigma: times(scale, s.blur ?? 0), color: premultiply(a.colors(s.color)) };
     reach = Math.max(reach, Math.max(Math.abs(shadow.dx), Math.abs(shadow.dy)) + 3 * widest(shadow.sigma));
   }
-  const empty = adjust.length === 0 && widest(blur) === 0 && glow === undefined && shadow === undefined;
-  return { plan: empty ? undefined : { adjust, blur, glow, shadow }, reach: Math.ceil(reach) + 1 };
+  // A bleed displaces reads by up to `bleed` along each local axis.
+  reach = Math.max(reach, (effects.wash?.bleed ?? 0) * Math.SQRT2 * maxScale(a.matrix));
+  const empty = adjust.length === 0 && widest(blur) === 0 && glow === undefined && shadow === undefined && painterly === undefined;
+  return { plan: empty ? undefined : { adjust, blur, glow, shadow, painterly }, reach: Math.ceil(reach) + 1 };
 }
 
 function boxOf(lo: number, hi: number): Map<number, number> {

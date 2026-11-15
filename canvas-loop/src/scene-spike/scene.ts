@@ -5,7 +5,7 @@
 // versions shared by reference between the frames that place them.
 import type { Brush, Gesture } from "../core/brush/types.js";
 import type { BlendMode, Paint, PathCommand, TextStyle, Vec2 } from "../core/paint.js";
-import type { Effects, Material } from "../scene-draft/scene-api.js";
+import type { Effects, Light, Material } from "../scene-draft/scene-api.js";
 
 /** A 2D affine transform `[a, b, c, d, e, f]`: x' = a·x + c·y + e, y' = b·x + d·y + f (Canvas2D order). */
 export type Mat = readonly [number, number, number, number, number, number];
@@ -50,6 +50,10 @@ export interface ShapeStyle {
   readonly effects: Effects | undefined;
   /** The stroke is brushed (draft section 9). */
   readonly brush: BrushStroke | undefined;
+  /** How the shape takes light; used only inside a lit group (R8). */
+  readonly material: Material | undefined;
+  /** The paper `effects.wash` and `effects.paper` use: the scope's at the call (R9); undefined without effects. */
+  readonly effectsPaper: PaperSettings | undefined;
 }
 
 export interface ShapeNode {
@@ -70,13 +74,22 @@ export interface AtNode {
   readonly matrix: Mat;
   readonly children: readonly SceneNode[];
 }
-/** R5: the children as one isolated layer. */
+/** A lit group's settings (R8), defaults filled in. */
+export interface LightingRec {
+  /** CSS colour; its channels multiply the surface colour everywhere, before any lamp. */
+  readonly ambient: string;
+  readonly shadows: "none" | "hard" | "soft";
+}
+/** R5: the children as one isolated layer; with `lighting`, a lit group (R8). */
 export interface GroupNode {
   readonly kind: "group";
   readonly name: string | undefined;
   readonly opacity: number;
   readonly blend: BlendMode;
   readonly effects: Effects | undefined;
+  readonly lighting: LightingRec | undefined;
+  /** The paper at the end of the body (R9), for `effects.wash` and `effects.paper`. */
+  readonly paper: PaperSettings;
   /** The group's `clip` option (after its effects), as a union of shapes. */
   readonly clip: readonly Geom[] | undefined;
   readonly children: readonly SceneNode[];
@@ -146,8 +159,16 @@ export interface PlaceNode {
   readonly opacity: number;
   readonly blend: BlendMode;
   readonly erase: boolean;
-  /** Recorded for lit groups (R8); the spike has none yet. */
+  /** A material for the picture's shapes that have none, inside a lit group (R8). */
   readonly material: Material | undefined;
+}
+
+/** A light with its defaults filled in, in the coordinates of its call (R8). */
+export type LightRec = Required<Omit<Light, "at">> & { readonly at: Vec2 };
+/** `light`: lights the nearest enclosing lit group, under the transforms and placements around it. */
+export interface LightNode {
+  readonly kind: "light";
+  readonly light: LightRec;
 }
 
 /** `debugBox`: drawn only with `run --outline`; inside a picture it is part of the recording and moves with each placement (section 8). */
@@ -160,7 +181,7 @@ export interface DebugNode {
   readonly h: number;
 }
 
-export type SceneNode = ShapeNode | BackgroundNode | AtNode | GroupNode | ClipNode | MaskNode | TextNode | PlaceNode | DebugNode;
+export type SceneNode = ShapeNode | BackgroundNode | AtNode | GroupNode | ClipNode | MaskNode | TextNode | PlaceNode | DebugNode | LightNode;
 
 /** What one `draw` recorded: the canvas size in logical pixels and the top-level nodes. */
 export interface Scene {

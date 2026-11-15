@@ -37,6 +37,7 @@ function walk(nodes: readonly SceneNode[], a: { m: Mat; out: DebugBox[] }): void
       case "shape":
       case "background":
       case "text":
+      case "light":
         break;
     }
   }
