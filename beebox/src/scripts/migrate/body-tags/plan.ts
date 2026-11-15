@@ -3,7 +3,7 @@
  * (`image`, `silence`, `purpose`, `correction`) into plain card shapes. The
  * whole decision, as a pure function of the cards' text, so a test reaches
  * every case with no box on disk; `run.ts` is the IO around it
- * (docs/implemented-plans/retire-type-specific-core-tags.md, Track 4).
+ * (plan:retire-type-specific-core-tags, Track 4).
  *
  * Tag nodes come from `Markdoc.parse` (no schema needed), which gives each
  * tag its attributes and line span and tells a real tag from one quoted in a

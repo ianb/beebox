@@ -1,7 +1,7 @@
 // # `todos.setStatus` — tick one todo from the web UI
 //
 // The checkbox on a rendered todo calls `todos.setStatus`
-// (`docs/plans/todos-ui.md`, Track 3). It addresses the todo by card path and
+// (`plan:todos-ui`, Track 3). It addresses the todo by card path and
 // locator, and also sends the text and status the reader saw. Under the card
 // lock the server re-extracts the card and writes only if the todo at that
 // locator still reads the same and still has that status; otherwise it refuses

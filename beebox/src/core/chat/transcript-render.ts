@@ -1,6 +1,6 @@
 /**
  * Compact transcript rendering, shared by the retrospective observer and the
- * nightly chat review (docs/implemented-plans/chat-review.md).
+ * nightly chat review (plan:chat-review).
  *
  * User and agent text plus one-line tool summaries, with tool results skipped
  * because they add noise without signal.

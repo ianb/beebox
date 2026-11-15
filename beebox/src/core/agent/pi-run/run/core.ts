@@ -1,6 +1,6 @@
 /**
  * Drive one batch-agent invocation through a pi session
- * (docs/implemented-plans/pi-box-engine.md, Track 4).
+ * (plan:pi-box-engine, Track 4).
  *
  * OpenRouter failures, 402 and 429 included, are ordinary failures carrying
  * OpenRouter's message. Nothing goes to the engine availability store: it

@@ -1,6 +1,6 @@
 /**
  * View card renderer — renders the named builtin view a `view` card points
- * at (docs/plans/interface-as-cards.md, "instrument cards"). The component
+ * at (plan:interface-as-cards, "instrument cards"). The component
  * registry here must cover every name in src/shared/named-views.ts; an
  * unknown name (schema/registry drift, or a card edited past validation)
  * renders an explicit error naming the card and the valid set — never a

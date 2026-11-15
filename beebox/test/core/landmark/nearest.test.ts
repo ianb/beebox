@@ -3,7 +3,7 @@
 // Resolving the directory whose chat a "chat about this card" action binds to:
 // the deepest landmark directory that is an ancestor-or-self of the card's
 // directory, or `""` (the box root) when none encloses it. See
-// `src/core/landmark/nearest.ts` and `docs/plans/open-chat-from-card.md`.
+// `src/core/landmark/nearest.ts` and `plan:open-chat-from-card`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -85,7 +85,7 @@ void test("The ?card= value flows into card.get; openForCard rejects paths that 
 // this schema (`chat.startSession`'s `contextDir`, `landmarks.hqPreferences`'s
 // `dir`, …) gets this for free — a display-form leak (`Config:box.json`) fails
 // zod input validation, which tRPC reports as `BAD_REQUEST` carrying the zod
-// issue message (`docs/plans/display-path-guard.subplan.md`).
+// issue message (`plan:display-path-guard.subplan`).
 void test("Every tRPC procedure that takes a contextDir/dir/card-path string through thi...", async (t) => {
   const ok = boxRelativePathSchema.safeParse("class/activities/x.card");
   t.check(ok.success, true);

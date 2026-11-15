@@ -1,6 +1,6 @@
 /**
  * What `bbx webpage` hands to `standard` and to a box's `webpage.ts`, and what
- * they answer with (docs/plans/webpage-capture-tools.md).
+ * they answer with (plan:webpage-capture-tools).
  */
 
 import { z } from "zod";

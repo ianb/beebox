@@ -3,7 +3,7 @@
 // Gemini speaks raw 24 kHz PCM. The browser's streaming player takes MP3, so
 // `pcmToMp3` (`src/core/tts/mp3-encoder.ts`) runs the audio through `ffmpeg` on
 // the way. These examples use the real `ffmpeg`, a declared runtime dependency of
-// the server (`docs/plans/tts-streamed-playback.md`).
+// the server (`plan:tts-streamed-playback`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -6,7 +6,7 @@
 // instance. That separation is the security property: every mobile gate reduces
 // identity to a boolean, and any valid device bearer can mint a full session
 // cookie, so a "scope" field on one shared store could not be contained (see
-// `docs/plans/scanner-ingest.review.md` finding 1). Two stores, two files, no
+// `plan:scanner-ingest.review` finding 1). Two stores, two files, no
 // cross-resolution.
 
 import { test } from "tap";

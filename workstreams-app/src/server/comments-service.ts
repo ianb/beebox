@@ -1,4 +1,4 @@
-// The app's half of the comment channel (`docs/plans/document-comments.md`).
+// The app's half of the comment channel (`plan:document-comments`).
 //
 // IT SHELLS OUT RATHER THAN REACHING INTO THE STORE. `bin/comments` owns where
 // a comment lives — the root derivation, the two namespaces, containment, the
@@ -39,7 +39,7 @@ const cliAddSchema = z.object({ id: z.string() });
 /**
  * What a comment is on. A file is addressed by repository path plus the
  * checkout whose untracked namespace applies; an exhibit page by workstream
- * and name (`docs/implemented-plans/exhibit-comments.md`).
+ * and name (`plan:exhibit-comments`).
  */
 export type CommentTarget =
   | { relPath: string; worktree: string | null }

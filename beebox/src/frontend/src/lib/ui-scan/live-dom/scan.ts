@@ -225,7 +225,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
             // nowhere. Testing every clipping ancestor would mean reading each
             // one's overflow and box on the way down, which the lazy `style()`
             // /`rect()` seam exists to avoid; the limitation is documented
-            // instead (docs/plans/agent-points-at-ui.md, "Visibility").
+            // instead (plan:agent-points-at-ui, "Visibility").
             offscreen:
               rect.left + rect.width <= 0 ||
               rect.top + rect.height <= 0 ||

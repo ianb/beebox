@@ -1,6 +1,6 @@
 // # What the agent waits for in the box browser
 //
-// docs/plans/shared-browser-ask.subplan.md. A chat has at most one question
+// plan:shared-browser-ask.subplan. A chat has at most one question
 // waiting, so a chat's new ask replaces its own and leaves another chat's alone.
 // A question is claimed once. One whose answer failed comes back, unless its
 // chat has asked again. A corrupt file reads as nothing waiting. The answer's

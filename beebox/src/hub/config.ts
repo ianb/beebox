@@ -1,6 +1,6 @@
 /**
  * `bbx hub` configuration — `hub.json`, the fleet's routing table (Track D,
- * chunk D1 in `docs/implemented-plans/boxes-as-packages-v2.md`).
+ * chunk D1 in `plan:boxes-as-packages-v2`).
  *
  * This file is intentionally strict (`z.strictObject`, closed enums, fail on
  * unknown keys): it decides which processes the hub spawns and which URL
@@ -56,7 +56,7 @@ const boxEntrySchema = z.strictObject({
    *  Absent: the hub's own store. */
   secretsFile: z.string().min(1).optional(),
   /** The Unix socket this box's unit listens on (`/run/beebox/<slug>.sock`).
-   *  Present on a unit host (docs/implemented-plans/per-box-units.md), where the hub
+   *  Present on a unit host (plan:per-box-units), where the hub
    *  routes to systemd-owned sockets and spawns nothing; absent on a hub that
    *  spawns children itself. All entries of one hub agree. */
   socket: z.string().min(1).optional(),

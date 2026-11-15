@@ -1,6 +1,6 @@
 /**
  * The deploy's check that Chrome keeps its own sandbox inside the box
- * browser's private network namespace (docs/plans/shared-browser.md, Track F,
+ * browser's private network namespace (plan:shared-browser, Track F,
  * the "Chromium runs without its sandbox" row of Failure modes).
  *
  * That failure is silent: agent-browser adds `--no-sandbox` when it sees uid

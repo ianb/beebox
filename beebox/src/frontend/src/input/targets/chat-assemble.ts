@@ -1,12 +1,12 @@
 /**
  * Chat-target assembly — the ONE place an Emission becomes a chat wire
- * payload (docs/implemented-plans/input-extraction.md, chunk 1). Replaces the five
+ * payload (plan:input-extraction, chunk 1). Replaces the five
  * scattered payload builders (typed handleSend, keyword-voice submit, the
  * desktop/mobile stop-and-send buttons, recovered dictation), whose exact
  * output strings are pinned by src/frontend/test/components/chat.emission-assemble.test.ts.
  *
  * Assembly lives with the target, not the input (design decision recorded
- * in docs/plans/input-widget.md): the `<typed>`/`<speech>` wrapper rules
+ * in plan:input-widget): the `<typed>`/`<speech>` wrapper rules
  * are ChatTarget's business; the input ships the emission noun. The
  * witness context (what the user was looking at when they sent) is also
  * the target adapter's concern — it arrives here as plain serializable
@@ -107,7 +107,7 @@ export function assembleChatMessage(
   const text = missingTokens.length === 0
     ? emission.text
     : [emission.text, ...missingTokens].filter((s) => s.length > 0).join(" ");
-  // <unsure> marking (Track 3, docs/implemented-plans/transcript-confidence.md) runs on
+  // <unsure> marking (Track 3, plan:transcript-confidence) runs on
   // `text` — before selections fold in — so the words-stream alignment never
   // has to reason about `<user-selection>` markup, and never risks landing a
   // wrap partway through one. Selection anchor-matching (below) still works
@@ -117,7 +117,7 @@ export function assembleChatMessage(
   const confidenceMarked = emission.origin === "voice" && emission.words !== undefined
     ? markUnsureWords(text, { words: emission.words, spokenStart: emission.spokenStart ?? 0 })
     : text;
-  // Live text with a gap (docs/implemented-plans/live-gap-marker.md): each `[…]` is
+  // Live text with a gap (plan:live-gap-marker): each `[…]` is
   // speech the live pass never transcribed, sent as unsure. Anywhere in a
   // voice message, HQ included: a marker can arrive in the prefix from an
   // earlier segment folded into the composer.
@@ -142,7 +142,7 @@ export function assembleChatMessage(
   } else {
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
     // Every dictated message gets the HQ pass when it can
-    // (docs/implemented-plans/hq-always.md), so the marker is on the exception:
+    // (plan:hq-always), so the marker is on the exception:
     // `stt="live"` says this text is the live transcript — HQ failed, timed
     // out, was skipped by the user, the box has no HQ key, or there was no
     // recording. HQ text carries no `stt`, only `stt-service` naming the

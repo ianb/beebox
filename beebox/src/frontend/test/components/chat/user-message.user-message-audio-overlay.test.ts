@@ -2,7 +2,7 @@
 //
 // `UserMessage` (`components/chat/user-message.tsx`) overlays a retranscription
 // or audio-consult report onto a user's bubble
-// (docs/implemented-plans/retranscription-in-chat.md Track 3): the swapped text reaches
+// (plan:retranscription-in-chat Track 3): the swapped text reaches
 // `UserMessageText`, the original stays recoverable in the badge's popover
 // content, and the popover never opens by default — so these tests render the
 // badge cluster's pure spec-building seam (`buildAudioBadgeSpecs`) directly for
@@ -156,7 +156,7 @@ void test("The service comes from the persisted speech wrapper, which the client
   t.check(render([voiceEntry("msg-realtime", "fast words")]), ownBubble({ badge: null, hq: "", text: "fast words", status: "" }));
 });
 
-// Current messages mark the exception instead (docs/plans/hq-always.md): HQ
+// Current messages mark the exception instead (plan:hq-always): HQ
 // text carries only `stt-service`, and live text carries `stt="live"`, which
 // renders the live-text status line. The legacy wrappers above still read the
 // same way.

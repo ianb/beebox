@@ -1,7 +1,7 @@
 // # The box-wide pages in the avatar menu
 //
 // Dashboard, Browse, History, and Storage summary are rows of the avatar menu,
-// below Settings and Admin (docs/plans/box-screen.md, "Box-wide pages move to
+// below Settings and Admin (plan:box-screen, "Box-wide pages move to
 // the avatar menu"). The boxholder never opened them from the box screen. The
 // rows keep the ids of the old box panel, so smoke snapshots and docs keep one
 // name for each.

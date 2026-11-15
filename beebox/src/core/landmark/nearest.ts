@@ -43,7 +43,7 @@ export function isBoxRelativeCardPath(cardPath: string): boolean {
 export const boxRelativePathSchema = z
   .string()
   .refine(isBoxRelativeCardPath, "must be box-relative and contain no '..' segments")
-  // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+  // Display-form leak (plan:display-path-guard.subplan): a
   // boxholder display-form path (`Config:box.json`) is a string-shape
   // rejection like the one above, not a filesystem containment check — zod
   // input validation fails as BAD_REQUEST automatically, carrying this

@@ -4,7 +4,7 @@
  * Priors live in `_config/scan.guide.card` (the scan guide); the photo flow
  * injects the COMPILED guide text into the per-page vision prompt. The
  * legacy box-root `CLAUDE_SCANS.md` file is a deprecated, warning-logged
- * fallback until boxes migrate (runbook: `docs/plans/scan-guide-card.md`).
+ * fallback until boxes migrate (runbook: `plan:scan-guide-card`).
  *
  * The guide is compiled in-memory from the card on every run — never read
  * from the possibly-stale `_content/docs/generated/scan-guide.md` derivative. The

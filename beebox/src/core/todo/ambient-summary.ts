@@ -1,5 +1,5 @@
 /**
- * The ambient todo-count line (`docs/implemented-plans/todo-annotation.md` Track 5a):
+ * The ambient todo-count line (`plan:todo-annotation` Track 5a):
  * a one-line, only-when-nonzero box-wide summary — "N open todos on the
  * plate (M escalated) — `bbx query todos`" — computed fresh at prompt-assembly
  * time and never persisted (a MAP.md-style persisted count would go stale

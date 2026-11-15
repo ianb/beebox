@@ -1,6 +1,6 @@
 // A paragraph annotated `{% #id %}` renders with that id, and a heading with an
 // explicit id keeps it, so a ref's `#fragment` has an element to land on
-// (docs/plans/knowledge-base-tools.md, Track C).
+// (plan:knowledge-base-tools, Track C).
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";

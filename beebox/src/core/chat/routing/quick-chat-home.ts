@@ -1,5 +1,5 @@
 /**
- * What the box screen shows (docs/plans/box-screen.md): unfinished quick chat
+ * What the box screen shows (plan:box-screen): unfinished quick chat
  * messages, the ones sent in the last day, recent chats, and the box's own
  * shortcut links from `nav.card`.
  */

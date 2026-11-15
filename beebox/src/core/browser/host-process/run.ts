@@ -1,5 +1,5 @@
 /**
- * The browser host process, `bbx engine browser-host` (docs/plans/shared-browser.md,
+ * The browser host process, `bbx engine browser-host` (plan:shared-browser,
  * Track B): it runs the agent-browser dashboard for one box, the relay
  * socket in front of it, and the command socket that runs the agent's
  * commands, and stops them when told to.

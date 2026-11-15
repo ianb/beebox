@@ -280,7 +280,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     // The injected service is the test seam; production resolves one from the
     // box's configured backend. There is no third path — the inline provider
     // call this route used to carry is what let the service interface sit
-    // unused (docs/plans/tts-backend-selection.md, Track 1).
+    // unused (plan:tts-backend-selection, Track 1).
     let service: TtsService;
     try {
       service = openaiAudio ?? await resolveTtsService(boxRoot);

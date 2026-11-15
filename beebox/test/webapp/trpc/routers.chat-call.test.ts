@@ -85,7 +85,7 @@ void test("the agent cannot be on a call", async (t) => {
   await t.checkThrows(() => caller({ user: priya, actor: "agent" }).chatCall.iceServers(), "TRPCError: Only a box member can be on a call.");
 });
 
-// docs/implemented-plans/chat-calls.md, Track F: a member registers its recording before
+// plan:chat-calls, Track F: a member registers its recording before
 // capture starts. Only the peer's own person may, and only while transcribing.
 void test("a member registers its own recording, only while transcription is on", async (t) => {
   const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));
@@ -104,7 +104,7 @@ void test("a member registers its own recording, only while transcription is on"
   await p.close();
 });
 
-// docs/plans/self-hosted-turn.md: the host's own coturn, signed locally with no
+// plan:self-hosted-turn: the host's own coturn, signed locally with no
 // outside call, and preferred over Cloudflare. The username's expiry is three
 // hours out and names the box; the credential is coturn's HMAC of it.
 void test("a box granted the host's relay gets its coturn servers", async (t) => {

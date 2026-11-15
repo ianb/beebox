@@ -8,7 +8,7 @@
  * permanent error would be parked as "recoverable someday" and never fixed.
  * Anything unrecognized keeps the ordinary failure path.
  *
- * Design: docs/implemented-plans/deferred-recoverable-agent-failures.md
+ * Design: plan:deferred-recoverable-agent-failures
  */
 
 import type { AgentEngine } from "../box/config.js";
@@ -16,7 +16,7 @@ import { assertNever } from "../../shared/invariant.js";
 
 /** The machine-wide accounts whose quota this store tracks. Unavailability is
  * account-scoped, not box-scoped, so pi is absent: it runs on a key granted
- * per box (docs/implemented-plans/pi-box-engine.md, Track 4). */
+ * per box (plan:pi-box-engine, Track 4). */
 export const ENGINE_PROVIDERS = ["claude", "codex"] as const satisfies readonly AgentEngine[];
 export type EngineProvider = (typeof ENGINE_PROVIDERS)[number];
 

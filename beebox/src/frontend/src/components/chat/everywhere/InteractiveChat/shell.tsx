@@ -112,7 +112,7 @@ interface InteractiveChatProps {
   /**
    * The lifted emission store: created once in `ChatPage`, above this
    * component's `key={keyState.epoch}` remount boundary, so the in-progress
-   * composition survives a session switch (docs/implemented-plans/input-extraction.md,
+   * composition survives a session switch (plan:input-extraction,
    * chunk 4).
    */
   emissionStore: EmissionStore;
@@ -136,7 +136,7 @@ interface InteractiveChatProps {
   initial?: ChatInitialLoad;
   /**
    * The session's display name, from the same `chat.bootstrap` call — the app
-   * bar's session chip face (docs/implemented-plans/top-nav-ia.md Track C2). Null for a
+   * bar's session chip face (plan:top-nav-ia Track C2). Null for a
    * fresh chat (and until bootstrap settles); the chip then reads "New chat".
    */
   sessionLabel: string | null;
@@ -249,7 +249,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const catchingUp = useChatCatchUp({ snapshot, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
-  // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
+  // in dispatchEmission (plan:input-extraction chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
   // Assigned by useEnsureComposerVisible below (it needs voice state) — the
   // same ref pattern as clearDraftRef.

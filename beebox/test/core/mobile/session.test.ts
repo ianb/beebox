@@ -112,7 +112,7 @@ void test("every forged, expired, or malformed cookie is null", async (t) => {
   t.check(verifyMobileSession(otherBox.root, sign(otherBox.root, {})), { deviceId: "device-1", createdBy: null, exp: any(Number).int() });
 });
 
-// On a unit host (docs/plans/per-box-units.md, question 7) the key is derived
+// On a unit host (plan:per-box-units, question 7) the key is derived
 // from the box's per-boot hub secret, so the hub, which holds that secret, can
 // verify a cookie without reading anything a box owns; no secret file is made.
 void test("on a unit host the key derives from the hub secret and no secret file is written", async (t) => {

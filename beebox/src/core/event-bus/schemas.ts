@@ -274,7 +274,7 @@ export const eventSchemas = {
   }),
   /**
    * A voice recording's HQ pass or handoff moved
-   * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
+   * (`plan:resilient-voice-recording`, Track 1). Emitted by the HQ
    * job (`core/voice-recording/hq-job.ts`) after every persisted transition.
    * `sessionId` is the chat session the HQ result is for
    * (`voice.hqRequest.sessionId`), or null for the first message of a new
@@ -290,7 +290,7 @@ export const eventSchemas = {
   /**
    * The box tried to reach the person (`notifyBoxholder`): the intent plus
    * its rendered root-relative `url`. The live signal for open apps; the
-   * record is `.beebox/notifications.jsonl` (docs/implemented-plans/notifications.md,
+   * record is `.beebox/notifications.jsonl` (plan:notifications,
    * Track A).
    */
   notification: notificationEventSchema,
@@ -298,7 +298,7 @@ export const eventSchemas = {
    * A chat session's trigger activations changed (armed, disarmed, fired,
    * expired, failed): the status line refetches `triggers.list`, and the
    * server's runner reloads the session's timers when the CLI armed or
-   * disarmed from another process (docs/implemented-plans/activity-triggers.md, Track C).
+   * disarmed from another process (plan:activity-triggers, Track C).
    */
   "trigger-changed": z.object({ sessionId: z.string().min(1) }),
 } satisfies Record<string, z.ZodType>;

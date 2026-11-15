@@ -1,5 +1,5 @@
 /**
- * `runFieldScenario` — one whole field run (`docs/implemented-plans/agent-field-tests.md`,
+ * `runFieldScenario` — one whole field run (`plan:agent-field-tests`,
  * Track 2, the activity loop).
  *
  * Everything a run owns is created here and torn down here: the run directory,

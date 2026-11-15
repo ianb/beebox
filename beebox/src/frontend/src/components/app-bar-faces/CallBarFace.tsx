@@ -1,6 +1,6 @@
 /**
  * The call bar at the top of the chat's status banners
- * (docs/implemented-plans/chat-calls.md, Track D): a call ringing or going that this tab
+ * (plan:chat-calls, Track D): a call ringing or going that this tab
  * can join, this tab's own call with its controls, or how a call ended.
  * Pure: `CallBar` computes the view and passes the actions, so tests render
  * every state.

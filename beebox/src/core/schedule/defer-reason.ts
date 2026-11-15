@@ -4,7 +4,7 @@
  * `no-change`, as does a procedure whose prechecks all skip with no marker
  * from an inner command; `bbx judge` writes the rest. The reason decides whether the
  * schedule's change cursor advances (`memory.ts`). `bbx health` shows a run
- * that found nothing to do as `ok: <reason>`, and the others as `waiting: <reason>`. See docs/implemented-plans/notifications.md (Track D).
+ * that found nothing to do as `ok: <reason>`, and the others as `waiting: <reason>`. See plan:notifications (Track D).
  */
 
 export const DEFER_REASONS = ["no-change", "no-pass", "budget", "jev-unavailable", "unconfigured"] as const;

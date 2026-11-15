@@ -1,6 +1,6 @@
 // # `status.browse` — the listing carries prominence
 //
-// Track C of `docs/implemented-plans/card-prominence.md`: `status.browse` adds each
+// Track C of `plan:card-prominence`: `status.browse` adds each
 // card's effective `prominence`, each subdirectory's pruned-subtree
 // `DirectorySummary` (plus its own landmark identity when it has one), and
 // the listed directory's own `background` cascade. No test previously
@@ -25,7 +25,7 @@ function ctxFor(boxRoot: string): TrpcContext {
 // An `entry-point`/`primary`/`background`-declared card reports that level; an
 // undeclared card falls back to its type's default — `ordinary` for a doc,
 // `background` for a landmark (its type default, per Track A) and for a chat
-// husk (`docs/implemented-plans/place-shows-cards.md`, Track A), so Browse folds it into
+// husk (`plan:place-shows-cards`, Track A), so Browse folds it into
 // "more" when the folder has a primary card.
 void test("An entry-point/primary/background-declared card reports that level; an undecl...", async (t) => {
   t.teardown(async () => {
@@ -103,7 +103,7 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
 // ## A box-layout template folder is `seeded`; a person's own folder is not
 //
 // `seeded` marks the `_content` folders the box layout creates
-// (`docs/implemented-plans/front-door.md`, Track D), including the intermediate
+// (`plan:front-door`, Track D), including the intermediate
 // `reviews/` that `reviews/retro` makes. Browse folds a seeded folder only
 // when nothing is below it.
 void test("A box-layout template folder is seeded; a person's own folder is not", async (t) => {

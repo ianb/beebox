@@ -1,6 +1,6 @@
 /**
  * `bbx engine question-review check` — the precheck of the stock
- * `question-review` procedure (`docs/implemented-plans/questions-later-and-figure-it-out.md`,
+ * `question-review` procedure (`plan:questions-later-and-figure-it-out`,
  * Track F).
  *
  * Loads the box's questions, selects the ones to review

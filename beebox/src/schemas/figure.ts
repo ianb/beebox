@@ -9,8 +9,8 @@
  * view compiler and mounts it through a per-runtime harness (p5 instance mode
  * into a `<div>`, canvas-loop's `mountSketch`, etc.).
  *
- * See docs/implemented-plans/figure-card-type.md and
- * docs/implemented-plans/canvas-loop-figure.md for the full design.
+ * See plan:figure-card-type and
+ * plan:canvas-loop-figure for the full design.
  */
 
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";

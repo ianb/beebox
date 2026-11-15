@@ -167,7 +167,7 @@ async function collectFiles(root: string, definition: PublicationDefinition): Pr
       }
       const content = await readBoundedRegularFile({ absolute, relative, currentTotal: totalBytes });
       // An unlocked git-annex file whose content is absent holds pointer text
-      // (see lib/annex-pointer.ts and docs/plans/asset-annex.md, "Working-tree
+      // (see lib/annex-pointer.ts and plan:asset-annex, "Working-tree
       // files are ordinary files"). Detected by content so every box behaves alike.
       if (isAnnexPointer(content)) {
         throw bundlePolicyError(`file '${relative}' is a git-annex pointer; its content is not in this checkout. Fetch it (git annex get) and prepare again`);

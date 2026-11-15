@@ -15,7 +15,7 @@
  * A single-file card, usually embedded in a course's attach scope. General
  * beyond courseware — any deliberate presentation could use it.
  *
- * See docs/implemented-plans/courseware-phase1.md.
+ * See plan:courseware-phase1.
  */
 
 import { body, type CardSchemaConfig } from "../../exports/cards.js";

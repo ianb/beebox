@@ -6,7 +6,7 @@
 // discoverable hub config it REFUSES with guidance rather than guessing (the dev
 // router is never auto-targeted). Discovery only supplies a candidate port — every
 // posture guard in `tailscale-target.ts` still decides whether it may be exposed.
-// See `docs/implemented-plans/tailscale-expose-and-protect.md` Track B.
+// See `plan:tailscale-expose-and-protect` Track B.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

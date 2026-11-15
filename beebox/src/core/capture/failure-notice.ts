@@ -2,7 +2,7 @@
  * A capture that failed for good tells the person who has left: one `quiet`
  * notification to the chat it was headed for, sent only when nobody is present
  * in the app (an open app already shows the failed capture bubble). Success
- * sends nothing. See docs/implemented-plans/notifications.md (Track E). A bulk
+ * sends nothing. See plan:notifications (Track E). A bulk
  * upload that fails after its seal sends the same notice through
  * {@link notifyStagingFailed}, whatever the presence: no web UI shows it.
  */

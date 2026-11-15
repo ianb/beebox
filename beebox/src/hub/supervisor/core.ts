@@ -1,6 +1,6 @@
 /**
  * Per-box process supervision for `bbx hub` (Track D, chunk D1 in
- * `docs/implemented-plans/boxes-as-packages-v2.md`). Adapted from the monorepo dev
+ * `plan:boxes-as-packages-v2`). Adapted from the monorepo dev
  * router's spawn/readiness/teardown mechanics (`../../../workstreams-app/src/router/router.ts`,
  * `startWorktree`/`onChildExit`/`stopWorktree`), productized as engine code:
  * no lazy-start or idle-shutdown (hub children are resident — schedulers and

@@ -1,7 +1,7 @@
 // # Markdoc `{% todo %}` / `{% see-also %}` — parse/validate/transform
 //
 // `todo` is the universal capture-in-place annotation
-// (`docs/implemented-plans/todo-annotation.md`); `see-also` nests inside it and points at
+// (`plan:todo-annotation`); `see-also` nests inside it and points at
 // supporting context. Both delegate attribute validation to
 // `todo-model.ts`'s `validateTodoAttributes` — this test exercises the
 // Markdoc-level wiring (schema `matches`, `validate()`, and the transform's

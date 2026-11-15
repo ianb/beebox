@@ -359,7 +359,7 @@ void test("A job that leaves status: off relies on the schema default (pending),
 // ## `--max-cycles` reaches the reactor
 //
 // A wakeup runs one reactor cycle unless `--max-cycles <n>` asks for more; the
-// job check's run asks for 3 (docs/implemented-plans/on-demand-job-triggers.md, Track C).
+// job check's run asks for 3 (plan:on-demand-job-triggers, Track C).
 // The value must be a positive integer.
 void test("--max-cycles reaches the reactor", async (t) => {
   t.check(

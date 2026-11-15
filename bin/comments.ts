@@ -23,7 +23,7 @@
  *
  * `--json` on any command emits machine-readable output for that caller.
  *
- * Design: beebox/docs/plans/document-comments.md
+ * Design: plan:document-comments
  * Store:  bin/lib/comments-store.ts (root derivation, namespaces, containment)
  * Target: bin/lib/comments-address.ts (a path or an exhibit address → subjects)
  */

@@ -5,7 +5,7 @@
 // instruction-file resolver. After it, they find `AGENTS.md` everywhere, with the
 // template ledger and parked updates moved along. The framework reopens a box
 // whose migration stopped partway, so every interruption point must be a state
-// the template sync and `generateDocs` handle. Plan: `docs/implemented-plans/box-agents-md.md`,
+// the template sync and `generateDocs` handle. Plan: `plan:box-agents-md`,
 // Track B and "What will hold this after it ships".
 //
 // The fixture is an unconverted box (`makeTmpBox({ legacyInstructions: true })`)

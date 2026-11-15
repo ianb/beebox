@@ -1,4 +1,4 @@
-// Track 6 of docs/plans/router-transient-failure-resilience.md: a down worktree
+// Track 6 of plan:router-transient-failure-resilience: a down worktree
 // is unavailable, not unauthorized.
 //
 // Boxholder ruling, 2026-09-15: "I don't see why we'd have a 401 instead of 503,

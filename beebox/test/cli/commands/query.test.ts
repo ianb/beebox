@@ -1,6 +1,6 @@
 // # `bbx query <collection>` — the agent's read surface over a collection
 //
-// CLI-tier tests for `docs/plans/todo-collection.md` Track 4. `bbx query`
+// CLI-tier tests for `plan:todo-collection` Track 4. `bbx query`
 // and the web list run the same query through the same runner, so what the
 // agent is told matches what the boxholder sees.
 //

@@ -2,7 +2,7 @@
 //
 // The pure classifier behind the message-list scroll controller's resize handler
 // (`chat-scroll.ts`). Under the scroll model
-// (`docs/plans/chat-scroll-model.md`) the controller writes `scrollTop` only on a
+// (`plan:chat-scroll-model`) the controller writes `scrollTop` only on a
 // discrete user action — opening a thread, sending, pressing the button — plus
 // geometric compensations for changes the reader did not cause. This function is
 // the dispatcher for the compensations: given the facts of one ResizeObserver

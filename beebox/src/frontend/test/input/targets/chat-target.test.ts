@@ -1,6 +1,6 @@
 // # ChatTarget — status mapping + restore planning
 //
-// `chatTargetStatus` (docs/plans/input-extraction.md, chunk 3) maps the chat
+// `chatTargetStatus` (plan:input-extraction, chunk 3) maps the chat
 // machine's busy signals onto the target's status vocabulary; `planRestore`
 // is the pure half of what happens when a dispatched emission comes back
 // `rejected` — putting it back into the composer rather than losing it to

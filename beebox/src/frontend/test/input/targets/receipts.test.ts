@@ -3,7 +3,7 @@
 // `expectReceipt`/`settleReceipt` bridge the gap between the emission
 // dispatcher (fire-and-forget into the chat machine) and the send outcome
 // (consumed inside the stream actor) — keyed by the emission id / wire
-// messageId. See docs/plans/input-extraction.md chunk 3.
+// messageId. See plan:input-extraction chunk 3.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,6 +1,6 @@
 // # Getting a page over HTTP
 //
-// docs/plans/webpage-capture-tools.md. A redirect is followed only when it is
+// plan:webpage-capture-tools. A redirect is followed only when it is
 // the same page in another form, and each hop is recorded; any other redirect
 // goes back to the agent with the chain so far. The server is a fake `fetch`.
 

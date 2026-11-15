@@ -1,9 +1,9 @@
 /**
  * Todo review job card schema — the brief the `todo-review` sweep
- * (`src/core/todo/review-sweep.ts`, `docs/implemented-plans/todo-annotation.md`
+ * (`src/core/todo/review-sweep.ts`, `plan:todo-annotation`
  * Track 5b) used to queue for the wakeup reactor.
  *
- * Since `docs/implemented-plans/todos-ui.md` Track 7 nothing writes these cards: the
+ * Since `plan:todos-ui` Track 7 nothing writes these cards: the
  * stock `todo-review` procedure's precheck (`bbx engine todo-review check`)
  * prints the same brief — these item shapes and {@link TODO_REVIEW_INSTRUCTIONS}
  * — straight to its agent, so no card exists for the reactor to pick up too.

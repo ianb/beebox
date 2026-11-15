@@ -6,7 +6,7 @@
 // `connectors/google-auth-status.ts` — the refresh probe that keeps that state
 // fresh runs about daily from the scheduler, so health queries stay cheap.
 //
-// See `docs/plans/google-auth-reauth-health.md`.
+// See `plan:google-auth-reauth-health`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

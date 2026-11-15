@@ -6,7 +6,7 @@
  * composer, mic, capture and box switcher are SwiftUI. A DOM-only scan on a
  * phone therefore returns almost nothing while *looking* like a complete
  * answer, which is the exact failure this feature exists to avoid
- * (`docs/plans/agent-points-at-ui.md`, Track 5). So the handler asks the bridge,
+ * (`plan:agent-points-at-ui`, Track 5). So the handler asks the bridge,
  * waits {@link NATIVE_SCAN_TIMEOUT_MS}, and either merges what came back
  * (`coverage: "dom+native"`) or says out loud that it could not
  * (`coverage: "dom-native-unavailable"`).

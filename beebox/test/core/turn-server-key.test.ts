@@ -1,6 +1,6 @@
 // # The host's own TURN relay
 //
-// A cloud server runs one coturn for all its boxes (docs/plans/self-hosted-turn.md).
+// A cloud server runs one coturn for all its boxes (plan:self-hosted-turn).
 // The box server signs credentials with coturn's TURN REST scheme; coturn checks
 // them with the same secret. The stored value is strict: a malformed one reads as
 // "no relay" with a warning, never a crash and never a half-working relay.

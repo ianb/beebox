@@ -47,7 +47,7 @@ function parseDetail(value: unknown): ViewTarget | null {
 /**
  * Where Browse opens with no directory given: the content root, where a
  * person spends their time. The box root (`""`) stays reachable by an
- * explicit `""` (`docs/implemented-plans/front-door.md`, Track D).
+ * explicit `""` (`plan:front-door`, Track D).
  */
 export const BROWSE_DEFAULT_DIRECTORY = "_content";
 

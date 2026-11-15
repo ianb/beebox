@@ -17,7 +17,7 @@
  * An unwritable package with no docs is reported (`unwritable`) so the caller
  * can make it visible — the agent guide points here on every turn.
  *
- * Design: `docs/implemented-plans/box-docs-in-package.md`.
+ * Design: `plan:box-docs-in-package`.
  */
 
 import { basename, join } from "node:path";
@@ -240,7 +240,7 @@ async function ensurePackageDocsUncontended(packageRoot: string): Promise<Ensure
     for (const d of docs) await writeFile(join(tmp, d.filename), d.content);
     await writeFile(join(tmp, FINGERPRINT_FILE), `${want}\n`);
     // Readable by every user: `mkdtemp` makes a 0700 directory, and on a unit
-    // host (docs/implemented-plans/per-box-units.md) the deploy's build is read by each
+    // host (plan:per-box-units) the deploy's build is read by each
     // box user, whose `bbx engine init` otherwise cannot open the fingerprint
     // (found on the VM, 2026-10-24). The writer's umask may be 077 too.
     await chmod(tmp, 0o755);

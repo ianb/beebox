@@ -7,7 +7,7 @@
  * shape and nothing else — a version bump there would break the companion
  * selection flow on every phone that has not updated.
  *
- * **V2** is the extensible envelope (`docs/plans/agent-points-at-ui.md`,
+ * **V2** is the extensible envelope (`plan:agent-points-at-ui`,
  * Track 5): `{version:2,id,kind,payload?}`, where `kind` discriminates a payload
  * union. It exists because V1 cannot carry a command that has no selection —
  * `NativeComposerContract.swift` decodes `selection` unconditionally — and

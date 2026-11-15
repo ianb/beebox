@@ -143,7 +143,7 @@ export const cardRouter = router({
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). `resolveCardPath` above
       // already confirmed the resolved path stays inside the box AND inside
-      // the box namespace (Track B, `docs/implemented-plans/one-root-box-layout.md`) —
+      // the box namespace (Track B, `plan:one-root-box-layout`) —
       // mirrors the `/api/files` boundary guard.
       let raw: string | null = null;
       try {

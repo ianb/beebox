@@ -3,7 +3,7 @@
 // A running server watches the box's `src/schemas` and drops its cached
 // schemas when a file changes (`core/schema-watcher.ts`). An editor's write
 // burst must cause one invalidation, after the last write, and a box with no
-// local schemas must still start (docs/implemented-plans/small-dependency-sweep.md).
+// local schemas must still start (plan:small-dependency-sweep).
 //
 // These tests use a fake `fs.watch` and a mocked clock. On a real watch,
 // macOS delivers directory events through FSEvents. On a busy Mac

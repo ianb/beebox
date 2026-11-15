@@ -2,7 +2,7 @@
 //
 // `UserMessageText` (`components/chat/user-message-text.tsx`) renders a sent
 // message's body, expanding the `<send-message>`/`<user-selection>` pills.
-// Track 4 of `docs/plans/transcript-confidence.md` adds a third embedded tag:
+// Track 4 of `plan:transcript-confidence` adds a third embedded tag:
 // `<unsure>word</unsure>`, placed in the body by `markUnsureWords` (Track 3)
 // around a word the transcriber had low acoustic confidence in. The raw tag
 // must never reach the DOM — it renders as its inner word with a subtle dotted

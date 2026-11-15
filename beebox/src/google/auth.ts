@@ -58,7 +58,7 @@ export const GOOGLE_CLIENT_SECRET_SECRET_NAME = "google-oauth-client-secret";
 /**
  * A BOX's Google OAuth client credentials: the machine store's
  * `google-oauth-client-id` / `google-oauth-client-secret` entries at `server`
- * access (`docs/implemented-plans/secret-custody.md`). `null` when the box has
+ * access (`plan:secret-custody`). `null` when the box has
  * no grant — the connector is simply not configured for it.
  *
  * These are the OAuth *app's* identity, not a user's tokens — the token record

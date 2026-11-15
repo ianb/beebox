@@ -1,6 +1,6 @@
 // # The recency feed (src/server/main/recency.ts)
 //
-// The browser's front door (`docs/plans/general-browser.md`, Track 3). The
+// The browser's front door (`plan:general-browser`, Track 3). The
 // boxholder's rule is *"a file is interesting if it has been modified recently, in
 // any workstream"* — a feed, not a directory listing, which is why it is what the
 // browser opens on.

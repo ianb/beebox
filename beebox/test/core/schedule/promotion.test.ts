@@ -4,7 +4,7 @@
 // boxholder asked for (`requested-by: boxholder`) that could not run: the first
 // tick of the episode sends one `loud` notification and latches
 // `alertedFor: skipped:<reason>`; later ticks in the same episode send nothing;
-// a run clears the latch. See docs/implemented-plans/notifications.md (Track E) and
+// a run clears the latch. See plan:notifications (Track E) and
 // `src/core/schedule/promotion.ts`.
 
 import { test } from "tap";

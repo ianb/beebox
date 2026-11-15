@@ -4,7 +4,7 @@
  * every decision without running Docling.
  *
  * Measurements and the reasons for each choice: D18 in
- * `docs/plans/scanner-ingest-docling-decisions.md`.
+ * `plan:scanner-ingest-docling-decisions`.
  */
 
 import * as fs from "node:fs/promises";

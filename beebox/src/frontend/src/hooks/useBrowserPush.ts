@@ -7,7 +7,7 @@
  * subscription.unsubscribe() to disable (it traps Safari into refusing a new
  * subscribe without a fresh gesture) — disabling removes the endpoint
  * server-side only, so "on" is the box's answer, not the browser's. See
- * docs/implemented-plans/web-push-notifications.md (Track E).
+ * plan:web-push-notifications (Track E).
  */
 
 import { useEffect, useState } from "react";

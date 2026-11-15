@@ -1,6 +1,6 @@
 /**
  * Syntax trees from the TypeScript 7 compiler, the only way beebox parses
- * TypeScript (`docs/implemented-plans/typescript-7.md`, Track C).
+ * TypeScript (`plan:typescript-7`, Track C).
  *
  * TypeScript 7 parses in its Go process; `@typescript/native/unstable/sync`
  * talks to that process over a pipe and returns the tree as JS objects with the

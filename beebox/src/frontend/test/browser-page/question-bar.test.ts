@@ -1,6 +1,6 @@
 // # The question bar's script, in a document
 //
-// docs/plans/shared-browser-ask.subplan.md. The script runs in a happy-dom
+// plan:shared-browser-ask.subplan. The script runs in a happy-dom
 // window with `fetch` substituted. Keys typed in the bar must not reach the
 // dashboard, which would send them to the page in the browser. A question can
 // quote a page, so its markup must show as text. Typed words must survive a

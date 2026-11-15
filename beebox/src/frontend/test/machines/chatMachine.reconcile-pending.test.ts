@@ -331,7 +331,7 @@ void test("A delivered capture is announced before the agent writes it to the tr
 // "yes" was dropped by a restart (undelivered), then "yes" was sent again and
 // delivered. The transcript's one "yes" is the second send's: the dropped copy
 // keeps its "Not delivered" face, placed where it was sent, and the delivered
-// copy retires instead of looking queued (docs/implemented-plans/chat-not-delivered.md),
+// copy retires instead of looking queued (plan:chat-not-delivered),
 // on this refresh and every later one.
 void test("A dropped send does not take a later identical send's echo", async (t) => {
   const before = userEntry("s0", "<typed>ready?</typed>");

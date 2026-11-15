@@ -103,7 +103,7 @@ void test("With auth enabled, an unauthenticated loopback POST is rejected; the 
     headers: { authorization: `Bearer ${token}` },
   });
   // messageId is required since the targeted-fetch change
-  // (docs/implemented-plans/retranscription-in-chat.md, Track 1b) — this test only
+  // (plan:retranscription-in-chat, Track 1b) — this test only
   // exercises the bearer wall, so any id works; no tab answers → 504.
   const audio = await ctx.request({
     method: "POST",

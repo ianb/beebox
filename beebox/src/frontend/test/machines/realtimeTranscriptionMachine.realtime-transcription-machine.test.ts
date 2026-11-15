@@ -2,7 +2,7 @@
 //
 // `realtimeTranscriptionMachine` (`machines/realtimeTranscriptionMachine.ts`)
 // separates the recording from the live transcription socket
-// (`docs/plans/resilient-voice-recording.md`, Track 3). Once the actor reports
+// (`plan:resilient-voice-recording`, Track 3). Once the actor reports
 // `MIC_LIVE`, audio is staging to the box, and the live socket is a preview that
 // may come and go: `recordingLocal` is "recording, no live text". Only a lost
 // microphone is bounded by a window, because only then does audio stop.

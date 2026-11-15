@@ -1,7 +1,7 @@
 // # The browsable-path index and quick-open matching (src/server/main/file-index.ts)
 //
 // Quick-open is the affordance that has to survive the consolidation
-// (`docs/plans/general-browser.md`, Track 3). Replacing several reading surfaces
+// (`plan:general-browser`, Track 3). Replacing several reading surfaces
 // with one is only an improvement if finding things gets *easier*; a browser
 // without it would trade five surfaces for one worse one.
 //

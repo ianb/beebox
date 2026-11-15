@@ -9,7 +9,7 @@ import { addSubscription, endpointsForBox, removeEndpointFromBox } from "../../.
  * server-level store under this box's slug; `disable` removes it from this box
  * (server-side only — never client-unsubscribe, which traps Safari into refusing
  * a new subscribe without a fresh gesture). See
- * docs/implemented-plans/web-push-notifications.md (Track E).
+ * plan:web-push-notifications (Track E).
  */
 
 const SubscriptionInput = z.object({

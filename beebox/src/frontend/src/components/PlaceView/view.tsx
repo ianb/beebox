@@ -3,20 +3,20 @@
  *
  * A person who opens a landmark card is visiting the place, so the front shows
  * what the place holds instead of its configuration: its intention, when it
- * has one and the person has not hidden it (docs/implemented-plans/place-intention.md,
+ * has one and the person has not hidden it (plan:place-intention,
  * Track B), the place summary (the card's body), its openers ("Start
  * something", where they can be sent), then its resolved links in tiers and
  * each `expand` as a group labeled in plain words. The card header already
  * shows the place's mark and label; an embed, which has no header, draws them
  * here. The fields stay under Properties
  * (`CardFacts`). See
- * docs/implemented-plans/landmark-arrival.md, Track C, and
- * docs/implemented-plans/place-shows-cards.md, Track C.
+ * plan:landmark-arrival, Track C, and
+ * plan:place-shows-cards, Track C.
  *
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
  * loading and error states; `PlacePage` renders a loaded payload. On the root
  * place it also reads `status.navStatus`, the nav badge's query, for the count
- * line under the summary (docs/implemented-plans/front-door.md, Track C).
+ * line under the summary (plan:front-door, Track C).
  */
 
 import { useContext, type ReactNode } from "react";
@@ -68,7 +68,7 @@ function SectionHeading({ children }: { children: ReactNode }) {
 /**
  * No links and no groups: say so, and offer the folder in Browse. It does not
  * claim the folder is empty: the walk skips background cards and unknown
- * types, so the folder may still hold files (docs/implemented-plans/front-door.md, Track E).
+ * types, so the folder may still hold files (plan:front-door, Track E).
  */
 function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: string; onNavigate: (target: ViewTarget) => void }) {
   const material = useMaterial(undefined);

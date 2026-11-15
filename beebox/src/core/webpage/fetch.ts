@@ -1,6 +1,6 @@
 /**
  * Get a page over plain HTTP for `bbx webpage`
- * (docs/plans/webpage-capture-tools.md).
+ * (plan:webpage-capture-tools).
  *
  * A redirect is followed only when it is the same page in another form. Any
  * other redirect stops here and goes back to the agent, which can read the

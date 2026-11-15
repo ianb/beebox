@@ -43,7 +43,7 @@ void test("boxSlug", async (t) => {
 
 // ## On a unit host the box's directory is always `box`, so the slug is its parent's
 //
-// docs/plans/per-box-units.md: `/var/lib/beebox/<slug>/box`, one home per box.
+// plan:per-box-units: `/var/lib/beebox/<slug>/box`, one home per box.
 // Found on production at the migration: every box asked for its grants as "box".
 // Off a unit host a directory named `box` is a box named "box", as before.
 void test("On a unit host the slug is the parent of a directory named box", async (t) => {

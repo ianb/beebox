@@ -5,7 +5,7 @@
  * path) as a pure move — the tick is the whole-store pass, the runner is one
  * schedule at a time.
  *
- * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track B).
+ * Design: plan:scheduled-workstreams (Track B).
  */
 
 import { loadSchedules, runIdFor, type InvalidSchedule, type ScheduleEntry } from "./schedules.js";

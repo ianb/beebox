@@ -1,7 +1,7 @@
 // # `browse-fold.ts` — the Browse compact/raw fold decision
 //
 // `foldListing(listing)` is the pure fold decision behind compact Browse
-// (`docs/implemented-plans/card-prominence.md`, Track C): what leads a directory's
+// (`plan:card-prominence`, Track C): what leads a directory's
 // listing, and what folds behind "N more". Every branch in the module doc.
 
 import { test } from "tap";
@@ -140,7 +140,7 @@ void test("Sorting is natural order within every tier", async (t) => {
 
 // ## Seeded empty folders fold behind "N more"
 //
-// `docs/implemented-plans/front-door.md`, Track D. A new box's `_content` holds the box
+// `plan:front-door`, Track D. A new box's `_content` holds the box
 // layout's template folders, all empty, and the person's first cards. The
 // cards lead in today's order; the empty template folders fold, not dimmed.
 const TEMPLATE_FOLDERS = ["inbox", "incoming", "recipes", "todos", "drive", "calendar", "chat", "reviews", "people", "places"];

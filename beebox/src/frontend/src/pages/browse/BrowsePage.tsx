@@ -59,7 +59,7 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
   // resolved link list (listed + derived + expand), which only `forDir`
   // carries. The place pill and title mark need just label/symbol, so they
   // read `identity` instead and this query no longer shares their cache
-  // entry (`docs/implemented-plans/card-prominence.md`, "Split identity from resolution").
+  // entry (`plan:card-prominence`, "Split identity from resolution").
   const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath });
   const landmark = landmarkQuery.data?.landmark ?? null;
 

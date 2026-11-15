@@ -331,7 +331,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // store holds every box's real keys, so neither "this box opted out of
         // the auth wall" nor "this box lets agent browsing act as its owner"
         // may read as "the boxholder is here" there
-        // (`docs/implemented-plans/secret-custody.md`). A box on an ISOLATED
+        // (`plan:secret-custody`). A box on an ISOLATED
         // store — every worktree box under the dev router, every test — has
         // nothing of the boxholder's to expose, and refusing browse there only
         // made the Secrets panel the one owner surface an agent could never

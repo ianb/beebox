@@ -1,6 +1,6 @@
 // # The HQ transcription job
 //
-// `runHqJob` (`docs/plans/resilient-voice-recording.md`, Track 1) concatenates a
+// `runHqJob` (`plan:resilient-voice-recording`, Track 1) concatenates a
 // voice recording's staged PCM chunks, transcribes them piece by piece, retries
 // a transient/piece-too-long failure, and persists every transition through
 // `nextVoiceState` — emitting `voice-recording-status` on the event bus each
@@ -329,7 +329,7 @@ void test("If a process restart interrupts a retrying job, runHqJob's backoff mu
 
 // ## A call recording asks for word timing and stores words on the recording's timeline
 //
-// docs/implemented-plans/chat-calls.md, Track F: the call fold places words by time, so a
+// plan:chat-calls, Track F: the call fold places words by time, so a
 // recording sealed with `call` is transcribed with word timing and each piece's
 // words shift by that piece's start (here the second piece starts at 300 s).
 void test("A call recording stores words timed across pieces", async (t) => {

@@ -58,7 +58,7 @@ export const googleAdminProcedures = {
       hasTokens: !!(tokens && tokens.refreshToken),
       // A stored refresh token that Google has since rejected — the tokens are
       // present but dead, so "Connected" would be a lie. See
-      // docs/implemented-plans/google-auth-reauth-health.md.
+      // plan:google-auth-reauth-health.
       needsReauthSince: tokens?.needsReauthSince ?? null,
       scopes: GOOGLE_SCOPES,
       enabledServices,

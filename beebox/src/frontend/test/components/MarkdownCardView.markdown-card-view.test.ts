@@ -32,7 +32,7 @@ const html = renderToStaticMarkup(
 // ## Frontmatter todos render as todos
 //
 // A card's `todos:` list renders through `TodoItem`, the same as a body todo
-// (`docs/plans/todos-ui.md`, Track 2), rather than as `text:`/`due:` rows.
+// (`plan:todos-ui`, Track 2), rather than as `text:`/`due:` rows.
 // Each entry is addressed as the collector addresses it,
 // `{ kind: "frontmatter", index }`, which is also how it finds its plate state
 // in the card's todo context. A finished agent follow-up is left out.
@@ -118,7 +118,7 @@ async function renderRecord(body: string): Promise<string> {
 //
 // A card embedded in chat has no header, so the view draws the title and the
 // type's summary line, then the body, then the field block
-// (docs/implemented-plans/place-shows-cards.md, Track B). The title shows once: it is not
+// (plan:place-shows-cards, Track B). The title shows once: it is not
 // also a row in the field block, and a body heading that repeats it is hidden.
 // A record is titled by its `name:`.
 async function renderEmbed(data: FileData): Promise<string> {

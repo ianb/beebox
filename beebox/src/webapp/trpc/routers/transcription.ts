@@ -61,7 +61,7 @@ export const transcriptionRouter = router({
    * Mint a TTL'd, usage-scoped Deepgram key for the browser. This SPENDS the
    * box's stored management key without disclosing it — the derived-credential
    * pattern — so it is logged to the secrets access log as a `mint` event
-   * (`docs/implemented-plans/secret-custody.md`, "operation surface"). Deliberately
+   * (`plan:secret-custody`, "operation surface"). Deliberately
    * uncapped (Decision 7): logged-and-visible, not throttled.
    */
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {

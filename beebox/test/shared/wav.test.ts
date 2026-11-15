@@ -1,7 +1,7 @@
 // # WAV header builder
 //
 // `buildWavHeader` is the one WAV header layout shared by the server's HQ piece
-// cutter and the frontend's whole-segment encoder (`docs/plans/resilient-voice-recording.md`,
+// cutter and the frontend's whole-segment encoder (`plan:resilient-voice-recording`,
 // #8). It must keep producing byte-identical headers to what the frontend's
 // inline builder wrote before this module absorbed it.
 

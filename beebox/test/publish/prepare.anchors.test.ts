@@ -1,6 +1,6 @@
 // A published page carries the ids a card body annotates: the same Markdoc
 // config as in-app, so a citation `card#id` works on the published copy
-// (docs/plans/knowledge-base-tools.md, Track C).
+// (plan:knowledge-base-tools, Track C).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

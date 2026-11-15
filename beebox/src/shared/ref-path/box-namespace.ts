@@ -2,7 +2,7 @@
  * The box namespace fence: whether a box-relative path lands inside an
  * underscore area (`BOX_ROOT_VOCABULARY`'s `kind: "area"` entries) — the
  * closed set every ref and HTTP surface is restricted to
- * (`docs/implemented-plans/one-root-box-layout.md` Track B).
+ * (`plan:one-root-box-layout` Track B).
  *
  * Dependency-free (only imports `box-root-vocabulary.ts`, itself a leaf) —
  * mirrored at `src/shared/box-namespace.ts` per `docs/module-map.md`'s

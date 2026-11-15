@@ -2,7 +2,7 @@
  * Content-Security-Policy for the webapp — one source of truth shared by the
  * production Fastify `onSend` hook and the Vite dev server, so the two policies
  * can't drift. See `docs/content-security-policy.md` (and the design rationale
- * in `docs/implemented-plans/app-wide-csp.md`) for why each directive is here;
+ * in `plan:app-wide-csp`) for why each directive is here;
  * every origin/scheme is traced to a real browser connection — don't add one
  * without a verified consumer.
  *

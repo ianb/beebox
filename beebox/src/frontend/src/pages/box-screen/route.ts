@@ -1,5 +1,5 @@
 /**
- * The box screen's route (docs/plans/box-screen.md, track 2), apart from its
+ * The box screen's route (plan:box-screen, track 2), apart from its
  * parent and page: no chat is mounted on it (`standalone`). The retired
  * `/quick-chat` redirects here.
  */

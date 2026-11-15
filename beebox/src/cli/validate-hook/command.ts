@@ -36,7 +36,7 @@ import { isWithin } from "../../lib/box-containment.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
- * package surface" (Track C, `docs/implemented-plans/one-root-box-layout.md`) — their
+ * package surface" (Track C, `plan:one-root-box-layout`) — their
  * first path segment, whether the edit lands on the entry itself or
  * somewhere underneath it (a file inside `node_modules/`, say). A subset of
  * the full closed vocabulary — these specifically get their own feedback
@@ -46,7 +46,7 @@ const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "packag
 
 /**
  * Root-vocabulary tripwire for the hook. Two independent checks on the
- * edited path's TOP-LEVEL segment (Track C, `docs/implemented-plans/one-root-box-layout.md`):
+ * edited path's TOP-LEVEL segment (Track C, `plan:one-root-box-layout`):
  *
  *  - Editing anywhere under an npm-namespace entry (`package.json`, a
  *    lockfile, `tsconfig.json`, `node_modules/`) always gets a nudge —

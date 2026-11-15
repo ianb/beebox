@@ -57,7 +57,7 @@ function memberRef(ctx: TrpcContext, input: z.infer<typeof memberInput>): Member
 /**
  * Mint short-lived TURN credentials: from the host's own coturn when the box is
  * granted `turn-server`, else from Cloudflare when granted `cloudflare-turn`,
- * else null. The two are never offered together (docs/plans/self-hosted-turn.md).
+ * else null. The two are never offered together (plan:self-hosted-turn).
  */
 async function mintTurn(ctx: TrpcContext): Promise<IceServer[] | null> {
   const own = await getTurnServerKey(ctx.boxRoot, { observe: true });
@@ -180,7 +180,7 @@ export const chatCallRouter = router({
   /**
    * Name the voice staging session this member is about to record into, before
    * capture starts, so the fold waits for it even if the tab closes and the
-   * staging queue uploads it later (docs/implemented-plans/chat-calls.md, Track F).
+   * staging queue uploads it later (plan:chat-calls, Track F).
    * `clockOffsetMs` is the member's real clock minus the server's at join.
    */
   registerRecording: authedProcedure

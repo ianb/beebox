@@ -1,6 +1,6 @@
 import type { SendBinding } from "@shared/chat-composer-binding.js";
 /**
- * ChatTarget — status + accept (docs/implemented-plans/input-extraction.md, chunk 3).
+ * ChatTarget — status + accept (plan:input-extraction, chunk 3).
  * Wraps today's machine/backend state into `TargetStatus`, and turns a
  * dispatched Emission into a settled `Receipt` by pairing the receipt
  * registry (`targets/receipts.ts`) with the wire assembler
@@ -34,7 +34,7 @@ type CardFields = ChatSendContext;
  * streaming/refreshing states; `disposition: "will-queue"` is the honest
  * value for `busy` — chat never interrupts a running turn on send, it
  * queues behind it. `unavailable` is part of the wider Target/status
- * vocabulary (docs/plans/input-widget.md) but chat has no session-gone
+ * vocabulary (plan:input-widget) but chat has no session-gone
  * state that produces it today, so this adapter never returns it.
  */
 export type ChatTargetStatus =

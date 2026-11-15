@@ -1,6 +1,6 @@
 /**
  * The private network namespace a unit host runs the browser host in
- * (docs/plans/shared-browser.md, Track F; verified in
+ * (plan:shared-browser, Track F; verified in
  * research/embedded-browser/linux-verification.md).
  *
  * agent-browser's dashboard, stream and Chrome debugging ports are loopback

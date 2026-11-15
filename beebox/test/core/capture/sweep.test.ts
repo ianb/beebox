@@ -223,7 +223,7 @@ void test("bbx wakeup's seal-only sweep (no runtime) seals abandoned captures bu
 
 // ## Voice sessions are invisible to the capture sweep
 //
-// A voice recording (`docs/plans/resilient-voice-recording.md`) is a different
+// A voice recording (`plan:resilient-voice-recording`) is a different
 // staging pipeline (`kind: "voice"`) with its own resume/GC path (a later chunk).
 // Whether it sits `open` and long-idle, or already `sealed`, the capture sweep
 // must never touch it — sealing it would fire `prepareCaptureSession` against a

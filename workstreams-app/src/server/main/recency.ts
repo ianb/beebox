@@ -1,5 +1,5 @@
 // What changed recently, anywhere — the browser's front door
-// (beebox/docs/plans/general-browser.md, Track 3).
+// (plan:general-browser, Track 3).
 //
 // The boxholder's rule: "a file is interesting if it has been modified
 // recently, in any workstream." That is a FEED, not a listing, and it is a

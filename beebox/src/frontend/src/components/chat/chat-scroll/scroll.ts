@@ -1,7 +1,7 @@
 /**
  * The single scroll controller for the chat message list.
  *
- * Model (docs/plans/chat-scroll-model.md): **the controller writes `scrollTop`
+ * Model (plan:chat-scroll-model): **the controller writes `scrollTop`
  * only in response to a discrete user action, plus geometric compensations for
  * changes the reader cannot see. Content growth below the reader never
  * scrolls.** Writes, exhaustively:

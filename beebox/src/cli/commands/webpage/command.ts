@@ -1,7 +1,7 @@
 /**
  * `bbx webpage save`: make or update a webpage card from a URL, from the page
  * open in the box browser, or from HTML already on disk
- * (docs/plans/webpage-capture-tools.md).
+ * (plan:webpage-capture-tools).
  *
  * It runs in the agent's shell, so a URL reaches only what `curl` could. Exit
  * codes: 0 saved, 1 failed, 3 refused, 4 a redirect the agent should read first.

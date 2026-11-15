@@ -1,6 +1,6 @@
 // When search holds back a configured area, the person sees how many matches
 // it held and the Search card stops saying "all paths"
-// (`docs/plans/knowledge-base-tools.md`, Track A).
+// (`plan:knowledge-base-tools`, Track A).
 import { test } from "tap";
 import { heldBackText, pathsBadgeText } from "../../../src/components/search/held-back.js";
 

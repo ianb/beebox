@@ -1,7 +1,7 @@
 // # The pi batch agent
 //
 // A pi run ends completed, interrupted, at a limit, or failed, and maps to the
-// same `AgentResult` the other engines return (docs/plans/pi-box-engine.md,
+// same `AgentResult` the other engines return (plan:pi-box-engine,
 // Track 4). A structured run answers through a `submit_result` tool, with one
 // follow-up when the model answers in prose. Edits the box validator rejects
 // are steered back to the model and fail the run if they still stand. pi's

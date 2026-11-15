@@ -1,6 +1,6 @@
 // # `bbx pdf save`: a PDF saved like a web page
 //
-// docs/plans/knowledge-base-tools.md, Track B. A real local HTTP server, a real
+// plan:knowledge-base-tools, Track B. A real local HTTP server, a real
 // box, and a fake Docling. A saved PDF is one commit: the card and the original
 // beside it, with the address, the hash, and the capture on the card. Bytes that
 // are not a PDF (a sign-in page with status 200) are refused and save nothing.

@@ -1,7 +1,7 @@
 // # Off-default model indicator
 //
 // The session chip shows where a chat sits against the box default — a dial whose
-// needle reads left, centre or right (`docs/implemented-plans/model-engine-policy.md`).
+// needle reads left, centre or right (`plan:model-engine-policy`).
 // The comparison is by *tier*, so it survives a model-id bump and says something
 // true across engines.
 //

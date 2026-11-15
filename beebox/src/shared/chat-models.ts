@@ -13,7 +13,7 @@ export interface ChatModelOption {
  * An OpenRouter model the box owner added in admin (`openrouterModels` in box
  * config). These bill per use, so they exist only by that act: the static
  * menu below never lists one, and a key alone offers nothing
- * (`docs/implemented-plans/openrouter-chat-models.md`).
+ * (`plan:openrouter-chat-models`).
  */
 export interface AddedModel {
   /** OpenRouter's own id, sent to it verbatim — `author/slug[:variant]`. */
@@ -64,7 +64,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
     { label: "Luna", model: MODEL_ID.luna },
   ],
   // pi has no models of its own: only the box's added OpenRouter models, and
-  // no "Default" row (docs/implemented-plans/pi-box-engine.md, Track 2).
+  // no "Default" row (plan:pi-box-engine, Track 2).
   pi: [],
 };
 

@@ -1,6 +1,6 @@
 /**
  * The replay ring for the live transcription socket
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3). It keeps the last
+ * (`plan:resilient-voice-recording`, Track 3). It keeps the last
  * `capacity` PCM frames and the point in the frame stream where live
  * forwarding stopped. A (re)connected socket is sent the frames since that
  * point, capped at the ring; anything older exists only in voice staging.

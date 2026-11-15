@@ -1,5 +1,5 @@
 /**
- * The dashboard relay (docs/plans/shared-browser.md, Track B): a Unix socket
+ * The dashboard relay (plan:shared-browser, Track B): a Unix socket
  * that forwards each connection to the dashboard's loopback port.
  *
  * On a unit host the dashboard listens inside the box's private network

@@ -6,7 +6,7 @@
  *
  * All paths are repo-relative POSIX paths with no trailing slash
  * (`beebox/src/core/chat/session/history.ts`, `beebox/src/core`).
- * Rules: docs/implemented-plans/file-layout.md; this check: file-layout.check.subplan.md.
+ * Rules: plan:file-layout; this check: file-layout.check.subplan.md.
  */
 
 export interface ImportEdge {

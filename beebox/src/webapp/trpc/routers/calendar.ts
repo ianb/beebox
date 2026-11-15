@@ -22,7 +22,7 @@ export const calendarRouter = router({
    *
    * The settings page's picker and `bbx calendar calendars` from an agent's
    * shell are the same call: the credential stays in this process either way
-   * (`docs/implemented-plans/agent-capability-delegation.md`).
+   * (`plan:agent-capability-delegation`).
    */
   available: publicProcedure.query(async ({ ctx }) => {
     const service = await googleService({

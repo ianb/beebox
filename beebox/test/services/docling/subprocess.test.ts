@@ -3,7 +3,7 @@
 // `services/docling/subprocess.ts` builds the driver's request and argv and
 // names how a run ended; `convert.py` takes the conversion locks. Memory
 // measurements and the reasons for each choice are D18 in
-// `docs/plans/scanner-ingest-docling-decisions.md`.
+// `plan:scanner-ingest-docling-decisions`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -4,7 +4,7 @@
 // card row, each item naming the todo it nests under and the headings above it.
 // This module turns that back into what a reader sees — a tree, sections, a
 // dated strip — and it is pure, so it is tested here rather than through a React
-// render (`docs/plans/todo-collection.md`, Track 4).
+// render (`plan:todo-collection`, Track 4).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

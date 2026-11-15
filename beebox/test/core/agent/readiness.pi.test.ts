@@ -1,7 +1,7 @@
 // # Readiness of a pi default
 //
 // pi runs only an added OpenRouter model chosen as the box default, with the
-// box's granted `openrouter` key (docs/plans/pi-box-engine.md, Track 2). Its
+// box's granted `openrouter` key (plan:pi-box-engine, Track 2). Its
 // readiness names the first piece missing, in the order the spawn gate checks
 // them: the default model, then the key.
 //

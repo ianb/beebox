@@ -64,7 +64,7 @@ export interface UnfiledBatch {
  * is what has to notice and act. Surfacing it to the chat agent with enough
  * context to explain or re-file matches this feature's premise: the upload
  * surface just lands bytes durably, the agent does the thinking
- * (`docs/implemented-plans/bulk-file-upload.md`).
+ * (`plan:bulk-file-upload`).
  */
 export interface StrandedBatch {
   sessionId: string;

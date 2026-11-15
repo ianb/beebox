@@ -1,5 +1,5 @@
 /**
- * pi's session files read as chat history (`docs/implemented-plans/pi-box-engine.md`,
+ * pi's session files read as chat history (`plan:pi-box-engine`,
  * Track 5), without loading pi: `SessionManager.open` parses the whole file,
  * and this reads it with the same bounded scan as Claude's JSONL.
  *

@@ -7,7 +7,7 @@
 // eviction, `isTranscribing` — goes through one predicate, `segmentCapturing`
 // (`machines/transcription-events.ts`). A check written against state names
 // would miss `recordingLocal`, where audio records with no live text
-// (`docs/plans/resilient-voice-recording.md`, Track 3).
+// (`plan:resilient-voice-recording`, Track 3).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

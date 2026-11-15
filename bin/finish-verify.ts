@@ -17,7 +17,7 @@
  * hidden; failing again is real and blocks. The `smoke` command gets no such
  * forgiveness — it boots one real box and either it works or it does not.
  *
- * See beebox/docs/plans/change-based-test-selection.md, "Revision
+ * See plan:change-based-test-selection, "Revision
  * 2026-08-25 — test economics", mechanism E2.
  */
 

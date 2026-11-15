@@ -1,7 +1,7 @@
 // # The box screen mounts no chat
 //
 // The box screen exists so a thought goes in before any chat loads
-// (docs/plans/box-screen.md, track 2). `ProductLayout` mounts the conversation
+// (plan:box-screen, track 2). `ProductLayout` mounts the conversation
 // shell for every page whose route does not declare `staticData.standalone`;
 // `useStandalonePage` (`main/standalone-page.ts`) is that check. This test builds
 // a router from the box screen's real route options (`pages/box-screen/route.ts`) and the real page, with a

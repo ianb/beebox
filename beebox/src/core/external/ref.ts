@@ -1,6 +1,6 @@
 /**
  * Resolve `file:` URLs to on-disk paths and compute version markers for the
- * commentary surface's live wrapper (see `docs/plans/box-commentary-surface.md`
+ * commentary surface's live wrapper (see `plan:box-commentary-surface`
  * Track B). **Dev-only** — the route that exposes this is mounted only behind a
  * dev flag; the boxholder already runs agents with full machine read access, so
  * the allowlist + realpath guard here is hygiene (keep the route's intent

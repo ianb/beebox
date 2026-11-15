@@ -1,6 +1,6 @@
 // # VoiceIntent — the pure submit-to-emission mapping
 //
-// `buildVoiceSubmitEmission` (docs/plans/input-extraction.md, chunk 5) is the
+// `buildVoiceSubmitEmission` (plan:input-extraction, chunk 5) is the
 // pure piece of `runKeywordSend`'s submit logic: given the composer context
 // frozen at keyword-fire time (`priorInput`, `selectionsSnapshot`, and the
 // pending image/file attachment snapshots) and the final committed text
@@ -210,7 +210,7 @@ void test("A real Deepgram capture — even one where every word cleared the thr
 //
 // `prepareVoiceSubmitEmission` builds the dispatched emission from the realtime
 // emission staged when the segment ended and the HQ wait's outcome
-// (`docs/plans/resilient-voice-recording.md`, Track 4). The id and the frozen
+// (`plan:resilient-voice-recording`, Track 4). The id and the frozen
 // composer context never change: text typed into the composer during the wait
 // belongs to the next message.
 void test("prepareVoiceSubmitEmission builds the dispatched emission from the realtime e...", async (t) => {
@@ -253,7 +253,7 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
   // The live pass fired the send on its keyword. When the HQ text writes the
   // command in words the spotter does not match, the HQ text is kept as it came
   // back, and the tag is appended with `heard="live"` — not both transcripts. The
-  // agent reads the trailing words for sense (docs/plans/hq-always.md):
+  // agent reads the trailing words for sense (plan:hq-always):
 
   t.check(
     prepareVoiceSubmitEmission({
@@ -346,7 +346,7 @@ void test("Recorded wholly while live text was paused, a segment has no realtime
 
 // ## Manual stop-and-send HQ routing (empty `matchedPhrase`)
 //
-// A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk 2 — the
+// A manual stop-and-send (plan:hq-dictation-switch, chunk 2 — the
 // desktop/mobile Send button) synthesizes a
 // "submit" intent with `matchedPhrase: ""`: nothing was spoken to match, unlike
 // a real keyword-fire. When the HQ pass finds no keyword in its own result

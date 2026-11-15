@@ -1,7 +1,7 @@
 // # TypeScript imports rule
 //
 // `typescriptImportsRule` keeps the TypeScript compiler behind
-// `src/lib/typescript/` (`docs/implemented-plans/typescript-7.md`, Track C): no other module
+// `src/lib/typescript/` (`plan:typescript-7`, Track C): no other module
 // or `.test.ts` imports `typescript`, `@typescript/native`, or a subpath of
 // either, type-only imports included, in the package named `beebox`. The fixture is a real package scanned from disk, so import resolution is the scanner's.
 

@@ -1,6 +1,6 @@
 // # The pinned dashboard bundle still has the shape the rewrite expects
 //
-// docs/plans/shared-browser.md, Track C ("What will hold this after it ships")
+// plan:shared-browser, Track C ("What will hold this after it ships")
 // and the Failure-modes row on rewrite drift. Starts the real pinned
 // agent-browser dashboard on a temp socket directory, fetches the page and
 // every `/_next/static` script and stylesheet it names, and checks two things:

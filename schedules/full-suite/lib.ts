@@ -8,7 +8,7 @@
  * failure, where a binary search steps next, what an issue file says — are the
  * parts that must be right at 03:00, and none of them need a checkout to test.
  *
- * Design: beebox/docs/plans/change-based-test-selection.md, revision
+ * Design: plan:change-based-test-selection, revision
  * 2026-08-25, mechanism D.
  */
 

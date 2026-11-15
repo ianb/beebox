@@ -6,7 +6,7 @@
 // running source alone. `ensurePackageDocs()` writes them into
 // `<packageRoot>/box-docs/` when the content fingerprint on disk differs, so a
 // box never carries a copy and the docs can never lag the engine that reads them.
-// Design: `docs/plans/box-docs-in-package.md`.
+// Design: `plan:box-docs-in-package`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

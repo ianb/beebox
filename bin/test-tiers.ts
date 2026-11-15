@@ -8,7 +8,7 @@
  * `.taprc`'s includes and runs everything. So the ledger wrapper, already in
  * front of every tap invocation, builds the argv itself.
  *
- * See beebox/docs/plans/change-based-test-selection.md, mechanism C.
+ * See plan:change-based-test-selection, mechanism C.
  */
 
 import { globSync, readFileSync, existsSync, statSync } from "node:fs";

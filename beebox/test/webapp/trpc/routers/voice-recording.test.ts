@@ -1,7 +1,7 @@
 // # `voiceRecording` tRPC procedures: status, claim, fallBack
 //
 // The client half of the voice-recording handoff
-// (`docs/plans/resilient-voice-recording.md`, Track 1). `status` is read-only
+// (`plan:resilient-voice-recording`, Track 1). `status` is read-only
 // ground truth for the pending bubble; `claim`/`fallBack`
 // apply one event through the same `nextVoiceState` machine the HQ job and
 // finalize route already drive — this router adds no side effect beyond that one

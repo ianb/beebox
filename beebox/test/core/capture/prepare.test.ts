@@ -622,7 +622,7 @@ void test("A card that fails validation must not leave orphaned uncommitted file
 //
 // Post-annex boxes gitignore the whole capture staging attach scope
 // (`**/tmp-capture/**/*.attach/**` — staging media joins the annex only when an
-// agent files it, see `docs/plans/asset-annex.md`). `git add` then stages nothing
+// agent files it, see `plan:asset-annex`). `git add` then stages nothing
 // from the attach directory, and a commit pathspec naming it would fail with
 // "pathspec did not match any file(s) known to git" — the 2026-08-03 production
 // incident: every capture wedged in `preparing` and the client retried forever.

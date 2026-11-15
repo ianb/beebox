@@ -10,7 +10,7 @@
  *
  * Every dependency with a side effect is injected (timers, the evaluation
  * child, delivery, presence, the clock), so the unit tier runs it with fake
- * timers and a fake child. See docs/implemented-plans/activity-triggers.md, Track C.
+ * timers and a fake child. See plan:activity-triggers, Track C.
  */
 
 import { readActivity } from "../../activity/log.js";

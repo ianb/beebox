@@ -1,6 +1,6 @@
 // # Model policy on pi: added models only, no tier table
 //
-// pi has no models of its own (docs/plans/pi-box-engine.md, Track 2). Each
+// pi has no models of its own (plan:pi-box-engine, Track 2). Each
 // resolver that would otherwise ask the tier table answers from the box's
 // added OpenRouter list and its two slots, or answers `null` so the run
 // refuses. None of them reaches `resolveProcedureModel`, whose invariant

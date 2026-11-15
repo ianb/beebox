@@ -13,7 +13,7 @@
  * failure counts into failure rates, and a denominator is free to collect now
  * and impossible to reconstruct later.
  *
- * See beebox/docs/plans/change-based-test-selection.md, Track 5.
+ * See plan:change-based-test-selection, Track 5.
  */
 
 import { createHash } from "node:crypto";

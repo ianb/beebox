@@ -4,7 +4,7 @@
 // each send's message id, and an optimistic copy's uuid is that id. Pairing by
 // text instead matches two identical sends crosswise; when only one of them was
 // dropped, the wrong bubble says "Not delivered"
-// (`docs/implemented-plans/chat-not-delivered.md`, plan review).
+// (`plan:chat-not-delivered`, plan review).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

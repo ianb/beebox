@@ -1,6 +1,6 @@
 /**
  * Pure decision core for the voice-staging upload queue
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 2). No I/O: it decides
+ * (`plan:resilient-voice-recording`, Track 2). No I/O: it decides
  * what the drainer should do next given the current ops and the outcome of
  * whatever it last tried, and every branch is reached by
  * `src/frontend/test/lib/audio/voice-staging-queue-core.test.ts`. The impure
@@ -44,7 +44,7 @@ export interface VoiceFinalizeOp {
   chunkCount: number;
   emissionId: string | null;
   hq: { emissionId: string; sessionId: string | null } | null;
-  /** Set for a call recording, which sends `hq: null` (docs/implemented-plans/chat-calls.md, Track F). */
+  /** Set for a call recording, which sends `hq: null` (plan:chat-calls, Track F). */
   call?: VoiceCallLink;
 }
 

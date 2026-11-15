@@ -6,7 +6,7 @@
  * (per the plan, later tracks) the frontmatter `todos:` Zod shape, the
  * collector, the CLI, and the React rendering components. Kept here, once,
  * so the enum and its defaults aren't restated at each of those sites
- * (types-are-structure — see `docs/implemented-plans/todo-annotation.md`).
+ * (types-are-structure — see `plan:todo-annotation`).
  *
  * **Pure TypeScript only.** No React, no `fs`/Node-only APIs, no DOM
  * imports — both tsconfigs (backend + frontend) include this directory.
@@ -181,7 +181,7 @@ export interface TodoValidationError {
 
 /**
  * The `recheck` value that retires a todo from the todo-review sweep for good
- * (`docs/implemented-plans/todos-ui.md`, Track 7). Any other `recheck` is an ISO date.
+ * (`plan:todos-ui`, Track 7). Any other `recheck` is an ISO date.
  */
 export const RECHECK_NEVER = "never";
 

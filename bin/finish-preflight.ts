@@ -11,7 +11,7 @@
  * Exit: 0 sheet printed, 2 wrong place / broken private mount / bad arguments,
  * 3 merge conflict.
  *
- * See beebox/docs/plans/change-based-test-selection.md, "Revision
+ * See plan:change-based-test-selection, "Revision
  * 2026-08-25 — test economics", mechanism E2.
  */
 

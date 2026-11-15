@@ -224,8 +224,11 @@ The `issue` value is the path under `issues/`, URL-encoded. Add
 
 Issue basenames must be unique across the tree; duplicates fail doc-check.
 Move or rename with `bin/doc-move` and close with `bin/issues close`: both
-rewrite every reference to the moved file, print each one, and print
-`check by hand` for anything they cannot rewrite.
+rewrite every reference to the moved file, link labels and prose paths
+included, and print each one. A reference two files could answer to refuses
+the move before anything changes. Neither stages: run the printed `git add`
+line for each repository; a file listed as already holding other changes is
+staged by hunk.
 
 ## Deferred items
 

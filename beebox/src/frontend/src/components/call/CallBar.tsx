@@ -1,5 +1,5 @@
 /**
- * The call bar in the chat's status banners (docs/implemented-plans/chat-calls.md,
+ * The call bar in the chat's status banners (plan:chat-calls,
  * Track D). Reads this tab's call and the chat's call as presence reports
  * it, rings while a call rings here (every few seconds, for up to 20 s), and
  * wires the controls to the call engine.

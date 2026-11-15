@@ -1,6 +1,6 @@
 /**
  * OpenRouter models on the claude engine — the one OpenRouter use that needs
- * an owner act in admin (`docs/implemented-plans/openrouter-chat-models.md`).
+ * an owner act in admin (`plan:openrouter-chat-models`).
  *
  * `core/openrouter.ts` routes optional services through a granted key with no
  * configuration, because they cost cents. A chat or agent turn is a different
@@ -65,7 +65,7 @@ class OpenRouterSetupError extends ProviderSetupError {
 
 /**
  * A pi run with no model to run. pi has no default of its own: the box must
- * choose one of its added models (docs/implemented-plans/pi-box-engine.md, Track 2).
+ * choose one of its added models (plan:pi-box-engine, Track 2).
  */
 export function piModelMissing(): ProviderSetupError {
   return new OpenRouterSetupError(

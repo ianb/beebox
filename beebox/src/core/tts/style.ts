@@ -1,6 +1,6 @@
 /**
  * Where a backend's style direction goes — the pure decision at the centre of
- * multi-backend TTS (`docs/plans/tts-backend-selection.md`, Track 3).
+ * multi-backend TTS (`plan:tts-backend-selection`, Track 3).
  *
  * The boxholder writes style direction once, on the personality card's
  * `speaking-voice.instructions`. Every backend takes it somewhere different,

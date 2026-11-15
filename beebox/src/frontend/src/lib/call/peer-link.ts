@@ -41,7 +41,7 @@ export interface PeerLinkOptions {
 /**
  * A debug switch for checking the relay end to end: with
  * `localStorage["bbx.call.forceRelay"] = "1"` a page uses only relay candidates,
- * so a call connects only through TURN (docs/plans/self-hosted-turn.md).
+ * so a call connects only through TURN (plan:self-hosted-turn).
  */
 function iceTransportPolicy(): RTCIceTransportPolicy {
   try {

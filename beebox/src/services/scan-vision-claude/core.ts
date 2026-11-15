@@ -4,7 +4,7 @@
  * reactor uses (no per-deployment API key).
  *
  * Shape of every call (measured configuration — see
- * `docs/plans/scan-vision-claude.md` and `scratch/model-comparison/REPORT.md`):
+ * `plan:scan-vision-claude` and `scratch/model-comparison/REPORT.md`):
  * one stateless `query()` per small batch, images inlined as base64 (the
  * file-path/Read variant measured 2× cost, 5× latency, and one lost page),
  * outline-then-capture prompting with a machine-checked slot invariant, and a

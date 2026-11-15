@@ -5,7 +5,7 @@ export type CloseButtonVariant = "plain" | "bubble";
 
 export interface CloseButtonProps {
   onClick: () => void;
-  /** DOM id. Set it to publish a `bbx-` control address (docs/plans/agent-points-at-ui.md). */
+  /** DOM id. Set it to publish a `bbx-` control address (plan:agent-points-at-ui). */
   id?: string;
   /** Accessible label. Default `"Close"`. Override for specifics ("Dismiss error", "Close preview"). */
   label?: string;

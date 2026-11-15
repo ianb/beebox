@@ -5,7 +5,7 @@
  * `run` reads their unread spans and writes title / `contains` /
  * `contains-evidence` back to each husk card.
  *
- * See docs/implemented-plans/chat-review.md.
+ * See plan:chat-review.
  */
 
 import { Command } from "commander";

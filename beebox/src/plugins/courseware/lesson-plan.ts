@@ -20,7 +20,7 @@
  * as the sibling `*.concept-map.card` — no optional ref that silently no-ops
  * when absent.
  *
- * See docs/implemented-plans/courseware-lesson-plan.md.
+ * See plan:courseware-lesson-plan.
  */
 
 import { body, type CardSchemaConfig } from "../../exports/cards.js";

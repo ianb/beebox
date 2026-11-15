@@ -1,7 +1,7 @@
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
  * The `PlacePill`'s landmark menu — the app bar's activity switcher
- * (docs/implemented-plans/top-nav-ia.md Track C1, reshaped by docs/plans/box-screen.md
+ * (plan:top-nav-ia Track C1, reshaped by plan:box-screen
  * track 3). Split out of PlacePill.tsx to keep both files under the line cap,
  * mirroring `VoiceChip-panels.tsx`.
  *
@@ -66,7 +66,7 @@ interface SwitchMenuProps {
 /**
  * The box row is a plain document navigation to the box screen, not a router
  * link: in a browser it loads the web box screen, and the native shell
- * intercepts it to show its own (docs/plans/box-screen.md, track 4).
+ * intercepts it to show its own (plan:box-screen, track 4).
  */
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
@@ -90,7 +90,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
       </MenuItem>
       <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)}>
         <span className="block">Find a landmark</span>
-        {/* The glossary's gloss, where a newcomer first meets the word (docs/implemented-plans/front-door.md, Track E). */}
+        {/* The glossary's gloss, where a newcomer first meets the word (plan:front-door, Track E). */}
         <Text as="span" size="xs" tone="muted" className="block">the places you jump to most</Text>
       </MenuItem>
       <MenuDivider />

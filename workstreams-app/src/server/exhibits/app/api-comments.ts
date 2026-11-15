@@ -1,4 +1,4 @@
-// Comments from an exhibit page (docs/implemented-plans/exhibit-comments.md).
+// Comments from an exhibit page (plan:exhibit-comments).
 //
 // POST /api/<ws>/<exhibit>/comments writes one remark to the comment store,
 // addressed to the exhibit's workstream, through the same `bin/comments` the

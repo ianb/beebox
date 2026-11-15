@@ -128,7 +128,7 @@ void test("A voice send with an image, a file, a selection and word timings is s
 // ## A voice send waiting on HQ survives a reload as a visible, unsent item
 //
 // `prepare` with a `recordingId` marks a voice send that is waiting for its HQ
-// transcript (`docs/plans/resilient-voice-recording.md`, Track 4). A reload
+// transcript (`plan:resilient-voice-recording`, Track 4). A reload
 // keeps it as `awaitingHq` rather than `recovered`: the recording and its HQ job
 // are on the box, and the user chooses which text to send. Loading never sends
 // it. A `preparing` row without a recording keeps the old recovered path.
@@ -152,7 +152,7 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
     { emission: voice("plain"), binding: chatBinding, status: "recovered", reason: INTERRUPTED },
   ]);
 
-  // A row saved before every send got the HQ pass (docs/plans/hq-always.md) may
+  // A row saved before every send got the HQ pass (plan:hq-always) may
   // still hold an `hqFallback` marker on disk, `true` or the older
   // `"pending"`/`"failed"`. It loads, and the marker is dropped: a voice emission
   // without `hqText` is live text either way.

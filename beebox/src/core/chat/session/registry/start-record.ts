@@ -93,7 +93,7 @@ export async function recordSessionStart(
     log("session-start", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);
   }
 
-  // Husk card for the session (docs/plans/chat-husks.md) — the box-side noun
+  // Husk card for the session (plan:chat-husks) — the box-side noun
   // for this chat. Its own catch: a husk failure never blocks chat.
   try {
     await ensureChatHusk(boxRoot, {

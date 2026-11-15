@@ -61,7 +61,7 @@ export interface HealthReport {
 }
 
 /**
- * The host's call relay (docs/plans/self-hosted-turn.md): whether the master
+ * The host's call relay (plan:self-hosted-turn): whether the master
  * store holds `turn-server`, coturn's unit state, and its package version.
  */
 export interface RelayReport { configured: boolean; state: string; version: string | null }

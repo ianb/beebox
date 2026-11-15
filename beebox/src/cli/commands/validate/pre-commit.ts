@@ -6,7 +6,7 @@
  * scan, unlisted-binary walk). Each invocation paid the full CLI startup floor
  * (~0.7s) for ~0.05–0.15s of actual work, and commit duration is also git-lock
  * hold duration for a box, so the boots dominated every commit. See
- * `docs/plans/commit-performance.md`.
+ * `plan:commit-performance`.
  *
  * The three checks keep their individual semantics, with one deliberate change
  * each to the box-wide passes:

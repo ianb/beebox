@@ -11,7 +11,7 @@
  *
  * The mac-app check is `swift build` until mac-app/ has a Tests/ directory,
  * then `swift test`. The simulator is chosen from `simctl`, never by name.
- * Plan: beebox/docs/plans/mac-app-shell.md, section B.
+ * Plan: plan:mac-app-shell, section B.
  */
 
 import { spawn } from "node:child_process";

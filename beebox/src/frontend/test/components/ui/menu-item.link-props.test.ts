@@ -2,7 +2,7 @@
 //
 // The session rows link to `/<box>/chat` with a `search` (the session and, for
 // a search hit, the message anchor), a `title`, and a `data-bbx-source` tag
-// (docs/implemented-plans/ui-primitives-dedup.md, Track 7, "MenuItem links and actions").
+// (plan:ui-primitives-dedup, Track 7, "MenuItem links and actions").
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

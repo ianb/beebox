@@ -99,7 +99,7 @@ export const historyRouter = router({
       const greps = input.filter ? buildGreps(input.filter) : [];
       let historyPath: string | undefined;
       if (input.filter?.path !== undefined) {
-        // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+        // Display-form leak (plan:display-path-guard.subplan): a
         // boxholder display-form path (`Config:box.json`) has no history
         // under that spelling, and would otherwise just silently filter to
         // an empty result — checked before the tolerant-form normalization

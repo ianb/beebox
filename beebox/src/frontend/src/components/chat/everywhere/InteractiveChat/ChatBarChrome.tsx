@@ -1,5 +1,5 @@
 /**
- * The chat's contribution to the unified app bar (docs/implemented-plans/top-nav-ia.md
+ * The chat's contribution to the unified app bar (plan:top-nav-ia
  * Track C2), replacing the old chat header row.
  *
  * Three publications, no rendered output of its own:
@@ -89,7 +89,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   // The same landmark lookup the retired ContextChip made — react-query
   // dedupes it with the pill's own `identity` call for the same dir. Only
   // the label is needed here, so `identity` (not `forDir`'s full resolved
-  // link list) is the right query — `docs/implemented-plans/card-prominence.md`, "Split
+  // link list) is the right query — `plan:card-prominence`, "Split
   // identity from resolution".
   const { data: landmarkData } = trpc.landmarks.identity.useQuery(
     { dir: contextDir ?? "" },
@@ -104,7 +104,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   useAppBarPlace(transcriptVisible ? { dir: contextDir, label } : null);
   // The here (folder) menu's body, with the session's "Recent files ›". A
   // chat whose directory has no landmark has no folder half, so no Recent
-  // files row (docs/plans/box-screen.md, failure modes).
+  // files row (plan:box-screen, failure modes).
   useAppBarHereMenuClaim(transcriptVisible);
 
   const { chipSlot, hereSlot } = useAppBarSlots();

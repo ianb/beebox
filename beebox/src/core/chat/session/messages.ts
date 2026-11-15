@@ -313,7 +313,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
  *
  * A run on a third-party model (GLM, an added OpenRouter model) loses its
  * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
- * OpenRouter spend 5–20× when measured (`docs/implemented-plans/openrouter-chat-models.md`,
+ * OpenRouter spend 5–20× when measured (`plan:openrouter-chat-models`,
  * Track 1 (h)). No figure is better than a wrong one; the real spend is the
  * provider's own. A native backend's result (pi) carries its own harness's
  * figure and keeps it.

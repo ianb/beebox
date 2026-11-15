@@ -5,7 +5,7 @@
 // is bound to its SW registration, not a box). `sendPush` delivers to the
 // endpoints opted into a box and prunes any the push service reports gone —
 // pruning removes the endpoint from *every* box at once. See
-// `docs/plans/web-push-notifications.md` (Track B).
+// `plan:web-push-notifications` (Track B).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

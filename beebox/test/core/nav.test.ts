@@ -1,6 +1,6 @@
 // # Nav card resolution
 //
-// `nav.card` at the box root drives the top navigation (docs/implemented-plans/nav-card.md).
+// `nav.card` at the box root drives the top navigation (plan:nav-card).
 // `resolveNav` loads and validates it: `absent` means "the box has no custom nav
 // section" (the app bar's switch menu is builtin and shows regardless), `invalid`
 // means the same plus a health warning, `ok` carries render-ready entries plus

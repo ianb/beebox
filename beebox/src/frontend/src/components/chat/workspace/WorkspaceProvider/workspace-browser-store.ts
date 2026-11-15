@@ -55,7 +55,7 @@ export function createWorkspaceBrowserStoreWithStorage({
   let state = createEmptyWorkspaceState();
   let identity = "";
   let adoption: WorkspaceStoreAdoption | null = null;
-  // Arrival candidate (docs/implemented-plans/landmark-arrival.md, Track D): the selected
+  // Arrival candidate (plan:landmark-arrival, Track D): the selected
   // conversation had no saved arrangement in this tab. Cleared once taken, on
   // adoption, on any card action, and on any interaction with the chat pane.
   let arrivalCandidate = false;

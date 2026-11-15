@@ -6,7 +6,7 @@
  * Why this exists: missing prerequisites fail silently (git-lfs filters:
  * `.husky/post-commit` degrades with `|| true`) or opaquely (a missing/expired
  * Claude login surfaces as an unhelpful SDK stream failure). This is the rail
- * beside the install path — read `beebox/docs/plans/installation-story.md`
+ * beside the install path — read `plan:installation-story`
  * Track B for the design discussion, including why this is a small root
  * script rather than a shared check-framework library (health.ts, the run-path
  * preflight, and this doctor each have their own right-sized shape).
@@ -34,7 +34,7 @@
  *     production disk truncated every large response with nothing saying so.
  *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
  *     the `com.beebox.schedules` launchd job is loaded — the anti-silence
- *     check for beebox/docs/implemented-plans/scheduled-workstreams.md.
+ *     check for plan:scheduled-workstreams.
  *   - The frontend build output exists (`beebox/src/frontend/dist`,
  *     Vite's `build.outDir`), else "run `pnpm --dir beebox
  *     build:frontend`".

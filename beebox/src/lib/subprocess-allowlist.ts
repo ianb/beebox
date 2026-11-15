@@ -14,7 +14,7 @@ import { inheritedCredentials } from "./credential-env.js";
  * `CHILD_ENV_ALLOWLIST` one level down: the hub refuses to spread its env
  * into a box's `bbx serve` child, and this refuses to spread that child's env
  * into the box's own agents, scripts, and tricks (Track 1 of
- * `docs/implemented-plans/secret-custody.md`).
+ * `plan:secret-custody`).
  *
  * This used to be `{ ...process.env }` minus four names. A denylist only ever
  * withheld the secrets someone remembered to name — every connector credential
@@ -125,7 +125,7 @@ const SCRIPT_ENV_PLAIN: readonly string[] = [
  * The connector credentials themselves used to be listed here too, which meant
  * an arbitrary `runs:` command inherited every connector key on the machine.
  * The secret-store transition closed that
- * (`docs/implemented-plans/secret-custody.md`): the readers no longer look at
+ * (`plan:secret-custody`): the readers no longer look at
  * env, so nothing is withheld by leaving the names out.
  *
  * `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` stay out for the same reason. They remain

@@ -1,5 +1,5 @@
 /**
- * The Landmarks page's filter (docs/plans/box-screen.md, track 3): the rows of
+ * The Landmarks page's filter (plan:box-screen, track 3): the rows of
  * `landmarks.list` whose label or directory contains the text, each kept with
  * its ancestor landmarks so the result reads in the same indented form as the
  * whole hierarchy. Empty text keeps every row.

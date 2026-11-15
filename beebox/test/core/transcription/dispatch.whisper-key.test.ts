@@ -4,7 +4,7 @@
 // `THINKING_OPENAI_API_KEY` from the environment directly. It goes through
 // `getOpenAiThinkingKey(boxRoot)` like its siblings — the machine secret store's
 // `openai-thinking` entry, and nothing else
-// (`docs/implemented-plans/secret-custody.md`).
+// (`plan:secret-custody`).
 //
 // `boxRoot` was already on `TranscribeAudioParams`, so nothing above changed
 // shape; a caller that omits it has no box whose grants to check, and so no key.

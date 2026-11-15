@@ -5,7 +5,7 @@
 // carries a `learning:` block targeting the scan guide — identification
 // ambiguities are where durable scanner priors surface — while the orphan-back
 // and unsure questions deliberately carry none (one-off page dispositions; see
-// `docs/plans/scan-guide-card.md`).
+// `plan:scan-guide-card`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

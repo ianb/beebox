@@ -106,7 +106,7 @@ void test("An embedded card has no header and no Properties face, so its title a
 //
 // A bodied type whose body is empty would show only "No body content" while
 // its facts sat in Properties, so its type fields go to the front instead
-// (docs/implemented-plans/place-shows-cards.md, Track B). The common fields keep their
+// (plan:place-shows-cards, Track B). The common fields keep their
 // places, and Properties' table is empty, so no field shows twice:
 void test("A bodied type whose body is empty would show only \"No body content\" while its...", async (t) => {
   t.check(splitCardFields(memo, { hasBodyField: true, bodyEmpty: true, mode: "page" }), {

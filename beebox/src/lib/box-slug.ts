@@ -5,7 +5,7 @@
  * the box's directory name — no "content dir" trap to work around (the v2
  * layout's `boxRoot` was a `content/` directory, so its basename was the
  * literal string "content" for EVERY box; that trap is gone with the
- * two-root layout — see `docs/implemented-plans/one-root-box-layout.md`).
+ * two-root layout — see `plan:one-root-box-layout`).
  *
  * Prefer the authoritative slug when you have one: a served box carries
  * `box.slug` (honouring `bbx serve --slug`) through `BoxSpec` and the tRPC
@@ -21,7 +21,7 @@ import { onUnitHost } from "./unit-host.js";
 
 /**
  * The slug a root's path names. On a unit host every box lives at
- * `<home>/box` (`docs/implemented-plans/per-box-units.md`: `/var/lib/beebox/<slug>/box`),
+ * `<home>/box` (`plan:per-box-units`: `/var/lib/beebox/<slug>/box`),
  * so the directory's own name is `box` for all of them and the slug is its
  * parent's. Found on production the day of the migration (2026-10-25): every
  * box resolved its grants under the name `box` and found none.

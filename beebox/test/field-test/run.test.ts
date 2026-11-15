@@ -2,7 +2,7 @@
 //
 // `runFieldScenario` is the whole run: box, server, operator session, and then the
 // per-item loop of pre-actions → brief → activity → debrief → quiescence → checks
-// → cleanup (`docs/implemented-plans/agent-field-tests.md`, Track 2).
+// → cleanup (`plan:agent-field-tests`, Track 2).
 //
 // The operator here is the fake chat backend — a fully scripted persona, no SDK
 // and no cost — but the box and the server are REAL, for the same reason the

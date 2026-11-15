@@ -134,7 +134,7 @@ async function restartOver(boxRoot: string, chatBackend: ChatBackend): Promise<R
 // duplicate fired then finds the volatile claim and waits. When the first request
 // is admitted and answers, both clients get its one `{turnId}`, and the message
 // is recorded once. The wait is short: the response does not wait for the
-// engine to start (`docs/implemented-plans/emission-model.md`, Track A).
+// engine to start (`plan:emission-model`, Track A).
 void test("The gate below parks the first request as it enters chatSession.send(), befor...", async (t) => {
   t.teardown(async () => {
     try {
@@ -195,7 +195,7 @@ void test("The same rule pinned at the registry it lives in.", async (t) => {
 //
 // It no longer can. The route records the message and answers `{turnId}` once
 // the session takes the turn, before the run starts
-// (`docs/implemented-plans/emission-model.md`, Track A), so by the time a spawn
+// (`plan:emission-model`, Track A), so by the time a spawn
 // fails both clients have been told — truthfully — that the box has the message.
 // The duplicate shares that `{turnId}`, and the later retry is answered
 // `deduplicated: true`: the id stays claimed, because a redelivery must not

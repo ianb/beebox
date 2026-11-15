@@ -65,9 +65,9 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
 /**
  * Which pipeline owns a staging session. `capture` (default) is the recorded
  * photo/voice-memo batch that becomes a capture-session card; `bulk` is a bulk
- * file-upload batch (`docs/implemented-plans/bulk-file-upload.md`) that becomes an
+ * file-upload batch (`plan:bulk-file-upload`) that becomes an
  * `upload-batch` card; `voice` is a chat voice recording
- * (`docs/implemented-plans/resilient-voice-recording.md`) staged as raw PCM chunks and
+ * (`plan:resilient-voice-recording`) staged as raw PCM chunks and
  * transcribed by the HQ job. Old manifests predate the field and parse as
  * `capture`.
  */
@@ -160,7 +160,7 @@ export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
 const VoiceHqRequestSchema = z.object({
   requestedAt: z.string(),
   service: z.enum(HQ_TRANSCRIPTION_SERVICES),
-  /** Null for a call recording: no composer message waits on it (docs/implemented-plans/chat-calls.md, Track F). */
+  /** Null for a call recording: no composer message waits on it (plan:chat-calls, Track F). */
   emissionId: z.string().nullable(),
   sessionId: z.string().nullable(),
 });
@@ -194,7 +194,7 @@ const StagingVoiceSchema = z.object({
   handoff: VoiceHandoffSchema,
   /**
    * Set when the recording is one member's microphone during a transcribed
-   * call (docs/implemented-plans/chat-calls.md, Track F). `firstAudioAtMs` is the device's
+   * call (plan:chat-calls, Track F). `firstAudioAtMs` is the device's
    * real wall clock (never the box's shifted clock) when its first audio
    * arrived; the call fold places words at `firstAudioAtMs + word.start`.
    */
@@ -344,7 +344,7 @@ export function isBulkSession(session: StagingSession): boolean {
 }
 
 /**
- * True for a voice-recording-pipeline session (`docs/implemented-plans/resilient-voice-recording.md`).
+ * True for a voice-recording-pipeline session (`plan:resilient-voice-recording`).
  * Written as an exhaustive switch for the same reason as {@link isCaptureSession}
  * — a future fourth kind must fail to compile here until this decides how it
  * is filtered.

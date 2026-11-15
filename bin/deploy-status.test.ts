@@ -114,7 +114,7 @@ test("healthz parsing reads the verdict, boxes, and unit states", () => {
   assert.deepEqual(down, degraded("hub /healthz did not answer (services: beebox-hub failed, beebox-scheduler active)"));
 });
 
-// docs/plans/self-hosted-turn.md: a host with the turn-server secret must have
+// plan:self-hosted-turn: a host with the turn-server secret must have
 // coturn running, or boxes hand out a relay that does not answer.
 test("the relay line says whether calls have a working relay", () => {
   const read = (text: string) => parseRelay(text);

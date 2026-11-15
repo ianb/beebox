@@ -2,7 +2,7 @@ import { boxClockShiftMs, getBoxTime } from "../../time.js";
 
 /**
  * Box time for a walk fixture's commits, as `boxGit` overrides
- * (docs/implemented-plans/walk-simulated-time.md, Track 5). Empty when the box
+ * (plan:walk-simulated-time, Track 5). Empty when the box
  * clock is real or the caller already set either date.
  */
 export function commitDateOverrides(boxRoot: string): Record<string, string> {

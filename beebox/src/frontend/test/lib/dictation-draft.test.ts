@@ -30,7 +30,7 @@ function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
 
 // ## draftKey
 //
-// One singleton slot per box (docs/plans/input-extraction.md, chunk 4) — not
+// One singleton slot per box (plan:input-extraction, chunk 4) — not
 // per session, mirroring the composer's `emissionKey`. A missing box slug falls
 // back to `default`:
 void test("One singleton slot per box (docs/plans/input-extraction.md, chunk 4) — not pe...", async (t) => {

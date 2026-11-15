@@ -3,7 +3,7 @@
 // `src/core/deepgram-key.ts` resolves the box's Deepgram *management* key — the
 // long-lived one the server spends to mint browser temp keys — from the machine
 // store's `deepgram` entry and nowhere else
-// (`docs/implemented-plans/secret-custody.md`). The transition window's in-tree
+// (`plan:secret-custody`). The transition window's in-tree
 // `_config/connectors/deepgram.secret.json` file and `BBX_DEEPGRAM_API_KEY` +
 // `BBX_DEEPGRAM_PROJECT` env pair are gone.
 //

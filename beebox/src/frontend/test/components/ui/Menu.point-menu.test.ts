@@ -1,6 +1,6 @@
 // # A menu at a point (a context menu)
 //
-// `Menu at` (docs/implemented-plans/ui-primitives-dedup.md, Track 7): a pointer open
+// `Menu at` (plan:ui-primitives-dedup, Track 7): a pointer open
 // focuses the panel and the arrow keys start from it; a keyboard open focuses
 // the first item; a press outside the panel closes it, including a press on
 // the row that opened it; a scroll outside the panel or a resize closes it;

@@ -1,5 +1,5 @@
 /**
- * A directory's todo line on its browse page (`docs/implemented-plans/todos-ui.md`,
+ * A directory's todo line on its browse page (`plan:todos-ui`,
  * Track 4): "3 todos now · 1 later · 2 done" for every card under it.
  * The list it opens can count more: it also shows todos elsewhere that link
  * into the folder, which this line skips (below), so the hover text says so.

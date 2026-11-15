@@ -1,6 +1,6 @@
 // # `POST /api/browser/exec`: the agent's commands reach the box browser, nothing else does
 //
-// docs/plans/shared-browser.md, Track C. The route accepts only the per-box
+// plan:shared-browser, Track C. The route accepts only the per-box
 // agent bearer (a person's cookie would let any page the person has open drive
 // the browser), refuses the flags that would leave the box browser with a
 // message naming the flag, starts the browser host, and returns what the host's
@@ -164,7 +164,7 @@ void test("The page route is the agent's, and reads the whole page in one evalua
   t.check((await read(agent)).status, 502);
 });
 
-// docs/implemented-plans/agent-self-view.md, Track B: the box's pass goes in before the
+// plan:agent-self-view, Track B: the box's pass goes in before the
 // agent's command, so the agent can open its own box's pages.
 void test("With an app URL, the box's pass is set before the agent's command", async (t) => {
   const prior = process.env.BBX_DEV_APP_URL;
@@ -196,7 +196,7 @@ void test("A pass the browser refuses is a note after the command's own output",
   });
 });
 
-// docs/implemented-plans/agent-self-view.md, Track C: a path starting with / is a page of this box.
+// plan:agent-self-view, Track C: a path starting with / is a page of this box.
 void test("A box path is opened as this box's page; --card refuses other screenshot arguments", async (t) => {
   const prior = process.env.BBX_DEV_APP_URL;
   process.env.BBX_DEV_APP_URL = "http://localhost:3210/wt";

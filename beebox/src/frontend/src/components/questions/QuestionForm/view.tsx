@@ -33,7 +33,7 @@ export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 
 /**
  * Where the form is shown, beyond the Questions page
- * (docs/implemented-plans/questions-beside-the-chat.md, Track B): `onAnswerInChat`, a list
+ * (plan:questions-beside-the-chat, Track B): `onAnswerInChat`, a list
  * row offers to open the question beside the chat. Beside the chat the card is
  * `QuestionBeside` (`beside.tsx`), not this form.
  */

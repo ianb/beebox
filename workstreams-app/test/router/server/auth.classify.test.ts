@@ -1,6 +1,6 @@
 // Route-shape tests for the dev router's URL classifier (`classifyRouterRoute`
 // in workstreams-app/src/router/server/auth.ts) — Track B, chunk 1 of
-// beebox/docs/implemented-plans/expose-dev-router.md. Classification is
+// plan:expose-dev-router. Classification is
 // pure over method + url, so these need none of the credential fakes the
 // authorization truth table in workstreams-app/test/router/server/auth.test.ts uses; they were split out
 // of that file to keep both under the file-length limit.

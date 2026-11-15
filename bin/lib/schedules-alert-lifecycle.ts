@@ -2,7 +2,7 @@
  * How alerts close: a schedule resolving its conditions, a person
  * acknowledging, and the one-time rewrite of records from before conditions.
  *
- * Design: beebox/docs/implemented-plans/schedule-alert-signal.md (Track A).
+ * Design: plan:schedule-alert-signal (Track A).
  */
 
 import * as fs from "node:fs/promises";

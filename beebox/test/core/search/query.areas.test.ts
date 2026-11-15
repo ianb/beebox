@@ -4,7 +4,7 @@
 // `search.areas` in `_config/box.json` names that folder an area; default
 // search leaves it out and says how many hits it held back, so the written
 // cards come first and nothing looks missing
-// (`docs/plans/knowledge-base-tools.md`, Track A). `_tmp/` is held back too,
+// (`plan:knowledge-base-tools`, Track A). `_tmp/` is held back too,
 // without a report.
 
 import { test } from "tap";

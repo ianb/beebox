@@ -1,7 +1,7 @@
 // # Todo actions — tick and "+ to chat"
 //
 // A rendered todo gets its two actions from `TodoActionsContext`
-// (`components/todo/todo-actions.ts`, `docs/plans/todos-ui.md` Track 3).
+// (`components/todo/todo-actions.ts`, `plan:todos-ui` Track 3).
 // `FileView` provides it around a card; Markdown rendered anywhere else has no
 // provider, and then the checkbox is read-only and there is no "+".
 //

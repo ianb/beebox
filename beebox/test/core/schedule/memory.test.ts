@@ -5,7 +5,7 @@
 // box HEAD at the previous run), `BBX_SINCE_TIME`, `BBX_CARRY_IN`, and two temp
 // paths, `BBX_CARRY_OUT` and `BBX_DEFER_FILE`. A sixth, `BBX_SCHEDULE_NAME`,
 // names the schedule. The cursor and the carry live in
-// the schedule's machine-local state. See docs/implemented-plans/notifications.md (Track D).
+// the schedule's machine-local state. See plan:notifications (Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -11,7 +11,7 @@
  * private topic passes it. The prompt, the husk view, and the boxholder's
  * ability to edit are the real controls.
  *
- * See docs/implemented-plans/chat-review.md § Track C.
+ * See plan:chat-review § Track C.
  */
 
 import { promises as fs } from "node:fs";
@@ -227,7 +227,7 @@ export async function applyReviewToHusk(
  * condition is absence, not staleness — and safe on every pass, because a
  * coined-id chat's husk is created before its transcript exists and only a
  * pass that reads the transcript can fill the field
- * (`docs/implemented-plans/chat-titles.md` § Track C).
+ * (`plan:chat-titles` § Track C).
  *
  * The value is the person's own opening message (the same text a live list
  * label shows quoted), not model output, so it bypasses the leak scan.

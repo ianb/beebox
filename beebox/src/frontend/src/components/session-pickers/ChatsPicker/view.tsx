@@ -3,8 +3,8 @@
  * with a New-chat button per landmark, and a trailing "Other chats" card for
  * chats bound to a directory with no landmark. Self-sufficient (fetches its
  * own data). Card-embedded only now — it serves `view: chat-picker` cards
- * (docs/plans/interface-as-cards.md); the /chats route redirects to the
- * merged Landmarks surface (docs/implemented-plans/top-nav-ia.md Track D).
+ * (plan:interface-as-cards); the /chats route redirects to the
+ * merged Landmarks surface (plan:top-nav-ia Track D).
  */
 
 import { useParams } from "@tanstack/react-router";

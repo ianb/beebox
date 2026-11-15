@@ -4,7 +4,7 @@
 // later, on the place page). A place carries its own openers under the landmark's
 // `navigation.openers`, and `landmarks.forDir` ships them on its payload, so the
 // chat reads the same request it already makes for the place's links
-// (docs/implemented-plans/landmark-arrival.md, Track B).
+// (plan:landmark-arrival, Track B).
 //
 // There is no inheritance: a place whose landmark lists no openers shows none,
 // and a directory with no landmark has no payload at all.

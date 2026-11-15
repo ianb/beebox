@@ -14,7 +14,7 @@
  * The ledger is not involved. This is the lock and nothing else.
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
- * beebox/docs/plans/change-based-test-selection.md, mechanism A.
+ * plan:change-based-test-selection, mechanism A.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";

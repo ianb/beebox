@@ -1,6 +1,6 @@
 // # The live view's WebSocket bridge caps input queued before the dashboard answers
 //
-// docs/plans/shared-browser.md, Failure modes. The bridge accepts the
+// plan:shared-browser, Failure modes. The bridge accepts the
 // person's socket at once and queues their input until the upstream stream
 // opens; a host that never comes up must not let that queue grow without
 // bound. Here the relay socket never arrives, so everything sent queues.

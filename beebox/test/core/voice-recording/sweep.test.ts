@@ -1,6 +1,6 @@
 // # Voice recording GC sweep
 //
-// `sweepVoiceSessions` (`docs/plans/resilient-voice-recording.md`, Track 1)
+// `sweepVoiceSessions` (`plan:resilient-voice-recording`, Track 1)
 // deletes a voice session's staging directory 7 days after creation if it was
 // never sealed, 7 days after it reaches a terminal handoff/HQ state, or 7 days
 // after sealing if it never becomes terminal.

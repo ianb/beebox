@@ -4,7 +4,7 @@
  * above the composer and the composer section (desktop bar + mobile typing
  * row). Presentational — every interactive bit comes in as a prop.
  *
- * The chat header row is gone (docs/implemented-plans/top-nav-ia.md Track C2): its title,
+ * The chat header row is gone (plan:top-nav-ia Track C2): its title,
  * context chip, voice chip and `⋯` menu now live in the single app bar, fed
  * by `ChatBarChrome`. `ChatView` keeps a visually-hidden `h1` so the page
  * still has a heading.
@@ -60,7 +60,7 @@ export function ChatStatusBanners(props: {
       ) : null}
 
       {/* Queued-message indicator + stop controls now live in TargetStrip
-          (docs/implemented-plans/input-extraction.md chunk 3) — the target's own status
+          (plan:input-extraction chunk 3) — the target's own status
           row, rendered by InteractiveChat-view.tsx just after this. */}
 
       {/* Active schedules */}
@@ -89,7 +89,7 @@ export function ChatStatusBanners(props: {
  * Dismissible notice for attachments dropped when a persisted emission was
  * restored — their `tmp/…` upload no longer exists (housekeeping sweeps
  * uploads after 7 days), so they're never restored silently-broken
- * (docs/implemented-plans/input-extraction.md, chunk 4). Rendered in the composer
+ * (plan:input-extraction, chunk 4). Rendered in the composer
  * region, above the attachment panels, alongside `RecoveredDictation`.
  */
 export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: () => void }) {
@@ -222,7 +222,7 @@ export function ChatView(props: {
   /**
    * A pointer, focus, or key event inside the chat pane (transcript, cards,
    * composer). The workspace uses it to cancel a pending arrival
-   * (docs/implemented-plans/landmark-arrival.md, Track D).
+   * (plan:landmark-arrival, Track D).
    */
   onPaneInteraction?: () => void;
 }) {

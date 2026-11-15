@@ -1,6 +1,6 @@
 /**
  * Waiting for a voice message's HQ transcript
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 4). A voice send with HQ
+ * (`plan:resilient-voice-recording`, Track 4). A voice send with HQ
  * seals its recording with an HQ request, then waits here, within a bounded
  * budget, for the box's HQ job. The wait ends one of three ways:
  *

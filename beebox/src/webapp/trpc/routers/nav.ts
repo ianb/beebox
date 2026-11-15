@@ -2,7 +2,7 @@
  * tRPC router for the nav card — resolves the box root's `nav.card` into
  * render-ready entries for the app bar's switch menu. The frontend treats
  * `absent`/`invalid` as "render no custom section"; the health check (not
- * this endpoint) carries the report when the card is invalid. See docs/implemented-plans/nav-card.md.
+ * this endpoint) carries the report when the card is invalid. See plan:nav-card.
  */
 
 import { router, publicProcedure } from "../procedures.js";

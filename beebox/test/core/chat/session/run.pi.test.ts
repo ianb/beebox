@@ -1,7 +1,7 @@
 // # A chat on pi
 //
 // A pi chat runs through the same `ChatSession` as Claude and Codex
-// (docs/plans/pi-box-engine.md, Track 6). Each finished assistant message
+// (plan:pi-box-engine, Track 6). Each finished assistant message
 // carries its pi session entry id, so the turn's end waits for it and an
 // immediate history read through the pi store shows it; `<chat-app>` tags in
 // the reply change the chat's features; pi's cost reaches the result. pi's

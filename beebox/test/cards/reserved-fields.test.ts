@@ -5,7 +5,7 @@
 // `reservedFieldProblems` (`src/cards/reserved-fields.ts`) reports them with
 // what to write instead. Built-in schemas are held to it here; box-local
 // schemas still load and get a health warning (`box-schema-fields`). See
-// `docs/implemented-plans/standard-card-fields.md`.
+// `plan:standard-card-fields`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

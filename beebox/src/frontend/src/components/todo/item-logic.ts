@@ -1,5 +1,5 @@
 /**
- * Pure rules behind `TodoItem` (`docs/implemented-plans/todos-ui.md`, Track 2): how a
+ * Pure rules behind `TodoItem` (`plan:todos-ui`, Track 2): how a
  * todo's words are treated, which todos a reading view leaves out, and how a
  * date chip reads. Split from the component so each rule is testable
  * without rendering (`src/frontend/test/components/todo/TodoItem.todo-item.test.ts`).

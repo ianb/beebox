@@ -8,7 +8,7 @@ import { trpc } from "../trpc.js";
 import type { Comment } from "../types.js";
 
 /**
- * Commenting on a rendered document (`docs/plans/document-comments.md`).
+ * Commenting on a rendered document (`plan:document-comments`).
  *
  * Comments are a communication medium, not a document medium: the boxholder
  * leaves a remark, an agent reads it, acts, and clears it. Nothing here

@@ -1,12 +1,12 @@
 /**
  * The quiet one-line todo summary at the top of a card or a directory
- * (`docs/implemented-plans/todos-ui.md`, Track 4). Presentational: `CardTodos.tsx` and
+ * (`plan:todos-ui`, Track 4). Presentational: `CardTodos.tsx` and
  * `DirectoryTodos.tsx` own the queries and decide what "N open" does — scroll
  * to the first open todo on a card, open the list from a directory.
  *
  * `CountsLine` is the shared part: a row of counts, where a part marked
  * `action` is a control when `actions` has an entry for its key. The root
- * place page uses it for its own line (`docs/implemented-plans/front-door.md`, Track C).
+ * place page uses it for its own line (`plan:front-door`, Track C).
  */
 
 import { Fragment, type ReactNode } from "react";

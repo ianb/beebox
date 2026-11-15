@@ -91,7 +91,7 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
   pendingQuestions: number;
   /**
    * In a chat, the questions segment shows and hides the question beside the
-   * chat (docs/implemented-plans/questions-later-and-figure-it-out.md, Track B); absent, it
+   * chat (plan:questions-later-and-figure-it-out, Track B); absent, it
    * links to the Questions page.
    */
   questionToggle?: { label: string; onToggle: () => void } | undefined;

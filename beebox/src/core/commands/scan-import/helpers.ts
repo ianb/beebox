@@ -135,7 +135,7 @@ async function normalizeScanImages(
 
 /**
  * Run all batches with sliding overlap. Retry policy (per
- * `docs/plans/scan-vision-claude.md`): `transient` errors get up to 3
+ * `plan:scan-vision-claude`): `transient` errors get up to 3
  * attempts with exponential backoff, then the batch fails; `split` errors
  * re-run as smaller overlap-preserving batches (singletons get one
  * `lastResort` re-attempt); `batch` errors fail the batch (its pages become

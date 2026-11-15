@@ -2,7 +2,7 @@
 //
 // On webapp startup, `resumeStagingSessions` re-fires preparation for any capture
 // session left `sealed`/`preparing`/`delivering` by a crash or restart, and
-// re-fires the HQ job (`docs/plans/resilient-voice-recording.md`) for any voice
+// re-fires the HQ job (`plan:resilient-voice-recording`) for any voice
 // session whose `hq.state` is `queued`/`transcribing`/`retrying`. Bulk-upload
 // sessions resume through their own path (`resumeBulkSessions`) and a voice
 // session with no HQ requested (`hq: none`) or already at a terminal state is

@@ -1,7 +1,7 @@
 // # Field-test `inject-email`, end to end (manual)
 //
 // **What this diagnoses.** The `inject-email` pre action of the field-test
-// harness (`docs/implemented-plans/agent-field-tests.md`, Track 2), across the process
+// harness (`plan:agent-field-tests`, Track 2), across the process
 // boundary it exists to cross: a fixture is appended to the run's fake-Gmail
 // state file, a REAL connector-scoped `bbx wakeup` subprocess reads it through the
 // `BBX_FAKE_GMAIL` gate, and the message becomes cards in the box.

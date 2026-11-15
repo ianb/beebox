@@ -5,7 +5,7 @@
  *
  * Results are one row per CHAT (the server folds chunk hits), each landing
  * at the matched message via `/chat?session=<id>&m=<anchor>`. Text-only
- * search by design (docs/plans/chat-search.md): labels are joined from the
+ * search by design (plan:chat-search): labels are joined from the
  * live session list when it has loaded, falling back to the indexed title.
  */
 

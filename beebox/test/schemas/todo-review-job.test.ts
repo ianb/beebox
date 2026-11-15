@@ -1,11 +1,11 @@
 // # `todo-review-job` card schema
 //
 // The compact brief the wakeup sweep used to queue for the reactor
-// (`core/todo/review-sweep.ts`). Since `docs/plans/todos-ui.md` Track 7 nothing
+// (`core/todo/review-sweep.ts`). Since `plan:todos-ui` Track 7 nothing
 // writes these cards (the todo-review procedure prints the brief instead), but
 // the schema stays so a card still pending on a box validates and drains. Each item is deliberately terse: a locator, the
 // todo's text, whichever date drove it into its set — and, since
-// `docs/plans/todo-collection.md` Track 4, where it was written.
+// `plan:todo-collection` Track 4, where it was written.
 //
 // `card` and `section` are OPTIONAL. A job card queued before those fields
 // existed is still sitting in some box's `_bookkeeping/jobs/`, and it has to

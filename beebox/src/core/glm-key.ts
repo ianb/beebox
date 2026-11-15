@@ -1,7 +1,7 @@
 /**
  * Resolve the box's GLM (Z.ai) API key — the credential behind the `glm-*`
  * agent models, which ride the claude engine against Z.ai's
- * Anthropic-compatible endpoint (`docs/plans/box-glm-provider.md`).
+ * Anthropic-compatible endpoint (`plan:box-glm-provider`).
  *
  * The key lives in the machine secret store's `glm` entry at `server` access,
  * same as every connector credential: the server resolves it and injects it

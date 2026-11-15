@@ -2,7 +2,7 @@
 //
 // A `view` card makes an interface surface addressable: its `view` field names
 // a builtin view (src/shared/named-views.ts), which the frontend renders in
-// place of the card. See docs/plans/interface-as-cards.md ("instrument cards").
+// place of the card. See plan:interface-as-cards ("instrument cards").
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

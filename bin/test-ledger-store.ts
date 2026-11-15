@@ -6,7 +6,7 @@
  * tap child, the CLI). Both halves are the same instrument — nothing here
  * branches on a record either.
  *
- * See beebox/docs/plans/change-based-test-selection.md, Track 5.
+ * See plan:change-based-test-selection, Track 5.
  */
 
 import { appendFileSync, readFileSync, existsSync } from "node:fs";

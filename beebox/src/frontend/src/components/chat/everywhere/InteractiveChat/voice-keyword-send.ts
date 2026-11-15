@@ -18,7 +18,7 @@ import type { InputStore } from "../../input-store";
 import { toastError } from "../../../ui/toast-store";
 
 export interface RunKeywordSendOpts {
-  /** The realtime keyword spotter's "submit" intent (docs/implemented-plans/input-extraction.md, chunk 5). */
+  /** The realtime keyword spotter's "submit" intent (plan:input-extraction, chunk 5). */
   intent: Extract<VoiceIntent, { kind: "submit" }>;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
@@ -43,8 +43,8 @@ export interface RunKeywordSendOpts {
  * segment's staged recording; every exit below seals it exactly once.
  *
  * Every segment with a recording is sealed with an HQ request and the send
- * waits for the box's HQ job (docs/implemented-plans/hq-always.md;
- * docs/implemented-plans/resilient-voice-recording.md, Track 4): the HQ text if it
+ * waits for the box's HQ job (plan:hq-always;
+ * plan:resilient-voice-recording, Track 4): the HQ text if it
  * arrives within the budget, otherwise the live text. A box with no usable HQ
  * key fails the job at once, so its sends fall back without a long wait. The
  * mic re-arms at once; waits run concurrently and dispatch in segment order.

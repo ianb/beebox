@@ -6,7 +6,7 @@
  * reported by a check that does not depend on reading it. The Jev budget
  * check rides along: a judgment deferred for budget is a check that did not
  * run, so a notification that did not go out. See
- * docs/implemented-plans/notifications.md (Tracks A and D).
+ * plan:notifications (Tracks A and D).
  */
 
 import * as fs from "node:fs/promises";

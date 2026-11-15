@@ -196,7 +196,7 @@ void test("Phrases with characters meaningful in XML are escaped, matching the t
 // ## A live gap marker breaks a phrase
 //
 // `[…]` in the live transcript marks words the live pass missed
-// (`docs/implemented-plans/live-gap-marker.md`). A command never matches across it: the
+// (`plan:live-gap-marker`). A command never matches across it: the
 // words on either side were not spoken together. A command after it still
 // fires, and the marker stays in the text.
 void test("[…] in the live transcript marks words the live pass missed (docs/implemented...", async (t) => {

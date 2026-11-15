@@ -1,7 +1,7 @@
 /**
  * Canonical card filename grammar, shared by backend and frontend.
  *
- * Two identity modes (docs/plans/interface-as-cards.md):
+ * Two identity modes (plan:interface-as-cards):
  *
  * - **Nominal** — `Name.<type>.card`: identity from the name.
  * - **Positional** — bare `<type>.card`: "the ‹type› of this directory";

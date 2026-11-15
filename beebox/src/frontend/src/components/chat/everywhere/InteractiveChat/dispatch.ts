@@ -4,7 +4,7 @@ import { useBoundEmission } from "../../conversation/use-bound-emission/hook";
 import type { ConversationControllerPool } from "../../conversation/controller-pool/pool";
 import type { ConversationTarget, ConversationSelection, AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
- * The one user-send funnel (docs/implemented-plans/input-extraction.md chunk 1): every
+ * The one user-send funnel (plan:input-extraction chunk 1): every
  * send site builds an Emission and lands in `dispatchEmission`, which
  * assembles the wire payload via the chat-target assembler and dispatches
  * SEND. Witness context (open card, zoomed view, time passed) is captured
@@ -132,7 +132,7 @@ export function useEmissionDispatch(opts: {
       const { images, files } = captured.attachments;
       const emission = buildVoiceSubmitEmission({
         priorInput: captured.draft.text, finalText: text, imagesSnapshot: images, filesSnapshot: files, selectionsSnapshot: captured.draft.selections, diarized: false,
-        // Fix D (docs/implemented-plans/transcript-confidence.md): the tap-send path
+        // Fix D (plan:transcript-confidence): the tap-send path
         // now carries the hook's realtime words too, same as a keyword
         // send — the interim tail (if any) simply has no words, which the
         // aligner tolerates (fail-open per word).

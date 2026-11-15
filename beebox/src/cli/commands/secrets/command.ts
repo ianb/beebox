@@ -1,6 +1,6 @@
 /**
  * `bbx secrets` — plumbing for the machine-level secret store
- * (`docs/implemented-plans/secret-custody.md`, Track 2).
+ * (`plan:secret-custody`, Track 2).
  *
  * Deliberately plumbing, not the boxholder's surface: the admin page and the
  * chat capture widget are where a person manages secrets, and they ride the

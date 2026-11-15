@@ -32,6 +32,7 @@ import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
 import { duplicateBasenames, buildBasenameLookup, buildSuffixMatcher, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
 import { frontmatterProblems } from "./frontmatter.js";
+import { fixPlanCitations, planCitationProblems } from "./plan-citations.js";
 import { describeFilePathProblem, findFilePathProblems, findMovedPathMentions, repairFilePaths, type BasenameLookup, type FilePathProblem } from "./file-paths.js";
 import { findSiteReferenceLinkProblems, referencePublishPath, SITE_DOCS_PREFIX } from "./site-reference-links.js";
 import { AGENT_DOCS_PREFIX, GENERATED_NO_SCAN, MENTION_SOURCE_RE, isFilePathExempt, isLinkScanned } from "./scan-scope.js";
@@ -156,7 +157,7 @@ function issuesUniquenessProblems(tracked: string[]): string[] {
 // HARD invariant, lexical and independent of filesystem resolution: a
 // tracked (public) file must never link into
 // private-issues/ — see src/dev/doc-check/private-link.ts and
-// docs/implemented-plans/private-issues-shadow-repo.md section I. Deliberately not fed
+// plan:private-issues-shadow-repo section I. Deliberately not fed
 // through --fix: these are never a heal-by-basename case, they must stay a
 // hard error.
 function privateLinkProblems(): string[] {
@@ -289,7 +290,7 @@ function reportAndExit(problems: string[]): void {
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
   const all = markdownFiles();
-  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all), ...siteReferenceProblems(), ...agentChangesDocProblems()];
+  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all), ...planCitationProblems({ root: MONO_ROOT, tracked: trackedFiles() }), ...siteReferenceProblems(), ...agentChangesDocProblems()];
   reportAndExit(problems);
 }
 
@@ -354,6 +355,9 @@ function runFix(): void {
   totalRewrites += pathFix.rewrites;
   filesChanged += pathFix.filesChanged;
   const missingPaths = pathFix.missing;
+  const citationFix = fixPlanCitations({ root: MONO_ROOT, tracked: everyTracked });
+  totalRewrites += citationFix.rewrites;
+  filesChanged += citationFix.filesChanged;
 
   console.log(totalRewrites > 0
     ? `\ndoc-check --fix: rewrote ${totalRewrites} link(s) across ${filesChanged} file(s).`
@@ -401,11 +405,17 @@ function runFix(): void {
   }
 
   // Fail loud on anything needing a human; rewrites alone are a success.
-  if (claudeProblems.length > 0 || issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0) process.exit(1);
+  if (claudeProblems.length > 0 || issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0 || missingPaths.length > 0 || citationFix.manual > 0) process.exit(1);
 }
 
 // `--site-reference` runs that check alone: pre-commit runs it for an engine
 // source change, which can delete a generated page without touching any doc.
-if (process.argv.includes("--fix")) runFix();
+// `--plan-citations` runs that check alone (with `--fix`, its conversion
+// alone): pre-commit runs it when a commit stages code and no Markdown.
+if (process.argv.includes("--plan-citations")) {
+  const tracked = trackedFiles();
+  if (!process.argv.includes("--fix")) reportAndExit(planCitationProblems({ root: MONO_ROOT, tracked }));
+  else if (fixPlanCitations({ root: MONO_ROOT, tracked }).manual > 0) process.exit(1);
+} else if (process.argv.includes("--fix")) runFix();
 else if (process.argv.includes("--site-reference")) reportAndExit(siteReferenceProblems());
 else runDefaultCheck();

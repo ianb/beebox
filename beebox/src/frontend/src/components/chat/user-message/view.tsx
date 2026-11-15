@@ -177,7 +177,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     currentUserName,
   });
 
-  // Live text is the exception (docs/implemented-plans/hq-always.md) and gets a static
+  // Live text is the exception (plan:hq-always) and gets a static
   // label; a late HQ result stays on the box, reachable only through
   // `bbx chat retranscribe`.
   const hqStatus = isLiveTranscriptMessage(firstEntry)
@@ -243,7 +243,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
           instead of the bubble overflowing the row. */}
       <div className="relative min-w-0">
         {/* Shared corner row: ack badges keep precedence order, audio
-            badges append after (docs/implemented-plans/retranscription-in-chat.md
+            badges append after (plan:retranscription-in-chat
             Track 3, "badge rendering"). */}
         <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
           <AckBadgeCluster acks={acks} onZoomView={onZoomView} />

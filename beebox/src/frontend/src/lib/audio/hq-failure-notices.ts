@@ -1,6 +1,6 @@
 /**
  * Persistent notices for HQ transcription failures that will not fix
- * themselves (`docs/implemented-plans/resilient-voice-recording.md`, Track 4) — e.g. a
+ * themselves (`plan:resilient-voice-recording`, Track 4) — e.g. a
  * missing OpenRouter key. One notice per `(service, code)` until the user
  * dismisses it; a dismissal is remembered per box in `localStorage`, so the
  * same failure does not nag on every message. The voice chip renders them.

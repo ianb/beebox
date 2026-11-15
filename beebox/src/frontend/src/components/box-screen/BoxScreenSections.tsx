@@ -1,5 +1,5 @@
 /**
- * The box screen's navigation sections (docs/plans/box-screen.md, track 2):
+ * The box screen's navigation sections (plan:box-screen, track 2):
  * "Pick up where you left off", "Shortcuts", and "Boxes". Each section is a
  * labelled list of links; the first recent chat is styled as the primary
  * action. The box-wide pages (Dashboard, Browse, History, Storage summary)
