@@ -115,13 +115,126 @@ function segmentsMeet(p: readonly number[], q: readonly number[]): boolean {
   return o1 !== o2 && o3 !== o4 ? true : o1 === 0 || o2 === 0 || o3 === 0 || o4 === 0;
 }
 
+/** `ring` without repeated points (a closing point equal to the first, zero-length steps). */
+function withoutRepeats(ring: readonly number[]): number[] {
+  const r: number[] = [];
+  for (let i = 0; i + 1 < ring.length; i += 2) {
+    const x = ring[i] ?? 0;
+    const y = ring[i + 1] ?? 0;
+    const n = r.length;
+    if (n === 0 || x !== r[n - 2] || y !== r[n - 1]) r.push(x, y);
+  }
+  while (r.length >= 4 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) r.length -= 2;
+  return r;
+}
+
+/** Ascending runs of `lo` in index order, a falling run reversed: each run's indices, and where each run starts. */
+function runsOf(lo: Float64Array): { ids: Int32Array; starts: number[] } {
+  const n = lo.length;
+  const ids = new Int32Array(n);
+  const starts: number[] = [];
+  let i = 0;
+  while (i < n) {
+    const s = i;
+    starts.push(s);
+    i++;
+    const falling = i < n && (lo[i] ?? 0) < (lo[i - 1] ?? 0);
+    while (i < n && (falling ? (lo[i] ?? 0) <= (lo[i - 1] ?? 0) : (lo[i] ?? 0) >= (lo[i - 1] ?? 0))) i++;
+    for (let k = s; k < i; k++) ids[k] = falling ? s + i - 1 - k : k;
+  }
+  starts.push(n);
+  return { ids, starts };
+}
+
+/**
+ * Edge indices in increasing order of `lo` (finite), by merging runs: an outline's edges, in ring order, rise and fall
+ * in a few long runs, so this is close to linear where a comparison sort was most of the check. Which of two equal
+ * values comes first is not kept: the sweep compares the same pairs either way, and whether two edges meet does not
+ * depend on their order.
+ */
+function sweepOrder(lo: Float64Array): Int32Array {
+  const n = lo.length;
+  let { ids, starts: runs } = runsOf(lo);
+  let into = new Int32Array(n);
+  while (runs.length > 2) {
+    const next: number[] = [];
+    for (let k = 0; k + 1 < runs.length; k += 2) {
+      const a0 = runs[k] ?? 0;
+      const a1 = runs[k + 1] ?? 0;
+      const b1 = runs[k + 2] ?? a1;
+      next.push(a0);
+      let p = a0;
+      let q = a1;
+      let o = a0;
+      while (p < a1 && q < b1) into[o++] = (lo[ids[q] ?? 0] ?? 0) < (lo[ids[p] ?? 0] ?? 0) ? (ids[q++] ?? 0) : (ids[p++] ?? 0);
+      while (p < a1) into[o++] = ids[p++] ?? 0;
+      while (q < b1) into[o++] = ids[q++] ?? 0;
+    }
+    next.push(n);
+    [ids, into] = [into, ids];
+    runs = next;
+  }
+  return ids;
+}
+
+/** Whether sorted edge `k` (in `e`, six numbers each: x0, y0, x1, y1, lower y, upper y) meets a later edge it may touch. */
+function meetsLater(e: Float64Array, a: { k: number; ids: Int32Array }): boolean {
+  const { k, ids } = a;
+  const n = ids.length;
+  const i = ids[k] ?? 0;
+  const ax = e[6 * k] ?? 0, ay = e[6 * k + 1] ?? 0, bx = e[6 * k + 2] ?? 0, by = e[6 * k + 3] ?? 0, top = e[6 * k + 5] ?? 0;
+  const left = Math.min(ax, bx), right = Math.max(ax, bx);
+  for (let m = k + 1; m < n; m++) {
+    if ((e[6 * m + 4] ?? 0) > top) return false;
+    const gap = Math.abs(i - (ids[m] ?? 0));
+    if (gap === 1 || gap === n - 1) continue;
+    const cx = e[6 * m] ?? 0, cy = e[6 * m + 1] ?? 0, dx = e[6 * m + 2] ?? 0, dy = e[6 * m + 3] ?? 0;
+    if (Math.min(cx, dx) > right || Math.max(cx, dx) < left) continue;
+    // As `segmentsMeet`: crossing, touching or collinear counts as meeting.
+    const o1 = Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+    const o2 = Math.sign((bx - ax) * (dy - ay) - (by - ay) * (dx - ax));
+    const o3 = Math.sign((dx - cx) * (ay - cy) - (dy - cy) * (ax - cx));
+    const o4 = Math.sign((dx - cx) * (by - cy) - (dy - cy) * (bx - cx));
+    if ((o1 !== o2 && o3 !== o4) || o1 === 0 || o2 === 0 || o3 === 0 || o4 === 0) return true;
+  }
+  return false;
+}
+
 /**
  * Whether a closed ring (flat x, y pairs) is simple: no two non-adjacent edges
  * touch or cross. A sweep down y compares each edge only with edges whose y
  * ranges overlap it. Such a ring's exact-area coverage equals its winding
- * coverage everywhere, so a clip to it can read the coverage atlas.
+ * coverage everywhere, so a clip to it can read the coverage atlas. Clip
+ * outlines change every frame, so this runs every frame: the edges are kept in
+ * flat arrays and ordered by merging their runs.
  */
 export function isSimpleRing(ring: readonly number[]): boolean {
+  const r = withoutRepeats(ring);
+  const n = r.length / 2;
+  if (n < 3) return false;
+  const lo = new Float64Array(n);
+  for (let i = 0; i < n; i++) lo[i] = Math.min(r[2 * i + 1] ?? 0, r[2 * ((i + 1) % n) + 1] ?? 0);
+  if (!r.every(Number.isFinite)) return sortedSweepSimple(r);
+  const ids = sweepOrder(lo);
+  const e = new Float64Array(6 * n);
+  for (let k = 0; k < n; k++) {
+    const i = ids[k] ?? 0;
+    const j = (i + 1) % n;
+    const ay = r[2 * i + 1] ?? 0;
+    const by = r[2 * j + 1] ?? 0;
+    e[6 * k] = r[2 * i] ?? 0;
+    e[6 * k + 1] = ay;
+    e[6 * k + 2] = r[2 * j] ?? 0;
+    e[6 * k + 3] = by;
+    e[6 * k + 4] = Math.min(ay, by);
+    e[6 * k + 5] = Math.max(ay, by);
+  }
+  for (let k = 0; k < n; k++) if (meetsLater(e, { k, ids })) return false;
+  return true;
+}
+
+/** The sweep with edges sorted by a comparison: for a ring with a non-finite coordinate, where `sweepOrder` has no order. */
+function sortedSweepSimple(ring: readonly number[]): boolean {
   // Repeated points (a closing point equal to the first, zero-length steps) are dropped first.
   const r: number[] = [];
   for (let i = 0; i + 1 < ring.length; i += 2) {
