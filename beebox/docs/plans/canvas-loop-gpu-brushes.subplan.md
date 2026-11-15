@@ -631,6 +631,68 @@ by the same WebGPU renderer.
   fresh process with a new device.
 - **Checkpoint.** Crops within the brush criteria. **Measurement:** walker
   lowering and atlas CPU ms, Node and Chromium.
+- **As built (chunk 3).** Stamp strokes are no longer expanded on the CPU:
+  the expander keeps a `StampSet` (the prepared stroke, the brush, the tint)
+  in place of a `MarkSet`, and `expandOnCpu` keeps the CPU expansion as the
+  tests' reference. Ink, bristle and smear are unchanged. Details settled here:
+  - **The box.** `prepared.box` already includes the wobble, so the mark's
+    box grows it by `width / 2 × (1 + sizeJitter / 2) + scatter × width / 2`
+    in brush space, maps the four corners by `e`, and adds 1 **device** px
+    (the dab quad's edge) after the mapping, where the plan adds `wobble + 1`
+    before it. At the extremes (scatter 10, sizeJitter 1, wobble up to 20)
+    the closest dab stays 7.8 px inside its box at ratio 1 and 15.9 px inside
+    at ratio 2. The placed-marks cache (`kept`, `m|…`) no longer holds stamps.
+  - **The pass.** The mark atlas owns the `BrushPass`. After `shelfPack`, it
+    sorts the frame's stamp marks by page and encodes them in one compute
+    pass: `samples`, then `dabs`. Each page then draws its contiguous range
+    of instances with the existing dab pipeline (`draw(6, n, 0, first)`).
+    `dabs` is a second shader module in `shader-brush.ts` (`DABS_WGSL`)
+    because binding 2 is read-write in `samples` and read-only in `dabs`.
+    Contour word 13 holds the address of a 24-word stroke record (`lin`, the
+    offset to the mark's own pixels, the slot, width, ratio, the brush
+    fields, the jitter base). Stroke records follow the keyframes. The dab
+    buffer is `STORAGE | VERTEX` and frame-temporary. Pipelines compile on
+    first use.
+  - **Tests** (`brush-pass.gpu.test.ts`) go through
+    `GpuRenderer.stampBrushes`, a verification path like `sampleBrushes`.
+    The test places each stroke as the lowering does (`stampBox`, the offset,
+    a fractional translation) and does not read the frame's own buffer;
+    parity, stability and cache equivalence cover that wiring. Dabs against
+    `linMarks` of the CPU expansion, at ratio 1 and 2:
+    - brush sheet: 2,546 dabs;
+    - focused contours: 1,049 dabs;
+    - walker frame 0: 72,655 dabs.
+
+    Largest differences: centre 4.7e-4 device px, radius 6.2e-6, alpha
+    2.6e-7. A new jitter case (`test/gpu/stamps.ts`) covers grey, wrap-around
+    hue, near white and near black, rotation and non-uniform scale, and
+    zero-pressure ends: 1,714 dabs, RGB equal, and the same 72 dabs skipped.
+    The walker frame at ratio 1 and 2 hashes the same in a child process
+    with a new device.
+  - **Pixels.** Stamps changed less than expected. Against chunk 2:
+    - the brush sheet: 9 pixels by 1/255;
+    - the smear sheet: no change;
+    - walker frames 0 and 30: 3 to 18 pixels by 1/255.
+
+    The parity crops against the frozen Skia references are unchanged at the
+    reported precision (pencil: luminance 0.08%, contrast 6.27%; chalk 0.02%
+    and 0.27%; airbrush 0.06% and 0.3%; wash 0.08% and 0.83%). No gallery
+    exercise uses the scene renderer, so gallery output does not change;
+    `gallery:check` passes. Images: `scratch/stage5/b3/{before,after,diff}`.
+  - **Measurement** (Node, Dawn on Metal, walker frames 0–59, three passes
+    after a warm-up, `scratch/stage5/b3/measure.ts`; ms per frame, median
+    and p95):
+
+    | Ratio | Lowering, before | Lowering, after | Atlas, before | Atlas, after | Both, before | Both, after |
+    |---|---|---|---|---|---|---|
+    | 1 | 29.0, 83.0 | 19.8, 71–82 | 5.36, 5.92 | 3.74, 4.20 | 34.3, 88.6 | 23.5, 75–86 |
+    | 2 | 33.1, 89.1 | 22.0–22.5, 75–83 | 6.34, 7.36 | 4.20–4.27, 24–30 | 39.3, 95.2 | 26.1–26.8, 79–89 |
+
+    The atlas p95 at ratio 2 is V8 garbage collection. On every spike frame
+    `--trace-gc` shows a Mark-Compact of 17–34 ms inside the atlas step,
+    where before it fell in lowering; the step it lands in varies, and in one
+    case it was `shelfPack`, normally 0.1 ms. The p95 of lowering plus atlas
+    together fell. Chromium was not measured; chunk 6 measures it.
 
 ### Chunk 4: ink on the GPU
 
