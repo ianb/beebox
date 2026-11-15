@@ -102,6 +102,12 @@ Backend candidates carried to Stage 3: our own WebGPU renderer; PixiJS v8 on
 WebGPU; CanvasKit (WebAssembly; WebGL backend). Also probed: Dawn (`webgpu` on
 npm) running effect shaders headless.
 
+## Checkpoint 1 decisions (2026-11-15)
+
+The boxholder accepted all thirteen behaviour changes listed in section 12 of
+`canvas-loop-scene/scene-api-draft.md` (draft 2.1), deferring to the planner on
+the ones it had no view on. Stage 2 probes draft 2.1.
+
 ## Smallest fix and budget
 
 The smallest fix for speed alone is already shipped (commit `2e0720f1a`: one

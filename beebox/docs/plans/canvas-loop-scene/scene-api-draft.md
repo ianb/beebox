@@ -1,7 +1,7 @@
 # Stage 1: the scene API, draft 2.1
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
-`canvas-loop/src/scene-draft/examples/scene-api.ts`. Example sketches that
+`canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
 type-check against them: `canvas-loop/src/scene-draft/examples/`. Nothing runs
 yet. Draft 1 (commit `882c1300e`) was reviewed by Codex (gpt-6-sol); draft 2
 replaced its informal rules with the lowering contract in section 3. Draft 2.1
