@@ -37,7 +37,9 @@ From the boxholder (2026-11-14), in their words:
    rendering)."
 2. **Art that doesn't look like lazy digital art.**
 3. **Programmatic composability and reusability.**
-4. **Speed so animation is reasonable and works.**
+4. **Speed so animation is reasonable and works.** In the browser. Headless
+   speed matters little: the boxholder, "it's probably trivial compared to agent
+   speed."
 5. **Familiar APIs that feel natural for an agent**, "API rhyming with well
    known APIs", tested the way the path form was (agents drawing with each
    candidate, `canvas-brushes.md` Track D).
@@ -65,6 +67,12 @@ Each checkpoint below names the evidence it needs under each principle.
   ("learning to balance a chemical equation") is not in its shapes. An agent
   that understands the subject writes a different accessible form; the scene
   does not try to carry semantics.
+- **The GPU is for flexibility and effects as well as speed.** The boxholder:
+  "Performance is one … goal, but flexibility and effects and such are also a
+  goal." WebGPU is in scope as a backend candidate beside WebGL2.
+- **Visual reviews use Astra** (`codex gpt-6-astra`): the boxholder rates it
+  good at visual judgement. Checkpoint exhibits get an Astra read before the
+  boxholder's.
 - **Headless fonts:** watch for wrapping differences between Skia and the
   browser; no design work until a spike shows a problem.
 
