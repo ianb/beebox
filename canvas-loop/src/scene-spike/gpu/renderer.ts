@@ -50,6 +50,15 @@ function packablesOf(jobs: readonly Job[]): { pieces: Piece[]; marks: TexMark[];
   return { pieces: [...pieces], marks, cells: [...cells] };
 }
 
+/** A submitted frame: its readback buffer (none when drawn into a target), size, and counts. */
+interface Encoded {
+  readonly read: GPUBuffer | undefined;
+  readonly width: number;
+  readonly height: number;
+  readonly bytesPerRow: number;
+  readonly stats: FrameStats;
+}
+
 export class GpuRenderer {
   readonly #gpu: GpuHandle;
   readonly #pool: TexturePool;
@@ -83,8 +92,8 @@ export class GpuRenderer {
     return { textures: this.#pool.count, bytes: this.#pool.bytes, inUse: this.#pool.inUse, images: this.#images.count, strokes: this.#expander.size };
   }
 
-  /** Lower, encode and submit one frame; the canvas is copied into `read`. Throws before submitting on a bad scene. */
-  #encode(scene: Scene, a: { ratio: number; temp: GPUBuffer[] }): { read: GPUBuffer; width: number; height: number; bytesPerRow: number; stats: FrameStats } {
+  /** Lower, encode and submit one frame; the canvas is copied into `target` when given, else into `read`. Throws before submitting on a bad scene. */
+  #encode(scene: Scene, a: { ratio: number; temp: GPUBuffer[]; target?: GPUTexture }): Encoded {
     const device = this.#gpu.device;
     this.#expander.beginFrame();
     const root = new Lowering({ colors: this.#gpu.colors, width: scene.width, height: scene.height, ratio: a.ratio, expander: this.#expander, glyphs: this.#glyphs }).lower(scene);
@@ -105,6 +114,13 @@ export class GpuRenderer {
     const width = widthOf(root.rect);
     const height = heightOf(root.rect);
     const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
+    if (a.target !== undefined) {
+      // A WebGPU canvas must be configured with format rgba8unorm and COPY_DST usage to receive the frame.
+      if (a.target.format !== "rgba8unorm" || (a.target.usage & GPUTextureUsage.COPY_DST) === 0) throw new GpuRenderError({ detail: `present needs a canvas configured with format "rgba8unorm" and COPY_DST usage; got ${a.target.format}` });
+      enc.copyTextureToTexture({ texture: out }, { texture: a.target }, [Math.min(width, a.target.width), Math.min(height, a.target.height)]);
+      device.queue.submit([enc.finish()]);
+      return { read: undefined, width, height, bytesPerRow, stats };
+    }
     const read = device.createBuffer({ size: bytesPerRow * height, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     a.temp.push(read);
     enc.copyTextureToBuffer({ texture: out }, { buffer: read, bytesPerRow }, [width, height]);
@@ -118,6 +134,23 @@ export class GpuRenderer {
    * error), its error scopes are popped and its buffers and textures freed.
    */
   async render(scene: Scene, ratio: number): Promise<Pixels> {
+    return this.#frame(scene, { ratio }, async ({ read, width, height, bytesPerRow }) => {
+      if (read === undefined) throw new GpuRenderError({ detail: "no readback buffer" });
+      await read.mapAsync(GPUMapMode.READ);
+      const src = new Uint8Array(read.getMappedRange());
+      const data = new Uint8Array(width * height * 4);
+      for (let y = 0; y < height; y++) data.set(src.subarray(y * bytesPerRow, y * bytesPerRow + width * 4), y * width * 4);
+      read.unmap();
+      return { width, height, data };
+    });
+  }
+
+  /** Render `scene` into `target` (an rgba8unorm texture, such as a WebGPU canvas's), with no readback. */
+  async present(scene: Scene, a: { ratio: number; target: GPUTexture }): Promise<void> {
+    await this.#frame(scene, a, async () => {});
+  }
+
+  async #frame<T>(...[scene, a, finish]: [Scene, { ratio: number; target?: GPUTexture }, (out: Encoded) => Promise<T>]): Promise<T> {
     const device = this.#gpu.device;
     const temp: GPUBuffer[] = [];
     let open = 0;
@@ -126,20 +159,16 @@ export class GpuRenderer {
       open++;
       device.pushErrorScope("out-of-memory");
       open++;
-      const { read, width, height, bytesPerRow, stats } = this.#encode(scene, { ratio, temp });
+      const out = this.#encode(scene, { ...a, temp });
       const errors: GPUError[] = [];
       for (; open > 0; open--) {
         const e = await device.popErrorScope();
         if (e !== null) errors.push(e);
       }
       if (errors.length > 0) throw new GpuRenderError({ detail: errors.map((e) => e.message).join("; ") });
-      await read.mapAsync(GPUMapMode.READ);
-      const src = new Uint8Array(read.getMappedRange());
-      const data = new Uint8Array(width * height * 4);
-      for (let y = 0; y < height; y++) data.set(src.subarray(y * bytesPerRow, y * bytesPerRow + width * 4), y * width * 4);
-      read.unmap();
-      this.stats = stats;
-      return { width, height, data };
+      const result = await finish(out);
+      this.stats = out.stats;
+      return result;
     } finally {
       for (; open > 0; open--) await device.popErrorScope();
       for (const b of temp) b.destroy();

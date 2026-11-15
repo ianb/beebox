@@ -129,3 +129,19 @@ starts.
   "lower": caster heights and a tone curve come next for it.
 - A look-iteration round on wash and hatching follows chunk 5, before the
   drawing round.
+
+## Chunk 5: three ports (2026-11-15)
+
+- The walker sheet, the Intra Hallway (panning, plus a wash variant) and the
+  chemistry figure ported to the draft API in `canvas-loop/src/examples/scene-ports/`.
+  Port changes were small: type imports, `paperTexture` became a group's
+  `effects.paper`, and the Hallway's sprite strip became one wide `picture`.
+- Parity with today: 99.98–99.99% (walker), 91.1% panned Hallway (crops within
+  0.3% luminance), 99.2% chemistry.
+- **Speed is the open problem.** Browser at ratio 2: walker 3.2 fps (today 5.6),
+  Hallway 1.8 fps (today 60), chemistry 60 fps. Causes found: shape coverage
+  geometry rebuilt on the CPU every frame (~85–90 ms), the room picture redrawn
+  every frame (no kept image), and one full-layer pass per clip. These are the
+  caches the draft allows and the spike has not built; a performance round
+  comes before Checkpoint 4.
+- `v.control` is a kept frame output; headless stand-ins draw above the scene.

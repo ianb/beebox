@@ -18,5 +18,6 @@ export function draw(v: View, model: { t: number }): void {
   v.curve([[10, 100], [60, 90], [110, 108]], false, { stroke: "#1d2a44", weight: 5, brush: "pencil" });
   v.place(v.picture({ key: "badge", width: 30, height: 16 }, () => v.rect(0, 0, 30, 16, { fill: "#2a9d8f" })), 120, 96);
   v.text(`t ${model.t}`, { x: 120, y: 10 }, { size: 12 });
-  v.log("t", model.t);
+  // Logs on one frame only, so the capture test can show a logged frame is captured and others are skipped.
+  if (model.t === 2) v.log("t", model.t);
 }

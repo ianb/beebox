@@ -25,7 +25,7 @@ export interface SpikeRunOptions {
   readonly sketchPath: string;
   readonly outDir: string;
   readonly frames: number;
-  /** Capture every Nth frame, plus the last and any snapshot. */
+  /** Capture every Nth frame, plus the last and frames with a snapshot or an event. */
   readonly every: number;
   readonly seed: number;
   readonly ratio: number;
@@ -82,7 +82,7 @@ class SpikeRun {
   async run(header: string): Promise<number[]> {
     const size = this.#mod.canvas ?? { width: 400, height: 300 };
     // Headless rendering is testing mode: pictures are re-recorded and compared every frame (draft section 5).
-    const recorder = new SceneRecorder(size, { text: this.#text, audit: true, seed: this.#o.seed });
+    const recorder = new SceneRecorder(size, { text: this.#text, audit: true, seed: this.#o.seed, params: { decl: this.#mod.params, values: () => this.#params } });
     const byFrame = bucketTeaByFrame(this.#o.events);
     const mouse = { x: 0, y: 0 };
     const captured: number[] = [];
@@ -90,7 +90,8 @@ class SpikeRun {
     let model: unknown = this.#call("init", [this.#util]);
     for (let frame = 0; frame < this.#o.frames; frame++) {
       let snapshot = false;
-      for (const e of byFrame.get(frame) ?? []) {
+      const events = byFrame.get(frame) ?? [];
+      for (const e of events) {
         if (e.type === "snapshot") snapshot = true;
         if (e.type === "param") this.#params = { ...this.#params, [e.name]: e.value };
         const msg = msgOf(e, mouse);
@@ -99,11 +100,14 @@ class SpikeRun {
       model = this.#call("update", [model, { type: "tick", frame }, this.#util]);
       const params = this.#params;
       const rec = recorder.record((v) => this.#call("draw", [v, model, params]));
-      for (const line of [...this.#util.logs, ...rec.logs]) this.#lines.push(`frame ${frame}: ${line}`);
+      const logs = [...this.#util.logs, ...rec.logs];
+      for (const line of logs) this.#lines.push(`frame ${frame}: ${line}`);
       for (const w of rec.warnings) this.#lines.push(`frame ${frame}: warning: ${w}`);
       this.#util.logs = [];
-      if (!(snapshot || rec.snapshots.length > 0 || frame % this.#o.every === 0 || frame === this.#o.frames - 1)) continue;
-      const px = await this.#renderer.render(rec.scene, this.#o.ratio);
+      // As today: every Nth, the last, and frames with a snapshot, an event or a log.
+      if (!(snapshot || events.length > 0 || logs.length > 0 || rec.snapshots.length > 0 || frame % this.#o.every === 0 || frame === this.#o.frames - 1)) continue;
+      // Control stand-ins draw above the scene (draft section 8, decision 9).
+      const px = await this.#renderer.render({ ...rec.scene, children: [...rec.scene.children, ...rec.standIns] }, this.#o.ratio);
       const file = `frame-${String(frame).padStart(4, "0")}.png`;
       writeFileSync(join(this.#o.outDir, file), encodePng(px));
       captured.push(frame);

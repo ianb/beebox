@@ -15,3 +15,7 @@ export { SeededRandom } from "../core/prng.js";
 export { formatArgs, formatValue } from "../core/format.js";
 export type { LogLevel, SketchHost } from "../core/types.js";
 
+// Stage 4 spike (beebox/docs/plans/canvas-loop-scene/stage4-plan.md): the draft
+// scene API's types, so ported `*-tea.ts` sketches can name them through the
+// package root, the only import the TEA lint allows. Type-only.
+export type { Picture as ScenePicture, Style as SceneStyle, View as SceneView } from "../scene-draft/scene-api.js";

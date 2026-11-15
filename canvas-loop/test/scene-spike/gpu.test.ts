@@ -86,25 +86,26 @@ const sketchPath = join(import.meta.dirname, "spike-sketch.ts");
 test("runs a draft-View sketch, renders only captured frames, and repeats exactly", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
-  const options = { sketchPath, frames: 5, every: 2, seed: 1, ratio: 1, scene: true, events: [{ frame: 3, type: "snapshot" as const }] };
+  const options = { sketchPath, frames: 7, every: 3, seed: 1, ratio: 1, scene: true, events: [{ frame: 4, type: "snapshot" as const }] };
   const a = tmpDir();
   const b = tmpDir();
-  assert.deepEqual(await runSpike({ ...options, outDir: a }, handle), [0, 2, 3, 4]);
+  // Every 3rd (0, 3, 6), the logged frame (1) and the snapshot (4); frames 2 and 5 are skipped.
+  assert.deepEqual(await runSpike({ ...options, outDir: a }, handle), [0, 1, 3, 4, 6]);
   await runSpike({ ...options, outDir: b }, handle);
-  assert.deepEqual(readdirSync(a).toSorted(), ["frame-0000.png", "frame-0002.png", "frame-0003.png", "frame-0004.png", "transcript.md"]);
+  assert.deepEqual(readdirSync(a).toSorted(), ["frame-0000.png", "frame-0001.png", "frame-0003.png", "frame-0004.png", "frame-0006.png", "transcript.md"]);
   const transcript = readFileSync(join(a, "transcript.md"), "utf8");
   assert.match(transcript, /frame 1: t 2/);
   assert.match(transcript, /!\[frame 4]\(frame-0004\.png\)/);
   assert.match(transcript, /group opacity 1 blend normal effects glow\n {4}circle/);
   assert.match(transcript, /## frame 0\n.*\n.*\nbrushed strokes 1: expanded 1, expansion cache hits 0/);
-  assert.match(transcript, /## frame 2\n.*\n.*\nbrushed strokes 1: expanded 0, expansion cache hits 1/);
+  assert.match(transcript, /## frame 1\n.*\n.*\nbrushed strokes 1: expanded 0, expansion cache hits 1/);
   assert.match(transcript, /text "t 4" 12px sans-serif/);
   assert.match(transcript, /picture "badge" 30×16\n {2}rect/);
   assert.doesNotMatch(transcript, /warning/);
   const bytesA = readDirBytes(a);
   const bytesB = readDirBytes(b);
   for (const name of ["frame-0000.png", "frame-0004.png"]) assert.ok(bytesA.get(name)?.equals(bytesB.get(name) ?? Buffer.alloc(0)), `${name} is byte-identical across runs`);
-  assert.ok(!existsSync(join(a, "frame-0001.png")));
+  assert.ok(!existsSync(join(a, "frame-0002.png")), "frame 2 is not captured");
 });
 
 test("a group just above the canvas still casts its shadow onto it (R5 bounds)", async (t) => {

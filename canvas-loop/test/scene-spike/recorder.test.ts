@@ -78,7 +78,6 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
 
 test("a call or option the spike does not support yet throws, naming it", () => {
   const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => void][] = [
-    ["v.control", (v) => v.control("c", { x: 0, y: 0, w: 1, h: 1 })],
     ["line with style.dash", (v) => v.line(0, 0, 1, 1, { stroke: "#000", dash: [2, 2] })],
   ];
   for (const [call, draw] of cases) {

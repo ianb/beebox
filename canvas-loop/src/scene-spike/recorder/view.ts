@@ -14,27 +14,18 @@ import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOpti
 import { UnsupportedCallError } from "../errors.js";
 import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
 import { versionName } from "../outline.js";
-import type { Geom, Mat, PaperSettings, PictureVersion, PixelsVersion, Scene, SceneNode } from "../scene.js";
+import type { Geom, Mat, PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../scene.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import { PictureHandle, PictureTable, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
-import type { DebugBox } from "./debug.js";
 import { recordText } from "./text.js";
 import { PureHelpers } from "./helpers.js";
 import { copyMaterial, hasOpenLight, resolveLight } from "./light.js";
 import { valueNoise } from "./noise.js";
-
-/** Everything one `draw` produced (draft section 8), and testing-mode warnings. */
-export interface FrameRecord {
-  readonly scene: Scene;
-  readonly logs: readonly string[];
-  /** One entry per `snapshot` call, with its label. */
-  readonly snapshots: readonly (string | undefined)[];
-  readonly debugBoxes: readonly DebugBox[];
-  readonly cursor: CursorKind | undefined;
-  readonly warnings: readonly string[];
-}
+import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
+import type { ControlParams, ControlPlacement } from "./controls.js";
+import type { FrameRecord } from "./frame.js";
 
 function unsupported(call: string, detail?: string): never {
   throw new UnsupportedCallError({ call: `v.${call}`, ...(detail === undefined ? {} : { detail }) });
@@ -45,6 +36,7 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly #text: TextMeasurer | undefined;
   readonly #audit: boolean;
   readonly #seed: number;
+  readonly #params: ControlParams | undefined;
   readonly #table = new PictureTable();
   /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
   #lit = 0;
@@ -60,15 +52,17 @@ export class SceneRecorder extends PureHelpers implements View {
   #snapshots: (string | undefined)[] = [];
   #warnings: string[] = [];
   #cursor: CursorKind | undefined;
+  #controls: ControlPlacement[] = [];
 
-  /** `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. */
-  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number }) {
+  /** `seed` is the run's seed, which `noise` uses (draft 2.3 section 15); default 0. `params` resolve `control` calls. */
+  constructor(size: { width: number; height: number }, options?: { text?: TextMeasurer; audit?: boolean; seed?: number; params?: ControlParams }) {
     super();
     this.#canvas = size;
     this.#size = size;
     this.#text = options?.text;
     this.#audit = options?.audit ?? false;
     this.#seed = options?.seed ?? 0;
+    this.#params = options?.params;
   }
 
   /** The canvas size, or the picture's inside a picture body (section 5). */
@@ -91,11 +85,16 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#snapshots = [];
     this.#warnings = [];
     this.#cursor = undefined;
+    this.#controls = [];
     this.#lit = 0;
     this.#inMask = false;
     this.#table.beginFrame();
     draw(this);
-    return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: debugBoxesOf(root), cursor: this.#cursor, warnings: this.#warnings };
+    const controls = this.#controls;
+    this.#paper = DEFAULT_PAPER;
+    // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
+    const standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, controls));
+    return { scene: { ...this.#canvas, children: root }, logs: this.#logs, snapshots: this.#snapshots, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(controls)], cursor: this.#cursor, controls, standIns, warnings: this.#warnings };
   }
 
   #add(node: SceneNode): void {
@@ -323,9 +322,9 @@ export class SceneRecorder extends PureHelpers implements View {
     return valueNoise(this.#seed, { x, y: y ?? 0, z: z ?? 0 });
   }
 
-  // ── not yet ──
-  control(_name: string, _box: ControlBox): void {
+  /** Section 8: a kept placement, in canvas coordinates whatever scope it is called in; headless stand-ins draw above the scene. */
+  control(name: string, box: ControlBox): void {
     this.#notInPicture("control");
-    unsupported("control", "control stand-ins come with the browser mount");
+    this.#controls.push(placeControl(name, box, this.#params));
   }
 }
