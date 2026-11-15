@@ -919,6 +919,11 @@ by the same WebGPU renderer.
   chunks 7–9. Lean: continue only if bristle or smear expansion is a
   measurable share of a scene box agents draw.
 
+- **Decided (2026-11-15), before chunk 6 finished.** The boxholder: "Of
+  course bristle and smudge would go to the GPU, that's the whole point of
+  what we're doing." Chunks 7–9 go ahead; chunk 6 still records the numbers,
+  but the stop point is no longer a decision.
+
 ### Chunk 7: bristle on the GPU (after the stop point)
 
 - **What.** The `bristles` entry: one thread per (contour, bristle). It makes
