@@ -1,13 +1,13 @@
 ---
 title: "Make theme-check a landing gate"
-status: active
+status: implemented
 workstream: theme-check-gate
 issues:
   - ../../../issues/closed/bugs/2026-11-13-theme-check-runs-are-fragile.md
   - ../../../issues/bugs/2026-11-12-theme-check-all-fails-on-chrome-and-chat-misses.md
   - ../../../issues/closed/code-quality/2026-11-12-theme-check-shared-sheets-not-yet-covered.md
   - ../../../issues/bugs/2026-11-12-badge-tones-below-aa-on-their-fills.md
-  - ../../../issues/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md
+  - ../../../issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md
 ---
 # Make theme-check a landing gate
 
@@ -25,7 +25,7 @@ The smallest plausible fix is to wait for the studio, give sessions unique names
 
 ## Stated preferences this plan trades against
 
-The package `AGENTS.md` says, *"Work only on the requested problem"* (`beebox/AGENTS.md:9`); limit changes to the gate and its diagnosed misses. The Rose Trellis decision says, *"The boxholder chose to keep the current look over a darker bar"* (`issues/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md:15`); preserve the gradient and seek a smaller chip fill, subject to visual approval. The gate must reject unmeasured text: `theme-check.ts:115` says, *"an unmeasured run is not a passing one."*
+The package `AGENTS.md` says, *"Work only on the requested problem"* (`beebox/AGENTS.md:9`); limit changes to the gate and its diagnosed misses. The Rose Trellis decision says, *"The boxholder chose to keep the current look over a darker bar"* (`issues/closed/decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md:15`); preserve the gradient and seek a smaller chip fill, subject to visual approval. The gate must reject unmeasured text: `theme-check.ts:115` says, *"an unmeasured run is not a passing one."*
 
 ## What already exists
 
@@ -172,6 +172,6 @@ The next catalog attempt exposed six false surface-inversion reports for the new
 
 Claude verified the status stacking/fallback fix and the narrow Badge material boundary in a final follow-up. It found no counterexamples, and confirmed that material-neutral and all badge text checks remain active. The visible status correction joins the human approval gate.
 
-## Ready for visual approval
+## Landing evidence
 
-The final full run was `25502-c65f0559`; local evidence is in `scratch/theme-gate/full-complete.log` and `scratch/theme-gate/full/last-run.json`. Runner and shared-sheet coverage issues are closed. The two contrast issues retain their manual-testing gates, and the Rose Trellis decision remains open. The single “Theme contrast before and after” exhibit shows Rose Trellis, Phosphor, Veil, Overprint, Badge tones, and the now-visible Updating status. Implementation and Claude review are complete; human visual approval and a later finish request remain before landing.
+The final full run was `25502-c65f0559`; local evidence is in `scratch/theme-gate/full-complete.log` and `scratch/theme-gate/full/last-run.json`. It passed 25 catalog cases, 50 contrast jobs, and 150 backdrop and coverage jobs. The boxholder approved the “Theme contrast before and after” exhibit in chat on 2026-11-15, including the four theme color changes, Badge tones, and the now-visible Updating status. The Rose Trellis decision is resolved with the original gradient preserved.

@@ -203,7 +203,7 @@ test("a package without a script contributes no command for it", () => {
   });
   assert.deepEqual(
     commands.map((c) => c.kind),
-    ["typecheck", "lint"],
+    ["typecheck", "smoke", "lint"],
   );
 });
 
@@ -390,4 +390,3 @@ test("the text sheet puts the decision fields first and shortens the test list",
     "  … 35 more (--json lists all; bin/test-select.ts --why groups them)",
   ]);
 });
-
