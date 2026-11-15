@@ -38,7 +38,7 @@ export interface StampJob {
   /** Brush space → device pixels, linear part (pixel ratio included). */
   readonly lin: readonly [number, number, number, number];
   readonly ratio: number;
-  /** Added to a dab's linearly mapped position: the mark's translation less its box corner. */
+  /** Added to a dab's linearly mapped position: the mark's translation less its box corner (the stroke's origin is added in stampWords). */
   readonly offset: readonly [number, number];
   /** The mark's slot on its page: x0, y0, x1, y1. */
   readonly slot: readonly [number, number, number, number];
@@ -67,7 +67,11 @@ function stampWords(j: StampJob): number[] {
   const b = j.brush;
   const base = j.prepared.base;
   const soft = b.tip === "soft" ? 1 : 0;
-  return [...j.lin, ...j.offset, ...j.slot, j.prepared.width, j.ratio, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
+  // The samples are relative to the stroke's origin: its mapped position joins the offset here, in f64.
+  const [l0, l1, l2, l3] = j.lin;
+  const [ox, oy] = j.prepared.origin;
+  const offset = [j.offset[0] + l0 * ox + l2 * oy, j.offset[1] + l1 * ox + l3 * oy];
+  return [...j.lin, ...offset, ...j.slot, j.prepared.width, j.ratio, b.sizeJitter, b.sizeByPressure, b.flow, b.opacityByPressure, b.scatter, soft, b.hueJitter ?? 0, b.lightJitter ?? 0, base?.r ?? 0, base?.g ?? 0, base?.b ?? 0, base === undefined ? 0 : 1];
 }
 
 /** The records and geometry buffers' contents for `strokes`' contours (in order), with a record per stroke when `stamps` gives one, and their sample ranges. */

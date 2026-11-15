@@ -78,6 +78,12 @@ interface Worst {
   failures: string[];
 }
 
+/** GPU sample `at`'s position in brush space: the GPU samples are relative to the stroke's origin. */
+function absolute(f: Float32Array, a: { at: number; origin: readonly [number, number] | undefined }): [number, number] {
+  const [ox, oy] = a.origin ?? [NaN, NaN];
+  return [(f[a.at] ?? NaN) + ox, (f[a.at + 1] ?? NaN) + oy];
+}
+
 /** Every GPU sample against its CPU sample: counts equal, positions within 1e-3 brush px, pressure within 1e-5, the end points exact. */
 async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[]): Promise<Worst> {
   const g = await gpuSamples(handle, reqs);
@@ -94,7 +100,7 @@ async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[])
       if (r.count !== contour.samples.length) fail(`stroke ${i} contour ${c}: ${r.count} samples on the GPU, ${contour.samples.length} on the CPU`);
       for (const [k, s] of contour.samples.entries()) {
         const at = (r.first + k) * SAMPLE_FLOATS;
-        const [x = NaN, y = NaN] = g.f.subarray(at, at + 2);
+        const [x, y] = absolute(g.f, { at, origin: prep?.origin });
         const p = g.f[at + 6] ?? NaN;
         const d = Math.hypot(x - s.x, y - s.y);
         worst.pos = Math.max(worst.pos, d);
@@ -195,14 +201,15 @@ test("the WGSL hash equals random.ts's on 65,536 inputs, bit for bit", async (t)
 });
 
 /** Stamp strokes placed as the lowering places them (brush-space q times the ratio, a fractional translation), with their CPU dabs after `linMarks`. */
-function placeStamps(reqs: readonly ExpandRequest[], ratio: number): { job: StampJob; box: R; cpu: { x: number; y: number; r: number; a: number; soft: boolean; rgb: readonly number[] }[]; skip: boolean[] }[] {
+function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; translate?: readonly [number, number] }): { job: StampJob; box: R; cpu: { x: number; y: number; r: number; a: number; soft: boolean; rgb: readonly number[] }[]; skip: boolean[] }[] {
   const expander = new BrushExpander({ enabled: false });
   const SIZE_JITTER = randOf(11);
+  const { ratio } = at;
   return reqs.flatMap((req, i) => {
     const ex = expander.expand(req);
     if (ex?.set.kind !== "stamp") return [];
     const { q } = ex;
-    const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], 13.25 + i * 0.37, 7.5 + i * 0.11];
+    const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], at.translate?.[0] ?? 13.25 + i * 0.37, at.translate?.[1] ?? 7.5 + i * 0.11];
     const box = stampBox(ex.set, e);
     const cpu = expandOnCpu(req);
     if (box === undefined || cpu?.kind !== "marks") return [];
@@ -232,7 +239,7 @@ interface DabWorst {
 
 /** Every GPU dab against its CPU dab: the same count and zero-alpha dabs, centres within 2e-3 device px, radius and alpha within 1e-4, RGB within 1/255. */
 async function compareDabs(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number }): Promise<DabWorst> {
-  const placed = placeStamps(a.reqs, a.ratio);
+  const placed = placeStamps(a.reqs, { ratio: a.ratio });
   const renderer = new GpuRenderer(handle);
   const g = await renderer.stampBrushes(placed.map((p) => p.job)).finally(() => renderer.destroy());
   const f = new Float32Array(g.data);
@@ -302,7 +309,7 @@ test("a stamp mark's box holds every dab at the extremes of scatter, sizeJitter 
   if (handle === undefined) return;
   const scene = new SceneRecorder(STAMPS_SIZE).record(drawExtremes).scene;
   for (const ratio of [1, 2]) {
-    const placed = placeStamps(brushRequests(scene, handle.colors), ratio);
+    const placed = placeStamps(brushRequests(scene, handle.colors), { ratio });
     assert.equal(placed.length, 3);
     const renderer = new GpuRenderer(handle);
     const g = await renderer.stampBrushes(placed.map((p) => p.job)).finally(() => renderer.destroy());
@@ -334,4 +341,24 @@ test("the walker frame is byte-identical in a fresh process with a new device", 
   const child = execFileSync(process.execPath, ["--import", "tsx", script, "--print"], { encoding: "utf8" }).trim().split("\n");
   t.diagnostic(`ratio 1 ${here[0]}, ratio 2 ${here[1]}`);
   assert.deepEqual(child, here);
+});
+
+test("a stamp far from the origin, translated back, lands where the CPU puts it (stroke-local f32 coordinates)", async (t) => {
+  const handle = needGpu(t);
+  if (handle === undefined) return;
+  // At x = 16777217, f32 cannot hold the point: rounded to 16777216, the dab would land one device pixel off.
+  const scene = new SceneRecorder({ width: 40, height: 20 }).record((v) => {
+    v.at({ translate: [-16777207, 0] }, () => v.line(16777217, 10, 16777217, 10, { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } }));
+  }).scene;
+  const reqs = brushRequests(scene, handle.colors);
+  const [p] = placeStamps(reqs, { ratio: 1, translate: [-16777207, 0] });
+  assert.ok(p !== undefined);
+  const renderer = new GpuRenderer(handle);
+  const g = await renderer.stampBrushes([p.job]).finally(() => renderer.destroy());
+  const f = new Float32Array(g.data);
+  assert.equal(g.count, 1);
+  const x = (f[0] ?? NaN) + p.box.x0;
+  t.diagnostic(`box x0 ${p.box.x0}; dab centre at device x ${x}`);
+  assert.ok(Math.abs(x - 10) <= 2e-3, `the dab's centre lands at device x 10 (got ${x})`);
+  reportDabs(t, { w: await compareDabs(handle, { reqs, ratio: 1 }), what: "far stamp" });
 });
