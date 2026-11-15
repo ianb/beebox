@@ -36,9 +36,11 @@ export function planFilesByName(tracked: readonly string[]): Map<string, string[
   return byName;
 }
 
-// A path to a plan file: not part of a longer path or URL, optional `./` or
-// `../` steps, any directories, then a lifecycle directory and the name.
-const PLAN_PATH_RE = /(?<![\w./:@-])((?:\.\.?\/)*(?:[\w.-]+\/)*(?:implemented-|unimplemented-)?plans\/([\w.-]+)\.md(?::L?\d+(?:-L?\d+)?)?)(?![\w/-])/g;
+// A path to a plan file: not part of a longer path or URL, an optional
+// leading `/` (repo-root-relative), optional `./` or `../` steps, any
+// directories, then a lifecycle directory and the name. A continuation such as
+// `.bak` makes it another file; sentence punctuation does not.
+const PLAN_PATH_RE = /(?<![\w./:@-])(\/?(?:\.\.?\/)*(?:[\w.-]+\/)*(?:implemented-|unimplemented-)?plans\/([\w.-]+)\.md(?::L?\d+(?:-L?\d+)?)?)(?![\w/-]|\.\w)/g;
 // A citation; the name may hold dots (`x.review`) but does not end in one.
 const CITATION_RE = /(?<![\w-])plan:([\w-]+(?:\.[\w-]+)*)/g;
 
@@ -98,6 +100,7 @@ function lineAt(content: string, offset: number): number {
 
 function namesPlanFile(rel: string, token: string): boolean {
   const file = token.replace(/:L?\d+(?:-L?\d+)?$/, "");
+  if (file.startsWith("/")) return PLAN_FILE_RE.test(path.posix.normalize(file.slice(1)));
   const bases = [path.posix.dirname(rel), rel.split("/")[0] ?? ".", "beebox", "."];
   return bases.some((base) => PLAN_FILE_RE.test(path.posix.normalize(path.posix.join(base, file))));
 }

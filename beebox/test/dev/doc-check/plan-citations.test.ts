@@ -33,6 +33,7 @@ const source = `/**
  * and beebox/docs/plans/todos-ui.md:L40 (see ../../docs/implemented-plans/secret-custody.review.md).
  * Already cited: plan:parked. Mistyped: plan:secret-custodee.
  * Not a plan: docs/plans/README.md, https://example.com/docs/plans/todos-ui.md, research/plans/todos-ui.md.
+ * Root-relative: /beebox/docs/plans/todos-ui.md. Another file: docs/plans/todos-ui.md.bak.
  */
 const fixture = "beebox/docs/plans/todos-ui.md";
 const view = \`docs/implemented-plans/\${name}.md and docs/plans/todos-ui.md\`;
@@ -46,12 +47,14 @@ void test("Comments are rewritten; strings, template literals, and non-plans are
     { line: 3, kind: "path", token: "beebox/docs/plans/todos-ui.md:L40", citation: "plan:todos-ui" },
     { line: 3, kind: "path", token: "../../docs/implemented-plans/secret-custody.review.md", citation: "plan:secret-custody.review" },
     { line: 4, kind: "unknown", token: "plan:secret-custodee" },
+    { line: 6, kind: "path", token: "/beebox/docs/plans/todos-ui.md", citation: "plan:todos-ui" },
   ]);
   t.check(repairPlanCitations({ rel: "beebox/src/core/x.ts", content: source, plans, parse }).content, `/**
  * Honest scope, per \`plan:secret-custody\`, Track C,
  * and plan:todos-ui (see plan:secret-custody.review).
  * Already cited: plan:parked. Mistyped: plan:secret-custodee.
  * Not a plan: docs/plans/README.md, https://example.com/docs/plans/todos-ui.md, research/plans/todos-ui.md.
+ * Root-relative: plan:todos-ui. Another file: docs/plans/todos-ui.md.bak.
  */
 const fixture = "beebox/docs/plans/todos-ui.md";
 const view = \`docs/implemented-plans/\${name}.md and docs/plans/todos-ui.md\`;

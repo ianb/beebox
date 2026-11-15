@@ -66,6 +66,10 @@ Found while converting: a bare `ts.createScanner` loses its place after a templa
 
 Remaining plan paths in TypeScript after the conversion are strings (help text, fixtures) or comments naming plans that do not exist; a plan move still rewrites the strings.
 
+## Branch review (codex gpt-6-astra, 2026-11-15)
+
+Fixed: a repo-root-relative path (`/beebox/docs/plans/x.md`) is now a citation finding, so a move cannot rewrite it in TypeScript; a filename continuation (`x.md.bak`) is not taken for the plan; a commit that only deletes a plan runs the citation check, since `$staged` omits deletions.
+
 ## Could this be simpler?
 
 Simplest: stop rewriting code at move time and let comments keep the old directory. Comments would then claim a plan is in `plans/` after it shipped, and doc-check's moved-path check would fail them. Simpler still: convert once with `sed` and add no check. New comments would cite paths again within days; agents copy the form they read, and the issue was reported three times. The scanner restriction to comments is what lets the conversion skip test fixture strings, which are data.
