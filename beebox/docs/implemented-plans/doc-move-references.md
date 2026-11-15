@@ -1,6 +1,6 @@
 ---
 title: "Doc moves rewrite every reference and stage nothing"
-status: draft
+status: implemented
 workstream: doc-move-references
 issues:
   - ../../../issues/closed/bugs/2026-11-13-doc-move-and-issues-close-leave-stale-references.md

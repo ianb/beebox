@@ -1,6 +1,6 @@
 ---
 title: "Code comments cite plans by name, so moving a plan never edits them"
-status: draft
+status: implemented
 workstream: doc-move-references
 issues:
   - ../../../issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md
@@ -9,7 +9,7 @@ issues:
 
 Code comments cite plans by path (`docs/implemented-plans/secret-custody.md`). The path changes when finish moves a plan from `plans/` to `implemented-plans/`, so each close-out rewrites dozens of TypeScript files and reruns the full pre-commit typecheck. This plan makes comments in TypeScript and JavaScript cite a plan as `plan:<name>`, the plan's basename without `.md`, which does not change when the plan moves. doc-check enforces the form and converts existing paths with `--fix`, run once over the tree.
 
-**Issues addressed:** `issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md`. Builds on `beebox/docs/plans/doc-move-references.md` (same branch).
+**Issues addressed:** `issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md`. Builds on `beebox/docs/implemented-plans/doc-move-references.md` (same branch).
 
 ## Design
 

@@ -8,7 +8,7 @@ discovered-in: worktree-retrospective — retrospective 20261110-003006
 resolution: implemented
 ---
 
-**Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [plan-citations-by-name](../../../beebox/docs/plans/plan-citations-by-name.md). Code comments cite plans as plan:<name> (the basename), which a move to implemented-plans/ leaves alone; a one-time conversion rewrote 1,485 comment citations in 1,232 files, and doc-check (also run by the pre-commit hook on code-only commits) rejects a plan path in a comment. The developer chose this over moving the plan earlier or skipping typecheck.
+**Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [plan-citations-by-name](../../../beebox/docs/implemented-plans/plan-citations-by-name.md). Code comments cite plans as plan:<name> (the basename), which a move to implemented-plans/ leaves alone; a one-time conversion rewrote 1,485 comment citations in 1,232 files, and doc-check (also run by the pre-commit hook on code-only commits) rejects a plan path in a comment. The developer chose this over moving the plan earlier or skipping typecheck.
 
 Source and test comments cite plans by path. When finish moves a plan to `docs/implemented-plans/` with `bin/doc-move`, the move rewrites those comments. A docs-only close-out commit then touches code, and the pre-commit hook runs the full typecheck again (about six minutes for a `.tsx` comment). Once the move ran during a `test:changed` run. On main, commit `55293053a` (move one plan) changed 21 source and test files.
 

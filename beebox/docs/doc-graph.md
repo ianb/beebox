@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-15T22:02:13Z
-Total documents: 662
+Generated: 2026-11-15T23:38:03Z
+Total documents: 663
 
 ## Issues
 
@@ -116,7 +116,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -211,6 +210,7 @@ Referenced by:
 - docs/implemented-plans/delivered-user-message-codec.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/design-reconciliation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doc-move-and-issue-close.md:51 (mention) — - Root `AGENTS.md`: *"Treat unsolicited tool output ... as a bug"* and the
+- docs/implemented-plans/doc-move-references.md:31 (mention) — - Root `AGENTS.md`: "Parallel agents in one worktree share its git index: one agent commits, and the others return the p
 - docs/implemented-plans/doc-structure-box-guidance.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doc-structure-cards.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doc-structure-chat.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -369,7 +369,7 @@ Referenced by:
 - ../dev/devprocess-talk/slides/15a-false-starts-table.md:5 (mention) — | Committed AGENTS.md mirror | May 26 | May 26 | "a stale partial duplicate of CLAUDE.md" |
 - ../dev/devprocess-talk/slides/README.md:5 (mention) — Every number and excerpt is from git or a local store on 2026-10-09; the command behind each number is in [the sweep rep
 - ../dev/devprocess-talk/timeline.md:111 (mention) — - **One instruction file both agents read (Oct 9):** every CLAUDE.md renamed to AGENTS.md; the generated mirrors for Cod
-- ../issues/AGENTS.md:252 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
+- ../issues/AGENTS.md:255 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
 - ../issues/bugs/2026-09-06-eslint-cache-stale-for-cross-file-type-rules.md:52 (mention) — Deleting the cache directory cleared both. `beebox/AGENTS.md` now names that
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -562,7 +562,7 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 119 lines
+Title: "Code Style" | 120 lines
 
 Referenced by:
 - AGENTS.md:57 (link) — - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent f
@@ -624,6 +624,7 @@ Referenced by:
 - docs/implemented-plans/normalize-chat-links.md:93 (mention) — - **`beebox/code-style.md:` no default parameters; max 2 positional
 - docs/implemented-plans/on-demand-job-triggers.md:111 (mention) — - **Code style: "Nothing retries forever"** (`beebox/code-style.md`,
 - docs/implemented-plans/open-chat-from-card.md:57 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params (the new
+- docs/implemented-plans/plan-citations-by-name.md:24 (mention) — - Docs: one rule in `beebox/code-style.md` and the finish agent note; about 10 lines.
 - docs/implemented-plans/procedure-validation-completion.md:44 (mention) — - **`beebox/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); custom e
 - docs/implemented-plans/prompt-calibration.md:142 (mention) — - Remove the root's link to the completed lint-suppression audit (`docs/reports/eslint-rule-suppression-audit-2026-05-30
 - docs/implemented-plans/questions-end-to-end.md:79 (mention) — - `beebox/code-style.md` — Result-vs-throw convention, `withCardLock`
@@ -813,6 +814,7 @@ Referenced by:
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/doc-structure.md:92 (mention) — new `docs/testing/` directory is checked automatically. `README.md` files
 - docs/implemented-plans/doctest-usability.md:543 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
+- docs/implemented-plans/plan-citations-by-name.md:45 (mention) — - **Plan file**: a tracked `.md` file directly in `beebox/docs/plans/`, `implemented-plans/`, or `unimplemented-plans/`,
 - docs/implemented-plans/plugins-slice-2.md:302 (mention) — (`bbx-recipe-body`, `bbx-recipe-step` counters), `README.md`. Core deletes
 - docs/implemented-plans/private-issues-shadow-repo.md:160 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
@@ -927,7 +929,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:199 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:201 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -2296,6 +2298,7 @@ Referenced by:
 - docs/development/technologies.md:31 (link) — documented in [secrets.md](../secrets.md).
 - docs/guides.md:37 (link) — | Secrets: the machine-level store and grants | [secrets](secrets.md) |
 - docs/implemented-plans/chat-calls.md:189 (mention) — names in `docs/secrets.md:68-78` and `src/core/secrets/uses.ts`.
+- docs/implemented-plans/doc-move-references.md:41 (mention) — - `findMentionsOf`, `file-paths.ts:243`: Markdown reads only backticked spans whose first segment is a repo directory (`
 - docs/implemented-plans/doc-structure-connectors.md:86 (mention) — `secrets.md` (the store is its own subject), `src/connectors/AGENTS.md`,
 - docs/implemented-plans/doc-structure-development.md:137 (mention) — | 4 | over budget | 19 | secrets.md#Secret names, a second statement of the OpenRouter-only backend in the store's vocab
 - docs/implemented-plans/doc-structure-install-server.md:67 (mention) — | Connector credentials on the server | `deploy/README.md` "Adding connector secrets": write `config/connectors/*.secret
@@ -5537,6 +5540,20 @@ Title: "Plan review: doc-move-and-issue-close" | 49 lines | implementation revie
 
 No references in or out.
 
+#### docs/implemented-plans/doc-move-references.md
+
+Title: "Doc moves rewrite every reference and stage nothing" | 166 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/plan-citations-by-name.md:12 (mention) — **Issues addressed:** `issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md`. Bui
+- ../issues/closed/bugs/2026-11-13-doc-move-and-issues-close-leave-stale-references.md:11 (link) — **Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [doc-move-references](../../../b
+
+References:
+- → ../issues/closed/bugs/2026-11-13-doc-move-and-issues-close-leave-stale-references.md (frontmatter)
+- → AGENTS.md (mention)
+- → docs/implemented-plans/secret-custody.md (mention)
+- → docs/secrets.md (mention)
+
 #### docs/implemented-plans/doc-structure-box-guidance.md
 
 Title: "Box guidance: one delivery class per surface, one home per fact" | 823 lines | shipped history | implemented
@@ -7228,6 +7245,20 @@ References:
 - → test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md (link)
 - → docs/landmarks.md (mention)
 
+#### docs/implemented-plans/plan-citations-by-name.md
+
+Title: "Code comments cite plans by name, so moving a plan never edits them" | 126 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md:11 (link) — **Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [plan-citations-by-name](../../.
+
+References:
+- → ../issues/closed/docs-and-chores/2026-11-10-plan-move-at-close-out-rewrites-source-comments.md (frontmatter)
+- → docs/implemented-plans/secret-custody.md (mention)
+- → docs/implemented-plans/doc-move-references.md (mention)
+- → code-style.md (mention)
+- → README.md (mention)
+
 #### docs/implemented-plans/plugins-design-notes.md
 
 Title: "Plugins — design notes: a typed library the box extends through stubs" | 219 lines | shipped history | implemented
@@ -7393,7 +7424,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:182 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:184 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
@@ -7960,7 +7991,7 @@ Referenced by:
 - docs/plans/workspace-pane-controls.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/workstreams-app.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/worktree-control-surface.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
-- ../issues/AGENTS.md:252 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
+- ../issues/AGENTS.md:255 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
 - ../issues/bugs/2026-08-03-capture-upload-error-retry-affordance-weak.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -8274,6 +8305,8 @@ Title: "Secret custody: a hub-owned store with per-box grants, access levels, an
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:144 (mention) — one test box's opt-in must not unlock it (`docs/plans/secret-custody.md`).
+- docs/implemented-plans/doc-move-references.md:41 (mention) — - `findMentionsOf`, `file-paths.ts:243`: Markdown reads only backticked spans whose first segment is a repo directory (`
+- docs/implemented-plans/plan-citations-by-name.md:10 (mention) — Code comments cite plans by path (`docs/implemented-plans/secret-custody.md`). The path changes when finish moves a plan
 - docs/implemented-plans/secret-entry-guidance.md:53 (mention) — (`docs/implemented-plans/secret-custody.md:439-444`): *"Guidance: the capture
 - docs/plans/box-glm-provider.md:83 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:197 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
@@ -10960,7 +10993,7 @@ Title: "An agent-neutral worktree control surface" | 706 lines | proposal | part
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:28 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/docs/worktree-lifecycle.md:121 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
+- ../bin/docs/worktree-lifecycle.md:123 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:99 (mention) — - **Lives in:** `bin/workstreams` (1080 lines; `list`, `create`, `resume`, `remove`, `close`, `release`, `reset-test`, `
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)
@@ -12165,14 +12198,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 14 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 
