@@ -76,3 +76,16 @@ and arm64, as `@napi-rs/canvas` has).
 
 Chunks 1–4 each get a cross-model (Codex) review of the diff before the next
 starts.
+
+## Progress and known limitations
+
+- **Chunks 1–2** (commit after `0865b900d`): scene types, recorder, Dawn and
+  browser device setup, headless runner, fills and strokes on the exact-area
+  coverage atlas, gradients, transforms, groups, clips, masks, blends, effects.
+  Matches today's Skia on 24 compositing fixtures and 16 shape cells. Codex
+  review: four findings fixed and verified.
+- **Known limitation, for the implementation subplan:** clip coverage keeps at
+  most 16 edge crossings per pixel band, so a pixel crossed by more than 16
+  clip edges (for example nine overlapping thin shapes in one union) gets too
+  much coverage. Effects under a rotated non-uniform scale or a skew are
+  refused with an error.
