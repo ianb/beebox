@@ -30,7 +30,7 @@ export function arcPoints(out: number[], a: { cx: number; cy: number; rx: number
 }
 
 /** Canvas2D's clockwise arc sweep: a whole number of turns draws the whole circle; otherwise the end wraps to within a turn of the start. */
-function arcSweep(start: number, end: number): { sweep: number; full: boolean } {
+export function arcSweep(start: number, end: number): { sweep: number; full: boolean } {
   const raw = end - start;
   const whole = raw !== 0 && Math.abs(raw / TURN - Math.round(raw / TURN)) < 1e-9;
   if (raw >= TURN - 1e-9 || whole) return { sweep: TURN, full: true };

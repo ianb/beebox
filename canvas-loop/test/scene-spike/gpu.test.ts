@@ -333,3 +333,26 @@ onGpu("off the canvas: only what is off on every frame warns, once; unboxed text
   assert.equal(out.warnings.length, 1, out.warnings.join("\n"));
   assert.match(out.warnings[0] ?? "", /^end of run: warning: text "Period: 2\.00 s" crosses the edge of the 80×60 canvas on every frame \(0–2\), .* \(at test\/scene-spike\/gpu\.test\.ts:\d+:\d+\)$/);
 });
+
+onGpu("off the canvas: a loop that grows onto the canvas stays quiet; a picture placed off it, and an arc whose circle reaches it but whose sweep does not, warn", async (handle) => {
+  const fill = { fill: "#2a9d8f" };
+  const out = await runCase({
+    id: "off-canvas-more",
+    mistake: "a picture placed in the wrong units, and an arc's sweep off the canvas",
+    channel: "warning",
+    names: [],
+    frames: 3,
+    draw: (v, m) => {
+      // Frame 0: one rect, off the canvas; then a second one on it, from the same line.
+      for (let i = 0; i < m.t; i++) v.rect(i === 0 ? 200 : 10, 10, 10, 10, fill);
+      const p = v.picture({ key: "badge", width: 20, height: 10 }, () => v.rect(0, 0, 20, 10, fill));
+      v.place(p, 1000, 1000);
+      v.arc(150, 30, 100, -0.2, 0.2, { stroke: "#000000", weight: 2 });
+    },
+  }, handle);
+  assert.equal(out.error, undefined);
+  const warnings = out.warnings.join("\n");
+  assert.equal(out.warnings.length, 2, warnings);
+  assert.match(warnings, /place picture "badge" lands entirely off the 80×60 canvas on every frame \(0–2\), the first at \(1000,1000\)–\(1020,1010\)/);
+  assert.match(warnings, /arc lands entirely off the 80×60 canvas/);
+});

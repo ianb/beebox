@@ -92,15 +92,8 @@ export class SceneRecorder extends PureHelpers implements View {
   /** Run `draw` against a fresh scene and return what it recorded. */
   record(draw: (v: View) => void): FrameRecord {
     const root: SceneNode[] = [];
-    this.#open = [root];
-    this.#matrix = IDENTITY;
-    this.#paper = DEFAULT_PAPER;
-    this.#size = this.#canvas;
-    this.#picture = undefined;
     const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
-    this.#out = out;
-    this.#lit = 0;
-    this.#inMask = false;
+    ({ open: this.#open, matrix: this.#matrix, paper: this.#paper, size: this.#size, picture: this.#picture, out: this.#out, lit: this.#lit, inMask: this.#inMask } = { open: [root], matrix: IDENTITY, paper: DEFAULT_PAPER, size: this.#canvas, picture: undefined, out, lit: 0, inMask: false });
     this.#table.beginFrame();
     this.#notes.begin();
     this.#offCanvas?.begin();
@@ -310,7 +303,9 @@ export class SceneRecorder extends PureHelpers implements View {
     if (!(Number.isFinite(x) && Number.isFinite(y))) checkNumbers("place", { values: { x, y } });
     const unlit = this.#unlit();
     if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
-    this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
+    const placed = { kind: "place", picture: v, x, y, ...resolvePlace(options) } as const;
+    this.#add(placed);
+    if (this.#picture === undefined && !this.#inMask && !(this.#lit > 0 && (placed.material?.castsShadow ?? false) !== false)) this.#offCanvas?.place(`place ${versionName(v)}`, { version: v, matrix: mul(this.#matrix, [1, 0, 0, 1, x, y]) });
     if (this.#audit && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v, this.#matrix);
   }
 
