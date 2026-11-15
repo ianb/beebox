@@ -5,7 +5,6 @@
  */
 
 import { Command } from "commander";
-import { resolveChatSessionId } from "../../../../core/chat/session/id-file.js";
 import { requireBoxRoot } from "../../../../lib/paths/core.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 import {
@@ -23,31 +22,7 @@ import { emitTriggerChanged } from "../../../../core/triggers/events.js";
 import { inspectTrigger } from "../../../../core/triggers/eval.js";
 import { logCommand } from "./log.js";
 import { runCommand } from "./run.js";
-
-/** A usage error: its `detail` is printed as one line, exit 1. */
-export class TriggerUsageError extends Error {
-  readonly detail: string;
-  constructor({ detail }: { detail: string }) {
-    super("bbx chat trigger was given something it cannot use");
-    this.name = "TriggerUsageError";
-    this.detail = detail;
-  }
-}
-
-export async function requireSession(): Promise<string> {
-  const sessionId = await resolveChatSessionId();
-  if (sessionId === null) throw new TriggerUsageError({ detail: "no chat session: run inside a chat session (BBX_CHAT_SESSION_ID)" });
-  return sessionId;
-}
-
-export function parseConfig(raw: string | undefined): unknown {
-  if (raw === undefined) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    throw new TriggerUsageError({ detail: `--config is not JSON: ${errorMessage(e)}` });
-  }
-}
+import { parseConfig, requireSession, runCli, TriggerUsageError } from "./shared.js";
 
 function parseExpires(raw: string | undefined): Expires {
   if (raw === undefined) return DEFAULT_EXPIRES;
@@ -68,17 +43,6 @@ export function renderActivationLine(a: Activation): string {
   const parts = [a.id, a.state.padEnd(15), a.label, `(${a.file}; expires ${describeExpires(a.expires)}; turns ${String(a.turnsSeen)}; fires ${String(a.fires)}${a.tick === undefined ? "" : `; tick ${String(a.tick)}s`})`];
   if (a.error !== undefined) parts.push(`— ${a.error}`);
   return parts.join("  ");
-}
-
-export async function runCli(fn: () => Promise<void>): Promise<void> {
-  try {
-    await fn();
-  } catch (e) {
-    console.error(`bbx chat trigger: ${e instanceof TriggerUsageError ? e.detail : errorMessage(e)}`);
-    process.exitCode = 1;
-  } finally {
-    await (await import("esbuild")).stop();
-  }
 }
 
 const armCommand = new Command("arm")

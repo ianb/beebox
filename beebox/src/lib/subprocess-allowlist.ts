@@ -1,11 +1,12 @@
 /**
- * The box-subprocess env allowlist — the data half of `script-env.ts`, split
- * out so that file stays under the 300-line cap (the same split
- * `src/hub/supervisor/child-env.ts` made out of `supervisor.ts`, for the same reason and
- * with the same fail-closed posture).
+ * The box-subprocess env allowlist: the data half of `core/script-env/core.ts`,
+ * split out so that file stays under the 300-line cap (as
+ * `src/hub/supervisor/child-env.ts` was split out of `supervisor.ts`, with the
+ * same fail-closed posture). It lives in `lib/` so `lib/git/env.ts` can use it
+ * without an import cycle through `script-env/core.ts`.
  */
 
-import { inheritedCredentials } from "../../lib/credential-env.js";
+import { inheritedCredentials } from "./credential-env.js";
 
 /**
  * Env vars a box-spawned subprocess may inherit from the spawning server
@@ -165,4 +166,15 @@ export function pickBoxSubprocessEnv(
   { connectorCreds }: { connectorCreds: boolean }
 ): NodeJS.ProcessEnv {
   return pickAllowed(sourceEnv, connectorCreds ? TOOLING_ENV_ALLOWLIST : SCRIPT_ENV_ALLOWLIST);
+}
+
+/**
+ * The agent profile's inherited allowlist with `BBX_SPAWN_PROFILE=agent`, and
+ * nothing `buildScriptEnv` injects: no server URL, agent token, or `bbx` on
+ * PATH. For a child that runs box-authored code but needs no way back to the
+ * box's server, such as the view metadata import, which also has no box when
+ * the engine hosts the compile.
+ */
+export function agentAllowlistEnv(): NodeJS.ProcessEnv {
+  return { ...pickBoxSubprocessEnv(process.env, { connectorCreds: false }), BBX_SPAWN_PROFILE: "agent" };
 }

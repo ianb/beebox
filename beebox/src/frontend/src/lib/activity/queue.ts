@@ -84,7 +84,7 @@ export class ActivityQueue {
       }
     } finally {
       this.running = false;
-      for (const wake of [...this.idleWaiters]) wake();
+      for (const wake of this.idleWaiters) wake();
     }
   }
 

@@ -1,5 +1,4 @@
 /** Shared admission for box writers and exclusive lifecycle operations. */
-import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,7 +9,10 @@ import { writeFileAtomic } from "../atomic-write.js";
 import { readJsonIfPresent } from "../json-state.js";
 import { invariant } from "../../shared/invariant.js";
 import { BoxMaintenanceError, type WorkHolder } from "../box-maintenance-error.js";
+import { boxWorkContext as context, permitSchema, type Permit } from "../box-work-context.js";
 import { clearMaintenanceStep, readMaintenanceStep, writeMaintenanceStep, type MaintenanceStep } from "./step.js";
+
+export { boxWorkEnvironment } from "../box-work-context.js";
 
 const phaseSchema = z.object({
   id: z.string().uuid(), reason: z.string(), phase: z.enum(["draining", "exclusive", "ready"]),
@@ -21,8 +23,6 @@ const phaseSchema = z.object({
   endsBackgroundTasksAt: z.string().datetime().optional(), // when an owner that cannot defer ends idle chats with live background tasks
 });
 type Phase = z.infer<typeof phaseSchema>;
-const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
-type Permit = z.infer<typeof permitSchema>;
 /**
  * A phase record and whether anyone still holds it. A record with a live owner
  * closes the box. A record without one is unfinished maintenance: it refuses
@@ -32,7 +32,6 @@ type Permit = z.infer<typeof permitSchema>;
 export interface MaintenanceStatus extends Phase { owner: WorkHolder | null; step: MaintenanceStep | undefined }
 const workHolderSchema = z.object({ reason: z.string(), since: z.string() });
 const workLeaseSchema = z.object({ holders: z.array(workHolderSchema).default([]) });
-const context = new AsyncLocalStorage<Permit | null>();
 const directories = new Map<string, Promise<string>>();
 interface ProcessLease {
   count: number; permit: Permit; ready: Promise<unknown>;
@@ -212,14 +211,6 @@ export async function boxWorkHolders(boxRoot: string): Promise<WorkHolder[]> {
   const directory = await directoryFor(boxRoot);
   const locks = await scanLocks(join(directory, "work"), { suffix: ".lock", profile: "default" });
   return [...locks.values()].filter((holder) => holder.pid !== process.pid).flatMap((holder) => holdersOf(holder.pid, holder));
-}
-
-/** Only the current admitted operation can delegate, never ambient server state. */
-export function boxWorkEnvironment(): Record<string, string> {
-  const permit = context.getStore();
-  // CLI actions install their validated admission here; servers do not.
-  const inherited = permit === null ? undefined : process.env.BBX_BOX_WORK;
-  return permit ? { BBX_BOX_WORK: JSON.stringify(permit) } : inherited ? { BBX_BOX_WORK: inherited } : {};
 }
 
 export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> { return maintenanceStatusIn(await directoryFor(boxRoot)); }

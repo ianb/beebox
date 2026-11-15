@@ -9,14 +9,14 @@
  * `process.env`. Every `simpleGit` and raw `git` spawn in `src/` goes through
  * this module (enforced by eslint.config.ts and `test/lib/git-env.test.ts`).
  *
- * The base is the agent profile's allowlist (`core/script-env/allowlist.ts`):
+ * The base is the agent profile's allowlist (`lib/subprocess-allowlist.ts`):
  * what a hook runs is box-authored code, and the box's own `bbx validate` hook
  * needs nothing more than an agent's `bbx` does.
  */
 
 import { simpleGit, type SimpleGit } from "simple-git";
-import { agentAllowlistEnv } from "../../core/script-env/core.js";
-import { boxWorkEnvironment } from "../box-maintenance/admission.js";
+import { agentAllowlistEnv } from "../subprocess-allowlist.js";
+import { boxWorkEnvironment } from "../box-work-context.js";
 
 /** Git's identity and config variables, kept when the parent has them. None is a credential. */
 const GIT_PASS_THROUGH: readonly string[] = [

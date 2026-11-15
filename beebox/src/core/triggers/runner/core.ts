@@ -139,7 +139,7 @@ export class TriggerRunner {
 
   /** Resolves once every evaluation, tick and expiry the runner started has finished. For tests and shutdown. */
   async idle(): Promise<void> {
-    while (this.work.size > 0) await Promise.allSettled([...this.work]);
+    while (this.work.size > 0) await Promise.allSettled(this.work);
   }
 
   /** Run `fn` as tracked work; its failure is logged, never thrown. */
