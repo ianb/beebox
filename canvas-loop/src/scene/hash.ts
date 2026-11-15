@@ -216,7 +216,11 @@ function keyed<T extends object>(v: T, a: { walk: (v: T) => void; memo: WeakMap<
   laneA = 0x811c9dc5;
   laneB = 0x9747b28c;
   walk(v);
-  const key = `${fin(laneA).toString(36)}.${fin(laneB).toString(36)}`;
+  // Four UTF-16 code units, one per 16 bits of the lanes: a fixed width, so a key needs no separator where it is
+  // joined into a cache key, and much cheaper to make than base-36 text. Keys are never shown.
+  const ha = fin(laneA);
+  const hb = fin(laneB);
+  const key = String.fromCodePoint(ha & 0xffff, ha >>> 16, hb & 0xffff, hb >>> 16);
   laneA = outerA;
   laneB = outerB;
   memo.set(v, key);
