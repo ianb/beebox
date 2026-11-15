@@ -787,6 +787,15 @@ then the switch that deletes the old code; then docs.
     median 16.6 ms against 16.7, p95 20 ms; not 60 sustained over 600
     frames. Target 3: missed: 24 fps each against 30, input-to-frame p95
     about 100 ms against 33 (no input dropped).
+  - **Review fixes.** Codex (gpt-6-sol) review of the commits above
+    found two re-entry cases: a brush `spacing` getter that prepared
+    another contour overwrote the shared point buffers, and a nested key
+    whose walk threw left its lanes in place. Fixed in 613e55868, each
+    with a test that fails without it.
+  - **Decision (2026-11-15).** Work continues to chunk 5 under the
+    boxholder's earlier "Accept for now" on desktop numbers
+    (`stage4/checkpoint4.md`, answer 7). A main-thread worker split is
+    not started; it needs the boxholder's yes.
 
 ### Track 5: gallery and examples (chunk 5)
 
