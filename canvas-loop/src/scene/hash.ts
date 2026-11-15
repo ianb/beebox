@@ -291,14 +291,19 @@ function keyed<T extends object>(v: T, a: { walk: (v: T) => void; memo: WeakMap<
   const outerA = laneA, outerB = laneB;
   laneA = 0x811c9dc5;
   laneB = 0x9747b28c;
-  walk(v);
-  // Four UTF-16 code units, one per 16 bits of the lanes: a fixed width, so a key needs no separator where it is
-  // joined into a cache key, and much cheaper to make than base-36 text. Keys are never shown.
-  const ha = fin(laneA);
-  const hb = fin(laneB);
-  const key = String.fromCodePoint(ha & 0xffff, ha >>> 16, hb & 0xffff, hb >>> 16);
-  laneA = outerA;
-  laneB = outerB;
+  let key: string;
+  try {
+    walk(v);
+    // Four UTF-16 code units, one per 16 bits of the lanes: a fixed width, so a key needs no separator where it is
+    // joined into a cache key, and much cheaper to make than base-36 text. Keys are never shown.
+    const ha = fin(laneA);
+    const hb = fin(laneB);
+    key = String.fromCodePoint(ha & 0xffff, ha >>> 16, hb & 0xffff, hb >>> 16);
+  } finally {
+    // Also when the walk throws: a getter that catches a nested key's error keeps hashing on the outer lanes.
+    laneA = outerA;
+    laneB = outerB;
+  }
   memo.set(v, key);
   return key;
 }

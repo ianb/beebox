@@ -73,3 +73,28 @@ test("a getter that asks for another geometry's or gesture's key does not change
   assert.notEqual(gestureKey(gesture(0.25)), gestureKey(gesture(0.75)));
   assert.equal(gestureKey(gesture(0.25)), gestureKey({ pressure: 0.25, seed: 3 }));
 });
+
+test("a getter that catches a nested key's error does not change the outer key", () => {
+  // The inner data has hashed some words when its getter throws.
+  const broken = (): object => {
+    const d = { a: 1 };
+    Object.defineProperty(d, "b", { enumerable: true, get: () => { throw new Error("bad"); } });
+    return d;
+  };
+  const poly = (x: number): Geom => {
+    const last: [number, number] = [0, 0];
+    Object.defineProperty(last, 1, {
+      get: () => {
+        try {
+          keyOf(broken());
+        } catch (e) {
+          assert.ok(e instanceof Error, "the getter's own error");
+        }
+        return 2;
+      },
+    });
+    return { kind: "poly", points: [[x, 0], [5, 5], last], closed: true };
+  };
+  const plain = (x: number): Geom => ({ kind: "poly", points: [[x, 0], [5, 5], [0, 2]], closed: true });
+  assert.equal(geomKey(poly(10)), geomKey(plain(10)));
+});

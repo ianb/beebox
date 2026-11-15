@@ -54,6 +54,8 @@ function preparedPoints(contour: Contour, b: Mat): number {
 
 /** One contour, prepared in brush space (`b` maps the call's coordinates there); grows `box` by its points. */
 export function prepareContour(c: { contour: Contour; seed: number }, a: { b: Mat; brush: Brush; gesture: Gesture; width: number; box: { x0: number; y0: number; x1: number; y1: number } }): PreparedContour {
+  // Read the brush before the shared buffers are filled: a getter in it could prepare another contour.
+  const step = stepFor(a.brush, a.width);
   const m = preparedPoints(c.contour, a.b);
   const n = Math.max(0, m - 1);
   let total = 0;
@@ -63,7 +65,6 @@ export function prepareContour(c: { contour: Contour; seed: number }, a: { b: Ma
     lengths[i] = len;
     total += len;
   }
-  const step = stepFor(a.brush, a.width);
   const count = firstSamples(lengths, { n, points: m, total, step, first: firsts });
   const origin = m === 0 ? ([0, 0] as const) : ([points[0] ?? 0, points[1] ?? 0] as const);
   const geom = new Float32Array(m * POINT_WORDS);
