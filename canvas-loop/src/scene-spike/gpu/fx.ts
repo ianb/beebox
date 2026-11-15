@@ -31,7 +31,7 @@ function runStage(s: Stage, a: { f: Frame; w: number; h: number }): GPUTexture {
   ] });
   const views = [0, 1, 2].map((i) => (s.inputs[i] ?? f.pipes.dummy).createView());
   const g1 = f.device.createBindGroup({ layout: f.pipes.f1, entries: views.map((resource, binding) => ({ binding, resource })) });
-  const pass = beginPass(f, { tex: out, clear: true });
+  const pass = beginPass(f, { tex: out, clear: true, kind: "effect" });
   pass.setPipeline(f.pipes.fx[s.pipe]);
   pass.setBindGroup(0, g0);
   pass.setBindGroup(1, g1);

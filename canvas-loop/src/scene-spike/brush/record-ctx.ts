@@ -37,12 +37,19 @@ class RecordedGradient implements Ctx2DGradient {
   }
 }
 
-/** `rgba(r, g, b, a)` as kinds.ts and ink.ts write it: 0..1 channels and alpha. */
-function parseInk(style: string | Ctx2DGradient): { rgb: [number, number, number]; a: number } {
+const inks = new Map<string, { rgb: readonly [number, number, number]; a: number }>();
+
+/** `rgba(r, g, b, a)` as kinds.ts and ink.ts write it: 0..1 channels and alpha (parsed once per string). */
+function parseInk(style: string | Ctx2DGradient): { rgb: readonly [number, number, number]; a: number } {
   const css = style instanceof RecordedGradient ? (style.stops[0]?.[1] ?? "") : style;
-  const m = typeof css === "string" ? /^rgba\(([\d.]+), ([\d.]+), ([\d.]+), ([\d.e-]+)\)$/.exec(css) : null;
-  if (m === null) throw new GpuRenderError({ detail: `brush recorder: unexpected ink ${String(css)}` });
-  return { rgb: [Number(m[1]) / 255, Number(m[2]) / 255, Number(m[3]) / 255], a: Number(m[4]) };
+  if (typeof css !== "string") throw new GpuRenderError({ detail: "brush recorder: unexpected ink (not a string)" });
+  const hit = inks.get(css);
+  if (hit !== undefined) return hit;
+  const m = /^rgba\(([\d.]+), ([\d.]+), ([\d.]+), ([\d.e-]+)\)$/.exec(css);
+  if (m === null) throw new GpuRenderError({ detail: `brush recorder: unexpected ink ${css}` });
+  const ink = { rgb: [Number(m[1]) / 255, Number(m[2]) / 255, Number(m[3]) / 255] as const, a: Number(m[4]) };
+  if (inks.size < 4096) inks.set(css, ink);
+  return ink;
 }
 
 function unexpected(call: string): never {

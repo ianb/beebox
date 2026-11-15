@@ -5,7 +5,7 @@
 import type { SmearBrush } from "../../core/brush/types.js";
 import type { Dab, Run } from "../brush/expand.js";
 import type { Rgba } from "../colors.js";
-import type { Mat } from "../scene.js";
+import type { Mat, PictureVersion } from "../scene.js";
 import type { FxPlan } from "./effects.js";
 import type { LightPlan } from "./light.js";
 import type { BevelPlan } from "./material.js";
@@ -34,18 +34,26 @@ export interface Slot {
   readonly y: number;
 }
 
-/** Closed rings in device pixels whose nonzero union is one coverage; `box` bounds them. `slot` is set when packed into the atlas. */
+/**
+ * Closed rings whose nonzero union is one coverage: a ring point plus (ox, oy)
+ * is in device pixels (rings kept between frames are shared, untranslated).
+ * `box` bounds them in device pixels. `slot` is set when packed into the atlas.
+ */
 export interface Piece {
   readonly rings: readonly (readonly number[])[];
   readonly box: R;
+  readonly ox: number;
+  readonly oy: number;
   slot?: Slot;
 }
 
-/** A brushed mark's dabs and bristle runs in device pixels, accumulated in the mark atlas inside `box`. */
+/** A brushed mark's dabs and bristle runs, accumulated in the mark atlas inside `box`; a point plus (ox, oy) is in device pixels. */
 export interface TexMark {
   readonly box: R;
   readonly dabs: readonly Dab[];
   readonly runs: readonly Run[];
+  readonly ox: number;
+  readonly oy: number;
   slot?: Slot;
 }
 
@@ -101,21 +109,27 @@ interface Mat4 {
 
 export type Item =
   | (Common & Mat4 & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
-  | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number })
+  /** A layer; `shift` (whole device pixels) moves a picture tile from raster space to the target's. */
+  | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number; readonly shift?: readonly [number, number] })
   | (Common & Mat4 & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec })
   | (Common & { readonly k: "smear"; readonly smear: SmearRec })
   | (Common & Mat4 & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
 
 /**
- * A clip region in its job: every shape's rings (each shape oriented positive),
- * inside where their summed winding is not zero, times its parent clip. `tex`
- * lives while its job draws.
+ * A clip region in its job's device pixels, times its parent clip: one shape's
+ * coverage from the atlas (`piece`, exact area as a fill), or for a union of
+ * shapes their rings (each oriented positive), inside where the summed winding
+ * is not zero. Every clip of a frame is drawn once, inside its own `box`, on a
+ * shared clip page per nesting depth (clip-pages.ts): `slot` and `page`.
  */
 export interface ClipMask {
   readonly rings: readonly (readonly number[])[];
+  readonly piece: Piece | undefined;
   readonly parent: ClipMask | null;
+  readonly depth: number;
   readonly box: R;
-  tex?: GPUTexture | undefined;
+  slot?: Slot;
+  page?: GPUTexture | undefined;
 }
 
 export interface Job {
@@ -128,18 +142,26 @@ export interface Job {
   light?: { readonly plan: LightPlan; readonly mats: readonly [Job, Job] } | undefined;
   /** A bevelled shape in material layer 0: its coverage becomes rim normals. */
   bevel?: BevelPlan | undefined;
-  /** The finished layer once encoded; texel (0, 0) is device pixel (rect.x0, rect.y0). */
+  /** The finished layer once encoded; texel (0, 0) is device pixel (rect.x0, rect.y0). Set when lowered for a kept picture tile. */
   tex?: GPUTexture | undefined;
+  /** A picture tile to keep once drawn (rasters.ts), in raster space. */
+  keep?: { readonly version: PictureVersion; readonly key: string } | undefined;
 }
 
-/** Every job below `j` (children first), so a job's sources are encoded before it. */
+/** Every job below `j` (children first, each once: a picture tile may be placed twice), so a job's sources are encoded before it. */
 export function postOrder(j: Job, out: Job[]): Job[] {
+  visit(j, { out, seen: new Set() });
+  return out;
+}
+
+function visit(j: Job, a: { out: Job[]; seen: Set<Job> }): void {
+  if (a.seen.has(j)) return;
+  a.seen.add(j);
   for (const it of j.items) {
     if (it.k !== "layer") continue;
-    if (!isEmpty(it.job.rect)) postOrder(it.job, out);
-    if (it.mask !== undefined && !isEmpty(it.mask.rect)) postOrder(it.mask, out);
+    if (!isEmpty(it.job.rect) && it.job.tex === undefined) visit(it.job, a);
+    if (it.mask !== undefined && !isEmpty(it.mask.rect)) visit(it.mask, a);
   }
-  for (const m of j.light?.mats ?? []) if (!isEmpty(m.rect)) postOrder(m, out);
-  out.push(j);
-  return out;
+  for (const m of j.light?.mats ?? []) if (!isEmpty(m.rect)) visit(m, a);
+  a.out.push(j);
 }

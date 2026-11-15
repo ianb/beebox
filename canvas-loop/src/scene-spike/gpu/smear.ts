@@ -1,7 +1,8 @@
 // Encode one smudge or wet stroke onto its target layer (shader-smear.ts). The
 // caller ends its render pass first: the stroke reads what is drawn before it.
 import type { Frame } from "./frame.js";
-import type { R, SmearRec } from "./jobs.js";
+import { timed } from "./frame.js";
+import type { ClipMask, R, SmearRec } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import { SMEAR_WGSL } from "./shader-smear.js";
 
@@ -35,7 +36,7 @@ export class SmearPass {
     return { x0, y0, x1, y1 };
   }
 
-  encode(s: SmearRec, a: { f: Frame; tex: GPUTexture; rect: R; clip: GPUTexture | undefined }): void {
+  encode(s: SmearRec, a: { f: Frame; tex: GPUTexture; rect: R; clip: ClipMask | undefined }): void {
     const { f, tex, rect } = a;
     const reg = SmearPass.region(s, rect);
     const rw = widthOf(reg);
@@ -51,7 +52,7 @@ export class SmearPass {
     const dd = new Float32Array(s.dabs.length * 8);
     for (const [k, d] of s.dabs.entries()) dd.set([d.x - rect.x0, d.y - rect.y0, d.r, d.a, d.first ? 1 : 0, 0, 0, 0], k * 8);
     const dabs = this.#buffer(f, { size: dd.byteLength, usage: S, data: dd.buffer });
-    const ub = new ArrayBuffer(144);
+    const ub = new ArrayBuffer(176);
     const ui = new Int32Array(ub);
     const uu = new Uint32Array(ub);
     const uf = new Float32Array(ub);
@@ -66,12 +67,15 @@ export class SmearPass {
     uu[32] = p.seed;
     ui[33] = p.width;
     uf.set([rect.x0, rect.y0], 34);
-    const u = this.#buffer(f, { size: 144, usage: GPUBufferUsage.UNIFORM, data: ub });
+    // The clip's box relative to the layer, and its slot on its clip page.
+    const c = a.clip;
+    if (c !== undefined) ui.set([c.box.x0 - rect.x0, c.box.y0 - rect.y0, widthOf(c.box), heightOf(c.box), c.slot?.x ?? 0, c.slot?.y ?? 0], 36);
+    const u = this.#buffer(f, { size: 176, usage: GPUBufferUsage.UNIFORM, data: ub });
     const buffers = [pix, fb, before, load, dabs, u];
-    const entries: GPUBindGroupEntry[] = [...buffers.map((buffer, binding) => ({ binding, resource: { buffer } })), { binding: 6, resource: (a.clip ?? f.pipes.dummy).createView() }];
+    const entries: GPUBindGroupEntry[] = [...buffers.map((buffer, binding) => ({ binding, resource: { buffer } })), { binding: 6, resource: (a.clip?.page ?? f.pipes.dummy).createView() }];
     const group = this.#device.createBindGroup({ layout: this.#pipe.getBindGroupLayout(0), entries });
     f.enc.copyTextureToBuffer({ texture: tex, origin: [reg.x0, reg.y0] }, { buffer: pix, bytesPerRow: bpr }, [rw, rh]);
-    const cp = f.enc.beginComputePass();
+    const cp = f.enc.beginComputePass(timed(f, "smear"));
     cp.setPipeline(this.#pipe);
     cp.setBindGroup(0, group);
     cp.dispatchWorkgroups(1);

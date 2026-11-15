@@ -19,7 +19,7 @@ import { GpuRenderer } from "../gpu/renderer.js";
 import { encodePng } from "./png.js";
 import { SceneRecorder } from "../recorder/view.js";
 import { sceneOutline } from "../outline.js";
-import { SpikeUtil } from "./util.js";
+import { SpikeUtil } from "../util.js";
 
 export interface SpikeRunOptions {
   readonly sketchPath: string;

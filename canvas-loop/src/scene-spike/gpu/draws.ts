@@ -1,4 +1,5 @@
-// Encode one job: its clip masks, then its items in order into its own layer.
+// Encode one job: its items in order into its own layer (its clips are on the
+// frame's clip pages, clip-pages.ts).
 // A draw whose blend reads what is below (every mode but normal, add, screen
 // and erase) ends the pass, copies its box of the layer, and blends in the
 // shader (W3C formulas); the others are fixed-function blends. A smudge or wet
@@ -6,7 +7,7 @@
 import { blur2, encodeFx } from "./fx.js";
 import type { Frame } from "./frame.js";
 import { beginPass, storage } from "./frame.js";
-import type { ClipMask, Item, Job } from "./jobs.js";
+import type { Item, Job } from "./jobs.js";
 import { heightOf, inter, isEmpty, widthOf } from "./jobs.js";
 import type { DrawPipe } from "./pipelines.js";
 import type { Rec } from "./records.js";
@@ -24,9 +25,28 @@ interface Textures {
   image?: GPUTexture | undefined;
 }
 
-function textures(f: Frame, t: Textures): GPUBindGroup {
-  const views = [t.src, t.mask, t.clip, t.bd, t.atlas, t.aux, t.image].map((x) => (x ?? f.pipes.dummy).createView());
-  return f.device.createBindGroup({ layout: f.pipes.g1, entries: views.map((resource, binding) => ({ binding, resource })) });
+const ids = new WeakMap<GPUTexture, number>();
+let nextId = 1;
+const idOf = (t: GPUTexture | undefined): number => {
+  if (t === undefined) return 0;
+  let id = ids.get(t);
+  if (id === undefined) {
+    id = nextId++;
+    ids.set(t, id);
+  }
+  return id;
+};
+
+/** The draw shader's texture bind group for `t`, made once per frame for each set of textures. */
+export function textures(f: Frame, t: Textures): GPUBindGroup {
+  const list = [t.src, t.mask, t.clip, t.bd, t.atlas, t.aux, t.image];
+  const key = list.map(idOf).join(",");
+  const hit = f.bindGroups.get(key);
+  if (hit !== undefined) return hit;
+  const views = list.map((x) => (x ?? f.pipes.dummy).createView());
+  const group = f.device.createBindGroup({ layout: f.pipes.g1, entries: views.map((resource, binding) => ({ binding, resource })) });
+  f.bindGroups.set(key, group);
+  return group;
 }
 
 /**
@@ -35,7 +55,7 @@ function textures(f: Frame, t: Textures): GPUBindGroup {
  * their mark page, so a run of them shares one draw.
  */
 function itemTextures(it: Item, f: Frame): { page: number; t: Textures }[] {
-  const clip = it.clip?.tex;
+  const clip = it.clip?.page;
   const image = (p: { image?: Parameters<Frame["image"]>[0] }): GPUTexture | undefined => (p.image === undefined ? undefined : f.image(p.image));
   const pages = (a: { atlas: number; marks: number }): Textures => ({ atlas: f.atlas[a.atlas]?.tex, aux: f.markPages[a.marks]?.tex });
   switch (it.k) {
@@ -64,26 +84,12 @@ function pipeOf(it: Item): DrawPipe {
   return it.erase ? "erase" : (FIXED[it.mode] ?? "backdrop");
 }
 
-/** Clip masks: each clip's coverage, times its parent, inside the clip's box. */
-function clipRecs(job: Job): { clip: ClipMask; recs: Rec[]; mul: Rec | undefined }[] {
-  return job.clips.map((clip) => {
-    const box = inter(clip.box, job.rect);
-    const recs: Rec[] = isEmpty(box) ? [] : [{ box, src: 0, rings: clip.rings }];
-    const mul = clip.parent === null || isEmpty(box) ? undefined : { box, src: 0, clip: true };
-    return { clip, recs, mul };
-  });
-}
-
-/** Release what `job`'s items and clips held once the job is encoded. */
+/** Release what `job`'s items held once the job is encoded; a drawn picture tile is kept (another placement may read it). */
 function releaseSources(job: Job, f: Frame): void {
-  for (const c of job.clips) {
-    if (c.tex !== undefined) f.pool.release(c.tex);
-    c.tex = undefined;
-  }
   for (const it of job.items) {
     if (it.k !== "layer") continue;
     for (const src of [it.job, it.mask]) {
-      if (src?.tex === undefined) continue;
+      if (src?.tex === undefined || src.keep !== undefined) continue;
       f.pool.release(src.tex);
       src.tex = undefined;
     }
@@ -96,11 +102,10 @@ export function encodeJob(job: Job, f: Frame): void {
   const w = widthOf(job.rect);
   const h = heightOf(job.rect);
   const tex = f.pool.acquire({ w, h, format: "rgba8unorm" });
-  const clips = clipRecs(job);
   const items = job.items.map((it) => ({ it, recs: itemRecs(it, job.rect), box: inter(it.box, job.rect) })).filter((x) => !isEmpty(x.box));
   // Backdrop draws carry their copy's box.
   const itemRecsAll = items.map((x) => (pipeOf(x.it) === "backdrop" ? x.recs.map((r) => ({ ...r, bd: x.box })) : x.recs));
-  const all: Rec[] = [...clips.flatMap((c) => [...c.recs, ...(c.mul === undefined ? [] : [c.mul])]), ...itemRecsAll.flat()];
+  const all: Rec[] = itemRecsAll.flat();
   const packed = pack(all, { rect: job.rect, tex });
   const g0 = f.device.createBindGroup({ layout: f.pipes.g0, entries: [{ binding: 0, resource: { buffer: storage(f, packed.draws) } }, { binding: 1, resource: { buffer: storage(f, packed.stops) } }, { binding: 2, resource: { buffer: storage(f, packed.edges) } }] });
   let index = 0;
@@ -111,19 +116,8 @@ export function encodeJob(job: Job, f: Frame): void {
     index += a.count;
     f.stats.draws++;
   };
-  for (const c of clips) {
-    c.clip.tex = f.pool.acquire({ w, h, format: "r8unorm" });
-    const pass = beginPass(f, { tex: c.clip.tex, clear: true });
-    pass.setPipeline(f.pipes.draw.clipCov);
-    for (const _r of c.recs) draw(pass, { t: {}, count: 1 });
-    if (c.mul !== undefined) {
-      pass.setPipeline(f.pipes.draw.clipMul);
-      draw(pass, { t: { clip: c.clip.parent?.tex }, count: 1 });
-    }
-    pass.end();
-  }
   const held: GPUTexture[] = [];
-  let pass = beginPass(f, { tex, clear: true });
+  let pass = beginPass(f, { tex, clear: true, kind: "draw" });
   // Consecutive draws with one fixed-function pipeline and the same textures go out as one instanced draw.
   let pending: { pipe: DrawPipe; t: Textures; count: number } | undefined;
   const flush = (): void => {
@@ -137,8 +131,8 @@ export function encodeJob(job: Job, f: Frame): void {
     if (it.k === "smear") {
       flush();
       pass.end();
-      f.smear.encode(it.smear, { f, tex, rect: job.rect, clip: it.clip?.tex });
-      pass = beginPass(f, { tex, clear: false });
+      f.smear.encode(it.smear, { f, tex, rect: job.rect, clip: it.clip ?? undefined });
+      pass = beginPass(f, { tex, clear: false, kind: "draw" });
       continue;
     }
     const pipe = pipeOf(it);
@@ -160,7 +154,7 @@ export function encodeJob(job: Job, f: Frame): void {
       f.enc.copyTextureToTexture({ texture: tex, origin: [box.x0 - job.rect.x0, box.y0 - job.rect.y0] }, { texture: bd }, [widthOf(box), heightOf(box)]);
       f.stats.copies++;
       held.push(bd);
-      pass = beginPass(f, { tex, clear: false });
+      pass = beginPass(f, { tex, clear: false, kind: "draw" });
     }
     pass.setPipeline(f.pipes.draw[pipe]);
     if (only !== undefined || it.k !== "glyphs") {

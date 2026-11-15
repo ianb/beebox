@@ -7,9 +7,13 @@ import { EDGE_WGSL } from "./shader-draw.js";
 import type { Piece, R, Slot } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import type { PoolFormat, TexturePool } from "./pool.js";
+import { timed } from "./frame.js";
+import type { PassTimer } from "./timing.js";
 
 const MAX = 8192;
 const GAP = 1;
+/** Floats per edge instance. */
+const FLOATS = 8;
 
 export interface AtlasPage {
   readonly tex: GPUTexture;
@@ -48,26 +52,41 @@ export function shelfPack(pieces: readonly { readonly box: R; slot?: Slot }[], p
   return pages;
 }
 
-/** One instance per edge: (x0, y0, x1, y1) in page pixels, then the slot's right side. */
+/**
+ * One instance per edge: (x0, y0, x1, y1) relative to its piece's box, then the
+ * slot's corner on the page and the box's width. Coverage is computed in the
+ * piece's own pixels, so it does not depend on where the piece is packed (which
+ * depends on what else the frame draws): a kept and a fresh frame agree.
+ */
 function edgeData(pieces: readonly Piece[], page: number): Float32Array {
-  const out: number[] = [];
+  let n = 0;
+  for (const p of pieces) if (p.slot?.page === page) for (const r of p.rings) n += r.length / 2;
+  const out = new Float32Array(n * FLOATS);
+  let o = 0;
   for (const p of pieces) {
     const s = p.slot;
     if (s?.page !== page) continue;
-    const ox = s.x - p.box.x0;
-    const oy = s.y - p.box.y0;
-    const right = s.x + widthOf(p.box);
+    // Ring point → device pixel (+ ox, oy) → the piece's own pixel (− box corner).
+    const { x0, y0 } = p.box;
+    const w = widthOf(p.box);
     for (const r of p.rings) {
       for (let i = 0; i + 1 < r.length; i += 2) {
         const j = (i + 2) % r.length;
-        const ay = r[i + 1] ?? 0;
-        const by = r[j + 1] ?? 0;
+        const ay = (r[i + 1] ?? 0) + p.oy - y0;
+        const by = (r[j + 1] ?? 0) + p.oy - y0;
         if (ay === by) continue;
-        out.push((r[i] ?? 0) + ox, ay + oy, (r[j] ?? 0) + ox, by + oy, right);
+        out[o] = (r[i] ?? 0) + p.ox - x0;
+        out[o + 1] = ay;
+        out[o + 2] = (r[j] ?? 0) + p.ox - x0;
+        out[o + 3] = by;
+        out[o + 4] = s.x;
+        out[o + 5] = s.y;
+        out[o + 6] = w;
+        o += FLOATS;
       }
     }
   }
-  return new Float32Array(out);
+  return out.subarray(0, o);
 }
 
 export class CoverageAtlas {
@@ -82,26 +101,26 @@ export class CoverageAtlas {
     const add: GPUBlendComponent = { srcFactor: "one", dstFactor: "one", operation: "add" };
     this.#pipe = device.createRenderPipeline({
       layout: "auto",
-      vertex: { module, entryPoint: "segVs", buffers: [{ arrayStride: 20, stepMode: "instance", attributes: [{ shaderLocation: 0, offset: 0, format: "float32x4" }, { shaderLocation: 1, offset: 16, format: "float32" }] }] },
+      vertex: { module, entryPoint: "segVs", buffers: [{ arrayStride: FLOATS * 4, stepMode: "instance", attributes: [{ shaderLocation: 0, offset: 0, format: "float32x4" }, { shaderLocation: 1, offset: 16, format: "float32x4" }] }] },
       fragment: { module, entryPoint: "segFs", targets: [{ format, blend: { color: add, alpha: add } }] },
     });
   }
 
   /** Pack `pieces`, accumulate their coverage, and return the pages (pool textures the caller releases). */
-  build(pieces: readonly Piece[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; minWidth: number }): AtlasPage[] {
+  build(pieces: readonly Piece[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; minWidth: number; timer: PassTimer | undefined }): AtlasPage[] {
     const widest = pieces.reduce((w, p) => Math.max(w, widthOf(p.box) + GAP), 0);
     const sizes = shelfPack(pieces, Math.min(MAX, Math.max(f.minWidth, widest, 256)));
     return sizes.map((size, page) => {
       const tex = f.pool.acquire({ w: size.w, h: size.h, format: this.#format });
       const data = edgeData(pieces, page);
-      const pass = f.enc.beginRenderPass({ colorAttachments: [{ view: tex.createView(), loadOp: "clear", clearValue: [0, 0, 0, 0], storeOp: "store" }] });
+      const pass = f.enc.beginRenderPass({ colorAttachments: [{ view: tex.createView(), loadOp: "clear", clearValue: [0, 0, 0, 0], storeOp: "store" }], ...timed(f, "coverage") });
       if (data.length > 0) {
         const uni = this.#buffer(new Float32Array([tex.width, tex.height, 0, 0]), { usage: GPUBufferUsage.UNIFORM, temp: f.temp });
         const edges = this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp });
         pass.setPipeline(this.#pipe);
         pass.setBindGroup(0, this.#device.createBindGroup({ layout: this.#pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uni } }] }));
         pass.setVertexBuffer(0, edges);
-        pass.draw(6, data.length / 5);
+        pass.draw(6, data.length / FLOATS);
       }
       pass.end();
       return { tex, width: tex.width, height: tex.height };

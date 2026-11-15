@@ -145,3 +145,34 @@ starts.
   caches the draft allows and the spike has not built; a performance round
   comes before Checkpoint 4.
 - `v.control` is a kept frame output; headless stand-ins draw above the scene.
+
+## Performance round (2026-11-15, not yet committed)
+
+- **What was built:** pass timing by timestamp queries (`gpu/timing.ts`);
+  coverage geometry kept per shape under a structural key hashed while
+  recording, with translation added afterwards (`hash.ts`,
+  `gpu/geometry-cache.ts`, `gpu/shape-geometry.ts`); picture rasters kept as
+  a fixed grid of 2048 px tiles aligned to the picture's origin
+  (`gpu/rasters.ts`), or as one layer over the whole picture when it reads
+  its surroundings: smudge, wet, wash, hatching, lighting
+  (`gpu/picture-reads.ts`); every clip of a frame drawn once on shared clip
+  pages (`gpu/clip-pages.ts`); per-frame bind groups.
+- **Provisional draft 2.6 decision** (for the boxholder at Checkpoint 4): a
+  placement's device translation snaps to whole device pixels, cached or
+  not, so a panning camera reuses the room's tiles. A group does not snap.
+- **Cause of the slowness:** one clip pass per clip, each looping over every
+  clip edge per pixel: 99% of the walker's GPU time and 76% of the Hallway's.
+  Passes per frame: walker 229 → 4, Hallway 191 → 11.
+- **Browser, ratio 2:** walker 3.2 → 18.8 fps (CPU-bound: brush expansion of
+  ~525 moving strokes, ~30 ms); Hallway still and panning 60 / 58.8 fps;
+  chemistry 60.
+- **Clips:** a one-shape clip whose outline is one simple ring reads
+  exact-area coverage from the atlas; any other clip sums windings in 64
+  bands, within two levels of the atlas. Kept rasters are destroyed when not
+  placed in the last two frames, budget 256 MB.
+- **Cache equivalence** is tested (`test/scene-spike/cache-cases.ts`,
+  `raster-cases.ts`): warm, caches-off and cold renders byte-identical for
+  moving frames at ratio 1 and 2 and for the three ports. It needed atlas
+  and mark coverage computed in each piece's own pixels (slot positions
+  depend on what else a frame draws), with slot offsets applied as integers
+  (Metal's fast math reassociated them).

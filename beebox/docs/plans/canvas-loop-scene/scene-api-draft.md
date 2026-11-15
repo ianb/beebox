@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.5
+# Stage 1: the scene API, draft 2.6
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -492,3 +492,28 @@ From the Stage 4 builder (chunks 1–2):
 - **`effects.paper`** keeps today's `paperTexture` strength (at most 18% darker
   in the paper's valleys) per unit of amount.
 - **`noise`** sums p5's four halving octaves, scaled to [0, 1).
+
+## 18. Draft 2.6: caching details settled in the speed round
+
+- **Placements snap to whole device pixels** (provisional; for the boxholder at
+  Checkpoint 4). The translation part of a placement's final device transform
+  is rounded, for cached and uncached rendering alike, so a panning camera
+  reuses a picture's kept raster and cache equivalence still holds. Rotation
+  and scale are unchanged. A group does not snap, so a picture and the same
+  body drawn in a group can differ by under one device pixel of position.
+  Measured: the panning Hallway goes from 25 to 58 fps at ratio 2. The
+  alternative (today's) is resampling a kept raster at fractional offsets,
+  which blurs slightly while moving.
+- **Kept rasters** are a fixed grid of 2048-device-pixel tiles aligned to the
+  picture's origin. Pictures with backdrop-reading content (`smudge`, `wet`) or
+  effects that read their surroundings (hatching's tone range, wash bleed,
+  blur near a tile edge) are kept as one raster for their whole extent, so
+  tiles never change their result.
+- **Eviction:** versions not placed in the last two frames may be dropped; all
+  kept and spare rasters together stay under 256 MB.
+- **Fonts:** a picture that measured text is re-recorded when fonts finish
+  loading (browser); until that exists, the spike does not invalidate on font
+  load.
+- **Hashes:** cache keys are 64-bit hashes of recorded data; a collision
+  (about 2^-64 per pair) is accepted as the only way two different inputs can
+  share a cached result.

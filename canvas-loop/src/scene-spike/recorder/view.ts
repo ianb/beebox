@@ -19,6 +19,7 @@ import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import { PictureHandle, PictureTable, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
 import { clipGeoms, copyCommands, copyPaint, copyPoints, resolveGroup, resolveStyle, roundedRect } from "./style.js";
 import { debugBoxesOf } from "./debug.js";
+import { keyOf } from "../hash.js";
 import { recordText } from "./text.js";
 import { PureHelpers } from "./helpers.js";
 import { copyMaterial, hasOpenLight, resolveLight } from "./light.js";
@@ -116,7 +117,10 @@ export class SceneRecorder extends PureHelpers implements View {
     return children;
   }
   #shape(call: string, args: { geom: Geom; style: Style }): void {
-    this.#add({ kind: "shape", call, geom: args.geom, style: resolveStyle(args.style, { call, paper: this.#paper }) });
+    const style = resolveStyle(args.style, { call, paper: this.#paper });
+    // Structural keys, hashed while recording: what the renderer keeps geometry and expansions under (draft section 6).
+    for (const v of [args.geom, style.brush?.brush, style.brush?.gesture]) if (v !== undefined) keyOf(v);
+    this.#add({ kind: "shape", call, geom: args.geom, style });
   }
   #notInPicture(call: string): void {
     if (this.#picture !== undefined) throw new SketchUsageError({ detail: `v.${call} inside the body of ${this.#picture}: a body runs only when its version records, so ${call} would come and go with the cache (draft section 8)` });
@@ -211,6 +215,7 @@ export class SceneRecorder extends PureHelpers implements View {
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     const shapes = clipGeoms(shape);
+    for (const g of shapes) keyOf(g);
     this.#add({ kind: "clip", shapes, children: this.#inside(body, true) });
   }
   mask(maskBody: () => void, body: () => void): void {

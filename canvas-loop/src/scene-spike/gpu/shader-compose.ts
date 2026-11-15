@@ -2,20 +2,30 @@
 // by summed winding) and the W3C blend formulas for blends that read the
 // target. Ported from the Stage 3 compositing probe.
 export const COMPOSE_WGSL = /* wgsl */ `
-// A clip's coverage: the share of the pixel where the summed winding of all its
-// shapes is not zero, so a shape repeated, or two shapes sharing an edge, give
-// the same coverage as their geometric union. Exact across x; sampled in 16
-// bands down the pixel (at most 1/32 off on a nearly horizontal edge).
-const BANDS = 16u;
+// A union clip's coverage: the share of the pixel where the summed winding of
+// all its shapes is not zero, so two shapes sharing an edge, or overlapping,
+// give the coverage of their geometric union. Exact across x; sampled in 64
+// bands down the pixel (at most 1/128 off on a nearly horizontal edge, so
+// within two levels of a one-shape clip's exact area from the atlas).
+const BANDS = 64u;
 const SLOTS = 16u;
+const NEAR = 48u;
 fn unionCover(pix: vec2f, start: u32, count: u32) -> f32 {
+  // The edges that reach this pixel's row, in order (all of them if there are too many): only they can matter.
+  var near: array<u32, 48>; var n = 0u; var all = false;
+  for (var k = 0u; k < count; k++) {
+    let e = clipEdges[start + k];
+    if (max(e.y, e.w) <= pix.y || min(e.y, e.w) >= pix.y + 1) { continue; }
+    if (n < NEAR) { near[n] = start + k; n++; } else { all = true; }
+  }
+  let m0 = select(n, count, all);
   var total = 0.0;
   for (var b = 0u; b < BANDS; b++) {
     let y = pix.y + (f32(b) + 0.5) / f32(BANDS);
     var w = 0;
     var xs: array<f32, 16>; var ds: array<i32, 16>; var m = 0u;
-    for (var k = 0u; k < count; k++) {
-      let e = clipEdges[start + k];
+    for (var k = 0u; k < m0; k++) {
+      let e = clipEdges[select(near[min(k, NEAR - 1u)], start + k, all)];
       let lo = min(e.y, e.w); let hi = max(e.y, e.w);
       if (y < lo || y >= hi) { continue; }
       let x = e.x + (y - e.y) * (e.z - e.x) / (e.w - e.y);
@@ -35,13 +45,20 @@ fn unionCover(pix: vec2f, start: u32, count: u32) -> f32 {
   }
   return total / f32(BANDS);
 }
-@fragment fn fsClipCov(i: VOut) -> @location(0) vec4f {
+// One clip on a clip page: its box (clipO, device pixels) sits at clipA.xy. Coverage is
+// one shape's from the coverage atlas (src 0) or a union's by summed winding (src 1,
+// edges at covA.zw), times its parent's (box srcO, at maskO.xy on the page bound as clipT).
+@fragment fn fsClipPage(i: VOut) -> @location(0) vec4f {
   let d = draws[i.id];
-  return vec4f(unionCover(pixOf(d, i.pos), u32(d.covA.z), u32(d.covA.w)), 0, 0, 1);
-}
-@fragment fn fsClipMul(i: VOut) -> @location(0) vec4f {
-  let d = draws[i.id];
-  return vec4f(ld(clipT, pixOf(d, i.pos), d.clipO).r, 0, 0, 1);
+  let p = pixOf(d, i.pos) - d.clipA.xy + d.clipO.xy;
+  var c: f32;
+  if (d.src == 0u) { c = cover(d, p); } else { c = unionCover(p, u32(d.covA.z), u32(d.covA.w)); }
+  if (d.srcO.z > 0) {
+    let q = p - d.srcO.xy;
+    if (q.x < 0 || q.y < 0 || q.x >= d.srcO.z || q.y >= d.srcO.w) { c = 0.0; }
+    else { c = c * textureLoad(clipT, vec2i(q + d.maskO.xy), 0).r; }
+  }
+  return vec4f(c, 0, 0, 1);
 }
 // W3C compositing formulas on unpremultiplied colours; modes numbered as BLEND_MODES.
 fn sep(m: u32, s: f32, b: f32) -> f32 {

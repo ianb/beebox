@@ -8,7 +8,7 @@ import { det } from "../mat.js";
 import type { Mat, PaperSettings } from "../scene.js";
 import type { Sigma } from "./effects.js";
 import type { Frame } from "./frame.js";
-import { beginPass } from "./frame.js";
+import { beginPass, timed } from "./frame.js";
 import type { R } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import { PAINTERLY_WGSL, TONE_WGSL } from "./shader-painterly.js";
@@ -126,7 +126,7 @@ export class PainterlyPasses {
       { binding: 2, resource: (a.aux ?? f.pipes.dummy).createView() },
       { binding: 3, resource: { buffer: tone } },
     ] });
-    const pass = beginPass(f, { tex: out, clear: true });
+    const pass = beginPass(f, { tex: out, clear: true, kind: "painterly" });
     pass.setPipeline(this.#pipes[pipe]);
     pass.setBindGroup(0, group);
     pass.draw(6);
@@ -140,7 +140,7 @@ export class PainterlyPasses {
     const { f } = a;
     const hist = this.#buffer(f, { size: 264, usage: GPUBufferUsage.STORAGE });
     const region = this.#buffer(f, { size: 16, usage: GPUBufferUsage.UNIFORM, data: new Float32Array([0, 0, a.w, a.h]).buffer });
-    const cp = f.enc.beginComputePass();
+    const cp = f.enc.beginComputePass(timed(f, "painterly"));
     cp.setPipeline(this.#histogram);
     cp.setBindGroup(0, this.#device.createBindGroup({ layout: this.#histogram.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: region } }, { binding: 1, resource: a.toneTex.createView() }, { binding: 2, resource: { buffer: hist } }] }));
     cp.dispatchWorkgroups(Math.ceil(a.w / 8), Math.ceil(a.h / 8));

@@ -10,9 +10,8 @@ import type { BlendMode } from "../../core/paint.js";
 import type { BrushExpander } from "../brush/expand.js";
 import type { ColorParser } from "../colors.js";
 import { polylines as flatten } from "../geometry/flatten.js";
-import { strokeRings } from "../geometry/stroke.js";
 import { invert, maxScale, mul } from "../mat.js";
-import type { Geom, GroupNode, Mat, PaperSettings, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene.js";
+import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene.js";
 import type { Effects, Material } from "../../scene-draft/scene-api.js";
 import type { Rgba } from "../colors.js";
 import type { LightOut } from "./light.js";
@@ -27,7 +26,14 @@ import type { BrushFrame } from "./marks.js";
 import { brushDraw } from "./marks.js";
 import type { PaintRec } from "./paint.js";
 import { imageRec, paintRec } from "./paint.js";
-import { cutRings, orientShape, pieceOf } from "./rings.js";
+import { pieceOf } from "./rings.js";
+import type { KeptValues, LinShape } from "./geometry-cache.js";
+import { linShape, placePiece } from "./geometry-cache.js";
+import { linearKey } from "../hash.js";
+import type { RasterCache } from "./rasters.js";
+import { TILE, tilesOver, wholeLayer } from "./rasters.js";
+import { readsSurroundings } from "./picture-reads.js";
+import { ShapeGeometry } from "./shape-geometry.js";
 import { lineQuads } from "./text.js";
 
 interface Here {
@@ -82,12 +88,18 @@ export class Lowering {
   readonly #base: Mat;
   readonly #brush: BrushFrame;
   readonly #glyphs: GlyphCache;
+  readonly #geo: ShapeGeometry;
+  readonly #rasters: RasterCache;
+  /** Picture tiles lowered this frame, shared by every placement that needs them. */
+  readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
 
-  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache }) {
+  constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache }) {
+    this.#geo = new ShapeGeometry(options.kept);
+    this.#rasters = options.rasters;
     this.#colors = options.colors;
     this.#base = [options.ratio, 0, 0, options.ratio, 0, 0];
     this.#canvas = { x0: 0, y0: 0, x1: Math.round(options.width * options.ratio), y1: Math.round(options.height * options.ratio) };
-    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio };
+    this.#brush = { expander: options.expander, colors: options.colors, ratio: options.ratio, kept: options.kept };
     this.#glyphs = options.glyphs;
   }
 
@@ -121,7 +133,7 @@ export class Lowering {
         this.#shapeNode(n, here);
         return;
       case "background": {
-        this.#draw({ rings: here.ground, paint: paintRec(n.paint, { matrix: here.groundMatrix, colors: this.#colors }), mode: 0, erase: false, mat: this.#matColor(here, undefined) }, here);
+        this.#draw({ shape: linShape(here.ground), tx: 0, ty: 0, paint: paintRec(n.paint, { matrix: here.groundMatrix, colors: this.#colors }), mode: 0, erase: false, mat: this.#matColor(here, undefined) }, here);
         return;
       }
       case "at":
@@ -130,9 +142,13 @@ export class Lowering {
       case "group":
         this.#group(n, here);
         return;
-      case "clip":
-        this.#nodes(n.children, { ...here, clip: this.#clip(n.shapes, here) });
+      case "clip": {
+        const clip = this.#clip(n.shapes, here);
+        // Nothing inside a clip that cannot be seen draws; only lights for the lit group are still gathered.
+        if (isEmpty(clip.box) && here.lights === undefined) return;
+        this.#nodes(n.children, { ...here, clip });
         return;
+      }
       case "mask": {
         const body = this.#job("mask body", { effects: undefined, here, body: (inner) => this.#nodes(n.body, inner) });
         // Mask artwork contributes no material: its colour alpha cuts colour and material alike (R8).
@@ -183,17 +199,16 @@ export class Lowering {
   #shapeNode(n: ShapeNode, here: Here): void {
     const s = n.style;
     const m = here.matrix;
-    const sc = maxScale(m);
-    const polys = flatten(n.geom, sc);
-    const fill = s.fill === undefined ? [] : toDevice(polys.map((p) => p.pts).filter((r) => r.length >= 6), m);
+    const fill = s.fill === undefined ? undefined : this.#geo.fill(n.geom, m);
     const plain = s.brush === undefined && s.stroke !== undefined && s.weight > 0;
-    const stroke = plain ? toDevice(polys.flatMap((p) => strokeRings(p, { style: s, scale: sc })), m) : [];
+    const stroke = plain ? this.#geo.stroke(n.geom, { style: s, m }) : undefined;
+    const t = { tx: m[4], ty: m[5] };
     const mat = this.#matColor(here, s.material);
     // Blends are colour's: material composites normally (R8).
     const inMat = (mode: number): number => (mat === undefined ? mode : 0);
     const both = (at: Here, mode: { mode: number; erase: boolean; brushMode: number }): void => {
-      if (s.fill !== undefined) this.#draw({ rings: fill, paint: paintRec(s.fill, { matrix: m, colors: this.#colors }), mode: inMat(mode.mode), erase: mode.erase, mat }, at);
-      if (plain) this.#draw({ rings: stroke, paint: paintRec(s.stroke, { matrix: m, colors: this.#colors }), mode: inMat(mode.mode), erase: mode.erase, mat }, at);
+      if (s.fill !== undefined && fill !== undefined) this.#draw({ shape: fill, ...t, paint: paintRec(s.fill, { matrix: m, colors: this.#colors }), mode: inMat(mode.mode), erase: mode.erase, mat }, at);
+      if (s.stroke !== undefined && stroke !== undefined) this.#draw({ shape: stroke, ...t, paint: paintRec(s.stroke, { matrix: m, colors: this.#colors }), mode: inMat(mode.mode), erase: mode.erase, mat }, at);
       if (s.brush !== undefined) this.#brushed(n, { here: at, mode: inMat(mode.brushMode), erase: mode.erase, mat });
     };
     const bevel = here.mat?.layer === 0 ? bevelOf(materialOf(s.material, here.mat), { x: Math.hypot(m[0], m[1]), y: Math.hypot(m[2], m[3]) }) : undefined;
@@ -239,9 +254,16 @@ export class Lowering {
 
   /** R7: replay the picture under the current transform plus (x, y), into its own layer; `background` inside fills its box. */
   #place(n: PlaceNode, here: Here): void {
-    const m = mul(here.matrix, [1, 0, 0, 1, n.x, n.y]);
+    // Draft 2.6: every placement's device translation snaps to whole device pixels (rotation and scale unchanged).
+    const u = mul(here.matrix, [1, 0, 0, 1, n.x, n.y]);
+    const m: Mat = [u[0], u[1], u[2], u[3], Math.round(u[4]), Math.round(u[5])];
     if (invert(m) === undefined) return;
     const v = n.picture;
+    // Outside a lit group a picture draws in kept tiles (rasters.ts); inside one its lights and materials join the group's.
+    if (v.kind === "picture" && here.lights === undefined && here.mat === undefined) {
+      this.#placeTiles(n, { version: v, m, here });
+      return;
+    }
     const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m);
     // R8: the placement's material for the picture's shapes that have none.
     const mat = here.mat === undefined ? undefined : { ...here.mat, fallback: n.material ?? here.mat.fallback };
@@ -250,16 +272,61 @@ export class Lowering {
       here: { ...here, matrix: m, ground, groundMatrix: m, mat },
       body: (inner) => {
         if (v.kind === "picture") this.#nodes(v.children, inner);
-        else this.#draw({ rings: fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m), paint: imageRec(v, m), mode: 0, erase: false, mat: this.#matColor(inner, undefined) }, inner);
+        else this.#draw({ shape: linShape(fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m)), tx: 0, ty: 0, paint: imageRec(v, m), mode: 0, erase: false, mat: this.#matColor(inner, undefined) }, inner);
       },
     });
     this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase }, here);
   }
 
-  /** A shape's fill or stroke, cut to where it can be seen; nothing when it cannot be. */
-  #draw(d: { rings: readonly (readonly number[])[]; paint: PaintRec | undefined; mode: number; erase: boolean; mat?: Rgba | undefined }, here: Here): void {
+  /**
+   * R7 through kept tiles (draft 2.6): the placement's device translation
+   * snaps to whole device pixels and is taken out; the picture draws in that
+   * raster space, cut into the fixed tile grid (or as one layer over its whole
+   * extent when it reads its surroundings); each tile seen is a layer moved
+   * back by the snapped translation. Tiles are disjoint, so compositing each
+   * with the placement's opacity and blend is compositing the one layer. A
+   * tile drawn this frame is shared by every placement that needs it.
+   */
+  #placeTiles(n: PlaceNode, a: { version: PictureVersion; m: Mat; here: Here }): void {
+    const { version: v, m, here } = a;
+    const ix = Math.round(m[4]);
+    const iy = Math.round(m[5]);
+    const rm: Mat = [m[0], m[1], m[2], m[3], 0, 0];
+    const vis = { x0: here.visible.x0 - ix, y0: here.visible.y0 - iy, x1: here.visible.x1 - ix, y1: here.visible.y1 - iy };
+    if (isEmpty(vis)) return;
+    const raster = `${linearKey(rm)}|${this.#brush.ratio}`;
+    const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, rm);
+    const grid = tilesOver(vis);
+    const tiles = readsSurroundings(v) ? [wholeLayer(grid, { raster, name: v.key })] : grid.map((t) => ({ key: `${raster}|${t.x0 / TILE},${t.y0 / TILE}`, tile: t }));
+    for (const { key, tile } of tiles) {
+      const job = this.#tileJob(v, { key, tile, rm, ground, here });
+      if (isEmpty(job.rect)) continue;
+      const shifted = { x0: job.rect.x0 + ix, y0: job.rect.y0 + iy, x1: job.rect.x1 + ix, y1: job.rect.y1 + iy };
+      const item: Item = { k: "layer", job, mask: undefined, opacity: n.opacity, mode: modeOf(n.blend), erase: n.erase, shift: [ix, iy], box: clipBox(here.clip, shifted), clip: here.clip };
+      if (!isEmpty(item.box)) here.job.items.push(item);
+    }
+  }
+
+  /** One tile of `v` in raster space: kept, drawn earlier this frame, or lowered now (and kept once drawn). */
+  #tileJob(v: PictureVersion, a: { key: string; tile: R; rm: Mat; ground: readonly (readonly number[])[]; here: Here }): Job {
+    const { key, tile, rm } = a;
+    const kept = this.#rasters.kept(v, key);
+    if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex };
+    const drawing = this.#drawing.get(v)?.get(key);
+    if (drawing !== undefined) return drawing;
+    const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });
+    if (isEmpty(job.rect)) this.#rasters.store(v, { key, rect: EMPTY, tex: undefined });
+    else job.keep = { version: v, key };
+    const map = this.#drawing.get(v) ?? new Map<string, Job>();
+    map.set(key, job);
+    this.#drawing.set(v, map);
+    return job;
+  }
+
+  /** A shape's fill or stroke (linear rings moved by tx, ty), cut to where it can be seen; nothing when it cannot be. */
+  #draw(d: { shape: LinShape; tx: number; ty: number; paint: PaintRec | undefined; mode: number; erase: boolean; mat?: Rgba | undefined }, here: Here): void {
     if (d.paint === undefined) return;
-    const p = pieceOf(cutRings(d.rings, pad(here.visible, 2)));
+    const p = placePiece(d.shape, { tx: d.tx, ty: d.ty, cut: pad(here.visible, 2) });
     if (p === undefined) return;
     const box = clipBox(here.clip, p.box);
     if (isEmpty(box)) return;
@@ -272,11 +339,15 @@ export class Lowering {
     if (!isEmpty(item.box)) here.job.items.push(item);
   }
 
-  /** A clip mask in the current job: the union of `shapes`, inside any enclosing clip. */
+  /** A clip in the current job: the union of `shapes` (one shape: its coverage piece), inside any enclosing clip. */
   #clip(shapes: readonly Geom[], here: Here): ClipMask {
-    const rings = cutRings(shapes.flatMap((g) => orientShape(fillRings(g, here.matrix))), pad(here.visible, 2));
-    const c: ClipMask = { rings, parent: here.clip, box: clipBox(here.clip, boundsOf(rings)) };
-    here.job.clips.push(c);
+    const parent = here.clip;
+    const depth = parent === null ? 0 : parent.depth + 1;
+    const cov = this.#geo.clip(shapes, { m: here.matrix, cut: pad(here.visible, 2) });
+    const c: ClipMask = "piece" in cov
+      ? { rings: [], piece: cov.piece, parent, depth, box: cov.piece === undefined ? EMPTY : clipBox(parent, cov.piece.box) }
+      : { rings: cov.rings, piece: undefined, parent, depth, box: clipBox(parent, boundsOf(cov.rings)) };
+    if (!isEmpty(c.box)) here.job.clips.push(c);
     return c;
   }
 }

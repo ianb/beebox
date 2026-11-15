@@ -24,6 +24,11 @@ import { rotatedText, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves } from "./paint-cases.js";
 import { castingAmount, featheredCoverage, fullCone, lightsInPictures, materialScopes, nestedLighting, translucentMaterial } from "./light-cases.js";
 import { SHAPE_CELLS, drawShapesDraft, drawShapesToday } from "./shapes.js";
+import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
+import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
+import * as walkerSheet from "../../src/examples/scene-ports/walker-sheet/sketch-tea.js";
+import * as hallwayPort from "../../src/examples/scene-ports/hallway/sketch-tea.js";
+import * as chemistryPort from "../../src/examples/scene-ports/chemistry/sketch-tea.js";
 
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;
@@ -180,3 +185,27 @@ onGpu("R8: shading takes material per unit of coverage, so a translucent emissiv
 onGpu("R8: a feathered mask and a blurred nested lit group cut colour and material alike", featheredCoverage);
 onGpu("R8: a spot with a full-angle cone lights as a point light", fullCone);
 onGpu("hatching amount sets how many lines show at a tone, not only how dark", hatchingAmount);
+
+onGpu("cached, uncached and cold renders give the same bytes (draft section 6): moving frames, ratio 1 and 2", async (handle, t) => {
+  await cacheEquivalence(handle, { t, text });
+});
+onGpu("cached, uncached and cold renders give the same bytes: the three ports", async (handle, t) => {
+  if (text === undefined) return;
+  const ports = [
+    { name: "walker sheet", mod: walkerSheet, at: [1, 2, 3] },
+    // The Hallway pans from frame 301: still frames, then panning ones.
+    { name: "Hallway", mod: hallwayPort, at: [1, 2, 330, 331, 332] },
+    { name: "chemistry", mod: chemistryPort, at: [1, 2, 3] },
+  ];
+  for (const p of ports) {
+    const scenes = portFrames(p.mod, { at: p.at, text });
+    const used = await sameWarmColdOff(handle, { scenes, ratio: 1, what: p.name });
+    t.diagnostic(`${p.name}: warm renderer reused ${used.kept} geometry entries, ${used.tiles} picture tiles, ${used.strokes} brush expansions`);
+  }
+});
+onGpu("kept rasters stay inside the budget: dropped versions' textures are destroyed", rasterMemory);
+onGpu("a picture with a smudge across the tile edge draws as one layer, as a group does", smudgeAcrossTiles);
+onGpu("a tile placed twice in a frame is drawn once and kept once", tilePlacedTwice);
+onGpu("a clip to a path whose contours overlap keeps winding coverage", overlappingContourClip);
+onGpu("a wide picture that reads its surroundings is one layer over what can be seen of it", wideReadingPicture);
+onGpu("pixels images and pictures in a lit group snap to whole device pixels (draft 2.6)", everyPlacementSnaps);

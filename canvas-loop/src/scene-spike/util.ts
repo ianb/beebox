@@ -1,14 +1,14 @@
 // The `Util` a spike run hands to `init` and `update`: seeded randomness,
 // params, log, and text measured by the recorder's own measurer, as text with
 // no transform inside the canvas (draft section 7).
-import { formatArgs } from "../../core/format.js";
-import { SeededRandom } from "../../core/prng.js";
-import { recordOf } from "../../core/records.js";
-import { scaleNote } from "../../core/sound/notes.js";
-import type { ScaleName } from "../../core/sound/notes.js";
-import type { ParamsDecl, ParamValues, TextBounds, TextBox, TextOptions, Util } from "../../core/tea.js";
-import { SketchUsageError } from "../../core/errors.js";
-import type { TextMeasurer } from "../../core/painter/text/measure.js";
+import { formatArgs } from "../core/format.js";
+import { SeededRandom } from "../core/prng.js";
+import { recordOf } from "../core/records.js";
+import { scaleNote } from "../core/sound/notes.js";
+import type { ScaleName } from "../core/sound/notes.js";
+import type { ParamsDecl, ParamValues, TextBounds, TextBox, TextOptions, Util } from "../core/tea.js";
+import { SketchUsageError } from "../core/errors.js";
+import type { TextMeasurer } from "../core/painter/text/measure.js";
 
 export class SpikeUtil implements Util {
   readonly #random: SeededRandom;

@@ -55,11 +55,14 @@ export async function clipUnions(handle: GpuHandle): Promise<void> {
   const one = await render(handle, { size, draw: clipped([star]) });
   assert.equal(maxDiff(one, await render(handle, { size, draw: clipped([star, star, star]) })), 0, "a repeated shape clips as the shape once");
   const rect = (...[x0, y0, x1, y1]: [number, number, number, number]): Vec2[] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  // A union sums windings in 64 bands down each pixel; one shape takes its exact area from the atlas: within two levels.
   const halves = await render(handle, { size, draw: clipped([rect(10.3, 10.4, 50.5, 70.6), rect(50.5, 10.4, 100.7, 70.6)]) });
-  assert.ok(maxDiff(halves, await render(handle, { size, draw: clipped([rect(10.3, 10.4, 100.7, 70.6)]) })) <= 1, "two shapes sharing an edge leave no seam");
+  const seam = maxDiff(halves, await render(handle, { size, draw: clipped([rect(10.3, 10.4, 100.7, 70.6)]) }));
+  assert.ok(seam <= 2, `two shapes sharing an edge leave no seam (largest difference ${seam})`);
   const ell: Vec2[] = [[10.3, 10.4], [60.6, 10.4], [60.6, 30.2], [90.8, 30.2], [90.8, 70.6], [40.2, 70.6], [40.2, 60.5], [10.3, 60.5]];
   const overlap = await render(handle, { size, draw: clipped([rect(10.3, 10.4, 60.6, 60.5), rect(40.2, 30.2, 90.8, 70.6)]) });
-  assert.ok(maxDiff(overlap, await render(handle, { size, draw: clipped([ell]) })) <= 1, "overlapping shapes clip as their outline");
+  const outline = maxDiff(overlap, await render(handle, { size, draw: clipped([ell]) }));
+  assert.ok(outline <= 2, `overlapping shapes clip as their outline (largest difference ${outline})`);
   // A path with a hole keeps the hole; another shape in the union fills part of it.
   const ring: PathCommand[] = [["move", 10, 10], ["line", 110, 10], ["line", 110, 80], ["line", 10, 80], ["close"], ["move", 30, 25], ["line", 30, 65], ["line", 90, 65], ["line", 90, 25], ["close"]];
   const holed = await render(handle, { size, draw: clipped([ring, rect(35, 30, 55, 60)]) });

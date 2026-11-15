@@ -36,6 +36,8 @@ export interface GpuHandle {
   readonly colors: ColorParser;
   /** 2D contexts for the glyph atlas: the runtime's own text rasteriser. */
   readonly raster: MakeRaster;
+  /** The device can time passes ('timestamp-query' was asked for and granted). */
+  readonly timestamps: boolean;
   /** The adapter, for transcripts. */
   readonly description: string;
   destroy(): void;
@@ -115,16 +117,19 @@ export async function openTextMeasurer(): Promise<TextMeasurer> {
 }
 
 /** A GPU device, or undefined when the runtime has no adapter (a machine without a GPU and without a software fallback). */
-export async function openGpu(): Promise<GpuHandle | undefined> {
+export async function openGpu(options?: { timestamps?: boolean }): Promise<GpuHandle | undefined> {
   const { gpu, node } = await gpuEntry();
   const adapter = await gpu.requestAdapter();
   if (adapter === null) return undefined;
   const blendable = adapter.features.has("float32-blendable");
-  const device = await adapter.requestDevice({ requiredFeatures: blendable ? ["float32-blendable"] : [] });
+  const timestamps = options?.timestamps === true && adapter.features.has("timestamp-query");
+  const features: GPUFeatureName[] = [...(blendable ? ["float32-blendable" as const] : []), ...(timestamps ? ["timestamp-query" as const] : [])];
+  const device = await adapter.requestDevice({ requiredFeatures: features });
   const info = adapter.info;
   return {
     device,
     atlasFormat: blendable ? "r32float" : "r16float",
+    timestamps,
     colors: colorsFrom(node ? await node2d() : browser2d()),
     raster: node ? await nodeRaster() : browserRaster(),
     description: [info.vendor, info.architecture, info.description].filter((s) => s !== "").join(" ") || "unknown adapter",

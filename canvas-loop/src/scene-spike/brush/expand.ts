@@ -22,6 +22,7 @@ import type { ColorParser } from "../colors.js";
 import { IDENTITY, applyLinear, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../scene.js";
 import { geomContours } from "./contours.js";
+import { keyOf, linearKey } from "../hash.js";
 import { RecordingCtx, SoftDabImage } from "./record-ctx.js";
 import type { Dab, Run } from "./record-ctx.js";
 
@@ -43,6 +44,8 @@ export interface SmearSet {
 }
 export interface Expanded {
   readonly set: MarkSet | SmearSet;
+  /** What the expansion is kept under: equal keys, equal expansions. */
+  readonly key: string;
   /** Brush space → the stroke's logical coordinates (linear part only; orthogonal). */
   readonly q: Mat;
 }
@@ -132,7 +135,13 @@ function expandIn(req: ExpandRequest, b: Mat): MarkSet | SmearSet | undefined {
 
 export class BrushExpander {
   readonly #cache = new Map<string, { set: MarkSet | SmearSet | undefined; frame: number }>();
+  readonly #enabled: boolean;
   #frame = 0;
+
+  /** Disabled, every stroke is expanded afresh (for cache-equivalence checks). */
+  constructor(options?: { enabled?: boolean }) {
+    this.#enabled = options?.enabled ?? true;
+  }
   /** This frame: brushed strokes asked for, expanded afresh, and reused. */
   stats = { strokes: 0, expanded: 0, hits: 0 };
 
@@ -147,18 +156,20 @@ export class BrushExpander {
     const { b, q } = brushSpace(req.linear);
     const { brush, gesture } = req.stroke;
     const tinted = brush.kind !== "smear" && jitterOf(brush) !== undefined;
-    const key = JSON.stringify([req.geom, req.weight, brush, gesture, b.slice(0, 4), tinted || brush.kind === "smear" ? req.paint : 0]);
+    // The geometry, brush and gesture by their structural keys (hashed when recorded); the paint only where it is expanded in.
+    const paint = tinted || brush.kind === "smear" ? JSON.stringify(req.paint) : "";
+    const key = `${keyOf(req.geom)}|${req.weight}|${keyOf(brush)}|${keyOf(gesture)}|${linearKey(b)}|${paint}`;
     this.stats.strokes++;
-    let entry = this.#cache.get(key);
+    let entry = this.#enabled ? this.#cache.get(key) : undefined;
     if (entry === undefined) {
       entry = { set: expandIn(req, b), frame: this.#frame };
-      this.#cache.set(key, entry);
+      if (this.#enabled) this.#cache.set(key, entry);
       this.stats.expanded++;
     } else {
       entry.frame = this.#frame;
       this.stats.hits++;
     }
-    return entry.set === undefined ? undefined : { set: entry.set, q };
+    return entry.set === undefined ? undefined : { set: entry.set, key, q };
   }
 
   /** Strokes kept between frames. */

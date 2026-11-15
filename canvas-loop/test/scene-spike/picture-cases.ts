@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import type { View } from "../../src/scene-draft/scene-api.js";
 import type { GpuHandle } from "../../src/scene-spike/device.js";
 import { alphaAt, renderOnce, rgbaAt } from "./gpu-render.js";
+import { matrixOf, mul } from "../../src/scene-spike/mat.js";
 
 function body(v: View): void {
   v.rect(0, 0, 60, 40, { fill: "#cfe0ea", stroke: "#1d3557", weight: 2 });
@@ -13,13 +14,39 @@ function body(v: View): void {
   v.group({ effects: { blur: 2 } }, () => v.rect(40, 5, 10, 10, { fill: "#000" }));
 }
 
+/**
+ * Draft 2.6: a placement's device translation snaps to whole device pixels
+ * (rotation and scale unchanged); a group does not snap. So a placement draws
+ * what the body draws in a group moved by the snap, within one level (the same
+ * numbers summed in raster space), and at a sub-pixel position it is not the
+ * unsnapped group.
+ */
 export async function placementReplays(handle: GpuHandle): Promise<void> {
   const size = { width: 200, height: 120 };
-  for (const at of [{ translate: [30, 20] as const, scale: [2, 1] as const }, { translate: [80, 10] as const, rotate: 0.4 }]) {
+  const cases = [
+    { at: { translate: [30, 20] as const, scale: [2, 1] as const }, within: 0 },
+    { at: { translate: [80, 10] as const, rotate: 0.4 }, within: 1 },
+    { at: { translate: [80.3, 10.7] as const }, within: 1 },
+  ];
+  for (const { at, within } of cases) {
+    const m = mul(matrixOf(at), matrixOf({ translate: [5, 7] }));
+    const snap: [number, number] = [Math.round(m[4]) - m[4], Math.round(m[5]) - m[5]];
     const placed = await renderOnce(handle, { size, draw: (v) => v.at(at, () => v.place(v.picture({ key: "p", width: 60, height: 40 }, () => body(v)), 5, 7)) });
-    const direct = await renderOnce(handle, { size, draw: (v) => v.at(at, () => v.at({ translate: [5, 7] }, () => v.group({}, () => body(v)))) });
-    assert.ok(Buffer.from(placed.data).equals(Buffer.from(direct.data)), `placing under ${JSON.stringify(at)} draws exactly what the body draws there in a group`);
+    const group = (shift: readonly [number, number]) => (v: View): void => v.at({ translate: shift }, () => v.at(at, () => v.at({ translate: [5, 7] }, () => v.group({}, () => body(v)))));
+    const snapped = await renderOnce(handle, { size, draw: group(snap) });
+    const most = maxDiff(placed.data, snapped.data);
+    assert.ok(most <= within, `placing under ${JSON.stringify(at)} draws what the body draws in a group at the snapped position, within ${within} (largest difference ${most})`);
+    if (snap[0] !== 0 || snap[1] !== 0) {
+      const unsnapped = await renderOnce(handle, { size, draw: group([0, 0]) });
+      assert.ok(maxDiff(placed.data, unsnapped.data) > 8, `under ${JSON.stringify(at)} the placement snaps and the group does not`);
+    }
   }
+}
+
+function maxDiff(a: Uint8Array, b: Uint8Array): number {
+  let most = 0;
+  for (const [i, x] of a.entries()) most = Math.max(most, Math.abs(x - (b[i] ?? 0)));
+  return most;
 }
 
 export async function placeOptions(handle: GpuHandle): Promise<void> {

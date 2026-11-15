@@ -4,7 +4,7 @@
 // between), and the result is copied back, kept only inside the clip. The
 // arithmetic is core/brush/render/mark/smear.ts's, in float. Coordinates are
 // texels of the target layer; pick-up near its edge reads the nearest patch
-// inside it, as today.
+// inside it, as today. The clip is read from its box on its clip page.
 import { PAPER_WGSL } from "./shader-paper.js";
 
 export const SMEAR_WGSL = /* wgsl */ `
@@ -17,6 +17,7 @@ struct U {
   pap0: vec4f, pap1: vec4f,
   paper: vec4f,
   seed: u32, pwidth: i32, origin: vec2f,
+  clipBox: vec4i, clipSlot: vec2i, pad: vec2i,
 };
 struct Dab { x: f32, y: f32, r: f32, a: f32, first: f32, p0: f32, p1: f32, p2: f32 };
 @group(0) @binding(0) var<storage, read_write> pix: array<u32>;
@@ -80,7 +81,10 @@ fn paperOf(x: i32, y: i32) -> f32 {
     let x = i % u32(u.region.z); let y = i / u32(u.region.z);
     let at = y * u.rowPx + x;
     var c = 1.0;
-    if (u.clip == 1u) { c = textureLoad(clipT, vec2i(i32(x) + u.region.x, i32(y) + u.region.y), 0).r; }
+    if (u.clip == 1u) {
+      let q = vec2i(i32(x) + u.region.x, i32(y) + u.region.y) - u.clipBox.xy;
+      c = select(textureLoad(clipT, q + u.clipSlot, 0).r, 0.0, any(q < vec2i(0)) || any(q >= u.clipBox.zw));
+    }
     pix[at] = pack4x8unorm(clamp(mix(unpack4x8unorm(pix[at]), fb[i], c), vec4f(0.0), vec4f(1.0)));
   }
 }

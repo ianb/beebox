@@ -13,13 +13,18 @@ import { EMPTY, inter, isEmpty, pad } from "./jobs.js";
 import type { PaintRec } from "./paint.js";
 import { paintRec } from "./paint.js";
 import { PAPER_ROW, paperParams } from "./painterly.js";
-import { cutRings, orientShape, pieceOf } from "./rings.js";
+import { orientShape } from "./rings.js";
+import type { KeptValues, LinShape } from "./geometry-cache.js";
+import { linShape, placePiece } from "./geometry-cache.js";
+import { linearKey } from "../hash.js";
+import type { Dab, Run } from "../brush/expand.js";
 
 /** What lowering a brushed stroke needs from the frame. */
 export interface BrushFrame {
   readonly expander: BrushExpander;
   readonly colors: ColorParser;
   readonly ratio: number;
+  readonly kept: KeptValues;
 }
 
 
@@ -44,29 +49,55 @@ function bounds(points: readonly { x: number; y: number; reach: number }[]): R {
   return { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) };
 }
 
-function marks(set: MarkSet, a: { e: Mat; ratio: number; visible: R }): MarkSource | undefined {
+/** A mark set under a linear map (no translation): ink outlines as one shape, or dabs and runs with the bounds they reach. */
+type LinMarks =
+  | { readonly kind: "piece"; readonly shape: LinShape }
+  | { readonly kind: "tex"; readonly dabs: readonly Dab[]; readonly runs: readonly Run[]; readonly reach: { x0: number; y0: number; x1: number; y1: number } };
+
+const lin = (...[e, x, y]: [Mat, number, number]): [number, number] => [e[0] * x + e[2] * y, e[1] * x + e[3] * y];
+
+function linMarks(set: MarkSet, a: { e: Mat; ratio: number }): LinMarks {
   const { e, ratio } = a;
   if (set.polys.length > 0) {
     const rings = set.polys.map((p) => {
       const out: number[] = [];
-      for (let i = 0; i + 1 < p.length; i += 2) out.push(...map(e, p[i] ?? 0, p[i + 1] ?? 0));
+      for (let i = 0; i + 1 < p.length; i += 2) out.push(...lin(e, p[i] ?? 0, p[i + 1] ?? 0));
       return orientShape([out])[0] ?? out;
     });
-    const piece = pieceOf(cutRings(rings, pad(a.visible, 2)));
-    return piece === undefined ? undefined : { kind: "piece", piece };
+    return { kind: "piece", shape: linShape(rings) };
   }
   const dabs = set.dabs.map((d) => {
-    const [x, y] = map(e, d.x, d.y);
+    const [x, y] = lin(e, d.x, d.y);
     return { ...d, x, y, r: d.r * ratio };
   });
   const runs = set.runs.map((r) => {
     const pts: number[] = [];
-    for (let i = 0; i + 1 < r.pts.length; i += 2) pts.push(...map(e, r.pts[i] ?? 0, r.pts[i + 1] ?? 0));
+    for (let i = 0; i + 1 < r.pts.length; i += 2) pts.push(...lin(e, r.pts[i] ?? 0, r.pts[i + 1] ?? 0));
     return { ...r, pts, width: r.width * ratio };
   });
-  const reach = [...dabs.map((d) => ({ x: d.x, y: d.y, reach: d.r + 1 })), ...runs.flatMap((r) => Array.from({ length: r.pts.length / 2 }, (_, i) => ({ x: r.pts[2 * i] ?? 0, y: r.pts[2 * i + 1] ?? 0, reach: r.width + 2 })))];
-  const box = inter(bounds(reach), pad(a.visible, 2));
-  return isEmpty(box) ? undefined : { kind: "tex", mark: { box, dabs, runs } };
+  const reach = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const grow = (...[x, y, k]: [number, number, number]): void => {
+    reach.x0 = Math.min(reach.x0, x - k);
+    reach.y0 = Math.min(reach.y0, y - k);
+    reach.x1 = Math.max(reach.x1, x + k);
+    reach.y1 = Math.max(reach.y1, y + k);
+  };
+  for (const d of dabs) grow(d.x, d.y, d.r + 1);
+  for (const r of runs) for (let i = 0; i + 1 < r.pts.length; i += 2) grow(r.pts[i] ?? 0, r.pts[i + 1] ?? 0, r.width + 2);
+  return { kind: "tex", dabs, runs, reach };
+}
+
+/** A kept linear mark set moved by the transform's translation and cut to what can be seen. */
+function marks(l: LinMarks, a: { tx: number; ty: number; visible: R }): MarkSource | undefined {
+  const cut = pad(a.visible, 2);
+  if (l.kind === "piece") {
+    const piece = placePiece(l.shape, { tx: a.tx, ty: a.ty, cut });
+    return piece === undefined ? undefined : { kind: "piece", piece };
+  }
+  const r = l.reach;
+  if (!(r.x1 >= r.x0)) return undefined;
+  const box = inter({ x0: Math.floor(r.x0 + a.tx), y0: Math.floor(r.y0 + a.ty), x1: Math.ceil(r.x1 + a.tx), y1: Math.ceil(r.y1 + a.ty) }, cut);
+  return isEmpty(box) ? undefined : { kind: "tex", mark: { box, dabs: l.dabs, runs: l.runs, ox: a.tx, oy: a.ty } };
 }
 
 function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: PaperRec; paint: PaintRec | undefined; node: ShapeNode }): BrushDraw | undefined {
@@ -103,7 +134,9 @@ export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; vis
   const rec = paintRec(paint, { matrix: m, colors });
   if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, node: n });
   if (rec === undefined) return undefined;
-  const source = marks(ex.set, { e, ratio, visible: a.visible });
+  const set = ex.set;
+  const l = a.frame.kept.get(`m|${ex.key}|${linearKey(e)}`, () => linMarks(set, { e, ratio }));
+  const source = marks(l, { tx: e[4], ty: e[5], visible: a.visible });
   if (source === undefined) return undefined;
   const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
   const box = source.kind === "piece" ? source.piece.box : source.mark.box;

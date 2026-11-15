@@ -78,7 +78,7 @@ export class LightPass {
     const { f, job } = a;
     const out = f.pool.acquire({ w: widthOf(job.rect), h: heightOf(job.rect), format: "rgba8unorm" });
     const entries = a.entries.map((r, binding): GPUBindGroupEntry => ({ binding, resource: "createView" in r ? r.createView() : { buffer: r } }));
-    const pass = beginPass(f, { tex: out, clear: true });
+    const pass = beginPass(f, { tex: out, clear: true, kind: "light" });
     pass.setPipeline(pipe);
     pass.setBindGroup(0, this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries }));
     pass.draw(6);

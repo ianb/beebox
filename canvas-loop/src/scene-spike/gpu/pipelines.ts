@@ -2,7 +2,7 @@
 import { DRAW_WGSL } from "./shader-draw.js";
 import { FX_WGSL } from "./shader-fx.js";
 
-export type DrawPipe = "normal" | "add" | "screen" | "erase" | "backdrop" | "clipCov" | "clipMul";
+export type DrawPipe = "normal" | "add" | "screen" | "erase" | "backdrop" | "clipPage";
 export type FxPipe = "fxBlur" | "fxMatrix" | "fxCombine";
 
 export interface Pipelines {
@@ -46,8 +46,7 @@ export function makePipelines(device: GPUDevice): Pipelines {
     screen: mk("fsFixed", rgba(blendOf(["one-minus-dst", "one"], ["one-minus-dst-alpha", "one"]))),
     erase: mk("fsFixed", rgba(blendOf(["zero", "one-minus-src-alpha"]))),
     backdrop: mk("fsBackdrop", rgba()),
-    clipCov: mk("fsClipCov", { format: "r8unorm" }),
-    clipMul: mk("fsClipMul", { format: "r8unorm", blend: blendOf(["zero", "src"]) }),
+    clipPage: mk("fsClipPage", { format: "r8unorm" }),
   };
   const fxPipe = (entryPoint: FxPipe): GPURenderPipeline =>
     device.createRenderPipeline({ layout: fxLayout, vertex: { module: fxModule, entryPoint: "fxVs" }, fragment: { module: fxModule, entryPoint, targets: [{ format: "rgba8unorm" }] } });

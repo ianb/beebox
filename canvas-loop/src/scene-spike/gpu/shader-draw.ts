@@ -2,7 +2,9 @@
 // - EDGE_WGSL: the geometry probe's exact-area coverage atlas. Each polygon
 //   edge draws a quad from the edge to its slot's right side and adds, per
 //   pixel, the signed area of the pixel right of the edge (closed form). The
-//   sum is the exact covered area with nonzero winding.
+//   sum is the exact covered area with nonzero winding. Edges are in their
+//   piece's own pixels and the slot only places the quad, so coverage does not
+//   depend on where the piece is packed.
 // - DRAW_WGSL: the compositing probe's draw shader, reading coverage from the
 //   atlas instead of looping over edges. A draw is one quad over its box in the
 //   target layer; layers are premultiplied rgba8unorm. A draw's source (`src`)
@@ -16,22 +18,25 @@ import { COMPOSE_WGSL } from "./shader-compose.js";
 import { PAPER_WGSL } from "./shader-paper.js";
 
 /** 32-bit words per draw record (the WGSL `Draw` struct). */
-export const WORDS = 72;
+export const WORDS = 76;
 
 export const EDGE_WGSL = /* wgsl */ `
 struct U { size: vec4f };
 @group(0) @binding(0) var<uniform> u: U;
-struct SegOut { @builtin(position) pos: vec4f, @location(0) @interpolate(flat) seg: vec4f };
-@vertex fn segVs(@builtin(vertex_index) vi: u32, @location(0) seg: vec4f, @location(1) right: f32) -> SegOut {
+struct SegOut { @builtin(position) pos: vec4f, @location(0) @interpolate(flat) seg: vec4f, @location(1) @interpolate(flat) slot: vec2f };
+// seg: the edge in its piece's pixels; at: the slot's corner on the page, and the piece's width.
+@vertex fn segVs(@builtin(vertex_index) vi: u32, @location(0) seg: vec4f, @location(1) at: vec4f) -> SegOut {
   let x0 = floor(min(seg.x, seg.z)); let y0 = floor(min(seg.y, seg.w)); let y1 = ceil(max(seg.y, seg.w));
   var c = array(vec2f(0,0), vec2f(1,0), vec2f(0,1), vec2f(0,1), vec2f(1,0), vec2f(1,1));
   let k = c[vi];
-  let p = vec2f(mix(x0, right, k.x), mix(y0, y1, k.y));
-  var o: SegOut; o.pos = vec4f(p.x / u.size.x * 2 - 1, 1 - p.y / u.size.y * 2, 0, 1); o.seg = seg; return o;
+  let p = vec2f(mix(x0, at.z, k.x), mix(y0, y1, k.y)) + at.xy;
+  var o: SegOut; o.pos = vec4f(p.x / u.size.x * 2 - 1, 1 - p.y / u.size.y * 2, 0, 1); o.seg = seg; o.slot = at.xy; return o;
 }
 fn G(f: f32) -> f32 { if (f <= 0) { return 0.0; } if (f >= 1) { return f - 0.5; } return 0.5 * f * f; }
 @fragment fn segFs(i: SegOut) -> @location(0) vec4f {
-  let px = floor(i.pos.x); let py = floor(i.pos.y);
+  // The pixel in its piece's own pixels, in integers (no reassociation can mix the slot in).
+  let lp = vec2f(vec2i(floor(i.pos.xy)) - vec2i(i.slot));
+  let px = lp.x; let py = lp.y;
   var a = i.seg.xy; var b = i.seg.zw; var sgn = 1.0;
   if (a.y > b.y) { let t = a; a = b; b = t; sgn = -1.0; }
   let ya = max(py, a.y); let yb = min(py + 1, b.y);
@@ -56,6 +61,7 @@ struct Draw {
   kind: u32, mode: u32, stopStart: u32, stopCount: u32,
   src: u32, seed: u32, pwidth: i32, opacity: f32,
   mat: vec4f,
+  clipA: vec4f,
 };
 @group(0) @binding(0) var<storage, read> draws: array<Draw>;
 @group(0) @binding(1) var<storage, read> stops: array<vec4f>;
@@ -155,10 +161,16 @@ fn source(d: Draw, pix: vec2f, cov: ptr<function, f32>) -> vec4f {
     *cov = *cov * (1.0 - d.pap1.w * paperAt(vec3f(d.pap1.z, d.pap2.xy), d.seed, d.pwidth, q));
   }
   *cov = *cov * d.pap2.z;
-  if (d.clipO.z > 0) { *cov = *cov * ld(clipT, pix, d.clipO).r; }
+  if (d.clipO.z > 0) { *cov = *cov * clipAt(d, pix); }
   return s;
 }
 fn pixOf(d: Draw, pos: vec4f) -> vec2f { return floor(pos.xy) + d.tgt.xy; }
+// A clip's coverage at device pixel p: its box is clipO, packed at clipA.xy on the clip page bound as clipT; outside the box, none.
+fn clipAt(d: Draw, p: vec2f) -> f32 {
+  let q = p - d.clipO.xy;
+  if (q.x < 0 || q.y < 0 || q.x >= d.clipO.z || q.y >= d.clipO.w) { return 0.0; }
+  return textureLoad(clipT, vec2i(q + d.clipA.xy), 0).r;
+}
 @fragment fn fsFixed(i: VOut) -> @location(0) vec4f {
   let d = draws[i.id]; var cov: f32; let s = source(d, pixOf(d, i.pos), &cov);
   return s * cov;
