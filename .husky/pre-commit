@@ -138,6 +138,13 @@ if echo "$staged" | grep -q '\.md$'; then
 elif git -C "$REPO_DIR" diff --cached --name-only -- beebox/src | grep -q .; then
   run_in beebox pnpm --silent doc-check --site-reference
 fi
+# Code comments cite plans by name (beebox/src/dev/doc-check/plan-citations.ts);
+# the full doc-check above already covers it when Markdown is staged.
+# Here-strings, not `echo | grep -q`: grep exits at the first match and a long
+# staged list then breaks the pipe.
+if ! grep -q '\.md$' <<<"$staged" && grep -qE '\.(ts|tsx|mts|js|mjs)$' <<<"$staged"; then
+  run_in beebox pnpm --silent doc-check --plan-citations
+fi
 
 # Source file layout (beebox/docs/plans/file-layout.md): every package root
 # must stay at zero findings. The whole repo scans in a few seconds; there is no
