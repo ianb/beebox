@@ -1,30 +1,38 @@
 // Brushed strokes on the GPU, run by renderer.gpu.test.ts: parity with today's Skia
-// marks by crop, R1 blends and erase, the expansion cache, texture that moves
+// marks by crop (frozen in test/fixtures/scene-parity/), R1 blends and erase, the expansion cache, texture that moves
 // with a translated shape, and paper scoped by R9.
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
+import { Canvas, loadImage } from "@napi-rs/canvas";
 import type { TestContext } from "node:test";
 import type { View } from "../../src/scene/api.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
-import { teaView } from "../helpers.js";
 import { SHEET_CROPS, SMEAR_CROPS, cropParity, drawSheet, drawSmear } from "./brush-sheet.js";
 import type { SheetView } from "./brush-sheet.js";
 import { parity, premultiplied } from "./compare.js";
 import { alphaAt, renderOnce, rgbaAt, shiftedDiff } from "./render.js";
 
-async function sheetRows(handle: GpuHandle, s: { size: { width: number; height: number }; draw: (v: SheetView) => void; crops: typeof SHEET_CROPS }): Promise<{ rows: ReturnType<typeof cropParity>[]; flat: number }> {
-  const ref = teaView(s.size);
-  s.draw(ref.v);
+/** Today's Skia render of a sheet, frozen as a fixture (opaque, so straight and premultiplied agree). */
+async function frozen(name: string, size: { width: number; height: number }): Promise<Uint8Array> {
+  const image = await loadImage(fileURLToPath(new URL(`../fixtures/scene-parity/${name}.png`, import.meta.url)));
+  assert.deepEqual([image.width, image.height], [size.width, size.height], `${name}.png is the sheet's size`);
+  const ctx = new Canvas(size.width, size.height).getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  return premultiplied(ctx.getImageData(0, 0, size.width, size.height).data);
+}
+
+async function sheetRows(handle: GpuHandle, s: { fixture: string; size: { width: number; height: number }; draw: (v: SheetView) => void; crops: typeof SHEET_CROPS }): Promise<{ rows: ReturnType<typeof cropParity>[]; flat: number }> {
   const gpu = await renderOnce(handle, { size: s.size, draw: (v) => s.draw(v) });
-  const refPx = premultiplied(ref.pixels());
+  const refPx = await frozen(s.fixture, s.size);
   const rows = s.crops.map((c) => cropParity({ ref: refPx, gpu: gpu.data }, { width: s.size.width, ...c }));
   return { rows, flat: parity({ ref: refPx, gpu: gpu.data }, { ...s.size, rect: [0, 0, s.size.width, s.size.height] }).flat };
 }
 
 export async function brushParity(handle: GpuHandle, t: TestContext): Promise<void> {
-  const sheet = await sheetRows(handle, { size: { width: 640, height: 480 }, draw: drawSheet, crops: SHEET_CROPS });
-  const smear = await sheetRows(handle, { size: { width: 320, height: 160 }, draw: drawSmear, crops: SMEAR_CROPS });
+  const sheet = await sheetRows(handle, { fixture: "brush-sheet", size: { width: 640, height: 480 }, draw: drawSheet, crops: SHEET_CROPS });
+  const smear = await sheetRows(handle, { fixture: "brush-smear", size: { width: 320, height: 160 }, draw: drawSmear, crops: SMEAR_CROPS });
   t.diagnostic(`sheet: flat pixels within 4/255 ${sheet.flat}%; smear: ${smear.flat}%`);
   const rows = [...sheet.rows, ...smear.rows];
   for (const r of rows) t.diagnostic(`${r.pass ? "pass" : "FAIL"} ${r.name.padEnd(18)} luminance ${r.lum}% contrast ${r.contrast}%`);
