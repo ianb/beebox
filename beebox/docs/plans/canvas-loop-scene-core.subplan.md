@@ -659,7 +659,7 @@ then the switch that deletes the old code; then docs.
   then the levers in order. Done when targets 1 and 3 are met, or the
   boxholder has decided on the miss; output stays byte-identical either way.
 
-- **As built (chunk 4b): targets 1 and 3 missed; the boxholder decides.**
+- **As built (chunk 4b): targets 1 and 3 missed (target 1 by about 2 fps); the boxholder decides.**
   Scripts, logs and profiles are in `scratch/stage5/a4b/` (`measure.sh`
   and `run.sh` for the pages, `profile.sh` for DevTools CPU profiles,
   `compare.sh` for output bytes). Measured in Chromium on this Mac at
@@ -745,6 +745,48 @@ then the switch that deletes the old code; then docs.
       near enough for target 3 to measure.
     - Or relax the targets to what is measured: the walker at 45 fps and
       six figures at 20.
+  - **Second round** (after the cross-model review and the boxholder's
+    direction to keep cutting). The review found that a getter asking for
+    another key during a geometry or gesture layout erased the outer
+    layout (`ebf9080e9`, with tests). Two levers followed:
+    - *Clip simplicity check* (`b9c82f311`, `7c626952e`). 212 of the
+      walker's 228 clip outlines change every frame (`clipreuse.ts`), so a
+      cache by geometry key cannot help. The sweep now orders edges by
+      merging their runs instead of a comparison sort, over flat arrays;
+      it compares the same pairs with the same test (2.5 -> 1.2 ms in
+      Node on the walker's clip rings; agreement with an every-pair
+      reference on 800 rings).
+    - *Brush preparation* (`3e5b959b3`). Contours are mapped, cleaned,
+      measured and packed in reused flat buffers, with the same operations
+      in the same order; 8880 prepared strokes equal the previous code's
+      field for field (`prepcmp.ts`). Brush CPU 5.9 -> 5.2 ms. Garbage
+      collection did not move (1.8–2.0 ms a frame before and after), so
+      its source is elsewhere in lowering; flattening (`pathContours`,
+      0.55 ms) was left as it is.
+  - **Final measurement**, quiet machine (no game, no full suite; the
+    boxholder's own Chrome was open). Before is the chunk's starting
+    commit (`e4db1f99c`) rebuilt and measured in the same session
+    (`measure-old.sh`); after is two runs of `cea1d7d5a`'s successors
+    (`final3`, `final4`):
+
+    | | Before | After |
+    |---|---|---|
+    | Walker fps (rAF, 10 s) | 36.4 | 57.9, 58.2 |
+    | Walker frame interval, median / p95 ms | 25.6 / 32.9 | 16.6 / 20.7, 16.7 / 19.7 |
+    | Walker record / lower / brush (in lower) / atlas / encode ms | 11.5 / 8.9 / 4.6 / 2.1 / 1.0 | 2.0 / 8.3 / 4.5 / 2.0 / 1.2 |
+    | Walker frame waited to GPU completion, median ms | 32.2 | 21.8, 21.5 |
+    | Six figures, fps each | 16.8 | 24.3, 24.1 |
+    | Pointer moves reaching `update` | 120 of 120 | 120 of 120 |
+    | Input-to-frame p95 ms | 80.2 | 97.7, 100.2 |
+
+    Profile of the walker frame after (`final-top.txt`, ms a frame with
+    the profiler's overhead): lower 10.2 (brushed strokes 4.8, of it
+    expansion 4.0; clips 2.5, of it the simplicity check 1.5; geometry
+    keys 1.7), record 2.8, encode 1.5, garbage collection 1.9.
+  - **Acceptance.** Target 1: missed by a little: 58 fps, frame interval
+    median 16.6 ms against 16.7, p95 20 ms; not 60 sustained over 600
+    frames. Target 3: missed: 24 fps each against 30, input-to-frame p95
+    about 100 ms against 33 (no input dropped).
 
 ### Track 5: gallery and examples (chunk 5)
 
