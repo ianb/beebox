@@ -1,14 +1,13 @@
 /**
  * The editor bar's "N marked" menu (`plan:composition-copy-and-accept-all`,
  * Track 5): every open mark in text order, each a jump, then the resolve
- * actions for the kinds present. Accept all agent words warns and asks once
- * first, since it changes who the words read as written by (boxholder:
- * "Warnings on that button are okay"). Each action writes the text on
- * screen, then commits it and the resolve separately on the server.
+ * actions for the kinds present, ending with Accept all agent words. That
+ * one warns and asks first, since it changes whose words they read as
+ * (boxholder: "Warnings on that button are okay"). Each action writes the
+ * text on screen, then commits it and the resolve separately on the server.
  */
 import { useState, type ReactNode } from "react";
 import { controlAddress } from "@shared/ui-scan/control-address";
-import type { ResolveRequest } from "@shared/composition/marks/resolve";
 import { errorMessage } from "@shared/error-guards";
 import { trpcClient } from "../../../lib/trpc/client";
 import { Button } from "../../ui/Button";
@@ -18,7 +17,7 @@ import { Text } from "../../ui/Text";
 import { resultMessage } from "../CompositionCopy";
 import { openConflictCount } from "./conflicts";
 import type { CompositionSync } from "./sync";
-import { selectOpenMark, type OpenMarkRange } from "./widgets";
+import { openMarkRanges, selectOpenMark, type OpenMarkRange } from "./widgets";
 import type { EditorView } from "@codemirror/view";
 
 const KIND_LABELS: Record<OpenMarkRange["kind"], string> = { joiner: "Agent words", gap: "Gap", note: "Note", check: "Check" };
@@ -38,25 +37,55 @@ export interface MarksMenuProps {
   onMessage: (message: string | null) => void;
 }
 
+type BulkAction = "accept-joiners" | "keep-checks" | "remove-notes";
+
+const ACTION_KIND: Record<BulkAction, OpenMarkRange["kind"]> = { "accept-joiners": "joiner", "keep-checks": "check", "remove-notes": "note" };
+
+const CONFLICT_OPEN = "Choose a version for each conflict first; then try again.";
+const MARKS_CHANGED = "The marks changed while you were choosing. Look again.";
+
+/** The words of the open marks of one kind, in order: what the person is acting on. */
+function wordsOf(marks: readonly OpenMarkRange[], kind: OpenMarkRange["kind"]): string[] {
+  return marks.filter((mark) => mark.kind === kind).map((mark) => mark.words);
+}
+
 export function MarksMenu({ view, sync, marks, cardPath, instance, onMessage }: MarksMenuProps): ReactNode {
-  const [confirming, setConfirming] = useState(false);
+  // The agent words the confirm named when it opened; `null` while it is closed.
+  const [confirming, setConfirming] = useState<string[] | null>(null);
   if (marks.length === 0) return null;
   const count = (kind: OpenMarkRange["kind"]) => marks.filter((mark) => mark.kind === kind).length;
   const joiners = count("joiner");
-  const run = async (request: ResolveRequest) => {
-    // An open merge conflict is a choice the person has not made: committing now would decide it silently.
-    if (openConflictCount(view.state) > 0) {
-      onMessage("Choose a version for each conflict first; then try again.");
+  /**
+   * Run a bulk action on the marks the person saw (`seen`). An open merge
+   * conflict is a choice not yet made, so it stops the action, as do marks
+   * that changed meanwhile; both are checked again after the flush, since
+   * the flush can merge the agent's newest text in.
+   */
+  const run = async (action: BulkAction, seen: string[]) => {
+    const kind = ACTION_KIND[action];
+    const stale = (): string | null => {
+      if (openConflictCount(view.state) > 0) return CONFLICT_OPEN;
+      const now = wordsOf(openMarkRanges(view.state), kind);
+      return now.length === seen.length && now.every((words, i) => words === seen[i]) ? null : MARKS_CHANGED;
+    };
+    const before = stale();
+    if (before !== null) {
+      onMessage(before);
       return;
     }
     onMessage(null);
     try {
-      const result = await sync.afterFlush((regionHash) => trpcClient.card.resolveComposition.mutate({ path: cardPath, baseRegionHash: regionHash, request }));
-      onMessage(result === null ? "Your text is not saved, so nothing was changed." : resultMessage(result));
+      // `afterFlush` gives `null` for a failed write, so the step's own message (often `null`) travels wrapped.
+      const result = await sync.afterFlush(async (regionHash) => {
+        const after = stale();
+        if (after !== null) return { message: after };
+        return { message: resultMessage(await trpcClient.card.resolveComposition.mutate({ path: cardPath, baseRegionHash: regionHash, request: { action } })) };
+      });
+      onMessage(result === null ? "Your text is not saved, so nothing was changed." : result.message);
       // Take the change in now; the file-change notice would bring it too.
       sync.remoteChanged();
     } catch (error) {
-      console.error(`Composition: ${request.action} in ${cardPath} failed:`, error);
+      console.error(`Composition: ${action} in ${cardPath} failed:`, error);
       onMessage(`That did not work: ${errorMessage(error)}`);
     }
   };
@@ -64,22 +93,14 @@ export function MarksMenu({ view, sync, marks, cardPath, instance, onMessage }: 
     <Menu
       align="right"
       width="w-80 max-w-[calc(100vw-2rem)]"
-      onClose={() => setConfirming(false)}
+      onClose={() => setConfirming(null)}
       trigger={({ toggle, ariaProps }) => (
         <Button id={controlAddress("bbx-composition-marks", instance)} label={`${String(marks.length)} marked: list the marks`} size="sm" intent="secondary" onClick={toggle} {...ariaProps}>
           {`${String(marks.length)} marked`}
         </Button>
       )}
     >
-      {confirming ? (
-        <>
-          <Text as="p" size="sm" className="px-3 py-2">
-            {`The agent's ${String(joiners)} ${joiners === 1 ? "passage" : "passages"} will read as yours, here and in the card's history.`}
-          </Text>
-          <MenuItem id={controlAddress("bbx-composition-accept-all-confirm", instance)} onClick={() => run({ action: "accept-joiners" })}>Yes, accept all agent words</MenuItem>
-          <MenuItem keepOpen onClick={() => setConfirming(false)}>Cancel</MenuItem>
-        </>
-      ) : (
+      {confirming === null ? (
         <>
           {marks.map((mark) => (
             <MenuItem key={mark.index} id={controlAddress(`bbx-composition-mark-${String(mark.index)}`, instance)} title={mark.words} onClick={() => { selectOpenMark(view, mark); }}>
@@ -89,11 +110,19 @@ export function MarksMenu({ view, sync, marks, cardPath, instance, onMessage }: 
               </span>
             </MenuItem>
           ))}
+          {count("check") > 0 ? <MenuItem id={controlAddress("bbx-composition-marks-keep-checks", instance)} onClick={() => run("keep-checks", wordsOf(marks, "check"))}>Keep all checked words</MenuItem> : null}
+          {count("note") > 0 ? <MenuItem id={controlAddress("bbx-composition-marks-remove-notes", instance)} onClick={() => run("remove-notes", wordsOf(marks, "note"))}>Remove all notes</MenuItem> : null}
           {joiners > 0 ? (
-            <MenuItem id={controlAddress("bbx-composition-accept-all", instance)} keepOpen title="Asks first: the agent's words will read as yours" onClick={() => setConfirming(true)}>Accept all agent words…</MenuItem>
+            <MenuItem id={controlAddress("bbx-composition-accept-all", instance)} keepOpen title="Asks first: the agent's words will be marked as yours" onClick={() => setConfirming(wordsOf(marks, "joiner"))}>Accept all agent words…</MenuItem>
           ) : null}
-          {count("check") > 0 ? <MenuItem id={controlAddress("bbx-composition-marks-keep-checks", instance)} onClick={() => run({ action: "keep-checks" })}>Keep all checked words</MenuItem> : null}
-          {count("note") > 0 ? <MenuItem id={controlAddress("bbx-composition-marks-remove-notes", instance)} onClick={() => run({ action: "remove-notes" })}>Remove all notes</MenuItem> : null}
+        </>
+      ) : (
+        <>
+          <Text as="p" size="sm" className="px-3 py-2">
+            {`The agent's ${String(confirming.length)} ${confirming.length === 1 ? "passage" : "passages"} will be marked as yours from now on. A new commit records it; earlier versions keep the marks.`}
+          </Text>
+          <MenuItem id={controlAddress("bbx-composition-accept-all-confirm", instance)} onClick={() => run("accept-joiners", confirming)}>Yes, accept all agent words</MenuItem>
+          <MenuItem keepOpen onClick={() => setConfirming(null)}>Cancel</MenuItem>
         </>
       )}
     </Menu>

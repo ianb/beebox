@@ -347,7 +347,8 @@ parent plan's.
 - **Direction:** the list comes from `marksField` (`widgets.ts`) via an
   `onMarks(list)` callback, as `onAcceptable` does. A bulk action:
   Accept all agent words carries a warning in the menu item's description,
-  "The agent's N passages will read as yours, here and in the history", and
+  "The agent's N passages will be marked as yours from now on. A new commit
+  records it; earlier versions keep the marks.", and
   asks once in a confirm popover naming the count before it runs; the other
   two run on choice. Then `sync.flush()`, `resolveComposition` with the
   sync's hash; the editor
