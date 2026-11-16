@@ -230,7 +230,7 @@ export class SceneRecorder extends PureHelpers implements View {
     const { node, bounds } = this.#layText(content, { box, options });
     const made = this.#stamp(node, "text");
     const keepInside = options?.keepInside === true;
-    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
+    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
     return made;
   }
   textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {

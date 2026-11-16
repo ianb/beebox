@@ -219,7 +219,7 @@ and, for most, the sketch line that made it.
 | Check | Kind |
 |---|---|
 | Faint brushed marks (a readback of each mark's strongest pixel) | warning |
-| Labels overlapping in one frame; a missing glyph; an unknown font family | warning |
+| Labels overlapping in one frame (`overlay` text excepted); a missing glyph; an unknown font family | warning |
 | Drawings off the canvas on every frame; unboxed text across the canvas edge | warning, after the run |
 | A node made and not returned (at most 8 a frame) | warning |
 | A picture recorded differently with the same deps (each picture is recorded again every frame and compared) | warning |

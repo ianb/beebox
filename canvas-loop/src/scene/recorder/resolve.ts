@@ -35,10 +35,11 @@ export interface ResolveContext {
   readonly scoped?: boolean;
 }
 
-/** What a text call kept for the walk: its bounds as laid out at the call, whether it is unboxed, and for `keepInside` its inputs, copied. */
+/** What a text call kept for the walk: its bounds as laid out at the call, whether it is unboxed or an `overlay`, and for `keepInside` its inputs, copied. */
 export interface TextFacts {
   readonly bounds: TextBounds;
   readonly unboxed: boolean;
+  readonly overlay: boolean;
   readonly keep: { readonly box: TextBox; readonly options: TextOptions } | undefined;
 }
 
@@ -235,7 +236,7 @@ export class Resolver {
     if (audit !== undefined) {
       const site = this.#site(n) ?? NO_SITE;
       if (ctx.picture === undefined && !ctx.inMask) audit.offCanvas.text(`text ${JSON.stringify(n.content.slice(0, 24))}`, { bounds, matrix: ctx.matrix, unboxed: facts.unboxed, site });
-      audit.text.text(node, { bounds, matrix: ctx.matrix, seen: !ctx.inMask, site });
+      audit.text.text(node, { bounds, matrix: ctx.matrix, seen: !ctx.inMask && !facts.overlay, site });
     }
     return node;
   }
