@@ -1276,6 +1276,72 @@ by the same WebGPU renderer.
 - **Checkpoint.** Typecheck, lint, scene tests; the three ports render the
   same bytes as after chunk 8. **Measurement:** changed lines against the
   estimate.
+- **As built (chunk 9).** Commits 74ce5c74b (golden numbers), 4b36723f7
+  (deletion), febe056c9 (every kind repeats), 01df3dda4 (a `bbx figure run`
+  fix). Scripts and logs are in `scratch/stage5/b9/`.
+  - **Golden numbers.** A recorder (`scratch/stage5/b9/golden-record.ts`;
+    it imports the deleted code, so it is not tracked) wrote
+    `canvas-loop/test/fixtures/brush-golden/`, 1.7 MB of gzipped f32 streams
+    that `test/brushes/golden.ts` reads; two runs gave the same bytes.
+    Positions are stored relative to each contour's origin, so f32 holds the
+    far-stamp case. They hold the CPU samples (brush sheet, smear sheet,
+    focused, walker frame 0), stamp dabs per sample with the skip flag
+    (sheet, focused, jitter, far stamp, and every fourth walker stamp
+    stroke: 17,985 of 72,655 dabs), bristle runs with each drawn run's
+    mitred sides and the excused flag (sheet and focused at ratio 1 and 2,
+    jitter at ratio 1 only, the dot at ratio 32), smear dabs, and the thin
+    rows' tone of perfect-freehand's outline by exact area. The whole walker
+    would have added 0.7 MB, jitter at ratio 2 0.3 MB. The tests rebuild
+    `runStrip`'s vertices from the sides and place dabs by the test's own
+    transform. With the CPU path still present every readback test passed
+    against them, at the differences chunks 2–8 measured.
+  - **Deleted.** `core/brush/render/` (kind painters, dab, ink, colour, the
+    Canvas2D mark pipeline, the CPU smear), `scene/brush/record-ctx.ts`,
+    `expandOnCpu` and `brushSamples` with the CPU sampling around them,
+    `linMarks`, the mark atlas's `#lay`, `runStrip` and CPU dab and run
+    draws, the three `core/ctx2d.ts` helpers, `noise1`, `noiseOf`, `randOf`
+    and `envelopeAt` (and their test), and `perfect-freehand` from canvas-loop
+    and from beebox, which declared it for the bundled canvas-loop; the
+    lockfile lost that package only. A `TexMark` now always has its GPU
+    stroke and no CPU dabs or runs, and a mark item holds it directly: the
+    `piece` source (CPU ink outlines before chunk 4) had no producer left.
+    `stepFor` and `wobbleLattice` moved to `prepare.ts`, `jitterOf` to
+    `expand.ts`, `bristleReach` to `marks.ts`. `resample` stays (`shapes.ts`
+    uses it). The shaders' comments now describe what they compute.
+    ACKNOWLEDGEMENTS keeps perfect-freehand for the radius formula, now in
+    the `capsules` entry; CHANGELOG and draft sections 9 and 22 updated.
+  - **Final verification.** The fresh-process child now also hashes the brush
+    sheet and the smear case (every kind) at ratio 1 and 2; the walker and
+    those scenes are byte-identical after `release()` and wake, split at a
+    small limit and unsplit; warm, cold and caches-off renders of each kind
+    scene agree (41 expansions reused at each ratio). Lavapipe (`cl-dawn`):
+    the four brush test files and the prepare test, 41 of 41 pass in 35.5 s;
+    `renderer.gpu.test.ts` and the TEA determinism tests, 118 pass, 3 todo,
+    5 fail, the same five text tests as chunk 6 (no fonts in the VM).
+  - **Checkpoint.** canvas-loop typecheck and lint pass; tests 203 and 198
+    pass (3 todo); `gallery:check` passes all 48; the brush sheet, smear
+    sheet, stress frame, walker (`gallery/intra-walk-styles`), Hallway
+    (`gallery/intra-rooms`) and chemistry (`gallery/balance-reaction-2`) at
+    ratio 1 and 2 hash the same before and after, and decode to the same
+    pixels as chunk 8's renders; beebox typecheck and layout-check pass.
+  - **Measurement.** canvas-loop source +132 −1,534 against the estimate's
+    +60 −650: subplan (a) left more of `core/brush/render/` than the plan
+    counted (the Canvas2D mark pipeline and CPU smear, 545 lines). Tests
+    +465 −310 against 140: the golden readers and the placement each test
+    now does itself. Docs +14 −8.
+  - **The doubled path** (from scene core chunk 6). `bundleView` compiled a
+    figure entry from stdin as `views/<name>` with no outfile, so its inline
+    source map's paths were relative to the working directory, while Node
+    resolved them from `entry.mjs` deep in `_tmp/figure-run/`; the `../`
+    steps ran out at the wrong level and the temp directory appeared twice.
+    `bundleView` takes an `outfile`; figure run passes `entry.mjs`'s path, so
+    a warning names the entry's own file. `run.test.ts` checks it; it failed
+    before the fix.
+  - **Review.** Codex (`gpt-6-sol`) found no defect in the deletion, the
+    `TexMark` change or the fix. Its two findings are the two fixture cuts
+    above (walker dabs at stride 4, jitter bristles at ratio 1 only); left
+    for the boxholder, since the CPU path is gone and restoring them means
+    recording from the tree at 74ce5c74b (about 1 MB more).
 
 ## Could this be simpler?
 
