@@ -3,9 +3,10 @@
 // bounds at once. The node keeps each glyph and its pen position (the width of
 // the line up to it, so kerning holds), for the renderer's glyph atlas.
 import { compositeOp } from "../../core/compose.js";
-import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
+import type { TextBounds, TextBox, TextOptions, TextRun } from "../../core/paint.js";
 import { fontString, haloWidth } from "../../core/text/measure.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
+import { runsText } from "../../core/text/measure.js";
 import type { Mat, TextLine, TextNode } from "../nodes.js";
 import { copyPaint } from "./style.js";
 import { checkNumbers } from "./checks.js";
@@ -38,11 +39,12 @@ export function fontWarning(node: TextNode, known: ((family: string) => boolean)
 }
 
 /** Lay out `content` where it is called: under `matrix` (logical), keeping inside `canvas` (the scene, or the picture's box). */
-export function recordText(content: string, at: { box: TextBox; options: TextOptions; measurer: TextMeasurer; matrix: Mat; canvas: { width: number; height: number } }): { node: TextNode; bounds: TextBounds } {
+export function recordText(given: string | readonly TextRun[], at: { box: TextBox; options: TextOptions; measurer: TextMeasurer; matrix: Mat; canvas: { width: number; height: number } }): { node: TextNode; bounds: TextBounds } {
   const box = at.box;
   if (!(Number.isFinite(box.x) && Number.isFinite(box.y) && (box.w === undefined || Number.isFinite(box.w)) && (box.h === undefined || Number.isFinite(box.h)))) checkNumbers("text box", { values: { x: box.x, y: box.y, ...(box.w === undefined ? {} : { w: box.w }), ...(box.h === undefined ? {} : { h: box.h }) } });
   const [a, b, c, d, e, f] = at.matrix;
-  const laid = at.measurer.place(content, { box: at.box, options: at.options, where: { transform: { a, b, c, d, e, f }, pixelRatio: 1, canvas: at.canvas } });
+  const content = runsText(given);
+  const laid = at.measurer.place(given, { box: at.box, options: at.options, where: { transform: { a, b, c, d, e, f }, pixelRatio: 1, canvas: at.canvas } });
   const o = laid.options;
   const blend = o.blend ?? "normal";
   compositeOp(blend);

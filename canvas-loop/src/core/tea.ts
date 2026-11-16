@@ -7,7 +7,7 @@ import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGr
 import type { Paper } from "./brush/types.js";
 import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
-import type { AtOptions, Bounds, Drawing, DrawingNode, FlowOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+import type { AtOptions, Bounds, Drawing, DrawingNode, FlowOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions, TextRun } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 import type { EaseName, Keyframe } from "./ease.js";
@@ -29,7 +29,7 @@ export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, 
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
 export type { Drawing, DrawingNode, RootDrawing } from "./paint.js";
-export type { AtOptions, Bounds, BrushPreset, Effects, FlowOptions, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
+export type { AtOptions, Bounds, BrushPreset, Effects, FlowOptions, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, TextRun, Wash } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
@@ -195,13 +195,13 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * The width `v.text` gives `content` with these options, measured without
    * drawing (cached), so hit areas and layout in `update` match what `draw` shows.
    */
-  textWidth(content: string, options?: TextOptions): number;
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number;
   /**
    * The bounds `v.text(content, box, options)` would draw, measured without
    * drawing: wrapping, `fit` and `keepInside` included, as for text drawn
    * without a `v.at` transform.
    */
-  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  textBounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
 }
 
 /**
@@ -254,9 +254,9 @@ export interface View {
    */
   text(content: string, box: TextBox, options?: TextOptions): DrawingNode;
   /** The bounds `text` would draw for these arguments where no transform moves it (inside the canvas, or the picture's box in a body). */
-  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  textBounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */
-  textWidth(content: string, options?: TextOptions): number;
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number;
   /** The layout box of `drawing` (any drawing of this frame), or null when it draws nothing. It does not count as returning it. */
   bounds(drawing: Drawing): Bounds | null;
   /** `children` left to right by their layout boxes, `gap` apart; one node holding each child in its own translating `at`. */

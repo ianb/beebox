@@ -646,6 +646,28 @@ Existing names kept: `Drawing`, `DrawingNode`, `SceneNode`, `Scene`,
   accept runs; tests: `["H", {text:"2", sub:true}, "O"]` is as wide as
   `H` + `2` at 0.7 size + `O`; the box height equals a plain text's; `\n` in
   a run, `wrap: true` and `sub`+`sup` each throw with the call named.
+- **As built (C1).** Logs are in `scratch/layout-text-hits/c1-*.log`.
+  - **Runs.** `TextRun` is in `core/paint.ts`, re-exported from `core/tea.ts`.
+    `core/text/runs.ts` holds the factors, `runSpecs` (each run's size and
+    baseline move as multiples of the call's size), `runsText` (the joined
+    string) and `checkContent`, which throws at the call for `\n` in a run,
+    `wrap: true`, `sub` with `sup`, a non-string `text` and an unknown key
+    (`fill`: "a text has one paint").
+  - **Measurer.** `TextMeasurer.runs(content, base)` lays runs out: each
+    run's width in its own font, its pen offset, size, style and `dy` (down
+    positive). `width` and `place` take `string | readonly TextRun[]`; for
+    runs, `#lay` measures a row as the runs' total width at the trial size and
+    passes `wrap: false` to `layoutText`, so `fit` and a `w` box work as for
+    one plain line.
+  - **Calls.** `textWidth`/`textBounds` on `View`, the headless `TeaUtil` and
+    `BrowserUtil` take runs and call `checkContent` with their own name
+    (`v.textBounds`, `u.textWidth`, …). `recordText` takes runs for
+    `v.textBounds` and joins them for the node; `v.text` itself is C2's.
+  - **Imported through `measure.ts`.** Callers import `checkContent` and
+    `runsText` from `measure.ts`, which re-exports them, so `runs.ts` stays
+    a helper of the measure unit (`layout-check` rule 5).
+  - **Lines:** source 179, tests 64, docs 0 (243). Much of the source is
+    signature widening at seven call sites.
 
 ## Could this be simpler?
 

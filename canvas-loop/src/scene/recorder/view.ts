@@ -13,8 +13,9 @@ import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
 import { MADE_IN } from "../../core/paint.js";
-import type { Bounds, ClipShape, Drawing, DrawingNode, FlowOptions, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import type { Bounds, ClipShape, Drawing, DrawingNode, FlowOptions, Paint, PathCommand, TextBounds, TextBox, TextOptions, TextRun, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
+import { checkContent } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
 import { RemovedCallError, STATEMENT_DRAW, UnsupportedCallError } from "../errors.js";
@@ -224,7 +225,7 @@ export class SceneRecorder extends PureHelpers implements View {
     return this.#text;
   }
   /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box. */
-  #layText(content: string, at: { box: TextBox; options: TextOptions | undefined }): ReturnType<typeof recordText> {
+  #layText(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions | undefined }): ReturnType<typeof recordText> {
     return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas: this.#size });
   }
   /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
@@ -236,10 +237,12 @@ export class SceneRecorder extends PureHelpers implements View {
     if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
     return made;
   }
-  textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
+  textBounds(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds {
+    checkContent(content, { call: "v.textBounds", options });
     return this.#layText(content, { box, options }).bounds;
   }
-  textWidth(content: string, options?: TextOptions): number {
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number {
+    checkContent(content, { call: "v.textWidth", options });
     return this.#measurer("textWidth").width(content, options);
   }
   bounds(drawing: Drawing): Bounds | null {

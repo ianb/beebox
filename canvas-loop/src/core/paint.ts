@@ -14,6 +14,13 @@ export type { BlendMode, Effects, Hatching, Shadow, Wash } from "./compose.js";
 export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
 
 /**
+ * One piece of a one-line text: a string, or a run that is a subscript, a
+ * superscript (0.7 × the call's size, moved 0.22 × size down or 0.38 × size
+ * up), or in another `style`. The whole text has one box, one baseline, one fill.
+ */
+export type TextRun = string | { text: string; sub?: boolean; sup?: boolean; style?: TextStyle };
+
+/**
  * Where `text` writes. Without `w`, `align` places the text about `x`; without
  * `h`, `valign` places it about `y`. With `w`, lines wrap to it.
  */

@@ -6,7 +6,7 @@
 // queue, so a release never lands inside a frame; frames that arrive while
 // one is drawing collapse to the newest.
 import type { ParamsDecl, ParamValues } from "../../core/tea.js";
-import type { TextBox, TextOptions } from "../../core/paint.js";
+import type { TextBox, TextOptions, TextRun } from "../../core/paint.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import { SketchMountError } from "../../scene/errors.js";
 import type { TextMeasure } from "../../core/text/measure.js";
@@ -102,7 +102,7 @@ export class SceneSurface implements DrawSurface {
     this.#recorder = new SceneRecorder(d.size, { text: d.text, colors: d.colors, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
     this.textMeasure = {
       width: (content, options) => d.text.width(content, options),
-      bounds: (...[content, box, options]: [string, TextBox, TextOptions?]) => d.text.place(content, { box, options: options ?? {}, where: { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: d.size } }).bounds,
+      bounds: (...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]) => d.text.place(content, { box, options: options ?? {}, where: { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: d.size } }).bounds,
     };
     this.#attach();
   }

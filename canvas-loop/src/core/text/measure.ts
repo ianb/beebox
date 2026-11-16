@@ -5,10 +5,13 @@
 //
 // Widths depend on the fonts the runtime has: headless and a browser can differ,
 // and a browser web font that loads later changes them (`clear()` on load).
-import type { TextBounds, TextBox, TextOptions, TextStyle } from "../paint.js";
+import type { TextBounds, TextBox, TextOptions, TextRun, TextStyle } from "../paint.js";
 import type { Ctx2D, CtxTextBaseline, CtxTransform, MakeLayer } from "../ctx2d.js";
 import { layoutText } from "./layout.js";
 import type { TextLayout } from "./layout.js";
+import { runSpecs, runsText } from "./runs.js";
+
+export { checkContent, runsText } from "./runs.js";
 
 /** What `text(s, box, options)` uses for options left out. */
 export const TEXT_DEFAULTS = { size: 12, font: "sans-serif", style: "normal", fill: "#000000", align: "left", valign: "top" } as const satisfies TextOptions;
@@ -26,6 +29,16 @@ export const haloWidth = (size: number): number => Math.max(2, size / 4);
 
 /** The CSS font string for a size, family and style. */
 export const fontString = (over: { size: number; font: string; style: TextStyle }): string => `${over.style} ${over.size}px ${over.font}`;
+
+/** One run laid out: its text, its pen offset from the line's start, width, size, style, and baseline move (down is positive). */
+export interface LaidRun {
+  readonly text: string;
+  readonly x: number;
+  readonly w: number;
+  readonly size: number;
+  readonly style: TextStyle;
+  readonly dy: number;
+}
 
 /** Where measured text sits: the current transform (logical → device) and the canvas's logical size. */
 export interface TextPlace {
@@ -86,12 +99,27 @@ export class TextMeasurer {
   }
 
   /** The width `text` would take with these options, in logical pixels. */
-  width(content: string, options?: TextOptions): number {
-    return this.measure(content, fontString({ ...TEXT_DEFAULTS, ...options }));
+  width(content: string | readonly TextRun[], options?: TextOptions): number {
+    const o = { ...TEXT_DEFAULTS, ...options };
+    return typeof content === "string" ? this.measure(content, fontString(o)) : this.runs(content, o).width;
+  }
+
+  /** Runs one after another at the call's `size`, `font` and `style`: each in its own font, pen offsets from 0. */
+  runs(content: readonly TextRun[], base: { size: number; font: string; style: TextStyle }): { runs: LaidRun[]; width: number } {
+    let x = 0;
+    const runs = runSpecs(content).map((r) => {
+      const size = base.size * r.scale;
+      const style = r.style ?? base.style;
+      const w = this.measure(r.text, fontString({ size, font: base.font, style }));
+      const run = { text: r.text, x, w, size, style, dy: base.size * r.shift };
+      x += w;
+      return run;
+    });
+    return { runs, width: x };
   }
 
   /** Lay text out; with `keepInside`, move it so its bounds stay inside the canvas. */
-  place(content: string, at: { box: TextBox; options: TextOptions; where: TextPlace }): LaidText {
+  place(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions; where: TextPlace }): LaidText {
     const laid = this.#lay(content, at);
     if (at.options.keepInside !== true) return laid;
     const shift = insideShift(laid.bounds, at.where);
@@ -102,14 +130,16 @@ export class TextMeasurer {
   /**
    * Lay text out without drawing. One line with no box is placed by the
    * context's own alignment and baseline (`layout` undefined); anything else
-   * is laid out line by line.
+   * is laid out line by line. Runs are one line that does not wrap, its
+   * width the sum of the runs' widths at each trial size.
    */
-  #lay(content: string, at: { box: TextBox; options: TextOptions }): LaidText {
+  #lay(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions }): LaidText {
     const options = { ...TEXT_DEFAULTS, ...at.options };
     const { box } = at;
-    const measure = (text: string, size: number): number => this.measure(text, fontString({ ...options, size }));
-    const native = box.w === undefined && box.h === undefined && !content.includes("\n");
-    const layout = native ? undefined : layoutText(content, { size: options.size, box, options, measure });
+    const text = runsText(content);
+    const measure = (row: string, size: number): number => (typeof content === "string" ? this.measure(row, fontString({ ...options, size })) : this.runs(content, { ...options, size }).width);
+    const native = box.w === undefined && box.h === undefined && !text.includes("\n");
+    const layout = native ? undefined : layoutText(text, { size: options.size, box, options: typeof content === "string" ? options : { ...options, wrap: false }, measure });
     // A halo widens the ink by half its band on every side.
     const grow = (b: TextBounds): TextBounds => {
       if (options.halo === undefined) return b;
@@ -121,7 +151,7 @@ export class TextMeasurer {
       return { box, options, layout, bounds: grow(bounds) };
     }
     const size = options.size;
-    const w = measure(content, size);
+    const w = measure(text, size);
     const x = options.align === "center" ? box.x - w / 2 : options.align === "right" ? box.x - w : box.x;
     const h = size * 1.25;
     const top = { top: box.y, middle: box.y - h / 2, bottom: box.y - h, baseline: box.y - size }[options.valign];
@@ -159,6 +189,6 @@ function insideShift(b: TextBounds, where: TextPlace): { x: number; y: number } 
 
 /** Text measuring without drawing, for `Util`. */
 export interface TextMeasure {
-  width(content: string, options?: TextOptions): number;
-  bounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  width(content: string | readonly TextRun[], options?: TextOptions): number;
+  bounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
 }

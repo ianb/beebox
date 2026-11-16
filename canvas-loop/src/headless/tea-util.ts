@@ -2,7 +2,8 @@
 // random stream, a live view of the params, `log`, engagement names
 // (`u.handled`), and text measured as the run's `draw` lays it out. No drawing
 // surface and no GPU object: `update` cannot paint.
-import type { TextBounds, TextBox, TextOptions } from "../core/paint.js";
+import type { TextBounds, TextBox, TextOptions, TextRun } from "../core/paint.js";
+import { checkContent } from "../core/text/measure.js";
 import type { SeededRandom } from "../core/prng.js";
 import { recordOf } from "../core/records.js";
 import { scaleNote } from "../core/sound/notes.js";
@@ -12,8 +13,8 @@ import { SketchUsageError } from "./errors.js";
 
 /** Text measured as the run's `draw` measures it, for `u.textWidth` and `u.textBounds`. */
 export interface UtilText {
-  width(content: string, options?: TextOptions): number;
-  bounds(...args: [string, TextBox, TextOptions?]): TextBounds;
+  width(content: string | readonly TextRun[], options?: TextOptions): number;
+  bounds(...args: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds;
 }
 
 export class TeaUtil<D extends ParamsDecl> implements Util<D> {
@@ -67,11 +68,13 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
     return scaleNote(step, options);
   }
 
-  textWidth(content: string, options?: TextOptions): number {
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number {
+    checkContent(content, { call: "u.textWidth", options });
     return this.#text.width(content, options);
   }
 
-  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#text.bounds(...args);
+  textBounds(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds {
+    checkContent(content, { call: "u.textBounds", options });
+    return this.#text.bounds(content, box, options);
   }
 }
