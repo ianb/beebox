@@ -16,12 +16,12 @@ fresh ask, and a docs-only workstream may land each verified change.
 
 1. **Add a what's-new line if a person using the box would notice the work.**
    Top of `beebox/docs/box/whats-new.md`, committed with the work:
-   `- YYYY-MM-DD **New|Changed|Agent**: <what they see, plain words, ≤30 words>`.
-   **New**: a control, view, or thing to ask for. **Changed**: something moved,
-   renamed, removed, or works differently. **Agent**: noticed only through what
-   the agent now does. Leave out internal work, restoring fixes, dev tooling,
-   agent internals (`agent-changes.md`), and the iOS app and Chrome extension.
-   Most finishes add nothing.
+   `- YYYY-MM-DD **New|Changed|Agent**: <≤30 words>`. Write for someone who
+   uses the box for anything and knows none of its internals or our examples:
+   what they can now do or will see, in their words, and how to get it.
+   **New**: a thing to see, use, or ask for. **Changed**: works differently.
+   **Agent**: seen only in what the agent does. Most finishes add nothing: skip
+   internal work, restoring fixes, dev tooling, agent internals, iOS, Chrome.
 
 2. **Dispatch the `finish` subagent** (subagent_type `finish`, via your
    subagent-launch tool). It runs the whole merge procedure headless on a
