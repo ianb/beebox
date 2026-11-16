@@ -23,6 +23,7 @@ import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
 import type { EffectiveLevel } from "../../../shared/prominence.js";
 import type { BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
 import { readCompositionFile, writeCompositionFile } from "../../../core/composition-file.js";
+import { resolveCompositionFile } from "../../../core/composition-resolve.js";
 
 /**
  * The two schema facts the card faces need: whether the type has a body field
@@ -122,6 +123,11 @@ async function resolveDocCardPath(input: { boxRoot: string; inputPath: string; m
 }
 
 /** Runs a read of the card file, turning a missing file into `NOT_FOUND`. */
+const ResolveRequestSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.enum(["accept-joiners", "keep-checks", "remove-notes"]) }),
+  z.object({ action: z.enum(["keep-check", "remove-note"]), index: z.number().int().nonnegative() }),
+]);
+
 async function onCardFile<T>(relPath: string, read: () => Promise<T>): Promise<T> {
   try {
     return await read();
@@ -305,6 +311,26 @@ export const cardRouter = router({
         ctx.eventBus.emitTransient("file-change", { event: "change", path: relPath, timestamp: new Date().toISOString() });
       }
       return { status: result.status, regionHash: result.regionHash, commit: result.commit, commitWarning: result.commitWarning };
+    }),
+
+  /**
+   * A resolve action from Copy's list or the editor's marks menu: commit the
+   * person's pending edits, then the edit alone
+   * (`plan:composition-copy-and-accept-all`). Every outcome is a status the
+   * caller shows; nothing here throws for a stale or refused edit.
+   */
+  resolveComposition: authedProcedure
+    .input(z.object({ path: z.string().min(1), baseRegionHash: z.string().min(1), request: ResolveRequestSchema }))
+    .mutation(async ({ input, ctx }) => {
+      const { relPath, fullPath } = await resolveDocCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "write" });
+      const result = await withCardLock(fullPath, () => onCardFile(relPath, () => resolveCompositionFile(
+        { boxRoot: ctx.boxRoot, relPath, fullPath },
+        { baseRegionHash: input.baseRegionHash, request: input.request },
+      )));
+      if (result.status === "resolved" || ("committedEdits" in result && result.committedEdits !== null)) {
+        ctx.eventBus.emitTransient("file-change", { event: "change", path: relPath, timestamp: new Date().toISOString() });
+      }
+      return result;
     }),
 
   trash: publicProcedure
