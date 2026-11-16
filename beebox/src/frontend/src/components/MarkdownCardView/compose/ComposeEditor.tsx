@@ -85,6 +85,7 @@ function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, 
     ],
   });
   onMalformed(isMalformed(view.state));
+  onAcceptable(canAccept(view.state));
   sync = new CompositionSync({
     client: {
       read: () => trpcClient.card.readComposition.query({ path: cardPath }),
