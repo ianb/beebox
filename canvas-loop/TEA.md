@@ -292,7 +292,29 @@ u.textWidth(s, options)
   `overlay: true`, and the check skips it; the text under it is still checked
   against the rest. Headless runs also warn when
   the font has no glyph for a character, which draws as an empty box or
-  nothing; use a plain word or another character.
+  nothing; use a plain word or another character. Unicode subscript and
+  superscript digits (`₂`, `⁻`) are missing in the headless fonts: write
+  them as runs.
+
+Text content can be a list of runs instead of a string, for formulas,
+units and exponents. A run is a string or `{ text, sub?, sup?, style? }`:
+
+```ts
+const sub = (text: string) => ({ text, sub: true });
+v.text(["H", sub("2"), "O"], { x: 40, y: 80 }, { size: 28, valign: "baseline" }) // H₂O
+v.text(["10", { text: "−3", sup: true }, " mol L", { text: "−1", sup: true }], { x: 40, y: 120 }, UNITS)
+v.text(["k", { text: "obs", sub: true, style: "italic" }], { x: 40, y: 160 }, LABEL)
+```
+
+- `sub` and `sup` draw at 0.7 × `size`; `sub` moves the baseline down by
+  0.22 × `size`, `sup` up by 0.38 × `size`. `style` sets that run's style.
+- Runs are one line, measured and drawn as one text: one box (the line box
+  at `size`; sub and sup sit inside it), one baseline, one `fill`, one `name`.
+  `textWidth` and `textBounds` (on `v` and `u`) take runs too.
+- A `w` box aligns the line inside it and does not wrap; `fit` shrinks every
+  run together.
+- These throw at the call: `\n` in a run, `wrap: true`, a run with both `sub`
+  and `sup`, and any other key (a run in another color is its own `v.text`).
 
 ### Scopes
 

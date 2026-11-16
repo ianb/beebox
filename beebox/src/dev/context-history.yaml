@@ -11988,6 +11988,14 @@ test1:
       peak: 39755
       added: 4631
       turns: 7
+  figure-formula-runs:
+    - date: 2026-11-16T21:36:11.130Z
+      boxCommit: 121cc2ff4f7195722d3f6d95e9d1bc8dc38bdf55
+      repoCommit: 6a57b9d5e36a0309cc798f03681ed33bf8533ddd
+      initial: 35084
+      peak: 40960
+      added: 5876
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

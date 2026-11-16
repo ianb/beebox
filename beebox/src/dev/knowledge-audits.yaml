@@ -1506,6 +1506,21 @@ tests:
     correct_matches: ["msg\\.targets?\\b|\\btargets?\\.includes", "\\bname\\s*:|`name`"]
     tags: [cards, schemas, figure]
 
+  # Status (2026-11-16): figure-formula-runs added with text runs in
+  # canvas-loop (plan:canvas-loop-layout-text-hits, C3). knows_about, as
+  # figure-named-hits: the answer is in canvas-loop.md ("Text"). Passes 1/1
+  # on the worktree's test1 (2 reads, 2 greps): greps canvas-loop.md for
+  # "subscript", writes v.text(["H", sub("2"), "SO", sub("4")], …) and warns
+  # off the Unicode subscript digits.
+
+  - id: figure-formula-runs
+    prompt: "How do you draw H₂SO₄ with a real subscript in a canvas-loop figure?"
+    expected_level: knows_about
+    watch_for: "Reads canvas-loop.md (Text); writes one v.text with runs, { text: \"2\", sub: true } and { text: \"4\", sub: true }; does not use Unicode subscript digits or draw the pieces as separate texts at hand-computed offsets"
+    should_read_any: ["node_modules/beebox/box-docs/canvas-loop.md"]
+    correct_matches: ["sub\\s*:\\s*true"]
+    tags: [cards, schemas, figure]
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run

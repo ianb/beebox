@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Text runs.** `v.text`, `textBounds` and `textWidth` (on `v` and `u`)
+  take a list of runs, `string | { text, sub?, sup?, style? }`, for
+  formulas and exponents: `["H", { text: "2", sub: true }, "O"]`. Sub and
+  sup draw at 0.7 × size, moved 0.22 × size down or 0.38 × size up. One
+  line with one box, baseline and fill; a newline, `wrap: true` or an
+  unknown key throws.
 - **Names and hits.** `name` on any drawing (styles, text, `at`, `group`,
   `place`, `row`, `column`). Mouse messages carry `target` and `targets`,
   the named drawings under the pointer in the last frame drawn, innermost

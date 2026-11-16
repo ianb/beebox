@@ -1043,6 +1043,23 @@ run them on the worktree's test1 with `--filter figure`:
        ink sits where plain text's does, the sub `2` is smaller and lower),
        run under the GPU lock.
      - **Lines:** source 105, tests 112, docs 0 (217). Track C so far: 460.
+   - **As built (C3).** Logs are in `scratch/layout-text-hits/c3-*.log`.
+     TEA.md "Text" gains the runs: the `H₂O`, units and `k_obs` examples,
+     the 0.7 / 0.22 / 0.38 factors, one line with one box, baseline, fill
+     and name, a `w` box and `fit`, and what throws; the missing-glyph
+     bullet says Unicode subscript digits are missing headless. One
+     CHANGELOG bullet at the top of `## 0.2.0`. The example sketch is
+     unchanged (no runs label), to keep its line budget.
+     - **Audit.** `figure-formula-runs` is `knows_about`, as
+       `figure-named-hits`. It passes 1/1 on the worktree's test1 (2 reads,
+       2 greps; it writes `v.text(["H", sub("2"), "SO", sub("4")], …)` and
+       warns off `₂`). The ledger `context-history.yaml` (8) is generated.
+     - **Tests run:** the package-docs, ledger-schema and audit-runner tests
+       (46 pass); canvas-loop's docs test.
+     - **Lines:** tests 15 (the audit entry), docs 30 (TEA.md 24, CHANGELOG
+       6): 45. Track C in all: 505 (source 284, tests 191, docs 30) against
+       ~420 planned. **Whole plan: 2,797** (source 1,486, tests 1,127, docs
+       184), against ~2,150 approved and ~2,710 projected after B5.
 
 ## Rollout shape
 
