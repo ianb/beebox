@@ -48,7 +48,7 @@ const theme = EditorView.theme({
 /** The editor's frame, rendered where the composition block stands; nothing while the block is not mounted. */
 function Frame({ host, children }: { host: HTMLElement | null; children: ReactNode }): ReactNode {
   if (host === null) return null;
-  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-pen">{children}</section>, host);
+  return createPortal(<section aria-label="Composition editor" className="bbx-composition bbx-composition-editor my-4 rounded border border-card-pen">{children}</section>, host);
 }
 
 interface Session {
@@ -72,6 +72,13 @@ function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, 
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ "aria-label": "Composition text" }),
+      // The sticky header bar (the frame's first child) covers the top of
+      // the pane down to its sticky offset plus its height; keep the cursor below it.
+      EditorView.scrollMargins.of((editor) => {
+        const bar = editor.dom.closest(".bbx-composition")?.firstElementChild;
+        if (bar === null || bar === undefined) return null;
+        return { top: (Number.parseFloat(getComputedStyle(bar).top) || 0) + bar.getBoundingClientRect().height };
+      }),
       markWidgets(),
       conflictWidgets(),
       theme,
@@ -162,7 +169,10 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
-      <Row gap="sm" align="center" justify="end" wrap className="rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
+      {/* Sticky at the pane's top. When the card has its own sticky Contents
+          button (z-index 3, shorter than the bar), the bar keeps its right
+          end clear and the button sits there, above the bar. */}
+      <Row gap="sm" align="center" justify="end" wrap className="sticky top-0 z-[2] [.bbx-card-front:has(>.bbx-card-contents)_&]:pr-12 rounded-t border-b border-card-pen bg-card-tint px-2 py-0.5 print:hidden">
         <span className="text-sm font-semibold text-card-pen">Composition</span>
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
