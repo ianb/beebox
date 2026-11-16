@@ -1052,3 +1052,10 @@ findings; each checked against the source.
     (`controls.ts:65-80`) added; the examples' second rewrite cut to four
     files; acceptance now against a baseline taken just before R1, with
     six-figure and input thresholds.
+
+**Decision on the R5 misses (2026-11-16).** Accepted, under the
+boxholder's standing "Accept for now" on desktop numbers
+(`stage4/checkpoint4.md`, answer 7). The walk adds 0.1 ms; the walker sits
+at the 60 fps edge, so that tips a few more frames past a refresh. The
+pointer p95 alternates between two values one six-figure frame apart, and the
+median moved 0.9 ms. Moving the walk into lowering is not started.
