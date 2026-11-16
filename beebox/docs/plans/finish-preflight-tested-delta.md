@@ -180,8 +180,9 @@ headless finish agent's next runs exercise it directly.
 
 ## What will hold this after it ships
 
-Unit tests of `deltaSinceTested` in `bin/finish-preflight.test.ts`; a temp-repo
-test for the ancestor refusal. The grouping cannot drift from the sheet because
+Unit tests of `deltaSinceTested` and temp-repo tests of the revision refusals
+in `bin/finish-preflight-delta.test.ts` (node:test, like the other selection
+tests). The grouping cannot drift from the sheet because
 it calls the same `verificationCommands`.
 
 ## Implementation order
