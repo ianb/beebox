@@ -218,3 +218,36 @@ test("a first frame that fails to draw is reported once, and ready never resolve
   assert.match(String(errors[0]), /GPU fault/);
   assert.equal(lease.released, true);
 });
+
+test("a device lost before frame 0 is on screen is reported once, and ready never resolves", async () => {
+  const errors: unknown[] = [];
+  const lease = fakeLease();
+  let fail: () => void = () => {};
+  const held = (): Promise<void> => new Promise((_resolve, reject) => (fail = () => reject(new Error("device lost"))));
+  const attached = attach({ errors, gpu: fakeGpu(async () => lease, held) });
+  await settle();
+  lease.lose();
+  fail();
+  assert.equal(await resolvesSoon(attached.ready), false);
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0]), /lost before the figure's first frame/);
+  assert.equal(lease.released, true);
+});
+
+test("teardown while frame 0 is still drawing stops the loop at once", async () => {
+  const errors: unknown[] = [];
+  const lease = fakeLease();
+  let finish: () => void = () => {};
+  const held = (): Promise<void> => new Promise((resolve) => (finish = resolve));
+  const { module, counters } = makeModule();
+  const attached = attach({ errors, module, gpu: fakeGpu(async () => lease, held) });
+  await settle();
+  const before = counters.draws;
+  attached.teardown();
+  runFrames(5);
+  assert.equal(counters.draws, before, "no frame after teardown");
+  finish();
+  assert.equal(await resolvesSoon(attached.ready), false);
+  assert.equal(lease.released, true);
+  assert.deepEqual(errors, []);
+});

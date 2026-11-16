@@ -16,7 +16,8 @@ import { Runtime, watchVisibility } from "../../runtime/engine.js";
 import type { EmittedEvent, ParamOverrides, RuntimeLog } from "../../runtime/engine.js";
 import type { PlaygroundModule } from "../../sketch-types.js";
 import { leaseGpu } from "../shared-gpu.js";
-import type { LeaseGpu } from "../shared-gpu.js";
+import type { GpuLease, LeaseGpu } from "../shared-gpu.js";
+import { GpuRenderError } from "../../../scene/errors.js";
 import { FigureSleep } from "./sleep.js";
 import { SceneSurface } from "../surface.js";
 import type { SceneSurfaceDeps } from "../surface.js";
@@ -85,6 +86,26 @@ class Rollback {
   }
 }
 
+/** The scene surface on `canvas`, with the stand-ins `opts.gpu` gives or the browser's own. */
+function openSurface(canvas: HTMLCanvasElement, a: { opts: FigureOptions; lease: GpuLease; report: (error: unknown) => void }): SceneSurface {
+  const { opts } = a;
+  const gpu = opts.gpu ?? {};
+  return new SceneSurface({
+    canvas,
+    size: opts.size,
+    ratio: opts.ratio,
+    seed: opts.seed,
+    decl: opts.module.params ?? {},
+    draw: opts.module.draw,
+    text: gpu.text ?? browserTextMeasurer(),
+    colors: gpu.colors ?? colorsFrom(browser2d()),
+    lease: a.lease,
+    onError: a.report,
+    ...(gpu.lease === undefined ? {} : { openLease: gpu.lease }),
+    ...(gpu.makeRenderer === undefined ? {} : { makeRenderer: gpu.makeRenderer }),
+  });
+}
+
 /**
  * Lease a device and start the figure on `canvas`; resolves once frame 0 is on
  * screen. Resolves undefined, with everything released, when `torn()` turned
@@ -92,7 +113,7 @@ class Rollback {
  * `NoWebGpuError` or `NoGpuAdapterError` without a device, and whatever the
  * sketch's `init` or first `draw` threw; everything built is undone first.
  */
-export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOptions; report: (error: unknown) => void; inform: (error: unknown) => void; torn: () => boolean }): Promise<StartedFigure | undefined> {
+export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOptions; report: (error: unknown) => void; inform: (error: unknown) => void; torn: () => boolean; building: (stop: () => void) => void }): Promise<StartedFigure | undefined> {
   const { opts } = a;
   // A failure while starting (frame 0's draw or present) is reported once, and the start then stops.
   const start = { failed: false };
@@ -108,20 +129,7 @@ export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOp
   }
   let surface: SceneSurface;
   try {
-    surface = new SceneSurface({
-      canvas,
-      size: opts.size,
-      ratio: opts.ratio,
-      seed: opts.seed,
-      decl: module.params ?? {},
-      draw: module.draw,
-      text: opts.gpu?.text ?? browserTextMeasurer(),
-      colors: opts.gpu?.colors ?? colorsFrom(browser2d()),
-      lease,
-      onError: report,
-      ...(opts.gpu?.lease === undefined ? {} : { openLease: opts.gpu.lease }),
-      ...(opts.gpu?.makeRenderer === undefined ? {} : { makeRenderer: opts.gpu.makeRenderer }),
-    });
+    surface = openSurface(canvas, { opts, lease, report });
   } catch (error) {
     lease.release();
     throw error;
@@ -175,8 +183,11 @@ export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOp
       fontsLoaded: () => rt.fontsLoaded(),
     });
     undo.add(detachWatch);
+    // A teardown while frame 0 is still drawing stops everything at once.
+    a.building(() => undo.run());
     // Frame 0 on screen before the figure counts as started: a first present that fails was reported, and torn down here.
     await surface.settled();
+    if (!a.torn() && !start.failed && surface.state === "lost") report(new GpuRenderError({ detail: "the GPU device was lost before the figure's first frame was drawn" }));
     if (a.torn() || start.failed || surface.state === "failed" || surface.state === "destroyed") {
       undo.run();
       return undefined;

@@ -96,7 +96,7 @@ export interface AttachedSketch {
  * module's declared `canvas` size times the pixel ratio (`sizeCanvas`).
  */
 export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOptions): AttachedSketch {
-  const state: { torn: boolean; reported: boolean; started: StartedFigure | undefined; runtime: Runtime | undefined; detachInput: (() => void) | undefined } = { torn: false, reported: false, started: undefined, runtime: undefined, detachInput: undefined };
+  const state: { torn: boolean; reported: boolean; started: StartedFigure | undefined; runtime: Runtime | undefined; detachInput: (() => void) | undefined; stopBuilding: (() => void) | undefined } = { torn: false, reported: false, started: undefined, runtime: undefined, detachInput: undefined, stopBuilding: undefined };
   // The host hears one failure; `report` also stops the figure, `inform` leaves it retryable (a device not recreated yet).
   const inform = (error: unknown): void => {
     if (state.reported || state.torn) return;
@@ -123,7 +123,11 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
       report,
       inform,
       torn,
+      building: (stop) => {
+        state.stopBuilding = stop;
+      },
     });
+    state.stopBuilding = undefined;
     if (started === undefined) return;
     // Torn down while it started (a callback during frame 0, or before this continuation ran).
     if (torn()) {
@@ -154,6 +158,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
       if (state.torn) return;
       state.torn = true;
       state.detachInput?.();
+      state.stopBuilding?.();
       state.started?.teardown();
       state.runtime = undefined;
     },
