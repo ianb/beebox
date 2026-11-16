@@ -765,6 +765,60 @@ corpus, then the hand-written sketches, then validation, then speed.
   1 fps of the baseline; input-to-frame p95 within 10 ms of it; output
   byte-identical to `out/rs-after/`. A miss goes to the boxholder with the
   profile.
+- **As built (R5).** Scripts and logs are in `scratch/stage5/rs5/`
+  (`alternate.sh`, `runs.log`, `medians.py`, `profile.py`).
+  - **Method.** The baseline is a separate checkout of d1d08b5ee; the
+    current tree is HEAD with R5's two review fixes. Both use R1's walker
+    and six-figure pages. The six-figure page now returns `draw`'s value,
+    so it runs on both trees. Ten runs of each, alternated, under the GPU
+    lock. Load average was 2.6 to 4.3 at each run start, with no build or
+    indexing in the top processes and no `vcmiclient`. Spotlight indexed the
+    new checkout before the first run; the runs started after it stopped.
+  - **Result: two misses.** Medians of ten runs:
+
+    | | Baseline | Now | Change | Limit | Verdict |
+    |---|---|---|---|---|---|
+    | Walker record plus walk (rAF) | 2.1 ms | 2.2 ms | +0.1 ms | +0.5 ms | pass |
+    | Record alone | 1.8 ms | 1.9 ms | +0.1 ms | — | — |
+    | Walker fps | 57.6 | 56.4 | −1.2 | ±1 | **miss** |
+    | Six-figure fps | 24.2 | 24.2 | 0.0 | ±1 | pass |
+    | Pointer input-to-frame p95 | 66.5 ms | 98.0 ms | +31.5 ms | +10 ms | **miss** |
+    | Output against `out/rs-after/` | | 61 of 61 identical | | | pass |
+
+  - **Profile.** Each value is the median over the ten runs. The walk adds
+    about 0.1 ms per walker frame; every other part of the frame is
+    unchanged:
+
+    | Per frame (ms) | Baseline | Now |
+    |---|---|---|
+    | Walker record | 2.1 | 2.2 |
+    | Walker lower / brush / atlas / encode | 8.5 / 4.55 / 2.0 / 1.2 | 8.4 / 4.5 / 2.0 / 1.2 |
+    | Walker frame p95 (rAF) | 21.1 | 22.05 |
+    | Walker frame to GPU done, median / p95 | 21.85 / 25.45 | 22.15 / 26.15 |
+    | Six-figure walker draw / lower | 2.3 / 9.9 | 2.3 / 9.9 |
+    | Chemistry draw | 0.3 | 0.3 |
+    | Pointer input-to-frame median | 55.65 | 56.6 |
+
+    The walker's frame is at the 16.7 ms vsync edge: its median frame is
+    16.7 ms in every run. So 0.1 ms more pushes more frames to the next
+    vsync. Across the runs the walker's fps falls by about 1.2 (2%). The
+    pointer p95 has two values: about 64 ms or about 105 ms. The
+    difference, about 41 ms, is one frame of the six-figure page at 24 fps.
+    In two of ten baseline runs the p95 was the higher value; in six of ten
+    current runs it was. The median latency is unchanged (55.65 against
+    56.6 ms). Folding the walk into lowering is the lever the plan names
+    (Could this be simpler?). It is not taken here; the boxholder decides.
+  - **Review.** Codex (`gpt-6-astra`) reviewed the whole diff from R1 to
+    R4. It did not review the 48 converted gallery exercises or the nine
+    converted examples. It found two faults, both fixed, each with a test
+    that fails without its fix:
+    - The contract check refused a sketch that exports only `init`,
+      `update` and `draw` (TS2559). The boundary's target for the optional
+      exports was a weak type. An index signature on that target fixes it.
+    - The picture-paper hint fired for a picture whose body has its own
+      paper scope, when that scope matches the paper the picture is placed
+      in. The hint now fires only when a stroke or effect draws on the
+      picture's own paper.
 
 ### Seams
 
