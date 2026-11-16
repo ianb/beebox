@@ -974,6 +974,29 @@ run them on the worktree's test1 with `--filter figure`:
        audit ledger `context-history.yaml` (8) is generated. Track B so far:
        1,494.
 8. **B5** the example sketch and events file; `gallery:check`.
+   - **As built (B5).** Logs are in `scratch/layout-text-hits/b5-*.log`.
+     `src/examples/scale-tea.ts` and `scale-tea-events.json`: a beam that
+     tilts toward the heavier side, two pans as `v.at`s named `pan-left` and
+     `pan-right` (bowls with `fill: "transparent"`), weights named
+     `weight-<id>` inside them, and a caption column holding a baseline row.
+     `update` reads only `msg.targets`. The events file aims four clicks by
+     pan name, removes `weight-2` by name (`on weight-2 in pan-left →
+     remove-weight`), and ends with one click by `x`/`y` on empty canvas
+     (`(unhandled)`). Plain text: Track C may add a subscript later. The
+     playground registry lists it as "Scale".
+     - **Deviation: not in `gallery:check`.** `gallery check` reads only
+       `src/gallery/<slug>/` exercise folders (`headless/gallery.ts`); no
+       example is in it. The examples are held by tests instead, as
+       `orbit-tea.ts` is by `headless.tea-determinism.gpu.test.ts`: a case in
+       `tea-runtime.hits.gpu.test.ts` runs the example with its events file
+       and pins the six verdict lines. A gallery folder would make it an
+       exercise record, which the plan's NOT in scope rules out.
+       `gallery:check` was run once under the GPU lock: all 50 entries pass.
+     - **Lines:** source 120 (sketch 110, events 8, registry 2), tests 24,
+       docs 4 (148). Track B in all: 1,642 (source 885, tests 663, docs
+       94), against the plan's ~1,030 for B core, both extras and the
+       example. Revised plan total: about 2,710 (A 650) if Track C
+       lands near its ~420.
 9. **C1–C3** run measurement (needs A1's `baselineGap`); the node on the
    alphabetic baseline, glyph quads, the `keepInside` path; TEA.md and
    CHANGELOG, audit `figure-formula-runs`, run. Track C is core scope; only

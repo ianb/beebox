@@ -1,0 +1,8 @@
+[
+  { "frame": 10, "type": "mousedown", "target": "pan-left" },
+  { "frame": 20, "type": "mousedown", "target": "pan-left" },
+  { "frame": 30, "type": "mousedown", "target": "pan-right" },
+  { "frame": 40, "type": "mousedown", "target": "pan-left" },
+  { "frame": 60, "type": "mousedown", "target": "weight-2" },
+  { "frame": 75, "type": "mousedown", "x": 240, "y": 20 }
+]

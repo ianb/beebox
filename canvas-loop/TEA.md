@@ -798,7 +798,9 @@ three orbiting planets. It exercises every param type (`speed-scale` number,
 manipulation (click a *moving* planet to select it; ArrowUp/Down nudge its
 speed). It predates names and computes its hits from position math; a new
 sketch names the planets and reads `msg.target`
-([Names and hits](#names-and-hits)).
+([Names and hits](#names-and-hits)), as
+[`src/examples/scale-tea.ts`](./src/examples/scale-tea.ts) does with
+[its events file](./src/examples/scale-tea-events.json).
 
 `draw` returns one list: a `.map` over the planets, `&&` for what a param or
 the mode turns on, and small components (`drawPlanet`, `drawHud`):
