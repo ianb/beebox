@@ -353,7 +353,8 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   value. Leave `deps` out for a drawing that never changes.
 - Call `v.picture` in every `draw` that places it: it returns the kept
   version without running `body`. A `Picture` from an earlier frame is
-  refused at `place`.
+  refused at `place`. Versions not asked for stay kept for a while (within a
+  memory budget), so poses that come back are not recorded again.
 - Inside `body`, `v.width` and `v.height` are the picture's size, and
   `keepInside` text keeps inside the picture's box. Drawing outside the box
   is kept, so glows and shadows can spill over it.

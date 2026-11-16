@@ -32,7 +32,7 @@ import { casterHeights, casterOnCaster, casterOutlineFringe, lightPeaks, smoothP
 import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonReceiver, skyKeepsLight, translucentNonReceiver } from "./receives-shadow-cases.js";
 import { SHAPE_CELLS, drawShapesDraft } from "./shapes.js";
 import { cacheEquivalence, portFrames, sameWarmColdOff } from "./cache-cases.js";
-import { everyPlacementSnaps, overlappingContourClip, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
+import { everyPlacementSnaps, overlappingContourClip, poseCycleReuse, rasterMemory, smudgeAcrossTiles, tilePlacedTwice, wideReadingPicture } from "./raster-cases.js";
 import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-cases.js";
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
@@ -255,6 +255,7 @@ onGpu("cached, uncached and cold renders give the same bytes: the walker sheet, 
   }
 });
 onGpu("kept rasters stay inside the budget: dropped versions' textures are destroyed", rasterMemory);
+onGpu("a walk cycle's poses are each drawn once and reused when they come back", poseCycleReuse);
 onGpu("a picture with a smudge across the tile edge draws as one layer, as a group does", smudgeAcrossTiles);
 onGpu("a tile placed twice in a frame is drawn once and kept once", tilePlacedTwice);
 onGpu("a clip to a path whose contours overlap keeps winding coverage", overlappingContourClip);

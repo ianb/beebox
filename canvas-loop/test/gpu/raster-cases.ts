@@ -1,7 +1,8 @@
-// Kept picture rasters and clips, run by renderer.gpu.test.ts: memory stays inside the
-// raster budget, a picture that reads its surroundings draws as one layer, a
-// tile placed twice in a frame is drawn once, and a clip to a path whose
-// contours overlap keeps winding coverage.
+// Kept picture rasters and clips, run by renderer.gpu.test.ts: memory stays
+// inside the raster budget, a walk cycle's poses are drawn once, a picture
+// that reads its surroundings draws as one layer, a tile placed twice in a
+// frame is drawn once, and a clip to a path whose contours overlap keeps
+// winding coverage.
 import assert from "node:assert/strict";
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
 import type { Drawing, View } from "../../src/core/tea.js";
@@ -16,21 +17,39 @@ function maxDiff(a: Uint8Array, b: Uint8Array): number {
   return most;
 }
 
-/** A picture whose size grows every frame: dropped versions' textures are destroyed, not kept as spares. */
+/** A picture whose size grows every frame: idle versions' textures stay within the 32 MB idle budget, the oldest destroyed first. */
 export async function rasterMemory(handle: GpuHandle): Promise<void> {
-  const size = { width: 300, height: 200 };
+  const size = { width: 1000, height: 1000 };
   const rec = new SceneRecorder(size);
   const renderer = new GpuRenderer(handle);
   try {
     let most = 0;
-    for (let f = 0; f < 24; f++) {
-      const scene = rec.record((v) => v.place(v.picture({ key: "grow", width: 100 + f * 7, height: 100 }, () => v.rect(0, 0, 100 + f * 7, 100, { fill: "#3a6a9a" })), 10, 10)).scene;
+    for (let f = 0; f < 8; f++) {
+      const scene = rec.record((v) => v.place(v.picture({ key: "grow", width: 800 + f * 10, height: 800 }, () => v.rect(0, 0, 800 + f * 10, 800, { fill: "#3a6a9a" })), 10, 10)).scene;
       await renderer.render(scene, 2);
-      most = Math.max(most, renderer.held.tiles);
+      most = Math.max(most, renderer.held.tileBytes);
     }
-    const tile = (100 + 23 * 7) * 2 * 100 * 2 * 4;
-    assert.ok(most <= 2, `at most the last two frames' tiles are kept (most ${most})`);
-    assert.ok(renderer.held.tileBytes <= 2 * tile, `kept raster bytes ${renderer.held.tileBytes} stay within two tiles (${2 * tile})`);
+    const tile = (800 + 7 * 10) * 2 * 800 * 2 * 4;
+    assert.ok(most <= 32 * 1024 * 1024 + 2 * tile, `kept raster bytes (most ${most}) stay within the idle budget and two live tiles`);
+    assert.ok(renderer.held.tiles < 8, `old versions' tiles are destroyed (${renderer.held.tiles} kept)`);
+  } finally {
+    renderer.destroy();
+  }
+}
+
+/** A walk cycle: four poses, each shown three frames in turn, are drawn once each; when a pose comes back its tile is reused. */
+export async function poseCycleReuse(handle: GpuHandle): Promise<void> {
+  const rec = new SceneRecorder({ width: 200, height: 100 });
+  const renderer = new GpuRenderer(handle);
+  try {
+    let drawn = 0;
+    for (let f = 0; f < 36; f++) {
+      const pose = Math.floor(f / 3) % 4;
+      const scene = rec.record((v) => v.place(v.picture({ key: "walker", width: 40, height: 60, deps: [pose] }, () => v.rect(pose * 5, 0, 20, 60, { fill: "#8a4f9a" })), 20 + f, 20)).scene;
+      await renderer.render(scene, 1);
+      drawn += renderer.stats.tilesDrawn;
+    }
+    assert.equal(drawn, 4, "one tile per pose, over three cycles");
   } finally {
     renderer.destroy();
   }

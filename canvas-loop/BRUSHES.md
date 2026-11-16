@@ -417,7 +417,10 @@ each frame:
   `v.picture({ key: "sky", width: 600, height: 300, deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
 - A thing that moves but keeps its look (a character, a boat, a cloud) is a
   picture placed at a new position each frame. Draw each pose as its own
-  version (`deps: [pose]`) and switch between them.
+  version (`deps: [pose]`) and switch between them. A pose not shown for a
+  while stays kept, so a walk cycle draws each pose once:
+  `v.picture({ key: "walker", width: 80, height: 120, deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
+  Do not pack poses into one sheet picture and clip to one.
 - The renderer keeps a placed picture's pixels while its version, scale and
   rotation stay the same; a move reuses them, since placements snap to whole
   device pixels. So bob a picture by moving it, and flip it with a fixed

@@ -187,8 +187,10 @@ The renderer decides what to keep; the sketch has no say. It may keep:
 - inside a lit group, the colour and material layers of a still subtree, but
   never the lit result while a light in the group changes.
 
-Versions not placed in the last two frames may be dropped; kept rasters stay
-under 256 MB. A dropped version is recorded again when asked for. Cache keys
+Versions and rasters not placed in the last two frames are kept while they
+fit an idle budget (about 16 MB of recordings, 32 MB of rasters), the least
+recently placed dropped first, so a walk cycle's poses are recorded and
+rasterized once; all kept rasters stay under 256 MB. A dropped version is recorded again when asked for. Cache keys
 are 64-bit hashes of recorded data; a collision is the accepted risk. A
 picture that measured text is recorded again when fonts finish loading
 (browser).

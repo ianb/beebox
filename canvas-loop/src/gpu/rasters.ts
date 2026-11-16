@@ -8,8 +8,10 @@
 // one and one drawn after waking agree byte for byte. A picture whose content
 // reads its surroundings (smudge, wet, wash, hatching, lighting) is one layer
 // over its whole extent instead (picture-reads.ts). Tiles not placed in the
-// last two frames are destroyed, and past 256 MB the least recently placed go
-// first; no texture is held outside that count.
+// last two frames stay kept while they fit in 32 MB, least recently placed
+// destroyed first, so a pose a walk cycle shows again is reused; past 256 MB
+// in all, the least recently placed go first. No texture is held outside that
+// count.
 import type { PictureVersion } from "../scene/nodes.js";
 import type { MarkPeak } from "./peaks.js";
 import type { R } from "./jobs.js";
@@ -45,6 +47,8 @@ export function tilesOver(r: R): R[] {
 }
 /** Bytes of kept raster textures before the least recently placed are destroyed. */
 const BUDGET = 256 * 1024 * 1024;
+/** Bytes of kept tiles not placed in the last two frames (a walk cycle's other poses) before the least recently placed of them are destroyed. */
+const IDLE_BUDGET = 32 * 1024 * 1024;
 const USES = 0x10 | 0x04 | 0x01 | 0x02; // RENDER_ATTACHMENT | TEXTURE_BINDING | COPY_SRC | COPY_DST
 
 export interface KeptTile {
@@ -115,19 +119,20 @@ export class RasterCache {
     tex.destroy();
   }
 
-  /** After a frame: destroy tiles not placed in the last two frames, then the least recently placed past the budget. */
+  /** After a frame: destroy the least recently placed tiles while those not placed in the last two frames pass `IDLE_BUDGET`, or all of them pass `BUDGET`. */
   endFrame(): void {
     const all: { version: PictureVersion; key: string; tile: KeptTile }[] = [];
-    for (const [version, map] of this.#tiles) {
-      for (const [key, tile] of map) {
-        if (tile.frame < this.#frame - 1) this.#drop(version, key);
-        else all.push({ version, key, tile });
-      }
-    }
+    for (const [version, map] of this.#tiles) for (const [key, tile] of map) all.push({ version, key, tile });
+    const idle = (t: KeptTile): boolean => t.frame < this.#frame - 1;
     let bytes = all.reduce((n, e) => n + tileBytes(e.tile), 0);
+    // An empty tile holds no texture but keeps its version's recording alive: it counts as a small tile.
+    const idleCost = (t: KeptTile): number => (idle(t) ? Math.max(tileBytes(t), 16 * 1024) : 0);
+    let idleBytes = all.reduce((n, e) => n + idleCost(e.tile), 0);
+    if (bytes <= BUDGET && idleBytes <= IDLE_BUDGET) return;
     for (const e of all.toSorted((a, b) => a.tile.frame - b.tile.frame)) {
-      if (bytes <= BUDGET) break;
+      if (bytes <= BUDGET && idleBytes <= IDLE_BUDGET) break;
       bytes -= tileBytes(e.tile);
+      idleBytes -= idleCost(e.tile);
       this.#drop(e.version, e.key);
     }
   }
