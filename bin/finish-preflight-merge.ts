@@ -20,14 +20,16 @@ import {
   mergeHistories,
   parseHistoryText,
 } from "../beebox/src/dev/lib/context-history.js";
-import { MergeConflictError } from "./finish-preflight-errors.js";
-import { git } from "./lib/git.js";
+import { MergeConflictError, MergeStateError, type StoppingMergeState } from "./finish-preflight-errors.js";
+import { git, gitOrNull } from "./lib/git.js";
 
 export interface MergeResult {
   status: "up-to-date" | "merged";
   broughtPaths: string[];
   /** Conflicted paths preflight resolved by rule, each with the rule's name. */
   resolved: string[];
+  /** The leftover `MERGE_HEAD` preflight cleared before merging (see {@link readMergeState}). */
+  clearedMergeHead?: string;
 }
 
 interface Stages {
@@ -169,15 +171,55 @@ function resolveConflicts(root: string, conflicted: string[]): string[] | null {
   return conflicted.map((path) => `${path} (${CONTENT_RULES[path]?.name ?? "regenerated"})`);
 }
 
+const lines = (text: string): string[] => text.split("\n").filter((line) => line !== "");
+
+export type MergeState =
+  | { state: "none" }
+  /** HEAD already records this merge; only the metadata was left behind. */
+  | { state: "finished"; mergeHead: string }
+  | Exclude<StoppingMergeState, { state: "merge-failed" }>;
+
+/**
+ * What a `MERGE_HEAD` left in the worktree means. git refuses to start a merge
+ * while one exists, and a merge preflight committed or a person finished by
+ * hand can leave it behind
+ * (issues/bugs/2026-11-13-finish-preflight-misreads-a-finished-merge.md).
+ * Only "finished" is safe to clear: HEAD is a merge whose second parent is
+ * MERGE_HEAD, nothing is unmerged, and nothing is staged.
+ */
+export function readMergeState(root: string): MergeState {
+  const mergeHead = gitOrNull(["rev-parse", "-q", "--verify", "MERGE_HEAD^{commit}"], { cwd: root });
+  if (mergeHead === null) return { state: "none" };
+  const unmerged = lines(git(["diff", "--name-only", "--diff-filter=U"], { cwd: root, onError: "throw" }));
+  if (unmerged.length > 0) return { state: "conflicted", mergeHead, paths: [...new Set(unmerged)] };
+  const staged = lines(git(["diff", "--cached", "--name-only", "HEAD"], { cwd: root, onError: "throw" }));
+  const recorded = gitOrNull(["rev-parse", "-q", "--verify", "HEAD^2"], { cwd: root }) === mergeHead;
+  if (recorded) return staged.length === 0 ? { state: "finished", mergeHead } : { state: "finished-with-staged", mergeHead, staged };
+  return staged.length === 0 ? { state: "unrecorded", mergeHead } : { state: "resolved-uncommitted", mergeHead, staged };
+}
+
+/** Clears a provably finished leftover merge; any other merge state stops the finish. */
+function clearLeftoverMerge(root: string): string | undefined {
+  const found = readMergeState(root);
+  if (found.state === "none") return undefined;
+  if (found.state !== "finished") throw new MergeStateError(found);
+  git(["merge", "--quit"], { cwd: root, onError: "throw" });
+  return found.mergeHead;
+}
+
 export function mergeMain(root: string): MergeResult {
+  const clearedMergeHead = clearLeftoverMerge(root);
+  const cleared = clearedMergeHead === undefined ? {} : { clearedMergeHead };
   const before = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   const result = spawnSync("git", ["merge", "main"], { cwd: root, encoding: "utf-8" });
   let resolved: string[] = [];
   if (result.status !== 0) {
-    const conflicted = git(["diff", "--name-only", "--diff-filter=U"], { cwd: root, onError: "throw" })
-      .split("\n")
-      .filter((path) => path !== "");
-    const resolution = conflicted.length === 0 ? null : resolveConflicts(root, conflicted);
+    const conflicted = lines(git(["diff", "--name-only", "--diff-filter=U"], { cwd: root, onError: "throw" }));
+    if (conflicted.length === 0) {
+      // Not a conflict: a dirty file the merge would overwrite, a missing ref.
+      throw new MergeStateError({ state: "merge-failed", output: `${result.stdout}${result.stderr}` });
+    }
+    const resolution = resolveConflicts(root, conflicted);
     const commit =
       resolution === null
         ? null
@@ -192,9 +234,7 @@ export function mergeMain(root: string): MergeResult {
     resolved = resolution;
   }
   const after = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
-  if (before === after) return { status: "up-to-date", broughtPaths: [], resolved };
-  const brought = git(["diff", "--name-only", "--no-renames", `${before}..HEAD`], { cwd: root, onError: "throw" })
-    .split("\n")
-    .filter((path) => path !== "");
-  return { status: "merged", broughtPaths: brought, resolved };
+  if (before === after) return { status: "up-to-date", broughtPaths: [], resolved, ...cleared };
+  const brought = lines(git(["diff", "--name-only", "--no-renames", `${before}..HEAD`], { cwd: root, onError: "throw" }));
+  return { status: "merged", broughtPaths: brought, resolved, ...cleared };
 }

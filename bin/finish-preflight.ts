@@ -252,6 +252,11 @@ export function formatSheet(sheet: Sheet): string {
   lines.push(`worktree ${sheet.worktree} (${sheet.branch})`);
   const brought = sheet.merge.broughtPaths.length;
   lines.push(`merge main: ${sheet.merge.status}${brought > 0 ? ` (+${String(brought)} paths)` : ""}`);
+  if (sheet.merge.clearedMergeHead !== undefined) {
+    lines.push(
+      `  cleared a leftover MERGE_HEAD ${sheet.merge.clearedMergeHead.slice(0, 9)} (git merge --quit): HEAD already records that merge`,
+    );
+  }
   if (sheet.merge.resolved.length > 0) {
     list("  conflicts resolved by rule (check them in the diff review)", sheet.merge.resolved);
   }

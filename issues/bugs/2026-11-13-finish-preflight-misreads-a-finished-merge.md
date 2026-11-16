@@ -1,6 +1,6 @@
 ---
 title: "finish-preflight misreads a merge that is already finished or resolved"
-workstream: unattached
+workstream: finish-preflight-merge-state
 area: bin
 filed-by: agent
 discovered-by: agent
