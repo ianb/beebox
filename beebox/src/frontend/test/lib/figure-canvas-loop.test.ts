@@ -149,3 +149,12 @@ void test("figureNotice picks the notice by the error's name", async (t) => {
     { kind: "error", detail: "Build failed with 1 error" },
   ]);
 });
+
+// Sketch code never holds the page's GPU device: `inspect` would hand it over
+// and `gpu` would replace where it comes from, so the wrapper drops both.
+void test("the wrapper drops the options that reach the GPU device", async (t) => {
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], onError });
+  wrapped.mountSketch(mount, { module: {}, autoplay: false, inspect: () => {}, gpu: {} });
+  t.check(Object.keys(calls[0] ?? {}).toSorted(), ["autoplay", "module", "onError"]);
+});

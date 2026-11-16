@@ -647,12 +647,15 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
     import names, as the bundler does (a route test fails without the fix).
     (2) The `beebox/server` export bundled canvas-loop as a bare import,
     so a packed server could not load the check; it now inlines canvas-loop
-    as `cli.mjs` does (checked in the rebuilt bundle). Not taken: (3) a
-    sketch can pass `inspect` to `cl.mountSketch` and reach the page's
-    shared `GPUDevice`. This predates C1–C3, and figure code runs unsandboxed
-    in the page, where it can call `navigator.gpu` itself, so stripping the
-    option would not make a boundary. The isolation issue
-    (`2026-11-13-isolate-view-and-figure-code.md`) owns it.
+    as `cli.mjs` does (checked in the rebuilt bundle). (3) A sketch could pass
+    `inspect` to `cl.mountSketch` and get the page's shared `GPUDevice`,
+    against need 7. First declined, since figure code runs unsandboxed and
+    can call `navigator.gpu` itself; the verification round pointed out that
+    its own device is not the shared one. Now the wrapper drops `inspect`
+    and `gpu`, and the box-facing library leaves out `attachSketch`. Figure
+    code still runs in the page; the isolation issue
+    (`2026-11-13-isolate-view-and-figure-code.md`) owns that. The
+    verification round confirmed (1) and (2).
 
 ### C4. Guidance and starter
 

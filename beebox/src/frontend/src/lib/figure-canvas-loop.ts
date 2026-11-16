@@ -11,7 +11,10 @@
  *   activity log with the sketch's `activity(model)` value when it has one;
  * - hands every failure after mount to the card first, then to the sketch's
  *   own `onError`, so the card can show it in the figure's place
- *   (`figureNotice`).
+ *   (`figureNotice`);
+ * - drops the `inspect` and `gpu` options, which hand over or replace the
+ *   page's shared GPU device: sketch code builds scenes and never holds the
+ *   device (FigureMount also leaves `attachSketch` out of the library).
  */
 
 import type * as CanvasLoopBrowser from "@ianbicking/canvas-loop/browser";
@@ -101,8 +104,9 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
       if (detail === null) return;
       report("explored", detail, event.activity);
     };
+    const { inspect: _inspect, gpu: _gpu, ...sketchOpts } = opts;
     return inner(mount, {
-      ...opts,
+      ...sketchOpts,
       ...(onEvent !== undefined ? { onEvent } : {}),
       onError: onErrorFor(opts.onError),
     });

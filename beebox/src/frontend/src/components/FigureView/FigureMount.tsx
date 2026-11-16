@@ -77,7 +77,9 @@ async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness
   }
   if (runtime === "canvas-loop") {
     await import("@ianbicking/canvas-loop/browser/figure.css");
-    return wrapCanvasLoopLib(await import("@ianbicking/canvas-loop/browser"), harness);
+    // attachSketch takes the device options mountSketch's wrapper drops; a box figure has no use for it.
+    const { attachSketch: _attachSketch, ...lib } = await import("@ianbicking/canvas-loop/browser");
+    return wrapCanvasLoopLib(lib, harness);
   }
   return import("d3");
 }
