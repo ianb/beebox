@@ -139,6 +139,8 @@ class Playground {
     canvas.className = "sketch-canvas";
     canvas.tabIndex = 0;
     this.#canvasWrap.replaceChildren(canvas);
+    // The last sketch's controls go at once; this one's appear when its device is ready.
+    this.#controlsHost.replaceChildren();
     this.#applyScale(canvas);
     const attached = attachSketch(canvas, {
       module: entry.module,

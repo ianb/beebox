@@ -83,7 +83,7 @@ export interface AttachSketchOptions {
 export interface AttachedSketch {
   /** The runtime, once `ready` resolved; undefined before. */
   readonly runtime: Runtime | undefined;
-  /** Resolves with the runtime once the device opened and frame 0 drew. Never settles if the figure fails (see `onError`) or is torn down first. */
+  /** Resolves with the runtime once the device opened and frame 0 is on screen. Never settles if the figure fails first (see `onError`) or is torn down first. */
   readonly ready: Promise<Runtime>;
   /** Stops the loop, detaches input listeners and frees the GPU resources; before `ready`, releases the device lease. Idempotent. */
   teardown: () => void;
@@ -97,17 +97,23 @@ export interface AttachedSketch {
  */
 export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOptions): AttachedSketch {
   const state: { torn: boolean; reported: boolean; started: StartedFigure | undefined; runtime: Runtime | undefined; detachInput: (() => void) | undefined } = { torn: false, reported: false, started: undefined, runtime: undefined, detachInput: undefined };
-  const report = (error: unknown): void => {
-    state.started?.fail();
+  // The host hears one failure; `report` also stops the figure, `inform` leaves it retryable (a device not recreated yet).
+  const inform = (error: unknown): void => {
     if (state.reported || state.torn) return;
     state.reported = true;
     if (opts.onError === undefined) console.error("canvas-loop: figure failed", error);
     else opts.onError(error);
   };
+  const report = (error: unknown): void => {
+    state.started?.fail();
+    inform(error);
+  };
   let resolveReady: (runtime: Runtime) => void = () => {};
   const ready = new Promise<Runtime>((resolve) => {
     resolveReady = resolve;
   });
+  // Read through a function: teardown can run while `run` awaits, which narrowing does not see.
+  const torn = (): boolean => state.torn;
   const run = async (): Promise<void> => {
     const { startFigure } = await import("./scene/figure/start.js");
     if (state.torn) return;
@@ -115,9 +121,15 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     const started = await startFigure(canvas, {
       opts: { ...opts, size, ratio: pixelRatioOf(canvas) },
       report,
-      torn: () => state.torn,
+      inform,
+      torn,
     });
     if (started === undefined) return;
+    // Torn down while it started (a callback during frame 0, or before this continuation ran).
+    if (torn()) {
+      started.teardown();
+      return;
+    }
     state.started = started;
     const { runtime } = started.figure;
     // Input after the runtime exists; a throw here undoes the figure.
@@ -130,7 +142,7 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     }
     state.runtime = runtime;
     opts.inspect?.(started.figure);
-    resolveReady(runtime);
+    if (!torn()) resolveReady(runtime);
   };
   run().catch(report);
   return {

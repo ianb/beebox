@@ -161,23 +161,33 @@ Object.assign(globalThis, { GPUTextureUsage: Reflect.get(globalThis, "GPUTexture
 /** A lease on a stand-in device: the figure code reads only `device` off the handle. */
 export interface FakeLease extends GpuLease {
   released: boolean;
+  /** Lose the device, as a driver reset would. */
+  lose(): void;
 }
 
 export function fakeLease(): FakeLease {
+  let listener: ((info: GPUDeviceLostInfo) => void) | undefined;
   const lease: FakeLease = {
     // eslint-disable-next-line no-restricted-syntax -- test stand-in: the figure reads only `device` off the handle, and only for its own getter
     gpu: { device: {} } as GpuHandle,
     released: false,
-    onLost: () => {},
+    onLost: (l) => {
+      listener = l;
+    },
     release: () => {
       lease.released = true;
+      listener = undefined;
     },
+    // eslint-disable-next-line no-restricted-syntax -- test stand-in: the listener reads only `reason` and `message`
+    lose: () => listener?.({ reason: "unknown", message: "driver reset" } as GPUDeviceLostInfo),
   };
   return lease;
 }
 
-const stubRenderer = (): SurfaceRenderer => ({
-  present: async () => {},
+const stubRenderer = (present?: () => Promise<void>) => (): SurfaceRenderer => ({
+  present: async () => {
+    await present?.();
+  },
   release: () => {},
   destroy: () => {},
   held: { textures: 0, bytes: 0, inUse: 0, images: 0, imageBytes: 0, strokes: 0, geometry: 0, tiles: 0, tileBytes: 0 },
@@ -192,8 +202,8 @@ const text = await openTextMeasurer();
  * (pass a pending promise to hold the figure before `ready`). Colours parse as
  * opaque black.
  */
-export function fakeGpu(lease?: () => Promise<GpuLease>): FigureGpu {
-  return { lease: lease ?? (async () => fakeLease()), text, colors: () => [0, 0, 0, 1], makeRenderer: stubRenderer };
+export function fakeGpu(lease?: () => Promise<GpuLease>, present?: () => Promise<void>): FigureGpu {
+  return { lease: lease ?? (async () => fakeLease()), text, colors: () => [0, 0, 0, 1], makeRenderer: stubRenderer(present) };
 }
 
 /** Let pending promises and the figure's lazy import settle. */

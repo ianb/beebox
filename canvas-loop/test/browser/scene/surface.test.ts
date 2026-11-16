@@ -109,3 +109,23 @@ test("a colour the page cannot parse fails at the call, naming the call and the 
   assert.throws(() => s.draw({}, {}), (e: unknown) => e instanceof SketchUsageError && /rect fill "#ggg" is not a CSS colour/.test(e.message));
   await s.destroy();
 });
+
+test("a surface torn down while a frame draws does not unconfigure a newer surface on the same canvas", async () => {
+  const counts = { configured: 0, unconfigured: 0 };
+  const ctx = { configure: () => void counts.configured++, unconfigure: () => void counts.unconfigured++, getCurrentTexture: () => ({}) };
+  // eslint-disable-next-line no-restricted-syntax -- test stand-in: the surface uses only getContext("webgpu") and style
+  const canvas = { getContext: () => ctx, style: {} } as unknown as HTMLCanvasElement;
+  let finish: () => void = () => {};
+  const held = (): SurfaceRenderer => ({ ...renderer(), present: () => new Promise((r) => (finish = () => r(undefined))) });
+  const deps = { canvas, size: { width: 40, height: 30 }, ratio: 1, seed: 1, decl: {}, draw: () => {}, text: await openTextMeasurer(), colors, onError: () => {} };
+  const old = new SceneSurface({ ...deps, lease: fakeLease(), makeRenderer: held });
+  old.draw({}, {});
+  await new Promise((r) => setImmediate(r));
+  const destroying = old.destroy();
+  const next = new SceneSurface({ ...deps, lease: fakeLease(), makeRenderer: renderer });
+  finish();
+  await destroying;
+  assert.equal(counts.unconfigured, 0, "the old surface leaves the canvas to the new one");
+  await next.destroy();
+  assert.equal(counts.unconfigured, 1);
+});

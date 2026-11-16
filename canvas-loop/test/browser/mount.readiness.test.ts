@@ -148,3 +148,73 @@ test("teardown before ready releases the lease when it arrives, and ready never 
   assert.equal(rafState.pending.size, 0, "nothing runs");
   assert.deepEqual(errors, [], "a teardown is not a failure");
 });
+
+// Review fixes (scene core chunk 6).
+
+test("teardown from a callback during frame 0 releases the lease, and ready never resolves", async () => {
+  const errors: unknown[] = [];
+  const lease = fakeLease();
+  const canvas = new FakeElement("canvas");
+  canvas.width = 120;
+  canvas.height = 90;
+  const placing = { ...makeModule().module, draw: () => {} };
+  const attached: ReturnType<typeof attachSketch> = attachSketch(asHTMLCanvas(canvas), {
+    module: asPlaygroundModule(placing),
+    seed: 1,
+    paused: false,
+    onFrame: () => {},
+    onError: (e) => errors.push(e),
+    // The first draw's placements arrive inside the start; the host tears down there.
+    onPlace: () => attached.teardown(),
+    gpu: fakeGpu(async () => lease),
+  });
+  assert.equal(await resolvesSoon(attached.ready), false);
+  assert.equal(lease.released, true);
+  assert.equal(attached.runtime, undefined);
+  assert.deepEqual(errors, []);
+});
+
+test("a device lost and not recreated reaches onError once; the figure stays retryable", async () => {
+  const errors: unknown[] = [];
+  const first = fakeLease();
+  let opens = 0;
+  const gpu = fakeGpu(async () => {
+    opens++;
+    if (opens === 1) return first;
+    if (opens === 2) throw new NoGpuAdapterError({ browser: true });
+    return fakeLease();
+  });
+  let figure: { setOnScreen: (on: boolean) => Promise<void> } | undefined;
+  const canvas = new FakeElement("canvas");
+  const attached = attachSketch(asHTMLCanvas(canvas), {
+    module: asPlaygroundModule(makeModule().module),
+    seed: 1,
+    paused: false,
+    onFrame: () => {},
+    onError: (e) => errors.push(e),
+    onNotice: () => {},
+    inspect: (f) => {
+      figure = f;
+    },
+    gpu,
+  });
+  await attached.ready;
+  first.lose();
+  await figure?.setOnScreen(true);
+  assert.equal(errors.length, 1);
+  assert.ok(errors[0] instanceof NoGpuAdapterError);
+  await figure?.setOnScreen(true);
+  assert.equal(opens, 3, "waking again tries a third device");
+  assert.equal(errors.length, 1, "reported once");
+  attached.teardown();
+});
+
+test("a first frame that fails to draw is reported once, and ready never resolves", async () => {
+  const errors: unknown[] = [];
+  const lease = fakeLease();
+  const attached = attach({ errors, gpu: fakeGpu(async () => lease, async () => Promise.reject(new Error("GPU fault"))) });
+  assert.equal(await resolvesSoon(attached.ready), false);
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0]), /GPU fault/);
+  assert.equal(lease.released, true);
+});

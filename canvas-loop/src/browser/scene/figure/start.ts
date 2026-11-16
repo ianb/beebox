@@ -86,13 +86,20 @@ class Rollback {
 }
 
 /**
- * Lease a device and start the figure on `canvas`. Resolves undefined when
- * `torn()` turned true while the device opened (the lease is released). Throws
+ * Lease a device and start the figure on `canvas`; resolves once frame 0 is on
+ * screen. Resolves undefined, with everything released, when `torn()` turned
+ * true meanwhile or frame 0 failed to draw (already reported). Throws
  * `NoWebGpuError` or `NoGpuAdapterError` without a device, and whatever the
  * sketch's `init` or first `draw` threw; everything built is undone first.
  */
-export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOptions; report: (error: unknown) => void; torn: () => boolean }): Promise<StartedFigure | undefined> {
-  const { opts, report } = a;
+export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOptions; report: (error: unknown) => void; inform: (error: unknown) => void; torn: () => boolean }): Promise<StartedFigure | undefined> {
+  const { opts } = a;
+  // A failure while starting (frame 0's draw or present) is reported once, and the start then stops.
+  const start = { failed: false };
+  const report = (error: unknown): void => {
+    start.failed = true;
+    a.report(error);
+  };
   const { module } = opts;
   const lease = await (opts.gpu?.lease ?? leaseGpu)();
   if (a.torn()) {
@@ -148,7 +155,11 @@ export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOp
       release: () => surface.sleep(),
       restore: () => surface.wake(),
       restored: () => surface.state === "awake",
-      onRestoreFailed: (error) => notice(`The figure could not get a GPU device again (${error instanceof Error ? error.message : String(error)}).`),
+      // The figure stays retryable (waking again, or the notice), and the host hears it once.
+      onRestoreFailed: (error) => {
+        notice(`The figure could not get a GPU device again (${error instanceof Error ? error.message : String(error)}).`);
+        a.inform(error);
+      },
       onRestored: () => notice(undefined),
     });
     undo.add(() => sleep.end());
@@ -164,6 +175,12 @@ export async function startFigure(canvas: HTMLCanvasElement, a: { opts: FigureOp
       fontsLoaded: () => rt.fontsLoaded(),
     });
     undo.add(detachWatch);
+    // Frame 0 on screen before the figure counts as started: a first present that fails was reported, and torn down here.
+    await surface.settled();
+    if (a.torn() || start.failed || surface.state === "failed" || surface.state === "destroyed") {
+      undo.run();
+      return undefined;
+    }
     return {
       figure: { runtime: rt, surface, setOnScreen: (onScreen) => sleep.setOnScreen(onScreen), frame: () => frameNow, sleep },
       teardown: () => undo.run(),

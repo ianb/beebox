@@ -54,6 +54,13 @@ export interface SceneSurfaceDeps {
 /** What the surface uses of a renderer. */
 export type SurfaceRenderer = Pick<GpuRenderer, "present" | "release" | "destroy" | "held" | "stats">;
 
+/**
+ * The surface that configured each canvas last. A torn-down surface's queued
+ * `unconfigure` must not undo a newer surface on the same canvas (React reuses
+ * the element when the module changes).
+ */
+const OWNERS = new WeakMap<HTMLCanvasElement, SceneSurface>();
+
 /** `failed`: a frame threw; GPU resources are freed, the canvas keeps its last frame until teardown. */
 export type State = "awake" | "asleep" | "lost" | "failed" | "destroyed";
 
@@ -91,6 +98,7 @@ export class SceneSurface implements DrawSurface {
     const ctx = d.canvas.getContext("webgpu");
     if (ctx === null) throw new SketchMountError({ detail: "the canvas gave no WebGPU context (it may already have another context)" });
     this.#context = ctx;
+    OWNERS.set(d.canvas, this);
     this.#recorder = new SceneRecorder(d.size, { text: d.text, colors: d.colors, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
     this.textMeasure = {
       width: (content, options) => d.text.width(content, options),
@@ -256,8 +264,15 @@ export class SceneSurface implements DrawSurface {
     this.#want = undefined;
     return this.#enqueue(() => {
       this.#freeGpu();
+      if (OWNERS.get(this.#d.canvas) !== this) return;
+      OWNERS.delete(this.#d.canvas);
       this.#context.unconfigure();
     });
+  }
+
+  /** Resolves when every GPU step queued so far (frames, sleep, waking) has finished. */
+  settled(): Promise<void> {
+    return this.#tail;
   }
 
   #freeGpu(): void {
