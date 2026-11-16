@@ -253,10 +253,12 @@ a BIG CHANGE.
     any text, an image still encoding (`pendingImages`), or any image, file,
     or selection.
   - `streaming`: in `useConversationMachine`, via a new
-    `ConversationControllerPool.busy()`. It reuses the predicate that already
-    keeps an actor from being collected (a pinned send being delivered,
-    `streaming` or `refreshing`, a start awaiting its session) and adds queued
-    `pendingMessages`.
+    `ConversationControllerPool.busy()`: a pinned send being delivered,
+    `streaming`, a start awaiting its session, unechoed `pendingMessages`, or
+    `refreshing` while it still holds stream text, tools, or a lost reply. A
+    plain `refreshing` resync does not block: every reconnect and every return
+    to the tab starts one (found in the browser walk), and a reload refetches
+    the same history.
   - `upload`: `uploadBinary` registers for the request's lifetime. The
     browser-task `SubmissionForm` registers from the first picked file until
     the submission is accepted or the files are removed. Composer file uploads
