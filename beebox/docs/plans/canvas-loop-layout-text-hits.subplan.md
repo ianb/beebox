@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: layout boxes, text runs and named hits"
-status: draft
+status: active
 workstream: canvas-brushes
 issues: []
 ---
@@ -42,6 +42,15 @@ figures; paraphrased, the box is private):
 **Boxholder decisions (2026-11-16):** measure/layout "Seems fixable, yes";
 rich text "That would be helpful for our uses, but might be kind of
 extensive"; named hits "Yes, this seems important".
+
+**Approved (2026-11-16, boxholder: "okay, make those changes" to the full
+~2,150-line scope).** This is the BIG CHANGE approval for everything in the
+table below: Tracks A, B (with scripted aim and the host's activity detail),
+C, and the example sketch. Click timing is accepted as planned: a click
+resolves against the last recorded frame, for determinism (Failure modes,
+"presentation delay"). The courseware box prompt is written at finish as a
+deliverable text in this plan ("Courseware box prompt" below); nothing is
+sent.
 
 **Smallest fix per problem:**
 
@@ -710,6 +719,9 @@ none
 
 ## Open design questions
 
+Both answered on 2026-11-16 (see "Smallest fix and budget"): the whole plan
+is approved, and the courseware prompt is written at finish.
+
 1. **Approve the whole plan as a BIG CHANGE (~2,150 lines), or keep the
    core under 2,000 (~1,840)?** The core is all three requests: layout boxes
    and flows, named hits with the transcript, and one-line sub/sup runs. The
@@ -846,3 +858,7 @@ migration: sketches are code, and no stored shape changes.
   first child's; the outer row then works. The cursor arithmetic stays inside
   the component, with a hand-set sub size per figure: this is what Track C
   replaces.
+
+## Courseware box prompt
+
+Written at finish, after the work ships; not sent from this plan.
