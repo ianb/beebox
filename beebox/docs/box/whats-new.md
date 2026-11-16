@@ -6,6 +6,7 @@ see or use), **Changed** (something that works differently), or **Agent**
 on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
 
+- 2026-11-16 **New**: This list. Open it from Settings under "What's new in Bee Box", or ask the box what's new.
 - 2026-11-15 **New**: When you write with the box in the composition editor, an Accept control marks the agent's text in your draft as your own.
 - 2026-11-14 **Agent**: When the box makes you something interactive, such as a practice problem, it can watch how you do and offer a hint when you seem stuck, without you asking.
 - 2026-11-13 **New**: A shared chat shows when someone else is typing or dictating.
