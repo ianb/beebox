@@ -379,7 +379,12 @@ start, (a) must provide:
     `checkSketchTypes` uses canvas-loop's compiler options, with the ES2023
     library and no DOM types, and a figure entry's default export calls
     `matchMedia`. (c) either checks the TEA exports apart from the factory or
-    gives the check an option for the DOM library.
+    gives the check an option for the DOM library. This item is required:
+    R4 removed the `cap` and `join` runtime checks because types cover them,
+    so without it a box figure with `cap: "triangle"` draws with no error.
+    `lib/typescript/check.ts:110` says the native API has no in-memory
+    overlay; R4's `checkSketchTypes` checks virtual files with it, so that
+    temp-directory route can go if (c) uses the same API.
 
 **Order.** (a), (b) and (c) reach `main` in **one merge**, or (b) lands on
 `main` first and (a) with (c) in the next merge. In both cases subplan (b)'s
