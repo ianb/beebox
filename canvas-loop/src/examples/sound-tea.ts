@@ -6,7 +6,7 @@
 //
 // `update` records each sound with a fresh id and its start frame; `sound`
 // returns them as voices. See TEA.md "Sound".
-import type { DeepReadonly, Msg, Util, View, Voice } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, RootDrawing, Util, View, Voice } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 400, height: 260 };
 
@@ -93,14 +93,16 @@ export function sound(model: DeepReadonly<Model>): readonly Voice[] {
   });
 }
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.background("#f4efe4");
-  v.text("Tap a bar to play it. Tap the sky to drop a ball.", { x: 200, y: 24 }, { size: 13, align: "center", valign: "middle", fill: "#5a5040" });
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f4efe4"));
+  out.push(v.text("Tap a bar to play it. Tap the sky to drop a ball.", { x: 200, y: 24 }, { size: 13, align: "center", valign: "middle", fill: "#5a5040" }));
   for (let i = 0; i < BARS; i += 1) {
     const height = 80 - i * 6;
     const lit = model.lit.includes(i);
-    v.roundRect(BAR_X0 + i * (BAR_W + 3), FLOOR - height, BAR_W, height, 4, { fill: lit ? "#f2b84b" : model.played[i] === true ? "#b5793a" : "#8a5a2b" });
+    out.push(v.roundRect(BAR_X0 + i * (BAR_W + 3), FLOOR - height, BAR_W, height, 4, { fill: lit ? "#f2b84b" : model.played[i] === true ? "#b5793a" : "#8a5a2b" }));
   }
-  v.rect(0, FLOOR, 400, 30, { fill: "#6b4a2b" });
-  for (const ball of model.balls) v.circle(ball.x, ball.y, 4, { fill: "#3b6ea8" });
+  out.push(v.rect(0, FLOOR, 400, 30, { fill: "#6b4a2b" }));
+  for (const ball of model.balls) out.push(v.circle(ball.x, ball.y, 4, { fill: "#3b6ea8" }));
+  return out;
 }

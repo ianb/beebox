@@ -13,9 +13,11 @@
 // exhaustive. `draw` only paints. See TEA.md.
 import type {
   DeepReadonly,
+  Drawing,
   Msg,
-  ParamsDecl,
   ParamValues,
+  ParamsDecl,
+  RootDrawing,
   Style,
   Util,
   View,
@@ -214,48 +216,52 @@ function drawHud(params_: {
   v: View;
   model: DeepReadonly<Model>;
   p: Params;
-}): void {
+}): Drawing {
+  const out: Drawing[] = [];
   const { v, model, p } = params_;
-  v.text(
+  out.push(v.text(
     `frame ${model.frame}   speed x${p["speed-scale"].toFixed(1)}`,
     { x: 8, y: 8 },
     HUD_TEXT,
-  );
+  ));
   const focused = model.planets.find((planet) => planet.name === p.focus);
   const selectedName =
     model.mode.type === "selected"
       ? (model.planets[model.mode.index]?.name ?? "?")
       : "none";
-  v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
+  out.push(v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT));
   if (focused !== undefined) {
-    v.text(
+    out.push(v.text(
       `focus ${focused.name}: base speed ${focused.speed.toFixed(3)}`,
       { x: 8, y: 44 },
       HUD_TEXT,
-    );
+    ));
   }
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background("#0b1020");
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#0b1020"));
   const scale = p["speed-scale"];
 
   if (p["show-orbits"]) {
     for (const planet of model.planets)
-      v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING);
+      out.push(v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING));
   }
 
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
+  out.push(v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }));
 
   for (let i = 0; i < model.planets.length; i++) {
     const planet = model.planets[i];
     if (planet === undefined) continue;
     const pos = planetPos({ planet, frame: model.frame, scale });
-    v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
+    out.push(v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color }));
     if (model.mode.type === "selected" && model.mode.index === i) {
-      v.circle(pos.x, pos.y, (planet.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING);
+      out.push(v.circle(pos.x, pos.y, (planet.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING));
     }
   }
 
-  drawHud({ v, model, p });
+  out.push(drawHud({ v, model, p }));
+  return out;
 }

@@ -11,7 +11,7 @@
 //     the way `draw` turns it into pixels; a host such as a figure may log it.
 //
 // Click a tile to show its atomic mass.
-import type { DeepReadonly, Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 420, height: 220 };
 
@@ -95,16 +95,18 @@ const VERDICT: Record<Model["verdict"], { text: string; fill: string }> = {
   wrong: { text: "Not yet. Click the tiles for the atomic masses.", fill: "#b91c1c" },
 };
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.background("#f8fafc");
-  v.text("What is the molar mass of water (H2O)?", { x: 20, y: 22 }, { size: 17, fill: "#0f172a" });
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f8fafc"));
+  out.push(v.text("What is the molar mass of water (H2O)?", { x: 20, y: 22 }, { size: 17, fill: "#0f172a" }));
   for (const t of tiles((s) => v.textWidth(s, LABEL), model.shown)) {
-    v.roundRect(t.x, t.y, t.w, t.h, 6, { fill: model.shown.includes(t.symbol) ? "#dbeafe" : "#ffffff", stroke: "#94a3b8", weight: 1 });
-    v.text(t.label, { x: t.x + 12, y: t.y + t.h / 2 }, { ...LABEL, valign: "middle", fill: "#1e293b" });
+    out.push(v.roundRect(t.x, t.y, t.w, t.h, 6, { fill: model.shown.includes(t.symbol) ? "#dbeafe" : "#ffffff", stroke: "#94a3b8", weight: 1 }));
+    out.push(v.text(t.label, { x: t.x + 12, y: t.y + t.h / 2 }, { ...LABEL, valign: "middle", fill: "#1e293b" }));
   }
-  v.text("Answer:", { x: 20, y: 142 }, { size: 15, valign: "middle", fill: "#0f172a" });
+  out.push(v.text("Answer:", { x: 20, y: 142 }, { size: 15, valign: "middle", fill: "#0f172a" }));
   v.control("answer", { x: 90, y: 128, w: 120, h: 28, size: 15 });
-  v.text("g/mol", { x: 218, y: 142 }, { size: 15, valign: "middle", fill: "#475569" });
+  out.push(v.text("g/mol", { x: 218, y: 142 }, { size: 15, valign: "middle", fill: "#475569" }));
   const verdict = VERDICT[model.verdict];
-  v.text(verdict.text, { x: 20, y: 186 }, { size: 15, fill: verdict.fill });
+  out.push(v.text(verdict.text, { x: 20, y: 186 }, { size: 15, fill: verdict.fill }));
+  return out;
 }
