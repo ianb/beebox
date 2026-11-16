@@ -54,6 +54,10 @@ and agent-resolvable for another:
 - `agent` (includes server access) — box-local, agent-authored code may resolve
   the value at call time, and every resolve is logged.
 
+On a host with per-box users, `server` is a rule inside the engine, not a file
+barrier: the box user owns its exported store (`bbx engine secrets export-box`)
+and can read every value granted to it.
+
 ## Secret names
 
 A name is a flat identifier; per-box instances use `name/<box-slug>`. The

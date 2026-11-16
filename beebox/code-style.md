@@ -28,7 +28,8 @@ pnpm lint:circular  # Circular dependency detector (oxlint import/no-cycle)
 - ONLY catch the minimal, specific error you can handle
 - If there's an error boundary with recovery, ALWAYS log the error somewhere
 - Never silently ignore errors — at minimum log them
-- Use custom error classes, not `new Error()` — enables programmatic error inspection
+- Use custom error classes, not `new Error()` — enables programmatic error inspection. The class builds its own message; call sites pass data (`error/no-literal-error-message` rejects a string literal at `new`; off in tests).
+- Shape a new module for the preset's size limits before writing it: `max-params` 2 (pass an options object), `max-lines` 300 per file (600 in tests), `max-lines-per-function` 150.
 - **Never resilient to the impossible.** Degrade only for failures that can genuinely happen. A seemingly-impossible state (a broken invariant) gets a hard failure, not a fallback — use `invariant()` / `assertNever()` (`src/shared/invariant.ts`), which always throw. `checkInvariant()` is the deliberate prod-degradation counterpart: it logs loudly and returns the condition so the caller branches explicitly (it does NOT narrow types). Dev and test fail hard where prod may degrade.
 - **When to Result vs throw.** Return a `Result<T, E>` (`src/shared/result.ts`, keyed on `ok`) when callers genuinely branch on *why* it failed — the failure is part of the contract. Throw (typed class, `cause` chaining) when they can't act on it, and for broken invariants and infrastructure failures. One Result shape, not two.
 
