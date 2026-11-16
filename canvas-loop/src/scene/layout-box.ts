@@ -21,7 +21,11 @@ const ordered = (b: Box): Box => ({ x0: Math.min(b.x0, b.x1), y0: Math.min(b.y0,
 
 /** The tight box of a shape's outline: a path's curves are flattened, so a bezier is bounded by its curve, not its control points. */
 function outlineBox(g: Geom): Box | null {
-  if (g.kind !== "path") return ordered(geomBox(g));
+  if (g.kind !== "path") {
+    const b = geomBox(g);
+    // An empty point list gives the empty box (infinite corners): it takes no place.
+    return Number.isFinite(b.x0) && Number.isFinite(b.x1) ? ordered(b) : null;
+  }
   let box: Box | null = null;
   for (const poly of polylines(g, 1)) {
     for (let i = 0; i + 1 < poly.pts.length; i += 2) {

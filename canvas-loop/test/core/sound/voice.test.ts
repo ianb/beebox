@@ -75,6 +75,13 @@ test("a voice budget drops a fifth voice of one sound, and a seventeenth voice i
   assert.equal(score.voices().length, 4 + 1 + 15, "only kept voices are in the score");
 });
 
+test("a voice declared ahead reserves its start: four thuds due at frame 30 leave no room for one due at 29", () => {
+  const score = new Score();
+  const thud = (n: number, at: number): Voice => ({ id: `t${n}`, at, kind: "sample", name: "thud" });
+  assert.equal(score.add([0, 1, 2, 3].map((n) => thud(n, 30)), 0).added.length, 4);
+  assert.deepEqual(score.add([thud(4, 29)], 1).dropped.map((v) => v.id), ["t4"]);
+});
+
 test("required fields and the wave name are checked", () => {
   // eslint-disable-next-line no-restricted-syntax -- deliberately wrong input: a voice missing required fields, as plain JavaScript could pass
   const bad = (voice: object): Voice => voice as unknown as Voice;

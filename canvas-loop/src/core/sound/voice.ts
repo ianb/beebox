@@ -257,10 +257,11 @@ export function soundOf(voice: Voice): string {
  * The run's voices by id. A voice is one occurrence: re-declaring an id with
  * the same data is harmless, with different data is an error, and a new
  * voice may not start before the frame that declares it. A new voice is
- * dropped when, at its start frame, `MAX_SAME_SOUND` voices of the same sound
- * or `MAX_SOUNDING` voices in all started within the last `SOUNDING_FRAMES`
- * frames: the budget is counted in frames, so both runtimes drop the same
- * voices.
+ * dropped when `MAX_SAME_SOUND` kept voices of the same sound, or
+ * `MAX_SOUNDING` in all, start within `SOUNDING_FRAMES` of its start, before
+ * or after: each voice counts for that long whatever its length. The budget
+ * is counted in frames, not sample lengths (the browser loads samples
+ * later), so both runtimes drop the same voices.
  */
 export class Score {
   #voices = new Map<string, { voice: Voice; key: string; kept: boolean }>();
@@ -292,7 +293,8 @@ export class Score {
       }
       fresh += 1;
       const sound = soundOf(voice);
-      const now = this.#sounding.filter((s) => s.at <= voice.at && voice.at - s.at < SOUNDING_FRAMES);
+      // Earlier and later starts both count: a voice declared ahead (a delay) reserves its quarter second.
+      const now = this.#sounding.filter((s) => Math.abs(voice.at - s.at) < SOUNDING_FRAMES);
       const kept = now.length < MAX_SOUNDING && now.filter((s) => s.sound === sound).length < MAX_SAME_SOUND;
       this.#voices.set(voice.id, { voice: { ...voice }, key, kept });
       if (kept) {

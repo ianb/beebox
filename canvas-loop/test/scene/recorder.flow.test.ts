@@ -83,6 +83,8 @@ test("children that draw nothing a layout can place take no room and no gap, and
   assert.ok(flow.kind === "at");
   assert.deepEqual(flow.children.map((c) => c.kind), ["at", "light", "at", "at"]);
   assert.deepEqual(xywh(flow.children.map((c) => layoutBox([c]))), [[0, 0, 10, 10], null, null, [15, 0, 10, 10]]);
+  // An empty polygon has the empty box (infinite corners): without the null it would give its siblings NaN translations.
+  assert.deepEqual(xywh(placed((v) => v.row({ gap: 5 }, [v.polygon([], INK), v.rect(0, 0, 10, 10, INK)]))), [null, [0, 0, 10, 10]]);
 });
 
 test("nested: a row in a row is one item, and a column's baseline is its first child's", () => {

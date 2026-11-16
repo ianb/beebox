@@ -657,8 +657,10 @@ variants the name has.
   at `model.frame + 1` when the model keeps the last tick's frame.
 - At most 32 new voices a frame.
 - A voice budget keeps busy moments from piling up: a new voice is dropped
-  when, at its start frame, 4 voices of the same sound, or 16 voices in all,
-  started in the last 15 frames (a quarter second). The same sound is a
+  when 4 kept voices of the same sound, or 16 in all, start within 15 frames
+  (a quarter second) of its start, before or after it. Each voice counts for
+  that quarter second whatever its length, so a long tone repeated slowly is
+  not limited. The same sound is a
   sample by name (any `variant` or `rate`), a note by instrument and note
   name, or a `pluck` or `tone` by `freq`. So a sketch can return a sound for
   every hit without counting them itself. A dropped voice stays dropped; the
