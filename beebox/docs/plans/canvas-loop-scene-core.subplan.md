@@ -1173,6 +1173,47 @@ then the switch that deletes the old code; then docs.
   the review of the frames. The boxholder is shown only differences a person
   would notice in use: a lost effect, a wrong colour, overlapping text. Brush
   texture changes are not shown to the boxholder.
+- **As built (chunk 8).** Commits 5b847ea49 (the two fixes chunk 7 left for
+  (c)) and the hand-off commit after it. Scripts and logs are in
+  `scratch/stage5/a8/`.
+  - **Fixes.** The lighting warnings state their rule in words instead of
+    "(R8)"; the figure schema names what `BRUSHES.md` covers.
+  - **Baselines.** `canvas-loop/out/baselines/5b847ea49/` (untracked,
+    237 MB): 48 exercises, 790 frames, none failed, rendered by
+    `scratch/stage5/a8/baselines.ts`. It is the Stage 0 script with the
+    CLI's new path, `--fps` from `meta.yaml` (gallery check passes it; the
+    Stage 0 script did not) and `--no-typecheck`; `manifest.json` also
+    records the seconds per exercise.
+  - **Speed pages.** Stage 4's `stage4-perf` page called the deleted spike
+    modules, so Hallway and chemistry run on a new page,
+    `scratch/stage5/a8/single-page.ts`: one figure through `mountSketch`
+    with `inspect`, fps counted from presents. The walker page (R1's) and
+    the six-figure page (R5's, already on `mountSketch`) are unchanged.
+    One run, load 4.5, no `vcmiclient`, Spotlight idle (it had indexed the
+    baselines first):
+
+    | | Checkpoint 4 | 4b final | R5 | Now |
+    |---|---|---|---|---|
+    | Walker fps (rAF, 10 s) | 22.8 | 57.9, 58.2 | 56.4 | 57.1 |
+    | Hallway panning fps | 58.8 | — | — | 59.9 |
+    | Chemistry fps | 60 | — | — | 59.5 |
+    | Six figures, fps each | 11.0 | 24.3, 24.1 | 24.2 | 24.7 |
+    | Pointer input-to-frame p95 ms | — | 97.7, 100.2 | 98.0 | 66.0 |
+
+    Walker per frame: record 2.2, lower 8.0 (brush 4.3), atlas 2.0, encode
+    1.1 ms; to GPU completion 21.6 ms. The walker through `mountSketch`
+    alone: 55.9 fps. Pointer moves: 120 of 120 reached `update`; 66 ms is
+    the lower of R5's two p95 values (one six-figure frame apart).
+  - **Headless**, `cli run --frames 90` wall time with the type check,
+    medians of three: walker 2.7 s at ratio 1, 3.2 s at ratio 2; chemistry
+    2.3 and 2.5 s; Hallway 6.3 and 8.6 s. The Hallway's record step is
+    52 ms a frame headless: testing mode re-records every picture each
+    frame, and its room is one picture.
+  - **Exhibit** "Gallery on the final renderer: before and after": per
+    exercise, the frame furthest from the Stage 0 baseline, beside it.
+    Astra (`gpt-6-astra`, `scratch/cross-model/a8-eyes.answer.md`) found
+    no difference a person would notice in any of the 48.
+  - **Hand-off:** `canvas-loop-scene/stage5/checkpoint5-handoff.md`.
 
 ### Seams for subplans (b) and (c)
 
