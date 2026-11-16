@@ -17,7 +17,9 @@ export class PrivateMountUnhealthyError extends PreflightError {
 }
 
 export class MergeConflictError extends PreflightError {
-  constructor(readonly detail: { conflicted: string; stdout: string; stderr: string }) {
+  constructor(
+    readonly detail: { conflicted: string; stdout: string; stderr: string },
+  ) {
     super(
       `git merge main conflicted; the merge is left in progress:\n${detail.conflicted}\n${detail.stdout}${detail.stderr}`,
       3,
@@ -39,7 +41,8 @@ export type StoppingMergeState =
   | { state: "merge-failed"; output: string };
 
 function describeMergeState(found: StoppingMergeState): string {
-  if (found.state === "merge-failed") return `git merge main failed without conflicts:\n${found.output}`;
+  if (found.state === "merge-failed")
+    return `git merge main failed without conflicts:\n${found.output}`;
   const head = `MERGE_HEAD ${found.mergeHead.slice(0, 9)}`;
   switch (found.state) {
     case "conflicted":
@@ -74,8 +77,24 @@ export class NotAWorktreeBranchError extends PreflightError {
   }
 }
 
+/** `--tested <rev>` named no commit, or one HEAD does not contain. */
+export class TestedRevisionError extends PreflightError {
+  constructor(readonly detail: { rev: string; sha: string | null }) {
+    super(
+      detail.sha === null
+        ? `--tested ${detail.rev}: not a commit`
+        : `--tested ${detail.rev}: ${detail.sha.slice(0, 9)} is not an ancestor of HEAD, so the changes since it cannot be listed`,
+      2,
+    );
+    this.name = "TestedRevisionError";
+  }
+}
+
 export class UsageError extends PreflightError {
-  constructor(readonly detail: string, usage: string) {
+  constructor(
+    readonly detail: string,
+    usage: string,
+  ) {
     super(`${detail}\n${usage}`, 2);
     this.name = "UsageError";
   }

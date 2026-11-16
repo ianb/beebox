@@ -47,15 +47,20 @@ const failed = (why: string): SelectedTests => ({
 });
 
 /**
- * The selected test set. Only asked for when beebox is in the diff — the
- * selector's esbuild pass costs seconds and selects nothing otherwise.
+ * The selected test set against `base` (main, or a tested revision). Callers
+ * ask only when beebox is in the diff — the selector's esbuild pass costs
+ * seconds and selects nothing otherwise.
  */
-export function selection(root: string, packages: string[]): SelectedTests | null {
-  if (!packages.includes("beebox")) return null;
-  const result = spawnSync(process.execPath, binTsArgs(join(root, "bin/test-select.ts"), ["--json"]), {
+export function selection(input: { root: string; base: string }): SelectedTests {
+  const { root, base } = input;
+  const result = spawnSync(process.execPath, binTsArgs(join(root, "bin/test-select.ts"), ["--json", "--base", base]), {
     cwd: root,
     encoding: "utf-8",
+    // A broad selection's JSON (every test under every reason) runs to megabytes;
+    // the 1 MB default cut it off and read as a selector failure.
+    maxBuffer: 256 * 1024 * 1024,
   });
+  if (result.error !== undefined) return failed(result.error.message);
   if (result.status !== 0) return failed(result.stderr.trim());
   let parsed: unknown;
   try {

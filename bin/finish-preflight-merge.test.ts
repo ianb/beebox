@@ -11,7 +11,10 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { MergeConflictError, MergeStateError } from "./finish-preflight-errors.js";
+import {
+  MergeConflictError,
+  MergeStateError,
+} from "./finish-preflight-errors.js";
 import { mergeMain, readMergeState } from "./finish-preflight-merge.js";
 
 interface Repo {
@@ -26,7 +29,11 @@ interface Repo {
 function repo(): Repo {
   const dir = mkdtempSync(join(tmpdir(), "finish-preflight-merge-"));
   const git = (...args: string[]): string =>
-    execFileSync("git", args, { cwd: dir, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+    execFileSync("git", args, {
+      cwd: dir,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
   const write = (path: string, text: string): void => {
     writeFileSync(join(dir, path), text);
   };
@@ -47,12 +54,21 @@ function repo(): Repo {
   write("c.txt", "main\n");
   commit("main work");
   git("checkout", "-q", "work");
-  return { dir, git, write, commit, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  return {
+    dir,
+    git,
+    write,
+    commit,
+    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
 /** Writes MERGE_HEAD as an interrupted or hand-finished merge leaves it. */
 function leaveMergeHead(fx: Repo, sha: string): void {
-  writeFileSync(join(fx.dir, fx.git("rev-parse", "--git-path", "MERGE_HEAD")), `${sha}\n`);
+  writeFileSync(
+    join(fx.dir, fx.git("rev-parse", "--git-path", "MERGE_HEAD")),
+    `${sha}\n`,
+  );
 }
 
 function expectState(fn: () => unknown, state: string): void {
@@ -88,12 +104,18 @@ test("a leftover MERGE_HEAD that HEAD already records is cleared, and the merge 
     fx.commit("main later");
     fx.git("checkout", "-q", "work");
     leaveMergeHead(fx, merged);
-    assert.deepEqual(readMergeState(fx.dir), { state: "finished", mergeHead: merged });
+    assert.deepEqual(readMergeState(fx.dir), {
+      state: "finished",
+      mergeHead: merged,
+    });
     const result = mergeMain(fx.dir);
     assert.equal(result.clearedMergeHead, merged);
     assert.equal(result.status, "merged");
     assert.deepEqual(result.broughtPaths, ["d.txt"]);
-    assert.equal(existsSync(join(fx.dir, fx.git("rev-parse", "--git-path", "MERGE_HEAD"))), false);
+    assert.equal(
+      existsSync(join(fx.dir, fx.git("rev-parse", "--git-path", "MERGE_HEAD"))),
+      false,
+    );
   } finally {
     fx.cleanup();
   }
@@ -122,10 +144,16 @@ test("a merge with conflicts still in progress stops and names the files", () =>
     fx.git("checkout", "-q", "work");
     fx.write("a.txt", "branch side\n");
     fx.commit("branch edits a");
-    assert.notEqual(spawnSync("git", ["merge", "main"], { cwd: fx.dir }).status, 0);
+    assert.notEqual(
+      spawnSync("git", ["merge", "main"], { cwd: fx.dir }).status,
+      0,
+    );
     assert.throws(
       () => mergeMain(fx.dir),
-      (e: unknown) => e instanceof MergeStateError && e.found.state === "conflicted" && /a\.txt/.test(e.message),
+      (e: unknown) =>
+        e instanceof MergeStateError &&
+        e.found.state === "conflicted" &&
+        /a\.txt/.test(e.message),
     );
   } finally {
     fx.cleanup();
@@ -184,7 +212,8 @@ test("a new conflict with no rule is reported as a conflict, merge left in progr
     fx.commit("branch edits a");
     assert.throws(
       () => mergeMain(fx.dir),
-      (e: unknown) => e instanceof MergeConflictError && e.detail.conflicted === "a.txt",
+      (e: unknown) =>
+        e instanceof MergeConflictError && e.detail.conflicted === "a.txt",
     );
     assert.equal(readMergeState(fx.dir).state, "conflicted");
   } finally {

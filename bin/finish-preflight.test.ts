@@ -375,6 +375,7 @@ test("the text sheet puts the decision fields first and shortens the test list",
     issues: [],
     diff: { lines: 10, sourceLines: 10 },
     trackO: { recommended: false, reason: "small" },
+    sinceTested: null,
   };
   const lines = formatSheet(sheet).split("\n");
   const at = (prefix: string): number => lines.findIndex((line) => line.startsWith(prefix));
