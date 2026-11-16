@@ -660,7 +660,8 @@ corpus, then the hand-written sketches, then validation, then speed.
   type error in an imported helper fails; a clean one runs; `--no-typecheck`
   runs a sketch with a type error; `gallery:check` fails on an exercise
   with a boundary error. Timed on `pell-anim` (2,104 lines).
-- **As built (R4).** The commit that adds this note. Measurement scripts and logs are in
+- **As built (R4).** Commits cf40c0243 (the check) and the review fix after it.
+  Measurement scripts and logs are in
   `scratch/stage5/rs34/`.
   - **Removed:** the `cap` and `join` value checks, and their line in
     `test/scene/recorder.test.ts`. Every other check listed above stays.
@@ -690,8 +691,10 @@ corpus, then the hand-written sketches, then validation, then speed.
     `--no-typecheck`, prints them to stderr, and exits 1.
     `canvas-loop/AGENTS.md` says so in place of "`run` does not type-check".
   - **`gallery:check`** checks every exercise in one program before it
-    renders. An exercise with a type error fails with them and is not run;
-    an error outside every exercise gets its own failing entry.
+    renders. After any type error no exercise is rendered: an exercise with
+    errors in its directory lists them, an error outside every exercise gets
+    its own entry, and every other exercise fails as not run. A file one
+    exercise owns may be imported by another, so the run stops for all.
   - **Cost** (native compiler; `measure.sh`, `write-probe.ts`):
 
     | Program | Wall time | Compiler memory |
@@ -711,14 +714,25 @@ corpus, then the hand-written sketches, then validation, then speed.
     param, and a helper with a type error each fail where they should, and
     a clean sketch has none; a missing `init` is named; `cli run` stops
     with the error on stderr and in the transcript; `checkGallery` fails an
-    exercise with a boundary error without rendering it.
+    exercise with a boundary error without rendering it, and renders no
+    exercise when a helper outside the gallery has a type error.
     `test/headless/cli/main.no-typecheck.gpu.test.ts`: `--no-typecheck` runs a
     sketch that fails the check.
+  - **Review.** Codex (`gpt-6-sol`) traced the four R3 drawings (same
+    nodes, same order) and the strict model check, and found two faults.
+    First, a gallery exercise rendered while a helper it imports, in
+    another directory, had a type error; fixed as above, with a test that
+    fails without the fix. Second, with the `cap` and `join` checks gone, a
+    box figure with `cap: "triangle"` draws a butt cap with no error,
+    because `bbx figure run` and the card route do not type-check yet. Not
+    taken: Track 4 removes these checks, and this plan merges only with
+    (c), whose need 10 adds the check to both routes. If (c) drops that
+    need, these two checks come back.
   - **For (c).** Need 10 in `canvas-loop-box-figures.subplan.md` records
     that `bbx figure run` and the card route need the same check, and that
     the check has no DOM types while a figure entry's default export calls
     `matchMedia`. R4 does not implement it there.
-  - **Checkpoint.** canvas-loop typecheck, lint and tests pass (227, and
+  - **Checkpoint.** canvas-loop typecheck, lint and tests pass (228, and
     199 with 3 todo on the GPU); `gallery:check` passes all 48 with the
     contract check (506 s wall; `time -l` gives 4.5 GB peak RSS for the
     whole run, with no figure from before R4 to compare; the check's

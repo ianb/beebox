@@ -1,8 +1,9 @@
 // Gallery corpus check (the `cli gallery check` subcommand): renders every
 // src/gallery/<slug> exercise, asserts run-twice byte-identical determinism, and
 // lints its sketch file. Before rendering, one type check covers every sketch
-// and its exports (sketch-types.ts); an exercise with a type error is not rendered. Read-only — the repo's src/gallery/ directory is never
-// written to; each run lands in a throwaway temp directory. See
+// and its exports (sketch-types.ts); after any type error, no exercise is
+// rendered. Read-only — the repo's src/gallery/ directory is never written to;
+// each run lands in a throwaway temp directory. See
 // src/gallery/README.md for the on-disk schema this reads.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
@@ -167,12 +168,11 @@ function lintSketch(exerciseDir: URL, sketchFile: string): string | undefined {
   }
 }
 
-async function checkExercise(slug: string, at: { galleryDir: URL; typeErrors: readonly string[] }): Promise<GalleryCheckEntry> {
-  const exerciseDir = new URL(`${slug}/`, at.galleryDir);
+async function checkExercise(slug: string, galleryDir: URL): Promise<GalleryCheckEntry> {
+  const exerciseDir = new URL(`${slug}/`, galleryDir);
   try {
     const meta = loadMeta(exerciseDir, slug);
     const sketchFile = sketchFileName(exerciseDir, slug);
-    if (at.typeErrors.length > 0) return { slug, ok: false, detail: `type errors, not run:\n${at.typeErrors.join("\n")}` };
     const base = mkdtempSync(join(tmpdir(), "canvas-loop-gallery-"));
     try {
       const outA = join(base, "run-a");
@@ -231,8 +231,13 @@ export async function checkGallery(options?: { galleryDir?: URL }): Promise<Gall
   const entries: GalleryCheckEntry[] = [];
   const outside = typeErrors.get("");
   if (outside !== undefined) entries.push({ slug: "(type check)", ok: false, detail: `type errors outside the exercises:\n${outside.join("\n")}` });
+  // Any type error stops every render: a file one exercise owns may be imported by another.
+  const anyTypeError = typeErrors.size > 0;
   for (const slug of slugs) {
-    entries.push(await checkExercise(slug, { galleryDir, typeErrors: typeErrors.get(slug) ?? [] }));
+    const own = typeErrors.get(slug);
+    if (own !== undefined) entries.push({ slug, ok: false, detail: `type errors, not run:\n${own.join("\n")}` });
+    else if (anyTypeError) entries.push({ slug, ok: false, detail: "not run: the type check failed (see the entries with type errors)" });
+    else entries.push(await checkExercise(slug, galleryDir));
   }
   return { entries, ok: entries.every((entry) => entry.ok) };
 }

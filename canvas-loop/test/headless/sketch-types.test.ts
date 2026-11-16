@@ -91,3 +91,18 @@ test("gallery check fails an exercise whose exports do not fit, and does not ren
   assert.deepEqual(result.entries.map((e) => [e.slug, e.ok]), [["bad", false]]);
   assert.match(result.entries[0]?.detail ?? "", /^type errors, not run:\n {2}.*sketch-tea\.ts - error TS2322: the export "draw" does not fit/);
 });
+
+test("gallery check renders nothing when any file has a type error", async () => {
+  // Exercise "a" imports a helper outside the gallery that has a type error; "b" is clean.
+  const gallery = join(dir, "gallery-shared");
+  for (const slug of ["a", "b"]) {
+    mkdirSync(join(gallery, slug), { recursive: true });
+    writeFileSync(join(gallery, slug, "meta.yaml"), "frames: 1\n");
+  }
+  writeFileSync(join(gallery, "a", "sketch-tea.ts"), readFileSync(cases.helper, "utf8").replace('"./helper.js"', '"../../helper.js"'));
+  writeFileSync(join(gallery, "b", "sketch-tea.ts"), readFileSync(clean, "utf8"));
+  const result = await checkGallery({ galleryDir: pathToFileURL(`${gallery}/`) });
+  assert.deepEqual(result.entries.map((e) => [e.slug, e.ok]), [["(type check)", false], ["a", false], ["b", false]]);
+  assert.match(result.entries[0]?.detail ?? "", /helper\.ts:2:9 - error TS2322/);
+  for (const entry of result.entries.slice(1)) assert.match(entry.detail, /^not run: the type check failed/);
+});
