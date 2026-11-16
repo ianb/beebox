@@ -7,9 +7,11 @@
 // the params, so pausing/resuming never needs extra state. See TEA.md.
 import type {
   DeepReadonly,
+  Drawing,
   Msg,
-  ParamsDecl,
   ParamValues,
+  ParamsDecl,
+  RootDrawing,
   Style,
   Util,
   View,
@@ -71,49 +73,52 @@ export function update(
 
 // ── Drawing helpers ──────────────────────────────────────────────────
 
-function drawGround(params_: { v: View; animFrame: number }): void {
+function drawGround(params_: { v: View; animFrame: number }): Drawing {
+  const out: Drawing[] = [];
   const { v, animFrame } = params_;
   const scroll = animFrame * SCROLL_RATE;
-  v.line(0, GROUND_Y + WHEEL_RADIUS, canvas.width, GROUND_Y + WHEEL_RADIUS, {
+  out.push(v.line(0, GROUND_Y + WHEEL_RADIUS, canvas.width, GROUND_Y + WHEEL_RADIUS, {
     stroke: "#94a3b8",
     weight: 3,
-  });
+  }));
   // Scrolling dash marks sell the forward motion.
   const dashSpacing = 40;
   const offset = scroll % dashSpacing;
   const dash: Style = { stroke: "#64748b", weight: 4 };
   for (let x = -offset; x < canvas.width + dashSpacing; x += dashSpacing) {
-    v.line(
+    out.push(v.line(
       x,
       GROUND_Y + WHEEL_RADIUS + 10,
       x + 18,
       GROUND_Y + WHEEL_RADIUS + 10,
       dash,
-    );
+    ));
   }
   // A couple of distant background hummocks drifting slower (parallax).
   const bgSpacing = 160;
   const bgOffset = (scroll * 0.35) % bgSpacing;
   for (let x = -bgOffset; x < canvas.width + bgSpacing; x += bgSpacing) {
-    v.circle(x, GROUND_Y + WHEEL_RADIUS + 4, 35, { fill: "#1e293b" });
+    out.push(v.circle(x, GROUND_Y + WHEEL_RADIUS + 4, 35, { fill: "#1e293b" }));
   }
+  return out;
 }
 
 function drawWheel(params_: {
   v: View;
   center: { x: number; y: number };
   angle: number;
-}): void {
+}): Drawing {
+  const out: Drawing[] = [];
   const { v, center, angle } = params_;
-  v.circle(center.x, center.y, WHEEL_RADIUS, {
+  out.push(v.circle(center.x, center.y, WHEEL_RADIUS, {
     stroke: "#e2e8f0",
     weight: 5,
-  });
-  v.circle(center.x, center.y, (WHEEL_RADIUS * 2 - 10) / 2, {
+  }));
+  out.push(v.circle(center.x, center.y, (WHEEL_RADIUS * 2 - 10) / 2, {
     fill: "#0f172a",
     stroke: "#e2e8f0",
     weight: 3,
-  });
+  }));
   const spoke: Style = { stroke: "#cbd5e1", weight: 2 };
   for (let i = 0; i < SPOKE_COUNT; i++) {
     const a = angle + (i / SPOKE_COUNT) * Math.PI * 2;
@@ -121,36 +126,39 @@ function drawWheel(params_: {
     const y1 = center.y + Math.sin(a) * 6;
     const x2 = center.x + Math.cos(a) * (WHEEL_RADIUS - 4);
     const y2 = center.y + Math.sin(a) * (WHEEL_RADIUS - 4);
-    v.line(x1, y1, x2, y2, spoke);
+    out.push(v.line(x1, y1, x2, y2, spoke));
   }
-  v.circle(center.x, center.y, 5, { fill: "#94a3b8" });
+  out.push(v.circle(center.x, center.y, 5, { fill: "#94a3b8" }));
+  return out;
 }
 
-function drawFrame(v: View): void {
+function drawFrame(v: View): Drawing {
+  const out: Drawing[] = [];
   const tube: Style = { stroke: "#dc2626", weight: 6 };
-  v.line(REAR_AXLE.x, REAR_AXLE.y, BB.x, BB.y, tube); // chain stay
-  v.line(BB.x, BB.y, SEAT_TOP.x, SEAT_TOP.y, tube); // seat tube
-  v.line(SEAT_TOP.x, SEAT_TOP.y, HEAD_TOP.x, HEAD_TOP.y, tube); // top tube
-  v.line(HEAD_TOP.x, HEAD_TOP.y, FRONT_AXLE.x, FRONT_AXLE.y, tube); // fork
-  v.line(BB.x, BB.y, HEAD_TOP.x, HEAD_TOP.y, tube); // down tube
-  v.line(REAR_AXLE.x, REAR_AXLE.y, SEAT_TOP.x, SEAT_TOP.y, tube); // seat stay
+  out.push(v.line(REAR_AXLE.x, REAR_AXLE.y, BB.x, BB.y, tube)); // chain stay
+  out.push(v.line(BB.x, BB.y, SEAT_TOP.x, SEAT_TOP.y, tube)); // seat tube
+  out.push(v.line(SEAT_TOP.x, SEAT_TOP.y, HEAD_TOP.x, HEAD_TOP.y, tube)); // top tube
+  out.push(v.line(HEAD_TOP.x, HEAD_TOP.y, FRONT_AXLE.x, FRONT_AXLE.y, tube)); // fork
+  out.push(v.line(BB.x, BB.y, HEAD_TOP.x, HEAD_TOP.y, tube)); // down tube
+  out.push(v.line(REAR_AXLE.x, REAR_AXLE.y, SEAT_TOP.x, SEAT_TOP.y, tube)); // seat stay
 
   // Saddle.
-  v.line(SEAT_TOP.x - 16, SEAT_TOP.y - 6, SEAT_TOP.x + 12, SEAT_TOP.y - 10, {
+  out.push(v.line(SEAT_TOP.x - 16, SEAT_TOP.y - 6, SEAT_TOP.x + 12, SEAT_TOP.y - 10, {
     ...tube,
     weight: 4,
-  });
+  }));
 
   // Handlebar stem + bar.
   const bar: Style = { ...tube, weight: 5 };
-  v.line(HEAD_TOP.x, HEAD_TOP.y, HEAD_TOP.x + 4, HEAD_TOP.y - 22, bar);
-  v.line(
+  out.push(v.line(HEAD_TOP.x, HEAD_TOP.y, HEAD_TOP.x + 4, HEAD_TOP.y - 22, bar));
+  out.push(v.line(
     HEAD_TOP.x - 22,
     HEAD_TOP.y - 24,
     HEAD_TOP.x + 22,
     HEAD_TOP.y - 20,
     bar,
-  );
+  ));
+  return out;
 }
 
 interface PedalPos {
@@ -165,20 +173,22 @@ function pedalPos(angle: number): PedalPos {
   };
 }
 
-function drawCranks(params_: { v: View; angle: number }): void {
+function drawCranks(params_: { v: View; angle: number }): Drawing {
   const { v, angle } = params_;
   const near = pedalPos(angle);
   const far = pedalPos(angle + Math.PI);
   // Far crank+pedal drawn first so the near one overlaps it (depth cue).
-  v.line(BB.x, BB.y, far.x, far.y, { stroke: "#475569", weight: 4 });
-  v.rect(far.x - 8, far.y - 3, 16, 6, {
-    fill: "#1e293b",
-    stroke: "#475569",
-    weight: 3,
-  });
-  v.line(BB.x, BB.y, near.x, near.y, { stroke: "#334155", weight: 5 });
-  v.rect(near.x - 8, near.y - 3, 16, 6, { fill: "#334155" });
-  v.circle(BB.x, BB.y, 6, { fill: "#94a3b8" });
+  return [
+    v.line(BB.x, BB.y, far.x, far.y, { stroke: "#475569", weight: 4 }),
+    v.rect(far.x - 8, far.y - 3, 16, 6, {
+      fill: "#1e293b",
+      stroke: "#475569",
+      weight: 3,
+    }),
+    v.line(BB.x, BB.y, near.x, near.y, { stroke: "#334155", weight: 5 }),
+    v.rect(near.x - 8, near.y - 3, 16, 6, { fill: "#334155" }),
+    v.circle(BB.x, BB.y, 6, { fill: "#94a3b8" }),
+  ];
 }
 
 interface Point {
@@ -197,7 +207,7 @@ function drawWing(params_: {
   grip: Point;
   bulge: number;
   color: string;
-}): void {
+}): Drawing {
   const { v, shoulder, grip, bulge, color } = params_;
   const midX = (shoulder.x + grip.x) / 2;
   const midY = (shoulder.y + grip.y) / 2;
@@ -207,18 +217,20 @@ function drawWing(params_: {
   const nx = -dy / len;
   const ny = dx / len;
   const edge: Style = { stroke: "#64748b", weight: 1.5 };
-  v.path(
-    [
-      ["move", shoulder.x, shoulder.y],
-      ["quad", midX + nx * bulge, midY + ny * bulge, grip.x, grip.y],
-      ["quad", midX - nx * (bulge * 0.35), midY - ny * (bulge * 0.35), shoulder.x, shoulder.y],
-      ["close"],
-    ],
-    { ...edge, fill: color },
-  );
-  // A couple of feather-crease lines from shoulder toward the tip.
-  v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.6 + nx * bulge * 0.3, shoulder.y + dy * 0.6 + ny * bulge * 0.3, edge);
-  v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.8 + nx * bulge * 0.15, shoulder.y + dy * 0.8 + ny * bulge * 0.15, edge);
+  return [
+    v.path(
+      [
+        ["move", shoulder.x, shoulder.y],
+        ["quad", midX + nx * bulge, midY + ny * bulge, grip.x, grip.y],
+        ["quad", midX - nx * (bulge * 0.35), midY - ny * (bulge * 0.35), shoulder.x, shoulder.y],
+        ["close"],
+      ],
+      { ...edge, fill: color },
+    ),
+    // A couple of feather-crease lines from shoulder toward the tip.
+    v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.6 + nx * bulge * 0.3, shoulder.y + dy * 0.6 + ny * bulge * 0.3, edge),
+    v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.8 + nx * bulge * 0.15, shoulder.y + dy * 0.8 + ny * bulge * 0.15, edge),
+  ];
 }
 
 /** Pelican anatomy, hand-fitted around the saddle/handlebar/pedal anchor points. */
@@ -226,7 +238,8 @@ function drawPelican(params_: {
   v: View;
   nearFootAngle: number;
   farFootAngle: number;
-}): void {
+}): Drawing {
+  const out: Drawing[] = [];
   const { v, nearFootAngle, farFootAngle } = params_;
   const bodyX = SEAT_TOP.x + 2;
   const bodyY = SEAT_TOP.y - 46;
@@ -236,30 +249,30 @@ function drawPelican(params_: {
   const hip = { x: bodyX - 6, y: bodyY + 30 };
   const nearFoot = pedalPos(nearFootAngle);
   const farFoot = pedalPos(farFootAngle);
-  v.line(hip.x, hip.y, farFoot.x, farFoot.y - 4, {
+  out.push(v.line(hip.x, hip.y, farFoot.x, farFoot.y - 4, {
     stroke: "#78716c",
     weight: 6,
-  });
-  v.line(hip.x, hip.y, nearFoot.x, nearFoot.y - 4, {
+  }));
+  out.push(v.line(hip.x, hip.y, nearFoot.x, nearFoot.y - 4, {
     stroke: "#78716c",
     weight: 7,
-  });
-  v.circle(nearFoot.x, nearFoot.y - 4, 5, { fill: "#78716c" });
+  }));
+  out.push(v.circle(nearFoot.x, nearFoot.y - 4, 5, { fill: "#78716c" }));
 
   // ── Far wing: shoulder to the far handlebar grip, mostly hidden by the body.
   const farShoulder = { x: bodyX + 8, y: bodyY - 18 };
   const farGrip = { x: HEAD_TOP.x - 22, y: HEAD_TOP.y - 22 };
-  drawWing({
+  out.push(drawWing({
     v,
     shoulder: farShoulder,
     grip: farGrip,
     bulge: 32,
     color: "#94a3b8",
-  });
+  }));
 
   // ── Body: plump oval, tail tucked toward the saddle.
-  v.ellipse(bodyX, bodyY, 56, 35, { fill: "#f8fafc" });
-  v.triangle(
+  out.push(v.ellipse(bodyX, bodyY, 56, 35, { fill: "#f8fafc" }));
+  out.push(v.triangle(
     bodyX - 52,
     bodyY - 8,
     bodyX - 70,
@@ -267,40 +280,40 @@ function drawPelican(params_: {
     bodyX - 48,
     bodyY + 16,
     { fill: "#e2e8f0" },
-  ); // tail
+  )); // tail
 
   // ── Neck + head, curving up and forward from the shoulders to over the handlebars.
   const neckBase = { x: bodyX + 32, y: bodyY - 26 };
   const headX = HEAD_TOP.x - 2;
   const headY = HEAD_TOP.y - 62;
-  v.path(
+  out.push(v.path(
     [
       ["move", neckBase.x, neckBase.y],
       ["quad", neckBase.x + 34, bodyY - 96, headX, headY],
     ],
     { stroke: "#f8fafc", weight: 32, cap: "round" },
-  );
+  ));
 
   // ── Near wing: drawn after the neck so it overlaps the body/neck join, folded onto the near handlebar grip.
   const nearShoulder = { x: bodyX + 14, y: bodyY - 6 };
   const nearGrip = { x: HEAD_TOP.x + 20, y: HEAD_TOP.y - 18 };
-  drawWing({
+  out.push(drawWing({
     v,
     shoulder: nearShoulder,
     grip: nearGrip,
     bulge: 40,
     color: "#cbd5e1",
-  });
+  }));
 
   // ── Head + the pelican's signature bill: long flat upper mandible over a
   // sagging throat pouch, sketched as filled paths rather than primitives.
-  v.circle(headX, headY, 19, { fill: "#f1f5f9" });
+  out.push(v.circle(headX, headY, 19, { fill: "#f1f5f9" }));
 
   const billTipX = headX + 84;
   const billTipY = headY + 10;
 
   // Throat pouch first — the upper mandible sits on top of it and hides the seam.
-  v.path(
+  out.push(v.path(
     [
       ["move", headX - 4, headY + 2],
       ["quad", headX + 26, headY + 46, headX + 60, headY + 22],
@@ -309,11 +322,11 @@ function drawPelican(params_: {
       ["close"],
     ],
     { fill: "#fb923c", stroke: "#c2660f", weight: 1.5 },
-  );
+  ));
 
   // Upper mandible: a long, flat, slightly hooked-tip wedge from the head to the bill tip.
   const billEdge: Style = { stroke: "#c99a3b", weight: 1.5 };
-  v.path(
+  out.push(v.path(
     [
       ["move", headX - 8, headY - 18],
       ["quad", headX + 46, headY - 20, billTipX, billTipY - 6],
@@ -322,35 +335,38 @@ function drawPelican(params_: {
       ["close"],
     ],
     { ...billEdge, fill: "#f2c14e" },
-  );
+  ));
   // Culmen ridge line down the top of the bill for definition.
-  v.path(
+  out.push(v.path(
     [
       ["move", headX + 4, headY - 12],
       ["quad", headX + 48, headY - 13, billTipX - 4, billTipY - 4],
     ],
     billEdge,
-  );
+  ));
 
   // Eye: white ring behind a dark pupil, set high on the head so it clears the bill.
-  v.circle(headX - 4, headY - 18, 4, { fill: "#1e293b" });
-  v.circle(headX - 4, headY - 18, 1.5, { fill: "#f8fafc" });
+  out.push(v.circle(headX - 4, headY - 18, 4, { fill: "#1e293b" }));
+  out.push(v.circle(headX - 4, headY - 18, 1.5, { fill: "#f8fafc" }));
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, _p: Params): void {
-  v.background("#0b1020");
-  drawGround({ v, animFrame: model.animFrame });
+export function draw(v: View, model: DeepReadonly<Model>, _p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#0b1020"));
+  out.push(drawGround({ v, animFrame: model.animFrame }));
 
   const wheelAngle = model.animFrame * WHEEL_SPIN_RATE;
   const crankAngle = model.animFrame * CRANK_RATE - Math.PI / 2;
 
-  drawWheel({ v, center: REAR_AXLE, angle: wheelAngle });
-  drawWheel({ v, center: FRONT_AXLE, angle: wheelAngle });
-  drawFrame(v);
-  drawCranks({ v, angle: crankAngle });
-  drawPelican({
+  out.push(drawWheel({ v, center: REAR_AXLE, angle: wheelAngle }));
+  out.push(drawWheel({ v, center: FRONT_AXLE, angle: wheelAngle }));
+  out.push(drawFrame(v));
+  out.push(drawCranks({ v, angle: crankAngle }));
+  out.push(drawPelican({
     v,
     nearFootAngle: crankAngle,
     farFootAngle: crankAngle + Math.PI,
-  });
+  }));
+  return out;
 }

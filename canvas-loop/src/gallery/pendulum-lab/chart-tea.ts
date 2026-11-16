@@ -2,7 +2,7 @@
 //
 // Geometry is pure functions of the trials and the display switches, so draw
 // can hit-test the pointer against the same numbers it paints.
-import type { DeepReadonly, Style, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Style, View } from "@ianbicking/canvas-loop";
 
 import { card, FAINT, GRID, INK, say, SOFT } from "./look-tea.js";
 import { PLANET_COLOR, PLANETS, theoryPeriod, type Planet } from "./physics-tea.js";
@@ -91,32 +91,35 @@ function fmt(n: number, digits: number): string {
   return n.toFixed(digits);
 }
 
-function drawAxes(v: View, a: Axes): void {
+function drawAxes(v: View, a: Axes): Drawing {
+  const out: Drawing[] = [];
   const axis: Style = { stroke: INK, weight: 1.5 };
   const grid: Style = { stroke: GRID, weight: 1 };
   for (let t = a.yStep; t <= a.yMax + 1e-9; t += a.yStep) {
     const y = yOf(a, t);
-    v.line(PLOT.left, y, PLOT.right, y, grid);
-    say(v, fmt(t, a.yStep < 1 ? 1 : 0), { x: PLOT.left - 8, y }, { size: 12, fill: SOFT, align: "right", valign: "middle" });
+    out.push(v.line(PLOT.left, y, PLOT.right, y, grid));
+    out.push(say(v, fmt(t, a.yStep < 1 ? 1 : 0), { x: PLOT.left - 8, y }, { size: 12, fill: SOFT, align: "right", valign: "middle" }));
   }
   const xTicks = a.sqrt ? [0.25, 0.5, 0.75, 1, 1.25, 1.5] : [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   for (const xv of xTicks) {
     const x = PLOT.left + (xv / a.xMax) * (PLOT.right - PLOT.left);
-    v.line(x, PLOT.top, x, PLOT.bottom, grid);
+    out.push(v.line(x, PLOT.top, x, PLOT.bottom, grid));
     const major = Math.abs(xv * 2 - Math.round(xv * 2)) < 1e-9;
-    if (major) say(v, fmt(xv, 1), { x, y: PLOT.bottom + 8 }, { size: 12, fill: SOFT, align: "center", valign: "top" });
+    if (major) out.push(say(v, fmt(xv, 1), { x, y: PLOT.bottom + 8 }, { size: 12, fill: SOFT, align: "center", valign: "top" }));
   }
-  say(v, "0", { x: PLOT.left - 8, y: PLOT.bottom }, { size: 12, fill: SOFT, align: "right", valign: "middle" });
-  v.line(PLOT.left, PLOT.bottom, PLOT.right + 6, PLOT.bottom, axis);
-  v.line(PLOT.left, PLOT.top - 6, PLOT.left, PLOT.bottom, axis);
+  out.push(say(v, "0", { x: PLOT.left - 8, y: PLOT.bottom }, { size: 12, fill: SOFT, align: "right", valign: "middle" }));
+  out.push(v.line(PLOT.left, PLOT.bottom, PLOT.right + 6, PLOT.bottom, axis));
+  out.push(v.line(PLOT.left, PLOT.top - 6, PLOT.left, PLOT.bottom, axis));
   const xLabel = a.sqrt ? "square root of length, √L  (√m)" : "string length L  (m)";
-  say(v, xLabel, { x: (PLOT.left + PLOT.right) / 2, y: PLOT.bottom + 26 }, { size: 13, fill: INK, align: "center", valign: "top" });
-  v.at({ translate: [GRAPH_CARD.x + 20, (PLOT.top + PLOT.bottom) / 2], rotate: -Math.PI / 2 }, () => {
-    say(v, "period T  (s)", { x: 0, y: 0 }, { size: 13, fill: INK, align: "center", valign: "middle" });
-  });
+  out.push(say(v, xLabel, { x: (PLOT.left + PLOT.right) / 2, y: PLOT.bottom + 26 }, { size: 13, fill: INK, align: "center", valign: "top" }));
+  out.push(v.at({ translate: [GRAPH_CARD.x + 20, (PLOT.top + PLOT.bottom) / 2], rotate: -Math.PI / 2 }, [
+    say(v, "period T  (s)", { x: 0, y: 0 }, { size: 13, fill: INK, align: "center", valign: "middle" }),
+  ]));
+  return out;
 }
 
-function drawTheory(v: View, a: { axes: Axes; planets: Planet[] }): void {
+function drawTheory(v: View, a: { axes: Axes; planets: Planet[] }): Drawing {
+  const out: Drawing[] = [];
   for (const pl of a.planets) {
     const pts: [number, number][] = [];
     for (let i = 0; i <= 80; i += 1) {
@@ -124,14 +127,15 @@ function drawTheory(v: View, a: { axes: Axes; planets: Planet[] }): void {
       const length = a.axes.sqrt ? (u * a.axes.xMax) ** 2 : u * a.axes.xMax;
       pts.push([xOf(a.axes, length), yOf(a.axes, theoryPeriod(length, pl))]);
     }
-    v.group({ opacity: 0.55 }, () => {
-      v.curve(pts, false, { stroke: PLANET_COLOR[pl], weight: 2 });
-    });
+    out.push(v.group({ opacity: 0.55 }, [
+      v.curve(pts, false, { stroke: PLANET_COLOR[pl], weight: 2 }),
+    ]));
     const end = pts[pts.length - 1];
     if (end !== undefined && end[1] > PLOT.top - 4) {
-      say(v, pl, { x: end[0] + 10, y: end[1] }, { size: 11, fill: PLANET_COLOR[pl], align: "left", valign: "middle", bold: true });
+      out.push(say(v, pl, { x: end[0] + 10, y: end[1] }, { size: 11, fill: PLANET_COLOR[pl], align: "left", valign: "middle", bold: true }));
     }
   }
+  return out;
 }
 
 export interface GraphState {
@@ -144,57 +148,65 @@ export interface GraphState {
   fresh: { n: number; age: number } | null;
 }
 
-function drawDots(v: View, g: GraphState): void {
+function drawDots(v: View, g: GraphState): Drawing {
+  const out: Drawing[] = [];
   for (const t of g.trials) {
     const x = xOf(g.axes, t.length);
     const y = yOf(g.axes, t.period);
     if (g.fresh?.n === t.n && g.fresh.age < 90) {
       const k = g.fresh.age / 90;
-      v.circle(x, y, (12 + 30 * k) / 2, { stroke: PLANET_COLOR[t.planet], weight: 2 * (1 - k) + 0.5 });
+      out.push(v.circle(x, y, (12 + 30 * k) / 2, { stroke: PLANET_COLOR[t.planet], weight: 2 * (1 - k) + 0.5 }));
     }
-    v.circle(x, y, 5.5, { fill: PLANET_COLOR[t.planet], stroke: "#ffffff", weight: 1.5 });
+    out.push(v.circle(x, y, 5.5, { fill: PLANET_COLOR[t.planet], stroke: "#ffffff", weight: 1.5 }));
   }
+  return out;
 }
 
-function drawTooltip(v: View, g: GraphState): void {
+function drawTooltip(v: View, g: GraphState): Drawing {
+  const out: Drawing[] = [];
   const t = g.trials.find((tr) => tr.n === g.focus);
-  if (t === undefined) return;
+  if (t === undefined) return out;
   const x = xOf(g.axes, t.length);
   const y = yOf(g.axes, t.period);
-  v.circle(x, y, 10, { stroke: INK, weight: 1.5 });
+  out.push(v.circle(x, y, 10, { stroke: INK, weight: 1.5 }));
   const lines = [`Trial ${t.n} · ${t.planet}`, `L = ${fmt(t.length, 2)} m, ${t.angle}°`, `T = ${fmt(t.period, 3)} s`];
   const w = 132;
   const h = 58;
   const bx = Math.min(x + 14, PLOT.right - w);
   const by = Math.max(PLOT.top - 10, y - h - 12);
-  v.roundRect(bx, by, w, h, 6, { fill: "rgba(42, 40, 51, 0.92)" });
+  out.push(v.roundRect(bx, by, w, h, 6, { fill: "rgba(42, 40, 51, 0.92)" }));
   for (const [i, s] of lines.entries()) {
-    say(v, s, { x: bx + 9, y: by + 18 + i * 16 }, { size: 12, fill: "#ffffff", bold: i === 0 });
+    out.push(say(v, s, { x: bx + 9, y: by + 18 + i * 16 }, { size: 12, fill: "#ffffff", bold: i === 0 }));
   }
+  return out;
 }
 
-function drawLegend(v: View, g: GraphState): void {
+function drawLegend(v: View, g: GraphState): Drawing {
+  const out: Drawing[] = [];
   const present = PLANETS.filter((pl) => g.trials.some((t) => t.planet === pl));
   let x = PLOT.left;
   const y = GRAPH_CARD.y + 52;
   for (const pl of present) {
-    v.circle(x + 5, y, 4.5, { fill: PLANET_COLOR[pl], stroke: "#ffffff", weight: 1 });
-    say(v, pl, { x: x + 13, y }, { size: 12, fill: SOFT, valign: "middle" });
+    out.push(v.circle(x + 5, y, 4.5, { fill: PLANET_COLOR[pl], stroke: "#ffffff", weight: 1 }));
+    out.push(say(v, pl, { x: x + 13, y }, { size: 12, fill: SOFT, valign: "middle" }));
     x += 22 + v.textWidth(pl, { size: 12 }) + 10;
   }
+  return out;
 }
 
-export function drawGraph(v: View, g: GraphState): void {
-  card(v, GRAPH_CARD);
-  say(v, "Period vs length", { x: GRAPH_CARD.x + 18, y: GRAPH_CARD.y + 28 }, { size: 17, bold: true });
-  drawAxes(v, g.axes);
-  if (g.theory !== null) drawTheory(v, { axes: g.axes, planets: g.theory });
-  drawLegend(v, g);
-  drawDots(v, g);
+export function drawGraph(v: View, g: GraphState): Drawing {
+  const out: Drawing[] = [];
+  out.push(card(v, GRAPH_CARD));
+  out.push(say(v, "Period vs length", { x: GRAPH_CARD.x + 18, y: GRAPH_CARD.y + 28 }, { size: 17, bold: true }));
+  out.push(drawAxes(v, g.axes));
+  if (g.theory !== null) out.push(drawTheory(v, { axes: g.axes, planets: g.theory }));
+  out.push(drawLegend(v, g));
+  out.push(drawDots(v, g));
   if (g.trials.length === 0) {
-    say(v, "Each trial adds a dot here.", { x: PLOT.left + 14, y: PLOT.top + 16 }, { size: 14, fill: FAINT, valign: "middle", italic: true });
+    out.push(say(v, "Each trial adds a dot here.", { x: PLOT.left + 14, y: PLOT.top + 16 }, { size: 14, fill: FAINT, valign: "middle", italic: true }));
   }
-  drawTooltip(v, g);
+  out.push(drawTooltip(v, g));
+  return out;
 }
 
 // ---------- table ----------
@@ -223,32 +235,34 @@ export interface TableState {
   fresh: { n: number; age: number } | null;
 }
 
-export function drawTable(v: View, s: TableState): void {
-  card(v, TABLE_CARD);
-  say(v, "Results", { x: TABLE_CARD.x + 18, y: TABLE_CARD.y + 28 }, { size: 17, bold: true });
+export function drawTable(v: View, s: TableState): Drawing {
+  const out: Drawing[] = [];
+  out.push(card(v, TABLE_CARD));
+  out.push(say(v, "Results", { x: TABLE_CARD.x + 18, y: TABLE_CARD.y + 28 }, { size: 17, bold: true }));
   const cols = s.theory ? [...COLUMNS, THEORY_COLUMN] : COLUMNS;
   const headY = ROW_TOP - 8;
   for (const c of cols) {
-    say(v, c.head, { x: c.x, y: headY }, { size: 12, fill: SOFT, bold: true, align: c.align });
+    out.push(say(v, c.head, { x: c.x, y: headY }, { size: 12, fill: SOFT, bold: true, align: c.align }));
   }
-  v.line(TABLE_CARD.x + 12, ROW_TOP - 2, TABLE_CARD.x + TABLE_CARD.w - 12, ROW_TOP - 2, { stroke: GRID, weight: 1.5 });
+  out.push(v.line(TABLE_CARD.x + 12, ROW_TOP - 2, TABLE_CARD.x + TABLE_CARD.w - 12, ROW_TOP - 2, { stroke: GRID, weight: 1.5 }));
   if (s.trials.length === 0) {
-    say(v, "No trials yet. Set a length, then press “Time 10 swings”.", { x: TABLE_CARD.x + TABLE_CARD.w / 2, y: ROW_TOP + 40 }, { size: 13, fill: FAINT, align: "center", italic: true });
-    return;
+    out.push(say(v, "No trials yet. Set a length, then press “Time 10 swings”.", { x: TABLE_CARD.x + TABLE_CARD.w / 2, y: ROW_TOP + 40 }, { size: 13, fill: FAINT, align: "center", italic: true }));
+    return out;
   }
   const rows = visibleRows(s.trials);
   const hidden = s.trials.length - rows.length;
   for (const [i, t] of rows.entries()) {
     const top = ROW_TOP + i * ROW_H;
     const freshTint = s.fresh?.n === t.n && s.fresh.age < 120 ? 1 - s.fresh.age / 120 : 0;
-    if (s.focus === t.n) v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: "#efe8d8" });
-    else if (freshTint > 0) v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: `rgba(250, 214, 120, ${(0.55 * freshTint).toFixed(3)})` });
-    v.circle(TABLE_CARD.x + 17, top + ROW_H / 2, 3.5, { fill: PLANET_COLOR[t.planet] });
+    if (s.focus === t.n) out.push(v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: "#efe8d8" }));
+    else if (freshTint > 0) out.push(v.rect(TABLE_CARD.x + 8, top, TABLE_CARD.w - 16, ROW_H, { fill: `rgba(250, 214, 120, ${(0.55 * freshTint).toFixed(3)})` }));
+    out.push(v.circle(TABLE_CARD.x + 17, top + ROW_H / 2, 3.5, { fill: PLANET_COLOR[t.planet] }));
     for (const c of cols) {
-      say(v, c.cell(t), { x: c.x, y: top + ROW_H / 2 }, { size: 13, fill: c === THEORY_COLUMN ? SOFT : INK, align: c.align, valign: "middle", bold: c.head === "Period T" });
+      out.push(say(v, c.cell(t), { x: c.x, y: top + ROW_H / 2 }, { size: 13, fill: c === THEORY_COLUMN ? SOFT : INK, align: c.align, valign: "middle", bold: c.head === "Period T" }));
     }
   }
   if (hidden > 0) {
-    say(v, `+ ${hidden} earlier trial${hidden === 1 ? "" : "s"} (on the graph)`, { x: TABLE_CARD.x + 18, y: TABLE_CARD.y + TABLE_CARD.h - 9 }, { size: 12, fill: FAINT, italic: true });
+    out.push(say(v, `+ ${hidden} earlier trial${hidden === 1 ? "" : "s"} (on the graph)`, { x: TABLE_CARD.x + 18, y: TABLE_CARD.y + TABLE_CARD.h - 9 }, { size: 12, fill: FAINT, italic: true }));
   }
+  return out;
 }

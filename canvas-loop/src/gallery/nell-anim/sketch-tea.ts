@@ -12,7 +12,7 @@
 // Performance: the painted page is drawn once into cached layers (keyed on the
 // params they depend on); each frame pastes them and draws only the moving
 // parts with gradients, plain shapes and a few seeded ink marks.
-import type { DeepReadonly, Gesture, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Gesture, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   dusk: { type: "number", min: 0, max: 1, step: 0.05, default: 0.35 },
@@ -250,34 +250,38 @@ export function draw(
   v: View,
   model: DeepReadonly<Model>,
   p: ParamValues<typeof params>,
-): void {
+): RootDrawing {
   // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
   // `effects.paper` (draft section 2).
-  v.group({ effects: { paper: 0.35 } }, () => {
+  return v.group({ effects: { paper: 0.35 } }, ((): Drawing => {
+    const parts: Drawing[] = [];
     const f = model.frame;
     const lamp = lanternAt(model, f, p.wind);
     const d = p.dusk;
-    background(v, d);
-    mist(v, f, d);
-    waterGlints(v, f, p.wind);
-    lanternReflection(v, lamp, f, p.wind);
-    touchRipples(v, model.ripples, f);
-    carpRings(v, f, "back");
-    v.place(v.picture({ key: "boat-back", width: v.width, height: v.height }, () => {
-      boatBack(v);
-      girl(v);
-    }), 0, 0);
-    nellBlink(v, f);
-    arm(v, model.mitten);
-    v.place(v.picture({ key: "boat-front", width: v.width, height: v.height }, () => {
-      boatFront(v);
-      oar(v);
-    }), 0, 0);
+    parts.push(background(v, d));
+    parts.push(mist(v, f, d));
+    parts.push(waterGlints(v, f, p.wind));
+    parts.push(lanternReflection(v, lamp, f, p.wind));
+    parts.push(touchRipples(v, model.ripples, f));
+    parts.push(carpRings(v, f, "back"));
+    parts.push(v.place(v.picture({ key: "boat-back", width: v.width, height: v.height }, () => {
+      return [
+        boatBack(v),
+        girl(v),
+      ];
+    }), 0, 0));
+    parts.push(nellBlink(v, f));
+    parts.push(arm(v, model.mitten));
+    parts.push(v.place(v.picture({ key: "boat-front", width: v.width, height: v.height }, () => {
+      return [
+        boatFront(v),
+        oar(v),
+      ];
+    }), 0, 0));
     // the lantern lights the bow wherever it is held
-    v.clip(v.curvePath(HULL, true), () =>
-      glow(v, lamp[0], lamp[1], 120, "255,170,80", 0.7 * flicker(f)),
-    );
-    v.place(v.picture({ key: "head", width: v.width, height: v.height }, () => fishHead(v)), 0, 0);
+    parts.push(v.clip(v.curvePath(HULL, true), glow(v, lamp[0], lamp[1], 120, "255,170,80", 0.7 * flicker(f)),
+    ));
+    parts.push(v.place(v.picture({ key: "head", width: v.width, height: v.height }, () => fishHead(v)), 0, 0));
     // how close the light has been brought to the carp's mouth, 0..1
     // (zero at rest, even in a strong wind: the resting lantern comes no nearer than 37 px)
     const near = Math.min(
@@ -287,27 +291,28 @@ export function draw(
         1 - (Math.hypot(lamp[0] - MOUTH[0], lamp[1] - MOUTH[1]) - 20) / 16,
       ),
     );
-    carpFace(
+    parts.push(carpFace(
       v,
       f,
       model.watching === null ? lamp : [model.watching.x, model.watching.y],
       model.greeted,
       near,
-    );
-    greetRings(v, f, model.greeted);
-    chinDrops(v, f);
-    carpRings(v, f, "front");
-    if (p.moths) moths(v, lamp, f, "behind");
-    lantern(v, model.mitten, lamp, f, d);
-    if (p.moths) moths(v, lamp, f, "front");
-    v.place(v.picture({ key: "lilies", width: v.width, height: v.height }, () => lilyPads(v)), 0, 0);
-    reeds(v, f, p.wind);
-    dark(v, lamp, d);
+    ));
+    parts.push(greetRings(v, f, model.greeted));
+    parts.push(chinDrops(v, f));
+    parts.push(carpRings(v, f, "front"));
+    if (p.moths) parts.push(moths(v, lamp, f, "behind"));
+    parts.push(lantern(v, model.mitten, lamp, f, d));
+    if (p.moths) parts.push(moths(v, lamp, f, "front"));
+    parts.push(v.place(v.picture({ key: "lilies", width: v.width, height: v.height }, () => lilyPads(v)), 0, 0));
+    parts.push(reeds(v, f, p.wind));
+    parts.push(dark(v, lamp, d));
     // lights in the dark come after the darkening, so it does not dim them
-    stars(v, f, d);
-    homeWindow(v, f, d);
-    fireflies(v, f, d);
-  });
+    parts.push(stars(v, f, d));
+    parts.push(homeWindow(v, f, d));
+    parts.push(fireflies(v, f, d));
+    return parts;
+  })());
 }
 
 /**
@@ -316,20 +321,21 @@ export function draw(
  * repainting. Every colour is a linear mix along dusk, so the fade is exact
  * for the flat fills and close for the strokes.
  */
-function background(v: View, d: number): void {
+function background(v: View, d: number): Drawing {
+  const out: Drawing[] = [];
   const [lo, hi] = d <= 0.35 ? [0, 0.35] : [0.35, 1];
   const t = (d - lo) / (hi - lo);
-  const paint = (at: number): void =>
-    v.place(v.picture({ key: `bg-${at}`, width: v.width, height: v.height }, () => {
-      v.paper({ scale: 3, contrast: 0.6, seed: 7 });
-      sky(v, at);
-      farShore(v, at);
-      water(v, at);
-      fishBody(v);
-    }), 0, 0);
-  if (t < 1) paint(lo);
-  if (t >= 1) paint(hi);
-  else if (t > 0) v.group({ opacity: t }, () => paint(hi));
+  const paint = (at: number): Drawing =>
+    v.place(v.picture({ key: `bg-${at}`, width: v.width, height: v.height, paper: { scale: 3, contrast: 0.6, seed: 7 } }, () => [
+      sky(v, at),
+      farShore(v, at),
+      water(v, at),
+      fishBody(v),
+    ]), 0, 0);
+  if (t < 1) out.push(paint(lo));
+  if (t >= 1) out.push(paint(hi));
+  else if (t > 0) out.push(v.group({ opacity: t }, paint(hi)));
+  return out;
 }
 
 // ── helpers ─────────────────────────────────────────────────────────
@@ -420,14 +426,15 @@ function sample(
   ]);
 }
 
-/** One row of horizontal paint strokes: varied, overlapping, tapered both ends. */
+/** One row of horizontal paint strokes: varied, overlapping, tapered both ends; and the last stroke's gesture. */
 function paintRow(
   v: View,
   y: number,
   seed: number,
   wobble: number,
   style: Style,
-): Gesture {
+): { drawing: Drawing; gesture: Gesture } {
+  const drawing: Drawing[] = [];
   let x = -120 + ((seed * 97) % 140);
   let k = 0;
   let gesture: Gesture = {};
@@ -444,7 +451,7 @@ function paintRow(
       wobble,
       seed: seed * 10 + k,
     };
-    v.curve(
+    drawing.push(v.curve(
       [
         [x, y + dy],
         [x + len / 2, y + dy + ((k % 2) * 2 - 1) * 2],
@@ -452,11 +459,11 @@ function paintRow(
       ],
       false,
       { ...style, gesture },
-    );
+    ));
     x += len - 60 - ((seed * 31 + k * 17) % 50);
     k += 1;
   }
-  return gesture;
+  return { drawing, gesture };
 }
 
 function glow(
@@ -466,8 +473,8 @@ function glow(
   r: number,
   color: string,
   a: number,
-): void {
-  v.circle(x, y, r, {
+): Drawing {
+  return v.circle(x, y, r, {
     fill: v.radialGradient(x, y, r, [
       [0, `rgba(${color},${a})`],
       [1, `rgba(${color},0)`],
@@ -483,8 +490,8 @@ function glowEllipse(
   h: number,
   color: string,
   a: number,
-): void {
-  v.ellipse(x, y, w / 2, h / 2, {
+): Drawing {
+  return v.ellipse(x, y, w / 2, h / 2, {
     fill: v.ellipseGradient(x, y, w / 2, h / 2, [
       [0, `rgba(${color},${a})`],
       [1, `rgba(${color},0)`],
@@ -502,9 +509,10 @@ function ribbon(
   width: number,
   color: string,
   taper: "both" | "out" = "both",
-): void {
+): Drawing {
+  const drawn: Drawing[] = [];
   const n = pts.length;
-  if (n < 2) return;
+  if (n < 2) return drawn;
   const left: Vec2[] = [];
   const right: Vec2[] = [];
   for (const [i, [x, y]] of pts.entries()) {
@@ -522,7 +530,8 @@ function ribbon(
     left.push([x + nx, y + ny]);
     right.push([x - nx, y - ny]);
   }
-  v.polygon([...left, ...right.reverse()], { fill: color });
+  drawn.push(v.polygon([...left, ...right.reverse()], { fill: color }));
+  return drawn;
 }
 
 /** Points along a straight segment, for `ribbon`. */
@@ -565,25 +574,26 @@ const WATER_STOPS: [number, string][] = [
   [1, "#0e1c28"],
 ];
 
-function sky(v: View, d: number): void {
+function sky(v: View, d: number): Drawing {
+  const out: Drawing[] = [];
   const stops = duskStops(SKY_STOPS, d);
-  v.rect(0, 0, W, HORIZON + 4, {
+  out.push(v.rect(0, 0, W, HORIZON + 4, {
     fill: v.linearGradient(0, 0, 0, HORIZON, stops),
-  });
+  }));
   for (let i = 0; i < 24; i += 1) {
     const y = 6 + i * 12.5;
-    paintRow(v, y, i, 3, {
+    out.push(paintRow(v, y, i, 3, {
       brush: { preset: "bristle", opacity: 0.6, load: 0.7 },
       stroke: sample(stops, y / HORIZON, i % 2 === 0 ? 30 : -22),
       weight: 26,
-    });
+    }).drawing);
   }
   const wash: Style = {
     brush: { preset: "wash", opacity: 0.5 },
     gesture: { pressure: "taper", wobble: 3 },
   };
   const violet: Style = { ...wash, stroke: dusky("#6a5a8c", d), weight: 30 };
-  v.curve(
+  out.push(v.curve(
     [
       [60, 150],
       [220, 140],
@@ -591,8 +601,8 @@ function sky(v: View, d: number): void {
     ],
     false,
     violet,
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [420, 110],
       [600, 100],
@@ -600,9 +610,9 @@ function sky(v: View, d: number): void {
     ],
     false,
     violet,
-  );
+  ));
   const rose: Style = { ...wash, stroke: dusky("#c9919a", d), weight: 18 };
-  v.curve(
+  out.push(v.curve(
     [
       [0, 230],
       [180, 222],
@@ -610,8 +620,8 @@ function sky(v: View, d: number): void {
     ],
     false,
     rose,
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [480, 215],
       [650, 210],
@@ -619,7 +629,8 @@ function sky(v: View, d: number): void {
     ],
     false,
     rose,
-  );
+  ));
+  return out;
 }
 
 const HILLS: Vec2[] = [
@@ -635,29 +646,34 @@ const HILLS: Vec2[] = [
   [820, 302],
 ];
 
-function farShore(v: View, d: number): void {
-  v.curve(HILLS, true, { fill: dusky("#3d3f66", d) });
+function farShore(v: View, d: number): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.curve(HILLS, true, { fill: dusky("#3d3f66", d) }));
   const pine: Style = { fill: dusky("#2e3054", d) };
   for (let i = 0; i < 26; i += 1) {
     const x = 20 + i * 11 + (i % 3) * 3;
     const base = 290 - Math.sin(i * 0.4) * 6 - (x < 200 ? 12 : 0);
     const h = 12 + (i % 4) * 4;
-    v.triangle(x - 4, base + 4, x + 4, base + 4, x, base - h, pine);
+    out.push(v.triangle(x - 4, base + 4, x + 4, base + 4, x, base - h, pine));
   }
+  return out;
 }
 
 /** One lit window on the far shore: home, where someone keeps the lamp going. */
-function homeWindow(v: View, f: number, d: number): void {
+function homeWindow(v: View, f: number, d: number): Drawing {
   const fl = 0.92 + 0.08 * wave(f, 3, 0.4);
-  glow(v, 148, 272, (10 + d * 8) * fl, "255,200,110", (0.5 + d * 0.35) * fl);
-  v.rect(146, 270, 4, 4, { fill: "#ffcf7a" });
+  return [
+    glow(v, 148, 272, (10 + d * 8) * fl, "255,200,110", (0.5 + d * 0.35) * fl),
+    v.rect(146, 270, 4, 4, { fill: "#ffcf7a" }),
+  ];
 }
 
-function water(v: View, d: number): void {
+function water(v: View, d: number): Drawing {
+  const out: Drawing[] = [];
   const stops = duskStops(WATER_STOPS, d);
-  v.rect(0, HORIZON, W, H - HORIZON, {
+  out.push(v.rect(0, HORIZON, W, H - HORIZON, {
     fill: v.linearGradient(0, HORIZON, 0, H, stops),
-  });
+  }));
   // the last row's stroke style stays in force for the reflection below
   let rowStyle: Style = {};
   let rowGesture: Gesture = {};
@@ -672,9 +688,11 @@ function water(v: View, d: number): void {
       ),
       weight: 22 + i * 0.5,
     };
-    rowGesture = paintRow(v, y, 100 + i, 1.5, rowStyle);
+    const row = paintRow(v, y, 100 + i, 1.5, rowStyle);
+    out.push(row.drawing);
+    rowGesture = row.gesture;
   }
-  v.group({ opacity: 0.4 }, () => {
+  out.push(v.group({ opacity: 0.4 }, [
     v.curve(
       HILLS.map(([x, y]): Vec2 => [x, HORIZON + (HORIZON - y) * 0.6 + 1]),
       true,
@@ -683,9 +701,9 @@ function water(v: View, d: number): void {
         gesture: rowGesture,
         fill: dusky("#3a3c62", d),
       },
-    );
-  });
-  v.curve(
+    ),
+  ]));
+  out.push(v.curve(
     [
       [-40, 300],
       [200, 304],
@@ -700,13 +718,13 @@ function water(v: View, d: number): void {
       stroke: dusky("#c8a8b4", d),
       weight: 28,
     },
-  );
+  ));
   for (let i = 0; i < 30; i += 1) {
     const t = i / 30;
     const y = HORIZON + 6 + t * t * 480;
     const x = (i * 211) % 700;
     const len = 60 + t * 220 + ((i * 37) % 80);
-    v.line(x - len / 2, y, x + len / 2, y + 1, {
+    out.push(v.line(x - len / 2, y, x + len / 2, y + 1, {
       brush: { preset: "wash", opacity: 0.25 + t * 0.15 },
       gesture: { pressure: "taper", wobble: 1 },
       stroke: dusky(
@@ -714,8 +732,9 @@ function water(v: View, d: number): void {
         d,
       ),
       weight: 3 + t * 16,
-    });
+    }));
   }
+  return out;
 }
 
 const FISH_BODY: Vec2[] = [
@@ -730,60 +749,64 @@ const FISH_BODY: Vec2[] = [
   [574, 630],
 ];
 
-function fishBody(v: View): void {
-  v.group({ opacity: 0.4 }, () => {
-    v.curve(FISH_BODY, true, { fill: "#98865a" });
-    v.clip(v.curvePath(FISH_BODY, true), () => {
-      v.curve(shift(v.offset(FISH_BODY, 4), 26, 4), true, { fill: "#5a5a46" });
-      const scale: Style = {
-        brush: { preset: "ink", opacity: 0.8 },
-        stroke: "#2e2a1e",
-        weight: 2.2,
-        gesture: { pressure: "taper" },
-      };
-      const ax: Vec2 = [0.42, 0.91];
-      const px: Vec2 = [0.91, -0.42];
-      for (let r = 0; r < 8; r += 1) {
-        const along = 30 + r * 26;
-        const half = 2 + Math.min(r, 4);
-        for (let c = -half; c <= half; c += 1) {
-          const across = (c + (r % 2) * 0.5) * 24;
-          const cx = 612 + ax[0] * along + px[0] * across;
-          const cy = 556 + ax[1] * along + px[1] * across;
-          const size = 12 - r * 0.5;
-          const pts: Vec2[] = [];
-          for (let k = 0; k <= 6; k += 1) {
-            const a = -1.2 + (k / 6) * 2.4;
-            const uu = Math.sin(a) * size;
-            const vv = Math.cos(a) * size * 0.75;
-            pts.push([
-              cx + px[0] * uu + ax[0] * vv,
-              cy + px[1] * uu + ax[1] * vv,
-            ]);
+function fishBody(v: View): Drawing {
+  return [
+    v.group({ opacity: 0.4 }, [
+      v.curve(FISH_BODY, true, { fill: "#98865a" }),
+      v.clip(v.curvePath(FISH_BODY, true), ((): Drawing => {
+        const drawn: Drawing[] = [];
+        drawn.push(v.curve(shift(v.offset(FISH_BODY, 4), 26, 4), true, { fill: "#5a5a46" }));
+        const scale: Style = {
+          brush: { preset: "ink", opacity: 0.8 },
+          stroke: "#2e2a1e",
+          weight: 2.2,
+          gesture: { pressure: "taper" },
+        };
+        const ax: Vec2 = [0.42, 0.91];
+        const px: Vec2 = [0.91, -0.42];
+        for (let r = 0; r < 8; r += 1) {
+          const along = 30 + r * 26;
+          const half = 2 + Math.min(r, 4);
+          for (let c = -half; c <= half; c += 1) {
+            const across = (c + (r % 2) * 0.5) * 24;
+            const cx = 612 + ax[0] * along + px[0] * across;
+            const cy = 556 + ax[1] * along + px[1] * across;
+            const size = 12 - r * 0.5;
+            const pts: Vec2[] = [];
+            for (let k = 0; k <= 6; k += 1) {
+              const a = -1.2 + (k / 6) * 2.4;
+              const uu = Math.sin(a) * size;
+              const vv = Math.cos(a) * size * 0.75;
+              pts.push([
+                cx + px[0] * uu + ax[0] * vv,
+                cy + px[1] * uu + ax[1] * vv,
+              ]);
+            }
+            drawn.push(v.curve(pts, false, scale));
           }
-          v.curve(pts, false, scale);
         }
-      }
-    });
-    v.curve(
-      [
-        [680, 578],
-        [740, 590],
-        [796, 650],
-        [778, 690],
-        [736, 640],
-      ],
-      true,
-      { fill: "#2a2a20" },
-    );
-  });
-  v.ellipse(690, 800, 180, 220, {
-    fill: v.ellipseGradient(690, 800, 180, 220, [
-      [0, "rgba(14,28,40,0.75)"],
-      [0.6, "rgba(14,28,40,0.4)"],
-      [1, "rgba(14,28,40,0)"],
+        return drawn;
+      })()),
+      v.curve(
+        [
+          [680, 578],
+          [740, 590],
+          [796, 650],
+          [778, 690],
+          [736, 640],
+        ],
+        true,
+        { fill: "#2a2a20" },
+      ),
     ]),
-  });
+    v.ellipse(690, 800, 180, 220, {
+      fill: v.ellipseGradient(690, 800, 180, 220, [
+        [0, "rgba(14,28,40,0.75)"],
+        [0.6, "rgba(14,28,40,0.4)"],
+        [1, "rgba(14,28,40,0)"],
+      ]),
+    }),
+  ];
 }
 
 // ── moving water ───────────────────────────────────────────────────
@@ -799,36 +822,41 @@ const STARS: readonly (readonly [number, number, number])[] = [
   [400, 120, 0.9],
 ];
 
-function stars(v: View, f: number, d: number): void {
+function stars(v: View, f: number, d: number): Drawing {
+  const drawn: Drawing[] = [];
   for (const [i, [x, y, r]] of STARS.entries()) {
     // later stars come out only as it gets darker
     const out = Math.min(1, Math.max(0, d * 2.2 - i * 0.18));
     const a = out * (0.55 + 0.3 * wave(f, 3 + (i % 4), i * 1.7));
     if (a <= 0.02) continue;
-    v.circle(x, y, (r * (1 + d * 0.6)) / 2, {
+    drawn.push(v.circle(x, y, (r * (1 + d * 0.6)) / 2, {
       fill: `rgba(240,236,255,${a.toFixed(3)})`,
-    });
+    }));
   }
   const evening = 0.35 + 0.4 * Math.min(1, d * 2);
-  glow(v, 612, 66, 16, "255,240,210", evening * (0.85 + 0.15 * wave(f, 4)));
-  v.circle(612, 66, 1.75, { fill: "#fff4d8" });
+  drawn.push(glow(v, 612, 66, 16, "255,240,210", evening * (0.85 + 0.15 * wave(f, 4))));
+  drawn.push(v.circle(612, 66, 1.75, { fill: "#fff4d8" }));
+  return drawn;
 }
 
-function waterGlints(v: View, f: number, wind: number): void {
+function waterGlints(v: View, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   for (let i = 0; i < 8; i += 1) {
     const dx = (4 + 10 * wind) * wave(f, 1 + (i % 3), i);
     const x = 60 + ((i * 173) % 680) + dx;
     const y = 600 + ((i * 59) % 180) + wave(f, 2, i * 2.1) * (1 + wind);
     const len = (18 + (i % 4) * 8) * (0.8 + 0.2 * wave(f, 3, i));
-    ribbon(v, seg(x, y, x + len, y), 1.8, "rgba(138,160,188,0.5)");
+    out.push(ribbon(v, seg(x, y, x + len, y), 1.8, "rgba(138,160,188,0.5)"));
   }
+  return out;
 }
 
-function lanternReflection(v: View, lamp: Vec2, f: number, wind: number): void {
+function lanternReflection(v: View, lamp: Vec2, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   const lx = lamp[0];
   const fl = flicker(f);
-  glowEllipse(v, lx + 10, 548, 300, 90, "255,176,90", 0.3 * fl);
-  glowEllipse(v, lx + 5, 585, 34, 120, "244,176,88", 0.35 * fl);
+  out.push(glowEllipse(v, lx + 10, 548, 300, 90, "255,176,90", 0.3 * fl));
+  out.push(glowEllipse(v, lx + 5, 585, 34, 120, "244,176,88", 0.35 * fl));
   const dxs = [0, -6, 5, -3, 8, -9, 2, 10, -12, 4, -6, 13, -2, 7];
   for (const [i, dx0] of dxs.entries()) {
     const y =
@@ -839,14 +867,16 @@ function lanternReflection(v: View, lamp: Vec2, f: number, wind: number): void {
       (12 + ((i * 7) % 11) + i * 1.2) * (0.85 + 0.2 * wave(f, 4, i * 2.2));
     const x = lx + 4 + dx;
     const c = rgba("#f4b058", Math.max(0.1, (0.8 - i * 0.045) * fl));
-    ribbon(v, seg(x - half, y, x + half * 0.4, y + 1), 2.6 + (i % 2), c);
+    out.push(ribbon(v, seg(x - half, y, x + half * 0.4, y + 1), 2.6 + (i % 2), c));
     if (i % 2 === 1)
-      ribbon(v, seg(x + half * 0.6, y + 2, x + half * 1.2, y + 2), 2.6, c);
+      out.push(ribbon(v, seg(x + half * 0.6, y + 2, x + half * 1.2, y + 2), 2.6, c));
   }
+  return out;
 }
 
 /** Rings the reader made by touching the water. */
-function touchRipples(v: View, ripples: readonly Ripple[], f: number): void {
+function touchRipples(v: View, ripples: readonly Ripple[], f: number): Drawing {
+  const out: Drawing[] = [];
   for (const [k, r] of ripples.entries()) {
     const age = f - r.born;
     for (let j = 0; j < 3; j += 1) {
@@ -858,27 +888,29 @@ function touchRipples(v: View, ripples: readonly Ripple[], f: number): void {
       const depth = 0.12 + 0.2 * ((r.y - HORIZON) / (H - HORIZON));
       const rx = 4 + t * 70;
       const from = Math.PI * (0.02 + 0.1 * k);
-      ribbon(
+      out.push(ribbon(
         v,
         ellipseArc(r.x, r.y, rx, rx * depth, from, from + Math.PI * 1.96, 28),
         2.6 - t * 1.4,
         rgba("#c9d4e6", (1 - t) * 0.75),
-      );
+      ));
     }
   }
+  return out;
 }
 
 const RING_C: Vec2 = [606, WATERLINE];
 
 /** Rings spreading from the carp, endlessly: three at a time, back or front halves. */
-function carpRings(v: View, f: number, half: "back" | "front"): void {
+function carpRings(v: View, f: number, half: "back" | "front"): Drawing {
+  const out: Drawing[] = [];
   for (let k = 0; k < 3; k += 1) {
     const age = (f + k * 60) % LOOP;
     const t = age / LOOP;
     const rx = 70 + t * 120;
     const fade = Math.min(1, age / 20) * (1 - t);
     if (half === "back") {
-      ribbon(
+      out.push(ribbon(
         v,
         ellipseArc(
           RING_C[0],
@@ -891,9 +923,9 @@ function carpRings(v: View, f: number, half: "back" | "front"): void {
         ),
         2.4 - t,
         rgba("#e7c49a", 0.6 * fade),
-      );
+      ));
     } else {
-      ribbon(
+      out.push(ribbon(
         v,
         ellipseArc(
           RING_C[0],
@@ -906,9 +938,10 @@ function carpRings(v: View, f: number, half: "back" | "front"): void {
         ),
         3.2 - t * 1.4,
         rgba("#f0d2a6", 0.8 * fade),
-      );
+      ));
     }
   }
+  return out;
 }
 
 // ── the carp's head (cached) and face (moving) ──────────────────────
@@ -931,147 +964,153 @@ const ABOVE: Vec2[] = [
   [500, WATERLINE + 2],
 ];
 
-function fishHead(v: View): void {
-  v.clip(ABOVE, () => {
-    v.curve(HEAD_F, true, { fill: "#d6ae62" });
-    v.clip(v.curvePath(HEAD_F, true), () => {
-      v.curve(shift(v.offset(HEAD_F, 2), 40, 14), true, { fill: "#7a6034" });
-      glow(v, 520, 492, 90, "255,214,150", 0.8);
-      const orange: Style = {
-        brush: { preset: "wash", opacity: 0.6 },
-        gesture: { pressure: "swell", wobble: 2 },
-        stroke: "#c0662e",
-        weight: 26,
-      };
-      v.curve(
-        [
-          [596, 476],
-          [624, 486],
-          [648, 512],
-        ],
-        false,
-        orange,
-      );
-      v.curve(
-        [
-          [640, 540],
-          [656, 556],
-        ],
-        false,
-        { ...orange, weight: 16 },
-      );
-      v.curve(
-        [
-          [556, 482],
-          [580, 472],
-          [610, 472],
-        ],
-        false,
-        {
+function fishHead(v: View): Drawing {
+  return [
+    v.clip(ABOVE, ((): Drawing => {
+      const nodes: Drawing[] = [];
+      nodes.push(v.curve(HEAD_F, true, { fill: "#d6ae62" }));
+      nodes.push(v.clip(v.curvePath(HEAD_F, true), ((): Drawing => {
+        const more: Drawing[] = [];
+        more.push(v.curve(shift(v.offset(HEAD_F, 2), 40, 14), true, { fill: "#7a6034" }));
+        more.push(glow(v, 520, 492, 90, "255,214,150", 0.8));
+        const orange: Style = {
+          brush: { preset: "wash", opacity: 0.6 },
+          gesture: { pressure: "swell", wobble: 2 },
+          stroke: "#c0662e",
+          weight: 26,
+        };
+        more.push(v.curve(
+          [
+            [596, 476],
+            [624, 486],
+            [648, 512],
+          ],
+          false,
+          orange,
+        ));
+        more.push(v.curve(
+          [
+            [640, 540],
+            [656, 556],
+          ],
+          false,
+          { ...orange, weight: 16 },
+        ));
+        more.push(v.curve(
+          [
+            [556, 482],
+            [580, 472],
+            [610, 472],
+          ],
+          false,
+          {
+            brush: { preset: "ink", opacity: 0.85 },
+            stroke: "#fff0c8",
+            weight: 3,
+            gesture: { pressure: "taper" },
+          },
+        ));
+        const brown: Style = {
           brush: { preset: "ink", opacity: 0.85 },
-          stroke: "#fff0c8",
-          weight: 3,
-          gesture: { pressure: "taper" },
-        },
-      );
-      const brown: Style = {
-        brush: { preset: "ink", opacity: 0.85 },
-        stroke: "#5e4826",
-        weight: 2.6,
-        gesture: { pressure: "swell", wobble: 0.5 },
-      };
-      v.curve(
-        [
-          [614, 474],
-          [630, 512],
-          [630, 566],
-        ],
-        false,
-        brown,
-      );
-      v.curve(
-        [
-          [560, 524],
-          [584, 532],
-          [608, 524],
-        ],
-        false,
-        { ...brown, weight: 1.8 },
-      );
-      const scales: Style = {
-        ...brown,
-        brush: { preset: "pencil", opacity: 0.8 },
-        weight: 2.5,
-      };
-      for (let r = 0; r < 3; r += 1) {
-        for (let c = 0; c < 2; c += 1) {
-          v.curve(
-            ellipseArc(
-              644 + c * 16,
-              506 + r * 18 + c * 8,
-              9,
-              7,
-              0.3,
-              Math.PI - 0.3,
-              6,
-            ),
-            false,
-            scales,
-          );
+          stroke: "#5e4826",
+          weight: 2.6,
+          gesture: { pressure: "swell", wobble: 0.5 },
+        };
+        more.push(v.curve(
+          [
+            [614, 474],
+            [630, 512],
+            [630, 566],
+          ],
+          false,
+          brown,
+        ));
+        more.push(v.curve(
+          [
+            [560, 524],
+            [584, 532],
+            [608, 524],
+          ],
+          false,
+          { ...brown, weight: 1.8 },
+        ));
+        const scales: Style = {
+          ...brown,
+          brush: { preset: "pencil", opacity: 0.8 },
+          weight: 2.5,
+        };
+        for (let r = 0; r < 3; r += 1) {
+          for (let c = 0; c < 2; c += 1) {
+            more.push(v.curve(
+              ellipseArc(
+                644 + c * 16,
+                506 + r * 18 + c * 8,
+                9,
+                7,
+                0.3,
+                Math.PI - 0.3,
+                6,
+              ),
+              false,
+              scales,
+            ));
+          }
         }
-      }
-    });
-    // eye socket ring, drawn here so the moving eye sits in it
-    const socket: Style = {
-      brush: "ink",
-      stroke: "#5e4826",
-      weight: 2.4,
-      gesture: { pressure: "taper-out", wobble: 0.4 },
-    };
+        return more;
+      })()));
+      // eye socket ring, drawn here so the moving eye sits in it
+      const socket: Style = {
+        brush: "ink",
+        stroke: "#5e4826",
+        weight: 2.4,
+        gesture: { pressure: "taper-out", wobble: 0.4 },
+      };
+      nodes.push(v.curve(
+        [
+          [542, 514],
+          [528, 532],
+          [522, 556],
+        ],
+        false,
+        socket,
+      ));
+      nodes.push(v.curve(
+        [
+          [548, 518],
+          [544, 538],
+          [548, 560],
+        ],
+        false,
+        socket,
+      ));
+      const outline: Style = {
+        brush: "ink",
+        stroke: "#2c1e10",
+        weight: 3,
+        gesture: { pressure: "swell", wobble: 0.8 },
+      };
+      nodes.push(v.curve(HEAD_F.slice(0, 6), false, outline));
+      nodes.push(v.curve([...HEAD_F.slice(6), ...HEAD_F.slice(0, 1)], false, {
+        ...outline,
+        weight: 2.2,
+      }));
+      return nodes;
+    })()),
     v.curve(
       [
-        [542, 514],
-        [528, 532],
-        [522, 556],
+        [540, WATERLINE + 2],
+        [600, WATERLINE - 2],
+        [672, WATERLINE + 2],
       ],
       false,
-      socket,
-    );
-    v.curve(
-      [
-        [548, 518],
-        [544, 538],
-        [548, 560],
-      ],
-      false,
-      socket,
-    );
-    const outline: Style = {
-      brush: "ink",
-      stroke: "#2c1e10",
-      weight: 3,
-      gesture: { pressure: "swell", wobble: 0.8 },
-    };
-    v.curve(HEAD_F.slice(0, 6), false, outline);
-    v.curve([...HEAD_F.slice(6), ...HEAD_F.slice(0, 1)], false, {
-      ...outline,
-      weight: 2.2,
-    });
-  });
-  v.curve(
-    [
-      [540, WATERLINE + 2],
-      [600, WATERLINE - 2],
-      [672, WATERLINE + 2],
-    ],
-    false,
-    {
-      brush: { preset: "ink", opacity: 0.85 },
-      stroke: "#e9caa0",
-      weight: 2.6,
-      gesture: { pressure: "taper", wobble: 1 },
-    },
-  );
+      {
+        brush: { preset: "ink", opacity: 0.85 },
+        stroke: "#e9caa0",
+        weight: 2.6,
+        gesture: { pressure: "taper", wobble: 1 },
+      },
+    ),
+  ];
 }
 
 /** How far the carp's eye is closed, 0..1: a slow blink once a loop, and one when greeted. */
@@ -1092,31 +1131,32 @@ function carpFace(
   look: Vec2,
   greeted: number | null,
   near: number,
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const since = greeted === null ? 999 : f - greeted;
   const greet = since < 60 ? Math.sin((since / 60) * Math.PI) : 0;
   // mouth: a round "o" that breathes, and opens wide when greeted
   const o = 1 + 0.12 * wave(f, 2) + 0.45 * greet + 0.3 * near;
-  v.ellipse(538, 504, (18 * (0.9 + 0.1 * o)) / 2, (22 * o) / 2, { fill: "#e8c48a" });
-  v.ellipse(537, 503, (11 * (0.85 + 0.15 * o)) / 2, (15 * o) / 2, { fill: "#3a2216" });
-  v.ellipse(538, 505, 2.5, (8 * (0.7 + 0.3 * o)) / 2, { fill: "#b0603e" });
+  out.push(v.ellipse(538, 504, (18 * (0.9 + 0.1 * o)) / 2, (22 * o) / 2, { fill: "#e8c48a" }));
+  out.push(v.ellipse(537, 503, (11 * (0.85 + 0.15 * o)) / 2, (15 * o) / 2, { fill: "#3a2216" }));
+  out.push(v.ellipse(538, 505, 2.5, (8 * (0.7 + 0.3 * o)) / 2, { fill: "#b0603e" }));
   // eye: follows the lantern, or the reader
   const dx = look[0] - EYE[0];
   const dy = look[1] - EYE[1];
   const dl = Math.max(1, Math.hypot(dx, dy));
   const px = EYE[0] + (dx / dl) * 3.2;
   const py = EYE[1] + (dy / dl) * 3.2;
-  v.circle(EYE[0], EYE[1], 10, { fill: "#f2e2b4" });
-  v.circle(px, py, 6.5, { fill: "#20160e" });
-  v.circle(px - 3, py - 3, 2, { fill: "#fff6dc" });
+  out.push(v.circle(EYE[0], EYE[1], 10, { fill: "#f2e2b4" }));
+  out.push(v.circle(px, py, 6.5, { fill: "#20160e" }));
+  out.push(v.circle(px - 3, py - 3, 2, { fill: "#fff6dc" }));
   // with the light close, the old fish half-closes its eye, content
   const shut = Math.max(blinkAt(f, greeted), 0.55 * near);
   if (shut > 0) {
     // the lid comes down from above, darker than the lit cheek, its lashline dark
-    v.clip(ellipseArc(EYE[0], EYE[1], 11, 11, 0, TAU, 20), () => {
-      v.ellipse(EYE[0], EYE[1] - 26 + 22 * shut, 13, 15, { fill: "#b48a4a" });
-    });
-    ribbon(
+    out.push(v.clip(ellipseArc(EYE[0], EYE[1], 11, 11, 0, TAU, 20), [
+      v.ellipse(EYE[0], EYE[1] - 26 + 22 * shut, 13, 15, { fill: "#b48a4a" }),
+    ]));
+    out.push(ribbon(
       v,
       ellipseArc(
         EYE[0],
@@ -1129,20 +1169,22 @@ function carpFace(
       ),
       2.6,
       "#2c1e10",
-    );
+    ));
   }
-  ribbon(v, quad([568, 486], [580, 478], [592, 487]), 2, "#5e4826");
+  out.push(ribbon(v, quad([568, 486], [580, 478], [592, 487]), 2, "#5e4826"));
+  return out;
 }
 
 /** When greeted, the carp breathes out and the water rings quickly from its chin. */
-function greetRings(v: View, f: number, greeted: number | null): void {
-  if (greeted === null) return;
+function greetRings(v: View, f: number, greeted: number | null): Drawing {
+  const out: Drawing[] = [];
+  if (greeted === null) return out;
   for (let k = 0; k < 3; k += 1) {
     const age = f - greeted - k * 8;
     if (age < 0 || age > 70) continue;
     const t = age / 70;
     const rx = 12 + t * 110;
-    ribbon(
+    out.push(ribbon(
       v,
       ellipseArc(
         CHIN[0] + 10,
@@ -1155,28 +1197,31 @@ function greetRings(v: View, f: number, greeted: number | null): void {
       ),
       3 - t * 1.6,
       rgba("#ffe2b0", 0.85 * (1 - t)),
-    );
+    ));
   }
+  return out;
 }
 
 /** A drop gathers on the chin, falls, and rings the water: twice a loop. */
-function chinDrops(v: View, f: number): void {
+function chinDrops(v: View, f: number): Drawing {
+  const out: Drawing[] = [];
   const t = f % (LOOP / 2);
   const drop: Style = { fill: "#ffe2b0" };
   if (t < 30) {
-    v.circle(CHIN[0], CHIN[1], (1.5 + t / 15) / 2, drop);
+    out.push(v.circle(CHIN[0], CHIN[1], (1.5 + t / 15) / 2, drop));
   } else if (t < 42) {
     const k = (t - 30) / 12;
-    v.circle(CHIN[0] - 2 * k, CHIN[1] + 22 * k * k, 1.75, drop);
+    out.push(v.circle(CHIN[0] - 2 * k, CHIN[1] + 22 * k * k, 1.75, drop));
   } else if (t < 80) {
     const k = (t - 42) / 38;
-    ribbon(
+    out.push(ribbon(
       v,
       ellipseArc(CHIN[0] - 2, WATERLINE + 3, 3 + 16 * k, 1 + 3 * k, 0, Math.PI),
       2,
       rgba("#f0d2a6", 0.8 * (1 - k)),
-    );
+    ));
   }
+  return out;
 }
 
 // ── the boat (cached) ──────────────────────────────────────────────
@@ -1202,57 +1247,60 @@ const INSIDE: Vec2[] = [
 ];
 const LANTERN_REST: Vec2 = [498, 490];
 
-function boatBack(v: View): void {
-  v.group({ opacity: 0.4 }, () => {
+function boatBack(v: View): Drawing {
+  return [
+    v.group({ opacity: 0.4 }, [
+      v.curve(
+        [
+          [190, 540],
+          [330, 552],
+          [440, 538],
+          [430, 572],
+          [320, 594],
+          [220, 582],
+        ],
+        true,
+        { fill: "#120e0c" },
+      ),
+    ]),
+    v.curve(INSIDE, true, { fill: "#3b2618" }),
+    v.clip(v.curvePath(INSIDE, true), [
+      v.curve(
+        [
+          [180, 488],
+          [300, 478],
+          [470, 466],
+        ],
+        false,
+        {
+          brush: { preset: "bristle", opacity: 0.6 },
+          stroke: "#5c3a22",
+          weight: 14,
+          gesture: { pressure: "even" },
+        },
+      ),
+      glow(v, LANTERN_REST[0], LANTERN_REST[1], 90, "255,170,80", 0.45),
+    ]),
     v.curve(
       [
-        [190, 540],
-        [330, 552],
-        [440, 538],
-        [430, 572],
-        [320, 594],
-        [220, 582],
-      ],
-      true,
-      { fill: "#120e0c" },
-    );
-  });
-  v.curve(INSIDE, true, { fill: "#3b2618" });
-  v.clip(v.curvePath(INSIDE, true), () => {
-    v.curve(
-      [
-        [180, 488],
-        [300, 478],
-        [470, 466],
+        [176, 494],
+        [260, 476],
+        [380, 470],
+        [474, 464],
       ],
       false,
       {
-        brush: { preset: "bristle", opacity: 0.6 },
-        stroke: "#5c3a22",
-        weight: 14,
-        gesture: { pressure: "even" },
+        brush: "ink",
+        stroke: "#22140c",
+        weight: 2.2,
+        gesture: { pressure: "taper", wobble: 0.6 },
       },
-    );
-    glow(v, LANTERN_REST[0], LANTERN_REST[1], 90, "255,170,80", 0.45);
-  });
-  v.curve(
-    [
-      [176, 494],
-      [260, 476],
-      [380, 470],
-      [474, 464],
-    ],
-    false,
-    {
-      brush: "ink",
-      stroke: "#22140c",
-      weight: 2.2,
-      gesture: { pressure: "taper", wobble: 0.6 },
-    },
-  );
+    ),
+  ];
 }
 
-function oar(v: View): void {
+function oar(v: View): Drawing {
+  const out: Drawing[] = [];
   const shaft = v.tube(
     [
       [262, 468],
@@ -1261,7 +1309,7 @@ function oar(v: View): void {
     ],
     { width: 7 },
   );
-  v.path(shaft, { fill: "#9a6a40" });
+  out.push(v.path(shaft, { fill: "#9a6a40" }));
   const blade: Vec2[] = [
     [148, 540],
     [120, 552],
@@ -1269,8 +1317,8 @@ function oar(v: View): void {
     [104, 582],
     [134, 566],
   ];
-  v.curve(blade, true, { fill: "#8a5c36" });
-  v.curve(
+  out.push(v.curve(blade, true, { fill: "#8a5c36" }));
+  out.push(v.curve(
     [
       [160, 556],
       [120, 562],
@@ -1280,31 +1328,34 @@ function oar(v: View): void {
     ],
     true,
     { fill: "rgba(40,58,80,0.65)" },
-  );
+  ));
   const edge: Style = {
     brush: "ink",
     stroke: "#22140c",
     weight: 1.8,
     gesture: { pressure: "taper", wobble: 0.4 },
   };
-  v.path(shaft, edge);
-  v.curve(blade, true, edge);
-  v.curve(ellipseArc(124, 566, 42, 8, Math.PI * 0.1, Math.PI * 0.9), false, {
+  out.push(v.path(shaft, edge));
+  out.push(v.curve(blade, true, edge));
+  out.push(v.curve(ellipseArc(124, 566, 42, 8, Math.PI * 0.1, Math.PI * 0.9), false, {
     ...edge,
     brush: { preset: "ink", opacity: 0.6 },
     stroke: "#a8b4c8",
     weight: 1.5,
-  });
+  }));
+  return out;
 }
 
-function boatFront(v: View): void {
-  v.curve(HULL, true, { fill: "#7a4a2c" });
-  v.clip(v.curvePath(HULL, true), () => {
+function boatFront(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.curve(HULL, true, { fill: "#7a4a2c" }));
+  out.push(v.clip(v.curvePath(HULL, true), ((): Drawing => {
+    const drawn: Drawing[] = [];
     const plank: Style = {
       brush: { preset: "bristle", opacity: 0.85 },
       gesture: { pressure: "even", wobble: 1 },
     };
-    v.curve(
+    drawn.push(v.curve(
       [
         [160, 506],
         [320, 510],
@@ -1312,8 +1363,8 @@ function boatFront(v: View): void {
       ],
       false,
       { ...plank, weight: 16, stroke: "#a8693c" },
-    );
-    v.curve(
+    ));
+    drawn.push(v.curve(
       [
         [170, 536],
         [320, 544],
@@ -1321,14 +1372,14 @@ function boatFront(v: View): void {
       ],
       false,
       { ...plank, weight: 20, stroke: "#4a2a16" },
-    );
+    ));
     const seam: Style = {
       brush: "ink",
       stroke: "#3a2214",
       weight: 1.5,
       gesture: { pressure: "taper" },
     };
-    v.curve(
+    drawn.push(v.curve(
       [
         [180, 512],
         [320, 518],
@@ -1336,8 +1387,8 @@ function boatFront(v: View): void {
       ],
       false,
       seam,
-    );
-    v.curve(
+    ));
+    drawn.push(v.curve(
       [
         [190, 528],
         [320, 533],
@@ -1345,14 +1396,15 @@ function boatFront(v: View): void {
       ],
       false,
       seam,
-    );
-  });
+    ));
+    return drawn;
+  })()));
   const rim: Style = {
     brush: "ink",
     stroke: "#22140c",
     gesture: { pressure: "swell", wobble: 0.8 },
   };
-  v.curve(
+  out.push(v.curve(
     [
       [170, 496],
       [300, 500],
@@ -1361,8 +1413,8 @@ function boatFront(v: View): void {
     ],
     false,
     { ...rim, weight: 3.5 },
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [486, 466],
       [470, 506],
@@ -1374,7 +1426,8 @@ function boatFront(v: View): void {
     ],
     false,
     { ...rim, weight: 2.4 },
-  );
+  ));
+  return out;
 }
 
 // ── the girl (cached) and her arm (moving) ──────────────────────────
@@ -1410,8 +1463,9 @@ const HAT: Vec2[] = [
   [446, 388],
 ];
 
-function girl(v: View): void {
-  v.curve(
+function girl(v: View): Drawing {
+  const drawn: Drawing[] = [];
+  drawn.push(v.curve(
     [
       [404, 400],
       [396, 420],
@@ -1424,18 +1478,19 @@ function girl(v: View): void {
       weight: 9,
       gesture: { pressure: "taper-out", wobble: 0.5 },
     },
-  );
-  v.curve(COAT, true, { fill: "#2f5a5e" });
-  v.clip(v.curvePath(COAT, true), () => {
-    v.curve(shift(v.offset(COAT, 4), -18, 6), true, { fill: "#1a343c" });
-    glow(v, 470, 470, 60, "240,170,90", 0.7);
+  ));
+  drawn.push(v.curve(COAT, true, { fill: "#2f5a5e" }));
+  drawn.push(v.clip(v.curvePath(COAT, true), ((): Drawing => {
+    const parts: Drawing[] = [];
+    parts.push(v.curve(shift(v.offset(COAT, 4), -18, 6), true, { fill: "#1a343c" }));
+    parts.push(glow(v, 470, 470, 60, "240,170,90", 0.7));
     const fold: Style = {
       brush: { preset: "bristle", opacity: 0.55, load: 0.9 },
       gesture: { pressure: "even", wobble: 1 },
       stroke: "#122a30",
       weight: 18,
     };
-    v.curve(
+    parts.push(v.curve(
       [
         [360, 500],
         [364, 462],
@@ -1443,8 +1498,8 @@ function girl(v: View): void {
       ],
       false,
       fold,
-    );
-    v.curve(
+    ));
+    parts.push(v.curve(
       [
         [376, 506],
         [380, 470],
@@ -1452,8 +1507,8 @@ function girl(v: View): void {
       ],
       false,
       fold,
-    );
-    v.curve(
+    ));
+    parts.push(v.curve(
       [
         [404, 432],
         [424, 450],
@@ -1461,8 +1516,8 @@ function girl(v: View): void {
       ],
       false,
       { ...fold, stroke: "#4a8282", weight: 16 },
-    );
-    v.curve(
+    ));
+    parts.push(v.curve(
       [
         [426, 440],
         [438, 466],
@@ -1470,10 +1525,11 @@ function girl(v: View): void {
       ],
       false,
       { ...fold, stroke: "#c99a5c", weight: 10 },
-    );
-  });
+    ));
+    return parts;
+  })()));
   const scarf: Style = { fill: "#d9a334" };
-  v.curve(
+  drawn.push(v.curve(
     [
       [402, 416],
       [420, 418],
@@ -1484,8 +1540,8 @@ function girl(v: View): void {
     ],
     true,
     scarf,
-  );
-  v.curve(
+  ));
+  drawn.push(v.curve(
     [
       [404, 426],
       [388, 436],
@@ -1496,10 +1552,10 @@ function girl(v: View): void {
     ],
     true,
     scarf,
-  );
-  v.curve(FACE, true, { fill: "#e8b896" });
-  v.clip(v.curvePath(FACE, true), () => {
-    v.curve(shift(FACE, -22, -4), true, { fill: "#4a2c1a" });
+  ));
+  drawn.push(v.curve(FACE, true, { fill: "#e8b896" }));
+  drawn.push(v.clip(v.curvePath(FACE, true), [
+    v.curve(shift(FACE, -22, -4), true, { fill: "#4a2c1a" }),
     v.curve(
       [
         [420, 392],
@@ -1509,18 +1565,18 @@ function girl(v: View): void {
       ],
       true,
       { fill: "#c9967a" },
-    );
-    glow(v, 470, 440, 56, "255,196,120", 0.8);
-    v.circle(428, 408, 5, { fill: "rgba(214,110,90,0.45)" });
-  });
-  v.circle(433, 395, 1.8, { fill: "#1c140c" });
+    ),
+    glow(v, 470, 440, 56, "255,196,120", 0.8),
+    v.circle(428, 408, 5, { fill: "rgba(214,110,90,0.45)" }),
+  ]));
+  drawn.push(v.circle(433, 395, 1.8, { fill: "#1c140c" }));
   const brow: Style = {
     brush: "ink",
     stroke: "#3a2214",
     weight: 1.6,
     gesture: { pressure: "taper" },
   };
-  v.curve(
+  drawn.push(v.curve(
     [
       [428, 386],
       [433, 383],
@@ -1528,19 +1584,19 @@ function girl(v: View): void {
     ],
     false,
     brow,
-  );
-  v.curve(FACE.slice(2, 8), false, brow);
-  v.ellipse(441, 411, 2, 2.5, { fill: "#5a2418" });
-  v.curve(HAT, true, { fill: "#c4402e" });
-  v.clip(v.curvePath(HAT, true), () => {
-    v.curve(shift(HAT, -10, -4), true, { fill: "#8e2a20" });
+  ));
+  drawn.push(v.curve(FACE.slice(2, 8), false, brow));
+  drawn.push(v.ellipse(441, 411, 2, 2.5, { fill: "#5a2418" }));
+  drawn.push(v.curve(HAT, true, { fill: "#c4402e" }));
+  drawn.push(v.clip(v.curvePath(HAT, true), [
+    v.curve(shift(HAT, -10, -4), true, { fill: "#8e2a20" }),
     v.line(410, 366, 440, 380, {
       brush: { preset: "chalk", opacity: 0.6 },
       stroke: "#e56a4a",
       weight: 10,
       gesture: { pressure: "even" },
-    });
-  });
+    }),
+  ]));
   const band: Vec2[] = [
     [396, 384],
     [420, 378],
@@ -1549,42 +1605,47 @@ function girl(v: View): void {
     [420, 388],
     [398, 394],
   ];
-  v.curve(band, true, { fill: "#a8322a" });
-  v.clip(v.curvePath(band, true), () => {
+  drawn.push(v.curve(band, true, { fill: "#a8322a" }));
+  drawn.push(v.clip(v.curvePath(band, true), ((): Drawing => {
+    const parts: Drawing[] = [];
     const stitch: Style = {
       brush: { preset: "pencil", opacity: 0.7 },
       stroke: "#6e1e18",
       weight: 1.6,
       gesture: { pressure: "even" },
     };
-    for (let x = 400; x < 446; x += 5) v.line(x, 376, x + 1, 396, stitch);
-  });
-  v.circle(400, 362, 6.5, { fill: "#efe0c8" });
+    for (let x = 400; x < 446; x += 5) parts.push(v.line(x, 376, x + 1, 396, stitch));
+    return parts;
+  })()));
+  drawn.push(v.circle(400, 362, 6.5, { fill: "#efe0c8" }));
   const line: Style = {
     brush: "ink",
     stroke: "#14100c",
     weight: 2.2,
     gesture: { pressure: "swell", wobble: 0.5 },
   };
-  v.curve(HAT, true, line);
-  v.curve(COAT.slice(0, 6), false, line);
+  drawn.push(v.curve(HAT, true, line));
+  drawn.push(v.curve(COAT.slice(0, 6), false, line));
+  return drawn;
 }
 
 /** Nell blinks too, once a loop, out of step with the carp. */
-function nellBlink(v: View, f: number): void {
+function nellBlink(v: View, f: number): Drawing {
+  const out: Drawing[] = [];
   const t = (f % LOOP) - 70;
-  if (t < 0 || t > 8) return;
+  if (t < 0 || t > 8) return out;
   const shut = Math.sin((t / 8) * Math.PI);
-  v.ellipse(433, 395 - 2 + 2 * shut, 2.75, (2 + 4 * shut) / 2, { fill: "#e9b48e" });
-  ribbon(
+  out.push(v.ellipse(433, 395 - 2 + 2 * shut, 2.75, (2 + 4 * shut) / 2, { fill: "#e9b48e" }));
+  out.push(ribbon(
     v,
     seg(430.5, 394 + 1.5 * shut, 436, 394.5 + 1.5 * shut, 4),
     1.4,
     "#3a2214",
-  );
+  ));
+  return out;
 }
 
-function arm(v: View, mitten: Pt): void {
+function arm(v: View, mitten: Pt): Drawing {
   const { x: mx, y: my } = mitten;
   const elbow: Vec2 = [(SHOULDER[0] + mx) / 2 + 2, (SHOULDER[1] + my) / 2 + 5];
   const line: Vec2[] = [SHOULDER, elbow, [mx - 4, my]];
@@ -1595,34 +1656,37 @@ function arm(v: View, mitten: Pt): void {
       [1, 0.75],
     ],
   });
-  v.path(tube, { fill: "#2f5a5e" });
-  v.clip(tube, () => {
-    v.path(v.tube(shift(line, -2, 9), { width: 12 }), { fill: "#1a343c" });
-    glow(v, mx + 2, my + 18, 40, "250,180,100", 0.8);
-  });
-  v.path(tube, {
-    brush: "ink",
-    stroke: "#14100c",
-    weight: 2,
-    gesture: { pressure: "taper", wobble: 0.4, seed: 21 },
-  });
-  v.circle(mx, my, 7, { fill: "#c4402e" });
+  return [
+    v.path(tube, { fill: "#2f5a5e" }),
+    v.clip(tube, [
+      v.path(v.tube(shift(line, -2, 9), { width: 12 }), { fill: "#1a343c" }),
+      glow(v, mx + 2, my + 18, 40, "250,180,100", 0.8),
+    ]),
+    v.path(tube, {
+      brush: "ink",
+      stroke: "#14100c",
+      weight: 2,
+      gesture: { pressure: "taper", wobble: 0.4, seed: 21 },
+    }),
+    v.circle(mx, my, 7, { fill: "#c4402e" }),
+  ];
 }
 
 // ── the lantern (moving) ────────────────────────────────────────────
 
-function lantern(v: View, mitten: Pt, lamp: Vec2, f: number, d: number): void {
+function lantern(v: View, mitten: Pt, lamp: Vec2, f: number, d: number): Drawing {
+  const out: Drawing[] = [];
   const [x, y] = lamp;
   const fl = flicker(f);
   const strength = 0.75 + 0.5 * d;
-  glow(v, x, y, 150 * (0.96 + 0.04 * fl), "255,190,100", 0.35 * fl * strength);
-  glow(v, x, y, 50 * fl, "255,220,150", Math.min(1, 0.7 * fl * strength));
+  out.push(glow(v, x, y, 150 * (0.96 + 0.04 * fl), "255,190,100", 0.35 * fl * strength));
+  out.push(glow(v, x, y, 50 * fl, "255,220,150", Math.min(1, 0.7 * fl * strength)));
   // bail from the mitten
   const bail: Style = { stroke: "#14100c", weight: 1.6 };
   // the lantern hangs along the line from the mitten through its centre
   const a = Math.atan2(x - mitten.x, y - mitten.y);
   const top: Vec2 = [x - Math.sin(a) * 16, y - Math.cos(a) * 16];
-  v.curve(
+  out.push(v.curve(
     [
       [mitten.x - 6, mitten.y + 4],
       [(mitten.x + top[0]) / 2 - 3, (mitten.y + top[1]) / 2 + 2],
@@ -1630,27 +1694,31 @@ function lantern(v: View, mitten: Pt, lamp: Vec2, f: number, d: number): void {
     ],
     false,
     bail,
-  );
-  v.line(mitten.x + 6, mitten.y + 4, top[0] + 6, top[1], bail);
-  v.at({ translate: [x, y], rotate: Math.atan2(HANG[0], HANG[1]) - a }, () => {
-    v.rect(-8, -12, 16, 22, { fill: "#fff2c4" });
-    v.circle(0, 0, 9, {
+  ));
+  out.push(v.line(mitten.x + 6, mitten.y + 4, top[0] + 6, top[1], bail));
+  out.push(v.at({ translate: [x, y], rotate: Math.atan2(HANG[0], HANG[1]) - a }, ((): Drawing => {
+    const drawn: Drawing[] = [];
+    drawn.push(v.rect(-8, -12, 16, 22, { fill: "#fff2c4" }));
+    drawn.push(v.circle(0, 0, 9, {
       fill: v.radialGradient(0, 0, 9 * fl, [
         [0, "#ffffff"],
         [1, "rgba(255,240,190,0)"],
       ]),
-    });
-    v.ellipse(0, 1 - 2 * fl, 2, (7 + 3 * fl) / 2, { fill: "#ffd27a" });
+    }));
+    drawn.push(v.ellipse(0, 1 - 2 * fl, 2, (7 + 3 * fl) / 2, { fill: "#ffd27a" }));
     const frame: Style = { fill: "#2a1c12" };
-    v.triangle(-11, -12, 11, -12, 0, -20, frame);
-    v.rect(-10, 9, 20, 4, frame);
-    v.rect(-9, -12, 2, 22, frame);
-    v.rect(7, -12, 2, 22, frame);
-  });
+    drawn.push(v.triangle(-11, -12, 11, -12, 0, -20, frame));
+    drawn.push(v.rect(-10, 9, 20, 4, frame));
+    drawn.push(v.rect(-9, -12, 2, 22, frame));
+    drawn.push(v.rect(7, -12, 2, 22, frame));
+    return drawn;
+  })()));
+  return out;
 }
 
 /** Two moths circling the light; the far half of each orbit passes behind the lantern. */
-function moths(v: View, lamp: Vec2, f: number, side: "behind" | "front"): void {
+function moths(v: View, lamp: Vec2, f: number, side: "behind" | "front"): Drawing {
+  const out: Drawing[] = [];
   for (let k = 0; k < 2; k += 1) {
     const a = (TAU * f * (k === 0 ? 2 : 3)) / LOOP + k * 2.4;
     if (Math.sin(a + 0.6) < 0 !== (side === "behind")) continue;
@@ -1663,19 +1731,20 @@ function moths(v: View, lamp: Vec2, f: number, side: "behind" | "front"): void {
       x + sx * dx * beat - dy * tilt,
       y + dy + sx * dx * tilt,
     ];
-    glow(v, x, y, 12, "255,226,160", 0.3);
+    out.push(glow(v, x, y, 12, "255,226,160", 0.3));
     for (const sx of [-1, 1]) {
-      v.curve([at(sx, 0, 1), at(sx, 7, 2), at(sx, 7, 6), at(sx, 2, 5)], true, {
+      out.push(v.curve([at(sx, 0, 1), at(sx, 7, 2), at(sx, 7, 6), at(sx, 2, 5)], true, {
         fill: "#d9c29a",
-      });
-      v.curve(
+      }));
+      out.push(v.curve(
         [at(sx, 0, -1), at(sx, 5, -7), at(sx, 11, -6), at(sx, 10, -1)],
         true,
         { fill: "#f8ead0" },
-      );
+      ));
     }
-    v.ellipse(x, y, 1.3, 3.5, { fill: "#4a3826" });
+    out.push(v.ellipse(x, y, 1.3, 3.5, { fill: "#4a3826" }));
   }
+  return out;
 }
 
 // ── foreground (lilies cached, reeds moving) ─────────────────────────
@@ -1686,7 +1755,7 @@ function lilyPad(
   y: number,
   w: number,
   notch: number,
-): void {
+): Drawing {
   const h = w * 0.32;
   const pts: Vec2[] = [];
   for (let i = 0; i <= 14; i += 1) {
@@ -1694,58 +1763,64 @@ function lilyPad(
     pts.push([x + Math.cos(a) * w * 0.5, y + Math.sin(a) * h * 0.5]);
   }
   pts.push([x, y]);
-  v.polygon(pts, { fill: "#152a28" });
-  v.clip(pts, () => {
-    const gesture = { pressure: "even", wobble: 1 } as const;
-    v.line(x - w * 0.5, y - h * 0.2, x + w * 0.5, y - h * 0.25, {
-      brush: { preset: "bristle", opacity: 0.7, load: 0.8 },
-      gesture,
-      stroke: "#22403a",
-      weight: h * 0.5,
-    });
-    v.curve(
-      ellipseArc(x, y, w * 0.5, h * 0.5, Math.PI * 1.1, Math.PI * 1.9),
-      false,
-      {
-        brush: { preset: "wash", opacity: 0.55 },
-        gesture,
-        stroke: "#6c6c92",
-        weight: 6,
-      },
-    );
-  });
-  v.curve(ellipseArc(x, y, w * 0.5, h * 0.5, 0, Math.PI), false, {
-    brush: "ink",
-    stroke: "#08120e",
-    weight: 1.8,
-    gesture: { pressure: "swell", wobble: 0.6 },
-  });
+  return [
+    v.polygon(pts, { fill: "#152a28" }),
+    v.clip(pts, ((): Drawing => {
+      const gesture = { pressure: "even", wobble: 1 } as const;
+      return [
+        v.line(x - w * 0.5, y - h * 0.2, x + w * 0.5, y - h * 0.25, {
+          brush: { preset: "bristle", opacity: 0.7, load: 0.8 },
+          gesture,
+          stroke: "#22403a",
+          weight: h * 0.5,
+        }),
+        v.curve(
+          ellipseArc(x, y, w * 0.5, h * 0.5, Math.PI * 1.1, Math.PI * 1.9),
+          false,
+          {
+            brush: { preset: "wash", opacity: 0.55 },
+            gesture,
+            stroke: "#6c6c92",
+            weight: 6,
+          },
+        ),
+      ];
+    })()),
+    v.curve(ellipseArc(x, y, w * 0.5, h * 0.5, 0, Math.PI), false, {
+      brush: "ink",
+      stroke: "#08120e",
+      weight: 1.8,
+      gesture: { pressure: "swell", wobble: 0.6 },
+    }),
+  ];
 }
 
-function lilyPads(v: View): void {
-  lilyPad(v, 250, 742, 150, 4.2);
-  lilyPad(v, 380, 778, 120, 4.9);
-  lilyPad(v, 170, 690, 80, 3.9);
-  v.curve(
-    [
-      [285, 730],
-      [289, 716],
-      [292, 711],
-      [296, 716],
-      [299, 730],
-    ],
-    true,
-    { fill: "#7a5a72" },
-  );
-  v.curve(
-    [
-      [289, 718],
-      [292, 711],
-      [295, 718],
-    ],
-    true,
-    { fill: "#c8a8b8" },
-  );
+function lilyPads(v: View): Drawing {
+  return [
+    lilyPad(v, 250, 742, 150, 4.2),
+    lilyPad(v, 380, 778, 120, 4.9),
+    lilyPad(v, 170, 690, 80, 3.9),
+    v.curve(
+      [
+        [285, 730],
+        [289, 716],
+        [292, 711],
+        [296, 716],
+        [299, 730],
+      ],
+      true,
+      { fill: "#7a5a72" },
+    ),
+    v.curve(
+      [
+        [289, 718],
+        [292, 711],
+        [295, 718],
+      ],
+      true,
+      { fill: "#c8a8b8" },
+    ),
+  ];
 }
 
 /** A reed bent through `mid`, with a fixed hand wobble, as a tapering ribbon. */
@@ -1756,7 +1831,7 @@ function reed(
   tip: Vec2,
   width: number,
   seed: number,
-): void {
+): Drawing {
   const c: Vec2 = [
     2 * mid[0] - (base[0] + tip[0]) / 2,
     2 * mid[1] - (base[1] + tip[1]) / 2,
@@ -1764,55 +1839,57 @@ function reed(
   const pts = quad(base, c, tip, 14).map(
     ([x, y], i): Vec2 => [x + Math.sin(i * 0.9 + seed) * 0.7, y],
   );
-  ribbon(v, pts, width * 1.15, "#09121a", "out");
+  return ribbon(v, pts, width * 1.15, "#09121a", "out");
 }
 
-function reeds(v: View, f: number, wind: number): void {
+function reeds(v: View, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   const lean = (x: number, top: number): number =>
     (2 + 9 * wind) * wave(f, 2, x * 0.02) * ((820 - top) / 200);
   for (let i = 0; i < 14; i += 1) {
     const x = 10 + i * 12 + (i % 3) * 5;
     const top = 600 + ((i * 47) % 120);
     const s = lean(x, top);
-    reed(
+    out.push(reed(
       v,
       [x, 820],
       [x + 4 + s * 0.3, (820 + top) / 2],
       [x + 14 + (i % 4) * 6 + s, top],
       3 + (i % 3),
       i,
-    );
+    ));
   }
   for (let i = 0; i < 9; i += 1) {
     const x = 722 + i * 10;
     const top = 570 + ((i * 53) % 140);
     const s = lean(x, top);
-    reed(
+    out.push(reed(
       v,
       [x, 820],
       [x - 2 + s * 0.3, (820 + top) / 2],
       [x - 12 - (i % 3) * 5 + s, top],
       3 + (i % 3),
       20 + i,
-    );
+    ));
   }
   const c1 = lean(56, 620);
   const c2 = lean(712, 580);
-  reed(v, [56, 820], [57 + c1 * 0.3, 720], [58 + c1, 620], 2.6, 40);
-  reed(v, [712, 820], [709 + c2 * 0.3, 700], [706 + c2, 580], 2.6, 41);
-  v.ellipse(58 + c1, 640, 5, 18, { fill: "#2a1a10" });
-  v.ellipse(706 + c2, 600, 5, 17, { fill: "#2a1a10" });
+  out.push(reed(v, [56, 820], [57 + c1 * 0.3, 720], [58 + c1, 620], 2.6, 40));
+  out.push(reed(v, [712, 820], [709 + c2 * 0.3, 700], [706 + c2, 580], 2.6, 41));
+  out.push(v.ellipse(58 + c1, 640, 5, 18, { fill: "#2a1a10" }));
+  out.push(v.ellipse(706 + c2, 600, 5, 17, { fill: "#2a1a10" }));
+  return out;
 }
 
 /** The dark gathering everywhere the lantern does not reach. */
-function dark(v: View, lamp: Vec2, d: number): void {
+function dark(v: View, lamp: Vec2, d: number): Drawing {
   const late = Math.max(0, (d - 0.35) / 0.65);
   const early = Math.max(0, (0.35 - d) / 0.35);
   // at dusk 0.35 this is the still page's vignette; later, the lantern's pool shrinks
   const edge = mix(mix("#786e96", "#221e40", late), "#ffffff", early * 0.6);
   const hole = 0.55 - 0.4 * late;
   const radius = 640 - 260 * late;
-  v.rect(0, 0, W, H, {
+  return v.rect(0, 0, W, H, {
     blend: "multiply",
     fill: v.radialGradient(lamp[0] - 28, lamp[1] - 20, radius, [
       [0, "#ffffff"],
@@ -1824,7 +1901,8 @@ function dark(v: View, lamp: Vec2, d: number): void {
 }
 
 /** Fireflies over the reeds: they drift and glow on and off, more of them as it darkens. */
-function fireflies(v: View, f: number, d: number): void {
+function fireflies(v: View, f: number, d: number): Drawing {
+  const out: Drawing[] = [];
   const flies: readonly (readonly [number, number, number])[] = [
     [90, 600, 0],
     [150, 650, 1.9],
@@ -1838,16 +1916,18 @@ function fireflies(v: View, f: number, d: number): void {
     const y = y0 + 10 * wave(f, 2, ph + 1);
     const on = Math.max(0, wave(f, 2 + (i % 2), ph * 1.3)) ** 2;
     if (on < 0.02) continue;
-    glow(v, x, y, 14, "214,255,140", 0.55 * on * (0.5 + d));
-    v.circle(x, y, 1.2, { fill: `rgba(240,255,200,${(0.9 * on).toFixed(3)})` });
+    out.push(glow(v, x, y, 14, "214,255,140", 0.55 * on * (0.5 + d)));
+    out.push(v.circle(x, y, 1.2, { fill: `rgba(240,255,200,${(0.9 * on).toFixed(3)})` }));
   }
+  return out;
 }
 
 /** A band of mist drifting slowly along the far water. */
-function mist(v: View, f: number, d: number): void {
+function mist(v: View, f: number, d: number): Drawing {
+  const out: Drawing[] = [];
   for (let k = 0; k < 2; k += 1) {
     const x = 200 + k * 420 + 60 * wave(f, 1, k * 2.5);
-    glowEllipse(
+    out.push(glowEllipse(
       v,
       x,
       304,
@@ -1855,6 +1935,7 @@ function mist(v: View, f: number, d: number): void {
       22,
       "200,168,180",
       (0.22 - d * 0.12) * (0.8 + 0.2 * wave(f, 2, k)),
-    );
+    ));
   }
+  return out;
 }

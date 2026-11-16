@@ -1,5 +1,5 @@
 // The boardwalk out from the village, its posts, and the lamps along it.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 const X0 = 180;
 const X1 = 740;
@@ -48,7 +48,8 @@ const WOOD = {
   plank: "#5a4150",
 } as const;
 
-export function drawWalkway(v: View): void {
+export function drawWalkway(v: View): Drawing {
+  const out: Drawing[] = [];
   // Posts down into the water, with short dark reflections.
   const post: Style = {
     brush: "ink",
@@ -57,16 +58,16 @@ export function drawWalkway(v: View): void {
   for (let x = X0 + 30; x <= X1; x += 62) {
     const k = depth(x);
     const y0 = deckFront(x);
-    v.line(x, y0, x, y0 + 50 * k, {
+    out.push(v.line(x, y0, x, y0 + 50 * k, {
       ...post,
       stroke: WOOD.post,
       weight: 9 * k,
-    });
-    v.line(x, y0 + 50 * k, x + 1, y0 + 90 * k, {
+    }));
+    out.push(v.line(x, y0 + 50 * k, x + 1, y0 + 90 * k, {
       ...post,
       stroke: "rgba(30,24,50,0.45)",
       weight: 7 * k,
-    });
+    }));
   }
   // Deck surface.
   const deck: Vec2[] = [
@@ -75,14 +76,14 @@ export function drawWalkway(v: View): void {
     [X1, deckFront(X1)],
     [X0, deckFront(X0)],
   ];
-  v.polygon(deck, {
+  out.push(v.polygon(deck, {
     fill: v.linearGradient(X0, 0, X1, 0, [
       [0, WOOD.deck],
       [1, WOOD.deckLit],
     ]),
-  });
+  }));
   // Side beam under the front edge.
-  v.polygon(
+  out.push(v.polygon(
     [
       [X0, deckFront(X0)],
       [X1, deckFront(X1)],
@@ -90,9 +91,10 @@ export function drawWalkway(v: View): void {
       [X0, deckFront(X0) + 5],
     ],
     { fill: WOOD.beam },
-  );
+  ));
   // Plank seams, over brushed wood grain.
-  v.clip(deck, () => {
+  out.push(v.clip(deck, ((): Drawing => {
+    const drawn: Drawing[] = [];
     const grain: Style = {
       weight: 5,
       brush: {
@@ -106,7 +108,7 @@ export function drawWalkway(v: View): void {
     };
     for (let i = 0; i < 6; i += 1) {
       const f = (i + 0.5) / 6;
-      v.line(
+      drawn.push(v.line(
         X0,
         deckTop(X0) + f * (deckFront(X0) - deckTop(X0)),
         X1,
@@ -115,7 +117,7 @@ export function drawWalkway(v: View): void {
           ...grain,
           stroke: i % 2 === 0 ? "#6e5060" : "#d8a585",
         },
-      );
+      ));
     }
     const seam: Style = {
       stroke: WOOD.plank,
@@ -123,45 +125,48 @@ export function drawWalkway(v: View): void {
       gesture: { pressure: "even", wobble: 0.4 },
     };
     for (let x = X0 + 8; x < X1; x += 5 + 16 * depth(x)) {
-      v.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2, {
+      drawn.push(v.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2, {
         ...seam,
         weight: 1.5 + 1.5 * depth(x),
-      });
+      }));
     }
-  });
+    return drawn;
+  })()));
+  return out;
 }
 
-export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
+export function drawLantern(v: View, lamp: Lamp, main: boolean): Drawing {
+  const drawn: Drawing[] = [];
   const { x, hx, hy, k } = lamp;
   const base = deckTop(x);
   const top = base - lamp.height;
   // Reflection of the light in the water.
-  v.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k, {
+  drawn.push(v.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k, {
     stroke: "#ffcf7a",
     weight: 26 * k,
     brush: { preset: "wash", opacity: 0.5 },
     gesture: { pressure: "taper-out", wobble: 4 },
-  });
+  }));
   // Glow, and a pool of light on the deck below.
   const r = (main ? 230 : 150) * k;
-  v.circle(hx, hy + 26 * k, r, {
+  drawn.push(v.circle(hx, hy + 26 * k, r, {
     fill: v.radialGradient(hx, hy + 26 * k, r, [
       [0, "rgba(255,222,140,0.85)"],
       [0.18, "rgba(255,196,112,0.45)"],
       [0.55, "rgba(255,170,100,0.12)"],
       [1, "rgba(255,170,100,0)"],
     ]),
-  });
+  }));
   if (main) {
-    v.circle(hx, hy + 28 * k, (92 * k) / 2, {
+    drawn.push(v.circle(hx, hy + 28 * k, (92 * k) / 2, {
       fill: v.radialGradient(hx, hy + 28 * k, 46 * k, [
         [0, "rgba(255,246,210,0.95)"],
         [0.5, "rgba(255,226,150,0.5)"],
         [1, "rgba(255,210,130,0)"],
       ]),
-    });
+    }));
   }
-  v.ellipse(hx, (deckTop(x) + deckFront(x)) / 2, (220 * k) / 2, (50 * k) / 2, {
+  drawn.push(v.ellipse(hx, (deckTop(x) + deckFront(x)) / 2, (220 * k) / 2, (50 * k) / 2, {
     fill: v.ellipseGradient(
       hx,
       (deckTop(x) + deckFront(x)) / 2,
@@ -172,21 +177,21 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
         [1, "rgba(255,190,120,0)"],
       ],
     ),
-  });
+  }));
   // Post and arm.
   const pole: Style = {
     stroke: WOOD.post,
     brush: "ink",
     gesture: { pressure: "even", wobble: 0.5 },
   };
-  v.line(x, base + 2, x, top, { ...pole, weight: 8 * k });
-  v.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k, {
+  drawn.push(v.line(x, base + 2, x, top, { ...pole, weight: 8 * k }));
+  drawn.push(v.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k, {
     ...pole,
     weight: 4 * k,
-  });
-  v.line(hx, top + 2 * k, hx, hy + 6 * k, { ...pole, weight: 2 * k });
+  }));
+  drawn.push(v.line(hx, top + 2 * k, hx, hy + 6 * k, { ...pole, weight: 2 * k }));
   // Lantern: cap, glass, base.
-  v.polygon(
+  drawn.push(v.polygon(
     [
       [hx - 11 * k, hy + 14 * k],
       [hx + 11 * k, hy + 14 * k],
@@ -194,9 +199,9 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
       [hx - 9 * k, hy + 40 * k],
     ],
     { fill: "#ffe2a0" },
-  );
-  v.ellipse(hx, hy + 30 * k, (8 * k) / 2, (14 * k) / 2, { fill: "#fff6d6" });
-  v.triangle(
+  ));
+  drawn.push(v.ellipse(hx, hy + 30 * k, (8 * k) / 2, (14 * k) / 2, { fill: "#fff6d6" }));
+  drawn.push(v.triangle(
     hx - 15 * k,
     hy + 15 * k,
     hx + 15 * k,
@@ -204,10 +209,11 @@ export function drawLantern(v: View, lamp: Lamp, main: boolean): void {
     hx,
     hy + 4 * k,
     { fill: "#2a1e2e" },
-  );
-  v.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k, { fill: "#2a1e2e" });
-  v.line(hx, hy + 15 * k, hx, hy + 40 * k, {
+  ));
+  drawn.push(v.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k, { fill: "#2a1e2e" }));
+  drawn.push(v.line(hx, hy + 15 * k, hx, hy + 40 * k, {
     stroke: "#2a1e2e",
     weight: 1.6 * k,
-  });
+  }));
+  return drawn;
 }

@@ -13,7 +13,7 @@
 // All state lives in Model; the only way it changes is `update` returning a
 // new Model; the switch on `msg.type` is exhaustive. `draw` only paints. See
 // TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },
@@ -235,47 +235,51 @@ function drawParticle(params_: {
   palette: Palette;
   /** Frames back along the trail (0: where it is now). */
   back: number;
-}): void {
+}): Drawing {
+  const out: Drawing[] = [];
   const { v, particle, palette, back } = params_;
   const at = back === 0 ? ([particle.x, particle.y] as const) : particle.trail[back - 1];
-  if (at === undefined) return;
+  if (at === undefined) return out;
   const lifeFrac = 1 - (particle.age - back) / particle.maxAge;
   const size = 2 + particle.variant * 4;
-  v.circle(at[0], at[1], size / 2, {
+  out.push(v.circle(at[0], at[1], size / 2, {
     fill: paletteColor({
       palette,
       variant: particle.variant,
       alpha: Math.max(lifeFrac, 0) * TRAIL_FADE ** back,
     }),
-  });
+  }));
+  return out;
 }
 
 function drawEmitter(params_: {
   v: View;
   emitter: { x: number; y: number };
   fade: number;
-}): void {
+}): Drawing {
   const { v, emitter, fade } = params_;
-  v.circle(emitter.x, emitter.y, 5, { stroke: `rgba(248, 250, 252, ${fade.toFixed(3)})`, weight: 1.5 });
+  return v.circle(emitter.x, emitter.y, 5, { stroke: `rgba(248, 250, 252, ${fade.toFixed(3)})`, weight: 1.5 });
 }
 
 function drawAttractor(params_: {
   v: View;
   attractor: { x: number; y: number };
-}): void {
+}): Drawing {
   const { v, attractor } = params_;
   const { x, y } = attractor;
   const reticle: Style = { stroke: "#fde047", weight: 2 };
-  v.circle(x, y, 9, reticle);
-  v.line(x - 12, y, x + 12, y, reticle);
-  v.line(x, y - 12, x, y + 12, reticle);
+  return [
+    v.circle(x, y, 9, reticle),
+    v.line(x - 12, y, x + 12, y, reticle),
+    v.line(x, y - 12, x, y + 12, reticle),
+  ];
 }
 
 function drawHud(params_: {
   v: View;
   model: DeepReadonly<Model>;
   p: Params;
-}): void {
+}): Drawing {
   const { v, model, p } = params_;
   const label = {
     size: 14,
@@ -283,31 +287,35 @@ function drawHud(params_: {
     align: "left",
     valign: "top",
   } as const;
-  v.text(
-    `frame ${model.frame}   particles ${model.particles.length}`,
-    { x: 8, y: 8 },
-    label,
-  );
-  v.text(
-    `palette ${p.palette}   attractor ${model.attractor === null ? "off" : "on"}`,
-    { x: 8, y: 26 },
-    label,
-  );
+  return [
+    v.text(
+      `frame ${model.frame}   particles ${model.particles.length}`,
+      { x: 8, y: 8 },
+      label,
+    ),
+    v.text(
+      `palette ${p.palette}   attractor ${model.attractor === null ? "off" : "on"}`,
+      { x: 8, y: 26 },
+      label,
+    ),
+  ];
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background("#0b1020");
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#0b1020"));
   // Trails: the recent positions, oldest first, each fainter by TRAIL_FADE a frame.
   for (let back = p.trails ? TRAIL_LENGTH : 0; back >= 0; back--) {
     if (back > 0 && model.frame - back >= 0)
-      drawEmitter({ v, emitter: emitterAt(model.frame - back), fade: TRAIL_FADE ** back });
+      out.push(drawEmitter({ v, emitter: emitterAt(model.frame - back), fade: TRAIL_FADE ** back }));
     for (const particle of model.particles)
-      drawParticle({ v, particle, palette: p.palette, back });
+      out.push(drawParticle({ v, particle, palette: p.palette, back }));
   }
 
-  drawEmitter({ v, emitter: model.emitter, fade: 1 });
+  out.push(drawEmitter({ v, emitter: model.emitter, fade: 1 }));
   if (model.attractor !== null)
-    drawAttractor({ v, attractor: model.attractor });
+    out.push(drawAttractor({ v, attractor: model.attractor }));
 
-  drawHud({ v, model, p });
+  out.push(drawHud({ v, model, p }));
+  return out;
 }

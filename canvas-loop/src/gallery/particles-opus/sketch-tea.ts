@@ -14,7 +14,7 @@
 // discriminated-union `mode` field. All state lives in Model; the only way it
 // changes is `update` returning a new Model; the switch on `msg.type` is
 // exhaustive; `draw` only paints. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },
@@ -220,78 +220,90 @@ function drawParticles(a: {
   v: View;
   model: DeepReadonly<Model>;
   palette: Params["palette"];
-}): void {
+}): Drawing {
+  const out: Drawing[] = [];
   const { v, model, palette } = a;
   for (const p of model.particles) {
     const remaining = 1 - p.age / p.life;
     const alpha = Math.max(0, Math.min(1, remaining));
     const size = 2.5 + remaining * 3.5;
-    v.circle(p.x, p.y, size / 2, {
+    out.push(v.circle(p.x, p.y, size / 2, {
       fill: particleColor({ tint: p.tint, palette, alpha }),
-    });
+    }));
   }
+  return out;
 }
 
-function drawEmitter(v: View, a: { frame: number; fade: number }): void {
+function drawEmitter(v: View, a: { frame: number; fade: number }): Drawing {
   const ex = emitterX(a.frame);
-  v.circle(ex, EMIT_Y, 5, { fill: `rgba(226, 232, 240, ${(0.85 * a.fade).toFixed(3)})` });
-  v.circle(ex, EMIT_Y, 10, { fill: `rgba(148, 163, 184, ${(0.35 * a.fade).toFixed(3)})` });
+  return [
+    v.circle(ex, EMIT_Y, 5, { fill: `rgba(226, 232, 240, ${(0.85 * a.fade).toFixed(3)})` }),
+    v.circle(ex, EMIT_Y, 10, { fill: `rgba(148, 163, 184, ${(0.35 * a.fade).toFixed(3)})` }),
+  ];
 }
 
 /** Trails: every particle's and the emitter's recent positions, oldest first, each fainter by TRAIL_FADE a frame. */
-function drawTrails(a: { v: View; model: DeepReadonly<Model>; palette: Params["palette"] }): void {
+function drawTrails(a: { v: View; model: DeepReadonly<Model>; palette: Params["palette"] }): Drawing {
+  const out: Drawing[] = [];
   const { v, model, palette } = a;
   for (let k = TRAIL_LENGTH; k >= 1; k--) {
     const fade = TRAIL_FADE ** k;
-    if (model.frame - k >= 0) drawEmitter(v, { frame: model.frame - k, fade });
+    if (model.frame - k >= 0) out.push(drawEmitter(v, { frame: model.frame - k, fade }));
     for (const p of model.particles) {
       const at = p.trail[k - 1];
       if (at === undefined) continue;
       const remaining = 1 - (p.age - k) / p.life;
       const alpha = Math.max(0, Math.min(1, remaining)) * fade;
-      v.circle(at[0], at[1], (2.5 + remaining * 3.5) / 2, { fill: particleColor({ tint: p.tint, palette, alpha }) });
+      out.push(v.circle(at[0], at[1], (2.5 + remaining * 3.5) / 2, { fill: particleColor({ tint: p.tint, palette, alpha }) }));
     }
   }
+  return out;
 }
 
 const RETICLE: Style = { stroke: "#f472b6", weight: 2 };
 
-function drawAttractor(v: View, mode: Mode): void {
-  if (mode.type !== "attract") return;
-  v.circle(mode.x, mode.y, 17, RETICLE);
-  v.circle(mode.x, mode.y, 7, RETICLE);
-  v.line(mode.x - 22, mode.y, mode.x + 22, mode.y, RETICLE);
-  v.line(mode.x, mode.y - 22, mode.x, mode.y + 22, RETICLE);
+function drawAttractor(v: View, mode: Mode): Drawing {
+  const out: Drawing[] = [];
+  if (mode.type !== "attract") return out;
+  out.push(v.circle(mode.x, mode.y, 17, RETICLE));
+  out.push(v.circle(mode.x, mode.y, 7, RETICLE));
+  out.push(v.line(mode.x - 22, mode.y, mode.x + 22, mode.y, RETICLE));
+  out.push(v.line(mode.x, mode.y - 22, mode.x, mode.y + 22, RETICLE));
+  return out;
 }
 
-function drawHud(a: { v: View; model: DeepReadonly<Model>; p: Params }): void {
+function drawHud(a: { v: View; model: DeepReadonly<Model>; p: Params }): Drawing {
+  const out: Drawing[] = [];
   const { v, model, p } = a;
   // Opaque backing so the HUD stays crisp even under translucent trails.
-  v.rect(0, 0, 300, 46, { fill: "#090c18" });
+  out.push(v.rect(0, 0, 300, 46, { fill: "#090c18" }));
   const label = {
     size: 14,
     fill: "#e2e8f0",
     align: "left",
     valign: "top",
   } as const;
-  v.text(
+  out.push(v.text(
     `frame ${model.frame}   particles ${model.particles.length}`,
     { x: 10, y: 10 },
     label,
-  );
+  ));
   const attractor = model.mode.type === "attract" ? "on" : "off";
-  v.text(
+  out.push(v.text(
     `palette ${p.palette}   attractor ${attractor}`,
     { x: 10, y: 28 },
     label,
-  );
+  ));
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background("#090c18");
-  if (p.trails) drawTrails({ v, model, palette: p.palette });
-  drawEmitter(v, { frame: model.frame, fade: 1 });
-  drawParticles({ v, model, palette: p.palette });
-  drawAttractor(v, model.mode);
-  drawHud({ v, model, p });
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#090c18"));
+  if (p.trails) out.push(drawTrails({ v, model, palette: p.palette }));
+  out.push(drawEmitter(v, { frame: model.frame, fade: 1 }));
+  out.push(drawParticles({ v, model, palette: p.palette }));
+  out.push(drawAttractor(v, model.mode));
+  out.push(drawHud({ v, model, p }));
+  return out;
 }

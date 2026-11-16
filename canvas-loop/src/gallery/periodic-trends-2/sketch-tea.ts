@@ -6,7 +6,7 @@
 // period or down its group. Hover an element (in either view) to read it;
 // click to select it, which also picks the period or group the chart shows.
 // Arrow keys move the selection. Data and sources: ./elements-tea.ts.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, TextOptions, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, TextOptions, Util, View } from "@ianbicking/canvas-loop";
 import type { ElementData, PropInfo, PropKey } from "./elements-tea.js";
 import { ELEMENTS, GROUPS, element, NOTES, PERIODS, PROPS, formatValue, valueOf } from "./elements-tea.js";
 
@@ -192,97 +192,111 @@ const AXIS_LINE: Style = { stroke: "#cbd5e1", weight: 1 };
 const GRID: Style = { stroke: "#eef2f7", weight: 1 };
 
 // ── Draw: header ─────────────────────────────────────────────────────
-function drawHeader(v: View): void {
-  v.text("Periodic trends", { x: 24, y: 16 }, H1);
-  v.text("Property", { x: 24, y: 64 }, { ...BODY, valign: "middle", style: "bold" });
+function drawHeader(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.text("Periodic trends", { x: 24, y: 16 }, H1));
+  out.push(v.text("Property", { x: 24, y: 64 }, { ...BODY, valign: "middle", style: "bold" }));
   v.control("property", { x: 92, y: 52, w: 180, h: 26, size: 13 });
-  v.text("Line chart", { x: 296, y: 64 }, { ...BODY, valign: "middle", style: "bold" });
+  out.push(v.text("Line chart", { x: 296, y: 64 }, { ...BODY, valign: "middle", style: "bold" }));
   v.control("chart", { x: 372, y: 52, w: 170, h: 26, size: 13 });
   v.control("arrows", { x: 566, y: 55, w: 20, h: 20 });
-  v.text("Show trend arrows", { x: 592, y: 64 }, { ...BODY, valign: "middle" });
+  out.push(v.text("Show trend arrows", { x: 592, y: 64 }, { ...BODY, valign: "middle" }));
+  return out;
 }
 
 // ── Draw: table ──────────────────────────────────────────────────────
-function drawCell(v: View, a: { e: ElementData; info: PropInfo }): void {
+function drawCell(v: View, a: { e: ElementData; info: PropInfo }): Drawing {
+  const out: Drawing[] = [];
   const hasNote = NOTES[a.info.key][a.e.symbol] !== undefined;
   const { x, y } = cellOf(a.e);
   const value = valueOf(a.e, a.info.key);
   const t = value === null ? 0 : norm(value, a.info);
   const dark = value !== null && t > 0.55;
   const fg = dark ? "#ffffff" : INK;
-  v.roundRect(x, y, CELL, CELL, 4, { fill: value === null ? NO_VALUE : rampAt(t) });
-  v.text(a.e.symbol, { x: x + 6, y: y + 5 }, { size: 18, style: "bold", fill: fg });
-  v.text(String(a.e.z), { x: x + CELL - 5, y: y + 6 }, { size: 9, fill: dark ? "#dbeafe" : "#475569", align: "right" });
-  v.text(formatValue(value, a.info), { x: x + CELL / 2, y: y + CELL - 6 }, { size: 11, fill: fg, align: "center", valign: "bottom" });
-  if (hasNote) v.circle(x + CELL - 8, y + CELL - 9, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
+  out.push(v.roundRect(x, y, CELL, CELL, 4, { fill: value === null ? NO_VALUE : rampAt(t) }));
+  out.push(v.text(a.e.symbol, { x: x + 6, y: y + 5 }, { size: 18, style: "bold", fill: fg }));
+  out.push(v.text(String(a.e.z), { x: x + CELL - 5, y: y + 6 }, { size: 9, fill: dark ? "#dbeafe" : "#475569", align: "right" }));
+  out.push(v.text(formatValue(value, a.info), { x: x + CELL / 2, y: y + CELL - 6 }, { size: 11, fill: fg, align: "center", valign: "bottom" }));
+  if (hasNote) out.push(v.circle(x + CELL - 8, y + CELL - 9, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 }));
+  return out;
 }
 
-function drawDBlock(v: View): void {
+function drawDBlock(v: View): Drawing {
   const x = colX(1) + CELL + 6;
   const y = rowY(3);
   const h = 3 * PITCH - 4;
-  v.roundRect(x, y, STUB - 8, h, 4, { fill: "#f1f5f9", stroke: "#e2e8f0" });
-  v.at({ translate: [x + (STUB - 8) / 2, y + h / 2], rotate: -Math.PI / 2 }, () => {
-    v.text("transition metals (not shown)", { x: 0, y: 0 }, { size: 10, fill: "#94a3b8", align: "center", valign: "middle" });
-  });
+  return [
+    v.roundRect(x, y, STUB - 8, h, 4, { fill: "#f1f5f9", stroke: "#e2e8f0" }),
+    v.at({ translate: [x + (STUB - 8) / 2, y + h / 2], rotate: -Math.PI / 2 }, [
+      v.text("transition metals (not shown)", { x: 0, y: 0 }, { size: 10, fill: "#94a3b8", align: "center", valign: "middle" }),
+    ]),
+  ];
 }
 
-function drawTableLabels(v: View): void {
+function drawTableLabels(v: View): Drawing {
+  const out: Drawing[] = [];
   for (const [i, g] of GROUPS.entries()) {
-    v.text(String(g), { x: colX(i) + CELL / 2, y: TABLE_Y - 8 }, { ...SMALL, align: "center", valign: "bottom" });
+    out.push(v.text(String(g), { x: colX(i) + CELL / 2, y: TABLE_Y - 8 }, { ...SMALL, align: "center", valign: "bottom" }));
   }
-  v.text("group", { x: TABLE_X - 8, y: TABLE_Y - 8 }, { ...SMALL, align: "right", valign: "bottom" });
+  out.push(v.text("group", { x: TABLE_X - 8, y: TABLE_Y - 8 }, { ...SMALL, align: "right", valign: "bottom" }));
   for (const [i, n] of PERIODS.entries()) {
-    v.text(String(n), { x: TABLE_X - 10, y: rowY(i) + CELL / 2 }, { ...SMALL, align: "right", valign: "middle" });
+    out.push(v.text(String(n), { x: TABLE_X - 10, y: rowY(i) + CELL / 2 }, { ...SMALL, align: "right", valign: "middle" }));
   }
-  v.at({ translate: [TABLE_X - 30, TABLE_Y + 3 * PITCH - 2], rotate: -Math.PI / 2 }, () => {
-    v.text("period", { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" });
-  });
+  out.push(v.at({ translate: [TABLE_X - 30, TABLE_Y + 3 * PITCH - 2], rotate: -Math.PI / 2 }, [
+    v.text("period", { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" }),
+  ]));
+  return out;
 }
 
 /** Outline the row or column the chart is showing. */
-function drawSeriesBand(v: View, a: { selected: ElementData; byPeriod: boolean }): void {
+function drawSeriesBand(v: View, a: { selected: ElementData; byPeriod: boolean }): Drawing {
+  const out: Drawing[] = [];
   const pad = 3;
   if (a.byPeriod) {
     const y = rowY(a.selected.period - 1) - pad;
-    v.roundRect(TABLE_X - pad, y, colX(7) + CELL - TABLE_X + 2 * pad, CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 });
+    out.push(v.roundRect(TABLE_X - pad, y, colX(7) + CELL - TABLE_X + 2 * pad, CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 }));
   } else {
     const x = colX(GROUPS.indexOf(a.selected.group)) - pad;
-    v.roundRect(x, TABLE_Y - pad, CELL + 2 * pad, 5 * PITCH + CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 });
+    out.push(v.roundRect(x, TABLE_Y - pad, CELL + 2 * pad, 5 * PITCH + CELL + 2 * pad, 7, { stroke: MUTED, weight: 1.5 }));
   }
+  return out;
 }
 
-function drawMarks(v: View, a: { model: DeepReadonly<Model> }): void {
+function drawMarks(v: View, a: { model: DeepReadonly<Model> }): Drawing {
+  const out: Drawing[] = [];
   const sel = cellOf(element(a.model.selected));
-  v.roundRect(sel.x - 1, sel.y - 1, CELL + 2, CELL + 2, 5, { stroke: INK, weight: 3 });
+  out.push(v.roundRect(sel.x - 1, sel.y - 1, CELL + 2, CELL + 2, 5, { stroke: INK, weight: 3 }));
   if (a.model.hover !== null && a.model.hover !== a.model.selected) {
     const h = cellOf(element(a.model.hover));
-    v.roundRect(h.x - 1, h.y - 1, CELL + 2, CELL + 2, 5, { stroke: HOVER, weight: 3 });
+    out.push(v.roundRect(h.x - 1, h.y - 1, CELL + 2, CELL + 2, 5, { stroke: HOVER, weight: 3 }));
   }
+  return out;
 }
 
-function drawLegend(v: View, info: PropInfo): void {
+function drawLegend(v: View, info: PropInfo): Drawing {
+  const out: Drawing[] = [];
   const x = TABLE_X;
   const y = rowY(5) + CELL + 52;
   const w = colX(7) + CELL - TABLE_X;
   const stops = RAMP.map((_, i): [number, string] => [i / (RAMP.length - 1), rampAt(i / (RAMP.length - 1))]);
-  v.rect(x, y, w, 12, { fill: v.linearGradient(x, 0, x + w, 0, stops) });
+  out.push(v.rect(x, y, w, 12, { fill: v.linearGradient(x, 0, x + w, 0, stops) }));
   for (let t = info.min; t <= info.max + 1e-9; t += info.tick) {
     const tx = x + norm(t, info) * w;
-    v.line(tx, y + 12, tx, y + 16, AXIS_LINE);
-    v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: tx, y: y + 18 }, { ...SMALL, align: "center" });
+    out.push(v.line(tx, y + 12, tx, y + 16, AXIS_LINE));
+    out.push(v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: tx, y: y + 18 }, { ...SMALL, align: "center" }));
   }
   const unit = info.unit === "" ? "" : ` (${info.unit})`;
-  v.text(`${info.label}${unit}: darker = larger`, { x, y: y - 6 }, { ...SMALL, valign: "bottom" });
-  v.circle(x + w - 190, y - 13, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 });
-  v.text("note: hover to read", { x: x + w - 182, y: y - 13 }, { ...SMALL, valign: "middle" });
-  v.rect(x + w - 70, y - 18, 10, 10, { fill: NO_VALUE });
-  v.text("no value", { x: x + w - 56, y: y - 13 }, { ...SMALL, valign: "middle" });
+  out.push(v.text(`${info.label}${unit}: darker = larger`, { x, y: y - 6 }, { ...SMALL, valign: "bottom" }));
+  out.push(v.circle(x + w - 190, y - 13, 3.5, { fill: HOVER, stroke: PAGE, weight: 1 }));
+  out.push(v.text("note: hover to read", { x: x + w - 182, y: y - 13 }, { ...SMALL, valign: "middle" }));
+  out.push(v.rect(x + w - 70, y - 18, 10, 10, { fill: NO_VALUE }));
+  out.push(v.text("no value", { x: x + w - 56, y: y - 13 }, { ...SMALL, valign: "middle" }));
+  return out;
 }
 
-function arrowHead(v: View, a: { x: number; y: number; dx: number; dy: number }): void {
+function arrowHead(v: View, a: { x: number; y: number; dx: number; dy: number }): Drawing {
   const s = 7;
-  v.triangle(
+  return v.triangle(
     a.x,
     a.y,
     a.x - a.dx * s - a.dy * s * 0.6,
@@ -293,7 +307,8 @@ function arrowHead(v: View, a: { x: number; y: number; dx: number; dy: number })
   );
 }
 
-function drawTrendArrows(v: View, info: PropInfo): void {
+function drawTrendArrows(v: View, info: PropInfo): Drawing {
+  const out: Drawing[] = [];
   const style: Style = { stroke: HOVER, weight: 2.5 };
   const label: TextOptions = { size: 12, style: "bold", fill: HOVER, align: "center" };
   // Across: below the table.
@@ -301,40 +316,44 @@ function drawTrendArrows(v: View, info: PropInfo): void {
   const x1 = TABLE_X + 10;
   const x2 = colX(7) + CELL - 10;
   const [from, to] = info.across > 0 ? [x1, x2] : [x2, x1];
-  v.line(from, y, to, y, style);
-  arrowHead(v, { x: to, y, dx: Math.sign(to - from), dy: 0 });
-  v.rect((x1 + x2) / 2 - 60, y - 9, 120, 18, { fill: PAGE });
-  v.text("increases", { x: (x1 + x2) / 2, y }, { ...label, valign: "middle" });
+  out.push(v.line(from, y, to, y, style));
+  out.push(arrowHead(v, { x: to, y, dx: Math.sign(to - from), dy: 0 }));
+  out.push(v.rect((x1 + x2) / 2 - 60, y - 9, 120, 18, { fill: PAGE }));
+  out.push(v.text("increases", { x: (x1 + x2) / 2, y }, { ...label, valign: "middle" }));
   // Down: right of the table.
   const x = colX(7) + CELL + 22;
   const y1 = TABLE_Y + 6;
   const y2 = rowY(5) + CELL - 6;
   const [top, bottom] = info.down > 0 ? [y1, y2] : [y2, y1];
-  v.line(x, top, x, bottom, style);
-  arrowHead(v, { x, y: bottom, dx: 0, dy: Math.sign(bottom - top) });
-  v.at({ translate: [x, (y1 + y2) / 2], rotate: -Math.PI / 2 }, () => {
-    v.rect(-40, -8, 80, 16, { fill: PAGE });
-    v.text("increases", { x: 0, y: 0 }, { ...label, valign: "middle" });
-  });
+  out.push(v.line(x, top, x, bottom, style));
+  out.push(arrowHead(v, { x, y: bottom, dx: 0, dy: Math.sign(bottom - top) }));
+  out.push(v.at({ translate: [x, (y1 + y2) / 2], rotate: -Math.PI / 2 }, [
+    v.rect(-40, -8, 80, 16, { fill: PAGE }),
+    v.text("increases", { x: 0, y: 0 }, { ...label, valign: "middle" }),
+  ]));
+  return out;
 }
 
 // ── Draw: chart ──────────────────────────────────────────────────────
-function drawAxes(v: View, info: PropInfo): void {
+function drawAxes(v: View, info: PropInfo): Drawing {
+  const out: Drawing[] = [];
   for (let t = info.min; t <= info.max + 1e-9; t += info.tick) {
     const y = valueY(t, info);
-    v.line(PLOT.x, y, PLOT.x + PLOT.w, y, GRID);
-    v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: PLOT.x - 6, y }, AXIS);
+    out.push(v.line(PLOT.x, y, PLOT.x + PLOT.w, y, GRID));
+    out.push(v.text(info.decimals > 0 ? t.toFixed(1) : String(t), { x: PLOT.x - 6, y }, AXIS));
   }
-  v.line(PLOT.x, PLOT.y, PLOT.x, PLOT.y + PLOT.h, AXIS_LINE);
-  v.line(PLOT.x, PLOT.y + PLOT.h, PLOT.x + PLOT.w, PLOT.y + PLOT.h, AXIS_LINE);
-  v.at({ translate: [PLOT.x - 46, PLOT.y + PLOT.h / 2], rotate: -Math.PI / 2 }, () => {
+  out.push(v.line(PLOT.x, PLOT.y, PLOT.x, PLOT.y + PLOT.h, AXIS_LINE));
+  out.push(v.line(PLOT.x, PLOT.y + PLOT.h, PLOT.x + PLOT.w, PLOT.y + PLOT.h, AXIS_LINE));
+  out.push(v.at({ translate: [PLOT.x - 46, PLOT.y + PLOT.h / 2], rotate: -Math.PI / 2 }, ((): Drawing => {
     const unit = info.unit === "" ? "Pauling scale" : info.unit;
-    v.text(`${info.label} (${unit})`, { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" });
-  });
+    return v.text(`${info.label} (${unit})`, { x: 0, y: 0 }, { ...SMALL, align: "center", valign: "middle" });
+  })()));
+  return out;
 }
 
 /** Draw a polyline through consecutive slots that have values; a missing value breaks it. */
-function drawLine(v: View, a: { items: readonly ElementData[]; info: PropInfo; byPeriod: boolean; style: Style }): void {
+function drawLine(v: View, a: { items: readonly ElementData[]; info: PropInfo; byPeriod: boolean; style: Style }): Drawing {
+  const out: Drawing[] = [];
   let prev: readonly [number, number, number] | null = null; // slot index, x, y
   for (const e of a.items) {
     const value = valueOf(e, a.info.key);
@@ -344,44 +363,47 @@ function drawLine(v: View, a: { items: readonly ElementData[]; info: PropInfo; b
       continue;
     }
     const pt = [slot, slotX(e, a.byPeriod), valueY(value, a.info)] as const;
-    if (prev !== null && prev[0] === slot - 1) v.line(prev[1], prev[2], pt[1], pt[2], a.style);
+    if (prev !== null && prev[0] === slot - 1) out.push(v.line(prev[1], prev[2], pt[1], pt[2], a.style));
     prev = pt;
   }
+  return out;
 }
 
-function drawChart(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): void {
+function drawChart(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): Drawing {
+  const out: Drawing[] = [];
   const sel = element(a.model.selected);
   const items = series(sel, a.byPeriod);
   const title = a.byPeriod ? `across period ${sel.period}` : `down group ${sel.group}`;
-  v.text(`${a.info.label} ${title}`, { x: PLOT.x - 56, y: PLOT.y - 46 }, { size: 15, style: "bold", fill: INK });
+  out.push(v.text(`${a.info.label} ${title}`, { x: PLOT.x - 56, y: PLOT.y - 46 }, { size: 15, style: "bold", fill: INK }));
   const othersName = a.byPeriod ? "other periods" : "other groups";
-  v.line(PLOT.x - 56, PLOT.y - 22, PLOT.x - 40, PLOT.y - 22, { stroke: "#cbd5e1", weight: 2 });
-  v.text(othersName, { x: PLOT.x - 36, y: PLOT.y - 22 }, { ...SMALL, valign: "middle" });
-  drawAxes(v, a.info);
+  out.push(v.line(PLOT.x - 56, PLOT.y - 22, PLOT.x - 40, PLOT.y - 22, { stroke: "#cbd5e1", weight: 2 }));
+  out.push(v.text(othersName, { x: PLOT.x - 36, y: PLOT.y - 22 }, { ...SMALL, valign: "middle" }));
+  out.push(drawAxes(v, a.info));
   // Other periods or groups, faint, for comparison.
   const others = a.byPeriod
     ? PERIODS.filter((n) => n !== sel.period).map((n) => ELEMENTS.find((e) => e.period === n) ?? sel)
     : GROUPS.filter((g) => g !== sel.group).map((g) => ELEMENTS.find((e) => e.group === g) ?? sel);
-  for (const o of others) drawLine(v, { items: series(o, a.byPeriod), info: a.info, byPeriod: a.byPeriod, style: { stroke: "#e2e8f0", weight: 1.5 } });
-  drawLine(v, { items, info: a.info, byPeriod: a.byPeriod, style: { stroke: INK, weight: 2 } });
+  for (const o of others) out.push(drawLine(v, { items: series(o, a.byPeriod), info: a.info, byPeriod: a.byPeriod, style: { stroke: "#e2e8f0", weight: 1.5 } }));
+  out.push(drawLine(v, { items, info: a.info, byPeriod: a.byPeriod, style: { stroke: INK, weight: 2 } }));
   for (const e of items) {
     const value = valueOf(e, a.info.key);
     const x = slotX(e, a.byPeriod);
-    v.text(e.symbol, { x, y: PLOT.y + PLOT.h + 8 }, { size: 12, style: "bold", fill: INK, align: "center" });
+    out.push(v.text(e.symbol, { x, y: PLOT.y + PLOT.h + 8 }, { size: 12, style: "bold", fill: INK, align: "center" }));
     const sub = a.byPeriod ? `g${e.group}` : `p${e.period}`;
-    v.text(sub, { x, y: PLOT.y + PLOT.h + 24 }, { ...SMALL, size: 10, align: "center" });
+    out.push(v.text(sub, { x, y: PLOT.y + PLOT.h + 24 }, { ...SMALL, size: 10, align: "center" }));
     if (value === null) {
-      v.text("—", { x, y: PLOT.y + PLOT.h - 10 }, { ...SMALL, align: "center", valign: "bottom" });
+      out.push(v.text("—", { x, y: PLOT.y + PLOT.h - 10 }, { ...SMALL, align: "center", valign: "bottom" }));
       continue;
     }
     const y = valueY(value, a.info);
     const i = ELEMENTS.indexOf(e);
-    if (i === a.model.selected) v.circle(x, y, 10, { stroke: INK, weight: 2.5 });
-    if (i === a.model.hover && i !== a.model.selected) v.circle(x, y, 10, { stroke: HOVER, weight: 2.5 });
-    v.circle(x, y, 5.5, { fill: rampAt(norm(value, a.info)), stroke: INK, weight: 1.5 });
+    if (i === a.model.selected) out.push(v.circle(x, y, 10, { stroke: INK, weight: 2.5 }));
+    if (i === a.model.hover && i !== a.model.selected) out.push(v.circle(x, y, 10, { stroke: HOVER, weight: 2.5 }));
+    out.push(v.circle(x, y, 5.5, { fill: rampAt(norm(value, a.info)), stroke: INK, weight: 1.5 }));
   }
   const axisName = a.byPeriod ? "group" : "period";
-  v.text(axisName, { x: PLOT.x + PLOT.w / 2, y: PLOT.y + PLOT.h + 40 }, { ...SMALL, align: "center" });
+  out.push(v.text(axisName, { x: PLOT.x + PLOT.w / 2, y: PLOT.y + PLOT.h + 40 }, { ...SMALL, align: "center" }));
+  return out;
 }
 
 // ── Draw: readout ────────────────────────────────────────────────────
@@ -398,42 +420,46 @@ function neighbours(e: ElementData, a: { info: PropInfo; byPeriod: boolean }): s
   return `In ${where}, ${parts.join("; ")}.`;
 }
 
-function drawReadout(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): void {
+function drawReadout(v: View, a: { model: DeepReadonly<Model>; info: PropInfo; byPeriod: boolean }): Drawing {
+  const out: Drawing[] = [];
   const i = a.model.hover ?? a.model.selected;
   const e = element(i);
   const value = valueOf(e, a.info.key);
   const x = 656;
   const y = 448;
   const w = 300;
-  v.roundRect(x, y, w, 140, 8, { fill: "#f8fafc", stroke: i === a.model.selected ? "#cbd5e1" : HOVER, weight: i === a.model.selected ? 1 : 2 });
-  v.text(`${e.name} (${e.symbol})`, { x: x + 14, y: y + 12 }, { size: 16, style: "bold", fill: INK });
-  v.text(`Z = ${e.z} · group ${e.group} · period ${e.period}`, { x: x + w - 14, y: y + 15 }, { ...SMALL, align: "right" });
+  out.push(v.roundRect(x, y, w, 140, 8, { fill: "#f8fafc", stroke: i === a.model.selected ? "#cbd5e1" : HOVER, weight: i === a.model.selected ? 1 : 2 }));
+  out.push(v.text(`${e.name} (${e.symbol})`, { x: x + 14, y: y + 12 }, { size: 16, style: "bold", fill: INK }));
+  out.push(v.text(`Z = ${e.z} · group ${e.group} · period ${e.period}`, { x: x + w - 14, y: y + 15 }, { ...SMALL, align: "right" }));
   const unit = a.info.unit === "" ? "" : ` ${a.info.unit}`;
   const shown = value === null ? "no value" : `${formatValue(value, a.info)}${unit}`;
-  v.text(`${a.info.label}: ${shown}`, { x: x + 14, y: y + 38 }, { size: 14, fill: INK });
+  out.push(v.text(`${a.info.label}: ${shown}`, { x: x + 14, y: y + 38 }, { size: 14, fill: INK }));
   const note = NOTES[a.info.key][e.symbol];
-  if (note === undefined) v.text(neighbours(e, a), { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: MUTED, fit: true });
-  else v.text(note, { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: "#9a3412", fit: true });
+  if (note === undefined) out.push(v.text(neighbours(e, a), { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: MUTED, fit: true }));
+  else out.push(v.text(note, { x: x + 14, y: y + 62, w: w - 28, h: 50 }, { size: 12, fill: "#9a3412", fit: true }));
   const hint = i === a.model.selected ? "Selected. Hover another element, or use the arrow keys." : `Click to chart its ${a.byPeriod ? "period" : "group"}.`;
-  v.text(hint, { x: x + 14, y: y + 140 - 10 }, { ...SMALL, valign: "bottom" });
+  out.push(v.text(hint, { x: x + 14, y: y + 140 - 10 }, { ...SMALL, valign: "bottom" }));
+  return out;
 }
 
 const SOURCE =
   "Data: covalent radii, Cordero et al. (2008); Pauling electronegativity, CRC Handbook; first ionization energy, NIST / CRC Handbook.";
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
   const info = PROPS[propKey(p)];
   const byPeriod = p.chart === "Across the period";
-  v.background(PAGE);
-  drawHeader(v);
-  drawTableLabels(v);
-  drawDBlock(v);
-  drawSeriesBand(v, { selected: element(model.selected), byPeriod });
-  for (const e of ELEMENTS) drawCell(v, { e, info });
-  drawMarks(v, { model });
-  drawLegend(v, info);
-  if (p.arrows) drawTrendArrows(v, info);
-  drawChart(v, { model, info, byPeriod });
-  drawReadout(v, { model, info, byPeriod });
-  v.text(SOURCE, { x: 24, y: canvas.height - 14 }, { ...SMALL, size: 10, valign: "bottom" });
+  out.push(v.background(PAGE));
+  out.push(drawHeader(v));
+  out.push(drawTableLabels(v));
+  out.push(drawDBlock(v));
+  out.push(drawSeriesBand(v, { selected: element(model.selected), byPeriod }));
+  for (const e of ELEMENTS) out.push(drawCell(v, { e, info }));
+  out.push(drawMarks(v, { model }));
+  out.push(drawLegend(v, info));
+  if (p.arrows) out.push(drawTrendArrows(v, info));
+  out.push(drawChart(v, { model, info, byPeriod }));
+  out.push(drawReadout(v, { model, info, byPeriod }));
+  out.push(v.text(SOURCE, { x: 24, y: canvas.height - 14 }, { ...SMALL, size: 10, valign: "bottom" }));
+  return out;
 }

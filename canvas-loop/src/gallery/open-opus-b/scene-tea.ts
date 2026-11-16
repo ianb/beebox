@@ -1,5 +1,5 @@
 // Backdrop: dusk sky, moon, far hills, the stilt village, and the water.
-import type { Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const HORIZON = 470;
 
@@ -187,8 +187,9 @@ export function rollScene(u: Util): SceneRandom {
   return { stars, ripples, moonDabs, houseRipples, leaves, cattails };
 }
 
-export function drawSky(v: View, r: SceneRandom): void {
-  v.background(
+export function drawSky(v: View, r: SceneRandom): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background(
     v.linearGradient(0, 0, 0, HORIZON, [
       [0, C.skyTop],
       [0.42, C.skyMid],
@@ -196,20 +197,20 @@ export function drawSky(v: View, r: SceneRandom): void {
       [0.93, C.skyGlow],
       [1, C.skyLow],
     ]),
-  );
+  ));
   // Moon and its halo.
-  v.circle(190, 130, 110, {
+  out.push(v.circle(190, 130, 110, {
     fill: v.radialGradient(190, 130, 110, [
       [0, "rgba(251,241,208,0.35)"],
       [1, "rgba(251,241,208,0)"],
     ]),
-  });
-  v.circle(190, 130, 29, { fill: C.moon });
+  }));
+  out.push(v.circle(190, 130, 29, { fill: C.moon }));
   // Stars.
   for (const star of r.stars)
-    v.circle(star.x, star.y, star.d / 2, { fill: "rgba(255,244,214,0.85)" });
+    out.push(v.circle(star.x, star.y, star.d / 2, { fill: "rgba(255,244,214,0.85)" }));
   // A broad rose wash low in the sky.
-  v.curve(
+  out.push(v.curve(
     [
       [-40, 360],
       [400, 345],
@@ -222,7 +223,7 @@ export function drawSky(v: View, r: SceneRandom): void {
       brush: { preset: "wash", opacity: 0.4 },
       gesture: { pressure: "swell", wobble: 8 },
     },
-  );
+  ));
   // Cloud streaks: a lavender body, its underside lit rose and peach by the set sun.
   const clouds: readonly { x: number; y: number; len: number; w: number }[] = [
     { x: 420, y: 215, len: 300, w: 16 },
@@ -236,7 +237,7 @@ export function drawSky(v: View, r: SceneRandom): void {
   ];
   for (const c of clouds) {
     const lowGlow = c.y > 300;
-    v.curve(
+    out.push(v.curve(
       [
         [c.x, c.y + 3],
         [c.x + c.len * 0.45, c.y - c.w * 0.3],
@@ -263,8 +264,8 @@ export function drawSky(v: View, r: SceneRandom): void {
           wobble: 3,
         },
       },
-    );
-    v.curve(
+    ));
+    out.push(v.curve(
       [
         [c.x + c.len * 0.15, c.y + c.w * 0.45],
         [c.x + c.len * 0.5, c.y + c.w * 0.3],
@@ -283,10 +284,10 @@ export function drawSky(v: View, r: SceneRandom): void {
         },
         gesture: { pressure: "taper", wobble: 2 },
       },
-    );
+    ));
   }
   // Far hills behind the village.
-  v.curve(
+  out.push(v.curve(
     [
       [-20, HORIZON],
       [-20, 420],
@@ -298,8 +299,8 @@ export function drawSky(v: View, r: SceneRandom): void {
     ],
     true,
     { fill: C.hillFar },
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [-20, HORIZON],
       [-20, 438],
@@ -309,21 +310,23 @@ export function drawSky(v: View, r: SceneRandom): void {
     ],
     true,
     { fill: C.hill },
-  );
+  ));
+  return out;
 }
 
-export function drawWater(v: View, r: SceneRandom): void {
-  v.rect(0, HORIZON, 800, 330, {
+export function drawWater(v: View, r: SceneRandom): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, HORIZON, 800, 330, {
     fill: v.linearGradient(0, HORIZON, 0, 800, [
       [0, C.waterTop],
       [0.18, "#b8708e"],
       [0.45, C.waterMid],
       [1, C.waterLow],
     ]),
-  });
+  }));
   // Ripples: bristle strokes in several values, the sky's colours mirrored.
   for (const rp of r.ripples) {
-    v.line(rp.x, rp.y, rp.x + rp.len, rp.y + rp.dy, {
+    out.push(v.line(rp.x, rp.y, rp.x + rp.len, rp.y + rp.dy, {
       stroke: rp.color,
       weight: 2.5 + rp.t * 8,
       brush: {
@@ -334,20 +337,22 @@ export function drawWater(v: View, r: SceneRandom): void {
         flow: 0.65,
       },
       gesture: { pressure: "taper", wobble: 1 + rp.t },
-    });
+    }));
   }
   // The moon's reflection: a broken, drifting column of pale dabs.
   for (const d of r.moonDabs) {
-    v.line(d.cx - d.half, d.y, d.cx + d.half, d.y + d.dy, {
+    out.push(v.line(d.cx - d.half, d.y, d.cx + d.half, d.y + d.dy, {
       stroke: `rgba(251,236,196,${(0.85 - d.t * 0.5).toFixed(2)})`,
       weight: 1.5 + d.t * 2.5,
       brush: "ink",
       gesture: { pressure: "taper", wobble: 0.6 },
-    });
+    }));
   }
+  return out;
 }
 
-function drawHouse(v: View, h: House): void {
+function drawHouse(v: View, h: House): Drawing {
+  const out: Drawing[] = [];
   // Stilts.
   const stilt: Style = {
     stroke: C.roof,
@@ -357,11 +362,11 @@ function drawHouse(v: View, h: House): void {
   };
   for (let i = 0; i <= 3; i += 1) {
     const x = h.x + 6 + (i * (h.w - 12)) / 3;
-    v.line(x, h.base, x, h.base + 26, stilt);
+    out.push(v.line(x, h.base, x, h.base + 26, stilt));
   }
-  v.polygon(houseShape(h), { fill: C.house });
+  out.push(v.polygon(houseShape(h), { fill: C.house }));
   const top = h.base - h.h;
-  v.polygon(
+  out.push(v.polygon(
     [
       [h.x - 8, top + 4],
       [h.x + h.w / 2, top - h.roof - 4],
@@ -371,9 +376,10 @@ function drawHouse(v: View, h: House): void {
       [h.x - 8, top + 10],
     ],
     { fill: C.roof },
-  );
+  ));
   // Board texture on the walls, and the sky's light along the roof's upper edge.
-  v.clip(houseShape(h), () => {
+  out.push(v.clip(houseShape(h), ((): Drawing => {
+    const drawn: Drawing[] = [];
     const board: Style = {
       weight: 6,
       brush: {
@@ -386,40 +392,43 @@ function drawHouse(v: View, h: House): void {
       gesture: { pressure: "even", wobble: 0.6 },
     };
     for (let x = h.x + 5; x < h.x + h.w; x += 9) {
-      v.line(x, top - h.roof, x + 1, h.base, {
+      drawn.push(v.line(x, top - h.roof, x + 1, h.base, {
         ...board,
         stroke: x % 2 === 0 ? "#4a3a5c" : "#2f2541",
-      });
+      }));
     }
-  });
+    return drawn;
+  })()));
   const edge: Style = {
     weight: 3,
     brush: { preset: "ink", opacity: 0.95 },
     gesture: { pressure: "taper", wobble: 0.4 },
   };
-  v.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3, {
+  out.push(v.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3, {
     ...edge,
     stroke: "#e79aa6",
-  });
-  v.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3, {
+  }));
+  out.push(v.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3, {
     ...edge,
     stroke: "#f2a77e",
-  });
+  }));
   // Windows with glow.
   const wy = top + h.h * 0.3;
   for (const fx of [0.28, 0.66]) {
     const wx = h.x + h.w * fx;
-    v.circle(wx, wy + 8, 30, {
+    out.push(v.circle(wx, wy + 8, 30, {
       fill: v.radialGradient(wx, wy + 8, 30, [
         [0, "rgba(255,200,110,0.45)"],
         [1, "rgba(255,200,110,0)"],
       ]),
-    });
-    v.rect(wx - 7, wy, 14, 17, { fill: C.window });
+    }));
+    out.push(v.rect(wx - 7, wy, 14, 17, { fill: C.window }));
   }
+  return out;
 }
 
-export function drawVillage(v: View, r: SceneRandom): void {
+export function drawVillage(v: View, r: SceneRandom): Drawing {
+  const drawn: Drawing[] = [];
   // Reflections first, painted as broken horizontal strokes, then the houses.
   for (const [hi, h] of HOUSES.entries()) {
     const water = h.base + 26;
@@ -432,7 +441,7 @@ export function drawVillage(v: View, r: SceneRandom): void {
       const roll = rolls[n];
       n += 1;
       if (roll === undefined) continue;
-      v.line(
+      drawn.push(v.line(
         roll.cx - half - roll.left,
         water + d,
         roll.cx + half + roll.right,
@@ -443,7 +452,7 @@ export function drawVillage(v: View, r: SceneRandom): void {
           brush: { preset: "bristle", bristles: 8, load: 0.9, flow: 0.75 },
           gesture: { pressure: "taper", wobble: 1 },
         },
-      );
+      ));
     }
     // Window light, stretched by the ripples.
     const glint: Style = {
@@ -455,38 +464,42 @@ export function drawVillage(v: View, r: SceneRandom): void {
     const wy = water + (h.base - h.h * 0.7 - water) * -1;
     for (const fx of [0.28, 0.66]) {
       const wx = h.x + h.w * fx;
-      v.line(wx, wy - 6, wx + 1, wy + 34, glint);
+      drawn.push(v.line(wx, wy - 6, wx + 1, wy + 34, glint));
     }
   }
-  for (const h of HOUSES) drawHouse(v, h);
-  drawBoat(v);
+  for (const h of HOUSES) drawn.push(drawHouse(v, h));
+  drawn.push(drawBoat(v));
+  return drawn;
 }
 
 /** The last boat still out, far off on the right, with its own small light. */
-function drawBoat(v: View): void {
+function drawBoat(v: View): Drawing {
   const bx = 778;
   const by = HORIZON + 4;
-  v.circle(bx + 4, by - 12, 22, {
-    fill: v.radialGradient(bx + 4, by - 12, 22, [
-      [0, "rgba(255,214,130,0.7)"],
-      [1, "rgba(255,190,110,0)"],
-    ]),
-  });
-  v.polygon(
-    [
-      [bx - 16, by - 4],
-      [bx + 18, by - 4],
-      [bx + 12, by + 2],
-      [bx - 12, by + 2],
-    ],
-    { fill: "#3a2c4d" },
-  );
-  v.line(bx - 2, by - 4, bx - 2, by - 26, { stroke: "#3a2c4d", weight: 1.4 });
-  v.circle(bx + 5, by - 12, 1.7, { fill: "#fff0b8" });
+  return [
+    v.circle(bx + 4, by - 12, 22, {
+      fill: v.radialGradient(bx + 4, by - 12, 22, [
+        [0, "rgba(255,214,130,0.7)"],
+        [1, "rgba(255,190,110,0)"],
+      ]),
+    }),
+    v.polygon(
+      [
+        [bx - 16, by - 4],
+        [bx + 18, by - 4],
+        [bx + 12, by + 2],
+        [bx - 12, by + 2],
+      ],
+      { fill: "#3a2c4d" },
+    ),
+    v.line(bx - 2, by - 4, bx - 2, by - 26, { stroke: "#3a2c4d", weight: 1.4 }),
+    v.circle(bx + 5, by - 12, 1.7, { fill: "#fff0b8" }),
+  ];
 }
 
 /** Dark reeds in the near corners, for depth: filled tapering leaves. */
-export function drawReeds(v: View, r: SceneRandom): void {
+export function drawReeds(v: View, r: SceneRandom): Drawing {
+  const out: Drawing[] = [];
   for (const [ci, c] of REED_CLUMPS.entries()) {
     for (const [i, lf] of (r.leaves[ci] ?? []).entries()) {
       const pts: Vec2[] = [
@@ -503,8 +516,8 @@ export function drawReeds(v: View, r: SceneRandom): void {
           [1, 0],
         ],
       });
-      v.path(leaf, { fill: i % 3 === 0 ? "#2c2543" : "#1a172d" });
-      v.clip(leaf, () => {
+      out.push(v.path(leaf, { fill: i % 3 === 0 ? "#2c2543" : "#1a172d" }));
+      out.push(v.clip(leaf, [
         v.curve(
           pts.map(([px, py]): Vec2 => [px - 5 * c.dir, py]),
           false,
@@ -514,18 +527,18 @@ export function drawReeds(v: View, r: SceneRandom): void {
             brush: { preset: "wash", opacity: 0.6 },
             gesture: { pressure: "taper-in" },
           },
-        );
-      });
+        ),
+      ]));
     }
     // A few cattail heads on stems.
     for (const ct of r.cattails[ci] ?? []) {
       const { x, y } = ct;
-      v.line(x, 815, x + 4 * c.dir, y, {
+      out.push(v.line(x, 815, x + 4 * c.dir, y, {
         stroke: "#1a172d",
         weight: 3,
         brush: "ink",
         gesture: { pressure: "even", wobble: 1 },
-      });
+      }));
       const head = v.tube(
         [
           [x + 4 * c.dir, y + 6],
@@ -533,8 +546,8 @@ export function drawReeds(v: View, r: SceneRandom): void {
         ],
         { width: 11 },
       );
-      v.path(head, { fill: "#4a2f2c" });
-      v.clip(head, () => {
+      out.push(v.path(head, { fill: "#4a2f2c" }));
+      out.push(v.clip(head, [
         v.line(
           x + 4 * c.dir + 4 * c.dir,
           y + 8,
@@ -546,8 +559,9 @@ export function drawReeds(v: View, r: SceneRandom): void {
             brush: { preset: "wash", opacity: 0.8 },
             gesture: { pressure: "swell" },
           },
-        );
-      });
+        ),
+      ]));
     }
   }
+  return out;
 }
