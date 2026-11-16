@@ -48,7 +48,7 @@ const theme = EditorView.theme({
 /** The editor's frame, rendered where the composition block stands; nothing while the block is not mounted. */
 function Frame({ host, children }: { host: HTMLElement | null; children: ReactNode }): ReactNode {
   if (host === null) return null;
-  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-pen">{children}</section>, host);
+  return createPortal(<section aria-label="Composition editor" className="bbx-composition bbx-composition-editor my-4 rounded border border-card-pen">{children}</section>, host);
 }
 
 interface Session {
