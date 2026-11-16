@@ -45,14 +45,21 @@ function report(result: FigureRunResult): void {
   for (const warning of result.warnings) write(`    warning: ${warning}\n`);
 }
 
-/** Each shared file's type errors once, with the figures that import it, in first-seen order. */
+/**
+ * Each shared file's type errors once, with the figures that import it, in
+ * first-seen order. Each figure is its own program, so one file can get
+ * different errors per figure: the distinct lines are merged.
+ */
 export function sharedTypeErrors(results: readonly FigureRunResult[]): Array<SharedTypeErrors[number] & { figures: string[] }> {
   const byFile = new Map<string, { file: string; lines: string[]; figures: string[] }>();
   for (const result of results) {
     for (const { file, lines } of result.shared ?? []) {
       const seen = byFile.get(file);
-      if (seen === undefined) byFile.set(file, { file, lines, figures: [result.card] });
-      else seen.figures.push(result.card);
+      if (seen === undefined) byFile.set(file, { file, lines: [...lines], figures: [result.card] });
+      else {
+        seen.figures.push(result.card);
+        for (const line of lines) if (!seen.lines.includes(line)) seen.lines.push(line);
+      }
     }
   }
   return [...byFile.values()];

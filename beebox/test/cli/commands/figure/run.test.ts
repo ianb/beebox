@@ -165,6 +165,11 @@ void test("A shared helper's type error is reported once for its importers; tras
   const line = "src/lib/radius.ts:1:14 - error TS2322: Type 'string' is not assignable to type 'number'.";
   t.check(sharedTypeErrors(results), [{ file: "src/lib/radius.ts", lines: [line], figures: ["_content/figs/A.figure.card", "_content/figs/B.figure.card"] }]);
   t.check(await checkSharedCode(box.root), { files: 2, errors: [line] });
+  // Each figure is its own program, so one file's errors can differ by figure: the distinct lines are merged, each once.
+  const other = "src/lib/radius.ts:1:1 - error TS9999: another.";
+  t.check(sharedTypeErrors([...results, { card: "c", ok: false, errors: [], warnings: [], shared: [{ file: "src/lib/radius.ts", lines: [other, line] }] }]), [
+    { file: "src/lib/radius.ts", lines: [line, other], figures: ["_content/figs/A.figure.card", "_content/figs/B.figure.card", "c"] },
+  ]);
 });
 
 void test("A removed View call is named with what replaces it", async (t) => {
@@ -217,17 +222,19 @@ void test("With no Vulkan driver the run gives the possible causes and a transcr
   const missing = path.join(box.root, "_tmp", "no-such-driver.json");
   process.env["VK_DRIVER_FILES"] = missing;
   process.env["VK_ICD_FILENAMES"] = missing;
-  await box.write(CARD, card(""));
+  // A card param the module lacks is still named when the run fails.
+  await box.write(CARD, card("params:\n  - { name: left, type: number, default: 1 }\n"));
   await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY);
   const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: CARD, frames: 1, params: {} });
   const result = await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 60_000 });
   // This text comes only from NoGpuAdapterError, so it also shows the setup reached the adapter request.
   t.check(
-    { ok: result.ok, errors: result.errors, transcript: result.transcript },
+    { ok: result.ok, errors: result.errors, transcript: result.transcript, warnings: result.warnings },
     {
       ok: false,
       errors: ["no GPU adapter: Dawn found no GPU it can use here. Possible causes: no Vulkan driver is installed (on Linux, Mesa's mesa-vulkan-drivers), the driver does not load inside the box's sandbox, or the driver rejects this machine. Ask the boxholder; rewriting the sketch will not help."],
       transcript: path.join("_tmp", "figure-run", "content", "figs", "Dot", "out", "transcript.md"),
+      warnings: ["card params not in the module's params: left. They set no control and are not set in this run; the factory still reads them from figure.params"],
     },
   );
   t.check(await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8"), any(String).includes("NoGpuAdapterError"));

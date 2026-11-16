@@ -82,8 +82,11 @@ export async function runFigureOne(jobFile: string): Promise<void> {
     process.stdout.write(`${JSON.stringify({ errors: ["the entry has no exports"] })}\n`);
     return;
   }
+  // Named before the run, so a run that fails (no GPU) still reports them.
+  let warnings: string[] = [];
   try {
     const module = toTeaModule(imported);
+    warnings = undeclaredCardParams(module.params, job.cardParams);
     const rawEvents: unknown = job.events === undefined ? [] : JSON.parse(await fs.readFile(job.events, "utf8"));
     const events = parseTeaEvents(rawEvents, module.params);
     const last = Math.max(-1, ...events.map((event) => event.frame));
@@ -101,12 +104,11 @@ export async function runFigureOne(jobFile: string): Promise<void> {
       initialParams: initialParams(module.params, job),
       scene: job.scene,
     });
-    const warnings = undeclaredCardParams(module.params, job.cardParams);
     process.stdout.write(`${JSON.stringify({ transcript: result.transcriptPath, framesRun: result.framesRun, imageCount: result.imageCount, errors: result.errors, warnings })}\n`);
   } catch (error) {
     errors.push(runErrorText(error));
     // The runner wrote a transcript (its header and the failure line) before it threw.
     const transcript = error instanceof NoGpuAdapterError ? error.transcriptPath : undefined;
-    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors })}\n`);
+    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors, warnings })}\n`);
   }
 }
