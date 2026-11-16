@@ -32,9 +32,10 @@ function captureWarnings(t: Test): string[] {
   return warnings;
 }
 
-// Card types map string→select, number→number, boolean→boolean. A param the
-// module lacks, or one whose type cannot map, warns once per mount wrapper.
-void test("card params the module cannot honor warn once each", async (t) => {
+// Card types map string→select, number→number, boolean→boolean. A param whose
+// type cannot map warns once per mount wrapper. A param the module lacks is
+// quiet: the factory may read it from figure.params (bbx figure run names it).
+void test("card params the module declares with another type warn once each; undeclared ones are quiet", async (t) => {
   const warnings = captureWarnings(t);
   const { lib } = fakeLib();
   const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [
@@ -49,7 +50,6 @@ void test("card params the module cannot honor warn once each", async (t) => {
   wrapped.mountSketch(mount, { module });
   t.check(warnings, [
     "figure params: card param \"tare\" is boolean, but the module declares it trigger (card string→select or text, number→number, boolean→boolean)",
-    "figure params: card param \"ghost\" is not declared in the canvas-loop module's params",
   ]);
 });
 

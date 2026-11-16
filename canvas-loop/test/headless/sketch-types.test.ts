@@ -103,6 +103,13 @@ test("paths adds module mappings, as a box maps @/ to its root", async () => {
   assert.deepEqual(await checkSketchTypes([path], { paths: { "@/*": [join(dir, "box", "*")] } }), []);
 });
 
+test("helpers are checked with no sketch and no contract on their exports", async () => {
+  const unused = join(dir, "unused-helper.ts");
+  writeFileSync(unused, "export const n: number = 1;\n");
+  assert.deepEqual(await checkSketchTypes([], { helpers: [unused] }), []);
+  assert.deepEqual((await checkSketchTypes([], { helpers: [join(dir, "helper.ts")] })).map((e) => [e.file, e.line, e.code]), [[join(dir, "helper.ts"), 2, 2322]]);
+});
+
 test("cli run stops before the run on a type error, with the error on stderr and in the transcript", () => {
   const out = join(dir, "out");
   mkdirSync(out, { recursive: true });

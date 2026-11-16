@@ -57,9 +57,18 @@ export type FigureSketchCheck =
     ok: false;
     /** One `file:line:col - error TS…` line per error, paths relative to the box. */
     lines: string[];
+    /** The errors in the entry itself (and any global one): `lines` without `shared`. */
+    own: string[];
+    /** The errors in files other than the entry (shared code, a helper), by box-relative file: a whole-box run prints each once. */
+    shared: Array<{ file: string; lines: string[] }>;
     /** `v.cache was removed: use v.picture …`, when an error names a call the scene API removed: the sketch was written for the earlier canvas-loop. */
     removed: string | undefined;
   };
+
+/** The settings a box figure is checked with: DOM types, and `@/…` from the box root. */
+function boxOptions(boxRoot: string): { packageRoot: string; dom: true; paths: Record<string, string[]> } {
+  return { packageRoot: canvasLoopRoot(), dom: true, paths: { "@/*": [path.join(boxRoot, "*")] } };
+}
 
 /** Type-check a canvas-loop figure's entry (absolute path) against the sketch contract. */
 export async function checkFigureSketch(boxRoot: string, entry: string): Promise<FigureSketchCheck> {
@@ -67,8 +76,28 @@ export async function checkFigureSketch(boxRoot: string, entry: string): Promise
   const factoryLine = (await fs.readFile(entry, "utf8")).split("\n").findIndex((line) => /^export default\b/u.test(line)) + 1;
   const inFactory = (e: { file: string | undefined; line: number | undefined; code: number }): boolean =>
     factoryLine > 0 && e.file === entry && IMPLICIT_ANY_PARAM.has(e.code) && (e.line ?? 0) >= factoryLine;
-  const errors = (await checkSketchTypes([entry], { packageRoot: canvasLoopRoot(), dom: true, paths: { "@/*": [path.join(boxRoot, "*")] } })).filter((e) => !inFactory(e));
+  const errors = (await checkSketchTypes([entry], boxOptions(boxRoot))).filter((e) => !inFactory(e));
   if (errors.length === 0) return { ok: true };
   const removed = errors.map((e) => REMOVED_LINE.exec(e.message)?.[1]).find((line) => line !== undefined);
-  return { ok: false, lines: errors.map((e) => formatSketchTypeError(e, boxRoot)), removed };
+  const own: string[] = [];
+  const shared = new Map<string, string[]>();
+  for (const e of errors) {
+    const line = formatSketchTypeError(e, boxRoot);
+    if (e.file === undefined || e.file === entry) own.push(line);
+    else {
+      const file = path.relative(boxRoot, e.file);
+      shared.set(file, [...(shared.get(file) ?? []), line]);
+    }
+  }
+  return { ok: false, lines: errors.map((e) => formatSketchTypeError(e, boxRoot)), own, shared: [...shared].map(([file, lines]) => ({ file, lines })), removed };
+}
+
+/**
+ * Type-check shared code on its own (absolute paths), with the settings a
+ * figure's imports get; no sketch contract. One `file:line:col - error TS…`
+ * line per error.
+ */
+export async function checkFigureHelpers(boxRoot: string, files: readonly string[]): Promise<string[]> {
+  const { checkSketchTypes, formatSketchTypeError } = await import("@ianbicking/canvas-loop/sketch-check");
+  return (await checkSketchTypes([], { ...boxOptions(boxRoot), helpers: files })).map((e) => formatSketchTypeError(e, boxRoot));
 }

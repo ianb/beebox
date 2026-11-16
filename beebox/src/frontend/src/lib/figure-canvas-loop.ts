@@ -3,8 +3,10 @@
  * call (plan `plan:figure-check`). FigureMount hands the sketch a copy
  * of the canvas-loop browser namespace whose `mountSketch`:
  *
- * - console-warns once per card param that the module does not declare, or
- *   declares with a type the card's type cannot map to;
+ * - console-warns once per card param that the module declares with a type
+ *   the card's type cannot map to. A card param the module does not declare
+ *   is quiet: a factory may read it from `figure.params`, and `bbx figure
+ *   run` names such params for the agent;
  * - chains the sketch's own `onEvent` and reports learner activity as
  *   `explored`: declared param values and handled names only, never
  *   coordinates, raw keys or model state. Each report also goes to the
@@ -46,9 +48,10 @@ export function figureActivityDetail(event: EmittedEvent): string | null {
 }
 
 /**
- * One warning per card param the canvas-loop module cannot honor: the module
- * does not declare it, or declares it with a type the card type does not map
- * to. `module` is the sketch's untrusted `opts.module`.
+ * One warning per card param the canvas-loop module declares with a type the
+ * card type does not map to. A param the module does not declare is no
+ * mismatch: the factory reads it from `figure.params`, and `bbx figure run`
+ * names it. `module` is the sketch's untrusted `opts.module`.
  */
 export function paramMismatches(declared: readonly FigureParamDecl[], module: unknown): string[] {
   const moduleParams = isRecord(module) && isRecord(module.params) ? module.params : {};
@@ -56,9 +59,7 @@ export function paramMismatches(declared: readonly FigureParamDecl[], module: un
   for (const decl of declared) {
     const entry = moduleParams[decl.name];
     const moduleType = isRecord(entry) && typeof entry.type === "string" ? entry.type : null;
-    if (moduleType === null) {
-      out.push(`figure params: card param "${decl.name}" is not declared in the canvas-loop module's params`);
-    } else if (!MODULE_TYPES_FOR[decl.type].includes(moduleType)) {
+    if (moduleType !== null && !MODULE_TYPES_FOR[decl.type].includes(moduleType)) {
       out.push(`figure params: card param "${decl.name}" is ${decl.type}, but the module declares it ${moduleType} (card string→select or text, number→number, boolean→boolean)`);
     }
   }

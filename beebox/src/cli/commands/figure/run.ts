@@ -13,7 +13,8 @@ import { spawn } from "node:child_process";
 import { existsSync, promises as fs, realpathSync } from "node:fs";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../cards/frontmatter.js";
-import { checkFigureSketch, FigureCheckUnavailableError, type FigureSketchCheck } from "../../../core/figure-sketch-check.js";
+import { checkFigureHelpers, checkFigureSketch, FigureCheckUnavailableError, type FigureSketchCheck } from "../../../core/figure-sketch-check.js";
+import { isTrashedCard } from "../../../lib/paths/core.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { isRecord } from "../../../shared/is-record.js";
@@ -31,6 +32,8 @@ export interface FigureJob {
   scene: boolean | "first";
   /** Card `params:` defaults (typed) and `--params` values (strings, typed by the child against the module). */
   cardDefaults: Record<string, string | number | boolean>;
+  /** Every card `params:` name, valued or not, so the child can name those the module does not declare. */
+  cardParams: string[];
   overrides: Record<string, string>;
 }
 
@@ -43,14 +46,22 @@ export interface FigureRunResult {
   imageCount?: number;
   errors: string[];
   warnings: string[];
+  /** Type errors in files the entry imports, by file; `figure run` prints each file's once per run. */
+  shared?: SharedTypeErrors;
 }
+
+/** Type errors in files other than a figure's entry, by box-relative file. */
+export type SharedTypeErrors = Array<{ file: string; lines: string[] }>;
 
 const RUN_DIR = path.join("_tmp", "figure-run");
 
 class FigureRunError extends Error {
-  constructor(options: { detail: string }) {
+  /** Type errors in files the entry imports, kept out of the message so a whole-box run prints each once. */
+  readonly shared: SharedTypeErrors;
+  constructor(options: { detail: string; shared?: SharedTypeErrors }) {
     super(options.detail);
     this.name = "FigureRunError";
+    this.shared = options.shared ?? [];
   }
 }
 
@@ -90,14 +101,18 @@ function boxFile(args: { boxRoot: string; cardRel: string; ref: string; what: st
   return abs;
 }
 
+/** The card's `params:` declarations that have a string `name`. */
+function cardParamDecls(frontmatter: Record<string, unknown>): Array<Record<string, unknown> & { name: string }> {
+  const declared = frontmatter["params"];
+  if (!Array.isArray(declared)) return [];
+  return declared.filter((item): item is Record<string, unknown> & { name: string } => isRecord(item) && typeof item["name"] === "string");
+}
+
 function cardDefaults(frontmatter: Record<string, unknown>): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {};
-  const declared = frontmatter["params"];
-  if (!Array.isArray(declared)) return out;
-  for (const item of declared) {
-    if (!isRecord(item) || typeof item["name"] !== "string") continue;
+  for (const item of cardParamDecls(frontmatter)) {
     const value = item["default"];
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") out[item["name"]] = value;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") out[item.name] = value;
   }
   return out;
 }
@@ -112,7 +127,38 @@ async function checkEntryTypes(boxRoot: string, entry: string): Promise<void> {
     throw error;
   }
   if (check.ok) return;
-  throw new FigureRunError({ detail: `${path.relative(boxRoot, entry)}: the sketch does not type-check, so it was not run. Fix these and run again:\n${check.lines.join("\n")}` });
+  const sharedFiles = new Set(check.shared.map((s) => s.file));
+  const { own } = check;
+  const sharedCount = check.shared.reduce((n, s) => n + s.lines.length, 0);
+  const sharedNote = sharedFiles.size === 0 ? "" : `${String(sharedCount)} error(s) in files it imports, listed once after the figures: ${[...sharedFiles].join(", ")}`;
+  const rel = path.relative(boxRoot, entry);
+  const detail = own.length === 0
+    ? `${rel}: the sketch does not type-check, so it was not run: ${sharedNote}`
+    : `${rel}: the sketch does not type-check, so it was not run. Fix these and run again:\n${[...own, ...(sharedNote === "" ? [] : [sharedNote])].join("\n")}`;
+  throw new FigureRunError({ detail, shared: check.shared });
+}
+
+/** The box's shared code: every `.ts` file under `src/lib/` (absolute), sorted. */
+async function sharedCodeFiles(boxRoot: string): Promise<string[]> {
+  const lib = path.join(boxRoot, "src", "lib");
+  if (!existsSync(lib)) return [];
+  const entries = await fs.readdir(lib, { recursive: true, withFileTypes: true });
+  return entries
+    .filter((e) => e.isFile() && e.name.endsWith(".ts") && !path.relative(lib, e.parentPath).split(path.sep).includes("node_modules"))
+    .map((e) => path.join(e.parentPath, e.name))
+    .toSorted();
+}
+
+/** Type-check the box's shared code (`src/lib/*.ts`) on its own, as a figure's imports are checked: the file count and one line per error. */
+export async function checkSharedCode(boxRoot: string): Promise<{ files: number; errors: string[] }> {
+  const files = await sharedCodeFiles(boxRoot);
+  if (files.length === 0) return { files: 0, errors: [] };
+  try {
+    return { files: files.length, errors: await checkFigureHelpers(boxRoot, files) };
+  } catch (error) {
+    if (error instanceof FigureCheckUnavailableError) throw new FigureRunError({ detail: error.message });
+    throw error;
+  }
 }
 
 /** Prepare the run directory and compiled entry for one card. */
@@ -161,6 +207,7 @@ export async function prepareFigureJob(args: {
       every: args.every ?? 30,
       scene: args.scene ?? false,
       cardDefaults: cardDefaults(frontmatter),
+      cardParams: cardParamDecls(frontmatter).map((p) => p.name),
       overrides: args.params,
     },
   };
@@ -216,11 +263,14 @@ export async function runFigureJob(args: { boxRoot: string; cardRel: string; job
     ...(typeof parsed["framesRun"] === "number" ? { framesRun: parsed["framesRun"] } : {}),
     ...(typeof parsed["imageCount"] === "number" ? { imageCount: parsed["imageCount"] } : {}),
     errors,
-    warnings: transcript === undefined ? [] : await transcriptWarnings(transcript),
+    warnings: [
+      ...(Array.isArray(parsed["warnings"]) ? parsed["warnings"].map(String) : []),
+      ...(transcript === undefined ? [] : await transcriptWarnings(transcript)),
+    ],
   };
 }
 
-/** Every canvas-loop figure card in the box (box-relative), skipping `_tmp/` and dot directories. */
+/** Every canvas-loop figure card in the box (box-relative), skipping `_tmp/`, dot directories and the trash (`isTrashedCard`). */
 export async function listCanvasLoopFigures(boxRoot: string): Promise<string[]> {
   const found: string[] = [];
   const walk = async (dir: string): Promise<void> => {
@@ -229,8 +279,10 @@ export async function listCanvasLoopFigures(boxRoot: string): Promise<string[]> 
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) await walk(abs);
       else if (entry.name.endsWith(".figure.card")) {
+        const rel = path.relative(boxRoot, abs);
+        if (isTrashedCard(rel)) continue;
         const frontmatter = parseFrontmatterObject(await fs.readFile(abs, "utf8"));
-        if (frontmatter?.["runtime"] === "canvas-loop") found.push(path.relative(boxRoot, abs));
+        if (frontmatter?.["runtime"] === "canvas-loop") found.push(rel);
       }
     }
   };

@@ -36,6 +36,12 @@ export interface SketchTypeOptions {
    * `@/*` to its root, as its bundler resolves it. Default: none.
    */
   paths?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * More files to type-check in the same program, with no contract on their
+   * exports: shared code checked on its own, whether or not a sketch imports
+   * it. Default: none.
+   */
+  helpers?: readonly string[];
 }
 
 /** One error the compiler reports for a sketch, its imports, or its exports. */
@@ -143,8 +149,8 @@ function withReplacement(message: string): string {
 
 /**
  * Type-check sketch files and each one's exports against the TEA contract.
- * Returns every error in the sketches, the files they import and their
- * exports, in one list; empty when all are clean. Paths may be relative to
+ * Returns every error in the sketches, the files they import, their
+ * exports and any `helpers`, in one list; empty when all are clean. Paths may be relative to
  * the working directory.
  */
 export async function checkSketchTypes(files: readonly string[], options?: SketchTypeOptions): Promise<SketchTypeError[]> {
@@ -160,7 +166,8 @@ export async function checkSketchTypes(files: readonly string[], options?: Sketc
     virtual.set(path, boundarySource(importPathFor(sketch, virtualDir)));
     boundaryOf.set(path, sketch);
   }
-  virtual.set(configPath, configSource([...sketches, ...boundaryOf.keys()], { root, dom: options?.dom === true, paths: options?.paths ?? {} }));
+  const helpers = (options?.helpers ?? []).map((f) => resolve(f));
+  virtual.set(configPath, configSource([...sketches, ...helpers, ...boundaryOf.keys()], { root, dom: options?.dom === true, paths: options?.paths ?? {} }));
 
   const { API, DiagnosticCategory } = await import("@typescript/native/unstable/sync");
   const api = new API({
