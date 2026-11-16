@@ -1,8 +1,6 @@
 ---
 title: "Remove quick capture's leftover-memo guard after retire-memo-2026-10"
 workstream: unattached
-activate-on: 2026-11-16
-category: code-quality
 area: beebox
 design: ../../beebox/docs/implemented-plans/retire-memo.md
 filed-by: agent
