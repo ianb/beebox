@@ -53,7 +53,12 @@ void test("A figure runs headlessly with its sibling events file and the card's 
   const transcript = await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8");
   t.check(transcript, any(String).includes("mousedown (5,5) → dot"));
   t.check(findReservedNestedSegment(result.transcript ?? ""), null);
-  t.check(result.warnings, [any(String).includes('overlaps text "overlap"'), any(String).includes('overlaps text "overlap"')]);
+  // The scene renderer's warnings, each naming the sketch's line: the two labels overlap, and the first is wider than the canvas.
+  t.check(result.warnings, [
+    any(String).includes('text "overlap" overlaps text "n=0 speed=2"').includes("dot-tea.ts:12:"),
+    any(String).includes('text "overlap" overlaps text "n=1 speed=2"').includes("dot-tea.ts:12:"),
+    any(String).includes('text "n=1 speed=2" crosses the edge of the 60×40 canvas').includes("dot-tea.ts:11:"),
+  ]);
 });
 
 void test("--params overrides a default; a param the sketch lacks is an error", async (t) => {

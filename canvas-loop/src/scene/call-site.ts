@@ -5,10 +5,48 @@
 // sketch. Paths under the working directory are
 // shown relative to it.
 
-const SRC = new URL("../", import.meta.url).pathname;
-const RUNTIME = ["scene/", "gpu/", "device/", "core/", "headless/"].map((dir) => SRC + dir);
-// The runner and the browser surface call the sketch: frames below them are their callers, not the sketch.
-const ROOTS = ["headless/tea-runtime/runner.ts", "browser/scene/"].map((dir) => SRC + dir);
+/** `file:line:col` of a stack line, or undefined for a frame without a location. */
+function location(line: string): string | undefined {
+  const m = /\(?((?:file:\/\/)?\/[^():]+):(\d+):(\d+)\)?\s*$/.exec(line.trim());
+  if (m?.[1] === undefined) return undefined;
+  return `${m[1].replace(/^file:\/\//, "")}:${m[2] ?? ""}:${m[3] ?? ""}`;
+}
+
+const SELF_FILE = "scene/call-site.ts";
+
+/**
+ * Where canvas-loop's source shows in stacks. Two forms: the module's URL, and
+ * this module's own frame as the stack reports it. They differ when the code
+ * runs bundled (beebox's `bbx`): with source maps a frame names the mapped
+ * source path, which need not be the bundle's; without them it names the
+ * bundle, which then holds the whole runtime.
+ */
+export function runtimePaths(a: { moduleUrl: string; ownFrame: string | undefined }): RuntimePaths {
+  const srcs: string[] = [new URL("../", a.moduleUrl).pathname];
+  const own = a.ownFrame?.replace(/:\d+:\d+$/, "");
+  const bundle: string[] = [];
+  if (own !== undefined && own.endsWith(`/${SELF_FILE}`)) srcs.push(own.slice(0, -SELF_FILE.length));
+  else if (own !== undefined) bundle.push(own);
+  return {
+    runtime: [...srcs.flatMap((src) => ["scene/", "gpu/", "device/", "core/", "headless/"].map((dir) => src + dir)), ...bundle],
+    // The runner and the browser surface call the sketch: frames below them are their callers, not the sketch.
+    roots: srcs.flatMap((src) => ["headless/tea-runtime/runner.ts", "browser/scene/"].map((dir) => src + dir)),
+  };
+}
+
+/** Path prefixes of the runtime's frames, and of the frames that call the sketch. */
+export interface RuntimePaths {
+  readonly runtime: readonly string[];
+  readonly roots: readonly string[];
+}
+
+let paths: RuntimePaths | undefined;
+
+/** This module's paths, from its URL and from a frame of its own (`capture`'s), found once. */
+function ownPaths(): RuntimePaths {
+  paths ??= runtimePaths({ moduleUrl: import.meta.url, ownFrame: location(capture().stack?.split("\n")[1] ?? "") });
+  return paths;
+}
 
 function workingDir(): string | undefined {
   const proc: unknown = Reflect.get(globalThis, "process");
@@ -18,21 +56,16 @@ function workingDir(): string | undefined {
   return typeof dir === "string" ? `${dir}/` : undefined;
 }
 
-/** `file:line:col` of a stack line, or undefined for a frame without a location. */
-function location(line: string): string | undefined {
-  const m = /\(?((?:file:\/\/)?\/[^():]+):(\d+):(\d+)\)?\s*$/.exec(line.trim());
-  if (m?.[1] === undefined) return undefined;
-  return `${m[1].replace(/^file:\/\//, "")}:${m[2] ?? ""}:${m[3] ?? ""}`;
-}
 
 /** The stack's frames that belong to the sketch, nearest first, as `path:line:col`. */
-export function sketchFrames(stack: string | undefined): string[] {
+export function sketchFrames(stack: string | undefined, known?: RuntimePaths): string[] {
+  const { runtime, roots } = known ?? ownPaths();
   const cwd = workingDir();
   const out: string[] = [];
   for (const line of (stack ?? "").split("\n").slice(1)) {
     const at = location(line);
-    if (at !== undefined && ROOTS.some((dir) => at.startsWith(dir))) break;
-    if (at === undefined || at.includes("/node_modules/") || RUNTIME.some((dir) => at.startsWith(dir))) continue;
+    if (at !== undefined && roots.some((dir) => at.startsWith(dir))) break;
+    if (at === undefined || at.includes("/node_modules/") || runtime.some((dir) => at.startsWith(dir))) continue;
     out.push(cwd !== undefined && at.startsWith(cwd) ? at.slice(cwd.length) : at);
   }
   return out;
