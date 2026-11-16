@@ -2,8 +2,7 @@
 // vehicles at their places, the happenings set off by clicks, the weather, the
 // fall of night with its lit windows and lamps, fireworks, and the hover cue.
 //
-// Poses of one character live side by side in one sheet picture; a clip shows
-// the current cell. A sheet is placed every frame, so its pixels are kept.
+// Each pose of a character is its own kept picture, placed where the character is.
 import type { DeepReadonly, Drawing, PathCommand, Picture, RootDrawing, TextOptions, View } from "@ianbicking/canvas-loop";
 import { type Carry, FOLK_W, FOOT_X, type Kind, paintBaker, paintBoat, paintCart, paintCat, paintCyclist, paintDuck, paintFolk, paintPigeon, paintTram } from "./folk-tea.js";
 import { INK, blob, clamp01, ellipsePts, hash, ink, mix, rectPts, rgba, type RGB } from "./ink-tea.js";
@@ -22,13 +21,16 @@ const since = (start: number | null, f: number, lasts: number): number | null =>
 const CELL_H = 120;
 const CELL_FOOT = 116;
 
-/** A sheet of poses, `cells` wide, each cell `w` x `h`. */
-function sheet(v: View, a: { key: string; w: number; h: number; cells: number; deps: readonly (string | number | boolean)[]; dy?: number }, paint: (k: number) => Drawing): Picture {
-  return v.picture({ key: a.key, width: a.w * a.cells, height: a.h, deps: [...a.deps] }, () => Array.from({ length: a.cells }, (_, k) => v.clip(rectPts(k * a.w, 0, a.w, a.h), [v.at({ translate: [k * a.w, a.dy ?? 0] }, paint(k))])));
+/** A character or thing in several poses: one picture per pose, each drawn once and kept. */
+interface Poses {
+  readonly pose: (k: number) => Picture;
 }
-/** Cell `k` of a sheet with its top-left at (x, y) in the current coordinates. */
-function cell(v: View, pic: Picture, a: { k: number; w: number; h: number; x: number; y: number }): Drawing {
-  return v.clip(rectPts(a.x, a.y, a.w, a.h), [v.place(pic, a.x - a.k * a.w, a.y)]);
+function poses(v: View, a: { key: string; w: number; h: number; deps: readonly (string | number | boolean)[]; dy?: number }, paint: (k: number) => Drawing): Poses {
+  return { pose: (k) => v.picture({ key: a.key, width: a.w, height: a.h, deps: [...a.deps, k] }, () => v.at({ translate: [0, a.dy ?? 0] }, paint(k))) };
+}
+/** Pose `k` with its top-left at (x, y) in the current coordinates. */
+function cell(v: View, set: Poses, a: { k: number; x: number; y: number }): Drawing {
+  return v.place(set.pose(a.k), a.x, a.y);
 }
 /** Something standing at (x, feet), scaled and facing `dir`. */
 function standing(v: View, a: { x: number; feet: number; scale: number; dir: number }, child: Drawing): Drawing {
@@ -40,11 +42,11 @@ function standing(v: View, a: { x: number; feet: number; scale: number; dir: num
 function carryOf(kind: Kind, weather: Opts["weather"]): Carry {
   return weather === "rain" && kind !== "hedgehog" && kind !== "otter" ? "umbrella" : "none";
 }
-function folkSheet(v: View, kind: Kind, carry: Carry): Picture {
-  return sheet(v, { key: "folk", w: FOLK_W, h: CELL_H, cells: 4, deps: [kind, carry], dy: CELL_FOOT - 100 }, (k) => paintFolk(v, kind, k, carry));
+function folkSheet(v: View, kind: Kind, carry: Carry): Poses {
+  return poses(v, { key: "folk", w: FOLK_W, h: CELL_H, deps: [kind, carry], dy: CELL_FOOT - 100 }, (k) => paintFolk(v, kind, k, carry));
 }
-function folkAt(v: View, pic: Picture, a: { k: number; x: number; feet: number; scale: number; dir: number }): Drawing {
-  return standing(v, a, cell(v, pic, { k: a.k, w: FOLK_W, h: CELL_H, x: -FOOT_X, y: -CELL_FOOT }));
+function folkAt(v: View, pic: Poses, a: { k: number; x: number; feet: number; scale: number; dir: number }): Drawing {
+  return standing(v, a, cell(v, pic, { k: a.k, x: -FOOT_X, y: -CELL_FOOT }));
 }
 
 /** How long ago `who` was clicked, while the reaction lasts. */
@@ -111,9 +113,9 @@ function walkers(v: View, model: DeepReadonly<Model>, lane: 0 | 1, o: Opts): Dra
 function cyclist(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   if (o.folk < 8) return null;
   const f = model.frame, x = cyclistX(f), t = reacting(model, "cyclist");
-  const pic = sheet(v, { key: "cyclist", w: 96, h: 96, cells: 4, deps: [], dy: 16 }, (k) => paintCyclist(v, k));
+  const pic = poses(v, { key: "cyclist", w: 96, h: 96, deps: [], dy: 16 }, (k) => paintCyclist(v, k));
   return [
-    standing(v, { x, feet: CYCLIST_FEET - hop(t) * 0.5, scale: 0.72, dir: 1 }, cell(v, pic, { k: Math.floor(f / 5) % 4, w: 96, h: 96, x: -46, y: -92 })),
+    standing(v, { x, feet: CYCLIST_FEET - hop(t) * 0.5, scale: 0.72, dir: 1 }, cell(v, pic, { k: Math.floor(f / 5) % 4, x: -46, y: -92 })),
     t !== null && reaction(v, "cyclist", t, { x: x + 10, head: CYCLIST_FEET - 62, feet: CYCLIST_FEET, dir: 1 }),
   ];
 }
@@ -121,9 +123,9 @@ function cyclist(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
 function cart(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   if (o.folk < 9) return null;
   const f = model.frame, x = cartX(f), t = reacting(model, "cart");
-  const pic = sheet(v, { key: "cart", w: 104, h: 76, cells: 2, deps: [], dy: 16 }, (k) => paintCart(v, k));
+  const pic = poses(v, { key: "cart", w: 104, h: 76, deps: [], dy: 16 }, (k) => paintCart(v, k));
   return [
-    standing(v, { x, feet: CART_FEET - (t !== null && t < 10 ? 3 : 0), scale: 0.74, dir: -1 }, cell(v, pic, { k: Math.floor(f / 22) % 2, w: 104, h: 76, x: -46, y: -72 })),
+    standing(v, { x, feet: CART_FEET - (t !== null && t < 10 ? 3 : 0), scale: 0.74, dir: -1 }, cell(v, pic, { k: Math.floor(f / 22) % 2, x: -46, y: -72 })),
     t !== null && reaction(v, "cart", t, { x: x - 30, head: CART_FEET - 50, feet: CART_FEET, dir: -1 }),
   ];
 }
@@ -132,17 +134,17 @@ function cart(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
 
 
 function pigeons(v: View, model: DeepReadonly<Model>): Drawing {
-  const pic = sheet(v, { key: "pigeon", w: 32, h: 26, cells: 3, deps: [] }, (k) => paintPigeon(v, k === 0 ? "sit" : k === 1 ? "up" : "down"));
+  const pic = poses(v, { key: "pigeon", w: 32, h: 26, deps: [] }, (k) => paintPigeon(v, k === 0 ? "sit" : k === 1 ? "up" : "down"));
   const t = since(model.bell, model.frame, LASTS.bell);
   return [0, 1, 2, 3, 4].map((i) => {
     const hx = TOWER.x - 4 + i * 14, hy = LEDGE_Y - 1;
-    if (t === null) return standing(v, { x: hx, feet: hy, scale: 0.8, dir: i % 2 === 0 ? 1 : -1 }, cell(v, pic, { k: 0, w: 32, h: 26, x: -16, y: -23 }));
+    if (t === null) return standing(v, { x: hx, feet: hy, scale: 0.8, dir: i % 2 === 0 ? 1 : -1 }, cell(v, pic, { k: 0, x: -16, y: -23 }));
     const u = t / LASTS.bell, k = Math.sin(Math.PI * Math.min(1, u * 1.15));
     const x = hx + Math.sin(t * 0.035 + i * 1.3) * 120 * k + (i - 2) * 24 * k;
     const y = hy - 120 * k - Math.cos(t * 0.05 + i) * 22 * k;
     const dir = Math.cos(t * 0.035 + i * 1.3) >= 0 ? 1 : -1;
     const pose = k < 0.04 ? 0 : (Math.floor(t / 5) + i) % 2 === 0 ? 1 : 2;
-    return standing(v, { x, feet: y, scale: 0.8, dir }, cell(v, pic, { k: pose, w: 32, h: 26, x: -16, y: -23 }));
+    return standing(v, { x, feet: y, scale: 0.8, dir }, cell(v, pic, { k: pose, x: -16, y: -23 }));
   });
 }
 
@@ -181,7 +183,7 @@ function sails(v: View, angle: number): Drawing {
   const quarter = Math.PI / 2;
   const k = Math.floor((((angle % quarter) + quarter) % quarter) / quarter * SAIL_STEPS) % SAIL_STEPS;
   const size = 96;
-  const pic = sheet(v, { key: "sails", w: size, h: size, cells: SAIL_STEPS, deps: [] }, (s) => {
+  const pic = poses(v, { key: "sails", w: size, h: size, deps: [] }, (s) => {
     const a0 = (s / SAIL_STEPS) * quarter;
     return [0, 1, 2, 3].map((j) => {
       const a = a0 + j * quarter;
@@ -193,7 +195,7 @@ function sails(v: View, angle: number): Drawing {
       ];
     }).concat([v.circle(size / 2, size / 2, 3.5, { fill: "#5a4030" })]);
   });
-  return cell(v, pic, { k, w: size, h: size, x: MILL.x - size / 2, y: MILL.y - size / 2 });
+  return cell(v, pic, { k, x: MILL.x - size / 2, y: MILL.y - size / 2 });
 }
 
 function smoke(v: View, f: number, busy: boolean): Drawing {
@@ -216,10 +218,10 @@ function bakery(v: View, model: DeepReadonly<Model>): Drawing {
   const sill = WINDOWS[3];
   if (!b || !sill) return null;
   const doorX = b.x + b.w - 26 - 12;
-  const catPic = sheet(v, { key: "cat", w: 42, h: 40, cells: 2, deps: [], dy: 2 }, (k) => paintCat(v, k === 0 ? "sit" : "trot"));
+  const catPic = poses(v, { key: "cat", w: 42, h: 40, deps: [], dy: 2 }, (k) => paintCat(v, k === 0 ? "sit" : "trot"));
   const sillPos: [number, number] = [sill.x + sill.w / 2, sill.y + sill.h + 4];
   const ground: [number, number] = [doorX - 10, BACK_FEET];
-  const catAt = (pos: readonly [number, number], k: number, dir: number): Drawing => standing(v, { x: pos[0], feet: pos[1], scale: 0.62, dir }, cell(v, catPic, { k, w: 42, h: 40, x: -21, y: -36 }));
+  const catAt = (pos: readonly [number, number], k: number, dir: number): Drawing => standing(v, { x: pos[0], feet: pos[1], scale: 0.62, dir }, cell(v, catPic, { k, x: -21, y: -36 }));
   if (t === null) return catAt(sillPos, 0, 1);
   const out = clamp01(t / 40) * clamp01((LASTS.bakery - t) / 40);
   const bx = doorX + 13 - out * 34;
@@ -318,10 +320,10 @@ function canal(v: View, model: DeepReadonly<Model>, night: number): Drawing {
   const f = model.frame;
   const bx = boatX(f);
   const rowing = since(model.rowing, f, LASTS.rowing);
-  const boatPic = sheet(v, { key: "boat", w: 122, h: 64, cells: 2, deps: [], dy: 10 }, (k) => paintBoat(v, k));
+  const boatPic = poses(v, { key: "boat", w: 122, h: 64, deps: [], dy: 10 }, (k) => paintBoat(v, k));
   const pose = Math.floor(f / (rowing === null ? 34 : 9)) % 2;
   const dir = Math.cos(f / 520) >= 0 ? 1 : -1;
-  const duckPic = sheet(v, { key: "duck", w: 36, h: 28, cells: 4, deps: [], dy: 2 }, (k) => paintDuck(v, k % 2 === 0 ? "swim" : "flap", k >= 2));
+  const duckPic = poses(v, { key: "duck", w: 36, h: 28, deps: [], dy: 2 }, (k) => paintDuck(v, k % 2 === 0 ? "swim" : "flap", k >= 2));
   const scared = since(model.ducks, f, LASTS.ducks);
   const ducks = [0, 1, 2, 3].map((i) => {
     const [hx, hy] = duckHome(i, f);
@@ -330,7 +332,7 @@ function canal(v: View, model: DeepReadonly<Model>, night: number): Drawing {
     const side = i % 2 === 0 ? -1 : 1;
     const x = hx + side * 150 * k, y = hy - 26 * k * (u < 0.5 ? 1 : 0.4);
     const flap = k > 0.1 && Math.floor(f / 4 + i) % 2 === 0;
-    return standing(v, { x, feet: y, scale: 0.85, dir: scared !== null && u < 0.5 ? side : Math.cos(f / 140 + i * 2) >= 0 ? 1 : -1 }, cell(v, duckPic, { k: (flap ? 1 : 0) + (i === 1 ? 2 : 0), w: 36, h: 28, x: -17, y: -21 }));
+    return standing(v, { x, feet: y, scale: 0.85, dir: scared !== null && u < 0.5 ? side : Math.cos(f / 140 + i * 2) >= 0 ? 1 : -1 }, cell(v, duckPic, { k: (flap ? 1 : 0) + (i === 1 ? 2 : 0), x: -17, y: -21 }));
   });
   const fishT = since(model.fish, f, LASTS.fish);
   const fish = fishT !== null && ((): Drawing => {
@@ -355,7 +357,7 @@ function canal(v: View, model: DeepReadonly<Model>, night: number): Drawing {
     ducks,
     // A wake behind the boat.
     [1, 2, 3].map((k) => v.line(bx - dir * (54 + k * 14), BOAT_Y + 2 + k, bx - dir * (66 + k * 18), BOAT_Y + 2 + k, { stroke: "rgba(230,248,248,0.5)", weight: 1.2 })),
-    standing(v, { x: bx, feet: BOAT_Y + Math.round(Math.sin(f / 30) * 1.5), scale: 0.9, dir }, cell(v, boatPic, { k: pose, w: 122, h: 64, x: -61, y: -54 })),
+    standing(v, { x: bx, feet: BOAT_Y + Math.round(Math.sin(f / 30) * 1.5), scale: 0.9, dir }, cell(v, boatPic, { k: pose, x: -61, y: -54 })),
     fish,
     fishT !== null && [splash(600, fishT), splash(690, fishT - LASTS.fish + 6)],
   ];
@@ -566,9 +568,10 @@ function hotAir(v: View, model: DeepReadonly<Model>): Drawing {
 function burner(v: View, model: DeepReadonly<Model>, night: number): Drawing {
   const f = model.frame;
   const [hx, hy] = hotAirAt(f, model.hotAir);
-  const fired = since(model.hotAir, f, 70);
+  const fired = since(model.hotAir.fired, f, model.hotAir.sputter ? 30 : 70);
   const idle = night > 0.3 ? night * (0.5 + 0.5 * Math.max(0, Math.sin(f * 0.05)) ** 4) : 0;
-  const roar = fired === null ? 0 : (1 - fired / 70) * (0.8 + 0.2 * Math.sin(fired * 1.3));
+  // A full burn roars and fades; a sputter at the ceiling only coughs a few small flames.
+  const roar = fired === null ? 0 : model.hotAir.sputter ? (Math.floor(fired / 4) % 2 === 0 ? 0.35 : 0.05) * (1 - fired / 30) : (1 - fired / 70) * (0.8 + 0.2 * Math.sin(fired * 1.3));
   const k = Math.max(idle * 0.6, roar);
   if (k <= 0.02) return null;
   const x = hx + 30, y = hy + 72;
@@ -601,17 +604,19 @@ function litWindows(v: View, model: DeepReadonly<Model>): Drawing {
   // windows aglow, and pools on the pavement. What hangs in front of a shop window
   // (awnings, bunting, lamp posts) is cut out, so the light stays behind it.
   const light = v.picture({ key: "window-light", width: W, height: H, deps: [mask, shops] }, () => v.group({}, [
-    v.group({ effects: { glow: { blur: 8, color: "#ff9a30", strength: 1.2 } } }, lit.map((w) => v.rect(w.x, w.y, w.w, w.h, { fill: "rgba(255,200,120,0.35)" }))),
+    // One group glow, small blur and high strength, so each window gets its own halo
+    // instead of the haze that many wide halos add up to (BRUSHES.md, "Halos add up").
+    v.group({ effects: { glow: { blur: 4, color: "#ff9a30", strength: 3 } } }, lit.map((w) => v.rect(w.x, w.y, w.w, w.h, { fill: "#4a2c12" }))),
     shops && BUILDINGS.map((b) => {
       const sw = shopWindow(b);
       return sw && [
-        v.rect(sw.x, sw.y, sw.w, sw.h, { fill: v.linearGradient(0, sw.y, 0, sw.y + sw.h, [[0, "rgba(255,176,86,0.62)"], [1, "rgba(240,130,60,0.5)"]]), effects: { glow: { blur: 9, color: "#ff9a30", strength: 1 } } }),
+        v.rect(sw.x, sw.y, sw.w, sw.h, { fill: v.linearGradient(0, sw.y, 0, sw.y + sw.h, [[0, "rgba(255,176,86,0.62)"], [1, "rgba(240,130,60,0.5)"]]), effects: { glow: { blur: 5, color: "#ff9a30", strength: 2.5 } } }),
         v.ellipse(sw.x + sw.w / 2, BASE + 8, sw.w * 0.75, 16, { fill: v.ellipseGradient(sw.x + sw.w / 2, BASE + 8, sw.w * 0.75, 16, [[0, "rgba(255,180,100,0.5)"], [1, "rgba(255,180,100,0)"]]) }),
       ];
     }),
     occluders(v, CUT),
   ]));
-  return [v.place(panes, 0, 0), v.place(light, 0, 0, { blend: "screen" })];
+  return [lit.length > 0 && v.place(panes, 0, 0), (lit.length > 0 || shops) && v.place(light, 0, 0, { blend: "screen" })];
 }
 
 function lampLight(v: View, model: DeepReadonly<Model>, town: Picture): Drawing {

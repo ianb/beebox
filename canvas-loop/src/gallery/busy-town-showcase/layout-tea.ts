@@ -182,11 +182,36 @@ export function cartX(frame: number): number {
   return W + 60 - ((frame * 0.18 + 500) % (W + 220));
 }
 
-/** The hot-air balloon: drifting, and lifted for a while after its burner is fired. */
+/** The hot-air balloon drifts across at REST_Y. Firing the burner lifts it by up
+ * to LIFT_MAX (a soft ceiling: each burn closes part of the gap that is left), and
+ * it cools and sinks back gradually from wherever it is. */
 export const HOT_AIR = { w: 60, h: 96 } as const;
-export function hotAirAt(frame: number, fired: number | null): readonly [number, number] {
+export const HOT_AIR_REST_Y = 78;
+/** The highest lift; at REST_Y minus this, with its bob, the envelope still clears the top by 8 px. */
+export const LIFT_MAX = 64;
+export interface Balloon {
+  /** How high the hot air wants to carry it, px above rest (0..LIFT_MAX). */
+  readonly lift: number;
+  /** How high it is now, px above rest; it eases toward `lift`. */
+  readonly rise: number;
+  /** The frame the burner last fired, or null. */
+  readonly fired: number | null;
+  /** True when that firing was at the ceiling (the burner sputters). */
+  readonly sputter: boolean;
+}
+export const BALLOON_AT_REST: Balloon = { lift: 0, rise: 0, fired: null, sputter: false };
+export function hotAirAt(frame: number, b: Balloon): readonly [number, number] {
   const x = ((frame * 0.22 + 600) % (W + 200)) - 100;
-  const t = fired === null ? -1 : frame - fired;
-  const lift = t < 0 ? 0 : t < 60 ? Math.sin((t / 60) * (Math.PI / 2)) : t < 180 ? 1 : t < 420 ? 0.5 + 0.5 * Math.cos(((t - 180) / 240) * Math.PI) : 0;
-  return [x, 44 + Math.sin(frame * 0.01) * 6 - lift * 40];
+  return [x, HOT_AIR_REST_Y + Math.sin(frame * 0.01) * 6 - b.rise];
+}
+/** One frame of the balloon: it rises toward its lift, and the lift cools away. */
+export function stepBalloon(b: Balloon): Balloon {
+  const rise = b.rise + (b.lift - b.rise) * 0.035;
+  return { ...b, rise, lift: Math.max(0, b.lift - 0.06) };
+}
+/** Fire the burner: close 45% of the gap to the ceiling; near the ceiling it only sputters. */
+export function burn(b: Balloon, frame: number): Balloon {
+  const room = LIFT_MAX - b.lift;
+  if (room < LIFT_MAX * 0.12) return { ...b, fired: frame, sputter: true };
+  return { ...b, lift: b.lift + room * 0.45, fired: frame, sputter: false };
 }

@@ -1,7 +1,7 @@
 // The town's state, the light at a given hour, and what a click at a point hits.
 import type { DeepReadonly, Voice } from "@ianbicking/canvas-loop";
 import { clamp01, ramp } from "./ink-tea.js";
-import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, CART_FEET, CYCLIST_FEET, HALL, HOT_AIR, LAMPS, LAMP_H, MILL, MOUSE, RAIL_Y, TOWER, TRAM_H, TRAM_W, WALKERS, WINDOWS, type WalkerKind, boatX, cartX, cyclistX, duckHome, hotAirAt, tramX, walkerAt } from "./layout-tea.js";
+import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, type Balloon, CART_FEET, CYCLIST_FEET, HALL, HOT_AIR, LAMPS, LAMP_H, MILL, MOUSE, RAIL_Y, TOWER, TRAM_H, TRAM_W, WALKERS, WINDOWS, type WalkerKind, boatX, cartX, cyclistX, duckHome, hotAirAt, tramX, walkerAt } from "./layout-tea.js";
 
 export interface Rocket {
   readonly at: number;
@@ -32,7 +32,7 @@ export interface Model {
   petals: number | null;
   cafe: number | null;
   fish: number | null;
-  hotAir: number | null;
+  hotAir: Balloon;
   /** Who reacted to a click, and when. */
   reactions: readonly { readonly who: Who; readonly at: number }[];
   /** The weather now, the weather before, and the frame it changed. */
@@ -45,7 +45,7 @@ export interface Model {
   count: number;
 }
 
-export const LASTS = { bell: 360, bakery: 540, balloonPop: 300, balloonBack: 420, rowing: 240, ducks: 300, tram: 50, petals: 320, cafe: 420, fish: 70, rocket: 150, reaction: 90, hotAir: 420, thunder: 120 } as const;
+export const LASTS = { bell: 360, bakery: 540, balloonPop: 300, balloonBack: 420, rowing: 240, ducks: 300, tram: 50, petals: 320, cafe: 420, fish: 70, rocket: 150, reaction: 90, thunder: 120 } as const;
 /** A rocket climbs for this many frames, then bursts. */
 export const CLIMB = 42;
 
@@ -164,9 +164,31 @@ function hitCyclist(model: DeepReadonly<Model>, x: number, y: number, folk: numb
   return inRect(x, y, cx - 34, CYCLIST_FEET - 70, 68, 72) ? { target: { kind: "folk", who: "cyclist" }, x: cx, y: CYCLIST_FEET - 34, r: 36, hint: PEOPLE_HINTS.cyclist } : null;
 }
 
+/** Whether a building, the hall or the tower (with their roofs) covers (x, y). */
+function buildingCovers(x: number, y: number): boolean {
+  const under = (a: readonly [number, number], b: readonly [number, number], c: readonly [number, number]): boolean => {
+    const s1 = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]);
+    const s2 = (c[0] - b[0]) * (y - b[1]) - (c[1] - b[1]) * (x - b[0]);
+    const s3 = (a[0] - c[0]) * (y - c[1]) - (a[1] - c[1]) * (x - c[0]);
+    return (s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0);
+  };
+  for (const b of BUILDINGS) {
+    const flatTop = b.top - (b.roof === "mansard" ? 16 : b.roof === "flat" ? 10 : 0);
+    if (inRect(x, y, b.x - 6, flatTop, b.w + 12, BASE - flatTop)) return true;
+    if (b.roof === "gable" || b.roof === "steep") {
+      const peak = b.top - (b.roof === "gable" ? 54 : 78);
+      if (under([b.x - 8, b.top + 2], [b.x + b.w / 2, peak], [b.x + b.w + 8, b.top + 2])) return true;
+    }
+    if (b.roof === "step" && inRect(x, y, b.x + b.w / 3, b.top - 8, b.w / 3, 10)) return true;
+  }
+  if (inRect(x, y, TOWER.x - 6, TOWER.top, TOWER.w + 12, BASE - TOWER.top)) return true;
+  return under([TOWER.x - 6, TOWER.top + 2], [TOWER.x + TOWER.w / 2, TOWER.top - TOWER.spire - 40], [TOWER.x + TOWER.w + 6, TOWER.top + 2]);
+}
+
 function hitHotAir(model: DeepReadonly<Model>, x: number, y: number): Hit | null {
   const [hx, hy] = hotAirAt(model.frame, model.hotAir);
-  return inRect(x, y, hx, hy, HOT_AIR.w, HOT_AIR.h) ? { target: { kind: "hotair" }, x: hx + HOT_AIR.w / 2, y: hy + HOT_AIR.h / 2 - 8, r: 44, hint: "fire the burner" } : null;
+  // The balloon flies behind the town: where a roof is in front of it, the roof is what is clicked.
+  return inRect(x, y, hx, hy, HOT_AIR.w, HOT_AIR.h) && !buildingCovers(x, y) ? { target: { kind: "hotair" }, x: hx + HOT_AIR.w / 2, y: hy + HOT_AIR.h / 2 - 8, r: 44, hint: "fire the burner" } : null;
 }
 
 /** What is under (x, y) in the frame the model shows; the front-most thing wins. */

@@ -8,7 +8,7 @@
 // The still town is painted once into pictures (town-tea.ts); the folk are pose
 // pictures (folk-tea.ts); live-tea.ts places it all each frame.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, RootDrawing, SampleName, Util, View, Voice } from "@ianbicking/canvas-loop";
-import { H, LAMPS, W, WINDOWS } from "./layout-tea.js";
+import { BALLOON_AT_REST, H, LAMPS, W, WINDOWS, burn, stepBalloon } from "./layout-tea.js";
 import { paintScene } from "./live-tea.js";
 import { CLIMB, LASTS, type Model, type Sky, type Target, type Who, hitId, hitTest, nightOf } from "./model-tea.js";
 
@@ -34,7 +34,7 @@ export function init(u: Util<P>): Model {
     flipped: WINDOWS.map(() => false),
     lampFlipped: LAMPS.map(() => false),
     bell: null, bakery: null, balloon: null, rowing: null, ducks: null, tram: null, petals: null, cafe: null, fish: null,
-    hotAir: null,
+    hotAir: BALLOON_AT_REST,
     reactions: [],
     sky: { kind: u.params.weather, prev: "fair", at: -10000 },
     thunder: null,
@@ -111,8 +111,14 @@ function press(model: DeepReadonly<Model>, target: Target, u: Util<P>): Model {
       return { ...m, reactions: [...model.reactions.filter((r) => f - r.at < LASTS.reaction && r.who !== target.who), { who: target.who, at: f }], ...hear(model, folkSounds(target.who, u)) };
     }
     case "hotair":
-      if (model.hotAir !== null && f - model.hotAir < 90) return m;
-      return { ...m, hotAir: f, ...hear(model, [{ noise: 0.9, gain: 0.16 }, { name: "rise", variant: 2, gain: 0.18, rate: 0.6, delay: 4 }]) };
+      if (model.hotAir.fired !== null && f - model.hotAir.fired < 12) return m;
+      {
+        const hotAir = burn(model.hotAir, f);
+        const sounds: Sound[] = hotAir.sputter
+          ? [{ noise: 0.12, gain: 0.12 }, { name: "click", variant: 2, gain: 0.2, rate: 0.6, delay: 7 }, { noise: 0.1, gain: 0.1, delay: 14 }, { name: "click", variant: 4, gain: 0.16, rate: 0.55, delay: 22 }]
+          : [{ noise: 0.9, gain: 0.16 }, { name: "rise", variant: 2, gain: 0.18, rate: 0.6, delay: 4 }];
+        return { ...m, hotAir, ...hear(model, sounds) };
+      }
     case "window":
       return { ...m, flipped: m.flipped.map((b, i) => (i === target.i ? !b : b)), ...hear(model, [{ name: "toggle", variant: target.i, gain: 0.3 }]) };
     case "lamp":
@@ -158,7 +164,7 @@ function tick(model: DeepReadonly<Model>, frame: number, u: Util<P>): Model {
   const pace = u.params.pace;
   const clock = (model.clock + pace / 600 + 24) % 24;
   const wind = u.params.weather === "rain" ? 0.03 : 0.012;
-  let next: Model = { ...model, frame, clock, millAngle: (model.millAngle + wind + model.millSpin) % (Math.PI * 2), millSpin: model.millSpin * 0.985 };
+  let next: Model = { ...model, frame, clock, hotAir: stepBalloon(model.hotAir), millAngle: (model.millAngle + wind + model.millSpin) % (Math.PI * 2), millSpin: model.millSpin * 0.985 };
   // The balloon pops when it reaches the top of the sky.
   if (model.balloon !== null && frame - model.balloon === LASTS.balloonPop) next = { ...next, ...hear(next, [{ name: "pop", variant: 1, gain: 0.4 }]) };
   if (model.balloon !== null && frame - model.balloon >= LASTS.balloonBack) next = { ...next, balloon: null };
