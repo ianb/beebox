@@ -595,6 +595,29 @@ corpus, then the hand-written sketches, then validation, then speed.
     guidance stay (c)'s.
 - **First implementation chunk:** the four examples, then the consumers and
   beebox; `pnpm typecheck` and `pnpm layout-check` from `beebox/`.
+- **As built (R3).** One commit, the one that adds this note. Logs are in
+  `scratch/stage5/rs34/`.
+  - **The four examples.** Each `draw` returns one list literal. Loops are
+    `.map` over the model's data (orbit's planets, sound's bars and balls,
+    fjord's cliff layers and ripple rows); conditions are `cond && node`
+    (orbit's rings, selection ring and focus line; fjord's beach). Small
+    components return drawings: `drawPlanet` in orbit, `barShape` in sound,
+    `ripple` in fjord. No `out.push` and no immediately called function is
+    left. Fjord's two ripple loops became two constant lists of rows and
+    columns.
+  - **Bytes.** All 13 examples render the same PNG bytes and transcripts as
+    `out/rs-before/` (`out/rs-r3/`, compared with R2's `compare.ts`).
+  - **Consumers.** The playground, dev demo and `SketchFigure` needed no
+    change: the runtime types `draw`'s result as `unknown` and checks it at
+    run time, so `PlaygroundModule` keeps that type. beebox's starter, the
+    theme harness figure, and the sketches in
+    `test/cli/commands/figure/run.test.ts` and
+    `test/webapp/routes/figure.test.ts` return their drawing. The run test's
+    expected warning lines moved down by one.
+  - **Checkpoint.** canvas-loop typecheck, lint and tests pass (223, and 198
+    with 3 todo on the GPU); `gallery:check` passes all 48; beebox typecheck
+    and layout-check pass; the two figure tests and `test/schemas.test.ts`
+    pass.
 
 ### Track 4: types carry shape; the sketch's contract is checked (chunk R4)
 

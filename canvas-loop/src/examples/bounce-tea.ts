@@ -6,7 +6,7 @@
 //   - 'r' resets the ball to center
 //
 // All state lives in Model; `update` is the only thing that changes it.
-import type { DeepReadonly, Drawing, Msg, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 400, height: 300 };
 
@@ -119,14 +119,10 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
 }
 
 export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
-  const out: Drawing[] = [];
-  out.push(v.background("#0f172a"));
   const fill = model.hold.type === "grabbed" ? "#f59e0b" : "#38bdf8";
-  out.push(v.circle(model.ball.x, model.ball.y, RADIUS, { fill }));
-  out.push(v.text(
-    `frame ${model.frame}`,
-    { x: 8, y: 8 },
-    { size: 12, fill: "#e2e8f0", align: "left", valign: "top" },
-  ));
-  return out;
+  return [
+    v.background("#0f172a"),
+    v.circle(model.ball.x, model.ball.y, RADIUS, { fill }),
+    v.text(`frame ${model.frame}`, { x: 8, y: 8 }, { size: 12, fill: "#e2e8f0", align: "left", valign: "top" }),
+  ];
 }

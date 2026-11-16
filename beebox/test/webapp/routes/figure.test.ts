@@ -36,8 +36,7 @@ export function update(model, msg, u) {
   return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
 }
 export function draw(v, model, p) {
-  v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
+  return [v.background("#0b0e17"), v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12, { fill: "#7dd3fc" })];
 }
 
 export default (cl, { mount, figure }) =>
@@ -134,8 +133,7 @@ function update(model, msg, u) {
   return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
 }
 function draw(v, model, p) {
-  v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
+  return [v.background("#0b0e17"), v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12, { fill: "#7dd3fc" })];
 }
 var sketch_default = (cl, { mount, figure }) => cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
 export {

@@ -6,7 +6,7 @@
  */
 
 import { mountSketch } from "@ianbicking/canvas-loop/browser";
-import type { DeepReadonly, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, ParamsDecl, ParamValues, RootDrawing, View } from "@ianbicking/canvas-loop";
 import { FigureMount, figureFileHelpers, type FigureContext, type FigureSketch } from "../../../../components/FigureView/FigureMount";
 import { useViewFileHelpers } from "../../../../hooks/useViewFileHelpers";
 
@@ -23,10 +23,10 @@ const SKETCH = {
   init: (): null => null,
   update: (model: DeepReadonly<null>): null => model,
   // eslint-disable-next-line max-params -- canvas-loop's TEA contract fixes draw(view, model, params)
-  draw: (v: View, _model: DeepReadonly<null>, p: ParamValues<typeof params>): void => {
-    v.background("#0b0e17");
-    v.circle(40 + p.warmth * 5, 40, 8, { fill: p.tray === "seedlings" ? "#86efac" : "#fb923c" });
-  },
+  draw: (v: View, _model: DeepReadonly<null>, p: ParamValues<typeof params>): RootDrawing => [
+    v.background("#0b0e17"),
+    v.circle(40 + p.warmth * 5, 40, 8, { fill: p.tray === "seedlings" ? "#86efac" : "#fb923c" }),
+  ],
 };
 
 const sketch: FigureSketch = (_lib, { mount }) => mountSketch(mount, { module: SKETCH, autoplay: false, transport: true });

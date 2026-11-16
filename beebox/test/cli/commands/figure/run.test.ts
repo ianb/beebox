@@ -18,7 +18,7 @@ const CARD = "_content/figs/Dot.figure.card";
 const card = (params: string): string => `---\ntype: figure\ntitle: Dot\nruntime: canvas-loop\nentry: attach/dot-tea.ts\n${params}---\nA dot.\n`;
 
 // A sketch that counts presses it acknowledges and reads its speed param at init.
-const ENTRY = `import type { Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
+const ENTRY = `import type { Msg, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 export const params = { speed: { type: "number", min: 0, max: 5, default: 1 } } as const satisfies ParamsDecl;
 export const canvas = { width: 60, height: 40 };
 export function init(u: Util<typeof params>) { return { n: 0, speed: u.params.speed }; }
@@ -26,10 +26,12 @@ export function update(model: { n: number; speed: number }, msg: Msg, u: Util<ty
   if (msg.type === "mousedown") { u.handled("dot"); return { ...model, n: model.n + 1 }; }
   return model;
 }
-export function draw(v: View, model: { n: number; speed: number }) {
-  v.background("#fff");
-  v.text(\`n=\${model.n} speed=\${model.speed}\`, { x: 2, y: 2 });
-  v.text("overlap", { x: 4, y: 4 });
+export function draw(v: View, model: { n: number; speed: number }): RootDrawing {
+  return [
+    v.background("#fff"),
+    v.text(\`n=\${model.n} speed=\${model.speed}\`, { x: 2, y: 2 }),
+    v.text("overlap", { x: 4, y: 4 }),
+  ];
 }
 export default (cl: { mountSketch: (m: unknown, o: unknown) => () => void }, ctx: { mount: unknown }) =>
   cl.mountSketch(ctx.mount, { module: { params, canvas, init, update, draw }, autoplay: !matchMedia("(prefers-reduced-motion: reduce)").matches });
@@ -55,9 +57,9 @@ void test("A figure runs headlessly with its sibling events file and the card's 
   t.check(findReservedNestedSegment(result.transcript ?? ""), null);
   // The scene renderer's warnings, each naming the sketch's line: the two labels overlap, and the first is wider than the canvas.
   t.check(result.warnings, [
-    any(String).includes('text "overlap" overlaps text "n=0 speed=2"').includes("dot-tea.ts:12:"),
-    any(String).includes('text "overlap" overlaps text "n=1 speed=2"').includes("dot-tea.ts:12:"),
-    any(String).includes('text "n=1 speed=2" crosses the edge of the 60×40 canvas').includes("dot-tea.ts:11:"),
+    any(String).includes('text "overlap" overlaps text "n=0 speed=2"').includes("dot-tea.ts:13:"),
+    any(String).includes('text "overlap" overlaps text "n=1 speed=2"').includes("dot-tea.ts:13:"),
+    any(String).includes('text "n=1 speed=2" crosses the edge of the 60×40 canvas').includes("dot-tea.ts:12:"),
   ]);
   // The line is the entry's own file: the compiled entry's source map is relative to where entry.mjs is written.
   const named = result.warnings.map((w) => /\(at (.+):\d+:\d+\)$/u.exec(w)?.[1]);
