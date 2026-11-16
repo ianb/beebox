@@ -1060,6 +1060,20 @@ run them on the worktree's test1 with `--filter figure`:
        6): 45. Track C in all: 505 (source 284, tests 191, docs 30) against
        ~420 planned. **Whole plan: 2,797** (source 1,486, tests 1,127, docs
        184), against ~2,150 approved and ~2,710 projected after B5.
+10. **Review and verification (as built).** Cross-model review by codex
+    `gpt-6-astra`, three rounds, on the whole branch diff from `000e4c0e4`.
+    Fixed: an empty polygon gave a flow NaN translations (now no box); a
+    brushed stroke under a non-uniform scale was hit with a local
+    `weight / 2` band (now on the canvas at `weight / 2 × √|det|`, as the
+    renderer draws it); unhandled lines folded by the printed path, so two
+    name lists that print alike merged (now by the list); the example
+    acknowledged removing a weight already gone; TEA.md said sub and sup
+    always sit inside the line box (a large subscript's descender can reach
+    below it; layout and `keepInside` keep the line box, as planned).
+    Round 3 verified each fix. After the fixes the whole plan is **2,805
+    changed lines** (source 1,467, tests 1,150, docs 188). Checks: the
+    canvas-loop suite, `gallery:check` (50 entries), beebox `typecheck`,
+    `layout-check` and change-selected tests; the two knowledge audits pass.
 
 ## Rollout shape
 
@@ -1139,4 +1153,45 @@ migration: sketches are code, and no stored shape changes.
 
 ## Courseware box prompt
 
-Written at finish, after the work ships; not sent from this plan.
+A deliverable text for the boxholder to send to the courseware box agent
+after this ships to `main`. Nothing was sent from this plan. The courseware
+figures have no live audience yet, so the prompt asks for a direct rewrite
+with no transition steps.
+
+```text
+canvas-loop gained three things you asked for after moving the chemistry
+figures to returned drawings. They are in the canvas-loop doc (TEA.md,
+shipped as canvas-loop.md): "Layout", "Names and hits", "Text" (runs), and
+"Events file".
+
+- Measure and lay out: v.bounds(drawing) returns any drawing's layout box
+  { x, y, w, h, baseline }; v.row(options, children) and
+  v.column(options, children) place children one after another (gap,
+  align, valign with v.text's names, valign "baseline" for formulas). Draw
+  each child at (0, 0). Wrap a component that returns a list in
+  v.at({}, ...) to keep it one item.
+- Names and hits: give a drawing a name (a style key, or an option on
+  v.text, v.at, v.group, v.place, v.row, v.column). Mouse messages carry
+  msg.target (the innermost name under the pointer) and msg.targets (it and
+  its named ancestors, innermost first), resolved against the last frame
+  drawn. Unnamed drawings over a named one do not block it. A stroke-only
+  ring is hit on its stroke; add fill: "transparent" to take clicks inside.
+  Events files can click by name: { "frame": 30, "type": "mousedown",
+  "target": "pan-left" }.
+- Text runs: v.text(["H", { text: "2", sub: true }, "O"], at, options) draws
+  one line with real subscripts and superscripts (and a per-run style for
+  italic variables), measured as one text. Unicode subscript digits have no
+  glyph in headless renders; use runs.
+
+Please go through the figures and remove what these replace: draw/measure
+twin functions (formulaWidth beside drawFormula), mutable cursors and
+out.push used to place pieces in a line, layout functions that update calls
+only to find what was clicked, and click coordinates computed in events
+files where a name would do. Name what a learner can press with names built
+from model ids, read msg.targets in update, and aim the events files by
+"target". Keep each figure's look the same: render each changed figure with
+its events file, check that the transcript shows "on <name>" on each click
+and the handled verdict you expect, and compare the frames with the
+previous render. Report per figure what you removed, and anything the new
+calls could not express.
+```
