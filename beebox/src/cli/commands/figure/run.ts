@@ -123,13 +123,14 @@ export async function prepareFigureJob(args: {
   if (!insideBox(boxRoot, runDir) || (await fs.lstat(runDir)).isSymbolicLink()) throw new FigureRunError({ detail: `${path.relative(boxRoot, runDir)}: links outside this box` });
   await fs.rm(runDir, { recursive: true, force: true });
   await fs.mkdir(runDir, { recursive: true });
+  const compiled = path.join(runDir, "entry.mjs");
   let output: string;
   try {
-    ({ output } = await bundleView(entry, { target: "node", cache: false }));
+    // Written at `compiled`: the source map's paths are relative to it, so a warning names the entry's own line.
+    ({ output } = await bundleView(entry, { target: "node", cache: false, outfile: compiled }));
   } catch (error) {
     throw new FigureRunError({ detail: `compiling ${path.relative(boxRoot, entry)} failed:\n${error instanceof Error ? error.message : String(error)}` });
   }
-  const compiled = path.join(runDir, "entry.mjs");
   await fs.writeFile(compiled, output);
   return {
     cardRel: rel,

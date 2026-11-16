@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { promises as fs } from "node:fs";
+import { promises as fs, realpathSync } from "node:fs";
 import * as path from "node:path";
 import { listCanvasLoopFigures, prepareFigureJob, runFigureJob } from "../../../../src/cli/commands/figure/run.js";
 import { any } from "@ianbicking/tap-check/check";
@@ -59,6 +59,10 @@ void test("A figure runs headlessly with its sibling events file and the card's 
     any(String).includes('text "overlap" overlaps text "n=1 speed=2"').includes("dot-tea.ts:12:"),
     any(String).includes('text "n=1 speed=2" crosses the edge of the 60×40 canvas').includes("dot-tea.ts:11:"),
   ]);
+  // The line is the entry's own file: the compiled entry's source map is relative to where entry.mjs is written.
+  const named = result.warnings.map((w) => /\(at (.+):\d+:\d+\)$/u.exec(w)?.[1]);
+  const real = await fs.realpath(path.join(box.root, "_content/figs/Dot.attach/dot-tea.ts"));
+  t.check(named.map((file) => (file === undefined ? undefined : path.resolve(realpathSync(box.root), file))), [real, real, real]);
 });
 
 void test("--params overrides a default; a param the sketch lacks is an error", async (t) => {
