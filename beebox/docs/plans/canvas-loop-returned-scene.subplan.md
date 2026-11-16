@@ -514,6 +514,63 @@ corpus, then the hand-written sketches, then validation, then speed.
   the two internal drawers; then the codemod over `src/gallery`,
   `src/examples`, `test/`; then hand fixes; then the byte comparison. No
   commit leaves `gallery:check` failing.
+- **As built (R2).** Commits 456feaa08 (a per-test timeout for `pnpm
+  test`), 03b97a4c5 (the runtime), 8775ff685 (the tests), 047b4088f,
+  a551a667e and a63a37996 (the gallery in three batches), eef2890dd (the
+  examples), and the records commit after them. The codemod, its 10
+  fixtures and the hand-fix scripts are in `scratch/stage5/rs2/`, not
+  committed.
+  - **Order.** The runtime commit breaks the tests and the gallery until the
+    commits after it land; `gallery:check` passes at the end of the series.
+    A commit holding everything at once was too large to review.
+  - **Bytes.** All 48 exercises and 13 examples render the same PNG bytes as
+    `out/rs-before/`, the 13 files with paper statements included, so no
+    frame needed a visual judgement. Transcripts match except one
+    off-canvas warning in `scene-night-room-opus-b` that lists moved line
+    numbers.
+  - **Paper.** Each `v.paper` statement set paper before any drawing that
+    reads it, so a scope around the frame's drawing (or a picture's `paper`
+    option for pictures made under it) gives the same bytes. `pell-anim`
+    passes one `PAPER` constant to the frame and its ten pictures.
+  - **Codemod, beyond the plan.** A types phase changes declared `=> void`
+    function types in the corpus to `=> Drawing` when a drawing callback is
+    passed to them (render props such as `shade: () => void`, `Tint`, case
+    tables), then the main pass runs again. A function body or scope body
+    made only of drawing statements becomes one returned list; only bodies
+    that mix statements use `out.push` or an immediately called function.
+    `forEach` over a drawing callback becomes `map`.
+  - **Listed and fixed by hand.** Ten functions that drew and returned a
+    value now return `{ drawing, value }` (`drawSlot`, `cabinet`, `junk`,
+    `stack`, `paintRow` twice, `drawEquation`, `chip`, `arm`,
+    `paintSpecial`); `arm` passes its two scopes to `toCanvas`. Test
+    modules whose `draw` drew nothing return `null`; these are outside every
+    tsconfig, so only the runtime error found them. Five comma expressions
+    in tests (`(base(v), line(v))`) dropped a drawing and became lists.
+  - **Differences from the plan.** The made-not-returned count removes a
+    node when a scope, a picture body or the root takes it, so a node inside
+    an unreturned scope warns only for the scope. The paper scope is an
+    identity `at` node marked in a `WeakMap`, which the walk replaces with
+    its children; `SceneNode` gains no kind. The paper hint fires only
+    inside a `v.paper` scope. `v.paper(settings)` without children throws
+    `RemovedCallError`.
+  - **Review.** Codex (`gpt-6-astra`) found two faults in the
+    made-not-returned count: a re-record of a kept picture did not take
+    outer nodes, and warnings given in earlier frames used up the frame's
+    8. Both fixed with tests that fail without them; a verification round
+    confirmed them.
+  - **Size.** Runtime source about 640 changed lines (estimate ~650); new
+    tests about 300 (~400); test corpus about 1,660 (~1,800); gallery and
+    examples about 23,000 (~21,200), hand fixes included.
+  - **Corpus patterns for R3 and the docs chunk.** 144 immediately called
+    functions `((): Drawing => { … })()` where a scope body mixed
+    statements with drawing; about 5,200 `out.push` lines; picture bodies
+    written `() => { return [a, b]; }` where `() => [a, b]` reads better.
+    The plan keeps the gallery in this form; R3's four examples and (a)'s
+    chunk 7 should teach `.map`, `&&` and components instead, and say why
+    the gallery does not.
+  - **Checkpoint.** canvas-loop typecheck and lint pass; 223 non-GPU tests
+    and 198 GPU tests pass (3 todo, as before); `gallery:check` passes all
+    48; beebox typecheck and layout-check pass.
 
 ### Track 3: hand-written sketches and consumers (chunk R3)
 

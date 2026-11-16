@@ -5,7 +5,7 @@ model: gpt-6-sol
 driver: opus-5.5
 cycles: 3
 tier: tea
-migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it; 2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod, with hand fixes)"
 harness-commit: 69002fd6
 frames: 1
 seed: 42

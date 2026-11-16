@@ -1,4 +1,4 @@
-# Stage 1: the scene API, draft 2.10
+# Stage 1: the scene API, draft 2.11
 
 Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
@@ -9,6 +9,8 @@ answers the second review round (section 13). Draft 2.2 makes the changes the
 Stage 2 drawers asked for (`stage2-findings.md`; section 14).
 
 ## 1. The stance: same calls, recorded
+
+Draft 2.11 replaces this stance: `draw` returns its drawing (section 23).
 
 A sketch looks almost the same as today. `draw(v, model, params)` calls
 `v.rect`, `v.curve`, `v.text`, `v.at`, `v.group`, with a style on every call.
@@ -173,7 +175,8 @@ only where the result matches (section 6).
 - Lighting happens before the group's effects (R5), so a wash paints over the
   lit result.
 
-**R9, paper.** `v.paper(settings)` applies to brushes drawn after it in the same
+**R9, paper.** Draft 2.11 replaces this rule with a paper scope and a
+picture `paper` option (section 23). `v.paper(settings)` applies to brushes drawn after it in the same
 group, picture or scene, and in their children. It ends with that scope. A
 picture's brushes use the paper in effect where `v.picture` is called (or a
 `v.paper` inside its body), and that paper is part of the picture's version,
@@ -387,7 +390,8 @@ Behaviour that changes from today, or new policy. Each needs a yes or no.
    back to the brush's blend (`marker` still multiplies).
 9. **Headless control stand-ins draw above the scene** (section 8). Today they
    paint at the call, inside any open layer.
-10. **Paper is scoped** (R9): `v.paper` lasts until its group, picture or scene
+10. **Paper is scoped** (R9; draft 2.11, section 23, makes it a scope with
+    children): `v.paper` lasts until its group, picture or scene
     ends, and pictures do not inherit the paper where they are placed; brush
     grain moves into picture coordinates. Today `v.paper` is canvas-wide.
 11. **Pictures replay instead of stretching** (R7): a picture placed under a
@@ -630,3 +634,55 @@ From the Stage 4 builder (chunks 1–2):
 - **Measurement.** `stats.cpu.brush` is the CPU time spent on brushed
   strokes: preparation and placement at lowering, and packing and upload for
   the GPU pass.
+
+## 23. Draft 2.11: `draw` returns its drawing (returned-scene subplan, R2)
+
+The boxholder chose a returned form: *"a return style just seems better"*
+(`beebox/docs/plans/canvas-loop-returned-scene.subplan.md`). It replaces
+section 1's stance and R9's paper rules.
+
+- **Constructors return nodes.** Every drawing call on `v` keeps its name and
+  arguments and returns a `DrawingNode`: the shapes, `text`, `background`,
+  `light`, `debugBox`, `place`, and the scopes.
+- **Scopes take children.** `at(options, children)`, `group(options,
+  children)`, `clip(shape, children)`, `mask(maskArt, children)` and
+  `paper(settings, children)`. Children are a `Drawing`: a node, a list,
+  or `null`, `undefined` or `false` for nothing. Nested lists are flattened.
+  A number, a string, `true`, another object and a function are refused at
+  the call. A function child is the retired body form; it throws
+  `RemovedCallError`.
+- **`draw` returns a `RootDrawing`:** a `Drawing` without `undefined`. A `draw`
+  that returns `undefined` throws `RemovedCallError` ("drawing calls as
+  statements"), so an old sketch fails with a clear message. An empty frame
+  returns `null`, `false` or `[]`.
+- **Children are copied.** A scope copies its children into a list it owns.
+  Its options are read after the children are built.
+- **A node belongs to its frame.** A node may appear more than once in the
+  frame that made it. A node from an earlier frame is refused: *"this
+  drawing was made in an earlier frame; make it again in draw, or record it
+  once as a picture"*. Pictures are the one way to keep drawing across
+  frames.
+- **Pictures.** A body is still a function that runs when the version is new;
+  it returns its drawing. `PictureOptions.paper` sets the paper of its
+  brushed strokes and effects, and is part of the version. The default is
+  the default paper. A picture never takes the paper of where it is placed.
+  In testing mode, a picture that reads paper and is placed inside a paper
+  scope with other paper gives a hint once.
+- **R9, paper.** `v.paper(settings, children)` sets the paper for every
+  brushed stroke and every effect in its children, and nothing else. A
+  nested scope wins. A group's `effects.wash` and `effects.paper` use the
+  paper of the scope around the group. A shape with effects and no brush
+  uses it too. The scope leaves no node in the scene.
+- **Frame outputs stay statements.** `log`, `snapshot`, `cursor` and
+  `control` return nothing and are called before `draw` returns.
+- **Text.** `v.text` returns a node. `v.textBounds` and `v.textWidth`
+  measure without making a node. `textBounds` measures where no transform
+  moves the text: inside the canvas, or inside the picture's box in a body.
+  A `keepInside` label is laid out again under its transform when the frame
+  resolves.
+- **`toCanvas(point, scopes)`** is a pure helper. It takes the `at` options the
+  point is inside, outermost first.
+- **Made and not returned.** In testing mode, a node that no scope, picture
+  body or `draw` returned gives one warning per line, at most 8 in a frame:
+  *"v.circle made a drawing that was not returned; …"*. A frame that throws
+  gives its error and no such warning.

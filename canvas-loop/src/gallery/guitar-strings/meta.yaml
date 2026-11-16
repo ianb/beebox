@@ -5,7 +5,7 @@ model: opus-5.5
 driver: opus-5.5
 cycles: 2
 tier: tea
-migrated: "2026-11-15: ported to the scene API (scene core chunk 5; the removed calls replaced as draft section 2's table says)"
+migrated: "2026-11-15: ported to the scene API (scene core chunk 5; the removed calls replaced as draft section 2's table says); 2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod)"
 harness-commit: 70fcfacb
 frames: 300
 seed: 42

@@ -176,6 +176,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** The pi coding-agent harness as a third box engine, used as a library.
 - **Where it landed:** `beebox/src/core/agent/pi-run/`, `beebox/src/services/claude-chat/pi-chat.ts`, and `beebox/docs/pi-engine.md`.
 
+### React's rules for children, by Meta
+
+- **Source:** [React](https://react.dev/learn/conditional-rendering), "Conditional Rendering" (React is MIT; its documentation is CC BY 4.0).
+- **What we took:** A list of children skips `null`, `undefined` and `false` and flattens nested lists. Unlike React, a number is refused, so `count && v.rect(…)` with `count` 0 is an error, not a drawn 0.
+- **Where it landed:** `canvas-loop/src/scene/recorder/children.ts`
+
 ### Sentry feedback widget, by getsentry (Sentry)
 
 - **Source:** https://github.com/getsentry/sentry-javascript (MIT)

@@ -5,6 +5,7 @@ model: opus-5.5
 driver: opus-5.5
 cycles: 10
 tier: tea
+migrated: "2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod, with hand fixes)"
 harness-commit: 70fcfacb
 frames: 480
 seed: 42
