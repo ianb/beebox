@@ -1,6 +1,6 @@
 ---
 title: "What's new: a person-facing Bee Box changelog copied into each box"
-status: draft
+status: implemented
 workstream: user-changelog
 issues: []
 ---
@@ -17,7 +17,7 @@ skill asks for one line when the work is something a person would notice.
 `issues/decisions/2026-07-20-release-discipline-and-update-story.md` ("Still
 open: no changelog or release notes"; this covers the person's changelog, not
 release notes or update detection) and
-`issues/features/2026-08-03-detect-server-update-prompt-client-reload.md` (a
+`issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md` (a
 "what's new" prompt after an update would belong there). A general way to show
 every Bee Box doc to the person was planned and parked:
 [unimplemented-plans/bbxdocs.md](../unimplemented-plans/bbxdocs.md).
