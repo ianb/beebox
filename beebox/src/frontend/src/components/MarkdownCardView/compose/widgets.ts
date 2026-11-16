@@ -176,10 +176,14 @@ export function openMarkRanges(state: EditorState): OpenMarkRange[] {
   return out;
 }
 
-/** Select an open mark and scroll it into view; `false` (nothing selected) when the mark at that index is another kind. */
-export function selectOpenMark(view: EditorView, target: { index: number; kind: string }): boolean {
+/**
+ * Select an open mark and scroll it into view. `false` (nothing selected)
+ * when the mark at that index is not the one named: another kind or other
+ * words, as when the agent added a mark before it since the person looked.
+ */
+export function selectOpenMark(view: EditorView, target: { index: number; kind: string; words: string }): boolean {
   const mark = openMarkRanges(view.state)[target.index];
-  if (mark?.kind !== target.kind) return false;
+  if (mark?.kind !== target.kind || mark.words !== target.words) return false;
   view.dispatch({ selection: EditorSelection.range(mark.from, mark.to), effects: EditorView.scrollIntoView(mark.from, { y: "center" }) });
   view.focus();
   return true;

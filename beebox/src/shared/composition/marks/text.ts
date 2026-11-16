@@ -134,7 +134,7 @@ function replacementFor(chunk: string, { match, mark }: { match: RegExpExecArray
  * inside a fence too, so only a `process=false` fence (or other literal text)
  * leaves tag syntax that must stay as written.
  */
-function markLines(text: string): Set<number> {
+export function markLines(text: string): Set<number> {
   const lines = new Set<number>();
   for (const node of parseMarkdown(text).walk()) {
     if (node.type !== "tag" || (node.tag !== "editorial" && node.tag !== "source")) continue;

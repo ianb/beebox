@@ -16,6 +16,7 @@ import { Menu } from "../../ui/Menu";
 import { MenuItem } from "../../ui/menu-item";
 import { Text } from "../../ui/Text";
 import { resultMessage } from "../CompositionCopy";
+import { openConflictCount } from "./conflicts";
 import type { CompositionSync } from "./sync";
 import { selectOpenMark, type OpenMarkRange } from "./widgets";
 import type { EditorView } from "@codemirror/view";
@@ -43,6 +44,11 @@ export function MarksMenu({ view, sync, marks, cardPath, instance, onMessage }: 
   const count = (kind: OpenMarkRange["kind"]) => marks.filter((mark) => mark.kind === kind).length;
   const joiners = count("joiner");
   const run = async (request: ResolveRequest) => {
+    // An open merge conflict is a choice the person has not made: committing now would decide it silently.
+    if (openConflictCount(view.state) > 0) {
+      onMessage("Choose a version for each conflict first; then try again.");
+      return;
+    }
     onMessage(null);
     try {
       const result = await sync.afterFlush((regionHash) => trpcClient.card.resolveComposition.mutate({ path: cardPath, baseRegionHash: regionHash, request }));

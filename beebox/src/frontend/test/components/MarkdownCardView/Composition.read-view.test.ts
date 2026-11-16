@@ -105,7 +105,7 @@ void test("Copy with a gap lists what to resolve", async (t) => {
   t.check(copied, ["One [gap: more] line.\n\nTwo [agent: and] three."]);
 });
 
-// ## A mark of an unknown kind (the region itself is whole): no Copy, a
+// ## A mark of an unknown kind (the region itself is whole): no Copy (the draft copy stays), a
 // reason, and Edit stays to fix it
 void test("a broken tag keeps Edit and withholds Copy", async (t) => {
   const view = await mount(render(piece('One {% editorial kind="draft" %}line{% /editorial %}.'), Editor));
@@ -114,7 +114,7 @@ void test("a broken tag keeps Edit and withholds Copy", async (t) => {
   t.check({
     buttons: [...(section?.querySelectorAll("button") ?? [])].map((b) => b.getAttribute("aria-label")),
     says: section?.textContent?.includes("A tag in this composition is broken. Edit it to fix the tag."),
-  }, { buttons: ["Edit composition"], says: true });
+  }, { buttons: ["More copy options", "Edit composition"], says: true });
 });
 
 void test("Compose shows only for one closed composition, and opens the editor", async (t) => {

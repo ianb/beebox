@@ -45,13 +45,18 @@ function targets(text: string, request: ResolveRequest): MarkRange[] | "refused"
   return mark.kind === kind ? [mark] : "refused";
 }
 
+/**
+ * Deletions for whole marks. Each takes its spacing (`wholeMarkRange`), so two
+ * neighbouring block marks can claim the same blank line: overlapping ranges
+ * merge into one, or applying both would delete text past them.
+ */
 function removeChanges(text: string, marks: readonly MarkRange[]): TextChange[] {
   const changes: TextChange[] = [];
-  let doneTo = -1;
   for (const mark of marks) {
-    if (mark.openFrom < doneTo) continue;
-    changes.push({ ...wholeMarkRange(text, { from: mark.openFrom, to: mark.closeTo }), insert: "" });
-    doneTo = mark.closeTo;
+    const range = wholeMarkRange(text, { from: mark.openFrom, to: mark.closeTo });
+    const last = changes.at(-1);
+    if (last !== undefined && range.from <= last.to) last.to = Math.max(last.to, range.to);
+    else changes.push({ ...range, insert: "" });
   }
   return changes;
 }

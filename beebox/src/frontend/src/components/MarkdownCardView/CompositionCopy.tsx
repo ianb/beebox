@@ -23,8 +23,8 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { toastError } from "../ui/toast-store";
 
-/** An open mark the editor should select when it opens. */
-export type MarkTarget = Pick<OpenMark, "index" | "kind">;
+/** An open mark the editor should select when it opens; its words guard against a mark the agent added before it meanwhile. */
+export type MarkTarget = Pick<OpenMark, "index" | "kind" | "words">;
 
 type Blocker = OpenMark & { kind: BlockerKind };
 
@@ -108,7 +108,7 @@ function ResolveList({ blockers, cardPath, regionText, instance, onGoTo, onDraft
                 <Button id={controlAddress(`bbx-composition-resolve-${String(blocker.index)}`, instance)} label={`${action.label}: ${blocker.words}`} size="sm" intent="secondary" disabled={busy} onClick={() => run(action.request)}>{action.label}</Button>
               )}
               {onGoTo === null ? null : (
-                <Button id={controlAddress(`bbx-composition-goto-${String(blocker.index)}`, instance)} label={`Go to it: ${blocker.words}`} size="sm" intent="secondary" disabled={busy} onClick={() => onGoTo({ index: blocker.index, kind: blocker.kind })}>Go to it</Button>
+                <Button id={controlAddress(`bbx-composition-goto-${String(blocker.index)}`, instance)} label={`Go to it: ${blocker.words}`} size="sm" intent="secondary" disabled={busy} onClick={() => onGoTo({ index: blocker.index, kind: blocker.kind, words: blocker.words })}>Go to it</Button>
               )}
             </Row>
           </Stack>
@@ -138,13 +138,12 @@ export interface CompositionCopyProps {
 export function CompositionCopy({ cardPath, regionText, instance, onGoTo }: CompositionCopyProps): ReactNode {
   const copy = useMemo(() => publishingCopy(regionText), [regionText]);
   const onDraft = () => navigator.clipboard.writeText(draftCopy(regionText));
-  if (copy.status === "malformed") {
-    return <Text as="span" size="xs" tone="danger" material>A tag in this composition is broken. Edit it to fix the tag.</Text>;
-  }
   const copyId = controlAddress("bbx-composition-copy", instance);
   return (
     <>
-      {copy.status === "ready" ? (
+      {copy.status === "malformed" ? (
+        <Text as="span" size="xs" tone="danger" material>A tag in this composition is broken. Edit it to fix the tag.</Text>
+      ) : copy.status === "ready" ? (
         <Button id={copyId} label="Copy composition" size="sm" intent="secondary" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={() => navigator.clipboard.writeText(copy.text)}>Copy</Button>
       ) : (
         <Popover

@@ -57,13 +57,11 @@ void test("source tags", async (t) => {
   t.check(publishingCopy(text), { status: "ready", text: "Tomas remembers the hail that June.\n\nA secondhand paragraph." });
 });
 
-// ## Tag syntax in a `process=false` fence: the draft keeps it as written. The
-// mark scan does not know fences, so the publishing copy calls the text
-// malformed, as the editor does (accepted: only text about tag syntax has it).
+// ## Tag syntax in a `process=false` fence is literal text: both copies keep it as written
 void test("literal tags in a fence", async (t) => {
   const text = 'Before.\n\n```{% process=false %}\n{% editorial kind="gap" %}literal{% /editorial %}\n```';
   t.check(draftCopy(text), text);
-  t.check(publishingCopy(text), { status: "malformed" });
+  t.check(publishingCopy(text), { status: "ready", text });
 });
 
 // ## Tag syntax inside inline code is literal text, beside a real mark on the same line

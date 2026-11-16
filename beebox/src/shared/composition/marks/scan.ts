@@ -9,7 +9,7 @@
  */
 import { parseMarkdown } from "../../markdoc-config/parse/core.js";
 import { EDITORIAL_KINDS, tagAttr } from "../tags.js";
-import { compositionTagMatches } from "./text.js";
+import { compositionTagMatches, markLines } from "./text.js";
 
 export type MarkKind = (typeof EDITORIAL_KINDS)[number] | "source";
 
@@ -46,7 +46,10 @@ const MALFORMED: Scan = { marks: [], malformed: true };
 export function scanMarks(text: string): Scan {
   const marks: MarkRange[] = [];
   const open: { name: string; kind: MarkKind; from: number; to: number; note: string | null }[] = [];
+  // Tag syntax Markdoc leaves literal (a `process=false` fence) is text, not a mark.
+  const tagLines = markLines(text);
   for (const match of compositionTagMatches(text)) {
+    if (!tagLines.has(text.slice(0, match.index).split("\n").length - 1)) continue;
     const name = match.groups?.["name"] ?? "";
     const attrs = match.groups?.["attrs"] ?? "";
     const from = match.index;

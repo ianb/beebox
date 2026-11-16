@@ -54,3 +54,10 @@ void test("inline code", async (t) => {
   t.check(resolveEdit(`${J("see `x` here")}`, { action: "accept-joiners" }), { status: "edit", text: "see `x` here" });
   t.check(resolveEdit("{% editorial kind=\"joiner\" %}`a{% /editorial %}`", { action: "accept-joiners" }), { status: "refused" });
 });
+
+// ## Two block notes side by side: both go with one blank line between the
+// paragraphs around them, and no other text is lost
+void test("adjacent block notes", async (t) => {
+  const text = 'Before.\n\n{% editorial kind="note" %}\nOne.\n{% /editorial %}\n\n{% editorial kind="note" %}\nTwo.\n{% /editorial %}\n\nAfter.';
+  t.check(resolveEdit(text, { action: "remove-notes" }), { status: "edit", text: "Before.\n\nAfter." });
+});
