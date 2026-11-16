@@ -55,19 +55,21 @@ export interface ResolveDeps {
 
 const NO_SITE: CallSite = { line: undefined };
 
-/** Whether a picture's nodes hold a brushed stroke or a shape with effects, which read the paper. */
-function readsPaper(nodes: readonly SceneNode[]): boolean {
+/** Whether resolved nodes hold a brushed stroke, a shape with effects or a group with effects that draws on `paper`. */
+function readsPaper(nodes: readonly SceneNode[], paper: PaperSettings): boolean {
   return nodes.some((n) => {
     switch (n.kind) {
-      case "shape":
-        return n.style.brush !== undefined || n.style.effects !== undefined;
+      case "shape": {
+        const { brush, effectsPaper } = n.style;
+        return (brush !== undefined && sameData(brush.paper, paper)) || (effectsPaper !== undefined && sameData(effectsPaper, paper));
+      }
       case "group":
-        return n.effects !== undefined || readsPaper(n.children);
+        return (n.effects !== undefined && sameData(n.paper, paper)) || readsPaper(n.children, paper);
       case "at":
       case "clip":
-        return readsPaper(n.children);
+        return readsPaper(n.children, paper);
       case "mask":
-        return readsPaper(n.mask) || readsPaper(n.body);
+        return readsPaper(n.mask, paper) || readsPaper(n.body, paper);
       case "place":
       case "text":
       case "light":
@@ -249,7 +251,8 @@ export class Resolver {
     if (v.kind === "picture" && !ctx.inMask) audit.text.placed(v.children, matrix);
     if (ctx.picture === undefined && !ctx.inMask && !(ctx.lit > 0 && (n.material?.castsShadow ?? false) !== false)) audit.offCanvas.place(`place ${versionName(v)}`, { version: v, matrix, site });
     if (ctx.picture === undefined && v.kind === "picture") this.#d.notes.placed(v, { matrix: ctx.matrix, line: site?.line });
-    if (ctx.scoped === true && v.kind === "picture" && !sameData(v.paper, ctx.paper) && readsPaper(v.children)) {
+    // Only nodes drawn on the picture's own paper: one in a paper scope of the body has the paper its sketch chose.
+    if (ctx.scoped === true && v.kind === "picture" && !sameData(v.paper, ctx.paper) && readsPaper(v.children, v.paper)) {
       this.#d.notes.hintAt(`paper ${v.key}`, { message: `picture "${v.key}" keeps its own paper (its paper option, default the default paper) but is placed inside a v.paper scope with other paper; to draw it on that paper, pass the same settings as the picture's paper option`, line: site?.line });
     }
   }

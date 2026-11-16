@@ -54,7 +54,8 @@ function boundarySource(importPath: string): string {
     'export const init: Fn<Contract["init"]> = sketch.init;',
     'export const update: Fn<Contract["update"]> = sketch.update;',
     'export const draw: Fn<Contract["draw"]> = sketch.draw;',
-    'export const rest: { params?: ParamsDecl; canvas?: CanvasSize; sound?: Fn<Contract["sound"]>; activity?: Fn<Contract["activity"]> } = sketch;',
+    // The index signature keeps this all-optional target from being a weak type, which a sketch exporting none of these would fail (TS2559).
+    'export const rest: { readonly [name: string]: unknown; params?: ParamsDecl; canvas?: CanvasSize; sound?: Fn<Contract["sound"]>; activity?: Fn<Contract["activity"]> } = sketch;',
     "",
   ].join("\n");
 }

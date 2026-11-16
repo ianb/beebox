@@ -233,6 +233,8 @@ test("a picture's paper option is part of its version; placed in a paper scope w
   assert.deepEqual(plain.hints, [], "a picture that reads no paper does not hint");
   const unscoped = testing().record((v) => brushed(v, { seed: 5 }));
   assert.deepEqual(unscoped.hints, [], "a picture with its own paper placed outside any paper scope does not hint");
+  const inner = testing().record((v) => v.paper({ seed: 5 }, v.place(v.picture({ key: "inner", width: 4, height: 4 }, () => v.paper({ seed: 5 }, v.line(0, 0, 4, 4, PENCIL))), 0, 0)));
+  assert.deepEqual(inner.hints, [], "a picture whose strokes take the outer paper from a scope in its body does not hint");
 });
 
 test("a paper scope sets brushed strokes and effects inside it, leaves no node, and is laid out like its children", () => {

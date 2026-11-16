@@ -67,6 +67,12 @@ test("a sketch without init names the missing export", async () => {
   assert.ok(errors.some((e) => e.file === path && e.message.startsWith('the export "init" does not fit') && e.message.includes("init")), JSON.stringify(errors));
 });
 
+test("a sketch exporting only init, update and draw has no errors", async () => {
+  const path = join(dir, "minimal-tea.ts");
+  writeFileSync(path, "export function init(): number { return 0; }\nexport function update(model: number): number { return model; }\nexport function draw(): null { return null; }\n");
+  assert.deepEqual(await checkSketchTypes([path]), []);
+});
+
 test("cli run stops before the run on a type error, with the error on stderr and in the transcript", () => {
   const out = join(dir, "out");
   mkdirSync(out, { recursive: true });
