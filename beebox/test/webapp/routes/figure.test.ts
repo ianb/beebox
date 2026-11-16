@@ -392,6 +392,11 @@ void test("A canvas-loop figure's entry is type-checked against the sketch contr
     payload: `export const figureError = ${JSON.stringify("_content/figures/Helped.attach/sketch.ts: the sketch does not type-check:\n_content/figures/Helped.attach/radius.ts:2:9 - error TS2322: Type 'string' is not assignable to type 'number'.")};\n`,
   });
 
+  // Shared box code imported with `@/` resolves from the box root, as the bundler resolves it.
+  await ctx.seed("src/lib/orbit.ts", "export function orbitOf(n: number): number {\n  return 80 + n;\n}\n");
+  const shared = await seedFigure("Shared", figureStarterSketch("canvas-loop").replace("const orbit = 90;", "const orbit = orbitOf(10);").replace("export const params", "import { orbitOf } from \"@/src/lib/orbit\";\n\nexport const params"));
+  t.check({ statusCode: shared.statusCode, compiled: shared.payload.startsWith("// ") }, { statusCode: 200, compiled: true });
+
   const cached = await seedFigure("Cached", figureStarterSketch("canvas-loop").replace("v.background(\"#0b0e17\"),", "v.background(\"#0b0e17\"),\n    v.cache(\"ring\", 10, 10, () => null),"));
   t.check(cached.payload.split("\n").filter((line) => line.startsWith("export const figureOutdated")), [
     `export const figureOutdated = ${JSON.stringify("v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (TEA.md, \"Pictures\")")};`,

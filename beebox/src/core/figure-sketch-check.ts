@@ -9,7 +9,8 @@
  * entry's default export runs in a browser. That export, the figure factory,
  * takes the host's wrapped library and figure context, for which a box has no
  * type to import, so implicit-`any` parameters from the `export default` line
- * on are not errors.
+ * on are not errors. `@/…` imports resolve from the box root, as the bundler
+ * resolves them (`webapp/views/compiler/box-imports.ts`).
  */
 import { existsSync, promises as fs } from "node:fs";
 import { createRequire } from "node:module";
@@ -66,7 +67,7 @@ export async function checkFigureSketch(boxRoot: string, entry: string): Promise
   const factoryLine = (await fs.readFile(entry, "utf8")).split("\n").findIndex((line) => /^export default\b/u.test(line)) + 1;
   const inFactory = (e: { file: string | undefined; line: number | undefined; code: number }): boolean =>
     factoryLine > 0 && e.file === entry && IMPLICIT_ANY_PARAM.has(e.code) && (e.line ?? 0) >= factoryLine;
-  const errors = (await checkSketchTypes([entry], { packageRoot: canvasLoopRoot(), dom: true })).filter((e) => !inFactory(e));
+  const errors = (await checkSketchTypes([entry], { packageRoot: canvasLoopRoot(), dom: true, paths: { "@/*": [path.join(boxRoot, "*")] } })).filter((e) => !inFactory(e));
   if (errors.length === 0) return { ok: true };
   const removed = errors.map((e) => REMOVED_LINE.exec(e.message)?.[1]).find((line) => line !== undefined);
   return { ok: false, lines: errors.map((e) => formatSketchTypeError(e, boxRoot)), removed };

@@ -31,6 +31,11 @@ export interface SketchTypeOptions {
    * a box figure's default export calls `matchMedia`. Default: no DOM types.
    */
   dom?: boolean;
+  /**
+   * More module path mappings, beside `@ianbicking/canvas-loop`'s: a box maps
+   * `@/*` to its root, as its bundler resolves it. Default: none.
+   */
+  paths?: Readonly<Record<string, readonly string[]>>;
 }
 
 /** One error the compiler reports for a sketch, its imports, or its exports. */
@@ -82,8 +87,8 @@ function importPathFor(sketch: string, virtualDir: string): string {
 }
 
 /** The config: canvas-loop's own compiler options, the bundler resolution that `tsx` and esbuild use, no ambient types. */
-function configSource(files: readonly string[], options: { root: string; dom: boolean }): string {
-  const { root, dom } = options;
+function configSource(files: readonly string[], options: { root: string; dom: boolean; paths: Readonly<Record<string, readonly string[]>> }): string {
+  const { root, dom, paths } = options;
   return JSON.stringify({
     extends: join(root, "tsconfig.json"),
     compilerOptions: {
@@ -92,8 +97,10 @@ function configSource(files: readonly string[], options: { root: string; dom: bo
       module: "preserve",
       moduleResolution: "bundler",
       types: [],
+      // A sketch may import a helper by its `.ts` name, as the bundler allows.
+      allowImportingTsExtensions: true,
       ...(dom ? { lib: ["ES2023", "DOM"] } : {}),
-      paths: { "@ianbicking/canvas-loop": [join(root, "src/exports/core")] },
+      paths: { ...paths, "@ianbicking/canvas-loop": [join(root, "src/exports/core")] },
     },
     include: [],
     files,
@@ -153,7 +160,7 @@ export async function checkSketchTypes(files: readonly string[], options?: Sketc
     virtual.set(path, boundarySource(importPathFor(sketch, virtualDir)));
     boundaryOf.set(path, sketch);
   }
-  virtual.set(configPath, configSource([...sketches, ...boundaryOf.keys()], { root, dom: options?.dom === true }));
+  virtual.set(configPath, configSource([...sketches, ...boundaryOf.keys()], { root, dom: options?.dom === true, paths: options?.paths ?? {} }));
 
   const { API, DiagnosticCategory } = await import("@typescript/native/unstable/sync");
   const api = new API({

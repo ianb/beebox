@@ -95,6 +95,14 @@ test("dom adds the DOM library, for a box figure's factory; packageRoot names th
   assert.deepEqual(await checkSketchTypes([path], { dom: true, packageRoot }), []);
 });
 
+test("paths adds module mappings, as a box maps @/ to its root", async () => {
+  mkdirSync(join(dir, "box", "src", "lib"), { recursive: true });
+  writeFileSync(join(dir, "box", "src", "lib", "radius.ts"), "export function radius(): number {\n  return 4;\n}\n");
+  const path = sketch("aliased-tea.ts", { draw: "export function draw(v: View): RootDrawing {\n  return v.circle(10, 10, radius(), { fill: \"#000\" });\n}", imports: 'import { radius } from "@/src/lib/radius.ts";\n' });
+  assert.deepEqual((await checkSketchTypes([path])).map((e) => e.code), [2307]);
+  assert.deepEqual(await checkSketchTypes([path], { paths: { "@/*": [join(dir, "box", "*")] } }), []);
+});
+
 test("cli run stops before the run on a type error, with the error on stderr and in the transcript", () => {
   const out = join(dir, "out");
   mkdirSync(out, { recursive: true });

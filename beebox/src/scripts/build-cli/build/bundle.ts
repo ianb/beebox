@@ -117,6 +117,8 @@ await build({
   target: "node22",
   jsx: "automatic",
   packages: "external",
+  // The figure route loads canvas-loop's sketch check; inline it as cli.mjs does.
+  plugins: [inlineCanvasLoop],
   sourcemap: true,
   logLevel: "warning",
 });

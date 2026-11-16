@@ -639,6 +639,20 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
     `sketch-types.test.ts`: the statement-`draw` line.
     `figure-gpu.test.ts`: the image's `allowBuilds` and the declarations
     step.
+  - **Review of C1–C3.** Codex (`gpt-6-astra`), three findings, each checked
+    against the source. Fixed: (1) the check did not resolve `@/` box-root
+    imports, the documented way to share code, so a figure importing
+    `@/src/lib/…` failed in both routes since C2; `checkSketchTypes` takes
+    `paths`, beebox maps `@/*` to the box root, and the check allows `.ts`
+    import names, as the bundler does (a route test fails without the fix).
+    (2) The `beebox/server` export bundled canvas-loop as a bare import,
+    so a packed server could not load the check; it now inlines canvas-loop
+    as `cli.mjs` does (checked in the rebuilt bundle). Not taken: (3) a
+    sketch can pass `inspect` to `cl.mountSketch` and reach the page's
+    shared `GPUDevice`. This predates C1–C3, and figure code runs unsandboxed
+    in the page, where it can call `navigator.gpu` itself, so stripping the
+    option would not make a boundary. The isolation issue
+    (`2026-11-13-isolate-view-and-figure-code.md`) owns it.
 
 ### C4. Guidance and starter
 
