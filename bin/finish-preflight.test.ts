@@ -363,6 +363,7 @@ test("the text sheet puts the decision fields first and shortens the test list",
     codeChanged: true,
     selectedTests: {
       files,
+      causes: ["beebox/src/y.ts"],
       reasons: [
         { reason: "imports beebox/src/y.ts", count: 38 },
         { reason: "the test itself changed", count: 2 },
@@ -375,6 +376,7 @@ test("the text sheet puts the decision fields first and shortens the test list",
     issues: [],
     diff: { lines: 10, sourceLines: 10 },
     trackO: { recommended: false, reason: "small" },
+    sinceTested: null,
   };
   const lines = formatSheet(sheet).split("\n");
   const at = (prefix: string): number => lines.findIndex((line) => line.startsWith(prefix));

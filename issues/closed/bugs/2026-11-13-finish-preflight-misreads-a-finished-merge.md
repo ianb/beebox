@@ -1,11 +1,14 @@
 ---
 title: "finish-preflight misreads a merge that is already finished or resolved"
-workstream: unattached
+workstream: finish-preflight-merge-state
 area: bin
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261113-003305
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** bin/finish-preflight-merge.ts readMergeState/clearLeftoverMerge: clears MERGE_HEAD only when HEAD^2 equals its single commit, nothing unmerged, nothing staged (git merge --quit, reported on the sheet); every other state stops with exit 3 naming it. Also applies under --no-merge. The boxholder chose to have preflight clear the safe case.
 
 Two finish runs stopped on merge state that needed no judgment:
 

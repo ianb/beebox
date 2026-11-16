@@ -13,10 +13,11 @@ write CODING_FEEDBACK using `bin/coding-feedback help` and
 `bin/coding-feedback add --checkpoint landed`. Scripts own classification and
 mechanics; you own review and whether passing verification remains applicable.
 
-## 1. Preflight — `bin/finish-preflight`
-Confirms the worktree, lists stragglers, merges `main` (resolving conflicts it has
-a rule for; check those in step 4), prints the decision sheet (`--json` for fields).
-Exit 2 (wrong place / private mount) or 3 (other merge conflict) → BLOCKED.
+## 1. Preflight — `bin/finish-preflight [--tested <rev>]`
+Confirms the worktree, lists stragglers, merges `main` (conflicts it has a rule
+for: check in step 4), prints the decision sheet (`--json` for fields). Pass the
+caller's tested revision as `--tested` on every run. Exit 2 (wrong place, private
+mount, bad revision) or 3 (a merge state it will not clear, named) → BLOCKED.
 
 ## 2. Stragglers — the sheet lists them and commits nothing
 Caller said intentional (or obviously this session's work) → commit, with a
@@ -35,7 +36,8 @@ from the caller. Run `bin/finish-verify` for missing checks; do not repeat a
 passing check just because main advanced, a merge commit exists, or the sheet
 still lists it. Test selection describes coverage, not invalidation of a pass.
 
-Before retesting, inspect the delta since the tested revision. Documentation, issue
+With `--tested`, the sheet lists every path since that revision under the checks
+it reaches; judge the reached ones. Documentation, issue
 close-out, audit/history records, and independent merged work preserve prior passes.
 Rerun only for a concrete interaction: conflict resolution, overlapping behavior, or a
 shared dependency, schema, build configuration, or test fixture this work uses.

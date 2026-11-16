@@ -26,7 +26,7 @@ fresh ask, and a docs-only workstream may land each verified change.
      what's done and leaves punch-lists open, but it can only judge issues it
      knows about;
    - whether **uncommitted changes** are intentional;
-   - completed checks, their tested revision, and any later changes;
+   - completed checks and the commit they passed at (its `--tested` revision);
    - anything unusual about **scope or verification** its final report should be
      honest about (e.g. "tests pass but I never exercised it in the app").
 
