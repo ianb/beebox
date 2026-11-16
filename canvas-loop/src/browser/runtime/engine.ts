@@ -291,7 +291,7 @@ export class Runtime {
     const sound = this.#module.sound;
     if (sound === undefined) return;
     const frame = this.#frame;
-    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame));
+    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame).added);
     const due = this.#waiting.filter((voice) => voice.at <= frame);
     if (due.length === 0) return;
     this.#waiting = this.#waiting.filter((voice) => voice.at > frame);

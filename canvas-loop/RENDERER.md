@@ -222,12 +222,12 @@ and, for most, the sketch line that made it.
 
 | Check | Kind |
 |---|---|
-| Faint brushed marks (a readback of each mark's strongest pixel) | warning |
+| Faint brushed marks (a readback of each mark's strongest pixel, before group and placement opacity) | warning |
 | Labels overlapping in one frame (`overlay` text excepted); a missing glyph; an unknown font family | warning |
 | Drawings off the canvas on every frame; unboxed text across the canvas edge | warning, after the run |
 | A node made and not returned (at most 8 a frame) | warning |
 | A picture recorded differently with the same deps (each picture is recorded again every frame and compared) | warning |
-| A picture key that records a new version in each of the last 3 frames, most of them not asked for again | warning |
+| A picture key that records a new version in every frame for over 30 frames, most of those from 30 frames ago not asked for again (poses that come back within half a second do not count) | warning |
 | A placement at a new scale or rotation in each of the last 3 frames | hint |
 | A picture on its own paper placed in a paper scope with other paper | hint |
 | `light` outside a lit group or in mask art; a lit group with no light | warning (also in the browser) |

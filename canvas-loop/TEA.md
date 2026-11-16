@@ -534,6 +534,14 @@ variants the name has.
   for frame N run before its tick, so a sound from a click on frame N starts
   at `model.frame + 1` when the model keeps the last tick's frame.
 - At most 32 new voices a frame.
+- A voice budget keeps busy moments from piling up: a new voice is dropped
+  when, at its start frame, 4 voices of the same sound, or 16 voices in all,
+  started in the last 15 frames (a quarter second). The same sound is a
+  sample by name (any `variant` or `rate`), a note by instrument and note
+  name, or a `pluck` or `tone` by `freq`. So a sketch can return a sound for
+  every hit without counting them itself. A dropped voice stays dropped; the
+  transcript shows `sound dropped "hit-9" thud: …`. Both runtimes drop the
+  same voices.
 - Headless runs write `sound.wav` and `sound.png` (the waveform, a red mark at
   each voice start, a grey line each second) beside the frames, and a
   transcript line per voice (`sound sample "hit-3" ding #3`). The same voice

@@ -377,11 +377,13 @@ oval glows. `radialGradient` is always circular.
 
 ## Faint marks
 
-A mark whose strongest pixel lands below about 8% opacity (after its brush
-and any groups around it) is too faint to see. Headless runs warn with the
-mark's line: `faint mark (curve): it reaches only 5% opacity and will barely
-show`. For a mark that is meant to be that faint, give its style
-`gesture: { faint: true }`.
+A mark whose strongest pixel lands below about 8% opacity (after its paint,
+brush and paper grain) is too faint to see. Headless runs warn with the
+mark's line: `faint mark (curve): its paint, brush and paper grain reach only
+5% opacity, so it will barely show`. For a mark that is meant to be that
+faint, give its style `gesture: { faint: true }`. The `opacity` of the groups
+and placements around a mark is not counted, so fading a stain or a banner
+out with `place(…, { opacity })` does not warn.
 
 Shading inside a shape: fill the shape, clip to it and draw marks, then draw
 its outline last. The clip includes the inside half of the outline, so marks

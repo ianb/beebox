@@ -71,7 +71,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a picture whose deps (or size) change every frame, so it records every frame",
     channel: "warning",
     names: [/picture "bar"/, /every frame/, CASE_FILE],
-    frames: 5,
+    frames: 36,
     draw: (v, m) => v.place(v.picture({ key: "bar", width: 20 + m.t, height: 10, deps: [m.t] }, () => v.rect(0, 0, 20 + m.t, 10, fill)), 10, 10),
   },
   {
@@ -393,7 +393,7 @@ export const CASES: readonly DevLoopCase[] = [
     id: "faint-mark",
     mistake: "a brushed mark too faint to see",
     channel: "warning",
-    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only [0-7]% opacity and will barely show/m, /gesture\({ faint: true }\)/, CASE_FILE],
+    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): its paint, brush and paper grain reach only [0-7]% opacity, so it will barely show/m, /gesture\({ faint: true }\)/, CASE_FILE],
     draw: (v) => v.line(5, 5, 70, 50, { stroke: "rgba(0,0,0,0.03)", weight: 3, brush: "pencil" }),
   },
   {
@@ -488,14 +488,14 @@ export const CASES: readonly DevLoopCase[] = [
     id: "faint-ink",
     mistake: "a translucent ink line too faint to see",
     channel: "warning",
-    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only [0-7]% opacity/m, CASE_FILE],
+    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): its paint, brush and paper grain reach only [0-7]% opacity/m, CASE_FILE],
     draw: (v) => v.line(5, 5, 70, 50, { stroke: "rgba(0,0,0,0.04)", weight: 3, brush: "ink" }),
   },
   {
     id: "faint-in-group",
-    mistake: "an opaque ink line inside a group at 5% opacity",
-    channel: "warning",
-    names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only 5% opacity/m, CASE_FILE],
+    mistake: "none: an opaque ink line inside a group at 5% opacity (the sketch set the opacity, as a fade does; the check leaves it out)",
+    channel: "none",
+    names: [],
     draw: (v) => v.group({ opacity: 0.05 }, v.line(5, 5, 70, 50, { stroke: "#000", weight: 3, brush: "ink" })),
   },
   {

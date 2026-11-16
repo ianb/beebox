@@ -10,6 +10,7 @@ import type { ColorParser } from "../colors.js";
 import type { Geom, SceneNode } from "../nodes.js";
 
 const NAN_HINT = " (NaN usually comes from undefined in arithmetic: a model field or param that is not there)";
+const NEGATIVE_HINT = " (a size computed from time or input can go below 0, as a shrinking ring does; clamp it with Math.max(0, …), or skip the drawing)";
 
 function bad(call: string, what: { name: string; want: string; got: unknown }): SketchUsageError {
   const hint = typeof what.got === "number" && Number.isNaN(what.got) ? NAN_HINT : "";
@@ -24,7 +25,7 @@ export function checkNumbers(call: string, args: { values: Readonly<Record<strin
   for (const [name, v] of Object.entries(args.values)) {
     const positive = args.nonNegative?.includes(name) === true;
     if (typeof v !== "number" || !Number.isFinite(v)) throw bad(call, { name, want: positive ? "a finite number ≥ 0" : "a finite number", got: v });
-    if (positive && v < 0) throw bad(call, { name, want: "a finite number ≥ 0", got: v });
+    if (positive && v < 0) throw new SketchUsageError({ detail: `${call}: ${name} must be ≥ 0, got ${v}${NEGATIVE_HINT}` });
   }
 }
 

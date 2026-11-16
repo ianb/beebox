@@ -2,13 +2,13 @@
 // for the current values. In testing mode every asked-for version is recorded
 // again and compared, and a difference warns, telling a stale capture (the
 // body reads a value not in deps) from two drawings sharing a key. A key that
-// records a new version three frames running, whose versions are used once,
-// warns.
+// records a new version in every frame for over half a second, whose versions
+// are not asked for again, warns.
 import { SketchUsageError } from "../../core/errors.js";
 import type { PictureOptions } from "../../core/tea.js";
 import { versionName } from "../outline.js";
 import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
-import { PictureHandle, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
+import { PictureHandle, REUSE_WINDOW, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import type { PictureTable } from "./pictures.js";
 
@@ -28,8 +28,9 @@ type Fill = (image: { data: Uint8ClampedArray; width: number; height: number }) 
 const depsText = (v: Version): string => (v.deps === undefined ? "no deps" : `deps ${JSON.stringify(v.deps)}`);
 
 function added(s: PictureScope, version: Version): PictureHandle {
-  if (s.table.add(version)) {
-    s.warn(`every ${version.key}`, `${version.kind} "${version.key}" recorded a new version in each of the last 3 frames (now ${depsText(version)}, ${version.width}×${version.height}): its deps or size change every frame, so each new version is used once; keep per-frame values out of the ${version.kind} and apply them with at, place or a drawing beside it`);
+  const run = s.table.add(version);
+  if (run !== undefined) {
+    s.warn(`every ${version.key}`, `${version.kind} "${version.key}" recorded a new version in each of the last ${run} frames (now ${depsText(version)}, ${version.width}×${version.height}), and the versions from ${REUSE_WINDOW} frames ago were not asked for again: its deps or size change every frame, so each new version is used once; keep per-frame values out of the ${version.kind} and apply them with at, place or a drawing beside it`);
   }
   return new PictureHandle(version, s.frame);
 }

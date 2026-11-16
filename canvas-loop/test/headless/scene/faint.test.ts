@@ -8,7 +8,7 @@ import { FAINT, faintState, faintWarnings } from "../../../src/headless/scene/fa
 test("a mark under 8% warns with its call, its strength and its line; one at 8% does not", () => {
   const state = faintState();
   const out = faintWarnings([{ call: "line", alpha: 0.034, line: "a.ts:3:5" }, { call: "curve", alpha: FAINT, line: "a.ts:4:5" }], state);
-  assert.deepEqual(out, ["faint mark (line): it reaches only 3% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at a.ts:3:5)"]);
+  assert.deepEqual(out, ["faint mark (line): its paint, brush and paper grain reach only 3% opacity, so it will barely show; raise the paint's alpha or the brush's opacity, or add gesture({ faint: true }) if faint is intended (group and placement opacity are not counted, so fading with them does not warn) (at a.ts:3:5)"]);
   assert.deepEqual(faintWarnings([{ call: "line", alpha: 0.01, line: "a.ts:3:5" }], state), [], "each line once per run");
 });
 

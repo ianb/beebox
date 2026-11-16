@@ -187,15 +187,27 @@ test("a shared key and a later stale capture at one call each warn: the cause is
 
 test("a key that records a new version every frame says each new version is used once, not that the picture is never reused", () => {
   const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
-  const warnings: string[] = [];
-  for (let t = 0; t < 3; t++) {
-    warnings.push(...rec.record((v) => {
+  const warnings: (readonly string[])[] = [];
+  for (let t = 0; t < 40; t++) {
+    warnings.push(rec.record((v) => {
       return [
         v.place(v.picture({ key: "bar", width: 10, height: 10 }, () => v.rect(0, 0, 10, 10, { fill: "#000" })), 0, 0),
         v.place(v.picture({ key: "bar", width: 20 + t, height: 10 }, () => v.rect(0, 0, 20 + t, 10, { fill: "#000" })), 0, 20),
       ];
     }).warnings);
   }
-  assert.match(warnings.join("\n"), /picture "bar" recorded a new version in each of the last 3 frames .* so each new version is used once/);
-  assert.doesNotMatch(warnings.join("\n"), /never reused/);
+  assert.deepEqual(warnings.slice(0, 32).flat(), [], "quiet while the versions could still come back");
+  assert.match(warnings.flat().join("\n"), /picture "bar" recorded a new version in each of the last 33 frames .*, and the versions from 30 frames ago were not asked for again: .* so each new version is used once/);
+  assert.doesNotMatch(warnings.flat().join("\n"), /never reused/);
+});
+
+test("poses that change every frame and come back (one walker, pose = frame % 4; six poses at three steps a frame) do not warn", () => {
+  for (const pose of [(f: number) => f % 4, (f: number) => Math.floor((f * 3) / 2) % 6, (f: number) => f % 24]) {
+    const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+    const warnings: string[] = [];
+    for (let f = 0; f < 120; f++) {
+      warnings.push(...rec.record((v) => v.place(v.picture({ key: "walker", width: 10, height: 10, deps: [pose(f)] }, () => v.rect(0, 0, pose(f) + 1, 10, { fill: "#000" })), 0, 0)).warnings);
+    }
+    assert.deepEqual(warnings, []);
+  }
 });

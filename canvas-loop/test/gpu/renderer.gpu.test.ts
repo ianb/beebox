@@ -263,8 +263,8 @@ onGpu("a wide picture that reads its surroundings is one layer over what can be 
 onGpu("pixels images and pictures in a lit group snap to whole device pixels (draft 2.6)", everyPlacementSnaps);
 
 onGpu("testing mode's faint-mark readback leaves the colour output byte-identical", peakVariantSameBytes);
-onGpu("a mark's measured peak is its resolved alpha times its groups' opacities; erasing marks are not measured", peaksMeasured);
-onGpu("a picture tile reused from an earlier frame keeps its marks' peaks, times the opacity it is placed at now", keptPictureFaint);
+onGpu("a mark's measured peak is its resolved alpha, before its groups' opacities; erasing marks are not measured", peaksMeasured);
+onGpu("a picture tile reused from an earlier frame keeps its marks' peaks, whatever opacity it is placed at now", keptPictureFaint);
 
 // The dev-loop checklist (beebox/docs/plans/canvas-loop-scene/stage4/dev-loop.md): each deliberately bad
 // sketch runs through the headless runner, and its message must come out on the expected channel naming

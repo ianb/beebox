@@ -1,7 +1,8 @@
 // The faint-mark warning (dev-loop row 42), the Canvas2D painter's rule, kept:
 // a brushed mark whose strongest pixel lands under 8% opacity, after its
-// brush, paint, paper grain and the groups around it, cannot be seen, and an
-// agent would otherwise spend a render cycle finding that out. The renderer
+// brush, paint and paper grain, cannot be seen, and an agent would otherwise
+// spend a render cycle finding that out. The opacity of the groups and
+// placements around a mark is not counted, so a fade does not warn. The renderer
 // measures each mark (gpu/peaks.ts); this decides which to warn about: each
 // sketch line once per run, at most 8, then one line saying the rest are
 // suppressed. `gesture({ faint: true })` marks are never measured.
@@ -38,7 +39,7 @@ export function faintWarnings(marks: readonly MeasuredMark[], state: FaintState)
       out.push("faint marks: more marks are too faint to see; further warnings suppressed");
       continue;
     }
-    out.push(`faint mark (${m.call}): it reaches only ${Math.round(m.alpha * 100)}% opacity and will barely show (gesture({ faint: true }) marks it as intended)${m.line === undefined ? "" : ` (at ${m.line})`}`);
+    out.push(`faint mark (${m.call}): its paint, brush and paper grain reach only ${Math.round(m.alpha * 100)}% opacity, so it will barely show; raise the paint's alpha or the brush's opacity, or add gesture({ faint: true }) if faint is intended (group and placement opacity are not counted, so fading with them does not warn)${m.line === undefined ? "" : ` (at ${m.line})`}`);
   }
   return out;
 }

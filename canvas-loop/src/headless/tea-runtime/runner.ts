@@ -13,7 +13,7 @@ import { FrameRecorder, patchConsole } from "../recorder/frame-recorder.js";
 import type { Zoom } from "../recorder/zoom.js";
 import { FrameTimer } from "../recorder/timing.js";
 import type { RunResult } from "../recorder/frame-recorder.js";
-import { Score, voiceDetail } from "../../core/sound/voice.js";
+import { MAX_SAME_SOUND, MAX_SOUNDING, Score, voiceDetail } from "../../core/sound/voice.js";
 import { soundFiles } from "../recorder/sound.js";
 import { UnhandledFold, describeInput, verdict } from "../../core/engagement.js";
 import type { InteractionMsg } from "../../core/engagement.js";
@@ -187,10 +187,14 @@ class TeaRunner {
     if (sound === undefined) return;
     const model = this.#model;
     const params = this.#state.params;
-    for (const voice of this.#score.add(this.#sketch("sound", () => sound(model, params)), frame)) {
+    const { added, dropped } = this.#score.add(this.#sketch("sound", () => sound(model, params)), frame);
+    for (const voice of added) {
       const pitch = voiceDetail(voice);
       const when = voice.at === frame ? "" : ` at frame ${voice.at}`;
       this.#recorder.recordLog({ level: "log", message: `sound ${voice.kind} "${voice.id}"${pitch}${when}` });
+    }
+    for (const voice of dropped) {
+      this.#recorder.recordLog({ level: "log", message: `sound dropped "${voice.id}"${voiceDetail(voice)}: ${MAX_SAME_SOUND} of the same sound or ${MAX_SOUNDING} in all were already sounding` });
     }
   }
 
