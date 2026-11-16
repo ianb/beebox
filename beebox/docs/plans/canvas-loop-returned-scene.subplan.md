@@ -86,6 +86,11 @@ authored. What drives the size: the sketch corpus. `src/gallery/` and
 `v.line` 494, `v.path` 480, `v.clip` 444). The runtime change is small; the
 corpus is large. Implementation needs the boxholder's approval at this size.
 
+**Approved (2026-11-15).** The boxholder approved this size and the plan:
+"that sounds fine, go ahead". The paper-scope change (R9 and decision 10)
+is taken with it: the returned form has no current paper while it builds
+nodes. Implementation starts after core chunk 6 and gpu-brushes chunk 9.
+
 ## Stated preferences this plan trades against
 
 - **The boxholder's direction** (quoted above) and *"Don't worry about
