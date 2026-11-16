@@ -49,6 +49,9 @@ packages:
   # Codex's sandbox (deploy/server-bin/bbx-codex-sandbox-install, which also
   # restricts it to box users and adds its AppArmor grant).
   - bubblewrap
+  # Mesa's software Vulkan driver, which Dawn renders canvas-loop figures with
+  # (deploy/server-bin/bbx-figure-gpu-install installs it too and probes it).
+  - mesa-vulkan-drivers
 
 groups:
   - beebox-boxes

@@ -1001,6 +1001,13 @@ REMOTE
   queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
     < "$CHECKOUT/beebox/deploy/server-bin/bbx-codex-sandbox-install"
 
+  # Figures render headlessly with Dawn, which needs a Vulkan driver: Mesa's
+  # software one, then a check that Dawn finds an adapter as a box user inside
+  # the box sandbox. Without it every `bbx figure run` fails.
+  queue_step "Installing the figure renderer's Vulkan driver..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-figure-gpu-install"
+
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
   #      crash-looping. The hub blocks on startAll() before it listens, and a

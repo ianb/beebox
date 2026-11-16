@@ -218,6 +218,9 @@ importers:
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
+      webgpu:
+        specifier: 0.6.2
+        version: 0.6.2
       ws:
         specifier: ^8.21.0
         version: 8.21.1

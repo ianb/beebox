@@ -439,6 +439,30 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   `bbx` verb.
 - **First chunk (no open questions):** the dependency, the dependency test,
   the probe, the helper, the deploy step, cloud-init and Dockerfile lines.
+- **As built (C1).** Logs are in `scratch/stage5/c1/`.
+  - **Dependency.** `webgpu` 0.6.2 in beebox's dependencies; the lockfile
+    gained only beebox's importer entry, since canvas-loop already pulled the
+    package in. `test/deploy/figure-gpu.test.ts` checks that beebox declares
+    each of canvas-loop's runtime dependencies (`@napi-rs/canvas`, `webgpu`,
+    `yaml`) at the same version, and that the deploy, helper, cloud-init and
+    Dockerfile lines are there.
+  - **Probe path changed.** The probe is `src/scripts/dawn-probe.ts`, not
+    `deploy/server-bin/dawn-probe.ts`: beebox type-checks and lints only
+    `src/`, `scripts/` and `test/`, and `src/scripts/deploy-releases/` is the
+    precedent for a helper Node runs with type stripping. It takes any
+    directory and resolves `webgpu` from that directory's real path, so it
+    works against the hoisted server install (`/opt/beebox/beebox`) and a
+    packed one (`node_modules/beebox`). It uses its own small WebGPU types,
+    since beebox's typecheck has none.
+  - **Helper and docs.** `deploy/server-bin/bbx-figure-gpu-install` as
+    planned; it runs `node <engine>/src/scripts/dawn-probe.ts <engine>`.
+    deploy.sh runs it after the Codex sandbox step. One paragraph each in
+    `docs/server/provisioning.md` (a "Figure renderer (Dawn)" section) and
+    `deploying.md`.
+  - **Docker base image.** C5 found bookworm's Mesa unusable, so both stages
+    moved to `node:24-trixie-slim`; `docker/README.md`, the Debian flavour
+    of `bbx-host-apt.smoke.sh` and its line in `docs/security-report.md`
+    follow. The image itself was not built in this chunk.
 
 ### C2. `bbx figure run` on the scene runner
 
@@ -561,6 +585,17 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
 - An exhibit, captured in the worktree's dev router: a working chemistry
   figure; the "needs updating" and "can't draw on this device" notices, each
   in page mode with the description and embedded in a card with its caption.
+- **As built (VM half).** Notes in
+  `canvas-loop-scene/stage5/figures-timing.md`. On Ubuntu 24.04 (Mesa
+  25.2.8) and Debian 13 trixie (Mesa 25.0.7) the probe finds `llvmpipe` and
+  `bbx figure run` passes on the starter: about 0.9 s cold and 0.55 s warm,
+  peak RSS 420–440 MB cold. On Debian 12 bookworm (Mesa 22.3.6) Dawn
+  rejects the driver (*"Vulkan shaderUniform\*ArrayDynamicIndexing
+  required"*), so the probe and the run report no adapter. The Docker image
+  moved to trixie (C1). Found on the way: `pnpm add` of the tarball with
+  corepack's latest pnpm (12.21.0) exits 1 on ignored build scripts
+  (`@google/genai`, `agent-browser`, `protobufjs`, and now `webgpu`), which
+  would stop the image build; not fixed here.
 
 ### Production steps — each needs the boxholder's own yes
 

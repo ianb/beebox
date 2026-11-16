@@ -11,12 +11,17 @@
 # major must match. Debian (glibc) is mandatory, not Alpine: the Agent SDK's
 # launcher resolves a glibc binary first (src/core/sdk-binary-path.ts, SDK
 # issue #296) and musl breaks it.
+#
+# Debian 13 (trixie), not 12 (bookworm): `bbx figure run` renders with Dawn on
+# Mesa's software Vulkan driver, and bookworm's Mesa 22.3 lacks a feature Dawn
+# requires, so Dawn finds no adapter there. Trixie's Mesa 25.0 works
+# (beebox/docs/plans/canvas-loop-scene/stage5/figures-timing.md).
 
 # ─────────────────────────────────────────────────────────────────────────
 # Build stage — install the workspace and produce the release tarball the
 # same way src/scripts/release.ts does (build:cli + frontend build + pnpm pack).
 # ─────────────────────────────────────────────────────────────────────────
-FROM node:24-bookworm-slim AS build
+FROM node:24-trixie-slim AS build
 
 # Native modules may compile if no prebuilt binary is available for this
 # arch — give the throwaway build stage the toolchain.
@@ -55,7 +60,7 @@ RUN pnpm install --frozen-lockfile \
 # native Claude Code CLI, the installed engine, and a non-root user that owns
 # everything and carries the git/LFS/auth state.
 # ─────────────────────────────────────────────────────────────────────────
-FROM node:24-bookworm-slim
+FROM node:24-trixie-slim
 
 # Git identity baked in as defaults; the entrypoint overrides from
 # BBX_GIT_NAME / BBX_GIT_EMAIL at runtime if they are set.
@@ -94,10 +99,13 @@ LABEL org.opencontainers.image.version=$BEEBOX_VERSION \
 # judges only what a box adds; without them gLabels (which depends on dbus
 # and systemd) would be refused here and accepted on a server. Nothing runs
 # systemd in the container; the packages are inert.
+#
+# mesa-vulkan-drivers: the software Vulkan driver (lavapipe) that Dawn renders
+# canvas-loop figures with in `bbx figure run`; the container has no GPU.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
        pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv qpdf ffmpeg git git-lfs git-annex curl ca-certificates \
-       sudo systemd dbus procps bzip2 \
+       sudo systemd dbus procps bzip2 mesa-vulkan-drivers \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
   # call `magick` (IM7). Symlink so both names work (same as cloud-init.yaml).

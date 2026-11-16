@@ -206,6 +206,19 @@ root, after the box browser:
 - A check, as one box user under the box sandbox, that `codex sandbox --
   /bin/true` succeeds. A host with no box yet skips it.
 
+### Figure renderer (Dawn)
+
+`bbx figure run` renders canvas-loop figures with Dawn (the `webgpu`
+package), which needs a Vulkan driver. The server has no GPU, so it uses
+Mesa's software driver, lavapipe. Every deploy runs
+`server-bin/bbx-figure-gpu-install` as root, after the Codex sandbox:
+
+- `mesa-vulkan-drivers`, when it is not installed. `cloud-init.yaml` installs
+  it too.
+- A check, as one box user under the box sandbox, that
+  `node src/scripts/dawn-probe.ts <engine>` reports an adapter. A host with no
+  box yet skips it.
+
 ## Systemd units
 
 Every file under `deploy/systemd/` is installed whole on every deploy.
