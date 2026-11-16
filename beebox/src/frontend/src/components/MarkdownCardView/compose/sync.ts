@@ -149,6 +149,17 @@ export class CompositionSync {
     return await this.enqueue(() => this.write(false)) || this.stopped;
   }
 
+  /**
+   * Write what is unsaved (no commit), then run `step` with the region hash
+   * the disk now has, before any later write or read: a resolve action
+   * (`plan:composition-copy-and-accept-all`) works on the text on screen.
+   * `null` when the write failed or the card's composition is gone.
+   */
+  afterFlush<T>(step: (regionHash: string) => Promise<T>): Promise<T | null> {
+    this.clearTimer();
+    return this.enqueue(async () => (await this.write(false) ? step(this.syncedHash) : null));
+  }
+
   /** Resolves once the reads and writes queued so far have finished. */
   async settled(): Promise<void> {
     await this.lane;

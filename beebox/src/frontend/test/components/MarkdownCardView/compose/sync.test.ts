@@ -205,3 +205,19 @@ void test("saved goes stale on a remote change", async (t) => {
   await h.sync.settled();
   t.check({ text: h.text(), states: h.states }, { text: "One two, mine. Agent's line.", states: ["Saving…", "Committed", "Saved"] });
 });
+
+// ## A resolve action runs after the pending text is written, with the hash of that text
+void test("after flush", async (t) => {
+  const h = harness("Draft.");
+  h.type("Draft, edited.");
+  const seen = await h.sync.afterFlush(async (regionHash) => regionHash);
+  t.check({ seen, writes: h.writes, pending: h.pending() }, {
+    seen: "h:Draft, edited.",
+    writes: [{ baseRegionHash: "h:Draft.", text: "Draft, edited.", commit: false }],
+    pending: [],
+  });
+  // A failed write runs nothing.
+  h.type("Draft, again.");
+  h.replies.push(new Error("offline"));
+  t.check(await h.sync.afterFlush(async () => "ran"), null);
+});

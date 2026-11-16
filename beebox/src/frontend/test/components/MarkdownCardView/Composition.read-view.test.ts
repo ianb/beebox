@@ -65,20 +65,56 @@ void test("each kind of mark renders by kind", async (t) => {
   ]);
 });
 
-void test("Copy copies the plain text and counts open marks", async (t) => {
+function clipboard(): string[] {
   const copied: string[] = [];
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText: (text: string) => { copied.push(text); return Promise.resolve(); } },
   });
+  return copied;
+}
+
+// ## Only the agent's words open: Copy copies at once, with them as plain text
+// (`plan:composition-copy-and-accept-all`)
+void test("Copy with only agent words copies the publishing text", async (t) => {
+  const copied = clipboard();
+  const view = await mount(render(piece('One line.\n\nTwo {% editorial kind="joiner" %}and{% /editorial %} three.'), null));
+  t.teardown(() => view.unmount());
+  const copy = view.container.querySelector<HTMLButtonElement>('button[aria-label="Copy composition"]');
+  await view.act(() => { copy?.click(); });
+  await view.act(() => Promise.resolve());
+  t.check({ copied, label: copy?.textContent }, { copied: ["One line.\n\nTwo and three."], label: "Copied" });
+});
+
+// ## A gap open: Copy copies nothing and lists it, with the draft copy beside
+void test("Copy with a gap lists what to resolve", async (t) => {
+  const copied = clipboard();
   const view = await mount(render(piece('One {% editorial kind="gap" %}more{% /editorial %} line.\n\nTwo {% editorial kind="joiner" %}and{% /editorial %} three.'), null));
   t.teardown(() => view.unmount());
   const copy = view.container.querySelector<HTMLButtonElement>('button[aria-label^="Copy composition"]');
-  const labels = () => [copy?.textContent];
-  t.check({ name: copy?.getAttribute("aria-label"), labels: labels() }, { name: "Copy composition (2 open marks)", labels: ["Copy (2 open marks)"] });
+  t.check(copy?.getAttribute("aria-label"), "Copy composition: 1 to resolve first");
   await view.act(() => { copy?.click(); });
+  const panel = view.container.querySelector('[aria-label="Before you publish"]');
+  t.check({ copied, lines: [...(panel?.querySelectorAll("p") ?? [])].map((p) => p.textContent) }, {
+    copied: [],
+    lines: ["Before you publish: 1 thing to resolve", "A gap: “more”. Write it, or remove the gap."],
+  });
+  const draft = panel?.querySelector<HTMLButtonElement>('button[aria-label="Copy the draft with its marks labelled"]');
+  await view.act(() => { draft?.click(); });
   await view.act(() => Promise.resolve());
-  t.check({ copied, labels: labels() }, { copied: ["One [gap: more] line.\n\nTwo [agent: and] three."], labels: ["Copied"] });
+  t.check(copied, ["One [gap: more] line.\n\nTwo [agent: and] three."]);
+});
+
+// ## A mark of an unknown kind (the region itself is whole): no Copy, a
+// reason, and Edit stays to fix it
+void test("a broken tag keeps Edit and withholds Copy", async (t) => {
+  const view = await mount(render(piece('One {% editorial kind="draft" %}line{% /editorial %}.'), Editor));
+  t.teardown(() => view.unmount());
+  const section = view.container.querySelector("section");
+  t.check({
+    buttons: [...(section?.querySelectorAll("button") ?? [])].map((b) => b.getAttribute("aria-label")),
+    says: section?.textContent?.includes("A tag in this composition is broken. Edit it to fix the tag."),
+  }, { buttons: ["Edit composition"], says: true });
 });
 
 void test("Compose shows only for one closed composition, and opens the editor", async (t) => {
@@ -87,7 +123,7 @@ void test("Compose shows only for one closed composition, and opens the editor",
     t.teardown(() => view.unmount());
     return [...view.container.querySelectorAll("section button")].map((b) => b.getAttribute("aria-label"));
   };
-  t.check(await labels(piece("Plain.")), ["Copy composition", "Edit composition"]);
+  t.check(await labels(piece("Plain.")), ["Copy composition", "More copy options", "Edit composition"]);
   t.check(await labels(`${piece("One.")}\n${piece("Two.")}`), []);
   t.check(await labels("No composition here.\n"), []);
   const view = await mount(render(piece("Plain."), Editor));
