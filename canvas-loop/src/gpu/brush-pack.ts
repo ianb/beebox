@@ -30,7 +30,7 @@ export interface BrushJob {
   readonly offset: readonly [number, number];
   /** The mark's slot on its page: x0, y0, x1, y1 (unused for a smear). */
   readonly slot: readonly [number, number, number, number];
-  /** A bristle stroke's one-sample dots as a stamp job: no dab is skipped (kinds.ts `paintBristle` draws every dot). */
+  /** A bristle stroke's one-sample dots as a stamp job: no dab is skipped (a bristle stroke draws every dot). */
   readonly dot?: boolean;
 }
 

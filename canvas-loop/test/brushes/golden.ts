@@ -1,12 +1,12 @@
 // Golden numbers for the GPU brush expansion's readback tests: what the CPU
-// expansion gave for the test scenes, recorded before it was deleted
-// (canvas-loop-gpu-brushes.subplan.md, chunk 9). A file in
+// expansion gave for the test scenes, recorded at commit 74ce5c74b, before
+// chunk 9 deleted it (canvas-loop-gpu-brushes.subplan.md). A file in
 // test/fixtures/brush-golden/ is a gzipped stream of f32 values, counts and
-// flags among them (exact in f32), read in the order each test's reader
+// flags among them (exact in f32), read in the order each reader below
 // documents. Positions are relative to their contour's origin
 // (`PreparedContour.origin`, f64), so f32 keeps them precise far from 0.
-import { readFileSync, writeFileSync } from "node:fs";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 
 const DIR = new URL("../fixtures/brush-golden/", import.meta.url);
 
@@ -38,13 +38,6 @@ export class Golden {
   get done(): boolean {
     return this.#at === this.#f.length;
   }
-}
-
-/** Write golden file `name` (the recorder, run once before the CPU expansion was deleted); returns its bytes. */
-export function writeGolden(name: string, values: readonly number[]): number {
-  const gz = gzipSync(Buffer.from(Float32Array.from(values).buffer), { level: 9 });
-  writeFileSync(new URL(`${name}.f32.gz`, DIR), gz);
-  return gz.length;
 }
 
 /** A sample (brush space, less its contour's origin) and its pressure. */

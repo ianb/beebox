@@ -39,7 +39,6 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "1.1.0",
-    "perfect-freehand": "1.2.3",
     "webgpu": "0.6.2",
     "yaml": "^2.7.0"
   },

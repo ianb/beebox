@@ -1,7 +1,8 @@
 // The `bristles` entry of shader-brush.ts's instances module (canvas-loop-gpu-brushes.subplan.md,
 // chunk 7): one thread per unit, a contour and one of its bristles, walking the
-// contour's samples as kinds.ts `paintBristle` does and writing each run as
-// mark-atlas.ts `runStrip`'s mitred strip. It uses that module's prelude
+// contour's samples and writing each run as a mitred strip; a port of the CPU
+// expansion's `paintBristle` and the mark atlas's `runStrip`, both deleted in
+// chunk 9 (test/fixtures/brush-golden/ holds their numbers). It uses that module's prelude
 // (the uniform, records, hash), its samples (binding 2) and output (binding 3),
 // `placed`'s stroke-record readers and `shiftColour`; its units are binding 1.
 
@@ -23,12 +24,12 @@ export const BRISTLES_WORKGROUP = 4;
 
 /** The entry's WGSL. */
 export const BRISTLES_WGSL = /* wgsl */ `
-// The \`bristles\` entry: one thread per unit (a contour and one of its bristles), as kinds.ts
-// \`paintBristle\` paints that bristle: \`makeBristles\`, \`bristlePoints\`, runs broken where the
-// level changes (the boundary point shared, with the earlier run's level), each run of two or
-// more points and a level above 0 stroked at its average width; and each run's strip as
-// mark-atlas.ts \`runStrip\` writes it. Segment j of the contour's samples is written as run
-// vertices 6j to 6j + 5 of the unit's range; a segment in a run that is not drawn is all zeros.
+// The \`bristles\` entry: one thread per unit (a contour and one of its bristles): the bristle
+// (offset, strength, thickness, where it runs dry), its points along the samples, runs broken
+// where the level changes (the boundary point shared, with the earlier run's level), each run of
+// two or more points and a level above 0 stroked at its average width, as a mitred strip.
+// Segment j of the contour's samples is written as run vertices 6j to 6j + 5 of the unit's
+// range; a segment in a run that is not drawn is all zeros.
 @group(0) @binding(1) var<storage, read> units: array<vec4u>;
 const LEVELS = 5.0;
 const DRIFT = 0.12;
@@ -36,7 +37,7 @@ fn smooth01(e0: f32, e1: f32, x: f32) -> f32 {
   let f = min(1.0, max(0.0, (x - e0) / (e1 - e0)));
   return f * f * (3.0 - 2.0 * f);
 }
-// random.ts \`noise1\` at x ≥ 0 on \`ch\`, no wrap.
+// Smooth 1-D value noise in [-1, 1] at x ≥ 0 on \`ch\`, no wrap.
 fn noiseCh(seed: u32, ch: u32, x: f32) -> f32 {
   let i = floor(x);
   let f = x - i;
@@ -71,7 +72,7 @@ fn lenOr1(v: vec2f) -> f32 {
   let l = length(v);
   return select(l, 1.0, l == 0.0);
 }
-// runStrip's mitred side offset at point p, with the run's neighbours q (before) and r (after),
+// The strip's mitred side offset at point p, with the run's neighbours q (before) and r (after),
 // \`first\` or \`last\` at a run end: the unit mitre direction times its length, \`e\` from the centre line.
 fn mitre(p: vec2f, q: vec2f, r: vec2f, ends: vec2<bool>, e: f32) -> vec2f {
   var a = p - q;
@@ -140,7 +141,7 @@ fn emitRun(w: Walk, run: vec2u, level: f32, wavg: f32, at: RunAt) {
     side = side1;
   }
 }
-// The bristle's colour: black coverage, or (jittered) its own colour, as ink.ts \`jitteredInk\` gives bristle b.
+// The bristle's colour: black coverage, or (jittered) its own colour: the paint shifted by bristle b's hue and light.
 fn shiftedInk(w: Walk) -> vec3f {
   if (sf(w.st, 23u) <= 0.5) { return vec3f(0.0); }
   let hue = sf(w.st, 18u) * (2.0 * rand1(w.seed, 13u, w.b) - 1.0);

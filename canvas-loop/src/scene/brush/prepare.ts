@@ -7,13 +7,39 @@
 // buffers instead, since every moving stroke is prepared again each frame.
 import type { Contour } from "../../core/contours.js";
 import { firstSamples } from "../../core/brush/sample.js";
-import { stepFor, wobbleLattice } from "../../core/brush/render/mark/render.js";
 import type { Brush, Gesture } from "../../core/brush/types.js";
 import type { Mat } from "../nodes.js";
 import type { PreparedContour } from "./expand.js";
 
 /** Words per prepared point in `PreparedContour.geom`. */
 export const POINT_WORDS = 4;
+
+/** Wobble noise wavelength, in brush px. */
+const WOBBLE_CELL = 28;
+
+/** The sample spacing of `brush` at `width` brush px. */
+function stepFor(brush: Brush, width: number): number {
+  switch (brush.kind) {
+    case "ink":
+      return Math.max(0.5, width / 6);
+    case "stamp":
+    case "smear":
+      return Math.max(0.25, width * brush.spacing);
+    case "bristle":
+      return Math.max(0.75, Math.min(3, width / 8));
+  }
+}
+
+/**
+ * The wobble noise's lattice for a contour whose last sample is at arc length
+ * `total`. A closed loop gets a whole number of noise cells around it,
+ * wrapping, so the wobble at the end meets the wobble at the start.
+ */
+export function wobbleLattice(...[closed, total]: [boolean, number]): { period: number | undefined; cell: number } {
+  const period = closed ? Math.max(1, Math.round(total / WOBBLE_CELL)) : undefined;
+  // A closed dot (total 0) reads the noise at 0, as an open one does: a cell of 0 would give 0 / 0.
+  return { period, cell: period === undefined || total === 0 ? WOBBLE_CELL : total / period };
+}
 
 // Reused between contours: the prepared points (x, y), segment lengths, and each segment's first sample.
 let points = new Float64Array(512);

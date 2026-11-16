@@ -70,10 +70,7 @@ function packablesOf(jobs: readonly Job[]): { pieces: Piece[]; marks: TexMark[];
     }
     for (const it of j.items) {
       if (it.k === "shape") pieces.add(it.piece);
-      else if (it.k === "mark") {
-        if (it.source.kind === "piece") pieces.add(it.source.piece);
-        else marks.push(it.source.mark);
-      }
+      else if (it.k === "mark") marks.push(it.mark);
       else if (it.k === "glyphs") for (const q of it.quads) cells.add(q.cell);
     }
   }

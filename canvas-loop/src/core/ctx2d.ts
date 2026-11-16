@@ -1,8 +1,5 @@
-// The structural 2D-context subset canvas-loop's CPU brush expansion draws
-// against (`scene/brush/record-ctx.ts` records it; the colour parsers and the
-// text measurer use a real context through it), and the helpers the brush kinds
-// paint with. Internal: no sketch sees a context.
-import type { Gradient, Paint } from "./paint.js";
+// The structural 2D-context subset the colour parsers and the text measurer
+// use a real context through. Internal: no sketch sees a context.
 
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
@@ -94,46 +91,4 @@ export interface Ctx2D {
   measureText(text: string): { readonly width: number };
   createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
-}
-
-/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
-export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
-  ctx.save();
-  try {
-    return body();
-  } finally {
-    ctx.restore();
-  }
-}
-
-/**
- * Run a fill in the paint's own space. An elliptical radial gradient is a
- * circular one under a vertical scale about its centre; Canvas2D reads a
- * gradient in the transform current at fill time, while the path was already
- * traced, so only the gradient is squashed. Only fills use this: a stroke
- * would squash its line width too.
- */
-export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
-  const { paint } = args;
-  if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
-    args.fill();
-    return;
-  }
-  const { x2, y2, scaleY } = paint;
-  withSaved(ctx, () => {
-    ctx.translate(x2, y2);
-    ctx.scale(1, scaleY);
-    ctx.translate(-x2, -y2);
-    args.fill();
-  });
-}
-
-/** Build the ctx-bound gradient for a gradient handle. */
-export function resolveGradient(ctx: Ctx2D, g: Gradient): Ctx2DGradient {
-  const grad =
-    g.kind === "linear-gradient"
-      ? ctx.createLinearGradient(g.x1, g.y1, g.x2, g.y2)
-      : ctx.createRadialGradient(g.x1, g.y1, g.r1, g.x2, g.y2, g.r2);
-  for (const [offset, color] of g.stops) grad.addColorStop(offset, color);
-  return grad;
 }

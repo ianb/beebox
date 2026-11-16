@@ -1,7 +1,7 @@
 // Stamp strokes for the GPU `dabs` entry (canvas-loop-gpu-brushes.subplan.md,
 // chunk 3): hue and light jitter on every tip and on colours where the HSL
 // conversion has edge cases (grey, a hue near 0°/360°, near white and black),
-// under a rotation and a non-uniform scale; dabs kinds.ts skips (alpha 0 at
+// under a rotation and a non-uniform scale; dabs the stamp rule skips (alpha 0 at
 // zero pressure, radii falling through 0.05); and the extremes of scatter,
 // sizeJitter and wobble, for the mark's box.
 import type { View } from "../../src/core/tea.js";

@@ -31,8 +31,8 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 ### perfect-freehand, by Steve Ruiz
 
 - **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
-- **What we took:** Its pressure-sensitive stroke outline as canvas-loop's ink brush; canvas-loop supplies synthetic pressure from a gesture envelope and fills the outline.
-- **Where it landed:** `canvas-loop/package.json` (pinned dependency); `canvas-loop/src/core/brush/render/kinds.ts`.
+- **What we took:** Its stroke radius for a pressure, `size × (0.5 − thinning × (0.5 − pressure))`, as the radius of canvas-loop's ink. The ink is now a union of capsules drawn on the GPU, so the package is no longer a dependency.
+- **Where it landed:** `canvas-loop/src/gpu/shader-brush.ts` (the `capsules` entry).
 
 ### restic, by the restic contributors
 

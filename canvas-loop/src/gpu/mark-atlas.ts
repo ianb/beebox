@@ -1,16 +1,14 @@
-// The mark atlas: every dab-and-run mark of a frame gets a slot on an rgba8
-// page; per page, one instanced draw lays every dab and one draw every bristle
-// run (shader-mark.ts). Stamp marks' dabs and ink marks' capsules are written
+// The mark atlas: every stamp, ink and bristle mark of a frame gets a slot on
+// an rgba8 page, where the GPU lays its dabs, capsules or bristle strips
+// (shader-mark.ts). Stamp marks' dabs and ink marks' capsules are written
 // on the GPU (brush-pass.ts) into one buffer per batch, dabs then capsules,
 // each ordered by page; after each batch, each page draws its part of it.
 // Bristle marks' strips follow, in batches of their own (cut between
 // bristles), and a bristle contour of one sample is a dab laid with the
 // stamps'. A mark's draw then reads its slot (src 3 or 4 in the draw shader),
 // so a mark's opacity applies once however many dabs, capsules or strips
-// overlap. The CPU dabs and runs (`#lay`, `runStrip`) remain for the tests'
-// reference until chunk 9; no mark has them in normal rendering.
+// overlap.
 import type { BristleBrush } from "../core/brush/types.js";
-import type { Run } from "../scene/brush/expand.js";
 import type { AtlasPage } from "./atlas.js";
 import { shelfPack } from "./atlas.js";
 import type { R, TexMark } from "./jobs.js";
@@ -28,76 +26,9 @@ import { DAB_FLOATS } from "./shader-brush.js";
 import { RUN_FLOATS } from "./shader-bristle.js";
 
 const MAX = ATLAS_MAX;
-/** A strip quad's two triangles, as offsets into the per-point [left x, left y, right x, right y] list: (L_i, R_i, L_i+1), (L_i+1, R_i, R_i+1). */
-const TRIS = [[0, 2, 4], [4, 2, 6]] as const;
 
-/** Each point's left and right strip corners in the mark's own pixels (`local`: device point → mark pixel), mitred, `e` from the centre line. */
-function stripSides(pts: readonly number[], a: { e: number; local: readonly [number, number, number, number] }): Float64Array {
-  const { e } = a;
-  const n = pts.length / 2;
-  const [ox, oy, x0, y0] = a.local;
-  const side = new Float64Array(n * 4);
-  const at = (i: number): [number, number] => [pts[2 * i] ?? 0, pts[2 * i + 1] ?? 0];
-  for (let i = 0; i < n; i++) {
-    const [px, py] = at(i);
-    const [qx, qy] = at(Math.max(0, i - 1));
-    const [rx, ry] = at(Math.min(n - 1, i + 1));
-    // Unit normals of the segments before and after this point (one of them at an end).
-    let [ax, ay] = [px - qx, py - qy];
-    let [bx, by] = [rx - px, ry - py];
-    if (i === 0) [ax, ay] = [bx, by];
-    if (i === n - 1) [bx, by] = [ax, ay];
-    const la = Math.hypot(ax, ay) || 1;
-    const lb = Math.hypot(bx, by) || 1;
-    const n1x = -ay / la;
-    const n1y = ax / la;
-    const mx0 = n1x - by / lb;
-    const my0 = n1y + bx / lb;
-    const ml = Math.hypot(mx0, my0) || 1;
-    const mx = mx0 / ml;
-    const my = my0 / ml;
-    const k = Math.min(2, 1 / Math.max(0.05, mx * n1x + my * n1y)) * e;
-    const lx = px + ox - x0;
-    const ly = py + oy - y0;
-    side.set([lx + mx * k, ly + my * k, lx - mx * k, ly - my * k], i * 4);
-  }
-  return side;
-}
-
-/**
- * Write one run as a mitred strip of triangles into `out` at float `o`,
- * extruded a pixel past its half width for the edge filter; returns the next
- * offset. Every vertex carries its triangle's corners (in the mark's own
- * pixels) and their signed distances across, so the fragment shader finds the
- * distance at a pixel from the mark's own pixels, wherever the mark is packed.
- */
-export function runStrip(out: Float32Array, a: { o: number; run: Run; local: readonly [number, number, number, number]; slot: readonly number[] }): number {
-  const { pts, width } = a.run;
-  const hw = width / 2;
-  const e = hw + 1;
-  const n = pts.length / 2;
-  const [sx = 0, sy = 0] = a.slot;
-  const side = stripSides(pts, { e, local: a.local });
-  const tail = [...a.run.rgb, a.run.a, ...a.slot];
-  // u is the signed distance across: +e on the left side, −e on the right.
-  const uOf = (c: number): number => (c % 4 === 0 ? e : -e);
-  let o = a.o;
-  for (let i = 0; i + 1 < n; i++) {
-    const q = i * 4;
-    for (const tri of TRIS) {
-      const ks = tri.map((t) => q + t);
-      const corners = ks.flatMap((k) => [side[k] ?? 0, side[k + 1] ?? 0]);
-      const us = tri.map((t) => uOf(t));
-      for (const k of ks) {
-        out.set([(side[k] ?? 0) + sx, (side[k + 1] ?? 0) + sy, hw, 0, ...tail, ...corners, ...us], o);
-        o += RUN_FLOATS;
-      }
-    }
-  }
-  return o;
-}
-
-type GpuMark = TexMark & { gpu: NonNullable<TexMark["gpu"]>; slot: NonNullable<TexMark["slot"]> };
+/** A mark with its slot (packed). */
+type GpuMark = TexMark & { slot: NonNullable<TexMark["slot"]> };
 
 /** A stamp, ink or bristle mark (packed) as the `dabs`, `capsules` or `bristles` entry takes it. */
 function brushJob(m: GpuMark): BrushJob {
@@ -106,11 +37,11 @@ function brushJob(m: GpuMark): BrushJob {
 }
 
 /**
- * A bristle stroke's contours of one sample, as a stamp job: kinds.ts
- * `paintBristle` paints such a contour as one hard dab of radius
+ * A bristle stroke's contours of one sample, as a stamp job: such a contour
+ * is one hard dab of radius
  * `width / 2 × (0.35 + 0.65 p)` at the brush flow, in bristle 0's colour, which
  * is the `dabs` entry's dab 0 with sizeByPressure 0.65 and nothing else
- * varied; `dot` keeps the stamp skip rule off, since `paintBristle` draws every
+ * varied; `dot` keeps the stamp skip rule off, since a bristle stroke draws every
  * dot. Undefined when the stroke has none.
  */
 export function bristleDots(job: BrushJob, brush: BristleBrush): BrushJob | undefined {
@@ -169,12 +100,11 @@ export class MarkAtlas {
   }
 
   /**
-   * Pack `marks`, lay their dabs and runs, and return the pages (pool
-   * textures the caller releases). Each page's first render pass clears it
-   * and draws its CPU dabs and runs; the GPU strokes' instances come in
-   * batches (brush-pass.ts), and after each batch's dispatch, each page with
-   * instances in it draws them, in a later pass with `loadOp: "load"`. With
-   * one batch, each page has one pass.
+   * Pack `marks`, lay their dabs, capsules and strips, and return the pages
+   * (pool textures the caller releases). The instances come in batches
+   * (brush-pass.ts); after each batch's dispatch, each page with instances in
+   * it draws them, its first pass clearing it and later ones with `loadOp:
+   * "load"`. With one batch, each page has one pass.
    */
   build(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; pool: TexturePool; temp: GPUBuffer[]; timer: PassTimer | undefined; stats: FrameStats }): AtlasPage[] {
     const widest = marks.reduce((w, m) => Math.max(w, widthOf(m.box) + 1), 0);
@@ -192,16 +122,6 @@ export class MarkAtlas {
         p.setPipeline(pipe);
         p.setBindGroup(0, this.#device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: uni } }] }));
       };
-      if (first) {
-        const { dabs, runs } = this.#lay(marks.filter((m) => m.slot?.page === page));
-        for (const [pipe, data] of [[this.#dab, dabs], [this.#run, runs]] as const) {
-          if (data.length === 0) continue;
-          bind(pipe);
-          p.setVertexBuffer(0, this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp }));
-          if (pipe === this.#dab) p.draw(6, data.length / DAB_FLOATS);
-          else p.draw(data.length / RUN_FLOATS);
-        }
-      }
       for (const d of gpu?.draws ?? []) {
         const r = gpu === undefined ? undefined : within(d.ranges.get(page), gpu.batch);
         if (gpu === undefined || r === undefined) continue;
@@ -229,7 +149,7 @@ export class MarkAtlas {
    * and the CPU milliseconds to pack, upload and encode them (draws excluded).
    */
   #gpuMarks(marks: readonly TexMark[], f: { enc: GPUCommandEncoder; temp: GPUBuffer[]; timer: PassTimer | undefined; each: (gpu: BatchDraws) => void }): { batches: number; ms: number } {
-    const placed = marks.flatMap((m): GpuMark[] => (m.gpu === undefined || m.slot === undefined ? [] : [{ ...m, gpu: m.gpu, slot: m.slot }]));
+    const placed = marks.flatMap((m): GpuMark[] => (m.slot === undefined ? [] : [{ ...m, slot: m.slot }]));
     if (placed.length === 0) return { batches: 0, ms: 0 };
     const items = placed.flatMap((m): { m: GpuMark; job: BrushJob }[] => {
       const job = brushJob(m);
@@ -253,7 +173,7 @@ export class MarkAtlas {
 
   /** Reserve the frame's one brush sample buffer and output buffer, shared by this atlas's batches and every smear (`smears`, drawn later); returns its bytes, 0 when the frame has no brushes. */
   reserve(marks: readonly TexMark[], f: { smears: readonly Prepared[]; temp: GPUBuffer[] }): number {
-    const need = scratchNeed({ gpu: marks.flatMap((m) => m.gpu ?? []), smears: f.smears, limit: this.brushes.limit });
+    const need = scratchNeed({ gpu: marks.map((m) => m.gpu), smears: f.smears, limit: this.brushes.limit });
     return need.samples > 0 || need.out > 0 ? this.brushes.reserve(f, need) : 0;
   }
 
@@ -266,40 +186,6 @@ export class MarkAtlas {
     pass.setVertexBuffer(0, this.#buffer(data, { usage: GPUBufferUsage.VERTEX, temp: f.temp }));
     pass.draw(6, data.length / DAB_FLOATS);
     pass.end();
-  }
-
-  /** Every dab (one instance each) and every run's strip vertices of `marks`, in each mark's own pixels with its slot. */
-  #lay(marks: readonly TexMark[]): { dabs: Float32Array; runs: Float32Array } {
-    let nd = 0;
-    let nv = 0;
-    for (const m of marks) {
-      nd += m.dabs.length;
-      for (const r of m.runs) nv += Math.max(0, r.pts.length / 2 - 1) * 6;
-    }
-    const dabs = new Float32Array(nd * DAB_FLOATS);
-    const runs = new Float32Array(nv * RUN_FLOATS);
-    let od = 0;
-    let ov = 0;
-    for (const m of marks) {
-      const s = m.slot;
-      if (s === undefined) continue;
-      const slot = slotRect(m.box, s);
-      // Device point (+ ox, oy) → the mark's own pixel (− box corner); the slot only places it on the page.
-      for (const d of m.dabs) {
-        dabs[od] = d.x + m.ox - m.box.x0;
-        dabs[od + 1] = d.y + m.oy - m.box.y0;
-        dabs[od + 2] = d.r;
-        dabs[od + 3] = d.a;
-        dabs[od + 4] = d.soft ? 1 : 0;
-        dabs[od + 5] = d.rgb[0];
-        dabs[od + 6] = d.rgb[1];
-        dabs[od + 7] = d.rgb[2];
-        dabs.set(slot, od + 8);
-        od += DAB_FLOATS;
-      }
-      for (const run of m.runs) ov = runStrip(runs, { o: ov, run, local: [m.ox, m.oy, m.box.x0, m.box.y0], slot });
-    }
-    return { dabs, runs };
   }
 
   #buffer(data: Float32Array, b: { usage: number; temp: GPUBuffer[] }): GPUBuffer {

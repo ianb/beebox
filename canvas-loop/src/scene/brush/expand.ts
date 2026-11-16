@@ -1,6 +1,6 @@
-// The shared CPU step for brushed strokes (draft section 9): a stroke becomes
-// dabs, ink outlines or bristle runs by canvas-loop's own sampling and kind
-// painters (core/brush), recorded instead of rasterised.
+// The shared CPU step for brushed strokes (draft section 9): a stroke is
+// prepared for the GPU, which expands it into dabs, capsules, bristle strips
+// or smear dabs (gpu/brush-pass.ts).
 //
 // Expansion runs in a "brush space" that depends only on the stroke's data and
 // the scale of its transform, never on the pixel ratio or the translation
@@ -11,48 +11,24 @@
 // as passed to the call (not its flattening, which follows the scale), or is
 // `gesture.seed`. Expanded strokes are kept while
 // they are asked for (draft section 6); `stats` counts hits. `prepare` is the
-// CPU part of the GPU expansion (gpu/brush-pass.ts): the same contours and
-// seeds, with each contour's sample count fixed by `resample`'s own loop.
-// No kind is expanded on the CPU for drawing: the expander keeps each stroke's
-// prepared stroke, and the GPU's `dabs` entry lays stamp dabs (chunk 3), its
-// `capsules` entry draws ink as a union of capsules (chunk 4), its `bristles`
-// entry writes bristle strips (chunk 7) and its `smears` entry a smudge's or
-// wet stroke's dabs (chunk 8). `expandOnCpu` keeps the CPU expansion as the
-// tests' reference until chunk 9.
+// CPU part of the GPU expansion: each contour's points in brush space, its
+// seed, and its sample count fixed by `resample`'s own loop. The expander
+// keeps each stroke's prepared stroke, and the GPU's `dabs` entry lays stamp
+// dabs, its `capsules` entry draws ink as a union of capsules, its `bristles`
+// entry writes bristle strips and its `smears` entry a smudge's or wet
+// stroke's dabs (canvas-loop-gpu-brushes.subplan.md).
 import type { Contour } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { Paint } from "../../core/paint.js";
 import { hashNumbers } from "../../core/brush/random.js";
-import { BLACK, jitterOf, jitteredInk } from "../../core/brush/render/ink.js";
-import { paintBristle, paintInk, paintStamp } from "../../core/brush/render/kinds.js";
-import { shapeSamples } from "../../core/brush/render/mark/render.js";
-import type { Sample } from "../../core/brush/sample.js";
-import type { BristleBrush, BrushKind, Envelope, InkBrush, SmearBrush, StampBrush } from "../../core/brush/types.js";
+import type { BristleBrush, Brush, BrushKind, Envelope, InkBrush, SmearBrush, StampBrush } from "../../core/brush/types.js";
 import type { ColorParser } from "../colors.js";
-import { IDENTITY, applyLinear, det } from "../mat.js";
+import { IDENTITY, det } from "../mat.js";
 import type { BrushStroke, Geom, Mat } from "../nodes.js";
 import { geomContours } from "./contours.js";
 import { prepareContour } from "./prepare.js";
 import { geomKey, gestureKey, keyOf, linearKey } from "../hash.js";
-import { RecordingCtx, SoftDabImage } from "./record-ctx.js";
-import type { Dab, Run } from "./record-ctx.js";
 
-export type { Dab, Run };
-
-/** Dabs, ink outlines (flat rings) and bristle runs, in brush space. `tint` is the paint's alpha when each dab carries its own colour. */
-export interface MarkSet {
-  readonly kind: "marks";
-  readonly dabs: readonly Dab[];
-  readonly polys: readonly (readonly number[])[];
-  readonly runs: readonly Run[];
-  readonly tint: number | undefined;
-}
-/** A smudge or wet stroke's CPU expansion (the tests' reference): its dabs per contour, in brush space, and its width there. */
-export interface SmearDabs {
-  readonly kind: "smear-dabs";
-  readonly contours: readonly (readonly { x: number; y: number; r: number; a: number }[])[];
-  readonly width: number;
-}
 /** A smudge or wet stroke: prepared for the GPU, whose `smears` entry writes its dabs for the smear pass. */
 export interface SmearSet {
   readonly kind: "smear";
@@ -60,7 +36,7 @@ export interface SmearSet {
   readonly brush: SmearBrush;
   readonly tint: undefined;
 }
-/** A stamp stroke: prepared for the GPU, which lays its dabs. `tint` as for `MarkSet`. */
+/** A stamp stroke: prepared for the GPU, which lays its dabs. `tint` is the paint's alpha when each dab carries its own colour. */
 export interface StampSet {
   readonly kind: "stamp";
   readonly prepared: Prepared;
@@ -74,7 +50,7 @@ export interface InkSet {
   readonly brush: InkBrush;
   readonly tint: undefined;
 }
-/** A bristle stroke: prepared for the GPU, which writes each bristle's strips. `tint` as for `MarkSet`. */
+/** A bristle stroke: prepared for the GPU, which writes each bristle's strips. `tint` as for `StampSet`. */
 export interface BristleSet {
   readonly kind: "bristle";
   readonly prepared: Prepared;
@@ -145,8 +121,6 @@ export interface ExpandRequest {
   readonly colors: ColorParser;
 }
 
-const SOFT_DAB = new SoftDabImage();
-
 /** L = q·B, q orthogonal (see the header). */
 function brushSpace(m: Mat): { b: Mat; q: Mat } {
   const [a, b, c, d] = m;
@@ -182,6 +156,14 @@ function checkFinite(contours: readonly Contour[]): void {
   }
 }
 
+/** How much the brush varies its colour per dab or bristle, or undefined when it does not. */
+function jitterOf(brush: Brush): { hue: number; light: number } | undefined {
+  if (brush.kind === "ink" || brush.kind === "smear") return undefined;
+  const hue = brush.hueJitter ?? 0;
+  const light = brush.lightJitter ?? 0;
+  return hue > 0 || light > 0 ? { hue, light } : undefined;
+}
+
 function baseColour(paint: Paint, colors: ColorParser): { r: number; g: number; b: number; a: number } {
   if (typeof paint !== "string") throw new SketchUsageError({ detail: "hueJitter and lightJitter need a solid stroke colour, not a gradient" });
   const [r, g, b, a] = colors(paint);
@@ -197,29 +179,6 @@ function brushLocal(req: ExpandRequest, b: Mat): { local: { contour: Contour; se
   const { gesture } = req.stroke;
   const seed = gesture.seed === undefined ? hashNumbers(geomNumbers(req.geom), 0x811c9dc5) : gesture.seed >>> 0;
   return { local: local.map((contour, i) => ({ contour, seed: hashNumbers([i], seed) })), width: req.weight * s };
-}
-
-/** The stroke's contours in brush space, each with its own seed, and the brush width there; undefined for a degenerate transform. */
-function brushContours(req: ExpandRequest, b: Mat): { contours: { contour: Contour; seed: number }[]; width: number } | undefined {
-  const c = brushLocal(req, b);
-  if (c === undefined) return undefined;
-  return { contours: c.local.map(({ contour, seed }) => ({ contour: { points: contour.points.map((p) => applyLinear(b, p)), closed: contour.closed }, seed })), width: c.width };
-}
-
-type Sampled = { samples: Sample[]; closed: boolean; seed: number }[];
-
-/** Each contour's CPU samples (brush space), and the brush width there. */
-function sampledIn(req: ExpandRequest, b: Mat): { all: Sampled; width: number } | undefined {
-  const c = brushContours(req, b);
-  if (c === undefined) return undefined;
-  const { brush, gesture } = req.stroke;
-  const { width } = c;
-  return { all: c.contours.map((k) => ({ samples: shapeSamples({ brush, gesture }, { contour: k.contour, width, seed: k.seed }), closed: k.contour.closed, seed: k.seed })), width };
-}
-
-/** The CPU samples of each contour, as the expansion draws them (brush space): the GPU sample pass's reference. */
-export function brushSamples(req: ExpandRequest): Sampled | undefined {
-  return sampledIn(req, brushSpace(req.linear).b)?.all;
 }
 
 /** The stroke prepared for the GPU sample pass (brush space, as `expand`); undefined for a degenerate transform. */
@@ -239,11 +198,6 @@ function prepareIn(req: ExpandRequest, b: Mat): Prepared | undefined {
   return { kind: brush.kind, contours, width: c.width, wobble, base, box: grown };
 }
 
-/** The CPU expansion of every kind, in brush space: what the GPU expansion is checked against. */
-export function expandOnCpu(req: ExpandRequest): MarkSet | SmearDabs | undefined {
-  return cpuIn(req, brushSpace(req.linear).b);
-}
-
 function expandIn(req: ExpandRequest, b: Mat): SmearSet | GpuSet | undefined {
   const { brush } = req.stroke;
   const prepared = prepareIn(req, b);
@@ -258,28 +212,6 @@ function expandIn(req: ExpandRequest, b: Mat): SmearSet | GpuSet | undefined {
     case "smear":
       return { kind: "smear", prepared, brush, tint: undefined };
   }
-}
-
-function cpuIn(req: ExpandRequest, b: Mat): MarkSet | SmearDabs | undefined {
-  const sampled = sampledIn(req, b);
-  if (sampled === undefined) return undefined;
-  const { brush } = req.stroke;
-  const { all, width } = sampled;
-  if (brush.kind === "smear") {
-    const dabOf = (p: { x: number; y: number; p: number }): { x: number; y: number; r: number; a: number } => ({ x: p.x, y: p.y, r: (width / 2) * (1 - brush.sizeByPressure * (1 - p.p)), a: brush.flow * (1 - brush.opacityByPressure * (1 - p.p)) });
-    return { kind: "smear-dabs", width, contours: all.map((c) => c.samples.map(dabOf)) };
-  }
-  const ctx = new RecordingCtx();
-  const jitter = jitterOf(brush);
-  const base = jitter === undefined ? undefined : baseColour(req.paint, req.colors);
-  for (const c of all) {
-    const ink = jitter === undefined || base === undefined ? BLACK : jitteredInk(base, { jitter, seed: c.seed });
-    const input = { ctx, samples: c.samples, closed: c.closed, width, seed: c.seed, ink, dab: jitter === undefined ? SOFT_DAB : undefined };
-    if (brush.kind === "ink") paintInk(input, brush);
-    else if (brush.kind === "stamp") paintStamp(input, brush);
-    else paintBristle(input, brush);
-  }
-  return { kind: "marks", dabs: ctx.dabs, polys: ctx.polys, runs: ctx.runs, tint: base?.a };
 }
 
 export class BrushExpander {

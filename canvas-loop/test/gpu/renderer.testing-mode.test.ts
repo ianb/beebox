@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { shelfPack } from "../../src/gpu/atlas.js";
-import type { Item, Job } from "../../src/gpu/jobs.js";
+import type { GpuSource, Item, Job } from "../../src/gpu/jobs.js";
 import { ATLAS_MAX, cutOf } from "../../src/gpu/jobs.js";
 import { NodePath, atPath, nodeName } from "../../src/gpu/node-path.js";
 import { peaksOf, planPeaks } from "../../src/gpu/peaks.js";
@@ -73,7 +73,9 @@ const common = { box: { x0: 10, y0: 10, x1: 20, y1: 20 }, mode: 0, clip: null } 
 const paint = { kind: 0, color: [0, 0, 0, 1], inv: [1, 0, 0, 1, 0, 0], scaleY: 1, grad: [0, 0, 0, 0], stops: [] } as const;
 const brush = { grain: 0, opacity: 1, paper: { toPaper: [1, 0, 0, 1, 0, 0], scale: 1, lo: 0, hi: 1, seed: 0, width: 1 } } as const;
 const shape = (call: string): ShapeNode => ({ kind: "shape", call, geom: { kind: "rect", x: 0, y: 0, w: 1, h: 1 }, style: { fill: undefined, stroke: "#000", weight: 1, dash: undefined, cap: "butt", join: "miter", blend: "normal", erase: false, effects: undefined, brush: undefined, material: undefined, effectsPaper: undefined } });
-const mark = (node: ShapeNode | undefined, a?: { erase?: boolean; box?: Item["box"] }): Item => ({ ...common, ...(a?.box === undefined ? {} : { box: a.box }), erase: a?.erase ?? false, k: "mark", source: { kind: "tex", mark: { box: common.box, dabs: [], runs: [], ox: 0, oy: 0 } }, tinted: false, paint, brush, node });
+// A stamp stroke with no contours: the peak plan reads only the item.
+const gpu: GpuSource = { prepared: { kind: "stamp", contours: [], width: 1, wobble: 0, base: undefined, box: common.box }, brush: { kind: "stamp", opacity: 1, grain: 0, tip: "hard", spacing: 1, flow: 1, sizeByPressure: 0, opacityByPressure: 0, scatter: 0, sizeJitter: 0 }, lin: [1, 0, 0, 1], ratio: 1 };
+const mark = (node: ShapeNode | undefined, a?: { erase?: boolean; box?: Item["box"] }): Item => ({ ...common, ...(a?.box === undefined ? {} : { box: a.box }), erase: a?.erase ?? false, k: "mark", mark: { box: common.box, ox: 0, oy: 0, gpu }, tinted: false, paint, brush, node });
 const layer = (child: Job, opacity: number): Item => ({ ...common, erase: false, k: "layer", job: child, mask: undefined, opacity });
 
 test("peak slots: one per drawn colour mark item; each item's peak times the largest product of opacities to its layer", () => {

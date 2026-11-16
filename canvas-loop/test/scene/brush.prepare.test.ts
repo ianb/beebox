@@ -1,12 +1,13 @@
 // Stroke preparation for the GPU sample pass (canvas-loop-gpu-brushes.subplan.md,
 // "The contour contract"): the counts are resample's own, the box holds every
-// sample, and the expander keeps the prepared stroke with its expansion.
+// sample (the CPU samples, golden), and the expander keeps the prepared stroke
+// with its expansion.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sampleSegments } from "../../src/core/brush/sample.js";
-import { BrushExpander, brushSamples, prepare } from "../../src/scene/brush/expand.js";
+import { BrushExpander, prepare } from "../../src/scene/brush/expand.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
-import { prepareContour } from "../../src/scene/brush/prepare.js";
+import { prepareContour, wobbleLattice } from "../../src/scene/brush/prepare.js";
 import { resolveBrush } from "../../src/core/brush/presets.js";
 import type { Contour } from "../../src/core/contours.js";
 import type { Mat } from "../../src/scene/nodes.js";
@@ -29,16 +30,15 @@ test("each segment's first sample is the loop's, so a sample at a corner keeps t
   assert.deepEqual(sampleSegments([[0, 0], [1, 0], [1.05, 0], [3, 0]], 0.5).first, [0, 3, 3]);
 });
 
-test("a closed dot with wobble gets a finite sample, its wobble read at 0", () => {
+test("a closed dot with wobble reads its wobble at 0: a finite lattice cell", () => {
   const scene = new SceneRecorder({ width: 50, height: 50 }).record((v) => v.rect(10, 10, 0.1, 0.1, { stroke: "#000", weight: 4, brush: "ink", gesture: { wobble: 1 } })).scene;
   const [req] = brushRequests(scene, NO_COLORS);
   assert.ok(req !== undefined);
-  const [c] = brushSamples(req) ?? [];
-  assert.equal(c?.samples.length, 1);
-  const s = c?.samples[0];
-  assert.ok(s !== undefined && Number.isFinite(s.x) && Number.isFinite(s.y), `got (${s?.x}, ${s?.y})`);
-  assert.equal(s.x, 10, "the wobble moves along the normal (0, -1)");
-  assert.notEqual(s.y, 10, "the wobble moves it");
+  const [c] = prepare(req)?.contours ?? [];
+  assert.equal(c?.count, 1);
+  // A cell of total / period would be 0 / 1 here, and the noise read at 0 / 0 (NaN on the CPU before chunk 2).
+  assert.deepEqual([c.period, c.cell], [1, 28], "the closed contour's one cell, its length the open wavelength");
+  assert.deepEqual(wobbleLattice(true, 0), { period: 1, cell: 28 });
 });
 
 test("prepared contours have the CPU sampling's counts, and the box holds every sample", () => {

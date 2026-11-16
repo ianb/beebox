@@ -191,9 +191,6 @@ importers:
       markdownlint:
         specifier: ^0.40.0
         version: 0.40.0
-      perfect-freehand:
-        specifier: 1.2.3
-        version: 1.2.3
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -580,9 +577,6 @@ importers:
       '@napi-rs/canvas':
         specifier: 1.1.0
         version: 1.1.0
-      perfect-freehand:
-        specifier: 1.2.3
-        version: 1.2.3
       webgpu:
         specifier: 0.6.2
         version: 0.6.2
@@ -7323,9 +7317,6 @@ packages:
 
   perfect-debounce@2.1.0:
     resolution: {integrity: sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g==}
-
-  perfect-freehand@1.2.3:
-    resolution: {integrity: sha512-bHZSfqDHGNlPpgH2yxXgPHlQSPpEbo+qg7li0M78J9vNAi2yjwLeA4x79BEQhX44lEWpCLSFCeRZwpw0niiXPA==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -16134,8 +16125,6 @@ snapshots:
   pathe@2.0.3: {}
 
   perfect-debounce@2.1.0: {}
-
-  perfect-freehand@1.2.3: {}
 
   picocolors@1.1.1: {}
 

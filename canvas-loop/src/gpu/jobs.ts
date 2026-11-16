@@ -3,7 +3,7 @@
 // picture) in canvas device pixels; its items draw into it in order.
 // Rectangles are integer device pixels with exclusive ends.
 import type { BristleBrush, InkBrush, SmearBrush, StampBrush } from "../core/brush/types.js";
-import type { Dab, Prepared, Run } from "../scene/brush/expand.js";
+import type { Prepared } from "../scene/brush/expand.js";
 import type { Rgba } from "../scene/colors.js";
 import type { Mat, PictureVersion, ShapeNode } from "../scene/nodes.js";
 import type { FxPlan } from "./effects.js";
@@ -72,17 +72,15 @@ export interface GpuSource {
 }
 
 /**
- * A brushed mark's dabs and bristle runs, accumulated in the mark atlas
- * inside `box`; a point plus (ox, oy) is in device pixels. A stamp, ink or
- * bristle mark has no CPU dabs or runs: its `gpu` stroke is expanded on the GPU.
+ * A stamp, ink or bristle mark, laid in the mark atlas inside `box` from its
+ * `gpu` stroke, which the GPU expands; a point plus (ox, oy) is in device
+ * pixels.
  */
 export interface TexMark {
   readonly box: R;
-  readonly dabs: readonly Dab[];
-  readonly runs: readonly Run[];
   readonly ox: number;
   readonly oy: number;
-  readonly gpu?: GpuSource | undefined;
+  readonly gpu: GpuSource;
   slot?: Slot;
 }
 
@@ -132,8 +130,6 @@ export interface GlyphQuad {
   readonly cell: GlyphCell;
 }
 
-export type MarkSource = { readonly kind: "piece"; readonly piece: Piece } | { readonly kind: "tex"; readonly mark: TexMark };
-
 interface Common {
   readonly box: R;
   readonly mode: number;
@@ -151,7 +147,7 @@ export type Item =
   /** A layer; `shift` (whole device pixels) moves a picture tile from raster space to the target's. */
   | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number; readonly shift?: readonly [number, number] })
   /** A brushed mark; `node` (in colour, not material layers) is the stroke it draws, for testing mode's faint-mark check. */
-  | (Common & Mat4 & { readonly k: "mark"; readonly source: MarkSource; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly node?: ShapeNode | undefined })
+  | (Common & Mat4 & { readonly k: "mark"; readonly mark: TexMark; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly node?: ShapeNode | undefined })
   | (Common & { readonly k: "smear"; readonly smear: SmearRec })
   | (Common & Mat4 & { readonly k: "glyphs"; readonly quads: readonly GlyphQuad[]; readonly paint: PaintRec });
 

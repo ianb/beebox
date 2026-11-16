@@ -290,9 +290,10 @@ does not call `draw`, so events neither repeat nor go missing.
   one round-ended segment (a capsule) per sample, a bristle brush each
   bristle's runs as strips, one walk per bristle, and a smear brush
   (`smudge`, `wet`) one smear dab per sample, which the smear pass then runs
-  in order. The GPU computes the same
-  random numbers as the CPU, bit for bit, so a mark's random character does
-  not depend on where it was expanded; positions differ only in `f32` detail.
+  in order. No brush is expanded on the CPU. The GPU's random numbers are
+  `random.ts`'s hashes, bit for bit, so a mark's random character is the one
+  the CPU expansion gave before chunk 9 deleted it; positions differ only in
+  `f32` detail.
 - Backdrop-reading strokes (`smudge`, `wet`, non-`normal` blends) make the
   renderer finish everything before them on the same target first. They limit
   batching; Stage 3 measures how much.
@@ -611,7 +612,7 @@ From the Stage 4 builder (chunks 1–2):
 - **Hatching** keeps covering its group's whole layer (Checkpoint 4, decision
   6).
 
-## 22. Draft 2.10: brushes on the GPU (GPU brushes subplan, chunks 2–8)
+## 22. Draft 2.10: brushes on the GPU (GPU brushes subplan, chunks 2–9)
 
 - **Ink is drawn as capsules** (section 9), one per sample, with
   perfect-freehand's width for the pressure. The line keeps its character
@@ -627,5 +628,5 @@ From the Stage 4 builder (chunks 1–2):
   stroke is never split, since its paint carries from dab to dab: one of more
   than about 1.4 million dabs fails at the call.
 - **Measurement.** `stats.cpu.brush` is the CPU time spent on brushed
-  strokes: expansion, preparation and placement at lowering, and packing and
-  upload for the GPU pass.
+  strokes: preparation and placement at lowering, and packing and upload for
+  the GPU pass.

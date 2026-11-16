@@ -1,8 +1,8 @@
 // Smudge and wet from GPU samples (canvas-loop-gpu-brushes.subplan.md, chunk
 // 8): the `smears` entry's dabs against the CPU expansion's (golden numbers
-// recorded before chunk 9 deleted it), placed as the lowering placed them; a smear is one batch, so a frame with the
-// buffer limit forced small draws the same pixels; a smear over the limit
-// fails naming its call. The smear crops of `brushParity` and
+// recorded before chunk 9 deleted it), placed as the lowering placed them; a
+// smear is one batch, so a frame with the buffer limit forced small draws the
+// same pixels; a smear over the limit fails naming its call. The smear crops of `brushParity` and
 // `smudgeAcrossTiles` are in renderer.gpu.test.ts. One Dawn device for the
 // file; skipped, with a message, where Dawn finds no adapter.
 import assert from "node:assert/strict";

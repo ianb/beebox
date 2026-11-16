@@ -64,9 +64,7 @@ function itemTextures(it: Item, f: Frame): { page: number; t: Textures }[] {
     case "layer":
       return [{ page: 0, t: { src: it.job.tex, mask: it.mask?.tex, clip } }];
     case "mark": {
-      const s = it.source;
-      const at = s.kind === "piece" ? { atlas: s.piece.slot?.page ?? 0, marks: 0 } : { atlas: 0, marks: s.mark.slot?.page ?? 0 };
-      return [{ page: 0, t: { clip, image: image(it.paint), ...pages(at) } }];
+      return [{ page: 0, t: { clip, image: image(it.paint), ...pages({ atlas: 0, marks: it.mark.slot?.page ?? 0 }) } }];
     }
     case "glyphs": {
       const used = [...new Set(it.quads.map((q) => q.cell.slot?.page ?? 0))];

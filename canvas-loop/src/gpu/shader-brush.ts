@@ -6,10 +6,12 @@
 // its start), finds its segment by a binary search over the integer index of
 // each segment's first sample (fixed on the CPU by resample's loop, so a sample
 // at a corner takes the CPU's segment and normal),
-// and adds pressure and wobble as core/brush/render/mark/render.ts's
-// `shapeSamples` does. Hashes are core/brush/random.ts's, bit for bit; a random
-// value keeps the hash's 24 high bits, which f32 holds exactly. Positions are
-// brush space, as the CPU expansion's. The `dabs` and `capsules` entries (their
+// and adds pressure (the gesture's envelope at t) and wobble (along the
+// normal). Hashes are core/brush/random.ts's, bit for bit; a random value
+// keeps the hash's 24 high bits, which f32 holds exactly. Positions are brush
+// space, relative to the contour's origin. These entries are ports of the CPU
+// brush expansion (core/brush/render/), deleted in chunk 9; the readback tests
+// hold them to its numbers (test/fixtures/brush-golden/). The `dabs` and `capsules` entries (their
 // own module, below) turn each sample of a stamp stroke into one dab instance,
 // and each sample of an ink stroke into one capsule instance, in device pixels;
 // `smears` (shader-smear.ts) turns each sample of a smudge or wet stroke into
@@ -67,7 +69,7 @@ fn pt(i: u32) -> vec2f { return vec2f(bitcast<f32>(geo[PW * i]), bitcast<f32>(ge
 fn arc(i: u32) -> f32 { return bitcast<f32>(geo[PW * i + 2u]); }
 fn firstOn(i: u32) -> u32 { return geo[PW * i + 3u]; }
 
-// random.ts \`noiseOf(1, period)\` at x ≥ 0; period 0 does not wrap.
+// Smooth 1-D value noise in [-1, 1] on channel 1 at x ≥ 0, the lattice wrapping at \`period\` (0: no wrap).
 fn noise1(seed: u32, x: f32, period: u32) -> f32 {
   let i = floor(x);
   let f = x - i;
@@ -169,7 +171,7 @@ fn pressure(c: u32, t: f32) -> f32 {
 }
 `;
 
-// colour.ts `shiftColour`: hue and HSL lightness shifted, channels rounded to 0..255.
+// `shiftColour`: hue and HSL lightness shifted, channels rounded to 0..255.
 const COLOUR_WGSL = /* wgsl */ `
 fn toHsl(c: vec3f) -> vec3f {
   let mx = max(c.r, max(c.g, c.b));
@@ -204,9 +206,11 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 }
 `;
 
-// The `dabs` entry: kinds.ts `paintStamp` for sample i, written as dab instance i
+// The `dabs` entry: a stamp stroke's sample i, written as dab instance i
 // (mark-atlas.ts's layout: x, y, radius, alpha; soft, r, g, b; the slot) in the
-// mark's own device pixels. A dab paintStamp skips is written with alpha 0.
+// mark's own device pixels: radius and alpha from the pressure, size jitter
+// and scatter along the normal from the hash. A dab of radius ≤ 0.05 brush px
+// or alpha ≤ 0 is skipped: written with alpha 0.
 // Stroke record words: 0-3 brush space → device (linear), 4 a bristle dot (no dab skipped), 5 unused (the
 // offset to the mark's own pixels is per contour, words 14-15), 6-9 the slot, 10 width (brush space), 11 pixel ratio;
 // a stamp: 12 sizeJitter, 13 sizeByPressure, 14 flow, 15 opacityByPressure,
@@ -221,7 +225,8 @@ fn shiftColour(base: vec3f, hue: f32, light: f32) -> vec3f {
 // sample writes radius 0, which draws nothing; a one-sample contour writes a disc
 // (both ends at the sample). The radius is perfect-freehand's for the pressure,
 // \`size × (0.5 − thinning × (0.5 − p))\` with \`size = width / (1 + thinning)\`
-// (kinds.ts \`paintInk\`), so a full-pressure line keeps today's width.
+// (the CPU ink drew perfect-freehand's outline until chunk 4), so a
+// full-pressure line keeps its width.
 export const INSTANCES_WGSL = /* wgsl */ `
 ${PRELUDE}
 ${COLOUR_WGSL}
@@ -252,7 +257,7 @@ fn sv(st: u32, w: u32) -> vec4f { return vec4f(sf(st, w), sf(st, w + 1u), sf(st,
     let light = sf(st, 19u) * (2.0 * rand1(seed, 14u, k) - 1.0);
     rgb = shiftColour(vec3f(sf(st, 20u), sf(st, 21u), sf(st, 22u)), hue, light) / 255.0;
   }
-  // A bristle dot (stroke word 4) is never skipped, as kinds.ts paintBristle draws it.
+  // A bristle dot (stroke word 4) is never skipped: a bristle stroke draws every dot.
   let shown = (radius > 0.05 && alpha > 0.0) || sf(st, 4u) > 0.5;
   let o = (i - u.base) * ${DAB_FLOATS}u;
   let slot = sv(st, 6u);

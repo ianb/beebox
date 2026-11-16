@@ -1,6 +1,6 @@
 // CSS colours as numbers, parsed the way the runtime's 2D canvas parses them:
 // set `fillStyle` and read back the normalised `#rrggbb` or `rgba(…)` (both
-// runtimes normalise; brush/render/colour.ts does the same for brushes).
+// runtimes normalise).
 import type { Ctx2D } from "../core/ctx2d.js";
 import { SketchUsageError } from "../core/errors.js";
 

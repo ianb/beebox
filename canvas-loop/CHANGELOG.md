@@ -5,6 +5,11 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Brushes expand on the GPU; `perfect-freehand` removed.** A compute pass
+  lays every brush kind's dabs, ink capsules, bristle strips and smear dabs;
+  the CPU only prepares each stroke. Ink is a union of capsules with
+  perfect-freehand's width for the pressure, so the dependency is gone.
+
 - **Text params.** `{ type: "text", default, placeholder?, multiline?,
   maxLength? }`: a native text box (a textarea with `multiline`) in the panel
   or over the canvas with `v.control`. Every edit, empty included, arrives as

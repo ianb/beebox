@@ -73,11 +73,9 @@ function itemRecsOf(it: Item, a: { box: R; clip: ClipRef | undefined; mode: numb
     case "layer":
       return [{ box, src: it.mask === undefined ? 1 : 2, mode, job: it.job, ...(it.mask === undefined ? {} : { mask: it.mask }), ...(it.shift === undefined ? {} : { shift: it.shift }), clip, opacity: it.opacity }];
     case "mark": {
-      const s = it.source;
-      const cell = s.kind === "piece" ? s.piece : s.mark;
-      const src = s.kind === "piece" ? 0 : it.tinted ? 4 : 3;
+      const cell = it.mark;
       const paper = it.brush.paper;
-      return [{ box, src, mode, paint: it.paint, clip, cov: { o: rectO(cell.box), slot: [cell.slot?.x ?? 0, cell.slot?.y ?? 0] }, pap: brushPap(it.brush), seed: paper.seed, pwidth: paper.width }];
+      return [{ box, src: it.tinted ? 4 : 3, mode, paint: it.paint, clip, cov: { o: rectO(cell.box), slot: [cell.slot?.x ?? 0, cell.slot?.y ?? 0] }, pap: brushPap(it.brush), seed: paper.seed, pwidth: paper.width }];
     }
     case "glyphs":
       return it.quads.map((q) => ({ ...glyphRec(q, { paint: it.paint, clip, mode }), box: inter(q.box, rect) }));

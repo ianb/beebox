@@ -2,7 +2,7 @@
 // region the stroke reaches is copied out of the target layer, one workgroup
 // runs the dabs in order (pick up, then lay down through the tip, barriers
 // between), and the result is copied back, kept only inside the clip. The
-// arithmetic is core/brush/render/mark/smear.ts's, in float. Coordinates are
+// arithmetic is the Stage 3 CPU smear's (deleted in chunk 9), in float. Coordinates are
 // texels of the target layer; pick-up near its edge reads the nearest patch
 // inside it, as today. The clip is read from its box on its clip page. The
 // dabs come from the brush pass's `smears` entry (`smearDabsWgsl`, below),
