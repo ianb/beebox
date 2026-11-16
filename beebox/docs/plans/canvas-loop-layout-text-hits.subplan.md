@@ -817,6 +817,24 @@ run them on the worktree's test1 with `--filter figure`:
      - **Lines:** source 135, tests 119, docs 18 (272). Track A so far: 625.
 3. **A3** TEA.md "Layout" section and CHANGELOG; the browser baseline-sign
    test.
+   - **As built (A3).** TEA.md "Layout" (under "Drawing", after "Scopes")
+     gains the plan's column-and-row example, the `v.at({}, …)` wrapping
+     note and the `keepInside` note; the `out.push` bullet in "Drawing"
+     points to it. One CHANGELOG bullet at the top of `## 0.2.0`.
+     - **Deviation: no browser test.** canvas-loop has no real-browser test
+       tier: `test/browser/` runs in Node with a fake DOM, and nothing in
+       `src/` or `test/` drives Chromium. The check was run once by hand
+       instead, under the GPU lock, in `bin/browse`'s headless Chromium 150:
+       an `OffscreenCanvas` 2D context with `normal 24px sans-serif` gives
+       `measureText("H").alphabeticBaseline` of −19.56 from `top`, −7.56 from
+       `middle`, 0 from `alphabetic` and +4.44 from `bottom`, the same signs
+       as headless (`baselineGap` is the negation). To repeat it:
+       `bin/browse open about:blank`, then `bin/browse eval` of that
+       expression for each `textBaseline`. Firefox and Safari are not
+       checked. A browser that reported the other sign would put baseline
+       rows' text upside down about `y` in that browser only.
+     - **Lines:** docs 25 (CHANGELOG 6, TEA.md 19). Track A in all: source
+       317, tests 273, docs 60 (650; plan ~700).
 4. **B1** names and the hit walk (above).
 5. **B2** runtime wiring: `Msg` fields, headless and browser hit scenes,
    transcript `on …`, `EmittedEvent.targets`, outline names, the timing check.

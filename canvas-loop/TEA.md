@@ -145,7 +145,8 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
 - A loop that carries state (a running total, the previous point) can push
   into a local `const out: Drawing[] = []` and return it. The gallery's
   sketches were converted to this form by a script and use `out.push`
-  everywhere; write `.map`, `&&` and components instead.
+  everywhere; write `.map`, `&&` and components instead. For pieces placed
+  one after another, use [`v.row` and `v.column`](#layout), not a cursor.
 - A scope copies its children when it is called: changing the array later
   changes nothing.
 - A node belongs to the frame that made it. Make the drawing again in each
@@ -337,7 +338,15 @@ second function that computes its size.
 `v.row(options, children)` and `v.column(options, children)` place their
 children one after another by their layout boxes and return one node, which
 can go in another row or column. Options: `x`, `y` (default 0), `gap`
-(default 0), `align`, `valign`, with `v.text`'s names.
+(default 0), `align`, `valign`, with `v.text`'s names. Draw each child at
+`(0, 0)` and let the flow move it:
+
+```ts
+v.column({ x: 300, y: 330, gap: 6, align: "center" }, [
+  v.text("Left pan", { x: 0, y: 0 }, LABEL),
+  v.row({ gap: 4, valign: "baseline" }, model.left.map((w) => v.text(`${w} g`, { x: 0, y: 0 }, SMALL))),
+])
+```
 
 - A row runs left to right. `valign` lines each child up and says what `y`
   is: `"top"` (default), `"middle"`, `"bottom"`, or `"baseline"` (each
@@ -351,6 +360,12 @@ can go in another row or column. Options: `x`, `y` (default 0), `gap`
 - Each child is moved by its box, so a child drawn at its own `(0, 0)` and one
   drawn at `(240, 80)` land the same. A child that draws nothing a layout can
   place (`null`, a light) takes no room and no gap.
+- Every node in the flattened children is one item. A component that returns
+  a list (an arrow as a line and a head) becomes two items with a gap
+  between; wrap it to make one: `v.at({}, arrow(v))`.
+- The positions are fixed when the call returns. Text with `keepInside` that
+  later slides back inside the canvas moves alone; the flow keeps the box
+  from the call, so the text can then overlap its neighbour.
 
 ### Pictures
 

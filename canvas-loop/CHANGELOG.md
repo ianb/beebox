@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Layout: `v.bounds`, `v.row`, `v.column`.** `v.bounds(drawing)` gives any
+  drawing's layout box `{ x, y, w, h, baseline }` (shape geometry plus half
+  the stroke, text's `textBounds`, a placement's declared size) and does not
+  count as returning it. `v.row` and `v.column` place their children by
+  those boxes, `gap` apart, with `v.text`'s `align`/`valign` names; a row
+  can line children up on their text baselines. Each returns one node.
 - **Quieter checks; a voice budget** (gaps the lane-defense game found). The
   faint-mark check leaves out group and placement `opacity`, so a fade does
   not warn. The picture churn warning waits 30 frames for versions to come
