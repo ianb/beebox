@@ -63,8 +63,10 @@ only reads on the phone still sees what is unresolved.
   editor save, and the editor shows whether its text is saved to disk.
 - **Risks:** "The best stuff comes from the people", through quiet adoption —
   a joining sentence the person never replaces reads as theirs once copied.
-  Guard: a joining mark has no accept action; it leaves only when the person
-  replaces or deletes it, and a copy keeps open marks visible in brackets.
+  Guard: a joining mark leaves only by a person's act: they replace it,
+  delete it, or press Accept on it. Editing words inside a joiner keeps the
+  mark, and a copy keeps open marks visible in brackets. (Accept was added
+  2026-11-15 at the boxholder's request; before, a joiner had no accept.)
 
 ## Trust
 
@@ -77,8 +79,8 @@ only reads on the phone still sees what is unresolved.
   is automatic and unmarked. It keeps the person's words, so it keeps their
   authorship.
 - **Marks** are placed by the agent and resolved only by the person: accept (a
-  transcript check), dismiss (a note), or replace by typing (a gap or a joining
-  sentence). No mark resolves automatically. Implicit resolution on edit is
+  transcript check or a joining sentence, whole or a selected part), dismiss
+  (a note), or replace by typing (a gap or a joining sentence). No mark resolves automatically. Implicit resolution on edit is
   deferred until real use shows which marks it suits.
 - **Merging agent changes** into the open editor is automatic. It changes only
   what the agent changed on disk, which the agent already did; the merge only

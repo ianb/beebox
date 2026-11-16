@@ -28,7 +28,7 @@ import { Text } from "../../ui/Text";
 import type { ComposeEditorProps } from "../Composition";
 import { addConflicts, conflictWidgets, openConflictCount } from "./conflicts";
 import { CompositionSync, saveStateText, type ReadResult, type SaveState, type Schedule } from "./sync";
-import { isMalformed, markWidgets } from "./widgets";
+import { acceptSelection, canAccept, isMalformed, markWidgets } from "./widgets";
 
 const AUTOSAVE_MS = 800;
 const RETRY_MS = 3000;
@@ -56,11 +56,12 @@ interface Session {
   sync: CompositionSync;
 }
 
-function createSession({ cardPath, initial, onState, onMalformed, focused }: {
+function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, focused }: {
   cardPath: string;
   initial: { text: string; regionHash: string };
   onState: (state: SaveState) => void;
   onMalformed: (malformed: boolean) => void;
+  onAcceptable: (acceptable: boolean) => void;
   focused: { current: boolean };
 }): Session {
   let sync: CompositionSync | null = null;
@@ -76,6 +77,7 @@ function createSession({ cardPath, initial, onState, onMalformed, focused }: {
       theme,
       EditorView.updateListener.of((update) => {
         if (update.focusChanged) focused.current = update.view.hasFocus;
+        if (update.docChanged || update.selectionSet) onAcceptable(canAccept(update.state));
         if (!update.docChanged) return;
         onMalformed(isMalformed(update.state));
         if (!update.transactions.some((tr) => tr.annotation(Transaction.remote) === true)) sync?.localChanged();
@@ -83,6 +85,7 @@ function createSession({ cardPath, initial, onState, onMalformed, focused }: {
     ],
   });
   onMalformed(isMalformed(view.state));
+  onAcceptable(canAccept(view.state));
   sync = new CompositionSync({
     client: {
       read: () => trpcClient.card.readComposition.query({ path: cardPath }),
@@ -121,12 +124,13 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const [session, setSession] = useState<Session | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
   const [malformed, setMalformed] = useState(false);
+  const [acceptable, setAcceptable] = useState(false);
   const focused = useRef(false);
 
   // The session lives as long as this component, which `CardBody` keeps
   // mounted while composing; the frame around it may move between hosts.
   useEffect(() => {
-    const created = createSession({ cardPath, initial, onState: setSaveState, onMalformed: setMalformed, focused });
+    const created = createSession({ cardPath, initial, onState: setSaveState, onMalformed: setMalformed, onAcceptable: setAcceptable, focused });
     setSession(created);
     let ended = false;
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -163,6 +167,24 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
         </span>
+        <Button
+          id={controlAddress("bbx-composition-accept", instance)}
+          label="Accept marked words as yours"
+          title="Accept the selected marked words as yours, or the whole mark at the cursor (Ctrl/⌘+Shift+Enter)"
+          aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter"
+          size="sm"
+          intent="secondary"
+          disabled={!acceptable}
+          // Keep the editor's focus and selection through the press.
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            if (session === null) return;
+            acceptSelection(session.view);
+            session.view.focus();
+          }}
+        >
+          Accept
+        </Button>
         <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
         <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
