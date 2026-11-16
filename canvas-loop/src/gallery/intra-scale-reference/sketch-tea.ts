@@ -1,7 +1,7 @@
 // The scale reference sheet for side-view rooms (the standard lives in
 // sizes-tea.ts, a copy of intra-lounge-side's): people and furniture from sizes-tea.ts, drawn at the
 // scenes' true scale against a metre ruler, and a diagram of how depth shows.
-import type { DeepReadonly, Msg, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, roundRectPts } from "./ink-tea.js";
 import { DEPTH_PX_PER_M, PLANES, PX_PER_M, SIZES, m } from "./sizes-tea.js";
 

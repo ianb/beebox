@@ -1,6 +1,6 @@
 // The stage: a place to stand (Earth, Moon, Mars, Jupiter's cloud tops), a lab
 // stand with a metre rule, and the pendulum itself.
-import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 import { card, FONT, INK, say, sayWidth } from "./look-tea.js";
 import type { Planet } from "./physics-tea.js";

@@ -1,5 +1,5 @@
 // One fish, drawn in its own frame: nose at -len/2, tail at +len/2, belly down.
-import type { SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { View, Vec2 } from "@ianbicking/canvas-loop";
 import { form, INK, mark } from "./kit-tea.js";
 
 export interface FishSpec {

@@ -6,7 +6,7 @@
 // The room is rendered per pixel with its lighting baked per light (scene-tea.ts);
 // each frame the screens decide what they show and what light they throw
 // (screens-tea.ts), and the room is relit from that.
-import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import type { ParamsDecl, ParamValues } from "@ianbicking/canvas-loop";
 import { paintDabs } from "./dabs-tea.js";
 import { H, W, paintRoom } from "./scene-tea.js";

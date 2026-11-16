@@ -2,7 +2,7 @@
 // mark's layer in device pixels; the pipeline in render.ts then cuts the paper
 // grain out of it, colours it, and composites it once.
 import { getStroke } from "perfect-freehand";
-import type { Ctx2D, LayerImage } from "../../paint.js";
+import type { Ctx2D, LayerImage } from "../../ctx2d.js";
 import { SOFT_DAB_RADIUS } from "./dab.js";
 import { noise1, rand, randOf } from "../random.js";
 import type { Sample } from "../sample.js";

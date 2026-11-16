@@ -3,7 +3,7 @@
 // images become dabs, filled paths become ink outlines, stroked paths become
 // bristle runs. Calls the kinds never make throw, so a change in kinds.ts that
 // paints some other way fails loudly instead of drawing nothing.
-import type { Ctx2D, Ctx2DGradient, CtxImageData, CtxTextAlign, CtxTextBaseline, CtxTransform, LayerImage } from "../../core/paint.js";
+import type { Ctx2D, Ctx2DGradient, CtxImageData, CtxTextAlign, CtxTextBaseline, CtxTransform, LayerImage } from "../../core/ctx2d.js";
 import { GpuRenderError } from "../errors.js";
 
 /** One round dab: centre, radius, alpha; a soft tip fades linearly to its edge. Colour is 0..1, or black coverage. */

@@ -2,7 +2,7 @@
 // T = 2π√(L/g) is shown in a box sized to its text. A ruler beside the string
 // is marked in tenths of a metre, an arc under the pivot in degrees, and the
 // bob leaves a fading trail of where it has been.
-import type { DeepReadonly, Msg, ParamValues, ParamsDecl, SceneStyle as Style, TextOptions, Util, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Style, TextOptions, Util, View, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

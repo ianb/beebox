@@ -1,4 +1,4 @@
-import type { SceneStyle as Style, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Style, View } from "@ianbicking/canvas-loop";
 
 export type Kind =
   | "fox"

@@ -4,7 +4,7 @@
 // laid-out lines, and a picture version's whole body. A box may be larger
 // than the ink, never smaller; `undefined` means "can reach anywhere" (a light,
 // or a shadow caster in a lit room).
-import type { Effects, Material } from "../api.js";
+import type { Effects, Material } from "../../core/tea.js";
 import { arcSweep } from "../geometry/flatten.js";
 import { apply, matrixOf, maxScale, mul } from "../mat.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, SceneNode, ShapeStyle } from "../nodes.js";

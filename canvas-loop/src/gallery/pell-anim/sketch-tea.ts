@@ -13,7 +13,7 @@
 // A TEA sketch may import nothing but the framework types, so the painting
 // code from open-opus-b is copied into this one file, with `Sketch` → `View`
 // and its `s.random` calls replaced by a seeded generator.
-import type { BrushPreset, DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

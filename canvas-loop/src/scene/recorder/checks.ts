@@ -5,7 +5,7 @@
 // parses them, so a bad colour fails at the call rather than at render.
 import { SketchUsageError } from "../../core/errors.js";
 import type { Paint, PathCommand, Vec2 } from "../../core/paint.js";
-import type { AtOptions, Effects } from "../api.js";
+import type { AtOptions, Effects } from "../../core/tea.js";
 import type { ColorParser } from "../colors.js";
 import type { Geom, SceneNode } from "../nodes.js";
 

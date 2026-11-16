@@ -3,7 +3,7 @@
 // cheerful animated icons that blink and dance; it hums an upbeat tune. The
 // Archivist AI waits cheerfully to assist."
 // Exits (1): Archive Lounge (stairs-down).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { cabinet, hueHex, lamps, notes, reel, screenFrame } from "./parts-a-tea.js";
 import { amaEye, amaSpeaker, citizen, plant, shellChair, tubeGlow, tubeLight } from "./props-tea.js";

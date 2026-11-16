@@ -11,7 +11,7 @@ import { GlyphWatch } from "../../src/gpu/glyphs.js";
 import { SketchUsageError } from "../../src/core/errors.js";
 import { RemovedCallError } from "../../src/scene/errors.js";
 import type { CallSite } from "../../src/scene/call-site.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import { offCanvasMessages } from "../../src/scene/recorder/off-canvas.js";
 import type { OffLine } from "../../src/scene/recorder/off-canvas.js";
 import { MAX_PAIRS, glyphMessage, newOverlaps, overlapMessage, placedRect, textRect } from "../../src/scene/recorder/text-checks.js";

@@ -9,8 +9,9 @@
 // is also where the paper lives, so grain stays fixed to the canvas.
 import type { Contour } from "../../../contours.js";
 import { SketchUsageError } from "../../../errors.js";
-import type { Ctx2D, CtxTransform, Layer, LayerImage, Paint, Vec2 } from "../../../paint.js";
-import { inPaintSpace, resolveGradient, withSaved } from "../../../paint.js";
+import type { Paint, Vec2 } from "../../../paint.js";
+import type { Ctx2D, CtxTransform, Layer, LayerImage } from "../../../ctx2d.js";
+import { inPaintSpace, resolveGradient, withSaved } from "../../../ctx2d.js";
 import { envelopeAt, validateEnvelope } from "../../envelope.js";
 import { bristleReach, paintBristle, paintInk, paintStamp } from "../kinds.js";
 import type { Rgba } from "../colour.js";

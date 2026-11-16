@@ -1,7 +1,7 @@
 // The fishmonger behind his counter, too late: cap jumping off his head,
 // eyes up and left at the gull, one arm flung out pointing after it, the
 // other hand spread in shock, mouth open on "Oi!".
-import type { PathCommand, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { PathCommand, View, Vec2 } from "@ianbicking/canvas-loop";
 import { form, INK, LIGHT, mark, ring, shift } from "./kit-tea.js";
 
 const SKIN = "#f2b48c";

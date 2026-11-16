@@ -9,7 +9,7 @@
 //
 // Because the colour depends only on position, any rectangle of the map can be
 // computed on its own: a tile is just the field over its square.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { type Ground, H, S, W, groundAt, hash } from "./map-tea.js";
 import { ZOOM } from "./paint-tea.js";
 

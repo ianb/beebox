@@ -4,7 +4,7 @@
 import { createCanvas } from "@napi-rs/canvas";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import { formatArgs } from "../core/format.js";
-import type { Ctx2D, Layer, LayerImage } from "../core/paint.js";
+import type { Ctx2D, Layer, LayerImage } from "../core/ctx2d.js";
 import { Painter } from "../core/painter/engine.js";
 import type { SketchHost } from "../core/types.js";
 

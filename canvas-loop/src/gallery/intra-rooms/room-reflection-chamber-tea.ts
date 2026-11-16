@@ -6,7 +6,7 @@
 // machine that is always serving 00; a big screen where Ama, a figure with a red
 // eye for a head, sits down in a floral wingback armchair; an eye chart; a cable
 // marked SENTRA running off into the closet.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { cable, stencil } from "./parts-c-tea.js";
 import { amaEye, amaSpeaker, citizen, poster, tubeGlow, tubeLight } from "./props-tea.js";

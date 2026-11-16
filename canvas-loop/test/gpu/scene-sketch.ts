@@ -1,5 +1,5 @@
 // A small TEA sketch drawn with the draft 2.2 View, for the scene runner's tests.
-import type { Msg, View } from "../../src/scene/api.js";
+import type { Msg, View } from "../../src/core/tea.js";
 
 export const canvas = { width: 160, height: 120 };
 export const params = { speed: { type: "number", min: 0, max: 2, default: 1 } } as const;

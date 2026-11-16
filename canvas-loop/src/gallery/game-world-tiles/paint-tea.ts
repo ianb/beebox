@@ -1,6 +1,6 @@
 // Painted pieces shared by the ground and the props: irregular blobs, brushed
 // foliage, and sprites painted at the map's zoom so they stay sharp.
-import type { BrushPreset, ScenePicture as Picture, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Picture, Vec2, View } from "@ianbicking/canvas-loop";
 import { hash } from "./map-tea.js";
 
 /** The map is drawn at this multiple of game-world's pixel size. */

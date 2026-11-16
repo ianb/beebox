@@ -11,7 +11,7 @@
 // Sketch files may import only sibling -tea helpers, so intra-lounge-side's
 // painters (placing, the sets, shelves, cabinet, vending tank, sofa, sitter and
 // the per-frame pictures) are copied here, unchanged but for the rim light.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import type { Rim } from "./ink-tea.js";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, ink, rgba, rivet, roundRectPts, stroke, wobble } from "./kit-tea.js";
 import { bareBulb } from "./parts-c-tea.js";

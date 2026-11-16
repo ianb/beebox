@@ -39,27 +39,38 @@ export class GpuRenderError extends Error {
 }
 
 /**
- * Headless: Dawn found no GPU adapter, so the scene renderer cannot draw. The
- * run wrote its transcript first (the header and the failure line), at
- * `transcriptPath`. A caller catches this by class; it is never in
+ * No GPU adapter, so the scene renderer cannot draw. Headless (Dawn), the run
+ * wrote its transcript first (the header and the failure line), at
+ * `transcriptPath`; in a browser figure `transcriptPath` is undefined and the
+ * error reaches `onError`. A caller catches this by class; it is never in
  * `RunResult.errors`.
  */
 export class NoGpuAdapterError extends Error {
   name = "NoGpuAdapterError";
-  readonly transcriptPath: string;
-  constructor(options: { transcriptPath: string }) {
+  readonly transcriptPath: string | undefined;
+  constructor(options: { transcriptPath: string } | { browser: true }) {
     super(
-      "no GPU adapter: Dawn (WebGPU for Node) found none, so the scene renderer cannot draw. Possible causes: no Vulkan driver is installed (on Linux, Mesa's lavapipe is a software one); a driver is installed but this user cannot open it; a sandbox hides the GPU",
+      "transcriptPath" in options
+        ? "no GPU adapter: Dawn (WebGPU for Node) found none, so the scene renderer cannot draw. Possible causes: no Vulkan driver is installed (on Linux, Mesa's lavapipe is a software one); a driver is installed but this user cannot open it; a sandbox hides the GPU"
+        : "no GPU adapter: the browser has WebGPU but gave no adapter, so the figure cannot draw. Possible causes: the GPU is blocked for this browser or site, or unavailable",
     );
-    this.transcriptPath = options.transcriptPath;
+    this.transcriptPath = "transcriptPath" in options ? options.transcriptPath : undefined;
   }
 }
 
-/** A scene figure cannot mount in this browser (no WebGPU, no adapter) or was handed a bad module. */
-export class SceneMountError extends Error {
-  name = "SceneMountError";
+/** A browser figure cannot draw: the browser has no WebGPU (`navigator.gpu`), and there is no Canvas2D fallback. */
+export class NoWebGpuError extends Error {
+  name = "NoWebGpuError";
+  constructor() {
+    super("no WebGPU: this browser has no navigator.gpu, so the figure cannot draw (canvas-loop figures need WebGPU)");
+  }
+}
+
+/** `mountSketch` or `attachSketch` cannot mount: a bad module value, or a canvas that gives no WebGPU context. */
+export class SketchMountError extends Error {
+  name = "SketchMountError";
   constructor(options: { detail: string }) {
-    super(`mountSceneSketch: ${options.detail}`);
+    super(`mountSketch: ${options.detail}`);
   }
 }
 

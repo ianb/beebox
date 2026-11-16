@@ -4,7 +4,7 @@
 // group, and exposure with the tone curve.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { Light, Lighting, Material, View } from "../../src/scene/api.js";
+import type { Light, Lighting, Material, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";

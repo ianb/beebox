@@ -8,9 +8,10 @@
 // through, and `style.ts` the style state.
 import type { Contour } from "../contours.js";
 import { curveCommands, ellipseContour, pathContours } from "../contours.js";
-import type { Ctx2D, Paint, PathCommand, Style, TextBounds, TextBox, TextOptions, Vec2 } from "../paint.js";
+import type { Paint, PathCommand, Style, TextBounds, TextBox, TextOptions, Vec2 } from "../paint.js";
+import type { Ctx2D } from "../ctx2d.js";
 import { resolveStyle } from "./style.js";
-import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../paint.js";
+import { inPaintSpace, tracePath, tracePolygon, withSaved } from "../ctx2d.js";
 import { PainterCore } from "./core.js";
 import { fontString, haloWidth, TextMeasurer } from "../text/measure.js";
 import type { LaidText } from "../text/measure.js";

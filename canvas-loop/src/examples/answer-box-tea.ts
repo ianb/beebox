@@ -11,7 +11,7 @@
 //     the way `draw` turns it into pixels; a host such as a figure may log it.
 //
 // Click a tile to show its atomic mass.
-import type { DeepReadonly, Msg, ParamsDecl, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

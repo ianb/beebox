@@ -60,74 +60,15 @@ export function paramMismatches(declared: readonly FigureParamDecl[], module: un
 
 type MountSketch = CanvasLoopLib["mountSketch"];
 
-/** A figure entry's `renderer` export does not match the mount its factory calls. */
-export class FigureRendererMismatchError extends Error {
-  constructor(options: { detail: string }) {
-    super(options.detail);
-    this.name = "FigureRendererMismatchError";
-  }
-}
-
-/**
- * Check the entry's `renderer` export against the mount call: `"scene"` must
- * call `mountSceneSketch`; no export must call `mountSketch` (today's
- * figures); any other value is wrong. `bbx figure run` picks its runner from
- * the same export, so a mismatch would draw differently there.
- */
-export function rendererMismatch(renderer: unknown, call: "mountSketch" | "mountSceneSketch"): string | null {
-  if (renderer !== undefined && renderer !== "scene") return `figure entry: export const renderer must be "scene" or absent; got ${JSON.stringify(renderer)}`;
-  if (renderer === "scene" && call === "mountSketch") return 'figure entry: renderer is "scene" but the factory calls cl.mountSketch; call cl.mountSceneSketch';
-  if (renderer === undefined && call === "mountSceneSketch") return 'figure entry: the factory calls cl.mountSceneSketch but the entry does not export renderer = "scene"';
-  return null;
-}
-
-/**
- * `mountSceneSketch` for a figure whose `draw` takes the scene View (canvas-loop
- * scene spike, GPU). The renderer loads on the first call, as its own chunk, so
- * Canvas2D figures never fetch it; the teardown works before it arrives. A
- * failed load goes to the sketch's `onError` and the host's, unless the figure
- * was already torn down.
- */
-function sceneMount(hostError: ((message: string) => void) | undefined): MountSketch {
-  return (mount, opts) => {
-    const state: { torn: boolean; teardown?: () => void } = { torn: false };
-    import("@ianbicking/canvas-loop/scene-browser")
-      .then((scene) => {
-        if (!state.torn) state.teardown = scene.mountSceneSketch(mount, opts);
-      })
-      .catch((error: unknown) => {
-        if (state.torn) return;
-        opts.onError?.(error);
-        const message = `loading the scene renderer failed: ${error instanceof Error ? error.message : String(error)}`;
-        if (hostError === undefined) console.error(`canvas-loop: ${message}`);
-        else hostError(message);
-      });
-    return () => {
-      state.torn = true;
-      state.teardown?.();
-    };
-  };
-}
-
-/**
- * Return `lib` with its `mountSketch` wrapped for this figure (see the module
- * comment), plus `mountSceneSketch`, wrapped the same way. Each refuses a call
- * that disagrees with the entry's `renderer` export (`rendererMismatch`).
- */
+/** Return `lib` with its `mountSketch` wrapped for this figure (see the module comment). */
 export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(lib: L, harness: {
   declared: readonly FigureParamDecl[];
   /** Logs the figure's actions (`useCardActivityReporter`); absent means none. */
   report?: ReportActivity;
-  /** The entry module's `renderer` export (absent for today's figures). */
-  renderer?: unknown;
-  /** The host's error path (the card's figure error); absent: the console. */
-  onError?: (message: string) => void;
-}): L & { mountSceneSketch: MountSketch } {
+}): L {
   const warned = new Set<string>();
   const { report } = harness;
-  const wrap = (inner: MountSketch, call: "mountSketch" | "mountSceneSketch"): MountSketch => (mount, opts) => {
-    const mismatch = rendererMismatch(harness.renderer, call);
-    if (mismatch !== null) throw new FigureRendererMismatchError({ detail: mismatch });
+  const wrap = (inner: MountSketch): MountSketch => (mount, opts) => {
     for (const warning of paramMismatches(harness.declared, opts.module)) {
       if (warned.has(warning)) continue;
       warned.add(warning);
@@ -145,5 +86,5 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
       ...(onEvent !== undefined ? { onEvent } : {}),
     });
   };
-  return { ...lib, mountSketch: wrap(lib.mountSketch, "mountSketch"), mountSceneSketch: wrap(sceneMount(harness.onError), "mountSceneSketch") };
+  return { ...lib, mountSketch: wrap(lib.mountSketch) };
 }

@@ -1,14 +1,13 @@
 // The Elm-Architecture (TEA) sketch contract: the *only* module a TEA sketch
 // imports. Everything here is a type — capability objects (View, Util) are
 // constructed by the runtime and handed in, never imported. See TEA.md.
-import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types, re-exported (below) so a sketch, which imports only this
 // module, can name them.
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 import type { Paper } from "./brush/types.js";
 import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
-import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 import type { EaseName, Keyframe } from "./ease.js";
@@ -29,9 +28,8 @@ export interface ControlBox {
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shadow, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { AtOptions, BrushPreset, Effects, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";
-export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
 export type { Instrument } from "./sound/instruments.js";
@@ -193,9 +191,10 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
 }
 
 /**
- * The drawing surface handed to `draw`: the p5-like subset plus `log`,
- * `snapshot`, and the raw `ctx` escape hatch. No randomness and no parameter
- * store beyond the `p` argument — `draw` cannot change the world, only render it.
+ * The drawing surface handed to `draw`. Each call records part of the frame's
+ * scene, which the renderer draws when `draw` returns; each frame starts
+ * clear. No randomness and no parameter store beyond the `p` argument —
+ * `draw` cannot change the world, only describe it.
  */
 export interface View {
   readonly width: number;
@@ -240,9 +239,9 @@ export interface View {
   textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */
   textWidth(content: string, options?: TextOptions): number;
-  /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. No layer. */
+  /** Transform `body` (matrix, then translate, rotate, skew, scale); the transform ends with `body`. No layer: what it draws composites with its siblings. */
   at(options: AtOptions, body: () => void): void;
-  /** Draw `body` on its own layer, then composite it once with opacity, blend and effects (blur, glow, shadow, colour adjustments). */
+  /** `body` as one isolated layer: opacity, blend, clip, effects and lighting apply to it as a whole. */
   group(options: GroupOptions, body: () => void): void;
   /** Draw `body` kept where `maskBody` paints, in proportion to its alpha (a gradient mask fades it). */
   mask(maskBody: () => void, body: () => void): void;
@@ -254,16 +253,20 @@ export interface View {
   ease(name: EaseName, u: number): number;
   /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
-  /** Draw `body` once into a stored layer; later calls with the same key paste it (with `paste`'s blend or erase). */
-  cache(key: string, body: () => void, paste?: Omit<PasteOptions, "opacity">): void;
-  /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
-  sprite(options: SpriteOptions, body: () => void): Sprite;
-  /** Draw a sprite with its top-left at (x, y) under the current transform. */
-  image(sprite: Sprite, x: number, y: number, paste?: PasteOptions): void;
-  /** The canvas's paper texture, which grainy brushes read. */
+  /** Record a reusable drawing (see PictureOptions); place it with `place`. */
+  picture(options: PictureOptions, body: () => void): Picture;
+  /** A fixed-resolution image: `fill` writes RGBA bytes into `data` (width × height × 4, zeroed) when the version is new. */
+  pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture;
+  /** Draw a picture with its top-left at (x, y) under the current transform. */
+  place(picture: Picture, x: number, y: number, options?: PlaceOptions): void;
+  /** The canvas's paper texture, which grainy brushes and `effects.paper` read. */
   paper(paper: Paper): void;
-  /** Show the paper's texture across everything drawn so far (0..1). */
-  paperTexture(amount: number): void;
+  /** A light, in the current coordinates; it lights the nearest enclosing lit group. */
+  light(light: Light): void;
+  /** A point in canvas coordinates under the current transform (Canvas2D `getTransform` applied to it). */
+  toCanvas(point: Vec2): Vec2;
+  /** Seeded value noise of coordinates, 0..1: a pure function, as p5 `noise`. */
+  noise(x: number, y?: number, z?: number): number;
   /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
   cursor(kind: CursorKind): void;
   /**
@@ -277,8 +280,6 @@ export interface View {
   debugBox(label: string, x: number, y: number, w: number, h: number): void;
   log(...args: readonly unknown[]): void;
   snapshot(label?: string): void;
-  /** The raw context drawing lands on now (the canvas, or the innermost group's layer), for what the View does not cover. */
-  readonly ctx: SKRSContext2D;
 }
 
 /** Optional `canvas` export: the drawing surface size (default 400×300). */

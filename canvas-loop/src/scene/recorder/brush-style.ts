@@ -7,7 +7,7 @@ import { validateEnvelope } from "../../core/brush/envelope.js";
 import { resolveBrush } from "../../core/brush/presets.js";
 import type { Brush, Gesture } from "../../core/brush/types.js";
 import type { BlendMode } from "../../core/paint.js";
-import type { Style } from "../api.js";
+import type { Style } from "../../core/tea.js";
 import type { BrushStroke, PaperSettings } from "../nodes.js";
 
 export const DEFAULT_PAPER: PaperSettings = { scale: 3, contrast: 0.7, seed: 1 };

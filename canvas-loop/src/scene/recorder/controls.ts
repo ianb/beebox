@@ -1,14 +1,15 @@
 // Control placements (draft section 8): a kept output of `draw`, apart from
 // the scene. The browser turns them into DOM inputs over the canvas, as today;
 // headless draws a stand-in for each above the scene, in call order (decision
-// 9): as today's headless runtime draws them (headless/tea-view.ts), plus the
-// param's label, and a slider (track and thumb) for a `number` param without
-// `control: "field"`.
+// 9). A stand-in looks like the browser's bare input: no param label (a sketch
+// labels its own controls), a slider (track, thumb, value) for a `number`
+// param without `control: "field"`, a box with the value for a field or
+// select, a checkbox, and a button with its label.
 import { controlModels } from "../../browser/controls-model.js";
 import type { ControlModel } from "../../browser/controls-model.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { ControlBox, ParamsDecl, ParamValues } from "../../core/tea.js";
-import type { Style, View } from "../api.js";
+import type { Style, View } from "../../core/tea.js";
 import type { DebugBox } from "./debug.js";
 
 /** One `v.control` call: the param, its box in canvas coordinates, and the control as it stood at the call. */
@@ -67,22 +68,12 @@ export function drawStandIns(v: View, controls: readonly ControlPlacement[]): vo
   for (const c of controls) drawStandIn(v, c);
 }
 
-const LABEL = "#555555";
-
-/** The param's label in grey at `x`, vertically centred in the box; returns where what follows it starts. */
-function label(v: View, c: { text: string; x: number; box: Readonly<ControlBox>; h: number; size: number }): number {
-  v.text(c.text, { x: c.x, y: c.box.y + c.h / 2 }, { valign: "middle", size: c.size, fill: LABEL });
-  return c.x + v.textWidth(c.text, { size: c.size }) + 8;
-}
-
-/** A slider (a `number` param without `control: "field"`): label, track, thumb at the value, and the value. */
+/** A slider (a `number` param without `control: "field"`): track, thumb at the value, and the value. */
 function drawSlider(v: View, a: { box: Readonly<ControlBox>; model: Extract<ControlModel, { kind: "number" }>; h: number; size: number }): void {
   const { box, model, h, size } = a;
   const value = String(model.value);
   const right = box.x + box.w - 6 - v.textWidth(value, { size }) - 8;
-  // The label goes first when it leaves the track at least 24 px.
-  const afterLabel = box.x + 6 + v.textWidth(model.label, { size }) + 8;
-  const x0 = right - afterLabel >= 24 ? label(v, { text: model.label, x: box.x + 6, box, h, size }) : box.x + 6;
+  const x0 = box.x + 6;
   const cy = box.y + h / 2;
   const span = model.max > model.min ? (model.value - model.min) / (model.max - model.min) : 0;
   const tx = x0 + Math.max(0, Math.min(1, span)) * Math.max(0, right - x0);
@@ -92,7 +83,7 @@ function drawSlider(v: View, a: { box: Readonly<ControlBox>; model: Extract<Cont
   v.text(value, { x: box.x + box.w - 6, y: cy }, { align: "right", valign: "middle", size, fill: "#111111" });
 }
 
-/** One stand-in, with the param's label (the browser's input carries it as its accessible name). */
+/** One stand-in: the bare input, as the browser shows it over the canvas. */
 function drawStandIn(v: View, c: ControlPlacement): void {
   const { box, model } = c;
   const h = box.h ?? NATURAL_HEIGHT;
@@ -103,7 +94,6 @@ function drawStandIn(v: View, c: ControlPlacement): void {
     const y = box.y + (h - side) / 2;
     v.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 3, FIELD);
     if (model.value) v.path([["move", x + side * 0.22, y + side * 0.52], ["line", x + side * 0.42, y + side * 0.72], ["line", x + side * 0.78, y + side * 0.28]], MARK);
-    label(v, { text: model.label, x: x + side + 6, box, h, size });
     return;
   }
   if (model.kind === "number" && model.control === "slider") {
@@ -116,11 +106,10 @@ function drawStandIn(v: View, c: ControlPlacement): void {
   const cx = box.x + box.w - 12;
   const cy = box.y + h / 2;
   if (select) v.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
-  // A button shows its label as its text; a field shows the label in grey before its value when there is room.
+  // A button shows its label as its text; a field or select shows its value.
   const lines = model.kind === "text" && model.multiline;
   const end = box.x + box.w - (select ? 22 : 6);
-  const withLabel = !button && !lines && end - (box.x + 6 + v.textWidth(model.label, { size })) >= 40;
-  const x = withLabel ? label(v, { text: model.label, x: box.x + 6, box, h, size }) : box.x + 6;
+  const x = box.x + 6;
   // A text box shows its placeholder in grey while empty; a multi-line one wraps from the top.
   const placeholder = model.kind === "text" && model.value === "";
   v.text(shown(model), { x, y: box.y + (lines ? 4 : 0), w: end - x, h: h - (lines ? 8 : 0) }, {

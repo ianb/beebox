@@ -1,7 +1,7 @@
 // Two checks on drawn text, reported as warnings: labels that overlap other
 // labels in one frame, and characters the font has no glyph for (they draw
 // as empty boxes or not at all, with no error from the canvas).
-import type { CtxTransform, Layer, MakeLayer } from "../paint.js";
+import type { CtxTransform, Layer, MakeLayer } from "../ctx2d.js";
 
 /** A text's ink box in canvas coordinates. */
 export interface TextRect {

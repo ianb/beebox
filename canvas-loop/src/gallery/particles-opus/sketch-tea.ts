@@ -5,7 +5,7 @@
 //
 //   - `rate` (number)   particles spawned per frame (fractional → probabilistic)
 //   - `gravity` (number) downward acceleration added to every particle each tick
-//   - `trails` (boolean) motion trails (translucent overlay) vs a clean redraw
+//   - `trails` (boolean) motion trails: each particle's recent positions, fading
 //   - `palette` (select) "warm" | "cool" | "mono" — recolors *live* particles
 //   - `burst` (trigger)  instantly spawn a large radial burst at the emitter
 //
@@ -14,7 +14,7 @@
 // discriminated-union `mode` field. All state lives in Model; the only way it
 // changes is `update` returning a new Model; the switch on `msg.type` is
 // exhaustive; `draw` only paints. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";
@@ -43,6 +43,8 @@ interface Particle {
   age: number;
   life: number;
   tint: number; // 0..1, stable per particle; palette maps it to a color
+  /** Positions on the frames before this one, newest first (at most TRAIL_LENGTH). */
+  trail: readonly (readonly [number, number])[];
 }
 
 type Mode = { type: "idle" } | { type: "attract"; x: number; y: number };
@@ -60,6 +62,11 @@ const EMIT_AMP = 210;
 const EMIT_SPEED = 0.05;
 const ATTRACT_STRENGTH = 65;
 const BURST_COUNT = 140;
+// Trails: a mark k frames old shows at TRAIL_FADE^k of its strength, as under
+// the 20% overlay the sketch first drew its trails with (the scene port: each
+// frame starts clear, so the model keeps the recent positions instead).
+const TRAIL_LENGTH = 12;
+const TRAIL_FADE = 0.8;
 
 // ── Emitter path — a pure function of frame, so spawn position is a calculation.
 function emitterX(frame: number): number {
@@ -77,6 +84,7 @@ function makeParticle(a: { ex: number; u: Util<typeof params> }): Particle {
     age: 0,
     life: u.random(70, 150),
     tint: u.random(),
+    trail: [],
   };
 }
 
@@ -92,6 +100,7 @@ function burstParticle(a: { ex: number; u: Util<typeof params> }): Particle {
     age: 0,
     life: u.random(50, 120),
     tint: u.random(),
+    trail: [],
   };
 }
 
@@ -120,7 +129,8 @@ function step(a: { p: Particle; gravity: number; mode: Mode }): Particle {
   const pull = attractorPull({ mode, x: p.x, y: p.y });
   const vx = p.vx + pull.ax;
   const vy = p.vy + gravity + pull.ay;
-  return { ...p, x: p.x + vx, y: p.y + vy, vx, vy, age: p.age + 1 };
+  const trail = [[p.x, p.y] as const, ...p.trail].slice(0, TRAIL_LENGTH);
+  return { ...p, x: p.x + vx, y: p.y + vy, vx, vy, age: p.age + 1, trail };
 }
 
 function alive(p: Particle): boolean {
@@ -225,10 +235,26 @@ function drawParticles(a: {
   }
 }
 
-function drawEmitter(v: View, frame: number): void {
-  const ex = emitterX(frame);
-  v.circle(ex, EMIT_Y, 5, { fill: "rgba(226, 232, 240, 0.85)" });
-  v.circle(ex, EMIT_Y, 10, { fill: "rgba(148, 163, 184, 0.35)" });
+function drawEmitter(v: View, a: { frame: number; fade: number }): void {
+  const ex = emitterX(a.frame);
+  v.circle(ex, EMIT_Y, 5, { fill: `rgba(226, 232, 240, ${(0.85 * a.fade).toFixed(3)})` });
+  v.circle(ex, EMIT_Y, 10, { fill: `rgba(148, 163, 184, ${(0.35 * a.fade).toFixed(3)})` });
+}
+
+/** Trails: every particle's and the emitter's recent positions, oldest first, each fainter by TRAIL_FADE a frame. */
+function drawTrails(a: { v: View; model: DeepReadonly<Model>; palette: Params["palette"] }): void {
+  const { v, model, palette } = a;
+  for (let k = TRAIL_LENGTH; k >= 1; k--) {
+    const fade = TRAIL_FADE ** k;
+    if (model.frame - k >= 0) drawEmitter(v, { frame: model.frame - k, fade });
+    for (const p of model.particles) {
+      const at = p.trail[k - 1];
+      if (at === undefined) continue;
+      const remaining = 1 - (p.age - k) / p.life;
+      const alpha = Math.max(0, Math.min(1, remaining)) * fade;
+      v.circle(at[0], at[1], (2.5 + remaining * 3.5) / 2, { fill: particleColor({ tint: p.tint, palette, alpha }) });
+    }
+  }
 }
 
 const RETICLE: Style = { stroke: "#f472b6", weight: 2 };
@@ -265,14 +291,9 @@ function drawHud(a: { v: View; model: DeepReadonly<Model>; p: Params }): void {
 }
 
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  if (p.trails) {
-    // Translucent overlay preserves prior frames → motion trails.
-    v.rect(0, 0, v.width, v.height, { fill: "rgba(9, 12, 24, 0.20)" });
-  } else {
-    v.background("#090c18");
-  }
-
-  drawEmitter(v, model.frame);
+  v.background("#090c18");
+  if (p.trails) drawTrails({ v, model, palette: p.palette });
+  drawEmitter(v, { frame: model.frame, fade: 1 });
   drawParticles({ v, model, palette: p.palette });
   drawAttractor(v, model.mode);
   drawHud({ v, model, p });

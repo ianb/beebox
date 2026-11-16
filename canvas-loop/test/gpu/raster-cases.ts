@@ -4,7 +4,7 @@
 // contours overlap keeps winding coverage.
 import assert from "node:assert/strict";
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";

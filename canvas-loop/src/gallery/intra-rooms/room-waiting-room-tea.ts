@@ -2,7 +2,7 @@
 // Exits (1): Solitude Cubes (edge-left).
 // Rows of bolted plastic chairs face a shuttered hatch. NOW SERVING never gets past
 // 047; your ticket says 9,413,882. The clocks keep HERE, THERE, LATER and NEVER.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { mouldedChair, placard, speech } from "./parts-b-tea.js";
 import { amaEye, amaSpeaker, citizen, clock, plant, poster, tubeGlow, tubeLight } from "./props-tea.js";

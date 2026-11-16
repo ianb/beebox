@@ -8,7 +8,7 @@
 // streaks. That map is worked out once. Each frame, every dab takes the colour the
 // render gives at its centre for that frame's light, so the flicker survives while
 // every edge in the room becomes ragged paint.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { BAKED, H, W, hash, litAt, project, toneMap } from "./scene-tea.js";
 
 type RGB = [number, number, number];

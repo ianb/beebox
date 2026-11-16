@@ -1,6 +1,6 @@
 // A row of three market stalls at dusk. Two vendors share one picture in
 // different colours; the middle one holds a lantern that lights the row.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

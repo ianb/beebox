@@ -3,7 +3,7 @@
 // their own speed), twelve acted walks, a jog, a run and two blends.
 // sheet=clothes: a skirt, a long coat walking and running, a person drawn without
 // limbs, crossing a room at the rooms' scale; below, the garments' skeletons.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 import { CLIPS } from "./clips-tea.js";
 import type { ClipName } from "./clips-tea.js";
 import { cadence, progress, stepBody, strideLength } from "./gait-tea.js";

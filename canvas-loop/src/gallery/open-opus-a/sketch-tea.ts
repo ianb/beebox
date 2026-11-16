@@ -4,7 +4,7 @@
 // Dusk lake, far shore with one lit window, the girl kneeling in the bow holding
 // the lantern out, and the great carp lifting its head under it. Reeds frame
 // the foreground.
-import type { Gesture, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Gesture, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 const W = 800;
 const H = 800;

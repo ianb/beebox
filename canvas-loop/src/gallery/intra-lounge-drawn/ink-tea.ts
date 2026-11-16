@@ -1,6 +1,6 @@
 // Drawing by hand: wobbly outlines, inked edges, washes and hatching, on an
 // isometric floor. Nothing here is a true straight line or a true box.
-import type { BrushPreset, PathCommand, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export function hash(x: number, y: number, salt = 0): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483587);

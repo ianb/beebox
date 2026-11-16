@@ -4,7 +4,7 @@
 // and blurs its pigment; a lit group casts shadows across itself. Such a
 // picture, or one placing such a picture, renders as one layer over its whole
 // extent. Decided once per version.
-import type { Effects } from "../scene/api.js";
+import type { Effects } from "../core/tea.js";
 import type { PictureVersion, SceneNode } from "../scene/nodes.js";
 
 const memo = new WeakMap<PictureVersion, boolean>();

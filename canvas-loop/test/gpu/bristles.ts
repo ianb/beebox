@@ -4,7 +4,7 @@
 // a rotation and a non-uniform scale, a one-sample dot (alone and beside a
 // longer contour), and hue and light jitter on colours where the HSL conversion
 // has edge cases (grey, a hue near 0°/360°, near white and black).
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 
 export const BRISTLES_SIZE = { width: 360, height: 300 };
 

@@ -1,6 +1,6 @@
 // Rendering helpers the GPU case files share (all run in renderer.gpu.test.ts, one Dawn device per process).
 import type { TextMeasurer } from "../../src/core/text/measure.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { Pixels } from "../../src/gpu/renderer.js";

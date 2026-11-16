@@ -1,6 +1,6 @@
 // Brush sampler: every preset with two gestures, plus a small-shape row.
 // Renders the reference images for BRUSHES.md.
-import type { BrushName, DeepReadonly, Msg, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushName, DeepReadonly, Msg, Style, Util, View } from "@ianbicking/canvas-loop";
 
 const PRESETS: [BrushName, string, number][] = [
   ["ink", "#1d2a44", 6],

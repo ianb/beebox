@@ -3,8 +3,8 @@
 // stays retryable.
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
-import { FigureSleep, RELEASE_AFTER_MS } from "../../../src/browser/scene/sleep.js";
-import type { SleepTarget } from "../../../src/browser/scene/sleep.js";
+import { FigureSleep, RELEASE_AFTER_MS } from "../../../../src/browser/scene/figure/sleep.js";
+import type { SleepTarget } from "../../../../src/browser/scene/figure/sleep.js";
 
 class WakeFailedError extends Error {
   name = "WakeFailedError";

@@ -2,7 +2,7 @@
 // dabs per mark. Building a radial gradient for each one is slow (most of all in
 // a browser), so the dab is drawn once into its own scratch layer and copied,
 // scaled, for every dab after that.
-import type { Ctx2D, Layer, LayerImage } from "../../paint.js";
+import type { Ctx2D, Layer, LayerImage } from "../../ctx2d.js";
 import type { Brush } from "../types.js";
 import type { ScratchName } from "./mark/render.js";
 

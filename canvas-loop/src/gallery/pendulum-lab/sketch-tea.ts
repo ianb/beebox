@@ -14,7 +14,7 @@
 //
 // The swing integrates the full pendulum equation (physics-tea.ts), so a 30°
 // release measures about 1.7% slower than a 5° one, as a real pendulum does.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 import {
   axesFor,

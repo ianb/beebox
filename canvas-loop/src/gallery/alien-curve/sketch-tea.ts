@@ -1,4 +1,4 @@
-import type { PathCommand, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 // A friendly green alien, picture-book style: ink outlines drawn with s.curve,
 // bristle and pencil shading clipped inside each shape. One frame, no state:

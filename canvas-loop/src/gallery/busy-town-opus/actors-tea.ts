@@ -1,5 +1,5 @@
 // Every moving thing, drawn each frame from sprites and a few cheap marks.
-import type { BlendMode, ScenePicture as Picture, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BlendMode, Picture, View } from "@ianbicking/canvas-loop";
 import type { Clock, Id } from "./things-tea.js";
 import { BUS_Y, FEET, IDS, W, act, boxOf, busX, snailX } from "./things-tea.js";
 import * as S from "./folk-tea.js";

@@ -5,7 +5,7 @@
 // Coordinates: metres. x from the room's left edge; h up from the floor; depth out
 // from the back wall (see sizes-tea.ts). `at(x, h, depth)` gives the screen point
 // in the room's own pixels (before the camera pans).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type Rim, blob, ellipsePts, hash, ink, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 import { BACK_FOOT_Y, PLANES, VIEW_H, footY, m } from "./sizes-tea.js";
 

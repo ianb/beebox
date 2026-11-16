@@ -14,7 +14,7 @@
 // The model holds only what the params cannot: the frame, when the equation
 // last became balanced (for the celebration's clock), and which box was last
 // edited (for a short highlight). Everything else is derived from params in draw.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 
 import {
   commonFactor,

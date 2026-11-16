@@ -1,7 +1,7 @@
 // A sitting room at night, wider than the canvas. The camera drifts along it:
 // a bookshelf, a reader at a table under a flickering ceiling lamp, a sofa,
 // and a window full of moonlight. The whole room is one lit, washed group.
-import type { BrushPreset, Msg, SceneStyle as Style, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Msg, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

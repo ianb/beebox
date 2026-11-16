@@ -4,7 +4,7 @@
 // occasionally, though no storm ever arrives."
 // Exits (5): Foyer (left), Activity Hub (right), Hallway and Archive Lounge
 // (arches in the back wall), Solitude Cubes (stairs down).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, stroke } from "./kit-tea.js";
 import { amaEye, amaSpeaker, bunting, citizen, pacing, plant, poster } from "./props-tea.js";
 import { m } from "./sizes-tea.js";

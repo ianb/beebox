@@ -1,12 +1,11 @@
 // Compositing fixtures from the Stage 3 probe (scratch/stage3/compositing/fixtures.ts),
-// as data with two lowerings: draft 2.2 calls (the scene renderer) and today's calls
-// (the Skia renderer), as the probe's skia-lower.ts wrote them.
+// as data, drawn with the scene View's calls. The Skia painter's render of them is
+// frozen in test/fixtures/scene-parity/compositing.png.
 import { BLEND_MODES } from "../../src/core/compose.js";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { BlendMode, LinearGradient, Vec2 } from "../../src/core/paint.js";
-import type { View as TodayView } from "../../src/core/tea.js";
-import type { Effects } from "../../src/scene/api.js";
-import type { View as DraftView } from "../../src/scene/api.js";
+import type { Effects } from "../../src/core/tea.js";
+import type { View as DraftView } from "../../src/core/tea.js";
 
 type Fill = string | LinearGradient;
 type Geom = { k: "rect"; x: number; y: number; w: number; h: number } | { k: "circle"; x: number; y: number; r: number } | { k: "poly"; pts: readonly Vec2[] };
@@ -98,30 +97,5 @@ export function drawDraft(v: DraftView, nodes: readonly FxNode[]): void {
     else if (n.t === "group") v.group({ ...(n.opacity === undefined ? {} : { opacity: n.opacity }), ...(n.blend === undefined ? {} : { blend: n.blend }), ...(n.effects === undefined ? {} : { effects: n.effects }), ...(n.clip === undefined ? {} : { clip: n.clip }) }, () => drawDraft(v, n.body));
     else if (n.t === "clip") v.clip(n.shapes, () => drawDraft(v, n.body));
     else v.mask(() => drawDraft(v, n.mask), () => drawDraft(v, n.body));
-  }
-}
-
-let cacheKey = 0;
-
-/** Today's calls: a shape's effects become a group around it; erase with effects pastes a cache; the group clip option becomes a clip around the group. */
-export function drawToday(v: TodayView, nodes: readonly FxNode[]): void {
-  for (const n of nodes) {
-    if (n.t === "shape") {
-      const { g, s } = n;
-      const plain = (style: { fill: Fill; blend?: BlendMode; erase?: boolean }): void => {
-        if (g.k === "rect") v.rect(g.x, g.y, g.w, g.h, style);
-        else if (g.k === "circle") v.circle(g.x, g.y, g.r, style);
-        else v.polygon(g.pts, style);
-      };
-      const fx = s.effects;
-      if (fx === undefined) plain({ fill: s.fill, ...(s.blend === undefined ? {} : { blend: s.blend }), ...(s.erase === true ? { erase: true } : {}) });
-      else if (s.erase === true) v.cache(`fx${cacheKey++}`, () => v.group({ effects: fx }, () => plain({ fill: s.fill })), { erase: true });
-      else v.group({ effects: fx, ...(s.blend === undefined ? {} : { blend: s.blend }) }, () => plain({ fill: s.fill }));
-    } else if (n.t === "group") {
-      const run = (): void => v.group({ ...(n.opacity === undefined ? {} : { opacity: n.opacity }), ...(n.blend === undefined ? {} : { blend: n.blend }), ...(n.effects === undefined ? {} : { effects: n.effects }) }, () => drawToday(v, n.body));
-      if (n.clip === undefined) run();
-      else v.clip(n.clip, run);
-    } else if (n.t === "clip") v.clip(n.shapes, () => drawToday(v, n.body));
-    else v.mask(() => drawToday(v, n.mask), () => drawToday(v, n.body));
   }
 }

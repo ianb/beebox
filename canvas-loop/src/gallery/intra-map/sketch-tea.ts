@@ -2,7 +2,7 @@
 // (plan-tea.ts). Every piece belongs to a depth layer, and standing pieces sort by
 // where they meet the floor, so people pass behind statues and under door lintels.
 // The same pieces also draw the depth map an engine would use, and the walk map.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 import { MAP_H, MAP_W, type Room, T, VISITED, WALKERS, type Walker } from "./plan-tea.js";
 import { STATIC_PIECES, WALK, WALK_GRID, WALK_W, type Piece, ceilingPieces, roomLabels } from "./pieces-tea.js";
 import { paintPerson } from "./props-tea.js";

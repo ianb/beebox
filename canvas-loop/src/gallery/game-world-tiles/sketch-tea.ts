@@ -1,7 +1,7 @@
 // game-world's sample map, drawn by canvas-loop instead of the LPC tile atlas.
 // Ground is painted by per-cell passes (ground-tea.ts) that can run over the whole
 // map or one 32 px cell at a time; props are sprites (objects-tea.ts).
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 import { type GroundStyle, type Pass, passesFor } from "./ground-tea.js";
 import { paintField } from "./field-tea.js";
 import { H, PERIOD, S, W } from "./map-tea.js";

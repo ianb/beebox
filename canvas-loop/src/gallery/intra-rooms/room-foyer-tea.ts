@@ -3,7 +3,7 @@
 // 'Hollow Atrium' and 'Intake'." In the game the Atrium door is locked until the
 // player tries the pad; it is very easy.
 // Exits (2): Intake (edge-left), Hollow Atrium (edge-right).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { signBox } from "./parts-a-tea.js";
 import { amaEye, amaSpeaker, bench, citizen, pacing, plant } from "./props-tea.js";

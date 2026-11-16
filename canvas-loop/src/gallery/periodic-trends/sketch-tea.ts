@@ -14,7 +14,7 @@
 //     elements on the chart whose step goes against the usual trend.
 //
 // Data and sources: ./elements-tea.ts.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 
 import {
   bySymbol,

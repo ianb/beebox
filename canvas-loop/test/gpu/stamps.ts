@@ -4,7 +4,7 @@
 // under a rotation and a non-uniform scale; dabs kinds.ts skips (alpha 0 at
 // zero pressure, radii falling through 0.05); and the extremes of scatter,
 // sizeJitter and wobble, for the mark's box.
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 
 export const STAMPS_SIZE = { width: 320, height: 240 };
 

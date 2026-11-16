@@ -5,7 +5,7 @@
 // by coefficient, and tallies every element on each side. Pointing at a tally
 // row lights up that element's atoms; clicking a row keeps it lit. When every
 // element matches, the banner turns green and a few atoms burst out of it.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 import { analyse, REACTION_LABELS } from "./chem-tea.js";
 import type { Analysis, El } from "./chem-tea.js";
 import { paint } from "./draw-tea.js";

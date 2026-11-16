@@ -1,7 +1,7 @@
 // Drawing a person from a gait: one continuous outline per limb (no jointed
 // segments), a trunk with a back and a belly, a face in profile, and clothes that
 // hang from their own small skeletons, which follow the legs a moment late.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, stroke, wobble } from "./ink-tea.js";
 import { pose } from "./gait-tea.js";
 import { REFERENCE } from "./body-tea.js";

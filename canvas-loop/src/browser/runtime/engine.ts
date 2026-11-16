@@ -1,5 +1,5 @@
-// The browser TEA runner — the interactive twin of src/tea-runtime.ts. It folds
-// the same sketch contract (init/update/draw) over a real canvas: a fixed-
+// The browser TEA runner — the interactive twin of headless/tea-runtime/. It folds
+// the same sketch contract (init/update/draw) over a figure's surface: a fixed-
 // timestep rAF loop supplies virtual time as `tick` msgs (frame-count based, NOT
 // wall time), pointer/key/param/trigger inputs are queued and dispatched before
 // each frame's tick (the frame-N guarantee), the model is deep-frozen between
@@ -13,7 +13,6 @@ import { Score } from "../../core/sound/voice.js";
 import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
-import { canvasSurface } from "./canvas-surface.js";
 import type { TextMeasure } from "../../core/view.js";
 import { ActivityReporter, streamWithActivity } from "../../core/activity.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
@@ -103,7 +102,7 @@ export class Runtime {
     this.#onPlace = deps.onPlace;
     this.#util = this.#makeUtil();
     const log = (args: readonly unknown[]): void => this.#recordLog(args);
-    this.#surface = "surface" in deps ? deps.surface(log) : canvasSurface({ deps, module: this.#module, log });
+    this.#surface = deps.surface(log);
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }

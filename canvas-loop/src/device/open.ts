@@ -4,7 +4,7 @@
 // referenced for as long as its devices live (collecting it crashes the
 // process), so it is kept at module level.
 import type { create as CreateDawn } from "webgpu";
-import type { Ctx2D } from "../core/paint.js";
+import type { Ctx2D } from "../core/ctx2d.js";
 import { TextMeasurer } from "../core/text/measure.js";
 import type { ColorParser } from "../scene/colors.js";
 import { colorsFrom } from "../scene/colors.js";

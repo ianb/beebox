@@ -10,7 +10,7 @@ import { formatArgs } from "../../core/format.js";
 import type { ClipShape, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
-import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, View } from "../api.js";
+import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
 import { UnsupportedCallError } from "../errors.js";
 import { IDENTITY, apply, axisScales, matrixOf, mul } from "../mat.js";
 import type { ColorParser } from "../colors.js";

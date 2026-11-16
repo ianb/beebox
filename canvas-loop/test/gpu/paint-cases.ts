@@ -4,7 +4,7 @@
 // hatching revealed by tone relative to the group's own range.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { Effects, View } from "../../src/scene/api.js";
+import type { Effects, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { Pixels } from "../../src/gpu/renderer.js";

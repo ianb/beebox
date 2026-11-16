@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { before, test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import { UnsupportedCallError } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";

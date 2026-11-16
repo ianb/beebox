@@ -1,6 +1,6 @@
 // Sky, sun, sea, the far headland with its houses and lighthouse, boats, and
 // the stone quay the market stands on.
-import type { SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { View, Vec2 } from "@ianbicking/canvas-loop";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";
 
 export const W = 900;

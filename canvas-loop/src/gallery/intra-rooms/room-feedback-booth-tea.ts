@@ -3,7 +3,7 @@
 // A low, warm booth: the glowing terminal that thanks you for your satisfaction, a
 // brass SUGGESTIONS slot whose pipe runs down to the incinerator, a corkboard of
 // complaints, a coffee urn, and people who came to complain and stayed to chat.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, roundRectPts } from "./kit-tea.js";
 import { placard, pulse, speech } from "./parts-b-tea.js";
 import { type Crt, amaEye, amaSpeaker, citizen, crate, crt, crtScreen, globeLamp, lampGlow, pipe } from "./props-tea.js";

@@ -7,7 +7,7 @@
 // the hall."
 // Exits (14): the Hollow Atrium (left), the Reflection Chamber (right end), and
 // twelve quarters doors along the wall. 20 m long: the view pans with the walker.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { type Exit, type RoomSpec, at, blob, glow, hash, roundRectPts, stroke } from "./kit-tea.js";
 import { amaEye, amaSpeaker, citizen, pacing, plant, poster, vent } from "./props-tea.js";
 import { BACK_FOOT_Y, m } from "./sizes-tea.js";

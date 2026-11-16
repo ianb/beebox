@@ -1,7 +1,7 @@
 // A room at night, wider than the canvas. The camera pans slowly from the
 // bookshelf past the flickering ceiling lamp to the window, where someone
 // stands looking out. The whole room is washed like a watercolour.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

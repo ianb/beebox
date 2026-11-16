@@ -2,7 +2,7 @@
 // seaside fish market: a cheeky herring gull flaps off to the left with a
 // mackerel from the fishmonger's tray, and the fishmonger, cap jumping off
 // his head, notices a moment too late.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { H, headland, quay, sea, sky, W } from "./backdrop-tea.js";
 import { fishmonger, shock } from "./fishmonger-tea.js";
 import {

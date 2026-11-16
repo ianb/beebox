@@ -2,7 +2,7 @@
 // it is composited, over an optional glow painted from its silhouette. Effects
 // are data on `group`; the filter is a CSS filter string both runtimes
 // (browsers, @napi-rs/canvas) understand.
-import type { Ctx2D, Layer } from "../paint.js";
+import type { Ctx2D, Layer } from "../ctx2d.js";
 import type { Effects } from "../compose.js";
 import { drawLayer, type LayerPool } from "./layers.js";
 import { SketchUsageError } from "../errors.js";

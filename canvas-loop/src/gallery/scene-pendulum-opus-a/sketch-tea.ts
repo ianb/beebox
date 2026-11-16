@@ -1,7 +1,7 @@
 // A pendulum for a physics page: drag the length slider and watch the period
 // change. The bob swings by the full equation of motion; the label gives the
 // small-angle period 2π√(L/g), which the measured swing matches closely.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, SceneView as View, TextOptions, Util, Vec2 } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, TextOptions, Util, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

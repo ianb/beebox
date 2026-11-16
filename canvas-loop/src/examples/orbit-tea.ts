@@ -33,6 +33,7 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: 500, height: 400 };
+export const renderer = "scene";
 
 type Params = ParamValues<typeof params>;
 

@@ -5,7 +5,7 @@
 // door, a desk and chair in the far corner, a wall shelf over the desk, a lamp,
 // a nameplate. Each occupant's dressing adds to it (wall, furniture, live) and
 // may put them in the room.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { frame, mascot, slab, stencil } from "./parts-c-tea.js";
 import { type Citizen, amaEye, amaSpeaker, citizen, clock, crate, plant, poster, shellChair, tulipTable, vent } from "./props-tea.js";

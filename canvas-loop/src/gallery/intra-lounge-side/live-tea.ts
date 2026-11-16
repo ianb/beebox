@@ -3,7 +3,7 @@
 // messages; the sets show unreadable data and throw their light; the archive reels
 // turn; the vending window hums; the doorways glow with the rooms beyond; the bulb
 // stutters; someone walks through. Most of it repeats every PERIOD frames.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { blob, ellipsePts, hash, ink } from "./ink-tea.js";
 import { DEAD_PANEL, FLOOR, H, PANELS, PLACES, TELLIES, type Telly, VENDING, W, leaning, onScreen, placed, screenOf, sitter } from "./scene-tea.js";
 import { PLANES, SIZES, footY, m } from "./sizes-tea.js";

@@ -7,7 +7,7 @@
 // the east wall glows, the west wall throws a band of shadow on the floor, and every
 // statue throws a long shadow east. Everything else is lit by the purple of the
 // upper sky.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 
 export const W = 1200;
 export const H = 860;

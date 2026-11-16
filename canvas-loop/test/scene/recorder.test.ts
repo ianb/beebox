@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { LinearGradient, PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { Effects, View } from "../../src/scene/api.js";
+import type { Effects, View } from "../../src/core/tea.js";
 import { UnsupportedCallError } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { sceneOutline } from "../../src/scene/outline.js";

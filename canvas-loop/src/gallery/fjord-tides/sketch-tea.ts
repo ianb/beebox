@@ -11,7 +11,7 @@
 //
 // Written with `v.ctx` for path fills, clipping and gradients; ported to
 // polygons, paths, `v.clip` and `v.linearGradient` in scene core chunk 5.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

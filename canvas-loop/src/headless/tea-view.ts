@@ -4,7 +4,8 @@ import type { ControlModel } from "../browser/controls-model.js";
 import type { Style } from "../core/paint.js";
 import type { Painter } from "../core/painter/engine.js";
 import { PainterView } from "../core/view.js";
-import type { ControlBox, CursorKind, ParamsDecl, ParamValues, View } from "../core/tea.js";
+import type { ControlBox, CursorKind, ParamsDecl, ParamValues } from "../core/tea.js";
+import type { CanvasView } from "../core/view.js";
 import { SketchUsageError } from "./errors.js";
 import type { Surface } from "./surface.js";
 
@@ -70,7 +71,7 @@ function drawStandIn(painter: Painter, at: { box: ControlBox; model: ControlMode
  * run's surface. No `random`, no input state, no parameter store: the object
  * never carries what `draw` may not touch.
  */
-export class TeaView extends PainterView implements View {
+export class TeaView extends PainterView implements CanvasView {
   #surface: Surface;
   #decl: ParamsDecl;
   #getParams: () => ParamValues<ParamsDecl>;

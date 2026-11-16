@@ -62,11 +62,18 @@ export function update(
   }
 }
 
+export const renderer = "scene";
+
 export function draw(
   v: View,
   _model: DeepReadonly<Model>,
   p: ParamValues<typeof params>,
 ): void {
+  // Paper texture over the whole drawing, where it drew (once `v.paperTexture` at the end).
+  v.group({ effects: { paper: p.paper } }, () => drawSheet(v, p));
+}
+
+function drawSheet(v: View, p: ParamValues<typeof params>): void {
   v.background("#f4efe2");
   const strokes: Style = {
     brush: p.brush,
@@ -118,5 +125,4 @@ export function draw(
     weight: 3,
     brush: "ink",
   });
-  v.paperTexture(p.paper);
 }

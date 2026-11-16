@@ -7,7 +7,7 @@ import type { TestContext } from "node:test";
 import type { GpuHandle } from "../../src/device/open.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
-import type { Material, View } from "../../src/scene/api.js";
+import type { Material, View } from "../../src/core/tea.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { renderOnce, rgbaAt } from "./render.js";
 

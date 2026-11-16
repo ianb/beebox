@@ -2,7 +2,7 @@
 // through a context (both runtimes normalise `fillStyle` to `#rrggbb` or
 // `rgba(r, g, b, a)`), then shift hue and lightness in HSL.
 import { SketchUsageError } from "../../errors.js";
-import type { Ctx2D } from "../../paint.js";
+import type { Ctx2D } from "../../ctx2d.js";
 
 export interface Rgba {
   readonly r: number;

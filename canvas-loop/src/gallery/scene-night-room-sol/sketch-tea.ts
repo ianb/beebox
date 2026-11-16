@@ -1,4 +1,4 @@
-import type { DeepReadonly, Msg, SceneView as View, Util } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, View, Util } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

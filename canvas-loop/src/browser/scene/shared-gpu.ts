@@ -3,7 +3,7 @@
 // forgotten, so the next lease (a figure waking) opens a new one.
 import type { GpuHandle } from "../../device/open.js";
 import { openBrowserGpu } from "../../device/browser.js";
-import { SceneMountError } from "../../scene/errors.js";
+import { NoGpuAdapterError, NoWebGpuError } from "../../scene/errors.js";
 
 /** A figure's hold on the shared device; `release` is idempotent and drops its loss listener. */
 export interface GpuLease {
@@ -37,7 +37,7 @@ export function hasWebGpu(): boolean {
 
 function open(): Shared {
   const opening = openBrowserGpu().then((gpu) => {
-    if (gpu === undefined) throw new SceneMountError({ detail: "WebGPU is present but the browser gave no GPU adapter (the GPU may be blocked or unavailable); this figure needs WebGPU" });
+    if (gpu === undefined) throw new NoGpuAdapterError({ browser: true });
     return gpu;
   });
   const entry: Shared = { opening, users: 0, gone: false, listeners: new Set() };
@@ -59,9 +59,9 @@ function open(): Shared {
   return entry;
 }
 
-/** Lease the page's device, opening it when there is none. Throws `SceneMountError` without WebGPU or an adapter. */
+/** Lease the page's device, opening it when there is none. Throws `NoWebGpuError` without WebGPU, `NoGpuAdapterError` without an adapter. */
 export async function leaseGpu(): Promise<GpuLease> {
-  if (!hasWebGpu()) throw new SceneMountError({ detail: "this browser has no WebGPU (navigator.gpu is missing), and the scene renderer has no Canvas2D fallback" });
+  if (!hasWebGpu()) throw new NoWebGpuError();
   if (shared === undefined || shared.gone) shared = open();
   const entry = shared;
   entry.users++;

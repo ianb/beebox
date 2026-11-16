@@ -1,6 +1,6 @@
 // Drawing by hand, seen from the side: wobbly outlines, inked edges, washes and
 // hatching, and rim light painted on the edges that face a light.
-import type { BrushPreset, PathCommand, SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export function hash(x: number, y: number, salt = 0): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483587);

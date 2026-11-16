@@ -6,7 +6,7 @@
 // period or down its group. Hover an element (in either view) to read it;
 // click to select it, which also picks the period or group the chart shows.
 // Arrow keys move the selection. Data and sources: ./elements-tea.ts.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, TextOptions, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, TextOptions, Util, View } from "@ianbicking/canvas-loop";
 import type { ElementData, PropInfo, PropKey } from "./elements-tea.js";
 import { ELEMENTS, GROUPS, element, NOTES, PERIODS, PROPS, formatValue, valueOf } from "./elements-tea.js";
 

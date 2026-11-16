@@ -1,4 +1,4 @@
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 
 const P = (x: number, y: number): Vec2 => [x, y];
 

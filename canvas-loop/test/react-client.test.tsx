@@ -8,6 +8,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { parseHTML } from "linkedom";
 import { SketchFigure } from "../src/react/SketchFigure/figure/view.js";
+import { fakeGpu, settle } from "./fake-dom.js";
 
 // ── DOM + rAF harness ─────────────────────────────────────────────────
 
@@ -24,10 +25,10 @@ Object.assign(globalThis, {
     delete raf[id - 1];
   },
 });
-// A permissive 2D context so attachSketch builds a runtime (linkedom has none).
+// A WebGPU context stand-in so the figure starts (linkedom has none); the device is a stand-in too (`fakeGpu`).
 Object.defineProperty(window.HTMLCanvasElement.prototype, "getContext", {
   configurable: true,
-  value: () => new Proxy({}, { get: (t: Record<PropertyKey, unknown>, p) => (p in t ? t[p] : () => null) }),
+  value: (kind: string) => (kind === "webgpu" ? { configure: () => {}, unconfigure: () => {}, getCurrentTexture: () => ({}) } : null),
 });
 
 /** Fire the currently-queued rAF callbacks once, 17 virtual ms apart per call. */
@@ -44,18 +45,26 @@ function asContainer(el: Element): HTMLElement {
   return el as unknown as HTMLElement;
 }
 
-function mountInto(element: React.ReactElement): { root: Root; host: Element } {
+async function mountInto(element: React.ReactElement): Promise<{ root: Root; host: Element }> {
   const host = document.createElement("div");
   document.body.append(host);
   let root!: Root;
   act(() => {
     root = createRoot(asContainer(host));
   });
-  act(() => {
-    root.render(element);
-  });
+  await renderSettled(root, element);
   return { root, host };
 }
+
+/** Render, then let the figure's lazy import and device lease resolve, inside act. */
+async function renderSettled(root: Root, element: React.ReactElement): Promise<void> {
+  await act(async () => {
+    root.render(element);
+    await settle();
+  });
+}
+
+const gpu = fakeGpu();
 
 // ── finding 1: identity keyed on sub-references, not the wrapper ──────
 
@@ -74,28 +83,24 @@ const countingInit = (): { t: number } => {
   return { t: 0 };
 };
 
-test("an inline module literal (stable sub-refs) does NOT reset the sketch on parent re-render", () => {
+test("an inline module literal (stable sub-refs) does NOT reset the sketch on parent re-render", async () => {
   inits = 0;
-  const { root } = mountInto(React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params } }));
+  const { root } = await mountInto(React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params }, gpu }));
   assert.equal(inits, 1, "the sketch initialised once at mount");
   // Re-render with a brand-new wrapper object built from the SAME sub-references.
-  act(() => {
-    root.render(React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params } }));
-  });
+  await renderSettled(root, React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params }, gpu }));
   assert.equal(inits, 1, "no re-init: the runtime was not torn down and recreated (no frame-0 reset / reseed)");
   act(() => {
     root.unmount();
   });
 });
 
-test("a genuinely new update function still restarts the sketch (keying stays correct)", () => {
+test("a genuinely new update function still restarts the sketch (keying stays correct)", async () => {
   inits = 0;
-  const { root } = mountInto(React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params } }));
+  const { root } = await mountInto(React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params }, gpu }));
   assert.equal(inits, 1, "initialised once");
-  act(() => {
-    // Only the update reference changes — a real identity change must recreate.
-    root.render(React.createElement(SketchFigure, { module: { init: countingInit, update: (m: unknown) => m, draw, params } }));
-  });
+  // Only the update reference changes — a real identity change must recreate.
+  await renderSettled(root, React.createElement(SketchFigure, { module: { init: countingInit, update: (m: unknown) => m, draw, params }, gpu }));
   assert.equal(inits, 2, "the runtime was recreated when a sub-identity genuinely changed");
   act(() => {
     root.unmount();
@@ -111,12 +116,12 @@ class BoomError extends Error {
   }
 }
 
-test("a throwing update surfaces a small inline error box and stops the loop", () => {
+test("a throwing update surfaces a small inline error box and stops the loop", async () => {
   const throwingUpdate = (): unknown => {
     throw new BoomError();
   };
-  const { root, host } = mountInto(
-    React.createElement(SketchFigure, { module: { init: () => ({ t: 0 }), update: throwingUpdate, draw, params: {} }, showControls: false }),
+  const { root, host } = await mountInto(
+    React.createElement(SketchFigure, { module: { init: () => ({ t: 0 }), update: throwingUpdate, draw, params: {} }, showControls: false, gpu }),
   );
   assert.equal(host.querySelector(".cl-error"), null, "no error box before the first throwing frame");
   act(() => {
@@ -134,14 +139,15 @@ test("a throwing update surfaces a small inline error box and stops the loop", (
 // ── a text param's box follows a value set from outside ──────────────
 const textParams = { answer: { type: "text", default: "" } } as const;
 
-test("a controlled text param's box shows a new value the host sets", () => {
+test("a controlled text param's box shows a new value the host sets", async () => {
   const render = (answer: string): React.ReactElement =>
-    React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params: textParams }, params: { answer }, showControls: true });
-  const { root, host } = mountInto(render("H2O"));
+    React.createElement(SketchFigure, { module: { init: countingInit, update, draw, params: textParams }, params: { answer }, showControls: true, gpu });
+  const { root, host } = await mountInto(render("H2O"));
   const shown = (): string | null => host.querySelector("input.cl-text")?.getAttribute("value") ?? null;
   assert.equal(shown(), "H2O");
-  act(() => {
+  await act(async () => {
     root.render(render("CO2"));
+    await settle();
     pumpFrames(2);
   });
   assert.equal(shown(), "CO2", "a value that is not an echo of typing replaces the draft");

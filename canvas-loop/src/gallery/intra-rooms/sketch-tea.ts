@@ -1,7 +1,7 @@
 // Intra (intra-game), room by room, from the side: one shared kit (kit-tea.ts,
 // props-tea.ts, sky-tea.ts), one file per room. Pick the room with the `room`
 // param. Rooms wider than the view pan with their walker.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, dim, exitGlows, paintShell } from "./kit-tea.js";
 import { ROOMS, ROOM_IDS } from "./rooms-tea.js";
 import { VIEW_H, VIEW_W, m } from "./sizes-tea.js";

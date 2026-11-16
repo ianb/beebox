@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createCanvas } from "@napi-rs/canvas";
-import type { Ctx2D, Layer, LayerImage } from "../../../src/core/paint.js";
+import type { Ctx2D, Layer, LayerImage } from "../../../src/core/ctx2d.js";
 import { Painter } from "../../../src/core/painter/engine.js";
 
 function skiaLayer(size: { width: number; height: number }): Layer {

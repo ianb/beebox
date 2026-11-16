@@ -1,7 +1,7 @@
 // The paper texture: a canvas-sized layer whose alpha marks the paper's valleys,
 // where a grainy brush leaves less pigment. Generated in JS from hash noise, so
 // it is the same in every runtime.
-import type { Ctx2D, Layer, MakeLayer } from "../paint.js";
+import type { Ctx2D, Layer, MakeLayer } from "../ctx2d.js";
 import { rand } from "./random.js";
 import type { Paper } from "./types.js";
 

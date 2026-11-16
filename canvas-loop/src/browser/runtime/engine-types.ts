@@ -28,8 +28,8 @@ export interface RuntimeLog {
 export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean; activity?: Record<string, unknown> };
 
 /**
- * What draws a frame for the runtime. Today's is a Canvas2D view over the
- * figure's canvas; the scene surface records the frame and draws it on the GPU.
+ * What draws a frame for the runtime: the scene surface records the frame and
+ * draws it on the GPU.
  */
 export interface DrawSurface {
   /** The text measuring `u.textWidth` and `u.textBounds` answer with. */
@@ -40,21 +40,12 @@ export interface DrawSurface {
   draw(model: unknown, params: ParamValues<ParamsDecl>): ReadonlyMap<string, ControlBox>;
 }
 
-/** Today's surface: a 2D context the runtime draws into with its Canvas2D view. */
-export interface CanvasDeps {
-  ctx: CanvasRenderingContext2D;
-  width: number;
-  height: number;
-  /** Device pixels per logical pixel of the canvas (see `sizeCanvas`); 1 when absent. */
-  pixelRatio?: number;
-}
-
-/** Another surface, made once the runtime exists; `log` is the runtime's frame-tagged log. */
+/** The surface, made once the runtime exists; `log` is the runtime's frame-tagged log. */
 export interface SurfaceDeps {
   surface: (log: (args: readonly unknown[]) => void) => DrawSurface;
 }
 
-export type RuntimeDeps = (CanvasDeps | SurfaceDeps) & {
+export type RuntimeDeps = SurfaceDeps & {
   module: PlaygroundModule;
   seed: number;
   onFrame: (frame: number) => void;

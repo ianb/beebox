@@ -4,7 +4,7 @@
 // body reads a value not in deps) from two drawings sharing a key. A key that
 // records a new version three frames running warns that it is never reused.
 import { SketchUsageError } from "../../core/errors.js";
-import type { PictureOptions } from "../api.js";
+import type { PictureOptions } from "../../core/tea.js";
 import { versionName } from "../outline.js";
 import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
 import { PictureHandle, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";

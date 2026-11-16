@@ -1,7 +1,7 @@
 // Reference guide for the brush experiments: a friendly green alien in flat
 // shapes. Clear form only — pose and proportion for a drawer to follow, not a
 // finished illustration.
-import type { DeepReadonly, Msg, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Style, Util, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

@@ -5,7 +5,8 @@
 //
 // Widths depend on the fonts the runtime has: headless and a browser can differ,
 // and a browser web font that loads later changes them (`clear()` on load).
-import type { Ctx2D, CtxTransform, MakeLayer, TextBounds, TextBox, TextOptions, TextStyle } from "../paint.js";
+import type { TextBounds, TextBox, TextOptions, TextStyle } from "../paint.js";
+import type { Ctx2D, CtxTransform, MakeLayer } from "../ctx2d.js";
 import { layoutText } from "./layout.js";
 import type { TextLayout } from "./layout.js";
 

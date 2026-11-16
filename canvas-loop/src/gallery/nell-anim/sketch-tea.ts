@@ -12,7 +12,7 @@
 // Performance: the painted page is drawn once into cached layers (keyed on the
 // params they depend on); each frame pastes them and draws only the moving
 // parts with gradients, plain shapes and a few seeded ink marks.
-import type { DeepReadonly, Gesture, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Gesture, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

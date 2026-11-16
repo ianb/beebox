@@ -3,19 +3,20 @@
 // serialises every interaction to the headless events-file format. All wiring
 // goes through the Runtime's input methods, so hand interaction and scripted
 // replay converge on one representation.
-import { pixelRatioOf, sizeCanvas, wireInput } from "../mount.js";
+import { attachSketch } from "../mount.js";
+import { pixelRatioOf, sizeCanvas } from "../canvas-dom.js";
+import type { AttachedSketch } from "../mount.js";
 import type { CanvasSize } from "../../core/tea.js";
 import { buildControls } from "../controls.js";
 import { REGISTRY } from "./registry.js";
 import type { RegistryEntry } from "../sketch-types.js";
-import { Runtime } from "../runtime/engine.js";
-import type { RuntimeLog } from "../runtime/engine.js";
+import type { Runtime, RuntimeLog } from "../runtime/engine.js";
 
 const DEFAULT_CANVAS: CanvasSize = { width: 400, height: 300 };
 const MAX_LOG_LINES = 200;
 
 interface Session {
-  runtime: Runtime;
+  attached: AttachedSketch;
   canvas: HTMLCanvasElement;
 }
 
@@ -128,7 +129,7 @@ class Playground {
 
   // ── sketch selection ─────────────────────────────────────────────
   #select(entry: RegistryEntry): void {
-    this.#session?.runtime.stop();
+    this.#session?.attached.teardown();
     this.#entry = entry;
     this.#logLines = [];
     this.#logHost.textContent = "";
@@ -139,27 +140,23 @@ class Playground {
     canvas.tabIndex = 0;
     this.#canvasWrap.replaceChildren(canvas);
     this.#applyScale(canvas);
-    const ctx = canvas.getContext("2d");
-    if (ctx === null) throw new PlaygroundError({ detail: "2d context unavailable" });
-    const runtime = new Runtime({
+    const attached = attachSketch(canvas, {
       module: entry.module,
-      ctx,
-      width: size.width,
-      height: size.height,
-      pixelRatio: pixelRatioOf(canvas),
       seed: this.#readSeed(),
+      paused: false,
       onFrame: (frame) => this.#onFrame(frame),
       onLog: (line) => this.#onLog(line),
+      onError: (error) => this.#onLog({ frame: 0, message: `error: ${error instanceof Error ? error.message : String(error)}` }),
     });
-    const session: Session = { runtime, canvas };
+    const session: Session = { attached, canvas };
     this.#session = session;
-    this.#wireInput(session);
-    this.#renderControls(runtime);
     this.#pauseBtn.textContent = "Pause";
     this.#onFrame(0);
     this.#refreshEvents();
     this.#markActiveTab();
-    runtime.start();
+    void attached.ready.then((runtime) => {
+      if (this.#session === session) this.#renderControls(runtime);
+    });
   }
 
   #renderControls(runtime: Runtime): void {
@@ -178,23 +175,21 @@ class Playground {
     }
   }
 
-  // ── input wiring (all through Runtime) ───────────────────────────
-  #wireInput(session: Session): void {
-    // The same pointer/touch/key wiring as a mounted figure; the canvas is
-    // replaced (not reused) on restart, so its listeners go with it.
-    wireInput(session.canvas, session.runtime);
+  /** The current sketch's runtime, once its device opened. */
+  #runtime(): Runtime | undefined {
+    return this.#session?.attached.runtime;
   }
 
   // ── toolbar actions ──────────────────────────────────────────────
   #restart(): void {
     this.#logLines = [];
     this.#logHost.textContent = "";
-    this.#session?.runtime.restart(this.#readSeed());
+    this.#runtime()?.restart(this.#readSeed());
     this.#refreshEvents();
   }
 
   #togglePause(): void {
-    const runtime = this.#session?.runtime;
+    const runtime = this.#runtime();
     if (runtime === undefined) return;
     runtime.setPaused(!runtime.paused);
     this.#pauseBtn.textContent = runtime.paused ? "Resume" : "Pause";
@@ -220,7 +215,7 @@ class Playground {
   // ── record + transcript ──────────────────────────────────────────
   #copyEvents(): void {
     this.#refreshEvents();
-    const text = this.#session?.runtime.eventsJSON() ?? "[]";
+    const text = this.#runtime()?.eventsJSON() ?? "[]";
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- lib.dom types Navigator.clipboard as always present; insecure contexts and older browsers genuinely omit it at runtime.
     if (typeof navigator !== "undefined" && navigator.clipboard !== undefined) {
       void navigator.clipboard.writeText(text).catch(() => {
@@ -232,7 +227,7 @@ class Playground {
   }
 
   #refreshEvents(): void {
-    const runtime = this.#session?.runtime;
+    const runtime = this.#runtime();
     if (runtime === undefined) return;
     this.#eventsArea.value = runtime.eventsJSON();
     this.#eventsSummary.textContent = `Recorded events (${runtime.eventCount()})`;
@@ -240,7 +235,7 @@ class Playground {
 
   #onFrame(frame: number): void {
     this.#frameReadout.textContent = `frame ${frame}`;
-    const runtime = this.#session?.runtime;
+    const runtime = this.#runtime();
     if (runtime !== undefined) this.#eventsSummary.textContent = `Recorded events (${runtime.eventCount()})`;
   }
 

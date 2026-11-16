@@ -11,7 +11,7 @@
 // the light's spread, and whether the sofa or the table is in the way). Each
 // frame: multiply in each light's colour and brightness for that frame and sum.
 // That is a deferred renderer with baked visibility, in plain code.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 
 export const W = 1200;
 export const H = 860;

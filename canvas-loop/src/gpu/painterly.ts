@@ -2,7 +2,7 @@
 // hatching, paper, in that order (shader-painterly.ts). Their patterns live in
 // the coordinates where the group is called, so `toLocal` maps device pixels
 // back to them; the paper is the scope's at the end of the group's body (R9).
-import type { Effects } from "../scene/api.js";
+import type { Effects } from "../core/tea.js";
 import type { ColorParser, Rgba } from "../scene/colors.js";
 import { det } from "../scene/mat.js";
 import type { Mat, PaperSettings } from "../scene/nodes.js";

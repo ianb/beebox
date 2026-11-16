@@ -2,7 +2,7 @@
 //
 // Geometry is pure functions of the trials and the display switches, so draw
 // can hit-test the pointer against the same numbers it paints.
-import type { DeepReadonly, SceneStyle as Style, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Style, View } from "@ianbicking/canvas-loop";
 
 import { card, FAINT, GRID, INK, say, SOFT } from "./look-tea.js";
 import { PLANET_COLOR, PLANETS, theoryPeriod, type Planet } from "./physics-tea.js";

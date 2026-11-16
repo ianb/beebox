@@ -1,7 +1,7 @@
 // The Hollow Atrium (intra-game): "A vast, empty space beneath a frozen sunset."
 // The room and its light are computed per pixel (room-tea.ts); the statues and the
 // one visitor are painted (figures-tea.ts); dust drifts in the light.
-import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import { STATUES, VISITOR, paintFigures, paintMotes } from "./figures-tea.js";
 import { H, W, paintRoom } from "./room-tea.js";
 

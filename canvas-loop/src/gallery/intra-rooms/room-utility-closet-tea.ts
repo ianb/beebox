@@ -5,7 +5,7 @@
 // lunchbox); a cracked pipe dripping into a can; a swinging bare bulb; and in
 // the corner, behind a mop bucket and bottles, the SENTRA panel: a heavy grey box
 // with a big plug, flickering lamps, a frayed cable throwing sparks, and a note.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, mixHex, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { bareBulb, box, bulbPoint, cable, mascot, shelfUnit, slab, sparks, stencil } from "./parts-c-tea.js";
 import { amaEye, amaSpeaker, citizen, pipe } from "./props-tea.js";

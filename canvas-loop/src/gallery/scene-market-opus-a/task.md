@@ -14,7 +14,7 @@ feedback is when something is wrong.
 
 1. `beebox/docs/plans/canvas-loop-scene/scene-api-draft.md`: the API. Where it
    disagrees with today's docs, it wins.
-2. `canvas-loop/src/scene/api.ts`: its types. In a sketch, import
+2. `canvas-loop/src/core/tea.ts`: its types (in scene/api.ts when this was written; merged in scene core chunk 6). In a sketch, import
    them from `@ianbicking/canvas-loop` (`SceneView as View`, `Msg`,
    `ParamsDecl`, `ParamValues`).
 3. `canvas-loop/TEA.md` and `canvas-loop/BRUSHES.md`: today's API, for

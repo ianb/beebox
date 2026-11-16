@@ -2,7 +2,7 @@
 // return what it saw: the run's error line (if any) and the transcript.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Msg } from "../../../src/scene/api.js";
+import type { Msg } from "../../../src/core/tea.js";
 import { toTeaModule } from "../../../src/headless/tea-load.js";
 import { teaRun } from "../../../src/headless/tea-runtime/runner.js";
 import { tmpDir } from "../../helpers.js";

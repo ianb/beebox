@@ -9,7 +9,7 @@
 // fresh each frame (not accumulated), so a speed change takes effect
 // immediately and hit-testing in `update` (which runs *before* that frame's
 // draw) can predict the exact on-screen spot with the same formula.
-import type { DeepReadonly, Msg, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Style, Util, View } from "@ianbicking/canvas-loop";
 
 interface Planet {
   name: string;

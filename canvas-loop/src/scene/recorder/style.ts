@@ -5,7 +5,7 @@ import { compositeOp } from "../../core/compose.js";
 import { SketchUsageError, assertUnit } from "../../core/errors.js";
 import type { BlendMode, ClipShape, Paint, PathCommand, Vec2 } from "../../core/paint.js";
 import { isPathShape } from "../../core/paint.js";
-import type { Effects, GroupOptions, Material, PlaceOptions, Style } from "../api.js";
+import type { Effects, GroupOptions, Material, PlaceOptions, Style } from "../../core/tea.js";
 import { UnsupportedCallError } from "../errors.js";
 import type { Geom, LightingRec, PaperSettings, ShapeStyle } from "../nodes.js";
 import { resolveBrushStroke } from "./brush-style.js";

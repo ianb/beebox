@@ -1,7 +1,7 @@
 // Opening the GPU in a browser, with none of `open.ts`'s Node paths
 // (Dawn, napi-rs canvas), so a browser bundle pulls in neither. `open.ts`
 // reuses the adapter step (`openOn`) and the OffscreenCanvas contexts.
-import type { Ctx2D, LayerImage } from "../core/paint.js";
+import type { Ctx2D, LayerImage } from "../core/ctx2d.js";
 import { TextMeasurer } from "../core/text/measure.js";
 import type { ColorParser } from "../scene/colors.js";
 import { colorsFrom } from "../scene/colors.js";

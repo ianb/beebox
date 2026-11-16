@@ -18,7 +18,7 @@ import { sharedGpu } from "../../src/headless/scene/surface.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { Scene } from "../../src/scene/nodes.js";
-import type { Picture, View } from "../../src/scene/api.js";
+import type { Picture, View } from "../../src/core/tea.js";
 import type { Model } from "./dev-loop/cases.js";
 import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 import { parity } from "./compare.js";

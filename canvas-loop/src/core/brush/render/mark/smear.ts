@@ -13,8 +13,8 @@
 // with a uniform alpha, then add with `lighter`.
 import { SketchUsageError } from "../../../errors.js";
 import { cssColour, parseColour } from "../colour.js";
-import type { Ctx2D, Layer, LayerImage } from "../../../paint.js";
-import { withSaved } from "../../../paint.js";
+import type { Ctx2D, Layer, LayerImage } from "../../../ctx2d.js";
+import { withSaved } from "../../../ctx2d.js";
 import type { Sample } from "../../sample.js";
 import type { SmearBrush } from "../../types.js";
 

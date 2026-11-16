@@ -5,7 +5,7 @@
 // versions shared by reference between the frames that place them.
 import type { Brush, Gesture } from "../core/brush/types.js";
 import type { BlendMode, Paint, PathCommand, TextStyle, Vec2 } from "../core/paint.js";
-import type { Effects, Light, Material } from "./api.js";
+import type { Effects, Light, Material } from "../core/tea.js";
 
 /** A 2D affine transform `[a, b, c, d, e, f]`: x' = a·x + c·y + e, y' = b·x + d·y + f (Canvas2D order). */
 export type Mat = readonly [number, number, number, number, number, number];

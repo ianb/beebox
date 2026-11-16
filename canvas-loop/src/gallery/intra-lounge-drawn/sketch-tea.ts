@@ -3,7 +3,7 @@
 // in the corner, offering unlabeled drinks."
 // The room is drawn once (room-tea.ts) and kept; each frame the screens, glows and
 // lights are drawn over it (light-tea.ts).
-import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import { paintLight } from "./light-tea.js";
 import { paintRoom } from "./room-tea.js";
 

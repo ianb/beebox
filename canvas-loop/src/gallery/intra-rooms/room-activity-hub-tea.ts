@@ -3,7 +3,7 @@
 // for 'extreme resting', competing to nap the longest. Sky: clear, birds sometimes
 // fly backward or in loops."
 // Exits (2): Hollow Atrium (edge-left), Joyous Cafe (edge-right).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type RoomSpec, at, blob, ellipsePts, glow, mixHex, roundRectPts, stroke } from "./kit-tea.js";
 import { dial, signBox } from "./parts-a-tea.js";
 import { amaEye, amaSpeaker, bunting, citizen, clock, pacing, poster, tubeGlow, tubeLight } from "./props-tea.js";

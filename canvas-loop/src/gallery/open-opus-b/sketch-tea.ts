@@ -2,7 +2,7 @@
 // walks the long boardwalk out from the stilt village, lighting the lamps one
 // by one so the fishing boats can find their way home. This page: the last
 // lamp, at the very end of the pier, with one small boat still out on the water.
-import type { DeepReadonly, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Util, View } from "@ianbicking/canvas-loop";
 
 import { drawHeron } from "./heron-tea.js";
 import { drawLantern, drawWalkway, LAMP, LIT_LAMPS } from "./pier-tea.js";

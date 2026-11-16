@@ -3,7 +3,7 @@
 // differ in length; a film tone curve keeps the darks deep and the lamp's
 // highlights soft. Params switch caster heights and the tone curve off, to
 // compare, and move the lamp.
-import type { Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

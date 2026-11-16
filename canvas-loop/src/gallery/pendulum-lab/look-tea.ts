@@ -1,5 +1,5 @@
 // Shared look: palette, fonts and a one-line text helper.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 
 export const FONT = "Avenir Next, Helvetica Neue, Helvetica, Arial, sans-serif";
 export const PAGE = "#f3efe6";

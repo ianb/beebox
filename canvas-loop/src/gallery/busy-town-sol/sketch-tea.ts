@@ -1,4 +1,4 @@
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 import { paintOccupiedWindowTrim, paintTown } from "./town-tea.js";
 import { THINGS, paintSprite, type Thing } from "./people-tea.js";
 

@@ -4,7 +4,7 @@
 // at its start, a length of 2.85 at step 0.3, every pressure form, wobble
 // on open and closed contours, a rotated, scaled call, a sample at a corner,
 // an empty contour, and a closed dot with wobble.
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 
 export const FOCUSED_SIZE = { width: 200, height: 160 };
 

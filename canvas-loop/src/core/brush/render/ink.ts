@@ -1,7 +1,8 @@
 // The colour each dab or bristle paints: black coverage (coloured later, in one
 // pass), or, for a brush with hueJitter/lightJitter, each one's own colour.
 import { SketchUsageError } from "../../errors.js";
-import type { Ctx2D, Paint } from "../../paint.js";
+import type { Paint } from "../../paint.js";
+import type { Ctx2D } from "../../ctx2d.js";
 import { cssColour, parseColour, shiftColour } from "./colour.js";
 import type { Rgba } from "./colour.js";
 import { rand } from "../random.js";

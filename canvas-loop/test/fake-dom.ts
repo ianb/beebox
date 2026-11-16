@@ -3,6 +3,11 @@
 // fakes on globalThis — node --test runs each file in its own process, so the
 // install can't leak into the SSR test's asserted-DOM-free environment.
 import type { ParamsDecl } from "@ianbicking/canvas-loop";
+import type { FigureGpu } from "@ianbicking/canvas-loop/browser";
+import { openTextMeasurer } from "../src/device/open.js";
+import type { GpuHandle } from "../src/device/open.js";
+import type { GpuLease } from "../src/browser/scene/shared-gpu.js";
+import type { SurfaceRenderer } from "../src/browser/scene/surface.js";
 
 // ── fake DOM ─────────────────────────────────────────────────────────
 
@@ -86,7 +91,12 @@ export class FakeElement {
   getBoundingClientRect(): { left: number; top: number; width: number; height: number } {
     return { left: 0, top: 0, width: this.width, height: this.height };
   }
+  /** What the WebGPU context stand-in was asked: configured and unconfigured counts. */
+  gpuContext = { configured: 0, unconfigured: 0 };
   getContext(kind: string): unknown {
+    if (kind === "webgpu") {
+      return { configure: () => void this.gpuContext.configured++, unconfigure: () => void this.gpuContext.unconfigured++, getCurrentTexture: () => ({}) };
+    }
     // A permissive 2D-context stand-in: method calls no-op, property sets stick.
     if (kind !== "2d") return null;
     // Property writes land on the target; reads of unset names yield a no-op
@@ -144,6 +154,53 @@ Object.assign(globalThis, {
   },
 });
 
+// ── stand-in GPU ─────────────────────────────────────────────────────
+
+Object.assign(globalThis, { GPUTextureUsage: Reflect.get(globalThis, "GPUTextureUsage") ?? { RENDER_ATTACHMENT: 16, COPY_DST: 2 } });
+
+/** A lease on a stand-in device: the figure code reads only `device` off the handle. */
+export interface FakeLease extends GpuLease {
+  released: boolean;
+}
+
+export function fakeLease(): FakeLease {
+  const lease: FakeLease = {
+    // eslint-disable-next-line no-restricted-syntax -- test stand-in: the figure reads only `device` off the handle, and only for its own getter
+    gpu: { device: {} } as GpuHandle,
+    released: false,
+    onLost: () => {},
+    release: () => {
+      lease.released = true;
+    },
+  };
+  return lease;
+}
+
+const stubRenderer = (): SurfaceRenderer => ({
+  present: async () => {},
+  release: () => {},
+  destroy: () => {},
+  held: { textures: 0, bytes: 0, inUse: 0, images: 0, imageBytes: 0, strokes: 0, geometry: 0, tiles: 0, tileBytes: 0 },
+  // eslint-disable-next-line no-restricted-syntax -- test stand-in: the surface never reads the stats it passes through
+  stats: {} as SurfaceRenderer["stats"],
+});
+
+const text = await openTextMeasurer();
+
+/**
+ * A figure's device, text and colours as stand-ins: `lease` opens a fake lease
+ * (pass a pending promise to hold the figure before `ready`). Colours parse as
+ * opaque black.
+ */
+export function fakeGpu(lease?: () => Promise<GpuLease>): FigureGpu {
+  return { lease: lease ?? (async () => fakeLease()), text, colors: () => [0, 0, 0, 1], makeRenderer: stubRenderer };
+}
+
+/** Let pending promises and the figure's lazy import settle. */
+export async function settle(): Promise<void> {
+  for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
+}
+
 /** Fire every pending rAF callback `times` times, 17 virtual ms apart. */
 export function runFrames(times: number): void {
   for (let i = 0; i < times; i += 1) {
@@ -164,6 +221,21 @@ export function captureWarnings(fn: () => void): string[] {
   };
   try {
     fn();
+  } finally {
+    console.warn = original;
+  }
+  return warnings;
+}
+
+/** As captureWarnings, for a body that awaits (the figure starts asynchronously). */
+export async function captureWarningsAsync(fn: () => Promise<void>): Promise<string[]> {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(" "));
+  };
+  try {
+    await fn();
   } finally {
     console.warn = original;
   }

@@ -1,6 +1,6 @@
 // Acorn Lane: a busy picture-book street. Every townsperson idles; click one
 // and it performs its little act, sometimes setting off a neighbour.
-import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamValues, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
 import type { Id } from "./things-tea.js";
 import { CHAIN, H, IDS, W, act, boxOf, hit } from "./things-tea.js";
 import { paintNightSky, paintTown } from "./town-tea.js";

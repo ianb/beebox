@@ -15,7 +15,7 @@ import type {
   View,
 } from "@ianbicking/canvas-loop";
 
-type Ctx2D = View["ctx"];
+export const renderer = "scene";
 
 export const params = {
   speed: { type: "number", min: 0, max: 3, default: 1, step: 0.1 },
@@ -194,13 +194,13 @@ interface Point {
  * perpendicular to the shoulder→grip line so it reads as a wing, not a blob.
  */
 function drawWing(params_: {
-  ctx: Ctx2D;
+  v: View;
   shoulder: Point;
   grip: Point;
   bulge: number;
   color: string;
 }): void {
-  const { ctx, shoulder, grip, bulge, color } = params_;
+  const { v, shoulder, grip, bulge, color } = params_;
   const midX = (shoulder.x + grip.x) / 2;
   const midY = (shoulder.y + grip.y) / 2;
   const dx = grip.x - shoulder.x;
@@ -208,36 +208,19 @@ function drawWing(params_: {
   const len = Math.hypot(dx, dy) || 1;
   const nx = -dy / len;
   const ny = dx / len;
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = "#64748b";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(shoulder.x, shoulder.y);
-  ctx.quadraticCurveTo(midX + nx * bulge, midY + ny * bulge, grip.x, grip.y);
-  ctx.quadraticCurveTo(
-    midX - nx * (bulge * 0.35),
-    midY - ny * (bulge * 0.35),
-    shoulder.x,
-    shoulder.y,
+  const edge: Style = { stroke: "#64748b", weight: 1.5 };
+  v.path(
+    [
+      ["move", shoulder.x, shoulder.y],
+      ["quad", midX + nx * bulge, midY + ny * bulge, grip.x, grip.y],
+      ["quad", midX - nx * (bulge * 0.35), midY - ny * (bulge * 0.35), shoulder.x, shoulder.y],
+      ["close"],
+    ],
+    { ...edge, fill: color },
   );
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
   // A couple of feather-crease lines from shoulder toward the tip.
-  ctx.beginPath();
-  ctx.moveTo(shoulder.x, shoulder.y);
-  ctx.lineTo(
-    shoulder.x + dx * 0.6 + nx * bulge * 0.3,
-    shoulder.y + dy * 0.6 + ny * bulge * 0.3,
-  );
-  ctx.moveTo(shoulder.x, shoulder.y);
-  ctx.lineTo(
-    shoulder.x + dx * 0.8 + nx * bulge * 0.15,
-    shoulder.y + dy * 0.8 + ny * bulge * 0.15,
-  );
-  ctx.stroke();
-  ctx.restore();
+  v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.6 + nx * bulge * 0.3, shoulder.y + dy * 0.6 + ny * bulge * 0.3, edge);
+  v.line(shoulder.x, shoulder.y, shoulder.x + dx * 0.8 + nx * bulge * 0.15, shoulder.y + dy * 0.8 + ny * bulge * 0.15, edge);
 }
 
 /** Pelican anatomy, hand-fitted around the saddle/handlebar/pedal anchor points. */
@@ -247,7 +230,6 @@ function drawPelican(params_: {
   farFootAngle: number;
 }): void {
   const { v, nearFootAngle, farFootAngle } = params_;
-  const ctx = v.ctx;
   const bodyX = SEAT_TOP.x + 2;
   const bodyY = SEAT_TOP.y - 46;
 
@@ -270,7 +252,7 @@ function drawPelican(params_: {
   const farShoulder = { x: bodyX + 8, y: bodyY - 18 };
   const farGrip = { x: HEAD_TOP.x - 22, y: HEAD_TOP.y - 22 };
   drawWing({
-    ctx,
+    v,
     shoulder: farShoulder,
     grip: farGrip,
     bulge: 32,
@@ -293,21 +275,19 @@ function drawPelican(params_: {
   const neckBase = { x: bodyX + 32, y: bodyY - 26 };
   const headX = HEAD_TOP.x - 2;
   const headY = HEAD_TOP.y - 62;
-  ctx.save();
-  ctx.strokeStyle = "#f8fafc";
-  ctx.lineWidth = 32;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(neckBase.x, neckBase.y);
-  ctx.quadraticCurveTo(neckBase.x + 34, bodyY - 96, headX, headY);
-  ctx.stroke();
-  ctx.restore();
+  v.path(
+    [
+      ["move", neckBase.x, neckBase.y],
+      ["quad", neckBase.x + 34, bodyY - 96, headX, headY],
+    ],
+    { stroke: "#f8fafc", weight: 32, cap: "round" },
+  );
 
   // ── Near wing: drawn after the neck so it overlaps the body/neck join, folded onto the near handlebar grip.
   const nearShoulder = { x: bodyX + 14, y: bodyY - 6 };
   const nearGrip = { x: HEAD_TOP.x + 20, y: HEAD_TOP.y - 18 };
   drawWing({
-    ctx,
+    v,
     shoulder: nearShoulder,
     grip: nearGrip,
     bulge: 40,
@@ -322,39 +302,37 @@ function drawPelican(params_: {
   const billTipY = headY + 10;
 
   // Throat pouch first — the upper mandible sits on top of it and hides the seam.
-  ctx.save();
-  ctx.fillStyle = "#fb923c";
-  ctx.strokeStyle = "#c2660f";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(headX - 4, headY + 2);
-  ctx.quadraticCurveTo(headX + 26, headY + 46, headX + 60, headY + 22);
-  ctx.quadraticCurveTo(billTipX + 4, billTipY + 8, billTipX - 2, billTipY);
-  ctx.quadraticCurveTo(headX + 40, headY + 12, headX - 4, headY + 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
+  v.path(
+    [
+      ["move", headX - 4, headY + 2],
+      ["quad", headX + 26, headY + 46, headX + 60, headY + 22],
+      ["quad", billTipX + 4, billTipY + 8, billTipX - 2, billTipY],
+      ["quad", headX + 40, headY + 12, headX - 4, headY + 2],
+      ["close"],
+    ],
+    { fill: "#fb923c", stroke: "#c2660f", weight: 1.5 },
+  );
 
   // Upper mandible: a long, flat, slightly hooked-tip wedge from the head to the bill tip.
-  ctx.save();
-  ctx.fillStyle = "#f2c14e";
-  ctx.strokeStyle = "#c99a3b";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(headX - 8, headY - 18);
-  ctx.quadraticCurveTo(headX + 46, headY - 20, billTipX, billTipY - 6);
-  ctx.quadraticCurveTo(billTipX - 6, billTipY + 2, billTipX - 14, billTipY);
-  ctx.quadraticCurveTo(headX + 40, headY - 2, headX - 2, headY - 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  const billEdge: Style = { stroke: "#c99a3b", weight: 1.5 };
+  v.path(
+    [
+      ["move", headX - 8, headY - 18],
+      ["quad", headX + 46, headY - 20, billTipX, billTipY - 6],
+      ["quad", billTipX - 6, billTipY + 2, billTipX - 14, billTipY],
+      ["quad", headX + 40, headY - 2, headX - 2, headY - 2],
+      ["close"],
+    ],
+    { ...billEdge, fill: "#f2c14e" },
+  );
   // Culmen ridge line down the top of the bill for definition.
-  ctx.beginPath();
-  ctx.moveTo(headX + 4, headY - 12);
-  ctx.quadraticCurveTo(headX + 48, headY - 13, billTipX - 4, billTipY - 4);
-  ctx.stroke();
-  ctx.restore();
+  v.path(
+    [
+      ["move", headX + 4, headY - 12],
+      ["quad", headX + 48, headY - 13, billTipX - 4, billTipY - 4],
+    ],
+    billEdge,
+  );
 
   // Eye: white ring behind a dark pupil, set high on the head so it clears the bill.
   v.circle(headX - 4, headY - 18, 4, { fill: "#1e293b" });

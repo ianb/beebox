@@ -1,6 +1,6 @@
 // Painters for props and people, in map pixels. Each takes the centre of the
 // prop's footprint on the floor (px, py); tall things rise above it.
-import type { SceneStyle as Style, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Style, View } from "@ianbicking/canvas-loop";
 import type { Prop } from "./plan-tea.js";
 import { T } from "./plan-tea.js";
 

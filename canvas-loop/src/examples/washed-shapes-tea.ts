@@ -1,7 +1,7 @@
 // Flat shapes and brushed strokes, with and without a watercolour wash
 // (draft effects.wash): the look round's test for pooling, blooms, drying
 // edges and faint granulation.
-import type { Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

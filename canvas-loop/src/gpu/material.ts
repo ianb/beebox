@@ -8,7 +8,7 @@
 // - layer 2, only in a group that holds `receivesShadow: false`: the
 //   non-receiving amount (1 for such a shape, 0 for every other), coverage.
 // A shape without a material is flat matte (zeros apart from the flat normal).
-import type { Material } from "../scene/api.js";
+import type { Material } from "../core/tea.js";
 import type { Rgba } from "../scene/colors.js";
 import type { FxPlan, Sigma } from "./effects.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";

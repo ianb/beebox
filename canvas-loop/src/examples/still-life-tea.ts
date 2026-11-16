@@ -2,7 +2,7 @@
 // from highlight through half tone to core shadow, with cast shadows on the
 // table: the look round's test for hatching (draft effects.hatching), where
 // light areas stay bare, half tones take single lines and shadows cross.
-import type { Msg, ParamsDecl, ParamValues, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

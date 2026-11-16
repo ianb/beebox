@@ -2,7 +2,7 @@
 // strum. Each pluck is one sound: `update` records it with a fresh id, and
 // `sound` returns the recent plucks as voices (Karplus–Strong strings). The
 // drawn wobble is a decaying standing wave, not a physics simulation.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, SceneView as View, Voice } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Voice } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

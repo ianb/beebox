@@ -1,26 +1,14 @@
-// Shared drawing-data types for the View and the Painter. Everything here is DATA, not calls on a live context: point
-// arrays, a tagged path mini-language, and gradient handles. That keeps the
-// surface serializable-in-principle — a later browser renderer could emit these
-// as JSON draw commands — and keeps live `CanvasGradient`/`Path2D` objects from
-// leaking into sketch code. The `trace*`/`resolveGradient` helpers below are the
-// one place those data forms are turned into ctx calls; the engine calls them.
+// The drawing-data types of the View: styles, effects, light, pictures, text
+// options. Everything here is DATA, not calls on a live context: point arrays,
+// a tagged path mini-language, and gradient handles, which the scene recorder
+// copies at the call.
 
 import type { BrushName } from "./brush/presets.js";
 import type { BlendMode, Effects } from "./compose.js";
 import type { Brush, BrushOverrides, Gesture } from "./brush/types.js";
 
 export { BLEND_MODES, compositeOp } from "./compose.js";
-export type { BlendMode, Effects, Shadow } from "./compose.js";
-
-// ── Structural 2D-context subset ─────────────────────────────────────
-// The drawing engine (paint.ts helpers + Painter) is typed against this
-// structural subset rather than a concrete `SKRSContext2D`/`CanvasRenderingContext2D`.
-// Both the headless Skia context and the browser's DOM context satisfy it, so one
-// drawing implementation serves both the CLI and the browser harness. The two
-// concrete contexts are handed in through a single boundary cast each (their
-// `fillStyle` unions are wider — they include `CanvasPattern` — so structural
-// assignability doesn't hold, but every method/property the engine touches is
-// shared and behaves identically).
+export type { BlendMode, Effects, Hatching, Shadow, Wash } from "./compose.js";
 
 /** Text weight and slant, as p5's `textStyle`. */
 export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
@@ -91,6 +79,14 @@ export interface Style {
   readonly erase?: boolean;
   /** Dash a plain stroke: lengths on, off, on, … in logical pixels (`[6, 4]`). Brushed strokes cannot be dashed. */
   readonly dash?: readonly number[];
+  /** Line ends of a plain stroke, as Canvas2D `lineCap`. */
+  readonly cap?: "butt" | "round" | "square";
+  /** Corners of a plain stroke, as Canvas2D `lineJoin`. */
+  readonly join?: "miter" | "round" | "bevel";
+  /** How the shape takes light (only inside a lit group). */
+  readonly material?: Material;
+  /** Effects on this shape alone: it draws into its own layer, the effects apply, then the layer composites with `blend` or `erase`. */
+  readonly effects?: Effects;
 }
 
 /** A brush preset with some fields changed, as plain data. */
@@ -103,103 +99,15 @@ export interface PasteOptions {
   readonly erase?: boolean;
 }
 
-/** A transform scope for `at`: applied as translate, then rotate, then scale. */
+/** A transform scope for `at`: applied as matrix, then translate, rotate, skew, scale. */
 export interface AtOptions {
   readonly translate?: readonly [number, number];
   readonly rotate?: number;
   readonly scale?: number | readonly [number, number];
-}
-
-/** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
-export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
-/** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */
-export type CtxTextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
-
-/** A gradient handle as both contexts expose it — the one shared method is `addColorStop`. */
-export interface Ctx2DGradient {
-  addColorStop(offset: number, color: string): void;
-}
-
-/**
- * An offscreen surface's image, as `drawImage` accepts it. Opaque: each runtime
- * hands its real canvas through one boundary cast in its `makeLayer` factory.
- */
-export interface LayerImage {
-  readonly layerImageBrand: never;
-}
-
-/** An offscreen drawing surface: a context to draw on and the image to composite. */
-export interface Layer {
-  readonly ctx: Ctx2D;
-  readonly image: LayerImage;
-}
-
-/** Make an offscreen layer of the given device-pixel size (runtime-specific). */
-export type MakeLayer = (size: { width: number; height: number }) => Layer;
-
-/** A 2D affine transform, `[a b c d e f]` as Canvas2D reports it. */
-export interface CtxTransform {
-  readonly a: number;
-  readonly b: number;
-  readonly c: number;
-  readonly d: number;
-  readonly e: number;
-  readonly f: number;
-}
-
-/** Pixel data from `createImageData`. */
-export interface CtxImageData {
-  readonly width: number;
-  readonly height: number;
-  readonly data: Uint8ClampedArray;
-}
-
-/** The exact 2D-context surface the drawing engine uses. */
-export interface Ctx2D {
-  fillStyle: string | Ctx2DGradient;
-  strokeStyle: string | Ctx2DGradient;
-  lineWidth: number;
-  lineCap: "butt" | "round" | "square";
-  lineJoin: "bevel" | "miter" | "round";
-  globalAlpha: number;
-  globalCompositeOperation: string;
-  /** A CSS filter list applied to later drawing ("none" for none). */
-  filter: string;
-  font: string;
-  textAlign: CtxTextAlign;
-  textBaseline: CtxTextBaseline;
-  save(): void;
-  restore(): void;
-  resetTransform(): void;
-  getTransform(): CtxTransform;
-  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
-  drawImage(image: LayerImage, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
-  createImageData(width: number, height: number): CtxImageData;
-  getImageData(x: number, y: number, w: number, h: number): CtxImageData;
-  putImageData(imageData: CtxImageData, dx: number, dy: number): void;
-  clearRect(x: number, y: number, w: number, h: number): void;
-  translate(x: number, y: number): void;
-  rotate(angle: number): void;
-  scale(x: number, y: number): void;
-  beginPath(): void;
-  closePath(): void;
-  moveTo(x: number, y: number): void;
-  lineTo(x: number, y: number): void;
-  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
-  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
-  rect(x: number, y: number, w: number, h: number): void;
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
-  ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number): void;
-  fill(): void;
-  stroke(): void;
-  clip(): void;
-  fillRect(x: number, y: number, w: number, h: number): void;
-  fillText(text: string, x: number, y: number): void;
-  strokeText(text: string, x: number, y: number): void;
-  setLineDash(segments: number[]): void;
-  measureText(text: string): { readonly width: number };
-  createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
-  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
+  /** Shear angles in radians, `[x, y]`, as CSS `skew()`. */
+  readonly skew?: readonly [number, number];
+  /** `[a, b, c, d, e, f]` as Canvas2D `transform()` and CSS `matrix()`. */
+  readonly matrix?: readonly [number, number, number, number, number, number];
 }
 
 /** A single point, `[x, y]`. The vertex form used by `polygon` and `clip`. */
@@ -288,11 +196,103 @@ export interface SpriteOptions {
   readonly height: number;
 }
 
-/** Options for `group`: opacity applied once to the finished group, its blend mode, and its effects. */
+/** Options for `group`: opacity applied once to the finished group, its blend mode, clip, effects and lighting. */
 export interface GroupOptions {
+  /** Names the group in warnings, scene outlines and diffs; draws nothing. */
+  readonly name?: string;
   readonly opacity?: number;
   readonly blend?: BlendMode;
   readonly effects?: Effects;
+  readonly lighting?: Lighting;
+  /** Clip the group's drawing (applied after its effects, as CSS `clip-path`). */
+  readonly clip?: ClipShape | readonly ClipShape[];
+}
+
+// ── Light ────────────────────────────────────────────────────────────
+
+/** How a surface takes light. Without one, a shape in a lit group is flat matte. */
+export interface Material {
+  /** Rounded edges, in logical pixels: the surface bends away near the outline (0 = flat). */
+  readonly bevel?: number;
+  /** How far the surface rises from the page, 0..1; with `bevel` it shapes the normals. */
+  readonly relief?: number;
+  /** Highlights, 0..1. */
+  readonly shine?: number;
+  /** Glows by itself: lights don't darken it (screens, lamps), 0..1. */
+  readonly emissive?: number;
+  /**
+   * Blocks light, casting a 2D shadow. `true` stands 32 logical pixels above
+   * the page; a number is the caster's height (0..1024), so a taller caster
+   * casts a longer shadow, and a lower light a longer one still. A pixel on a
+   * caster sits at its height: only taller casters shadow it.
+   */
+  readonly castsShadow?: boolean | number;
+  /**
+   * `false`: no light's shadow falls on this shape, for a backdrop in a side
+   * view (a sky behind a figure). It is still lit, and still casts if it has
+   * `castsShadow`. Default `true`.
+   */
+  readonly receivesShadow?: boolean;
+}
+
+export interface Light {
+  readonly kind: "point" | "spot" | "directional";
+  /** Position (point, spot) in the current coordinates. */
+  readonly at?: Vec2;
+  /** Height above the picture plane in logical pixels: higher gives a wider, softer pool and shorter shadows; low lights rake across relief. */
+  readonly height?: number;
+  readonly color?: string;
+  /** Brightness, 0.. (1 is a normal lamp). */
+  readonly energy?: number;
+  /** Distance where it fades out, logical pixels. */
+  readonly reach?: number;
+  /** Spot and directional: the direction it points, radians from +x, clockwise (y down), as `arc`. */
+  readonly direction?: number;
+  /** Spot: half-angle of the cone, radians. */
+  readonly cone?: number;
+}
+
+/** A group with `lighting` lights everything inside it with its lights. */
+export interface Lighting {
+  /** The light everywhere, before any lamp (default a dim neutral). */
+  readonly ambient?: string;
+  /** Soft or hard shadows from `castsShadow` shapes. */
+  readonly shadows?: "none" | "hard" | "soft";
+  /** Brightness of the lit result in stops (default 0): +1 doubles the light, −1 halves it. */
+  readonly exposure?: number;
+  /**
+   * How light maps to colour, 0..1 (default 0: lit colour clips at white).
+   * Toward 1, a film-like curve: shadows go deeper and highlights roll off
+   * softly instead of clipping. Middle tones stay about where they were.
+   */
+  readonly toneCurve?: number;
+}
+
+// ── Pictures ─────────────────────────────────────────────────────────
+
+/** A reusable drawing, recorded once and placed any number of times. */
+export interface Picture {
+  readonly pictureBrand: never;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface PictureOptions {
+  /** With width, height and deps, identifies a version; an existing version is reused without running `body`. */
+  readonly key: string;
+  /** Everything the body reads that can change. Omitted: never changes. Testing mode re-records to catch missing deps. */
+  readonly deps?: readonly unknown[];
+  /** The picture's layout box (0..width, 0..height); drawing outside it is kept. */
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface PlaceOptions {
+  /** A material for the picture's shapes that have none (used only inside a lit group). */
+  readonly material?: Material;
+  readonly opacity?: number;
+  readonly blend?: BlendMode;
+  readonly erase?: boolean;
 }
 
 /** Any gradient handle. */
@@ -313,95 +313,4 @@ export type ClipShape = readonly Vec2[] | readonly PathCommand[];
 export function isPathShape(shape: ClipShape): shape is readonly PathCommand[] {
   const first = shape[0];
   return first !== undefined && typeof first[0] === "string";
-}
-
-/** Trace a closed polygon onto `ctx`'s current path (no fill/stroke). */
-export function tracePolygon(ctx: Ctx2D, points: readonly Vec2[]): void {
-  ctx.beginPath();
-  let started = false;
-  for (const [x, y] of points) {
-    if (started) {
-      ctx.lineTo(x, y);
-    } else {
-      ctx.moveTo(x, y);
-      started = true;
-    }
-  }
-  ctx.closePath();
-}
-
-/** Trace a `PathCommand` list onto `ctx`'s current path (no fill/stroke). */
-export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
-  ctx.beginPath();
-  for (const cmd of commands) {
-    switch (cmd[0]) {
-      case "move":
-        ctx.moveTo(cmd[1], cmd[2]);
-        break;
-      case "line":
-        ctx.lineTo(cmd[1], cmd[2]);
-        break;
-      case "quad":
-        ctx.quadraticCurveTo(cmd[1], cmd[2], cmd[3], cmd[4]);
-        break;
-      case "bezier":
-        ctx.bezierCurveTo(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
-        break;
-      case "close":
-        ctx.closePath();
-        break;
-    }
-  }
-}
-
-/**
- * Run a fill in the paint's own space. An elliptical radial gradient is a
- * circular one under a vertical scale about its centre; Canvas2D reads a
- * gradient in the transform current at fill time, while the path was already
- * traced, so only the gradient is squashed. Only fills use this: a stroke
- * would squash its line width too.
- */
-/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
-/** Apply an `at` scope's transform to `ctx`: translate, then rotate, then scale. */
-export function applyAt(ctx: Ctx2D, options: AtOptions): void {
-  const { translate, rotate, scale } = options;
-  if (translate !== undefined) ctx.translate(translate[0], translate[1]);
-  if (rotate !== undefined) ctx.rotate(rotate);
-  if (scale === undefined) return;
-  if (typeof scale === "number") ctx.scale(scale, scale);
-  else ctx.scale(scale[0], scale[1]);
-}
-
-export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
-  ctx.save();
-  try {
-    return body();
-  } finally {
-    ctx.restore();
-  }
-}
-
-export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
-  const { paint } = args;
-  if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
-    args.fill();
-    return;
-  }
-  const { x2, y2, scaleY } = paint;
-  withSaved(ctx, () => {
-    ctx.translate(x2, y2);
-    ctx.scale(1, scaleY);
-    ctx.translate(-x2, -y2);
-    args.fill();
-  });
-}
-
-/** Build the ctx-bound gradient for a gradient handle. */
-export function resolveGradient(ctx: Ctx2D, g: Gradient): Ctx2DGradient {
-  const grad =
-    g.kind === "linear-gradient"
-      ? ctx.createLinearGradient(g.x1, g.y1, g.x2, g.y2)
-      : ctx.createRadialGradient(g.x1, g.y1, g.r1, g.x2, g.y2, g.r2);
-  for (const [offset, color] of g.stops) grad.addColorStop(offset, color);
-  return grad;
 }

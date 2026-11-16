@@ -1,7 +1,7 @@
 // "Hello, Earth!" — a friendly green alien has just stepped down the ramp of
 // its landed saucer onto a dusk meadow, and waves to us. Picture-book
 // illustration painted with canvas-loop brushes.
-import type { DeepReadonly, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 const W = 800;
 const H = 600;

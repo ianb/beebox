@@ -8,7 +8,7 @@
 import type { ControlBox, ParamsDecl, ParamValues } from "../../core/tea.js";
 import type { TextBox, TextOptions } from "../../core/paint.js";
 import type { PlaygroundModule } from "../sketch-types.js";
-import { SceneMountError } from "../../scene/errors.js";
+import { SketchMountError } from "../../scene/errors.js";
 import type { TextMeasure } from "../../core/view.js";
 import type { DrawSurface } from "../runtime/engine.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
@@ -89,7 +89,7 @@ export class SceneSurface implements DrawSurface {
     this.#d = d;
     this.#lease = d.lease;
     const ctx = d.canvas.getContext("webgpu");
-    if (ctx === null) throw new SceneMountError({ detail: "the canvas gave no WebGPU context (it may already have another context)" });
+    if (ctx === null) throw new SketchMountError({ detail: "the canvas gave no WebGPU context (it may already have another context)" });
     this.#context = ctx;
     this.#recorder = new SceneRecorder(d.size, { text: d.text, colors: d.colors, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
     this.textMeasure = {

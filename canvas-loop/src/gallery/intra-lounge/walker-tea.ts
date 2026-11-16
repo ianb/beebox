@@ -1,7 +1,7 @@
 // A citizen walking through the lounge: along a loop on the floor, tinted by the
 // light where they are, and hidden wherever the room is nearer to the camera
 // (the sofa, the table), using the depth the room was rendered with.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { SCALE, depthOf, lightAt, project, sceneDepth } from "./scene-tea.js";
 
 type RGB = [number, number, number];

@@ -1,7 +1,7 @@
 // The sky screens: each room's ceiling shows the sky its description names. One
 // sky runs behind all the room's panels (so it reads as one picture behind the
 // frames), animated, with scanlines; dead panels stay dark.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, glow, hash, panelBand, panels, rgba } from "./kit-tea.js";
 import { m } from "./sizes-tea.js";
 

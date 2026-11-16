@@ -2,7 +2,7 @@
 // pictures, the light each throws (one function, so the light always matches the
 // picture), the vending machine's hum, the shelves' status lights, and the sky's
 // static bursts. Everything repeats every PERIOD frames.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { CRTS, CRT_FRONT, type Crt, LIGHTS, SCALE, SHELF, SHELF_FACE, VENDING, faceTransform, hash, hex, project, pxPerM } from "./scene-tea.js";
 
 /** Draws `body` in local px on a face of constant z: x right from world x0, y down from world y1. */

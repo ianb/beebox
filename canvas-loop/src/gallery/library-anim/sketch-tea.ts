@@ -1,4 +1,4 @@
-import type { BrushName, DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushName, DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

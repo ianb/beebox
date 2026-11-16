@@ -13,7 +13,7 @@ import type { ColorParser } from "../scene/colors.js";
 import { det, invert, mul } from "../scene/mat.js";
 import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";
-import type { Effects, Material } from "../scene/api.js";
+import type { Effects, Material } from "../core/tea.js";
 import type { Rgba } from "../scene/colors.js";
 import type { LightOut } from "./light.js";
 import { lightPlanOf } from "./light.js";

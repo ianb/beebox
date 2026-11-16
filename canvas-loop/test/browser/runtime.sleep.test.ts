@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, setDensity } from "@ianbicking/canvas-loop/browser";
 import type { Msg, Util } from "@ianbicking/canvas-loop";
+import type { Runtime } from "../../src/browser/runtime/engine.js";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
-import { FakeElement, asHTMLCanvas, rafState, runFrames } from "./fake-dom.js";
+import { FakeElement, asHTMLCanvas, rafState, runFrames, fakeGpu } from "../fake-dom.js";
 
 // IntersectionObserver stand-in: the test calls `observed` to say whether the canvas is on screen.
 let observed: (onScreen: boolean) => void = () => {};
@@ -26,7 +27,7 @@ interface Model {
   frames: number;
 }
 
-function sketch(): { attached: NonNullable<ReturnType<typeof attachSketch>>; counts: { draws: number; ticks: number } } {
+async function sketch(): Promise<{ attached: ReturnType<typeof attachSketch>; runtime: Runtime; counts: { draws: number; ticks: number } }> {
   const counts = { draws: 0, ticks: 0 };
   const raw = {
     params: { size: { type: "number", min: 1, max: 10, default: 3 } },
@@ -45,34 +46,34 @@ function sketch(): { attached: NonNullable<ReturnType<typeof attachSketch>>; cou
   const canvas = new FakeElement("canvas");
   canvas.width = 40;
   canvas.height = 40;
-  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {} });
-  assert.ok(attached !== null);
-  return { attached, counts };
+  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, gpu: fakeGpu() });
+  const runtime = await attached.ready;
+  return { attached, runtime, counts };
 }
 
-test("a still figure draws once, then only when the model or a param changes", () => {
-  const { attached, counts } = sketch();
+test("a still figure draws once, then only when the model or a param changes", async () => {
+  const { attached, runtime, counts } = await sketch();
   runFrames(30);
   // The first frame only sets the clock, so 30 frames are 29 ticks.
   assert.deepEqual(counts, { draws: 1, ticks: 29 }, "29 ticks, the model unchanged: no redraws");
-  attached.runtime.pointer({ type: "mousemove", x: 5, y: 5 });
+  runtime.pointer({ type: "mousemove", x: 5, y: 5 });
   runFrames(2);
   // Input always redraws once (the cursor or an over-canvas input may follow it), then rests.
   assert.equal(counts.draws, 2, "a hover redraws once, even with the model unchanged");
-  attached.runtime.pointer({ type: "mousedown", x: 5, y: 5 });
+  runtime.pointer({ type: "mousedown", x: 5, y: 5 });
   runFrames(2);
   assert.equal(counts.draws, 3, "a click redraws once");
-  attached.runtime.setParam("size", 5);
+  runtime.setParam("size", 5);
   runFrames(2);
   assert.equal(counts.draws, 4, "a param change redraws once");
-  attached.runtime.invalidate();
+  runtime.invalidate();
   runFrames(5);
   assert.equal(counts.draws, 5, "invalidate (a font arrived, a resize) redraws once");
   attached.teardown();
 });
 
-test("off screen the loop stops; back on screen it resumes from the same frame", () => {
-  const { attached, counts } = sketch();
+test("off screen the loop stops; back on screen it resumes from the same frame", async () => {
+  const { attached, counts } = await sketch();
   runFrames(5);
   observed(false);
   assert.equal(rafState.pending.size, 0, "no frame scheduled while off screen");

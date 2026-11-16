@@ -1,7 +1,7 @@
 // What moves in the drawn lounge, each frame: the room dims, every set glows with
 // what it shows (and the glow spills onto what is in front of it), the vending
 // machine's window hums, the archive machine's lights blink. Repeats every PERIOD.
-import type { SceneView as View } from "@ianbicking/canvas-loop";
+import type { View } from "@ianbicking/canvas-loop";
 import { hash, iso } from "./ink-tea.js";
 import { RU, RW, TELLIES, type Telly, VENDING_AT, WALL, leaning, screenRect } from "./room-tea.js";
 

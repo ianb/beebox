@@ -1,7 +1,7 @@
 {
   "name": "@ianbicking/canvas-loop",
   "version": "0.1.0",
-  "description": "Deterministic, browser-less, frame-stepped Canvas2D sandbox for agent programming",
+  "description": "Deterministic, frame-stepped drawing sandbox for agent programming: a scene API drawn with WebGPU in the browser and Dawn headless",
   "type": "module",
   "private": true,
   "exports": {
@@ -22,10 +22,6 @@
       "default": "./src/browser/mount.ts"
     },
     "./browser/figure.css": "./src/browser/figure.css",
-    "./scene-browser": {
-      "types": "./src/browser/scene/mount.ts",
-      "default": "./src/browser/scene/mount.ts"
-    },
     "./eslint": {
       "types": "./src/eslint/plugin.ts",
       "default": "./src/eslint/plugin.ts"

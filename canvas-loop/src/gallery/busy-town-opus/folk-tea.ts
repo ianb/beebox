@@ -1,5 +1,5 @@
 // Sprites: every character, pose and prop, painted once and placed every frame.
-import type { ScenePicture as Picture, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Picture, View } from "@ianbicking/canvas-loop";
 import type { Folk } from "./paint-tea.js";
 import {
   FOLK_H,

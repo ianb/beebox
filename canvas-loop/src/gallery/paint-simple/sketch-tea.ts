@@ -8,7 +8,7 @@
 //     thinner), with a short taper at the start and, once finished, at the end.
 //   - finished strokes are drawn once into a cache keyed on (page, count); each
 //     frame pastes it and draws only the stroke in progress.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, SceneStyle as Style, Util, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 
 const BRUSHES = ["ink", "pencil", "marker", "bristle", "wash"] as const;
 const COLOURS = ["black", "red", "blue", "green", "ochre"] as const;

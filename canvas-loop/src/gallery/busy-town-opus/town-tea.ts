@@ -1,5 +1,5 @@
 // The still town: sky, buildings, sidewalk, road. Painted once into a cache.
-import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, ellipsePts, hash, ink, inked, label } from "./paint-tea.js";
 import { CURB, H, ROAD_END, STREET, W } from "./things-tea.js";
 

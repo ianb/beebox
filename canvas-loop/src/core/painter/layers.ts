@@ -1,8 +1,10 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
 import type { ScratchName } from "../brush/render/mark/render.js";
-import type { ClipShape, Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, MakeLayer } from "../paint.js";
-import { isPathShape, tracePath, tracePolygon } from "../paint.js";
+import type { ClipShape } from "../paint.js";
+import type { Ctx2D, CtxImageData, CtxTransform, Layer, LayerImage, MakeLayer } from "../ctx2d.js";
+import { isPathShape } from "../paint.js";
+import { tracePath, tracePolygon } from "../ctx2d.js";
 
 /** Draw a full-canvas layer image onto `ctx` at device scale, once. */
 export function drawLayer(ctx: Ctx2D, args: { image: LayerImage; width: number; height: number; opacity: number; op: string; filter?: string }): void {

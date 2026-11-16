@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { MarkPeak, Pixels } from "../../src/gpu/renderer.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 

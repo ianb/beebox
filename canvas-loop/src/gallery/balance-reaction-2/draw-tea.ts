@@ -1,6 +1,6 @@
 // Painting for the balancing sketch. `paint` draws one frame from the model
 // and the analysis of the current numbers.
-import type { DeepReadonly, SceneStyle as Style, TextOptions, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Style, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
 import { ELEMENTS, formulaParts } from "./chem-tea.js";
 import type { Analysis, El, Molecule, Slot, Tally } from "./chem-tea.js";
 import { ARROW_GAP, BANNER, EQUATION, HEADER, PICTURE, TALLY, tallyRow, W } from "./layout-tea.js";

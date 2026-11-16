@@ -6,7 +6,7 @@
 //
 // `update` records each sound with a fresh id and its start frame; `sound`
 // returns them as voices. See TEA.md "Sound".
-import type { DeepReadonly, Msg, Util, SceneView as View, Voice } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Util, View, Voice } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

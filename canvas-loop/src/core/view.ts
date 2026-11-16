@@ -26,6 +26,8 @@ import { ellipseGradient, linearGradient, radialGradient } from "./paint.js";
 import { offsetPoints, tubePath } from "./shapes.js";
 import type { TubeOptions } from "./shapes.js";
 import type { Painter } from "./painter/engine.js";
+import type { SKRSContext2D } from "@napi-rs/canvas";
+import type { View } from "./tea.js";
 import { ease, tween, tweenPoint } from "./ease.js";
 import type { EaseName, Keyframe } from "./ease.js";
 
@@ -33,6 +35,15 @@ import type { EaseName, Keyframe } from "./ease.js";
 export interface TextMeasure {
   width(content: string, options?: TextOptions): number;
   bounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+}
+
+/** The Canvas2D painter's View: the scene View without pictures, lights and noise, with the calls the scene API removed. Goes with the painter. */
+export interface CanvasView extends Omit<View, "picture" | "pixels" | "place" | "light" | "toCanvas" | "noise"> {
+  cache(key: string, body: () => void, paste?: Omit<PasteOptions, "opacity">): void;
+  sprite(options: SpriteOptions, body: () => void): Sprite;
+  image(sprite: Sprite, x: number, y: number, paste?: PasteOptions): void;
+  paperTexture(amount: number): void;
+  readonly ctx: SKRSContext2D;
 }
 
 export class PainterView {

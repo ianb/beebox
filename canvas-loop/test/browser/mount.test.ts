@@ -8,15 +8,16 @@ import { attachSketch, mountSketch, sanitizeInitialParams, type EmittedEvent } f
 import type { Msg, Util } from "@ianbicking/canvas-loop";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
-import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
+import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, captureWarningsAsync, decl, makeModule, fakeGpu, settle } from "../fake-dom.js";
 
 
 // ── tests ────────────────────────────────────────────────────────────
 
-test("mountSketch mounts a canvas + generated panel and runs the loop", () => {
+test("mountSketch mounts a canvas + generated panel and runs the loop", async () => {
   const mount = new FakeElement("div");
   const { module, counters } = makeModule();
-  const teardown = mountSketch(asHTMLElement(mount), { module });
+  const teardown = mountSketch(asHTMLElement(mount), { module, gpu: fakeGpu() });
+  await settle();
 
   const container = mount.children[0];
   assert.ok(container !== undefined && container.className === "cl-figure", "a .cl-figure container is appended");
@@ -40,10 +41,11 @@ test("mountSketch mounts a canvas + generated panel and runs the loop", () => {
   teardown();
 });
 
-test("transport toolbar renders on request; panel:false suppresses controls", () => {
+test("transport toolbar renders on request; panel:false suppresses controls", async () => {
   const mount = new FakeElement("div");
   const { module } = makeModule();
-  const teardown = mountSketch(asHTMLElement(mount), { module, transport: true, panel: false });
+  const teardown = mountSketch(asHTMLElement(mount), { module, transport: true, panel: false, gpu: fakeGpu() });
+  await settle();
 
   const container = mount.children[0];
   assert.ok(container !== undefined, "container mounted");
@@ -72,17 +74,19 @@ test("a non-TEA module throws a typed error and mounts nothing", () => {
   assert.equal(mount.children.length, 0, "nothing is left mounted after a throw");
 });
 
-test("initialParams: unknown keys and type mismatches warn and fall back to defaults", () => {
+test("initialParams: unknown keys and type mismatches warn and fall back to defaults", async () => {
   const mount = new FakeElement("div");
   const { module } = makeModule();
   let teardown: () => void = () => {
     // replaced by the real teardown inside captureWarnings below
   };
-  const warnings = captureWarnings(() => {
+  const warnings = await captureWarningsAsync(async () => {
     teardown = mountSketch(asHTMLElement(mount), {
       module,
       initialParams: { speed: 3, bogus: 1, tone: "nope", glow: "yes" },
+      gpu: fakeGpu(),
     });
+    await settle();
   });
   assert.equal(warnings.length, 3, "one warning per rejected override (bogus, tone, glow)");
   assert.ok(warnings.some((w) => w.includes('"bogus"')), "unknown name is named");
@@ -105,10 +109,11 @@ test("sanitizeInitialParams rejects values aimed at trigger params", () => {
   assert.equal(warnings.length, 1, "the rejected trigger override warns");
 });
 
-test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", () => {
+test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", async () => {
   const mount = new FakeElement("div");
   const { module } = makeModule();
-  const teardown = mountSketch(asHTMLElement(mount), { module });
+  const teardown = mountSketch(asHTMLElement(mount), { module, gpu: fakeGpu() });
+  await settle();
   runFrames(1);
   const container = mount.children[0];
   const canvas = container?.find((el) => el.tagName === "canvas");
@@ -122,7 +127,7 @@ test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", (
   assert.equal(mount.children.length, 0, "teardown removes the container from the mount");
 });
 
-test("onEvent carries the engagement verdict (handled names + model-reference change)", () => {
+test("onEvent carries the engagement verdict (handled names + model-reference change)", async () => {
   interface Model {
     hits: number;
   }
@@ -154,14 +159,15 @@ test("onEvent carries the engagement verdict (handled names + model-reference ch
     paused: false,
     onFrame: () => {},
     onEvent: (entry) => emitted.push(entry),
+    gpu: fakeGpu(),
   });
-  assert.ok(attached !== null, "attached to the fake canvas");
+  const runtime = await attached.ready;
 
-  attached.runtime.pointer({ type: "mousedown", x: 10, y: 10 });
+  runtime.pointer({ type: "mousedown", x: 10, y: 10 });
   runFrames(2);
-  attached.runtime.key({ type: "keydown", key: "a" });
+  runtime.key({ type: "keydown", key: "a" });
   runFrames(2);
-  attached.runtime.pointer({ type: "mousemove", x: 12, y: 12 });
+  runtime.pointer({ type: "mousemove", x: 12, y: 12 });
   runFrames(2);
 
   const down = emitted.find((e) => e.type === "mousedown");
@@ -184,7 +190,7 @@ test("the headless loader ignores a default export (dual-export entries)", () =>
   assert.equal("default" in loaded, false, "the loaded module carries no default export");
 });
 
-test("update returning undefined (an unhandled msg) surfaces a typed error naming the msg type", () => {
+test("update returning undefined (an unhandled msg) surfaces a typed error naming the msg type", async () => {
   const mount = new FakeElement("div");
   const module = {
     params: {},
@@ -208,7 +214,8 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
   };
   let teardown: () => void = () => {};
   try {
-    teardown = mountSketch(asHTMLElement(mount), { module });
+    teardown = mountSketch(asHTMLElement(mount), { module, gpu: fakeGpu() });
+    await settle();
     runFrames(2);
   } finally {
     console.error = original;
@@ -219,7 +226,7 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
   teardown();
 });
 
-test("mountSketch keeps a module's sound export, so its runtime collects voices", () => {
+test("mountSketch keeps a module's sound export, so its runtime collects voices", async () => {
   const mount = new FakeElement("div");
   const { module } = makeModule();
   let calls = 0;
@@ -231,13 +238,15 @@ test("mountSketch keeps a module's sound export, so its runtime collects voices"
         return [];
       },
     },
+    gpu: fakeGpu(),
   });
+  await settle();
   runFrames(3);
   assert.ok(calls > 0, "sound() ran after ticks");
   teardown();
 });
 
-test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, page scrolling is off, a second finger is ignored", () => {
+test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, page scrolling is off, a second finger is ignored", async () => {
   const seen: string[] = [];
   const raw = {
     params: {},
@@ -253,8 +262,8 @@ test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, pa
   const canvas = new FakeElement("canvas");
   canvas.width = 50;
   canvas.height = 50;
-  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {} });
-  assert.ok(attached !== null, "attached to the fake canvas");
+  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, gpu: fakeGpu() });
+  await attached.ready;
   assert.equal(canvas.style["touchAction"], "none", "a drag on the canvas does not scroll the page");
 
   const touch = (pointerId: number, at: { x: number; y: number; isPrimary?: boolean }): object => ({ pointerId, isPrimary: at.isPrimary ?? true, pointerType: "touch", clientX: at.x, clientY: at.y });
@@ -272,7 +281,7 @@ test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, pa
   attached.teardown();
 });
 
-test("a handled event carries the sketch's activity(model) after the fold; a throwing activity warns once and the sketch runs on", () => {
+test("a handled event carries the sketch's activity(model) after the fold; a throwing activity warns once and the sketch runs on", async () => {
   interface Model {
     hits: number;
   }
@@ -289,28 +298,28 @@ test("a handled event carries the sketch's activity(model) after the fold; a thr
     draw: (): void => {},
     activity,
   });
-  const run = (raw: object): EmittedEvent[] => {
+  const run = async (raw: object): Promise<EmittedEvent[]> => {
     const canvas = new FakeElement("canvas");
     canvas.width = 50;
     canvas.height = 50;
     const emitted: EmittedEvent[] = [];
-    const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, onEvent: (entry) => emitted.push(entry) });
-    assert.ok(attached !== null);
+    const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, onEvent: (entry) => emitted.push(entry), gpu: fakeGpu() });
+    const runtime = await attached.ready;
     for (const x of [10, 20]) {
-      attached.runtime.pointer({ type: "mousedown", x, y: 10 });
+      runtime.pointer({ type: "mousedown", x, y: 10 });
       runFrames(2);
     }
-    attached.runtime.pointer({ type: "mousemove", x: 12, y: 12 });
+    runtime.pointer({ type: "mousemove", x: 12, y: 12 });
     runFrames(2);
     return emitted;
   };
-  const emitted = run(make((model) => ({ hits: model.hits })));
+  const emitted = await run(make((model) => ({ hits: model.hits })));
   assert.deepEqual(emitted.filter((e) => e.type === "mousedown").map((e) => e.activity), [{ hits: 1 }, { hits: 2 }], "the model after each fold");
   assert.equal(emitted.find((e) => e.type === "mousemove")?.activity, undefined, "an unhandled input carries none");
 
   let failing: EmittedEvent[] = [];
-  const warnings = captureWarnings(() => {
-    failing = run(make(() => {
+  const warnings = await captureWarningsAsync(async () => {
+    failing = await run(make(() => {
       throw new Error("bad summary");
     }));
   });

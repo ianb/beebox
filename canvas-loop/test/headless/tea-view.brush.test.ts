@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Style } from "../../src/core/paint.js";
-import type { Sprite } from "../../src/core/tea.js";
+import type { Sprite } from "../../src/core/paint.js";
 import { teaView } from "../helpers.js";
 import type { TeaViewHarness } from "../helpers.js";
 

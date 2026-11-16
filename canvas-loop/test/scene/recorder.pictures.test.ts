@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import { sceneOutline } from "../../src/scene/outline.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 

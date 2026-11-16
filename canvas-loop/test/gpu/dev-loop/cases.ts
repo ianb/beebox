@@ -4,7 +4,7 @@
 // `run-case.ts` runs them through the headless runner; renderer.gpu.test.ts asserts.
 // A row with `gap` is not met yet: its proposal needs a decision, and its test
 // is marked todo.
-import type { Msg, ParamValues, ParamsDecl, Picture, View } from "../../../src/scene/api.js";
+import type { Msg, ParamValues, ParamsDecl, Picture, View } from "../../../src/core/tea.js";
 
 /** Where the message comes out: a thrown error (and its transcript line), a transcript warning, or nothing. */
 export type Channel = "error" | "warning" | "none";

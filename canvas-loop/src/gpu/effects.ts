@@ -5,7 +5,7 @@
 // transform. A rotated non-uniform scale or a skew would need a blur along
 // rotated axes, which the renderer does not build: it throws.
 // Glow and shadow are made from the layer before the other effects (R5).
-import type { Effects } from "../scene/api.js";
+import type { Effects } from "../core/tea.js";
 import type { ColorParser, Rgba } from "../scene/colors.js";
 import { applyLinear, axisScales, invert, maxScale } from "../scene/mat.js";
 import type { Mat, PaperSettings } from "../scene/nodes.js";

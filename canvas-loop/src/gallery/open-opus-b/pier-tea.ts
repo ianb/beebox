@@ -1,5 +1,5 @@
 // The boardwalk out from the village, its posts, and the lamps along it.
-import type { SceneStyle as Style, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 const X0 = 180;
 const X1 = 740;

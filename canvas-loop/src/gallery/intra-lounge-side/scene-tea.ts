@@ -4,7 +4,7 @@
 // Depth runs down the screen: the back wall stands on the floor line at FLOOR, the
 // sofa a little nearer, the walker's path nearer still, and dark foreground shapes
 // along the bottom edge in front of everything.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, type Rim, blob, ellipsePts, hash, ink, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 import { PLANES, SIZES, footY, m } from "./sizes-tea.js";
 

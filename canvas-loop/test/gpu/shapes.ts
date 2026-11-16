@@ -1,14 +1,13 @@
 // A 640×600 sheet of plain shapes for the parity test: fills, strokes with
 // caps, joins and dashes, arcs, curves, gradients, and shapes under rotation,
-// non-uniform scale, skew and a full matrix. Drawn with draft 2.2 calls and,
-// for the reference, with today's calls (caps, joins and skew through `v.ctx`).
+// non-uniform scale, skew and a full matrix. The Skia painter's render of the
+// same cells is frozen in test/fixtures/scene-parity/shapes.png.
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { View as TodayView } from "../../src/core/tea.js";
-import type { View as DraftView } from "../../src/scene/api.js";
+import type { View as DraftView } from "../../src/core/tea.js";
 import { matrixOf, mul } from "../../src/scene/mat.js";
 import type { Mat } from "../../src/scene/nodes.js";
 
-type Common = Pick<TodayView, "rect" | "roundRect" | "circle" | "ellipse" | "arc" | "polygon" | "path" | "curve" | "line" | "linearGradient" | "radialGradient" | "ellipseGradient">;
+type Common = Pick<DraftView, "rect" | "roundRect" | "circle" | "ellipse" | "arc" | "polygon" | "path" | "curve" | "line" | "linearGradient" | "radialGradient" | "ellipseGradient">;
 interface Pen {
   readonly cap?: "butt" | "round" | "square";
   readonly join?: "miter" | "round" | "bevel";
@@ -88,18 +87,4 @@ const origin = (i: number): Mat => [1, 0, 0, 1, (i % 4) * 160, Math.floor(i / 4)
 export function drawShapesDraft(v: DraftView): void {
   v.background("#fdfcf8");
   for (const [i, c] of CELLS.entries()) v.at({ matrix: mul(origin(i), c.matrix ?? [1, 0, 0, 1, 0, 0]) }, () => c.body(v, c.pen ?? {}));
-}
-
-export function drawShapesToday(v: TodayView): void {
-  v.background("#fdfcf8");
-  const ctx = v.ctx;
-  for (const [i, c] of CELLS.entries()) {
-    const m = mul(origin(i), c.matrix ?? [1, 0, 0, 1, 0, 0]);
-    ctx.save();
-    ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
-    ctx.lineCap = c.pen?.cap ?? "butt";
-    ctx.lineJoin = c.pen?.join ?? "miter";
-    c.body(v, {});
-    ctx.restore();
-  }
 }

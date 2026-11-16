@@ -8,7 +8,7 @@
 //   - an old photo inset with `saturation` and `sepia`
 //
 // `draw` only paints; `update` only counts frames. See TEA.md and BRUSHES.md.
-import type { DeepReadonly, Msg, Util, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, Util, View, Vec2 } from "@ianbicking/canvas-loop";
 
 /** Draws with the scene View on the GPU renderer (`cli run` reads this). */
 export const renderer = "scene";

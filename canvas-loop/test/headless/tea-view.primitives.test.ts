@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
-import type { View } from "../../src/core/tea.js";
+import type { CanvasView as View } from "../../src/core/view.js";
 import { teaView } from "../helpers.js";
 import type { TeaViewHarness } from "../helpers.js";
 

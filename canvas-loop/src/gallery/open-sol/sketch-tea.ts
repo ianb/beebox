@@ -1,4 +1,4 @@
-import type { BrushName, Gesture, SceneView as View, Vec2 } from "@ianbicking/canvas-loop";
+import type { BrushName, Gesture, View, Vec2 } from "@ianbicking/canvas-loop";
 
 const P = (points: number[][]): Vec2[] =>
   points.map((point) => [point[0] ?? 0, point[1] ?? 0]);

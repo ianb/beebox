@@ -1,7 +1,7 @@
 // The Archive Lounge (intra-game) from the side, as a cross-section, drawn by hand.
 // The still room is drawn once and kept (scene-tea.ts); each frame the light, the
 // screens and the walker are drawn over it (live-tea.ts), then the foreground.
-import type { DeepReadonly, Msg, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import { paintLive } from "./live-tea.js";
 import { H, W, foreground, paintRoom } from "./scene-tea.js";
 

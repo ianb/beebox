@@ -1,6 +1,6 @@
 // 2D affine matrices in Canvas2D order, `[a, b, c, d, e, f]`.
 import type { Vec2 } from "../core/paint.js";
-import type { AtOptions } from "./api.js";
+import type { AtOptions } from "../core/tea.js";
 import type { Mat } from "./nodes.js";
 import { UnsupportedCallError } from "./errors.js";
 

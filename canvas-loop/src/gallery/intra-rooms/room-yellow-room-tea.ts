@@ -2,7 +2,7 @@
 // Exits (1): Solitude Cubes (edge-right).
 // Someone keeps painting it yellow: over the plates, over the ceiling beam, over Ama
 // (all but her eye). The chair faces a taped-off patch of wall marked NOTHING.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, at, blob, ellipsePts, glow, hash, panelBand, panels, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { placard } from "./parts-b-tea.js";
 import { amaEye, amaSpeaker, citizen } from "./props-tea.js";

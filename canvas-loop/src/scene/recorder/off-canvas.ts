@@ -20,7 +20,7 @@
 // frames. Under a moving camera the lines whose drawings moved but never
 // reached the canvas join one summary warning (`offCanvasMessages`); a line
 // whose drawing stayed put warns on its own.
-import type { Effects } from "../api.js";
+import type { Effects } from "../../core/tea.js";
 import { maxScale } from "../mat.js";
 import { sketchLine } from "../call-site.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, ShapeStyle } from "../nodes.js";

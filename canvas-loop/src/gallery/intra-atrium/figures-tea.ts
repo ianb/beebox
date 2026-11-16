@@ -1,7 +1,7 @@
 // The statues and the one visitor, painted with brushes and lit from the west like
 // the room. Statues are citizens in sandstone worn faceless: soft outlines, no
 // features, dust on every upward surface.
-import type { BrushPreset, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Vec2, View } from "@ianbicking/canvas-loop";
 import { CX, CY, type Figure, SQ, hash, rimPoint, wallShadow } from "./room-tea.js";
 
 interface Palette { shadow: string; mid: string; light: string; glint: string; dust: string; pit: string }

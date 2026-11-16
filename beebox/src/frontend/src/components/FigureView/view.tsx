@@ -36,8 +36,6 @@ import {
 interface FigureModule {
   default?: FigureSketch;
   figureError?: string;
-  /** canvas-loop: `"scene"` opts into the GPU scene renderer. */
-  renderer?: unknown;
 }
 
 function parseRuntime(value: unknown): FigureRuntime | null {
@@ -127,7 +125,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
   const figureEl = (
     <ViewErrorBoundary onRetry={() => void loadModule()}>
       <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} declaredParams={declared}
-        report={report} renderer={mod.renderer} />
+        report={report} />
     </ViewErrorBoundary>
   );
 

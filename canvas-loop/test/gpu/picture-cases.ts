@@ -1,7 +1,7 @@
 // Pictures on the GPU, run by renderer.gpu.test.ts: placement replays the recording
 // under the placement transform (R7), placement options, and `pixels` images.
 import assert from "node:assert/strict";
-import type { View } from "../../src/scene/api.js";
+import type { View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { alphaAt, renderOnce, rgbaAt } from "./render.js";
 import { matrixOf, mul } from "../../src/scene/mat.js";

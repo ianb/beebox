@@ -12,7 +12,7 @@
 //
 // The model holds the object (u, h in cm) and the pointer mode. The optics are
 // derived from the model and params in draw (optics-tea.ts).
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, SceneStyle as Style, TextOptions, Util, Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Style, TextOptions, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 import {
   caseSentence,

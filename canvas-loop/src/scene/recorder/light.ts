@@ -4,7 +4,7 @@
 // by the renderer; here a colour must be a non-empty string.
 import { SketchUsageError } from "../../core/errors.js";
 import type { Vec2 } from "../../core/paint.js";
-import type { Effects, Light, Lighting, Material } from "../api.js";
+import type { Effects, Light, Lighting, Material } from "../../core/tea.js";
 import type { LightRec, LightingRec, SceneNode } from "../nodes.js";
 import { MAX_CASTER_HEIGHT } from "../nodes.js";
 

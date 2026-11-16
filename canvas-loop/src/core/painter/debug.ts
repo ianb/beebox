@@ -2,7 +2,8 @@
 // and boxes the sketch asked to see (hit areas). Collected while a frame is
 // drawn, in canvas coordinates, and drawn over the finished frame.
 import { pathContours } from "../contours.js";
-import type { ClipShape, Ctx2D, CtxTransform, Vec2 } from "../paint.js";
+import type { ClipShape, Vec2 } from "../paint.js";
+import type { Ctx2D, CtxTransform } from "../ctx2d.js";
 import { isPathShape } from "../paint.js";
 
 type Kind = "sprite" | "clip" | "box";

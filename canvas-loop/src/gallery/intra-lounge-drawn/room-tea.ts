@@ -2,7 +2,7 @@
 // skirting and pipes, sagging plank floor and a worn rug, a teetering pile of old
 // television sets, a sagging tape shelf, a lumpy sofa, a tank of a vending machine.
 // Everything here is still; screens and light are drawn per frame (light-tea.ts).
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, hash, ink, iso, isoBox, rivet, roundRectPts, stroke, wobble } from "./ink-tea.js";
 
 /** Room size along the two walls, and wall height. */

@@ -1,7 +1,7 @@
 // Props shared by the rooms, all sized in metres from sizes-tea.ts and drawn in the
 // kit's hand. x is metres from the room's left; depth is metres out from the back
 // wall; h is metres above the floor.
-import type { Vec2, SceneView as View } from "@ianbicking/canvas-loop";
+import type { Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, at, blob, ellipsePts, glow, hash, ink, mixHex, rivet, roundRectPts, stroke } from "./kit-tea.js";
 import { BACK_FOOT_Y, PLANES, footY, m } from "./sizes-tea.js";
 
