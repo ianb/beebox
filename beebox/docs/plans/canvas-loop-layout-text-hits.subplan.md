@@ -947,6 +947,32 @@ run them on the worktree's test1 with `--filter figure`:
 7. **B4** beebox host activity detail (`figure-canvas-loop.ts`) and its test;
    TEA.md "Names and hits", "Events file"; CHANGELOG; knowledge audit
    `figure-named-hits`, run.
+   - **As built (B4).** Logs are in `scratch/layout-text-hits/b4-*.log`.
+     `figureActivityDetail` (`figure-canvas-loop.ts`) adds ` on <target>`,
+     the innermost name (`targets[0]`), after `pressed …`; an unhandled input
+     stays silent with or without a target. No shared mobile contract is
+     touched. TEA.md gains "Names and hits" (under "Drawing", after
+     "Pictures") with the plan's bullets and the three accepted gaps; "Events
+     file" names `"target"`; "Engagement verdicts" shows an `on pan-left`
+     line; the Worked example says orbit predates names. `canvas-loop/AGENTS.md`
+     points to `"target"` first. One CHANGELOG bullet.
+     - **Audit.** `figure-named-hits` is `knows_about`, not the plan's
+       `knows_directly`: TEA.md ships as the box doc `canvas-loop.md`, which
+       loads on demand. Box docs are regenerated from the worktree's
+       `canvas-loop/TEA.md` before each audit, so no build step is needed.
+       It passes 1/1 on the worktree's test1. The guard first refused the
+       box: an uncommitted Orbits spike figure from 2026-11-15 was in it.
+       It was committed in the box (`Keep the Orbits spike figure …`), as
+       `box-work.md` says, and the audit then ran.
+     - **Tests run:** `figure-canvas-loop`, the `figure run` CLI tests, the
+       package-docs tests and the audit-runner tests (85 pass, 1 skip).
+       `test-select` picks 694 files (13 min) for the whole branch's
+       canvas-loop diff, which this chunk does not change; the full beebox
+       run is the driver's.
+     - **Lines:** source 15, tests 34 (19 in the host test, 15 the audit
+       entry), docs 75 (TEA.md 64, AGENTS.md 5, CHANGELOG 6): 124. The
+       audit ledger `context-history.yaml` (8) is generated. Track B so far:
+       1,494.
 8. **B5** the example sketch and events file; `gallery:check`.
 9. **C1–C3** run measurement (needs A1's `baselineGap`); the node on the
    alphabetic baseline, glyph quads, the `keepInside` path; TEA.md and

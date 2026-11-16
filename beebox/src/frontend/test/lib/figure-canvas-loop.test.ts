@@ -3,8 +3,9 @@
 // FigureMount hands a canvas-loop sketch a `mountSketch` that warns about
 // card/module param drift and reports learner activity (plan
 // plan:figure-check, Track C). The activity
-// detail is an allowlist: declared param values and handled names, capped at
-// 200 characters; never coordinates, raw keys or model state.
+// detail is an allowlist: declared param values, handled names and the named
+// drawing a handled pointer input landed on, capped at 200 characters; never
+// coordinates, raw keys or model state.
 
 // First, and bare: a happy-dom window, so the fake mount is a real element.
 import "../helpers/dom-globals.js";
@@ -76,6 +77,20 @@ void test("activity reports params and handled names after the sketch's onEvent"
     "sketch keydown",
     "sketch mousemove",
   ]);
+});
+
+// A handled pointer input names the innermost drawing it landed on; an
+// unhandled one stays silent even with a target, and no target adds nothing.
+void test("a handled pointer input adds the named drawing it landed on", async (t) => {
+  const details: string[] = [];
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [], report: (_kind, detail) => { details.push(detail ?? ""); } });
+  wrapped.mountSketch(mount, { module: {} });
+  calls[0]?.onEvent?.({ frame: 1, type: "mousedown", x: 180, y: 216, handled: ["add-weight"], changed: true, targets: ["pan-left"] });
+  calls[0]?.onEvent?.({ frame: 2, type: "mousedown", x: 170, y: 200, handled: ["remove-weight"], changed: true, targets: ["weight-2", "pan-left"] });
+  calls[0]?.onEvent?.({ frame: 3, type: "mousedown", x: 10, y: 10, handled: [], changed: false, targets: ["pan-right"] });
+  calls[0]?.onEvent?.({ frame: 4, type: "mousedown", x: 10, y: 10, handled: ["reset"], changed: true, targets: [] });
+  t.check(details, ["pressed add-weight on pan-left", "pressed remove-weight on weight-2", "pressed reset"]);
 });
 
 // 200 characters is the plan's cap: 199 kept plus an ellipsis.

@@ -11980,6 +11980,14 @@ test1:
       peak: 38926
       added: 3834
       turns: 7
+  figure-named-hits:
+    - date: 2026-11-16T21:04:57.601Z
+      boxCommit: 58c7527bc8ae0fcbab84741963800bc3e091049b
+      repoCommit: dc759ee5eea89bfafcfe6760d152b6df3979d0f7
+      initial: 35124
+      peak: 39755
+      added: 4631
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -23,8 +23,9 @@ If `CANVAS_LOOP_CHECKPOINTS` is set, each render is saved as a checkpoint; add
 `--note "what you changed and why"` to each `run` so the record reads as a story.
 
 Script interactions as events: one events file is a test, a reproduction, and a
-demo. Events for frame N dispatch before frame N's `draw`, so compute click
-coordinates from the sketch's own position math. Pin a frame the capture policy
+demo. Name what a click should land on and aim at it with `"target"`; for an
+unnamed spot, compute coordinates from the sketch's own position math (events
+for frame N dispatch before frame N's `draw`). Pin a frame the capture policy
 would skip with `{ "frame": 40, "type": "snapshot", "label": "peak" }`.
 
 Use determinism to verify. Add params that land frames on round instants (a

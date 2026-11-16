@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Names and hits.** `name` on any drawing (styles, text, `at`, `group`,
+  `place`, `row`, `column`). Mouse messages carry `target` and `targets`,
+  the named drawings under the pointer in the last frame drawn, innermost
+  first; unnamed drawings do not block. An events file can aim with
+  `"target": "pan-left"`. Transcripts print `on X in Y`, `--scene` outlines
+  print names, and `onEvent` mouse entries carry `targets`.
 - **Layout: `v.bounds`, `v.row`, `v.column`.** `v.bounds(drawing)` gives any
   drawing's layout box `{ x, y, w, h, baseline }` (shape geometry plus half
   the stroke, text's `textBounds`, a placement's declared size) and does not

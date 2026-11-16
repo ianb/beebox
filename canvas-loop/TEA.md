@@ -423,6 +423,56 @@ image: `fill({ data, width, height })` writes straight RGBA bytes (alpha is
 every fourth byte; 255 is opaque) into a zeroed array when the version is
 new. Place it like a picture; scaled up, it blurs as an image does.
 
+### Names and hits
+
+Give a drawing a `name`, and a mouse message says when the pointer is on it.
+`update` reads the name instead of repeating `draw`'s position math. `name`
+goes in a shape's style and in the options of `v.text`, `v.at`, `v.group`,
+`v.place`, `v.row` and `v.column`; it adds no layer.
+
+```ts
+v.at({ translate: [150, 200], name: "pan-left" }, [
+  v.arc(0, 0, 60, 0, Math.PI, { fill: "transparent", stroke: INK, weight: 3 }),
+  model.left.map((w, i) => v.circle(-30 + 20 * i, 12, 9, { fill: GOLD, name: `weight-${w.id}` })),
+]),
+v.text("Left", { x: 150, y: 290 }, LABEL),        // unnamed: does not block the pan
+```
+
+```ts
+case "mousedown": {
+  const weight = msg.targets.find((t) => t.startsWith("weight-"));
+  if (weight !== undefined) { u.handled("remove-weight"); return removeWeight(model, weight); }
+  if (msg.targets.includes("pan-left")) { u.handled("add-weight"); return addWeight(model, "left"); }
+  return model;
+}
+```
+
+- `msg.target` is the innermost name under the pointer; `msg.targets` lists
+  every name on its path, innermost first (`["weight-3", "pan-left"]`). Use
+  `targets.includes(…)` for a name that can hold named drawings.
+- A shape hits where it paints: its fill, and the band its stroke draws. A
+  ring with only a stroke misses in its hole; add `fill: "transparent"` to
+  fill it. Text hits in its `textBounds` box.
+- Only named drawings take a hit. An unnamed label drawn over a named pan
+  does not block it. To give a small control the 40-pixel area a fingertip
+  needs, draw a larger `fill: "transparent"` shape under the same name.
+- Build names from the model's ids (`weight-${w.id}`), and in `update` look
+  the id up again: an item `update` has removed since the frame was drawn is
+  not found, so ignore it.
+- `v.clip` and `v.mask` take no options: wrap them in `v.at({ name }, …)`.
+- The hit scene is the last frame drawn before the message: the first event
+  of frame N hits frame N−1's drawing, as an events file sees it. At frame 0
+  nothing is drawn, so `targets` is empty. A replay gives the same targets.
+- `--scene` outlines print each node's name, so you can read the names a
+  frame holds; the transcript prints `on weight-3 in pan-left` after the
+  position.
+- Known gaps. A headless run and a browser can measure text slightly
+  differently, so a click a pixel inside a text's edge can miss in one of
+  them. While the playground is paused, clicks hit the last running frame,
+  not what the paused redraw shows. When the GPU is behind, a click hits the
+  newest recorded frame, which can be one display frame ahead of the image
+  on screen.
+
 ### Other `View` members
 
 - `v.width`, `v.height`: the canvas size, or the picture's size inside a
@@ -661,7 +711,8 @@ activity for the chat agent.
 
 ## Events file
 
-The format is in the [README](./README.md#events-file).
+The format is in the [README](./README.md#events-file). A mouse entry can aim
+at a named drawing with `"target": "pan-left"` instead of `x` and `y`.
 
 ## Engagement verdicts
 
@@ -670,13 +721,13 @@ Every scripted **interaction** event (mouse, key, trigger — not `tick`, not
 an events file reads as a test of whether each input connected:
 
 ```
-**[frame 30]** mousedown (297,288) → select-planet
+**[frame 30]** mousedown (180,216) on pan-left → add-weight
 **[frame 40]** keydown ArrowUp → Δmodel
 **[frame 55]** mousedown (200,150) → (unhandled)
 ```
 
-- **a name**: `update` called `u.handled("select-planet")` (several calls
-  join with `, `).
+- **a name**: `update` called `u.handled("add-weight")` (several calls
+  join with `, `). `on pan-left` names the [drawings hit](#names-and-hits).
 - **Δmodel**: no name, but `update` returned a different model reference.
 - **(unhandled)**: no name and the same model. Nothing engaged.
 
@@ -745,8 +796,9 @@ three orbiting planets. It exercises every param type (`speed-scale` number,
 `show-orbits` boolean, `focus` select, `reset` trigger), a mode union
 (`{ type: "idle" } | { type: "selected"; index }`), and direct pointer
 manipulation (click a *moving* planet to select it; ArrowUp/Down nudge its
-speed). Because position is a pure function of `frame`, hit-testing a moving
-target is a calculation, not trial and error.
+speed). It predates names and computes its hits from position math; a new
+sketch names the planets and reads `msg.target`
+([Names and hits](#names-and-hits)).
 
 `draw` returns one list: a `.map` over the planets, `&&` for what a param or
 the mode turns on, and small components (`drawPlanet`, `drawHud`):

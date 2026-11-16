@@ -8,9 +8,9 @@
  *   is quiet: a factory may read it from `figure.params`, and `bbx figure
  *   run` names such params for the agent;
  * - chains the sketch's own `onEvent` and reports learner activity as
- *   `explored`: declared param values and handled names only, never
- *   coordinates, raw keys or model state. Each report also goes to the
- *   activity log with the sketch's `activity(model)` value when it has one;
+ *   `explored`: declared param values, handled names and the named drawing
+ *   a handled pointer input landed on; never coordinates, raw keys or model
+ *   state. Each report also goes to the activity log with the sketch's `activity(model)` value when it has one;
  * - hands every failure after mount to the card first, then to the sketch's
  *   own `onError`, so the card can show it in the figure's place
  *   (`figureNotice`);
@@ -37,13 +37,16 @@ const MODULE_TYPES_FOR: Record<FigureParamType, readonly string[]> = { string: [
 /**
  * The activity detail for one recorded input, or null when it says nothing
  * the agent should hear: a param change names the param and its value; any
- * other input counts only when the sketch marked it handled.
+ * other input counts only when the sketch marked it handled, and a pointer
+ * input adds the innermost named drawing it landed on.
  */
 export function figureActivityDetail(event: EmittedEvent): string | null {
   let detail: string;
   if (event.type === "param") detail = `set ${event.name} = ${String(event.value)}`;
-  else if (event.handled !== undefined && event.handled.length > 0) detail = `pressed ${event.handled.join(", ")}`;
-  else return null;
+  else if (event.handled !== undefined && event.handled.length > 0) {
+    const target = event.targets?.[0];
+    detail = `pressed ${event.handled.join(", ")}${target === undefined ? "" : ` on ${target}`}`;
+  } else return null;
   return detail.length > DETAIL_CAP ? `${detail.slice(0, DETAIL_CAP - 1)}…` : detail;
 }
 

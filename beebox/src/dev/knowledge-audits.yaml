@@ -1491,6 +1491,21 @@ tests:
     correct_matches: ["updat|another device|other device"]
     tags: [cards, schemas, figure]
 
+  # Status (2026-11-16): figure-named-hits added with names and hits in
+  # canvas-loop (plan:canvas-loop-layout-text-hits, B4). knows_about: the
+  # answer is in the box doc canvas-loop.md ("Names and hits"), which loads
+  # on demand, not in always-on context. Passes 1/1 on the worktree's test1
+  # (3 reads, 2 greps): greps canvas-loop.md for "hit", reads the section,
+  # names the pans and checks msg.targets.includes; no hit-test function.
+
+  - id: figure-named-hits
+    prompt: "In a canvas-loop figure, how does update find which of several drawn pans the learner clicked?"
+    expected_level: knows_about
+    watch_for: "Reads canvas-loop.md (Names and hits); gives each pan a name (name: \"pan-left\" on the drawing or its v.at) and reads msg.target or msg.targets.includes(…) in update; does not write a hit-test function over the pans' positions"
+    should_read_any: ["node_modules/beebox/box-docs/canvas-loop.md"]
+    correct_matches: ["msg\\.targets?\\b|\\btargets?\\.includes", "\\bname\\s*:|`name`"]
+    tags: [cards, schemas, figure]
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run
