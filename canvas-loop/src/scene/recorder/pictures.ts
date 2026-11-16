@@ -6,7 +6,8 @@
 // a dropped version is recorded again when asked for. In testing mode the
 // recorder re-records each asked-for version and compares (`firstDifference`).
 import { SketchUsageError } from "../../core/errors.js";
-import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
+import type { PaperSettings, PictureVersion, PixelsVersion } from "../nodes.js";
+import { weightOf } from "../weight.js";
 
 type Version = PictureVersion | PixelsVersion;
 
@@ -92,22 +93,6 @@ interface Entry {
 
 /** Bytes of recordings not asked for in the last two frames that the table keeps. */
 const IDLE_BUDGET = 16 * 1024 * 1024;
-/** A rough size of one recorded node in bytes. */
-const NODE_BYTES = 512;
-
-function nodeCount(nodes: readonly SceneNode[]): number {
-  let n = nodes.length;
-  for (const node of nodes) {
-    if (node.kind === "mask") n += nodeCount(node.mask) + nodeCount(node.body);
-    else if ("children" in node) n += nodeCount(node.children);
-  }
-  return n;
-}
-
-/** About how many bytes a version's recording holds: its pixels, or its nodes. */
-function weightOf(v: Version): number {
-  return v.kind === "pixels" ? v.data.byteLength : Math.max(1, nodeCount(v.children)) * NODE_BYTES;
-}
 
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {

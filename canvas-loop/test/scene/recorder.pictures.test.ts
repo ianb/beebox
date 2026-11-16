@@ -82,8 +82,8 @@ test("a version not asked for stays kept, so a walk cycle's poses record once an
 test("versions not asked for are dropped, least recently asked first, past about 16 MB", () => {
   const rec = new SceneRecorder({ width: 10, height: 10 });
   let fills = 0;
-  // Each version holds 1024 × 1024 × 4 bytes: four of them idle are 16 MB.
-  const ask = (n: number) => (v: View): Drawing => v.place(v.pixels({ key: "big", width: 1024, height: 1024, deps: [n] }, (im) => {
+  // Each version holds 1000 × 1000 × 4 bytes: four of them idle fit in 16 MiB, five do not.
+  const ask = (n: number) => (v: View): Drawing => v.place(v.pixels({ key: "big", width: 1000, height: 1000, deps: [n] }, (im) => {
     fills++;
     im.data[3] = 255;
   }), 0, 0);

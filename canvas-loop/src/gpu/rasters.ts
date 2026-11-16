@@ -8,12 +8,13 @@
 // one and one drawn after waking agree byte for byte. A picture whose content
 // reads its surroundings (smudge, wet, wash, hatching, lighting) is one layer
 // over its whole extent instead (picture-reads.ts). Tiles not placed in the
-// last two frames stay kept while they fit in 32 MB, least recently placed
-// destroyed first, so a pose a walk cycle shows again is reused; past 256 MB
+// last two frames stay kept while they and the recordings they hold fit in
+// 32 MB, least recently placed destroyed first, so a pose a walk cycle shows again is reused; past 256 MB
 // in all, the least recently placed go first. No texture is held outside that
 // count.
 import type { PictureVersion } from "../scene/nodes.js";
 import type { MarkPeak } from "./peaks.js";
+import { weightOf } from "../scene/weight.js";
 import type { R } from "./jobs.js";
 import { heightOf, widthOf } from "./jobs.js";
 import { GpuRenderError } from "../scene/errors.js";
@@ -125,14 +126,14 @@ export class RasterCache {
     for (const [version, map] of this.#tiles) for (const [key, tile] of map) all.push({ version, key, tile });
     const idle = (t: KeptTile): boolean => t.frame < this.#frame - 1;
     let bytes = all.reduce((n, e) => n + tileBytes(e.tile), 0);
-    // An empty tile holds no texture but keeps its version's recording alive: it counts as a small tile.
-    const idleCost = (t: KeptTile): number => (idle(t) ? Math.max(tileBytes(t), 16 * 1024) : 0);
-    let idleBytes = all.reduce((n, e) => n + idleCost(e.tile), 0);
+    // A kept tile keeps its version's recording alive (the recorder may have dropped it): it counts with the tile.
+    const idleCost = (e: { version: PictureVersion; tile: KeptTile }): number => (idle(e.tile) ? tileBytes(e.tile) + weightOf(e.version) : 0);
+    let idleBytes = all.reduce((n, e) => n + idleCost(e), 0);
     if (bytes <= BUDGET && idleBytes <= IDLE_BUDGET) return;
     for (const e of all.toSorted((a, b) => a.tile.frame - b.tile.frame)) {
       if (bytes <= BUDGET && idleBytes <= IDLE_BUDGET) break;
       bytes -= tileBytes(e.tile);
-      idleBytes -= idleCost(e.tile);
+      idleBytes -= idleCost(e);
       this.#drop(e.version, e.key);
     }
   }
