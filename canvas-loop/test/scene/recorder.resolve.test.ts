@@ -133,3 +133,13 @@ test("keepInside text in a picture body keeps inside the picture's box; changing
   assert.equal(node.size, 12, "laid out with the options as they were at the call");
   assert.ok((node.lines[0]?.xs[0] ?? Number.NaN) < 55 - 20, `slid back inside the 60 px box: ${node.lines[0]?.xs[0]}`);
 });
+
+test("an effects-scale error inside a picture body names the picture first", () => {
+  const draw = (v: View): void => {
+    for (const key of ["a", "b"]) {
+      const skew = key === "b" ? 0.4 : 0;
+      v.place(v.picture({ key, width: 10, height: 10, deps: [skew] }, () => v.at({ skew: [skew, 0] }, () => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: 1 } }))), 0, 0);
+    }
+  };
+  assert.throws(() => new SceneRecorder({ width: 100, height: 80 }).record(draw), (e: unknown) => e instanceof UnsupportedCallError && e.message.endsWith(' in picture "b" [0.4] > at #1 > rect #1'), "the path starts at the picture");
+});

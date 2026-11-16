@@ -87,12 +87,14 @@ export class Resolver {
    * the node path; in testing mode it carries the stack of the call that made
    * `n`, so the transcript lists the sketch's lines as for an error at the call.
    */
-  #axes(n: SceneNode, a: { index: number; matrix: Mat; call: string }): void {
+  #axes(n: SceneNode, a: { index: number; matrix: Mat; call: string; picture: string | undefined }): void {
     try {
       axisScales(a.matrix, a.call);
     } catch (error: unknown) {
       if (!(error instanceof UnsupportedCallError)) throw error;
-      const path = [...this.#open, { n, index: a.index }].map((o) => nodeName(o.n, o.index)).join(" > ");
+      const names = [...this.#open, { n, index: a.index }].map((o) => nodeName(o.n, o.index));
+      // In a picture body the path starts at the picture: two pictures can hold the same nodes.
+      const path = (a.picture === undefined ? names : [a.picture, ...names]).join(" > ");
       const pathed = new UnsupportedCallError({ call: error.call, ...(error.detail === undefined ? {} : { detail: error.detail }), at: path });
       const stack = this.#site(n)?.stack;
       if (stack !== undefined) pathed.stack = [`${pathed.name}: ${pathed.message}`, ...stack.split("\n").slice(1)].join("\n");
@@ -110,7 +112,7 @@ export class Resolver {
     const audit = this.#d.audit;
     switch (n.kind) {
       case "shape":
-        if (n.style.effects !== undefined) this.#axes(n, { index, matrix: ctx.matrix, call: n.call });
+        if (n.style.effects !== undefined) this.#axes(n, { index, matrix: ctx.matrix, call: n.call, picture: ctx.picture });
         if (audit !== undefined) {
           const site = this.#site(n);
           audit.shape(n, { seen: !ctx.inMask, site: site ?? NO_SITE });
@@ -152,7 +154,7 @@ export class Resolver {
 
   #group(n: Extract<SceneNode, { kind: "group" }>, a: { index: number; ctx: ResolveContext }): SceneNode {
     const { index, ctx } = a;
-    if (n.effects !== undefined) this.#axes(n, { index, matrix: ctx.matrix, call: "group" });
+    if (n.effects !== undefined) this.#axes(n, { index, matrix: ctx.matrix, call: "group", picture: ctx.picture });
     const offCanvas = this.#d.audit?.offCanvas;
     const outer = offCanvas?.enter(n.effects, ctx.matrix) ?? 0;
     try {
