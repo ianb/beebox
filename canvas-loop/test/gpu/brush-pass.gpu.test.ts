@@ -1,17 +1,17 @@
 // The GPU brush expansion against the CPU expansion it replaced
 // (canvas-loop-gpu-brushes.subplan.md, chunks 2 and 3), read from golden
 // numbers recorded before chunk 9 deleted it (test/brushes/golden.ts): sample
-// readback for the brush sheet, the walker's first frame and focused contours;
-// the WGSL hash against random.ts's, bit for bit; stamp dab readback, with hue
-// and light jitter;
-// the stamp mark's box at the extremes; the walker frame in a fresh
-// process; and (chunk 5) batches: with the buffer limit forced small, so that
-// inputs split between contours and batches inside contours, samples,
-// instances and pixels equal an unsplit render; a contour over the limit
-// fails naming its call; the walker repeats after `release()` and wake; the
-// readback splits into buffers no larger than the limit. One
-// Dawn device for the file; skipped, with a message, where Dawn finds no
-// adapter.
+// readback for the brush sheet, the walker's first frame and focused
+// contours; the WGSL hash against random.ts's, bit for bit; stamp dab
+// readback, with hue and light jitter; the stamp mark's box at the extremes;
+// and (chunk 5) batches: with the buffer limit forced small, so that inputs
+// split between contours and batches inside contours, samples, instances and
+// pixels equal an unsplit render; a contour over the limit fails naming its
+// call; the readback splits into buffers no larger than the limit. The walker
+// frame and every brush kind (chunk 9) repeat in a fresh process, after
+// `release()` and wake, split and unsplit, and warm, cold and with caches
+// off. One Dawn device for the file; skipped, with a message, where Dawn
+// finds no adapter.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -43,8 +43,8 @@ import { goldenDabs, goldenSamples } from "../brushes/golden.js";
 import { STAMPS_SIZE, drawExtremes, drawJitter } from "./stamps.js";
 import { drawSheet, drawSmear } from "./brush-sheet.js";
 import { THIN_SIZE, drawThin } from "./ink-sheet.js";
-import { portFrames } from "./cache-cases.js";
-import { walkerHashes } from "./walker-frame.js";
+import { portFrames, sameWarmColdOff } from "./cache-cases.js";
+import { kindScenes, walkerHashes } from "./walker-frame.js";
 
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;
@@ -366,13 +366,14 @@ test("a stamp mark's box holds every dab at the extremes of scatter, sizeJitter 
   }
 });
 
-test("the walker frame is byte-identical in a fresh process with a new device", async (t) => {
+test("the walker frame and every brush kind are byte-identical in a fresh process with a new device", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   const here = await walkerHashes(handle);
   const script = fileURLToPath(new URL("walker-frame.ts", import.meta.url));
   const child = execFileSync(process.execPath, ["--import", "tsx", script, "--print"], { encoding: "utf8" }).trim().split("\n");
-  t.diagnostic(`ratio 1 ${here[0]}, ratio 2 ${here[1]}`);
+  t.diagnostic(`walker ratio 1 ${here[0]}, ratio 2 ${here[1]}; ${here.length} frames`);
+  assert.equal(here.length, 6);
   assert.deepEqual(child, here);
 });
 
@@ -594,29 +595,41 @@ test("a brushed contour larger than one buffer fails, naming its call", async (t
   }
 });
 
-test("the walker frame is byte-identical after release() and wake, split and unsplit", async (t) => {
+test("the walker frame and every brush kind are byte-identical after release() and wake, split and unsplit, and warm, cold and caches-off renders agree", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined || text === undefined) return;
-  const [scene] = portFrames(walkerSheet, { at: [0], text });
-  assert.ok(scene !== undefined);
-  const hashes: string[] = [];
-  for (const brushLimit of [undefined, 64 * 1024]) {
+  const [walker] = portFrames(walkerSheet, { at: [0], text });
+  assert.ok(walker !== undefined);
+  const scenes = [walker, ...kindScenes()];
+  const limit = Math.max(64 * 1024, smallLimit(scenes.flatMap((s) => brushRequests(s, handle.colors).map((r) => prepare(r)).filter((p) => p !== undefined)), "strips"));
+  const hashes: string[][] = [];
+  for (const brushLimit of [undefined, limit]) {
     const renderer = new GpuRenderer(handle, { brushLimit });
+    const got: string[] = [];
     try {
-      for (const ratio of [1, 2]) {
-        const asleep: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
-        renderer.release();
-        assert.equal(renderer.held.strokes, 0, "release() forgets the prepared strokes");
-        const woken: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
-        assert.equal(woken, asleep, `ratio ${ratio}, limit ${brushLimit ?? "the device's"}: the same bytes after release() and wake`);
-        hashes.push(`${ratio}:${woken}`);
+      for (const scene of scenes) {
+        for (const ratio of [1, 2]) {
+          const asleep: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
+          renderer.release();
+          assert.equal(renderer.held.strokes, 0, "release() forgets the prepared strokes");
+          const woken: string = createHash("sha256").update((await renderer.render(scene, ratio)).data).digest("hex");
+          assert.equal(woken, asleep, `ratio ${ratio}, limit ${brushLimit ?? "the device's"}: the same bytes after release() and wake`);
+          got.push(woken);
+        }
       }
     } finally {
       renderer.destroy();
     }
+    hashes.push(got);
   }
-  t.diagnostic(hashes.join(" "));
-  assert.deepEqual(hashes.slice(2), hashes.slice(0, 2), "split and unsplit give the same bytes");
+  t.diagnostic(`${hashes[0]?.join(" ")}; split at ${limit} bytes`);
+  assert.deepEqual(hashes[1], hashes[0], "split and unsplit give the same bytes");
+  // Each kind scene twice in a row: the warm renderer reuses its prepared strokes.
+  for (const ratio of [1, 2]) {
+    const used = await sameWarmColdOff(handle, { scenes: kindScenes().flatMap((s) => [s, s]), ratio, what: `every brush kind at ratio ${ratio}` });
+    t.diagnostic(`ratio ${ratio}: the warm renderer reused ${used.strokes} brush expansions`);
+    assert.ok(used.strokes > 0);
+  }
 });
 
 test("with the buffer limit forced small, marks over several atlas pages draw the same pixels", async (t) => {
