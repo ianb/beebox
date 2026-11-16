@@ -10,8 +10,8 @@ The person using a box has no way to learn that Bee Box gained a feature, such
 as the Accept control in the composer. This plan adds `whats-new.md`: one dated
 line per user-visible change. The engine copies it into each box on docs
 refresh, where the person opens it from Settings and the agent reads it when
-asked "what's new?". The `agent-changes` schedule writes it alongside
-`agent-changes.md`.
+asked "what's new?". Entries are added by hand when work lands: the finish
+skill asks for one line when the work is something a person would notice.
 
 **Issues addressed:** none filed for this. Related and left open:
 `issues/decisions/2026-07-20-release-discipline-and-update-story.md` ("Still
@@ -70,16 +70,16 @@ and box git is unchanged.
 
 ## Smallest fix and budget
 
-The smallest fix is this plan. Estimate, additions plus deletions:
+The smallest fix is this plan. Changed lines, additions plus deletions:
 
-- Copy step in `generateDocs` and the prose-docs exclusion: ~25 source, ~30 test.
-- Settings link: ~15 source, ~15 test.
-- Schedule: `isPersonSurface`, two-group briefing, prompt section: ~70 source,
-  ~40 test.
-- doc-check format for the second file: ~15 source, ~15 test.
-- Authored docs: the seeded `whats-new.md` (~20 lines), one guide line.
+- Copy step, shared path, prose-docs exclusion: ~45 source, ~50 test.
+- Settings section: ~30 source.
+- Format check for the doc: ~35 source, ~35 test.
+- Guide line, ledger rule, knowledge audit: ~25.
+- Finish skill step: +21/−22 (net shorter).
+- Authored docs: the backfilled `whats-new.md` (~15 lines).
 
-About 225 changed lines. Not a BIG CHANGE.
+About 260 changed lines. Not a BIG CHANGE.
 
 ## Stated preferences this plan trades against
 
@@ -89,8 +89,12 @@ About 225 changed lines. Not a BIG CHANGE.
 - **Principle 8, one way to do each thing** (`docs/engineering-principles.md`):
   the doc has one source and one path agents and the person use. The source is
   kept out of the package docs index so agents do not see two copies.
-- **Box `agent-changes` precedent** (`schedules/agent-changes/`): same format,
-  same limits, same landing.
+- **Developer decision, 2026-11-16:** "for now we should add it to the finish
+  skill, with some clear criteria about what goes in. Ideally we'd backfill it
+  for like the last week based on git history." The session that did the work
+  knows best whether a person would notice it, so it writes the line.
+- **Box `agent-changes` precedent** (`docs/box/agent-changes.md`): the same
+  dated-line form, minus the commit hash, which means nothing to the person.
 
 ## What already exists
 
@@ -110,9 +114,9 @@ About 225 changed lines. Not a BIG CHANGE.
 - **Settings.** `src/frontend/src/pages/SettingsPage.tsx:28` `SettingsSections`
   lists sections. `src/frontend/src/components/view-widgets/CardLink.tsx`
   opens a card by path. Reuse.
-- **Schedule.** `schedules/agent-changes/lib.ts:8` `OWN_OUTPUT`, l.32
-  `isAgentSurface`; `run.ts` gathers first-parent landings and closed issues;
-  `prompt.md` holds the bar ("Leave out UI-only changes").
+- **Finish skill.** `.claude/skills/finish/SKILL.md` is the step every landing
+  runs. Reuse: one step before dispatch.
+
 - **Format check.** `src/dev/doc-check/agent-changes.ts` checks entry format,
   order, and limits. Reuse for the second file.
 
@@ -126,10 +130,14 @@ No decision depends on an external premise.
   `beebox/docs/box/whats-new.md`; box copy
   `_content/docs/generated/whats-new.md`. Not `agent-changes.md`, whose bar is
   agent habits.
-- **Person surface** (new, schedule only): a repo path whose change can alter
-  what the person sees: `bin/deployed-paths.ts`'s shipped paths minus tests and
-  docs. The iOS app and the Chrome extension ship separately, on their own
-  schedule, so their changes are left out of this box-version list.
+- **Qualifying change**: a change a person using the box would notice. Not
+  internal work, restoring fixes, dev tooling, agent internals
+  (`agent-changes.md`), or the iOS app and Chrome extension, which reach people
+  on their own schedule.
+- **Category** (one per entry, developer's list 2026-11-16): **New** (a
+  control, view, or thing to ask for), **Changed** (moved, renamed, removed, or
+  works differently), **Agent** (noticed only through what the agent now does).
+  Written as a bold tag after the date, so the list stays one dated sequence.
 
 ## Tracks / scope
 
@@ -155,25 +163,19 @@ No decision depends on an external premise.
   file, rewrites a deleted copy with an unchanged engine, and that the package
   index does not list it.
 
-### Track 2 — The schedule writes it
+### Track 2 — The finish skill adds entries, and a format check
 
-- **What:** the `agent-changes` session also maintains `whats-new.md`.
-- **Direction:**
-  - `lib.ts`: `isPersonSurface(file)`; both files in `OWN_OUTPUT`.
-  - `run.ts`: each landing records which filters it passed; the briefing lists
-    two groups. Hand off when either is non-empty.
-  - `prompt.md`: a second bar. An entry qualifies when a person would notice
-    it: a new control, a new thing they can ask for, or a changed behavior that
-    would surprise them. Leave out internal work, fixes with no visible change,
-    and dev tooling. Second person; what the person sees; one line. The session
-    states an outcome for each group in its alert: entries written, or "no
-    qualifying change". Authority widens to the two files.
-  - `doc-check`: same format and limits for `whats-new.md`. The limits are the
-    check's (`src/dev/doc-check/agent-changes.ts:10-11`: 12 entries in any 10
-    days); the prompt's stale "10 entries" is corrected in the same edit.
-  - Baseline: the schedule's existing baseline sha is shared. The seeded
-    entries cover landings up to that sha, so nothing falls between them.
-- **First chunk:** `isPersonSurface`, the two-group briefing, tests.
+- **What:** a first step in `.claude/skills/finish/SKILL.md`: when the work is
+  a qualifying change, add one line at the top of `docs/box/whats-new.md` and
+  commit it with the work. `src/dev/doc-check/whats-new.ts` holds every line to
+  `- YYYY-MM-DD **New|Changed|Agent**: text`, at most 30 words, newest first;
+  it reuses
+  `realDate`, `MAX_WORDS`, and `ENTRY_LIKE` from `agent-changes.ts`.
+- **Why the finish skill:** it runs on every landing, in the session that did
+  the work. A schedule would have to infer visibility from file paths.
+- **Backfill:** entries for 2026-11-09 to 2026-11-15, drafted from first-parent
+  `main` history against the criteria and checked by hand.
+- **First chunk:** the skill step, the check, its test, the backfill.
 
 ## Could this be simpler?
 
@@ -190,9 +192,10 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Source missing from an install (files list changed) | Track 1 test | `writeStaticDocs` fails the refresh | Clear |
+| Source missing from an install (files list changed) | `whats-new.test.ts` reads the shipped doc | `copyWhatsNew` throws; the refresh fails | Clear |
 | Box copy edited by an agent | No | Next engine update overwrites it | Silent; accepted, as for all generated docs |
-| Session skips a qualifying person change | No (judgment) | Per-group outcome in the alert | Visible in the alert |
+| A finish skips a qualifying change | No (judgment) | The finish skill step and its criteria | Silent; the list misses it until someone adds the line |
+| A malformed or out-of-order line | `whats-new.test.ts` | doc-check | Clear |
 | Box copy deleted, engine unchanged | Track 1 test | Copy runs before the skip gate | Clear (healed on next refresh) |
 
 ## Agent-flow / user-flow edge cases
@@ -203,7 +206,8 @@ none
 - **Two agents:** none write it at runtime.
 - **Hand-edit drift:** see Failure modes; accepted.
 - **Fabricated value:** an entry for a change the person cannot see.
-  ADDRESSED in part by the bar and the filter; the developer can delete lines.
+  ADDRESSED in part by the criteria in the finish skill; the developer can
+  delete lines.
 - **Validation error UX:** doc-check messages as for `agent-changes.md`.
 - **Transition:** a box on an old engine has no copy and the guide does not
   mention it. Nothing breaks.
@@ -213,6 +217,10 @@ none
 - Showing other Bee Box docs to the person: parked in `bbxdocs.md`.
 - A badge or notice after an update: the update-detection issue.
 - Release tags and version numbers: the release-discipline issue.
+- A schedule that writes entries unattended: considered (a second output of
+  `agent-changes`); the developer chose the finish skill for now.
+- iOS app and Chrome extension changes: they reach people separately, so a
+  box-version list could name a feature the person does not have yet.
 
 ## Open design questions
 
@@ -227,8 +235,8 @@ One `knows_directly` entry in `src/dev/knowledge-audits.yaml`:
 
 ## What will hold this after it ships
 
-Unit tests for the copy and the exclusion; `lib.test.ts` for the schedule
-filter and briefing; doc-check for the format. No new test tier.
+Unit tests for the copy and the exclusion; `whats-new.test.ts` for the
+format; doc-check runs it on the shipped doc. No new test tier.
 
 ## Implementation order
 

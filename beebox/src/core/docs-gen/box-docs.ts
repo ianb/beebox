@@ -6,13 +6,14 @@
  */
 
 import { join } from "node:path";
-import { readdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { errnoCode } from "../../shared/error-guards.js";
 import type { CardSchema } from "../../exports/cards.js";
 import { getBuiltinTemplates, type TemplateDefinition } from "../../templates-registry.js";
 import { generateCardDoc } from "./content.js";
 import { cardDocFilename, cardDocInstructions, engineDocFilenames, ensurePackageDocs } from "./package-docs/core.js";
-import { DOCS_DIR, withDocId } from "./shared.js";
+import { WHATS_NEW_PATH } from "../../shared/whats-new-path.js";
+import { DOCS_DIR, WHATS_NEW_FILE, withDocId } from "./shared.js";
 
 /**
  * `card-<type>.md` for each BOX-LOCAL schema with `instructions` — the only
@@ -83,3 +84,26 @@ export async function ensureEngineDocs(): Promise<void> {
   }
 }
 
+
+/**
+ * Copy the person-facing changelog from the package into the box, where the
+ * person opens it from Settings. Writes only when the bytes differ, so an
+ * unchanged copy costs one read. Runs on every refresh, ahead of the box's
+ * skip gate: a deleted copy comes back without an engine change.
+ */
+export async function copyWhatsNew(params: { boxRoot: string; packageRoot: string }): Promise<void> {
+  const { boxRoot, packageRoot } = params;
+  const relativePath = WHATS_NEW_PATH;
+  const source = await readFile(join(packageRoot, "docs", "box", WHATS_NEW_FILE), "utf-8");
+  const want = withDocId({ relativePath, content: source });
+  const target = join(boxRoot, relativePath);
+  let have: string | null = null;
+  try {
+    have = await readFile(target, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
+  }
+  if (have === want) return;
+  await mkdir(join(boxRoot, DOCS_DIR), { recursive: true });
+  await writeFile(target, want);
+}

@@ -5,14 +5,14 @@
  * checkout cannot start failing with age. Plan: plan:agent-changes.
  */
 
-const MAX_WORDS = 30;
+export const MAX_WORDS = 30;
 const MAX_ENTRIES = 40;
 const SPAN_DAYS = 10;
 const MAX_IN_SPAN = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ENTRY_LINE = /^- (\d{4}-\d{2}-\d{2}) \([\da-f]{7,40}\): (\S.*)$/;
-const ENTRY_LIKE = /^(?:-(?!--)|\*|\d{4}-\d{2}-\d{2})/;
+export const ENTRY_LIKE = /^(?:-(?!--)|\*|\d{4}-\d{2}-\d{2})/;
 const HANDLE = /\*\*([A-Z][A-Z_]+)\*\*/g;
 
 interface Entry {
@@ -21,7 +21,8 @@ interface Entry {
   time: number;
 }
 
-function realDate(date: string): number | null {
+/** A `YYYY-MM-DD` that names a real day, as epoch ms; null otherwise. */
+export function realDate(date: string): number | null {
   const time = Date.parse(`${date}T00:00:00.000Z`);
   if (Number.isNaN(time) || new Date(time).toISOString().slice(0, 10) !== date) return null;
   return time;

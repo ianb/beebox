@@ -137,6 +137,11 @@ don't know; don't reconstruct a mechanism from memory (THE_LAW_OF_CHECKING).{{en
 when something you remember fails, when a note disagrees with the docs, or
 before you say Bee Box cannot do something.
 
+<!-- rules: docs.whats-new -->
+When the person asks what's new in Bee Box, read
+`_content/docs/generated/whats-new.md` and link it. It lists the changes they
+can see; Bee Box rewrites it, so do not edit it.
+
 <!-- rules: docs.compiled -->
 Docs compiled from this box's own content (its guides, personality, and
 box-local card types) are in `_content/docs/generated/`.

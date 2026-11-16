@@ -27,6 +27,16 @@ tests:
     correct_contains: ["bbx chat trigger log"]
     tags: [triggers]
 
+  # === The person's changelog (docs/plans/whats-new.md) ===
+  - id: whats-new-answer
+    prompt: >
+      What's new in Bee Box lately? Anything I should try? Explain only; do
+      not change files.
+    expected_level: knows_directly
+    should_read_any: ["_content/docs/generated/whats-new.md"]
+    watch_for: "Reads the box's what's-new list and answers from it with a link, rather than from agent-changes.md or from memory."
+    correct_contains: ["whats-new.md"]
+    tags: [whats-new]
   # === The box agent changelog (docs/implemented-plans/agent-changes.md) ===
   # Status (2026-11-01, Claude): all three passed on the agent-changelog test1
   # clone; each agent opened box-docs/agent-changes.md by itself.
