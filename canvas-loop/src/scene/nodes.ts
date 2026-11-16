@@ -128,6 +128,14 @@ export interface TextLine {
   /** Where the line's `baseline` sits. */
   readonly y: number;
 }
+/** One run of a runs text, over line 0's glyphs `from` to `to`: its size, style, and baseline move (down positive). */
+export interface TextRunSpan {
+  readonly from: number;
+  readonly to: number;
+  readonly size: number;
+  readonly style: TextStyle;
+  readonly dy: number;
+}
 /** `text`: measured and laid out when recorded (draft section 7); drawn through a glyph atlas. */
 export interface TextNode {
   readonly kind: "text";
@@ -144,6 +152,8 @@ export interface TextNode {
   readonly box: { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
   /** The first line's alphabetic baseline y (distinct from `baseline`, the Canvas2D mode). */
   readonly baselineY: number;
+  /** A runs text's runs; its one line is then on the alphabetic baseline. Undefined for plain text. */
+  readonly runs: readonly TextRunSpan[] | undefined;
   readonly fill: Paint;
   readonly halo: { readonly paint: Paint; readonly width: number } | undefined;
   readonly blend: BlendMode;

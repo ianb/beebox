@@ -26,7 +26,7 @@ import { CASE_NAMES, drawDraft, fixtures } from "./fixtures.js";
 import { brushBlends, brushParity, frozen, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
 import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
-import { rotatedText, textParity } from "./text-cases.js";
+import { rotatedText, subRun, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
 import { casterHeights, casterOnCaster, casterOutlineFringe, lightPeaks, smoothPenumbra, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonReceiver, skyKeepsLight, translucentNonReceiver } from "./receives-shadow-cases.js";
@@ -203,6 +203,9 @@ onGpu("text sits where today's does, at today's size, through the glyph atlas", 
 });
 onGpu("text under a rotation draws through the glyph atlas", async (handle) => {
   if (text !== undefined) await rotatedText(handle, text);
+});
+onGpu("a sub run draws smaller and lower; its base run sits where plain text does", async (handle) => {
+  if (text !== undefined) await subRun(handle, text);
 });
 onGpu("wash, hatching and paper repeat byte for byte, at ratio 1 and 2", painterlyRepeats);
 onGpu("a wash's bleed grows the group's layer; hatching and paper never change alpha (R5)", painterlyBounds);

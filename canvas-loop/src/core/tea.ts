@@ -252,7 +252,7 @@ export interface View {
    * black, left, top. To place a label by its size, measure it first with
    * `textBounds` or `textWidth`.
    */
-  text(content: string, box: TextBox, options?: TextOptions): DrawingNode;
+  text(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): DrawingNode;
   /** The bounds `text` would draw for these arguments where no transform moves it (inside the canvas, or the picture's box in a body). */
   textBounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */

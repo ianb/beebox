@@ -225,21 +225,21 @@ export class SceneRecorder extends PureHelpers implements View {
     return this.#text;
   }
   /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box. */
-  #layText(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions | undefined }): ReturnType<typeof recordText> {
+  #layText(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions | undefined; call: string }): ReturnType<typeof recordText> {
+    checkContent(content, at);
     return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas: this.#size });
   }
   /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
-  text(...[content, box, options]: [string, TextBox, TextOptions?]): DrawingNode {
+  text(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): DrawingNode {
     this.#notes.live("text");
-    const { node, bounds } = this.#layText(content, { box, options });
+    const { node, bounds } = this.#layText(content, { box, options, call: "v.text" });
     const made = this.#stamp(node, "text");
     const keepInside = options?.keepInside === true;
-    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
+    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { content: structuredClone(content), box: { ...box }, options: structuredClone({ ...options }) } : undefined });
     return made;
   }
   textBounds(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds {
-    checkContent(content, { call: "v.textBounds", options });
-    return this.#layText(content, { box, options }).bounds;
+    return this.#layText(content, { box, options, call: "v.textBounds" }).bounds;
   }
   textWidth(content: string | readonly TextRun[], options?: TextOptions): number {
     checkContent(content, { call: "v.textWidth", options });

@@ -9,7 +9,7 @@
 // unless one of these changed it; a container whose children changed comes
 // back as a copy. Warnings name the line each node's
 // call kept (testing mode); an error names the node path too.
-import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
+import type { TextBounds, TextBox, TextOptions, TextRun } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { CallSite } from "../call-site.js";
 import { UnsupportedCallError } from "../errors.js";
@@ -40,7 +40,7 @@ export interface TextFacts {
   readonly bounds: TextBounds;
   readonly unboxed: boolean;
   readonly overlay: boolean;
-  readonly keep: { readonly box: TextBox; readonly options: TextOptions } | undefined;
+  readonly keep: { readonly content: string | readonly TextRun[]; readonly box: TextBox; readonly options: TextOptions } | undefined;
 }
 
 /** What the recorder lends the walk. `sites` and `audit` are present in testing mode only. */
@@ -229,7 +229,7 @@ export class Resolver {
     let bounds = facts.bounds;
     const keep = facts.keep;
     if (keep !== undefined && this.#d.text !== undefined) {
-      const laid = recordText(n.content, { box: keep.box, options: keep.options, measurer: this.#d.text, matrix: ctx.matrix, canvas: ctx.size });
+      const laid = recordText(keep.content, { box: keep.box, options: keep.options, measurer: this.#d.text, matrix: ctx.matrix, canvas: ctx.size });
       ({ node, bounds } = laid);
     }
     const audit = this.#d.audit;

@@ -1023,6 +1023,26 @@ run them on the worktree's test1 with `--filter figure`:
    alphabetic baseline, glyph quads, the `keepInside` path; TEA.md and
    CHANGELOG, audit `figure-formula-runs`, run. Track C is core scope; only
    B3, the host half of B4 and B5 wait on the BIG CHANGE answer.
+   - **As built (C2).** Logs are in `scratch/layout-text-hits/c2-*.log`.
+     `v.text` takes runs (checked in `#layText`, so `v.text` and
+     `v.textBounds` name themselves). `TextNode` gains `runs`
+     (`TextRunSpan`: `from`, `to`, `size`, `style`, `dy`) over line 0's
+     glyphs, undefined for plain text. `recordText` lays the line out as
+     before, then for runs moves its `y` once by `baselineGap` for the
+     pre-conversion mode at the fitted size, sets `baseline: "alphabetic"`,
+     and places each run's glyphs in the run's font (`runLine`). An unboxed
+     runs line is placed by the runs' width. `gpu/text.ts` takes each glyph's
+     size and style from its run and adds `dy`; the missing-glyph check
+     checks each run's glyphs in the run's style. `TextFacts.keep` holds the
+     original content (cloned), and the `keepInside` re-layout uses it.
+     - **Tests:** `test/scene/recorder.runs.test.ts` (`"H"` against `["H"]`
+       for four `valign`s unboxed and boxed and with `fit`; the node's runs;
+       a `w` box; `keepInside` under an `at`; `v.bounds` and a hit on a named
+       runs text; `v.text` names itself in a run error) and one GPU case in
+       `renderer.gpu.test.ts` (`subRun` in `text-cases.ts`: the base run's
+       ink sits where plain text's does, the sub `2` is smaller and lower),
+       run under the GPU lock.
+     - **Lines:** source 105, tests 112, docs 0 (217). Track C so far: 460.
 
 ## Rollout shape
 
