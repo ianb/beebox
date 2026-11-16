@@ -192,7 +192,7 @@ export default (cl, { mount, figure }) =>
   to survive the shrink. To size labels and hit areas to their text, measure in
   \`update\` with \`u.textBounds\` / \`u.textWidth\`.
 - **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
-  \`canvas-loop.md\`; brushes, paper, sprites and caches in
+  \`canvas-loop.md\`; brushes, paper, effects, glow, lighting and pictures in
   \`canvas-loop-brushes.md\` (both beside this file).
 
 ### The factory's arguments

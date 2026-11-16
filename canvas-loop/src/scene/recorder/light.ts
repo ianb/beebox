@@ -121,12 +121,14 @@ export function resolveLight(light: Light): LightRec {
 
 /** The warning for a light (or a placed picture holding one) where it does nothing (R8). */
 export function lightWarning(where: "mask" | "unlit", what: string): string {
-  return where === "mask" ? `${what} is inside a mask's artwork and does nothing (R8)` : `${what} is outside any lit group and does nothing (R8); put it inside group({ lighting: {} }, …)`;
+  return where === "mask"
+    ? `${what} is inside a mask's artwork and does nothing: a mask uses only its artwork's coverage, so nothing there is lit; put the light outside the mask, inside the lit group`
+    : `${what} is outside any lit group and does nothing: a light lights only the nearest group({ lighting }) around it; put it inside group({ lighting: {} }, …)`;
 }
 
 /** The warning for a lit group with no light inside it (R8). */
 export function noLightWarning(name: string | undefined, lighting: LightingRec): string {
-  return `lit group${name === undefined ? "" : ` "${name}"`} has no light inside it, so only its ambient (${lighting.ambient}) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group`;
+  return `lit group${name === undefined ? "" : ` "${name}"`} has no light inside it, so only its ambient (${lighting.ambient}) lights it: a lit group is lit only by the lights drawn inside it; add v.light({ kind: "point", at: [x, y] }) inside the group`;
 }
 
 /** A placed picture's answer to `holdsNonReceiving`, kept per picture body: a picture is placed many times. */
