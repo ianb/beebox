@@ -29,6 +29,7 @@ import type { ComposeEditorProps } from "../Composition";
 import { addConflicts, conflictWidgets, openConflictCount } from "./conflicts";
 import { CompositionSync, saveStateText, type ReadResult, type SaveState, type Schedule } from "./sync";
 import { acceptSelection, canAccept, isMalformed, markWidgets } from "./widgets";
+import { registerReloadBlocker } from "../../../lib/reload-blockers";
 
 const AUTOSAVE_MS = 800;
 const RETRY_MS = 3000;
@@ -140,10 +141,12 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
     const created = createSession({ cardPath, initial, onState: setSaveState, onMalformed: setMalformed, onAcceptable: setAcceptable, focused });
     setSession(created);
     let ended = false;
+    const losesEdits = () => created.sync.hasUnsaved() || (!ended && openConflictCount(created.view.state) > 0);
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (created.sync.hasUnsaved() || (!ended && openConflictCount(created.view.state) > 0)) event.preventDefault();
+      if (losesEdits()) event.preventDefault();
     };
     window.addEventListener("beforeunload", beforeUnload);
+    const unblockReload = registerReloadBlocker("compose-edits", losesEdits);
     return () => {
       ended = true;
       // A flush that never gets through keeps the leave warning on, and says
@@ -151,6 +154,7 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
       void created.sync.dispose().then((flushed) => {
         if (flushed.ok) {
           window.removeEventListener("beforeunload", beforeUnload);
+          unblockReload();
           return;
         }
         console.error(`Compose: the final write of ${cardPath} failed:`, flushed.error);

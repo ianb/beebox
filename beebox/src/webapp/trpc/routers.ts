@@ -62,6 +62,7 @@ import { chatCallRouter } from "./routers/chat-call.js";
 import { notificationsRouter } from "./routers/notifications.js";
 import { activityRouter } from "./routers/activity.js";
 import { triggersRouter } from "./routers/triggers.js";
+import { buildRouter } from "./routers/build.js";
 
 const routerMembers = {
   quickChat: quickChatRouter,
@@ -87,6 +88,7 @@ const routerMembers = {
   nav: navRouter,
   chat: chatRouter,
   events: eventsRouter,
+  build: buildRouter,
   location: locationRouter,
   push: pushRouter,
   views: viewsRouter,

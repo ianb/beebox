@@ -1,4 +1,4 @@
-import type { PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, PathCommand, RootDrawing, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 // A friendly green alien, picture-book style: ink outlines drawn with s.curve,
 // bristle and pencil shading clipped inside each shape. One frame, no state:
@@ -113,7 +113,7 @@ interface Part {
   readonly color?: string;
   readonly weight?: number;
   readonly closed?: boolean;
-  readonly marks?: () => void;
+  readonly marks?: () => Drawing;
   readonly pressure?: "even" | "taper";
   /** Where along a closed outline (0..1 from its first point) the ink is heaviest. */
   readonly heavy?: number;
@@ -129,13 +129,13 @@ function heavyAt(heavy: number): [number, number][] {
   return keys;
 }
 
-function flatFill(v: View, part: Part): void {
-  v.curve(part.pts, true, { fill: part.color ?? GREEN });
+function flatFill(v: View, part: Part): Drawing {
+  return v.curve(part.pts, true, { fill: part.color ?? GREEN });
 }
 
-function outline(v: View, part: Part): void {
+function outline(v: View, part: Part): Drawing {
   const closed = part.closed ?? true;
-  v.curve(part.pts, closed, {
+  return v.curve(part.pts, closed, {
     stroke: INK,
     weight: part.weight ?? 3.6,
     brush: { preset: "ink", thinning: 0.35 },
@@ -149,10 +149,12 @@ function outline(v: View, part: Part): void {
 }
 
 /** Run `part.marks` clipped to the part's outline. */
-function shade(v: View, part: Part): void {
+function shade(v: View, part: Part): Drawing {
+  const out: Drawing[] = [];
   const marks = part.marks;
-  if (marks === undefined) return;
-  v.clip(closedCurvePath(part.pts), marks);
+  if (marks === undefined) return out;
+  out.push(v.clip(closedCurvePath(part.pts), marks()));
+  return out;
 }
 
 interface Stroke {
@@ -162,7 +164,7 @@ interface Stroke {
   readonly opacity?: number;
 }
 
-function bristleStroke(v: View, st: Stroke): void {
+function bristleStroke(v: View, st: Stroke): Drawing {
   const style: Style = {
     stroke: st.color,
     weight: st.weight,
@@ -175,13 +177,15 @@ function bristleStroke(v: View, st: Stroke): void {
     },
     gesture: { pressure: "taper", wobble: 1.5 },
   };
-  v.curve(st.pts, false, style);
+  return v.curve(st.pts, false, style);
 }
 
-function greenPart(v: View, part: Part): void {
-  flatFill(v, part);
-  shade(v, part);
-  outline(v, part);
+function greenPart(v: View, part: Part): Drawing {
+  return [
+    flatFill(v, part),
+    shade(v, part),
+    outline(v, part),
+  ];
 }
 
 // ── draw ─────────────────────────────────────────────────────────────
@@ -200,15 +204,17 @@ export function update(model: Model): Model {
 const D = GREEN_DARK;
 const L = GREEN_LIGHT;
 
-export function draw(v: View): void {
-  v.background("#f4f1ea");
+export function draw(v: View): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f4f1ea"));
 
   // ground shadow
   const shadow = ellipsePts({ cx: 200, cy: 450, rx: 95, ry: 13, n: 10 });
-  flatFill(v, { pts: shadow, color: "rgba(120,110,80,0.14)" });
-  shade(v, {
+  out.push(flatFill(v, { pts: shadow, color: "rgba(120,110,80,0.14)" }));
+  out.push(shade(v, {
     pts: shadow,
     marks: () => {
+      const drawn: Drawing[] = [];
       const pencil: Style = {
         stroke: "#8f8668",
         weight: 2.2,
@@ -216,9 +222,10 @@ export function draw(v: View): void {
         gesture: { pressure: "taper" },
       };
       for (let i = 0; i < 34; i += 1)
-        v.line(104 + i * 6, 466, 116 + i * 6, 436, pencil);
+        drawn.push(v.line(104 + i * 6, 466, 116 + i * 6, 436, pencil));
+      return drawn;
     },
-  });
+  }));
 
   // antennae
   for (const [base, tip] of [
@@ -235,17 +242,18 @@ export function draw(v: View): void {
       (base[0] + tip[0]) / 2 + (tip[0] < 200 ? 3 : -3),
       (base[1] + tip[1]) / 2,
     ];
-    outline(v, {
+    out.push(outline(v, {
       pts: [base, mid, tip],
       weight: 3.6,
       closed: false,
       pressure: "even",
-    });
+    }));
     const ball = ellipsePts({ cx: tip[0], cy: tip[1], rx: 11, ry: 11, n: 8 });
-    flatFill(v, { pts: ball, color: "#f2d34a" });
-    shade(v, {
+    out.push(flatFill(v, { pts: ball, color: "#f2d34a" }));
+    out.push(shade(v, {
       pts: ball,
       marks: () => {
+        const drawn: Drawing[] = [];
         const pencil: Style = {
           stroke: "#d99a2b",
           weight: 2,
@@ -253,22 +261,23 @@ export function draw(v: View): void {
           gesture: { pressure: 0.8 },
         };
         for (let i = 0; i < 5; i += 1)
-          v.line(
+          drawn.push(v.line(
             tip[0] - 12 + i * 3,
             tip[1] + 12,
             tip[0] - 2 + i * 3,
             tip[1] - 2,
             pencil,
-          );
+          ));
+        return drawn;
       },
-    });
-    outline(v, { pts: ball, weight: 3 });
+    }));
+    out.push(outline(v, { pts: ball, weight: 3 }));
   }
 
   // legs and feet
   for (const leg of [LEG_L, LEG_R]) {
     const x = (leg[1]?.[0] ?? 0) - 4;
-    greenPart(v, {
+    out.push(greenPart(v, {
       pts: leg,
       heavy: 0.6,
       marks: () =>
@@ -280,11 +289,11 @@ export function draw(v: View): void {
             [x, 438],
           ],
         }),
-    });
+    }));
   }
   for (const foot of [FOOT_L, FOOT_R]) {
     const x = foot[0]?.[0] ?? 0;
-    greenPart(v, {
+    out.push(greenPart(v, {
       pts: foot,
       marks: () =>
         bristleStroke(v, {
@@ -296,11 +305,11 @@ export function draw(v: View): void {
             [x + 2, 450],
           ],
         }),
-    });
+    }));
   }
 
   // arms and hands (behind the body)
-  greenPart(v, {
+  out.push(greenPart(v, {
     pts: ARM_L,
     heavy: 0.3,
     marks: () =>
@@ -313,8 +322,8 @@ export function draw(v: View): void {
           [130, 374],
         ],
       }),
-  });
-  greenPart(v, {
+  }));
+  out.push(greenPart(v, {
     pts: HAND_L,
     marks: () =>
       bristleStroke(v, {
@@ -326,8 +335,8 @@ export function draw(v: View): void {
           [136, 388],
         ],
       }),
-  });
-  greenPart(v, {
+  }));
+  out.push(greenPart(v, {
     pts: ARM_R,
     heavy: 0.7,
     marks: () =>
@@ -340,8 +349,8 @@ export function draw(v: View): void {
           [328, 258],
         ],
       }),
-  });
-  greenPart(v, {
+  }));
+  out.push(greenPart(v, {
     pts: HAND_R,
     marks: () =>
       bristleStroke(v, {
@@ -353,66 +362,68 @@ export function draw(v: View): void {
           [346, 230],
         ],
       }),
-  });
+  }));
 
   // body
-  greenPart(v, {
+  out.push(greenPart(v, {
     pts: BODY,
     heavy: 0.6,
     marks: () => {
-      bristleStroke(v, {
-        color: D,
-        weight: 30,
-        pts: [
-          [160, 258],
-          [150, 320],
-          [156, 396],
-        ],
-        opacity: 0.35,
-      });
-      bristleStroke(v, {
-        color: D,
-        weight: 14,
-        pts: [
-          [156, 264],
-          [147, 324],
-          [152, 392],
-        ],
-      });
-      bristleStroke(v, {
-        color: D,
-        weight: 26,
-        pts: [
-          [150, 396],
-          [200, 404],
-          [252, 392],
-        ],
-        opacity: 0.4,
-      });
-      bristleStroke(v, {
-        color: D,
-        weight: 10,
-        pts: [
-          [244, 300],
-          [252, 350],
-          [246, 388],
-        ],
-        opacity: 0.45,
-      });
-      bristleStroke(v, {
-        color: L,
-        weight: 10,
-        pts: [
-          [226, 268],
-          [236, 304],
-          [238, 340],
-        ],
-        opacity: 0.5,
-      });
+      return [
+        bristleStroke(v, {
+          color: D,
+          weight: 30,
+          pts: [
+            [160, 258],
+            [150, 320],
+            [156, 396],
+          ],
+          opacity: 0.35,
+        }),
+        bristleStroke(v, {
+          color: D,
+          weight: 14,
+          pts: [
+            [156, 264],
+            [147, 324],
+            [152, 392],
+          ],
+        }),
+        bristleStroke(v, {
+          color: D,
+          weight: 26,
+          pts: [
+            [150, 396],
+            [200, 404],
+            [252, 392],
+          ],
+          opacity: 0.4,
+        }),
+        bristleStroke(v, {
+          color: D,
+          weight: 10,
+          pts: [
+            [244, 300],
+            [252, 350],
+            [246, 388],
+          ],
+          opacity: 0.45,
+        }),
+        bristleStroke(v, {
+          color: L,
+          weight: 10,
+          pts: [
+            [226, 268],
+            [236, 304],
+            [238, 340],
+          ],
+          opacity: 0.5,
+        }),
+      ];
     },
-  });
-  flatFill(v, { pts: BELLY, color: "#62ad56" });
-  shade(v, {
+  }));
+  out.push(flatFill(v, { pts: BELLY, color: "#62ad56" }));
+  out.push(shade(v, {
     pts: BELLY,
     marks: () =>
       bristleStroke(v, {
@@ -424,76 +435,79 @@ export function draw(v: View): void {
           [202, 380],
         ],
       }),
-  });
+  }));
 
   // head
-  greenPart(v, {
+  out.push(greenPart(v, {
     pts: HEAD,
     marks: () => {
-      bristleStroke(v, {
-        color: D,
-        weight: 40,
-        pts: [
-          [98, 150],
-          [118, 226],
-          [200, 268],
-          [282, 230],
-          [304, 160],
-        ],
-        opacity: 0.3,
-      });
-      bristleStroke(v, {
-        color: D,
-        weight: 20,
-        pts: [
-          [100, 160],
-          [122, 226],
-          [200, 262],
-          [276, 236],
-          [302, 176],
-        ],
-      });
-      bristleStroke(v, {
-        color: D,
-        weight: 12,
-        pts: [
-          [104, 190],
-          [140, 236],
-          [190, 252],
-        ],
-      });
-      bristleStroke(v, {
-        color: L,
-        weight: 22,
-        pts: [
-          [130, 120],
-          [188, 100],
-          [256, 110],
-        ],
-        opacity: 0.45,
-      });
-      bristleStroke(v, {
-        color: L,
-        weight: 10,
-        pts: [
-          [150, 110],
-          [190, 100],
-          [230, 104],
-        ],
-        opacity: 0.7,
-      });
+      return [
+        bristleStroke(v, {
+          color: D,
+          weight: 40,
+          pts: [
+            [98, 150],
+            [118, 226],
+            [200, 268],
+            [282, 230],
+            [304, 160],
+          ],
+          opacity: 0.3,
+        }),
+        bristleStroke(v, {
+          color: D,
+          weight: 20,
+          pts: [
+            [100, 160],
+            [122, 226],
+            [200, 262],
+            [276, 236],
+            [302, 176],
+          ],
+        }),
+        bristleStroke(v, {
+          color: D,
+          weight: 12,
+          pts: [
+            [104, 190],
+            [140, 236],
+            [190, 252],
+          ],
+        }),
+        bristleStroke(v, {
+          color: L,
+          weight: 22,
+          pts: [
+            [130, 120],
+            [188, 100],
+            [256, 110],
+          ],
+          opacity: 0.45,
+        }),
+        bristleStroke(v, {
+          color: L,
+          weight: 10,
+          pts: [
+            [150, 110],
+            [190, 100],
+            [230, 104],
+          ],
+          opacity: 0.7,
+        }),
+      ];
     },
-  });
+  }));
 
   // eyes
   for (const [eye, px] of [
     [EYE_L, 165],
     [EYE_R, 235],
   ] as const) {
-    flatFill(v, { pts: eye, color: "#ffffff" });
-    shade(v, {
+    out.push(flatFill(v, { pts: eye, color: "#ffffff" }));
+    out.push(shade(v, {
       pts: eye,
       marks: () => {
+        const drawn: Drawing[] = [];
         const pencil: Style = {
           stroke: "#9aa6b2",
           weight: 2.2,
@@ -501,21 +515,23 @@ export function draw(v: View): void {
           gesture: { pressure: 0.8 },
         };
         for (let i = 0; i < 9; i += 1)
-          v.line(px - 34 + i * 4, 198, px - 18 + i * 4, 180, pencil);
+          drawn.push(v.line(px - 34 + i * 4, 198, px - 18 + i * 4, 180, pencil));
+        return drawn;
       },
-    });
-    outline(v, { pts: eye, weight: 3 });
-    v.circle(px, 172, 13, { fill: INK });
-    v.circle(px + 6, 165, 4, { fill: "#ffffff" });
+    }));
+    out.push(outline(v, { pts: eye, weight: 3 }));
+    out.push(v.circle(px, 172, 13, { fill: INK }));
+    out.push(v.circle(px + 6, 165, 4, { fill: "#ffffff" }));
   }
 
   // cheeks: a soft pink oval with a few pencil marks over it
   for (const cx of [132, 268]) {
-    v.group({ opacity: 0.8 }, () => {
-      flatFill(v, {
+    out.push(v.group({ opacity: 0.8 }, ((): Drawing => {
+      const drawn: Drawing[] = [];
+      drawn.push(flatFill(v, {
         pts: ellipsePts({ cx, cy: 205, rx: 11, ry: 6.5, n: 8 }),
         color: "#f1a19c",
-      });
+      }));
       const pencil: Style = {
         stroke: "#e0736f",
         weight: 2,
@@ -523,12 +539,13 @@ export function draw(v: View): void {
         gesture: { pressure: 0.7 },
       };
       for (let i = 0; i < 4; i += 1)
-        v.line(cx - 8 + i * 4, 210, cx - 3 + i * 4, 200, pencil);
-    });
+        drawn.push(v.line(cx - 8 + i * 4, 210, cx - 3 + i * 4, 200, pencil));
+      return drawn;
+    })()));
   }
 
   // smile
-  outline(v, {
+  out.push(outline(v, {
     pts: [
       [179, 211],
       [188, 218],
@@ -538,5 +555,6 @@ export function draw(v: View): void {
     ],
     weight: 3.6,
     closed: false,
-  });
+  }));
+  return out;
 }

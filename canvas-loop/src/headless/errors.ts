@@ -4,12 +4,14 @@
 // class via `super(...)` is allowed, so each class owns its message template and
 // callers pass only structured detail.
 
-/** Thrown when a sketch reaches for a nondeterministic global (Math.random, Date, …). */
+/** Thrown when a sketch reaches for a nondeterministic global (Math.random, Date, …) or schedules work (`use` absent). */
 export class DeterminismError extends Error {
   name = "DeterminismError";
-  constructor(options: { api: string; use: string }) {
+  constructor(options: { api: string; use?: string }) {
     super(
-      `${options.api}() is unavailable inside canvas-loop sketches — runs are deterministic. Use ${options.use} instead.`,
+      options.use === undefined
+        ? `${options.api}() is unavailable inside canvas-loop sketches: sketch code runs synchronously; it cannot schedule work. Keep what should happen later in the model and do it on a later tick.`
+        : `${options.api}() is unavailable inside canvas-loop sketches — runs are deterministic. Use ${options.use} instead.`,
     );
   }
 }

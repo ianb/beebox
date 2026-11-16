@@ -3,7 +3,7 @@ import type { Voice, CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, 
 
 /**
  * A TEA sketch module after validation; the model is opaque to the runtime.
- * Defined HERE (the loader that produces it) rather than in tea-runtime.ts so
+ * Defined HERE (the loader that produces it) rather than in tea-runtime/runner.ts so
  * that consumers of the validator — including the browser mount, whose type
  * graph must stay free of the node/napi-typed runner — never pull tea-runtime
  * into their program.
@@ -13,7 +13,7 @@ export interface LoadedTeaModule {
   canvas: CanvasSize | undefined;
   init(u: Util<ParamsDecl>): unknown;
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
-  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): unknown;
   sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
   activity?: (model: unknown) => Record<string, unknown>;
 }
@@ -167,6 +167,7 @@ export function toTeaModule(mod: Record<string, unknown>): LoadedTeaModule {
     throw new CliError({ detail: "the \"activity\" export must be a function activity(model) returning an object" });
   }
   const activity = readFn<NonNullable<LoadedTeaModule["activity"]>>(mod, "activity");
+  // A `renderer` export (the marker of the move to the scene renderer) is ignored: every sketch draws on it.
   return {
     params: parseParamsDecl(mod["params"]), canvas: parseCanvas(mod["canvas"]), init, update, draw,
     ...(sound === undefined ? {} : { sound }), ...(activity === undefined ? {} : { activity }),

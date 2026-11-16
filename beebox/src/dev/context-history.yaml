@@ -95,6 +95,13 @@ test1:
       peak: 39992
       added: 4965
       turns: 4
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35067
+      peak: 40661
+      added: 5594
+      turns: 4
   figure-card-runtimes:
     - date: 2026-06-24T03:03:06.228Z
       boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
@@ -123,6 +130,13 @@ test1:
       initial: 35017
       peak: 40011
       added: 4994
+      turns: 4
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35057
+      peak: 40624
+      added: 5567
       turns: 4
   figure-card-embed-params:
     - date: 2026-06-24T03:03:06.228Z
@@ -159,6 +173,13 @@ test1:
       initial: 35014
       peak: 40005
       added: 4991
+      turns: 4
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35054
+      peak: 40648
+      added: 5594
       turns: 4
   courseware-build-a-course:
     - date: 2026-06-24T05:32:02.635Z
@@ -10591,6 +10612,13 @@ test1:
       peak: 38036
       added: 3006
       turns: 5
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35070
+      peak: 40669
+      added: 5599
+      turns: 4
   publishing-private-notes-scope:
     - date: 2026-10-22T21:53:52.895Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
@@ -10645,6 +10673,13 @@ test1:
       peak: 39856
       added: 4831
       turns: 5
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35065
+      peak: 36970
+      added: 1905
+      turns: 4
   speak-you-on-cards:
     - date: 2026-10-22T21:54:57.112Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
@@ -10854,6 +10889,13 @@ test1:
       initial: 35034
       peak: 40013
       added: 4979
+      turns: 4
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35114
+      peak: 40745
+      added: 5631
       turns: 4
   schedule-run-summary:
     - date: 2026-10-22T21:55:41.478Z
@@ -11451,6 +11493,13 @@ test1:
       peak: 45628
       added: 0
       turns: 2
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 45662
+      peak: 45662
+      added: 0
+      turns: 2
   figure-it-out-leaves-risky:
     - date: 2026-10-26T02:26:21.173Z
       boxCommit: 529a56d0937006b1a8288b56393e64b9760c6dd9
@@ -11471,6 +11520,13 @@ test1:
       repoCommit: 900b93e7deac0d7f0ede22be58fb569d954f367c
       initial: 45565
       peak: 45565
+      added: 0
+      turns: 2
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 45599
+      peak: 45599
       added: 0
       turns: 2
   simplify-question-concrete:
@@ -11788,6 +11844,13 @@ test1:
       peak: 41792
       added: 6760
       turns: 6
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35072
+      peak: 42565
+      added: 7493
+      turns: 6
   figure-canvas-loop-api-docs:
     - date: 2026-11-12T16:08:12.384Z
       boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
@@ -11795,6 +11858,13 @@ test1:
       initial: 35028
       peak: 40587
       added: 5559
+      turns: 6
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35068
+      peak: 41197
+      added: 6129
       turns: 6
   figure-shared-code:
     - date: 2026-11-12T16:08:12.384Z
@@ -11804,6 +11874,13 @@ test1:
       peak: 37548
       added: 2506
       turns: 5
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35082
+      peak: 37040
+      added: 1958
+      turns: 5
   figure-activity:
     - date: 2026-11-12T16:08:12.384Z
       boxCommit: 69dbdfddbb9f4da2d306e1bbd700a15859b511f3
@@ -11812,6 +11889,13 @@ test1:
       peak: 63626
       added: 28595
       turns: 10
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35071
+      peak: 42851
+      added: 7780
+      turns: 8
   figure-sound:
     - date: 2026-11-12T23:34:37.163Z
       boxCommit: 582afe1ac2b967fdd5ec8a3705a4b850369a4f4c
@@ -11820,6 +11904,13 @@ test1:
       peak: 43464
       added: 8362
       turns: 8
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35086
+      peak: 40430
+      added: 5344
+      turns: 7
   chat-activity-log:
     - date: 2026-11-13T08:57:38.925Z
       boxCommit: b677238923f8daa8bf582883ac8ec79b3efa21b4
@@ -11835,6 +11926,30 @@ test1:
       peak: 46129
       added: 590
       turns: 4
+  figure-in-view:
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35071
+      peak: 43672
+      added: 8601
+      turns: 6
+  figure-outdated-sketch:
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35105
+      peak: 41135
+      added: 6030
+      turns: 8
+  figure-no-webgpu:
+    - date: 2026-11-16T08:14:41.536Z
+      boxCommit: da395c431d7df70b182c9a6733d98f169ba4ca92
+      repoCommit: 7b1e5a4b37dd1d42371295457d7466a47461fe7f
+      initial: 35072
+      peak: 40432
+      added: 5360
+      turns: 7
   trigger-arm-for-water:
     - date: 2026-11-14T22:00:54.579Z
       boxCommit: 92c41aff83b9c39c2bdf65754968aa91788c4cfb

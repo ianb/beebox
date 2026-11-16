@@ -1,6 +1,6 @@
 // Sky, sun, sea, the far headland with its houses and lighthouse, boats, and
 // the stone quay the market stands on.
-import type { View, Vec2 } from "@ianbicking/canvas-loop";
+import type { Drawing, Vec2, View } from "@ianbicking/canvas-loop";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";
 
 export const W = 900;
@@ -9,14 +9,15 @@ export const HORIZON = 232;
 export const QUAY = 338;
 export const SUN: Vec2 = [800, 78];
 
-export function sky(v: View): void {
-  v.background(
+export function sky(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background(
     v.linearGradient(0, 0, 0, HORIZON, [
       [0, "#5fb4e6"],
       [0.7, "#a8dcf2"],
       [1, "#e4f4f6"],
     ]),
-  );
+  ));
   // loose bristle strokes, slightly rising, so the sky reads painted
   for (let i = 0; i < 22; i += 1) {
     const y = 4 + i * 10.5;
@@ -30,7 +31,7 @@ export function sky(v: View): void {
         : i < 11
           ? "#79c0ea"
           : "#d6f1f7";
-    mark(
+    out.push(mark(
       v,
       [
         [x0, y + 6],
@@ -45,8 +46,8 @@ export function sky(v: View): void {
         wobble: 2.5,
         seed: 40 + i,
       },
-    );
-    mark(
+    ));
+    out.push(mark(
       v,
       [
         [x0 + len + 40, y + 2],
@@ -61,20 +62,20 @@ export function sky(v: View): void {
         wobble: 2.5,
         seed: 140 + i,
       },
-    );
+    ));
   }
   // sun and its glow
-  v.circle(SUN[0], SUN[1], 150, {
+  out.push(v.circle(SUN[0], SUN[1], 150, {
     fill: v.radialGradient(SUN[0], SUN[1], 150, [
       [0, "rgba(255,250,214,0.95)"],
       [0.35, "rgba(255,244,200,0.45)"],
       [1, "rgba(255,244,200,0)"],
     ]),
-  });
-  v.circle(SUN[0], SUN[1], 32, { fill: "#fff6c8" });
+  }));
+  out.push(v.circle(SUN[0], SUN[1], 32, { fill: "#fff6c8" }));
   for (let k = 0; k < 12; k += 1) {
     const a = (k / 12) * Math.PI * 2 + 0.13;
-    mark(
+    out.push(mark(
       v,
       [
         [SUN[0] + Math.cos(a) * 44, SUN[1] + Math.sin(a) * 44],
@@ -86,11 +87,11 @@ export function sky(v: View): void {
         wobble: 0.5,
         seed: 70 + k,
       },
-    );
+    ));
   }
-  cloud(v, [150, 76], 1);
-  cloud(v, [470, 46], 0.75);
-  cloud(v, [640, 150], 0.55);
+  out.push(cloud(v, [150, 76], 1));
+  out.push(cloud(v, [470, 46], 0.75));
+  out.push(cloud(v, [640, 150], 0.55));
   // far-off gulls, a tick each
   for (const [i, [x, y, k]] of (
     [
@@ -100,7 +101,7 @@ export function sky(v: View): void {
       [700, 190, 0.6],
     ] as const
   ).entries()) {
-    mark(
+    out.push(mark(
       v,
       [
         [x - 12 * k, y - 2 * k],
@@ -110,11 +111,12 @@ export function sky(v: View): void {
         [x + 12 * k, y - 2 * k],
       ],
       { color: "#3b4a58", weight: 2.4 * k, seed: 260 + i },
-    );
+    ));
   }
+  return out;
 }
 
-function cloud(v: View, at: Vec2, k: number): void {
+function cloud(v: View, at: Vec2, k: number): Drawing {
   const [cx, cy] = at;
   // a flat-bottomed heap of puffs: radius swells over each lobe on the top
   const outline: Vec2[] = [];
@@ -128,56 +130,61 @@ function cloud(v: View, at: Vec2, k: number): void {
     ]);
   }
   outline.push([cx + 80 * k, cy + 12 * k], [cx - 80 * k, cy + 12 * k]);
-  form(v, outline, { base: "#ffffff", shade: "#cfe0ee", depth: 12 * k });
-  v.clip(v.curvePath(outline, true), () => {
-    for (let j = 0; j < 4; j += 1) {
-      const y = cy - 30 * k + j * 12 * k;
-      mark(
-        v,
-        [
-          [cx - 90 * k, y + 4],
-          [cx, y - 2],
-          [cx + 90 * k, y + 3],
-        ],
-        {
-          color: j < 2 ? "#ffffff" : "#c2d6e6",
-          weight: 16 * k,
-          brush: "bristle",
-          opacity: 0.8,
-          wobble: 2,
-          seed: Math.round(cx) + j,
-        },
-      );
-    }
-  });
-  mark(
-    v,
-    [
-      [cx - 84 * k, cy + 10 * k],
-      [cx, cy + 14 * k],
-      [cx + 84 * k, cy + 10 * k],
-    ],
-    {
-      color: "#a9c3d9",
-      weight: 6 * k,
-      brush: "ink",
-      opacity: 0.7,
-      seed: Math.round(cx) + 9,
-    },
-  );
+  return [
+    form(v, outline, { base: "#ffffff", shade: "#cfe0ee", depth: 12 * k }),
+    v.clip(v.curvePath(outline, true), ((): Drawing => {
+      const drawn: Drawing[] = [];
+      for (let j = 0; j < 4; j += 1) {
+        const y = cy - 30 * k + j * 12 * k;
+        drawn.push(mark(
+          v,
+          [
+            [cx - 90 * k, y + 4],
+            [cx, y - 2],
+            [cx + 90 * k, y + 3],
+          ],
+          {
+            color: j < 2 ? "#ffffff" : "#c2d6e6",
+            weight: 16 * k,
+            brush: "bristle",
+            opacity: 0.8,
+            wobble: 2,
+            seed: Math.round(cx) + j,
+          },
+        ));
+      }
+      return drawn;
+    })()),
+    mark(
+      v,
+      [
+        [cx - 84 * k, cy + 10 * k],
+        [cx, cy + 14 * k],
+        [cx + 84 * k, cy + 10 * k],
+      ],
+      {
+        color: "#a9c3d9",
+        weight: 6 * k,
+        brush: "ink",
+        opacity: 0.7,
+        seed: Math.round(cx) + 9,
+      },
+    ),
+  ];
 }
 
-export function sea(v: View): void {
-  v.rect(0, HORIZON, W, QUAY - HORIZON, {
+export function sea(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, HORIZON, W, QUAY - HORIZON, {
     fill: v.linearGradient(0, HORIZON, 0, QUAY, [
       [0, "#2f8fb8"],
       [1, "#4fb3c8"],
     ]),
-  });
+  }));
   for (let i = 0; i < 9; i += 1) {
     const y = HORIZON + 6 + i * 11;
     const x0 = -60 + hash(i + 20) * 160;
-    mark(
+    out.push(mark(
       v,
       [
         [x0, y],
@@ -192,65 +199,69 @@ export function sea(v: View): void {
         wobble: 1.5,
         seed: 90 + i,
       },
-    );
+    ));
   }
   // glitter under the sun
   for (let i = 0; i < 26; i += 1) {
     const x = 640 + hash(i + 3) * 260;
     const y = HORIZON + 6 + hash(i + 50) * 80;
-    mark(
+    out.push(mark(
       v,
       [
         [x, y],
         [x + 10 + hash(i) * 14, y],
       ],
       { color: "#fffbe0", weight: 2.5, seed: 200 + i },
-    );
+    ));
   }
-  boat(v, [560, HORIZON + 2], 1);
-  boat(v, [400, HORIZON + 14], 0.6);
+  out.push(boat(v, [560, HORIZON + 2], 1));
+  out.push(boat(v, [400, HORIZON + 14], 0.6));
+  return out;
 }
 
-function boat(v: View, at: Vec2, k: number): void {
+function boat(v: View, at: Vec2, k: number): Drawing {
+  const out: Drawing[] = [];
   const [x, y] = at;
   const sail: Vec2[] = [
     [x, y - 70 * k],
     [x + 4 * k, y - 6 * k],
     [x + 40 * k, y - 8 * k],
   ];
-  form(v, sail, {
+  out.push(form(v, sail, {
     base: "#fff3df",
     shade: "#e0cfb5",
     depth: 4,
     sharp: true,
     weight: 1.6 * k,
     seed: 3,
-  });
+  }));
   const hull: Vec2[] = [
     [x - 34 * k, y - 4 * k],
     [x + 48 * k, y - 4 * k],
     [x + 36 * k, y + 9 * k],
     [x - 26 * k, y + 9 * k],
   ];
-  form(v, hull, {
+  out.push(form(v, hull, {
     base: "#d8483a",
     shade: "#93302a",
     depth: 3,
     sharp: true,
     weight: 1.8 * k,
     seed: 4,
-  });
-  mark(
+  }));
+  out.push(mark(
     v,
     [
       [x + 1 * k, y - 72 * k],
       [x + 1 * k, y - 4 * k],
     ],
     { color: INK, weight: 2 * k, pressure: "even" },
-  );
+  ));
+  return out;
 }
 
-export function headland(v: View): void {
+export function headland(v: View): Drawing {
+  const out: Drawing[] = [];
   const hill: Vec2[] = [
     [-20, HORIZON + 4],
     [-20, 150],
@@ -260,7 +271,7 @@ export function headland(v: View): void {
     [300, 214],
     [330, HORIZON + 4],
   ];
-  form(v, hill, {
+  out.push(form(v, hill, {
     base: "#7fb069",
     shade: "#4f8a4e",
     strokes: "#a8d38a",
@@ -268,7 +279,7 @@ export function headland(v: View): void {
     line: "#3c6a3e",
     weight: 2,
     seed: 11,
-  });
+  }));
   // little houses up the slope
   const colours = [
     "#f2c14e",
@@ -281,7 +292,7 @@ export function headland(v: View): void {
   for (const [i, c] of colours.entries()) {
     const hx = 18 + i * 42;
     const hy = 150 + i * 9 + (i > 3 ? (i - 3) * 6 : 0);
-    form(
+    out.push(form(
       v,
       [
         [hx, hy],
@@ -297,8 +308,8 @@ export function headland(v: View): void {
         weight: 1.2,
         seed: 20 + i,
       },
-    );
-    form(
+    ));
+    out.push(form(
       v,
       [
         [hx - 3, hy + 1],
@@ -313,12 +324,12 @@ export function headland(v: View): void {
         weight: 1.2,
         seed: 30 + i,
       },
-    );
-    v.rect(hx + 10, hy + 9, 9, 9, { fill: "#2c4258" });
+    ));
+    out.push(v.rect(hx + 10, hy + 9, 9, 9, { fill: "#2c4258" }));
   }
   // lighthouse on the point
   const lx = 268;
-  form(
+  out.push(form(
     v,
     [
       [lx - 9, 196],
@@ -334,10 +345,10 @@ export function headland(v: View): void {
       weight: 1.4,
       seed: 8,
     },
-  );
-  v.rect(lx - 10, 208, 20, 8, { fill: "#d8483a" });
-  v.rect(lx - 11, 224, 22, 8, { fill: "#d8483a" });
-  form(
+  ));
+  out.push(v.rect(lx - 10, 208, 20, 8, { fill: "#d8483a" }));
+  out.push(v.rect(lx - 11, 224, 22, 8, { fill: "#d8483a" }));
+  out.push(form(
     v,
     [
       [lx - 7, 184],
@@ -353,25 +364,27 @@ export function headland(v: View): void {
       weight: 1.2,
       seed: 9,
     },
-  );
-  form(v, ring(lx, 182, 9, 5), {
+  ));
+  out.push(form(v, ring(lx, 182, 9, 5), {
     base: "#d8483a",
     shade: "#93302a",
     depth: 2,
     weight: 1.2,
-  });
+  }));
+  return out;
 }
 
-export function quay(v: View): void {
-  v.rect(0, QUAY, W, H - QUAY, {
+export function quay(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, QUAY, W, H - QUAY, {
     fill: v.linearGradient(0, QUAY, 0, H, [
       [0, "#d9c6a2"],
       [1, "#c4a77c"],
     ]),
-  });
+  }));
   // harbour wall lip along the water
-  v.rect(0, QUAY - 4, W, 12, { fill: "#a78f6c" });
-  mark(
+  out.push(v.rect(0, QUAY - 4, W, 12, { fill: "#a78f6c" }));
+  out.push(mark(
     v,
     [
       [0, QUAY + 8],
@@ -379,12 +392,12 @@ export function quay(v: View): void {
       [W, QUAY + 7],
     ],
     { color: "#6f5a42", weight: 3, pressure: "even", wobble: 1, seed: 5 },
-  );
+  ));
   // brushed flagstones: broad dry strokes, then pencil joints
   for (let i = 0; i < 18; i += 1) {
     const y = QUAY + 20 + i * 20;
     const x0 = -80 + hash(i + 7) * 200;
-    mark(
+    out.push(mark(
       v,
       [
         [x0, y],
@@ -399,11 +412,11 @@ export function quay(v: View): void {
         wobble: 2,
         seed: 300 + i,
       },
-    );
+    ));
   }
   for (let row = 0; row < 9; row += 1) {
     const y = QUAY + 26 + row * row * 4.2 + row * 10;
-    mark(
+    out.push(mark(
       v,
       [
         [0, y],
@@ -417,11 +430,11 @@ export function quay(v: View): void {
         wobble: 1.5,
         seed: 400 + row,
       },
-    );
+    ));
     const step = 50 + row * 14;
     for (let x = (row % 2) * step * 0.5; x < W; x += step) {
       const h = 8 + row * 4.5;
-      mark(
+      out.push(mark(
         v,
         [
           [x + hash(x + row) * 10, y],
@@ -434,7 +447,8 @@ export function quay(v: View): void {
           wobble: 1,
           seed: 500 + row * 40 + x,
         },
-      );
+      ));
     }
   }
+  return out;
 }

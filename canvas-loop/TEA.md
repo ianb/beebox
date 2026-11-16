@@ -1,10 +1,9 @@
 # Writing a sketch (TEA)
 
 A canvas-loop sketch follows The Elm Architecture (TEA). It is a pure fold:
-`model = msgs.reduce(update, init())`, then `draw` renders the model. State
-changes only when `update` returns a new `Model`. Types, a runtime deep-freeze,
-a double-run byte-diff and lint enforce this. TEA is the only sketch form: a
-module that exports `setup` gets a loader error that names the TEA form.
+`model = msgs.reduce(update, init())`, then `draw` returns the drawing of the
+model. State changes only when `update` returns a new `Model`. Types, a
+runtime deep-freeze, a double-run byte-diff and lint enforce this.
 
 ```sh
 pnpm --dir canvas-loop run cli run src/examples/orbit-tea.ts \
@@ -21,7 +20,7 @@ for a large sketch, sibling helper files named `<name>-tea.ts` (imported as
 `./<name>-tea.js`; the TEA lint applies to them too). It exports:
 
 ```ts
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = { /* … */ } as const satisfies ParamsDecl;   // optional
 export const canvas = { width: 500, height: 400 };                 // optional (default 400×300)
@@ -30,31 +29,30 @@ export type Model = { /* your state */ };                          // sketch-def
 
 export function init(u: Util<typeof params>): Model;
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model;
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void;
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing;
 ```
 
 - **`init`** runs once, before frame 0, returning the initial `Model`.
 - **`update`** folds one `Msg` into a new `Model`. Pure: same inputs → same
   output. Return a *new* value — never mutate `model` (it is deep-frozen; a
   mutation throws).
-- **`draw`** paints the `Model`. View-only: no randomness, no state store beyond
-  the `p` argument. It cannot change the world.
+- **`draw`** returns the drawing of the `Model`. View-only: no randomness, no
+  state store beyond the `p` argument. It cannot change the world.
+
+A sketch without `params` writes `Util` (no type argument) and leaves out `p`.
+
+`cli run` type-checks the sketch and the files it imports, and checks its
+exports against this contract, before it runs: `update` and `draw` must take
+the model `init` returns, and `draw` must return a drawing. A type error stops
+the run and is listed in the transcript.
 
 Capabilities are injected, not ambient — `update` gets `Util` (randomness,
 params, log, `handled`) and no drawing; `draw` gets `View` (drawing, log,
-snapshot, `ctx`) and no randomness. That withholding *is* the enforcement.
+snapshot) and no randomness. That withholding *is* the enforcement.
 
-[Drawing](#drawing) below covers `View`.
-
-The lint preset caps functions at 2 parameters. Sketch directories
-(`src/examples/`, `src/gallery/`) turn that cap off, so a sketch there needs
-nothing. Elsewhere, if lint reports `max-params` on `update` or `draw`, the
-contract signatures are the one sanctioned exception; put this exact comment
-on each:
-
-```ts
-// eslint-disable-next-line max-params -- TEA contract signature
-```
+The lint preset caps functions at 2 parameters, except in `src/examples/`
+and `src/gallery/`. Elsewhere, put this exact comment on `update` and `draw`:
+`// eslint-disable-next-line max-params -- TEA contract signature`.
 
 Every param may also carry `label` (the words its control shows; default: the
 param's name) and `hint` (a short line shown with it).
@@ -98,8 +96,8 @@ For each frame N, the runtime:
 3. folding each through `update` in that order,
 4. then calls `draw` **once** with the resulting model.
 
-So the world an event sees is exactly the state after frame **N−1**'s draw, and
-`draw` runs exactly once per frame headless. `init` runs once before frame 0.
+So the first event of frame N sees the state after frame **N−1**'s draw, and
+each later event sees the folds before it. `draw` runs exactly once per frame headless. `init` runs once before frame 0.
 
 In a browser, `draw` runs only when the frame's model is a new object, a
 param changed, or input arrived; otherwise the canvas keeps the last picture.
@@ -110,8 +108,61 @@ paused, and a sound playing when it left is cut off.
 
 ## Drawing
 
-`draw(v, model, p)` paints through `v: View`. Nothing on `View` sets state
-that a later call reads: each call says how it paints.
+Each drawing call on `v` returns a node and draws nothing by itself. `draw`
+returns the frame's drawing, and the renderer draws it on a clear canvas.
+Later items draw over earlier ones. Nothing on `View` sets state that a later
+call reads: each call says how it paints. The calls keep the Canvas2D and p5
+names and argument order.
+
+```ts
+import type { DeepReadonly, Drawing, RootDrawing, Style, View } from "@ianbicking/canvas-loop";
+
+const RING: Style = { stroke: "#f8fafc", weight: 2 };
+
+function drawPlanet(v: View, planet: DeepReadonly<Planet>, selected: boolean): Drawing {
+  return [
+    v.circle(planet.x, planet.y, planet.r, { fill: planet.color }),
+    selected && v.circle(planet.x, planet.y, planet.r + 4, RING),     // a condition is &&
+  ];
+}
+
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  return [
+    v.background("#0b1020"),
+    model.planets.map((planet, i) => drawPlanet(v, planet, model.selected === i)),  // a loop is .map
+    v.at({ translate: [250, 200] }, [                                               // a scope takes its children
+      v.circle(0, 0, 20, { fill: "#facc15" }),
+      v.text("Sun", { x: 0, y: 30 }, { fill: "#e2e8f0", align: "center" }),
+    ]),
+  ];
+}
+```
+
+- A **`Drawing`** is a node, a list of drawings (nested lists are flattened),
+  or `null`, `undefined` or `false` for nothing. A component is a function
+  that returns one. `draw` returns a **`RootDrawing`**: the same without
+  `undefined`. An empty frame returns `null` or `[]`.
+- A loop that carries state (a running total, the previous point) can push
+  into a local `const out: Drawing[] = []` and return it. The gallery's
+  sketches were converted to this form by a script and use `out.push`
+  everywhere; write `.map`, `&&` and components instead.
+- A scope copies its children when it is called: changing the array later
+  changes nothing.
+- A node belongs to the frame that made it. Make the drawing again in each
+  `draw`; to keep a drawing across frames, record it as a
+  [picture](#pictures).
+- `log`, `snapshot`, `cursor` and `control` are not drawings: call them as
+  statements before `return`.
+
+### Mistakes and what you see
+
+| Mistake | What you see |
+| --- | --- |
+| `draw` has no `return` | `cli run` stops on a type error: `TS2355: A function whose declared type is neither 'undefined', 'void', nor 'any' must return a value`, or without a return type, `the export "draw" does not fit the sketch contract … Type 'void' is not assignable to type 'RootDrawing'`. With `--no-typecheck`: `RemovedCallError: … drawing calls as statements was removed: return the drawing from draw`. |
+| A node made and not returned (`v.circle(…);` as a statement, a helper's result dropped) | The frame draws without it, and the transcript warns with its line: `warn: v.circle made a drawing that was not returned; put it in the list draw returns, or in a scope's children (at sketch-tea.ts:10:5)`. |
+| A node kept and returned in a later frame | The frame fails: `group: this drawing was made in an earlier frame; make it again in draw, or record it once as a picture (at …)`. |
+| A number where a child goes (`count && v.rect(…)` with `count` 0) | A type error: `Type 'number' is not assignable to type 'Drawing'`. With `--no-typecheck`: `a child must be a drawing …; got the number 0`. Write `count > 0 && …`. |
+| A body function (`v.group(options, () => { … })`, the old form) | A type error. With `--no-typecheck`: `RemovedCallError: group(options, body function) was removed: group takes its children as a list`. |
 
 ### Styles
 
@@ -119,20 +170,16 @@ A shape call takes a `Style` as its last argument. A style is a plain object.
 Keep the ones you reuse in `const`s and spread to vary them:
 
 ```ts
-import type { DeepReadonly, Style, TextOptions, View } from "@ianbicking/canvas-loop";
-
 const CARD: Style = { fill: "#f8fafc", stroke: "#334155", weight: 2 };
 const INK: Style = { stroke: "#1d2a44", weight: 3, brush: "ink" };
 const LABEL: TextOptions = { size: 14, fill: "#334155", align: "center", valign: "middle" };
 
-interface Model {
-  hot: boolean;
-}
-
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.roundRect(20, 20, 160, 80, 8, model.hot ? { ...CARD, fill: "#fde68a" } : CARD);
-  v.line(30, 80, 170, 80, INK);
-  v.text("Sun", { x: 100, y: 50 }, LABEL);
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  return [
+    v.roundRect(20, 20, 160, 80, 8, model.hot ? { ...CARD, fill: "#fde68a" } : CARD),
+    v.line(30, 80, 170, 80, INK),
+    v.text("Sun", { x: 100, y: 50 }, LABEL),
+  ];
 }
 ```
 
@@ -146,6 +193,9 @@ export function draw(v: View, model: DeepReadonly<Model>): void {
 | `blend` | how the pixels combine with what is under them (`"multiply"`, `"screen"`, …) | `"normal"` |
 | `erase` | `true` removes pixels instead of adding them | `false` |
 | `dash` | lengths on, off, on, … for a plain stroke (`[6, 4]`); a brushed stroke cannot be dashed | solid |
+| `cap`, `join` | line ends and corners of a plain stroke, as Canvas2D `lineCap` and `lineJoin` | `"butt"`, `"miter"` |
+| `effects` | effects on this shape alone (see [BRUSHES.md](./BRUSHES.md#effects)) | none |
+| `material` | how the shape takes light inside a lit group (see [BRUSHES.md](./BRUSHES.md#lighting)) | flat matte |
 
 A brush preset kept in a variable needs its type, or TypeScript widens
 `preset` to `string`: `const SHADE: BrushPreset = { preset: "bristle", load: 0.4 }`.
@@ -153,11 +203,11 @@ A brush preset kept in a variable needs its type, or TypeScript widens
 
 Colors are CSS strings only (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`).
 
-The style is checked at each call. An unknown key, a negative `weight` or an
-unknown brush name throws an error that names the call and the key. A call
-that can draw nothing logs a line to the transcript once per distinct message:
-a `line` or open `curve` with no stroke, or a closed shape with neither fill
-nor stroke.
+The style is checked at each call. An unknown key, a negative `weight`, an
+unknown brush name or a color that does not parse throws an error that names
+the call and the key. After the run, a drawing that was off the canvas on
+every frame, or text with no box (`w`) that crossed the canvas edge on every
+frame, gets a warning naming its line.
 
 ### Shapes
 
@@ -188,10 +238,10 @@ v.path(commands, style)                 v.curve(points, closed, style)
 ### Text
 
 ```ts
-v.text(s, { x, y, w?, h? }, options)    // returns the bounds drawn
-v.textBounds(s, { x, y, w?, h? }, options) // the same bounds, nothing drawn
-v.textWidth(s, options)                 // width in logical pixels
-u.textBounds(s, { x, y, w?, h? }, options) // in init and update: the same, without v.at
+v.text(s, { x, y, w?, h? }, options)       // a node
+v.textBounds(s, { x, y, w?, h? }, options) // the bounds text draws, as data
+v.textWidth(s, options)                    // width in logical pixels
+u.textBounds(s, { x, y, w?, h? }, options) // in init and update: the same
 u.textWidth(s, options)
 ```
 
@@ -204,7 +254,8 @@ u.textWidth(s, options)
 | `align` (`"left"`, `"center"`, `"right"`) | `"left"` |
 | `valign` (`"top"`, `"middle"`, `"bottom"`, `"baseline"`) | `"top"` |
 | `halo` (a color drawn as a band around the letters, under them) | none |
-| `keepInside` (slide the text back inside the canvas, 4px margin, when it would cross an edge) | off |
+| `keepInside` (slide the text back inside the canvas, or a picture's box, 4px margin, when it would cross an edge) | off |
+| `overlay` (the text floats over the drawing on purpose: the overlap check skips it) | off |
 | `blend`, `erase` | as for a style |
 | `wrap` | on when `w` is set |
 | `fit` (shrink until the text fits the box) | off |
@@ -217,54 +268,115 @@ u.textWidth(s, options)
   `valign` places the lines inside the box.
 - The bounds are `{ x, y, w, h, lines, size, overflow }`. `overflow` is true
   when the text does not fit the box.
-- Which fonts exist depends on the machine. Use common families.
-- Use `textBounds` to place a label before drawing it, for example to move it
-  clear of another label or to size a backing box.
+- Use `textBounds` to place a label before drawing it, for example to size a
+  backing box: measure, then return the box and the text in one list.
+  `textBounds` measures where no transform moves the text; inside an `at`,
+  the bounds are in the `at`'s coordinates.
 - `u.textBounds` and `u.textWidth` measure in `init` and `update`, so a hit
-  area or tile can be sized to its label instead of a guessed constant. They
-  give exactly what `draw` then gets for the same text at no `v.at` transform.
-  Measure when you need it rather than storing widths in the model: widths
-  are cached, and a web font that loads later changes them. Headless runs and
-  a browser can measure the same font slightly differently. A `halo` in the background
-  color keeps a label readable where it crosses a line.
+  area or tile can be sized to its label instead of a guessed constant.
+  Measure when you need it rather than storing widths in the model: a web
+  font that loads later changes them. Headless runs and a browser can measure
+  the same font slightly differently.
+- Which fonts exist depends on the machine. Use common families, and end the list
+  with a generic one (`"Georgia, serif"`); a list with no family the runtime
+  has and no generic one gets a warning.
+- Each character is drawn on its own: there are no ligatures, and scripts
+  whose letters join or reorder (Arabic, Devanagari) are not shaped.
 - The run warns, once per pair of texts, when two different texts overlap in
   a frame (the same text twice, as for a shadow, is not reported). A rotated
   text counts as the upright box around it. After ten pairs it stops
-  reporting. A `halo` is part of the bounds. Headless
-  runs also warn when the font has no glyph for a character, which draws as
-  an empty box or nothing; use a plain word or another character.
+  reporting. A `halo` is part of the bounds; a `halo` in the background color
+  keeps a label readable where it crosses a line. Text meant to float over
+  other text (a tooltip, a hover hint by the pointer, a dragged label) takes
+  `overlay: true`, and the check skips it; the text under it is still checked
+  against the rest. Headless runs also warn when
+  the font has no glyph for a character, which draws as an empty box or
+  nothing; use a plain word or another character.
 
 ### Scopes
 
-Each scope takes a body function. Its effect ends when the body returns.
+Each scope takes its children as its last argument and returns one node.
 
-- `v.at({ translate?: [x, y], rotate?: radians, scale?: n | [sx, sy] }, body)`
-  transforms the drawing in `body`: translate, then rotate, then scale. For
-  another order, nest `at` calls. It has no layer: `erase` inside it erases
-  the canvas beneath.
-- `v.group({ opacity?, blend?, effects? }, body)` draws `body` on its own
-  layer, then composites the layer once. `erase` inside a group erases only
-  the group's pixels. `effects` adds blur, a glow, a drop shadow or colour
-  adjustments: see [BRUSHES.md](./BRUSHES.md#effects).
-- `v.mask(maskBody, body)` keeps `body` where `maskBody` paints, in
-  proportion to its alpha: a gradient in the mask fades the body out. Unlike
+- `v.at({ translate?: [x, y], rotate?: radians, scale?: n | [sx, sy], skew?:
+  [x, y], matrix?: [a, b, c, d, e, f] }, children)` transforms its children.
+  The options apply as Canvas2D calls in the order matrix, translate, rotate,
+  skew, scale, so `scale` acts on the points first. For another order, nest
+  `at` calls. It has no layer: `erase` inside it erases the canvas beneath.
+- `v.group({ name?, opacity?, blend?, effects?, lighting?, clip? }, children)`
+  draws its children on their own layer, then composites the layer once.
+  `erase` inside a group erases only the group's pixels. `effects` adds blur,
+  a glow, a drop shadow, colour adjustments, a wash or hatching; `lighting`
+  lights it (see [BRUSHES.md](./BRUSHES.md#effects)). `name` labels the group
+  in warnings and `--scene` outlines.
+- `v.mask(maskArt, children)` keeps `children` where `maskArt` paints, in
+  proportion to its alpha: a gradient in the mask fades them out. Unlike
   `clip`, the mask is any drawing and its edge can be soft. Like `group`, the
-  body draws on its own layer: `erase` inside it erases only the body, and
-  blends inside it blend with the body only.
-- `v.clip(shape, body)` clips `body` to a polygon or path, or to the union of
-  an array of them.
-- `v.cache(key, body, { blend?, erase? }?)` draws `body` once into a stored
-  layer and pastes it on later calls with the same `key`.
-- `v.sprite({ key, width, height }, body)` draws `body` once in its own
-  coordinates and returns a handle. `v.image(sprite, x, y, { opacity?, blend?,
-  erase? }?)` draws it with its top-left at (x, y), under the current `at`.
+  children draw on their own layer.
+- `v.clip(shape, children)` clips its children to a polygon or path, or to the
+  union of an array of them.
+- `v.paper(settings, children)` sets the paper grain for the brushes and
+  effects in its children (see [BRUSHES.md](./BRUSHES.md#paper)).
 
-[BRUSHES.md](./BRUSHES.md#animation-and-interaction) covers cache and sprite
-keys.
+### Pictures
+
+A picture records a drawing once and places it any number of times. Use one
+for anything that does not change every frame: a background, a character
+drawn in a few poses, a sign. A picture's drawing is reused across frames, so
+a still part costs nothing to keep.
+
+```ts
+const STALL = (v: View, colour: string): Picture =>
+  v.picture({ key: "stall", width: 120, height: 90, deps: [colour] }, () => [
+    v.rect(0, 30, 120, 60, { fill: colour }),
+    v.polygon([[0, 30], [60, 0], [120, 30]], { fill: "#7c2d12" }),
+  ]);
+
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  const red = STALL(v, "#b91c1c");
+  return [
+    v.place(red, 20, 200),
+    v.place(STALL(v, "#1d4ed8"), 160, 200),          // a second version
+    v.at({ translate: [300, 200], scale: 0.5 }, v.place(red, 0, 0)),
+  ];
+}
+```
+
+- `v.picture({ key, width, height, deps?, paper? }, body)` returns a
+  `Picture`. `body` returns the picture's drawing in the picture's own
+  coordinates, 0..width and 0..height. `v.place(picture, x, y, { opacity?,
+  blend?, erase?, material? }?)` puts its top-left at (x, y), under the scopes
+  around it.
+- A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
+  only when the version is new. Put in `deps` everything the body reads that
+  can change: a colour, a pose name, a param. `deps` are plain data (numbers,
+  strings, booleans, `null`, and arrays and objects of these) compared by
+  value. Leave `deps` out for a drawing that never changes.
+- Call `v.picture` in every `draw` that places it: it returns the kept
+  version without running `body`. A `Picture` from an earlier frame is
+  refused at `place`. Versions not asked for stay kept for a while (within a
+  memory budget), so poses that come back are not recorded again.
+- Inside `body`, `v.width` and `v.height` are the picture's size, and
+  `keepInside` text keeps inside the picture's box. Drawing outside the box
+  is kept, so glows and shadows can spill over it.
+- `log`, `snapshot`, `cursor` and `control` are errors inside `body`.
+- A placed picture draws as if its drawing were drawn there: brush widths,
+  effect lengths and text follow the scale of the scopes around it.
+- Headless runs record every picture again each frame and compare it with
+  the kept version. A body that reads a value not in `deps` warns, naming the
+  picture and the first difference. A picture whose `deps` change in every
+  frame warns too: it gains nothing.
+- `paper` sets the paper the picture's brushes use. A picture never takes
+  the paper of the scope it is placed in.
+
+`v.pixels({ key, width, height, deps? }, fill)` makes a fixed-resolution
+image: `fill({ data, width, height })` writes straight RGBA bytes (alpha is
+every fourth byte; 255 is opaque) into a zeroed array when the version is
+new. Place it like a picture; scaled up, it blurs as an image does.
 
 ### Other `View` members
 
-- `v.width`, `v.height`: the canvas size.
+- `v.width`, `v.height`: the canvas size, or the picture's size inside a
+  picture body.
 - `v.tween(keys, t, ease?)`: a number moving through keyframes
   `[[time, value], …]` (sorted by time) at time `t`, eased within each span:
   `v.tween([[0, 40], [30, 260], [60, 260]], model.frame, "in-out")`. It holds
@@ -274,23 +386,29 @@ keys.
   (holds, then jumps at the span's end). A keyframe `[time, value, ease]`
   eases the span it starts with its own curve. Two keyframes at the same time
   make a jump. `v.ease(name, u)` is one curve at `u` in 0..1.
-- `v.paper({ scale, contrast, seed })` and `v.paperTexture(amount)`: see
-  [BRUSHES.md](./BRUSHES.md#paper).
+- `v.noise(x, y?, z?)`: smooth value noise, 0..1, of its coordinates, as p5's
+  `noise`. The run's seed sets it. Use it for flicker and texture in `draw`,
+  which has no `random`.
+- `v.toCanvas(point, scopes)`: `point` in canvas coordinates, when it sits
+  inside the `at` scopes listed outermost first:
+  `v.toCanvas([0, -40], [{ translate: [200, 150] }, { rotate: angle }])`.
+- `v.light(light)`: a light node for a lit group (see
+  [BRUSHES.md](./BRUSHES.md#lighting)).
+- `v.debugBox(label, x, y, w, h)`: a labelled box drawn only with
+  `run --outline`. It is a node: return it.
 - `v.control(name, box)`: see [Inputs over the canvas](#inputs-over-the-canvas).
 - `v.cursor(kind)`: the pointer's look over a browser figure. It starts as
   the normal arrow. Set `pointer` over something a tap acts on, `grab` over
   something draggable, and back to `default` elsewhere. Headless, it does
   nothing.
-- `v.debugBox(label, x, y, w, h)`: a labelled box drawn only with
-  `run --outline`.
 - `v.log(...args)`: a frame-tagged transcript line. `console.log/warn/error`
   also land in the transcript.
 - `v.snapshot(label?)`: capture this frame.
-- `v.ctx`: the raw `@napi-rs/canvas` context, for what `View` does not cover
-  (shadows, `drawImage`). It follows `at`, `group` and `clip`. Prefer the
-  calls above: they are data, so a `draw` stays serializable in principle.
-  [`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) draws a full
-  scene without `ctx`.
+
+`v.ctx`, `v.cache`, `v.sprite`, `v.image` and `v.paperTexture` are gone; a
+call throws `RemovedCallError` naming what replaces it. Use pictures for
+`cache`, `sprite` and `image`, `effects: { paper }` for `paperTexture`, and the
+`View`'s calls, `at({ matrix })` or `v.pixels` for `ctx`.
 
 ## Sound
 
@@ -490,8 +608,8 @@ The format is in the [README](./README.md#events-file).
 ## Engagement verdicts
 
 Every scripted **interaction** event (mouse, key, trigger — not `tick`, not
-`param`, not `snapshot`) gets an engagement verdict on its transcript line, so an
-events file reads as a test of whether each input actually connected:
+`param`, not `snapshot`) gets an engagement verdict on its transcript line, so
+an events file reads as a test of whether each input connected:
 
 ```
 **[frame 30]** mousedown (297,288) → select-planet
@@ -499,29 +617,18 @@ events file reads as a test of whether each input actually connected:
 **[frame 55]** mousedown (200,150) → (unhandled)
 ```
 
-The verdict is one of:
+- **a name**: `update` called `u.handled("select-planet")` (several calls
+  join with `, `).
+- **Δmodel**: no name, but `update` returned a different model reference.
+- **(unhandled)**: no name and the same model. Nothing engaged.
 
-- **a name** — `update` called `u.handled("select-planet")` (allowed multiple
-  times per dispatch; names join with `, `). The explicit acknowledgment that
-  this input engaged.
-- **Δmodel** — no name, but `update` returned a *different* model reference than
-  before the fold. State changed; the free signal, zero author cost.
-- **(unhandled)** — no name and the model reference was unchanged. Nothing
-  engaged.
-
-`u.handled(name)` is distinct from both "code ran" and "state changed": a `tick`
-changes everything and handles nothing; an absorbed click (a toggle already in
-its target state) handles and changes nothing. Reach for it when the free
-`Δmodel` signal is too coarse.
-
-The motivating case: a scripted click aimed at a *moving* target that has drifted
-by the time the frame arrives reads `(unhandled)` — the miss is visible in the
-transcript instead of having to be inferred from later frames.
-
-`param` changes keep their own `param: name → value` line (a param change is
-definitionally applied, so it carries no separate verdict). The browser runtime
-streams the same signal on its `onEvent` entries as structured
-`handled?: readonly string[]` / `changed?: boolean` fields.
+A `tick` changes everything and handles nothing; an absorbed click (a toggle
+already in its target state) handles and changes nothing. Call `u.handled`
+when `Δmodel` is too coarse. A scripted click aimed at a moving target that
+has drifted reads `(unhandled)`, so the miss shows in the transcript. `param`
+changes keep their own `param: name → value` line. The browser runtime
+streams the same signal on its `onEvent` entries as `handled?: readonly
+string[]` and `changed?: boolean`.
 
 ## Dual-export entries (embedding as a figure)
 
@@ -533,9 +640,8 @@ export default (cl, { mount, figure }) =>
   cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
 ```
 
-The headless loader (`src/headless/tea-load.ts`) reads only the contract
-exports, so the CLI ignores `default`. One file is simultaneously the
-headless-runnable sketch and the embeddable figure entry.
+The CLI reads only the contract exports and ignores `default`, so one file is
+both the headless sketch and the figure entry.
 
 `mountSketch(mount, opts)` lives at `@ianbicking/canvas-loop/browser` — the
 React-free twin of `<SketchFigure>` (which delegates to the same runtime
@@ -544,10 +650,12 @@ attach). Its opts: `module` (validated TEA module object), `seed?`,
 module declares params), `transport?` (play/pause/restart; default off —
 embeds are frameless), `initialParams?` (validated against the declaration;
 unknown names or mismatched types warn and fall back to defaults),
-`onParamsChange?`, `onEvent?`. It injects no styles — hosts import
-`@ianbicking/canvas-loop/src/browser/figure.css` (CSP-clean by construction).
+`onParamsChange?`, `onEvent?`, `onError?`. It draws with WebGPU: a browser
+without it reports `NoWebGpuError` through `onError`, and one with no GPU
+adapter `NoGpuAdapterError`. It injects no styles — hosts import
+`@ianbicking/canvas-loop/browser/figure.css` (CSP-clean by construction).
 
-A figure's log (`v.log`, style notes, overlap warnings) goes to the browser
+A figure's log (`v.log` and warnings) goes to the browser
 console as `[canvas-loop] frame N: …`. The figure shrinks to fit a narrow column; the
 canvas keeps its aspect ratio and pointer input stays accurate.
 
@@ -557,6 +665,8 @@ canvas keeps its aspect ratio and pointer input stays accurate.
   data/functions only.
 - **State changes only by `update` returning a new `Model`.** Never mutate
   `model` (assignment, `delete`, `push`/`splice`/`sort`/…).
+- **`draw` returns its drawing.** Every node it makes goes into the list it
+  returns.
 - **Modes as a discriminated-union field** on the model
   (`mode: { type: "idle" } | { type: "dragging"; index: number }`) + exhaustive
   switch — a statechart's modal part, zero machinery.
@@ -565,7 +675,7 @@ canvas keeps its aspect ratio and pointer input stays accurate.
 - **Import only `@ianbicking/canvas-loop`** (types only) and sibling
   `./<name>-tea.js` helpers.
 
-Lint enforces all of it on `*-tea.ts` (`tea/no-module-state`,
+Lint enforces most of it on `*-tea.ts` (`tea/no-module-state`,
 `tea/no-model-mutation`, `tea/no-async-sketch`, `tea/no-classes`,
 `no-restricted-imports`, and type-aware `switch-exhaustiveness-check`).
 
@@ -578,35 +688,21 @@ three orbiting planets. It exercises every param type (`speed-scale` number,
 (`{ type: "idle" } | { type: "selected"; index }`), and direct pointer
 manipulation (click a *moving* planet to select it; ArrowUp/Down nudge its
 speed). Because position is a pure function of `frame`, hit-testing a moving
-target is a calculation, not trial-and-error:
+target is a calculation, not trial and error.
+
+`draw` returns one list: a `.map` over the planets, `&&` for what a param or
+the mode turns on, and small components (`drawPlanet`, `drawHud`):
 
 ```ts
-function planetPos(a: { planet: Planet; frame: number; scale: number }) {
-  const angle = a.planet.angle0 + a.planet.speed * a.scale * a.frame;
-  return { x: CENTER_X + a.planet.orbitRadius * Math.cos(angle), /* … */ };
-}
-```
-
-`update` returns new models — nudging a planet's speed rebuilds the array
-immutably, selection swaps the `mode` field:
-
-```ts
-case "keydown":
-  return nudgeSelected({ model, key: msg.key, u });   // → { ...model, planets: planets.map(…) }
-case "trigger":
-  return msg.name === "reset" ? init() : model;
-```
-
-`draw` keeps its styles in `const`s and passes one to each call:
-
-```ts
-const ORBIT_RING: Style = { stroke: "#1e293b", weight: 1 };
-const SELECTION_RING: Style = { stroke: "#f8fafc", weight: 2 };
-
-v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
-v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
-if (selected) v.circle(pos.x, pos.y, planet.size / 2 + HIT_PADDING + 2, SELECTION_RING);
-v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
+return [
+  v.background("#0b1020"),
+  p["show-orbits"] && model.planets.map((planet) => v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING)),
+  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }),
+  model.planets.map((planet, i) =>
+    drawPlanet({ v, planet, pos: planetPos({ planet, frame: model.frame, scale }), selected: mode.type === "selected" && mode.index === i }),
+  ),
+  drawHud({ v, model, p }),
+];
 ```
 
 Note the boundary: `reset` restores the *model* (planets, selection) but leaves

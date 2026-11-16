@@ -204,11 +204,14 @@ function slugFromFilename(filename: string): string {
  * `module.js`, the edit-time lint check, a figure sketch) don't pay for a
  * metadata import they don't use. `target` selects React resolution (browser
  * shim vs bare Node specifiers) — see {@link ViewCompileTarget}; defaults to
- * "browser".
+ * "browser". `outfile`, for a node build the caller writes to disk and
+ * imports (a figure entry), is where it will be written: the inline source
+ * map's paths are made relative to it and name the entry by its own file, so
+ * a stack maps to the real source.
  */
 export async function bundleView(
   viewPath: string,
-  opts?: { target?: ViewCompileTarget; external?: string[]; cache?: boolean }
+  opts?: { target?: ViewCompileTarget; external?: string[]; cache?: boolean; outfile?: string }
 ): Promise<{ output: string; inputs: BundleInput[] }> {
   const target = opts?.target ?? "browser";
   // The mtime+size cache is a freshness heuristic, not a guarantee: it misses a
@@ -228,11 +231,12 @@ export async function bundleView(
 
   // Key the cache by target too: the browser and node builds of the same file
   // produce incompatible output (window shim vs bare imports), so sharing one
-  // slot would let one target's compile poison the other's. Externals go in the
-  // key as well, so the same file compiled with and without them never collides.
+  // slot would let one target's compile poison the other's. Externals and the
+  // outfile (it sets the source map's paths) go in the key as well, so the same
+  // file compiled with and without them never collides.
   // The viewPath is always the final `:`-delimited segment — invalidateView
   // relies on that to sweep every key referencing a path.
-  const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
+  const cacheKey = `${target}:${extraExternal.join(",")}:${opts?.outfile ?? ""}:${viewPath}`;
   if (useCache) {
     const cached = cache.get(cacheKey);
     if (cached && cached.mtime === mtime && cached.size === size && (await inputsUnchanged(cached.inputs))) {
@@ -265,7 +269,7 @@ export async function bundleView(
           sourcemap: "inline",
         }
       : { plugins: [reactExternalPlugin, viewWidgetsExternalPlugin], external: extraExternal };
-  const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
+  const sourcefile = target === "node" && opts?.outfile === undefined ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
 
   const boxRootPlugin = boxRootImportsPlugin(await findBoxRoot(path.dirname(viewPath)));
   const { build } = await import("esbuild");
@@ -282,6 +286,7 @@ export async function bundleView(
     target: "es2020",
     jsx: "automatic",
     write: false,
+    ...(opts?.outfile === undefined ? {} : { outfile: opts.outfile }),
     ...reactConfig,
     plugins: [boxRootPlugin, ...(reactConfig.plugins ?? [])],
     metafile: true,

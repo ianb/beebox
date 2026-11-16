@@ -1,5 +1,5 @@
-// The browser TEA runner — the interactive twin of src/tea-runtime.ts. It folds
-// the same sketch contract (init/update/draw) over a real canvas: a fixed-
+// The browser TEA runner — the interactive twin of headless/tea-runtime/. It folds
+// the same sketch contract (init/update/draw) over a figure's surface: a fixed-
 // timestep rAF loop supplies virtual time as `tick` msgs (frame-count based, NOT
 // wall time), pointer/key/param/trigger inputs are queued and dispatched before
 // each frame's tick (the frame-N guarantee), the model is deep-frozen between
@@ -13,15 +13,14 @@ import { Score } from "../../core/sound/voice.js";
 import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
-import { BrowserView } from "./browser-view.js";
-import type { TextMeasure } from "../../core/view.js";
+import type { TextMeasure } from "../../core/text/measure.js";
 import { ActivityReporter, streamWithActivity } from "../../core/activity.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
-import type { ParamOverrides, RuntimeDeps } from "./engine-types.js";
+import type { DrawSurface, ParamOverrides, RuntimeDeps } from "./engine-types.js";
 import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
 
-export type { EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
+export type { DrawSurface, EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -51,7 +50,7 @@ function frozen(value: unknown): unknown {
 export class Runtime {
   #module: PlaygroundModule;
   #decl: ParamsDecl;
-  #view: BrowserView;
+  #surface: DrawSurface;
   #util: BrowserUtil<ParamsDecl>;
   #random: SeededRandom;
   #seed: number;
@@ -102,7 +101,8 @@ export class Runtime {
     this.#onError = deps.onError;
     this.#onPlace = deps.onPlace;
     this.#util = this.#makeUtil();
-    this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, pixelRatio: deps.pixelRatio ?? 1, log: (args) => this.#recordLog(args), params: new Set(Object.keys(this.#decl)) });
+    const log = (args: readonly unknown[]): void => this.#recordLog(args);
+    this.#surface = deps.surface(log);
     this.#model = frozen(this.#module.init(this.#util));
     this.#draw();
   }
@@ -142,13 +142,13 @@ export class Runtime {
   }
 
   #makeUtil(): BrowserUtil<ParamsDecl> {
-    const text = (): TextMeasure => this.#view.textMeasure;
+    const text = (): TextMeasure => this.#surface.textMeasure;
     return new BrowserUtil({ random: this.#random, getParams: () => this.#params, log: (args) => this.#recordLog(args), onHandled: (name) => this.#handledNames.push(name), text });
   }
 
   /** A web font finished loading: forget measured text widths, then redraw. */
   fontsLoaded(): void {
-    this.#view.forgetTextWidths();
+    this.#surface.forgetTextWidths();
     this.invalidate();
   }
 
@@ -366,9 +366,7 @@ export class Runtime {
 
   #draw(): void {
     this.#dirty = false;
-    this.#module.draw(this.#view, this.#model, this.#params);
-    this.#view.finishFrame();
-    const placements = this.#view.takePlacements();
+    const placements = this.#surface.draw(this.#model, this.#params);
     this.#onPlace?.(placements);
   }
 
@@ -377,6 +375,9 @@ export class Runtime {
   }
 }
 
+/** What `watchVisibility` drives: a runtime, or a figure that also frees its GPU resources while asleep. */
+export type Sleeper = Pick<Runtime, "suspend" | "resume" | "invalidate" | "fontsLoaded">;
+
 /**
  * Sleep while off screen: suspend the runtime's loop when the canvas leaves
  * the viewport (with a margin, so it wakes just before it scrolls in) and
@@ -384,7 +385,7 @@ export class Runtime {
  * since a still figure otherwise keeps the fallback font it first drew with.
  * Hosts without these APIs (bare Node) get no watching. Returns a teardown.
  */
-export function watchVisibility(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
+export function watchVisibility(canvas: HTMLCanvasElement, runtime: Sleeper): () => void {
   const observer = typeof IntersectionObserver === "undefined" ? undefined : new IntersectionObserver((entries) => {
     const onScreen = entries.at(-1)?.isIntersecting;
     if (onScreen === true) runtime.resume();

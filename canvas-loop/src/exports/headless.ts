@@ -1,8 +1,10 @@
 // canvas-loop headless runner (the "./headless" export): everything that renders
-// a sketch without a browser — the @napi-rs/canvas-backed surface, the
-// deterministic fold loop, the events-script parser, the recorder, and the
-// transcript renderer. Depends on @napi-rs/canvas and node:
-// builtins; import it only where those are available (the CLI, tests, tooling).
+// a sketch without a browser — the deterministic fold loop over the scene
+// surface (the recorder and the GPU renderer on Dawn), the events-script
+// parser, the frame recorder, and the transcript renderer. Depends on
+// @napi-rs/canvas (PNG, text measuring), `webgpu`
+// and node: builtins; import it only where those are available (the CLI,
+// tests, tooling).
 // The dependency-light authoring/drawing surface is the package root (".").
 
 export type { RunResult } from "../headless/recorder/frame-recorder.js";
@@ -10,13 +12,19 @@ export type { RunMeta, TranscriptEntry } from "../headless/transcript.js";
 export { renderTranscript } from "../headless/transcript.js";
 
 // ── TEA runs ─────────────────────────────────────────────────────────
-export { teaRun } from "../headless/tea-runtime.js";
-export type { TeaRunOptions } from "../headless/tea-runtime.js";
+export { teaRun } from "../headless/tea-runtime/runner.js";
+export type { TeaRunOptions } from "../headless/tea-runtime/runner.js";
 export { toTeaModule } from "../headless/tea-load.js";
 export type { LoadedTeaModule } from "../headless/tea-load.js";
 export { parseTeaEvents, bucketTeaByFrame } from "../headless/tea-events.js";
 export type { TeaScriptEvent } from "../headless/tea-events.js";
-export { TeaView, TeaUtil } from "../headless/tea-view.js";
+export { TeaUtil } from "../headless/tea-util.js";
+export type { UtilText } from "../headless/tea-util.js";
+export { NoGpuAdapterError } from "../scene/errors.js";
+
+// ── The sketch contract check (`cli run`, `gallery check`) ──────────────
+export { checkSketchTypes, formatSketchTypeError } from "../headless/sketch-types.js";
+export type { SketchTypeError } from "../headless/sketch-types.js";
 
 // ── Gallery corpus check (`cli gallery check`) ────────────────────────
 export { checkGallery } from "../headless/gallery.js";

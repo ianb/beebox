@@ -123,6 +123,8 @@ const OUTSIDE_VITE_SHARED_RAW = [
   // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
+  // Loaded by vite.config.ts in Node, where the @shared alias does not apply.
+  "src/dev/build-identity-plugin/plugin.ts",
   // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
   "src/components/history/HistoryViewCard/CommitDetail-diff.ts",

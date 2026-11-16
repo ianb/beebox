@@ -6,7 +6,7 @@
 //
 // `update` records each sound with a fresh id and its start frame; `sound`
 // returns them as voices. See TEA.md "Sound".
-import type { DeepReadonly, Msg, Util, View, Voice } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, DrawingNode, Msg, RootDrawing, Util, View, Voice } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 400, height: 260 };
 
@@ -93,14 +93,19 @@ export function sound(model: DeepReadonly<Model>): readonly Voice[] {
   });
 }
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.background("#f4efe4");
-  v.text("Tap a bar to play it. Tap the sky to drop a ball.", { x: 200, y: 24 }, { size: 13, align: "center", valign: "middle", fill: "#5a5040" });
-  for (let i = 0; i < BARS; i += 1) {
-    const height = 80 - i * 6;
-    const lit = model.lit.includes(i);
-    v.roundRect(BAR_X0 + i * (BAR_W + 3), FLOOR - height, BAR_W, height, 4, { fill: lit ? "#f2b84b" : model.played[i] === true ? "#b5793a" : "#8a5a2b" });
-  }
-  v.rect(0, FLOOR, 400, 30, { fill: "#6b4a2b" });
-  for (const ball of model.balls) v.circle(ball.x, ball.y, 4, { fill: "#3b6ea8" });
+/** One marimba bar, shorter to the right: gold while it rings, darker once it has been played. */
+function barShape(v: View, a: { i: number; played: boolean; lit: boolean }): DrawingNode {
+  const height = 80 - a.i * 6;
+  const fill = a.lit ? "#f2b84b" : a.played ? "#b5793a" : "#8a5a2b";
+  return v.roundRect(BAR_X0 + a.i * (BAR_W + 3), FLOOR - height, BAR_W, height, 4, { fill });
+}
+
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  return [
+    v.background("#f4efe4"),
+    v.text("Tap a bar to play it. Tap the sky to drop a ball.", { x: 200, y: 24 }, { size: 13, align: "center", valign: "middle", fill: "#5a5040" }),
+    model.played.map((played, i) => barShape(v, { i, played, lit: model.lit.includes(i) })),
+    v.rect(0, FLOOR, 400, 30, { fill: "#6b4a2b" }),
+    model.balls.map((ball) => v.circle(ball.x, ball.y, 4, { fill: "#3b6ea8" })),
+  ];
 }

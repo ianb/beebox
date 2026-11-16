@@ -56,7 +56,7 @@ gallery example (~250) and ~100 lines of docs. Not a BIG CHANGE.
   (`init`, `update`, `draw`). **Extend** with optional `sound`.
 - Loader: `toTeaModule` in `canvas-loop/src/headless/tea-load.ts` reads named
   exports. **Extend** to read `sound`.
-- Headless frame loop: `canvas-loop/src/headless/tea-runtime.ts` `#runFrame`.
+- Headless frame loop: `canvas-loop/src/headless/tea-runtime/runner.ts` `#runFrame`.
   **Extend:** call `sound` after `draw`.
 - Output writer: `FrameRecorder.writeOutput`
   (`canvas-loop/src/headless/recorder/frame-recorder.ts:166`). **Extend:** write

@@ -40,7 +40,7 @@ export class FrameTimer {
   report(): string {
     const parts = [summary("draw", this.#draw)];
     if (this.#update.length > 0) parts.push(summary("update", this.#update));
-    if (this.#first !== undefined) parts.push(`frame 0 draw ${this.#first.toFixed(1)} ms (builds caches and sprites)`);
+    if (this.#first !== undefined) parts.push(`frame 0 draw ${this.#first.toFixed(1)} ms (records pictures)`);
     return `timing: ${parts.join("; ")}`;
   }
 }

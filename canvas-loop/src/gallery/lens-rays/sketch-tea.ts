@@ -12,18 +12,7 @@
 //
 // The model holds the object (u, h in cm) and the pointer mode. The optics are
 // derived from the model and params in draw (optics-tea.ts).
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  PathCommand,
-  Style,
-  TextOptions,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, PathCommand, RootDrawing, Style, TextOptions, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 import {
   caseSentence,
@@ -226,9 +215,11 @@ function dashes(a: Vec2, b: Vec2, dash = 7, gap = 5): PathCommand[] {
   return out;
 }
 
-function dashedLine(v: View, a: Vec2, b: Vec2, style: Style): void {
+function dashedLine(v: View, a: Vec2, b: Vec2, style: Style): Drawing {
+  const out: Drawing[] = [];
   const cmds = dashes(a, b);
-  if (cmds.length > 0) v.path(cmds, style);
+  if (cmds.length > 0) out.push(v.path(cmds, style));
+  return out;
 }
 
 function arrowHead(
@@ -236,7 +227,7 @@ function arrowHead(
   at: Vec2,
   dir: Vec2,
   args: { color: string; size: number; hollow?: boolean },
-): void {
+): Drawing {
   const n = Math.hypot(dir[0], dir[1]) || 1;
   const ux = dir[0] / n;
   const uy = dir[1] / n;
@@ -247,7 +238,7 @@ function arrowHead(
   const style: Style = args.hollow
     ? { fill: PAPER, stroke: args.color, weight: 1.5 }
     : { fill: args.color };
-  v.triangle(
+  return v.triangle(
     at[0],
     at[1],
     back[0] + px,
@@ -264,7 +255,7 @@ function tag(
   text: string,
   at: { x: number; y: number },
   o: TextOptions,
-): void {
+): Drawing {
   const opts = T(o);
   const size = opts.size ?? 12;
   const w = v.textWidth(text, opts) + 8;
@@ -277,8 +268,10 @@ function tag(
   let y = at.y - 3;
   if (valign === "middle") y = at.y - h / 2;
   else if (valign === "bottom") y = at.y - h + 3;
-  v.roundRect(x, y, w, h, 3, { fill: "rgba(255,255,255,0.9)" });
-  v.text(text, at, opts);
+  return [
+    v.roundRect(x, y, w, h, 3, { fill: "rgba(255,255,255,0.9)" }),
+    v.text(text, at, opts),
+  ];
 }
 
 /**
@@ -290,15 +283,17 @@ function rayArrow(
   v: View,
   seg: { a: Vec2; b: Vec2 },
   args: { color: string; avoid: readonly number[] },
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const { a, b } = seg;
   const d = sub(b, a);
-  if (Math.hypot(d[0], d[1]) < 30) return;
+  if (Math.hypot(d[0], d[1]) < 30) return out;
   const at = (t: number): Vec2 => [a[0] + d[0] * t, a[1] + d[1] * t];
   const clear = (p: Vec2): boolean =>
     Math.abs(p[1] - A) > 30 || args.avoid.every((x) => Math.abs(p[0] - x) > 20);
   const t = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.9].find((k) => clear(at(k))) ?? 0.5;
-  arrowHead(v, along(at(t), d, 5), d, { color: args.color, size: 9 });
+  out.push(arrowHead(v, along(at(t), d, 5), d, { color: args.color, size: 9 }));
+  return out;
 }
 
 // ---------- rays ----------
@@ -390,7 +385,8 @@ function divergingRays(s: Solution, tip: Vec2): Ray[] {
   ];
 }
 
-function drawRays(v: View, rays: readonly Ray[], s: Solution): void {
+function drawRays(v: View, rays: readonly Ray[], s: Solution): Drawing {
+  const out: Drawing[] = [];
   const g = Math.abs(s.f);
   const img = imagePoint(s);
   const avoid = [-2 * g, -g, g, 2 * g].map((cm) => xOf(cm));
@@ -400,16 +396,16 @@ function drawRays(v: View, rays: readonly Ray[], s: Solution): void {
     const color = RAY_COLORS[ray.index];
     for (const seg of ray.segs)
       if (seg.dashed)
-        dashedLine(v, seg.a, seg.b, { stroke: color, weight: 1.5 });
+        out.push(dashedLine(v, seg.a, seg.b, { stroke: color, weight: 1.5 }));
   }
   for (const ray of rays) {
     const color = RAY_COLORS[ray.index];
     for (const seg of ray.segs) {
       if (seg.dashed) continue;
-      v.line(seg.a[0], seg.a[1], seg.b[0], seg.b[1], {
+      out.push(v.line(seg.a[0], seg.a[1], seg.b[0], seg.b[1], {
         stroke: color,
         weight: 2,
-      });
+      }));
     }
   }
   for (const ray of rays) {
@@ -421,14 +417,15 @@ function drawRays(v: View, rays: readonly Ray[], s: Solution): void {
         Math.hypot(seg.b[0] - seg.a[0], seg.b[1] - seg.a[1]) > FAR / 2
           ? along(seg.a, sub(seg.b, seg.a), 260)
           : seg.b;
-      rayArrow(v, { a: seg.a, b: end }, { color, avoid });
+      out.push(rayArrow(v, { a: seg.a, b: end }, { color, avoid }));
     }
   }
+  return out;
 }
 
 // ---------- the diagram ----------
 
-function drawGrid(v: View): void {
+function drawGrid(v: View): Drawing {
   const cmds: PathCommand[] = [];
   for (let cm = -80; cm <= 80; cm += 5) {
     const x = xOf(cm);
@@ -440,19 +437,22 @@ function drawGrid(v: View): void {
     if (y <= DIAG.y || y >= DIAG.y + DIAG.h) continue;
     cmds.push(["move", DIAG.x, y], ["line", DIAG.x + DIAG.w, y]);
   }
-  v.path(cmds, { stroke: "#edf0f4", weight: 1 });
+  return v.path(cmds, { stroke: "#edf0f4", weight: 1 });
 }
 
-function drawAxis(v: View): void {
-  v.line(DIAG.x, A, DIAG.x + DIAG.w, A, { stroke: "#495057", weight: 1.25 });
-  v.text(
-    "principal axis",
-    { x: DIAG.x + DIAG.w - 8, y: A - 6 },
-    T({ size: 11, fill: MUTED, align: "right", valign: "bottom" }),
-  );
+function drawAxis(v: View): Drawing {
+  return [
+    v.line(DIAG.x, A, DIAG.x + DIAG.w, A, { stroke: "#495057", weight: 1.25 }),
+    v.text(
+      "principal axis",
+      { x: DIAG.x + DIAG.w - 8, y: A - 6 },
+      T({ size: 11, fill: MUTED, align: "right", valign: "bottom" }),
+    ),
+  ];
 }
 
-function drawFoci(v: View, s: Solution): void {
+function drawFoci(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const g = Math.abs(s.f);
   const img = imagePoint(s);
   const below = img !== null && img[1] > A ? img[0] : null;
@@ -467,19 +467,21 @@ function drawFoci(v: View, s: Solution): void {
     const x = xOf(m.cm);
     if (x < DIAG.x + 4 || x > DIAG.x + DIAG.w - 4) continue;
     const isF = Math.abs(m.cm) === g;
-    v.line(x, A - 6, x, A + 6, { stroke: INK, weight: 1.5 });
-    if (isF) v.circle(x, A, 3, { fill: INK });
+    out.push(v.line(x, A - 6, x, A + 6, { stroke: INK, weight: 1.5 }));
+    if (isF) out.push(v.circle(x, A, 3, { fill: INK }));
     const up = below !== null && Math.abs(below - x) < 16;
-    tag(v, m.label, { x, y: up ? A - 10 : A + 10 }, {
+    out.push(tag(v, m.label, { x, y: up ? A - 10 : A + 10 }, {
       size: isF ? 15 : 13,
       style: isF ? "bold" : "normal",
       align: "center",
       valign: up ? "bottom" : "top",
-    });
+    }));
   }
+  return out;
 }
 
-function drawLens(v: View, s: Solution): void {
+function drawLens(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const top = A - LENS_HALF;
   const bot = A + LENS_HALF;
   const glass: Style = {
@@ -488,7 +490,7 @@ function drawLens(v: View, s: Solution): void {
     weight: 1.5,
   };
   if (s.kind === "converging") {
-    v.path(
+    out.push(v.path(
       [
         ["move", L, top],
         ["quad", L + 26, A, L, bot],
@@ -496,9 +498,9 @@ function drawLens(v: View, s: Solution): void {
         ["close"],
       ],
       glass,
-    );
+    ));
   } else {
-    v.path(
+    out.push(v.path(
       [
         ["move", L - 11, top],
         ["line", L + 11, top],
@@ -508,18 +510,19 @@ function drawLens(v: View, s: Solution): void {
         ["close"],
       ],
       glass,
-    );
+    ));
   }
-  dashedLine(v, [L, top], [L, bot], { stroke: "#74c0fc", weight: 1 });
-  tag(v, `${s.kind} lens, f = ${fmt(s.f)} cm`, { x: L, y: top - 8 }, {
+  out.push(dashedLine(v, [L, top], [L, bot], { stroke: "#74c0fc", weight: 1 }));
+  out.push(tag(v, `${s.kind} lens, f = ${fmt(s.f)} cm`, { x: L, y: top - 8 }, {
     size: 13,
     style: "bold",
     align: "center",
     valign: "bottom",
-  });
+  }));
+  return out;
 }
 
-function drawObject(v: View, model: DeepReadonly<Model>): void {
+function drawObject(v: View, model: DeepReadonly<Model>): Drawing {
   const [tx, ty] = tipOf(model);
   const hot = model.drag.type !== "idle" || model.hover !== "none";
   const tipHot = model.drag.type === "tip" || model.hover === "tip";
@@ -527,23 +530,25 @@ function drawObject(v: View, model: DeepReadonly<Model>): void {
   const ring: Style = tipHot
     ? { fill: "rgba(255, 212, 59, 0.45)", stroke: "#f08c00", weight: 1.5 }
     : { stroke: "#adb5bd", weight: 1.5 };
-  v.circle(tx, ty + 2, (tipHot ? 26 : 20) / 2, ring);
-  v.line(tx, A, tx, ty + 10, { stroke: INK, weight: hot ? 4 : 3 });
-  arrowHead(v, [tx, ty], [0, -1], { color: INK, size: 14 });
-  // Grip at the foot: drag left / right.
-  v.roundRect(tx - 16, A + 26, 32, 14, 7, {
-    fill: hot && !tipHot ? "#ffe066" : "#f1f3f5",
-    stroke: "#868e96",
-    weight: 1,
-  });
-  arrowHead(v, [tx - 11, A + 33], [-1, 0], { color: MUTED, size: 7 });
-  arrowHead(v, [tx + 11, A + 33], [1, 0], { color: MUTED, size: 7 });
-  // Below the grip: real images are never on the object's side, below the axis.
-  tag(v, `object, h = ${fmt(model.h)} cm`, { x: tx, y: A + 46 }, {
-    size: 12,
-    style: "bold",
-    align: "center",
-  });
+  return [
+    v.circle(tx, ty + 2, (tipHot ? 26 : 20) / 2, ring),
+    v.line(tx, A, tx, ty + 10, { stroke: INK, weight: hot ? 4 : 3 }),
+    arrowHead(v, [tx, ty], [0, -1], { color: INK, size: 14 }),
+    // Grip at the foot: drag left / right.
+    v.roundRect(tx - 16, A + 26, 32, 14, 7, {
+      fill: hot && !tipHot ? "#ffe066" : "#f1f3f5",
+      stroke: "#868e96",
+      weight: 1,
+    }),
+    arrowHead(v, [tx - 11, A + 33], [-1, 0], { color: MUTED, size: 7 }),
+    arrowHead(v, [tx + 11, A + 33], [1, 0], { color: MUTED, size: 7 }),
+    // Below the grip: real images are never on the object's side, below the axis.
+    tag(v, `object, h = ${fmt(model.h)} cm`, { x: tx, y: A + 46 }, {
+      size: 12,
+      style: "bold",
+      align: "center",
+    }),
+  ];
 }
 
 function inDiagram(p: Vec2): boolean {
@@ -556,9 +561,10 @@ function inDiagram(p: Vec2): boolean {
 }
 
 /** The image arrow (or, when it is off the diagram, a note saying so). */
-function drawImage(v: View, s: Solution): void {
+function drawImage(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const img = imagePoint(s);
-  if (s.image.type === "none" || img === null) return;
+  if (s.image.type === "none" || img === null) return out;
   const c = character(s.image);
   const [ix, iy] = img;
   if (!inDiagram(img)) {
@@ -566,30 +572,32 @@ function drawImage(v: View, s: Solution): void {
     // Off the rays: they converge on the image, so sit beside that point.
     const py = clamp(iy + (iy > A ? -28 : 28), DIAG.y + 30, DIAG.y + DIAG.h - 60);
     const px = right ? DIAG.x + DIAG.w - 10 : DIAG.x + 10;
-    tag(v, right ? "image off the diagram →" : "← image off the diagram", { x: px, y: py }, {
+    out.push(tag(v, right ? "image off the diagram →" : "← image off the diagram", { x: px, y: py }, {
       size: 12,
       fill: IMAGE,
       style: "bold",
       align: right ? "right" : "left",
       valign: "middle",
-    });
-    return;
+    }));
+    return out;
   }
   const dir: Vec2 = [0, iy < A ? -1 : 1];
   const shaftEnd = iy - dir[1] * 10;
   if (c.real) {
-    v.line(ix, A, ix, shaftEnd, { stroke: IMAGE, weight: 3 });
-    arrowHead(v, img, dir, { color: IMAGE, size: 14 });
+    out.push(v.line(ix, A, ix, shaftEnd, { stroke: IMAGE, weight: 3 }));
+    out.push(arrowHead(v, img, dir, { color: IMAGE, size: 14 }));
   } else {
-    dashedLine(v, [ix, A], [ix, shaftEnd], { stroke: IMAGE, weight: 3 });
-    arrowHead(v, img, dir, { color: IMAGE, size: 14, hollow: true });
+    out.push(dashedLine(v, [ix, A], [ix, shaftEnd], { stroke: IMAGE, weight: 3 }));
+    out.push(arrowHead(v, img, dir, { color: IMAGE, size: 14, hollow: true }));
   }
+  return out;
 }
 
 /** The image's label: drawn before the rays, so no ray is hidden by it. */
-function drawImageLabel(v: View, s: Solution): void {
+function drawImageLabel(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const img = imagePoint(s);
-  if (s.image.type === "none" || img === null || !inDiagram(img)) return;
+  if (s.image.type === "none" || img === null || !inDiagram(img)) return out;
   const c = character(s.image);
   const [ix, iy] = img;
   const dir: Vec2 = [0, iy < A ? -1 : 1];
@@ -598,7 +606,7 @@ function drawImageLabel(v: View, s: Solution): void {
   const roomRight = DIAG.x + DIAG.w - ix > 110;
   const away = ix < L || !roomRight ? -1 : 1;
   const short = Math.abs(A - iy) < 40;
-  tag(
+  out.push(tag(
     v,
     label,
     short
@@ -612,87 +620,98 @@ function drawImageLabel(v: View, s: Solution): void {
       align: short ? "center" : away < 0 ? "right" : "left",
       valign: short ? (dir[1] < 0 ? "bottom" : "top") : "middle",
     },
-  );
+  ));
+  return out;
 }
 
 function dimension(
   v: View,
   args: { x1: number; x2: number; y: number; label: string; color: string },
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const { x1, x2, y, color } = args;
-  v.line(x1, y, x2, y, { stroke: color, weight: 1 });
-  for (const x of [x1, x2]) v.line(x, y - 5, x, y + 5, { stroke: color, weight: 1 });
+  out.push(v.line(x1, y, x2, y, { stroke: color, weight: 1 }));
+  for (const x of [x1, x2]) out.push(v.line(x, y - 5, x, y + 5, { stroke: color, weight: 1 }));
   const w = v.textWidth(args.label, T({ size: 12 })) + 10;
   const opts: TextOptions = { size: 12, fill: color, valign: "middle" };
   const lo = Math.min(x1, x2);
   if (Math.abs(x2 - x1) > w + 16) {
-    tag(v, args.label, { x: (x1 + x2) / 2, y }, { ...opts, align: "center" });
+    out.push(tag(v, args.label, { x: (x1 + x2) / 2, y }, { ...opts, align: "center" }));
   } else {
     // Too short to hold its label: put the label outside, on the left.
-    tag(v, args.label, { x: lo - 8, y }, { ...opts, align: "right" });
+    out.push(tag(v, args.label, { x: lo - 8, y }, { ...opts, align: "right" }));
   }
+  return out;
 }
 
-function drawDimensions(v: View, s: Solution): void {
+function drawDimensions(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const xo = xOf(-s.u);
-  dimension(v, { x1: xo, x2: L, y: 404, label: `u = ${fmt(s.u)} cm`, color: INK });
-  if (s.image.type === "none") return;
+  out.push(dimension(v, { x1: xo, x2: L, y: 404, label: `u = ${fmt(s.u)} cm`, color: INK }));
+  if (s.image.type === "none") return out;
   const xi = clamp(xOf(s.image.v), DIAG.x, DIAG.x + DIAG.w);
-  dimension(v, { x1: L, x2: xi, y: 424, label: `v = ${fmt(s.image.v)} cm`, color: IMAGE });
+  out.push(dimension(v, { x1: L, x2: xi, y: 424, label: `v = ${fmt(s.image.v)} cm`, color: IMAGE }));
+  return out;
 }
 
-function drawLegend(v: View, s: Solution): void {
+function drawLegend(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const conv = s.kind === "converging";
   const lines = [
     conv ? "parallel to the axis, then through F′" : "parallel, then away from F′",
     "through the centre, straight on",
     conv ? "through F, then parallel" : "towards F, then parallel",
   ];
-  v.rect(DIAG.x + 8, DIAG.y + 8, 250, 66, { fill: "rgba(255,255,255,0.85)" });
+  out.push(v.rect(DIAG.x + 8, DIAG.y + 8, 250, 66, { fill: "rgba(255,255,255,0.85)" }));
   for (const [i, text] of lines.entries()) {
     const y = DIAG.y + 20 + i * 19;
     const color = RAY_COLORS[i] ?? INK;
-    v.line(DIAG.x + 16, y, DIAG.x + 40, y, { stroke: color, weight: 2.5 });
+    out.push(v.line(DIAG.x + 16, y, DIAG.x + 40, y, { stroke: color, weight: 2.5 }));
     const dim = s.image.type === "none" && i === 2;
-    v.text(
+    out.push(v.text(
       dim
         ? "3  (none: the object stands on F)"
         : `${i + 1}  ${text}`,
       { x: DIAG.x + 48, y },
       T({ size: 12, fill: dim ? MUTED : INK, valign: "middle" }),
-    );
+    ));
   }
+  return out;
 }
 
-function drawDiagram(v: View, model: DeepReadonly<Model>, s: Solution): void {
-  v.rect(DIAG.x, DIAG.y, DIAG.w, DIAG.h, { fill: "#ffffff", stroke: "#ced4da", weight: 1 });
+function drawDiagram(v: View, model: DeepReadonly<Model>, s: Solution): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(DIAG.x, DIAG.y, DIAG.w, DIAG.h, { fill: "#ffffff", stroke: "#ced4da", weight: 1 }));
   const box: Vec2[] = [
     [DIAG.x, DIAG.y],
     [DIAG.x + DIAG.w, DIAG.y],
     [DIAG.x + DIAG.w, DIAG.y + DIAG.h],
     [DIAG.x, DIAG.y + DIAG.h],
   ];
-  v.clip(box, () => {
-    drawGrid(v);
-    drawAxis(v);
-    drawLens(v, s);
+  out.push(v.clip(box, ((): Drawing => {
+    const drawn: Drawing[] = [];
+    drawn.push(drawGrid(v));
+    drawn.push(drawAxis(v));
+    drawn.push(drawLens(v, s));
     // Labels go under the rays: a label's backing must never hide a ray.
-    drawFoci(v, s);
-    drawImageLabel(v, s);
+    drawn.push(drawFoci(v, s));
+    drawn.push(drawImageLabel(v, s));
     const tip = tipOf(model);
-    drawRays(v, s.kind === "converging" ? convergingRays(s, tip) : divergingRays(s, tip), s);
+    drawn.push(drawRays(v, s.kind === "converging" ? convergingRays(s, tip) : divergingRays(s, tip), s));
     if (s.image.type === "none")
-      tag(v, "the rays leave parallel: they never meet", { x: 930, y: 140 }, {
+      drawn.push(tag(v, "the rays leave parallel: they never meet", { x: 930, y: 140 }, {
         size: 12,
         style: "bold",
         fill: "#c92a2a",
         align: "right",
-      });
-    drawImage(v, s);
-    drawObject(v, model);
-    drawDimensions(v, s);
-    drawLegend(v, s);
-  });
+      }));
+    drawn.push(drawImage(v, s));
+    drawn.push(drawObject(v, model));
+    drawn.push(drawDimensions(v, s));
+    drawn.push(drawLegend(v, s));
+    return drawn;
+  })()));
+  return out;
 }
 
 // ---------- the panels ----------
@@ -703,35 +722,42 @@ interface Frac {
 }
 type EqPart = string | Frac;
 
-function drawEquation(v: View, parts: readonly EqPart[], at: { x: number; y: number; size: number; fill?: string }): number {
+/** An equation's drawing, and the x where it ends. */
+function drawEquation(v: View, parts: readonly EqPart[], at: { x: number; y: number; size: number; fill?: string }): { drawing: Drawing; end: number } {
+  const drawing: Drawing[] = [];
   let x = at.x;
   const fill = at.fill ?? INK;
   const txt = T({ size: at.size, fill, valign: "middle" });
   const small = T({ size: at.size * 0.85, fill, align: "center" });
   for (const part of parts) {
     if (typeof part === "string") {
-      v.text(part, { x, y: at.y }, txt);
+      drawing.push(v.text(part, { x, y: at.y }, txt));
       x += v.textWidth(part, txt);
       continue;
     }
     const w = Math.max(v.textWidth(part.num, small), v.textWidth(part.den, small)) + 8;
     const cx = x + w / 2;
-    v.text(part.num, { x: cx, y: at.y - 3 }, { ...small, valign: "bottom" });
-    v.line(x + 2, at.y, x + w - 2, at.y, { stroke: fill, weight: 1.25 });
-    v.text(part.den, { x: cx, y: at.y + 3 }, { ...small, valign: "top" });
+    drawing.push(
+      v.text(part.num, { x: cx, y: at.y - 3 }, { ...small, valign: "bottom" }),
+      v.line(x + 2, at.y, x + w - 2, at.y, { stroke: fill, weight: 1.25 }),
+      v.text(part.den, { x: cx, y: at.y + 3 }, { ...small, valign: "top" }),
+    );
     x += w;
   }
-  return x;
+  return { drawing, end: x };
 }
 
-function card(v: View, box: { x: number; w: number }, title: string): void {
-  v.roundRect(box.x, 448, box.w, 180, 8, { fill: "#ffffff", stroke: "#ced4da", weight: 1 });
-  v.text(title.toUpperCase(), { x: box.x + 14, y: 460 }, T({ size: 11, style: "bold", fill: MUTED }));
+function card(v: View, box: { x: number; w: number }, title: string): Drawing {
+  return [
+    v.roundRect(box.x, 448, box.w, 180, 8, { fill: "#ffffff", stroke: "#ced4da", weight: 1 }),
+    v.text(title.toUpperCase(), { x: box.x + 14, y: 460 }, T({ size: 11, style: "bold", fill: MUTED })),
+  ];
 }
 
-function drawMeasurements(v: View, model: DeepReadonly<Model>, s: Solution): void {
+function drawMeasurements(v: View, model: DeepReadonly<Model>, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const box = { x: 16, w: 250 };
-  card(v, box, "Measurements");
+  out.push(card(v, box, "Measurements"));
   const img = s.image.type === "image" ? s.image : null;
   const rows: [string, string][] = [
     ["object distance", `u = ${fmt(s.u)} cm`],
@@ -743,19 +769,21 @@ function drawMeasurements(v: View, model: DeepReadonly<Model>, s: Solution): voi
   ];
   for (const [i, [k, val]] of rows.entries()) {
     const y = 488 + i * 22;
-    v.text(k, { x: box.x + 14, y }, T({ size: 12, fill: MUTED, valign: "middle" }));
-    v.text(val, { x: box.x + box.w - 14, y }, T({ size: 13, style: "bold", align: "right", valign: "middle" }));
+    out.push(v.text(k, { x: box.x + 14, y }, T({ size: 12, fill: MUTED, valign: "middle" })));
+    out.push(v.text(val, { x: box.x + box.w - 14, y }, T({ size: 13, style: "bold", align: "right", valign: "middle" })));
   }
+  return out;
 }
 
-function drawLensEquation(v: View, s: Solution): void {
+function drawLensEquation(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const box = { x: 278, w: 372 };
-  card(v, box, "Thin-lens equation");
+  out.push(card(v, box, "Thin-lens equation"));
   const x0 = box.x + 18;
   const fS = fmt(s.f);
   const uS = fmt(s.u);
-  drawEquation(v, [{ num: "1", den: "f" }, " = ", { num: "1", den: "u" }, " + ", { num: "1", den: "v" }], { x: x0, y: 500, size: 18, fill: MUTED });
-  drawEquation(v, [{ num: "1", den: fS }, " = ", { num: "1", den: uS }, " + ", { num: "1", den: "v" }], { x: x0 + 180, y: 500, size: 18 });
+  out.push(drawEquation(v, [{ num: "1", den: "f" }, " = ", { num: "1", den: "u" }, " + ", { num: "1", den: "v" }], { x: x0, y: 500, size: 18, fill: MUTED }).drawing);
+  out.push(drawEquation(v, [{ num: "1", den: fS }, " = ", { num: "1", den: uS }, " + ", { num: "1", den: "v" }], { x: x0 + 180, y: 500, size: 18 }).drawing);
   const inv = 1 / s.f - 1 / s.u;
   const rest: EqPart[] = [
     { num: "1", den: "v" },
@@ -765,60 +793,71 @@ function drawLensEquation(v: View, s: Solution): void {
     { num: "1", den: uS },
     ` = ${fmt(inv, 4)}`,
   ];
-  const x = drawEquation(v, rest, { x: x0, y: 556, size: 18 });
+  const eq = drawEquation(v, rest, { x: x0, y: 556, size: 18 });
+  out.push(eq.drawing);
+  const x = eq.end;
   const answer = s.image.type === "none" ? "  so v = ∞" : `  so v = ${fmt(s.image.v)} cm`;
-  v.text(answer, { x, y: 556 }, T({ size: 18, style: "bold", fill: IMAGE, valign: "middle" }));
-  v.text(
+  out.push(v.text(answer, { x, y: 556 }, T({ size: 18, style: "bold", fill: IMAGE, valign: "middle" })));
+  out.push(v.text(
     "Real is positive: f < 0 for a diverging lens; v < 0 means the image is virtual, on the object's side.",
     { x: x0, y: 592, w: box.w - 36 },
     T({ size: 11, fill: MUTED }),
-  );
+  ));
+  return out;
 }
 
-function chip(v: View, args: { x: number; y: number; text: string; color: string }): number {
+/** A chip's drawing, and the x where the next chip starts. */
+function chip(v: View, args: { x: number; y: number; text: string; color: string }): { drawing: Drawing; next: number } {
   const opts = T({ size: 13, style: "bold", fill: "#ffffff", valign: "middle" });
   const w = v.textWidth(args.text, opts) + 18;
-  v.roundRect(args.x, args.y - 12, w, 24, 12, { fill: args.color });
-  v.text(args.text, { x: args.x + 9, y: args.y }, opts);
-  return args.x + w + 6;
+  return {
+    drawing: [v.roundRect(args.x, args.y - 12, w, 24, 12, { fill: args.color }), v.text(args.text, { x: args.x + 9, y: args.y }, opts)],
+    next: args.x + w + 6,
+  };
 }
 
-function drawImageCard(v: View, s: Solution): void {
+function drawImageCard(v: View, s: Solution): Drawing {
+  const out: Drawing[] = [];
   const box = { x: 662, w: 282 };
-  card(v, box, "The image");
+  out.push(card(v, box, "The image"));
   const y = 494;
   if (s.image.type === "none") {
-    chip(v, { x: box.x + 14, y, text: "NO IMAGE", color: "#c92a2a" });
+    out.push(chip(v, { x: box.x + 14, y, text: "NO IMAGE", color: "#c92a2a" }).drawing);
   } else {
     const c = character(s.image);
-    let x = chip(v, { x: box.x + 14, y, text: c.real ? "REAL" : "VIRTUAL", color: c.real ? "#2b8a3e" : IMAGE });
-    x = chip(v, { x, y, text: c.upright ? "UPRIGHT" : "INVERTED", color: "#495057" });
-    chip(v, { x, y, text: c.size.toUpperCase(), color: "#495057" });
+    const kind = chip(v, { x: box.x + 14, y, text: c.real ? "REAL" : "VIRTUAL", color: c.real ? "#2b8a3e" : IMAGE });
+    const way = chip(v, { x: kind.next, y, text: c.upright ? "UPRIGHT" : "INVERTED", color: "#495057" });
+    out.push(kind.drawing, way.drawing, chip(v, { x: way.next, y, text: c.size.toUpperCase(), color: "#495057" }).drawing);
   }
-  v.text(caseSentence(s), { x: box.x + 14, y: 520, w: box.w - 28 }, T({ size: 13, lineHeight: 1.35 }));
+  out.push(v.text(caseSentence(s), { x: box.x + 14, y: 520, w: box.w - 28 }, T({ size: 13, lineHeight: 1.35 })));
+  return out;
 }
 
-function drawHeader(v: View): void {
-  v.text("Ray diagram for a thin lens", { x: 18, y: 12 }, T({ size: 20, style: "bold" }));
-  v.text(
+function drawHeader(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.text("Ray diagram for a thin lens", { x: 18, y: 12 }, T({ size: 20, style: "bold" })));
+  out.push(v.text(
     "Drag the object along the axis; drag its tip to change its height.",
     { x: 18, y: 38 },
     T({ size: 12, fill: MUTED }),
-  );
-  v.text("Lens", { x: 560, y: 30 }, T({ size: 13, fill: MUTED, align: "right", valign: "middle" }));
+  ));
+  out.push(v.text("Lens", { x: 560, y: 30 }, T({ size: 13, fill: MUTED, align: "right", valign: "middle" })));
   v.control("lens", { x: 568, y: 16, w: 130, h: 28, size: 14 });
-  v.text("Focal length f =", { x: 820, y: 30 }, T({ size: 13, fill: MUTED, align: "right", valign: "middle" }));
+  out.push(v.text("Focal length f =", { x: 820, y: 30 }, T({ size: 13, fill: MUTED, align: "right", valign: "middle" })));
   v.control("focal", { x: 828, y: 16, w: 60, h: 28, size: 15, align: "center", bold: true });
-  v.text("cm", { x: 894, y: 30 }, T({ size: 13, fill: MUTED, valign: "middle" }));
+  out.push(v.text("cm", { x: 894, y: 30 }, T({ size: 13, fill: MUTED, valign: "middle" })));
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background(PAPER);
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background(PAPER));
   const s = solve({ kind: p.lens, focal: p.focal, u: model.u, h: model.h });
   v.cursor(model.drag.type !== "idle" ? "grabbing" : model.hover !== "none" ? "grab" : "default");
-  drawHeader(v);
-  drawDiagram(v, model, s);
-  drawMeasurements(v, model, s);
-  drawLensEquation(v, s);
-  drawImageCard(v, s);
+  out.push(drawHeader(v));
+  out.push(drawDiagram(v, model, s));
+  out.push(drawMeasurements(v, model, s));
+  out.push(drawLensEquation(v, s));
+  out.push(drawImageCard(v, s));
+  return out;
 }

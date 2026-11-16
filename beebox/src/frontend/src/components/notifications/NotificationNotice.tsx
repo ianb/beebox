@@ -29,11 +29,14 @@ function linkParts(url: string): { to: string; search: Record<string, string>; h
   return { to: parsed.pathname, search: Object.fromEntries(parsed.searchParams), hash: parsed.hash.replace(/^#/, "") };
 }
 
+/** The quiet info banner frame, shared with the new-version banner (`components/BuildSkewBanner.tsx`). */
+export const INFO_BANNER_CLASSES = "rounded-lg border border-info-light bg-info-50 px-3 py-2";
+
 export function NotificationNotice({ title, body, url, fullBody, onDismiss, idPrefix }: NotificationNoticeProps) {
   const shownBody = fullBody === true ? body.trim() : (body.split("\n").find((line) => line.trim() !== "") ?? "");
   const link = url === undefined ? null : linkParts(url);
   return (
-    <Row gap="sm" align="start" className="rounded-lg border border-info-light bg-info-50 px-3 py-2">
+    <Row gap="sm" align="start" className={INFO_BANNER_CLASSES}>
       <Stack gap="xs" className="flex-1 min-w-0">
         <Text weight="semibold" size="sm">{title}</Text>
         {shownBody === "" ? null : <Text as="p" size="sm" tone="muted" className="whitespace-pre-line">{shownBody}</Text>}

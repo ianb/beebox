@@ -5,7 +5,7 @@ import { test } from "node:test";
 // Self-reference the package by its published name (what a sibling workspace
 // package does). That this file typechecks proves the "." export resolves for a
 // NodeNext consumer.
-import { Painter, SeededRandom, formatArgs } from "@ianbicking/canvas-loop";
+import { SeededRandom, formatArgs, isPathShape } from "@ianbicking/canvas-loop";
 import type { Msg, ParamsDecl, Style } from "@ianbicking/canvas-loop";
 
 // Name the imported types so the compiler must resolve them (unused-var-safe).
@@ -18,8 +18,7 @@ test("core values are usable through the package name (self-reference)", () => {
   const b = new SeededRandom(42);
   assert.equal(a.next(), b.next(), "seeded PRNG is deterministic");
   assert.equal(formatArgs(["x", 1, true]), "x 1 true", "formatArgs joins args");
-  // The context-generic Painter is a real value export of the core entry.
-  assert.equal(typeof Painter, "function", "Painter is exported from the package root");
+  assert.equal(isPathShape([["move", 0, 0]]), true, "isPathShape tells a path from a polygon");
 });
 
 // Probe a subpath in a bare process and report which heavy deps its import

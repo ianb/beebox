@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, mountSketch } from "@ianbicking/canvas-loop/browser";
 import { asPlaygroundModule } from "../../src/browser/sketch-types.js";
-import { FakeElement, asHTMLElement, rafState, makeModule } from "./fake-dom.js";
+import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, makeModule, fakeGpu, settle } from "../fake-dom.js";
 
 /** Thrown by the poisoned addEventListener to simulate a mid-wiring failure. */
 class HostileAddEventListenerError extends Error {
@@ -24,7 +24,7 @@ class HostileCreateElementError extends Error {
   }
 }
 
-test("a throw during listener wiring leaves no running rAF loop", () => {
+test("a throw during listener wiring reports once, leaves no running rAF loop, and never becomes ready", async () => {
   const { module } = makeModule();
   const canvas = new FakeElement("canvas");
   canvas.width = 40;
@@ -34,42 +34,52 @@ test("a throw during listener wiring leaves no running rAF loop", () => {
     adds += 1;
     if (adds === 3) throw new HostileAddEventListenerError();
   };
+  const errors: unknown[] = [];
   const pendingBefore = rafState.pending.size;
-  assert.throws(
-    () =>
-      // eslint-disable-next-line no-restricted-syntax -- test boundary: the fake element stands in for the DOM canvas the mount code duck-types against
-      attachSketch(canvas as unknown as HTMLCanvasElement, {
-        module: asPlaygroundModule(module),
-        seed: 42,
-        paused: false,
-        onFrame: () => {
-          // Frame progress is irrelevant here — the mount must fail first.
-        },
-      }),
-    HostileAddEventListenerError,
-  );
+  const attached = attachSketch(asHTMLCanvas(canvas), {
+    module: asPlaygroundModule(module),
+    seed: 42,
+    paused: false,
+    onFrame: () => {
+      // Frame progress is irrelevant here: the mount must fail first.
+    },
+    onError: (e) => errors.push(e),
+    gpu: fakeGpu(),
+  });
+  let resolved = false;
+  void attached.ready.then(() => {
+    resolved = true;
+  });
+  await settle();
+  assert.equal(errors.length, 1, "the host hears the failure once");
+  assert.ok(errors[0] instanceof HostileAddEventListenerError);
+  assert.equal(resolved, false, "a failed figure is never ready");
+  assert.equal(attached.runtime, undefined, "no runtime is exposed");
   assert.equal(rafState.pending.size, pendingBefore, "no rAF frame may remain scheduled after a wiring throw");
 });
 
-test("a throw while building figure chrome tears down before rethrowing", () => {
+test("a throw while building figure chrome stops the loop and reports once; teardown removes the shell", async () => {
   const { module } = makeModule();
   const mount = new FakeElement("div");
   const realCreate = document.createElement.bind(document);
-  // Transport is built from <button> elements; poison them to force a throw
-  // after the runtime has started.
-  document.createElement = (tag: string) => {
-    if (tag === "button") throw new HostileCreateElementError();
-    return realCreate(tag);
-  };
+  const errors: unknown[] = [];
   const pendingBefore = rafState.pending.size;
+  let teardown: () => void = () => {};
   try {
-    assert.throws(
-      () => mountSketch(asHTMLElement(mount), { module, transport: true, panel: false }),
-      HostileCreateElementError,
-    );
+    teardown = mountSketch(asHTMLElement(mount), { module, transport: true, panel: false, gpu: fakeGpu(), onError: (e) => errors.push(e) });
+    // The transport is built from <button> elements once the figure is ready; poison them
+    // to force a throw after the runtime has started.
+    document.createElement = (tag: string) => {
+      if (tag === "button") throw new HostileCreateElementError();
+      return realCreate(tag);
+    };
+    await settle();
   } finally {
     document.createElement = realCreate;
   }
+  assert.equal(errors.length, 1, "the host hears it once");
+  assert.ok(errors[0] instanceof HostileCreateElementError);
   assert.equal(rafState.pending.size, pendingBefore, "runtime loop must be stopped by the cleanup path");
-  assert.equal(mount.children.length, 0, "no half-built figure may remain in the mount host");
+  teardown();
+  assert.equal(mount.children.length, 0, "no half-built figure may remain in the mount host after teardown");
 });

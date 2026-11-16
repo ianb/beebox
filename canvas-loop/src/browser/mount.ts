@@ -2,9 +2,15 @@
 // subpath. `mountSketch(mount, opts)` builds a complete figure (canvas +
 // optional transport toolbar + optional declaration-generated param panel)
 // inside a host element and returns a teardown; `attachSketch(canvas, opts)`
-// is the shared lower layer (runtime creation + input wiring + teardown) that
-// both `mountSketch` and the React `<SketchFigure>` delegate to — one
-// implementation of the mount/wire/stop lifecycle.
+// is the shared lower layer (runtime, scene surface, input wiring, sleep and
+// teardown on a given canvas) that both `mountSketch` and the React
+// `<SketchFigure>` delegate to — one implementation of the lifecycle.
+//
+// Figures draw with WebGPU. The GPU code (`scene/figure.ts`, the renderer) is
+// loaded on the first attach, and the device opens asynchronously: the figure
+// draws when both are ready (`AttachedSketch.ready`). Without WebGPU a figure
+// reports `NoWebGpuError`, without an adapter `NoGpuAdapterError`, through
+// `onError`, once.
 //
 // No React, no @napi-rs/canvas anywhere in this module's import graph (the
 // dependency-isolation test enforces it), and NO runtime <style> injection —
@@ -13,14 +19,21 @@
 //   import "@ianbicking/canvas-loop/browser/figure.css";
 import type { CanvasSize, ControlBox } from "../core/tea.js";
 import { toTeaModule } from "../headless/tea-load.js";
+import { SketchMountError } from "../scene/errors.js";
 import { buildControls, ControlOverlay } from "./controls.js";
-import { sanitizeInitialParams } from "./param-validate.js";
-import { Runtime, watchVisibility, type EmittedEvent, type ParamOverrides } from "./runtime/engine.js";
+import type { Runtime, EmittedEvent, ParamOverrides, RuntimeLog } from "./runtime/engine.js";
+import type { FigureGpu, SceneFigure, StartedFigure } from "./scene/figure/start.js";
 import type { PlaygroundModule } from "./sketch-types.js";
+import { pixelRatioOf, sizeCanvas, wireInput } from "./canvas-dom.js";
+
+export { pixelRatioOf, setDensity, sizeCanvas, wireInput } from "./canvas-dom.js";
 
 // Re-exported so `./browser` consumers can type an `onEvent` handler that reads
 // the engagement verdict fields.
 export type { EmittedEvent } from "./runtime/engine.js";
+export type { FigureGpu, SceneFigure } from "./scene/figure/start.js";
+// The errors a host matches on, by class.
+export { NoGpuAdapterError, NoWebGpuError, RemovedCallError, SketchMountError } from "../scene/errors.js";
 
 // Re-exported here so the public `./browser` subpath keeps exporting it (the
 // definition lives in param-validate.ts, shared with Runtime.setParam).
@@ -30,14 +43,6 @@ export { sanitizeInitialParams } from "./param-validate.js";
 export const DEFAULT_CANVAS: CanvasSize = { width: 400, height: 300 };
 
 const DEFAULT_SEED = 42;
-
-/** Thrown when `mountSketch` can't mount: bad module value or no 2D context. */
-export class SketchMountError extends Error {
-  name = "SketchMountError";
-  constructor(options: { detail: string }) {
-    super(`mountSketch: ${options.detail}`);
-  }
-}
 
 /** Options for {@link attachSketch} — the runtime-on-a-canvas layer. */
 export interface AttachSketchOptions {
@@ -55,66 +60,107 @@ export interface AttachSketchOptions {
   onFrame: (frame: number) => void;
   /** Streams each recorded input entry as it is dispatched. */
   onEvent?: (entry: EmittedEvent) => void;
-  /** Called once if a frame throws; the loop stops. Default: `console.error`. */
+  /**
+   * Called once if the figure fails: no WebGPU (`NoWebGpuError`), no adapter
+   * (`NoGpuAdapterError`), a canvas without a WebGPU context
+   * (`SketchMountError`), a frame that throws (a removed call is a
+   * `RemovedCallError`), or a GPU fault. The loop stops and the GPU resources
+   * are freed. Default: `console.error`.
+   */
   onError?: (error: unknown) => void;
   /** After each draw: where `v.control` placed param inputs this frame. */
   onPlace?: (placements: ReadonlyMap<string, ControlBox>) => void;
+  /** The log (`v.log`, warnings, replay verdicts), frame-tagged. Default: the console. */
+  onLog?: (entry: RuntimeLog) => void;
+  /** The device was lost (`message`; the figure redraws when it next comes into view), or `undefined` once it draws again. Default: `console.warn`. */
+  onNotice?: (message: string | undefined) => void;
+  /** Called once the figure runs, with its handle (test pages, dev tools). */
+  inspect?: (figure: SceneFigure) => void;
+  /** Where the figure gets its device (tests and dev tools); default the page's shared WebGPU device. */
+  gpu?: FigureGpu;
 }
 
 export interface AttachedSketch {
-  runtime: Runtime;
-  /** Detaches input listeners and stops the rAF loop. */
+  /** The runtime, once `ready` resolved; undefined before. */
+  readonly runtime: Runtime | undefined;
+  /** Resolves with the runtime once the device opened and frame 0 is on screen. Never settles if the figure fails first (see `onError`) or is torn down first. */
+  readonly ready: Promise<Runtime>;
+  /** Stops the loop, detaches input listeners and frees the GPU resources; before `ready`, releases the device lease. Idempotent. */
   teardown: () => void;
 }
 
 /**
- * Create a runtime on an existing canvas element and wire pointer/key input
- * into it. Returns null when the canvas has no 2D context (canvas already in
- * use with another context kind). The caller owns the element — its
- * width/height attributes should match the module's declared `canvas` size.
+ * Start a figure on an existing canvas element: open the GPU device, then
+ * build the runtime and the scene surface and wire pointer/key input into it.
+ * The caller owns the element — its width/height attributes should be the
+ * module's declared `canvas` size times the pixel ratio (`sizeCanvas`).
  */
-export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOptions): AttachedSketch | null {
-  const ctx = canvas.getContext("2d");
-  if (ctx === null) return null;
-  const size = opts.module.canvas ?? DEFAULT_CANVAS;
-  // The single validation point: every caller (imperative mountSketch and the
-  // React figure) passes raw overrides through here.
-  const initialParams = sanitizeInitialParams({ decl: opts.module.params ?? {}, overrides: opts.initialParams });
-  const runtime = new Runtime({
-    module: opts.module,
-    ctx,
-    width: size.width,
-    height: size.height,
-    pixelRatio: pixelRatioOf(canvas),
-    seed: opts.seed,
-    // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
-    ...(initialParams !== undefined ? { initialParams } : {}),
-    onFrame: opts.onFrame,
-    // The log (`v.log`, style notes, overlap warnings, replay verdicts) goes to the console, frame-tagged.
-    onLog: (entry) => console.log(`[canvas-loop] frame ${entry.frame}: ${entry.message}`),
-    ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
-    ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
-    ...(opts.onPlace !== undefined ? { onPlace: opts.onPlace } : {}),
+export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOptions): AttachedSketch {
+  const state: { torn: boolean; reported: boolean; started: StartedFigure | undefined; runtime: Runtime | undefined; detachInput: (() => void) | undefined; stopBuilding: (() => void) | undefined } = { torn: false, reported: false, started: undefined, runtime: undefined, detachInput: undefined, stopBuilding: undefined };
+  // The host hears one failure; `report` also stops the figure, `inform` leaves it retryable (a device not recreated yet).
+  const inform = (error: unknown): void => {
+    if (state.reported || state.torn) return;
+    state.reported = true;
+    if (opts.onError === undefined) console.error("canvas-loop: figure failed", error);
+    else opts.onError(error);
+  };
+  const report = (error: unknown): void => {
+    state.started?.fail();
+    inform(error);
+  };
+  let resolveReady: (runtime: Runtime) => void = () => {};
+  const ready = new Promise<Runtime>((resolve) => {
+    resolveReady = resolve;
   });
-  runtime.setPaused(opts.paused);
-  // Wire input BEFORE starting the loop: if listener setup throws (hostile or
-  // partial DOM shims), no rAF loop is left running with no teardown returned.
-  const detachInput = wireInput(canvas, runtime);
-  let detachWatch = (): void => {};
-  try {
-    runtime.start();
-    detachWatch = watchVisibility(canvas, runtime);
-  } catch (e) {
-    detachInput();
-    runtime.stop();
-    throw e;
-  }
+  // Read through a function: teardown can run while `run` awaits, which narrowing does not see.
+  const torn = (): boolean => state.torn;
+  const run = async (): Promise<void> => {
+    const { startFigure } = await import("./scene/figure/start.js");
+    if (state.torn) return;
+    const size = opts.module.canvas ?? DEFAULT_CANVAS;
+    const started = await startFigure(canvas, {
+      opts: { ...opts, size, ratio: pixelRatioOf(canvas) },
+      report,
+      inform,
+      torn,
+      building: (stop) => {
+        state.stopBuilding = stop;
+      },
+    });
+    state.stopBuilding = undefined;
+    if (started === undefined) return;
+    // Torn down while it started (a callback during frame 0, or before this continuation ran).
+    if (torn()) {
+      started.teardown();
+      return;
+    }
+    state.started = started;
+    const { runtime } = started.figure;
+    // Input after the runtime exists; a throw here undoes the figure.
+    try {
+      state.detachInput = wireInput(canvas, runtime);
+    } catch (error) {
+      started.teardown();
+      state.started = undefined;
+      throw error;
+    }
+    state.runtime = runtime;
+    opts.inspect?.(started.figure);
+    if (!torn()) resolveReady(runtime);
+  };
+  run().catch(report);
   return {
-    runtime,
+    get runtime(): Runtime | undefined {
+      return state.runtime;
+    },
+    ready,
     teardown: () => {
-      detachWatch();
-      detachInput();
-      runtime.stop();
+      if (state.torn) return;
+      state.torn = true;
+      state.detachInput?.();
+      state.stopBuilding?.();
+      state.started?.teardown();
+      state.runtime = undefined;
     },
   };
 }
@@ -146,22 +192,23 @@ export interface MountSketchOptions {
   onParamsChange?: (values: ParamOverrides) => void;
   /** Streams each recorded input entry (the events-file line). */
   onEvent?: (entry: EmittedEvent) => void;
-  /** Called once if a frame throws; the loop stops. Default: `console.error`. */
+  /** Called once if the figure fails (see `AttachSketchOptions.onError`). Default: `console.error`. */
   onError?: (error: unknown) => void;
+  /** Called once the figure runs, with its handle (test pages, dev tools). */
+  inspect?: (figure: SceneFigure) => void;
+  /** Where the figure gets its device (tests and dev tools); default the page's shared WebGPU device. */
+  gpu?: FigureGpu;
 }
 
-/**
- * Mount a complete figure into a host element; returns a teardown that stops
- * the loop, detaches listeners, and removes everything it added.
- */
-export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () => void {
-  const module = coerceModule(opts.module);
-  const decl = module.params ?? {};
-  const seed = opts.seed ?? DEFAULT_SEED;
-  const size = module.canvas ?? DEFAULT_CANVAS;
-  const showPanel = opts.panel ?? Object.keys(decl).length > 0;
-  const showTransport = opts.transport ?? false;
+/** The DOM a figure is built in; made at once, so the figure takes its space while the device opens. */
+interface Shell {
+  readonly container: HTMLElement;
+  readonly stage: HTMLElement;
+  readonly canvas: HTMLCanvasElement;
+  readonly frameLabel: HTMLElement;
+}
 
+function buildShell(size: { width: number; height: number }): Shell {
   const container = document.createElement("div");
   container.className = "cl-figure";
   // The stage hugs the canvas so over-canvas inputs (`v.control`) position against it.
@@ -174,113 +221,126 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   canvas.tabIndex = 0;
   stage.append(canvas);
   container.append(stage);
-
   const frameLabel = document.createElement("span");
   frameLabel.className = "cl-frame";
   frameLabel.textContent = "frame 0";
+  return { container, stage, canvas, frameLabel };
+}
 
-  // `attached` is assigned right below; runtime callbacks only fire from rAF
-  // frames and control events, never synchronously during attachSketch.
-  let attached: AttachedSketch | null = null;
-  // Over-canvas inputs. The first draw runs inside attachSketch, before
-  // `attached` exists, so the latest placements are kept and synced after.
+/** A notice over the canvas (a lost device); clicking it tries to draw again. */
+function buildNotice(stage: HTMLElement, onRetry: () => void): (message: string | undefined) => void {
+  const notice = document.createElement("button");
+  notice.type = "button";
+  notice.className = "cl-error";
+  Object.assign(notice.style, { position: "absolute", left: "8px", right: "8px", top: "8px", display: "none", cursor: "pointer", textAlign: "left", font: "inherit" });
+  notice.addEventListener("click", onRetry);
+  stage.append(notice);
+  return (message) => {
+    if (message === undefined) {
+      notice.style.display = "none";
+      return;
+    }
+    notice.textContent = `${message} Click to try again.`;
+    notice.style.display = "";
+  };
+}
+
+/**
+ * Mount a complete figure into a host element; returns a teardown (idempotent)
+ * that stops the loop, frees the GPU resources, detaches listeners and removes
+ * everything it added. A bad module throws; failures after that go to
+ * `onError` once. The panel and transport appear once the figure runs.
+ */
+export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () => void {
+  const module = coerceModule(opts.module);
+  const decl = module.params ?? {};
+  const size = module.canvas ?? DEFAULT_CANVAS;
+  const shell = buildShell(size);
+  // Over-canvas inputs. The first draw runs before `ready`, so the latest placements are kept and synced after.
   let placed: ReadonlyMap<string, ControlBox> = new Map();
   let excluded: ReadonlySet<string> = new Set();
   let renderPanel = (): void => {};
+  let figure: SceneFigure | undefined;
+  // A control's change is a user gesture: it may unlock sound (iOS needs one).
+  const onParam = (name: string, value: number | boolean | string): void => {
+    attached.runtime?.enableSound();
+    attached.runtime?.setParam(name, value);
+  };
+  const onTrigger = (name: string): void => {
+    attached.runtime?.enableSound();
+    attached.runtime?.trigger(name);
+  };
   const overlay = new ControlOverlay({
-    stage,
+    stage: shell.stage,
     size,
     decl,
-    handlers: {
-      // A control's change is a user gesture: it may unlock sound (iOS needs one).
-      onParam: (name, value) => {
-        attached?.runtime.enableSound();
-        attached?.runtime.setParam(name, value);
-      },
-      onTrigger: (name) => {
-        attached?.runtime.enableSound();
-        attached?.runtime.trigger(name);
-      },
-    },
+    handlers: { onParam, onTrigger },
     onShownChange: (names) => {
       excluded = names;
       renderPanel();
     },
   });
-  // Raw overrides — attachSketch is the single validation point (no duplicate here).
-  attached = attachSketch(canvas, {
+  const notice = buildNotice(shell.stage, () => void figure?.setOnScreen(true));
+  mount.append(shell.container);
+  const attached = attachSketch(shell.canvas, {
     module,
-    seed,
+    seed: opts.seed ?? DEFAULT_SEED,
     paused: !(opts.autoplay ?? true),
-    ...(opts.initialParams !== undefined ? { initialParams: opts.initialParams } : {}),
-    ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
+    ...(opts.initialParams === undefined ? {} : { initialParams: opts.initialParams }),
+    ...(opts.onError === undefined ? {} : { onError: opts.onError }),
+    ...(opts.gpu === undefined ? {} : { gpu: opts.gpu }),
+    onNotice: notice,
+    inspect: (f) => {
+      figure = f;
+      opts.inspect?.(f);
+    },
     onFrame: (frame) => {
-      frameLabel.textContent = `frame ${frame}`;
+      shell.frameLabel.textContent = `frame ${frame}`;
     },
     onPlace: (placements) => {
       placed = placements;
-      if (attached !== null) overlay.sync(placements, attached.runtime.paramValues());
+      const rt = attached.runtime;
+      if (rt !== undefined) overlay.sync(placements, rt.paramValues());
     },
     onEvent: (entry) => {
       opts.onEvent?.(entry);
-      if (entry.type === "param" && attached !== null) {
-        opts.onParamsChange?.(attached.runtime.paramValues());
-      }
+      const rt = attached.runtime;
+      if (entry.type === "param" && rt !== undefined) opts.onParamsChange?.(rt.paramValues());
     },
   });
-  if (attached === null) {
-    throw new SketchMountError({ detail: "canvas has no 2D context" });
-  }
-  const runtime = attached.runtime;
-
-  // The panel is rebuilt after a restart so widgets show the re-applied
-  // initial values (widget edits keep themselves in sync; restart doesn't).
   const panelHost = document.createElement("div");
-  renderPanel = (): void => {
-    panelHost.replaceChildren(
-      buildControls({
-        decl,
-        values: runtime.paramValues(),
-        onParam: (name, value) => {
-          runtime.enableSound();
-          runtime.setParam(name, value);
-        },
-        onTrigger: (name) => {
-          runtime.enableSound();
-          runtime.trigger(name);
-        },
-        classPrefix: "cl-",
-        exclude: excluded,
-      }),
-    );
-  };
-  // Any throw between a started runtime and a returned teardown would leak the
-  // rAF loop + listeners with no way to stop them — tear down before rethrowing.
-  try {
-    if (showTransport) container.append(buildTransport({ runtime, frameLabel, renderPanel }));
-    if (showPanel) {
-      renderPanel();
-      container.append(panelHost);
-    }
-    mount.append(container);
-    // After insertion, so the stage has its shown width for scaling input text.
-    overlay.sync(placed, runtime.paramValues());
-  } catch (e) {
-    attached.teardown();
-    overlay.remove();
-    container.remove();
-    throw e;
-  }
-
+  let torn = false;
+  attached.ready
+    .then((rt) => {
+      if (torn) return;
+      renderPanel = (): void => {
+        panelHost.replaceChildren(buildControls({ decl, values: rt.paramValues(), onParam, onTrigger, classPrefix: "cl-", exclude: excluded }));
+      };
+      if (opts.transport ?? false) shell.container.append(buildTransport({ runtime: rt, frameLabel: shell.frameLabel, renderPanel }));
+      if (opts.panel ?? Object.keys(decl).length > 0) {
+        renderPanel();
+        shell.container.append(panelHost);
+      }
+      // After insertion, so the stage has its shown width for scaling input text.
+      overlay.sync(placed, rt.paramValues());
+    })
+    .catch((error: unknown) => {
+      // Building the panel failed: the figure stops, and the host hears it once.
+      attached.teardown();
+      if (opts.onError === undefined) console.error("canvas-loop: figure failed", error);
+      else opts.onError(error);
+    });
   return () => {
+    if (torn) return;
+    torn = true;
     attached.teardown();
     overlay.remove();
-    container.remove();
+    shell.container.remove();
   };
 }
 
 /** The transport toolbar: frame readout + play/pause + restart. */
-function buildTransport(deps: { runtime: Runtime; frameLabel: HTMLElement; renderPanel: () => void }): HTMLElement {
+export function buildTransport(deps: { runtime: Runtime; frameLabel: HTMLElement; renderPanel: () => void }): HTMLElement {
   const { runtime } = deps;
   const toolbar = document.createElement("div");
   toolbar.className = "cl-toolbar";
@@ -311,7 +371,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Validate an untrusted module value against the TEA contract. */
-function coerceModule(raw: unknown): PlaygroundModule {
+export function coerceModule(raw: unknown): PlaygroundModule {
   if (!isRecord(raw)) {
     throw new SketchMountError({ detail: "module must be a TEA sketch module object (named exports: init, update, draw)" });
   }
@@ -326,108 +386,4 @@ function coerceModule(raw: unknown): PlaygroundModule {
     ...(loaded.sound === undefined ? {} : { sound: loaded.sound }),
     ...(loaded.activity === undefined ? {} : { activity: loaded.activity }),
   };
-}
-
-
-/**
- * Wire pointer/key listeners on the canvas straight into the runtime's input
- * methods — the same dispatch path scripted events take. Pointer events cover
- * mouse, touch and pen; each reaches the sketch as `mousedown`/`mousemove`/
- * `mouseup`, so sketches and events files are the same for every device.
- * Returns a teardown that removes every listener.
- */
-export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
-  // A drag that starts on the canvas belongs to the sketch, not to page scrolling.
-  canvas.style.touchAction = "none";
-  // The one pointer (finger or mouse) that pressed; others are ignored until it lifts.
-  let pressedId: number | undefined;
-  const send = (type: "mousedown" | "mousemove" | "mouseup", e: PointerEvent): void => {
-    const p = coords(canvas, e);
-    runtime.pointer({ type, x: p.x, y: p.y });
-  };
-  const onDown = (e: PointerEvent): void => {
-    if (!e.isPrimary || pressedId !== undefined) return;
-    runtime.enableSound();
-    pressedId = e.pointerId;
-    // Keep this pointer's moves and its release even when it slides off the canvas.
-    canvas.setPointerCapture(e.pointerId);
-    canvas.focus({ preventScroll: true });
-    send("mousedown", e);
-  };
-  // Every move of the primary pointer is sent, pressed or not (as in a scripted
-  // events file), so a sketch can react to hover; a finger only moves while down.
-  const onMove = (e: PointerEvent): void => {
-    if (!e.isPrimary || (pressedId !== undefined && e.pointerId !== pressedId)) return;
-    send("mousemove", e);
-  };
-  // A lift, a cancel (the browser took the touch) and a lost capture all end the press once.
-  const release = (e: PointerEvent): void => {
-    // iOS unlocks audio on a touch's end, not its start, so a lift asks too.
-    if (e.type === "pointerup") runtime.enableSound();
-    if (e.pointerId !== pressedId) return;
-    pressedId = undefined;
-    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
-    send("mouseup", e);
-  };
-  const onKeyDown = (e: KeyboardEvent): void => {
-    if (e.repeat) return;
-    runtime.enableSound();
-    if (e.key.startsWith("Arrow")) e.preventDefault();
-    runtime.key({ type: "keydown", key: e.key });
-  };
-  const onKeyUp = (e: KeyboardEvent): void => runtime.key({ type: "keyup", key: e.key });
-  const listeners = [
-    ["pointerdown", onDown],
-    ["pointermove", onMove],
-    ["pointerup", release],
-    ["pointercancel", release],
-    ["lostpointercapture", release],
-  ] as const;
-  for (const [type, fn] of listeners) canvas.addEventListener(type, fn);
-  canvas.addEventListener("keydown", onKeyDown);
-  canvas.addEventListener("keyup", onKeyUp);
-  return () => {
-    for (const [type, fn] of listeners) canvas.removeEventListener(type, fn);
-    canvas.removeEventListener("keydown", onKeyDown);
-    canvas.removeEventListener("keyup", onKeyUp);
-  };
-}
-
-/** CSS→canvas coordinate mapping for a pointer event (accounts for display scaling). */
-/**
- * Size a canvas for the screen's pixel density: `size` logical pixels shown at
- * that size, backed by `size × devicePixelRatio` device pixels, so drawing is
- * sharp on a high-density display. The ratio is kept on the element.
- */
-export function sizeCanvas(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
-  setDensity(canvas, size);
-  canvas.style.width = `${size.width}px`;
-}
-
-/** Give a canvas a backing store of `size × devicePixelRatio` device pixels (its display size is left alone). */
-export function setDensity(canvas: HTMLCanvasElement, size: { width: number; height: number }): void {
-  // No devicePixelRatio (a non-browser host) means 1; very dense screens are capped at 3.
-  const dpr = Number(globalThis.devicePixelRatio);
-  // Capped at 2: on a 3× phone screen 3× is barely sharper and costs 2.25× the pixels.
-  const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(2, Math.max(1, dpr)) : 1;
-  canvas.width = Math.round(size.width * ratio);
-  canvas.height = Math.round(size.height * ratio);
-  RATIOS.set(canvas, ratio);
-}
-
-// The pixel ratio each canvas was sized with (kept off the DOM).
-const RATIOS = new WeakMap<HTMLCanvasElement, number>();
-
-/** The pixel ratio `sizeCanvas` gave a canvas (1 for a canvas it did not size). */
-export function pixelRatioOf(canvas: HTMLCanvasElement): number {
-  return RATIOS.get(canvas) ?? 1;
-}
-
-function coords(canvas: HTMLCanvasElement, e: MouseEvent): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  // In logical (sketch) pixels: the backing store is pixelRatio times larger.
-  const ratio = pixelRatioOf(canvas);
-  const sx = rect.width === 0 ? 1 : canvas.width / ratio / rect.width;
-  const sy = rect.height === 0 ? 1 : canvas.height / ratio / rect.height;
-  return { x: Math.round((e.clientX - rect.left) * sx), y: Math.round((e.clientY - rect.top) * sy) };
 }

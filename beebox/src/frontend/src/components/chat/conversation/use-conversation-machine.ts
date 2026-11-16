@@ -6,6 +6,7 @@ import type { ChatEvent, ChatMachineInput } from "../../../machines/chat-types";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
 import { ConversationControllerPool, conversationKey, type SessionAssignment } from "./controller-pool/pool";
+import { registerReloadBlocker } from "../../../lib/reload-blockers";
 
 /**
  * The target a conversation starts from when no caller supplied one.
@@ -55,6 +56,7 @@ export function useConversationMachine(opts: {
   }, [pool, opts.onSessionAssignment]);
   useEffect(() => { pool.setRecoveryHandler(setRecoveryNotice); }, [pool]);
   useEffect(() => pool.attach(), [pool]);
+  useEffect(() => registerReloadBlocker("streaming", () => pool.busy()), [pool]);
   useBusSubscription({ onEvent: (event) => {
     const assigned = busEventData(event, "chat-session-assigned");
     if (assigned !== null) pool.markReady(assigned.sessionId);

@@ -63,6 +63,9 @@ export function dashboardEnv({ paths, boxRoot, executablePath, home, pathVar, us
     AGENT_BROWSER_CONTENT_BOUNDARIES: "1",
     AGENT_BROWSER_MAX_OUTPUT: "60000",
     AGENT_BROWSER_IDLE_TIMEOUT_MS: "1800000",
+    // No one listens to an agent's browser: muted, so a page's sound never
+    // plays through the speakers of the machine running the box.
+    AGENT_BROWSER_ARGS: "--mute-audio",
     HOME: home,
     PATH: pathVar,
   };

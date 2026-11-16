@@ -1,59 +1,62 @@
 // Things around the theft: the gull's flight trail from the gap, drips and a
 // loose feather, its shadow on the quay, bunting, crates of fish, a jealous
 // gull on a bollard and a cat who saw everything.
-import type { View, Vec2 } from "@ianbicking/canvas-loop";
+import type { Drawing, Vec2, View } from "@ianbicking/canvas-loop";
 import { fish } from "./fish-tea.js";
 import { GULL_AT } from "./gull-tea.js";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";
 
 /** Shadows the sun throws down and to the left of everything standing on the quay. */
-export function castShadows(v: View): void {
-  v.group({ opacity: 0.4, blend: "multiply" }, () => {
+export function castShadows(v: View): Drawing {
+  return v.group({ opacity: 0.4, blend: "multiply" }, ((): Drawing => {
     const shadow = { fill: "#8a6e4e" };
-    v.polygon(
-      [
-        [454, 600],
-        [884, 600],
-        [846, 632],
-        [412, 632],
-      ],
-      shadow,
-    );
-    v.polygon(
-      [
-        [90, 596],
-        [240, 596],
-        [204, 624],
-        [54, 624],
-      ],
-      shadow,
-    );
-    v.ellipse(276, 618, 28, 6, shadow);
-    v.ellipse(372, 632, 44, 7, shadow);
-    v.ellipse(322, 548, 30, 5, shadow);
-    v.ellipse(40, 624, 35, 6, shadow);
-    v.polygon(
-      [
-        [8, 636],
-        [26, 636],
-        [-10, 668],
-        [-28, 668],
-      ],
-      shadow,
-    );
-  });
+    return [
+      v.polygon(
+        [
+          [454, 600],
+          [884, 600],
+          [846, 632],
+          [412, 632],
+        ],
+        shadow,
+      ),
+      v.polygon(
+        [
+          [90, 596],
+          [240, 596],
+          [204, 624],
+          [54, 624],
+        ],
+        shadow,
+      ),
+      v.ellipse(276, 618, 28, 6, shadow),
+      v.ellipse(372, 632, 44, 7, shadow),
+      v.ellipse(322, 548, 30, 5, shadow),
+      v.ellipse(40, 624, 35, 6, shadow),
+      v.polygon(
+        [
+          [8, 636],
+          [26, 636],
+          [-10, 668],
+          [-28, 668],
+        ],
+        shadow,
+      ),
+    ];
+  })());
 }
 
-export function shadowAndBunting(v: View): void {
+export function shadowAndBunting(v: View): Drawing {
+  const out: Drawing[] = [];
   // the gull's shadow, down and left on the quay
-  v.ellipse(250, 590, 75, 14, {
+  out.push(v.ellipse(250, 590, 75, 14, {
     fill: v.ellipseGradient(250, 590, 75, 14, [
       [0, "rgba(90,70,50,0.35)"],
       [1, "rgba(90,70,50,0)"],
     ]),
-  });
+  }));
   // lamppost and a string of bunting to the stall
-  form(
+  out.push(form(
     v,
     [
       [12, 150],
@@ -69,8 +72,8 @@ export function shadowAndBunting(v: View): void {
       weight: 2,
       seed: 3001,
     },
-  );
-  form(
+  ));
+  out.push(form(
     v,
     [
       [0, 120],
@@ -86,21 +89,21 @@ export function shadowAndBunting(v: View): void {
       weight: 2,
       seed: 3002,
     },
-  );
+  ));
   const line: Vec2[] = [
     [20, 160],
     [180, 198],
     [330, 198],
     [478, 166],
   ];
-  mark(v, line, { color: INK, weight: 1.6, pressure: "even", seed: 3003 });
+  out.push(mark(v, line, { color: INK, weight: 1.6, pressure: "even", seed: 3003 }));
   const colours = ["#e2423a", "#f7d548", "#3e86b8", "#7fb069", "#f78154"];
   for (let i = 0; i < 13; i += 1) {
     const t = (i + 0.5) / 13;
     const x = 20 + t * 458;
     const sag = Math.sin(t * Math.PI) * 34;
     const y = 160 + t * 6 + sag;
-    form(
+    out.push(form(
       v,
       [
         [x - 10, y],
@@ -115,28 +118,30 @@ export function shadowAndBunting(v: View): void {
         weight: 1.4,
         seed: 3010 + i,
       },
-    );
+    ));
   }
+  return out;
 }
 
-export function trail(v: View): void {
+export function trail(v: View): Drawing {
+  const out: Drawing[] = [];
   // speed strokes behind the gull
   for (let i = 0; i < 4; i += 1) {
     const y = GULL_AT[1] - 30 + i * 16;
-    mark(
+    out.push(mark(
       v,
       [
         [GULL_AT[0] + 150, y],
         [GULL_AT[0] + 220 - i * 10, y + 6],
       ],
       { color: "#8aa3b4", weight: 3, wobble: 1, seed: 3120 + i },
-    );
+    ));
   }
   // drips falling from the fish, and a loose feather
   for (let i = 0; i < 4; i += 1) {
     const x = 182 + hash(i + 3) * 30;
     const y = 360 + i * 30;
-    form(
+    out.push(form(
       v,
       [
         [x, y - 8],
@@ -151,9 +156,9 @@ export function trail(v: View): void {
         weight: 1.2,
         seed: 3130 + i,
       },
-    );
+    ));
   }
-  v.at({ translate: [452, 330], rotate: 0.6 }, () => {
+  out.push(v.at({ translate: [452, 330], rotate: 0.6 }, [
     form(
       v,
       [
@@ -165,7 +170,7 @@ export function trail(v: View): void {
         [-6, 5],
       ],
       { base: "#f4f4f0", shade: "#c8d2da", depth: 2, weight: 1.4, seed: 3140 },
-    );
+    ),
     mark(
       v,
       [
@@ -173,16 +178,18 @@ export function trail(v: View): void {
         [16, 0],
       ],
       { color: "#8a96a0", weight: 1.2, pressure: "even" },
-    );
-  });
+    ),
+  ]));
+  return out;
 }
 
-export function crates(v: View): void {
+export function crates(v: View): Drawing {
+  const out: Drawing[] = [];
   for (const [x, y, w, h] of [
     [90, 520, 150, 80],
     [110, 470, 120, 56],
   ] as const) {
-    form(
+    out.push(form(
       v,
       [
         [x, y],
@@ -199,26 +206,27 @@ export function crates(v: View): void {
         weight: 2.6,
         seed: x + y,
       },
-    );
-    v.clip(
+    ));
+    out.push(v.clip(
       [
         [x, y],
         [x + w, y],
         [x + w, y + h],
         [x, y + h],
       ],
-      () => {
+      ((): Drawing => {
+        const drawn: Drawing[] = [];
         for (let i = 1; i < 3; i += 1) {
-          mark(
+          drawn.push(mark(
             v,
             [
               [x, y + (h * i) / 3],
               [x + w, y + (h * i) / 3],
             ],
             { color: "#6e4420", weight: 2.4, pressure: "even", seed: x + i },
-          );
+          ));
         }
-        mark(
+        drawn.push(mark(
           v,
           [
             [x + 8, y + 4],
@@ -231,23 +239,24 @@ export function crates(v: View): void {
             opacity: 0.7,
             seed: y + 5,
           },
-        );
-      },
-    );
+        ));
+        return drawn;
+      })(),
+    ));
   }
   // fish heaped in the top crate
   for (let i = 0; i < 4; i += 1) {
-    fish(v, {
+    out.push(fish(v, {
       at: [130 + i * 26, 468 - (i % 2) * 6],
       len: 54,
       angle: -0.5 + i * 0.35,
       body: "#8fa3ad",
       belly: "#eef2f2",
       seed: 3200 + i * 5,
-    });
+    }));
   }
   // a bucket
-  form(
+  out.push(form(
     v,
     [
       [262, 560],
@@ -264,15 +273,15 @@ export function crates(v: View): void {
       weight: 2.4,
       seed: 3300,
     },
-  );
-  form(v, ring(287, 560, 25, 6), {
+  ));
+  out.push(form(v, ring(287, 560, 25, 6), {
     base: "#3c4e5a",
     shade: "#2a3a44",
     depth: 2,
     weight: 2,
     seed: 3301,
-  });
-  mark(
+  }));
+  out.push(mark(
     v,
     [
       [264, 560],
@@ -280,12 +289,14 @@ export function crates(v: View): void {
       [310, 560],
     ],
     { color: INK, weight: 2, pressure: "even", seed: 3302 },
-  );
+  ));
+  return out;
 }
 
-export function bollardGull(v: View): void {
+export function bollardGull(v: View): Drawing {
+  const out: Drawing[] = [];
   // a second gull on a bollard, watching the thief, beak open in envy
-  form(
+  out.push(form(
     v,
     [
       [22, 620],
@@ -303,7 +314,7 @@ export function bollardGull(v: View): void {
       weight: 2.6,
       seed: 3400,
     },
-  );
+  ));
   const body: Vec2[] = [
     [18, 540],
     [30, 506],
@@ -313,14 +324,14 @@ export function bollardGull(v: View): void {
     [72, 548],
     [30, 550],
   ];
-  form(v, body, {
+  out.push(form(v, body, {
     base: "#fbfbf7",
     shade: "#c8d2da",
     depth: 10,
     weight: 2.4,
     seed: 3401,
-  });
-  form(
+  }));
+  out.push(form(
     v,
     [
       [46, 506],
@@ -329,15 +340,15 @@ export function bollardGull(v: View): void {
       [60, 528],
     ],
     { base: "#b4c2cc", shade: "#7f909d", depth: 6, weight: 2.2, seed: 3402 },
-  );
-  form(v, ring(36, 492, 17, 15), {
+  ));
+  out.push(form(v, ring(36, 492, 17, 15), {
     base: "#fbfbf7",
     shade: "#c8d2da",
     depth: 6,
     weight: 2.4,
     seed: 3403,
-  });
-  form(
+  }));
+  out.push(form(
     v,
     [
       [44, 486],
@@ -353,22 +364,24 @@ export function bollardGull(v: View): void {
       weight: 1.8,
       seed: 3404,
     },
-  );
-  v.circle(40, 487, 2.5, { fill: INK });
-  mark(
+  ));
+  out.push(v.circle(40, 487, 2.5, { fill: INK }));
+  out.push(mark(
     v,
     [
       [32, 480],
       [46, 482],
     ],
     { color: INK, weight: 2.2, seed: 3405 },
-  );
+  ));
+  return out;
 }
 
-export function cat(v: View): void {
+export function cat(v: View): Drawing {
+  const drawn: Drawing[] = [];
   // a ginger cat sitting on the quay, looking up at the gull and the fish
   const [cx, cy] = [392, 600];
-  form(
+  drawn.push(form(
     v,
     [
       [cx - 30, cy + 30],
@@ -387,8 +400,8 @@ export function cat(v: View): void {
       weight: 2.8,
       seed: 3500,
     },
-  );
-  mark(
+  ));
+  drawn.push(mark(
     v,
     [
       [cx + 28, cy + 26],
@@ -396,9 +409,9 @@ export function cat(v: View): void {
       [cx + 62, cy - 6],
     ],
     { color: "#e8913f", weight: 12, pressure: "taper-out", seed: 3501 },
-  );
+  ));
   const head: Vec2 = [cx - 8, cy - 46];
-  form(
+  drawn.push(form(
     v,
     [
       [head[0] - 22, head[1] - 4],
@@ -418,31 +431,33 @@ export function cat(v: View): void {
       weight: 2.6,
       seed: 3502,
     },
-  );
+  ));
   for (const ex of [head[0] - 8, head[0] + 8]) {
-    v.ellipse(ex, head[1] - 2, 4.5, 5, { fill: "#d9f07a" });
-    v.ellipse(ex - 2.5, head[1] - 5, 1.5, 2.5, { fill: INK });
+    drawn.push(v.ellipse(ex, head[1] - 2, 4.5, 5, { fill: "#d9f07a" }));
+    drawn.push(v.ellipse(ex - 2.5, head[1] - 5, 1.5, 2.5, { fill: INK }));
   }
   for (let i = 0; i < 4; i += 1) {
-    mark(
+    drawn.push(mark(
       v,
       [
         [cx - 22 + i * 12, cy - 30],
         [cx - 24 + i * 13, cy - 10],
       ],
       { color: "#b0602a", weight: 3, seed: 3510 + i },
-    );
+    ));
   }
+  return drawn;
 }
 
-export function child(v: View): void {
+export function child(v: View): Drawing {
+  const out: Drawing[] = [];
   // a small child in a yellow raincoat, laughing and pointing up at the gull
   const skin = "#f2c29a";
   for (const [x0, x1] of [
     [326, 322],
     [342, 348],
   ] as const) {
-    v.path(
+    out.push(v.path(
       v.tube(
         [
           [x0, 500],
@@ -451,8 +466,8 @@ export function child(v: View): void {
         { width: 11 },
       ),
       { fill: "#3e4a6b" },
-    );
-    form(
+    ));
+    out.push(form(
       v,
       [
         [x1 - 9, 530],
@@ -468,9 +483,9 @@ export function child(v: View): void {
         weight: 1.8,
         seed: 3600 + x0,
       },
-    );
+    ));
   }
-  form(
+  out.push(form(
     v,
     [
       [316, 450],
@@ -488,15 +503,15 @@ export function child(v: View): void {
       weight: 2.4,
       seed: 3610,
     },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [333, 454],
       [333, 506],
     ],
     { color: "#a8780f", weight: 1.6, pressure: "even" },
-  );
+  ));
   // pointing arm
   const arm = v.tube(
     [
@@ -506,31 +521,31 @@ export function child(v: View): void {
     ],
     { width: 11 },
   );
-  v.path(arm, { fill: "#f7c82e" });
-  v.path(arm, { stroke: "#2b2230", weight: 2 });
-  form(v, ring(371, 410, 5, 5), {
+  out.push(v.path(arm, { fill: "#f7c82e" }));
+  out.push(v.path(arm, { stroke: "#2b2230", weight: 2 }));
+  out.push(form(v, ring(371, 410, 5, 5), {
     base: skin,
     shade: "#cf9670",
     depth: 2,
     weight: 1.6,
-  });
-  mark(
+  }));
+  out.push(mark(
     v,
     [
       [372, 406],
       [376, 396],
     ],
     { color: "#2b2230", weight: 3, pressure: "even" },
-  );
+  ));
   // head with a sou'wester, looking up
-  form(v, ring(333, 432, 17, 17), {
+  out.push(form(v, ring(333, 432, 17, 17), {
     base: skin,
     shade: "#cf9670",
     depth: 6,
     weight: 2.4,
     seed: 3620,
-  });
-  form(
+  }));
+  out.push(form(
     v,
     [
       [310, 430],
@@ -542,12 +557,12 @@ export function child(v: View): void {
       [322, 424],
     ],
     { base: "#f7c82e", shade: "#c9951c", depth: 4, weight: 2.2, seed: 3621 },
-  );
-  v.circle(332, 429, 2, { fill: INK });
-  v.circle(344, 428, 2, { fill: INK });
-  v.circle(333, 428, 0.75, { fill: "#ffffff" });
-  v.circle(345, 427, 0.75, { fill: "#ffffff" });
-  form(
+  ));
+  out.push(v.circle(332, 429, 2, { fill: INK }));
+  out.push(v.circle(344, 428, 2, { fill: INK }));
+  out.push(v.circle(333, 428, 0.75, { fill: "#ffffff" }));
+  out.push(v.circle(345, 427, 0.75, { fill: "#ffffff" }));
+  out.push(form(
     v,
     [
       [330, 438],
@@ -562,13 +577,14 @@ export function child(v: View): void {
       weight: 1.4,
       seed: 3622,
     },
-  );
+  ));
   // (the outline of the form just above carries over onto this circle)
-  v.circle(325, 437, 4, {
+  out.push(v.circle(325, 437, 4, {
     fill: "rgba(226,92,80,0.35)",
     stroke: "#2b2230",
     weight: 1.4,
-  });
+  }));
+  return out;
 }
 
 interface Stroller {
@@ -580,7 +596,8 @@ interface Stroller {
 }
 
 /** Small market-goers along the harbour edge, far behind the action. */
-export function strollers(v: View): void {
+export function strollers(v: View): Drawing {
+  const out: Drawing[] = [];
   const folk: Stroller[] = [
     { at: [252, 352], coat: "#c0504d", hat: "#f2e6c9", basket: true },
     { at: [280, 350], coat: "#5b8ec9", hat: "#2f3f6b", basket: false },
@@ -588,9 +605,9 @@ export function strollers(v: View): void {
   ];
   for (const [i, f] of folk.entries()) {
     const [x, y] = f.at;
-    v.rect(x - 5, y - 12, 4, 12, { fill: "#3e4a6b" });
-    v.rect(x + 1, y - 12, 4, 12, { fill: "#3e4a6b" });
-    form(
+    out.push(v.rect(x - 5, y - 12, 4, 12, { fill: "#3e4a6b" }));
+    out.push(v.rect(x + 1, y - 12, 4, 12, { fill: "#3e4a6b" }));
+    out.push(form(
       v,
       [
         [x - 8, y - 40],
@@ -606,15 +623,15 @@ export function strollers(v: View): void {
         weight: 1.4,
         seed: 3700 + i,
       },
-    );
-    form(v, ring(x, y - 46, 6, 6), {
+    ));
+    out.push(form(v, ring(x, y - 46, 6, 6), {
       base: "#f2c29a",
       shade: "#cf9670",
       depth: 2,
       weight: 1.2,
       seed: 3710 + i,
-    });
-    form(
+    }));
+    out.push(form(
       v,
       [
         [x - 8, y - 49],
@@ -629,9 +646,9 @@ export function strollers(v: View): void {
         weight: 1.2,
         seed: 3720 + i,
       },
-    );
+    ));
     if (f.basket)
-      form(
+      out.push(form(
         v,
         [
           [x + 8, y - 26],
@@ -647,6 +664,7 @@ export function strollers(v: View): void {
           weight: 1.2,
           seed: 3730 + i,
         },
-      );
+      ));
   }
+  return out;
 }

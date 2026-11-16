@@ -56,6 +56,13 @@ fails the deploy instead of shipping silently. The 180s window replaces an old
 30s poll that raced the hub's cold boot; the endpoints now require the bearer
 key, so an unauthenticated external monitor gets 401.
 
+After the restart, root helpers install host pieces and check them as a box
+user (see [provisioning](provisioning.md)). One of them,
+`server-bin/bbx-figure-gpu-install`, installs Mesa's software Vulkan driver
+and runs `src/scripts/dawn-probe.ts` from the new release. When Dawn finds no
+GPU adapter for a box user, the deploy fails with the probe's output, since
+every `bbx figure run` would fail too.
+
 ```bash
 ./deploy/deploy.sh                 # deploy HEAD of this checkout
 ./deploy/deploy.sh --ref <sha>     # deploy (or roll back to) any commit

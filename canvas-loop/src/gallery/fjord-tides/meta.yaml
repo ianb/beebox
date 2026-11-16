@@ -39,4 +39,4 @@ features-exercised:
   - seeded-random geometry generated once in init, stored in Model
   - v.ctx escape hatch for path fills, clipping, gradients (pre-primitives)
   - perspective/composition iteration (nested-V cliff slopes, wet-rim edges)
-migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it; 2026-11-15: ported to the scene API (scene core chunk 5; the removed calls replaced as draft section 2's table says); 2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod)"

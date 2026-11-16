@@ -1,14 +1,13 @@
 // The Elm-Architecture (TEA) sketch contract: the *only* module a TEA sketch
 // imports. Everything here is a type — capability objects (View, Util) are
 // constructed by the runtime and handed in, never imported. See TEA.md.
-import type { SKRSContext2D } from "@napi-rs/canvas";
 // Drawing-data types, re-exported (below) so a sketch, which imports only this
 // module, can name them.
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Sprite, Vec2 } from "./paint.js";
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 import type { Paper } from "./brush/types.js";
 import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
-import type { AtOptions, GroupOptions, PasteOptions, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+import type { AtOptions, Drawing, DrawingNode, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 import type { EaseName, Keyframe } from "./ease.js";
@@ -29,9 +28,9 @@ export interface ControlBox {
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
-export type { AtOptions, BrushPreset, Effects, GroupOptions, PasteOptions, Shadow, SpriteOptions, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+export type { Drawing, DrawingNode, RootDrawing } from "./paint.js";
+export type { AtOptions, BrushPreset, Effects, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";
-export type { Sprite } from "./paint.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
 export type { Instrument } from "./sound/instruments.js";
@@ -193,31 +192,35 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
 }
 
 /**
- * The drawing surface handed to `draw`: the p5-like subset plus `log`,
- * `snapshot`, and the raw `ctx` escape hatch. No randomness and no parameter
- * store beyond the `p` argument — `draw` cannot change the world, only render it.
+ * The drawing surface handed to `draw`. Each drawing call returns a node;
+ * `draw` returns the frame's drawing (a node, a list, or `null`), which the
+ * renderer draws; each frame starts clear. Scopes (`at`, `group`, `clip`,
+ * `mask`, `paper`) take their children as a list. A node belongs to the frame
+ * that made it; keep drawing across frames with `picture`. No randomness and
+ * no parameter store beyond the `p` argument — `draw` cannot change the world,
+ * only describe it.
  */
 export interface View {
   readonly width: number;
   readonly height: number;
   /** Fill the whole canvas, ignoring transforms. */
-  background(paint: Paint): void;
-  rect(x: number, y: number, w: number, h: number, style: Style): void;
+  background(paint: Paint): DrawingNode;
+  rect(x: number, y: number, w: number, h: number, style: Style): DrawingNode;
   /** A rectangle with corners rounded to `radius`. */
-  roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): void;
+  roundRect(x: number, y: number, w: number, h: number, radius: number, style: Style): DrawingNode;
   /** A circle of `radius` around (x, y). Round shapes take radii: `circle`, `ellipse`, `arc`, the gradients. */
-  circle(x: number, y: number, radius: number, style: Style): void;
+  circle(x: number, y: number, radius: number, style: Style): DrawingNode;
   /** An ellipse with radii `rx` (across) and `ry` (down) around (x, y). */
-  ellipse(x: number, y: number, rx: number, ry: number, style: Style): void;
-  line(x1: number, y1: number, x2: number, y2: number, style: Style): void;
-  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style: Style): void;
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style: Style): void;
+  ellipse(x: number, y: number, rx: number, ry: number, style: Style): DrawingNode;
+  line(x1: number, y1: number, x2: number, y2: number, style: Style): DrawingNode;
+  triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, style: Style): DrawingNode;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, style: Style): DrawingNode;
   /** Closed polygon through `points`. */
-  polygon(points: readonly Vec2[], style: Style): void;
+  polygon(points: readonly Vec2[], style: Style): DrawingNode;
   /** Render a data-encoded `PathCommand` list. */
-  path(commands: readonly PathCommand[], style: Style): void;
+  path(commands: readonly PathCommand[], style: Style): DrawingNode;
   /** A smooth curve through every point (Catmull-Rom). */
-  curve(points: readonly Vec2[], closed: boolean, style: Style): void;
+  curve(points: readonly Vec2[], closed: boolean, style: Style): DrawingNode;
   /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
   /** A tube's closed outline around a smooth centreline (limbs, stems, tails). */
@@ -233,37 +236,42 @@ export interface View {
   /**
    * Write text at a point (`{x, y}`) or in a box (`{x, y, w, h}`: wrap, align,
    * valign, fit). Options left out take the defaults: size 12, sans-serif,
-   * black, left, top. Returns the bounds drawn.
+   * black, left, top. To place a label by its size, measure it first with
+   * `textBounds` or `textWidth`.
    */
-  text(content: string, box: TextBox, options?: TextOptions): TextBounds;
-  /** The bounds `text` would return for these arguments, without drawing (to place labels before drawing them). */
+  text(content: string, box: TextBox, options?: TextOptions): DrawingNode;
+  /** The bounds `text` would draw for these arguments where no transform moves it (inside the canvas, or the picture's box in a body). */
   textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */
   textWidth(content: string, options?: TextOptions): number;
-  /** Draw `body` translated, rotated, then scaled; the transform ends with `body`. No layer. */
-  at(options: AtOptions, body: () => void): void;
-  /** Draw `body` on its own layer, then composite it once with opacity, blend and effects (blur, glow, shadow, colour adjustments). */
-  group(options: GroupOptions, body: () => void): void;
-  /** Draw `body` kept where `maskBody` paints, in proportion to its alpha (a gradient mask fades it). */
-  mask(maskBody: () => void, body: () => void): void;
+  /** Transform `children` (matrix, then translate, rotate, skew, scale). No layer: they composite with their siblings. */
+  at(options: AtOptions, children: Drawing): DrawingNode;
+  /** `children` as one isolated layer: opacity, blend, clip, effects and lighting apply to it as a whole. */
+  group(options: GroupOptions, children: Drawing): DrawingNode;
+  /** Draw `children` kept where `maskArt` paints, in proportion to its alpha (a gradient mask fades them). */
+  mask(maskArt: Drawing, children: Drawing): DrawingNode;
   /** A number between keyframes `[[time, value], …]` at time `t`, eased within each span. */
   tween(keys: readonly Keyframe<number>[], t: number, ease?: EaseName): number;
   /** `tween` for tuples (points, colour channels). */
   tweenPoint(keys: readonly Keyframe<readonly number[]>[], t: number, ease?: EaseName): number[];
   /** An easing curve at `u` (clamped to 0..1). */
   ease(name: EaseName, u: number): number;
-  /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
-  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
-  /** Draw `body` once into a stored layer; later calls with the same key paste it (with `paste`'s blend or erase). */
-  cache(key: string, body: () => void, paste?: Omit<PasteOptions, "opacity">): void;
-  /** A picture drawn once in its own coordinates and kept under `options.key`; place it with `image`. */
-  sprite(options: SpriteOptions, body: () => void): Sprite;
-  /** Draw a sprite with its top-left at (x, y) under the current transform. */
-  image(sprite: Sprite, x: number, y: number, paste?: PasteOptions): void;
-  /** The canvas's paper texture, which grainy brushes read. */
-  paper(paper: Paper): void;
-  /** Show the paper's texture across everything drawn so far (0..1). */
-  paperTexture(amount: number): void;
+  /** `children` clipped to a polygon/path, or to the union of several. */
+  clip(shape: ClipShape | readonly ClipShape[], children: Drawing): DrawingNode;
+  /** Record a reusable drawing (see PictureOptions): `body` returns it, and runs only when the version is new. Place it with `place`. */
+  picture(options: PictureOptions, body: () => Drawing): Picture;
+  /** A fixed-resolution image: `fill` writes RGBA bytes into `data` (width × height × 4, zeroed) when the version is new. */
+  pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture;
+  /** A picture with its top-left at (x, y), under the transforms around it. */
+  place(picture: Picture, x: number, y: number, options?: PlaceOptions): DrawingNode;
+  /** The paper texture that grainy brushes and `effects.paper` read, for every drawing in `children`. A picture takes its own `paper` option instead. */
+  paper(paper: Paper, children: Drawing): DrawingNode;
+  /** A light, in the coordinates around it; it lights the nearest enclosing lit group. */
+  light(light: Light): DrawingNode;
+  /** `point` in canvas coordinates, inside the `at` scopes listed outermost first (Canvas2D `getTransform` applied to it). */
+  toCanvas(point: Vec2, scopes: readonly AtOptions[]): Vec2;
+  /** Seeded value noise of coordinates, 0..1: a pure function, as p5 `noise`. */
+  noise(x: number, y?: number, z?: number): number;
   /** The pointer's look over the canvas in a browser figure (until changed); nothing headless. */
   cursor(kind: CursorKind): void;
   /**
@@ -274,11 +282,9 @@ export interface View {
    */
   control(name: string, box: ControlBox): void;
   /** With `run --outline`, a labelled box drawn over the frame (e.g. a hit area); otherwise nothing. */
-  debugBox(label: string, x: number, y: number, w: number, h: number): void;
+  debugBox(label: string, x: number, y: number, w: number, h: number): DrawingNode;
   log(...args: readonly unknown[]): void;
   snapshot(label?: string): void;
-  /** The raw context drawing lands on now (the canvas, or the innermost group's layer), for what the View does not cover. */
-  readonly ctx: SKRSContext2D;
 }
 
 /** Optional `canvas` export: the drawing surface size (default 400×300). */
@@ -290,19 +296,22 @@ export interface CanvasSize {
 /**
  * The shape of a TEA sketch module. Sketches don't have to name this type —
  * exporting `init`, `update`, `draw` (and optionally `params`/`canvas`) is
- * enough — but `satisfies TeaModule<typeof params, Model>` type-checks the whole
- * contract.
+ * enough — and `cli run` checks the exports against it, with `M` taken from
+ * `init`'s return type and `D` from `typeof params`, and each member's
+ * parameters compared strictly (headless/sketch-types.ts).
  */
 export interface TeaModule<D extends ParamsDecl, M> {
   params?: D;
   canvas?: CanvasSize;
   init(u: Util<D>): M;
   update(model: DeepReadonly<M>, msg: Msg, u: Util<D>): M;
-  draw(v: View, model: DeepReadonly<M>, p: ParamValues<D>): void;
+  draw(v: View, model: DeepReadonly<M>, p: ParamValues<D>): RootDrawing;
   /**
    * Optional: the sounds the model holds, as voices. Called after every tick.
    * A voice is one occurrence (a new id for each new sound), starting at its
    * `at` frame, which may not be earlier than the frame that first returns it.
    */
   sound?(model: DeepReadonly<M>, p: ParamValues<D>): readonly Voice[];
+  /** Optional: what the state means now, as data; added to handled events. */
+  activity?(model: DeepReadonly<M>): Record<string, unknown>;
 }

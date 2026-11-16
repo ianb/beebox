@@ -20,4 +20,4 @@ features-exercised:
   - cache for static painted layers
   - brushes in motion (seeded marks)
   - events file with snapshot entries
-migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it; 2026-11-15: ported to the scene API (scene core chunk 5; the removed calls replaced as draft section 2's table says); 2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod, with hand fixes)"

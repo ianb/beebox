@@ -602,3 +602,44 @@ void test("Accepted startup without init has a bounded visible wait and releases
     actor: "stopped",
   });
 });
+
+// ## What a page reload would cut off
+//
+// The new-version reload (`lib/reload-blockers.ts`) asks the pool whether a
+// reload would lose chat work. A history refetch is not such work: every
+// reconnect and every return to the tab starts one, and a reload refetches
+// the same history. A send in flight is.
+void test("A history refetch does not hold a reload; a send still being delivered does", async (t) => {
+  const f = fixture();
+  const chat = f.pool.select(session("first"));
+  await tick();
+  chat.send({ type: "REFRESH" });
+  const whileRefetching = { state: chat.getSnapshot().value, busy: f.pool.busy() };
+  await tick();
+  f.holdReceipts();
+  const captured = f.pool.capture(bind(session("first")));
+  captured.send(send("in-flight"));
+  const whileSending = f.pool.busy();
+  f.pool.suspend();
+  t.check({ whileRefetching, whileSending }, { whileRefetching: { state: "refreshing", busy: false }, whileSending: true });
+});
+
+// A live view that dropped mid-reply leaves the partial reply in the page
+// while `refreshing` checks history for it (machine.ts, STREAM_LOST): the
+// page may hold the only copy, so that refetch does hold a reload.
+void test("A refetch holding a dropped reply holds a reload", async (t) => {
+  const f = fixture();
+  const chat = f.pool.select(session("first"));
+  await tick();
+  const captured = f.pool.capture(bind(session("first")));
+  captured.send(send("asked"));
+  await captured.finished();
+  chat.send({ type: "STREAM_TEXT", text: "Half a reply" });
+  // History has echoed the question, so only the dropped reply is left unsettled.
+  chat.send({ type: "SET_MESSAGES", messages: [{ uuid: "asked", type: "user", timestamp: "2026-11-16T12:00:00.000Z", content: [{ type: "text", text: "test" }] }], sessionId: "first" });
+  const pendingAfterEcho = chat.getSnapshot().context.pendingMessages;
+  chat.send({ type: "STREAM_LOST", reason: "socket closed" });
+  const result = { pendingAfterEcho, state: chat.getSnapshot().value, busy: f.pool.busy() };
+  f.pool.suspend();
+  t.check(result, { pendingAfterEcho: [], state: "refreshing", busy: true });
+});

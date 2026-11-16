@@ -3,7 +3,7 @@
 // smoothness comes from sampling ellipses and Catmull-Rom splines into dense
 // point lists here, in the sketch. Shading uses pencil and bristle marks clipped
 // to the shapes.
-import type { PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, PathCommand, RootDrawing, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 const INK = "#1f2a1c";
 const GREEN = "#78c96a";
@@ -196,7 +196,7 @@ interface Part {
   pts: readonly Vec2[];
   fill: string;
   weight?: number;
-  shade?: () => void;
+  shade?: () => Drawing;
 }
 
 const OUTLINE: Style = {
@@ -206,11 +206,13 @@ const OUTLINE: Style = {
 };
 
 /** Flat fill, then shading clipped inside, then the ink outline on top. */
-function part(v: View, o: Part): void {
-  v.polygon(o.pts, { fill: o.fill });
+function part(v: View, o: Part): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.polygon(o.pts, { fill: o.fill }));
   const shade = o.shade;
-  if (shade !== undefined) v.clip(o.pts, shade);
-  v.polygon(o.pts, { ...OUTLINE, weight: o.weight ?? 3.2 });
+  if (shade !== undefined) out.push(v.clip(o.pts, shade()));
+  out.push(v.polygon(o.pts, { ...OUTLINE, weight: o.weight ?? 3.2 }));
+  return out;
 }
 
 interface Arc {
@@ -235,13 +237,14 @@ function arcPts(o: Arc): Vec2[] {
 function rimShade(
   v: View,
   o: Arc & { count: number; inset: number; style: Style },
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   for (let i = 0; i < o.count; i += 1) {
     const d = o.inset * (i + 0.5);
     const shrink = 1 - i / (o.count * 2.5);
     const span = (o.a[1] - o.a[0]) * shrink;
     const mid = (o.a[0] + o.a[1]) / 2;
-    v.path(
+    out.push(v.path(
       openPath(
         arcPts({
           c: o.c,
@@ -250,8 +253,9 @@ function rimShade(
         }),
       ),
       o.style,
-    );
+    ));
   }
+  return out;
 }
 
 /** A stroke along a centerline, shifted sideways by `offset`. */
@@ -286,67 +290,70 @@ function lightBristle(weight: number): Style {
   };
 }
 
-function drawLimbs(v: View): void {
+function drawLimbs(v: View): Drawing {
+  const out: Drawing[] = [];
   // legs and feet
   for (const leg of [LEG_L, LEG_R]) {
     const x = at(leg, 1)[0];
-    part(v, {
+    out.push(part(v, {
       pts: leg,
       fill: GREEN,
       shade: () => {
-        v.line(x - 6, 386, x - 6, 440, darkBristle(10));
+        return v.line(x - 6, 386, x - 6, 440, darkBristle(10));
       },
-    });
+    }));
   }
   for (const [foot, c] of [
     [FOOT_L, [172, 443]],
     [FOOT_R, [228, 443]],
   ] as const) {
-    part(v, {
+    out.push(part(v, {
       pts: foot,
       fill: GREEN,
       shade: () => {
-        v.path(
+        return v.path(
           openPath(arcPts({ c, r: [21, 8], a: [0.2, 2.9] })),
           darkBristle(7),
         );
       },
-    });
+    }));
   }
 
   // arms behind the body
-  part(v, {
+  out.push(part(v, {
     pts: ARM_L,
     fill: GREEN,
     shade: () => {
-      v.path(openPath(offsetLine(ARM_L_CENTER, -4)), darkBristle(11));
+      return v.path(openPath(offsetLine(ARM_L_CENTER, -4)), darkBristle(11));
     },
-  });
-  part(v, {
+  }));
+  out.push(part(v, {
     pts: ARM_R,
     fill: GREEN,
     shade: () => {
-      v.path(openPath(offsetLine(ARM_R_CENTER, 5)), darkBristle(11));
+      return v.path(openPath(offsetLine(ARM_R_CENTER, 5)), darkBristle(11));
     },
-  });
+  }));
   for (const [hand, c] of [
     [HAND_L, [122, 380]],
     [HAND_R, [330, 222]],
   ] as const) {
-    part(v, {
+    out.push(part(v, {
       pts: hand,
       fill: GREEN,
       shade: () => {
-        v.path(
+        return v.path(
           openPath(arcPts({ c, r: [8, 8], a: [-0.3, 2.3] })),
           darkBristle(8),
         );
       },
-    });
+    }));
   }
+  return out;
 }
 
-function drawAntennae(v: View): void {
+function drawAntennae(v: View): Drawing {
+  const drawn: Drawing[] = [];
   // antennae (behind the head)
   const stalk: Style = {
     stroke: INK,
@@ -354,27 +361,30 @@ function drawAntennae(v: View): void {
     brush: "ink",
     gesture: { pressure: "taper-out", wobble: 0.5 },
   };
-  v.path(openPath(ANT_L), stalk);
-  v.path(openPath(ANT_R), stalk);
+  drawn.push(v.path(openPath(ANT_L), stalk));
+  drawn.push(v.path(openPath(ANT_R), stalk));
   for (const [ball, c] of [
     [BALL_L, [140, 40]],
     [BALL_R, [261, 34]],
   ] as const) {
-    part(v, {
+    drawn.push(part(v, {
       pts: ball,
       fill: YELLOW,
       weight: 3,
       shade: () => {
-        v.path(openPath(arcPts({ c, r: [8, 8], a: [-0.2, 2.4] })), {
-          stroke: "#c78a1a",
-          weight: 5,
-          brush: { preset: "bristle", opacity: 0.8 },
-          gesture: { pressure: "taper" },
-        });
-        v.circle(c[0] - 3, c[1] - 3, 3, { fill: "#fffbe6" });
+        return [
+          v.path(openPath(arcPts({ c, r: [8, 8], a: [-0.2, 2.4] })), {
+            stroke: "#c78a1a",
+            weight: 5,
+            brush: { preset: "bristle", opacity: 0.8 },
+            gesture: { pressure: "taper" },
+          }),
+          v.circle(c[0] - 3, c[1] - 3, 3, { fill: "#fffbe6" }),
+        ];
       },
-    });
+    }));
   }
+  return drawn;
 }
 
 export const canvas = { width: 400, height: 500 };
@@ -389,11 +399,12 @@ export function update(model: Model): Model {
   return model;
 }
 
-export function draw(v: View): void {
-  v.background(PAPER);
+export function draw(v: View): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background(PAPER));
 
   // ground shadow: a pale flat oval with pencil scribbles, darker near the feet
-  v.polygon(oval([200, 450], [96, 14]), { fill: "#ddd6c3" });
+  out.push(v.polygon(oval([200, 450], [96, 14]), { fill: "#ddd6c3" }));
   const scribble: Style = {
     stroke: "#a9a08a",
     weight: 3,
@@ -403,21 +414,22 @@ export function draw(v: View): void {
   for (let i = 0; i < 7; i += 1) {
     const y = 440 + i * 3;
     const half = 80 - Math.abs(i - 3) * 14;
-    v.line(200 - half, y, 200 + half, y + 1, scribble);
+    out.push(v.line(200 - half, y, 200 + half, y + 1, scribble));
   }
 
-  drawAntennae(v);
-  drawLimbs(v);
+  out.push(drawAntennae(v));
+  out.push(drawLimbs(v));
 
   // body
-  part(v, {
+  out.push(part(v, {
     pts: BODY,
     fill: GREEN,
     shade: () => {
+      const drawn: Drawing[] = [];
       const dark = darkBristle(10);
-      v.line(248, 262, 252, 394, dark);
-      v.line(240, 266, 244, 394, dark);
-      v.path(
+      drawn.push(v.line(248, 262, 252, 394, dark));
+      drawn.push(v.line(240, 266, 244, 394, dark));
+      drawn.push(v.path(
         openPath(
           spline(
             [
@@ -429,8 +441,8 @@ export function draw(v: View): void {
           ),
         ),
         dark,
-      );
-      v.path(
+      ));
+      drawn.push(v.path(
         openPath(
           spline(
             [
@@ -442,7 +454,7 @@ export function draw(v: View): void {
           ),
         ),
         dark,
-      );
+      ));
       // pencil texture following the body's right curve
       const pencil: Style = {
         stroke: GREEN_DARK,
@@ -452,7 +464,7 @@ export function draw(v: View): void {
       };
       for (let i = 0; i < 6; i += 1) {
         const x = 214 + i * 5;
-        v.path(
+        drawn.push(v.path(
           openPath(
             spline(
               [
@@ -464,9 +476,9 @@ export function draw(v: View): void {
             ),
           ),
           pencil,
-        );
+        ));
       }
-      v.path(
+      drawn.push(v.path(
         openPath(
           spline(
             [
@@ -478,48 +490,51 @@ export function draw(v: View): void {
           ),
         ),
         lightBristle(9),
-      );
-      v.polygon(BELLY_SHAPE, { fill: BELLY });
-      v.path(
+      ));
+      drawn.push(v.polygon(BELLY_SHAPE, { fill: BELLY }));
+      drawn.push(v.path(
         openPath(arcPts({ c: [200, 345], r: [26, 31], a: [-0.6, 2.2] })),
         darkBristle(6),
-      );
+      ));
+      return drawn;
     },
-  });
+  }));
 
   // head
-  part(v, {
+  out.push(part(v, {
     pts: HEAD,
     fill: GREEN,
     weight: 3.5,
     shade: () => {
-      rimShade(v, {
-        c: [200, 175],
-        r: [105, 85],
-        a: [-0.5, 2.6],
-        count: 3,
-        inset: 7,
-        style: darkBristle(9),
-      });
-      rimShade(v, {
-        c: [200, 175],
-        r: [105, 85],
-        a: [-0.2, 2.2],
-        count: 5,
-        inset: 6,
-        style: {
-          stroke: GREEN_DARK,
-          weight: 2.5,
-          brush: { preset: "pencil", opacity: 0.8 },
-          gesture: { pressure: "taper", wobble: 1 },
-        },
-      });
-      v.path(
-        openPath(arcPts({ c: [200, 175], r: [88, 68], a: [3.6, 4.6] })),
-        lightBristle(14),
-      );
+      return [
+        rimShade(v, {
+          c: [200, 175],
+          r: [105, 85],
+          a: [-0.5, 2.6],
+          count: 3,
+          inset: 7,
+          style: darkBristle(9),
+        }),
+        rimShade(v, {
+          c: [200, 175],
+          r: [105, 85],
+          a: [-0.2, 2.2],
+          count: 5,
+          inset: 6,
+          style: {
+            stroke: GREEN_DARK,
+            weight: 2.5,
+            brush: { preset: "pencil", opacity: 0.8 },
+            gesture: { pressure: "taper", wobble: 1 },
+          },
+        }),
+        v.path(
+          openPath(arcPts({ c: [200, 175], r: [88, 68], a: [3.6, 4.6] })),
+          lightBristle(14),
+        ),
+      ];
     },
-  });
+  }));
 
   // eyes
   for (const [eye, pupil] of [
@@ -527,44 +542,47 @@ export function draw(v: View): void {
     [EYE_R, [235, 172]],
   ] as const) {
     const [px, py] = pupil;
-    part(v, {
+    out.push(part(v, {
       pts: eye,
       fill: "#ffffff",
       weight: 3,
       shade: () => {
-        v.path(
-          openPath(arcPts({ c: [px - 5, py - 8], r: [21, 26], a: [3.5, 5.9] })),
-          {
-            stroke: "#c9d2d6",
-            weight: 5,
-            brush: { preset: "pencil", opacity: 0.8 },
-            gesture: { pressure: "taper" },
-          },
-        );
-        v.circle(px, py, 12, { fill: INK });
-        v.circle(px + 6, py - 6, 4, { fill: "#ffffff" });
+        return [
+          v.path(
+            openPath(arcPts({ c: [px - 5, py - 8], r: [21, 26], a: [3.5, 5.9] })),
+            {
+              stroke: "#c9d2d6",
+              weight: 5,
+              brush: { preset: "pencil", opacity: 0.8 },
+              gesture: { pressure: "taper" },
+            },
+          ),
+          v.circle(px, py, 12, { fill: INK }),
+          v.circle(px + 6, py - 6, 4, { fill: "#ffffff" }),
+        ];
       },
-    });
+    }));
   }
 
   // cheeks: flat blush with a pencil scribble over it
   for (const cx of [132, 268]) {
-    v.polygon(oval([cx, 205], [11, 5.5]), { fill: PINK });
+    out.push(v.polygon(oval([cx, 205], [11, 5.5]), { fill: PINK }));
     const blush: Style = {
       stroke: "#d9625d",
       weight: 2,
       brush: { preset: "pencil", opacity: 0.9 },
       gesture: { pressure: "taper", wobble: 0.4 },
     };
-    v.line(cx - 8, 203, cx + 6, 201, blush);
-    v.line(cx - 6, 207, cx + 8, 205, blush);
+    out.push(v.line(cx - 8, 203, cx + 6, 201, blush));
+    out.push(v.line(cx - 6, 207, cx + 8, 205, blush));
   }
 
   // smile
-  v.path(openPath(SMILE), {
+  out.push(v.path(openPath(SMILE), {
     stroke: INK,
     weight: 3.5,
     brush: "ink",
     gesture: { pressure: "taper", wobble: 0.3 },
-  });
+  }));
+  return out;
 }

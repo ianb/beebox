@@ -1,6 +1,6 @@
 // Old Pell the heron, in a red knitted scarf, reaching the lighting pole up to
 // the last lamp. Local coordinates: origin between the feet, facing +x.
-import type { Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 import { deckFront, deckTop, LAMP } from "./pier-tea.js";
 
@@ -55,7 +55,7 @@ const NECK: readonly Vec2[] = [
 const HEAD = { x: 48, y: -236 } as const;
 const GRIP: Vec2 = [50, -116];
 
-type Tint = (pts: readonly Vec2[]) => void;
+type Tint = (pts: readonly Vec2[]) => Drawing;
 
 /** Fill a shape, then inside it a warm rim on the lamp side and a cool shade on the far side. */
 function litShape(
@@ -63,38 +63,45 @@ function litShape(
   pts: readonly Vec2[],
   base: string,
   extra?: Tint,
-): void {
-  v.curve(pts, true, { fill: H.rim });
-  v.clip(v.curvePath(pts, true), () => {
-    v.curve(
-      v.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]),
-      true,
-      { fill: base },
-    );
-    v.group({ opacity: 0.35 }, () => {
-      v.curve(
-        v.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]),
+): Drawing {
+  return [
+    v.curve(pts, true, { fill: H.rim }),
+    v.clip(v.curvePath(pts, true), ((): Drawing => {
+      const drawn: Drawing[] = [];
+      drawn.push(v.curve(
+        v.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]),
         true,
-        { fill: H.bodyShade },
-      );
-    });
-    if (extra) extra(pts);
-  });
+        { fill: base },
+      ));
+      drawn.push(v.group({ opacity: 0.35 }, [
+        v.curve(
+          v.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]),
+          true,
+          { fill: H.bodyShade },
+        ),
+      ]));
+      if (extra) drawn.push(extra(pts));
+      return drawn;
+    })()),
+  ];
 }
 
-export function drawHeron(v: View): void {
-  drawShadow(v);
-  v.at({ translate: [FEET_X, FEET_Y], scale: SCALE }, () => {
-    drawLegs(v);
-    drawPole(v);
-    drawBody(v);
-    drawNeckAndHead(v);
-    drawScarf(v);
-    drawGrip(v);
-  });
+export function drawHeron(v: View): Drawing {
+  return [
+    drawShadow(v),
+    v.at({ translate: [FEET_X, FEET_Y], scale: SCALE }, [
+      drawLegs(v),
+      drawPole(v),
+      drawBody(v),
+      drawNeckAndHead(v),
+      drawScarf(v),
+      drawGrip(v),
+    ]),
+  ];
 }
 
-function drawLegs(v: View): void {
+function drawLegs(v: View): Drawing {
+  const drawn: Drawing[] = [];
   const leg: Style = {
     stroke: H.leg,
     weight: 4.5,
@@ -113,20 +120,20 @@ function drawLegs(v: View): void {
       [14, -2],
     ],
   ];
-  for (const l of legs) v.curve(l, false, leg);
+  for (const l of legs) drawn.push(v.curve(l, false, leg));
   // Shade on the back edge of each leg, warm light on the lamp side.
   for (const l of legs)
-    v.curve(
+    drawn.push(v.curve(
       l.map(([x, y]): Vec2 => [x - 1.6, y]),
       false,
       { ...leg, stroke: "#6e4e30", weight: 1.6 },
-    );
+    ));
   for (const l of legs)
-    v.curve(
+    drawn.push(v.curve(
       l.map(([x, y]): Vec2 => [x + 1.5, y]),
       false,
       { ...leg, stroke: "#ffe0a0", weight: 1.1 },
-    );
+    ));
   const toe: Style = {
     stroke: H.leg,
     weight: 2.5,
@@ -137,14 +144,17 @@ function drawLegs(v: View): void {
     [-10, 0],
     [14, -2],
   ] as const) {
-    v.line(fx, fy, fx + 16, fy + 3, toe);
-    v.line(fx, fy, fx - 12, fy + 2, toe);
-    v.line(fx, fy, fx + 6, fy + 6, toe);
+    drawn.push(v.line(fx, fy, fx + 16, fy + 3, toe));
+    drawn.push(v.line(fx, fy, fx - 12, fy + 2, toe));
+    drawn.push(v.line(fx, fy, fx + 6, fy + 6, toe));
   }
+  return drawn;
 }
 
-function drawBody(v: View): void {
-  litShape(v, BODY, H.body, () => {
+function drawBody(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(litShape(v, BODY, H.body, () => {
+    const drawn: Drawing[] = [];
     // Brushed feather tone following the body's curve.
     const feather: Style = {
       weight: 10,
@@ -158,7 +168,7 @@ function drawBody(v: View): void {
       gesture: { pressure: "taper", wobble: 1.5 },
     };
     for (let i = 0; i < 7; i += 1) {
-      v.curve(
+      drawn.push(v.curve(
         [
           [40 - i * 4, -160 + i * 3],
           [10 - i * 6, -150 + i * 9],
@@ -170,9 +180,9 @@ function drawBody(v: View): void {
           ...feather,
           stroke: i % 2 === 0 ? "#a4afc6" : "#6f7c9c",
         },
-      );
+      ));
     }
-    v.curve(
+    drawn.push(v.curve(
       [
         [52, -150],
         [44, -104],
@@ -182,7 +192,7 @@ function drawBody(v: View): void {
       ],
       true,
       { fill: H.belly },
-    );
+    ));
     // Pencil hatching in the shadow under the belly.
     const hatch: Style = {
       stroke: "#434b6c",
@@ -190,11 +200,13 @@ function drawBody(v: View): void {
       brush: { preset: "pencil", opacity: 0.85 },
       gesture: { pressure: "taper", wobble: 0.4 },
     };
-    for (let x = -50; x < 40; x += 4) v.line(x, -78, x + 10, -100, hatch);
-  });
-  litShape(v, WING, H.wing, () => {
+    for (let x = -50; x < 40; x += 4) drawn.push(v.line(x, -78, x + 10, -100, hatch));
+    return drawn;
+  }));
+  out.push(litShape(v, WING, H.wing, () => {
+    const drawn: Drawing[] = [];
     // A dark band of flight feathers along the lower wing.
-    v.curve(
+    drawn.push(v.curve(
       [
         [20, -100],
         [-30, -86],
@@ -207,7 +219,7 @@ function drawBody(v: View): void {
         brush: { preset: "wash", opacity: 0.8 },
         gesture: { pressure: "swell", wobble: 1 },
       },
-    );
+    ));
     // Feather edges inside the band.
     const edge: Style = {
       stroke: "#8e9abb",
@@ -216,7 +228,7 @@ function drawBody(v: View): void {
       gesture: { pressure: "taper", wobble: 0.4 },
     };
     for (let i = 0; i < 5; i += 1) {
-      v.curve(
+      drawn.push(v.curve(
         [
           [8 - i * 9, -108 + i * 5],
           [-44 - i * 6, -88 + i * 4],
@@ -224,7 +236,7 @@ function drawBody(v: View): void {
         ],
         false,
         edge,
-      );
+      ));
     }
     // Pale covert feathers in rows across the shoulder, back rows first.
     const seam: Style = {
@@ -244,10 +256,10 @@ function drawBody(v: View): void {
           [cx, cy + 9],
           [cx - 7, cy + 3],
         ];
-        v.curve(f, true, {
+        drawn.push(v.curve(f, true, {
           fill: row === 0 ? "#9aa6c2" : row === 1 ? "#8592b2" : "#7280a2",
-        });
-        v.curve(
+        }));
+        drawn.push(v.curve(
           [
             [cx - 7, cy + 2],
             [cx, cy + 9],
@@ -255,12 +267,13 @@ function drawBody(v: View): void {
           ],
           false,
           seam,
-        );
+        ));
       }
     }
-  });
+    return drawn;
+  }));
   // Split primary tips at the wing's end.
-  v.polygon(
+  out.push(v.polygon(
     [
       [-80, -70],
       [-112, -58],
@@ -271,9 +284,9 @@ function drawBody(v: View): void {
       [-70, -62],
     ],
     { fill: H.wingDark },
-  );
+  ));
   // Cool shadow over the lower body, away from the lamp.
-  v.clip(v.curvePath(BODY, true), () => {
+  out.push(v.clip(v.curvePath(BODY, true), [
     v.curve(
       [
         [-90, -66],
@@ -287,8 +300,8 @@ function drawBody(v: View): void {
         brush: { preset: "wash", opacity: 0.45 },
         gesture: { pressure: "swell", wobble: 2 },
       },
-    );
-  });
+    ),
+  ]));
   // Heavier line on the shadow side (front-lower edge round to the tail), thin toward the lamp.
   const outline: Style = {
     stroke: H.ink,
@@ -306,32 +319,35 @@ function drawBody(v: View): void {
       wobble: 0.6,
     },
   };
-  v.curve(BODY, true, outline);
-  v.curve(WING, true, outline);
+  out.push(v.curve(BODY, true, outline));
+  out.push(v.curve(WING, true, outline));
+  return out;
 }
 
-function drawNeckAndHead(v: View): void {
+function drawNeckAndHead(v: View): Drawing {
+  const drawn: Drawing[] = [];
   const neckProfile: [number, number][] = [
     [0, 1.4],
     [1, 0.8],
   ];
   const neck = v.tube(NECK, { width: 19, profile: neckProfile });
-  v.path(neck, { fill: H.rim });
-  v.clip(neck, () => {
-    v.path(
+  drawn.push(v.path(neck, { fill: H.rim }));
+  drawn.push(v.clip(neck, ((): Drawing => {
+    const parts: Drawing[] = [];
+    parts.push(v.path(
       v.tube(
         NECK.map(([x, y]): Vec2 => [x - 3, y + 1]),
         { width: 19, profile: neckProfile },
       ),
       { fill: H.belly },
-    );
-    v.path(
+    ));
+    parts.push(v.path(
       v.tube(
         NECK.map(([x, y]): Vec2 => [x - 13, y + 1]),
         { width: 19, profile: neckProfile },
       ),
       { fill: H.body },
-    );
+    ));
     // The dark dashed streak down the front of a heron's neck.
     const streak: Style = {
       stroke: "#2b2f48",
@@ -343,15 +359,16 @@ function drawNeckAndHead(v: View): void {
     for (let i = 0; i < front.length - 1; i += 1) {
       const [ax, ay] = front[i] ?? [0, 0];
       const [bx, by] = front[i + 1] ?? [0, 0];
-      v.line(
+      parts.push(v.line(
         ax + (bx - ax) * 0.2,
         ay + (by - ay) * 0.2,
         ax + (bx - ax) * 0.65,
         ay + (by - ay) * 0.65,
         streak,
-      );
+      ));
     }
-  });
+    return parts;
+  })()));
   // Head.
   const head: Vec2[] = [
     [HEAD.x + 18, HEAD.y - 1],
@@ -360,33 +377,33 @@ function drawNeckAndHead(v: View): void {
     [HEAD.x - 12, HEAD.y + 8],
     [HEAD.x + 8, HEAD.y + 10],
   ];
-  litShape(v, head, H.body, () => {
-    v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
-  });
+  drawn.push(litShape(v, head, H.body, () => {
+    return v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
+  }));
   // Bill.
-  v.polygon(
+  drawn.push(v.polygon(
     [
       [HEAD.x + 13, HEAD.y - 5],
       [HEAD.x + 46, HEAD.y + 7],
       [HEAD.x + 12, HEAD.y + 6],
     ],
     { fill: H.bill },
-  );
-  v.polygon(
+  ));
+  drawn.push(v.polygon(
     [
       [HEAD.x + 13, HEAD.y - 5],
       [HEAD.x + 46, HEAD.y + 7],
       [HEAD.x + 13, HEAD.y + 1],
     ],
     { fill: "#f6d27e" },
-  );
+  ));
   // Black crest stripe and plume.
   const crest: Style = {
     stroke: H.ink,
     brush: "ink",
     gesture: { pressure: "taper-out", wobble: 0.5 },
   };
-  v.curve(
+  drawn.push(v.curve(
     [
       [HEAD.x + 8, HEAD.y - 9],
       [HEAD.x - 10, HEAD.y - 9],
@@ -395,8 +412,8 @@ function drawNeckAndHead(v: View): void {
     ],
     false,
     { ...crest, weight: 5 },
-  );
-  v.curve(
+  ));
+  drawn.push(v.curve(
     [
       [HEAD.x - 4, HEAD.y - 6],
       [HEAD.x - 22, HEAD.y + 2],
@@ -404,28 +421,30 @@ function drawNeckAndHead(v: View): void {
     ],
     false,
     { ...crest, weight: 3 },
-  );
+  ));
   const fine: Style = {
     stroke: H.ink,
     brush: "ink",
     gesture: { pressure: "taper", wobble: 0.5 },
   };
-  v.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6, {
+  drawn.push(v.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6, {
     ...fine,
     weight: 1.6,
-  });
-  v.curve(
+  }));
+  drawn.push(v.curve(
     NECK.map(([x, y]): Vec2 => [x - 9, y]),
     false,
     { ...fine, weight: 2.2 },
-  );
-  v.curve(head, true, { ...fine, weight: 2.2 });
+  ));
+  drawn.push(v.curve(head, true, { ...fine, weight: 2.2 }));
   // Eye.
-  v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" });
-  v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink });
+  drawn.push(v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" }));
+  drawn.push(v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink }));
+  return drawn;
 }
 
-function drawScarf(v: View): void {
+function drawScarf(v: View): Drawing {
+  const drawn: Drawing[] = [];
   // One band: knot at the front of the neck, round the back, out into the wind.
   const band: Vec2[] = [
     [52, -160],
@@ -444,8 +463,9 @@ function drawScarf(v: View): void {
       [1, 0.85],
     ],
   });
-  v.path(shape, { fill: H.scarf });
-  v.clip(shape, () => {
+  drawn.push(v.path(shape, { fill: H.scarf }));
+  drawn.push(v.clip(shape, ((): Drawing => {
+    const parts: Drawing[] = [];
     // Knit ribs, and a shadow along the lower edge.
     const rib: Style = {
       stroke: H.scarfDark,
@@ -453,8 +473,8 @@ function drawScarf(v: View): void {
       brush: { preset: "pencil", opacity: 0.9 },
       gesture: { pressure: "even", wobble: 0.3 },
     };
-    for (let x = -74; x < 64; x += 4.5) v.line(x, -192, x - 3, -146, rib);
-    v.curve(
+    for (let x = -74; x < 64; x += 4.5) parts.push(v.line(x, -192, x - 3, -146, rib));
+    parts.push(v.curve(
       band.map(([x, y]): Vec2 => [x - 2, y + 7]),
       false,
       {
@@ -462,8 +482,8 @@ function drawScarf(v: View): void {
         weight: 8,
         brush: { preset: "wash", opacity: 0.6 },
       },
-    );
-    v.curve(
+    ));
+    parts.push(v.curve(
       band.slice(0, 4).map(([x, y]): Vec2 => [x + 2, y - 5]),
       false,
       {
@@ -472,8 +492,9 @@ function drawScarf(v: View): void {
         weight: 5,
         brush: { preset: "wash", opacity: 0.5 },
       },
-    );
-  });
+    ));
+    return parts;
+  })()));
   // Fringe.
   const fringe: Style = {
     stroke: H.scarf,
@@ -482,41 +503,45 @@ function drawScarf(v: View): void {
     gesture: { pressure: "taper-out", wobble: 0.6 },
   };
   for (let i = 0; i < 4; i += 1)
-    v.line(-64, -166 + i * 4, -78, -164 + i * 6, fringe);
-  v.path(shape, {
+    drawn.push(v.line(-64, -166 + i * 4, -78, -164 + i * 6, fringe));
+  drawn.push(v.path(shape, {
     stroke: H.ink,
     weight: 1.8,
     brush: "ink",
     gesture: { pressure: "taper", wobble: 0.5 },
-  });
+  }));
+  return drawn;
 }
 
 function tip(): Vec2 {
   return [(LAMP.hx - 2 - FEET_X) / SCALE, (LAMP.hy + 48 - FEET_Y) / SCALE];
 }
 
-function drawPole(v: View): void {
+function drawPole(v: View): Drawing {
   const [tx, ty] = tip();
   const dx = tx - GRIP[0];
   const dy = ty - GRIP[1];
   const back: Vec2 = [GRIP[0] - dx * 0.45, GRIP[1] - dy * 0.45];
-  v.line(back[0], back[1], tx, ty, {
-    stroke: H.pole,
-    weight: 3.6,
-    brush: "ink",
-    gesture: { pressure: "even", wobble: 0.4 },
-  });
-  // Taper flame.
-  v.circle(tx, ty - 4, 18, {
-    fill: v.radialGradient(tx, ty - 4, 18, [
-      [0, "rgba(255,240,180,0.95)"],
-      [1, "rgba(255,160,80,0)"],
-    ]),
-  });
-  v.ellipse(tx, ty - 6, 2.5, 5.5, { fill: "#fff3c0" });
+  return [
+    v.line(back[0], back[1], tx, ty, {
+      stroke: H.pole,
+      weight: 3.6,
+      brush: "ink",
+      gesture: { pressure: "even", wobble: 0.4 },
+    }),
+    // Taper flame.
+    v.circle(tx, ty - 4, 18, {
+      fill: v.radialGradient(tx, ty - 4, 18, [
+        [0, "rgba(255,240,180,0.95)"],
+        [1, "rgba(255,160,80,0)"],
+      ]),
+    }),
+    v.ellipse(tx, ty - 6, 2.5, 5.5, { fill: "#fff3c0" }),
+  ];
 }
 
-function drawGrip(v: View): void {
+function drawGrip(v: View): Drawing {
+  const out: Drawing[] = [];
   // Three primary feathers curled round the pole, like fingers.
   const [gx, gy] = GRIP;
   const feathers: Vec2[][] = [
@@ -543,39 +568,40 @@ function drawGrip(v: View): void {
     ],
   ];
   for (const f of feathers) {
-    litShape(v, f, H.wing);
-    v.curve(f, true, {
+    out.push(litShape(v, f, H.wing));
+    out.push(v.curve(f, true, {
       stroke: H.ink,
       weight: 1.8,
       brush: "ink",
       gesture: { pressure: "taper", wobble: 0.3 },
-    });
+    }));
   }
+  return out;
 }
 
 /** Cast shadow on the deck, thrown back and left by the lamp, and a contact shadow under the feet. */
-function drawShadow(v: View): void {
+function drawShadow(v: View): Drawing {
   const deck: Vec2[] = [
     [180, deckTop(180)],
     [740, deckTop(740)],
     [740, deckFront(740)],
     [180, deckFront(180)],
   ];
-  v.clip(deck, () => {
-    v.group({ opacity: 0.85, blend: "multiply" }, () => {
+  return v.clip(deck, [
+    v.group({ opacity: 0.85, blend: "multiply" }, [
       v.ellipse(FEET_X - 80, FEET_Y - 5, 105, 12, {
         fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 105, 12, [
           [0, "#5a3a58"],
           [0.55, "rgba(90,58,88,0.7)"],
           [1, "rgba(90,58,88,0)"],
         ]),
-      });
+      }),
       v.ellipse(FEET_X + 2, FEET_Y + 2, 27, 5, {
         fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 27, 5, [
           [0, "#3a2236"],
           [1, "rgba(58,34,54,0)"],
         ]),
-      });
-    });
-  });
+      }),
+    ]),
+  ]);
 }

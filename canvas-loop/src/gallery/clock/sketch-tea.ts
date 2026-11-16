@@ -4,7 +4,7 @@
 // `style` select toggles numerals on/off ("classic" | "minimal"); a
 // `showDigital` boolean overlays an HH:MM:SS readout for verifying the hands
 // against the underlying time. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   timeScale: { type: "number", min: 1, max: 3600, default: 60, step: 1 },
@@ -84,7 +84,8 @@ function handAngles(virtualSeconds: number): { hour: number; minute: number; sec
   return { hour: hourFrac * TAU, minute: minuteFrac * TAU, second: secondFrac * TAU };
 }
 
-function drawTicks(v: View): void {
+function drawTicks(v: View): Drawing {
+  const out: Drawing[] = [];
   for (let i = 0; i < 60; i++) {
     const isHour = i % 5 === 0;
     const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
@@ -93,11 +94,13 @@ function drawTicks(v: View): void {
     const outerY = CENTER_Y + TICK_OUTER_RADIUS * Math.sin(angle);
     const innerX = CENTER_X + (TICK_OUTER_RADIUS - length) * Math.cos(angle);
     const innerY = CENTER_Y + (TICK_OUTER_RADIUS - length) * Math.sin(angle);
-    v.line(innerX, innerY, outerX, outerY, { stroke: "#e2e8f0", weight: isHour ? HOUR_TICK_WEIGHT : MINUTE_TICK_WEIGHT });
+    out.push(v.line(innerX, innerY, outerX, outerY, { stroke: "#e2e8f0", weight: isHour ? HOUR_TICK_WEIGHT : MINUTE_TICK_WEIGHT }));
   }
+  return out;
 }
 
-function drawNumerals(v: View): void {
+function drawNumerals(v: View): Drawing {
+  const out: Drawing[] = [];
   const numeral = { size: NUMERAL_SIZE, fill: "#f8fafc", align: "center", valign: "middle" } as const;
   for (let n = 1; n <= 12; n++) {
     // Numeral n sits at the same angle as hour-hand-at-n on the clock face:
@@ -105,42 +108,45 @@ function drawNumerals(v: View): void {
     const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
     const x = CENTER_X + NUMERAL_RADIUS * Math.cos(angle);
     const y = CENTER_Y + NUMERAL_RADIUS * Math.sin(angle);
-    v.text(String(n), { x, y }, numeral);
+    out.push(v.text(String(n), { x, y }, numeral));
   }
+  return out;
 }
 
-function drawHand(params_: { v: View; angle: number; length: number; weight: number; color: string }): void {
+function drawHand(params_: { v: View; angle: number; length: number; weight: number; color: string }): Drawing {
   const { v, angle, length, weight, color } = params_;
   const dialAngle = angle - Math.PI / 2; // 0 rad here = 12 o'clock, clockwise
   const x = CENTER_X + length * Math.cos(dialAngle);
   const y = CENTER_Y + length * Math.sin(dialAngle);
-  v.line(CENTER_X, CENTER_Y, x, y, { stroke: color, weight });
+  return v.line(CENTER_X, CENTER_Y, x, y, { stroke: color, weight });
 }
 
-function drawDigital(params_: { v: View; virtualSeconds: number }): void {
+function drawDigital(params_: { v: View; virtualSeconds: number }): Drawing {
   const { v, virtualSeconds } = params_;
   const totalSeconds = Math.floor(virtualSeconds) % SECONDS_PER_DAY;
   const hours24 = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   const pad = (n: number): string => String(n).padStart(2, "0");
-  v.text(`${pad(hours24)}:${pad(minutes)}:${pad(seconds)}`, { x: CENTER_X, y: 12 }, { size: 16, fill: "#facc15", align: "center", valign: "top" });
+  return v.text(`${pad(hours24)}:${pad(minutes)}:${pad(seconds)}`, { x: CENTER_X, y: 12 }, { size: 16, fill: "#facc15", align: "center", valign: "top" });
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background("#0b1020");
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#0b1020"));
 
-  v.circle(CENTER_X, CENTER_Y, FACE_RADIUS, { stroke: "#334155", weight: 2 });
+  out.push(v.circle(CENTER_X, CENTER_Y, FACE_RADIUS, { stroke: "#334155", weight: 2 }));
 
-  drawTicks(v);
-  if (p.style === "classic") drawNumerals(v);
+  out.push(drawTicks(v));
+  if (p.style === "classic") out.push(drawNumerals(v));
 
   const angles = handAngles(model.virtualSeconds);
-  drawHand({ v, angle: angles.hour, length: HOUR_HAND_LENGTH, weight: HOUR_HAND_WEIGHT, color: "#e2e8f0" });
-  drawHand({ v, angle: angles.minute, length: MINUTE_HAND_LENGTH, weight: MINUTE_HAND_WEIGHT, color: "#e2e8f0" });
-  drawHand({ v, angle: angles.second, length: SECOND_HAND_LENGTH, weight: SECOND_HAND_WEIGHT, color: "#f87171" });
+  out.push(drawHand({ v, angle: angles.hour, length: HOUR_HAND_LENGTH, weight: HOUR_HAND_WEIGHT, color: "#e2e8f0" }));
+  out.push(drawHand({ v, angle: angles.minute, length: MINUTE_HAND_LENGTH, weight: MINUTE_HAND_WEIGHT, color: "#e2e8f0" }));
+  out.push(drawHand({ v, angle: angles.second, length: SECOND_HAND_LENGTH, weight: SECOND_HAND_WEIGHT, color: "#f87171" }));
 
-  v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS, { fill: "#f8fafc" });
+  out.push(v.circle(CENTER_X, CENTER_Y, CENTER_CAP_RADIUS, { fill: "#f8fafc" }));
 
-  if (p.showDigital) drawDigital({ v, virtualSeconds: model.virtualSeconds });
+  if (p.showDigital) out.push(drawDigital({ v, virtualSeconds: model.virtualSeconds }));
+  return out;
 }

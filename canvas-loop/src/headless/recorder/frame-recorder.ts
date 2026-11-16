@@ -5,7 +5,9 @@ import type { Pixels } from "./capture.js";
 import { encodeZoomPng, zoomFileName, zoomLabel } from "./zoom.js";
 import type { Zoom } from "./zoom.js";
 import { formatArgs } from "../../core/format.js";
-import { renderTranscript } from "../transcript.js";
+import { describeError } from "../../scene/errors.js";
+import { sketchFrames } from "../../scene/call-site.js";
+import { errorLine, renderTranscript } from "../transcript.js";
 import type { RunMeta, TranscriptEntry } from "../transcript.js";
 import type { LogLevel, SketchHost } from "../../core/types.js";
 
@@ -17,14 +19,14 @@ export interface RunResult {
   errors: string[];
 }
 
-/** What the recorder needs from whichever tier is driving it. */
+/** What the recorder needs from the runner driving it. */
 export interface RecorderDeps {
   frames: number;
   every: number;
-  /** Raw pixels of the current frame, for capture. */
-  readPixels: () => Pixels;
-  /** Regions to write as enlarged crops beside every captured frame. */
+  /** Regions to write as enlarged crops beside every captured frame, in canvas pixels. */
   zooms?: readonly Zoom[];
+  /** Device pixels per canvas pixel in the captured frames (the scene renderer's `--ratio`); default 1. */
+  ratio?: number;
 }
 
 interface ZoomImage {
@@ -32,17 +34,11 @@ interface ZoomImage {
   readonly label: string;
 }
 
-function normalizeError(error: unknown): { name: string; message: string; stack: string } {
-  if (error instanceof Error) {
-    return { name: error.name, message: error.message, stack: error.stack ?? "" };
-  }
-  return { name: "Error", message: formatArgs([error]), stack: "" };
-}
-
 /**
  * Accumulates the transcript across a frame loop: log lines, param changes,
- * captured/deduped frames, and errors — then writes out/. tea-runtime.ts drives
- * it; capture policy, dedup, and the on-disk format are defined here.
+ * captured/deduped frames, and errors — then writes out/. tea-runtime/runner.ts drives
+ * it: it asks `shouldCapture`, renders, and hands the pixels to `capture`.
+ * Capture policy, dedup, and the on-disk format are defined here.
  */
 export class FrameRecorder implements SketchHost {
   #deps: RecorderDeps;
@@ -56,7 +52,6 @@ export class FrameRecorder implements SketchHost {
   #frameHadLog = false;
   #frameHadEvent = false;
   #frameHadSnapshot = false;
-  #frameCaptured = false;
   #frameLabels: string[] = [];
   #lastHash: string | undefined;
   #lastFile: string | undefined;
@@ -100,7 +95,6 @@ export class FrameRecorder implements SketchHost {
     this.#frameHadLog = false;
     this.#frameHadEvent = false;
     this.#frameHadSnapshot = false;
-    this.#frameCaptured = false;
     this.#frameLabels = [];
   }
 
@@ -109,20 +103,26 @@ export class FrameRecorder implements SketchHost {
     this.#frameHadEvent = hadEvents;
   }
 
-  captureIfNeeded(frame: number): void {
-    if (this.#shouldCapture(frame)) this.#capture(frame);
+  /** Preformatted text under this frame's image (`--scene`). */
+  recordBlock(text: string): void {
+    this.#entries.push({ kind: "block", frame: this.#currentFrame, text });
   }
 
-  recordError(error: unknown): void {
-    const { name, message, stack } = normalizeError(error);
-    if (!this.#frameCaptured) {
-      this.#capture(this.#currentFrame);
-    }
-    this.#entries.push({ kind: "error", frame: this.#currentFrame, name, message, stack });
-    this.#errors.push(`[frame ${this.#currentFrame}] ${name}: ${message}`);
+  /**
+   * A step threw (`frame` undefined before frame 0): the transcript ends with
+   * the error line and the sketch's lines of the stack. The failed frame has no
+   * image; the frames before it stay.
+   */
+  recordError(failure: { frame: number | undefined; step: string; error: unknown }): void {
+    const { frame, step, error } = failure;
+    const text = describeError(error);
+    const at = sketchFrames(error instanceof Error ? error.stack : undefined).slice(0, 4);
+    this.#entries.push({ kind: "error", frame, step, text, at });
+    this.#errors.push(errorLine({ frame, step, text, at }));
   }
 
-  #shouldCapture(frame: number): boolean {
+  /** Whether frame N is captured: the first, the last, every Nth, and frames with a log, an event or a snapshot. */
+  shouldCapture(frame: number): boolean {
     const { frames, every } = this.#deps;
     return (
       frame === 0 ||
@@ -134,11 +134,10 @@ export class FrameRecorder implements SketchHost {
     );
   }
 
-  #capture(frame: number): void {
-    const pixels = this.#deps.readPixels();
+  /** Record frame N's rendered pixels: a new PNG, or a reference to the last one when nothing changed. */
+  capture(frame: number, pixels: Pixels): void {
     const hash = hashPixels(pixels);
     const labels = this.#frameLabels.slice();
-    this.#frameCaptured = true;
     if (hash === this.#lastHash && this.#lastFile !== undefined) {
       this.#entries.push({ kind: "image", frame, labels, file: this.#lastFile, unchanged: true, zooms: this.#lastZooms });
       return;
@@ -176,7 +175,7 @@ export class FrameRecorder implements SketchHost {
       writeFileSync(join(outDir, file), encodePng(pixels));
     }
     for (const [file, { pixels, zoom }] of this.#zoomsToEncode) {
-      writeFileSync(join(outDir, file), encodeZoomPng(pixels, zoom));
+      writeFileSync(join(outDir, file), encodeZoomPng(pixels, { zoom, ratio: this.#deps.ratio ?? 1 }));
     }
     for (const [file, bytes] of this.#files) writeFileSync(join(outDir, file), bytes);
     const transcriptPath = join(outDir, "transcript.md");

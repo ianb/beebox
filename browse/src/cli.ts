@@ -10,7 +10,7 @@ import { CaptureNoAnswerError, runEnhancedScreenshot } from "./screenshot.js";
 import { drainPlan, drainRuntimeLint, noteWedged } from "./runtime-lint-drain.js";
 import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
-import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
+import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit, withMutedAudio } from "./launch-options.js";
 import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
@@ -182,6 +182,9 @@ async function main(): Promise<number> {
   const launch = hoistLaunchOptions(args, process.env);
   args = launch.args;
   Object.assign(process.env, launch.env);
+  // The agent's browser is silent: a page under test (a sketch's click
+  // sounds, a video) must not play through the developer's speakers.
+  process.env["AGENT_BROWSER_ARGS"] = withMutedAudio(process.env["AGENT_BROWSER_ARGS"]);
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
   if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];

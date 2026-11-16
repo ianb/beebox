@@ -28,7 +28,7 @@ function segmentLengths(points: readonly Vec2[]): number[] {
 }
 
 /** Remove consecutive duplicate points; close the loop by repeating the start. */
-function prepare(points: readonly Vec2[], closed: boolean): Vec2[] {
+export function preparePoints(points: readonly Vec2[], closed: boolean): Vec2[] {
   const out: Vec2[] = [];
   for (const p of points) {
     const prev = out.at(-1);
@@ -47,7 +47,7 @@ function prepare(points: readonly Vec2[], closed: boolean): Vec2[] {
  * a contour shorter than one step (a dot) returns its single start point.
  */
 export function resample(points: readonly Vec2[], args: { closed: boolean; step: number }): Sample[] {
-  const pts = prepare(points, args.closed);
+  const pts = preparePoints(points, args.closed);
   const lengths = segmentLengths(pts);
   const total = lengths.reduce((a, b) => a + b, 0);
   const first = pts[0];
@@ -55,13 +55,15 @@ export function resample(points: readonly Vec2[], args: { closed: boolean; step:
   if (total < args.step || pts.length < 2) return [{ x: first[0], y: first[1], nx: 0, ny: -1, s: 0, t: 0, p: 1 }];
   // Fixed spacing from the start (plus the exact end point), so editing the end
   // of a mark leaves the samples before the edit where they were.
-  const positions: number[] = [];
-  for (let s = 0; s < total - args.step * 0.5; s += args.step) positions.push(s);
-  positions.push(total);
   const samples: Sample[] = [];
   let seg = 0;
   let segStart = 0;
-  for (const s of positions) {
+  let s = 0;
+  for (let last = false; !last; s += args.step) {
+    if (!(s < total - args.step * 0.5)) {
+      s = total;
+      last = true;
+    }
     while (seg < lengths.length - 1 && segStart + (lengths[seg] ?? 0) < s) {
       segStart += lengths[seg] ?? 0;
       seg += 1;
@@ -75,4 +77,49 @@ export function resample(points: readonly Vec2[], args: { closed: boolean; step:
     samples.push({ x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, nx: dy, ny: -dx, s, t: s / total, p: 1 });
   }
   return samples;
+}
+
+/**
+ * What `resample` decides for prepared points before placing anything: its
+ * segment lengths and total (the same f64 sums), the sample count from its
+ * own loop (repeated addition of `step`, the last sample at the total), and
+ * for each segment the index of the first sample the loop puts on it or past
+ * it. The GPU sample pass takes a sample's segment from `first`, integers, so
+ * a sample at a corner gets the same segment, and normal, as on the CPU. No
+ * points give no samples; one point, or a total under one step, gives one.
+ */
+export function sampleSegments(pts: readonly Vec2[], step: number): { lengths: number[]; total: number; count: number; first: number[] } {
+  const lengths = segmentLengths(pts);
+  const total = lengths.reduce((a, b) => a + b, 0);
+  const first = lengths.map(() => 0);
+  const count = firstSamples(lengths, { n: lengths.length, points: pts.length, total, step, first });
+  return { lengths, total, count, first };
+}
+
+/**
+ * `sampleSegments` over `n` segment lengths already measured, between `points` prepared points (`total` their sum, in
+ * order from 0): writes `first[0..n)` and returns the sample count. For callers that keep points in flat arrays.
+ */
+export function firstSamples(lengths: ArrayLike<number>, a: { n: number; points: number; total: number; step: number; first: { [i: number]: number } }): number {
+  const { n, points, total, step, first } = a;
+  for (let j = 0; j < n; j += 1) first[j] = 0;
+  if (points === 0) return 0;
+  if (total < step || points < 2) return 1;
+  let seg = 0;
+  let segStart = 0;
+  let k = 0;
+  for (let last = false, s = 0; !last; s += step) {
+    if (!(s < total - step * 0.5)) {
+      s = total;
+      last = true;
+    }
+    while (seg < n - 1 && segStart + (lengths[seg] ?? 0) < s) {
+      segStart += lengths[seg] ?? 0;
+      seg += 1;
+      first[seg] = k;
+    }
+    k += 1;
+  }
+  for (let j = seg + 1; j < n; j += 1) first[j] = k;
+  return k;
 }

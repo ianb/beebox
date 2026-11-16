@@ -14,6 +14,7 @@ import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
 import { useCaptureFinish, type CaptureExit } from "./useCaptureFinish";
 import { useRetryFeedback } from "../retry-feedback";
+import { registerReloadBlocker } from "../../../lib/reload-blockers";
 
 export type { CaptureExit };
 
@@ -58,6 +59,9 @@ export function useCaptureSession(opts: {
   const { finalizeCaptureSession, cancelCaptureSession } = useCaptureApi();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
+  // An open capture session holds photos, files and audio in this page.
+  const capturing = sessionId !== null;
+  useEffect(() => (capturing ? registerReloadBlocker("recording", () => true) : undefined), [capturing]);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);

@@ -1,0 +1,529 @@
+# Stage 4, chunk 7: the dev-loop checklist
+
+Part of `beebox/docs/plans/canvas-loop-scene/stage4-plan.md`, item 7. Written
+2026-11-15.
+
+The spike's first principle is agent DX: when a sketch has a mistake, the
+tools say what is wrong, where, and how to fix it. Each row below is one
+mistake an agent makes, written as a deliberately bad sketch. Each sketch runs
+through the headless runner, as `run` does, and its output is compared with
+what the row expects.
+
+- **Sketches:** `canvas-loop/test/gpu/dev-loop/cases.ts`, one entry per
+  row, with the channel and the patterns the text must match.
+- **Test:** `canvas-loop/test/gpu/renderer.gpu.test.ts`, one test per row
+  (`dev loop, <id>: …`). An error row's names are checked in both the thrown
+  error and the transcript's error part, with the sketch's line; a row about
+  the recorded scene also checks the `--scene` outline. A row whose gap is
+  left is a `todo` test with its proposal as the reason.
+- **Channels:** *error* is the error the run throws (a `SketchRunError` naming
+  the frame, the step and the sketch's line) and its `error in <step>` line
+  in the transcript; *warning* is a `frame N: warning:` line in the
+  transcript, or an `end of run: warning:` line for a check over the whole
+  run; *none* means no error and no warning.
+
+## Result
+
+46 rows: **18 pass** as they were, **23 gaps fixed**, **5 gaps left** with
+proposals. All 46 tests run in the one GPU test process; the 5 left are todo.
+Row 38 was fixed after the drawing round (finding 6).
+
+**Chunk 3 of the scene core plan** (`beebox/docs/implemented-plans/canvas-loop-scene-core.subplan.md`,
+Track 3): rows 42 and 43 fixed, rows 47–56 added and passing (label overlap,
+removed calls, the off-canvas fold, node paths in render errors, a canvas at
+the texture limit, browser colours, three more faint-mark rows and one that
+must not warn). Now 56 rows: **20 pass** (the 18, and rows 54 and 55, which
+must stay quiet), **33 gaps fixed**, **3 gaps left** (rows 37, 41, 45), which are follow-ups: see "Follow-ups"
+below. Since chunk 2 a transcript warning reads `**[frame N]** warn: …`; an
+end-of-run warning carries the last frame's number.
+
+## Fixes that apply to every row
+
+- **An error leaves a transcript.** Before, a throw in `init`, `update`,
+  `draw` or the render ended the run with no transcript, and the error named
+  neither the frame nor the step. Now the transcript ends with
+  `frame N: error in <step>: <Name>: <message>` and the sketch's own stack
+  lines (`at path:line:col`), and the run throws `SketchRunError` with the
+  same text and the first sketch line. beebox's `figure run-one` reports that
+  message unchanged. Two error rows have no sketch line, and their tests
+  check that: an async `draw` (row 20), found only after `draw` has
+  returned, and a render error (row 33), raised after `draw`. Placing those
+  would need a source-location mechanism; none is built.
+- **Warnings name the sketch's line** (`… (at path:line:col)`), found from the
+  stack (`canvas-loop/src/scene-spike/call-site.ts`), and each is given once
+  per run instead of every frame.
+- **Testing mode guards, as today's runtime has them:** the model is frozen
+  after `init` and each `update`; `init`, `update` and `draw` must not return
+  a Promise; reading a param the sketch does not declare is an error.
+
+## The checklist
+
+| # | Mistake (id) | Expected: channel, and what the text must name | Result | Fix |
+|---|---|---|---|---|
+| 1 | Picture body reads model state not in `deps` (`stale-picture`) | warning: the picture, its deps, the first differing node, the line | gap fixed | Warned every frame, without a line, with one message for two causes. Now once, with the line, and the message says the kept version is stale. |
+| 2 | Two drawings under one key with equal deps (`shared-key`) | warning: the picture, "two drawings share the key", the line | gap fixed | Now told apart from row 1: a key asked for twice in one frame that draws differently. Each cause is given once per run, so this one does not hide a later row-1 warning from the same call. |
+| 3 | Deps or size change every frame (`deps-every-frame`) | warning: the picture, "every frame", the line | gap fixed | Was silent (the draft's deferred warning). Now warns once when a key records a new version three frames running; it says each new version is used once, since other versions of the key may be reused. |
+| 4 | NaN coordinate (`nan-coordinate`) | error: the call, the argument, NaN | gap fixed | Drew nothing, silently. Shape calls now check every number and name the argument, with a hint that NaN comes from `undefined`. |
+| 5 | Infinity size (`infinite-radius`) | error: the call, `radius`, Infinity | gap fixed | Was `RangeError: Invalid array length` from deep in the geometry code. |
+| 6 | NaN in a point list (`nan-point`) | error: the call, `points[1]`, NaN | gap fixed | Was silent. |
+| 7 | NaN in `at` (`nan-transform`) | error: `at`, `rotate`, NaN | gap fixed | Hid everything inside, silently. |
+| 8 | Negative radius (`negative-radius`) | error: the call, `radius`, -5 | gap fixed | Was silent (Canvas2D throws here). |
+| 9 | Zero-width rect (`zero-size`) | none: draws nothing, as Canvas2D | pass | — |
+| 10 | Unknown brush (`unknown-brush`) | error: the brush name and the presets | pass | — |
+| 11 | Unknown blend (`unknown-blend`) | error: the blend name and the list | pass | — |
+| 12 | Unknown effect (`unknown-effect`) | error: the effect name and the list | pass | — |
+| 13 | Misspelt style key (`unknown-style-key`) | error: the call, the key, the valid keys | pass | — |
+| 14 | Colour that does not parse (`bad-colour`) | error: the call, the field, the colour, the line | gap fixed | Failed at render, after `draw`, as `"#ggg" is not a CSS colour` with no call or line. The runner's recorder now parses colours at the call. |
+| 15 | Effect colour that does not parse (`bad-effect-colour`) | error: `effects.glow.color`, the colour, the line | gap fixed | As row 14. |
+| 16 | `v.*` after `draw` returned (`view-after-draw`) | error: the call, "outside draw" | gap fixed | Silently added to the previous frame's scene. |
+| 17 | `place` of a Picture kept from an earlier frame (`old-picture`) | error: `place`, the picture, "earlier frame", what to do | gap fixed | Was accepted, bypassing deps. |
+| 18 | A group body throws (`throw-in-group`) | error: the frame, the step, the message, the line | gap fixed | No transcript; see "Fixes that apply to every row". |
+| 19 | `update` throws (`throw-in-update`) | error: the frame, `update`, the message, the line | gap fixed | As row 18. |
+| 20 | `async draw` (`async-draw`) | error: `draw`, "Promise", "synchronous"; no sketch line | gap fixed | Was accepted, and the body after its first `await` drew into a finished frame. |
+| 21 | `draw` changes the model (`mutate-model`) | error: `draw`, the property, "model is frozen", the line | gap fixed | Was allowed (today's runtime freezes the model). |
+| 22 | Reads an undeclared param (`undeclared-param`) | error: `params.speed`, the declared params, the line | gap fixed | Was `undefined`, then NaN. Names an object inherits (`toString`) are refused too. |
+| 23 | `control` for an undeclared param (`undeclared-control`) | error: the control and the param | pass | — |
+| 24 | `v.log` in a picture body (`log-in-picture`) | error: `v.log`, the picture, why | pass | — |
+| 25 | A function in `deps` (`function-dep`) | error: the picture, `deps[0]`, "function" | pass | — |
+| 26 | Smudge brush with effects (`smudge-with-effects`) | error: the call, smudge, effects, "group" | pass | — |
+| 27 | A light outside any lit group (`light-unlit`) | warning: the light, "outside any lit group", the line | pass | Now also names the line and says what to do. |
+| 28 | A lit group with no light (`lit-no-light`) | warning: "lit group", "no light", the ambient, the line | gap fixed | Was silent. |
+| 29 | A material outside a lit group (`material-unlit`) | none: ignored silently by design (R8) | pass | — |
+| 30 | Text in a font that is not installed (`unknown-font`) | warning: the font, the line | gap fixed | Drew in a fallback font, silently. Headless only: the browser loads web fonts later. |
+| 31 | `pixels` fill leaves alpha 0 (`transparent-pixels`) | warning: the pixels key, "transparent", the line | pass | Now also names the line and where alpha is. |
+| 32 | `pixels` fill replaces `image.data` (`pixels-replaced`) | error: the pixels key, `data`, "write into" | gap fixed | Was a Dawn error about texture data layout. |
+| 33 | Canvas wider than the GPU's largest texture (`huge-canvas`) | error: render, the canvas, its size, the limit; no sketch line | gap fixed | Was "a shape 9000×20 device px is larger than the atlas", which named neither the canvas nor the limit. |
+| 34 | A 40000×40000 picture mostly off the canvas (`huge-picture`) | none: tiles only where seen | pass | — |
+| 35 | Picture with zero width (`zero-size-picture`) | error: the picture, `width`, "> 0", 0 | pass | — |
+| 36 | One key at two sizes in a frame (`same-key-sizes`) | none: two versions, by design (section 5); the outline shows both | pass | — |
+| 37 | Clip with no area (`empty-clip`) | warning: the clip, "no area", the line | gap left | Proposal below. |
+| 38 | Drawing entirely off the canvas (`offscreen`) | warning, at the end of the run: the call, "entirely off the canvas", the frames, the line | gap fixed | Was silent. A sketch line warns once per run when everything it draws is off the canvas on every frame; unboxed text that crosses the edge on every frame warns too. |
+| 39 | Point light without `at` (`point-light-no-at`) | error: `light (point)`, `at: [x, y]` | pass | — |
+| 40 | Hatching without `amount` (`hatching-no-amount`) | error: `effects.hatching.amount`, the range | pass | — |
+| 41 | Hatching over one flat tone (`flat-hatching`) | warning: hatching, tone | gap left | Proposal below. |
+| 42 | A brushed mark too faint to see (`faint-mark`) | warning: faint, the percentage, `gesture({ faint: true })`, the line | gap fixed | Chunk 3: in testing mode a variant of each mark's composite draw keeps its peak alpha in a storage buffer, read back per captured frame; group opacities multiply on the CPU. Today's rule: under 8%, at most 8 warnings. |
+| 43 | A character the font has no glyph for (`missing-glyph`) | warning: glyph, the code point, the line | gap fixed | Chunk 3: checked at the `v.text` call by the glyph atlas's rasteriser. Headless only, as today. |
+| 44 | Blur under a skew (`skewed-effects`) | error: skew, group, "not supported", the line | gap fixed | Failed at render with no line. Now checked at the call too; a picture placed under a skew still fails at render. |
+| 45 | Effect groups nested 30 deep (`deep-nesting`) | warning: passes, cost | gap left | Proposal below. |
+| 46 | Group opacity 50 for 50% (`opacity-out-of-range`) | error: opacity, 0..1, 50 | pass | — |
+| 47 | Two labels drawn over each other (`label-overlap`) | warning: both texts, "overlaps", the later text's line | gap fixed | Chunk 3: today's check, missing from the spike. Text bounds under their transform (a picture's labels where each placement puts them), each pair once per run, at most 10 pairs. |
+| 48 | An old figure calls `v.cache` (`removed-call`) | error: `RemovedCallError`, `v.cache was removed`, `v.picture`, `v.place`, the doc section, the line | gap fixed | Chunk 3: was `v.cache is not a function`. `v.ctx`, `v.sprite`, `v.image` and `v.paperTexture` answer the same way with their replacements. |
+| 49 | A panning camera never reaches two drawings (`moving-offscreen`) | warning, at the end of the run: "2 lines draw only off … while moving", the lines, "a camera that has not reached them, or a wrong sign" | gap fixed | Chunk 3: was one warning per line (7 on the drawer's night room); lines whose box moved now join one summary. Row 38's line, which never moves, still warns on its own. |
+| 50 | A picture with a blurred group placed under a skew (`render-node-path`) | error: render, `GpuRenderError`, skew, the node path; no sketch line | gap fixed | Chunk 3: was the error with no node. Lowering keeps the node path: `(at at #1 > place picture "badge" > group "glow")`. |
+| 51 | A canvas exactly 8192 px wide with a stroke across it (`canvas-at-texture-limit`) | none | gap fixed | Chunk 3: the atlas piece is cut at the atlas side, and an atlas page no longer adds its gap past a piece at its edge. |
+| 52 | A translucent ink line (`faint-ink`) | warning: faint, the line | gap fixed | Chunk 3: ink is a coverage piece, not a dab mark; measured in the same draw. |
+| 53 | An opaque ink line in a group at 5% (`faint-in-group`) | warning: faint, 5%, the line | gap fixed | Chunk 3: group opacity multiplies the peak. |
+| 54 | An opaque marker (`opaque-marker`) | none | pass | Must not warn: it peaks at 70%, the marker preset's opacity. |
+| 55 | A translucent pencil line with `gesture({ faint: true })` (`faint-on-purpose`) | none | pass | The gesture marks it as intended. |
+| 56 | A bad colour in the browser (browser colours) | error at the call: the call, the field, the colour | gap fixed | Chunk 3: the browser recorder parses colours at the call with a parser made at mount. The case is in `canvas-loop/test/browser/scene/surface.test.ts`; `cases.ts` runs headless only. |
+
+## Gaps left, with proposals
+
+Each needs a decision before it is built. Chunk 3 built `faint-mark` and
+`missing-glyph` (today's checks); the other three are its follow-ups.
+
+- **`empty-clip`:** warn when a clip has no area on every frame of a run.
+  One frame is not a mistake: an animated wipe starts at zero width.
+- **`flat-hatching`:** the draft's "no tone variation" warning. Read back the
+  histogram pass that hatching already runs, and warn when its tone range is
+  empty. This costs one readback per hatched group in testing mode.
+- **`faint-mark`:** built in chunk 3 (row 42).
+- **`missing-glyph`:** built in chunk 3 (row 43).
+- **`deep-nesting`:** the transcript prints `passes N` for each captured
+  frame (91 here), but does not mark it as high. Proposal: warn above a pass
+  budget per frame (a number to choose, for example 64) and name the deepest
+  group path.
+
+## Follow-ups
+
+Rows 37 (`empty-clip`), 41 (`flat-hatching`) and 45 (`deep-nesting`) stay
+`todo`. They are new policies, not today's checks, and are out of scope of
+the scene core plan (its "NOT in scope", "New diagnostics (follow-ups)");
+their proposals are above.
+
+## Other finds
+
+All three were fixed in chunk 3 (rows 50, 51 and 56).
+
+- **Render errors do not name the node.** Draft section 10 says a message
+  names the node by its path (`group "room" > place "citizen" … > circle #4`).
+  Errors raised at the call do this through the sketch's line. Errors raised
+  at render (an effect under a placed picture's skew, a layer over the
+  texture limit) name only the picture or nothing. Proposal: the renderer
+  keeps the path while lowering and adds it to `GpuRenderError`.
+- **The browser parses colours at render.** The browser mount's recorder is
+  made before the GPU code loads, so it has no colour parser; a bad colour
+  there fails at render, without the call. Proposal: give it a parser from
+  the page's 2D canvas.
+- **A canvas exactly as wide as the largest texture (8192) fails** for a shape
+  across its width: the atlas piece is the canvas plus 4 px of padding.
+  `failedFrames` uses this case to fail a frame late.
+
+## Actual output, verbatim
+
+Captured with the runner at this commit (the transcript forms of Stage 4). Paths are relative to `canvas-loop/`;
+line numbers are those of `cases.ts`.
+
+**stale-picture**
+
+```
+frame 1: warning: picture "swatch" drew differently from its kept version with the same key and no deps: the body reads a value (a model field, a param, the frame) that is not in deps, so the kept version is stale; first difference at picture "swatch" > rect #1 (at test/scene-spike/dev-loop/cases.ts:55:31)
+```
+
+**shared-key**
+
+```
+frame 0: warning: picture "icon" was asked for twice this frame with the same key and no deps and drew differently: two drawings share the key, or the body reads a value (such as a loop variable) that is not in deps; first difference at picture "icon" > rect #1 (at test/scene-spike/dev-loop/cases.ts:64:17)
+```
+
+**deps-every-frame**
+
+```
+frame 2: warning: picture "bar" recorded a new version in each of the last 3 frames (now deps [3], 23×10): its deps or size change every frame, so each new version is used once; keep per-frame values out of the picture and apply them with at, place or a drawing beside it (at test/scene-spike/dev-loop/cases.ts:73:31)
+```
+
+**nan-coordinate**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: rect: y must be a finite number, got NaN (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
+  at test/scene-spike/dev-loop/cases.ts:80:23
+```
+
+**infinite-radius**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: circle: radius must be a finite number ≥ 0, got Infinity
+  at test/scene-spike/dev-loop/cases.ts:87:23
+```
+
+**nan-point**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: curve: points[1] must be [x, y] with finite numbers, got [NaN, 4] (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
+  at test/scene-spike/dev-loop/cases.ts:94:20
+```
+
+**nan-transform**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: at: rotate must be a finite number, got NaN (NaN usually comes from undefined in arithmetic: a model field or param that is not there)
+  at test/scene-spike/dev-loop/cases.ts:101:20
+```
+
+**negative-radius**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: circle: radius must be a finite number ≥ 0, got -5
+  at test/scene-spike/dev-loop/cases.ts:108:20
+```
+
+**zero-size**
+
+```
+(nothing: no warning, no error)
+```
+
+**unknown-brush**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: unknown brush "pen" (presets: ink, marker, pencil, chalk, airbrush, wash, bristle, smudge, wet)
+  at test/scene-spike/dev-loop/cases.ts:122:20
+```
+
+**unknown-blend**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: blend "lighter-ish" is not one of: normal, multiply, screen, overlay, darken, lighten, soft-light, hard-light, color-dodge, color-burn, add, difference, exclusion, hue, saturation, color, luminosity
+  at test/scene-spike/dev-loop/cases.ts:129:20
+```
+
+**unknown-effect**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: group effects: unknown effect "blurr" (hue, saturation, brightness, contrast, grayscale, sepia, invert, blur, glow, shadow, wash, hatching, paper)
+  at test/scene-spike/dev-loop/cases.ts:136:20
+```
+
+**unknown-style-key**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: rect: unknown style key "colour" (fill, stroke, weight, brush, gesture, blend, erase, dash, cap, join, material, effects)
+  at test/scene-spike/dev-loop/cases.ts:143:20
+```
+
+**bad-colour**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: rect fill "#ggg" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)" or "teal")
+  at test/scene-spike/dev-loop/cases.ts:150:20
+```
+
+**bad-effect-colour**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: group effects.glow.color "warm yellow" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)" or "teal")
+  at test/scene-spike/dev-loop/cases.ts:157:20
+```
+
+**view-after-draw**
+
+```
+frame 1: error in update: SketchUsageError: Sketch API misuse: v.rect called outside draw: the View records only while draw runs; keep what you need in the model and draw it from draw
+  at test/scene-spike/dev-loop/cases.ts:166:57
+```
+
+**old-picture**
+
+```
+frame 1: error in draw: SketchUsageError: Sketch API misuse: place(picture "dot"): this Picture came from an earlier frame; call v.picture in each draw (it hands back the kept version without recording again) and place what it returns
+  at test/scene-spike/dev-loop/cases.ts:182:9
+```
+
+**throw-in-group**
+
+```
+frame 0: error in draw: RangeError: boom in group
+  at test/scene-spike/dev-loop/cases.ts:192:28
+  at test/scene-spike/dev-loop/cases.ts:191:23
+```
+
+**throw-in-update**
+
+```
+frame 2: error in update: TypeError: boom in update
+  at test/scene-spike/dev-loop/cases.ts:203:57
+```
+
+**async-draw**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: draw() returned a Promise: sketches must be synchronous (no async, no await)
+```
+
+**mutate-model**
+
+```
+frame 0: error in draw: TypeError: Cannot assign to read only property 't' of object '#<Object>' (the model is frozen: update returns a new model, and draw only reads it)
+  at test/scene-spike/dev-loop/cases.ts:226:16
+```
+
+**undeclared-param**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: params.speed: the sketch declares no param "speed" (declared: size); add it to the params export
+  at test/scene-spike/dev-loop/cases.ts:236:56
+```
+
+**undeclared-control**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: control("speed"): no param named "speed" is declared
+  at test/scene-spike/dev-loop/cases.ts:243:20
+```
+
+**log-in-picture**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: v.log inside the body of picture "p": a body runs only when its version records, so log would come and go with the cache (draft section 8)
+  at test/scene-spike/dev-loop/cases.ts:250:81
+  at test/scene-spike/dev-loop/cases.ts:250:28
+```
+
+**function-dep**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "p": deps must be plain data compared by value, but deps[0] is a function
+  at test/scene-spike/dev-loop/cases.ts:257:28
+```
+
+**smudge-with-effects**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: line: a smudge brush with effects has nothing to read (R2): draw it without effects, or put it in a group
+  at test/scene-spike/dev-loop/cases.ts:264:20
+```
+
+**light-unlit**
+
+```
+frame 0: warning: light point at (20,20) is outside any lit group and does nothing (R8); put it inside group({ lighting: {} }, …) (at test/scene-spike/dev-loop/cases.ts:271:20)
+```
+
+**lit-no-light**
+
+```
+frame 0: warning: lit group has no light inside it, so only its ambient (#4d4d4d) lights it (R8); add v.light({ kind: "point", at: [x, y] }) inside the group (at test/scene-spike/dev-loop/cases.ts:278:20)
+```
+
+**material-unlit**
+
+```
+(nothing: no warning, no error)
+```
+
+**unknown-font**
+
+```
+frame 0: warning: text "hello": no font family in "Comic Neuee" is installed here, so it draws in a fallback font; name an installed family or end the list with a generic one (sans-serif, serif, monospace) (at test/scene-spike/dev-loop/cases.ts:292:20)
+```
+
+**transparent-pixels**
+
+```
+frame 0: warning: pixels "field": the fill left every pixel transparent (alpha is every 4th byte, data[i + 3]; 255 is opaque) (at test/scene-spike/dev-loop/cases.ts:299:28)
+```
+
+**pixels-replaced**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: pixels "field": the fill replaced image.data; write into the array it is given (data[(y * width + x) * 4 + channel] = …), which holds 4×4×4 bytes
+  at test/scene-spike/dev-loop/cases.ts:308:28
+```
+
+**huge-canvas**
+
+```
+frame 0: error in render: GpuRenderError: GPU renderer: the canvas 9000×20 at pixel ratio 1 is 9000×20 device px, larger than this GPU's largest texture (8192 px a side)
+```
+
+**huge-picture**
+
+```
+(nothing: no warning, no error)
+```
+
+**zero-size-picture**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: picture "label": width must be a number > 0, got 0
+  at test/scene-spike/dev-loop/cases.ts:333:28
+```
+
+**same-key-sizes**
+
+```
+(nothing: no warning, no error)
+```
+
+**empty-clip**
+
+```
+(nothing: no warning, no error)
+```
+
+**offscreen**
+
+```
+end of run: warning: rect lands entirely off the 80×60 canvas on frame 0, the first at (1000,1000)–(1040,1040) in canvas coordinates; check the translate, the units or the sign of its position (or, under a moving camera, run enough frames to reach it) (at test/scene-spike/dev-loop/cases.ts:358:60)
+```
+
+**point-light-no-at**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: light (point): needs at: [x, y]
+  at test/scene-spike/dev-loop/cases.ts:366:52
+  at test/scene-spike/dev-loop/cases.ts:366:20
+```
+
+**hatching-no-amount**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: effects.hatching.amount: must be a number in 0..1, got undefined
+  at test/scene-spike/dev-loop/cases.ts:373:20
+```
+
+**flat-hatching**
+
+```
+(nothing: no warning, no error)
+```
+
+**faint-mark** (chunk 3)
+
+```
+**[frame 0]** warn: faint mark (line): it reaches only 2% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:387:20)
+```
+
+**missing-glyph** (chunk 3)
+
+```
+**[frame 0]** warn: text: the font "normal sans-serif" has no glyph for "" (U+E000); it draws as an empty box or nothing (at test/gpu/dev-loop/cases.ts:394:20)
+```
+
+**skewed-effects**
+
+```
+frame 0: error in draw: UnsupportedCallError: scene spike: group effects under a rotated non-uniform scale or a skew is not supported yet (effects follow axis-aligned scales and rotations with a uniform scale only)
+  at test/scene-spike/dev-loop/cases.ts:404:51
+  at test/scene-spike/dev-loop/cases.ts:404:20
+```
+
+**deep-nesting**
+
+```
+passes 91, effect passes 60, copies 0, draws 31
+```
+
+**opacity-out-of-range**
+
+```
+frame 0: error in draw: SketchUsageError: Sketch API misuse: group opacity must be a number in 0..1, got 50
+  at test/scene-spike/dev-loop/cases.ts:425:20
+```
+
+Chunk 3 rows, captured with the runner at that commit (the transcript's warning form since chunk 2):
+
+**label-overlap**
+
+```
+**[frame 0]** warn: text "right" overlaps text "left" near (16, 24); move one, or place them with v.textBounds first (at test/gpu/dev-loop/cases.ts:432:9)
+```
+
+**removed-call**
+
+```
+frame 0: error in draw: RemovedCallError: Sketch API misuse: v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (draft sections 2 and 5) (at test/gpu/dev-loop/cases.ts:440:26)
+  at test/gpu/dev-loop/cases.ts:440:26
+```
+
+**moving-offscreen**
+
+```
+**[frame 2]** warn: 2 lines draw only off the 80×60 canvas while moving, on every frame 0–2: lines 450:11 (rect), 451:11 (circle) in test/gpu/dev-loop/cases.ts; a camera that has not reached them, or a wrong sign
+```
+
+**render-node-path**
+
+```
+frame 0: error in render: GpuRenderError: GPU renderer: UnsupportedCallError: glow effects under a rotated non-uniform scale or a skew is not supported yet (effects follow axis-aligned scales and rotations with a uniform scale only) (at at #1 > place picture "badge" > group "glow")
+```
+
+**canvas-at-texture-limit**
+
+```
+(nothing: no warning, no error)
+```
+
+**faint-ink**
+
+```
+**[frame 0]** warn: faint mark (line): it reaches only 4% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:478:20)
+```
+
+**faint-in-group**
+
+```
+**[frame 0]** warn: faint mark (line): it reaches only 5% opacity and will barely show (gesture({ faint: true }) marks it as intended) (at test/gpu/dev-loop/cases.ts:485:53)
+```
+
+**opaque-marker**
+
+```
+(nothing: no warning, no error)
+```
+
+**faint-on-purpose**
+
+```
+(nothing: no warning, no error)
+```
