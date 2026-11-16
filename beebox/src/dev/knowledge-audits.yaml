@@ -28,6 +28,8 @@ tests:
     tags: [triggers]
 
   # === The person's changelog (docs/plans/whats-new.md) ===
+  # Status (2026-11-16, Claude): passed on the user-changelog test1 clone;
+  # 1 file read (the box copy of whats-new.md), 0 searches.
   - id: whats-new-answer
     prompt: >
       What's new in Bee Box lately? Anything I should try? Explain only; do
