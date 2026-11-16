@@ -1,7 +1,7 @@
 // Intra (intra-game), room by room, from the side: one shared kit (kit-tea.ts,
 // props-tea.ts, sky-tea.ts), one file per room. Pick the room with the `room`
 // param. Rooms wider than the view pan with their walker.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, View } from "@ianbicking/canvas-loop";
 import { type RoomSpec, dim, exitGlows, paintShell } from "./kit-tea.js";
 import { ROOMS, ROOM_IDS } from "./rooms-tea.js";
 import { VIEW_H, VIEW_W, m } from "./sizes-tea.js";
@@ -50,26 +50,28 @@ function cameraX(r: RoomSpec, focus: number): number {
  * picture keeps what it draws outside its box (draft decision 3), so a strip of
  * chunks would each draw the whole room; nothing needs chunking once placement
  * replays. */
-function paintCached(v: View, r: RoomSpec): void {
+function paintCached(v: View, r: RoomSpec): Drawing {
   const x0 = -300, x1 = m(r.width) + 300;
   const pic = v.picture({ key: `room-${r.id}`, width: x1 - x0, height: VIEW_H }, () => {
-    v.at({ translate: [-x0, 0] }, () => paintShell(v, r));
+    return v.at({ translate: [-x0, 0] }, paintShell(v, r));
   });
-  v.place(pic, x0, 0);
+  return v.place(pic, x0, 0);
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
+  const out: Drawing[] = [];
   const r = roomOf(p.room);
-  if (!r) return;
+  if (!r) return out;
   const t = model.frame;
-  v.background("#0c0a0e");
+  out.push(v.background("#0c0a0e"));
   const focus = r.focus?.(t) ?? m(r.width) / 2;
-  v.at({ translate: [cameraX(r, focus), 0] }, () => {
-    paintCached(v, r);
-    dim(v, r);
-    paintSky(v, r, t);
-    exitGlows(v, r, t);
-    r.live?.(v, t);
-  });
-  v.rect(0, 0, VIEW_W, VIEW_H, { fill: v.ellipseGradient(VIEW_W / 2, VIEW_H * 0.5, VIEW_W * 0.68, VIEW_H * 0.7, [[0.65, "rgba(8,6,12,0)"], [1, "rgba(8,6,12,0.55)"]]) });
+  out.push(v.at({ translate: [cameraX(r, focus), 0] }, [
+    paintCached(v, r),
+    dim(v, r),
+    paintSky(v, r, t),
+    exitGlows(v, r, t),
+    r.live?.(v, t),
+  ]));
+  out.push(v.rect(0, 0, VIEW_W, VIEW_H, { fill: v.ellipseGradient(VIEW_W / 2, VIEW_H * 0.5, VIEW_W * 0.68, VIEW_H * 0.7, [[0.65, "rgba(8,6,12,0)"], [1, "rgba(8,6,12,0.55)"]]) }));
+  return out;
 }

@@ -1,6 +1,6 @@
 // Drawing by hand, seen from the side: wobbly outlines, inked edges, washes and
 // hatching, and rim light painted on the edges that face a light.
-import type { BrushPreset, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Drawing, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export function hash(x: number, y: number, salt = 0): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483587);
@@ -61,18 +61,20 @@ export interface Rim {
   reach: number;
 }
 
-export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: string | undefined; dark?: string | undefined; seed: number; shadeSide?: "left" | "right" | "bottom"; line?: number; amp?: number; rim?: Rim | undefined }): void {
+export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: string | undefined; dark?: string | undefined; seed: number; shadeSide?: "left" | "right" | "bottom"; line?: number; amp?: number; rim?: Rim | undefined }): Drawing {
+  const out: Drawing[] = [];
   const outline = wobble(pts, { seed: a.seed, amp: a.amp ?? 1.4 });
-  v.curve(outline, true, { fill: a.fill });
+  out.push(v.curve(outline, true, { fill: a.fill }));
   const xs = outline.map((p) => p[0]), ys = outline.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  v.clip(v.curvePath(outline, true), () => {
+  out.push(v.clip(v.curvePath(outline, true), ((): Drawing => {
+    const drawn: Drawing[] = [];
     // Washes: a few broad, uneven strokes of the light and dark tones.
     for (let i = 0; i < 4; i++) {
       const y = y0 + (y1 - y0) * (0.15 + hash(a.seed, i, 1) * 0.7);
       const tone = i % 2 === 0 ? a.light : a.dark;
       if (tone === undefined) continue;
-      v.line(x0 - 4, y + (hash(a.seed, i, 2) - 0.5) * 10, x1 + 4, y + (hash(a.seed, i, 3) - 0.5) * 10, { stroke: tone, weight: Math.max(8, (y1 - y0) * 0.35), brush: WASH, gesture: { seed: a.seed + i, wobble: 3, faint: true } });
+      drawn.push(v.line(x0 - 4, y + (hash(a.seed, i, 2) - 0.5) * 10, x1 + 4, y + (hash(a.seed, i, 3) - 0.5) * 10, { stroke: tone, weight: Math.max(8, (y1 - y0) * 0.35), brush: WASH, gesture: { seed: a.seed + i, wobble: 3, faint: true } }));
     }
     // Hatching on the side away from the light.
     if (a.shadeSide !== undefined && a.dark !== undefined) {
@@ -86,15 +88,18 @@ export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: s
         const top = a.shadeSide === "bottom" ? y0 + (y1 - y0) * 0.55 : y0;
         hatch.push(["move", x, y1 + 2], ["line", x + (y1 - top) * 0.55, top]);
       }
-      if (hatch.length > 0) v.path(hatch, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed, faint: true } });
+      if (hatch.length > 0) drawn.push(v.path(hatch, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed, faint: true } }));
     }
-  });
-  if (a.rim) rimLight(v, outline, a.rim);
-  v.curve(outline, true, ink(a.seed, a.line ?? 2.2));
+    return drawn;
+  })()));
+  if (a.rim) out.push(rimLight(v, outline, a.rim));
+  out.push(v.curve(outline, true, ink(a.seed, a.line ?? 2.2)));
+  return out;
 }
 
 /** Bright strokes just inside the outline wherever it faces the light. */
-export function rimLight(v: View, outline: readonly Vec2[], rim: Rim): void {
+export function rimLight(v: View, outline: readonly Vec2[], rim: Rim): Drawing {
+  const drawn: Drawing[] = [];
   const n = outline.length;
   // Which way round the outline goes decides which side is outward.
   let area = 0;
@@ -113,20 +118,23 @@ export function rimLight(v: View, outline: readonly Vec2[], rim: Rim): void {
     const facing = (nx * lx + ny * ly) / d;
     const k = facing * Math.max(0, 1 - d / rim.reach);
     if (k < 0.12) continue;
-    v.line(p[0] - nx * 1.8, p[1] - ny * 1.8, q[0] - nx * 1.8, q[1] - ny * 1.8, { stroke: rim.colour, weight: 2.6, blend: "screen", brush: { preset: "chalk", opacity: Math.min(1, k * 1.4) }, gesture: { seed: i, faint: true } });
+    drawn.push(v.line(p[0] - nx * 1.8, p[1] - ny * 1.8, q[0] - nx * 1.8, q[1] - ny * 1.8, { stroke: rim.colour, weight: 2.6, blend: "screen", brush: { preset: "chalk", opacity: Math.min(1, k * 1.4) }, gesture: { seed: i, faint: true } }));
   }
+  return drawn;
 }
 
 /** A line drawn by hand: a cable, a pipe edge, a crack. */
-export function stroke(v: View, pts: readonly Vec2[], a: { seed: number; weight?: number; colour?: string; amp?: number }): void {
+export function stroke(v: View, pts: readonly Vec2[], a: { seed: number; weight?: number; colour?: string; amp?: number }): Drawing {
   const line = a.amp === 0 ? [...pts] : wobble(pts, { seed: a.seed, amp: a.amp ?? 1, closed: false, step: 10 });
-  v.curve(line, false, { ...ink(a.seed, a.weight ?? 2), stroke: a.colour ?? INK });
+  return v.curve(line, false, { ...ink(a.seed, a.weight ?? 2), stroke: a.colour ?? INK });
 }
 
 /** A rivet: a dot with a highlight. */
-export function rivet(v: View, x: number, y: number, r = 1.8): void {
-  v.circle(x, y, r, { fill: "#3a2e26" });
-  v.circle(x - r * 0.35, y - r * 0.35, r * 0.4, { fill: "#c9b79a" });
+export function rivet(v: View, x: number, y: number, r = 1.8): Drawing {
+  return [
+    v.circle(x, y, r, { fill: "#3a2e26" }),
+    v.circle(x - r * 0.35, y - r * 0.35, r * 0.4, { fill: "#c9b79a" }),
+  ];
 }
 
 /** A rounded rectangle's outline as points, for hand-drawn shapes. */

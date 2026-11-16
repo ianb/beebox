@@ -1,6 +1,6 @@
 // Drawing by hand: wobbly outlines, inked edges, washes and hatching, on an
 // isometric floor. Nothing here is a true straight line or a true box.
-import type { BrushPreset, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Drawing, PathCommand, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export function hash(x: number, y: number, salt = 0): number {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483587);
@@ -64,18 +64,20 @@ const HATCH: BrushPreset = { preset: "pencil", opacity: 0.5 };
 
 /** A filled shape: flat colour, then inside it a few washes of lighter and darker
  * paint, hatching on its shaded side, and an inked outline. */
-export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: string | undefined; dark?: string | undefined; seed: number; shadeSide?: "left" | "right" | "bottom"; line?: number; amp?: number }): void {
+export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: string | undefined; dark?: string | undefined; seed: number; shadeSide?: "left" | "right" | "bottom"; line?: number; amp?: number }): Drawing {
+  const out: Drawing[] = [];
   const outline = wobble(pts, { seed: a.seed, amp: a.amp ?? 1.4 });
-  v.curve(outline, true, { fill: a.fill });
+  out.push(v.curve(outline, true, { fill: a.fill }));
   const xs = outline.map((p) => p[0]), ys = outline.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  v.clip(v.curvePath(outline, true), () => {
+  out.push(v.clip(v.curvePath(outline, true), ((): Drawing => {
+    const drawn: Drawing[] = [];
     // Washes: a few broad, uneven strokes of the light and dark tones.
     for (let i = 0; i < 4; i++) {
       const y = y0 + (y1 - y0) * (0.15 + hash(a.seed, i, 1) * 0.7);
       const tone = i % 2 === 0 ? a.light : a.dark;
       if (tone === undefined) continue;
-      v.line(x0 - 4, y + (hash(a.seed, i, 2) - 0.5) * 10, x1 + 4, y + (hash(a.seed, i, 3) - 0.5) * 10, { stroke: tone, weight: Math.max(8, (y1 - y0) * 0.35), brush: WASH, gesture: { seed: a.seed + i, wobble: 3, faint: true } });
+      drawn.push(v.line(x0 - 4, y + (hash(a.seed, i, 2) - 0.5) * 10, x1 + 4, y + (hash(a.seed, i, 3) - 0.5) * 10, { stroke: tone, weight: Math.max(8, (y1 - y0) * 0.35), brush: WASH, gesture: { seed: a.seed + i, wobble: 3, faint: true } }));
     }
     // Hatching on the side away from the light.
     if (a.shadeSide !== undefined && a.dark !== undefined) {
@@ -89,22 +91,26 @@ export function blob(v: View, pts: readonly Vec2[], a: { fill: string; light?: s
         const top = a.shadeSide === "bottom" ? y0 + (y1 - y0) * 0.55 : y0;
         hatch.push(["move", x, y1 + 2], ["line", x + (y1 - top) * 0.55, top]);
       }
-      if (hatch.length > 0) v.path(hatch, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed, faint: true } });
+      if (hatch.length > 0) drawn.push(v.path(hatch, { stroke: a.dark, weight: 1, brush: HATCH, gesture: { seed: a.seed, faint: true } }));
     }
-  });
-  v.curve(outline, true, ink(a.seed, a.line ?? 2.2));
+    return drawn;
+  })()));
+  out.push(v.curve(outline, true, ink(a.seed, a.line ?? 2.2)));
+  return out;
 }
 
 /** A line drawn by hand: a cable, a pipe edge, a crack. */
-export function stroke(v: View, pts: readonly Vec2[], a: { seed: number; weight?: number; colour?: string; amp?: number }): void {
+export function stroke(v: View, pts: readonly Vec2[], a: { seed: number; weight?: number; colour?: string; amp?: number }): Drawing {
   const line = a.amp === 0 ? [...pts] : wobble(pts, { seed: a.seed, amp: a.amp ?? 1, closed: false, step: 10 });
-  v.curve(line, false, { ...ink(a.seed, a.weight ?? 2), stroke: a.colour ?? INK });
+  return v.curve(line, false, { ...ink(a.seed, a.weight ?? 2), stroke: a.colour ?? INK });
 }
 
 /** A rivet: a dot with a highlight. */
-export function rivet(v: View, x: number, y: number, r = 1.8): void {
-  v.circle(x, y, r, { fill: "#3a2e26" });
-  v.circle(x - r * 0.35, y - r * 0.35, r * 0.4, { fill: "#c9b79a" });
+export function rivet(v: View, x: number, y: number, r = 1.8): Drawing {
+  return [
+    v.circle(x, y, r, { fill: "#3a2e26" }),
+    v.circle(x - r * 0.35, y - r * 0.35, r * 0.4, { fill: "#c9b79a" }),
+  ];
 }
 
 /** A rounded rectangle's outline as points, for hand-drawn shapes. */
@@ -159,16 +165,18 @@ export interface IsoBox {
 
 /** A box drawn by hand: its silhouette as one softly rounded lump, the top lighter,
  * the right-hand side (facing +u) darker, and inked. */
-export function isoBox(v: View, b: IsoBox, a: { fill: string; light?: string; dark?: string; seed: number; line?: number }): void {
+export function isoBox(v: View, b: IsoBox, a: { fill: string; light?: string; dark?: string; seed: number; line?: number }): Drawing {
+  const out: Drawing[] = [];
   const [u0, u1] = b.u, [w0, w1] = b.w, [h0, h1] = b.h;
   const corners: Vec2[] = [];
   for (const u of [u0, u1]) for (const w of [w0, w1]) for (const h of [h0, h1]) corners.push(iso(u, w, h));
   const outline = densify(hull(corners));
-  blob(v, outline, { fill: a.fill, light: a.light, dark: a.dark, seed: a.seed, line: a.line ?? 2.2, amp: 1.6 });
+  out.push(blob(v, outline, { fill: a.fill, light: a.light, dark: a.dark, seed: a.seed, line: a.line ?? 2.2, amp: 1.6 }));
   const top = densify([iso(u0, w0, h1), iso(u1, w0, h1), iso(u1, w1, h1), iso(u0, w1, h1)], 14);
-  v.curve(wobble(top, { seed: a.seed + 1, amp: 1 }), true, { fill: "rgba(255,245,225,0.16)" });
+  out.push(v.curve(wobble(top, { seed: a.seed + 1, amp: 1 }), true, { fill: "rgba(255,245,225,0.16)" }));
   const side = densify([iso(u1, w0, h0), iso(u1, w1, h0), iso(u1, w1, h1), iso(u1, w0, h1)], 14);
-  v.curve(wobble(side, { seed: a.seed + 2, amp: 1 }), true, { fill: "rgba(25,15,20,0.3)" });
-  stroke(v, [iso(u1, w1, h0 + 2), iso(u1, w1, h1 - 2)], { seed: a.seed + 3, weight: 1.4 });
-  stroke(v, [iso(u0 + 2, w1, h1), iso(u1 - 2, w1, h1)], { seed: a.seed + 4, weight: 1.4 });
+  out.push(v.curve(wobble(side, { seed: a.seed + 2, amp: 1 }), true, { fill: "rgba(25,15,20,0.3)" }));
+  out.push(stroke(v, [iso(u1, w1, h0 + 2), iso(u1, w1, h1 - 2)], { seed: a.seed + 3, weight: 1.4 }));
+  out.push(stroke(v, [iso(u0 + 2, w1, h1), iso(u1 - 2, w1, h1)], { seed: a.seed + 4, weight: 1.4 }));
+  return out;
 }

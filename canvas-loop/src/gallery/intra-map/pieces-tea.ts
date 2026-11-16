@@ -1,7 +1,7 @@
 // Turns the plan into pieces: each one a layer, a base y for sorting, and a painter.
 // Walls are derived from the rooms (merged where rooms share a wall), doors from the
 // exits, and the walkable floor from both plus the props' footprints.
-import type { View } from "@ianbicking/canvas-loop";
+import type { Drawing, View } from "@ianbicking/canvas-loop";
 import { MAP_H, MAP_W, OFF_PLAN, PROPS, QUARTERS, ROOMS, type Room, type Sky, T } from "./plan-tea.js";
 import { onWall, paintProp } from "./props-tea.js";
 
@@ -12,7 +12,7 @@ export interface Piece {
   /** For standing pieces: where it meets the floor, in map px. Later is nearer. */
   baseY: number;
   room?: string;
-  paint: (v: View, t: number) => void;
+  paint: (v: View, t: number) => Drawing;
 }
 
 /** Wall height in px: how far a wall's top is drawn above its foot. */
@@ -142,6 +142,7 @@ function wallPieces(): Piece[] {
         layer: "standing",
         baseY: y + HALF_THICK,
         paint: (v) => {
+          const drawn: Drawing[] = [];
           // The face is seen from the room to the south, in that room's colour. A wall
           // with no room south of it faces the viewer from outside, so it is cut down
           // low, as cutaway maps do, to keep the room behind it in view.
@@ -149,11 +150,12 @@ function wallPieces(): Piece[] {
             const below = roomAt(Math.min(x + T / 4, x1 - 1), y + 4);
             const h = below ? WALL_H : LOW_WALL;
             const w = Math.min(T / 2, x1 - x);
-            v.rect(x, y + HALF_THICK - h, w, h, { fill: below ? shade(below.color, 0.72) : "#3a3f4b" });
-            v.rect(x, y + HALF_THICK - 4, w, 4, { fill: below ? shade(below.color, 0.5) : "#2f333d" });
-            v.rect(x, y - HALF_THICK - h, w, HALF_THICK * 2, { fill: CAP });
+            drawn.push(v.rect(x, y + HALF_THICK - h, w, h, { fill: below ? shade(below.color, 0.72) : "#3a3f4b" }));
+            drawn.push(v.rect(x, y + HALF_THICK - 4, w, 4, { fill: below ? shade(below.color, 0.5) : "#2f333d" }));
+            drawn.push(v.rect(x, y - HALF_THICK - h, w, HALF_THICK * 2, { fill: CAP }));
           }
-          v.rect(x0, y + HALF_THICK, x1 - x0, 5, { fill: v.linearGradient(0, y + HALF_THICK, 0, y + HALF_THICK + 5, [[0, "rgba(0,0,0,0.3)"], [1, "rgba(0,0,0,0)"]]) });
+          drawn.push(v.rect(x0, y + HALF_THICK, x1 - x0, 5, { fill: v.linearGradient(0, y + HALF_THICK, 0, y + HALF_THICK + 5, [[0, "rgba(0,0,0,0.3)"], [1, "rgba(0,0,0,0)"]]) }));
+          return drawn;
         },
       });
     }
@@ -170,8 +172,10 @@ function wallPieces(): Piece[] {
           layer: "standing",
           baseY: b,
           paint: (v) => {
-            v.rect(x - HALF_THICK, a - WALL_H, HALF_THICK * 2, b - a + (end ? 0 : 0.5), { fill: CAP });
-            if (end) v.rect(x - HALF_THICK, b - WALL_H, HALF_THICK * 2, WALL_H, { fill: "#4a4f5c" });
+            const drawn: Drawing[] = [];
+            drawn.push(v.rect(x - HALF_THICK, a - WALL_H, HALF_THICK * 2, b - a + (end ? 0 : 0.5), { fill: CAP }));
+            if (end) drawn.push(v.rect(x - HALF_THICK, b - WALL_H, HALF_THICK * 2, WALL_H, { fill: "#4a4f5c" }));
+            return drawn;
           },
         });
       }
@@ -194,8 +198,10 @@ function doorPieces(): Piece[] {
           layer: "over",
           baseY: d.at,
           paint: (v) => {
-            v.rect(d.from, d.at - HALF_THICK - WALL_H, d.to - d.from, HALF_THICK * 2, { fill: CAP });
-            v.rect(d.from, d.at + HALF_THICK - WALL_H, d.to - d.from, 4, { fill: "#4a4f5c" });
+            return [
+              v.rect(d.from, d.at - HALF_THICK - WALL_H, d.to - d.from, HALF_THICK * 2, { fill: CAP }),
+              v.rect(d.from, d.at + HALF_THICK - WALL_H, d.to - d.from, 4, { fill: "#4a4f5c" }),
+            ];
           },
         },
       ];
@@ -208,7 +214,7 @@ function doorPieces(): Piece[] {
           paint: (v) => {
             const cx = (d.from + d.to) / 2;
             const ty = north ? d.at - WALL_H - 12 : d.at + 12;
-            v.text(label, { x: cx, y: ty }, { size: 6, fill: "#e5e7eb", align: "center", valign: "middle", halo: "#15171c" });
+            return v.text(label, { x: cx, y: ty }, { size: 6, fill: "#e5e7eb", align: "center", valign: "middle", halo: "#15171c" });
           },
         });
       }
@@ -242,108 +248,120 @@ function floorPiece(r: Room): Piece {
     baseY: p.y0,
     room: r.id,
     paint: (v) => {
-      const tiles = (a: string, b: string, size: number): void => {
-        v.rect(p.x0, p.y0, w, h, { fill: a });
-        for (let y = p.y0; y < p.y1; y += size) for (let x = p.x0 + (((y - p.y0) / size) % 2) * size; x < p.x1; x += size * 2) v.rect(x, y, Math.min(size, p.x1 - x), Math.min(size, p.y1 - y), { fill: b });
+      const out: Drawing[] = [];
+      const tiles = (a: string, b: string, size: number): Drawing => {
+        const drawn: Drawing[] = [];
+        drawn.push(v.rect(p.x0, p.y0, w, h, { fill: a }));
+        for (let y = p.y0; y < p.y1; y += size) for (let x = p.x0 + (((y - p.y0) / size) % 2) * size; x < p.x1; x += size * 2) drawn.push(v.rect(x, y, Math.min(size, p.x1 - x), Math.min(size, p.y1 - y), { fill: b }));
+        return drawn;
       };
-      const grout = (color: string, size: number): void => {
-        for (let x = p.x0; x <= p.x1; x += size) v.line(x, p.y0, x, p.y1, { stroke: color, weight: 0.6 });
-        for (let y = p.y0; y <= p.y1; y += size) v.line(p.x0, y, p.x1, y, { stroke: color, weight: 0.6 });
+      const grout = (color: string, size: number): Drawing => {
+        const drawn: Drawing[] = [];
+        for (let x = p.x0; x <= p.x1; x += size) drawn.push(v.line(x, p.y0, x, p.y1, { stroke: color, weight: 0.6 }));
+        for (let y = p.y0; y <= p.y1; y += size) drawn.push(v.line(p.x0, y, p.x1, y, { stroke: color, weight: 0.6 }));
+        return drawn;
       };
       switch (r.floor) {
-        case "terracotta": tiles("#b8642f", "#c4703a", T); grout("rgba(60,25,10,0.35)", T); break;
-        case "green-tile": tiles("#8fd3b0", "#a3dcbe", T / 2); grout("rgba(20,80,60,0.25)", T / 2); break;
-        case "linoleum": v.rect(p.x0, p.y0, w, h, { fill: "#cfdcd4" }); for (let x = p.x0; x < p.x1; x += 24) v.line(x, p.y0, x, p.y1, { stroke: "rgba(80,110,95,0.25)", weight: 0.6 }); break;
-        case "carpet-blue": v.rect(p.x0, p.y0, w, h, { fill: "#2c4572" }); for (let y = p.y0 + 4; y < p.y1; y += 8) for (let x = p.x0 + 4 + ((y / 8) % 2) * 4; x < p.x1; x += 8) v.circle(x, y, 0.8, { fill: "#3a5890" }); break;
+        case "terracotta": out.push(tiles("#b8642f", "#c4703a", T)); out.push(grout("rgba(60,25,10,0.35)", T)); break;
+        case "green-tile": out.push(tiles("#8fd3b0", "#a3dcbe", T / 2)); out.push(grout("rgba(20,80,60,0.25)", T / 2)); break;
+        case "linoleum": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#cfdcd4" })); for (let x = p.x0; x < p.x1; x += 24) out.push(v.line(x, p.y0, x, p.y1, { stroke: "rgba(80,110,95,0.25)", weight: 0.6 })); break;
+        case "carpet-blue": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#2c4572" })); for (let y = p.y0 + 4; y < p.y1; y += 8) for (let x = p.x0 + 4 + ((y / 8) % 2) * 4; x < p.x1; x += 8) out.push(v.circle(x, y, 0.8, { fill: "#3a5890" })); break;
         case "pool-deck": {
-          tiles("#eadcd2", "#e2d2c6", T / 2);
+          out.push(tiles("#eadcd2", "#e2d2c6", T / 2));
           const pool = { x: p.x0 + 3 * T, y: p.y0 + 3.6 * T, w: 6 * T, h: 2.6 * T };
-          v.roundRect(pool.x - 3, pool.y - 3, pool.w + 6, pool.h + 6, 4, { fill: "#f8f1ea" });
-          v.rect(pool.x, pool.y, pool.w, pool.h, { fill: v.linearGradient(0, pool.y, 0, pool.y + pool.h, [[0, "#ff8fc0"], [0.35, "#5fb6d6"], [1, "#2a7fa6"]]) });
-          v.rect(pool.x, pool.y, pool.w, 4, { fill: "rgba(0,0,0,0.18)" });
+          out.push(v.roundRect(pool.x - 3, pool.y - 3, pool.w + 6, pool.h + 6, 4, { fill: "#f8f1ea" }));
+          out.push(v.rect(pool.x, pool.y, pool.w, pool.h, { fill: v.linearGradient(0, pool.y, 0, pool.y + pool.h, [[0, "#ff8fc0"], [0.35, "#5fb6d6"], [1, "#2a7fa6"]]) }));
+          out.push(v.rect(pool.x, pool.y, pool.w, 4, { fill: "rgba(0,0,0,0.18)" }));
           break;
         }
-        case "rubber": v.rect(p.x0, p.y0, w, h, { fill: "#43525c" }); grout("rgba(0,0,0,0.25)", T * 2); break;
-        case "cafe": v.rect(p.x0, p.y0, w, h, { fill: "#b9874f" }); for (let y = p.y0; y < p.y1; y += 6) v.line(p.x0, y, p.x1, y, { stroke: "rgba(90,50,20,0.35)", weight: 0.6 }); break;
-        case "yellow": v.rect(p.x0, p.y0, w, h, { fill: "#facc15" }); break;
-        case "grey-carpet": v.rect(p.x0, p.y0, w, h, { fill: "#5b6070" }); break;
-        case "stone": tiles("#a8a29e", "#9c9590", T); grout("rgba(40,35,30,0.3)", T); break;
+        case "rubber": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#43525c" })); out.push(grout("rgba(0,0,0,0.25)", T * 2)); break;
+        case "cafe": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#b9874f" })); for (let y = p.y0; y < p.y1; y += 6) out.push(v.line(p.x0, y, p.x1, y, { stroke: "rgba(90,50,20,0.35)", weight: 0.6 })); break;
+        case "yellow": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#facc15" })); break;
+        case "grey-carpet": out.push(v.rect(p.x0, p.y0, w, h, { fill: "#5b6070" })); break;
+        case "stone": out.push(tiles("#a8a29e", "#9c9590", T)); out.push(grout("rgba(40,35,30,0.3)", T)); break;
       }
       // The sky screen's light on the floor, brightest under its middle.
       const cx = p.x0 + w / 2, cy = p.y0 + h / 2, rad = Math.max(w, h) * 0.7;
-      v.rect(p.x0, p.y0, w, h, { fill: v.radialGradient(cx, cy, rad, [[0, SKY_LIGHT[r.sky]], [1, "rgba(0,0,0,0.12)"]]) });
+      out.push(v.rect(p.x0, p.y0, w, h, { fill: v.radialGradient(cx, cy, rad, [[0, SKY_LIGHT[r.sky]], [1, "rgba(0,0,0,0.12)"]]) }));
+      return out;
     },
   };
 }
 
 // --- Sky screens (ceilings) -------------------------------------------------------------
 
-function paintSky(v: View, r: Room, t: number): void {
+function paintSky(v: View, r: Room, t: number): Drawing {
   const p = px(r);
   // The ceiling sits on top of the walls, so it is drawn raised by the wall height.
   const x = p.x0 - HALF_THICK, y = p.y0 - WALL_H - HALF_THICK, w = p.x1 - p.x0 + HALF_THICK * 2, h = p.y1 - p.y0 + HALF_THICK * 2;
-  const grad = (stops: [number, string][]): void => v.rect(x, y, w, h, { fill: v.linearGradient(0, y, 0, y + h, stops) });
+  const grad = (stops: [number, string][]): Drawing => v.rect(x, y, w, h, { fill: v.linearGradient(0, y, 0, y + h, stops) });
   const hash = (i: number): number => {
     const s = Math.sin(i * 127.1 + r.rect[0] * 311.7 + r.rect[1] * 74.7) * 43758.5453;
     return s - Math.floor(s);
   };
-  const clouds = (n: number, color: string, drift: number): void => {
+  const clouds = (n: number, color: string, drift: number): Drawing => {
+    const parts: Drawing[] = [];
     for (let i = 0; i < n; i++) {
       const cx = x + ((hash(i) * w + drift) % w), cy = y + 8 + hash(i + 50) * (h - 16);
-      for (const [dx, dy, rr] of [[0, 0, 7], [7, 2, 5], [-7, 2, 5], [3, -4, 5]] as const) v.circle(cx + dx, cy + dy, rr, { fill: color });
+      for (const [dx, dy, rr] of [[0, 0, 7], [7, 2, 5], [-7, 2, 5], [3, -4, 5]] as const) parts.push(v.circle(cx + dx, cy + dy, rr, { fill: color }));
     }
+    return parts;
   };
-  v.clip([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], () => {
-    switch (r.sky) {
-      case "sunset": {
-        grad([[0, "#3b1d5a"], [0.45, "#d9480f"], [0.7, "#ff9b3d"], [1, "#ffd27a"]]);
-        v.circle(x + w / 2, y + h * 0.78, 22, { fill: "#fff1b8" });
-        break;
-      }
-      case "static-blue": {
-        grad([[0, "#1e3a8a"], [1, "#3b82f6"]]);
-        for (let i = 0; i < 40; i++) {
-          const on = (Math.floor(t / 4) + i * 7) % 13 < 3;
-          if (on) v.rect(x + Math.floor(hash(i) * (w / 8)) * 8, y + Math.floor(hash(i + 9) * (h / 8)) * 8, 8, 8, { fill: hash(i + 3) < 0.5 ? "#e5e7eb" : "#111827" });
+  return [
+    v.clip([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], ((): Drawing => {
+      const parts: Drawing[] = [];
+      switch (r.sky) {
+        case "sunset": {
+          parts.push(grad([[0, "#3b1d5a"], [0.45, "#d9480f"], [0.7, "#ff9b3d"], [1, "#ffd27a"]]));
+          parts.push(v.circle(x + w / 2, y + h * 0.78, 22, { fill: "#fff1b8" }));
+          break;
         }
-        if (Math.floor(t / 30) % 3 === 0) v.text("ERR 0x0F", { x: x + w / 2, y: y + h / 2 }, { size: 10, fill: "#fca5a5", align: "center", valign: "middle", style: "bold" });
-        break;
-      }
-      case "pink-sunset": {
-        grad([[0, "#831843"], [0.5, "#ec4899"], [0.62, "#fb923c"], [1, "#fde68a"]]);
-        const flicker = Math.sin(t * 0.7) > 0.6 ? 2 : 0;
-        v.rect(x, y + h * 0.62 + flicker, w, 1.5, { fill: "#fff7ed" });
-        break;
-      }
-      case "clouds": grad([[0, "#60a5fa"], [1, "#bfdbfe"]]); clouds(5, "#ffffff", Math.floor(t / 20) % 3 === 0 ? 0 : t * 0.3); break;
-      case "clear-birds": {
-        grad([[0, "#38bdf8"], [1, "#e0f2fe"]]);
-        for (let i = 0; i < 5; i++) {
-          const back = i % 2 === 1;
-          const bx = x + (((hash(i) * w) + (back ? -t : t) * 0.8) % w + w) % w, by = y + 10 + hash(i + 20) * (h - 20);
-          v.path([["move", bx - 4, by - 2], ["line", bx, by], ["line", bx + 4, by - 2]], { stroke: "#1e293b", weight: 1 });
+        case "static-blue": {
+          parts.push(grad([[0, "#1e3a8a"], [1, "#3b82f6"]]));
+          for (let i = 0; i < 40; i++) {
+            const on = (Math.floor(t / 4) + i * 7) % 13 < 3;
+            if (on) parts.push(v.rect(x + Math.floor(hash(i) * (w / 8)) * 8, y + Math.floor(hash(i + 9) * (h / 8)) * 8, 8, 8, { fill: hash(i + 3) < 0.5 ? "#e5e7eb" : "#111827" }));
+          }
+          if (Math.floor(t / 30) % 3 === 0) parts.push(v.text("ERR 0x0F", { x: x + w / 2, y: y + h / 2 }, { size: 10, fill: "#fca5a5", align: "center", valign: "middle", style: "bold" }));
+          break;
         }
-        break;
+        case "pink-sunset": {
+          parts.push(grad([[0, "#831843"], [0.5, "#ec4899"], [0.62, "#fb923c"], [1, "#fde68a"]]));
+          const flicker = Math.sin(t * 0.7) > 0.6 ? 2 : 0;
+          parts.push(v.rect(x, y + h * 0.62 + flicker, w, 1.5, { fill: "#fff7ed" }));
+          break;
+        }
+        case "clouds": parts.push(grad([[0, "#60a5fa"], [1, "#bfdbfe"]])); parts.push(clouds(5, "#ffffff", Math.floor(t / 20) % 3 === 0 ? 0 : t * 0.3)); break;
+        case "clear-birds": {
+          parts.push(grad([[0, "#38bdf8"], [1, "#e0f2fe"]]));
+          for (let i = 0; i < 5; i++) {
+            const back = i % 2 === 1;
+            const bx = x + (((hash(i) * w) + (back ? -t : t) * 0.8) % w + w) % w, by = y + 10 + hash(i + 20) * (h - 20);
+            parts.push(v.path([["move", bx - 4, by - 2], ["line", bx, by], ["line", bx + 4, by - 2]], { stroke: "#1e293b", weight: 1 }));
+          }
+          break;
+        }
+        case "still-clouds": parts.push(grad([[0, "#3b82f6"], [1, "#93c5fd"]])); parts.push(clouds(3, "#ffffff", 0)); break;
+        case "night": {
+          parts.push(grad([[0, "#020617"], [1, "#1e1b4b"]]));
+          for (let i = 0; i < 40; i++) parts.push(v.circle(x + hash(i) * w, y + hash(i + 70) * h, 0.6 + 0.6 * Math.abs(Math.sin(t * 0.05 + i)), { fill: "#f8fafc" }));
+          const s = (t % 120) / 120;
+          if (s < 0.3) parts.push(v.line(x + w * (0.2 + s), y + h * (0.2 + s * 0.5), x + w * (0.2 + s) - 10, y + h * (0.2 + s * 0.5) - 4, { stroke: "#fef9c3", weight: 1.2 }));
+          break;
+        }
+        case "overcast": parts.push(grad([[0, "#374151"], [1, "#6b7280"]])); parts.push(clouds(6, "#4b5563", t * 0.1)); break;
+        case "calm-static": {
+          parts.push(grad([[0, "#7dd3fc"], [1, "#e0f2fe"]]));
+          const band = (t * 1.5) % (h + 20) - 10;
+          parts.push(v.rect(x, y + band, w, 3, { fill: "rgba(255,255,255,0.6)" }));
+          break;
+        }
+        case "teal": parts.push(grad([[0, "#0f766e"], [1, "#5eead4"]])); break;
       }
-      case "still-clouds": grad([[0, "#3b82f6"], [1, "#93c5fd"]]); clouds(3, "#ffffff", 0); break;
-      case "night": {
-        grad([[0, "#020617"], [1, "#1e1b4b"]]);
-        for (let i = 0; i < 40; i++) v.circle(x + hash(i) * w, y + hash(i + 70) * h, 0.6 + 0.6 * Math.abs(Math.sin(t * 0.05 + i)), { fill: "#f8fafc" });
-        const s = (t % 120) / 120;
-        if (s < 0.3) v.line(x + w * (0.2 + s), y + h * (0.2 + s * 0.5), x + w * (0.2 + s) - 10, y + h * (0.2 + s * 0.5) - 4, { stroke: "#fef9c3", weight: 1.2 });
-        break;
-      }
-      case "overcast": grad([[0, "#374151"], [1, "#6b7280"]]); clouds(6, "#4b5563", t * 0.1); break;
-      case "calm-static": {
-        grad([[0, "#7dd3fc"], [1, "#e0f2fe"]]);
-        const band = (t * 1.5) % (h + 20) - 10;
-        v.rect(x, y + band, w, 3, { fill: "rgba(255,255,255,0.6)" });
-        break;
-      }
-      case "teal": grad([[0, "#0f766e"], [1, "#5eead4"]]); break;
-    }
-  });
-  v.rect(x, y, w, h, { stroke: "#15171c", weight: 2 });
+      return parts;
+    })()),
+    v.rect(x, y, w, h, { stroke: "#15171c", weight: 2 }),
+  ];
 }
 
 // --- Assembly -----------------------------------------------------------------------
@@ -376,10 +394,12 @@ function quartersPieces(): Piece[] {
     room: hall.id,
     paint: (v) => {
       const dx = p.x0 + 14 + i * 26;
-      v.rect(dx, wallY - 18, 14, 18, { fill: name === "Yours" ? "#fef3c7" : "#d1fae5" });
-      v.rect(dx, wallY - 18, 14, 18, { stroke: "#065f46", weight: 1 });
-      v.circle(dx + 11, wallY - 9, 1, { fill: "#065f46" });
-      v.text(name, { x: dx + 7, y: wallY - 24 }, { size: 4.2, fill: "#ecfdf5", align: "center", valign: "middle" });
+      return [
+        v.rect(dx, wallY - 18, 14, 18, { fill: name === "Yours" ? "#fef3c7" : "#d1fae5" }),
+        v.rect(dx, wallY - 18, 14, 18, { stroke: "#065f46", weight: 1 }),
+        v.circle(dx + 11, wallY - 9, 1, { fill: "#065f46" }),
+        v.text(name, { x: dx + 7, y: wallY - 24 }, { size: 4.2, fill: "#ecfdf5", align: "center", valign: "middle" }),
+      ];
     },
   }));
 }
@@ -396,11 +416,13 @@ export function ceilingPieces(show: (room: Room) => boolean): Piece[] {
   return ROOMS.filter(show).map((r): Piece => ({ layer: "ceiling", baseY: 0, room: r.id, paint: (v, t) => paintSky(v, r, t) }));
 }
 
-export function roomLabels(v: View): void {
+export function roomLabels(v: View): Drawing {
+  const out: Drawing[] = [];
   for (const r of ROOMS) {
     const p = px(r);
-    v.text(r.name, { x: (p.x0 + p.x1) / 2, y: p.y0 + HALF_THICK + 9 }, { size: 7, fill: "#f8fafc", align: "center", valign: "middle", halo: "#15171c", style: "bold" });
+    out.push(v.text(r.name, { x: (p.x0 + p.x1) / 2, y: p.y0 + HALF_THICK + 9 }, { size: 7, fill: "#f8fafc", align: "center", valign: "middle", halo: "#15171c", style: "bold" }));
   }
+  return out;
 }
 
 // --- The walk map --------------------------------------------------------------------

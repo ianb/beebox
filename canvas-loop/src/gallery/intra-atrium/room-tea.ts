@@ -7,7 +7,7 @@
 // the east wall glows, the west wall throws a band of shadow on the floor, and every
 // statue throws a long shadow east. Everything else is lit by the purple of the
 // upper sky.
-import type { View } from "@ianbicking/canvas-loop";
+import type { Drawing, View } from "@ianbicking/canvas-loop";
 
 export const W = 1200;
 export const H = 860;
@@ -352,7 +352,7 @@ function pixel(x: number, y: number, figures: readonly Figure[]): RGB {
 /** Paints the room as a fixed-resolution image of computed pixels. Port (scene
  * core chunk 5): `putImageData` at device resolution became `v.pixels`, W × H
  * pixels placed at the origin (draft decision 12). */
-export function paintRoom(v: View, figures: readonly Figure[]): void {
+export function paintRoom(v: View, figures: readonly Figure[]): Drawing {
   // Only figures standing in the sun cast a shadow: one inside the west wall's
   // shadow is lit by nothing the wall has not already blocked.
   const casters = figures.filter((f) => wallShadow(f.x - CX, (f.y - CY) * SQ) < 0.5);
@@ -370,5 +370,5 @@ export function paintRoom(v: View, figures: readonly Figure[]): void {
       }
     }
   });
-  v.place(room, 0, 0);
+  return v.place(room, 0, 0);
 }

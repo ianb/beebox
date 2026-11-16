@@ -6,7 +6,7 @@
 // The room is rendered per pixel with its lighting baked per light (scene-tea.ts);
 // each frame the screens decide what they show and what light they throw
 // (screens-tea.ts), and the room is relit from that.
-import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, RootDrawing, View } from "@ianbicking/canvas-loop";
 import type { ParamsDecl, ParamValues } from "@ianbicking/canvas-loop";
 import { paintDabs } from "./dabs-tea.js";
 import { H, W, paintRoom } from "./scene-tea.js";
@@ -40,19 +40,21 @@ export function update(model: DeepReadonly<Model>, msg: Msg): Model {
   }
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
+  const out: Drawing[] = [];
   const t = model.frame;
   const lights = lightColours(t), sky = skyColour(t);
-  if (p.style === "painted") paintDabs(v, { lights, sky });
-  else paintRoom(v, { lights, sky });
-  paintLeds(v, t);
-  paintVending(v, t);
-  paintScreens(v, t);
-  paintWalker(v, { t, lights, sky });
-  paintMotes(v, t);
+  if (p.style === "painted") out.push(paintDabs(v, { lights, sky }));
+  else out.push(paintRoom(v, { lights, sky }));
+  out.push(paintLeds(v, t));
+  out.push(paintVending(v, t));
+  out.push(paintScreens(v, t));
+  out.push(paintWalker(v, { t, lights, sky }));
+  out.push(paintMotes(v, t));
   // When the sky screen bursts into static, a faint flicker of it falls over everything.
   if (skyBurst(t) > 0) {
-    for (let y = 0; y < H; y += 3) v.rect(0, y, W, 1, { fill: `rgba(170,190,255,${(0.05 * skyBurst(t)).toFixed(3)})` });
+    for (let y = 0; y < H; y += 3) out.push(v.rect(0, y, W, 1, { fill: `rgba(170,190,255,${(0.05 * skyBurst(t)).toFixed(3)})` }));
   }
-  v.rect(0, 0, W, H, { fill: v.ellipseGradient(W / 2, H * 0.5, W * 0.7, H * 0.7, [[0.55, "rgba(5,5,10,0)"], [1, "rgba(5,5,10,0.6)"]]) });
+  out.push(v.rect(0, 0, W, H, { fill: v.ellipseGradient(W / 2, H * 0.5, W * 0.7, H * 0.7, [[0.55, "rgba(5,5,10,0)"], [1, "rgba(5,5,10,0.6)"]]) }));
+  return out;
 }

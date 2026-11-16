@@ -8,7 +8,7 @@
 // streaks. That map is worked out once. Each frame, every dab takes the colour the
 // render gives at its centre for that frame's light, so the flicker survives while
 // every edge in the room becomes ragged paint.
-import type { View } from "@ianbicking/canvas-loop";
+import type { Drawing, View } from "@ianbicking/canvas-loop";
 import { BAKED, H, W, hash, litAt, project, toneMap } from "./scene-tea.js";
 
 type RGB = [number, number, number];
@@ -95,7 +95,7 @@ function owners(): Owner {
 const OWNERS: Owner = owners();
 
 /** Paints the room for one frame in dabs. */
-export function paintDabs(v: View, a: { lights: readonly RGB[]; sky: RGB }): void {
+export function paintDabs(v: View, a: { lights: readonly RGB[]; sky: RGB }): Drawing {
   const colours = new Float32Array(DABS.length * 3);
   for (const [n, d] of DABS.entries()) {
     const [r, g, b] = litAt(d.k, a);
@@ -120,5 +120,5 @@ export function paintDabs(v: View, a: { lights: readonly RGB[]; sky: RGB }): voi
       px[q + 3] = 255;
     }
   });
-  v.place(room, 0, 0);
+  return v.place(room, 0, 0);
 }

@@ -2,7 +2,7 @@
 // (plan-tea.ts). Every piece belongs to a depth layer, and standing pieces sort by
 // where they meet the floor, so people pass behind statues and under door lintels.
 // The same pieces also draw the depth map an engine would use, and the walk map.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 import { MAP_H, MAP_W, type Room, T, VISITED, WALKERS, type Walker } from "./plan-tea.js";
 import { STATIC_PIECES, WALK, WALK_GRID, WALK_W, type Piece, ceilingPieces, roomLabels } from "./pieces-tea.js";
 import { paintPerson } from "./props-tea.js";
@@ -96,33 +96,39 @@ function depthColour(p: Piece): string {
 
 const WALK_COLOUR: Record<string, string> = { floor: "rgba(74,222,128,0.55)", door: "rgba(96,165,250,0.85)", blocked: "rgba(248,113,113,0.6)" };
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
   const t = model.frame;
-  v.background("#17191f");
-  v.at({ scale: ZOOM }, () => v.at({ translate: [MARGIN, MARGIN] }, () => {
-    // Bedrock around the rooms.
-    v.place(v.picture({ key: "rock", width: v.width, height: v.height }, () => {
-      for (let i = 0; i < 260; i++) {
-        const s = Math.sin(i * 91.7) * 43758.5;
-        const r = Math.sin(i * 12.3) * 9631.1;
-        v.circle((s - Math.floor(s)) * MAP_W * T, (r - Math.floor(r)) * MAP_H * T, 3 + ((i * 7) % 9), { fill: i % 2 === 0 ? "#1d2027" : "#14161b" });
+  return [
+    v.background("#17191f"),
+    v.at({ scale: ZOOM }, v.at({ translate: [MARGIN, MARGIN] }, ((): Drawing => {
+      const drawn: Drawing[] = [];
+      // Bedrock around the rooms.
+      drawn.push(v.place(v.picture({ key: "rock", width: v.width, height: v.height }, () => {
+        const rock: Drawing[] = [];
+        for (let i = 0; i < 260; i++) {
+          const s = Math.sin(i * 91.7) * 43758.5;
+          const r = Math.sin(i * 12.3) * 9631.1;
+          rock.push(v.circle((s - Math.floor(s)) * MAP_W * T, (r - Math.floor(r)) * MAP_H * T, 3 + ((i * 7) % 9), { fill: i % 2 === 0 ? "#1d2027" : "#14161b" }));
+        }
+        return rock;
+      }), 0, 0));
+      const ceilingShown = (room: Room): boolean => (p.ceilings === "all on" ? true : p.ceilings === "fog of war" ? !VISITED.includes(room.id) : false);
+      const people = p.people ? peoplePieces(t) : [];
+      const all = sorted([...STATIC_PIECES, ...people, ...(p.view === "picture" ? ceilingPieces(ceilingShown) : [])]);
+      if (p.view === "depth map") {
+        for (const piece of all) drawn.push(v.mask(piece.paint(v, t), v.rect(-MARGIN, -MARGIN, MAP_W * T + MARGIN * 2, MAP_H * T + MARGIN * 2, { fill: depthColour(piece) })));
+        return drawn;
       }
-    }), 0, 0);
-    const ceilingShown = (room: Room): boolean => (p.ceilings === "all on" ? true : p.ceilings === "fog of war" ? !VISITED.includes(room.id) : false);
-    const people = p.people ? peoplePieces(t) : [];
-    const all = sorted([...STATIC_PIECES, ...people, ...(p.view === "picture" ? ceilingPieces(ceilingShown) : [])]);
-    if (p.view === "depth map") {
-      for (const piece of all) v.mask(() => piece.paint(v, t), () => v.rect(-MARGIN, -MARGIN, MAP_W * T + MARGIN * 2, MAP_H * T + MARGIN * 2, { fill: depthColour(piece) }));
-      return;
-    }
-    for (const piece of all) piece.paint(v, t);
-    if (p.view === "walk map") {
-      v.rect(-MARGIN, -MARGIN, MAP_W * T + MARGIN * 2, MAP_H * T + MARGIN * 2, { fill: "rgba(10,12,16,0.55)" });
-      for (const [k, cell] of WALK_GRID.entries()) {
-        const fill = WALK_COLOUR[cell];
-        if (fill !== undefined) v.rect((k % WALK_W) * WALK, Math.floor(k / WALK_W) * WALK, WALK, WALK, { fill });
+      for (const piece of all) drawn.push(piece.paint(v, t));
+      if (p.view === "walk map") {
+        drawn.push(v.rect(-MARGIN, -MARGIN, MAP_W * T + MARGIN * 2, MAP_H * T + MARGIN * 2, { fill: "rgba(10,12,16,0.55)" }));
+        for (const [k, cell] of WALK_GRID.entries()) {
+          const fill = WALK_COLOUR[cell];
+          if (fill !== undefined) drawn.push(v.rect((k % WALK_W) * WALK, Math.floor(k / WALK_W) * WALK, WALK, WALK, { fill }));
+        }
       }
-    }
-    if (p.labels && p.view !== "walk map") roomLabels(v);
-  }));
+      if (p.labels && p.view !== "walk map") drawn.push(roomLabels(v));
+      return drawn;
+    })())),
+  ];
 }

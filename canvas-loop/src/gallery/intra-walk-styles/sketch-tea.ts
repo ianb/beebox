@@ -3,7 +3,7 @@
 // their own speed), twelve acted walks, a jog, a run and two blends.
 // sheet=clothes: a skirt, a long coat walking and running, a person drawn without
 // limbs, crossing a room at the rooms' scale; below, the garments' skeletons.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, View } from "@ianbicking/canvas-loop";
 import { CLIPS } from "./clips-tea.js";
 import type { ClipName } from "./clips-tea.js";
 import { cadence, progress, stepBody, strideLength } from "./gait-tea.js";
@@ -160,30 +160,36 @@ const CELLS: Cell[] = [
   { label: "run", gait: one("run"), body: { kind: "man", weight: -0.5 }, outfit: { top: "#e8b83a", legs: "#2a2a40" } },
 ];
 
-function cell(v: View, c: Cell, i: number, sec: number, fast: boolean): void {
+function cell(v: View, c: Cell, i: number, sec: number, fast: boolean): Drawing {
+  const out: Drawing[] = [];
   const w = 320, h = 250, x0 = (i % 4) * w, y0 = Math.floor(i / 4) * h;
   const g = c.gait(sec);
   const b = buildOf(c.body ?? { kind: "woman" });
   const pr = progress(g, sec, b);
   const s = 88, ground = y0 + h - 34, cx = x0 + w / 2 - 10;
-  v.clip(rectPath(v, x0, y0, w, h), () => {
-    v.rect(x0, y0, w, h, { fill: i % 2 === Math.floor(i / 4) % 2 ? "#ddd2b8" : "#d4c8ac" });
-    v.rect(x0, ground, w, h - (ground - y0), { fill: "#b9ab8e" });
+  out.push(v.clip(rectPath(v, x0, y0, w, h), ((): Drawing => {
+    const drawn: Drawing[] = [];
+    drawn.push(v.rect(x0, y0, w, h, { fill: i % 2 === Math.floor(i / 4) % 2 ? "#ddd2b8" : "#d4c8ac" }));
+    drawn.push(v.rect(x0, ground, w, h - (ground - y0), { fill: "#b9ab8e" }));
     // The floor slides back under them at exactly the speed their feet push it.
     const off = (pr.x * s) % (0.5 * s);
-    for (let gx = -off; gx < w; gx += 0.5 * s) v.line(x0 + gx, ground, x0 + gx - 14, ground + 22, { stroke: "rgba(60,40,20,0.35)", weight: 1.5 });
-    person(v, g, pr.phase, speedOf(g, b), { x: cx, y: ground, s, facing: 1 }, { ...JUMPSUIT, ...c.outfit, seed: 900 + i * 40, fast }, b);
-  });
-  v.line(x0, y0, x0, y0 + h, { stroke: "rgba(0,0,0,0.25)", weight: 1 });
-  v.line(x0, y0, x0 + w, y0, { stroke: "rgba(0,0,0,0.25)", weight: 1 });
-  v.text(c.label, { x: x0 + 10, y: y0 + 8 }, { size: 13, fill: "#2a2420", align: "left", valign: "top", style: "bold" });
-  v.text(`${speedOf(g, b).toFixed(1)} m/s · ${cadence(g, b).toFixed(2)} strides/s`, { x: x0 + 10, y: y0 + 26 }, { size: 11, fill: "#5a4e44", align: "left", valign: "top" });
+    for (let gx = -off; gx < w; gx += 0.5 * s) drawn.push(v.line(x0 + gx, ground, x0 + gx - 14, ground + 22, { stroke: "rgba(60,40,20,0.35)", weight: 1.5 }));
+    drawn.push(person(v, g, pr.phase, speedOf(g, b), { x: cx, y: ground, s, facing: 1 }, { ...JUMPSUIT, ...c.outfit, seed: 900 + i * 40, fast }, b));
+    return drawn;
+  })()));
+  out.push(v.line(x0, y0, x0, y0 + h, { stroke: "rgba(0,0,0,0.25)", weight: 1 }));
+  out.push(v.line(x0, y0, x0 + w, y0, { stroke: "rgba(0,0,0,0.25)", weight: 1 }));
+  out.push(v.text(c.label, { x: x0 + 10, y: y0 + 8 }, { size: 13, fill: "#2a2420", align: "left", valign: "top", style: "bold" }));
+  out.push(v.text(`${speedOf(g, b).toFixed(1)} m/s · ${cadence(g, b).toFixed(2)} strides/s`, { x: x0 + 10, y: y0 + 26 }, { size: 11, fill: "#5a4e44", align: "left", valign: "top" }));
   const take = g.length === 1 && g[0] ? CLIPS[g[0][0]].take : "";
-  if (take) v.text(`CMU ${take}`, { x: x0 + w - 8, y: y0 + h - 8 }, { size: 9, fill: "#5a4e44", align: "right", valign: "bottom" });
+  if (take) out.push(v.text(`CMU ${take}`, { x: x0 + w - 8, y: y0 + h - 8 }, { size: 9, fill: "#5a4e44", align: "right", valign: "bottom" }));
+  return out;
 }
 
-function styles(v: View, sec: number, fast: boolean): void {
-  for (const [i, c] of CELLS.entries()) cell(v, c, i, sec, fast);
+function styles(v: View, sec: number, fast: boolean): Drawing {
+  const out: Drawing[] = [];
+  for (const [i, c] of CELLS.entries()) out.push(cell(v, c, i, sec, fast));
+  return out;
 }
 
 // --- Clothes -----------------------------------------------------------------------------
@@ -204,43 +210,51 @@ const WALKERS: Walker[] = [
   { label: "long coat, running", gait: [["run", 1]], depth: 3.6, start: 2, body: { kind: "woman", height: 0.4, weight: -0.3 }, outfit: { top: "#c84a3a", legs: "#2a2a40", shoes: "#1e1812", skin: "#d8a070", hair: "#8a3a1a", hairdo: "ponytail", coat: "#3a5a7a", seed: 1420 } },
 ];
 
-function walkerInRoom(v: View, w: Walker, sec: number, fast: boolean): void {
+function walkerInRoom(v: View, w: Walker, sec: number, fast: boolean): Drawing {
   const wrap = canvas.width + 300;
   const b = buildOf(w.body);
   const pr = progress(w.gait, sec, b);
   const ux = w.start * PXM + pr.x * PXM;
   const x = ((ux + 150) % wrap) - 150, y = WALL + w.depth * 34;
-  person(v, w.gait, pr.phase, speedOf(w.gait, b), { x, y, s: PXM, facing: 1 }, { ...w.outfit, fast }, b);
-  v.text(w.label, { x, y: y - 1.95 * PXM }, { size: 12, fill: "#1a2a3a", align: "center", valign: "bottom", style: "bold" });
+  return [
+    person(v, w.gait, pr.phase, speedOf(w.gait, b), { x, y, s: PXM, facing: 1 }, { ...w.outfit, fast }, b),
+    v.text(w.label, { x, y: y - 1.95 * PXM }, { size: 12, fill: "#1a2a3a", align: "center", valign: "bottom", style: "bold" }),
+  ];
 }
 
-function closeUp(v: View, x: number, label: string, g: Gait, outfit: Outfit, sec: number, body: BodySpec, fast: boolean): void {
+function closeUp(v: View, x: number, label: string, g: Gait, outfit: Outfit, sec: number, body: BodySpec, fast: boolean): Drawing {
   const y0 = 560, w = 420, h = 440, s = 150, ground = y0 + h - 30;
   const b = buildOf(body);
   const pr = progress(g, sec, b);
-  v.clip(rectPath(v, x, y0, w, h), () => {
-    v.rect(x, y0, w, h, { fill: "#16140f" });
-    for (let gx = x; gx <= x + w; gx += 20) v.line(gx, y0, gx, y0 + h, { stroke: "rgba(240,230,210,0.1)", weight: 1 });
-    for (let gy = y0; gy <= y0 + h; gy += 20) v.line(x, gy, x + w, gy, { stroke: "rgba(240,230,210,0.1)", weight: 1 });
-    const off = (pr.x * s) % (0.5 * s);
-    for (let gx = -off; gx < w; gx += 0.5 * s) v.line(x + gx, ground, x + gx - 12, ground + 18, { stroke: "rgba(240,230,210,0.4)", weight: 1.5 });
-    v.line(x, ground, x + w, ground, { stroke: "#e8dcc0", weight: 1 });
-    person(v, g, pr.phase, speedOf(g, b), { x: x + w / 2, y: ground, s, facing: 1 }, { ...outfit, rig: true, fast }, b);
-  });
-  v.text(label, { x: x + 10, y: y0 + 8 }, { size: 13, fill: "#e8dcc0", align: "left", valign: "top" });
+  return [
+    v.clip(rectPath(v, x, y0, w, h), ((): Drawing => {
+      const drawn: Drawing[] = [];
+      drawn.push(v.rect(x, y0, w, h, { fill: "#16140f" }));
+      for (let gx = x; gx <= x + w; gx += 20) drawn.push(v.line(gx, y0, gx, y0 + h, { stroke: "rgba(240,230,210,0.1)", weight: 1 }));
+      for (let gy = y0; gy <= y0 + h; gy += 20) drawn.push(v.line(x, gy, x + w, gy, { stroke: "rgba(240,230,210,0.1)", weight: 1 }));
+      const off = (pr.x * s) % (0.5 * s);
+      for (let gx = -off; gx < w; gx += 0.5 * s) drawn.push(v.line(x + gx, ground, x + gx - 12, ground + 18, { stroke: "rgba(240,230,210,0.4)", weight: 1.5 }));
+      drawn.push(v.line(x, ground, x + w, ground, { stroke: "#e8dcc0", weight: 1 }));
+      drawn.push(person(v, g, pr.phase, speedOf(g, b), { x: x + w / 2, y: ground, s, facing: 1 }, { ...outfit, rig: true, fast }, b));
+      return drawn;
+    })()),
+    v.text(label, { x: x + 10, y: y0 + 8 }, { size: 13, fill: "#e8dcc0", align: "left", valign: "top" }),
+  ];
 }
 
-function clothes(v: View, sec: number, fast: boolean): void {
-  v.rect(0, 0, canvas.width, WALL, { fill: "#8a8a6e" });
-  for (let x = 0; x < canvas.width; x += 1.2 * PXM) v.line(x, 30, x, WALL, { stroke: "rgba(0,0,0,0.18)", weight: 2 });
-  v.rect(0, WALL - 46, canvas.width, 46, { fill: "#6e6e58" });
-  v.rect(0, WALL, canvas.width, 260, { fill: "#b9ab8e" });
-  v.text("At the rooms' scale (145 px per metre).", { x: 16, y: 12 }, { size: 13, fill: "#f4ecd8", align: "left", valign: "top" });
-  for (const w of WALKERS) walkerInRoom(v, w, sec, fast);
+function clothes(v: View, sec: number, fast: boolean): Drawing {
+  const drawn: Drawing[] = [];
+  drawn.push(v.rect(0, 0, canvas.width, WALL, { fill: "#8a8a6e" }));
+  for (let x = 0; x < canvas.width; x += 1.2 * PXM) drawn.push(v.line(x, 30, x, WALL, { stroke: "rgba(0,0,0,0.18)", weight: 2 }));
+  drawn.push(v.rect(0, WALL - 46, canvas.width, 46, { fill: "#6e6e58" }));
+  drawn.push(v.rect(0, WALL, canvas.width, 260, { fill: "#b9ab8e" }));
+  drawn.push(v.text("At the rooms' scale (145 px per metre).", { x: 16, y: 12 }, { size: 13, fill: "#f4ecd8", align: "left", valign: "top" }));
+  for (const w of WALKERS) drawn.push(walkerInRoom(v, w, sec, fast));
   const coat = WALKERS[0]?.outfit, skirt = WALKERS[1]?.outfit;
-  if (coat) closeUp(v, 0, "Coat: front and back panels (pink) hang from the hips", [["confident", 1]], coat, sec, { kind: "man", height: 0.5 }, fast);
-  if (skirt) closeUp(v, 430, "Skirt on a bold stride: the legs push the panels", [["stride", 1]], skirt, sec, { kind: "woman" }, fast);
-  if (skirt) closeUp(v, 860, "Skirt running: legs never come out the front", [["run", 1]], skirt, sec, { kind: "woman" }, fast);
+  if (coat) drawn.push(closeUp(v, 0, "Coat: front and back panels (pink) hang from the hips", [["confident", 1]], coat, sec, { kind: "man", height: 0.5 }, fast));
+  if (skirt) drawn.push(closeUp(v, 430, "Skirt on a bold stride: the legs push the panels", [["stride", 1]], skirt, sec, { kind: "woman" }, fast));
+  if (skirt) drawn.push(closeUp(v, 860, "Skirt running: legs never come out the front", [["run", 1]], skirt, sec, { kind: "woman" }, fast));
+  return drawn;
 }
 
 // --- Bodies -----------------------------------------------------------------------------
@@ -260,23 +274,25 @@ const BODIES: readonly { label: string; body: BodySpec }[] = [
   { label: "tall heavy child", body: { kind: "child", height: 1, weight: 0.7 } },
 ];
 
-function bodies(v: View, sec: number, fast: boolean): void {
+function bodies(v: View, sec: number, fast: boolean): Drawing {
+  const out: Drawing[] = [];
   const w = canvas.width / 6, h = canvas.height / 2, s = 118;
   for (const [i, c] of BODIES.entries()) {
     const x0 = (i % 6) * w, y0 = Math.floor(i / 6) * h, ground = y0 + h - 40;
     const b = buildOf(c.body);
     const g: Gait = [["normal", 1]];
     const pr = progress(g, sec, b);
-    v.rect(x0, y0, w, h, { fill: i % 2 === Math.floor(i / 6) % 2 ? "#ddd2b8" : "#d4c8ac" });
-    v.rect(x0, ground, w, h - (ground - y0), { fill: "#b9ab8e" });
+    out.push(v.rect(x0, y0, w, h, { fill: i % 2 === Math.floor(i / 6) % 2 ? "#ddd2b8" : "#d4c8ac" }));
+    out.push(v.rect(x0, ground, w, h - (ground - y0), { fill: "#b9ab8e" }));
     // A 10 cm ruler, so heights read.
-    for (let m = 0; m <= 2; m += 0.1) v.line(x0 + 4, ground - m * s, x0 + (Math.round(m * 10) % 5 === 0 ? 14 : 9), ground - m * s, { stroke: "rgba(0,0,0,0.35)", weight: 1 });
+    for (let m = 0; m <= 2; m += 0.1) out.push(v.line(x0 + 4, ground - m * s, x0 + (Math.round(m * 10) % 5 === 0 ? 14 : 9), ground - m * s, { stroke: "rgba(0,0,0,0.35)", weight: 1 }));
     const outfit: Outfit = { ...JUMPSUIT, hairdo: c.body.kind === "man" ? "short" : "ponytail", seed: 2000 + i * 40, fast };
-    person(v, g, pr.phase, speedOf(g, b), { x: x0 + w * 0.32, y: ground, s, facing: 1 }, outfit, b);
-    personFront(v, { x: x0 + w * 0.76, y: ground, s, facing: 1 }, outfit, b);
-    v.text(c.label, { x: x0 + 10, y: y0 + 10 }, { size: 13, fill: "#2a2420", align: "left", valign: "top", style: "bold" });
-    v.text(`${b.height.toFixed(2)} m · ${speedOf(g, b).toFixed(2)} m/s`, { x: x0 + 10, y: y0 + 28 }, { size: 11, fill: "#5a4e44", align: "left", valign: "top" });
+    out.push(person(v, g, pr.phase, speedOf(g, b), { x: x0 + w * 0.32, y: ground, s, facing: 1 }, outfit, b));
+    out.push(personFront(v, { x: x0 + w * 0.76, y: ground, s, facing: 1 }, outfit, b));
+    out.push(v.text(c.label, { x: x0 + 10, y: y0 + 10 }, { size: 13, fill: "#2a2420", align: "left", valign: "top", style: "bold" }));
+    out.push(v.text(`${b.height.toFixed(2)} m · ${speedOf(g, b).toFixed(2)} m/s`, { x: x0 + 10, y: y0 + 28 }, { size: 11, fill: "#5a4e44", align: "left", valign: "top" }));
   }
+  return out;
 }
 
 // --- Play -------------------------------------------------------------------------------
@@ -288,39 +304,43 @@ const PLAY_OUTFITS: Record<string, Outfit> = {
   coat: { top: "#d8d0c0", legs: "#2a2a30", shoes: "#3a2418", skin: "#b07850", hair: "#1a1410", coat: "#6a5040", seed: 1580 },
 };
 
-function play(v: View, m: DeepReadonly<Model>, outfit: string, fast: boolean): void {
-  v.rect(0, 0, canvas.width, PLAY_FLOOR - 40, { fill: "#8a8a6e" });
-  for (let x = 0; x < canvas.width; x += 1.2 * PXM) v.line(x, 60, x, PLAY_FLOOR - 40, { stroke: "rgba(0,0,0,0.18)", weight: 2 });
-  v.rect(0, PLAY_FLOOR - 86, canvas.width, 46, { fill: "#6e6e58" });
-  v.rect(0, PLAY_FLOOR - 40, canvas.width, canvas.height - PLAY_FLOOR + 40, { fill: "#b9ab8e" });
-  for (let x = 0; x < canvas.width; x += PXM) v.line(x, PLAY_FLOOR + 60, x, PLAY_FLOOR + 72, { stroke: INK, weight: 1.5 });
-  v.text("← → to walk. Tap twice and hold to run. Turning: press the other way.", { x: 20, y: 16 }, { size: 16, fill: "#f4ecd8", align: "left", valign: "top", style: "bold" });
+function play(v: View, m: DeepReadonly<Model>, outfit: string, fast: boolean): Drawing {
+  const drawn: Drawing[] = [];
+  drawn.push(v.rect(0, 0, canvas.width, PLAY_FLOOR - 40, { fill: "#8a8a6e" }));
+  for (let x = 0; x < canvas.width; x += 1.2 * PXM) drawn.push(v.line(x, 60, x, PLAY_FLOOR - 40, { stroke: "rgba(0,0,0,0.18)", weight: 2 }));
+  drawn.push(v.rect(0, PLAY_FLOOR - 86, canvas.width, 46, { fill: "#6e6e58" }));
+  drawn.push(v.rect(0, PLAY_FLOOR - 40, canvas.width, canvas.height - PLAY_FLOOR + 40, { fill: "#b9ab8e" }));
+  for (let x = 0; x < canvas.width; x += PXM) drawn.push(v.line(x, PLAY_FLOOR + 60, x, PLAY_FLOOR + 72, { stroke: INK, weight: 1.5 }));
+  drawn.push(v.text("← → to walk. Tap twice and hold to run. Turning: press the other way.", { x: 20, y: 16 }, { size: 16, fill: "#f4ecd8", align: "left", valign: "top", style: "bold" }));
   const g = gaitAt(m.level);
   const b = buildOf(m.body);
   const look = { ...(PLAY_OUTFITS[outfit] ?? JUMPSUIT), fast };
   const place = { x: m.x * PXM, y: PLAY_FLOOR, s: PXM, facing: m.facing };
   // The middle half of a turn looks out at us.
-  if (m.turn > TURN / 4 && m.turn <= (3 * TURN) / 4) personFront(v, place, look, b);
-  else person(v, g, m.phase, Math.abs(m.v) * 60, place, look, b);
+  if (m.turn > TURN / 4 && m.turn <= (3 * TURN) / 4) drawn.push(personFront(v, place, look, b));
+  else drawn.push(person(v, g, m.phase, Math.abs(m.v) * 60, place, look, b));
   // The mix: how much stand, walk and run is in this frame's gait.
   const mix = [["stand", Math.max(0, 1 - m.level)], ["walk", 1 - Math.abs(1 - m.level)], ["run", Math.max(0, m.level - 1)]] as const;
   for (const [i, [name, w]] of mix.entries()) {
     const y = 760 + i * 30;
-    v.text(name, { x: 20, y }, { size: 13, fill: "#2a2420", align: "left", valign: "middle" });
-    v.rect(80, y - 8, 200, 16, { fill: "rgba(0,0,0,0.12)" });
-    v.rect(80, y - 8, 200 * w, 16, { fill: "#3a6a9a" });
+    drawn.push(v.text(name, { x: 20, y }, { size: 13, fill: "#2a2420", align: "left", valign: "middle" }));
+    drawn.push(v.rect(80, y - 8, 200, 16, { fill: "rgba(0,0,0,0.12)" }));
+    drawn.push(v.rect(80, y - 8, 200 * w, 16, { fill: "#3a6a9a" }));
   }
   const keys = `${m.left ? "←" : "  "} ${m.right ? "→" : "  "}${m.run ? "  running" : ""}`;
-  v.text(keys, { x: 300, y: 760 }, { size: 15, fill: "#2a2420", align: "left", valign: "middle", style: "bold" });
-  v.text(`${(Math.abs(m.v) * 60).toFixed(1)} m/s`, { x: 300, y: 790 }, { size: 13, fill: "#2a2420", align: "left", valign: "middle" });
+  drawn.push(v.text(keys, { x: 300, y: 760 }, { size: 15, fill: "#2a2420", align: "left", valign: "middle", style: "bold" }));
+  drawn.push(v.text(`${(Math.abs(m.v) * 60).toFixed(1)} m/s`, { x: 300, y: 790 }, { size: 13, fill: "#2a2420", align: "left", valign: "middle" }));
+  return drawn;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
+  const out: Drawing[] = [];
   const sec = model.frame / 60;
-  v.rect(0, 0, canvas.width, canvas.height, { fill: "#d8ccb0" });
+  out.push(v.rect(0, 0, canvas.width, canvas.height, { fill: "#d8ccb0" }));
   const fast = p.quality === "fast";
-  if (p.sheet === "clothes") clothes(v, sec, fast);
-  else if (p.sheet === "play") play(v, model, p.outfit, fast);
-  else if (p.sheet === "bodies") bodies(v, sec, fast);
-  else styles(v, sec, fast);
+  if (p.sheet === "clothes") out.push(clothes(v, sec, fast));
+  else if (p.sheet === "play") out.push(play(v, model, p.outfit, fast));
+  else if (p.sheet === "bodies") out.push(bodies(v, sec, fast));
+  else out.push(styles(v, sec, fast));
+  return out;
 }

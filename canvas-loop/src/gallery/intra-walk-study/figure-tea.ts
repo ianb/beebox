@@ -1,6 +1,6 @@
 // Drawing a pose from gait-tea.ts: a citizen in a jumpsuit, hand-inked, with the
 // far-side limbs a shade darker and behind the body. Also the bare skeleton.
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts } from "./ink-tea.js";
 import type { Arm, Leg, Pose, Vec } from "./gait-tea.js";
 
@@ -46,71 +46,83 @@ function toPx(q: Place): (v: Vec) => Vec2 {
   return (v) => [q.x + v[0] * q.s * q.facing, q.y - v[1] * q.s];
 }
 
-function drawLeg(v: View, l: Leg, P: (v: Vec) => Vec2, a: { suit: string; seed: number; s: number }): void {
+function drawLeg(v: View, l: Leg, P: (v: Vec) => Vec2, a: { suit: string; seed: number; s: number }): Drawing {
+  const out: Drawing[] = [];
   const r = (mm: number): number => mm * a.s;
-  blob(v, capsule(P(l.hip), P(l.knee), r(0.075), r(0.058)), { fill: a.suit, seed: a.seed, line: 1.6, amp: 0.5 });
-  blob(v, capsule(P(l.knee), P(l.ankle), r(0.056), r(0.044)), { fill: a.suit, seed: a.seed + 1, line: 1.6, amp: 0.5 });
+  out.push(blob(v, capsule(P(l.hip), P(l.knee), r(0.075), r(0.058)), { fill: a.suit, seed: a.seed, line: 1.6, amp: 0.5 }));
+  out.push(blob(v, capsule(P(l.knee), P(l.ankle), r(0.056), r(0.044)), { fill: a.suit, seed: a.seed + 1, line: 1.6, amp: 0.5 }));
   // The boot: heel, ball, toe and up the back of the ankle.
   const up: Vec = [l.ankle[0] - 0.02, l.ankle[1] + 0.05];
-  blob(v, [P(up), P(l.heel), P(l.ball), P(l.toe), P([l.ankle[0] + 0.06, l.ankle[1] + 0.01])], { fill: "#1a1410", seed: a.seed + 2, line: 1.2, amp: 0.3 });
+  out.push(blob(v, [P(up), P(l.heel), P(l.ball), P(l.toe), P([l.ankle[0] + 0.06, l.ankle[1] + 0.01])], { fill: "#1a1410", seed: a.seed + 2, line: 1.2, amp: 0.3 }));
+  return out;
 }
 
-function drawArm(v: View, arm: Arm, P: (v: Vec) => Vec2, a: { suit: string; skin: string; seed: number; s: number }): void {
+function drawArm(v: View, arm: Arm, P: (v: Vec) => Vec2, a: { suit: string; skin: string; seed: number; s: number }): Drawing {
   const r = (mm: number): number => mm * a.s;
-  blob(v, capsule(P(arm.shoulder), P(arm.elbow), r(0.05), r(0.042)), { fill: a.suit, seed: a.seed, line: 1.5, amp: 0.4 });
-  blob(v, capsule(P(arm.elbow), P(arm.wrist), r(0.04), r(0.033)), { fill: a.suit, seed: a.seed + 1, line: 1.5, amp: 0.4 });
-  blob(v, capsule(P(arm.wrist), P(arm.hand), r(0.03), r(0.026)), { fill: a.skin, seed: a.seed + 2, line: 1.2, amp: 0.3 });
+  return [
+    blob(v, capsule(P(arm.shoulder), P(arm.elbow), r(0.05), r(0.042)), { fill: a.suit, seed: a.seed, line: 1.5, amp: 0.4 }),
+    blob(v, capsule(P(arm.elbow), P(arm.wrist), r(0.04), r(0.033)), { fill: a.suit, seed: a.seed + 1, line: 1.5, amp: 0.4 }),
+    blob(v, capsule(P(arm.wrist), P(arm.hand), r(0.03), r(0.026)), { fill: a.skin, seed: a.seed + 2, line: 1.2, amp: 0.3 }),
+  ];
 }
 
 /** A citizen in this pose, feet on (x, y), `s` px per metre. */
-export function walker(v: View, ps: Pose, q: Place, look: Look = LOOK): void {
+export function walker(v: View, ps: Pose, q: Place, look: Look = LOOK): Drawing {
+  const out: Drawing[] = [];
   const P = toPx(q);
   const far = mixHex(look.suit, "#000000", 0.3), near = look.suit;
   const s = q.s;
-  v.ellipse(P([ps.pelvis[0], 0])[0], q.y, 0.2 * s, 0.04 * s, { fill: "rgba(0,0,0,0.35)" });
-  drawArm(v, ps.farArm, P, { suit: far, skin: mixHex(look.skin, "#000000", 0.25), seed: look.seed + 10, s });
-  drawLeg(v, ps.far, P, { suit: far, seed: look.seed + 20, s });
+  out.push(v.ellipse(P([ps.pelvis[0], 0])[0], q.y, 0.2 * s, 0.04 * s, { fill: "rgba(0,0,0,0.35)" }));
+  out.push(drawArm(v, ps.farArm, P, { suit: far, skin: mixHex(look.skin, "#000000", 0.25), seed: look.seed + 10, s }));
+  out.push(drawLeg(v, ps.far, P, { suit: far, seed: look.seed + 20, s }));
   // Trunk: hips to shoulders, a little fuller at the chest.
   const sh = ps.nearArm.shoulder, pv = ps.pelvis;
   const trunk: Vec[] = [[pv[0] - 0.1, pv[1] - 0.06], [pv[0] + 0.11, pv[1] - 0.06], [sh[0] + 0.12, sh[1] - 0.12], [sh[0] + 0.07, sh[1] + 0.04], [sh[0] - 0.1, sh[1] + 0.03], [sh[0] - 0.12, sh[1] - 0.16]];
-  blob(v, trunk.map(P), { fill: near, light: mixHex(near, "#ffffff", 0.22), dark: mixHex(near, "#000000", 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: look.seed + 30, line: 2 });
+  out.push(blob(v, trunk.map(P), { fill: near, light: mixHex(near, "#ffffff", 0.22), dark: mixHex(near, "#000000", 0.3), shadeSide: q.facing > 0 ? "left" : "right", seed: look.seed + 30, line: 2 }));
   const belt: Vec[] = [[pv[0] - 0.11, pv[1] + 0.06], [pv[0] + 0.12, pv[1] + 0.07], [pv[0] + 0.12, pv[1] + 0.03], [pv[0] - 0.11, pv[1] + 0.02]];
-  blob(v, belt.map(P), { fill: "#2a2420", seed: look.seed + 31, line: 1, amp: 0.2 });
+  out.push(blob(v, belt.map(P), { fill: "#2a2420", seed: look.seed + 31, line: 1, amp: 0.2 }));
   const collar: Vec[] = [[sh[0] - 0.09, sh[1] + 0.04], [sh[0] + 0.08, sh[1] + 0.05], [sh[0] + 0.05, sh[1] - 0.03], [sh[0] - 0.07, sh[1] - 0.03]];
-  blob(v, collar.map(P), { fill: look.collar, seed: look.seed + 32, line: 1.3, amp: 0.3 });
-  drawLeg(v, ps.near, P, { suit: near, seed: look.seed + 40, s });
+  out.push(blob(v, collar.map(P), { fill: look.collar, seed: look.seed + 32, line: 1.3, amp: 0.3 }));
+  out.push(drawLeg(v, ps.near, P, { suit: near, seed: look.seed + 40, s }));
   // Head, tipped by the nod: face forward, hair over the back.
   const [hx, hy] = P(ps.head);
-  v.at({ translate: [hx, hy], rotate: ps.nod * q.facing, scale: [q.facing, 1] }, () => {
+  out.push(v.at({ translate: [hx, hy], rotate: ps.nod * q.facing, scale: [q.facing, 1] }, ((): Drawing => {
     const R = 0.105 * s;
-    blob(v, ellipsePts(0, 0, R * 0.92, R * 1.1, 14), { fill: look.skin, light: mixHex(look.skin, "#ffffff", 0.2), seed: look.seed + 50, line: 1.8, amp: 0.5 });
-    blob(v, [[-R * 0.95, R * 0.1], [-R * 0.9, -R * 0.8], [-R * 0.1, -R * 1.18], [R * 0.75, -R * 0.75], [R * 0.2, -R * 0.55], [-R * 0.3, -R * 0.2]], { fill: look.hair, seed: look.seed + 51, line: 1.3, amp: 0.4 });
-    v.circle(R * 0.55, -R * 0.12, Math.max(1.2, R * 0.08), { fill: "#1a1010" });
-    v.line(R * 0.86, -R * 0.05, R * 1.02, R * 0.22, { stroke: INK, weight: 1.4 });
-  });
-  drawArm(v, ps.nearArm, P, { suit: mixHex(near, "#000000", 0.08), skin: look.skin, seed: look.seed + 60, s });
+    return [
+      blob(v, ellipsePts(0, 0, R * 0.92, R * 1.1, 14), { fill: look.skin, light: mixHex(look.skin, "#ffffff", 0.2), seed: look.seed + 50, line: 1.8, amp: 0.5 }),
+      blob(v, [[-R * 0.95, R * 0.1], [-R * 0.9, -R * 0.8], [-R * 0.1, -R * 1.18], [R * 0.75, -R * 0.75], [R * 0.2, -R * 0.55], [-R * 0.3, -R * 0.2]], { fill: look.hair, seed: look.seed + 51, line: 1.3, amp: 0.4 }),
+      v.circle(R * 0.55, -R * 0.12, Math.max(1.2, R * 0.08), { fill: "#1a1010" }),
+      v.line(R * 0.86, -R * 0.05, R * 1.02, R * 0.22, { stroke: INK, weight: 1.4 }),
+    ];
+  })()));
+  out.push(drawArm(v, ps.nearArm, P, { suit: mixHex(near, "#000000", 0.08), skin: look.skin, seed: look.seed + 60, s }));
+  return out;
 }
 
 /** The bare rig: bones as lines, joints as dots. */
-export function skeleton(v: View, ps: Pose, q: Place, a: { colour: string; weight?: number }): void {
+export function skeleton(v: View, ps: Pose, q: Place, a: { colour: string; weight?: number }): Drawing {
   const P = toPx(q);
   const w = a.weight ?? 2;
-  const line = (pts: Vec[], c: string): void => {
+  const line = (pts: Vec[], c: string): Drawing => {
+    const drawn: Drawing[] = [];
     for (let i = 1; i < pts.length; i++) {
       const p0 = pts[i - 1], p1 = pts[i];
       if (!p0 || !p1) continue;
       const [x0, y0] = P(p0), [x1, y1] = P(p1);
-      v.line(x0, y0, x1, y1, { stroke: c, weight: w });
+      drawn.push(v.line(x0, y0, x1, y1, { stroke: c, weight: w }));
     }
     for (const p of pts) {
       const [x, y] = P(p);
-      v.circle(x, y, w * 1.3, { fill: c });
+      drawn.push(v.circle(x, y, w * 1.3, { fill: c }));
     }
+    return drawn;
   };
   const farC = mixHex(a.colour, "#ffffff", 0.5);
-  line([ps.farArm.shoulder, ps.farArm.elbow, ps.farArm.wrist, ps.farArm.hand], farC);
-  line([ps.far.hip, ps.far.knee, ps.far.ankle, ps.far.heel, ps.far.ball, ps.far.toe], farC);
-  line([ps.pelvis, ps.nearArm.shoulder, ps.neck, ps.head], a.colour);
-  line([ps.near.hip, ps.near.knee, ps.near.ankle, ps.near.heel, ps.near.ball, ps.near.toe], a.colour);
-  line([ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist, ps.nearArm.hand], a.colour);
+  return [
+    line([ps.farArm.shoulder, ps.farArm.elbow, ps.farArm.wrist, ps.farArm.hand], farC),
+    line([ps.far.hip, ps.far.knee, ps.far.ankle, ps.far.heel, ps.far.ball, ps.far.toe], farC),
+    line([ps.pelvis, ps.nearArm.shoulder, ps.neck, ps.head], a.colour),
+    line([ps.near.hip, ps.near.knee, ps.near.ankle, ps.near.heel, ps.near.ball, ps.near.toe], a.colour),
+    line([ps.nearArm.shoulder, ps.nearArm.elbow, ps.nearArm.wrist, ps.nearArm.hand], a.colour),
+  ];
 }

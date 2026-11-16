@@ -1,7 +1,7 @@
 // Walk study: the rooms' old walker beside three walkers driven by measured gait
 // (gait-tea.ts), crossing one floor at the rooms' scale with their footprints
 // left behind; a Muybridge-style strip of one stride; and the measured curves.
-import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, RootDrawing, View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, stroke } from "./ink-tea.js";
 import { CURVES, STYLES, footprints, pose, progress, strideLength } from "./gait-tea.js";
 import type { Style } from "./gait-tea.js";
@@ -37,42 +37,48 @@ const floorY = (depth: number): number => WALL_FOOT + depth * DEPTH_PX_PER_M;
 const WRAP = canvas.width + 320;
 const TEXT = { size: 13, fill: "#2a2420", align: "left", valign: "top" } as const;
 
-function room(v: View): void {
-  v.rect(0, 0, canvas.width, WALL_FOOT, { fill: "#8a8a6e" });
-  for (let x = 0; x < canvas.width; x += m(1.2)) v.line(x, 30, x, WALL_FOOT, { stroke: "rgba(0,0,0,0.18)", weight: 2 });
-  v.rect(0, WALL_FOOT - 50, canvas.width, 50, { fill: "#6e6e58" });
-  v.rect(0, WALL_FOOT, canvas.width, 560 - WALL_FOOT, { fill: "#b9ab8e" });
-  for (let d = 0.5; d < 7; d += 0.5) v.line(0, floorY(d), canvas.width, floorY(d), { stroke: "rgba(60,40,20,0.12)", weight: 1 });
+function room(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, 0, canvas.width, WALL_FOOT, { fill: "#8a8a6e" }));
+  for (let x = 0; x < canvas.width; x += m(1.2)) out.push(v.line(x, 30, x, WALL_FOOT, { stroke: "rgba(0,0,0,0.18)", weight: 2 }));
+  out.push(v.rect(0, WALL_FOOT - 50, canvas.width, 50, { fill: "#6e6e58" }));
+  out.push(v.rect(0, WALL_FOOT, canvas.width, 560 - WALL_FOOT, { fill: "#b9ab8e" }));
+  for (let d = 0.5; d < 7; d += 0.5) out.push(v.line(0, floorY(d), canvas.width, floorY(d), { stroke: "rgba(60,40,20,0.12)", weight: 1 }));
   // Metre marks along the front edge.
   for (let x = 0; x < canvas.width; x += PX_PER_M) {
-    v.line(x, 548, x, 560, { stroke: INK, weight: 1.5 });
-    v.text(`${Math.round(x / PX_PER_M)} m`, { x: x + 3, y: 545 }, { size: 10, fill: "#4a3e34", align: "left", valign: "bottom" });
+    out.push(v.line(x, 548, x, 560, { stroke: INK, weight: 1.5 }));
+    out.push(v.text(`${Math.round(x / PX_PER_M)} m`, { x: x + 3, y: 545 }, { size: 10, fill: "#4a3e34", align: "left", valign: "bottom" }));
   }
-  v.text("Same floor, same scale (145 px per metre). Footprints show where each foot stood flat.", { x: 16, y: 12 }, { ...TEXT, fill: "#f4ecd8" });
+  out.push(v.text("Same floor, same scale (145 px per metre). Footprints show where each foot stood flat.", { x: 16, y: 12 }, { ...TEXT, fill: "#f4ecd8" }));
+  return out;
 }
 
 // --- The kit's walker, as it was (props-tea.ts `citizen` + `pacing`) ------------------------
 
-function oldWalker(v: View, frame: number, depth: number): void {
+function oldWalker(v: View, frame: number, depth: number): Drawing {
   const metres = (frame * 0.009) % (WRAP / PX_PER_M);
   const x = metres * PX_PER_M - 160, y = floorY(depth);
   const k = m(1.65) / 140;
   const suit = "#6a4a8a", step = Math.sin(frame * 0.3);
-  v.at({ translate: [x, y], scale: [k, k] }, () => {
-    v.ellipse(0, 0, 24, 6, { fill: "rgba(0,0,0,0.4)" });
-    for (const s of [-1, 1]) {
-      const sw = s * step * 10;
-      blob(v, [[-5 + sw * 0.3, -62], [5 + sw * 0.3, -62], [6 + sw, -2], [-3 + sw, -2]], { fill: mixHex(suit, "#000000", 0.15), seed: 804 + s, line: 1.6, amp: 0.4 });
-      blob(v, ellipsePts(sw + 5, -2, 9, 4.5, 10), { fill: "#1a1410", seed: 806 + s, line: 1.2, amp: 0.3 });
-    }
-    blob(v, [[-14, -58], [14, -58], [12, -112], [0, -116], [-12, -112]], { fill: suit, seed: 808, line: 2 });
-    stroke(v, [[-13, -66], [13, -66]], { seed: 809, weight: 3, colour: "#2a2420", amp: 0.3 });
-    blob(v, ellipsePts(2, -127, 11, 13, 14), { fill: "#c58a62", seed: 811, line: 1.8 });
-    blob(v, [[-11, -129], [10, -138], [12, -128], [0, -141], [-10, -138]], { fill: "#2e1d15", seed: 812, line: 1.4 });
-    v.circle(9, -127, 1.3, { fill: "#1a1010" });
-    blob(v, [[9, -108], [15, -104], [18 + step * 4, -70], [12 + step * 4, -68], [7, -100]], { fill: suit, seed: 813, line: 1.6 });
-  });
-  v.text("before: the rooms' walker", { x, y: y - m(1.65) - 22 }, { size: 12, fill: "#3a2a4a", align: "center", valign: "bottom", style: "bold" });
+  return [
+    v.at({ translate: [x, y], scale: [k, k] }, ((): Drawing => {
+      const drawn: Drawing[] = [];
+      drawn.push(v.ellipse(0, 0, 24, 6, { fill: "rgba(0,0,0,0.4)" }));
+      for (const s of [-1, 1]) {
+        const sw = s * step * 10;
+        drawn.push(blob(v, [[-5 + sw * 0.3, -62], [5 + sw * 0.3, -62], [6 + sw, -2], [-3 + sw, -2]], { fill: mixHex(suit, "#000000", 0.15), seed: 804 + s, line: 1.6, amp: 0.4 }));
+        drawn.push(blob(v, ellipsePts(sw + 5, -2, 9, 4.5, 10), { fill: "#1a1410", seed: 806 + s, line: 1.2, amp: 0.3 }));
+      }
+      drawn.push(blob(v, [[-14, -58], [14, -58], [12, -112], [0, -116], [-12, -112]], { fill: suit, seed: 808, line: 2 }));
+      drawn.push(stroke(v, [[-13, -66], [13, -66]], { seed: 809, weight: 3, colour: "#2a2420", amp: 0.3 }));
+      drawn.push(blob(v, ellipsePts(2, -127, 11, 13, 14), { fill: "#c58a62", seed: 811, line: 1.8 }));
+      drawn.push(blob(v, [[-11, -129], [10, -138], [12, -128], [0, -141], [-10, -138]], { fill: "#2e1d15", seed: 812, line: 1.4 }));
+      drawn.push(v.circle(9, -127, 1.3, { fill: "#1a1010" }));
+      drawn.push(blob(v, [[9, -108], [15, -104], [18 + step * 4, -70], [12 + step * 4, -68], [7, -100]], { fill: suit, seed: 813, line: 1.6 }));
+      return drawn;
+    })()),
+    v.text("before: the rooms' walker", { x, y: y - m(1.65) - 22 }, { size: 12, fill: "#3a2a4a", align: "center", valign: "bottom", style: "bold" }),
+  ];
 }
 
 // --- Measured walkers -------------------------------------------------------------------------
@@ -90,7 +96,8 @@ const LANES: Lane[] = [
   { name: "brisk (bigger, quicker)", style: STYLES.brisk, depth: 4.4, start: 0, look: { suit: "#3a7a5a", collar: "#e8b83a", skin: "#e0b090", hair: "#a04a20", seed: 980 } },
 ];
 
-function lane(v: View, l: Lane, sec: number): void {
+function lane(v: View, l: Lane, sec: number): Drawing {
+  const out: Drawing[] = [];
   const pr = progress(l.style, sec);
   const unwrapped = m(l.start + pr.x);
   const shift = Math.floor((unwrapped + 160) / WRAP) * WRAP;
@@ -100,22 +107,24 @@ function lane(v: View, l: Lane, sec: number): void {
     const fx0 = m(l.start + f.heel) - shift, fx1 = m(l.start + f.ball) - shift;
     if (fx1 > x + 4) continue;
     const yy = y + (f.near ? 5 : -5);
-    v.ellipse((fx0 + fx1) / 2, yy, (fx1 - fx0) / 2 + 5, 4, { fill: f.near ? "rgba(60,30,10,0.35)" : "rgba(60,30,10,0.2)" });
+    out.push(v.ellipse((fx0 + fx1) / 2, yy, (fx1 - fx0) / 2 + 5, 4, { fill: f.near ? "rgba(60,30,10,0.35)" : "rgba(60,30,10,0.2)" }));
   }
-  walker(v, pose(l.style, pr.phase), { x, y, s: PX_PER_M, facing: 1 }, l.look);
+  out.push(walker(v, pose(l.style, pr.phase), { x, y, s: PX_PER_M, facing: 1 }, l.look));
   const speed = strideLength(l.style) * l.style.cadence;
-  v.text(`${l.name} · ${speed.toFixed(2)} m/s`, { x, y: y - m(1.65) - 22 }, { size: 12, fill: "#1a2a3a", align: "center", valign: "bottom", style: "bold" });
+  out.push(v.text(`${l.name} · ${speed.toFixed(2)} m/s`, { x, y: y - m(1.65) - 22 }, { size: 12, fill: "#1a2a3a", align: "center", valign: "bottom", style: "bold" }));
+  return out;
 }
 
 // --- One stride, Muybridge-style --------------------------------------------------------------
 
 const STRIP = { x: 20, y: 580, w: 820, h: 400 };
-function strip(v: View, phaseNow: number): void {
+function strip(v: View, phaseNow: number): Drawing {
+  const out: Drawing[] = [];
   const { x, y, w, h } = STRIP;
-  v.rect(x, y, w, h, { fill: "#16140f" });
-  for (let gx = x; gx <= x + w; gx += 20) v.line(gx, y, gx, y + h, { stroke: "rgba(240,230,210,0.13)", weight: 1 });
-  for (let gy = y; gy <= y + h; gy += 20) v.line(x, gy, x + w, gy, { stroke: "rgba(240,230,210,0.13)", weight: 1 });
-  v.text("One stride of the measured walk, every 1/8. Ink figure over its skeleton; the current frame is lit.", { x: x + 10, y: y + 8 }, { ...TEXT, fill: "#e8dcc0" });
+  out.push(v.rect(x, y, w, h, { fill: "#16140f" }));
+  for (let gx = x; gx <= x + w; gx += 20) out.push(v.line(gx, y, gx, y + h, { stroke: "rgba(240,230,210,0.13)", weight: 1 }));
+  for (let gy = y; gy <= y + h; gy += 20) out.push(v.line(x, gy, x + w, gy, { stroke: "rgba(240,230,210,0.13)", weight: 1 }));
+  out.push(v.text("One stride of the measured walk, every 1/8. Ink figure over its skeleton; the current frame is lit.", { x: x + 10, y: y + 8 }, { ...TEXT, fill: "#e8dcc0" }));
   const S = 95, ground = y + h - 30;
   const n = 8;
   for (let i = 0; i < n; i++) {
@@ -123,21 +132,23 @@ function strip(v: View, phaseNow: number): void {
     const cx = x + 70 + i * 98;
     const ps = pose(STYLES.ordinary, p);
     const lit = Math.abs(((phaseNow - p + 1.5) % 1) - 0.5) < 0.5 / n;
-    if (lit) v.rect(cx - 50, y + 34, 98, h - 40, { fill: "rgba(240,200,120,0.18)" });
-    walker(v, ps, { x: cx, y: ground, s: S, facing: 1 });
-    skeleton(v, ps, { x: cx, y: ground, s: S, facing: 1 }, { colour: "#ffd27a", weight: 1.2 });
-    v.text(`${Math.round(p * 100)}%`, { x: cx, y: ground + 8 }, { size: 11, fill: "#e8dcc0", align: "center", valign: "top" });
+    if (lit) out.push(v.rect(cx - 50, y + 34, 98, h - 40, { fill: "rgba(240,200,120,0.18)" }));
+    out.push(walker(v, ps, { x: cx, y: ground, s: S, facing: 1 }));
+    out.push(skeleton(v, ps, { x: cx, y: ground, s: S, facing: 1 }, { colour: "#ffd27a", weight: 1.2 }));
+    out.push(v.text(`${Math.round(p * 100)}%`, { x: cx, y: ground + 8 }, { size: 11, fill: "#e8dcc0", align: "center", valign: "top" }));
   }
-  v.line(x, ground, x + w, ground, { stroke: "#e8dcc0", weight: 1 });
+  out.push(v.line(x, ground, x + w, ground, { stroke: "#e8dcc0", weight: 1 }));
+  return out;
 }
 
 // --- The measured curves ----------------------------------------------------------------------
 
 const PLOT = { x: 870, y: 580, w: 390, h: 400 };
-function curves(v: View, phaseNow: number): void {
+function curves(v: View, phaseNow: number): Drawing {
+  const out: Drawing[] = [];
   const { x, y, w, h } = PLOT;
-  v.rect(x, y, w, h, { fill: "#f4ecd8", stroke: INK, weight: 1 });
-  v.text("Joint angles over one stride (degrees), mean of 10 people", { x: x + 10, y: y + 8 }, { size: 12, fill: "#2a2420", align: "left", valign: "top" });
+  out.push(v.rect(x, y, w, h, { fill: "#f4ecd8", stroke: INK, weight: 1 }));
+  out.push(v.text("Joint angles over one stride (degrees), mean of 10 people", { x: x + 10, y: y + 8 }, { size: 12, fill: "#2a2420", align: "left", valign: "top" }));
   const rows = [
     { name: "hip (forward +)", f: CURVES.hip, lo: -15, hi: 35, c: "#2a5a9a" },
     { name: "knee (bent +)", f: CURVES.knee, lo: 0, hi: 70, c: "#9a3a2a" },
@@ -147,28 +158,31 @@ function curves(v: View, phaseNow: number): void {
   for (const [i, r] of rows.entries()) {
     const top = y + 36 + i * rh, bot = top + rh - 22;
     const Y = (d: number): number => bot - ((d - r.lo) / (r.hi - r.lo)) * (bot - top);
-    v.line(x + 40, Y(0), x + w - 12, Y(0), { stroke: "rgba(0,0,0,0.25)", weight: 1 });
+    out.push(v.line(x + 40, Y(0), x + w - 12, Y(0), { stroke: "rgba(0,0,0,0.25)", weight: 1 }));
     const pts: [number, number][] = [];
     for (let k = 0; k <= 100; k++) pts.push([x + 40 + ((w - 52) * k) / 100, Y(r.f(k / 100))]);
-    v.curve(pts, false, { stroke: r.c, weight: 2.4 });
+    out.push(v.curve(pts, false, { stroke: r.c, weight: 2.4 }));
     const cx = x + 40 + (w - 52) * phaseNow;
-    v.circle(cx, Y(r.f(phaseNow)), 4, { fill: r.c });
-    v.text(r.name, { x: x + 44, y: top - 4 }, { size: 11, fill: r.c, align: "left", valign: "top", style: "bold" });
-    v.text(`${r.hi}°`, { x: x + 36, y: top }, { size: 9, fill: "#6a5e54", align: "right", valign: "middle" });
-    v.text(`${r.lo}°`, { x: x + 36, y: bot }, { size: 9, fill: "#6a5e54", align: "right", valign: "middle" });
+    out.push(v.circle(cx, Y(r.f(phaseNow)), 4, { fill: r.c }));
+    out.push(v.text(r.name, { x: x + 44, y: top - 4 }, { size: 11, fill: r.c, align: "left", valign: "top", style: "bold" }));
+    out.push(v.text(`${r.hi}°`, { x: x + 36, y: top }, { size: 9, fill: "#6a5e54", align: "right", valign: "middle" }));
+    out.push(v.text(`${r.lo}°`, { x: x + 36, y: bot }, { size: 9, fill: "#6a5e54", align: "right", valign: "middle" }));
   }
   const cx = x + 40 + (w - 52) * phaseNow;
-  v.line(cx, y + 30, cx, y + h - 22, { stroke: "rgba(0,0,0,0.35)", weight: 1 });
-  v.text("heel strike → stance → toe off (60%) → swing → heel strike", { x: x + w / 2, y: y + h - 8 }, { size: 10, fill: "#6a5e54", align: "center", valign: "bottom" });
+  out.push(v.line(cx, y + 30, cx, y + h - 22, { stroke: "rgba(0,0,0,0.35)", weight: 1 }));
+  out.push(v.text("heel strike → stance → toe off (60%) → swing → heel strike", { x: x + w / 2, y: y + h - 8 }, { size: 10, fill: "#6a5e54", align: "center", valign: "bottom" }));
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.rect(0, 0, canvas.width, canvas.height, { fill: "#d8ccb0" });
-  room(v);
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, 0, canvas.width, canvas.height, { fill: "#d8ccb0" }));
+  out.push(room(v));
   const sec = model.frame / 60;
-  oldWalker(v, model.frame, 1.4);
-  for (const l of LANES) lane(v, l, sec);
+  out.push(oldWalker(v, model.frame, 1.4));
+  for (const l of LANES) out.push(lane(v, l, sec));
   const phase = progress(STYLES.ordinary, sec).phase;
-  strip(v, phase);
-  curves(v, phase);
+  out.push(strip(v, phase));
+  out.push(curves(v, phase));
+  return out;
 }
