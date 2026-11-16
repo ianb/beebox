@@ -31,7 +31,7 @@ const SKETCH = {
 
 const sketch: FigureSketch = (_lib, { mount }) => mountSketch(mount, { module: SKETCH, autoplay: false, transport: true });
 
-function reportError(message: string) { console.error("theme studio figure failed", message); }
+function reportError(error: unknown) { console.error("theme studio figure failed", error); }
 
 export function StudioFigure() {
   const file = useViewFileHelpers("/api");

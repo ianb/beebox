@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REPLACEMENTS } from "../scene/errors.js";
+import { REPLACEMENTS, STATEMENT_DRAW } from "../scene/errors.js";
 import { CliError } from "./errors.js";
 
 /** canvas-loop's package directory, found from this module's place in it. */
@@ -93,7 +93,7 @@ function configSource(files: readonly string[], options: { root: string; dom: bo
       moduleResolution: "bundler",
       types: [],
       ...(dom ? { lib: ["ES2023", "DOM"] } : {}),
-      paths: { "@ianbicking/canvas-loop": [join(root, "src/exports/core.ts")] },
+      paths: { "@ianbicking/canvas-loop": [join(root, "src/exports/core")] },
     },
     include: [],
     files,
@@ -122,8 +122,13 @@ function flatten(diagnostic: ChainedDiagnostic, depth: number): string {
   return lines.join("\n");
 }
 
-/** A removed View member the compiler cannot find gets what replaces it, as the recorder's `RemovedCallError` would say. */
+/**
+ * A removed View member the compiler cannot find, or a `draw` that returns
+ * nothing, gets what replaces it, as the recorder's `RemovedCallError` would
+ * say. The added line reads `<call> was removed: <replacement>`.
+ */
 function withReplacement(message: string): string {
+  if (message.includes("Type 'void' is not assignable to type 'RootDrawing'")) return `${message}\n  ${STATEMENT_DRAW.call} was removed: ${STATEMENT_DRAW.replacement}`;
   const name = /^Property '(\w+)' does not exist on type 'View'/u.exec(message)?.[1];
   const call = `v.${name ?? ""}`;
   return name !== undefined && Object.hasOwn(REPLACEMENTS, call) ? `${message}\n  ${call} was removed: ${Reflect.get(REPLACEMENTS, call)}` : message;

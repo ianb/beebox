@@ -29,6 +29,12 @@ export const REPLACEMENTS = {
   "v.paperTexture": "use group({ effects: { paper: amount } }, children), an effect scoped to the group (BRUSHES.md, \"Paper\")",
 } as const;
 
+/** A `draw` that makes drawing calls as statements and returns nothing: the recorder's `RemovedCallError` and the sketch type check both say it. */
+export const STATEMENT_DRAW = {
+  call: "drawing calls as statements",
+  replacement: "return the drawing from draw: return [v.rect(…), v.at(options, [children])] (a node, a list, or null for nothing)",
+} as const;
+
 /** A View member today's API had and the scene API removed: `call` names it, `replacement` what to use instead. */
 export class RemovedCallError extends SketchUsageError {
   name = "RemovedCallError";

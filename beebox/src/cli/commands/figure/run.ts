@@ -11,9 +11,9 @@
  */
 import { spawn } from "node:child_process";
 import { existsSync, promises as fs, realpathSync } from "node:fs";
-import { createRequire } from "node:module";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../cards/frontmatter.js";
+import { checkFigureSketch, FigureCheckUnavailableError, type FigureSketchCheck } from "../../../core/figure-sketch-check.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { isRecord } from "../../../shared/is-record.js";
@@ -102,41 +102,17 @@ function cardDefaults(frontmatter: Record<string, unknown>): Record<string, stri
   return out;
 }
 
-/**
- * canvas-loop's package directory, for the type check: the CLI bundle inlines
- * canvas-loop, so its own module URL no longer points into the package. A
- * packed install has no canvas-loop source to check against.
- */
-function canvasLoopRoot(): string {
-  try {
-    // The root export is `src/exports/core.ts`.
-    return path.resolve(path.dirname(createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("@ianbicking/canvas-loop")), "..", "..");
-  } catch (error) {
-    throw new FigureRunError({ detail: `cannot type-check the sketch: this engine install has no canvas-loop source to check it against (${error instanceof Error ? error.message : String(error)})` });
-  }
-}
-
-/** TS7006 and TS7031: a parameter, or a destructured one, with an implicit `any` type. */
-const IMPLICIT_ANY_PARAM = new Set([7006, 7031]);
-
-/**
- * Type-check the entry, the files it imports, and its exports against
- * canvas-loop's sketch contract, as canvas-loop's own `cli run` does. esbuild
- * strips types, so without this a wrong style value (a `cap` canvas-loop does
- * not have) would draw with no error. DOM types are on: the entry's default
- * export runs in a browser. That export, the figure factory, takes the host's
- * wrapped library and figure context, for which a box has no type to import,
- * so implicit-`any` parameters from the `export default` line on are not errors.
- */
+/** Type-check the entry against the sketch contract (`core/figure-sketch-check.ts`); a failure stops the run. */
 async function checkEntryTypes(boxRoot: string, entry: string): Promise<void> {
-  const { checkSketchTypes, formatSketchTypeError } = await import("@ianbicking/canvas-loop/headless");
-  const factoryLine = (await fs.readFile(entry, "utf8")).split("\n").findIndex((line) => /^export default\b/u.test(line)) + 1;
-  const inFactory = (e: { file: string | undefined; line: number | undefined; code: number }): boolean =>
-    factoryLine > 0 && e.file === entry && IMPLICIT_ANY_PARAM.has(e.code) && (e.line ?? 0) >= factoryLine;
-  const errors = (await checkSketchTypes([entry], { packageRoot: canvasLoopRoot(), dom: true })).filter((e) => !inFactory(e));
-  if (errors.length === 0) return;
-  const lines = errors.map((e) => formatSketchTypeError(e, boxRoot));
-  throw new FigureRunError({ detail: `${path.relative(boxRoot, entry)}: the sketch does not type-check, so it was not run. Fix these and run again:\n${lines.join("\n")}` });
+  let check: FigureSketchCheck;
+  try {
+    check = await checkFigureSketch(boxRoot, entry);
+  } catch (error) {
+    if (error instanceof FigureCheckUnavailableError) throw new FigureRunError({ detail: error.message });
+    throw error;
+  }
+  if (check.ok) return;
+  throw new FigureRunError({ detail: `${path.relative(boxRoot, entry)}: the sketch does not type-check, so it was not run. Fix these and run again:\n${check.lines.join("\n")}` });
 }
 
 /** Prepare the run directory and compiled entry for one card. */

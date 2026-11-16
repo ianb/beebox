@@ -211,21 +211,29 @@ COPY --from=build --chown=node:node /docling-version /app/docling-version
 RUN HOME=/opt/claude bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
   && /usr/local/bin/claude --version
 
-# Install the engine into /app from the baked tarball. --allow-build lets
-# the native/generated deps run their install scripts — pnpm 10 blocks them by default (and, non-interactive,
-# a blocked build is a hard error, not a warning). The flag form is the same
-# one src/scripts/smoke-external-box.ts uses; a package.json `pnpm` field is no
-# longer read by pnpm 10.26.
+# Install the engine into /app from the baked tarball. pnpm blocks install
+# scripts by default, and non-interactive a blocked build is a hard error
+# (pnpm 12 also fails on a script it was not told to skip). allowBuilds in
+# /app/pnpm-workspace.yaml names each one, as the repo's pnpm-workspace.yaml
+# does: esbuild and the Workspace CLI run theirs; the rest are skipped, as
+# the earlier --allow-build flags skipped them (webgpu's script only clears a
+# macOS quarantine attribute). pnpm 10.26 and 12.21 both read allowBuilds; a
+# package.json `pnpm` field is not read.
 RUN printf '%s\n' \
       '{' \
       '  "name": "beebox-runtime",' \
       '  "private": true,' \
       '  "type": "module"' \
       '}' > /app/package.json \
-  && pnpm add \
-       --allow-build=esbuild \
-       --allow-build=@googleworkspace/cli \
-       /app/beebox.tgz
+  && printf '%s\n' \
+      'allowBuilds:' \
+      '  esbuild: true' \
+      '  "@googleworkspace/cli": true' \
+      '  "@google/genai": false' \
+      '  agent-browser: false' \
+      '  protobufjs: false' \
+      '  webgpu: false' > /app/pnpm-workspace.yaml \
+  && pnpm add /app/beebox.tgz
 
 COPY --chown=node:node beebox/docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

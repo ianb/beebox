@@ -17,7 +17,7 @@ import type { ClipShape, DrawingNode, Paint, PathCommand, TextBounds, TextBox, T
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
-import { RemovedCallError, UnsupportedCallError } from "../errors.js";
+import { RemovedCallError, STATEMENT_DRAW, UnsupportedCallError } from "../errors.js";
 import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
@@ -129,7 +129,7 @@ export class SceneRecorder extends PureHelpers implements View {
     const top: ResolveContext = { matrix: IDENTITY, size: this.#canvas, picture: undefined, lit: 0, inMask: false, paper: DEFAULT_PAPER };
     try {
       const drawn = draw(this);
-      if (drawn === undefined) throw new RemovedCallError({ call: "drawing calls as statements", replacement: "return the drawing from draw: return [v.rect(…), v.at(options, [children])] (a node, a list, or null for nothing)" });
+      if (drawn === undefined) throw new RemovedCallError(STATEMENT_DRAW);
       root = this.#resolver.resolve(this.#children.list("draw", drawn), top);
       this.#warnUnreturned();
       this.#audit?.end();

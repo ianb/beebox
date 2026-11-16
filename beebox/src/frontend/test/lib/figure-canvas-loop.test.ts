@@ -10,10 +10,13 @@
 import "../helpers/dom-globals.js";
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
-import type { EmittedEvent, MountSketchOptions } from "@ianbicking/canvas-loop/browser";
-import { wrapCanvasLoopLib } from "../../src/lib/figure-canvas-loop.js";
+import { NoGpuAdapterError, NoWebGpuError, RemovedCallError, SketchMountError, type EmittedEvent, type MountSketchOptions } from "@ianbicking/canvas-loop/browser";
+import { figureNotice, wrapCanvasLoopLib } from "../../src/lib/figure-canvas-loop.js";
 
 /** A stand-in canvas-loop namespace that records each `mountSketch` call's options. */
+/** The host's error handler, for the tests that raise no error. */
+const onError = (_error: unknown): void => {};
+
 function fakeLib() {
   const calls: MountSketchOptions[] = [];
   return { calls, lib: { mountSketch: (_mount: HTMLElement, opts: MountSketchOptions) => { calls.push(opts); return () => {}; } } };
@@ -34,7 +37,7 @@ function captureWarnings(t: Test): string[] {
 void test("card params the module cannot honor warn once each", async (t) => {
   const warnings = captureWarnings(t);
   const { lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [
+  const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [
     { name: "mode", type: "string" },
     { name: "formula", type: "string" },
     { name: "mass", type: "number" },
@@ -56,7 +59,7 @@ void test("card params the module cannot honor warn once each", async (t) => {
 void test("activity reports params and handled names after the sketch's onEvent", async (t) => {
   const log: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
+  const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [], report: (kind, detail) => { log.push(`report ${kind}: ${detail ?? ""}`); } });
   wrapped.mountSketch(mount, { module: {}, onEvent: (event) => { log.push(`sketch ${event.type}`); } });
   const events: EmittedEvent[] = [
     { frame: 1, type: "param", name: "mass", value: 2.5 },
@@ -79,7 +82,7 @@ void test("activity reports params and handled names after the sketch's onEvent"
 void test("a long detail is capped at 200 characters", async (t) => {
   const details: string[] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (_kind, detail) => { details.push(detail ?? ""); } });
+  const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [], report: (_kind, detail) => { details.push(detail ?? ""); } });
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "trigger", name: "x", handled: ["n".repeat(300)] });
   t.check(details, [`pressed ${"n".repeat(191)}…`]);
@@ -90,7 +93,7 @@ void test("a long detail is capped at 200 characters", async (t) => {
 void test("reports carry the sketch's activity", async (t) => {
   const reported: unknown[][] = [];
   const { calls, lib } = fakeLib();
-  const wrapped = wrapCanvasLoopLib(lib, { declared: [], report: (...args) => { reported.push(args); } });
+  const wrapped = wrapCanvasLoopLib(lib, { onError, declared: [], report: (...args) => { reported.push(args); } });
   wrapped.mountSketch(mount, { module: {} });
   calls[0]?.onEvent?.({ frame: 1, type: "mousedown", x: 4, y: 5, handled: ["add H"], changed: true, activity: { molecules: ["H2"] } });
   calls[0]?.onEvent?.({ frame: 2, type: "mousemove", x: 4, y: 6 });
@@ -98,5 +101,51 @@ void test("reports carry the sketch's activity", async (t) => {
   t.check(reported, [
     ["explored", "pressed add H", { molecules: ["H2"] }],
     ["explored", "set mass = 2", undefined],
+  ]);
+});
+
+// A mount failure goes to the card first, then to the sketch's own onError,
+// each in its own try: a sketch callback that throws cannot keep the error
+// from the card, and its throw is logged.
+void test("a mount error reaches the host first, even when the sketch's onError throws", async (t) => {
+  const log: string[] = [];
+  const logged: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  t.teardown(() => { console.error = original; });
+  const { calls, lib } = fakeLib();
+  const wrapped = wrapCanvasLoopLib(lib, { declared: [], onError: (error) => { log.push(`host ${String(error)}`); } });
+  const thrown = new SketchMountError({ detail: "sketch handler broke" });
+  wrapped.mountSketch(mount, { module: {}, onError: (error) => { log.push(`sketch ${String(error)}`); throw thrown; } });
+  calls[0]?.onError?.("no webgpu");
+  t.check({ log, logged }, { log: ["host no webgpu", "sketch no webgpu"], logged: [["figure sketch onError threw", thrown]] });
+});
+
+// A sketch with no onError of its own: the host still hears the error.
+void test("a mount error reaches the host when the sketch has no onError", async (t) => {
+  const heard: unknown[] = [];
+  const { calls, lib } = fakeLib();
+  wrapCanvasLoopLib(lib, { declared: [], onError: (error) => { heard.push(error); } }).mountSketch(mount, { module: {} });
+  calls[0]?.onError?.("lost");
+  t.check(heard, ["lost"]);
+});
+
+// canvas-loop's own error classes. The card matches them by name, since they
+// arrive from a lazily loaded chunk. The notice kinds: a removed call is `outdated` with its replacement line;
+// no WebGPU and no adapter each have their own kind; anything else, and a
+// compile error string from the module route, is `error`.
+void test("figureNotice picks the notice by the error's name", async (t) => {
+  t.check([
+    figureNotice(new RemovedCallError({ call: "v.cache", replacement: "use v.picture" })),
+    figureNotice(new NoWebGpuError()),
+    figureNotice(new NoGpuAdapterError({ browser: true })),
+    figureNotice(new SketchMountError({ detail: "module must be a TEA sketch module object" })),
+    figureNotice("Build failed with 1 error"),
+  ], [
+    { kind: "outdated", detail: "v.cache was removed: use v.picture" },
+    { kind: "no-webgpu", detail: "no WebGPU: this browser has no navigator.gpu, so the figure cannot draw (canvas-loop figures need WebGPU)" },
+    { kind: "no-adapter", detail: "no GPU adapter: the browser has WebGPU but gave no adapter, so the figure cannot draw. Possible causes: the GPU is blocked for this browser or site, or unavailable" },
+    { kind: "error", detail: "mountSketch: module must be a TEA sketch module object" },
+    { kind: "error", detail: "Build failed with 1 error" },
   ]);
 });

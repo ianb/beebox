@@ -26,7 +26,7 @@ import { useMobileChatViewport } from "../../../../components/chat/everywhere/us
 import { Pre } from "../../../../components/ui/Pre";
 import { Image } from "../../../../components/ui/Image/view";
 import { Row } from "../../../../components/ui/Row";
-import { CaptionedFigure } from "../../../../components/FigureView/view";
+import { CaptionedFigure } from "../../../../components/FigureView/FigureLayout";
 import { MaterialContext } from "../../../../components/ui/material";
 import { CheckboxField, SelectField } from "../../../../components/ui/fields/field";
 import { StudioFigure } from "./figure";

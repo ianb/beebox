@@ -42,3 +42,17 @@ void test("Every deploy installs Mesa's Vulkan driver and probes Dawn as a box u
   t.check(dockerfile, any(String).includes(" mesa-vulkan-drivers"));
   t.end();
 });
+
+// pnpm 12 fails an install on a build script it was not told to run or skip,
+// and webgpu has one. The image's engine install names it in allowBuilds.
+void test("The image's engine install names webgpu's build script in allowBuilds", (t) => {
+  t.check(dockerfile, any(String).includes("'  webgpu: false'"));
+  t.end();
+});
+
+// A packed install has no canvas-loop source; build:declarations ships its
+// root-export declarations and tsconfig for the sketch contract check.
+void test("The packed engine ships canvas-loop's declarations for the sketch check", async (t) => {
+  const scripts = JSON.parse(await readFile("package.json", "utf8")).scripts;
+  t.check(scripts["build:declarations"], any(String).includes("tsc -p tsconfig.declarations.canvas-loop.json && cp ../canvas-loop/tsconfig.json dist/canvas-loop/tsconfig.json"));
+});

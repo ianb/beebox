@@ -8,12 +8,16 @@
  * - chains the sketch's own `onEvent` and reports learner activity as
  *   `explored`: declared param values and handled names only, never
  *   coordinates, raw keys or model state. Each report also goes to the
- *   activity log with the sketch's `activity(model)` value when it has one.
+ *   activity log with the sketch's `activity(model)` value when it has one;
+ * - hands every failure after mount to the card first, then to the sketch's
+ *   own `onError`, so the card can show it in the figure's place
+ *   (`figureNotice`).
  */
 
 import type * as CanvasLoopBrowser from "@ianbicking/canvas-loop/browser";
 import type { EmittedEvent } from "@ianbicking/canvas-loop/browser";
 import type { ReportActivity } from "@core/chat/card-activity.js";
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import type { FigureParamDecl, FigureParamType } from "./figure-params";
 
@@ -65,9 +69,25 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
   declared: readonly FigureParamDecl[];
   /** Logs the figure's actions (`useCardActivityReporter`); absent means none. */
   report?: ReportActivity;
+  /** The card's error handler: hears every mount failure, before the sketch's own `onError`. */
+  onError: (error: unknown) => void;
 }): L {
   const warned = new Set<string>();
   const { report } = harness;
+  // Each handler in its own `try`: the host always hears the error, whatever the sketch's callback does.
+  const onErrorFor = (sketchOnError: ((error: unknown) => void) | undefined) => (error: unknown) => {
+    try {
+      harness.onError(error);
+    } catch (e) {
+      console.error("figure host onError threw", e);
+    }
+    if (sketchOnError === undefined) return;
+    try {
+      sketchOnError(error);
+    } catch (e) {
+      console.error("figure sketch onError threw", e);
+    }
+  };
   const wrap = (inner: MountSketch): MountSketch => (mount, opts) => {
     for (const warning of paramMismatches(harness.declared, opts.module)) {
       if (warned.has(warning)) continue;
@@ -84,7 +104,33 @@ export function wrapCanvasLoopLib<L extends Pick<CanvasLoopLib, "mountSketch">>(
     return inner(mount, {
       ...opts,
       ...(onEvent !== undefined ? { onEvent } : {}),
+      onError: onErrorFor(opts.onError),
     });
   };
   return { ...lib, mountSketch: wrap(lib.mountSketch) };
+}
+
+/** What the card shows in a figure's place when it cannot draw (canvas-loop box figures plan, C3). */
+export interface FigureNotice {
+  /** `outdated`: written for the earlier canvas-loop; `no-webgpu`, `no-adapter`: this device cannot draw it; `error`: anything else. */
+  kind: "outdated" | "no-webgpu" | "no-adapter" | "error";
+  /** The technical line: for `outdated`, `<call> was removed: <replacement>`. */
+  detail: string;
+}
+
+/**
+ * The notice for a figure failure. canvas-loop's errors are matched by
+ * `name`, since they come from a lazily loaded chunk; a string is a compile
+ * error from the module route.
+ */
+export function figureNotice(error: unknown): FigureNotice {
+  if (typeof error === "string") return { kind: "error", detail: error };
+  const name = isRecord(error) && typeof error.name === "string" ? error.name : "";
+  if (name === "RemovedCallError" && isRecord(error) && typeof error.call === "string" && typeof error.replacement === "string") {
+    return { kind: "outdated", detail: `${error.call} was removed: ${error.replacement}` };
+  }
+  const detail = errorMessage(error);
+  if (name === "NoWebGpuError") return { kind: "no-webgpu", detail };
+  if (name === "NoGpuAdapterError") return { kind: "no-adapter", detail };
+  return { kind: "error", detail };
 }

@@ -587,6 +587,58 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   `error`; `FigureLayout`.
 - **First chunk:** the wrapper's error order and its test; then the layout
   split with its tests; then the notices.
+- **As built (C3).** Logs are in `scratch/stage5/c3/`.
+  - **The card.** As planned: `wrapCanvasLoopLib` takes the card's
+    `onError` and calls it before the sketch's, each in its own `try`;
+    `FigureMount`'s `onError` takes `unknown`; `figureNotice` lives beside
+    the wrapper in `lib/figure-canvas-loop.ts`. `FigureLayout.tsx` holds
+    `FigureLayout`, `CaptionedFigure` (moved from `view.tsx`) and the
+    `FigureNotice` component (layout-check would not let a helper used only
+    by `view.tsx` sit beside it). Every state, including an unknown runtime
+    and a missing entry, goes in the slot. The wording is the Design
+    section's draft. The technical line shows only under "needs updating".
+  - **Need 10, the card route.** `checkFigureSketch`
+    (`src/core/figure-sketch-check.ts`) now serves `bbx figure run` and
+    `/api/figure/module.js`. The route checks a figure whose owning card has
+    `runtime: canvas-loop` before it compiles it, and a type error comes back
+    as `figureError`, as a compile error does. canvas-loop gained a
+    `./sketch-check` subpath, so the server loads the check without the
+    headless runner's `@napi-rs/canvas`.
+  - **Found: the check runs before the runtime error.** An old sketch now
+    fails the type check before its `draw` can throw `RemovedCallError`, so
+    the card would have shown "Figure error" with a list of type errors for
+    nearly every old figure. So a type error that names a removed call also
+    sets `figureOutdated`, and the card shows "This figure needs updating"
+    with that line. canvas-loop's check now adds the removed-call line for a
+    `draw` that returns nothing (`STATEMENT_DRAW`, the text the recorder
+    already threw), since an imperative `draw` is the most common old
+    pattern. Other old-API errors (a style argument now required) stay
+    "Figure error".
+  - **Settled: the packed install (open question below).**
+    `build:declarations` emits canvas-loop's root-export declarations to
+    `dist/canvas-loop/src/` and copies its `tsconfig.json` beside them
+    (`tsconfig.declarations.canvas-loop.json`; 19 files, 108 KB). The check
+    uses the workspace package when it resolves and these otherwise.
+    `checkSketchTypes` maps `@ianbicking/canvas-loop` to `src/exports/core`
+    without an extension, so the `.d.ts` resolves.
+  - **Settled: the image's install under pnpm 12.21.** The runtime stage
+    writes `/app/pnpm-workspace.yaml` with `allowBuilds` (esbuild and the
+    Workspace CLI true; `@google/genai`, `agent-browser`, `protobufjs`,
+    `webgpu` false) in place of the `--allow-build` flags. pnpm 10.26.2 and
+    12.21.0 both honour `allowBuilds` (checked locally: esbuild's postinstall
+    runs, protobufjs's is skipped, exit 0); pnpm 12.21 ignores
+    `ignoredBuiltDependencies`. Docker is not installed on this Mac, so the
+    image was not built.
+  - **Tests.** `figure-canvas-loop.test.ts`: host first when the sketch's
+    `onError` throws, the host alone when the sketch has none, and
+    `figureNotice` over canvas-loop's real error classes and a string.
+    `FigureView/FigureLayout.notice-slot.test.ts`: the description under a
+    notice (page), the caption under one (embed), and each notice's text.
+    `routes/figure.test.ts`: the starter compiles; a helper's type error
+    comes back with its line; `v.cache` sets `figureOutdated`.
+    `sketch-types.test.ts`: the statement-`draw` line.
+    `figure-gpu.test.ts`: the image's `allowBuilds` and the declarations
+    step.
 
 ### C4. Guidance and starter
 
@@ -644,7 +696,7 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   moved to trixie (C1). Found on the way: `pnpm add` of the tarball with
   corepack's latest pnpm (12.21.0) exits 1 on ignored build scripts
   (`@google/genai`, `agent-browser`, `protobufjs`, and now `webgpu`), which
-  would stop the image build; not fixed here.
+  would stop the image build; fixed in C3 with `allowBuilds`.
 
 ### Production steps — each needs the boxholder's own yes
 
@@ -844,12 +896,8 @@ None. This is itself subplan (c).
 - **P1 before the merge, or let the deploy install Mesa.** Lean: P1 first, for
   real timing before the cutover.
 - **The live server's CPU count.** Unknown in the repo; P1 records it.
-- **The contract check in the Docker image** (found in C2). The packed
-  install has no canvas-loop source, so `bbx figure run` cannot type-check
-  and fails. Options: ship canvas-loop's type sources in the tarball (the
-  build copies them beside `dist/`), or let a packed install run without
-  the check and say so in the output. Lean: ship the sources, since without
-  the check a wrong style value draws with no error.
+- **The contract check in the Docker image** (found in C2). Settled: ship
+  canvas-loop's declarations in the tarball (C3 as built).
 
 ## Knowledge audits
 

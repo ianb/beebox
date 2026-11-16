@@ -9,7 +9,6 @@
  * path (p5 touches `window` at import time).
  */
 
-import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../../hooks/useViewFileHelpers";
 import type { FigureParamDecl } from "../../lib/figure-params";
@@ -87,13 +86,15 @@ async function loadRuntimeLib(runtime: FigureRuntime, harness: CanvasLoopHarness
 interface CanvasLoopHarness {
   declared: readonly FigureParamDecl[];
   report?: ReportActivity;
+  onError: (error: unknown) => void;
 }
 
 interface FigureMountProps {
   runtime: FigureRuntime;
   sketch: FigureSketch;
   figure: FigureContext;
-  onError: (message: string) => void;
+  /** Hears a failure: the runtime did not load, the sketch factory threw, or (canvas-loop) the figure failed after mount. */
+  onError: (error: unknown) => void;
   /** The card's declared `params:`, checked against a canvas-loop module's own. Default none. */
   declaredParams?: readonly FigureParamDecl[];
   /** Logs this figure's actions (a no-op outside the companion pane). */
@@ -129,6 +130,9 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
     // mutable object property isn't narrowed the same way, which also keeps
     // the check honest for readers.
     const state = { cancelled: false };
+    const fail = (error: unknown): void => {
+      if (!state.cancelled) onError(error);
+    };
 
     void (async () => {
       try {
@@ -136,6 +140,7 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
         const lib = await loadRuntimeLib(runtime, {
           declared: declared ?? [],
           ...(reporter !== undefined ? { report: (...args: Parameters<ReportActivity>) => { harnessRef.current.report?.(...args); } } : {}),
+          onError: fail,
         });
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
@@ -149,7 +154,7 @@ export function FigureMount({ runtime, sketch, figure, onError, declaredParams, 
           if (w > 0 && h > 0) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
         }
       } catch (e) {
-        if (!state.cancelled) onError(errorMessage(e));
+        fail(e);
       }
     })();
 

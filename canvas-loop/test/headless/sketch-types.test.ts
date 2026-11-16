@@ -81,6 +81,12 @@ test("a removed View member gets what replaces it, as the recorder's RemovedCall
   ]);
 });
 
+test("a draw that returns nothing gets the statement-draw replacement, as the recorder's RemovedCallError would say", async () => {
+  const errors = errorsIn(await checkSketchTypes([cases.nothing]), cases.nothing);
+  assert.equal(errors.length, 1, JSON.stringify(errors));
+  assert.ok(errors[0]?.message.endsWith("\n  drawing calls as statements was removed: return the drawing from draw: return [v.rect(…), v.at(options, [children])] (a node, a list, or null for nothing)"), errors[0]?.message);
+});
+
 test("dom adds the DOM library, for a box figure's factory; packageRoot names the package", async () => {
   const path = sketch("figure-tea.ts", { draw: 'export function draw(v: View): RootDrawing {\n  return v.background("#fff");\n}\nexport const reduced = (): boolean => matchMedia("(prefers-reduced-motion: reduce)").matches;' });
   assert.deepEqual((await checkSketchTypes([path])).map((e) => e.message), ["Cannot find name 'matchMedia'."]);

@@ -22,6 +22,10 @@
       "default": "./src/browser/mount.ts"
     },
     "./browser/figure.css": "./src/browser/figure.css",
+    "./sketch-check": {
+      "types": "./src/headless/sketch-types.ts",
+      "default": "./src/headless/sketch-types.ts"
+    },
     "./eslint": {
       "types": "./src/eslint/plugin.ts",
       "default": "./src/eslint/plugin.ts"
