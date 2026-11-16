@@ -255,6 +255,7 @@ u.textWidth(s, options)
 | `valign` (`"top"`, `"middle"`, `"bottom"`, `"baseline"`) | `"top"` |
 | `halo` (a color drawn as a band around the letters, under them) | none |
 | `keepInside` (slide the text back inside the canvas, or a picture's box, 4px margin, when it would cross an edge) | off |
+| `overlay` (the text floats over the drawing on purpose: the overlap check skips it) | off |
 | `blend`, `erase` | as for a style |
 | `wrap` | on when `w` is set |
 | `fit` (shrink until the text fits the box) | off |
@@ -285,7 +286,10 @@ u.textWidth(s, options)
   a frame (the same text twice, as for a shadow, is not reported). A rotated
   text counts as the upright box around it. After ten pairs it stops
   reporting. A `halo` is part of the bounds; a `halo` in the background color
-  keeps a label readable where it crosses a line. Headless runs also warn when
+  keeps a label readable where it crosses a line. Text meant to float over
+  other text (a tooltip, a hover hint by the pointer, a dragged label) takes
+  `overlay: true`, and the check skips it; the text under it is still checked
+  against the rest. Headless runs also warn when
   the font has no glyph for a character, which draws as an empty box or
   nothing; use a plain word or another character.
 
@@ -349,7 +353,8 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   value. Leave `deps` out for a drawing that never changes.
 - Call `v.picture` in every `draw` that places it: it returns the kept
   version without running `body`. A `Picture` from an earlier frame is
-  refused at `place`.
+  refused at `place`. Versions not asked for stay kept for a while (within a
+  memory budget), so poses that come back are not recorded again.
 - Inside `body`, `v.width` and `v.height` are the picture's size, and
   `keepInside` text keeps inside the picture's box. Drawing outside the box
   is kept, so glows and shadows can spill over it.

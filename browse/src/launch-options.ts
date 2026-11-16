@@ -138,3 +138,14 @@ export function daemonRunning(socketDir: string, session: string): boolean {
     return e instanceof Error && "code" in e && e.code === "EPERM";
   }
 }
+
+/**
+ * Launch args with Chromium's `--mute-audio` added. Upstream splits the value
+ * on newlines, or on a comma before another flag, so the flag joins with
+ * whichever separator the value already uses.
+ */
+export function withMutedAudio(launchArgs: string | undefined): string {
+  if (launchArgs === undefined || launchArgs === "") return "--mute-audio";
+  if (launchArgs.split(/\n|,(?=--)/u).includes("--mute-audio")) return launchArgs;
+  return `${launchArgs}${launchArgs.includes("\n") ? "\n" : ","}--mute-audio`;
+}

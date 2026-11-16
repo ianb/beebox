@@ -38,7 +38,7 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.325` (SDK), `2.1.325` (Claude Code), `0.169.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.326` (SDK), `2.1.326` (Claude Code), `0.169.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.325` on 2026-11-14 on
   the **act-now** path (taking 0.3.323 and 0.3.324): 2.1.325 fixes a security
@@ -73,6 +73,24 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.326 / Claude Code 2.1.326 — pending; changelog UNPUBLISHED at this turn (re-read next turn)
+
+Published 2026-11-16T18:44Z, minutes before this turn; neither changelog had a
+section. Bound from the `sdk.d.ts` diff against 0.3.325 (bundled CLI 2.1.326):
+- **New `mcpServersDelivery` option** (`'argv'` default, or `'initialize'`):
+  stdio/SSE/HTTP MCP servers can reach Claude Code over stdin instead of the
+  command line, where their `env` and `headers` are readable by other users.
+  Passing them on the command line is deprecated; an app that sets
+  `pathToClaudeCodeExecutable` and leaves the option unset gets a
+  `DeprecationWarning` (`CLAUDE_SDK_MCP_SERVERS_ARGV_DEPRECATED`) once per
+  process. beebox sets `pathToClaudeCodeExecutable`
+  (`resolveClaudeCodeBinary()`) and passes no MCP servers. **Check when
+  taken** whether the warning appears with no MCP servers; if so, set
+  `'initialize'` in the query options.
+- `BUILTIN_TOOL_NAMES` changed; per-tool MCP permission policy wording.
+- **Action:** Settled path; takeable 2026-11-18T18:44Z, after the changelog
+  re-read.
 
 ### 0.3.324 / 0.3.325 / Claude Code 2.1.324 / 2.1.325 — APPLIED 2026-11-14, act-now (published 2026-11-13T18:47Z and 20:05Z)
 

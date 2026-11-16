@@ -70,7 +70,7 @@ test("label overlap: a pair overlapping by more than 2 px is reported once, nami
   const [o] = found;
   assert.ok(o !== undefined && o !== "more");
   assert.equal(o.second.content, "right");
-  assert.equal(overlapMessage(o), 'text "right" overlaps text "left" near (20, 4); move one, or place them with v.textBounds first');
+  assert.equal(overlapMessage(o), 'text "right" overlaps text "left" near (20, 4); move one, or place them with v.textBounds first; for text that floats over others on purpose (a tooltip, a hover hint), give it overlay: true');
   assert.deepEqual(newOverlaps(texts, reported), [], "each pair once per run");
 });
 
@@ -116,6 +116,20 @@ test("label overlap, through the recorder: top-level labels, labels inside a pla
   assert.equal(placed.length, 1, "the placement at (100, 50) overlaps; the one at (10, 10) does not");
   assert.match(placed[0] ?? "", /text "in a picture" overlaps text "over it"/);
   assert.deepEqual(warningsOf((v) => v.mask(v.text("stencil", { x: 10, y: 20 }, { size: 14 }), v.text("seen", { x: 12, y: 22 }, { size: 14 }))), []);
+});
+
+test("label overlap: overlay text (a hover hint) is skipped, also with keepInside; the text under it still counts against other text", () => {
+  const out = warningsOf((v) => {
+    return [
+      v.text("sign", { x: 10, y: 20 }, { size: 14 }),
+      v.text("hint", { x: 14, y: 22 }, { size: 14, overlay: true }),
+      v.text("tip", { x: 150, y: 22 }, { size: 14, overlay: true, keepInside: true }),
+      v.text("label", { x: 152, y: 24 }, { size: 14 }),
+      v.text("other", { x: 16, y: 24 }, { size: 14 }),
+    ];
+  });
+  assert.equal(out.length, 1);
+  assert.match(out[0] ?? "", /^text "other" overlaps text "sign"/);
 });
 
 test("label overlap: a rotation inside a picture undone by its placement leaves the label upright, not a box around a box (review probe)", () => {

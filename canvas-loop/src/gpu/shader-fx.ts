@@ -77,7 +77,7 @@ fn adjust(kind: u32, v: f32, c: vec3f) -> vec3f {
   return vec4f(c * s.a, s.a);
 }
 // t0 = the effected layer, t1 = the blurred shadow source, t2 = the blurred glow source.
-// v[1] = (has shadow, has glow, shadow dx, shadow dy), v[2] = shadow colour, v[3] = glow colour, v[4].x = glow passes.
+// v[1] = (has shadow, has glow, shadow dx, shadow dy), v[2] = shadow colour, v[3] = glow colour, v[4].x = glow strength (any value, not only whole).
 @fragment fn fxCombine(i: FOut) -> @location(0) vec4f {
   let f = fx[i.id]; let p = vec2i(floor(i.pos.xy));
   let E = textureLoad(t0, p, 0);

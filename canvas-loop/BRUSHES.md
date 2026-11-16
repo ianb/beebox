@@ -241,7 +241,7 @@ v.group({ effects: { hatching: { amount: 0.8 } } }, drawStatue(v)),
 | Effect | Value |
 | --- | --- |
 | `blur` | radius in pixels |
-| `glow` | `{ blur, color, strength? }`: a halo in `color` around what the group drew; `strength` 1–6 (default 2) builds it brighter |
+| `glow` | `{ blur, color, strength? }`: a halo in `color` around what the group drew; `strength` 1–6 (default 2, fractions too) builds it brighter |
 | `shadow` | `{ x?, y?, blur?, color }`: a drop shadow, offset and softened |
 | `hue` | rotate hues, degrees |
 | `saturation`, `brightness`, `contrast` | factors: 1 unchanged, 0 grey / black / flat |
@@ -281,6 +281,18 @@ see. For a small flame, keep `blur` near the flame's size and raise
 
 ```ts
 v.circle(lx, ly, 14, { fill: "rgba(255,190,90,0.5)", effects: { glow: { blur: 16, color: "#ff9a2e", strength: 4 } } })
+```
+
+Halos add up. Over many small lights, the blurred silhouette tends toward the
+share of the area the lights cover, so the halo becomes an even haze over
+everything around them. 35 windows of 10×14 px, 26 px apart, each with
+`blur: 10`, lay a quarter-strength orange haze over the whole facade, yet one
+such window alone barely shows a halo. For each of many small lights to get
+its own halo, keep `blur` near half the light's size and raise `strength`,
+and put the lights in one group so one glow draws them all:
+
+```ts
+v.group({ effects: { glow: { blur: 4, color: "#ff9a30", strength: 3 } } }, litWindows.map((w) => v.rect(w.x, w.y, w.w, w.h, WINDOW)))
 ```
 
 A lit lamp: the flame is an emissive shape with a glow, and a light sits at
@@ -405,7 +417,10 @@ each frame:
   `v.picture({ key: "sky", width: 600, height: 300, deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
 - A thing that moves but keeps its look (a character, a boat, a cloud) is a
   picture placed at a new position each frame. Draw each pose as its own
-  version (`deps: [pose]`) and switch between them.
+  version (`deps: [pose]`) and switch between them. A pose not shown for a
+  while stays kept, so a walk cycle draws each pose once:
+  `v.picture({ key: "walker", width: 80, height: 120, deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
+  Do not pack poses into one sheet picture and clip to one.
 - The renderer keeps a placed picture's pixels while its version, scale and
   rotation stay the same; a move reuses them, since placements snap to whole
   device pixels. So bob a picture by moving it, and flip it with a fixed

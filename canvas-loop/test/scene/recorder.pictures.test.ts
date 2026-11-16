@@ -58,23 +58,43 @@ test("testing mode records each version again and warns when the body draws diff
   assert.match(warning ?? "", /first difference at picture "card" \[1] > group #2 > circle #1/);
 });
 
-test("a version not asked for in two frames is dropped and recorded again", () => {
+test("a version not asked for stays kept, so a walk cycle's poses record once and the churn warning stays quiet", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  const warnings: string[] = [];
+  // Three walkers on one key, each holding a pose three frames; one of them changes pose each frame, so the first cycle adds a version in every frame.
+  for (let f = 0; f < 40; f++) {
+    warnings.push(...rec.record((v) => [0, 1, 2].map((i) => {
+      const pose = (Math.floor((f + i) / 3) + i * 2) % 6;
+      return v.place(v.picture({ key: "walker", width: 10, height: 10, deps: [pose] }, () => v.rect(0, 0, pose + 1, 10, { fill: "#000" })), i * 20, 0);
+    })).warnings);
+  }
+  assert.deepEqual(warnings, []);
+  const plain = new SceneRecorder({ width: 10, height: 10 });
+  let recorded = 0;
+  const ask = (pose: number) => (v: View): Drawing => v.place(v.picture({ key: "k", width: 1, height: 1, deps: [pose] }, () => {
+    recorded++;
+    return v.rect(0, 0, 1, 1, { fill: "#000" });
+  }), 0, 0);
+  for (let f = 0; f < 60; f++) plain.record(ask(Math.floor(f / 5) % 4));
+  assert.equal(recorded, 4, "each of 4 poses, shown 5 frames in turn, is recorded once (not each time it comes back)");
+});
+
+test("versions not asked for are dropped, least recently asked first, past about 16 MB", () => {
   const rec = new SceneRecorder({ width: 10, height: 10 });
-  let runs = 0;
-  const ask = (v: View): Drawing => {
-    v.picture({ key: "k", width: 1, height: 1 }, () => {
-      runs++;
-      return null;
-    });
-    return null;
-  };
-  rec.record(ask);
-  rec.record(() => null);
-  rec.record(ask);
-  assert.equal(runs, 1, "kept across one frame without it");
-  for (let i = 0; i < 3; i++) rec.record(() => null);
-  rec.record(ask);
-  assert.equal(runs, 2);
+  let fills = 0;
+  // Each version holds 1000 × 1000 × 4 bytes: four of them idle fit in 16 MiB, five do not.
+  const ask = (n: number) => (v: View): Drawing => v.place(v.pixels({ key: "big", width: 1000, height: 1000, deps: [n] }, (im) => {
+    fills++;
+    im.data[3] = 255;
+  }), 0, 0);
+  for (let n = 0; n < 8; n++) rec.record(ask(n));
+  for (let f = 0; f < 3; f++) rec.record(() => null);
+  assert.equal(fills, 8);
+  rec.record(ask(7));
+  rec.record(ask(4));
+  assert.equal(fills, 8, "the four most recent are kept");
+  rec.record(ask(3));
+  assert.equal(fills, 9, "an older one was dropped and is filled again");
 });
 
 test("a picture body has its own coordinates and box; it may not log, snapshot or set the cursor", () => {

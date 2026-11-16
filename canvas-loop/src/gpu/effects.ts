@@ -25,7 +25,8 @@ export interface FxPlan {
   /** Colour adjustments in CSS filter order: [index into ADJUSTMENTS, value]. */
   readonly adjust: readonly (readonly [number, number])[];
   readonly blur: Sigma;
-  readonly glow: { readonly sigma: Sigma; readonly color: Rgba; readonly passes: number } | undefined;
+  /** `strength` builds the halo as `1 − (1 − blurred alpha)^strength`; any value 1..6, not only whole ones. */
+  readonly glow: { readonly sigma: Sigma; readonly color: Rgba; readonly strength: number } | undefined;
   readonly shadow: { readonly dx: number; readonly dy: number; readonly sigma: Sigma; readonly color: Rgba } | undefined;
   /** Wash, hatching and paper, after the blur. */
   readonly painterly: PainterlyPlan | undefined;
@@ -50,7 +51,7 @@ export function fxPlanOf(effects: Effects | undefined, a: { matrix: Mat; colors:
   let glow: FxPlan["glow"];
   if (effects.glow !== undefined) {
     const sigma = times(scale, effects.glow.blur);
-    glow = { sigma, color: premultiply(a.colors(effects.glow.color)), passes: Math.round(effects.glow.strength ?? 2) };
+    glow = { sigma, color: premultiply(a.colors(effects.glow.color)), strength: effects.glow.strength ?? 2 };
     reach = Math.max(reach, 3 * widest(sigma));
   }
   let shadow: FxPlan["shadow"];

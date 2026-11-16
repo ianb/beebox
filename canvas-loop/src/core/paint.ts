@@ -44,6 +44,8 @@ export interface TextOptions {
   keepInside?: boolean;
   /** A band of this color around the letters, drawn under them, so text reads over lines and busy ground. */
   halo?: Paint;
+  /** The text floats over the drawing on purpose (a tooltip, a hover hint, a dragged label): the overlap check skips it. Drawing is unchanged. */
+  overlay?: boolean;
   blend?: BlendMode;
   erase?: boolean;
 }
