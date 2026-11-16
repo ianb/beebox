@@ -852,8 +852,7 @@ then the switch that deletes the old code; then docs.
     one row per exercise with the frames compared, the parity numbers, the
     expected differences seen, and the verdict.
   - **Eyes.** One exhibit with baseline and new frames side by side for every
-    exercise, and 4× crops for brushed and papered ones. Astra reads it first;
-    the boxholder reads it at the hand-off (chunk 8).
+    exercise, and 4× crops for brushed and papered ones. Astra reads it.
   - **Records.** Each exercise gets a `runs.jsonl` line: `ported` where the
     source changed, `rerun` where it did not. Changed ones get a `migrated`
     line in `meta.yaml`.
@@ -1016,6 +1015,74 @@ then the switch that deletes the old code; then docs.
   read them, committed while the painter still exists. Then the type merge,
   the mechanical import edit across migrated sketches, and the deletions.
 
+- **As built (chunk 6).** Commits 7e7c3b499 (frozen references),
+  d106f4473 (types, browser, React, sketches, stand-ins, trails), b3fdf3c4f
+  (deletions), 15d4e9001 (call sites under `bbx`), d4b5588d7 and 5911466f9
+  (review fixes). The order changed: the type merge, the browser port and
+  the sketch ports are one commit, since the painter typed its View against
+  the old interface and the sketches against the new one; beebox's mount
+  edits went with them, since layout-check refuses a re-export shim for
+  `./scene-browser`.
+  - **Frozen references.** `compositing.png`, `shapes.png`, `text.png` and
+    `text-bounds.json` in `canvas-loop/test/fixtures/scene-parity/` (270 KB),
+    each decoding within 0 levels of the render it froze; every row passes as
+    before. `recorder.brushes.test.ts` holds the painter's text numbers as
+    literals.
+  - **Types.** As planned, with one addition: the Canvas2D context subset
+    and its brush helpers moved from `core/paint.ts` to `core/ctx2d.ts`
+    (internal), which kept `paint.ts` under the file limit.
+  - **Browser.** The GPU half is `browser/scene/figure/start.ts`
+    (`startFigure`, with `sleep.ts` beside it), loaded by `attachSketch` on
+    first use. `ready` resolves once frame 0 is on screen. Every failure
+    reaches `onError` once: no WebGPU (`NoWebGpuError`), no adapter
+    (`NoGpuAdapterError`, now with `transcriptPath` undefined in a browser),
+    no WebGPU context (`SketchMountError`, moved to `scene/errors.ts`), a
+    throwing frame, a failed first frame, a device lost before frame 0, and a
+    device that could not be recreated (the figure stays retryable).
+    `AttachSketchOptions` gains `onLog`, `onNotice`, `inspect` and `gpu` (a
+    stand-in device for tests and dev tools); `SketchFigure` takes `gpu` too.
+    The canvas DOM helpers are `browser/canvas-dom.ts`. The playground and
+    dev demo bundle as ES modules, since the scene code reads
+    `import.meta.url`; both draw in Chrome on WebGPU. The Stage 4 speed pages
+    in `scratch/` call `mountSceneSketch`; chunk 8 points them at
+    `mountSketch` with `inspect`.
+  - **Headless.** The runner always draws on the scene surface;
+    `toTeaModule` ignores a `renderer` export.
+  - **Deleted.** `core/painter/`, `core/view.ts`, `core/brush/paper.ts`,
+    `headless/surface.ts`, `headless/tea-view.ts`, `CanvasFrameSurface`, the
+    Canvas2D browser surface, `BrowserView`, the layer factory, the
+    `./scene-browser` export, and 1,394 lines of painter tests, each file with its
+    reason in b3fdf3c4f's message. Ported first: `textBounds`, halo bounds,
+    `keepInside` (`test/scene/recorder.text.test.ts`), `debugBox` with
+    `--outline` and the `--timing` line (`tea-runtime.gpu.test.ts`).
+  - **Gallery.** Every exercise has a verdict and runs on the scene renderer.
+    `pelican-bicycle` passes (9 of 9 frames). The control stand-ins draw the
+    bare input, so A2 is gone: the six exercises with `v.control` and the
+    drawers' pendulums pass. The particle fountains keep their last 12
+    positions in the model and draw them fading over the dark ground, so A1
+    passes by eye (the measures count the residue of dead particles the
+    overlay kept). Examples: `brushes-tea.ts`, `orbit-tea.ts`,
+    `fjord-tea.ts` pass. The table has no accepted differences left. The
+    exhibit gained the four deferred drawings and new frames for the
+    stand-in and particle exercises; its stale crops were removed.
+  - **Found and fixed.** Under `bbx`, canvas-loop runs bundled with source
+    maps, so `call-site.ts` matched no runtime frame and every warning named
+    `call-site.ts` instead of the sketch's line, for any figure on the scene
+    renderer. It now also takes the runtime's paths from a frame of its own.
+  - **Review.** Codex (gpt-6-astra) found five problems in the async mount
+    (a stale surface unconfiguring a reused canvas, teardown during start,
+    an unrecreated device not reaching `onError`, `ready` before frame 0, the
+    playground's stale controls); all fixed with tests. The verification
+    round confirmed four and found two more (a device lost before frame 0,
+    teardown while frame 0 draws), fixed with tests.
+  - **For subplan (b)'s chunk 9.** No file imports `core/painter/`. What the
+    CPU expansion still uses is `core/brush/render/` (the kind painters,
+    `dab`, `ink`, `colour`, `mark/`), `scene/brush/record-ctx.ts`,
+    `scene/brush/expand.ts`, and the internal `Ctx2D` with `withSaved`,
+    `inPaintSpace` and `resolveGradient` in `core/ctx2d.ts`; chunk 9 can
+    delete them with the CPU expansion. `@napi-rs/canvas` stays (PNG
+    encoding, diff and zoom views, text measuring, colour parsing).
+
 ### Track 7: docs (chunk 7)
 
 - **What:** rewrite `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md` for
@@ -1062,6 +1129,10 @@ then the switch that deletes the old code; then docs.
   58.8, 60, 11.0) and chunk 4b's acceptance, and headless time per 90 frames; one exhibit; Astra's read; a short
   checkpoint summary for the boxholder in
   `beebox/docs/plans/canvas-loop-scene/stage5/`.
+- **Who reads what (boxholder, 2026-11-15).** Astra's read of the exhibit is
+  the review of the frames. The boxholder is shown only differences a person
+  would notice in use: a lost effect, a wrong colour, overlapping text. Brush
+  texture changes are not shown to the boxholder.
 
 ### Seams for subplans (b) and (c)
 
@@ -1351,8 +1422,9 @@ check holds.
    ahead; chunk 9 needs this chunk's painter deletion.*
 7. **Docs.** Track 7, including the doc probe. Checkpoint: the doc probe's
    account; the View-members doc test passes; `pnpm doc-check` passes.
-8. **Baselines and hand-off.** Track 8. Checkpoint: the boxholder's read of
-   the exhibit and the summary.
+8. **Baselines and hand-off.** Track 8. Checkpoint: Astra's read of the
+   exhibit; the boxholder's read of the summary and of any difference a
+   person would notice in use.
 
 No chunk merges to `main`; see Rollout shape. No external source is adopted,
 so no ACKNOWLEDGEMENTS.md entry.
