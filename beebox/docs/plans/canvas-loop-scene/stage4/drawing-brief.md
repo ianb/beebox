@@ -1,7 +1,7 @@
 # Stage 4 drawer brief
 
 What each Stage 4 drawer was given (2026-11-15). Part of
-`beebox/docs/plans/canvas-loop-scene.md`, Stage 4: the drawing round. It
+`beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 4: the drawing round. It
 repeats the Stage 2 paper probe (`../stage2-brief.md`) against the running
 spike renderer, so drawers can render and look.
 

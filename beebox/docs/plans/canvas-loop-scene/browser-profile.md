@@ -1,6 +1,6 @@
 # Stage 0: where browser time goes, and the targets
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 0. Measured
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 0. Measured
 2026-11-14 at commit `570e8ef21` (after `2e0720f1a`: one soft-dab image,
 hatching batched).
 

@@ -1,6 +1,6 @@
 # Stage 3: Dawn on a GPU-less Linux host
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`; the probe Checkpoint 3 asked
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`; the probe Checkpoint 3 asked
 for (2026-11-15). Question: can the WebGPU renderer run headless on a server
 with no GPU, so one implementation serves the browser and headless?
 

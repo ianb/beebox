@@ -1,6 +1,6 @@
 # Stage 3 summary and the Checkpoint 3 recommendation
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`. Five probes ran on an Apple
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Five probes ran on an Apple
 M2 Pro in the repo's headless Chromium (2026-11-15). The Mac crashed once when
 all five ran at once (shared CPU and GPU memory); after that they ran one at a
 time with memory bounds. Notes, in this folder: `scene-cost.md`,

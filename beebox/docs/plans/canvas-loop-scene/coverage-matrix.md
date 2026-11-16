@@ -1,6 +1,6 @@
 # canvas-loop coverage matrix (Stage 0, reconciled with Stage 1 draft 2)
 
-Part of [canvas-loop-scene](../canvas-loop-scene.md), Stage 0. One row per
+Part of [canvas-loop-scene](../../implemented-plans/canvas-loop-scene.md), Stage 0. One row per
 feature. Each row says how the feature works today, whether it reads what is
 already drawn, how a scene could describe it, and how each renderer could
 draw it. Counts of real use are in [api-inventory.md](api-inventory.md).

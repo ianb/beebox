@@ -1,6 +1,6 @@
 # Stage 3: parity criteria
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`. Written before any Stage 3
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Written before any Stage 3
 probe ran (2026-11-15), so results are judged against fixed criteria rather
 than accepted as they come. The boxholder's standing guidance: "Deterministic
 is more like it", not GPU-exact; brushes "may be reimplemented" and judged by

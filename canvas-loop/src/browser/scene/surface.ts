@@ -174,6 +174,7 @@ export class SceneSurface implements DrawSurface {
 
   #enqueue(op: () => Promise<void> | void): Promise<void> {
     const run = this.#tail.then(op);
+    // The caller gets `run` and sees its rejection; the tail only orders the next op after it settles.
     this.#tail = run.catch(() => {});
     return run;
   }

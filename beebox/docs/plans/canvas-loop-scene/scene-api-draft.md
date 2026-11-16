@@ -1,6 +1,6 @@
 # Stage 1: the scene API, draft 2.11
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 1. Types:
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 1. Types:
 `canvas-loop/src/scene-draft/scene-api.ts`. Example sketches that
 type-check against them: `canvas-loop/src/scene-draft/examples/`. Nothing runs
 yet. Draft 1 (commit `882c1300e`) was reviewed by Codex (gpt-6-sol); draft 2
@@ -641,7 +641,7 @@ From the Stage 4 builder (chunks 1–2):
 ## 23. Draft 2.11: `draw` returns its drawing (returned-scene subplan, R2)
 
 The boxholder chose a returned form: *"a return style just seems better"*
-(`beebox/docs/plans/canvas-loop-returned-scene.subplan.md`). It replaces
+(`beebox/docs/implemented-plans/canvas-loop-returned-scene.subplan.md`). It replaces
 section 1's stance and R9's paper rules.
 
 - **Constructors return nodes.** Every drawing call on `v` keeps its name and

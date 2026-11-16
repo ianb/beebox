@@ -1,6 +1,6 @@
 # Stage 3 probe: scene cost
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 3. Code (throwaway):
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Code (throwaway):
 `scratch/stage3/scene-cost/`. Raw numbers: `node-results.json`,
 `browser-results.json` in that folder.
 

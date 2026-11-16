@@ -1,6 +1,6 @@
 # Checkpoint 4: summary for the boxholder
 
-Stage 4 of `beebox/docs/plans/canvas-loop-scene.md`, 2026-11-15. The spike
+Stage 4 of `beebox/docs/implemented-plans/canvas-loop-scene.md`, 2026-11-15. The spike
 renderer (`canvas-loop/src/scene-spike/`) draws a recorded scene with WebGPU,
 in the browser and headless through Dawn. The exhibit "Canvas-loop scene
 renderer: Checkpoint 4" holds the images.
@@ -133,7 +133,7 @@ Chromebook-class check: not done; no such device is on hand.
 
 Stage 5 writes the subplans, each through bbx-plan with cross-model review:
 (a) scene core, (b) brushes on the GPU, (c) box figures. The list is in the
-Stage 5 section of `../../canvas-loop-scene.md`.
+Stage 5 section of `../../../implemented-plans/canvas-loop-scene.md`.
 
 Correction found while writing (b): targets 1 and 3 miss for two reasons.
 Recording the walker's scene also takes about 11.4 ms per frame in

@@ -1,7 +1,7 @@
 # Stage 2 drawer brief
 
 What each Stage 2 drawer was given (2026-11-15). Part of
-`beebox/docs/plans/canvas-loop-scene.md`, Stage 2: a paper probe of the scene
+`beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 2: a paper probe of the scene
 API draft 2.1. Nothing renders yet; this tests whether the API is natural to
 write, not how the pictures look.
 

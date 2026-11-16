@@ -1,6 +1,6 @@
 # Gallery parity: the scene renderer against the Stage 0 frames
 
-Part of `beebox/docs/plans/canvas-loop-scene-core.subplan.md`, Track 5
+Part of `beebox/docs/implemented-plans/canvas-loop-scene-core.subplan.md`, Track 5
 (chunk 5) and Track 6 (chunk 6: `pelican-bicycle`, the three examples the
 playground and dev demo held back, the control stand-ins and the particle
 trails). Each gallery exercise is rendered on the scene renderer (Dawn,

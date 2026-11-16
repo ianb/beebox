@@ -1,6 +1,6 @@
 # Stage 3 probe: geometry
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 3. Brief:
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
 `canvas-loop-scene/stage3-brief.md`. Judged against
 `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 in the repo's headless
 Chromium (Apple M2 Pro, WebGPU on Metal, WebGL2 on ANGLE Metal). Code:

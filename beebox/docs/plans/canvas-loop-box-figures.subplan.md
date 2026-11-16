@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop scene, subplan (c): box figures"
-status: draft
+status: partial
 workstream: canvas-brushes
 issues:
   - ../../../issues/decisions/2026-11-13-isolate-view-and-figure-code.md
@@ -9,7 +9,7 @@ issues:
 ---
 # canvas-loop scene, subplan (c): box figures
 
-Stage 5 subplan (c) of `beebox/docs/plans/canvas-loop-scene.md`. It moves
+Stage 5 subplan (c) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. It moves
 beebox's figure card and `bbx figure run` to the scene renderer as the only
 canvas-loop path, puts a software Vulkan driver on the server, rewrites the
 box-agent figure guidance and starter, and sets what a person sees when a
@@ -770,11 +770,11 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
 
 ### Production steps — each needs the boxholder's own yes
 
-- **P0 (optional, needs a yes because it reads courseware content).** The
+- **P0 (optional, needs a yes because it reads courseware content). Not run.** The
   boxholder, or an agent they name, runs the new engine's `bbx figure run`
   against a local clone of the courseware box to see which figures fail
   before the cutover. Nothing from it goes into public docs.
-- **P1. Mesa and a Dawn probe on the server before the merge.** As root over
+- **P1. Mesa and a Dawn probe on the server before the merge. Done 2026-11-16:** the server already had `mesa-vulkan-drivers` 25.2.8, and the probe as a box user found `llvmpipe: Mesa 25.2.8` in 0.3 s. As root over
   `deploy/prod-ssh`: `apt-get install -y mesa-vulkan-drivers`; install the
   pinned `webgpu@0.6.2` with `npm install --ignore-scripts` into a root-owned
   throwaway directory a box user can read (for example
@@ -784,13 +784,13 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   `nproc`, and the probe's time. Then delete the directory. The live engine
   is not touched and no `bbx` verb is needed; installing Mesa changes nothing
   that runs today.
-- **P2. The merge to `main`.** This is the cutover; the post-commit hook
+- **P2. The merge to `main`. Done 2026-11-16.** This is the cutover; the post-commit hook
   deploys. Inside the deploy: release prepared and installed (`webgpu`
   included), switch, restart, then `bbx-figure-gpu-install` (installs Mesa if
   P1 was skipped, and probes). After it: open one figure in the boxholder's
   browser, and confirm `.claude/rules/card-figure.md` in the courseware box
   carries the new text after its next chat starts.
-- **P3. Regeneration.** The boxholder sends the courseware agent the prompt
+- **P3. Regeneration. Pending: the boxholder's to send.** The boxholder sends the courseware agent the prompt
   below, in the scope chosen at Checkpoint 5, when they choose.
 
 ### Regeneration prompt (for the boxholder to send)

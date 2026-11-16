@@ -1,6 +1,6 @@
 # canvas-loop API inventory (Stage 0)
 
-Part of [canvas-loop-scene](../canvas-loop-scene.md), Stage 0. It lists every
+Part of [canvas-loop-scene](../../implemented-plans/canvas-loop-scene.md), Stage 0. It lists every
 `View` call and option and the `Util` helpers, with counts from the corpus.
 The counts decide what the scene vocabulary must carry and what it can drop.
 

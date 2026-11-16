@@ -1,6 +1,6 @@
 # Checkpoint 5: summary for the boxholder
 
-Stage 5 of `beebox/docs/plans/canvas-loop-scene.md`, 2026-11-15. Three
+Stage 5 of `beebox/docs/implemented-plans/canvas-loop-scene.md`, 2026-11-15. Three
 subplans, each reviewed twice by Codex (gpt-6-astra for (a) and (b),
 gpt-6-sol for (c)) with every finding checked against the source.
 

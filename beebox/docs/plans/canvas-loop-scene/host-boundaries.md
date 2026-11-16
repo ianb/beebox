@@ -1,6 +1,6 @@
 # Stage 0: how beebox hosts canvas-loop figures
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 0. Paths below are in
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 0. Paths below are in
 `beebox/` unless they start with `canvas-loop/`. Checked 2026-11-14.
 
 ## Browser

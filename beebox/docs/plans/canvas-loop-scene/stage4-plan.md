@@ -1,6 +1,6 @@
 # Stage 4: the spike-through, plan
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 4. Written
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 4. Written
 2026-11-15, after Checkpoint 3 chose one WebGPU renderer for the browser and
 for headless (Dawn), and the Linux probe confirmed Dawn runs without a GPU.
 

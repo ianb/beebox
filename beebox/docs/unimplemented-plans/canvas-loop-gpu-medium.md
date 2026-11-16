@@ -3,7 +3,7 @@ title: "canvas-loop: a painted medium on the GPU"
 status: superseded
 workstream: canvas-brushes
 issues: []
-superseded-by: ../plans/canvas-loop-scene.md
+superseded-by: ../implemented-plans/canvas-loop-scene.md
 ---
 # canvas-loop: a painted medium on the GPU
 

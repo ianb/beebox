@@ -28,7 +28,7 @@ what the row expects.
 proposals. All 46 tests run in the one GPU test process; the 5 left are todo.
 Row 38 was fixed after the drawing round (finding 6).
 
-**Chunk 3 of the scene core plan** (`beebox/docs/plans/canvas-loop-scene-core.subplan.md`,
+**Chunk 3 of the scene core plan** (`beebox/docs/implemented-plans/canvas-loop-scene-core.subplan.md`,
 Track 3): rows 42 and 43 fixed, rows 47–56 added and passing (label overlap,
 removed calls, the off-canvas fold, node paths in render errors, a canvas at
 the texture limit, browser colours, three more faint-mark rows and one that

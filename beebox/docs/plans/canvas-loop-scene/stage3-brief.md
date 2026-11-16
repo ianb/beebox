@@ -1,6 +1,6 @@
 # Stage 3 probe brief (shared by every probe)
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 3: small runnable
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3: small runnable
 probes of the hardest rendering mechanisms, before the backend is chosen.
 Read first: the plan (principles, Checkpoint 0 and 1 decisions),
 `scene-api-draft.md` (draft 2.2; its lowering contract is what a renderer must

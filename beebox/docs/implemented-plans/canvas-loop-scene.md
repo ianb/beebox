@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop scene: a plan for planning the redesign"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---

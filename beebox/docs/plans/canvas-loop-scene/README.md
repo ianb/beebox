@@ -1,6 +1,6 @@
 # canvas-loop scene: Stage 0 notes
 
-Evidence for Checkpoint 0 of `beebox/docs/plans/canvas-loop-scene.md`.
+Evidence for Checkpoint 0 of `beebox/docs/implemented-plans/canvas-loop-scene.md`.
 Gathered 2026-11-14.
 
 | Note | What it holds |

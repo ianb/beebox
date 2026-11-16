@@ -1,6 +1,6 @@
 # canvas-loop scene: prior art
 
-Stage 0 note for `beebox/docs/plans/canvas-loop-scene.md`. Researched 2026-11-14 from primary
+Stage 0 note for `beebox/docs/implemented-plans/canvas-loop-scene.md`. Researched 2026-11-14 from primary
 sources where possible. A claim marked **unverified** comes from a secondary source or from memory
 and needs a check before a decision depends on it. Each item: what it is, what to borrow, what an
 agent recognises, limits, source.

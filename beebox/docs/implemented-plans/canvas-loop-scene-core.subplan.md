@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop scene core: the spike becomes the one API and renderer"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop scene core: the spike becomes the one API and renderer
 
-Stage 5 subplan (a) of `beebox/docs/plans/canvas-loop-scene.md`. The Stage 4
+Stage 5 subplan (a) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. The Stage 4
 spike (`canvas-loop/src/scene-spike/`) records each `draw` as a scene and
 renders it with our own WebGPU renderer, in the browser and headless through
 Dawn. This subplan promotes that spike into canvas-loop's only API and
@@ -1315,7 +1315,7 @@ then the switch that deletes the old code; then docs.
 ## Subplans
 
 None below this one. This file is subplan (a) of
-`beebox/docs/plans/canvas-loop-scene.md`; its siblings are
+`beebox/docs/implemented-plans/canvas-loop-scene.md`; its siblings are
 `canvas-loop-gpu-brushes.subplan.md` (b) and
 `canvas-loop-box-figures.subplan.md` (c).
 

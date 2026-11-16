@@ -1,6 +1,6 @@
 # Stage 2: what the drawers found
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 2. Three drawers
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 2. Three drawers
 (two fresh Opus agents, one Codex gpt-6-sol) each wrote the three sketches in
 `stage2-brief.md` against draft 2.1, without rendering, and wrote an account.
 Their code and accounts are in `canvas-loop/src/scene-draft/probe/`. All nine

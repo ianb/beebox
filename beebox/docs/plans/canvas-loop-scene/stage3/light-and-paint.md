@@ -1,6 +1,6 @@
 # Stage 3 probe: light and paint
 
-Part of `beebox/docs/plans/canvas-loop-scene.md`, Stage 3. Brief:
+Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
 `canvas-loop-scene/stage3-brief.md`. Judged against
 `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 on an Apple M2 Pro:
 the repo's headless Chromium (WebGPU on Metal, WebGL2 on ANGLE Metal), Node

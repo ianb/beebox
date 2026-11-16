@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop: draw returns its scene"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop: draw returns its scene
 
-A subplan of `beebox/docs/plans/canvas-loop-scene.md`. Today a sketch's
+A subplan of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Today a sketch's
 `draw(v, model, params)` calls `v.rect(…)`, `v.group(opts, () => {…})` and so
 on, and a recorder turns the calls into a tree of plain nodes. This plan
 changes `draw` to build the tree as values and return it: `v.rect(…)` returns a

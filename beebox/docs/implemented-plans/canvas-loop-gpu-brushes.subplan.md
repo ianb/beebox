@@ -1,12 +1,12 @@
 ---
 title: "canvas-loop scene: brushes on the GPU"
-status: draft
+status: implemented
 workstream: canvas-brushes
 issues: []
 ---
 # canvas-loop scene: brushes on the GPU
 
-Stage 5 subplan (b) of `beebox/docs/plans/canvas-loop-scene.md`. Brushed
+Stage 5 subplan (b) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Brushed
 strokes in the scene renderer are expanded on the CPU today: about 15 ms per
 frame for the walker sheet, more than the whole frame budget. This subplan
 moves the per-sample work (resampling, pressure, wobble, dabs, ink, bristles)
