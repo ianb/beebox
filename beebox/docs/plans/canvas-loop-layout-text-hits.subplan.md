@@ -794,6 +794,27 @@ run them on the worktree's test1 with `--filter figure`:
 1. **A1** layout box, baseline gap, `v.bounds` (above).
 2. **A2** `v.row`, `v.column`; tests for each `align`/`valign`, null
    children, a child not at its origin, nested rows.
+   - **As built (A2).** Logs are in `scratch/layout-text-hits/a2-*.log`.
+     `scene/recorder/flow.ts` (`flowChildren`) checks the options and
+     computes each child's move; `SceneRecorder.row`/`column` wrap the result
+     in one stamped `at`. The inner translating `at`s are not stamped: the
+     sketch never holds them, so they need no frame mark and do not count as
+     made. A child whose layout box is null stays in the list, untranslated,
+     with no room and no gap. `FlowOptions` is in `core/paint.ts`, re-exported
+     with `Bounds`; `column` takes `Omit<FlowOptions, "valign">` with
+     `valign` limited to top, middle and bottom, and a `"baseline"` passed
+     past the types is refused with a hint. Unknown keys, non-finite `x`,
+     `y`, `gap` and unknown alignments throw naming the call and the key, so
+     B1 need not add the unknown-key check for flows.
+     - **Deviation: no `name` in `FlowOptions` yet.** Storing it needs
+       `AtNode.name`, which is B1's design, so B1 adds `name` to
+       `FlowOptions` (and to the flow's key list in `flow.ts`) and puts it on
+       the flow's outer `at`. Until then `name` is refused as an unknown key.
+     - **Column baseline.** It follows the Ontology's container rule: the
+       first child, in order, that has a baseline (usually the first child).
+     - **`toCanvas` moved** from `view.ts` to `PureHelpers` (`helpers.ts`),
+       unchanged, to keep `view.ts` under the 300-line cap.
+     - **Lines:** source 135, tests 119, docs 18 (272). Track A so far: 625.
 3. **A3** TEA.md "Layout" section and CHANGELOG; the browser baseline-sign
    test.
 4. **B1** names and the hit walk (above).

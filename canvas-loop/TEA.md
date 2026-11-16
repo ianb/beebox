@@ -334,6 +334,24 @@ second function that computes its size.
 - Measuring does not return the drawing: return it as well, or testing mode
   warns that it was not returned.
 
+`v.row(options, children)` and `v.column(options, children)` place their
+children one after another by their layout boxes and return one node, which
+can go in another row or column. Options: `x`, `y` (default 0), `gap`
+(default 0), `align`, `valign`, with `v.text`'s names.
+
+- A row runs left to right. `valign` lines each child up and says what `y`
+  is: `"top"` (default), `"middle"`, `"bottom"`, or `"baseline"` (each
+  child's first text baseline on `y`; a child with no baseline sits on it by
+  its bottom). `align` places the whole row about `x`: `"left"` (default),
+  `"center"` or `"right"`.
+- A column runs top to bottom. `align` lines each child up and says what `x`
+  is; `valign` (`"top"`, `"middle"`, `"bottom"`) places the whole column about
+  `y`. A column's baseline is its first child's, so a column sits in a
+  baseline row by its first line.
+- Each child is moved by its box, so a child drawn at its own `(0, 0)` and one
+  drawn at `(240, 80)` land the same. A child that draws nothing a layout can
+  place (`null`, a light) takes no room and no gap.
+
 ### Pictures
 
 A picture records a drawing once and places it any number of times. Use one

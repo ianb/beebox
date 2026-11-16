@@ -77,6 +77,21 @@ export interface Bounds {
 }
 
 /**
+ * Where `v.row` and `v.column` put their children: in order, `gap` apart,
+ * about (x, y) (default 0, 0). In a row, `align` places the whole row about
+ * `x` and `valign` lines each child up at `y`; in a column, `align` lines each
+ * child up at `x` and `valign` places the whole column about `y`.
+ */
+export interface FlowOptions {
+  readonly x?: number;
+  readonly y?: number;
+  readonly gap?: number;
+  readonly align?: "left" | "center" | "right";
+  /** "baseline" (rows only): each child's first text baseline on `y`; a child with none by its bottom. */
+  readonly valign?: "top" | "middle" | "bottom" | "baseline";
+}
+
+/**
  * How one drawing call paints: plain data, held in variables and spread to
  * vary (`{ ...ink, stroke: "red" }`). A key left out means none (no fill, no
  * stroke, no brush) or the default (weight 1, blend "normal").

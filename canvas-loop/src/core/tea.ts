@@ -7,7 +7,7 @@ import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGr
 import type { Paper } from "./brush/types.js";
 import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
-import type { AtOptions, Bounds, Drawing, DrawingNode, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+import type { AtOptions, Bounds, Drawing, DrawingNode, FlowOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 import type { EaseName, Keyframe } from "./ease.js";
@@ -29,7 +29,7 @@ export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, 
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
 export type { Drawing, DrawingNode, RootDrawing } from "./paint.js";
-export type { AtOptions, Bounds, BrushPreset, Effects, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
+export type { AtOptions, Bounds, BrushPreset, Effects, FlowOptions, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
@@ -246,6 +246,10 @@ export interface View {
   textWidth(content: string, options?: TextOptions): number;
   /** The layout box of `drawing` (any drawing of this frame), or null when it draws nothing. It does not count as returning it. */
   bounds(drawing: Drawing): Bounds | null;
+  /** `children` left to right by their layout boxes, `gap` apart; one node holding each child in its own translating `at`. */
+  row(options: FlowOptions, children: Drawing): DrawingNode;
+  /** `children` top to bottom by their layout boxes, `gap` apart; its baseline is its first child's. */
+  column(options: Omit<FlowOptions, "valign"> & { valign?: "top" | "middle" | "bottom" }, children: Drawing): DrawingNode;
   /** Transform `children` (matrix, then translate, rotate, skew, scale). No layer: they composite with their siblings. */
   at(options: AtOptions, children: Drawing): DrawingNode;
   /** `children` as one isolated layer: opacity, blend, clip, effects and lighting apply to it as a whole. */

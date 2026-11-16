@@ -13,12 +13,12 @@ import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
 import { MADE_IN } from "../../core/paint.js";
-import type { Bounds, ClipShape, Drawing, DrawingNode, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import type { Bounds, ClipShape, Drawing, DrawingNode, FlowOptions, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
 import { RemovedCallError, STATEMENT_DRAW, UnsupportedCallError } from "../errors.js";
-import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
+import { IDENTITY, matrixOf } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
 import type { Geom, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
@@ -45,6 +45,7 @@ import type { ControlParams } from "./controls.js";
 import type { FrameOutputs, FrameRecord } from "./frame.js";
 import { Children } from "./children.js";
 import { layoutBox } from "./layout-box.js";
+import { flowChildren } from "./flow.js";
 
 /** Testing mode warns of at most this many drawings made and not returned in one frame. */
 const UNRETURNED_PER_FRAME = 8;
@@ -245,17 +246,6 @@ export class SceneRecorder extends PureHelpers implements View {
     return layoutBox(this.#children.look("bounds", drawing));
   }
 
-  /** A pure helper: `point` under each scope's transform, innermost first, as the walk composes them. */
-  toCanvas(point: Vec2, scopes: readonly AtOptions[]): Vec2 {
-    if (!Array.isArray(scopes)) throw new SketchUsageError({ detail: "toCanvas(point, scopes): list the at options the point is inside, outermost first, e.g. v.toCanvas([0, 33], [{ translate: [x, y] }, { rotate: a }])" });
-    let matrix = IDENTITY;
-    for (const options of scopes) {
-      checkAt(options);
-      matrix = mul(matrix, matrixOf(options));
-    }
-    return apply(matrix, point);
-  }
-
   // ── scopes ──
   at(options: AtOptions, children: unknown): DrawingNode {
     this.#notes.live("at");
@@ -278,6 +268,18 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live("mask");
     const mask = this.#children.list("mask", maskArt);
     return this.#stamp({ kind: "mask", mask, body: this.#children.list("mask", children) }, "mask");
+  }
+  row(options: FlowOptions, children: unknown): DrawingNode {
+    return this.#flow("row", { options, children });
+  }
+  column(options: FlowOptions, children: unknown): DrawingNode {
+    return this.#flow("column", { options, children });
+  }
+  /** A flow: one `at` node holding each placed child in its own translating `at` (flow.ts). */
+  #flow(call: "row" | "column", a: { options: FlowOptions; children: unknown }): DrawingNode {
+    this.#notes.live(call);
+    const kids = flowChildren(call, { options: a.options, nodes: this.#children.list(call, a.children) });
+    return this.#stamp({ kind: "at", matrix: IDENTITY, children: kids }, call);
   }
   /** R9 (draft 2.11): the paper for every brushed stroke and effect in `children`. */
   paper(...args: [Paper, unknown] | [Paper]): DrawingNode {
