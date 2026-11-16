@@ -36,9 +36,8 @@ function targetTilt(model: DeepReadonly<Model>): number {
   return Math.max(-0.35, Math.min(0.35, (model.left.length - model.right.length) * 0.08));
 }
 
-/** Remove a weight by its name; one already gone (removed since that frame) is ignored. */
-function remove(model: DeepReadonly<Model>, name: string): Model {
-  const id = Number(name.slice("weight-".length));
+/** The model without weight `id`; update checks first that it is still there (two clicks in one frame both name it). */
+function remove(model: DeepReadonly<Model>, id: number): Model {
   return { ...model, left: model.left.filter((w) => w !== id), right: model.right.filter((w) => w !== id) };
 }
 
@@ -53,8 +52,10 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
     case "mousedown": {
       const weight = msg.targets.find((t) => t.startsWith("weight-"));
       if (weight !== undefined) {
+        const id = Number(weight.slice("weight-".length));
+        if (!model.left.includes(id) && !model.right.includes(id)) return model;
         u.handled("remove-weight");
-        return remove(model, weight);
+        return remove(model, id);
       }
       const side = msg.targets.includes("pan-left") ? "left" : msg.targets.includes("pan-right") ? "right" : null;
       if (side === null || model[side].length >= FULL) return model;

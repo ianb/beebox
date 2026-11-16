@@ -26,23 +26,27 @@ function onText(msg: InteractionMsg): string {
  */
 export class UnhandledFold {
   #seen = new Set<string>();
-  #more = new Map<string, number>();
+  /** Per key: the line the summary names, and how many were hidden. */
+  #more = new Map<string, { label: string; count: number }>();
 
   /** True when this input's line should be shown. */
   show(msg: InteractionMsg, text: string): boolean {
     if (text !== "(unhandled)") return true;
-    const key = msg.type + onText(msg);
+    // The names as a list: a name may itself contain " in ", so the printed path is not a key.
+    const targets = msg.type === "mousedown" || msg.type === "mouseup" || msg.type === "mousemove" ? msg.targets : [];
+    const key = JSON.stringify([msg.type, targets]);
     if (!this.#seen.has(key)) {
       this.#seen.add(key);
       return true;
     }
-    this.#more.set(key, (this.#more.get(key) ?? 0) + 1);
+    const more = this.#more.get(key);
+    this.#more.set(key, { label: msg.type + onText(msg), count: (more?.count ?? 0) + 1 });
     return false;
   }
 
   /** One line per input type and target path with hidden "(unhandled)" lines. */
   summary(): string[] {
-    return [...this.#more].map(([key, count]) => `${key}: ${count} more unhandled (not listed)`);
+    return [...this.#more.values()].map(({ label, count }) => `${label}: ${count} more unhandled (not listed)`);
   }
 }
 

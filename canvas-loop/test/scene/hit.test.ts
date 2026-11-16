@@ -66,6 +66,9 @@ test("a plain stroke: a band of weight / 2, its caps as drawn, and nothing in a 
 test("a brushed stroke: a band of weight / 2 either side of its path", () => {
   const s = scene((v) => v.line(50, 100, 150, 100, { stroke: "#000", weight: 10, brush: "ink", name: "b" }));
   assert.deepEqual(targetsAt(s, [[100, 104.9], [100, 105.5], [100, 100]]), [["b"], [], ["b"]]);
+  // Under scale [4, 1] the renderer draws the tip round, 10 × √4 = 20 across: 8 below the path on the canvas is inside.
+  const wide = scene((v) => v.at({ scale: [4, 1] }, v.line(10, 50, 60, 50, { stroke: "#000", weight: 10, brush: "ink", name: "w" })));
+  assert.deepEqual(targetsAt(wide, [[100, 58], [100, 61]]), [["w"], []]);
 });
 
 test("fills use nonzero winding: the middle of a five-point star is inside", () => {

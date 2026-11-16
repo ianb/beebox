@@ -22,3 +22,8 @@ test("UnhandledFold: a named unhandled click shows after a miss in empty space; 
   assert.equal(fold.show(down([]), "add-weight"), true, "a handled line always shows");
   assert.deepEqual(fold.summary(), ["mousedown: 1 more unhandled (not listed)", "mousedown on pan-left: 1 more unhandled (not listed)"]);
 });
+
+test("UnhandledFold: two target paths that print alike still each show once", () => {
+  const fold = new UnhandledFold();
+  assert.deepEqual([down(["a in b"]), down(["a", "b"])].map((m) => fold.show(m, "(unhandled)")), [true, true]);
+});

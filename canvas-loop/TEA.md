@@ -309,7 +309,9 @@ v.text(["k", { text: "obs", sub: true, style: "italic" }], { x: 40, y: 160 }, LA
 - `sub` and `sup` draw at 0.7 × `size`; `sub` moves the baseline down by
   0.22 × `size`, `sup` up by 0.38 × `size`. `style` sets that run's style.
 - Runs are one line, measured and drawn as one text: one box (the line box
-  at `size`; sub and sup sit inside it), one baseline, one `fill`, one `name`.
+  at `size`, which layout and `keepInside` use; a large subscript's
+  descender can reach a little below it), one baseline, one `fill`, one
+  `name`.
   `textWidth` and `textBounds` (on `v` and `u`) take runs too.
 - A `w` box aligns the line inside it and does not wrap; `fit` shrinks every
   run together.

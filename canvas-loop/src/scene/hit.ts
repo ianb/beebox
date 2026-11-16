@@ -157,6 +157,22 @@ function plainStrokeRings(polys: readonly Poly[], at: { style: ShapeStyle; scale
   });
 }
 
+/**
+ * A brushed stroke's band, measured on the canvas: the renderer keeps the tip
+ * round and scales its width by √|det| (RENDERER.md, "Coordinate spaces"),
+ * so under a non-uniform scale the band is not `weight / 2` in local units.
+ */
+function brushedHit(polys: readonly Poly[], a: { h: Here; weight: number }): boolean {
+  const [ma, mb, mc, md] = a.h.matrix;
+  const r = (a.weight / 2) * Math.sqrt(Math.abs(ma * md - mb * mc));
+  const p = apply(a.h.matrix, a.h.p);
+  return polys.some((poly) => {
+    const pts: number[] = [];
+    for (let i = 0; i + 1 < poly.pts.length; i += 2) pts.push(...apply(a.h.matrix, [poly.pts[i] ?? 0, poly.pts[i + 1] ?? 0]));
+    return near({ pts, closed: poly.closed }, { p, r });
+  });
+}
+
 /** A shape's hit area: its fill (any paint, `"transparent"` too) and its stroke. An erasing shape has none. */
 function shapeHit(n: ShapeNode, h: Here): boolean {
   const s = n.style;
@@ -166,7 +182,7 @@ function shapeHit(n: ShapeNode, h: Here): boolean {
   if (s.stroke === undefined || s.weight <= 0) return false;
   const scale = maxScale(h.matrix);
   const polys = polylines(n.geom, scale);
-  if (s.brush !== undefined) return polys.some((poly) => near(poly, { p: h.p, r: s.weight / 2 }));
+  if (s.brush !== undefined) return brushedHit(polys, { h, weight: s.weight });
   return plainStrokeRings(polys, { style: s, scale }).some((r) => winding(r, h.p) !== 0);
 }
 
