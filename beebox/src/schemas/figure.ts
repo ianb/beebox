@@ -225,7 +225,8 @@ Render it headlessly; no browser needed:
 bbx figure run <card path>          # or no path: every canvas-loop figure in the box
 \`\`\`
 
-- It compiles the entry, runs it with canvas-loop's own headless runner and
+- It type-checks the entry, the files it imports, and its exports against
+  the sketch contract, then compiles the entry, runs it with canvas-loop's own headless runner and
   writes \`_tmp/figure-run/…/out/transcript.md\` (the command prints the path) plus frame PNGs
   (frame 0, the last frame, every 30th, and any frame that logged or ran an
   event). Read the transcript and look at the frames.
@@ -240,7 +241,9 @@ bbx figure run <card path>          # or no path: every canvas-loop figure in th
   \`<entry stem>-events.json\`; it is used automatically and is the figure's
   standing check. \`--events <file>\` picks another; \`--frames N\` runs N
   frames (default: through the last event plus 60); \`--params name=value\`
-  starts a param elsewhere (the card's \`params:\` defaults apply first).
+  starts a param elsewhere (the card's \`params:\` defaults apply first);
+  \`--scene\` writes each captured frame's drawing as an outline into the
+  transcript (\`--scene first\`: only the first frame's).
 - Code outside the default export runs in Node: keep \`window\`, \`document\`
   and \`matchMedia\` inside the factory.
 

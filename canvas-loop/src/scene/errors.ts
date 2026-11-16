@@ -18,6 +18,17 @@ export class UnsupportedCallError extends Error {
   }
 }
 
+const PICTURES = "use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (TEA.md, \"Pictures\")";
+
+/** Each removed View member and what replaces it: the recorder's `RemovedCallError` and the sketch type check both say it. */
+export const REPLACEMENTS = {
+  "v.ctx": "draw with the View's calls; a transform with at({ matrix }) or at({ skew }), pixel fields with v.pixels, hand-built lighting with group({ lighting }) (TEA.md, \"Pictures\"; BRUSHES.md, \"Lighting\")",
+  "v.cache": PICTURES,
+  "v.sprite": PICTURES,
+  "v.image": PICTURES,
+  "v.paperTexture": "use group({ effects: { paper: amount } }, children), an effect scoped to the group (BRUSHES.md, \"Paper\")",
+} as const;
+
 /** A View member today's API had and the scene API removed: `call` names it, `replacement` what to use instead. */
 export class RemovedCallError extends SketchUsageError {
   name = "RemovedCallError";

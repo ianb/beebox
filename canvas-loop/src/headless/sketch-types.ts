@@ -12,12 +12,26 @@
 import { readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { REPLACEMENTS } from "../scene/errors.js";
 import { CliError } from "./errors.js";
 
+/** canvas-loop's package directory, found from this module's place in it. */
 const PACKAGE_ROOT = fileURLToPath(new URL("../../", import.meta.url));
-/** The virtual directory that holds the config and the boundary files. Nothing is written there. */
-const VIRTUAL_DIR = join(PACKAGE_ROOT, ".sketch-check");
-const CONFIG_PATH = join(VIRTUAL_DIR, "tsconfig.json");
+
+/** Options for {@link checkSketchTypes}. */
+export interface SketchTypeOptions {
+  /**
+   * canvas-loop's package directory, which holds its `tsconfig.json` and
+   * `src/`. Needed when this module runs bundled into another program, where
+   * its own URL no longer points into the package. Default: found from that URL.
+   */
+  packageRoot?: string;
+  /**
+   * Add the DOM library, for sketch files whose other code runs in a browser:
+   * a box figure's default export calls `matchMedia`. Default: no DOM types.
+   */
+  dom?: boolean;
+}
 
 /** One error the compiler reports for a sketch, its imports, or its exports. */
 export interface SketchTypeError {
@@ -62,22 +76,24 @@ function boundarySource(importPath: string): string {
 /** The 1-based line of the first checked export in every boundary file. */
 const FIRST_CHECKED_LINE = boundarySource("").split("\n").findIndex((l) => l.startsWith("export const init")) + 1;
 
-function importPathFor(sketch: string): string {
-  const rel = relative(VIRTUAL_DIR, sketch).split(sep).join("/").replace(/\.tsx?$/u, ".js");
+function importPathFor(sketch: string, virtualDir: string): string {
+  const rel = relative(virtualDir, sketch).split(sep).join("/").replace(/\.tsx?$/u, ".js");
   return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
 /** The config: canvas-loop's own compiler options, the bundler resolution that `tsx` and esbuild use, no ambient types. */
-function configSource(files: readonly string[]): string {
+function configSource(files: readonly string[], options: { root: string; dom: boolean }): string {
+  const { root, dom } = options;
   return JSON.stringify({
-    extends: join(PACKAGE_ROOT, "tsconfig.json"),
+    extends: join(root, "tsconfig.json"),
     compilerOptions: {
       noEmit: true,
       incremental: false,
       module: "preserve",
       moduleResolution: "bundler",
       types: [],
-      paths: { "@ianbicking/canvas-loop": [join(PACKAGE_ROOT, "src/exports/core.ts")] },
+      ...(dom ? { lib: ["ES2023", "DOM"] } : {}),
+      paths: { "@ianbicking/canvas-loop": [join(root, "src/exports/core.ts")] },
     },
     include: [],
     files,
@@ -106,39 +122,50 @@ function flatten(diagnostic: ChainedDiagnostic, depth: number): string {
   return lines.join("\n");
 }
 
+/** A removed View member the compiler cannot find gets what replaces it, as the recorder's `RemovedCallError` would say. */
+function withReplacement(message: string): string {
+  const name = /^Property '(\w+)' does not exist on type 'View'/u.exec(message)?.[1];
+  const call = `v.${name ?? ""}`;
+  return name !== undefined && Object.hasOwn(REPLACEMENTS, call) ? `${message}\n  ${call} was removed: ${Reflect.get(REPLACEMENTS, call)}` : message;
+}
+
 /**
  * Type-check sketch files and each one's exports against the TEA contract.
  * Returns every error in the sketches, the files they import and their
  * exports, in one list; empty when all are clean. Paths may be relative to
  * the working directory.
  */
-export async function checkSketchTypes(files: readonly string[]): Promise<SketchTypeError[]> {
+export async function checkSketchTypes(files: readonly string[], options?: SketchTypeOptions): Promise<SketchTypeError[]> {
+  const root = options?.packageRoot ?? PACKAGE_ROOT;
+  // The virtual directory that holds the config and the boundary files. Nothing is written there.
+  const virtualDir = join(root, ".sketch-check");
+  const configPath = join(virtualDir, "tsconfig.json");
   const sketches = files.map((f) => resolve(f));
   const virtual = new Map<string, string>();
   const boundaryOf = new Map<string, string>();
   for (const [i, sketch] of sketches.entries()) {
-    const path = join(VIRTUAL_DIR, `contract-${i}.ts`);
-    virtual.set(path, boundarySource(importPathFor(sketch)));
+    const path = join(virtualDir, `contract-${i}.ts`);
+    virtual.set(path, boundarySource(importPathFor(sketch, virtualDir)));
     boundaryOf.set(path, sketch);
   }
-  virtual.set(CONFIG_PATH, configSource([...sketches, ...boundaryOf.keys()]));
+  virtual.set(configPath, configSource([...sketches, ...boundaryOf.keys()], { root, dom: options?.dom === true }));
 
   const { API, DiagnosticCategory } = await import("@typescript/native/unstable/sync");
   const api = new API({
-    cwd: PACKAGE_ROOT,
+    cwd: root,
     fs: {
       readFile: (name) => virtual.get(name),
       fileExists: (name) => (virtual.has(name) ? true : undefined),
-      directoryExists: (name) => (name === VIRTUAL_DIR ? true : undefined),
-      getAccessibleEntries: (name) => (name === VIRTUAL_DIR ? { files: [...virtual.keys()].map((p) => relative(VIRTUAL_DIR, p)), directories: [] } : undefined),
-      realpath: (name) => (virtual.has(name) || name === VIRTUAL_DIR ? name : undefined),
+      directoryExists: (name) => (name === virtualDir ? true : undefined),
+      getAccessibleEntries: (name) => (name === virtualDir ? { files: [...virtual.keys()].map((p) => relative(virtualDir, p)), directories: [] } : undefined),
+      realpath: (name) => (virtual.has(name) || name === virtualDir ? name : undefined),
     },
   });
   try {
-    const snapshot = api.updateSnapshot({ openProjects: [CONFIG_PATH] });
+    const snapshot = api.updateSnapshot({ openProjects: [configPath] });
     try {
-      const project = snapshot.getProject(CONFIG_PATH);
-      if (project === undefined) throw new CliError({ detail: `TypeScript did not load the sketch check's program (${CONFIG_PATH})` });
+      const project = snapshot.getProject(configPath);
+      if (project === undefined) throw new CliError({ detail: `TypeScript did not load the sketch check's program (${configPath})` });
       const { program } = project;
       const diagnostics = [
         ...program.getConfigFileParsingDiagnostics(),
@@ -156,7 +183,7 @@ export async function checkSketchTypes(files: readonly string[]): Promise<Sketch
         return read;
       };
       return diagnostics.map((d): SketchTypeError => {
-        const message = flatten(d, 0);
+        const message = withReplacement(flatten(d, 0));
         const file = d.fileName;
         if (file === undefined) return { file: undefined, line: undefined, column: undefined, code: d.code, message };
         const sketch = boundaryOf.get(file);

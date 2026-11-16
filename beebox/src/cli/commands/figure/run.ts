@@ -11,6 +11,7 @@
  */
 import { spawn } from "node:child_process";
 import { existsSync, promises as fs, realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
@@ -26,6 +27,8 @@ export interface FigureJob {
   events: string | undefined;
   frames: number | undefined;
   every: number;
+  /** Write scene outlines into the transcript: every captured frame (true), the first ("first"), or none (false). */
+  scene: boolean | "first";
   /** Card `params:` defaults (typed) and `--params` values (strings, typed by the child against the module). */
   cardDefaults: Record<string, string | number | boolean>;
   overrides: Record<string, string>;
@@ -99,6 +102,43 @@ function cardDefaults(frontmatter: Record<string, unknown>): Record<string, stri
   return out;
 }
 
+/**
+ * canvas-loop's package directory, for the type check: the CLI bundle inlines
+ * canvas-loop, so its own module URL no longer points into the package. A
+ * packed install has no canvas-loop source to check against.
+ */
+function canvasLoopRoot(): string {
+  try {
+    // The root export is `src/exports/core.ts`.
+    return path.resolve(path.dirname(createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("@ianbicking/canvas-loop")), "..", "..");
+  } catch (error) {
+    throw new FigureRunError({ detail: `cannot type-check the sketch: this engine install has no canvas-loop source to check it against (${error instanceof Error ? error.message : String(error)})` });
+  }
+}
+
+/** TS7006 and TS7031: a parameter, or a destructured one, with an implicit `any` type. */
+const IMPLICIT_ANY_PARAM = new Set([7006, 7031]);
+
+/**
+ * Type-check the entry, the files it imports, and its exports against
+ * canvas-loop's sketch contract, as canvas-loop's own `cli run` does. esbuild
+ * strips types, so without this a wrong style value (a `cap` canvas-loop does
+ * not have) would draw with no error. DOM types are on: the entry's default
+ * export runs in a browser. That export, the figure factory, takes the host's
+ * wrapped library and figure context, for which a box has no type to import,
+ * so implicit-`any` parameters from the `export default` line on are not errors.
+ */
+async function checkEntryTypes(boxRoot: string, entry: string): Promise<void> {
+  const { checkSketchTypes, formatSketchTypeError } = await import("@ianbicking/canvas-loop/headless");
+  const factoryLine = (await fs.readFile(entry, "utf8")).split("\n").findIndex((line) => /^export default\b/u.test(line)) + 1;
+  const inFactory = (e: { file: string | undefined; line: number | undefined; code: number }): boolean =>
+    factoryLine > 0 && e.file === entry && IMPLICIT_ANY_PARAM.has(e.code) && (e.line ?? 0) >= factoryLine;
+  const errors = (await checkSketchTypes([entry], { packageRoot: canvasLoopRoot(), dom: true })).filter((e) => !inFactory(e));
+  if (errors.length === 0) return;
+  const lines = errors.map((e) => formatSketchTypeError(e, boxRoot));
+  throw new FigureRunError({ detail: `${path.relative(boxRoot, entry)}: the sketch does not type-check, so it was not run. Fix these and run again:\n${lines.join("\n")}` });
+}
+
 /** Prepare the run directory and compiled entry for one card. */
 export async function prepareFigureJob(args: {
   boxRoot: string;
@@ -106,6 +146,7 @@ export async function prepareFigureJob(args: {
   events?: string;
   frames?: number;
   every?: number;
+  scene?: boolean | "first";
   params: Record<string, string>;
 }): Promise<{ cardRel: string; job: FigureJob }> {
   const { boxRoot } = args;
@@ -113,6 +154,7 @@ export async function prepareFigureJob(args: {
   const entryRef = frontmatter["entry"];
   if (typeof entryRef !== "string" || entryRef === "") throw new FigureRunError({ detail: `${rel}: no entry` });
   const entry = boxFile({ boxRoot, cardRel: rel, ref: entryRef, what: "entry" });
+  await checkEntryTypes(boxRoot, entry);
   const sibling = path.join(path.dirname(entry), `${path.basename(entry, path.extname(entry))}-events.json`);
   const events = args.events === undefined ? (existsSync(sibling) ? sibling : undefined) : boxFile({ boxRoot, cardRel: rel, ref: args.events, what: "events file" });
   // Box-area names (`_content`, …) are reserved below the root, even under _tmp: drop the underscore.
@@ -141,6 +183,7 @@ export async function prepareFigureJob(args: {
       events,
       frames: args.frames,
       every: args.every ?? 30,
+      scene: args.scene ?? false,
       cardDefaults: cardDefaults(frontmatter),
       overrides: args.params,
     },
@@ -177,7 +220,7 @@ export async function runFigureJob(args: { boxRoot: string; cardRel: string; job
     proc.on("close", (code, signal) => resolve({ code, signal, stdout, stderr }));
   });
   if (child.signal === "SIGKILL" && child.code === null) {
-    return { card: cardRel, ok: false, errors: [`stopped after ${String(timeoutMs / 1000)} s: a sketch that never returns (an endless loop in init, update or draw?)`], warnings: [] };
+    return { card: cardRel, ok: false, errors: [`stopped after ${String(timeoutMs / 1000)} s: an endless loop in init, update or draw, or rendering too slow here (each captured frame is rendered; try fewer frames, a larger --every, or --timeout)`], warnings: [] };
   }
   const last = child.stdout.trim().split("\n").at(-1) ?? "";
   let parsed: unknown;

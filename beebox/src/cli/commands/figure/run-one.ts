@@ -6,7 +6,7 @@
  */
 import { promises as fs } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { parseTeaEvents, teaRun, toTeaModule } from "@ianbicking/canvas-loop/headless";
+import { NoGpuAdapterError, parseTeaEvents, teaRun, toTeaModule } from "@ianbicking/canvas-loop/headless";
 import type { ParamsDecl } from "@ianbicking/canvas-loop";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../../shared/is-record.js";
@@ -31,6 +31,17 @@ function initialParams(decl: ParamsDecl, job: FigureJob): Record<string, string 
     else out[name] = raw;
   }
   return out;
+}
+
+/**
+ * The error line for a run that threw. No GPU adapter is the host's problem,
+ * not the sketch's, so its text says to ask the boxholder.
+ */
+export function runErrorText(error: unknown): string {
+  if (error instanceof NoGpuAdapterError) {
+    return "no GPU adapter: Dawn found no GPU it can use here. Possible causes: no Vulkan driver is installed (on Linux, Mesa's mesa-vulkan-drivers), the driver does not load inside the box's sandbox, or the driver rejects this machine. Ask the boxholder; rewriting the sketch will not help.";
+  }
+  return errorMessage(error);
 }
 
 function isJob(value: unknown): value is FigureJob {
@@ -76,10 +87,13 @@ export async function runFigureOne(jobFile: string): Promise<void> {
       events,
       eventsPath: job.events,
       initialParams: initialParams(module.params, job),
+      scene: job.scene,
     });
     process.stdout.write(`${JSON.stringify({ transcript: result.transcriptPath, framesRun: result.framesRun, imageCount: result.imageCount, errors: result.errors })}\n`);
   } catch (error) {
-    errors.push(errorMessage(error));
-    process.stdout.write(`${JSON.stringify({ errors })}\n`);
+    errors.push(runErrorText(error));
+    // The runner wrote a transcript (its header and the failure line) before it threw.
+    const transcript = error instanceof NoGpuAdapterError ? error.transcriptPath : undefined;
+    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors })}\n`);
   }
 }

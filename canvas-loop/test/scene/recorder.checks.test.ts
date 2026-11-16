@@ -16,7 +16,7 @@ import { offCanvasMessages } from "../../src/scene/recorder/off-canvas.js";
 import type { OffLine } from "../../src/scene/recorder/off-canvas.js";
 import { MAX_PAIRS, glyphMessage, newOverlaps, overlapMessage, placedRect, textRect } from "../../src/scene/recorder/text-checks.js";
 import type { TextRect } from "../../src/scene/recorder/text-checks.js";
-import { REPLACEMENTS } from "../../src/scene/recorder/removed.js";
+import { REPLACEMENTS } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 
 let text: TextMeasurer;

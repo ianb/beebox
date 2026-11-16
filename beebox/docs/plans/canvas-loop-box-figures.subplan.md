@@ -500,6 +500,49 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
 - **Vocabulary lock-ins:** `--scene`, `--scene first`, as in canvas-loop's
   CLI (`canvas-loop-scene-core.subplan.md:366-367`).
 - **First chunk:** the catch, the rewording, `--scene`, tests.
+- **As built (C2).** Logs are in `scratch/stage5/c1/` (`c2-*.log`).
+  - **The contract check (need 10, this path).** `prepareFigureJob` runs
+    `checkSketchTypes` on the entry before it compiles it; errors stop the
+    run as one error, with one `file:line:col - error TS…` line per compiler
+    error, box-relative. canvas-loop's `checkSketchTypes` gained an options
+    object: `packageRoot`, because in the CLI bundle canvas-loop is inlined
+    and its own `import.meta.url` no longer points into the package (beebox
+    resolves `@ianbicking/canvas-loop` from its install and passes the
+    directory), and `dom`, which adds the DOM library for the factory's
+    `matchMedia`. The factory has one more gap the plan did not name: it is
+    written `(cl, { mount, figure }) =>` with no types, as the starter
+    shows, and a box has no type to import for those, so the strict check
+    gives TS7006 and TS7031. beebox drops only those two codes, only in the
+    entry, from its `export default` line on. A type error that names a
+    removed `View` member (`v.cache`, `v.sprite`, `v.image`, `v.ctx`,
+    `v.paperTexture`) now carries the replacement text from the recorder's
+    table, since the type check runs before the runtime's
+    `RemovedCallError` can. So `cli run` gets it too.
+  - **A packed install cannot run the check**: the tarball has no
+    canvas-loop source, so `bbx figure run` fails there with "this engine
+    install has no canvas-loop source to check it against". The server runs
+    from the workspace, where the source is present. The Docker image needs
+    a decision (see Open design questions).
+  - **The rest, as planned.** `runErrorText` in `run-one.ts` gives the
+    possible-causes text for `NoGpuAdapterError`, and the result carries the
+    transcript the runner wrote. The timeout text is reworded. `--scene` and
+    `--scene first` pass to `teaRun`; because Commander gives an optional
+    value the next word, a word other than `first` after `--scene` is taken
+    as a card. Documented in `bbx-commands.ts` and the schema's "Checking a
+    canvas-loop figure", which also says the run type-checks first.
+    `run.ts:150-158` already matched only the transcript's warn lines; no
+    change.
+  - **Tests.** `run.test.ts`: a type error in an imported helper (the exact
+    message), `cap: "triangle"`, `v.cache` naming `v.picture`, the starter
+    clean with `--scene first` writing one outline, and the reworded
+    timeout; the endless-loop fixture changed, since an `init` that never
+    returns now fails the contract first. The Linux no-driver case is
+    written and skipped on macOS; it has not run yet (C5's second half).
+    `run-one.test.ts`: `runErrorText`. canvas-loop's `sketch-types.test.ts`:
+    the replacement text, `dom` and `packageRoot`.
+  - **Through the bundle.** In a throwaway box, `bin/bbx figure run` on the
+    starter passes and on a figure whose helper has a type error prints the
+    helper's line and exits 1.
 
 ### C3. The card: errors to the card first, notices in the figure slot
 
@@ -795,6 +838,12 @@ None. This is itself subplan (c).
 - **P1 before the merge, or let the deploy install Mesa.** Lean: P1 first, for
   real timing before the cutover.
 - **The live server's CPU count.** Unknown in the repo; P1 records it.
+- **The contract check in the Docker image** (found in C2). The packed
+  install has no canvas-loop source, so `bbx figure run` cannot type-check
+  and fails. Options: ship canvas-loop's type sources in the tarball (the
+  build copies them beside `dist/`), or let a packed install run without
+  the check and say so in the output. Lean: ship the sources, since without
+  the check a wrong style value draws with no error.
 
 ## Knowledge audits
 
@@ -900,3 +949,33 @@ no-adapter error's `transcriptPath` is now in (a)'s contract too; the Linux
 no-driver test points the Vulkan loader at a missing manifest and checks it
 reaches `NoGpuAdapterError`; C1 is drafted before the VM run and committed
 after the image choice.
+
+## Citation check before C1 (2026-11-16)
+
+The `file:line` citations were checked against the tree after the scene
+core's chunk 8 and the GPU brushes' chunk 9. Line shifts of one to three
+lines are not listed (`view.tsx`, `FigureMount.tsx`, `run.ts`, `starters.ts`).
+What changed in substance:
+
+- (a)'s beebox edits are done: `run-one.ts` calls `teaRun` directly
+  (`run-one.ts:68`); `runSpike`, the `renderer` marker, `sceneMount` and
+  `rendererMismatch` are gone, and `wrapCanvasLoopLib` is at
+  `figure-canvas-loop.ts:64-90` with no error forwarding;
+  `FigureMount.tsx:152` forwards a failed load.
+- The spike paths are gone. The browser mount is
+  `canvas-loop/src/browser/mount.ts` (its console line is now
+  *"canvas-loop: figure failed"*, `:104` and `:330`; the lost-device notice
+  is `buildNotice`, `:230-243`). The no-WebGPU and no-adapter texts are
+  `NoWebGpuError` and `NoGpuAdapterError` in `canvas-loop/src/scene/errors.ts`.
+- Headless no adapter: `teaRun` writes the transcript, then throws
+  (`headless/tea-runtime/runner.ts:304-318`), as need 8 asked; "thrown
+  before any transcript exists" no longer holds.
+- `run.test.ts:53-56` checks warnings, not a throwing `draw`.
+- Plan cross-references moved: no backward compatibility is
+  `canvas-loop-scene.md:170-171`; (a)'s marker and async `teaRun` are
+  `canvas-loop-scene-core.subplan.md:327-338,397`, its `--scene` lock-in
+  `:397-399`, and its order across subplans `:1220-1238`.
+- `knowledge-audits.yaml:1376-1415` holds the `figure-canvas-loop-*`
+  audits; the range to `:1440` also covers the other figure audits listed.
+- `frontend.md:240` is `beebox/frontend.md`, not under `docs/`.
+- `Dockerfile:197,217-220` is now about `:205` and `:228` (after C1).

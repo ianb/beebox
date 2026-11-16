@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { after, test } from "node:test";
 import { checkGallery } from "../../src/headless/gallery.js";
 import { checkSketchTypes } from "../../src/headless/sketch-types.js";
@@ -71,6 +71,22 @@ test("a sketch exporting only init, update and draw has no errors", async () => 
   const path = join(dir, "minimal-tea.ts");
   writeFileSync(path, "export function init(): number { return 0; }\nexport function update(model: number): number { return model; }\nexport function draw(): null { return null; }\n");
   assert.deepEqual(await checkSketchTypes([path]), []);
+});
+
+test("a removed View member gets what replaces it, as the recorder's RemovedCallError would say", async () => {
+  const path = sketch("cache-tea.ts", { draw: "export function draw(v: View): RootDrawing {\n  return v.cache(\"k\", 10, 10, () => null);\n}" });
+  const errors = errorsIn(await checkSketchTypes([path]), path);
+  assert.deepEqual(errors.map((e) => [e.line, e.code, e.message]), [
+    [6, 2339, "Property 'cache' does not exist on type 'View'.\n  v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (TEA.md, \"Pictures\")"],
+  ]);
+});
+
+test("dom adds the DOM library, for a box figure's factory; packageRoot names the package", async () => {
+  const path = sketch("figure-tea.ts", { draw: 'export function draw(v: View): RootDrawing {\n  return v.background("#fff");\n}\nexport const reduced = (): boolean => matchMedia("(prefers-reduced-motion: reduce)").matches;' });
+  assert.deepEqual((await checkSketchTypes([path])).map((e) => e.message), ["Cannot find name 'matchMedia'."]);
+  // From a bundle this module's own URL is elsewhere, so the caller names the package directory.
+  const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
+  assert.deepEqual(await checkSketchTypes([path], { dom: true, packageRoot }), []);
 });
 
 test("cli run stops before the run on a type error, with the error on stderr and in the transcript", () => {
