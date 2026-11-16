@@ -90,3 +90,67 @@ export function wholeMarkRange(text: string, { from, to }: { from: number; to: n
   if (text[from - 1] === " " && (text[to] === " " || endsLine)) return { from: from - 1, to };
   return { from, to };
 }
+
+/** Marks whose words the person can accept as theirs: an agent joiner, or a check on their own words. */
+const ACCEPTABLE: ReadonlySet<MarkKind> = new Set(["joiner", "check"]);
+
+export interface TextChange {
+  from: number;
+  to: number;
+  insert: string;
+}
+
+/** Wraps each line's words in the delimiters, leaving the line's edge whitespace outside the mark. */
+function wrapLines(text: string, { open, close }: { open: string; close: string }): string {
+  return text.split("\n").map((line) => {
+    const words = line.trim();
+    if (words === "") return line;
+    const start = line.indexOf(words);
+    return `${line.slice(0, start)}${open}${words}${close}${line.slice(start + words.length)}`;
+  }).join("\n");
+}
+
+/**
+ * The changes that accept the person's selection: the words of each joiner
+ * or check it covers lose their mark and keep their text. A selection over
+ * part of a mark splits it, so only the selected words leave the mark. An
+ * empty selection inside a mark accepts the whole mark. Gaps, notes, and
+ * source marks are left alone. What stays marked becomes one inline mark per
+ * line, so a block mark split this way stays well formed.
+ */
+export function acceptChanges(text: string, { marks, selection }: { marks: readonly MarkRange[]; selection: { from: number; to: number } }): TextChange[] {
+  const changes: TextChange[] = [];
+  const cursor = selection.from === selection.to;
+  let doneTo = -1;
+  for (const mark of marks) {
+    if (!ACCEPTABLE.has(mark.kind) || mark.closeTo === mark.closeFrom || mark.openFrom < doneTo) continue;
+    const block = text[mark.openTo] === "\n" && text[mark.closeFrom - 1] === "\n" && mark.closeFrom > mark.openTo + 1;
+    const contentFrom = mark.openTo + (block ? 1 : 0);
+    const contentTo = mark.closeFrom - (block ? 1 : 0);
+    let from: number;
+    let to: number;
+    if (cursor) {
+      if (selection.from < mark.openFrom || selection.from > mark.closeTo) continue;
+      [from, to] = [contentFrom, contentTo];
+    } else {
+      [from, to] = [Math.max(selection.from, contentFrom), Math.min(selection.to, contentTo)];
+      if (from >= to) continue;
+    }
+    const delimiters = { open: text.slice(mark.openFrom, mark.openTo), close: text.slice(mark.closeFrom, mark.closeTo) };
+    changes.push({ from: mark.openFrom, to: from, insert: wrapLines(text.slice(contentFrom, from), delimiters) });
+    changes.push({ from: to, to: mark.closeTo, insert: wrapLines(text.slice(to, contentTo), delimiters) });
+    doneTo = mark.closeTo;
+    if (cursor) break;
+  }
+  return changes;
+}
+
+/**
+ * Joiners left with no words, which a deletion inside one leaves behind:
+ * the ranges that remove them, with their spacing (`wholeMarkRange`).
+ */
+export function emptyJoinerRanges(text: string, marks: readonly MarkRange[]): { from: number; to: number }[] {
+  return marks
+    .filter((mark) => mark.kind === "joiner" && text.slice(mark.openTo, mark.closeFrom).trim() === "")
+    .map((mark) => wholeMarkRange(text, { from: mark.openFrom, to: mark.closeTo }));
+}

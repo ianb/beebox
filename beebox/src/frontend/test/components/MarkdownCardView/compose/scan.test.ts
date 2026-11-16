@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { scanMarks, wholeMarkRange } from "../../../../src/components/MarkdownCardView/compose/scan.js";
+import { acceptChanges, emptyJoinerRanges, scanMarks, wholeMarkRange, type TextChange } from "../../../../src/components/MarkdownCardView/compose/scan.js";
 
 // ## Inline marks of each kind, with their delimiter ranges
 void test("inline marks", async (t) => {
@@ -83,4 +83,75 @@ void test("whole-mark removal range", async (t) => {
   t.check(remove(`them. ${gap} By May`, gap), "them. By May");
   t.check(remove(`them. ${gap}\n\nNext.`, gap), "them.\n\nNext.");
   t.check(remove(`(${gap}) words`, gap), "() words");
+});
+
+// # Accepting agent words as the person's
+//
+// `acceptChanges` removes the mark from the joiner or check words at the
+// selection and keeps the words. Each case gives the text with the selection
+// written as `[` and `]`, or a cursor as `|`, and the text after accepting.
+
+const J = '{% editorial kind="joiner" %}';
+const E = "{% /editorial %}";
+
+function applyChanges(text: string, changes: TextChange[]): string {
+  let out = text;
+  for (const change of changes.toSorted((a, b) => b.from - a.from)) out = out.slice(0, change.from) + change.insert + out.slice(change.to);
+  return out;
+}
+
+function accept(marked: string): string {
+  const cursor = marked.indexOf("|");
+  const from = cursor !== -1 ? cursor : marked.indexOf("[");
+  const text = cursor !== -1 ? marked.replace("|", "") : marked.replace("[", "").replace("]", "");
+  const to = cursor !== -1 ? cursor : marked.indexOf("]") - 1;
+  return applyChanges(text, acceptChanges(text, { marks: scanMarks(text).marks, selection: { from, to } }));
+}
+
+// ## A selection over part of a joiner splits it; spaces at the cut stay outside the marks
+void test("partial selection splits the joiner", async (t) => {
+  t.check(accept(`Odette. ${J}After that [first] spring,${E} we planted.`), `Odette. ${J}After that${E} first ${J}spring,${E} we planted.`);
+  t.check(accept(`${J}[After that] first spring,${E} we`), `After that ${J}first spring,${E} we`);
+  t.check(accept(`${J}After that first [spring,${E} we]`), `${J}After that first${E} spring, we`);
+});
+
+// ## A cursor inside a joiner, or on its edge, accepts the whole joiner
+void test("cursor accepts the whole segment", async (t) => {
+  t.check(accept(`Odette. ${J}After that fi|rst spring,${E} we planted.`), "Odette. After that first spring, we planted.");
+  t.check(accept(`Odette. |${J}After${E} we`), "Odette. After we");
+  t.check(accept(`Odette. ${J}After${E}| we`), "Odette. After we");
+  t.check(accept(`Odet|te. ${J}After${E} we`), `Odette. ${J}After${E} we`);
+});
+
+// ## A check accepts the same way and keeps its note on the part left marked
+void test("check marks", async (t) => {
+  const C = '{% editorial kind="check" note="unclear audio" %}';
+  t.check(accept(`${C}in [this] world${E}`), `${C}in${E} this ${C}world${E}`);
+  t.check(accept(`${C}in th|is world${E}`), "in this world");
+});
+
+// ## Gaps and notes are placeholders, so accepting leaves them alone
+void test("gaps and notes are not accepted", async (t) => {
+  const gap = '{% editorial kind="gap" %}connect the two{% /editorial %}';
+  const note = '{% editorial kind="note" %}Shorter?{% /editorial %}';
+  t.check(accept(`A ${gap.replace("connect", "con|nect")} B`), `A ${gap} B`);
+  t.check(accept(`[A ${note} B]`), `A ${note} B`);
+});
+
+// ## One selection across two joiners accepts the selected part of each
+void test("selection across two joiners", async (t) => {
+  t.check(accept(`${J}One [two${E} mine ${J}three] four${E}`), `${J}One${E} two mine three ${J}four${E}`);
+});
+
+// ## A block joiner on its own lines: whole accept drops the tag lines; a split leaves one inline mark per line
+void test("block joiners", async (t) => {
+  t.check(accept(`A.\n\n${J}\nBridge| one.\n\nBridge two.\n${E}\n\nB.`), "A.\n\nBridge one.\n\nBridge two.\n\nB.");
+  t.check(accept(`${J}\nBridge [one].\n\nBridge two.\n${E}`), `${J}Bridge${E} one${J}.${E}\n\n${J}Bridge two.${E}`);
+});
+
+// ## A joiner whose words were all deleted goes away with its spacing
+void test("empty joiners", async (t) => {
+  const text = `them. ${J}${E} By May ${J}kept${E}`;
+  const after = applyChanges(text, emptyJoinerRanges(text, scanMarks(text).marks).map((r): TextChange => ({ ...r, insert: "" })));
+  t.check(after, `them. By May ${J}kept${E}`);
 });

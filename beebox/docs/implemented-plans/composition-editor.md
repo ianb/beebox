@@ -55,6 +55,17 @@ disagrees with this section, this section is right.
 check. The failure toast after navigation and the fallback for a composition
 removed while composing are covered by unit tests only, not in a browser.
 
+**Accept (2026-11-15):** at the boxholder's request, the person can accept
+agent words as their own. The Accept button in the editor header, or
+Ctrl/⌘+Shift+Enter, removes the mark from the joiner or check words at the
+selection and keeps the words. A selection over part of a mark splits it;
+an empty selection inside a mark accepts the whole mark. Gaps and notes are
+placeholders and comments, so Accept leaves them alone. To make part of a
+joiner selectable, a joiner's words are now editable text with a dotted
+underline instead of one atomic widget; edits inside a joiner keep the mark,
+and a joiner whose words are all deleted is removed. Code:
+`acceptChanges` in `compose/scan.ts`, `acceptSelection` in `compose/widgets.ts`.
+
 **Open question:** Save commits the whole card, so uncommitted agent edits
 outside the region are committed with it under the `Composition-Save: person`
 trailer. Today the trailer describes the button press, not the content. The
@@ -253,7 +264,7 @@ designs; no entry needed. The bracket convention has no single author.
   block, placed by the agent inside a composition. Content is the agent's
   words, except for `check`. Kinds (closed enum):
   - `joiner` — agent-written text meant to read as part of the piece until the
-    person replaces it. No accept action.
+    person replaces or accepts it (Accept, added 2026-11-15; see As built).
   - `gap` — a description of missing content. Removed when resolved.
   - `note` — a comment for the person. Removed when resolved.
   - `check` — wraps the person's text the agent is unsure of (a transcript

@@ -1,18 +1,20 @@
 /**
  * The marks as widgets in the compose editor (`plan:composition-editor`,
- * Track 5). Gap, note, and joiner marks are agent text: each becomes one
- * atomic widget; gap and note have "×" (remove the tag and its words), a
- * joiner has no button and Backspace or Delete removes it whole. Check and
- * source marks wrap the person's text: only their delimiters become small
- * atomic widgets and the text stays editable; check's "✓" and source's "×"
- * remove the delimiters and keep the text. Malformed text gets no widgets.
+ * Track 5). Gap and note marks are agent placeholders: each becomes one
+ * atomic widget with "×" (remove the tag and its words). Joiner, check, and
+ * source marks wrap words: only their delimiters become small atomic widgets
+ * and the words stay editable. A joiner's words are the agent's, underlined
+ * dotted; a joiner left with no words goes away. Check's "✓" and source's
+ * "×" remove the delimiters and keep the text. `acceptSelection` accepts
+ * joiner and check words at the selection (`acceptChanges`). Malformed text
+ * gets no widgets.
  */
-import { EditorSelection, Prec, StateField, type EditorState, type Extension, type Range, type RangeSet } from "@codemirror/state";
+import { EditorSelection, EditorState, Prec, StateField, Transaction, type Extension, type Range, type RangeSet } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, keymap, type DecorationSet } from "@codemirror/view";
 import { el, widgetButton } from "./dom";
-import { scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
+import { acceptChanges, emptyJoinerRanges, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
 
-const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note", "joiner"]);
+const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note"]);
 
 function deleteWhole(view: EditorView, range: { from: number; to: number }): void {
   view.dispatch({ changes: wholeMarkRange(view.state.doc.toString(), range), userEvent: "delete.mark" });
@@ -54,8 +56,7 @@ class MarkWidget extends WidgetType {
     };
     let wrap: HTMLElement;
     if (kind === "joiner") {
-      wrap = el("span", { className: "underline decoration-dotted decoration-card-soft underline-offset-4", text: content });
-      wrap.title = "agent's words";
+      wrap = el("span", { className: "", text: "" });
     } else if (kind === "gap" || kind === "note") {
       wrap = el("span", { className: "rounded bg-card-tint px-1 text-card-ink", text: "" });
       wrap.append(el("span", { className: "mr-1 text-xs font-medium text-card-soft", text: `${kind}:` }), content);
@@ -100,9 +101,12 @@ function build(state: EditorState): MarksValue {
     }
     replaced.push(widget(true).range(mark.openFrom, mark.openTo));
     if (mark.closeTo > mark.closeFrom) replaced.push(widget(false).range(mark.closeFrom, mark.closeTo));
-    if (mark.kind === "check" && mark.closeFrom > mark.openTo) {
+    if (mark.closeFrom <= mark.openTo) continue;
+    if (mark.kind === "check") {
       const attributes = mark.note === null ? undefined : { title: mark.note };
       styled.push(Decoration.mark({ class: "underline decoration-wavy decoration-card-pen underline-offset-4", attributes }).range(mark.openTo, mark.closeFrom));
+    } else if (mark.kind === "joiner") {
+      styled.push(Decoration.mark({ class: "underline decoration-dotted decoration-card-soft underline-offset-4", attributes: { title: "agent's words" } }).range(mark.openTo, mark.closeFrom));
     }
   }
   const atomic = Decoration.set(replaced, true);
@@ -121,6 +125,40 @@ const marksField = StateField.define<MarksValue>({
 export function isMalformed(state: EditorState): boolean {
   return state.field(marksField).scan.malformed;
 }
+
+/** Whether the selection touches joiner or check words that `acceptSelection` would accept. */
+export function canAccept(state: EditorState): boolean {
+  const { scan } = state.field(marksField);
+  return !scan.malformed && acceptChanges(state.doc.toString(), { marks: scan.marks, selection: state.selection.main }).length > 0;
+}
+
+/**
+ * Accepts the joiner and check words at the main selection as the person's:
+ * the selected words, or the whole mark around an empty selection.
+ */
+export function acceptSelection(view: EditorView): boolean {
+  const { state } = view;
+  const { scan } = state.field(marksField);
+  if (scan.malformed) return false;
+  const changes = state.changes(acceptChanges(state.doc.toString(), { marks: scan.marks, selection: state.selection.main }));
+  if (changes.empty) return false;
+  const { main } = state.selection;
+  const selection = main.empty
+    ? EditorSelection.cursor(changes.mapPos(main.head, -1))
+    : EditorSelection.range(changes.mapPos(main.anchor, main.anchor < main.head ? 1 : -1), changes.mapPos(main.head, main.head < main.anchor ? 1 : -1));
+  view.dispatch({ changes, selection, userEvent: "accept.mark" });
+  return true;
+}
+
+/** A deletion that empties a joiner removes the joiner's tags too. */
+const dropEmptyJoiners = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent("delete") || tr.annotation(Transaction.remote) === true) return tr;
+  const text = tr.newDoc.toString();
+  const scan = scanMarks(text);
+  if (scan.malformed) return tr;
+  const ranges = emptyJoinerRanges(text, scan.marks);
+  return ranges.length === 0 ? tr : [tr, { changes: ranges, sequential: true }];
+});
 
 /**
  * Backspace and Delete next to a mark: a whole-mark widget is deleted as one
@@ -149,7 +187,12 @@ function deleteAcross(forward: boolean) {
 export function markWidgets(): Extension {
   return [
     marksField,
-    Prec.high(keymap.of([{ key: "Backspace", run: deleteAcross(false) }, { key: "Delete", run: deleteAcross(true) }])),
+    dropEmptyJoiners,
+    Prec.high(keymap.of([
+      { key: "Backspace", run: deleteAcross(false) },
+      { key: "Delete", run: deleteAcross(true) },
+      { key: "Mod-Shift-Enter", run: acceptSelection },
+    ])),
     EditorView.editorAttributes.compute([marksField], (state) => ({
       class: isMalformed(state) ? "border border-dashed border-card-danger" : "",
     })),
