@@ -1,6 +1,6 @@
 // Smudge and wet from GPU samples (canvas-loop-gpu-brushes.subplan.md, chunk
-// 8): the `smears` entry's dabs against the CPU expansion's, placed as the
-// lowering placed them before; a smear is one batch, so a frame with the
+// 8): the `smears` entry's dabs against the CPU expansion's (golden numbers
+// recorded before chunk 9 deleted it), placed as the lowering placed them; a smear is one batch, so a frame with the
 // buffer limit forced small draws the same pixels; a smear over the limit
 // fails naming its call. The smear crops of `brushParity` and
 // `smudgeAcrossTiles` are in renderer.gpu.test.ts. One Dawn device for the
@@ -14,13 +14,14 @@ import type { BrushJob } from "../../src/gpu/brush-pass.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { DAB_FLOATS } from "../../src/gpu/shader-brush.js";
 import { sharedGpu } from "../../src/headless/scene/surface.js";
-import { BrushExpander, expandOnCpu } from "../../src/scene/brush/expand.js";
+import { BrushExpander } from "../../src/scene/brush/expand.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { brushRequests } from "../brushes/requests.js";
+import { goldenSmears } from "../brushes/golden.js";
 import type { PlacedRequest } from "../brushes/requests.js";
-import { drawSmear } from "./brush-sheet.js";
+import { SMEARS_SIZE, drawSmears } from "./smears.js";
 
 let gpu: GpuHandle | undefined;
 before(async () => {
@@ -32,15 +33,9 @@ function needGpu(t: TestContext): GpuHandle | undefined {
   return gpu;
 }
 
-const SMEAR_SIZE = { width: 320, height: 160 };
-
 /** The smear sheet with a rotated, scaled smudge and a wet stroke of two contours (one a single sample) added. */
 function smearScene(): Scene {
-  return new SceneRecorder(SMEAR_SIZE).record((v) => {
-    drawSmear(v);
-    v.at({ translate: [160, 80], rotate: 0.4, scale: [1.3, 0.8] }, () => v.curve([[-60, 0], [0, 12], [60, -6]], false, { stroke: "#000", weight: 10, brush: "smudge", gesture: { wobble: 1.5 } }));
-    v.path([["move", 40, 140], ["line", 40, 140], ["move", 60, 140], ["line", 200, 150]], { stroke: "#f2f2f2", weight: 8, brush: "wet" });
-  }).scene;
+  return new SceneRecorder(SMEARS_SIZE).record(drawSmears).scene;
 }
 
 interface DabWorst {
@@ -51,16 +46,19 @@ interface DabWorst {
   failures: string[];
 }
 
-/** Each smear stroke's GPU dabs against the CPU's (expand.ts `dabOf`, placed by `e` with the layer's corner `corner`). */
+/** Each smear stroke's GPU dabs against the golden CPU dabs (brush space, placed by `e` with the layer's corner `corner`). */
 async function compareSmears(handle: GpuHandle, a: { reqs: readonly PlacedRequest[]; ratio: number; corner: readonly [number, number] }): Promise<DabWorst> {
   const expander = new BrushExpander({ enabled: false });
   const renderer = new GpuRenderer(handle);
   const w: DabWorst = { dabs: 0, pos: 0, r: 0, a: 0, failures: [] };
   const fail = (m: string): void => void (w.failures.length < 12 && w.failures.push(m));
+  const golden = goldenSmears();
+  let si = 0;
   try {
     for (const [i, req] of a.reqs.entries()) {
       const ex = expander.expand(req);
       if (ex?.set.kind !== "smear") continue;
+      const gold = golden[si++] ?? [];
       const { q } = ex;
       const e = [a.ratio * q[0], a.ratio * q[1], a.ratio * q[2], a.ratio * q[3], req.translate[0] * a.ratio + 0.37, req.translate[1] * a.ratio + 0.11] as const;
       const brush: SmearBrush = ex.set.brush;
@@ -68,9 +66,14 @@ async function compareSmears(handle: GpuHandle, a: { reqs: readonly PlacedReques
       const g = await renderer.smearDabs(job);
       if (g.batches !== 1) fail(`stroke ${i}: ${g.batches} batches`);
       const f = new Float32Array(g.data);
-      const cpu = expandOnCpu(req);
-      assert.ok(cpu?.kind === "smear-dabs");
-      const want = cpu.contours.flatMap((c) => c.map((d, k) => ({ x: e[0] * d.x + e[2] * d.y + e[4] - a.corner[0], y: e[1] * d.x + e[3] * d.y + e[5] - a.corner[1], r: d.r * a.ratio, a: d.a, first: k === 0 })));
+      assert.equal(gold.length, job.prepared.contours.length);
+      const want = gold.flatMap((c, ci) => {
+        const [cx, cy] = job.prepared.contours[ci]?.origin ?? [NaN, NaN];
+        return c.map((d, k) => {
+          const [x, y] = [cx + d.x, cy + d.y];
+          return { x: e[0] * x + e[2] * y + e[4] - a.corner[0], y: e[1] * x + e[3] * y + e[5] - a.corner[1], r: d.r * a.ratio, a: d.a, first: k === 0 };
+        });
+      });
       if (g.count !== want.length) fail(`stroke ${i}: ${g.count} dabs on the GPU, ${want.length} on the CPU`);
       for (const [k, d] of want.entries()) {
         const [x = NaN, y = NaN, r = NaN, al = NaN, first = NaN, ...rest] = f.subarray(k * DAB_FLOATS, (k + 1) * DAB_FLOATS);
@@ -83,6 +86,7 @@ async function compareSmears(handle: GpuHandle, a: { reqs: readonly PlacedReques
   } finally {
     renderer.destroy();
   }
+  assert.equal(si, golden.length, "the golden numbers have every smear stroke");
   return w;
 }
 

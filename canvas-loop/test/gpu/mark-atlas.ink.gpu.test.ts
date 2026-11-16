@@ -1,5 +1,6 @@
 // Ink on the GPU as capsules (canvas-loop-gpu-brushes.subplan.md, chunk 4):
-// the capsule instances against the CPU samples and the ink mark's box; the
+// the capsule instances against the CPU samples (golden numbers recorded
+// before chunk 9 deleted the CPU expansion) and the ink mark's box; the
 // gate's union check against a 16×16 supersampled reference, on its synthetic
 // cases and on the walker's ink in the gate's crop windows; capsules in reverse
 // order; thin lines against the frozen Skia reference; a self-crossing loop.
@@ -18,18 +19,19 @@ import { gpuBox } from "../../src/gpu/marks.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { DAB_FLOATS } from "../../src/gpu/shader-brush.js";
 import { sharedGpu } from "../../src/headless/scene/surface.js";
-import { BrushExpander, brushSamples, expandOnCpu } from "../../src/scene/brush/expand.js";
+import { BrushExpander } from "../../src/scene/brush/expand.js";
 import type { Mat } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
 import type { PlacedRequest } from "../brushes/requests.js";
 import { brushRequests } from "../brushes/requests.js";
+import { goldenSamples, goldenThinOutline } from "../brushes/golden.js";
 import { frozen } from "./brush-cases.js";
 import { drawSheet } from "./brush-sheet.js";
 import { portFrames } from "./cache-cases.js";
 import type { Capsule, UnionError } from "./capsule-union.js";
 import { CELL, UNION_CASES, supersampled, unionError } from "./capsule-union.js";
-import { THIN_ROWS, THIN_SIZE, areaCoverage, coverageTone, drawThin, rowTone } from "./ink-sheet.js";
+import { THIN_ROWS, THIN_SIZE, drawThin, rowTone } from "./ink-sheet.js";
 import { renderOnce, rgbaAt } from "./render.js";
 
 let gpu: GpuHandle | undefined;
@@ -47,6 +49,8 @@ function needGpu(t: TestContext): GpuHandle | undefined {
 /** An ink stroke placed as the lowering places it (ratio `ratio`, its call's translation), its slot at `slot`, positions relative to `corner` (its box's, unless given). */
 interface PlacedInk {
   readonly req: PlacedRequest;
+  /** The request's index in `reqs`. */
+  readonly index: number;
   readonly job: BrushJob;
   readonly box: R;
 }
@@ -54,7 +58,7 @@ interface PlacedInk {
 function placeInk(reqs: readonly PlacedRequest[], at: { ratio: number; corner?: readonly [number, number]; slot?: (i: number, box: R) => readonly [number, number, number, number] }): PlacedInk[] {
   const expander = new BrushExpander({ enabled: false });
   const { ratio } = at;
-  return reqs.flatMap((req) => {
+  return reqs.flatMap((req, index) => {
     const ex = expander.expand(req);
     if (ex?.set.kind !== "ink") return [];
     const { q } = ex;
@@ -62,7 +66,7 @@ function placeInk(reqs: readonly PlacedRequest[], at: { ratio: number; corner?: 
     const box = gpuBox(ex.set, e);
     if (box === undefined) return [];
     const [cx, cy] = at.corner ?? [box.x0, box.y0];
-    return [{ req, box, job: { prepared: ex.set.prepared, brush: ex.set.brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset: [e[4] - cx, e[5] - cy], slot: [0, 0, box.x1 - box.x0, box.y1 - box.y0] } }];
+    return [{ req, index, box, job: { prepared: ex.set.prepared, brush: ex.set.brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset: [e[4] - cx, e[5] - cy], slot: [0, 0, box.x1 - box.x0, box.y1 - box.y0] } }];
   });
 }
 
@@ -110,9 +114,12 @@ test("the capsules entry writes each ink segment from the CPU samples, inside th
   const sheet = new SceneRecorder({ width: 640, height: 480 }).record((v) => drawSheet(v)).scene;
   const [walker] = portFrames(walkerSheet, { at: [0], text });
   assert.ok(walker !== undefined);
-  for (const [what, scene] of [["brush sheet", sheet], ["walker frame 0", walker]] as const) {
+  for (const [what, scene, name] of [["brush sheet", sheet, "sheet"], ["walker frame 0", walker, "walker"]] as const) {
+    const golden = goldenSamples(name);
+    const reqs = brushRequests(scene, handle.colors);
+    assert.equal(golden.length, reqs.length, "the golden numbers have every stroke");
     for (const ratio of [1, 2]) {
-      const placed = placeInk(brushRequests(scene, handle.colors), { ratio });
+      const placed = placeInk(reqs, { ratio });
       const renderer = new GpuRenderer(handle);
       const g = await renderer.brushInstances(placed.map((p) => p.job)).finally(() => renderer.destroy());
       const f = new Float32Array(g.data);
@@ -124,14 +131,20 @@ test("the capsules entry writes each ink segment from the CPU samples, inside th
         const { prepared, brush, lin } = p.job;
         const size = prepared.width / (1 + thinning(brush));
         const [ox, oy] = p.job.offset;
-        // The CPU samples are in brush space (not stroke-local): mapped by lin and the offset, as the GPU places them.
-        const at = (s: { x: number; y: number; p: number }): [number, number, number] => [lin[0] * s.x + lin[2] * s.y + ox, lin[1] * s.x + lin[3] * s.y + oy, size * (0.5 - thinning(brush) * (0.5 - s.p)) * ratio];
-        const want: Capsule[] = (brushSamples(p.req) ?? []).flatMap((c) => c.samples.map((s, k) => {
-          const a = at(s);
-          const next = c.samples[k + 1];
-          if (next !== undefined) return [...a, ...at(next)] as const;
-          return c.samples.length === 1 ? ([...a, ...a] as const) : ([a[0], a[1], 0, a[0], a[1], 0] as const);
-        }));
+        // The golden samples are relative to their contour's origin (brush space): mapped by lin and the offset, as the GPU places them.
+        const want: Capsule[] = (golden[p.index] ?? []).flatMap((samples, c) => {
+          const [cx, cy] = prepared.contours[c]?.origin ?? [NaN, NaN];
+          const at = (s: { x: number; y: number; p: number }): [number, number, number] => {
+            const [x, y] = [cx + s.x, cy + s.y];
+            return [lin[0] * x + lin[2] * y + ox, lin[1] * x + lin[3] * y + oy, size * (0.5 - thinning(brush) * (0.5 - s.p)) * ratio];
+          };
+          return samples.map((s, k) => {
+            const a = at(s);
+            const next = samples[k + 1];
+            if (next !== undefined) return [...a, ...at(next)] as const;
+            return samples.length === 1 ? ([...a, ...a] as const) : ([a[0], a[1], 0, a[0], a[1], 0] as const);
+          });
+        });
         const range = g.strokes[i] ?? { first: 0, count: 0 };
         const got = capsulesIn(f, range);
         if (got.length !== want.length) failures.push(`stroke ${i}: ${got.length} capsules on the GPU, ${want.length} samples on the CPU`);
@@ -243,25 +256,19 @@ test("thin ink lines (0.6 and 1.0 px) keep their tone, row by row, within 3%", a
   if (handle === undefined) return;
   const got = await renderOnce(handle, { size: THIN_SIZE, draw: (v) => drawThin(v) });
   const ref = await frozen("ink-thin", THIN_SIZE);
-  // Today's perfect-freehand outlines, filled by exact area (the GPU renderer's ink before chunk 4), each stroke over the last.
-  const area = new Float64Array(THIN_SIZE.width * THIN_SIZE.height);
-  for (const req of brushRequests(new SceneRecorder(THIN_SIZE).record((v) => drawThin(v)).scene, handle.colors)) {
-    const set = expandOnCpu(req);
-    assert.equal(set?.kind, "marks");
-    const rings = set?.kind === "marks" ? set.polys.map((p) => p.map((v, i) => v + (req.translate[i % 2] ?? 0))) : [];
-    for (const [k, c] of areaCoverage(rings).entries()) area[k] = 1 - (1 - (area[k] ?? 0)) * (1 - c);
-  }
-  const rows = THIN_ROWS.map((r) => {
+  // perfect-freehand's outlines, filled by exact area (the GPU renderer's ink before chunk 4), each stroke over the last: golden numbers.
+  const outlines = goldenThinOutline(THIN_ROWS.length);
+  const rows = THIN_ROWS.map((r, i) => {
     const skia = rowTone(ref, r);
-    const outline = coverageTone(area, r);
+    const outline = outlines[i] ?? NaN;
     const gpuTone = rowTone(got.data, r);
     return { name: r.name, skia, outline, gpu: gpuTone, offSkia: (100 * Math.abs(gpuTone - skia)) / skia, offOutline: (100 * Math.abs(gpuTone - outline)) / outline };
   });
-  for (const r of rows) t.diagnostic(`${r.name}: tone ${r.gpu.toFixed(3)}; Skia ${r.skia.toFixed(3)} (${r.offSkia.toFixed(2)}% off); today's outline by exact area ${r.outline.toFixed(3)} (${r.offOutline.toFixed(2)}% off)`);
-  // Against today's outline by exact area: every row within 3%.
+  for (const r of rows) t.diagnostic(`${r.name}: tone ${r.gpu.toFixed(3)}; Skia ${r.skia.toFixed(3)} (${r.offSkia.toFixed(2)}% off); perfect-freehand's outline by exact area ${r.outline.toFixed(3)} (${r.offOutline.toFixed(2)}% off)`);
+  // Against perfect-freehand's outline by exact area: every row within 3%.
   assert.deepEqual(rows.filter((r) => !(r.offOutline <= 3)).map((r) => r.name), []);
   // Against the frozen Skia render: the 1.0 px rows within 3%. Skia's antialiasing samples a pixel at 4 × 4 points,
-  // which loses tone on lines under one pixel wide: today's outline sampled that way gives Skia's tone, by exact area
+  // which loses tone on lines under one pixel wide: perfect-freehand's outline sampled that way gives Skia's tone, by exact area
   // 7% more (scratch/stage5/b4/thin.log). The 0.6 px rows are held within 8% of Skia.
   assert.deepEqual(rows.filter((r) => !(r.offSkia <= (r.name.startsWith("width 1,") ? 3 : 8))).map((r) => r.name), []);
 });

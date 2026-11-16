@@ -1,7 +1,8 @@
 // Bristle on the GPU (canvas-loop-gpu-brushes.subplan.md, chunk 7): the
-// `bristles` entry's strips against the CPU runs, bristle by bristle (kinds.ts
-// `paintBristle`, placed by `linMarks` and laid by mark-atlas.ts `runStrip`),
-// with hue and light jitter; one-sample bristle contours as dabs; every strip
+// `bristles` entry's strips against the CPU runs, bristle by bristle (golden
+// numbers recorded before chunk 9 deleted the CPU expansion: kinds.ts
+// `paintBristle`'s runs and mark-atlas.ts `runStrip`'s mitred sides), with hue
+// and light jitter; one-sample bristle contours as dabs; every strip
 // inside the mark's box; with the buffer limit forced small, batches cut only
 // between bristles, the same bytes and pixels as one batch; a bristle over the
 // limit fails naming its call. `brushStability` (renderer.gpu.test.ts) moves a
@@ -10,25 +11,25 @@
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
 import type { TestContext } from "node:test";
-import { bristlePoints, makeBristles } from "../../src/core/brush/render/kinds.js";
-import { rand } from "../../src/core/brush/random.js";
 import type { BristleBrush } from "../../src/core/brush/types.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { bristleBytes } from "../../src/gpu/brush-pack.js";
 import type { BrushJob } from "../../src/gpu/brush-pass.js";
 import type { R } from "../../src/gpu/jobs.js";
-import { bristleDots, runStrip } from "../../src/gpu/mark-atlas.js";
-import { gpuBox, linMarks } from "../../src/gpu/marks.js";
+import { bristleDots } from "../../src/gpu/mark-atlas.js";
+import { gpuBox } from "../../src/gpu/marks.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { RUN_FLOATS, RUN_VERTICES } from "../../src/gpu/shader-bristle.js";
 import { DAB_FLOATS } from "../../src/gpu/shader-brush.js";
 import { sharedGpu } from "../../src/headless/scene/surface.js";
-import type { ExpandRequest, Run } from "../../src/scene/brush/expand.js";
-import { BrushExpander, brushSamples, expandOnCpu } from "../../src/scene/brush/expand.js";
+import type { ExpandRequest } from "../../src/scene/brush/expand.js";
+import { BrushExpander } from "../../src/scene/brush/expand.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
 import type { Mat, Scene } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { brushRequests } from "../brushes/requests.js";
+import type { GoldenBristleContour, GoldenRun } from "../brushes/golden.js";
+import { goldenBristles } from "../brushes/golden.js";
 import { drawSheet } from "./brush-sheet.js";
 import { BRISTLES_SIZE, drawBristleJitter, drawBristles } from "./bristles.js";
 
@@ -43,7 +44,6 @@ function needGpu(t: TestContext): GpuHandle | undefined {
 }
 
 interface Placed {
-  readonly req: ExpandRequest;
   readonly brush: BristleBrush;
   readonly job: BrushJob;
   readonly box: R;
@@ -61,7 +61,7 @@ function placeBristles(reqs: readonly ExpandRequest[], ratio: number): Placed[] 
     const box = gpuBox(ex.set, e);
     if (box === undefined) return [];
     const job: BrushJob = { prepared: ex.set.prepared, brush: ex.set.brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset: [e[4] - box.x0, e[5] - box.y0], slot: [3, 5, 3 + box.x1 - box.x0, 5 + box.y1 - box.y0] };
-    return [{ req, brush: ex.set.brush, job, box, e }];
+    return [{ brush: ex.set.brush, job, box, e }];
   });
 }
 
@@ -81,32 +81,34 @@ interface StripWorst {
   failures: string[];
 }
 
-/**
- * A gap index (kinds.ts `Math.floor(c.s / 2.5)`) within 1e-3 of an integer
- * where the bristle is drying, and the cells on either side give different
- * gaps: f32 may take the other cell, and the level there may differ.
- */
-function nearGap(s: number, a: { dryAt: number; seed: number; index: number }): boolean {
-  const g = s / 2.5;
-  const k = Math.round(g);
-  const f = Math.min(1, Math.max(0, (s - a.dryAt * 0.7) / (a.dryAt * 0.3)));
-  const dry = 1 - f * f * (3 - 2 * f);
-  const gap = (cell: number): boolean => rand(a.seed, { channel: 30 + a.index, index: cell }) > dry;
-  return dry < 1 && Math.abs(g - k) <= 1e-3 && gap(k) !== gap(k - 1);
-}
+/** A strip quad's two triangles, as offsets into a run's per-point [left x, left y, right x, right y] sides: (L_i, R_i, L_i+1), (L_i+1, R_i, R_i+1). */
+const TRIS = [[0, 2, 4], [4, 2, 6]] as const;
 
-/** kinds.ts `paintBristle`'s runs over one bristle's points: [a, z] (z included), each broken where the level changes. */
-function bristleRuns(pts: readonly { level: number }[]): { a: number; z: number; level: number }[] {
-  const runs: { a: number; z: number; level: number }[] = [];
-  let start = 0;
-  for (let j = 1; j < pts.length; j++) {
-    if (pts[j]?.level !== pts[start]?.level) {
-      runs.push({ a: start, z: j, level: pts[start]?.level ?? 0 });
-      start = j;
+/**
+ * A drawn run's strip vertices as mark-atlas.ts `runStrip` wrote them, from
+ * its golden sides: per segment two triangles, each vertex its corner placed
+ * by the slot, the half width, the colour and alpha, the slot, the
+ * triangle's corners and their signed distances across (± the half width
+ * plus one pixel).
+ */
+function stripOf(run: GoldenRun & { drawn: true }, slot: readonly number[]): Float32Array {
+  const { sides, hw } = run;
+  const e = hw + 1;
+  const [sx = 0, sy = 0] = slot;
+  const segs = run.z - run.a;
+  const out = new Float32Array(segs * RUN_VERTICES * RUN_FLOATS);
+  let o = 0;
+  for (let i = 0; i < segs; i++) {
+    for (const tri of TRIS) {
+      const corners = tri.flatMap((t) => [sides[i * 4 + t] ?? NaN, sides[i * 4 + t + 1] ?? NaN]);
+      const us = tri.map((t) => (t % 4 === 0 ? e : -e));
+      for (const t of tri) {
+        out.set([(sides[i * 4 + t] ?? NaN) + sx, (sides[i * 4 + t + 1] ?? NaN) + sy, hw, 0, ...run.rgb, run.alpha, ...slot, ...corners, ...us], o);
+        o += RUN_FLOATS;
+      }
     }
   }
-  runs.push({ a: start, z: pts.length - 1, level: pts[start]?.level ?? 0 });
-  return runs;
+  return out;
 }
 
 /** One run's GPU vertices (`got`, its segments' six each) against `runStrip`'s (`want`), or zeros where the run is not drawn. */
@@ -134,7 +136,7 @@ function compareRun(w: StripWorst, a: { got: Float32Array; want: Float32Array | 
   }
 }
 
-/** A stroke's one-sample contours as dabs, from the CPU expansion placed by `linMarks` (in the mark's own pixels). */
+/** A stroke's one-sample contours as dabs, golden, placed as the lowering places them (in the mark's own pixels). */
 interface Dot {
   readonly x: number;
   readonly y: number;
@@ -144,49 +146,41 @@ interface Dot {
 }
 
 /**
- * Stroke `p`'s GPU strips (vertices from `first` in `f`) against the CPU's,
- * bristle by bristle; returns the vertices it covered and the CPU dots.
+ * Stroke `p`'s GPU strips (vertices from `first` in `f`) against its golden
+ * contours, bristle by bristle; returns the vertices it covered and the
+ * golden dots, placed.
  */
-function compareStroke(w: StripWorst, a: { p: Placed; f: Float32Array; first: number; ratio: number; where: string; fail: (m: string) => void }): { end: number; dots: Dot[] } {
+function compareStroke(w: StripWorst, a: { p: Placed; golden: readonly GoldenBristleContour[]; f: Float32Array; first: number; ratio: number; where: string; fail: (m: string) => void }): { end: number; dots: Dot[] } {
   const { p } = a;
-  const cpu = expandOnCpu(p.req);
-  assert.ok(cpu?.kind === "marks");
-  const l = linMarks(cpu, { e: p.e, ratio: a.ratio });
-  assert.ok(l.kind === "tex");
+  const { prepared, offset } = p.job;
   const dots: Dot[] = [];
   let unit = a.first;
-  let ri = 0;
-  for (const [ci, c] of (brushSamples(p.req) ?? []).entries()) {
-    const n = c.samples.length;
-    const d = n === 1 ? l.dabs[dots.length] : undefined;
-    if (d !== undefined) dots.push({ ...d, x: d.x + p.job.offset[0], y: d.y + p.job.offset[1] });
-    if (n < 2) continue;
-    const input = { samples: c.samples, width: p.job.prepared.width, seed: c.seed };
-    for (const [b, br] of makeBristles(input, p.brush).entries()) {
+  if (a.golden.length !== prepared.contours.length) a.fail(`${a.where}: ${prepared.contours.length} contours, ${a.golden.length} golden`);
+  for (const [ci, c] of a.golden.entries()) {
+    const pc = prepared.contours[ci];
+    if (pc?.count !== c.n) a.fail(`${a.where} contour ${ci}: ${pc?.count} samples prepared, ${c.n} golden`);
+    if (c.dot !== undefined) {
+      const [x, y] = [(pc?.origin[0] ?? NaN) + c.dot.x, (pc?.origin[1] ?? NaN) + c.dot.y];
+      const { e } = p;
+      dots.push({ ...c.dot, x: e[0] * x + e[2] * y + offset[0], y: e[1] * x + e[3] * y + offset[1], r: c.dot.r * a.ratio });
+      continue;
+    }
+    if (c.n < 2) continue;
+    for (const [b, br] of c.bristles.entries()) {
       w.bristles++;
-      const excused = c.samples.some((s) => nearGap(s.s, { dryAt: br.dryAt, seed: c.seed, index: b }));
-      if (excused) w.excused++;
+      if (br.excused) w.excused++;
       let differs = false;
       // An excused bristle is compared too; a difference there is counted, not failed.
-      const fail = excused ? (): void => void (differs = true) : a.fail;
-      for (const run of bristleRuns(bristlePoints(input, { b: br, index: b }))) {
-        let want: Float32Array | undefined;
-        if (run.z > run.a && run.level !== 0) {
-          const rec: Run | undefined = l.runs[ri++];
-          if (rec?.pts.length !== (run.z - run.a + 1) * 2) a.fail(`${a.where} contour ${ci} bristle ${b}: the derived run [${run.a}, ${run.z}] is not the CPU's recorded run ${ri - 1}`);
-          if (rec === undefined) continue;
-          w.runs++;
-          want = new Float32Array((run.z - run.a) * RUN_VERTICES * RUN_FLOATS);
-          runStrip(want, { o: 0, run: rec, local: [p.e[4], p.e[5], p.box.x0, p.box.y0], slot: p.job.slot });
-        }
+      const fail = br.excused ? (): void => void (differs = true) : a.fail;
+      for (const run of br.runs) {
+        if (run.drawn) w.runs++;
         const v = (unit + run.a * RUN_VERTICES) * RUN_FLOATS;
-        compareRun(excused ? { ...w } : w, { got: a.f.subarray(v, v + (run.z - run.a) * RUN_VERTICES * RUN_FLOATS), want, slot: p.job.slot, where: `${a.where} contour ${ci} bristle ${b} run [${run.a}, ${run.z}]`, fail });
+        compareRun(br.excused ? { ...w } : w, { got: a.f.subarray(v, v + (run.z - run.a) * RUN_VERTICES * RUN_FLOATS), want: run.drawn ? stripOf(run, p.job.slot) : undefined, slot: p.job.slot, where: `${a.where} contour ${ci} bristle ${b} run [${run.a}, ${run.z}]`, fail });
       }
       if (differs) w.differ++;
-      unit += (n - 1) * RUN_VERTICES;
+      unit += (c.n - 1) * RUN_VERTICES;
     }
   }
-  if (ri !== l.runs.length) a.fail(`${a.where}: ${ri} derived runs, ${l.runs.length} recorded`);
   return { end: unit, dots };
 }
 
@@ -206,15 +200,18 @@ async function compareDots(w: StripWorst, a: { renderer: GpuRenderer; jobs: read
 }
 
 /**
- * Every GPU strip against the CPU's, bristle by bristle: the runs kinds.ts
- * draws (two or more points, a level above 0) give `runStrip`'s vertices for
- * their segments, within 2e-3 px; the segments of runs it does not draw are
- * zeros. A bristle with a gap index near an integer is excused. The derived
- * runs must be the CPU expansion's recorded runs, in order. One-sample
- * contours are compared as dabs.
+ * Every GPU strip against the CPU's (golden file `bristles-<golden>`),
+ * bristle by bristle: the runs kinds.ts drew (two or more points, a level
+ * above 0) give `runStrip`'s vertices for their segments, within 2e-3 px; the
+ * segments of runs it did not draw are zeros. A bristle with a gap index near
+ * an integer is excused: kinds.ts `Math.floor(s / 2.5)` within 1e-3 of an
+ * integer where the bristle is drying, and the cells on either side give
+ * different gaps, so f32 may take the other cell, and the level there may
+ * differ. One-sample contours are compared as dabs.
  */
-async function compareStrips(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number }): Promise<StripWorst> {
+async function compareStrips(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number; golden: string }): Promise<StripWorst> {
   const placed = placeBristles(a.reqs, a.ratio);
+  const golden = goldenBristles(a.golden);
   const renderer = new GpuRenderer(handle);
   const w: StripWorst = { vertices: 0, bristles: 0, excused: 0, differ: 0, runs: 0, dots: 0, pos: 0, hw: 0, alpha: 0, rgb: 0, inside: Infinity, failures: [] };
   const fail = (m: string): void => void (w.failures.length < 12 && w.failures.push(m));
@@ -224,9 +221,10 @@ async function compareStrips(handle: GpuHandle, a: { reqs: readonly ExpandReques
     const f = new Float32Array(g.data);
     const jobs: BrushJob[] = [];
     const refs: Dot[] = [];
+    assert.equal(golden.length, placed.length, "the golden numbers have every bristle stroke");
     for (const [i, p] of placed.entries()) {
       const range = g.strokes[i] ?? { first: 0, count: 0 };
-      const out = compareStroke(w, { p, f, first: range.first, ratio: a.ratio, where: `stroke ${i}`, fail });
+      const out = compareStroke(w, { p, golden: golden[i] ?? [], f, first: range.first, ratio: a.ratio, where: `stroke ${i}`, fail });
       if (out.end !== range.first + range.count) fail(`stroke ${i}: ${range.count} vertices on the GPU, ${out.end - range.first} derived`);
       refs.push(...out.dots);
       const dots = bristleDots(p.job, p.brush);
@@ -248,13 +246,13 @@ function reportStrips(t: TestContext, a: { w: StripWorst; what: string }): void 
 
 const scene = (size: { width: number; height: number }, draw: Parameters<SceneRecorder["record"]>[0]): Scene => new SceneRecorder(size).record(draw).scene;
 
-test("the bristles entry writes the brush sheet's and the focused bristle strips as runStrip does, at ratio 1 and 2", async (t) => {
+test("the bristles entry writes the brush sheet's and the focused bristle strips as the CPU did, at ratio 1 and 2", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
-  const cases = [["brush sheet", scene({ width: 640, height: 480 }, (v) => drawSheet(v))], ["focused", scene(BRISTLES_SIZE, drawBristles)]] as const;
-  for (const [what, s] of cases) {
+  const cases = [["brush sheet", scene({ width: 640, height: 480 }, (v) => drawSheet(v)), "sheet"], ["focused", scene(BRISTLES_SIZE, drawBristles), "focused"]] as const;
+  for (const [what, s, golden] of cases) {
     for (const ratio of [1, 2]) {
-      const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio });
+      const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio, golden: `${golden}-r${ratio}` });
       reportStrips(t, { w, what: `${what}, ratio ${ratio}` });
       assert.ok(w.runs > 50 && w.bristles > w.excused, "the case draws runs and compares bristles");
       if (what === "focused") assert.equal(w.dots, 2, "the two one-sample contours are dots");
@@ -262,15 +260,13 @@ test("the bristles entry writes the brush sheet's and the focused bristle strips
   }
 });
 
-test("the bristles entry gives each bristle its hue and light jitter as the CPU does", async (t) => {
+test("the bristles entry gives each bristle its hue and light jitter as the CPU did", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
-  const s = scene(BRISTLES_SIZE, drawBristleJitter);
-  for (const ratio of [1, 2]) {
-    const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio });
-    reportStrips(t, { w, what: `jitter, ratio ${ratio}` });
-    assert.equal(w.dots, 1);
-  }
+  // Recorded at ratio 1 only: the colours do not depend on the ratio.
+  const w = await compareStrips(handle, { reqs: brushRequests(scene(BRISTLES_SIZE, drawBristleJitter), handle.colors), ratio: 1, golden: "jitter-r1" });
+  reportStrips(t, { w, what: "jitter, ratio 1" });
+  assert.equal(w.dots, 1);
 });
 
 /** The smallest buffer limit (a multiple of 256 bytes) that holds every bristle's strip and every contour's inputs. */
@@ -364,13 +360,13 @@ test("a bristle larger than one buffer fails, naming its call", async (t) => {
   }
 });
 
-test("a one-sample bristle dot far below 0.05 brush px is drawn at a high pixel ratio, as the CPU draws it", async (t) => {
+test("a one-sample bristle dot far below 0.05 brush px is drawn at a high pixel ratio, as the CPU drew it", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   // Weight 0.1, even pressure: radius 0.05 brush px, 1.6 device px at ratio 32. The stamp rule would skip it.
   const draw = (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]): void => v.line(5, 5, 5, 5, { stroke: "#000", weight: 0.1, brush: "bristle", gesture: { pressure: "even" } });
   const s = scene({ width: 10, height: 10 }, draw);
-  const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio: 32 });
+  const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio: 32, golden: "dot-r32" });
   reportStrips(t, { w, what: "dot, ratio 32" });
   assert.equal(w.dots, 1);
   const renderer = new GpuRenderer(handle);

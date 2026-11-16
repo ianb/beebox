@@ -12,6 +12,7 @@ import type { Contour } from "../../src/core/contours.js";
 import type { Mat } from "../../src/scene/nodes.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { NO_COLORS, brushRequests } from "../brushes/requests.js";
+import { goldenSamples } from "../brushes/golden.js";
 
 test("the sample count is resample's loop, not a closed form", () => {
   assert.equal(sampleSegments([[0, 0], [2.85, 0]], 0.3).count, 11);
@@ -42,13 +43,23 @@ test("a closed dot with wobble gets a finite sample, its wobble read at 0", () =
 
 test("prepared contours have the CPU sampling's counts, and the box holds every sample", () => {
   const scene = new SceneRecorder(FOCUSED_SIZE).record(drawFocused).scene;
+  const reqs = brushRequests(scene, NO_COLORS);
+  // The CPU samples, golden: relative to each contour's origin, in f32.
+  const golden = goldenSamples("focused");
+  assert.equal(golden.length, reqs.length);
   let contours = 0;
-  for (const req of brushRequests(scene, NO_COLORS)) {
+  for (const [i, req] of reqs.entries()) {
     const p = prepare(req);
-    const cpu = brushSamples(req);
-    assert.ok(p !== undefined && cpu !== undefined);
-    assert.deepEqual(p.contours.map((c) => c.count), cpu.map((c) => c.samples.length));
-    for (const s of cpu.flatMap((c) => c.samples)) assert.ok(s.x >= p.box.x0 && s.x <= p.box.x1 && s.y >= p.box.y0 && s.y <= p.box.y1, `sample (${s.x}, ${s.y}) outside the box`);
+    const cpu = golden[i] ?? [];
+    assert.ok(p !== undefined);
+    assert.deepEqual(p.contours.map((c) => c.count), cpu.map((c) => c.length));
+    for (const [c, samples] of cpu.entries()) {
+      const [ox, oy] = p.contours[c]?.origin ?? [NaN, NaN];
+      for (const s of samples) {
+        const [x, y] = [ox + s.x, oy + s.y];
+        assert.ok(x >= p.box.x0 - 1e-4 && x <= p.box.x1 + 1e-4 && y >= p.box.y0 - 1e-4 && y <= p.box.y1 + 1e-4, `sample (${x}, ${y}) outside the box`);
+      }
+    }
     contours += cpu.length;
   }
   assert.ok(contours >= 17);

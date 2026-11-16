@@ -1,8 +1,9 @@
-// The GPU brush expansion against the CPU expansion it replaces
-// (canvas-loop-gpu-brushes.subplan.md, chunks 2 and 3): sample readback
-// against `shapeSamples` for the brush sheet, the walker's first frame and
-// focused contours; the WGSL hash against random.ts's, bit for bit; stamp dab
-// readback against the CPU dabs after `linMarks`, with hue and light jitter;
+// The GPU brush expansion against the CPU expansion it replaced
+// (canvas-loop-gpu-brushes.subplan.md, chunks 2 and 3), read from golden
+// numbers recorded before chunk 9 deleted it (test/brushes/golden.ts): sample
+// readback for the brush sheet, the walker's first frame and focused contours;
+// the WGSL hash against random.ts's, bit for bit; stamp dab readback, with hue
+// and light jitter;
 // the stamp mark's box at the extremes; the walker frame in a fresh
 // process; and (chunk 5) batches: with the buffer limit forced small, so that
 // inputs split between contours and batches inside contours, samples,
@@ -17,26 +18,28 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { before, test } from "node:test";
 import type { TestContext } from "node:test";
-import { mix, randOf } from "../../src/core/brush/random.js";
+import { mix } from "../../src/core/brush/random.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import { bristleBytes } from "../../src/gpu/brush-pack.js";
 import type { BrushJob, BrushOutputs } from "../../src/gpu/brush-pass.js";
-import { gpuBox, linMarks } from "../../src/gpu/marks.js";
+import { gpuBox } from "../../src/gpu/marks.js";
 import type { R } from "../../src/gpu/jobs.js";
 import { MIX_WGSL } from "../../src/gpu/shader-paper.js";
 import { DAB_FLOATS, SAMPLE_FLOATS } from "../../src/gpu/shader-brush.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { sharedGpu } from "../../src/headless/scene/surface.js";
 import type { ExpandRequest, Prepared } from "../../src/scene/brush/expand.js";
-import { BrushExpander, POINT_WORDS, brushSamples, expandOnCpu, prepare } from "../../src/scene/brush/expand.js";
+import { BrushExpander, POINT_WORDS, prepare } from "../../src/scene/brush/expand.js";
 import type { Mat } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
 import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
 import { FOCUSED_SIZE, drawFocused } from "../brushes/focused.js";
 import { brushRequests } from "../brushes/requests.js";
+import type { GoldenSample } from "../brushes/golden.js";
+import { goldenDabs, goldenSamples } from "../brushes/golden.js";
 import { STAMPS_SIZE, drawExtremes, drawJitter } from "./stamps.js";
 import { drawSheet, drawSmear } from "./brush-sheet.js";
 import { THIN_SIZE, drawThin } from "./ink-sheet.js";
@@ -87,19 +90,19 @@ interface Worst {
   failures: string[];
 }
 
-/** GPU sample `at`'s position in brush space: the GPU samples are relative to their contour's origin. */
-function absolute(f: Float32Array, a: { at: number; origin: readonly [number, number] | undefined }): [number, number] {
-  const [ox, oy] = a.origin ?? [NaN, NaN];
-  return [(f[a.at] ?? NaN) + ox, (f[a.at + 1] ?? NaN) + oy];
-}
-
-/** Every GPU sample against its CPU sample: counts equal, positions within 1e-3 brush px, pressure within 1e-5, the end points exact. */
-async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[]): Promise<Worst> {
+/**
+ * Every GPU sample against its golden CPU sample (both relative to the
+ * contour's origin): counts equal, positions within 1e-3 brush px, pressure
+ * within 1e-5, the end points exact.
+ */
+async function compareSamples(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; golden: readonly GoldenSample[][][] }): Promise<Worst> {
+  const { reqs } = a;
   const g = await gpuSamples(handle, reqs);
   const worst: Worst = { samples: g.out.count, contours: 0, pos: 0, pressure: 0, failures: [] };
   const fail = (m: string): void => void (worst.failures.length < 12 && worst.failures.push(m));
-  for (const [i, req] of reqs.entries()) {
-    const cpu = brushSamples(req) ?? [];
+  assert.equal(a.golden.length, reqs.length, "the golden numbers have every stroke");
+  for (const i of reqs.keys()) {
+    const cpu = (a.golden[i] ?? []).map((samples) => ({ samples }));
     const ranges = g.out.ranges[i] ?? [];
     const prep = g.prepared[i];
     assert.equal(ranges.length, cpu.length, `stroke ${i}: contours`);
@@ -109,7 +112,7 @@ async function compareSamples(handle: GpuHandle, reqs: readonly ExpandRequest[])
       if (r.count !== contour.samples.length) fail(`stroke ${i} contour ${c}: ${r.count} samples on the GPU, ${contour.samples.length} on the CPU`);
       for (const [k, s] of contour.samples.entries()) {
         const at = (r.first + k) * SAMPLE_FLOATS;
-        const [x, y] = absolute(g.f, { at, origin: prep?.contours[c]?.origin });
+        const [x = NaN, y = NaN] = g.f.subarray(at, at + 2);
         const p = g.f[at + 6] ?? NaN;
         const d = Math.hypot(x - s.x, y - s.y);
         worst.pos = Math.max(worst.pos, d);
@@ -136,20 +139,21 @@ function report(t: TestContext, a: { w: Worst; what: string }): void {
   assert.deepEqual(w.failures, []);
 }
 
-test("the sample pass places the brush sheet's samples as shapeSamples does", async (t) => {
+test("the sample pass places the brush sheet's samples as the CPU sampling did", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   const sheet = new SceneRecorder({ width: 640, height: 480 }).record((v) => drawSheet(v)).scene;
   const smear = new SceneRecorder({ width: 320, height: 160 }).record((v) => drawSmear(v)).scene;
-  report(t, { w: await compareSamples(handle, [...brushRequests(sheet, handle.colors), ...brushRequests(smear, handle.colors)]), what: "brush sheet and smear sheet" });
+  const reqs = [...brushRequests(sheet, handle.colors), ...brushRequests(smear, handle.colors)];
+  report(t, { w: await compareSamples(handle, { reqs, golden: [...goldenSamples("sheet"), ...goldenSamples("smear")] }), what: "brush sheet and smear sheet" });
 });
 
-test("the sample pass places focused contours as shapeSamples does", async (t) => {
+test("the sample pass places focused contours as the CPU sampling did", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   const scene = new SceneRecorder(FOCUSED_SIZE).record(drawFocused).scene;
   const reqs = brushRequests(scene, handle.colors);
-  const w = await compareSamples(handle, reqs);
+  const w = await compareSamples(handle, { reqs, golden: goldenSamples("focused") });
   report(t, { w, what: "focused contours" });
   const counts = reqs.map((r) => prepare(r)?.contours.map((c) => c.count));
   assert.deepEqual(counts[0], [1], "shorter than one step: one sample");
@@ -157,13 +161,13 @@ test("the sample pass places focused contours as shapeSamples does", async (t) =
   assert.deepEqual(counts.slice(-3), [[17], [0], [1]], "the corner path, the empty contour, the closed dot");
 });
 
-test("the sample pass places the walker's first frame as shapeSamples does, and repeats exactly", async (t) => {
+test("the sample pass places the walker's first frame as the CPU sampling did, and repeats exactly", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined || text === undefined) return;
   const [scene] = portFrames(walkerSheet, { at: [0], text });
   assert.ok(scene !== undefined);
   const reqs = brushRequests(scene, handle.colors);
-  report(t, { w: await compareSamples(handle, reqs), what: `walker frame 0 (${reqs.length} strokes)` });
+  report(t, { w: await compareSamples(handle, { reqs, golden: goldenSamples("walker") }), what: `walker frame 0 (${reqs.length} strokes)` });
   const [a, b] = [await gpuSamples(handle, reqs), await gpuSamples(handle, reqs)];
   assert.ok(Buffer.from(a.f.buffer).equals(Buffer.from(b.f.buffer)), "a second run writes the same bytes");
 });
@@ -209,35 +213,55 @@ test("the WGSL hash equals random.ts's on 65,536 inputs, bit for bit", async (t)
   }
 });
 
-/** Stamp strokes placed as the lowering places them (brush-space q times the ratio, a fractional translation), with their CPU dabs after `linMarks`. */
-function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; translate?: readonly [number, number] }): { job: BrushJob; box: R; cpu: { x: number; y: number; r: number; a: number; soft: boolean; rgb: readonly number[] }[]; skip: boolean[] }[] {
+/** A golden dab where the lowering places it (the mark's own pixels), or a sample the stamp rule skipped. */
+type WantDab = { readonly skip: true } | { readonly skip: false; readonly x: number; readonly y: number; readonly r: number; readonly a: number; readonly soft: boolean; readonly rgb: readonly number[] };
+
+/**
+ * Stamp strokes placed as the lowering places them (brush-space q times the
+ * ratio, a fractional translation), with golden file `golden`'s dabs (brush
+ * space) placed the same way, per sample, for the strokes it recorded (every
+ * `stride`-th); none without `golden`.
+ */
+function placeStamps(reqs: readonly ExpandRequest[], at: { ratio: number; golden?: string; translate?: readonly [number, number] }): { job: BrushJob; box: R; want: WantDab[] | undefined }[] {
   const expander = new BrushExpander({ enabled: false });
-  const SIZE_JITTER = randOf(11);
   const { ratio } = at;
-  return reqs.flatMap((req, i) => {
+  const placed = reqs.flatMap((req, i) => {
     const ex = expander.expand(req);
     if (ex?.set.kind !== "stamp") return [];
     const { q } = ex;
     const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], at.translate?.[0] ?? 13.25 + i * 0.37, at.translate?.[1] ?? 7.5 + i * 0.11];
     const box = gpuBox(ex.set, e);
-    const cpu = expandOnCpu(req);
-    if (box === undefined || cpu?.kind !== "marks") return [];
-    const l = linMarks(cpu, { e, ratio });
-    assert.equal(l.kind, "tex");
+    if (box === undefined) return [];
     const offset = [e[4] - box.x0, e[5] - box.y0] as const;
-    const { brush, prepared } = { brush: ex.set.brush, prepared: ex.set.prepared };
-    // kinds.ts `paintStamp`'s skip rule, sample by sample.
-    const skip = (brushSamples(req) ?? []).flatMap((c) => c.samples.map((s, k) => {
-      const radius = (prepared.width / 2) * (1 - brush.sizeByPressure * (1 - s.p)) * (1 + brush.sizeJitter * (SIZE_JITTER(c.seed, k) - 0.5));
-      return radius <= 0.05 || brush.flow * (1 - brush.opacityByPressure * (1 - s.p)) <= 0;
-    }));
-    const dabs = l.kind === "tex" ? l.dabs.map((d) => ({ ...d, x: d.x + offset[0], y: d.y + offset[1] })) : [];
-    return [{ job: { prepared, brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset, slot: [3, 5, 3 + box.x1 - box.x0, 5 + box.y1 - box.y0] }, box, cpu: dabs, skip }];
+    const { brush, prepared } = ex.set;
+    const job: BrushJob = { prepared, brush, lin: [e[0], e[1], e[2], e[3]], ratio, offset, slot: [3, 5, 3 + box.x1 - box.x0, 5 + box.y1 - box.y0] };
+    return [{ job, box, e }];
+  });
+  if (at.golden === undefined) return placed.map((p) => ({ ...p, want: undefined }));
+  const { stride, strokes } = goldenDabs(at.golden);
+  assert.equal(strokes.length, Math.ceil(placed.length / stride), `${at.golden}: the golden numbers have every ${stride === 1 ? "" : `${stride}th `}stamp stroke`);
+  return placed.map((p, i) => {
+    const gold = i % stride === 0 ? strokes[i / stride] : undefined;
+    if (gold === undefined) return { ...p, want: undefined };
+    const { e } = p;
+    const [ox, oy] = p.job.offset;
+    assert.equal(gold.contours.length, p.job.prepared.contours.length);
+    const want = gold.contours.flatMap((c, ci) => {
+      const [cx, cy] = p.job.prepared.contours[ci]?.origin ?? [NaN, NaN];
+      return c.map((d): WantDab => {
+        if (d.skip) return d;
+        const [x, y] = [cx + d.x, cy + d.y];
+        return { ...d, x: e[0] * x + e[2] * y + ox, y: e[1] * x + e[3] * y + oy, r: d.r * ratio, soft: gold.soft };
+      });
+    });
+    return { ...p, want };
   });
 }
 
 interface DabWorst {
   dabs: number;
+  /** Dabs compared with a golden dab (the walker's golden numbers keep every fourth stamp stroke). */
+  compared: number;
   skipped: number;
   pos: number;
   r: number;
@@ -246,31 +270,32 @@ interface DabWorst {
   failures: string[];
 }
 
-/** Every GPU dab against its CPU dab: the same count and zero-alpha dabs, centres within 2e-3 device px, radius and alpha within 1e-4, RGB within 1/255. */
-async function compareDabs(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number }): Promise<DabWorst> {
-  const placed = placeStamps(a.reqs, { ratio: a.ratio });
+/** Every GPU dab against its golden CPU dab: the same count and zero-alpha dabs, centres within 2e-3 device px, radius and alpha within 1e-4, RGB within 1/255. */
+async function compareDabs(handle: GpuHandle, a: { reqs: readonly ExpandRequest[]; ratio: number; golden: string }): Promise<DabWorst> {
+  const placed = placeStamps(a.reqs, { ratio: a.ratio, golden: a.golden });
   const renderer = new GpuRenderer(handle);
   const g = await renderer.brushInstances(placed.map((p) => p.job)).finally(() => renderer.destroy());
   const f = new Float32Array(g.data);
-  const w: DabWorst = { dabs: g.count, skipped: 0, pos: 0, r: 0, a: 0, rgb: 0, failures: [] };
+  const w: DabWorst = { dabs: g.count, compared: 0, skipped: 0, pos: 0, r: 0, a: 0, rgb: 0, failures: [] };
   const fail = (m: string): void => void (w.failures.length < 12 && w.failures.push(m));
   for (const [i, p] of placed.entries()) {
     const range = g.strokes[i] ?? { first: 0, count: 0 };
-    if (range.count !== p.skip.length) fail(`stroke ${i}: ${range.count} dabs on the GPU, ${p.skip.length} samples on the CPU`);
-    let j = 0;
+    if (p.want === undefined) continue;
+    if (range.count !== p.want.length) fail(`stroke ${i}: ${range.count} dabs on the GPU, ${p.want.length} samples on the CPU`);
     for (let k = 0; k < range.count; k++) {
       const d = f.subarray((range.first + k) * DAB_FLOATS, (range.first + k + 1) * DAB_FLOATS);
       const [x = NaN, y = NaN, r = NaN, al = NaN, soft = NaN] = d;
-      if (p.skip[k] === true) {
+      const c = p.want[k];
+      if (c?.skip === true) {
         w.skipped++;
         if (al !== 0) fail(`stroke ${i} dab ${k}: skipped on the CPU, alpha ${al} on the GPU`);
         continue;
       }
-      const c = p.cpu[j++];
       if (c === undefined || al === 0) {
         fail(`stroke ${i} dab ${k}: ${c === undefined ? "no CPU dab" : "zero alpha on the GPU"}`);
         continue;
       }
+      w.compared++;
       const dp = Math.hypot(x - c.x, y - c.y);
       const dr = Math.abs(r - c.r);
       const da = Math.abs(al - c.a);
@@ -279,26 +304,25 @@ async function compareDabs(handle: GpuHandle, a: { reqs: readonly ExpandRequest[
       if (!(dp <= 2e-3 && dr <= 1e-4 && da <= 1e-4 && dc <= 1 / 255 + 1e-6) || soft !== (c.soft ? 1 : 0)) fail(`stroke ${i} dab ${k}: (${x}, ${y}) r ${r} a ${al} rgb ${[...d.subarray(5, 8)].join(",")} soft ${soft} against (${c.x}, ${c.y}) r ${c.r} a ${c.a} rgb ${c.rgb.join(",")} soft ${c.soft}`);
       if ([...d.subarray(8, 12)].join(",") !== p.job.slot.join(",")) fail(`stroke ${i} dab ${k}: slot ${[...d.subarray(8, 12)].join(",")}`);
     }
-    if (j !== p.cpu.length) fail(`stroke ${i}: ${j} shown dabs on the GPU, ${p.cpu.length} on the CPU`);
   }
   return w;
 }
 
 function reportDabs(t: TestContext, a: { w: DabWorst; what: string }): void {
   const { w, what } = a;
-  t.diagnostic(`${what}: ${w.dabs} dabs (${w.skipped} skipped); largest centre difference ${w.pos.toExponential(2)} device px, radius ${w.r.toExponential(2)}, alpha ${w.a.toExponential(2)}, RGB ${(w.rgb * 255).toFixed(3)}/255`);
+  t.diagnostic(`${what}: ${w.dabs} dabs, ${w.compared} compared (${w.skipped} skipped); largest centre difference ${w.pos.toExponential(2)} device px, radius ${w.r.toExponential(2)}, alpha ${w.a.toExponential(2)}, RGB ${(w.rgb * 255).toFixed(3)}/255`);
   assert.deepEqual(w.failures, []);
 }
 
-test("the dabs entry lays the brush sheet's, focused and walker stamp dabs as linMarks does, at ratio 1 and 2", async (t) => {
+test("the dabs entry lays the brush sheet's, focused and walker stamp dabs as the CPU did, at ratio 1 and 2", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined || text === undefined) return;
   const sheet = new SceneRecorder({ width: 640, height: 480 }).record((v) => drawSheet(v)).scene;
   const focused = new SceneRecorder(FOCUSED_SIZE).record(drawFocused).scene;
   const [walker] = portFrames(walkerSheet, { at: [0], text });
   assert.ok(walker !== undefined);
-  for (const [what, scene] of [["brush sheet", sheet], ["focused", focused], ["walker frame 0", walker]] as const) {
-    for (const ratio of [1, 2]) reportDabs(t, { w: await compareDabs(handle, { reqs: brushRequests(scene, handle.colors), ratio }), what: `${what}, ratio ${ratio}` });
+  for (const [what, scene, golden] of [["brush sheet", sheet, "sheet"], ["focused", focused, "focused"], ["walker frame 0", walker, "walker"]] as const) {
+    for (const ratio of [1, 2]) reportDabs(t, { w: await compareDabs(handle, { reqs: brushRequests(scene, handle.colors), ratio, golden }), what: `${what}, ratio ${ratio}` });
   }
 });
 
@@ -307,7 +331,7 @@ test("the dabs entry gives each dab its hue and light jitter as the CPU does, RG
   if (handle === undefined) return;
   const scene = new SceneRecorder(STAMPS_SIZE).record(drawJitter).scene;
   for (const ratio of [1, 2]) {
-    const w = await compareDabs(handle, { reqs: brushRequests(scene, handle.colors), ratio });
+    const w = await compareDabs(handle, { reqs: brushRequests(scene, handle.colors), ratio, golden: "jitter" });
     reportDabs(t, { w, what: `jitter, ratio ${ratio}` });
     assert.ok(w.dabs > 500 && w.skipped > 4, "the case lays dabs, and skips some");
   }
@@ -360,7 +384,7 @@ test("a stamp far from the origin, translated back, lands where the CPU puts it 
     v.at({ translate: [-16777207, 0] }, () => v.line(16777217, 10, 16777217, 10, { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } }));
   }).scene;
   const reqs = brushRequests(scene, handle.colors);
-  const [p] = placeStamps(reqs, { ratio: 1, translate: [-16777207, 0] });
+  const [p] = placeStamps(reqs, { ratio: 1, golden: "far", translate: [-16777207, 0] });
   assert.ok(p !== undefined);
   const renderer = new GpuRenderer(handle);
   const g = await renderer.brushInstances([p.job]).finally(() => renderer.destroy());
@@ -369,7 +393,7 @@ test("a stamp far from the origin, translated back, lands where the CPU puts it 
   const x = (f[0] ?? NaN) + p.box.x0;
   t.diagnostic(`box x0 ${p.box.x0}; dab centre at device x ${x}`);
   assert.ok(Math.abs(x - 10) <= 2e-3, `the dab's centre lands at device x 10 (got ${x})`);
-  reportDabs(t, { w: await compareDabs(handle, { reqs, ratio: 1 }), what: "far stamp" });
+  reportDabs(t, { w: await compareDabs(handle, { reqs, ratio: 1, golden: "far" }), what: "far stamp" });
 });
 
 test("a far contour of the same stamp stroke does not move a near one (per-contour f32 coordinates)", async (t) => {
