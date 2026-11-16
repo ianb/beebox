@@ -7,6 +7,8 @@
  * The notices (canvas-loop box figures plan, "When it goes wrong"): a sketch
  * written for the earlier canvas-loop and a device without WebGPU each get a
  * plain-words warning; any other failure keeps the technical "Figure error".
+ * The outdated notice is for learners, so its technical line goes only to the
+ * console warning (view.tsx) and to `bbx figure run`.
  */
 
 import type { ReactNode } from "react";
@@ -62,8 +64,8 @@ const CANNOT_DRAW = "This figure can't draw on this device";
 /** The warning texts, by kind. */
 const WARNINGS = {
   outdated: {
-    heading: "This figure needs updating",
-    text: "It was made for an earlier version of the canvas-loop drawing library. The box's agent can regenerate it.",
+    heading: "This figure is being updated",
+    text: "It will be back soon.",
   },
   "no-webgpu": {
     heading: CANNOT_DRAW,
@@ -82,7 +84,6 @@ export function FigureNotice({ notice }: { notice: NoticeInfo }) {
     <Notice tone="warning">
       <h3 className="mt-0 mb-1 text-base font-semibold">{heading}</h3>
       <Text as="p" size="sm" className="my-0">{text}</Text>
-      {notice.kind === "outdated" ? <Text as="p" size="xs" mono tone="muted" className="mt-2 mb-0">{notice.detail}</Text> : null}
     </Notice>
   );
 }

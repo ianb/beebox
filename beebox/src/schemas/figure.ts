@@ -191,7 +191,7 @@ export default (cl, { mount, figure }) =>
 - **canvas-loop figures draw with WebGPU.** A device without it shows "This
   figure can't draw on this device" in place of the figure. Do not switch a
   figure to another runtime for this unless the boxholder asks.
-- **"This figure needs updating"** in a figure's place means it was written
+- **"This figure is being updated"** in a figure's place means it was written
   for the earlier canvas-loop. \`bbx figure run <card>\` names each removed
   call and what replaces it; rewrite the sketch until the run is clean.
 

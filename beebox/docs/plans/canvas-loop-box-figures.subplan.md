@@ -87,6 +87,12 @@ Nothing is recorded as standing trust; each regeneration is one chat request.
 
 ### When it goes wrong or does nothing
 
+**Decided at Checkpoint 5 (2026-11-16):** the old-sketch notice reads "This
+figure is being updated" / "It will be back soon." with no technical line;
+learners cannot regenerate a figure and do not know the library's name. The
+technical line goes to the console warning and `bbx figure run`. The draft
+below is kept as written.
+
 The wording below is a draft. **The final learner wording is the boxholder's
 call** (Open design questions).
 

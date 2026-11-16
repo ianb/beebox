@@ -29,10 +29,11 @@ void test("page mode keeps the description below a notice", async (t) => {
     description: React.createElement("p", null, "Balance the reaction by dragging molecules."),
     children: React.createElement(FigureNotice, { notice: OUTDATED }),
   }));
+  // The learner sees no technical line: `v.cache was removed` goes only to
+  // the console warning and `bbx figure run` (boxholder's wording, Checkpoint 5).
   t.check(text(html), [
-    "This figure needs updating",
-    "It was made for an earlier version of the canvas-loop drawing library. The box&#x27;s agent can regenerate it.",
-    "v.cache was removed: use v.picture",
+    "This figure is being updated",
+    "It will be back soon.",
     "Balance the reaction by dragging molecules.",
   ]);
   t.check(/role="(\w+)"/u.exec(html)?.[1], "status");

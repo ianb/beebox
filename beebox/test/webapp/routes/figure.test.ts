@@ -362,7 +362,7 @@ export {
 // run` does (`core/figure-sketch-check.ts`). The starter passes. A type error
 // in a file the entry imports comes back through `figureError`, with the
 // helper's line. A call the scene API removed also sets `figureOutdated`,
-// which the card shows as "This figure needs updating". Figures in other
+// which the card shows as "This figure is being updated". Figures in other
 // runtimes are not checked (the untyped sketches above compile).
 const CANVAS_LOOP_CARD = "---\nruntime: canvas-loop\nentry: attach/sketch.ts\n---\n";
 
