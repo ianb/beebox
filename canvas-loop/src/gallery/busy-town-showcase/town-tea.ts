@@ -1,6 +1,6 @@
 // The still parts of Thimble Quay, painted once into pictures: the sky, the far
 // hills with the windmill's tower, the row of shops, the street and the canal.
-import type { BrushPreset, Drawing, PathCommand, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Drawing, PathCommand, Style, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, hash, ink, rectPts, shade, stroke } from "./ink-tea.js";
 import { BASE, BUILDINGS, type Building, CANAL_TOP, CLOCK, H, HALL, LAMPS, LAMP_H, LEDGE_Y, MILL, RAIL_Y, ROAD_BOT, ROAD_TOP, SHOP_H, TOWER, W, WINDOWS, WIRE_Y, type Win } from "./layout-tea.js";
 
@@ -178,20 +178,23 @@ function goods(v: View, b: Building, x: number, y: number, w: number, h: number)
   }
 }
 
-function awning(v: View, b: Building, seed: number): Drawing {
+/** A shop's striped awning. With `cut`, every piece is drawn in that style instead
+ * (the light layer uses it to cut the awning's shape out of window light). */
+function awning(v: View, b: Building, seed: number, cut?: Style): Drawing {
   const colours: Record<string, readonly [string, string]> = { cafe: ["#c9413a", "#fbefdf"], fish: ["#2f6d8a", "#eaf3f6"], florist: ["#4f7f3a", "#f6f1dc"] };
   const pair = colours[b.id];
   if (!pair) return null;
   const y = BASE - SHOP_H + 2, x = b.x + 4, w = b.w - 8, drop = 26;
   const stripes = 8;
+  const fill = (i: number): Style => cut ?? { fill: i % 2 === 0 ? pair[0] : pair[1] };
   return [
     Array.from({ length: stripes }, (_, i) => {
       const x0 = x + (w / stripes) * i, x1 = x0 + w / stripes;
-      return v.polygon([[x0, y], [x1, y], [x1 + 4, y + drop], [x0 + 4, y + drop]], { fill: i % 2 === 0 ? pair[0] : pair[1] });
+      return v.polygon([[x0 - 1, y - 1], [x1 + 1, y - 1], [x1 + 5, y + drop], [x0 + 3, y + drop]], fill(i));
     }),
-    Array.from({ length: stripes }, (_, i) => v.arc(x + 4 + (w / stripes) * (i + 0.5), y + drop, w / stripes / 2, 0, Math.PI, { fill: i % 2 === 0 ? pair[0] : pair[1] })),
-    stroke(v, [[x, y], [x + w, y]], { seed, weight: 1.6 }),
-    stroke(v, [[x + 4, y + drop], [x + w + 4, y + drop]], { seed: seed + 1, weight: 1.2 }),
+    Array.from({ length: stripes }, (_, i) => v.arc(x + 4 + (w / stripes) * (i + 0.5), y + drop, w / stripes / 2 + (cut ? 1 : 0), 0, Math.PI, fill(i))),
+    !cut && stroke(v, [[x, y], [x + w, y]], { seed, weight: 1.6 }),
+    !cut && stroke(v, [[x + 4, y + drop], [x + w + 4, y + drop]], { seed: seed + 1, weight: 1.2 }),
   ];
 }
 
@@ -326,17 +329,29 @@ export function lampPost(v: View, i: number): Drawing {
 const FLAGS = ["#d0443a", "#f2c14e", "#4f8acb", "#6aa04a", "#f6f1e6", "#9b6fd0"] as const;
 
 /** Bunting strung between two points, sagging in the middle. */
-function bunting(v: View, a: Vec2, b: Vec2, seed: number): Drawing {
+function bunting(v: View, a: Vec2, b: Vec2, seed: number, cut?: Style): Drawing {
   const sag = 16;
   const at = (t: number): Vec2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + Math.sin(Math.PI * t) * sag];
   const n = Math.floor(Math.hypot(b[0] - a[0], b[1] - a[1]) / 16);
   return [
-    v.curve(Array.from({ length: 9 }, (_, i) => at(i / 8)), false, ink(seed, 1.1)),
+    v.curve(Array.from({ length: 9 }, (_, i) => at(i / 8)), false, cut ? { stroke: "#000", weight: 2.5, erase: true } : ink(seed, 1.1)),
     Array.from({ length: n }, (_, i) => {
       const p = at((i + 0.5) / n), q = at((i + 1.3) / n);
-      return v.polygon([p, [q[0], q[1]], [(p[0] + q[0]) / 2 + 1, (p[1] + q[1]) / 2 + 11]], { fill: FLAGS[(i + seed) % FLAGS.length] ?? "#d0443a", stroke: INK, weight: 0.7 });
+      return v.polygon([p, [q[0], q[1]], [(p[0] + q[0]) / 2 + 1, (p[1] + q[1]) / 2 + 11]], cut ?? { fill: FLAGS[(i + seed) % FLAGS.length] ?? "#d0443a", stroke: INK, weight: 0.7 });
     }),
   ];
+}
+
+function buntings(v: View, cut?: Style): Drawing {
+  return [0, 1].map((i) => {
+    const a = LAMPS[i], b = LAMPS[i + 1];
+    return a && b && bunting(v, [a.x, a.foot - LAMP_H + 4], [b.x, b.foot - LAMP_H + 4], 90 + i, cut);
+  });
+}
+
+/** What hangs in front of the shop windows, drawn in `cut` (an erasing style). */
+export function occluders(v: View, cut: Style): Drawing {
+  return [BUILDINGS.map((b, bi) => awning(v, b, 0 + bi, cut)), buntings(v, cut), LAMPS.map((l, i) => i < 3 && v.rect(l.x - 7, l.foot - LAMP_H - 14, 14, LAMP_H + 14, cut))];
 }
 
 /** The whole still town, in one picture's coordinates (the canvas). */
@@ -348,10 +363,7 @@ export function paintTown(v: View): Drawing {
     ]),
     street(v),
     LAMPS.map((_, i) => i < 3 && lampPost(v, i)),
-    [0, 1].map((i) => {
-      const a = LAMPS[i], b = LAMPS[i + 1];
-      return a && b && bunting(v, [a.x, a.foot - LAMP_H + 4], [b.x, b.foot - LAMP_H + 4], 90 + i);
-    }),
+    buntings(v),
   ];
 }
 

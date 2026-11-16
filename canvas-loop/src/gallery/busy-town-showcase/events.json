@@ -1,39 +1,335 @@
 [
-  { "frame": 20, "type": "mousemove", "x": 222, "y": 130 },
-  { "frame": 24, "type": "mousedown", "x": 222, "y": 130 },
-  { "frame": 25, "type": "mouseup", "x": 222, "y": 130 },
-  { "frame": 50, "type": "mousedown", "x": 60, "y": 380 },
-  { "frame": 51, "type": "mouseup", "x": 60, "y": 380 },
-  { "frame": 70, "type": "mousedown", "x": 352, "y": 380 },
-  { "frame": 71, "type": "mouseup", "x": 352, "y": 380 },
-  { "frame": 90, "type": "mousedown", "x": 600, "y": 545 },
-  { "frame": 91, "type": "mouseup", "x": 600, "y": 545 },
-  { "frame": 100, "type": "mousedown", "x": 884, "y": 206 },
-  { "frame": 101, "type": "mouseup", "x": 884, "y": 206 },
-  { "frame": 110, "type": "mousedown", "x": 344, "y": 246 },
-  { "frame": 111, "type": "mouseup", "x": 344, "y": 246 },
-  { "frame": 120, "type": "mousedown", "x": 480, "y": 390 },
-  { "frame": 121, "type": "mouseup", "x": 480, "y": 390 },
-  { "frame": 130, "type": "mousedown", "x": 880, "y": 380 },
-  { "frame": 131, "type": "mouseup", "x": 880, "y": 380 },
-  { "frame": 140, "type": "mousedown", "x": 620, "y": 390 },
-  { "frame": 141, "type": "mouseup", "x": 620, "y": 390 },
-  { "frame": 160, "type": "mousemove", "x": 340, "y": 330 },
-  { "frame": 166, "type": "snapshot", "label": "busy afternoon" },
-  { "frame": 230, "type": "mousedown", "x": 560, "y": 450 },
-  { "frame": 231, "type": "mouseup", "x": 560, "y": 450 },
-  { "frame": 260, "type": "param", "name": "hour", "value": 19 },
-  { "frame": 270, "type": "snapshot", "label": "dusk" },
-  { "frame": 300, "type": "param", "name": "hour", "value": 21.5 },
-  { "frame": 304, "type": "mousedown", "x": 140, "y": 452 },
-  { "frame": 305, "type": "mouseup", "x": 140, "y": 452 },
-  { "frame": 310, "type": "trigger", "name": "fireworks" },
-  { "frame": 330, "type": "mousedown", "x": 640, "y": 110 },
-  { "frame": 331, "type": "mouseup", "x": 640, "y": 110 },
-  { "frame": 384, "type": "snapshot", "label": "fireworks" },
-  { "frame": 400, "type": "param", "name": "weather", "value": "rain" },
-  { "frame": 420, "type": "snapshot", "label": "rain at night" },
-  { "frame": 430, "type": "param", "name": "hour", "value": 10 },
-  { "frame": 431, "type": "param", "name": "weather", "value": "snow" },
-  { "frame": 450, "type": "snapshot", "label": "snowy morning" }
+ {
+  "frame": 10,
+  "type": "mousemove",
+  "x": 533,
+  "y": 80
+ },
+ {
+  "frame": 14,
+  "type": "mousedown",
+  "x": 533,
+  "y": 80
+ },
+ {
+  "frame": 15,
+  "type": "mouseup",
+  "x": 533,
+  "y": 80
+ },
+ {
+  "frame": 20,
+  "type": "mousemove",
+  "x": 222,
+  "y": 130
+ },
+ {
+  "frame": 24,
+  "type": "mousedown",
+  "x": 222,
+  "y": 130
+ },
+ {
+  "frame": 25,
+  "type": "mouseup",
+  "x": 222,
+  "y": 130
+ },
+ {
+  "frame": 50,
+  "type": "mousedown",
+  "x": 60,
+  "y": 380
+ },
+ {
+  "frame": 51,
+  "type": "mouseup",
+  "x": 60,
+  "y": 380
+ },
+ {
+  "frame": 70,
+  "type": "mousedown",
+  "x": 352,
+  "y": 380
+ },
+ {
+  "frame": 71,
+  "type": "mouseup",
+  "x": 352,
+  "y": 380
+ },
+ {
+  "frame": 90,
+  "type": "mousedown",
+  "x": 600,
+  "y": 545
+ },
+ {
+  "frame": 91,
+  "type": "mouseup",
+  "x": 600,
+  "y": 545
+ },
+ {
+  "frame": 100,
+  "type": "mousedown",
+  "x": 884,
+  "y": 206
+ },
+ {
+  "frame": 101,
+  "type": "mouseup",
+  "x": 884,
+  "y": 206
+ },
+ {
+  "frame": 106,
+  "type": "mousedown",
+  "x": 344,
+  "y": 246
+ },
+ {
+  "frame": 107,
+  "type": "mouseup",
+  "x": 344,
+  "y": 246
+ },
+ {
+  "frame": 110,
+  "type": "mousedown",
+  "x": 548,
+  "y": 380
+ },
+ {
+  "frame": 111,
+  "type": "mouseup",
+  "x": 548,
+  "y": 380
+ },
+ {
+  "frame": 114,
+  "type": "mousedown",
+  "x": 880,
+  "y": 380
+ },
+ {
+  "frame": 115,
+  "type": "mouseup",
+  "x": 880,
+  "y": 380
+ },
+ {
+  "frame": 117,
+  "type": "mousedown",
+  "x": 620,
+  "y": 390
+ },
+ {
+  "frame": 118,
+  "type": "mouseup",
+  "x": 620,
+  "y": 390
+ },
+ {
+  "frame": 120,
+  "type": "mousedown",
+  "x": 66,
+  "y": 410
+ },
+ {
+  "frame": 121,
+  "type": "mouseup",
+  "x": 66,
+  "y": 410
+ },
+ {
+  "frame": 126,
+  "type": "mousedown",
+  "x": 250,
+  "y": 480
+ },
+ {
+  "frame": 127,
+  "type": "mouseup",
+  "x": 250,
+  "y": 480
+ },
+ {
+  "frame": 132,
+  "type": "mousedown",
+  "x": 482,
+  "y": 410
+ },
+ {
+  "frame": 133,
+  "type": "mouseup",
+  "x": 482,
+  "y": 410
+ },
+ {
+  "frame": 138,
+  "type": "mousedown",
+  "x": 890,
+  "y": 490
+ },
+ {
+  "frame": 139,
+  "type": "mouseup",
+  "x": 890,
+  "y": 490
+ },
+ {
+  "frame": 144,
+  "type": "mousedown",
+  "x": 99,
+  "y": 500
+ },
+ {
+  "frame": 145,
+  "type": "mouseup",
+  "x": 99,
+  "y": 500
+ },
+ {
+  "frame": 150,
+  "type": "mousedown",
+  "x": 59,
+  "y": 500
+ },
+ {
+  "frame": 151,
+  "type": "mouseup",
+  "x": 59,
+  "y": 500
+ },
+ {
+  "frame": 156,
+  "type": "mousedown",
+  "x": 390,
+  "y": 470
+ },
+ {
+  "frame": 157,
+  "type": "mouseup",
+  "x": 390,
+  "y": 470
+ },
+ {
+  "frame": 162,
+  "type": "mousedown",
+  "x": 493,
+  "y": 505
+ },
+ {
+  "frame": 163,
+  "type": "mouseup",
+  "x": 493,
+  "y": 505
+ },
+ {
+  "frame": 166,
+  "type": "mousemove",
+  "x": 340,
+  "y": 330
+ },
+ {
+  "frame": 170,
+  "type": "snapshot",
+  "label": "folk reacting"
+ },
+ {
+  "frame": 230,
+  "type": "mousedown",
+  "x": 560,
+  "y": 450
+ },
+ {
+  "frame": 231,
+  "type": "mouseup",
+  "x": 560,
+  "y": 450
+ },
+ {
+  "frame": 250,
+  "type": "param",
+  "name": "weather",
+  "value": "rain"
+ },
+ {
+  "frame": 262,
+  "type": "snapshot",
+  "label": "rain arriving"
+ },
+ {
+  "frame": 300,
+  "type": "snapshot",
+  "label": "raining"
+ },
+ {
+  "frame": 330,
+  "type": "param",
+  "name": "hour",
+  "value": 21.5
+ },
+ {
+  "frame": 351,
+  "type": "snapshot",
+  "label": "lightning"
+ },
+ {
+  "frame": 360,
+  "type": "snapshot",
+  "label": "night rain"
+ },
+ {
+  "frame": 380,
+  "type": "param",
+  "name": "weather",
+  "value": "fair"
+ },
+ {
+  "frame": 398,
+  "type": "snapshot",
+  "label": "clouds leaving"
+ },
+ {
+  "frame": 420,
+  "type": "trigger",
+  "name": "fireworks"
+ },
+ {
+  "frame": 440,
+  "type": "mousedown",
+  "x": 820,
+  "y": 100
+ },
+ {
+  "frame": 441,
+  "type": "mouseup",
+  "x": 820,
+  "y": 100
+ },
+ {
+  "frame": 470,
+  "type": "snapshot",
+  "label": "night"
+ },
+ {
+  "frame": 500,
+  "type": "param",
+  "name": "hour",
+  "value": 10
+ },
+ {
+  "frame": 501,
+  "type": "param",
+  "name": "weather",
+  "value": "snow"
+ },
+ {
+  "frame": 540,
+  "type": "snapshot",
+  "label": "snowy morning"
+ }
 ]

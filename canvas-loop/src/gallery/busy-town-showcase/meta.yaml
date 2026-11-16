@@ -3,16 +3,16 @@ title: "Thimble Quay: a canal town through a day, with things to click"
 created: 2026-11-16
 model: opus-5.5
 driver: opus-5.5
-cycles: 7
+cycles: 13
 tier: tea
 harness-commit: d3eb0fe26
-frames: 460
+frames: 545
 seed: 42
 fps: 60
 every: 200
 reconstructed: false
 audit: >
-  Judged by the driving agent from frames only (afternoon, dusk, night with fireworks, rain at night, snowy morning, and zoomed crops of the folk); no independent review yet. In the browser (walks-now page, mountSketch) it held 60 frames/s by day, at night, and with rain and fireworks running; brief dips to 58 while dusk switches windows on (the lit-window picture is recorded again for each change).
+  Round 1 judged by the driving agent from frames. The boxholder then looked at it ("Some cool stuff there", "Water reflection is very cool!") and asked for clearer rain with clouds that arrive and leave, rain sound and thunder, the released balloon in front of the buildings, every person clickable, window light that does not paint over the awnings, a proper hot-air balloon that can be clicked, and clouds that do not move with the sun. Round 2 does all of these; judged again from frames and zoomed crops. In the browser (walks-now page) it holds 60 frames/s by day, at night in the rain, and in snow, after a few seconds of warm-up at load.
 self-report-summary: >
   The still town (sky, hills, six shops, the hall and clock tower, street, canal, its reflection) is painted once into pictures with ink, wash, bristle, chalk and pencil brushes under a watercolour wash effect and paper. Folk, vehicles, pigeons, ducks and windmill sails are pose sheets shown through a clip, because a picture version not asked for in two frames is dropped. Night is one multiply over the frame, then lit-window and lamp pictures; the lamps are real point lights in a lit group over the town picture, screened on.
 features-exercised:

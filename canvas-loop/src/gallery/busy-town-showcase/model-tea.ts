@@ -1,7 +1,7 @@
 // The town's state, the light at a given hour, and what a click at a point hits.
 import type { DeepReadonly, Voice } from "@ianbicking/canvas-loop";
 import { clamp01, ramp } from "./ink-tea.js";
-import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, HALL, LAMPS, LAMP_H, MILL, MOUSE, RAIL_Y, TOWER, TRAM_H, TRAM_W, WINDOWS, boatX, duckHome, tramX } from "./layout-tea.js";
+import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, CART_FEET, CYCLIST_FEET, HALL, HOT_AIR, LAMPS, LAMP_H, MILL, MOUSE, RAIL_Y, TOWER, TRAM_H, TRAM_W, WALKERS, WINDOWS, type WalkerKind, boatX, cartX, cyclistX, duckHome, hotAirAt, tramX, walkerAt } from "./layout-tea.js";
 
 export interface Rocket {
   readonly at: number;
@@ -9,6 +9,9 @@ export interface Rocket {
   readonly y: number;
   readonly hue: number;
 }
+
+export type Who = WalkerKind | "cyclist" | "cart";
+export type Sky = "fair" | "rain" | "snow";
 
 export interface Model {
   frame: number;
@@ -29,6 +32,12 @@ export interface Model {
   petals: number | null;
   cafe: number | null;
   fish: number | null;
+  hotAir: number | null;
+  /** Who reacted to a click, and when. */
+  reactions: readonly { readonly who: Who; readonly at: number }[];
+  /** The weather now, the weather before, and the frame it changed. */
+  sky: { readonly kind: Sky; readonly prev: Sky; readonly at: number };
+  thunder: number | null;
   millAngle: number;
   millSpin: number;
   rockets: readonly Rocket[];
@@ -36,7 +45,7 @@ export interface Model {
   count: number;
 }
 
-export const LASTS = { bell: 360, bakery: 540, balloonPop: 300, balloonBack: 420, rowing: 240, ducks: 300, tram: 50, petals: 320, cafe: 420, fish: 70, rocket: 150 } as const;
+export const LASTS = { bell: 360, bakery: 540, balloonPop: 300, balloonBack: 420, rowing: 240, ducks: 300, tram: 50, petals: 320, cafe: 420, fish: 70, rocket: 150, reaction: 90, hotAir: 420, thunder: 120 } as const;
 /** A rocket climbs for this many frames, then bursts. */
 export const CLIMB = 42;
 
@@ -65,7 +74,8 @@ export function lampLit(model: DeepReadonly<Model>, i: number): boolean {
 export type Target =
   | { kind: "window"; i: number }
   | { kind: "lamp"; i: number }
-  | { kind: "bell" | "bakery" | "tram" | "balloon" | "boat" | "ducks" | "mill" | "cafe" | "florist" | "fish" | "house" | "books" | "sky" };
+  | { kind: "folk"; who: Who }
+  | { kind: "bell" | "hotair" | "bakery" | "tram" | "balloon" | "boat" | "ducks" | "mill" | "cafe" | "florist" | "fish" | "house" | "books" | "sky" };
 
 export interface Hit {
   readonly target: Target;
@@ -128,14 +138,51 @@ function hitBuildings(model: DeepReadonly<Model>, x: number, y: number): Hit | n
   return null;
 }
 
+const PEOPLE_HINTS: Record<Who, string> = {
+  heron: "post!", goose: "say hello", mole: "the evening paper", badger: "a tune?", hedgehog: "sweep, sweep",
+  mouse: "hello, little one", otter: "tea for two", cyclist: "ring-a-ling", cart: "fresh veg",
+};
+
+function hitPeople(model: DeepReadonly<Model>, x: number, y: number, a: { folk: number; lane: 0 | 1 }): Hit | null {
+  const f = model.frame;
+  const people = WALKERS.slice(0, a.folk).filter((w) => w.lane === a.lane);
+  for (const w of people) {
+    const p = walkerAt(w, f);
+    const half = Math.max(16, 22 * p.scale), tall = (w.kind === "heron" || w.kind === "goose" ? 96 : 78) * p.scale;
+    if (inRect(x, y, p.x - half, p.feet - tall, half * 2, tall + 4)) return { target: { kind: "folk", who: w.kind }, x: p.x, y: p.feet - tall / 2, r: tall / 2 + 4, hint: PEOPLE_HINTS[w.kind] };
+  }
+  if (a.lane === 1 && a.folk >= 9) {
+    const cx = cartX(f);
+    if (inRect(x, y, cx - 40, CART_FEET - 46, 80, 48)) return { target: { kind: "folk", who: "cart" }, x: cx, y: CART_FEET - 22, r: 36, hint: PEOPLE_HINTS.cart };
+  }
+  return null;
+}
+
+function hitCyclist(model: DeepReadonly<Model>, x: number, y: number, folk: number): Hit | null {
+  if (folk < 8) return null;
+  const cx = cyclistX(model.frame);
+  return inRect(x, y, cx - 34, CYCLIST_FEET - 70, 68, 72) ? { target: { kind: "folk", who: "cyclist" }, x: cx, y: CYCLIST_FEET - 34, r: 36, hint: PEOPLE_HINTS.cyclist } : null;
+}
+
+function hitHotAir(model: DeepReadonly<Model>, x: number, y: number): Hit | null {
+  const [hx, hy] = hotAirAt(model.frame, model.hotAir);
+  return inRect(x, y, hx, hy, HOT_AIR.w, HOT_AIR.h) ? { target: { kind: "hotair" }, x: hx + HOT_AIR.w / 2, y: hy + HOT_AIR.h / 2 - 8, r: 44, hint: "fire the burner" } : null;
+}
+
 /** What is under (x, y) in the frame the model shows; the front-most thing wins. */
-export function hitTest(model: DeepReadonly<Model>, x: number, y: number): Hit | null {
-  const hit = hitWater(model, x, y) ?? hitStreet(model, x, y) ?? hitBuildings(model, x, y);
+export function hitTest(model: DeepReadonly<Model>, x: number, y: number, folk: number): Hit | null {
+  const hit = hitWater(model, x, y)
+    ?? hitPeople(model, x, y, { folk, lane: 1 })
+    ?? hitCyclist(model, x, y, folk)
+    ?? hitStreet(model, x, y)
+    ?? hitPeople(model, x, y, { folk, lane: 0 })
+    ?? hitHotAir(model, x, y)
+    ?? hitBuildings(model, x, y);
   if (hit) return hit;
   if (y < 300) return { target: { kind: "sky" }, x, y, r: 0, hint: nightOf(model.clock) > 0.4 ? "a firework" : "" };
   return null;
 }
 
 export function hitId(t: Target): string {
-  return t.kind === "window" || t.kind === "lamp" ? `${t.kind}-${t.i}` : t.kind;
+  return t.kind === "window" || t.kind === "lamp" ? `${t.kind}-${t.i}` : t.kind === "folk" ? t.who : t.kind;
 }

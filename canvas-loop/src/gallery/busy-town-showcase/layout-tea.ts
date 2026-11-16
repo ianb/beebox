@@ -142,3 +142,51 @@ export interface Hotspot {
   readonly h: number;
   readonly hint: string;
 }
+
+// --- Folk on the pavements, and the vehicles ---------------------------------------
+
+export type WalkerKind = "heron" | "hedgehog" | "mouse" | "mole" | "goose" | "badger" | "otter";
+export interface Walker {
+  readonly kind: WalkerKind;
+  readonly lane: 0 | 1;
+  readonly speed: number;
+  readonly dir: 1 | -1;
+  readonly at: number;
+}
+export const WALKERS: readonly Walker[] = [
+  { kind: "heron", lane: 0, speed: 0.55, dir: 1, at: 80 },
+  { kind: "goose", lane: 1, speed: 0.42, dir: -1, at: 380 },
+  { kind: "mole", lane: 0, speed: 0.45, dir: -1, at: 620 },
+  { kind: "badger", lane: 1, speed: 0.5, dir: 1, at: 900 },
+  { kind: "hedgehog", lane: 1, speed: 0.22, dir: -1, at: 210 },
+  { kind: "mouse", lane: 1, speed: 0.66, dir: 1, at: 40 },
+  { kind: "otter", lane: 0, speed: 0.6, dir: 1, at: 1000 },
+];
+export const LANE_SCALE = [0.64, 0.8] as const;
+export const LANE_FEET = [BACK_FEET, FRONT_FEET] as const;
+const SPAN = W + 160;
+
+/** Where a walker is: feet x, the pose cell (0..3), scale and facing. */
+export function walkerAt(w: Walker, frame: number): { x: number; feet: number; k: number; scale: number; dir: number } {
+  const x = ((((w.at + frame * w.speed * w.dir) % SPAN) + SPAN) % SPAN) - 80;
+  const k = Math.floor((w.at + frame * w.speed) / 6) % 4;
+  return { x, feet: LANE_FEET[w.lane], k, scale: LANE_SCALE[w.lane], dir: w.dir };
+}
+/** The goat's bicycle (needs 8 folk out) and the tortoise's cart (9). */
+export const CYCLIST_FEET = ROAD_BOT - 6;
+export function cyclistX(frame: number): number {
+  return ((frame * 1.6 + 300) % (W + 300)) - 150;
+}
+export const CART_FEET = FRONT_FEET + 2;
+export function cartX(frame: number): number {
+  return W + 60 - ((frame * 0.18 + 500) % (W + 220));
+}
+
+/** The hot-air balloon: drifting, and lifted for a while after its burner is fired. */
+export const HOT_AIR = { w: 60, h: 96 } as const;
+export function hotAirAt(frame: number, fired: number | null): readonly [number, number] {
+  const x = ((frame * 0.22 + 600) % (W + 200)) - 100;
+  const t = fired === null ? -1 : frame - fired;
+  const lift = t < 0 ? 0 : t < 60 ? Math.sin((t / 60) * (Math.PI / 2)) : t < 180 ? 1 : t < 420 ? 0.5 + 0.5 * Math.cos(((t - 180) / 240) * Math.PI) : 0;
+  return [x, 44 + Math.sin(frame * 0.01) * 6 - lift * 40];
+}

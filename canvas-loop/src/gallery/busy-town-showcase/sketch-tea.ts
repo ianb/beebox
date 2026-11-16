@@ -10,7 +10,7 @@
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, RootDrawing, SampleName, Util, View, Voice } from "@ianbicking/canvas-loop";
 import { H, LAMPS, W, WINDOWS } from "./layout-tea.js";
 import { paintScene } from "./live-tea.js";
-import { CLIMB, LASTS, type Model, type Target, hitTest, nightOf } from "./model-tea.js";
+import { CLIMB, LASTS, type Model, type Sky, type Target, type Who, hitId, hitTest, nightOf } from "./model-tea.js";
 
 export const params = {
   hour: { type: "number", min: 0, max: 24, step: 0.25, default: 17.5, label: "Time of day", hint: "hours; dusk falls around seven" },
@@ -23,6 +23,7 @@ export const params = {
 type P = typeof params;
 
 export const canvas = { width: W, height: H };
+const SKIES: readonly Sky[] = params.weather.options;
 export type { Model };
 
 export function init(u: Util<P>): Model {
@@ -33,6 +34,10 @@ export function init(u: Util<P>): Model {
     flipped: WINDOWS.map(() => false),
     lampFlipped: LAMPS.map(() => false),
     bell: null, bakery: null, balloon: null, rowing: null, ducks: null, tram: null, petals: null, cafe: null, fish: null,
+    hotAir: null,
+    reactions: [],
+    sky: { kind: u.params.weather, prev: "fair", at: -10000 },
+    thunder: null,
     millAngle: 0, millSpin: 0,
     rockets: [],
     voices: [],
@@ -51,6 +56,8 @@ interface Sound {
   readonly rate?: number;
   readonly gain?: number;
   readonly note?: { instrument: "marimba" | "kalimba" | "bell" | "epiano"; note: string };
+  /** A burst of noise this many seconds long (rain, wind, a whoosh). */
+  readonly noise?: number;
 }
 
 function hear(model: DeepReadonly<Model>, sounds: readonly Sound[]): Pick<Model, "voices" | "count"> {
@@ -59,6 +66,7 @@ function hear(model: DeepReadonly<Model>, sounds: readonly Sound[]): Pick<Model,
     const at = model.frame + 1 + (s.delay ?? 0);
     const gain = s.gain ?? 0.35;
     if (s.note) return { id, at, gain, kind: "note", instrument: s.note.instrument, note: s.note.note };
+    if (s.noise !== undefined) return { id, at, gain, kind: "noise", duration: s.noise };
     return { id, at, gain, kind: "sample", name: s.name ?? "click", variant: s.variant ?? 0, rate: s.rate ?? 1 };
   });
   return { voices: [...model.voices.filter((vc) => model.frame - vc.at < KEEP), ...fresh], count: model.count + fresh.length };
@@ -77,11 +85,34 @@ function launch(model: DeepReadonly<Model>, u: Util<P>, at: { x: number; y: numb
   };
 }
 
+/** What each of the folk says when clicked. */
+function folkSounds(who: Who, u: Util<P>): Sound[] {
+  switch (who) {
+    case "heron": return [{ name: "page", variant: 0, gain: 0.3 }, { name: "page", variant: 1, gain: 0.25, delay: 8 }];
+    case "goose": return [{ name: "question", variant: 0, gain: 0.3, rate: 0.6 }, { name: "question", variant: 1, gain: 0.28, rate: 0.55, delay: 12 }];
+    case "mole": return [{ name: "page", variant: 1, gain: 0.32, rate: 0.9 }, { name: "pop", variant: 0, gain: 0.2, delay: 6 }];
+    case "badger": return [0, 2, 4, 2].map((st, k): Sound => ({ note: { instrument: "kalimba", note: u.scaleNote(st + 5) }, gain: 0.22, delay: k * 9 }));
+    case "hedgehog": return [{ noise: 0.35, gain: 0.08 }, { noise: 0.35, gain: 0.07, delay: 14 }, { name: "thud", variant: 1, gain: 0.2, delay: 4 }];
+    case "mouse": return [{ name: "pop", variant: 1, gain: 0.28, rate: 1.4 }, { note: { instrument: "kalimba", note: u.scaleNote(10) }, gain: 0.2, delay: 6 }];
+    case "otter": return [{ name: "clink", variant: 1, gain: 0.3 }, { name: "clink", variant: 3, gain: 0.25, delay: 10 }];
+    case "cyclist": return [{ name: "ding", variant: 3, gain: 0.3, rate: 1.9 }, { name: "ding", variant: 3, gain: 0.28, rate: 1.9, delay: 9 }];
+    case "cart": return [{ name: "knock", variant: 0, gain: 0.3 }, { name: "knock", variant: 2, gain: 0.22, delay: 22 }, { name: "knock", variant: 3, gain: 0.16, delay: 38 }];
+  }
+}
+
 // eslint-disable-next-line complexity -- one case per thing in the town; each is a line or two
 function press(model: DeepReadonly<Model>, target: Target, u: Util<P>): Model {
   const f = model.frame;
   const m: Model = { ...model, flipped: [...model.flipped], lampFlipped: [...model.lampFlipped], rockets: [...model.rockets], voices: [...model.voices] };
   switch (target.kind) {
+    case "folk": {
+      const last = model.reactions.find((r) => r.who === target.who);
+      if (last && f - last.at < 40) return m;
+      return { ...m, reactions: [...model.reactions.filter((r) => f - r.at < LASTS.reaction && r.who !== target.who), { who: target.who, at: f }], ...hear(model, folkSounds(target.who, u)) };
+    }
+    case "hotair":
+      if (model.hotAir !== null && f - model.hotAir < 90) return m;
+      return { ...m, hotAir: f, ...hear(model, [{ noise: 0.9, gain: 0.16 }, { name: "rise", variant: 2, gain: 0.18, rate: 0.6, delay: 4 }]) };
     case "window":
       return { ...m, flipped: m.flipped.map((b, i) => (i === target.i ? !b : b)), ...hear(model, [{ name: "toggle", variant: target.i, gain: 0.3 }]) };
     case "lamp":
@@ -131,7 +162,22 @@ function tick(model: DeepReadonly<Model>, frame: number, u: Util<P>): Model {
   // The balloon pops when it reaches the top of the sky.
   if (model.balloon !== null && frame - model.balloon === LASTS.balloonPop) next = { ...next, ...hear(next, [{ name: "pop", variant: 1, gain: 0.4 }]) };
   if (model.balloon !== null && frame - model.balloon >= LASTS.balloonBack) next = { ...next, balloon: null };
-  return next;
+  return rainSounds(next, frame, u);
+}
+
+/** While it rains: a soft hiss of rain, a patter of drops, and now and then lightning and thunder. */
+function rainSounds(model: Model, frame: number, u: Util<P>): Model {
+  if (model.sky.kind !== "rain" || frame - model.sky.at < 30) return model;
+  const sounds: Sound[] = [];
+  if (frame % 40 === 0) sounds.push({ noise: 1.6, gain: 0.05 });
+  if (u.random() < 0.06) sounds.push({ name: "drop", variant: Math.floor(u.random() * 4), gain: 0.04 + u.random() * 0.03, rate: 0.9 + u.random() * 0.5 });
+  let next = model;
+  const first = frame - model.sky.at === 100;
+  if (first || ((model.thunder === null || frame - model.thunder > 420) && frame - model.sky.at > 100 && u.random() < 1 / 360)) {
+    next = { ...next, thunder: frame };
+    sounds.push({ name: "thud", variant: 0, gain: 0.45, rate: 0.5, delay: 26 }, { noise: 2.8, gain: 0.16, delay: 24 }, { name: "thud", variant: 2, gain: 0.3, rate: 0.55, delay: 44 });
+  }
+  return sounds.length === 0 ? next : { ...next, ...hear(next, sounds) };
 }
 
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<P>): Model {
@@ -142,10 +188,10 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<P>): Model 
       return { ...model, mouse: [msg.x, msg.y] };
     case "mousedown": {
       const at: Model = { ...model, mouse: [msg.x, msg.y] };
-      const hit = hitTest(at, msg.x, msg.y);
+      const hit = hitTest(at, msg.x, msg.y, u.params.folk);
       if (!hit) return at;
       if (hit.target.kind === "sky" && nightOf(model.clock) <= 0.4) return at;
-      u.handled(hit.target.kind);
+      u.handled(hitId(hit.target));
       return press(at, hit.target, u);
     }
     case "mouseup":
@@ -154,6 +200,13 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<P>): Model 
       return model;
     case "param":
       if (msg.name === "hour" && typeof msg.value === "number") return { ...model, clock: msg.value };
+      if (msg.name === "weather") {
+        const kind = SKIES.find((k) => k === msg.value);
+        if (kind === undefined || kind === model.sky.kind) return model;
+        // Rain to snow keeps the clouds where they are.
+        const stays = kind !== "fair" && model.sky.kind !== "fair";
+        return { ...model, sky: { kind, prev: model.sky.kind, at: stays ? model.sky.at : model.frame } };
+      }
       return model;
     case "trigger": {
       if (msg.name !== "fireworks") return model;

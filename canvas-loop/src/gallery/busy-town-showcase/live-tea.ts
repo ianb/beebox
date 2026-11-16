@@ -4,18 +4,20 @@
 //
 // Poses of one character live side by side in one sheet picture; a clip shows
 // the current cell. A sheet is placed every frame, so its pixels are kept.
-import type { DeepReadonly, Drawing, PathCommand, Picture, RootDrawing, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, PathCommand, Picture, RootDrawing, TextOptions, View } from "@ianbicking/canvas-loop";
 import { type Carry, FOLK_W, FOOT_X, type Kind, paintBaker, paintBoat, paintCart, paintCat, paintCyclist, paintDuck, paintFolk, paintPigeon, paintTram } from "./folk-tea.js";
 import { INK, blob, clamp01, ellipsePts, hash, ink, mix, rectPts, rgba, type RGB } from "./ink-tea.js";
-import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, shopWindow, CANAL_TOP, CLOCK, FRONT_FEET, H, LAMPS, LAMP_H, LEDGE_Y, MILL, MOUSE, RAIL_Y, ROAD_BOT, ROAD_TOP, TOWER, TRAM_H, W, WINDOWS, boatX, duckHome, tramX } from "./layout-tea.js";
-import { CLIMB, LASTS, type Model, balloonHeld, duskOf, hitTest, lampLit, nightOf, windowLit } from "./model-tea.js";
-import { paintCanal, paintCloud, paintFront, paintHills, paintSky, paintTown } from "./town-tea.js";
+import { BACK_FEET, BASE, BOAT_Y, BUILDINGS, CANAL_TOP, CART_FEET, CLOCK, CYCLIST_FEET, H, HOT_AIR, LANE_SCALE, LAMPS, LAMP_H, LEDGE_Y, MILL, MOUSE, RAIL_Y, ROAD_BOT, ROAD_TOP, TOWER, TRAM_H, W, WALKERS, WINDOWS, boatX, cartX, cyclistX, duckHome, hotAirAt, shopWindow, tramX, walkerAt } from "./layout-tea.js";
+import { CLIMB, LASTS, type Model, type Who, balloonHeld, duskOf, hitTest, lampLit, nightOf, windowLit } from "./model-tea.js";
+import { occluders, paintCanal, paintCloud, paintFront, paintHills, paintSky, paintTown } from "./town-tea.js";
 
 export interface Opts {
   readonly weather: "fair" | "rain" | "snow";
   readonly folk: number;
   readonly hints: boolean;
 }
+
+const since = (start: number | null, f: number, lasts: number): number | null => (start === null || f - start < 0 || f - start >= lasts ? null : f - start);
 
 const CELL_H = 120;
 const CELL_FOOT = 116;
@@ -35,26 +37,6 @@ function standing(v: View, a: { x: number; feet: number; scale: number; dir: num
 
 // --- Folk on the pavements -------------------------------------------------------
 
-interface Walker {
-  readonly kind: Kind;
-  readonly lane: 0 | 1;
-  readonly speed: number;
-  readonly dir: 1 | -1;
-  readonly at: number;
-}
-const WALKERS: readonly Walker[] = [
-  { kind: "heron", lane: 0, speed: 0.55, dir: 1, at: 80 },
-  { kind: "goose", lane: 1, speed: 0.42, dir: -1, at: 380 },
-  { kind: "mole", lane: 0, speed: 0.45, dir: -1, at: 620 },
-  { kind: "badger", lane: 1, speed: 0.5, dir: 1, at: 900 },
-  { kind: "hedgehog", lane: 1, speed: 0.22, dir: -1, at: 210 },
-  { kind: "mouse", lane: 1, speed: 0.66, dir: 1, at: 40 },
-  { kind: "otter", lane: 0, speed: 0.6, dir: 1, at: 1000 },
-];
-const LANE_SCALE = [0.64, 0.8] as const;
-const LANE_FEET = [BACK_FEET, FRONT_FEET] as const;
-const SPAN = W + 160;
-
 function carryOf(kind: Kind, weather: Opts["weather"]): Carry {
   return weather === "rain" && kind !== "hedgehog" && kind !== "otter" ? "umbrella" : "none";
 }
@@ -65,32 +47,89 @@ function folkAt(v: View, pic: Picture, a: { k: number; x: number; feet: number; 
   return standing(v, a, cell(v, pic, { k: a.k, w: FOLK_W, h: CELL_H, x: -FOOT_X, y: -CELL_FOOT }));
 }
 
-function walkers(v: View, f: number, lane: 0 | 1, o: Opts): Drawing {
+/** How long ago `who` was clicked, while the reaction lasts. */
+function reacting(model: DeepReadonly<Model>, who: Who): number | null {
+  const r = model.reactions.find((x) => x.who === who);
+  return r ? since(r.at, model.frame, LASTS.reaction) : null;
+}
+/** A happy hop at the start of a reaction. */
+const hop = (t: number | null): number => (t !== null && t < 24 ? Math.sin((Math.PI * t) / 24) * 9 : 0);
+
+const SAY: TextOptions = { overlay: true, size: 12, font: "Georgia, serif", style: "bold italic", fill: "#3a2418", halo: "rgba(255,248,228,0.95)", align: "center", valign: "bottom" };
+
+function note(v: View, x: number, y: number, a: number): Drawing {
+  const c = `rgba(58,36,24,${a.toFixed(3)})`;
+  return [v.ellipse(x, y, 3.2, 2.4, { fill: c }), v.line(x + 3, y, x + 3, y - 11, { stroke: c, weight: 1.4 }), v.line(x + 3, y - 11, x + 7, y - 8, { stroke: c, weight: 1.4 })];
+}
+function heart(v: View, x: number, y: number, a: number): Drawing {
+  const c = `rgba(220,60,70,${a.toFixed(3)})`;
+  return [v.circle(x - 2.6, y, 3, { fill: c }), v.circle(x + 2.6, y, 3, { fill: c }), v.triangle(x - 5.4, y + 1, x + 5.4, y + 1, x, y + 7, { fill: c })];
+}
+
+/** The little show over someone's head when clicked: words, notes, hearts, letters, dust. */
+function reaction(v: View, who: Who, t: number, at: { x: number; head: number; feet: number; dir: number }): Drawing {
+  const a = clamp01((LASTS.reaction - t) / 25), rise = t * 0.35;
+  const say = (words: string): Drawing => v.text(words, { x: at.x, y: at.head - 4 - rise * 0.5 }, { ...SAY, fill: rgba([58, 36, 24], a), halo: rgba([255, 248, 228], 0.95 * a) });
+  switch (who) {
+    case "heron":
+      return [0, 1, 2].map((i) => {
+        const s = Math.max(0, t - i * 6);
+        const x = at.x + at.dir * (8 + s * 0.6) + Math.sin(s * 0.2 + i) * 6, y = at.head + 20 + s * 0.45;
+        return v.at({ translate: [x, y], rotate: Math.sin(s * 0.15 + i) * 0.6 }, [v.rect(-5, -3.5, 10, 7, { fill: rgba([250, 244, 228], a), stroke: rgba([90, 60, 40], a), weight: 0.8 }), v.path([["move", -5, -3.5], ["line", 0, 0.5], ["line", 5, -3.5]], { stroke: rgba([90, 60, 40], a), weight: 0.7 })]);
+      });
+    case "goose": return say("Honk!");
+    case "mole": return say("Extra! Extra!");
+    case "badger": return [0, 1, 2].map((i) => note(v, at.x + i * 9 - 6 + Math.sin(t * 0.1 + i) * 4, at.head - 6 - Math.max(0, t - i * 9) * 0.4, a * (t >= i * 9 ? 1 : 0)));
+    case "hedgehog":
+      return [0, 1, 2, 3, 4].map((i) => {
+        const s = (t + i * 7) % 40;
+        return v.circle(at.x - at.dir * (6 + s * 0.5) + i * 3, at.feet - 2 - s * 0.25, 2 + s * 0.15, { fill: rgba([200, 186, 160], 0.6 * (1 - s / 40) * a) });
+      });
+    case "mouse": return [0, 1].map((i) => heart(v, at.x - 6 + i * 12 + Math.sin(t * 0.12 + i * 2) * 3, at.head - 6 - Math.max(0, t - i * 12) * 0.4, a * (t >= i * 12 ? 1 : 0)));
+    case "otter": return say("Tea?");
+    case "cyclist": return say("ring-a-ling!");
+    case "cart": {
+      // An apple jumps off the cart and rolls along ahead of it.
+      const x = at.x + at.dir * (30 + t * 1.1), bounce = Math.abs(Math.sin(t * 0.18)) * Math.max(0, 14 - t * 0.2);
+      return v.at({ translate: [x, at.feet - 4 - bounce] }, [v.circle(0, 0, 4, { fill: rgba([214, 64, 54], a), stroke: rgba([43, 32, 32], a), weight: 0.8 }), v.line(0, -4, 1, -7, { stroke: rgba([90, 60, 30], a), weight: 1 })]);
+    }
+  }
+}
+
+function walkers(v: View, model: DeepReadonly<Model>, lane: 0 | 1, o: Opts): Drawing {
   return WALKERS.slice(0, o.folk).filter((w) => w.lane === lane).map((w) => {
-    const d = w.at + f * w.speed;
-    const x = ((((w.at + f * w.speed * w.dir) % SPAN) + SPAN) % SPAN) - 80;
-    const k = Math.floor(d / 6) % 4;
-    return folkAt(v, folkSheet(v, w.kind, carryOf(w.kind, o.weather)), { k, x, feet: LANE_FEET[lane] - (k % 2 === 1 ? 1 : 0), scale: LANE_SCALE[lane], dir: w.dir });
+    const p = walkerAt(w, model.frame);
+    const t = reacting(model, w.kind);
+    const tall = (w.kind === "heron" || w.kind === "goose" ? 96 : w.kind === "mouse" || w.kind === "hedgehog" ? 62 : 78) * p.scale;
+    return [
+      folkAt(v, folkSheet(v, w.kind, carryOf(w.kind, o.weather)), { ...p, feet: p.feet - (p.k % 2 === 1 ? 1 : 0) - hop(t) }),
+      t !== null && reaction(v, w.kind, t, { x: p.x, head: p.feet - tall, feet: p.feet, dir: p.dir }),
+    ];
   });
 }
 
-function cyclist(v: View, f: number, o: Opts): Drawing {
+function cyclist(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   if (o.folk < 8) return null;
-  const x = ((f * 1.6 + 300) % (W + 300)) - 150;
+  const f = model.frame, x = cyclistX(f), t = reacting(model, "cyclist");
   const pic = sheet(v, { key: "cyclist", w: 96, h: 96, cells: 4, deps: [], dy: 16 }, (k) => paintCyclist(v, k));
-  return standing(v, { x, feet: ROAD_BOT - 6, scale: 0.72, dir: 1 }, cell(v, pic, { k: Math.floor(f / 5) % 4, w: 96, h: 96, x: -46, y: -92 }));
+  return [
+    standing(v, { x, feet: CYCLIST_FEET - hop(t) * 0.5, scale: 0.72, dir: 1 }, cell(v, pic, { k: Math.floor(f / 5) % 4, w: 96, h: 96, x: -46, y: -92 })),
+    t !== null && reaction(v, "cyclist", t, { x: x + 10, head: CYCLIST_FEET - 62, feet: CYCLIST_FEET, dir: 1 }),
+  ];
 }
 
-function cart(v: View, f: number, o: Opts): Drawing {
+function cart(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   if (o.folk < 9) return null;
-  const x = W + 60 - ((f * 0.18 + 500) % (W + 220));
+  const f = model.frame, x = cartX(f), t = reacting(model, "cart");
   const pic = sheet(v, { key: "cart", w: 104, h: 76, cells: 2, deps: [], dy: 16 }, (k) => paintCart(v, k));
-  return standing(v, { x, feet: FRONT_FEET + 2, scale: 0.74, dir: -1 }, cell(v, pic, { k: Math.floor(f / 22) % 2, w: 104, h: 76, x: -46, y: -72 }));
+  return [
+    standing(v, { x, feet: CART_FEET - (t !== null && t < 10 ? 3 : 0), scale: 0.74, dir: -1 }, cell(v, pic, { k: Math.floor(f / 22) % 2, w: 104, h: 76, x: -46, y: -72 })),
+    t !== null && reaction(v, "cart", t, { x: x - 30, head: CART_FEET - 50, feet: CART_FEET, dir: -1 }),
+  ];
 }
 
 // --- Happenings ----------------------------------------------------------------
 
-const since = (start: number | null, f: number, lasts: number): number | null => (start === null || f - start < 0 || f - start >= lasts ? null : f - start);
 
 function pigeons(v: View, model: DeepReadonly<Model>): Drawing {
   const pic = sheet(v, { key: "pigeon", w: 32, h: 26, cells: 3, deps: [] }, (k) => paintPigeon(v, k === 0 ? "sit" : k === 1 ? "up" : "down"));
@@ -184,8 +223,8 @@ function bakery(v: View, model: DeepReadonly<Model>): Drawing {
   if (t === null) return catAt(sillPos, 0, 1);
   const out = clamp01(t / 40) * clamp01((LASTS.bakery - t) / 40);
   const bx = doorX + 13 - out * 34;
-  const hop = (u: number, from: readonly [number, number], to: readonly [number, number]): [number, number] => [from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u - Math.sin(Math.PI * u) * 30];
-  const catPos = t < 50 ? sillPos : t < 90 ? hop((t - 50) / 40, sillPos, ground) : t < LASTS.bakery - 80 ? ground : t < LASTS.bakery - 40 ? hop((t - (LASTS.bakery - 80)) / 40, ground, sillPos) : sillPos;
+  const leap = (u: number, from: readonly [number, number], to: readonly [number, number]): [number, number] => [from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u - Math.sin(Math.PI * u) * 30];
+  const catPos = t < 50 ? sillPos : t < 90 ? leap((t - 50) / 40, sillPos, ground) : t < LASTS.bakery - 80 ? ground : t < LASTS.bakery - 40 ? leap((t - (LASTS.bakery - 80)) / 40, ground, sillPos) : sillPos;
   const moving = (t >= 50 && t < 90) || (t >= LASTS.bakery - 80 && t < LASTS.bakery - 40);
   const baker = v.picture({ key: "baker", width: 70, height: CELL_H }, () => v.at({ translate: [0, CELL_FOOT - 100] }, paintBaker(v)));
   return [
@@ -335,26 +374,83 @@ function reflection(v: View, town: Picture): Drawing {
 
 // --- Weather --------------------------------------------------------------------
 
-function precipitation(v: View, f: number, kind: Opts["weather"]): Drawing {
-  if (kind === "fair") return null;
-  if (kind === "rain") {
-    const cmds: PathCommand[] = Array.from({ length: 160 }, (_, i): PathCommand[] => {
-      const x = (hash(i, 1, 71) * (W + 100) + f * 3) % (W + 100) - 50;
-      const y = (hash(i, 2, 71) * H + f * (12 + hash(i, 3, 71) * 4)) % H;
-      return [["move", x, y], ["line", x - 3, y + 12]];
+/** The weather on screen: which kind is falling (or leaving), how far the clouds
+ * have come in (0..1), and how hard it falls (0..1). */
+interface Weather {
+  readonly kind: "rain" | "snow" | null;
+  readonly t: number;
+  readonly arriving: boolean;
+  readonly amount: number;
+}
+function weatherOf(model: DeepReadonly<Model>): Weather {
+  const { kind, prev, at } = model.sky;
+  const t = model.frame - at;
+  if (kind !== "fair") return { kind, t, arriving: true, amount: clamp01((t - 30) / 50) };
+  if (prev !== "fair") return { kind: prev, t, arriving: false, amount: 1 - clamp01(t / 25) };
+  return { kind: null, t, arriving: false, amount: 0 };
+}
+
+function precipitation(v: View, f: number, w: Weather, night: number): Drawing {
+  if (w.kind === null || w.amount <= 0) return null;
+  if (w.kind === "rain") {
+    const streaks = (n: number, a: { salt: number; speed: number; len: number }): PathCommand[] => Array.from({ length: Math.round(n * w.amount) }, (_, i): PathCommand[] => {
+      const x = (hash(i, 1, a.salt) * (W + 120) + f * a.speed * 0.3) % (W + 120) - 60;
+      const y = (hash(i, 2, a.salt) * (H + 40) + f * a.speed * (1 + hash(i, 3, a.salt) * 0.3)) % (H + 40) - 20;
+      return [["move", x, y], ["line", x - a.len * 0.3, y + a.len]];
     }).flat();
-    const rings = Array.from({ length: 10 }, (_, i) => {
-      const t = (f + i * 9) % 40;
-      return v.ellipse(hash(i, Math.floor((f + i * 9) / 40), 72) * W, CANAL_TOP + 10 + hash(i, 5, 72) * 60, 2 + t * 0.3, 0.8 + t * 0.08, { stroke: `rgba(220,235,240,${(0.6 * (1 - t / 40)).toFixed(3)})`, weight: 1 });
+    const near = rgba(mix([60, 78, 112], [214, 226, 244], night), 0.8);
+    const far = rgba(mix([86, 102, 132], [170, 186, 210], night), 0.55);
+    const splashes: PathCommand[] = Array.from({ length: Math.round(36 * w.amount) }, (_, i): PathCommand[] => {
+      const s = Math.floor((f + i * 3) / 7);
+      const x = hash(i, s, 74) * W, y = i % 2 === 0 ? BASE + 4 + hash(i, s, 75) * 18 : ROAD_BOT + 4 + hash(i, s, 75) * 20;
+      return [["move", x - 3, y - 2], ["line", x - 1, y], ["move", x + 3, y - 2], ["line", x + 1, y]];
+    }).flat();
+    const rings = Array.from({ length: Math.round(16 * w.amount) }, (_, i) => {
+      const t = (f + i * 7) % 40;
+      return v.ellipse(hash(i, Math.floor((f + i * 7) / 40), 72) * W, CANAL_TOP + 10 + hash(i, 5, 72) * 60, 2 + t * 0.35, 0.8 + t * 0.09, { stroke: `rgba(220,235,240,${(0.7 * (1 - t / 40)).toFixed(3)})`, weight: 1 });
     });
-    return [v.path(cmds, { stroke: "rgba(210,220,235,0.5)", weight: 1.1, cap: "round" }), rings];
+    return [
+      v.path(streaks(240, { salt: 76, speed: 13, len: 14 }), { stroke: far, weight: 1.2, cap: "round" }),
+      v.path(streaks(240, { salt: 71, speed: 19, len: 26 }), { stroke: near, weight: 2, cap: "round" }),
+      v.path(splashes, { stroke: rgba(mix([120, 140, 170], [210, 225, 240], night), 0.8), weight: 1.1, cap: "round" }),
+      rings,
+    ];
   }
-  const flakes: PathCommand[] = Array.from({ length: 170 }, (_, i): PathCommand[] => {
+  const flakes: PathCommand[] = Array.from({ length: Math.round(170 * w.amount) }, (_, i): PathCommand[] => {
     const x = (hash(i, 1, 73) * W + Math.sin(f * 0.02 + i) * 14 + f * 0.3) % W;
     const y = (hash(i, 2, 73) * H + f * (0.6 + hash(i, 3, 73) * 0.8)) % H;
     return [["move", x, y], ["line", x + 0.1, y]];
   }).flat();
   return v.path(flakes, { stroke: "rgba(255,255,255,0.9)", weight: 3, cap: "round" });
+}
+
+/** Rain and snow clouds: they race in from both sides with a bounce, and race off again. */
+function stormClouds(v: View, w: Weather): Drawing {
+  if (w.kind === null) return null;
+  const kind = w.kind;
+  return [0, 1, 2, 3, 4, 5].map((j) => {
+    const cw = 250 + hash(j, 1, 77) * 60;
+    const to = -70 + j * 172 + hash(j, 2, 77) * 30, y = -26 + (j % 2) * 34 + hash(j, 3, 77) * 10;
+    const from = j % 2 === 0 ? -cw - 40 - j * 30 : W + 40 + j * 30;
+    const u = w.arriving ? clamp01((w.t - j * 6) / 44) : clamp01((w.t - j * 3) / 26);
+    const x = w.arriving ? from + (to - from) * v.ease("out-back", u) : to + (from - to) * v.ease("in", u);
+    if (!w.arriving && u >= 1) return null;
+    const pic = v.picture({ key: "storm", width: cw, height: cw * 0.6, deps: [j, kind] }, () => v.group({ effects: { brightness: kind === "rain" ? 0.58 : 0.86, saturation: 0.3, paper: 0.4 } }, paintCloud(v, 20 + j, cw)));
+    return v.place(pic, Math.round(x), Math.round(y));
+  });
+}
+
+/** Lightning: two flashes and a bolt, before the thunder. */
+function lightning(v: View, model: DeepReadonly<Model>): Drawing {
+  const t = since(model.thunder, model.frame, 14);
+  if (t === null || model.thunder === null) return null;
+  const flash = t < 3 ? 0.42 : t >= 6 && t < 9 ? 0.28 : 0;
+  const x0 = 180 + hash(model.thunder, 1, 79) * 600;
+  const bolt: [number, number][] = Array.from({ length: 9 }, (_, i) => [x0 + (hash(model.thunder ?? 0, i, 80) - 0.5) * 40 + i * 3, i * 26]);
+  return [
+    flash > 0 && v.rect(0, 0, W, H, { fill: `rgba(235,240,255,${flash})`, blend: "add" }),
+    (t < 3 || (t >= 6 && t < 9)) && v.group({ blend: "add", effects: { glow: { blur: 10, color: "#bcd4ff", strength: 3 } } }, [v.path(bolt.map(([x, y], i): PathCommand => [i === 0 ? "move" : "line", x, y]), { stroke: "#f4f8ff", weight: 2.4, join: "round" })]),
+  ];
 }
 
 function snowcaps(v: View): Drawing {
@@ -411,64 +507,111 @@ function sun(v: View, clock: number): Drawing {
 }
 
 const CLOUDS = [
-  { x: 40, y: 40, w: 150, speed: 0.1, seed: 1 },
-  { x: 420, y: 22, w: 190, speed: 0.07, seed: 2 },
-  { x: 700, y: 92, w: 120, speed: 0.13, seed: 3 },
-  { x: 260, y: 112, w: 100, speed: 0.16, seed: 4 },
+  { x: 40, y: 40, w: 150, speed: 0.34, seed: 1 },
+  { x: 420, y: 22, w: 190, speed: 0.24, seed: 2 },
+  { x: 700, y: 92, w: 120, speed: 0.46, seed: 3 },
+  { x: 260, y: 112, w: 100, speed: 0.58, seed: 4 },
 ] as const;
 
-function clouds(v: View, f: number, kind: Opts["weather"]): Drawing {
+function clouds(v: View, f: number): Drawing {
   return CLOUDS.map((c) => {
-    const pic = v.picture({ key: "cloud", width: c.w, height: c.w * 0.6, deps: [c.seed, kind === "fair"] }, () => v.group({ effects: { paper: 0.4 }, opacity: kind === "fair" ? 1 : 0.9 }, kind === "fair" ? paintCloud(v, c.seed, c.w) : v.group({ effects: { brightness: 0.75, saturation: 0.4 } }, paintCloud(v, c.seed, c.w))));
+    const pic = v.picture({ key: "cloud", width: c.w, height: c.w * 0.6, deps: [c.seed] }, () => v.group({ effects: { paper: 0.4 } }, paintCloud(v, c.seed, c.w)));
     const x = ((c.x + f * c.speed) % (W + c.w * 2)) - c.w;
     return v.place(pic, Math.round(x), c.y);
   });
 }
 
-function airship(v: View, f: number): Drawing {
-  const x = ((f * 0.22 + 600) % (W + 200)) - 100, y = 64 + Math.sin(f * 0.01) * 6;
-  const pic = v.picture({ key: "hot-air", width: 50, height: 70 }, () => [
-    blob(v, [[25, 2], [44, 14], [42, 34], [30, 46], [20, 46], [8, 34], [6, 14]], { fill: "#e9c04a", seed: 720, line: 1.4, amp: 0.4, curve: true }),
-    v.clip(v.curvePath([[25, 2], [44, 14], [42, 34], [30, 46], [20, 46], [8, 34], [6, 14]], true), [v.rect(18, 0, 6, 50, { fill: "#d0443a" }), v.rect(32, 0, 5, 50, { fill: "#d0443a" }), v.rect(8, 0, 4, 50, { fill: "#d0443a" })]),
-    v.line(20, 46, 21, 56, { stroke: INK, weight: 0.8 }),
-    v.line(30, 46, 29, 56, { stroke: INK, weight: 0.8 }),
-    blob(v, rectPts(19, 56, 12, 9), { fill: "#9a6a3a", seed: 721, line: 1.2, amp: 0.3 }),
-  ]);
+const ENVELOPE: readonly [number, number][] = [[30, 3], [45, 7], [55, 20], [56, 34], [50, 48], [40, 60], [36, 66], [24, 66], [20, 60], [10, 48], [4, 34], [5, 20], [15, 7]];
+/** Half the envelope's width at height y, for the gores. */
+function envelopeHalf(y: number): number {
+  const keys: readonly [number, number][] = [[3, 2], [8, 17], [20, 25], [34, 26], [48, 20], [60, 10], [66, 6]];
+  for (let i = 1; i < keys.length; i++) {
+    const a = keys[i - 1] ?? [0, 0], b = keys[i] ?? [0, 0];
+    if (y <= b[0]) return a[1] + ((b[1] - a[1]) * (y - a[0])) / (b[0] - a[0]);
+  }
+  return 6;
+}
+
+function paintHotAir(v: View): Drawing {
+  const ys = [3, 8, 14, 20, 27, 34, 41, 48, 54, 60, 66];
+  const gore = (s: number): [number, number][] => ys.map((y): [number, number] => [30 + s * envelopeHalf(y), y]);
+  return [
+    // Ropes from the skirt to the basket.
+    [[24, 66, 25, 80], [36, 66, 35, 80], [28, 66, 28.5, 80], [32, 66, 31.5, 80]].map(([x1 = 0, y1 = 0, x2 = 0, y2 = 0]) => v.line(x1, y1, x2, y2, { stroke: "#4a3a2a", weight: 0.8 })),
+    v.curve([...ENVELOPE], true, { fill: "#f2c94c" }),
+    v.clip(v.curvePath([...ENVELOPE], true), [
+      [-0.78, -0.26, 0.26, 0.78].map((s, i) => v.curve(gore(s), false, { stroke: i % 2 === 0 ? "#d0443a" : "#3f6fb0", weight: 7, brush: { preset: "bristle", load: 0.9, lightJitter: 0.05 }, gesture: { seed: 730 + i, pressure: "even" } })),
+      [-0.52, 0, 0.52].map((s, i) => v.curve(gore(s), false, { stroke: "rgba(90,50,30,0.45)", weight: 0.8, brush: "ink", gesture: { seed: 740 + i, pressure: "even", faint: true } })),
+      // Light from the upper left, shade on the right.
+      v.ellipse(20, 20, 12, 16, { fill: "rgba(255,255,240,0.35)" }),
+      v.line(52, 10, 46, 60, { stroke: "rgba(60,30,40,0.3)", weight: 14, brush: { preset: "wash", opacity: 0.6 }, gesture: { seed: 745, faint: true } }),
+    ]),
+    v.curve([...ENVELOPE], true, ink(746, 1.5)),
+    blob(v, rectPts(23, 64, 14, 4), { fill: "#8a3a2a", seed: 747, line: 1, amp: 0.2 }),
+    // A wicker basket.
+    blob(v, [[23, 80], [37, 80], [36, 92], [24, 92]], { fill: "#b07a42", dark: "#7a4e28", seed: 748, line: 1.3, amp: 0.3 }),
+    v.path([["move", 24, 84], ["line", 36, 84], ["move", 24, 88], ["line", 36, 88], ["move", 27, 80], ["line", 27.5, 92], ["move", 31, 80], ["line", 31, 92], ["move", 34, 80], ["line", 33.5, 92]], { stroke: "#6a4220", weight: 0.7 }),
+    blob(v, rectPts(22, 79, 16, 3), { fill: "#8a5a32", seed: 749, line: 1, amp: 0.2 }),
+    v.circle(28, 77, 2.4, { fill: "#d8c2a6", stroke: INK, weight: 0.7 }),
+  ];
+}
+
+function hotAir(v: View, model: DeepReadonly<Model>): Drawing {
+  const [x, y] = hotAirAt(model.frame, model.hotAir);
+  const pic = v.picture({ key: "hot-air", width: HOT_AIR.w, height: HOT_AIR.h }, () => paintHotAir(v));
   return v.place(pic, Math.round(x), Math.round(y));
 }
 
-/** At night the balloon's burner flares now and then. */
-function burner(v: View, f: number, night: number): Drawing {
-  if (night < 0.3) return null;
-  const x = ((f * 0.22 + 600) % (W + 200)) - 100 + 25, y = 64 + Math.sin(f * 0.01) * 6 + 50;
-  const flare = 0.5 + 0.5 * Math.max(0, Math.sin(f * 0.05)) ** 4;
-  return v.circle(x, y, 2 + flare * 2, { fill: `rgba(255,190,90,${(night * flare).toFixed(3)})`, effects: { glow: { blur: 12, color: "#ff9a30", strength: 2 } } });
+/** The burner's flame: a roar when clicked, and at night a flare now and then. */
+function burner(v: View, model: DeepReadonly<Model>, night: number): Drawing {
+  const f = model.frame;
+  const [hx, hy] = hotAirAt(f, model.hotAir);
+  const fired = since(model.hotAir, f, 70);
+  const idle = night > 0.3 ? night * (0.5 + 0.5 * Math.max(0, Math.sin(f * 0.05)) ** 4) : 0;
+  const roar = fired === null ? 0 : (1 - fired / 70) * (0.8 + 0.2 * Math.sin(fired * 1.3));
+  const k = Math.max(idle * 0.6, roar);
+  if (k <= 0.02) return null;
+  const x = hx + 30, y = hy + 72;
+  return v.group({ blend: "screen", effects: { glow: { blur: 10 + roar * 10, color: "#ff9a30", strength: 2 + roar * 2 } } }, [
+    v.ellipse(x, y - 4 * k, 2.5 + 2 * k, 4 + 9 * k, { fill: `rgba(255,170,60,${clamp01(k).toFixed(3)})` }),
+    v.ellipse(x, y - 2 * k, 1.4 + k, 2 + 5 * k, { fill: `rgba(255,240,180,${clamp01(k).toFixed(3)})` }),
+  ]);
 }
 
 // --- Night -----------------------------------------------------------------------
+
+const CUT = { fill: "#000", erase: true } as const;
 
 function litWindows(v: View, model: DeepReadonly<Model>): Drawing {
   const lit = WINDOWS.filter((w) => windowLit(model, w.i));
   const mask = WINDOWS.map((w) => (windowLit(model, w.i) ? "1" : "0")).join("");
   const shops = nightOf(model.clock) > 0.35;
-  const pic = v.picture({ key: "lit-windows", width: W, height: H, deps: [mask, shops] }, () => [
+  // The glass and its bars, drawn over the dark facade.
+  const panes = v.picture({ key: "lit-panes", width: W, height: H, deps: [mask] }, () => lit.map((w) => {
+    const someone = hash(w.i, 9, 3) < 0.4;
+    return [
+      v.rect(w.x, w.y, w.w, w.h, { fill: v.linearGradient(w.x, w.y, w.x, w.y + w.h, [[0, "#ffe9a8"], [1, "#f6b45a"]]) }),
+      someone && v.clip(rectPts(w.x, w.y, w.w, w.h), [v.circle(w.x + w.w * 0.4, w.y + w.h * 0.55, w.w * 0.18, { fill: "rgba(90,50,40,0.75)" }), v.ellipse(w.x + w.w * 0.4, w.y + w.h, w.w * 0.32, w.h * 0.25, { fill: "rgba(90,50,40,0.75)" })]),
+      v.line(w.x + w.w / 2, w.y, w.x + w.w / 2, w.y + w.h, { stroke: "#5a3a26", weight: 2 }),
+      v.line(w.x, w.y + w.h * 0.45, w.x + w.w, w.y + w.h * 0.45, { stroke: "#5a3a26", weight: 2 }),
+      v.rect(w.x - 3, w.y - 3, w.w + 6, w.h + 6, { stroke: "rgba(60,40,30,0.8)", weight: 3 }),
+    ];
+  }));
+  // The light itself, screened onto the scene: haloes round the windows, the shop
+  // windows aglow, and pools on the pavement. What hangs in front of a shop window
+  // (awnings, bunting, lamp posts) is cut out, so the light stays behind it.
+  const light = v.picture({ key: "window-light", width: W, height: H, deps: [mask, shops] }, () => v.group({}, [
+    v.group({ effects: { glow: { blur: 8, color: "#ff9a30", strength: 1.2 } } }, lit.map((w) => v.rect(w.x, w.y, w.w, w.h, { fill: "rgba(255,200,120,0.35)" }))),
     shops && BUILDINGS.map((b) => {
       const sw = shopWindow(b);
-      return sw && v.rect(sw.x, sw.y, sw.w, sw.h, { fill: v.linearGradient(0, sw.y, 0, sw.y + sw.h, [[0, "rgba(255,214,140,0.55)"], [1, "rgba(255,170,90,0.4)"]]), blend: "screen", effects: { glow: { blur: 10, color: "#ff9a30", strength: 1 } } });
-    }),
-    v.group({ effects: { glow: { blur: 7, color: "#ff9a30", strength: 1.3 } } }, lit.map((w) => v.rect(w.x, w.y, w.w, w.h, { fill: v.linearGradient(w.x, w.y, w.x, w.y + w.h, [[0, "#ffe9a8"], [1, "#f6b45a"]]) }))),
-    lit.map((w) => {
-      const b = BUILDINGS[w.b];
-      const someone = hash(w.i, 9, 3) < 0.4;
-      return [
-        someone && [v.circle(w.x + w.w * 0.4, w.y + w.h * 0.55, w.w * 0.18, { fill: "rgba(90,50,40,0.75)" }), v.ellipse(w.x + w.w * 0.4, w.y + w.h, w.w * 0.32, w.h * 0.25, { fill: "rgba(90,50,40,0.75)" })],
-        v.line(w.x + w.w / 2, w.y, w.x + w.w / 2, w.y + w.h, { stroke: "#5a3a26", weight: 2 }),
-        v.line(w.x, w.y + w.h * 0.45, w.x + w.w, w.y + w.h * 0.45, { stroke: "#5a3a26", weight: 2 }),
-        b && v.rect(w.x - 3, w.y - 3, w.w + 6, w.h + 6, { stroke: "rgba(60,40,30,0.8)", weight: 3 }),
+      return sw && [
+        v.rect(sw.x, sw.y, sw.w, sw.h, { fill: v.linearGradient(0, sw.y, 0, sw.y + sw.h, [[0, "rgba(255,176,86,0.62)"], [1, "rgba(240,130,60,0.5)"]]), effects: { glow: { blur: 9, color: "#ff9a30", strength: 1 } } }),
+        v.ellipse(sw.x + sw.w / 2, BASE + 8, sw.w * 0.75, 16, { fill: v.ellipseGradient(sw.x + sw.w / 2, BASE + 8, sw.w * 0.75, 16, [[0, "rgba(255,180,100,0.5)"], [1, "rgba(255,180,100,0)"]]) }),
       ];
     }),
-  ]);
-  return v.place(pic, 0, 0);
+    occluders(v, CUT),
+  ]));
+  return [v.place(panes, 0, 0), v.place(light, 0, 0, { blend: "screen" })];
 }
 
 function lampLight(v: View, model: DeepReadonly<Model>, town: Picture): Drawing {
@@ -484,8 +627,14 @@ function lampLight(v: View, model: DeepReadonly<Model>, town: Picture): Drawing 
     // Their reflections in the canal.
     LAMPS.map((l, i) => on[i] === true && i >= 3 && v.ellipse(l.x, CANAL_TOP + 34, 8, 30, { fill: v.ellipseGradient(l.x, CANAL_TOP + 34, 8, 30, [[0, "rgba(255,200,120,0.55)"], [1, "rgba(255,200,120,0)"]]) })),
   ]);
+  return v.place(pic, 0, 0, { blend: "screen" });
+}
+
+function lampHeads(v: View, model: DeepReadonly<Model>): Drawing {
+  const on = LAMPS.map((_, i) => lampLit(model, i));
+  if (!on.some(Boolean)) return null;
   const heads = v.picture({ key: "lamp-heads", width: W, height: H, deps: [on.map((b) => (b ? "1" : "0")).join("")] }, () => v.group({ effects: { glow: { blur: 14, color: "#ffb24a", strength: 3 } } }, LAMPS.map((l, i) => on[i] === true && v.polygon([[l.x - 6, l.foot - LAMP_H + 7], [l.x + 6, l.foot - LAMP_H + 7], [l.x + 4.5, l.foot - LAMP_H - 5], [l.x - 4.5, l.foot - LAMP_H - 5]], { fill: "#fff0b8" }))));
-  return [v.place(pic, 0, 0, { blend: "screen" }), v.place(heads, 0, 0)];
+  return v.place(heads, 0, 0);
 }
 
 function tramLights(v: View, f: number, night: number): Drawing {
@@ -547,7 +696,7 @@ function fireworks(v: View, model: DeepReadonly<Model>): Drawing {
 
 function hover(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   const m = model.mouse;
-  const hit = m ? hitTest(model, m[0], m[1]) : null;
+  const hit = m ? hitTest(model, m[0], m[1], o.folk) : null;
   v.cursor(hit && hit.hint !== "" ? "pointer" : "default");
   const pulse = Math.sin(model.frame * 0.15) * 2;
   const spots: readonly (readonly [number, number])[] = [[TOWER.x + TOWER.w / 2, TOWER.top - 12], [(BUILDINGS[0]?.x ?? 12) + 60, BASE - 104], [MOUSE.x + 12, BACK_FEET - 96], [boatX(model.frame), BOAT_Y - 64], [MILL.x + 40, MILL.y - 40]];
@@ -564,7 +713,7 @@ function hover(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
   return [
     marks,
     hit.r > 0 && v.circle(hit.x, hit.y, hit.r + pulse, { stroke: "rgba(255,240,170,0.95)", weight: 2.5, brush: { preset: "chalk", opacity: 0.9 }, gesture: { seed: 5 } }),
-    o.hints && m && v.text(hit.hint, { x: m[0] + 16, y: m[1] + 14 }, { size: 14, font: "Georgia, serif", style: "italic", fill: "#3a2418", halo: "rgba(255,248,228,0.95)", keepInside: true }),
+    o.hints && m && v.text(hit.hint, { x: m[0] + 16, y: m[1] + 14 }, { size: 14, font: "Georgia, serif", style: "italic", fill: "#3a2418", halo: "rgba(255,248,228,0.95)", keepInside: true, overlay: true }),
   ];
 }
 
@@ -573,49 +722,60 @@ function hover(v: View, model: DeepReadonly<Model>, o: Opts): Drawing {
 export function paintScene(v: View, model: DeepReadonly<Model>, o: Opts): RootDrawing {
   const f = model.frame;
   const night = nightOf(model.clock), dusk = duskOf(model.clock);
+  const wx = weatherOf(model);
+  const wet = wx.kind === null ? 0 : wx.arriving ? clamp01(wx.t / 60) : 1 - clamp01(wx.t / 40);
   const full = { width: W, height: H };
   const town = v.picture({ key: "town", ...full }, () => paintTown(v));
   const dim = mix([255, 196, 150], [46, 60, 118], night);
   const shade = Math.max(dusk * 0.4, night * 0.86);
+  // What moves is drawn after the lights, so it passes in front of lit windows;
+  // it is darkened by an effect instead of the multiply the still town gets.
+  const bright = 1 - Math.max(0.62 * night, 0.18 * dusk) - 0.14 * wet;
+  const movers: Drawing = [
+    bakery(v, model),
+    cafe(v, model, o),
+    walkers(v, model, 0, o),
+    balloon(v, model),
+    v.at({ translate: [Math.round(tramX(f)), RAIL_Y + 4 - TRAM_H] }, v.place(v.picture({ key: "tram", width: 214, height: TRAM_H + 70 }, () => v.at({ translate: [0, 70] }, paintTram(v, false))), 0, -70)),
+    cyclist(v, model, o),
+    walkers(v, model, 1, o),
+    cart(v, model, o),
+    v.place(v.picture({ key: "front", ...full }, () => paintFront(v)), 0, 0),
+    canal(v, model, night),
+    petals(v, model),
+    pigeons(v, model),
+    precipitation(v, f, wx, night),
+  ];
   return v.paper({ scale: 3, contrast: 0.7 }, [
     v.place(v.picture({ key: "sky", ...full }, () => paintSky(v)), 0, 0),
     dusk > 0 && v.place(v.picture({ key: "dusk-sky", ...full }, () => DUSK_SKY(v)), 0, 0, { opacity: dusk * (1 - night * 0.5) }),
-    o.weather !== "fair" && v.rect(0, 0, W, 360, { fill: "rgba(150,158,170,0.55)" }),
-    night > 0 && v.place(v.picture({ key: "stars", ...full }, () => stars(v)), 0, 0, { opacity: night, blend: "screen" }),
+    night > 0 && v.place(v.picture({ key: "stars", ...full }, () => stars(v)), 0, 0, { opacity: night * (1 - wet), blend: "screen" }),
     sun(v, model.clock),
-    clouds(v, f, o.weather),
-    airship(v, f),
+    clouds(v, f),
+    wet > 0 && v.rect(0, 0, W, 360, { fill: `rgba(112,120,136,${(0.6 * wet).toFixed(3)})` }),
+    hotAir(v, model),
+    stormClouds(v, wx),
     v.place(v.picture({ key: "hills", ...full }, () => paintHills(v)), 0, 0),
     sails(v, model.millAngle),
     smoke(v, f, since(model.bakery, f, LASTS.bakery) !== null),
     v.place(town, 0, 0),
-    o.weather === "snow" && v.place(v.picture({ key: "snow", ...full }, () => snowcaps(v)), 0, 0),
+    model.sky.kind === "snow" && v.place(v.picture({ key: "snow", ...full }, () => snowcaps(v)), 0, 0),
     clockHands(v, model.clock),
     belfry(v, model, night),
-    bakery(v, model),
-    cafe(v, model, o),
-    walkers(v, f, 0, o),
-    balloon(v, model),
-    v.at({ translate: [Math.round(tramX(f)), RAIL_Y + 4 - TRAM_H] }, v.place(v.picture({ key: "tram", width: 214, height: TRAM_H + 70 }, () => v.at({ translate: [0, 70] }, paintTram(v, false))), 0, -70)),
-    cyclist(v, f, o),
-    walkers(v, f, 1, o),
-    cart(v, f, o),
-    v.place(v.picture({ key: "front", ...full }, () => paintFront(v)), 0, 0),
     v.place(v.picture({ key: "canal", ...full }, () => paintCanal(v)), 0, 0),
     v.place(v.picture({ key: "reflection", ...full }, () => reflection(v, town)), 0, 0),
-    canal(v, model, night),
-    petals(v, model),
-    pigeons(v, model),
-    precipitation(v, f, o.weather),
-    // Evening: the whole town darkens, then its lights come on.
+    // Evening and rain: the still town darkens, then its lights come on.
     shade > 0.01 && v.rect(0, 0, W, H, { fill: rgba(dim, shade), blend: "multiply" }),
+    wet > 0 && v.rect(0, 0, W, H, { fill: `rgba(150,160,182,${(0.35 * wet).toFixed(3)})`, blend: "multiply" }),
     litWindows(v, model),
     lampLight(v, model, town),
+    bright < 0.99 ? v.group({ effects: { brightness: bright, saturation: 1 - 0.35 * night } }, movers) : movers,
+    lampHeads(v, model),
     tramLights(v, f, night),
-    burner(v, f, night),
+    burner(v, model, night),
     sparks(v, model),
+    lightning(v, model),
     fireworks(v, model),
     hover(v, model, o),
   ]);
 }
-
