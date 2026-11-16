@@ -7,19 +7,18 @@ import { SketchUsageError } from "../../core/errors.js";
 import type { Bounds, FlowOptions } from "../../core/paint.js";
 import type { AtNode, SceneNode } from "../nodes.js";
 import { layoutBox } from "./layout-box.js";
+import { checkKeys } from "./options.js";
 
 type Flow = "row" | "column";
 
-const KEYS: readonly string[] = ["x", "y", "gap", "align", "valign"];
+const KEYS: readonly string[] = ["x", "y", "gap", "align", "valign", "name"];
 const ALIGNS = ["left", "center", "right"];
 const VALIGNS = { row: ["top", "middle", "bottom", "baseline"], column: ["top", "middle", "bottom"] } as const;
 
 /** The options, checked at the call: known keys, finite numbers, and the alignments this flow takes. */
-function checked(call: Flow, options: FlowOptions): Required<FlowOptions> {
+function checked(call: Flow, options: FlowOptions): Required<Omit<FlowOptions, "name">> {
   if (typeof options !== "object" || Array.isArray(options)) throw new SketchUsageError({ detail: `${call}: the first argument is an options object ({ x, y, gap, align, valign }); the children come second` });
-  for (const key of Object.keys(options)) {
-    if (!KEYS.includes(key)) throw new SketchUsageError({ detail: `${call}: unknown option "${key}" (${KEYS.join(", ")})` });
-  }
+  checkKeys(call, { options, keys: KEYS, what: "option" });
   const o = { x: options.x ?? 0, y: options.y ?? 0, gap: options.gap ?? 0, align: options.align ?? "left", valign: options.valign ?? "top" };
   for (const key of ["x", "y", "gap"] as const) {
     if (!Number.isFinite(o[key])) throw new SketchUsageError({ detail: `${call}: option ${key} must be a finite number (got ${String(o[key])})` });
@@ -62,7 +61,7 @@ export function flowChildren(call: Flow, a: { options: FlowOptions; nodes: reado
     if (box === null) return node;
     const main = start + (along[i] ?? 0);
     const cross = row ? o.y - crossEdge(box, { along: "y", mode: o.valign }) : o.x - crossEdge(box, { along: "x", mode: o.align });
-    const at: AtNode = { kind: "at", matrix: row ? [1, 0, 0, 1, main, cross] : [1, 0, 0, 1, cross, main], children: [node] };
+    const at: AtNode = { kind: "at", name: undefined, matrix: row ? [1, 0, 0, 1, main, cross] : [1, 0, 0, 1, cross, main], children: [node] };
     return at;
   });
 }

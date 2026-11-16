@@ -48,6 +48,8 @@ export interface TextOptions {
   overlay?: boolean;
   blend?: BlendMode;
   erase?: boolean;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  name?: string;
 }
 
 /** What `text` drew: the ink box in logical pixels, the line count, and the size used. */
@@ -89,6 +91,8 @@ export interface FlowOptions {
   readonly align?: "left" | "center" | "right";
   /** "baseline" (rows only): each child's first text baseline on `y`; a child with none by its bottom. */
   readonly valign?: "top" | "middle" | "bottom" | "baseline";
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /**
@@ -118,6 +122,8 @@ export interface Style {
   readonly material?: Material;
   /** Effects on this shape alone: it draws into its own layer, the effects apply, then the layer composites with `blend` or `erase`. */
   readonly effects?: Effects;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** A brush preset with some fields changed, as plain data. */
@@ -132,6 +138,8 @@ export interface AtOptions {
   readonly skew?: readonly [number, number];
   /** `[a, b, c, d, e, f]` as Canvas2D `transform()` and CSS `matrix()`. */
   readonly matrix?: readonly [number, number, number, number, number, number];
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** A single point, `[x, y]`. The vertex form used by `polygon` and `clip`. */
@@ -207,7 +215,7 @@ export function ellipseGradient(...args: [number, number, number, number, readon
 
 /** Options for `group`: opacity applied once to the finished group, its blend mode, clip, effects and lighting. */
 export interface GroupOptions {
-  /** Names the group in warnings, scene outlines and diffs; draws nothing. */
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
   readonly name?: string;
   readonly opacity?: number;
   readonly blend?: BlendMode;
@@ -320,6 +328,8 @@ export interface PlaceOptions {
   readonly opacity?: number;
   readonly blend?: BlendMode;
   readonly erase?: boolean;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** Any gradient handle. */

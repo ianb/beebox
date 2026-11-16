@@ -8,6 +8,7 @@ import type { Paint, PathCommand, Vec2 } from "../../core/paint.js";
 import type { AtOptions, Effects } from "../../core/tea.js";
 import type { ColorParser } from "../colors.js";
 import type { Geom, SceneNode } from "../nodes.js";
+import { checkKeys } from "./options.js";
 
 const NAN_HINT = " (NaN usually comes from undefined in arithmetic: a model field or param that is not there)";
 const NEGATIVE_HINT = " (a size computed from time or input can go below 0, as a shrinking ring does; clamp it with Math.max(0, …), or skip the drawing)";
@@ -96,8 +97,11 @@ export function checkGeom(call: string, g: Geom): void {
   }
 }
 
-/** `at` options: every number finite (a NaN transform hides everything inside it). */
+const AT_KEYS = ["name", "translate", "rotate", "scale", "skew", "matrix"];
+
+/** `at` options: known keys, and every number finite (a NaN transform hides everything inside it). */
 export function checkAt(at: AtOptions): void {
+  checkKeys("at", { options: at, keys: AT_KEYS, what: "option" });
   const { matrix, translate, rotate, skew, scale } = at;
   const ok = (matrix === undefined || matrix.every(fin)) && (translate === undefined || (fin(translate[0]) && fin(translate[1]))) && (rotate === undefined || fin(rotate))
     && (skew === undefined || (fin(skew[0]) && fin(skew[1]))) && (scale === undefined || (typeof scale === "number" ? fin(scale) : fin(scale[0]) && fin(scale[1])));

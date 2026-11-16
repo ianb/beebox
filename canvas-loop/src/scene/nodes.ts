@@ -62,6 +62,8 @@ export interface ShapeNode {
   readonly kind: "shape";
   /** The View call that made it (`rect`, `curve`, …), for messages and outlines. */
   readonly call: string;
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly geom: Geom;
   readonly style: ShapeStyle;
 }
@@ -73,6 +75,8 @@ export interface BackgroundNode {
 /** R3: a transform for the children; no layer. */
 export interface AtNode {
   readonly kind: "at";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly matrix: Mat;
   readonly children: readonly SceneNode[];
 }
@@ -127,6 +131,8 @@ export interface TextLine {
 /** `text`: measured and laid out when recorded (draft section 7); drawn through a glyph atlas. */
 export interface TextNode {
   readonly kind: "text";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly content: string;
   readonly family: string;
   readonly style: TextStyle;
@@ -167,6 +173,8 @@ export interface PixelsVersion {
 /** R7: a picture replayed under the current transform plus (x, y), into its own layer. */
 export interface PlaceNode {
   readonly kind: "place";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly picture: PictureVersion | PixelsVersion;
   readonly x: number;
   readonly y: number;

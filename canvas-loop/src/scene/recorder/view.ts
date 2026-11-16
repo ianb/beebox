@@ -46,6 +46,7 @@ import type { FrameOutputs, FrameRecord } from "./frame.js";
 import { Children } from "./children.js";
 import { layoutBox } from "./layout-box.js";
 import { flowChildren } from "./flow.js";
+import { checkName } from "./options.js";
 
 /** Testing mode warns of at most this many drawings made and not returned in one frame. */
 const UNRETURNED_PER_FRAME = 8;
@@ -170,7 +171,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live(call);
     checkGeom(call, args.geom);
     const style = resolveStyle(args.style, { call, paper: DEFAULT_PAPER });
-    return this.#stamp({ kind: "shape", call, geom: args.geom, style }, call);
+    return this.#stamp({ kind: "shape", call, name: checkName(args.style.name, call), geom: args.geom, style }, call);
   }
   /** An output that is not drawing: only while `draw` runs, and never in a picture body. */
   #notInPicture(call: string): void {
@@ -251,7 +252,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live("at");
     const kids = this.#children.list("at", children);
     checkAt(options);
-    return this.#stamp({ kind: "at", matrix: matrixOf(options), children: kids }, "at");
+    return this.#stamp({ kind: "at", name: checkName(options.name, "at"), matrix: matrixOf(options), children: kids }, "at");
   }
   group(options: GroupOptions, children: unknown): DrawingNode {
     this.#notes.live("group");
@@ -279,7 +280,7 @@ export class SceneRecorder extends PureHelpers implements View {
   #flow(call: "row" | "column", a: { options: FlowOptions; children: unknown }): DrawingNode {
     this.#notes.live(call);
     const kids = flowChildren(call, { options: a.options, nodes: this.#children.list(call, a.children) });
-    return this.#stamp({ kind: "at", matrix: IDENTITY, children: kids }, call);
+    return this.#stamp({ kind: "at", name: checkName(a.options.name, call), matrix: IDENTITY, children: kids }, call);
   }
   /** R9 (draft 2.11): the paper for every brushed stroke and effect in `children`. */
   paper(...args: [Paper, unknown] | [Paper]): DrawingNode {
@@ -287,7 +288,7 @@ export class SceneRecorder extends PureHelpers implements View {
     if (args.length === 1) throw new RemovedCallError({ call: "v.paper(settings) as a statement", replacement: "v.paper(settings, children) sets the paper for the drawing it holds" });
     const [settings, children] = args;
     const kids = this.#children.list("paper", children);
-    const node = this.#stamp({ kind: "at", matrix: IDENTITY, children: kids }, "paper");
+    const node = this.#stamp({ kind: "at", name: undefined, matrix: IDENTITY, children: kids }, "paper");
     this.#papers.set(node, resolvePaper(settings));
     return node;
   }

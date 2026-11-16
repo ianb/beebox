@@ -110,7 +110,7 @@ test("flow options: unknown keys, bad numbers and alignments are refused naming 
     return null;
   };
   const bad: [(v: View) => Drawing, RegExp][] = [
-    [flow("row", { hit: true }), /row: unknown option "hit" \(x, y, gap, align, valign\)/],
+    [flow("row", { hit: true }), /row: unknown option "hit" \(x, y, gap, align, valign, name\); there is no hit flag: every name is a target/],
     [flow("column", { gap: Number.NaN }), /column: option gap must be a finite number/],
     [flow("row", { align: "middle" }), /row: option align must be left, center, right/],
     [flow("column", { valign: "baseline" }), /column: option valign must be top, middle, bottom .*baseline is its first child's/],

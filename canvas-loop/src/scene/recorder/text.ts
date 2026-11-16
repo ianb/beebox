@@ -9,6 +9,7 @@ import type { TextMeasurer } from "../../core/text/measure.js";
 import type { Mat, TextLine, TextNode } from "../nodes.js";
 import { copyPaint } from "./style.js";
 import { checkNumbers } from "./checks.js";
+import { checkName } from "./options.js";
 
 const BASELINES = { top: "top", middle: "middle", bottom: "bottom", baseline: "alphabetic" } as const;
 
@@ -64,6 +65,6 @@ export function recordText(content: string, at: { box: TextBox; options: TextOpt
   const halo = o.halo === undefined ? undefined : { paint: copyPaint(o.halo, "text halo"), width: haloWidth(size) };
   const lb = laid.bounds;
   const baselineY = (lines[0]?.y ?? lb.y) + measurer.baselineGap(font, lines[0] === undefined ? "top" : baseline);
-  const node: TextNode = { kind: "text", content, family: o.font, style: o.style, size, baseline, lines, box: { x: lb.x, y: lb.y, w: lb.w, h: lb.h }, baselineY, fill: copyPaint(o.fill, "text"), halo, blend, erase: o.erase ?? false };
+  const node: TextNode = { kind: "text", name: checkName(at.options.name, "text"), content, family: o.font, style: o.style, size, baseline, lines, box: { x: lb.x, y: lb.y, w: lb.w, h: lb.h }, baselineY, fill: copyPaint(o.fill, "text"), halo, blend, erase: o.erase ?? false };
   return { node, bounds: laid.bounds };
 }

@@ -546,6 +546,40 @@ Existing names kept: `Drawing`, `DrawingNode`, `SceneNode`, `Scene`,
   `clip` misses; a rotated `at`; a name inside a picture placed twice
   returns the placement it is in; a non-invertible `at({ scale: 0 })` hits
   nothing; an `erase` shape is not a hit area.
+- **As built (B1).** Logs are in `scratch/layout-text-hits/b1-*.log`.
+  - **Names.** `name` is on `Style`, `TextOptions`, `AtOptions`,
+    `PlaceOptions` and `FlowOptions` (`core/paint.ts`); `ShapeNode`,
+    `TextNode`, `AtNode` and `PlaceNode` gain `name`. A flow's name goes on
+    its outer `at`; its inner translating `at`s and a paper scope's `at` have
+    none. `scene/recorder/options.ts` holds `checkName` (a non-empty string,
+    or the call throws naming itself) and `checkKeys`, which styles, `at`,
+    `group`, `place` and flows now share; an unknown `hit` key gets "there is
+    no hit flag: every name is a target". The resolve walk copies
+    containers with a spread, and the `keepInside` re-layout reads the name
+    from the kept options, so both keep it (tested). `TextNode.box` was A1's.
+  - **Hit walk.** `scene/hit.ts`, `hitTest(scene, point)`, as planned. A
+    background's ground is the canvas at the top and the placement's
+    picture box inside a body, as `gpu/lower.ts` draws it. A clip, or a
+    group's `clip` option, is tested on entry: a point outside skips the
+    children.
+  - **Plain strokes** call the renderer's own `strokeRings`, `dotRings`
+    and `dashPolys` in the order `gpu/shape-geometry.ts` does (five lines
+    repeated in `hit.ts`). Moving that step into `stroke.ts` for both to
+    share made `stroke.ts` and `dash.ts` one unit under `layout-check`
+    rule 5, so the repeat is the smaller change.
+  - **Deviation: erasing text and placements** have no hit area either,
+    as erasing shapes: they remove ink.
+  - **Small differences from the renderer**, by design of the logical
+    frame: outlines are flattened for the logical scale (the renderer uses
+    device pixels; both keep the chord error under 0.05 of a unit), and a
+    placement's translation is not snapped to whole device pixels.
+  - **Not done here.** No TEA.md change: the doc test checks `View`
+    members only, and B1 adds none; B4 documents names. Text options still
+    take unknown keys (the plan lists only group, `at`, place and flow). The
+    2,000-node timing check is B2's.
+  - **Lines:** source 299, tests 233, docs 0 (532). The plan's ~370 source
+    lines for all of B core look low: B2's runtime wiring is still to come,
+    so B core will likely reach about 500 source lines.
 
 ### C. Text runs (one line; separable from A and B)
 
