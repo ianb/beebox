@@ -61,12 +61,14 @@ export function BuildSkewBanner() {
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("pointerdown", handleInput, { capture: true });
     window.addEventListener("keydown", handleInput, { capture: true });
+    window.addEventListener("wheel", handleInput, { capture: true, passive: true });
     return () => {
       document.removeEventListener("visibilitychange", handleShownChange);
       window.removeEventListener("beebox:shell-shown", handleShownChange);
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("pointerdown", handleInput, { capture: true });
       window.removeEventListener("keydown", handleInput, { capture: true });
+      window.removeEventListener("wheel", handleInput, { capture: true });
     };
   }, [store]);
 

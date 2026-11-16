@@ -125,3 +125,12 @@ void test("tab storage unavailable: banner, never reload", (t) => {
   t.check(a.store.getSnapshot(), { banner: true });
   t.end();
 });
+
+void test("storage that reads but refuses the write: banner, and the log says banner", (t) => {
+  const a = tab({ storage: () => ({ getItem: () => null, setItem: () => { throw new Error("QuotaExceededError"); }, removeItem: () => {} }) });
+  a.store.serverBuild("new");
+  t.check({ reloads: a.reloads, snapshot: a.store.getSnapshot(), warnings: a.warnings }, {
+    reloads: [], snapshot: { banner: true }, warnings: ["[build] skew client=old server=new action=banner"],
+  });
+  t.end();
+});

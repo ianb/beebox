@@ -118,19 +118,21 @@ export function createBuildSkewStore(deps: BuildSkewDeps): BuildSkewStore {
       setBanner(false);
       return;
     }
-    log(action, blockers);
-    if (action === "wait") return;
     if (action === "reload") {
       try {
         deps.storage().setItem(ATTEMPT_KEY, `${deps.clientBuild ?? ""}>${server ?? ""}`);
       } catch (_error) {
         // The record is the loop guard; without it, do not reload.
+        log("banner", blockers);
         setBanner(dismissedFor !== server);
         return;
       }
+      log("reload", blockers);
       deps.reload();
       return;
     }
+    log(action, blockers);
+    if (action === "wait") return;
     setBanner(dismissedFor !== server);
   }
 
