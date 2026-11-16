@@ -1,6 +1,6 @@
 // Painting for the balancing sketch. `paint` draws one frame from the model
 // and the analysis of the current numbers.
-import type { DeepReadonly, Style, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Style, TextOptions, Vec2, View } from "@ianbicking/canvas-loop";
 import { ELEMENTS, formulaParts } from "./chem-tea.js";
 import type { Analysis, El, Molecule, Slot, Tally } from "./chem-tea.js";
 import { ARROW_GAP, BANNER, EQUATION, HEADER, PICTURE, TALLY, tallyRow, W } from "./layout-tea.js";
@@ -40,28 +40,32 @@ function formulaWidth(v: View, formula: string, size: number): number {
 }
 
 /** Draw `formula` with its left end at x and its baseline at y. */
-function drawFormula(v: View, formula: string, at: { x: number; y: number; size: number; fill: string }): void {
+function drawFormula(v: View, formula: string, at: { x: number; y: number; size: number; fill: string }): Drawing {
+  const out: Drawing[] = [];
   let x = at.x;
   for (const part of formulaParts(formula)) {
     const big: TextOptions = { ...T, size: at.size, style: "bold", fill: at.fill, valign: "baseline" };
-    v.text(part.symbol, { x, y: at.y }, big);
+    out.push(v.text(part.symbol, { x, y: at.y }, big));
     x += v.textWidth(part.symbol, big);
     if (part.sub !== "") {
       const small: TextOptions = { ...big, size: at.size * 0.62 };
-      v.text(part.sub, { x, y: at.y + at.size * 0.22 }, small);
+      out.push(v.text(part.sub, { x, y: at.y + at.size * 0.22 }, small));
       x += v.textWidth(part.sub, small);
     }
   }
+  return out;
 }
 
 // ── header ───────────────────────────────────────────────────────────
 
-function drawHeader(v: View, analysis: Analysis): void {
-  v.line(34, HEADER.y + 38, 290, HEADER.y + 36, { stroke: "#fde68a", weight: 14, brush: "marker", gesture: { seed: 3, wobble: 1.5 } });
-  v.text("Balance the equation", { x: 32, y: HEADER.y + 12 }, { ...T, size: 26, style: "bold" });
-  v.text(analysis.reaction.story, { x: 32, y: HEADER.y + 44 }, { ...T, size: 14, fill: MUTED });
-  v.text("Reaction", { x: 548, y: HEADER.y + 33 }, { ...T, size: 14, style: "bold", align: "right", valign: "middle" });
+function drawHeader(v: View, analysis: Analysis): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.line(34, HEADER.y + 38, 290, HEADER.y + 36, { stroke: "#fde68a", weight: 14, brush: "marker", gesture: { seed: 3, wobble: 1.5 } }));
+  out.push(v.text("Balance the equation", { x: 32, y: HEADER.y + 12 }, { ...T, size: 26, style: "bold" }));
+  out.push(v.text(analysis.reaction.story, { x: 32, y: HEADER.y + 44 }, { ...T, size: 14, fill: MUTED }));
+  out.push(v.text("Reaction", { x: 548, y: HEADER.y + 33 }, { ...T, size: 14, style: "bold", align: "right", valign: "middle" }));
   v.control("reaction", { x: 560, y: HEADER.y + 16, w: W - 32 - 560, h: 34, size: 15 });
+  return out;
 }
 
 // ── equation row with the number boxes ───────────────────────────────
@@ -70,10 +74,12 @@ const BOX_W = 56;
 const BOX_H = 44;
 const EQ_SIZE = 30;
 
-function drawArrow(v: View, x: number, y: number, color: string): void {
+function drawArrow(v: View, x: number, y: number, color: string): Drawing {
   const style: Style = { stroke: color, weight: 3.5 };
-  v.line(x, y, x + 34, y, style);
-  v.path([["move", x + 24, y - 9], ["line", x + 35, y], ["line", x + 24, y + 9]], style);
+  return [
+    v.line(x, y, x + 34, y, style),
+    v.path([["move", x + 24, y - 9], ["line", x + 35, y], ["line", x + 24, y + 9]], style),
+  ];
 }
 
 function equationItems(v: View, analysis: Analysis): { width: number; plus: number } {
@@ -85,35 +91,39 @@ function equationItems(v: View, analysis: Analysis): { width: number; plus: numb
   return { width, plus };
 }
 
-function drawUnusedSlot(v: View, right: number, rowY: number): void {
+function drawUnusedSlot(v: View, right: number, rowY: number): Drawing {
   const x = right - 196;
-  v.roundRect(x, rowY, BOX_W, BOX_H, 6, { fill: "#f3f4f6", stroke: "#d1d5db", weight: 1.5 });
-  v.line(x + 10, rowY + BOX_H - 10, x + BOX_W - 10, rowY + 10, { stroke: "#9ca3af", weight: 2 });
-  v.text("4th box not used:\nthis reaction has\nonly 3 substances", { x: x + BOX_W + 10, y: rowY + BOX_H / 2 }, {
-    ...T,
-    size: 12,
-    fill: MUTED,
-    valign: "middle",
-  });
+  return [
+    v.roundRect(x, rowY, BOX_W, BOX_H, 6, { fill: "#f3f4f6", stroke: "#d1d5db", weight: 1.5 }),
+    v.line(x + 10, rowY + BOX_H - 10, x + BOX_W - 10, rowY + 10, { stroke: "#9ca3af", weight: 2 }),
+    v.text("4th box not used:\nthis reaction has\nonly 3 substances", { x: x + BOX_W + 10, y: rowY + BOX_H / 2 }, {
+      ...T,
+      size: 12,
+      fill: MUTED,
+      valign: "middle",
+    }),
+  ];
 }
 
-function drawSlot(v: View, slot: Slot, at: { x: number; rowY: number; mid: number }): number {
-  v.roundRect(at.x - 4, at.rowY - 4, BOX_W + 8, BOX_H + 8, 9, { fill: "#fef3c7", stroke: "#f59e0b", weight: 1.5 });
+/** A slot's box and formula, and the x where the slot ends. */
+function drawSlot(v: View, slot: Slot, at: { x: number; rowY: number; mid: number }): { drawing: Drawing; end: number } {
+  const box = v.roundRect(at.x - 4, at.rowY - 4, BOX_W + 8, BOX_H + 8, 9, { fill: "#fef3c7", stroke: "#f59e0b", weight: 1.5 });
   v.control(`c${slot.index + 1}`, { x: at.x, y: at.rowY, w: BOX_W, h: BOX_H, size: 24, align: "center", bold: true });
   const fx = at.x + BOX_W + 8;
-  drawFormula(v, slot.molecule.formula, { x: fx, y: at.mid + EQ_SIZE * 0.36, size: EQ_SIZE, fill: INK });
-  return fx + formulaWidth(v, slot.molecule.formula, EQ_SIZE);
+  const formula = drawFormula(v, slot.molecule.formula, { x: fx, y: at.mid + EQ_SIZE * 0.36, size: EQ_SIZE, fill: INK });
+  return { drawing: [box, formula], end: fx + formulaWidth(v, slot.molecule.formula, EQ_SIZE) };
 }
 
-function drawEquation(v: View, frame: Frame): void {
+function drawEquation(v: View, frame: Frame): Drawing {
+  const out: Drawing[] = [];
   const { analysis } = frame;
-  v.roundRect(EQUATION.x, EQUATION.y, EQUATION.w, EQUATION.h, 14, CARD);
+  out.push(v.roundRect(EQUATION.x, EQUATION.y, EQUATION.w, EQUATION.h, 14, CARD));
   const four = analysis.left.length + analysis.right.length === 4;
-  v.text("Type how many of each molecule (1 to 12) in the yellow boxes.", { x: EQUATION.x + 16, y: EQUATION.y + 10 }, {
+  out.push(v.text("Type how many of each molecule (1 to 12) in the yellow boxes.", { x: EQUATION.x + 16, y: EQUATION.y + 10 }, {
     ...T,
     size: 13,
     fill: MUTED,
-  });
+  }));
   const rowY = EQUATION.y + 36;
   const mid = rowY + BOX_H / 2;
   const right = EQUATION.x + EQUATION.w - 16;
@@ -124,17 +134,20 @@ function drawEquation(v: View, frame: Frame): void {
   for (const [s, side] of sides.entries()) {
     for (const [i, slot] of side.entries()) {
       if (i > 0) {
-        v.text(" + ", { x, y: mid }, { ...T, size: EQ_SIZE, fill: MUTED, valign: "middle" });
+        out.push(v.text(" + ", { x, y: mid }, { ...T, size: EQ_SIZE, fill: MUTED, valign: "middle" }));
         x += plus;
       }
-      x = drawSlot(v, slot, { x, rowY, mid });
+      const drawn = drawSlot(v, slot, { x, rowY, mid });
+      out.push(drawn.drawing);
+      x = drawn.end;
     }
     if (s === 0) {
-      drawArrow(v, x + 15, mid, analysis.balanced ? GOOD : INK);
+      out.push(drawArrow(v, x + 15, mid, analysis.balanced ? GOOD : INK));
       x += 64;
     }
   }
-  if (!four) drawUnusedSlot(v, right, rowY);
+  if (!four) out.push(drawUnusedSlot(v, right, rowY));
+  return out;
 }
 
 // ── molecules ────────────────────────────────────────────────────────
@@ -180,23 +193,27 @@ const PALE: Readonly<Record<El, string>> = {
   Fe: "#f8e2c2",
 };
 
-function drawAtom(v: View, a: { el: El; x: number; y: number; s: number; focus: El | null }): void {
+function drawAtom(v: View, a: { el: El; x: number; y: number; s: number; focus: El | null }): Drawing {
+  const out: Drawing[] = [];
   const info = ELEMENTS[a.el];
   const d = info.r * 2 * a.s;
   const dim = a.focus !== null && a.focus !== a.el;
-  v.circle(a.x, a.y, d / 2, { fill: dim ? PALE[a.el] : info.fill, stroke: dim ? "#d1d5db" : info.edge, weight: 1.4 });
-  if (dim) return;
-  v.circle(a.x - d * 0.18, a.y - d * 0.2, (d * 0.32) / 2, { fill: "rgba(255,255,255,0.45)" });
+  out.push(v.circle(a.x, a.y, d / 2, { fill: dim ? PALE[a.el] : info.fill, stroke: dim ? "#d1d5db" : info.edge, weight: 1.4 }));
+  if (dim) return out;
+  out.push(v.circle(a.x - d * 0.18, a.y - d * 0.2, (d * 0.32) / 2, { fill: "rgba(255,255,255,0.45)" }));
   if (d >= 17) {
-    v.text(a.el, { x: a.x, y: a.y + 0.5 }, { ...T, size: d * 0.42, style: "bold", fill: info.text, align: "center", valign: "middle" });
+    out.push(v.text(a.el, { x: a.x, y: a.y + 0.5 }, { ...T, size: d * 0.42, style: "bold", fill: info.text, align: "center", valign: "middle" }));
   }
+  return out;
 }
 
-function drawMolecule(v: View, m: Molecule, at: { x: number; y: number; s: number; focus: El | null }): void {
+function drawMolecule(v: View, m: Molecule, at: { x: number; y: number; s: number; focus: El | null }): Drawing {
+  const out: Drawing[] = [];
   for (const atom of m.atoms) {
-    if (atom.el === at.focus) v.circle(at.x + atom.x * at.s, at.y + atom.y * at.s, (ELEMENTS[atom.el].r * 2 * at.s + 7) / 2, { fill: "#facc15" });
+    if (atom.el === at.focus) out.push(v.circle(at.x + atom.x * at.s, at.y + atom.y * at.s, (ELEMENTS[atom.el].r * 2 * at.s + 7) / 2, { fill: "#facc15" }));
   }
-  for (const atom of m.atoms) drawAtom(v, { el: atom.el, x: at.x + atom.x * at.s, y: at.y + atom.y * at.s, s: at.s, focus: at.focus });
+  for (const atom of m.atoms) out.push(drawAtom(v, { el: atom.el, x: at.x + atom.x * at.s, y: at.y + atom.y * at.s, s: at.s, focus: at.focus }));
+  return out;
 }
 
 const LABEL_H = 28;
@@ -248,14 +265,15 @@ function bob(model: DeepReadonly<Model>, i: number): number {
   return Math.sin(t / 6 + i * 0.9) * 4 * (1 - t / 150);
 }
 
-function drawSpecies(v: View, slot: Slot, at: { box: Box; scale: number; frame: Frame }): void {
+function drawSpecies(v: View, slot: Slot, at: { box: Box; scale: number; frame: Frame }): Drawing {
+  const out: Drawing[] = [];
   const { box, scale } = at;
   const label = `${slot.coefficient} ×`;
   const lw = v.textWidth(`${label} `, { ...T, size: 17, style: "bold" });
   const fw = formulaWidth(v, slot.molecule.formula, 17);
   const lx = box.x + (box.w - lw - fw) / 2;
-  v.text(label, { x: lx, y: box.y + 20 }, { ...T, size: 17, style: "bold", fill: MUTED, valign: "baseline" });
-  drawFormula(v, slot.molecule.formula, { x: lx + lw, y: box.y + 20, size: 17, fill: INK });
+  out.push(v.text(label, { x: lx, y: box.y + 20 }, { ...T, size: 17, style: "bold", fill: MUTED, valign: "baseline" }));
+  out.push(drawFormula(v, slot.molecule.formula, { x: lx + lw, y: box.y + 20, size: 17, fill: INK }));
   const area = moleculeArea(box);
   const { cols } = fit(slot.molecule, slot.coefficient, area);
   const rows = Math.ceil(slot.coefficient / cols);
@@ -271,19 +289,21 @@ function drawSpecies(v: View, slot: Slot, at: { box: Box; scale: number; frame: 
     const shift = ((cols - lastRow) * cw) / 2;
     const cx = ox + shift + col * cw + cw / 2 - ((b.minX + b.maxX) / 2) * scale;
     const cy = oy + row * ch + ch / 2 - ((b.minY + b.maxY) / 2) * scale + bob(at.frame.model, i + slot.index * 3);
-    drawMolecule(v, slot.molecule, { x: cx, y: cy, s: scale, focus: focusOf(at.frame.model) });
+    out.push(drawMolecule(v, slot.molecule, { x: cx, y: cy, s: scale, focus: focusOf(at.frame.model) }));
   }
+  return out;
 }
 
-function drawPicture(v: View, frame: Frame): void {
+function drawPicture(v: View, frame: Frame): Drawing {
+  const out: Drawing[] = [];
   const { analysis } = frame;
-  v.roundRect(PICTURE.x, PICTURE.y, PICTURE.w, PICTURE.h, 14, CARD);
-  drawSparkles(v, frame.model);
+  out.push(v.roundRect(PICTURE.x, PICTURE.y, PICTURE.w, PICTURE.h, 14, CARD));
+  out.push(drawSparkles(v, frame.model));
   const { left, right } = sideAreas();
-  v.text("Start with", { x: left.x + left.w / 2, y: PICTURE.y + 12 }, { ...T, size: 14, style: "bold", fill: MUTED, align: "center" });
-  v.text("End with", { x: right.x + right.w / 2, y: PICTURE.y + 12 }, { ...T, size: 14, style: "bold", fill: MUTED, align: "center" });
+  out.push(v.text("Start with", { x: left.x + left.w / 2, y: PICTURE.y + 12 }, { ...T, size: 14, style: "bold", fill: MUTED, align: "center" }));
+  out.push(v.text("End with", { x: right.x + right.w / 2, y: PICTURE.y + 12 }, { ...T, size: 14, style: "bold", fill: MUTED, align: "center" }));
   const ax = PICTURE.x + PICTURE.w / 2 - 17;
-  drawArrow(v, ax, PICTURE.y + PICTURE.h / 2, analysis.balanced ? GOOD : "#9ca3af");
+  out.push(drawArrow(v, ax, PICTURE.y + PICTURE.h / 2, analysis.balanced ? GOOD : "#9ca3af"));
   const placed = [
     ...speciesBoxes(analysis.left, left).map((box, i) => ({ box, slot: analysis.left[i] })),
     ...speciesBoxes(analysis.right, right).map((box, i) => ({ box, slot: analysis.right[i] })),
@@ -298,95 +318,106 @@ function drawPicture(v: View, frame: Frame): void {
     for (const [i, box] of boxes.entries()) {
       const slot = side[i];
       if (!slot) continue;
-      if (i > 0) v.text("+", { x: box.x - 14, y: box.y + box.h / 2 }, { ...T, size: 24, fill: MUTED, align: "center", valign: "middle" });
-      drawSpecies(v, slot, { box, scale, frame });
+      if (i > 0) out.push(v.text("+", { x: box.x - 14, y: box.y + box.h / 2 }, { ...T, size: 24, fill: MUTED, align: "center", valign: "middle" }));
+      out.push(drawSpecies(v, slot, { box, scale, frame }));
     }
   }
+  return out;
 }
 
 // ── tally ────────────────────────────────────────────────────────────
 
 const BAR = { x: 230, w: 400, h: 15 };
 
-function drawBar(v: View, at: { y: number; count: number; other: number; unit: number; label: string }): void {
+function drawBar(v: View, at: { y: number; count: number; other: number; unit: number; label: string }): Drawing {
+  const out: Drawing[] = [];
   const ok = at.count === at.other;
-  v.text(at.label, { x: BAR.x - 10, y: at.y + BAR.h / 2 }, { ...T, size: 12, fill: MUTED, align: "right", valign: "middle" });
-  v.rect(BAR.x, at.y, BAR.w, BAR.h, { fill: "#f3efe6" });
+  out.push(v.text(at.label, { x: BAR.x - 10, y: at.y + BAR.h / 2 }, { ...T, size: 12, fill: MUTED, align: "right", valign: "middle" }));
+  out.push(v.rect(BAR.x, at.y, BAR.w, BAR.h, { fill: "#f3efe6" }));
   if (at.other > at.count) {
-    v.rect(BAR.x + at.count * at.unit, at.y, (at.other - at.count) * at.unit, BAR.h, { stroke: BAD_FILL, weight: 1.5 });
+    out.push(v.rect(BAR.x + at.count * at.unit, at.y, (at.other - at.count) * at.unit, BAR.h, { stroke: BAD_FILL, weight: 1.5 }));
   }
-  v.rect(BAR.x, at.y, at.count * at.unit, BAR.h, { fill: ok ? GOOD_FILL : BAD_FILL });
+  out.push(v.rect(BAR.x, at.y, at.count * at.unit, BAR.h, { fill: ok ? GOOD_FILL : BAD_FILL }));
   if (at.unit >= 5) {
-    for (let i = 1; i < at.count; i += 1) v.line(BAR.x + i * at.unit, at.y, BAR.x + i * at.unit, at.y + BAR.h, { stroke: PAGE, weight: 1 });
+    for (let i = 1; i < at.count; i += 1) out.push(v.line(BAR.x + i * at.unit, at.y, BAR.x + i * at.unit, at.y + BAR.h, { stroke: PAGE, weight: 1 }));
   }
   const end = BAR.x + Math.max(at.count, at.other) * at.unit;
-  v.text(String(at.count), { x: end + 8, y: at.y + BAR.h / 2 }, { ...T, size: 14, style: "bold", fill: ok ? GOOD : BAD, valign: "middle" });
+  out.push(v.text(String(at.count), { x: end + 8, y: at.y + BAR.h / 2 }, { ...T, size: 14, style: "bold", fill: ok ? GOOD : BAD, valign: "middle" }));
+  return out;
 }
 
-function drawCheck(v: View, x: number, y: number): void {
-  v.path([["move", x, y], ["line", x + 6, y + 6], ["line", x + 17, y - 7]], { stroke: GOOD, weight: 3.5 });
+function drawCheck(v: View, x: number, y: number): Drawing {
+  return v.path([["move", x, y], ["line", x + 6, y + 6], ["line", x + 17, y - 7]], { stroke: GOOD, weight: 3.5 });
 }
 
-function drawCross(v: View, x: number, y: number): void {
+function drawCross(v: View, x: number, y: number): Drawing {
   const style: Style = { stroke: BAD, weight: 3.5 };
-  v.line(x + 1, y - 7, x + 15, y + 7, style);
-  v.line(x + 15, y - 7, x + 1, y + 7, style);
+  return [
+    v.line(x + 1, y - 7, x + 15, y + 7, style),
+    v.line(x + 15, y - 7, x + 1, y + 7, style),
+  ];
 }
 
 /** "H is in H₂, H₂O": the molecules to look at, drawn with real subscripts. */
-function drawHolders(v: View, analysis: Analysis, at: { el: El; x: number; y: number }): void {
+function drawHolders(v: View, analysis: Analysis, at: { el: El; x: number; y: number }): Drawing {
+  const out: Drawing[] = [];
   const small: TextOptions = { ...T, size: 12, fill: MUTED, valign: "baseline" };
   const lead = `${at.el} is in `;
-  v.text(lead, { x: at.x, y: at.y }, small);
+  out.push(v.text(lead, { x: at.x, y: at.y }, small));
   let x = at.x + v.textWidth(lead, small);
   const names = [...analysis.left, ...analysis.right]
     .filter((s) => s.molecule.atoms.some((atom) => atom.el === at.el))
     .map((s) => s.molecule.formula);
   for (const [i, name] of names.entries()) {
     if (i > 0) {
-      v.text(", ", { x, y: at.y }, small);
+      out.push(v.text(", ", { x, y: at.y }, small));
       x += v.textWidth(", ", small);
     }
-    drawFormula(v, name, { x, y: at.y, size: 13, fill: MUTED });
+    out.push(drawFormula(v, name, { x, y: at.y, size: 13, fill: MUTED }));
     x += formulaWidth(v, name, 13);
   }
+  return out;
 }
 
-function drawTallyRow(v: View, t: Tally, at: { i: number; unit: number; frame: Frame }): void {
+function drawTallyRow(v: View, t: Tally, at: { i: number; unit: number; frame: Frame }): Drawing {
+  const out: Drawing[] = [];
   const row = tallyRow(at.i);
   const { model, analysis } = at.frame;
   const focused = focusOf(model) === t.el;
-  if (focused) v.roundRect(row.x, row.y, row.w, row.h, 10, { fill: "#fef9c3", stroke: "#facc15", weight: 1.5 });
+  if (focused) out.push(v.roundRect(row.x, row.y, row.w, row.h, 10, { fill: "#fef9c3", stroke: "#facc15", weight: 1.5 }));
   const info = ELEMENTS[t.el];
   const cy = row.y + row.h / 2;
-  v.circle(row.x + 26, cy, 15, { fill: info.fill, stroke: info.edge, weight: 1.5 });
-  v.text(t.el, { x: row.x + 26, y: cy + 0.5 }, { ...T, size: 13, style: "bold", fill: info.text, align: "center", valign: "middle" });
-  v.text(info.name, { x: row.x + 50, y: cy }, { ...T, size: 15, style: "bold", valign: "middle" });
-  if (model.pinned === t.el) v.text("(kept lit)", { x: row.x + 50, y: cy + 16 }, { ...T, size: 11, fill: MUTED, valign: "middle" });
-  drawBar(v, { y: row.y + 5, count: t.left, other: t.right, unit: at.unit, label: "left" });
-  drawBar(v, { y: row.y + row.h - 5 - BAR.h, count: t.right, other: t.left, unit: at.unit, label: "right" });
+  out.push(v.circle(row.x + 26, cy, 15, { fill: info.fill, stroke: info.edge, weight: 1.5 }));
+  out.push(v.text(t.el, { x: row.x + 26, y: cy + 0.5 }, { ...T, size: 13, style: "bold", fill: info.text, align: "center", valign: "middle" }));
+  out.push(v.text(info.name, { x: row.x + 50, y: cy }, { ...T, size: 15, style: "bold", valign: "middle" }));
+  if (model.pinned === t.el) out.push(v.text("(kept lit)", { x: row.x + 50, y: cy + 16 }, { ...T, size: 11, fill: MUTED, valign: "middle" }));
+  out.push(drawBar(v, { y: row.y + 5, count: t.left, other: t.right, unit: at.unit, label: "left" }));
+  out.push(drawBar(v, { y: row.y + row.h - 5 - BAR.h, count: t.right, other: t.left, unit: at.unit, label: "right" }));
   const sx = 690;
   if (t.left === t.right) {
-    drawCheck(v, sx, cy);
-    v.text(`${t.left} = ${t.right}  matches`, { x: sx + 26, y: cy }, { ...T, size: 15, style: "bold", fill: GOOD, valign: "middle" });
-    return;
+    out.push(drawCheck(v, sx, cy));
+    out.push(v.text(`${t.left} = ${t.right}  matches`, { x: sx + 26, y: cy }, { ...T, size: 15, style: "bold", fill: GOOD, valign: "middle" }));
+    return out;
   }
-  drawCross(v, sx, cy);
+  out.push(drawCross(v, sx, cy));
   const more = t.left > t.right ? "more on the left" : "more on the right";
-  v.text(`${t.left} ≠ ${t.right}  ${more}`, { x: sx + 26, y: cy - 9 }, { ...T, size: 14, style: "bold", fill: BAD, valign: "middle" });
-  drawHolders(v, analysis, { el: t.el, x: sx + 26, y: cy + 15 });
+  out.push(v.text(`${t.left} ≠ ${t.right}  ${more}`, { x: sx + 26, y: cy - 9 }, { ...T, size: 14, style: "bold", fill: BAD, valign: "middle" }));
+  out.push(drawHolders(v, analysis, { el: t.el, x: sx + 26, y: cy + 15 }));
+  return out;
 }
 
-function drawTally(v: View, frame: Frame): void {
-  v.roundRect(TALLY.x, TALLY.y, TALLY.w, TALLY.h, 14, CARD);
-  v.text("Count the atoms on each side", { x: TALLY.x + 16, y: TALLY.y + 12 }, { ...T, size: 16, style: "bold" });
+function drawTally(v: View, frame: Frame): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.roundRect(TALLY.x, TALLY.y, TALLY.w, TALLY.h, 14, CARD));
+  out.push(v.text("Count the atoms on each side", { x: TALLY.x + 16, y: TALLY.y + 12 }, { ...T, size: 16, style: "bold" }));
   const max = Math.max(10, ...frame.analysis.tallies.flatMap((t) => [t.left, t.right]));
   const unit = BAR.w / max;
-  for (const [i, t] of frame.analysis.tallies.entries()) drawTallyRow(v, t, { i, unit, frame });
-  v.text("Point at an element to light up its atoms in the picture. Click to keep it lit.", {
+  for (const [i, t] of frame.analysis.tallies.entries()) out.push(drawTallyRow(v, t, { i, unit, frame }));
+  out.push(v.text("Point at an element to light up its atoms in the picture. Click to keep it lit.", {
     x: TALLY.x + TALLY.w - 16,
     y: TALLY.y + 14,
-  }, { ...T, size: 12, fill: MUTED, align: "right" });
+  }, { ...T, size: 12, fill: MUTED, align: "right" }));
+  return out;
 }
 
 // ── banner and celebration ───────────────────────────────────────────
@@ -396,28 +427,30 @@ function joinNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
 }
 
-function drawBanner(v: View, frame: Frame): void {
+function drawBanner(v: View, frame: Frame): Drawing {
+  const out: Drawing[] = [];
   const { analysis } = frame;
   const box = BANNER;
   if (!analysis.balanced) {
-    v.roundRect(box.x, box.y, box.w, box.h, 14, { fill: "#fef2f2", stroke: "#fecaca", weight: 1.5 });
+    out.push(v.roundRect(box.x, box.y, box.w, box.h, 14, { fill: "#fef2f2", stroke: "#fecaca", weight: 1.5 }));
     const off = analysis.tallies.filter((t) => t.left !== t.right).map((t) => ELEMENTS[t.el].name);
     const verb = off.length === 1 ? "does not match" : "do not match";
-    v.text(`Not balanced yet: ${joinNames(off)} ${verb}. Change one number at a time and watch the counts.`, {
+    out.push(v.text(`Not balanced yet: ${joinNames(off)} ${verb}. Change one number at a time and watch the counts.`, {
       x: box.x + 20,
       y: box.y + box.h / 2,
-    }, { ...T, size: 16, style: "bold", fill: BAD, valign: "middle" });
-    return;
+    }, { ...T, size: 16, style: "bold", fill: BAD, valign: "middle" }));
+    return out;
   }
-  v.roundRect(box.x, box.y, box.w, box.h, 14, { fill: "#dcfce7", stroke: "#86efac", weight: 1.5 });
-  drawCheck(v, box.x + 22, box.y + box.h / 2);
+  out.push(v.roundRect(box.x, box.y, box.w, box.h, 14, { fill: "#dcfce7", stroke: "#86efac", weight: 1.5 }));
+  out.push(drawCheck(v, box.x + 22, box.y + box.h / 2));
   const tip = analysis.divisor > 1 ? `  Tip: every number divides by ${analysis.divisor}; chemists use the smallest whole numbers.` : "";
-  v.text(`Balanced! Every atom you start with is still there at the end.${tip}`, {
+  out.push(v.text(`Balanced! Every atom you start with is still there at the end.${tip}`, {
     x: box.x + 52,
     y: box.y,
     w: box.w - 70,
     h: box.h,
-  }, { ...T, size: 16, style: "bold", fill: GOOD, valign: "middle" });
+  }, { ...T, size: 16, style: "bold", fill: GOOD, valign: "middle" }));
+  return out;
 }
 
 /** A repeatable 0..1 value for confetti piece `i`, field `k`. */
@@ -442,34 +475,40 @@ function star(x: number, y: number, r: number, turn: number): Vec2[] {
  * A gentle burst of sparkles from the picture's arrow, behind the molecules.
  * Sparkles, not atoms: loose atoms would say atoms appeared from nowhere.
  */
-function drawSparkles(v: View, model: DeepReadonly<Model>): void {
-  if (model.balancedAt === null) return;
+function drawSparkles(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
+  if (model.balancedAt === null) return out;
   const t = model.frame - model.balancedAt;
   const life = 90;
-  if (t > life) return;
+  if (t > life) return out;
   const ox = PICTURE.x + PICTURE.w / 2;
   const oy = PICTURE.y + PICTURE.h / 2;
   const fade = 1 - t / life;
   const ease = 1 - (1 - Math.min(1, t / 45)) ** 3;
-  v.group({ opacity: Math.min(1, fade * 1.5) }, () => {
+  out.push(v.group({ opacity: Math.min(1, fade * 1.5) }, ((): Drawing => {
+    const drawn: Drawing[] = [];
     for (let i = 0; i < 30; i += 1) {
       const angle = Math.PI * 2 * hash01(i, 1);
       const travel = (40 + 170 * hash01(i, 2)) * ease;
       const x = ox + Math.cos(angle) * travel * 2;
       const y = oy + Math.sin(angle) * travel * 0.55;
       const r = (6 + 7 * hash01(i, 4)) * (0.7 + 0.3 * Math.sin(t / 5 + i));
-      v.polygon(star(x, y, r, t / 25 + i), { fill: SPARK_COLORS[i % SPARK_COLORS.length] ?? "#fbbf24" });
+      drawn.push(v.polygon(star(x, y, r, t / 25 + i), { fill: SPARK_COLORS[i % SPARK_COLORS.length] ?? "#fbbf24" }));
     }
-  });
+    return drawn;
+  })()));
+  return out;
 }
 
-export function paint(v: View, frame: Frame): void {
+export function paint(v: View, frame: Frame): readonly Drawing[] {
   // Port: `v.paperTexture(0.22)` right after the background becomes the
   // background drawn in a group with `effects.paper` (draft section 2).
-  v.group({ effects: { paper: 0.22 } }, () => v.background(PAGE));
-  drawHeader(v, frame.analysis);
-  drawEquation(v, frame);
-  drawPicture(v, frame);
-  drawTally(v, frame);
-  drawBanner(v, frame);
+  return [
+    v.group({ effects: { paper: 0.22 } }, v.background(PAGE)),
+    drawHeader(v, frame.analysis),
+    drawEquation(v, frame),
+    drawPicture(v, frame),
+    drawTally(v, frame),
+    drawBanner(v, frame),
+  ];
 }

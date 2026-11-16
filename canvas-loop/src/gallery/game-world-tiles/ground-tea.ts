@@ -3,7 +3,7 @@
 // paint the whole map at once, or paint one cell at a time clipped to its square
 // (drawing the marks of its neighbours too): both give the same pixels, and the
 // per-cell version is a tile that could be baked into an atlas.
-import type { Style, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Style, View } from "@ianbicking/canvas-loop";
 import { type Ground, PERIOD, S, groundAt, hash, wind } from "./map-tea.js";
 import { LEAVES, foliage } from "./paint-tea.js";
 
@@ -15,7 +15,7 @@ export interface Pass {
   animated: boolean;
   /** Which ground styles use it; all when left out. */
   styles?: readonly GroundStyle[];
-  paint: (v: View, c: { x: number; y: number; t: number }) => void;
+  paint: (v: View, c: { x: number; y: number; t: number }) => Drawing;
 }
 
 const HALF = S / 2;
@@ -28,26 +28,27 @@ const isGrassy = (g: Ground): boolean => g === "grass" || g === "flowers";
  * Pieces: a round blob at the centre, bridges east and south to the same kind,
  * a filled square where four cells meet, and small lobes along open edges so the
  * shore is not a geometric curve. */
-function regionPiece(v: View, a: { x: number; y: number; kind: Ground; inset: number; style: Style; lobes?: number }): void {
+function regionPiece(v: View, a: { x: number; y: number; kind: Ground; inset: number; style: Style; lobes?: number }): Drawing {
+  const drawn: Drawing[] = [];
   const { x, y, kind, inset, style } = a;
-  if (groundAt(x, y) !== kind) return;
+  if (groundAt(x, y) !== kind) return drawn;
   const px = x * S, py = y * S;
   const r = HALF - inset;
-  if (r > 0) v.circle(px + HALF, py + HALF, r, style);
+  if (r > 0) drawn.push(v.circle(px + HALF, py + HALF, r, style));
   const e = groundAt(x + 1, y) === kind, s = groundAt(x, y + 1) === kind;
-  if (e) v.rect(px + HALF, py + inset, S, S - 2 * inset, style);
-  if (s) v.rect(px + inset, py + HALF, S - 2 * inset, S, style);
-  if (e && s && groundAt(x + 1, y + 1) === kind) v.rect(px + HALF, py + HALF, S, S, style);
+  if (e) drawn.push(v.rect(px + HALF, py + inset, S, S - 2 * inset, style));
+  if (s) drawn.push(v.rect(px + inset, py + HALF, S - 2 * inset, S, style));
+  if (e && s && groundAt(x + 1, y + 1) === kind) drawn.push(v.rect(px + HALF, py + HALF, S, S, style));
   // Round each inside corner: where the region turns around a missing diagonal
   // neighbour, fill a curved fillet into the corner the bridges leave square.
   const f = 5 + Math.max(0, inset) * 0.6;
   for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
     if (groundAt(x + dx, y) !== kind || groundAt(x, y + dy) !== kind || groundAt(x + dx, y + dy) === kind) continue;
     const cx = px + HALF + dx * (HALF - inset), cy = py + HALF + dy * (HALF - inset);
-    v.path([["move", cx, cy], ["line", cx + dx * f, cy], ["quad", cx, cy, cx, cy + dy * f], ["close"]], style);
+    drawn.push(v.path([["move", cx, cy], ["line", cx + dx * f, cy], ["quad", cx, cy, cx, cy + dy * f], ["close"]], style));
   }
   const lobes = a.lobes ?? 0;
-  if (lobes === 0) return;
+  if (lobes === 0) return drawn;
   // Lobes on each side that the region does not continue across.
   const sides: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
   for (const [side, [dx, dy]] of sides.entries()) {
@@ -58,16 +59,17 @@ function regionPiece(v: View, a: { x: number; y: number; kind: Ground; inset: nu
       const out = HALF - inset - lr * 0.4 + (hash(x, y, 70 + side * 7 + i) - 0.3) * 3;
       const cx = px + HALF + dx * out + (dy !== 0 ? along : 0);
       const cy = py + HALF + dy * out + (dx !== 0 ? along : 0);
-      v.circle(cx, cy, lr, style);
+      drawn.push(v.circle(cx, cy, lr, style));
     }
   }
+  return drawn;
 }
 
 /** A tapered blade from (bx, by), `h` tall, its tip pushed `lean` px sideways. */
-function blade(v: View, a: { bx: number; by: number; h: number; lean: number; w: number; fill: string }): void {
+function blade(v: View, a: { bx: number; by: number; h: number; lean: number; w: number; fill: string }): Drawing {
   const { bx, by, h, lean, w } = a;
   const tx = bx + lean, ty = by - h;
-  v.path(
+  return v.path(
     [
       ["move", bx - w, by],
       ["quad", bx - w * 0.3 + lean * 0.2, by - h * 0.55, tx, ty],
@@ -88,19 +90,21 @@ const grassBase: Pass = {
   name: "grass",
   animated: false,
   paint: (v, { x, y }) => {
+    const out: Drawing[] = [];
     // Soft patches of lighter and darker grass, a little larger than a cell, so the
     // field has a slow colour drift instead of a repeating tile.
     for (let i = 0; i < 3; i++) {
       const cx = x * S + hash(x, y, i) * S, cy = y * S + hash(x, y, i + 3) * S;
       const r = 14 + hash(x, y, i + 6) * 14;
       const col = GRASS_MOTTLE[Math.floor(hash(x, y, i + 9) * GRASS_MOTTLE.length)] ?? GRASS_BASE;
-      v.circle(cx, cy, r, { fill: v.radialGradient(cx, cy, r, [[0, `${col}aa`], [1, `${col}00`]]) });
+      out.push(v.circle(cx, cy, r, { fill: v.radialGradient(cx, cy, r, [[0, `${col}aa`], [1, `${col}00`]]) }));
     }
     // Small dark specks of earth and clover.
     for (let i = 0; i < 4; i++) {
       const cx = x * S + hash(x, y, 20 + i) * S, cy = y * S + hash(x, y, 30 + i) * S;
-      v.ellipse(cx, cy, 1.4, 0.9, { fill: hash(x, y, 40 + i) < 0.5 ? "#4a7a31" : "#7cb653" });
+      out.push(v.ellipse(cx, cy, 1.4, 0.9, { fill: hash(x, y, 40 + i) < 0.5 ? "#4a7a31" : "#7cb653" }));
     }
+    return out;
   },
 };
 
@@ -118,17 +122,19 @@ const furrows: Pass = {
   name: "furrows",
   animated: false,
   paint: (v, { x, y }) => {
-    if (groundAt(x, y) !== "soil") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "soil") return out;
     // Furrows: a dark trench and a light ridge per crop row.
     const px = x * S, py = y * S;
     const left = groundAt(x - 1, y) === "soil" ? px : px + 4, right = groundAt(x + 1, y) === "soil" ? px + S : px + S - 4;
     for (const fy of [py + 9, py + 25]) {
-      v.line(left, fy, right, fy, { stroke: "#4a3020", weight: 3 });
-      v.line(left, fy - 3, right, fy - 3, { stroke: "#8d6448", weight: 1.5 });
+      out.push(v.line(left, fy, right, fy, { stroke: "#4a3020", weight: 3 }));
+      out.push(v.line(left, fy - 3, right, fy - 3, { stroke: "#8d6448", weight: 1.5 }));
     }
     for (let i = 0; i < 5; i++) {
-      v.circle(px + 3 + hash(x, y, 50 + i) * (S - 6), py + 3 + hash(x, y, 60 + i) * (S - 6), 0.9, { fill: "#a07a5a" });
+      out.push(v.circle(px + 3 + hash(x, y, 50 + i) * (S - 6), py + 3 + hash(x, y, 60 + i) * (S - 6), 0.9, { fill: "#a07a5a" }));
     }
+    return out;
   },
 };
 
@@ -136,16 +142,18 @@ const pathTexture: Pass = {
   name: "path-texture",
   animated: false,
   paint: (v, { x, y }) => {
-    if (groundAt(x, y) !== "path") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "path") return out;
     const px = x * S, py = y * S;
     // A lighter worn line down the middle, then pebbles.
-    v.circle(px + HALF, py + HALF, 7, { fill: v.radialGradient(px + HALF, py + HALF, 9, [[0, "#d9b98299"], [1, "#d9b98200"]]) });
+    out.push(v.circle(px + HALF, py + HALF, 7, { fill: v.radialGradient(px + HALF, py + HALF, 9, [[0, "#d9b98299"], [1, "#d9b98200"]]) }));
     for (let i = 0; i < 7; i++) {
       const cx = px + 7 + hash(x, y, 80 + i) * (S - 14), cy = py + 7 + hash(x, y, 90 + i) * (S - 14);
       const r = 0.8 + hash(x, y, 100 + i) * 1.6;
-      v.ellipse(cx, cy + 0.6, r, r * 0.7, { fill: "#8a6a46" });
-      v.ellipse(cx, cy, r, r * 0.7, { fill: hash(x, y, 110 + i) < 0.5 ? "#e0c79a" : "#a98b66" });
+      out.push(v.ellipse(cx, cy + 0.6, r, r * 0.7, { fill: "#8a6a46" }));
+      out.push(v.ellipse(cx, cy, r, r * 0.7, { fill: hash(x, y, 110 + i) < 0.5 ? "#e0c79a" : "#a98b66" }));
     }
+    return out;
   },
 };
 
@@ -154,7 +162,8 @@ const waterMotion: Pass = {
   name: "water-motion",
   animated: true,
   paint: (v, { x, y, t }) => {
-    if (groundAt(x, y) !== "water") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "water") return out;
     const px = x * S, py = y * S;
     const a = (2 * Math.PI * t) / PERIOD;
     for (let i = 0; i < 2; i++) {
@@ -163,15 +172,16 @@ const waterMotion: Pass = {
       const cy = py + 8 + hash(x, y, 140 + i) * 16;
       const len = 4 + hash(x, y, 150 + i) * 4;
       const alpha = 0.25 + 0.25 * Math.sin(a + phase);
-      v.path([["move", cx - len, cy], ["quad", cx, cy - 1.5, cx + len, cy]], { stroke: `rgba(220, 240, 250, ${alpha.toFixed(3)})`, weight: 1 });
+      out.push(v.path([["move", cx - len, cy], ["quad", cx, cy - 1.5, cx + len, cy]], { stroke: `rgba(220, 240, 250, ${alpha.toFixed(3)})`, weight: 1 }));
     }
     const sp = hash(x, y, 160);
     const glint = Math.max(0, Math.sin(2 * a + sp * Math.PI * 2)) ** 12;
     if (glint > 0.05) {
       const gx = px + 6 + hash(x, y, 170) * 20, gy = py + 6 + hash(x, y, 180) * 20;
-      v.line(gx - 2.5 * glint, gy, gx + 2.5 * glint, gy, { stroke: `rgba(255,255,255,${glint.toFixed(3)})`, weight: 1 });
-      v.line(gx, gy - 1.5 * glint, gx, gy + 1.5 * glint, { stroke: `rgba(255,255,255,${glint.toFixed(3)})`, weight: 1 });
+      out.push(v.line(gx - 2.5 * glint, gy, gx + 2.5 * glint, gy, { stroke: `rgba(255,255,255,${glint.toFixed(3)})`, weight: 1 }));
+      out.push(v.line(gx, gy - 1.5 * glint, gx, gy + 1.5 * glint, { stroke: `rgba(255,255,255,${glint.toFixed(3)})`, weight: 1 }));
     }
+    return out;
   },
 };
 
@@ -179,8 +189,9 @@ const grassBlades: Pass = {
   name: "grass-blades",
   animated: true,
   paint: (v, { x, y, t }) => {
+    const out: Drawing[] = [];
     const g = groundAt(x, y);
-    if (!isGrassy(g)) return;
+    if (!isGrassy(g)) return out;
     for (let i = 0; i < 7; i++) {
       const bx = x * S + hash(x, y, 200 + i) * S, by = y * S + hash(x, y, 210 + i) * S;
       const sway = wind(bx, by, t) * 1.6;
@@ -189,22 +200,23 @@ const grassBlades: Pass = {
         const fan = (j - (n - 1) / 2) * 1.6;
         const h = 3.5 + hash(x, y, 230 + i * 5 + j) * 3.5;
         const fill = BLADE[Math.floor(hash(x, y, 240 + i * 5 + j) * BLADE.length)] ?? "#4c8233";
-        blade(v, { bx: bx + fan * 0.6, by, h, lean: fan + sway, w: 0.8, fill });
+        out.push(blade(v, { bx: bx + fan * 0.6, by, h, lean: fan + sway, w: 0.8, fill }));
       }
     }
-    if (g !== "flowers") return;
+    if (g !== "flowers") return out;
     for (let i = 0; i < 5; i++) {
       const fx = x * S + 3 + hash(x, y, 300 + i) * (S - 6), fy = y * S + 3 + hash(x, y, 310 + i) * (S - 6);
       const sway = wind(fx, fy, t) * 1.2;
       const col = FLOWER[Math.floor(hash(x, y, 320 + i) * FLOWER.length)] ?? "#fff";
-      v.line(fx, fy, fx + sway, fy - 5, { stroke: "#4a7d30", weight: 0.8 });
+      out.push(v.line(fx, fy, fx + sway, fy - 5, { stroke: "#4a7d30", weight: 0.8 }));
       const hx = fx + sway, hy = fy - 5.5;
       for (let k = 0; k < 5; k++) {
         const ang = (k / 5) * Math.PI * 2 + hash(x, y, 330 + i);
-        v.circle(hx + Math.cos(ang) * 1.3, hy + Math.sin(ang) * 1.3, 1.1, { fill: col });
+        out.push(v.circle(hx + Math.cos(ang) * 1.3, hy + Math.sin(ang) * 1.3, 1.1, { fill: col }));
       }
-      v.circle(hx, hy, 0.8, { fill: "#e9b23a" });
+      out.push(v.circle(hx, hy, 0.8, { fill: "#e9b23a" }));
     }
+    return out;
   },
 };
 
@@ -214,7 +226,8 @@ const tallGrass: Pass = {
   name: "tall-grass",
   animated: true,
   paint: (v, { x, y, t }) => {
-    if (groundAt(x, y) !== "tall") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "tall") return out;
     for (let i = 0; i < 16; i++) {
       const u = hash(x, y, 400 + i), w = hash(x, y, 410 + i);
       const bx = x * S + u * S, by = y * S + 4 + w * (S - 2);
@@ -229,15 +242,16 @@ const tallGrass: Pass = {
         const fan = (j - 2) * 1.8;
         const h = (11 + hash(x, y, 430 + i * 5 + j) * 8) * scale;
         const fill = TALL[Math.floor(hash(x, y, 440 + i * 5 + j) * TALL.length)] ?? "#5e9a35";
-        blade(v, { bx: bx + fan * 0.5, by, h, lean: fan + sway * (0.7 + j * 0.1), w: 1, fill });
+        out.push(blade(v, { bx: bx + fan * 0.5, by, h, lean: fan + sway * (0.7 + j * 0.1), w: 1, fill }));
       }
       if (hash(x, y, 450 + i) < 0.3) {
         // A seed head on a taller stalk.
         const sx = bx + sway * 1.2, sy = by - 20 * scale;
-        v.line(bx, by, sx, sy, { stroke: "#9a9a4a", weight: 0.7 });
-        v.ellipse(sx, sy - 2, 1.2, 2.6, { fill: "#d8c27a" });
+        out.push(v.line(bx, by, sx, sy, { stroke: "#9a9a4a", weight: 0.7 }));
+        out.push(v.ellipse(sx, sy - 2, 1.2, 2.6, { fill: "#d8c27a" }));
       }
     }
+    return out;
   },
 };
 
@@ -249,15 +263,17 @@ const forestTrunks: Pass = {
   name: "forest-trunks",
   animated: false,
   paint: (v, { x, y }) => {
-    if (groundAt(x, y) !== "forest" || groundAt(x, y + 1) === "forest") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "forest" || groundAt(x, y + 1) === "forest") return out;
     const px = x * S, by = (y + 1) * S;
-    v.ellipse(px + HALF, by + 2, HALF + 6, 7, { fill: v.ellipseGradient(px + HALF, by + 2, HALF + 6, 7, [[0, "rgba(15,30,15,0.45)"], [1, "rgba(15,30,15,0)"]]) });
+    out.push(v.ellipse(px + HALF, by + 2, HALF + 6, 7, { fill: v.ellipseGradient(px + HALF, by + 2, HALF + 6, 7, [[0, "rgba(15,30,15,0.45)"], [1, "rgba(15,30,15,0)"]]) }));
     for (let i = 0; i < 2; i++) {
       const tx = px + 6 + hash(x, y, 580 + i) * (S - 12);
       const h = 8 + hash(x, y, 590 + i) * 5;
-      v.rect(tx - 2.2, by - 8, 4.4, h, { fill: "#3b2a1c" });
-      v.rect(tx - 2.2, by - 8, 1.4, h, { fill: "#5a412b" });
+      out.push(v.rect(tx - 2.2, by - 8, 4.4, h, { fill: "#3b2a1c" }));
+      out.push(v.rect(tx - 2.2, by - 8, 1.4, h, { fill: "#5a412b" }));
     }
+    return out;
   },
 };
 
@@ -266,13 +282,15 @@ const forestCrowns: Pass = {
   name: "forest-crowns",
   animated: false,
   paint: (v, { x, y }) => {
-    if (groundAt(x, y) !== "forest") return;
+    const out: Drawing[] = [];
+    if (groundAt(x, y) !== "forest") return out;
     for (let i = 0; i < 2; i++) {
       const cx = x * S + 6 + hash(x, y, 500 + i) * (S - 12), cy = y * S + 4 + hash(x, y, 510 + i) * (S - 14);
       const r = 13 + hash(x, y, 520 + i) * 5;
       const look = LEAVES[hash(x, y, 530 + i) < 0.35 ? "oak" : "forest"];
-      if (look) foliage(v, { cx, cy, r, look, x, y, salt: 40 + i * 7 });
+      if (look) out.push(foliage(v, { cx, cy, r, look, x, y, salt: 40 + i * 7 }));
     }
+    return out;
   },
 };
 
@@ -285,13 +303,15 @@ function pathStroke(a: { name: string; weight: number; style: Style }): Pass {
     animated: false,
     styles: ["brushed paths"],
     paint: (v, { x, y }) => {
-      if (groundAt(x, y) !== "path") return;
+      const out: Drawing[] = [];
+      if (groundAt(x, y) !== "path") return out;
       const cx = x * S + HALF, cy = y * S + HALF;
       const style: Style = { ...a.style, weight: a.weight, gesture: { pressure: "even", wobble: 1.5, seed: Math.floor(hash(x, y, 1200) * 1e6) } };
       for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
         if (groundAt(x + dx, y + dy) !== "path") continue;
-        v.line(cx - dx * 3, cy - dy * 3, cx + dx * (S + 3), cy + dy * (S + 3), style);
+        out.push(v.line(cx - dx * 3, cy - dy * 3, cx + dx * (S + 3), cy + dy * (S + 3), style));
       }
+      return out;
     },
   };
 }

@@ -1,7 +1,7 @@
 // game-world's sample map, drawn by canvas-loop instead of the LPC tile atlas.
 // Ground is painted by per-cell passes (ground-tea.ts) that can run over the whole
 // map or one 32 px cell at a time; props are sprites (objects-tea.ts).
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 import { type GroundStyle, type Pass, passesFor } from "./ground-tea.js";
 import { paintField } from "./field-tea.js";
 import { H, PERIOD, S, W } from "./map-tea.js";
@@ -70,45 +70,57 @@ const RUNS: Record<GroundStyle, Pass[][]> = {
   field: runs("field"),
 };
 
-function paintRunWhole(v: View, run: readonly Pass[], t: number): void {
+function paintRunWhole(v: View, run: readonly Pass[], t: number): Drawing {
+  const out: Drawing[] = [];
   for (const pass of run) {
-    for (let y = -1; y <= H; y++) for (let x = -1; x <= W; x++) pass.paint(v, { x, y, t });
+    for (let y = -1; y <= H; y++) for (let x = -1; x <= W; x++) out.push(pass.paint(v, { x, y, t }));
   }
+  return out;
 }
 
-function paintRunTiles(v: View, run: readonly Pass[], t: number): void {
+function paintRunTiles(v: View, run: readonly Pass[], t: number): Drawing {
+  const out: Drawing[] = [];
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const px = x * S, py = y * S;
-      v.clip([[px, py], [px + S, py], [px + S, py + S], [px, py + S]], () => {
+      out.push(v.clip([[px, py], [px + S, py], [px + S, py + S], [px, py + S]], ((): Drawing => {
+        const drawn: Drawing[] = [];
         for (const pass of run) {
-          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) pass.paint(v, { x: x + dx, y: y + dy, t });
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) drawn.push(pass.paint(v, { x: x + dx, y: y + dy, t }));
         }
-      });
+        return drawn;
+      })()));
     }
   }
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
-  v.background("#5f9a3e");
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#5f9a3e"));
   const t = model.frame % PERIOD;
   const tiles = p.render === "tile by tile";
-  v.at({ scale: ZOOM }, () => {
+  out.push(v.at({ scale: ZOOM }, ((): Drawing => {
+    const drawn: Drawing[] = [];
     if (p.ground === "field") {
-      v.place(v.picture({ key: `field-${p.render}`, width: W * S, height: H * S }, () => {
-        if (!tiles) paintField(v, { x: 0, y: 0, w: W * S, h: H * S });
-        else for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) paintField(v, { x: x * S, y: y * S, w: S, h: S });
-      }), 0, 0);
+      drawn.push(v.place(v.picture({ key: `field-${p.render}`, width: W * S, height: H * S }, () => {
+        const field: Drawing[] = [];
+        if (!tiles) field.push(paintField(v, { x: 0, y: 0, w: W * S, h: H * S }));
+        else for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) field.push(paintField(v, { x: x * S, y: y * S, w: S, h: S }));
+        return field;
+      }), 0, 0));
     }
     for (const [i, run] of RUNS[p.ground].entries()) {
-      const paint = (): void => (tiles ? paintRunTiles(v, run, t) : paintRunWhole(v, run, t));
-      if (run[0]?.animated === true) paint();
-      else v.place(v.picture({ key: `ground-${p.ground}-${i}-${p.render}`, width: W * S, height: H * S }, paint), 0, 0);
+      const paint = (): Drawing => (tiles ? paintRunTiles(v, run, t) : paintRunWhole(v, run, t));
+      if (run[0]?.animated === true) drawn.push(paint());
+      else drawn.push(v.place(v.picture({ key: `ground-${p.ground}-${i}-${p.render}`, width: W * S, height: H * S }, paint), 0, 0));
     }
-    if (p.props) paintObjects(v, t);
+    if (p.props) drawn.push(paintObjects(v, t));
     if (p.grid) {
-      for (let x = 0; x <= W; x++) v.line(x * S, 0, x * S, H * S, { stroke: "rgba(255,255,255,0.35)", weight: 0.5 });
-      for (let y = 0; y <= H; y++) v.line(0, y * S, W * S, y * S, { stroke: "rgba(255,255,255,0.35)", weight: 0.5 });
+      for (let x = 0; x <= W; x++) drawn.push(v.line(x * S, 0, x * S, H * S, { stroke: "rgba(255,255,255,0.35)", weight: 0.5 }));
+      for (let y = 0; y <= H; y++) drawn.push(v.line(0, y * S, W * S, y * S, { stroke: "rgba(255,255,255,0.35)", weight: 0.5 }));
     }
-  });
+    return drawn;
+  })()));
+  return out;
 }

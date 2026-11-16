@@ -1,4 +1,4 @@
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 import { paintOccupiedWindowTrim, paintTown } from "./town-tea.js";
 import { THINGS, paintSprite, type Thing } from "./people-tea.js";
 
@@ -52,22 +52,24 @@ function hit(x: number, y: number, model: DeepReadonly<Model>): string {
   return THINGS.findLast((t) => bounds(t, x, y, model))?.id ?? "";
 }
 
-function showHitAreas(v: View, model: DeepReadonly<Model>): void {
+function showHitAreas(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
   for (const t of THINGS) {
     if (t.kind === "bus")
-      v.debugBox(t.id, t.x + busShift(t, model) - 76, t.y - 78, 152, 80);
-    else if (t.kind === "flag") v.debugBox(t.id, t.x - 35, t.y - 76, 70, 76);
+      out.push(v.debugBox(t.id, t.x + busShift(t, model) - 76, t.y - 78, 152, 80));
+    else if (t.kind === "flag") out.push(v.debugBox(t.id, t.x - 35, t.y - 76, 70, 76));
     else {
       const upper = t.y < 300;
-      v.debugBox(
+      out.push(v.debugBox(
         t.id,
         t.x - (upper ? 24 : 31),
         t.y - (upper ? 67 : 83),
         upper ? 48 : 62,
         upper ? 77 : 93,
-      );
+      ));
     }
   }
+  return out;
 }
 
 export function update(
@@ -117,90 +119,95 @@ const TREBUCHET = "Trebuchet MS";
 const fillOf = (fill: string): Style => ({ fill });
 const lineOf = (stroke: string, weight: number): Style => ({ stroke, weight });
 
-function label(v: View, text: string, x: number, y: number): void {
-  v.rect(x - 34, y - 17, 68, 20, fillOf("#fff3d9"));
-  v.text(
-    text,
-    { x, y: y - 3 },
-    {
-      size: 10,
-      font: TREBUCHET,
-      style: "bold",
-      fill: "#405657",
-      align: "center",
-      valign: "baseline",
-    },
-  );
+function label(v: View, text: string, x: number, y: number): Drawing {
+  return [
+    v.rect(x - 34, y - 17, 68, 20, fillOf("#fff3d9")),
+    v.text(
+      text,
+      { x, y: y - 3 },
+      {
+        size: 10,
+        font: TREBUCHET,
+        style: "bold",
+        fill: "#405657",
+        align: "center",
+        valign: "baseline",
+      },
+    ),
+  ];
 }
 
-function notes(v: View, x: number, y: number, age: number): void {
+function notes(v: View, x: number, y: number, age: number): Drawing {
   const opts = { size: 22, fill: "#506f86", valign: "baseline" } as const;
-  v.text("♪", { x: x + age * 0.5, y: y - age * 0.8 }, opts);
-  v.text("♫", { x: x + 14 + age * 0.3, y: y - 23 - age * 0.5 }, opts);
+  return [
+    v.text("♪", { x: x + age * 0.5, y: y - age * 0.8 }, opts),
+    v.text("♫", { x: x + 14 + age * 0.3, y: y - 23 - age * 0.5 }, opts),
+  ];
 }
 
-function actEffectA(v: View, t: Thing, age: number): void {
+function actEffectA(v: View, t: Thing, age: number): Drawing {
+  const out: Drawing[] = [];
   const x = t.x,
     y = t.y,
     s = Math.sin(age * 0.2);
   switch (t.act) {
     case "loaf":
-      v.ellipse(x + 28, y - 46 - age * 0.08, 15.5, 8, fillOf("#e6ad69"));
+      out.push(v.ellipse(x + 28, y - 46 - age * 0.08, 15.5, 8, fillOf("#e6ad69")));
       for (let i = 0; i < 3; i += 1) {
-        v.circle(
+        out.push(v.circle(
           x + 23 + i * 8,
           y - 66 - ((age + i * 13) % 28),
           2,
           fillOf("#fff4d8"),
-        );
+        ));
       }
       break;
     case "sweep":
-      v.line(x + 25, y - 38, x + 35 + s * 14, y + 5, lineOf("#8a644d", 3));
-      v.ellipse(x + 35 + s * 14, y + 5, 11, 3.5, fillOf("#e1cf9e"));
+      out.push(v.line(x + 25, y - 38, x + 35 + s * 14, y + 5, lineOf("#8a644d", 3)));
+      out.push(v.ellipse(x + 35 + s * 14, y + 5, 11, 3.5, fillOf("#e1cf9e")));
       break;
     case "letters":
       for (let i = 0; i < 4; i += 1) {
-        v.rect(
+        out.push(v.rect(
           x + 10 + i * 8 + age * 0.18,
           y - 57 - i * 13 - age * 0.3,
           15,
           10,
           fillOf("#fff4d7"),
-        );
+        ));
       }
       break;
     case "wave":
-      v.circle(x + 34, y - 72 + s * 8, 4, fillOf("#f1dbab"));
+      out.push(v.circle(x + 34, y - 72 + s * 8, 4, fillOf("#f1dbab")));
       break;
     case "ladder": {
       const rail = lineOf("#956c54", 4);
-      v.line(x + 27, y - 5, x + 27 + s * 7, y - 119, rail);
-      v.line(x + 48, y - 5, x + 48 + s * 7, y - 119, rail);
+      out.push(v.line(x + 27, y - 5, x + 27 + s * 7, y - 119, rail));
+      out.push(v.line(x + 48, y - 5, x + 48 + s * 7, y - 119, rail));
       for (let i = 0; i < 5; i += 1)
-        v.line(
+        out.push(v.line(
           x + 27 + s * 7,
           y - 16 - i * 20,
           x + 48 + s * 7,
           y - 16 - i * 20,
           rail,
-        );
+        ));
       break;
     }
     case "water":
       for (let i = 0; i < 6; i += 1)
-        v.circle(
+        out.push(v.circle(
           x + 20 + i * 7,
           y - 30 + ((age + i * 9) % 40),
           2,
           fillOf("#85afc9"),
-        );
+        ));
       break;
     case "music":
-      notes(v, x, y - 78, age);
+      out.push(notes(v, x, y - 78, age));
       break;
     case "cloth":
-      v.triangle(
+      out.push(v.triangle(
         x + 24,
         y - 54,
         x + 75 + s * 9,
@@ -208,75 +215,78 @@ function actEffectA(v: View, t: Thing, age: number): void {
         x + 67,
         y - 16,
         fillOf("#da8b8b"),
-      );
+      ));
       break;
     default:
       break;
   }
+  return out;
 }
 
-function actEffectB(v: View, t: Thing, age: number, frame: number): void {
+function actEffectB(v: View, t: Thing, age: number, frame: number): Drawing {
+  const out: Drawing[] = [];
   const x = t.x,
     y = t.y,
     s = Math.sin(age * 0.2);
   switch (t.act) {
     case "books":
       for (let i = 0; i < 4; i += 1) {
-        v.rect(
+        out.push(v.rect(
           x + 23 + i * 9,
           y - 46 - (age % 18) * 0.5 - i * 5,
           7,
           20,
           fillOf(i % 2 ? "#d58f67" : "#6a9690"),
-        );
+        ));
       }
       break;
     case "stars":
       for (let i = 0; i < 5; i += 1) {
-        v.circle(
+        out.push(v.circle(
           x - 44 + i * 19,
           y - 89 + Math.sin(frame * 0.12 + i) * 9,
           (4 + (i % 2) * 3) / 2,
           fillOf("#f9e5a0"),
-        );
+        ));
       }
       break;
     case "whistle":
-      notes(v, x, y - 72, age * 0.6);
+      out.push(notes(v, x, y - 72, age * 0.6));
       break;
     case "wheel": {
       const rim = lineOf("#4c6266", 3);
-      v.circle(x + 20, y - 4, (30 + age * 0.3) / 2, rim);
-      v.circle(x - 24, y - 4, (30 + age * 0.3) / 2, rim);
+      out.push(v.circle(x + 20, y - 4, (30 + age * 0.3) / 2, rim));
+      out.push(v.circle(x - 24, y - 4, (30 + age * 0.3) / 2, rim));
       break;
     }
     case "spin":
-      v.arc(
+      out.push(v.arc(
         x,
         y - 45,
         35,
         age * 0.13,
         age * 0.13 + Math.PI * 1.5,
         lineOf("#e8bd83", 3),
-      );
+      ));
       break;
     case "drive":
       for (let i = 0; i < 3; i += 1)
-        v.ellipse(x - 90 - i * 14, y + 16, 9.5, 4, fillOf("#e8ddc4"));
+        out.push(v.ellipse(x - 90 - i * 14, y + 16, 9.5, 4, fillOf("#e8ddc4")));
       break;
     case "flutter":
-      v.circle(x + 61, y - 50 + s * 8, 2.5, fillOf("#f2c36f"));
+      out.push(v.circle(x + 61, y - 50 + s * 8, 2.5, fillOf("#f2c36f")));
       break;
     case "chime":
-      v.circle(x, y - 27, (65 + age * 0.8) / 2, lineOf("#eecb7e", 3));
+      out.push(v.circle(x, y - 27, (65 + age * 0.8) / 2, lineOf("#eecb7e", 3)));
       break;
     case "bloom":
       for (let i = 0; i < 5; i += 1)
-        v.circle(x - 24 + i * 12, y - 59 - age * 0.38, 2, fillOf("#f8dfa1"));
+        out.push(v.circle(x - 24 + i * 12, y - 59 - age * 0.38, 2, fillOf("#f8dfa1")));
       break;
     default:
       break;
   }
+  return out;
 }
 
 function poseAngle(
@@ -292,7 +302,8 @@ function poseAngle(
   return t.act === "spin" ? age * 0.13 : Math.sin(age * 0.22) * 0.09;
 }
 
-function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
+function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
   const age = model.frame - (model.acts[t.id] ?? -1000);
   const active = age >= 0 && age < 72;
   const hovered = model.hover === t.id;
@@ -310,49 +321,51 @@ function drawThing(v: View, t: Thing, model: DeepReadonly<Model>): void {
   const hop = hovered ? Math.sin(model.frame * 0.22) * 3.8 : 0;
   const shift = busShift(t, model);
   const angle = poseAngle(t, model, age, active);
-  v.at(
+  out.push(v.at(
     {
       translate: [t.x + shift, t.y + idle - hop],
       ...(angle === undefined ? {} : { rotate: angle }),
       ...(t.y < 300 && !special ? { scale: 0.75 } : {}),
     },
-    () => {
-      v.place(sprite, -width / 2, -height);
-    },
-  );
+    [
+      v.place(sprite, -width / 2, -height),
+    ],
+  ));
   if (active) {
-    actEffectA(v, t, age);
-    actEffectB(v, t, age, model.frame);
+    out.push(actEffectA(v, t, age));
+    out.push(actEffectB(v, t, age, model.frame));
   }
   if (hovered) {
-    v.circle(
+    out.push(v.circle(
       t.x + shift,
       t.y - height * 0.56,
       (Math.min(width, 66) + 8 + Math.sin(model.frame * 0.25) * 4) / 2,
       lineOf("#fff6ce", 2),
-    );
-    label(
+    ));
+    out.push(label(
       v,
       t.id.toUpperCase(),
       t.x + shift,
       t.kind === "flowers" ? t.y - 90 : t.y < 300 ? t.y - 88 : t.y + 25,
-    );
+    ));
   }
+  return out;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.place(v.picture({ key: `busy-town-${p.dusk}`, width: v.width, height: v.height }, () => paintTown(v, p.dusk)), 0, 0);
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.place(v.picture({ key: `busy-town-${p.dusk}`, width: v.width, height: v.height }, () => paintTown(v, p.dusk)), 0, 0));
   v.cursor(model.hover ? "pointer" : "default");
-  for (const t of THINGS) drawThing(v, t, model);
-  paintOccupiedWindowTrim(v);
-  showHitAreas(v, model);
+  for (const t of THINGS) out.push(drawThing(v, t, model));
+  out.push(paintOccupiedWindowTrim(v));
+  out.push(showHitAreas(v, model));
   // A few tiny looping marks make the printed street breathe even at rest.
   for (let i = 0; i < 3; i += 1) {
     const x = 52 + i * 324;
     const dy = Math.sin(model.frame * 0.06 + i) * 5;
-    v.arc(x, 533 + dy, 10, 0, Math.PI, lineOf("#f9edcd", 2));
+    out.push(v.arc(x, 533 + dy, 10, 0, Math.PI, lineOf("#f9edcd", 2)));
   }
-  v.text(
+  out.push(v.text(
     "WILLOW WICK • click anyone and see what happens",
     { x: 27, y: 686 },
     {
@@ -361,5 +374,6 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
       align: "left",
       valign: "baseline",
     },
-  );
+  ));
+  return out;
 }

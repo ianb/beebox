@@ -1,7 +1,7 @@
 // The fish stall: posts, striped awning, the dim interior behind the
 // fishmonger, and (drawn after him) the counter with its tray of fish on ice
 // and the fish-shaped gap where the stolen mackerel lay.
-import type { View, Vec2 } from "@ianbicking/canvas-loop";
+import type { Drawing, Vec2, View } from "@ianbicking/canvas-loop";
 import { fish } from "./fish-tea.js";
 import { form, hash, INK, mark, ring } from "./kit-tea.js";
 
@@ -13,9 +13,10 @@ export const TRAY_FRONT = 482;
 /** Where the stolen fish lay. */
 export const GAP: Vec2 = [530, 462];
 
-export function stallBack(v: View): void {
+export function stallBack(v: View): Drawing {
+  const drawn: Drawing[] = [];
   // dim interior so the fishmonger stands out against it
-  form(
+  drawn.push(form(
     v,
     [
       [LEFT, VALANCE],
@@ -31,10 +32,10 @@ export function stallBack(v: View): void {
       sharp: true,
       seed: 610,
     },
-  );
+  ));
   for (let i = 0; i < 9; i += 1) {
     const x = LEFT + 20 + i * 44;
-    mark(
+    drawn.push(mark(
       v,
       [
         [x, VALANCE + 4],
@@ -48,11 +49,11 @@ export function stallBack(v: View): void {
         wobble: 1,
         seed: 600 + i,
       },
-    );
+    ));
   }
   // posts
   for (const x of [LEFT, RIGHT]) {
-    form(
+    drawn.push(form(
       v,
       [
         [x - 8, 150],
@@ -68,11 +69,13 @@ export function stallBack(v: View): void {
         weight: 2.2,
         seed: x,
       },
-    );
+    ));
   }
+  return drawn;
 }
 
-export function awning(v: View): void {
+export function awning(v: View): Drawing {
+  const out: Drawing[] = [];
   const backY = 154;
   // sloped roof in stripes
   const n = 9;
@@ -87,7 +90,7 @@ export function awning(v: View): void {
       [fx(t1), VALANCE],
       [fx(t0), VALANCE],
     ];
-    form(v, quad, {
+    out.push(form(v, quad, {
       base: i % 2 === 0 ? "#e2423a" : "#fbf4e6",
       shade: i % 2 === 0 ? "#a42a2a" : "#d9cbb3",
       strokes: i % 2 === 0 ? "#f2766a" : "#e6d6bc",
@@ -95,7 +98,7 @@ export function awning(v: View): void {
       depth: 8,
       sharp: true,
       seed: 620 + i,
-    });
+    }));
   }
   // scalloped valance
   const scallops = 11;
@@ -109,48 +112,48 @@ export function awning(v: View): void {
       [x0 + step * 0.5, VALANCE + 32],
       [x0, VALANCE + 14],
     ];
-    form(v, lobe, {
+    out.push(form(v, lobe, {
       base: i % 2 === 0 ? "#e2423a" : "#fbf4e6",
       shade: i % 2 === 0 ? "#a42a2a" : "#d9cbb3",
       depth: 6,
       weight: 2,
       seed: 640 + i,
-    });
+    }));
   }
-  mark(
+  out.push(mark(
     v,
     [
       [492, backY],
       [858, backY],
     ],
     { color: INK, weight: 2.5, pressure: "even" },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [452, VALANCE],
       [898, VALANCE],
     ],
     { color: INK, weight: 3, pressure: "swell" },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [492, backY],
       [452, VALANCE],
     ],
     { color: INK, weight: 2.5 },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [858, backY],
       [898, VALANCE],
     ],
     { color: INK, weight: 2.5 },
-  );
+  ));
   // name board on the roof
-  form(
+  out.push(form(
     v,
     [
       [566, 106],
@@ -167,24 +170,24 @@ export function awning(v: View): void {
       weight: 3,
       seed: 66,
     },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [600, 146],
       [596, 156],
     ],
     { color: INK, weight: 3, pressure: "even" },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [752, 146],
       [756, 156],
     ],
     { color: INK, weight: 3, pressure: "even" },
-  );
-  v.text(
+  ));
+  out.push(v.text(
     "FRESH FISH",
     { x: 676, y: 127 },
     {
@@ -195,10 +198,11 @@ export function awning(v: View): void {
       align: "center",
       valign: "middle",
     },
-  );
+  ));
+  return out;
 }
 
-export function counter(v: View): void {
+export function counter(v: View): Drawing {
   // wooden front, painted blue, planks brushed
   const front: Vec2[] = [
     [446, TRAY_FRONT],
@@ -206,84 +210,89 @@ export function counter(v: View): void {
     [884, 606],
     [454, 606],
   ];
-  form(v, front, {
-    base: "#3e86b8",
-    shade: "#25587e",
-    light: "#7ab8de",
-    depth: 18,
-    sharp: true,
-    weight: 3,
-    seed: 70,
-  });
-  v.clip(front, () => {
-    for (let i = 1; i < 5; i += 1) {
-      const y = TRAY_FRONT + i * 25;
-      mark(
-        v,
-        [
-          [446, y],
-          [892, y + 1],
-        ],
-        {
-          color: "#1d4766",
-          weight: 2.4,
-          pressure: "even",
-          wobble: 0.8,
-          seed: 700 + i,
-        },
-      );
-    }
-    for (let i = 0; i < 14; i += 1) {
-      const y = TRAY_FRONT + 10 + hash(i + 5) * 110;
-      const x = 460 + hash(i + 9) * 380;
-      mark(
-        v,
-        [
-          [x, y],
-          [x + 60 + hash(i) * 80, y + 2],
-        ],
-        {
-          color: "#5aa0cf",
-          weight: 10,
-          brush: "bristle",
-          opacity: 0.6,
-          seed: 720 + i,
-        },
-      );
-    }
-  });
-  // painted fish emblem on the front
-  fish(v, {
-    at: [670, 548],
-    len: 110,
-    angle: 0,
-    body: "#f4efe4",
-    belly: "#e8dcc5",
-    seed: 760,
-  });
-  tray(v);
+  return [
+    form(v, front, {
+      base: "#3e86b8",
+      shade: "#25587e",
+      light: "#7ab8de",
+      depth: 18,
+      sharp: true,
+      weight: 3,
+      seed: 70,
+    }),
+    v.clip(front, ((): Drawing => {
+      const drawn: Drawing[] = [];
+      for (let i = 1; i < 5; i += 1) {
+        const y = TRAY_FRONT + i * 25;
+        drawn.push(mark(
+          v,
+          [
+            [446, y],
+            [892, y + 1],
+          ],
+          {
+            color: "#1d4766",
+            weight: 2.4,
+            pressure: "even",
+            wobble: 0.8,
+            seed: 700 + i,
+          },
+        ));
+      }
+      for (let i = 0; i < 14; i += 1) {
+        const y = TRAY_FRONT + 10 + hash(i + 5) * 110;
+        const x = 460 + hash(i + 9) * 380;
+        drawn.push(mark(
+          v,
+          [
+            [x, y],
+            [x + 60 + hash(i) * 80, y + 2],
+          ],
+          {
+            color: "#5aa0cf",
+            weight: 10,
+            brush: "bristle",
+            opacity: 0.6,
+            seed: 720 + i,
+          },
+        ));
+      }
+      return drawn;
+    })()),
+    // painted fish emblem on the front
+    fish(v, {
+      at: [670, 548],
+      len: 110,
+      angle: 0,
+      body: "#f4efe4",
+      belly: "#e8dcc5",
+      seed: 760,
+    }),
+    tray(v),
+  ];
 }
 
-function tray(v: View): void {
+function tray(v: View): Drawing {
+  const out: Drawing[] = [];
   const top: Vec2[] = [
     [468, TRAY_BACK],
     [872, TRAY_BACK],
     [892, TRAY_FRONT],
     [446, TRAY_FRONT],
   ];
-  form(v, top, {
+  out.push(form(v, top, {
     base: "#e9f5fa",
     shade: "#b9d6e3",
     depth: 8,
     sharp: true,
     weight: 2.5,
     seed: 80,
-  });
+  }));
   // crushed ice
   for (let i = 0; i < 70; i += 1) {
     const x = 470 + hash(i + 100) * 410;
     const y = TRAY_BACK + 6 + hash(i + 200) * 38;
-    mark(
+    out.push(mark(
       v,
       [
         [x, y],
@@ -295,18 +304,18 @@ function tray(v: View): void {
         brush: "chalk",
         seed: 800 + i,
       },
-    );
+    ));
   }
   // the empty place: a wet, fish-shaped hollow in the ice, and a few drips
-  form(v, ring(GAP[0], GAP[1], 42, 10), {
+  out.push(form(v, ring(GAP[0], GAP[1], 42, 10), {
     base: "#9fc3d4",
     shade: "#7aa5ba",
     depth: 3,
     line: "#6f97ab",
     weight: 1.5,
     seed: 81,
-  });
-  mark(
+  }));
+  out.push(mark(
     v,
     [
       [GAP[0] + 40, GAP[1] - 2],
@@ -314,7 +323,7 @@ function tray(v: View): void {
       [GAP[0] + 58, GAP[1] + 8],
     ],
     { color: "#7aa5ba", weight: 2, seed: 82 },
-  );
+  ));
   // the fish still on ice
   const laid: {
     x: number;
@@ -353,7 +362,7 @@ function tray(v: View): void {
     },
   ];
   for (const [i, f] of laid.entries()) {
-    fish(v, {
+    out.push(fish(v, {
       at: [f.x, f.y],
       len: 84,
       angle: f.a,
@@ -361,24 +370,24 @@ function tray(v: View): void {
       belly: f.belly,
       ...(f.stripes === undefined ? {} : { stripes: f.stripes }),
       seed: 900 + i * 7,
-    });
+    }));
   }
   // lemons
   for (const [x, y] of [
     [582, 474],
     [808, 476],
   ] as const) {
-    form(v, ring(x, y, 10, 7), {
+    out.push(form(v, ring(x, y, 10, 7), {
       base: "#f7d548",
       shade: "#d1a52a",
       light: "#fff3a6",
       depth: 4,
       weight: 1.6,
       seed: x,
-    });
+    }));
   }
   // price card stuck in the ice beside the gap, now pointing at nothing
-  form(
+  out.push(form(
     v,
     [
       [462, 410],
@@ -394,15 +403,15 @@ function tray(v: View): void {
       weight: 2,
       seed: 90,
     },
-  );
-  mark(
+  ));
+  out.push(mark(
     v,
     [
       [497, 438],
       [499, 458],
     ],
     { color: "#8a6a44", weight: 3, pressure: "even" },
-  );
+  ));
   const card = {
     fill: INK,
     font: "Georgia, serif",
@@ -411,6 +420,7 @@ function tray(v: View): void {
     align: "center",
     valign: "middle",
   } as const;
-  v.text("MACKEREL", { x: 498, y: 418 }, card);
-  v.text("£2", { x: 499, y: 431 }, card);
+  out.push(v.text("MACKEREL", { x: 498, y: 418 }, card));
+  out.push(v.text("£2", { x: 499, y: 431 }, card));
+  return out;
 }

@@ -9,7 +9,7 @@
 //
 // Because the colour depends only on position, any rectangle of the map can be
 // computed on its own: a tile is just the field over its square.
-import type { View } from "@ianbicking/canvas-loop";
+import type { Drawing, View } from "@ianbicking/canvas-loop";
 import { type Ground, H, S, W, groundAt, hash } from "./map-tea.js";
 import { ZOOM } from "./paint-tea.js";
 
@@ -209,7 +209,7 @@ function colourAt(x: number, y: number): RGB {
  * computed pixels at the map's zoom. Port (scene core chunk 5):
  * `putImageData` at device resolution became `v.pixels`, placed under the
  * inverse scale so one image pixel is one canvas pixel (draft decision 12). */
-export function paintField(v: View, rect: { x: number; y: number; w: number; h: number }): void {
+export function paintField(v: View, rect: { x: number; y: number; w: number; h: number }): Drawing {
   // The map is drawn at ZOOM (a picture body cannot ask where it is placed).
   const k = ZOOM;
   const dw = Math.round(rect.w * k), dh = Math.round(rect.h * k);
@@ -226,5 +226,5 @@ export function paintField(v: View, rect: { x: number; y: number; w: number; h: 
       }
     }
   });
-  v.at({ scale: 1 / k }, () => v.place(field, Math.round(rect.x * k), Math.round(rect.y * k)));
+  return v.at({ scale: 1 / k }, v.place(field, Math.round(rect.x * k), Math.round(rect.y * k)));
 }

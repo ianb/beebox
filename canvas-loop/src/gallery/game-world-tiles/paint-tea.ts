@@ -1,21 +1,21 @@
 // Painted pieces shared by the ground and the props: irregular blobs, brushed
 // foliage, and sprites painted at the map's zoom so they stay sharp.
-import type { BrushPreset, Picture, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushPreset, Drawing, Picture, Vec2, View } from "@ianbicking/canvas-loop";
 import { hash } from "./map-tea.js";
 
 /** The map is drawn at this multiple of game-world's pixel size. */
 export const ZOOM = 2;
 
 /** A sprite painted at ZOOM× its logical size. `body` draws in logical units. */
-export function paintedSprite(v: View, a: { key: string; w: number; h: number }, body: () => void): Picture {
+export function paintedSprite(v: View, a: { key: string; w: number; h: number }, body: () => Drawing): Picture {
   return v.picture({ key: a.key, width: Math.ceil(a.w * ZOOM), height: Math.ceil(a.h * ZOOM) }, () => {
-    v.at({ scale: ZOOM }, body);
+    return v.at({ scale: ZOOM }, body());
   });
 }
 
 /** Draws a paintedSprite with its top-left at (x, y) in logical units. */
-export function placeSprite(v: View, sprite: Picture, x: number, y: number): void {
-  v.at({ scale: 1 / ZOOM }, () => v.place(sprite, x * ZOOM, y * ZOOM));
+export function placeSprite(v: View, sprite: Picture, x: number, y: number): Drawing {
+  return v.at({ scale: 1 / ZOOM }, v.place(sprite, x * ZOOM, y * ZOOM));
 }
 
 /** An irregular closed outline around (cx, cy): `n` points at jittered radii,
@@ -48,12 +48,13 @@ const LEAF_BRUSHES: Record<string, BrushPreset> = {
 
 /** One clump of leaves: a dark body, then short leaf dabs that hang down and to
  * the right, lighter toward the upper left where the light comes from. */
-function clump(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush: BrushPreset }): void {
+function clump(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush: BrushPreset }): Drawing {
+  const drawn: Drawing[] = [];
   const { cx, cy, r, look, x, y, salt } = a;
   const outline = blob({ cx, cy, r, x, y, salt, n: 11, squash: 0.85, rough: 0.4 });
-  v.curve(outline, true, { fill: look.dark });
+  drawn.push(v.curve(outline, true, { fill: look.dark }));
   const body = outline.map(([px, py]): Vec2 => [cx + (px - cx) * 0.86 - r * 0.08, cy + (py - cy) * 0.8 - r * 0.14]);
-  v.curve(body, true, { fill: look.mid });
+  drawn.push(v.curve(body, true, { fill: look.mid }));
   const n = Math.round(6 + r * r * 0.22);
   for (let k = 0; k < n; k++) {
     const ang = hash(x, y, salt + 100 + k) * Math.PI * 2;
@@ -65,13 +66,15 @@ function clump(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x
     const len = 2.2 + hash(x, y, salt + 400 + k) * 2.2;
     const dir = 1.05 + (hash(x, y, salt + 500 + k) - 0.5) * 0.9;
     const ex = Math.cos(dir) * len, ey = Math.sin(dir) * len;
-    v.line(lx - ex, ly - ey, lx + ex, ly + ey, { stroke, weight: 2.6 + r * 0.12, brush: a.brush, gesture: { pressure: "taper-out" } });
+    drawn.push(v.line(lx - ex, ly - ey, lx + ex, ly + ey, { stroke, weight: 2.6 + r * 0.12, brush: a.brush, gesture: { pressure: "taper-out" } }));
   }
-  rim(v, { ...a, n: Math.round(5 + r * 0.9), size: 1 });
+  drawn.push(rim(v, { ...a, n: Math.round(5 + r * 0.9), size: 1 }));
+  return drawn;
 }
 
 /** Leaves sticking out past an outline, so its edge is ragged instead of a curve. */
-function rim(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush: BrushPreset; n: number; size: number }): void {
+function rim(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush: BrushPreset; n: number; size: number }): Drawing {
+  const drawn: Drawing[] = [];
   const { cx, cy, r, look, x, y, salt, size } = a;
   for (let k = 0; k < a.n; k++) {
     const ang = (k / a.n) * Math.PI * 2 + hash(x, y, salt + 700 + k) * 0.5;
@@ -81,16 +84,18 @@ function rim(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: 
     const sx = cx + ox * r * 0.8, sy = cy + oy * r * 0.8;
     const len = (2.5 + hash(x, y, salt + 720 + k) * 3) * size;
     // Out from the rim and drooping a little.
-    v.line(sx, sy, sx + ox * len, sy + oy * len + 1.2, { stroke, weight: 2.8 * size, brush: a.brush, gesture: { pressure: "taper-out" } });
+    drawn.push(v.line(sx, sy, sx + ox * len, sy + oy * len + 1.2, { stroke, weight: 2.8 * size, brush: a.brush, gesture: { pressure: "taper-out" } }));
   }
+  return drawn;
 }
 
 /** A mass of leaves: a shadow under it, then clumps from the back and bottom up
  * to the front and top, each lit on its upper left. */
-export function foliage(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush?: string }): void {
+export function foliage(v: View, a: { cx: number; cy: number; r: number; look: Leafage; x: number; y: number; salt: number; brush?: string }): Drawing {
+  const out: Drawing[] = [];
   const { cx, cy, r, look, x, y, salt } = a;
   const brush = LEAF_BRUSHES[a.brush ?? "bristle"] ?? { preset: "bristle" };
-  v.curve(blob({ cx: cx + r * 0.05, cy: cy + r * 0.12, r: r * 0.86, x, y, salt, n: 14, squash: 0.85, rough: 0.35 }), true, { fill: look.shadow });
+  out.push(v.curve(blob({ cx: cx + r * 0.05, cy: cy + r * 0.12, r: r * 0.86, x, y, salt, n: 14, squash: 0.85, rough: 0.35 }), true, { fill: look.shadow }));
   const count = Math.max(4, Math.round(r / 3.6));
   const parts: [number, number, number][] = [];
   for (let i = 0; i < count; i++) {
@@ -99,11 +104,12 @@ export function foliage(v: View, a: { cx: number; cy: number; r: number; look: L
     parts.push([cx + Math.cos(ang) * d, cy + Math.sin(ang) * d * 0.8, r * (0.42 + hash(x, y, salt + 620 + i) * 0.2)]);
   }
   // The crown's body, so gaps between clumps read as depth, not holes.
-  v.curve(blob({ cx, cy, r: r * 0.8, x, y, salt: salt + 7, n: 13, squash: 0.85, rough: 0.35 }), true, { fill: look.dark });
-  rim(v, { cx, cy: cy + r * 0.1, r: r * 0.92, look: { ...look, light: look.dark, mid: look.dark, dark: look.shadow }, x, y, salt: salt + 9, brush, n: Math.round(10 + r * 1.4), size: 1 + r * 0.04 });
+  out.push(v.curve(blob({ cx, cy, r: r * 0.8, x, y, salt: salt + 7, n: 13, squash: 0.85, rough: 0.35 }), true, { fill: look.dark }));
+  out.push(rim(v, { cx, cy: cy + r * 0.1, r: r * 0.92, look: { ...look, light: look.dark, mid: look.dark, dark: look.shadow }, x, y, salt: salt + 9, brush, n: Math.round(10 + r * 1.4), size: 1 + r * 0.04 }));
   // Lower clumps first; the top clumps catch the most light and sit in front.
   parts.sort((p, q) => q[1] - p[1]);
-  for (const [i, [px, py, pr]] of parts.entries()) clump(v, { cx: px, cy: py, r: pr, look, x, y, salt: salt + 1000 + i * 50, brush });
+  for (const [i, [px, py, pr]] of parts.entries()) out.push(clump(v, { cx: px, cy: py, r: pr, look, x, y, salt: salt + 1000 + i * 50, brush }));
+  return out;
 }
 
 /** Leafage palettes. */

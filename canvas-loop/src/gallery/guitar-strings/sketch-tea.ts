@@ -2,7 +2,7 @@
 // strum. Each pluck is one sound: `update` records it with a fresh id, and
 // `sound` returns the recent plucks as voices (Karplus–Strong strings). The
 // drawn wobble is a decaying standing wave, not a physics simulation.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Voice } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, View, Voice } from "@ianbicking/canvas-loop";
 
 export const params = {
   tuning: { type: "select", options: ["standard", "open G", "DADGAD"], default: "standard", label: "Tuning", panel: false },
@@ -144,22 +144,24 @@ const WOOD = "#7a4a26";
 const NUT: Style = { fill: "#efe6d2", stroke: "#3b2a1a", weight: 1 };
 const LABEL = { size: 15, fill: "#f5ead6", align: "center", valign: "middle", style: "bold" } as const;
 
-function backdrop(v: View): void {
+function backdrop(v: View): Drawing {
   // Port: `v.paperTexture(0.5)` at the end becomes what was drawn before it, in a group with
   // `effects.paper` (draft section 2).
-  v.group({ effects: { paper: 0.5 } }, () => {
-    v.background("#2b1d14");
-    v.roundRect(30, 70, 580, 260, 18, { fill: v.linearGradient(0, 70, 0, 330, [[0, "#8a5a32"], [0.5, WOOD], [1, "#5e3719"]]) });
+  return v.group({ effects: { paper: 0.5 } }, ((): Drawing => {
+    const parts: Drawing[] = [];
+    parts.push(v.background("#2b1d14"));
+    parts.push(v.roundRect(30, 70, 580, 260, 18, { fill: v.linearGradient(0, 70, 0, 330, [[0, "#8a5a32"], [0.5, WOOD], [1, "#5e3719"]]) }));
     // Grain: a few long brushed strokes.
     for (let i = 0; i < 9; i += 1) {
       const y = 84 + i * 28;
-      v.curve([[40, y], [220, y + 6], [420, y - 5], [600, y + 3]], false, { stroke: "rgba(40, 20, 8, 0.25)", weight: 6, brush: "wash", gesture: { seed: i, faint: true } });
+      parts.push(v.curve([[40, y], [220, y + 6], [420, y - 5], [600, y + 3]], false, { stroke: "rgba(40, 20, 8, 0.25)", weight: 6, brush: "wash", gesture: { seed: i, faint: true } }));
     }
-    v.rect(LEFT - 14, 80, 14, 240, NUT);
-    v.rect(RIGHT, 80, 10, 240, { ...NUT, fill: "#d9cdb5" });
-    for (const x of [190, 310, 420, 515]) v.line(x, 82, x, 318, { stroke: "rgba(225, 210, 180, 0.35)", weight: 2 });
-    v.text("Pluck a string, or drag across them to strum", { x: 320, y: 30 }, { size: 18, fill: "#f5ead6", align: "center", valign: "middle" });
-  });
+    parts.push(v.rect(LEFT - 14, 80, 14, 240, NUT));
+    parts.push(v.rect(RIGHT, 80, 10, 240, { ...NUT, fill: "#d9cdb5" }));
+    for (const x of [190, 310, 420, 515]) parts.push(v.line(x, 82, x, 318, { stroke: "rgba(225, 210, 180, 0.35)", weight: 2 }));
+    parts.push(v.text("Pluck a string, or drag across them to strum", { x: 320, y: 30 }, { size: 18, fill: "#f5ead6", align: "center", valign: "middle" }));
+    return parts;
+  })());
 }
 
 /** How far the string is displaced at `x` now: a decaying standing wave from each recent pluck. */
@@ -177,10 +179,11 @@ function displacement(model: DeepReadonly<Model>, string: number, x: number): nu
   return sum;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.place(v.picture({ key: "backdrop", width: v.width, height: v.height }, () => backdrop(v)), 0, 0);
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.place(v.picture({ key: "backdrop", width: v.width, height: v.height }, () => backdrop(v)), 0, 0));
   v.control("tuning", { x: 470, y: 340, w: 140, h: 28, size: 14 });
-  v.text("Tuning", { x: 460, y: 354 }, { size: 14, fill: "#f5ead6", align: "right", valign: "middle" });
+  out.push(v.text("Tuning", { x: 460, y: 354 }, { size: 14, fill: "#f5ead6", align: "right", valign: "middle" }));
   const tuning = TUNINGS[p.tuning];
   for (let i = 0; i < 6; i += 1) {
     const y = stringY(i);
@@ -191,8 +194,9 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
     }
     const lit = model.hover === i;
     const weight = 3.4 - i * 0.45;
-    v.curve(points, false, { stroke: "rgba(0, 0, 0, 0.35)", weight: weight + 2 });
-    v.curve(points, false, { stroke: lit ? "#fff4c8" : i < 3 ? "#c9a46a" : "#dcdcdc", weight });
-    v.text(tuning[i]?.name ?? "", { x: 42, y }, LABEL);
+    out.push(v.curve(points, false, { stroke: "rgba(0, 0, 0, 0.35)", weight: weight + 2 }));
+    out.push(v.curve(points, false, { stroke: lit ? "#fff4c8" : i < 3 ? "#c9a46a" : "#dcdcdc", weight }));
+    out.push(v.text(tuning[i]?.name ?? "", { x: 42, y }, LABEL));
   }
+  return out;
 }
