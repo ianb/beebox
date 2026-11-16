@@ -1,14 +1,15 @@
 /**
  * Where the marks are in composition source text, for the editor's widgets
- * (`plan:composition-editor`, Track 5). Markdoc decides whether the
+ * (`plan:composition-editor`, Track 5) and the server's bulk edits
+ * (`plan:composition-copy-and-accept-all`). Markdoc decides whether the
  * tags are well formed, but gives inline tags line numbers only, so the
  * character offsets come from pairing the tag delimiters here. When the two
  * disagree, or a tag is unclosed or names an unknown kind, the text is
  * `malformed` and the editor shows it raw.
  */
-import { parseMarkdown } from "@shared/markdoc-config/parse/core";
-import { EDITORIAL_KINDS } from "@shared/composition/tags";
-import { compositionTagMatches } from "@shared/composition/text";
+import { parseMarkdown } from "../../markdoc-config/parse/core.js";
+import { EDITORIAL_KINDS, tagAttr } from "../tags.js";
+import { compositionTagMatches } from "./text.js";
 
 export type MarkKind = (typeof EDITORIAL_KINDS)[number] | "source";
 
@@ -29,12 +30,6 @@ export interface Scan {
   malformed: boolean;
 }
 
-const KIND_ATTR = /\bkind\s*=\s*"([^"]*)"/;
-const NOTE_ATTR = /\bnote\s*=\s*"((?:[^"\\]|\\.)*)"/;
-
-function attr(attrs: string, pattern: RegExp): string | null {
-  return pattern.exec(attrs)?.[1] ?? null;
-}
 
 function markdocTagCount(text: string): number | null {
   let count = 0;
@@ -62,9 +57,9 @@ export function scanMarks(text: string): Scan {
       marks.push({ kind: opener.kind, openFrom: opener.from, openTo: opener.to, closeFrom: from, closeTo: to, note: opener.note });
       continue;
     }
-    const kind: MarkKind | undefined = name === "source" ? "source" : EDITORIAL_KINDS.find((k) => k === attr(attrs, KIND_ATTR));
+    const kind: MarkKind | undefined = name === "source" ? "source" : EDITORIAL_KINDS.find((k) => k === tagAttr(attrs, "kind"));
     if (kind === undefined) return MALFORMED;
-    const mark = { name, kind, from, to, note: attr(attrs, NOTE_ATTR) };
+    const mark = { name, kind, from, to, note: tagAttr(attrs, "note") };
     if (attrs.trimEnd().endsWith("/")) marks.push({ kind, openFrom: from, openTo: to, closeFrom: to, closeTo: to, note: mark.note });
     else open.push(mark);
   }
@@ -91,14 +86,15 @@ export function wholeMarkRange(text: string, { from, to }: { from: number; to: n
   return { from, to };
 }
 
-/** Marks whose words the person can accept as theirs: an agent joiner, or a check on their own words. */
-const ACCEPTABLE: ReadonlySet<MarkKind> = new Set(["joiner", "check"]);
-
 export interface TextChange {
   from: number;
   to: number;
   insert: string;
 }
+
+/** Marks whose words the person can accept as theirs: an agent joiner, or a check on their own words. */
+const ACCEPTABLE: ReadonlySet<MarkKind> = new Set(["joiner", "check"]);
+
 
 /** Wraps each line's words in the delimiters, leaving the line's edge whitespace outside the mark. */
 function wrapLines(text: string, { open, close }: { open: string; close: string }): string {

@@ -13,7 +13,7 @@ import { Transaction } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { errorMessage } from "@shared/error-guards";
-import { normalizeComposition } from "@shared/composition/text";
+import { normalizeComposition } from "@shared/composition/marks/text";
 import { controlAddress } from "@shared/ui-scan/control-address";
 import { trpcClient } from "../../../lib/trpc/client";
 import { displayName } from "../../../lib/display-name";

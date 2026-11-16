@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type TextChange } from "../../../../src/components/MarkdownCardView/compose/scan.js";
+import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type TextChange } from "../../../../src/shared/composition/marks/scan.js";
 
 // ## Inline marks of each kind, with their delimiter ranges
 void test("inline marks", async (t) => {

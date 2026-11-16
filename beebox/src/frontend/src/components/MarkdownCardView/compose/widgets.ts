@@ -12,7 +12,7 @@
 import { EditorSelection, EditorState, Prec, StateField, Transaction, type Extension, type Range, type RangeSet } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, keymap, type DecorationSet } from "@codemirror/view";
 import { el, widgetButton } from "./dom";
-import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
+import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "@shared/composition/marks/scan";
 
 const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note"]);
 

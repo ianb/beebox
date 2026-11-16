@@ -18,6 +18,16 @@ const { Tag } = Markdoc;
 
 export const EDITORIAL_KINDS = ["joiner", "gap", "note", "check"] as const;
 
+const ATTR_PATTERNS = {
+  kind: /\bkind\s*=\s*"([^"]*)"/,
+  note: /\bnote\s*=\s*"((?:[^"\\]|\\.)*)"/,
+} as const;
+
+/** A `kind` or `note` attribute's value in a tag's raw attribute text, or `null`. */
+export function tagAttr(attrs: string, name: keyof typeof ATTR_PATTERNS): string | null {
+  return ATTR_PATTERNS[name].exec(attrs)?.[1] ?? null;
+}
+
 const composition: Schema = {
   validate(node) {
     if (!node.inline) return [];

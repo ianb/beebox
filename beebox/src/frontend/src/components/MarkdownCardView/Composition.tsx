@@ -19,7 +19,7 @@ import { createContext, useCallback, useContext, useId, useMemo, useState, type 
 import { controlAddress } from "@shared/ui-scan/control-address";
 import { findComposition } from "@shared/composition/region";
 import { EDITORIAL_KINDS } from "@shared/composition/tags";
-import { compositionPlainText } from "@shared/composition/text";
+import { draftCopy, openMarks } from "@shared/composition/marks/copy";
 import { Button } from "../ui/Button";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 
@@ -82,9 +82,9 @@ export function useComposeSession({ body, cardPath, composeEditor }: {
 
 export const CompositionCardContext = createContext<CompositionCard | null>(null);
 
-function openMarksSuffix(openMarks: number): string {
-  if (openMarks === 0) return "";
-  return ` (${String(openMarks)} open mark${openMarks === 1 ? "" : "s"})`;
+function openMarksSuffix(count: number): string {
+  if (count === 0) return "";
+  return ` (${String(count)} open mark${count === 1 ? "" : "s"})`;
 }
 
 /** The element the compose editor renders into (`useComposeSession`). */
@@ -97,7 +97,9 @@ export function CompositionBlock({ children }: { children?: ReactNode }): ReactN
   const plain = useMemo(() => {
     if (card === null) return null;
     const region = findComposition(card.body);
-    return "problem" in region ? null : compositionPlainText(region.text);
+    if ("problem" in region) return null;
+    // Until the publishing copy lands (plan:composition-copy-and-accept-all, Track 4), Copy gives the draft form.
+    return { text: draftCopy(region.text), openMarks: openMarks(region.text)?.length ?? 0 };
   }, [card]);
   const canCompose = card !== null && card.composeEditor !== null;
   if (canCompose && card.composing && plain !== null) return <ComposeHost register={card.composeHost} />;

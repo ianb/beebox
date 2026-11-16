@@ -7,8 +7,9 @@
  * timers are passed in, so this runs without a browser in tests.
  */
 import { errorMessage } from "@shared/error-guards";
-import { normalizeComposition } from "@shared/composition/text";
-import { diffToChanges, mergeComposition, type MergeConflict, type TextChange } from "@shared/composition/merge";
+import { normalizeComposition } from "@shared/composition/marks/text";
+import { diffToChanges, mergeComposition, type MergeConflict } from "@shared/composition/merge";
+import type { TextChange } from "@shared/composition/marks/scan";
 
 export type ReadResult = { text: string; regionHash: string } | { problem: string };
 export type WriteResult =

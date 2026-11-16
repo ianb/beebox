@@ -1,11 +1,12 @@
 /**
  * Composition text transforms that keep what it renders
  * (`plan:composition-editor`, Track 1): whitespace normalization,
- * which the editor applies on each read, and the plain-text form that Copy
- * puts on the clipboard.
+ * which the editor applies on each read, and the tag replacement that
+ * Copy's forms (`copy.ts`) build on.
  */
 import type { Node } from "@markdoc/markdoc";
-import { parseMarkdown } from "../markdoc-config/parse/core.js";
+import { parseMarkdown } from "../../markdoc-config/parse/core.js";
+import { tagAttr } from "../tags.js";
 
 interface LineRoles {
   /** Lines written back byte for byte: fences and blockquotes. */
@@ -121,7 +122,9 @@ function replacementFor(chunk: string, { match, mark }: { match: RegExpExecArray
   const lineEnd = newline === -1 ? chunk.length : newline;
   const alone = chunk.slice(lineStart, from).trim() === "" && chunk.slice(to, lineEnd).trim() === "";
   const closing = match.groups?.["close"] !== undefined;
-  if (alone && !closing && newline !== -1 && mark !== "[]") return { from: lineStart, to: newline + 1, with: mark };
+  // A self-closing tag alone on its line is that line's whole content: it keeps the line break.
+  const selfClosing = (match.groups?.["attrs"] ?? "").trimEnd().endsWith("/");
+  if (alone && !closing && !selfClosing && newline !== -1) return { from: lineStart, to: newline + 1, with: mark };
   if (alone && closing && lineStart > 0) return { from: lineStart - 1, to: lineEnd, with: mark };
   return { from, to, with: mark };
 }
@@ -142,29 +145,41 @@ function markLines(text: string): Set<number> {
   return lines;
 }
 
+/** One `editorial` or `source` tag as `compositionPlainText` hands it to `mark`; a closer carries its opener's attributes. */
+export interface PlainTag {
+  name: "editorial" | "source";
+  /** The `kind` attribute; `null` on `source`, or when it is missing. */
+  kind: string | null;
+  note: string | null;
+  closing: boolean;
+  selfClosing: boolean;
+}
+
 /**
  * The composition as plain text for the clipboard. Normalized first, so a
- * hard-wrapped paragraph pastes as one line. `source` tags are removed and
- * their content kept; each `editorial` mark becomes `[content]` and counts
- * as an open mark. Other Markdown stays as written.
+ * hard-wrapped paragraph pastes as one line. Each tag is replaced by what
+ * `mark` returns for it: `""` drops the tag and keeps its words. A tag alone
+ * on its line takes its line break with it. Other Markdown stays as written.
  */
-export function compositionPlainText(text: string): { text: string; openMarks: number } {
+export function compositionPlainText(text: string, { mark }: { mark: (tag: PlainTag) => string }): string {
   const normalized = normalizeComposition(text);
   const tagLines = markLines(normalized);
-  let openMarks = 0;
   const replacements: Replacement[] = [];
+  const open: PlainTag[] = [];
   for (const match of compositionTagMatches(normalized)) {
     const line = normalized.slice(0, match.index).split("\n").length - 1;
     if (!tagLines.has(line)) continue;
-    const closing = match.groups?.["close"] !== undefined;
-    const selfClosing = (match.groups?.["attrs"] ?? "").trimEnd().endsWith("/");
-    let mark = "";
-    if (match.groups?.["name"] === "editorial") {
-      if (!closing) openMarks += 1;
-      if (closing) mark = "]";
-      else mark = selfClosing ? "[]" : "[";
+    const name = match.groups?.["name"] === "source" ? "source" : "editorial";
+    const attrs = match.groups?.["attrs"] ?? "";
+    let tag: PlainTag;
+    if (match.groups?.["close"] === undefined) {
+      tag = { name, kind: tagAttr(attrs, "kind"), note: tagAttr(attrs, "note"), closing: false, selfClosing: attrs.trimEnd().endsWith("/") };
+      if (!tag.selfClosing) open.push(tag);
+    } else {
+      const opener = open.pop();
+      tag = { name, kind: opener?.kind ?? null, note: opener?.note ?? null, closing: true, selfClosing: false };
     }
-    replacements.push(replacementFor(normalized, { match, mark }));
+    replacements.push(replacementFor(normalized, { match, mark: mark(tag) }));
   }
   let plain = "";
   let at = 0;
@@ -172,5 +187,5 @@ export function compositionPlainText(text: string): { text: string; openMarks: n
     plain += normalized.slice(at, replacement.from) + replacement.with;
     at = replacement.to;
   }
-  return { text: plain + normalized.slice(at), openMarks };
+  return plain + normalized.slice(at);
 }

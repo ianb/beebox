@@ -78,7 +78,7 @@ void test("Copy copies the plain text and counts open marks", async (t) => {
   t.check({ name: copy?.getAttribute("aria-label"), labels: labels() }, { name: "Copy composition (2 open marks)", labels: ["Copy (2 open marks)"] });
   await view.act(() => { copy?.click(); });
   await view.act(() => Promise.resolve());
-  t.check({ copied, labels: labels() }, { copied: ["One [more] line.\n\nTwo [and] three."], labels: ["Copied"] });
+  t.check({ copied, labels: labels() }, { copied: ["One [gap: more] line.\n\nTwo [agent: and] three."], labels: ["Copied"] });
 });
 
 void test("Compose shows only for one closed composition, and opens the editor", async (t) => {

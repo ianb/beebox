@@ -67,7 +67,7 @@ its [design](../implemented-plans/composition-editor.design.md).
 |---|---|---|---|
 | Copy, nothing blocks | Act | Copy on the composition block (read view) | None: copies at once |
 | Copy, gaps/notes/checks open | Show what is left and how to resolve it | A popover under Copy | Waits for the person; no publishing copy until resolved |
-| Draft copy for another reader | Act on request | An option in the same popover, always present | Waits to be found |
+| Draft copy for another reader | Act on request | "More copy options" menu beside Copy, in every state; also in the popover | Waits to be found |
 | Find the open marks | Show | "N marked" button in the editor bar, a list menu | Waits to be found; the count is visible while editing |
 | Accept all agent words | Act on request | Editor marks menu only | Waits to be found |
 
@@ -118,9 +118,10 @@ Asking earlier (at Done, at Commit) interrupts writing.
   message says "Done, but the Git commit failed", Save's wording family
   (`src/webapp/trpc/routers/card.ts:292`).
 - A bulk action has nothing to do (no notes, say): its control is not shown.
-- The text is malformed: no Copy, no marks button. The read view checks
-  `scanMarks(...).malformed` as well as `findComposition` (today it checks
-  only the region, `Composition.tsx:97-100`).
+- The text is malformed: the read view keeps its bar with Edit, withholds
+  Copy, and says "A tag in this composition is broken; edit it to fix the
+  tag." Today a null copy hides the whole bar, Edit included
+  (`Composition.tsx:97-118`); malformed becomes its own state.
 - The clipboard write fails: the existing "Copy failed" flash
   (`Composition.tsx:110`). The publishing copy is made inside the click, with
   no server call before it.
@@ -228,10 +229,16 @@ parent plan's.
   plain; defined only when there are no blockers. New.
 - **Draft copy** (`form: "draft"`): every open mark labelled `[agent: …]`,
   `[check: …]`, `[gap: …]`, `[note: …]`. New.
-- **Resolve action**: one of `accept-joiners` (Accept all agent words),
-  `accept-checks` (Keep all checked words), `remove-notes` (Remove all
-  notes). Committed alone with trailer `Composition-Resolve: <action>`. New
-  trailer. Gaps have no bulk action: each needs words or a removal.
+- **Resolve action**: `accept-joiners` (Accept all agent words),
+  `keep-checks` (Keep all checked words), `remove-notes` (Remove all notes),
+  or one mark: `keep-check` / `remove-note` with the mark's `index`.
+  Committed alone with trailer `Composition-Resolve: <action>`. New trailer.
+  Gaps have no resolve action: each needs words or a removal in the editor.
+- **Mark index**: a mark's 0-based place among the open marks in text order.
+  Normalization joins lines but never adds, drops, or reorders marks, so the
+  read view (normalizing the disk text) and the editor (showing normalized
+  text) count the same marks. The receiver checks the kind at that index and
+  refuses on a mismatch.
 - **Marks menu**: the editor bar's "N marked" button and its list. New UI;
   no stored state.
 
@@ -246,7 +253,7 @@ parent plan's.
   now.
 - **Direction:** `git mv`, fix imports, move its test to
   `test/shared/composition/marks.test.ts`. `accept-joiners` and
-  `accept-checks` call `acceptChanges` over the whole text, restricted to
+  `keep-checks` call `acceptChanges` over the whole text, restricted to
   one kind (`acceptChanges` gains a `kinds` option, default both).
   `remove-notes` deletes each note with `wholeMarkRange` spacing, then
   rescans and refuses a malformed result, as `acceptChanges` does.
@@ -256,11 +263,13 @@ parent plan's.
 
 ### Track 2: plain-text forms and blockers
 
-- **What:** `compositionPlainText(text, { form })` with `"publish" |
-  "draft"`, returning `{ text, open: { joiner, check, gap, note } }`
-  (counts) in place of `openMarks`. Publish with any blocker returns
-  `{ blocked: [...] }` with each blocker's kind, its words' first 40
-  characters, and its offset in the region.
+- **What:** `src/shared/composition/copy.ts`: `publishingCopy(text)`
+  returns `ready` with the text, `blocked` with each blocker's kind, words,
+  check reason, and mark index, or `malformed`. `draftCopy(text)` returns the
+  labelled text. `openMarks(text)` lists the open marks for both.
+  `compositionPlainText` (`text.ts`) takes a `mark` function per tag; it
+  cannot import `marks.ts` (which imports it), so the forms live in
+  `copy.ts`.
 - **Why:** `[but]` in a published paste; a gap or note pasted as text.
 - **Direction:** publish removes joiner delimiters and keeps the words.
   Draft writes `[agent: `, `[check: `, `[gap: `, `[note: ` and `]`; a check's
@@ -278,11 +287,15 @@ parent plan's.
 - **Direction:** inside `withCardLock`:
   1. `readCompositionFile`; if the hash differs, `{ status: "conflict" }`.
   2. `resolveEdit(text, action)`; `nothing` or `refused` returns that
-     status. Nothing committed.
+     status. Then the same splice-and-refind check `writeCompositionFile`
+     makes (factored into `checkCompositionWrite`), so a `problem` is found
+     before any commit. Nothing committed.
   3. `stageAndCommitPaths` with Save's message and trailers (the person's
      pending edits). Failure: `{ status: "commit-failed" }`.
   4. `writeCompositionFile` with the edited text and the same hash. Any
-     result other than `written`: `{ status: "conflict", committedEdits }`.
+     `conflict` (an agent wrote in between): `{ status: "conflict",
+     committedEdits }`; `problem` (not reachable after step 2's check, kept
+     distinct): `{ status: "problem", committedEdits }`.
   5. `stageAndCommitPaths` with message `<Action>: <path>` (e.g. "Remove
      notes") and trailers `{"Source": "webapp", "Endpoint":
      "card.resolveComposition", "Composition-Resolve": action}`. Failure:
@@ -308,14 +321,20 @@ parent plan's.
     [Go to it]
   - When two or more of a kind: a row-group action [Remove all notes] /
     [Keep all checked words].
-  "Go to it" calls `startCompose({ at: offset })`; the editor opens with
-  that mark selected and scrolled below the sticky bar. "Remove note" and
-  "Keep as written" on one row need no new path: they call `writeComposition` with the region text edited by the shared
-  helpers (`wholeMarkRange`, `acceptChanges` with a selection at the
-  mark), then commit (`commit: true`), so a one-mark resolution is a Save.
+  "Go to it" calls `startCompose({ at: { index, kind } })`; the editor opens
+  with that mark selected and scrolled below the sticky bar, or with no
+  selection when the kind at that index differs. "Remove note" and "Keep as
+  written" call `resolveComposition` with the one-mark action, so a row has
+  the same outcomes as a bulk action: `resolved` removes the row (the read
+  view re-renders from the file change); `resolved` with `commitWarning`
+  removes it and shows the warning; `conflict` or `problem` keeps the row and
+  shows "The composition just changed. Look again." A "More copy options"
+  menu button beside Copy holds "Copy draft with marks" in every state.
   The Copy button reads "Copy" always; with blockers it carries
   `aria-haspopup="dialog"`. No accept of agent words appears here.
-- **First chunk:** the popover with gap rows, Go to it, and the draft copy.
+- **First chunk:** Copy with the publishing form, the More menu with the
+  draft copy, the malformed state, and the popover with gap rows and Go to
+  it.
 
 ### Track 5: editor marks menu with bulk actions
 
@@ -365,7 +384,9 @@ none
 | Second commit fails after the write | Track 3 test | `commitWarning` | Clear |
 | A blocker counted wrongly, so Copy publishes a gap | Track 2 tests (each kind) | `blocked` result has no text | Silent if wrong; the tests catch it |
 | Malformed marks in a well-formed region reach Copy | Track 4 check | `scanMarks` gate | Clear: no Copy, malformed message |
-| Go to it lands on the wrong mark after the text changed | Track 4 check | offset from the same body the editor reads; mismatch selects nothing | Clear: the editor opens without a selection |
+| Go to it lands on the wrong mark after the text changed | Track 5 test (hard-wrapped paragraph before the mark) | mark index plus kind check; mismatch selects nothing | Clear: the editor opens without a selection |
+| A one-row action meets a conflict or a failed commit | Track 3 tests (same procedure) | row stays on conflict; warning on commit failure | Clear |
+| Malformed marks hide Edit | Track 4 check | malformed is its own read-view state | Clear: message plus Edit |
 | Editor has unflushed text at a bulk action | Track 5 sync test | `flush()` first | Clear on failure ("Not saved") |
 
 No critical gap.
@@ -406,6 +427,13 @@ No critical gap.
   accept both and say so in the commit body. An edit-only commit needs a
   commit built from HEAD's blob with only the region replaced: a new git
   path, for a window measured in milliseconds.
+
+- **Markdown or plain text in the publishing copy.** The publishing copy
+  keeps Markdown syntax (`**bold**`, `[link](url)`, `## Heading`); paragraphs
+  are separated by one blank line. A target such as a social post wants the
+  syntax removed. Boxholder (2026-11-16): "W/ and w/o markdown is another
+  copy option... hrm". Not built in this plan; lean: a later "Copy as plain
+  text" beside the publishing copy, rendering from the Markdoc tree.
 
 ## Knowledge audits
 
