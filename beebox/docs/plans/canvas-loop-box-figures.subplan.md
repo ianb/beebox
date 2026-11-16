@@ -741,6 +741,26 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   corepack's latest pnpm (12.21.0) exits 1 on ignored build scripts
   (`@google/genai`, `agent-browser`, `protobufjs`, and now `webgpu`), which
   would stop the image build; fixed in C3 with `allowBuilds`.
+- **As built (final half).** Notes in `stage5/figures-timing.md`, "Second
+  half". On Ubuntu 24.04 and trixie, from the packed tarball installed as
+  the image installs it (pnpm 12.21.0 with `allowBuilds`, exit 0): the
+  starter at 120 frames takes 1.26–1.29 s cold and about 0.6 s after, the
+  chemistry figure 1.71–1.74 s cold and 1.15–1.30 s after; peak RSS 564 MB
+  at most; the Mesa shader cache 1.4–2.0 MB. All pass; C2's defaults stay.
+  The packed check reports a helper's type error by line. C2's Linux
+  no-driver test passes in a Linux checkout on the Ubuntu VM (21 of 21, none
+  skipped). The Docker image itself was not built: no Docker on this Mac.
+- **The exhibit** ("Figure cards when a figure cannot draw", in the
+  workstream's exhibits): the chemistry figure working in a lesson; "This
+  figure needs updating" embedded and on its own page; "This figure can't
+  draw on this device" in a browser with WebGPU hidden, embedded and on its
+  own page; each at 1280 and 390 pixels wide. The figures were added to the
+  worktree's test1 for the captures and removed after. Taking them showed
+  that inside a card body the prose styles changed the notice's heading
+  size and margins; the notice now sets its own (commit 5897a062b).
+  Codex (`gpt-6-astra`) read the exhibit first: one capture was blank and
+  was retaken, and three captions claimed more than their image showed and
+  were reworded.
 
 ### Production steps — each needs the boxholder's own yes
 

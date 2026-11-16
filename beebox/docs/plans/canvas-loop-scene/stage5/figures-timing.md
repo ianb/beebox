@@ -68,3 +68,43 @@ match; it was not re-run. C5's second half builds the image.
   failure.
 - **Not run here:** the deploy helper's `systemd-run` check as a box user,
   which needs a provisioned host (P1 and P2).
+
+## Second half: the final code (after C4)
+
+Same VMs (3 CPUs, 4 GB, aarch64). The tarball is built from the branch after
+C4, and installed as the Docker image now installs it: `/app/pnpm-workspace.yaml`
+with `allowBuilds`, and corepack's pnpm, which was 12.21.0. The install
+exits 0 with no ignored-build lines on both. The packed install has no
+canvas-loop package, so these runs type-check against the declarations the
+tarball ships (`dist/canvas-loop/`). Scripts and logs:
+`scratch/stage5/c3/vm/` (`setup.sh`, `time.sh`, `*-time.log`).
+
+`bbx figure run --frames 120` (one capture every 30 frames), each run a new
+process. Run 1 of the starter starts with an empty Mesa shader cache; the
+chemistry figure (the `balance-reaction` gallery sketch with a figure
+factory, 800×600) runs after it. Peak RSS is GNU `time`'s.
+
+| OS | Figure | Run 1 | Runs 2–3 | Peak RSS run 1, then | Shader cache after |
+|---|---|---|---|---|---|
+| Ubuntu 24.04 (Mesa 25.2.8) | starter | 1.26 s | 0.61 s | 433 MB, then 325 MB | 1.4 MB |
+| Ubuntu 24.04 | chemistry | 1.74 s | 1.29–1.30 s | 562 MB, then 516 MB | 1.5 MB |
+| Debian 13 trixie (Mesa 25.0.7) | starter | 1.29 s | 0.57–0.59 s | 422 MB, then 302 MB | 1.9 MB |
+| Debian 13 trixie | chemistry | 1.71 s | 1.15 s | 564 MB, then 456 MB | 2.0 MB |
+
+Pass: every run is under 15 s and under 1 GB. C2's defaults stay. Cold
+starter runs are about 0.3 s slower than the first half's (0.90 and 0.97 s),
+which ran no type check.
+
+- **The packed check works.** A figure whose imported helper has a type
+  error fails on both with the helper's `file:line`, from the shipped
+  declarations.
+- **The Linux no-driver test.** In a Linux checkout of the branch on the
+  Ubuntu VM, `test/cli/commands/figure/run.test.ts` passes 21 of 21 with
+  none skipped, including "With no Vulkan driver the run gives the possible
+  causes and a transcript".
+- **The probe** finds `llvmpipe` on both (0.06 s, 157 MB). The probe script
+  is not in the tarball (`src/scripts/` is not in `files`); the server runs
+  it from its workspace checkout, so the deploy helper is unaffected. A
+  packed install has no probe.
+- **The Docker image was not built:** Docker is not installed on this Mac.
+  The install step it runs was checked as above.
