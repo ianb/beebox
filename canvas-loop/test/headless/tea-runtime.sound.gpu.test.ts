@@ -29,7 +29,7 @@ const module: LoadedTeaModule = {
     if (msg.type === "tick" && (msg.frame === 10 || msg.frame === 40)) return { plucks: [...m.plucks, msg.frame] };
     return m;
   },
-  draw: () => {},
+  draw: () => null,
   sound: (model): readonly Voice[] => asModel(model).plucks.map((at, i) => ({ id: `pluck-${i}`, at, kind: "pluck", freq: 196 })),
 };
 
@@ -64,5 +64,5 @@ test("a run with no sound writes no sound files", async () => {
 });
 
 test("a sound export that is not a function is a loader error", () => {
-  assert.throws(() => toTeaModule({ init: () => ({}), update: (m: unknown) => m, draw: () => {}, sound: 42 }), /"sound" export must be a function/u);
+  assert.throws(() => toTeaModule({ init: () => ({}), update: (m: unknown) => m, draw: () => null, sound: 42 }), /"sound" export must be a function/u);
 });

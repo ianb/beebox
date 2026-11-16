@@ -4,7 +4,7 @@
 // `run-case.ts` runs them through the headless runner; renderer.gpu.test.ts asserts.
 // A row with `gap` is not met yet: its proposal needs a decision, and its test
 // is marked todo.
-import type { Msg, ParamValues, ParamsDecl, Picture, View } from "../../../src/core/tea.js";
+import type { Drawing, Msg, ParamValues, ParamsDecl, Picture, View } from "../../../src/core/tea.js";
 
 /** Where the message comes out: a thrown error (and its transcript line), a transcript warning, or nothing. */
 export type Channel = "error" | "warning" | "none";
@@ -31,7 +31,7 @@ export interface DevLoopCase {
   readonly canvas?: { readonly width: number; readonly height: number };
   readonly params?: ParamsDecl;
   readonly update?: (model: Model, msg: Msg) => Model;
-  readonly draw: (...args: [View, Model, ParamValues<ParamsDecl>]) => void;
+  readonly draw: (...args: [View, Model, ParamValues<ParamsDecl>]) => Drawing;
 }
 
 const CASE_FILE = /cases\.ts:\d+/;
@@ -60,8 +60,10 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "warning",
     names: [/picture "icon"/, /two drawings share the key/, CASE_FILE],
     draw: (v) => {
-      v.place(v.picture({ key: "icon", width: 20, height: 20 }, () => v.rect(0, 0, 20, 20, fill)), 10, 10);
-      v.place(v.picture({ key: "icon", width: 20, height: 20 }, () => v.circle(10, 10, 10, fill)), 40, 10);
+      return [
+        v.place(v.picture({ key: "icon", width: 20, height: 20 }, () => v.rect(0, 0, 20, 20, fill)), 10, 10),
+        v.place(v.picture({ key: "icon", width: 20, height: 20 }, () => v.circle(10, 10, 10, fill)), 40, 10),
+      ];
     },
   },
   {
@@ -98,7 +100,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a NaN in an at() transform",
     channel: "error",
     names: [/at/, /rotate/, /NaN/],
-    draw: (v) => v.at({ rotate: Number.NaN }, () => v.rect(0, 0, 10, 10, fill)),
+    draw: (v) => v.at({ rotate: Number.NaN }, v.rect(0, 0, 10, 10, fill)),
   },
   {
     id: "negative-radius",
@@ -133,7 +135,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "an unknown effect name",
     channel: "error",
     names: [/effect/, /"blurr"/, /blur/],
-    draw: (v) => v.group({ effects: loose({ blurr: 2 }) }, () => v.rect(0, 0, 10, 10, fill)),
+    draw: (v) => v.group({ effects: loose({ blurr: 2 }) }, v.rect(0, 0, 10, 10, fill)),
   },
   {
     id: "unknown-style-key",
@@ -154,7 +156,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a glow colour that does not parse",
     channel: "error",
     names: [/glow/, /"warm yellow"/, CASE_FILE],
-    draw: (v) => v.group({ effects: { glow: { blur: 4, color: "warm yellow" } } }, () => v.rect(0, 0, 10, 10, fill)),
+    draw: (v) => v.group({ effects: { glow: { blur: 4, color: "warm yellow" } } }, v.rect(0, 0, 10, 10, fill)),
   },
   {
     id: "view-after-draw",
@@ -168,7 +170,7 @@ export const CASES: readonly DevLoopCase[] = [
     },
     draw: (v) => {
       kept = v;
-      v.rect(0, 0, 5, 5, fill);
+      return v.rect(0, 0, 5, 5, fill);
     },
   },
   {
@@ -179,7 +181,7 @@ export const CASES: readonly DevLoopCase[] = [
     frames: 2,
     draw: (v) => {
       keptPicture ??= v.picture({ key: "dot", width: 10, height: 10 }, () => v.circle(5, 5, 5, fill));
-      v.place(keptPicture, 10, 10);
+      return v.place(keptPicture, 10, 10);
     },
   },
   {
@@ -188,10 +190,10 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "error",
     names: [/frame 0/, /draw/, /boom in group/, CASE_FILE],
     frames: 2,
-    draw: (v, m) => v.group({}, () => {
+    draw: (v, m) => v.group({}, ((): Drawing => {
       if (m.t === 1) throw new RangeError("boom in group");
-      v.rect(0, 0, 10, 10, fill);
-    }),
+      return v.rect(0, 0, 10, 10, fill);
+    })()),
   },
   {
     id: "throw-in-update",
@@ -211,9 +213,9 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "error",
     names: [/draw/, /Promise/, /synchronous/],
     noSketchLine: "the Promise is found after draw has returned, so no sketch frame is on the stack",
-    draw: loose(async (v: View): Promise<void> => {
+    draw: loose(async (v: View): Promise<Drawing> => {
       await Promise.resolve();
-      v.rect(0, 0, 10, 10, fill);
+      return v.rect(0, 0, 10, 10, fill);
     }),
   },
   {
@@ -224,7 +226,7 @@ export const CASES: readonly DevLoopCase[] = [
     draw: (v, m) => {
       const writable: { t: number } = loose(m);
       writable.t = 99;
-      v.rect(0, 0, 10, 10, fill);
+      return v.rect(0, 0, 10, 10, fill);
     },
   },
   {
@@ -240,14 +242,20 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a control for a param that is not declared",
     channel: "error",
     names: [/control\("speed"\)/, /no param named "speed"/],
-    draw: (v) => v.control("speed", { x: 0, y: 0, w: 100 }),
+    draw: (v) => {
+      v.control("speed", { x: 0, y: 0, w: 100 });
+      return null;
+    },
   },
   {
     id: "log-in-picture",
     mistake: "v.log inside a picture body",
     channel: "error",
     names: [/v\.log/, /picture "p"/, /cache/, CASE_FILE],
-    draw: (v) => v.place(v.picture({ key: "p", width: 10, height: 10 }, () => v.log("hi")), 0, 0),
+    draw: (v) => v.place(v.picture({ key: "p", width: 10, height: 10 }, () => {
+      v.log("hi");
+      return null;
+    }), 0, 0),
   },
   {
     id: "function-dep",
@@ -275,7 +283,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a lit group with no light in it",
     channel: "warning",
     names: [/lit group/, /no light/, /ambient/, CASE_FILE],
-    draw: (v) => v.group({ lighting: {} }, () => v.rect(0, 0, 40, 40, fill)),
+    draw: (v) => v.group({ lighting: {} }, v.rect(0, 0, 40, 40, fill)),
   },
   {
     id: "material-unlit",
@@ -339,7 +347,9 @@ export const CASES: readonly DevLoopCase[] = [
     names: [],
     outline: [/place picture "tile" at \(10,0\)/, /place picture "tile" at \(20,0\)/, /^picture "tile" 10×10\n {2}rect \(0,0\) 10×10/m, /^picture "tile" 20×10\n {2}rect \(0,0\) 20×10/m],
     draw: (v) => {
-      for (const w of [10, 20]) v.place(v.picture({ key: "tile", width: w, height: 10 }, () => v.rect(0, 0, w, 10, fill)), w, 0);
+      const parts: Drawing[] = [];
+      for (const w of [10, 20]) parts.push(v.place(v.picture({ key: "tile", width: w, height: 10 }, () => v.rect(0, 0, w, 10, fill)), w, 0));
+      return parts;
     },
   },
   {
@@ -348,28 +358,28 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "warning",
     names: [/clip/, /no area/, CASE_FILE],
     gap: "warn when a clip has no area on every frame of a run (an animated wipe starts at zero width, so one frame is not a mistake)",
-    draw: (v) => v.clip([[0, 0], [20, 0], [40, 0]], () => v.rect(0, 0, 40, 40, fill)),
+    draw: (v) => v.clip([[0, 0], [20, 0], [40, 0]], v.rect(0, 0, 40, 40, fill)),
   },
   {
     id: "offscreen",
     mistake: "drawing entirely off the canvas (a translate in the wrong units)",
     channel: "warning",
     names: [/^\*\*\[frame 0]\*\* warn: rect lands entirely off the 80×60 canvas on frame 0/m, /\(1000,1000\)–\(1040,1040\)/, CASE_FILE],
-    draw: (v) => v.at({ translate: [1000, 1000] }, () => v.rect(0, 0, 40, 40, fill)),
+    draw: (v) => v.at({ translate: [1000, 1000] }, v.rect(0, 0, 40, 40, fill)),
   },
   {
     id: "point-light-no-at",
     mistake: "a point light without a position",
     channel: "error",
     names: [/light \(point\)/, /at: \[x, y]/, CASE_FILE],
-    draw: (v) => v.group({ lighting: {} }, () => v.light(loose({ kind: "point" }))),
+    draw: (v) => v.group({ lighting: {} }, v.light(loose({ kind: "point" }))),
   },
   {
     id: "hatching-no-amount",
     mistake: "hatching without its required amount",
     channel: "error",
     names: [/effects\.hatching\.amount/, /0\.\.1/, /undefined/, CASE_FILE],
-    draw: (v) => v.group({ effects: { hatching: loose({ spacing: 6 }) } }, () => v.rect(0, 0, 40, 40, fill)),
+    draw: (v) => v.group({ effects: { hatching: loose({ spacing: 6 }) } }, v.rect(0, 0, 40, 40, fill)),
   },
   {
     id: "flat-hatching",
@@ -377,7 +387,7 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "warning",
     names: [/hatching/, /tone/],
     gap: "the draft's 'no tone variation' warning: read back the histogram pass the renderer already runs and warn when its range is empty",
-    draw: (v) => v.group({ effects: { hatching: { amount: 0.8 } } }, () => v.rect(0, 0, 80, 60, fill)),
+    draw: (v) => v.group({ effects: { hatching: { amount: 0.8 } } }, v.rect(0, 0, 80, 60, fill)),
   },
   {
     id: "faint-mark",
@@ -398,7 +408,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a blur under a skew (the spike does not support it)",
     channel: "error",
     names: [/skew/, /group/, /not supported/],
-    draw: (v) => v.at({ skew: [0.4, 0] }, () => v.group({ effects: { blur: 3 } }, () => v.rect(10, 10, 20, 20, fill))),
+    draw: (v) => v.at({ skew: [0.4, 0] }, v.group({ effects: { blur: 3 } }, v.rect(10, 10, 20, 20, fill))),
   },
   {
     id: "deep-nesting",
@@ -407,11 +417,13 @@ export const CASES: readonly DevLoopCase[] = [
     names: [/passes/, /cost/],
     gap: "the transcript prints passes per captured frame but flags nothing; warn above a per-frame pass budget (a number to choose, for example 64) and name the deepest group path",
     draw: (v) => {
-      const nest = (n: number): void => {
-        if (n === 0) v.rect(10, 10, 20, 20, fill);
-        else v.group({ effects: { blur: 1 } }, () => nest(n - 1));
+      const nest = (n: number): Drawing => {
+        const nodes: Drawing[] = [];
+        if (n === 0) nodes.push(v.rect(10, 10, 20, 20, fill));
+        else nodes.push(v.group({ effects: { blur: 1 } }, nest(n - 1)));
+        return nodes;
       };
-      nest(30);
+      return nest(30);
     },
   },
   {
@@ -419,7 +431,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "a group opacity above 1 (a percentage)",
     channel: "error",
     names: [/opacity/, /0\.\.1/, /50/],
-    draw: (v) => v.group({ opacity: 50 }, () => v.rect(0, 0, 10, 10, fill)),
+    draw: (v) => v.group({ opacity: 50 }, v.rect(0, 0, 10, 10, fill)),
   },
   // Chunk 3 (canvas-loop-scene-core.subplan.md, Track 3): rows 47 on.
   {
@@ -428,8 +440,10 @@ export const CASES: readonly DevLoopCase[] = [
     channel: "warning",
     names: [/^\*\*\[frame 0]\*\* warn: text "right" overlaps text "left" near \(\d+, \d+\); move one, or place them with v\.textBounds first/m, CASE_FILE],
     draw: (v) => {
-      v.text("left", { x: 10, y: 20 }, { size: 14 });
-      v.text("right", { x: 16, y: 22 }, { size: 14 });
+      return [
+        v.text("left", { x: 10, y: 20 }, { size: 14 }),
+        v.text("right", { x: 16, y: 22 }, { size: 14 }),
+      ];
     },
   },
   {
@@ -446,10 +460,10 @@ export const CASES: readonly DevLoopCase[] = [
     names: [/^\*\*\[frame 2]\*\* warn: 2 lines draw only off the 80×60 canvas while moving, on every frame 0–2: lines \d+:\d+ \(rect\), \d+:\d+ \(circle\) in test\/gpu\/dev-loop\/cases\.ts; a camera that has not reached them, or a wrong sign$/m],
     frames: 3,
     draw: (v, m) =>
-      v.at({ translate: [-10 * m.t, 0] }, () => {
-        v.rect(200, 10, 20, 20, fill);
-        v.circle(260, 30, 8, fill);
-      }),
+      v.at({ translate: [-10 * m.t, 0] }, [
+        v.rect(200, 10, 20, 20, fill),
+        v.circle(260, 30, 8, fill),
+      ]),
   },
   {
     id: "render-node-path",
@@ -458,8 +472,8 @@ export const CASES: readonly DevLoopCase[] = [
     names: [/GpuRenderError/, /skew/, /not supported/, /\(at at #1 > place picture "badge" > group "glow"\)/],
     noSketchLine: "raised while lowering, after draw returned; the node path names where",
     draw: (v) => {
-      const badge = v.picture({ key: "badge", width: 20, height: 20 }, () => v.group({ name: "glow", effects: { blur: 2 } }, () => v.rect(4, 4, 12, 12, fill)));
-      v.at({ skew: [0.4, 0] }, () => v.place(badge, 10, 10));
+      const badge = v.picture({ key: "badge", width: 20, height: 20 }, () => v.group({ name: "glow", effects: { blur: 2 } }, v.rect(4, 4, 12, 12, fill)));
+      return v.at({ skew: [0.4, 0] }, v.place(badge, 10, 10));
     },
   },
   {
@@ -482,7 +496,7 @@ export const CASES: readonly DevLoopCase[] = [
     mistake: "an opaque ink line inside a group at 5% opacity",
     channel: "warning",
     names: [/^\*\*\[frame 0]\*\* warn: faint mark \(line\): it reaches only 5% opacity/m, CASE_FILE],
-    draw: (v) => v.group({ opacity: 0.05 }, () => v.line(5, 5, 70, 50, { stroke: "#000", weight: 3, brush: "ink" })),
+    draw: (v) => v.group({ opacity: 0.05 }, v.line(5, 5, 70, 50, { stroke: "#000", weight: 3, brush: "ink" })),
   },
   {
     id: "opaque-marker",

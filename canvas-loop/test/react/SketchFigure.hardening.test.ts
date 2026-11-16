@@ -16,9 +16,7 @@ function makeModule(update?: () => unknown): PlaygroundModule {
     canvas: { width: 40, height: 30 },
     init: () => ({ t: 0 }),
     update: update ?? ((model: unknown) => model),
-    draw: () => {
-      // no-op
-    },
+    draw: () => null,
   });
 }
 
@@ -35,9 +33,7 @@ test("a throwing frame stops the loop and reports the error exactly once via onE
     update: () => {
       throw boom;
     },
-    draw: () => {
-      // no-op
-    },
+    draw: () => null,
   };
   const errors: unknown[] = [];
   const teardown = mountSketch(asHTMLElement(new FakeElement("div")), { module, gpu: fakeGpu(), onError: (e) => errors.push(e) });

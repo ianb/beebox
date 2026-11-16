@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 import { before, test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import { openTextMeasurer } from "../../src/device/open.js";
-import { UnsupportedCallError } from "../../src/scene/errors.js";
+import { RemovedCallError, UnsupportedCallError } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import type { SceneNode, ShapeNode } from "../../src/scene/nodes.js";
 
@@ -17,16 +17,18 @@ function shapes(nodes: readonly SceneNode[]): ShapeNode[] {
   return nodes.flatMap((n) => (n.kind === "shape" ? [n] : n.kind === "group" || n.kind === "at" || n.kind === "clip" ? shapes(n.children) : []));
 }
 
-function record(draw: (v: View) => void): ShapeNode[] {
+function record(draw: (v: View) => Drawing): ShapeNode[] {
   return shapes(new SceneRecorder({ width: 100, height: 80 }).record(draw).scene.children);
 }
 
 test("a brushed stroke takes the style's blend when set, else the brush's (R1, decision 8)", () => {
-  const line = (v: View, blend?: "normal" | "screen"): void => v.line(0, 0, 10, 0, { stroke: "#000", brush: "marker", ...(blend === undefined ? {} : { blend }) });
+  const line = (v: View, blend?: "normal" | "screen"): Drawing => v.line(0, 0, 10, 0, { stroke: "#000", brush: "marker", ...(blend === undefined ? {} : { blend }) });
   const [plain, normal, screen] = record((v) => {
-    line(v);
-    line(v, "normal");
-    line(v, "screen");
+    return [
+      line(v),
+      line(v, "normal"),
+      line(v, "screen"),
+    ];
   });
   assert.deepEqual([plain?.style.brush?.blend, normal?.style.brush?.blend, screen?.style.brush?.blend], ["multiply", "normal", "screen"]);
   assert.equal(normal?.style.brush?.own, "multiply", "inside a shape's effects layer the marker still multiplies (R2)");
@@ -53,30 +55,30 @@ test("a brushed stroke cannot be dashed: the error says to draw each dash as its
   assert.deepEqual(shapes(scene.children)[0]?.style.dash, [4, 2]);
 });
 
-test("paper lasts to the end of its group, picture or scene; at and clip do not end it (R9)", () => {
-  const line = (v: View): void => v.line(0, 0, 1, 0, { stroke: "#000", brush: "pencil" });
-  const seeds = record((v) => {
-    line(v);
-    v.group({}, () => {
-      v.paper({ seed: 2 });
-      line(v);
-    });
-    line(v);
-    v.at({ translate: [1, 1] }, () => v.paper({ seed: 3 }));
-    line(v);
-  }).map((s) => s.style.brush?.paper.seed);
-  assert.deepEqual(seeds, [1, 2, 1, 3]);
+test("paper applies to the drawing it holds, through at and group; the innermost scope wins (R9, draft 2.11)", () => {
+  const line = (v: View): Drawing => v.line(0, 0, 1, 0, { stroke: "#000", brush: "pencil" });
+  const seeds = record((v) => [
+    line(v),
+    v.paper({ seed: 2 }, [line(v), v.at({ translate: [1, 1] }, line(v)), v.group({}, v.paper({ seed: 3 }, line(v))), line(v)]),
+    line(v),
+  ]).map((s) => s.style.brush?.paper.seed);
+  assert.deepEqual(seeds, [1, 2, 2, 3, 2, 1]);
   // @ts-expect-error -- not a paper field; the runtime must refuse it
-  assert.throws(() => record((v) => v.paper({ grit: 1 })), usage(/paper has no "grit"/));
-  assert.throws(() => record((v) => v.paper({ contrast: 2 })), usage(/paper contrast must be a number in 0..1/));
+  assert.throws(() => record((v) => v.paper({ grit: 1 }, [])), usage(/paper has no "grit"/));
+  assert.throws(() => record((v) => v.paper({ contrast: 2 }, [])), usage(/paper contrast must be a number in 0..1/));
+  // @ts-expect-error -- the retired statement form: no children
+  assert.throws(() => record((v) => v.paper({ seed: 2 })), (e: unknown) => e instanceof RemovedCallError && /v\.paper\(settings, children\)/.test(e.message));
 });
 
 test("a picture's paper is part of its version (R9)", () => {
   const rec = new SceneRecorder({ width: 10, height: 10 });
   let runs = 0;
-  const ask = (seed: number) => (v: View): void => {
-    v.paper({ seed });
-    v.picture({ key: "k", width: 1, height: 1 }, () => void runs++);
+  const ask = (seed: number) => (v: View): Drawing => {
+    v.picture({ key: "k", width: 1, height: 1, paper: { seed } }, () => {
+      runs++;
+      return null;
+    });
+    return null;
   };
   rec.record(ask(1));
   rec.record(ask(1));
@@ -101,11 +103,13 @@ test("text is measured at the call with today's numbers, inside a picture agains
   let width = 0;
   let inside: { x: number } = { x: 0 };
   const scene = rec.record((v) => {
-    for (const [s, box, o] of cases) got.push(v.text(s, box, o));
+    for (const [s, box, o] of cases) got.push(v.textBounds(s, box, o));
     width = v.textWidth("Hello", { size: 20 });
     v.picture({ key: "label", width: 60, height: 20 }, () => {
       inside = v.textBounds("Off the edge", { x: 55, y: 0 }, { keepInside: true });
+      return null;
     });
+    return cases.map(([s, box, o]) => v.text(s, box, o));
   }).scene;
   // The Skia painter's numbers for the same calls, recorded before it was deleted.
   assert.deepEqual(got, [

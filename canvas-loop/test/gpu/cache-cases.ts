@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
@@ -49,20 +49,22 @@ export async function sameWarmColdOff(handle: GpuHandle, a: { scenes: readonly S
 const star: Vec2[] = Array.from({ length: 10 }, (_, i): Vec2 => [40 + (i % 2 === 0 ? 30 : 12) * Math.cos(-Math.PI / 2 + (Math.PI * i) / 5), 40 + (i % 2 === 0 ? 30 : 12) * Math.sin(-Math.PI / 2 + (Math.PI * i) / 5)]);
 
 /** A wide still picture: shapes, a gradient, brushes, a blurred group, a nested clip, text, a nested picture. */
-function room(v: View, text: boolean): void {
-  v.rect(0, 0, 1400, 220, { fill: v.linearGradient(0, 0, 1400, 0, [[0, "#e8dcc0"], [1, "#9ab0c8"]]) });
+function room(v: View, text: boolean): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.rect(0, 0, 1400, 220, { fill: v.linearGradient(0, 0, 1400, 0, [[0, "#e8dcc0"], [1, "#9ab0c8"]]) }));
   for (let x = 20; x < 1400; x += 90) {
-    v.roundRect(x, 40, 60, 120, 8, { fill: "#6a5040", stroke: "#2a1a10", weight: 2 });
-    v.curve([[x, 175], [x + 30, 160], [x + 60, 178]], false, { stroke: "#1d2a44", weight: 3, brush: "ink" });
+    out.push(v.roundRect(x, 40, 60, 120, 8, { fill: "#6a5040", stroke: "#2a1a10", weight: 2 }));
+    out.push(v.curve([[x, 175], [x + 30, 160], [x + 60, 178]], false, { stroke: "#1d2a44", weight: 3, brush: "ink" }));
   }
-  v.clip(v.curvePath(star, true), () => {
-    v.rect(0, 0, 90, 90, { fill: "#c04a7a" });
-    v.clip([[[20, 20], [60, 20], [60, 60], [20, 60]], [[50, 50], [80, 50], [80, 80], [50, 80]]], () => v.circle(45, 45, 40, { fill: "#2f6b3a" }));
-  });
-  v.group({ effects: { blur: 3, shadow: { x: 4, y: 4, blur: 3, color: "rgba(0,0,0,0.5)" } } }, () => v.circle(700, 100, 40, { fill: "#e0b02a" }));
-  v.curve([[300, 200], [700, 190], [1100, 205]], false, { stroke: "#b0563a", weight: 10, brush: "chalk" });
-  if (text) v.text("kept tiles", { x: 1000, y: 20 }, { size: 18, fill: "#1a1410", align: "left", valign: "top" });
-  v.place(v.picture({ key: "badge", width: 40, height: 40 }, () => v.circle(20, 20, 16, { fill: "#3a6a9a", stroke: "#fff", weight: 3 })), 1200, 120);
+  out.push(v.clip(v.curvePath(star, true), [
+    v.rect(0, 0, 90, 90, { fill: "#c04a7a" }),
+    v.clip([[[20, 20], [60, 20], [60, 60], [20, 60]], [[50, 50], [80, 50], [80, 80], [50, 80]]], v.circle(45, 45, 40, { fill: "#2f6b3a" })),
+  ]));
+  out.push(v.group({ effects: { blur: 3, shadow: { x: 4, y: 4, blur: 3, color: "rgba(0,0,0,0.5)" } } }, v.circle(700, 100, 40, { fill: "#e0b02a" })));
+  out.push(v.curve([[300, 200], [700, 190], [1100, 205]], false, { stroke: "#b0563a", weight: 10, brush: "chalk" }));
+  if (text) out.push(v.text("kept tiles", { x: 1000, y: 20 }, { size: 18, fill: "#1a1410", align: "left", valign: "top" }));
+  out.push(v.place(v.picture({ key: "badge", width: 40, height: 40 }, () => v.circle(20, 20, 16, { fill: "#3a6a9a", stroke: "#fff", weight: 3 })), 1200, 120));
+  return out;
 }
 
 /** A sketch-like sequence: a still room panned by whole and by fractional pixels and back, live shapes moving over it, a smudge in a clip. */
@@ -71,19 +73,21 @@ export function movingFrames(a: { text: TextMeasurer | undefined }): Scene[] {
   const rec = new SceneRecorder(size, a.text === undefined ? {} : { text: a.text });
   const pans = [0, -3, -3, -3.25, -40, -0.5, -3.25, -3, -900, -900.5];
   return pans.map((pan, f) => rec.record((v) => {
-    v.background("#20242a");
+    const out: Drawing[] = [];
+    out.push(v.background("#20242a"));
     const pic = v.picture({ key: "room", width: 1400, height: 220 }, () => room(v, a.text !== undefined));
-    v.at({ translate: [pan, 20] }, () => v.place(pic, 0, 0));
-    v.at({ translate: [100 + f * 7.5, 120] }, () => {
-      v.circle(0, 0, 18, { fill: "#d8a070", stroke: "#1e1812", weight: 2 });
-      v.curve([[-20, 30], [0, 50], [20, 30]], false, { stroke: "#1e1812", weight: 3, brush: "ink" });
-    });
-    v.line(10, 240, 10 + f * 30, 240, { stroke: "#e8b83a", weight: 4, brush: "pencil" });
-    v.clip([[200, 150], [390, 150], [390, 250], [200, 250]], () => {
-      v.rect(200, 150, 190, 100, { fill: "#3a7a7a" });
-      v.rect(200, 180, 190, 20, { fill: "#e8d8b0" });
-      v.curve([[210, 170], [300, 200], [380, 230]], false, { stroke: "#000", weight: 16, brush: "smudge", gesture: { pressure: "even", wobble: 0 } });
-    });
+    out.push(v.at({ translate: [pan, 20] }, v.place(pic, 0, 0)));
+    out.push(v.at({ translate: [100 + f * 7.5, 120] }, [
+      v.circle(0, 0, 18, { fill: "#d8a070", stroke: "#1e1812", weight: 2 }),
+      v.curve([[-20, 30], [0, 50], [20, 30]], false, { stroke: "#1e1812", weight: 3, brush: "ink" }),
+    ]));
+    out.push(v.line(10, 240, 10 + f * 30, 240, { stroke: "#e8b83a", weight: 4, brush: "pencil" }));
+    out.push(v.clip([[200, 150], [390, 150], [390, 250], [200, 250]], [
+      v.rect(200, 150, 190, 100, { fill: "#3a7a7a" }),
+      v.rect(200, 180, 190, 20, { fill: "#e8d8b0" }),
+      v.curve([[210, 170], [300, 200], [380, 230]], false, { stroke: "#000", weight: 16, brush: "smudge", gesture: { pressure: "even", wobble: 0 } }),
+    ]));
+    return out;
   }).scene);
 }
 

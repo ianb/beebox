@@ -71,9 +71,7 @@ const gpu = fakeGpu();
 // Module-scope sketch functions: an inline `module={{…}}` literal rebuilt from
 // these on every render carries new WRAPPER identity but stable sub-identities.
 const update = (m: unknown): unknown => m;
-const draw = (): void => {
-  // no-op
-};
+const draw = (): null => null;
 // A stable module-scope params reference — the documented contract is that
 // `params` is keyed by reference too, so it must be stable to stay stable.
 const params = {};

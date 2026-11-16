@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { LinearGradient, PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { Effects, View } from "../../src/core/tea.js";
+import type { Drawing, Effects, View } from "../../src/core/tea.js";
 import { UnsupportedCallError } from "../../src/scene/errors.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { sceneOutline } from "../../src/scene/outline.js";
@@ -19,8 +19,10 @@ test("arguments are captured by value: changing them after the call changes noth
   const effects: { blur: number } = { blur: 2 };
   const style: { fill: string; effects: Effects } = { fill: "#ff0000", effects };
   const scene = recorder().record((v) => {
-    v.polygon(points, style);
-    v.path(commands, { stroke: gradient });
+    return [
+      v.polygon(points, style),
+      v.path(commands, { stroke: gradient }),
+    ];
   }).scene;
   points[0] = [99, 99];
   commands[1] = ["line", 50, 50];
@@ -38,16 +40,19 @@ test("arguments are captured by value: changing them after the call changes noth
   assert.deepEqual(path.style.stroke.stops[0], [0, "#000"]);
 });
 
-test("scopes nest as nodes; at composes its matrix and toCanvas follows it", () => {
+test("scopes nest as nodes; at composes its matrix and toCanvas composes the scopes it is given", () => {
   let corner: Vec2 = [0, 0];
+  let nested: Vec2 = [0, 0];
   const rec = recorder().record((v) => {
-    v.at({ translate: [10, 20], scale: 2 }, () => {
-      corner = v.toCanvas([1, 1]);
-      v.group({ opacity: 0.5, name: "g", clip: [[0, 0], [5, 0], [0, 5]] }, () => v.clip([[[0, 0], [4, 0], [0, 4]], [[1, 1], [3, 1], [1, 3]]], () => v.circle(0, 0, 3, { fill: "red" })));
-    });
-    v.mask(() => v.rect(0, 0, 5, 5, { fill: "#000" }), () => v.rect(0, 0, 5, 5, { fill: "blue" }));
+    corner = v.toCanvas([1, 1], [{ translate: [10, 20], scale: 2 }]);
+    nested = v.toCanvas([1, 0], [{ translate: [10, 20] }, { rotate: Math.PI / 2 }]);
+    return [
+      v.at({ translate: [10, 20], scale: 2 }, v.group({ opacity: 0.5, name: "g", clip: [[0, 0], [5, 0], [0, 5]] }, v.clip([[[0, 0], [4, 0], [0, 4]], [[1, 1], [3, 1], [1, 3]]], v.circle(0, 0, 3, { fill: "red" })))),
+      v.mask(v.rect(0, 0, 5, 5, { fill: "#000" }), v.rect(0, 0, 5, 5, { fill: "blue" })),
+    ];
   });
   assert.deepEqual(corner, [12, 22]);
+  assert.ok(Math.abs(nested[0] - 10) < 1e-9 && Math.abs(nested[1] - 21) < 1e-9, `outermost first: ${nested.join(",")}`);
   const at = rec.scene.children[0];
   assert.ok(at?.kind === "at");
   assert.deepEqual(at.matrix, [2, 0, 0, 2, 10, 20]);
@@ -68,7 +73,7 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
     v.snapshot("peak");
     v.cursor("pointer");
     v.cursor("grab");
-    v.at({ translate: [5, 5] }, () => v.debugBox("hit", 0, 0, 2, 2));
+    return v.at({ translate: [5, 5] }, v.debugBox("hit", 0, 0, 2, 2));
   });
   assert.deepEqual(rec.logs, ["x 1"]);
   assert.deepEqual(rec.snapshots, ["peak"]);
@@ -77,9 +82,9 @@ test("log, snapshot, cursor and debugBox are kept beside the scene", () => {
 });
 
 test("a call or option the recorder does not support yet throws, naming it", () => {
-  const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => void][] = [
+  const cases: [string, (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]) => Drawing][] = [
     // style.dash was here until the drawing-round fixes; a blur under a skew is the one left.
-    ["group effects under a rotated non-uniform scale or a skew", (v) => v.at({ skew: [0.4, 0] }, () => v.group({ effects: { blur: 2 } }, () => v.rect(0, 0, 1, 1, { fill: "#000" })))],
+    ["group effects under a rotated non-uniform scale or a skew", (v) => v.at({ skew: [0.4, 0] }, v.group({ effects: { blur: 2 } }, v.rect(0, 0, 1, 1, { fill: "#000" })))],
   ];
   for (const [call, draw] of cases) {
     assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof UnsupportedCallError && e.call === call && e.message.includes("not supported yet"), call);
@@ -95,11 +100,11 @@ test("misuse fails at the call, as today", () => {
   // @ts-expect-error -- not a blend mode
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", blend: "plus" })), usage(/blend "plus" is not one of/));
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: -1 } })), usage(/group effects: blur must be a number ≥ 0/));
-  assert.throws(() => recorder().record((v) => v.group({ opacity: 2 }, () => {})), /group opacity must be a number in 0..1/);
+  assert.throws(() => recorder().record((v) => v.group({ opacity: 2 }, [])), /group opacity must be a number in 0..1/);
 });
 
 test("a number that is not finite is an error naming the call's argument", () => {
-  const cases: readonly [(v: View) => void, RegExp][] = [
+  const cases: readonly [(v: View) => Drawing, RegExp][] = [
     [(v) => v.line(0, 0, Number.NaN, 4, { stroke: "#000" }), /line: x2 must be a finite number, got NaN/],
     [(v) => v.triangle(0, 0, 1, 1, 2, Infinity, { fill: "#000" }), /triangle: y3 must be a finite number, got Infinity/],
     [(v) => v.path([["move", 0, 0], ["line", 1, Number.NaN]], { stroke: "#000" }), /path: command 1 \(line\) must hold finite numbers/],
@@ -107,7 +112,7 @@ test("a number that is not finite is an error naming the call's argument", () =>
     // @ts-expect-error -- a line command with three numbers
     [(v) => v.path([["move", 0, 0], ["line", 1, 2, Number.NaN]], { stroke: "#000" }), /path: command 1 \(line\) must hold finite numbers, got \[line, 1, 2, NaN]/],
     [(v) => v.ellipse(0, 0, 3, -1, { fill: "#000" }), /ellipse: ry must be a finite number ≥ 0, got -1/],
-    [(v) => v.at({ scale: [1, Number.NaN] }, () => {}), /at: scale\[1] must be a finite number, got NaN/],
+    [(v) => v.at({ scale: [1, Number.NaN] }, []), /at: scale\[1] must be a finite number, got NaN/],
   ];
   for (const [draw, message] of cases) assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof SketchUsageError && message.test(e.message));
 });

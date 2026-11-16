@@ -5,23 +5,25 @@ import assert from "node:assert/strict";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { MarkPeak, Pixels } from "../../src/gpu/renderer.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { Scene } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 
 // Marks of every source the composite draw reads (ink coverage pieces, painted
 // and tinted dabs, bristle runs), under blends that take the fixed and the
 // backdrop pipelines, clipped, in groups and in a placed picture.
-function marks(v: View): void {
-  v.background("#f4efe6");
-  v.line(10, 10, 150, 20, { stroke: "rgba(20,40,90,0.6)", weight: 6, brush: "ink" });
-  v.line(10, 30, 150, 40, { stroke: "#b03a2e", weight: 8, brush: "pencil" });
-  v.line(10, 50, 150, 60, { stroke: "#2a9d8f", weight: 10, brush: "chalk", blend: "multiply" });
-  v.line(10, 70, 150, 80, { stroke: "#264653", weight: 12, brush: "bristle" });
-  v.line(10, 90, 150, 100, { stroke: "#e9c46a", weight: 14, brush: "airbrush", blend: "screen" });
-  v.group({ opacity: 0.5 }, () => v.clip([[50, 30], [110, 30], [110, 90], [50, 90]], () => v.line(40, 40, 120, 90, { stroke: "#000", weight: 9, brush: "marker" })));
+function marks(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f4efe6"));
+  out.push(v.line(10, 10, 150, 20, { stroke: "rgba(20,40,90,0.6)", weight: 6, brush: "ink" }));
+  out.push(v.line(10, 30, 150, 40, { stroke: "#b03a2e", weight: 8, brush: "pencil" }));
+  out.push(v.line(10, 50, 150, 60, { stroke: "#2a9d8f", weight: 10, brush: "chalk", blend: "multiply" }));
+  out.push(v.line(10, 70, 150, 80, { stroke: "#264653", weight: 12, brush: "bristle" }));
+  out.push(v.line(10, 90, 150, 100, { stroke: "#e9c46a", weight: 14, brush: "airbrush", blend: "screen" }));
+  out.push(v.group({ opacity: 0.5 }, v.clip([[50, 30], [110, 30], [110, 90], [50, 90]], v.line(40, 40, 120, 90, { stroke: "#000", weight: 9, brush: "marker" }))));
   const tile = v.picture({ key: "tile", width: 40, height: 40 }, () => v.line(4, 4, 36, 36, { stroke: "#7a4", weight: 5, brush: "pencil" }));
-  v.place(tile, 110, 70);
+  out.push(v.place(tile, 110, 70));
+  return out;
 }
 
 /** Render `scene`; each measured mark's peak by its line's first y, in increasing y. */
@@ -47,10 +49,12 @@ export async function peakVariantSameBytes(handle: GpuHandle): Promise<void> {
 
 export async function peaksMeasured(handle: GpuHandle): Promise<void> {
   const scene = new SceneRecorder({ width: 80, height: 60 }).record((v) => {
-    v.line(5, 10, 70, 10, { stroke: "#000", weight: 6, brush: "marker" });
-    v.line(5, 25, 70, 25, { stroke: "rgba(0,0,0,0.5)", weight: 6, brush: "ink" });
-    v.group({ opacity: 0.25 }, () => v.group({ opacity: 0.5 }, () => v.line(5, 40, 70, 40, { stroke: "#000", weight: 6, brush: "ink" })));
-    v.line(5, 50, 70, 50, { stroke: "#000", weight: 6, brush: "ink", erase: true });
+    return [
+      v.line(5, 10, 70, 10, { stroke: "#000", weight: 6, brush: "marker" }),
+      v.line(5, 25, 70, 25, { stroke: "rgba(0,0,0,0.5)", weight: 6, brush: "ink" }),
+      v.group({ opacity: 0.25 }, v.group({ opacity: 0.5 }, v.line(5, 40, 70, 40, { stroke: "#000", weight: 6, brush: "ink" }))),
+      v.line(5, 50, 70, 50, { stroke: "#000", weight: 6, brush: "ink", erase: true }),
+    ];
   }).scene;
   const { peaks } = await renderWith(handle, { scene, peaks: true });
   const [marker, half, nested, ...rest] = peaks;
@@ -66,7 +70,7 @@ export async function keptPictureFaint(handle: GpuHandle): Promise<void> {
   const frame = (opacity: number): Scene =>
     recorder.record((v) => {
       const sign = v.picture({ key: "sign", width: 60, height: 20 }, () => v.line(4, 10, 56, 10, { stroke: "#000", weight: 4, brush: "ink" }));
-      v.place(sign, 10, 20, { opacity });
+      return v.place(sign, 10, 20, { opacity });
     }).scene;
   const renderer = new GpuRenderer(handle, { peaks: true });
   try {

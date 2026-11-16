@@ -26,6 +26,7 @@ import type { ExpandRequest } from "../../src/scene/brush/expand.js";
 import { BrushExpander } from "../../src/scene/brush/expand.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
 import type { Mat, Scene } from "../../src/scene/nodes.js";
+import type { Drawing } from "../../src/core/tea.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { brushRequests } from "../brushes/requests.js";
 import type { GoldenBristleContour, GoldenRun } from "../brushes/golden.js";
@@ -343,8 +344,10 @@ test("a bristle larger than one buffer fails, naming its call", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   const s = scene({ width: 600, height: 40 }, (v) => {
-    v.line(4, 10, 12, 10, { stroke: "#000", weight: 4, brush: "bristle" });
-    v.line(10, 20, 590, 30, { stroke: "#000", weight: 4, brush: "bristle" });
+    return [
+      v.line(4, 10, 12, 10, { stroke: "#000", weight: 4, brush: "bristle" }),
+      v.line(10, 20, 590, 30, { stroke: "#000", weight: 4, brush: "bristle" }),
+    ];
   });
   const renderer = new GpuRenderer(handle, { brushLimit: 16384 });
   try {
@@ -364,7 +367,7 @@ test("a one-sample bristle dot far below 0.05 brush px is drawn at a high pixel 
   const handle = needGpu(t);
   if (handle === undefined) return;
   // Weight 0.1, even pressure: radius 0.05 brush px, 1.6 device px at ratio 32. The stamp rule would skip it.
-  const draw = (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]): void => v.line(5, 5, 5, 5, { stroke: "#000", weight: 0.1, brush: "bristle", gesture: { pressure: "even" } });
+  const draw = (v: Parameters<Parameters<SceneRecorder["record"]>[0]>[0]): Drawing => v.line(5, 5, 5, 5, { stroke: "#000", weight: 0.1, brush: "bristle", gesture: { pressure: "even" } });
   const s = scene({ width: 10, height: 10 }, draw);
   const w = await compareStrips(handle, { reqs: brushRequests(s, handle.colors), ratio: 32, golden: "dot-r32" });
   reportStrips(t, { w, what: "dot, ratio 32" });

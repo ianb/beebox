@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
-import type { ParamsDecl } from "../../src/core/tea.js";
+import type { Drawing, ParamsDecl } from "../../src/core/tea.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 
@@ -20,13 +20,17 @@ async function recorder(values: () => Record<string, number | string>): Promise<
 test("controls are kept in call order with their values, and stand-ins sit above the scene, outside any group", async () => {
   let c1 = 3;
   const rec = (await recorder(() => ({ reaction: "rust", c1 }))).record((v) => {
-    v.at({ translate: [50, 10] }, () => {
-      v.group({ opacity: 0.5 }, () => {
-        v.rect(0, 0, 10, 10, { fill: "#000" });
+    const out: Drawing[] = [];
+    out.push(v.at({ translate: [50, 10] }, [
+      v.group({ opacity: 0.5 }, ((): Drawing => {
+        const drawn: Drawing[] = [];
+        drawn.push(v.rect(0, 0, 10, 10, { fill: "#000" }));
         v.control("c1", { x: 20, y: 30, w: 40, h: 24 });
-      });
-    });
+        return drawn;
+      })()),
+    ]));
     v.control("reaction", { x: 100, y: 0, w: 90 });
+    return out;
   });
   c1 = 7;
   assert.deepEqual(rec.controls.map((c) => [c.name, c.box.x, c.box.y]), [["c1", 20, 30], ["reaction", 100, 0]]);
@@ -45,7 +49,17 @@ test("controls are kept in call order with their values, and stand-ins sit above
 
 test("a control inside a picture body, or for an undeclared param, is an error", async () => {
   const r = await recorder(() => ({ reaction: "water", c1: 1 }));
-  assert.throws(() => r.record((v) => v.picture({ key: "p", width: 10, height: 10 }, () => v.control("c1", { x: 0, y: 0, w: 10 }))), SketchUsageError);
+  assert.throws(
+    () =>
+      r.record((v) => {
+        v.picture({ key: "p", width: 10, height: 10 }, () => {
+          v.control("c1", { x: 0, y: 0, w: 10 });
+          return null;
+        });
+        return null;
+      }),
+    SketchUsageError,
+  );
   assert.throws(() => r.record((v) => v.control("c9", { x: 0, y: 0, w: 10 })), /no param named "c9"/);
   const bare = new SceneRecorder({ width: 10, height: 10 });
   assert.throws(() => bare.record((v) => v.control("c1", { x: 0, y: 0, w: 10 })), /no param named "c1"/);
@@ -58,6 +72,7 @@ test("a stand-in is the bare input, as the browser shows it: a slider's track, t
     v.control("c1", { x: 10, y: 10, w: 300, h: 24 });
     v.control("c2", { x: 10, y: 50, w: 300, h: 24 });
     v.control("on", { x: 10, y: 90, w: 300, h: 24 });
+    return null;
   });
   const texts = rec.standIns.flatMap((n) => (n.kind === "text" ? [n.content] : []));
   assert.deepEqual(texts, ["4", "2.5"], "values only: no param label, and none beside the checkbox");

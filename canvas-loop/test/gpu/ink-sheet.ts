@@ -4,6 +4,7 @@
 // 1.0 px (ratio 1). Drawn through today's View to freeze the Skia reference
 // (test/fixtures/scene-parity/ink-thin.png) and through the draft's for the
 // GPU render; a row's tone is compared by its mean.
+import type { Drawing } from "../../src/core/paint.js";
 import type { SheetView } from "./brush-sheet.js";
 
 export const THIN_SIZE = { width: 320, height: 96 } as const;
@@ -14,15 +15,17 @@ const LINES = [[0.6, "even"], [1, "even"], [0.6, "taper"], [1, "taper"]] as cons
 /** Each row's band and what it holds. */
 export const THIN_ROWS: readonly { name: string; y: number; h: number }[] = LINES.map(([w, p], r) => ({ name: `width ${w}, ${p}`, y: r * ROW, h: ROW }));
 
-export function drawThin(v: SheetView): void {
-  v.background(PAPER);
+export function drawThin(v: SheetView): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background(PAPER));
   for (const [r, [weight, pressure]] of LINES.entries()) {
     const cy = r * ROW + ROW / 2;
     const style = { stroke: "#1d2a44", weight, brush: "ink", gesture: { pressure, wobble: 0 } } as const;
-    v.curve([[10, cy + 0.25], [100, cy + 0.25]], false, style);
-    v.curve([[110, cy - 8], [200, cy + 7]], false, style);
-    v.curve([[210, cy + 6], [250, cy - 8], [310, cy + 5]], false, style);
+    out.push(v.curve([[10, cy + 0.25], [100, cy + 0.25]], false, style));
+    out.push(v.curve([[110, cy - 8], [200, cy + 7]], false, style));
+    out.push(v.curve([[210, cy + 6], [250, cy - 8], [310, cy + 5]], false, style));
   }
+  return out;
 }
 
 /** A row's tone: the mean darkening below the paper's luminance, over its band (premultiplied over an opaque ground). */

@@ -122,6 +122,7 @@ function countedModule(params: SketchFigureProps["module"]["params"]): Counted {
     },
     draw: () => {
       counts.draws += 1;
+      return null;
     },
   };
   return { module, counts };

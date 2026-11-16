@@ -6,8 +6,7 @@
 // out under its transform and inside its box.
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
-import type { TextBounds } from "../../src/core/paint.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import { sketchFrames } from "../../src/scene/call-site.js";
@@ -37,10 +36,12 @@ test("light warnings found after draw name the line of the call that made the no
   let group = 0;
   let place = 0;
   const { warnings } = testing().record((v) => {
-    v.light({ kind: "point", at: [1, 2] }); light = here();
-    v.group({ name: "room", lighting: {} }, () => v.rect(0, 0, 10, 10, { fill: "#888" })); group = here();
+    const out: Drawing[] = [];
+    out.push(v.light({ kind: "point", at: [1, 2] })); light = here();
+    out.push(v.group({ name: "room", lighting: {} }, v.rect(0, 0, 10, 10, { fill: "#888" }))); group = here();
     const lamp = v.picture({ key: "lamp", width: 10, height: 10 }, () => v.light({ kind: "point", at: [5, 5] }));
-    v.place(lamp, 0, 0); place = here();
+    out.push(v.place(lamp, 0, 0)); place = here();
+    return out;
   });
   assert.equal(warnings.length, 3, warnings.join("\n"));
   const [l, g, p] = warnings;
@@ -54,14 +55,18 @@ test("light warnings found after draw name the line of the call that made the no
 
 test("effects under a skew are refused after draw, naming the node path; in testing mode its stack is the call's", () => {
   let line = 0;
-  const draw = (v: View): void => {
-    v.rect(0, 0, 1, 1, { fill: "#000" });
-    v.at({ skew: [0.4, 0] }, () => {
-      v.clip([[0, 0], [5, 0], [5, 5]], () => {
-        v.circle(0, 0, 1, { fill: "#000" });
-        v.group({ name: "g", effects: { blur: 2 } }, () => v.rect(0, 0, 1, 1, { fill: "#000" })); line = here();
-      });
-    });
+  const draw = (v: View): Drawing => {
+    return [
+      v.rect(0, 0, 1, 1, { fill: "#000" }),
+      v.at({ skew: [0.4, 0] }, [
+        v.clip([[0, 0], [5, 0], [5, 5]], ((): Drawing => {
+          const drawn: Drawing[] = [];
+          drawn.push(v.circle(0, 0, 1, { fill: "#000" }));
+          drawn.push(v.group({ name: "g", effects: { blur: 2 } }, v.rect(0, 0, 1, 1, { fill: "#000" }))); line = here();
+          return drawn;
+        })()),
+      ]),
+    ];
   };
   const refused = (sited: boolean) => (e: unknown): boolean => {
     assert.ok(e instanceof UnsupportedCallError, String(e));
@@ -76,7 +81,7 @@ test("effects under a skew are refused after draw, naming the node path; in test
   assert.throws(() => testing().record(draw), refused(true));
   assert.throws(() => new SceneRecorder({ width: 100, height: 80 }).record(draw), refused(false), "no line outside testing mode");
   assert.throws(
-    () => testing().record((v) => v.at({ skew: [0.4, 0] }, () => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: 1 } }))),
+    () => testing().record((v) => v.at({ skew: [0.4, 0] }, v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: 1 } }))),
     (e: unknown) => e instanceof UnsupportedCallError && e.call === "rect effects under a rotated non-uniform scale or a skew" && e.message.endsWith(" in at #1 > rect #1"),
   );
 });
@@ -85,7 +90,8 @@ test("a draw that throws gives its error and none of the walk's warnings", () =>
   const notes: string[] = [];
   const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true, onNote: (n) => notes.push(`${n.kind}: ${n.message}`) });
   assert.throws(() => rec.record((v) => {
-    v.light({ kind: "point", at: [1, 2] });
+    const out: Drawing[] = [];
+    out.push(v.light({ kind: "point", at: [1, 2] }));
     throw new Error("the sketch's own bug");
   }), /the sketch's own bug/);
   assert.deepEqual(notes, []);
@@ -98,33 +104,30 @@ function textsOf(nodes: readonly SceneNode[]): TextNode[] {
   return nodes.flatMap((n) => (n.kind === "text" ? [n] : n.kind === "at" || n.kind === "clip" || n.kind === "group" ? textsOf(n.children) : []));
 }
 
-test("keepInside text is laid out by the walk under its transform; v.text returns where it lands", () => {
+test("keepInside text is laid out by the walk under its transform", () => {
   const options = { size: 16, keepInside: true } as const;
-  let returned: TextBounds | undefined;
-  let measured: TextBounds | undefined;
+  let width = 0;
   const { scene } = testing({ width: 200, height: 100 }).record((v) => {
-    v.at({ translate: [150, 0], scale: 2 }, () => {
-      measured = v.textBounds("Label", { x: 20, y: 25 }, options);
-      returned = v.text("Label", { x: 20, y: 25 }, options);
-    });
+    width = v.textWidth("Label", options);
+    return v.at({ translate: [150, 0], scale: 2 }, v.text("Label", { x: 20, y: 25 }, options));
   });
-  assert.ok(returned !== undefined && measured !== undefined);
-  assert.deepEqual(returned, measured);
-  // In local units the right edge sits at (200 - 4 - 150) / 2.
-  assert.ok(Math.abs(returned.x + returned.w - 23) < 0.01, `right edge: ${returned.x + returned.w}`);
   const [node] = textsOf(scene.children);
   assert.ok(node !== undefined);
-  assert.ok(Math.abs((node.lines[0]?.xs[0] ?? Number.NaN) - returned.x) < 0.01, `the drawn label starts where v.text said: ${node.lines[0]?.xs[0]} vs ${returned.x}`);
+  // In local units the right edge sits at (200 - 4 - 150) / 2.
+  const x = node.lines[0]?.xs[0] ?? Number.NaN;
+  assert.ok(Math.abs(x + width - 23) < 0.01, `right edge: ${x + width}`);
 });
 
 test("keepInside text in a picture body keeps inside the picture's box; changing the options after the call moves nothing", () => {
   const options: { size: number; keepInside: true } = { size: 12, keepInside: true };
   const { scene } = testing({ width: 200, height: 100 }).record((v) => {
     const card = v.picture({ key: "card", width: 60, height: 30 }, () => {
-      v.text("Off the edge", { x: 55, y: 0 }, options);
+      const parts: Drawing[] = [];
+      parts.push(v.text("Off the edge", { x: 55, y: 0 }, options));
       options.size = 40;
+      return parts;
     });
-    v.place(card, 0, 0);
+    return v.place(card, 0, 0);
   });
   const placed = scene.children[0];
   assert.ok(placed?.kind === "place" && placed.picture.kind === "picture");
@@ -135,11 +138,13 @@ test("keepInside text in a picture body keeps inside the picture's box; changing
 });
 
 test("an effects-scale error inside a picture body names the picture first", () => {
-  const draw = (v: View): void => {
+  const draw = (v: View): Drawing => {
+    const out: Drawing[] = [];
     for (const key of ["a", "b"]) {
       const skew = key === "b" ? 0.4 : 0;
-      v.place(v.picture({ key, width: 10, height: 10, deps: [skew] }, () => v.at({ skew: [skew, 0] }, () => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: 1 } }))), 0, 0);
+      out.push(v.place(v.picture({ key, width: 10, height: 10, deps: [skew] }, () => v.at({ skew: [skew, 0] }, v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: 1 } }))), 0, 0));
     }
+    return out;
   };
   assert.throws(() => new SceneRecorder({ width: 100, height: 80 }).record(draw), (e: unknown) => e instanceof UnsupportedCallError && e.message.endsWith(' in picture "b" [0.4] > at #1 > rect #1'), "the path starts at the picture");
 });

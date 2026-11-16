@@ -4,7 +4,7 @@
 // today's bounds.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { TextBounds, TextBox, TextOptions } from "../../src/core/paint.js";
+import type { Drawing, TextBounds, TextBox, TextOptions } from "../../src/core/paint.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { readFileSync } from "node:fs";
@@ -55,10 +55,15 @@ export async function textParity(handle: GpuHandle, a: { t: TestContext; text: T
   const refBounds: readonly TextBounds[] = JSON.parse(readFileSync(new URL("../fixtures/scene-parity/text-bounds.json", import.meta.url), "utf8"));
   const sceneBounds: unknown[] = [];
   const gpu = await renderOnce(handle, { size, text: a.text, draw: (v) => {
-    v.background(BG);
-    for (const [s, box, o] of LABELS) sceneBounds.push(v.text(s, box, o));
+    const out: Drawing[] = [];
+    out.push(v.background(BG));
+    for (const [s, box, o] of LABELS) {
+      sceneBounds.push(v.textBounds(s, box, o));
+      out.push(v.text(s, box, o));
+    }
+    return out;
   } });
-  assert.deepEqual(sceneBounds, refBounds, "v.text returns today's bounds");
+  assert.deepEqual(sceneBounds, refBounds, "v.textBounds gives today's bounds");
   const refPx = await frozen("text", size);
   const worst = { shift: 0, size: 0 };
   for (const [i, b] of refBounds.entries()) {
@@ -81,8 +86,10 @@ export async function textParity(handle: GpuHandle, a: { t: TestContext; text: T
 export async function rotatedText(handle: GpuHandle, text: TextMeasurer): Promise<void> {
   const size = { width: 120, height: 80 };
   const px = await renderOnce(handle, { size, text, ratio: 2, draw: (v) => {
-    v.background(BG);
-    v.at({ translate: [20, 20], rotate: 0.5 }, () => v.text("turned", { x: 0, y: 0 }, { size: 16 }));
+    return [
+      v.background(BG),
+      v.at({ translate: [20, 20], rotate: 0.5 }, v.text("turned", { x: 0, y: 0 }, { size: 16 })),
+    ];
   } });
   const box = inkBox(px.data, { width: px.width, rect: [0, 0, px.width, px.height] });
   assert.ok(box !== undefined && box[3] - box[1] > 40, "rotated text draws, its ink running downhill");

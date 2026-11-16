@@ -9,10 +9,10 @@ const module = toTeaModule({
   canvas: { width: 20, height: 20 },
   init: () => ({ frame: 0 }),
   update: (model: { frame: number }, msg: Msg) => (msg.type === "tick" ? { frame: msg.frame } : model),
-  draw: (v: { background: (c: string) => void; log: (...a: unknown[]) => void }, model: { frame: number }) => {
-    v.background("#000000");
+  draw: (v: { background: (c: string) => unknown; log: (...a: unknown[]) => void }, model: { frame: number }) => {
     if (model.frame === 2) console.log("via-console");
     if (model.frame === 3) v.log("via-log");
+    return v.background("#000000");
   },
 });
 

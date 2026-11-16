@@ -39,8 +39,9 @@ async function sketch(): Promise<{ attached: ReturnType<typeof attachSketch>; ru
       // A still figure: ticks and moves return the same model.
       return msg.type === "mousedown" ? { ...model, clicks: model.clicks + 1 } : model;
     },
-    draw: (): void => {
+    draw: () => {
       counts.draws += 1;
+      return null;
     },
   };
   const canvas = new FakeElement("canvas");

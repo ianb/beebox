@@ -15,7 +15,7 @@ test("mouse and key events reach update as msgs in script order, with their coor
       if (line !== undefined) logged.push(line);
       return model;
     },
-    draw: () => {},
+    draw: () => null,
   });
   const dir = tmpDir();
   await teaRun(
@@ -44,7 +44,7 @@ test("events within one frame are logged in file order", async () => {
       if (msg.type === "mousemove") console.log(`move ${msg.x}`);
       return model;
     },
-    draw: () => {},
+    draw: () => null,
   });
   const dir = tmpDir();
   await teaRun(

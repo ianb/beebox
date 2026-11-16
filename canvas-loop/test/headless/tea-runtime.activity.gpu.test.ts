@@ -20,7 +20,7 @@ const sketch = toTeaModule({
     u.handled("pick");
     return { picks: model.picks + 1 };
   },
-  draw: () => {},
+  draw: () => null,
   activity: (model: Model) => ({ picks: model.picks }),
 });
 
@@ -41,7 +41,7 @@ test("the transcript shows activity(model) after a handled input and a param cha
 });
 
 test("an activity export that is not a function is a load error", () => {
-  assert.throws(() => toTeaModule({ init: () => ({}), update: (m: object) => m, draw: () => {}, activity: 3 }), /"activity" export must be a function/u);
+  assert.throws(() => toTeaModule({ init: () => ({}), update: (m: object) => m, draw: () => null, activity: 3 }), /"activity" export must be a function/u);
 });
 
 test("an activity object that cannot be serialized leaves its line off, warns once, and the run continues", async () => {
@@ -54,7 +54,7 @@ test("an activity object that cannot be serialized leaves its line off, warns on
       u.handled("pick");
       return { picks: model.picks + 1 };
     },
-    draw: () => {},
+    draw: () => null,
     activity: (model: Model) => {
       const data: Record<string, unknown> = { picks: model.picks };
       data["self"] = data;

@@ -147,7 +147,7 @@ test("onEvent carries the engagement verdict (handled names + model-reference ch
           return model; // tick, mousemove, …: same reference
       }
     },
-    draw: (): void => {},
+    draw: () => null,
   };
   const canvas = new FakeElement("canvas");
   canvas.width = 50;
@@ -201,7 +201,7 @@ test("update returning undefined (an unhandled msg) surfaces a typed error namin
     // runtime's #fold guard throws UnhandledMsgError rather than letting the
     // model silently become undefined and crash draw downstream.
     update: () => {},
-    draw: () => {},
+    draw: () => null,
   };
   // The loop catches a frame throw, stops, and reports the error once (default
   // channel is console.error). The first rAF frame only establishes the time
@@ -257,7 +257,7 @@ test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, pa
       if (msg.type !== "tick") seen.push(`${msg.type} ${"x" in msg ? `${msg.x},${msg.y}` : ""}`.trim());
       return model;
     },
-    draw: (): void => {},
+    draw: () => null,
   };
   const canvas = new FakeElement("canvas");
   canvas.width = 50;
@@ -295,7 +295,7 @@ test("a handled event carries the sketch's activity(model) after the fold; a thr
       u.handled("pick");
       return { hits: model.hits + 1 };
     },
-    draw: (): void => {},
+    draw: () => null,
     activity,
   });
   const run = async (raw: object): Promise<EmittedEvent[]> => {

@@ -16,9 +16,11 @@ import { SceneRecorder } from "../../src/scene/recorder/view.js";
 const nodes = (): readonly SceneNode[] =>
   new SceneRecorder({ width: 100, height: 100 }).record((v) => {
     const p = v.picture({ key: "citizen", width: 10, height: 10 }, () => v.circle(5, 5, 4, { fill: "#000" }));
-    v.group({ name: "room" }, () => v.place(p, 0, 0));
-    v.group({}, () => v.rect(0, 0, 1, 1, { fill: "#000" }));
-    v.at({ translate: [1, 1] }, () => v.line(0, 0, 5, 5, { stroke: "#000", brush: "pencil" }));
+    return [
+      v.group({ name: "room" }, v.place(p, 0, 0)),
+      v.group({}, v.rect(0, 0, 1, 1, { fill: "#000" })),
+      v.at({ translate: [1, 1] }, v.line(0, 0, 5, 5, { stroke: "#000", brush: "pencil" })),
+    ];
   }).scene.children;
 
 test("node names: a group by its name, a placement by its picture's key, other nodes by call and place among siblings", () => {

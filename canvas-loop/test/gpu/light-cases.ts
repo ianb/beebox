@@ -4,7 +4,7 @@
 // group, and exposure with the tone curve.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { Light, Lighting, Material, View } from "../../src/core/tea.js";
+import type { Drawing, Light, Lighting, Material, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
@@ -22,18 +22,18 @@ function linear(px: Pixels, at: readonly [number, number]): number {
 }
 
 /** A grey floor lit by one low lamp at the left; `body` adds casters. */
-function room(body: (v: View) => void) {
+function room(body: (v: View) => Drawing) {
   const lighting: Lighting = { ambient: "#202020", shadows: "hard" };
-  return (v: View): void => v.group({ lighting }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    body(v);
-    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 600 });
-  });
+  return (v: View): Drawing => v.group({ lighting }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    body(v),
+    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 600 }),
+  ]);
 }
 
 /** A caster at half alpha blocks half the light; an erased part of a caster casts no shadow. */
 export async function castingAmount(handle: GpuHandle, t: TestContext): Promise<void> {
-  const caster = (fill: string) => (v: View): void => v.rect(70, 30, 20, 60, { fill, material: CASTER });
+  const caster = (fill: string) => (v: View): Drawing => v.rect(70, 30, 20, 60, { fill, material: CASTER });
   const open = await renderOnce(handle, { size, draw: room(() => {}) });
   const full = await renderOnce(handle, { size, draw: room(caster("#606060")) });
   const half = await renderOnce(handle, { size, draw: room(caster("rgba(96,96,96,0.5)")) });
@@ -45,8 +45,10 @@ export async function castingAmount(handle: GpuHandle, t: TestContext): Promise<
   assert.ok(f < 0.3 * u, "a caster shadows the floor behind it");
   assert.ok(Math.abs(h - (u + f) / 2) < 0.05 * u, "a caster at half alpha blocks half the light");
   const erased = await renderOnce(handle, { size, draw: room((v) => {
-    caster("#606060")(v);
-    v.rect(70, 52, 20, 16, { fill: "#000", erase: true });
+    return [
+      caster("#606060")(v),
+      v.rect(70, 52, 20, 16, { fill: "#000", erase: true }),
+    ];
   }) });
   assert.ok(Math.abs(linear(erased, p) - u) < 0.03 * u, "behind the erased strip the floor is lit");
   // Soft shadows march through casters blurred by 3 px; this point's ray passes well clear of the erased strip.
@@ -67,11 +69,13 @@ function shadowEnd(pair: { lit: Pixels; open: Pixels }, x0: number): number {
  */
 export async function casterHeights(handle: GpuHandle, t: TestContext): Promise<void> {
   const wide = { width: 320, height: 120 };
-  const scene = (a: { h: number | true | undefined; lamp: number }) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 320, 120, { fill: "#a0a0a0" });
-    if (a.h !== undefined) v.rect(74, 40, 6, 40, { fill: "#606060", material: { castsShadow: a.h } });
-    v.light({ kind: "point", at: [30, 60], height: a.lamp, energy: 2, reach: 900 });
-  });
+  const scene = (a: { h: number | true | undefined; lamp: number }) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, ((): Drawing => {
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 320, 120, { fill: "#a0a0a0" }));
+    if (a.h !== undefined) out.push(v.rect(74, 40, 6, 40, { fill: "#606060", material: { castsShadow: a.h } }));
+    out.push(v.light({ kind: "point", at: [30, 60], height: a.lamp, energy: 2, reach: 900 }));
+    return out;
+  })());
   const end = async (h: number | true, lamp: number): Promise<number> => {
     const open = await renderOnce(handle, { size: wide, draw: scene({ h: undefined, lamp }) });
     return shadowEnd({ lit: await renderOnce(handle, { size: wide, draw: scene({ h, lamp }) }), open }, 81);
@@ -88,12 +92,12 @@ export async function casterHeights(handle: GpuHandle, t: TestContext): Promise<
 
 /** A pixel on a caster sits at its height: a shorter caster in front does not shadow it, a taller one does. */
 export async function casterOnCaster(handle: GpuHandle): Promise<void> {
-  const scene = (front: number) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.rect(100, 20, 60, 80, { fill: "#a0a0a0", material: { castsShadow: 30 } });
-    v.rect(70, 40, 6, 40, { fill: "#606060", material: { castsShadow: front } });
-    v.light({ kind: "point", at: [30, 60], height: 120, energy: 2, reach: 900 });
-  });
+  const scene = (front: number) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    v.rect(100, 20, 60, 80, { fill: "#a0a0a0", material: { castsShadow: 30 } }),
+    v.rect(70, 40, 6, 40, { fill: "#606060", material: { castsShadow: front } }),
+    v.light({ kind: "point", at: [30, 60], height: 120, energy: 2, reach: 900 }),
+  ]);
   const shorter = await renderOnce(handle, { size, draw: scene(20) });
   const taller = await renderOnce(handle, { size, draw: scene(80) });
   const p = [104, 60] as const;
@@ -102,12 +106,12 @@ export async function casterOnCaster(handle: GpuHandle): Promise<void> {
 
 /** The material layer, exposure and tone curve are deterministic: a second render and a fresh renderer agree, at ratio 1 and 2. */
 export async function litRepeats(handle: GpuHandle): Promise<void> {
-  const draw = (v: View): void => v.group({ lighting: { ambient: "#202030", shadows: "soft", exposure: 0.7, toneCurve: 0.8 } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a08f80" });
-    v.roundRect(60, 30, 40, 60, 8, { fill: "#6b2e2a", material: { bevel: 6, shine: 0.3, castsShadow: 45 } });
-    v.circle(140, 70, 14, { fill: "#4f78a8", material: { castsShadow: true } });
-    v.light({ kind: "point", at: [30, 50], height: 70, color: "#ffd0a0", energy: 2.5, reach: 300 });
-  });
+  const draw = (v: View): Drawing => v.group({ lighting: { ambient: "#202030", shadows: "soft", exposure: 0.7, toneCurve: 0.8 } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a08f80" }),
+    v.roundRect(60, 30, 40, 60, 8, { fill: "#6b2e2a", material: { bevel: 6, shine: 0.3, castsShadow: 45 } }),
+    v.circle(140, 70, 14, { fill: "#4f78a8", material: { castsShadow: true } }),
+    v.light({ kind: "point", at: [30, 50], height: 70, color: "#ffd0a0", energy: 2.5, reach: 300 }),
+  ]);
   const renderer = new GpuRenderer(handle);
   try {
     const scene = new SceneRecorder(size).record(draw).scene;
@@ -131,12 +135,14 @@ export async function toneCurve(handle: GpuHandle, t: TestContext): Promise<void
   const wide = { width: 300, height: 90 };
   const curves = [0, 0.5, 1];
   const px = await renderOnce(handle, { size: wide, draw: (v) => {
+    const out: Drawing[] = [];
     for (const [k, curve] of curves.entries()) {
-      v.group({ lighting: { ambient: "#000000", exposure: 1, toneCurve: curve } }, () => {
-        v.rect(0, k * 30, 300, 30, { fill: "#c0c0c0" });
-        v.light({ kind: "point", at: [0, k * 30 + 15], height: 20, energy: 3, reach: 320 });
-      });
+      out.push(v.group({ lighting: { ambient: "#000000", exposure: 1, toneCurve: curve } }, [
+        v.rect(0, k * 30, 300, 30, { fill: "#c0c0c0" }),
+        v.light({ kind: "point", at: [0, k * 30 + 15], height: 20, energy: 3, reach: 320 }),
+      ]));
     }
+    return out;
   } });
   const row = (k: number): number[] => Array.from({ length: 300 }, (_, x) => rgbaAt(px, [x, k * 30 + 15])[1] ?? 0);
   const [clip = [], half = [], film = []] = curves.map((_, k) => row(k));
@@ -156,11 +162,13 @@ const rel = (pair: { px: Pixels; open: Pixels }, at: readonly [number, number]):
 
 /** `castsShadow: 0` casts nothing: a zero-height floor still receives another caster's shadow. */
 export async function zeroHeightFloor(handle: GpuHandle): Promise<void> {
-  const draw = (caster: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0", material: { castsShadow: 0 } });
-    if (caster) v.rect(70, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } });
-    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 900 });
-  });
+  const draw = (caster: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, ((): Drawing => {
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 200, 120, { fill: "#a0a0a0", material: { castsShadow: 0 } }));
+    if (caster) out.push(v.rect(70, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } }));
+    out.push(v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 900 }));
+    return out;
+  })());
   const open = await renderOnce(handle, { size, draw: draw(false) });
   const lit = await renderOnce(handle, { size, draw: draw(true) });
   assert.ok(rel({ px: lit, open }, [100, 60]) < 0.3, `the floor behind the caster is in shadow (${rel({ px: lit, open }, [100, 60]).toFixed(3)} of open)`);
@@ -168,12 +176,12 @@ export async function zeroHeightFloor(handle: GpuHandle): Promise<void> {
 
 /** A taller caster touching a shorter one shadows its top without a gap between them; the shorter one never shadows itself. */
 export async function touchingCasters(handle: GpuHandle): Promise<void> {
-  const draw = (front: number) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.rect(100, 20, 60, 80, { fill: "#a0a0a0", material: { castsShadow: 30 } });
-    v.rect(90, 40, 10, 40, { fill: "#606060", material: { castsShadow: front } });
-    v.light({ kind: "point", at: [30, 60], height: 120, energy: 2, reach: 900 });
-  });
+  const draw = (front: number) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    v.rect(100, 20, 60, 80, { fill: "#a0a0a0", material: { castsShadow: 30 } }),
+    v.rect(90, 40, 10, 40, { fill: "#606060", material: { castsShadow: front } }),
+    v.light({ kind: "point", at: [30, 60], height: 120, energy: 2, reach: 900 }),
+  ]);
   const short = await renderOnce(handle, { size, draw: draw(20) });
   const tall = await renderOnce(handle, { size, draw: draw(80) });
   const p = [110, 60] as const;
@@ -184,11 +192,13 @@ export async function touchingCasters(handle: GpuHandle): Promise<void> {
 /** A thin, very tall caster under a low directional light shadows the floor far beyond it: the march does not skip it. */
 export async function thinTallCaster(handle: GpuHandle): Promise<void> {
   const wide = { width: 400, height: 120 };
-  const draw = (caster: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 400, 120, { fill: "#a0a0a0" });
-    if (caster) v.rect(100, 20, 6, 80, { fill: "#606060", material: { castsShadow: 1024 } });
-    v.light({ kind: "directional", direction: 0, height: 30, energy: 2 });
-  });
+  const draw = (caster: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, ((): Drawing => {
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 400, 120, { fill: "#a0a0a0" }));
+    if (caster) out.push(v.rect(100, 20, 6, 80, { fill: "#606060", material: { castsShadow: 1024 } }));
+    out.push(v.light({ kind: "directional", direction: 0, height: 30, energy: 2 }));
+    return out;
+  })());
   const open = await renderOnce(handle, { size: wide, draw: draw(false) });
   const lit = await renderOnce(handle, { size: wide, draw: draw(true) });
   for (const y of [40, 60, 80]) assert.ok(rel({ px: lit, open }, [246, y]) < 0.3, `the floor 140 px past the caster is in shadow at y ${y} (${rel({ px: lit, open }, [246, y]).toFixed(3)} of open)`);
@@ -196,11 +206,11 @@ export async function thinTallCaster(handle: GpuHandle): Promise<void> {
 
 /** Hard shadows read casters as drawn: across a shadow's side, almost no pixel is part-lit; soft shadows blur it. */
 export async function hardEdges(handle: GpuHandle, t: TestContext): Promise<void> {
-  const draw = (shadows: "hard" | "soft" | "none") => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.rect(70, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } });
-    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 900 });
-  });
+  const draw = (shadows: "hard" | "soft" | "none") => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    v.rect(70, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } }),
+    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 900 }),
+  ]);
   const open = await renderOnce(handle, { size, draw: draw("none") });
   const between = async (shadows: "hard" | "soft"): Promise<number> => {
     const px = await renderOnce(handle, { size, draw: draw(shadows) });
@@ -222,11 +232,13 @@ export async function hardEdges(handle: GpuHandle, t: TestContext): Promise<void
 /** A caster made taller than 1024 by a transform keeps its full height: 800 under scale 2 stands 1600. */
 export async function scaledTallCaster(handle: GpuHandle, t: TestContext): Promise<void> {
   const wide = { width: 320, height: 120 };
-  const draw = (caster: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    v.rect(0, 0, 320, 120, { fill: "#a0a0a0" });
-    if (caster) v.at({ scale: 2 }, () => v.rect(37, 20, 3, 20, { fill: "#606060", material: { castsShadow: 800 } }));
-    v.light({ kind: "point", at: [30, 60], height: 2000, energy: 20, reach: 4000 });
-  });
+  const draw = (caster: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, ((): Drawing => {
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 320, 120, { fill: "#a0a0a0" }));
+    if (caster) out.push(v.at({ scale: 2 }, v.rect(37, 20, 3, 20, { fill: "#606060", material: { castsShadow: 800 } })));
+    out.push(v.light({ kind: "point", at: [30, 60], height: 2000, energy: 20, reach: 4000 }));
+    return out;
+  })());
   const open = await renderOnce(handle, { size: wide, draw: draw(false) });
   const end = shadowEnd({ lit: await renderOnce(handle, { size: wide, draw: draw(true) }), open }, 81);
   t.diagnostic(`shadow ends at x ${end} (1600 tall: 280; clamped to 1024: 132)`);
@@ -235,12 +247,14 @@ export async function scaledTallCaster(handle: GpuHandle, t: TestContext): Promi
 
 /** Shadow grain is keyed to canvas pixels: a far-off shape that moves the lit layer's bounds leaves shadows unchanged. */
 export async function stableShadowGrain(handle: GpuHandle): Promise<void> {
-  const draw = (extra: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "soft" } }, () => {
-    v.rect(60, 0, 140, 120, { fill: "#a0a0a0" });
-    if (extra) v.rect(0, 0, 4, 4, { fill: "#a0a0a0" });
-    v.rect(90, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } });
-    v.light({ kind: "point", at: [70, 60], height: 60, energy: 2, reach: 900 });
-  });
+  const draw = (extra: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "soft" } }, ((): Drawing => {
+    const out: Drawing[] = [];
+    out.push(v.rect(60, 0, 140, 120, { fill: "#a0a0a0" }));
+    if (extra) out.push(v.rect(0, 0, 4, 4, { fill: "#a0a0a0" }));
+    out.push(v.rect(90, 30, 10, 60, { fill: "#606060", material: { castsShadow: 30 } }));
+    out.push(v.light({ kind: "point", at: [70, 60], height: 60, energy: 2, reach: 900 }));
+    return out;
+  })());
   for (const ratio of [1, 2]) {
     const a = await renderOnce(handle, { size, draw: draw(false), ratio });
     const b = await renderOnce(handle, { size, draw: draw(true), ratio });
@@ -257,13 +271,15 @@ export async function stableShadowGrain(handle: GpuHandle): Promise<void> {
 
 /** A lit group inside a lit group is lit only by its own lights; its result is not lit again. */
 export async function nestedLighting(handle: GpuHandle): Promise<void> {
-  const draw = (inner: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.group({ lighting: { ambient: "#ffffff" } }, () => {
-      v.rect(20, 20, 40, 40, { fill: "#ff0000" });
-      if (inner) v.light({ kind: "point", at: [150, 60], height: 40, energy: 3 });
-    });
-  });
+  const draw = (inner: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    v.group({ lighting: { ambient: "#ffffff" } }, ((): Drawing => {
+      const out: Drawing[] = [];
+      out.push(v.rect(20, 20, 40, 40, { fill: "#ff0000" }));
+      if (inner) out.push(v.light({ kind: "point", at: [150, 60], height: 40, energy: 3 }));
+      return out;
+    })()),
+  ]);
   const lit = await renderOnce(handle, { size, draw: draw(true) });
   const unlit = await renderOnce(handle, { size, draw: draw(false) });
   assert.deepEqual(rgbaAt(unlit, [40, 40]), [255, 0, 0, 255], "the inner result keeps its colour: it is not darkened by the outer ambient");
@@ -281,14 +297,16 @@ export async function lightsInPictures(handle: GpuHandle, t: TestContext): Promi
     }
     return at;
   };
-  const scene = (xs: readonly number[]) => (v: View): void => {
+  const scene = (xs: readonly number[]) => (v: View): Drawing => {
     const lamp = v.picture({ key: "lamp", width: 20, height: 20 }, () => v.light({ kind: "point", at: [10, 10], height: 30, reach: 120 }));
-    v.group({ lighting: { ambient: "#000000" } }, () => {
-      v.rect(0, 0, 400, 120, { fill: "#a0a0a0" });
-      v.group({}, () => {
-        for (const x of xs) v.place(lamp, x, 90);
-      });
-    });
+    return v.group({ lighting: { ambient: "#000000" } }, [
+      v.rect(0, 0, 400, 120, { fill: "#a0a0a0" }),
+      v.group({}, ((): Drawing => {
+        const drawn: Drawing[] = [];
+        for (const x of xs) drawn.push(v.place(lamp, x, 90));
+        return drawn;
+      })()),
+    ]);
   };
   const wide = { width: 400, height: 120 };
   const one = await renderOnce(handle, { size: wide, draw: scene([60]) });
@@ -307,9 +325,11 @@ export async function materialScopes(handle: GpuHandle): Promise<void> {
   const plain = await renderOnce(handle, { size, draw: placed(undefined) });
   const casting = await renderOnce(handle, { size, draw: placed(CASTER) });
   assert.ok(linear(casting, [140, 60]) < 0.3 * linear(plain, [140, 60]), "the placement's material makes the picture cast a shadow");
-  const shapes = (material: Material | undefined) => (v: View): void => {
-    v.rect(10, 10, 80, 80, { fill: "#3b5d8a", ...(material === undefined ? {} : { material }) });
-    v.place(card(v), 120, 20, material === undefined ? {} : { material });
+  const shapes = (material: Material | undefined) => (v: View): Drawing => {
+    return [
+      v.rect(10, 10, 80, 80, { fill: "#3b5d8a", ...(material === undefined ? {} : { material }) }),
+      v.place(card(v), 120, 20, material === undefined ? {} : { material }),
+    ];
   };
   const bare = await renderOnce(handle, { size, draw: shapes(undefined) });
   const ignored = await renderOnce(handle, { size, draw: shapes({ bevel: 8, emissive: 1, shine: 1, castsShadow: true }) });
@@ -317,8 +337,8 @@ export async function materialScopes(handle: GpuHandle): Promise<void> {
 }
 
 /** An emissive, unlit room: what a body draws shows its own colour, so coverage mistakes show as dark fringes. */
-function dark(body: (v: View) => void) {
-  return (v: View): void => v.group({ lighting: { ambient: "#000000" } }, () => body(v));
+function dark(body: (v: View) => Drawing) {
+  return (v: View): Drawing => v.group({ lighting: { ambient: "#000000" } }, body(v));
 }
 const GLOW: Material = { emissive: 1 };
 /** Premultiplied red within 2 levels of alpha: a white or red pixel kept at full emissive strength. */
@@ -337,20 +357,20 @@ export async function translucentMaterial(handle: GpuHandle): Promise<void> {
 /** A feathered mask and a blurred nested lit group cut colour and material alike. */
 export async function featheredCoverage(handle: GpuHandle): Promise<void> {
   const masked = await renderOnce(handle, { size, draw: dark((v) => v.mask(
-    () => v.group({ effects: { blur: 6 } }, () => v.rect(50, 30, 60, 60, { fill: "#000" })),
-    () => v.rect(0, 0, 200, 120, { fill: "#ff0000", material: GLOW }),
+    v.group({ effects: { blur: 6 } }, v.rect(50, 30, 60, 60, { fill: "#000" })),
+    v.rect(0, 0, 200, 120, { fill: "#ff0000", material: GLOW }),
   )) });
   assert.ok(fullRed(masked, [46, 60]), `the mask's feather is lit as the body is (got ${rgbaAt(masked, [46, 60]).join(",")})`);
-  const nested = await renderOnce(handle, { size, draw: dark((v) => v.group({ lighting: { ambient: "#ffffff" }, effects: { blur: 6 } }, () => v.rect(50, 30, 60, 60, { fill: "#ff0000" }))) });
+  const nested = await renderOnce(handle, { size, draw: dark((v) => v.group({ lighting: { ambient: "#ffffff" }, effects: { blur: 6 } }, v.rect(50, 30, 60, 60, { fill: "#ff0000" }))) });
   assert.ok(fullRed(nested, [46, 60]), `a nested lit group's blurred fringe is not darkened by the outer group (got ${rgbaAt(nested, [46, 60]).join(",")})`);
 }
 
 /** A spot whose cone is π lights every way, exactly as a point light. */
 export async function fullCone(handle: GpuHandle): Promise<void> {
-  const lamp = (spot: boolean) => (v: View): void => v.group({ lighting: { ambient: "#202020" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.light(spot ? { kind: "spot", at: [100, 60], height: 40, direction: 0, cone: Math.PI } : { kind: "point", at: [100, 60], height: 40 });
-  });
+  const lamp = (spot: boolean) => (v: View): Drawing => v.group({ lighting: { ambient: "#202020" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }),
+    v.light(spot ? { kind: "spot", at: [100, 60], height: 40, direction: 0, cone: Math.PI } : { kind: "point", at: [100, 60], height: 40 }),
+  ]);
   const spot = await renderOnce(handle, { size, draw: lamp(true) });
   const point = await renderOnce(handle, { size, draw: lamp(false) });
   assert.ok(Buffer.from(spot.data).equals(Buffer.from(point.data)), "a full-angle spot equals a point light");
@@ -368,10 +388,10 @@ export async function lightPeaks(handle: GpuHandle, t: TestContext): Promise<voi
     { light: { kind: "spot", at: [50, 60], height: 40, color: "#ffd8a0", energy: 0.6, reach: 60, direction: 0, cone: 0.25 }, peak: [52, 60], behind: [47, 60], place: /beside \(50,60\) on its beam, toward 0 rad/ },
   ] satisfies { light: Light; peak: [number, number]; behind?: [number, number]; place: RegExp }[];
   for (const c of cases) {
-    const scene = new SceneRecorder({ width: 200, height: 120 }).record((v) => v.group({ lighting }, () => {
-      v.rect(0, 0, 200, 120, { fill: "#ffffff" });
-      v.light(c.light);
-    })).scene;
+    const scene = new SceneRecorder({ width: 200, height: 120 }).record((v) => v.group({ lighting }, [
+      v.rect(0, 0, 200, 120, { fill: "#ffffff" }),
+      v.light(c.light),
+    ])).scene;
     const line = sceneOutline(scene, handle.colors).split("\n").find((l) => l.includes(`light ${c.light.kind}`)) ?? "";
     t.diagnostic(line.trim());
     assert.match(line, c.place);
@@ -418,11 +438,11 @@ function pixelNoise(px: Pixels, where: (x: number, y: number) => boolean): { noi
 
 /** Checkpoint 4 visual read, B1: a soft shadow's penumbra is smooth, not speckled by the march's sampling. */
 export async function smoothPenumbra(handle: GpuHandle, t: TestContext): Promise<void> {
-  const draw = (v: View): void => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#c0b090" });
-    v.rect(70, 30, 30, 50, { fill: "#604030", material: { castsShadow: 40 } });
-    v.light({ kind: "point", at: [40, 55], height: 70, energy: 2.5, reach: 600 });
-  });
+  const draw = (v: View): Drawing => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#c0b090" }),
+    v.rect(70, 30, 30, 50, { fill: "#604030", material: { castsShadow: 40 } }),
+    v.light({ kind: "point", at: [40, 55], height: 70, energy: 2.5, reach: 600 }),
+  ]);
   for (const ratio of [1, 2]) {
     const px = await renderOnce(handle, { size, draw, ratio });
     // The floor right of the caster, away from its outline: the shadow and its soft sides.
@@ -437,12 +457,12 @@ export async function smoothPenumbra(handle: GpuHandle, t: TestContext): Promise
  * caster shadows, so it is never brighter than both the caster and the shadowed floor beside it.
  */
 export async function casterOutlineFringe(handle: GpuHandle, t: TestContext): Promise<void> {
-  const draw = (v: View): void => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, () => {
-    v.rect(0, 0, 200, 120, { fill: "#d8c8a8" });
+  const draw = (v: View): Drawing => v.group({ lighting: { ambient: "#303030", shadows: "soft" } }, [
+    v.rect(0, 0, 200, 120, { fill: "#d8c8a8" }),
     // A slanted right side, so its outline pixels take every coverage.
-    v.polygon([[60, 20], [100, 20], [112, 100], [60, 100]], { fill: "#3a4658", material: { bevel: 7, castsShadow: 70 } });
-    v.light({ kind: "point", at: [20, 60], height: 150, energy: 3, reach: 600 });
-  });
+    v.polygon([[60, 20], [100, 20], [112, 100], [60, 100]], { fill: "#3a4658", material: { bevel: 7, castsShadow: 70 } }),
+    v.light({ kind: "point", at: [20, 60], height: 150, energy: 3, reach: 600 }),
+  ]);
   for (const ratio of [1, 2]) {
     const px = await renderOnce(handle, { size, draw, ratio });
     const lum = (x: number, y: number): number => {

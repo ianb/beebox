@@ -7,7 +7,7 @@ import type { TestContext } from "node:test";
 import type { GpuHandle } from "../../src/device/open.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
-import type { Material, View } from "../../src/core/tea.js";
+import type { Drawing, Material, View } from "../../src/core/tea.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { renderOnce, rgbaAt } from "./render.js";
 
@@ -24,21 +24,23 @@ function linear(px: Pixels, at: readonly [number, number]): number {
 }
 
 /** A lit group with one low lamp at the left, hard shadows; `body` draws everything else. */
-function lit(body: (v: View) => void) {
-  return (v: View): void => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, () => {
-    body(v);
-    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 600 });
-  });
+function lit(body: (v: View) => Drawing) {
+  return (v: View): Drawing => v.group({ lighting: { ambient: "#202020", shadows: "hard" } }, [
+    body(v),
+    v.light({ kind: "point", at: [30, 60], height: 60, energy: 2, reach: 600 }),
+  ]);
 }
 
-const caster = (v: View): void => v.rect(70, 30, 20, 60, { fill: "#606060", material: CASTER });
+const caster = (v: View): Drawing => v.rect(70, 30, 20, 60, { fill: "#606060", material: CASTER });
 
 /** A sky (upper part, non-receiving) over a floor (lower part, receiving), and a caster across both. */
 export async function skyKeepsLight(handle: GpuHandle, t: TestContext): Promise<void> {
   const scene = (a: { sky: Material | undefined; caster: boolean }) => lit((v) => {
-    v.rect(0, 0, 200, 60, { fill: "#a0a0a0", ...(a.sky === undefined ? {} : { material: a.sky }) });
-    v.rect(0, 60, 200, 60, { fill: "#a0a0a0" });
-    if (a.caster) caster(v);
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 200, 60, { fill: "#a0a0a0", ...(a.sky === undefined ? {} : { material: a.sky }) }));
+    out.push(v.rect(0, 60, 200, 60, { fill: "#a0a0a0" }));
+    if (a.caster) out.push(caster(v));
+    return out;
   });
   const open = await renderOnce(handle, { size, draw: scene({ sky: SKY, caster: false }) });
   const shaded = await renderOnce(handle, { size, draw: scene({ sky: undefined, caster: true }) });
@@ -60,8 +62,10 @@ export async function skyKeepsLight(handle: GpuHandle, t: TestContext): Promise<
  */
 export async function translucentNonReceiver(handle: GpuHandle): Promise<void> {
   const scene = (a: { material: Material | undefined; caster: boolean }) => lit((v) => {
-    v.circle(140, 60, 30.5, { fill: "rgba(160,160,160,0.5)", ...(a.material === undefined ? {} : { material: a.material }) });
-    if (a.caster) caster(v);
+    const out: Drawing[] = [];
+    out.push(v.circle(140, 60, 30.5, { fill: "rgba(160,160,160,0.5)", ...(a.material === undefined ? {} : { material: a.material }) }));
+    if (a.caster) out.push(caster(v));
+    return out;
   });
   const open = await renderOnce(handle, { size, draw: scene({ material: SKY, caster: false }) });
   const kept = await renderOnce(handle, { size, draw: scene({ material: SKY, caster: true }) });
@@ -81,9 +85,11 @@ export async function translucentNonReceiver(handle: GpuHandle): Promise<void> {
 /** The same half-transparent non-receiving shape over an opaque receiving floor receives half the shadow. */
 export async function halfOverReceiver(handle: GpuHandle, t: TestContext): Promise<void> {
   const scene = (a: { material: Material | undefined; caster: boolean }) => lit((v) => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    v.rect(110, 20, 60, 80, { fill: "rgba(160,160,160,0.5)", ...(a.material === undefined ? {} : { material: a.material }) });
-    if (a.caster) caster(v);
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }));
+    out.push(v.rect(110, 20, 60, 80, { fill: "rgba(160,160,160,0.5)", ...(a.material === undefined ? {} : { material: a.material }) }));
+    if (a.caster) out.push(caster(v));
+    return out;
   });
   const u = linear(await renderOnce(handle, { size, draw: scene({ material: SKY, caster: false }) }), BEHIND);
   const f = linear(await renderOnce(handle, { size, draw: scene({ material: undefined, caster: true }) }), BEHIND);
@@ -96,9 +102,11 @@ export async function halfOverReceiver(handle: GpuHandle, t: TestContext): Promi
 /** A placement's `material` supplies `receivesShadow` to the picture's shapes that have none. */
 export async function placedNonReceiver(handle: GpuHandle): Promise<void> {
   const scene = (a: { material: Material | undefined; caster: boolean }) => lit((v) => {
+    const out: Drawing[] = [];
     const sky = v.picture({ key: "sky", width: 200, height: 120 }, () => v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }));
-    v.place(sky, 0, 0, a.material === undefined ? {} : { material: a.material });
-    if (a.caster) caster(v);
+    out.push(v.place(sky, 0, 0, a.material === undefined ? {} : { material: a.material }));
+    if (a.caster) out.push(caster(v));
+    return out;
   });
   const open = await renderOnce(handle, { size, draw: scene({ material: SKY, caster: false }) });
   const kept = await renderOnce(handle, { size, draw: scene({ material: SKY, caster: true }) });
@@ -110,8 +118,10 @@ export async function placedNonReceiver(handle: GpuHandle): Promise<void> {
 /** A non-receiving caster still casts onto a receiving floor. */
 export async function nonReceivingCaster(handle: GpuHandle): Promise<void> {
   const scene = (material: Material | undefined) => lit((v) => {
-    v.rect(0, 0, 200, 120, { fill: "#a0a0a0" });
-    if (material !== undefined) v.rect(70, 30, 20, 60, { fill: "#606060", material });
+    const out: Drawing[] = [];
+    out.push(v.rect(0, 0, 200, 120, { fill: "#a0a0a0" }));
+    if (material !== undefined) out.push(v.rect(70, 30, 20, 60, { fill: "#606060", material }));
+    return out;
   });
   const open = await renderOnce(handle, { size, draw: scene(undefined) });
   const casting = await renderOnce(handle, { size, draw: scene({ castsShadow: true, receivesShadow: false }) });
@@ -124,8 +134,10 @@ export async function materialLayerCount(handle: GpuHandle): Promise<void> {
     const renderer = new GpuRenderer(handle);
     try {
       const scene = new SceneRecorder(size).record(lit((v) => {
-        v.rect(0, 0, 200, 120, { fill: "#a0a0a0", ...(material === undefined ? {} : { material }) });
-        caster(v);
+        return [
+          v.rect(0, 0, 200, 120, { fill: "#a0a0a0", ...(material === undefined ? {} : { material }) }),
+          caster(v),
+        ];
       })).scene;
       await renderer.render(scene, 1);
       return renderer.stats.jobs;

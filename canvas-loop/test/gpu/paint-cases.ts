@@ -4,7 +4,7 @@
 // hatching revealed by tone relative to the group's own range.
 import assert from "node:assert/strict";
 import type { TestContext } from "node:test";
-import type { Effects, View } from "../../src/core/tea.js";
+import type { Drawing, Effects, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
@@ -14,18 +14,20 @@ import { alphaAt, renderOnce, rgbaAt, shiftedDiff } from "./render.js";
 const ALL: Effects = { wash: { granulate: 0.6, edges: 0.7, blotch: 0.5, bleed: 3 }, hatching: { amount: 1 }, paper: 1 };
 
 /** Shapes at several tones with a grainy brush across them. */
-function scene(v: View): void {
-  v.rect(10, 10, 70, 50, { fill: "#2f4f6f" });
-  v.circle(100, 45, 30, { fill: "#d98c4a" });
-  v.rect(20, 60, 110, 30, { fill: v.linearGradient(20, 0, 130, 0, [[0, "#f2efe6"], [1, "#3a3226"]]) });
-  v.curve([[15, 30], [70, 15], [130, 40]], false, { stroke: "#7a2f2f", weight: 8, brush: "chalk" });
+function scene(v: View): Drawing {
+  return [
+    v.rect(10, 10, 70, 50, { fill: "#2f4f6f" }),
+    v.circle(100, 45, 30, { fill: "#d98c4a" }),
+    v.rect(20, 60, 110, 30, { fill: v.linearGradient(20, 0, 130, 0, [[0, "#f2efe6"], [1, "#3a3226"]]) }),
+    v.curve([[15, 30], [70, 15], [130, 40]], false, { stroke: "#7a2f2f", weight: 8, brush: "chalk" }),
+  ];
 }
 
 const same = (a: Pixels, b: Pixels): boolean => Buffer.from(a.data).equals(Buffer.from(b.data));
 
 export async function painterlyRepeats(handle: GpuHandle): Promise<void> {
   const size = { width: 160, height: 110 };
-  const draw = (v: View): void => v.group({ effects: ALL }, () => scene(v));
+  const draw = (v: View): Drawing => v.group({ effects: ALL }, scene(v));
   const renderer = new GpuRenderer(handle);
   try {
     const rec = new SceneRecorder(size).record(draw).scene;
@@ -43,7 +45,7 @@ export async function painterlyRepeats(handle: GpuHandle): Promise<void> {
 /** R5 bounds: a wash's bleed reaches past the content and no further; hatching and paper keep alpha exactly. */
 export async function painterlyBounds(handle: GpuHandle, t: TestContext): Promise<void> {
   const size = { width: 120, height: 120 };
-  const square = (effects: Effects) => (v: View): void => v.group({ effects }, () => v.rect(40, 40, 40, 40, { fill: "#3b5d8a" }));
+  const square = (effects: Effects) => (v: View): Drawing => v.group({ effects }, v.rect(40, 40, 40, 40, { fill: "#3b5d8a" }));
   const bled = await renderOnce(handle, { size, draw: square({ wash: { bleed: 6 } }) });
   let outside = 0;
   let beyond = 0;
@@ -60,7 +62,7 @@ export async function painterlyBounds(handle: GpuHandle, t: TestContext): Promis
   assert.equal(beyond, 0, "and no further than the bleed");
   const plain = await renderOnce(handle, { size, draw: (v) => scene(v) });
   for (const effects of [{ hatching: { amount: 1 } }, { paper: 1 }, { wash: { bleed: 0 } }] satisfies Effects[]) {
-    const fx = await renderOnce(handle, { size, draw: (v) => v.group({ effects }, () => scene(v)) });
+    const fx = await renderOnce(handle, { size, draw: (v) => v.group({ effects }, scene(v)) });
     let alphaChanged = 0;
     let lighter = 0;
     for (let i = 0; i < plain.data.length; i += 4) {
@@ -76,7 +78,7 @@ export async function painterlyBounds(handle: GpuHandle, t: TestContext): Promis
 export async function pigmentMoves(handle: GpuHandle, t: TestContext): Promise<void> {
   const size = { width: 200, height: 200 };
   for (const ratio of [1, 2]) {
-    const at = (dx: number, dy: number) => (v: View): void => v.at({ translate: [dx, dy] }, () => v.group({ effects: ALL }, () => scene(v)));
+    const at = (dx: number, dy: number) => (v: View): Drawing => v.at({ translate: [dx, dy] }, v.group({ effects: ALL }, scene(v)));
     const a = await renderOnce(handle, { size, draw: at(0, 0), ratio });
     const b = await renderOnce(handle, { size, draw: at(7, 3), ratio });
     const d = shiftedDiff({ a, b }, { rect: [0, 0, 180 * ratio, 180 * ratio], dx: 7 * ratio, dy: 3 * ratio });
@@ -86,9 +88,9 @@ export async function pigmentMoves(handle: GpuHandle, t: TestContext): Promise<v
   // A quarter turn: device (x, y) = (200 − y, x) in the group's coordinates. Shapes and brushes
   // themselves rasterise a little differently turned, so the effects must add no more than that.
   const turnDiff = async (effects: Effects | undefined): Promise<{ differ: number; max: number }> => {
-    const draw = (v: View): void => v.group(effects === undefined ? {} : { effects }, () => scene(v));
+    const draw = (v: View): Drawing => v.group(effects === undefined ? {} : { effects }, scene(v));
     const plain = await renderOnce(handle, { size, draw });
-    const turned = await renderOnce(handle, { size, draw: (v) => v.at({ matrix: [0, 1, -1, 0, 200, 0] }, () => draw(v)) });
+    const turned = await renderOnce(handle, { size, draw: (v) => v.at({ matrix: [0, 1, -1, 0, 200, 0] }, draw(v)) });
     let differ = 0;
     let max = 0;
     for (let y = 0; y < 200; y++) {
@@ -136,11 +138,13 @@ export async function hatchingTones(handle: GpuHandle, t: TestContext): Promise<
   const size = { width: 300, height: 100 };
   const rects = [[10, 10, 80, 80], [110, 10, 80, 80], [210, 10, 80, 80]] as const;
   for (const key of [["#ece8e0", "#8f8a80", "#2e2b26"], ["#5a5650", "#3a3732", "#1a1814"]]) {
-    const patches = (v: View): void => {
-      for (const [k, [x, y, w, h]] of rects.entries()) v.rect(x, y, w, h, { fill: key[k] ?? "#000" });
+    const patches = (v: View): Drawing => {
+      const out: Drawing[] = [];
+      for (const [k, [x, y, w, h]] of rects.entries()) out.push(v.rect(x, y, w, h, { fill: key[k] ?? "#000" }));
+      return out;
     };
     const plain = await renderOnce(handle, { size, draw: patches });
-    const hatched = await renderOnce(handle, { size, draw: (v) => v.group({ effects: { hatching: { amount: 1 } } }, () => patches(v)) });
+    const hatched = await renderOnce(handle, { size, draw: (v) => v.group({ effects: { hatching: { amount: 1 } } }, patches(v)) });
     const [light = 0, mid = 0, dark = 0] = rects.map((r) => inkShare({ plain, hatched }, r));
     t.diagnostic(`${key.join(" ")}: inked share light ${light.toFixed(3)}, mid ${mid.toFixed(3)}, dark ${dark.toFixed(3)}`);
     assert.ok(light < 0.01, "the group's lightest tone stays bare");
@@ -165,12 +169,14 @@ function touched(pair: { plain: Pixels; hatched: Pixels }, rect: readonly [numbe
 /** Draft 2.5: `amount` scales line density with ink, so less amount leaves fewer lines at a given tone. */
 export async function hatchingAmount(handle: GpuHandle, t: TestContext): Promise<void> {
   const size = { width: 200, height: 100 };
-  const patches = (v: View): void => {
-    v.rect(0, 0, 100, 100, { fill: "#ece8e0" });
-    v.rect(100, 0, 100, 100, { fill: "#6f6a60" });
+  const patches = (v: View): Drawing => {
+    return [
+      v.rect(0, 0, 100, 100, { fill: "#ece8e0" }),
+      v.rect(100, 0, 100, 100, { fill: "#6f6a60" }),
+    ];
   };
   const plain = await renderOnce(handle, { size, draw: patches });
-  const at = async (amount: number): Promise<number> => touched({ plain, hatched: await renderOnce(handle, { size, draw: (v) => v.group({ effects: { hatching: { amount } } }, () => patches(v)) }) }, [110, 10, 80, 80]);
+  const at = async (amount: number): Promise<number> => touched({ plain, hatched: await renderOnce(handle, { size, draw: (v) => v.group({ effects: { hatching: { amount } } }, patches(v)) }) }, [110, 10, 80, 80]);
   const full = await at(1);
   const half = await at(0.5);
   t.diagnostic(`mid patch, pixels touched: amount 1 ${full}, amount 0.5 ${half}`);
@@ -184,12 +190,12 @@ export async function hatchingAmount(handle: GpuHandle, t: TestContext): Promise
  */
 export async function washCanvasEdge(handle: GpuHandle, t: TestContext): Promise<void> {
   const size = { width: 200, height: 150 };
-  const washed = (edges: number) => (v: View): void => v.group({ effects: { wash: { edges, blotch: 0, granulate: 0, bleed: 3 } } }, () => {
-    v.rect(0, 0, 200, 150, { fill: "#7d8a86" });
-    v.rect(70, 50, 60, 50, { fill: "#4f78a8" });
-  });
+  const washed = (edges: number) => (v: View): Drawing => v.group({ effects: { wash: { edges, blotch: 0, granulate: 0, bleed: 3 } } }, [
+    v.rect(0, 0, 200, 150, { fill: "#7d8a86" }),
+    v.rect(70, 50, 60, 50, { fill: "#4f78a8" }),
+  ]);
   // Also inside a group whose glow reaches past the canvas: the wash still treats the canvas edge as continuous.
-  const inGlow = (edges: number) => (v: View): void => v.group({ effects: { glow: { blur: 4, color: "#000000" } } }, () => washed(edges)(v));
+  const inGlow = (edges: number) => (v: View): Drawing => v.group({ effects: { glow: { blur: 4, color: "#000000" } } }, washed(edges)(v));
   for (const [ratio, draw] of [[1, washed], [2, washed], [1, inGlow]] as const) {
     const dried = await renderOnce(handle, { size, draw: draw(0.8), ratio });
     const flat = await renderOnce(handle, { size, draw: draw(0), ratio });

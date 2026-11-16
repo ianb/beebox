@@ -11,7 +11,7 @@ import { GlyphWatch } from "../../src/gpu/glyphs.js";
 import { SketchUsageError } from "../../src/core/errors.js";
 import { RemovedCallError } from "../../src/scene/errors.js";
 import type { CallSite } from "../../src/scene/call-site.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import { offCanvasMessages } from "../../src/scene/recorder/off-canvas.js";
 import type { OffLine } from "../../src/scene/recorder/off-canvas.js";
 import { MAX_PAIRS, glyphMessage, newOverlaps, overlapMessage, placedRect, textRect } from "../../src/scene/recorder/text-checks.js";
@@ -45,8 +45,10 @@ test("off canvas, through the recorder: a drawing that moves joins the summary; 
   const rec = new SceneRecorder({ width: 80, height: 60 }, { audit: true });
   for (let t = 0; t < 3; t++) {
     rec.record((v) => {
-      v.rect(500, 10, 10, 10, { fill: "#000" });
-      v.at({ translate: [-5 * t, 0] }, () => v.rect(300, 10, 10, 10, { fill: "#000" }));
+      return [
+        v.rect(500, 10, 10, 10, { fill: "#000" }),
+        v.at({ translate: [-5 * t, 0] }, v.rect(300, 10, 10, 10, { fill: "#000" })),
+      ];
     });
   }
   const out = rec.offCanvasWarnings();
@@ -89,27 +91,31 @@ test("label overlap: a text's box is its bounds under the transform, trimmed abo
   assert.deepEqual([p.x, p.y, p.w, p.h].map((n) => Math.round(n * 100) / 100), [77.4, 5, 15.2, 40]);
 });
 
-function warningsOf(draw: (v: View) => void, options?: { glyphMissing?: (char: string) => boolean }): readonly string[] {
+function warningsOf(draw: (v: View) => Drawing, options?: { glyphMissing?: (char: string) => boolean }): readonly string[] {
   const rec = new SceneRecorder({ width: 200, height: 100 }, { audit: true, text, ...(options?.glyphMissing === undefined ? {} : { glyphMissing: options.glyphMissing }) });
   return rec.record(draw).warnings;
 }
 
 test("label overlap, through the recorder: top-level labels, labels inside a placed picture where it lands, not mask artwork", () => {
   const plain = warningsOf((v) => {
-    v.text("left", { x: 10, y: 20 }, { size: 14 });
-    v.text("right", { x: 16, y: 22 }, { size: 14 });
+    return [
+      v.text("left", { x: 10, y: 20 }, { size: 14 }),
+      v.text("right", { x: 16, y: 22 }, { size: 14 }),
+    ];
   });
   assert.equal(plain.length, 1);
   assert.match(plain[0] ?? "", /^text "right" overlaps text "left" near \(\d+, \d+\); .* \(at test\/scene\/recorder\.checks\.test\.ts:\d+:\d+\)$/);
   const placed = warningsOf((v) => {
     const tag = v.picture({ key: "tag", width: 60, height: 30 }, () => v.text("in a picture", { x: 2, y: 2 }, { size: 14 }));
-    v.text("over it", { x: 105, y: 52 }, { size: 14 });
-    v.place(tag, 100, 50);
-    v.place(tag, 10, 10);
+    return [
+      v.text("over it", { x: 105, y: 52 }, { size: 14 }),
+      v.place(tag, 100, 50),
+      v.place(tag, 10, 10),
+    ];
   });
   assert.equal(placed.length, 1, "the placement at (100, 50) overlaps; the one at (10, 10) does not");
   assert.match(placed[0] ?? "", /text "in a picture" overlaps text "over it"/);
-  assert.deepEqual(warningsOf((v) => v.mask(() => v.text("stencil", { x: 10, y: 20 }, { size: 14 }), () => v.text("seen", { x: 12, y: 22 }, { size: 14 }))), []);
+  assert.deepEqual(warningsOf((v) => v.mask(v.text("stencil", { x: 10, y: 20 }, { size: 14 }), v.text("seen", { x: 12, y: 22 }, { size: 14 }))), []);
 });
 
 test("label overlap: a rotation inside a picture undone by its placement leaves the label upright, not a box around a box (review probe)", () => {
@@ -117,9 +123,11 @@ test("label overlap: a rotation inside a picture undone by its placement leaves 
   const back = placedRect(r, [Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, Math.SQRT1_2, 0, 0]);
   assert.deepEqual([back.x, back.y, back.w, back.h].map((n) => Math.round(n * 100) / 100), [0, 1.2, 100, 7.6]);
   const out = warningsOf((v) => {
-    const tag = v.picture({ key: "tag", width: 200, height: 200 }, () => v.at({ rotate: Math.PI / 4 }, () => v.text("a long label in a turned picture", { x: 0, y: 0 }, { size: 14 })));
-    v.at({ rotate: -Math.PI / 4 }, () => v.place(tag, 0, 0));
-    v.text("below it", { x: 20, y: 30 }, { size: 14 });
+    const tag = v.picture({ key: "tag", width: 200, height: 200 }, () => v.at({ rotate: Math.PI / 4 }, v.text("a long label in a turned picture", { x: 0, y: 0 }, { size: 14 })));
+    return [
+      v.at({ rotate: -Math.PI / 4 }, v.place(tag, 0, 0)),
+      v.text("below it", { x: 20, y: 30 }, { size: 14 }),
+    ];
   });
   assert.deepEqual(out, []);
 });
@@ -132,8 +140,10 @@ test("missing glyph, through the recorder: once per font and character, naming t
   };
   const rec = new SceneRecorder({ width: 200, height: 100 }, { audit: true, text, glyphMissing });
   const first = rec.record((v) => {
-    v.text("a b", { x: 10, y: 20 }, { size: 14 });
-    v.text("", { x: 10, y: 60 }, { size: 14 });
+    return [
+      v.text("a b", { x: 10, y: 20 }, { size: 14 }),
+      v.text("", { x: 10, y: 60 }, { size: 14 }),
+    ];
   }).warnings;
   assert.equal(first.length, 1);
   assert.match(first[0] ?? "", /^text: the font "normal .*" has no glyph for "" \(U\+E000\); it draws as an empty box or nothing \(at test\/scene\/recorder\.checks\.test\.ts:\d+:\d+\)$/);

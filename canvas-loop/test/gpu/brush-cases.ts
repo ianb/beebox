@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { Canvas, loadImage } from "@napi-rs/canvas";
 import type { TestContext } from "node:test";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
@@ -23,7 +23,7 @@ export async function frozen(name: string, size: { width: number; height: number
   return premultiplied(ctx.getImageData(0, 0, size.width, size.height).data);
 }
 
-async function sheetRows(handle: GpuHandle, s: { fixture: string; size: { width: number; height: number }; draw: (v: SheetView) => void; crops: typeof SHEET_CROPS }): Promise<{ rows: ReturnType<typeof cropParity>[]; flat: number }> {
+async function sheetRows(handle: GpuHandle, s: { fixture: string; size: { width: number; height: number }; draw: (v: SheetView) => Drawing; crops: typeof SHEET_CROPS }): Promise<{ rows: ReturnType<typeof cropParity>[]; flat: number }> {
   const gpu = await renderOnce(handle, { size: s.size, draw: (v) => s.draw(v) });
   const refPx = await frozen(s.fixture, s.size);
   const rows = s.crops.map((c) => cropParity({ ref: refPx, gpu: gpu.data }, { width: s.size.width, ...c }));
@@ -42,25 +42,25 @@ export async function brushParity(handle: GpuHandle, t: TestContext): Promise<vo
 /** R1: the brush's blend unless the style sets one (decision 8); erase removes by the mark's alpha. */
 export async function brushBlends(handle: GpuHandle): Promise<void> {
   const size = { width: 120, height: 60 };
-  const line = (v: View, extra: { blend?: "normal"; erase?: boolean }): void => v.line(10, 30, 110, 30, { stroke: "#ff0000", weight: 14, brush: "marker", gesture: { pressure: "even" }, ...extra });
-  const base = (v: View): void => v.rect(0, 0, 120, 60, { fill: "#0000ff" });
-  const multiplied = await renderOnce(handle, { size, draw: (v) => (base(v), line(v, {})) });
-  const normal = await renderOnce(handle, { size, draw: (v) => (base(v), line(v, { blend: "normal" })) });
+  const line = (v: View, extra: { blend?: "normal"; erase?: boolean }): Drawing => v.line(10, 30, 110, 30, { stroke: "#ff0000", weight: 14, brush: "marker", gesture: { pressure: "even" }, ...extra });
+  const base = (v: View): Drawing => v.rect(0, 0, 120, 60, { fill: "#0000ff" });
+  const multiplied = await renderOnce(handle, { size, draw: (v) => [base(v), line(v, {})] });
+  const normal = await renderOnce(handle, { size, draw: (v) => [base(v), line(v, { blend: "normal" })] });
   const [mr = 0, , mb = 0] = rgbaAt(multiplied, [60, 30]);
   const [nr = 0, , nb = 0] = rgbaAt(normal, [60, 30]);
   assert.ok(mr < 10 && mb < 100, `a marker multiplies red over blue to near black (got ${mr}, ${mb})`);
   assert.ok(nr > 150 && nb > 40, `blend "normal" lays red over blue at the marker's opacity (got ${nr}, ${nb})`);
-  const erased = await renderOnce(handle, { size, draw: (v) => (base(v), v.line(10, 30, 110, 30, { stroke: "#000", weight: 14, brush: "ink", erase: true, gesture: { pressure: "even" } })) });
+  const erased = await renderOnce(handle, { size, draw: (v) => [base(v), v.line(10, 30, 110, 30, { stroke: "#000", weight: 14, brush: "ink", erase: true, gesture: { pressure: "even" } })] });
   assert.equal(alphaAt(erased, [60, 30]), 0, "an ink erase removes the target under the mark");
   assert.equal(alphaAt(erased, [60, 5]), 255);
-  const half = await renderOnce(handle, { size, draw: (v) => (base(v), v.line(10, 30, 110, 30, { stroke: "rgba(0,0,0,0.5)", weight: 14, brush: "ink", erase: true, gesture: { pressure: "even" } })) });
+  const half = await renderOnce(handle, { size, draw: (v) => [base(v), v.line(10, 30, 110, 30, { stroke: "rgba(0,0,0,0.5)", weight: 14, brush: "ink", erase: true, gesture: { pressure: "even" } })] });
   assert.ok(Math.abs(alphaAt(half, [60, 30]) - 128) <= 2, `a half-alpha brush erases half (alpha ${alphaAt(half, [60, 30])})`);
 }
 
 /** Section 6: unchanged strokes reuse their expansion; the frame is byte-identical with and without the cache. */
 export async function expansionCache(handle: GpuHandle, t: TestContext): Promise<void> {
   const rec = new SceneRecorder({ width: 640, height: 480 });
-  const at = (dx: number, scale: number): ReturnType<SceneRecorder["record"]> => rec.record((v) => v.at({ translate: [dx, 0], scale }, () => drawSheet(v)));
+  const at = (dx: number, scale: number): ReturnType<SceneRecorder["record"]> => rec.record((v) => v.at({ translate: [dx, 0], scale }, drawSheet(v)));
   const warm = new GpuRenderer(handle);
   try {
     const cold = await warm.render(at(0, 1).scene, 1);
@@ -83,17 +83,21 @@ export async function expansionCache(handle: GpuHandle, t: TestContext): Promise
 
 /** Parity section 3: a brushed shape moved by whole pixels moves its texture with it. */
 export async function brushStability(handle: GpuHandle, t: TestContext): Promise<void> {
-  const figure = (v: View): void => {
-    v.curve([[20, 20], [70, 12], [90, 60], [40, 75], [15, 50]], true, { stroke: "#2b2b2b", weight: 4, brush: "pencil", gesture: { wobble: 1 } });
-    v.curve([[25, 40], [55, 32], [85, 48]], false, { stroke: "#b0563a", weight: 10, brush: "chalk" });
-    v.curve([[20, 62], [50, 55], [88, 66]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle" });
-    v.curve([[30, 30], [70, 34]], false, { stroke: "#3b4a8a", weight: 16, brush: "wash", gesture: { pressure: "swell" } });
+  const figure = (v: View): Drawing => {
+    return [
+      v.curve([[20, 20], [70, 12], [90, 60], [40, 75], [15, 50]], true, { stroke: "#2b2b2b", weight: 4, brush: "pencil", gesture: { wobble: 1 } }),
+      v.curve([[25, 40], [55, 32], [85, 48]], false, { stroke: "#b0563a", weight: 10, brush: "chalk" }),
+      v.curve([[20, 62], [50, 55], [88, 66]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle" }),
+      v.curve([[30, 30], [70, 34]], false, { stroke: "#3b4a8a", weight: 16, brush: "wash", gesture: { pressure: "swell" } }),
+    ];
   };
   const size = { width: 200, height: 100 };
   for (const ratio of [1, 2]) {
-    const place = (dx: number) => (v: View): void => {
-      v.background("#f4efe2");
-      v.place(v.picture({ key: "figure", width: 100, height: 90 }, () => figure(v)), 10 + dx, 5);
+    const place = (dx: number) => (v: View): Drawing => {
+      return [
+        v.background("#f4efe2"),
+        v.place(v.picture({ key: "figure", width: 100, height: 90 }, () => figure(v)), 10 + dx, 5),
+      ];
     };
     const a = await renderOnce(handle, { size, draw: place(0), ratio });
     const b = await renderOnce(handle, { size, draw: place(7), ratio });
@@ -101,32 +105,31 @@ export async function brushStability(handle: GpuHandle, t: TestContext): Promise
     t.diagnostic(`ratio ${ratio}: a placed picture moved 7 px differs in ${d.differ} pixels`);
     assert.equal(d.differ, 0, `ratio ${ratio}: the texture moves with the placed picture`);
   }
-  const moved = (dx: number) => (v: View): void => {
-    v.background("#f4efe2");
-    v.at({ translate: [dx, 0] }, () => v.curve([[20, 30], [60, 15], [100, 40]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle", gesture: { wobble: 1 } }));
+  const moved = (dx: number) => (v: View): Drawing => {
+    return [
+      v.background("#f4efe2"),
+      v.at({ translate: [dx, 0] }, v.curve([[20, 30], [60, 15], [100, 40]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle", gesture: { wobble: 1 } })),
+    ];
   };
   const d = shiftedDiff({ a: await renderOnce(handle, { size, draw: moved(0) }), b: await renderOnce(handle, { size, draw: moved(5) }) }, { rect: [0, 0, 120, 60], dx: 5, dy: 0 });
   t.diagnostic(`a grainy bristle stroke moved 5 px with at differs in ${d.differ} pixels`);
   assert.equal(d.differ, 0, "paper is anchored to the call's coordinates: a stroke moved with at keeps its grain");
 }
 
-/** R9: v.paper lasts to the end of its group; a picture keeps the paper where v.picture is called. */
+/** R9 (draft 2.11): v.paper applies to the drawing it holds; a picture uses its own paper option, never the paper where it is placed. */
 export async function paperScopes(handle: GpuHandle): Promise<void> {
   const size = { width: 120, height: 40 };
-  const stroke = (v: View): void => v.line(10, 20, 110, 20, { stroke: "#000", weight: 10, brush: "chalk", gesture: { pressure: "even" } });
+  const stroke = (v: View): Drawing => v.line(10, 20, 110, 20, { stroke: "#000", weight: 10, brush: "chalk", gesture: { pressure: "even" } });
   const plain = await renderOnce(handle, { size, draw: stroke });
-  const other = await renderOnce(handle, { size, draw: (v) => (v.paper({ seed: 9 }), stroke(v)) });
-  const scoped = await renderOnce(handle, { size, draw: (v) => (v.group({}, () => v.paper({ seed: 9 })), stroke(v)) });
-  const pictured = await renderOnce(handle, { size, draw: (v) => {
-    v.paper({ seed: 9 });
-    const p = v.picture({ key: "line", width: 120, height: 40 }, () => stroke(v));
-    v.paper({ seed: 1 });
-    v.place(p, 0, 0);
-  } });
+  const other = await renderOnce(handle, { size, draw: (v) => v.paper({ seed: 9 }, stroke(v)) });
+  const scoped = await renderOnce(handle, { size, draw: (v) => [v.paper({ seed: 9 }, []), stroke(v)] });
+  const pictured = await renderOnce(handle, { size, draw: (v) => v.paper({ seed: 1 }, v.place(v.picture({ key: "line", width: 120, height: 40, paper: { seed: 9 } }, () => stroke(v)), 0, 0)) });
+  const placed = await renderOnce(handle, { size, draw: (v) => v.paper({ seed: 9 }, v.place(v.picture({ key: "line", width: 120, height: 40 }, () => stroke(v)), 0, 0)) });
   const same = (a: { data: Uint8Array }, b: { data: Uint8Array }): boolean => Buffer.from(a.data).equals(Buffer.from(b.data));
   const wide = await renderOnce(handle, { size: { width: 200, height: 40 }, draw: stroke });
   assert.equal(shiftedDiff({ a: plain, b: wide }, { rect: [0, 0, 120, 40], dx: 0, dy: 0 }).differ, 0, "grain does not depend on the canvas size");
   assert.ok(!same(plain, other), "another paper seed changes the grain");
-  assert.ok(same(plain, scoped), "paper set inside a group ends with the group");
-  assert.ok(same(other, pictured), "a picture uses the paper in effect where v.picture is called");
+  assert.ok(same(plain, scoped), "paper applies only to the drawing it holds");
+  assert.ok(same(other, pictured), "a picture uses its own paper option");
+  assert.ok(same(plain, placed), "a picture does not take the paper of where it is placed");
 }

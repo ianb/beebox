@@ -1,6 +1,6 @@
 // Rendering helpers the GPU case files share (all run in renderer.gpu.test.ts, one Dawn device per process).
 import type { TextMeasurer } from "../../src/core/text/measure.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import type { Pixels } from "../../src/gpu/renderer.js";
@@ -12,7 +12,7 @@ export interface Size {
 }
 
 /** Record `draw` and render it once with a fresh renderer. */
-export async function renderOnce(handle: GpuHandle, s: { size: Size; draw: (v: View) => void; ratio?: number; text?: TextMeasurer }): Promise<Pixels> {
+export async function renderOnce(handle: GpuHandle, s: { size: Size; draw: (v: View) => Drawing; ratio?: number; text?: TextMeasurer }): Promise<Pixels> {
   const renderer = new GpuRenderer(handle);
   try {
     const rec = new SceneRecorder(s.size, s.text === undefined ? {} : { text: s.text });

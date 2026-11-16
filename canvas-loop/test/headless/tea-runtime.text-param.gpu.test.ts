@@ -21,7 +21,7 @@ test("a text value is checked against maxLength by every door: link, panel and e
 });
 
 test("a declaration with a bad text default is rejected when the sketch loads", () => {
-  const base = { init: () => ({}), update: (m: object) => m, draw: () => {} };
+  const base = { init: () => ({}), update: (m: object) => m, draw: () => null };
   assert.throws(() => toTeaModule({ ...base, params: { a: { type: "text", default: 3 } } }), /must be a string/u);
   assert.throws(() => toTeaModule({ ...base, params: { a: { type: "text", default: "long", maxLength: 2 } } }), /longer than "maxLength"/u);
 });
@@ -41,7 +41,10 @@ test("u.params carries the typed text, starting from the link's value, and scrip
       typed.push(String(msg.value));
       return { formula: String(msg.value) };
     },
-    draw: (v: View) => v.control("formula", { x: 10, y: 10, w: 120, h: 24 }),
+    draw: (v: View) => {
+      v.control("formula", { x: 10, y: 10, w: 120, h: 24 });
+      return null;
+    },
   });
   const dir = tmpDir();
   const events = parseTeaEvents([{ frame: 2, type: "param", name: "formula", value: "" }, { frame: 3, type: "param", name: "formula", value: "Ca(OH)2" }], sketch.params);

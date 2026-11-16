@@ -4,7 +4,7 @@
 import { BLEND_MODES } from "../../src/core/compose.js";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { BlendMode, LinearGradient, Vec2 } from "../../src/core/paint.js";
-import type { Effects } from "../../src/core/tea.js";
+import type { Drawing, Effects } from "../../src/core/tea.js";
 import type { View as DraftView } from "../../src/core/tea.js";
 
 type Fill = string | LinearGradient;
@@ -82,20 +82,24 @@ export function fixtures(names: readonly string[], cols: number): Fixture[] {
 
 export const CASE_NAMES = Object.keys(CASES);
 
-function draftShape(v: DraftView, n: Extract<FxNode, { t: "shape" }>): void {
+function draftShape(v: DraftView, n: Extract<FxNode, { t: "shape" }>): Drawing {
+  const out: Drawing[] = [];
   const { g, s } = n;
   const style = { fill: s.fill, ...(s.blend === undefined ? {} : { blend: s.blend }), ...(s.erase === true ? { erase: true } : {}), ...(s.effects === undefined ? {} : { effects: s.effects }) };
-  if (g.k === "rect") v.rect(g.x, g.y, g.w, g.h, style);
-  else if (g.k === "circle") v.circle(g.x, g.y, g.r, style);
-  else v.polygon(g.pts, style);
+  if (g.k === "rect") out.push(v.rect(g.x, g.y, g.w, g.h, style));
+  else if (g.k === "circle") out.push(v.circle(g.x, g.y, g.r, style));
+  else out.push(v.polygon(g.pts, style));
+  return out;
 }
 
 /** Draft 2.2 calls: shape effects, the group clip option, and erase with effects are native. */
-export function drawDraft(v: DraftView, nodes: readonly FxNode[]): void {
+export function drawDraft(v: DraftView, nodes: readonly FxNode[]): Drawing {
+  const out: Drawing[] = [];
   for (const n of nodes) {
-    if (n.t === "shape") draftShape(v, n);
-    else if (n.t === "group") v.group({ ...(n.opacity === undefined ? {} : { opacity: n.opacity }), ...(n.blend === undefined ? {} : { blend: n.blend }), ...(n.effects === undefined ? {} : { effects: n.effects }), ...(n.clip === undefined ? {} : { clip: n.clip }) }, () => drawDraft(v, n.body));
-    else if (n.t === "clip") v.clip(n.shapes, () => drawDraft(v, n.body));
-    else v.mask(() => drawDraft(v, n.mask), () => drawDraft(v, n.body));
+    if (n.t === "shape") out.push(draftShape(v, n));
+    else if (n.t === "group") out.push(v.group({ ...(n.opacity === undefined ? {} : { opacity: n.opacity }), ...(n.blend === undefined ? {} : { blend: n.blend }), ...(n.effects === undefined ? {} : { effects: n.effects }), ...(n.clip === undefined ? {} : { clip: n.clip }) }, drawDraft(v, n.body)));
+    else if (n.t === "clip") out.push(v.clip(n.shapes, drawDraft(v, n.body)));
+    else out.push(v.mask(drawDraft(v, n.mask), drawDraft(v, n.body)));
   }
+  return out;
 }

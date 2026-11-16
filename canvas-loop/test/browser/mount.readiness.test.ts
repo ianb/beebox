@@ -119,7 +119,7 @@ test("a frame that throws reports once, stops the loop and hands the device back
   const errors: unknown[] = [];
   const boom = new Error("boom");
   const lease = fakeLease();
-  const module = { params: {}, canvas: { width: 40, height: 30 }, init: () => ({}), update: () => { throw boom; }, draw: () => {} };
+  const module = { params: {}, canvas: { width: 40, height: 30 }, init: () => ({}), update: () => { throw boom; }, draw: () => null };
   const attached = attach({ errors, module, gpu: fakeGpu(async () => lease) });
   await attached.ready;
   runFrames(5);
@@ -157,7 +157,7 @@ test("teardown from a callback during frame 0 releases the lease, and ready neve
   const canvas = new FakeElement("canvas");
   canvas.width = 120;
   canvas.height = 90;
-  const placing = { ...makeModule().module, draw: () => {} };
+  const placing = { ...makeModule().module, draw: () => null };
   const attached: ReturnType<typeof attachSketch> = attachSketch(asHTMLCanvas(canvas), {
     module: asPlaygroundModule(placing),
     seed: 1,

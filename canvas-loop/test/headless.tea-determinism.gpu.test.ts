@@ -43,7 +43,7 @@ test("a run that calls u.handled() is still byte-identical across two runs", asy
       }
       return model;
     },
-    draw: () => {},
+    draw: () => null,
   };
   const events = [
     { frame: 0, type: "mousedown", x: 10, y: 10 },
@@ -78,8 +78,10 @@ test("a different seed changes the output", async () => {
     init: (u: { random: (min: number, max: number) => number }) => ({ x: u.random(5, 55) }),
     update: (model: { x: number }) => model,
     draw: (v: View, model: { x: number }) => {
-      v.background("#000000");
-      v.circle(model.x, 10, 4, { fill: "#ffffff" });
+      return [
+        v.background("#000000"),
+        v.circle(model.x, 10, 4, { fill: "#ffffff" }),
+      ];
     },
   });
   const dir42 = tmpDir();

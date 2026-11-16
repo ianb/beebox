@@ -135,8 +135,10 @@ test("a smear larger than one buffer fails, naming its call", async (t) => {
   const handle = needGpu(t);
   if (handle === undefined) return;
   const scene = new SceneRecorder({ width: 600, height: 40 }).record((v) => {
-    v.line(4, 10, 12, 10, { stroke: "#000", weight: 6, brush: "smudge" });
-    v.line(10, 20, 590, 30, { stroke: "#000", weight: 6, brush: "smudge" });
+    return [
+      v.line(4, 10, 12, 10, { stroke: "#000", weight: 6, brush: "smudge" }),
+      v.line(10, 20, 590, 30, { stroke: "#000", weight: 6, brush: "smudge" }),
+    ];
   }).scene;
   const renderer = new GpuRenderer(handle, { brushLimit: 4096 });
   try {
@@ -156,11 +158,13 @@ test("two large smears and bristles share one sample buffer and one output buffe
   const handle = needGpu(t);
   if (handle === undefined) return;
   const scene = new SceneRecorder({ width: 400, height: 120 }).record((v) => {
-    v.background("#f4efe2");
-    v.line(10, 30, 390, 40, { stroke: "#000", weight: 2, brush: "smudge" });
-    v.line(10, 70, 390, 60, { stroke: "#f2f2f2", weight: 2, brush: "wet" });
-    v.curve([[10, 100], [30, 95], [50, 105]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle" });
-    v.line(70, 100, 70, 100, { stroke: "#3b5d8a", weight: 12, brush: "bristle" });
+    return [
+      v.background("#f4efe2"),
+      v.line(10, 30, 390, 40, { stroke: "#000", weight: 2, brush: "smudge" }),
+      v.line(10, 70, 390, 60, { stroke: "#f2f2f2", weight: 2, brush: "wet" }),
+      v.curve([[10, 100], [30, 95], [50, 105]], false, { stroke: "#3b5d8a", weight: 12, brush: "bristle" }),
+      v.line(70, 100, 70, 100, { stroke: "#3b5d8a", weight: 12, brush: "bristle" }),
+    ];
   }).scene;
   const expander = new BrushExpander({ enabled: false });
   const sets = brushRequests(scene, handle.colors).map((r) => expander.expand(r)?.set);

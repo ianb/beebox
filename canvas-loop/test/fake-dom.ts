@@ -271,6 +271,7 @@ export function makeModule(): { module: Record<string, unknown>; counters: { dra
     update: (model: { t: number }) => ({ t: model.t + 1 }),
     draw: () => {
       counters.draws += 1;
+      return null;
     },
   };
   return { module, counters };

@@ -4,7 +4,7 @@
 // contours overlap keeps winding coverage.
 import assert from "node:assert/strict";
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
@@ -39,12 +39,14 @@ export async function rasterMemory(handle: GpuHandle): Promise<void> {
 /** A smudge crossing the tile edge (x = 2048) carries paint across it: the picture draws as one layer, as the group does. */
 export async function smudgeAcrossTiles(handle: GpuHandle): Promise<void> {
   const size = { width: 2200, height: 80 };
-  const body = (v: View): void => {
-    for (let x = 1900; x < 2200; x += 40) v.rect(x, 0, 20, 80, { fill: x % 80 === 20 ? "#c84a3a" : "#3a6a9a" });
-    v.curve([[1960, 40], [2050, 44], [2150, 38]], false, { stroke: "#000", weight: 18, brush: "smudge", gesture: { pressure: "even", wobble: 0 } });
+  const body = (v: View): Drawing => {
+    const out: Drawing[] = [];
+    for (let x = 1900; x < 2200; x += 40) out.push(v.rect(x, 0, 20, 80, { fill: x % 80 === 20 ? "#c84a3a" : "#3a6a9a" }));
+    out.push(v.curve([[1960, 40], [2050, 44], [2150, 38]], false, { stroke: "#000", weight: 18, brush: "smudge", gesture: { pressure: "even", wobble: 0 } }));
+    return out;
   };
   const placed = await renderOnce(handle, { size, draw: (v) => v.place(v.picture({ key: "smudged", width: 2200, height: 80 }, () => body(v)), 0, 0) });
-  const group = await renderOnce(handle, { size, draw: (v) => v.group({}, () => body(v)) });
+  const group = await renderOnce(handle, { size, draw: (v) => v.group({}, body(v)) });
   const most = maxDiff(placed.data, group.data);
   assert.ok(most <= 1, `a placed picture smudged across the tile edge matches the group (largest difference ${most})`);
 }
@@ -56,8 +58,10 @@ export async function tilePlacedTwice(handle: GpuHandle): Promise<void> {
     const rec = new SceneRecorder({ width: 200, height: 100 });
     const scene = rec.record((v) => {
       const pic = v.picture({ key: "twice", width: 40, height: 40 }, () => v.circle(20, 20, 18, { fill: "#e0b02a" }));
-      v.place(pic, 10, 10);
-      v.place(pic, 120, 30);
+      return [
+        v.place(pic, 10, 10),
+        v.place(pic, 120, 30),
+      ];
     }).scene;
     await renderer.render(scene, 1);
     assert.equal(renderer.stats.tilesDrawn, 1, "the shared tile is drawn once");
@@ -72,9 +76,11 @@ export async function overlappingContourClip(handle: GpuHandle): Promise<void> {
   const size = { width: 120, height: 90 };
   const pts: Vec2[] = Array.from({ length: 24 }, (_, i): Vec2 => [60 + 37.3 * Math.cos((i * Math.PI) / 12), 45 + 31.7 * Math.sin((i * Math.PI) / 12)]);
   const contour = (): PathCommand[] => [["move", ...(pts[0] ?? [0, 0])], ...pts.slice(1).map((p): PathCommand => ["line", ...p]), ["close"]];
-  const clipped = (path: PathCommand[]) => (v: View): void => {
-    v.background("#ffffff");
-    v.clip(path, () => v.rect(0, 0, 120, 90, { fill: "#000000" }));
+  const clipped = (path: PathCommand[]) => (v: View): Drawing => {
+    return [
+      v.background("#ffffff"),
+      v.clip(path, v.rect(0, 0, 120, 90, { fill: "#000000" })),
+    ];
   };
   const once = await renderOnce(handle, { size, draw: clipped(contour()) });
   const twice = await renderOnce(handle, { size, draw: clipped([...contour(), ...contour()]) });
@@ -85,12 +91,14 @@ export async function overlappingContourClip(handle: GpuHandle): Promise<void> {
 /** A wide picture that reads its surroundings, placed far left: its one layer covers what can be seen of it, wherever that lies in the picture. */
 export async function wideReadingPicture(handle: GpuHandle): Promise<void> {
   const size = { width: 400, height: 100 };
-  const body = (v: View): void => {
-    v.curve([[100, 50], [300, 50]], false, { stroke: "#000", weight: 18, brush: "smudge", gesture: { pressure: "even", wobble: 0 } });
-    v.rect(9000, 20, 100, 60, { fill: "#c84a3a" });
+  const body = (v: View): Drawing => {
+    return [
+      v.curve([[100, 50], [300, 50]], false, { stroke: "#000", weight: 18, brush: "smudge", gesture: { pressure: "even", wobble: 0 } }),
+      v.rect(9000, 20, 100, 60, { fill: "#c84a3a" }),
+    ];
   };
   const placed = await renderOnce(handle, { size, draw: (v) => v.place(v.picture({ key: "wide", width: 10000, height: 100 }, () => body(v)), -9000, 0) });
-  const group = await renderOnce(handle, { size, draw: (v) => v.at({ translate: [-9000, 0] }, () => v.group({}, () => body(v))) });
+  const group = await renderOnce(handle, { size, draw: (v) => v.at({ translate: [-9000, 0] }, v.group({}, body(v))) });
   assert.equal(placed.data[(50 * 400 + 50) * 4 + 3], 255, "the rect at picture x 9000 shows at canvas x 0..100");
   const most = maxDiff(placed.data, group.data);
   assert.ok(most <= 1, `the placed wide picture matches the group (largest difference ${most})`);
@@ -102,11 +110,11 @@ export async function everyPlacementSnaps(handle: GpuHandle): Promise<void> {
   const image = (v: View): ReturnType<View["pixels"]> => v.pixels({ key: "ramp", width: 4, height: 2 }, (im) => {
     for (let i = 0; i < 8; i++) im.data.set([i * 30, 255 - i * 30, 90, 255], i * 4);
   });
-  const px = (x: number, y: number) => (v: View): void => v.place(image(v), x, y);
+  const px = (x: number, y: number) => (v: View): Drawing => v.place(image(v), x, y);
   assert.ok(Buffer.from((await renderOnce(handle, { size, draw: px(10.3, 5.6), ratio: 2 })).data).equals(Buffer.from((await renderOnce(handle, { size, draw: px(10.5, 5.5), ratio: 2 })).data)), "a pixels image at a sub-pixel position draws at the snapped device position");
-  const lit = (x: number, y: number) => (v: View): void => v.group({ lighting: { ambient: "#404040" } }, () => {
-    v.light({ kind: "point", at: [60, 40], height: 50, energy: 2 });
-    v.place(v.picture({ key: "lit", width: 40, height: 30 }, () => v.rect(0, 0, 40, 30, { fill: "#d8c890" })), x, y);
-  });
+  const lit = (x: number, y: number) => (v: View): Drawing => v.group({ lighting: { ambient: "#404040" } }, [
+    v.light({ kind: "point", at: [60, 40], height: 50, energy: 2 }),
+    v.place(v.picture({ key: "lit", width: 40, height: 30 }, () => v.rect(0, 0, 40, 30, { fill: "#d8c890" })), x, y),
+  ]);
   assert.ok(Buffer.from((await renderOnce(handle, { size, draw: lit(20.3, 10.6) })).data).equals(Buffer.from((await renderOnce(handle, { size, draw: lit(20, 11) })).data)), "a picture in a lit group at a sub-pixel position draws at the snapped device position");
 }

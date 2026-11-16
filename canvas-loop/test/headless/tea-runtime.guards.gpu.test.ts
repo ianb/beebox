@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 const REAL_THEN = Promise.prototype.then;
@@ -18,8 +18,10 @@ function guardModule(offend: () => void): LoadedTeaModule {
     init: () => ({}),
     update: (model: object) => model,
     draw: (v: View) => {
-      v.background("#000000");
+      const out: Drawing[] = [];
+      out.push(v.background("#000000"));
       offend();
+      return out;
     },
   });
 }
@@ -133,7 +135,7 @@ test("a throwing init that scheduled nothing leaves the process as it was", asyn
   const before = { then: Promise.prototype.then, setTimeout, queueMicrotask, nextTick: process.nextTick, random: Math.random, log: console.log };
   const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => {
     throw new RangeError("init failed");
-  }, update: (m: object) => m, draw: () => {} });
+  }, update: (m: object) => m, draw: () => null });
   const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
   assert.match(result.errors[0] ?? "", /^error in init: RangeError: init failed/u);
   await new Promise<void>((resolve) => setImmediate(resolve));
@@ -147,7 +149,7 @@ test("a pre-installed once listener and uncaught-exception capture callback are 
   process.setUncaughtExceptionCaptureCallback(capture);
   try {
     const raw = process.rawListeners("unhandledRejection");
-    const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m: object) => m, draw: () => {} });
+    const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m: object) => m, draw: () => null });
     assert.deepEqual((await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }))).errors, []);
     assert.deepEqual(process.rawListeners("unhandledRejection"), raw, "the once wrapper is the same, in the same place");
     assert.ok(process.hasUncaughtExceptionCaptureCallback());
@@ -166,7 +168,7 @@ import { teaRun } from ${JSON.stringify(src("tea-runtime/runner.ts"))};
 import { toTeaModule } from ${JSON.stringify(src("tea-load.ts"))};
 test("host", async () => {
   setTimeout(() => { throw new Error("HOST TEST BUG"); }, 0);
-  const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m) => m, draw: () => {} });
+  const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m) => m, draw: () => null });
   await teaRun({ module, sketchPath: "host", outDir: ${JSON.stringify(join(dir, "out"))}, frames: 30, seed: 1, fps: 60, every: 1, events: [], eventsPath: undefined });
   await new Promise((resolve) => setTimeout(resolve, 20));
 });

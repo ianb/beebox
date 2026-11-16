@@ -16,7 +16,7 @@ const module: PlaygroundModule = {
   canvas: { width: 10, height: 10 },
   init: () => 0,
   update: (model: unknown, msg: Msg) => (msg.type === "tick" ? msg.frame : model),
-  draw: () => {},
+  draw: () => null,
   sound: (model: unknown): readonly Voice[] => {
     const frame = typeof model === "number" ? model : 0;
     return frame % 3 === 0 ? [{ id: `v${frame}`, at: frame + 1, kind: "noise", duration: 0.05 }] : [];

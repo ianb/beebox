@@ -279,7 +279,7 @@ test("a self-crossing ink loop is no darker where it crosses itself", async (t) 
   const size = { width: 120, height: 120 };
   for (const [what, style] of [["half-alpha ink", { stroke: "rgba(29,42,68,0.5)", weight: 6, brush: "ink" }], ["marker (no grain)", { stroke: "#2f7bbf", weight: 6, brush: { preset: "marker", grain: 0 } }]] as const) {
     // A closed bowtie: its sides cross at (60, 60).
-    const px = await renderOnce(handle, { size, draw: (v) => (v.background("#f4efe2"), v.polygon([[20, 20], [100, 100], [100, 20], [20, 100]], { ...style, gesture: { pressure: "even" } })) });
+    const px = await renderOnce(handle, { size, draw: (v) => [v.background("#f4efe2"), v.polygon([[20, 20], [100, 100], [100, 20], [20, 100]], { ...style, gesture: { pressure: "even" } })] });
     const lum = (at: readonly [number, number]): number => {
       const [r = 0, g = 0, b = 0] = rgbaAt(px, at);
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -298,7 +298,7 @@ test("a far contour of the same ink stroke does not move a near one (per-contour
   if (handle === undefined) return;
   // At x = 67108864, f32 steps by 8: a near contour stored relative to it would land up to 4 px off.
   const scene = new SceneRecorder({ width: 40, height: 40 }).record((v) => {
-    v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 2, brush: "ink", gesture: { pressure: "even" } });
+    return v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 2, brush: "ink", gesture: { pressure: "even" } });
   }).scene;
   const [p] = placeInk(brushRequests(scene, handle.colors), { ratio: 1 });
   assert.ok(p !== undefined);

@@ -117,7 +117,7 @@ test("a surface torn down while a frame draws does not unconfigure a newer surfa
   const canvas = { getContext: () => ctx, style: {} } as unknown as HTMLCanvasElement;
   let finish: () => void = () => {};
   const held = (): SurfaceRenderer => ({ ...renderer(), present: () => new Promise((r) => (finish = () => r(undefined))) });
-  const deps = { canvas, size: { width: 40, height: 30 }, ratio: 1, seed: 1, decl: {}, draw: () => {}, text: await openTextMeasurer(), colors, onError: () => {} };
+  const deps = { canvas, size: { width: 40, height: 30 }, ratio: 1, seed: 1, decl: {}, draw: () => null, text: await openTextMeasurer(), colors, onError: () => {} };
   const old = new SceneSurface({ ...deps, lease: fakeLease(), makeRenderer: held });
   old.draw({}, {});
   await new Promise((r) => setImmediate(r));

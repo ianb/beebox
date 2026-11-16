@@ -33,6 +33,7 @@ import { sharedGpu } from "../../src/headless/scene/surface.js";
 import type { ExpandRequest, Prepared } from "../../src/scene/brush/expand.js";
 import { BrushExpander, POINT_WORDS, prepare } from "../../src/scene/brush/expand.js";
 import type { Mat } from "../../src/scene/nodes.js";
+import type { Drawing } from "../../src/core/tea.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { GpuRenderError } from "../../src/scene/errors.js";
 import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
@@ -382,7 +383,7 @@ test("a stamp far from the origin, translated back, lands where the CPU puts it 
   if (handle === undefined) return;
   // At x = 16777217, f32 cannot hold the point: rounded to 16777216, the dab would land one device pixel off.
   const scene = new SceneRecorder({ width: 40, height: 20 }).record((v) => {
-    v.at({ translate: [-16777207, 0] }, () => v.line(16777217, 10, 16777217, 10, { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } }));
+    return v.at({ translate: [-16777207, 0] }, v.line(16777217, 10, 16777217, 10, { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } }));
   }).scene;
   const reqs = brushRequests(scene, handle.colors);
   const [p] = placeStamps(reqs, { ratio: 1, golden: "far", translate: [-16777207, 0] });
@@ -402,7 +403,7 @@ test("a far contour of the same stamp stroke does not move a near one (per-conto
   if (handle === undefined) return;
   // At x = 67108864, f32 steps by 8: a near contour stored relative to it would land up to 4 px off.
   const scene = new SceneRecorder({ width: 40, height: 40 }).record((v) => {
-    v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } });
+    return v.path([["move", 67108864, 20], ["line", 67108864, 20], ["move", 10.25, 20], ["line", 10.25, 20]], { stroke: "#000", weight: 4, brush: { preset: "pencil", scatter: 0, sizeJitter: 0 }, gesture: { pressure: 1 } });
   }).scene;
   const reqs = brushRequests(scene, handle.colors);
   const [p] = placeStamps(reqs, { ratio: 1, translate: [0, 0] });
@@ -578,8 +579,10 @@ test("a brushed contour larger than one buffer fails, naming its call", async (t
   if (handle === undefined) return;
   const points = Array.from({ length: 400 }, (_, i) => [10 + i * 0.5, 20 + (i % 2)] as const);
   const scene = new SceneRecorder({ width: 240, height: 40 }).record((v) => {
-    v.line(4, 4, 30, 4, { stroke: "#000", weight: 2, brush: "ink" });
-    v.curve(points, false, { stroke: "#000", weight: 2, brush: "ink" });
+    return [
+      v.line(4, 4, 30, 4, { stroke: "#000", weight: 2, brush: "ink" }),
+      v.curve(points, false, { stroke: "#000", weight: 2, brush: "ink" }),
+    ];
   }).scene;
   const renderer = new GpuRenderer(handle, { brushLimit: 4096 });
   try {
@@ -637,10 +640,12 @@ test("with the buffer limit forced small, marks over several atlas pages draw th
   if (handle === undefined) return;
   // Six marks about 2,900 px square: an 8,192 px page holds few of them, so the batches draw into several pages, later passes loading what an earlier batch drew.
   const scene = new SceneRecorder({ width: 3000, height: 3000 }).record((v) => {
+    const out: Drawing[] = [];
     for (let i = 0; i < 6; i++) {
       const style = { stroke: "#1d2a44", weight: 3 + i, brush: i % 2 === 0 ? "pencil" : "ink" } as const;
-      v.line(40 + i * 10, 40, 2950 - i * 10, 2950, style);
+      out.push(v.line(40 + i * 10, 40, 2950 - i * 10, 2950, style));
     }
+    return out;
   }).scene;
   const whole = new GpuRenderer(handle);
   const split = new GpuRenderer(handle, { brushLimit: 4096 });

@@ -18,7 +18,7 @@ import { sharedGpu } from "../../src/headless/scene/surface.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { Scene } from "../../src/scene/nodes.js";
-import type { Picture, View } from "../../src/core/tea.js";
+import type { Drawing, Picture, View } from "../../src/core/tea.js";
 import type { Model } from "./dev-loop/cases.js";
 import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 import { parity } from "./compare.js";
@@ -148,7 +148,7 @@ test("a group just above the canvas still casts its shadow onto it (R5 bounds)",
   const handle = needGpu(t);
   if (handle === undefined) return;
   const scene = new SceneRecorder({ width: 120, height: 80 }).record((v) => {
-    v.group({ effects: { shadow: { x: 0, y: 50, blur: 4, color: "#000000" } } }, () => v.rect(30, -40, 60, 32, { fill: "#6d597a" }));
+    return v.group({ effects: { shadow: { x: 0, y: 50, blur: 4, color: "#000000" } } }, v.rect(30, -40, 60, 32, { fill: "#6d597a" }));
   }).scene;
   const renderer = new GpuRenderer(handle);
   try {
@@ -309,11 +309,13 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
     names: [],
     frames: 6,
     draw: (v, m) => {
+      const drawn: Drawing[] = [];
       const badge = v.picture({ key: "badge", width: 20, height: 20 }, () => v.rect(0, 0, 20, 20, { fill: "#2a9d8f" }));
-      v.at({ translate: [30, 30], rotate: m.t * 0.1 }, () => v.place(badge, -10, -10));
+      drawn.push(v.at({ translate: [30, 30], rotate: m.t * 0.1 }, v.place(badge, -10, -10)));
       // Two fixed scales of one key, every frame: two kept versions, nothing to hint.
       const dot = v.picture({ key: "dot", width: 6, height: 6 }, () => v.circle(3, 3, 3, { fill: "#e63946" }));
-      for (const s of [1, 2]) v.at({ scale: s }, () => v.place(dot, 2, 2));
+      for (const s of [1, 2]) drawn.push(v.at({ scale: s }, v.place(dot, 2, 2)));
+      return drawn;
     },
   });
   const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
@@ -322,15 +324,17 @@ onGpu("section 10: a picture placed at a new rotation every frame gets one perfo
   assert.deepEqual(out.warnings, []);
   // As the raster cache keys them: fixed scales placed in turn reuse their images (kept two frames); a change
   // too small to see in six decimals is still a new key every frame.
-  const hintsFor = async (draw: (v: View, m: Model) => void): Promise<string[]> => (await runCase({ id: "scales", mistake: "", channel: "none", names: [], frames: 8, draw })).transcript.split("\n").filter((l) => l.includes("hint:"));
+  const hintsFor = async (draw: (v: View, m: Model) => Drawing): Promise<string[]> => (await runCase({ id: "scales", mistake: "", channel: "none", names: [], frames: 8, draw })).transcript.split("\n").filter((l) => l.includes("hint:"));
   const tile = (v: View): Picture => v.picture({ key: "tile", width: 6, height: 6 }, () => v.rect(0, 0, 6, 6, { fill: "#2a9d8f" }));
   assert.deepEqual(await hintsFor((v, m) => {
+    const drawn: Drawing[] = [];
     const p = tile(v);
-    for (const s of [1, m.t % 2 === 0 ? 2 : 3]) v.at({ scale: s }, () => v.place(p, 2, 2));
+    for (const s of [1, m.t % 2 === 0 ? 2 : 3]) drawn.push(v.at({ scale: s }, v.place(p, 2, 2)));
+    return drawn;
   }), [], "scales {1, 2} and {1, 3} in turn");
   assert.equal((await hintsFor((v, m) => {
     const p = tile(v);
-    v.at({ scale: 1 + m.t * 1e-9 }, () => v.place(p, 2, 2));
+    return v.at({ scale: 1 + m.t * 1e-9 }, v.place(p, 2, 2));
   })).length, 1, "a scale growing by 1e-9 a frame");
 });
 
@@ -344,12 +348,14 @@ onGpu("off the canvas: only what is off on every frame warns, once; unboxed text
     frames: 3,
     draw: (v, m) => {
       // On the canvas on frames 0 and 1, off it on frame 2: moving, so not reported.
-      v.circle(m.t * 40 - 20, 30, 5, fill);
-      // Off the canvas, but its glow reaches 30 px in.
-      v.group({ effects: { glow: { blur: 10, color: "#ffd166" } } }, () => v.rect(-30, 10, 25, 10, fill));
-      // A boxed label wraps inside its box; it is not checked for crossing.
-      v.text("a long boxed label", { x: 60, y: 30, w: 15 }, { size: 10 });
-      v.text("Period: 2.00 s", { x: 60, y: 10 }, { size: 12 });
+      return [
+        v.circle(m.t * 40 - 20, 30, 5, fill),
+        // Off the canvas, but its glow reaches 30 px in.
+        v.group({ effects: { glow: { blur: 10, color: "#ffd166" } } }, v.rect(-30, 10, 25, 10, fill)),
+        // A boxed label wraps inside its box; it is not checked for crossing.
+        v.text("a long boxed label", { x: 60, y: 30, w: 15 }, { size: 10 }),
+        v.text("Period: 2.00 s", { x: 60, y: 10 }, { size: 12 }),
+      ];
     },
   });
   assert.equal(out.error, undefined);
@@ -366,11 +372,13 @@ onGpu("off the canvas: a loop that grows onto the canvas stays quiet; a picture 
     names: [],
     frames: 3,
     draw: (v, m) => {
+      const drawn: Drawing[] = [];
       // Frame 0: one rect, off the canvas; then a second one on it, from the same line.
-      for (let i = 0; i < m.t; i++) v.rect(i === 0 ? 200 : 10, 10, 10, 10, fill);
+      for (let i = 0; i < m.t; i++) drawn.push(v.rect(i === 0 ? 200 : 10, 10, 10, 10, fill));
       const p = v.picture({ key: "badge", width: 20, height: 10 }, () => v.rect(0, 0, 20, 10, fill));
-      v.place(p, 1000, 1000);
-      v.arc(150, 30, 100, -0.2, 0.2, { stroke: "#000000", weight: 2 });
+      drawn.push(v.place(p, 1000, 1000));
+      drawn.push(v.arc(150, 30, 100, -0.2, 0.2, { stroke: "#000000", weight: 2 }));
+      return drawn;
     },
   });
   assert.equal(out.error, undefined);

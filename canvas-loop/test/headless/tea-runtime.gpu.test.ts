@@ -5,10 +5,12 @@ import { test } from "node:test";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
-import type { Msg, ParamsDecl, View } from "../../src/core/tea.js";
+import type { Drawing, Msg, ParamsDecl, View } from "../../src/core/tea.js";
 import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
-function noop(): void {}
+function noop(): null {
+  return null;
+}
 
 test("mutating a frozen model throws and is recorded as an error", async () => {
   const module: LoadedTeaModule = {
@@ -144,6 +146,7 @@ test("param values reach draw and update through u.params / p", async () => {
     draw: (_v: View, _model, p) => {
       const value = p["speed"];
       if (typeof value === "number") seen.push(value);
+      return null;
     },
   };
   const dir = tmpDir();
@@ -181,8 +184,10 @@ test("a step that throws ends the transcript with its line and the sketch's line
     init: () => ({ t: 0 }),
     update: (model, msg: Msg) => (msg.type === "tick" ? { t: msg.frame } : model),
     draw: (v: View, model: unknown) => {
-      v.background("#000000");
+      const out: Drawing[] = [];
+      out.push(v.background("#000000"));
       if (typeof model === "object" && model !== null && Reflect.get(model, "t") === 2) throw new RangeError("no third frame");
+      return out;
     },
   };
   const dir = tmpDir();
@@ -215,9 +220,11 @@ const debugBoxSketch = toTeaModule({
   canvas: { width: 60, height: 40 },
   init: () => ({}),
   update: (model: object) => model,
-  draw: (v: View): void => {
-    v.background("#ffffff");
-    v.debugBox("hit", 10, 20, 30, 15);
+  draw: (v: View): Drawing => {
+    return [
+      v.background("#ffffff"),
+      v.debugBox("hit", 10, 20, 30, 15),
+    ];
   },
 });
 
@@ -229,14 +236,14 @@ test("debugBox draws only with --outline, over the finished frame", async () => 
     frames.push(readFileSync(join(outDir, "frame-0000.png")));
   }
   const plain = tmpDir();
-  await teaRun(teaRunOptions(toTeaModule({ ...debugBoxSketch, draw: (v: View): void => v.background("#ffffff") }), { outDir: plain, frames: 1 }));
+  await teaRun(teaRunOptions(toTeaModule({ ...debugBoxSketch, draw: (v: View): Drawing => v.background("#ffffff") }), { outDir: plain, frames: 1 }));
   assert.ok(frames[0]?.equals(readFileSync(join(plain, "frame-0000.png"))), "without --outline the box draws nothing");
   assert.ok(frames[1] !== undefined && !frames[1].equals(frames[0] ?? Buffer.alloc(0)), "with --outline the box shows");
 });
 
 test("--timing adds one timing summary line to the transcript", async () => {
   const outDir = tmpDir();
-  const module = toTeaModule({ canvas: { width: 10, height: 10 }, init: () => ({}), update: (model: object) => model, draw: (v: View): void => v.background("#000") });
+  const module = toTeaModule({ canvas: { width: 10, height: 10 }, init: () => ({}), update: (model: object) => model, draw: (v: View): Drawing => v.background("#000") });
   await teaRun(teaRunOptions(module, { outDir, frames: 5, timing: true }));
   assert.equal(readTranscript(outDir).match(/timing: draw avg [\d.]+ ms, p95 [\d.]+ ms, max [\d.]+ ms \(frame \d+\); update avg [^;]+; frame 0 draw/g)?.length, 1);
 });

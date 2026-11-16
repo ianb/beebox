@@ -6,6 +6,6 @@ import { test } from "node:test";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 
 test("a renderer export, whatever its value, is ignored", () => {
-  const base = { init: () => ({}), update: (m: object) => m, draw: () => {} };
+  const base = { init: () => ({}), update: (m: object) => m, draw: () => null };
   for (const renderer of ["scene", "Scene", true]) assert.deepEqual(Object.keys(toTeaModule({ ...base, renderer })), Object.keys(toTeaModule(base)));
 });

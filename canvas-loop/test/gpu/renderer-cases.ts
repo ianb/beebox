@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { SketchUsageError } from "../../src/core/errors.js";
 import type { PathCommand, Vec2 } from "../../src/core/paint.js";
-import type { View } from "../../src/core/tea.js";
+import type { Drawing, View } from "../../src/core/tea.js";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderError, UnsupportedCallError } from "../../src/scene/errors.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
@@ -17,7 +17,7 @@ interface Size {
   height: number;
 }
 
-async function render(handle: GpuHandle, s: { size: Size; draw: (v: View) => void }): Promise<Pixels> {
+async function render(handle: GpuHandle, s: { size: Size; draw: (v: View) => Drawing }): Promise<Pixels> {
   const renderer = new GpuRenderer(handle);
   try {
     return await renderer.render(new SceneRecorder(s.size).record(s.draw).scene, 1);
@@ -40,16 +40,18 @@ export async function offscreenShapes(handle: GpuHandle): Promise<void> {
   const huge = await render(handle, { size, draw: (v) => v.rect(-20000, 10, 40000, 20, { fill: "#f00" }) });
   assert.equal(alpha(huge, [0, 20]), 255);
   assert.equal(alpha(huge, [99, 20]), 255, "a shape wider than the atlas is cut to the canvas and drawn");
-  const near = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 4 } }, () => v.rect(-12, 10, 10, 80, { fill: "#000" })) });
+  const near = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 4 } }, v.rect(-12, 10, 10, 80, { fill: "#000" })) });
   assert.ok(alpha(near, [0, 50]) > 0, "a shape just off the canvas still blurs onto it (R5 reach)");
   await assert.rejects(render(handle, { size: { width: 9000, height: 4 }, draw: (v) => v.rect(0, 0, 9000, 4, { fill: "#000" }) }), (e: unknown) => e instanceof GpuRenderError && /the canvas 9000×4 .* larger than this GPU's largest texture/.test(e.message));
 }
 
 export async function clipUnions(handle: GpuHandle): Promise<void> {
   const size = { width: 120, height: 90 };
-  const clipped = (shapes: readonly (readonly Vec2[] | readonly PathCommand[])[]) => (v: View): void => {
-    v.background("#ffffff");
-    v.clip(shapes, () => v.rect(0, 0, 120, 90, { fill: "#000000" }));
+  const clipped = (shapes: readonly (readonly Vec2[] | readonly PathCommand[])[]) => (v: View): Drawing => {
+    return [
+      v.background("#ffffff"),
+      v.clip(shapes, v.rect(0, 0, 120, 90, { fill: "#000000" })),
+    ];
   };
   const star: Vec2[] = Array.from({ length: 10 }, (_, i): Vec2 => [60 + (i % 2 === 0 ? 40 : 17) * Math.cos(-Math.PI / 2 + (Math.PI * i) / 5), 45 + (i % 2 === 0 ? 40 : 17) * Math.sin(-Math.PI / 2 + (Math.PI * i) / 5)]);
   const one = await render(handle, { size, draw: clipped([star]) });
@@ -76,15 +78,15 @@ export async function anisotropicEffects(handle: GpuHandle): Promise<void> {
   const row = (px: Pixels, y: number): number[] => Array.from({ length: px.width }, (_, x) => alpha(px, [x, y]));
   const col = (px: Pixels, x: number): number[] => Array.from({ length: px.height }, (_, y) => alpha(px, [x, y]));
   const close = (a: readonly number[], b: readonly number[]): boolean => a.every((v, i) => Math.abs(v - (b[i] ?? 0)) <= 1);
-  const across = await render(handle, { size, draw: (v) => v.at({ scale: [4, 1] }, () => v.group({ effects: { blur: 4 } }, () => v.rect(10, -100, 20, 300, { fill: "#000" }))) });
-  const wide = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 16 } }, () => v.rect(40, -100, 80, 300, { fill: "#000" })) });
+  const across = await render(handle, { size, draw: (v) => v.at({ scale: [4, 1] }, v.group({ effects: { blur: 4 } }, v.rect(10, -100, 20, 300, { fill: "#000" }))) });
+  const wide = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 16 } }, v.rect(40, -100, 80, 300, { fill: "#000" })) });
   assert.ok(close(row(across, 30), row(wide, 30)), "under scale [4, 1], blur 4 spreads 16 device px across");
-  const down = await render(handle, { size, draw: (v) => v.at({ scale: [4, 1] }, () => v.group({ effects: { blur: 4 } }, () => v.rect(-100, 20, 300, 20, { fill: "#000" }))) });
-  const tall = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 4 } }, () => v.rect(-400, 20, 1200, 20, { fill: "#000" })) });
+  const down = await render(handle, { size, draw: (v) => v.at({ scale: [4, 1] }, v.group({ effects: { blur: 4 } }, v.rect(-100, 20, 300, 20, { fill: "#000" }))) });
+  const tall = await render(handle, { size, draw: (v) => v.group({ effects: { blur: 4 } }, v.rect(-400, 20, 1200, 20, { fill: "#000" })) });
   assert.ok(close(col(down, 80), col(tall, 80)), "and 4 device px down");
-  await render(handle, { size, draw: (v) => v.at({ rotate: 0.5, scale: 2 }, () => v.group({ effects: { blur: 2, shadow: { y: 3, blur: 2, color: "#000" } } }, () => v.rect(0, 0, 10, 10, { fill: "#000" }))) });
+  await render(handle, { size, draw: (v) => v.at({ rotate: 0.5, scale: 2 }, v.group({ effects: { blur: 2, shadow: { y: 3, blur: 2, color: "#000" } } }, v.rect(0, 0, 10, 10, { fill: "#000" }))) });
   for (const at of [{ rotate: 0.5, scale: [2, 1] as const }, { skew: [0.3, 0] as const }]) {
-    await assert.rejects(render(handle, { size, draw: (v) => v.at(at, () => v.group({ effects: { glow: { blur: 3, color: "#ff0" } } }, () => v.rect(0, 0, 10, 10, { fill: "#000" }))) }), (e: unknown) => e instanceof UnsupportedCallError && /effects under a rotated non-uniform scale or a skew/.test(e.message));
+    await assert.rejects(render(handle, { size, draw: (v) => v.at(at, v.group({ effects: { glow: { blur: 3, color: "#ff0" } } }, v.rect(0, 0, 10, 10, { fill: "#000" }))) }), (e: unknown) => e instanceof UnsupportedCallError && /effects under a rotated non-uniform scale or a skew/.test(e.message));
   }
 }
 
@@ -95,8 +97,10 @@ export async function failedFrames(handle: GpuHandle): Promise<void> {
     // largest texture, and a brushed mark across it in a blurred group, which can be seen past the canvas by the
     // blur's reach, so its piece in the mark atlas is wider than the atlas.
     const late = new SceneRecorder({ width: 8192, height: 8 }).record((v) => {
-      v.rect(0, 0, 10, 8, { fill: "#000" });
-      v.group({ effects: { blur: 4 } }, () => v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" }));
+      return [
+        v.rect(0, 0, 10, 8, { fill: "#000" }),
+        v.group({ effects: { blur: 4 } }, v.line(-50, 4, 8300, 4, { stroke: "#000", weight: 3, brush: "pencil" })),
+      ];
     }).scene;
     await assert.rejects(renderer.render(late, 1), (e: unknown) => e instanceof GpuRenderError && /larger than the atlas/.test(e.message));
     assert.ok(renderer.held.textures > 0, "the failed frame had allocated textures");

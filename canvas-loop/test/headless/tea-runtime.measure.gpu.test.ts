@@ -24,8 +24,9 @@ test("u.textBounds in update gives what v.text then draws, and u.textWidth what 
     },
     update: (model: object) => model,
     draw: (v: View) => {
-      measured.draw = CASES.map(([s, box, options]) => v.text(s, box, options));
+      measured.draw = CASES.map(([s, box, options]) => v.textBounds(s, box, options));
       measured.widths[1] = v.textWidth("Ca(OH)2", { size: 16, style: "bold" });
+      return CASES.map(([s, box, options]) => v.text(s, box, options));
     },
   });
   await teaRun(teaRunOptions(sketch, { outDir: tmpDir(), frames: 1, every: 1 }));
