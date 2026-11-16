@@ -409,7 +409,9 @@ Not built: smudge, watercolor, pixel API, layers (see NOT in scope).
 
 ## Subplans
 
-none
+- [canvas-loop-layout-text-hits.subplan.md](canvas-loop-layout-text-hits.subplan.md):
+  layout boxes and flows, text runs, and named hits, from a box agent's
+  figure-migration report (2026-11-16).
 
 ## Failure modes
 
