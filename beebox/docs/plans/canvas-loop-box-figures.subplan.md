@@ -543,6 +543,12 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   - **Through the bundle.** In a throwaway box, `bin/bbx figure run` on the
     starter passes and on a figure whose helper has a type error prints the
     helper's line and exits 1.
+  - **Checkpoint.** canvas-loop typecheck and lint pass; tests 233, and 199
+    with 3 todo on the GPU. beebox typecheck and layout-check pass; the
+    figure tests pass (21, one skipped on macOS). The 685 change-selected
+    tests pass but one: `test/scenarios/cross-box-probe.test.ts`, whose
+    `bbx-box-install` case lacks the stub engine `package.json` that `b7671b927` added after
+    this branch left it; it passes on `main`.
 
 ### C3. The card: errors to the card first, notices in the figure slot
 
