@@ -8,8 +8,10 @@
 // winding, a plain stroke by the renderer's own stroke rings, a brushed stroke
 // by a band of weight / 2 without wobble, text by its box, a background by the
 // canvas or the picture body's box, a pixels placement by its box. Clips cut;
-// mask artwork, effects, opacity and erasing drawings take no part. There is
-// no box rejection: no box kept on a node contains every hit area.
+// mask artwork, effects, opacity and erasing drawings take no part. No box
+// kept on a container contains every hit area, so containers are always
+// entered; a shape is first tested against a box around its own outline and
+// stroke, so a point far from it costs no flattening (chunk B2's timing check).
 import type { Vec2 } from "../core/paint.js";
 import { polylines } from "./geometry/flatten.js";
 import type { Poly } from "./geometry/flatten.js";
@@ -117,6 +119,34 @@ function near(poly: Poly, a: { p: Vec2; r: number }): boolean {
   return false;
 }
 
+/** Points whose box holds a shape's outline: an arc's whole circle, a path's control points (which hold its curves). */
+function outlinePoints(g: Geom): readonly Vec2[] {
+  switch (g.kind) {
+    case "rect":
+      return [[g.x, g.y], [g.x + g.w, g.y + g.h]];
+    case "ellipse":
+      return [[g.x - g.rx, g.y - g.ry], [g.x + g.rx, g.y + g.ry]];
+    case "arc":
+      return [[g.x - g.r, g.y - g.r], [g.x + g.r, g.y + g.r]];
+    case "poly":
+      return g.points;
+    case "path":
+      return g.commands.flatMap((c) => {
+        const pts: Vec2[] = [];
+        for (let i = 1; i + 1 < c.length; i += 2) pts.push([Number(c[i]), Number(c[i + 1])]);
+        return pts;
+      });
+  }
+}
+
+/** Whether the point is in the box around the outline, grown by the farthest a stroke reaches: a miter at the limit of 10 reaches 5 weights. */
+function nearOutline(n: ShapeNode, p: Vec2): boolean {
+  const reach = n.style.stroke === undefined ? 0 : 5 * n.style.weight;
+  const pts = outlinePoints(n.geom);
+  const [px, py] = p;
+  return pts.some(([x]) => x >= px - reach) && pts.some(([x]) => x <= px + reach) && pts.some(([, y]) => y >= py - reach) && pts.some(([, y]) => y <= py + reach);
+}
+
 /** A plain stroke's rings, dashes split off first: the same steps as the renderer's (gpu/shape-geometry.ts). */
 function plainStrokeRings(polys: readonly Poly[], at: { style: ShapeStyle; scale: number }): number[][] {
   const dash = at.style.dash;
@@ -131,6 +161,7 @@ function plainStrokeRings(polys: readonly Poly[], at: { style: ShapeStyle; scale
 function shapeHit(n: ShapeNode, h: Here): boolean {
   const s = n.style;
   if (s.erase) return false;
+  if (!nearOutline(n, h.p)) return false;
   if (s.fill !== undefined && filled(n.geom, h)) return true;
   if (s.stroke === undefined || s.weight <= 0) return false;
   const scale = maxScale(h.matrix);

@@ -121,11 +121,10 @@ function nodeLine(n: SceneNode, cx: LightContext): string {
     case "at":
       return `at [${n.matrix.map((v) => Math.round(v * 1000) / 1000).join(", ")}]`;
     case "group": {
-      const name = n.name === undefined ? "" : ` "${n.name}"`;
       const fx = n.effects === undefined ? "" : ` effects ${Object.keys(n.effects).join(",")}`;
       const l = n.lighting;
       const lit = l === undefined ? "" : ` lit ambient ${l.ambient} shadows ${l.shadows}${l.exposure === 0 ? "" : ` exposure ${l.exposure}`}${l.toneCurve === 0 ? "" : ` toneCurve ${l.toneCurve}`}`;
-      return `group${name} opacity ${n.opacity} blend ${n.blend}${fx}${lit}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
+      return `group opacity ${n.opacity} blend ${n.blend}${fx}${lit}${n.clip === undefined ? "" : ` clip ${n.clip.length}`}`;
     }
     case "clip":
       return `clip ${n.shapes.length} shape${n.shapes.length === 1 ? "" : "s"}`;
@@ -144,10 +143,19 @@ function nodeLine(n: SceneNode, cx: LightContext): string {
   }
 }
 
+/** A node's line with its name, when it has one, after the first word (`circle "atom-3" (40,40) r 14×14 …`). */
+function namedLine(n: SceneNode, cx: LightContext): string {
+  const line = nodeLine(n, cx);
+  const name = "name" in n ? n.name : undefined;
+  if (name === undefined) return line;
+  const cut = line.indexOf(" ");
+  return `${line.slice(0, cut)} ${JSON.stringify(name)}${line.slice(cut)}`;
+}
+
 function outlineInto(out: string[], args: { nodes: readonly SceneNode[]; depth: number; versions: Set<PictureVersion | PixelsVersion>; cx: LightContext }): void {
   const pad = "  ".repeat(args.depth);
   for (const n of args.nodes) {
-    out.push(pad + nodeLine(n, args.cx));
+    out.push(pad + namedLine(n, args.cx));
     if (n.kind === "mask") {
       out.push(`${pad}  mask body:`);
       outlineInto(out, { ...args, nodes: n.mask, depth: args.depth + 2 });

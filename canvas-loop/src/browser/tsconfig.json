@@ -4,6 +4,6 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node", "@webgpu/types"]
   },
-  "include": ["**/*.ts", "../../test/browser/scene/**/*.ts", "../../test/browser/mount.test.ts", "../../test/react/SketchFigure.hardening.test.ts", "../../test/browser/mount.failure-paths.test.ts", "../../test/fake-dom.ts", "../../test/browser/controls.overlay.test.ts", "../../test/browser/runtime/engine.sound.test.ts", "../../test/browser/runtime.sleep.test.ts", "../../test/browser/runtime/sound-player.library.test.ts", "../../test/browser/mount.readiness.test.ts"],
+  "include": ["**/*.ts", "../../test/browser/scene/**/*.ts", "../../test/browser/mount.test.ts", "../../test/react/SketchFigure.hardening.test.ts", "../../test/browser/mount.failure-paths.test.ts", "../../test/fake-dom.ts", "../../test/browser/controls.overlay.test.ts", "../../test/browser/runtime/engine.sound.test.ts", "../../test/browser/runtime/engine.hits.test.ts", "../../test/browser/runtime.sleep.test.ts", "../../test/browser/runtime/sound-player.library.test.ts", "../../test/browser/mount.readiness.test.ts"],
   "exclude": ["dist"]
 }

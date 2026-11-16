@@ -69,9 +69,9 @@ exhaustively on `msg.type` (the type-aware lint enforces it):
 ```ts
 type Msg =
   | { type: "tick"; frame: number }
-  | { type: "mousedown"; x: number; y: number }
-  | { type: "mouseup"; x: number; y: number }
-  | { type: "mousemove"; x: number; y: number }
+  | { type: "mousedown"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mouseup"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mousemove"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }

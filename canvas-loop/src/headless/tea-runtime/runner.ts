@@ -27,6 +27,7 @@ import { formatArgs } from "../../core/format.js";
 import type { FrameSurface } from "../frame-surface.js";
 import type { GpuHandle } from "../../device/open.js";
 import { NoGpuAdapterError } from "../../scene/errors.js";
+import { hitTest } from "../../scene/hit.js";
 // Type-only: the loader owns LoadedTeaModule (see tea-load.ts for why it
 // lives there and not here).
 import type { LoadedTeaModule } from "../tea-load.js";
@@ -230,7 +231,7 @@ class TeaRunner {
     this.#handledNames = [];
     const changed = this.#fold(msg);
     const text = verdict({ handled: this.#handledNames, changed });
-    if (this.#unhandled.show(msg.type, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
+    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
     if (this.#handledNames.length > 0) this.#recordActivity();
   }
 
@@ -262,7 +263,10 @@ class TeaRunner {
       case "mousemove": {
         if (event.x !== undefined) this.#mouseX = event.x;
         if (event.y !== undefined) this.#mouseY = event.y;
-        return { type: event.type, x: this.#mouseX, y: this.#mouseY };
+        // Frame N's events dispatch before frame N's draw, so this is frame N−1's scene (none at frame 0).
+        const scene = this.#surface.hitScene();
+        const { target, targets } = scene === undefined ? { target: undefined, targets: [] } : hitTest(scene, [this.#mouseX, this.#mouseY]);
+        return { type: event.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }
       case "keydown":
       case "keyup":

@@ -2,7 +2,8 @@
 // `name` on a style, text, at, group, place and flow options is kept on the
 // node, not in the resolved style, and survives the resolve walk. A bad name
 // throws at the call; scope and placement options refuse unknown keys, and a
-// `hit` key is told that every name is a target.
+// `hit` key is told that every name is a target. A `--scene` outline prints
+// each name on its node's line (chunk B2).
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
@@ -10,6 +11,7 @@ import type { Drawing, View } from "../../src/core/tea.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import type { SceneNode } from "../../src/scene/nodes.js";
+import { sceneOutline } from "../../src/scene/outline.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 
 let text: TextMeasurer | undefined;
@@ -90,4 +92,19 @@ test("group, at, place and style refuse unknown keys; hit: true is told every na
       return null;
     }), usage(re));
   }
+});
+
+test("a scene outline prints each name after its node's first word", () => {
+  if (text === undefined) throw new Error("no text measurer");
+  const { scene } = new SceneRecorder({ width: 300, height: 200 }, { text }).record((v) => [
+    v.at({ translate: [10, 10], name: "pan-left" }, [v.circle(0, 0, 4, { fill: "#000", name: "weight-2" }), v.rect(0, 0, 4, 4, { fill: "#000" })]),
+    v.text("Reset", { x: 0, y: 0 }, { name: "reset" }),
+    v.group({ name: "tray" }, []),
+  ]);
+  const lines = sceneOutline(scene).split("\n").map((l) => l.trim());
+  assert.match(lines[1] ?? "", /^at "pan-left" \[/);
+  assert.match(lines[2] ?? "", /^circle "weight-2" /);
+  assert.match(lines[3] ?? "", /^rect \(/);
+  assert.match(lines[4] ?? "", /^text "reset" "Reset" /);
+  assert.match(lines[5] ?? "", /^group "tray" opacity /);
 });

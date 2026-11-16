@@ -132,15 +132,28 @@ export type DeepReadonly<T> = T extends (...args: never[]) => unknown
 
 // ── Messages ─────────────────────────────────────────────────────────
 /**
+ * Where a mouse message is, in canvas pixels, and the named drawings under it
+ * in the last frame drawn before the message (none at frame 0).
+ */
+export interface Pointer {
+  x: number;
+  y: number;
+  /** The innermost named drawing under the pointer (`targets[0]`), or undefined. */
+  target: string | undefined;
+  /** That name and the names of the named drawings around it, innermost first; empty when nothing named is under the pointer. */
+  targets: readonly string[];
+}
+
+/**
  * The runtime-defined discriminated union folded through `update`. Time is a
  * message (`tick`); scripted input, parameter edits, and triggers are the rest.
  * Switch exhaustively on `msg.type`.
  */
 export type Msg =
   | { type: "tick"; frame: number }
-  | { type: "mousedown"; x: number; y: number }
-  | { type: "mouseup"; x: number; y: number }
-  | { type: "mousemove"; x: number; y: number }
+  | ({ type: "mousedown" } & Pointer)
+  | ({ type: "mouseup" } & Pointer)
+  | ({ type: "mousemove" } & Pointer)
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }

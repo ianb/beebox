@@ -872,6 +872,48 @@ run them on the worktree's test1 with `--filter figure`:
 4. **B1** names and the hit walk (above).
 5. **B2** runtime wiring: `Msg` fields, headless and browser hit scenes,
    transcript `on …`, `EmittedEvent.targets`, outline names, the timing check.
+   - **As built (B2).** Logs are in `scratch/layout-text-hits/b2-*.log`.
+     The three mouse variants of `Msg` share a `Pointer` interface (`x`, `y`,
+     `target`, `targets`; `core/tea.ts`), and TEA.md's union block shows the
+     fields. Headless: `FrameSurface.hitScene()` returns the `#last` record's
+     scene and the runner's `#toMsg` hit-tests it. Browser:
+     `browser/runtime/hit-scene.ts` (`HitScenes`) keeps the end state of
+     each frame, the last draw's state and scene, and one scene recorded
+     again; `DrawSurface.draw` now returns `{ placements, scene }` and
+     gains `recordScene(model, params)`, which records without presenting
+     and drops logs, warnings and the cursor. `restart` clears the end
+     state. `describeInput` prints `on X in Y`; `UnhandledFold.show` takes
+     the message and keys on type plus target path (the summary line names
+     the path). `EmittedEvent.targets` is set on mouse entries only.
+     `--scene` outline lines print the name after the first word
+     (`circle "weight-2" (…)`), group lines as before.
+     - **Deviation: shapes are rejected by a box.** The timing check
+       (`test/scene/hit.timing.test.ts`, 2,000 named nodes of five kinds, a
+       point that misses all, median of 21 walks after 5 warm-up walks) took
+       1.48 ms without rejection: building stroke rings and flattening paths
+       on every shape. A shape is now first tested against a box around its
+       outline points (an arc's whole circle, a path's control points) grown
+       by 5 weights when it has a stroke (a miter at the limit of 10), which
+       holds every hit area the plan defines for it. Containers are still
+       always entered (Track B, item 2). The median is now about 0.3 ms;
+       the bound stays 1 ms.
+     - **Moved:** `watchVisibility` from `browser/runtime/engine.ts` to
+       `browser/scene/figure/visibility.ts` beside its one user, to keep
+       `engine.ts` under 300 lines without a second entry in
+       `browser/runtime/` (`layout-check` rule 5). The box helper is in
+       `hit.ts` itself, not `recorder/bounds.ts`'s `shapeBox`, for the same
+       rule.
+     - **Tests:** `test/headless/tea-runtime.hits.gpu.test.ts` (frame 0, frame
+       N against N−1, several events of one frame, the transcript);
+       `test/browser/runtime/engine.hits.test.ts` (fake surface: frame 0, a
+       still figure's click at frame 100, paused draws and one re-record,
+       only mouse entries carry targets); `test/core/engagement.test.ts`;
+       outline names in `recorder.names.test.ts`. The new browser test is
+       listed in both tsconfigs, as `engine.sound.test.ts` is.
+     - **Lines:** source 313 (of which about 64 are the `watchVisibility`
+       move), tests 278, docs 6 (597). Track B so far: 1,129 against the
+       plan's ~720 + ~110 for B core and scripted aim; the revised estimate
+       for both is about 1,300.
 6. **B3** scripted aim in events files.
 7. **B4** beebox host activity detail (`figure-canvas-loop.ts`) and its test;
    TEA.md "Names and hits", "Events file"; CHANGELOG; knowledge audit
