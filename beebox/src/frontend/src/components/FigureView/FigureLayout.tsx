@@ -80,9 +80,9 @@ export function FigureNotice({ notice }: { notice: NoticeInfo }) {
   const { heading, text } = WARNINGS[notice.kind];
   return (
     <Notice tone="warning">
-      <h3 className="font-medium mb-1">{heading}</h3>
-      <Text as="p" size="sm">{text}</Text>
-      {notice.kind === "outdated" ? <Text as="p" size="xs" mono tone="muted" className="mt-2">{notice.detail}</Text> : null}
+      <h3 className="mt-0 mb-1 text-base font-semibold">{heading}</h3>
+      <Text as="p" size="sm" className="my-0">{text}</Text>
+      {notice.kind === "outdated" ? <Text as="p" size="xs" mono tone="muted" className="mt-2 mb-0">{notice.detail}</Text> : null}
     </Notice>
   );
 }
@@ -90,7 +90,7 @@ export function FigureNotice({ notice }: { notice: NoticeInfo }) {
 function FigureError({ message }: { message: string }) {
   return (
     <Notice tone="error">
-      <h3 className="text-danger-dark font-medium mb-2">Figure error</h3>
+      <h3 className="mt-0 mb-2 text-base font-semibold text-danger-dark">Figure error</h3>
       <Pre size="sm" error>{message}</Pre>
     </Notice>
   );
