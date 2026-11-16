@@ -1,5 +1,5 @@
 ---
-title: "Maybe: tell the agent on its next turn about errors in its last reply"
+title: "Maybe: tell the agent about errors in its reply, in the same turn or the next"
 workstream: unattached
 area: beebox
 discovered-by: Ian
@@ -28,3 +28,13 @@ Candidate checks:
 - Where does the note go in the next turn's input, and is it visible to the person in the transcript?
 - What if the person does not send a next turn? The note waits, or it is dropped.
 - Limit the noise. Report only errors the agent can fix, a few at most, and nothing when the reply is clean.
+
+## Same-turn retry (2026-11-16)
+
+The developer proposed a second delivery. When the turn ends, validate the reply. If a check fails, send the agent a message such as `<system-error>Your link [...] does not point to a live page</system-error>` and let it continue in the same turn. Allow one pass only, so a check that the agent cannot satisfy does not loop.
+
+This fixes the reply that the person reads, while the next-turn note fixes only later replies. Tensions:
+
+- The person may already see the faulty reply while it streams. The fix arrives as a second message, or it replaces the first.
+- The retry adds latency and cost to every turn that fails a check, so false positives matter more.
+- If the second pass also fails, the reply stays as it is. Possibly the next-turn note then applies.

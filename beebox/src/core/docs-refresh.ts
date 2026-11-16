@@ -10,7 +10,8 @@ import { withBoxWork } from "../lib/box-maintenance/admission.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { generateDocs, generatedDocsAreCurrent, GENERATE_MARKER, readGenerateMarker } from "./docs-gen/generate/core.js";
-import { ensureEngineDocs } from "./docs-gen/box-docs.js";
+import { copyWhatsNew, ensureEngineDocs } from "./docs-gen/box-docs.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 export interface DocsRefreshResult { readonly status: "current" | "refreshed" }
 class DocsRefreshError extends Error {
@@ -32,6 +33,8 @@ async function docsRefreshHasWork(boxRoot: string): Promise<boolean> {
 export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<DocsRefreshResult> {
   const shape = await getBoxShape(opts.boxRoot);
   await ensureEngineDocs();
+  // Ahead of the current-check, like generateDocs: a deleted copy heals here too.
+  await copyWhatsNew({ boxRoot: shape.boxRoot, packageRoot: PACKAGE_ROOT });
   return withBoxWork({ boxRoot: shape.boxRoot, reason: "docs refresh" }, async (): Promise<DocsRefreshResult> => {
     if (!(await docsRefreshHasWork(shape.boxRoot))) return { status: "current" };
     const before = await readGenerateMarker(opts.boxRoot);

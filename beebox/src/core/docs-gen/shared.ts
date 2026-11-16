@@ -11,9 +11,16 @@ import { frontmatterFence } from "../../cards/frontmatter.js";
 export const AGENT_GUIDE_DIR = ".beebox";
 export const AGENT_GUIDE_FILE = "agent-guide.md";
 /** Box-relative dir for docs compiled from THIS box's content (guides,
- *  personality, box-local card types). Engine docs are not here — see
- *  BOX_PACKAGE_DOCS. */
+ *  personality, box-local card types), plus the person's copy of
+ *  {@link WHATS_NEW_FILE}. Engine docs are not here — see BOX_PACKAGE_DOCS. */
 export const DOCS_DIR = "_content/docs/generated";
+
+/**
+ * The person-facing changelog. Its source is `docs/box/` in the package, but it
+ * is not a package doc: the engine copies it into {@link DOCS_DIR} so the
+ * person can open it as a card. Plan: plan:whats-new.
+ */
+export const WHATS_NEW_FILE = "whats-new.md";
 
 /** Name of the engine-docs directory inside the beebox package root. */
 export const PACKAGE_DOCS_DIR_NAME = "box-docs";

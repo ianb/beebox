@@ -823,6 +823,12 @@ rows:
     bin: core
     reason: The guide describes only the present, so an agent working from a saved note or a resumed chat has no sign that the note went stale. The entries stay in the doc so they add nothing here (boxholder, 2026-11-01).
     audits: [change-note-stale, change-note-right, change-doc-before-cannot]
+  - id: docs.whats-new
+    rule: "When the person asks what's new in Bee Box, read `_content/docs/generated/whats-new.md` and link it; Bee Box rewrites it, so do not edit it."
+    handle: DOCS
+    bin: core
+    reason: The person's changelog is copied into the box so they can open it from Settings; the agent answers from the same file so the two agree (boxholder, 2026-11-16).
+    audits: [whats-new-answer]
   - id: docs.read-first
     rule: Read the doc before answering how something works or working with an unfamiliar type; don't reconstruct a mechanism from memory.
     handle: DOCS

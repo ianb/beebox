@@ -1,6 +1,6 @@
 /**
- * The box-wide pages as profile-menu rows: Dashboard, Browse, History, and
- * Storage summary. They moved here from the box screen, where the boxholder
+ * The box-wide pages as profile-menu rows: Dashboard, Browse, History,
+ * Storage summary, and What's new in Bee Box. They moved here from the box screen, where the boxholder
  * never used them (plan:box-screen, "Box-wide pages move to the
  * avatar menu"). The ids are the ones the old box panel used, so smoke
  * snapshots and docs keep one name for each row.
@@ -9,6 +9,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { workspaceRouteTarget } from "../../lib/system-card-navigation";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { WHATS_NEW_PATH } from "@shared/whats-new-path";
 import { href } from "../../lib/routing";
 import { MenuItem } from "../ui/menu-item";
 
@@ -17,6 +18,7 @@ const BOX_PAGES = [
   { id: "bbx-box-menu-browse", path: SYSTEM_CARD_PATHS.browse, label: "Browse" },
   { id: "bbx-box-menu-history", path: SYSTEM_CARD_PATHS.history, label: "History" },
   { id: "bbx-box-menu-inventory", path: SYSTEM_CARD_PATHS.inventory, label: "Storage summary" },
+  { id: "bbx-box-menu-whats-new", path: WHATS_NEW_PATH, label: "What's new in Bee Box" },
 ] as const;
 
 export function BoxPageMenuItems({ boxSlug }: { boxSlug: string }) {
