@@ -66,3 +66,7 @@ removes the whole category of "worked after I refreshed" ghosts.
 - A version-mismatch line in the client debug log helps a field probe even with no UI.
 
 The iOS build already stamps its commit (`CBGitCommit` in Info.plist) and logs `[ios] lifecycle: launch build=<sha>`. No web-bundle version handshake exists in `beebox/src` today.
+
+## Re-encounter 2026-11-16
+
+The boxholder reported it again: returning to a tab left open across a deploy, the app often misbehaves until a reload. Still no web-bundle version handshake in `beebox/src`. The priority (`normal`) may be stale.
