@@ -168,7 +168,7 @@ test("removed calls: v.ctx, v.cache, v.sprite, v.image and v.paperTexture fail w
           const got: unknown = Reflect.get(v, member);
           if (typeof got === "function") Reflect.apply(got, v, []);
         }),
-      (e: unknown) => e instanceof RemovedCallError && e instanceof SketchUsageError && e.call === call && e.replacement.length > 0 && e.message.includes(`${call} was removed: `) && /draft section/.test(e.message),
+      (e: unknown) => e instanceof RemovedCallError && e instanceof SketchUsageError && e.call === call && e.replacement.length > 0 && e.message.includes(`${call} was removed: `) && /(TEA|BRUSHES)\.md, "/.test(e.message),
       call,
     );
   }

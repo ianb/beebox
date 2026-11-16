@@ -3,7 +3,72 @@
 `@ianbicking/canvas-loop` is EXPERIMENTAL: the API moves as agent exercises teach
 us more. Every change lands here — hand-written and terse.
 
-## Unreleased
+## 0.2.0
+
+- **Breaking: `draw` returns its drawing.** Each drawing call on `v` returns a
+  node and draws nothing by itself; `draw` returns a node, a list (nested
+  lists flatten; `null`, `undefined` and `false` are skipped) or `null`
+  (`RootDrawing`). Scopes take their children as a list: `at(options,
+  children)`, `group(options, children)`, `clip(shape, children)`,
+  `mask(maskArt, children)`. A body function throws `RemovedCallError`, and so
+  does a `draw` that returns `undefined`. A child that is a number, a string,
+  `true` or another object is refused at the call. A node belongs to the frame
+  that made it. Headless runs warn, with the line, for a node made and not
+  returned. `log`, `snapshot`, `cursor` and `control` stay statements.
+  `toCanvas(point, scopes)` takes the `at` options it is inside. `v.text`
+  returns a node; measure with `textBounds`. Every gallery sketch and example
+  was converted by script with byte-identical renders.
+- **Breaking: paper is a scope.** `v.paper(settings, children)` sets the paper
+  for the brushes and effects in its children only; it no longer leaks out of
+  `at` or `clip`. A group's wash and paper effects use the paper around the
+  group. A picture takes its own `paper` option, never the paper where it is
+  placed.
+- **Breaking: one renderer, WebGPU.** The scene renderer replaces the Canvas2D
+  painter: the browser's WebGPU, and Dawn (`webgpu`) headless. A headless run
+  needs a GPU adapter (`NoGpuAdapterError` otherwise); a browser without
+  WebGPU reports `NoWebGpuError`. `attachSketch` opens the device
+  asynchronously: `AttachedSketch.ready` resolves when frame 0 is on screen,
+  and failures reach `onError` once. `Painter`, `Ctx2D`, `tracePath`,
+  `tracePolygon`, `resolveGradient` and the `./scene-browser` export are gone;
+  a sketch's `renderer` export is ignored.
+- **Breaking: removed calls.** `v.ctx`, `v.cache`, `v.sprite`, `v.image` and
+  `v.paperTexture` throw `RemovedCallError` naming the replacement: pictures
+  (`v.picture(options, body)`, `v.place(picture, x, y)`) for the first four,
+  `effects: { paper }` for the last.
+- **Pictures.** `v.picture({ key, width, height, deps?, paper? }, body)`
+  records a drawing once per version (key, size, paper and the values of
+  `deps`) and `v.place` puts it anywhere, any number of times. `v.pixels`
+  makes a fixed-resolution image from RGBA bytes. Headless runs re-record each
+  picture every frame and warn when the body reads something not in `deps`.
+- **New calls and options.** Lighting: `group({ lighting })`, `v.light`,
+  `style.material` (`bevel`, `relief`, `shine`, `emissive`, `castsShadow`,
+  `receivesShadow`). Effects: `wash`, `hatching`, `paper`, and `style.effects`
+  on one shape. `at` takes `skew` and `matrix`; strokes take `cap` and `join`;
+  groups take `name` and `clip`. `v.noise(x, y?, z?)`. `run --scene` writes
+  each frame's drawing as an outline; `run --ratio` sets the pixel density.
+- **Type-checked runs.** `cli run` and `gallery:check` type-check each sketch,
+  its imports and its exports against the TEA contract before rendering;
+  `--no-typecheck` skips it. `checkSketchTypes` is exported from `./headless`.
+  The style's `cap` and `join` values are no longer checked at run time.
+- **Changed behaviour** (draft section 12):
+  - Effect lengths follow their group's transform: a group drawn at half
+    scale blurs half as far, and a shadow's offset turns with it.
+  - `keepInside` inside a picture keeps text inside the picture's box.
+  - Pictures keep what spills past their box; sprites cut it.
+  - `effects.paper` darkens colour only where the group drew; `paperTexture`
+    painted over everything drawn so far.
+  - `control`, `cursor`, `log` and `snapshot` are errors inside a picture
+    body.
+  - Brushed drawings changed texture once: a mark's seed hashes its own
+    geometry, not device pixels.
+  - `blend: "normal"` on a brushed stroke means normal (a `marker` stops
+    multiplying).
+  - Headless control stand-ins draw above the scene.
+  - Pictures replay under a non-uniform scale, so brush tips stay round; a
+    scaled sprite stretched its pixels.
+  - `pixels` makes a fixed-resolution image; `v.ctx` drew at device
+    resolution.
+  - `smudge` or `wet` with `effects` is an error.
 
 - **Brushes expand on the GPU; `perfect-freehand` removed.** A compute pass
   lays every brush kind's dabs, ink capsules, bristle strips and smear dabs;

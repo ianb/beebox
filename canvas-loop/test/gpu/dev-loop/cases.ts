@@ -450,7 +450,7 @@ export const CASES: readonly DevLoopCase[] = [
     id: "removed-call",
     mistake: "an old figure calls v.cache, which the scene API removed",
     channel: "error",
-    names: [/RemovedCallError/, /v\.cache was removed/, /v\.picture/, /v\.place/, /draft sections 2 and 5/],
+    names: [/RemovedCallError/, /v\.cache was removed/, /v\.picture/, /v\.place/, /TEA\.md, "Pictures"/],
     draw: (v) => Reflect.apply(Reflect.get(v, "cache"), v, ["key", () => v.rect(0, 0, 10, 10, fill)]),
   },
   {

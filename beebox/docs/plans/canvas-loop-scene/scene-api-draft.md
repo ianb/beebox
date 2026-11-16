@@ -47,6 +47,9 @@ measurement, gradients, brushes, gestures, `clip`, `mask`, `tween`, `ease`,
 
 ## 3. The lowering contract
 
+The current contract, with the as-built details of sections 15–23, is
+`canvas-loop/RENDERER.md`; this section keeps the draft's wording.
+
 This section is normative: both renderers produce this result, and no cache
 may change it. A **layer** is a premultiplied RGBA image. The **target** is the
 layer drawing currently lands on. The scene starts with one target, the

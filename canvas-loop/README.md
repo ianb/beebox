@@ -1,11 +1,11 @@
 # canvas-loop
 
-> **EXPERIMENTAL.** `@ianbicking/canvas-loop@0.1.0`. This is a workspace library
+> **EXPERIMENTAL.** `@ianbicking/canvas-loop@0.2.0`. This is a workspace library
 > whose API is expected to move as agent exercises teach us more — imports,
 > exports, and event shapes may change between versions. Every change is recorded
 > in [CHANGELOG.md](./CHANGELOG.md).
 
-A deterministic, browser-less, frame-stepped **Canvas2D sandbox for agent programming**.
+A deterministic, frame-stepped **drawing sandbox for agent programming**.
 
 You write a sketch, run one CLI command, and get back a single interleaved
 **transcript**: frame-tagged log lines with rendered PNG frames inline.
@@ -14,28 +14,47 @@ messages, the same path a real UI uses. So one events file is a test, a
 reproduction, and a demo.
 
 A sketch has one form: The Elm Architecture (TEA). `init` builds a model,
-`update` folds each message into a new model, and `draw` paints it. Each
-drawing call takes its style as an argument, so no drawing state carries from
-one call to the next. [TEA.md](./TEA.md) is the sketch reference: the
-contract, the drawing API, params and events. Brushes are in
-[BRUSHES.md](./BRUSHES.md).
+`update` folds each message into a new model, and `draw` returns the drawing
+of the model, built from calls that each return a node and take their style as
+an argument. [TEA.md](./TEA.md) is the sketch reference: the contract, the
+drawing API, pictures, params and events. Brushes, effects and lighting are in
+[BRUSHES.md](./BRUSHES.md). [RENDERER.md](./RENDERER.md) is the renderer's
+contract, for work on canvas-loop itself.
 
-It renders with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas)
-(Skia, no browser). Two identical runs produce byte-identical output: time is a
-fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
-`performance.now` / argless `new Date()` are disabled inside a sketch.
+## What draws
+
+One renderer, on WebGPU: the browser's in a figure, and Dawn (the `webgpu`
+package) headless. A headless run needs a GPU adapter: a GPU with its driver,
+or on Linux a software Vulkan driver such as Mesa's lavapipe. Without one,
+`run` writes the transcript and throws `NoGpuAdapterError`, whose message lists
+possible causes. A browser without WebGPU reports `NoWebGpuError`.
+
+Runs are deterministic: time is a fixed timestep, randomness is seeded, and
+`Math.random` / `Date.now` / `performance.now` / argless `new Date()` are
+disabled inside a sketch. Two runs are byte-identical within one runtime on one
+machine. Between a browser and a headless run, or two machines, pixels can
+differ slightly; `beebox/docs/plans/canvas-loop-scene/parity-criteria.md`
+sets how much.
 
 ## Run
 
 ```sh
 pnpm --dir canvas-loop run cli run <sketch.ts> \
-  [--frames 120] [--events events.json] [--out out/] \
-  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]... [--outline] [--timing] [--note text]
+  [--frames 120] [--events events.json] [--out out/] [--seed 42] [--fps 60] \
+  [--every 30] [--zoom x,y,w,h[@scale]]... [--ratio 2] [--scene [first]] \
+  [--outline] [--timing] [--note text] [--no-typecheck]
 ```
 
-`--outline` draws sprite, clip and `debugBox` outlines over each captured
-frame; `--timing` adds a per-frame draw-time line to the transcript (see
-[BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
+`run` first type-checks the sketch, the files it imports and its exports
+against the TEA contract; a type error stops the run with exit 1 and is listed
+in the transcript. `--no-typecheck` skips the check, for runs that time the
+renderer.
+
+`--ratio` sets the pixel density (default 1). `--scene` writes each captured
+frame's drawing as an outline into the transcript (`--scene first`: only the
+first). `--outline` draws picture, clip and `debugBox` outlines over each
+captured frame; `--timing` adds render counts and draw times to the
+transcript (see [BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
 
 `--zoom` (repeatable) also writes an enlarged crop of that region beside every
 captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and
@@ -61,12 +80,15 @@ change crop is). Look at the highlight first to find the edits, then the
 change crops to judge them.
 
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
-overwritten each run. On success it prints only the transcript path and frame
+emptied first. On success it prints only the transcript path and frame
 count; each sketch error prints one line and exits nonzero (the transcript is
 still written, with the error frame-tagged).
 
 Read `transcript.md` — the inline `![frame N](frame-NNNN.png)` images render
 directly in tools that display markdown images (including Claude Code's `Read`).
+
+Run one heavy GPU process at a time on a machine: several large renders at
+once have crashed the GPU driver.
 
 ## Events file
 
@@ -255,7 +277,7 @@ with zero setup.
 ## Development
 
 ```sh
-pnpm --dir canvas-loop test        # node --test
+pnpm --dir canvas-loop test        # node --test; *.gpu.test.ts files run one at a time
 pnpm --dir canvas-loop typecheck
 pnpm --dir canvas-loop lint         # @ianbicking/personal-vibe-check preset
 ```

@@ -4,10 +4,11 @@ Use canvas-loop to see what a program draws (sketches, simulations, generative
 figures, interactive canvas toys, `SketchFigure` embeds) without a live
 browser. Real DOM or CSS app UI stays with the browse skill.
 
-Reference, read before writing: [TEA.md](TEA.md) (sketch contract, drawing
-API with a style on every call; name files `*-tea.ts`), [README.md](README.md)
-(run, events, capture, `<SketchFigure>`), [BRUSHES.md](BRUSHES.md) and
-[src/gallery/README.md](src/gallery/README.md) (exercise corpus).
+Reference, read before writing: [TEA.md](TEA.md) (sketch contract; `draw`
+returns its drawing; name files `*-tea.ts`), [README.md](README.md) (run,
+events, capture, `<SketchFigure>`), [BRUSHES.md](BRUSHES.md) (brushes,
+effects, lighting) and [src/gallery/README.md](src/gallery/README.md)
+(exercise corpus). For work on the renderer: [RENDERER.md](RENDERER.md).
 
 ## The loop
 
@@ -36,6 +37,13 @@ To bank or re-run an exercise, follow [src/gallery/README.md](src/gallery/README
 `src/gallery/<slug>/` with `task.md`, `sketch*.ts`, `events.json`, `meta.yaml`,
 one appended `runs.jsonl` line, then `pnpm --dir canvas-loop run gallery:check`
 must pass before commit. Do not commit PNGs or transcripts.
+
+## GPU
+
+- Run one heavy GPU process at a time on a machine (`gallery:check`, the test
+  suite, long renders): several at once have crashed the GPU driver.
+- A test that opens a GPU device goes in a `*.gpu.test.ts` file. `pnpm test`
+  runs those one at a time, after the rest.
 
 ## Audit norms
 

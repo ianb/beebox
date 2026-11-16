@@ -1,6 +1,6 @@
 {
   "name": "@ianbicking/canvas-loop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Deterministic, frame-stepped drawing sandbox for agent programming: a scene API drawn with WebGPU in the browser and Dawn headless",
   "type": "module",
   "private": true,
