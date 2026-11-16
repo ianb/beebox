@@ -168,8 +168,8 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         </span>
         <Button
           id={controlAddress("bbx-composition-accept", instance)}
-          label="Accept agent text as yours"
-          title="Accept the selected agent words as yours, or the whole mark at the cursor (Ctrl/⌘+Shift+Enter)"
+          label="Accept marked words as yours"
+          title="Accept the selected marked words as yours, or the whole mark at the cursor (Ctrl/⌘+Shift+Enter)"
           aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter"
           size="sm"
           intent="secondary"

@@ -128,6 +128,14 @@ void test("check marks", async (t) => {
   const C = '{% editorial kind="check" note="unclear audio" %}';
   t.check(accept(`${C}in [this] world${E}`), `${C}in${E} this ${C}world${E}`);
   t.check(accept(`${C}in th|is world${E}`), "in this world");
+  // A check's ⟩ shows, so a cursor after it is outside the check.
+  t.check(accept(`${C}in this world${E}| ok`), `${C}in this world${E} ok`);
+});
+
+// ## A split that would not come out clean is refused: tags would land inside inline code
+void test("unclean split is refused", async (t) => {
+  t.check(accept(`${J}run \`[hello] world\` now${E}`), `${J}run \`hello world\` now${E}`);
+  t.check(accept(`${J}run \`hello wo|rld\` now${E}`), "run `hello world` now");
 });
 
 // ## Gaps and notes are placeholders, so accepting leaves them alone

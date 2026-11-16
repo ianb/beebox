@@ -116,10 +116,15 @@ function wrapLines(text: string, { open, close }: { open: string; close: string 
  * part of a mark splits it, so only the selected words leave the mark. An
  * empty selection inside a mark accepts the whole mark. Gaps, notes, and
  * source marks are left alone. What stays marked becomes one inline mark per
- * line, so a block mark split this way stays well formed.
+ * line, so a block mark split this way stays well formed. A cursor on a
+ * joiner's edge counts as inside it, since its delimiters show nothing; a
+ * check's "✓" and "⟩" show, so only its words count. A split that does not
+ * come out clean (tags landing in inline code, nested marks) is refused:
+ * no changes.
  */
 export function acceptChanges(text: string, { marks, selection }: { marks: readonly MarkRange[]; selection: { from: number; to: number } }): TextChange[] {
   const changes: TextChange[] = [];
+  const accepted: { from: number; to: number }[] = [];
   const cursor = selection.from === selection.to;
   let doneTo = -1;
   for (const mark of marks) {
@@ -130,7 +135,8 @@ export function acceptChanges(text: string, { marks, selection }: { marks: reado
     let from: number;
     let to: number;
     if (cursor) {
-      if (selection.from < mark.openFrom || selection.from > mark.closeTo) continue;
+      const [inFrom, inTo] = mark.kind === "joiner" ? [mark.openFrom, mark.closeTo] : [mark.openTo, mark.closeFrom];
+      if (selection.from < inFrom || selection.from > inTo) continue;
       [from, to] = [contentFrom, contentTo];
     } else {
       [from, to] = [Math.max(selection.from, contentFrom), Math.min(selection.to, contentTo)];
@@ -139,10 +145,24 @@ export function acceptChanges(text: string, { marks, selection }: { marks: reado
     const delimiters = { open: text.slice(mark.openFrom, mark.openTo), close: text.slice(mark.closeFrom, mark.closeTo) };
     changes.push({ from: mark.openFrom, to: from, insert: wrapLines(text.slice(contentFrom, from), delimiters) });
     changes.push({ from: to, to: mark.closeTo, insert: wrapLines(text.slice(to, contentTo), delimiters) });
+    accepted.push({ from, to });
     doneTo = mark.closeTo;
     if (cursor) break;
   }
-  return changes;
+  return changes.length === 0 || acceptedCleanly(text, { changes, accepted }) ? changes : [];
+}
+
+/** Whether, after the changes, the text is well formed and no accepted words sit inside a joiner or check. */
+function acceptedCleanly(text: string, { changes, accepted }: { changes: TextChange[]; accepted: { from: number; to: number }[] }): boolean {
+  const shift = (pos: number) => changes.reduce((sum, c) => (c.to <= pos ? sum + c.insert.length - (c.to - c.from) : sum), pos);
+  let out = text;
+  for (const change of changes.toSorted((a, b) => b.from - a.from)) out = out.slice(0, change.from) + change.insert + out.slice(change.to);
+  const scan = scanMarks(out);
+  if (scan.malformed) return false;
+  return accepted.every(({ from, to }) => {
+    const [a, b] = [shift(from), shift(to)];
+    return !scan.marks.some((m) => ACCEPTABLE.has(m.kind) && m.openTo < b && m.closeFrom > a);
+  });
 }
 
 /**
