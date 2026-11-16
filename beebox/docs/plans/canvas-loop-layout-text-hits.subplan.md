@@ -396,6 +396,32 @@ Existing names kept: `Drawing`, `DrawingNode`, `SceneNode`, `Scene`,
   grows by 2; an `ellipse` under `at({ rotate })`; a path with a bezier is
   bounded by its curve, not its control points; a `place` is its declared box;
   `null` for `[]`; a node made in an earlier frame throws.
+- **As built (A1).** Logs are in `scratch/layout-text-hits/a1-*.log`.
+  - **Layout box.** `scene/recorder/layout-box.ts` (`layoutBox(nodes)`) per
+    the Ontology rules. Paths are flattened with `polylines(g, 1)`; rect,
+    ellipse, arc and poly reuse `geomBox`, with corners ordered for a negative
+    width or radius. A baseline survives an `at` whose matrix has no
+    rotation or skew terms (`b` and `c` exactly 0).
+  - **Measurer.** `TextMeasurer.baselineGap(font, textBaseline)` returns the
+    distance down from the `textBaseline` line to the alphabetic baseline,
+    `0 − measureText("H").alphabeticBaseline`, cached per font and mode and
+    cleared with the widths. `test/core/text/measure.test.ts` pins the
+    headless sign (positive from `top` and `middle`, 0 at `alphabetic`,
+    negative from `bottom`).
+  - **Deviation: `TextNode.box` lands here, not in B1.** The layout box of a
+    text node needs its rectangle, and `layoutBox` is a pure function of
+    nodes, so `recordText` sets `box` (the `TextBounds` rectangle) beside
+    `baselineY`. The `keepInside` re-layout already calls `recordText`, so the
+    resolved node carries the moved box; B1 has nothing left to add for `box`.
+  - **`View.bounds`** uses `Children.look`, a no-take twin of `list` (a
+    method, not a flag, because of the two-parameter cap). `Bounds` is in
+    `core/paint.ts` beside `TextBounds`, re-exported from `core/tea.ts` and
+    so from the package root. `SceneRecorder` is the only `View`; the browser
+    runtime uses it too.
+  - **Docs.** TEA.md gains a "Layout" section under "Drawing" (after
+    "Scopes") with `v.bounds`, so the View-members doc test passes; A2 and A3
+    add to it.
+  - **Lines:** source 182, tests 154, docs 17 (353; plan ~700 for all of A).
 
 ### B. Named hits
 

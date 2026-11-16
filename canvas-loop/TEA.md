@@ -317,6 +317,23 @@ Each scope takes its children as its last argument and returns one node.
 - `v.paper(settings, children)` sets the paper grain for the brushes and
   effects in its children (see [BRUSHES.md](./BRUSHES.md#paper)).
 
+### Layout
+
+`v.bounds(drawing)` returns the layout box of any drawing of this frame:
+`{ x, y, w, h, baseline }` in the coordinates where it is returned, or `null`
+when it draws nothing. Measure a component's result instead of writing a
+second function that computes its size.
+
+- A shape is its geometry (a path by its curve) plus half its stroke weight.
+  Miter spikes, brush wobble and effects are not counted.
+- Text is exactly what `textBounds` gives. `baseline` is the first text's
+  alphabetic baseline y, or `null` when the drawing has no text or a rotation
+  or skew turns it.
+- A placed picture is its declared `width × height`. Backgrounds, lights and
+  `erase` shapes add nothing; a clip cuts the box.
+- Measuring does not return the drawing: return it as well, or testing mode
+  warns that it was not returned.
+
 ### Pictures
 
 A picture records a drawing once and places it any number of times. Use one

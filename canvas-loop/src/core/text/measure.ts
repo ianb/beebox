@@ -6,7 +6,7 @@
 // Widths depend on the fonts the runtime has: headless and a browser can differ,
 // and a browser web font that loads later changes them (`clear()` on load).
 import type { TextBounds, TextBox, TextOptions, TextStyle } from "../paint.js";
-import type { Ctx2D, CtxTransform, MakeLayer } from "../ctx2d.js";
+import type { Ctx2D, CtxTextBaseline, CtxTransform, MakeLayer } from "../ctx2d.js";
 import { layoutText } from "./layout.js";
 import type { TextLayout } from "./layout.js";
 
@@ -41,6 +41,7 @@ export class TextMeasurer {
   #makeLayer: MakeLayer;
   #ctx: Ctx2D | undefined;
   #widths = new Map<string, number>();
+  #gaps = new Map<string, number>();
 
   constructor(makeLayer: MakeLayer) {
     this.#makeLayer = makeLayer;
@@ -59,9 +60,29 @@ export class TextMeasurer {
     return width;
   }
 
-  /** Forget every width: fonts changed (a web font finished loading). */
+  /**
+   * How far below the `textBaseline` line the alphabetic baseline of `font`
+   * sits, in logical pixels (negative when above). Canvas reports
+   * `alphabeticBaseline` with the opposite sign: up is positive.
+   */
+  baselineGap(font: string, textBaseline: CtxTextBaseline): number {
+    const key = `${font}\n${textBaseline}`;
+    const cached = this.#gaps.get(key);
+    if (cached !== undefined) return cached;
+    this.#ctx ??= this.#makeLayer({ width: 1, height: 1 }).ctx;
+    this.#ctx.font = font;
+    this.#ctx.textBaseline = textBaseline;
+    const gap = 0 - this.#ctx.measureText("H").alphabeticBaseline;
+    this.#ctx.textBaseline = "alphabetic";
+    if (this.#gaps.size >= CACHE_LIMIT) this.#gaps.clear();
+    this.#gaps.set(key, gap);
+    return gap;
+  }
+
+  /** Forget every width and baseline: fonts changed (a web font finished loading). */
   clear(): void {
     this.#widths.clear();
+    this.#gaps.clear();
   }
 
   /** The width `text` would take with these options, in logical pixels. */

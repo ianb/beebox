@@ -62,6 +62,8 @@ export function recordText(content: string, at: { box: TextBox; options: TextOpt
     lines = laid.layout.lines.map((line, i) => glyphLine(line.text, { x: line.x, y: onBaseline ? laid.box.y + i * lineHeight : line.y, font, measurer }));
   }
   const halo = o.halo === undefined ? undefined : { paint: copyPaint(o.halo, "text halo"), width: haloWidth(size) };
-  const node: TextNode = { kind: "text", content, family: o.font, style: o.style, size, baseline, lines, fill: copyPaint(o.fill, "text"), halo, blend, erase: o.erase ?? false };
+  const lb = laid.bounds;
+  const baselineY = (lines[0]?.y ?? lb.y) + measurer.baselineGap(font, lines[0] === undefined ? "top" : baseline);
+  const node: TextNode = { kind: "text", content, family: o.font, style: o.style, size, baseline, lines, box: { x: lb.x, y: lb.y, w: lb.w, h: lb.h }, baselineY, fill: copyPaint(o.fill, "text"), halo, blend, erase: o.erase ?? false };
   return { node, bounds: laid.bounds };
 }

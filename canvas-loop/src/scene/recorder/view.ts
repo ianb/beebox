@@ -13,7 +13,7 @@ import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
 import { MADE_IN } from "../../core/paint.js";
-import type { ClipShape, DrawingNode, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import type { Bounds, ClipShape, Drawing, DrawingNode, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
@@ -44,6 +44,7 @@ import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
 import type { FrameOutputs, FrameRecord } from "./frame.js";
 import { Children } from "./children.js";
+import { layoutBox } from "./layout-box.js";
 
 /** Testing mode warns of at most this many drawings made and not returned in one frame. */
 const UNRETURNED_PER_FRAME = 8;
@@ -238,6 +239,10 @@ export class SceneRecorder extends PureHelpers implements View {
   }
   textWidth(content: string, options?: TextOptions): number {
     return this.#measurer("textWidth").width(content, options);
+  }
+  bounds(drawing: Drawing): Bounds | null {
+    this.#notes.live("bounds");
+    return layoutBox(this.#children.look("bounds", drawing));
   }
 
   /** A pure helper: `point` under each scope's transform, innermost first, as the walk composes them. */

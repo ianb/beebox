@@ -63,6 +63,20 @@ export interface TextBounds {
 }
 
 /**
+ * A drawing's layout box (`v.bounds`), in the coordinates where it is
+ * returned: shape geometry plus half the stroke, text's line boxes, a placed
+ * picture's declared size. `baseline` is the first text's alphabetic baseline
+ * y, or null when it holds no text or a rotation or skew moves it.
+ */
+export interface Bounds {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  baseline: number | null;
+}
+
+/**
  * How one drawing call paints: plain data, held in variables and spread to
  * vary (`{ ...ink, stroke: "red" }`). A key left out means none (no fill, no
  * stroke, no brush) or the default (weight 1, blend "normal").

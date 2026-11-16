@@ -134,6 +134,10 @@ export interface TextNode {
   /** The Canvas2D `textBaseline` each line's `y` is measured to. */
   readonly baseline: "top" | "middle" | "bottom" | "alphabetic";
   readonly lines: readonly TextLine[];
+  /** The text's bounds as laid out at the call (its `TextBounds` rectangle). */
+  readonly box: { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+  /** The first line's alphabetic baseline y (distinct from `baseline`, the Canvas2D mode). */
+  readonly baselineY: number;
   readonly fill: Paint;
   readonly halo: { readonly paint: Paint; readonly width: number } | undefined;
   readonly blend: BlendMode;
