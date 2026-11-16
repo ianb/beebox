@@ -602,3 +602,24 @@ void test("Accepted startup without init has a bounded visible wait and releases
     actor: "stopped",
   });
 });
+
+// ## What a page reload would cut off
+//
+// The new-version reload (`lib/reload-blockers.ts`) asks the pool whether a
+// reload would lose chat work. A history refetch is not such work: every
+// reconnect and every return to the tab starts one, and a reload refetches
+// the same history. A send in flight is.
+void test("A history refetch does not hold a reload; a send still being delivered does", async (t) => {
+  const f = fixture();
+  const chat = f.pool.select(session("first"));
+  await tick();
+  chat.send({ type: "REFRESH" });
+  const whileRefetching = { state: chat.getSnapshot().value, busy: f.pool.busy() };
+  await tick();
+  f.holdReceipts();
+  const captured = f.pool.capture(bind(session("first")));
+  captured.send(send("in-flight"));
+  const whileSending = f.pool.busy();
+  f.pool.suspend();
+  t.check({ whileRefetching, whileSending }, { whileRefetching: { state: "refreshing", busy: false }, whileSending: true });
+});

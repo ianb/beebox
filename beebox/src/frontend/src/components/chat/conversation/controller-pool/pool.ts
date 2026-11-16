@@ -253,21 +253,26 @@ export class ConversationControllerPool {
       if (entry.assigned) finish();
     });
   }
-  /** A send still being delivered, a turn streaming or refreshing, or a start waiting for its session. */
-  private static working(entry: Entry): boolean {
-    if (entry.pins > 0) return true;
-    const snapshot = entry.actor.getSnapshot();
-    if (snapshot.matches("streaming") || snapshot.matches("refreshing")) return true;
-    return entry.awaitingAssignment && !entry.assigned;
-  }
-  /** Some conversation has work a page reload would cut off, including messages queued behind a turn. */
+  /**
+   * Some conversation has work a page reload would cut off: a send still
+   * being delivered, a reply streaming, a start waiting for its session, or a
+   * message not yet echoed by history. A history refetch (`refreshing`) is
+   * not: every reconnect and every return to the tab starts one, and a reload
+   * refetches the same history.
+   */
   busy(): boolean {
-    return [...this.entries.values()].some((entry) => ConversationControllerPool.working(entry) || entry.actor.getSnapshot().context.pendingMessages.length > 0);
+    return [...this.entries.values()].some((entry) => {
+      const snapshot = entry.actor.getSnapshot();
+      return entry.pins > 0 || snapshot.matches("streaming") || (entry.awaitingAssignment && !entry.assigned)
+        || snapshot.context.pendingMessages.length > 0;
+    });
   }
   private collect(): void {
     for (const [key, entry] of this.entries) {
-      if (key === this.selected || entry.alias === this.selected) continue;
-      if (ConversationControllerPool.working(entry)) continue;
+      if (key === this.selected || entry.alias === this.selected || entry.pins > 0) continue;
+      const snapshot = entry.actor.getSnapshot();
+      if (snapshot.matches("streaming") || snapshot.matches("refreshing")) continue;
+      if (entry.awaitingAssignment && !entry.assigned) continue;
       entry.actor.stop();
       this.entries.delete(key);
     }
