@@ -9,7 +9,7 @@ import type { Bounds, Drawing, View } from "../../src/core/tea.js";
 import type { TextMeasurer } from "../../src/core/text/measure.js";
 import { openTextMeasurer } from "../../src/device/open.js";
 import type { SceneNode } from "../../src/scene/nodes.js";
-import { layoutBox } from "../../src/scene/recorder/layout-box.js";
+import { layoutBox } from "../../src/scene/layout-box.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 
 let text: TextMeasurer | undefined;

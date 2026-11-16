@@ -915,6 +915,35 @@ run them on the worktree's test1 with `--filter figure`:
        plan's ~720 + ~110 for B core and scripted aim; the revised estimate
        for both is about 1,300.
 6. **B3** scripted aim in events files.
+   - **As built (B3).** Logs are in `scratch/layout-text-hits/b3-*.log`.
+     `TeaScriptEvent`'s mouse entry gains `target?: string`; the parser
+     refuses an empty or non-string `target` and `target` with `x` or `y`
+     (`give "target" or "x" and "y", not both`). `headless/tea-runtime/aim.ts`
+     (`aimAt`) finds the topmost node with the name (drawn last first; a
+     named node before the nodes inside it; through `at`, group, clip, mask
+     body and placed picture bodies), takes the centre of `layoutBox([node])`
+     through the matrices around it, rounds it, and hit-tests it. The runner
+     uses that point and hit, and keeps it as the mouse position for later
+     entries without `x`/`y`. Errors are `EventScriptError`s that end the run
+     with the frame and step: frame 0 (`nothing is drawn before frame 0's
+     events`), no drawing with the name and a layout box (`… in the scene
+     drawn at frame 29`), and a centre that misses (`its centre (150,50)
+     lands on "weight-2"; aim with x and y`, or `lands on no named
+     drawing`). The browser's intent type omits `target`, so its log keeps
+     `x` and `y` only. README "Events file" documents the form; TEA.md's
+     section points there.
+     - **Moved:** `scene/recorder/bounds.ts` and `scene/recorder/layout-box.ts`
+       to `scene/`. `aim.ts` needs `layoutBox` from outside the recorder,
+       which `layout-check` rule 5 refuses for a recorder helper; both are
+       pure functions of nodes, like `hit.ts`. Import paths only.
+     - **Tests:** `test/headless/tea-runtime.aim.test.ts` (recorded scenes:
+       scopes and placements, rounding, the topmost of two, the three
+       errors); the parser cases in `tea-events.test.ts`; one end-to-end run
+       and one failing run in `tea-runtime.hits.gpu.test.ts`.
+     - **Lines:** source 138 (22 of them the move's import paths), tests 94,
+       docs 9 (241). Track B so far: 1,370 against ~830 planned for B core
+       and scripted aim; with B4 and B5, Track B will likely end near
+       1,600.
 7. **B4** beebox host activity detail (`figure-canvas-loop.ts`) and its test;
    TEA.md "Names and hits", "Events file"; CHANGELOG; knowledge audit
    `figure-named-hits`, run.

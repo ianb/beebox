@@ -4,10 +4,10 @@
 // picture's declared size. Miter spikes, brush wobble and effects are left
 // out, as are backgrounds, lights and debug boxes. The off-canvas check's
 // boxes (bounds.ts) are larger on purpose and are not used here.
-import type { Bounds } from "../../core/paint.js";
-import { polylines } from "../geometry/flatten.js";
-import { apply } from "../mat.js";
-import type { Geom, Mat, SceneNode, ShapeNode } from "../nodes.js";
+import type { Bounds } from "../core/paint.js";
+import { polylines } from "./geometry/flatten.js";
+import { apply } from "./mat.js";
+import type { Geom, Mat, SceneNode, ShapeNode } from "./nodes.js";
 import { geomBox, transformed } from "./bounds.js";
 import type { Box } from "./bounds.js";
 

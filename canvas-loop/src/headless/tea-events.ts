@@ -4,7 +4,7 @@ import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 
 /** One entry in a TEA events script: scripted input, a param edit, a trigger, or a snapshot. */
 export type TeaScriptEvent =
-  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number }
+  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string }
   | { frame: number; type: "keydown" | "keyup"; key?: string }
   | { frame: number; type: "param"; name: string; value: number | boolean | string }
   | { frame: number; type: "trigger"; name: string }
@@ -127,10 +127,17 @@ function parseMouseEvent(params: { record: Record<string, unknown>; frame: numbe
   const { record, frame, type, where } = params;
   const x = readOptionalNumber({ record, key: "x", where });
   const y = readOptionalNumber({ record, key: "y", where });
-  const event: TeaScriptEvent = { frame, type };
-  if (x !== undefined) event.x = x;
-  if (y !== undefined) event.y = y;
-  return event;
+  const target = record["target"];
+  if (target === undefined) {
+    const event: TeaScriptEvent = { frame, type };
+    if (x !== undefined) event.x = x;
+    if (y !== undefined) event.y = y;
+    return event;
+  }
+  if (typeof target !== "string" || target.length === 0) throw new EventScriptError({ detail: `${where}: "target" must be a non-empty string` });
+  // Aiming by name picks the point; a given x or y would be a second answer.
+  if (x !== undefined || y !== undefined) throw new EventScriptError({ detail: `${where}: give "target" or "x" and "y", not both` });
+  return { frame, type, target };
 }
 
 function parseSnapshotEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {

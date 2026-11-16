@@ -1,7 +1,9 @@
 // Pointer targets in a headless run (plan:canvas-loop-layout-text-hits.subplan,
 // chunk B2): a message at frame N is hit-tested against the scene frame N−1
 // drew, since frame N's events dispatch before frame N's draw. Frame 0 has no
-// scene, so no targets. The transcript names what each click landed on.
+// scene, so no targets. The transcript names what each click landed on. An
+// entry with a `target` aims at the named drawing's centre (chunk B3), and a
+// bad aim stops the run.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
@@ -48,4 +50,25 @@ test("targets come from the scene of frame N−1: none at frame 0, and the same 
   const transcript = readTranscript(dir);
   assert.match(transcript, /mousedown \(5,5\) on f4c1 in figure/);
   assert.match(transcript, /mousedown \(30,30\)(?! on)/);
+});
+
+test("a target entry clicks the named drawing's centre; a later move keeps the point; a bad aim stops the run", async () => {
+  const seen: string[] = [];
+  const module = toTeaModule({
+    canvas: { width: 100, height: 60 },
+    init: () => ({}),
+    update: (model: object, msg: Msg): object => {
+      if (msg.type === "mousedown" || msg.type === "mousemove") seen.push(`${msg.type} ${msg.x},${msg.y} ${msg.targets.join("/")}`);
+      return model;
+    },
+    draw: (v: View) => [v.rect(10, 10, 20, 20, { fill: "#000", name: "left" }), v.at({ translate: [60, 10], name: "right" }, v.circle(10, 10, 10, { stroke: "#000", weight: 2, name: "ring" }))],
+  });
+  const ok = tmpDir();
+  await teaRun(teaRunOptions(module, { outDir: ok, frames: 3, events: [{ frame: 1, type: "mousedown", target: "left" }, { frame: 2, type: "mousemove" }] }));
+  assert.deepEqual(seen, ["mousedown 20,20 left", "mousemove 20,20 left"]);
+  assert.match(readTranscript(ok), /mousedown \(20,20\) on left/);
+  const bad = tmpDir();
+  const result = await teaRun(teaRunOptions(module, { outDir: bad, frames: 3, events: [{ frame: 1, type: "mousedown", target: "ring" }] }));
+  assert.equal(result.errors.length, 1);
+  assert.match(result.errors[0] ?? "", /frame 1: mousedown target "ring": its centre \(70,20\) lands on no named drawing; aim with x and y/);
 });

@@ -29,8 +29,9 @@ const MAX_DT_MS = 250;
 
 // A queued input before it is stamped with the frame it dispatches on. `snapshot`
 // is a scripted-only directive (a forced capture, never live UI input), so it is
-// excluded from the browser's intent stream and its recorded event log.
-type InputIntent<T> = T extends unknown ? Omit<T, "frame"> : never;
+// excluded from the browser's intent stream and its recorded event log, and so
+// is a mouse entry's `target` (scripted aim): the log keeps x and y only.
+type InputIntent<T> = T extends unknown ? Omit<T, "frame" | "target"> : never;
 type Intent = InputIntent<Exclude<TeaScriptEvent, { type: "snapshot" }>>;
 
 function deepFreeze(value: unknown, seen: WeakSet<object>): void {

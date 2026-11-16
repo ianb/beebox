@@ -6,7 +6,7 @@
 import { SketchUsageError } from "../../core/errors.js";
 import type { Bounds, FlowOptions } from "../../core/paint.js";
 import type { AtNode, SceneNode } from "../nodes.js";
-import { layoutBox } from "./layout-box.js";
+import { layoutBox } from "../layout-box.js";
 import { checkKeys } from "./options.js";
 
 type Flow = "row" | "column";

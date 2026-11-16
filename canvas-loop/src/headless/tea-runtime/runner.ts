@@ -28,6 +28,7 @@ import type { FrameSurface } from "../frame-surface.js";
 import type { GpuHandle } from "../../device/open.js";
 import { NoGpuAdapterError } from "../../scene/errors.js";
 import { hitTest } from "../../scene/hit.js";
+import { aimAt } from "./aim.js";
 // Type-only: the loader owns LoadedTeaModule (see tea-load.ts for why it
 // lives there and not here).
 import type { LoadedTeaModule } from "../tea-load.js";
@@ -261,10 +262,15 @@ class TeaRunner {
       case "mousedown":
       case "mouseup":
       case "mousemove": {
-        if (event.x !== undefined) this.#mouseX = event.x;
-        if (event.y !== undefined) this.#mouseY = event.y;
         // Frame N's events dispatch before frame N's draw, so this is frame N−1's scene (none at frame 0).
         const scene = this.#surface.hitScene();
+        if (event.target !== undefined) {
+          const { point, hit } = aimAt(scene, { frame: event.frame, type: event.type, target: event.target });
+          [this.#mouseX, this.#mouseY] = point;
+          return { type: event.type, x: point[0], y: point[1], ...hit };
+        }
+        if (event.x !== undefined) this.#mouseX = event.x;
+        if (event.y !== undefined) this.#mouseY = event.y;
         const { target, targets } = scene === undefined ? { target: undefined, targets: [] } : hitTest(scene, [this.#mouseX, this.#mouseY]);
         return { type: event.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }

@@ -44,7 +44,7 @@ import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
 import type { FrameOutputs, FrameRecord } from "./frame.js";
 import { Children } from "./children.js";
-import { layoutBox } from "./layout-box.js";
+import { layoutBox } from "../layout-box.js";
 import { flowChildren } from "./flow.js";
 import { checkName } from "./options.js";
 

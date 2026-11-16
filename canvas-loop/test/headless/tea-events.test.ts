@@ -60,3 +60,14 @@ test("triggering a non-trigger param is a clear error", () => {
     (e: unknown) => e instanceof EventScriptError && e.message.includes('param "speed" is a number, not a trigger'),
   );
 });
+
+test("a mouse entry aims by target, and target with x or y, or an empty target, is an error", () => {
+  assert.deepEqual(parseTeaEvents([{ frame: 3, type: "mousedown", target: "pan-left" }], decl), [{ frame: 3, type: "mousedown", target: "pan-left" }]);
+  const bad = (entry: object, text: string): void => {
+    assert.throws(() => parseTeaEvents([entry], decl), (e: unknown) => e instanceof EventScriptError && e.message.includes(text));
+  };
+  bad({ frame: 3, type: "mousedown", target: "pan-left", x: 4 }, 'event[0]: give "target" or "x" and "y", not both');
+  bad({ frame: 3, type: "mouseup", target: "pan-left", y: 4 }, "not both");
+  bad({ frame: 3, type: "mousemove", target: "" }, '"target" must be a non-empty string');
+  bad({ frame: 3, type: "mousedown", target: 7 }, '"target" must be a non-empty string');
+});

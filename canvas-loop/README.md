@@ -102,6 +102,7 @@ events see the folds before them), and hit-testing a moving target is a calculat
   { "frame": 6, "type": "mousedown", "x": 200, "y": 150 },
   { "frame": 8, "type": "mousemove", "x": 212, "y": 144 },
   { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
+  { "frame": 30, "type": "mousedown", "target": "pan-left" },
   { "frame": 40, "type": "snapshot", "label": "mid-arc" },
   { "frame": 55, "type": "param", "name": "speed", "value": 2.5 },
   { "frame": 90, "type": "keydown", "key": "r" },
@@ -111,6 +112,14 @@ events see the folds before them), and hit-testing a moving target is a calculat
 
 - Input types are `mousedown`, `mouseup`, `mousemove`, `keydown` and `keyup`.
   Each becomes a `Msg` of the same type.
+- A mouse entry can aim by name instead of by position: `"target": "pan-left"`
+  clicks the centre (in whole pixels) of the topmost drawing with that `name`
+  in the frame drawn before the event, at any depth and inside placed
+  pictures. Give `target` or `x`/`y`, not both. When no drawing has the name,
+  or its centre lands on another named drawing or on nothing named (a ring's
+  hole), the run stops with an error that says what the centre hit; aim with
+  `x` and `y` then. A frame-0 event cannot aim: nothing is drawn yet. A
+  browser's recorded events keep `x` and `y` only.
 - `param` sets a declared param and becomes a `param` msg. `trigger` becomes a
   `trigger` msg. Both are checked against the sketch's `params` before frame
   0: an unknown name or a wrong value type is an error.
