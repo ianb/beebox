@@ -688,6 +688,33 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
     lacks WebGPU, suggests updating it or another device, does not rewrite
     the figure). Re-run the existing `figure-canvas-loop-*` audits.
 - **First chunk:** schema instructions and starter with the starter test.
+- **As built (C4).** Logs are in `scratch/stage5/c3/`.
+  - **Most of this was already done.** The scene-core chunk 7 had rewritten
+    the canvas-loop section around pictures, effects and lighting by doc
+    name, and C2 added `--scene` and the type check to "Checking a
+    canvas-loop figure". The starter already uses the scene API and keeps
+    its params. The box note on the copied docs still names the right dev
+    command (`cli run`). The transcript claims (warnings for a style that
+    draws nothing, overlapping text, a missing glyph; `Δmodel`,
+    `(unhandled)`, `activity {…}`) all hold.
+  - **Added** two bullets to the canvas-loop section: figures draw with
+    WebGPU and a device without it shows "This figure can't draw on this
+    device" (do not switch runtime unless the boxholder asks); "This figure
+    needs updating" means the earlier canvas-loop, and `bbx figure run`
+    names each removed call and its replacement.
+  - **Removed** the sentence that esbuild will not flag an undeclared name
+    in the module literal (the type check now does, TS18004), the
+    dev-facing note on why `mount` and `figure` share an argument, and the
+    factory-arguments list that repeated "The source". The instructions
+    shrank by four lines.
+  - **The starter's factory stays untyped** (settled decision 2). A box can
+    import only canvas-loop's root types; the factory takes beebox's
+    wrapped browser namespace and figure context, which no box-importable
+    module types. The check keeps ignoring implicit-`any` parameters from
+    the `export default` line on.
+  - **Audits.** `figure-outdated-sketch` and `figure-no-webgpu` added; with
+    the existing figure audits, `--filter figure` passes 16/16 on the
+    worktree's test1 (status comment in `knowledge-audits.yaml`).
 
 ### C5. Measure on a VM like the server (no source)
 
