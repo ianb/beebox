@@ -41,7 +41,7 @@ import { getBoxDir } from "../../../lib/paths/core.js";
 import { isRepo, hasCommits, getStatus, stageFiles, unstageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, readDocId, withDocId } from "../shared.js";
 import { getTemplatesOwnedBy, type TemplateDefinition } from "../../../templates-registry.js";
-import { ensureEngineDocs, writeBoxCardDocs } from "../box-docs.js";
+import { copyWhatsNew, ensureEngineDocs, writeBoxCardDocs } from "../box-docs.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -433,6 +433,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // cache: they depend on the engine alone, and a deleted or never-written
   // directory must heal on any activity, not only when this box's inputs move.
   await ensureEngineDocs();
+  await copyWhatsNew({ boxRoot, packageRoot: PACKAGE_ROOT });
 
   // Fast path: skip if no input files changed and source code unchanged.
   // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
