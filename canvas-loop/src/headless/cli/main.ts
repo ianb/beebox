@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
@@ -15,6 +15,8 @@ import { sceneArgs } from "./args.js";
 import { statsLine, writeDiff } from "../diff.js";
 import { CHECKPOINT_ENV, saveCheckpoint } from "../checkpoint/save.js";
 import { checkpointPage } from "../checkpoint/page.js";
+import { checkSketchTypes, formatSketchTypeError } from "../sketch-types.js";
+import type { SketchTypeError } from "../sketch-types.js";
 
 function intOption(params: { value: string | undefined; fallback: number; name: string }): number {
   const { value, fallback, name } = params;
@@ -69,6 +71,32 @@ function reportGalleryResult(result: GalleryCheckResult): void {
   if (!result.ok) process.exitCode = 1;
 }
 
+/**
+ * A sketch that fails its type check does not run: its errors go to stderr and
+ * to the transcript, in an emptied `--out` as a run would leave it, and the
+ * exit code is 1.
+ */
+function reportTypeErrors(errors: readonly SketchTypeError[], at: { sketchArg: string; outDir: string }): void {
+  const lines = errors.map((e) => formatSketchTypeError(e, process.cwd()));
+  for (const line of lines) console.error(line);
+  rmSync(at.outDir, { recursive: true, force: true });
+  mkdirSync(at.outDir, { recursive: true });
+  const transcript = join(at.outDir, "transcript.md");
+  const count = errors.length === 1 ? "1 type error" : `${errors.length} type errors`;
+  writeFileSync(transcript, [
+    `# ${at.sketchArg}: not run, ${count}`,
+    "",
+    "`cli run` type-checks the sketch, the files it imports, and its exports against the sketch contract before it runs. Fix these errors, or pass `--no-typecheck` to run it anyway.",
+    "",
+    "```",
+    ...lines,
+    "```",
+    "",
+  ].join("\n"));
+  console.log(`${transcript} — not run, ${count}`);
+  process.exitCode = 1;
+}
+
 /** `cli zoom <frame.png> <spec>...`: write enlarged crops of an existing frame beside it. */
 async function zoomFile(args: readonly string[]): Promise<void> {
   const [file, ...specs] = args;
@@ -105,6 +133,7 @@ async function main(): Promise<void> {
       scene: { type: "string" },
       note: { type: "string" },
       title: { type: "string" },
+      "no-typecheck": { type: "boolean" },
     },
   });
   const command = parsed.positionals[0];
@@ -141,7 +170,7 @@ async function main(): Promise<void> {
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] [--no-typecheck] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
     });
   }
   if (sketchArg === undefined) {
@@ -158,6 +187,13 @@ async function main(): Promise<void> {
   const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms, timing: values.timing === true, outline: values.outline === true, ratio: ratioOption(values.ratio), scene: sceneOption(values.scene) };
 
   const sketchPath = resolve(sketchArg);
+  if (values["no-typecheck"] !== true) {
+    const typeErrors = await checkSketchTypes([sketchPath]);
+    if (typeErrors.length > 0) {
+      reportTypeErrors(typeErrors, { sketchArg, outDir });
+      return;
+    }
+  }
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);
 
   const module = toTeaModule(imported);

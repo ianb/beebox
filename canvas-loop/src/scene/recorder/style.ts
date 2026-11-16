@@ -12,8 +12,6 @@ import { resolveBrushStroke } from "./brush-style.js";
 import { checkPainterly, copyMaterial, resolveLighting } from "./light.js";
 
 const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects"]);
-const CAPS = new Set(["butt", "round", "square"]);
-const JOINS = new Set(["miter", "round", "bevel"]);
 
 export function copyPoints(points: readonly Vec2[]): Vec2[] {
   return points.map((p): Vec2 => [p[0], p[1]]);
@@ -122,8 +120,6 @@ export function resolveStyle(style: Style, at: { call: string; paper: PaperSetti
   }
   const { weight, cap, join } = style;
   if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) throw new SketchUsageError({ detail: `${call}: style.weight must be a number ≥ 0 (got ${String(weight)})` });
-  if (cap !== undefined && !CAPS.has(cap)) throw new SketchUsageError({ detail: `${call}: style.cap must be butt, round or square (got ${String(cap)})` });
-  if (join !== undefined && !JOINS.has(join)) throw new SketchUsageError({ detail: `${call}: style.join must be miter, round or bevel (got ${String(join)})` });
   compositeOp(style.blend ?? "normal");
   const effects = copyEffects(style.effects, call);
   const dash = copyDash(style, call);

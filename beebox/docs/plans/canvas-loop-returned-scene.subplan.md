@@ -595,8 +595,7 @@ corpus, then the hand-written sketches, then validation, then speed.
     guidance stay (c)'s.
 - **First implementation chunk:** the four examples, then the consumers and
   beebox; `pnpm typecheck` and `pnpm layout-check` from `beebox/`.
-- **As built (R3).** One commit, the one that adds this note. Logs are in
-  `scratch/stage5/rs34/`.
+- **As built (R3).** Commit a3da3f2e0. Logs are in `scratch/stage5/rs34/`.
   - **The four examples.** Each `draw` returns one list literal. Loops are
     `.map` over the model's data (orbit's planets, sound's bars and balls,
     fjord's cliff layers and ripple rows); conditions are `cond && node`
@@ -661,6 +660,70 @@ corpus, then the hand-written sketches, then validation, then speed.
   type error in an imported helper fails; a clean one runs; `--no-typecheck`
   runs a sketch with a type error; `gallery:check` fails on an exercise
   with a boundary error. Timed on `pell-anim` (2,104 lines).
+- **As built (R4).** The commit that adds this note. Measurement scripts and logs are in
+  `scratch/stage5/rs34/`.
+  - **Removed:** the `cap` and `join` value checks, and their line in
+    `test/scene/recorder.test.ts`. Every other check listed above stays.
+  - **The check.** `checkSketchTypes(files)` in
+    `src/headless/sketch-types.ts`, exported from `./headless` with
+    `formatSketchTypeError` and `SketchTypeError`. It uses the TypeScript 7
+    compiler through its API (`@typescript/native/unstable/sync`, loaded on
+    first use), in the compiler's Go process. The config and one boundary
+    file per sketch are virtual: the API's file system callbacks serve them,
+    and every other read goes to the disk, so nothing is written. The
+    program holds the sketches, what they import, canvas-loop's root export
+    and the ES2023 library. Options: canvas-loop's `tsconfig.json`, with
+    `module: preserve` and `moduleResolution: bundler` (as `tsx` and esbuild
+    resolve), `types: []`, and `paths` for `@ianbicking/canvas-loop`, so a
+    sketch outside the package (a temp directory, a box) resolves it.
+  - **The boundary.** `M` is `ReturnType<typeof sketch.init>`; `D` is
+    `typeof params` when it is a `ParamsDecl`, else no params. `init`,
+    `update` and `draw` are each assigned to the `TeaModule<D, M>` member on
+    their own line, so an error names its export. `TeaModule`'s members are
+    methods, which TypeScript compares both ways, so a `draw` that wants
+    more model than `init` gives would pass; the boundary converts each
+    member to a function type (`Fn<F>`), which is compared strictly. A test
+    fails without that conversion. `params`, `canvas`, `sound` and
+    `activity` are checked when present; `TeaModule` gains `activity`.
+  - **`cli run`** checks before it imports the sketch. On an error it
+    empties `--out`, writes a transcript that lists the errors and names
+    `--no-typecheck`, prints them to stderr, and exits 1.
+    `canvas-loop/AGENTS.md` says so in place of "`run` does not type-check".
+  - **`gallery:check`** checks every exercise in one program before it
+    renders. An exercise with a type error fails with them and is not run;
+    an error outside every exercise gets its own failing entry.
+  - **Cost** (native compiler; `measure.sh`, `write-probe.ts`):
+
+    | Program | Wall time | Compiler memory |
+    |---|---|---|
+    | `pell-anim` alone (2,185 lines; 82 files, 16,000 lines in all) | 82-89 ms per call, API start included | 18 MB heap, 49 MB peak RSS |
+    | 48 exercises and 13 examples in one program (294 files) | 359 ms | 139 MB heap, about 160-190 MB peak RSS |
+    | For scale: `tsc --noEmit -p canvas-loop` | 0.27 s | 256 MB heap, 349 MB peak RSS |
+
+    The 1–2 GB figure is the JavaScript compiler's; canvas-loop's
+    `typecheck` runs the native one. A `cli run` pays under 0.1 s and one
+    short-lived process of about 50 MB.
+  - **Gallery and examples.** All 61 sketches pass the contract check as
+    they are; none needed a change.
+  - **Tests.** `test/headless/sketch-types.test.ts`: in one program, an
+    unannotated `draw` returning `model.n && …`, one returning nothing, one
+    wanting a model `init` does not return, one wanting an undeclared
+    param, and a helper with a type error each fail where they should, and
+    a clean sketch has none; a missing `init` is named; `cli run` stops
+    with the error on stderr and in the transcript; `checkGallery` fails an
+    exercise with a boundary error without rendering it.
+    `test/headless/cli/main.no-typecheck.gpu.test.ts`: `--no-typecheck` runs a
+    sketch that fails the check.
+  - **For (c).** Need 10 in `canvas-loop-box-figures.subplan.md` records
+    that `bbx figure run` and the card route need the same check, and that
+    the check has no DOM types while a figure entry's default export calls
+    `matchMedia`. R4 does not implement it there.
+  - **Checkpoint.** canvas-loop typecheck, lint and tests pass (227, and
+    199 with 3 todo on the GPU); `gallery:check` passes all 48 with the
+    contract check (506 s wall; `time -l` gives 4.5 GB peak RSS for the
+    whole run, with no figure from before R4 to compare; the check's
+    compiler alone measured under 200 MB); beebox typecheck and
+    layout-check pass.
 
 ### Track 5: speed and review (chunk R5)
 

@@ -296,8 +296,9 @@ export interface CanvasSize {
 /**
  * The shape of a TEA sketch module. Sketches don't have to name this type —
  * exporting `init`, `update`, `draw` (and optionally `params`/`canvas`) is
- * enough — but `satisfies TeaModule<typeof params, Model>` type-checks the whole
- * contract.
+ * enough — and `cli run` checks the exports against it, with `M` taken from
+ * `init`'s return type and `D` from `typeof params`, and each member's
+ * parameters compared strictly (headless/sketch-types.ts).
  */
 export interface TeaModule<D extends ParamsDecl, M> {
   params?: D;
@@ -311,4 +312,6 @@ export interface TeaModule<D extends ParamsDecl, M> {
    * `at` frame, which may not be earlier than the frame that first returns it.
    */
   sound?(model: DeepReadonly<M>, p: ParamValues<D>): readonly Voice[];
+  /** Optional: what the state means now, as data; added to handled events. */
+  activity?(model: DeepReadonly<M>): Record<string, unknown>;
 }

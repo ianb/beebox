@@ -1,17 +1,20 @@
 // Gallery corpus check (the `cli gallery check` subcommand): renders every
 // src/gallery/<slug> exercise, asserts run-twice byte-identical determinism, and
-// lints its sketch file. Read-only — the repo's src/gallery/ directory is never
+// lints its sketch file. Before rendering, one type check covers every sketch
+// and its exports (sketch-types.ts); an exercise with a type error is not rendered. Read-only — the repo's src/gallery/ directory is never
 // written to; each run lands in a throwaway temp directory. See
 // src/gallery/README.md for the on-disk schema this reads.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { CliError } from "./errors.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { parseTeaEvents } from "./tea-events.js";
+import { checkSketchTypes, formatSketchTypeError } from "./sketch-types.js";
+import type { SketchTypeError } from "./sketch-types.js";
 import { toTeaModule } from "./tea-load.js";
 import { teaRun } from "./tea-runtime/runner.js";
 
@@ -84,8 +87,8 @@ function loadMeta(exerciseDir: URL, slug: string): GalleryMeta {
   };
 }
 
-function listExerciseSlugs(): string[] {
-  return readdirSync(GALLERY_DIR, { withFileTypes: true })
+function listExerciseSlugs(galleryDir: URL): string[] {
+  return readdirSync(galleryDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .toSorted();
@@ -164,11 +167,12 @@ function lintSketch(exerciseDir: URL, sketchFile: string): string | undefined {
   }
 }
 
-async function checkExercise(slug: string): Promise<GalleryCheckEntry> {
-  const exerciseDir = new URL(`${slug}/`, GALLERY_DIR);
+async function checkExercise(slug: string, at: { galleryDir: URL; typeErrors: readonly string[] }): Promise<GalleryCheckEntry> {
+  const exerciseDir = new URL(`${slug}/`, at.galleryDir);
   try {
     const meta = loadMeta(exerciseDir, slug);
     const sketchFile = sketchFileName(exerciseDir, slug);
+    if (at.typeErrors.length > 0) return { slug, ok: false, detail: `type errors, not run:\n${at.typeErrors.join("\n")}` };
     const base = mkdtempSync(join(tmpdir(), "canvas-loop-gallery-"));
     try {
       const outA = join(base, "run-a");
@@ -184,7 +188,7 @@ async function checkExercise(slug: string): Promise<GalleryCheckEntry> {
       return {
         slug,
         ok: true,
-        detail: `${resultA.framesRun} frames, ${resultA.imageCount} images, deterministic, lint clean`,
+        detail: `${resultA.framesRun} frames, ${resultA.imageCount} images, deterministic, types and lint clean`,
       };
     } finally {
       rmSync(base, { recursive: true, force: true });
@@ -194,11 +198,41 @@ async function checkExercise(slug: string): Promise<GalleryCheckEntry> {
   }
 }
 
-/** Check every gallery exercise: render twice (byte-identical determinism), lint. Read-only. */
-export async function checkGallery(): Promise<GalleryCheckResult> {
+/** The sketch files of the exercises that have one; an exercise without one fails later, in its own entry. */
+function sketchPaths(galleryDir: URL, slugs: readonly string[]): string[] {
+  return slugs.flatMap((slug) => {
+    const exerciseDir = new URL(`${slug}/`, galleryDir);
+    return SKETCH_FILE_NAMES.filter((name) => exists(new URL(name, exerciseDir))).map((name) => fileURLToPath(new URL(name, exerciseDir)));
+  });
+}
+
+/** Each exercise's type errors, formatted, by slug; errors outside every exercise directory under "". */
+function typeErrorsBySlug(errors: readonly SketchTypeError[], at: { galleryDir: URL; slugs: readonly string[] }): Map<string, string[]> {
+  const root = fileURLToPath(PACKAGE_ROOT);
+  const galleryPath = fileURLToPath(at.galleryDir);
+  const bySlug = new Map<string, string[]>();
+  for (const error of errors) {
+    const inGallery = error.file === undefined ? undefined : relative(galleryPath, error.file).split(sep)[0];
+    const slug = inGallery !== undefined && at.slugs.includes(inGallery) ? inGallery : "";
+    bySlug.set(slug, [...(bySlug.get(slug) ?? []), `  ${formatSketchTypeError(error, root)}`]);
+  }
+  return bySlug;
+}
+
+/**
+ * Check every gallery exercise: type-check every sketch and its exports, then
+ * render each twice (byte-identical determinism) and lint it. Read-only.
+ * `galleryDir` is for tests; the default is src/gallery/.
+ */
+export async function checkGallery(options?: { galleryDir?: URL }): Promise<GalleryCheckResult> {
+  const galleryDir = options?.galleryDir ?? GALLERY_DIR;
+  const slugs = listExerciseSlugs(galleryDir);
+  const typeErrors = typeErrorsBySlug(await checkSketchTypes(sketchPaths(galleryDir, slugs)), { galleryDir, slugs });
   const entries: GalleryCheckEntry[] = [];
-  for (const slug of listExerciseSlugs()) {
-    entries.push(await checkExercise(slug));
+  const outside = typeErrors.get("");
+  if (outside !== undefined) entries.push({ slug: "(type check)", ok: false, detail: `type errors outside the exercises:\n${outside.join("\n")}` });
+  for (const slug of slugs) {
+    entries.push(await checkExercise(slug, { galleryDir, typeErrors: typeErrors.get(slug) ?? [] }));
   }
   return { entries, ok: entries.every((entry) => entry.ok) };
 }

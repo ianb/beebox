@@ -95,8 +95,6 @@ test("misuse fails at the call, as today", () => {
   const usage = (message: RegExp) => (e: unknown): boolean => e instanceof SketchUsageError && message.test(e.message);
   // @ts-expect-error -- a key the Style type does not have; the runtime must refuse it
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", colour: "red" })), usage(/unknown style key "colour"/));
-  // @ts-expect-error -- not a Canvas2D line cap
-  assert.throws(() => recorder().record((v) => v.line(0, 0, 1, 1, { stroke: "#000", cap: "flat" })), usage(/style.cap must be butt, round or square/));
   // @ts-expect-error -- not a blend mode
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", blend: "plus" })), usage(/blend "plus" is not one of/));
   assert.throws(() => recorder().record((v) => v.rect(0, 0, 1, 1, { fill: "#000", effects: { blur: -1 } })), usage(/group effects: blur must be a number ≥ 0/));

@@ -363,6 +363,23 @@ start, (a) must provide:
    a class. (a) states the same contract, `transcriptPath` included.
 9. **The beebox marker removal** in `run-one.ts`, `figure-canvas-loop.ts`,
    `FigureMount.tsx` and their tests (`canvas-loop-scene-core.subplan.md:618-623`).
+10. **The sketch contract check on both box paths**, from the returned-scene
+    subplan (`canvas-loop-returned-scene.subplan.md`, Track 4 and Seams).
+    Since its R4, `cli run` and `gallery check` type-check each sketch, its
+    imports and its exports against the TEA contract before they run it.
+    `bbx figure run` (`figure/run.ts:130`, `bundleView`) and the figure card
+    route (`webapp/routes/figure.ts:159`) compile with esbuild, which strips
+    types, so neither checks yet. Both need the same check, with its errors
+    in `bbx figure run`'s output and as the card's error, and a fixture with
+    a type error in an imported helper through each route. The returned-scene
+    plan does not implement it; it belongs in C2 and C3. Use
+    `checkSketchTypes` from `@ianbicking/canvas-loop/headless`, or
+    `lib/typescript/check.ts` with every diagnostic (the view wrapper's
+    filter at `view/typecheck.ts:95-97` is not enough). One gap to close:
+    `checkSketchTypes` uses canvas-loop's compiler options, with the ES2023
+    library and no DOM types, and a figure entry's default export calls
+    `matchMedia`. (c) either checks the TEA exports apart from the factory or
+    gives the check an option for the DOM library.
 
 **Order.** (a), (b) and (c) reach `main` in **one merge**, or (b) lands on
 `main` first and (a) with (c) in the next merge. In both cases subplan (b)'s

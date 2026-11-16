@@ -22,6 +22,10 @@ export { TeaUtil } from "../headless/tea-util.js";
 export type { UtilText } from "../headless/tea-util.js";
 export { NoGpuAdapterError } from "../scene/errors.js";
 
+// ── The sketch contract check (`cli run`, `gallery check`) ──────────────
+export { checkSketchTypes, formatSketchTypeError } from "../headless/sketch-types.js";
+export type { SketchTypeError } from "../headless/sketch-types.js";
+
 // ── Gallery corpus check (`cli gallery check`) ────────────────────────
 export { checkGallery } from "../headless/gallery.js";
 export type { GalleryCheckEntry, GalleryCheckResult } from "../headless/gallery.js";
