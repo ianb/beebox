@@ -1,6 +1,6 @@
 // # The box-wide pages in the avatar menu
 //
-// Dashboard, Browse, History, and Storage summary are rows of the avatar menu,
+// Dashboard, Browse, History, Storage summary, and What's new are rows of the avatar menu,
 // below Settings and Admin (plan:box-screen, "Box-wide pages move to
 // the avatar menu"). The boxholder never opened them from the box screen. The
 // rows keep the ids of the old box panel, so smoke snapshots and docs keep one
@@ -39,6 +39,7 @@ void test("Each row opens its system card under /<box>/views/.", async (t) => {
     "bbx-box-menu-browse: Browse → /test1/views/_config/interface/browse.card",
     "bbx-box-menu-history: History → /test1/views/_config/interface/history.card",
     "bbx-box-menu-inventory: Storage summary → /test1/views/_config/interface/inventory.card",
+    "bbx-box-menu-whats-new: What&#x27;s new in Bee Box → /test1/views/_content/docs/generated/whats-new.md",
   ]);
 });
 
