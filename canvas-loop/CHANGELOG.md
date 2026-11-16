@@ -5,6 +5,12 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Quieter checks; a voice budget** (gaps the lane-defense game found). The
+  faint-mark check leaves out group and placement `opacity`, so a fade does
+  not warn. The picture churn warning waits 30 frames for versions to come
+  back, so poses that change every frame stay quiet. A new voice is dropped
+  when 4 of the same sound or 16 in all started in the last 15 frames. A
+  negative radius says to clamp with `Math.max(0, …)`.
 - **Breaking: `draw` returns its drawing.** Each drawing call on `v` returns a
   node and draws nothing by itself; `draw` returns a node, a list (nested
   lists flatten; `null`, `undefined` and `false` are skipped) or `null`
