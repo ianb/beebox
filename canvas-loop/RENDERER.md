@@ -187,7 +187,11 @@ The renderer decides what to keep; the sketch has no say. It may keep:
 - inside a lit group, the colour and material layers of a still subtree, but
   never the lit result while a light in the group changes.
 
-Versions not placed in the last two frames may be dropped; kept rasters stay
+Versions not asked for in the last two frames are kept while their
+recordings fit an estimated 16 MB, the least recently asked for dropped
+first; rasters not placed in the last two frames are kept while they and the
+recordings they hold fit 32 MB, the least recently placed dropped first. So a
+walk cycle's poses are recorded and rasterized once. All kept rasters stay
 under 256 MB. A dropped version is recorded again when asked for. Cache keys
 are 64-bit hashes of recorded data; a collision is the accepted risk. A
 picture that measured text is recorded again when fonts finish loading
@@ -219,11 +223,11 @@ and, for most, the sketch line that made it.
 | Check | Kind |
 |---|---|
 | Faint brushed marks (a readback of each mark's strongest pixel) | warning |
-| Labels overlapping in one frame; a missing glyph; an unknown font family | warning |
+| Labels overlapping in one frame (`overlay` text excepted); a missing glyph; an unknown font family | warning |
 | Drawings off the canvas on every frame; unboxed text across the canvas edge | warning, after the run |
 | A node made and not returned (at most 8 a frame) | warning |
 | A picture recorded differently with the same deps (each picture is recorded again every frame and compared) | warning |
-| A picture whose deps change in each of the last 3 frames | warning |
+| A picture key that records a new version in each of the last 3 frames, most of them not asked for again | warning |
 | A placement at a new scale or rotation in each of the last 3 frames | hint |
 | A picture on its own paper placed in a paper scope with other paper | hint |
 | `light` outside a lit group or in mask art; a lit group with no light | warning (also in the browser) |

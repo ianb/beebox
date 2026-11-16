@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { hoistLaunchOptions } from "../src/launch-options.js";
+import { hoistLaunchOptions, withMutedAudio } from "../src/launch-options.js";
 
 // Flags come out wherever they sit, before or after the subcommand; the rest
 // keeps its order.
@@ -64,4 +64,18 @@ void test("wait --state is not taken for a launch option.", async (t) => {
     env: {},
     flags: [],
   });
+});
+
+// The agent's browser always launches muted (a sketch's click sounds played
+// through the developer's speakers). The flag joins with the separator the
+// value already uses: upstream splits on newlines, or on a comma before a flag.
+void test("withMutedAudio adds --mute-audio once, in the value's own format", async (t) => {
+  t.check([undefined, "", "--a", "--a,--disable-features=X,Y", "--a\n--b", "--a,--mute-audio"].map((v) => withMutedAudio(v)), [
+    "--mute-audio",
+    "--mute-audio",
+    "--a,--mute-audio",
+    "--a,--disable-features=X,Y,--mute-audio",
+    "--a\n--b\n--mute-audio",
+    "--a,--mute-audio",
+  ]);
 });

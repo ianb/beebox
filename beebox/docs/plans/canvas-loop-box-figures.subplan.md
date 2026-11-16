@@ -790,7 +790,7 @@ the cutover, so courseware figures are regenerated once, against (b)'s ink.
   P1 was skipped, and probes). After it: open one figure in the boxholder's
   browser, and confirm `.claude/rules/card-figure.md` in the courseware box
   carries the new text after its next chat starts.
-- **P3. Regeneration. Pending: the boxholder's to send.** The boxholder sends the courseware agent the prompt
+- **P3. Regeneration. Prompt sent 2026-11-16 (the boxholder sent it to the courseware agent; result not yet observed).** The boxholder sends the courseware agent the prompt
   below, in the scope chosen at Checkpoint 5, when they choose.
 
 ### Regeneration prompt (for the boxholder to send)

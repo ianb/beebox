@@ -55,11 +55,11 @@ export function blur2(src: GPUTexture, a: { sigma: Sigma; f: Frame; w: number; h
   return down;
 }
 
-/** v[1] = (has shadow, has glow, dx, dy), v[2] shadow colour, v[3] glow colour, v[4].x glow passes. */
+/** v[1] = (has shadow, has glow, dx, dy), v[2] shadow colour, v[3] glow colour, v[4].x glow strength. */
 function combineFields(plan: FxPlan): number[] {
   const { glow, shadow } = plan;
   const head = [shadow === undefined ? 0 : 1, glow === undefined ? 0 : 1, shadow?.dx ?? 0, shadow?.dy ?? 0];
-  return [...head, ...(shadow?.color ?? [0, 0, 0, 0]), ...(glow?.color ?? [0, 0, 0, 0]), glow?.passes ?? 1];
+  return [...head, ...(shadow?.color ?? [0, 0, 0, 0]), ...(glow?.color ?? [0, 0, 0, 0]), glow?.strength ?? 1];
 }
 
 /** Apply `job.fx` to its layer `tex`; returns the result and releases what it no longer needs. */

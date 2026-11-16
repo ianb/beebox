@@ -1,10 +1,13 @@
 // Picture versions (draft section 5): identified by key, width, height, the
 // values of `deps` (plain data, compared deeply) and its paper option (R9).
-// The table lives across frames; a version not asked for in the last two
-// frames is dropped and recorded again when asked for. In testing mode the
+// The table lives across frames. Versions not asked for in the last two
+// frames stay while their recordings fit in about 16 MB, least recently asked
+// for dropped first, so a pose a walk cycle shows again is not recorded again;
+// a dropped version is recorded again when asked for. In testing mode the
 // recorder re-records each asked-for version and compares (`firstDifference`).
 import { SketchUsageError } from "../../core/errors.js";
 import type { PaperSettings, PictureVersion, PixelsVersion } from "../nodes.js";
+import { weightOf } from "../weight.js";
 
 type Version = PictureVersion | PixelsVersion;
 
@@ -84,20 +87,34 @@ interface Entry {
   readonly version: Version;
   readonly made: number;
   lastAsked: number;
+  /** About how many bytes the recording holds. */
+  readonly weight: number;
 }
+
+/** Bytes of recordings not asked for in the last two frames that the table keeps. */
+const IDLE_BUDGET = 16 * 1024 * 1024;
 
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {
   readonly #entries = new Map<string, Entry[]>();
-  /** Per key: the last frame a new version was added, and how many frames running had one. */
-  readonly #runs = new Map<string, { frame: number; run: number }>();
+  /** Per key: the last frame a new version was added, how many frames running had one, and the frame that run started. */
+  readonly #runs = new Map<string, { frame: number; run: number; start: number }>();
   #frame = 0;
 
-  /** A new frame: drop versions not asked for in the last two. */
+  /** A new frame: drop the least recently asked-for versions while those not asked for in the last two frames weigh more than `IDLE_BUDGET`. */
   beginFrame(): void {
     this.#frame++;
+    const idle = [...this.#entries.values()].flat().filter((e) => e.lastAsked < this.#frame - 2);
+    let weight = idle.reduce((n, e) => n + e.weight, 0);
+    if (weight <= IDLE_BUDGET) return;
+    const drop = new Set<Entry>();
+    for (const e of idle.toSorted((a, b) => a.lastAsked - b.lastAsked)) {
+      if (weight <= IDLE_BUDGET) break;
+      weight -= e.weight;
+      drop.add(e);
+    }
     for (const [key, list] of this.#entries) {
-      const keep = list.filter((e) => e.lastAsked >= this.#frame - 2);
+      const keep = list.filter((e) => !drop.has(e));
       if (keep.length === 0) this.#entries.delete(key);
       else this.#entries.set(key, keep);
     }
@@ -114,15 +131,24 @@ export class PictureTable {
     return hit.version;
   }
 
-  /** Add a new version; returns how many frames running (this one included) its key has added a new version. */
-  add(version: Version): number {
+  /**
+   * Add a new version. Returns whether its key churns: it added a new version
+   * in each of the last 3 frames (this one included), and most of the
+   * versions it added in that run before this frame were not asked for again
+   * in a later frame. A walk cycle adds versions in a row of frames while it
+   * first shows its poses, but asks for most of them again.
+   */
+  add(version: Version): boolean {
     const list = this.#entries.get(version.key) ?? [];
-    list.push({ version, made: this.#frame, lastAsked: this.#frame });
+    list.push({ version, made: this.#frame, lastAsked: this.#frame, weight: weightOf(version) });
     this.#entries.set(version.key, list);
     const last = this.#runs.get(version.key);
     const run = last === undefined ? 1 : last.frame === this.#frame ? last.run : last.frame === this.#frame - 1 ? last.run + 1 : 1;
-    this.#runs.set(version.key, { frame: this.#frame, run });
-    return run;
+    const start = run === 1 || last === undefined ? this.#frame : last.start;
+    this.#runs.set(version.key, { frame: this.#frame, run, start });
+    if (run < 3) return false;
+    const before = list.filter((e) => e.made >= start && e.made < this.#frame);
+    return before.filter((e) => e.lastAsked === e.made).length * 2 > before.length;
   }
 
   /** Whether `version` was added this frame (so asking for it again this frame was a second call). */

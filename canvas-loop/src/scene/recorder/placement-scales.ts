@@ -2,17 +2,21 @@
 // it has no kept image for is drawn again. This mirrors the renderer's raster
 // cache (gpu/lower.ts `#placeTiles`, gpu/rasters.ts): a version's kept image
 // is keyed by the placement's linear part, exactly (`linearKey`), and is kept
-// while it was placed in one of the last two frames. A placement of a version
-// already placed elsewhere that finds no kept image is a miss; a key with a
-// miss three frames running gets the hint. A version's first placement is not
-// a miss (a new version is the deps warning's business), and a key placed at
-// several fixed scales, even in turn, reuses its images and gets none.
+// after it was last placed, within a budget (here: its last `KEEP` linear
+// parts). A placement of a version already placed elsewhere that finds no
+// kept image is a miss; a key with a miss three frames running gets the hint.
+// A version's first placement is not a miss (a new version is the deps
+// warning's business), and a key placed at several fixed scales, even in
+// turn, reuses its images and gets none.
 import { linearKey } from "../hash.js";
 import type { Mat, PictureVersion } from "../nodes.js";
 
+/** Linear parts remembered per version; past this many, the least recently placed is forgotten. */
+const KEEP = 32;
+
 export class PlacementScales {
-  /** Per version: each linear part it was placed at, and the last frame it was. */
-  readonly #kept = new WeakMap<PictureVersion, Map<string, number>>();
+  /** Per version: the linear parts it was placed at, least recently placed first. */
+  readonly #kept = new WeakMap<PictureVersion, Set<string>>();
   /** Per key: the last frame with a miss, and how many frames running had one. */
   readonly #runs = new Map<string, { frame: number; run: number }>();
   #frame = 0;
@@ -24,12 +28,16 @@ export class PlacementScales {
   /** A top-level placement of `version` under `matrix`: the hint, once its key has missed three frames running. */
   placed(version: PictureVersion, matrix: Mat): string | undefined {
     const linear = linearKey(matrix);
-    const seen = this.#kept.get(version) ?? new Map<string, number>();
+    const seen = this.#kept.get(version) ?? new Set<string>();
     this.#kept.set(version, seen);
-    const last = seen.get(linear);
-    const miss = seen.size > 0 && (last === undefined || last < this.#frame - 2);
-    seen.set(linear, this.#frame);
-    for (const [k, f] of seen) if (f < this.#frame - 2) seen.delete(k);
+    const miss = seen.size > 0 && !seen.has(linear);
+    // Re-inserted, so the set's order is least recently placed first.
+    seen.delete(linear);
+    seen.add(linear);
+    for (const k of seen) {
+      if (seen.size <= KEEP) break;
+      seen.delete(k);
+    }
     if (!miss) return undefined;
     const prev = this.#runs.get(version.key);
     const run = prev === undefined ? 1 : prev.frame === this.#frame ? prev.run : prev.frame === this.#frame - 1 ? prev.run + 1 : 1;

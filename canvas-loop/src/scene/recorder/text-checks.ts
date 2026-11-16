@@ -111,7 +111,7 @@ function overlapOf([a, b]: readonly [TextRect, TextRect], reported: Set<string>)
 /** The warning for one reported pair, or for the cap. */
 export function overlapMessage(o: Overlap | "more"): string {
   if (o === "more") return `text: more than ${MAX_PAIRS} pairs of texts overlap; no more overlaps are reported this run`;
-  return `text ${quote(o.second.content)} overlaps text ${quote(o.first.content)} near (${Math.round(o.at[0])}, ${Math.round(o.at[1])}); move one, or place them with v.textBounds first`;
+  return `text ${quote(o.second.content)} overlaps text ${quote(o.first.content)} near (${Math.round(o.at[0])}, ${Math.round(o.at[1])}); move one, or place them with v.textBounds first; for text that floats over others on purpose (a tooltip, a hover hint), give it overlay: true`;
 }
 
 /** The warning for a character `char` font `font` has no glyph for. */
@@ -147,7 +147,7 @@ export class TextChecks {
     this.#collect = [[]];
   }
 
-  /** Text `node`, made by the call at `site`, laid out in `bounds` under `matrix`; `seen` is false in mask artwork. */
+  /** Text `node`, made by the call at `site`, laid out in `bounds` under `matrix`; `seen` is false in mask artwork and for `overlay` text, which the overlap check skips. */
   text(node: TextNode, a: { bounds: TextBounds; matrix: Mat; seen: boolean; site: CallSite }): void {
     const font = fontWarning(node, this.#fontKnown);
     if (font !== undefined) this.#warn(`font ${node.family}`, { message: font, line: a.site.line });

@@ -8,6 +8,7 @@ Thin wrapper around the upstream [`agent-browser`](https://github.com/vercel-lab
 - **Self-describing screenshots** — `bin/browse screenshot` writes a sidecar `<image>.json` with `{url, title, timestamp, takenInWorktree}`.
 - **Indexed default path** — `bin/browse screenshot` with no path saves to `.claude/screenshots/NNNN-<slug>.png`.
 - **Bounded settle wait** — `open`, `snapshot`, and `screenshot` wait for the app's React Query activity to quiet down (`<body data-bbx-loading="false">`), but only on this worktree's own origin, and only for `BROWSE_READY_TIMEOUT_MS` (default 15000) before proceeding with a note on stderr. `--no-wait` skips it. The wrapper passes the bound as `wait --timeout`, which keeps a page that never sets the marker — `about:blank`, any other site, the login wall — from hanging the command.
+- **Always muted** — the browser launches with `--mute-audio`, so a page's sound never plays through the developer's speakers. The box agents' own browser (`beebox/src/core/browser/host-process/agent-browser.ts`) is muted the same way.
 - **Per-session Chrome profiles** — each `--session <name>` gets `profiles/<name>` under the worktree's browse cache, because Chrome refuses to open a profile another live instance holds.
 
 Cheat sheet: [`.claude/skills/browse/SKILL.md`](../.claude/skills/browse/SKILL.md).
