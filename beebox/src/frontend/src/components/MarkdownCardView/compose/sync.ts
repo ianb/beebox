@@ -7,8 +7,9 @@
  * timers are passed in, so this runs without a browser in tests.
  */
 import { errorMessage } from "@shared/error-guards";
-import { normalizeComposition } from "@shared/composition/text";
-import { diffToChanges, mergeComposition, type MergeConflict, type TextChange } from "@shared/composition/merge";
+import { normalizeComposition } from "@shared/composition/marks/text";
+import { diffToChanges, mergeComposition, type MergeConflict } from "@shared/composition/merge";
+import type { TextChange } from "@shared/composition/marks/scan";
 
 export type ReadResult = { text: string; regionHash: string } | { problem: string };
 export type WriteResult =
@@ -146,6 +147,17 @@ export class CompositionSync {
   async close(): Promise<boolean> {
     this.clearTimer();
     return await this.enqueue(() => this.write(false)) || this.stopped;
+  }
+
+  /**
+   * Write what is unsaved (no commit), then run `step` with the region hash
+   * the disk now has, before any later write or read: a resolve action
+   * (`plan:composition-copy-and-accept-all`) works on the text on screen.
+   * `null` when the write failed or the card's composition is gone.
+   */
+  afterFlush<T>(step: (regionHash: string) => Promise<T>): Promise<T | null> {
+    this.clearTimer();
+    return this.enqueue(async () => (await this.write(false) ? step(this.syncedHash) : null));
   }
 
   /** Resolves once the reads and writes queued so far have finished. */

@@ -38,15 +38,17 @@ export async function readCompositionFile(fullPath: string): Promise<Composition
   return { text: found.text, regionHash: compositionHash(found.text) };
 }
 
+type Spliced =
+  | { status: "ok"; content: string; regionHash: string; changed: boolean }
+  | Exclude<CompositionWrite, { status: "written" }>;
+
 /**
- * Replace the region's text when its hash still equals `baseRegionHash`.
- * Bytes outside the region are kept. The caller holds the card lock.
+ * The file content with the region's text replaced, when the region's hash
+ * still equals `baseRegionHash` and the result keeps one well-formed region
+ * holding exactly `text`. Pure, so a caller can check a write before it
+ * commits anything.
  */
-export async function writeCompositionFile(
-  fullPath: string,
-  { baseRegionHash, text }: { baseRegionHash: string; text: string },
-): Promise<CompositionWrite> {
-  const raw = await fs.readFile(fullPath, "utf-8");
+export function checkCompositionWrite(raw: string, { baseRegionHash, text }: { baseRegionHash: string; text: string }): Spliced {
   const { prefix, body, found } = locate(raw);
   if ("problem" in found) return { status: "problem", problem: found.problem, where: "file" };
   const currentHash = compositionHash(found.text);
@@ -57,7 +59,19 @@ export async function writeCompositionFile(
   // The region found again must be exactly the text sent (less the final newline the splice supplies).
   if (next.text !== text.replace(/\n$/, "")) return { status: "problem", problem: "closed-early", where: "text" };
   const content = prefix + nextBody;
-  const changed = content !== raw;
-  if (changed) await writeFileAtomic(fullPath, { content });
-  return { status: "written", regionHash: compositionHash(next.text), changed };
+  return { status: "ok", content, regionHash: compositionHash(next.text), changed: content !== raw };
+}
+
+/**
+ * Replace the region's text when its hash still equals `baseRegionHash`.
+ * Bytes outside the region are kept. The caller holds the card lock.
+ */
+export async function writeCompositionFile(
+  fullPath: string,
+  input: { baseRegionHash: string; text: string },
+): Promise<CompositionWrite> {
+  const spliced = checkCompositionWrite(await fs.readFile(fullPath, "utf-8"), input);
+  if (spliced.status !== "ok") return spliced;
+  if (spliced.changed) await writeFileAtomic(fullPath, { content: spliced.content });
+  return { status: "written", regionHash: spliced.regionHash, changed: spliced.changed };
 }

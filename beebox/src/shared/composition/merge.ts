@@ -12,6 +12,7 @@
  * more by character; only a conflict that remains there is reported.
  */
 import { diff3Merge, diffIndices } from "node-diff3";
+import type { TextChange } from "./marks/scan.js";
 
 export interface MergeConflict {
   /** The local side's range in `merged`. */
@@ -26,11 +27,6 @@ export interface MergeResult {
   conflicts: MergeConflict[];
 }
 
-export interface TextChange {
-  from: number;
-  to: number;
-  insert: string;
-}
 
 function tokens(text: string): string[] {
   return text.split(/(\s+)/).filter((token) => token !== "");

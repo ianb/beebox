@@ -12,7 +12,7 @@
 import { EditorSelection, EditorState, Prec, StateField, Transaction, type Extension, type Range, type RangeSet } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, keymap, type DecorationSet } from "@codemirror/view";
 import { el, widgetButton } from "./dom";
-import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
+import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "@shared/composition/marks/scan";
 
 const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note"]);
 
@@ -147,6 +147,45 @@ export function acceptSelection(view: EditorView): boolean {
     ? EditorSelection.cursor(changes.mapPos(main.head, -1))
     : EditorSelection.range(changes.mapPos(main.anchor, main.anchor < main.head ? 1 : -1), changes.mapPos(main.head, main.head < main.anchor ? 1 : -1));
   view.dispatch({ changes, selection, userEvent: "accept.mark" });
+  return true;
+}
+
+/** An open mark (not `source`) in the editor: its place among the open marks, and the range Go to selects. */
+export interface OpenMarkRange {
+  kind: Exclude<MarkKind, "source">;
+  index: number;
+  from: number;
+  to: number;
+  /** The mark's words, whitespace collapsed. */
+  words: string;
+}
+
+/**
+ * The open marks in text order. A gap or note is one widget, so its range is
+ * the whole mark (typing replaces it); a joiner's or check's is its words.
+ */
+export function openMarkRanges(state: EditorState): OpenMarkRange[] {
+  const { scan } = state.field(marksField);
+  const out: OpenMarkRange[] = [];
+  for (const mark of scan.marks) {
+    if (mark.kind === "source") continue;
+    const words = state.sliceDoc(mark.openTo, mark.closeFrom).replaceAll(/\s+/g, " ").trim();
+    const [from, to] = WHOLE.has(mark.kind) ? [mark.openFrom, mark.closeTo] : [mark.openTo, mark.closeFrom];
+    out.push({ kind: mark.kind, index: out.length, from, to, words });
+  }
+  return out;
+}
+
+/**
+ * Select an open mark and scroll it into view. `false` (nothing selected)
+ * when the mark at that index is not the one named: another kind or other
+ * words, as when the agent added a mark before it since the person looked.
+ */
+export function selectOpenMark(view: EditorView, target: { index: number; kind: string; words: string }): boolean {
+  const mark = openMarkRanges(view.state)[target.index];
+  if (mark?.kind !== target.kind || mark.words !== target.words) return false;
+  view.dispatch({ selection: EditorSelection.range(mark.from, mark.to), effects: EditorView.scrollIntoView(mark.from, { y: "center" }) });
+  view.focus();
   return true;
 }
 

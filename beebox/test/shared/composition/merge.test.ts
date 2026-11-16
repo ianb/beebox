@@ -7,7 +7,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { diffToChanges, mergeComposition, type TextChange } from "../../../src/shared/composition/merge.js";
+import { diffToChanges, mergeComposition } from "../../../src/shared/composition/merge.js";
+import type { TextChange } from "../../../src/shared/composition/marks/scan.js";
 
 function apply(text: string, changes: readonly TextChange[]): string {
   let out = text;

@@ -19,8 +19,8 @@ import { createContext, useCallback, useContext, useId, useMemo, useState, type 
 import { controlAddress } from "@shared/ui-scan/control-address";
 import { findComposition } from "@shared/composition/region";
 import { EDITORIAL_KINDS } from "@shared/composition/tags";
-import { compositionPlainText } from "@shared/composition/text";
 import { Button } from "../ui/Button";
+import { CompositionCopy, type MarkTarget } from "./CompositionCopy";
 import { VisuallyHidden } from "../ui/VisuallyHidden";
 
 /** What the composition editor (Track 5) gets. It reads the region itself and renders into `host`. */
@@ -31,6 +31,8 @@ export interface ComposeEditorProps {
   host: HTMLElement | null;
   /** Encoded per-card-view key for control ids (`controlAddress`). */
   instance: string;
+  /** The open mark to select when the editor opens (Copy's "Go to it"); `null` for none. */
+  initialMark: MarkTarget | null;
 }
 
 export interface CompositionCard {
@@ -40,7 +42,8 @@ export interface CompositionCard {
   /** Shown in place of the block in compose mode; without one there is no Compose button. A module constant. */
   composeEditor: ComponentType<ComposeEditorProps> | null;
   composing: boolean;
-  startCompose: () => void;
+  /** Opens the editor, with `at` selected when given. */
+  startCompose: (at?: MarkTarget) => void;
   /** Ref callback for the element the editor renders into. */
   composeHost: (element: HTMLElement | null) => void;
   instance: string;
@@ -65,9 +68,13 @@ export function useComposeSession({ body, cardPath, composeEditor }: {
 } {
   const instance = useId();
   const [composing, setComposing] = useState(false);
+  const [initialMark, setInitialMark] = useState<MarkTarget | null>(null);
   const [blockHost, setBlockHost] = useState<HTMLElement | null>(null);
   const [fallbackHost, setFallbackHost] = useState<HTMLElement | null>(null);
-  const startCompose = useCallback(() => setComposing(true), []);
+  const startCompose = useCallback((at?: MarkTarget) => {
+    setInitialMark(at ?? null);
+    setComposing(true);
+  }, []);
   const session = useMemo(() => ({ composing, startCompose, composeHost: setBlockHost, instance }), [composing, startCompose, instance]);
   const hasRegion = useMemo(() => !("problem" in findComposition(body)), [body]);
   const Editor = composeEditor;
@@ -75,17 +82,12 @@ export function useComposeSession({ body, cardPath, composeEditor }: {
   const host = hasRegion ? blockHost : fallbackHost;
   return {
     session,
-    editor: active ? <Editor cardPath={cardPath} host={host} instance={instance} onClose={() => setComposing(false)} /> : null,
+    editor: active ? <Editor cardPath={cardPath} host={host} instance={instance} initialMark={initialMark} onClose={() => setComposing(false)} /> : null,
     fallback: active && !hasRegion ? <ComposeHost register={setFallbackHost} /> : null,
   };
 }
 
 export const CompositionCardContext = createContext<CompositionCard | null>(null);
-
-function openMarksSuffix(openMarks: number): string {
-  if (openMarks === 0) return "";
-  return ` (${String(openMarks)} open mark${openMarks === 1 ? "" : "s"})`;
-}
 
 /** The element the compose editor renders into (`useComposeSession`). */
 function ComposeHost({ register }: { register: (element: HTMLElement | null) => void }): ReactNode {
@@ -94,22 +96,20 @@ function ComposeHost({ register }: { register: (element: HTMLElement | null) => 
 
 export function CompositionBlock({ children }: { children?: ReactNode }): ReactNode {
   const card = useContext(CompositionCardContext);
-  const plain = useMemo(() => {
+  const regionText = useMemo(() => {
     if (card === null) return null;
     const region = findComposition(card.body);
-    return "problem" in region ? null : compositionPlainText(region.text);
+    return "problem" in region ? null : region.text;
   }, [card]);
   const canCompose = card !== null && card.composeEditor !== null;
-  if (canCompose && card.composing && plain !== null) return <ComposeHost register={card.composeHost} />;
+  if (canCompose && card.composing && regionText !== null) return <ComposeHost register={card.composeHost} />;
   const handleCompose = () => card?.startCompose();
   return (
     <section aria-label="Composition" className="bbx-composition my-4 rounded border border-card-pen">
-      {plain === null || card === null ? null : (
+      {regionText === null || card === null ? null : (
         <div className="flex items-center justify-end gap-2 rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
           <span className="mr-auto text-sm font-semibold text-card-pen">Composition</span>
-          <Button id={controlAddress("bbx-composition-copy", card.instance)} label={`Copy composition${openMarksSuffix(plain.openMarks)}`} size="sm" intent="secondary" flash={{ label: "Copied", failLabel: "Copy failed" }} onClick={() => navigator.clipboard.writeText(plain.text)}>
-            {`Copy${openMarksSuffix(plain.openMarks)}`}
-          </Button>
+          <CompositionCopy cardPath={card.cardPath} regionText={regionText} instance={card.instance} onGoTo={canCompose ? card.startCompose : null} />
           {canCompose ? (
             <Button id={controlAddress("bbx-composition-compose", card.instance)} label="Edit composition" size="sm" intent="primary" onClick={handleCompose}>Edit</Button>
           ) : null}
