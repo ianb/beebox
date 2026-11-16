@@ -23,7 +23,7 @@ us more. Every change lands here — hand-written and terse.
   count as returning it. `v.row` and `v.column` place their children by
   those boxes, `gap` apart, with `v.text`'s `align`/`valign` names; a row
   can line children up on their text baselines. Each returns one node.
-- **Quieter checks; a voice budget** (gaps the lane-defense game found). The
+- **Quieter checks; a voice budget** (gaps a game sketch found). The
   faint-mark check leaves out group and placement `opacity`, so a fade does
   not warn. The picture churn warning waits 30 frames for versions to come
   back, so poses that change every frame stay quiet. A new voice is dropped

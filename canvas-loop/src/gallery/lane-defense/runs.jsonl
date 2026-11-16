@@ -1,1 +1,0 @@
-{"date": "2026-11-16", "commit": "324e45b51", "model": "opus-5.5", "action": "authored", "cycles": 8, "outcome": "pass", "notes": "Lane-defense game in sumi-e: 5 defenders, 4 haunted-object foes, 4 waves, win/lose/restart, sound and shake. 56-60 frames/s in the browser at speed 1 and 3."}
