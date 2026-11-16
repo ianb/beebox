@@ -14,14 +14,7 @@
 //
 // The swing integrates the full pendulum equation (physics-tea.ts), so a 30°
 // release measures about 1.7% slower than a 5° one, as a real pendulum does.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 import {
   axesFor,
@@ -191,42 +184,45 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
 
 const CONTROLS = { x: 20, y: 452, w: 428, h: 168 };
 
-function drawStopwatch(v: View, a: { mode: DeepReadonly<Mode>; frame: number }): void {
+function drawStopwatch(v: View, a: { mode: DeepReadonly<Mode>; frame: number }): Drawing {
+  const out: Drawing[] = [];
   const { mode } = a;
   const t = mode.type === "held" ? 0 : mode.type === "timing" ? mode.swing.t : mode.total;
   const swings = mode.type === "held" ? 0 : mode.type === "timing" ? mode.swing.swings : SWINGS_PER_TRIAL;
   const done = mode.type === "free";
   const running = mode.type === "timing";
   const x0 = CONTROLS.x + 16;
-  say(v, "Stopwatch", { x: x0, y: CONTROLS.y + 24 }, { size: 14, bold: true });
+  out.push(say(v, "Stopwatch", { x: x0, y: CONTROLS.y + 24 }, { size: 14, bold: true }));
   // dial: one turn per 10 s
   const cx = x0 + 26;
   const cy = CONTROLS.y + 64;
-  v.circle(cx, cy - 27, 4, { fill: "#4b4f5a" });
-  v.circle(cx, cy, 25, { fill: "#ffffff", stroke: done ? GOOD : INK, weight: 2.5 });
+  out.push(v.circle(cx, cy - 27, 4, { fill: "#4b4f5a" }));
+  out.push(v.circle(cx, cy, 25, { fill: "#ffffff", stroke: done ? GOOD : INK, weight: 2.5 }));
   for (let i = 0; i < 10; i += 1) {
     const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
-    v.line(cx + 19 * Math.cos(ang), cy + 19 * Math.sin(ang), cx + 22 * Math.cos(ang), cy + 22 * Math.sin(ang), { stroke: SOFT, weight: 1 });
+    out.push(v.line(cx + 19 * Math.cos(ang), cy + 19 * Math.sin(ang), cx + 22 * Math.cos(ang), cy + 22 * Math.sin(ang), { stroke: SOFT, weight: 1 }));
   }
   const hand = (t / 10) * Math.PI * 2 - Math.PI / 2;
-  v.line(cx, cy, cx + 18 * Math.cos(hand), cy + 18 * Math.sin(hand), { stroke: "#c03a2b", weight: 2 });
-  v.circle(cx, cy, 2, { fill: "#c03a2b" });
+  out.push(v.line(cx, cy, cx + 18 * Math.cos(hand), cy + 18 * Math.sin(hand), { stroke: "#c03a2b", weight: 2 }));
+  out.push(v.circle(cx, cy, 2, { fill: "#c03a2b" }));
   // reading
   const fill = done ? GOOD : running ? INK : FAINT;
-  say(v, `${t.toFixed(2)} s`, { x: x0 + 62, y: cy + 2 }, { size: 24, bold: true, fill, valign: "middle" });
+  out.push(say(v, `${t.toFixed(2)} s`, { x: x0 + 62, y: cy + 2 }, { size: 24, bold: true, fill, valign: "middle" }));
   // ten swing pips
   for (let i = 0; i < SWINGS_PER_TRIAL; i += 1) {
     const filled = i < swings;
-    v.circle(x0 + 6 + i * 15, CONTROLS.y + 106, 5, filled ? { fill: done ? GOOD : "#d9a43a" } : { stroke: FAINT, weight: 1.25 });
+    out.push(v.circle(x0 + 6 + i * 15, CONTROLS.y + 106, 5, filled ? { fill: done ? GOOD : "#d9a43a" } : { stroke: FAINT, weight: 1.25 }));
   }
   const caption = done ? "10 swings: done" : running ? `swing ${Math.min(swings + 1, SWINGS_PER_TRIAL)} of 10` : "ready";
-  say(v, caption, { x: x0, y: CONTROLS.y + 128 }, { size: 12, fill: SOFT });
+  out.push(say(v, caption, { x: x0, y: CONTROLS.y + 128 }, { size: 12, fill: SOFT }));
   v.control("time", { x: x0, y: CONTROLS.y + 134, w: 150, h: 26, size: 13, bold: true });
+  return out;
 }
 
-function drawSettings(v: View): void {
+function drawSettings(v: View): Drawing {
+  const out: Drawing[] = [];
   const lx = CONTROLS.x + 196;
-  v.line(lx - 12, CONTROLS.y + 14, lx - 12, CONTROLS.y + CONTROLS.h - 14, { stroke: "#ece5d6", weight: 1.5 });
+  out.push(v.line(lx - 12, CONTROLS.y + 14, lx - 12, CONTROLS.y + CONTROLS.h - 14, { stroke: "#ece5d6", weight: 1.5 }));
   const rows: { name: "length" | "gravity" | "angle" | "speed"; label: string; unit: string; w: number }[] = [
     { name: "length", label: "String length", unit: "m", w: 80 },
     { name: "gravity", label: "Gravity", unit: "", w: 104 },
@@ -235,69 +231,76 @@ function drawSettings(v: View): void {
   ];
   for (const [i, r] of rows.entries()) {
     const top = CONTROLS.y + 14 + i * 37;
-    say(v, r.label, { x: lx, y: top + 14 }, { size: 13, fill: INK, valign: "middle" });
+    out.push(say(v, r.label, { x: lx, y: top + 14 }, { size: 13, fill: INK, valign: "middle" }));
     v.control(r.name, { x: lx + 100, y: top, w: r.w, h: 28, size: 14 });
-    if (r.unit !== "") say(v, r.unit, { x: lx + 100 + r.w + 6, y: top + 14 }, { size: 14, fill: SOFT, valign: "middle" });
+    if (r.unit !== "") out.push(say(v, r.unit, { x: lx + 100 + r.w + 6, y: top + 14 }, { size: 14, fill: SOFT, valign: "middle" }));
   }
+  return out;
 }
 
-function drawBanner(v: View, model: DeepReadonly<Model>): void {
+function drawBanner(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
   const fresh = model.fresh;
-  if (fresh === null || model.mode.type !== "free") return;
+  if (fresh === null || model.mode.type !== "free") return out;
   const age = model.frame - fresh.frame;
   const trial = model.trials.find((t) => t.n === fresh.n);
-  if (trial === undefined || age > 240) return;
+  if (trial === undefined || age > 240) return out;
   const w = 150;
   const x = STAGE.x + STAGE.w - w - 12;
   const y = STAGE.y + 40;
-  v.group({ opacity: age > 200 ? (240 - age) / 40 : 1 }, () => {
-    v.roundRect(x, y, w, 50, 10, { fill: "rgba(255, 255, 255, 0.94)", stroke: GOOD, weight: 1.5 });
-    say(v, `10 swings in ${trial.total.toFixed(2)} s`, { x: x + w / 2, y: y + 17 }, { size: 12, fill: GOOD, align: "center", valign: "middle" });
-    say(v, `T = ${trial.period.toFixed(3)} s`, { x: x + w / 2, y: y + 35 }, { size: 17, bold: true, fill: GOOD, align: "center", valign: "middle" });
-  });
+  out.push(v.group({ opacity: age > 200 ? (240 - age) / 40 : 1 }, [
+    v.roundRect(x, y, w, 50, 10, { fill: "rgba(255, 255, 255, 0.94)", stroke: GOOD, weight: 1.5 }),
+    say(v, `10 swings in ${trial.total.toFixed(2)} s`, { x: x + w / 2, y: y + 17 }, { size: 12, fill: GOOD, align: "center", valign: "middle" }),
+    say(v, `T = ${trial.period.toFixed(3)} s`, { x: x + w / 2, y: y + 35 }, { size: 17, bold: true, fill: GOOD, align: "center", valign: "middle" }),
+  ]));
+  return out;
 }
 
-function drawPlace(v: View, planet: Params["gravity"]): void {
+function drawPlace(v: View, planet: Params["gravity"]): Drawing {
   const s = `${planet === "Jupiter" ? "Jupiter cloud tops" : planet}  ·  g = ${planetG(planet)} m/s²`;
   const w = sayWidth(v, s, { size: 12, bold: true }) + 20;
   const x = STAGE.x + STAGE.w - w - 10;
   const y = STAGE.y + 10;
-  v.roundRect(x, y, w, 22, 11, { fill: "rgba(32, 30, 40, 0.72)" });
-  say(v, s, { x: x + 10, y: y + 11 }, { size: 12, bold: true, fill: "#ffffff", valign: "middle" });
+  return [
+    v.roundRect(x, y, w, 22, 11, { fill: "rgba(32, 30, 40, 0.72)" }),
+    say(v, s, { x: x + 10, y: y + 11 }, { size: 12, bold: true, fill: "#ffffff", valign: "middle" }),
+  ];
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background(PAGE);
-  say(v, "Pendulum Lab", { x: 22, y: 38 }, { size: 24, bold: true });
-  say(v, "How does the length of the string change the time for one swing?", { x: 196, y: 37 }, { size: 14, fill: SOFT, italic: true });
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background(PAGE));
+  out.push(say(v, "Pendulum Lab", { x: 22, y: 38 }, { size: 24, bold: true }));
+  out.push(say(v, "How does the length of the string change the time for one swing?", { x: 196, y: 37 }, { size: 14, fill: SOFT, italic: true }));
 
   const mode = model.mode;
   const planet = mode.type === "held" ? p.gravity : mode.swing.planet;
-  drawBackdrop(v, planet);
+  out.push(drawBackdrop(v, planet));
   const pose =
     mode.type === "held"
       ? { theta: (p.angle * Math.PI) / 180, omega: 0, length: p.length, angle: p.angle, held: true, dark: planet === "Moon" || planet === "Jupiter" }
       : { theta: mode.swing.theta, omega: mode.swing.omega, length: mode.swing.length, angle: mode.swing.angle, held: false, dark: planet === "Moon" || planet === "Jupiter" };
-  drawPendulum(v, pose);
-  drawPlace(v, planet);
-  drawBanner(v, model);
+  out.push(drawPendulum(v, pose));
+  out.push(drawPlace(v, planet));
+  out.push(drawBanner(v, model));
 
-  card(v, CONTROLS);
-  drawStopwatch(v, { mode, frame: model.frame });
-  drawSettings(v);
+  out.push(card(v, CONTROLS));
+  out.push(drawStopwatch(v, { mode, frame: model.frame }));
+  out.push(drawSettings(v));
 
   const axes = axesFor(model.trials, { sqrt: p.sqrtAxis, theory: p.theory, current: p.gravity });
   const ptr = model.pointer;
   const focus = ptr === null ? null : (pointAt(model.trials, { axes, x: ptr.x, y: ptr.y }) ?? rowAt(model.trials, ptr));
   const fresh = model.fresh === null ? null : { n: model.fresh.n, age: model.frame - model.fresh.frame };
-  drawGraph(v, { trials: model.trials, axes, theory: p.theory ? theoryPlanets(model.trials, p.gravity) : null, focus, fresh });
+  out.push(drawGraph(v, { trials: model.trials, axes, theory: p.theory ? theoryPlanets(model.trials, p.gravity) : null, focus, fresh }));
   v.control("theory", { x: GRAPH_CARD.x + 232, y: GRAPH_CARD.y + 12, w: 20, h: 22 });
-  say(v, "Theory curve", { x: GRAPH_CARD.x + 254, y: GRAPH_CARD.y + 23 }, { size: 13, valign: "middle" });
+  out.push(say(v, "Theory curve", { x: GRAPH_CARD.x + 254, y: GRAPH_CARD.y + 23 }, { size: 13, valign: "middle" }));
   v.control("sqrtAxis", { x: GRAPH_CARD.x + 346, y: GRAPH_CARD.y + 12, w: 20, h: 22 });
-  say(v, "Plot against √L", { x: GRAPH_CARD.x + 368, y: GRAPH_CARD.y + 23 }, { size: 13, valign: "middle" });
+  out.push(say(v, "Plot against √L", { x: GRAPH_CARD.x + 368, y: GRAPH_CARD.y + 23 }, { size: 13, valign: "middle" }));
 
-  drawTable(v, { trials: model.trials, theory: p.theory, focus, fresh });
+  out.push(drawTable(v, { trials: model.trials, theory: p.theory, focus, fresh }));
   v.control("clear", { x: TABLE_CARD.x + TABLE_CARD.w - 116, y: TABLE_CARD.y + 12, w: 100, h: 26, size: 12 });
+  return out;
 }
 
 function planetG(planet: Params["gravity"]): string {

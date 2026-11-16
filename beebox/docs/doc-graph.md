@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-16T02:10:35Z
-Total documents: 664
+Generated: 2026-11-16T11:41:42Z
+Total documents: 698
 
 ## Issues
 
@@ -20,7 +20,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-brushes-paint.subplan.md** — "canvas-loop: colour variation within a stroke, smudge and wet paint" (276 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-sound.md** — "canvas-loop: sound as a view of state" (221 lines) · shipped history · implemented
-- **docs/implemented-plans/canvas-loop-styles.md** — "canvas-loop: per-call styles; retire the p5-style tier" (430 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-loop-text-and-radii.subplan.md** — "canvas-loop: text params, text measurement in update, radii for round shapes" (218 lines) · shipped history · implemented
 - **docs/implemented-plans/canvas-sound-library.subplan.md** — "canvas-loop: instruments, a sample library, and sound guidance" (289 lines) · shipped history · implemented
 - **docs/implemented-plans/card-front-material.md** — "Card fronts take the card's ink; the theme audit flags app ink in cards" (161 lines) · shipped history · implemented
@@ -91,6 +90,8 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
+- **docs/plans/canvas-loop-scene/README.md** — "canvas-loop scene: Stage 0 notes" (79 lines) · proposal
+- **docs/plans/canvas-loop-scene/stage5/checkpoint5.md** — "Checkpoint 5: summary for the boxholder" (40 lines) · proposal
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -117,6 +118,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -156,7 +158,7 @@ Title: "Bee Box" | 74 lines
 Referenced by:
 - AGENTS.md:67 (mention) — When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for pack
 - README.md:36 (mention) — (`package.json`, `tsconfig.json`), the root `AGENTS.md`, the operational areas,
-- code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per AGENTS.md, noisy output is
+- code-style.md:42 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per AGENTS.md, noisy output is
 - docs/README.md:94 (mention) — `AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/agent-guide.md:12 (mention) — `AGENTS.md`. Every word in it is paid on every turn, so each rule in it must
 - docs/box-guidance.md:14 (mention) — root `AGENTS.md` and its `@` includes), `situational` (when the agent works on
@@ -189,6 +191,8 @@ Referenced by:
 - docs/implemented-plans/box-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/box-view-guidance-and-checks.md:599 (mention) — lints; the preset is a standalone package (root `AGENTS.md`: *"Shared
 - docs/implemented-plans/boxes-as-packages-v2.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:581 (mention) — are named in `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md`); the
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:70 (mention) — `AGENTS.md`, a new `RENDERER.md`, `CHANGELOG.md`, the gallery README, the
 - docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
 - docs/implemented-plans/capture-mode.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/card-front-material.md:45 (mention) — - Root `AGENTS.md`: no lint weakening or audit exemptions to pass. The
@@ -307,6 +311,7 @@ Referenced by:
 - docs/plans/agent-docs.md:377 (mention) — directory's `AGENTS.md` marks the rest as steering docs).
 - docs/plans/asset-offbox-storage.md:365 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:383 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
+- docs/plans/canvas-loop-box-figures.subplan.md:189 (mention) — - **Production changes need the boxholder's own yes** (root `AGENTS.md`,
 - docs/plans/change-based-test-selection.md:338 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
 - docs/plans/chat-photo-batch-upload.md:53 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:217 (mention) — harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
@@ -442,6 +447,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
 - ../issues/code-quality/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:49 (mention) — needs the boxholder's approval (root `AGENTS.md`).
+- ../issues/code-quality/2026-11-16-frontend-test-from-wrong-directory-gives-no-hint.md:11 (mention) — `beebox/` with the `src/frontend/test/...` path, as `beebox/AGENTS.md` and
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:32 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:22 (mention) — AGENTS.md files) and spot-check their concrete claims against code —
@@ -564,7 +570,7 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 120 lines
+Title: "Code Style" | 121 lines
 
 Referenced by:
 - AGENTS.md:57 (link) — - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent f
@@ -755,6 +761,7 @@ Referenced by:
 - docs/implemented-plans/user-location.md:72 (mention) — - `beebox/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
 - docs/plans/agent-points-at-ui.md:68 (mention) — - `beebox/frontend.md` — primitives own appearance, `className` is
+- docs/plans/canvas-loop-box-figures.subplan.md:201 (mention) — `<Notice>` also has `tone="warning"` (`frontend.md:240`: *"`tone="warning"`
 - docs/plans/chat-session-delete.md:80 (mention) — - **`frontend.md`:** destructive appearance uses the semantic `danger` role,
 - docs/plans/invite-links-and-password-change.md:61 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:199 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
@@ -811,6 +818,8 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/implemented-plans/box-shape-in-package-json.md:81 (mention) — `README.md:46`, `dev/lib/context-assembly/assembly.ts:119`.
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:581 (mention) — are named in `TEA.md`, `BRUSHES.md`, `README.md` and `AGENTS.md`); the
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:69 (mention) — - **Authored docs:** about 1,500 lines (`TEA.md`, `BRUSHES.md`, `README.md`,
 - docs/implemented-plans/canvas-loop-styles.md:40 (mention) — | Docs (TEA.md, README.md, BRUSHES.md, AGENTS.md, CHANGELOG.md) | ~500 | |
 - docs/implemented-plans/cards-as-markdown-rfc.md:82 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
@@ -838,6 +847,7 @@ Referenced by:
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/closed/docs-and-chores/2026-07-21-pages-site-go-live.md:12 (mention) — > **Closed 2026-10-22 (issue audit):** The site is live: `https://beebox.run` and `/llms.txt` return 200, and the home p
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:83 (mention) — root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
+- ../issues/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md:9 (mention) — canvas-loop docs (README.md, TEA.md, BRUSHES.md, and RENDERER.md on the
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:212 (mention) — Out of date in the body above: Update the Gates section: mark gate 1's dev-router-lan-exposure FIXED and gate 2 closed;
 - ../issues/features/2026-07-19-installation-remaining-work.md:133 (mention) — Out of date in the body above: Mark item 11 done (README.md front door with agent install prompt). Under item 6, add tha
 - ../issues/features/2026-09-06-container-install-is-the-primary-path.md:45 (mention) — Partly done. The root `README.md` no longer lists the from-source guide first. It points to an agent install prompt, and
@@ -890,7 +900,8 @@ Referenced by:
 - docs/implemented-plans/atomic-deploy.md:60 (mention) — | Docs (`docs/server/deploying.md`, `deploy/AGENTS.md`, `docs/server/provisioning.md`) | ~80, reported separately |
 - docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/AGENTS.md`'s poll matches —
 - docs/implemented-plans/doc-structure-install-server.md:114 (mention) — setup docs (next cluster). The scripts themselves. `deploy/AGENTS.md`.
-- docs/server/deploying.md:69 (mention) — (see `deploy/AGENTS.md` for the wait/poll pattern).
+- docs/plans/canvas-loop-box-figures.subplan.md:265 (mention) — `--ref`"*. `deploy/AGENTS.md`: deploy.sh *"requires a local
+- docs/server/deploying.md:76 (mention) — (see `deploy/AGENTS.md` for the wait/poll pattern).
 - docs/unimplemented-plans/origin-tls.md:29 (mention) — 3. Update the two nginx deploy tests for the new listeners and certificate paths, and restore the rollback notes in `dep
 
 References:
@@ -932,8 +943,8 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
 - ../bin/AGENTS.md:201 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
-- ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
+- ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:90 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:15 (mention) — (`deploy/README.md` documents this as a known gap). So a change to the
@@ -965,6 +976,7 @@ Title: "Docker packaging" | 42 lines
 
 Referenced by:
 - docs/implemented-plans/portable-engine-dependency.md:165 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
+- docs/plans/canvas-loop-box-figures.subplan.md:469 (mention) — moved to `node:24-trixie-slim`; `docker/README.md`, the Debian flavour
 - docs/plans/container-first.md:591 (mention) — `bbx serve /data/box/content` (`docker/README.md:11`). The root
 
 References:
@@ -997,7 +1009,7 @@ References:
 
 #### docs/agent-guide.md
 
-Title: "Agent guide" | 203 lines | current reference
+Title: "Agent guide" | 206 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:3 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md` in every box), the
@@ -1014,6 +1026,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-box-guidance.md:261 (mention) — | `.beebox/agent-guide.md` (11,081 words) | always | generated | `agent-guide/index.ts` | yes | no (ignored) |
 - docs/implemented-plans/user-location.md:128 (mention) — `.beebox/agent-guide.md`. Sections are **not** gated on box
 - docs/plans/agent-docs.md:415 (mention) — - The box-specific agent guide (`.beebox/agent-guide.md`) needs a box to
+- docs/plans/canvas-loop-box-figures.subplan.md:277 (mention) — `agent-changes` schedule (`docs/agent-guide.md:145`); this plan's commits
 - docs/plans/shared-browser.md:91 (mention) — - **Agent guide budget.** `docs/agent-guide.md` test 3: *"Does it apply only when touching one thing (a field, a command
 - docs/prompts/logging.md:10 (mention) — - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
 - docs/testing/knowledge-audits.md:37 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `AG
@@ -1180,7 +1193,7 @@ Referenced by:
 - docs/implemented-plans/box-view-guidance-and-checks.md:718 (mention) — (`docs/box-work.md`, "Rules for every box"), with this worktree's engine.
 - docs/implemented-plans/journey-simulated-notifications.md:49 (mention) — - **Hand check, 2026-10-23**, throwaway box made per `beebox/docs/box-work.md` ("Making a throwaway box"): `BBX_NOTIFY_F
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
-- docs/testing.md:107 (link) — each lives and what not to touch: [box work](box-work.md).
+- docs/testing.md:108 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:150 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
 - ../AGENTS.md:19 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
@@ -1286,8 +1299,9 @@ Referenced by:
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
 - docs/implemented-plans/runtime-lint.md:45 (mention) — | Docs (`docs/client-debug-log.md`, browse command reference) | ~50 |
+- docs/plans/canvas-loop-box-figures.subplan.md:280 (mention) — `.beebox/client-debug.log` (`docs/client-debug-log.md`, "How It Works").
 - docs/server/operations.md:205 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
-- docs/testing.md:98 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
+- docs/testing.md:99 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:169 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:152 (mention) — - **Lives in:** `.claude/skills/field-probe/SKILL.md`; house pattern `beebox/src/frontend/src/lib/scroll-diagnostics/dia
@@ -1356,6 +1370,7 @@ Referenced by:
 - docs/implemented-plans/modern-web-guidance-adoption.md:842 (mention) — `docs/content-security-policy.md`; F1 enforces only `frame-ancestors`.
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
+- docs/plans/canvas-loop-scene/host-boundaries.md:62 (mention) — - No `'wasm-unsafe-eval'` anywhere. `docs/content-security-policy.md:58-62`:
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - docs/security-report.md:469 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
@@ -1447,6 +1462,9 @@ Referenced by:
 - docs/implemented-plans/browser-task-card.md:63 (mention) — degradation is not"* allowed, `beebox/docs/engineering-principles.md:51`).
 - docs/implemented-plans/bulk-file-upload.md:30 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:118 (mention) — - **Engineering principles** (`beebox/docs/engineering-principles.md`): §8,
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:124 (mention) — - **Engineering principles** (`beebox/docs/engineering-principles.md`):
+- docs/implemented-plans/canvas-loop-scene.md:159 (mention) — - **One way to do each thing** (`beebox/docs/engineering-principles.md` §8).
 - docs/implemented-plans/capture-mode.md:25 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
 - docs/implemented-plans/card-prominence.md:61 (mention) — - `docs/engineering-principles.md` **#1 Types are structure**: the level is a
 - docs/implemented-plans/card-themes.md:55 (link) — Design decisions below follow [engineering principles](../engineering-principles.md)
@@ -1536,6 +1554,7 @@ Referenced by:
 - docs/plans/android-companion-app.md:24 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/asset-annex.md:76 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
 - docs/plans/asset-offbox-storage.md:81 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent —
+- docs/plans/canvas-loop-box-figures.subplan.md:179 (mention) — - **One way to do each thing** (`beebox/docs/engineering-principles.md` §8):
 - docs/plans/change-based-test-selection.md:74 (mention) — - `docs/engineering-principles.md` **#4 — "Resilient AND never silent."** The
 - docs/plans/change-based-test-selection.review.md:155 (mention) — > The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`beebox/.taprc:7-14`)
 - docs/plans/chat-everywhere.md:45 (link) — - Principles [1, 3, 4, 8, 9, 10, 13](../engineering-principles.md): typed navigation intent; validation at the native/ne
@@ -1573,6 +1592,7 @@ Referenced by:
 - docs/plans/workspace-pane-controls.md:48 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
 - docs/plans/workstreams-app.md:46 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:113 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
+- docs/unimplemented-plans/canvas-loop-gpu-medium.md:72 (mention) — - **One way to do each thing** (`beebox/docs/engineering-principles.md` §8).
 - docs/unimplemented-plans/publish-custom-domain-admin.md:30 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - docs/unimplemented-plans/publish-pages-superseded.md:22 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/unimplemented-plans/temporal-everywhere.md:110 (mention) — (`beebox/docs/engineering-principles.md:95`): one clock helper per clock,
@@ -1858,6 +1878,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:77 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:16 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
 - docs/plans/box-screen.md:32 (mention) — | Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security
+- docs/plans/canvas-loop-box-figures.subplan.md:940 (mention) — - **The `mobile-contract.md` index:** no HTTP, bridge or URL change; the iOS
 - docs/plans/capture-fast-landing.md:302 (mention) — (`docs/mobile-contract.md` unaffected).
 - docs/plans/chat-everywhere.md:577 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
 - docs/plans/chat-photo-batch-upload.md:27 (mention) — > cross-platform rule is stated in `docs/mobile-contract.md` §8.
@@ -1901,8 +1922,8 @@ Referenced by:
 - ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:30 (link) — shape is in [mobile contract §5.11](../../../beebox/docs/mobile-contract.md).
 - ../issues/closed/features/2026-11-11-chat-shows-who-is-present-and-typing.md:51 (mention) — bridge contract (`beebox/docs/mobile-contract.md`).
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:31 (mention) — web (`docs/mobile-contract.md` §2).
+- ../issues/code-quality/2026-10-16-retire-memo-legacy-source-guard.md:38 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:59 (mention) — `docs/mobile-contract.md:21-23` records the shape: *"A paired box's `baseURL`
-- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:40 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:10 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:13 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:106 (mention) — `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
@@ -2287,7 +2308,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 544 lines | current reference
+Title: "Secrets: the machine-level store" | 548 lines | current reference
 
 Referenced by:
 - AGENTS.md:71 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2396,6 +2417,7 @@ Referenced by:
 - docs/implemented-plans/remove-telegram.md:159 (mention) — `docs/security-report.md`, `docs/secrets.md`, `docs/chat*.md`,
 - docs/implemented-plans/webapp-production-mode.md:230 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
+- docs/plans/canvas-loop-box-figures.subplan.md:470 (mention) — of `bbx-host-apt.smoke.sh` and its line in `docs/security-report.md`
 - docs/plans/per-box-units.subplan.md:29 (mention) — (`docs/security-report.md:531`) unchanged with a different group name.
 - docs/plans/publication-approval-card.md:23 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
 - docs/plans/shared-browser.md:89 (mention) — - **Cross-box isolation is zero-exception.** `docs/security-report.md:546`: *"every path input in the route and tRPC inv
@@ -2488,7 +2510,7 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 124 lines | current reference
+Title: "Testing" | 125 lines | current reference
 
 Referenced by:
 - AGENTS.md:21 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
@@ -2821,6 +2843,7 @@ Referenced by:
 - docs/agent-guide.md:145 (link) — [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
 - docs/box/about-bee-box.md:47 (mention) — box behaves, the installed docs win; `agent-changes.md` lists recent changes.
 - docs/implemented-plans/agent-changes.md:88 (mention) — - **`agent-changes.md`:** `docs/box/agent-changes.md`, a prose box doc holding every entry. Existing kind.
+- docs/plans/canvas-loop-box-figures.subplan.md:276 (mention) — - **Box changelog.** `docs/box/agent-changes.md` is written by the
 
 References:
 - → docs/box/triggers.md (mention)
@@ -3241,7 +3264,7 @@ Referenced by:
 - docs/cards/format.md:151 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/implemented-plans/doc-structure-cards.md:63 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:321 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
-- docs/testing.md:55 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
+- docs/testing.md:56 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
 - ../dev/devprocess-talk/reports/sweep-quality.md:137 (mention) — - **Lives in:** `beebox/src/core/install-validation-hooks.ts`, `beebox/src/core/sdk-hooks.ts` (`cardValidatorHook`), `be
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:21 (mention) — the agent harness's PostToolUse hook (`beebox/docs/cards/validation.md:13`):
 
@@ -4484,7 +4507,7 @@ Referenced by:
 - docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:282 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
+- docs/server/provisioning.md:295 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
@@ -4619,15 +4642,136 @@ References:
 - → code-style.md (mention)
 - → docs/implemented-plans/figure-card-type.md (mention)
 
+#### docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md
+
+Title: "canvas-loop scene: brushes on the GPU" | 1547 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:118 (mention) — (`canvas-loop-gpu-brushes.subplan.md:95-96`) and assigns the recorder and
+- docs/implemented-plans/canvas-loop-scene.md:393 (mention) — (`canvas-loop-gpu-brushes.subplan.md`).
+- docs/plans/canvas-loop-scene/stage5/checkpoint5.md:10 (mention) — | (b) `canvas-loop-gpu-brushes.subplan.md` | Brush expansion on the GPU | about 1,930 to its stop point after chunk 6; a
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/checkpoint4.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/dawn-linux.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/brushes.md (mention)
+
+#### docs/implemented-plans/canvas-loop-returned-scene.subplan.md
+
+Title: "canvas-loop: draw returns its scene" | 1062 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene.md:421 (mention) — Later: `canvas-loop-returned-scene.subplan.md` (`draw` returns its scene as values).
+- docs/plans/canvas-loop-box-figures.subplan.md:373 (mention) — subplan (`canvas-loop-returned-scene.subplan.md`, Track 4 and Seams).
+- docs/plans/canvas-loop-scene/scene-api-draft.md:644 (mention) — (`beebox/docs/implemented-plans/canvas-loop-returned-scene.subplan.md`). It replaces
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (mention)
+- → README.md (mention)
+- → AGENTS.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/checkpoint4.md (mention)
+
+#### docs/implemented-plans/canvas-loop-scene-core.subplan.md
+
+Title: "canvas-loop scene core: the spike becomes the one API and renderer" | 1607 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:484 (mention) — - **(a) scene core** (`canvas-loop-scene-core.subplan.md`). Decision:
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:115 (mention) — per walker frame in Chromium (`canvas-loop-scene-core.subplan.md:776`
+- docs/implemented-plans/canvas-loop-scene.md:390 (mention) — (`canvas-loop-scene-core.subplan.md`).
+- docs/plans/canvas-loop-box-figures.subplan.md:152 (mention) — (`canvas-loop-scene-core.subplan.md:618-623`) and is not counted here.
+- docs/plans/canvas-loop-scene/stage4/dev-loop.md:31 (mention) — **Chunk 3 of the scene core plan** (`beebox/docs/implemented-plans/canvas-loop-scene-core.subplan.md`,
+- docs/plans/canvas-loop-scene/stage5/checkpoint5.md:9 (mention) — | (a) `canvas-loop-scene-core.subplan.md` | The spike becomes canvas-loop's one API and renderer; the Canvas2D painter a
+- docs/plans/canvas-loop-scene/stage5/gallery-parity.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene-core.subplan.md`, Track 5
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → README.md (mention)
+- → AGENTS.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/checkpoint4.md (mention)
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+- → docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/dawn-linux.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/dev-loop.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/stage5/gallery-parity.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/drawing-brief.md (mention)
+- → docs/plans/canvas-loop-scene/stage5/checkpoint5-handoff.md (mention)
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+
+#### docs/implemented-plans/canvas-loop-scene.md
+
+Title: "canvas-loop scene: a plan for planning the redesign" | 503 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:9 (mention) — Stage 5 subplan (b) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Brushed
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:9 (mention) — A subplan of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Today a sketch's
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:9 (mention) — Stage 5 subplan (a) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. The Stage 4
+- docs/plans/canvas-loop-box-figures.subplan.md:12 (mention) — Stage 5 subplan (c) of `beebox/docs/implemented-plans/canvas-loop-scene.md`. It moves
+- docs/plans/canvas-loop-scene/README.md:3 (mention) — Evidence for Checkpoint 0 of `beebox/docs/implemented-plans/canvas-loop-scene.md`.
+- docs/plans/canvas-loop-scene/api-inventory.md:3 (link) — Part of [canvas-loop-scene](../../implemented-plans/canvas-loop-scene.md), Stage 0. It lists every
+- docs/plans/canvas-loop-scene/browser-profile.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 0. Measured
+- docs/plans/canvas-loop-scene/coverage-matrix.md:3 (link) — Part of [canvas-loop-scene](../../implemented-plans/canvas-loop-scene.md), Stage 0. One row per
+- docs/plans/canvas-loop-scene/host-boundaries.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 0. Paths below are in
+- docs/plans/canvas-loop-scene/parity-criteria.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Written before any Stage 3
+- docs/plans/canvas-loop-scene/prior-art.md:3 (mention) — Stage 0 note for `beebox/docs/implemented-plans/canvas-loop-scene.md`. Researched 2026-11-14 from primary
+- docs/plans/canvas-loop-scene/scene-api-draft.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 1. Types:
+- docs/plans/canvas-loop-scene/stage2-brief.md:4 (mention) — `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 2: a paper probe of the scene
+- docs/plans/canvas-loop-scene/stage2-findings.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 2. Three drawers
+- docs/plans/canvas-loop-scene/stage3-brief.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3: small runnable
+- docs/plans/canvas-loop-scene/stage3/brushes.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
+- docs/plans/canvas-loop-scene/stage3/compositing.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
+- docs/plans/canvas-loop-scene/stage3/dawn-linux.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`; the probe Checkpoint 3 asked
+- docs/plans/canvas-loop-scene/stage3/geometry.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
+- docs/plans/canvas-loop-scene/stage3/light-and-paint.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Brief:
+- docs/plans/canvas-loop-scene/stage3/scene-cost.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 3. Code (throwaway):
+- docs/plans/canvas-loop-scene/stage3/summary.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`. Five probes ran on an Apple
+- docs/plans/canvas-loop-scene/stage4-plan.md:3 (mention) — Part of `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 4. Written
+- docs/plans/canvas-loop-scene/stage4/checkpoint4.md:3 (mention) — Stage 4 of `beebox/docs/implemented-plans/canvas-loop-scene.md`, 2026-11-15. The spike
+- docs/plans/canvas-loop-scene/stage4/drawing-brief.md:4 (mention) — `beebox/docs/implemented-plans/canvas-loop-scene.md`, Stage 4: the drawing round. It
+- docs/plans/canvas-loop-scene/stage5/checkpoint5.md:3 (mention) — Stage 5 of `beebox/docs/implemented-plans/canvas-loop-scene.md`, 2026-11-15. Three
+- docs/unimplemented-plans/canvas-loop-gpu-medium.md:6 (frontmatter) — superseded-by: ../implemented-plans/canvas-loop-scene.md
+
+References:
+- → docs/unimplemented-plans/canvas-loop-gpu-medium.md (mention)
+- → docs/plans/canvas-brushes.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/summary.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/canvas-loop-styles.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/checkpoint4.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md (mention)
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+- → docs/implemented-plans/canvas-loop-returned-scene.subplan.md (mention)
+
 #### docs/implemented-plans/canvas-loop-sound.md **[ORPHAN]**
 
 Title: "canvas-loop: sound as a view of state" | 221 lines | shipped history | implemented
 
 No references in or out.
 
-#### docs/implemented-plans/canvas-loop-styles.md **[ORPHAN]**
+#### docs/implemented-plans/canvas-loop-styles.md
 
 Title: "canvas-loop: per-call styles; retire the p5-style tier" | 430 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene.md:167 (mention) — (`beebox/docs/implemented-plans/canvas-loop-styles.md:356`). This plan picks
 
 References:
 - → README.md (mention)
@@ -6069,6 +6213,7 @@ Title: "Figure card type" | 435 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:31 (mention) — `docs/implemented-plans/figure-card-type.md`. This plan adds a runtime to
+- docs/plans/canvas-loop-scene/host-boundaries.md:33 (mention) — there is no iframe or worker (`docs/implemented-plans/figure-card-type.md:336`).
 - docs/user-stories/catalog/2026-06-26.md:4244 (mention) — 7. **Documentation**: Complete plan documented in `beebox/docs/implemented-plans/figure-card-type.md` (marked as impleme
 - ../research/openui/beebox-surfaces.md:38 (mention) — Record: `beebox/docs/implemented-plans/figure-card-type.md`.
 
@@ -6083,7 +6228,7 @@ References:
 Title: "Figure verification: bbx figure run, the figure log, and teaching" | 319 lines | shipped history | implemented
 
 References:
-- → ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md (frontmatter)
+- → ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md (frontmatter)
 - → docs/implemented-plans/agent-changes.md (mention)
 
 #### docs/implemented-plans/file-layout.check.subplan.md **[ORPHAN]**
@@ -6101,7 +6246,7 @@ Title: "Source file layout: principles, rules, and what a check can verify" | 83
 
 Referenced by:
 - AGENTS.md:19 (link) — - `pnpm layout-check` enforces the [file layout rules](docs/implemented-plans/file-layout.md) for module directories, re
-- code-style.md:112 (link) — - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is on
+- code-style.md:113 (link) — - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is on
 - docs/implemented-plans/file-layout.check.subplan.md:13 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
 - docs/implemented-plans/file-layout.moves.subplan.md:10 (link) — Step 4 of [the file-layout plan](file-layout.md): move and rename files,
 - docs/implemented-plans/lazy-cli-commands.md:69 (mention) — - `docs/implemented-plans/file-layout.md`, rule 4: a set directory is
@@ -7145,7 +7290,7 @@ Referenced by:
 - docs/implemented-plans/pi-box-engine.md:388 (mention) — each box server as its own OS user (`implemented-plans/per-box-units.md`),
 - docs/plans/per-box-units.subplan.md:9 (link) — Subplan of [per-box-units.md](../implemented-plans/per-box-units.md), Track B. Today every box
 - docs/scheduler.md:171 (mention) — runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
-- docs/server/deploying.md:142 (link) — ([per-box units](../implemented-plans/per-box-units.md); the layout is in
+- docs/server/deploying.md:149 (link) — ([per-box units](../implemented-plans/per-box-units.md); the layout is in
 - docs/server/provisioning.md:98 (link) — ([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
 - src/hub/AGENTS.md:77 (mention) — the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
 - ../issues/closed/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/per-box-units.md
@@ -8072,7 +8217,7 @@ Title: "Retire the memo card type into doc" | 400 lines | shipped history | impl
 Referenced by:
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:14 (mention) — **Closed:** Closed by the retire-memo branch. No memo `source` field remains; the glossary records `via` vs `origin`. Pl
 - ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md:14 (mention) — **Closed:** Closed by the retire-memo branch (merge of worktree-retire-memo). The memo card type is removed; migration `
-- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/retire-memo.md
+- ../issues/code-quality/2026-10-16-retire-memo-legacy-source-guard.md:5 (frontmatter) — design: ../../beebox/docs/implemented-plans/retire-memo.md
 
 References:
 - → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (frontmatter)
@@ -9530,10 +9675,49 @@ Title: "canvas-loop brushes: an iterative drawing space for agents" | 553 lines 
 Referenced by:
 - docs/implemented-plans/canvas-brushes-effects.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The boxholder asked to look
 - docs/implemented-plans/canvas-brushes-paint.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). The effects subplan
+- docs/implemented-plans/canvas-loop-scene.md:45 (mention) — candidate, `canvas-brushes.md` Track D).
 - docs/implemented-plans/canvas-sound-library.subplan.md:9 (link) — Subplan of [canvas-brushes.md](../plans/canvas-brushes.md). Figures written by box
 
 References:
 - → docs/plans/README.md (mention)
+
+#### docs/plans/canvas-loop-box-figures.subplan.md
+
+Title: "canvas-loop scene, subplan (c): box figures" | 1106 lines | proposal | partial
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:28 (mention) — (`canvas-loop-box-figures.subplan.md`) owns; old courseware figures get a
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:1256 (mention) — (`canvas-loop-box-figures.subplan.md`, "What (c) needs from (a), and the
+- docs/implemented-plans/canvas-loop-scene.md:398 (mention) — error on the card, not a blank) (`canvas-loop-box-figures.subplan.md`).
+- docs/plans/canvas-loop-scene/stage5/checkpoint5-handoff.md:77 (mention) — `canvas-loop-box-figures.subplan.md`, about 835 lines. It moves beebox's
+- docs/plans/canvas-loop-scene/stage5/checkpoint5.md:11 (mention) — | (c) `canvas-loop-box-figures.subplan.md` | beebox's figure card and `bbx figure run`, the server's Vulkan driver, box-
+- docs/plans/canvas-loop-scene/stage5/figures-timing.md:3 (mention) — Notes for C5 of `beebox/docs/plans/canvas-loop-box-figures.subplan.md`. This
+
+References:
+- → ../issues/decisions/2026-11-13-isolate-view-and-figure-code.md (frontmatter)
+- → ../issues/decisions/2026-11-13-view-file-writes-too-broad.md (frontmatter)
+- → ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md (frontmatter)
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+- → frontend.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/dawn-linux.md (mention)
+- → docs/server/deploying.md (mention)
+- → deploy/AGENTS.md (mention)
+- → docs/box/agent-changes.md (mention)
+- → docs/agent-guide.md (mention)
+- → docs/client-debug-log.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/implemented-plans/canvas-loop-returned-scene.subplan.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/checkpoint4.md (mention)
+- → docs/server/provisioning.md (mention)
+- → docker/README.md (mention)
+- → docs/security-report.md (mention)
+- → docs/plans/canvas-loop-scene/host-boundaries.md (mention)
+- → docs/plans/canvas-loop-scene/stage5/figures-timing.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
 
 #### docs/plans/capture-fast-landing.md
 
@@ -10798,7 +10982,7 @@ References:
 Title: "Self-hosted TURN relay for chat calls on the cloud server" | 228 lines | proposal | active
 
 Referenced by:
-- docs/server/provisioning.md:213 (link) — cannot connect directly ([plan](../plans/self-hosted-turn.md)). Every deploy
+- docs/server/provisioning.md:226 (link) — cannot connect directly ([plan](../plans/self-hosted-turn.md)). Every deploy
 
 References:
 - → docs/server/provisioning.md (mention)
@@ -11021,6 +11205,385 @@ References:
 - → ../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md (link)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
+
+### docs/plans/canvas-loop-scene/
+
+#### docs/plans/canvas-loop-scene/api-inventory.md
+
+Title: "canvas-loop API inventory (Stage 0)" | 274 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/README.md:9 (link) — | [api-inventory.md](api-inventory.md) | Every View call and option with use counts; the 10 `v.ctx` files and their repl
+- docs/plans/canvas-loop-scene/coverage-matrix.md:6 (link) — draw it. Counts of real use are in [api-inventory.md](api-inventory.md).
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (link)
+
+#### docs/plans/canvas-loop-scene/browser-profile.md
+
+Title: "Stage 0: where browser time goes, and the targets" | 88 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:40 (mention) — (`canvas-loop-scene/browser-profile.md:76-77`). Target 3 is six animated
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:116 (mention) — (`canvas-loop-scene/browser-profile.md:76-77`). Subplan (b) projects the
+- docs/implemented-plans/canvas-loop-scene.md:82 (mention) — - **Targets accepted** (`canvas-loop-scene/browser-profile.md`). Headless must
+- docs/plans/canvas-loop-scene/README.md:8 (link) — | [browser-profile.md](browser-profile.md) | Browser frame times, a CPU profile of the inked walker sheet, and the propo
+- docs/plans/canvas-loop-scene/stage3-brief.md:8 (mention) — judged), and `browser-profile.md` (where time goes today).
+- docs/plans/canvas-loop-scene/stage3/brushes.md:15 (mention) — from its scratch canvas (`browser-profile.md`). The scope grew during the
+- docs/plans/canvas-loop-scene/stage4-plan.md:183 (mention) — Targets 1 and 3 (`browser-profile.md`), against the walker sheet. Scratch:
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+
+#### docs/plans/canvas-loop-scene/coverage-matrix.md
+
+Title: "canvas-loop coverage matrix (Stage 0, reconciled with Stage 1 draft 2)" | 157 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:270 (mention) — | `smear` (smudge, wet) | CPU samples; one workgroup per stroke | after the stop point: **samples from the `samples` ent
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:439 (mention) — coverage matrix's open note (`coverage-matrix.md:115` *"A `draw` that
+- docs/plans/canvas-loop-scene/README.md:10 (link) — | [coverage-matrix.md](coverage-matrix.md) | First draft: every brush, effect and compositing operation, today's code, a
+- docs/plans/canvas-loop-scene/scene-api-draft.md:350 (mention) — Every row of `coverage-matrix.md` maps to the draft. Where the matrix's early
+- docs/plans/canvas-loop-scene/stage3-brief.md:7 (mention) — do), `coverage-matrix.md` (your rows), `parity-criteria.md` (how results are
+- docs/plans/canvas-loop-scene/stage3/compositing.md:219 (mention) — - **Drop-shadow blur is σ = blur, not blur / 2.** `coverage-matrix.md`
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (link)
+- → docs/plans/canvas-loop-scene/api-inventory.md (link)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+
+#### docs/plans/canvas-loop-scene/host-boundaries.md
+
+Title: "Stage 0: how beebox hosts canvas-loop figures" | 89 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-box-figures.subplan.md:671 (mention) — - **Why:** box agents learn figures only from these (`host-boundaries.md:46-54`).
+- docs/plans/canvas-loop-scene/README.md:11 (link) — | [host-boundaries.md](host-boundaries.md) | How beebox runs figures in the browser and headless; the content security p
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/implemented-plans/figure-card-type.md (mention)
+- → docs/content-security-policy.md (mention)
+
+#### docs/plans/canvas-loop-scene/parity-criteria.md
+
+Title: "Stage 3: parity criteria" | 54 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:129 (mention) — (`parity-criteria.md`, section 1). This plan treats both as requirements
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:844 (mention) — (`canvas-loop-scene/parity-criteria.md` section 2, the functions in
+- docs/plans/canvas-loop-scene/stage3-brief.md:7 (mention) — do), `coverage-matrix.md` (your rows), `parity-criteria.md` (how results are
+- docs/plans/canvas-loop-scene/stage3/brushes.md:5 (mention) — `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 in the repo's headless
+- docs/plans/canvas-loop-scene/stage3/compositing.md:5 (mention) — `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 in the repo's headless
+- docs/plans/canvas-loop-scene/stage3/geometry.md:5 (mention) — `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 in the repo's headless
+- docs/plans/canvas-loop-scene/stage3/light-and-paint.md:5 (mention) — `canvas-loop-scene/parity-criteria.md`. Run 2026-11-15 on an Apple M2 Pro:
+- docs/plans/canvas-loop-scene/stage3/summary.md:65 (mention) — 2. **The parity bar** (`parity-criteria.md`): keep as written. The probes met
+- docs/plans/canvas-loop-scene/stage5/gallery-parity.md:18 (mention) — - **Parity pass, min flat, max edge:** parity-criteria.md section 2, the
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+
+#### docs/plans/canvas-loop-scene/prior-art.md
+
+Title: "canvas-loop scene: prior art" | 471 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/README.md:12 (link) — | [prior-art.md](prior-art.md) | View-as-value APIs, record-and-replay, scene graphs, GPU 2D renderers, WebGPU coverage,
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+
+#### docs/plans/canvas-loop-scene/README.md **[ORPHAN]**
+
+Title: "canvas-loop scene: Stage 0 notes" | 79 lines | proposal
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (link)
+- → docs/plans/canvas-loop-scene/api-inventory.md (link)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (link)
+- → docs/plans/canvas-loop-scene/host-boundaries.md (link)
+- → docs/plans/canvas-loop-scene/prior-art.md (link)
+
+#### docs/plans/canvas-loop-scene/scene-api-draft.md
+
+Title: "Stage 1: the scene API, draft 2.11" | 692 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:109 (mention) — (`canvas-loop-scene/scene-api-draft.md`), one line in `canvas-loop/BRUSHES.md`,
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:33 (mention) — **The decision.** The draft chose the builder: `scene-api-draft.md:11-24`,
+- docs/implemented-plans/canvas-loop-scene.md:108 (mention) — `canvas-loop-scene/scene-api-draft.md` (draft 2.1), deferring to the planner on
+- docs/plans/canvas-loop-box-figures.subplan.md:326 (mention) — `scene-api-draft.md:27-38`), with `call` and `replacement` fields. The
+- docs/plans/canvas-loop-scene/coverage-matrix.md:9 (mention) — were reconciled with the Stage 1 API draft 2.1 (`scene-api-draft.md`) on
+- docs/plans/canvas-loop-scene/stage2-brief.md:19 (mention) — 1. `beebox/docs/plans/canvas-loop-scene/scene-api-draft.md`: the proposal.
+- docs/plans/canvas-loop-scene/stage3-brief.md:6 (mention) — `scene-api-draft.md` (draft 2.2; its lowering contract is what a renderer must
+- docs/plans/canvas-loop-scene/stage3/compositing.md:13 (mention) — (`scene-api-draft.md` section 3, rules R1 to R7) correctly and cheaply? How
+- docs/plans/canvas-loop-scene/stage3/light-and-paint.md:14 (mention) — Do draft 2.2's lighting (`scene-api-draft.md` R8: material layer composited
+- docs/plans/canvas-loop-scene/stage4/drawing-brief.md:20 (mention) — 1. `beebox/docs/plans/canvas-loop-scene/scene-api-draft.md`: the API. Where it
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage2-findings.md (mention)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (mention)
+- → docs/implemented-plans/canvas-loop-returned-scene.subplan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage2-brief.md
+
+Title: "Stage 2 drawer brief" | 68 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage2-findings.md:5 (mention) — `stage2-brief.md` against draft 2.1, without rendering, and wrote an account.
+- docs/plans/canvas-loop-scene/stage4/drawing-brief.md:5 (mention) — repeats the Stage 2 paper probe (`../stage2-brief.md`) against the running
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage2-findings.md
+
+Title: "Stage 2: what the drawers found" | 46 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/scene-api-draft.md:9 (mention) — Stage 2 drawers asked for (`stage2-findings.md`; section 14).
+- docs/plans/canvas-loop-scene/stage4/drawing-findings.md:78 (mention) — Stage 2's paper probe (`../stage2-findings.md`) predicted the lighting
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage2-brief.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3-brief.md
+
+Title: "Stage 3 probe brief (shared by every probe)" | 51 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage3/brushes.md:4 (mention) — `canvas-loop-scene/stage3-brief.md`. Judged against
+- docs/plans/canvas-loop-scene/stage3/compositing.md:4 (mention) — `canvas-loop-scene/stage3-brief.md`. Judged against
+- docs/plans/canvas-loop-scene/stage3/geometry.md:4 (mention) — `canvas-loop-scene/stage3-brief.md`. Judged against
+- docs/plans/canvas-loop-scene/stage3/light-and-paint.md:4 (mention) — `canvas-loop-scene/stage3-brief.md`. Judged against
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage4-plan.md
+
+Title: "Stage 4: the spike-through, plan" | 358 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:42 (mention) — (`canvas-loop-scene/stage4-plan.md:209`: *"walker sheet 16.8–18.6 → 22.8 fps
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:114 (mention) — (`stage4-plan.md:209` *"walker sheet 16.8–18.6 → 22.8 fps (record 11.4,
+- docs/plans/canvas-loop-box-figures.subplan.md:949 (mention) — figure needed only small changes (`stage4-plan.md:137-139`); that is one
+- docs/plans/canvas-loop-scene/stage4/checkpoint4.md:75 (mention) — helps. The "Walker speed" section of `stage4-plan.md` has the profile.
+- docs/plans/canvas-loop-scene/stage4/dev-loop.md:3 (mention) — Part of `beebox/docs/plans/canvas-loop-scene/stage4-plan.md`, item 7. Written
+- docs/plans/canvas-loop-scene/stage4/drawing-findings.md:62 (mention) — Fixes are described in `../stage4-plan.md`, "Drawing-round fixes", with
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/dev-loop.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/drawing-findings.md (mention)
+
+### docs/plans/canvas-loop-scene/stage3/
+
+#### docs/plans/canvas-loop-scene/stage3/brushes.md
+
+Title: "Stage 3 probe: brushes" | 294 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:1360 (mention) — draw-call count dominated cost in Stage 3 (`stage3/brushes.md:226`).
+- docs/plans/canvas-loop-scene/stage3/summary.md:7 (mention) — `geometry.md`, `compositing.md`, `brushes.md`, `light-and-paint.md`. Astra
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage3-brief.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/browser-profile.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/compositing.md
+
+Title: "Stage 3 probe: compositing" | 285 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage3/summary.md:7 (mention) — `geometry.md`, `compositing.md`, `brushes.md`, `light-and-paint.md`. Astra
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage3-brief.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+- → docs/plans/canvas-loop-scene/coverage-matrix.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/dawn-linux.md
+
+Title: "Stage 3: Dawn on a GPU-less Linux host" | 62 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:398 (mention) — builds match. Lavapipe differs in the last bits (`stage3/dawn-linux.md`).
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:223 (mention) — recorded in `canvas-loop-scene/stage3/dawn-linux.md` and
+- docs/plans/canvas-loop-box-figures.subplan.md:259 (mention) — CPU count is not recorded in the repo (`dawn-linux.md:59-61`, "Open").
+- docs/plans/canvas-loop-scene/stage3/summary.md:58 (mention) — frame at ratio 1 on 2 CPUs (`dawn-linux.md`). The recommendation holds without
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/geometry.md
+
+Title: "Stage 3 probe: geometry" | 246 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage3/summary.md:7 (mention) — `geometry.md`, `compositing.md`, `brushes.md`, `light-and-paint.md`. Astra
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage3-brief.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/light-and-paint.md
+
+Title: "Stage 3 probe: light and paint" | 268 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage3/summary.md:7 (mention) — `geometry.md`, `compositing.md`, `brushes.md`, `light-and-paint.md`. Astra
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage3-brief.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/scene-cost.md
+
+Title: "Stage 3 probe: scene cost" | 199 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage3/summary.md:6 (mention) — time with memory bounds. Notes, in this folder: `scene-cost.md`,
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage3/summary.md
+
+Title: "Stage 3 summary and the Checkpoint 3 recommendation" | 80 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene.md:113 (mention) — From `canvas-loop-scene/stage3/summary.md`; the boxholder: "Your general
+- docs/testing/tours.md:43 (mention) — tour and review `summary.md` before calling the work done — the
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/scene-cost.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/geometry.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/compositing.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/brushes.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/light-and-paint.md (mention)
+- → docs/plans/canvas-loop-scene/stage3/dawn-linux.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+
+### docs/plans/canvas-loop-scene/stage4/
+
+#### docs/plans/canvas-loop-scene/stage4/checkpoint4.md
+
+Title: "Checkpoint 4: summary for the boxholder" | 141 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md:15 (mention) — at Checkpoint 4 (`canvas-loop-scene/stage4/checkpoint4.md`, "The boxholder's
+- docs/implemented-plans/canvas-loop-returned-scene.subplan.md:1058 (mention) — (`stage4/checkpoint4.md`, answer 7). The walk adds 0.1 ms; the walker sits
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:97 (mention) — (`beebox/docs/plans/canvas-loop-scene/stage4/checkpoint4.md:131-140`): our
+- docs/implemented-plans/canvas-loop-scene.md:383 (mention) — review. Revised after Checkpoint 4 (`canvas-loop-scene/stage4/checkpoint4.md`):
+- docs/plans/canvas-loop-box-figures.subplan.md:398 (mention) — chose GPU expansion for the missed browser targets (`checkpoint4.md:113-114`),
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/dev-loop.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/drawing-findings.md (mention)
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage4/dev-loop.md
+
+Title: "Stage 4, chunk 7: the dev-loop checklist" | 530 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:466 (mention) — `stage4/dev-loop.md`, fold the off-canvas warning under a moving camera,
+- docs/plans/canvas-loop-scene/stage4-plan.md:265 (mention) — - `stage4/dev-loop.md`: 46 deliberately bad sketches
+- docs/plans/canvas-loop-scene/stage4/checkpoint4.md:19 (mention) — - **Chunk 7:** the dev-loop checklist, `dev-loop.md`. It has 46 deliberately
+
+References:
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage4/drawing-brief.md
+
+Title: "Stage 4 drawer brief" | 88 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:864 (mention) — with `task.md` from `stage4/drawing-brief.md`, the account as
+- docs/plans/canvas-loop-scene/stage4/drawing-findings.md:3 (mention) — Three drawers ran the brief in `drawing-brief.md` on 2026-11-15:
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/plans/canvas-loop-scene/stage2-brief.md (mention)
+- → docs/plans/canvas-loop-scene/scene-api-draft.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage4/drawing-findings.md
+
+Title: "Stage 4 drawing round: findings" | 86 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-scene/stage4-plan.md:287 (mention) — From `stage4/drawing-findings.md`; each has a test in `gpu.test.ts` or a
+- docs/plans/canvas-loop-scene/stage4/checkpoint4.md:23 (mention) — accounts; see `drawing-findings.md`. Fixes followed: dashes, a wash
+- docs/plans/canvas-loop-scene/stage5/gallery-parity.md:69 (mention) — the Stage 4 drawing round, `stage4/drawing-findings.md`, row 9). A sketch
+
+References:
+- → docs/plans/canvas-loop-scene/stage4/drawing-brief.md (mention)
+- → docs/plans/canvas-loop-scene/stage4-plan.md (mention)
+- → docs/plans/canvas-loop-scene/stage2-findings.md (mention)
+
+### docs/plans/canvas-loop-scene/stage5/
+
+#### docs/plans/canvas-loop-scene/stage5/checkpoint5-handoff.md
+
+Title: "Checkpoint 5 hand-off: the new canvas-loop renderer" | 94 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:1216 (mention) — - **Hand-off:** `canvas-loop-scene/stage5/checkpoint5-handoff.md`.
+
+References:
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage5/checkpoint5.md **[ORPHAN]**
+
+Title: "Checkpoint 5: summary for the boxholder" | 40 lines | proposal
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (mention)
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/implemented-plans/canvas-loop-gpu-brushes.subplan.md (mention)
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage5/figures-timing.md
+
+Title: "Stage 5 (c): box figures on a VM like the server" | 111 lines | proposal
+
+Referenced by:
+- docs/plans/canvas-loop-box-figures.subplan.md:735 (mention) — - Notes go in `beebox/docs/plans/canvas-loop-scene/stage5/figures-timing.md`.
+
+References:
+- → docs/plans/canvas-loop-box-figures.subplan.md (mention)
+
+#### docs/plans/canvas-loop-scene/stage5/gallery-parity.md
+
+Title: "Gallery parity: the scene renderer against the Stage 0 frames" | 181 lines | proposal
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene-core.subplan.md:851 (mention) — table goes in `beebox/docs/plans/canvas-loop-scene/stage5/gallery-parity.md`:
+
+References:
+- → docs/implemented-plans/canvas-loop-scene-core.subplan.md (mention)
+- → docs/plans/canvas-loop-scene/parity-criteria.md (mention)
+- → docs/plans/canvas-loop-scene/stage4/drawing-findings.md (mention)
 
 ### docs/prompts/
 
@@ -11355,7 +11918,7 @@ Referenced by:
 - docs/plans/source-available-release.md:70 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
 - docs/server.md:17 (link) — | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troublesh
 - docs/server/operations.md:148 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
-- docs/server/provisioning.md:248 (link) — and re-exports the box's copy ([boxes](boxes.md)). Granting before coturn
+- docs/server/provisioning.md:261 (link) — and re-exports the box's copy ([boxes](boxes.md)). Granting before coturn
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:75 (mention) — - **Reconcile the docs.** `docs/server/boxes.md` describes the generic shape
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:23 (mention) — For now: manually copy secret files to new boxes. See `docs/server/boxes.md`'s "Connector secrets" section.
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:36 (mention) — Partly addressed, no backup story decided. Admin now has a read-only Backup section (commit 142e76168, `beebox/src/front
@@ -11383,7 +11946,7 @@ Referenced by:
 - docs/notifications.md:190 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the boxes' Claude token and Codex logins, box login an
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
-- docs/server/deploying.md:162 (link) — ([configuration](configuration.md), "The long-lived token").
+- docs/server/deploying.md:169 (link) — ([configuration](configuration.md), "The long-lived token").
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
 - ../issues/bugs/2026-10-28-add-box-new-box-has-no-claude-token-and-rerun-cannot-pull.md:16 (mention) — new box to start with Claude signed in. `docs/server/configuration.md`
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:77 (mention) — (`beebox/docs/server/configuration.md`, "Transferring the Claude login"). If
@@ -11397,7 +11960,7 @@ References:
 
 #### docs/server/deploying.md
 
-Title: "Deploying" | 219 lines | current reference
+Title: "Deploying" | 226 lines | current reference
 
 Referenced by:
 - AGENTS.md:27 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -11407,6 +11970,7 @@ Referenced by:
 - docs/implemented-plans/atomic-deploy.md:60 (mention) — | Docs (`docs/server/deploying.md`, `deploy/AGENTS.md`, `docs/server/provisioning.md`) | ~80, reported separately |
 - docs/implemented-plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
 - docs/implemented-plans/retire-type-specific-core-tags.md:86 (mention) — - Migration runner: `src/core/migrations.ts` (append-only `MIGRATIONS`, manifest `_config/migrations.jsonl`), `bbx engin
+- docs/plans/canvas-loop-box-figures.subplan.md:260 (mention) — - **Rollback mechanics.** `docs/server/deploying.md:110-121`: after a failed
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
 - docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active box check.** Cold-starts one box (a connection to its socket starts the unit), then fet
 - docs/server/provisioning.md:111 (link) — ([releases](deploying.md#releases)), owned by the hub user and read-only to
@@ -11417,9 +11981,9 @@ Referenced by:
 References:
 - → docs/cards/migrations.md (link)
 - → docs/server/health-checks.md (link)
+- → docs/server/provisioning.md (link)
 - → deploy/AGENTS.md (mention)
 - → docs/implemented-plans/per-box-units.md (link)
-- → docs/server/provisioning.md (link)
 - → docs/server/configuration.md (link)
 
 #### docs/server/health-checks.md
@@ -11497,7 +12061,7 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 383 lines | current reference
+Title: "Server provisioning" | 396 lines | current reference
 
 Referenced by:
 - deploy/AGENTS.md:31 (link) — Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
@@ -11506,11 +12070,12 @@ Referenced by:
 - docs/implemented-plans/atomic-deploy.md:60 (mention) — | Docs (`docs/server/deploying.md`, `deploy/AGENTS.md`, `docs/server/provisioning.md`) | ~80, reported separately |
 - docs/implemented-plans/box-backups.md:83 (mention) — - `beebox/docs/server/provisioning.md:145-147`: *“A Hetzner snapshot of the server does not include a volume”* holding p
 - docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
+- docs/plans/canvas-loop-box-figures.subplan.md:443 (mention) — - `docs/server/provisioning.md` and `deploying.md`: one paragraph each.
 - docs/plans/self-hosted-turn.md:48 (mention) — About 310 source and 150 test lines, plus about 105 doc lines. Not a BIG CHANGE. The fuller design buys a reproducible i
 - docs/plans/shared-browser.md:158 (mention) — - **Why:** the dashboard needs an address the person can reach through beebox's login (`docs/server/provisioning.md:245-
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
 - docs/server/boxes.md:127 (link) — ([provisioning](provisioning.md#call-relay)) once coturn is running, re-run
-- docs/server/deploying.md:143 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
+- docs/server/deploying.md:60 (link) — user (see [provisioning](provisioning.md)). One of them,
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
 - docs/unimplemented-plans/origin-tls.md:109 (mention) — - **What:** remove the zone-wide `flexible` PATCH from `create-server.sh` and print the certificate step. Update `provis
 - ../issues/closed/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:33 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
@@ -11549,6 +12114,7 @@ Referenced by:
 - ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
 - ../issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md:13 (mention) — Closed 2026-10-19 (flaky-tests): every recurring victim file is fixed, deleted, already fixed, or shown not test-caused
 - ../issues/closed/bugs/2026-10-25-connect-agent-button-lands-above-the-fold.md:40 (link) — ([DOM tests](../../../beebox/docs/testing/check.md#dom-tests)) that follows the
+- ../issues/code-quality/2026-11-16-frontend-test-from-wrong-directory-gives-no-hint.md:12 (mention) — `docs/testing/check.md` already say. Sessions still try the frontend
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:49 (mention) — Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `doc
 - ../research/test-value/reading-core.md:39 (mention) — - "`getServingEngineVersion` reads the running engine's own package.json" → `await realEngineVersion()` — R5 and tautolo
 - ../research/test-value/reading-tooling.md:13 (mention) — Docs baseline (`beebox/docs/testing.md`, `beebox/docs/testing/check.md`): tests exist for (1) forcing decomposition, (2)
@@ -11580,7 +12146,7 @@ Title: "Field tests" | 55 lines | current reference
 Referenced by:
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 - docs/implemented-plans/doc-structure.md:310 (mention) — field-testing.md       is it discoverable end to end through the real UI?
-- docs/testing.md:54 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
+- docs/testing.md:55 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
 - ../dev/devprocess-talk/reports/sweep-quality.md:127 (mention) — - **Lives in (historical):** `src/scenario/` (deleted); successor `beebox/src/field-test/`, `beebox/field-tests/*/scenar
 
 References:
@@ -11708,6 +12274,7 @@ Referenced by:
 References:
 - → docs/testing/smoke.md (link)
 - → docs/testing/check.md (link)
+- → docs/plans/canvas-loop-scene/stage3/summary.md (mention)
 - → docs/testing/dev-stubs.md (link)
 - → docs/implemented-plans/agent-browsing-owner.md (mention)
 - → frontend.md (link)
@@ -11741,6 +12308,17 @@ References:
 - → docs/agent-guide.md (mention)
 - → ../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.md (link)
 - → docs/cards/format.md (mention)
+
+#### docs/unimplemented-plans/canvas-loop-gpu-medium.md
+
+Title: "canvas-loop: a painted medium on the GPU" | 422 lines | past proposal | superseded
+
+Referenced by:
+- docs/implemented-plans/canvas-loop-scene.md:16 (mention) — It supersedes `beebox/docs/unimplemented-plans/canvas-loop-gpu-medium.md`, which covered one effect where the
+
+References:
+- → docs/implemented-plans/canvas-loop-scene.md (frontmatter)
+- → docs/engineering-principles.md (mention)
 
 #### docs/unimplemented-plans/capture-pipeline-redesign.md
 
@@ -11798,7 +12376,7 @@ Title: "Encrypt the Cloudflare-to-origin leg on the production server" | 204 lin
 
 Referenced by:
 - docs/plans/self-hosted-turn.md:71 (mention) — - **Ports in use on the origin** — nginx listens on 80 only (`deploy/nginx/beebox.conf:7-8`); 443 is reserved by the par
-- docs/server/provisioning.md:347 (link) — **Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first app
+- docs/server/provisioning.md:360 (link) — **Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first app
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:9 (frontmatter) — design: ../../beebox/docs/unimplemented-plans/origin-tls.md
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:31 (link) — Paused 2026-10-30 by the boxholder. The fix is prepared but not active: see [Activation in the origin-tls plan](../../be
 
@@ -11950,7 +12528,7 @@ References:
 Title: "User stories" | 280 lines | current reference
 
 Referenced by:
-- docs/testing.md:56 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
+- docs/testing.md:57 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
 - docs/user-stories/README.md:24 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:10 (link) — method are in [the pipeline README](../README.md). The underlying
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:122 (mention) — - **Lives in:** `beebox/docs/user-stories/README.md`, `beebox/docs/user-stories/catalog/{2026-06-26.md,2026-08-21.md,.js
@@ -12208,6 +12786,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

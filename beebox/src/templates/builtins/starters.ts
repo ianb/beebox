@@ -156,7 +156,7 @@ export default function (d3, { mount, figure }) {
 // beside this one (card-figure.md, "Checking a canvas-loop figure"); the
 // drawing API is in canvas-loop.md. Import canvas-loop TYPES only; the browser API arrives as
 // the factory's \`cl\` argument.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   speed: { type: "number", min: 0, max: 5, default: 1 },
@@ -191,14 +191,16 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
   }
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
-  v.background("#0b0e17");
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): RootDrawing {
   const cx = v.width / 2;
   const cy = v.height / 2;
   const orbit = 90;
-  // Each drawing call takes its style; nothing carries over between calls.
-  if (p["show-ring"]) v.circle(cx, cy, orbit, { stroke: "#334155" });
-  v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 12, { fill: TONES[p.tone] ?? "#7dd3fc" });
+  // draw returns its drawing. Each call takes its style; nothing carries over between calls.
+  return [
+    v.background("#0b0e17"),
+    p["show-ring"] && v.circle(cx, cy, orbit, { stroke: "#334155" }),
+    v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 12, { fill: TONES[p.tone] ?? "#7dd3fc" }),
+  ];
 }
 
 // A reader who asked for reduced motion gets the paused first frame.

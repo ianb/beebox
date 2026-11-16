@@ -1,10 +1,11 @@
-# Brushes, gestures, paper, groups
+# Brushes, paper, effects, light
 
-canvas-loop can draw with real-looking brushes. A brush is part of a
-shape's style, and it changes how **strokes** look. Fills stay flat.
+canvas-loop can draw with real-looking brushes, paint effects and light. A
+brush is part of a shape's style, and it changes how **strokes** look. Fills
+stay flat.
 
 ```ts
-import type { Style } from "@ianbicking/canvas-loop";
+import type { RootDrawing, Style, View } from "@ianbicking/canvas-loop";
 
 const INK: Style = {
   stroke: "#1d2a44",
@@ -13,13 +14,18 @@ const INK: Style = {
   gesture: { pressure: "taper", wobble: 1 },
 };
 
-v.background("#f6f2e7");
-v.curve([[40, 80], [120, 40], [200, 90]], false, INK);         // a smooth curve through the points
-v.circle(260, 70, 20, INK);                                    // any stroked shape takes the brush
-v.line(40, 120, 300, 120, { stroke: "#1d2a44", weight: 4 });   // no brush: a plain Canvas2D stroke
+export function draw(v: View): RootDrawing {
+  return [
+    v.background("#f6f2e7"),
+    v.curve([[40, 80], [120, 40], [200, 90]], false, INK),        // a smooth curve through the points
+    v.circle(260, 70, 20, INK),                                   // any stroked shape takes the brush
+    v.line(40, 120, 300, 120, { stroke: "#1d2a44", weight: 4 }),  // no brush: a plain stroke
+  ];
+}
 ```
 
-[TEA.md](./TEA.md#styles) lists every style key.
+[TEA.md](./TEA.md#styles) lists every style key and how `draw` returns its
+drawing.
 
 ## Shapes
 
@@ -37,7 +43,7 @@ All stroked shapes take their style's brush: `line`, `curve`, `path`, `polygon`,
   `["close"]`. Each `move` starts a separate piece. Each piece tapers on its own.
 
 A shape whose style has no `stroke` gets no mark. A fill is always flat
-colour. For textured shading, draw marks inside a `clip` (see below).
+colour. For textured shading, draw marks inside a `clip` (see "Faint marks").
 
 ### Shape helpers
 
@@ -54,9 +60,7 @@ These return data, so their results work with any style and with `clip`:
 
 ```ts
 const crescent = v.offset(HEAD, 10).map(([x, y]): Vec2 => [x + 12, y + 10]);
-v.clip(v.curvePath(HEAD, true), () => {
-  v.curve(crescent, true, { fill: SHADE });   // shadow crescent, lower right
-});
+v.clip(v.curvePath(HEAD, true), v.curve(crescent, true, { fill: SHADE }));  // shadow crescent, lower right
 ```
 
 Points are ordinary data. Name the ones you reuse:
@@ -81,7 +85,11 @@ A style's `brush` is a preset name or a preset with fields changed. The presets:
 | `smudge` | smear | drags the paint already under it along the stroke; adds no colour | 10–40 |
 | `wet` | smear | wet paint: lays down the stroke colour mixed with the paint it crosses | 10–40 |
 
-To stop a marker multiplying, override its blend: `brush: { preset: "marker", blend: "normal" }`.
+The `wash` brush is one stroke of tone; `effects: { wash }` (below) turns a
+whole group into watercolour.
+
+To stop a marker multiplying, set the blend: `brush: { preset: "marker", blend: "normal" }`,
+or `blend: "normal"` in the style.
 
 Texture needs size and contrast. A brush in a colour close to the colour under
 it, or a bristle or chalk mark shorter than a few widths, reads as flat tone
@@ -122,12 +130,12 @@ on a bristle brush, `hueJitter: 10` on chalk. Large values read as confetti.
 They need a solid stroke colour, not a gradient.
 
 ```ts
-v.curve(STEM, false, { stroke: "#4f7a3a", weight: 24, brush: { preset: "bristle", hueJitter: 12, lightJitter: 0.1 } });
+v.curve(STEM, false, { stroke: "#4f7a3a", weight: 24, brush: { preset: "bristle", hueJitter: 12, lightJitter: 0.1 } })
 ```
 
 ### Smudge and wet paint
 
-`smudge` and `wet` move paint that is already drawn, so draw them **after**
+`smudge` and `wet` move paint that is already drawn, so put them **after**
 what they should mix with.
 
 - `smudge` ignores its stroke colour (any colour will do). Drag it from a
@@ -140,11 +148,12 @@ what they should mix with.
   stroke along an edge blends it better than many short ones. Wet paint mixes
   only with the paint that was there before the stroke.
 - Inside a `group`, they only move that group's paint.
-- They cannot erase or use a blend mode; `wet` needs a solid stroke colour.
+- They cannot erase, use a blend mode or take `effects`; `wet` needs a solid
+  stroke colour.
 
 ```ts
-v.curve(ZIGZAG_ALONG_EDGE, false, { stroke: "#000", weight: 14, brush: "smudge" }); // blend two areas
-v.curve(SKY_STREAK, false, { stroke: "#f1c40f", weight: 18, brush: "wet" });      // a glaze that mixes in
+v.curve(ZIGZAG_ALONG_EDGE, false, { stroke: "#000", weight: 14, brush: "smudge" }), // blend two areas
+v.curve(SKY_STREAK, false, { stroke: "#f1c40f", weight: 18, brush: "wet" }),       // a glaze that mixes in
 ```
 
 ## Gestures
@@ -175,17 +184,26 @@ its brushed marks. Without a brush it does nothing.
 
 ## Paper
 
-Grainy brushes (pencil most of all) show the paper's tooth. The paper is fixed
-to the canvas, so marks line up with each other's grain. Change it with
-`v.paper({ scale, contrast, seed })`: `scale` is the size of the tooth in
-pixels (default 3), `contrast` is 0..1 (default 0.7).
+Grainy brushes (pencil most of all) show the paper's tooth. The grain is fixed
+to the coordinates where a mark is drawn, so a shape moved with `at` keeps its
+texture. `v.paper({ scale, contrast, seed }, children)` sets the paper for
+every brushed mark and paper effect in its children: `scale` is the size of
+the tooth in pixels (default 3), `contrast` is 0..1 (default 0.7). Wrap the
+whole drawing to change the paper everywhere; an inner `v.paper` wins inside
+it. A picture uses its own `paper` option (default the default paper), not
+the scope it is placed in; headless runs give a hint when the two differ for a brush or paper effect in
+the picture.
+
+`effects: { paper: amount }` on a group shows the paper's tooth in what the
+group drew, only where it drew, so flat fills and gradients look printed on
+paper. 0.3–0.6 is a typical range.
 
 ## Groups, blend, erase
 
 ```ts
-v.group({ opacity: 0.6, blend: "multiply" }, () => {
+v.group({ opacity: 0.6, blend: "multiply" }, [
   // drawn on its own layer, then composited once
-});
+])
 ```
 
 - **Opacity** applies once, to the finished group. Opaque shapes inside the
@@ -202,18 +220,22 @@ v.group({ opacity: 0.6, blend: "multiply" }, () => {
   hole. Inside a group it removes only the group's own pixels. Elsewhere,
   including inside `at`, it removes the canvas's pixels.
 - Groups nest.
-- `clip([shapeA, shapeB, …], body)` clips to the union of several shapes, for
-  example one light pass over a whole figure made of parts.
+- `clip([shapeA, shapeB, …], children)` clips to the union of several shapes,
+  for example one light pass over a whole figure made of parts. A group's
+  `clip` option cuts after its effects (a soft shadow stops at the clip); a
+  `clip` scope inside the group cuts before them.
 
 ## Effects
 
-`group`'s `effects` work on the finished group as it is composited:
+A group's `effects` work on the finished group as it is composited. A style's
+`effects` do the same for one shape.
 
 ```ts
-v.group({ effects: { shadow: { x: 4, y: 6, blur: 6, color: "rgba(0,0,0,0.4)" } } }, () => drawCard(v));
-v.group({ effects: { glow: { blur: 12, color: "#ffd84a" } }, blend: "screen" }, () => drawLamp(v));
-v.group({ effects: { blur: 3 } }, () => drawDistantHills(v));
-v.group({ effects: { saturation: 0.3, brightness: 1.1 } }, () => drawMemory(v));
+v.group({ effects: { shadow: { x: 4, y: 6, blur: 6, color: "rgba(0,0,0,0.4)" } } }, drawCard(v)),
+v.group({ effects: { blur: 3 } }, drawDistantHills(v)),
+v.group({ effects: { saturation: 0.3, brightness: 1.1 } }, drawMemory(v)),
+v.group({ effects: { wash: { edges: 0.6, blotch: 0.3 }, paper: 0.4 } }, drawRoom(v)),
+v.group({ effects: { hatching: { amount: 0.8 } } }, drawStatue(v)),
 ```
 
 | Effect | Value |
@@ -224,28 +246,114 @@ v.group({ effects: { saturation: 0.3, brightness: 1.1 } }, () => drawMemory(v));
 | `hue` | rotate hues, degrees |
 | `saturation`, `brightness`, `contrast` | factors: 1 unchanged, 0 grey / black / flat |
 | `grayscale`, `sepia`, `invert` | amounts 0..1 |
+| `wash` | `{ granulate?, edges?, blotch?, bleed? }`: watercolour. `granulate` (default 0.5) settles pigment into the paper; `edges` (0.5) darkens where a colour meets paper or another colour; `blotch` (0.4) pools pigment unevenly, with blooms above about 0.2; `bleed` lets edges wander by that many pixels |
+| `hatching` | `{ amount, angle?, spacing?, color? }`: pencil lines that show tone. The lightest third of the group's own tone range stays bare, half tones get single lines, shadows crossed lines. `angle` in radians (default π/4), `spacing` in pixels (default 6) |
+| `paper` | paper tooth in what the group drew, 0..1 |
 
-Colour adjustments apply first, then `blur`, then `shadow`. The glow is
-drawn beneath the group, from its silhouette, so a shadow does not fall from
-the glow. For another order, nest groups: the inner group's effects come
-first. The glow does not brighten the group itself (add `blend: "screen"` or
-`"add"` for that).
+Colour adjustments apply first, then `blur`, `wash`, `hatching` and `paper`.
+The glow and the shadow are drawn beneath the group, from what it drew
+before these effects. For another order, nest groups: the inner group's
+effects come first. The glow does not brighten the group itself (add
+`blend: "screen"` or `"add"` for that). Hatching reads tone across its whole
+group, so give it a group with light and dark parts.
 
-Lengths are canvas pixels, and the shadow's `x`, `y` point along the canvas:
-an enclosing `at` scale or rotation changes neither. A group inside a sprite
-is cut at the sprite's edge, so leave room in the sprite for its blur, glow
-or shadow. An effect runs over the whole canvas each time the group draws, so
-put a static effected picture in a `cache` or `sprite`. Browsers before
-Safari 18 ignore effects.
+Lengths (blur, glow, shadow offset, bleed, hatch spacing) are in the
+coordinates where the group is: under `at({ scale: 0.5 })` a blur is half as
+wide, and a shadow's offset turns with a rotation. A group's layer grows to
+hold its blur, glow and shadow, and a picture keeps what spills past its box.
+Effects work under scales along the axes and under rotation with a uniform
+scale; under `skew`, or a rotated non-uniform scale, an effect is an error.
 
-## Gradients and paper texture
+### Making something glow
 
-- `ellipseGradient(x, y, rx, ry, stops)` is a radial gradient that fills an
-  ellipse with radii `rx` and `ry` (like `ellipse`), for flat pools of
-  light and oval glows. `radialGradient` is always circular.
-- `paperTexture(amount)` shows the paper's tooth across everything drawn so
-  far, so flat fills and gradients look printed on paper. Call it last;
-  0.3–0.6 is a typical range.
+Three tools, often used together:
+
+- **A glow effect** (`effects: { glow }`) puts a coloured halo around a shape
+  or group. It does not light anything else.
+- **An emissive material** (`material: { emissive: 1 }`) keeps a shape's own
+  colour inside a lit group, however dark the lighting.
+- **A light** (`v.light`) lights the shapes around it in a lit group.
+
+A glow is the shape's silhouette blurred, so its strength comes from the
+shape's area: a blur many times wider than the shape spreads it too thin to
+see. For a small flame, keep `blur` near the flame's size and raise
+`strength`, or glow a larger soft shape around it:
+
+```ts
+v.circle(lx, ly, 14, { fill: "rgba(255,190,90,0.5)", effects: { glow: { blur: 16, color: "#ff9a2e", strength: 4 } } })
+```
+
+A lit lamp: the flame is an emissive shape with a glow, and a light sits at
+the flame.
+
+```ts
+const FLAME: Style = { fill: "#ffd27a", material: { emissive: 1 }, effects: { glow: { blur: 14, color: "#ffb347", strength: 3 } } };
+
+v.group({ lighting: { ambient: "#2e3448" } }, [
+  drawRoom(v),
+  v.circle(240, 110, 8, FLAME),
+  v.light({ kind: "point", at: [240, 110], height: 120, energy: 1.5, color: "#ffd9a0" }),
+])
+```
+
+A group's own glow is drawn beneath the group, so its wash does not paint over
+it. A shape's glow inside a washed group is part of the group's drawing, so
+the wash paints over it. To keep a flame's glow clean, draw the flame after
+the washed group, outside it.
+
+## Lighting
+
+A group with `lighting` is lit by the lights inside it:
+
+```ts
+v.group({ lighting: { ambient: "#2e3448", shadows: "soft" } }, [
+  v.rect(0, 0, 480, 300, { fill: "#d8cbb3" }),                                  // a floor
+  v.rect(200, 180, 60, 40, { fill: "#8b5a2b", material: { castsShadow: 40, bevel: 4 } }),
+  v.light({ kind: "point", at: [240, 110], height: 120, energy: 1.5 }),
+])
+```
+
+- **`lighting`:** `ambient` (the light everywhere, default `"#4d4d4d"`),
+  `shadows` (`"none"`, `"hard"`, `"soft"`, default soft), `exposure` (stops,
+  default 0), `toneCurve` (0..1, default 0: lit colour clips at white; toward
+  1, deeper shadows and highlights that roll off).
+- **`v.light({ kind, at?, height?, color?, energy?, reach?, direction?, cone? })`:**
+  `kind` is `"point"`, `"spot"` or `"directional"`. `at` is in the
+  coordinates around the call. `height` above the page (default 80): higher
+  gives a wider, softer pool and shorter shadows. `energy` default 1,
+  `reach` (where it fades out) default 400. `direction` (spot, directional)
+  is radians from +x, clockwise, as `arc` (default π/2, down); `cone` is a
+  spot's half-angle (default π/6). A directional light's `height` is its
+  slope: 100 is 45°.
+- **Starting values:** ambient `"#2e3448"` and a point light at `height: 120`,
+  `energy: 1.5` show a lamp's pool on the first render. `run --scene` prints
+  each light's peak: `peak +0.83 below (240,110), over ambient 0.20 (a white
+  floor there: 0.49 → 1.00)`. A peak several times the ambient reads as a
+  pool; one near the ambient barely shows.
+- **`material`** in a style: `bevel` (rounded edges, pixels), `relief` (0..1,
+  how far the surface rises), `shine` (highlights, 0..1), `emissive` (0..1),
+  `castsShadow` (`true` stands 32 pixels above the page, or a height up to
+  1024: taller casts longer), `receivesShadow: false` (no shadow falls on it:
+  a sky behind a figure in a side view). A shape with no material is flat
+  matte. Outside a lit group, materials are ignored.
+- A light lights only the nearest lit group around it, including inside
+  pictures placed there: a picture holding a lamp brings its light. A light
+  outside any lit group, or in mask art, does nothing and warns. A lit group
+  with no light warns.
+- `v.place(picture, x, y, { material })` gives that material to the
+  picture's shapes that have none, so an unlit drawing can cast shadows.
+- A lit group inside a lit group is lit only by its own lights; to the outer
+  group its result counts as emissive.
+- Lighting comes before the group's effects, so a wash paints over the lit
+  result. To light several parts that each have their own wash with one
+  light, put them in one lit group, give each part its wash as an inner group,
+  and put the lights in the outer group.
+
+## Gradients
+
+`ellipseGradient(x, y, rx, ry, stops)` is a radial gradient that fills an
+ellipse with radii `rx` and `ry` (like `ellipse`), for flat pools of light and
+oval glows. `radialGradient` is always circular.
 
 ## Colour tips
 
@@ -258,11 +366,10 @@ Safari 18 ignore effects.
 ## Faint marks
 
 A mark whose strongest pixel lands below about 8% opacity (after its brush
-and any open groups) is too faint to see. The transcript gets a warning line
-with the mark's position (and the sprite or cache it was drawn into, whose
-coordinates the position is in), so you do not spend a cycle finding out. For
-a mark that is meant to be that faint, give its style `gesture: { faint: true }`. The check reads
-pixels back, so it runs headless only; a browser figure skips it.
+and any groups around it) is too faint to see. Headless runs warn with the
+mark's line: `faint mark (curve): it reaches only 5% opacity and will barely
+show`. For a mark that is meant to be that faint, give its style
+`gesture: { faint: true }`.
 
 Shading inside a shape: fill the shape, clip to it and draw marks, then draw
 its outline last. The clip includes the inside half of the outline, so marks
@@ -271,57 +378,44 @@ drawn after the outline cover part of it.
 ```ts
 const HATCH: Style = { stroke: "#3f7f3a", weight: 2.5, brush: "pencil" };
 const OUTLINE: Style = { stroke: "#1f2a1f", weight: 3, brush: "ink" };
+const ROWS = Array.from({ length: 20 }, (_, i) => i);
 
-v.curve(BODY, true, { fill: "#7ccf6a" });   // 1. flat base colour
-v.clip(v.curvePath(BODY, true), () => {     // 2. marks, kept inside the shape
-  for (let i = 0; i < 20; i += 1) v.line(100 + i * 8, 300, 140 + i * 8, 200, HATCH);
-});
-v.curve(BODY, true, OUTLINE);               // 3. the outline, last
+return [
+  v.curve(BODY, true, { fill: "#7ccf6a" }),                                   // 1. flat base colour
+  v.clip(v.curvePath(BODY, true),                                             // 2. marks, kept inside the shape
+    ROWS.map((i) => v.line(100 + i * 8, 300, 140 + i * 8, 200, HATCH))),
+  v.curve(BODY, true, OUTLINE),                                               // 3. the outline, last
+];
 ```
 
 ## Transforms
 
-Brushes follow `v.at({ translate, rotate, scale }, body)` as strokes do:
-`scale: 2` doubles a mark's position and width. Under a non-uniform scale the brush stays
-round.
+Brushes follow `v.at({ translate, rotate, scale }, children)` as strokes do:
+`scale: 2` doubles a mark's position and width. Under a non-uniform scale the
+brush stays round.
 
-## Seeing texture: zoom
+## Animation and pictures
 
-At 1× a whole frame hides grain, bristle streaks and edges. Add zoomed crops
-to a run:
+Brushed marks, effects and lighting cost the most per frame. Keep what does
+not change in a [picture](./TEA.md#pictures) and draw only the moving parts
+each frame:
 
-```sh
-pnpm --dir canvas-loop run cli run sketch.ts --frames 1 --out out --zoom 90,80,160,120 --zoom 140,250,120,120@4
-```
-
-Each `--zoom x,y,w,h[@scale]` writes `frame-0000-zoom1.png` and so on
-(nearest-pixel, scale 3 by default) and lists it in the transcript under the
-frame. `cli zoom out/frame-0000.png x,y,w,h` crops a frame you already have.
-
-## Animation and interaction
-
-Brush marks are slow: a full painted page takes 1–2 seconds per frame
-headless. To animate one:
-
-- `cache(key, body, { blend?, erase? }?)` draws `body` once into a stored layer and pastes it on
-  later calls with the same `key`. Put everything that does not move in it, and
-  draw only the moving parts each frame. The key must name what the pixels
-  depend on: when a param changes the static scene, put its value in the key
-  (`` v.cache(`sky-${p.dusk}`, …) ``). The cache keeps the transform from the first
-  call, and the 24 most recent keys.
-- `sprite({ key, width, height }, body)` paints `body` once, in its own
-  coordinates (0..width, 0..height), and returns a handle.
-  `image(sprite, x, y, { opacity?, blend?, erase? })` draws it under the
-  current `at`. Use sprites for things that move but keep their look: a character, a boat, a cloud. Paint each pose
-  as its own sprite (`key: "baker-wave"`) and switch between them; rock, bob or
-  flip it with `at` (`scale: [-1, 1]` flips). A sprite must fit the
-  canvas; the 400 most recent keys are kept.
+- A still background goes in one picture with no `deps`. A static part that
+  changes with a param puts the param in `deps`:
+  `v.picture({ key: "sky", width: 600, height: 300, deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
+- A thing that moves but keeps its look (a character, a boat, a cloud) is a
+  picture placed at a new position each frame. Draw each pose as its own
+  version (`deps: [pose]`) and switch between them.
+- The renderer keeps a placed picture's pixels while its version, scale and
+  rotation stay the same; a move reuses them, since placements snap to whole
+  device pixels. So bob a picture by moving it, and flip it with a fixed
+  `scale: [-1, 1]`. A picture that turns or scales by a new amount in every
+  frame (rocking, breathing) is drawn again each time, and headless runs give
+  a hint: draw that part as a group, or as a few poses.
 
 ```ts
-const boat = v.sprite({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
-v.at({ translate: [x, y], rotate: Math.sin(model.frame / 30) * 0.05 }, () => {  // rock
-  v.image(boat, -60, -40);
-});
+const boat = v.picture({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
+return v.place(boat, x - 60, y - 40 + Math.round(Math.sin(model.frame / 30) * 3));  // bob
 ```
 
 - A mark's randomness comes from its points, so a mark whose points move
@@ -331,34 +425,40 @@ v.at({ translate: [x, y], rotate: Math.sin(model.frame / 30) * 0.05 }, () => {  
 ### Recipes
 
 - **Light under a night shade.** Darken the page with a multiply rect, then
-  draw lit windows and lamps after it with `blend: "screen"` in their style.
-  For a glow sprite, `v.image(glow, x, y, { blend: "screen" })` brightens
-  what is under it.
+  draw lit windows and lamps after it with `blend: "screen"` in their style,
+  or as a picture placed with `{ blend: "screen" }`. For real light and
+  shadows, use a [lit group](#lighting).
 - **Someone behind a window frame.** Draw the person, then the window's frame
-  and glazing bars as a sprite on top; or clip the person to the window
-  opening (`clip(openingRect, () => …)`).
-- **Randomness on the draw side.** TEA's `draw` gets no `random`. Scatter that
-  never changes (stars, grass) can be computed once into module `const` arrays
-  from a small seeded generator; a mark's own jitter comes from its `seed`.
+  and glazing bars on top; or clip the person to the window opening
+  (`v.clip(openingRect, drawPerson(v))`).
+- **Randomness on the draw side.** `draw` gets no `random`. `v.noise(x, y?,
+  z?)` gives smooth seeded noise for flicker. Scatter that never changes
+  (stars, grass) can be computed once into module `const` arrays from a small
+  seeded generator; a mark's own jitter comes from its `seed`.
 
 ## Seeing what you made
 
-- `run --zoom x,y,w,h` adds enlarged crops (see "Seeing texture").
-- `run --outline` draws, over every captured frame, the box of each placed
-  sprite (magenta, labelled with its key), each clip region (cyan), and each
-  `debugBox(label, x, y, w, h)` the sketch draws (yellow; e.g. its hit areas).
-  Without the flag, `debugBox` draws nothing.
-- `run --timing` adds a line to the transcript with the average, 95th
-  percentile and worst draw time per frame (and TEA's update time), with
-  frame 0, which builds caches and sprites, reported apart.
+- `run --zoom x,y,w,h[@scale]` (repeatable) writes an enlarged crop of that
+  region beside each captured frame (`frame-0000-zoom1.png`, nearest-pixel,
+  scale 3 by default). At 1× a frame hides grain, bristle streaks and edges.
+  `cli zoom out/frame-0000.png x,y,w,h` crops a frame you already have.
+- `run --ratio 2` renders at twice the pixel density, as a phone screen does.
+- `run --scene` writes each captured frame's drawing into the transcript as an
+  indented outline, with picture versions and each light's peak;
+  `--scene first` writes only the first frame's. Use it to check what `draw`
+  returned: what is inside which group, and in what order.
+- `run --outline` draws over every captured frame the box of each placed
+  picture (magenta, labelled with its key), each clip region (cyan), and each
+  `v.debugBox(label, x, y, w, h)` the drawing returns (yellow; e.g. its hit
+  areas). Without the flag, `debugBox` draws nothing.
+- `run --timing` adds per-frame lines (render passes, brushed strokes, CPU and
+  GPU time) and, at the end, the average, 95th percentile and worst `draw`
+  and `update` times, with frame 0 reported apart.
 - `cli diff before.png after.png` shows what changed between two frames.
-- `v.cursor("pointer")` sets the pointer over a browser figure (until changed;
-  set `"default"` when the pointer leaves a target); headless it does nothing.
 
 ## Determinism
 
-A render is byte-identical every time in the same runtime. The headless
-renderer (Skia) and a browser can differ: antialiasing, and the strength of
-marks built from many faint dabs. Measured on the brush playground, a bristle
-stroke comes out about 5% lighter in Chrome than headless; the look is the
-same.
+The renderer is WebGPU: in a browser, and headless through Dawn. A render is
+byte-identical every time within one runtime on one machine. A browser and a
+headless run, or two machines, can differ slightly in antialiasing and in
+the strength of marks built from many faint dabs; the look is the same.

@@ -23,12 +23,25 @@ function collectParam(value: string, previous: Record<string, string>): Record<s
   return { ...previous, [value.slice(0, eq)]: value.slice(eq + 1) };
 }
 
+/**
+ * `--scene` alone is every captured frame; `--scene first` only the first.
+ * Commander gives an optional option value the next word, so a word other than
+ * "first" after `--scene` is a card path.
+ */
+function sceneOption(value: string | true | undefined, cards: string[]): { scene: boolean | "first"; cards: string[] } {
+  if (value === undefined) return { scene: false, cards };
+  if (value === true) return { scene: true, cards };
+  if (value === "first") return { scene: "first", cards };
+  return { scene: true, cards: [value, ...cards] };
+}
+
 function report(result: FigureRunResult): void {
   const counts = result.framesRun === undefined ? "" : ` — ${String(result.framesRun)} frames, ${String(result.imageCount ?? 0)} images`;
   const write = result.ok ? (s: string): boolean => process.stdout.write(s) : (s: string): boolean => process.stderr.write(s);
   write(`${result.ok ? "✓" : "✗"} ${result.card}${counts}\n`);
   if (result.transcript !== undefined) write(`    transcript: ${result.transcript}\n`);
-  for (const error of result.errors) write(`    error: ${error}\n`);
+  // A type check's error has one line per compiler error: indent them under it.
+  for (const error of result.errors) write(`    error: ${error.replaceAll("\n", "\n      ")}\n`);
   for (const warning of result.warnings) write(`    warning: ${warning}\n`);
 }
 
@@ -39,12 +52,14 @@ const figureRunCommand = new Command("run")
   .option("--frames <n>", "Frames to run (default: last event frame + 60, or 120 with no events)")
   .option("--every <n>", "Also capture every Nth frame (default 30)")
   .option("--params <name=value>", "Start a declared param at this value (repeatable)", collectParam, {})
+  .option("--scene [first]", "Write each captured frame's drawing as an outline into the transcript (first: only the first frame's)")
   .option("--timeout <ms>", "Stop a run after this long", String(DEFAULT_TIMEOUT_MS))
   .option("--json", "Emit { ok, figures: [...] }")
-  .action(async (cards: string[], options: { events?: string; frames?: string; every?: string; params: Record<string, string>; timeout: string; json?: boolean }) => {
+  .action(async (cards: string[], options: { events?: string; frames?: string; every?: string; params: Record<string, string>; scene?: string | true; timeout: string; json?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
-      const targets = cards.length > 0 ? cards : await listCanvasLoopFigures(boxRoot);
+      const { scene, cards: named } = sceneOption(options.scene, cards);
+      const targets = named.length > 0 ? named : await listCanvasLoopFigures(boxRoot);
       if (options.events !== undefined && targets.length !== 1) throw new FigureRunError({ detail: "--events needs exactly one card" });
       const timeoutMs = Number(options.timeout) > 0 ? Number(options.timeout) : DEFAULT_TIMEOUT_MS;
       const results: FigureRunResult[] = [];
@@ -56,6 +71,7 @@ const figureRunCommand = new Command("run")
             ...(options.events === undefined ? {} : { events: options.events }),
             ...(options.frames === undefined ? {} : { frames: count("frames", options.frames) }),
             ...(options.every === undefined ? {} : { every: count("every", options.every) }),
+            scene,
             params: options.params,
           });
           results.push(await runFigureJob({ boxRoot, cardRel, job, timeoutMs }));

@@ -1,0 +1,19 @@
+{
+  // canvas-loop's root-export declarations, for the sketch contract check in
+  // a packed install (`src/core/figure-sketch-check.ts`). canvas-loop is a
+  // workspace devDependency that the CLI bundle inlines, so the tarball has
+  // no canvas-loop source; the check reads these and the tsconfig.json that
+  // build:declarations copies beside them.
+  "extends": "../canvas-loop/tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "incremental": false,
+    "types": [],
+    "rootDir": "../canvas-loop/src",
+    "outDir": "dist/canvas-loop/src"
+  },
+  "include": [],
+  "files": ["../canvas-loop/src/exports/core.ts"]
+}

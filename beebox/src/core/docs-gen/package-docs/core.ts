@@ -66,8 +66,8 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "narration-mode.md", readWhen: "The chat snapshot reports narration=\"on\" — the user is dictating, not chatting.", generate: generateNarrationModeDoc },
   { filename: "reducing-instruction-file.md", readWhen: "The box's AGENTS.md is flagged as too large.", generate: generateReducingInstructionFileDoc },
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
-  { filename: "canvas-loop.md", readWhen: "Writing a canvas-loop figure: the sketch contract, drawing calls and styles, text, scopes, input, sound.", generate: generateCanvasLoopDoc },
-  { filename: "canvas-loop-brushes.md", readWhen: "Using canvas-loop brushes, paper, sprites and caches in a figure.", generate: generateCanvasLoopBrushesDoc },
+  { filename: "canvas-loop.md", readWhen: "Writing a canvas-loop figure: the sketch contract, the drawing draw returns, styles, text, scopes, pictures, input, sound.", generate: generateCanvasLoopDoc },
+  { filename: "canvas-loop-brushes.md", readWhen: "Using canvas-loop brushes, paper, effects (wash, glow, hatching) and lighting in a figure.", generate: generateCanvasLoopBrushesDoc },
 ];
 
 /** Prose docs for box agents, shipped as-is (frontmatter stripped). */

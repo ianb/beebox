@@ -13,17 +13,7 @@
 // A TEA sketch may import nothing but the framework types, so the painting
 // code from open-opus-b is copied into this one file, with `Sketch` → `View`
 // and its `s.random` calls replaced by a seeded generator.
-import type {
-  BrushPreset,
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { BrushPreset, DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   wind: { type: "number", min: 0, max: 1, default: 0.35, step: 0.05 },
@@ -229,45 +219,50 @@ function phase(frame: number, k = 1): number {
 
 // ── Draw ─────────────────────────────────────────────────────────────
 
-export function draw(v: View, model: DeepReadonly<Model>, p: P): void {
-  const f = model.frame;
-  const bloom = lampBloom(model);
-  // `paper()` rebuilds its texture on every call, so it is set once, inside the
-  // first cache body: whenever the caches are fresh, so is the paper.
-  v.cache("sky-back", () => {
-    v.paper({ scale: 3, contrast: 0.6, seed: 7 });
-    drawSkyBack(v);
-  });
-  drawStars(v, f, p.dusk);
-  drawMoon(v, model.moon);
-  v.cache("sky-front", () => drawSkyFront(v));
-  v.cache("water", () => drawWater(v));
-  drawMoonPath(v, model.moon, f, p.wind);
-  drawShimmer(v, f, p.wind);
-  drawRings(v, model.rings, f);
-  v.cache("village", () => drawVillage(v));
-  if (bloom > 0)
-    v.group({ opacity: bloom }, () =>
-      v.cache("last-reflection", () => drawLampReflection(v, LAMP)),
-    );
-  drawBoat(v, model, f);
-  v.cache("walkway", () => {
-    drawWalkway(v);
-    for (const lamp of LIT_LAMPS) drawLantern(v, lamp, false);
-    drawPost(v, LAMP);
-  });
-  drawLastLamp(v, bloom, f, invitation(model));
-  const done =
-    model.lamp.type === "lit" ? smooth((f - model.lamp.at - 50) / 70) : 0;
-  drawHeron(v, f, p.wind, { bloom, done });
-  drawReeds(v, f, p.wind, model.stir);
-  drawDusk(v, p.dusk);
-  drawLights(v, f, bloom, p.dusk);
-  drawBoatLight(v, model, f, p.dusk);
-  if (p.fireflies) drawFireflies(v, f);
-  drawMoths(v, f, bloom);
-  drawStory(v, model);
-  v.paperTexture(0.35);
+/** The paper of the frame and of every picture. */
+const PAPER = { scale: 3, contrast: 0.6, seed: 7 } as const;
+
+export function draw(v: View, model: DeepReadonly<Model>, p: P): RootDrawing {
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  return v.paper(PAPER, v.group({ effects: { paper: 0.35 } }, ((): Drawing => {
+    const parts: Drawing[] = [];
+    const f = model.frame;
+    const bloom = lampBloom(model);
+    // Port (returned scene R2): a picture takes its paper as an option, not from where it is made.
+    parts.push(v.place(v.picture({ key: "sky-back", width: v.width, height: v.height, paper: PAPER }, () => drawSkyBack(v)), 0, 0));
+    parts.push(drawStars(v, f, p.dusk));
+    parts.push(drawMoon(v, model.moon));
+    parts.push(v.place(v.picture({ key: "sky-front", width: v.width, height: v.height, paper: PAPER }, () => drawSkyFront(v)), 0, 0));
+    parts.push(v.place(v.picture({ key: "water", width: v.width, height: v.height, paper: PAPER }, () => drawWater(v)), 0, 0));
+    parts.push(drawMoonPath(v, model.moon, f, p.wind));
+    parts.push(drawShimmer(v, f, p.wind));
+    parts.push(drawRings(v, model.rings, f));
+    parts.push(v.place(v.picture({ key: "village", width: v.width, height: v.height, paper: PAPER }, () => drawVillage(v)), 0, 0));
+    if (bloom > 0)
+      parts.push(v.group({ opacity: bloom }, v.place(v.picture({ key: "last-reflection", width: v.width, height: v.height, paper: PAPER }, () => drawLampReflection(v, LAMP)), 0, 0),
+      ));
+    parts.push(drawBoat(v, model, f));
+    parts.push(v.place(v.picture({ key: "walkway", width: v.width, height: v.height, paper: PAPER }, () => {
+      const walkway: Drawing[] = [];
+      walkway.push(drawWalkway(v));
+      for (const lamp of LIT_LAMPS) walkway.push(drawLantern(v, lamp, false));
+      walkway.push(drawPost(v, LAMP));
+      return walkway;
+    }), 0, 0));
+    parts.push(drawLastLamp(v, bloom, f, invitation(model)));
+    const done =
+      model.lamp.type === "lit" ? smooth((f - model.lamp.at - 50) / 70) : 0;
+    parts.push(drawHeron(v, f, p.wind, { bloom, done }));
+    parts.push(drawReeds(v, f, p.wind, model.stir));
+    parts.push(drawDusk(v, p.dusk));
+    parts.push(drawLights(v, f, bloom, p.dusk));
+    parts.push(drawBoatLight(v, model, f, p.dusk));
+    if (p.fireflies) parts.push(drawFireflies(v, f));
+    parts.push(drawMoths(v, f, bloom));
+    parts.push(drawStory(v, model));
+    return parts;
+  })()));
 }
 
 /** 0 while dark, rising to 1 over the first second after the lamp is lit. */
@@ -298,8 +293,8 @@ const C = {
   moon: "#fbf1d0",
 } as const;
 
-function drawSkyBack(v: View): void {
-  v.background(
+function drawSkyBack(v: View): Drawing {
+  return v.background(
     v.linearGradient(0, 0, 0, HORIZON, [
       [0, C.skyTop],
       [0.42, C.skyMid],
@@ -327,36 +322,41 @@ const STARS: readonly Star[] = (() => {
   }));
 })();
 
-function drawStars(v: View, f: number, dusk: number): void {
+function drawStars(v: View, f: number, dusk: number): Drawing {
+  const out: Drawing[] = [];
   const shown = Math.round(36 + dusk * 34);
   for (let i = 0; i < shown; i += 1) {
     const st = STARS[i];
     if (st === undefined) continue;
     const tw = 0.6 + 0.4 * Math.sin(phase(f, st.k) + i * 1.7);
-    v.circle(st.x, st.y, st.d / 2, {
+    out.push(v.circle(st.x, st.y, st.d / 2, {
       fill: `rgba(255,244,214,${(0.85 * tw).toFixed(3)})`,
-    });
+    }));
   }
+  return out;
 }
 
-function drawMoon(v: View, moon: Pt): void {
+function drawMoon(v: View, moon: Pt): Drawing {
+  const out: Drawing[] = [];
   const { x, y } = moon;
-  v.circle(x, y, 110, {
+  out.push(v.circle(x, y, 110, {
     fill: v.radialGradient(x, y, 110, [
       [0, "rgba(251,241,208,0.35)"],
       [1, "rgba(251,241,208,0)"],
     ]),
-  });
-  v.circle(x, y, MOON_R, { fill: C.moon });
+  }));
+  out.push(v.circle(x, y, MOON_R, { fill: C.moon }));
   // Faint dark patches, so the disc is a moon and not a lamp.
   const patch: Style = { fill: "rgba(214,196,170,0.45)" };
-  v.circle(x - 8, y - 6, 7, patch);
-  v.circle(x + 7, y + 8, 5, patch);
+  out.push(v.circle(x - 8, y - 6, 7, patch));
+  out.push(v.circle(x + 7, y + 8, 5, patch));
+  return out;
 }
 
 /** The rose wash, cloud streaks and hills: a transparent layer over the moon. */
-function drawSkyFront(v: View): void {
-  v.curve(
+function drawSkyFront(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.curve(
     [
       [-40, 360],
       [400, 345],
@@ -369,7 +369,7 @@ function drawSkyFront(v: View): void {
       brush: { preset: "wash", opacity: 0.4 },
       gesture: { pressure: "swell", wobble: 8 },
     },
-  );
+  ));
   const clouds: readonly { x: number; y: number; len: number; w: number }[] = [
     { x: 420, y: 215, len: 300, w: 16 },
     { x: 560, y: 248, len: 260, w: 22 },
@@ -396,7 +396,7 @@ function drawSkyFront(v: View): void {
   };
   for (const c of clouds) {
     const lowGlow = c.y > 300;
-    v.curve(
+    out.push(v.curve(
       [
         [c.x, c.y + 3],
         [c.x + c.len * 0.45, c.y - c.w * 0.3],
@@ -417,8 +417,8 @@ function drawSkyFront(v: View): void {
           wobble: 3,
         },
       },
-    );
-    v.curve(
+    ));
+    out.push(v.curve(
       [
         [c.x + c.len * 0.15, c.y + c.w * 0.45],
         [c.x + c.len * 0.5, c.y + c.w * 0.3],
@@ -431,9 +431,9 @@ function drawSkyFront(v: View): void {
         brush: light,
         gesture: { pressure: "taper", wobble: 2 },
       },
-    );
+    ));
   }
-  v.curve(
+  out.push(v.curve(
     [
       [-20, HORIZON],
       [-20, 420],
@@ -445,8 +445,8 @@ function drawSkyFront(v: View): void {
     ],
     true,
     { fill: C.hillFar },
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [-20, HORIZON],
       [-20, 438],
@@ -456,21 +456,23 @@ function drawSkyFront(v: View): void {
     ],
     true,
     { fill: C.hill },
-  );
+  ));
+  return out;
 }
 
 // ── Water ────────────────────────────────────────────────────────────
 
-function drawWater(v: View): void {
+function drawWater(v: View): Drawing {
+  const out: Drawing[] = [];
   const r = rng(23);
-  v.rect(0, HORIZON, 800, 330, {
+  out.push(v.rect(0, HORIZON, 800, 330, {
     fill: v.linearGradient(0, HORIZON, 0, 800, [
       [0, C.waterTop],
       [0.18, "#b8708e"],
       [0.45, C.waterMid],
       [1, C.waterLow],
     ]),
-  });
+  }));
   const near = ["#f8c99a", "#f2a77e", "#d98a96"];
   const mid = ["#9d7fb0", "#7c6aa3", "#c48aa0", "#5c5590"];
   const low = ["#3d3f78", "#2e3068", "#6e64a0", "#4a4a86"];
@@ -488,13 +490,14 @@ function drawWater(v: View): void {
     const len = 30 + t * 160 + r(0, 80);
     const pal = t < 0.25 ? near : t < 0.6 ? mid : low;
     const stroke = pal[Math.floor(r(0, pal.length))] ?? "#7c6aa3";
-    v.line(x, y, x + len, y + r(-1.5, 1.5), {
+    out.push(v.line(x, y, x + len, y + r(-1.5, 1.5), {
       stroke,
       weight: 2.5 + t * 8,
       brush,
       gesture: { pressure: "taper", wobble: 1 + t },
-    });
+    }));
   }
+  return out;
 }
 
 interface Dab {
@@ -516,7 +519,8 @@ const MOON_DABS: readonly Dab[] = (() => {
 })();
 
 /** The moon's broken reflection column, under wherever the moon is, each dab sliding on its own swell. */
-function drawMoonPath(v: View, moon: Pt, f: number, wind: number): void {
+function drawMoonPath(v: View, moon: Pt, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   const height = clamp((HORIZON - moon.y) / 340, 0.3, 1.2);
   for (const [i, d] of MOON_DABS.entries()) {
     const sway =
@@ -524,13 +528,14 @@ function drawMoonPath(v: View, moon: Pt, f: number, wind: number): void {
     const breathe = 0.75 + 0.25 * Math.sin(phase(f, 1) + i * 2.1);
     const cx = moon.x + d.off * height + sway;
     const half = d.half * 1.25 * breathe * (0.6 + 0.4 * height);
-    v.line(cx - half, d.y, cx + half, d.y, {
+    out.push(v.line(cx - half, d.y, cx + half, d.y, {
       stroke: `rgba(251,236,196,${((0.85 - d.t * 0.5) * (0.6 + 0.4 * breathe)).toFixed(3)})`,
       weight: 2 + d.t * 3,
       brush: "ink",
       gesture: { pressure: "taper", wobble: 0.6, seed: i + 1 },
-    });
+    }));
   }
+  return out;
 }
 
 interface Glint {
@@ -556,24 +561,27 @@ const GLINTS: readonly Glint[] = (() => {
 })();
 
 /** Short warm and pale glints that swell and fade on the water, drifting with the wind. */
-function drawShimmer(v: View, f: number, wind: number): void {
+function drawShimmer(v: View, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   for (const g of GLINTS) {
     const a = Math.sin(phase(f, g.k) + g.shift);
     if (a <= 0.1) continue;
     const near = (g.y - HORIZON) / 330;
     const drift = Math.sin(phase(f, 1) + g.shift) * (4 + wind * 14);
-    v.line(g.x + drift, g.y, g.x + drift + g.len * a, g.y, {
+    out.push(v.line(g.x + drift, g.y, g.x + drift + g.len * a, g.y, {
       stroke:
         near < 0.25
           ? `rgba(255,214,160,${(0.55 * a).toFixed(3)})`
           : `rgba(196,178,226,${(0.4 * a).toFixed(3)})`,
       weight: 1.2 + near * 2.5,
-    });
+    }));
   }
+  return out;
 }
 
 /** Rings where the reader touched the water: flattened ellipses that widen and fade. */
-function drawRings(v: View, rings: DeepReadonly<Ring[]>, f: number): void {
+function drawRings(v: View, rings: DeepReadonly<Ring[]>, f: number): Drawing {
+  const out: Drawing[] = [];
   for (const ring of rings) {
     const age = (f - ring.born) / RING_LIFE;
     const depthK = 0.5 + (ring.y - HORIZON) / 330;
@@ -589,15 +597,16 @@ function drawRings(v: View, rings: DeepReadonly<Ring[]>, f: number): void {
         brush: "ink",
         gesture: { pressure: "swell", wobble: 1, seed: 17 + j },
       };
-      v.at({ translate: [ring.x, ring.y], scale: [1, 0.22] }, () => {
-        v.arc(0, 0, w / 2, Math.PI * 1.05, Math.PI * 1.95, lit);
+      out.push(v.at({ translate: [ring.x, ring.y], scale: [1, 0.22] }, [
+        v.arc(0, 0, w / 2, Math.PI * 1.05, Math.PI * 1.95, lit),
         v.arc(0, 0, w / 2, Math.PI * 0.08, Math.PI * 0.92, {
           ...lit,
           stroke: `rgba(30,28,70,${(alpha * 0.7).toFixed(3)})`,
-        });
-      });
+        }),
+      ]));
     }
   }
+  return out;
 }
 
 // ── Village ──────────────────────────────────────────────────────────
@@ -632,7 +641,8 @@ function windows(h: House): Vec2[] {
   return [0.28, 0.66].map((fx): Vec2 => [h.x + h.w * fx, wy]);
 }
 
-function drawHouse(v: View, h: House): void {
+function drawHouse(v: View, h: House): Drawing {
+  const out: Drawing[] = [];
   const stake: Style = {
     stroke: C.roof,
     weight: 4,
@@ -641,11 +651,11 @@ function drawHouse(v: View, h: House): void {
   };
   for (let i = 0; i <= 3; i += 1) {
     const x = h.x + 6 + (i * (h.w - 12)) / 3;
-    v.line(x, h.base, x, h.base + 26, stake);
+    out.push(v.line(x, h.base, x, h.base + 26, stake));
   }
-  v.polygon(houseShape(h), { fill: C.house });
+  out.push(v.polygon(houseShape(h), { fill: C.house }));
   const top = h.base - h.h;
-  v.polygon(
+  out.push(v.polygon(
     [
       [h.x - 8, top + 4],
       [h.x + h.w / 2, top - h.roof - 4],
@@ -655,8 +665,9 @@ function drawHouse(v: View, h: House): void {
       [h.x - 8, top + 10],
     ],
     { fill: C.roof },
-  );
-  v.clip(houseShape(h), () => {
+  ));
+  out.push(v.clip(houseShape(h), ((): Drawing => {
+    const drawn: Drawing[] = [];
     const siding: Style = {
       weight: 6,
       brush: {
@@ -669,35 +680,38 @@ function drawHouse(v: View, h: House): void {
       gesture: { pressure: "even", wobble: 0.6 },
     };
     for (let x = h.x + 5; x < h.x + h.w; x += 9) {
-      v.line(x, top - h.roof, x + 1, h.base, {
+      drawn.push(v.line(x, top - h.roof, x + 1, h.base, {
         ...siding,
         stroke: x % 2 === 0 ? "#4a3a5c" : "#2f2541",
-      });
+      }));
     }
-  });
+    return drawn;
+  })()));
   const ridge: Style = {
     stroke: "#e79aa6",
     weight: 3,
     brush: { preset: "ink", opacity: 0.95 },
     gesture: { pressure: "taper", wobble: 0.4 },
   };
-  v.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3, ridge);
-  v.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3, {
+  out.push(v.line(h.x - 6, top + 3, h.x + h.w / 2, top - h.roof - 3, ridge));
+  out.push(v.line(h.x + h.w / 2, top - h.roof - 3, h.x + h.w + 6, top + 3, {
     ...ridge,
     stroke: "#f2a77e",
-  });
+  }));
   for (const [wx, wy] of windows(h)) {
-    v.circle(wx, wy + 8, 30, {
+    out.push(v.circle(wx, wy + 8, 30, {
       fill: v.radialGradient(wx, wy + 8, 30, [
         [0, "rgba(255,200,110,0.45)"],
         [1, "rgba(255,200,110,0)"],
       ]),
-    });
-    v.rect(wx - 7, wy, 14, 17, { fill: C.window });
+    }));
+    out.push(v.rect(wx - 7, wy, 14, 17, { fill: C.window }));
   }
+  return out;
 }
 
-function drawVillage(v: View): void {
+function drawVillage(v: View): Drawing {
+  const drawn: Drawing[] = [];
   const r = rng(53);
   for (const h of HOUSES) {
     const water = h.base + 26;
@@ -712,12 +726,12 @@ function drawVillage(v: View): void {
       const t = d / tall;
       const half = d < h.h ? h.w / 2 : (h.w / 2) * (1 - (d - h.h) / h.roof);
       const cx = h.x + h.w / 2 + r(-4, 4);
-      v.line(cx - half - r(2, 10), water + d, cx + half + r(2, 10), water + d, {
+      drawn.push(v.line(cx - half - r(2, 10), water + d, cx + half + r(2, 10), water + d, {
         stroke: `rgba(44,34,70,${(0.7 - t * 0.45).toFixed(2)})`,
         weight: 4.5,
         brush: bristle,
         gesture: { pressure: "taper", wobble: 1 },
-      });
+      }));
     }
     const glow: Style = {
       stroke: "#ffc979",
@@ -728,10 +742,11 @@ function drawVillage(v: View): void {
     const wy = water + (h.base - h.h * 0.7 - water) * -1;
     for (const fx of [0.28, 0.66]) {
       const wx = h.x + h.w * fx;
-      v.line(wx, wy - 6, wx + 1, wy + 34, glow);
+      drawn.push(v.line(wx, wy - 6, wx + 1, wy + 34, glow));
     }
   }
-  for (const h of HOUSES) drawHouse(v, h);
+  for (const h of HOUSES) drawn.push(drawHouse(v, h));
+  return drawn;
 }
 
 // ── The boat ─────────────────────────────────────────────────────────
@@ -775,10 +790,10 @@ function drawBoatLight(
   model: DeepReadonly<Model>,
   f: number,
   dusk: number,
-): void {
+): Drawing {
   const { x, y, k } = boatLantern(model, f);
   const a = (0.2 + dusk * 0.6) * (0.85 + 0.15 * Math.sin(phase(f, 4) + 1));
-  v.circle(x, y, (20 * k) / 2, {
+  return v.circle(x, y, (20 * k) / 2, {
     fill: v.radialGradient(x, y, 10 * k, [
       [0, `rgba(255,226,150,${a.toFixed(3)})`],
       [1, "rgba(255,200,120,0)"],
@@ -796,7 +811,7 @@ function along(route: readonly Vec2[], t: number): Vec2 {
   return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 }
 
-function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
+function drawBoat(v: View, model: DeepReadonly<Model>, f: number): Drawing {
   const trip = boatTrip(model);
   const [bx, by] = along(ROUTE, trip);
   const k = 1 + trip * 1.8;
@@ -804,32 +819,34 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
   const bob = Math.sin(phase(f, 2)) * 0.6;
   const row = moving ? Math.sin(phase(f, 4)) : 0;
   // The boat faces home (left), so its local +x is drawn mirrored.
-  v.at({ translate: [bx, by], scale: [-k, k] }, () => {
+  return v.at({ translate: [bx, by], scale: [-k, k] }, ((): Drawing => {
+    const parts: Drawing[] = [];
     // Hull shadow on the water, the lantern's broken streak, and a wake while under way.
-    v.ellipse(0, 4, 19, 2.5, { fill: "rgba(36,30,64,0.45)" });
+    parts.push(v.ellipse(0, 4, 19, 2.5, { fill: "rgba(36,30,64,0.45)" }));
     for (let j = 0; j < 5; j += 1) {
       const w = (7 - j) * (0.7 + 0.3 * Math.sin(phase(f, 3) + j));
-      v.rect(2 - w / 2 + Math.sin(phase(f, 2) + j) * 1.2, 6 + j * 4.5, w, 1.3, {
+      parts.push(v.rect(2 - w / 2 + Math.sin(phase(f, 2) + j) * 1.2, 6 + j * 4.5, w, 1.3, {
         fill: `rgba(255,206,120,${(0.55 - j * 0.09).toFixed(3)})`,
-      });
+      }));
     }
     if (moving) {
       const wake: Style = { stroke: "rgba(255,226,190,0.4)", weight: 0.8 };
       for (let j = 1; j <= 3; j += 1) {
         const back = -18 - j * 9 - (row + 1) * 1.5;
-        v.line(-16, 2, back, 2 - j * 1.6, wake);
-        v.line(-16, 3, back, 3 + j * 1.6, wake);
+        parts.push(v.line(-16, 2, back, 2 - j * 1.6, wake));
+        parts.push(v.line(-16, 3, back, 3 + j * 1.6, wake));
       }
     }
-    v.at({ translate: [0, bob] }, () => {
-      v.circle(2, -20, 15, {
+    parts.push(v.at({ translate: [0, bob] }, ((): Drawing => {
+      const nodes: Drawing[] = [];
+      nodes.push(v.circle(2, -20, 15, {
         fill: v.radialGradient(2, -20, 15, [
           [0, "rgba(255,214,130,0.75)"],
           [1, "rgba(255,190,110,0)"],
         ]),
-      });
+      }));
       // Hull, with a lit gunwale.
-      v.polygon(
+      nodes.push(v.polygon(
         [
           [-19, -5],
           [-8, -4],
@@ -839,19 +856,19 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
           [-13, 2],
         ],
         { fill: "#3a2c4d" },
-      );
-      v.line(-17, -5, 20, -6.5, {
+      ));
+      nodes.push(v.line(-17, -5, 20, -6.5, {
         stroke: "rgba(255,206,150,0.85)",
         weight: 1,
-      });
+      }));
       // Mast, arm and hanging lantern.
       const mast: Style = { stroke: "#3a2c4d", weight: 1.3 };
-      v.line(-4, -4, -4, -28, mast);
-      v.line(-4, -27, 3, -27, { ...mast, weight: 0.9 });
-      v.line(2, -27, 2, -23, { ...mast, weight: 0.9 });
+      nodes.push(v.line(-4, -4, -4, -28, mast));
+      nodes.push(v.line(-4, -27, 3, -27, { ...mast, weight: 0.9 }));
+      nodes.push(v.line(2, -27, 2, -23, { ...mast, weight: 0.9 }));
       // The fisher, hunched at the oar, in a brimmed hat.
       const fisher: Style = { fill: "#2a1f3d" };
-      v.curve(
+      nodes.push(v.curve(
         [
           [-15, -4],
           [-15 + row * 0.5, -11],
@@ -861,9 +878,9 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
         ],
         true,
         fisher,
-      );
-      v.circle(-8 + row * 1.3, -15.5, 2.2, fisher);
-      v.polygon(
+      ));
+      nodes.push(v.circle(-8 + row * 1.3, -15.5, 2.2, fisher));
+      nodes.push(v.polygon(
         [
           [-12.5 + row * 1.3, -16.5],
           [-3.5 + row * 1.3, -16.5],
@@ -871,19 +888,21 @@ function drawBoat(v: View, model: DeepReadonly<Model>, f: number): void {
           [-9 + row * 1.3, -20],
         ],
         fisher,
-      );
+      ));
       const oar: Style = { stroke: "#2a1f3d", weight: 0.9 };
       if (boatHome(model) > 0.5) {
         // Home: the oar shipped along the hull, and a wave up to the pier.
         const wave = Math.sin(phase(f, 4));
-        v.line(-17, -5, 12, -7, oar);
-        v.line(-10, -12, -17 + wave * 3, -25, { ...oar, weight: 1.1 });
+        nodes.push(v.line(-17, -5, 12, -7, oar));
+        nodes.push(v.line(-10, -12, -17 + wave * 3, -25, { ...oar, weight: 1.1 }));
       } else {
-        v.line(-8 + row, -10, -20 - row * 5, 3 + Math.max(0, row) * 1.5, oar);
+        nodes.push(v.line(-8 + row, -10, -20 - row * 5, 3 + Math.max(0, row) * 1.5, oar));
       }
-      v.ellipse(2, -20.5, 1.3, 1.7, { fill: "#fff0b8" });
-    });
-  });
+      nodes.push(v.ellipse(2, -20.5, 1.3, 1.7, { fill: "#fff0b8" }));
+      return nodes;
+    })()));
+    return parts;
+  })());
 }
 
 // ── Pier ─────────────────────────────────────────────────────────────
@@ -933,7 +952,8 @@ const WOOD = {
   plank: "#5a4150",
 } as const;
 
-function drawWalkway(v: View): void {
+function drawWalkway(v: View): Drawing {
+  const out: Drawing[] = [];
   const posts: Style = {
     brush: "ink",
     gesture: { pressure: "even", wobble: 0.8 },
@@ -941,16 +961,16 @@ function drawWalkway(v: View): void {
   for (let x = X0 + 30; x <= X1; x += 62) {
     const k = depth(x);
     const y0 = deckFront(x);
-    v.line(x, y0, x, y0 + 50 * k, {
+    out.push(v.line(x, y0, x, y0 + 50 * k, {
       ...posts,
       stroke: WOOD.post,
       weight: 9 * k,
-    });
-    v.line(x, y0 + 50 * k, x + 1, y0 + 90 * k, {
+    }));
+    out.push(v.line(x, y0 + 50 * k, x + 1, y0 + 90 * k, {
       ...posts,
       stroke: "rgba(30,24,50,0.45)",
       weight: 7 * k,
-    });
+    }));
   }
   const deck: Vec2[] = [
     [X0, deckTop(X0)],
@@ -958,13 +978,13 @@ function drawWalkway(v: View): void {
     [X1, deckFront(X1)],
     [X0, deckFront(X0)],
   ];
-  v.polygon(deck, {
+  out.push(v.polygon(deck, {
     fill: v.linearGradient(X0, 0, X1, 0, [
       [0, WOOD.deck],
       [1, WOOD.deckLit],
     ]),
-  });
-  v.polygon(
+  }));
+  out.push(v.polygon(
     [
       [X0, deckFront(X0)],
       [X1, deckFront(X1)],
@@ -972,8 +992,9 @@ function drawWalkway(v: View): void {
       [X0, deckFront(X0) + 5],
     ],
     { fill: WOOD.beam },
-  );
-  v.clip(deck, () => {
+  ));
+  out.push(v.clip(deck, ((): Drawing => {
+    const drawn: Drawing[] = [];
     const board: Style = {
       weight: 5,
       brush: {
@@ -987,7 +1008,7 @@ function drawWalkway(v: View): void {
     };
     for (let i = 0; i < 6; i += 1) {
       const fr = (i + 0.5) / 6;
-      v.line(
+      drawn.push(v.line(
         X0,
         deckTop(X0) + fr * (deckFront(X0) - deckTop(X0)),
         X1,
@@ -996,7 +1017,7 @@ function drawWalkway(v: View): void {
           ...board,
           stroke: i % 2 === 0 ? "#6e5060" : "#d8a585",
         },
-      );
+      ));
     }
     const seam: Style = {
       stroke: WOOD.plank,
@@ -1004,12 +1025,14 @@ function drawWalkway(v: View): void {
       gesture: { pressure: "even", wobble: 0.4 },
     };
     for (let x = X0 + 8; x < X1; x += 5 + 16 * depth(x)) {
-      v.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2, {
+      drawn.push(v.line(x, deckTop(x) - 2, x + 6 * depth(x), deckFront(x) + 2, {
         ...seam,
         weight: 1.5 + 1.5 * depth(x),
-      });
+      }));
     }
-  });
+    return drawn;
+  })()));
+  return out;
 }
 
 /** A lamp's reflection, glow and deck pool, at `glow` strength (0..1). */
@@ -1018,38 +1041,40 @@ function drawLampLight(
   lamp: LampPost,
   main: boolean,
   glow: number,
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const { x, hx, hy, k } = lamp;
   const r = (main ? 230 : 150) * k;
-  v.circle(hx, hy + 26 * k, r, {
+  out.push(v.circle(hx, hy + 26 * k, r, {
     fill: v.radialGradient(hx, hy + 26 * k, r, [
       [0, `rgba(255,222,140,${(0.85 * glow).toFixed(3)})`],
       [0.18, `rgba(255,196,112,${(0.45 * glow).toFixed(3)})`],
       [0.55, `rgba(255,170,100,${(0.12 * glow).toFixed(3)})`],
       [1, "rgba(255,170,100,0)"],
     ]),
-  });
+  }));
   if (main) {
-    v.circle(hx, hy + 28 * k, (92 * k) / 2, {
+    out.push(v.circle(hx, hy + 28 * k, (92 * k) / 2, {
       fill: v.radialGradient(hx, hy + 28 * k, 46 * k, [
         [0, `rgba(255,246,210,${(0.95 * glow).toFixed(3)})`],
         [0.5, `rgba(255,226,150,${(0.5 * glow).toFixed(3)})`],
         [1, "rgba(255,210,130,0)"],
       ]),
-    });
+    }));
   }
   const py = (deckTop(x) + deckFront(x)) / 2;
-  v.ellipse(hx, py, (220 * k) / 2, (50 * k) / 2, {
+  out.push(v.ellipse(hx, py, (220 * k) / 2, (50 * k) / 2, {
     fill: v.ellipseGradient(hx, py, (220 * k) / 2, (50 * k) / 2, [
       [0, `rgba(255,210,140,${(0.6 * glow).toFixed(3)})`],
       [1, "rgba(255,190,120,0)"],
     ]),
-  });
+  }));
+  return out;
 }
 
-function drawLampReflection(v: View, lamp: LampPost): void {
+function drawLampReflection(v: View, lamp: LampPost): Drawing {
   const { x, hx, k } = lamp;
-  v.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k, {
+  return v.line(hx, deckFront(x) + 24 * k, hx + 2, deckFront(x) + 170 * k, {
     stroke: "#ffcf7a",
     weight: 26 * k,
     brush: { preset: "wash", opacity: 0.5 },
@@ -1057,7 +1082,7 @@ function drawLampReflection(v: View, lamp: LampPost): void {
   });
 }
 
-function drawPost(v: View, lamp: LampPost): void {
+function drawPost(v: View, lamp: LampPost): Drawing {
   const { x, hx, k } = lamp;
   const base = deckTop(x);
   const top = base - lamp.height;
@@ -1066,12 +1091,14 @@ function drawPost(v: View, lamp: LampPost): void {
     brush: "ink",
     gesture: { pressure: "even", wobble: 0.5 },
   };
-  v.line(x, base + 2, x, top, { ...wood, weight: 8 * k });
-  v.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k, {
-    ...wood,
-    weight: 4 * k,
-  });
-  v.line(hx, top + 2 * k, hx, lamp.hy + 6 * k, { ...wood, weight: 2 * k });
+  return [
+    v.line(x, base + 2, x, top, { ...wood, weight: 8 * k }),
+    v.line(x + 3 * k, top + 2 * k, hx - 4 * k, top + 2 * k, {
+      ...wood,
+      weight: 4 * k,
+    }),
+    v.line(hx, top + 2 * k, hx, lamp.hy + 6 * k, { ...wood, weight: 2 * k }),
+  ];
 }
 
 /** The lantern body; `glow` 0 is dark glass, 1 is lit. */
@@ -1080,9 +1107,10 @@ function drawLanternBody(
   lamp: LampPost,
   glow: number,
   flame: number,
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const { hx, hy, k } = lamp;
-  v.polygon(
+  out.push(v.polygon(
     [
       [hx - 11 * k, hy + 14 * k],
       [hx + 11 * k, hy + 14 * k],
@@ -1092,14 +1120,14 @@ function drawLanternBody(
     {
       fill: mix("#4b3c52", "#ffe2a0", glow),
     },
-  );
+  ));
   if (glow > 0) {
-    v.ellipse(hx, hy + (30 - flame) * k, (8 * k) / 2, ((14 + flame * 2) * k) / 2, {
+    out.push(v.ellipse(hx, hy + (30 - flame) * k, (8 * k) / 2, ((14 + flame * 2) * k) / 2, {
       fill: `rgba(255,246,214,${glow.toFixed(3)})`,
-    });
+    }));
   } else {
     // Dark glass still catches a little sky.
-    v.polygon(
+    out.push(v.polygon(
       [
         [hx + 3 * k, hy + 16 * k],
         [hx + 9 * k, hy + 16 * k],
@@ -1109,10 +1137,10 @@ function drawLanternBody(
       {
         fill: "rgba(214,160,170,0.5)",
       },
-    );
+    ));
   }
   const iron: Style = { fill: "#2a1e2e" };
-  v.triangle(
+  out.push(v.triangle(
     hx - 15 * k,
     hy + 15 * k,
     hx + 15 * k,
@@ -1120,19 +1148,22 @@ function drawLanternBody(
     hx,
     hy + 4 * k,
     iron,
-  );
-  v.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k, iron);
-  v.line(hx, hy + 15 * k, hx, hy + 40 * k, {
+  ));
+  out.push(v.rect(hx - 11 * k, hy + 39 * k, 22 * k, 5 * k, iron));
+  out.push(v.line(hx, hy + 15 * k, hx, hy + 40 * k, {
     stroke: "#2a1e2e",
     weight: 1.6 * k,
-  });
+  }));
+  return out;
 }
 
-function drawLantern(v: View, lamp: LampPost, main: boolean): void {
-  drawLampReflection(v, lamp);
-  drawLampLight(v, lamp, main, 1);
-  drawPost(v, lamp);
-  drawLanternBody(v, lamp, 1, 0);
+function drawLantern(v: View, lamp: LampPost, main: boolean): Drawing {
+  return [
+    drawLampReflection(v, lamp),
+    drawLampLight(v, lamp, main, 1),
+    drawPost(v, lamp),
+    drawLanternBody(v, lamp, 1, 0),
+  ];
 }
 
 /** How strongly a pointer near the dark lantern invites a click, 0..1. */
@@ -1145,28 +1176,30 @@ function invitation(model: DeepReadonly<Model>): number {
   return clamp(1 - (d - 20) / 60, 0, 1);
 }
 
-function drawLastLamp(v: View, bloom: number, f: number, invite: number): void {
+function drawLastLamp(v: View, bloom: number, f: number, invite: number): Drawing {
+  const out: Drawing[] = [];
   if (invite > 0) {
     // A pointer near the dark lantern: a faint pulse round it, as if it is waiting.
     const pulse = 0.6 + 0.4 * Math.sin(phase(f, 4));
-    v.circle(LANTERN[0], LANTERN[1] - 6, 70, {
+    out.push(v.circle(LANTERN[0], LANTERN[1] - 6, 70, {
       fill: v.radialGradient(LANTERN[0], LANTERN[1] - 6, 70, [
         [0, `rgba(255,224,160,${(0.75 * invite * pulse).toFixed(3)})`],
         [0.4, `rgba(255,200,130,${(0.3 * invite * pulse).toFixed(3)})`],
         [1, "rgba(255,200,130,0)"],
       ]),
-    });
+    }));
   }
   if (bloom > 0) {
     const flicker =
       1 + 0.04 * Math.sin(phase(f, 5)) + 0.03 * Math.sin(phase(f, 7) + 1);
     // A brief flare as the wick catches.
     const flare = bloom < 1 ? Math.sin(bloom * Math.PI) * 0.35 : 0;
-    drawLampLight(v, LAMP, true, Math.min(1, bloom * flicker + flare));
+    out.push(drawLampLight(v, LAMP, true, Math.min(1, bloom * flicker + flare)));
   }
   // A waiting lamp's glass warms a little under the pointer.
   const glass = Math.max(bloom, invite * (0.25 + 0.15 * Math.sin(phase(f, 4))));
-  drawLanternBody(v, LAMP, glass, Math.sin(phase(f, 6)) * bloom);
+  out.push(drawLanternBody(v, LAMP, glass, Math.sin(phase(f, 6)) * bloom));
+  return out;
 }
 
 function mix(a: string, b: string, t: number): string {
@@ -1237,34 +1270,38 @@ const BAND: readonly Vec2[] = [
   [-66, -160],
 ];
 
-type Tint = (pts: readonly Vec2[]) => void;
+type Tint = (pts: readonly Vec2[]) => Drawing;
 
 function litShape(
   v: View,
   pts: readonly Vec2[],
   base: string,
   extra?: Tint,
-): void {
-  v.curve(pts, true, { fill: H.rim });
-  v.clip(v.curvePath(pts, true), () => {
-    v.curve(
-      v.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]),
-      true,
-      { fill: base },
-    );
-    v.group({ opacity: 0.35 }, () => {
-      v.curve(
-        v.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]),
+): Drawing {
+  return [
+    v.curve(pts, true, { fill: H.rim }),
+    v.clip(v.curvePath(pts, true), ((): Drawing => {
+      const drawn: Drawing[] = [];
+      drawn.push(v.curve(
+        v.offset(pts, -1).map(([x, y]): Vec2 => [x - 4, y + 2.5]),
         true,
-        { fill: H.bodyShade },
-      );
-    });
-    if (extra) extra(pts);
-  });
+        { fill: base },
+      ));
+      drawn.push(v.group({ opacity: 0.35 }, [
+        v.curve(
+          v.offset(pts, -2).map(([x, y]): Vec2 => [x - 26, y + 22]),
+          true,
+          { fill: H.bodyShade },
+        ),
+      ]));
+      if (extra) drawn.push(extra(pts));
+      return drawn;
+    })()),
+  ];
 }
 
-function inHeronSpace(v: View, body: () => void): void {
-  v.at({ translate: [FEET_X, FEET_Y], scale: SCALE }, body);
+function inHeronSpace(v: View, body: () => Drawing): Drawing {
+  return v.at({ translate: [FEET_X, FEET_Y], scale: SCALE }, body());
 }
 
 function drawHeron(
@@ -1272,27 +1309,35 @@ function drawHeron(
   f: number,
   wind: number,
   lamp: { bloom: number; done: number },
-): void {
-  v.cache("heron-legs", () => {
-    drawShadow(v);
-    inHeronSpace(v, () => drawLegs(v));
-  });
-  inHeronSpace(v, () => drawPole(v, lamp.done));
-  v.cache("heron-body", () =>
+): Drawing {
+  return [
+    v.place(v.picture({ key: "heron-legs", width: v.width, height: v.height, paper: PAPER }, () => {
+      return [
+        drawShadow(v),
+        inHeronSpace(v, () => drawLegs(v)),
+      ];
+    }), 0, 0),
+    inHeronSpace(v, () => drawPole(v, lamp.done)),
+    v.place(v.picture({ key: "heron-body", width: v.width, height: v.height, paper: PAPER }, () =>
+      inHeronSpace(v, () => {
+        return [
+          drawBody(v),
+          drawNeckAndHead(v),
+        ];
+      })), 0, 0),
     inHeronSpace(v, () => {
-      drawBody(v);
-      drawNeckAndHead(v);
+      return [
+        drawBlink(v, f),
+        drawScarf(v, f, wind),
+      ];
     }),
-  );
-  inHeronSpace(v, () => {
-    drawBlink(v, f);
-    drawScarf(v, f, wind);
-  });
-  v.cache("grip", () => inHeronSpace(v, () => drawGrip(v)));
-  inHeronSpace(v, () => drawFlame(v, f, lamp, wind));
+    v.place(v.picture({ key: "grip", width: v.width, height: v.height, paper: PAPER }, () => inHeronSpace(v, () => drawGrip(v))), 0, 0),
+    inHeronSpace(v, () => drawFlame(v, f, lamp, wind)),
+  ];
 }
 
-function drawLegs(v: View): void {
+function drawLegs(v: View): Drawing {
+  const drawn: Drawing[] = [];
   const leg: Style = {
     stroke: H.leg,
     weight: 4.5,
@@ -1311,19 +1356,19 @@ function drawLegs(v: View): void {
       [14, -2],
     ],
   ];
-  for (const l of legs) v.curve(l, false, leg);
+  for (const l of legs) drawn.push(v.curve(l, false, leg));
   for (const l of legs)
-    v.curve(
+    drawn.push(v.curve(
       l.map(([x, y]): Vec2 => [x - 1.6, y]),
       false,
       { ...leg, weight: 1.6, stroke: "#6e4e30" },
-    );
+    ));
   for (const l of legs)
-    v.curve(
+    drawn.push(v.curve(
       l.map(([x, y]): Vec2 => [x + 1.5, y]),
       false,
       { ...leg, weight: 1.1, stroke: "#ffe0a0" },
-    );
+    ));
   const toe: Style = {
     ...leg,
     weight: 2.5,
@@ -1333,14 +1378,17 @@ function drawLegs(v: View): void {
     [-10, 0],
     [14, -2],
   ] as const) {
-    v.line(fx, fy, fx + 16, fy + 3, toe);
-    v.line(fx, fy, fx - 12, fy + 2, toe);
-    v.line(fx, fy, fx + 6, fy + 6, toe);
+    drawn.push(v.line(fx, fy, fx + 16, fy + 3, toe));
+    drawn.push(v.line(fx, fy, fx - 12, fy + 2, toe));
+    drawn.push(v.line(fx, fy, fx + 6, fy + 6, toe));
   }
+  return drawn;
 }
 
-function drawBody(v: View): void {
-  litShape(v, BODY, H.body, () => {
+function drawBody(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(litShape(v, BODY, H.body, () => {
+    const drawn: Drawing[] = [];
     const barb: Style = {
       weight: 10,
       brush: {
@@ -1353,7 +1401,7 @@ function drawBody(v: View): void {
       gesture: { pressure: "taper", wobble: 1.5 },
     };
     for (let i = 0; i < 7; i += 1) {
-      v.curve(
+      drawn.push(v.curve(
         [
           [40 - i * 4, -160 + i * 3],
           [10 - i * 6, -150 + i * 9],
@@ -1365,9 +1413,9 @@ function drawBody(v: View): void {
           ...barb,
           stroke: i % 2 === 0 ? "#a4afc6" : "#6f7c9c",
         },
-      );
+      ));
     }
-    v.curve(
+    drawn.push(v.curve(
       [
         [52, -150],
         [44, -104],
@@ -1377,10 +1425,12 @@ function drawBody(v: View): void {
       ],
       true,
       { fill: H.belly },
-    );
-  });
-  litShape(v, WING, H.wing, () => {
-    v.curve(
+    ));
+    return drawn;
+  }));
+  out.push(litShape(v, WING, H.wing, () => {
+    const drawn: Drawing[] = [];
+    drawn.push(v.curve(
       [
         [20, -100],
         [-30, -86],
@@ -1393,7 +1443,7 @@ function drawBody(v: View): void {
         brush: { preset: "wash", opacity: 0.8 },
         gesture: { pressure: "swell", wobble: 1 },
       },
-    );
+    ));
     const quill: Style = {
       stroke: "#8e9abb",
       weight: 1.3,
@@ -1401,7 +1451,7 @@ function drawBody(v: View): void {
       gesture: { pressure: "taper", wobble: 0.4 },
     };
     for (let i = 0; i < 5; i += 1) {
-      v.curve(
+      drawn.push(v.curve(
         [
           [8 - i * 9, -108 + i * 5],
           [-44 - i * 6, -88 + i * 4],
@@ -1409,7 +1459,7 @@ function drawBody(v: View): void {
         ],
         false,
         quill,
-      );
+      ));
     }
     const edge: Style = {
       stroke: "#2e3552",
@@ -1428,10 +1478,10 @@ function drawBody(v: View): void {
           [cx, cy + 9],
           [cx - 7, cy + 3],
         ];
-        v.curve(fe, true, {
+        drawn.push(v.curve(fe, true, {
           fill: row === 0 ? "#9aa6c2" : row === 1 ? "#8592b2" : "#7280a2",
-        });
-        v.curve(
+        }));
+        drawn.push(v.curve(
           [
             [cx - 7, cy + 2],
             [cx, cy + 9],
@@ -1439,11 +1489,12 @@ function drawBody(v: View): void {
           ],
           false,
           edge,
-        );
+        ));
       }
     }
-  });
-  v.polygon(
+    return drawn;
+  }));
+  out.push(v.polygon(
     [
       [-80, -70],
       [-112, -58],
@@ -1454,8 +1505,8 @@ function drawBody(v: View): void {
       [-70, -62],
     ],
     { fill: H.wingDark },
-  );
-  v.clip(v.curvePath(BODY, true), () => {
+  ));
+  out.push(v.clip(v.curvePath(BODY, true), [
     v.curve(
       [
         [-90, -66],
@@ -1469,8 +1520,8 @@ function drawBody(v: View): void {
         brush: { preset: "wash", opacity: 0.45 },
         gesture: { pressure: "swell", wobble: 2 },
       },
-    );
-  });
+    ),
+  ]));
   const outline: Style = {
     stroke: H.ink,
     weight: 3.6,
@@ -1487,8 +1538,9 @@ function drawBody(v: View): void {
       wobble: 0.6,
     },
   };
-  v.curve(BODY, true, outline);
-  v.curve(WING, true, outline);
+  out.push(v.curve(BODY, true, outline));
+  out.push(v.curve(WING, true, outline));
+  return out;
 }
 
 const HEAD_SHAPE: readonly Vec2[] = [
@@ -1499,28 +1551,30 @@ const HEAD_SHAPE: readonly Vec2[] = [
   [HEAD.x + 8, HEAD.y + 10],
 ];
 
-function drawNeckAndHead(v: View): void {
+function drawNeckAndHead(v: View): Drawing {
+  const drawn: Drawing[] = [];
   const prof: Vec2[] = [
     [0, 1.4],
     [1, 0.8],
   ];
   const neck = v.tube(NECK, { width: 19, profile: prof });
-  v.path(neck, { fill: H.rim });
-  v.clip(neck, () => {
-    v.path(
+  drawn.push(v.path(neck, { fill: H.rim }));
+  drawn.push(v.clip(neck, ((): Drawing => {
+    const parts: Drawing[] = [];
+    parts.push(v.path(
       v.tube(
         NECK.map(([x, y]): Vec2 => [x - 3, y + 1]),
         { width: 19, profile: prof },
       ),
       { fill: H.belly },
-    );
-    v.path(
+    ));
+    parts.push(v.path(
       v.tube(
         NECK.map(([x, y]): Vec2 => [x - 13, y + 1]),
         { width: 19, profile: prof },
       ),
       { fill: H.body },
-    );
+    ));
     const crease: Style = {
       stroke: "#2b2f48",
       weight: 2,
@@ -1531,40 +1585,41 @@ function drawNeckAndHead(v: View): void {
     for (let i = 0; i < front.length - 1; i += 1) {
       const [ax, ay] = front[i] ?? [0, 0];
       const [bx, by] = front[i + 1] ?? [0, 0];
-      v.line(
+      parts.push(v.line(
         ax + (bx - ax) * 0.2,
         ay + (by - ay) * 0.2,
         ax + (bx - ax) * 0.65,
         ay + (by - ay) * 0.65,
         crease,
-      );
+      ));
     }
-  });
-  litShape(v, HEAD_SHAPE, H.body, () => {
-    v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
-  });
-  v.polygon(
+    return parts;
+  })()));
+  drawn.push(litShape(v, HEAD_SHAPE, H.body, () => {
+    return v.ellipse(HEAD.x + 6, HEAD.y + 6, 11, 4.5, { fill: H.belly });
+  }));
+  drawn.push(v.polygon(
     [
       [HEAD.x + 13, HEAD.y - 5],
       [HEAD.x + 46, HEAD.y + 7],
       [HEAD.x + 12, HEAD.y + 6],
     ],
     { fill: H.bill },
-  );
-  v.polygon(
+  ));
+  drawn.push(v.polygon(
     [
       [HEAD.x + 13, HEAD.y - 5],
       [HEAD.x + 46, HEAD.y + 7],
       [HEAD.x + 13, HEAD.y + 1],
     ],
     { fill: "#f6d27e" },
-  );
+  ));
   const line: Style = {
     stroke: H.ink,
     brush: "ink",
     gesture: { pressure: "taper-out", wobble: 0.5 },
   };
-  v.curve(
+  drawn.push(v.curve(
     [
       [HEAD.x + 8, HEAD.y - 9],
       [HEAD.x - 10, HEAD.y - 9],
@@ -1573,8 +1628,8 @@ function drawNeckAndHead(v: View): void {
     ],
     false,
     { ...line, weight: 5 },
-  );
-  v.curve(
+  ));
+  drawn.push(v.curve(
     [
       [HEAD.x - 4, HEAD.y - 6],
       [HEAD.x - 22, HEAD.y + 2],
@@ -1582,37 +1637,40 @@ function drawNeckAndHead(v: View): void {
     ],
     false,
     { ...line, weight: 3 },
-  );
+  ));
   const fine: Style = { ...line, gesture: { pressure: "taper", wobble: 0.5 } };
-  v.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6, {
+  drawn.push(v.line(HEAD.x + 14, HEAD.y + 1, HEAD.x + 42, HEAD.y + 6, {
     ...fine,
     weight: 1.6,
-  });
-  v.curve(
+  }));
+  drawn.push(v.curve(
     NECK.map(([x, y]): Vec2 => [x - 9, y]),
     false,
     { ...fine, weight: 2.2 },
-  );
-  v.curve(HEAD_SHAPE, true, { ...fine, weight: 2.2 });
-  v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" });
-  v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink });
+  ));
+  drawn.push(v.curve(HEAD_SHAPE, true, { ...fine, weight: 2.2 }));
+  drawn.push(v.circle(HEAD.x + 6, HEAD.y - 2, 3.5, { fill: "#fff2c8" }));
+  drawn.push(v.circle(HEAD.x + 7, HEAD.y - 2, 1.75, { fill: H.ink }));
+  return drawn;
 }
 
 /** An old bird's slow blink, twice a loop. */
-function drawBlink(v: View, f: number): void {
+function drawBlink(v: View, f: number): Drawing {
+  const out: Drawing[] = [];
   const t = f % (LOOP / 2);
-  if (t > 9) return;
+  if (t > 9) return out;
   const shut = Math.sin((t / 9) * Math.PI);
-  v.ellipse(HEAD.x + 6, HEAD.y - 2 - 3.5 * (1 - shut), 4.25, (7.5 * shut) / 2, {
+  out.push(v.ellipse(HEAD.x + 6, HEAD.y - 2 - 3.5 * (1 - shut), 4.25, (7.5 * shut) / 2, {
     fill: H.body,
-  });
-  v.line(
+  }));
+  out.push(v.line(
     HEAD.x + 2,
     HEAD.y - 2 + 3 * shut - 2,
     HEAD.x + 10,
     HEAD.y - 2 + 3 * shut - 2,
     { stroke: H.ink, weight: 1.2 },
-  );
+  ));
+  return out;
 }
 
 /** The scarf's band, its loose end lifting and rippling in the wind. */
@@ -1629,7 +1687,8 @@ function scarfBand(f: number, wind: number): Vec2[] {
   });
 }
 
-function drawScarf(v: View, f: number, wind: number): void {
+function drawScarf(v: View, f: number, wind: number): Drawing {
+  const out: Drawing[] = [];
   const band = scarfBand(f, wind);
   const shape = v.tube(band, {
     width: 14,
@@ -1639,28 +1698,30 @@ function drawScarf(v: View, f: number, wind: number): void {
       [1, 0.85],
     ],
   });
-  v.path(shape, { fill: H.scarf });
-  v.clip(shape, () => {
-    v.cache("scarf-knit", () => {
+  out.push(v.path(shape, { fill: H.scarf }));
+  out.push(v.clip(shape, [
+    v.place(v.picture({ key: "scarf-knit", width: v.width, height: v.height, paper: PAPER }, () => {
+      const drawn: Drawing[] = [];
       const knit: Style = {
         stroke: H.scarfDark,
         weight: 1.6,
         brush: { preset: "pencil", opacity: 0.9 },
         gesture: { pressure: "even", wobble: 0.3 },
       };
-      for (let x = -100; x < 64; x += 4.5) v.line(x, -205, x - 3, -132, knit);
-    });
+      for (let x = -100; x < 64; x += 4.5) drawn.push(v.line(x, -205, x - 3, -132, knit));
+      return drawn;
+    }), 0, 0),
     v.curve(
       band.map(([x, y]): Vec2 => [x - 2, y + 7]),
       false,
       { stroke: "rgba(126,31,44,0.55)", weight: 6 },
-    );
+    ),
     v.curve(
       band.slice(0, 4).map(([x, y]): Vec2 => [x + 2, y - 5]),
       false,
       { stroke: "rgba(255,154,122,0.45)", weight: 4 },
-    );
-  });
+    ),
+  ]));
   const end = band.at(-1) ?? [-66, -160];
   const prev = band.at(-2) ?? end;
   const ax = end[0] - prev[0];
@@ -1672,17 +1733,18 @@ function drawScarf(v: View, f: number, wind: number): void {
     const sx = end[0] - uy * (i - 1.5) * 4;
     const sy = end[1] + ux * (i - 1.5) * 4;
     const flick = Math.sin(phase(f, 3) + i) * (1 + wind * 3);
-    v.line(sx, sy, sx + ux * 13 - uy * flick, sy + uy * 13 + ux * flick, {
+    out.push(v.line(sx, sy, sx + ux * 13 - uy * flick, sy + uy * 13 + ux * flick, {
       stroke: H.scarf,
       weight: 2.4,
-    });
+    }));
   }
-  v.path(shape, {
+  out.push(v.path(shape, {
     stroke: H.ink,
     weight: 1.8,
     brush: "ink",
     gesture: { pressure: "taper", wobble: 0.5, seed: 5 },
-  });
+  }));
+  return out;
 }
 
 /** The pole's tip: at the lamp, or (`done` → 1) drawn back through the grip and lowered a little. */
@@ -1696,14 +1758,14 @@ function tip(done: number): Vec2 {
   return [GRIP[0] + Math.cos(a) * len, GRIP[1] + Math.sin(a) * len];
 }
 
-function drawPole(v: View, done: number): void {
+function drawPole(v: View, done: number): Drawing {
   const [tx, ty] = tip(done);
   const dx = tx - GRIP[0];
   const dy = ty - GRIP[1];
   const len = Math.hypot(dx, dy);
   // The pole's full length is fixed; what is drawn back through the grip goes behind the body.
   const back = (180 - len) / len;
-  v.line(GRIP[0] - dx * back, GRIP[1] - dy * back, tx, ty, {
+  return v.line(GRIP[0] - dx * back, GRIP[1] - dy * back, tx, ty, {
     stroke: H.pole,
     weight: 3.6,
     brush: "ink",
@@ -1717,27 +1779,30 @@ function drawFlame(
   f: number,
   lamp: { bloom: number; done: number },
   wind: number,
-): void {
+): Drawing {
   const [tx, ty] = tip(lamp.done);
   const lean = -wind * 3;
   const lick = Math.sin(phase(f, 9)) * 0.8 + Math.sin(phase(f, 13) + 2) * 0.5;
   const size = 1 - lamp.bloom * 0.45;
-  v.circle(tx, ty - 4, (36 * size) / 2, {
-    fill: v.radialGradient(tx, ty - 4, 18 * size, [
-      [0, "rgba(255,240,180,0.95)"],
-      [1, "rgba(255,160,80,0)"],
-    ]),
-  });
-  v.ellipse(
-    tx + lick * 0.6 + lean,
-    ty - 6 - Math.abs(lick) * 0.5,
-    (5 * size) / 2,
-    ((11 + lick) * size) / 2,
-    { fill: "#fff3c0" },
-  );
+  return [
+    v.circle(tx, ty - 4, (36 * size) / 2, {
+      fill: v.radialGradient(tx, ty - 4, 18 * size, [
+        [0, "rgba(255,240,180,0.95)"],
+        [1, "rgba(255,160,80,0)"],
+      ]),
+    }),
+    v.ellipse(
+      tx + lick * 0.6 + lean,
+      ty - 6 - Math.abs(lick) * 0.5,
+      (5 * size) / 2,
+      ((11 + lick) * size) / 2,
+      { fill: "#fff3c0" },
+    ),
+  ];
 }
 
-function drawGrip(v: View): void {
+function drawGrip(v: View): Drawing {
+  const out: Drawing[] = [];
   const [gx, gy] = GRIP;
   const feathers: Vec2[][] = [
     [
@@ -1763,40 +1828,41 @@ function drawGrip(v: View): void {
     ],
   ];
   for (const fe of feathers) {
-    litShape(v, fe, H.wing);
-    v.curve(fe, true, {
+    out.push(litShape(v, fe, H.wing));
+    out.push(v.curve(fe, true, {
       stroke: H.ink,
       weight: 1.8,
       brush: "ink",
       gesture: { pressure: "taper", wobble: 0.3 },
-    });
+    }));
   }
+  return out;
 }
 
-function drawShadow(v: View): void {
+function drawShadow(v: View): Drawing {
   const deck: Vec2[] = [
     [180, deckTop(180)],
     [740, deckTop(740)],
     [740, deckFront(740)],
     [180, deckFront(180)],
   ];
-  v.clip(deck, () => {
-    v.group({ opacity: 0.85, blend: "multiply" }, () => {
+  return v.clip(deck, [
+    v.group({ opacity: 0.85, blend: "multiply" }, [
       v.ellipse(FEET_X - 80, FEET_Y - 5, 105, 12, {
         fill: v.ellipseGradient(FEET_X - 80, FEET_Y - 5, 105, 12, [
           [0, "#5a3a58"],
           [0.55, "rgba(90,58,88,0.7)"],
           [1, "rgba(90,58,88,0)"],
         ]),
-      });
+      }),
       v.ellipse(FEET_X + 2, FEET_Y + 2, 27, 5, {
         fill: v.ellipseGradient(FEET_X + 2, FEET_Y + 2, 27, 5, [
           [0, "#3a2236"],
           [1, "rgba(58,34,54,0)"],
         ]),
-      });
-    });
-  });
+      }),
+    ]),
+  ]);
 }
 
 // ── Reeds ────────────────────────────────────────────────────────────
@@ -1884,44 +1950,46 @@ function drawReeds(
   f: number,
   wind: number,
   stir: DeepReadonly<Model["stir"]>,
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   for (const reed of REEDS) {
     const pts = reedLine(reed, reedPush(reed, f, wind, stir));
     if (reed.cattail) {
-      v.curve(pts, false, { stroke: "#1a172d", weight: 3 });
+      out.push(v.curve(pts, false, { stroke: "#1a172d", weight: 3 }));
       const top = pts.at(-1) ?? [reed.x, 815 - reed.h];
       const below = pts.at(-2) ?? top;
       const along2 = (k: number): Vec2 => [
         top[0] + (below[0] - top[0]) * k,
         top[1] + (below[1] - top[1]) * k,
       ];
-      v.polygon(
+      out.push(v.polygon(
         leaf(
           [along2(0.04), along2(0.15), along2(0.27), along2(0.4)],
           11,
           (t) => 0.55 + 0.45 * Math.sin(t * Math.PI),
         ),
         { fill: "#4a2f2c" },
-      );
+      ));
       const lit = along2(0.2);
-      v.ellipse(lit[0] + 2 * reed.dir, lit[1], 2, 9, {
+      out.push(v.ellipse(lit[0] + 2 * reed.dir, lit[1], 2, 9, {
         fill: "rgba(196,122,94,0.7)",
-      });
+      }));
       continue;
     }
-    v.polygon(leaf(pts, reed.width, leafProfile), {
+    out.push(v.polygon(leaf(pts, reed.width, leafProfile), {
       fill: reed.dark ? "#1a172d" : "#2c2543",
-    });
+    }));
     // The leaf's lit side: a narrower leaf shifted toward the light, in place of the still's clipped wash.
-    v.polygon(
+    out.push(v.polygon(
       leaf(
         pts.map(([px, py]): Vec2 => [px - 2.5 * reed.dir, py]),
         reed.width * 0.35,
         leafProfile,
       ),
       { fill: "rgba(106,79,120,0.55)" },
-    );
+    ));
   }
+  return out;
 }
 
 /** The still's reed profile: full at the root, 0.7 at 60%, a point at the tip. */
@@ -1982,33 +2050,36 @@ function leaf(
 // ── Night, lights, small life ────────────────────────────────────────
 
 /** Deepening dusk: a cool veil over the whole page, heavier at the top. */
-function drawDusk(v: View, dusk: number): void {
-  if (dusk <= 0) return;
-  v.rect(0, 0, 800, 800, {
+function drawDusk(v: View, dusk: number): Drawing {
+  const out: Drawing[] = [];
+  if (dusk <= 0) return out;
+  out.push(v.rect(0, 0, 800, 800, {
     fill: v.linearGradient(0, 0, 0, 800, [
       [0, `rgba(14,16,48,${(0.55 * dusk).toFixed(3)})`],
       [0.6, `rgba(20,20,56,${(0.42 * dusk).toFixed(3)})`],
       [1, `rgba(12,12,36,${(0.5 * dusk).toFixed(3)})`],
     ]),
-  });
+  }));
+  return out;
 }
 
 /** Lit windows and lanterns, painted again over the veil so they hold their warmth; each breathes a little. */
-function drawLights(v: View, f: number, bloom: number, dusk: number): void {
+function drawLights(v: View, f: number, bloom: number, dusk: number): Drawing {
+  const out: Drawing[] = [];
   for (const [hi, h] of HOUSES.entries()) {
     for (const [wi, [wx, wy]] of windows(h).entries()) {
       const flick = 0.85 + 0.15 * Math.sin(phase(f, 3 + wi) + hi * 2);
       const a = (0.15 + dusk * 0.5) * flick;
-      v.circle(wx, wy + 8, 26, {
+      out.push(v.circle(wx, wy + 8, 26, {
         fill: v.radialGradient(wx, wy + 8, 26, [
           [0, `rgba(255,206,120,${a.toFixed(3)})`],
           [1, "rgba(255,206,120,0)"],
         ]),
-      });
+      }));
       if (dusk > 0) {
-        v.rect(wx - 7, wy, 14, 17, {
+        out.push(v.rect(wx - 7, wy, 14, 17, {
           fill: `rgba(255,214,130,${(dusk * 0.9).toFixed(3)})`,
-        });
+        }));
       }
     }
   }
@@ -2022,13 +2093,14 @@ function drawLights(v: View, f: number, bloom: number, dusk: number): void {
     const flick = 0.8 + 0.2 * Math.sin(phase(f, 5 + i) + i);
     const a = g * (0.25 + dusk * 0.55) * flick;
     const r = 40 * lamp.k;
-    v.circle(lamp.hx, lamp.hy + 28 * lamp.k, r, {
+    out.push(v.circle(lamp.hx, lamp.hy + 28 * lamp.k, r, {
       fill: v.radialGradient(lamp.hx, lamp.hy + 28 * lamp.k, r, [
         [0, `rgba(255,236,170,${a.toFixed(3)})`],
         [1, "rgba(255,210,130,0)"],
       ]),
-    });
+    }));
   }
+  return out;
 }
 
 interface Fly {
@@ -2055,25 +2127,28 @@ const FLIES: readonly Fly[] = (() => {
 })();
 
 /** Fireflies drifting over the reeds, each on a small looping path, each blinking in its own time. */
-function drawFireflies(v: View, f: number): void {
+function drawFireflies(v: View, f: number): Drawing {
+  const out: Drawing[] = [];
   for (const fl of FLIES) {
     const x = fl.x + Math.sin(phase(f, fl.a) + fl.shift) * fl.rx;
     const y = fl.y + Math.sin(phase(f, fl.b) + fl.shift * 2) * fl.ry;
     const on = Math.max(0, Math.sin(phase(f, 2) + fl.shift * 3)) ** 3;
     if (on < 0.05) continue;
-    v.circle(x, y, 9, {
+    out.push(v.circle(x, y, 9, {
       fill: v.radialGradient(x, y, 9, [
         [0, `rgba(230,255,150,${(0.6 * on).toFixed(3)})`],
         [1, "rgba(200,255,120,0)"],
       ]),
-    });
-    v.circle(x, y, 1.3, { fill: `rgba(250,255,210,${on.toFixed(3)})` });
+    }));
+    out.push(v.circle(x, y, 1.3, { fill: `rgba(250,255,210,${on.toFixed(3)})` }));
   }
+  return out;
 }
 
 /** Two moths that find the last lamp once it is lit. */
-function drawMoths(v: View, f: number, bloom: number): void {
-  if (bloom < 0.5) return;
+function drawMoths(v: View, f: number, bloom: number): Drawing {
+  const out: Drawing[] = [];
+  if (bloom < 0.5) return out;
   const arrive = smooth((bloom - 0.5) * 2);
   const [cx, cy] = LANTERN;
   const wing: Style = { fill: "rgba(255,240,214,0.9)" };
@@ -2084,29 +2159,27 @@ function drawMoths(v: View, f: number, bloom: number): void {
     const x = cx + Math.cos(ang) * (rad + far) + far * 0.6;
     const y = cy - 4 + Math.sin(ang) * rad * 0.7 - far * 0.4;
     const flap = Math.abs(Math.sin(phase(f, 24 + i * 6)));
-    v.ellipse(x - 2, y, 2, (2 + 4 * flap) / 2, wing);
-    v.ellipse(x + 2, y, 2, (2 + 4 * flap) / 2, wing);
+    out.push(v.ellipse(x - 2, y, 2, (2 + 4 * flap) / 2, wing));
+    out.push(v.ellipse(x + 2, y, 2, (2 + 4 * flap) / 2, wing));
   }
+  return out;
 }
 
 /** The page's text, set in the quiet sky. Its second line changes when the lamp is lit; a third comes with the boat. */
-function drawStory(v: View, model: DeepReadonly<Model>): void {
+function drawStory(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
   const bloom = lampBloom(model);
   // Plain text each frame: cheaper than a cached layer faded through a group.
-  drawLine(v, "At the very end of the pier,", 92, 1);
+  out.push(drawLine(v, "At the very end of the pier,", 92, 1));
   if (bloom < 1)
-    drawLine(v, "Old Pell reached up to the last lamp.", 126, 1 - bloom);
-  if (bloom > 0) drawLine(v, "Old Pell lit the last lamp of all.", 126, bloom);
+    out.push(drawLine(v, "Old Pell reached up to the last lamp.", 126, 1 - bloom));
+  if (bloom > 0) out.push(drawLine(v, "Old Pell lit the last lamp of all.", 126, bloom));
   const home = boatHome(model);
-  if (home > 0) drawLine(v, "And the last boat came home.", 160, home);
+  if (home > 0) out.push(drawLine(v, "And the last boat came home.", 160, home));
+  return out;
 }
 
-function drawLine(v: View, line: string, y: number, alpha: number): void {
-  const ctx = v.ctx;
-  ctx.save();
-  ctx.fillStyle = `rgba(252,240,214,${(0.92 * alpha).toFixed(3)})`;
-  ctx.font = "italic 25px Georgia";
-  ctx.textAlign = "right";
-  ctx.fillText(line, 756, y);
-  ctx.restore();
+function drawLine(v: View, line: string, y: number, alpha: number): Drawing {
+  // Port (scene core chunk 5): `ctx.fillText` became `v.text` on the baseline.
+  return v.text(line, { x: 756, y }, { size: 25, font: "Georgia", style: "italic", fill: `rgba(252,240,214,${(0.92 * alpha).toFixed(3)})`, align: "right", valign: "baseline" });
 }

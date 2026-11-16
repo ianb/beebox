@@ -14,15 +14,7 @@
 //     elements on the chart whose step goes against the usual trend.
 //
 // Data and sources: ./elements-tea.ts.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 import {
   bySymbol,
@@ -225,8 +217,8 @@ interface LabelArgs {
   valign?: "top" | "middle" | "bottom" | "baseline";
 }
 
-function label(c: Ctx, args: LabelArgs): void {
-  c.v.text(
+function label(c: Ctx, args: LabelArgs): Drawing {
+  return c.v.text(
     args.s,
     { x: args.x, y: args.y },
     {
@@ -239,35 +231,38 @@ function label(c: Ctx, args: LabelArgs): void {
   );
 }
 
-function drawHeader(c: Ctx): void {
+function drawHeader(c: Ctx): Drawing {
   const info = PROPERTIES[c.prop];
-  label(c, {
-    s: `Periodic trends: ${info.label.toLowerCase()}`,
-    x: 28,
-    y: 40,
-    size: 24,
-    bold: true,
-  });
-  label(c, { s: info.trend, x: 28, y: 66, size: 15, color: SOFT });
-  label(c, {
-    s: "Point at an element to read it; click to pin it.",
-    x: CANVAS_W - 40,
-    y: 40,
-    size: 12,
-    color: SOFT,
-    align: "right",
-  });
-  label(c, {
-    s: "Click a period or group number to chart that row or column.",
-    x: CANVAS_W - 40,
-    y: 58,
-    size: 12,
-    color: SOFT,
-    align: "right",
-  });
+  return [
+    label(c, {
+      s: `Periodic trends: ${info.label.toLowerCase()}`,
+      x: 28,
+      y: 40,
+      size: 24,
+      bold: true,
+    }),
+    label(c, { s: info.trend, x: 28, y: 66, size: 15, color: SOFT }),
+    label(c, {
+      s: "Point at an element to read it; click to pin it.",
+      x: CANVAS_W - 40,
+      y: 40,
+      size: 12,
+      color: SOFT,
+      align: "right",
+    }),
+    label(c, {
+      s: "Click a period or group number to chart that row or column.",
+      x: CANVAS_W - 40,
+      y: 58,
+      size: 12,
+      color: SOFT,
+      align: "right",
+    }),
+  ];
 }
 
-function drawCell(c: Ctx, e: Element): void {
+function drawCell(c: Ctx, e: Element): Drawing {
+  const out: Drawing[] = [];
   const { v } = c;
   const b = cellBox(e);
   const val = valueOf(e, c.prop);
@@ -276,22 +271,22 @@ function drawCell(c: Ctx, e: Element): void {
     c.model.line.kind === "period"
       ? e.period === c.model.line.n
       : e.group === c.model.line.n;
-  v.rect(b.x, b.y, b.w, b.h, { fill: val === null ? MISSING : rampColor(t) });
+  out.push(v.rect(b.x, b.y, b.w, b.h, { fill: val === null ? MISSING : rampColor(t) }));
   if (inLine)
-    v.rect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5, {
+    out.push(v.rect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5, {
       stroke: LINE_INK,
       weight: 1.5,
-    });
+    }));
   const textColor = t > 0.55 ? "#ffffff" : INK;
-  label(c, {
+  out.push(label(c, {
     s: String(e.z),
     x: b.x + 4,
     y: b.y + 3,
     size: 9,
     color: textColor,
     valign: "top",
-  });
-  label(c, {
+  }));
+  out.push(label(c, {
     s: e.sym,
     x: b.x + b.w / 2,
     y: b.y + b.h / 2 - (c.p["show values"] || val === null ? 3 : 1),
@@ -300,11 +295,11 @@ function drawCell(c: Ctx, e: Element): void {
     bold: true,
     align: "center",
     valign: "middle",
-  });
+  }));
   if (c.p["show values"] || val === null) {
     const s =
       val === null ? "no value" : val.toFixed(PROPERTIES[c.prop].digits);
-    label(c, {
+    out.push(label(c, {
       s,
       x: b.x + b.w / 2,
       y: b.y + b.h - 9,
@@ -312,25 +307,27 @@ function drawCell(c: Ctx, e: Element): void {
       color: val === null ? SOFT : textColor,
       align: "center",
       valign: "middle",
-    });
+    }));
   }
   if (c.odd.includes(e.sym))
-    v.circle(b.x + b.w - 8, b.y + 8, 4, { fill: ACCENT });
-  v.debugBox(e.sym, b.x, b.y, b.w, b.h);
+    out.push(v.circle(b.x + b.w - 8, b.y + 8, 4, { fill: ACCENT }));
+  out.push(v.debugBox(e.sym, b.x, b.y, b.w, b.h));
+  return out;
 }
 
-function drawFocusRing(c: Ctx, b: Box): void {
-  c.v.rect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, { stroke: ACCENT, weight: 3 });
+function drawFocusRing(c: Ctx, b: Box): Drawing {
+  return c.v.rect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, { stroke: ACCENT, weight: 3 });
 }
 
-function drawTable(c: Ctx): void {
+function drawTable(c: Ctx): Drawing {
+  const out: Drawing[] = [];
   const { v, model } = c;
   // Placeholder for the transition metals.
   const g = gapBox();
-  v.rect(g.x, g.y, g.w, g.h, { fill: "#f5f5f4" });
-  v.at(
+  out.push(v.rect(g.x, g.y, g.w, g.h, { fill: "#f5f5f4" }));
+  out.push(v.at(
     { translate: [g.x + g.w / 2, g.y + g.h / 2], rotate: -Math.PI / 2 },
-    () => {
+    [
       label(c, {
         s: "groups 3–12 (not shown)",
         x: 0,
@@ -339,18 +336,18 @@ function drawTable(c: Ctx): void {
         color: "#a8a29e",
         align: "center",
         valign: "middle",
-      });
-    },
-  );
+      }),
+    ],
+  ));
 
-  for (const e of ELEMENTS) drawCell(c, e);
+  for (const e of ELEMENTS) out.push(drawCell(c, e));
 
   // Clickable headers: the chosen line's header is drawn as a filled tab.
   for (const grp of GROUPS) {
     const b = groupHeaderBox(grp);
     const on = model.line.kind === "group" && model.line.n === grp;
-    if (on) v.rect(b.x, b.y, b.w, b.h - 2, { fill: LINE_INK });
-    label(c, {
+    if (on) out.push(v.rect(b.x, b.y, b.w, b.h - 2, { fill: LINE_INK }));
+    out.push(label(c, {
       s: String(grp),
       x: b.x + b.w / 2,
       y: b.y + b.h / 2 - 1,
@@ -359,14 +356,14 @@ function drawTable(c: Ctx): void {
       bold: on,
       align: "center",
       valign: "middle",
-    });
-    v.debugBox(`g${grp}`, b.x, b.y, b.w, b.h);
+    }));
+    out.push(v.debugBox(`g${grp}`, b.x, b.y, b.w, b.h));
   }
   for (const per of PERIODS) {
     const b = periodLabelBox(per);
     const on = model.line.kind === "period" && model.line.n === per;
-    if (on) v.rect(b.x, b.y, b.w - 2, b.h, { fill: LINE_INK });
-    label(c, {
+    if (on) out.push(v.rect(b.x, b.y, b.w - 2, b.h, { fill: LINE_INK }));
+    out.push(label(c, {
       s: String(per),
       x: b.x + b.w / 2 - 1,
       y: b.y + b.h / 2,
@@ -375,22 +372,22 @@ function drawTable(c: Ctx): void {
       bold: on,
       align: "center",
       valign: "middle",
-    });
-    v.debugBox(`p${per}`, b.x, b.y, b.w, b.h);
+    }));
+    out.push(v.debugBox(`p${per}`, b.x, b.y, b.w, b.h));
   }
-  label(c, {
+  out.push(label(c, {
     s: "group",
     x: groupHeaderBox(1).x,
     y: TABLE_Y - 32,
     size: 11,
     color: SOFT,
-  });
-  v.at(
+  }));
+  out.push(v.at(
     {
       translate: [periodLabelBox(1).x - 6, TABLE_Y + 30],
       rotate: -Math.PI / 2,
     },
-    () => {
+    [
       label(c, {
         s: "period",
         x: 0,
@@ -399,14 +396,16 @@ function drawTable(c: Ctx): void {
         color: SOFT,
         align: "center",
         valign: "middle",
-      });
-    },
-  );
+      }),
+    ],
+  ));
 
-  if (c.focus !== undefined) drawFocusRing(c, cellBox(c.focus));
+  if (c.focus !== undefined) out.push(drawFocusRing(c, cellBox(c.focus)));
+  return out;
 }
 
-function drawLegend(c: Ctx): void {
+function drawLegend(c: Ctx): Drawing {
+  const out: Drawing[] = [];
   const { v } = c;
   const x = periodLabelBox(1).x + 30;
   const y = tableBottom() + 26;
@@ -414,20 +413,20 @@ function drawLegend(c: Ctx): void {
   const h = 12;
   const steps = 60;
   for (let i = 0; i < steps; i++) {
-    v.rect(x + (i * w) / steps, y, w / steps + 0.5, h, {
+    out.push(v.rect(x + (i * w) / steps, y, w / steps + 0.5, h, {
       fill: rampColor(i / (steps - 1)),
-    });
+    }));
   }
   const info = PROPERTIES[c.prop];
-  label(c, {
+  out.push(label(c, {
     s: `${c.range.min.toFixed(info.digits)} (lowest)`,
     x,
     y: y + h + 4,
     size: 11,
     color: SOFT,
     valign: "top",
-  });
-  label(c, {
+  }));
+  out.push(label(c, {
     s: `${c.range.max.toFixed(info.digits)} (highest)`,
     x: x + w,
     y: y + h + 4,
@@ -435,8 +434,8 @@ function drawLegend(c: Ctx): void {
     color: SOFT,
     align: "right",
     valign: "top",
-  });
-  label(c, {
+  }));
+  out.push(label(c, {
     s: info.unit === "" ? info.label : `${info.label} (${info.unit})`,
     x: x + w / 2,
     y: y + h + 4,
@@ -444,14 +443,15 @@ function drawLegend(c: Ctx): void {
     color: SOFT,
     align: "center",
     valign: "top",
-  });
+  }));
   if (c.focus !== undefined) {
     const val = valueOf(c.focus, c.prop);
     if (val !== null) {
       const mx = x + shade(val, c.range) * w;
-      v.triangle(mx, y - 1, mx - 5, y - 9, mx + 5, y - 9, { fill: ACCENT });
+      out.push(v.triangle(mx, y - 1, mx - 5, y - 9, mx + 5, y - 9, { fill: ACCENT }));
     }
   }
+  return out;
 }
 
 function asLine(l: DeepReadonly<Line>): Line {
@@ -497,7 +497,8 @@ function spread(ys: readonly number[], gap: number): number[] {
 }
 
 /** The faint comparison lines, each numbered at its right-hand end. */
-function drawOthers(c: Ctx, a: { line: Line; axis: Range }): void {
+function drawOthers(c: Ctx, a: { line: Line; axis: Range }): Drawing {
+  const out: Drawing[] = [];
   const { v, prop } = c;
   const others = (
     a.line.kind === "period"
@@ -507,9 +508,9 @@ function drawOthers(c: Ctx, a: { line: Line; axis: Range }): void {
   const ends: { n: number; x: number; y: number }[] = [];
   for (const o of others) {
     const pts = linePoints(o, prop, a.axis);
-    strokeRuns(v, pts, { stroke: FAINT, weight: 1.5 });
+    out.push(strokeRuns(v, pts, { stroke: FAINT, weight: 1.5 }));
     for (const pt of pts)
-      if (pt !== null) v.circle(pt.x, pt.y, 2, { fill: FAINT });
+      if (pt !== null) out.push(v.circle(pt.x, pt.y, 2, { fill: FAINT }));
     const last = pts.findLast((pt) => pt !== null);
     if (last !== undefined) ends.push({ n: o.n, x: last.x, y: last.y });
   }
@@ -518,34 +519,38 @@ function drawOthers(c: Ctx, a: { line: Line; axis: Range }): void {
     11,
   );
   for (const [i, e] of ends.entries())
-    label(c, {
+    out.push(label(c, {
       s: String(e.n),
       x: e.x + 12,
       y: ys[i] ?? e.y,
       size: 10,
       color: "#9ca3af",
       valign: "middle",
-    });
+    }));
+  return out;
 }
 
-function strokeRuns(v: View, pts: readonly (Pt | null)[], style: Style): void {
+function strokeRuns(v: View, pts: readonly (Pt | null)[], style: Style): Drawing {
+  const out: Drawing[] = [];
   let prev: Pt | null = null;
   for (const pt of pts) {
-    if (pt !== null && prev !== null) v.line(prev.x, prev.y, pt.x, pt.y, style);
+    if (pt !== null && prev !== null) out.push(v.line(prev.x, prev.y, pt.x, pt.y, style));
     prev = pt;
   }
+  return out;
 }
 
-function drawAxes(c: Ctx, axis: Range): void {
+function drawAxes(c: Ctx, axis: Range): Drawing {
+  const out: Drawing[] = [];
   const { v } = c;
   const info = PROPERTIES[c.prop];
   for (let t = axis.min; t <= axis.max + 1e-9; t += info.tick) {
     const y = chartY(t, axis);
-    v.line(CHART.x, y, CHART.x + CHART.w, y, {
+    out.push(v.line(CHART.x, y, CHART.x + CHART.w, y, {
       stroke: t === axis.min ? "#9ca3af" : "#eceef1",
       weight: 1,
-    });
-    label(c, {
+    }));
+    out.push(label(c, {
       s: t.toFixed(info.tick < 1 ? 1 : 0),
       x: CHART.x - 8,
       y,
@@ -553,11 +558,11 @@ function drawAxes(c: Ctx, axis: Range): void {
       color: SOFT,
       align: "right",
       valign: "middle",
-    });
+    }));
   }
-  v.at(
+  out.push(v.at(
     { translate: [CHART.x - 46, CHART.y + CHART.h / 2], rotate: -Math.PI / 2 },
-    () => {
+    [
       label(c, {
         s: info.unit === "" ? info.label : `${info.label} (${info.unit})`,
         x: 0,
@@ -566,57 +571,59 @@ function drawAxes(c: Ctx, axis: Range): void {
         color: SOFT,
         align: "center",
         valign: "middle",
-      });
-    },
-  );
+      }),
+    ],
+  ));
+  return out;
 }
 
-function drawChart(c: Ctx): void {
+function drawChart(c: Ctx): Drawing {
+  const out: Drawing[] = [];
   const { v, model, prop } = c;
   const info = PROPERTIES[prop];
   const axis = { min: info.min, max: info.max };
   const line = asLine(model.line);
 
-  label(c, {
+  out.push(label(c, {
     s: `${info.label}: ${lineTitle(line).toLowerCase()}`,
     x: CHART.x - 46,
     y: CHART.y - 34,
     size: 16,
     bold: true,
-  });
-  drawAxes(c, axis);
+  }));
+  out.push(drawAxes(c, axis));
 
   const kind = line.kind === "period" ? "periods" : "groups";
-  label(c, {
+  out.push(label(c, {
     s: `Grey lines: the other ${kind}, numbered at their right-hand end.`,
     x: CHART.x - 46,
     y: CHART.y - 14,
     size: 11,
     color: SOFT,
-  });
-  drawOthers(c, { line, axis });
+  }));
+  out.push(drawOthers(c, { line, axis }));
 
   const pts = linePoints(line, prop, axis);
-  strokeRuns(v, pts, { stroke: LINE_INK, weight: 2.5 });
+  out.push(strokeRuns(v, pts, { stroke: LINE_INK, weight: 2.5 }));
 
   const { odd } = c;
   for (const pt of pts) {
     if (pt === null) continue;
     const val = valueOf(pt.e, prop) ?? 0;
-    v.circle(pt.x, pt.y, 5.5, {
+    out.push(v.circle(pt.x, pt.y, 5.5, {
       fill: rampColor(shade(val, c.range)),
       stroke: LINE_INK,
       weight: 1.5,
-    });
+    }));
     if (odd.includes(pt.e.sym))
-      v.circle(pt.x, pt.y, 11, { stroke: ACCENT, weight: 2 });
+      out.push(v.circle(pt.x, pt.y, 11, { stroke: ACCENT, weight: 2 }));
   }
 
   // x-axis labels: the element symbols, with a dash where there is no value.
   for (const e of lineMembers(line)) {
     const x = chartX(line, e);
     const focused = c.focus?.sym === e.sym;
-    label(c, {
+    out.push(label(c, {
       s: e.sym,
       x,
       y: CHART.y + CHART.h + 8,
@@ -625,9 +632,9 @@ function drawChart(c: Ctx): void {
       bold: true,
       align: "center",
       valign: "top",
-    });
+    }));
     if (valueOf(e, prop) === null)
-      label(c, {
+      out.push(label(c, {
         s: "no value",
         x,
         y: CHART.y + CHART.h - 18,
@@ -635,13 +642,13 @@ function drawChart(c: Ctx): void {
         color: SOFT,
         align: "center",
         valign: "top",
-      });
+      }));
   }
   const axisNote =
     line.kind === "period"
       ? "group 1 → 18 (left to right)"
       : "period 1 → 6 (top to bottom)";
-  label(c, {
+  out.push(label(c, {
     s: axisNote,
     x: CHART.x + CHART.w / 2,
     y: CHART.y + CHART.h + 28,
@@ -649,28 +656,30 @@ function drawChart(c: Ctx): void {
     color: SOFT,
     align: "center",
     valign: "top",
-  });
+  }));
 
-  if (c.focus !== undefined) drawChartFocus(c, { line, axis, odd });
+  if (c.focus !== undefined) out.push(drawChartFocus(c, { line, axis, odd }));
+  return out;
 }
 
 function drawChartFocus(
   c: Ctx,
   a: { line: Line; axis: Range; odd: readonly string[] },
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const { v, prop } = c;
   const e = c.focus;
-  if (e === undefined) return;
+  if (e === undefined) return out;
   const inLine = lineMembers(a.line).some((m) => m.sym === e.sym);
   const val = valueOf(e, prop);
-  if (!inLine || val === null) return;
+  if (!inLine || val === null) return out;
   const x = chartX(a.line, e);
   const y = chartY(val, a.axis);
-  v.line(x, y + 8, x, CHART.y + CHART.h, { stroke: ACCENT, weight: 1 });
-  v.circle(x, y, 7, { fill: ACCENT });
+  out.push(v.line(x, y + 8, x, CHART.y + CHART.h, { stroke: ACCENT, weight: 1 }));
+  out.push(v.circle(x, y, 7, { fill: ACCENT }));
   // Near the top of the plot the label goes beside the point, clear of the caption above.
   const nearTop = y < CHART.y + 24;
-  label(c, {
+  out.push(label(c, {
     s: formatValue(val, prop),
     x: nearTop ? x - 14 : x,
     y: nearTop ? y : y - 12,
@@ -679,7 +688,8 @@ function drawChartFocus(
     bold: true,
     align: nearTop ? "right" : "center",
     valign: nearTop ? "middle" : "bottom",
-  });
+  }));
+  return out;
 }
 
 /** Wrap `s` into lines of at most `chars` characters. */
@@ -698,39 +708,41 @@ function wrap(s: string, chars: number): string[] {
   return lines;
 }
 
-function drawInfo(c: Ctx): void {
+function drawInfo(c: Ctx): Drawing {
+  const out: Drawing[] = [];
   const { prop } = c;
   const x = 28;
   const y = tableBottom() + 82;
   const e = c.focus;
   if (e === undefined) {
-    label(c, {
+    out.push(label(c, {
       s: "Point at an element to see its name and value here.",
       x,
       y,
       size: 14,
       color: SOFT,
-    });
-    return;
+    }));
+    return out;
   }
-  label(c, { s: `${e.name} (${e.sym})`, x, y, size: 20, bold: true });
-  label(c, {
+  out.push(label(c, { s: `${e.name} (${e.sym})`, x, y, size: 20, bold: true }));
+  out.push(label(c, {
     s: `atomic number ${e.z} · period ${e.period} · group ${e.group}`,
     x,
     y: y + 22,
     size: 13,
     color: SOFT,
-  });
-  label(c, {
+  }));
+  out.push(label(c, {
     s: `${PROPERTIES[prop].label}: ${formatValue(valueOf(e, prop), prop)}`,
     x,
     y: y + 48,
     size: 16,
     color: ACCENT,
     bold: true,
-  });
+  }));
   const note = rankNote(e, prop);
-  if (note !== "") label(c, { s: note, x, y: y + 70, size: 13, color: INK });
+  if (note !== "") out.push(label(c, { s: note, x, y: y + 70, size: 13, color: INK }));
+  return out;
 }
 
 function ordinal(n: number): string {
@@ -755,13 +767,14 @@ function rankNote(e: Element, prop: PropertyId): string {
   return `${place} of the ${vals.length} elements with a value here.`;
 }
 
-function drawExplain(c: Ctx): void {
+function drawExplain(c: Ctx): Drawing {
+  const out: Drawing[] = [];
   const info = PROPERTIES[c.prop];
   const line = asLine(c.model.line);
   let y = CHART.y + CHART.h + 64;
   const x = CHART.x - 46;
   for (const s of wrap(info.why, 52)) {
-    label(c, { s, x, y, size: 13, color: INK });
+    out.push(label(c, { s, x, y, size: 13, color: INK }));
     y += 18;
   }
   if (c.p["mark exceptions"]) {
@@ -772,18 +785,19 @@ function drawExplain(c: Ctx): void {
         : `Against the trend here: ${odd.map((e) => e.sym).join(", ")} (circled on the chart, dotted in the table).`;
     y += 6;
     for (const part of wrap(s, 48)) {
-      label(c, { s: part, x, y, size: 13, color: ACCENT, bold: true });
+      out.push(label(c, { s: part, x, y, size: 13, color: ACCENT, bold: true }));
       y += 18;
     }
   }
+  return out;
 }
 
-function drawSource(c: Ctx): void {
+function drawSource(c: Ctx): Drawing {
   const s = `Data: ${PROPERTIES[c.prop].source}. Main-group elements, periods 1–6.`;
-  label(c, { s, x: 28, y: CANVAS_H - 16, size: 11, color: SOFT });
+  return label(c, { s, x: 28, y: CANVAS_H - 16, size: 11, color: SOFT });
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
   const prop = p.property;
   const sym = model.hover ?? model.selected;
   const odd = p["mark exceptions"]
@@ -799,12 +813,14 @@ export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
     odd,
   };
   v.cursor(model.hover === null ? "default" : "pointer");
-  v.background(PAPER);
-  drawHeader(c);
-  drawTable(c);
-  drawLegend(c);
-  drawChart(c);
-  drawInfo(c);
-  drawExplain(c);
-  drawSource(c);
+  return [
+    v.background(PAPER),
+    drawHeader(c),
+    drawTable(c),
+    drawLegend(c),
+    drawChart(c),
+    drawInfo(c),
+    drawExplain(c),
+    drawSource(c),
+  ];
 }

@@ -9,7 +9,7 @@
 #   deploy/server-bin/bbx-host-apt.smoke.sh [ubuntu|debian]...   (default: both)
 #
 # ubuntu = ubuntu:24.04 with the cloud-init.yaml package list (production).
-# debian = debian:bookworm-slim with the docker/Dockerfile runtime list.
+# debian = debian:trixie-slim with the docker/Dockerfile runtime list.
 # Needs Docker and network access; not part of the per-commit suite. Run it
 # whenever bbx-host-apt changes.
 set -euo pipefail
@@ -27,7 +27,7 @@ build_image() {
       packages="systemd dbus sudo git git-lfs git-annex curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg dpkg-dev"
       ;;
     debian)
-      base=debian:bookworm-slim
+      base=debian:trixie-slim
       # docker/Dockerfile runtime stage, including its server-baseline packages.
       packages="sudo systemd dbus procps pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv git git-lfs git-annex curl ca-certificates dpkg-dev"
       ;;

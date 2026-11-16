@@ -40,8 +40,14 @@ export function zoomLabel(zoom: Zoom): string {
   return `${zoom.x},${zoom.y} ${zoom.w}×${zoom.h} ×${zoom.scale}`;
 }
 
-/** Encode the zoomed crop of `pixels` as a PNG (regions past the edge are transparent). */
-export function encodeZoomPng(pixels: Pixels, zoom: Zoom): Buffer {
+/**
+ * Encode the zoomed crop of `pixels` as a PNG (regions past the edge are
+ * transparent). `zoom` is in canvas pixels; `ratio` is device pixels per
+ * canvas pixel in `pixels` (the scene renderer's `--ratio`), so the crop reads
+ * the same region at any ratio and keeps its size of `w×h` at `scale`.
+ */
+export function encodeZoomPng(pixels: Pixels, crop: { zoom: Zoom; ratio: number }): Buffer {
+  const { zoom, ratio } = crop;
   const source = new Canvas(pixels.width, pixels.height);
   const sctx = source.getContext("2d");
   const image = sctx.createImageData(pixels.width, pixels.height);
@@ -50,7 +56,7 @@ export function encodeZoomPng(pixels: Pixels, zoom: Zoom): Buffer {
   const out = new Canvas(Math.round(zoom.w * zoom.scale), Math.round(zoom.h * zoom.scale));
   const ctx = out.getContext("2d");
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(source, zoom.x, zoom.y, zoom.w, zoom.h, 0, 0, out.width, out.height);
+  ctx.drawImage(source, zoom.x * ratio, zoom.y * ratio, zoom.w * ratio, zoom.h * ratio, 0, 0, out.width, out.height);
   return out.toBuffer("image/png");
 }
 

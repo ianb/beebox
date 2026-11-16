@@ -1,102 +1,14 @@
-// Hardening tests for the browser figure runtime, against a minimal fake DOM
-// (same honest-fake approach as mount.test.ts; node --test isolates each file's
-// globals). Covers: the loop's frame-throw guard + `onError` channel, and the
-// single param-validation choke points (initial overrides via `sanitizeInitialParams`,
-// live changes via `Runtime.setParam`).
+// Hardening tests for the browser figure runtime, against the shared fake DOM
+// and a stand-in GPU device (test/browser/fake-dom.ts; node --test isolates each
+// file's globals). Covers: the loop's frame-throw guard + `onError` channel, and
+// the single param-validation choke points (initial overrides via
+// `sanitizeInitialParams`, live changes via `Runtime.setParam`).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attachSketch, mountSketch, sanitizeInitialParams } from "@ianbicking/canvas-loop/browser";
-import type { ParamsDecl } from "@ianbicking/canvas-loop";
 import { recorderJson } from "../../src/react/SketchFigure/figure-internals.js";
 import { asPlaygroundModule, type PlaygroundModule } from "../../src/browser/sketch-types.js";
-
-// ── minimal fake DOM (only what attachSketch/mountSketch touch) ───────
-
-const rafState: { next: number; pending: Map<number, (now: number) => void> } = { next: 1, pending: new Map() };
-
-Object.assign(globalThis, {
-  requestAnimationFrame: (cb: (now: number) => void): number => {
-    rafState.pending.set(rafState.next, cb);
-    return rafState.next++;
-  },
-  cancelAnimationFrame: (id: number): void => {
-    rafState.pending.delete(id);
-  },
-  document: { createElement: () => new FakeCanvas() },
-});
-
-class FakeCanvas {
-  tagName = "canvas";
-  className = "";
-  width = 0;
-  height = 0;
-  tabIndex = -1;
-  textContent = "";
-  style: Record<string, string> = {};
-  children: unknown[] = [];
-  append(): void {
-    // no-op: these tests never inspect the mounted tree
-  }
-  remove(): void {
-    // no-op
-  }
-  addEventListener(): void {
-    // no-op
-  }
-  removeEventListener(): void {
-    // no-op
-  }
-  focus(): void {
-    // no-op
-  }
-  getBoundingClientRect(): { left: number; top: number; width: number; height: number } {
-    return { left: 0, top: 0, width: this.width, height: this.height };
-  }
-  getContext(kind: string): unknown {
-    if (kind !== "2d") return null;
-    const target: Record<PropertyKey, unknown> = {};
-    return new Proxy(target, { get: (t, prop) => (prop in t ? t[prop] : () => null) });
-  }
-}
-
-function asCanvas(el: FakeCanvas): HTMLCanvasElement {
-  // eslint-disable-next-line no-restricted-syntax -- test boundary: the fake stands in for the canvas attachSketch duck-types against
-  return el as unknown as HTMLCanvasElement;
-}
-function asHost(el: FakeCanvas): HTMLElement {
-  // eslint-disable-next-line no-restricted-syntax -- test boundary: the fake stands in for the host element mountSketch duck-types against
-  return el as unknown as HTMLElement;
-}
-
-function runFrames(times: number): void {
-  let now = 0;
-  for (let i = 0; i < times; i += 1) {
-    now += 17;
-    for (const [id, cb] of [...rafState.pending.entries()]) {
-      rafState.pending.delete(id);
-      cb(now);
-    }
-  }
-}
-
-function captureWarnings(fn: () => void): string[] {
-  const warnings: string[] = [];
-  const original = console.warn;
-  console.warn = (...args: unknown[]) => {
-    warnings.push(args.map(String).join(" "));
-  };
-  try {
-    fn();
-  } finally {
-    console.warn = original;
-  }
-  return warnings;
-}
-
-const decl = {
-  speed: { type: "number", min: 0, max: 5, default: 1 },
-  glow: { type: "boolean", default: true },
-} as const satisfies ParamsDecl;
+import { FakeElement, asHTMLCanvas, asHTMLElement, captureWarningsAsync, captureWarnings, decl, fakeGpu, rafState, runFrames, settle } from "../fake-dom.js";
 
 function makeModule(update?: () => unknown): PlaygroundModule {
   return asPlaygroundModule({
@@ -104,15 +16,13 @@ function makeModule(update?: () => unknown): PlaygroundModule {
     canvas: { width: 40, height: 30 },
     init: () => ({ t: 0 }),
     update: update ?? ((model: unknown) => model),
-    draw: () => {
-      // no-op
-    },
+    draw: () => null,
   });
 }
 
 // ── finding 2: a throwing frame stops the loop, reports once ──────────
 
-test("a throwing frame stops the loop and reports the error exactly once via onError", () => {
+test("a throwing frame stops the loop and reports the error exactly once via onError", async () => {
   const boom = { marker: "boom" };
   // Paramless so mountSketch renders no panel (keeping the fake DOM minimal)
   // while still exercising mountSketch's onError forward → attachSketch → Runtime.
@@ -123,12 +33,11 @@ test("a throwing frame stops the loop and reports the error exactly once via onE
     update: () => {
       throw boom;
     },
-    draw: () => {
-      // no-op
-    },
+    draw: () => null,
   };
   const errors: unknown[] = [];
-  const teardown = mountSketch(asHost(new FakeCanvas()), { module, onError: (e) => errors.push(e) });
+  const teardown = mountSketch(asHTMLElement(new FakeElement("div")), { module, gpu: fakeGpu(), onError: (e) => errors.push(e) });
+  await settle();
   // Frame 1 only sets the time baseline (dt=0, no fold); frame 2 folds the
   // throwing tick. Further frames must NOT re-throw or re-report.
   runFrames(4);
@@ -177,10 +86,10 @@ test("sanitizeInitialParams clamps an out-of-range number into [min, max] (warn 
 
 // ── finding 5: attachSketch + Runtime.setParam are the choke points ───
 
-test("attachSketch validates initialParams — the single point both figure surfaces share", () => {
+test("attachSketch validates initialParams — the single point both figure surfaces share", async () => {
   const module = makeModule();
-  const warnings = captureWarnings(() => {
-    const attached = attachSketch(asCanvas(new FakeCanvas()), {
+  const warnings = await captureWarningsAsync(async () => {
+    const attached = attachSketch(asHTMLCanvas(new FakeElement("canvas")), {
       module,
       seed: 1,
       paused: true,
@@ -188,25 +97,27 @@ test("attachSketch validates initialParams — the single point both figure surf
       onFrame: () => {
         // no-op
       },
+      gpu: fakeGpu(),
     });
-    attached?.teardown();
+    await attached.ready;
+    attached.teardown();
   });
   assert.equal(warnings.length, 1, "an unknown initial-param key warns — the React path no longer bypasses validation");
   assert.ok(warnings[0]?.includes('"bogus"'), "the unknown key is named");
 });
 
-test("Runtime.setParam validates every live change (unknown dropped, out-of-range clamped)", () => {
+test("Runtime.setParam validates every live change (unknown dropped, out-of-range clamped)", async () => {
   const module = makeModule();
-  const attached = attachSketch(asCanvas(new FakeCanvas()), {
+  const attached = attachSketch(asHTMLCanvas(new FakeElement("canvas")), {
     module,
     seed: 1,
     paused: true,
     onFrame: () => {
       // no-op
     },
+    gpu: fakeGpu(),
   });
-  assert.ok(attached !== null, "attachSketch created a runtime");
-  const rt = attached.runtime;
+  const rt = await attached.ready;
   const warnings = captureWarnings(() => {
     rt.setParam("bogus", 1); // unknown → dropped
     rt.setParam("speed", 999); // out of [0,5] → clamped to 5

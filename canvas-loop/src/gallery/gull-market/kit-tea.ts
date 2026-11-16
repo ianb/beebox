@@ -1,7 +1,7 @@
 // Shared painting helpers for the gull-market page: point utilities, the
 // palette, and a "paint a form" routine (flat base, light/shadow inside a
 // clip, a brushed outline last). Light comes from the sun, upper right.
-import type { BrushName, Style, Vec2, View } from "@ianbicking/canvas-loop";
+import type { BrushName, Drawing, Style, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const INK = "#2b2230";
 /** Unit vector toward the sun (upper right). */
@@ -62,44 +62,51 @@ function outlineOf(
   pts: readonly Vec2[],
   sharp: boolean,
   style: Style,
-): void {
-  if (sharp) v.polygon(pts, style);
-  else v.curve(pts, true, style);
+): Drawing {
+  const out: Drawing[] = [];
+  if (sharp) out.push(v.polygon(pts, style));
+  else out.push(v.curve(pts, true, style));
+  return out;
 }
 
 /**
  * Paint a closed form: flat base, a shade crescent on the side away from the
  * sun, an optional lit rim, a wash softening the terminator, and an ink line.
  */
-export function form(v: View, pts: readonly Vec2[], o: FormOptions): void {
+export function form(v: View, pts: readonly Vec2[], o: FormOptions): Drawing {
+  const out: Drawing[] = [];
   const sharp = o.sharp ?? false;
   const depth = o.depth ?? 10;
   const clipShape = sharp ? pts : v.curvePath(pts, true);
-  outlineOf(v, pts, sharp, { fill: o.base });
+  out.push(outlineOf(v, pts, sharp, { fill: o.base }));
   // Nested clips instead of group + erase: an erase inside a group under a
   // rotate only cleared a rectangle of the gull's body.
   const away = shift(pts, -LIGHT[0] * depth * 0.45, -LIGHT[1] * depth * 0.45);
-  const shadeAndBase = (): void => {
+  const shadeAndBase = (): Drawing => {
     // shade everywhere, then base over the shape shifted toward the sun,
     // which leaves a shade crescent on the side away from it
-    outlineOf(v, pts, sharp, { fill: o.shade });
-    outlineOf(v, shift(pts, LIGHT[0] * depth, LIGHT[1] * depth), sharp, {
-      fill: o.base,
-    });
+    return [
+      outlineOf(v, pts, sharp, { fill: o.shade }),
+      outlineOf(v, shift(pts, LIGHT[0] * depth, LIGHT[1] * depth), sharp, {
+        fill: o.base,
+      }),
+    ];
   };
   const { light } = o;
-  v.clip(clipShape, () => {
+  out.push(v.clip(clipShape, ((): Drawing => {
+    const drawn: Drawing[] = [];
     if (light === undefined) {
-      shadeAndBase();
-      return;
+      drawn.push(shadeAndBase());
+      return drawn;
     }
     // lit rim: light everywhere; the rest only inside the shape shifted away
-    outlineOf(v, pts, sharp, { fill: light });
-    v.clip(sharp ? away : v.curvePath(away, true), shadeAndBase);
-  });
-  if (o.strokes !== undefined) brushOver(v, pts, o);
+    drawn.push(outlineOf(v, pts, sharp, { fill: light }));
+    drawn.push(v.clip(sharp ? away : v.curvePath(away, true), shadeAndBase()));
+    return drawn;
+  })()));
+  if (o.strokes !== undefined) out.push(brushOver(v, pts, o));
   if (o.weight !== undefined && o.weight > 0) {
-    outlineOf(v, pts, sharp, {
+    out.push(outlineOf(v, pts, sharp, {
       stroke: o.line ?? INK,
       weight: o.weight,
       brush: "ink",
@@ -114,12 +121,13 @@ export function form(v: View, pts: readonly Vec2[], o: FormOptions): void {
         wobble: 0.6,
         seed: o.seed ?? 1,
       },
-    });
+    }));
   }
+  return out;
 }
 
 /** Loose bristle strokes across a form's bounding box, kept inside it. */
-function brushOver(v: View, pts: readonly Vec2[], o: FormOptions): void {
+function brushOver(v: View, pts: readonly Vec2[], o: FormOptions): Drawing {
   const xs = pts.map(([x]) => x);
   const ys = pts.map(([, y]) => y);
   const [x0, x1, y0, y1] = [
@@ -132,12 +140,13 @@ function brushOver(v: View, pts: readonly Vec2[], o: FormOptions): void {
   const weight = Math.max(8, Math.min(22, (y1 - y0) / 4));
   const rows = Math.ceil((y1 - y0) / (weight * 0.8)) + 1;
   const seed = o.seed ?? 1;
-  v.clip(o.sharp === true ? pts : v.curvePath(pts, true), () => {
+  return v.clip(o.sharp === true ? pts : v.curvePath(pts, true), ((): Drawing => {
+    const drawn: Drawing[] = [];
     for (let i = 0; i < rows; i += 1) {
       const y = y0 + i * weight * 0.8 + (hash(seed + i) - 0.5) * 4;
       const a = x0 - 12 + hash(seed + i * 3) * (x1 - x0) * 0.3;
       const b = x1 + 12 - hash(seed + i * 5) * (x1 - x0) * 0.3;
-      mark(
+      drawn.push(mark(
         v,
         [
           [a, y],
@@ -152,9 +161,10 @@ function brushOver(v: View, pts: readonly Vec2[], o: FormOptions): void {
           wobble: 1.5,
           seed: seed * 31 + i,
         },
-      );
+      ));
     }
-  });
+    return drawn;
+  })());
 }
 
 export interface MarkOptions {
@@ -168,7 +178,8 @@ export interface MarkOptions {
 }
 
 /** One brushed open stroke through `pts`. */
-export function mark(v: View, pts: readonly Vec2[], o: MarkOptions): void {
+export function mark(v: View, pts: readonly Vec2[], o: MarkOptions): Drawing {
+  const out: Drawing[] = [];
   const preset = o.brush ?? "ink";
   const style: Style = {
     stroke: o.color,
@@ -183,8 +194,9 @@ export function mark(v: View, pts: readonly Vec2[], o: MarkOptions): void {
   if (pts.length === 2) {
     const [a, b] = pts;
     if (a !== undefined && b !== undefined)
-      v.line(a[0], a[1], b[0], b[1], style);
-  } else v.curve(pts, false, style);
+      out.push(v.line(a[0], a[1], b[0], b[1], style));
+  } else out.push(v.curve(pts, false, style));
+  return out;
 }
 
 /** Small deterministic hash in 0..1 for scatter that must not depend on draw order. */

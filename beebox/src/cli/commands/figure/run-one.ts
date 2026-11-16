@@ -1,11 +1,12 @@
 /**
  * The child half of `bbx figure run`: import a compiled figure entry, run it
- * with canvas-loop's headless runner, and print one JSON result line. Runs in
+ * with canvas-loop's headless runner (`teaRun`: the scene renderer on Dawn),
+ * and print one JSON result line. Runs in
  * its own process so the parent can kill a sketch that never returns.
  */
 import { promises as fs } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { parseTeaEvents, teaRun, toTeaModule } from "@ianbicking/canvas-loop/headless";
+import { NoGpuAdapterError, parseTeaEvents, teaRun, toTeaModule } from "@ianbicking/canvas-loop/headless";
 import type { ParamsDecl } from "@ianbicking/canvas-loop";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { isRecord } from "../../../shared/is-record.js";
@@ -30,6 +31,17 @@ function initialParams(decl: ParamsDecl, job: FigureJob): Record<string, string 
     else out[name] = raw;
   }
   return out;
+}
+
+/**
+ * The error line for a run that threw. No GPU adapter is the host's problem,
+ * not the sketch's, so its text says to ask the boxholder.
+ */
+export function runErrorText(error: unknown): string {
+  if (error instanceof NoGpuAdapterError) {
+    return "no GPU adapter: Dawn found no GPU it can use here. Possible causes: no Vulkan driver is installed (on Linux, Mesa's mesa-vulkan-drivers), the driver does not load inside the box's sandbox, or the driver rejects this machine. Ask the boxholder; rewriting the sketch will not help.";
+  }
+  return errorMessage(error);
 }
 
 function isJob(value: unknown): value is FigureJob {
@@ -64,7 +76,7 @@ export async function runFigureOne(jobFile: string): Promise<void> {
     const events = parseTeaEvents(rawEvents, module.params);
     const last = Math.max(-1, ...events.map((event) => event.frame));
     const frames = job.frames ?? (events.length > 0 ? last + 1 + TAIL_FRAMES : DEFAULT_FRAMES);
-    const result = teaRun({
+    const result = await teaRun({
       module,
       sketchPath: job.sketchPath,
       outDir: job.outDir,
@@ -75,10 +87,13 @@ export async function runFigureOne(jobFile: string): Promise<void> {
       events,
       eventsPath: job.events,
       initialParams: initialParams(module.params, job),
+      scene: job.scene,
     });
     process.stdout.write(`${JSON.stringify({ transcript: result.transcriptPath, framesRun: result.framesRun, imageCount: result.imageCount, errors: result.errors })}\n`);
   } catch (error) {
-    errors.push(errorMessage(error));
-    process.stdout.write(`${JSON.stringify({ errors })}\n`);
+    errors.push(runErrorText(error));
+    // The runner wrote a transcript (its header and the failure line) before it threw.
+    const transcript = error instanceof NoGpuAdapterError ? error.transcriptPath : undefined;
+    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors })}\n`);
   }
 }

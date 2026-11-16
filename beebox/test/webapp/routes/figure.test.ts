@@ -11,6 +11,7 @@ import { makeTestServer, type TestServer } from "../../helpers/test-route-server
 import { writeFile, utimes, symlink, rm } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { realpathSync } from "node:fs";
+import { figureStarterSketch } from "../../../src/templates/builtins/starters.js";
 
 // A p5 figure sketch: native-style, imports nothing (the harness provides p5),
 // default-exports the (lib, mount, figure) => teardown factory.
@@ -36,8 +37,7 @@ export function update(model, msg, u) {
   return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
 }
 export function draw(v, model, p) {
-  v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
+  return [v.background("#0b0e17"), v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12, { fill: "#7dd3fc" })];
 }
 
 export default (cl, { mount, figure }) =>
@@ -134,8 +134,7 @@ function update(model, msg, u) {
   return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
 }
 function draw(v, model, p) {
-  v.background("#0b0e17");
-  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12);
+  return [v.background("#0b0e17"), v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 12, { fill: "#7dd3fc" })];
 }
 var sketch_default = (cl, { mount, figure }) => cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
 export {
@@ -354,4 +353,52 @@ export {
     contentType: "application/json; charset=utf-8",
     payload: "{\"error\":\"Attach scope has no owning card\"}",
   });
+});
+
+// ## A canvas-loop figure is type-checked first
+//
+// esbuild strips types, so the route checks a canvas-loop figure's entry
+// against canvas-loop's sketch contract before it compiles it, as `bbx figure
+// run` does (`core/figure-sketch-check.ts`). The starter passes. A type error
+// in a file the entry imports comes back through `figureError`, with the
+// helper's line. A call the scene API removed also sets `figureOutdated`,
+// which the card shows as "This figure is being updated". Figures in other
+// runtimes are not checked (the untyped sketches above compile).
+const CANVAS_LOOP_CARD = "---\nruntime: canvas-loop\nentry: attach/sketch.ts\n---\n";
+
+void test("A canvas-loop figure's entry is type-checked against the sketch contract before it compiles", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const seedFigure = async (name: string, source: string) => {
+    await ctx.seed(`_content/figures/${name}.figure.card`, CANVAS_LOOP_CARD);
+    await ctx.seed(`_content/figures/${name}.attach/sketch.ts`, source);
+    return page(await moduleFor(ctx, `_content/figures/${name}.attach/sketch.ts`));
+  };
+
+  const starter = await seedFigure("Starter", figureStarterSketch("canvas-loop"));
+  t.check({ statusCode: starter.statusCode, compiled: starter.payload.startsWith("// ") }, { statusCode: 200, compiled: true });
+
+  await ctx.seed("_content/figures/Helped.attach/radius.ts", "export function radius(): number {\n  const r: number = \"4\";\n  return r;\n}\n");
+  const helped = await seedFigure("Helped", figureStarterSketch("canvas-loop").replace("const orbit = 90;", "const orbit = radius();").replace("export const params", "import { radius } from \"./radius.js\";\n\nexport const params"));
+  t.check(helped, {
+    statusCode: 200,
+    contentType: "application/javascript",
+    payload: `export const figureError = ${JSON.stringify("_content/figures/Helped.attach/sketch.ts: the sketch does not type-check:\n_content/figures/Helped.attach/radius.ts:2:9 - error TS2322: Type 'string' is not assignable to type 'number'.")};\n`,
+  });
+
+  // Shared box code imported with `@/` resolves from the box root, as the bundler resolves it.
+  await ctx.seed("src/lib/orbit.ts", "export function orbitOf(n: number): number {\n  return 80 + n;\n}\n");
+  const shared = await seedFigure("Shared", figureStarterSketch("canvas-loop").replace("const orbit = 90;", "const orbit = orbitOf(10);").replace("export const params", "import { orbitOf } from \"@/src/lib/orbit\";\n\nexport const params"));
+  t.check({ statusCode: shared.statusCode, compiled: shared.payload.startsWith("// ") }, { statusCode: 200, compiled: true });
+
+  const cached = await seedFigure("Cached", figureStarterSketch("canvas-loop").replace("v.background(\"#0b0e17\"),", "v.background(\"#0b0e17\"),\n    v.cache(\"ring\", 10, 10, () => null),"));
+  t.check(cached.payload.split("\n").filter((line) => line.startsWith("export const figureOutdated")), [
+    `export const figureOutdated = ${JSON.stringify("v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y) (TEA.md, \"Pictures\")")};`,
+  ]);
 });

@@ -15,10 +15,12 @@ export interface ParamControlsProps {
   values: ParamValues<ParamsDecl>;
   onParam: (name: string, value: number | boolean | string) => void;
   onTrigger: (name: string) => void;
+  /** Every input disabled (the figure's runtime is not ready yet). */
+  disabled?: boolean;
 }
 
 /** A typed number field: keeps what the person typed, sends each valid entry, marks an invalid one. */
-function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   const [text, setText] = useState(String(model.value));
   const valid = parseField(text, model) !== undefined;
@@ -28,6 +30,7 @@ function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onP
       <input
         type="number"
         className="cl-field"
+        disabled={props.disabled}
         min={model.min}
         max={model.max}
         step={model.step}
@@ -50,7 +53,7 @@ function FieldRow(props: { model: Extract<ControlModel, { kind: "number" }>; onP
  * would undo keystrokes typed in between. A value that is not one of those
  * echoes came from elsewhere (a controlling host) and replaces the draft.
  */
-function TextRow(props: { model: Extract<ControlModel, { kind: "text" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+function TextRow(props: { model: Extract<ControlModel, { kind: "text" }>; onParam: ParamControlsProps["onParam"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   const [draft, setDraft] = useState(model.value);
   const [seen, setSeen] = useState(model.value);
@@ -66,7 +69,7 @@ function TextRow(props: { model: Extract<ControlModel, { kind: "text" }>; onPara
     setSent((before) => [...before, value]);
     props.onParam(model.name, value);
   };
-  const shared = { className: "cl-text", value: draft, placeholder: model.placeholder, maxLength: model.maxLength, spellCheck: false };
+  const shared = { className: "cl-text", value: draft, placeholder: model.placeholder, maxLength: model.maxLength, spellCheck: false, disabled: props.disabled };
   return (
     <label className="cl-param-row">
       <span className="cl-param-name">{model.label}</span>
@@ -80,15 +83,16 @@ function Hint(props: { hint: string | undefined }): JSX.Element | null {
   return props.hint === undefined ? null : <span className="cl-param-hint">{props.hint}</span>;
 }
 
-function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; onParam: ParamControlsProps["onParam"]; disabled: boolean }): JSX.Element {
   const { model } = props;
-  if (model.control === "field") return <FieldRow model={model} onParam={props.onParam} />;
+  if (model.control === "field") return <FieldRow model={model} onParam={props.onParam} disabled={props.disabled} />;
   return (
     <label className="cl-param-row">
       <span className="cl-param-name">{model.label}</span>
       <span className="cl-range-holder">
         <input
           type="range"
+          disabled={props.disabled}
           min={model.min}
           max={model.max}
           step={model.step}
@@ -102,23 +106,23 @@ function NumberRow(props: { model: Extract<ControlModel, { kind: "number" }>; on
   );
 }
 
-function BooleanRow(props: { model: Extract<ControlModel, { kind: "boolean" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+function BooleanRow(props: { model: Extract<ControlModel, { kind: "boolean" }>; onParam: ParamControlsProps["onParam"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   return (
     <label className="cl-param-row">
       <span className="cl-param-name">{model.label}</span>
-      <input type="checkbox" checked={model.value} onChange={(e) => props.onParam(model.name, e.target.checked)} />
+      <input type="checkbox" disabled={props.disabled} checked={model.value} onChange={(e) => props.onParam(model.name, e.target.checked)} />
       <Hint hint={model.hint} />
     </label>
   );
 }
 
-function SelectRow(props: { model: Extract<ControlModel, { kind: "select" }>; onParam: ParamControlsProps["onParam"] }): JSX.Element {
+function SelectRow(props: { model: Extract<ControlModel, { kind: "select" }>; onParam: ParamControlsProps["onParam"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   return (
     <label className="cl-param-row">
       <span className="cl-param-name">{model.label}</span>
-      <select value={model.value} onChange={(e) => props.onParam(model.name, e.target.value)}>
+      <select disabled={props.disabled} value={model.value} onChange={(e) => props.onParam(model.name, e.target.value)}>
         {model.options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -130,30 +134,30 @@ function SelectRow(props: { model: Extract<ControlModel, { kind: "select" }>; on
   );
 }
 
-function TriggerRow(props: { model: Extract<ControlModel, { kind: "trigger" }>; onTrigger: ParamControlsProps["onTrigger"] }): JSX.Element {
+function TriggerRow(props: { model: Extract<ControlModel, { kind: "trigger" }>; onTrigger: ParamControlsProps["onTrigger"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   return (
     <div className="cl-param-row">
-      <button type="button" className="cl-trigger-btn" title={model.hint} onClick={() => props.onTrigger(model.name)}>
+      <button type="button" className="cl-trigger-btn" disabled={props.disabled} title={model.hint} onClick={() => props.onTrigger(model.name)}>
         {model.label}
       </button>
     </div>
   );
 }
 
-function ControlRow(props: { model: ControlModel; onParam: ParamControlsProps["onParam"]; onTrigger: ParamControlsProps["onTrigger"] }): JSX.Element {
+function ControlRow(props: { model: ControlModel; onParam: ParamControlsProps["onParam"]; onTrigger: ParamControlsProps["onTrigger"]; disabled: boolean }): JSX.Element {
   const { model } = props;
   switch (model.kind) {
     case "number":
-      return <NumberRow model={model} onParam={props.onParam} />;
+      return <NumberRow model={model} onParam={props.onParam} disabled={props.disabled} />;
     case "boolean":
-      return <BooleanRow model={model} onParam={props.onParam} />;
+      return <BooleanRow model={model} onParam={props.onParam} disabled={props.disabled} />;
     case "select":
-      return <SelectRow model={model} onParam={props.onParam} />;
+      return <SelectRow model={model} onParam={props.onParam} disabled={props.disabled} />;
     case "text":
-      return <TextRow model={model} onParam={props.onParam} />;
+      return <TextRow model={model} onParam={props.onParam} disabled={props.disabled} />;
     case "trigger":
-      return <TriggerRow model={model} onTrigger={props.onTrigger} />;
+      return <TriggerRow model={model} onTrigger={props.onTrigger} disabled={props.disabled} />;
   }
 }
 
@@ -167,7 +171,7 @@ export function ParamControls(props: ParamControlsProps): JSX.Element {
   return (
     <div className="cl-params">
       {models.map((model) => (
-        <ControlRow key={model.name} model={model} onParam={props.onParam} onTrigger={props.onTrigger} />
+        <ControlRow key={model.name} model={model} onParam={props.onParam} onTrigger={props.onTrigger} disabled={props.disabled ?? false} />
       ))}
     </div>
   );

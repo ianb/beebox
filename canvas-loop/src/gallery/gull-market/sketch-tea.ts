@@ -2,7 +2,7 @@
 // seaside fish market: a cheeky herring gull flaps off to the left with a
 // mackerel from the fishmonger's tray, and the fishmonger, cap jumping off
 // his head, notices a moment too late.
-import type { View } from "@ianbicking/canvas-loop";
+import type { RootDrawing, View } from "@ianbicking/canvas-loop";
 import { H, headland, quay, sea, sky, W } from "./backdrop-tea.js";
 import { fishmonger, shock } from "./fishmonger-tea.js";
 import {
@@ -30,25 +30,27 @@ export function update(model: Model): Model {
   return model;
 }
 
-export function draw(v: View): void {
-  v.paper({ scale: 3, contrast: 0.6, seed: 12 });
-  sky(v);
-  sea(v);
-  headland(v);
-  quay(v);
-  castShadows(v);
-  strollers(v);
-  stallBack(v);
-  fishmonger(v);
-  counter(v);
-  awning(v);
-  shock(v);
-  shadowAndBunting(v);
-  crates(v);
-  bollardGull(v);
-  child(v);
-  cat(v);
-  trail(v);
-  gull(v);
-  v.paperTexture(0.35);
+export function draw(v: View): RootDrawing {
+  // Port: `v.paperTexture(0.35)` at the end becomes what was drawn before it, in a group with
+  // `effects.paper` (draft section 2).
+  return v.paper({ scale: 3, contrast: 0.6, seed: 12 }, v.group({ effects: { paper: 0.35 } }, [
+    sky(v),
+    sea(v),
+    headland(v),
+    quay(v),
+    castShadows(v),
+    strollers(v),
+    stallBack(v),
+    fishmonger(v),
+    counter(v),
+    awning(v),
+    shock(v),
+    shadowAndBunting(v),
+    crates(v),
+    bollardGull(v),
+    child(v),
+    cat(v),
+    trail(v),
+    gull(v),
+  ]));
 }

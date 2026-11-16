@@ -49,10 +49,39 @@ export interface Shadow {
   readonly color: string;
 }
 
+/** Watercolour wash over what the group drew (Bousseau et al. 2006). */
+export interface Wash {
+  /** Pigment settling faintly into the paper's tooth, 0..1 (default 0.5). */
+  readonly granulate?: number;
+  /** Pigment gathering at edges, 0..1 (default 0.5): a dark drying line where a colour meets paper or another colour, heavier near a region's edges and bottom, lighter in its middle. */
+  readonly edges?: number;
+  /** Uneven pigment, 0..1 (default 0.4): pooling in patches about a shape's size and, above about 0.2, occasional blooms (lighter backruns with a hard dark rim). */
+  readonly blotch?: number;
+  /** Edges wander, in logical pixels. */
+  readonly bleed?: number;
+}
+
 /**
- * Effects on a finished group, applied as it is composited, in this order:
- * colour adjustments, `blur`, `shadow`, with the `glow` drawn beneath. Lengths are canvas pixels and
- * are not scaled by an enclosing `at`.
+ * Pencil hatching revealed by darkness (Praun et al. 2001), by tone relative
+ * to the group's own range: the lightest part bare, half tones single lines,
+ * shadows crossed lines. Under the lines the colour lifts toward paper, so the
+ * lines carry the tone.
+ */
+export interface Hatching {
+  /** Hatch strength, 0..1. */
+  readonly amount: number;
+  /** Line angle in radians (default π/4); a second layer crosses it in the darkest tones. */
+  readonly angle?: number;
+  /** Line spacing in logical pixels (default 6). */
+  readonly spacing?: number;
+  readonly color?: string;
+}
+
+/**
+ * Effects on a group, applied in this fixed order: colour adjustments, blur,
+ * wash, hatching, paper; then glow and shadow are drawn beneath the result.
+ * Lengths are in the coordinates where the group is called. For another
+ * order, nest groups.
  */
 export interface Effects {
   /** Rotate hues, in degrees. */
@@ -77,5 +106,9 @@ export interface Effects {
    */
   readonly glow?: { readonly blur: number; readonly color: string; readonly strength?: number };
   readonly shadow?: Shadow;
+  readonly wash?: Wash;
+  readonly hatching?: Hatching;
+  /** Paper texture over what the group drew, only where it drew, 0..1. */
+  readonly paper?: number;
 }
 

@@ -1468,6 +1468,29 @@ tests:
     correct_contains: ["scaleNote"]
     tags: [cards, schemas, figure]
 
+  # Status (2026-11-16): figure-outdated-sketch and figure-no-webgpu added
+  # with the scene renderer's card notices (canvas-loop box figures plan, C4).
+  # `--filter figure` passes 16/16 on the worktree's test1 after the C4
+  # instruction edits. Both new audits answer from card-figure.md's two new
+  # bullets (3-4 reads): the outdated one runs bbx figure run and rewrites
+  # with v.picture/v.place and keeps the runtime; the WebGPU one names the
+  # device and does not rewrite the figure.
+
+  - id: figure-outdated-sketch
+    prompt: "A canvas-loop figure card shows 'This figure needs updating' with the line 'v.cache was removed: use v.picture({ key, width, height, deps }, body) and v.place(picture, x, y)'. What do you do?"
+    expected_level: knows_directly
+    watch_for: "Rewrites the sketch with v.picture and v.place (canvas-loop.md, Pictures), runs bbx figure run <card> until clean and looks at the frames; does not switch runtime or tell the learner to update their browser"
+    correct_contains: ["bbx figure run", "v.picture"]
+    tags: [cards, schemas, figure]
+
+  - id: figure-no-webgpu
+    prompt: "A learner says a canvas-loop figure shows 'This figure can't draw on this device' on their older iPad. What do you do?"
+    expected_level: knows_directly
+    watch_for: "Explains the device or browser lacks WebGPU, suggests updating the OS or browser or using another device; does not rewrite the figure or switch it to another runtime unless the boxholder asks"
+    correct_contains: ["WebGPU"]
+    correct_matches: ["updat|another device|other device"]
+    tags: [cards, schemas, figure]
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run

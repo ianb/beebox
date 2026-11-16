@@ -6,11 +6,12 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { promises as fs } from "node:fs";
+import { promises as fs, realpathSync } from "node:fs";
 import * as path from "node:path";
 import { listCanvasLoopFigures, prepareFigureJob, runFigureJob } from "../../../../src/cli/commands/figure/run.js";
 import { any } from "@ianbicking/tap-check/check";
 import { findReservedNestedSegment } from "../../../../src/lib/box-reserved-segments.js";
+import { figureStarterSketch } from "../../../../src/templates/builtins/starters.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const CARD = "_content/figs/Dot.figure.card";
@@ -18,7 +19,7 @@ const CARD = "_content/figs/Dot.figure.card";
 const card = (params: string): string => `---\ntype: figure\ntitle: Dot\nruntime: canvas-loop\nentry: attach/dot-tea.ts\n${params}---\nA dot.\n`;
 
 // A sketch that counts presses it acknowledges and reads its speed param at init.
-const ENTRY = `import type { Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
+const ENTRY = `import type { Msg, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 export const params = { speed: { type: "number", min: 0, max: 5, default: 1 } } as const satisfies ParamsDecl;
 export const canvas = { width: 60, height: 40 };
 export function init(u: Util<typeof params>) { return { n: 0, speed: u.params.speed }; }
@@ -26,14 +27,26 @@ export function update(model: { n: number; speed: number }, msg: Msg, u: Util<ty
   if (msg.type === "mousedown") { u.handled("dot"); return { ...model, n: model.n + 1 }; }
   return model;
 }
-export function draw(v: View, model: { n: number; speed: number }) {
-  v.background("#fff");
-  v.text(\`n=\${model.n} speed=\${model.speed}\`, { x: 2, y: 2 });
-  v.text("overlap", { x: 4, y: 4 });
+export function draw(v: View, model: { n: number; speed: number }): RootDrawing {
+  return [
+    v.background("#fff"),
+    v.text(\`n=\${model.n} speed=\${model.speed}\`, { x: 2, y: 2 }),
+    v.text("overlap", { x: 4, y: 4 }),
+  ];
 }
 export default (cl: { mountSketch: (m: unknown, o: unknown) => () => void }, ctx: { mount: unknown }) =>
   cl.mountSketch(ctx.mount, { module: { params, canvas, init, update, draw }, autoplay: !matchMedia("(prefers-reduced-motion: reduce)").matches });
 `;
+
+/** The message `prepareFigureJob` rejects with. */
+async function prepareError(boxRoot: string): Promise<string> {
+  try {
+    await prepareFigureJob({ boxRoot, card: CARD, params: {} });
+  } catch (error) {
+    return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  }
+  return "no error";
+}
 
 const EVENTS = JSON.stringify([{ frame: 2, type: "mousedown", x: 5, y: 5 }, { frame: 3, type: "mouseup", x: 5, y: 5 }]);
 
@@ -53,7 +66,16 @@ void test("A figure runs headlessly with its sibling events file and the card's 
   const transcript = await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8");
   t.check(transcript, any(String).includes("mousedown (5,5) → dot"));
   t.check(findReservedNestedSegment(result.transcript ?? ""), null);
-  t.check(result.warnings, [any(String).includes('overlaps text "overlap"'), any(String).includes('overlaps text "overlap"')]);
+  // The scene renderer's warnings, each naming the sketch's line: the two labels overlap, and the first is wider than the canvas.
+  t.check(result.warnings, [
+    any(String).includes('text "overlap" overlaps text "n=0 speed=2"').includes("dot-tea.ts:13:"),
+    any(String).includes('text "overlap" overlaps text "n=1 speed=2"').includes("dot-tea.ts:13:"),
+    any(String).includes('text "n=1 speed=2" crosses the edge of the 60×40 canvas').includes("dot-tea.ts:12:"),
+  ]);
+  // The line is the entry's own file: the compiled entry's source map is relative to where entry.mjs is written.
+  const named = result.warnings.map((w) => /\(at (.+):\d+:\d+\)$/u.exec(w)?.[1]);
+  const real = await fs.realpath(path.join(box.root, "_content/figs/Dot.attach/dot-tea.ts"));
+  t.check(named.map((file) => (file === undefined ? undefined : path.resolve(realpathSync(box.root), file))), [real, real, real]);
 });
 
 void test("--params overrides a default; a param the sketch lacks is an error", async (t) => {
@@ -84,11 +106,52 @@ void test("A compile error, a non-canvas-loop figure, and an endless loop each f
   await box.write("_content/figs/P5.figure.card", "---\ntype: figure\ntitle: P\nruntime: p5js\nentry: attach/s.ts\n---\n");
   await t.checkThrows(() => prepareFigureJob({ boxRoot: box.root, card: "_content/figs/P5.figure.card", params: {} }), 'FigureRunError: _content/figs/P5.figure.card: runtime is "p5js"; only canvas-loop figures run headlessly');
 
-  await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY.replace("return { n: 0, speed: u.params.speed };", "for (;;) {}"));
+  // The loop must type-check: an init that never returns would fail the contract check before it ran.
+  await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY.replace("return { n: 0, speed: u.params.speed };", "let i = 0; while (i >= 0) i++; return { n: 0, speed: u.params.speed };"));
   const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: CARD, frames: 1, params: {} });
   const result = await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 3000 });
   t.check(result.ok, false);
-  t.check(result.errors, [any(String).startsWith("stopped after 3 s")]);
+  t.check(result.errors, ["stopped after 3 s: an endless loop in init, update or draw, or rendering too slow here (each captured frame is rendered; try fewer frames, a larger --every, or --timeout)"]);
+});
+
+// Need 10 of the box-figures plan: esbuild strips types, so the run type-checks
+// the entry, its imports and its exports first, as canvas-loop's cli run does.
+// Without it a style value canvas-loop does not have would draw with no error.
+void test("A type error in an imported helper, or a wrong style value, stops the run with the file and line", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write(CARD, card(""));
+  await box.write("_content/figs/Dot.attach/helper.ts", "export const radius: number = \"four\";\n");
+  await box.write("_content/figs/Dot.attach/dot-tea.ts", `import { radius } from "./helper.js";\n${ENTRY.replace('v.background("#fff"),', "v.background(\"#fff\"), v.circle(5, 5, radius, { fill: \"#000\" }),")}`);
+  await t.checkThrows(
+    () => prepareFigureJob({ boxRoot: box.root, card: CARD, params: {} }),
+    "FigureRunError: _content/figs/Dot.attach/dot-tea.ts: the sketch does not type-check, so it was not run. Fix these and run again:\n" +
+      "_content/figs/Dot.attach/helper.ts:1:14 - error TS2322: Type 'string' is not assignable to type 'number'.",
+  );
+
+  await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY.replace('v.background("#fff"),', 'v.background("#fff"), v.line(0, 0, 9, 9, { stroke: "#000", cap: "triangle" }),'));
+  t.check(await prepareError(box.root), any(String).includes("dot-tea.ts:11:").includes('Type \'"triangle"\' is not assignable'));
+});
+
+void test("A removed View call is named with what replaces it", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write(CARD, card(""));
+  await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY.replace('v.background("#fff"),', 'v.background("#fff"), v.cache("k", 10, 10, () => null),'));
+  t.check(await prepareError(box.root), any(String).includes("Property 'cache' does not exist on type 'View'").includes("v.cache was removed: use v.picture"));
+});
+
+void test("The canvas-loop starter runs clean", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("_content/figs/Starter.figure.card", "---\ntype: figure\ntitle: Starter\nruntime: canvas-loop\nentry: attach/sketch.ts\n---\nThe starter.\n");
+  await box.write("_content/figs/Starter.attach/sketch.ts", figureStarterSketch("canvas-loop"));
+  const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: "_content/figs/Starter.figure.card", scene: "first", params: {} });
+  const result = await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 60_000 });
+  t.check({ ok: result.ok, errors: result.errors, warnings: result.warnings }, { ok: true, errors: [], warnings: [] });
+  // `--scene first` writes the first captured frame's outline into the transcript, and no other frame's.
+  const transcript = await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8");
+  t.check([...transcript.matchAll(/^```\nscene \d+×\d+$/gmu)].map((m) => m[0]), ["```\nscene 400×300"]);
 });
 
 void test("An entry that links outside the box is refused", async (t) => {
@@ -101,4 +164,37 @@ void test("An entry that links outside the box is refused", async (t) => {
   await fs.mkdir(path.join(box.root, "_content/figs/Dot.attach"), { recursive: true });
   await fs.symlink(path.join(outside.root, "dot-tea.ts"), path.join(box.root, "_content/figs/Dot.attach/dot-tea.ts"));
   await t.checkThrows(() => prepareFigureJob({ boxRoot: box.root, card: CARD, params: {} }), "FigureRunError: entry attach/dot-tea.ts: links outside this box");
+});
+
+// The box-figures plan, C2: with no Vulkan driver, Dawn finds no adapter and the
+// run says it is the host's problem, with the transcript the runner wrote. The
+// Vulkan loader is pointed at one manifest that does not exist, so it loads no
+// driver. Linux only: macOS draws through Metal, with no Vulkan loader.
+void test("With no Vulkan driver the run gives the possible causes and a transcript", { skip: process.platform === "linux" ? false : "Dawn uses Metal on macOS, so there is no Vulkan driver to hide" }, async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const saved = { files: process.env["VK_DRIVER_FILES"], icd: process.env["VK_ICD_FILENAMES"] };
+  t.teardown(() => {
+    for (const [name, value] of [["VK_DRIVER_FILES", saved.files], ["VK_ICD_FILENAMES", saved.icd]] as const) {
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
+      else process.env[name] = value;
+    }
+  });
+  const missing = path.join(box.root, "_tmp", "no-such-driver.json");
+  process.env["VK_DRIVER_FILES"] = missing;
+  process.env["VK_ICD_FILENAMES"] = missing;
+  await box.write(CARD, card(""));
+  await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY);
+  const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: CARD, frames: 1, params: {} });
+  const result = await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 60_000 });
+  // This text comes only from NoGpuAdapterError, so it also shows the setup reached the adapter request.
+  t.check(
+    { ok: result.ok, errors: result.errors, transcript: result.transcript },
+    {
+      ok: false,
+      errors: ["no GPU adapter: Dawn found no GPU it can use here. Possible causes: no Vulkan driver is installed (on Linux, Mesa's mesa-vulkan-drivers), the driver does not load inside the box's sandbox, or the driver rejects this machine. Ask the boxholder; rewriting the sketch will not help."],
+      transcript: path.join("_tmp", "figure-run", "content", "figs", "Dot", "out", "transcript.md"),
+    },
+  );
+  t.check(await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8"), any(String).includes("NoGpuAdapterError"));
 });

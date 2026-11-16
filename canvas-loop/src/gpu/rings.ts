@@ -1,0 +1,291 @@
+// Device-space rings (closed polygons, flat [x0, y0, x1, y1, …]): cut to a
+// rectangle before they reach the atlas, and oriented for clip unions; a
+// shape's rings under a matrix, and their bounds.
+import { polylines as flatten } from "../scene/geometry/flatten.js";
+import { maxScale } from "../scene/mat.js";
+import type { Geom, Mat } from "../scene/nodes.js";
+import type { ClipMask, Piece, R } from "./jobs.js";
+import { EMPTY, inter } from "./jobs.js";
+
+export function ringArea(r: readonly number[]): number {
+  let a = 0;
+  for (let i = 0; i + 1 < r.length; i += 2) {
+    const j = (i + 2) % r.length;
+    a += (r[i] ?? 0) * (r[j + 1] ?? 0) - (r[j] ?? 0) * (r[i + 1] ?? 0);
+  }
+  return a / 2;
+}
+
+interface Side { readonly axis: 0 | 1; readonly at: number; readonly keepBelow: boolean }
+
+function clipSide(r: readonly number[], s: Side): number[] {
+  const out: number[] = [];
+  const n = r.length / 2;
+  const inside = (i: number): boolean => {
+    const v = r[2 * i + s.axis] ?? 0;
+    return s.keepBelow ? v <= s.at : v >= s.at;
+  };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const ax = r[2 * i] ?? 0;
+    const ay = r[2 * i + 1] ?? 0;
+    const bx = r[2 * j] ?? 0;
+    const by = r[2 * j + 1] ?? 0;
+    const ia = inside(i);
+    const ib = inside(j);
+    if (ia) out.push(ax, ay);
+    if (ia !== ib) {
+      const av = s.axis === 0 ? ax : ay;
+      const bv = s.axis === 0 ? bx : by;
+      const t = (s.at - av) / (bv - av);
+      out.push(ax + (bx - ax) * t, ay + (by - ay) * t);
+    }
+  }
+  return out;
+}
+
+/**
+ * Cut each ring to `box` (Sutherland–Hodgman). Inside the box every point keeps
+ * its winding number, so coverage there is unchanged; outside it is gone, so a
+ * shape far off the canvas costs nothing and a huge one fits the atlas.
+ */
+export function cutRings(rings: readonly (readonly number[])[], box: R): number[][] {
+  const sides: Side[] = [
+    { axis: 0, at: box.x0, keepBelow: false },
+    { axis: 0, at: box.x1, keepBelow: true },
+    { axis: 1, at: box.y0, keepBelow: false },
+    { axis: 1, at: box.y1, keepBelow: true },
+  ];
+  const out: number[][] = [];
+  for (const r of rings) {
+    let c: readonly number[] = r;
+    for (const s of sides) if (c.length >= 6) c = clipSide(c, s);
+    if (c.length >= 6 && ringArea(c) !== 0) out.push([...c]);
+  }
+  return out;
+}
+
+function reversed(r: readonly number[]): number[] {
+  const q: number[] = [];
+  for (let i = r.length - 2; i >= 0; i -= 2) q.push(r[i] ?? 0, r[i + 1] ?? 0);
+  return q;
+}
+
+/**
+ * One clip shape's rings, turned so the shape's net area is positive. A hole
+ * (a contour wound against its outline) stays a hole; shapes then add their
+ * windings, and a pixel is inside the union where the sum is not zero.
+ */
+export function orientShape(rings: readonly (readonly number[])[]): number[][] {
+  const net = rings.reduce((a, r) => a + ringArea(r), 0);
+  return rings.map((r) => (net < 0 ? reversed(r) : [...r]));
+}
+
+/** Rings as a coverage piece with integer bounds, or undefined when they cover nothing. */
+export function pieceOf(rings: number[][]): Piece | undefined {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const r of rings) {
+    for (let i = 0; i + 1 < r.length; i += 2) {
+      const x = r[i] ?? 0;
+      const y = r[i + 1] ?? 0;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+  }
+  if (!(x1 > x0 && y1 > y0) || !Number.isFinite(x0 + x1 + y0 + y1)) return undefined;
+  return { rings, box: { x0: Math.floor(x0), y0: Math.floor(y0), x1: Math.ceil(x1), y1: Math.ceil(y1) }, ox: 0, oy: 0 };
+}
+
+const orient = (...[ax, ay, bx, by, cx, cy]: readonly number[]): number => Math.sign(((bx ?? 0) - (ax ?? 0)) * ((cy ?? 0) - (ay ?? 0)) - ((by ?? 0) - (ay ?? 0)) * ((cx ?? 0) - (ax ?? 0)));
+
+/** Whether segments p (x0, y0, x1, y1) and q touch or cross; the x and y ranges are known to overlap. */
+function segmentsMeet(p: readonly number[], q: readonly number[]): boolean {
+  const [ax = 0, ay = 0, bx = 0, by = 0] = p;
+  const [cx = 0, cy = 0, dx = 0, dy = 0] = q;
+  const o1 = orient(ax, ay, bx, by, cx, cy);
+  const o2 = orient(ax, ay, bx, by, dx, dy);
+  const o3 = orient(cx, cy, dx, dy, ax, ay);
+  const o4 = orient(cx, cy, dx, dy, bx, by);
+  // Collinear or touching counts as meeting: such an outline is not known to be simple.
+  return o1 !== o2 && o3 !== o4 ? true : o1 === 0 || o2 === 0 || o3 === 0 || o4 === 0;
+}
+
+/** `ring` without repeated points (a closing point equal to the first, zero-length steps). */
+function withoutRepeats(ring: readonly number[]): number[] {
+  const r: number[] = [];
+  for (let i = 0; i + 1 < ring.length; i += 2) {
+    const x = ring[i] ?? 0;
+    const y = ring[i + 1] ?? 0;
+    const n = r.length;
+    if (n === 0 || x !== r[n - 2] || y !== r[n - 1]) r.push(x, y);
+  }
+  while (r.length >= 4 && r[0] === r[r.length - 2] && r[1] === r[r.length - 1]) r.length -= 2;
+  return r;
+}
+
+/** Ascending runs of `lo` in index order, a falling run reversed: each run's indices, and where each run starts. */
+function runsOf(lo: Float64Array): { ids: Int32Array; starts: number[] } {
+  const n = lo.length;
+  const ids = new Int32Array(n);
+  const starts: number[] = [];
+  let i = 0;
+  while (i < n) {
+    const s = i;
+    starts.push(s);
+    i++;
+    const falling = i < n && (lo[i] ?? 0) < (lo[i - 1] ?? 0);
+    while (i < n && (falling ? (lo[i] ?? 0) <= (lo[i - 1] ?? 0) : (lo[i] ?? 0) >= (lo[i - 1] ?? 0))) i++;
+    for (let k = s; k < i; k++) ids[k] = falling ? s + i - 1 - k : k;
+  }
+  starts.push(n);
+  return { ids, starts };
+}
+
+/**
+ * Edge indices in increasing order of `lo` (finite), by merging runs: an outline's edges, in ring order, rise and fall
+ * in a few long runs, so this is close to linear where a comparison sort was most of the check. Which of two equal
+ * values comes first is not kept: the sweep compares the same pairs either way, and whether two edges meet does not
+ * depend on their order.
+ */
+function sweepOrder(lo: Float64Array): Int32Array {
+  const n = lo.length;
+  let { ids, starts: runs } = runsOf(lo);
+  let into: Int32Array = new Int32Array(n);
+  while (runs.length > 2) {
+    const next: number[] = [];
+    for (let k = 0; k + 1 < runs.length; k += 2) {
+      const a0 = runs[k] ?? 0;
+      const a1 = runs[k + 1] ?? 0;
+      const b1 = runs[k + 2] ?? a1;
+      next.push(a0);
+      let p = a0;
+      let q = a1;
+      let o = a0;
+      while (p < a1 && q < b1) into[o++] = (lo[ids[q] ?? 0] ?? 0) < (lo[ids[p] ?? 0] ?? 0) ? (ids[q++] ?? 0) : (ids[p++] ?? 0);
+      while (p < a1) into[o++] = ids[p++] ?? 0;
+      while (q < b1) into[o++] = ids[q++] ?? 0;
+    }
+    next.push(n);
+    [ids, into] = [into, ids];
+    runs = next;
+  }
+  return ids;
+}
+
+/** Whether sorted edge `k` (in `e`, six numbers each: x0, y0, x1, y1, lower y, upper y) meets a later edge it may touch. */
+function meetsLater(e: Float64Array, a: { k: number; ids: Int32Array }): boolean {
+  const { k, ids } = a;
+  const n = ids.length;
+  const i = ids[k] ?? 0;
+  const ax = e[6 * k] ?? 0, ay = e[6 * k + 1] ?? 0, bx = e[6 * k + 2] ?? 0, by = e[6 * k + 3] ?? 0, top = e[6 * k + 5] ?? 0;
+  const left = Math.min(ax, bx), right = Math.max(ax, bx);
+  for (let m = k + 1; m < n; m++) {
+    if ((e[6 * m + 4] ?? 0) > top) return false;
+    const gap = Math.abs(i - (ids[m] ?? 0));
+    if (gap === 1 || gap === n - 1) continue;
+    const cx = e[6 * m] ?? 0, cy = e[6 * m + 1] ?? 0, dx = e[6 * m + 2] ?? 0, dy = e[6 * m + 3] ?? 0;
+    if (Math.min(cx, dx) > right || Math.max(cx, dx) < left) continue;
+    // As `segmentsMeet`: crossing, touching or collinear counts as meeting.
+    const o1 = Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+    const o2 = Math.sign((bx - ax) * (dy - ay) - (by - ay) * (dx - ax));
+    const o3 = Math.sign((dx - cx) * (ay - cy) - (dy - cy) * (ax - cx));
+    const o4 = Math.sign((dx - cx) * (by - cy) - (dy - cy) * (bx - cx));
+    if ((o1 !== o2 && o3 !== o4) || o1 === 0 || o2 === 0 || o3 === 0 || o4 === 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether a closed ring (flat x, y pairs) is simple: no two non-adjacent edges
+ * touch or cross. A sweep down y compares each edge only with edges whose y
+ * ranges overlap it. Such a ring's exact-area coverage equals its winding
+ * coverage everywhere, so a clip to it can read the coverage atlas. Clip
+ * outlines change every frame, so this runs every frame: the edges are kept in
+ * flat arrays and ordered by merging their runs.
+ */
+export function isSimpleRing(ring: readonly number[]): boolean {
+  const r = withoutRepeats(ring);
+  const n = r.length / 2;
+  if (n < 3) return false;
+  const lo = new Float64Array(n);
+  for (let i = 0; i < n; i++) lo[i] = Math.min(r[2 * i + 1] ?? 0, r[2 * ((i + 1) % n) + 1] ?? 0);
+  if (!r.every(Number.isFinite)) return sortedSweepSimple(r);
+  const ids = sweepOrder(lo);
+  const e = new Float64Array(6 * n);
+  for (let k = 0; k < n; k++) {
+    const i = ids[k] ?? 0;
+    const j = (i + 1) % n;
+    const ay = r[2 * i + 1] ?? 0;
+    const by = r[2 * j + 1] ?? 0;
+    e[6 * k] = r[2 * i] ?? 0;
+    e[6 * k + 1] = ay;
+    e[6 * k + 2] = r[2 * j] ?? 0;
+    e[6 * k + 3] = by;
+    e[6 * k + 4] = Math.min(ay, by);
+    e[6 * k + 5] = Math.max(ay, by);
+  }
+  for (let k = 0; k < n; k++) if (meetsLater(e, { k, ids })) return false;
+  return true;
+}
+
+/** The sweep with edges sorted by a comparison: for a ring with a non-finite coordinate, where `sweepOrder` has no order. */
+function sortedSweepSimple(ring: readonly number[]): boolean {
+  // Repeated points (a closing point equal to the first, zero-length steps) are dropped first.
+  const r: number[] = [];
+  for (let i = 0; i + 1 < ring.length; i += 2) {
+    const x = ring[i] ?? 0;
+    const y = ring[i + 1] ?? 0;
+    if (r.length === 0 || x !== r.at(-2) || y !== r.at(-1)) r.push(x, y);
+  }
+  while (r.length >= 4 && r[0] === r.at(-2) && r[1] === r.at(-1)) r.splice(-2);
+  const n = r.length / 2;
+  if (n < 3) return false;
+  const segs = Array.from({ length: n }, (_, i) => {
+    const j = (i + 1) % n;
+    const s = [r[2 * i] ?? 0, r[2 * i + 1] ?? 0, r[2 * j] ?? 0, r[2 * j + 1] ?? 0];
+    return { i, s, y0: Math.min(s[1] ?? 0, s[3] ?? 0), y1: Math.max(s[1] ?? 0, s[3] ?? 0), x0: Math.min(s[0] ?? 0, s[2] ?? 0), x1: Math.max(s[0] ?? 0, s[2] ?? 0) };
+  }).toSorted((a, b) => a.y0 - b.y0);
+  for (const [k, a] of segs.entries()) {
+    for (let m = k + 1; m < segs.length; m++) {
+      const b = segs[m];
+      if (b === undefined || b.y0 > a.y1) break;
+      const gap = Math.abs(a.i - b.i);
+      if (gap === 1 || gap === n - 1 || b.x0 > a.x1 || b.x1 < a.x0) continue;
+      if (segmentsMeet(a.s, b.s)) return false;
+    }
+  }
+  return true;
+}
+
+export function toDevice(rings: readonly (readonly number[])[], m: Mat): number[][] {
+  return rings.map((r) => {
+    const o: number[] = [];
+    for (let i = 0; i + 1 < r.length; i += 2) {
+      const x = r[i] ?? 0;
+      const y = r[i + 1] ?? 0;
+      o.push(m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
+    }
+    return o;
+  });
+}
+
+export function fillRings(g: Geom, m: Mat): number[][] {
+  return toDevice(flatten(g, maxScale(m)).map((p) => p.pts).filter((r) => r.length >= 6), m);
+}
+
+/** Device-space rings' bounds, as integer pixels. */
+export function boundsOf(rings: readonly (readonly number[])[]): R {
+  return pieceOf(rings.map((r) => [...r]))?.box ?? EMPTY;
+}
+
+/** `r` inside `clip` and every clip around it. */
+export function clipBox(clip: ClipMask | null, r: R): R {
+  let b = r;
+  for (let c = clip; c !== null; c = c.parent) b = inter(b, c.box);
+  return b;
+}

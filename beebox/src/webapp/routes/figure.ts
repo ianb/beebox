@@ -9,6 +9,9 @@
  * compiler (`bundleView`), externalizing the runtime libraries — the harness
  * provides `p5`/`three`/`d3` to the sketch, which must not import them.
  *
+ * A canvas-loop figure's entry is type-checked against the sketch contract
+ * first; a type error is returned the same way, as a compile error.
+ *
  * On a compile error we return a figure-shaped module exporting
  * `figureError` (a string), NOT the views route's React error component — the
  * figure harness invokes `default` as a `(lib, mount, figure)` factory, so a
@@ -23,6 +26,8 @@ import { bundleView } from "../views/compiler/compile.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";
 import { isWithin } from "../../lib/box-containment.js";
+import { parseFrontmatterObject } from "../../cards/frontmatter.js";
+import { checkFigureSketch, FigureCheckUnavailableError, type FigureSketchCheck } from "../../core/figure-sketch-check.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -36,20 +41,25 @@ interface RegisterFigureRoutesOptions {
   boxRoot: string;
 }
 
-/** A module the figure harness recognizes as a compile failure. */
-function figureErrorModule(message: string): string {
-  return `export const figureError = ${JSON.stringify(message)};\n`;
+/**
+ * A module the figure harness recognizes as a compile failure. `outdated`,
+ * when given, is the removed call the error names (`figureOutdated`): the card
+ * then says the figure needs updating.
+ */
+function figureErrorModule(message: string, outdated?: string): string {
+  return `export const figureError = ${JSON.stringify(message)};\n${outdated === undefined ? "" : `export const figureOutdated = ${JSON.stringify(outdated)};\n`}`;
 }
 
-async function hasOwningCard(sourcePath: string, root: string): Promise<boolean> {
+/** The card that owns the attach scope holding `sourcePath` (absolute), or null. */
+async function owningCard(sourcePath: string, root: string): Promise<string | null> {
   const relative = path.relative(root, sourcePath);
   const segments = relative.split(path.sep);
   const attachIndex = segments.findIndex((segment) => isAttachDirName(segment));
-  if (attachIndex === -1) return false;
+  if (attachIndex === -1) return null;
   const attachName = segments[attachIndex];
-  if (attachName === undefined) return false;
+  if (attachName === undefined) return null;
   const owner = attachDirOwnerBasename(attachName);
-  if (owner === null) return false;
+  if (owner === null) return null;
   const parent = path.join(root, ...segments.slice(0, attachIndex));
   const entries = await fs.readdir(parent);
   // The owner of `Cube.attach/` is any card whose BASENAME is `Cube` —
@@ -61,9 +71,32 @@ async function hasOwningCard(sourcePath: string, root: string): Promise<boolean>
   // (issues/closed/bugs/2026-09-05-figure-module-attach-scope-has-no-owning-card.md).
   // Case-insensitive because a case-insensitive filesystem would otherwise let
   // the same path resolve differently here than when opened.
-  return entries.some(
+  const card = entries.find(
     (entry) => entry.endsWith(".card") && cardBasename(entry).toLowerCase() === owner.toLowerCase(),
   );
+  return card === undefined ? null : path.join(parent, card);
+}
+
+/**
+ * For a canvas-loop figure, the sketch contract check
+ * (`core/figure-sketch-check.ts`): a type error becomes the figure's error,
+ * as `bbx figure run` reports it, and one that names a removed call also
+ * marks the figure as written for the earlier canvas-loop. Null when the
+ * figure is clean or not a canvas-loop figure.
+ */
+async function sketchCheckModule(options: { card: string; source: string; root: string }): Promise<string | null> {
+  const { card, source, root } = options;
+  if (parseFrontmatterObject(await fs.readFile(card, "utf8"))?.["runtime"] !== "canvas-loop") return null;
+  let check: FigureSketchCheck;
+  try {
+    check = await checkFigureSketch(root, source);
+  } catch (e) {
+    if (e instanceof FigureCheckUnavailableError) return figureErrorModule(e.message);
+    throw e;
+  }
+  if (check.ok) return null;
+  const message = `${path.relative(root, source)}: the sketch does not type-check:\n${check.lines.join("\n")}`;
+  return figureErrorModule(message, check.removed);
 }
 
 export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void {
@@ -133,7 +166,8 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
           .status(400)
           .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
       }
-      if (!(await hasOwningCard(realResolved, realRoot))) {
+      const card = await owningCard(realResolved, realRoot);
+      if (card === null) {
         return reply.status(400).send({ error: "Attach scope has no owning card" });
       }
 
@@ -148,6 +182,14 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
       if (!isFile) {
         return reply.status(404).send({ error: "Source not found" });
+      }
+
+      const failedCheck = await sketchCheckModule({ card, source: realResolved, root: realRoot });
+      if (failedCheck !== null) {
+        return reply
+          .header("Content-Type", "application/javascript")
+          .header("Cache-Control", "no-cache")
+          .send(failedCheck);
       }
 
       try {

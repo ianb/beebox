@@ -10,6 +10,9 @@ onlyBuiltDependencies:
   - workerd
 
 ignoredBuiltDependencies:
+  # Its postinstall only removes the macOS quarantine attribute from the Dawn
+  # binary; pnpm installs from the registry do not set it.
+  - webgpu
   - agent-browser@0.41.0
   - "@google/genai"
   - "@ianbicking/personal-vibe-check"

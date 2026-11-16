@@ -9,13 +9,7 @@
 // fresh each frame (not accumulated), so a speed change takes effect
 // immediately and hit-testing in `update` (which runs *before* that frame's
 // draw) can predict the exact on-screen spot with the same formula.
-import type {
-  DeepReadonly,
-  Msg,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 interface Planet {
   name: string;
@@ -169,39 +163,41 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
   }
 }
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  v.background("#0b1020");
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#0b1020"));
 
   // orbit paths
   for (const p of model.planets) {
-    v.circle(CENTER_X, CENTER_Y, p.orbitRadius, ORBIT_RING);
+    out.push(v.circle(CENTER_X, CENTER_Y, p.orbitRadius, ORBIT_RING));
   }
 
   // sun
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
+  out.push(v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }));
 
   // planets
   for (let i = 0; i < model.planets.length; i++) {
     const p = model.planets[i];
     if (p === undefined) continue;
     const { x, y } = planetPos(p, model.frame);
-    v.circle(x, y, p.size / 2, { fill: p.color });
+    out.push(v.circle(x, y, p.size / 2, { fill: p.color }));
     if (i === model.selected) {
-      v.circle(x, y, (p.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING);
+      out.push(v.circle(x, y, (p.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING));
     }
   }
 
   // HUD
-  v.text(`frame ${model.frame}`, { x: 8, y: 8 }, HUD_TEXT);
+  out.push(v.text(`frame ${model.frame}`, { x: 8, y: 8 }, HUD_TEXT));
   const sel =
     model.selected === null ? undefined : model.planets[model.selected];
   if (sel !== undefined) {
-    v.text(
+    out.push(v.text(
       `selected: ${sel.name}  speed: ${sel.speed.toFixed(3)}`,
       { x: 8, y: 26 },
       HUD_TEXT,
-    );
+    ));
   } else {
-    v.text("selected: none", { x: 8, y: 26 }, HUD_TEXT);
+    out.push(v.text("selected: none", { x: 8, y: 26 }, HUD_TEXT));
   }
+  return out;
 }

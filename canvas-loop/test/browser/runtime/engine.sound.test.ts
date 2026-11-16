@@ -5,14 +5,18 @@ import { test } from "node:test";
 import { Runtime } from "../../../src/browser/runtime/engine.js";
 import type { PlaygroundModule } from "../../../src/browser/sketch-types.js";
 import type { Msg, Voice } from "../../../src/core/tea.js";
-import { FakeElement, rafState } from "../fake-dom.js";
+import type { TextMeasure } from "../../../src/core/text/measure.js";
+import { rafState } from "../../fake-dom.js";
+
+// Text is never measured here: only the voices are under test.
+const textMeasure: TextMeasure = { width: () => 0, bounds: (_content, box) => ({ x: box.x, y: box.y, w: 0, h: 0, lines: 0, size: 0, overflow: false }) };
 
 // A new voice every third tick, declared one frame ahead of its start.
 const module: PlaygroundModule = {
   canvas: { width: 10, height: 10 },
   init: () => 0,
   update: (model: unknown, msg: Msg) => (msg.type === "tick" ? msg.frame : model),
-  draw: () => {},
+  draw: () => null,
   sound: (model: unknown): readonly Voice[] => {
     const frame = typeof model === "number" ? model : 0;
     return frame % 3 === 0 ? [{ id: `v${frame}`, at: frame + 1, kind: "noise", duration: 0.05 }] : [];
@@ -21,14 +25,10 @@ const module: PlaygroundModule = {
 
 function heard(stepMs: number): string[] {
   const played: string[] = [];
-  const canvas = new FakeElement("canvas");
-  const ctx = canvas.getContext("2d");
   const runtime = new Runtime({
     module,
-    // eslint-disable-next-line no-restricted-syntax -- test boundary: the fake context stands in for the DOM context
-    ctx: ctx as CanvasRenderingContext2D,
-    width: 10,
-    height: 10,
+    // A surface that draws nothing.
+    surface: () => ({ textMeasure, forgetTextWidths: () => {}, draw: () => new Map() }),
     seed: 1,
     onFrame: () => {},
     onLog: () => {},

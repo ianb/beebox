@@ -1,7 +1,7 @@
 {
   "name": "@ianbicking/canvas-loop",
-  "version": "0.1.0",
-  "description": "Deterministic, browser-less, frame-stepped Canvas2D sandbox for agent programming",
+  "version": "0.2.0",
+  "description": "Deterministic, frame-stepped drawing sandbox for agent programming: a scene API drawn with WebGPU in the browser and Dawn headless",
   "type": "module",
   "private": true,
   "exports": {
@@ -22,24 +22,28 @@
       "default": "./src/browser/mount.ts"
     },
     "./browser/figure.css": "./src/browser/figure.css",
+    "./sketch-check": {
+      "types": "./src/headless/sketch-types.ts",
+      "default": "./src/headless/sketch-types.ts"
+    },
     "./eslint": {
       "types": "./src/eslint/plugin.ts",
       "default": "./src/eslint/plugin.ts"
     }
   },
   "scripts": {
-    "cli": "node --import tsx src/headless/cli.ts",
+    "cli": "node --import tsx src/headless/cli/main.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json && tsc --noEmit -p src/dev-demo/tsconfig.json && tsc --noEmit -p src/exports/tsconfig.json",
     "lint": "eslint .",
-    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 \"test/**/!(*.gpu).test.ts\" \"test/**/*.test.tsx\" && TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 --test-concurrency=1 \"test/**/*.gpu.test.ts\"",
     "build:playground": "node --import tsx src/browser/build.ts",
     "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
-    "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
+    "gallery:check": "node --import tsx src/headless/cli/main.ts gallery check",
     "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.1.0",
-    "perfect-freehand": "1.2.3",
+    "webgpu": "0.6.2",
     "yaml": "^2.7.0"
   },
   "peerDependencies": {
@@ -56,6 +60,7 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@typescript/native": "npm:typescript@7.0.2",
+    "@webgpu/types": "0.1.74",
     "esbuild": "0.25.12",
     "eslint": "^9.39.2",
     "linkedom": "^0.18.12",

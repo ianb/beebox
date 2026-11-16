@@ -13,9 +13,11 @@
 // exhaustive. `draw` only paints. See TEA.md.
 import type {
   DeepReadonly,
+  Drawing,
   Msg,
-  ParamsDecl,
   ParamValues,
+  ParamsDecl,
+  RootDrawing,
   Style,
   Util,
   View,
@@ -33,7 +35,6 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: 500, height: 400 };
-
 type Params = ParamValues<typeof params>;
 
 interface Planet {
@@ -211,52 +212,66 @@ export function update(
   }
 }
 
-function drawHud(params_: {
+/** One planet at its place on the orbit, with a ring around it when selected. */
+function drawPlanet(a: {
+  v: View;
+  planet: DeepReadonly<Planet>;
+  pos: { x: number; y: number };
+  selected: boolean;
+}): Drawing {
+  const { v, planet, pos, selected } = a;
+  return [
+    v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color }),
+    selected &&
+      v.circle(pos.x, pos.y, (planet.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING),
+  ];
+}
+
+function drawHud(a: {
   v: View;
   model: DeepReadonly<Model>;
   p: Params;
-}): void {
-  const { v, model, p } = params_;
-  v.text(
-    `frame ${model.frame}   speed x${p["speed-scale"].toFixed(1)}`,
-    { x: 8, y: 8 },
-    HUD_TEXT,
-  );
+}): Drawing {
+  const { v, model, p } = a;
   const focused = model.planets.find((planet) => planet.name === p.focus);
   const selectedName =
     model.mode.type === "selected"
       ? (model.planets[model.mode.index]?.name ?? "?")
       : "none";
-  v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT);
-  if (focused !== undefined) {
+  return [
     v.text(
-      `focus ${focused.name}: base speed ${focused.speed.toFixed(3)}`,
-      { x: 8, y: 44 },
+      `frame ${model.frame}   speed x${p["speed-scale"].toFixed(1)}`,
+      { x: 8, y: 8 },
       HUD_TEXT,
-    );
-  }
+    ),
+    v.text(`selected: ${selectedName}`, { x: 8, y: 26 }, HUD_TEXT),
+    focused !== undefined &&
+      v.text(
+        `focus ${focused.name}: base speed ${focused.speed.toFixed(3)}`,
+        { x: 8, y: 44 },
+        HUD_TEXT,
+      ),
+  ];
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  v.background("#0b1020");
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
   const scale = p["speed-scale"];
-
-  if (p["show-orbits"]) {
-    for (const planet of model.planets)
-      v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING);
-  }
-
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" });
-
-  for (let i = 0; i < model.planets.length; i++) {
-    const planet = model.planets[i];
-    if (planet === undefined) continue;
-    const pos = planetPos({ planet, frame: model.frame, scale });
-    v.circle(pos.x, pos.y, planet.size / 2, { fill: planet.color });
-    if (model.mode.type === "selected" && model.mode.index === i) {
-      v.circle(pos.x, pos.y, (planet.size + HIT_PADDING * 2 + 4) / 2, SELECTION_RING);
-    }
-  }
-
-  drawHud({ v, model, p });
+  const { mode } = model;
+  return [
+    v.background("#0b1020"),
+    p["show-orbits"] &&
+      model.planets.map((planet) =>
+        v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING),
+      ),
+    v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }),
+    model.planets.map((planet, i) =>
+      drawPlanet({
+        v,
+        planet,
+        pos: planetPos({ planet, frame: model.frame, scale }),
+        selected: mode.type === "selected" && mode.index === i,
+      }),
+    ),
+    drawHud({ v, model, p }),
+  ];
 }
