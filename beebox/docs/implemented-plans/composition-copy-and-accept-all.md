@@ -1,6 +1,6 @@
 ---
 title: "Composition: copy for publishing, a marks list, and resolving marks"
-status: draft
+status: implemented
 workstream: composition-editor
 issues: []
 ---
@@ -20,8 +20,8 @@ composition-editor session (2026-11-16). Searched `issues/` for
 `issues/features/2026-10-08-drafted-message-has-no-copy-control.md`, is the
 one the parent plan already addressed; nothing here changes it.
 
-Parent: [composition editor](../implemented-plans/composition-editor.md) and
-its [design](../implemented-plans/composition-editor.design.md).
+Parent: [composition editor](composition-editor.md) and
+its [design](composition-editor.design.md).
 
 ## Design
 
