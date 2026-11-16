@@ -72,6 +72,9 @@ function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, 
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ "aria-label": "Composition text" }),
+      // The sticky header bar (the frame's first child) covers the top of
+      // the pane; keep the cursor below it.
+      EditorView.scrollMargins.of((editor) => ({ top: editor.dom.closest(".bbx-composition")?.firstElementChild?.getBoundingClientRect().height ?? 0 })),
       markWidgets(),
       conflictWidgets(),
       theme,
@@ -162,7 +165,7 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
-      <Row gap="sm" align="center" justify="end" wrap className="rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
+      <Row gap="sm" align="center" justify="end" wrap className="sticky top-0 z-10 rounded-t border-b border-card-pen bg-card-tint px-2 py-0.5 print:hidden">
         <span className="text-sm font-semibold text-card-pen">Composition</span>
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
