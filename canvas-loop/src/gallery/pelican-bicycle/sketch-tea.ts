@@ -15,8 +15,6 @@ import type {
   View,
 } from "@ianbicking/canvas-loop";
 
-export const renderer = "scene";
-
 export const params = {
   speed: { type: "number", min: 0, max: 3, default: 1, step: 0.1 },
   pause: { type: "boolean", default: false },

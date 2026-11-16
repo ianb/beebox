@@ -16,9 +16,6 @@
 // exhaustive; `draw` only paints. See TEA.md.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },
   gravity: { type: "number", min: -0.4, max: 1, default: 0.15, step: 0.05 },

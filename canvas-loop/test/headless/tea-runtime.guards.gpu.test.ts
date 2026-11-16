@@ -8,13 +8,12 @@ import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
 import type { View } from "../../src/core/tea.js";
-import { SURFACES, onSurface, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
-import type { SurfaceName } from "../helpers.js";
+import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 const REAL_THEN = Promise.prototype.then;
 
-function guardModule(offend: () => void, surface: SurfaceName): LoadedTeaModule {
-  return onSurface(toTeaModule({
+function guardModule(offend: () => void): LoadedTeaModule {
+  return toTeaModule({
     canvas: { width: 20, height: 20 },
     init: () => ({}),
     update: (model: object) => model,
@@ -22,105 +21,103 @@ function guardModule(offend: () => void, surface: SurfaceName): LoadedTeaModule 
       v.background("#000000");
       offend();
     },
-  }), surface);
+  });
 }
 
-for (const surface of SURFACES) {
-  test(`Math.random() inside a sketch is a determinism error pointing at u.random() (${surface})`, async () => {
-    const dir = tmpDir();
-    const result = await teaRun(teaRunOptions(guardModule(() => void Math.random(), surface), { outDir: dir, frames: 3 }));
-    assert.equal(result.errors.length, 1, "run reported one error");
-    const [message] = result.errors;
-    assert.ok(message !== undefined && message.includes("Math.random"), "names the offending API");
-    assert.ok(message.includes("u.random()"), "points at the seeded replacement");
-    assert.match(message, /\(at test\/headless\/tea-runtime\.guards\.gpu\.test\.ts:\d+:\d+\)$/u, "names the sketch's line");
-    const transcript = readTranscript(dir);
-    assert.ok(transcript.includes("frame 0: error in draw: DeterminismError"), "transcript records the error");
-  });
+test("Math.random() inside a sketch is a determinism error pointing at u.random()", async () => {
+  const dir = tmpDir();
+  const result = await teaRun(teaRunOptions(guardModule(() => void Math.random()), { outDir: dir, frames: 3 }));
+  assert.equal(result.errors.length, 1, "run reported one error");
+  const [message] = result.errors;
+  assert.ok(message !== undefined && message.includes("Math.random"), "names the offending API");
+  assert.ok(message.includes("u.random()"), "points at the seeded replacement");
+  assert.match(message, /\(at test\/headless\/tea-runtime\.guards\.gpu\.test\.ts:\d+:\d+\)$/u, "names the sketch's line");
+  const transcript = readTranscript(dir);
+  assert.ok(transcript.includes("frame 0: error in draw: DeterminismError"), "transcript records the error");
+});
 
-  test(`Date.now() inside a sketch is a determinism error pointing at the tick msg (${surface})`, async () => {
-    const dir = tmpDir();
-    const result = await teaRun(teaRunOptions(guardModule(() => void Date.now(), surface), { outDir: dir, frames: 3 }));
-    assert.equal(result.errors.length, 1);
-    const [message] = result.errors;
-    assert.ok(message !== undefined && message.includes("Date.now"), "names Date.now");
-    assert.ok(message.includes("tick msg"), "points at the tick msg");
-  });
+test("Date.now() inside a sketch is a determinism error pointing at the tick msg", async () => {
+  const dir = tmpDir();
+  const result = await teaRun(teaRunOptions(guardModule(() => void Date.now()), { outDir: dir, frames: 3 }));
+  assert.equal(result.errors.length, 1);
+  const [message] = result.errors;
+  assert.ok(message !== undefined && message.includes("Date.now"), "names Date.now");
+  assert.ok(message.includes("tick msg"), "points at the tick msg");
+});
 
-  test(`nondeterministic globals are restored after a run (${surface})`, async () => {
-    const dir = tmpDir();
-    await teaRun(teaRunOptions(guardModule(() => {}, surface), { outDir: dir, frames: 2 }));
-    assert.equal(typeof Math.random(), "number", "Math.random works again");
-    assert.equal(typeof Date.now(), "number", "Date.now works again");
-  });
+test("nondeterministic globals are restored after a run", async () => {
+  const dir = tmpDir();
+  await teaRun(teaRunOptions(guardModule(() => {}), { outDir: dir, frames: 2 }));
+  assert.equal(typeof Math.random(), "number", "Math.random works again");
+  assert.equal(typeof Date.now(), "number", "Date.now works again");
+});
 
-  test(`scheduling from a sketch call is refused at the call: a microtask, a promise callback, a timer (${surface})`, async () => {
-    const schedulers: Record<string, () => void> = {
-      queueMicrotask: () => queueMicrotask(() => void Math.random()),
-      "Promise.then": () => void Promise.resolve().then(() => Math.random()),
-      setTimeout: () => void setTimeout(() => void Math.random(), 10),
-    };
-    for (const [api, schedule] of Object.entries(schedulers)) {
-      const module = onSurface(toTeaModule({
-        canvas: { width: 20, height: 20 },
-        init: () => {
-          schedule();
-          return {};
-        },
-        update: (model: object) => model,
-        draw: (v: View) => v.background("#000000"),
-      }), surface);
-      const dir = tmpDir();
-      const result = await teaRun(teaRunOptions(module, { outDir: dir, frames: 2 }));
-      assert.equal(result.errors.length, 1, api);
-      const message = `error in init: DeterminismError: ${api}() is unavailable inside canvas-loop sketches: sketch code runs synchronously; it cannot schedule work.`;
-      assert.ok(result.errors[0]?.startsWith(message), `${api}: ${result.errors[0] ?? ""}`);
-      assert.match(result.errors[0] ?? "", /\(at test\/headless\/tea-runtime\.guards\.gpu\.test\.ts:\d+:\d+\)$/u, `${api} names the sketch's line`);
-      assert.ok(readTranscript(dir).includes(message), api);
-    }
-    assert.equal(Promise.prototype.then, REAL_THEN, "Promise.prototype.then is restored");
-    assert.equal(typeof setTimeout(() => {}, 0), "object", "setTimeout works again");
-  });
-
-  test(`accepted limitation: an async function the sketch starts and does not return runs its continuation unguarded (${surface})`, async () => {
-    let after: number | undefined;
-    const module = onSurface(toTeaModule({
+test("scheduling from a sketch call is refused at the call: a microtask, a promise callback, a timer", async () => {
+  const schedulers: Record<string, () => void> = {
+    queueMicrotask: () => queueMicrotask(() => void Math.random()),
+    "Promise.then": () => void Promise.resolve().then(() => Math.random()),
+    setTimeout: () => void setTimeout(() => void Math.random(), 10),
+  };
+  for (const [api, schedule] of Object.entries(schedulers)) {
+    const module = toTeaModule({
       canvas: { width: 20, height: 20 },
       init: () => {
-        // Native await does not call Promise.prototype.then, so nothing refuses it; the continuation runs after init returned.
-        void (async () => {
-          await null;
-          after = Math.random();
-        })();
+        schedule();
         return {};
       },
       update: (model: object) => model,
       draw: (v: View) => v.background("#000000"),
-    }), surface);
-    const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
-    assert.deepEqual(result.errors, []);
-    assert.equal(typeof after, "number", "the continuation ran, outside the guards");
-  });
+    });
+    const dir = tmpDir();
+    const result = await teaRun(teaRunOptions(module, { outDir: dir, frames: 2 }));
+    assert.equal(result.errors.length, 1, api);
+    const message = `error in init: DeterminismError: ${api}() is unavailable inside canvas-loop sketches: sketch code runs synchronously; it cannot schedule work.`;
+    assert.ok(result.errors[0]?.startsWith(message), `${api}: ${result.errors[0] ?? ""}`);
+    assert.match(result.errors[0] ?? "", /\(at test\/headless\/tea-runtime\.guards\.gpu\.test\.ts:\d+:\d+\)$/u, `${api} names the sketch's line`);
+    assert.ok(readTranscript(dir).includes(message), api);
+  }
+  assert.equal(Promise.prototype.then, REAL_THEN, "Promise.prototype.then is restored");
+  assert.equal(typeof setTimeout(() => {}, 0), "object", "setTimeout works again");
+});
 
-  test(`a getter in the model runs under the guards when the runner freezes it (${surface})`, async () => {
-    let cached: number | undefined;
-    const module = onSurface(toTeaModule({
-      canvas: { width: 20, height: 20 },
-      init: () => ({
-        get x(): number {
-          cached ??= Math.random();
-          return cached;
-        },
-      }),
-      update: (model: object) => model,
-      draw: (v: View) => v.background("#000000"),
-    }), surface);
-    const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
-    assert.equal(cached, undefined);
-    assert.equal(result.errors.length, 1);
-    assert.match(result.errors[0] ?? "", /^error in init: DeterminismError: Math\.random\(\)/u);
+test("accepted limitation: an async function the sketch starts and does not return runs its continuation unguarded", async () => {
+  let after: number | undefined;
+  const module = toTeaModule({
+    canvas: { width: 20, height: 20 },
+    init: () => {
+      // Native await does not call Promise.prototype.then, so nothing refuses it; the continuation runs after init returned.
+      void (async () => {
+        await null;
+        after = Math.random();
+      })();
+      return {};
+    },
+    update: (model: object) => model,
+    draw: (v: View) => v.background("#000000"),
   });
-}
+  const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
+  assert.deepEqual(result.errors, []);
+  assert.equal(typeof after, "number", "the continuation ran, outside the guards");
+});
+
+test("a getter in the model runs under the guards when the runner freezes it", async () => {
+  let cached: number | undefined;
+  const module = toTeaModule({
+    canvas: { width: 20, height: 20 },
+    init: () => ({
+      get x(): number {
+        cached ??= Math.random();
+        return cached;
+      },
+    }),
+    update: (model: object) => model,
+    draw: (v: View) => v.background("#000000"),
+  });
+  const result = await teaRun(teaRunOptions(module, { outDir: tmpDir(), frames: 2 }));
+  assert.equal(cached, undefined);
+  assert.equal(result.errors.length, 1);
+  assert.match(result.errors[0] ?? "", /^error in init: DeterminismError: Math\.random\(\)/u);
+});
 
 test("a second teaRun while one is running is refused, and the first restores the console", async () => {
   const module = toTeaModule({ canvas: { width: 20, height: 20 }, init: () => ({}), update: (m: object) => m, draw: (v: View) => v.background("#000000") });

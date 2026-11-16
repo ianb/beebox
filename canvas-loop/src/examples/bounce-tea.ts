@@ -8,9 +8,6 @@
 // All state lives in Model; `update` is the only thing that changes it.
 import type { DeepReadonly, Msg, Util, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 400, height: 300 };
 
 interface Ball {

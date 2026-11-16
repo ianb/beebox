@@ -2,9 +2,6 @@
 // different colours; the middle one holds a lantern that lights the row.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 720, height: 420 };
 export const params = {
   wind: { type: "number", min: 0, max: 1, default: 0.5, step: 0.05, label: "lantern flicker" },

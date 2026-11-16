@@ -7,9 +7,6 @@ import { MAP_H, MAP_W, type Room, T, VISITED, WALKERS, type Walker } from "./pla
 import { STATIC_PIECES, WALK, WALK_GRID, WALK_W, type Piece, ceilingPieces, roomLabels } from "./pieces-tea.js";
 import { paintPerson } from "./props-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   view: {
     type: "select",

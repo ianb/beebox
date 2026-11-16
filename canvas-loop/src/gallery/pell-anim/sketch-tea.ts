@@ -15,9 +15,6 @@
 // and its `s.random` calls replaced by a seeded generator.
 import type { BrushPreset, DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   wind: { type: "number", min: 0, max: 1, default: 0.35, step: 0.05 },
   dusk: { type: "number", min: 0, max: 1, default: 0, step: 0.05 },

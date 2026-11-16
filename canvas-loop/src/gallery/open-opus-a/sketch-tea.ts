@@ -13,9 +13,6 @@ const WATERLINE = 560; // where the carp's head meets the water
 
 const LANTERN: Vec2 = [498, 490];
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: W, height: H };
 
 export type Model = Record<string, never>;

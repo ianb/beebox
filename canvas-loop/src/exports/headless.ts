@@ -1,8 +1,8 @@
 // canvas-loop headless runner (the "./headless" export): everything that renders
-// a sketch without a browser — the deterministic fold loop over the
-// @napi-rs/canvas-backed surface or the scene surface (Dawn, loaded only for a
-// sketch that exports `renderer = "scene"`), the events-script parser, the
-// recorder, and the transcript renderer. Depends on @napi-rs/canvas, `webgpu`
+// a sketch without a browser — the deterministic fold loop over the scene
+// surface (the recorder and the GPU renderer on Dawn), the events-script
+// parser, the frame recorder, and the transcript renderer. Depends on
+// @napi-rs/canvas (PNG, text measuring), `webgpu`
 // and node: builtins; import it only where those are available (the CLI,
 // tests, tooling).
 // The dependency-light authoring/drawing surface is the package root (".").
@@ -18,7 +18,6 @@ export { toTeaModule } from "../headless/tea-load.js";
 export type { LoadedTeaModule } from "../headless/tea-load.js";
 export { parseTeaEvents, bucketTeaByFrame } from "../headless/tea-events.js";
 export type { TeaScriptEvent } from "../headless/tea-events.js";
-export { TeaView } from "../headless/tea-view.js";
 export { TeaUtil } from "../headless/tea-util.js";
 export type { UtilText } from "../headless/tea-util.js";
 export { NoGpuAdapterError } from "../scene/errors.js";

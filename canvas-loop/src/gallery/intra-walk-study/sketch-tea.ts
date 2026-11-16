@@ -9,9 +9,6 @@ import { LOOK, mixHex, skeleton, walker } from "./figure-tea.js";
 import type { Look } from "./figure-tea.js";
 import { DEPTH_PX_PER_M, PX_PER_M, m } from "./sizes-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 1280, height: 1000 };
 
 export interface Model {

@@ -50,9 +50,6 @@ import {
   type Box,
 } from "./layout-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   property: { type: "select", options: PROPERTY_IDS, default: "atomic radius" },
   "show values": { type: "boolean", default: false },

@@ -3,8 +3,8 @@
 // warned, characters with no glyph warned), and a captured frame is rendered
 // by the GPU renderer on Dawn, measuring each brushed mark for the faint-mark
 // warning. One
-// GPU device per process, opened on first use and kept. Loaded only when a
-// sketch exports `renderer = "scene"`, so a Canvas2D run never loads Dawn.
+// GPU device per process, opened on first use and kept. The runner loads this
+// module on its first run, so importing `./headless` does not load Dawn.
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ParamsDecl, ParamValues } from "../../core/tea.js";
 import type { SketchHost } from "../../core/types.js";

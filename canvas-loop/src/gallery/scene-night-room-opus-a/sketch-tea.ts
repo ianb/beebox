@@ -3,9 +3,6 @@
 // stands looking out. The whole room is washed like a watercolour.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 640, height: 400 };
 export const params = {
   speed: { type: "number", min: 0, max: 3, default: 1, step: 0.1, label: "pan speed" },

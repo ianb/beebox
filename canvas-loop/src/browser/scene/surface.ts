@@ -9,7 +9,7 @@ import type { ControlBox, ParamsDecl, ParamValues } from "../../core/tea.js";
 import type { TextBox, TextOptions } from "../../core/paint.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import { SketchMountError } from "../../scene/errors.js";
-import type { TextMeasure } from "../../core/view.js";
+import type { TextMeasure } from "../../core/text/measure.js";
 import type { DrawSurface } from "../runtime/engine.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ColorParser } from "../../scene/colors.js";

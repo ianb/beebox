@@ -14,9 +14,6 @@ import { buildOf } from "./body-tea.js";
 import type { Archetype, BodySpec, Build } from "./body-tea.js";
 import type { Outfit } from "./figure-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   sheet: { type: "select", options: ["styles", "clothes", "bodies", "play"], default: "styles", label: "Sheet" },
   outfit: { type: "select", options: ["jumpsuit", "skirt", "coat"], default: "jumpsuit", label: "Outfit (play)" },

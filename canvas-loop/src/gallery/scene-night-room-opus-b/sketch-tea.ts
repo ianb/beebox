@@ -3,9 +3,6 @@
 // and a window full of moonlight. The whole room is one lit, washed group.
 import type { BrushPreset, Msg, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 640, height: 400 };
 
 const ROOM_W = 1400;

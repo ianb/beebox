@@ -4,9 +4,6 @@
 // light areas stay bare, half tones take single lines and shadows cross.
 import type { Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   look: { type: "select", options: ["plain", "hatching"], default: "hatching", label: "Look" },
 } as const satisfies ParamsDecl;

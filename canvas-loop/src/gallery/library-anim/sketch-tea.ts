@@ -1,8 +1,5 @@
 import type { BrushName, DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 760, height: 760 };
 
 export const params = {

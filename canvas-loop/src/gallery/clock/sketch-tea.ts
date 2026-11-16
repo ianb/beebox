@@ -6,9 +6,6 @@
 // against the underlying time. See TEA.md.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   timeScale: { type: "number", min: 1, max: 3600, default: 60, step: 1 },
   style: { type: "select", options: ["classic", "minimal"], default: "classic" },

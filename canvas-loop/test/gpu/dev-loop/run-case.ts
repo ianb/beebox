@@ -26,7 +26,6 @@ export async function runCase(c: DevLoopCase): Promise<CaseOutput> {
     init: (): Model => ({ t: 0, color: "#2a9d8f" }),
     update: c.update ?? tick,
     draw: c.draw,
-    renderer: "scene",
   });
   const result = await teaRun({ sketchPath: `dev-loop/${c.id}`, module, outDir, frames: c.frames ?? 1, every: 1, seed: 1, fps: 60, ratio: 1, scene: true, events: [], eventsPath: undefined });
   const file = join(outDir, "transcript.md");

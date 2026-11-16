@@ -10,9 +10,6 @@ import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, TextOptions, Ut
 import type { ElementData, PropInfo, PropKey } from "./elements-tea.js";
 import { ELEMENTS, GROUPS, element, NOTES, PERIODS, PROPS, formatValue, valueOf } from "./elements-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   property: {
     type: "select",

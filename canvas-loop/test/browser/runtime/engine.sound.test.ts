@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Runtime } from "../../../src/browser/runtime/engine.js";
 import type { PlaygroundModule } from "../../../src/browser/sketch-types.js";
 import type { Msg, Voice } from "../../../src/core/tea.js";
-import type { TextMeasure } from "../../../src/core/view.js";
+import type { TextMeasure } from "../../../src/core/text/measure.js";
 import { rafState } from "../../fake-dom.js";
 
 // Text is never measured here: only the voices are under test.

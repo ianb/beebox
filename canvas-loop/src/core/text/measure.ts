@@ -135,3 +135,9 @@ function insideShift(b: TextBounds, where: TextPlace): { x: number; y: number } 
   const cy = dy * pr;
   return { x: (m.d * cx - m.c * cy) / det, y: (-m.b * cx + m.a * cy) / det };
 }
+
+/** Text measuring without drawing, for `Util`. */
+export interface TextMeasure {
+  width(content: string, options?: TextOptions): number;
+  bounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+}

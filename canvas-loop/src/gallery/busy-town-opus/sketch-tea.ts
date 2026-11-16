@@ -7,9 +7,6 @@ import { paintNightSky, paintTown } from "./town-tea.js";
 import * as A from "./actors-tea.js";
 import * as S from "./folk-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   time: {
     type: "select",

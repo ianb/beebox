@@ -4,9 +4,6 @@
 // drawn wobble is a decaying standing wave, not a physics simulation.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, Voice } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   tuning: { type: "select", options: ["standard", "open G", "DADGAD"], default: "standard", label: "Tuning", panel: false },
 } as const satisfies ParamsDecl;

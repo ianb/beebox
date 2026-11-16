@@ -1,8 +1,7 @@
 // The one headless runner: a TEA sketch run for N frames through the
 // deterministic fold loop, its captured frames rendered and written with a
-// transcript. The sketch's `renderer` export picks the surface it draws on:
-// the scene surface (recorder and GPU renderer on Dawn) or, until it retires,
-// today's Canvas2D surface. Each sketch call runs under the determinism
+// transcript. Each frame is recorded as a scene and rendered by the GPU
+// renderer on Dawn (headless/scene/surface.ts). Each sketch call runs under the determinism
 // guards; the render between them is awaited outside them.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -25,7 +24,6 @@ import { renderTranscript } from "../transcript.js";
 import type { RunMeta } from "../transcript.js";
 import type { CanvasSize, Msg, ParamsDecl, ParamValues } from "../../core/tea.js";
 import { formatArgs } from "../../core/format.js";
-import { CanvasFrameSurface } from "../frame-surface.js";
 import type { FrameSurface } from "../frame-surface.js";
 import type { GpuHandle } from "../../device/open.js";
 import { NoGpuAdapterError } from "../../scene/errors.js";
@@ -281,26 +279,16 @@ function runMeta(options: TeaRunOptions, adapter: string | undefined): RunMeta {
     eventsPath: options.eventsPath,
     width: size.width,
     height: size.height,
-    ...(options.module.renderer === "scene" ? { ratio: options.ratio ?? 1 } : {}),
+    ratio: options.ratio ?? 1,
     ...(adapter === undefined ? {} : { adapter }),
   };
 }
 
-/** Options only the scene renderer has, refused on the Canvas2D surface rather than ignored. */
-function checkCanvasOptions(options: TeaRunOptions): void {
-  if (options.ratio !== undefined && options.ratio !== 1) throw new CliError({ detail: "--ratio needs the scene renderer (export const renderer = \"scene\")" });
-  if (options.scene !== undefined && options.scene !== false) throw new CliError({ detail: "--scene needs the scene renderer (export const renderer = \"scene\")" });
-}
-
-/** The surface the module's `renderer` export asks for; undefined when the scene renderer finds no GPU adapter. */
+/** The scene surface; undefined when Dawn finds no GPU adapter. */
 async function openSurface(options: TeaRunOptions, a: { recorder: FrameRecorder; getParams: () => ParamValues<ParamsDecl> }): Promise<FrameSurface | undefined> {
   const { module } = options;
   const size = module.canvas ?? DEFAULT_CANVAS;
   const common = { ...size, host: a.recorder, decl: module.params, getParams: a.getParams, outline: options.outline === true };
-  if (module.renderer !== "scene") {
-    checkCanvasOptions(options);
-    return new CanvasFrameSurface(common);
-  }
   // Loaded only here: the scene surface opens Dawn, a native module (`webgpu`).
   const { openSceneSurface } = await import("../scene/surface.js");
   return openSceneSurface({
@@ -335,7 +323,7 @@ export async function teaRun(options: TeaRunOptions): Promise<RunResult> {
   try {
     const { module } = options;
     const state = { params: guardParams(module.params, startParams(module.params, options.initialParams ?? {})) };
-    const ratio = module.renderer === "scene" ? (options.ratio ?? 1) : 1;
+    const ratio = options.ratio ?? 1;
     const recorder = new FrameRecorder({ frames: options.frames, every: options.every, ratio, ...(options.zooms === undefined ? {} : { zooms: options.zooms }) });
     const surface = await openSurface(options, { recorder, getParams: () => state.params });
     if (surface === undefined) noAdapter(options);

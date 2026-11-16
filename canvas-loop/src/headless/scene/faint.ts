@@ -1,4 +1,4 @@
-// The faint-mark warning (dev-loop row 42), today's rule (core/painter/faint.ts):
+// The faint-mark warning (dev-loop row 42), the Canvas2D painter's rule, kept:
 // a brushed mark whose strongest pixel lands under 8% opacity, after its
 // brush, paint, paper grain and the groups around it, cannot be seen, and an
 // agent would otherwise spend a render cycle finding that out. The renderer

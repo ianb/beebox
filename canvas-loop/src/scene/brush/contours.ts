@@ -1,5 +1,5 @@
-// A shape's outline as brush contours, as today's painter hands them to a
-// brush (core/painter/engine.ts): rectangles and polygons by their corners,
+// A shape's outline as brush contours, as the Canvas2D painter handed them to a
+// brush: rectangles and polygons by their corners,
 // round shapes and paths flattened every `step` units of their own coordinates.
 import type { Contour } from "../../core/contours.js";
 import { ellipseContour, pathContours } from "../../core/contours.js";

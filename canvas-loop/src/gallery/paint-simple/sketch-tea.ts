@@ -18,9 +18,6 @@ type BrushChoice = (typeof BRUSHES)[number];
 type ColourName = (typeof COLOURS)[number];
 type SizeName = (typeof SIZES)[number];
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   brush: { type: "select", options: BRUSHES, default: "ink" },
   colour: { type: "select", options: COLOURS, default: "black" },

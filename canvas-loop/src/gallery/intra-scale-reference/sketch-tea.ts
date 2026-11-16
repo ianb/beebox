@@ -5,9 +5,6 @@ import type { DeepReadonly, Msg, Vec2, View } from "@ianbicking/canvas-loop";
 import { INK, blob, ellipsePts, roundRectPts } from "./ink-tea.js";
 import { DEPTH_PX_PER_M, PLANES, PX_PER_M, SIZES, m } from "./sizes-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 1500, height: 960 };
 
 export interface Model {

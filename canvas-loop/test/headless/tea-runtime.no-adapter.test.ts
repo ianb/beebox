@@ -16,7 +16,7 @@ import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 const noAdapters = { requestAdapter: (): Promise<null> => Promise.resolve(null) };
 
 test("no GPU adapter: the transcript is written, then NoGpuAdapterError names it; no frame is written", async () => {
-  const module = toTeaModule({ canvas: { width: 40, height: 30 }, init: () => ({}), update: (m: object) => m, draw: () => {}, renderer: "scene" });
+  const module = toTeaModule({ canvas: { width: 40, height: 30 }, init: () => ({}), update: (m: object) => m, draw: () => {} });
   const outDir = tmpDir();
   const unusedColors = (): never => assert.fail("colours are not parsed without an adapter");
   const unusedRaster = (): never => assert.fail("glyphs are not drawn without an adapter");

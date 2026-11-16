@@ -42,9 +42,6 @@ const HUD_TEXT = {
   valign: "top",
 } as const;
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 500, height: 400 };
 
 function makePlanets(): Planet[] {

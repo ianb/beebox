@@ -23,9 +23,6 @@ import {
   type Solution,
 } from "./optics-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   lens: {
     type: "select",

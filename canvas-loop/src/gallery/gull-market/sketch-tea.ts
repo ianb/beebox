@@ -18,9 +18,6 @@ import {
 import { gull } from "./gull-tea.js";
 import { awning, counter, stallBack } from "./stall-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: W, height: H };
 
 export type Model = Record<string, never>;

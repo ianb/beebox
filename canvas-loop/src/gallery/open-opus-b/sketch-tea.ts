@@ -16,9 +16,6 @@ import {
 } from "./scene-tea.js";
 import type { SceneRandom } from "./scene-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 800, height: 800 };
 
 export interface Model {

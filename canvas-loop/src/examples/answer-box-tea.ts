@@ -13,9 +13,6 @@
 // Click a tile to show its atomic mass.
 import type { DeepReadonly, Msg, ParamsDecl, Util, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 420, height: 220 };
 
 export const params = {

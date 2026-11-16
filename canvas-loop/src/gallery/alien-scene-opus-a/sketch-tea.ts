@@ -95,9 +95,6 @@ const ANT_R: Pts = [
 const EYE_L = { x: AX - 36, y: 244 };
 const EYE_R = { x: AX + 36, y: 244 };
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: W, height: H };
 
 export interface Model {

@@ -177,9 +177,6 @@ export interface Model {
 const MEADOW_GREENS = ["#2c4a31", "#3d6a40", "#5e9455", "#86b46a"];
 const FORE_GREENS = ["#2c4a31", "#3d6a40", "#5e9455"];
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: W, height: H };
 
 export function init(u: Util): Model {

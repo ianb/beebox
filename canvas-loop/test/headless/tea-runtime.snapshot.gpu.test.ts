@@ -6,7 +6,7 @@ import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
 import type { Msg, View } from "../../src/core/tea.js";
-import { SURFACES, onSurface, readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
+import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 // A sketch whose pixels move with the frame number, so an unperturbed run is
 // a meaningful thing to diff against.
@@ -20,33 +20,29 @@ const mover: LoadedTeaModule = toTeaModule({
   },
 });
 
-for (const surface of SURFACES) {
-  test(`a scripted snapshot event forces a capture with its label (${surface})`, async () => {
-    const dir = tmpDir();
-    // frames 0..9, every=30 → only frames 0 and 9 capture on their own. The
-    // snapshot pulls frame 5 into the transcript with a labeled heading.
-    await teaRun(teaRunOptions(onSurface(mover, surface), { outDir: dir, frames: 10, every: 30, events: [{ frame: 5, type: "snapshot", label: "midway" }] }));
-    assert.match(readTranscript(dir), /### frame 5 — midway/, "labeled snapshot frame appears in the transcript");
-  });
-}
+test("a scripted snapshot event forces a capture with its label", async () => {
+  const dir = tmpDir();
+  // frames 0..9, every=30 → only frames 0 and 9 capture on their own. The
+  // snapshot pulls frame 5 into the transcript with a labeled heading.
+  await teaRun(teaRunOptions(mover, { outDir: dir, frames: 10, every: 30, events: [{ frame: 5, type: "snapshot", label: "midway" }] }));
+  assert.match(readTranscript(dir), /### frame 5 — midway/, "labeled snapshot frame appears in the transcript");
+});
 
-for (const surface of SURFACES) {
-  test(`a snapshot event captures without perturbing state (${surface})`, async () => {
-    const plain = tmpDir();
-    const snapped = tmpDir();
-    await teaRun(teaRunOptions(onSurface(mover, surface), { outDir: plain, frames: 10, every: 30, events: [] }));
-    await teaRun(teaRunOptions(onSurface(mover, surface), { outDir: snapped, frames: 10, every: 30, events: [{ frame: 5, type: "snapshot" }] }));
-    const plainFrames = readDirBytes(plain);
-    const snappedFrames = readDirBytes(snapped);
-    // Every frame the plain run captured is byte-identical in the snapshot run;
-    // the snapshot only ADDS frame-0005.png, it changes nothing else.
-    for (const [name, bytes] of plainFrames) {
-      if (name === "transcript.md") continue;
-      assert.deepEqual(snappedFrames.get(name), bytes, `${name} is unchanged by the snapshot`);
-    }
-    assert.ok(snappedFrames.has("frame-0005.png"), "the snapshot added its frame");
-  });
-}
+test("a snapshot event captures without perturbing state", async () => {
+  const plain = tmpDir();
+  const snapped = tmpDir();
+  await teaRun(teaRunOptions(mover, { outDir: plain, frames: 10, every: 30, events: [] }));
+  await teaRun(teaRunOptions(mover, { outDir: snapped, frames: 10, every: 30, events: [{ frame: 5, type: "snapshot" }] }));
+  const plainFrames = readDirBytes(plain);
+  const snappedFrames = readDirBytes(snapped);
+  // Every frame the plain run captured is byte-identical in the snapshot run;
+  // the snapshot only ADDS frame-0005.png, it changes nothing else.
+  for (const [name, bytes] of plainFrames) {
+    if (name === "transcript.md") continue;
+    assert.deepEqual(snappedFrames.get(name), bytes, `${name} is unchanged by the snapshot`);
+  }
+  assert.ok(snappedFrames.has("frame-0005.png"), "the snapshot added its frame");
+});
 
 test("the events parser accepts a snapshot (with and without label) and rejects a non-string label", () => {
   const events = parseTeaEvents(

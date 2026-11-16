@@ -1,6 +1,6 @@
 // The browser runtime's data types: what it is built from and what it reports.
 import type { ControlBox, ParamsDecl, ParamValues, Voice } from "../../core/tea.js";
-import type { TextMeasure } from "../../core/view.js";
+import type { TextMeasure } from "../../core/text/measure.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 

@@ -8,9 +8,6 @@
 // returns them as voices. See TEA.md "Sound".
 import type { DeepReadonly, Msg, Util, View, Voice } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 400, height: 260 };
 
 const BARS = 8;

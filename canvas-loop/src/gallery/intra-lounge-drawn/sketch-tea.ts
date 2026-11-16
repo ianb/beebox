@@ -7,9 +7,6 @@ import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import { paintLight } from "./light-tea.js";
 import { paintRoom } from "./room-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 1200, height: 860 };
 
 export interface Model {

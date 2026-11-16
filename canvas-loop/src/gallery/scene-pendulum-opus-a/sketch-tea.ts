@@ -3,9 +3,6 @@
 // small-angle period 2π√(L/g), which the measured swing matches closely.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, View, TextOptions, Util, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 640, height: 440 };
 export const params = {
   length: { type: "number", min: 0.25, max: 2, default: 1.2, step: 0.05, label: "length L (m)" },

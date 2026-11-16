@@ -184,9 +184,6 @@ function greenPart(v: View, part: Part): void {
   outline(v, part);
 }
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 // ── draw ─────────────────────────────────────────────────────────────
 export const canvas = { width: 400, height: 500 };
 

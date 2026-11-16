@@ -4,7 +4,7 @@ import type { DeepReadonly, Msg, Util } from "../../src/core/tea.js";
 import { parseTeaEvents } from "../../src/headless/tea-events.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
-import { SURFACES, onSurface, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
+import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 interface Model {
   picks: number;
@@ -24,57 +24,53 @@ const sketch = toTeaModule({
   activity: (model: Model) => ({ picks: model.picks }),
 });
 
-for (const surface of SURFACES) {
-  test(`the transcript shows activity(model) after a handled input and a param change, not after an unhandled one (${surface})`, async () => {
-    const dir = tmpDir();
-    const events = parseTeaEvents(
-      [
-        { frame: 1, type: "mousedown", x: 5, y: 5 },
-        { frame: 2, type: "mouseup", x: 5, y: 5 },
-        { frame: 3, type: "param", name: "mode", value: "b" },
-      ],
-      sketch.params,
-    );
-    await teaRun({ ...teaRunOptions(onSurface(sketch, surface), { outDir: dir, frames: 5, every: 1 }), events });
-    const lines = readTranscript(dir).split("\n").filter((line) => line.includes("activity {"));
-    assert.equal(lines.length, 2, lines.join("\n"));
-    assert.ok(lines.every((line) => line.includes('activity {"picks":1}')));
-  });
-}
+test("the transcript shows activity(model) after a handled input and a param change, not after an unhandled one", async () => {
+  const dir = tmpDir();
+  const events = parseTeaEvents(
+    [
+      { frame: 1, type: "mousedown", x: 5, y: 5 },
+      { frame: 2, type: "mouseup", x: 5, y: 5 },
+      { frame: 3, type: "param", name: "mode", value: "b" },
+    ],
+    sketch.params,
+  );
+  await teaRun({ ...teaRunOptions(sketch, { outDir: dir, frames: 5, every: 1 }), events });
+  const lines = readTranscript(dir).split("\n").filter((line) => line.includes("activity {"));
+  assert.equal(lines.length, 2, lines.join("\n"));
+  assert.ok(lines.every((line) => line.includes('activity {"picks":1}')));
+});
 
 test("an activity export that is not a function is a load error", () => {
   assert.throws(() => toTeaModule({ init: () => ({}), update: (m: object) => m, draw: () => {}, activity: 3 }), /"activity" export must be a function/u);
 });
 
-for (const surface of SURFACES) {
-  test(`an activity object that cannot be serialized leaves its line off, warns once, and the run continues (${surface})`, async () => {
-    const cyclic = toTeaModule({
-      canvas: { width: 40, height: 40 },
-      init: (): Model => ({ picks: 0 }),
-      // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
-      update: (model: DeepReadonly<Model>, msg: Msg, u: Util): Model => {
-        if (msg.type !== "mousedown") return { ...model };
-        u.handled("pick");
-        return { picks: model.picks + 1 };
-      },
-      draw: () => {},
-      activity: (model: Model) => {
-        const data: Record<string, unknown> = { picks: model.picks };
-        data["self"] = data;
-        return data;
-      },
-    });
-    const dir = tmpDir();
-    const events = parseTeaEvents(
-      [
-        { frame: 1, type: "mousedown", x: 5, y: 5 },
-        { frame: 2, type: "mousedown", x: 5, y: 5 },
-      ],
-      cyclic.params,
-    );
-    await teaRun({ ...teaRunOptions(onSurface(cyclic, surface), { outDir: dir, frames: 4, every: 1 }), events });
-    const transcript = readTranscript(dir).split("\n");
-    assert.equal(transcript.filter((line) => line.includes("activity {")).length, 0);
-    assert.equal(transcript.filter((line) => line.includes("could not be serialized to JSON")).length, 1);
+test("an activity object that cannot be serialized leaves its line off, warns once, and the run continues", async () => {
+  const cyclic = toTeaModule({
+    canvas: { width: 40, height: 40 },
+    init: (): Model => ({ picks: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: DeepReadonly<Model>, msg: Msg, u: Util): Model => {
+      if (msg.type !== "mousedown") return { ...model };
+      u.handled("pick");
+      return { picks: model.picks + 1 };
+    },
+    draw: () => {},
+    activity: (model: Model) => {
+      const data: Record<string, unknown> = { picks: model.picks };
+      data["self"] = data;
+      return data;
+    },
   });
-}
+  const dir = tmpDir();
+  const events = parseTeaEvents(
+    [
+      { frame: 1, type: "mousedown", x: 5, y: 5 },
+      { frame: 2, type: "mousedown", x: 5, y: 5 },
+    ],
+    cyclic.params,
+  );
+  await teaRun({ ...teaRunOptions(cyclic, { outDir: dir, frames: 4, every: 1 }), events });
+  const transcript = readTranscript(dir).split("\n");
+  assert.equal(transcript.filter((line) => line.includes("activity {")).length, 0);
+  assert.equal(transcript.filter((line) => line.includes("could not be serialized to JSON")).length, 1);
+});

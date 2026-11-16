@@ -5,9 +5,6 @@ import type { DeepReadonly, Msg, View } from "@ianbicking/canvas-loop";
 import { STATUES, VISITOR, paintFigures, paintMotes } from "./figures-tea.js";
 import { H, W, paintRoom } from "./room-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: W, height: H };
 
 export interface Model {

@@ -7,9 +7,6 @@ import { paintField } from "./field-tea.js";
 import { H, PERIOD, S, W } from "./map-tea.js";
 import { paintObjects } from "./objects-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   ground: {
     type: "select",

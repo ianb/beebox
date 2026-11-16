@@ -7,9 +7,6 @@ import { ROOMS, ROOM_IDS } from "./rooms-tea.js";
 import { VIEW_H, VIEW_W, m } from "./sizes-tea.js";
 import { paintSky } from "./sky-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   room: { type: "select", options: ROOM_IDS, default: ROOM_IDS[0], label: "Room" },
 } as const satisfies ParamsDecl;

@@ -14,9 +14,6 @@
 // parts with gradients, plain shapes and a few seeded ink marks.
 import type { DeepReadonly, Gesture, Msg, ParamsDecl, ParamValues, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   dusk: { type: "number", min: 0, max: 1, step: 0.05, default: 0.35 },
   wind: { type: "number", min: 0, max: 1, step: 0.05, default: 0.3 },

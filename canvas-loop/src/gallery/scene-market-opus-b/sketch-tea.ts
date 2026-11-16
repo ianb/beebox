@@ -2,9 +2,6 @@
 // different coats; the middle one holds a lantern whose flame lights the row.
 import type { BrushPreset, Msg, Style, View, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 720, height: 420 };
 
 export interface Model {

@@ -2,9 +2,6 @@ import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Style, Util, View } fr
 import { paintOccupiedWindowTrim, paintTown } from "./town-tea.js";
 import { THINGS, paintSprite, type Thing } from "./people-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 1000, height: 700 };
 export const params = {
   dusk: { type: "boolean", default: false },

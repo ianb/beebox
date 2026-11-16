@@ -92,13 +92,6 @@ export interface Style {
 /** A brush preset with some fields changed, as plain data. */
 export type BrushPreset = { readonly preset: BrushName } & BrushOverrides;
 
-/** How `image` pastes a sprite. */
-export interface PasteOptions {
-  readonly opacity?: number;
-  readonly blend?: BlendMode;
-  readonly erase?: boolean;
-}
-
 /** A transform scope for `at`: applied as matrix, then translate, rotate, skew, scale. */
 export interface AtOptions {
   readonly translate?: readonly [number, number];
@@ -179,21 +172,6 @@ export function radialGradient(...args: [number, number, number, readonly ColorS
 export function ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
   const [x, y, rx, ry, stops] = args;
   return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: rx, scaleY: ry / rx, stops };
-}
-
-/** A sprite handle from `sprite(...)`: plain data naming a stored picture; draw it with `image`. */
-export interface Sprite {
-  readonly kind: "sprite";
-  readonly key: string;
-  readonly width: number;
-  readonly height: number;
-}
-
-/** What `sprite` stores: a key naming everything the picture depends on, and its size in pixels. */
-export interface SpriteOptions {
-  readonly key: string;
-  readonly width: number;
-  readonly height: number;
 }
 
 /** Options for `group`: opacity applied once to the finished group, its blend mode, clip, effects and lighting. */

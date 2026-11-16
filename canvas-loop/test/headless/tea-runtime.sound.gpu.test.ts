@@ -7,7 +7,7 @@ import type { Voice } from "../../src/core/sound/voice.js";
 import { teaRun } from "../../src/headless/tea-runtime/runner.js";
 import type { LoadedTeaModule } from "../../src/headless/tea-load.js";
 import { toTeaModule } from "../../src/headless/tea-load.js";
-import { SURFACES, onSurface, readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
+import { readTranscript, teaRunOptions, tmpDir } from "../helpers.js";
 
 interface Model {
   plucks: readonly number[];
@@ -33,41 +33,35 @@ const module: LoadedTeaModule = {
   sound: (model): readonly Voice[] => asModel(model).plucks.map((at, i) => ({ id: `pluck-${i}`, at, kind: "pluck", freq: 196 })),
 };
 
-for (const surface of SURFACES) {
-  test(`a run's voices become sound.wav, sound.png and transcript lines, the same bytes every run (${surface})`, async () => {
-    const a = tmpDir();
-    const b = tmpDir();
-    assert.deepEqual((await teaRun(teaRunOptions(onSurface(module, surface), { outDir: a, frames: 60 }))).errors, []);
-    await teaRun(teaRunOptions(onSurface(module, surface), { outDir: b, frames: 60 }));
-    const wav = readFileSync(join(a, "sound.wav"));
-    assert.ok(wav.equals(readFileSync(join(b, "sound.wav"))), "deterministic");
-    assert.equal(wav.length, 44 + 44_100 * 2, "one second of 16-bit mono");
-    assert.ok(readFileSync(join(a, "sound.png")).length > 0);
-    const transcript = readTranscript(a);
-    assert.match(transcript, /sound pluck "pluck-0" 196 Hz/u);
-    assert.match(transcript, /sound pluck "pluck-1" 196 Hz/u);
-  });
-}
+test("a run's voices become sound.wav, sound.png and transcript lines, the same bytes every run", async () => {
+  const a = tmpDir();
+  const b = tmpDir();
+  assert.deepEqual((await teaRun(teaRunOptions(module, { outDir: a, frames: 60 }))).errors, []);
+  await teaRun(teaRunOptions(module, { outDir: b, frames: 60 }));
+  const wav = readFileSync(join(a, "sound.wav"));
+  assert.ok(wav.equals(readFileSync(join(b, "sound.wav"))), "deterministic");
+  assert.equal(wav.length, 44 + 44_100 * 2, "one second of 16-bit mono");
+  assert.ok(readFileSync(join(a, "sound.png")).length > 0);
+  const transcript = readTranscript(a);
+  assert.match(transcript, /sound pluck "pluck-0" 196 Hz/u);
+  assert.match(transcript, /sound pluck "pluck-1" 196 Hz/u);
+});
 
-for (const surface of SURFACES) {
-  test(`a longer run keeps the shorter run's audio as its prefix (${surface})`, async () => {
-    const short = tmpDir();
-    const long = tmpDir();
-    await teaRun(teaRunOptions(onSurface(module, surface), { outDir: short, frames: 30 }));
-    await teaRun(teaRunOptions(onSurface(module, surface), { outDir: long, frames: 60 }));
-    const s = readFileSync(join(short, "sound.wav")).subarray(44);
-    const l = readFileSync(join(long, "sound.wav")).subarray(44);
-    assert.ok(l.subarray(0, s.length).equals(s));
-  });
-}
+test("a longer run keeps the shorter run's audio as its prefix", async () => {
+  const short = tmpDir();
+  const long = tmpDir();
+  await teaRun(teaRunOptions(module, { outDir: short, frames: 30 }));
+  await teaRun(teaRunOptions(module, { outDir: long, frames: 60 }));
+  const s = readFileSync(join(short, "sound.wav")).subarray(44);
+  const l = readFileSync(join(long, "sound.wav")).subarray(44);
+  assert.ok(l.subarray(0, s.length).equals(s));
+});
 
-for (const surface of SURFACES) {
-  test(`a run with no sound writes no sound files (${surface})`, async () => {
-    const dir = tmpDir();
-    await teaRun(teaRunOptions(onSurface({ ...module, sound: () => [] }, surface), { outDir: dir, frames: 5 }));
-    assert.throws(() => readFileSync(join(dir, "sound.wav")));
-  });
-}
+test("a run with no sound writes no sound files", async () => {
+  const dir = tmpDir();
+  await teaRun(teaRunOptions({ ...module, sound: () => [] }, { outDir: dir, frames: 5 }));
+  assert.throws(() => readFileSync(join(dir, "sound.wav")));
+});
 
 test("a sound export that is not a function is a loader error", () => {
   assert.throws(() => toTeaModule({ init: () => ({}), update: (m: unknown) => m, draw: () => {}, sound: 42 }), /"sound" export must be a function/u);

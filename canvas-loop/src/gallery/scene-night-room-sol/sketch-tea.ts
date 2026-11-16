@@ -1,8 +1,5 @@
 import type { DeepReadonly, Msg, View, Util } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 700, height: 440 };
 export interface Model { frame: number }
 export function init(): Model { return { frame: 0 }; }

@@ -5,9 +5,6 @@
 // compare, and move the lamp.
 import type { Msg, ParamsDecl, ParamValues, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   heights: { type: "select", options: ["varied", "all 32"], default: "varied", label: "Caster heights" },
   tone: { type: "select", options: ["film", "clip"], default: "film", label: "Tone curve" },

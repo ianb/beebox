@@ -3,9 +3,6 @@
 // finished illustration.
 import type { DeepReadonly, Msg, Style, Util, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 400, height: 500 };
 
 const OUTLINE = "#1f2a1f";

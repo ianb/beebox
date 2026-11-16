@@ -1,9 +1,8 @@
 // The structural 2D-context subset canvas-loop's CPU brush expansion draws
 // against (`scene/brush/record-ctx.ts` records it; the colour parsers and the
-// text measurer use a real context through it), and the helpers that turn the
-// View's path and gradient data into context calls. Internal: no sketch sees a
-// context.
-import type { AtOptions, Gradient, Paint, PathCommand, Vec2 } from "./paint.js";
+// text measurer use a real context through it), and the helpers the brush kinds
+// paint with. Internal: no sketch sees a context.
+import type { Gradient, Paint } from "./paint.js";
 
 /** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
 export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
@@ -97,42 +96,13 @@ export interface Ctx2D {
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
 }
 
-/** Trace a closed polygon onto `ctx`'s current path (no fill/stroke). */
-export function tracePolygon(ctx: Ctx2D, points: readonly Vec2[]): void {
-  ctx.beginPath();
-  let started = false;
-  for (const [x, y] of points) {
-    if (started) {
-      ctx.lineTo(x, y);
-    } else {
-      ctx.moveTo(x, y);
-      started = true;
-    }
-  }
-  ctx.closePath();
-}
-
-/** Trace a `PathCommand` list onto `ctx`'s current path (no fill/stroke). */
-export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
-  ctx.beginPath();
-  for (const cmd of commands) {
-    switch (cmd[0]) {
-      case "move":
-        ctx.moveTo(cmd[1], cmd[2]);
-        break;
-      case "line":
-        ctx.lineTo(cmd[1], cmd[2]);
-        break;
-      case "quad":
-        ctx.quadraticCurveTo(cmd[1], cmd[2], cmd[3], cmd[4]);
-        break;
-      case "bezier":
-        ctx.bezierCurveTo(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
-        break;
-      case "close":
-        ctx.closePath();
-        break;
-    }
+/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
+export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
+  ctx.save();
+  try {
+    return body();
+  } finally {
+    ctx.restore();
   }
 }
 
@@ -143,26 +113,6 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
  * traced, so only the gradient is squashed. Only fills use this: a stroke
  * would squash its line width too.
  */
-/** Run `body` between `ctx.save()` and `ctx.restore()`; the restore runs even if `body` throws. */
-/** Apply an `at` scope's transform to `ctx`: translate, then rotate, then scale. */
-export function applyAt(ctx: Ctx2D, options: AtOptions): void {
-  const { translate, rotate, scale } = options;
-  if (translate !== undefined) ctx.translate(translate[0], translate[1]);
-  if (rotate !== undefined) ctx.rotate(rotate);
-  if (scale === undefined) return;
-  if (typeof scale === "number") ctx.scale(scale, scale);
-  else ctx.scale(scale[0], scale[1]);
-}
-
-export function withSaved<T>(ctx: Ctx2D, body: () => T): T {
-  ctx.save();
-  try {
-    return body();
-  } finally {
-    ctx.restore();
-  }
-}
-
 export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
   const { paint } = args;
   if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {

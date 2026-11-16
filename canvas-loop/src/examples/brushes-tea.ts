@@ -62,8 +62,6 @@ export function update(
   }
 }
 
-export const renderer = "scene";
-
 export function draw(
   v: View,
   _model: DeepReadonly<Model>,

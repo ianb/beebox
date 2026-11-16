@@ -120,7 +120,7 @@ export class GlyphCache {
   }
 }
 
-// Characters a font has no glyph for (today's check, core/painter/text-watch.ts):
+// Characters a font has no glyph for (the Canvas2D painter's check, kept):
 // a character whose pixels and box match the font's missing-glyph mark draws
 // as an empty box or nothing. Headless only, as today: a browser loads web
 // fonts later. Each (font, character) is drawn once.

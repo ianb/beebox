@@ -37,9 +37,6 @@ import {
 } from "./physics-tea.js";
 import { bobAt, drawBackdrop, drawPendulum, STAGE } from "./stage-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   length: {
     type: "number",

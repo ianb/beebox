@@ -37,9 +37,6 @@ function dot(v: View, x: number, y: number, r: number, color: string): void {
   v.circle(x, y, r, { fill: color });
 }
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 700, height: 700 };
 
 export type Model = Record<string, never>;

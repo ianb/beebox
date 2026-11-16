@@ -1,7 +1,7 @@
 /**
  * The child half of `bbx figure run`: import a compiled figure entry, run it
- * with canvas-loop's headless runner (`teaRun`, on the surface the entry's
- * `renderer` export picks), and print one JSON result line. Runs in
+ * with canvas-loop's headless runner (`teaRun`: the scene renderer on Dawn),
+ * and print one JSON result line. Runs in
  * its own process so the parent can kill a sketch that never returns.
  */
 import { promises as fs } from "node:fs";
@@ -65,7 +65,6 @@ export async function runFigureOne(jobFile: string): Promise<void> {
     const events = parseTeaEvents(rawEvents, module.params);
     const last = Math.max(-1, ...events.map((event) => event.frame));
     const frames = job.frames ?? (events.length > 0 ? last + 1 + TAIL_FRAMES : DEFAULT_FRAMES);
-    // The entry's `renderer` export (read by toTeaModule) picks the Canvas2D or the scene (Dawn) surface.
     const result = await teaRun({
       module,
       sketchPath: job.sketchPath,

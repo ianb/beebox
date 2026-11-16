@@ -13,9 +13,6 @@ import { H, W, paintRoom } from "./scene-tea.js";
 import { lightColours, paintLeds, paintMotes, paintScreens, paintVending, skyBurst, skyColour } from "./screens-tea.js";
 import { paintWalker } from "./walker-tea.js";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   style: { type: "select", options: ["painted", "rendered"] as const, default: "painted", label: "Style" },
 } as const satisfies ParamsDecl;

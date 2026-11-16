@@ -41,9 +41,6 @@ const COEF = {
   panel: false,
 } as const;
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   reaction: {
     type: "select",

@@ -26,9 +26,9 @@ export interface RunMeta {
   eventsPath: string | undefined;
   width: number;
   height: number;
-  /** The scene renderer's device pixel ratio (`--ratio`); absent for the Canvas2D surface. */
+  /** The device pixel ratio (`--ratio`). */
   ratio?: number;
-  /** The GPU adapter the scene renderer drew with; absent for the Canvas2D surface. */
+  /** The GPU adapter the scene renderer drew with. */
   adapter?: string;
 }
 

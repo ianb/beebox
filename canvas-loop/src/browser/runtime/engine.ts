@@ -13,7 +13,7 @@ import { Score } from "../../core/sound/voice.js";
 import { SoundPlayer } from "./sound-player.js";
 import type { TeaScriptEvent } from "../../headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
-import type { TextMeasure } from "../../core/view.js";
+import type { TextMeasure } from "../../core/text/measure.js";
 import { ActivityReporter, streamWithActivity } from "../../core/activity.js";
 import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";

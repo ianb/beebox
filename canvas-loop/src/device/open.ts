@@ -62,7 +62,7 @@ async function gpuEntry(): Promise<{ gpu: GPU; node: boolean }> {
 
 async function node2d(): Promise<Ctx2D> {
   const { createCanvas } = await import("@napi-rs/canvas");
-  // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union), as in headless/surface.ts
+  // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
   return createCanvas(1, 1).getContext("2d") as unknown as Ctx2D;
 }
 

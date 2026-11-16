@@ -46,9 +46,6 @@ function glint(v: View, x: number, y: number, r: number): void {
   );
 }
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 760, height: 760 };
 
 export function init(): Record<string, never> {

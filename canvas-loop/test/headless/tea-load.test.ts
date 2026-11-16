@@ -1,14 +1,11 @@
-// The loader's `renderer` field: `export const renderer = "scene"` picks the
-// scene surface; no export keeps the Canvas2D one. Any other value is an
-// error, so a typo cannot run the sketch with the wrong View.
+// The loader ignores a `renderer` export: it was the marker of the move to the
+// scene renderer, and a figure written then still exports it. Every sketch
+// draws on the scene renderer.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { toTeaModule } from "../../src/headless/tea-load.js";
 
-test("the renderer export picks the surface; an unknown value is an error", () => {
+test("a renderer export, whatever its value, is ignored", () => {
   const base = { init: () => ({}), update: (m: object) => m, draw: () => {} };
-  assert.equal(toTeaModule(base).renderer, undefined);
-  assert.equal(toTeaModule({ ...base, renderer: "scene" }).renderer, "scene");
-  assert.throws(() => toTeaModule({ ...base, renderer: "Scene" }), /export const renderer must be "scene" or absent; got "Scene"/u);
-  assert.throws(() => toTeaModule({ ...base, renderer: true }), /export const renderer must be "scene" or absent; got true/u);
+  for (const renderer of ["scene", "Scene", true]) assert.deepEqual(Object.keys(toTeaModule({ ...base, renderer })), Object.keys(toTeaModule(base)));
 });

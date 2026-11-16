@@ -13,9 +13,6 @@
 // polygons, paths, `v.clip` and `v.linearGradient` in scene core chunk 5.
 import type { DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const params = {
   tide: { type: "number", min: -1, max: 1, default: 0, step: 0.05 },
   timeOfDay: { type: "select", options: ["day", "dusk"], default: "day" },

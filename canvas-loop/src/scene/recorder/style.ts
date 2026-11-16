@@ -51,8 +51,7 @@ export function copyPaint(paint: Paint, where: string): Paint {
   return structuredClone(paint);
 }
 
-// Today's group effect ranges (core/painter/effects.ts), checked here so the recorder
-// does not reach into the painter: [key, min, max].
+// The group effect ranges (the Canvas2D painter's, kept): [key, min, max].
 const RANGES: readonly (readonly [string, number, number])[] = [
   ["hue", -Infinity, Infinity], ["saturation", 0, Infinity], ["brightness", 0, Infinity], ["contrast", 0, Infinity],
   ["grayscale", 0, 1], ["sepia", 0, 1], ["invert", 0, 1], ["blur", 0, Infinity],
@@ -105,7 +104,7 @@ export function copyEffects(effects: Effects | undefined, where: string): Effect
   return structuredClone(effects);
 }
 
-/** `style.dash`, checked as today's (core/painter/style.ts) and copied; a brushed stroke cannot be dashed. */
+/** `style.dash`, checked as the Canvas2D painter checked it, and copied; a brushed stroke cannot be dashed. */
 function copyDash(style: Style, call: string): readonly number[] | undefined {
   const { dash } = style;
   if (dash === undefined) return undefined;

@@ -10,9 +10,6 @@
 // `draw` only paints; `update` only counts frames. See TEA.md and BRUSHES.md.
 import type { DeepReadonly, Msg, Util, View, Vec2 } from "@ianbicking/canvas-loop";
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 480, height: 320 };
 
 export interface Model {

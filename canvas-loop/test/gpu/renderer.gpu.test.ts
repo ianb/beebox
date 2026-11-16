@@ -94,7 +94,7 @@ test("shapes, strokes, dashes, gradients and transforms match today's Skia rende
   assert.ok((rows.find((r) => r.name === "dash-closed")?.maxFlat ?? 255) < 20, "closed dashes join at the seam");
 });
 
-const sceneSketch = toTeaModule({ ...sceneSketchModule, renderer: "scene" });
+const sceneSketch = toTeaModule(sceneSketchModule);
 
 test("runs a scene-View sketch, renders only captured frames, and repeats exactly", async (t) => {
   if (needGpu(t) === undefined) return;

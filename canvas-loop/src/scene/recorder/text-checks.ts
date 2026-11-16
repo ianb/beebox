@@ -1,5 +1,5 @@
 // Testing mode: checks on recorded text, ported from today's runtime
-// (core/painter/text-watch.ts), and the unknown-font check (text.ts). Labels that overlap other labels in one
+// (the Canvas2D painter's checks, kept), and the unknown-font check (text.ts). Labels that overlap other labels in one
 // frame (text bounds under their transform, each pair once per run, at most
 // 10 pairs), and characters the font has no glyph for (headless only: the
 // runtime's rasteriser answers `glyphMissing`). Text in a picture body is

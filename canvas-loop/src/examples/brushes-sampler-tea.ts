@@ -12,9 +12,6 @@ const PRESETS: [BrushName, string, number][] = [
   ["bristle", "#2f6b3a", 26],
 ];
 
-/** Draws with the scene View on the GPU renderer (`cli run` reads this). */
-export const renderer = "scene";
-
 export const canvas = { width: 640, height: 70 * PRESETS.length + 20 };
 
 export type Model = Record<string, never>;
