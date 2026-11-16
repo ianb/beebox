@@ -66,6 +66,16 @@ underline instead of one atomic widget; edits inside a joiner keep the mark,
 and a joiner whose words are all deleted is removed. Code:
 `acceptChanges` in `compose/scan.ts`, `acceptSelection` in `compose/widgets.ts`.
 
+**Tag pairs kept (2026-11-16):** splitting joiners into separate delimiters
+let a selection delete, typing over a selection, word-delete, or cut remove
+one tag of a pair. On a real card, a selection across two adjacent joiners
+deleted the first one's closer, and every autosave was refused. Every typed
+or deleted edit now keeps a tag it would remove without its partner
+(`keepDelimiters` in `compose/scan.ts`, the `keepPairs` filter). A delete
+that reaches only kept tags steps the cursor over them. A pasted unpaired tag
+can still break the text; the editor then says that nothing saves until the
+tag is fixed, and how.
+
 **Open question:** Save commits the whole card, so uncommitted agent edits
 outside the region are committed with it under the `Composition-Save: person`
 trailer. Today the trailer describes the button press, not the content. The

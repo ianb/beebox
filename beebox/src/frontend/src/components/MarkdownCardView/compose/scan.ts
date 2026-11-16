@@ -174,3 +174,43 @@ export function emptyJoinerRanges(text: string, marks: readonly MarkRange[]): { 
     .filter((mark) => mark.kind === "joiner" && text.slice(mark.openTo, mark.closeFrom).trim() === "")
     .map((mark) => wholeMarkRange(text, { from: mark.openFrom, to: mark.closeTo }));
 }
+
+/**
+ * An edit with every tag it would delete without its partner kept in place,
+ * so typing, a selection delete, or a cut never leaves an unpaired tag. A
+ * tag deleted with its partner goes. Returns `null` when the edit removes
+ * no tag alone. `changes` are sorted, non-overlapping, in `marks`' text.
+ */
+export function keepDelimiters(changes: readonly TextChange[], marks: readonly MarkRange[]): TextChange[] | null {
+  const covered = (from: number, to: number) => changes.some((c) => c.from <= from && to <= c.to);
+  const touched = (from: number, to: number) => changes.some((c) => c.from < to && from < c.to);
+  const kept: { from: number; to: number }[] = [];
+  for (const mark of marks) {
+    const delimiters = mark.closeTo > mark.closeFrom ? [[mark.openFrom, mark.openTo], [mark.closeFrom, mark.closeTo]] as const : [[mark.openFrom, mark.openTo]] as const;
+    if (delimiters.every(([from, to]) => covered(from, to))) continue;
+    for (const [from, to] of delimiters) if (touched(from, to)) kept.push({ from, to });
+  }
+  if (kept.length === 0) return null;
+  kept.sort((a, b) => a.from - b.from);
+  const result: TextChange[] = [];
+  for (const change of changes) {
+    const pieces: { from: number; to: number }[] = [];
+    let at = change.from;
+    for (const k of kept) {
+      if (k.to <= at || k.from >= change.to) continue;
+      if (k.from > at) pieces.push({ from: at, to: k.from });
+      at = Math.max(at, k.to);
+    }
+    if (at < change.to) pieces.push({ from: at, to: change.to });
+    // Inserted text goes where the edit began, or just past a kept tag it began inside.
+    const insertAt = kept.find((k) => k.from < change.from && change.from < k.to)?.to ?? change.from;
+    const first = pieces[0];
+    if (first !== undefined && first.from === insertAt) {
+      result.push({ ...first, insert: change.insert }, ...pieces.slice(1).map((p) => ({ ...p, insert: "" })));
+    } else {
+      if (change.insert !== "") result.push({ from: insertAt, to: insertAt, insert: change.insert });
+      result.push(...pieces.map((p) => ({ ...p, insert: "" })));
+    }
+  }
+  return result;
+}
