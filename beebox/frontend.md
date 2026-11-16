@@ -142,6 +142,13 @@ and the chat recovery watchdog (`processing-status-display.ts`).
 View state a reload should keep (filters, the open tab, pagination) belongs in
 TanStack Router search params, not component state.
 
+A tab left open across a deploy reloads itself when it is next shown, unless
+a reload would lose something; then it shows a "new version" banner
+(`lib/build-skew/`, plan `docs/implemented-plans/reload-after-deploy.md`). State a reload
+would destroy (unsent input, an in-flight transfer, a recording, unsaved
+edits) registers a probe with `registerReloadBlocker` in
+`lib/reload-blockers.ts` for as long as it exists.
+
 A container fetches and owns the data states; its presentational children take
 loaded props. A new data view, or a change to how one loads, handles every
 reachable loading, empty, and error state: a skeleton shaped like the content

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-16T11:41:42Z
-Total documents: 698
+Generated: 2026-11-16T18:59:04Z
+Total documents: 699
 
 ## Issues
 
@@ -118,7 +118,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (23 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -732,7 +732,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 300 lines
+Title: "Frontend Conventions" | 307 lines
 
 Referenced by:
 - AGENTS.md:20 (link) — - `pnpm ui-check` fails when an export of `components/ui/` is not named in [`frontend.md`](frontend.md) or a `<Name>` in
@@ -751,6 +751,7 @@ Referenced by:
 - docs/implemented-plans/modern-web-guidance-adoption.md:48 (mention) — file, plus about 200 lines of docs (`frontend.md`, `box-docs/views.md` (generated from `src/core/views/doc/`),
 - docs/implemented-plans/open-chat-from-card.md:61 (mention) — - `beebox/frontend.md` — UI primitives + semantic palette, `className` only for
 - docs/implemented-plans/point-to-comment.md:53 (mention) — The boxholder's screenshots show selected text and `+` becoming `[selection#1]` in the chat draft, with selection placed
+- docs/implemented-plans/reload-after-deploy.md:115 (mention) — Docs: a paragraph in `beebox/frontend.md` or the deploy README (~15 lines). Not
 - docs/implemented-plans/remove-bbx-render.md:293 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:43 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:112 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
@@ -770,7 +771,7 @@ Referenced by:
 - docs/testing/check.md:314 (link) — The [accessible-name rule](../../frontend.md#frontend-ui-primitives) says
 - docs/testing/tours.md:155 (link) — [accessible-name rule](../../frontend.md#frontend-ui-primitives).
 - docs/unimplemented-plans/temporal-everywhere.md:645 (mention) — `frontend.md:153-156` paragraph reworded from "new code" to "all code",
-- frontend.md:282 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- frontend.md:289 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
 - ../dev/devprocess-talk/reports/sweep-instructions.md:25 (mention) — - **Appeared:** 2026-03-06 bedf968cf "Rewrite CLAUDE.md for clarity and add self-improvement meta-instruction" (body: "A
 - ../dev/devprocess-talk/slides/04b-meta-instruction.md:16 (mention) — CLAUDE.md for an area, code-style.md or frontend.md for coding contracts, and
@@ -802,6 +803,7 @@ References:
 - → code-style.md (mention)
 - → docs/box/card-themes.md (link)
 - → docs/data-source-tagging.md (mention)
+- → docs/implemented-plans/reload-after-deploy.md (mention)
 - → docs/client-debug-log.md (link)
 - → docs/testing/tours.md (link)
 - → frontend.md (mention)
@@ -1289,7 +1291,7 @@ References:
 
 #### docs/client-debug-log.md
 
-Title: "Client Debug Log" | 133 lines | current reference
+Title: "Client Debug Log" | 140 lines | current reference
 
 Referenced by:
 - AGENTS.md:61 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
@@ -1302,7 +1304,7 @@ Referenced by:
 - docs/plans/canvas-loop-box-figures.subplan.md:280 (mention) — `.beebox/client-debug.log` (`docs/client-debug-log.md`, "How It Works").
 - docs/server/operations.md:205 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
 - docs/testing.md:99 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
-- frontend.md:169 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
+- frontend.md:176 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:152 (mention) — - **Lives in:** `.claude/skills/field-probe/SKILL.md`; house pattern `beebox/src/frontend/src/lib/scroll-diagnostics/dia
 - ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
@@ -1916,6 +1918,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:27 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
+- ../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md:52 (mention) — reload path (`docs/mobile-contract.md`; bbx-ios-overlap territory).
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:66 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:266 (mention) — where it matters most. See `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:50 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
@@ -1927,7 +1930,6 @@ Referenced by:
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:10 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:13 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:106 (mention) — `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
-- ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md:49 (mention) — reload path (`docs/mobile-contract.md`; bbx-ios-overlap territory).
 - ../issues/features/2026-09-11-bias-apple-speech-with-box-vocabulary.md:53 (mention) — (`beebox/docs/mobile-contract.md`) is where that would live.
 - ../issues/features/2026-09-12-most-recent-conversation-should-be-per-person.md:26 (mention) — the owner (see `docs/mobile-contract.md` §2.3). Shared boxes with distinct
 - ../issues/features/2026-09-26-apns-push-relay-for-a-shared-app.md:47 (mention) — the mobile contract (`beebox/docs/mobile-contract.md` §5.10) and adds a
@@ -2624,7 +2626,7 @@ Title: "Authoring themes" | 118 lines | current reference
 Referenced by:
 - docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
 - docs/implemented-plans/theme-studio.md:124 (mention) — `docs/theme-authoring.md`, "chrome hooks").
-- frontend.md:285 (link) — [theme authoring studio](docs/theme-authoring.md).
+- frontend.md:292 (link) — [theme authoring studio](docs/theme-authoring.md).
 - ../.claude/skills/bbx-theme/SKILL.md:8 (mention) — Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
 
 References:
@@ -6861,7 +6863,7 @@ References:
 - → ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md (frontmatter)
 - → ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
 - → ../issues/decisions/2026-07-20-release-discipline-and-update-story.md (link)
-- → ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md (link)
+- → ../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md (link)
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 - → docs/install/docker.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -7847,6 +7849,17 @@ References:
 - → ../issues/closed/bugs/2026-09-12-procedure-templates-ship-pre-one-root-paths.md (link)
 - → README.md (mention)
 
+#### docs/implemented-plans/reload-after-deploy.md
+
+Title: "Reload a stale tab after a deploy" | 412 lines | shipped history | implemented
+
+Referenced by:
+- frontend.md:147 (mention) — (`lib/build-skew/`, plan `docs/implemented-plans/reload-after-deploy.md`). State a reload
+
+References:
+- → ../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md (frontmatter)
+- → frontend.md (mention)
+
 #### docs/implemented-plans/remove-bbx-render.md
 
 Title: "Remove `bbx render` and the SSR machinery" | 608 lines | shipped history | implemented
@@ -8303,7 +8316,7 @@ References:
 Title: "Runtime lint: the frontend reports problem React behavior to the box log" | 427 lines | shipped history | implemented
 
 Referenced by:
-- docs/client-debug-log.md:112 (mention) — `docs/implemented-plans/runtime-lint.md`.
+- docs/client-debug-log.md:119 (mention) — `docs/implemented-plans/runtime-lint.md`.
 - ../issues/closed/bugs/2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md:12 (mention) — **Closed (wontfix, 2026-11-06):** Not reproduced (in-place, atomic-rename, and real agent edits on the dev box), and it
 
 References:
@@ -10056,7 +10069,7 @@ References:
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 - → ../issues/decisions/2026-07-20-release-discipline-and-update-story.md (link)
 - → ../issues/decisions/2026-07-20-soft-launch-posture.md (link)
-- → ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md (link)
+- → ../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md (link)
 - → ../issues/closed/features/2026-08-12-stale-web-bundle-detection.md (link)
 - → docs/engineering-principles.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
@@ -12259,7 +12272,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:135 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:53 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
-- frontend.md:171 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
+- frontend.md:178 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
 - ../.claude/skills/bbx-plan/TEMPLATE.md:166 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:231 (mention) — - **Lives in:** `beebox/docs/testing/tours.md`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `schedules/to
 - ../dev/devprocess-talk/reports/sweep-quality.md:107 (mention) — - **Lives in:** `beebox/test/tours/` (10 `.tour.` files: `git ls-files beebox | grep -c '\.tour\.'`), `beebox/docs/testi
@@ -12791,7 +12804,7 @@ References:
 
 #### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
 
-Title: "Earcon sources & attribution" | 21 lines
+Title: "Earcon sources & attribution" | 23 lines
 
 No references in or out.
 

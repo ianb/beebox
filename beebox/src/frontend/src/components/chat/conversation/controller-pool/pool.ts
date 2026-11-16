@@ -253,6 +253,23 @@ export class ConversationControllerPool {
       if (entry.assigned) finish();
     });
   }
+  /**
+   * Some conversation has work a page reload would cut off: a send still
+   * being delivered, a reply streaming, a start waiting for its session, a
+   * message not yet echoed by history, or a refetch still holding a streamed
+   * or dropped reply it has not swapped for history (the page may hold the
+   * only copy). A plain history refetch is not: every reconnect and every
+   * return to the tab starts one, and a reload refetches the same history.
+   */
+  busy(): boolean {
+    return [...this.entries.values()].some((entry) => {
+      const snapshot = entry.actor.getSnapshot();
+      const { pendingMessages, streamText, streamTools, replyLost } = snapshot.context;
+      const holdingReply = snapshot.matches("refreshing") && (streamText !== "" || streamTools.length > 0 || replyLost);
+      return entry.pins > 0 || snapshot.matches("streaming") || holdingReply || (entry.awaitingAssignment && !entry.assigned)
+        || pendingMessages.length > 0;
+    });
+  }
   private collect(): void {
     for (const [key, entry] of this.entries) {
       if (key === this.selected || entry.alias === this.selected || entry.pins > 0) continue;

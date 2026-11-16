@@ -39,6 +39,7 @@ import { useVisualViewportHeight } from "../hooks/useVisualViewportHeight";
 import { BoxSlugProvider } from "../lib/box-slug";
 import { QuickSearchDialog } from "../components/search/QuickSearchDialog";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
+import { BuildSkewBanner } from "../components/BuildSkewBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
 import { useBoxClockSync } from "../hooks/useBoxClockSync";
 import { AgentReadinessGuard } from "../components/agents/AgentReadiness";
@@ -136,6 +137,7 @@ export function ProductLayout() {
           />
           <PresentationNotice />
           <NotificationBanner />
+          <BuildSkewBanner />
           <main className="flex-1 min-h-0">
             {standalonePage ? null : <BoxConversationShell />}<Outlet />
           </main>

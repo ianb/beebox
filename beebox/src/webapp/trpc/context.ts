@@ -62,4 +62,6 @@ export interface TrpcContext {
   actor: TrpcActor;
   /** The paired device this request authenticated as, or null when no device credential came with it. */
   mobileDeviceId: string | null;
+  /** The frontend build identity this server serves (`trpc/routers/build.ts`), or null when it has none. */
+  frontendBuild: string | null;
 }
