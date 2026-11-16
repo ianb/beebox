@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Install the software Vulkan driver figures render with and prove Dawn finds it.
+#
+#   bbx-figure-gpu-install <engine>     (as root; deploy.sh runs it every deploy)
+#
+# <engine> is the installed beebox package, /opt/beebox/beebox. `bbx figure
+# run` renders canvas-loop figures with Dawn (the `webgpu` package), which
+# needs a Vulkan driver; the server has no GPU, so it uses Mesa's software one
+# (lavapipe, in mesa-vulkan-drivers). It installs that package when absent,
+# then runs src/scripts/dawn-probe.ts as one box user inside the box sandbox.
+# The probe must report an adapter.
+#
+# Idempotent. Output is quiet on success and complete on failure.
+set -euo pipefail
+# The deploy's remote script runs with /home/beebox/.env's PATH, which omits
+# /usr/sbin; apt and dpkg need it.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bbx-figure-gpu-install <engine>" >&2
+  exit 64
+fi
+engine="$1"
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+# Run a command with its output kept back unless it fails.
+quietly() {
+  if ! "$@" > "$log" 2>&1; then
+    echo "  FAILED: $*" >&2
+    sed 's/^/    /' "$log" >&2
+    return 1
+  fi
+}
+
+# --- Mesa's Vulkan driver -------------------------------------------------------
+if ! dpkg-query -W -f='${Status}' mesa-vulkan-drivers 2> /dev/null | grep -qx 'install ok installed'; then
+  quietly apt-get update -qq
+  quietly env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mesa-vulkan-drivers
+  echo "  installed mesa-vulkan-drivers"
+fi
+
+# --- The check ----------------------------------------------------------------
+# One existing box user, through the box units' own sandbox drop-in and
+# environment file. A host with no box yet has nobody to check as.
+slug=""
+for home in /var/lib/beebox/*/; do
+  candidate=$(basename "$home")
+  [[ "$candidate" =~ ^[a-z0-9][a-z0-9-]{0,27}$ && -e "$home/box/.git" ]] || continue
+  getent passwd "bbx-$candidate" > /dev/null || continue
+  slug="$candidate"
+  break
+done
+if [[ -z "$slug" ]]; then
+  echo "  no box user yet; Dawn check skipped"
+  exit 0
+fi
+props=()
+while IFS= read -r line; do
+  [[ "$line" =~ ^[A-Za-z]+= ]] || continue
+  props+=(-p "${line//%i/$slug}")
+done < "$engine/deploy/systemd/box-sandbox.conf"
+if ! timeout 90 systemd-run --quiet --wait --pipe --collect \
+  --uid="bbx-$slug" --gid="bbx-$slug" \
+  -p EnvironmentFile=/etc/beebox/box.env -p "WorkingDirectory=/var/lib/beebox/$slug/box" -p RuntimeMaxSec=60 \
+  "${props[@]}" -- /usr/bin/env node "$engine/src/scripts/dawn-probe.ts" "$engine" < /dev/null > "$log" 2>&1; then
+  echo "  FAILED: Dawn finds no GPU adapter for a box user (checked as bbx-$slug)." >&2
+  sed 's/^/    /' "$log" >&2
+  echo "  bbx figure run would fail for every canvas-loop figure." >&2
+  exit 1
+fi
+echo "  Dawn check passed (as bbx-$slug): $(tail -n 1 "$log")"

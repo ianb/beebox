@@ -31,8 +31,8 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 ### perfect-freehand, by Steve Ruiz
 
 - **Source:** [steveruizok/perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT).
-- **What we took:** Its pressure-sensitive stroke outline as canvas-loop's ink brush; canvas-loop supplies synthetic pressure from a gesture envelope and fills the outline.
-- **Where it landed:** `canvas-loop/package.json` (pinned dependency); `canvas-loop/src/core/brush/render/kinds.ts`.
+- **What we took:** Its stroke radius for a pressure, `size × (0.5 − thinning × (0.5 − pressure))`, as the radius of canvas-loop's ink. The ink is now a union of capsules drawn on the GPU, so the package is no longer a dependency.
+- **Where it landed:** `canvas-loop/src/gpu/shader-brush.ts` (the `capsules` entry).
 
 ### restic, by the restic contributors
 
@@ -94,7 +94,7 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** https://api.flutter.dev/flutter/flutter_test/matchesGoldenFile.html (repository https://github.com/flutter/flutter, BSD 3-Clause)
 - **What we took:** The frame-stepped test shape. An injected event takes effect on the next stepped frame, and a snapshot is taken on demand.
-- **Where it landed:** `canvas-loop/src/headless/tea-runtime.ts`, `canvas-loop/README.md`
+- **Where it landed:** `canvas-loop/src/headless/tea-runtime/runner.ts`, `canvas-loop/README.md`
 
 ### Ghost-CLI, by TryGhost
 
@@ -175,6 +175,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **Source:** [pi](https://github.com/earendil-works/pi) (MIT, as declared in the package metadata).
 - **What we took:** The pi coding-agent harness as a third box engine, used as a library.
 - **Where it landed:** `beebox/src/core/agent/pi-run/`, `beebox/src/services/claude-chat/pi-chat.ts`, and `beebox/docs/pi-engine.md`.
+
+### React's rules for children, by Meta
+
+- **Source:** [React](https://react.dev/learn/conditional-rendering), "Conditional Rendering" (React is MIT; its documentation is CC BY 4.0).
+- **What we took:** A list of children skips `null`, `undefined` and `false` and flattens nested lists. Unlike React, a number is refused, so `count && v.rect(…)` with `count` 0 is an error, not a drawn 0.
+- **Where it landed:** `canvas-loop/src/scene/recorder/children.ts`
 
 ### Sentry feedback widget, by getsentry (Sentry)
 

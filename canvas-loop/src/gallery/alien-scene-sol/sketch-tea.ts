@@ -1,4 +1,4 @@
-import type { Vec2, View } from "@ianbicking/canvas-loop";
+import type { Drawing, RootDrawing, Vec2, View } from "@ianbicking/canvas-loop";
 
 const P = (x: number, y: number): Vec2 => [x, y];
 
@@ -8,14 +8,16 @@ function shape(
   color: string,
   edge = "#314542",
   weight = 3,
-): void {
-  v.curve(points, true, { fill: color });
-  v.curve(points, true, {
-    stroke: edge,
-    weight,
-    brush: { preset: "ink", thinning: 0.18 },
-    gesture: { pressure: "even", wobble: 0.7 },
-  });
+): Drawing {
+  return [
+    v.curve(points, true, { fill: color }),
+    v.curve(points, true, {
+      stroke: edge,
+      weight,
+      brush: { preset: "ink", thinning: 0.18 },
+      gesture: { pressure: "even", wobble: 0.7 },
+    }),
+  ];
 }
 
 function mark(
@@ -24,8 +26,8 @@ function mark(
   color: string,
   weight: number,
   brush: "ink" | "bristle" | "chalk" | "pencil" | "wash" = "ink",
-): void {
-  v.curve(points, false, {
+): Drawing {
+  return v.curve(points, false, {
     stroke: color,
     weight,
     brush,
@@ -33,8 +35,8 @@ function mark(
   });
 }
 
-function dot(v: View, x: number, y: number, r: number, color: string): void {
-  v.circle(x, y, r, { fill: color });
+function dot(v: View, x: number, y: number, r: number, color: string): Drawing {
+  return v.circle(x, y, r, { fill: color });
 }
 
 export const canvas = { width: 700, height: 700 };
@@ -49,22 +51,23 @@ export function update(model: Model): Model {
   return model;
 }
 
-export function draw(v: View): void {
-  v.paper({ scale: 3.5, contrast: 0.8, seed: 8 });
-  v.background(
+export function draw(v: View): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background(
     v.linearGradient(0, 0, 0, 700, [
       [0, "#263d68"],
       [0.4, "#775e87"],
       [0.7, "#df9b85"],
       [1, "#f3c293"],
     ]),
-  );
+  ));
 
   // Brush light into the dusk, then let the distant land cover its lower edge.
-  v.group({ opacity: 0.25 }, () => {
+  out.push(v.group({ opacity: 0.25 }, ((): Drawing => {
+    const drawn: Drawing[] = [];
     for (let i = 0; i < 18; i += 1) {
       const y = 27 + i * 26;
-      mark(
+      drawn.push(mark(
         v,
         [
           P(-30, y + 8),
@@ -76,44 +79,45 @@ export function draw(v: View): void {
         i % 3 === 0 ? "#e5b4ac" : "#bda5bd",
         12 + (i % 4) * 5,
         "bristle",
-      );
+      ));
     }
-  });
-  v.group({ opacity: 0.32 }, () => {
+    return drawn;
+  })()));
+  out.push(v.group({ opacity: 0.32 }, [
     mark(
       v,
       [P(-50, 151), P(48, 140), P(125, 147), P(204, 132)],
       "#f6ccd1",
       18,
       "wash",
-    );
-    mark(v, [P(76, 171), P(157, 160), P(256, 171)], "#dfbad3", 12, "bristle");
-    mark(v, [P(369, 207), P(445, 202), P(515, 211)], "#f5c8c0", 14, "wash");
-    mark(v, [P(398, 226), P(476, 220), P(548, 230)], "#f5c8c0", 8, "bristle");
-  });
-  v.group({ opacity: 0.5, blend: "screen" }, () => {
+    ),
+    mark(v, [P(76, 171), P(157, 160), P(256, 171)], "#dfbad3", 12, "bristle"),
+    mark(v, [P(369, 207), P(445, 202), P(515, 211)], "#f5c8c0", 14, "wash"),
+    mark(v, [P(398, 226), P(476, 220), P(548, 230)], "#f5c8c0", 8, "bristle"),
+  ]));
+  out.push(v.group({ opacity: 0.5, blend: "screen" }, [
     v.line(540, 128, 540, 128, {
       stroke: "#ffd5a5",
       weight: 90,
       brush: "airbrush",
-    });
-  });
-  dot(v, 542, 133, 55, "#ffe1ad");
-  v.circle(542, 133, 54, { stroke: "#fff2cf", weight: 3, brush: "chalk" });
-  v.group({ opacity: 0.28 }, () => {
-    mark(v, [P(513, 114), P(527, 106), P(545, 109)], "#dfac8e", 8, "wash");
-    mark(v, [P(548, 154), P(563, 145), P(579, 148)], "#dfac8e", 10, "wash");
-    mark(v, [P(512, 156), P(528, 160)], "#fff4d0", 7, "bristle");
-  });
+    }),
+  ]));
+  out.push(dot(v, 542, 133, 55, "#ffe1ad"));
+  out.push(v.circle(542, 133, 54, { stroke: "#fff2cf", weight: 3, brush: "chalk" }));
+  out.push(v.group({ opacity: 0.28 }, [
+    mark(v, [P(513, 114), P(527, 106), P(545, 109)], "#dfac8e", 8, "wash"),
+    mark(v, [P(548, 154), P(563, 145), P(579, 148)], "#dfac8e", 10, "wash"),
+    mark(v, [P(512, 156), P(528, 160)], "#fff4d0", 7, "bristle"),
+  ]));
 
   for (let i = 0; i < 34; i += 1) {
     const x = 29 + ((i * 107) % 645);
     const y = 25 + ((i * 67) % 240);
     if ((x - 542) ** 2 + (y - 133) ** 2 > 85 ** 2)
-      dot(v, x, y, i % 5 === 0 ? 2.2 : 1.1, "#fce3c5");
+      out.push(dot(v, x, y, i % 5 === 0 ? 2.2 : 1.1, "#fce3c5"));
   }
 
-  shape(
+  out.push(shape(
     v,
     [
       P(-50, 440),
@@ -129,18 +133,18 @@ export function draw(v: View): void {
     "#847b91",
     "#746e87",
     2,
-  );
-  v.group({ opacity: 0.3 }, () => {
-    mark(v, [P(-20, 449), P(95, 423), P(214, 444)], "#c3a6aa", 15, "bristle");
+  ));
+  out.push(v.group({ opacity: 0.3 }, [
+    mark(v, [P(-20, 449), P(95, 423), P(214, 444)], "#c3a6aa", 15, "bristle"),
     mark(
       v,
       [P(360, 414), P(456, 432), P(558, 406), P(681, 403)],
       "#c3a6aa",
       13,
       "bristle",
-    );
-  });
-  shape(
+    ),
+  ]));
+  out.push(shape(
     v,
     [
       P(-60, 500),
@@ -155,20 +159,20 @@ export function draw(v: View): void {
     "#546f78",
     "#526870",
     2,
-  );
-  v.group({ opacity: 0.25 }, () => {
-    mark(v, [P(-10, 512), P(110, 482), P(234, 514)], "#91a2a4", 18, "bristle");
+  ));
+  out.push(v.group({ opacity: 0.25 }, [
+    mark(v, [P(-10, 512), P(110, 482), P(234, 514)], "#91a2a4", 18, "bristle"),
     mark(
       v,
       [P(386, 484), P(489, 508), P(603, 501), P(709, 481)],
       "#91a2a4",
       15,
       "bristle",
-    );
-  });
+    ),
+  ]));
 
   // A ribbon of meadow curls toward the ship.
-  shape(
+  out.push(shape(
     v,
     [
       P(-40, 580),
@@ -183,18 +187,18 @@ export function draw(v: View): void {
     "#536f55",
     "#405b56",
     3,
-  );
-  v.group({ opacity: 0.27 }, () => {
-    mark(v, [P(-20, 594), P(90, 554), P(204, 563)], "#b8ae75", 16, "bristle");
+  ));
+  out.push(v.group({ opacity: 0.27 }, [
+    mark(v, [P(-20, 594), P(90, 554), P(204, 563)], "#b8ae75", 16, "bristle"),
     mark(
       v,
       [P(430, 538), P(530, 561), P(647, 549), P(716, 540)],
       "#b8ae75",
       17,
       "bristle",
-    );
-  });
-  shape(
+    ),
+  ]));
+  out.push(shape(
     v,
     [
       P(-40, 634),
@@ -209,41 +213,41 @@ export function draw(v: View): void {
     "#426850",
     "#35584f",
     2,
-  );
-  v.group({ opacity: 0.24 }, () => {
-    mark(v, [P(-20, 657), P(94, 629), P(174, 643)], "#a3aa71", 19, "bristle");
+  ));
+  out.push(v.group({ opacity: 0.24 }, [
+    mark(v, [P(-20, 657), P(94, 629), P(174, 643)], "#a3aa71", 19, "bristle"),
     mark(
       v,
       [P(389, 612), P(495, 631), P(616, 607), P(718, 592)],
       "#a3aa71",
       18,
       "bristle",
-    );
-  });
+    ),
+  ]));
   for (let i = 0; i < 115; i += 1) {
     const x = (i * 83 + 17) % 700;
     const base = 556 + ((i * 67) % 150);
     const h = 9 + (i % 6) * 4;
-    mark(
+    out.push(mark(
       v,
       [P(x - 3, base), P(x, base - h), P(x + 3, base - h - 5)],
       i % 5 === 0 ? "#e9b47a" : i % 3 === 0 ? "#a5a66a" : "#819d68",
       i % 4 === 0 ? 3 : 2,
       i % 3 === 0 ? "bristle" : "pencil",
-    );
+    ));
   }
 
   // The little visitor carries a warm lamp away through the evening.
-  v.group({ opacity: 0.55, blend: "screen" }, () => {
+  out.push(v.group({ opacity: 0.55, blend: "screen" }, [
     v.line(576, 272, 576, 272, {
       stroke: "#ffe0a0",
       weight: 54,
       brush: "airbrush",
-    });
-  });
-  mark(v, [P(481, 296), P(505, 300), P(526, 295)], "#ffe1ac", 5, "chalk");
-  mark(v, [P(455, 308), P(481, 312)], "#ffe1ac", 3, "chalk");
-  shape(
+    }),
+  ]));
+  out.push(mark(v, [P(481, 296), P(505, 300), P(526, 295)], "#ffe1ac", 5, "chalk"));
+  out.push(mark(v, [P(455, 308), P(481, 312)], "#ffe1ac", 3, "chalk"));
+  out.push(shape(
     v,
     [
       P(508, 270),
@@ -258,19 +262,19 @@ export function draw(v: View): void {
     "#d9ae8d",
     "#493d61",
     3.5,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [P(534, 256), P(549, 235), P(579, 227), P(610, 239), P(623, 257)],
     "#8bb6a8",
     "#493d61",
     3,
-  );
-  mark(v, [P(533, 273), P(572, 281), P(615, 272)], "#fff0c9", 6, "bristle");
-  dot(v, 554, 272, 4, "#fff1b4");
-  dot(v, 590, 276, 4, "#fff1b4");
-  dot(v, 623, 270, 4, "#fff1b4");
-  shape(
+  ));
+  out.push(mark(v, [P(533, 273), P(572, 281), P(615, 272)], "#fff0c9", 6, "bristle"));
+  out.push(dot(v, 554, 272, 4, "#fff1b4"));
+  out.push(dot(v, 590, 276, 4, "#fff1b4"));
+  out.push(dot(v, 623, 270, 4, "#fff1b4"));
+  out.push(shape(
     v,
     [
       P(566, 244),
@@ -283,50 +287,50 @@ export function draw(v: View): void {
     "#b9d67b",
     "#475653",
     1.5,
-  );
-  dot(v, 574, 242, 2, "#253c49");
-  dot(v, 582, 242, 2, "#253c49");
-  mark(v, [P(584, 246), P(593, 240), P(596, 231)], "#475653", 2.5);
-  dot(v, 597, 230, 3, "#b9d67b");
+  ));
+  out.push(dot(v, 574, 242, 2, "#253c49"));
+  out.push(dot(v, 582, 242, 2, "#253c49"));
+  out.push(mark(v, [P(584, 246), P(593, 240), P(596, 231)], "#475653", 2.5));
+  out.push(dot(v, 597, 230, 3, "#b9d67b"));
 
   // Cast shadow, legs, and a little satchel precede the body.
-  v.ellipse(266, 615, 109, 15.5, { fill: "#304f51" });
-  shape(
+  out.push(v.ellipse(266, 615, 109, 15.5, { fill: "#304f51" }));
+  out.push(shape(
     v,
     [P(214, 545), P(242, 543), P(243, 591), P(234, 605), P(214, 598)],
     "#6daa69",
     "#315549",
     3,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [P(285, 543), P(313, 538), P(317, 590), P(306, 605), P(286, 599)],
     "#6daa69",
     "#315549",
     3,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [P(201, 594), P(223, 584), P(249, 593), P(251, 608), P(203, 609)],
     "#86c779",
     "#315549",
     3,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [P(279, 594), P(301, 584), P(325, 592), P(331, 608), P(282, 609)],
     "#86c779",
     "#315549",
     3,
-  );
+  ));
 
   // Far arm, waving arm, then the round pear silhouette.
-  mark(v, [P(204, 456), P(173, 497), P(162, 540)], "#315549", 34);
-  mark(v, [P(204, 456), P(173, 497), P(162, 540)], "#77b66e", 27);
-  dot(v, 160, 544, 16, "#86c779");
-  mark(v, [P(311, 454), P(359, 437), P(387, 399), P(403, 363)], "#315549", 38);
-  mark(v, [P(311, 454), P(359, 437), P(387, 399), P(403, 363)], "#79ba72", 31);
-  shape(
+  out.push(mark(v, [P(204, 456), P(173, 497), P(162, 540)], "#315549", 34));
+  out.push(mark(v, [P(204, 456), P(173, 497), P(162, 540)], "#77b66e", 27));
+  out.push(dot(v, 160, 544, 16, "#86c779"));
+  out.push(mark(v, [P(311, 454), P(359, 437), P(387, 399), P(403, 363)], "#315549", 38));
+  out.push(mark(v, [P(311, 454), P(359, 437), P(387, 399), P(403, 363)], "#79ba72", 31));
+  out.push(shape(
     v,
     [
       P(394, 348),
@@ -339,11 +343,11 @@ export function draw(v: View): void {
     "#91ce77",
     "#315549",
     3,
-  );
-  mark(v, [P(425, 357), P(434, 343)], "#315549", 3);
-  mark(v, [P(419, 347), P(425, 339)], "#4b8055", 1.8, "pencil");
-  mark(v, [P(413, 345), P(416, 338)], "#4b8055", 1.8, "pencil");
-  shape(
+  ));
+  out.push(mark(v, [P(425, 357), P(434, 343)], "#315549", 3));
+  out.push(mark(v, [P(419, 347), P(425, 339)], "#4b8055", 1.8, "pencil"));
+  out.push(mark(v, [P(413, 345), P(416, 338)], "#4b8055", 1.8, "pencil"));
+  out.push(shape(
     v,
     [
       P(226, 425),
@@ -360,8 +364,8 @@ export function draw(v: View): void {
     "#87c979",
     "#315549",
     3.5,
-  );
-  v.clip(
+  ));
+  out.push(v.clip(
     v.curvePath(
       [
         P(226, 425),
@@ -377,18 +381,20 @@ export function draw(v: View): void {
       ],
       true,
     ),
-    () => {
+    ((): Drawing => {
+      const drawn: Drawing[] = [];
       for (let i = 0; i < 17; i += 1)
-        mark(
+        drawn.push(mark(
           v,
           [P(197 + i * 8, 450), P(219 + i * 8, 493), P(220 + i * 8, 565)],
           i % 2 ? "#a6dd87" : "#5da665",
           5,
           "bristle",
-        );
-    },
-  );
-  shape(
+        ));
+      return drawn;
+    })(),
+  ));
+  out.push(shape(
     v,
     [
       P(237, 493),
@@ -401,27 +407,27 @@ export function draw(v: View): void {
     "#6cb76e",
     "#6cb76e",
     1,
-  );
+  ));
   // A small travel bag gives the walk a destination.
-  mark(v, [P(286, 450), P(320, 476), P(328, 513)], "#d6ad76", 8, "bristle");
-  shape(
+  out.push(mark(v, [P(286, 450), P(320, 476), P(328, 513)], "#d6ad76", 8, "bristle"));
+  out.push(shape(
     v,
     [P(313, 504), P(343, 495), P(352, 518), P(343, 545), P(312, 540)],
     "#dcaa70",
     "#5e5750",
     3,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [P(314, 505), P(342, 501), P(347, 517), P(316, 520)],
     "#eec48d",
     "#5e5750",
     2,
-  );
-  dot(v, 332, 519, 3, "#7b6a4e");
+  ));
+  out.push(dot(v, 332, 519, 3, "#7b6a4e"));
 
   // A yellow scarf catches the last warm light and points back along the path.
-  shape(
+  out.push(shape(
     v,
     [
       P(213, 407),
@@ -436,8 +442,8 @@ export function draw(v: View): void {
     "#eec57d",
     "#80634d",
     2.5,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [
       P(223, 421),
@@ -450,15 +456,15 @@ export function draw(v: View): void {
     "#eec57d",
     "#80634d",
     2.5,
-  );
-  mark(v, [P(186, 444), P(206, 439), P(218, 431)], "#fff0b1", 4, "bristle");
+  ));
+  out.push(mark(v, [P(186, 444), P(206, 439), P(218, 431)], "#fff0b1", 4, "bristle"));
 
   // Antennae rise behind a softly irregular oval head.
-  mark(v, [P(223, 323), P(200, 267), P(184, 226)], "#315549", 7);
-  mark(v, [P(293, 316), P(320, 261), P(343, 220)], "#315549", 7);
-  dot(v, 183, 221, 14, "#f4d66a");
-  dot(v, 344, 216, 14, "#f4d66a");
-  shape(
+  out.push(mark(v, [P(223, 323), P(200, 267), P(184, 226)], "#315549", 7));
+  out.push(mark(v, [P(293, 316), P(320, 261), P(343, 220)], "#315549", 7));
+  out.push(dot(v, 183, 221, 14, "#f4d66a"));
+  out.push(dot(v, 344, 216, 14, "#f4d66a"));
+  out.push(shape(
     v,
     [
       P(172, 331),
@@ -477,8 +483,8 @@ export function draw(v: View): void {
     "#91d47d",
     "#315549",
     4,
-  );
-  v.clip(
+  ));
+  out.push(v.clip(
     v.curvePath(
       [
         P(172, 331),
@@ -496,20 +502,22 @@ export function draw(v: View): void {
       ],
       true,
     ),
-    () => {
+    ((): Drawing => {
+      const drawn: Drawing[] = [];
       for (let i = 0; i < 18; i += 1)
-        mark(
+        drawn.push(mark(
           v,
           [P(176 + i * 12, 275), P(187 + i * 12, 329), P(171 + i * 12, 389)],
           i % 3 ? "#b0df8b" : "#67b876",
           5,
           "bristle",
-        );
-    },
-  );
-  mark(v, [P(190, 326), P(213, 285), P(257, 270)], "#d2ed9d", 13, "wash");
+        ));
+      return drawn;
+    })(),
+  ));
+  out.push(mark(v, [P(190, 326), P(213, 285), P(257, 270)], "#d2ed9d", 13, "wash"));
   // The eye at right follows the departing friend.
-  shape(
+  out.push(shape(
     v,
     [
       P(199, 330),
@@ -523,8 +531,8 @@ export function draw(v: View): void {
     "#fff9e8",
     "#315549",
     3,
-  );
-  shape(
+  ));
+  out.push(shape(
     v,
     [
       P(278, 325),
@@ -538,18 +546,18 @@ export function draw(v: View): void {
     "#fff9e8",
     "#315549",
     3,
-  );
-  dot(v, 228, 329, 12, "#273e3e");
-  dot(v, 309, 324, 12, "#273e3e");
-  dot(v, 232, 321, 4, "#ffffff");
-  dot(v, 313, 316, 4, "#ffffff");
-  v.group({ opacity: 0.48 }, () => {
-    dot(v, 194, 363, 13, "#e99782");
-    dot(v, 330, 358, 13, "#e99782");
-  });
-  mark(v, [P(247, 366), P(260, 374), P(274, 372), P(284, 364)], "#315549", 3.5);
+  ));
+  out.push(dot(v, 228, 329, 12, "#273e3e"));
+  out.push(dot(v, 309, 324, 12, "#273e3e"));
+  out.push(dot(v, 232, 321, 4, "#ffffff"));
+  out.push(dot(v, 313, 316, 4, "#ffffff"));
+  out.push(v.group({ opacity: 0.48 }, [
+    dot(v, 194, 363, 13, "#e99782"),
+    dot(v, 330, 358, 13, "#e99782"),
+  ]));
+  out.push(mark(v, [P(247, 366), P(260, 374), P(274, 372), P(284, 364)], "#315549", 3.5));
 
-  mark(v, [P(394, 358), P(401, 364), P(409, 365)], "#4e875a", 2, "pencil");
+  out.push(mark(v, [P(394, 358), P(401, 364), P(409, 365)], "#4e875a", 2, "pencil"));
 
   // Foreground seed heads and three lit flowers keep the eye on the hill.
   for (const [x, y, c] of [
@@ -558,27 +566,27 @@ export function draw(v: View): void {
     [524, 635, "#f4c28a"],
     [607, 591, "#ebdcaa"],
   ] as const) {
-    mark(v, [P(x, y + 58), P(x + 2, y + 27), P(x, y)], "#9eb77b", 3, "bristle");
+    out.push(mark(v, [P(x, y + 58), P(x + 2, y + 27), P(x, y)], "#9eb77b", 3, "bristle"));
     for (let j = 0; j < 5; j += 1)
-      dot(v, x + Math.cos(j * 1.256) * 10, y + Math.sin(j * 1.256) * 10, 5, c);
-    dot(v, x, y, 5, "#b76e61");
+      out.push(dot(v, x + Math.cos(j * 1.256) * 10, y + Math.sin(j * 1.256) * 10, 5, c));
+    out.push(dot(v, x, y, 5, "#b76e61"));
   }
-  mark(v, [P(29, 686), P(150, 676), P(246, 687)], "#d0b284", 9, "bristle");
-  mark(v, [P(425, 691), P(565, 680), P(710, 685)], "#c0a374", 8, "bristle");
+  out.push(mark(v, [P(29, 686), P(150, 676), P(246, 687)], "#d0b284", 9, "bristle"));
+  out.push(mark(v, [P(425, 691), P(565, 680), P(710, 685)], "#c0a374", 8, "bristle"));
   for (const [x, y, flip] of [
     [25, 674, 1],
     [139, 607, -1],
     [365, 665, 1],
     [645, 652, -1],
   ] as const) {
-    mark(
+    out.push(mark(
       v,
       [P(x, y + 27), P(x, y + 5), P(x + 4 * flip, y - 19)],
       "#acc183",
       4,
       "bristle",
-    );
-    shape(
+    ));
+    out.push(shape(
       v,
       [
         P(x, y + 13),
@@ -589,8 +597,8 @@ export function draw(v: View): void {
       "#839c6e",
       "#5f7d62",
       1.2,
-    );
-    shape(
+    ));
+    out.push(shape(
       v,
       [
         P(x, y + 7),
@@ -601,6 +609,7 @@ export function draw(v: View): void {
       "#90ac78",
       "#5f7d62",
       1.2,
-    );
+    ));
   }
+  return v.paper({ scale: 3.5, contrast: 0.8, seed: 8 }, out);
 }

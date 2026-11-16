@@ -13,6 +13,7 @@ import { spawn } from "node:child_process";
 import { existsSync, promises as fs, realpathSync } from "node:fs";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../cards/frontmatter.js";
+import { checkFigureSketch, FigureCheckUnavailableError, type FigureSketchCheck } from "../../../core/figure-sketch-check.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
 import { isRecord } from "../../../shared/is-record.js";
@@ -26,6 +27,8 @@ export interface FigureJob {
   events: string | undefined;
   frames: number | undefined;
   every: number;
+  /** Write scene outlines into the transcript: every captured frame (true), the first ("first"), or none (false). */
+  scene: boolean | "first";
   /** Card `params:` defaults (typed) and `--params` values (strings, typed by the child against the module). */
   cardDefaults: Record<string, string | number | boolean>;
   overrides: Record<string, string>;
@@ -99,6 +102,19 @@ function cardDefaults(frontmatter: Record<string, unknown>): Record<string, stri
   return out;
 }
 
+/** Type-check the entry against the sketch contract (`core/figure-sketch-check.ts`); a failure stops the run. */
+async function checkEntryTypes(boxRoot: string, entry: string): Promise<void> {
+  let check: FigureSketchCheck;
+  try {
+    check = await checkFigureSketch(boxRoot, entry);
+  } catch (error) {
+    if (error instanceof FigureCheckUnavailableError) throw new FigureRunError({ detail: error.message });
+    throw error;
+  }
+  if (check.ok) return;
+  throw new FigureRunError({ detail: `${path.relative(boxRoot, entry)}: the sketch does not type-check, so it was not run. Fix these and run again:\n${check.lines.join("\n")}` });
+}
+
 /** Prepare the run directory and compiled entry for one card. */
 export async function prepareFigureJob(args: {
   boxRoot: string;
@@ -106,6 +122,7 @@ export async function prepareFigureJob(args: {
   events?: string;
   frames?: number;
   every?: number;
+  scene?: boolean | "first";
   params: Record<string, string>;
 }): Promise<{ cardRel: string; job: FigureJob }> {
   const { boxRoot } = args;
@@ -113,6 +130,7 @@ export async function prepareFigureJob(args: {
   const entryRef = frontmatter["entry"];
   if (typeof entryRef !== "string" || entryRef === "") throw new FigureRunError({ detail: `${rel}: no entry` });
   const entry = boxFile({ boxRoot, cardRel: rel, ref: entryRef, what: "entry" });
+  await checkEntryTypes(boxRoot, entry);
   const sibling = path.join(path.dirname(entry), `${path.basename(entry, path.extname(entry))}-events.json`);
   const events = args.events === undefined ? (existsSync(sibling) ? sibling : undefined) : boxFile({ boxRoot, cardRel: rel, ref: args.events, what: "events file" });
   // Box-area names (`_content`, …) are reserved below the root, even under _tmp: drop the underscore.
@@ -123,13 +141,14 @@ export async function prepareFigureJob(args: {
   if (!insideBox(boxRoot, runDir) || (await fs.lstat(runDir)).isSymbolicLink()) throw new FigureRunError({ detail: `${path.relative(boxRoot, runDir)}: links outside this box` });
   await fs.rm(runDir, { recursive: true, force: true });
   await fs.mkdir(runDir, { recursive: true });
+  const compiled = path.join(runDir, "entry.mjs");
   let output: string;
   try {
-    ({ output } = await bundleView(entry, { target: "node", cache: false }));
+    // Written at `compiled`: the source map's paths are relative to it, so a warning names the entry's own line.
+    ({ output } = await bundleView(entry, { target: "node", cache: false, outfile: compiled }));
   } catch (error) {
     throw new FigureRunError({ detail: `compiling ${path.relative(boxRoot, entry)} failed:\n${error instanceof Error ? error.message : String(error)}` });
   }
-  const compiled = path.join(runDir, "entry.mjs");
   await fs.writeFile(compiled, output);
   return {
     cardRel: rel,
@@ -140,16 +159,21 @@ export async function prepareFigureJob(args: {
       events,
       frames: args.frames,
       every: args.every ?? 30,
+      scene: args.scene ?? false,
       cardDefaults: cardDefaults(frontmatter),
       overrides: args.params,
     },
   };
 }
 
-/** Lines the transcript logged at warn or error level, for the summary. */
+/** Lines the transcript logged at warn level (`**[frame N]** warn:`), for the summary. */
 async function transcriptWarnings(transcript: string): Promise<string[]> {
   const text = await fs.readFile(transcript, "utf8").catch(() => "");
-  return text.split("\n").filter((line) => /^\*\*\[frame \d+\]\*\* warn: /u.test(line)).map((line) => line.replace(/^\*\*\[frame (\d+)\]\*\* warn: /u, "frame $1: "));
+  const warning = /^\*\*\[frame (\d+)\]\*\* warn: /u;
+  return text.split("\n").flatMap((line) => {
+    const m = warning.exec(line);
+    return m === null ? [] : [`frame ${m[1] ?? "?"}: ${line.slice(m[0].length)}`];
+  });
 }
 
 /** Run one prepared job in a child `bbx figure run-one`, killed after `timeoutMs`. */
@@ -172,7 +196,7 @@ export async function runFigureJob(args: { boxRoot: string; cardRel: string; job
     proc.on("close", (code, signal) => resolve({ code, signal, stdout, stderr }));
   });
   if (child.signal === "SIGKILL" && child.code === null) {
-    return { card: cardRel, ok: false, errors: [`stopped after ${String(timeoutMs / 1000)} s: a sketch that never returns (an endless loop in init, update or draw?)`], warnings: [] };
+    return { card: cardRel, ok: false, errors: [`stopped after ${String(timeoutMs / 1000)} s: an endless loop in init, update or draw, or rendering too slow here (each captured frame is rendered; try fewer frames, a larger --every, or --timeout)`], warnings: [] };
   }
   const last = child.stdout.trim().split("\n").at(-1) ?? "";
   let parsed: unknown;

@@ -4,7 +4,7 @@ import type { RenderInline } from "../../lib/view-host";
 import type { NavigateHint, ViewState, ViewTarget } from "../../lib/view-url";
 import { isFrameless, type FileViewMode } from "../file-view-types";
 import { BoundAgentViewRenderer } from "./BoundAgentViewRenderer";
-import { CaptionedFigure } from "../FigureView/view";
+import { CaptionedFigure } from "../FigureView/FigureLayout";
 
 interface ActiveFileRendererProps {
   active: FileRenderer;

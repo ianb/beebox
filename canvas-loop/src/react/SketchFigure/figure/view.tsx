@@ -1,7 +1,10 @@
 // <SketchFigure> — the browser TEA runner as a React component. This file is
-// mounting + prop plumbing + lifecycle ONLY; the runtime lifecycle (create +
-// wire input + teardown) is delegated to `attachSketch` (src/browser/mount.ts),
-// the same implementation the imperative `mountSketch` uses. SSR-safe by
+// mounting + prop plumbing + lifecycle ONLY; the runtime lifecycle (GPU device,
+// runtime, input wiring, teardown) is delegated to `attachSketch`
+// (src/browser/mount.ts), the same implementation the imperative `mountSketch`
+// uses. The device opens asynchronously: until `ready`, the toolbar and the
+// param controls are disabled, and the latest controlled params and play state
+// are applied when the runtime arrives. SSR-safe by
 // construction: no window/document/canvas is touched at module scope or
 // during render. `useSyncExternalStore` reports client-vs-server so the
 // server (and the first hydration pass) renders a plain placeholder div; the
@@ -25,7 +28,9 @@ import type { JSX } from "react";
 import type { TeaScriptEvent } from "../../../headless/tea-events.js";
 import type { PlaygroundModule } from "../../../browser/sketch-types.js";
 import type { Runtime } from "../../../browser/runtime/engine.js";
-import { DEFAULT_CANVAS, attachSketch, setDensity } from "../../../browser/mount.js";
+import { DEFAULT_CANVAS, attachSketch } from "../../../browser/mount.js";
+import { setDensity } from "../../../browser/canvas-dom.js";
+import type { FigureGpu } from "../../../browser/scene/figure/start.js";
 import { ParamControls } from "./ParamControls.js";
 import { RecorderPanel } from "./RecorderPanel.js";
 import type { ParamRecord } from "../figure-internals.js";
@@ -65,6 +70,8 @@ export interface SketchFigureProps {
   onParamsChange?: (values: ParamRecord) => void;
   /** Streams each recorded input entry as it is dispatched (the events-file line). */
   onEvent?: (entry: TeaScriptEvent) => void;
+  /** Tests and dev tools; default the page's shared WebGPU device. */
+  gpu?: FigureGpu;
 }
 
 const DEFAULT_SEED = 42;
@@ -78,6 +85,7 @@ interface LatestProps {
   showRecorder: boolean;
   onEvent: ((entry: TeaScriptEvent) => void) | undefined;
   onParamsChange: ((values: ParamRecord) => void) | undefined;
+  gpu: FigureGpu | undefined;
 }
 
 // A no-op external store whose server snapshot is false and client snapshot true
@@ -88,18 +96,48 @@ const clientSnapshot = (): boolean => true;
 const serverSnapshot = (): boolean => false;
 
 /** The play/pause + restart toolbar with its frame readout. */
-function FigureToolbar(props: { frame: number; playing: boolean; onToggle: () => void; onRestart: () => void }): JSX.Element {
+function FigureToolbar(props: { frame: number; playing: boolean; disabled: boolean; onToggle: () => void; onRestart: () => void }): JSX.Element {
   return (
     <div className="cl-toolbar">
       <span className="cl-frame">frame {props.frame}</span>
-      <button type="button" className="cl-btn" onClick={props.onToggle}>
+      <button type="button" className="cl-btn" disabled={props.disabled} onClick={props.onToggle}>
         {props.playing ? "Pause" : "Play"}
       </button>
-      <button type="button" className="cl-btn" onClick={props.onRestart}>
+      <button type="button" className="cl-btn" disabled={props.disabled} onClick={props.onRestart}>
         Restart
       </button>
     </div>
   );
+}
+
+/** The module attachSketch runs, rebuilt from the sketch's stable sub-identities. */
+function sketchModule(m: { init: PlaygroundModule["init"]; update: PlaygroundModule["update"]; draw: PlaygroundModule["draw"]; params: PlaygroundModule["params"]; sound: PlaygroundModule["sound"]; canvas: { width: number; height: number } }): PlaygroundModule {
+  return {
+    init: m.init,
+    update: m.update,
+    draw: m.draw,
+    canvas: m.canvas,
+    // Omit rather than pass `undefined` — exactOptionalPropertyTypes.
+    ...(m.params !== undefined ? { params: m.params } : {}),
+    ...(m.sound !== undefined ? { sound: m.sound } : {}),
+  };
+}
+
+/**
+ * Once the runtime arrives: apply what changed while the device opened (the
+ * latest controlled params, the current play state), and return the params now
+ * dispatched, for the controlled-params effect to diff against.
+ */
+function catchUp(rt: Runtime, a: { now: LatestProps | null; autoplay: boolean }): ParamRecord {
+  const { now } = a;
+  if (now !== null && now.controlled && now.params !== undefined) {
+    const applied = rt.paramValues();
+    for (const [name, value] of Object.entries(now.params)) {
+      if (applied[name] !== value) rt.setParam(name, value);
+    }
+  }
+  rt.setPaused(!(now?.playing ?? a.autoplay));
+  return { ...(now?.controlled === true && now.params !== undefined ? now.params : rt.paramValues()) };
 }
 
 export function SketchFigure(props: SketchFigureProps): JSX.Element {
@@ -128,6 +166,8 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   const [eventCount, setEventCount] = useState(0);
   const [eventsJson, setEventsJson] = useState("[]");
   const [error, setError] = useState<string | null>(null);
+  // The runtime exists (the device opened and frame 0 drew); controls are disabled until then.
+  const [ready, setReady] = useState(false);
   const [ownValues, setOwnValues] = useState<ParamRecord>(() => resolveValues({ decl, overrides: props.initialParams }));
 
   // Keep the latest props reachable from the runtime callbacks and the creation
@@ -143,6 +183,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       showRecorder,
       onEvent: props.onEvent,
       onParamsChange: props.onParamsChange,
+      gpu: props.gpu,
     };
   });
 
@@ -160,14 +201,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
     if (el === null) return;
     const latest = latestRef.current;
     const initialParams = latest === null ? undefined : latest.controlled ? latest.params : latest.initialParams;
-    const module: PlaygroundModule = {
-      init: modInit,
-      update: modUpdate,
-      draw: modDraw,
-      canvas: { width: canvasWidth, height: canvasHeight },
-      ...(modParams !== undefined ? { params: modParams } : {}),
-      ...(modSound !== undefined ? { sound: modSound } : {}),
-    };
+    const module = sketchModule({ init: modInit, update: modUpdate, draw: modDraw, params: modParams, sound: modSound, canvas: { width: canvasWidth, height: canvasHeight } });
     // Sharp on high-density screens: a device-pixel backing store; React keeps the display size.
     setDensity(el, { width: canvasWidth, height: canvasHeight });
     const attached = attachSketch(el, {
@@ -176,6 +210,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       paused: !(latest?.playing ?? autoplay),
       // Omit rather than pass `undefined` — exactOptionalPropertyTypes.
       ...(initialParams !== undefined ? { initialParams } : {}),
+      ...(latest?.gpu !== undefined ? { gpu: latest.gpu } : {}),
       onFrame: (f) => {
         setFrame(f);
         // A frame advanced: clear any stale error (e.g. after swapping in a
@@ -200,12 +235,20 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       },
       onError: (e) => setError(e instanceof Error ? e.message : String(e)),
     });
-    if (attached === null) return;
-    runtimeRef.current = attached.runtime;
-    dispatchedRef.current = { ...attached.runtime.paramValues() };
+    // Cleared by the cleanup: a runtime that arrives after an unmount, or after
+    // a new module or canvas size replaced this one, is never applied.
+    const live = { current: true };
+    void attached.ready.then((rt) => {
+      if (!live.current) return;
+      runtimeRef.current = rt;
+      dispatchedRef.current = catchUp(rt, { now: latestRef.current, autoplay });
+      setReady(true);
+    });
     return () => {
+      live.current = false;
       attached.teardown();
       runtimeRef.current = null;
+      setReady(false);
     };
   }, [modInit, modUpdate, modDraw, modParams, modSound, seed, canvasWidth, canvasHeight, autoplay, isClient]);
 
@@ -284,8 +327,8 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
           Sketch error: {error}
         </div>
       ) : null}
-      {showControls ? <FigureToolbar frame={frame} playing={playing} onToggle={togglePlay} onRestart={restart} /> : null}
-      {showControls ? <ParamControls decl={decl} values={values} onParam={handleParam} onTrigger={handleTrigger} /> : null}
+      {showControls ? <FigureToolbar frame={frame} playing={playing} disabled={!ready} onToggle={togglePlay} onRestart={restart} /> : null}
+      {showControls ? <ParamControls decl={decl} values={values} disabled={!ready} onParam={handleParam} onTrigger={handleTrigger} /> : null}
       {showRecorder ? <RecorderPanel json={eventsJson} count={eventCount} /> : null}
     </div>
   );

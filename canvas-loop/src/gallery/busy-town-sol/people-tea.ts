@@ -1,4 +1,4 @@
-import type { Style, View } from "@ianbicking/canvas-loop";
+import type { Drawing, Style, View } from "@ianbicking/canvas-loop";
 
 export type Kind =
   | "fox"
@@ -136,51 +136,57 @@ function lineOf(stroke: string, weight: number): Style {
   return { stroke, weight };
 }
 
-function paintSpecial(v: View, thing: Thing, pose: boolean): boolean {
+/** The drawing of a thing that is not a character, or undefined for a character. */
+function paintSpecial(v: View, thing: Thing, pose: boolean): Drawing {
   const { kind, color } = thing;
   if (kind === "bus") {
-    v.rect(1, 8, 149, 56, fillOf("#dc8f57"));
-    v.rect(13, 15, 123, 28, fillOf("#f6d391"));
-    for (let i = 0; i < 4; i += 1)
-      v.rect(20 + i * 29, 19, 22, 19, fillOf("#668e9c"));
-    v.circle(30, 66, 10.5, fillOf("#3e5357"));
-    v.circle(119, 66, 10.5, fillOf("#3e5357"));
-    v.text(
-      "TOWN LOOP",
-      { x: 75, y: 57 },
-      {
-        size: 13,
-        fill: "#f8eed0",
-        align: "center",
-        valign: "baseline",
-      },
-    );
-    return true;
+    return [
+      v.rect(1, 8, 149, 56, fillOf("#dc8f57")),
+      v.rect(13, 15, 123, 28, fillOf("#f6d391")),
+      [0, 1, 2, 3].map((i) => v.rect(20 + i * 29, 19, 22, 19, fillOf("#668e9c"))),
+      v.circle(30, 66, 10.5, fillOf("#3e5357")),
+      v.circle(119, 66, 10.5, fillOf("#3e5357")),
+      v.text(
+        "TOWN LOOP",
+        { x: 75, y: 57 },
+        {
+          size: 13,
+          fill: "#f8eed0",
+          align: "center",
+          valign: "baseline",
+        },
+      ),
+    ];
   }
   if (kind === "flag") {
-    v.rect(4, 0, 4, 72, fillOf("#534c4b"));
-    v.triangle(8, 5, pose ? 57 : 50, pose ? 21 : 9, 8, 36, fillOf(color));
-    return true;
+    return [
+      v.rect(4, 0, 4, 72, fillOf("#534c4b")),
+      v.triangle(8, 5, pose ? 57 : 50, pose ? 21 : 9, 8, 36, fillOf(color)),
+    ];
   }
   if (kind === "clock") {
-    v.circle(30, 30, 27, fillOf("#f7dfad"));
-    v.circle(30, 30, 23, fillOf("#586d70"));
-    v.circle(30, 30, 20, fillOf("#f9edce"));
     const hand = lineOf("#344a4c", 3);
-    v.line(30, 30, pose ? 39 : 30, 14, hand);
-    v.line(30, 30, pose ? 22 : 42, 35, hand);
-    return true;
+    return [
+      v.circle(30, 30, 27, fillOf("#f7dfad")),
+      v.circle(30, 30, 23, fillOf("#586d70")),
+      v.circle(30, 30, 20, fillOf("#f9edce")),
+      v.line(30, 30, pose ? 39 : 30, 14, hand),
+      v.line(30, 30, pose ? 22 : 42, 35, hand),
+    ];
   }
   if (kind === "flowers") {
-    v.rect(3, 34, 65, 32, fillOf("#b07963"));
-    for (let i = 0; i < 6; i += 1) {
-      const x = 10 + i * 10;
-      v.line(x, 39, x, pose ? 13 : 19, lineOf("#668f68", 2));
-      v.circle(x, pose ? 13 : 19, 6.5, fillOf(i % 2 ? "#edacaa" : "#f1d68d"));
-    }
-    return true;
+    return [
+      v.rect(3, 34, 65, 32, fillOf("#b07963")),
+      [0, 1, 2, 3, 4, 5].map((i) => {
+        const x = 10 + i * 10;
+        return [
+          v.line(x, 39, x, pose ? 13 : 19, lineOf("#668f68", 2)),
+          v.circle(x, pose ? 13 : 19, 6.5, fillOf(i % 2 ? "#edacaa" : "#f1d68d")),
+        ];
+      }),
+    ];
   }
-  return false;
+  return undefined;
 }
 
 function outfit(id: string): string {
@@ -193,113 +199,120 @@ function outfit(id: string): string {
   return "#547d82";
 }
 
-function props(v: View, thing: Thing): void {
+function props(v: View, thing: Thing): Drawing {
+  const out: Drawing[] = [];
   if (thing.id === "baker") {
     const f = fillOf("#f9f1db");
-    v.rect(13, 5, 30, 8, f);
-    v.rect(19, 0, 18, 10, f);
+    out.push(v.rect(13, 5, 30, 8, f));
+    out.push(v.rect(19, 0, 18, 10, f));
   }
   if (thing.id === "mailcarrier") {
-    v.rect(34, 52, 16, 13, fillOf("#d9ae70"));
+    out.push(v.rect(34, 52, 16, 13, fillOf("#d9ae70")));
   }
   if (thing.id === "painter") {
-    v.rect(14, 6, 28, 6, fillOf("#d27c60"));
+    out.push(v.rect(14, 6, 28, 6, fillOf("#d27c60")));
   }
   if (thing.id === "sweeper") {
-    v.line(50, 52, 54, 82, lineOf("#9b7156", 2));
-    v.ellipse(54, 80, 6.5, 2.5, fillOf("#e5c99d"));
+    out.push(v.line(50, 52, 54, 82, lineOf("#9b7156", 2)));
+    out.push(v.ellipse(54, 80, 6.5, 2.5, fillOf("#e5c99d")));
   }
   if (thing.id === "gardener") {
-    v.ellipse(47, 65, 8.5, 6.5, fillOf("#89aec0"));
-    v.rect(40, 54, 15, 9, fillOf("#89aec0"));
+    out.push(v.ellipse(47, 65, 8.5, 6.5, fillOf("#89aec0")));
+    out.push(v.rect(40, 54, 15, 9, fillOf("#89aec0")));
   }
   if (thing.id === "violinist") {
-    v.ellipse(44, 58, 8.5, 5, fillOf("#a86f49"));
-    v.line(49, 51, 51, 35, lineOf("#695648", 2));
+    out.push(v.ellipse(44, 58, 8.5, 5, fillOf("#a86f49")));
+    out.push(v.line(49, 51, 51, 35, lineOf("#695648", 2)));
   }
   if (thing.id === "tailor") {
     const f = fillOf("#dfb488");
-    v.triangle(43, 48, 49, 65, 37, 65, f);
-    v.circle(43, 51, 3, f);
+    out.push(v.triangle(43, 48, 49, 65, 37, 65, f));
+    out.push(v.circle(43, 51, 3, f));
   }
   if (thing.id === "librarian") {
-    v.rect(37, 52, 17, 14, fillOf("#be8b61"));
-    v.rect(39, 54, 13, 11, fillOf("#f8e4bd"));
+    out.push(v.rect(37, 52, 17, 14, fillOf("#be8b61")));
+    out.push(v.rect(39, 54, 13, 11, fillOf("#f8e4bd")));
   }
   if (thing.id === "astronomer") {
-    v.line(44, 47, 59, 32, lineOf("#dfbc7d", 5));
-    v.circle(58, 32, 4.5, fillOf("#f4d997"));
+    out.push(v.line(44, 47, 59, 32, lineOf("#dfbc7d", 5)));
+    out.push(v.circle(58, 32, 4.5, fillOf("#f4d997")));
   }
   if (thing.id === "conductor") {
     const f = fillOf("#344f66");
-    v.rect(11, 7, 34, 7, f);
-    v.rect(17, 0, 22, 10, f);
+    out.push(v.rect(11, 7, 34, 7, f));
+    out.push(v.rect(17, 0, 22, 10, f));
   }
   if (thing.id === "cyclist") {
-    v.rect(15, 8, 27, 6, fillOf("#e8bf7c"));
+    out.push(v.rect(15, 8, 27, 6, fillOf("#e8bf7c")));
   }
   if (thing.id === "skater") {
-    v.rect(17, 4, 26, 6, fillOf("#426b77"));
+    out.push(v.rect(17, 4, 26, 6, fillOf("#426b77")));
   }
+  return out;
 }
 
-function paintHead(v: View, kind: Thing["kind"], color: string): void {
+function paintHead(v: View, kind: Thing["kind"], color: string): Drawing {
+  const out: Drawing[] = [];
   const body = fillOf(color);
   if (kind === "rabbit") {
-    v.ellipse(16, 9, 5.5, 17, body);
-    v.ellipse(40, 9, 5.5, 17, body);
+    out.push(v.ellipse(16, 9, 5.5, 17, body));
+    out.push(v.ellipse(40, 9, 5.5, 17, body));
   }
   if (kind === "fox") {
-    v.triangle(8, 20, 8, 1, 23, 16, body);
-    v.triangle(33, 16, 48, 1, 48, 20, body);
+    out.push(v.triangle(8, 20, 8, 1, 23, 16, body));
+    out.push(v.triangle(33, 16, 48, 1, 48, 20, body));
   }
   if (kind === "cat") {
-    v.triangle(8, 21, 12, 3, 23, 17, body);
-    v.triangle(33, 17, 44, 3, 48, 21, body);
+    out.push(v.triangle(8, 21, 12, 3, 23, 17, body));
+    out.push(v.triangle(33, 17, 44, 3, 48, 21, body));
   }
   if (kind === "mouse") {
-    v.circle(10, 14, 9, body);
-    v.circle(46, 14, 9, body);
+    out.push(v.circle(10, 14, 9, body));
+    out.push(v.circle(46, 14, 9, body));
   }
   if (kind === "bear") {
-    v.circle(12, 15, 7, body);
-    v.circle(44, 15, 7, body);
+    out.push(v.circle(12, 15, 7, body));
+    out.push(v.circle(44, 15, 7, body));
   }
   if (kind === "frog") {
-    v.circle(15, 11, 7.5, body);
-    v.circle(41, 11, 7.5, body);
+    out.push(v.circle(15, 11, 7.5, body));
+    out.push(v.circle(41, 11, 7.5, body));
   }
-  v.circle(28, 27, 19.5, body);
-  v.ellipse(28, 35, (kind === "fox" ? 29 : 24) / 2, 8.5, fillOf("#f3d6ac"));
+  out.push(v.circle(28, 27, 19.5, body));
+  out.push(v.ellipse(28, 35, (kind === "fox" ? 29 : 24) / 2, 8.5, fillOf("#f3d6ac")));
   const eye = fillOf("#263d43");
-  v.circle(21, 27, 1.75, eye);
-  v.circle(35, 27, 1.75, eye);
-  v.circle(28, 36, 1.5, eye);
+  out.push(v.circle(21, 27, 1.75, eye));
+  out.push(v.circle(35, 27, 1.75, eye));
+  out.push(v.circle(28, 36, 1.5, eye));
   const mouth = lineOf("#34474a", 1.6);
-  v.arc(28, 39, 5, 0, Math.PI, mouth);
+  out.push(v.arc(28, 39, 5, 0, Math.PI, mouth));
   if (kind === "cat") {
-    v.line(9, 34, 19, 36, mouth);
-    v.line(37, 36, 47, 34, mouth);
+    out.push(v.line(9, 34, 19, 36, mouth));
+    out.push(v.line(37, 36, 47, 34, mouth));
   }
+  return out;
 }
 
-export function paintSprite(v: View, thing: Thing, pose: boolean): void {
+export function paintSprite(v: View, thing: Thing, pose: boolean): Drawing {
+  const out: Drawing[] = [];
   const { kind, color } = thing;
-  if (paintSpecial(v, thing, pose)) return;
+  const special = paintSpecial(v, thing, pose);
+  if (special !== undefined) return special;
   // A character is drawn around a fixed foot position in a 56×84 sprite.
   const shoe = fillOf("#495459");
-  v.ellipse(19, 76, 8, 4, shoe);
-  v.ellipse(38, 76, 8, 4, shoe);
-  v.ellipse(28, 57, 18, 20, fillOf(outfit(thing.id)));
+  out.push(v.ellipse(19, 76, 8, 4, shoe));
+  out.push(v.ellipse(38, 76, 8, 4, shoe));
+  out.push(v.ellipse(28, 57, 18, 20, fillOf(outfit(thing.id))));
   if (kind === "fox" || kind === "cat") {
-    v.triangle(9, 62, -3, pose ? 44 : 55, 14, 51, fillOf(color));
+    out.push(v.triangle(9, 62, -3, pose ? 44 : 55, 14, 51, fillOf(color)));
   }
-  paintHead(v, kind, color);
+  out.push(paintHead(v, kind, color));
   const arm = lineOf(color, 7);
-  v.line(13, 48, pose ? 2 : 8, pose ? 30 : 61, arm);
-  v.line(43, 48, pose ? 55 : 49, pose ? 32 : 61, arm);
+  out.push(v.line(13, 48, pose ? 2 : 8, pose ? 30 : 61, arm));
+  out.push(v.line(43, 48, pose ? 55 : 49, pose ? 32 : 61, arm));
   if (kind === "bird") {
-    v.triangle(28, 34, 48, 38, 28, 42, fillOf("#e7bc70"));
+    out.push(v.triangle(28, 34, 48, 38, 28, 42, fillOf("#e7bc70")));
   }
-  props(v, thing);
+  out.push(props(v, thing));
+  return out;
 }

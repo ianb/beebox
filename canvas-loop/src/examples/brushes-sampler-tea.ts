@@ -1,13 +1,6 @@
 // Brush sampler: every preset with two gestures, plus a small-shape row.
 // Renders the reference images for BRUSHES.md.
-import type {
-  BrushName,
-  DeepReadonly,
-  Msg,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { BrushName, DeepReadonly, Drawing, Msg, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 const PRESETS: [BrushName, string, number][] = [
   ["ink", "#1d2a44", 6],
@@ -31,17 +24,18 @@ export function update(model: DeepReadonly<Model>, _msg: Msg): Model {
   return model;
 }
 
-export function draw(v: View, _model: DeepReadonly<Model>): void {
-  v.background("#f6f2e7");
+export function draw(v: View, _model: DeepReadonly<Model>): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f6f2e7"));
   for (const [i, [name, color, weight]] of PRESETS.entries()) {
     const y = 45 + i * 70;
-    v.text(
+    out.push(v.text(
       name,
       { x: 16, y: y + 4 },
       { size: 13, fill: "#555555", valign: "baseline" },
-    );
+    ));
     const brushed: Style = { stroke: color, weight, brush: name };
-    v.curve(
+    out.push(v.curve(
       [
         [100, y + 10],
         [180, y - 14],
@@ -50,11 +44,12 @@ export function draw(v: View, _model: DeepReadonly<Model>): void {
       ],
       false,
       { ...brushed, gesture: { pressure: "taper", wobble: 1.5 } },
-    );
-    v.line(400, y, 520, y, { ...brushed, gesture: { pressure: "press" } });
+    ));
+    out.push(v.line(400, y, 520, y, { ...brushed, gesture: { pressure: "press" } }));
     // Small shapes: a dot-sized circle and a short dab.
     const small: Style = { ...brushed, gesture: { pressure: "even" } };
-    v.circle(560, y, 9, small);
-    v.line(595, y - 10, 615, y + 10, small);
+    out.push(v.circle(560, y, 9, small));
+    out.push(v.line(595, y - 10, 615, y + 10, small));
   }
+  return out;
 }

@@ -1,5 +1,5 @@
-/** Console/log channel a line came from. */
-export type LogLevel = "log" | "warn" | "error";
+/** Console/log channel a line came from; `hint` is a headless performance hint (a cost, not a mistake). */
+export type LogLevel = "log" | "warn" | "error" | "hint";
 
 /**
  * The runtime object a run's surface talks back to: log lines and snapshot requests

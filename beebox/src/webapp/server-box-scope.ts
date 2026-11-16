@@ -47,6 +47,7 @@ import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.
 import type { BoxSpec, InternalServerOptions } from "./server-types.js";
 import { assertNever, invariant } from "../shared/invariant.js";
 import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
+import { readFrontendBuild } from "./trpc/routers/build.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -241,6 +242,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // adapter's option type (a tRPC types gap). Assigning trpcOptions via a const
   // rather than an inline literal lets the supported extra property through
   // without a cast (excess-property checks fire only on inline literals).
+  const frontendBuild = frontendExists ? readFrontendBuild(frontendPath) : null;
   const trpcOptions = {
     router: appRouter,
     // Without this, an error sent to the client (especially over the WS,
@@ -317,6 +319,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
           open: identityIsOpen,
         }),
         mobileDeviceId: mobileAuth?.deviceId ?? null,
+        frontendBuild,
         eventBus,
         services: options.services ?? {},
         user,

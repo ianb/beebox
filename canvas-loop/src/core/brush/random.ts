@@ -3,8 +3,8 @@
 // before (insertion stability), and a feature read by arc length stays put when
 // a later part of the mark is edited.
 
-/** 32-bit integer mix (lowbias32). */
-function mix(input: number): number {
+/** 32-bit integer mix (lowbias32); the GPU's `mix32` (gpu/shader-paper.ts) is the same, bit for bit. */
+export function mix(input: number): number {
   let x = input >>> 0;
   x ^= x >>> 16;
   x = Math.imul(x, 0x7feb352d);
@@ -17,21 +17,6 @@ function mix(input: number): number {
 /** A float in [0, 1) for `(seed, channel, index)`. */
 export function rand(seed: number, at: { channel: number; index: number }): number {
   return mix(seed ^ mix(at.channel * 0x9e3779b1 + mix(at.index))) / 4294967296;
-}
-
-/**
- * Smooth 1-D value noise in [-1, 1] at position `x` (lattice spacing 1). With a
- * `period`, the lattice wraps, so the noise at `period` equals the noise at 0
- * (a closed loop has no seam).
- */
-export function noise1(seed: number, at: { channel: number; x: number; period?: number }): number {
-  const i = Math.floor(at.x);
-  const f = at.x - i;
-  const wrap = (k: number): number => (at.period === undefined ? k : ((k % at.period) + at.period) % at.period);
-  const a = rand(seed, { channel: at.channel, index: wrap(i) });
-  const b = rand(seed, { channel: at.channel, index: wrap(i + 1) });
-  const s = f * f * (3 - 2 * f);
-  return (a + (b - a) * s) * 2 - 1;
 }
 
 /** FNV-1a over a string, as an unsigned 32-bit seed. */

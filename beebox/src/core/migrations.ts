@@ -150,7 +150,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // stem, its recording moves under an audio card in the doc's attach scope,
   // and mentions of the memo file follow the rename. Fails closed (exit 1,
   // nothing written) on a field it does not map or an ambiguous recording.
-  // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
+  // Legacy support to remove: issues/code-quality/2026-10-16-retire-memo-legacy-source-guard.md.
   { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
   // Replaces a machine-local `link:` beebox dependency (deploy's
   // link:/opt/beebox/beebox, a laptop checkout path, a worktree override) with

@@ -9,7 +9,7 @@ import { SketchUsageError } from "../../headless/errors.js";
 import type { SeededRandom } from "../../core/prng.js";
 import type { ParamsDecl, ParamValues, Util } from "../../core/tea.js";
 import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
-import type { TextMeasure } from "../../core/view.js";
+import type { TextMeasure } from "../../core/text/measure.js";
 
 export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
   #random: SeededRandom;

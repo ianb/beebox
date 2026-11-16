@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mountSketch } from "@ianbicking/canvas-loop/browser";
 import type { View } from "@ianbicking/canvas-loop";
-import { FakeElement, asHTMLElement, runFrames } from "./fake-dom.js";
+import { FakeElement, asHTMLElement, runFrames, fakeGpu, settle } from "../fake-dom.js";
 
 function placingModule(place: { on: boolean }): Record<string, unknown> {
   return {
@@ -19,14 +19,16 @@ function placingModule(place: { on: boolean }): Record<string, unknown> {
     update: (model: object) => ({ ...model }),
     draw: (v: View) => {
       if (place.on) v.control("count", { x: 50, y: 25, w: 40, h: 20, size: 18 });
+      return null;
     },
   };
 }
 
-test("a placed param's input sits on the stage at its box and leaves the panel", () => {
+test("a placed param's input sits on the stage at its box and leaves the panel", async () => {
   const mount = new FakeElement("div");
   const place = { on: true };
-  const teardown = mountSketch(asHTMLElement(mount), { module: placingModule(place) });
+  const teardown = mountSketch(asHTMLElement(mount), { module: placingModule(place), gpu: fakeGpu() });
+  await settle();
   const stage = mount.find((el) => el.className === "cl-stage");
   assert.ok(stage !== null);
   const input = stage.find((el) => el.className.includes("cl-overlay-input"));
@@ -49,9 +51,10 @@ test("a placed param's input sits on the stage at its box and leaves the panel",
   assert.equal(stage.find((el) => el.className.includes("cl-overlay-input")), null, "teardown removes it");
 });
 
-test("showing the param's value clears a stale invalid mark", () => {
+test("showing the param's value clears a stale invalid mark", async () => {
   const mount = new FakeElement("div");
-  const teardown = mountSketch(asHTMLElement(mount), { module: placingModule({ on: true }) });
+  const teardown = mountSketch(asHTMLElement(mount), { module: placingModule({ on: true }), gpu: fakeGpu() });
+  await settle();
   const input = mount.find((el) => el.className.includes("cl-overlay-input"));
   assert.ok(input !== null);
   input.value = "99";
@@ -63,7 +66,7 @@ test("showing the param's value clears a stale invalid mark", () => {
   teardown();
 });
 
-test("a text param places a native text box that sends every edit, empty included", () => {
+test("a text param places a native text box that sends every edit, empty included", async () => {
   const mount = new FakeElement("div");
   const seen: string[] = [];
   const module = {
@@ -74,9 +77,13 @@ test("a text param places a native text box that sends every edit, empty include
       if (msg.type === "param" && typeof msg.value === "string") seen.push(msg.value);
       return { ...model };
     },
-    draw: (v: View) => v.control("answer", { x: 20, y: 40, w: 120, h: 24 }),
+    draw: (v: View) => {
+      v.control("answer", { x: 20, y: 40, w: 120, h: 24 });
+      return null;
+    },
   };
-  const teardown = mountSketch(asHTMLElement(mount), { module });
+  const teardown = mountSketch(asHTMLElement(mount), { module, gpu: fakeGpu() });
+  await settle();
   const input = mount.find((el) => el.className.includes("cl-overlay-input"));
   assert.ok(input !== null);
   assert.equal(input.tagName, "input");

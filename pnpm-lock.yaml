@@ -191,9 +191,6 @@ importers:
       markdownlint:
         specifier: ^0.40.0
         version: 0.40.0
-      perfect-freehand:
-        specifier: 1.2.3
-        version: 1.2.3
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -221,6 +218,9 @@ importers:
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
+      webgpu:
+        specifier: 0.6.2
+        version: 0.6.2
       ws:
         specifier: ^8.21.0
         version: 8.21.1
@@ -580,9 +580,9 @@ importers:
       '@napi-rs/canvas':
         specifier: 1.1.0
         version: 1.1.0
-      perfect-freehand:
-        specifier: 1.2.3
-        version: 1.2.3
+      webgpu:
+        specifier: 0.6.2
+        version: 0.6.2
       yaml:
         specifier: ^2.7.0
         version: 2.9.0
@@ -602,6 +602,9 @@ importers:
       '@typescript/native':
         specifier: npm:typescript@7.0.2
         version: typescript@7.0.2
+      '@webgpu/types':
+        specifier: 0.1.74
+        version: 0.1.74
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
@@ -4304,6 +4307,9 @@ packages:
   '@webext-core/match-patterns@1.0.3':
     resolution: {integrity: sha512-NY39ACqCxdKBmHgw361M9pfJma8e4AZo20w9AY+5ZjIj1W2dvXC8J31G5fjfOGbulW9w4WKpT8fPooi0mLkn9A==}
 
+  '@webgpu/types@0.1.74':
+    resolution: {integrity: sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==}
+
   '@wxt-dev/browser@0.1.42':
     resolution: {integrity: sha512-BSb0H09i4+0WlqFnN7LnZW0M6uCPH9KndciGx7mwOFKRVjNCorqwPk3hiVB58yQ+cyJNpDvYWL6IoPBxvP8qEA==}
 
@@ -7315,9 +7321,6 @@ packages:
   perfect-debounce@2.1.0:
     resolution: {integrity: sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g==}
 
-  perfect-freehand@1.2.3:
-    resolution: {integrity: sha512-bHZSfqDHGNlPpgH2yxXgPHlQSPpEbo+qg7li0M78J9vNAi2yjwLeA4x79BEQhX44lEWpCLSFCeRZwpw0niiXPA==}
-
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -8658,6 +8661,9 @@ packages:
   web-streams-polyfill@3.3.3:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
+
+  webgpu@0.6.2:
+    resolution: {integrity: sha512-3L4GfmqJLvYUIEWJngEQY+2HQiUlAFkg8+P8NDDj3Xx5hHHIFO/r8JW+ynfqBj7kHN4mbnwO74uB+lrRtLhp4Q==}
 
   webidl-conversions@7.0.0:
     resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
@@ -12580,6 +12586,8 @@ snapshots:
 
   '@webext-core/match-patterns@1.0.3': {}
 
+  '@webgpu/types@0.1.74': {}
+
   '@wxt-dev/browser@0.1.42':
     dependencies:
       '@types/filesystem': 0.0.36
@@ -16121,8 +16129,6 @@ snapshots:
 
   perfect-debounce@2.1.0: {}
 
-  perfect-freehand@1.2.3: {}
-
   picocolors@1.1.1: {}
 
   picomatch@2.3.2: {}
@@ -17838,6 +17844,13 @@ snapshots:
       - supports-color
 
   web-streams-polyfill@3.3.3: {}
+
+  webgpu@0.6.2:
+    dependencies:
+      '@webgpu/types': 0.1.74
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
 
   webidl-conversions@7.0.0: {}
 

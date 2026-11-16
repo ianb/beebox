@@ -90,9 +90,6 @@ The \`entry\` module is authored in the runtime's own style (not React) and
   that hold resources: p5 needs \`instance.remove()\`, three needs animation-
   frame cancellation + disposal, D3 needs listener/DOM cleanup.
 
-(The mount element and \`figure\` context travel together in the second
-argument because positional params are capped at two.)
-
 \`\`\`ts
 // attach/sketch.ts  (p5js)
 export default function (p5, { mount, figure }) {
@@ -134,10 +131,7 @@ export default (cl, { mount, figure }) =>
 \`\`\`
 
 - **The module literal lists only the exports you declared.** \`params\` and
-  \`canvas\` are both optional (\`mountSketch\` defaults: no controls, 400×300) —
-  a sketch with both uses \`{ params, canvas, init, update, draw }\`; one with
-  neither uses \`{ init, update, draw }\`. Referencing an undeclared identifier
-  in the literal ships a \`ReferenceError\` figure (esbuild won't flag it), and
+  \`canvas\` are both optional (defaults: no controls, 400×300), and
   \`initialParams\` only applies to params the module declares.
 
 - **\`import type\` ONLY** from \`@ianbicking/canvas-loop\` — the package is not
@@ -192,21 +186,23 @@ export default (cl, { mount, figure }) =>
   to survive the shrink. To size labels and hit areas to their text, measure in
   \`update\` with \`u.textBounds\` / \`u.textWidth\`.
 - **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
-  \`canvas-loop.md\`; brushes, paper, sprites and caches in
+  \`canvas-loop.md\`; brushes, paper, effects, glow, lighting and pictures in
   \`canvas-loop-brushes.md\` (both beside this file).
+- **canvas-loop figures draw with WebGPU.** A device without it shows "This
+  figure can't draw on this device" in place of the figure. Do not switch a
+  figure to another runtime for this unless the boxholder asks.
+- **"This figure is being updated"** in a figure's place means it was written
+  for the earlier canvas-loop. \`bbx figure run <card>\` names each removed
+  call and what replaces it; rewrite the sketch until the run is clean.
 
 ### The factory's arguments
 
-The default export is called as \`(cl, { mount, figure })\`:
-
-- \`cl\` — canvas-loop's browser API: \`cl.mountSketch(mount, options)\` with
-  \`module\`, \`initialParams\`, \`autoplay\`, \`seed\`, \`panel\`, \`transport\`,
-  \`onParamsChange\`, \`onEvent\`, \`onError\`.
-- \`mount\` — the element to mount into.
-- \`figure.params\` (embed values), \`figure.data\` (the card's \`data:\`),
-  \`figure.meta\` (frontmatter), \`figure.file\` (read-only file helpers:
-  \`readFile\`, \`fileUrl\`, \`imageUrl\`; a figure cannot write files, so one
-  that must save lives inside a view).
+The default export is called as \`(cl, { mount, figure })\`, with \`mount\`
+and \`figure\` as for other runtimes. \`cl\` is canvas-loop's browser API:
+\`cl.mountSketch(mount, options)\` with \`module\`, \`initialParams\`,
+\`autoplay\`, \`seed\`, \`panel\`, \`transport\`, \`onParamsChange\`,
+\`onEvent\`, \`onError\`. \`figure.file\` is read-only; a figure that must
+save lives inside a view.
 
 What the learner does in a figure open beside the chat goes to the activity
 log as \`explored\` entries, as a view's calls do: param changes
@@ -228,7 +224,8 @@ Render it headlessly; no browser needed:
 bbx figure run <card path>          # or no path: every canvas-loop figure in the box
 \`\`\`
 
-- It compiles the entry, runs it with canvas-loop's own headless runner and
+- It type-checks the entry, the files it imports, and its exports against
+  the sketch contract, then compiles the entry, runs it with canvas-loop's own headless runner and
   writes \`_tmp/figure-run/…/out/transcript.md\` (the command prints the path) plus frame PNGs
   (frame 0, the last frame, every 30th, and any frame that logged or ran an
   event). Read the transcript and look at the frames.
@@ -243,7 +240,9 @@ bbx figure run <card path>          # or no path: every canvas-loop figure in th
   \`<entry stem>-events.json\`; it is used automatically and is the figure's
   standing check. \`--events <file>\` picks another; \`--frames N\` runs N
   frames (default: through the last event plus 60); \`--params name=value\`
-  starts a param elsewhere (the card's \`params:\` defaults apply first).
+  starts a param elsewhere (the card's \`params:\` defaults apply first);
+  \`--scene\` writes each captured frame's drawing as an outline into the
+  transcript (\`--scene first\`: only the first frame's).
 - Code outside the default export runs in Node: keep \`window\`, \`document\`
   and \`matchMedia\` inside the factory.
 

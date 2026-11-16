@@ -5,7 +5,7 @@
 // by coefficient, and tallies every element on each side. Pointing at a tally
 // row lights up that element's atoms; clicking a row keeps it lit. When every
 // element matches, the banner turns green and a few atoms burst out of it.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 import { analyse, REACTION_LABELS } from "./chem-tea.js";
 import type { Analysis, El } from "./chem-tea.js";
 import { paint } from "./draw-tea.js";
@@ -33,7 +33,6 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: W, height: H };
-
 export type Params = ParamValues<typeof params>;
 
 export interface Model {
@@ -99,6 +98,6 @@ export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof para
   }
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  paint(v, { model, analysis: analysisOf(p) });
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  return paint(v, { model, analysis: analysisOf(p) });
 }

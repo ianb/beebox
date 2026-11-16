@@ -2,9 +2,11 @@
 // params and see a few strokes, a hatched shape and a soft glow drawn with it.
 import type {
   DeepReadonly,
+  Drawing,
   Msg,
-  ParamsDecl,
   ParamValues,
+  ParamsDecl,
+  RootDrawing,
   Style,
   Util,
   View,
@@ -66,8 +68,14 @@ export function draw(
   v: View,
   _model: DeepReadonly<Model>,
   p: ParamValues<typeof params>,
-): void {
-  v.background("#f4efe2");
+): RootDrawing {
+  // Paper texture over the whole drawing, where it drew (once `v.paperTexture` at the end).
+  return v.group({ effects: { paper: p.paper } }, drawSheet(v, p));
+}
+
+function drawSheet(v: View, p: ParamValues<typeof params>): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background("#f4efe2"));
   const strokes: Style = {
     brush: p.brush,
     gesture: { pressure: p.pressure, wobble: p.wobble },
@@ -76,7 +84,7 @@ export function draw(
   const colors = ["#1d2a44", "#b0563a", "#2f6b3a"];
   for (const [i, c] of colors.entries()) {
     const y = 60 + i * 55;
-    v.curve(
+    out.push(v.curve(
       [
         [30, y + 10],
         [130, y - 20],
@@ -85,7 +93,7 @@ export function draw(
       ],
       false,
       { ...strokes, stroke: c },
-    );
+    ));
   }
   const blob = v.curvePath(
     [
@@ -101,22 +109,24 @@ export function draw(
     [0, "rgba(255,214,120,0.9)"],
     [1, "rgba(255,214,120,0)"],
   ]);
-  v.ellipse(410, 240, 70, 50, { fill: glow });
-  v.clip(blob, () => {
+  out.push(v.ellipse(410, 240, 70, 50, { fill: glow }));
+  out.push(v.clip(blob, ((): Drawing => {
+    const drawn: Drawing[] = [];
     const hatch: Style = {
       ...strokes,
       stroke: "#3b4a8a",
       weight: Math.max(2, p.weight / 4),
     };
     for (let i = 0; i < 14; i += 1)
-      v.line(340 + i * 10, 300, 380 + i * 10, 180, hatch);
-  });
-  v.path(blob, {
+      drawn.push(v.line(340 + i * 10, 300, 380 + i * 10, 180, hatch));
+    return drawn;
+  })()));
+  out.push(v.path(blob, {
     ...strokes,
     fill: glow,
     stroke: "#1f2a1f",
     weight: 3,
     brush: "ink",
-  });
-  v.paperTexture(p.paper);
+  }));
+  return out;
 }

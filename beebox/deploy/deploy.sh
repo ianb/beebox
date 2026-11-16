@@ -1001,6 +1001,13 @@ REMOTE
   queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
     < "$CHECKOUT/beebox/deploy/server-bin/bbx-codex-sandbox-install"
 
+  # Figures render headlessly with Dawn, which needs a Vulkan driver: Mesa's
+  # software one, then a check that Dawn finds an adapter as a box user inside
+  # the box sandbox. Without it every `bbx figure run` fails.
+  queue_step "Installing the figure renderer's Vulkan driver..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-figure-gpu-install"
+
   # The host's TURN relay for calls (docs/plans/self-hosted-turn.md): coturn
   # configured from the master store's turn-server entry and checked with a
   # two-client relay, or stopped when there is no entry.

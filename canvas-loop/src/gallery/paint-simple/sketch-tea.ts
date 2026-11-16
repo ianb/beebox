@@ -8,15 +8,7 @@
 //     thinner), with a short taper at the start and, once finished, at the end.
 //   - finished strokes are drawn once into a cache keyed on (page, count); each
 //     frame pastes it and draws only the stroke in progress.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamsDecl,
-  ParamValues,
-  Style,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Style, Util, View } from "@ianbicking/canvas-loop";
 
 const BRUSHES = ["ink", "pencil", "marker", "bristle", "wash"] as const;
 const COLOURS = ["black", "red", "blue", "green", "ochre"] as const;
@@ -241,10 +233,11 @@ function paintStroke(
   v: View,
   stroke: DeepReadonly<Stroke>,
   finished: boolean,
-): void {
+): Drawing {
+  const out: Drawing[] = [];
   const pts = stroke.points;
   const first = pts[0];
-  if (first === undefined) return;
+  if (first === undefined) return out;
   const base: Style = {
     stroke: stroke.colour,
     weight: stroke.width,
@@ -252,20 +245,21 @@ function paintStroke(
   };
   if (pts.length < 2) {
     // A click without a drag: a short dab.
-    v.line(first[0], first[1], first[0] + 1, first[1] + 0.5, {
+    out.push(v.line(first[0], first[1], first[0] + 1, first[1] + 0.5, {
       ...base,
       gesture: { pressure: 0.8, seed: stroke.seed },
-    });
-    return;
+    }));
+    return out;
   }
-  v.curve(
+  out.push(v.curve(
     pts.map(([x, y]) => [x, y]),
     false,
     {
       ...base,
       gesture: { pressure: pressureEnvelope(pts, finished), seed: stroke.seed },
     },
-  );
+  ));
+  return out;
 }
 
 /**
@@ -274,37 +268,43 @@ function paintStroke(
  * costs one stroke, not the whole drawing. A layer evicted from the cache
  * rebuilds from the nearest one still kept.
  */
-function drawLayer(v: View, model: DeepReadonly<Model>, count: number): void {
-  v.cache(`page-${model.page}-${count}`, () => {
+function drawLayer(v: View, model: DeepReadonly<Model>, count: number): Drawing {
+  return v.place(v.picture({ key: `page-${model.page}-${count}`, width: v.width, height: v.height }, () => {
+    const drawn: Drawing[] = [];
     const stroke = model.strokes[count - 1];
     if (stroke === undefined) {
-      v.background(PAPER);
-      return;
+      drawn.push(v.background(PAPER));
+      return drawn;
     }
-    drawLayer(v, model, count - 1);
-    paintStroke(v, stroke, true);
-  });
+    drawn.push(drawLayer(v, model, count - 1));
+    drawn.push(paintStroke(v, stroke, true));
+    return drawn;
+  }), 0, 0);
 }
 
 /** Current brush, colour and size, as a small chip in the top-right corner. */
-function drawChip(v: View, p: Params): void {
+function drawChip(v: View, p: Params): Drawing {
   const x = canvas.width - 150;
   const y = 12;
-  v.rect(x, y, 138, 30, { fill: "rgba(255,255,255,0.7)" });
-  v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3) / 2, {
-    fill: HEX[p.colour],
-  });
-  v.text(
-    `${p.brush} · ${p.colour} · ${p.size}`,
-    { x: x + 32, y: y + 16 },
-    { size: 13, fill: "#444", align: "left", valign: "middle" },
-  );
+  return [
+    v.rect(x, y, 138, 30, { fill: "rgba(255,255,255,0.7)" }),
+    v.circle(x + 16, y + 15, Math.min(22, 6 + WIDTH[p.brush][p.size] / 3) / 2, {
+      fill: HEX[p.colour],
+    }),
+    v.text(
+      `${p.brush} · ${p.colour} · ${p.size}`,
+      { x: x + 32, y: y + 16 },
+      { size: 13, fill: "#444", align: "left", valign: "middle" },
+    ),
+  ];
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
-  drawLayer(v, model, model.strokes.length);
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
+  const out: Drawing[] = [];
+  out.push(drawLayer(v, model, model.strokes.length));
   if (model.mode.type === "painting") {
-    paintStroke(v, model.mode.stroke, false);
+    out.push(paintStroke(v, model.mode.stroke, false));
   }
-  drawChip(v, p);
+  out.push(drawChip(v, p));
+  return out;
 }

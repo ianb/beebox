@@ -37,4 +37,4 @@ features-exercised:
   - mousedown/mousemove/mouseup direct manipulation (attractor placement/drag)
   - motion trails (translucent overlay redraw) with opaque HUD backing rect
   - seeded randomness (stochastic fractional spawn rate)
-migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it"
+migrated: "2026-11-12: mechanically rewritten to per-call styles (and TEA) after the run; history/ shows the code as the agent wrote it; 2026-11-15: ported to the scene API (scene core chunk 6; trails kept in the model); 2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod)"

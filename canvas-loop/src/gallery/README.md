@@ -29,10 +29,15 @@ gallery/
       account.md    the agent's closing account of the process
 ```
 
-Some exercises were first written as mutable p5-style sketches (`setup`/`draw`)
-or with the modal drawing API. Both are retired: those sketches were rewritten
-mechanically to TEA and per-call styles, and their `meta.yaml` says so in
-`migrated`. `history/` keeps the code as the agent wrote it.
+Some exercises were first written as mutable p5-style sketches (`setup`/`draw`),
+with the modal drawing API, or with drawing calls as statements. All three are
+retired: those sketches were rewritten mechanically, and their `meta.yaml`
+says so in `migrated`. The last rewrite turned statements into returned lists
+by script, so most sketches build their drawing with `out.push(…)` and
+immediately called functions. That is not the style to copy: write `.map`,
+`&&` and components that return drawings, as `src/examples/orbit-tea.ts`
+does ([TEA.md](../../TEA.md#drawing)). `history/` keeps the code as the agent
+wrote it.
 
 **No PNGs or transcripts are committed.** Output is fully determined by
 `(sketch, events, seed, harness-commit)`; committing source + metadata keeps
@@ -86,7 +91,7 @@ omitted for a mechanical `rerun` that involves no agent.
 ## Re-exercising
 
 To check an existing exercise still holds against a later harness commit,
-re-run it unchanged (`pnpm --dir canvas-loop run cli run gallery/<slug>/sketch-tea.ts --events gallery/<slug>/events.json`),
+re-run it unchanged (`pnpm --dir canvas-loop run cli run src/gallery/<slug>/sketch-tea.ts --events src/gallery/<slug>/events.json --frames <meta frames>`),
 compare by eye against the last recorded audit, and append a `rerun` line to
 its `runs.jsonl`. Re-exercise cadence is manual, by design (see
 `LIBRARY-PLAN.md`'s open questions) — there is no scheduled job.
@@ -97,7 +102,9 @@ its `runs.jsonl`. Re-exercise cadence is manual, by design (see
 pnpm --dir canvas-loop run gallery:check
 ```
 
-Renders every exercise **twice** into a scratch temp directory (never into
-`gallery/`), asserts the two runs are byte-identical (determinism), and lints
-the sketch file. Read-only and side-effect-free on the repo; suitable as a
-package test-suite step.
+Type-checks every exercise and its exports against the TEA contract in one
+program; after any type error it renders nothing. Then it renders every
+exercise **twice** into a scratch temp directory (never into `gallery/`),
+asserts the two runs are byte-identical (determinism), and lints the sketch
+file. Read-only on the repo. It is a heavy GPU process: run one at a time
+(see [`AGENTS.md`](../../AGENTS.md#gpu)).

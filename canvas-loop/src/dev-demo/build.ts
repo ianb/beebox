@@ -1,7 +1,7 @@
 // Bundles the <SketchFigure> dev demo into ONE self-contained HTML file at the
 // monorepo dev/ directory, served at /<worktree>/dev/canvas-loop.html straight
 // from disk (so it never cold-starts the worktree). esbuild bundles
-// src/dev-demo/main.tsx (React + the component + two sketches) to an IIFE with the
+// src/dev-demo/main.tsx (React + the component + two sketches) to an ES module with the
 // automatic JSX runtime; this script wraps it in a light HTML shell with inline
 // CSS. The output HTML is TRACKED — regenerate after touching the demo or the
 // component with:  pnpm --dir canvas-loop run build:dev-demo
@@ -52,7 +52,7 @@ function renderHtml(js: string): string {
   Generated file — do not edit by hand. Rebuild with
   <code>pnpm --dir canvas-loop run build:dev-demo</code> (source: canvas-loop/dev-demo/).
 </footer>
-<script>${safe}</script>
+<script type="module">${safe}</script>
 </body>
 </html>
 `;
@@ -83,7 +83,8 @@ async function main(): Promise<void> {
   const result = await build({
     entryPoints: [ENTRY],
     bundle: true,
-    format: "iife",
+    // ESM, in a module script: the scene code reads import.meta.url (scene/call-site.ts).
+    format: "esm",
     platform: "browser",
     target: ["es2022"],
     jsx: "automatic",

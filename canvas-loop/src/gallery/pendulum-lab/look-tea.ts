@@ -1,5 +1,5 @@
 // Shared look: palette, fonts and a one-line text helper.
-import type { View } from "@ianbicking/canvas-loop";
+import type { Drawing, View } from "@ianbicking/canvas-loop";
 
 export const FONT = "Avenir Next, Helvetica Neue, Helvetica, Arial, sans-serif";
 export const PAGE = "#f3efe6";
@@ -27,8 +27,8 @@ function fontStyle(o: Say): "normal" | "bold" | "italic" | "bold italic" {
 }
 
 /** One line of text in the page font; (x, y) is on the baseline unless `valign` says otherwise. */
-export function say(v: View, s: string, at: { x: number; y: number }, o: Say): void {
-  v.text(s, at, {
+export function say(v: View, s: string, at: { x: number; y: number }, o: Say): Drawing {
+  return v.text(s, at, {
     size: o.size,
     font: FONT,
     style: fontStyle(o),
@@ -42,7 +42,9 @@ export function sayWidth(v: View, s: string, o: Say): number {
   return v.textWidth(s, { size: o.size, font: FONT, style: fontStyle(o) });
 }
 
-export function card(v: View, box: { x: number; y: number; w: number; h: number }): void {
-  v.roundRect(box.x + 2, box.y + 3, box.w, box.h, 12, { fill: "rgba(80, 60, 30, 0.08)" });
-  v.roundRect(box.x, box.y, box.w, box.h, 12, { fill: CARD, stroke: CARD_EDGE, weight: 1.25 });
+export function card(v: View, box: { x: number; y: number; w: number; h: number }): Drawing {
+  return [
+    v.roundRect(box.x + 2, box.y + 3, box.w, box.h, 12, { fill: "rgba(80, 60, 30, 0.08)" }),
+    v.roundRect(box.x, box.y, box.w, box.h, 12, { fill: CARD, stroke: CARD_EDGE, weight: 1.25 }),
+  ];
 }

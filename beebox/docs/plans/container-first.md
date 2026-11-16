@@ -42,7 +42,7 @@ notes and update discovery stay open there),
 [soft-launch-posture](../../../issues/decisions/2026-07-20-soft-launch-posture.md)
 (gate 3, the README front door, is reshaped here in structure; the
 boxholder's paragraphs are his),
-[detect-server-update-prompt-client-reload](../../../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md)
+[detect-server-update-prompt-client-reload](../../../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md)
 and
 [stale-web-bundle-detection](../../../issues/closed/features/2026-08-12-stale-web-bundle-detection.md)
 (a stamped engine version gives both a real identity to compare against; not

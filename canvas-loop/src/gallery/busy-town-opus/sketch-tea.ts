@@ -1,13 +1,6 @@
 // Acorn Lane: a busy picture-book street. Every townsperson idles; click one
 // and it performs its little act, sometimes setting off a neighbour.
-import type {
-  DeepReadonly,
-  Msg,
-  ParamValues,
-  ParamsDecl,
-  Util,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, View } from "@ianbicking/canvas-loop";
 import type { Id } from "./things-tea.js";
 import { CHAIN, H, IDS, W, act, boxOf, hit } from "./things-tea.js";
 import { paintNightSky, paintTown } from "./town-tea.js";
@@ -124,49 +117,51 @@ export function draw(
   v: View,
   model: DeepReadonly<Model>,
   p: ParamValues<typeof params>,
-): void {
+): RootDrawing {
+  const out: Drawing[] = [];
   const night = p.time === "night";
   const s: A.Scene = { ...model, night, evening: p.time !== "morning" };
-  v.cache("town", () => paintTown(v));
+  out.push(v.place(v.picture({ key: "town", width: v.width, height: v.height }, () => paintTown(v)), 0, 0));
   S.warm(v);
   // back to front
-  A.chimney(v, s);
-  A.flag(v, s);
-  A.clockHands(v, s);
-  A.windowAndGoat(v, s);
-  A.owl(v, s);
-  A.cat(v, s);
-  A.painter(v, s);
-  A.baker(v, s);
-  A.mailCarrier(v, s);
-  A.mailbox(v, s);
-  A.hydrant(v, s);
-  A.lamp(v, s);
-  A.bucket(v, s);
-  A.dog(v, s);
-  A.grocer(v, s);
-  A.duck(v, s);
-  A.pigeons(v, s);
-  A.snail(v, s);
-  A.manhole(v, s);
-  A.bus(v, s);
+  out.push(A.chimney(v, s));
+  out.push(A.flag(v, s));
+  out.push(A.clockHands(v, s));
+  out.push(A.windowAndGoat(v, s));
+  out.push(A.owl(v, s));
+  out.push(A.cat(v, s));
+  out.push(A.painter(v, s));
+  out.push(A.baker(v, s));
+  out.push(A.mailCarrier(v, s));
+  out.push(A.mailbox(v, s));
+  out.push(A.hydrant(v, s));
+  out.push(A.lamp(v, s));
+  out.push(A.bucket(v, s));
+  out.push(A.dog(v, s));
+  out.push(A.grocer(v, s));
+  out.push(A.duck(v, s));
+  out.push(A.pigeons(v, s));
+  out.push(A.snail(v, s));
+  out.push(A.manhole(v, s));
+  out.push(A.bus(v, s));
   if (p.rain) {
-    v.rect(0, 0, W, H, { fill: "rgba(90,100,130,0.25)" });
+    out.push(v.rect(0, 0, W, H, { fill: "rgba(90,100,130,0.25)" }));
   }
   const shade = SHADE[p.time];
   if (shade !== "") {
-    v.rect(0, 0, W, H, { fill: shade, blend: "multiply" });
+    out.push(v.rect(0, 0, W, H, { fill: shade, blend: "multiply" }));
     // lights go on after the shade, with a screen blend, so they glow through it
     if (night)
-      v.cache("night-sky", () => paintNightSky(v), { blend: "screen" });
-    A.lights(v, s);
+      out.push(v.place(v.picture({ key: "night-sky", width: v.width, height: v.height }, () => paintNightSky(v)), 0, 0, { blend: "screen" }));
+    out.push(A.lights(v, s));
   }
-  if (p.rain) A.rain(v, model.frame);
-  A.bubbles(v, s);
-  A.hoverGlint(v, s);
+  if (p.rain) out.push(A.rain(v, model.frame));
+  out.push(A.bubbles(v, s));
+  out.push(A.hoverGlint(v, s));
   v.cursor(model.hover === "" ? "default" : "pointer");
   for (const id of IDS) {
     const b = boxOf(model, id);
-    v.debugBox(id, b.x, b.y, b.w, b.h);
+    out.push(v.debugBox(id, b.x, b.y, b.w, b.h));
   }
+  return out;
 }

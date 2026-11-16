@@ -10,12 +10,14 @@
 import type {
   ColorStop,
   DeepReadonly,
+  Drawing,
   Msg,
-  ParamsDecl,
   ParamValues,
+  ParamsDecl,
   PathCommand,
-  Util,
+  RootDrawing,
   Style,
+  Util,
   Vec2,
   View,
 } from "@ianbicking/canvas-loop";
@@ -26,7 +28,6 @@ export const params = {
 } as const satisfies ParamsDecl;
 
 export const canvas = { width: 500, height: 400 };
-
 type Params = ParamValues<typeof params>;
 
 interface Point {
@@ -54,6 +55,14 @@ const HEIGHT = 400;
 const HORIZON_Y = 165;
 const WATER_TOP_Y = 272;
 const BEACH_MAX_EXPOSED = 68;
+
+/** `from`, `from + step`, … while below `to`. */
+function range(from: number, to: number, step: number): number[] {
+  return Array.from({ length: Math.ceil((to - from) / step) }, (_, k) => from + k * step);
+}
+// The water's ripple lines: one every 13 px down the channel, sampled every 10 px across.
+const RIPPLE_ROWS = range(WATER_TOP_Y + 6, HEIGHT, 13);
+const RIPPLE_XS = range(0, WIDTH + 1, 10);
 
 // Each wall's ridge slopes from `outerY` (high, at the frame edge) down to
 // `topY` where it meets the channel — nested Vs receding toward the horizon.
@@ -299,23 +308,26 @@ function fillLayer(a: {
   layer: CliffLayer;
   color: string;
   topY: number;
-}): void {
+}): Drawing {
   const { v, layer, color, topY } = a;
   const mass = layerCommands(layer);
-  v.path(mass, { fill: color });
   const shade: readonly ColorStop[] = [
     [0, "rgba(255,255,255,0.15)"],
     [1, "rgba(0,0,0,0.32)"],
   ];
-  v.clip(mass, () => {
-    v.rect(0, topY, WIDTH, HEIGHT - topY, {
-      fill: v.linearGradient(0, topY, 0, HEIGHT, shade),
-    });
-  });
+  return [
+    v.path(mass, { fill: color }),
+    v.clip(
+      mass,
+      v.rect(0, topY, WIDTH, HEIGHT - topY, {
+        fill: v.linearGradient(0, topY, 0, HEIGHT, shade),
+      }),
+    ),
+  ];
 }
 
-function drawSky(v: View, palette: Palette): void {
-  v.background(
+function drawSky(v: View, palette: Palette): Drawing {
+  return v.background(
     v.linearGradient(0, 0, 0, HORIZON_Y + 40, [
       [0, palette.skyTop],
       [1, palette.skyBottom],
@@ -327,14 +339,14 @@ function drawHazeSkyline(a: {
   v: View;
   skyline: readonly Point[];
   palette: Palette;
-}): void {
+}): Drawing {
   const { v, skyline, palette } = a;
   const outline: Vec2[] = [
     [0, HORIZON_Y + 6],
     ...skyline.map((p): Vec2 => [p.x, p.y]),
     [WIDTH, HORIZON_Y + 6],
   ];
-  v.polygon(outline, { fill: palette.haze });
+  return v.polygon(outline, { fill: palette.haze });
 }
 
 // Region between the near cliffs' inner edges from `topY` to the frame bottom —
@@ -355,32 +367,33 @@ function channelPolygon(near: CliffLayer, topY: number): Vec2[] {
   ];
 }
 
+// One ripple line across the channel at row `y0`, swaying with the frame.
+function ripple(a: { v: View; y0: number; frame: number; style: Style }): Drawing {
+  const { v, y0, frame, style } = a;
+  const pts = RIPPLE_XS.map((x) => ({
+    x,
+    y: y0 + Math.sin(x * 0.05 + frame * 0.05 + y0 * 0.1) * 2.5,
+  }));
+  return v.path(polyline(pts), style);
+}
+
 function drawWater(a: {
   v: View;
   near: CliffLayer;
   frame: number;
   palette: Palette;
-}): void {
+}): Drawing {
   const { v, near, frame, palette } = a;
-  v.clip(channelPolygon(near, WATER_TOP_Y), () => {
-    const sheet = v.linearGradient(0, WATER_TOP_Y, 0, HEIGHT, [
-      [0, palette.waterNear],
-      [1, palette.waterFar],
-    ]);
-    v.rect(0, WATER_TOP_Y, WIDTH, HEIGHT - WATER_TOP_Y, { fill: sheet });
-    // Gentle animated ripple lines double as light glints scrolling on the water.
-    const ripple: Style = { stroke: palette.ripple, weight: 1 };
-    for (let y0 = WATER_TOP_Y + 6; y0 < HEIGHT; y0 += 13) {
-      const pts: Point[] = [];
-      for (let x = 0; x <= WIDTH; x += 10) {
-        pts.push({
-          x,
-          y: y0 + Math.sin(x * 0.05 + frame * 0.05 + y0 * 0.1) * 2.5,
-        });
-      }
-      v.path(polyline(pts), ripple);
-    }
-  });
+  const sheet = v.linearGradient(0, WATER_TOP_Y, 0, HEIGHT, [
+    [0, palette.waterNear],
+    [1, palette.waterFar],
+  ]);
+  // Gentle animated ripple lines double as light glints scrolling on the water.
+  const style: Style = { stroke: palette.ripple, weight: 1 };
+  return v.clip(channelPolygon(near, WATER_TOP_Y), [
+    v.rect(0, WATER_TOP_Y, WIDTH, HEIGHT - WATER_TOP_Y, { fill: sheet }),
+    RIPPLE_ROWS.map((y0) => ripple({ v, y0, frame, style })),
+  ]);
 }
 
 // Wet-rock rim along the cliff bases: a wide stroke centered on each inner edge,
@@ -390,16 +403,18 @@ function drawWetBands(a: {
   near: CliffLayer;
   tide: number;
   palette: Palette;
-}): void {
+}): Drawing {
   const { v, near, tide, palette } = a;
-  v.clip(layerCommands(near), () => {
-    const rim: Style = {
-      stroke: palette.wetBand,
-      weight: 2 * (1.5 + ((1 - tide) / 2) * 9),
-    };
-    for (const edge of [near.innerEdgeLeft, near.innerEdgeRight])
-      v.path(polyline(edge), rim);
-  });
+  const rim: Style = {
+    stroke: palette.wetBand,
+    weight: 2 * (1.5 + ((1 - tide) / 2) * 9),
+  };
+  return v.clip(
+    layerCommands(near),
+    [near.innerEdgeLeft, near.innerEdgeRight].map((edge) =>
+      v.path(polyline(edge), rim),
+    ),
+  );
 }
 
 // The exposed foreshore: wet strip at the waterline, drier gravel below, with a
@@ -409,56 +424,46 @@ function drawBeach(a: {
   near: CliffLayer;
   beachY: number;
   palette: Palette;
-}): void {
+}): Drawing {
   const { v, near, beachY, palette } = a;
-  if (beachY >= HEIGHT) return;
-  v.clip(channelPolygon(near, beachY), () => {
-    v.rect(0, beachY, WIDTH, HEIGHT - beachY, { fill: palette.beach });
-    v.rect(0, beachY, WIDTH, 9, { fill: palette.wetBand });
-    v.line(0, beachY + 1, WIDTH, beachY + 1, {
-      stroke: "rgba(255, 255, 255, 0.45)",
-      weight: 1.5,
-    });
-  });
+  return (
+    beachY < HEIGHT &&
+    v.clip(channelPolygon(near, beachY), [
+      v.rect(0, beachY, WIDTH, HEIGHT - beachY, { fill: palette.beach }),
+      v.rect(0, beachY, WIDTH, 9, { fill: palette.wetBand }),
+      v.line(0, beachY + 1, WIDTH, beachY + 1, {
+        stroke: "rgba(255, 255, 255, 0.45)",
+        weight: 1.5,
+      }),
+    ])
+  );
 }
 
-export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
+export function draw(v: View, model: DeepReadonly<Model>, p: Params): RootDrawing {
   const palette = p.timeOfDay === "dusk" ? DUSK_PALETTE : DAY_PALETTE;
   const beachY = beachYFor(p.tide);
-
-  drawSky(v, palette);
-  drawHazeSkyline({ v, skyline: model.hazeSkyline, palette });
-  // Distant hazy water fills everything below the horizon — the channel gap
-  // between the cliffs reads as fjord, not sky; layers painted next cover it.
-  v.rect(0, HORIZON_Y + 5, WIDTH, HEIGHT - HORIZON_Y - 5, {
-    fill: palette.distantWater,
-  });
-  fillLayer({
-    v,
-    layer: model.far,
-    color: palette.far,
-    topY: FAR_CONFIG.outerY,
-  });
-  fillLayer({
-    v,
-    layer: model.mid,
-    color: palette.mid,
-    topY: MID_CONFIG.outerY,
-  });
-  fillLayer({
-    v,
-    layer: model.near,
-    color: palette.near,
-    topY: NEAR_CONFIG.outerY,
-  });
-  drawWater({ v, near: model.near, frame: model.frame, palette });
-  drawWetBands({ v, near: model.near, tide: p.tide, palette });
-  drawBeach({ v, near: model.near, beachY, palette });
-
   const shore = Math.max(0, Math.round(HEIGHT - beachY));
-  v.text(
-    `tide ${p.tide.toFixed(2)}  ${p.timeOfDay}  shore ${shore}px  frame ${model.frame}`,
-    { x: 8, y: 8 },
-    { size: 12, fill: "rgba(255,255,255,0.85)", align: "left", valign: "top" },
-  );
+  const layers = [
+    { layer: model.far, color: palette.far, topY: FAR_CONFIG.outerY },
+    { layer: model.mid, color: palette.mid, topY: MID_CONFIG.outerY },
+    { layer: model.near, color: palette.near, topY: NEAR_CONFIG.outerY },
+  ];
+  return [
+    drawSky(v, palette),
+    drawHazeSkyline({ v, skyline: model.hazeSkyline, palette }),
+    // Distant hazy water fills everything below the horizon — the channel gap
+    // between the cliffs reads as fjord, not sky; layers painted next cover it.
+    v.rect(0, HORIZON_Y + 5, WIDTH, HEIGHT - HORIZON_Y - 5, {
+      fill: palette.distantWater,
+    }),
+    layers.map((layer) => fillLayer({ v, ...layer })),
+    drawWater({ v, near: model.near, frame: model.frame, palette }),
+    drawWetBands({ v, near: model.near, tide: p.tide, palette }),
+    drawBeach({ v, near: model.near, beachY, palette }),
+    v.text(
+      `tide ${p.tide.toFixed(2)}  ${p.timeOfDay}  shore ${shore}px  frame ${model.frame}`,
+      { x: 8, y: 8 },
+      { size: 12, fill: "rgba(255,255,255,0.85)", align: "left", valign: "top" },
+    ),
+  ];
 }

@@ -37,7 +37,7 @@ interface BrushCommon {
   readonly blend?: BlendMode;
 }
 
-/** Smooth variable-width ink (perfect-freehand outline, filled). */
+/** Smooth variable-width ink (a union of capsules along the samples). */
 export interface InkBrush extends BrushCommon {
   readonly kind: "ink";
   /** How much pressure thins the line: 0 = constant width, 1 = width goes to 0 at pressure 0. */

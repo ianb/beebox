@@ -144,7 +144,10 @@ merge that touches one, rather than waiting for `test:changed`.
 The guide states only the present. What changed lives in
 [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
 writes and lands, and the guide keeps one pointer to it (row `docs.changes`).
-Entries never enter the guide. `pnpm doc-check` enforces the doc's limits.
+Entries never enter the guide. `pnpm doc-check` enforces the doc's limits:
+each entry `- <date> (<commit hash>): <text>` of at most 30 words, at most
+12 in any 10 days, and 40 in the file. When the 10-day window is full, fold
+your change into a related entry or drop the weakest; do not raise the limit.
 
 ## Changing it
 

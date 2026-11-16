@@ -1,13 +1,7 @@
 // "Hello, Earth!" — a friendly green alien has just stepped down the ramp of
 // its landed saucer onto a dusk meadow, and waves to us. Picture-book
 // illustration painted with canvas-loop brushes.
-import type {
-  DeepReadonly,
-  Style,
-  Util,
-  Vec2,
-  View,
-} from "@ianbicking/canvas-loop";
+import type { DeepReadonly, Drawing, RootDrawing, Style, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 const W = 800;
 const H = 600;
@@ -234,21 +228,22 @@ export function update(model: DeepReadonly<Model>): Model {
 }
 
 // ── layers ─────────────────────────────────────────────────────────────
-function sky(v: View, model: DeepReadonly<Model>): void {
-  v.background(
+function sky(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.background(
     v.linearGradient(0, 0, 0, 420, [
       [0, "#1c2150"],
       [0.42, "#4a3a7a"],
       [0.72, "#b06a8e"],
       [1, "#f5b67c"],
     ]),
-  );
+  ));
   // soft cloud bands, wash
   const band: Style = {
     brush: { preset: "wash", opacity: 0.35 },
     gesture: { pressure: "swell", wobble: 6 },
   };
-  v.curve(
+  out.push(v.curve(
     [
       [380, 230],
       [520, 214],
@@ -257,8 +252,8 @@ function sky(v: View, model: DeepReadonly<Model>): void {
     ],
     false,
     { ...band, stroke: "#e9a0a6", weight: 34 },
-  );
-  v.curve(
+  ));
+  out.push(v.curve(
     [
       [-20, 200],
       [120, 186],
@@ -266,7 +261,7 @@ function sky(v: View, model: DeepReadonly<Model>): void {
     ],
     false,
     { ...band, stroke: "#7a5a9a", weight: 26 },
-  );
+  ));
   // two soft cumulus clouds near the horizon, lit pink from below
   for (const [cx, cy, k] of [
     [110, 238, 1],
@@ -284,85 +279,89 @@ function sky(v: View, model: DeepReadonly<Model>): void {
       v.curvePath(oval(cx + dx * k, cy + dy * k, r * k, r * k * 0.8, 10), true),
     );
     // flat underside: clip away everything below the base line
-    v.clip(
+    out.push(v.clip(
       [
         [0, 0],
         [W, 0],
         [W, cy + 16 * k],
         [0, cy + 16 * k],
       ],
-      () => {
-        v.path(cmds, { fill: "#7d5a98" });
-        v.clip(cmds, () => {
+      [
+        v.path(cmds, { fill: "#7d5a98" }),
+        v.clip(cmds, [
           v.line(cx - 100 * k, cy + 12 * k, cx + 100 * k, cy + 12 * k, {
             stroke: "#f4a9a2",
             weight: 20 * k,
             brush: { preset: "wash", opacity: 0.85 },
             gesture: { pressure: "even", wobble: 1 },
-          });
+          }),
           v.line(cx - 30 * k, cy - 30 * k, cx + 30 * k, cy - 34 * k, {
             stroke: "#a07cc0",
             weight: 30 * k,
             brush: { preset: "airbrush", opacity: 0.5 },
             gesture: { pressure: "even", wobble: 1 },
-          });
-        });
-      },
-    );
+          }),
+        ]),
+      ],
+    ));
   }
   // moon glow
-  v.circle(140, 108, 40, {
+  out.push(v.circle(140, 108, 40, {
     stroke: "#fff1c9",
     weight: 90,
     brush: { preset: "airbrush", opacity: 0.22 },
     gesture: { pressure: "even" },
-  });
-  v.circle(140, 108, 35, { fill: "#fbf0cf" });
-  v.clip(v.curvePath(oval(140, 108, 35, 35, 12), true), () => {
+  }));
+  out.push(v.circle(140, 108, 35, { fill: "#fbf0cf" }));
+  out.push(v.clip(v.curvePath(oval(140, 108, 35, 35, 12), true), ((): Drawing => {
     const crater: Style = {
       stroke: "#d9c79a",
       weight: 16,
       brush: { preset: "wash", opacity: 0.45 },
       gesture: { pressure: "swell", wobble: 4 },
     };
-    v.curve(
-      [
-        [112, 92],
-        [128, 100],
-        [140, 96],
-      ],
-      false,
-      crater,
-    );
-    v.curve(
-      [
-        [146, 124],
-        [160, 120],
-        [168, 128],
-      ],
-      false,
-      crater,
-    );
-    v.curve(
-      [
-        [124, 128],
-        [132, 136],
-      ],
-      false,
-      crater,
-    );
-  });
+    return [
+      v.curve(
+        [
+          [112, 92],
+          [128, 100],
+          [140, 96],
+        ],
+        false,
+        crater,
+      ),
+      v.curve(
+        [
+          [146, 124],
+          [160, 120],
+          [168, 128],
+        ],
+        false,
+        crater,
+      ),
+      v.curve(
+        [
+          [124, 128],
+          [132, 136],
+        ],
+        false,
+        crater,
+      ),
+    ];
+  })()));
   // stars
   for (const star of model.stars) {
-    v.circle(star.x, star.y, star.r / 2, {
+    out.push(v.circle(star.x, star.y, star.r / 2, {
       fill: `rgba(255,248,220,${(0.35 + star.a).toFixed(2)})`,
-    });
+    }));
   }
+  return out;
 }
 
-function hills(v: View): void {
-  v.curve(closedBelow(HILL_FAR), true, { fill: "#6a5490" });
-  v.clip(v.curvePath(closedBelow(HILL_FAR), true), () => {
+function hills(v: View): Drawing {
+  const out: Drawing[] = [];
+  out.push(v.curve(closedBelow(HILL_FAR), true, { fill: "#6a5490" }));
+  out.push(v.clip(v.curvePath(closedBelow(HILL_FAR), true), [
     v.curve(
       [
         [-20, 345],
@@ -380,10 +379,11 @@ function hills(v: View): void {
         brush: { preset: "wash", opacity: 0.5 },
         gesture: { pressure: "taper", wobble: 4 },
       },
-    );
-  });
-  v.curve(closedBelow(HILL_MID), true, { fill: "#3d5872" });
-  v.clip(v.curvePath(closedBelow(HILL_MID), true), () => {
+    ),
+  ]));
+  out.push(v.curve(closedBelow(HILL_MID), true, { fill: "#3d5872" }));
+  out.push(v.clip(v.curvePath(closedBelow(HILL_MID), true), ((): Drawing => {
+    const drawn: Drawing[] = [];
     const streak: Style = {
       stroke: "#55708a",
       weight: 14,
@@ -392,7 +392,7 @@ function hills(v: View): void {
     };
     for (let i = 0; i < 6; i += 1) {
       const y = 400 + i * 10;
-      v.curve(
+      drawn.push(v.curve(
         [
           [-20 + i * 30, y],
           [200, y - 14],
@@ -402,9 +402,10 @@ function hills(v: View): void {
         ],
         false,
         streak,
-      );
+      ));
     }
-  });
+    return drawn;
+  })()));
   // dark rounded trees along the middle hill, left
   for (const [x, h] of [
     [24, 46],
@@ -414,11 +415,11 @@ function hills(v: View): void {
     [168, 30],
   ] as const) {
     const base = 398 - x * 0.05;
-    v.curve(oval(x, base - h / 2, h * 0.38, h / 2, 9), true, {
+    out.push(v.curve(oval(x, base - h / 2, h * 0.38, h / 2, 9), true, {
       fill: "#263649",
-    });
-    v.rect(x - 2, base - 4, 4, 10, { fill: "#1d2a3a" });
-    v.curve(
+    }));
+    out.push(v.rect(x - 2, base - 4, 4, 10, { fill: "#1d2a3a" }));
+    out.push(v.curve(
       arcPts(
         x,
         base - h / 2,
@@ -435,10 +436,10 @@ function hills(v: View): void {
         brush: { preset: "chalk", opacity: 0.6 },
         gesture: { pressure: "taper", wobble: 1 },
       },
-    );
+    ));
   }
   // a tiny cottage on the far hill, one lit window
-  v.polygon(
+  out.push(v.polygon(
     [
       [742, 312],
       [770, 312],
@@ -447,16 +448,17 @@ function hills(v: View): void {
       [742, 296],
     ],
     { fill: "#3a2f55" },
-  );
-  v.rect(752, 300, 7, 7, { fill: "#ffd36e" });
-  v.line(755, 303, 756, 303, {
+  ));
+  out.push(v.rect(752, 300, 7, 7, { fill: "#ffd36e" }));
+  out.push(v.line(755, 303, 756, 303, {
     stroke: "#ffd36e",
     weight: 22,
     brush: { preset: "airbrush", opacity: 0.4 },
     gesture: { pressure: "even" },
-  });
+  }));
   // ground
-  v.curve(closedBelow(GROUND), true, { fill: "#3e6a45" });
+  out.push(v.curve(closedBelow(GROUND), true, { fill: "#3e6a45" }));
+  return out;
 }
 
 function arcPts(
@@ -478,10 +480,12 @@ function arcPts(
 
 const BEAM_FOOT = 456;
 
-function saucer(v: View): void {
+function saucer(v: View): Drawing {
+  const out: Drawing[] = [];
   const { x: cx, y: cy } = SAUCER;
   // beam of warm light from the underside down to the grass
-  v.group({ opacity: 0.55 }, () => {
+  out.push(v.group({ opacity: 0.55 }, ((): Drawing => {
+    const drawn: Drawing[] = [];
     const beam: Style = {
       stroke: "#ffd27a",
       weight: 34,
@@ -495,11 +499,12 @@ function saucer(v: View): void {
       },
     };
     for (let i = -3; i <= 3; i += 1) {
-      v.line(cx + i * 7, cy + 20, cx + i * 26, BEAM_FOOT, beam);
+      drawn.push(v.line(cx + i * 7, cy + 20, cx + i * 26, BEAM_FOOT, beam));
     }
-  });
+    return drawn;
+  })()));
   // bright core of the beam
-  v.line(cx, cy + 24, cx, BEAM_FOOT - 8, {
+  out.push(v.line(cx, cy + 24, cx, BEAM_FOOT - 8, {
     stroke: "#fff3c4",
     weight: 24,
     brush: { preset: "airbrush", opacity: 0.45 },
@@ -509,7 +514,7 @@ function saucer(v: View): void {
         [1, 1],
       ],
     },
-  });
+  }));
   for (const [x, y] of [
     [596, 380],
     [628, 398],
@@ -518,36 +523,36 @@ function saucer(v: View): void {
     [642, 440],
     [606, 404],
   ] as const) {
-    v.line(x, y, x + 1, y, {
+    out.push(v.line(x, y, x + 1, y, {
       stroke: "#fff6d0",
       weight: 14,
       brush: { preset: "airbrush", opacity: 0.7 },
       gesture: { pressure: "even" },
-    });
-    v.circle(x, y, 1.5, { fill: "#ffffff" });
+    }));
+    out.push(v.circle(x, y, 1.5, { fill: "#ffffff" }));
   }
   // dome
-  v.ellipse(cx, cy - 20, 56, 41, {
+  out.push(v.ellipse(cx, cy - 20, 56, 41, {
     fill: v.radialGradient(cx - 16, cy - 40, 64, [
       [0, "#f4ffff"],
       [0.6, "#a9dde4"],
       [1, "#6fa9bd"],
     ]),
-  });
+  }));
   // disc
-  v.ellipse(cx, cy, 112, 27, {
+  out.push(v.ellipse(cx, cy, 112, 27, {
     fill: v.linearGradient(cx, cy - 27, cx, cy + 27, [
       [0, "#dfe2ee"],
       [0.5, "#a3a9c0"],
       [1, "#565b78"],
     ]),
-  });
+  }));
   // underside
-  v.ellipse(cx, cy + 18, 60, 10, { fill: "#3f4260" });
-  v.ellipse(cx, cy + 20, 30, 5, { fill: "#ffe7a8" });
+  out.push(v.ellipse(cx, cy + 18, 60, 10, { fill: "#3f4260" }));
+  out.push(v.ellipse(cx, cy + 20, 30, 5, { fill: "#ffe7a8" }));
   // windows
   for (let i = -2; i <= 2; i += 1) {
-    v.circle(cx + i * 38, cy + 2 - Math.abs(i) * 2, 6, { fill: "#ffe08a" });
+    out.push(v.circle(cx + i * 38, cy + 2 - Math.abs(i) * 2, 6, { fill: "#ffe08a" }));
   }
   // rim highlight
   const rim: Style = {
@@ -556,22 +561,24 @@ function saucer(v: View): void {
     brush: { preset: "ink", opacity: 0.7 },
     gesture: { pressure: "taper" },
   };
-  v.curve(arcPts(cx, cy, 104, 22, Math.PI * 1.1, Math.PI * 1.6, 8), false, rim);
-  v.curve(
+  out.push(v.curve(arcPts(cx, cy, 104, 22, Math.PI * 1.1, Math.PI * 1.6, 8), false, rim));
+  out.push(v.curve(
     arcPts(cx - 10, cy - 30, 34, 26, Math.PI * 1.15, Math.PI * 1.45, 6),
     false,
     rim,
-  );
-  v.ellipse(cx, cy, 112, 27, ink(LINE, 3));
-  v.curve(
+  ));
+  out.push(v.ellipse(cx, cy, 112, 27, ink(LINE, 3)));
+  out.push(v.curve(
     arcPts(cx, cy - 20, 56, 41, Math.PI * 1.04, Math.PI * 1.96, 12),
     false,
     ink(LINE, 3),
-  );
+  ));
+  return out;
 }
 
-function meadow(v: View, model: DeepReadonly<Model>): void {
-  v.clip(v.curvePath(closedBelow(GROUND), true), () => {
+function meadow(v: View, model: DeepReadonly<Model>): Drawing {
+  return v.clip(v.curvePath(closedBelow(GROUND), true), ((): Drawing => {
+    const parts: Drawing[] = [];
     // value variation: soft wash bands, darker toward the front
     const bands: [number, string, number][] = [
       [470, "#5a8f55", 0.6],
@@ -580,7 +587,7 @@ function meadow(v: View, model: DeepReadonly<Model>): void {
       [585, "#24402c", 0.6],
     ];
     for (const [y, c, o] of bands) {
-      v.curve(
+      parts.push(v.curve(
         [
           [-60, y],
           [220, y - 10],
@@ -594,16 +601,17 @@ function meadow(v: View, model: DeepReadonly<Model>): void {
           brush: { preset: "wash", opacity: o },
           gesture: { pressure: "even", wobble: 6 },
         },
-      );
+      ));
     }
     // pool of light where the beam lands
-    v.group({ blend: "screen", opacity: 0.9 }, () => {
+    parts.push(v.group({ blend: "screen", opacity: 0.9 }, ((): Drawing => {
+      const nodes: Drawing[] = [];
       for (const [w, dy, half] of [
         [60, 0, 200],
         [40, 14, 150],
         [30, -4, 100],
       ] as const) {
-        v.line(
+        nodes.push(v.line(
           SAUCER.x - half,
           BEAM_FOOT + dy,
           SAUCER.x + half,
@@ -614,13 +622,14 @@ function meadow(v: View, model: DeepReadonly<Model>): void {
             brush: { preset: "wash", opacity: 0.55 },
             gesture: { pressure: "swell", wobble: 3 },
           },
-        );
+        ));
       }
-    });
+      return nodes;
+    })()));
     // grass blades
     for (const b of model.meadowBlades) {
       const depth = (b.y - 450) / 150;
-      v.curve(
+      parts.push(v.curve(
         [
           [b.x, b.y],
           [b.x + b.lean * 0.4, b.y - b.h * 0.5],
@@ -633,16 +642,19 @@ function meadow(v: View, model: DeepReadonly<Model>): void {
           brush: { preset: "ink", thinning: 0.8 },
           gesture: { pressure: "taper-out", wobble: 0.5 },
         },
-      );
+      ));
     }
-  });
+    return parts;
+  })());
 }
 
-function grassTufts(v: View, model: DeepReadonly<Model>): void {
+function grassTufts(v: View, model: DeepReadonly<Model>): Drawing {
+  const out: Drawing[] = [];
   // flowers
   for (const f of model.flowers) {
-    v.circle(f.x, f.y, (4 + (f.y - 470) * 0.03) / 2, { fill: f.color });
+    out.push(v.circle(f.x, f.y, (4 + (f.y - 470) * 0.03) / 2, { fill: f.color }));
   }
+  return out;
 }
 
 const shadeStyle = (weight: number, opacity: number): Style => ({
@@ -670,23 +682,25 @@ const PENCIL: Style = {
 function part(
   v: View,
   shape: readonly Vec2[],
-  shade: (() => void) | null,
+  shade: (() => Drawing) | null,
   outline = 3.5,
-): void {
-  v.curve(shape, true, { fill: GREEN });
-  v.clip(v.curvePath(shape, true), () => {
-    shade?.();
-    // scene light over every part: violet sky side, warm beam side
-    v.rect(0, 0, W, H, {
-      fill: v.linearGradient(220, 0, 470, 0, [
-        [0, "#c2bbe8"],
-        [0.5, "#f1edf6"],
-        [1, "#fff4dc"],
-      ]),
-      blend: "multiply",
-    });
-  });
-  v.curve(shape, true, ink(LINE, outline));
+): Drawing {
+  return [
+    v.curve(shape, true, { fill: GREEN }),
+    v.clip(v.curvePath(shape, true), [
+      shade?.(),
+      // scene light over every part: violet sky side, warm beam side
+      v.rect(0, 0, W, H, {
+        fill: v.linearGradient(220, 0, 470, 0, [
+          [0, "#c2bbe8"],
+          [0.5, "#f1edf6"],
+          [1, "#fff4dc"],
+        ]),
+        blend: "multiply",
+      }),
+    ]),
+    v.curve(shape, true, ink(LINE, outline)),
+  ];
 }
 
 function shadeStroke(
@@ -694,8 +708,8 @@ function shadeStroke(
   weight: number,
   pts: readonly Vec2[],
   opacity = 0.75,
-): void {
-  v.curve(pts, false, shadeStyle(weight, opacity));
+): Drawing {
+  return v.curve(pts, false, shadeStyle(weight, opacity));
 }
 
 function rimStroke(
@@ -703,81 +717,85 @@ function rimStroke(
   weight: number,
   pts: readonly Vec2[],
   opacity = 0.7,
-): void {
-  v.curve(pts, false, rimStyle(weight, opacity));
+): Drawing {
+  return v.curve(pts, false, rimStyle(weight, opacity));
 }
 
-function alien(v: View): void {
+function alien(v: View): Drawing {
+  const out: Drawing[] = [];
   // ground shadow
-  v.line(250, 552, 420, 552, {
+  out.push(v.line(250, 552, 420, 552, {
     stroke: "#1b2a20",
     weight: 30,
     brush: { preset: "wash", opacity: 0.85, blend: "multiply" },
     gesture: { pressure: "swell", wobble: 2 },
-  });
+  }));
 
   for (const center of [LEG_L, LEG_R]) {
     const leg = tube(center, 24);
     const x = leg[0]?.[0] ?? 0;
-    part(v, leg, () => {
-      shadeStroke(v, 16, [
+    out.push(part(v, leg, () => {
+      return shadeStroke(v, 16, [
         [x - 14, 500],
         [x - 12, 550],
       ]);
-    });
+    }));
   }
   // feet
   for (const fx of [304, 356]) {
     const foot = oval(fx, 548, 24, 10, 10);
-    part(v, foot, () =>
+    out.push(part(v, foot, () =>
       shadeStroke(v, 12, [
         [fx - 26, 556],
         [fx + 26, 556],
       ]),
-    );
+    ));
   }
   // lowered arm (behind body)
   const armDown = tube(ARM_DOWN, 26, 20);
-  part(v, armDown, () =>
+  out.push(part(v, armDown, () =>
     shadeStroke(v, 18, [
       [262, 400],
       [230, 440],
       [222, 480],
     ]),
-  );
-  part(v, oval(232, 484, 16, 15, 10), () =>
+  ));
+  out.push(part(v, oval(232, 484, 16, 15, 10), () =>
     shadeStroke(v, 14, [
       [218, 488],
       [238, 502],
     ]),
-  );
+  ));
   // waving arm (behind body)
   const armWave = tube(ARM_WAVE, 26, 20);
-  part(v, armWave, () => {
-    shadeStroke(v, 16, [
-      [372, 404],
-      [420, 392],
-      [452, 350],
-      [466, 316],
-    ]);
-    rimStroke(
-      v,
-      8,
-      [
-        [380, 382],
-        [420, 368],
-        [440, 336],
-      ],
-      0.6,
-    );
-  });
+  out.push(part(v, armWave, () => {
+    return [
+      shadeStroke(v, 16, [
+        [372, 404],
+        [420, 392],
+        [452, 350],
+        [466, 316],
+      ]),
+      rimStroke(
+        v,
+        8,
+        [
+          [380, 382],
+          [420, 368],
+          [440, 336],
+        ],
+        0.6,
+      ),
+    ];
+  }));
 
   // body
-  part(
+  out.push(part(
     v,
     BODY,
     () => {
-      shadeStroke(
+      const drawn: Drawing[] = [];
+      drawn.push(shadeStroke(
         v,
         60,
         [
@@ -786,8 +804,8 @@ function alien(v: View): void {
           [296, 516],
         ],
         0.8,
-      );
-      shadeStroke(
+      ));
+      drawn.push(shadeStroke(
         v,
         40,
         [
@@ -796,8 +814,8 @@ function alien(v: View): void {
           [380, 350],
         ],
         0.7,
-      );
-      shadeStroke(
+      ));
+      drawn.push(shadeStroke(
         v,
         30,
         [
@@ -806,8 +824,8 @@ function alien(v: View): void {
           [400, 506],
         ],
         0.6,
-      );
-      rimStroke(
+      ));
+      drawn.push(rimStroke(
         v,
         10,
         [
@@ -816,8 +834,8 @@ function alien(v: View): void {
           [390, 500],
         ],
         0.95,
-      );
-      rimStroke(
+      ));
+      drawn.push(rimStroke(
         v,
         22,
         [
@@ -826,18 +844,18 @@ function alien(v: View): void {
           [396, 496],
         ],
         0.5,
-      );
+      ));
       // tummy: a lighter soft oval
-      v.line(338, 430, 338, 470, {
+      drawn.push(v.line(338, 430, 338, 470, {
         stroke: GREEN_LIGHT,
         weight: 46,
         brush: { preset: "airbrush", opacity: 0.55, blend: "screen" },
         gesture: { pressure: "even" },
-      });
+      }));
       // pencil hatching on the shadow side, following the body's curve
       for (let j = 0; j < 7; j += 1) {
         const x = 262 + j * 7;
-        v.curve(
+        drawn.push(v.curve(
           [
             [x - 6, 500 - j * 2],
             [x + 2, 450],
@@ -845,11 +863,12 @@ function alien(v: View): void {
           ],
           false,
           PENCIL,
-        );
+        ));
       }
+      return drawn;
     },
     4,
-  );
+  ));
 
   // hand that waves, with three little fingers
   const HX = 456;
@@ -859,36 +878,40 @@ function alien(v: View): void {
     [0, -22, 0],
     [12, -17, 0.5],
   ] as const) {
-    part(v, oval(HX + dx, HY + dy, 6, 10, 8, a), null, 2.5);
+    out.push(part(v, oval(HX + dx, HY + dy, 6, 10, 8, a), null, 2.5));
   }
-  part(v, oval(HX, HY, 18, 16, 10), () => {
-    shadeStroke(v, 14, [
-      [440, 314],
-      [460, 320],
-      [472, 306],
-    ]);
-    rimStroke(
-      v,
-      6,
-      [
-        [466, 290],
-        [474, 302],
-      ],
-      0.7,
-    );
-  });
+  out.push(part(v, oval(HX, HY, 18, 16, 10), () => {
+    return [
+      shadeStroke(v, 14, [
+        [440, 314],
+        [460, 320],
+        [472, 306],
+      ]),
+      rimStroke(
+        v,
+        6,
+        [
+          [466, 290],
+          [474, 302],
+        ],
+        0.7,
+      ),
+    ];
+  }));
 
   // heavier line on the shadow side of the body
-  v.curve(BODY.slice(0, 5), false, ink(LINE, 7, 0.3));
+  out.push(v.curve(BODY.slice(0, 5), false, ink(LINE, 7, 0.3)));
 
-  v.at({ translate: [330, 352], rotate: 0.08 }, () => {
-    v.at({ translate: [-330, -352] }, () => {
+  out.push(v.at({ translate: [330, 352], rotate: 0.08 }, [
+    v.at({ translate: [-330, -352] }, ((): Drawing => {
+      const drawn: Drawing[] = [];
       // head over the body
-      part(
+      drawn.push(part(
         v,
         HEAD,
         () => {
-          shadeStroke(
+          const head: Drawing[] = [];
+          head.push(shadeStroke(
             v,
             70,
             [
@@ -898,9 +921,9 @@ function alien(v: View): void {
               [432, 330],
             ],
             0.75,
-          );
+          ));
           for (const k of [0.93, 0.86, 0.79]) {
-            v.curve(
+            head.push(v.curve(
               arcPts(
                 330,
                 278,
@@ -916,9 +939,9 @@ function alien(v: View): void {
                 weight: 3,
                 brush: { preset: "pencil", opacity: 0.85, blend: "multiply" },
               },
-            );
+            ));
           }
-          v.curve(
+          head.push(v.curve(
             [
               [280, 226],
               [340, 216],
@@ -931,8 +954,8 @@ function alien(v: View): void {
               brush: { preset: "airbrush", opacity: 0.7 },
               gesture: { pressure: "swell" },
             },
-          );
-          rimStroke(
+          ));
+          head.push(rimStroke(
             v,
             12,
             [
@@ -941,8 +964,8 @@ function alien(v: View): void {
               [418, 312],
             ],
             0.95,
-          );
-          rimStroke(
+          ));
+          head.push(rimStroke(
             v,
             30,
             [
@@ -951,56 +974,57 @@ function alien(v: View): void {
               [416, 322],
             ],
             0.5,
-          );
+          ));
+          return head;
         },
         4,
-      );
+      ));
 
       // antennae
-      v.curve(ANT_L, false, ink(LINE, 4, 0.4));
-      v.curve(ANT_R, false, ink(LINE, 4, 0.4));
+      drawn.push(v.curve(ANT_L, false, ink(LINE, 4, 0.4)));
+      drawn.push(v.curve(ANT_R, false, ink(LINE, 4, 0.4)));
       for (const [x, y] of [
         [274, 146],
         [394, 142],
       ] as const) {
-        v.line(x, y, x + 1, y, {
+        drawn.push(v.line(x, y, x + 1, y, {
           stroke: "#ffe27a",
           weight: 40,
           brush: { preset: "airbrush", opacity: 0.45 },
           gesture: { pressure: "even" },
-        });
-        v.circle(x, y, 10, { fill: "#ffd84a" });
-        v.circle(x - 3, y - 3, 3, { fill: "#fff6c0" });
-        v.circle(x, y, 10, ink(LINE, 3));
+        }));
+        drawn.push(v.circle(x, y, 10, { fill: "#ffd84a" }));
+        drawn.push(v.circle(x - 3, y - 3, 3, { fill: "#fff6c0" }));
+        drawn.push(v.circle(x, y, 10, ink(LINE, 3)));
       }
 
       // face
-      v.ellipse(290, 276, 27, 31, { fill: "#ffffff" });
-      v.ellipse(372, 276, 27, 31, { fill: "#ffffff" });
-      v.circle(294, 282, 13, { fill: LINE });
-      v.circle(368, 282, 13, { fill: LINE });
-      v.circle(299, 276, 4, { fill: "#ffffff" });
-      v.circle(373, 276, 4, { fill: "#ffffff" });
-      v.ellipse(290, 276, 27, 31, ink(LINE, 3, 0.2));
-      v.ellipse(372, 276, 27, 31, ink(LINE, 3, 0.2));
+      drawn.push(v.ellipse(290, 276, 27, 31, { fill: "#ffffff" }));
+      drawn.push(v.ellipse(372, 276, 27, 31, { fill: "#ffffff" }));
+      drawn.push(v.circle(294, 282, 13, { fill: LINE }));
+      drawn.push(v.circle(368, 282, 13, { fill: LINE }));
+      drawn.push(v.circle(299, 276, 4, { fill: "#ffffff" }));
+      drawn.push(v.circle(373, 276, 4, { fill: "#ffffff" }));
+      drawn.push(v.ellipse(290, 276, 27, 31, ink(LINE, 3, 0.2)));
+      drawn.push(v.ellipse(372, 276, 27, 31, ink(LINE, 3, 0.2)));
       // heavier line on the shadow side of the head
-      v.curve(
+      drawn.push(v.curve(
         arcPts(330, 278, 100, 76, Math.PI * 0.55, Math.PI * 1.1, 8),
         false,
         ink(LINE, 7, 0.3),
-      );
+      ));
       // cheeks
       for (const cx of [254, 408]) {
-        v.line(cx - 6, 314, cx + 6, 314, {
+        drawn.push(v.line(cx - 6, 314, cx + 6, 314, {
           stroke: "#f5939b",
           weight: 22,
           brush: { preset: "airbrush", opacity: 0.55 },
           gesture: { pressure: "even" },
-        });
-        v.ellipse(cx, 314, 10, 5, { fill: "#f4a0a4" });
+        }));
+        drawn.push(v.ellipse(cx, 314, 10, 5, { fill: "#f4a0a4" }));
       }
       // smile
-      v.curve(
+      drawn.push(v.curve(
         [
           [310, 318],
           [320, 328],
@@ -1010,18 +1034,21 @@ function alien(v: View): void {
         ],
         false,
         ink(LINE, 4, 0),
-      );
-    });
-  });
+      ));
+      return drawn;
+    })()),
+  ]));
 
   // wave motion lines
   const wave = ink("#fff3d0", 3, 0.2);
-  v.curve(arcPts(456, 296, 42, 42, -1.6, -1.0, 4), false, wave);
-  v.curve(arcPts(456, 296, 42, 42, -0.75, -0.2, 4), false, wave);
-  v.curve(arcPts(456, 296, 42, 42, -2.5, -1.95, 4), false, wave);
+  out.push(v.curve(arcPts(456, 296, 42, 42, -1.6, -1.0, 4), false, wave));
+  out.push(v.curve(arcPts(456, 296, 42, 42, -0.75, -0.2, 4), false, wave));
+  out.push(v.curve(arcPts(456, 296, 42, 42, -2.5, -1.95, 4), false, wave));
+  return out;
 }
 
-function fireflies(v: View): void {
+function fireflies(v: View): Drawing {
+  const out: Drawing[] = [];
   const flies: Vec2[] = [
     [180, 420],
     [482, 430],
@@ -1032,20 +1059,22 @@ function fireflies(v: View): void {
     [745, 430],
   ];
   for (const [x, y] of flies) {
-    v.line(x, y, x + 1, y, {
+    out.push(v.line(x, y, x + 1, y, {
       stroke: "#fff3a0",
       weight: 34,
       brush: { preset: "airbrush", opacity: 0.55, blend: "screen" },
       gesture: { pressure: "even" },
-    });
-    v.circle(x, y, 2.5, { fill: "#fffbe0" });
+    }));
+    out.push(v.circle(x, y, 2.5, { fill: "#fffbe0" }));
   }
+  return out;
 }
 
 /** A few blades in front of the feet so he stands in the grass, not on it. */
-function foreGrass(v: View, model: DeepReadonly<Model>): void {
+function foreGrass(v: View, model: DeepReadonly<Model>): Drawing {
+  const drawn: Drawing[] = [];
   for (const b of model.foreBlades) {
-    v.curve(
+    drawn.push(v.curve(
       [
         [b.x, b.y],
         [b.x + b.lean * 0.4, b.y - b.h * 0.5],
@@ -1058,17 +1087,20 @@ function foreGrass(v: View, model: DeepReadonly<Model>): void {
         brush: { preset: "ink", thinning: 0.8 },
         gesture: { pressure: "taper-out", wobble: 0.5 },
       },
-    );
+    ));
   }
+  return drawn;
 }
 
-export function draw(v: View, model: DeepReadonly<Model>): void {
-  sky(v, model);
-  hills(v);
-  saucer(v);
-  meadow(v, model);
-  grassTufts(v, model);
-  alien(v);
-  foreGrass(v, model);
-  fireflies(v);
+export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
+  return [
+    sky(v, model),
+    hills(v),
+    saucer(v),
+    meadow(v, model),
+    grassTufts(v, model),
+    alien(v),
+    foreGrass(v, model),
+    fireflies(v),
+  ];
 }

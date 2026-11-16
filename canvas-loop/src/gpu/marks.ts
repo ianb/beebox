@@ -1,0 +1,148 @@
+// A brushed stroke (R1, draft section 9) as draws: the shared expansion
+// (brush/expand.ts, cached across frames) placed in device pixels. A stamp,
+// ink or bristle stroke becomes a mark whose dabs, capsules or strips the GPU
+// lays (brush-pass.ts); smudge and wet become a smear that reads the target
+// (smear.ts), its dabs written on the GPU. Grain is cut against paper
+// anchored to the picture or the scene (`toPaper`), then the brush opacity
+// applies once.
+import type { BristleBrush } from "../core/brush/types.js";
+import type { BrushExpander, GpuSet, SmearSet } from "../scene/brush/expand.js";
+import type { ColorParser } from "../scene/colors.js";
+import { invert } from "../scene/mat.js";
+import type { Mat, ShapeNode } from "../scene/nodes.js";
+import type { BrushRec, PaperRec, R, SmearRec, TexMark } from "./jobs.js";
+import { cutOf, inter, isEmpty, pad } from "./jobs.js";
+import type { PaintRec } from "./paint.js";
+import { paintRec } from "./paint.js";
+import { PAPER_ROW, paperParams } from "./painterly.js";
+import { checkBristles, checkContours, checkSmear } from "./brush-pack.js";
+
+/** What lowering a brushed stroke needs from the frame. */
+export interface BrushFrame {
+  readonly expander: BrushExpander;
+  readonly colors: ColorParser;
+  readonly ratio: number;
+  /** The brush pass's largest buffer (brush-pass.ts): a GPU stroke with a contour that cannot fit one fails here, naming the call. */
+  readonly brushLimit: number;
+}
+
+
+export type BrushDraw =
+  | { readonly k: "mark"; readonly mark: TexMark; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly box: R }
+  | { readonly k: "smear"; readonly smear: SmearRec; readonly box: R };
+
+const map = (...[e, x, y]: [Mat, number, number]): [number, number] => [e[0] * x + e[2] * y + e[4], e[1] * x + e[3] * y + e[5]];
+
+/** Box `b` (brush space) grown by `g` on each side and mapped by `e`: the box of its four corners, unrounded. */
+function mappedBox(b: { x0: number; y0: number; x1: number; y1: number }, a: { e: Mat; g: number }): R {
+  const { e, g } = a;
+  const corners = [map(e, b.x0 - g, b.y0 - g), map(e, b.x1 + g, b.y0 - g), map(e, b.x0 - g, b.y1 + g), map(e, b.x1 + g, b.y1 + g)];
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+
+/** How far a bristle wanders sideways, as a fraction of the brush's half-width (the `bristles` entry, shader-bristle.ts). */
+const BRISTLE_DRIFT = 0.12;
+
+/**
+ * How far past the centreline a bristle mark can reach, in brush px: the
+ * outermost bristle's offset (with spread and drift) plus half its thickest
+ * line.
+ */
+function bristleReach(width: number, brush: BristleBrush): number {
+  const n = Math.max(1, Math.round(brush.bristles));
+  const offset = 1 + (brush.spread * 2) / n + BRISTLE_DRIFT;
+  const thickest = (width / n) * 2.2 * (1 + brush.spread / 2);
+  return (offset * width) / 2 + thickest / 2;
+}
+
+/** How far past the prepared box (brush space) a stroke's marks reach before the quad or strip edge: see `gpuBox`. */
+function growth(set: GpuSet): number {
+  const w = set.prepared.width;
+  switch (set.kind) {
+    case "ink":
+      return w / 2;
+    case "stamp":
+      return (w / 2) * (1 + set.brush.sizeJitter / 2) + (set.brush.scatter * w) / 2;
+    case "bristle":
+      // The outermost bristle point and half the thickest bristle, and the other half again for the mitre.
+      return bristleReach(w, set.brush) + (w / Math.max(1, Math.round(set.brush.bristles))) * 1.1 * (1 + set.brush.spread / 2);
+  }
+}
+
+/**
+ * Where a stamp, ink or bristle stroke's marks can reach under `e` (brush
+ * space → device pixels, translation included): the prepared box (wobble
+ * included) grown, for a stamp, by the largest dab, `width / 2 × (1 +
+ * sizeJitter / 2)`, and the largest scatter, `scatter × width / 2`; for ink,
+ * by the largest capsule radius, `width / 2` (pressure 1); for bristle, by the
+ * outermost bristle and its whole thickness, since a strip's mitre reaches up
+ * to twice its half width plus one pixel; mapped by `e`, plus the edge of a
+ * dab's or capsule's quad, one pixel, or a strip's, two. Undefined when the
+ * stroke has no samples.
+ */
+export function gpuBox(set: GpuSet, e: Mat): R | undefined {
+  const p = set.prepared;
+  if (!p.contours.some((c) => c.count > 0)) return undefined;
+  const edge = set.kind === "bristle" ? 2 : 1;
+  const b = mappedBox(p.box, { e, g: growth(set) });
+  return { x0: Math.floor(b.x0 - edge), y0: Math.floor(b.y0 - edge), x1: Math.ceil(b.x1 + edge), y1: Math.ceil(b.y1 + edge) };
+}
+
+function gpuMark(set: GpuSet, a: { e: Mat; ratio: number; visible: R; limit: number }): TexMark | undefined {
+  checkContours(set.prepared, a.limit);
+  if (set.kind === "bristle") checkBristles(set.prepared, a.limit);
+  const reach = gpuBox(set, a.e);
+  if (reach === undefined) return undefined;
+  const box = inter(reach, cutOf(a.visible));
+  if (isEmpty(box)) return undefined;
+  const { e } = a;
+  return { box, ox: e[4], oy: e[5], gpu: { prepared: set.prepared, brush: set.brush, lin: [e[0], e[1], e[2], e[3]], ratio: a.ratio } };
+}
+
+/**
+ * A smudge or wet stroke as a smear: its dabs are written on the GPU when the
+ * smear is encoded (smear.ts), so its box is the prepared box's (every sample,
+ * wobble included) mapped by `e`, grown by the patch size and 2 px.
+ */
+function smear(set: SmearSet, a: { e: Mat; ratio: number; visible: R; paper: PaperRec; paint: PaintRec | undefined; limit: number }): BrushDraw | undefined {
+  const p = set.prepared;
+  checkContours(p, a.limit);
+  checkSmear(p, a.limit);
+  if (!p.contours.some((c) => c.count > 0)) return undefined;
+  const reach = mappedBox(p.box, { e: a.e, g: 0 });
+  const size = 2 * Math.ceil((p.width * a.ratio) / 2) + 4;
+  const r = size + 2;
+  const box = inter({ x0: Math.floor(reach.x0 - r), y0: Math.floor(reach.y0 - r), x1: Math.ceil(reach.x1 + r), y1: Math.ceil(reach.y1 + r) }, pad(a.visible, 2));
+  if (isEmpty(box)) return undefined;
+  const color = a.paint?.color ?? [0, 0, 0, 0];
+  const straight = color[3] > 0 ? [color[0] / color[3], color[1] / color[3], color[2] / color[3], color[3]] as const : color;
+  const { e } = a;
+  return { k: "smear", smear: { prepared: p, lin: [e[0], e[1], e[2], e[3]], tx: e[4], ty: e[5], ratio: a.ratio, reach, size, brush: set.brush, paint: straight, paper: a.paper }, box };
+}
+
+/** The draw for brushed stroke `n` under device transform `matrix`, or undefined when nothing can be seen. */
+export function brushDraw(n: ShapeNode, a: { frame: BrushFrame; matrix: Mat; visible: R }): BrushDraw | undefined {
+  const stroke = n.style.brush;
+  const paint = n.style.stroke;
+  if (stroke === undefined || paint === undefined || n.style.weight <= 0) return undefined;
+  const { ratio, colors } = a.frame;
+  const m = a.matrix;
+  const ex = a.frame.expander.expand({ geom: n.geom, weight: n.style.weight, stroke, paint, linear: [m[0] / ratio, m[1] / ratio, m[2] / ratio, m[3] / ratio, 0, 0], colors });
+  if (ex === undefined) return undefined;
+  const q = ex.q;
+  const e: Mat = [ratio * q[0], ratio * q[1], ratio * q[2], ratio * q[3], m[4], m[5]];
+  // Paper pixels are the call's own coordinates times the pixel ratio, so grain moves with the stroke (draft 2.4).
+  const inv = invert(m);
+  if (inv === undefined) return undefined;
+  const toPaper: Mat = [inv[0] * ratio, inv[1] * ratio, inv[2] * ratio, inv[3] * ratio, inv[4] * ratio, inv[5] * ratio];
+  const paper: PaperRec = { toPaper, ...paperParams(stroke.paper, ratio), width: PAPER_ROW };
+  const rec = paintRec(paint, { matrix: m, colors });
+  if (ex.set.kind === "smear") return smear(ex.set, { e, ratio, visible: a.visible, paper, paint: rec, limit: a.frame.brushLimit });
+  if (rec === undefined) return undefined;
+  const mark = gpuMark(ex.set, { e, ratio, visible: a.visible, limit: a.frame.brushLimit });
+  if (mark === undefined) return undefined;
+  const brush: BrushRec = { grain: stroke.brush.grain, opacity: stroke.brush.opacity * (ex.set.tint ?? 1), paper };
+  return { k: "mark", mark, tinted: ex.set.tint !== undefined, paint: rec, brush, box: mark.box };
+}

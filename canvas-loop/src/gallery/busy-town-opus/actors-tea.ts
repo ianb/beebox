@@ -1,5 +1,5 @@
 // Every moving thing, drawn each frame from sprites and a few cheap marks.
-import type { BlendMode, Sprite, View } from "@ianbicking/canvas-loop";
+import type { BlendMode, Drawing, Picture, View } from "@ianbicking/canvas-loop";
 import type { Clock, Id } from "./things-tea.js";
 import { BUS_Y, FEET, IDS, W, act, boxOf, busX, snailX } from "./things-tea.js";
 import * as S from "./folk-tea.js";
@@ -26,17 +26,16 @@ interface Place {
 }
 
 /** Draw a sprite with its pivot (px, py) at (x, y), turned, flipped and scaled about the pivot. */
-export function put(v: View, s: Sprite, at: Place): void {
+export function put(v: View, s: Picture, at: Place): Drawing {
   const k = at.scale ?? 1;
   const scaled = at.flip === true || at.scale !== undefined;
-  v.at(
+  return v.at(
     {
       translate: [at.x, at.y],
       ...(at.rot === undefined ? {} : { rotate: at.rot }),
       ...(scaled ? { scale: [at.flip === true ? -k : k, k] as const } : {}),
     },
-    () =>
-      v.image(s, -at.px, -at.py, {
+    v.place(s, -at.px, -at.py, {
         opacity: at.alpha ?? 1,
         ...(at.blend === undefined ? {} : { blend: at.blend }),
       }),
@@ -57,16 +56,18 @@ function wiggle(s: Scene, id: Id): number {
     : 0;
 }
 
-function puff(v: View, x: number, y: number, r: number, alpha: number): void {
-  v.circle(x, y, r, { fill: `rgba(250,250,250,${alpha.toFixed(3)})` });
+function puff(v: View, x: number, y: number, r: number, alpha: number): Drawing {
+  return v.circle(x, y, r, { fill: `rgba(250,250,250,${alpha.toFixed(3)})` });
 }
 
 function drops(
   v: View,
   color: string,
   pts: readonly (readonly [number, number])[],
-): void {
-  for (const [x, y] of pts) v.ellipse(x, y, 2, 3, { fill: color });
+): Drawing {
+  const out: Drawing[] = [];
+  for (const [x, y] of pts) out.push(v.ellipse(x, y, 2, 3, { fill: color }));
+  return out;
 }
 
 const bell = (t: number, a: number, b: number): number =>
@@ -74,73 +75,76 @@ const bell = (t: number, a: number, b: number): number =>
 
 // ── Bakery row ─────────────────────────────────────────────────────
 
-export function chimney(v: View, s: Scene): void {
+export function chimney(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "chimney");
   const shake =
     t === null ? wiggle(s, "chimney") : Math.sin(t * 60) * 0.08 * (1 - t);
-  put(v, S.chimney(v), { x: 185, y: 252, px: 17, py: 56, rot: shake });
+  out.push(put(v, S.chimney(v), { x: 185, y: 252, px: 17, py: 56, rot: shake }));
   for (let i = 0; i < 6; i += 1) {
     const age = ((s.frame + i * 20) % 120) / 120;
-    puff(
+    out.push(puff(
       v,
       186 + Math.sin(age * 5 + i) * 8 + age * 30,
       196 - age * 90,
       5 + age * 12,
       (1 - age) * 0.55,
-    );
+    ));
   }
   if (t !== null) {
     for (let i = 0; i < 3; i += 1) {
       const k = t * 1.6 - i * 0.25;
       if (k <= 0 || k >= 1) continue;
-      v.ellipse(186 + k * 20, 190 - k * 150, (18 + k * 50) / 2, (8 + k * 20) / 2, {
+      out.push(v.ellipse(186 + k * 20, 190 - k * 150, (18 + k * 50) / 2, (8 + k * 20) / 2, {
         stroke: `rgba(90,80,90,${(0.8 * (1 - k)).toFixed(3)})`,
         weight: 5 * (1 - k) + 1,
-      });
+      }));
     }
   }
+  return out;
 }
 
-export function windowAndGoat(v: View, s: Scene): void {
+export function windowAndGoat(v: View, s: Scene): Drawing {
+  const drawn: Drawing[] = [];
   const t = act(s, "window");
   const open = t !== null && t > 0.04 && t < 0.94;
   const x = 50;
   const y = 282 + hop(s, "window");
   if (open) {
     const rise = Math.min(1, (t - 0.04) / 0.12) * Math.min(1, (0.94 - t) / 0.1);
-    put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 });
+    drawn.push(put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 }));
     const gy = y + 120 - rise * 36;
-    v.clip(
+    drawn.push(v.clip(
       [
         [x + 16, y + 6],
         [x + 64, y + 6],
         [x + 64, y + 66],
         [x + 16, y + 66],
       ],
-      () => {
-        put(v, S.folk(v, "goat-water"), { x: x + 40, y: gy, px: 32, py: 96 });
-      },
-    );
-    v.clip(
+      [
+        put(v, S.folk(v, "goat-water"), { x: x + 40, y: gy, px: 32, py: 96 }),
+      ],
+    ));
+    drawn.push(v.clip(
       [
         [x, y + 64],
         [x + 80, y + 64],
         [x + 80, y + 86],
         [x, y + 86],
       ],
-      () => put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 }),
-    );
+      put(v, S.windowSprite(v, true), { x, y, px: 0, py: 0 }),
+    ));
     const pour = t > 0.18 && t < 0.8;
     const tilt = pour ? 0.55 + Math.sin(s.frame * 0.2) * 0.08 : 0;
     // the can pokes out over the sill, held at the goat's hands
     if (rise > 0.6)
-      put(v, S.wateringCan(v), {
+      drawn.push(put(v, S.wateringCan(v), {
         x: x + 66,
         y: gy - 38,
         px: 6,
         py: 10,
         rot: tilt,
-      });
+      }));
     if (pour) {
       const sx = x + 66 + Math.cos(tilt) * 23 - Math.sin(tilt) * -8;
       const sy = gy - 38 + Math.sin(tilt) * 23 + Math.cos(tilt) * -8;
@@ -154,10 +158,10 @@ export function windowAndGoat(v: View, s: Scene): void {
         const k = ((s.frame * 1.5 + i * 13) % 52) / 52;
         if (t > 0.3) pts.push([x + 28 + (i % 2) * 8, y + 82 + k * 40]);
       }
-      drops(v, "rgba(110,170,230,0.85)", pts);
+      drawn.push(drops(v, "rgba(110,170,230,0.85)", pts));
     }
   } else {
-    put(v, S.windowSprite(v, false), { x, y, px: 0, py: 0 });
+    drawn.push(put(v, S.windowSprite(v, false), { x, y, px: 0, py: 0 }));
   }
   // flowers in the box: they sway, and grow while watered
   const grow = t !== null && t > 0.18 ? Math.min(1, (t - 0.18) / 0.5) : 0;
@@ -166,18 +170,20 @@ export function windowAndGoat(v: View, s: Scene): void {
   for (let i = 0; i < 5; i += 1) {
     const fx = x + 16 + i * 12;
     const sway = Math.sin(s.frame * 0.05 + i) * 2;
-    v.line(fx, y + 67, fx + sway, y + 67 - tall, {
+    drawn.push(v.line(fx, y + 67, fx + sway, y + 67 - tall, {
       stroke: "#3f7a3a",
       weight: 2,
-    });
-    v.circle(fx + sway, y + 67 - tall, (9 + grow * 3 + s.bloom) / 2, {
+    }));
+    drawn.push(v.circle(fx + sway, y + 67 - tall, (9 + grow * 3 + s.bloom) / 2, {
       fill: colors[i] ?? "#e84a6a",
-    });
-    v.circle(fx + sway, y + 67 - tall, 1.5, { fill: "#fff3b0" });
+    }));
+    drawn.push(v.circle(fx + sway, y + 67 - tall, 1.5, { fill: "#fff3b0" }));
   }
+  return drawn;
 }
 
-export function cat(v: View, s: Scene): void {
+export function cat(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "cat");
   const leap = t === null ? 0 : Math.sin(Math.min(1, t / 0.7) * Math.PI) * 46;
   const mode = t !== null && t < 0.75 ? "arch" : "sit";
@@ -190,7 +196,7 @@ export function cat(v: View, s: Scene): void {
       : 0;
   const tail = { stroke: "#8e8a9a", weight: 6 };
   if (mode === "sit") {
-    v.curve(
+    out.push(v.curve(
       [
         [x + 36, y + 50],
         [x + 50, y + 56],
@@ -199,9 +205,9 @@ export function cat(v: View, s: Scene): void {
       ],
       false,
       tail,
-    );
+    ));
   } else {
-    v.curve(
+    out.push(v.curve(
       [
         [x + 42, y + 34],
         [x + 50, y + 20],
@@ -209,12 +215,14 @@ export function cat(v: View, s: Scene): void {
       ],
       false,
       tail,
-    );
+    ));
   }
-  put(v, S.cat(v, mode), { x, y, px: 0, py: 0 });
+  out.push(put(v, S.cat(v, mode), { x, y, px: 0, py: 0 }));
+  return out;
 }
 
-export function baker(v: View, s: Scene): void {
+export function baker(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "baker");
   const x = 114;
   const pose: S.Pose =
@@ -224,35 +232,37 @@ export function baker(v: View, s: Scene): void {
         ? "baker-reach"
         : "baker-up";
   const bob = Math.sin(s.frame * 0.07) * 1.2 + hop(s, "baker");
-  put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 });
-  if (t === null || t > 0.82) return;
+  out.push(put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 }));
+  if (t === null || t > 0.82) return out;
   let lx: number;
   let ly: number;
   if (t < 0.28) {
     const k = t / 0.28;
     lx = 200 - k * 58;
     ly = 520 - k * 12;
-    v.line(lx + 26, ly + 2, 142, 543, { stroke: "#8a5a3a", weight: 3 });
+    out.push(v.line(lx + 26, ly + 2, 142, 543, { stroke: "#8a5a3a", weight: 3 }));
   } else {
     lx = x;
     ly = FEET - 92 + bob;
   }
-  put(v, S.loaf(v), { x: lx, y: ly, px: 22, py: 14 });
+  out.push(put(v, S.loaf(v), { x: lx, y: ly, px: 22, py: 14 }));
   for (let i = 0; i < 6; i += 1) {
     const age = ((s.frame * 1.3 + i * 11) % 66) / 66;
-    puff(
+    out.push(puff(
       v,
       lx + Math.sin(age * 6 + i * 2) * 7,
       ly - 8 - age * 46,
       3 + age * 8,
       (1 - age) * 0.7,
-    );
+    ));
   }
+  return out;
 }
 
 // ── Post office ────────────────────────────────────────────────────
 
-export function mailCarrier(v: View, s: Scene): void {
+export function mailCarrier(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "mail");
   const x = 292;
   const pose: S.Pose = t !== null && t < 0.6 ? "mail-toss" : "mail-idle";
@@ -260,55 +270,59 @@ export function mailCarrier(v: View, s: Scene): void {
     t === null
       ? Math.abs(Math.sin(s.frame * 0.05)) * -2
       : Math.sin(t * Math.PI * 4) * -4;
-  put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 });
-  if (t === null || t > 0.62) return;
+  out.push(put(v, S.folk(v, pose), { x, y: FEET + bob, px: 32, py: 96 }));
+  if (t === null || t > 0.62) return out;
   for (let i = 0; i < 3; i += 1) {
     const k = (t - i * 0.12) / 0.4;
     if (k <= 0 || k >= 1) continue;
     const lx = 318 + k * 46;
     const ly = 506 - Math.sin(k * Math.PI) * 60 + k * 18;
-    put(v, S.letter(v), { x: lx, y: ly, px: 9, py: 6, rot: k * 6 });
+    out.push(put(v, S.letter(v), { x: lx, y: ly, px: 9, py: 6, rot: k * 6 }));
   }
+  return out;
 }
 
-export function mailbox(v: View, s: Scene): void {
+export function mailbox(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "mailbox");
   const open = t !== null && t > 0.1 && t < 0.8;
   const jig = t === null ? 0 : Math.sin(t * 50) * 0.07 * (1 - t);
-  put(v, S.mailbox(v, open), {
+  out.push(put(v, S.mailbox(v, open), {
     x: 380,
     y: 570 + hop(s, "mailbox"),
     px: 20,
     py: 66,
     rot: jig,
-  });
-  if (t === null) return;
+  }));
+  if (t === null) return out;
   for (let i = 0; i < 4; i += 1) {
     const k = (t - 0.12 - i * 0.05) / 0.62;
     if (k <= 0 || k >= 1) continue;
     const up = Math.sin(k * Math.PI) * (50 + i * 12);
-    put(v, S.letter(v), {
+    out.push(put(v, S.letter(v), {
       x: 380 + Math.sin(k * 9 + i) * (10 + i * 5),
       y: 524 - up,
       px: 9,
       py: 6,
       rot: Math.sin(k * 7 + i) * 0.8,
-    });
+    }));
   }
+  return out;
 }
 
 // ── Painter's house ────────────────────────────────────────────────
 
-export function owl(v: View, s: Scene): void {
+export function owl(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "owl");
   // an owl keeps owl hours: asleep by day, awake at night
   const roused = t !== null && t > 0.05 && t < 0.85;
   const awake = s.night ? !roused || Math.floor(s.frame / 6) % 2 === 0 : roused;
-  put(v, S.owl(v, awake), { x: 441, y: 237 + hop(s, "owl"), px: 0, py: 0 });
+  out.push(put(v, S.owl(v, awake), { x: 441, y: 237 + hop(s, "owl"), px: 0, py: 0 }));
   if (!awake && t === null) {
     for (let i = 0; i < 3; i += 1) {
       const k = ((s.frame + i * 40) % 120) / 120;
-      v.text(
+      out.push(v.text(
         "z",
         { x: 490 + k * 22 + Math.sin(k * 8) * 4, y: 240 - k * 34 },
         {
@@ -319,25 +333,27 @@ export function owl(v: View, s: Scene): void {
           align: "center",
           valign: "middle",
         },
-      );
+      ));
     }
   }
+  return out;
 }
 
-export function painter(v: View, s: Scene): void {
+export function painter(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "painter");
   const wob =
     t === null
       ? wiggle(s, "painter")
       : Math.sin(t * Math.PI * 9) * 0.2 * (1 - t) * Math.min(1, t * 8);
   const hang = t !== null && t < 0.8;
-  put(v, S.ladder(v, hang), { x: 536, y: 568, px: 16, py: 236, rot: wob });
+  out.push(put(v, S.ladder(v, hang), { x: 536, y: 568, px: 16, py: 236, rot: wob }));
   if (!hang) {
     // idle: the brush arm dabs, leaving a dab of yellow on the wall
     const dab = Math.sin(s.frame * 0.12);
-    v.ellipse(592 + dab * 2, 382 + dab * 7, 3.5, 5, {
+    out.push(v.ellipse(592 + dab * 2, 382 + dab * 7, 3.5, 5, {
       fill: "rgba(247,214,92,0.9)",
-    });
+    }));
   }
   if (t !== null && t < 0.9) {
     // paint drips falling to the bucket
@@ -346,11 +362,13 @@ export function painter(v: View, s: Scene): void {
       const k = (t - 0.1 - i * 0.08) / 0.35;
       if (k > 0 && k < 1) pts.push([584 + i * 3, 360 + k * k * 196]);
     }
-    drops(v, "#f2c43a", pts);
+    out.push(drops(v, "#f2c43a", pts));
   }
+  return out;
 }
 
-export function bucket(v: View, s: Scene): void {
+export function bucket(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "bucket");
   const tip = t === null ? wiggle(s, "bucket") : bell(t, 0, 0.7) * 1.1;
   const jump = t === null ? hop(s, "bucket") : -bell(t, 0, 0.25) * 18;
@@ -358,28 +376,30 @@ export function bucket(v: View, s: Scene): void {
     const k = Math.min(1, (t - 0.12) / 0.2);
     const fade = t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
     const splash = { fill: `rgba(247,214,92,${(0.95 * fade).toFixed(3)})` };
-    v.ellipse(618, 580, (10 + k * 56) / 2, (6 + k * 12) / 2, splash);
+    out.push(v.ellipse(618, 580, (10 + k * 56) / 2, (6 + k * 12) / 2, splash));
     for (let i = 0; i < 6; i += 1)
-      v.circle(
+      out.push(v.circle(
         600 + i * 8 + k * 10,
         572 - Math.sin(i * 2.1) * 6 * k,
         (4 + (i % 2) * 2) / 2,
         splash,
-      );
+      ));
   }
-  put(v, S.bucket(v), { x: 600, y: 582 + jump, px: 16, py: 32, rot: tip });
+  out.push(put(v, S.bucket(v), { x: 600, y: 582 + jump, px: 16, py: 32, rot: tip }));
+  return out;
 }
 
-export function hydrant(v: View, s: Scene): void {
+export function hydrant(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "hydrant");
-  put(v, S.hydrant(v), {
+  out.push(put(v, S.hydrant(v), {
     x: 434,
     y: 576 + hop(s, "hydrant"),
     px: 14,
     py: 44,
     rot: t === null ? 0 : Math.sin(t * 70) * 0.03,
-  });
-  if (t === null || t > 0.85) return;
+  }));
+  if (t === null || t > 0.85) return out;
   const pts: [number, number][] = [];
   const reach = Math.min(1, t / 0.15);
   for (let i = 0; i < 24; i += 1) {
@@ -389,10 +409,12 @@ export function hydrant(v: View, s: Scene): void {
       552 - Math.sin(k * Math.PI) * 40 + k * 16 + Math.sin(i * 3) * 2,
     ]);
   }
-  drops(v, "rgba(120,180,235,0.85)", pts);
+  out.push(drops(v, "rgba(120,180,235,0.85)", pts));
+  return out;
 }
 
-export function dog(v: View, s: Scene): void {
+export function dog(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "dog");
   const hy = act(s, "hydrant");
   const wet = hy !== null && hy > 0.2;
@@ -403,14 +425,14 @@ export function dog(v: View, s: Scene): void {
   const begging = t !== null && act(s, "baker") !== null;
   if (begging) {
     // sits up on its hind legs for the bread
-    v.at(
+    out.push(v.at(
       {
         translate: [x - 19, 584],
         rotate: -0.55 + Math.sin(s.frame * 0.3) * 0.05,
       },
-      () => v.image(S.dog(v, "stand"), -18, -50),
-    );
-    return;
+      v.place(S.dog(v, "stand"), -18, -50),
+    ));
+    return out;
   }
   if (t !== null) {
     // chase its own tail: flip back and forth, hopping
@@ -419,13 +441,13 @@ export function dog(v: View, s: Scene): void {
     rot = Math.sin(t * Math.PI * 6) * 0.15;
   }
   const wag = Math.sin(s.frame * (t === null ? 0.4 : 1.2)) * 6;
-  v.at(
+  out.push(v.at(
     {
       translate: [x, 586 + lift],
       rotate: rot,
       ...(flip ? { scale: [-1, 1] as const } : {}),
     },
-    () => {
+    [
       v.curve(
         [
           [-22, -22],
@@ -435,52 +457,56 @@ export function dog(v: View, s: Scene): void {
         ],
         false,
         { stroke: "#d9a25f", weight: 5 },
-      );
-      v.image(S.dog(v, wet ? "wet" : "stand"), -37, -52);
-    },
-  );
+      ),
+      v.place(S.dog(v, wet ? "wet" : "stand"), -37, -52),
+    ],
+  ));
+  return out;
 }
 
-export function lamp(v: View, s: Scene): void {
+export function lamp(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "lamp");
   const on = s.evening || t !== null;
   const flick = t !== null && t < 0.15 ? Math.floor(t * 60) % 2 === 0 : on;
-  put(v, S.lamp(v, flick), {
+  out.push(put(v, S.lamp(v, flick), {
     x: 609,
     y: 574,
     px: 15,
     py: 190,
     rot: wiggle(s, "lamp"),
-  });
-  if (!flick) return;
+  }));
+  if (!flick) return out;
   if (!s.evening) {
-    v.image(S.glow(v), 609 - 80, 400 - 80, { opacity: 0.7, blend: "screen" });
+    out.push(v.place(S.glow(v), 609 - 80, 400 - 80, { opacity: 0.7, blend: "screen" }));
   }
   if (t !== null) {
     for (let i = 0; i < 2; i += 1) {
       const a = s.frame * 0.15 + i * Math.PI;
-      v.ellipse(
+      out.push(v.ellipse(
         609 + Math.cos(a) * (18 + i * 6),
         398 + Math.sin(a * 1.3) * 12,
         2.5,
         1.5,
         { fill: "#5a4a3a" },
-      );
+      ));
     }
   }
+  return out;
 }
 
 // ── Grocer and town hall ───────────────────────────────────────────
 
-export function grocer(v: View, s: Scene): void {
+export function grocer(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "grocer");
   const x = 762;
   const juggling = t !== null && t < 0.9;
   if (!juggling) {
     // sweeping: the broom swings about the hands
     const sw = Math.sin(s.frame * 0.1) * 0.35;
-    v.at({ translate: [x - 16, FEET - 14], rotate: 0.35 + sw }, () => {
-      v.line(0, -16, -6, 22, { stroke: "#8a5a3a", weight: 3 });
+    out.push(v.at({ translate: [x - 16, FEET - 14], rotate: 0.35 + sw }, [
+      v.line(0, -16, -6, 22, { stroke: "#8a5a3a", weight: 3 }),
       v.polygon(
         [
           [-14, 20],
@@ -489,66 +515,69 @@ export function grocer(v: View, s: Scene): void {
           [-16, 32],
         ],
         { fill: "#d9b45a" },
-      );
-    });
-    put(v, S.folk(v, "grocer-sweep"), {
+      ),
+    ]));
+    out.push(put(v, S.folk(v, "grocer-sweep"), {
       x,
       y: FEET + hop(s, "grocer"),
       px: 32,
       py: 96,
-    });
-    return;
+    }));
+    return out;
   }
-  put(v, S.folk(v, "grocer-juggle"), {
+  out.push(put(v, S.folk(v, "grocer-juggle"), {
     x,
     y: FEET + Math.sin(t * 40) * 1.5,
     px: 32,
     py: 96,
-  });
+  }));
   for (let i = 0; i < 3; i += 1) {
     const a = t * Math.PI * 10 + (i * Math.PI * 2) / 3;
-    put(v, S.apple(v), {
+    out.push(put(v, S.apple(v), {
       x: x + Math.cos(a) * 22,
       y: FEET - 64 - Math.abs(Math.sin(a)) * 60,
       px: 7,
       py: 8,
       scale: 1.4,
-    });
+    }));
   }
+  return out;
 }
 
-export function clockHands(v: View, s: Scene): void {
+export function clockHands(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "clock");
   const spin = t === null ? 0 : t * t * Math.PI * 8;
   const minute = s.frame * 0.0017 - Math.PI / 2 + spin;
   const hour = s.frame * 0.00014 + 0.9 + spin / 12;
   const cx = 900;
   const cy = 200 + (t === null ? 0 : Math.sin(t * 80) * 1.2);
-  v.line(cx, cy, cx + Math.cos(hour) * 13, cy + Math.sin(hour) * 13, {
+  out.push(v.line(cx, cy, cx + Math.cos(hour) * 13, cy + Math.sin(hour) * 13, {
     stroke: "#3b2a24",
     weight: 4,
-  });
-  v.line(cx, cy, cx + Math.cos(minute) * 20, cy + Math.sin(minute) * 20, {
+  }));
+  out.push(v.line(cx, cy, cx + Math.cos(minute) * 20, cy + Math.sin(minute) * 20, {
     stroke: "#3b2a24",
     weight: 3,
-  });
-  v.circle(cx, cy, 3, { fill: "#c23b3b" });
+  }));
+  out.push(v.circle(cx, cy, 3, { fill: "#c23b3b" }));
   if (s.hover === "clock" && t === null) {
-    v.image(S.glint(v), cx + 16, cy - 30, {
+    out.push(v.place(S.glint(v), cx + 16, cy - 30, {
       opacity: 0.6 + Math.sin(s.frame * 0.3) * 0.4,
-    });
+    }));
   }
   if (t !== null) {
     // sound rings from the tower
     for (let i = 0; i < 3; i += 1) {
       const k = (t * 3 - i * 0.3) % 1;
       if (k < 0) continue;
-      v.arc(cx, 130, 40 + k * 90, Math.PI * 1.1, Math.PI * 1.9, {
+      out.push(v.arc(cx, 130, 40 + k * 90, Math.PI * 1.1, Math.PI * 1.9, {
         stroke: `rgba(194,59,59,${(0.6 * (1 - k)).toFixed(3)})`,
         weight: 2,
-      });
+      }));
     }
   }
+  return out;
 }
 
 const PIGEON_HOME: readonly (readonly [number, number])[] = [
@@ -558,19 +587,20 @@ const PIGEON_HOME: readonly (readonly [number, number])[] = [
   [978, 336],
 ];
 
-export function pigeons(v: View, s: Scene): void {
+export function pigeons(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "pigeons");
   for (const [i, [hx, hy]] of PIGEON_HOME.entries()) {
     if (t === null || t > 0.95) {
       const peck = Math.max(0, Math.sin(s.frame * 0.06 + i * 1.7)) ** 6 * 0.6;
-      put(v, S.pigeon(v, false), {
+      out.push(put(v, S.pigeon(v, false), {
         x: hx,
         y: hy + hop(s, "pigeons"),
         px: 13,
         py: 20,
         rot: peck,
         flip: i % 2 === 1,
-      });
+      }));
       continue;
     }
     // fly a loop round the tower and land
@@ -580,17 +610,19 @@ export function pigeons(v: View, s: Scene): void {
     const fx = hx + (900 - hx) * r + Math.cos(a) * 90 * r;
     const fy = hy - r * 170 + Math.sin(a) * 40 * r;
     const flapping = Math.floor(s.frame / 5 + i) % 2 === 0;
-    put(v, S.pigeon(v, flapping), {
+    out.push(put(v, S.pigeon(v, flapping), {
       x: fx,
       y: fy,
       px: 13,
       py: 20,
       flip: Math.cos(a) < 0,
-    });
+    }));
   }
+  return out;
 }
 
-export function flag(v: View, s: Scene): void {
+export function flag(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "flag");
   const amp = t === null ? (s.hover === "flag" ? 6 : 3) : 9;
   const speed = t === null ? 0.12 : 0.45;
@@ -603,17 +635,19 @@ export function flag(v: View, s: Scene): void {
     top.push([902 + k * len, 44 + w]);
     bottom.push([902 + k * len, 76 + w - k * 4]);
   }
-  v.polygon([...top, ...bottom.reverse()], {
+  out.push(v.polygon([...top, ...bottom.reverse()], {
     fill: "#d8443a",
     stroke: "#3b2a24",
     weight: 1.5,
-  });
+  }));
   const mid = Math.sin(s.frame * speed - 2.5) * amp * 0.5;
-  v.circle(902 + len * 0.5, 60 + mid, 6.5, { fill: "#f2c84b" });
-  v.rect(898 + len * 0.5, 50 + mid, 8, 4, { fill: "#8a5a3a" });
+  out.push(v.circle(902 + len * 0.5, 60 + mid, 6.5, { fill: "#f2c84b" }));
+  out.push(v.rect(898 + len * 0.5, 50 + mid, 8, 4, { fill: "#8a5a3a" }));
+  return out;
 }
 
-export function duck(v: View, s: Scene): void {
+export function duck(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "duck");
   const quack = t !== null && t < 0.85;
   const x = 928;
@@ -621,80 +655,83 @@ export function duck(v: View, s: Scene): void {
   const jump = quack ? -bell(t, 0, 0.3) * 22 : hop(s, "duck");
   // sitting: the legs are hidden behind the seat plank; only the feet dangle below it
   const y = 552 + jump;
-  v.clip(
+  out.push(v.clip(
     [
       [x - 40, 300],
       [x + 40, 300],
       [x + 40, 544 + Math.min(0, jump)],
       [x - 40, 544 + Math.min(0, jump)],
     ],
-    () => {
+    [
       put(v, S.folk(v, quack ? "duck-quack" : "duck-read"), {
         x,
         y,
         px: 32,
         py: 96,
         rot: rustle,
-      });
-    },
-  );
-  put(v, S.benchSeat(v), { x: 880, y: 538, px: 0, py: 0 });
+      }),
+    ],
+  ));
+  out.push(put(v, S.benchSeat(v), { x: 880, y: 538, px: 0, py: 0 }));
   const kick = Math.sin(s.frame * (quack ? 0.5 : 0.08)) * 3;
-  v.ellipse(x - 8 + kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" });
-  v.ellipse(x + 8 - kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" });
+  out.push(v.ellipse(x - 8 + kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" }));
+  out.push(v.ellipse(x + 8 - kick, 556 + Math.min(0, jump), 6.5, 3, { fill: "#f29a2e" }));
+  return out;
 }
 
 // ── The road ───────────────────────────────────────────────────────
 
-export function manhole(v: View, s: Scene): void {
+export function manhole(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const t = act(s, "manhole");
   const cx = 303;
   const cy = 662;
   if (t === null) {
-    put(v, S.manhole(v), {
+    out.push(put(v, S.manhole(v), {
       x: cx,
       y: cy + hop(s, "manhole") * 0.5,
       px: 31,
       py: 10,
-    });
+    }));
     const age = (s.frame % 150) / 150;
     if (age < 0.5)
-      puff(
+      out.push(puff(
         v,
         cx + Math.sin(age * 9) * 6,
         cy - 6 - age * 50,
         4 + age * 10,
         0.45 * (1 - age * 2),
-      );
-    return;
+      ));
+    return out;
   }
   const up = bell(t, 0.05, 0.92);
-  v.ellipse(cx, cy, 27, 7, { fill: "#1f1f26" });
-  v.clip(
+  out.push(v.ellipse(cx, cy, 27, 7, { fill: "#1f1f26" }));
+  out.push(v.clip(
     [
       [cx - 40, cy - 80],
       [cx + 40, cy - 80],
       [cx + 40, cy],
       [cx - 40, cy],
     ],
-    () => {
+    ((): Drawing => {
       const look = t > 0.3 && t < 0.7 ? Math.sin((t - 0.3) * 25) * 4 : 0;
-      put(v, S.mole(v), { x: cx + look, y: cy + 36 - up * 50, px: 20, py: 40 });
-    },
-  );
-  put(v, S.manhole(v), {
+      return put(v, S.mole(v), { x: cx + look, y: cy + 36 - up * 50, px: 20, py: 40 });
+    })(),
+  ));
+  out.push(put(v, S.manhole(v), {
     x: cx + 38 * up,
     y: cy - 4 * up,
     px: 31,
     py: 10,
     rot: -0.2 * up,
-  });
+  }));
+  return out;
 }
 
-export function snail(v: View, s: Scene): void {
+export function snail(v: View, s: Scene): Drawing {
   const t = act(s, "snail");
   const tucked = t !== null && t < 0.9;
-  put(v, S.snail(v, tucked), {
+  return put(v, S.snail(v, tucked), {
     x: snailX(s.frame),
     y: 580 + hop(s, "snail"),
     px: 0,
@@ -703,7 +740,8 @@ export function snail(v: View, s: Scene): void {
   });
 }
 
-export function bus(v: View, s: Scene): void {
+export function bus(v: View, s: Scene): Drawing {
+  const drawn: Drawing[] = [];
   const t = act(s, "bus");
   const x = busX(s);
   const idleShake =
@@ -712,24 +750,25 @@ export function bus(v: View, s: Scene): void {
   // exhaust from the back
   for (let i = 0; i < 4; i += 1) {
     const age = ((s.frame * (t === null ? 1 : 2.5) + i * 15) % 60) / 60;
-    puff(
+    drawn.push(puff(
       v,
       x - 6 - age * 40,
       y + 78 - age * 26,
       4 + age * 10,
       (1 - age) * 0.45,
-    );
+    ));
   }
-  v.image(S.bus(v), x, y);
+  drawn.push(v.place(S.bus(v), x, y));
   const turn = x * 0.07;
   for (const wx of [48, 172])
-    put(v, S.wheel(v), { x: x + wx, y: y + 98, px: 15, py: 15, rot: turn });
+    drawn.push(put(v, S.wheel(v), { x: x + wx, y: y + 98, px: 15, py: 15, rot: turn }));
   if (t !== null && t > 0.6) {
     // a passenger waves out of the window on the way back
-    v.circle(x + 34 + Math.sin(s.frame * 0.4) * 4, y + 8, 4, {
+    drawn.push(v.circle(x + 34 + Math.sin(s.frame * 0.4) * 4, y + 8, 4, {
       fill: "#f4b6b4",
-    });
+    }));
   }
+  return drawn;
 }
 
 // ── Speech, hover glints, weather ─────────────────────────────────
@@ -792,7 +831,8 @@ interface Placed {
 const overlaps = (a: Placed, b: { x: number; y: number; w: number }): boolean =>
   Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 4 && Math.abs(a.y - b.y) < 32;
 
-export function bubbles(v: View, s: Scene): void {
+export function bubbles(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const placed: Placed[] = [];
   for (const id of IDS) {
     const b = BUBBLES[id];
@@ -819,11 +859,11 @@ export function bubbles(v: View, s: Scene): void {
   // all tails first, then all boxes: a long tail passes behind other bubbles, never over their words
   const paper = { fill: "#fffdf4", stroke: "#3b2a24", weight: 2 };
   for (const p of placed)
-    v.triangle(p.x - 6, p.y + 10, p.x + 6, p.y + 10, p.tipX, p.tipY, paper);
+    out.push(v.triangle(p.x - 6, p.y + 10, p.x + 6, p.y + 10, p.tipX, p.tipY, paper));
   for (const p of placed) {
-    v.rect(p.x - p.w / 2, p.y - 13, p.w, 25, paper);
-    v.rect(p.x - 7, p.y + 8, 14, 5, { fill: "#fffdf4" });
-    v.text(
+    out.push(v.rect(p.x - p.w / 2, p.y - 13, p.w, 25, paper));
+    out.push(v.rect(p.x - 7, p.y + 8, 14, 5, { fill: "#fffdf4" }));
+    out.push(v.text(
       p.text,
       { x: p.x, y: p.y },
       {
@@ -834,15 +874,17 @@ export function bubbles(v: View, s: Scene): void {
         align: "center",
         valign: "middle",
       },
-    );
+    ));
   }
+  return out;
 }
 
-export function hoverGlint(v: View, s: Scene): void {
-  if (s.hover === "" || act(s, s.hover) !== null) return;
+export function hoverGlint(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
+  if (s.hover === "" || act(s, s.hover) !== null) return out;
   const b = boxOf(s, s.hover);
   const k = Math.sin(s.frame * 0.25);
-  put(v, S.glint(v), {
+  out.push(put(v, S.glint(v), {
     x: b.x + b.w - 4,
     y: b.y + 6,
     px: 12,
@@ -850,18 +892,20 @@ export function hoverGlint(v: View, s: Scene): void {
     rot: s.frame * 0.05,
     alpha: 0.75 + k * 0.25,
     scale: 1.1 + k * 0.3,
-  });
+  }));
+  return out;
 }
 
 /** Lit windows and the lamp, after the night shade, with the screen blend already set. */
-export function lights(v: View, s: Scene): void {
+export function lights(v: View, s: Scene): Drawing {
+  const out: Drawing[] = [];
   const g = S.glow(v);
   const k = s.night ? 0.75 : 0.45;
   for (const [x, y] of LIT_WINDOWS)
-    put(v, g, { x, y, px: 80, py: 80, scale: 0.6, alpha: k, blend: "screen" });
+    out.push(put(v, g, { x, y, px: 80, py: 80, scale: 0.6, alpha: k, blend: "screen" }));
   const w = act(s, "window");
   if (w !== null && w > 0.04 && w < 0.94)
-    put(v, g, {
+    out.push(put(v, g, {
       x: 90,
       y: 318,
       px: 80,
@@ -869,28 +913,31 @@ export function lights(v: View, s: Scene): void {
       scale: 0.6,
       alpha: k,
       blend: "screen",
-    });
+    }));
   if (s.evening || act(s, "lamp") !== null)
-    v.image(g, 609 - 80, 400 - 80, {
+    out.push(v.place(g, 609 - 80, 400 - 80, {
       opacity: s.night ? 1 : 0.8,
       blend: "screen",
-    });
+    }));
+  return out;
 }
 
-export function rain(v: View, frame: number): void {
+export function rain(v: View, frame: number): Drawing {
+  const out: Drawing[] = [];
   for (let i = 0; i < 110; i += 1) {
     const x = ((i * 97.3 + frame * 3) % 1040) - 20;
     const y = (i * 53.7 + frame * 14) % 760;
-    v.line(x, y, x - 4, y + 14, {
+    out.push(v.line(x, y, x - 4, y + 14, {
       stroke: "rgba(210,225,250,0.7)",
       weight: 1.5,
-    });
+    }));
   }
   for (let i = 0; i < 8; i += 1) {
     const k = ((frame + i * 13) % 40) / 40;
-    v.ellipse(60 + i * 123, i % 2 === 0 ? 590 : 728, (6 + k * 22) / 2, (2 + k * 6) / 2, {
+    out.push(v.ellipse(60 + i * 123, i % 2 === 0 ? 590 : 728, (6 + k * 22) / 2, (2 + k * 6) / 2, {
       stroke: "rgba(220,235,250,0.5)",
       weight: 1.5,
-    });
+    }));
   }
+  return out;
 }
