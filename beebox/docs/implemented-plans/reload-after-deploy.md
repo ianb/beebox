@@ -1,9 +1,9 @@
 ---
 title: "Reload a stale tab after a deploy"
-status: active
+status: implemented
 workstream: reload-after-deploy
 issues:
-  - ../../../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md
+  - ../../../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md
 ---
 # Reload a stale tab after a deploy
 

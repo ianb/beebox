@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked for it
 priority: normal
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-16):** Resolved by branch worktree-reload-after-deploy (305cbc81a..d50752066): build identity, build.watch handshake, auto-reload when safe, banner, debug-log lines, loop guard. iOS covered web-only, not device-tested.
 
 When the deployed server updates while a client (web tab or iOS webview) is
 already open, the client keeps running the **old** bundle against the **new**
@@ -59,7 +62,7 @@ removes the whole category of "worked after I refreshed" ghosts.
 
 ## Audit 2026-10-22
 
-[Stale web bundle detection](../closed/features/2026-08-12-stale-web-bundle-detection.md) was closed into this issue. It adds three points:
+[Stale web bundle detection](2026-08-12-stale-web-bundle-detection.md) was closed into this issue. It adds three points:
 
 - A stale iOS webview made a deployed fix look broken and cost a debugging round. A stale client looks the same as a failed fix.
 - A check on `visibilitychange` or app foreground matches that failure (the app resumes days later). The native shell could also reload a page older than a threshold.
