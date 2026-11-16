@@ -1,6 +1,6 @@
 ---
 title: "finish-preflight reports the delta since a tested revision"
-status: draft
+status: implemented
 workstream: finish-preflight-merge-state
 issues:
   - ../../../issues/closed/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md
