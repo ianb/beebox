@@ -196,7 +196,7 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         >
           Accept
         </Button>
-        <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
+        <Button id={controlAddress("bbx-composition-commit", instance)} label="Commit composition" title="Commit: record this version in the card's history. Edits save to disk on their own." size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Commit</Button>
         <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
       {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is broken, so the marks show as raw text and nothing saves. Undo (Ctrl/⌘+Z), or fix the tag in the text: each opening tag needs its closing tag.</ErrorText> : null}

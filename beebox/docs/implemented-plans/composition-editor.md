@@ -76,6 +76,13 @@ that reaches only kept tags steps the cursor over them. A pasted unpaired tag
 can still break the text; the editor then says that nothing saves until the
 tag is fixed, and how.
 
+**Commit button (2026-11-16):** the boxholder renamed the Save button to
+Commit, since autosave already writes every edit to disk and the button only
+adds a commit. The status reads "Saved" after an autosave and "Committed"
+after the button. Done writes what is unsaved and closes; it does not
+commit. The commit trailer stays `Composition-Save: person`, so existing
+history reads the same. "Save" below means this button.
+
 **Open question:** Save commits the whole card, so uncommitted agent edits
 outside the region are committed with it under the `Composition-Save: person`
 trailer. Today the trailer describes the button press, not the content. The
