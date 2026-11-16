@@ -283,6 +283,66 @@ corpus, then the hand-written sketches, then validation, then speed.
   the three ports and the cache cases render the same bytes
   (`scratch/stage5/a4b/compare.sh`). The walker's record step plus walk is
   measured once in Chromium.
+- **As built (R1).** Commits c614c6756 (the walk) and a2d7a9792 (the review fix).
+  Scripts and logs are in `scratch/stage5/rs1/`.
+  - **Baselines (item 0).** The Stage 4 speed pages, copied to
+    `scratch/stage5/rs1/` and pointed at `mountSketch` and at the ports'
+    gallery homes, measured at d1d08b5ee under the GPU lock. The machine
+    was busy (Spotlight indexing, other sessions' builds), so fps moved
+    widely between equal runs; the record step was steady. Medians:
+
+    | | Walker fps | Walker record (rAF) | Record alone | Six figures fps | Pointer p95 ms |
+    |---|---|---|---|---|---|
+    | Before, run 1 | 55.1 | 2.2 | 1.9 | 20.3 | 75 |
+    | Before, run 2 | 24.5 | 2.7 | 1.8 | 18.9 | 204 |
+    | After R1 | 42.1 | 2.6 | 2.0 | 19.3 | 125 |
+
+    So the walk adds about 0.1–0.2 ms to the walker's record step in
+    Chromium. R5 measures again on a quiet machine.
+  - **`out/rs-before/`.** Every gallery exercise (48) at its `meta.yaml`
+    frames and every example (13) at the CLI's defaults with its events
+    file, rendered at d1d08b5ee (`render-all.ts`). R1's tree renders all 61
+    with the same PNG bytes and the same transcripts, warnings included
+    (`out/rs-r1/`).
+  - **What moved.** As planned, with two differences. `holdsNonReceiving`
+    stays at the group call: it reads only the children, which R2's group
+    constructor holds too. Text facts (the bounds, and for `keepInside` a
+    copy of the box and options) live in a `WeakMap` on the recorder rather
+    than under a symbol key, so nodes keep their shape and `deepEqual`
+    ignores them. `v.text` lays text out under the identity; for a
+    `keepInside` label it still returns where the walk will put it, since
+    the builder knows the transform.
+  - **Call sites.** Testing mode keeps a stack for each shape, text, place,
+    light and group node. An effects-scale error found by the walk names
+    the node path (`… in picture "b" [0.4] > at #1 > rect #1`) and, in
+    testing mode, carries the stack of the call that made the node, so the
+    transcript lists the sketch's lines as before. Light warnings outside
+    testing mode have no ` (at …)`; in the browser's bundled stacks they had
+    none already. `nodeName` moved from `gpu/node-path.ts` to
+    `scene/outline.ts`, since layout-check refuses a recorder import of a
+    gpu helper.
+  - **Checkpoint.** canvas-loop typecheck, lint and tests pass (209, and
+    198 with 3 todo on the GPU); `gallery:check` passes all 48; the three
+    ports and the cache cases render the same bytes (raw RGBA over many
+    frames at ratio 1 and 2, and the CLI's PNGs and transcripts);
+    beebox typecheck and layout-check pass.
+  - **Drift from the plan's citations.** The ports moved from
+    `src/examples/scene-ports/` to `gallery/intra-walk-styles`,
+    `gallery/intra-rooms` (room `hallway`) and `gallery/balance-reaction-2`,
+    so `scratch/stage5/a4b/compare.sh` and `hashes.ts` no longer run;
+    copies in `scratch/stage5/rs1/` point at the gallery. The browser
+    surface's draw is at `browser/scene/surface.ts:140-147`, not
+    `:132-139`. The recorder citations in `view.ts`, `off-canvas.ts`,
+    `text-checks.ts` and `notes.ts` held at d1d08b5ee.
+  - **Review.** Codex (`gpt-6-sol`) traced the placement, mask, text,
+    re-record and stand-in paths and found no changed gate or transform.
+    It found an error in a picture body named no picture; fixed, with a
+    test that fails without it. It asked for `nonReceiving` to move into
+    the walk; not taken, for the reason above.
+  - **For R2.** Walk errors carry the node's stack only in testing mode.
+    `TextFacts.keep` is where R2's text constructor puts its copied inputs.
+    The walk returns the same array when nothing changed; R2's paper scope
+    will be its first frequent replacement.
 
 ### Track 2: constructors return, `draw` returns (chunk R2)
 
