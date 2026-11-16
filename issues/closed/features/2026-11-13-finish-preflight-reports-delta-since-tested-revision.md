@@ -1,11 +1,14 @@
 ---
 title: "finish-preflight reports what changed since the tested revision"
-workstream: unattached
+workstream: finish-preflight-merge-state
 area: bin
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261113-003305
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-15):** bin/finish-preflight --tested <rev> (bin/finish-preflight-delta.ts): an explicit flag, not a recorded revision, because the caller's own runs are the usual evidence and no recorder sees them. Reports reach only; skips nothing. Plan: finish-preflight-tested-delta.
 
 The finish agent reuses a passing check when the delta since its tested
 revision cannot affect it (`.claude/agents/finish.md` step 3). Preflight still

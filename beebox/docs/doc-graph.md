@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-15T23:38:03Z
-Total documents: 663
+Generated: 2026-11-16T02:10:35Z
+Total documents: 664
 
 ## Issues
 
@@ -50,6 +50,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/figure-check.md** — "Figure verification: bbx figure run, the figure log, and teaching" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.moves.subplan.md** — "Layout moves: bring the tree to zero layout-check findings" (149 lines) · shipped history · implemented
+- **docs/implemented-plans/finish-preflight-tested-delta.md** — "finish-preflight reports the delta since a tested revision" (212 lines) · shipped history · implemented
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines) · implementation review
 - **docs/implemented-plans/interrupted-chat-wake.md** — "An interrupted chat wakes itself to decide about its unfinished work" (180 lines) · shipped history · implemented
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines) · implementation review
@@ -227,6 +228,7 @@ Referenced by:
 - docs/implemented-plans/feedback-as-cards.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/file-layout.check.subplan.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/file-layout.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/finish-preflight-tested-delta.md:47 (mention) — - Root `AGENTS.md`: agent and skill files only grow unless pruned; the
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/frontend-unify-formatters-refresh-storage.md:59 (mention) — - Root `AGENTS.md`, "Implement and verify": reuse the platform mechanism
@@ -2200,7 +2202,7 @@ Referenced by:
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - docs/plugins.md:45 (mention) — README.md     What it is · Setup · Conventions · Migration · Uninstall
 - src/dev/AGENTS.md:13 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
-- ../.claude/agents/finish.md:96 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. Move with
+- ../.claude/agents/finish.md:98 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. Move with
 - ../AGENTS.md:68 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
 - ../dev/devprocess-talk/reports/sweep-instructions.md:322 (mention) — - **Lives in:** `beebox/src/dev/doc-check/` (check.ts, file-paths.ts, frontmatter.ts, link-repair.ts, private-link.ts) +
 - ../dev/devprocess-talk/reports/sweep-quality.md:227 (mention) — - **Lives in:** `beebox/src/dev/doc-check/`, `.husky/pre-commit` ("Any commit touching markdown runs the fast doc refere
@@ -3690,7 +3692,7 @@ Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
 - docs/design/representation.md:71 (mention) — ladder instead (`trust.md`).
 - docs/implemented-plans/box-backups.md:72 (mention) — - `docs/architecture/spirit.md`, “You should be able to see the gears,” favors an inspectable result over a silent timer
-- docs/implemented-plans/composition-editor.design.md:72 (link) — [trust.md](../design/trust.md): the agent changes the composition on
+- docs/implemented-plans/composition-editor.design.md:74 (link) — [trust.md](../design/trust.md): the agent changes the composition on
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
 - docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
@@ -5223,10 +5225,10 @@ References:
 
 #### docs/implemented-plans/composition-editor.design.md
 
-Title: "Composition editor: design" | 135 lines | shipped history | implemented
+Title: "Composition editor: design" | 137 lines | shipped history | implemented
 
 Referenced by:
-- docs/implemented-plans/composition-editor.md:65 (link) — See [composition-editor.design.md](composition-editor.design.md).
+- docs/implemented-plans/composition-editor.md:76 (link) — See [composition-editor.design.md](composition-editor.design.md).
 
 References:
 - → docs/implemented-plans/composition-editor.md (link)
@@ -5234,7 +5236,7 @@ References:
 
 #### docs/implemented-plans/composition-editor.md
 
-Title: "Composition editor" | 621 lines | shipped history | implemented
+Title: "Composition editor" | 632 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/composition-editor.design.md:9 (link) — **Parent plan:** [composition-editor.md](composition-editor.md)
@@ -6151,6 +6153,14 @@ References:
 - → docs/plans/ios-app-intent-capture.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/triage.md (mention)
+
+#### docs/implemented-plans/finish-preflight-tested-delta.md **[ORPHAN]**
+
+Title: "finish-preflight reports the delta since a tested revision" | 212 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md (frontmatter)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/first-run-openers.md
 
@@ -8505,7 +8515,7 @@ References:
 Title: "A card body does not remount when only its surroundings change" | 370 lines | shipped history | implemented
 
 Referenced by:
-- docs/implemented-plans/composition-editor.md:150 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
+- docs/implemented-plans/composition-editor.md:161 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
 - docs/implemented-plans/contents-menu-stable.md:19 (mention) — `beebox/docs/implemented-plans/stable-card-body.md`). Searched open `issues/`
 - docs/implemented-plans/runtime-lint.md:108 (mention) — `useMemo` (the 10-26 cause, `stable-card-body.md`) slip past it.
 - ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
@@ -10878,7 +10888,7 @@ References:
 Title: "Source Editor Plan" | 150 lines | proposal | active
 
 Referenced by:
-- docs/implemented-plans/composition-editor.md:152 (mention) — - **The source-editor plan** (`docs/plans/source-editor.md`) chose deliberate
+- docs/implemented-plans/composition-editor.md:163 (mention) — - **The source-editor plan** (`docs/plans/source-editor.md`) chose deliberate
 - docs/implemented-plans/docs-reorg.md:45 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/reports/plan-directory-migration-history-2026-09-13.md:21 (mention) — `source-editor.md` (unimplemented proposal). The intake → triage → handle
 
@@ -12094,7 +12104,7 @@ Referenced by:
 - docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/chat-progress-fold.md:166 (mention) — - The agent guide's line on command descriptions (`guide.md`, SPEAKING) stays.
-- docs/implemented-plans/composition-editor.md:214 (mention) — - **Quoting law.** `src/core/agent-guide/guide.md:39-55`. Unchanged; inside a
+- docs/implemented-plans/composition-editor.md:225 (mention) — - **Quoting law.** `src/core/agent-guide/guide.md:39-55`. Unchanged; inside a
 - docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
 - docs/implemented-plans/dup-sweep-backend-final.md:184 (mention) — `core/agent-guide/guide.md:437` and `core/agent-guide/ledger.yaml:507`.
 - docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm

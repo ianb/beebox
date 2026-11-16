@@ -60,7 +60,7 @@ const NONE_DIRS = new Set([
 const APPLE_DIRS = new Set(["apple-shared", "ios-app", "mac-app"]);
 
 /** Root files that change what the root scripts check. */
-const ROOT_FILES = new Set([
+export const ROOT_FILES: ReadonlySet<string> = new Set([
   "eslint.config.mjs",
   "knip.json",
   "package.json",
@@ -491,3 +491,4 @@ export function parseTrailers(messages: string[]): { issues: string[]; plans: st
   }
   return { issues: [...issues].toSorted(), plans: [...plans].toSorted() };
 }
+

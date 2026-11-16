@@ -6,10 +6,11 @@
  *   bin/finish-preflight             # short text block
  *   bin/finish-preflight --json      # the sheet
  *   bin/finish-preflight --no-merge  # re-read the sheet without merging again
+ *   bin/finish-preflight --tested <rev>  # also: which checks the changes since <rev> reach
  *   bin/finish-preflight --help
  *
  * Exit: 0 sheet printed, 2 wrong place / broken private mount / bad arguments,
- * 3 merge conflict.
+ * 3 merge conflict, or merge state it will not clear (finish-preflight-merge.ts).
  *
  * See plan:change-based-test-selection, "Revision
  * 2026-08-25 — test economics", mechanism E2.
@@ -22,8 +23,9 @@ import { parseArgs } from "node:util";
 import { git, gitBranch, gitTopLevel } from "./lib/git.js";
 import { changedPaths } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
-import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
+import { clearLeftoverMerge, mergeMain, type MergeResult } from "./finish-preflight-merge.js";
 import { selection, type SelectedTests } from "./finish-preflight-select.js";
+import { formatSinceTested, resolveTested, sinceTested, type SinceTested } from "./finish-preflight-delta.js";
 import {
   NotAWorktreeBranchError,
   PreflightError,
@@ -62,6 +64,8 @@ export interface Sheet {
   issues: string[];
   diff: { lines: number; sourceLines: number };
   trackO: { recommended: boolean; reason: string };
+  /** With `--tested <rev>`: the paths since that revision and the sheet checks they reach. */
+  sinceTested: SinceTested | null;
 }
 
 const SKIP_RULE =
@@ -165,7 +169,7 @@ function planDocs(root: string, workstream: string): string[] {
   });
 }
 
-export function buildSheet(input: { merge: boolean }): Sheet {
+export function buildSheet(input: { merge: boolean; tested?: string }): Sheet {
   const root = gitTopLevel();
   const branch = gitBranch(root);
   const worktree = basename(root);
@@ -174,6 +178,8 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   }
   const workstream = branch.replace(/^worktree-/, "");
   const leg = privateLeg(root);
+  // Before the merge, so `--tested HEAD` names the tip the caller tested.
+  const tested = input.tested === undefined ? null : { rev: input.tested, sha: resolveTested(root, input.tested) };
   const stragglers = git(["status", "--porcelain"], { cwd: root, onError: "throw" })
     .split("\n")
     .filter((line) => line !== "")
@@ -183,9 +189,10 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const mergeSkipped =
     !input.merge &&
     spawnSync("git", ["merge-base", "--is-ancestor", "main", "HEAD"], { cwd: root }).status !== 0;
+  const cleared = input.merge ? undefined : clearLeftoverMerge(root);
   const merge: MergeResult = input.merge
     ? mergeMain(root)
-    : { status: "up-to-date", broughtPaths: [], resolved: [] };
+    : { status: "up-to-date", broughtPaths: [], resolved: [], ...(cleared === undefined ? {} : { clearedMergeHead: cleared }) };
 
   const changed = changedPaths({ base: "main", cwd: root });
   const packages = new Set(packageOwnerDirs(root));
@@ -201,7 +208,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the
   // selected set), so the two cannot disagree.
-  const selectedTests = selection(root, grouped.packages);
+  const selectedTests = grouped.packages.includes("beebox") ? selection({ root, base: "main" }) : null;
   const verification = verificationCommands({
     paths: changed,
     workspacePackages: packages,
@@ -232,6 +239,17 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     issues: trailers.issues,
     diff,
     trackO: trackORecommendation({ codeChanged, sourceLines: diff.sourceLines }),
+    sinceTested:
+      tested === null
+        ? null
+        : sinceTested({
+            root,
+            ...tested,
+            packages,
+            hasScript: hasScriptIn(root),
+            verification,
+            selectorFailed: selectedTests?.failed === true,
+          }),
   };
 }
 
@@ -252,6 +270,11 @@ export function formatSheet(sheet: Sheet): string {
   lines.push(`worktree ${sheet.worktree} (${sheet.branch})`);
   const brought = sheet.merge.broughtPaths.length;
   lines.push(`merge main: ${sheet.merge.status}${brought > 0 ? ` (+${String(brought)} paths)` : ""}`);
+  if (sheet.merge.clearedMergeHead !== undefined) {
+    lines.push(
+      `  cleared a leftover MERGE_HEAD ${sheet.merge.clearedMergeHead.slice(0, 9)} (git merge --quit): HEAD already records that merge`,
+    );
+  }
   if (sheet.merge.resolved.length > 0) {
     list("  conflicts resolved by rule (check them in the diff review)", sheet.merge.resolved);
   }
@@ -260,6 +283,7 @@ export function formatSheet(sheet: Sheet): string {
     lines.push(`  ${command.skip === undefined ? "run " : "skip"} ${command.command}${command.skip === undefined ? "" : `  (${command.skip})`}`);
   }
   if (sheet.verification.length === 0) lines.push("  nothing to verify");
+  if (sheet.sinceTested !== null) lines.push(...formatSinceTested(sheet.sinceTested));
   lines.push(`skipTypecheckLint: ${String(sheet.skipTypecheckLint.value)} — ${sheet.skipTypecheckLint.reason}`);
   lines.push(`  rule: ${SKIP_RULE}`);
   list("stragglers (never commit these blind)", sheet.stragglers);
@@ -291,12 +315,14 @@ export function formatSheet(sheet: Sheet): string {
   return lines.join("\n");
 }
 
-const USAGE = `usage: bin/finish-preflight [--json] [--no-merge]
+const USAGE = `usage: bin/finish-preflight [--json] [--no-merge] [--tested <rev>]
 
 Merges main into this worktree branch and prints the finish decision sheet.
 
   --json      print the sheet as JSON
   --no-merge  re-read the sheet without merging main again
+  --tested <rev>  also list the paths changed since <rev> (an ancestor of HEAD;
+              resolved before the merge) and the checks they reach
   -h, --help  print this and exit`;
 
 /** Strict, like finish-verify: `--help` must never merge main. */
@@ -306,7 +332,7 @@ export function main(argv: string[]): number {
     ({ values } = parseArgs({
       args: argv,
       strict: true,
-      options: { help: { type: "boolean", short: "h" }, json: { type: "boolean" }, "no-merge": { type: "boolean" } },
+      options: { help: { type: "boolean", short: "h" }, json: { type: "boolean" }, "no-merge": { type: "boolean" }, tested: { type: "string" } },
     }));
   } catch (e) {
     throw new UsageError(e instanceof Error ? e.message : String(e), USAGE);
@@ -315,7 +341,10 @@ export function main(argv: string[]): number {
     console.log(USAGE);
     return 0;
   }
-  const sheet = buildSheet({ merge: values["no-merge"] !== true });
+  const sheet = buildSheet({
+    merge: values["no-merge"] !== true,
+    ...(values.tested === undefined ? {} : { tested: values.tested }),
+  });
   console.log(values.json === true ? JSON.stringify(sheet, null, 2) : formatSheet(sheet));
   return 0;
 }
