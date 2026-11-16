@@ -51,7 +51,7 @@ reason with its tests.
 | [Dev stubs](testing/dev-stubs.md) | Does the streaming UI behave, and is every state of a component reachable? Checked by hand in a browser. | no | minutes |
 | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of seconds |
-| [Lima VM](../deploy/server-bin/bbx-turn-install.smoke.sh) | Does a systemd unit, root helper, cgroup limit, or Linux GPU path behave? This Mac has no Docker; `limactl list` shows the VMs earlier work kept. | no | minutes |
+| Lima VM (example: [TURN installer smoke](../deploy/server-bin/bbx-turn-install.smoke.sh)) | Does a systemd unit, root helper, cgroup limit, or Linux GPU path behave? Use Lima where a script assumes Docker; `limactl list` shows existing VMs. | no | minutes |
 | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expensive; on demand |
 | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during agent sessions. | blocks bad commits | automatic |
 | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by agents, each verified by a different agent than the one that wrote it. | no | many model turns |
