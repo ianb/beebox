@@ -1,6 +1,6 @@
 ---
 title: "Detect a server update and prompt the client to reload"
-workstream: unknown
+workstream: reload-after-deploy
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked for it

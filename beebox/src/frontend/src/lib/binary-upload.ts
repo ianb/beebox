@@ -18,6 +18,8 @@
  * layer, and the server buffers it directly.
  */
 
+import { registerReloadBlocker } from "./reload-blockers";
+
 /** Bytes moved so far for one upload. `total` is 0 when the length is unknown. */
 export interface UploadProgressEvent {
   loaded: number;
@@ -87,7 +89,7 @@ export function uploadBinary(options: BinaryUploadOptions): Promise<void> {
     }
 
     const xhr = new XMLHttpRequest();
-    const teardown: Array<() => void> = [];
+    const teardown: Array<() => void> = [registerReloadBlocker("upload", () => true)];
     let lastProgressAt = Date.now();
     let settled = false;
 

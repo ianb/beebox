@@ -26,8 +26,9 @@
  * derives its text-only `InputStore` view with `createInputStoreAdapter`.
  */
 
-import { createContext, useContext, useState, useSyncExternalStore } from "react";
-import { createEmissionStore, type EmissionStore } from "../../input/emission-store";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { createEmissionStore, type EmissionDraft, type EmissionStore } from "../../input/emission-store";
+import { registerReloadBlocker } from "../../lib/reload-blockers";
 
 export interface InputStore {
   /** Current composer text. Read at call-time; does not subscribe. */
@@ -85,12 +86,19 @@ export function useEmissionStoreInstance(boxSlug: string | undefined): EmissionS
   // under the new box's key). Swap in a fresh store when the slug changes —
   // the render-time state-from-props pattern, not an effect, so no frame
   // ever sees the stale store.
+  let store = instance.store;
   if (instance.boxSlug !== boxSlug) {
     const next = { boxSlug, store: createEmissionStore() };
     setInstance(next);
-    return next.store;
+    store = next.store;
   }
-  return instance.store;
+  useEffect(() => registerReloadBlocker("composer", () => draftHoldsSomething(store.get())), [store]);
+  return store;
+}
+
+/** Text (any, even whitespace: the person typed it), an image still encoding or attached, a file, or a selection. */
+function draftHoldsSomething(draft: EmissionDraft): boolean {
+  return draft.text !== "" || draft.pendingImages > 0 || draft.images.length > 0 || draft.files.length > 0 || draft.selections.length > 0;
 }
 
 export function useInputStore(): InputStore {

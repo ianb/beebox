@@ -5,6 +5,7 @@ import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
 import { perBoxIdentityAssetPattern } from "../shared/box-identity-asset-routes.js";
 import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin/plugin";
 import { bootPreloadPlugin } from "./src/dev/boot-preload-plugin/plugin";
+import { buildIdentityPlugin } from "./src/dev/build-identity-plugin/plugin";
 import { precompressPlugin } from "./src/dev/precompress-plugin/plugin";
 
 // Vite reads these build controls while constructing its server/build config;
@@ -83,6 +84,7 @@ export default defineConfig({
         : undefined,
     ),
     bootPreloadPlugin(),
+    buildIdentityPlugin(),
     precompressPlugin(),
     ...(ANALYZE_BUNDLE ? [bundleAnalysisPlugin()] : []),
   ],
