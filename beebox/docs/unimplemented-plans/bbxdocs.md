@@ -1,6 +1,6 @@
 ---
 title: "_bbxdocs: one read-only area for Bee Box's own docs, and a person-facing changelog"
-status: draft
+status: parked
 workstream: user-changelog
 issues:
   - ../../../issues/docs-and-chores/2026-11-10-generated-box-docs-do-not-name-their-source.md
