@@ -170,9 +170,9 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   return (
     <Frame host={host}>
       {/* Sticky at the pane's top. When the card has its own sticky Contents
-          button (z-index 3), the bar sits below it, and an upward shadow of
-          card paper hides the text scrolling past in the strip between. */}
-      <Row gap="sm" align="center" justify="end" wrap className="sticky top-0 z-[2] [.bbx-card-front:has(>.bbx-card-contents)_&]:top-9 [.bbx-card-front:has(>.bbx-card-contents)_&]:shadow-[0_-2.25rem_0_0_var(--bbx-paper)] rounded-t border-b border-card-pen bg-card-tint px-2 py-0.5 print:hidden">
+          button (z-index 3, shorter than the bar), the bar keeps its right
+          end clear and the button sits there, above the bar. */}
+      <Row gap="sm" align="center" justify="end" wrap className="sticky top-0 z-[2] [.bbx-card-front:has(>.bbx-card-contents)_&]:pr-12 rounded-t border-b border-card-pen bg-card-tint px-2 py-0.5 print:hidden">
         <span className="text-sm font-semibold text-card-pen">Composition</span>
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
