@@ -44,8 +44,8 @@ export function saveStateText(state: SaveState): string {
   switch (state.kind) {
     case "idle": return "";
     case "saving": return "Saving…";
-    case "saved-disk": return "Saved to disk";
-    case "saved": return "Saved";
+    case "saved-disk": return "Saved";
+    case "saved": return "Committed";
     case "not-saved": return `Not saved: ${state.error}, retrying`;
     case "not-synced": return state.retrying ? `Not synced: ${state.error}, retrying` : `Not synced: ${state.error}`;
     case "commit-failed": return state.message;
@@ -217,7 +217,7 @@ export class CompositionSync {
     const local = this.opts.editor.text();
     const { merged, conflicts } = mergeComposition(this.base, { local, remote: theirs });
     this.opts.editor.applyRemote({ changes: diffToChanges(local, merged), conflicts });
-    // The disk now holds text the last commit does not: no longer "Saved".
+    // The disk now holds text the last commit does not: no longer "Committed".
     if (this.state.kind === "saved") this.setState({ kind: "saved-disk" });
     this.base = theirs;
     this.syncedHash = remote.regionHash;
