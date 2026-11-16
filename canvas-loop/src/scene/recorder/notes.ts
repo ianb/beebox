@@ -66,10 +66,10 @@ export class RecorderNotes {
     this.#note(this.#hints, { once: `hint ${once}`, message, kind: "hint" });
   }
 
-  /** A top-level placement of a picture (testing mode): hints when its scale or rotation is new every frame. */
-  placed(version: PictureVersion, matrix: Mat): void {
-    const hint = this.#scales.placed(version, matrix);
-    if (hint !== undefined) this.hint(`scale ${version.key}`, hint);
+  /** A top-level placement of a picture (testing mode), made at `line`: hints when its scale or rotation is new every frame. */
+  placed(version: PictureVersion, a: { matrix: Mat; line: string | undefined }): void {
+    const hint = this.#scales.placed(version, a.matrix);
+    if (hint !== undefined) this.#note(this.#hints, { once: `hint scale ${version.key}`, message: hint, kind: "hint", at: a.line === undefined ? "" : ` (at ${a.line})` });
   }
 
   #note(into: string[], a: { once: string; message: string; kind: "warn" | "hint"; at?: string }): void {

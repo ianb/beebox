@@ -99,6 +99,8 @@ export function sketchLine(): string | undefined {
 /** The current call's place, found only when `line` is read: V8 formats a stack on first read, so keeping one is cheap. */
 export interface CallSite {
   readonly line: string | undefined;
+  /** The whole stack, for an error found after the call that it is about. */
+  readonly stack?: string | undefined;
 }
 
 /** The current call's stack, kept for a check that decides later (after the frame, or after its render) whether to warn. */
@@ -109,6 +111,9 @@ export function callSite(): CallSite {
     get line() {
       line ??= { at: sketchFrames(error.stack)[0] };
       return line.at;
+    },
+    get stack() {
+      return error.stack;
     },
   };
 }

@@ -6,10 +6,11 @@
 // loop that draws past the edge (cobbles to x = 780 on a 720 canvas), are not
 // reported: some of what the line draws is on the canvas on some frame. A
 // line with unboxed text crossing the edge on every frame is reported too.
-// Each drawing's line comes from the stack, kept by its index in the frame
-// and its call, so an unchanged frame reads no stacks; once no line is a
-// candidate (after the first frame, candidates only drop out), nothing is
-// looked up at all.
+// Each drawing's line comes from the stack its call kept (the resolve walk
+// checks after `draw` returns), cached by its index in the frame and its
+// call, so an unchanged frame formats no stacks; once no line is a candidate
+// (after the first frame, candidates only drop out), nothing is looked up at
+// all.
 //
 // Bounds are conservative: a stroke's width, a brush's spread and the reach
 // of effects on the shape and on every group around it count as drawn, so
@@ -22,7 +23,7 @@
 // whose drawing stayed put warns on its own.
 import type { Effects } from "../../core/tea.js";
 import { maxScale } from "../mat.js";
-import { sketchLine } from "../call-site.js";
+import type { CallSite } from "../call-site.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, ShapeStyle } from "../nodes.js";
 import type { Box } from "./bounds.js";
 import { effectsReach, shapeBox, transformed, versionBox } from "./bounds.js";
@@ -145,21 +146,21 @@ export class OffCanvas {
     this.#frames++;
   }
 
-  /** A shape under `matrix` (to canvas coordinates); in a lit group (`lit`) a shadow caster is not checked. */
-  shape(what: string, a: { geom: Geom; style: ShapeStyle; matrix: Mat; lit: boolean }): void {
+  /** A shape under `matrix` (to canvas coordinates), drawn at `site`; in a lit group (`lit`) a shadow caster is not checked. */
+  shape(what: string, a: { geom: Geom; style: ShapeStyle; matrix: Mat; lit: boolean; site: CallSite | undefined }): void {
     if (!this.#open || (a.lit && (a.style.material?.castsShadow ?? false) !== false)) return;
-    this.#drawing(what, { box: transformed(a.matrix, shapeBox(a.geom, a.style)), crossing: false });
+    this.#drawing(what, { box: transformed(a.matrix, shapeBox(a.geom, a.style)), crossing: false, site: a.site });
   }
 
   /** A placement: the version's whole body under `matrix` (the placement's). One holding a light or a shadow caster can reach anywhere and is not checked. */
-  place(what: string, a: { version: PictureVersion | PixelsVersion; matrix: Mat }): void {
+  place(what: string, a: { version: PictureVersion | PixelsVersion; matrix: Mat; site: CallSite | undefined }): void {
     if (!this.#open) return;
     const body = versionBox(a.version);
-    if (body !== undefined) this.#drawing(what, { box: transformed(a.matrix, body), crossing: false });
+    if (body !== undefined) this.#drawing(what, { box: transformed(a.matrix, body), crossing: false, site: a.site });
   }
 
   /** Text's laid-out bounds (with any halo) under `matrix`; `unboxed` text that crosses the edge is reported too. */
-  text(what: string, a: { bounds: { x: number; y: number; w: number; h: number; size: number }; matrix: Mat; unboxed: boolean }): void {
+  text(what: string, a: { bounds: { x: number; y: number; w: number; h: number; size: number }; matrix: Mat; unboxed: boolean; site: CallSite | undefined }): void {
     if (!this.#open) return;
     const t = a.bounds;
     const box = transformed(a.matrix, { x0: t.x, y0: t.y, x1: t.x + t.w, y1: t.y + t.h });
@@ -167,13 +168,13 @@ export class OffCanvas {
     const slack = 0.2 * t.size * maxScale(a.matrix);
     const { width, height } = this.#canvas;
     const crossing = a.unboxed && this.#outer === 0 && (box.x0 < -1 || box.x1 > width + 1 || box.y0 < -slack || box.y1 > height + slack);
-    this.#drawing(what, { box, crossing });
+    this.#drawing(what, { box, crossing, site: a.site });
   }
 
-  #drawing(what: string, a: { box: Box; crossing: boolean }): void {
+  #drawing(what: string, a: { box: Box; crossing: boolean; site: CallSite | undefined }): void {
     const index = this.#index++;
     if (!this.#pending) return;
-    const line = this.#lineOf(index, what);
+    const line = this.#lineOf(index, { what, site: a.site });
     const off = this.#isOff(a.box);
     if (!off) this.#onCanvas.add(line);
     for (const [hit, into] of [[off, this.#offNow], [!off && a.crossing, this.#crossingNow]] as const) {
@@ -190,10 +191,11 @@ export class OffCanvas {
     return b.x1 + outer <= 0 || b.y1 + outer <= 0 || b.x0 - outer >= width || b.y0 - outer >= height;
   }
 
-  #lineOf(index: number, what: string): string {
+  #lineOf(index: number, a: { what: string; site: CallSite | undefined }): string {
+    const { what } = a;
     const known = this.#lineAt.get(index);
     if (known?.what === what) return known.line;
-    const line = sketchLine() ?? "";
+    const line = a.site?.line ?? "";
     this.#lineAt.set(index, { what, line });
     return line;
   }

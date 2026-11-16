@@ -4,27 +4,8 @@
 // renderer becomes a `GpuRenderError` naming the path (the innermost node,
 // where it was raised), with the original as its cause.
 import type { SceneNode } from "../scene/nodes.js";
+import { nodeName } from "../scene/outline.js";
 import { GpuRenderError, UnsupportedCallError } from "../scene/errors.js";
-
-/** A node's name in a path: its group name or picture key when it has one, else its call and place among its siblings (1-based). */
-export function nodeName(n: SceneNode, index: number): string {
-  switch (n.kind) {
-    case "group":
-      return n.name === undefined ? `group #${index}` : `group ${JSON.stringify(n.name)}`;
-    case "place":
-      return `place ${n.picture.kind} ${JSON.stringify(n.picture.key)}`;
-    case "shape":
-      return `${n.call} #${index}`;
-    case "background":
-    case "at":
-    case "clip":
-    case "mask":
-    case "text":
-    case "debug":
-    case "light":
-      return `${n.kind} #${index}`;
-  }
-}
 
 /** `error`, raised while lowering the node at `path`, as a render error naming the path; undefined for an error that is not the renderer's or already names one. */
 export function atPath(error: unknown, path: readonly string[]): GpuRenderError | undefined {

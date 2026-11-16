@@ -2,13 +2,19 @@
 // (core/errors.ts); these name what they do not do yet, or a GPU fault.
 import { SketchUsageError } from "../core/errors.js";
 
-/** A draft 2.2 call or option the scene recorder or renderer does not support yet. */
+/**
+ * A draft 2.2 call or option the scene recorder or renderer does not support
+ * yet. `at` is the node path, when a check after `draw` (the resolve walk)
+ * found it.
+ */
 export class UnsupportedCallError extends Error {
   name = "UnsupportedCallError";
   readonly call: string;
-  constructor(options: { call: string; detail?: string }) {
-    super(`${options.call} is not supported yet${options.detail === undefined ? "" : ` (${options.detail})`}`);
+  readonly detail: string | undefined;
+  constructor(options: { call: string; detail?: string; at?: string }) {
+    super(`${options.call} is not supported yet${options.detail === undefined ? "" : ` (${options.detail})`}${options.at === undefined ? "" : ` in ${options.at}`}`);
     this.call = options.call;
+    this.detail = options.detail;
   }
 }
 

@@ -1,9 +1,11 @@
 // The recorder: a draft 2.3 `View` whose calls add nodes to a scene instead of
 // painting. Arguments are captured by value at the call. Calls the recorder does
-// not support yet throw `UnsupportedCallError`, naming the call. Picture
-// versions live across frames; in testing mode (`audit`) each asked-for
-// version is recorded again and compared, and a difference warns. Warnings
-// name the sketch's line and are given once per run each.
+// not support yet throw `UnsupportedCallError`, naming the call. Checks that
+// need a node's ancestors run in the resolve walk (resolve.ts) once `draw`
+// returns, or once a picture body records. Picture versions live across
+// frames; in testing mode (`audit`) each asked-for version is recorded again
+// and compared, and a difference warns. Warnings name the sketch's line (each
+// node keeps its call's stack in testing mode) and are given once per run each.
 import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
@@ -12,11 +14,11 @@ import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
 import { UnsupportedCallError } from "../errors.js";
-import { IDENTITY, apply, axisScales, matrixOf, mul } from "../mat.js";
+import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
-import { versionName } from "../outline.js";
-import type { Geom, Mat, PaperSettings, SceneNode, ShapeNode } from "../nodes.js";
+import type { Geom, Mat, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
+import { callSite } from "../call-site.js";
 import type { CallSite } from "../call-site.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import { PictureTable, placedVersion } from "./pictures.js";
@@ -30,7 +32,9 @@ import { recordText } from "./text.js";
 import type { GlyphMissing } from "./text-checks.js";
 import { Audit } from "./audit.js";
 import { PureHelpers } from "./helpers.js";
-import { hasOpenLight, holdsNonReceiving, lightWarning, noLightWarning, resolveLight } from "./light.js";
+import { holdsNonReceiving, resolveLight } from "./light.js";
+import { Resolver } from "./resolve.js";
+import type { ResolveContext, TextFacts } from "./resolve.js";
 import { valueNoise } from "./noise.js";
 import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
@@ -46,10 +50,11 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly #table = new PictureTable();
   readonly #colors: ColorParser | undefined;
   readonly #notes: RecorderNotes;
-  /** Lit groups open around the current call, outside picture bodies (R8 warnings). */
-  #lit = 0;
-  /** Inside a mask's artwork, where lights do nothing (R8). */
-  #inMask = false;
+  readonly #resolver: Resolver;
+  /** Each text node's facts for the walk: kept for `keepInside`, and in testing mode for its checks. */
+  readonly #texts = new WeakMap<TextNode, TextFacts>();
+  /** Testing mode: the stack of the call that made each node, for the walk's warnings; one map per frame. */
+  #sites: WeakMap<SceneNode, CallSite> | undefined;
   #open: SceneNode[][] = [];
   #matrix: Mat = IDENTITY;
   #paper: PaperSettings = DEFAULT_PAPER;
@@ -75,6 +80,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#seed = options?.seed ?? 0;
     this.#params = options?.params;
     this.#colors = options?.colors;
+    this.#resolver = new Resolver({ notes: this.#notes, audit: this.#audit, text: this.#text, texts: this.#texts, sites: () => this.#sites });
   }
 
   /** The canvas size, or the picture's inside a picture body (section 5). */
@@ -96,23 +102,28 @@ export class SceneRecorder extends PureHelpers implements View {
 
   /** Run `draw` against a fresh scene and return what it recorded. */
   record(draw: (v: View) => void): FrameRecord {
-    const root: SceneNode[] = [];
+    const recorded: SceneNode[] = [];
     const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
-    ({ open: this.#open, matrix: this.#matrix, paper: this.#paper, size: this.#size, picture: this.#picture, out: this.#out, lit: this.#lit, inMask: this.#inMask } = { open: [root], matrix: IDENTITY, paper: DEFAULT_PAPER, size: this.#canvas, picture: undefined, out, lit: 0, inMask: false });
+    ({ open: this.#open, matrix: this.#matrix, paper: this.#paper, size: this.#size, picture: this.#picture, out: this.#out } = { open: [recorded], matrix: IDENTITY, paper: DEFAULT_PAPER, size: this.#canvas, picture: undefined, out });
+    this.#sites = this.#audit === undefined ? undefined : new WeakMap();
     this.#table.beginFrame();
     this.#notes.begin();
     this.#audit?.begin();
-    let standIns: SceneNode[];
+    let root: readonly SceneNode[];
+    let standIns: readonly SceneNode[];
     let notes: { warnings: string[]; hints: string[] };
+    const top: ResolveContext = { matrix: IDENTITY, size: this.#canvas, picture: undefined, lit: 0, inMask: false };
     try {
       draw(this);
+      root = this.#resolver.resolve(recorded, top);
       this.#audit?.end();
       this.#paper = DEFAULT_PAPER;
       // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
-      standIns = this.#text === undefined ? [] : this.#inside(() => drawStandIns(this, out.controls));
+      standIns = this.#text === undefined ? [] : this.#resolver.resolve(this.#inside(() => drawStandIns(this, out.controls)), top);
     } finally {
       notes = this.#notes.end();
       this.#open = [];
+      this.#sites = undefined;
     }
     return { scene: { ...this.#canvas, children: root }, ...out, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(out.controls)], standIns, ...notes };
   }
@@ -122,6 +133,8 @@ export class SceneRecorder extends PureHelpers implements View {
     if (this.#colors !== undefined) checkColours(node, this.#colors);
     const top = this.#open.at(-1);
     if (top === undefined) throw new UnsupportedCallError({ call: "drawing outside draw()" });
+    // Kept for the nodes the walk can warn about or refuse.
+    if (this.#sites !== undefined && (node.kind === "shape" || node.kind === "text" || node.kind === "place" || node.kind === "light" || node.kind === "group")) this.#sites.set(node, callSite());
     top.push(node);
   }
   /** Record `body`'s nodes; the paper it sets ends with it unless `keepPaper`. */
@@ -141,16 +154,8 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live(call);
     checkGeom(call, args.geom);
     const style = resolveStyle(args.style, { call, paper: this.#paper });
-    if (style.effects !== undefined) axisScales(this.#matrix, call);
     const node: ShapeNode = { kind: "shape", call, geom: args.geom, style };
     this.#add(node);
-    this.#audit?.shape(node, !this.#inMask);
-    // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
-    if (this.#picture === undefined && !this.#inMask) this.#audit?.offCanvas.shape(call, { geom: args.geom, style, matrix: this.#matrix, lit: this.#lit > 0 });
-  }
-  /** Where a light here does nothing (R8): inside a mask's artwork, or outside any lit group (a picture body may be placed lit). */
-  #unlit(): "mask" | "unlit" | undefined {
-    return this.#inMask ? "mask" : this.#lit === 0 && this.#picture === undefined ? "unlit" : undefined;
   }
   /** An output that is not drawing: only while `draw` runs, and never in a picture body. */
   #notInPicture(call: string): void {
@@ -201,18 +206,20 @@ export class SceneRecorder extends PureHelpers implements View {
     if (this.#text === undefined) throw new UnsupportedCallError({ call: `v.${call}`, detail: "this recorder was made without the runtime's text measurer" });
     return this.#text;
   }
-  #layText(...[content, box, options]: [string, TextBox, TextOptions?]): ReturnType<typeof recordText> {
-    return recordText(content, { box, options: options ?? {}, measurer: this.#measurer("text"), matrix: this.#matrix, canvas: this.#size });
+  #layText(content: string, at: { box: TextBox; options: TextOptions | undefined; matrix: Mat }): ReturnType<typeof recordText> {
+    return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: at.matrix, canvas: this.#size });
   }
-  text(...args: [string, TextBox, TextOptions?]): TextBounds {
-    const { node, bounds } = this.#layText(...args);
+  /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
+  text(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
+    const { node, bounds } = this.#layText(content, { box, options, matrix: IDENTITY });
     this.#add(node);
-    if (this.#picture === undefined && !this.#inMask) this.#audit?.offCanvas.text(`text ${JSON.stringify(node.content.slice(0, 24))}`, { bounds, matrix: this.#matrix, unboxed: args[1].w === undefined && args[2]?.keepInside !== true });
-    this.#audit?.text.text(node, { bounds, matrix: this.#matrix, seen: !this.#inMask });
-    return bounds;
+    const keepInside = options?.keepInside === true;
+    if (keepInside || this.#audit !== undefined) this.#texts.set(node, { bounds, unboxed: box.w === undefined && !keepInside, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
+    // The builder still knows the transform, so a kept-inside label's bounds are where the walk will put it.
+    return keepInside ? this.textBounds(content, box, options) : bounds;
   }
-  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#layText(...args).bounds;
+  textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
+    return this.#layText(content, { box, options, matrix: this.#matrix }).bounds;
   }
   textWidth(content: string, options?: TextOptions): number {
     return this.#measurer("textWidth").width(content, options);
@@ -239,22 +246,12 @@ export class SceneRecorder extends PureHelpers implements View {
   group(options: GroupOptions, body: () => void): void {
     this.#notes.live("group");
     const g = resolveGroup(options);
-    if (g.effects !== undefined) axisScales(this.#matrix, "group");
     let paper = this.#paper;
-    const lit = g.lighting === undefined ? 0 : 1;
-    this.#lit += lit;
-    const outer = this.#audit?.offCanvas.enter(g.effects, this.#matrix) ?? 0;
-    try {
-      const children = this.#inside(() => {
-        body();
-        paper = this.#paper;
-      });
-      if (g.lighting !== undefined && !hasOpenLight(children)) this.#notes.warn(`unlit ${g.name ?? ""}`, noLightWarning(g.name, g.lighting));
-      this.#add({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(children), paper, children });
-    } finally {
-      this.#lit -= lit;
-      this.#audit?.offCanvas.leave(outer);
-    }
+    const children = this.#inside(() => {
+      body();
+      paper = this.#paper;
+    });
+    this.#add({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(children), paper, children });
   }
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#notes.live("clip");
@@ -262,14 +259,7 @@ export class SceneRecorder extends PureHelpers implements View {
   }
   mask(maskBody: () => void, body: () => void): void {
     this.#notes.live("mask");
-    const outer = this.#inMask;
-    this.#inMask = true;
-    let mask: SceneNode[];
-    try {
-      mask = this.#inside(maskBody);
-    } finally {
-      this.#inMask = outer;
-    }
+    const mask = this.#inside(maskBody);
     this.#add({ kind: "mask", mask, body: this.#inside(body) });
   }
   /** R9: the paper for brushes drawn after this in the current group, picture or scene. */
@@ -279,15 +269,18 @@ export class SceneRecorder extends PureHelpers implements View {
   }
 
   // ── pictures (section 5, R7) ──
-  /** Record `body` as a picture's nodes: its own coordinates and box, the paper in scope. */
-  #recordBody(name: string, a: { size: { width: number; height: number }; body: () => void }): SceneNode[] {
-    const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask };
-    ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = { open: [], matrix: IDENTITY, size: a.size, picture: name, inMask: false });
+  /** Record `body` as a picture's nodes, then resolve them: its own coordinates and box, the paper in scope. */
+  #recordBody(name: string, a: { size: { width: number; height: number }; body: () => void }): readonly SceneNode[] {
+    const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture };
+    let recorded: SceneNode[];
+    ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture } = { open: [], matrix: IDENTITY, size: a.size, picture: name });
     try {
-      return this.#audit?.text.body(() => this.#inside(a.body)) ?? this.#inside(a.body);
+      recorded = this.#inside(a.body);
     } finally {
-      ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture, inMask: this.#inMask } = saved);
+      ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture } = saved);
     }
+    const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false };
+    return this.#audit?.text.body(() => this.#resolver.resolve(recorded, ctx)) ?? this.#resolver.resolve(recorded, ctx);
   }
   /** What a picture call needs from the recorder; `call` must be made while `draw` runs. */
   #scope(call: string): PictureScope {
@@ -303,13 +296,7 @@ export class SceneRecorder extends PureHelpers implements View {
   place(...[picture, x, y, options]: [Picture, number, number, PlaceOptions?]): void {
     const v = placedVersion(picture, this.#notes.frame);
     if (!(Number.isFinite(x) && Number.isFinite(y))) checkNumbers("place", { values: { x, y } });
-    const unlit = this.#unlit();
-    if (unlit !== undefined && v.kind === "picture" && hasOpenLight(v.children)) this.#notes.warn(`${unlit} place ${v.key}`, lightWarning(unlit, `place ${versionName(v)}: its light`));
-    const placed = { kind: "place", picture: v, x, y, ...resolvePlace(options) } as const;
-    this.#add(placed);
-    if (v.kind === "picture" && !this.#inMask) this.#audit?.text.placed(v.children, mul(this.#matrix, [1, 0, 0, 1, x, y]));
-    if (this.#picture === undefined && !this.#inMask && !(this.#lit > 0 && (placed.material?.castsShadow ?? false) !== false)) this.#audit?.offCanvas.place(`place ${versionName(v)}`, { version: v, matrix: mul(this.#matrix, [1, 0, 0, 1, x, y]) });
-    if (this.#audit !== undefined && this.#picture === undefined && v.kind === "picture") this.#notes.placed(v, this.#matrix);
+    this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
   }
 
   // ── outputs that are not drawing ──
@@ -332,10 +319,7 @@ export class SceneRecorder extends PureHelpers implements View {
 
   /** R8: a light for the nearest enclosing lit group, here or wherever this picture is placed. */
   light(light: Light): void {
-    const rec = resolveLight(light);
-    const unlit = this.#unlit();
-    if (unlit !== undefined) this.#notes.warn(`${unlit} light`, lightWarning(unlit, `light ${rec.kind} at (${rec.at.join(",")})`));
-    this.#add({ kind: "light", light: rec });
+    this.#add({ kind: "light", light: resolveLight(light) });
   }
   noise(...[x, y, z]: [number, number?, number?]): number {
     return valueNoise(this.#seed, { x, y: y ?? 0, z: z ?? 0 });

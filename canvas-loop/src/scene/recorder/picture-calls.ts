@@ -17,7 +17,7 @@ export interface PictureScope {
   readonly frame: object;
   readonly paper: PaperSettings;
   /** Record a body in the picture's own coordinates and box. */
-  readonly recordBody: (name: string, a: { size: { width: number; height: number }; body: () => void }) => SceneNode[];
+  readonly recordBody: (name: string, a: { size: { width: number; height: number }; body: () => void }) => readonly SceneNode[];
   readonly warn: (once: string, message: string) => void;
 }
 

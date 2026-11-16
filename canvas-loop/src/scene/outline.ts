@@ -1,5 +1,6 @@
 // The scene as an indented outline (`run --scene`): one node per line, then
-// each picture version the frame placed, once, with its body.
+// each picture version the frame placed, once, with its body. Also the name a
+// node takes in an error's node path (`nodeName`).
 //
 // A light's line says how bright it makes the floor at its brightest (drawing-
 // round finding 3): its added term in the lit group's sum (shader-light.ts
@@ -178,4 +179,24 @@ export function sceneOutline(scene: Scene, colors?: ColorParser): string {
     if (v.kind === "picture") outlineInto(out, { nodes: v.children, depth: 1, versions, cx: { colors, lighting: undefined } });
   }
   return out.join("\n");
+}
+
+/** A node's name in a path: its group name or picture key when it has one, else its call and place among its siblings (1-based). */
+export function nodeName(n: SceneNode, index: number): string {
+  switch (n.kind) {
+    case "group":
+      return n.name === undefined ? `group #${index}` : `group ${JSON.stringify(n.name)}`;
+    case "place":
+      return `place ${n.picture.kind} ${JSON.stringify(n.picture.key)}`;
+    case "shape":
+      return `${n.call} #${index}`;
+    case "background":
+    case "at":
+    case "clip":
+    case "mask":
+    case "text":
+    case "debug":
+    case "light":
+      return `${n.kind} #${index}`;
+  }
 }

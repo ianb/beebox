@@ -3,7 +3,6 @@
 // (text-checks.ts), and the call site of each brushed mark the renderer may
 // find too faint to see (its readback happens after the frame's render).
 import type { CallSite } from "../call-site.js";
-import { callSite } from "../call-site.js";
 import type { ShapeNode } from "../nodes.js";
 import { OffCanvas } from "./off-canvas.js";
 import { TextChecks } from "./text-checks.js";
@@ -32,13 +31,13 @@ export class Audit {
   }
 
   /**
-   * A shape was recorded; `seen` is false in mask artwork (a stencil). A brushed
-   * stroke that is drawn, not erased and not marked `gesture({ faint: true })`
-   * keeps its call site for the faint-mark check.
+   * The walk reached a shape made at `site`; `seen` is false in mask artwork (a
+   * stencil). A brushed stroke that is drawn, not erased and not marked
+   * `gesture({ faint: true })` keeps its call site for the faint-mark check.
    */
-  shape(node: ShapeNode, seen: boolean): void {
+  shape(node: ShapeNode, a: { seen: boolean; site: CallSite }): void {
     const s = node.style;
-    if (seen && s.brush !== undefined && s.stroke !== undefined && !s.erase && s.brush.gesture.faint !== true) this.#marks.set(node, callSite());
+    if (a.seen && s.brush !== undefined && s.stroke !== undefined && !s.erase && s.brush.gesture.faint !== true) this.#marks.set(node, a.site);
   }
 
   /** Where the sketch drew brushed mark `node`, when its strength is judged. */

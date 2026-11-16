@@ -7,7 +7,6 @@
 // it; mask artwork is never seen and is not checked.
 import type { TextBounds } from "../../core/paint.js";
 import type { CallSite } from "../call-site.js";
-import { callSite } from "../call-site.js";
 import type { Mat, SceneNode, TextNode } from "../nodes.js";
 import { fontWarning } from "./text.js";
 
@@ -148,16 +147,16 @@ export class TextChecks {
     this.#collect = [[]];
   }
 
-  /** A `v.text` call recorded `node`, laid out in `bounds` under `matrix`; `seen` is false in mask artwork. */
-  text(node: TextNode, a: { bounds: TextBounds; matrix: Mat; seen: boolean }): void {
+  /** Text `node`, made by the call at `site`, laid out in `bounds` under `matrix`; `seen` is false in mask artwork. */
+  text(node: TextNode, a: { bounds: TextBounds; matrix: Mat; seen: boolean; site: CallSite }): void {
     const font = fontWarning(node, this.#fontKnown);
-    if (font !== undefined) this.#warn(`font ${node.family}`, { message: font, line: callSite().line });
-    this.#glyphs(node);
-    if (a.seen) this.#collect.at(-1)?.push(textRect(node.content, { bounds: a.bounds, matrix: a.matrix, site: callSite() }));
+    if (font !== undefined) this.#warn(`font ${node.family}`, { message: font, line: a.site.line });
+    this.#glyphs(node, a.site);
+    if (a.seen) this.#collect.at(-1)?.push(textRect(node.content, { bounds: a.bounds, matrix: a.matrix, site: a.site }));
   }
 
-  /** Record a picture body, keeping its texts (in body coordinates) for its placements. */
-  body(record: () => SceneNode[]): SceneNode[] {
+  /** Resolve a picture body, keeping its texts (in body coordinates) for its placements. */
+  body(record: () => readonly SceneNode[]): readonly SceneNode[] {
     const texts: TextRect[] = [];
     this.#collect.push(texts);
     try {
@@ -183,7 +182,7 @@ export class TextChecks {
     this.#collect = [];
   }
 
-  #glyphs(node: TextNode): void {
+  #glyphs(node: TextNode, site: CallSite): void {
     const missing = this.#glyphMissing;
     if (missing === undefined) return;
     const key = `${node.style} ${node.family}\u0000${node.content}`;
@@ -195,7 +194,7 @@ export class TextChecks {
       const once = `glyph ${node.style} ${node.family} ${char}`;
       if (DRAWS_NOTHING.test(char) || this.#glyphsWarned.has(once) || !missing(char, node)) continue;
       this.#glyphsWarned.add(once);
-      this.#warn(once, { message: glyphMessage(char, node), line: callSite().line });
+      this.#warn(once, { message: glyphMessage(char, node), line: site.line });
     }
   }
 }
