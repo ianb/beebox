@@ -18,7 +18,7 @@ export interface FrameSurface {
   /** The GPU adapter, for the transcript header. */
   readonly adapter: string | undefined;
   /** Run one frame's `draw` against this surface's View; its logs, warnings and snapshots go to the host. Synchronous. */
-  draw(paint: (v: unknown) => void): void;
+  draw(paint: (v: unknown) => unknown): void;
   /** The last drawn frame, rendered. */
   capture(): Promise<Capture>;
   /** After the last frame: end-of-run warnings go to the host. */

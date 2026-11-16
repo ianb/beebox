@@ -8,6 +8,7 @@ import type { PictureOptions } from "../../core/tea.js";
 import { versionName } from "../outline.js";
 import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
 import { PictureHandle, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
+import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
 import type { PictureTable } from "./pictures.js";
 
 /** What the recorder lends a picture call. */
@@ -15,9 +16,8 @@ export interface PictureScope {
   readonly table: PictureTable;
   readonly audit: boolean;
   readonly frame: object;
-  readonly paper: PaperSettings;
-  /** Record a body in the picture's own coordinates and box. */
-  readonly recordBody: (name: string, a: { size: { width: number; height: number }; body: () => void }) => readonly SceneNode[];
+  /** Record a body in the picture's own coordinates, box and paper; `again` for a testing-mode re-record of a kept version. */
+  readonly recordBody: (name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
   readonly warn: (once: string, message: string) => void;
 }
 
@@ -42,14 +42,14 @@ function warnStale(s: PictureScope, a: { name: string; version: Version; diff: s
   s.warn(`${shared ? "shared" : "stale"} ${a.version.key}`, `${a.name} ${why}; first difference at ${a.diff}`);
 }
 
-export function recordPicture(s: PictureScope, a: { options: PictureOptions; body: () => void }): PictureHandle {
+export function recordPicture(s: PictureScope, a: { options: PictureOptions; body: () => unknown }): PictureHandle {
   const { key, width, height } = checkPictureOptions(a.options, "picture");
   const deps = copyDeps(a.options.deps, key);
-  const paper = s.paper;
+  const paper = a.options.paper === undefined ? DEFAULT_PAPER : resolvePaper(a.options.paper);
   const found = s.table.find({ kind: "picture", key, width, height, deps, paper });
   if (found !== undefined && !s.audit) return new PictureHandle(found, s.frame);
   const name = versionName({ kind: "picture", key, deps });
-  const children = s.recordBody(name, { size: { width, height }, body: a.body });
+  const children = s.recordBody(name, { size: { width, height }, paper, body: a.body, again: found !== undefined });
   if (found?.kind === "picture") {
     const diff = firstDifference({ a: found.children, b: children }, name);
     if (diff !== undefined) warnStale(s, { name, version: found, diff });

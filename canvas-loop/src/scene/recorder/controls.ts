@@ -9,7 +9,7 @@ import { controlModels } from "../../browser/controls-model.js";
 import type { ControlModel } from "../../browser/controls-model.js";
 import { SketchUsageError } from "../../core/errors.js";
 import type { ControlBox, ParamsDecl, ParamValues } from "../../core/tea.js";
-import type { Style, View } from "../../core/tea.js";
+import type { Drawing, Style, View } from "../../core/tea.js";
 import type { DebugBox } from "./debug.js";
 
 /** One `v.control` call: the param, its box in canvas coordinates, and the control as it stood at the call. */
@@ -63,13 +63,13 @@ const FIELD: Style = { fill: "#ffffff", stroke: "#767676", weight: 1 };
 const BUTTON: Style = { ...FIELD, fill: "#efefef" };
 const MARK: Style = { stroke: "#222222", weight: 1.75 };
 
-/** Draw a stand-in per control, in call order. */
-export function drawStandIns(v: View, controls: readonly ControlPlacement[]): void {
-  for (const c of controls) drawStandIn(v, c);
+/** A stand-in per control, in call order. */
+export function drawStandIns(v: View, controls: readonly ControlPlacement[]): Drawing {
+  return controls.map((c) => drawStandIn(v, c));
 }
 
 /** A slider (a `number` param without `control: "field"`): track, thumb at the value, and the value. */
-function drawSlider(v: View, a: { box: Readonly<ControlBox>; model: Extract<ControlModel, { kind: "number" }>; h: number; size: number }): void {
+function drawSlider(v: View, a: { box: Readonly<ControlBox>; model: Extract<ControlModel, { kind: "number" }>; h: number; size: number }): Drawing {
   const { box, model, h, size } = a;
   const value = String(model.value);
   const right = box.x + box.w - 6 - v.textWidth(value, { size }) - 8;
@@ -77,14 +77,16 @@ function drawSlider(v: View, a: { box: Readonly<ControlBox>; model: Extract<Cont
   const cy = box.y + h / 2;
   const span = model.max > model.min ? (model.value - model.min) / (model.max - model.min) : 0;
   const tx = x0 + Math.max(0, Math.min(1, span)) * Math.max(0, right - x0);
-  v.roundRect(x0, cy - 2, Math.max(0, right - x0), 4, 2, { fill: "#d0d0d0" });
-  v.roundRect(x0, cy - 2, tx - x0, 4, 2, { fill: "#767676" });
-  v.circle(tx, cy, Math.max(3, Math.min(7, h / 2 - 2)), { fill: "#ffffff", stroke: "#767676", weight: 1 });
-  v.text(value, { x: box.x + box.w - 6, y: cy }, { align: "right", valign: "middle", size, fill: "#111111" });
+  return [
+    v.roundRect(x0, cy - 2, Math.max(0, right - x0), 4, 2, { fill: "#d0d0d0" }),
+    v.roundRect(x0, cy - 2, tx - x0, 4, 2, { fill: "#767676" }),
+    v.circle(tx, cy, Math.max(3, Math.min(7, h / 2 - 2)), { fill: "#ffffff", stroke: "#767676", weight: 1 }),
+    v.text(value, { x: box.x + box.w - 6, y: cy }, { align: "right", valign: "middle", size, fill: "#111111" }),
+  ];
 }
 
 /** One stand-in: the bare input, as the browser shows it over the canvas. */
-function drawStandIn(v: View, c: ControlPlacement): void {
+function drawStandIn(v: View, c: ControlPlacement): Drawing {
   const { box, model } = c;
   const h = box.h ?? NATURAL_HEIGHT;
   const size = box.size ?? DEFAULT_SIZE;
@@ -92,27 +94,25 @@ function drawStandIn(v: View, c: ControlPlacement): void {
     const side = Math.min(h, 16);
     const x = box.x + 1;
     const y = box.y + (h - side) / 2;
-    v.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 3, FIELD);
-    if (model.value) v.path([["move", x + side * 0.22, y + side * 0.52], ["line", x + side * 0.42, y + side * 0.72], ["line", x + side * 0.78, y + side * 0.28]], MARK);
-    return;
+    return [
+      v.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 3, FIELD),
+      model.value && v.path([["move", x + side * 0.22, y + side * 0.52], ["line", x + side * 0.42, y + side * 0.72], ["line", x + side * 0.78, y + side * 0.28]], MARK),
+    ];
   }
-  if (model.kind === "number" && model.control === "slider") {
-    drawSlider(v, { box, model, h, size });
-    return;
-  }
+  if (model.kind === "number" && model.control === "slider") return drawSlider(v, { box, model, h, size });
   const button = model.kind === "trigger";
-  v.roundRect(box.x + 0.5, box.y + 0.5, box.w - 1, h - 1, 3, button ? BUTTON : FIELD);
+  const field = v.roundRect(box.x + 0.5, box.y + 0.5, box.w - 1, h - 1, 3, button ? BUTTON : FIELD);
   const select = model.kind === "select";
   const cx = box.x + box.w - 12;
   const cy = box.y + h / 2;
-  if (select) v.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
+  const arrow = select && v.path([["move", cx - 4, cy - 2], ["line", cx, cy + 2], ["line", cx + 4, cy - 2]], MARK);
   // A button shows its label as its text; a field or select shows its value.
   const lines = model.kind === "text" && model.multiline;
   const end = box.x + box.w - (select ? 22 : 6);
   const x = box.x + 6;
   // A text box shows its placeholder in grey while empty; a multi-line one wraps from the top.
   const placeholder = model.kind === "text" && model.value === "";
-  v.text(shown(model), { x, y: box.y + (lines ? 4 : 0), w: end - x, h: h - (lines ? 8 : 0) }, {
+  const label = v.text(shown(model), { x, y: box.y + (lines ? 4 : 0), w: end - x, h: h - (lines ? 8 : 0) }, {
     align: button ? "center" : (box.align ?? "left"),
     valign: lines ? "top" : "middle",
     wrap: lines,
@@ -121,4 +121,5 @@ function drawStandIn(v: View, c: ControlPlacement): void {
     style: box.bold === true ? "bold" : "normal",
     fill: placeholder ? "#767676" : "#111111",
   });
+  return [field, arrow, label];
 }

@@ -26,7 +26,7 @@ export interface PaperSettings {
   readonly seed: number;
 }
 
-/** A brushed stroke: the brush, the gesture, its blends and the paper in scope at the call. */
+/** A brushed stroke: the brush, the gesture, its blends and the paper of its scope (R9). */
 export interface BrushStroke {
   readonly brush: Brush;
   readonly gesture: Gesture;
@@ -54,7 +54,7 @@ export interface ShapeStyle {
   readonly brush: BrushStroke | undefined;
   /** How the shape takes light; used only inside a lit group (R8). */
   readonly material: Material | undefined;
-  /** The paper `effects.wash` and `effects.paper` use: the scope's at the call (R9); undefined without effects. */
+  /** The paper `effects.wash` and `effects.paper` use: its scope's (R9); undefined without effects. */
   readonly effectsPaper: PaperSettings | undefined;
 }
 
@@ -98,7 +98,7 @@ export interface GroupNode {
   readonly lighting: LightingRec | undefined;
   /** A lit group whose body holds a material with `receivesShadow: false`: only it draws a third material layer. */
   readonly nonReceiving: boolean;
-  /** The paper at the end of the body (R9), for `effects.wash` and `effects.paper`. */
+  /** The paper of the scope around the group (R9), for `effects.wash` and `effects.paper`. */
   readonly paper: PaperSettings;
   /** The group's `clip` option (after its effects), as a union of shapes. */
   readonly clip: readonly Geom[] | undefined;
@@ -147,7 +147,7 @@ export interface PictureVersion {
   readonly width: number;
   readonly height: number;
   readonly deps: readonly unknown[] | undefined;
-  /** The paper in scope where `v.picture` was called (R9), part of the version. */
+  /** The picture's `paper` option (R9), part of the version. */
   readonly paper: PaperSettings;
   readonly children: readonly SceneNode[];
 }

@@ -5,7 +5,7 @@
 
 import type { BrushName } from "./brush/presets.js";
 import type { BlendMode, Effects } from "./compose.js";
-import type { Brush, BrushOverrides, Gesture } from "./brush/types.js";
+import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 
 export { BLEND_MODES, compositeOp } from "./compose.js";
 export type { BlendMode, Effects, Hatching, Shadow, Wash } from "./compose.js";
@@ -246,6 +246,22 @@ export interface Lighting {
   readonly toneCurve?: number;
 }
 
+// ── Drawings ─────────────────────────────────────────────────────────
+
+/** The key under which a drawing node keeps the frame that made it; a node from an earlier frame is refused. */
+export const MADE_IN: unique symbol = Symbol("canvas-loop frame");
+
+/** What a drawing call returns: one node of this frame's drawing, opaque to the sketch. Return it from `draw`, or put it in a scope's children. */
+export interface DrawingNode {
+  readonly [MADE_IN]: object;
+}
+
+/** A scope's children, or a component's result: a node, a list (nested lists are flattened), or `null`, `undefined` or `false` for nothing. */
+export type Drawing = DrawingNode | readonly Drawing[] | null | undefined | false;
+
+/** What `draw` returns: a `Drawing`, but not `undefined`, so a `draw` that forgets to return its drawing is an error. */
+export type RootDrawing = DrawingNode | readonly Drawing[] | null | false;
+
 // ── Pictures ─────────────────────────────────────────────────────────
 
 /** A reusable drawing, recorded once and placed any number of times. */
@@ -263,6 +279,8 @@ export interface PictureOptions {
   /** The picture's layout box (0..width, 0..height); drawing outside it is kept. */
   readonly width: number;
   readonly height: number;
+  /** The paper its brushed strokes and effects use (part of the version); default the default paper. A picture never takes the paper of where it is placed. */
+  readonly paper?: Paper;
 }
 
 export interface PlaceOptions {

@@ -139,9 +139,7 @@ export class SceneSurface implements DrawSurface {
 
   draw(model: unknown, params: ParamValues<ParamsDecl>): ReadonlyMap<string, ControlBox> {
     this.#params = params;
-    const rec = this.#recorder.record((v) => {
-      Reflect.apply(this.#d.draw, undefined, [v, model, params]);
-    });
+    const rec = this.#recorder.record((v): unknown => Reflect.apply(this.#d.draw, undefined, [v, model, params]));
     this.records++;
     for (const line of rec.logs) this.#log([line]);
     for (const w of rec.warnings) this.#log([`warning: ${w}`]);

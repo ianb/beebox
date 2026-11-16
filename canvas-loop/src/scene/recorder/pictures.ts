@@ -1,5 +1,5 @@
 // Picture versions (draft section 5): identified by key, width, height, the
-// values of `deps` (plain data, compared deeply) and the paper in scope (R9).
+// values of `deps` (plain data, compared deeply) and its paper option (R9).
 // The table lives across frames; a version not asked for in the last two
 // frames is dropped and recorded again when asked for. In testing mode the
 // recorder re-records each asked-for version and compares (`firstDifference`).

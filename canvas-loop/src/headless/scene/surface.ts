@@ -118,7 +118,7 @@ export class SceneSurface implements FrameSurface {
     };
   }
 
-  draw(paint: (v: unknown) => void): void {
+  draw(paint: (v: unknown) => unknown): void {
     this.#last = undefined;
     const rec = this.#recorder.record((v) => paint(v));
     this.#last = rec;
@@ -158,15 +158,17 @@ export class SceneSurface implements FrameSurface {
   /** `--outline`: each box, clip and placement as a stroke with a see-through label, as today's painter draws them. */
   #outlines(boxes: readonly DebugBox[], cuts: readonly Outline[]): readonly SceneNode[] {
     const all = [...cuts, ...boxes.map((b) => ({ kind: "box" as const, label: b.label, points: b.corners }))];
-    return this.#overlay.record((v) => {
-      for (const { kind, label, points } of all) {
+    return this.#overlay.record((v) =>
+      all.map(({ kind, label, points }) => {
         const first = points[0];
-        if (first === undefined) continue;
-        v.polygon(points, { stroke: OUTLINE_COLORS[kind], weight: 1.5 });
-        v.rect(first[0], first[1] - 12, label.length * 5.6 + 6, 12, { fill: "rgba(0,0,0,0.35)" });
-        v.text(label, { x: first[0] + 3, y: first[1] - 11 }, { size: 10, fill: "#ffffff" });
-      }
-    }).scene.children;
+        if (first === undefined) return null;
+        return [
+          v.polygon(points, { stroke: OUTLINE_COLORS[kind], weight: 1.5 }),
+          v.rect(first[0], first[1] - 12, label.length * 5.6 + 6, 12, { fill: "rgba(0,0,0,0.35)" }),
+          v.text(label, { x: first[0] + 3, y: first[1] - 11 }, { size: 10, fill: "#ffffff" }),
+        ];
+      }),
+    ).scene.children;
   }
 
   /** `--timing`: the renderer's counts for this frame, and GPU pass times when the device grants timestamps. */

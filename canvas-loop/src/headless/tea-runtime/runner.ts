@@ -169,7 +169,7 @@ class TeaRunner {
     const { module } = this.#options;
     const model = this.#model;
     const params = this.#state.params;
-    const draw = (): void => this.#surface.draw((v) => void this.#sketch("draw", (): unknown => Reflect.apply(module.draw, undefined, [v, model, params])));
+    const draw = (): void => this.#surface.draw((v) => this.#sketch("draw", (): unknown => Reflect.apply(module.draw, undefined, [v, model, params])));
     if (this.#timer === undefined) draw();
     else this.#timer.draw(frame, draw);
     if (!this.#recorder.shouldCapture(frame)) return;

@@ -1,23 +1,26 @@
-// The resolve walk: one pass over a recorded tree, after `draw` returns (or a
-// picture body records), for the checks that need a node's ancestors: the
-// transform, the lit groups around it, mask artwork, and the canvas or
+// The resolve walk: one pass over a returned tree, after `draw` returns (or a
+// picture body records), for what needs a node's ancestors: the transform,
+// the paper scope, the lit groups around it, mask artwork, and the canvas or
 // picture box. It runs the effects-scale check, the light warnings, testing
 // mode's off-canvas and text checks, the faint-mark sites and the
-// placement-scale hint, and lays `keepInside` text out under its transform.
-// A node comes back as it was unless its layout changed; a container whose
-// children changed comes back as a copy. Warnings name the line each node's
+// placement-scale and picture-paper hints, lays `keepInside` text out under
+// its transform, gives brushed strokes and effects the paper of their scope,
+// and replaces each paper scope with its children. A node comes back as it was
+// unless one of these changed it; a container whose children changed comes
+// back as a copy. Warnings name the line each node's
 // call kept (testing mode); an error names the node path too.
 import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { CallSite } from "../call-site.js";
 import { UnsupportedCallError } from "../errors.js";
 import { axisScales, mul } from "../mat.js";
-import type { Mat, SceneNode, TextNode } from "../nodes.js";
+import type { Mat, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
 import { nodeName, versionName } from "../outline.js";
 import type { Audit } from "./audit.js";
 import { hasOpenLight, lightWarning, noLightWarning } from "./light.js";
 import type { RecorderNotes } from "./notes.js";
 import { recordText } from "./text.js";
+import { sameData } from "./pictures.js";
 
 /** Where the walk is: the transform to canvas (or body) coordinates, the box text keeps inside, the picture body's name for messages, lit groups open around it, and mask artwork. */
 export interface ResolveContext {
@@ -26,6 +29,10 @@ export interface ResolveContext {
   readonly picture: string | undefined;
   readonly lit: number;
   readonly inMask: boolean;
+  /** The paper of the nearest `v.paper` scope, or the picture's own. */
+  readonly paper: PaperSettings;
+  /** Inside a `v.paper` scope (in this frame or body). */
+  readonly scoped?: boolean;
 }
 
 /** What a text call kept for the walk: its bounds as laid out at the call, whether it is unboxed, and for `keepInside` its inputs, copied. */
@@ -41,15 +48,49 @@ export interface ResolveDeps {
   readonly audit: Audit | undefined;
   readonly text: TextMeasurer | undefined;
   readonly texts: WeakMap<TextNode, TextFacts>;
+  /** Each paper scope's paper; the scope is an identity `at` node, replaced by its children. */
+  readonly papers: WeakMap<SceneNode, PaperSettings>;
   readonly sites: () => WeakMap<SceneNode, CallSite> | undefined;
 }
 
 const NO_SITE: CallSite = { line: undefined };
 
+/** Whether a picture's nodes hold a brushed stroke or a shape with effects, which read the paper. */
+function readsPaper(nodes: readonly SceneNode[]): boolean {
+  return nodes.some((n) => {
+    switch (n.kind) {
+      case "shape":
+        return n.style.brush !== undefined || n.style.effects !== undefined;
+      case "group":
+        return n.effects !== undefined || readsPaper(n.children);
+      case "at":
+      case "clip":
+        return readsPaper(n.children);
+      case "mask":
+        return readsPaper(n.mask) || readsPaper(n.body);
+      case "place":
+      case "text":
+      case "light":
+      case "background":
+      case "debug":
+        return false;
+    }
+  });
+}
+
+/** `n` with `paper` for its brushed stroke and its effects, or `n` when it reads no paper or has it already. */
+function withPaper(n: ShapeNode, paper: PaperSettings): ShapeNode {
+  const { brush, effectsPaper } = n.style;
+  const brushOld = brush !== undefined && !sameData(brush.paper, paper);
+  const effectsOld = effectsPaper !== undefined && !sameData(effectsPaper, paper);
+  if (!brushOld && !effectsOld) return n;
+  return { ...n, style: { ...n.style, brush: brushOld ? { ...brush, paper } : brush, effectsPaper: effectsOld ? paper : effectsPaper } };
+}
+
 export class Resolver {
   readonly #d: ResolveDeps;
   /** The containers open around the current node, for an error's node path. */
-  readonly #open: { readonly n: SceneNode; readonly index: number }[] = [];
+  readonly #open: { readonly n: SceneNode; readonly index: number; readonly name?: string }[] = [];
 
   constructor(deps: ResolveDeps) {
     this.#d = deps;
@@ -61,6 +102,13 @@ export class Resolver {
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
       if (n === undefined) continue;
+      const paper = this.#d.papers.get(n);
+      if (paper !== undefined && n.kind === "at") {
+        // A paper scope has no layer and no transform: its children take its place.
+        out ??= nodes.slice(0, i);
+        out.push(...this.#inside(n, { index: i + 1, nodes: n.children, ctx: { ...ctx, paper, scoped: true }, name: "paper" }));
+        continue;
+      }
       const r = this.#node(n, { index: i + 1, ctx });
       if (r !== n && out === undefined) out = nodes.slice(0, i);
       out?.push(r);
@@ -73,8 +121,8 @@ export class Resolver {
   }
 
   /** The children of container `n` (sibling `index`) resolved under `ctx`, with `n` on the node path. */
-  #inside(n: SceneNode, a: { index: number; nodes: readonly SceneNode[]; ctx: ResolveContext }): readonly SceneNode[] {
-    this.#open.push({ n, index: a.index });
+  #inside(n: SceneNode, a: { index: number; nodes: readonly SceneNode[]; ctx: ResolveContext; name?: string }): readonly SceneNode[] {
+    this.#open.push(a.name === undefined ? { n, index: a.index } : { n, index: a.index, name: a.name });
     try {
       return this.resolve(a.nodes, a.ctx);
     } finally {
@@ -92,7 +140,7 @@ export class Resolver {
       axisScales(a.matrix, a.call);
     } catch (error: unknown) {
       if (!(error instanceof UnsupportedCallError)) throw error;
-      const names = [...this.#open, { n, index: a.index }].map((o) => nodeName(o.n, o.index));
+      const names = [...this.#open, { n, index: a.index, name: undefined }].map((o) => (o.name === undefined ? nodeName(o.n, o.index) : `${o.name} #${o.index}`));
       // In a picture body the path starts at the picture: two pictures can hold the same nodes.
       const path = (a.picture === undefined ? names : [a.picture, ...names]).join(" > ");
       const pathed = new UnsupportedCallError({ call: error.call, ...(error.detail === undefined ? {} : { detail: error.detail }), at: path });
@@ -111,15 +159,17 @@ export class Resolver {
     const { index, ctx } = a;
     const audit = this.#d.audit;
     switch (n.kind) {
-      case "shape":
+      case "shape": {
         if (n.style.effects !== undefined) this.#axes(n, { index, matrix: ctx.matrix, call: n.call, picture: ctx.picture });
+        const r = withPaper(n, ctx.paper);
         if (audit !== undefined) {
           const site = this.#site(n);
-          audit.shape(n, { seen: !ctx.inMask, site: site ?? NO_SITE });
+          audit.shape(r, { seen: !ctx.inMask, site: site ?? NO_SITE });
           // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
           if (ctx.picture === undefined && !ctx.inMask) audit.offCanvas.shape(n.call, { geom: n.geom, style: n.style, matrix: ctx.matrix, lit: ctx.lit > 0, site });
         }
-        return n;
+        return r;
+      }
       case "at": {
         const children = this.#inside(n, { index, nodes: n.children, ctx: { ...ctx, matrix: mul(ctx.matrix, n.matrix) } });
         return children === n.children ? n : { ...n, children };
@@ -160,7 +210,9 @@ export class Resolver {
     try {
       const children = this.#inside(n, { index, nodes: n.children, ctx: n.lighting === undefined ? ctx : { ...ctx, lit: ctx.lit + 1 } });
       if (n.lighting !== undefined && !hasOpenLight(children)) this.#d.notes.warnAt(`unlit ${n.name ?? ""}`, { message: noLightWarning(n.name, n.lighting), line: this.#site(n)?.line });
-      return children === n.children ? n : { ...n, children };
+      // A group's wash and paper effects use the paper of the scope around it.
+      const paper = sameData(n.paper, ctx.paper) ? n.paper : ctx.paper;
+      return children === n.children && paper === n.paper ? n : { ...n, paper, children };
     } finally {
       offCanvas?.leave(outer);
     }
@@ -197,5 +249,8 @@ export class Resolver {
     if (v.kind === "picture" && !ctx.inMask) audit.text.placed(v.children, matrix);
     if (ctx.picture === undefined && !ctx.inMask && !(ctx.lit > 0 && (n.material?.castsShadow ?? false) !== false)) audit.offCanvas.place(`place ${versionName(v)}`, { version: v, matrix, site });
     if (ctx.picture === undefined && v.kind === "picture") this.#d.notes.placed(v, { matrix: ctx.matrix, line: site?.line });
+    if (ctx.scoped === true && v.kind === "picture" && !sameData(v.paper, ctx.paper) && readsPaper(v.children)) {
+      this.#d.notes.hintAt(`paper ${v.key}`, { message: `picture "${v.key}" keeps its own paper (its paper option, default the default paper) but is placed inside a v.paper scope with other paper; to draw it on that paper, pass the same settings as the picture's paper option`, line: site?.line });
+    }
   }
 }

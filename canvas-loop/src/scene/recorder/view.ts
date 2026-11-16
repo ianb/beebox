@@ -1,23 +1,27 @@
-// The recorder: a draft 2.3 `View` whose calls add nodes to a scene instead of
-// painting. Arguments are captured by value at the call. Calls the recorder does
-// not support yet throw `UnsupportedCallError`, naming the call. Checks that
-// need a node's ancestors run in the resolve walk (resolve.ts) once `draw`
-// returns, or once a picture body records. Picture versions live across
+// The recorder: a draft 2.11 `View` whose drawing calls return nodes, and
+// whose scopes take their children as values; `draw` returns the frame's
+// drawing. Arguments are captured by value at the call, and a scope copies its
+// children into a list it owns. Each node is stamped with its frame; a node
+// from an earlier frame is refused. Checks that need a node's ancestors (its
+// transform, paper, lit groups) run in the resolve walk (resolve.ts) once
+// `draw` returns, or once a picture body records. Picture versions live across
 // frames; in testing mode (`audit`) each asked-for version is recorded again
 // and compared, and a difference warns. Warnings name the sketch's line (each
-// node keeps its call's stack in testing mode) and are given once per run each.
+// node keeps its call's stack in testing mode) and are given once per run each;
+// testing mode also warns of a node made and never returned.
 import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
-import type { ClipShape, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import { MADE_IN } from "../../core/paint.js";
+import type { ClipShape, DrawingNode, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
-import type { AtOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
-import { UnsupportedCallError } from "../errors.js";
+import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
+import { RemovedCallError, UnsupportedCallError } from "../errors.js";
 import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
-import type { Geom, Mat, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
+import type { Geom, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
 import { callSite } from "../call-site.js";
 import type { CallSite } from "../call-site.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
@@ -39,6 +43,10 @@ import { valueNoise } from "./noise.js";
 import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
 import type { FrameOutputs, FrameRecord } from "./frame.js";
+import { Children } from "./children.js";
+
+/** Testing mode warns of at most this many drawings made and not returned in one frame. */
+const UNRETURNED_PER_FRAME = 8;
 
 export class SceneRecorder extends PureHelpers implements View {
   readonly #canvas: { width: number; height: number };
@@ -53,11 +61,15 @@ export class SceneRecorder extends PureHelpers implements View {
   readonly #resolver: Resolver;
   /** Each text node's facts for the walk: kept for `keepInside`, and in testing mode for its checks. */
   readonly #texts = new WeakMap<TextNode, TextFacts>();
+  /** The paper of each `v.paper` scope: an identity `at` node the walk replaces with its children. */
+  readonly #papers = new WeakMap<SceneNode, PaperSettings>();
+  readonly #children: Children;
   /** Testing mode: the stack of the call that made each node, for the walk's warnings; one map per frame. */
   #sites: WeakMap<SceneNode, CallSite> | undefined;
-  #open: SceneNode[][] = [];
-  #matrix: Mat = IDENTITY;
-  #paper: PaperSettings = DEFAULT_PAPER;
+  /** Testing mode: the nodes made this frame and not yet put in a scope, a picture body or the root, with their call. */
+  #made: Map<SceneNode, string> | undefined;
+  /** How many testing-mode re-records of kept pictures are running: their nodes are not counted as made, but may still take nodes that were. */
+  #again = 0;
   #size: { width: number; height: number };
   /** The picture whose body is recording, for messages; undefined at the top level. */
   #picture: string | undefined;
@@ -80,7 +92,8 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#seed = options?.seed ?? 0;
     this.#params = options?.params;
     this.#colors = options?.colors;
-    this.#resolver = new Resolver({ notes: this.#notes, audit: this.#audit, text: this.#text, texts: this.#texts, sites: () => this.#sites });
+    this.#children = new Children({ frame: () => this.#notes.frame, taken: (node) => this.#made?.delete(node) });
+    this.#resolver = new Resolver({ notes: this.#notes, audit: this.#audit, text: this.#text, texts: this.#texts, papers: this.#papers, sites: () => this.#sites });
   }
 
   /** The canvas size, or the picture's inside a picture body (section 5). */
@@ -100,62 +113,62 @@ export class SceneRecorder extends PureHelpers implements View {
   /** Forget every picture version, so each body records again (a web font finished loading, draft section 20). */
   readonly forgetPictures = (): void => this.#table.clear();
 
-  /** Run `draw` against a fresh scene and return what it recorded. */
-  record(draw: (v: View) => void): FrameRecord {
-    const recorded: SceneNode[] = [];
+  /** Run `draw`, resolve the drawing it returns, and return the frame. A `draw` that returns `undefined` is the retired statement form. */
+  record(draw: (v: View) => unknown): FrameRecord {
     const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [] };
-    ({ open: this.#open, matrix: this.#matrix, paper: this.#paper, size: this.#size, picture: this.#picture, out: this.#out } = { open: [recorded], matrix: IDENTITY, paper: DEFAULT_PAPER, size: this.#canvas, picture: undefined, out });
+    ({ size: this.#size, picture: this.#picture, out: this.#out } = { size: this.#canvas, picture: undefined, out });
     this.#sites = this.#audit === undefined ? undefined : new WeakMap();
+    this.#made = this.#audit === undefined ? undefined : new Map();
+    this.#again = 0;
     this.#table.beginFrame();
     this.#notes.begin();
     this.#audit?.begin();
     let root: readonly SceneNode[];
     let standIns: readonly SceneNode[];
     let notes: { warnings: string[]; hints: string[] };
-    const top: ResolveContext = { matrix: IDENTITY, size: this.#canvas, picture: undefined, lit: 0, inMask: false };
+    const top: ResolveContext = { matrix: IDENTITY, size: this.#canvas, picture: undefined, lit: 0, inMask: false, paper: DEFAULT_PAPER };
     try {
-      draw(this);
-      root = this.#resolver.resolve(recorded, top);
+      const drawn = draw(this);
+      if (drawn === undefined) throw new RemovedCallError({ call: "drawing calls as statements", replacement: "return the drawing from draw: return [v.rect(…), v.at(options, [children])] (a node, a list, or null for nothing)" });
+      root = this.#resolver.resolve(this.#children.list("draw", drawn), top);
+      this.#warnUnreturned();
       this.#audit?.end();
-      this.#paper = DEFAULT_PAPER;
       // Stand-ins are painted only where text can be measured (headless); the placements are kept either way.
-      standIns = this.#text === undefined ? [] : this.#resolver.resolve(this.#inside(() => drawStandIns(this, out.controls)), top);
+      standIns = this.#text === undefined ? [] : this.#resolver.resolve(this.#children.list("stand-ins", drawStandIns(this, out.controls)), top);
     } finally {
       notes = this.#notes.end();
-      this.#open = [];
       this.#sites = undefined;
+      this.#made = undefined;
     }
     return { scene: { ...this.#canvas, children: root }, ...out, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(out.controls)], standIns, ...notes };
   }
 
-  #add(node: SceneNode): void {
-    this.#notes.live(node.kind === "shape" ? node.call : node.kind);
-    if (this.#colors !== undefined) checkColours(node, this.#colors);
-    const top = this.#open.at(-1);
-    if (top === undefined) throw new UnsupportedCallError({ call: "drawing outside draw()" });
-    // Kept for the nodes the walk can warn about or refuse.
-    if (this.#sites !== undefined && (node.kind === "shape" || node.kind === "text" || node.kind === "place" || node.kind === "light" || node.kind === "group")) this.#sites.set(node, callSite());
-    top.push(node);
-  }
-  /** Record `body`'s nodes; the paper it sets ends with it unless `keepPaper`. */
-  #inside(body: () => void, keepPaper?: boolean): SceneNode[] {
-    const children: SceneNode[] = [];
-    const paper = this.#paper;
-    this.#open.push(children);
-    try {
-      body();
-    } finally {
-      this.#open.pop();
-      if (keepPaper !== true) this.#paper = paper;
+  /** Testing mode: one warning per line for nodes made this frame that no scope, picture body or `draw` returned. */
+  #warnUnreturned(): void {
+    const made = this.#made;
+    if (made === undefined || made.size === 0) return;
+    let given = 0;
+    for (const [node, call] of made) {
+      const line = this.#sites?.get(node)?.line;
+      // A line warned before (this frame or an earlier one) gives nothing and does not count.
+      if (this.#notes.warnAt(`unreturned ${call}`, { message: `v.${call} made a drawing that was not returned; put it in the list draw returns, or in a scope's children`, line })) given++;
+      if (given === UNRETURNED_PER_FRAME) break;
     }
-    return children;
   }
-  #shape(call: string, args: { geom: Geom; style: Style }): void {
+
+  /** `node`, stamped with this frame, its colours checked, and in testing mode its call site kept and it counted as made. */
+  #stamp<N extends SceneNode>(node: N, call: string): N & DrawingNode {
+    if (this.#colors !== undefined) checkColours(node, this.#colors);
+    const made = Object.assign(node, { [MADE_IN]: this.#notes.frame });
+    this.#sites?.set(made, callSite());
+    if (this.#again === 0) this.#made?.set(made, call);
+    return made;
+  }
+  #shape(call: string, args: { geom: Geom; style: Style }): ShapeNode & DrawingNode {
     this.#notes.live(call);
     checkGeom(call, args.geom);
-    const style = resolveStyle(args.style, { call, paper: this.#paper });
-    const node: ShapeNode = { kind: "shape", call, geom: args.geom, style };
-    this.#add(node);
+    const style = resolveStyle(args.style, { call, paper: DEFAULT_PAPER });
+    return this.#stamp({ kind: "shape", call, geom: args.geom, style }, call);
   }
   /** An output that is not drawing: only while `draw` runs, and never in a picture body. */
   #notInPicture(call: string): void {
@@ -164,41 +177,42 @@ export class SceneRecorder extends PureHelpers implements View {
   }
 
   // ── shapes ──
-  background(paint: Paint): void {
-    this.#add({ kind: "background", paint: copyPaint(paint, "background") });
+  background(paint: Paint): DrawingNode {
+    this.#notes.live("background");
+    return this.#stamp({ kind: "background", paint: copyPaint(paint, "background") }, "background");
   }
-  rect(...[x, y, w, h, style]: [number, number, number, number, Style]): void {
-    this.#shape("rect", { geom: { kind: "rect", x, y, w, h }, style });
+  rect(...[x, y, w, h, style]: [number, number, number, number, Style]): DrawingNode {
+    return this.#shape("rect", { geom: { kind: "rect", x, y, w, h }, style });
   }
-  roundRect(...[x, y, w, h, radius, style]: [number, number, number, number, number, Style]): void {
+  roundRect(...[x, y, w, h, radius, style]: [number, number, number, number, number, Style]): DrawingNode {
     if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h) && Number.isFinite(radius))) checkNumbers("roundRect", { values: { x, y, w, h, radius } });
     const r = Math.max(0, Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2));
-    this.#shape("roundRect", { geom: { kind: "path", commands: roundedRect({ x, y, w, h, r }) }, style });
+    return this.#shape("roundRect", { geom: { kind: "path", commands: roundedRect({ x, y, w, h, r }) }, style });
   }
-  circle(...[x, y, radius, style]: [number, number, number, Style]): void {
-    this.#shape("circle", { geom: { kind: "ellipse", x, y, rx: radius, ry: radius }, style });
+  circle(...[x, y, radius, style]: [number, number, number, Style]): DrawingNode {
+    return this.#shape("circle", { geom: { kind: "ellipse", x, y, rx: radius, ry: radius }, style });
   }
-  ellipse(...[x, y, rx, ry, style]: [number, number, number, number, Style]): void {
-    this.#shape("ellipse", { geom: { kind: "ellipse", x, y, rx, ry }, style });
+  ellipse(...[x, y, rx, ry, style]: [number, number, number, number, Style]): DrawingNode {
+    return this.#shape("ellipse", { geom: { kind: "ellipse", x, y, rx, ry }, style });
   }
-  line(...[x1, y1, x2, y2, style]: [number, number, number, number, Style]): void {
-    this.#shape("line", { geom: { kind: "poly", points: [[x1, y1], [x2, y2]], closed: false }, style });
+  line(...[x1, y1, x2, y2, style]: [number, number, number, number, Style]): DrawingNode {
+    return this.#shape("line", { geom: { kind: "poly", points: [[x1, y1], [x2, y2]], closed: false }, style });
   }
-  triangle(...[x1, y1, x2, y2, x3, y3, style]: [number, number, number, number, number, number, Style]): void {
-    this.#shape("triangle", { geom: { kind: "poly", points: [[x1, y1], [x2, y2], [x3, y3]], closed: true }, style });
+  triangle(...[x1, y1, x2, y2, x3, y3, style]: [number, number, number, number, number, number, Style]): DrawingNode {
+    return this.#shape("triangle", { geom: { kind: "poly", points: [[x1, y1], [x2, y2], [x3, y3]], closed: true }, style });
   }
-  arc(...[x, y, r, start, end, style]: [number, number, number, number, number, Style]): void {
-    this.#shape("arc", { geom: { kind: "arc", x, y, r, start, end }, style });
+  arc(...[x, y, r, start, end, style]: [number, number, number, number, number, Style]): DrawingNode {
+    return this.#shape("arc", { geom: { kind: "arc", x, y, r, start, end }, style });
   }
-  polygon(points: readonly Vec2[], style: Style): void {
-    this.#shape("polygon", { geom: { kind: "poly", points: copyPoints(points), closed: true }, style });
+  polygon(points: readonly Vec2[], style: Style): DrawingNode {
+    return this.#shape("polygon", { geom: { kind: "poly", points: copyPoints(points), closed: true }, style });
   }
-  path(commands: readonly PathCommand[], style: Style): void {
-    this.#shape("path", { geom: { kind: "path", commands: copyCommands(commands) }, style });
+  path(commands: readonly PathCommand[], style: Style): DrawingNode {
+    return this.#shape("path", { geom: { kind: "path", commands: copyCommands(commands) }, style });
   }
-  curve(...[points, closed, style]: [readonly Vec2[], boolean, Style]): void {
+  curve(...[points, closed, style]: [readonly Vec2[], boolean, Style]): DrawingNode {
     checkPoints("curve", points);
-    this.#shape("curve", { geom: { kind: "path", commands: curveCommands(points, closed) }, style });
+    return this.#shape("curve", { geom: { kind: "path", commands: curveCommands(points, closed) }, style });
   }
 
   // ── text (section 7) ──
@@ -206,97 +220,103 @@ export class SceneRecorder extends PureHelpers implements View {
     if (this.#text === undefined) throw new UnsupportedCallError({ call: `v.${call}`, detail: "this recorder was made without the runtime's text measurer" });
     return this.#text;
   }
-  #layText(content: string, at: { box: TextBox; options: TextOptions | undefined; matrix: Mat }): ReturnType<typeof recordText> {
-    return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: at.matrix, canvas: this.#size });
+  /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box. */
+  #layText(content: string, at: { box: TextBox; options: TextOptions | undefined }): ReturnType<typeof recordText> {
+    return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas: this.#size });
   }
   /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
-  text(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
-    const { node, bounds } = this.#layText(content, { box, options, matrix: IDENTITY });
-    this.#add(node);
+  text(...[content, box, options]: [string, TextBox, TextOptions?]): DrawingNode {
+    this.#notes.live("text");
+    const { node, bounds } = this.#layText(content, { box, options });
+    const made = this.#stamp(node, "text");
     const keepInside = options?.keepInside === true;
-    if (keepInside || this.#audit !== undefined) this.#texts.set(node, { bounds, unboxed: box.w === undefined && !keepInside, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
-    // The builder still knows the transform, so a kept-inside label's bounds are where the walk will put it.
-    return keepInside ? this.textBounds(content, box, options) : bounds;
+    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
+    return made;
   }
   textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#layText(content, { box, options, matrix: this.#matrix }).bounds;
+    return this.#layText(content, { box, options }).bounds;
   }
   textWidth(content: string, options?: TextOptions): number {
     return this.#measurer("textWidth").width(content, options);
   }
 
-  toCanvas(point: Vec2): Vec2 {
-    if (this.#picture !== undefined) throw new SketchUsageError({ detail: `v.toCanvas inside the body of ${this.#picture}: a picture never depends on where it is placed` });
-    return apply(this.#matrix, point);
+  /** A pure helper: `point` under each scope's transform, innermost first, as the walk composes them. */
+  toCanvas(point: Vec2, scopes: readonly AtOptions[]): Vec2 {
+    if (!Array.isArray(scopes)) throw new SketchUsageError({ detail: "toCanvas(point, scopes): list the at options the point is inside, outermost first, e.g. v.toCanvas([0, 33], [{ translate: [x, y] }, { rotate: a }])" });
+    let matrix = IDENTITY;
+    for (const options of scopes) {
+      checkAt(options);
+      matrix = mul(matrix, matrixOf(options));
+    }
+    return apply(matrix, point);
   }
 
   // ── scopes ──
-  at(options: AtOptions, body: () => void): void {
+  at(options: AtOptions, children: unknown): DrawingNode {
     this.#notes.live("at");
+    const kids = this.#children.list("at", children);
     checkAt(options);
-    const matrix = matrixOf(options);
-    const outer = this.#matrix;
-    this.#matrix = mul(outer, matrix);
-    try {
-      this.#add({ kind: "at", matrix, children: this.#inside(body, true) });
-    } finally {
-      this.#matrix = outer;
-    }
+    return this.#stamp({ kind: "at", matrix: matrixOf(options), children: kids }, "at");
   }
-  group(options: GroupOptions, body: () => void): void {
+  group(options: GroupOptions, children: unknown): DrawingNode {
     this.#notes.live("group");
+    const kids = this.#children.list("group", children);
     const g = resolveGroup(options);
-    let paper = this.#paper;
-    const children = this.#inside(() => {
-      body();
-      paper = this.#paper;
-    });
-    this.#add({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(children), paper, children });
+    return this.#stamp({ kind: "group", ...g, nonReceiving: g.lighting !== undefined && holdsNonReceiving(kids), paper: DEFAULT_PAPER, children: kids }, "group");
   }
-  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
+  clip(shape: ClipShape | readonly ClipShape[], children: unknown): DrawingNode {
     this.#notes.live("clip");
-    this.#add({ kind: "clip", shapes: clipGeoms(shape), children: this.#inside(body, true) });
+    const kids = this.#children.list("clip", children);
+    return this.#stamp({ kind: "clip", shapes: clipGeoms(shape), children: kids }, "clip");
   }
-  mask(maskBody: () => void, body: () => void): void {
+  mask(maskArt: unknown, children: unknown): DrawingNode {
     this.#notes.live("mask");
-    const mask = this.#inside(maskBody);
-    this.#add({ kind: "mask", mask, body: this.#inside(body) });
+    const mask = this.#children.list("mask", maskArt);
+    return this.#stamp({ kind: "mask", mask, body: this.#children.list("mask", children) }, "mask");
   }
-  /** R9: the paper for brushes drawn after this in the current group, picture or scene. */
-  paper(settings: unknown): void {
+  /** R9 (draft 2.11): the paper for every brushed stroke and effect in `children`. */
+  paper(...args: [Paper, unknown] | [Paper]): DrawingNode {
     this.#notes.live("paper");
-    this.#paper = resolvePaper(settings);
+    if (args.length === 1) throw new RemovedCallError({ call: "v.paper(settings) as a statement", replacement: "v.paper(settings, children) sets the paper for the drawing it holds" });
+    const [settings, children] = args;
+    const kids = this.#children.list("paper", children);
+    const node = this.#stamp({ kind: "at", matrix: IDENTITY, children: kids }, "paper");
+    this.#papers.set(node, resolvePaper(settings));
+    return node;
   }
 
   // ── pictures (section 5, R7) ──
-  /** Record `body` as a picture's nodes, then resolve them: its own coordinates and box, the paper in scope. */
-  #recordBody(name: string, a: { size: { width: number; height: number }; body: () => void }): readonly SceneNode[] {
-    const saved = { open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture };
-    let recorded: SceneNode[];
-    ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture } = { open: [], matrix: IDENTITY, size: a.size, picture: name });
+  /** Record `body` as a picture's nodes, then resolve them: its own coordinates, box and paper. A re-record (testing mode) counts no node as made. */
+  #recordBody(name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }): readonly SceneNode[] {
+    const saved = { size: this.#size, picture: this.#picture };
+    let recorded: readonly SceneNode[];
+    ({ size: this.#size, picture: this.#picture } = { size: a.size, picture: name });
+    if (a.again) this.#again++;
     try {
-      recorded = this.#inside(a.body);
+      recorded = this.#children.list(`the body of ${name}`, a.body());
     } finally {
-      ({ open: this.#open, matrix: this.#matrix, size: this.#size, picture: this.#picture } = saved);
+      ({ size: this.#size, picture: this.#picture } = saved);
+      if (a.again) this.#again--;
     }
-    const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false };
+    const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false, paper: a.paper };
     return this.#audit?.text.body(() => this.#resolver.resolve(recorded, ctx)) ?? this.#resolver.resolve(recorded, ctx);
   }
   /** What a picture call needs from the recorder; `call` must be made while `draw` runs. */
   #scope(call: string): PictureScope {
     this.#notes.live(call);
-    return { table: this.#table, audit: this.#audit !== undefined, frame: this.#notes.frame, paper: this.#paper, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message) };
+    return { table: this.#table, audit: this.#audit !== undefined, frame: this.#notes.frame, recordBody: (name, a) => this.#recordBody(name, a), warn: (once, message) => this.#notes.warn(once, message) };
   }
-  picture(options: PictureOptions, body: () => void): Picture {
+  picture(options: PictureOptions, body: () => unknown): Picture {
     return recordPicture(this.#scope("picture"), { options, body });
   }
   pixels(options: PictureOptions, fill: (image: { data: Uint8ClampedArray; width: number; height: number }) => void): Picture {
     return recordPixels(this.#scope("pixels"), { options, fill });
   }
-  place(...[picture, x, y, options]: [Picture, number, number, PlaceOptions?]): void {
+  place(...[picture, x, y, options]: [Picture, number, number, PlaceOptions?]): DrawingNode {
+    this.#notes.live("place");
     const v = placedVersion(picture, this.#notes.frame);
     if (!(Number.isFinite(x) && Number.isFinite(y))) checkNumbers("place", { values: { x, y } });
-    this.#add({ kind: "place", picture: v, x, y, ...resolvePlace(options) });
+    return this.#stamp({ kind: "place", picture: v, x, y, ...resolvePlace(options) }, "place");
   }
 
   // ── outputs that are not drawing ──
@@ -312,14 +332,16 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notInPicture("cursor");
     this.#out.cursor = kind;
   }
-  debugBox(...[label, x, y, w, h]: [string, number, number, number, number]): void {
+  debugBox(...[label, x, y, w, h]: [string, number, number, number, number]): DrawingNode {
+    this.#notes.live("debugBox");
     if (!(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h))) checkNumbers("debugBox", { values: { x, y, w, h } });
-    this.#add({ kind: "debug", label, x, y, w, h });
+    return this.#stamp({ kind: "debug", label, x, y, w, h }, "debugBox");
   }
 
   /** R8: a light for the nearest enclosing lit group, here or wherever this picture is placed. */
-  light(light: Light): void {
-    this.#add({ kind: "light", light: resolveLight(light) });
+  light(light: Light): DrawingNode {
+    this.#notes.live("light");
+    return this.#stamp({ kind: "light", light: resolveLight(light) }, "light");
   }
   noise(...[x, y, z]: [number, number?, number?]): number {
     return valueNoise(this.#seed, { x, y: y ?? 0, z: z ?? 0 });

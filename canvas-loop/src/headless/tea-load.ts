@@ -13,7 +13,7 @@ export interface LoadedTeaModule {
   canvas: CanvasSize | undefined;
   init(u: Util<ParamsDecl>): unknown;
   update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
-  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): unknown;
   sound?: (model: unknown, p: ParamValues<ParamsDecl>) => readonly Voice[];
   activity?: (model: unknown) => Record<string, unknown>;
 }

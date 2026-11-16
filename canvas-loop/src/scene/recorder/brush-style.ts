@@ -1,7 +1,8 @@
 // Brushed strokes and paper at the call: the brush resolved and checked as
 // today (presets.ts), the gesture checked and copied, the blend chosen by R1,
-// and the paper in scope (R9) captured. A smudge or wet brush with effects,
-// a blend or erase is an error here, at the call.
+// and the default paper, which the resolve walk replaces with the paper of
+// its scope (R9). A smudge or wet brush with effects, a blend or erase is an
+// error here, at the call.
 import { SketchUsageError } from "../../core/errors.js";
 import { validateEnvelope } from "../../core/brush/envelope.js";
 import { resolveBrush } from "../../core/brush/presets.js";
@@ -46,7 +47,7 @@ export function resolveBrushStroke(style: Style, at: { call: string; paper: Pape
   return { brush, gesture: copyGesture(style.gesture, at.call), blend: style.blend ?? own, own, paper: at.paper };
 }
 
-/** `v.paper(settings)`, checked, with defaults filled in. */
+/** Paper settings (`v.paper` or a picture's `paper` option), checked, with defaults filled in. */
 export function resolvePaper(settings: unknown): PaperSettings {
   if (typeof settings !== "object" || settings === null) throw new SketchUsageError({ detail: "paper() takes { scale?, contrast?, seed? }" });
   const out: Record<string, number> = { ...DEFAULT_PAPER };
