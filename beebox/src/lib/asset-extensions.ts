@@ -55,7 +55,7 @@ export function assetGitignorePatterns(): string {
  * `.txt`. On one production box, 1,844 tracked files sit inside `.attach/`
  * scopes. `include=*.attach/*` would annex all of them, replacing committed
  * card text with pointer files — see the classifier section of
- * docs/plans/asset-annex.md.
+ * plan:asset-annex.
  *
  * **Unscoped, because git-annex replaces Git LFS here.** An earlier version
  * anchored every pattern to `.attach/`, inherited from the manifest model,

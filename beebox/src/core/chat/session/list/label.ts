@@ -8,7 +8,7 @@
  * Extracted because the two endpoints disagreed — `trpc/routers/chat.ts` was
  * title-aware while `trpc/routers/chat-session-procedures.ts` (the one the
  * chat history dropdown actually calls) never read a husk, so a generated
- * title was invisible there. See docs/implemented-plans/chat-review.md § Track D.
+ * title was invisible there. See plan:chat-review § Track D.
  *
  * Both *engines* now go through it too, for the same reason: Codex chats had
  * their own label path that skipped the cleaning, so every Codex row in the

@@ -41,7 +41,7 @@ export function MobileTextareaRow({
         // `-mobile`, not the desktop row's address: this row and the button
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
-        // Recorded in docs/plans/agent-points-at-ui.md, Track 1.
+        // Recorded in plan:agent-points-at-ui, Track 1.
         id={hasControlIds ? "bbx-composer-input-mobile" : undefined}
         mobile
         textareaRef={textareaRef}

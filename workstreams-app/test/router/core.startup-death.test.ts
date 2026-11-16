@@ -1,4 +1,4 @@
-// Track 1 of docs/plans/router-transient-failure-resilience.md: during startup,
+// Track 1 of plan:router-transient-failure-resilience: during startup,
 // a dying child is a signal and the clock is only a backstop.
 //
 // The 2026-09-15 outage was a healthy generation given up on: a cold Vite under

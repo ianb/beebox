@@ -65,7 +65,7 @@ export interface LandmarkPayload {
    */
   openers: string[];
   /**
-   * The place's `intention` (docs/implemented-plans/place-intention.md): the line, trimmed,
+   * The place's `intention` (plan:place-intention): the line, trimmed,
    * and its prime card resolved to a box-relative path, or null when the
    * written ref names no existing card inside the box. Null when the landmark
    * has no intention.
@@ -200,7 +200,7 @@ function labelUnnamedExpands(navigation: LandmarkNavigationData | undefined): La
  * The intention's prime card when it resolved, else the single entry-point
  * card in the subtree, else the landmark card (`LandmarkPayload.arrival`). The
  * root (`dir` "") always opens its own page: the front door is the page, with
- * any entry point under "Start here" (docs/implemented-plans/front-door.md,
+ * any entry point under "Start here" (plan:front-door,
  * Track B), and a root intention shows on that page.
  */
 function arrivalTarget({ derived, relPath, dir, primeCard }: { derived: PrunedSubtree | undefined; relPath: string; dir: string; primeCard: string | null }): string {
@@ -229,7 +229,7 @@ export interface LandmarkIdentity {
  * walk. Backs `identity`, the mount-path query for callers that only need to
  * know WHERE they are (`PlacePill`'s face, `DocumentIcon`, `DocumentPlace`,
  * `ChatBarChrome`) — Track B splits this off so those don't pay for
- * derivation on every page load (see `docs/implemented-plans/card-prominence.md`,
+ * derivation on every page load (see `plan:card-prominence`,
  * "Split identity from resolution"). Reads through the shared parse cache
  * (`card-cache.ts`) that `loadLandmarkSummaries` already warms.
  */

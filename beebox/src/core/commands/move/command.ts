@@ -269,7 +269,7 @@ async function executeMove(
   try {
     return await executeMoveUnguarded(ctx, args);
   } catch (e) {
-    // Display-form leak (docs/plans/display-path-guard.subplan.md): reported
+    // Display-form leak (plan:display-path-guard.subplan): reported
     // as an ordinary CommandResult failure — this function is also called
     // directly (tests, `runCommand`'s own catch-all only covers a
     // CLI-dispatched call).

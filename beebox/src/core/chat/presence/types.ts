@@ -29,8 +29,16 @@ export interface CallFrame {
   call: CallSummary | null;
 }
 
+/** What a person is doing in a chat's composer now. Never the text itself. */
+export type Composing = "typing" | "dictating";
+/** Everyone else in the room who is doing something in the composer. */
+export interface ComposingFrame {
+  t: "composing";
+  active: { email: string; doing: Composing }[];
+}
+
 /** A frame on the `chatPresence.watch` stream; a client switches on `t`. */
-export type ChatPresenceFrame = OthersFrame | CallFrame;
+export type ChatPresenceFrame = OthersFrame | CallFrame | ComposingFrame;
 
 /** One subscription on a call, as the other members address it. */
 export interface CallPeer {
@@ -55,6 +63,8 @@ export type CallMemberFrame =
   | { t: "full" };
 
 export const CALL_MEMBER_CAP = 3;
+/** A composing state the client stops refreshing clears after this; the client refreshes well inside it. */
+export const COMPOSING_TTL_MS = 8_000;
 export const NO_ANSWER_MS = 45_000;
 
 /** What an observer (the call transcript fold) learns about a call. */
@@ -116,6 +126,12 @@ export interface ChatPresence {
   callOf(member: MemberRef): CallSnapshot | null;
   /** Leave the call. False when `member` is not the caller's. */
   leaveCall(member: MemberRef): boolean;
+  /**
+   * Say what `email` is doing in the room's composer, or null when nothing.
+   * A non-null state clears itself after `COMPOSING_TTL_MS`, and when the
+   * person's last watcher leaves. False when `email` has no watcher there.
+   */
+  setComposing(opts: { boxRoot: string; sessionId: string; email: string; doing: Composing | null }): boolean;
   /** How many rooms have a watcher or a call. */
   size(): number;
 }

@@ -1,5 +1,5 @@
 /**
- * The operator session's turn state machine (`docs/implemented-plans/agent-field-tests.md`,
+ * The operator session's turn state machine (`plan:agent-field-tests`,
  * Track 3) — one message in, one settled turn out, over a single long-lived
  * `ChatBackendRun`.
  *

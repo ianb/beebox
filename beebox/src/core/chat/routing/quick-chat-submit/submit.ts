@@ -1,5 +1,5 @@
 /**
- * Store, route, and deliver one quick chat message (docs/plans/box-screen.md,
+ * Store, route, and deliver one quick chat message (plan:box-screen,
  * track 1). `submitQuickChat` does all three in one call so a caller that
  * stops after it returns has lost nothing: the record holds the message, and
  * a repeat `submit` or a `choose` finishes the job.

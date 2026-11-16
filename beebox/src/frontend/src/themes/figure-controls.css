@@ -33,7 +33,9 @@
   box-shadow: 0 0 0 4px #fff;
 }
 .bbx-figure-mount .cl-error {
+  /* An error keeps its semantic red material even on a dark themed card. */
+  --bbx-ink: #b91c1c;
   border-color: #fca5a5;
   background: #fef2f2;
-  color: #b91c1c;
+  color: var(--bbx-ink);
 }

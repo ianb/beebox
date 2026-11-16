@@ -9,7 +9,7 @@ import { outlineNeedsFocusStyle, vibeCheck } from "@ianbicking/personal-vibe-che
 import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
-// docs/implemented-plans/clerk-contract-and-import-boundary.md Track 2, and the paths
+// plan:clerk-contract-and-import-boundary Track 2, and the paths
 // comment in tsconfig.json). The frontend must not import backend source by a
 // raw relative path that escapes src/frontend/: type imports go through the
 // @core/@schemas/@backend type-only aliases; value imports go through @shared
@@ -276,7 +276,7 @@ export default [
   },
   // One owner per visual shape: a copy of a primitive's classes elsewhere is
   // a duplicate. Each entry lists the files that own the shape (`allowIn`,
-  // relative to this config); docs/implemented-plans/ui-primitives-dedup.md adds the rest.
+  // relative to this config); plan:ui-primitives-dedup adds the rest.
   {
     files: ["src/**/*.tsx"],
     rules: {

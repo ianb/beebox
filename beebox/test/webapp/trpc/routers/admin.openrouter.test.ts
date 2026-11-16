@@ -1,7 +1,7 @@
 // # Admin: adding and removing OpenRouter chat models
 //
 // Adding a model in admin is the only way a box can run one
-// (`docs/plans/openrouter-chat-models.md`). The add is checked against
+// (`plan:openrouter-chat-models`). The add is checked against
 // OpenRouter's catalog; removal refuses while the model is the box default or small model. The
 // catalog and key responses here are the recorded fixtures, served through the
 // `openrouterFetch` service so nothing leaves the machine.

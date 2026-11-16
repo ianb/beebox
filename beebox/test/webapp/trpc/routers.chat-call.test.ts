@@ -1,7 +1,8 @@
 // `chatCall`: holding `join` is being on the chat's call. Members hear each
 // other's peer ids and pass WebRTC signals through the server; people present
 // in the chat see the call on `chatPresence.watch`; the agent cannot join; a
-// box with no TURN key gets STUN only. See docs/chat-calls.md.
+// box with no TURN key gets STUN only; a box granted the host's own relay gets
+// coturn credentials signed locally. See docs/chat-calls.md.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -11,6 +12,9 @@ import { trpcContext } from "../../helpers/trpc-context.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { readFoldRecord } from "../../../src/core/chat/call-transcript/record.js";
+import { grantSecret, revokeSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../../src/lib/box-slug.js";
+import { restCredentials } from "../../../src/core/turn-server-key.js";
 
 // Mutations take box-work admission, which needs a Git box.
 const box = await makeTmpBox({ git: true });
@@ -43,7 +47,9 @@ async function open<T>(start: (signal: AbortSignal) => Promise<AsyncIterable<T>>
 void test("two people on a call pass signals, and someone present sees the call", async (t) => {
   const odette = await open((signal) => caller({ user: { email: "odette@example.com", name: "Odette Marlowe" } }, signal).chatPresence.watch({ sessionId }));
   t.check(await odette.next(), { t: "others", people: [] });
-  t.check(await odette.next(), { t: "call", call: null });
+  // The call and composing states arrive in either order.
+  const states = [await odette.next(), await odette.next()];
+  t.check(states.toSorted((a, b) => a.t.localeCompare(b.t)), [{ t: "call", call: null }, { t: "composing", active: [] }]);
 
   const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));
   const joined = await p.next();
@@ -79,7 +85,7 @@ void test("the agent cannot be on a call", async (t) => {
   await t.checkThrows(() => caller({ user: priya, actor: "agent" }).chatCall.iceServers(), "TRPCError: Only a box member can be on a call.");
 });
 
-// docs/implemented-plans/chat-calls.md, Track F: a member registers its recording before
+// plan:chat-calls, Track F: a member registers its recording before
 // capture starts. Only the peer's own person may, and only while transcribing.
 void test("a member registers its own recording, only while transcription is on", async (t) => {
   const p = await open((signal) => caller({ user: priya }, signal).chatCall.join({ sessionId, callId: null }));
@@ -96,6 +102,34 @@ void test("a member registers its own recording, only while transcription is on"
     { voiceSessionId: "3f1d2c4b-5a6e-4f70-8b9c-0d1e2f3a4b5c", person: priya, clockOffsetMs: 1_500 },
   ]);
   await p.close();
+});
+
+// plan:self-hosted-turn: the host's own coturn, signed locally with no
+// outside call, and preferred over Cloudflare. The username's expiry is three
+// hours out and names the box; the credential is coturn's HMAC of it.
+void test("a box granted the host's relay gets its coturn servers", async (t) => {
+  const slug = await boxSlug(boxRoot);
+  const secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  const urls = ["turn:203.0.113.5:3478?transport=udp", "turn:203.0.113.5:3478?transport=tcp"];
+  await setSecret({ name: "turn-server", value: JSON.stringify({ secret, urls }) });
+  await grantSecret({ slug, name: "turn-server", access: "server" });
+  t.teardown(() => revokeSecret({ slug, name: "turn-server" }));
+  const before = Math.floor(Date.now() / 1000);
+  const got = await caller({ user: priya }).chatCall.iceServers();
+  t.check(got, {
+    iceServers: [{ urls: ["stun:203.0.113.5:3478"] }, { urls, username: any(String), credential: any(String) }],
+    relay: true,
+    serverNowMs: any(Number),
+  });
+  const after = Math.floor(Date.now() / 1000);
+  const relayServer = got.iceServers[1];
+  const [expiry, id] = (relayServer?.username ?? "").split(":");
+  const issuedAt = Number(expiry) - 10_800;
+  const signed = restCredentials({ secret, nowMs: issuedAt * 1000, ttlSeconds: 10_800, id: id ?? "" });
+  t.check(
+    { issuedAt: issuedAt >= before && issuedAt <= after ? "during the request" : issuedAt, id, credential: relayServer?.credential },
+    { issuedAt: "during the request", id: "test", credential: signed.credential },
+  );
 });
 
 void test("a box with no TURN key gets STUN only", async (t) => {

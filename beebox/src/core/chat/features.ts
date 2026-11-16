@@ -56,7 +56,7 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
     label: "Show agent prose",
   },
   {
-    // The conversation's strip (docs/implemented-plans/conversation-strip.md): no card,
+    // The conversation's strip (plan:conversation-strip): no card,
     // closed by the person, or the box path of the card it shows. Set by
     // `bbx chat strip`, which checks the card; the person's dismiss sets
     // `dismissed`.
@@ -74,7 +74,7 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
 /**
  * Features that no longer exist but may still sit in stored session state or
  * landmark seeds. Dropped without a warning. `hq-dictation` went away when
- * every dictated message got the HQ pass (docs/implemented-plans/hq-always.md).
+ * every dictated message got the HQ pass (plan:hq-always).
  */
 const RETIRED_FEATURES = new Set(["hq-dictation"]);
 
@@ -169,7 +169,7 @@ const READ_ONLY_ATTRS = new Set([
 
 /**
  * The `clock` attribute's value on a box whose clock is shifted from the host's
- * (a journey walk box; docs/implemented-plans/walk-simulated-time.md). It carries its own
+ * (a journey walk box; plan:walk-simulated-time). It carries its own
  * instruction, so the always-loaded prompt needs none; probed with Haiku and
  * Sonnet, which used `local-time` and did not mention the host's date.
  */

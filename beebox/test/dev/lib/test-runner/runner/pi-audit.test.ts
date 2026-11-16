@@ -1,7 +1,7 @@
 // # Knowledge audits on pi
 //
 // A pi audit runs the pi batch agent and reads its session file afterwards
-// (docs/plans/pi-box-engine.md, "Knowledge audits"). pi's lowercase tools map
+// (plan:pi-box-engine, "Knowledge audits"). pi's lowercase tools map
 // onto the audit's reads, searches and commands. pi's `faux` provider stands
 // in for OpenRouter: nothing here spends.
 

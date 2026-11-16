@@ -1,6 +1,6 @@
 /**
  * Title freshness — the cheap gate in front of the title pass
- * (`docs/implemented-plans/chat-titles.md` § Track B).
+ * (`plan:chat-titles` § Track B).
  *
  * One Jev noul over (current title, tail of the new span): does the title
  * still name what the recent messages are about? A confident yes keeps the

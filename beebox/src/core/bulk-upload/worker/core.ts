@@ -1,5 +1,5 @@
 /**
- * Bulk-upload prepare→deliver worker (Track 1 of `docs/implemented-plans/bulk-file-upload.md`).
+ * Bulk-upload prepare→deliver worker (Track 1 of `plan:bulk-file-upload`).
  *
  * Turns a sealed bulk staging session into a committed `upload-batch` document
  * under the target chat's `tmp-upload/`, then delivers an `<upload>` message

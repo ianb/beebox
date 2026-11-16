@@ -7,7 +7,7 @@
  * in `src/`; the live path was an inline `ky.post` in the TTS route's fallback
  * branch. Adding a second backend to that branch would have made two dead
  * abstractions and one live if-ladder, so the seam was made real first
- * (`docs/plans/tts-backend-selection.md`, Track 1).
+ * (`plan:tts-backend-selection`, Track 1).
  *
  * A backend is chosen by the box (`core/tts/config.ts`), not by a key: granting
  * an OpenRouter key must never change what the box sounds like.
@@ -25,7 +25,7 @@ import { DEFAULT_TTS_INSTRUCTIONS, type TtsBackend } from "../shared/tts-backend
 
 /**
  * Speech on its way from the provider, handed over once its head has arrived
- * (`docs/implemented-plans/tts-streamed-playback.md`). Always MP3: the browser's streaming
+ * (`plan:tts-streamed-playback`). Always MP3: the browser's streaming
  * player takes MP3, and Gemini's PCM is encoded on the way.
  */
 export interface TtsAudioStream {
@@ -320,7 +320,7 @@ function createOpenAiTts(apiKey: string, fetchImpl: typeof fetch | undefined): T
 /**
  * The Gemini speech model. Flash-Lite rather than Flash: same voices and style
  * handling at two-thirds the audio price, and the 2026-10-04 benchmark
- * (`docs/plans/tts-backend-selection.md`) heard no reason to pay more for chat
+ * (`plan:tts-backend-selection`) heard no reason to pay more for chat
  * replies.
  */
 const GEMINI_TTS_MODEL = "gemini-3.8-flash-lite-tts";

@@ -132,8 +132,8 @@ void test("A card that failed validation has no schema facts (schema:", async (t
 // empty body, `splitCardFields` sends the type fields to the front, but the place
 // page replaces that front and draws no fields. So for a landmark Properties
 // shows them under Fields whether or not it has a body; otherwise `navigation`
-// would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
-// docs/implemented-plans/place-shows-cards.md, Track C).
+// would show only in Source (plan:landmark-arrival, Track C;
+// plan:place-shows-cards, Track C).
 void test("A landmark's body is the place summary, and most landmarks have none.", async (t) => {
   const landmarkSchema: Schema = { hasBodyField: true, defaultProminence: "background" };
   const landmark = (body: string | undefined) => render({

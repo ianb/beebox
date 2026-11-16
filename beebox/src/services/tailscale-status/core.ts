@@ -1,6 +1,6 @@
 /**
  * The `bbx tailscale status` state machine (Track B chunk 1 of
- * `docs/implemented-plans/tailscale-expose-and-protect.md`).
+ * `plan:tailscale-expose-and-protect`).
  *
  * Read-only and exhaustive over the plan's states 1-6, plus fail-closed
  * branches for schema drift, an unknown BackendState, a nonzero CLI exit, and a

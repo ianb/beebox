@@ -1,7 +1,7 @@
 ---
 title: "Interactives in educational material: triggers that decide what happens next"
-workstream: unattached
-area: courseware
+workstream: activity-triggers
+area: beebox
 labels: [interactives, design]
 filed-by: agent
 discovered-by: Ian

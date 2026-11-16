@@ -186,7 +186,7 @@ void test("An unresolved locator throws, rather than silently editing nothing", 
   // ## `setTodoAttribute`: the same surgery for `recheck`
   //
   // `setTodoStatus` is `setTodoAttribute` on `status`. The todo-review's verify
-  // step uses it on `recheck` (`docs/plans/todos-ui.md`, Track 7): an existing
+  // step uses it on `recheck` (`plan:todos-ui`, Track 7): an existing
   // value is replaced in place, a missing one is inserted after `todo`, and the
   // todo's words and its annotation stay as written. Extraction reads the new
   // value back at the same locator.

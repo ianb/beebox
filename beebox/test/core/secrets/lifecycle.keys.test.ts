@@ -2,7 +2,7 @@
 //
 // Three readers share the `mistral-key.ts` template. Each resolves one store entry
 // at `server` access and has no other source
-// (`docs/implemented-plans/secret-custody.md`):
+// (`plan:secret-custody`):
 //
 // | Reader | Store name |
 // |---|---|

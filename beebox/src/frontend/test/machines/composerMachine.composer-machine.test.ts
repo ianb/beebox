@@ -223,7 +223,7 @@ void test("From an idle mic it just reflects that speech is playing:", async (t)
 // ## Voice sends waiting for HQ
 //
 // Each voice send that waits for its HQ transcript is a pending bubble
-// (`docs/plans/resilient-voice-recording.md`, Track 4). `START_HQ` adds one and
+// (`plan:resilient-voice-recording`, Track 4). `START_HQ` adds one and
 // lights the in-flight region; several can wait at once. `HQ_STATUS` updates
 // one bubble's status line.
 void test("Each voice send that waits for its HQ transcript is a pending bubble (docs/pl...", async (t) => {

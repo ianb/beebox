@@ -2,7 +2,7 @@
 //
 // `extractCardTodos` turns ONE card's text into todo items. It reads no clock,
 // no timezone, and no other card — that is what lets a cache sit in front of it
-// (`docs/plans/todo-collection.md`, Track 2), and it is why plate-state is a
+// (`plan:todo-collection`, Track 2), and it is why plate-state is a
 // separate `deriveTodo` step.
 //
 // What an item keeps beyond the tag's own attributes is the context an undated

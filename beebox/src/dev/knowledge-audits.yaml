@@ -1,4 +1,32 @@
 tests:
+  # === Activity triggers (docs/implemented-plans/activity-triggers.md) ===
+  # Status (2026-11-14, Claude): both passed on the activity-triggers test1
+  # clone, twice: with the first prompt text and again after the boxholder had
+  # it cut to a pointer (the feature is look-up knowledge for interactives and
+  # educational boxes). Each agent opened box-docs/triggers.md and named the
+  # commands.
+  - id: trigger-arm-for-water
+    prompt: >
+      The learner has the molecule builder figure open beside this chat and
+      says "tell me the moment I make water, I don't want to have to ask".
+      How do you set that up so the box answers on its own, without waiting
+      for them to type? Explain the steps and the commands; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/triggers.md"]
+    watch_for: "Writes a trigger file under src/triggers/ that reads the figure's activity entries, and arms it with `bbx chat trigger arm` for this chat; does not propose polling, a schedule, or asking the learner to say when they are done."
+    correct_contains: ["bbx chat trigger arm", "src/triggers/"]
+    tags: [triggers]
+  - id: trigger-did-not-fire
+    prompt: >
+      I armed a trigger in this chat an hour ago and the learner built the
+      molecule, but nothing fired. How do you find out why? Explain only; do
+      not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/triggers.md"]
+    watch_for: "Reads the trace with `bbx chat trigger log` and checks `bbx chat trigger list` for the state (failed, expired), and dry-runs the file with `bbx chat trigger run`; does not guess at the cause."
+    correct_contains: ["bbx chat trigger log"]
+    tags: [triggers]
+
   # === The box agent changelog (docs/implemented-plans/agent-changes.md) ===
   # Status (2026-11-01, Claude): all three passed on the agent-changelog test1
   # clone; each agent opened box-docs/agent-changes.md by itself.

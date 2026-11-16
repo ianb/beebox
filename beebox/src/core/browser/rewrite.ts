@@ -1,6 +1,6 @@
 /**
  * Rewrites the upstream agent-browser dashboard so it works under a path
- * prefix (docs/plans/shared-browser.md, Track C).
+ * prefix (plan:shared-browser, Track C).
  *
  * The dashboard is a static Next.js export that assumes it is served at the
  * root: its HTML, CSS and scripts name `/_next/...` assets and `/api/...`

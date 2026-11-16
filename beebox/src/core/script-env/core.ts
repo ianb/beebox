@@ -20,7 +20,7 @@
  * "BBX_SERVER_URL is not set" error.
  *
  * What a subprocess inherits from the spawning server process is a
- * fail-closed ALLOWLIST (`script-env-allowlist.ts`), not a `process.env`
+ * fail-closed ALLOWLIST (`lib/subprocess-allowlist.ts`), not a `process.env`
  * spread: a box agent must not inherit the server's credentials. Two
  * profiles — `buildScriptEnv` (agent-safe) and `buildToolingScriptEnv`
  * (adds connector credentials, for spawning the box's own `bbx` tooling).
@@ -33,7 +33,7 @@ import { constants as fsConstants } from "node:fs";
 import { loadBoxConfig } from "../box/config.js";
 import { getOrCreateAgentToken } from "../agent/token.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { pickBoxSubprocessEnv } from "./allowlist.js";
+import { pickBoxSubprocessEnv } from "../../lib/subprocess-allowlist.js";
 import { packageManagerEnvironment } from "../../lib/package-manager-env.js";
 import type { SpawnProfile } from "../../lib/spawn-profile.js";
 import { pathWithGitShim } from "./git-shim.js";
@@ -41,6 +41,8 @@ import { readServeEndpoint } from "../serve-endpoint.js";
 import { onUnitHost } from "../../lib/unit-host.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { slugOfBoxRoot } from "../../lib/box-slug.js";
+
+export { agentAllowlistEnv } from "../../lib/subprocess-allowlist.js";
 
 // Path to Bee Box's own bin/ so subprocesses can find `bbx`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
@@ -235,17 +237,6 @@ export async function buildScriptEnv(
 }
 
 /**
- * The agent profile's inherited allowlist with `BBX_SPAWN_PROFILE=agent`, and
- * nothing `buildScriptEnv` injects: no server URL, agent token, or `bbx` on
- * PATH. For a child that runs box-authored code but needs no way back to the
- * box's server, such as the view metadata import, which also has no box when
- * the engine hosts the compile.
- */
-export function agentAllowlistEnv(): NodeJS.ProcessEnv {
-  return { ...pickBoxSubprocessEnv(process.env, { connectorCreds: false }), BBX_SPAWN_PROFILE: "agent" };
-}
-
-/**
  * For the engine's own `bbx` and `tsx` children of `bbx upgrade` and `bbx
  * migrate`: the tooling allowlist, the box-work permit, and the caller's own
  * `BBX_SPAWN_PROFILE`. These children are engine code at the caller's trust
@@ -273,7 +264,7 @@ export function engineChildEnvironment(additions?: Readonly<Record<string, strin
  * connectors, so on an env-var-configured server they need the connector
  * credentials the agent profile withholds.
  *
- * Honest scope, per `docs/implemented-plans/secret-custody.md`: a scheduled-script card is
+ * Honest scope, per `plan:secret-custody`: a scheduled-script card is
  * agent-authorable, so this profile is agent-*reachable* by writing a script
  * card and waiting for it to fire. What Track 1 closes is the trivial path —
  * the agent's own process env — not every path; Track 3 closes this one by

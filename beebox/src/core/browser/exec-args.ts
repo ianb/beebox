@@ -1,6 +1,6 @@
 /**
  * Which agent-browser arguments the box browser accepts
- * (docs/plans/shared-browser.md, Track C, `POST /api/browser/exec`).
+ * (plan:shared-browser, Track C, `POST /api/browser/exec`).
  *
  * The box has one browser with one profile, and the agent reaches it only
  * through `bbx browser`. A global flag that picks another browser, profile,

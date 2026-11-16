@@ -17,7 +17,7 @@
  * retained: a `QualifiedSession` is scalars only, and the reviewer re-reads the
  * sessions it actually reviews (see {@link QualifiedSession}).
  *
- * See docs/implemented-plans/chat-review.md § Track A.
+ * See plan:chat-review § Track A.
  */
 
 import * as fs from "node:fs/promises";
@@ -55,7 +55,7 @@ export const REVIEW_CHAR_THRESHOLD = 6_000;
  * pass. Deliberately tiny: with two user turns already required, 400 chars
  * means "a real exchange happened", the same job the 6,000-char gate does for
  * summaries — keeping a nightly model call off trivial growth. As untuned as
- * the summary threshold (`docs/implemented-plans/chat-titles.md` § Track A).
+ * the summary threshold (`plan:chat-titles` § Track A).
  */
 export const TITLE_CHAR_THRESHOLD = 400;
 
@@ -170,7 +170,7 @@ function emptyResult(): DiscoveryResult {
  * machine that reviews a session it did not originate extends
  * `contains-evidence` from partial material — the origin machine is the only
  * one that can see the whole conversation
- * (`docs/implemented-plans/chat-session-identity.md`, Track 4).
+ * (`plan:chat-session-identity`, Track 4).
  *
  * A husk with no `origin` predates the Track 2 stamp; it is claimed when its
  * transcript is here, which is the same evidence the backfill uses. Reconcile

@@ -5,7 +5,7 @@
  * The route and `quickChat` both send through the one sender that
  * `routes/chat/register.ts` creates per box, so they share one durable
  * message-id claim map and one in-flight table: a message id sent through
- * either path is posted once (docs/plans/box-screen.md, track 1).
+ * either path is posted once (plan:box-screen, track 1).
  */
 
 import { randomUUID } from "node:crypto";
@@ -29,7 +29,7 @@ export function createUserMessageSender(
     const { session: chatSession, id: knownId } = target;
     wireSession(chatSession);
     // Every message from this path is a person's, so it gets the activity hint.
-    const activityTurn = { ...(pendingChat !== undefined ? { pendingChat } : {}) };
+    const activityTurn = pendingChat !== undefined ? { pendingChat } : {};
     // A new chat has no id yet: bind the page's key to it once it is assigned.
     if (knownId === null && pendingChat !== undefined) {
       observeAssignedSession({
@@ -144,7 +144,7 @@ export function createUserMessageSender(
       // window. The turn buffer is already wired, so no frame the run emits is
       // lost between the ack and the client's subscribe, and a start failure
       // surfaces on that stream instead of as an HTTP status
-      // (see startAckedRun; docs/implemented-plans/emission-model.md, Track A).
+      // (see startAckedRun; plan:emission-model, Track A).
       //
       // The record waits for admission because the busy check above is not
       // the last word: the awaits since then let a concurrent send take the

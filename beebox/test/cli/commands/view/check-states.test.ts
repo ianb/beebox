@@ -3,9 +3,9 @@
 // Every view renders with no card. A view that renders card types also renders
 // with the first card of each type in the box, by path, that loads, as
 // `params.path`. A type with no card that loads is reported untested
-// (docs/implemented-plans/view-check-settled-render.md, Track 1). Then each
+// (plan:view-check-settled-render, Track 1). Then each
 // state the view declares in `checkStates`, by name
-// (docs/implemented-plans/view-declared-check-states.md).
+// (plan:view-declared-check-states).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

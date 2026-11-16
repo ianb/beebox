@@ -10,6 +10,7 @@
 import { memo, useMemo, type ReactNode } from "react";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
 import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
+import { TriggerNotice } from "./TriggerNotice";
 import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "../../../../lib/structured-output-parsing";
 import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
 import type { SessionContentBlock, SessionEntry } from "../../../../api";
@@ -22,7 +23,7 @@ import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
-import { PendingHqMessage } from "./pending-hq-message";
+import { PendingHqMessage } from "../../PendingHqMessage";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -269,6 +270,14 @@ function GroupItemInner({
       <div className="py-0.5">
         {group.notes.map((note, i) => (
           <SelfNoteMessage key={i} note={note} />
+        ))}
+      </div>
+    );
+  } else if (group.type === "trigger") {
+    body = (
+      <div className="py-0.5">
+        {group.notices.map((notice, i) => (
+          <TriggerNotice key={i} model={notice} />
         ))}
       </div>
     );

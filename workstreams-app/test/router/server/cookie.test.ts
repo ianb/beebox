@@ -1,5 +1,5 @@
 // Tests for the Set-Cookie Path rewrite (workstreams-app/src/router/server/cookie.ts) — Track B, chunk
-// 2b of beebox/docs/implemented-plans/expose-dev-router.md (iOS session continuity).
+// 2b of plan:expose-dev-router (iOS session continuity).
 //
 // Run with:
 //   node --import tsx --test workstreams-app/test/router/server/cookie.test.ts

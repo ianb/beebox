@@ -41,3 +41,12 @@ void test("more than two draw two heads and a disc naming the rest", (t) => {
   ]);
   t.end();
 });
+
+void test("a head says when that person is typing or dictating", (t) => {
+  t.check(items([{ ...tomas, doing: "typing" }, { ...odette, doing: "dictating" }, juni]), [
+    "Tomas Marlowe is typing",
+    "Odette Marlowe is dictating",
+    "+1 Also here: Juniper Marlowe",
+  ]);
+  t.end();
+});

@@ -121,8 +121,10 @@ commits them; `bin/issues next-action` lists, sets, and clears them from any
 checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
 reader and writer.
 
-`bin/issues close` and `bin/doc-move` share `bin/lib/doc-move.ts`: one `git mv`,
-then only references that resolve to the moved file's old path are rewritten.
+`bin/issues close`, `bin/doc-move`, and `bin/workstreams confirm-tested` share
+`bin/lib/doc-move.ts`: one rename, then only references that resolve to the
+moved file's old path are rewritten. The move never stages (a worktree's index
+is shared by parallel workers); it prints the paths to stage per repository.
 `doc-check --fix` stays the whole-tree, guess-by-basename repair; do not call it
 from a move.
 

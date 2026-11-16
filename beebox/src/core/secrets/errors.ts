@@ -1,5 +1,5 @@
 /**
- * Refusal types for the machine-level secret store (`docs/implemented-plans/secret-custody.md`,
+ * Refusal types for the machine-level secret store (`plan:secret-custody`,
  * Track 2).
  *
  * Every way a resolve can fail is its own class carrying a `kind` discriminant

@@ -18,7 +18,7 @@ const sandbox = await readFile("deploy/systemd/box-sandbox.conf", "utf8");
 const slice = await readFile("deploy/systemd/beebox-boxes.slice", "utf8");
 
 const entries = (text: string): string[] =>
-  text.split("\n").map((line) => line.trim()).filter((line) => /^d \//.test(line));
+  text.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("d /"));
 
 void test("cloud-init writes the same tmpfiles entries the deploy installs", (t) => {
   t.check(entries(tmpfiles), containing(["d /run/beebox        0775 root   beebox       -"]));

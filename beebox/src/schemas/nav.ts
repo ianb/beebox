@@ -3,10 +3,10 @@
  *
  * A positional card (`nav.card`) at the box root. Its `entries` list adds
  * shortcut links to the box screen's "Shortcuts" section
- * (docs/plans/box-screen.md); when the card is absent or invalid, the box
+ * (plan:box-screen); when the card is absent or invalid, the box
  * screen shows no shortcuts (and an invalid card is surfaced as a health warning — see
- * runHealthChecks). First slice of docs/plans/interface-as-cards.md; plan in
- * docs/implemented-plans/nav-card.md.
+ * runHealthChecks). First slice of plan:interface-as-cards; plan in
+ * plan:nav-card.
  *
  *   ---
  *   entries:

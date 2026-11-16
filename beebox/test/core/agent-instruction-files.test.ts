@@ -5,7 +5,7 @@
 // runs, so every writer asks `instructionFilePath(boxRoot, dirRel)` which file to
 // write. An existing file keeps its name, so an unconverted box behaves as it did
 // and a half-converted one keeps each directory's own file. Only a missing file
-// takes the box-level name. Plan: `docs/implemented-plans/box-agents-md.md`, Track A.
+// takes the box-level name. Plan: `plan:box-agents-md`, Track A.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

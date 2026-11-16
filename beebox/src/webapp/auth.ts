@@ -151,6 +151,24 @@ export interface SessionUser {
 export const HUB_EMAIL_HEADER = "x-bbx-authenticated-email";
 export const HUB_SECRET_HEADER = "x-bbx-hub-secret";
 export const HUB_AUTH_OFF_HEADER = "x-bbx-hub-auth";
+/** The person's display name from the hub's user store, URI-encoded (a header carries ASCII only). */
+export const HUB_NAME_HEADER = "x-bbx-authenticated-name";
+
+/** The hub's name header for a verified identity: none when the name is only the email. */
+export function hubNameHeader(identity: { email: string; name: string | null }): Record<string, string> {
+  return identity.name === null || identity.name === identity.email ? {} : { [HUB_NAME_HEADER]: encodeURIComponent(identity.name) };
+}
+
+/** A hub-sent name, or the email when the hub sent none or a malformed one. */
+function hubName(header: string | string[] | undefined, email: string): string {
+  if (typeof header !== "string" || header.length === 0) return email;
+  try {
+    const name = decodeURIComponent(header).trim();
+    return name.length > 0 ? name : email;
+  } catch (_error) {
+    return email;
+  }
+}
 
 /**
  * True when this box process is running behind a hub (Track D, chunk D2).
@@ -381,7 +399,7 @@ export function getOwnerEmail(): string | null {
  * `agentBrowsing: "owner"`. It carries the owner's email, so it is a person for
  * box-scoped purposes — but it is still a machine credential, so a gate over the
  * MACHINE-level secret store must exclude it explicitly (see
- * `docs/implemented-plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
+ * `plan:secret-custody`). `resolveRequestIdentity` itself never returns
  * it.
  */
 export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | "browse" | null;
@@ -396,7 +414,7 @@ export interface RequestIdentity {
  * Resolve the authenticated identity for a request through ONE path,
  * consumed by both the box auth preHandler (`server-box-scope.ts`) and the
  * tRPC context creation, so the two can never diverge (Track D, chunk D2 —
- * `docs/implemented-plans/boxes-as-packages-v2.md` calls this out explicitly: identity
+ * `plan:boxes-as-packages-v2` calls this out explicitly: identity
  * used to be recomputed separately in both places).
  *
  * In hub mode (`isHubMode()`), identity comes ONLY from hub-injected
@@ -452,7 +470,7 @@ export function resolveRequestIdentity(
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
     if (typeof emailHeader === "string" && emailHeader.length > 0) {
       const email = canonicalizeEmail(emailHeader);
-      return { email, name: email, source: "hub" };
+      return { email, name: hubName(request.headers[HUB_NAME_HEADER], email), source: "hub" };
     }
     if (request.headers[HUB_AUTH_OFF_HEADER] === "off") {
       return { email: null, name: null, source: "open" };

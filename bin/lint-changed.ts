@@ -20,7 +20,7 @@
  * filesystem and spawning is the shell at the bottom.
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
- * beebox/docs/plans/change-based-test-selection.md, mechanism B.
+ * plan:change-based-test-selection, mechanism B.
  */
 
 import { spawnSync } from "node:child_process";

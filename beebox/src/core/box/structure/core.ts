@@ -356,7 +356,7 @@ export { installRootQuestion } from "./root-question.js";
 
 /**
  * Ensure `.claude/memory/` exists (at the box root — see "Where Claude Code
- * runs" in `docs/implemented-plans/boxes-as-packages-v2.md`) and symlink it
+ * runs" in `plan:boxes-as-packages-v2`) and symlink it
  * from `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory is
  * stored inside the git-tracked box directory.
  *

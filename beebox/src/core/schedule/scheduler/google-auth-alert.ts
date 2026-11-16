@@ -11,9 +11,9 @@
  *     repaired-then-broken-again grant is a new episode.
  *
  * A dead grant is a health entry (the `google-auth` check, with the reconnect
- * link) and never notifies on its own (docs/implemented-plans/notifications.md, Track E).
+ * link) and never notifies on its own (plan:notifications, Track E).
  * A boxholder-requested schedule it stops is promoted separately
- * (`promotion.ts`). See docs/implemented-plans/google-auth-reauth-health.md.
+ * (`promotion.ts`). See plan:google-auth-reauth-health.
  */
 
 import { probeGoogleAuthIfStale } from "../../../google/auth-status.js";

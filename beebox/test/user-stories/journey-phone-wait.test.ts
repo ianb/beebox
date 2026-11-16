@@ -2,7 +2,7 @@
 //
 // A slow, real-box test of a whole wait, kept apart from journey-phone.test.ts
 // so each file stays inside the per-file timeout under load.
-// See docs/implemented-plans/walk-simulated-time.md (Track 7).
+// See plan:walk-simulated-time (Track 7).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,6 +1,6 @@
 /**
  * `bbx query <collection>` — the agent's read surface over a collection
- * (`docs/implemented-plans/todo-collection.md`, Track 4).
+ * (`plan:todo-collection`, Track 4).
  *
  * The web list and this command answer the same question through the same
  * runner, so what an agent is told matches what the boxholder sees. What

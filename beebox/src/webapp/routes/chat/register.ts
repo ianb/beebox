@@ -42,6 +42,7 @@ import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./uploads.js";
 import type { ChatRoutesContext } from "./context.js";
 import { setChatRuntime, clearChatRuntime } from "../../chat-runtime.js";
+import { startTriggerRunner } from "./triggers.js";
 import { registerChatSendRoutes } from "./send-routes.js";
 import { createInFlightSends, loadProcessedMessageIds } from "./send-dedup.js";
 import { createUserMessageSender } from "./user-message-sender.js";
@@ -95,7 +96,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // hasn't finished writing and leave those sessions card-less. Both stay off
   // the boot critical path; the reconcile is idempotent and repeats each boot,
   // so a session that misses this pass is picked up by the next one.
-  // See docs/plans/chat-husks.md.
+  // See plan:chat-husks.
   const maintenance = runBackfillIfNeeded(boxRoot).then(() => reconcileChatHusks(boxRoot)).catch((e: unknown) => {
     console.error("[chat] session backfill failed:", e instanceof Error ? e.message : e);
   });
@@ -285,6 +286,8 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
     sendUserMessage,
   });
 
+  const stopTriggerRunner = startTriggerRunner({ boxRoot, eventBus, registry, wireSession });
+
   server.get("/api/chat/default", async () => {
     const sessionId = await getMostActive(boxRoot);
     return { sessionId };
@@ -306,6 +309,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
 
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
+    stopTriggerRunner();
     clearChatRuntime(boxRoot);
     stopInterruptedWakes();
     await registry.shutdown();

@@ -5,7 +5,7 @@
 // sections: entry points, primary cards, places inside, pinned links, then each
 // `expand` group in the landmark's order. A tier with no links is left out. A
 // place with no links and no groups is empty, and the page says so
-// (docs/implemented-plans/landmark-arrival.md, Track C).
+// (plan:landmark-arrival, Track C).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

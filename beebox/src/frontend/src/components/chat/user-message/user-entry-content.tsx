@@ -20,6 +20,7 @@ import { CaptureChip } from "../CaptureChip";
 import { UploadChip } from "./UploadChip";
 import { QuestionHandoffChip } from "./QuestionHandoffChip";
 import { CallChip } from "./CallChip";
+import { TriggerChip } from "./TriggerChip";
 import { UserMessageText } from "../user-message-text";
 
 /**
@@ -68,6 +69,8 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
       return <QuestionHandoffChip model={part} />;
     case "call":
       return <CallChip model={part} />;
+    case "trigger":
+      return <TriggerChip model={part} />;
     default:
       return assertNever(part);
   }
@@ -93,7 +96,7 @@ function DeliveredMessageParts({ text, attachedFileIds }: { text: string; attach
  * true, swaps ONLY the string handed to `DeliveredMessageParts`/
  * `UserMessageText` for text blocks — file refs, images, and the debug view
  * all keep deriving from the block's ORIGINAL text
- * (docs/implemented-plans/retranscription-in-chat.md Track 3, "replacement is scoped to
+ * (plan:retranscription-in-chat Track 3, "replacement is scoped to
  * the display text only").
  */
 export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverlay }: {
@@ -149,7 +152,7 @@ export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverla
 }
 
 // Same unwrap `stripSpeechWrappers` does backend-side (`src/cli/lib/session-text.ts`)
-// for a low-confidence-word mark (Track 4, docs/implemented-plans/transcript-confidence.md):
+// for a low-confidence-word mark (Track 4, plan:transcript-confidence):
 // the popover wants clean human text, not the agent-facing `<unsure>` marker.
 // `stripUserDisplayTags` only strips the `<speech>`/`<typed>` SHELL — an inner
 // mark like `<unsure>` deliberately survives it (see that function's doc) so

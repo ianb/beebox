@@ -3,7 +3,7 @@
 // `extractFinalWords` (`src/frontend/src/machines/transcription-connections.ts`)
 // reads `msg.channel.alternatives[0].words[]` off a raw-`JSON.parse`'d Deepgram
 // message — not zod-validated, per the plan's Track 2 spec
-// (`docs/plans/transcript-confidence.md`). It prefers `punctuated_word` (to
+// (`plan:transcript-confidence`). It prefers `punctuated_word` (to
 // match how `accumulatedFinal` is built from the smart-formatted transcript),
 // attaches `confidence` only when it's a real number, and skips a malformed
 // entry rather than failing the whole message.

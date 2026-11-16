@@ -5,7 +5,7 @@
 // state is testable with no tailnet. Each fake scripts the two subcommands
 // (`tailscale status --json`, `tailscale serve status --json`) plus the `/auth/me`
 // probe, and per-command exit codes. See
-// `docs/implemented-plans/tailscale-expose-and-protect.md` Track B.
+// `plan:tailscale-expose-and-protect` Track B.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

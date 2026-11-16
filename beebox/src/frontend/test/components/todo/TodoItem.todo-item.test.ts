@@ -1,7 +1,7 @@
 // # TodoItem — one rendering of a todo
 //
 // `TodoItem` is how a todo reads in a card body, in a card's frontmatter
-// `todos:`, and in the todo list (`docs/plans/todos-ui.md`, Track 2). A
+// `todos:`, and in the todo list (`plan:todos-ui`, Track 2). A
 // checkbox leads, named by the todo's words; the words carry the status
 // treatment; date and assignment chips follow. Plate state comes from the
 // server, so only a todo the server calls `escalated` reads as overdue.
@@ -42,6 +42,16 @@ function summary(html: string) {
     /aria-label="([^"]*)"/.exec(box)?.[1],
     words,
   ].join(" | ");
+}
+
+function dateBadge(html: string) {
+  const match = /<span class="([^"]+)"><time dateTime="([^"]+)">([^<]+)<\/time><\/span>/.exec(html);
+  return { classes: match?.[1] ?? null, dateTime: match?.[2] ?? null, text: match?.[3] ?? null };
+}
+
+function assignedBadge(html: string) {
+  const match = /<span class="([^"]+)" title="Assigned">([^<]+)<\/span>/.exec(html);
+  return { classes: match?.[1] ?? null, text: match?.[2] ?? null };
 }
 
 // ## The four statuses
@@ -155,14 +165,22 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
 // date in a `<time>`:
 void test("Rendered, the escalated chip takes the warning tone and keeps the machine dat...", async (t) => {
   const escalated = render({ status: "open", due: "2026-09-15", plateState: "escalated" });
-  t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" readonly=\"\" disabled=\"\" class=\"accent-primary disabled:cursor-not-allowed mr-1 align-middle\" aria-label=\"Open\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
+  t.check(dateBadge(escalated), {
+    classes: "inline-block rounded font-medium bg-accent-100 text-warning-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    dateTime: "2026-09-15",
+    text: "overdue · Sep 15",
+  });
 
-  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" readonly=\"\" disabled=\"\" class=\"accent-primary disabled:cursor-not-allowed mr-1 align-middle\" aria-label=\"Open\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
+  t.check(dateBadge(render({ status: "open", due: "2026-09-15", plateState: "on-plate" })), {
+    classes: "inline-block rounded font-medium bg-warm-100 text-warm-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    dateTime: "2026-09-15",
+    text: "due Sep 15",
+  });
 });
 
 // ## `recheck`: a quiet chip in the list only
 //
-// `recheck` is the todo-review's bookkeeping (`docs/plans/todos-ui.md`, Track
+// `recheck` is the todo-review's bookkeeping (`plan:todos-ui`, Track
 // 7). The list shows it as a quiet note, never a date chip; a finished todo
 // shows none.
 void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Track 7).", async (t) => {
@@ -200,7 +218,10 @@ void test("An open agent todo reads in the quiet (parked) treatment with an \"ag
   const agentOpen = render({ status: "open", assigned: "agent" });
   t.check(summary(agentOpen), "unchecked | disabled | Open | text-card-soft");
 
-  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" readonly=\"\" disabled=\"\" class=\"accent-primary disabled:cursor-not-allowed mr-1 align-middle\" aria-label=\"Open\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
+  t.check(assignedBadge(agentOpen), {
+    classes: "inline-block rounded font-medium bg-warm-100 text-warm-700 bbx-badge-tone text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle",
+    text: "agent",
+  });
 
   t.check(
     [

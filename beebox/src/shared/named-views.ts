@@ -1,6 +1,6 @@
 /**
  * Named builtin views — self-sufficient interface surfaces a `view` card
- * can point at (docs/plans/interface-as-cards.md, "instrument cards").
+ * can point at (plan:interface-as-cards, "instrument cards").
  * The card supplies the address, configuration (`params`), and notes; the
  * view brings its own data.
  *

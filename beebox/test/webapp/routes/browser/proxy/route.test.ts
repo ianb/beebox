@@ -1,7 +1,7 @@
 // # `/<slug>/browser/`: the person's view of the box browser
 //
 // The engine proxies agent-browser's dashboard onto the box's own origin
-// (docs/plans/shared-browser.md, Track C). These tests run the real box
+// (plan:shared-browser, Track C). These tests run the real box
 // server with auth on, and stand a fake dashboard in for the browser host: an
 // HTTP and WebSocket server on the relay socket and a command server on the
 // command socket, at the paths `browserPaths` gives. The fake encodes the
@@ -323,7 +323,7 @@ void t.test("No browser installed: a page that says why", async (st) => {
 
 // # The question bar: the agent's question, the person's answer
 //
-// docs/plans/shared-browser-ask.subplan.md. The chat is substituted at its one
+// plan:shared-browser-ask.subplan. The chat is substituted at its one
 // seam, the box's chat runtime, which records what would reach the chat.
 
 interface FakeChat {

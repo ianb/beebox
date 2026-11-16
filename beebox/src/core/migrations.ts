@@ -24,7 +24,7 @@
  *                docs/cards/migrations.md).
  *   - procedure: an agent-applied migration — runs a procedure definition (which
  *                typically drives an agent through a checklist and gates on a
- *                `validate.shells` check). See docs/implemented-plans/agent-applied-migrations.md.
+ *                `validate.shells` check). See plan:agent-applied-migrations.
  * The two are distinguished by which field is present (`script` vs `procedure`),
  * so existing entries need no `kind` field.
  */
@@ -150,7 +150,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // stem, its recording moves under an audio card in the doc's attach scope,
   // and mentions of the memo file follow the rename. Fails closed (exit 1,
   // nothing written) on a field it does not map or an ambiguous recording.
-  // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
+  // Legacy support to remove: issues/code-quality/2026-10-16-retire-memo-legacy-source-guard.md.
   { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
   // Replaces a machine-local `link:` beebox dependency (deploy's
   // link:/opt/beebox/beebox, a laptop checkout path, a worktree override) with
@@ -160,7 +160,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // refresh restores both files and exits 1, so it stays pending. It runs
   // before box-shape-record so that migration's package.json commit does not
   // carry the machine path again.
-  // Plan: docs/implemented-plans/portable-engine-dependency.md.
+  // Plan: plan:portable-engine-dependency.
   { name: "engine-link-spec-2026-10", script: "src/scripts/migrate/engine-link-spec/run.ts" },
   // Copies shapeVersion and created from the gitignored .beebox/box.json into a
   // "beebox" block in the box's tracked package.json, so a clone of the box is
@@ -179,13 +179,13 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // (`folders` in google-drive.state.json) and deletes the key, so a mirror
   // pass that changed nothing on Drive changes no tracked file. Seeds the
   // state before writing cards; a card it cannot plan exits 2 as a leftover.
-  // Plan: docs/implemented-plans/drive-sync-time-out-of-card.md.
+  // Plan: plan:drive-sync-time-out-of-card.
   { name: "gfolder-last-sync-2026-10", script: "src/scripts/migrate/gfolder-last-sync/run.ts" },
   // Moves the flat `_content/calendar/*.ics` into one `<Name>.calendar.card`
   // per calendar with its events in `<Name>.attach/`, renamed to
   // `{date}_{title}_{shortId}.ics`, and rewrites the event index to match.
   // Writes a journal first; the calendar connector refuses to sync while it
-  // exists, and a rerun finishes it. Plan: docs/implemented-plans/calendar-cards.md.
+  // exists, and a rerun finishes it. Plan: plan:calendar-cards.
   { name: "calendar-folders-2026-10", script: "src/scripts/migrate/calendar-folders/run.ts" },
 ];
 

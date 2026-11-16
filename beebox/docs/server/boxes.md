@@ -123,6 +123,17 @@ Grant on the master as `beebox`, then re-export that box;
 a box's Admin page reaches only its own copy there and refuses a grant to
 another box with that instruction.
 
+To give an existing box the host's call relay
+([provisioning](provisioning.md#call-relay)) once coturn is running, re-run
+`deploy/add-box.sh` for it. When the master holds `turn-server` it grants it,
+then re-exports the box's copy.
+
+A re-export keeps what the box saved on its own Admin page: a value or grant
+in the box's copy that the master lacks is laid back over the master's share,
+and `add-box.sh` names each one it kept. To drop one, remove it on the box's
+Admin page. The script cannot tell a box's own grant from one the master
+revoked, so revoking a grant on the master also takes removing it there.
+
 Legacy `_config/connectors/*.secret.json` API-key files no longer work as a
 fallback; the machine secret store is the only source a connector reads a key
 from. The one exception is Google OAuth tokens, which the box rewrites as it

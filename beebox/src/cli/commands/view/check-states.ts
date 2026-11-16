@@ -1,12 +1,12 @@
 /**
  * The check states `bbx view check` renders a view with
- * (docs/implemented-plans/view-check-settled-render.md, Track 1). Every view renders with
+ * (plan:view-check-settled-render, Track 1). Every view renders with
  * no card. A view that renders card types also renders with `params.path` set
  * to the first card of each type, by path, among the cards it receives: the
  * app opens it on such a card, and its "card not found" branch is all a
  * path-less render reaches. A type with no such card is reported untested.
  * Then each state the view declares in its `checkStates` export, by name
- * (docs/implemented-plans/view-declared-check-states.md).
+ * (plan:view-declared-check-states).
  *
  * Also the records the children send the sweep: the `render-one` child's
  * remarks about a view that rendered but was not fully checked, and its

@@ -492,6 +492,17 @@ case "\$token_state" in
   *) echo "Secrets: the master store has no claude-oauth-token, so this box cannot run its agent until one is set and granted (docs/server/configuration.md)." ;;
 esac
 
+# The host's call relay (docs/plans/self-hosted-turn.md): one coturn for every
+# box, so a new box is granted turn-server whenever the master holds it. No
+# entry means this host runs no relay, and calls use Cloudflare TURN or STUN.
+relay_state=\$(node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{};const n="turn-server";process.stdout.write(!(n in (s.secrets??{}))?"absent":(n in (s.grants?.[process.argv[2]]??{}))?"granted":"grant")' "\$master_store" "$BOX_NAME")
+if [[ "\$relay_state" == grant ]]; then
+  if ! su - $BBX_USER -c "bbx engine secrets grant '$BOX_NAME' turn-server --agent-confirmed"; then
+    echo "Secrets: granting turn-server FAILED — stopping before the box is registered."
+    exit 1
+  fi
+fi
+
 # Re-chown everything (bbx engine init / the writes above ran as root in places).
 chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
 # The box's own secret store: its share of the hub user's master, verified.
@@ -499,29 +510,23 @@ chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
   # this copies the result (per-box-units.subplan.md).
   store="$BOX_HOME/.config/beebox/secrets.json"
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/.config/beebox"
-  # A re-run must not silently drop what the box saved on its own Admin page
-  # (a value or grant the master never received; per-box-units.md question
-  # 10): stop and name them, so the operator adds them to the master first.
-  if [[ -f "\$store" ]]; then
-    extra=\$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{secrets:{},grants:{}};const [m,c,slug]=process.argv.slice(1);const M=load(m),C=load(c);const extra=[...Object.keys(C.secrets??{}).filter((n)=>!(n in (M.secrets??{}))),...Object.keys(C.grants?.[slug]??{}).filter((n)=>!(n in (M.grants?.[slug]??{}))).map((n)=>"grant:"+n)];process.stdout.write(extra.join(" "))' "\$master_store" "\$store" "$BOX_NAME")
-    if [[ -n "\$extra" ]]; then
-      echo "Secrets: the box's own store holds entries the master does not (\$extra); re-exporting would drop them."
-      echo "  Add them to the master as $BBX_USER (bbx engine secrets set / grant $BOX_NAME) and re-run."
-      exit 1
-    fi
-  fi
+  # A re-run keeps what the box saved on its own Admin page (a value or grant
+  # the master never received; per-box-units.md question 10): the master's
+  # share is written, then the box's own entries are laid back over it and named.
   su - $BBX_USER -c "bbx engine secrets export-box '$BOX_NAME' --agent-confirmed" > "\$store.tmp"
+  kept=\$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{secrets:{},grants:{}};const [m,c,out,slug]=process.argv.slice(1);const M=load(m),C=load(c),O=load(out);O.secrets??={};O.grants??={};const kept=[];for(const [n,v] of Object.entries(C.secrets??{})){if(!(n in (M.secrets??{}))&&!(n in O.secrets)){O.secrets[n]=v;kept.push(n);}}const mine=O.grants[slug]??={};for(const [n,v] of Object.entries(C.grants?.[slug]??{})){if(!(n in (M.grants?.[slug]??{}))&&!(n in mine)){mine[n]=v;if(!(n in O.secrets)&&C.secrets?.[n]!==undefined)O.secrets[n]=C.secrets[n];kept.push("grant:"+n);}}f.writeFileSync(out,JSON.stringify(O,null,2)+"\\n");process.stdout.write(kept.join(" "))' "\$master_store" "\$store" "\$store.tmp" "$BOX_NAME")
   install -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0600 "\$store.tmp" "\$store"
   rm -f "\$store.tmp"
-  # Verify against the master file itself (root reads both): the copy's grant
-  # names for this box equal the master's. A missing store reads as empty, so
-  # a copy that lost a grant is exactly what this catches.
-  names() { node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{grants:{}};process.stdout.write(Object.keys(s.grants[process.argv[2]]??{}).sort().join(","))' "\$1" "$BOX_NAME"; }
-  master=\$(names "\$master_store"); copy=\$(names "\$store")
-  if [[ "\$master" != "\$copy" ]]; then
-    echo "Secrets: the box's store (\$copy) does not match the master's grants (\$master) — stopping before the box is registered."
+  [[ -z "\$kept" ]] || echo "Secrets: kept the box's own entries the master lacks (\$kept); remove one on the box's Admin page."
+  # Verify against the master file itself (root reads both): every grant the
+  # master holds for this box is in the copy. A missing store reads as empty,
+  # so a copy that lost a grant is exactly what this catches.
+  missing=\$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{grants:{}};const [m,c,slug]=process.argv.slice(1);const C=load(c);process.stdout.write(Object.keys(load(m).grants?.[slug]??{}).filter((n)=>!(n in (C.grants?.[slug]??{}))||!(n in (C.secrets??{}))).join(","))' "\$master_store" "\$store" "$BOX_NAME")
+  if [[ -n "\$missing" ]]; then
+    echo "Secrets: the box's store lacks the master's grants (\$missing) — stopping before the box is registered."
     exit 1
   fi
+  copy=\$(node -e 'const f=require("fs");process.stdout.write(Object.keys(JSON.parse(f.readFileSync(process.argv[1],"utf8")).grants?.[process.argv[2]]??{}).sort().join(","))' "\$store" "$BOX_NAME")
   echo "Secrets: \$store holds the box's grants (\${copy:-none})."
 # The engine link and node_modules are the deploy's job; the socket unit
 # serves the box on its first request.

@@ -1,5 +1,5 @@
 /**
- * One quick chat message on the box screen (docs/plans/box-screen.md, track
+ * One quick chat message on the box screen (plan:box-screen, track
  * 2), in the face `rowFace` gives it: sent, needs a choice, not delivered, or
  * past its delivery window. Each face shows the thought itself and only the
  * actions that face allows.

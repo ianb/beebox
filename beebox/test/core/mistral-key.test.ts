@@ -2,7 +2,7 @@
 //
 // `src/core/mistral-key.ts` was the first consumer migrated onto the machine-level
 // secret store and the template for the rest
-// (`docs/implemented-plans/secret-custody.md`). The store is now the only source:
+// (`plan:secret-custody`). The store is now the only source:
 // the transition window that also read the in-tree
 // `_config/connectors/mistral.secret.json` file and `BBX_MISTRAL_API_KEY` has
 // closed. A box with no grant degrades to `null` — the caller's existing "not

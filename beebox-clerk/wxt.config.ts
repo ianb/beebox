@@ -20,7 +20,9 @@ const dateVersion =
 // without Chrome's permission prompt or a toolbar click. That build goes to
 // `dist-browse/`, never `dist/`; real builds keep host access per-origin and
 // user-granted.
-function readDevHostPermissions(env: Record<string, string | undefined>): string[] {
+function readDevHostPermissions(
+  env: Record<string, string | undefined>,
+): string[] {
   const raw = env["CLERK_DEV_HOST_PERMISSIONS"];
   return raw === undefined ? [] : raw.split(",").filter((host) => host !== "");
 }
@@ -30,7 +32,9 @@ export default defineConfig({
   srcDir: "src",
   outDir: devHostPermissions.length > 0 ? "dist-browse" : "dist",
   modules: ["@wxt-dev/module-react"],
-  manifest: {
+  // MV3 for every target; WXT would otherwise build Firefox as MV2.
+  manifestVersion: 3,
+  manifest: ({ browser }) => ({
     name: "Bee Box Clerk",
     description: "Browser companion for Bee Box",
     version: dateVersion,
@@ -38,7 +42,9 @@ export default defineConfig({
     permissions: [
       "tabs",
       "storage",
-      "sidePanel",
+      // Firefox has no sidePanel API; WXT maps the sidepanel entrypoint to
+      // its sidebar_action instead.
+      ...(browser === "firefox" ? [] : ["sidePanel"]),
       "contextMenus",
       "scripting",
       "activeTab",
@@ -46,7 +52,9 @@ export default defineConfig({
     // Host access is granted per-origin when the user enables a box —
     // never broadly at install time.
     optional_host_permissions: ["http://*/*", "https://*/*"],
-    ...(devHostPermissions.length > 0 ? { host_permissions: devHostPermissions } : {}),
+    ...(devHostPermissions.length > 0
+      ? { host_permissions: devHostPermissions }
+      : {}),
     // Shares the beebox "box" mark (frontend public/icons/icon-512.png),
     // resized to the Chrome extension sizes — clerk is the box's browser
     // companion, so it carries the same icon rather than a placeholder square.
@@ -56,5 +64,18 @@ export default defineConfig({
       "48": "/icon-48.png",
       "128": "/icon-128.png",
     },
-  },
+    // Firefox requires an add-on ID for anything beyond a temporary install,
+    // and a data-collection declaration for new add-ons. Clerk sends page
+    // content only to the person's own box, never to the developer.
+    ...(browser === "firefox"
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: "clerk@beebox.run",
+              data_collection_permissions: { required: ["none"] },
+            },
+          },
+        }
+      : {}),
+  }),
 });

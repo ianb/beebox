@@ -1,4 +1,8 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+
 import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
+import { moveDoc, type DocMoveNotice, type StagePaths } from "./lib/doc-move.js";
 
 export interface ConfirmResult {
   content: string;
@@ -6,8 +10,16 @@ export interface ConfirmResult {
   workstream: string;
 }
 
+/** A refusal to confirm: the issue is not in a confirmable shape. */
+export class ConfirmTestedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfirmTestedError";
+  }
+}
+
 /** The issue file does not open with a `---` YAML frontmatter block. */
-class MissingFrontmatterError extends Error {
+class MissingFrontmatterError extends ConfirmTestedError {
   constructor() {
     super("issue has no YAML frontmatter");
     this.name = "MissingFrontmatterError";
@@ -15,7 +27,7 @@ class MissingFrontmatterError extends Error {
 }
 
 /** The frontmatter carries no `workstream:` field. */
-class MissingWorkstreamError extends Error {
+class MissingWorkstreamError extends ConfirmTestedError {
   constructor() {
     super("issue has no workstream");
     this.name = "MissingWorkstreamError";
@@ -23,7 +35,7 @@ class MissingWorkstreamError extends Error {
 }
 
 /** The issue is not awaiting manual testing (no `needs:`, or no `manual-testing` in it). */
-class NotAwaitingManualTestingError extends Error {
+class NotAwaitingManualTestingError extends ConfirmTestedError {
   constructor() {
     super("issue does not need manual testing");
     this.name = "NotAwaitingManualTestingError";
@@ -31,7 +43,7 @@ class NotAwaitingManualTestingError extends Error {
 }
 
 /** The `needs:` field is neither an inline `[a, b]` list nor a block list. */
-class NeedsNotAListError extends Error {
+class NeedsNotAListError extends ConfirmTestedError {
   constructor() {
     super("needs must be a list");
     this.name = "NeedsNotAListError";
@@ -39,7 +51,7 @@ class NeedsNotAListError extends Error {
 }
 
 /** The issue body has no `## Manual testing` heading to record the verification under. */
-class MissingManualTestingSectionError extends Error {
+class MissingManualTestingSectionError extends ConfirmTestedError {
   constructor() {
     super("issue has no Manual testing section");
     this.name = "MissingManualTestingSectionError";
@@ -113,4 +125,38 @@ export function confirmTestedContent(
     close: remaining.length === 0,
     workstream,
   };
+}
+
+export interface AppliedConfirmation {
+  close: boolean;
+  workstream: string;
+  /** Paths to stage and commit, by repository, in that repository's terms. */
+  stage: StagePaths;
+  notices: DocMoveNotice[];
+}
+
+/**
+ * Confirm manual testing for the open issue at `issue` (repo-relative) in the
+ * checkout at `repoRoot`. When the last need goes, the issue moves into
+ * `issues/closed/` through the shared move (`bin/lib/doc-move.ts`), which
+ * rewrites every inbound reference and stages nothing. Every refusal (the
+ * content checks, an unsafe reference, a dirty file in either repository)
+ * happens before any write.
+ */
+export function applyConfirmTested({ repoRoot, issue, date }: { repoRoot: string; issue: string; date: string }): AppliedConfirmation {
+  const confirmed = confirmTestedContent(fs.readFileSync(path.join(repoRoot, issue), "utf8"), date);
+  if (!confirmed.close) {
+    fs.writeFileSync(path.join(repoRoot, issue), confirmed.content, "utf8");
+    return { close: false, workstream: confirmed.workstream, stage: { public: [issue], private: [] }, notices: [] };
+  }
+  const result = moveDoc({
+    repoRoot,
+    from: issue,
+    to: path.posix.join("issues/closed", path.posix.relative("issues", issue)),
+    dryRun: false,
+    refuseDirty: true,
+    // The same edit, applied after the moved file's own links are re-expressed.
+    editMoved: (content) => confirmTestedContent(content, date).content,
+  });
+  return { close: true, workstream: confirmed.workstream, stage: result.stage, notices: result.notices };
 }

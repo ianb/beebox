@@ -7,7 +7,7 @@
 //
 // The seam is deliberately narrow: the reactor asks for the policy, rather than
 // `createAgent` silently supplying it to every unpinned agent run in the system
-// (`docs/implemented-plans/model-engine-policy.md`, Track B).
+// (`plan:model-engine-policy`, Track B).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -92,7 +92,7 @@ export interface ReadyLifecycle {
    * When the source under this generation was first seen to have moved, or
    * `null` while it still matches. Reporting only: nothing in the router acts
    * on it. See the "why not restart" note in
-   * beebox/docs/implemented-plans/dev-loop-lifecycle.md — the router's activity
+   * plan:dev-loop-lifecycle — the router's activity
    * signal is HTTP-only, so a WebSocket-borne chat looks idle to it and there
    * is no moment it can prove is safe to replace a generation in.
    */

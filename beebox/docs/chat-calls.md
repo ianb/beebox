@@ -12,8 +12,13 @@ A call belongs to one chat room (`core/chat/presence/`), at most one per
 room, held in memory. Holding a `chatCall.join` subscription is being on the
 call; it does not depend on focus, so switching tabs keeps you on. People
 present in the chat see the call on their `chatPresence.watch` stream
-(`{ t: "call", call }`), which is how they are rung. Nobody who does not have
-the chat open is rung.
+(`{ t: "call", call }`), which is how they are rung: the call bar plays a
+phone ring every 3 seconds for up to 20 seconds, until someone answers or the
+call ends. Nobody who does not have the chat open is rung.
+
+People are shown by name: the hub passes the signed-in person's name to the
+box (`x-bbx-authenticated-name`), and a person with no name on record shows as
+the part of their email before the @. The `<call>` entry uses the same names.
 
 - `join({ sessionId, callId: null })` starts a call, or joins the one going,
   so two people pressing call at once land in one call.
@@ -32,14 +37,32 @@ subscription registers
 
 ## Media
 
+The call bar's buttons name what pressing them does (Mute or Unmute, Start
+video or Stop video), and a muted person sees "You're muted". Video floats
+under the top-right avatar, beside the heads of others in the chat, on every
+page while the call lasts.
+
 Peers connect directly with WebRTC, one `RTCPeerConnection` per pair, using
 perfect negotiation (the lexically smaller `peerId` is polite). Offers,
 answers and candidates travel as `signal` frames; the server forwards them
-without reading them. `chatCall.iceServers` returns STUN, plus short-lived
-Cloudflare TURN credentials when the box is granted the `cloudflare-turn`
-secret (`{ keyId, apiToken }`, see [secrets.md](secrets.md)). The token
-stays on the server; each mint is logged. Without the key, calls connect
+without reading them. `chatCall.iceServers` returns short-lived TURN
+credentials and STUN from one of two relays, never both:
+
+- The host's own coturn, when the box is granted `turn-server` (a cloud
+  server; [provisioning](server/provisioning.md#call-relay)). The server
+  signs the credentials itself, with no outside call.
+- Otherwise Cloudflare's, when the box is granted `cloudflare-turn`
+  (`{ keyId, apiToken }`, see [secrets.md](secrets.md)), with STUN from
+  `stun.cloudflare.com`.
+
+Secrets stay on the server; each mint is logged. Without either, calls connect
 where a direct path exists, and a failed connection names the missing relay.
+Credentials last three hours and the page fetches them when it joins, so a
+relayed call longer than that fails until someone rejoins.
+
+To check the relay end to end, set `localStorage["bbx.call.forceRelay"] = "1"`
+in both pages: they then use only relay candidates, and
+`chrome://webrtc-internals` shows the selected pair as `relay`.
 
 In the iOS app, the web view grants the microphone and camera to the box's
 own page, and the page reports `beeboxCallState { active }`

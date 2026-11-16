@@ -2,7 +2,8 @@
  * `bin/issues close` — the "Closed items" procedure in `issues/AGENTS.md` as
  * one command: move the issue into `closed/<category>/`, set `resolution:`
  * and `workstream:`, add the closing note, and rewrite every reference to the
- * moved file (`bin/lib/doc-move.ts`), printing each one.
+ * moved file (`bin/lib/doc-move.ts`), printing each one. Nothing is staged;
+ * the report ends with the paths to stage in each repository.
  */
 
 import { execFileSync } from "node:child_process";
@@ -104,6 +105,7 @@ export async function commandClose(values: ParsedValues, positionals: string[]):
     dryRun,
     editMoved: (content) => closedSource(content, { resolution, workstream, note, date: localDate(new Date()) }),
   });
+  if (plan.notices.some((n) => n.blocking)) process.exitCode = 1;
   if (values.json === true) {
     emitJson({ ...plan, moved: { ...plan.moved, content: undefined }, files: plan.files.map((f) => ({ ...f, content: undefined })), workstream });
     return;

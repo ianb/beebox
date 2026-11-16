@@ -1,6 +1,6 @@
 /**
  * Tour card renderer — registers TourCard for `tour` cards, with a strip
- * rendering (`docs/implemented-plans/conversation-strip.md`, Track B).
+ * rendering (`plan:conversation-strip`, Track B).
  */
 
 import { lazyComponent } from "../lib/lazy-component";

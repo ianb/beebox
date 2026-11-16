@@ -4,7 +4,7 @@
  * `claude-oauth-token` and granted to every box. The Claude CLI accepts it
  * from `CLAUDE_CODE_OAUTH_TOKEN` and then needs no credentials file and no
  * refresh, which is what a host with one Linux user per box needs
- * (`docs/plans/per-box-units.subplan.md`, question 1): a copied
+ * (`plan:per-box-units.subplan`, question 1): a copied
  * `.credentials.json` dies at the first refresh, because the refresh token
  * rotates and the other copies are revoked (measured on production,
  * 2026-10-25).

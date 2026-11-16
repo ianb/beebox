@@ -4,7 +4,7 @@
 // argument and independently hand-rolled `path.isAbsolute(p) ? p :
 // <join>`. `resolveCliTargetPath` (`src/cli/lib/cli-target-path.ts`) is the
 // one place that resolution now happens, guarding two leaks
-// (`docs/plans/display-path-guard.subplan.md`): a boxholder DISPLAY-FORM path
+// (`plan:display-path-guard.subplan`): a boxholder DISPLAY-FORM path
 // (`Config:box.json`) is rejected outright, and a canonical box-ref form
 // (`/_config/box.json`) — which `path.isAbsolute` can't distinguish from a
 // real OS-absolute path — resolves against `boxRoot`, not the filesystem root.

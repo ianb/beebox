@@ -1,6 +1,6 @@
 /**
  * Does this response look like a site refusing the box, and not the page?
- * (docs/plans/webpage-capture-tools.md.) A page that matches makes no card.
+ * (plan:webpage-capture-tools.) A page that matches makes no card.
  *
  * It can miss a block: a site can send a long sign-in page with a 200. A box
  * adds those cases to its own `webpage.ts`, which can refuse any page.

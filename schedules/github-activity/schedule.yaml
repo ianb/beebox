@@ -1,0 +1,5 @@
+description: "GitHub activity watch: anything other people did on the public beebox repo"
+cadence: 1d
+# No `workstream:`: the product is the alert, and the content it reports
+# (issue bodies, comments) is written by strangers, so no unattended agent
+# reads it. The developer reads the links.

@@ -71,10 +71,10 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
 /**
  * Create a staging session. `kind` defaults to `"capture"` (the recorded
  * photo/voice-memo batch); pass `kind: "bulk"` plus an initial `expectedItems`
- * registry for a bulk file-upload batch (`docs/implemented-plans/bulk-file-upload.md`),
+ * registry for a bulk file-upload batch (`plan:bulk-file-upload`),
  * whose finalize path reads `files` + `expectedItems` rather than the capture
  * media arrays; pass `kind: "voice"` plus `targetSessionId` for a chat voice
- * recording (`docs/implemented-plans/resilient-voice-recording.md`).
+ * recording (`plan:resilient-voice-recording`).
  *
  * `id` lets a caller supply the session id up front — the voice route's
  * idempotent client-generated id (a resumed browser must be able to name the

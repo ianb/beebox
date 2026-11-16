@@ -3,7 +3,7 @@
 // The ids a ref's `#fragment` can name in a body: heading ids (explicit, else
 // slug, numbered when repeated) and annotated paragraph ids. Heading ids come
 // from `HeadingIds`, the function `makeHeadingNode` also uses, so lint and the
-// renderer agree (docs/plans/knowledge-base-tools.md, Track D).
+// renderer agree (plan:knowledge-base-tools, Track D).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

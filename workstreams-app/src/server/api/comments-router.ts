@@ -1,4 +1,4 @@
-// The comment channel's procedures (`docs/plans/document-comments.md`).
+// The comment channel's procedures (`plan:document-comments`).
 //
 // Everything mutating goes through tRPC — a CONSTRAINT, not a preference.
 // `workstreams-app/src/router/server/auth.ts:228-239` classifies a POST under `/workstreams/` as

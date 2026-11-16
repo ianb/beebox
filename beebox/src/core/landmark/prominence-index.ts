@@ -1,7 +1,7 @@
 /**
  * The prominence index: "which cards under this directory carry a level,
  * and what does each subdirectory's derived list boil down to" —
- * `docs/implemented-plans/card-prominence.md`, Track B.
+ * `plan:card-prominence`, Track B.
  *
  * The unit of work is a landmark's **pruned subtree**: its directory and
  * every descendant directory, stopping at any directory that has its own
@@ -64,7 +64,7 @@ export interface PrunedSubtree {
   /**
    * Every `ordinary` card the walk reached, with its file mtime — the cards
    * `entries` omits. The place page's "Also here" group lists them
-   * (`docs/implemented-plans/place-shows-cards.md`, Track A).
+   * (`plan:place-shows-cards`, Track A).
    */
   ordinary: OrdinaryCard[];
 }

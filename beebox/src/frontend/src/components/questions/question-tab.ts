@@ -1,8 +1,8 @@
 /**
- * A question beside the chat (docs/implemented-plans/questions-beside-the-chat.md,
+ * A question beside the chat (plan:questions-beside-the-chat,
  * Track B): closing the tab of a pending question is "Later", which puts
  * the card away (the dismiss transition,
- * docs/implemented-plans/questions-later-and-figure-it-out.md). Answered, dismissed, and
+ * plan:questions-later-and-figure-it-out). Answered, dismissed, and
  * expired questions close like any card. Only the person's close does this; the workspace evicting a tab
  * at its cap or retargeting one never goes through here.
  */
@@ -47,7 +47,7 @@ export function useAnswerInChat(): ((path: string) => void) | undefined {
 }
 
 /**
- * What the card beside the chat can do (docs/implemented-plans/questions-later-and-figure-it-out.md,
+ * What the card beside the chat can do (plan:questions-later-and-figure-it-out,
  * Track A): "Later" closes the tab, which puts the question away; "Figure it
  * out" hands it to the box in the background (`actions.figureOut`, which puts
  * it away itself) and closes the tab without a second put-away; "Answer in
@@ -78,7 +78,7 @@ export function useBesideActions(path: string, companion: boolean): BesideAction
   };
 }
 
-/** What the app bar's question counter does in a chat (docs/implemented-plans/questions-later-and-figure-it-out.md, Track B). */
+/** What the app bar's question counter does in a chat (plan:questions-later-and-figure-it-out, Track B). */
 export type QuestionToggle = { kind: "open"; path: string } | { kind: "hide"; path: string } | { kind: "page" };
 
 /**
@@ -124,7 +124,7 @@ export function useQuestionToggle(): { label: string; onToggle: () => void } | u
 /**
  * The pending question card in front, beside this chat, or null. The
  * empty chat then refers to it instead of offering openers
- * (docs/implemented-plans/questions-later-and-figure-it-out.md). Queries the question
+ * (plan:questions-later-and-figure-it-out). Queries the question
  * list only while a question card is in front.
  */
 export function useQuestionInFront(): string | null {

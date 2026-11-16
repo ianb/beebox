@@ -1,6 +1,6 @@
 // # `standard`: refuse what looks blocked or failed, otherwise read the page
 //
-// docs/plans/webpage-capture-tools.md. Links leave the site absolute, and page
+// plan:webpage-capture-tools. Links leave the site absolute, and page
 // script never runs. A page with almost no text is kept and says so.
 
 import { test } from "tap";

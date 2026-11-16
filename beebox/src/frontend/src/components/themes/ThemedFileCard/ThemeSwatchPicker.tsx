@@ -30,7 +30,7 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
   const systemDefault = paired.at(0);
   const defaultBadge = `${themeLabel(systemTheme)} default`;
   const swatch = ({ name, label, stock, isDefault }: { name: string; label: string; stock: string; isDefault: boolean }) => (
-    <Swatch key={`${name}/${stock}`} name={name} label={label} stock={stock} pressed={choice.name === name && choice.stock === stock}
+    <ThemeSwatch key={`${name}/${stock}`} name={name} label={label} stock={stock} pressed={choice.name === name && choice.stock === stock}
       badge={isDefault ? defaultBadge : null} disabled={mutation.isPending}
       onSelect={() => select({ name, stock })} />
   );
@@ -71,7 +71,7 @@ function SwatchGroup({ title, children }: { title: string; children: ReactNode }
   </div>;
 }
 
-function Swatch({ name, label, stock, pressed, badge, disabled, onSelect }: {
+export function ThemeSwatch({ name, label, stock, pressed, badge, disabled, onSelect }: {
   name: string; label: string; stock: string; pressed: boolean; badge: string | null; disabled: boolean; onSelect: () => void;
 }) {
   return (

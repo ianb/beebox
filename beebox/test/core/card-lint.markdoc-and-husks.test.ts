@@ -373,7 +373,7 @@ void test("An image, audio, file or pdf card keeps its file in its attach scope,
 //
 // A husk's `session` field is the *only* thing that identifies which chat the
 // card is about — the filename is a naming convention, and renaming a husk is
-// encouraged (`docs/implemented-plans/chat-session-identity.md`). So it is validated as a
+// encouraged (`plan:chat-session-identity`). So it is validated as a
 // UUID before anything keys on it or joins it into a path: Claude Agent SDK ids
 // are UUIDv4, Codex thread ids UUIDv7, and one check covers both.
 void test("A husk's session field is the only thing that identifies which chat the card...", async (t) => {

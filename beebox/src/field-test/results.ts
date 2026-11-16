@@ -1,6 +1,6 @@
 /**
  * The raw result of a field run — what `results.json` holds
- * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
+ * (`plan:agent-field-tests`, Track 2).
  *
  * Deliberately dumb: plain data, no formatting, no judgement. Track 5's report
  * writer turns this into `report.md`, and a triage agent reads one or the

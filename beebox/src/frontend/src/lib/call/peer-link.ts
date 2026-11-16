@@ -28,10 +28,27 @@ export interface PeerLinkOptions {
   /** Make the first offer now; otherwise wait for the other side's. */
   initiate: boolean;
   local: MediaStream | null;
-  send: (data: SignalData) => void;
+  /**
+   * Deliver one signal; resolves once the server has it. The link waits for
+   * each send before the next, so signals reach the other side in order.
+   */
+  send: (data: SignalData) => Promise<void>;
   onReport: (report: LinkReport) => void;
   /** The other member's media; called again whenever its tracks change. */
   onRemote: (stream: MediaStream) => void;
+}
+
+/**
+ * A debug switch for checking the relay end to end: with
+ * `localStorage["bbx.call.forceRelay"] = "1"` a page uses only relay candidates,
+ * so a call connects only through TURN (plan:self-hosted-turn).
+ */
+function iceTransportPolicy(): RTCIceTransportPolicy {
+  try {
+    return window.localStorage.getItem("bbx.call.forceRelay") === "1" ? "relay" : "all";
+  } catch (_error) {
+    return "all";
+  }
 }
 
 export class PeerLink {
@@ -42,14 +59,16 @@ export class PeerLink {
   private settingRemoteAnswer = false;
   /** The signals applied so far, in arrival order; `apply` never rejects, so the chain never breaks. */
   private applying: Promise<void> = Promise.resolve();
+  /** The signals sent so far, in order; each waits for the one before it. */
+  private sending: Promise<void> = Promise.resolve();
   private local: MediaStream | null;
 
   constructor(private readonly opts: PeerLinkOptions) {
-    this.pc = new RTCPeerConnection({ iceServers: opts.iceServers });
+    this.pc = new RTCPeerConnection({ iceServers: opts.iceServers, iceTransportPolicy: iceTransportPolicy() });
     this.polite = isPolite(opts.self, opts.other);
     this.local = opts.local;
     this.pc.onnegotiationneeded = () => { void this.offer(); };
-    this.pc.onicecandidate = ({ candidate }) => opts.send({ candidate: candidate === null ? null : candidate.toJSON() });
+    this.pc.onicecandidate = ({ candidate }) => this.send({ candidate: candidate === null ? null : candidate.toJSON() });
     this.pc.onconnectionstatechange = () => opts.onReport(linkReport(this.pc.connectionState));
     this.pc.ontrack = ({ track, streams }) => {
       const stream = streams[0] ?? new MediaStream([track]);
@@ -85,15 +104,31 @@ export class PeerLink {
       sender.replaceTrack(replacement).catch((e: unknown) => console.warn("[call] replaceTrack failed", e));
     }
     for (const track of unsent) {
-      if (local !== null) this.pc.addTrack(track, local);
+      if (local === null) continue;
+      // Video goes on a transceiver of its own: `addTrack` lets the other side's
+      // offer claim it, and after a glare rollback Chrome then leaves the other
+      // side's video there muted while its frames arrive, so no tile shows.
+      if (track.kind === "video") this.pc.addTransceiver(track, { direction: "sendonly", streams: [local] });
+      else this.pc.addTrack(track, local);
     }
+  }
+
+  /**
+   * Signals travel as separate requests, which can overtake each other; an
+   * offer that overtakes the answer before it breaks negotiation. Sending each
+   * after the previous one arrived keeps them in order.
+   */
+  private send(data: SignalData): void {
+    this.sending = this.sending.then(() => this.opts.send(data)).catch((e: unknown) => {
+      console.warn(`[call] signal to ${this.opts.other} failed`, e);
+    });
   }
 
   private async offer(): Promise<void> {
     try {
       this.makingOffer = true;
       await this.pc.setLocalDescription();
-      if (this.pc.localDescription !== null) this.opts.send({ description: this.pc.localDescription.toJSON() });
+      if (this.pc.localDescription !== null) this.send({ description: this.pc.localDescription.toJSON() });
     } catch (e) {
       console.warn(`[call] offer to ${this.opts.other} failed`, e);
     } finally {
@@ -143,7 +178,7 @@ export class PeerLink {
     // Send our tracks on the transceivers the offer created before answering it.
     this.syncTracks(this.local);
     await this.pc.setLocalDescription();
-    if (this.pc.localDescription !== null) this.opts.send({ description: this.pc.localDescription.toJSON() });
+    if (this.pc.localDescription !== null) this.send({ description: this.pc.localDescription.toJSON() });
   }
 
   private async onCandidate(candidate: RTCIceCandidateInit): Promise<void> {

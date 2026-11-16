@@ -1,5 +1,5 @@
 /**
- * Chat husks — a `chat` card per web chat session (docs/plans/chat-husks.md).
+ * Chat husks — a `chat` card per web chat session (plan:chat-husks).
  *
  * The husk is the session's noun: identity (`session` id, `context-dir`)
  * plus editorial fields, created eagerly at session-id assignment and
@@ -83,7 +83,7 @@ async function readFirstMessage(boxRoot: string, sessionId: string): Promise<str
  * Idempotent on the `session` field, not on the filename: a husk renamed to
  * something without the `_<shortid>` suffix is still found, so resuming a
  * renamed chat doesn't mint a second card pointing at the same session
- * (`docs/implemented-plans/chat-session-identity.md`, Track 1). `date` names the file
+ * (`plan:chat-session-identity`, Track 1). `date` names the file
  * (defaults to now; backfill passes the transcript mtime so old husks sort by
  * when the chat happened).
  */

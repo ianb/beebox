@@ -1,5 +1,5 @@
 // Tests for the REAL RouterAuthDeps (workstreams-app/src/router/server/auth-deps.ts) — Track B, chunk
-// 2a of beebox/docs/implemented-plans/expose-dev-router.md. These exercise the wiring
+// 2a of plan:expose-dev-router. These exercise the wiring
 // the pure gate (workstreams-app/src/router/server/auth.ts, covered by workstreams-app/test/router/server/auth.test.ts) can't:
 // the single slug→box source of truth (duplicate ⇒ fail closed; a non-box
 // segment ⇒ the worktree-root/session sentinel, NOT a deny), the per-box mobile

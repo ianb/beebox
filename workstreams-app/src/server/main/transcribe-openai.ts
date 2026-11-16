@@ -1,4 +1,4 @@
-// The real transcription call (`docs/plans/document-comments.md`, Track 4).
+// The real transcription call (`plan:document-comments`, Track 4).
 //
 // TWO STEPS, NOT ONE. This returns text and nothing else; the client puts it in
 // the composer, where it can be edited, and submits it through the ordinary

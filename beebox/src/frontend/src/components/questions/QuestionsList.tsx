@@ -4,7 +4,7 @@
  * live-refreshes on question/card events), so it serves both the
  * canonical Questions card and authored `view: questions` cards. The
  * query-card form (group-by, generic list renderer) is
- * future design (docs/plans/interface-as-cards.md).
+ * future design (plan:interface-as-cards).
  *
  * The archive is not a dead end: `answered` shows the recorded answer;
  * `dismissed`/`expired` are demoted, not closed — they keep the answer form
@@ -47,7 +47,7 @@ function demotedCard(q: QuestionInfo, actions: { onAnswered: () => void; answerI
     <Stack key={q.path} gap="xs">
       {q.provisional === undefined ? <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" /> : (
         // The box's decision, never the person's answer
-        // (docs/implemented-plans/questions-later-and-figure-it-out.md, Track C).
+        // (plan:questions-later-and-figure-it-out, Track C).
         <div data-testid="question-box-decided">
           <Text as="p" size="sm" weight="semibold">The box decided for now: {q.provisional.decision}</Text>
           <Text as="p" size="sm" tone="subtle">{q.provisional.reasoning}</Text>

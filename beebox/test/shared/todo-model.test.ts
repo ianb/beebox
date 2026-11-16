@@ -1,7 +1,7 @@
 // # `todo-model.ts` — status enum, date parsing, plate-state derivation
 //
 // Pure-function tests for the shared todo vocabulary
-// (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 1): the closed status enum,
+// (`plan:todo-annotation`, Track 1 chunk 1): the closed status enum,
 // absolute/relative date parsing, attribute validation, and the box-local
 // plate-state truth table.
 
@@ -155,7 +155,7 @@ void test("A relative start can never land after due by construction (it's alway
 
 // ### `recheck` is a date or `never`
 //
-// `recheck` is the todo-review's bookkeeping (`docs/plans/todos-ui.md`, Track
+// `recheck` is the todo-review's bookkeeping (`plan:todos-ui`, Track
 // 7): the date the review may next list the todo, or `never`. Anything else is
 // a validation error that says both accepted forms.
 void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Track 7):", async (t) => {

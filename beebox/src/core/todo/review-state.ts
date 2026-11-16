@@ -1,7 +1,7 @@
 /**
  * The todo-review's box-local state, `.beebox/todo-review-sweep.json`, and
  * the cross-process lock every reader-modifier-writer of it holds
- * (`docs/implemented-plans/todos-ui.md`, Track 7).
+ * (`plan:todos-ui`, Track 7).
  *
  * Three things live here:
  * - `lastSweepDateEpoch` — the sweep's `stirring` baseline (`review-sweep.ts`).

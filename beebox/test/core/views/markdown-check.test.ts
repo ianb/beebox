@@ -2,7 +2,7 @@
 //
 // `checkViewMarkdown(source)` (`src/core/views/markdown-check/core.ts`) is the
 // edit-time check that makes hand-rolled Markdown in a box view an error
-// (`docs/plans/todos-ui.md`, Track 6). The validation hooks run it after the
+// (`plan:todos-ui`, Track 6). The validation hooks run it after the
 // compile check. It reports each problem with its line; the hook message ends
 // with the rule and where to ask for more.
 

@@ -1,6 +1,6 @@
 // # The launcher that puts a box's browser in its own network
 //
-// docs/plans/shared-browser.md, Track F; research/embedded-browser/linux-verification.md.
+// plan:shared-browser, Track F; research/embedded-browser/linux-verification.md.
 // The launcher cannot run on a Mac, so these checks pin its argv and script.
 // Two silent failures depend on them: without `--map-user` and `setpriv`
 // agent-browser runs as uid 0 and turns Chrome's sandbox off, and without the

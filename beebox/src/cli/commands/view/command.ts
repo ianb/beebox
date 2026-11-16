@@ -21,7 +21,7 @@
  * called there (that's a view bug; fileUrl returns a string and is fine). The
  * settled render (`settle.ts`) then runs effects in a jsdom document with
  * `readFile` answered from the box, so a view that crashes once its data
- * loads fails too (docs/implemented-plans/view-check-settled-render.md).
+ * loads fails too (plan:view-check-settled-render).
  *
  * A view that passes then gets advice (`advise.ts`): patterns the views doc
  * forbids, printed under its line. Advice never changes `ok` or the exit code.

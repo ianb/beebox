@@ -2,13 +2,13 @@ import type { WorkspaceNavigationDecision } from "../history";
 
 /**
  * Arrival: going to a place with no saved arrangement opens the place
- * (docs/implemented-plans/landmark-arrival.md, Track D). The workspace store holds the
+ * (plan:landmark-arrival, Track D). The workspace store holds the
  * candidate flag (`takeArrival`); the place's `landmarks.forDir` payload holds
  * the target (`arrival`: its single entry-point card, else the landmark card).
  *
  * At the root, arrival also opens the newest pending question, active, so a
  * new chat has the question beside it
- * (docs/implemented-plans/questions-beside-the-chat.md, Track A). The desktop opens the
+ * (plan:questions-beside-the-chat, Track A). The desktop opens the
  * place first and the question on top; the phone, where one card or the chat
  * fits, opens only the question, and otherwise nothing: the chat wins.
  * Returns the paths to open in order; the last is the active tab.

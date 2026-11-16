@@ -110,7 +110,9 @@ absolute paths so destructive callers need no shared root assumptions.
 
 `reset-test` hard-resets the isolated clone to `test-setup`.
 `confirm-tested` clears an issue's landed manual-testing need on main, deletes
-that baseline branch, and commits the transition. `release` clears the cull pin
+that baseline branch, and commits the transition. A closing issue moves through
+`bin/lib/doc-move.ts`, so inbound references are rewritten in the same commit;
+rewrites inside `private-issues/` are committed in that repository. `release` clears the cull pin
 only after merge, cleanliness, and no live agent. `down` stops one worktree;
 `panic` stops the router and tracked/scoped orphan processes and wipes runtime
 state, while sparing processes attributed to live sibling agents.

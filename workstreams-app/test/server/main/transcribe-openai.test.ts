@@ -2,7 +2,7 @@
 //
 // Two steps, not one: this returns **text and nothing else**, and the client puts
 // it in the composer where it can be edited before anything is stored
-// (`docs/plans/document-comments.md`, Track 4). That is why the audio only has to
+// (`plan:document-comments`, Track 4). That is why the audio only has to
 // survive until the transcript returns — after that the comment is text like any
 // other, with nothing left to lose.
 //

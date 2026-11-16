@@ -1,5 +1,5 @@
 /**
- * The web box screen's page state (docs/plans/box-screen.md, track 2), as pure
+ * The web box screen's page state (plan:box-screen, track 2), as pure
  * functions so each row face and the reload path are tested without a
  * browser.
  *

@@ -7,7 +7,7 @@
  * `.claude/agents/finish.md` until now; {@link verificationCommands} is the
  * one place it lives.
  *
- * See beebox/docs/plans/change-based-test-selection.md, "Revision
+ * See plan:change-based-test-selection, "Revision
  * 2026-08-25 — test economics", mechanisms E and E2.
  */
 
@@ -60,7 +60,7 @@ const NONE_DIRS = new Set([
 const APPLE_DIRS = new Set(["apple-shared", "ios-app", "mac-app"]);
 
 /** Root files that change what the root scripts check. */
-const ROOT_FILES = new Set([
+export const ROOT_FILES: ReadonlySet<string> = new Set([
   "eslint.config.mjs",
   "knip.json",
   "package.json",
@@ -491,3 +491,4 @@ export function parseTrailers(messages: string[]): { issues: string[]; plans: st
   }
   return { issues: [...issues].toSorted(), plans: [...plans].toSorted() };
 }
+

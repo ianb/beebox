@@ -1,7 +1,7 @@
 /**
  * Per-chat overlay store for the two audio-review bus events
  * (`chat-retranscription` / `chat-audio-consulted`,
- * docs/implemented-plans/retranscription-in-chat.md Track 3): a `messageId -> overlay`
+ * plan:retranscription-in-chat Track 3): a `messageId -> overlay`
  * map the WS event handlers (`InteractiveChat-ws.ts`) write into and
  * `UserMessage` reads from.
  *

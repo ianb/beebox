@@ -38,7 +38,7 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
   // Loaded here, not at module scope: `cli/index.ts` imports every command
   // module eagerly, so a static import would make every `bbx` invocation load
   // the TypeScript API. Only this command needs it.
-  // (docs/plans/commit-performance.md, phase 1b.)
+  // (plan:commit-performance, phase 1b.)
   const { typecheckProject } = await import("../../../lib/typescript/check.js");
   const reactNodeModules = path.dirname(
     path.dirname(

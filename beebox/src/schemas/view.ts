@@ -1,7 +1,7 @@
 /**
  * View card schema — an interface surface as an addressable card.
  *
- * An "instrument card" (docs/plans/interface-as-cards.md): the named view
+ * An "instrument card" (plan:interface-as-cards): the named view
  * is self-sufficient code that loads its own data; the card *situates* it —
  * gives the surface a path (linkable, embeddable, pinnable in nav.card via
  * `ref`), frontmatter as its configuration surface, and a markdown body as

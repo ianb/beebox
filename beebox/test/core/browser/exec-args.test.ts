@@ -1,6 +1,6 @@
 // # The exec route refuses arguments that leave the box browser
 //
-// docs/plans/shared-browser.md, Track C (`exec-args.ts`) and the Failure-modes
+// plan:shared-browser, Track C (`exec-args.ts`) and the Failure-modes
 // row "Agent passes `--profile ~/.config/google-chrome` or `--cdp 9222`". The
 // box has one browser and one profile; global flags and subcommands that pick
 // another are refused with a 400 that names them.

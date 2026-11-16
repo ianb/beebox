@@ -3,7 +3,7 @@ import { cn } from "../../lib/cn";
 export interface MobileBackButtonProps {
   label: string;
   onClick: () => void;
-  /** DOM id. Set it to publish a `bbx-` control address (docs/plans/agent-points-at-ui.md). */
+  /** DOM id. Set it to publish a `bbx-` control address (plan:agent-points-at-ui). */
   id?: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;

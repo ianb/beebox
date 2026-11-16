@@ -5,7 +5,7 @@
 // iOS `SpeechKeywordsTests` XCTest suite, and (later) an Android JUnit suite all
 // load the **same files**. A contract change edits a fixture once and every
 // platform's suite fails for the cases the fixtures represent until it catches up.
-// The design and policy live in `docs/implemented-plans/mobile-parity-sync.md` and
+// The design and policy live in `plan:mobile-parity-sync` and
 // `docs/mobile-contract.md`.
 //
 // Each fixture is one well-formed JSON file: `{ "input": …, "expected": … }` plus
@@ -461,7 +461,7 @@ void test("The current session's narration flag is mirrored to native without am
 // Whether the box's HQ service labels speakers. A payload from web that predates
 // `diarized` reads as not diarized, and a non-boolean `diarized` drops the
 // payload. `enabled` is ignored: every dictated message gets the HQ pass
-// (docs/plans/hq-always.md), and web still sends `enabled: true` only for native
+// (plan:hq-always), and web still sends `enabled: true` only for native
 // builds from before that change:
 void test("Whether the box's HQ service labels speakers.", async (t) => {
   await t.checkText(runFamily("hq-dictation-state", validateHqDictationState), "{\"family\":\"hq-dictation-state\",\"cases\":7,\"pass\":7}");

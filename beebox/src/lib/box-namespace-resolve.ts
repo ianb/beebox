@@ -14,7 +14,7 @@
  * through a per-route copy of `path.resolve` + `isInBoxNamespace(rawPath)`.
  * Checking the raw string is a traversal bypass: `_content/../package.json`
  * starts with `_content` (passes a raw-string check) but *resolves* to
- * `package.json` (outside the namespace) — `docs/implemented-plans/one-root-box-layout.md`
+ * `package.json` (outside the namespace) — `plan:one-root-box-layout`
  * Track B.
  *
  * `resolveBoxNamespacePath` itself deliberately does NOT `fs.realpath` the
@@ -53,7 +53,7 @@ export interface BoxNamespacePath {
 /**
  * The result of resolving a request path against the box namespace,
  * distinguishing WHY it failed so callers can report each case differently
- * (`docs/plans/display-path-guard.subplan.md`):
+ * (`plan:display-path-guard.subplan`):
  *
  *  - `ok: true` — resolved and in-namespace; carries the same fields as the
  *    former `BoxNamespacePath`.

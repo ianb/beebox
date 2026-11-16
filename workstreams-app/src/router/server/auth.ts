@@ -1,5 +1,5 @@
 // The dev router's fail-closed authorization core (Track B, chunk 1 of
-// beebox/docs/implemented-plans/expose-dev-router.md).
+// plan:expose-dev-router).
 //
 // This module is PURE: it classifies a request into a route class and decides
 // allow/deny, given the request facts plus INJECTED auth-resolution functions.

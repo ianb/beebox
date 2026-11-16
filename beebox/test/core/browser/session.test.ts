@@ -1,7 +1,7 @@
 // # Reading `agent-browser session list`
 //
 // The browser page starts the box session only when the list parses and lacks
-// it (docs/plans/shared-browser.md, Track C); output in any other shape must
+// it (plan:shared-browser, Track C); output in any other shape must
 // read as unknown, so a page the person was using is never replaced.
 
 import { test } from "tap";

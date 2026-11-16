@@ -1,6 +1,6 @@
 /**
  * `bbx engine browser-host --box <root> --engine-pid <pid>`: the
- * box browser host (docs/plans/shared-browser.md, Track B). The engine spawns
+ * box browser host (plan:shared-browser, Track B). The engine spawns
  * one per box (`src/core/browser/host/start.ts`); nothing else should run it.
  * It runs the agent-browser dashboard and the relay socket until SIGTERM or
  * until the engine `--engine-pid` names is gone.

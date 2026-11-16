@@ -3,7 +3,7 @@
  * Mobile-contract tripwire (`pnpm mobile-contract-check`). One script, two modes,
  * driven by the two git hooks that together enforce the sync rule from
  * `beebox/docs/mobile-contract.md` (mechanism 5 of
- * `beebox/docs/implemented-plans/mobile-parity-sync.md`):
+ * `plan:mobile-parity-sync`):
  *
  *   pre-commit  (default mode)   — reads the staged file list (in a merge, only
  *     files whose merged content differs from every parent) and the anchor
@@ -26,7 +26,7 @@
  * we cannot know whether a staged file is an anchor, so we refuse to guess.
  *
  * Runs on EVERY commit repo-wide, so it stays fast: plain git + fs, no heavy
- * imports. Background: `beebox/docs/implemented-plans/mobile-parity-sync.md`.
+ * imports. Background: `plan:mobile-parity-sync`.
  */
 
 import { execFileSync } from "node:child_process";

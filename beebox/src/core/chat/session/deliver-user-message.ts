@@ -162,8 +162,16 @@ export async function deliverUserMessage(opts: {
   onSessionResolved?: ((sessionId: string) => void | Promise<void>) | undefined;
   /** Console-log prefix for this delivery kind (e.g. "capture", "bulk"). */
   logPrefix?: string;
+  /** Called once the message is admitted (queued, or past the session's readiness checks), before a cold engine start; a caller holding a lock can release it here. */
+  onAdmitted?: (() => void) | undefined;
+  /**
+   * Take a fresh box-work permit instead of the caller's. A delivery that
+   * starts from a timer inherits the async context of whatever request armed
+   * the timer, and that request's permit is gone by the time it fires.
+   */
+  independent?: boolean | undefined;
 }): Promise<DeliverUserMessageResult> {
-  const { boxRoot, registry, eventBus, wireSession, target, message, onSessionResolved } = opts;
+  const { boxRoot, registry, eventBus, wireSession, target, message, onSessionResolved, onAdmitted, independent } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
 
   const bound = target.contextDir !== null && target.contextDir !== "" ? target.contextDir : undefined;
@@ -207,6 +215,7 @@ export async function deliverUserMessage(opts: {
   if (session.isBusy()) {
     session.enqueue(input);
     recordUserMessage();
+    onAdmitted?.();
     return { sessionId: id, queued: true };
   }
 
@@ -223,7 +232,7 @@ export async function deliverUserMessage(opts: {
   // dispatched, while a throw is ambiguous — it may have gone out before the
   // failure — and treating the two alike would let a retry double-deliver. The
   // callers' crash-recovery paths depend on that distinction.
-  const sent = await session.send(input);
+  const sent = await session.send(input, { ...(onAdmitted === undefined ? {} : { onAdmitted }), ...(independent === true ? { independent: true } : {}) });
   if (!sent) throw new UserMessageDeliveryError();
   recordUserMessage();
   return { sessionId: session.getSessionId(), queued: false };

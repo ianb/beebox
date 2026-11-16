@@ -81,7 +81,7 @@ Then run `deploy/deploy.sh` from a checkout whose `target.env` names the server,
 - Users `beebox` (hub) and `beebox-sched` (scheduler), group `beebox-boxes`
 - The tmpfiles rules for `/run/beebox`, `/var/lib/beebox`, `/var/cache/beebox`, `/var/log/beebox` and `/etc/beebox`, and `/etc/beebox/box.env`
 
-`provision.sh` runs once as root after cloud-init finishes and before the first deploy: GitHub host keys, git identity, the `/home/beebox/.env` skeleton, Claude Code transcript retention, the nightly `claude-update` timer, and the Docling model pre-fetch into `/var/cache/beebox/hf` (skipped, with a message, until the first deploy provides the tree; pass the checkout path as `$1`). `setup-server.sh` is a retired stub that exits 1.
+`provision.sh` runs once as root after cloud-init finishes and before the first deploy: GitHub host keys, git identity, the `/home/beebox/.env` skeleton, Claude Code transcript retention, the nightly `claude-update` timer, the call relay's `turn-server` secret, and the Docling model pre-fetch into `/var/cache/beebox/hf` (skipped, with a message, until the first deploy provides the tree; pass the checkout path as `$1`). `setup-server.sh` is a retired stub that exits 1.
 
 **Neither runs on deploy.** `deploy.sh` owns everything repo-shaped: the tree under `/opt/beebox`, the hub, scheduler and box units, sudoers, the helpers, and the nginx site. The nginx site file lives in
 `nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
@@ -140,6 +140,7 @@ box publishes, `0700` inside).
 /var/log/beebox/host-apt.log       # One JSON line per package install attempt
 /usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
 /usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
+/etc/turnserver.conf               # coturn's config, rendered from turn-server (deploy writes it)
 /run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
 /var/lib/beebox-deploy/windows.tsv  # One line per deploy window: opened, down, closed, outcome
 /etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
@@ -218,6 +219,60 @@ Mesa's software driver, lavapipe. Every deploy runs
 - A check, as one box user under the box sandbox, that
   `node src/scripts/dawn-probe.ts <engine>` reports an adapter. A host with no
   box yet skips it.
+
+### Call relay
+
+Calls relay media through one coturn for the whole host when two browsers
+cannot connect directly ([plan](../plans/self-hosted-turn.md)). Every deploy
+runs `server-bin/bbx-turn-install` as root, after the Codex sandbox. Its only
+input is the master store's `turn-server` entry, JSON
+`{"secret": "<64 hex>", "urls": ["turn:<ipv4>:3478?transport=udp", ...]}`:
+
+- No entry: coturn is stopped and disabled if it is installed.
+- An entry: coturn (Ubuntu's package) is installed, `/etc/turnserver.conf` is
+  rendered from `coturn/turnserver.conf` plus the URLs' addresses and the
+  secret (0640 `root:turnserver`), and coturn restarts when that changed. Two
+  test clients then relay to each other through the first IPv4 address. A URL
+  whose address is not on this host fails the deploy.
+
+coturn accepts only credentials the box server signs with the secret
+(`src/core/turn-server-key.ts`), relays UDP only, and refuses loopback,
+private, link-local and IPv4-mapped peers. It listens on 3478 (UDP and TCP)
+and relays on UDP 49160–49999. These ports are reached on the server's own
+address, not through Cloudflare; `hetzner/origin-firewall.sh` opens them to
+everyone. There is no TLS listener. `bin/deploy-status` prints a Relay line.
+`server-bin/bbx-turn-install.smoke.sh` runs the helper against real coturn in a
+Lima VM; run it after changing the helper or the template.
+
+**A new host gets it automatically.** `hetzner/provision.sh` writes the
+`turn-server` entry from a fresh secret and the host's public addresses (it
+skips a host with no public IPv4 and never replaces an existing entry). The
+first deploy then starts coturn, and `add-box.sh` grants each box as it is
+added.
+
+**To turn it on by hand** (a host provisioned before this), as the hub user:
+
+1. `openssl rand -hex 32` for the secret; `ip -br addr` for the public
+   addresses.
+2. `bbx engine secrets set turn-server` with the JSON above, listing a `udp`
+   and a `tcp` URL for the IPv4 address and a `udp` URL for the IPv6 one.
+3. Deploy, and check that `bin/deploy-status` shows the relay active.
+4. Re-run `deploy/add-box.sh` for each existing box; it grants `turn-server`
+   and re-exports the box's copy ([boxes](boxes.md)). Granting before coturn
+   runs hands calls a relay that does not answer. New boxes get the grant
+   when they are added.
+
+**To turn it off:** on each box, as its user, remove the box's copy
+(`bbx engine secrets rm turn-server`), so its calls go back to Cloudflare or
+STUN. Then remove the entry from the master and deploy, which stops coturn.
+`add-box.sh` cannot do the first step: while the master holds the entry it
+grants it again, and once the master drops it a re-export keeps the box's copy
+as the box's own entry.
+
+**To change the secret or the addresses:** set the new value, deploy, then
+re-run `add-box.sh` for every box. Relayed calls that start between the deploy and a box's
+re-export fail. Credentials last three hours, and the page fetches them only
+when it joins a call.
 
 ## Systemd units
 

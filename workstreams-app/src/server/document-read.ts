@@ -1,5 +1,5 @@
 // Reading one browsable path out of a checkout, for the general browser
-// (beebox/docs/plans/general-browser.md).
+// (plan:general-browser).
 //
 // THE ADDRESS IS THE FILE. A path is repository-relative and a workstream is a
 // LENS over it (`workstream: null` reads main), never a segment you enter

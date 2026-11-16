@@ -34,7 +34,10 @@ import { StatusMessage } from "../../../../components/ui/StatusMessage";
 import { ErrorText } from "../../../../components/ui/ErrorText";
 import { InlineAction } from "../../../../components/ui/InlineAction";
 import { Table, Td, Th } from "../../../../components/ui/Table";
+import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
+import { WorkspaceUpdating } from "../../../../components/chat/WorkspaceUpdating";
 import { QUESTION_PATH, QuestionCard } from "./question";
+import { FigureErrorSpecimen, QuoteSpecimens, WorkspaceSpecimens } from "./specimens";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -74,8 +77,8 @@ Context: notes from the planning call. **Dana** asked for *shorter* labels.
 
 | Variety | Packets |
 | --- | ---: |
-| Marigold | 12 |
-| Basil | 8 |
+| [Marigold](#before-saturday) | \`12\` |
+| \`Basil\` | [8](#on-the-day) |
 
 \`\`\`text
 doors open: 10:00
@@ -97,6 +100,7 @@ This sample includes **bold**, *italic*, ~~retired text~~ and a [sample link](#b
 const READING_PATH = "notes/Seed exchange.doc.card";
 const SETTINGS_PATH = "_config/interface/settings.card";
 const FILE_PATH = "notes/packing-list.txt";
+const BADGE_TONES: BadgeTone[] = ["neutral", "info", "success", "warning", "danger", "accent"];
 
 function tab(path: string, { label, pinned }: { label: string; pinned: boolean }): PanelTab {
   return { target: { path, viewer: null, params: {}, viewState: null }, label, pinned, lastActiveAt: 0 };
@@ -129,6 +133,7 @@ function CompanionDesk({ id, label, tabs, active, identities, content, children 
     <div role="tabpanel" id={workspacePanelId(active)} aria-hidden={false} data-card-content={content} className="bbx-interface-card-desk flex-1 min-h-0">
       <MaterialContext.Provider value={content === "neutral"}>{children}</MaterialContext.Provider>
     </div>
+    {content === "card" && active === READING_PATH ? <WorkspaceUpdating editing /> : null}
   </div>;
 }
 
@@ -145,6 +150,7 @@ function ReadingCard({ theme }: { theme: Theme }) {
     }} />
     <div className="bbx-card-content">
       <StudioFigure />
+      <FigureErrorSpecimen />
       <CaptionedFigure caption="Drag the slider to warm the seed tray: germination starts near 20 °C">
         <img src={WIDGET_ART} alt="" className="block w-full" />
       </CaptionedFigure>
@@ -152,6 +158,8 @@ function ReadingCard({ theme }: { theme: Theme }) {
         <Image src={WIDGET_ART} alt="Seed tray sketch" size="chat" caption="An image embed shows its caption beneath" />
       </Row>
       <CardStatusLines />
+      <QuoteSpecimens />
+      <WorkspaceSpecimens />
     </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
       <CheckboxField id="bbx-studio-check" label="Bring spare envelopes" checked={checked} onChange={setChecked} />
@@ -167,6 +175,8 @@ function ReadingCard({ theme }: { theme: Theme }) {
  */
 function CardStatusLines() {
   return <Stack gap="sm" className="my-3">
+    <Row gap="sm" wrap>{BADGE_TONES.map((tone) => <Badge key={tone} tone={tone}>{tone}</Badge>)}
+      <Badge tone="neutral" material>On this card</Badge></Row>
     <StatusMessage variant="inline">Loading the seed list…</StatusMessage>
     <Row gap="sm">
       <ErrorText>The seed list could not be loaded.</ErrorText>
@@ -193,6 +203,10 @@ function SystemThemePanel() {
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
+    <div className="max-h-24 overflow-hidden"><SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled idPrefix="bbx-studio-system-theme-disabled" onSelect={noop} /></div>
+    {/* LandmarkSystemThemePicker's shell; its full picker makes a live box query. */}
+    <section className="bbx-landmark-system-theme" aria-label="Landmark system theme"><h4>System theme</h4>
+      <Text as="p" size="xs" tone="muted">Scope: This landmark</Text></section>
     <SelectField id="bbx-studio-select" label="Toolbar size" value="regular" onChange={noop}
       options={[{ value: "compact", label: "Compact" }, { value: "regular", label: "Regular" }, { value: "large", label: "Large" }]} />
     <Text size="xs" tone="muted">This box has its own system theme.</Text>
@@ -213,7 +227,10 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
   ]);
   return <div className="min-w-0 space-y-4">
     <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
-      tabs={[tab(READING_PATH, { label: "Seed exchange", pinned: true }), tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: false })]}>
+      tabs={[tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: true }),
+        ...["Map of the hall", "Labels and markers", "Volunteer shifts", "Seed packets"].map((label) => tab(`notes/${label}.doc.card`, { label, pinned: false })),
+        tab(READING_PATH, { label: "Seed exchange", pinned: false }),
+        ...["Door checklist", "Opening notes", "Visitors", "After the event"].map((label) => tab(`notes/${label}.doc.card`, { label, pinned: false }))]}>
       <ReadingCard theme={theme} />
     </CompanionDesk>
     <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"

@@ -8,9 +8,12 @@ import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { ChatPresenceFrame } from "../../../src/core/chat/presence/room.js";
 
-const boxRoot = "/tmp/bbx-chat-presence-router-test";
+// Mutations (setComposing) take box-work admission, which needs a Git box.
+const box = await makeTmpBox({ git: true });
+const boxRoot = box.root;
 const sessionId = "0b9d6a5e-3c1f-4e8a-9a51-2f4d7c6b8e10";
 const priya = { email: "priya@example.com", name: "Priya Marlowe" };
 const tomas = { email: "tomas@example.com", name: "Tomas Marlowe" };
@@ -75,4 +78,35 @@ void test("a different chat is a different room", async (t) => {
   t.check(await elsewhere.next(), { t: "others", people: [] });
   await p.close();
   await elsewhere.close();
+});
+
+void test("setComposing reaches the others in the chat; the agent and a stranger cannot set one", async (t) => {
+  // Tests run in order; the last one removes the shared box.
+  t.teardown(() => box.cleanup());
+  const priyaCaller = appRouter.createCaller(trpcContext({ boxRoot, user: priya }));
+  const tomasCaller = appRouter.createCaller(trpcContext({ boxRoot, user: tomas }));
+  const agentCaller = appRouter.createCaller(trpcContext({ boxRoot, user: tomas, actor: "agent" }));
+  // Not watching yet: refused.
+  t.check(await tomasCaller.chatPresence.setComposing({ sessionId, doing: "typing" }), { ok: false });
+  const controller = new AbortController();
+  const frames = (await appRouter.createCaller(trpcContext({ boxRoot, user: priya }), { signal: controller.signal }).chatPresence.watch({ sessionId }))[Symbol.asyncIterator]();
+  const nextActivity = async (): Promise<ChatPresenceFrame> => {
+    for (;;) {
+      const r = await frames.next();
+      if (r.done === true) throw new Error("subscription ended");
+      if (r.value.t === "composing") return r.value;
+    }
+  };
+  t.check(await nextActivity(), { t: "composing", active: [] });
+  const tm = await watch({ user: tomas });
+  await tm.next();
+  t.check(await tomasCaller.chatPresence.setComposing({ sessionId, doing: "dictating" }), { ok: true });
+  t.check(await nextActivity(), { t: "composing", active: [{ email: tomas.email, doing: "dictating" }] });
+  t.check(await agentCaller.chatPresence.setComposing({ sessionId, doing: null }), { ok: false });
+  // Priya's own composing state is never sent back to her.
+  t.check(await priyaCaller.chatPresence.setComposing({ sessionId, doing: "typing" }), { ok: true });
+  await tm.close();
+  t.check(await nextActivity(), { t: "composing", active: [] });
+  controller.abort();
+  await frames.return?.();
 });

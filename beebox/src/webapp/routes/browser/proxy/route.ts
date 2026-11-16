@@ -1,6 +1,6 @@
 /**
  * `/<slug>/browser/`: the person's view of the box browser
- * (docs/plans/shared-browser.md, Track C).
+ * (plan:shared-browser, Track C).
  *
  * The page is agent-browser's own dashboard, served by the browser host on
  * its relay socket and proxied here onto the box's origin, so the person

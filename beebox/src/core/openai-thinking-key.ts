@@ -2,7 +2,7 @@
  * Resolve the box's OpenAI *thinking* key — the one behind chat TTS, Whisper
  * transcription, and the realtime client-secret mint. The machine store's
  * `openai-thinking` entry at `server` access, and nothing else
- * (`docs/implemented-plans/secret-custody.md`); the `THINKING_OPENAI_API_KEY`
+ * (`plan:secret-custody`); the `THINKING_OPENAI_API_KEY`
  * env path this key used to have was retired with the rest of the transition
  * window.
  *

@@ -2,6 +2,12 @@
    variables; frameless embeds intentionally inherit their enclosing material.
    Selection colors are the exception: a theme without its own pair keeps the
    system theme's (chrome.css), so the base material leaves them unset. */
+/* Semantic badges keep their own fill and ink on every card stock. The
+   material-neutral badge deliberately inherits the card instead. */
+.bbx-badge-tone {
+  --bbx-ink: currentColor;
+}
+
 .bbx-card-theme {
   --bbx-paper: #fff;
   --bbx-ink: #302f2d;

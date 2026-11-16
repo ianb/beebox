@@ -174,7 +174,7 @@ void test("Caller additions override / extend the env, and passing undefined del
 // login surface's own configuration — is withheld too, and so is any name nobody
 // thought to list, which is the point of an allowlist. The connector keys that
 // used to be named here are no longer read from the environment at all
-// (`docs/implemented-plans/secret-custody.md`); they are exercised below anyway,
+// (`plan:secret-custody`); they are exercised below anyway,
 // because an allowlist must keep withholding a name after the reason for naming
 // it goes away.
 void test("The subprocess env is a fail-closed allowlist, not a process.env spread with...", async (t) => {
@@ -303,7 +303,7 @@ void test("Spawning the box's own tooling (bbx wakeup, bbx finalize, scheduled r
 // Each profile stamps `BBX_SPAWN_PROFILE`, so a credentialed `bbx` verb branches
 // on who spawned it rather than on what it can happen to read. The marker is set,
 // never inherited: a `tooling` parent's value does not reach an agent child, which
-// is the whole point (`docs/plans/agent-capability-delegation.md`).
+// is the whole point (`plan:agent-capability-delegation`).
 void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branches on w...", async (t) => {
   t.teardown(async () => {
     try {
@@ -357,7 +357,7 @@ void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branc
 // endpoint file, and the host's `BBX_PUBLIC_URL` has no box path. On a unit host
 // the hub starts an idle box for a request to `<base>/<slug>`, so `boxServerEnv`
 // names that URL, with the slug from the box's home (`<home>/box`). See
-// docs/implemented-plans/on-demand-job-triggers.md, Track A.
+// plan:on-demand-job-triggers, Track A.
 void test("On a unit host, the box name comes from the box's path", async (t) => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-unit-env-"));
   const boxRoot = path.join(home, "fam", "box");

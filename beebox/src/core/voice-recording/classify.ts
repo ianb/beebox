@@ -1,6 +1,6 @@
 /**
  * Pure classification of one HQ transcription attempt's failure
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). The HQ job branches on
+ * (`plan:resilient-voice-recording`, Track 1). The HQ job branches on
  * this to decide whether to retry with backoff, halve the piece and restart,
  * or give up.
  *

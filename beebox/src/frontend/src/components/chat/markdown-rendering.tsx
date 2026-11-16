@@ -19,6 +19,7 @@ import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
 import { useConversationSelectionCapture } from "./everywhere/card-context/context";
+import { PaneCardProvider } from "../../lib/activity/scope";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
@@ -153,17 +154,21 @@ function ChatImg({ src, alt }: { src?: string; alt?: string }) {
     // Frameless embed (no chat header/border): the renderer owns its
     // appearance and the caption, so an embedded image card reads like a
     // plain captioned image. To open a card in the sidebar, use a link.
+    // The embed is its own activity scope: a figure the agent put in the
+    // chat reports what the person does in it, as it would in the pane.
     return (
-      <FileView
-        path={target.path}
-        mode="embed"
-        rendererName={target.viewer}
-        viewState={target.viewState}
-        onNavigate={onNavigate}
-        onAddSelection={captureSelection}
-        params={target.params}
-        {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
-      />
+      <PaneCardProvider card={target.path}>
+        <FileView
+          path={target.path}
+          mode="embed"
+          rendererName={target.viewer}
+          viewState={target.viewState}
+          onNavigate={onNavigate}
+          onAddSelection={captureSelection}
+          params={target.params}
+          {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
+        />
+      </PaneCardProvider>
     );
   }
   // Also the fall-through for an embed path that escapes the box root

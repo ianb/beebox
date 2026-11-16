@@ -16,13 +16,14 @@ import {
   parseHealth,
   parseLastDeployRecord,
   parseMigrations,
+  parseRelay,
   redactHost,
   section,
   sshFailureReason,
   splitSections,
   type DeployStatusReport,
 } from "./deploy-status-lib.js";
-import { describeDivergence, renderLock, renderText } from "./deploy-status-render.js";
+import { describeDivergence, renderLock, renderRelay, renderText } from "./deploy-status-render.js";
 
 const NOW = new Date("2026-10-07T22:40:00Z");
 
@@ -113,6 +114,24 @@ test("healthz parsing reads the verdict, boxes, and unit states", () => {
   assert.deepEqual(down, degraded("hub /healthz did not answer (services: beebox-hub failed, beebox-scheduler active)"));
 });
 
+// plan:self-hosted-turn: a host with the turn-server secret must have
+// coturn running, or boxes hand out a relay that does not answer.
+test("the relay line says whether calls have a working relay", () => {
+  const read = (text: string) => parseRelay(text);
+  assert.deepEqual(read("configured yes\nstate active\nversion 4.6.1-1build4\n"), available({ configured: true, state: "active", version: "4.6.1-1build4" }));
+  assert.deepEqual(read("configured no\nstate inactive\nversion \n"), available({ configured: false, state: "inactive", version: null }));
+  assert.deepEqual(read("state active\n"), degraded('unreadable relay section: "state active"'));
+  const render = (text: string) => {
+    const relay = read(text);
+    assert.ok(relay.ok);
+    return renderRelay(relay.data);
+  };
+  assert.equal(render("configured yes\nstate active\nversion 4.6.1-1build4"), "Relay      coturn 4.6.1-1build4 active");
+  assert.equal(render("configured yes\nstate failed\nversion 4.6.1-1build4"), "Relay      coturn 4.6.1-1build4 failed — relayed calls fail; run a deploy and read its relay step");
+  assert.equal(render("configured no\nstate active\nversion 4.6.1-1build4"), "Relay      coturn 4.6.1-1build4 active without a turn-server secret; the next deploy stops it");
+  assert.equal(render("configured no\nstate inactive\nversion"), "Relay      none (no turn-server secret; boxes use Cloudflare TURN or STUN only)");
+});
+
 test("a report with every remote section degraded still renders and serializes", () => {
   const reason = "ssh to the deploy target failed: Connection timed out";
   const report: DeployStatusReport = {
@@ -128,6 +147,7 @@ test("a report with every remote section degraded still renders and serializes",
     lock: available({ state: "free", requestedSha: null }),
     health: degraded(reason),
     disk: degraded(reason),
+    relay: degraded(reason),
     migrations: degraded(reason),
   };
   const text = renderText(report, NOW);
@@ -135,10 +155,10 @@ test("a report with every remote section degraded still renders and serializes",
   assert.match(text, /main 2 ahead of prod · HEAD \(worktree-x\): cannot compare/);
   assert.match(text, /^Health {5}unavailable: ssh to the deploy target failed/m);
   assert.match(text, /^Migrations unavailable: ssh/m);
-  assert.equal(text.split("\n").length, 7);
+  assert.equal(text.split("\n").length, 8);
 
   const json: unknown = JSON.parse(JSON.stringify(report));
-  assert.deepEqual(Object.keys(json ?? {}), ["commits", "lastDeploy", "lock", "health", "disk", "migrations"]);
+  assert.deepEqual(Object.keys(json ?? {}), ["commits", "lastDeploy", "lock", "health", "disk", "relay", "migrations"]);
   assert.deepEqual(report.disk, { ok: false, reason });
 });
 
@@ -149,6 +169,7 @@ test("a healthy report flags only boxes that need attention", () => {
     lock: available({ state: "free", requestedSha: null }),
     health: available({ code: 200, verdict: "ok", boxes: [{ slug: "a", status: "stopped", consecutiveFailures: 0 }], services: { "beebox-hub": "active" } }),
     disk: available({ freeBytes: 1, freeGiB: 1, thresholdBytes: 2, thresholdGiB: 2, status: "low" }),
+    relay: available({ configured: true, state: "active", version: "4.6.1-1build4" }),
     migrations: available([
       { box: "a", status: available({ manifest: true, pending: [], questions: [] }) },
       { box: "b", status: available({ manifest: false, pending: [], questions: [] }) },

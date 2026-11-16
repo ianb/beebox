@@ -4,7 +4,7 @@
 // anchored to a span, written from a browser, waiting outside git until an agent
 // reads it and clears it. The store is the third persistence class — beside the
 // main checkout, surviving a worktree cull, never merged
-// (`docs/plans/document-comments.md`).
+// (`plan:document-comments`).
 //
 // Two properties carry most of the risk and are tested hardest here: **a path may
 // never escape the store**, and **a file that does not parse is reported rather

@@ -1,6 +1,6 @@
 /**
  * `bbx browser <agent-browser args>`: the agent's one way into the box
- * browser (docs/plans/shared-browser.md, Track D).
+ * browser (plan:shared-browser, Track D).
  *
  * The agent never runs `agent-browser` itself: whichever process runs it
  * first starts its daemon and Chrome, and on a server that must happen
@@ -9,7 +9,7 @@
  * the box's own server (`POST /<slug>/api/browser/exec`), which checks them
  * and runs agent-browser inside the host, and prints what agent-browser
  * printed, with its exit code. `bbx browser ask` is this command's own verb: it
- * saves a question for the person (docs/plans/shared-browser-ask.subplan.md).
+ * saves a question for the person (plan:shared-browser-ask.subplan).
  */
 
 import { Command } from "commander";

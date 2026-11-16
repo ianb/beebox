@@ -1,7 +1,7 @@
 /**
  * Landmark links + groups section of the context chip's menu — extracted
  * from the retired `LandmarkLinksButton` trigger (chunk 4 of
- * docs/implemented-plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
+ * plan:chat-header-chips). Owns the `trpc.landmarks.forDir` query.
  *
  * When the chat is scoped to a directory whose landmark carries
  * `navigation.links` (or `expand` fan-out), this surfaces those resolved
@@ -15,7 +15,7 @@
  * landmark links" row, rather than being indistinguishable from "no links"
  * (the bug in the retired button). A section with rows opens with a divider.
  * The landmark card itself is not a row: the agent edits it, not the person
- * (docs/plans/box-screen.md, track 3).
+ * (plan:box-screen, track 3).
  */
 
 import { LandmarkGroupRows } from "../../../landmarks/LandmarkGroupRows";

@@ -40,56 +40,54 @@ workstream_confirm_tested() {
     [ "$lock_attempt" -lt 20 ] || { echo "confirm-tested: timed out waiting for transition lock" >&2; return 1; }
     sleep 0.1
   done
-  local result_file original_file
+  # The file step (bin/confirm-tested-apply.ts) refuses before any write: the
+  # content checks, a reference it cannot rewrite, a dirty file in either
+  # repository. It moves a closing issue through the shared move, which
+  # rewrites inbound references and stages nothing, and prints the paths.
+  local result_file
   result_file=$(mktemp -t confirm-tested.XXXXXX)
-  original_file=$(mktemp -t confirm-tested-original.XXXXXX)
-  cp "$issue" "$original_file"
-  if ! (cd "$REPO_DIR" && node --import tsx -e 'import fs from "node:fs"; import {confirmTestedContent} from "./bin/confirm-tested.ts"; const [input, output] = process.argv.slice(1); const result=confirmTestedContent(fs.readFileSync(input,"utf8"),new Date().toISOString().slice(0,10)); fs.writeFileSync(output,JSON.stringify(result));' "$issue" "$result_file"); then
-    rm -f "$result_file" "$original_file"
+  if ! (cd "$REPO_DIR" && node --import tsx bin/confirm-tested-apply.ts "$WT_MONO" "$rel" >"$result_file"); then
+    rm -f "$result_file"
     rmdir "$confirm_lock"
     return 1
   fi
-  local close new_rel target workstream
+  local close workstream new_rel path
+  local -a pub=() priv=() restorable=()
   close=$(jq -r '.close' "$result_file")
   workstream=$(jq -r '.workstream' "$result_file")
-  wt_paths_valid_name "$workstream" || {
-    rm -f "$result_file" "$original_file"
-    rmdir "$confirm_lock"
-    echo "confirm-tested: issue has invalid workstream" >&2
-    return 1
-  }
   new_rel="$rel"
-  if [ "$close" = true ]; then
-    new_rel="issues/closed/${rel#issues/}"
-    target="$WT_MONO/$new_rel"
-  fi
-  if ! (
-    jq -r '.content' "$result_file" > "$issue.tmp" || exit
-    mv "$issue.tmp" "$issue" || exit
+  [ "$close" != true ] || new_rel="issues/closed/${rel#issues/}"
+  while IFS= read -r -d '' path; do pub+=("$path"); done < <(jq -j '.stage.public[] | . + "\u0000"' "$result_file")
+  while IFS= read -r -d '' path; do priv+=("$path"); done < <(jq -j '.stage.private[] | . + "\u0000"' "$result_file")
+  rm -f "$result_file"
+  for path in "${pub[@]}"; do [ "$path" = "$new_rel" ] && [ "$close" = true ] || restorable+=("$path"); done
+  if ! wt_paths_valid_name "$workstream" \
+    || ! git -C "$WT_MONO" add -A -- "${pub[@]}" \
+    || ! git -C "$WT_MONO" commit --only -m "Confirm manual testing for ${basename%.md}" -- "${pub[@]}" >/dev/null; then
+    # Every path here was clean at preflight; restore only these, so an edit
+    # another process made in main meanwhile is never discarded.
+    git -C "$WT_MONO" restore --staged --worktree --source=HEAD -- "${restorable[@]}"
     if [ "$close" = true ]; then
-      mkdir -p "$(dirname "$target")" || exit
-      mv "$issue" "$target" || exit
+      git -C "$WT_MONO" rm -q --cached --ignore-unmatch -- "$new_rel"
+      rm -f "${WT_MONO:?}/$new_rel"
     fi
-    git -C "$WT_MONO" add -- "$rel" "$new_rel" || exit
-    pnpm --dir "$WT_MONO/beebox" doc-check --fix >/dev/null || exit
-    git -C "$WT_MONO" commit --only -m "Confirm manual testing for ${basename%.md}" -- "$rel" "$new_rel" >/dev/null || exit
-  ); then
-    # Main was clean at preflight, so every tracked worktree/index change here
-    # belongs to this attempted transaction. Restore it without a hard reset;
-    # the closed target can be untracked when the failure preceded `git add`.
-    git -C "$WT_MONO" reset -q
-    git -C "$WT_MONO" restore --worktree -- .
-    [ -z "${target:-}" ] || rm -f "$target"
-    cp "$original_file" "$issue"
-    rm -f "$issue.tmp" "$result_file" "$original_file"
+    [ "${#priv[@]}" -eq 0 ] || git -C "$WT_MONO/private-issues" restore --worktree -- "${priv[@]}"
     rmdir "$confirm_lock"
     echo "confirm-tested: transition failed; restored $rel" >&2
     return 1
   fi
-  rm -f "$result_file" "$original_file"
+  local status=0
+  if [ "${#priv[@]}" -gt 0 ]; then
+    if ! git -C "$WT_MONO/private-issues" add -A -- "${priv[@]}" \
+      || ! git -C "$WT_MONO/private-issues" commit --only -m "Rewrite links to ${basename%.md} after confirming manual testing" -- "${priv[@]}" >/dev/null; then
+      echo "confirm-tested: committed the confirmation; private-issues/ link rewrites left uncommitted: ${priv[*]}" >&2
+      status=1
+    fi
+  fi
   rmdir "$confirm_lock"
   local clone="$WT_BOX_ROOT/$workstream/test1"
   if git -C "$clone" show-ref --verify --quiet refs/heads/test-setup 2>/dev/null; then
     git -C "$clone" branch -D test-setup >/dev/null
   fi
+  return "$status"
 }

@@ -57,7 +57,7 @@ items:
 //
 // A research box holds thousands of saved sources in a `search.areas` area.
 // Queueing them would hand a background agent thousands of summaries nobody
-// asked for (`docs/plans/knowledge-base-tools.md`, Track A).
+// asked for (`plan:knowledge-base-tools`, Track A).
 void test("cards in a held-back search area are not queued for contains", async (t) => {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());

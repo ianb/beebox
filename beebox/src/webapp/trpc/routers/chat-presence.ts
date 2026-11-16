@@ -3,7 +3,9 @@
  * `watch` while a chat is its current conversation and the page is active;
  * being subscribed is being present. Each subscriber hears everyone else in
  * the same chat and the chat's call, if any. The server, not the client, says
- * who a subscriber is (`ctx.user`). See docs/chat-presence.md.
+ * who a subscriber is (`ctx.user`). `setComposing` says what the caller is
+ * doing in the composer (typing, dictating), heard by the others as an
+ * `composing` frame. See docs/chat-presence.md.
  */
 
 import { z } from "zod";
@@ -17,7 +19,7 @@ export const chatPresenceRouter = router({
     .subscription(async function* (opts): AsyncGenerator<ChatPresenceFrame> {
       const signal = opts.signal;
       const person = personFor(opts.ctx);
-      // Both kinds are states: only the newest unsent frame of each matters.
+      // Every kind is a state: only the newest unsent frame of each matters.
       const pending = new Map<ChatPresenceFrame["t"], ChatPresenceFrame>();
       let wake: (() => void) | null = null;
       const ping = (): void => {
@@ -58,5 +60,13 @@ export const chatPresenceRouter = router({
       } finally {
         leave?.();
       }
+    }),
+
+  setComposing: authedProcedure
+    .input(z.object({ sessionId: z.string().regex(SESSION_ID_RE), doing: z.enum(["typing", "dictating"]).nullable() }))
+    .mutation(({ ctx, input }) => {
+      const person = personFor(ctx);
+      if (person === null) return { ok: false };
+      return { ok: chatRoom.setComposing({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, email: person.email, doing: input.doing }) };
     }),
 });

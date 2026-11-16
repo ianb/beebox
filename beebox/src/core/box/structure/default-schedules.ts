@@ -107,7 +107,7 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "30 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (boxholder, 2026-09-24, docs/implemented-plans/todos-ui.md Track 7).
+    // Seeded ENABLED (boxholder, 2026-09-24, plan:todos-ui Track 7).
     // Like process-retrospective, the precheck exits CHECK_SKIP when no todo
     // needs review, so a quiet box runs no agent.
     enabled: true,
@@ -124,7 +124,7 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (boxholder, 2026-10-26, docs/implemented-plans/questions-later-and-figure-it-out.md
+    // Seeded ENABLED (boxholder, 2026-10-26, plan:questions-later-and-figure-it-out
     // open question 4), and installed into existing boxes. Like todo-review,
     // the precheck exits CHECK_SKIP when no question qualifies, so a quiet box
     // runs no agent.
@@ -141,7 +141,7 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "15 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (docs/implemented-plans/place-intention.md, Track D). Like
+    // Seeded ENABLED (plan:place-intention, Track D). Like
     // todo-review, the precheck exits CHECK_SKIP when no place changed since
     // its last review, so a quiet box runs no agent. The first run lists every
     // place once (none has a review record yet): that is the kickoff.

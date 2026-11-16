@@ -255,7 +255,7 @@ export const chatControlProcedures = {
    * `status` cannot give (it reports on one id, and reports *idle* for an id it
    * has never heard of, so an outside process cannot tell "quiet" from
    * "unknown"). The field-test harness polls this for its quiescence gate
-   * (`docs/implemented-plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
+   * (`plan:agent-field-tests`, Track 2) with the diagnostic key, which
    * is why it is on the diag whitelist in `webapp/auth.ts`.
    *
    * A box whose chat runtime was never initialized reports `initialized: false`
@@ -306,7 +306,7 @@ export const chatControlProcedures = {
    * Deliberately restarts nothing. A pin is a statement about the box, not an
    * instruction to any conversation: live chats keep the model their
    * subprocess started with and pick the new default up when they next start
-   * cold (`docs/implemented-plans/model-engine-policy.md`).
+   * cold (`plan:model-engine-policy`).
    *
    * Owner-gated, unlike `setModel` — this writes box configuration, and the
    * write is committed to the box's git history.

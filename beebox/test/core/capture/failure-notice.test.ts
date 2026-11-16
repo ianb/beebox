@@ -3,7 +3,7 @@
 // A capture that fails for good (`markCapturePreparationFailed`) flips its
 // pending bubble to failed and, when nobody is present in the app, sends one
 // `quiet` notification to the chat it was headed for, with the reason in one
-// sentence. See docs/implemented-plans/notifications.md (Track E).
+// sentence. See plan:notifications (Track E).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

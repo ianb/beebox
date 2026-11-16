@@ -522,7 +522,7 @@ void test("card-lint no longer hardcodes which types get extra validation — it
 
 // ## A ref's #anchor must exist in its target
 //
-// docs/plans/knowledge-base-tools.md, Track D. An id fragment on a `.card` with
+// plan:knowledge-base-tools, Track D. An id fragment on a `.card` with
 // a body must name a heading (slug, either duplicate) or a `{% #id %}`
 // annotation; a warning, never an error. Other fragments, and targets with no
 // body, are not checked.

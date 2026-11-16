@@ -3,7 +3,7 @@
 // `body-tags-2026-10` rewrites the retired `image`, `silence`, `purpose`, and
 // `correction` Markdoc tags: an image becomes a link, a silence becomes text, a
 // briefing's purpose moves to frontmatter, and its corrections become a
-// `## Corrections` section (docs/implemented-plans/retire-type-specific-core-tags.md,
+// `## Corrections` section (plan:retire-type-specific-core-tags,
 // Track 4). It locates tags with the Markdoc parse and fails closed: when it
 // cannot place a tag it names the path and line, writes nothing, and exits 1, so
 // `bbx engine migrate` records no manifest entry.

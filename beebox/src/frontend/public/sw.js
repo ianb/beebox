@@ -4,7 +4,7 @@
 // whole base scope ("/" in prod, "/<worktree>/" through the dev router), so
 // it serves every box under that origin. The box a notification targets is
 // carried in the payload's `data.url` (a fully-qualified deep link), not
-// inferred from scope. See docs/plans/web-push-notifications.md (Track A).
+// inferred from scope. See plan:web-push-notifications (Track A).
 //
 // Payload contract (JSON the server sends, web-push-notifications.md):
 //   { title: string, body: string, url: string, tag?: string, icon?: string, silent?: boolean }

@@ -1,0 +1,180 @@
+/**
+ * The box-subprocess env allowlist: the data half of `core/script-env/core.ts`,
+ * split out so that file stays under the 300-line cap (as
+ * `src/hub/supervisor/child-env.ts` was split out of `supervisor.ts`, with the
+ * same fail-closed posture). It lives in `lib/` so `lib/git/env.ts` can use it
+ * without an import cycle through `script-env/core.ts`.
+ */
+
+import { inheritedCredentials } from "./credential-env.js";
+
+/**
+ * Env vars a box-spawned subprocess may inherit from the spawning server
+ * process. Fail-closed ALLOWLIST, mirroring `src/hub/supervisor/child-env.ts`'s
+ * `CHILD_ENV_ALLOWLIST` one level down: the hub refuses to spread its env
+ * into a box's `bbx serve` child, and this refuses to spread that child's env
+ * into the box's own agents, scripts, and tricks (Track 1 of
+ * `plan:secret-custody`).
+ *
+ * This used to be `{ ...process.env }` minus four names. A denylist only ever
+ * withheld the secrets someone remembered to name — every connector credential
+ * the server was configured with (`BBX_MISTRAL_API_KEY`,
+ * `BBX_DEEPGRAM_*`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`,
+ * `THINKING_OPENAI_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`, …) reached
+ * every agent subprocess as inherited environment, which is strictly worse
+ * than the on-disk secret files: the agent does not even have to open a file.
+ * Widen this list only by adding a named entry with a reasoned comment — never
+ * by reverting to a spread.
+ *
+ * Credential values are not listed here. `lib/credential-env.ts` holds every
+ * credential name with its `agent` and `tooling` visibility and the reason;
+ * today neither profile inherits any, and `script-env/core.ts` injects `BBX_AGENT_TOKEN`.
+ *
+ * Other names deliberately NOT here, and why:
+ *
+ * - `BBX_SERVER_URL` / `BBX_BOX_NAME` — not inherited because they are always
+ *   *derived* below from this box's own live endpoint registration or
+ *   `publicUrl`; inheriting a parent's copy could point a subprocess at the
+ *   wrong box.
+ * - `BBX_SPAWN_PROFILE` — always *set* by `buildEnv` to the profile it is
+ *   building (`agent` or `tooling`), never inherited. Inheriting it would let a
+ *   tooling parent hand its `tooling` marker to an agent child, which is
+ *   exactly the local-credential-use case the marker exists to prevent.
+ */
+const SCRIPT_ENV_PLAIN: readonly string[] = [
+  // --- OS/runtime basics ---
+  "PATH",
+  "HOME",
+  "USERPROFILE", // Windows HOME equivalent -- src/core/box.ts's homeDir fallback.
+  "SHELL", // scheduled scripts' `runs:` commands execute through the shell (cli/commands/tick-helpers.ts).
+  "TERM", // terminal capabilities for spawned tools (git, pagers, editors).
+  "NO_COLOR", // the standard color-suppression opt-out, honored by spawned tools such as git.
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "USER", // git's author fallback in box commits, and ordinary tool expectations.
+  "LOGNAME", // same, on systems that prefer it over USER.
+  "TZ",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "LC_MESSAGES",
+  "UV_TORCH_BACKEND", // `uvx docling` (services/docling/core.ts) must resolve the same PyTorch build the host prefetched; the container image sets cpu.
+  "UV_CACHE_DIR", // the host's shared uv cache (hub/box-env-file.ts); without it an agent-run conversion builds a private multi-GB environment and misses the host Docling lock (services/docling/subprocess.ts).
+  "HF_HOME", // the host's shared Docling model cache (hub/box-env-file.ts); without it each box downloads the weights again.
+
+  // --- Claude Agent SDK / codex config knobs (not credentials) ---
+  "CODEX_HOME", // Keep explicit agent env aligned with auth preflight and plugin installation.
+  "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
+  "BBX_CLAUDE_PROJECTS_DIR", // src/core/chat/session/transcript-paths.ts, delete-storage.ts -- transcript-dir override tests rely on.
+  "BBX_ORIGIN_ID_FILE", // src/core/chat/session/origin.ts -- machine-id file override tests rely on.
+  "BBX_CODEX_BINARY", // services/codex-sdk-session.ts and codex-binary.ts -- diagnostic binary override.
+  "DISABLE_TELEMETRY",
+  "DISABLE_ERROR_REPORTING",
+  "DO_NOT_TRACK",
+
+  // --- Box config a spawned `bbx` process reads (paths and flags, not credentials) ---
+  "PUBLIC_URL", // src/lib/public-url.ts and this file's publicUrl fallback.
+  "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
+  "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
+  "BBX_UNIT_HOST", // cli/commands/host.ts -- on a unit host a box records a package and the deploy installs it (hub/box-env-file.ts).
+  "BBX_AUTH_FILE", // src/webapp/local-users.ts -- credential-store PATH, not a credential; withholding it would point a test subprocess at the real global auth file.
+  "BBX_BOX_ROOT", // src/core/box/templates.ts -- the trick template's own box-root handle.
+  "BBX_HOOK_BIN", // src/core/install-validation-hooks.ts -- explicit hook-binary path override.
+  "BBX_INIT_BEEBOX_SPEC", // src/core/box/package.ts -- which Bee Box spec `bbx init` installs.
+  "BBX_SCAN_VISION", // src/services/scan-vision.ts -- photo-analysis backend selection.
+  "BBX_LOG_PROMPTS", // src/core/agent/invoke/run.ts -- prompt-logging debug flag.
+  "BBX_NO_URLCHECK", // src/core/install-validation-hooks.ts -- the post-commit hook skips its background URL check when set; the test suite sets it.
+  "TSX_TSCONFIG_PATH", // set by src/cli/entry/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
+
+  // --- Schedule memory (src/core/schedule/memory.ts): set by the tick on a
+  //     scheduled `runs:` command, and listed here so a `bbx procedure run` it
+  //     starts passes them to the procedure's shells, which rebuild their env
+  //     through this list (src/core/procedure/shell.ts). Cursors and temp
+  //     paths, not credentials. ---
+  "BBX_SINCE_COMMIT", // the box HEAD at the schedule's previous run; `bbx changes`' default --since.
+  "BBX_SINCE_TIME", // the previous run's time.
+  "BBX_CARRY_IN", // the value the previous run carried forward.
+  "BBX_CARRY_OUT", // a temp file path the run writes the next carry to.
+  "BBX_DEFER_FILE", // a temp file path `--or-skip` writes its defer reason to.
+  "BBX_SCHEDULE_NAME", // the schedule card's stem; `bbx notify`'s source is `schedule:<name>`.
+  "BBX_SUMMARY_FILE", // a temp file path `bbx run-summary` writes the run's summary to.
+
+  // --- Test/scenario harness (src/scenario/runner.ts sets these on process.env
+  //     precisely so its spawned `bbx wakeup`/`bbx finalize` children inherit them) ---
+  "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
+  "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
+  "BBX_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
+  "BBX_STRICT_FETCH", // src/cli/entry/bootstrap.ts -- scenario harness: fail on unstubbed fetch.
+  "BBX_AUTH_SCRYPT_N", // src/webapp/local-users-scrypt.ts -- test-only work-factor override.
+  "BBX_NOTIFY_FAKE", // src/core/notification/fake-mode.ts -- every notification channel through its fake.
+  "BBX_TRIAGE_RUN_ID", // Triage research CLI calls share the parent run allowance.
+  "BBX_TRIAGE_RESEARCH", // Inherited research calls also debit the 12-call sub-limit.
+  "BBX_JEV_FAKE", // src/core/judgment/service.ts -- `bbx judge` answers through a fixed fake (1 yes, 0 no).
+  "BBX_PUSH_FAKE", // src/core/notification/fake-mode.ts -- the old name of BBX_NOTIFY_FAKE, read for one release.
+  "BBX_PUSH_STORE_DIR", // src/core/push-subscriptions.ts -- push-store path override for tests.
+];
+
+/**
+ * Credential-store PATHS, allowlisted ONLY for the `bbx`-tooling spawn profile
+ * (`buildToolingScriptEnv`) — never for an agent. A spawned `bbx wakeup` runs
+ * the connectors themselves (gmail/calendar/drive sync, preprocessing), and
+ * they resolve their credentials from the machine secret store, so what a
+ * tooling child needs is the way to FIND the store, not the credentials.
+ *
+ * The connector credentials themselves used to be listed here too, which meant
+ * an arbitrary `runs:` command inherited every connector key on the machine.
+ * The secret-store transition closed that
+ * (`plan:secret-custody`): the readers no longer look at
+ * env, so nothing is withheld by leaving the names out.
+ *
+ * `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` stay out for the same reason. They remain
+ * live process configuration for the LOGIN surface
+ * (`connectors/google-auth.ts`'s `getLoginGoogleClientCreds`), and a spawned
+ * wakeup does not host login.
+ */
+const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
+  "BBX_GOOGLE_TOKENS_FILE", // src/google/token-store.ts -- a path, but to the OAuth token store.
+  "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `bbx wakeup` runs the connectors, which resolve their keys from the store. Deliberately absent from the agent profile -- an agent has no store interface yet, and pointing it at the file is the opposite of what the store is for.
+];
+
+/** What the agent profile inherits. Exported for `test/lib/credential-env.test.ts`. */
+export const SCRIPT_ENV_ALLOWLIST: readonly string[] = [...SCRIPT_ENV_PLAIN, ...inheritedCredentials("agent")];
+
+/** What the `bbx`-tooling profile inherits. Exported for `test/lib/credential-env.test.ts`. */
+export const TOOLING_ENV_ALLOWLIST: readonly string[] = [...SCRIPT_ENV_PLAIN, ...CONNECTOR_ENV_ALLOWLIST, ...inheritedCredentials("tooling")];
+
+/** Copy the allowed names out of `sourceEnv` into a fresh env. */
+function pickAllowed(sourceEnv: NodeJS.ProcessEnv, names: readonly string[]): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of names) {
+    const value = sourceEnv[key];
+    if (value !== undefined) env[key] = value;
+  }
+  return env;
+}
+
+/**
+ * Build the inherited base env for a box-spawned subprocess: the allowlisted
+ * names only. `connectorCreds` adds `CONNECTOR_ENV_ALLOWLIST` for the
+ * `bbx`-tooling spawn profile — see `buildToolingScriptEnv` in
+ * `script-env/core.ts`. An `execa` call passing this env also needs
+ * `extendEnv: false`; without it execa merges `process.env` back in.
+ */
+export function pickBoxSubprocessEnv(
+  sourceEnv: NodeJS.ProcessEnv,
+  { connectorCreds }: { connectorCreds: boolean }
+): NodeJS.ProcessEnv {
+  return pickAllowed(sourceEnv, connectorCreds ? TOOLING_ENV_ALLOWLIST : SCRIPT_ENV_ALLOWLIST);
+}
+
+/**
+ * The agent profile's inherited allowlist with `BBX_SPAWN_PROFILE=agent`, and
+ * nothing `buildScriptEnv` injects: no server URL, agent token, or `bbx` on
+ * PATH. For a child that runs box-authored code but needs no way back to the
+ * box's server, such as the view metadata import, which also has no box when
+ * the engine hosts the compile.
+ */
+export function agentAllowlistEnv(): NodeJS.ProcessEnv {
+  return { ...pickBoxSubprocessEnv(process.env, { connectorCreds: false }), BBX_SPAWN_PROFILE: "agent" };
+}

@@ -1,6 +1,6 @@
 // # Every `box-docs/<name>.md` pointer names a doc the package ships
 //
-// Plan: `docs/implemented-plans/doc-structure-box-guidance.md`, Track 2. A nested guide, a
+// Plan: `plan:doc-structure-box-guidance`, Track 2. A nested guide, a
 // managed skill, the agent guide (`guide.md`), and the guide ledger's `mechanics:` field
 // (`ledger.yaml`) send an agent to an engine doc by path,
 // `node_modules/beebox/box-docs/<name>.md` (written in source as

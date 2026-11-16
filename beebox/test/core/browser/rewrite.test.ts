@@ -1,6 +1,6 @@
 // # The dashboard rewrite adds the box's path prefix to root-absolute paths
 //
-// docs/plans/shared-browser.md, Track C (`rewrite.ts`). The upstream dashboard
+// plan:shared-browser, Track C (`rewrite.ts`). The upstream dashboard
 // names `/_next/` and `/api/` paths from the site root; under
 // `/test1/browser/` they need the prefix, in every quoting form the bundle
 // uses, and nowhere else.

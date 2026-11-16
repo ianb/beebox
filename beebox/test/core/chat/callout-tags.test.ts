@@ -4,7 +4,7 @@
 // parses a turn's callouts (`parseCalloutTags`) and sends one notification for
 // them (`notifyTurnCallouts`): titled by the first callout's `context`, carrying
 // its body, as loud as the loudest `loudness` any callout asked for (else `dot`),
-// targeting the chat session. See docs/implemented-plans/notifications.md (Track E).
+// targeting the chat session. See plan:notifications (Track E).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1008,6 +1008,13 @@ REMOTE
   queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
     < "$CHECKOUT/beebox/deploy/server-bin/bbx-figure-gpu-install"
 
+  # The host's TURN relay for calls (docs/plans/self-hosted-turn.md): coturn
+  # configured from the master store's turn-server entry and checked with a
+  # two-client relay, or stopped when there is no entry.
+  queue_step "Configuring the call relay..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-turn-install"
+
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
   #      crash-looping. The hub blocks on startAll() before it listens, and a

@@ -2,7 +2,7 @@
 //
 // A landmark card renders as the place page: its openers where they can be
 // sent, then its links in tiers and each `expand` as a
-// labeled group (docs/implemented-plans/landmark-arrival.md, Track C). These examples render
+// labeled group (plan:landmark-arrival, Track C). These examples render
 // `PlacePage` with a loaded `landmarks.forDir` payload, the way the
 // `PersonView` test renders a person's front.
 
@@ -72,7 +72,7 @@ const startedLending: PlaceChat = { contextDir: "_content/lending", showsOwnOpen
 // ## An empty place says so and offers its folder
 //
 // No links and no groups: "Nothing to show here yet." and a quiet line that
-// opens the folder in Browse (docs/implemented-plans/front-door.md, Track E). It does not
+// opens the folder in Browse (plan:front-door, Track E). It does not
 // say the folder is empty: the place skips background cards and cards of
 // unknown types. It names no path and does not say "card". A place with no
 // openers shows no "Start something".
@@ -88,7 +88,7 @@ void test("No links and no groups:", async (t) => {
 
 // ## The place summary comes first
 //
-// The landmark card's body is the place summary (docs/implemented-plans/place-shows-cards.md,
+// The landmark card's body is the place summary (plan:place-shows-cards,
 // Track C). It renders as markdown above "Start something" and the tiers.
 void test("The landmark card's body is the place summary (docs/implemented-plans/place-s...", async (t) => {
   const html = await render({ payload: payload({
@@ -292,7 +292,7 @@ void test("In a pane or on its own page the card header already names the place;
 //
 // On the root place the page shows "3 to do · 1 overdue · 2 questions
 // waiting" after the summary and before "Start something"
-// (docs/implemented-plans/front-door.md, Track C). The counts come from `PlaceView`;
+// (plan:front-door, Track C). The counts come from `PlaceView`;
 // `view.root-counts.test.ts` covers when it passes them. A failed count query
 // shows "Counts unavailable" with a retry; zero shows no line.
 void test("On the root place the page shows the count line after the summary", async (t) => {

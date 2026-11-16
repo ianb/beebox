@@ -1,5 +1,5 @@
 /**
- * tRPC router for collections — query only (`docs/implemented-plans/todo-collection.md`,
+ * tRPC router for collections — query only (`plan:todo-collection`,
  * Track 4). It replaces `todos.list`.
  *
  * The shape is the collection's, not the todo's: `collections.query` names a
@@ -10,7 +10,7 @@
  * inside the runner.
  *
  * Mutation is not here and never will be: changing a todo is editing the card
- * it was written in (`docs/implemented-plans/todo-annotation.md`, Track 3).
+ * it was written in (`plan:todo-annotation`, Track 3).
  */
 
 import { z } from "zod";

@@ -2,7 +2,7 @@
 //
 // A rendered `{% todo %}` needs the same locator the collector gives it, so a
 // tick (Track 3) and a plate-state lookup (Track 2) address the todo the reader
-// sees (`docs/plans/todos-ui.md`). `Markdown.tsx` runs `assignLocators` on the
+// sees (`plan:todos-ui`). `Markdown.tsx` runs `assignLocators` on the
 // parsed body with the card's body line offset and stamps each todo node
 // (`stampLocators`); the `todo` transform in `markdoc-config.ts` copies the
 // stamp onto the `Tag` as `locator`.

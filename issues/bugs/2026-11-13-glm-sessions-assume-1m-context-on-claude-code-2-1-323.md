@@ -27,3 +27,10 @@ The likely fix is one line: add `CLAUDE_CODE_DISABLE_1M_CONTEXT: "1"` (or a
 `glmEnvAdditions`, with a check that the variable reaches the child process.
 The sdk-update schedule holds Agent SDK 0.3.323 until this lands. GLM access
 ends 2026-12-15, so the fix only needs to cover the weeks until then.
+
+**2026-11-14:** The schedule took Agent SDK 0.3.325 (Claude Code 2.1.325)
+early for a security fix. 2.1.325 also says it *"Fixed sessions on many
+third-party gateways and Foundry stopping with a context length error on every
+turn instead of compacting"*, which should cover the failure above. Not tested
+against GLM. Setting `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` for GLM runs is still
+the direct fix; the SDK hold is lifted.

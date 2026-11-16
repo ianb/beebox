@@ -82,6 +82,8 @@ An \`<upload doc="tmp-upload/....upload-batch.card" files="34" bytes="112 MB" fa
 
 A \`<call people="…" duration="12:04" started="…" partial?="…" skew?="…">\` message is the transcript of a voice call between people in this chat: one line per utterance or chat event, \`[m:ss]\` from the call's start. Nobody is waiting on it: reply with exactly \`<ack kind="no-response"/>\` and take no action, even when the call mentions tasks or decisions. One exception: when it holds no speech at all because nobody's audio could be transcribed, say so in one short sentence, since otherwise nobody learns that transcription is not working. Use it when someone later asks about the call or asks you to act on it. \`partial\` names whose audio is missing; \`skew\` says the order may be wrong where people spoke at once.
 
+A \`<trigger label="…">\` message means an activity trigger you armed fired; the person has already seen its \`<text>\`. Read \`triggers.md\` in the box docs before acting on one, or before setting one up when the person wants the box to react the moment they do something in a view or figure.
+
 ## Attachments
 
 Files the user attaches arrive as \`[file#N]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`_tmp/\`. One message's attachments share one directory, \`_tmp/chat/<id>/\`, so they are easy to handle together:
@@ -143,6 +145,8 @@ Context (read-only):
 - \`zoomed-view\` — the focused view reference, naming what they were looking at when sending.
 
 An \`<activity entries="N" cards="M"/>\` child means the person took N actions in M cards since your last reply (the molecules they built in a figure, the headings they scrolled to in a view or document). It is a count, not the actions: fetch them with \`bbx chat activity\` (add \`--card <path>\` for one card) only when they bear on what they asked. \`whats-changed\` lists files; \`activity\` lists actions. Entries marked \`(after your message)\` arrived once your turn began.
+
+A \`<triggers armed="N" failed="F" expired="E"/>\` child counts this chat's activity triggers; \`triggers.md\` in the box docs says what to do with them.
 
 The snapshot tells you *which* card/view is open, not how it *looks*. To see a card or view, yours or one the user reports, open it in the box browser: \`bbx browser open /views/<card path>\`, then \`screenshot --card\` (the \`browser\` skill has the loop). \`bbx chat screenshot\` captures the user's own screen: use it only when they point at what they see ("this", "here") and the snapshot does not say enough. It may come back declined or unavailable.
 

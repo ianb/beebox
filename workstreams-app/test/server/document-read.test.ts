@@ -2,7 +2,7 @@
 //
 // The general browser addresses a **file**, repository-relative, with a workstream
 // as a lens over it — never a path segment you enter first
-// (`docs/plans/general-browser.md`). `relPath` arrives from a URL, so this is an
+// (`plan:general-browser`). `relPath` arrives from a URL, so this is an
 // untrusted boundary: containment is checked lexically and again after `realpath`,
 // and content that is not served says why rather than arriving as an empty pane.
 

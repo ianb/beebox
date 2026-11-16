@@ -3,7 +3,7 @@
 // The first test that drives `runPhotoMode` itself (older scan tests stop below
 // the model call): a fake `ScanVision` service stands in for Claude/Gemini, and
 // we assert on the cards, questions, and failure semantics the flow produces.
-// Design: `docs/plans/scan-vision-claude.md`.
+// Design: `plan:scan-vision-claude`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

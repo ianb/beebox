@@ -10,7 +10,7 @@
  * the agent works in). With the env var, ONE refresh token is shared by
  * gmail/calendar/drive across every box that names the file — which is why the
  * "this grant is dead" state lives here, with the credential, rather than in
- * per-connector or per-box state. See docs/implemented-plans/google-auth-reauth-health.md.
+ * per-connector or per-box state. See plan:google-auth-reauth-health.
  */
 
 import * as fs from "node:fs/promises";

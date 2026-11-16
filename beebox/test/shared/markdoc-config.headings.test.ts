@@ -48,7 +48,7 @@ void test("A heading with no word characters falls back to `section`", async (t)
 
 // ## An explicit id wins over the slug and is taken
 //
-// `{% #id %}` on a heading is the id (trusted anchors, docs/plans/knowledge-base-tools.md).
+// `{% #id %}` on a heading is the id (trusted anchors, plan:knowledge-base-tools).
 // A later heading whose slug equals it is numbered, so no two elements share an id.
 void test("An explicit id wins over the slug and is taken", async (t) => {
   t.check(

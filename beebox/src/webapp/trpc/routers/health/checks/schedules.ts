@@ -1,6 +1,6 @@
 /**
  * Scheduled-task and engine-quota health checks: the dashboard entries that
- * replaced the scheduler's proactive alerts (docs/implemented-plans/notifications.md,
+ * replaced the scheduler's proactive alerts (plan:notifications,
  * Track E). Health never notifies on its own; these checks are where the
  * boxholder sees a task that keeps failing, is overdue, or cannot parse, and
  * an engine out of usage quota.

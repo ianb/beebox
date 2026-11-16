@@ -1,6 +1,6 @@
 /**
  * Chat husk card surface — the `chat` card (a web session's durable face,
- * docs/plans/chat-husks.md). Shows the card's editorial identity and
+ * plan:chat-husks). Shows the card's editorial identity and
  * opens the live session; the full inversion (chat rendered *at* the
  * husk's path) is future frame work.
  */

@@ -196,7 +196,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   // absolute path becomes a nested box-relative lookup
   // (`<boxRoot>/tmp/.../_content/Marker...`) — but `resolveCardPath` then runs
   // that through the box namespace fence
-  // (`resolveBoxNamespacePathOnDisk`, `docs/implemented-plans/one-root-box-layout.md` Track
+  // (`resolveBoxNamespacePathOnDisk`, `plan:one-root-box-layout` Track
   // B), and a path whose first segment is `tmp` rather than an underscore area
   // fails the namespace check before any filesystem read, so this shape 400s
   // (`BAD_REQUEST`) same as the relative-`..` shape. Still fail-closed either way
@@ -430,6 +430,9 @@ void test("a deploy's box install leaves node_modules without other-access", asy
     [join(bin, "sudo")]: "#!/usr/bin/env bash\nshift 3\nexec \"$@\"\n",
     [join(bin, "pnpm")]: "#!/usr/bin/env bash\nmkdir -p node_modules/.pnpm\n",
     [join(engine, "bin", "box-engine-link")]: "#!/usr/bin/env bash\nexit 0\n",
+    // The helper reads the engine's bins from its package.json to build each
+    // box's engine shim; without one it skips the box before `pnpm` runs.
+    [join(engine, "package.json")]: '{"name":"beebox","bin":{"box-engine-link":"bin/box-engine-link"}}\n',
   };
   for (const [file, body] of Object.entries(stubs)) {
     await fs.mkdir(path.dirname(file), { recursive: true });

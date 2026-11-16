@@ -10,7 +10,7 @@
  * The graph is loose and deliberately allows cycles: two concepts that must be
  * learned together (a spiral) are an honest `complements` cycle, not an error.
  *
- * See docs/implemented-plans/courseware-phase1.md.
+ * See plan:courseware-phase1.
  */
 
 import { body, type CardSchemaConfig, type LintIssue } from "../../exports/cards.js";

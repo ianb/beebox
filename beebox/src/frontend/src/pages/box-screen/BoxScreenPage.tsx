@@ -1,5 +1,5 @@
 /**
- * The web box screen at `/<box>/box` (docs/plans/box-screen.md, track 2): the
+ * The web box screen at `/<box>/box` (plan:box-screen, track 2): the
  * screen for the box as a whole. Top to bottom: "Needs you", the sent rows,
  * "Pick up where you left off", "Shortcuts" (only when the box's `nav.card`
  * lists some), "Boxes" (only with more than one box), and the new-thought

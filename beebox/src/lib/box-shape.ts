@@ -1,6 +1,6 @@
 /**
  * The layout predicate: given a box root, resolve its shape. shapeVersion 3
- * (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`) collapses the
+ * (the one-root layout — `plan:one-root-box-layout`) collapses the
  * old two-root package layout (package root + nested `content/` operational
  * root) into ONE root: `package.json`, `src/`, and every underscore-prefixed
  * operational area (`_content/`, `_config/`, …) all live at the same
@@ -9,7 +9,7 @@
  * `docs/box-layout.md`.
  *
  * This is the single layout resolver described in
- * `docs/implemented-plans/boxes-as-packages-v2.md` ("The box repository"): every other
+ * `plan:boxes-as-packages-v2` ("The box repository"): every other
  * consumer (schema registry, view compiler, trick runner, agent guide) reads
  * this predicate instead of re-deriving the layout itself.
  */

@@ -10,7 +10,7 @@
  * A send resolves `{ ok }` or `{ gone }` for the expected "this token is dead"
  * answers (410 Unregistered, 400 BadDeviceToken); the caller prunes on `gone`.
  * Anything else throws. A token is never put in an error message or a log line.
- * See docs/implemented-plans/notifications.md (Track B).
+ * See plan:notifications (Track B).
  */
 
 import { createHash } from "node:crypto";

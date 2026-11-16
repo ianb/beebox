@@ -8,7 +8,7 @@
  * directory.
  *
  * Lived in `core/todo/collect.ts` until the collection runner needed the same
- * card set (`docs/implemented-plans/todo-collection.md`, Track 3); it was never
+ * card set (`plan:todo-collection`, Track 3); it was never
  * todo-specific.
  */
 

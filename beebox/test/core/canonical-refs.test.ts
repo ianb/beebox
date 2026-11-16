@@ -7,7 +7,7 @@
 // `--canonical --fix` rewrites the ones whose target actually exists.
 //
 // Card BODY refs (Markdoc tag refs, inline markdown links) get this warning by
-// default now (Track B, `docs/implemented-plans/one-root-box-layout.md`) — see the "quiet"
+// default now (Track B, `plan:one-root-box-layout`) — see the "quiet"
 // example below. Frontmatter refs stay opt-in: a box carries legacy relative
 // refs by the hundred, and reporting them in the normal walk would bury the
 // broken-ref signal. `--canonical` reports frontmatter refs too.
@@ -107,7 +107,7 @@ void test("Box-root-absolute is canonical; so is a card's attach/ scope, an exte
 // out of the BOX NAMESPACE has no box-root form to offer, so it is reported, never
 // rewritten — the same "escapes" verdict now covers a ref that physically stays
 // inside the box root but lands outside every underscore area (Track B's
-// namespace fence, `docs/implemented-plans/one-root-box-layout.md`).
+// namespace fence, `plan:one-root-box-layout`).
 void test("A .md dossier owns no attach scope, so attach/x there is a literal subdirecto...", async (t) => {
   t.check(checkCanonicalRef({ ref: "attach/photo.jpg", fromPath: "_content/docs/guide.md", kind: "markdown" }), {
     status: "rewritable",

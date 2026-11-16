@@ -1,6 +1,6 @@
 /**
  * Resolve the Mistral API key for a box: the machine-level secret store's
- * `mistral` entry at `server` access (`docs/implemented-plans/secret-custody.md`).
+ * `mistral` entry at `server` access (`plan:secret-custody`).
  * `server` because the key is spent only inside server processes
  * (transcription), so an `agent` grant is never required and never asked for.
  *

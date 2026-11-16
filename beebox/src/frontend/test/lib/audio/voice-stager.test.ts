@@ -1,7 +1,7 @@
 // # One voice recording's staging: batching, seal, discard
 //
 // `lib/audio/voice-stager.ts` stages a recording from its first PCM frame
-// (`docs/plans/resilient-voice-recording.md`, Track 3). `VoiceStager` batches the
+// (`plan:resilient-voice-recording`, Track 3). `VoiceStager` batches the
 // worklet's 300 ms frames (16 kHz mono s16le, 9,600 bytes each) into 15 s
 // `chunk` ops of exactly 480,000 bytes. `startStagedRecording` wraps it with the
 // recording's queue lifecycle: `create` at start, then exactly one `finalize`

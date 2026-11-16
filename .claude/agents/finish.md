@@ -13,10 +13,11 @@ write CODING_FEEDBACK using `bin/coding-feedback help` and
 `bin/coding-feedback add --checkpoint landed`. Scripts own classification and
 mechanics; you own review and whether passing verification remains applicable.
 
-## 1. Preflight — `bin/finish-preflight`
-Confirms the worktree, lists stragglers, merges `main` (resolving conflicts it has
-a rule for; check those in step 4), prints the decision sheet (`--json` for fields).
-Exit 2 (wrong place / private mount) or 3 (other merge conflict) → BLOCKED.
+## 1. Preflight — `bin/finish-preflight [--tested <rev>]`
+Confirms the worktree, lists stragglers, merges `main` (conflicts it has a rule
+for: check in step 4), prints the decision sheet (`--json` for fields). Pass the
+caller's tested revision as `--tested` on every run. Exit 2 (wrong place, private
+mount, bad revision) or 3 (a merge state it will not clear, named) → BLOCKED.
 
 ## 2. Stragglers — the sheet lists them and commits nothing
 Caller said intentional (or obviously this session's work) → commit, with a
@@ -35,7 +36,8 @@ from the caller. Run `bin/finish-verify` for missing checks; do not repeat a
 passing check just because main advanced, a merge commit exists, or the sheet
 still lists it. Test selection describes coverage, not invalidation of a pass.
 
-Before retesting, inspect the delta since the tested revision. Documentation, issue
+With `--tested`, the sheet lists every path since that revision under the checks
+it reaches; judge the reached ones. Documentation, issue
 close-out, audit/history records, and independent merged work preserve prior passes.
 Rerun only for a concrete interaction: conflict resolution, overlapping behavior, or a
 shared dependency, schema, build configuration, or test fixture this work uses.
@@ -95,7 +97,9 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
   duplicate prose line; renames follow `beebox/docs/README.md`. Move with
   `bin/doc-move <plan> <destination-dir>/`: it rewrites every
-  reference, tests included, and prints each; fix any `check by hand` line.
+  reference, tests included, prints each, and stages nothing; run the
+  `git add` lines it prints. Fix any `check by hand` line; a `refused` move
+  changed nothing.
   Then run `pnpm --dir beebox doc-graph`.
 
 ## 6. Close resolved issues
@@ -107,7 +111,8 @@ specific evidence of a missing related issue; search that symptom or identifier,
 not every file and symbol in the diff, nor a reconciled candidate unless later work
 affects it. For each issue this work **actually resolves**: `bin/issues close <issue>
 --resolution implemented|wontfix|superseded --workstream <name> --note "<resolving
-commit; any divergence from what the issue proposed>"`; fix any `check by hand` line.
+commit; any divergence from what the issue proposed>"`; stage the paths it prints and
+fix any `check by hand` line.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
 issues** close with the same command; commit them inside `private-issues/`.

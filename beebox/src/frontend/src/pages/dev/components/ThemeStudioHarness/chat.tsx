@@ -13,9 +13,10 @@ import { EmptyChat } from "../../../../components/chat/EmptyChat";
 import { LoadOlderHeader } from "../../../../components/chat/LoadOlderHeader";
 import { CardThemeSurface } from "../../../../components/themes/ThemedFileCard/CardThemeSurface";
 import { CardSurfaceActions } from "../../../../components/themes/ThemedFileCard/CardSurfaceActions";
-import { ThemeSwatchPicker } from "../../../../components/themes/ThemedFileCard/ThemeSwatchPicker";
+import { ThemeSwatch, ThemeSwatchPicker } from "../../../../components/themes/ThemedFileCard/ThemeSwatchPicker";
 import { Markdown } from "../../../../components/Markdown/body";
 import { ComposerSpecimen } from "../ComposerStatesHarness";
+import { PendingHqMessage } from "../../../../components/chat/PendingHqMessage";
 
 function noop() { /* The specimen never sends a message or opens a card. */ }
 
@@ -70,7 +71,10 @@ function ChatCard({ card, cardStock }: { card: string; cardStock: string }) {
     title="Welcome table" detail="Seed exchange · in chat" symbol={{ glyph: "🌱" }} boxSlug={undefined} mode="chat" initialSide="back"
     actions={<CardSurfaceActions mode="chat" path={WELCOME_PATH} />}
     properties={<><h2>Properties</h2><p>The back of a card shown in chat, with its appearance swatches.</p>
-      <h3>Appearance</h3><ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride /></>}>
+      <dl><dt>Filed in</dt><dd>garden/</dd><dt>Host</dt><dd>Dana</dd></dl>
+      <h3>Appearance</h3><ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride />
+      <div className="bbx-theme-swatches mt-2"><ThemeSwatch name={card} label="Saving appearance" stock={cardStock} pressed={false}
+        badge={null} disabled onSelect={noop} /></div></>}>
     <div className="bbx-card-content"><Markdown prose="block" onNavigate={noop}>{"A card shown in the conversation: **by the door**, with name tags."}</Markdown></div>
   </CardThemeSurface>;
 }
@@ -88,6 +92,7 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
       <AssistantMessage entries={REPLY} />
       <InterruptedMessage />
       <UserMessage entries={QUEUED} currentUserEmail="dana@example.com" currentUserName="Dana" />
+      <PendingHqMessage pending={{ id: "studio-hq", text: "Bring the spare tape for Saturday.", status: "Waiting for the full transcript…" }} onSendLive={noop} />
       <CalloutStack callouts={[{ context: "Ready to review", body: "The draft checklist is ready. **Bring spare envelopes** for new arrivals." }]} />
       <div className="px-3 sm:px-6"><ChatCard card={card} cardStock={cardStock} /></div>
     </div>

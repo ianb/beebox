@@ -1,4 +1,4 @@
-// Recording a spoken comment (`docs/plans/document-comments.md`, Track 4).
+// Recording a spoken comment (`plan:document-comments`, Track 4).
 //
 // THE CONTROL STATES ITS OWN AVAILABILITY. `navigator.mediaDevices` is
 // `undefined` outside a secure context, so on a bare-IP HTTP origin the mic is

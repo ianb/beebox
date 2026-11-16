@@ -6,7 +6,7 @@
  * resume the SAME session, and a GLM transcript resumed without its model
  * would run against a different provider. So the model of the first
  * invocation is the model of every following one until a caller names another
- * explicitly (`docs/plans/box-glm-provider.md`, Track 3).
+ * explicitly (`plan:box-glm-provider`, Track 3).
  *
  * The system prompt rides the same way. A resumed run passes it again rather
  * than relying on the SDK to have recorded the first run's append, a default

@@ -7,7 +7,7 @@ export interface ExternalIconLinkProps {
   /** Required aria-label and title — icon-only links have no visible text. */
   label: string;
   size?: ExternalIconLinkSize;
-  /** DOM id. Set it to publish a `bbx-` control address (docs/plans/agent-points-at-ui.md). */
+  /** DOM id. Set it to publish a `bbx-` control address (plan:agent-points-at-ui). */
   id?: string;
   /**
    * When true, renders a white-pill variant that stays visible on dark

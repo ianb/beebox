@@ -69,7 +69,7 @@ Use \`bbx calendar\` (the next 7 days), \`bbx calendar today\`, or \`bbx calenda
  * Generate rules files from schema instructions and connector rules.
  *
  * `.claude/` lives at the box root — see "Where Claude Code runs" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`.
+ * `plan:boxes-as-packages-v2`.
  *
  * Returns the filenames written, which are also the prune manifest.
  */

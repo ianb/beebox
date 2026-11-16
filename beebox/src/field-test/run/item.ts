@@ -1,5 +1,5 @@
 /**
- * One checklist item, start to finish (`docs/implemented-plans/agent-field-tests.md`,
+ * One checklist item, start to finish (`plan:agent-field-tests`,
  * Track 2 — the activity loop).
  *
  * The order is the whole design, and each step exists because of a specific

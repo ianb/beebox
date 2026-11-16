@@ -1,6 +1,6 @@
 // # EmissionEditor — the one mutation surface for the composition draft
 //
-// `createEmissionStore` (docs/plans/input-extraction.md, chunk 2) holds the
+// `createEmissionStore` (plan:input-extraction, chunk 2) holds the
 // whole in-progress emission — text, images, pending-image count, files,
 // selections — behind one editor. Framework-free (no React/DOM), so it's
 // testable headlessly; the React bindings
@@ -312,7 +312,7 @@ void test("Id counters are monotonic within a session — never reused except ac
 
 // ## reserveIds: advances counters past ids added directly, never rewinds them
 //
-// Restoring a persisted emission (docs/plans/input-extraction.md, chunk 4)
+// Restoring a persisted emission (plan:input-extraction, chunk 4)
 // re-adds items with their ORIGINAL ids (the restored text still carries the
 // matching `[imageN]`/`[fileN]`/`[selectionN]` tokens), bypassing
 // `nextImageId()`/`nextFileId()`/`nextSelectionId()` entirely. `reserveIds`

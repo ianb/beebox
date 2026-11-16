@@ -157,6 +157,7 @@
   border-bottom: 3px solid #c8ba79;
 }
 [data-chrome-theme="rose-trellis"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
+  background: #702a4888;
   border-radius: 24px 7px 24px 7px;
   border-color: #f2ccad99;
   box-shadow: 2px 3px 0 #53203855;

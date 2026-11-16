@@ -1,6 +1,6 @@
 /**
  * Canonical-form checking for box refs — the detection half of
- * `bbx validate --canonical` (`docs/implemented-plans/box-root-paths.md`, Track F).
+ * `bbx validate --canonical` (`plan:box-root-paths`, Track F).
  *
  * A ref is **canonical** when it addresses its target from the box root
  * (`/store/notes/Plan.doc.card`), or is the one sanctioned exception: a card's
@@ -13,7 +13,7 @@
  * **Body refs warn by default; frontmatter refs stay opt-in.** A card BODY
  * (Markdoc tag refs, inline markdown links) gets this warning on every
  * `bbx validate` run — `card-lint.ts`'s deprecation notice for the
- * document-relative form (Track B, `docs/implemented-plans/one-root-box-layout.md`).
+ * document-relative form (Track B, `plan:one-root-box-layout`).
  * Frontmatter refs (`ref:`/`refs:` fields) stay behind `--canonical`: a box
  * can carry them by the legacy hundred, and warning about them in the
  * default walk would bury the broken-ref signal that actually needs acting

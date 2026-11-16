@@ -164,6 +164,12 @@
   max-width: 0;
   margin-left: -0.3rem;
 }
+/* While a composition editor is open, its sticky bar shares the top with the
+   menu and keeps room for the icon only (ComposeEditor.tsx): no label. */
+.bbx-card-front:has(.bbx-composition-editor) .bbx-card-contents .bbx-card-contents-label {
+  max-width: 0;
+  margin-left: -0.3rem;
+}
 @media (prefers-reduced-motion: reduce) {
   .bbx-card-contents,
   .bbx-card-contents-label {

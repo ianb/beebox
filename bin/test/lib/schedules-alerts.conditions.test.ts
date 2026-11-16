@@ -3,7 +3,7 @@
 // A schedule that finds the same thing every hour used to add a record every
 // hour, and nothing ever closed them: the store held sixty open alerts, most of
 // them stale, and a new one did not stand out
-// (`docs/plans/schedule-alert-signal.md`). A **condition** is the schedule's name
+// (`plan:schedule-alert-signal`). A **condition** is the schedule's name
 // for a standing problem. Raising it again updates the open record; the schedule
 // `resolve`s it when it clears.
 //

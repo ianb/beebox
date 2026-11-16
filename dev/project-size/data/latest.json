@@ -1,25 +1,18 @@
 {
- "collectedAt": "2026-10-09T18:12:55.722Z",
- "commit": "fe640517e",
+ "collectedAt": "2026-11-13T20:45:03.883Z",
+ "commit": "529a87745",
  "values": {
-  "files": 6833,
-  "lines": 867803,
-  "code.lines": 391177,
-  "code.files": 2956,
-  "tests.lines": 177468,
-  "tests.files": 1500,
-  "docs.lines": 248615,
-  "doctest.lines": 146124,
-  "doctest.files": 1069,
-  "testts.files": 142,
-  "testts.lines": 19228,
-  "doctest.percent": 82,
-  "doctest.code.lines": 115407,
-  "doctest.prose.lines": 30717,
-  "doctest.prose.percent": 21,
-  "tests.codeOnly.lines": 146751,
-  "tests.codeOnly.percentOfCode": 38,
-  "beebox.percent": 67
+  "files": 9826,
+  "lines": 1298555,
+  "code.lines": 492966,
+  "code.files": 3710,
+  "tests.lines": 255681,
+  "tests.files": 2089,
+  "docs.lines": 334676,
+  "testts.files": 1714,
+  "testts.lines": 234829,
+  "tests.percentOfCode": 52,
+  "beebox.percent": 58
  },
  "datasets": {
   "byCategory": {
@@ -44,52 +37,52 @@
    "rows": [
     {
      "category": "code",
-     "files": 2956,
-     "lines": 391177
+     "files": 3710,
+     "lines": 492966
     },
     {
      "category": "tests",
-     "files": 1500,
-     "lines": 177468
-    },
-    {
-     "category": "docs: plans & reports",
-     "files": 327,
-     "lines": 115702
-    },
-    {
-     "category": "docs: issues",
-     "files": 1216,
-     "lines": 66062
-    },
-    {
-     "category": "docs: guides & other",
-     "files": 271,
-     "lines": 44618
+     "files": 2089,
+     "lines": 255681
     },
     {
      "category": "config & data",
-     "files": 295,
-     "lines": 35462
+     "files": 646,
+     "lines": 200820
+    },
+    {
+     "category": "docs: plans & reports",
+     "files": 474,
+     "lines": 161190
+    },
+    {
+     "category": "docs: issues",
+     "files": 1601,
+     "lines": 82613
+    },
+    {
+     "category": "docs: guides & other",
+     "files": 547,
+     "lines": 58473
     },
     {
      "category": "docs: research",
-     "files": 117,
-     "lines": 18449
+     "files": 177,
+     "lines": 28658
     },
     {
      "category": "lockfiles",
      "files": 1,
-     "lines": 15081
+     "lines": 14412
     },
     {
      "category": "docs: agent instructions",
-     "files": 59,
-     "lines": 3784
+     "files": 58,
+     "lines": 3742
     },
     {
      "category": "binary",
-     "files": 91,
+     "files": 523,
      "lines": 0
     }
    ],
@@ -130,86 +123,107 @@
    "rows": [
     {
      "package": "beebox",
-     "code": 286688,
-     "tests": 146575,
-     "docs": 149282,
-     "total": 582545
+     "code": 334164,
+     "tests": 217552,
+     "docs": 197178,
+     "total": 748894
     },
     {
      "package": "issues",
      "code": 0,
      "tests": 0,
-     "docs": 66062,
-     "total": 66062
-    },
-    {
-     "package": "bin",
-     "code": 23774,
-     "tests": 12289,
-     "docs": 884,
-     "total": 36947
-    },
-    {
-     "package": "ios-app",
-     "code": 28189,
-     "tests": 0,
-     "docs": 273,
-     "total": 28462
-    },
-    {
-     "package": "workstreams-app",
-     "code": 17201,
-     "tests": 7353,
-     "docs": 171,
-     "total": 24725
-    },
-    {
-     "package": "research",
-     "code": 0,
-     "tests": 0,
-     "docs": 18449,
-     "total": 18449
-    },
-    {
-     "package": "site",
-     "code": 5009,
-     "tests": 1849,
-     "docs": 3752,
-     "total": 10610
-    },
-    {
-     "package": "schedules",
-     "code": 5160,
-     "tests": 1550,
-     "docs": 3740,
-     "total": 10450
+     "docs": 82613,
+     "total": 82613
     },
     {
      "package": "canvas-loop",
-     "code": 6808,
-     "tests": 1780,
-     "docs": 993,
-     "total": 9581
+     "code": 38158,
+     "tests": 4045,
+     "docs": 3571,
+     "total": 45774
     },
     {
-     "package": "scan-uploader",
-     "code": 2804,
-     "tests": 2822,
-     "docs": 387,
-     "total": 6013
+     "package": "bin",
+     "code": 25789,
+     "tests": 15447,
+     "docs": 926,
+     "total": 42162
     },
     {
-     "package": "other (12 small)",
-     "code": 15544,
-     "tests": 3250,
-     "docs": 4622,
-     "total": 23416
+     "package": "research",
+     "code": 4705,
+     "tests": 78,
+     "docs": 28658,
+     "total": 33441
+    },
+    {
+     "package": "ios-app",
+     "code": 32713,
+     "tests": 0,
+     "docs": 285,
+     "total": 32998
+    },
+    {
+     "package": "workstreams-app",
+     "code": 17669,
+     "tests": 9626,
+     "docs": 215,
+     "total": 27510
+    },
+    {
+     "package": "dev",
+     "code": 8257,
+     "tests": 0,
+     "docs": 8645,
+     "total": 16902
+    },
+    {
+     "package": "schedules",
+     "code": 5934,
+     "tests": 1842,
+     "docs": 4284,
+     "total": 12060
+    },
+    {
+     "package": "site",
+     "code": 4762,
+     "tests": 2054,
+     "docs": 4180,
+     "total": 10996
+    },
+    {
+     "package": "mac-app",
+     "code": 7218,
+     "tests": 0,
+     "docs": 228,
+     "total": 7446
+    },
+    {
+     "package": "personal-vibe-check",
+     "code": 3490,
+     "tests": 1522,
+     "docs": 683,
+     "total": 5695
+    },
+    {
+     "package": "beebox-clerk",
+     "code": 4102,
+     "tests": 1447,
+     "docs": 136,
+     "total": 5685
+    },
+    {
+     "package": "other (9 small)",
+     "code": 6005,
+     "tests": 2068,
+     "docs": 3074,
+     "total": 11147
     }
    ],
    "bar": "total"
   },
   "testsByKind": {
-   "title": "Tests by kind (doctests split into fenced code and prose)",
+   "title": "Tests by kind",
    "columns": [
     {
      "key": "kind",
@@ -229,29 +243,19 @@
    ],
    "rows": [
     {
-     "kind": "doctest code (inside fences)",
-     "files": 1069,
-     "lines": 115407
-    },
-    {
-     "kind": "doctest prose",
-     "files": 0,
-     "lines": 30717
-    },
-    {
      "kind": "*.test.ts code",
-     "files": 142,
-     "lines": 19228
+     "files": 1714,
+     "lines": 234829
     },
     {
      "kind": "test fixtures & data",
-     "files": 228,
-     "lines": 7084
+     "files": 278,
+     "lines": 12393
     },
     {
      "kind": "test helper code",
-     "files": 61,
-     "lines": 5032
+     "files": 97,
+     "lines": 8459
     }
    ],
    "bar": "lines"
@@ -271,36 +275,44 @@
    ],
    "rows": [
     {
+     "package": "beebox",
+     "files": 1422
+    },
+    {
      "package": "bin",
-     "files": 44
+     "files": 95
     },
     {
      "package": "workstreams-app",
-     "files": 23
-    },
-    {
-     "package": "site",
-     "files": 20
+     "files": 61
     },
     {
      "package": "canvas-loop",
-     "files": 17
+     "files": 49
+    },
+    {
+     "package": "site",
+     "files": 24
     },
     {
      "package": "beebox-clerk",
-     "files": 12
+     "files": 17
     },
     {
      "package": "schedules",
-     "files": 12
+     "files": 16
     },
     {
-     "package": "beebox",
-     "files": 9
+     "package": "personal-vibe-check",
+     "files": 11
     },
     {
-     "package": "agent-doctest",
-     "files": 3
+     "package": "browse",
+     "files": 10
+    },
+    {
+     "package": "tap-check",
+     "files": 7
     },
     {
      "package": "other (2 small)",
@@ -331,38 +343,38 @@
    "rows": [
     {
      "extension": ".ts",
-     "files": 2279,
-     "lines": 296633
+     "files": 2857,
+     "lines": 375004
     },
     {
      "extension": ".tsx",
-     "files": 461,
-     "lines": 48396
+     "files": 530,
+     "lines": 54308
     },
     {
      "extension": ".swift",
-     "files": 98,
-     "lines": 29311
+     "files": 168,
+     "lines": 40760
     },
     {
      "extension": ".sh",
-     "files": 55,
-     "lines": 7583
+     "files": 61,
+     "lines": 8141
     },
     {
      "extension": ".html",
-     "files": 20,
-     "lines": 4694
+     "files": 28,
+     "lines": 7040
     },
     {
      "extension": ".css",
-     "files": 32,
-     "lines": 4182
+     "files": 45,
+     "lines": 5975
     },
     {
-     "extension": "other (2 small)",
-     "files": 11,
-     "lines": 378
+     "extension": "other (3 small)",
+     "files": 21,
+     "lines": 1738
     }
    ],
    "bar": "lines"
@@ -420,6 +432,13 @@
      "tests": 177468,
      "docs": 248615,
      "lines": 867803
+    },
+    {
+     "date": "2026-11-13",
+     "code": 492966,
+     "tests": 255681,
+     "docs": 334676,
+     "lines": 1298555
     }
    ],
    "bar": "lines"
@@ -437,52 +456,12 @@
        {
         "name": "monorepo",
         "category": "docs",
-        "value": 312
+        "value": 343
        },
        {
         "name": "monorepo",
         "category": "code",
-        "value": 218
-       }
-      ]
-     },
-     {
-      "name": "agent-doctest",
-      "children": [
-       {
-        "name": "(own files)",
-        "children": [
-         {
-          "name": "agent-doctest",
-          "category": "docs",
-          "value": 273
-         },
-         {
-          "name": "agent-doctest",
-          "category": "code",
-          "value": 26
-         }
-        ]
-       },
-       {
-        "name": "other (3 small)",
-        "children": [
-         {
-          "name": "other (3 small)",
-          "category": "docs",
-          "value": 517
-         },
-         {
-          "name": "other (3 small)",
-          "category": "code",
-          "value": 2693
-         },
-         {
-          "name": "other (3 small)",
-          "category": "tests",
-          "value": 1468
-         }
-        ]
+        "value": 198
        }
       ]
      },
@@ -495,12 +474,12 @@
          {
           "name": "beebox-clerk",
           "category": "docs",
-          "value": 132
+          "value": 136
          },
          {
           "name": "beebox-clerk",
           "category": "code",
-          "value": 61
+          "value": 95
          }
         ]
        },
@@ -510,12 +489,12 @@
          {
           "name": "other (3 small)",
           "category": "code",
-          "value": 3299
+          "value": 4007
          },
          {
           "name": "other (3 small)",
           "category": "tests",
-          "value": 945
+          "value": 1447
          }
         ]
        }
@@ -530,12 +509,12 @@
          {
           "name": "beebox",
           "category": "docs",
-          "value": 407
+          "value": 469
          },
          {
           "name": "beebox",
           "category": "code",
-          "value": 267
+          "value": 393
          }
         ]
        },
@@ -545,12 +524,12 @@
          {
           "name": "docs",
           "category": "docs",
-          "value": 147713
+          "value": 195235
          },
          {
           "name": "docs",
           "category": "code",
-          "value": 751
+          "value": 755
          }
         ]
        },
@@ -560,17 +539,17 @@
          {
           "name": "src",
           "category": "code",
-          "value": 281168
+          "value": 328064
          },
          {
           "name": "src",
           "category": "docs",
-          "value": 949
+          "value": 1206
          },
          {
           "name": "src",
           "category": "tests",
-          "value": 20868
+          "value": 35347
          }
         ]
        },
@@ -580,7 +559,7 @@
          {
           "name": "test",
           "category": "tests",
-          "value": 124935
+          "value": 181418
          }
         ]
        },
@@ -590,17 +569,17 @@
          {
           "name": "other (6 small)",
           "category": "docs",
-          "value": 213
+          "value": 268
          },
          {
           "name": "other (6 small)",
           "category": "code",
-          "value": 4502
+          "value": 4952
          },
          {
           "name": "other (6 small)",
           "category": "tests",
-          "value": 772
+          "value": 787
          }
         ]
        }
@@ -615,17 +594,17 @@
          {
           "name": "bin",
           "category": "docs",
-          "value": 189
+          "value": 200
          },
          {
           "name": "bin",
           "category": "code",
-          "value": 15186
+          "value": 16421
          },
          {
           "name": "bin",
           "category": "tests",
-          "value": 7514
+          "value": 8311
          }
         ]
        },
@@ -635,7 +614,7 @@
          {
           "name": "lib",
           "category": "code",
-          "value": 8588
+          "value": 9368
          }
         ]
        },
@@ -645,7 +624,7 @@
          {
           "name": "test",
           "category": "tests",
-          "value": 4775
+          "value": 7136
          }
         ]
        },
@@ -655,7 +634,7 @@
          {
           "name": "other (1 small)",
           "category": "docs",
-          "value": 695
+          "value": 726
          }
         ]
        }
@@ -670,12 +649,12 @@
          {
           "name": "canvas-loop",
           "category": "docs",
-          "value": 760
+          "value": 1549
          },
          {
           "name": "canvas-loop",
           "category": "code",
-          "value": 50
+          "value": 63
          }
         ]
        },
@@ -685,22 +664,72 @@
          {
           "name": "src",
           "category": "code",
-          "value": 6758
+          "value": 38095
          },
          {
           "name": "src",
           "category": "docs",
-          "value": 233
+          "value": 2022
          }
         ]
        },
        {
-        "name": "other (1 small)",
+        "name": "test",
         "children": [
          {
-          "name": "other (1 small)",
+          "name": "test",
           "category": "tests",
-          "value": 1780
+          "value": 4045
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "name": "dev",
+      "children": [
+       {
+        "name": "(own files)",
+        "children": [
+         {
+          "name": "dev",
+          "category": "docs",
+          "value": 601
+         },
+         {
+          "name": "dev",
+          "category": "code",
+          "value": 1907
+         }
+        ]
+       },
+       {
+        "name": "devprocess-talk",
+        "children": [
+         {
+          "name": "devprocess-talk",
+          "category": "docs",
+          "value": 7383
+         },
+         {
+          "name": "devprocess-talk",
+          "category": "code",
+          "value": 3427
+         }
+        ]
+       },
+       {
+        "name": "other (5 small)",
+        "children": [
+         {
+          "name": "other (5 small)",
+          "category": "code",
+          "value": 2923
+         },
+         {
+          "name": "other (5 small)",
+          "category": "docs",
+          "value": 661
          }
         ]
        }
@@ -715,7 +744,7 @@
          {
           "name": "ios-app",
           "category": "docs",
-          "value": 273
+          "value": 285
          }
         ]
        },
@@ -725,7 +754,7 @@
          {
           "name": "BeeBox",
           "category": "code",
-          "value": 19441
+          "value": 22560
          }
         ]
        },
@@ -735,17 +764,17 @@
          {
           "name": "BeeBoxTests",
           "category": "code",
-          "value": 8249
+          "value": 9588
          }
         ]
        },
        {
-        "name": "other (1 small)",
+        "name": "other (2 small)",
         "children": [
          {
-          "name": "other (1 small)",
+          "name": "other (2 small)",
           "category": "code",
-          "value": 499
+          "value": 565
          }
         ]
        }
@@ -760,7 +789,7 @@
          {
           "name": "issues",
           "category": "docs",
-          "value": 248
+          "value": 250
          }
         ]
        },
@@ -770,7 +799,7 @@
          {
           "name": "bugs",
           "category": "docs",
-          "value": 6160
+          "value": 5178
          }
         ]
        },
@@ -780,7 +809,7 @@
          {
           "name": "closed",
           "category": "docs",
-          "value": 40964
+          "value": 56185
          }
         ]
        },
@@ -790,7 +819,7 @@
          {
           "name": "features",
           "category": "docs",
-          "value": 9347
+          "value": 11158
          }
         ]
        },
@@ -800,7 +829,82 @@
          {
           "name": "other (6 small)",
           "category": "docs",
-          "value": 9343
+          "value": 9842
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "name": "mac-app",
+      "children": [
+       {
+        "name": "(own files)",
+        "children": [
+         {
+          "name": "mac-app",
+          "category": "code",
+          "value": 48
+         },
+         {
+          "name": "mac-app",
+          "category": "docs",
+          "value": 228
+         }
+        ]
+       },
+       {
+        "name": "Sources",
+        "children": [
+         {
+          "name": "Sources",
+          "category": "code",
+          "value": 5111
+         }
+        ]
+       },
+       {
+        "name": "other (2 small)",
+        "children": [
+         {
+          "name": "other (2 small)",
+          "category": "code",
+          "value": 2059
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "name": "personal-vibe-check",
+      "children": [
+       {
+        "name": "(own files)",
+        "children": [
+         {
+          "name": "personal-vibe-check",
+          "category": "docs",
+          "value": 683
+         },
+         {
+          "name": "personal-vibe-check",
+          "category": "code",
+          "value": 251
+         }
+        ]
+       },
+       {
+        "name": "other (5 small)",
+        "children": [
+         {
+          "name": "other (5 small)",
+          "category": "code",
+          "value": 3239
+         },
+         {
+          "name": "other (5 small)",
+          "category": "tests",
+          "value": 1522
          }
         ]
        }
@@ -815,7 +919,7 @@
          {
           "name": "research",
           "category": "docs",
-          "value": 2084
+          "value": 2677
          }
         ]
        },
@@ -825,52 +929,27 @@
          {
           "name": "openclaw-hermes",
           "category": "docs",
-          "value": 6794
+          "value": 6951
          }
         ]
        },
        {
-        "name": "other (11 small)",
+        "name": "other (21 small)",
         "children": [
          {
-          "name": "other (11 small)",
+          "name": "other (21 small)",
           "category": "docs",
-          "value": 9571
-         }
-        ]
-       }
-      ]
-     },
-     {
-      "name": "scan-uploader",
-      "children": [
-       {
-        "name": "(own files)",
-        "children": [
-         {
-          "name": "scan-uploader",
-          "category": "docs",
-          "value": 387
+          "value": 19030
          },
          {
-          "name": "scan-uploader",
+          "name": "other (21 small)",
           "category": "code",
-          "value": 90
-         }
-        ]
-       },
-       {
-        "name": "other (2 small)",
-        "children": [
-         {
-          "name": "other (2 small)",
-          "category": "code",
-          "value": 2714
+          "value": 4705
          },
          {
-          "name": "other (2 small)",
+          "name": "other (21 small)",
           "category": "tests",
-          "value": 2822
+          "value": 78
          }
         ]
        }
@@ -880,22 +959,22 @@
       "name": "schedules",
       "children": [
        {
-        "name": "other (14 small)",
+        "name": "other (15 small)",
         "children": [
          {
-          "name": "other (14 small)",
-          "category": "docs",
-          "value": 3740
-         },
-         {
-          "name": "other (14 small)",
-          "category": "code",
-          "value": 5160
-         },
-         {
-          "name": "other (14 small)",
+          "name": "other (15 small)",
           "category": "tests",
-          "value": 1550
+          "value": 1842
+         },
+         {
+          "name": "other (15 small)",
+          "category": "code",
+          "value": 5934
+         },
+         {
+          "name": "other (15 small)",
+          "category": "docs",
+          "value": 4284
          }
         ]
        }
@@ -910,17 +989,17 @@
          {
           "name": "site",
           "category": "docs",
-          "value": 756
+          "value": 807
          },
          {
           "name": "site",
           "category": "tests",
-          "value": 1641
+          "value": 1846
          },
          {
           "name": "site",
           "category": "code",
-          "value": 3440
+          "value": 3943
          }
         ]
        },
@@ -930,12 +1009,12 @@
          {
           "name": "other (5 small)",
           "category": "docs",
-          "value": 2996
+          "value": 3373
          },
          {
           "name": "other (5 small)",
           "category": "code",
-          "value": 1569
+          "value": 819
          },
          {
           "name": "other (5 small)",
@@ -955,7 +1034,7 @@
          {
           "name": "workstreams-app",
           "category": "code",
-          "value": 27
+          "value": 49
          }
         ]
        },
@@ -965,7 +1044,12 @@
          {
           "name": "src",
           "category": "code",
-          "value": 17174
+          "value": 17620
+         },
+         {
+          "name": "src",
+          "category": "tests",
+          "value": 6
          }
         ]
        },
@@ -975,7 +1059,7 @@
          {
           "name": "test",
           "category": "tests",
-          "value": 7353
+          "value": 9620
          }
         ]
        },
@@ -985,29 +1069,29 @@
          {
           "name": "other (1 small)",
           "category": "docs",
-          "value": 171
+          "value": 215
          }
         ]
        }
       ]
      },
      {
-      "name": "other (9 small)",
+      "name": "other (8 small)",
       "children": [
        {
-        "name": "other (9 small)",
+        "name": "other (8 small)",
         "category": "docs",
-        "value": 3388
+        "value": 2731
        },
        {
-        "name": "other (9 small)",
+        "name": "other (8 small)",
         "category": "code",
-        "value": 9247
+        "value": 5807
        },
        {
-        "name": "other (9 small)",
+        "name": "other (8 small)",
         "category": "tests",
-        "value": 837
+        "value": 2068
        }
       ]
      }
@@ -1025,12 +1109,12 @@
        {
         "name": "beebox",
         "category": "docs",
-        "value": 407
+        "value": 469
        },
        {
         "name": "beebox",
         "category": "code",
-        "value": 267
+        "value": 393
        }
       ]
      },
@@ -1043,22 +1127,27 @@
          {
           "name": "deploy",
           "category": "docs",
-          "value": 82
+          "value": 99
          },
          {
           "name": "deploy",
           "category": "code",
-          "value": 1977
+          "value": 2367
          }
         ]
        },
        {
-        "name": "other (2 small)",
+        "name": "other (3 small)",
         "children": [
          {
-          "name": "other (2 small)",
+          "name": "other (3 small)",
           "category": "code",
-          "value": 640
+          "value": 687
+         },
+         {
+          "name": "other (3 small)",
+          "category": "docs",
+          "value": 27
          }
         ]
        }
@@ -1073,12 +1162,12 @@
          {
           "name": "docs",
           "category": "docs",
-          "value": 14349
+          "value": 18903
          },
          {
           "name": "docs",
           "category": "code",
-          "value": 751
+          "value": 755
          }
         ]
        },
@@ -1088,7 +1177,7 @@
          {
           "name": "box",
           "category": "docs",
-          "value": 1908
+          "value": 2232
          }
         ]
        },
@@ -1098,7 +1187,7 @@
          {
           "name": "implemented-plans",
           "category": "docs",
-          "value": 78833
+          "value": 117284
          }
         ]
        },
@@ -1108,7 +1197,7 @@
          {
           "name": "plans",
           "category": "docs",
-          "value": 31437
+          "value": 33888
          }
         ]
        },
@@ -1118,7 +1207,7 @@
          {
           "name": "reports",
           "category": "docs",
-          "value": 2782
+          "value": 2837
          }
         ]
        },
@@ -1128,7 +1217,7 @@
          {
           "name": "unimplemented-plans",
           "category": "docs",
-          "value": 2650
+          "value": 3678
          }
         ]
        },
@@ -1141,7 +1230,7 @@
            {
             "name": "user-stories",
             "category": "docs",
-            "value": 220
+            "value": 222
            }
           ]
          },
@@ -1151,7 +1240,7 @@
            {
             "name": "catalog",
             "category": "docs",
-            "value": 8177
+            "value": 8179
            }
           ]
          }
@@ -1163,7 +1252,7 @@
          {
           "name": "other (12 small)",
           "category": "docs",
-          "value": 7357
+          "value": 8012
          }
         ]
        }
@@ -1178,7 +1267,7 @@
          {
           "name": "pub-worker",
           "category": "code",
-          "value": 992
+          "value": 990
          }
         ]
        },
@@ -1188,7 +1277,7 @@
          {
           "name": "other (1 small)",
           "category": "tests",
-          "value": 772
+          "value": 787
          }
         ]
        }
@@ -1203,7 +1292,17 @@
          {
           "name": "src",
           "category": "code",
-          "value": 1537
+          "value": 1530
+         }
+        ]
+       },
+       {
+        "name": "cards",
+        "children": [
+         {
+          "name": "cards",
+          "category": "code",
+          "value": 1618
          }
         ]
        },
@@ -1216,7 +1315,7 @@
            {
             "name": "cli",
             "category": "code",
-            "value": 1010
+            "value": 1021
            }
           ]
          },
@@ -1226,7 +1325,7 @@
            {
             "name": "commands",
             "category": "code",
-            "value": 13018
+            "value": 16352
            }
           ]
          },
@@ -1236,7 +1335,7 @@
            {
             "name": "lib",
             "category": "code",
-            "value": 2693
+            "value": 2916
            }
           ]
          },
@@ -1246,7 +1345,7 @@
            {
             "name": "other (2 small)",
             "category": "code",
-            "value": 707
+            "value": 817
            }
           ]
          }
@@ -1261,7 +1360,7 @@
            {
             "name": "connectors",
             "category": "docs",
-            "value": 16
+            "value": 15
            }
           ]
          },
@@ -1271,7 +1370,7 @@
            {
             "name": "gmail",
             "category": "code",
-            "value": 2257
+            "value": 2342
            }
           ]
          },
@@ -1281,7 +1380,7 @@
            {
             "name": "google-calendar",
             "category": "code",
-            "value": 3285
+            "value": 3720
            }
           ]
          },
@@ -1291,17 +1390,7 @@
            {
             "name": "google-drive",
             "category": "code",
-            "value": 3759
-           }
-          ]
-         },
-         {
-          "name": "other (1 small)",
-          "children": [
-           {
-            "name": "other (1 small)",
-            "category": "code",
-            "value": 999
+            "value": 4134
            }
           ]
          }
@@ -1316,7 +1405,7 @@
            {
             "name": "core",
             "category": "code",
-            "value": 12316
+            "value": 13518
            }
           ]
          },
@@ -1326,7 +1415,7 @@
            {
             "name": "agent",
             "category": "code",
-            "value": 2519
+            "value": 3760
            }
           ]
          },
@@ -1336,7 +1425,17 @@
            {
             "name": "box",
             "category": "code",
-            "value": 3546
+            "value": 3904
+           }
+          ]
+         },
+         {
+          "name": "browser",
+          "children": [
+           {
+            "name": "browser",
+            "category": "code",
+            "value": 2378
            }
           ]
          },
@@ -1346,7 +1445,7 @@
            {
             "name": "capture",
             "category": "code",
-            "value": 2850
+            "value": 2864
            }
           ]
          },
@@ -1356,7 +1455,7 @@
            {
             "name": "chat",
             "category": "code",
-            "value": 13350
+            "value": 14859
            }
           ]
          },
@@ -1366,7 +1465,7 @@
            {
             "name": "commands",
             "category": "code",
-            "value": 5088
+            "value": 5444
            }
           ]
          },
@@ -1376,7 +1475,7 @@
            {
             "name": "docs-gen",
             "category": "code",
-            "value": 2582
+            "value": 2751
            }
           ]
          },
@@ -1386,7 +1485,7 @@
            {
             "name": "landmark",
             "category": "code",
-            "value": 1864
+            "value": 2035
            }
           ]
          },
@@ -1396,7 +1495,7 @@
            {
             "name": "procedure",
             "category": "code",
-            "value": 2619
+            "value": 2621
            }
           ]
          },
@@ -1406,7 +1505,7 @@
            {
             "name": "schedule",
             "category": "code",
-            "value": 2454
+            "value": 3147
            }
           ]
          },
@@ -1416,7 +1515,7 @@
            {
             "name": "search",
             "category": "code",
-            "value": 2184
+            "value": 2314
            }
           ]
          },
@@ -1426,7 +1525,7 @@
            {
             "name": "secrets",
             "category": "code",
-            "value": 2735
+            "value": 2927
            }
           ]
          },
@@ -1436,7 +1535,7 @@
            {
             "name": "todo",
             "category": "code",
-            "value": 1981
+            "value": 1963
            }
           ]
          },
@@ -1446,7 +1545,7 @@
            {
             "name": "transcription",
             "category": "code",
-            "value": 1653
+            "value": 1670
            }
           ]
          },
@@ -1456,22 +1555,32 @@
            {
             "name": "triage",
             "category": "code",
-            "value": 2111
+            "value": 2770
            }
           ]
          },
          {
-          "name": "other (33 small)",
+          "name": "views",
           "children": [
            {
-            "name": "other (33 small)",
+            "name": "views",
             "category": "code",
-            "value": 21032
+            "value": 2277
+           }
+          ]
+         },
+         {
+          "name": "other (39 small)",
+          "children": [
+           {
+            "name": "other (39 small)",
+            "category": "code",
+            "value": 23889
            },
            {
-            "name": "other (33 small)",
+            "name": "other (39 small)",
             "category": "docs",
-            "value": 615
+            "value": 633
            }
           ]
          }
@@ -1486,12 +1595,12 @@
            {
             "name": "dev",
             "category": "docs",
-            "value": 16
+            "value": 17
            },
            {
             "name": "dev",
             "category": "code",
-            "value": 1062
+            "value": 1191
            }
           ]
          },
@@ -1501,7 +1610,7 @@
            {
             "name": "layout",
             "category": "code",
-            "value": 4362
+            "value": 4625
            }
           ]
          },
@@ -1511,7 +1620,7 @@
            {
             "name": "lib",
             "category": "code",
-            "value": 2832
+            "value": 3334
            }
           ]
          },
@@ -1521,17 +1630,17 @@
            {
             "name": "perf",
             "category": "code",
-            "value": 1500
+            "value": 1808
            }
           ]
          },
          {
-          "name": "other (5 small)",
+          "name": "other (6 small)",
           "children": [
            {
-            "name": "other (5 small)",
+            "name": "other (6 small)",
             "category": "code",
-            "value": 3397
+            "value": 4193
            }
           ]
          }
@@ -1546,7 +1655,7 @@
            {
             "name": "field-test",
             "category": "code",
-            "value": 2087
+            "value": 2086
            }
           ]
          },
@@ -1556,7 +1665,7 @@
            {
             "name": "run",
             "category": "code",
-            "value": 1701
+            "value": 1704
            }
           ]
          }
@@ -1571,7 +1680,12 @@
            {
             "name": "frontend",
             "category": "code",
-            "value": 2103
+            "value": 2542
+           },
+           {
+            "name": "frontend",
+            "category": "tests",
+            "value": 23
            }
           ]
          },
@@ -1581,12 +1695,12 @@
            {
             "name": "components",
             "category": "code",
-            "value": 47385
+            "value": 53508
            },
            {
             "name": "components",
             "category": "docs",
-            "value": 146
+            "value": 153
            }
           ]
          },
@@ -1596,7 +1710,7 @@
            {
             "name": "hooks",
             "category": "code",
-            "value": 2823
+            "value": 3162
            }
           ]
          },
@@ -1606,7 +1720,7 @@
            {
             "name": "input",
             "category": "code",
-            "value": 1819
+            "value": 1820
            }
           ]
          },
@@ -1616,7 +1730,7 @@
            {
             "name": "lib",
             "category": "code",
-            "value": 12837
+            "value": 16106
            }
           ]
          },
@@ -1626,7 +1740,7 @@
            {
             "name": "machines",
             "category": "code",
-            "value": 4096
+            "value": 4681
            }
           ]
          },
@@ -1636,7 +1750,7 @@
            {
             "name": "pages",
             "category": "code",
-            "value": 6536
+            "value": 7884
            }
           ]
          },
@@ -1646,7 +1760,7 @@
            {
             "name": "renderers",
             "category": "code",
-            "value": 1654
+            "value": 1677
            }
           ]
          },
@@ -1656,7 +1770,7 @@
            {
             "name": "themes",
             "category": "code",
-            "value": 2722
+            "value": 4493
            }
           ]
          },
@@ -1666,7 +1780,7 @@
            {
             "name": "test",
             "category": "tests",
-            "value": 20868
+            "value": 35324
            }
           ]
          },
@@ -1681,7 +1795,7 @@
            {
             "name": "other (7 small)",
             "category": "code",
-            "value": 1761
+            "value": 1784
            }
           ]
          }
@@ -1696,12 +1810,12 @@
            {
             "name": "hub",
             "category": "docs",
-            "value": 57
+            "value": 88
            },
            {
             "name": "hub",
             "category": "code",
-            "value": 812
+            "value": 1243
            }
           ]
          },
@@ -1711,7 +1825,7 @@
            {
             "name": "other (2 small)",
             "category": "code",
-            "value": 1911
+            "value": 2212
            }
           ]
          }
@@ -1726,17 +1840,62 @@
            {
             "name": "lib",
             "category": "code",
-            "value": 5504
+            "value": 5996
            }
           ]
          },
          {
-          "name": "other (2 small)",
+          "name": "other (4 small)",
           "children": [
            {
-            "name": "other (2 small)",
+            "name": "other (4 small)",
             "category": "code",
-            "value": 1790
+            "value": 2603
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "plugins",
+        "children": [
+         {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "plugins",
+            "category": "docs",
+            "value": 10
+           }
+          ]
+         },
+         {
+          "name": "courseware",
+          "children": [
+           {
+            "name": "courseware",
+            "category": "docs",
+            "value": 127
+           },
+           {
+            "name": "courseware",
+            "category": "code",
+            "value": 1522
+           }
+          ]
+         },
+         {
+          "name": "other (1 small)",
+          "children": [
+           {
+            "name": "other (1 small)",
+            "category": "docs",
+            "value": 70
+           },
+           {
+            "name": "other (1 small)",
+            "category": "code",
+            "value": 586
            }
           ]
          }
@@ -1761,7 +1920,7 @@
            {
             "name": "other (2 small)",
             "category": "code",
-            "value": 1272
+            "value": 1329
            }
           ]
          }
@@ -1776,7 +1935,7 @@
            {
             "name": "schemas",
             "category": "code",
-            "value": 5820
+            "value": 5370
            }
           ]
          },
@@ -1786,7 +1945,7 @@
            {
             "name": "other (5 small)",
             "category": "code",
-            "value": 1817
+            "value": 1837
            }
           ]
          }
@@ -1801,7 +1960,17 @@
            {
             "name": "scripts",
             "category": "code",
-            "value": 2956
+            "value": 2738
+           }
+          ]
+         },
+         {
+          "name": "migrate",
+          "children": [
+           {
+            "name": "migrate",
+            "category": "code",
+            "value": 2631
            }
           ]
          },
@@ -1811,17 +1980,17 @@
            {
             "name": "user-stories",
             "category": "code",
-            "value": 2879
+            "value": 2905
            }
           ]
          },
          {
-          "name": "other (2 small)",
+          "name": "other (3 small)",
           "children": [
            {
-            "name": "other (2 small)",
+            "name": "other (3 small)",
             "category": "code",
-            "value": 512
+            "value": 1136
            }
           ]
          }
@@ -1836,22 +2005,22 @@
            {
             "name": "services",
             "category": "docs",
-            "value": 84
+            "value": 78
            },
            {
             "name": "services",
             "category": "code",
-            "value": 4806
+            "value": 4625
            }
           ]
          },
          {
-          "name": "other (12 small)",
+          "name": "other (13 small)",
           "children": [
            {
-            "name": "other (12 small)",
+            "name": "other (13 small)",
             "category": "code",
-            "value": 4724
+            "value": 5956
            }
           ]
          }
@@ -1866,7 +2035,7 @@
            {
             "name": "shared",
             "category": "code",
-            "value": 4828
+            "value": 5700
            }
           ]
          },
@@ -1876,17 +2045,17 @@
            {
             "name": "markdoc-config",
             "category": "code",
-            "value": 1503
+            "value": 1686
            }
           ]
          },
          {
-          "name": "other (3 small)",
+          "name": "other (4 small)",
           "children": [
            {
-            "name": "other (3 small)",
+            "name": "other (4 small)",
             "category": "code",
-            "value": 929
+            "value": 1381
            }
           ]
          }
@@ -1901,7 +2070,7 @@
            {
             "name": "webapp",
             "category": "code",
-            "value": 2662
+            "value": 2790
            }
           ]
          },
@@ -1911,7 +2080,7 @@
            {
             "name": "routes",
             "category": "code",
-            "value": 9945
+            "value": 11351
            }
           ]
          },
@@ -1921,7 +2090,7 @@
            {
             "name": "trpc",
             "category": "code",
-            "value": 9125
+            "value": 10395
            }
           ]
          },
@@ -1931,19 +2100,19 @@
            {
             "name": "other (3 small)",
             "category": "code",
-            "value": 1680
+            "value": 2514
            }
           ]
          }
         ]
        },
        {
-        "name": "other (7 small)",
+        "name": "other (6 small)",
         "children": [
          {
-          "name": "other (7 small)",
+          "name": "other (6 small)",
           "category": "code",
-          "value": 3970
+          "value": 2522
          }
         ]
        }
@@ -1958,7 +2127,7 @@
          {
           "name": "test",
           "category": "tests",
-          "value": 1853
+          "value": 1902
          }
         ]
        },
@@ -1971,7 +2140,7 @@
            {
             "name": "cli",
             "category": "tests",
-            "value": 398
+            "value": 465
            }
           ]
          },
@@ -1981,7 +2150,7 @@
            {
             "name": "commands",
             "category": "tests",
-            "value": 6502
+            "value": 10340
            }
           ]
          },
@@ -1991,7 +2160,7 @@
            {
             "name": "lib",
             "category": "tests",
-            "value": 2703
+            "value": 3094
            }
           ]
          },
@@ -2001,7 +2170,7 @@
            {
             "name": "other (2 small)",
             "category": "tests",
-            "value": 181
+            "value": 370
            }
           ]
          }
@@ -2016,17 +2185,27 @@
            {
             "name": "connectors",
             "category": "tests",
-            "value": 2833
+            "value": 4208
            }
           ]
          },
          {
-          "name": "other (4 small)",
+          "name": "google-drive",
           "children": [
            {
-            "name": "other (4 small)",
+            "name": "google-drive",
             "category": "tests",
-            "value": 3055
+            "value": 2050
+           }
+          ]
+         },
+         {
+          "name": "other (2 small)",
+          "children": [
+           {
+            "name": "other (2 small)",
+            "category": "tests",
+            "value": 2099
            }
           ]
          }
@@ -2041,7 +2220,17 @@
            {
             "name": "core",
             "category": "tests",
-            "value": 11740
+            "value": 15934
+           }
+          ]
+         },
+         {
+          "name": "agent",
+          "children": [
+           {
+            "name": "agent",
+            "category": "tests",
+            "value": 1775
            }
           ]
          },
@@ -2051,7 +2240,17 @@
            {
             "name": "box",
             "category": "tests",
-            "value": 1955
+            "value": 2948
+           }
+          ]
+         },
+         {
+          "name": "bulk-upload",
+          "children": [
+           {
+            "name": "bulk-upload",
+            "category": "tests",
+            "value": 1599
            }
           ]
          },
@@ -2061,7 +2260,7 @@
            {
             "name": "capture",
             "category": "tests",
-            "value": 1667
+            "value": 1954
            }
           ]
          },
@@ -2071,7 +2270,7 @@
            {
             "name": "chat",
             "category": "tests",
-            "value": 8179
+            "value": 11719
            }
           ]
          },
@@ -2081,7 +2280,7 @@
            {
             "name": "commands",
             "category": "tests",
-            "value": 2140
+            "value": 3206
            }
           ]
          },
@@ -2091,7 +2290,7 @@
            {
             "name": "procedure",
             "category": "tests",
-            "value": 1862
+            "value": 2401
            }
           ]
          },
@@ -2101,17 +2300,27 @@
            {
             "name": "schedule",
             "category": "tests",
-            "value": 1733
+            "value": 2841
            }
           ]
          },
          {
-          "name": "other (34 small)",
+          "name": "triage",
           "children": [
            {
-            "name": "other (34 small)",
+            "name": "triage",
             "category": "tests",
-            "value": 19354
+            "value": 2152
+           }
+          ]
+         },
+         {
+          "name": "other (39 small)",
+          "children": [
+           {
+            "name": "other (39 small)",
+            "category": "tests",
+            "value": 23149
            }
           ]
          }
@@ -2126,7 +2335,7 @@
            {
             "name": "dev",
             "category": "tests",
-            "value": 22
+            "value": 53
            }
           ]
          },
@@ -2136,7 +2345,17 @@
            {
             "name": "layout",
             "category": "tests",
-            "value": 2657
+            "value": 3402
+           }
+          ]
+         },
+         {
+          "name": "lib",
+          "children": [
+           {
+            "name": "lib",
+            "category": "tests",
+            "value": 1543
            }
           ]
          },
@@ -2146,7 +2365,32 @@
            {
             "name": "other (4 small)",
             "category": "tests",
-            "value": 1519
+            "value": 1279
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "field-test",
+        "children": [
+         {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "field-test",
+            "category": "tests",
+            "value": 1318
+           }
+          ]
+         },
+         {
+          "name": "other (1 small)",
+          "children": [
+           {
+            "name": "other (1 small)",
+            "category": "tests",
+            "value": 342
            }
           ]
          }
@@ -2161,19 +2405,29 @@
            {
             "name": "triage-evaluation",
             "category": "tests",
-            "value": 3248
+            "value": 3254
            }
           ]
          },
          {
-          "name": "other (5 small)",
+          "name": "other (6 small)",
           "children": [
            {
-            "name": "other (5 small)",
+            "name": "other (6 small)",
             "category": "tests",
-            "value": 1803
+            "value": 1583
            }
           ]
+         }
+        ]
+       },
+       {
+        "name": "helpers",
+        "children": [
+         {
+          "name": "helpers",
+          "category": "tests",
+          "value": 1598
          }
         ]
        },
@@ -2186,17 +2440,17 @@
            {
             "name": "hub",
             "category": "tests",
-            "value": 2178
+            "value": 3323
            }
           ]
          },
          {
-          "name": "other (2 small)",
+          "name": "other (3 small)",
           "children": [
            {
-            "name": "other (2 small)",
+            "name": "other (3 small)",
             "category": "tests",
-            "value": 295
+            "value": 623
            }
           ]
          }
@@ -2211,17 +2465,17 @@
            {
             "name": "lib",
             "category": "tests",
-            "value": 4417
+            "value": 5827
            }
           ]
          },
          {
-          "name": "other (1 small)",
+          "name": "other (3 small)",
           "children": [
            {
-            "name": "other (1 small)",
+            "name": "other (3 small)",
             "category": "tests",
-            "value": 80
+            "value": 323
            }
           ]
          }
@@ -2231,12 +2485,97 @@
         "name": "mobile-contract",
         "children": [
          {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "mobile-contract",
+            "category": "tests",
+            "value": 41
+           }
+          ]
+         },
+         {
           "name": "fixtures",
           "children": [
            {
             "name": "fixtures",
             "category": "tests",
-            "value": 2275
+            "value": 2361
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "plugins",
+        "children": [
+         {
+          "name": "other (2 small)",
+          "children": [
+           {
+            "name": "other (2 small)",
+            "category": "tests",
+            "value": 1602
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "schemas",
+        "children": [
+         {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "schemas",
+            "category": "tests",
+            "value": 1483
+           }
+          ]
+         },
+         {
+          "name": "other (1 small)",
+          "children": [
+           {
+            "name": "other (1 small)",
+            "category": "tests",
+            "value": 161
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "scripts",
+        "children": [
+         {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "scripts",
+            "category": "tests",
+            "value": 162
+           }
+          ]
+         },
+         {
+          "name": "migrate",
+          "children": [
+           {
+            "name": "migrate",
+            "category": "tests",
+            "value": 2608
+           }
+          ]
+         },
+         {
+          "name": "other (3 small)",
+          "children": [
+           {
+            "name": "other (3 small)",
+            "category": "tests",
+            "value": 528
            }
           ]
          }
@@ -2251,17 +2590,17 @@
            {
             "name": "services",
             "category": "tests",
-            "value": 2287
+            "value": 2607
            }
           ]
          },
          {
-          "name": "other (5 small)",
+          "name": "other (7 small)",
           "children": [
            {
-            "name": "other (5 small)",
+            "name": "other (7 small)",
             "category": "tests",
-            "value": 456
+            "value": 1362
            }
           ]
          }
@@ -2276,17 +2615,42 @@
            {
             "name": "shared",
             "category": "tests",
-            "value": 3340
+            "value": 4651
            }
           ]
          },
          {
-          "name": "other (1 small)",
+          "name": "other (2 small)",
           "children": [
            {
-            "name": "other (1 small)",
+            "name": "other (2 small)",
             "category": "tests",
-            "value": 98
+            "value": 345
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "tours",
+        "children": [
+         {
+          "name": "(own files)",
+          "children": [
+           {
+            "name": "tours",
+            "category": "tests",
+            "value": 1199
+           }
+          ]
+         },
+         {
+          "name": "tour-lib",
+          "children": [
+           {
+            "name": "tour-lib",
+            "category": "tests",
+            "value": 2340
            }
           ]
          }
@@ -2301,7 +2665,7 @@
            {
             "name": "user-stories",
             "category": "tests",
-            "value": 54
+            "value": 423
            }
           ]
          },
@@ -2311,7 +2675,7 @@
            {
             "name": "journeys",
             "category": "tests",
-            "value": 4533
+            "value": 5873
            }
           ]
          }
@@ -2326,7 +2690,7 @@
            {
             "name": "webapp",
             "category": "tests",
-            "value": 2438
+            "value": 2805
            }
           ]
          },
@@ -2336,7 +2700,7 @@
            {
             "name": "routes",
             "category": "tests",
-            "value": 7633
+            "value": 11014
            }
           ]
          },
@@ -2346,7 +2710,7 @@
            {
             "name": "trpc",
             "category": "tests",
-            "value": 8946
+            "value": 13478
            }
           ]
          },
@@ -2356,19 +2720,19 @@
            {
             "name": "other (3 small)",
             "category": "tests",
-            "value": 827
+            "value": 1748
            }
           ]
          }
         ]
        },
        {
-        "name": "other (16 small)",
+        "name": "other (11 small)",
         "children": [
          {
-          "name": "other (16 small)",
+          "name": "other (11 small)",
           "category": "tests",
-          "value": 9674
+          "value": 5953
          }
         ]
        }
@@ -2380,12 +2744,12 @@
        {
         "name": "other (4 small)",
         "category": "docs",
-        "value": 131
+        "value": 142
        },
        {
         "name": "other (4 small)",
         "category": "code",
-        "value": 893
+        "value": 908
        }
       ]
      }

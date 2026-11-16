@@ -1,7 +1,7 @@
 /**
  * The app bar's place chip: a split pill naming where the user is
  * (box ▸ landmark) and opening the two navigation menus
- * (docs/implemented-plans/top-nav-ia.md Track C1).
+ * (plan:top-nav-ia Track C1).
  *
  * Face — split like `VoiceChip`'s, but with two separately actionable halves:
  *  - Left (the switch menu): box-name prefix, the landmark's symbol + label
@@ -15,7 +15,7 @@
  *
  * Three lazinesses matter. The FACE's landmark lookup (`landmarks.identity`)
  * runs per-place on mount — cheap, one glob and one cached parse, no link/
- * expand resolution and no pruned-subtree walk (`docs/implemented-plans/card-prominence.md`,
+ * expand resolution and no pruned-subtree walk (`plan:card-prominence`,
  * "Split identity from resolution"). The switch menu's `chat.placeMenu` —
  * which globs every landmark — and the here menu's `landmarks.forDir` — which
  * resolves this landmark's full link list, including its derived children —

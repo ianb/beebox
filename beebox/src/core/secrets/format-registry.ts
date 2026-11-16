@@ -1,5 +1,5 @@
 /**
- * Soft format hints for secret entry (`docs/implemented-plans/secret-custody.md`, "Guided
+ * Soft format hints for secret entry (`plan:secret-custody`, "Guided
  * entry + validation").
  *
  * WARN, NEVER BLOCK. Provider key formats drift — a prefix change at the
@@ -70,6 +70,11 @@ const secretFormats: Record<string, SecretFormat> = {
     hint: 'JSON with the management key and project: {"apiKey": "…", "projectId": "…"}.',
     pattern: /^{/,
     minLength: 20,
+  },
+  "turn-server": {
+    hint: 'JSON with the host\'s coturn secret and its URLs: {"secret": "<64 hex>", "urls": ["turn:<ip>:3478?transport=udp", …]}.',
+    pattern: /^{/,
+    minLength: 80,
   },
   "cloudflare-turn": {
     hint: 'JSON with the TURN key id and its API token: {"keyId": "…", "apiToken": "…"}.',

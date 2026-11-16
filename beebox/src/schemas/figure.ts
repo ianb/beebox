@@ -9,8 +9,8 @@
  * view compiler and mounts it through a per-runtime harness (p5 instance mode
  * into a `<div>`, canvas-loop's `mountSketch`, etc.).
  *
- * See docs/implemented-plans/figure-card-type.md and
- * docs/implemented-plans/canvas-loop-figure.md for the full design.
+ * See plan:figure-card-type and
+ * plan:canvas-loop-figure for the full design.
  */
 
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
@@ -212,6 +212,9 @@ that is what you read. Each entry carries the value of the sketch's optional
 \`export function activity(model)\` (a small JSON object of the state after
 the action), so the log can say what the learner built, not only what they
 pressed. Your message shows only a count; \`bbx chat activity\` lists them.
+An activity trigger (\`triggers.md\` in the box docs) can read these entries
+as they land and answer at once, so keep the state it would need in
+\`activity(model)\`.
 
 ### Checking a canvas-loop figure
 

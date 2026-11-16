@@ -1,7 +1,7 @@
 /**
  * The one enumeration of "which web chats exist".
  *
- * Husk cards are the source of truth (docs/plans/chat-husks.md) — the cards
+ * Husk cards are the source of truth (plan:chat-husks) — the cards
  * say which sessions exist and what they're called, so deleting a husk is
  * editorial removal from every list. Activity stays runtime-derived: freshness
  * is the transcript's mtime, and a husk whose transcript is gone is skipped

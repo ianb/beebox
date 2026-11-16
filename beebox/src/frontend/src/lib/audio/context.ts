@@ -136,6 +136,9 @@ export interface Playback {
   finished: Promise<void>;
 }
 
+/** The latest `playAudioUrl` on each element, so an older playback's stop leaves a newer one alone. */
+const urlPlaybackTurns = new WeakMap<HTMLAudioElement, number>();
+
 /**
  * Play audio from a URL. On iOS, reuses the pre-unlocked shared element.
  * Returns a promise that resolves when playback ends OR when stop() is called.
@@ -144,6 +147,8 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
   const volume = opts && opts.volume !== undefined ? opts.volume : 1;
   const label = opts ? opts.label : undefined;
   const audio = getPlaybackAudioElement();
+  const turn = (urlPlaybackTurns.get(audio) ?? 0) + 1;
+  urlPlaybackTurns.set(audio, turn);
   let stopped = false;
   let settle: () => void = () => {};
 
@@ -168,7 +173,10 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
     stop: () => {
       if (stopped) return;
       stopped = true;
-      try { audio.pause(); } catch (_e) { /* ignore */ }
+      // On iOS the element is shared: a later playback owns it now, so leave that one playing.
+      if (urlPlaybackTurns.get(audio) === turn) {
+        try { audio.pause(); } catch (_e) { /* ignore */ }
+      }
       logSpeechEvent("audio.end", { label, stopped: true });
       settle();
     },

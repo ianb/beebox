@@ -1,5 +1,5 @@
 /**
- * Where a box's browser keeps its files (docs/plans/shared-browser.md, Track B).
+ * Where a box's browser keeps its files (plan:shared-browser, Track B).
  *
  * Everything lives under `<BBX_STATE_DIR>/browser/<key>/`: outside the
  * box's git repository (cookies and logins must never be committed) and

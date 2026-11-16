@@ -32,7 +32,7 @@
  * `_config`, `_bookkeeping`, `_publish`, `_tmp`); anything else — `src/`,
  * `node_modules/`, `.git/`, `AGENTS.md`, `package.json`, any unlisted root
  * name — resolves to `null`, fail-closed like the `..`-escape rule
- * (`docs/implemented-plans/one-root-box-layout.md` Track B).
+ * (`plan:one-root-box-layout` Track B).
  *
  * Pure string operations — no Node deps (the `attach-path.ts` precedent), so
  * the backend (relative `../shared/ref-path.js`) and the frontend

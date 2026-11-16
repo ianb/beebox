@@ -14,6 +14,8 @@ import { stripChatAppTags } from "@shared/chat-tags";
 import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
 import { getApiBase } from "../../api-core";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
+import type { TriggerUserMessage } from "@shared/delivered-trigger-message";
+import { entryTriggerNotices } from "./trigger-notice";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -38,7 +40,7 @@ export type { SelfNoteInfo };
  *
  * Only the `<speech>`/`<typed>`/`<external-input>` *shell* tags (and their attributes, e.g.
  * `stt="live"`) are stripped here — a marker embedded *inside* the body,
- * like `<unsure>word</unsure>` (docs/implemented-plans/transcript-confidence.md, Track
+ * like `<unsure>word</unsure>` (plan:transcript-confidence, Track
  * 4), survives this pass on purpose and is handled downstream by
  * `UserMessageText` (`user-message-text.tsx`), which renders it as its inner
  * word with a subtle style rather than dropping it.
@@ -116,7 +118,7 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
 const STT_ATTR_RE = /\bstt="([^"]*)"/;
 const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
-// Legacy fallback marker, before `stt="live"` (docs/implemented-plans/hq-always.md).
+// Legacy fallback marker, before `stt="live"` (plan:hq-always).
 // `pending` predates the removal of late correction and reads the same.
 const HQ_ATTR_RE = /\bhq="(?:pending|failed)"/;
 
@@ -129,7 +131,7 @@ function speechWrapperAttrs(entry: SessionEntry): string | undefined {
 /**
  * A voice message whose text is the live transcript: `stt="live"`, or the
  * legacy `hq="failed"`. Every dictated message gets the HQ pass when it can
- * (docs/implemented-plans/hq-always.md), so this is the exception the UI labels.
+ * (plan:hq-always), so this is the exception the UI labels.
  */
 export function isLiveTranscriptMessage(entry: SessionEntry): boolean {
   const attrs = speechWrapperAttrs(entry) ?? "";
@@ -160,7 +162,7 @@ export function resolveTranscriptionProvenance(entry: SessionEntry): Transcripti
 
 /**
  * Resolve the key an audio-overlay event addresses this entry by
- * (docs/implemented-plans/retranscription-in-chat.md Track 3): the `message-id="…"`
+ * (plan:retranscription-in-chat Track 3): the `message-id="…"`
  * attribute `chat-assemble.ts` stamps on the `<speech>` wrapper of a voice
  * send, read from the entry's raw text (stripping only happens at render).
  *
@@ -235,7 +237,8 @@ export function stripSpeechTags(content: string): string {
  */
 export type MessageGroup =
   | { type: "user" | "assistant" | "compaction" | "interrupted"; entries: SessionEntry[] }
-  | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] };
+  | { type: "self-note"; entries: SessionEntry[]; notes: SelfNoteInfo[] }
+  | { type: "trigger"; entries: SessionEntry[]; notices: TriggerUserMessage[] };
 
 /**
  * Local-command entries are injected by the Claude CLI when slash commands
@@ -271,6 +274,12 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
     const notes = entrySelfNotes(entry);
     if (notes) {
       groups.push({ type: "self-note", entries: [entry], notes });
+      continue;
+    }
+    // A trigger notice alone is a system row, not the person speaking.
+    const notices = entryTriggerNotices(entry);
+    if (notices) {
+      groups.push({ type: "trigger", entries: [entry], notices });
       continue;
     }
     if (entry.type === "assistant") {

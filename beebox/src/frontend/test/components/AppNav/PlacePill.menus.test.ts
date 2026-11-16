@@ -1,6 +1,6 @@
 // # The app bar's landmark menu
 //
-// The place pill has two menus (docs/plans/box-screen.md, track 3). The landmark
+// The place pill has two menus (plan:box-screen, track 3). The landmark
 // menu says where the conversation is and where it can move; the folder menu
 // holds the current landmark's directory and what is in it. Box-wide pages live
 // on the box screen, which the landmark menu's box row opens.
@@ -68,7 +68,7 @@ const noop = () => {};
 // The box row opens the box screen. It is a plain document navigation, so the
 // native shell can intercept it; "Find a landmark" opens the Landmarks page,
 // and the line under it glosses the word: "the places you jump to most"
-// (docs/implemented-plans/front-door.md, Track E; the row text below runs the two lines together).
+// (plan:front-door, Track E; the row text below runs the two lines together).
 // There is no box panel, no Recent files row, and no shortcut rows: those moved
 // to the box screen and the folder menu.
 void test("The box row opens the box screen.", async (t) => {

@@ -1,6 +1,6 @@
 /**
  * Registers the box-relay content script dynamically (Track C of
- * docs/implemented-plans/see-as-the-user.md). Unlike the manifest-static path, we register
+ * plan:see-as-the-user). Unlike the manifest-static path, we register
  * at box-enable time with match patterns derived from each enabled box's full
  * boxUrl (path-scoped — see relay-auth.ts), persist the registration across
  * browser restarts, and reconcile against the stored config on startup so the

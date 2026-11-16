@@ -1,6 +1,6 @@
 /**
  * Who may open the box browser page, and from where
- * (docs/plans/shared-browser.md, Track C, `ALL /browser`).
+ * (plan:shared-browser, Track C, `ALL /browser`).
  *
  * The page is for the person. The box auth hook in front of it admits the
  * agent bearer, the box browser pass and the browse key too, and lets any path with an asset

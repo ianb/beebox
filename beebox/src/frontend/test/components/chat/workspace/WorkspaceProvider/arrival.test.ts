@@ -2,9 +2,9 @@
 //
 // Going to a place whose chat has no saved arrangement in this tab opens the
 // place beside the chat: its single entry-point card, else its landmark card
-// (docs/implemented-plans/landmark-arrival.md, Track D). At the root it also
+// (plan:landmark-arrival, Track D). At the root it also
 // opens the newest pending question on top, and on the phone only the
-// question (docs/implemented-plans/questions-beside-the-chat.md, Track A). `arrivalPlan`
+// question (plan:questions-beside-the-chat, Track A). `arrivalPlan`
 // makes the final decision in the workspace provider, after the store's
 // candidate flag is taken and arrival's queries have settled.
 

@@ -19,8 +19,8 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-warm-100 text-warm-700",
   info: "bg-info-50 text-info-dark",
   success: "bg-success-100 text-success-dark",
-  warning: "bg-accent-100 text-accent-dark",
-  danger: "bg-danger-100 text-danger",
+  warning: "bg-accent-100 text-warning-700",
+  danger: "bg-danger-100 text-danger-700",
   accent: "bg-primary-50 text-primary-dark",
 };
 
@@ -34,9 +34,11 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
 export function Badge({ children, tone, size, className, title, material }: BadgeProps) {
   tone = tone ?? "neutral";
   size = size ?? "md";
+  const usesMaterial = material === true && tone === "neutral";
   const classes = cn(
     "inline-block rounded font-medium",
-    material === true && tone === "neutral" ? MATERIAL_NEUTRAL_CLASSES : TONE_CLASSES[tone],
+    usesMaterial ? MATERIAL_NEUTRAL_CLASSES : TONE_CLASSES[tone],
+    !usesMaterial && "bbx-badge-tone",
     SIZE_CLASSES[size],
     className,
   );

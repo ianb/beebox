@@ -3,9 +3,9 @@
  * a person has interacted with it in the last two minutes; the server counts
  * the tabs heard from in the last 90 seconds per box and keeps
  * `.beebox/presence.json` current for every process that decides whether to
- * notify (`core/notification/presence.ts`). See docs/implemented-plans/notifications.md
+ * notify (`core/notification/presence.ts`). See plan:notifications
  * (Track A, presence). `clock` also lives here: it is the tab's other
- * per-session report of the box's time (docs/implemented-plans/walk-simulated-time.md, Track 6).
+ * per-session report of the box's time (plan:walk-simulated-time, Track 6).
  */
 
 import { z } from "zod";

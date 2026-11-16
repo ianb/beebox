@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../procedures.js";
 import type { CallMemberFrame, MemberRef } from "../../../core/chat/presence/room.js";
 import { CLOUDFLARE_TURN_SECRET_NAME, getCloudflareTurnKey } from "../../../core/cloudflare-turn-key.js";
+import { TURN_SERVER_SECRET_NAME, getTurnServerKey, restCredentials, stunUrlsFor } from "../../../core/turn-server-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { registerCallRecording } from "../../../core/chat/call-transcript/record.js";
@@ -21,7 +22,10 @@ import type { TrpcContext } from "../context.js";
 const ID_RE = /^[\w-]{8,64}$/;
 /** A WebRTC offer with many candidates stays well under this. */
 const MAX_SIGNAL_BYTES = 64 * 1024;
-/** Long enough for a long call; a call that outlives it reconnects with fresh credentials. */
+/**
+ * Long enough for a long call. The page fetches ICE servers only when it joins,
+ * so a relayed call that outlives this fails until someone leaves and rejoins.
+ */
 const TURN_TTL_SECONDS = 3 * 60 * 60;
 const STUN_ONLY = [{ urls: ["stun:stun.cloudflare.com:3478"] }];
 
@@ -50,8 +54,24 @@ function memberRef(ctx: TrpcContext, input: z.infer<typeof memberInput>): Member
   return { boxRoot: ctx.boxRoot, ...input, email: requirePerson(ctx).email };
 }
 
-/** Mint short-lived TURN credentials, or null when the box has no key or Cloudflare fails. */
+/**
+ * Mint short-lived TURN credentials: from the host's own coturn when the box is
+ * granted `turn-server`, else from Cloudflare when granted `cloudflare-turn`,
+ * else null. The two are never offered together (plan:self-hosted-turn).
+ */
 async function mintTurn(ctx: TrpcContext): Promise<IceServer[] | null> {
+  const own = await getTurnServerKey(ctx.boxRoot, { observe: true });
+  if (own !== null) {
+    await recordSecretMint({ boxRoot: ctx.boxRoot, slug: ctx.boxSlug, secret: TURN_SERVER_SECRET_NAME, purpose: "call-relay" });
+    // Real time, never the box's shifted clock: coturn checks the expiry against its own.
+    const { username, credential } = restCredentials({ secret: own.secret, nowMs: Date.now(), ttlSeconds: TURN_TTL_SECONDS, id: ctx.boxSlug });
+    return [{ urls: stunUrlsFor(own.urls) }, { urls: own.urls, username, credential }];
+  }
+  return mintCloudflareTurn(ctx);
+}
+
+/** Cloudflare TURN credentials, or null when the box has no key or Cloudflare fails. */
+async function mintCloudflareTurn(ctx: TrpcContext): Promise<IceServer[] | null> {
   const key = await getCloudflareTurnKey(ctx.boxRoot, { observe: true });
   if (key === null) return null;
   await recordSecretMint({ boxRoot: ctx.boxRoot, slug: ctx.boxSlug, secret: CLOUDFLARE_TURN_SECRET_NAME, purpose: "call-relay" });
@@ -160,7 +180,7 @@ export const chatCallRouter = router({
   /**
    * Name the voice staging session this member is about to record into, before
    * capture starts, so the fold waits for it even if the tab closes and the
-   * staging queue uploads it later (docs/implemented-plans/chat-calls.md, Track F).
+   * staging queue uploads it later (plan:chat-calls, Track F).
    * `clockOffsetMs` is the member's real clock minus the server's at join.
    */
   registerRecording: authedProcedure

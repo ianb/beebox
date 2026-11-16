@@ -24,6 +24,8 @@ const palette = {
     DEFAULT: "#C2788A",
     light: "#D49AAA",
     dark: "#A05A6C",
+    // Rose text on rose-100; the lighter shades remain fills.
+    700: "#92495B",
     50: "#F9EEF0",
     100: "#F2DDE1",
   },
@@ -58,6 +60,8 @@ const palette = {
     DEFAULT: "#D99A2B",
     light: "#E8B85F",
     dark: "#B07D1C",
+    // Badge text on the pale accent fill; darker warning shades stay fills.
+    700: "#876115",
     50: "#FBF3E4",
     100: "#F6E4BC",
   },

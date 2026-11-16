@@ -8,7 +8,7 @@
  * `JOB_INLINE_BUDGET_BYTES` and lists the rest by path; the assembled prompt
  * stays within `BATCH_PROMPT_BUDGET_BYTES`, so later jobs that do not fit wait
  * for the next cycle (`selectBatch`). A 300-item intake job once made a 3 MB
- * prompt that the model refused (docs/implemented-plans/bounded-reactor-batches.md).
+ * prompt that the model refused (plan:bounded-reactor-batches).
  */
 
 import {
@@ -143,7 +143,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<BatchO
     return { success: true, selected: selectedPaths };
   }
   // Resolved once for the whole run: a pin that lands mid-run does not switch
-  // the model out from under the agent (docs/implemented-plans/model-engine-policy.md).
+  // the model out from under the agent (plan:model-engine-policy).
   const boxModel = await loadEffectiveBoxModel(boxRoot);
   if (boxModel !== null) onLog?.(`  Model: ${boxModel}\n`);
 

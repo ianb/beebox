@@ -1,5 +1,5 @@
 /**
- * Track D chunk 1 of docs/plans/scheduled-workstreams.md: the `kind:
+ * Track D chunk 1 of plan:scheduled-workstreams: the `kind:
  * "scheduled"` registry field and everything that must branch on it — routing
  * state, prune, `list`, removal, `resume`.
  *

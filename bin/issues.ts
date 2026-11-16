@@ -46,7 +46,7 @@ import {
 import { emitJson, issueLine, reportHits } from "./issues-output.js";
 import { activateDueRepositories } from "./deferred-issues.js";
 import { commandClose } from "./issues-close.js";
-import { DocMoveError } from "./lib/doc-move.js";
+import { DocMoveError } from "./lib/doc-move-errors.js";
 
 const USAGE = `bin/issues — survey and search the issue queue
 
@@ -81,7 +81,8 @@ next-action: requests live in a local store outside git (dev-issue-actions/
          ${issueNextActionSchema.options.join(" ")}
 close:   --workstream defaults to the worktree branch's name; off one, it is left as is.
          Relative links in --note are written from the closed location.
-         Prints each rewritten reference; "check by hand" lines go to stderr.
+         Prints each rewritten reference and the git add line for each repository;
+         nothing is staged. A reference it cannot rewrite safely refuses the close.
 Common:  --json  --limit N  --rebuild (discard .issues-index/ first)
 
 Embeddings key, first match wins: BBX_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,

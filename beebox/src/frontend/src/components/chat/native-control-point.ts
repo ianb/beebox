@@ -1,5 +1,5 @@
 /**
- * The native half of a `control:` pointer (`docs/plans/agent-points-at-ui.md`,
+ * The native half of a `control:` pointer (`plan:agent-points-at-ui`,
  * Track 5, "Pointing at a native control").
  *
  * Inside the iOS shell the composer, mic and capture have no DOM element behind

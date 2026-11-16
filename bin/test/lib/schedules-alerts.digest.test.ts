@@ -2,7 +2,7 @@
 //
 // The boxholder deals with schedules once a day. Only `important` pops up when
 // it is raised; everything else waits for one daily popup that summarises all
-// schedules (`docs/plans/schedule-alert-signal.md`). A condition that stays open
+// schedules (`plan:schedule-alert-signal`). A condition that stays open
 // for a week is filed as a private issue instead of repeating — nothing retries
 // forever.
 

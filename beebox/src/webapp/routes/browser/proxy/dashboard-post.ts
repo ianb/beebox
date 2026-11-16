@@ -1,6 +1,6 @@
 /**
  * The dashboard's own POST endpoints, checked before they reach it
- * (docs/plans/shared-browser.md, Track C).
+ * (plan:shared-browser, Track C).
  *
  * The person drives the box browser through the proxied dashboard, and the
  * dashboard can also start and stop other sessions: "New session" posts

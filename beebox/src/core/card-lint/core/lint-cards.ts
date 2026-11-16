@@ -25,7 +25,7 @@
  *
  * Every card with a markdown body also gets a universal Markdoc parse+
  * validate pass here (`body-markdoc-lint.ts`), warning-severity
- * (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 2) — skipped for a schema
+ * (`plan:todo-annotation`, Track 1 chunk 2) — skipped for a schema
  * that sets `ownMarkdocValidation` (commentary already runs it at error
  * severity via its own `validate` hook; running it again here would
  * double-report the same violation).
@@ -209,7 +209,7 @@ async function lintFrontmatterCard(input: {
   const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
   const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
-  // Relative-ref deprecation (Track B, `docs/implemented-plans/one-root-box-layout.md`):
+  // Relative-ref deprecation (Track B, `plan:one-root-box-layout`):
   // a document-relative ref in the card BODY is on by default, warning-only —
   // it's the form most likely to be hand-typed or copied between cards, where
   // relativity silently changes what it means. Frontmatter refs stay behind
@@ -220,7 +220,7 @@ async function lintFrontmatterCard(input: {
   if (options.canonical === true) {
     warnings.push(...(await canonicalWarnings({ path, refs: frontmatterRefs, boxRoot: options.boxRoot })));
   }
-  // Display-form leak (docs/plans/display-path-guard.subplan.md): a ref
+  // Display-form leak (plan:display-path-guard.subplan): a ref
   // written as `Config:box.json` (the boxholder's CONVERSATION vocabulary,
   // never a canonical path) is a lint ERROR naming the canonical form —
   // checked before the existence walk below, which would otherwise either
@@ -285,7 +285,7 @@ async function lintFrontmatterCard(input: {
   warnings.push(...(await lintCardSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   warnings.push(...symbolFindings.filter((issue) => issue.severity === "warning"));
   warnings.push(...unknownKeyWarnings({ frontmatter: parsed.frontmatter, schema: parsed.schema }));
-  // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
+  // Universal Markdoc body validation (plan:todo-annotation, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
   // warning-first — except a schema that already runs its own (commentary),
   // which sets `ownMarkdocValidation` so the same violation isn't reported
@@ -332,7 +332,7 @@ async function lintFrontmatterCard(input: {
   if (type === "publication") {
     errors.push(...(await lintDuplicatePublicationId({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
   }
-  // No absolute machine paths (Track B, `docs/implemented-plans/one-root-box-layout.md`):
+  // No absolute machine paths (Track B, `plan:one-root-box-layout`):
   // a real developer home directory embedded in card content is a leak, not
   // a legitimate ref — error, unlike the ref/canonical checks above, which
   // stay warnings because broken/relative refs are routine data drift.
@@ -433,7 +433,7 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
 
 /**
  * "Did you mean `/_content/<path>`?" — suggestion-on-failure for the
- * boxholder's BARE display-form vocabulary (`docs/plans/display-path-guard.subplan.md`).
+ * boxholder's BARE display-form vocabulary (`plan:display-path-guard.subplan`).
  * A bare content path (`recipes/Soup.recipe.card`, no leading `/`, no
  * `<Label>:` prefix — that colon form is already a hard ERROR above) reads
  * to a boxholder as box-root-relative, but a REF's bare form is

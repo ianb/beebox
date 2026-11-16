@@ -4,7 +4,7 @@
 // directive, the answer, and (when the question declared one) the `learning`
 // passthrough so the follow-up agent doesn't need to re-read the question
 // card's frontmatter shape. See `test/schemas/question.test.ts` for the
-// question card itself and `docs/implemented-plans/questions-end-to-end.md` for the
+// question card itself and `plan:questions-end-to-end` for the
 // two-product contract.
 
 import { test } from "tap";

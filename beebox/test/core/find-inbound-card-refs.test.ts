@@ -34,7 +34,7 @@ void test("Read failures accompany the references that could be scanned", async 
 
 // ## Each ref's #fragment is reported with the referrer
 //
-// `bbx refs` (docs/plans/knowledge-base-tools.md, Track D). Relative and
+// `bbx refs` (plan:knowledge-base-tools, Track D). Relative and
 // box-absolute refs both resolve to the target; the count is unchanged by the
 // observation, and a ref with no fragment counts without listing one.
 void test("Each ref's #fragment is reported with the referrer", async (t) => {

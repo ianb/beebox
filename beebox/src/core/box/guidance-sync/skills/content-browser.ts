@@ -1,6 +1,6 @@
 /**
  * The `browser` skill — how the box agent uses the box's shared browser
- * through `bbx browser` (docs/plans/shared-browser.md, chunk 11). Split from
+ * through `bbx browser` (plan:shared-browser, chunk 11). Split from
  * skills-content.ts for size; see that file's header for the authoring
  * conventions. The command's no-argument help (`BROWSER_USAGE` in
  * `src/cli/commands/browser/command.ts`) lists the same core commands.

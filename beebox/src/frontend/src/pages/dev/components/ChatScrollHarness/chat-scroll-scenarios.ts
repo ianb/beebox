@@ -7,7 +7,7 @@
  * prepend, below-list chrome resizing, a late-decoding image above the
  * viewport, a momentum fling that fires scroll events and no input events at
  * all — and the expectations encode the scroll model
- * (docs/plans/chat-scroll-model.md): the controller writes `scrollTop` only on
+ * (plan:chat-scroll-model): the controller writes `scrollTop` only on
  * a discrete user action plus geometric compensations, and content growth
  * below the reader never scrolls.
  *

@@ -1,6 +1,6 @@
 // # bbx refs
 //
-// docs/plans/knowledge-base-tools.md, Track D. One line per referrer with the
+// plan:knowledge-base-tools, Track D. One line per referrer with the
 // anchors it names; `card#anchor` keeps only referrers naming that anchor.
 
 import { test } from "tap";

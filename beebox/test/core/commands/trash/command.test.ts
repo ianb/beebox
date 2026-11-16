@@ -171,7 +171,7 @@ void test("A never-committed card can still be trashed and committed", async (t)
 // `Config:box.json` (the boxholder's display vocabulary) is rejected with a
 // message naming the canonical form, rather than silently treated as (and
 // failing to find) a relative file named `Config:box.json`
-// (`docs/plans/display-path-guard.subplan.md`):
+// (`plan:display-path-guard.subplan`):
 void test("Config:box.json (the boxholder's display vocabulary) is rejected with a messa...", async (t) => {
   const dbox = await makeTmpBox();
   const rejected = await rm(dbox, { paths: ["Config:box.json"] });

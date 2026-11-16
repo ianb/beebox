@@ -2,7 +2,7 @@
  * Resolve the box's Gemini API key — the one behind audio questions
  * (`bbx chat ask-about-audio`) and scan-import's opt-in Gemini vision backend:
  * the machine store's `gemini` entry at `server` access
- * (`docs/implemented-plans/secret-custody.md`).
+ * (`plan:secret-custody`).
  *
  * This module exists to CONSOLIDATE what used to be the same two-env-var read
  * (`GEMINI_KEY`, then `SKE_GEMINI_API_KEY`) copied into four places

@@ -33,20 +33,20 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.322`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.325`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.323` (SDK), `2.1.323` (Claude Code), `0.169.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.325` (SDK), `2.1.325` (Claude Code), `0.169.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.322` on 2026-11-12
-  (taking `0.3.321`). **`0.3.323` is held** until
-  `issues/bugs/2026-11-13-glm-sessions-assume-1m-context-on-claude-code-2-1-323.md`
-  lands (GLM chats would get a 1M-context assumption).
-  `bin/land` refused 2026-11-07 and 11-08 over a
-  dirty main checkout; both commits reached main and production by
-  2026-11-09 (deploy `5a32213cd`). Codex stays held at `0.164.0` (0.165.0–0.167.0) on
+- **Current recommendation:** Agent SDK moved to `0.3.325` on 2026-11-14 on
+  the **act-now** path (taking 0.3.323 and 0.3.324): 2.1.325 fixes a security
+  issue in zstd response decoding, which every beebox Claude session uses.
+  The 0.3.323 GLM hold is lifted: 2.1.325 also fixes third-party gateway
+  sessions failing every turn on context length instead of compacting. The
+  GLM issue stays open for the explicit env setting. Codex stays held at
+  `0.164.0` (0.165.0–0.169.0) on
   `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -74,6 +74,40 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
+### 0.3.324 / 0.3.325 / Claude Code 2.1.324 / 2.1.325 — APPLIED 2026-11-14, act-now (published 2026-11-13T18:47Z and 20:05Z)
+
+0.3.324 is parity-only; 2.1.324 has no changelog section.
+- **Act-now, RUNTIME security:** *"Fixed a security issue in how
+  zstd-compressed responses are decoded."* Every beebox Claude session decodes
+  API responses through the bundled CLI.
+- **Lifts the 0.3.323 GLM hold:** *"Fixed sessions on many third-party gateways
+  and Foundry stopping with a context length error on every turn instead of
+  compacting."* GLM runs through such a gateway. The explicit env fix in
+  `issues/bugs/2026-11-13-glm-sessions-assume-1m-context-on-claude-code-2-1-323.md`
+  is still worth doing; not verified against GLM here.
+- **SDK, checked clear:** the `sandbox` option no longer auto-approves
+  sandboxed Bash (beebox sets no sandbox); read-only git in an untrusted repo
+  now goes through the permission flow (agent runs and chat use
+  `bypassPermissions`; scan vision has no tools); deny rules now remove an
+  in-process SDK MCP tool from the list; `archiveSession()` / `listSessions()`
+  `archived`; `hook_no_verdict` warning when a PreToolUse hook can't answer.
+- **RUNTIME fixes:** recent turns no longer go missing from a session resumed
+  after an unclean stop; subagents cut off at the output limit are asked for
+  the whole answer again.
+- **HARNESS:** sandboxed Bash follows the normal permission flow unless
+  `autoAllowBashIfSandboxed`; scheduled tasks and `/loop` ask before running a
+  skill that declares `allowed-tools` or hooks (`Skill(name)` in
+  `permissions.allow` runs it unattended); isolated worktree sessions are
+  refused `git bisect run`; several Bash permission gaps closed.
+- **Action:** Applied 2026-11-14 ahead of the settling window. Verified:
+  typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI
+  2.1.325, `pnpm -C beebox test` (15,416 pass, 9 fail, 4 skip; all in four
+  files unrelated to the SDK: two deploy tests,
+  `issues/bugs/2026-11-14-deploy-tests-red-after-release-switch.md`; the filed
+  `issues/bugs/2026-11-13-cross-box-probe-box-install-test-fails-on-mac.md`;
+  and the agent-browser os error 35 in `card-shot/run.e2e.test.ts`).
+- **Sources:** [SDK 0.3.325](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03325), [Claude Code 2.1.325](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21325)
+
 ### Codex 0.168.0 / 0.169.0 — HELD with 0.165.0–0.167.2 (published 2026-11-13T03:54Z and 08:37Z)
 
 0.168.0: open and resumed chats keep their saved model provider; steering
@@ -87,7 +121,7 @@ change. Held behind
 `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 - **Sources:** [rust-v0.168.0](https://github.com/openai/codex/releases/tag/rust-v0.168.0), [rust-v0.169.0](https://github.com/openai/codex/releases/tag/rust-v0.169.0)
 
-### 0.3.323 / Claude Code 2.1.323 — HELD pending a GLM fix (published 2026-11-12T20:33Z)
+### 0.3.323 / Claude Code 2.1.323 — APPLIED 2026-11-14 with 0.3.325 (published 2026-11-12T20:33Z)
 
 - **Hold, RUNTIME:** unrecognized model IDs now get a 1M context window
   (was 200K), and Anthropic says sessions on smaller-window vendors' models

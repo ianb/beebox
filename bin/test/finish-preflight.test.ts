@@ -184,7 +184,7 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   const unknown = cli("--jsno");
   t.check([help.status, help.stdout.split("\n")[0], unknown.status, git("rev-list", "--count", `${before}..HEAD`)], [
     0,
-    "usage: bin/finish-preflight [--json] [--no-merge]",
+    "usage: bin/finish-preflight [--json] [--no-merge] [--tested <rev>]",
     2,
     "0",
   ]);

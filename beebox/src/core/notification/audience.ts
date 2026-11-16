@@ -2,7 +2,7 @@
  * Who each channel can reach for a box: the paired phones with an APNs
  * registration, and the browser push subscriptions. Under
  * `BBX_NOTIFY_FAKE=1` an empty channel gets a synthetic member, so no channel
- * is skipped as `no-audience`. See docs/implemented-plans/notifications.md (Track A,
+ * is skipped as `no-audience`. See plan:notifications (Track A,
  * Track B, "Testability").
  */
 

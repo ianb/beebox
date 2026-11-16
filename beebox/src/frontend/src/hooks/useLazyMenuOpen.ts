@@ -1,7 +1,7 @@
 /**
  * First-open latch for a dropdown menu's lazily-fetched data
- * (`docs/implemented-plans/top-nav-ia.md` Track C1's pattern for the switch menu, reused
- * by `docs/implemented-plans/card-prominence.md` Track B for the here menu's link list).
+ * (`plan:top-nav-ia` Track C1's pattern for the switch menu, reused
+ * by `plan:card-prominence` Track B for the here menu's link list).
  * The query stays gated behind `enabled: opened`; once true it stays true,
  * so a later open reads from react-query's cache while `open()` asks for a
  * background refresh instead of blanking the menu.

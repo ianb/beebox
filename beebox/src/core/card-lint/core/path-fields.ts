@@ -8,7 +8,7 @@
  * scope). Both silently degraded when the target moved or was renamed — a
  * missing icon, a figure that fails to compile.
  *
- * These are targeted checks by deliberate design (see docs/implemented-plans/box-root-paths.md,
+ * These are targeted checks by deliberate design (see plan:box-root-paths,
  * "NOT in scope"): a general schema-declared path-field registry is real
  * machinery for a two-entry long tail, and would also owe `bbx mv` rewrite
  * coverage. A third field is the trigger to revisit.

@@ -1,6 +1,6 @@
 // # Trusted anchors on a saved webpage card
 //
-// docs/plans/knowledge-base-tools.md, Track C. A box function returns
+// plan:knowledge-base-tools, Track C. A box function returns
 // `anchors: [{ id, line }]`; the engine escapes the page text first, then
 // appends ` {% #id %}` to those lines. Page text that imitates the annotation
 // stays escaped, and a bad anchor throws before anything is written.

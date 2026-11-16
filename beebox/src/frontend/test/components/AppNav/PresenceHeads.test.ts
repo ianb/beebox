@@ -29,3 +29,12 @@ void test("nothing while reconnecting, after leaving, or for another chat's repo
   );
   t.end();
 });
+
+void test("a head carries what that person is doing, matched by email in any case", (t) => {
+  const odette = { email: "odette@example.com", name: "Odette Marlowe" };
+  t.check(
+    headsToShow({ live: true, inChat: "chat-a", report: { sessionId: "chat-a", people: [tomas, odette], active: [{ email: "TOMAS@example.com", doing: "typing" }] } }),
+    [{ ...tomas, doing: "typing" }, odette],
+  );
+  t.end();
+});

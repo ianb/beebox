@@ -4,7 +4,7 @@
 // the renderer is handed (`shared/todo-locators.ts`). `card.get` returns the
 // split body, so it also returns `bodyLineOffset`, the number of file lines
 // before that body, from the same `splitCardContent` the collector uses
-// (`docs/plans/todos-ui.md`, Track 2).
+// (`plan:todos-ui`, Track 2).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

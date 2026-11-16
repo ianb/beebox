@@ -304,7 +304,7 @@ test("pidfile serialization: a write cannot be clobbered by a concurrent stale r
 });
 
 // --- listenLoopback: the router must never bind a routable interface --------
-// (docs/implemented-plans/tailscale-expose-and-protect.md Track A: the router's
+// (plan:tailscale-expose-and-protect Track A: the router's
 // `/__router/*` control routes are unauthenticated, so exposure is a security
 // hole, not a feature. This exercises the real listen path main() uses.)
 

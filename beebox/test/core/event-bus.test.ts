@@ -35,6 +35,7 @@ const samples = {
   "chat-last-audio-request": { requestId: "req-1", messageId: "msg-1" },
   "screenshot-request": { requestId: "req-1", session: "s1", expiresAt: TS },
   "ui-scan-request": { requestId: "req-2", session: "s1", expiresAt: TS },
+  "trigger-changed": { sessionId: "s1" },
   "card-created": { path: "Voice.doc.card", template: "doc", timestamp: TS, audioPath: "attach/a.webm" },
   "command-complete": { command: "wakeup", success: true, timestamp: TS },
   "question-answered": { path: "Q.question.card", answer: "yes", selectedId: "opt-1", timestamp: TS },

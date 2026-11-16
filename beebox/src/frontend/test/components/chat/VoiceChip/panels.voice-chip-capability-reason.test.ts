@@ -5,7 +5,7 @@
 // under a disabled HQ-transcription or TTS-backend option, or `null` when the
 // option needs no explanation: it's usable, or the capability is unknown
 // (loading, or a non-owner viewer whose `voice.capabilities` query is gated
-// off) — Track 5 of docs/plans/secret-entry-guidance.md, so a picker never
+// off) — Track 5 of plan:secret-entry-guidance, so a picker never
 // blocks an option on a query that hasn't resolved.
 
 import { test } from "tap";

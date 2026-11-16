@@ -135,7 +135,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
       // A box in the unit-host layout, on a host with the wrapper, runs its
       // pass as its own user inside its sandbox through the one root path the
       // scheduler user may call; any other box runs in process
-      // (docs/implemented-plans/per-box-units.md, Track E).
+      // (plan:per-box-units, Track E).
       const unitSlug = throughWrapper ? unitSlugForBoxRoot(boxPath) : undefined;
       currentPass = unitSlug !== undefined
         ? runPassThroughWrapper(unitSlug).catch((error: unknown) => {

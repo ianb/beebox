@@ -1,6 +1,6 @@
 /**
  * `bbx tailscale setup` (the guided serve-config loop) and `bbx tailscale stop`
- * (Track B chunk 2 of `docs/implemented-plans/tailscale-expose-and-protect.md`).
+ * (Track B chunk 2 of `plan:tailscale-expose-and-protect`).
  *
  * `setup` runs the status state machine (`tailscale-status.ts`) as a loop: human
  * steps print the ONE next action and wait-and-recheck (or exit nonzero under

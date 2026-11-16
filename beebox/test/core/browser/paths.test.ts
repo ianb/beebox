@@ -1,6 +1,6 @@
 // # Where a box's browser keeps its files, and which Chromium it runs
 //
-// docs/plans/shared-browser.md, Track B. The profile holds the person's
+// plan:shared-browser, Track B. The profile holds the person's
 // logins, so it sits outside the box repository and outside `_tmp/`; two
 // boxes on one machine never share one, even two dev clones with the same
 // slug; and a socket path over the Unix limit fails here, naming the path,

@@ -22,7 +22,7 @@
  * `pnpm test`". An EMPTY selection is not an error: it exits 0 having run
  * nothing, because "no test imports the changed paths" is the honest
  * description of a change to untested code, and a full suite hides it rather
- * than fixing it. See beebox/docs/plans/change-based-test-selection.md,
+ * than fixing it. See plan:change-based-test-selection,
  * Track 2 and the 2026-08-25 revision (mechanism B).
  */
 

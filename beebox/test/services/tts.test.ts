@@ -2,7 +2,7 @@
 //
 // `TtsService` (`src/services/tts.ts`) is one interface over several speech
 // backends. `streamSpeech` resolves once the clip's head has arrived and hands
-// over the rest as a stream (`docs/plans/tts-streamed-playback.md`). These cover
+// over the rest as a stream (`plan:tts-streamed-playback`). These cover
 // what the real implementations share: a clip too short to be audio is an error,
 // not a result.
 

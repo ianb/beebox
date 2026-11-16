@@ -4,7 +4,7 @@
 // a box's `agents-md-2026-10` migration runs. Every writer resolves its target
 // through `instructionFilePath`, so a box not yet converted keeps writing its
 // `CLAUDE.md` files and a converted box writes `AGENTS.md`. Plan:
-// `docs/implemented-plans/box-agents-md.md`, Track A.
+// `plan:box-agents-md`, Track A.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

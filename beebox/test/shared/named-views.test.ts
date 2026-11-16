@@ -3,7 +3,7 @@
 // View-card params merge through a cascade — card frontmatter overlaid per
 // key by URL query params — and views receive `{ values, origins, card }`:
 // merged values, per-key provenance, and the card layer retained for
-// diff/reset. See docs/plans/interface-as-cards.md ("Runtime param
+// diff/reset. See plan:interface-as-cards ("Runtime param
 // overrides, with provenance").
 
 import { test } from "tap";

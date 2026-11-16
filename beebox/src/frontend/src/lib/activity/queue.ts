@@ -1,5 +1,5 @@
 /**
- * The page's activity queue (plan `docs/implemented-plans/activity-log.md`, Track D):
+ * The page's activity queue (plan `plan:activity-log`, Track D):
  * ordered, bounded, best-effort. Reporters `push` entries; one request is in
  * flight at a time, batches go out in the order they were pushed. A request
  * is never abandoned while in flight. A failed batch retries with backoff
@@ -84,7 +84,7 @@ export class ActivityQueue {
       }
     } finally {
       this.running = false;
-      for (const wake of [...this.idleWaiters]) wake();
+      for (const wake of this.idleWaiters) wake();
     }
   }
 

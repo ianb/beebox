@@ -1,6 +1,6 @@
 /**
  * One voice recording's side of the staging queue
- * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3): the recording is
+ * (`plan:resilient-voice-recording`, Track 3): the recording is
  * staged to the box from its first PCM frame, whether or not a live
  * transcription socket exists.
  *
@@ -43,7 +43,7 @@ export interface VoiceHqRequest {
  * segment produced no message (unconsumed/cancel/unmount seals), so a non-HQ
  * send is still findable by `get-last-audio`.
  */
-/** `call` marks a call recording, which always seals with `hq: null` (docs/implemented-plans/chat-calls.md, Track F). */
+/** `call` marks a call recording, which always seals with `hq: null` (plan:chat-calls, Track F). */
 interface SealOpts {
   emissionId: string | null;
   hq: VoiceHqRequest | null;

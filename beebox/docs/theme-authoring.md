@@ -28,7 +28,7 @@ bin/theme-check                     # the draft; or --system deck (its default s
 
 It audits the studio at a laptop and a phone screen, one screen of scroll at a
 time, and writes a capture per step under
-`beebox/test/tours/.artifacts/theme-check/` (`<case>.<screen>.<n>.png`),
+`beebox/test/tours/.artifacts/theme-check/<run-id>/` (`<case>.<screen>.<n>.png`),
 outlining what a reader would struggle with, each labelled:
 
 - text below WCAG AA against the pixels actually under it, including artwork,
@@ -54,8 +54,7 @@ An SVG pattern may tile.
 
 At the same screens it lists every rule of the theme's CSS (scoped by
 `data-chrome-theme` or `data-card-theme`), and every rule that names no theme
-in a sheet under `themes/` (worn by every theme, such as the question patch;
-older sheets are listed in `SHARED_NOT_YET_COVERED`), that matches nothing in the studio,
+in a sheet under `themes/` (worn by every theme, such as the question patch), that matches nothing in the studio,
 and each `bbx-` member of an `:is()` list that matches nothing in its place:
 a surface the studio lacks, or dead CSS. Render the surface in
 `pages/dev/components/ThemeStudioHarness/` with the real component, delete a
@@ -65,6 +64,21 @@ are skipped.
 
 It prints the same list with colors and selectors, and exits 0: it is the
 preview, not a gate. Read the captures before showing the theme.
+
+`bin/theme-check --failed` reruns the last completed run's failed jobs. Use
+the same `--out` root if one was supplied. A coverage miss reruns all screens
+from that run; a partial retry says rule coverage was not checked. Only a
+fresh `--all` pass is the landing gate. Completed runs replace `last-run.json`
+at the output root atomically; interrupted runs leave the earlier result.
+This includes previews: a later single-theme preview becomes the retry target.
+Concurrent runs use separate browser sessions and capture directories; their
+last completion wins the shared retry record. Use distinct `--out` roots to
+keep independent retry histories. Capture directories accumulate; remove old
+run directories after saving any evidence you need, when no run is using them.
+
+The runner waits for the studio on a cold open. Existing uncommitted edits
+are allowed, but edits during a run or a studio reload stop it with exit 2;
+restart after edits settle. `--jobs 1` limits the run to one browser session.
 
 Edit `beebox/src/frontend/src/pages/dev/theme-studio-draft.css`; Vite refreshes
 it. Unknown names render base styles until CSS matches. Existing studies are

@@ -1,7 +1,7 @@
 // # The admin Secrets procedures: owner-gated, with explicit audited reveal
 //
 // `src/webapp/trpc/routers/secrets.ts` is the boxholder's management surface for
-// the machine store (`docs/implemented-plans/secret-custody.md`, Track 2's management-surface
+// the machine store (`plan:secret-custody`, Track 2's management-surface
 // bullet, and Decision 8 for the machine-wide view).
 //
 // Ordinary procedures are metadata-only. `revealValue` is the sole exception: it
@@ -479,7 +479,7 @@ void test("Explicit reveal is owner-gated and audited", async (t) => {
 // ## A unit host: the page reaches only this box's copy of the store
 //
 // There each box reads its own export of the operator's master store
-// (docs/plans/per-box-units.md, question 9), so a grant to another box made
+// (plan:per-box-units, question 9), so a grant to another box made
 // from this box's Admin page would report success and change nothing that box
 // reads. The router refuses with the operator's command and tells the page
 // which scope it is showing.

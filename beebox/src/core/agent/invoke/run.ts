@@ -214,7 +214,7 @@ async function setupRunEnv(
   // A third-party run (GLM, an added OpenRouter model) bypasses the logging
   // proxy: the proxy forwards to first-party, and the two features claim the
   // same ANTHROPIC_BASE_URL slot. Warn and disable rather than teach the proxy
-  // other upstreams (docs/plans/box-glm-provider.md, Track 3).
+  // other upstreams (plan:box-glm-provider, Track 3).
   const thirdParty = isThirdPartyModel(options.model);
   if (thirdParty && logger) {
     stopPromptLogger(logger);

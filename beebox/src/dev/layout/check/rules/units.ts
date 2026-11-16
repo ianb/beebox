@@ -9,7 +9,7 @@
  * `registries[].directory`), which rule 1 governs at its own top level.
  * Only `module` files are siblings and importers here; tests never count
  * as importers for this rule (tests import internals freely).
- * Rules: docs/implemented-plans/file-layout.md, rules 3 and 5.
+ * Rules: plan:file-layout, rules 3 and 5.
  */
 import type { Finding, LayoutRule, ModuleFile, PackageLayout } from "../../model.js";
 import { baseOf, childrenOf, dirOf, isWithin, modules, stemOf } from "../../graph.js";
@@ -23,7 +23,7 @@ interface UnitsContext {
    * source of one of its members (a file member, or a directory member's
    * `<dir>/<name>/<entry>.ts`). Such a module is always an entry of its
    * directory and never a unit-directory or shared-infrastructure move
-   * candidate (docs/implemented-plans/file-layout.md, Ontology).
+   * candidate (plan:file-layout, Ontology).
    */
   fixedEntries: Set<string>;
 }

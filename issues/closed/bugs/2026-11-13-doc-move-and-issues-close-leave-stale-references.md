@@ -1,0 +1,43 @@
+---
+title: "bin/doc-move leaves link text and prose paths stale; bin/issues close leaves its rewrites unstaged"
+workstream: doc-move-references
+area: bin
+filed-by: agent
+discovered-by: agent
+discovered-in: worktree-retrospective — retrospective 20261113-003305
+resolution: implemented
+---
+
+**Closed (implemented, 2026-11-15):** Implemented on worktree-doc-move-references; plan [doc-move-references](../../../beebox/docs/implemented-plans/doc-move-references.md). bin/doc-move, bin/issues close, and bin/workstreams confirm-tested share bin/lib/doc-move.ts, which rewrites link labels and prose paths, refuses an ambiguous reference before writing, and stages nothing (it prints a git add line per repository). confirm-tested commits exactly the returned paths in each repository.
+
+A move rewrites link targets but not everything that names the old path:
+
+- Link text that spells the old path (a `plans/` label) stays stale; a
+  session fixed it with sed.
+- A plan path named in prose (a workstream `task.md`) is reported, not
+  rewritten.
+- `bin/issues close` rewrote a path in a test comment and left the edit
+  unstaged beside the staged rename. In a worktree shared by parallel workers,
+  the staged rename broke another worker's unrelated commit at doc-check.
+
+Wanted: rewrite link text that equals the old path, and have `issues close`
+either stage all its rewrites together or stage nothing and print the paths to
+add. A move can rewrite files in both the public repo and `private-issues/`
+(`bin/lib/doc-move.ts`), which have separate indexes, so the rule must say what
+happens in each repo and report each repo's paths apart.
+
+Evidence: `chat-presence/20261113T015356Z-landed.md`,
+`canvas-brushes/20261112T132713Z-landed.md`,
+`schema-watcher-flake/20261112T135353Z-landed.md`,
+`web-guidance-scan/20261111T100011Z-implemented.md`, and the retrospective
+watch item `issues-close-staging-and-references`.
+
+## Re-encounter 2026-11-15
+
+`bin/workstreams confirm-tested` moves an approved issue into `issues/closed/`
+but does not rewrite inbound paths. During the theme-check-gate landing, its
+commit hook rejected the move because the implemented plan's `issues:` entry
+still named the open path. The helper restored the issue after the failed
+commit. The plan references had to be removed temporarily, the confirmation
+committed, then the references restored to the closed path. Confirmation should
+rewrite inbound references before its commit check, as `bin/issues close` does.

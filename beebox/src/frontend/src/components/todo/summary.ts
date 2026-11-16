@@ -1,5 +1,5 @@
 /**
- * The place summary for one card (`docs/implemented-plans/todos-ui.md`, Track 4):
+ * The place summary for one card (`plan:todos-ui`, Track 4):
  * "3 todos now · 1 later · 1 overdue · 2 done" — the todo page's own split, so
  * the numbers agree with the todo page and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the
@@ -52,7 +52,7 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
 }
 
 /**
- * The root place page's line (`docs/implemented-plans/front-door.md`, Track C): "3 to do ·
+ * The root place page's line (`plan:front-door`, Track C): "3 to do ·
  * 1 overdue · 5 later · 2 questions waiting", from the nav's own counts, so the page and
  * the nav badge agree on "to do" (now); "later" is the todo page's own word. `null` when every count is zero. Questions show on
  * their own when nothing is to do. It does not use the word "plate" (decision,

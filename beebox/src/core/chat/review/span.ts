@@ -20,7 +20,7 @@
  * being read whole (which OOM'd `bbx serve` on 2026-08-01) or stalling forever
  * (which the bounded read that replaced it did).
  *
- * See docs/implemented-plans/chat-review.md § Track A.
+ * See plan:chat-review § Track A.
  */
 
 import { createHash, type Hash } from "node:crypto";

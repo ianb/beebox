@@ -1,6 +1,6 @@
 /**
  * In-place `<unsure>` marking of low-confidence transcript PHRASE SPANS
- * (Track 3, docs/implemented-plans/transcript-confidence.md — Vocabulary
+ * (Track 3, plan:transcript-confidence — Vocabulary
  * lock-ins; span rework, boxholder real-world-use feedback 2026-08-15).
  * Pure function: no alignment against a separate metadata channel, no
  * score in the output — `<unsure>…</unsure>` wraps the span where it sits
@@ -13,7 +13,7 @@ import { tokenizeBody, matchWordsToTokens, type BodyToken } from "./tokenize";
 /**
  * Confidence threshold below which a word SEEDS an unsure span. Measured
  * against the production batch call over 11 dictation recordings (642
- * words) — see docs/implemented-plans/transcript-confidence.md,
+ * words) — see plan:transcript-confidence,
  * "Measurement basis". Initially 0.85 (caught every observed error incl.
  * the borderline "Anthropix" 0.82 / "cloud" 0.76, at ~4.7 marks per long
  * dictation); lowered to 0.7 after real-world use (boxholder, 2026-08-15)
@@ -27,7 +27,7 @@ const UNSURE_THRESHOLD = 0.7;
 
 /**
  * Confidence threshold below which a word EXTENDS an already-seeded span
- * (docs/implemented-plans/transcript-confidence.md — span rework,
+ * (plan:transcript-confidence — span rework,
  * boxholder real-world-use feedback 2026-08-15). The actually-wrong word
  * often scores fine because the recognizer's language model repairs it to
  * something plausible, smearing doubt across its neighbors instead — a

@@ -11,11 +11,12 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-14 (05a1a80de): New: activity triggers. A function in `src/triggers/` watches what the person does in a view or figure and answers in the chat; `bbx chat trigger arm` arms it. See `triggers.md`.
+- 2026-11-13 (057d9030a): `<card-activity>` is gone from the chat snapshot. `<activity entries="N" cards="M"/>` is a count; `bbx chat activity` lists the person's actions. See `views.md`.
 - 2026-11-13 (6e657a83d): canvas-loop `v.circle` and `v.ellipse` take radii, so older figures draw them twice as big. `text` params give a typed box; `u.textBounds` measures in `update`. See `canvas-loop.md`.
-- 2026-11-12 (339551c2a): canvas-loop brushes vary their colour per dab or bristle (`hueJitter`, `lightJitter`), and two new presets move paint already drawn: `smudge` and `wet`. See `canvas-loop.md`.
-- 2026-11-12 (d2fad3a5f): canvas-loop figures play recorded sounds by name (`kind: "sample"`, `name: "ding"`) and instrument notes (`kind: "note"`, `instrument: "marimba"`, `u.scaleNote(step)`). "Choosing sounds" says which to use. See `canvas-loop.md`.
-- 2026-11-12 (5af9fc687): Views and figures import shared code as `@/src/lib/…` from the box root. A view shows a figure with `<CardRef cardRef=… embed />`. See `views.md`.
-- 2026-11-12 (8942fdb9e): `bbx figure run <card>` renders a canvas-loop figure headlessly: transcript and frames. Shared figure and view code goes in `src/lib/`. See `card-figure.md`.
+- 2026-11-12 (d57ab0b4f): New: `bbx chat strip set <card>` docks a `tour` card, or a view listing `strip` in `modes`, across the person's page. Only when asked. See `conversation-strip.md`.
+- 2026-11-12 (339551c2a): canvas-loop brushes vary colour (`hueJitter`, `lightJitter`); presets `smudge` and `wet` move paint. Figures play sounds: `kind: "sample"` by name, `kind: "note"` by instrument. See `canvas-loop.md`.
+- 2026-11-12 (5af9fc687): `bbx figure run <card>` renders a canvas-loop figure headlessly. Figures and views import shared code as `@/src/lib/…`; a view embeds a figure with `<CardRef cardRef=… embed />`. See `views.md`.
 - 2026-11-10 (f92ece238): `bbx notify --target` takes `chat:new:<place directory>` (a new chat there) and `place:<place directory>` (its latest chat); the place needs its landmark card. See **REACHING_THE_BOXHOLDER**.
 - 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemistry. A note saying math is unsupported is out of date. See `markdown.md`.
 - 2026-11-09 (7e42666b9): `bbx view check` now runs effects and renders each card type, so views it passed before can fail. Views declare `checkStates`; `bbx view states <slug>` lists them. See `views.md`.

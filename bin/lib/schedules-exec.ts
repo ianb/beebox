@@ -7,7 +7,7 @@
  * everywhere. Kept dependency-free so both the runner and the workstream
  * launcher can use it without an import cycle.
  *
- * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track B).
+ * Design: plan:scheduled-workstreams (Track B).
  */
 
 import * as fsSync from "node:fs";

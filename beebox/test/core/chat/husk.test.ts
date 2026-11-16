@@ -1,7 +1,7 @@
 // # Chat husks — a `chat` card per web chat session
 //
 // `ensureChatHusk` creates the session's card under `_content/chat/web/`
-// (docs/plans/chat-husks.md): identity + editorial only, keyed on the
+// (plan:chat-husks): identity + editorial only, keyed on the
 // `session` field — the `_<shortid>.chat.card` filename is a naming
 // convention and a lookup hint, nothing more.
 // `reconcileChatHusks` gives every history entry a husk, skipping ghosts

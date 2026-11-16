@@ -1,7 +1,7 @@
 /**
  * What each built-in secret IS, and where a person gets one — the guidance
  * layer secret custody named and left to agents at capture time
- * (`docs/implemented-plans/secret-custody.md`, "Guided entry + validation":
+ * (`plan:secret-custody`, "Guided entry + validation":
  * *where to obtain the key, what it looks like, what it will be used for*).
  *
  * The third of those is deliberately NOT here. "What it is used for" lives in
@@ -139,6 +139,19 @@ const guides: Record<string, SecretGuide> = {
       "Under API keys, create a key with member scope so it may mint temporary keys",
       "Note the project id from the project's settings",
       "Paste both below as JSON: {\"apiKey\": \"…\", \"projectId\": \"…\"}",
+    ],
+  },
+  "turn-server": {
+    title: "This server's TURN relay",
+    what:
+      "The shared secret and addresses of the coturn relay that runs on this cloud server, stored together as JSON. "
+      + "During a call in a chat the box signs short-lived relay credentials with it, so people on networks that block "
+      + "a direct connection can still hear each other. Deploy configures coturn from the same value.",
+    obtainUrl: "https://github.com/coturn/coturn",
+    obtainSteps: [
+      "On the server, generate a secret with `openssl rand -hex 32` and list its public addresses with `ip -br addr`",
+      "Set it on the hub user's master store and deploy before granting it to any box (docs/server/provisioning.md, Call relay)",
+      "Paste both below as JSON: {\"secret\": \"…\", \"urls\": [\"turn:<ipv4>:3478?transport=udp\", \"turn:<ipv4>:3478?transport=tcp\"]}",
     ],
   },
   "cloudflare-turn": {

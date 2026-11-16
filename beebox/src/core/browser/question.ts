@@ -1,6 +1,6 @@
 /**
  * What the agent is waiting for the person to do in the box browser
- * (docs/plans/shared-browser-ask.subplan.md).
+ * (plan:shared-browser-ask.subplan).
  *
  * `bbx browser ask` saves a question; the Browser page shows it in its question
  * bar; the person's answer goes to the chat that asked. A chat has at most one

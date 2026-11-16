@@ -14,6 +14,7 @@ import { invariant } from "@shared/invariant";
 
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "../../audio-overlay-store";
+import { useReportDictating } from "../../../../lib/composing";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "../../conversation/use-conversation-machine";
 import { ActivityScopeProvider, useChatActivityScope } from "../../../../lib/activity/scope";
@@ -111,7 +112,7 @@ interface InteractiveChatProps {
   /**
    * The lifted emission store: created once in `ChatPage`, above this
    * component's `key={keyState.epoch}` remount boundary, so the in-progress
-   * composition survives a session switch (docs/implemented-plans/input-extraction.md,
+   * composition survives a session switch (plan:input-extraction,
    * chunk 4).
    */
   emissionStore: EmissionStore;
@@ -135,7 +136,7 @@ interface InteractiveChatProps {
   initial?: ChatInitialLoad;
   /**
    * The session's display name, from the same `chat.bootstrap` call — the app
-   * bar's session chip face (docs/implemented-plans/top-nav-ia.md Track C2). Null for a
+   * bar's session chip face (plan:top-nav-ia Track C2). Null for a
    * fresh chat (and until bootstrap settles); the chip then reads "New chat".
    */
   sessionLabel: string | null;
@@ -248,7 +249,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const catchingUp = useChatCatchUp({ snapshot, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
-  // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
+  // in dispatchEmission (plan:input-extraction chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
   // Assigned by useEnsureComposerVisible below (it needs voice state) — the
   // same ref pattern as clearDraftRef.
@@ -279,6 +280,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
     speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
+  useReportDictating(voice.isTranscribing);
 
   // Persisted in-flight transcript recovery widget + the expired-attachments
   // notice; see InteractiveChat-recovery.tsx (combined there to keep this

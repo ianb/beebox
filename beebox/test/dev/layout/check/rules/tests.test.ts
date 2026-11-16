@@ -1,7 +1,7 @@
 // # Test placement (rule 8)
 //
 // `testsRule` enforces one source root with a test root that mirrors it
-// directory-for-directory (`docs/plans/file-layout.md` rule 8). A test is
+// directory-for-directory (`plan:file-layout` rule 8). A test is
 // placed by the subject it NAMES, not by what it imports for setup.
 // Each check states the findings in full, so the wording a boxholder sees is pinned.
 

@@ -169,7 +169,7 @@ export default defineConfig({
         rewrite: stripBase,
       },
       // Per-box browser page and its live-view WebSocket: /<base>/<box>/browser
-      // and below (docs/plans/shared-browser.md). The engine serves it; Vite
+      // and below (plan:shared-browser). The engine serves it; Vite
       // would otherwise answer with the SPA document. The stripped base goes
       // along as X-Forwarded-Prefix: the dashboard's paths are rewritten under
       // it (src/webapp/routes/browser/proxy/prefix.ts).
