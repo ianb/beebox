@@ -149,7 +149,7 @@ its version), never the paper where it is placed.
 | Effect lengths and directions (blur, glow, shadow offset, wash bleed, hatch spacing and angle) | the coordinates where the group or shape is; an axis-aligned scale gives separate x and y sizes |
 | Wash pigment, hatching lines, paper-effect texture | the coordinates where the group is |
 | Brush paper grain | the coordinates at the brushed call, before any placement |
-| Brush randomness seed | a hash of the call's own numbers (points, widths, brush and gesture data as passed), or `gesture.seed`; never its order among other marks, the pixel ratio or the placement |
+| Brush randomness seed | a hash of the mark's geometry as passed to the call, or `gesture.seed`; never its order among other marks, the pixel ratio or the placement |
 | Light positions | current coordinates at the `light` call, then the placement |
 
 Put a panning camera's `at` outside a washed group and the pigment moves with
@@ -220,7 +220,7 @@ and, for most, the sketch line that made it.
 |---|---|
 | Faint brushed marks (a readback of each mark's strongest pixel) | warning |
 | Labels overlapping in one frame; a missing glyph; an unknown font family | warning |
-| Drawings off the canvas on every frame; text across the canvas edge | warning, after the run |
+| Drawings off the canvas on every frame; unboxed text across the canvas edge | warning, after the run |
 | A node made and not returned (at most 8 a frame) | warning |
 | A picture recorded differently with the same deps (each picture is recorded again every frame and compared) | warning |
 | A picture whose deps change in each of the last 3 frames | warning |

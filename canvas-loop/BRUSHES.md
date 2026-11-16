@@ -191,7 +191,8 @@ every brushed mark and paper effect in its children: `scale` is the size of
 the tooth in pixels (default 3), `contrast` is 0..1 (default 0.7). Wrap the
 whole drawing to change the paper everywhere; an inner `v.paper` wins inside
 it. A picture uses its own `paper` option (default the default paper), not
-the scope it is placed in; headless runs give a hint when the two differ.
+the scope it is placed in; headless runs give a hint when the two differ for a brush or paper effect in
+the picture.
 
 `effects: { paper: amount }` on a group shows the paper's tooth in what the
 group drew, only where it drew, so flat fills and gradients look printed on
@@ -260,6 +261,8 @@ Lengths (blur, glow, shadow offset, bleed, hatch spacing) are in the
 coordinates where the group is: under `at({ scale: 0.5 })` a blur is half as
 wide, and a shadow's offset turns with a rotation. A group's layer grows to
 hold its blur, glow and shadow, and a picture keeps what spills past its box.
+Effects work under scales along the axes and under rotation with a uniform
+scale; under `skew`, or a rotated non-uniform scale, an effect is an error.
 
 ### Making something glow
 

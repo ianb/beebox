@@ -31,8 +31,8 @@ possible causes. A browser without WebGPU reports `NoWebGpuError`.
 
 Runs are deterministic: time is a fixed timestep, randomness is seeded, and
 `Math.random` / `Date.now` / `performance.now` / argless `new Date()` are
-disabled inside a sketch. Two runs are byte-identical within one runtime on one
-machine. Between a browser and a headless run, or two machines, pixels can
+disabled inside a sketch. Two runs give byte-identical frames within one
+runtime on one machine (`--timing` lines measure the clock and vary). Between a browser and a headless run, or two machines, pixels can
 differ slightly; `beebox/docs/plans/canvas-loop-scene/parity-criteria.md`
 sets how much.
 
@@ -94,8 +94,8 @@ once have crashed the GPU driver.
 
 A JSON array of events, each stamped with the frame it fires on. **Guarantee:
 all events for frame N dispatch, in file order, before frame N's `draw`.** So
-the world state a click sees is exactly the state after frame N−1's draw, and
-hit-testing a moving target is a calculation, not trial and error:
+the first event of frame N sees the state after frame N−1's draw (later
+events see the folds before them), and hit-testing a moving target is a calculation, not trial and error:
 
 ```json
 [
@@ -206,7 +206,8 @@ event takes — so widgets dispatch, they never poke model state.
 ### Module identity
 
 The runtime is (re)created when the sketch identity changes — but identity is
-keyed on the module's **sub-references** (`init`, `update`, `draw`, `params`),
+keyed on the module's **sub-references** (`init`, `update`, `draw`, `params`,
+`sound`; the canvas size, `seed` and `autoplay` also restart it),
 NOT on the wrapper object. So an inline literal built from module-scope
 functions is stable across parent re-renders:
 
@@ -270,9 +271,8 @@ with a "clear saved state" link). Build the self-contained page with:
 pnpm --dir canvas-loop run build:dev-demo   # writes dev/canvas-loop.html
 ```
 
-Served from disk at `/<worktree>/dev/canvas-loop.html`. The component ships its
-own minimal stylesheet (rendered inline), so a bare `<SketchFigure>` is styled
-with zero setup.
+Served from disk at `/<worktree>/dev/canvas-loop.html`. A host imports the
+stylesheet once: `import "@ianbicking/canvas-loop/browser/figure.css"`.
 
 ## Development
 

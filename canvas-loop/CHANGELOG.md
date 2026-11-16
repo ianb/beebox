@@ -33,8 +33,9 @@ us more. Every change lands here — hand-written and terse.
   a sketch's `renderer` export is ignored.
 - **Breaking: removed calls.** `v.ctx`, `v.cache`, `v.sprite`, `v.image` and
   `v.paperTexture` throw `RemovedCallError` naming the replacement: pictures
-  (`v.picture(options, body)`, `v.place(picture, x, y)`) for the first four,
-  `effects: { paper }` for the last.
+  (`v.picture(options, body)`, `v.place(picture, x, y)`) for `cache`, `sprite`
+  and `image`; `effects: { paper }` for `paperTexture`; the View's calls,
+  `at({ matrix })` or `v.pixels` for `ctx`.
 - **Pictures.** `v.picture({ key, width, height, deps?, paper? }, body)`
   records a drawing once per version (key, size, paper and the values of
   `deps`) and `v.place` puts it anywhere, any number of times. `v.pixels`

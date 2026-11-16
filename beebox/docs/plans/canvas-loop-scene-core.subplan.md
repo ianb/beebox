@@ -1120,6 +1120,46 @@ then the switch that deletes the old code; then docs.
     `TEA.md` or `BRUSHES.md` as `v.<name>`, so a new call cannot ship
     undocumented.
 
+- **As built (chunk 7).** Commits e4ee2f984 (the docs, the test, the probe
+  fixes) and the review-fix commit after it. Probe, snippet sketches and the
+  mistake sketches are in `scratch/stage5/a7/`.
+  - **Returned form.** Written after the returned-scene subplan (R1–R5), so
+    `TEA.md` and `BRUSHES.md` teach only `draw` returning its drawing: `.map`,
+    `cond && node` and components, from the four R3 examples. `TEA.md` has a
+    table of five returned-style mistakes with the text a run gives for each,
+    copied from real `cli run` output with and without the type check. The
+    gallery README says why its `out.push` form is not the style to copy.
+  - **Line counts** (before → after): `TEA.md` 614 → 705, `BRUSHES.md` 366 →
+    464, `README.md` 261 → 283, `AGENTS.md` 45 → 53, gallery README 103 →
+    110, `CHANGELOG.md` 371 → 437, `RENDERER.md` new (252). Growth is
+    pictures, lighting, glow, the mistakes table and "What draws"; the cache,
+    sprite, `ctx` and `paperTexture` text went.
+  - **Not as planned.** The draft's "text overflowing its box" check does not
+    exist in the scene recorder; `RENDERER.md` does not list it. The
+    removed-call messages cited draft sections a box agent cannot read; they
+    now cite `TEA.md` and `BRUSHES.md` sections. Code comments still cite
+    draft sections; `RENDERER.md` keeps the R1–R9 numbers so they resolve.
+    The package version is 0.2.0.
+  - **Doc probe.** One Sonnet agent drew the Stage 4 market-stall brief from
+    `TEA.md` and `BRUSHES.md` alone in 3 renders, with no type error and no
+    runtime error. It stumbled three times: the docs said to rock and breathe
+    a picture, which the placement hint then refuses; a 4-pixel flame with a
+    40-pixel glow was too faint to see; no example showed a sketch without
+    `params`. Each fixed (bob by moving; glow sizing with a render to check
+    it; `Util` without a type argument). The revisions were small, so no
+    second probe ran.
+  - **Review.** Codex (`gpt-6-sol`) traced the docs against the code and found
+    eleven inaccuracies, all taken: the figure stylesheet path, effects under
+    skew (an error), events in one frame seeing earlier folds, the edge
+    warning covering unboxed text only, paper in a picture's version, React
+    restart keys, `ctx`'s replacement, `--timing` text varying between runs,
+    the paper hint's condition, the brush seed's inputs, and the font
+    warning's condition.
+  - **For (c).** `beebox/src/schemas/figure.ts` still describes the brushes
+    doc as covering "sprites and caches"; the box-doc descriptions in
+    `package-docs/core.ts` were updated here. Warning texts end with "(R8)",
+    a rule number box agents cannot look up.
+
 ### Track 8: baselines and hand-off (chunk 8)
 
 - **What:** render the gallery with the final renderer into

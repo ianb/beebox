@@ -96,8 +96,8 @@ For each frame N, the runtime:
 3. folding each through `update` in that order,
 4. then calls `draw` **once** with the resulting model.
 
-So the world an event sees is exactly the state after frame **N−1**'s draw, and
-`draw` runs exactly once per frame headless. `init` runs once before frame 0.
+So the first event of frame N sees the state after frame **N−1**'s draw, and
+each later event sees the folds before it. `draw` runs exactly once per frame headless. `init` runs once before frame 0.
 
 In a browser, `draw` runs only when the frame's model is a new object, a
 param changed, or input arrived; otherwise the canvas keeps the last picture.
@@ -206,8 +206,8 @@ Colors are CSS strings only (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`).
 The style is checked at each call. An unknown key, a negative `weight`, an
 unknown brush name or a color that does not parse throws an error that names
 the call and the key. After the run, a drawing that was off the canvas on
-every frame, or text that crossed the canvas edge on every frame, gets a
-warning naming its line.
+every frame, or text with no box (`w`) that crossed the canvas edge on every
+frame, gets a warning naming its line.
 
 ### Shapes
 
@@ -276,8 +276,9 @@ u.textWidth(s, options)
   Measure when you need it rather than storing widths in the model: a web
   font that loads later changes them. Headless runs and a browser can measure
   the same font slightly differently.
-- Which fonts exist depends on the machine. Use common families; a family the
-  runtime does not have gets a warning.
+- Which fonts exist depends on the machine. Use common families, and end the list
+  with a generic one (`"Georgia, serif"`); a list with no family the runtime
+  has and no generic one gets a warning.
 - Each character is drawn on its own: there are no ligatures, and scripts
   whose letters join or reorder (Arabic, Devanagari) are not shaped.
 - The run warns, once per pair of texts, when two different texts overlap in
@@ -341,7 +342,7 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   coordinates, 0..width and 0..height. `v.place(picture, x, y, { opacity?,
   blend?, erase?, material? }?)` puts its top-left at (x, y), under the scopes
   around it.
-- A **version** is the key, the size and the values of `deps`. `body` runs
+- A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
   only when the version is new. Put in `deps` everything the body reads that
   can change: a colour, a pose name, a param. `deps` are plain data (numbers,
   strings, booleans, `null`, and arrays and objects of these) compared by
@@ -400,8 +401,9 @@ new. Place it like a picture; scaled up, it blurs as an image does.
 - `v.snapshot(label?)`: capture this frame.
 
 `v.ctx`, `v.cache`, `v.sprite`, `v.image` and `v.paperTexture` are gone; a
-call throws `RemovedCallError` naming what replaces it. Use pictures for the
-first four and `effects: { paper }` for the last.
+call throws `RemovedCallError` naming what replaces it. Use pictures for
+`cache`, `sprite` and `image`, `effects: { paper }` for `paperTexture`, and the
+`View`'s calls, `at({ matrix })` or `v.pixels` for `ctx`.
 
 ## Sound
 
@@ -646,7 +648,7 @@ unknown names or mismatched types warn and fall back to defaults),
 `onParamsChange?`, `onEvent?`, `onError?`. It draws with WebGPU: a browser
 without it reports `NoWebGpuError` through `onError`, and one with no GPU
 adapter `NoGpuAdapterError`. It injects no styles — hosts import
-`@ianbicking/canvas-loop/src/browser/figure.css` (CSP-clean by construction).
+`@ianbicking/canvas-loop/browser/figure.css` (CSP-clean by construction).
 
 A figure's log (`v.log` and warnings) goes to the browser
 console as `[canvas-loop] frame N: …`. The figure shrinks to fit a narrow column; the
