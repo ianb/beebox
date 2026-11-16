@@ -17,9 +17,7 @@ export class PrivateMountUnhealthyError extends PreflightError {
 }
 
 export class MergeConflictError extends PreflightError {
-  constructor(
-    readonly detail: { conflicted: string; stdout: string; stderr: string },
-  ) {
+  constructor(readonly detail: { conflicted: string; stdout: string; stderr: string }) {
     super(
       `git merge main conflicted; the merge is left in progress:\n${detail.conflicted}\n${detail.stdout}${detail.stderr}`,
       3,
@@ -37,12 +35,14 @@ export type StoppingMergeState =
   | { state: "finished-with-staged"; mergeHead: string; staged: string[] }
   /** MERGE_HEAD names a merge HEAD does not record, and nothing is staged. */
   | { state: "unrecorded"; mergeHead: string }
+  /** MERGE_HEAD names more than one commit (an octopus merge), or no commit. */
+  | { state: "unreadable"; heads: string[] }
   /** `git merge main` failed with no conflicted path: a file it would overwrite, a bad ref. */
   | { state: "merge-failed"; output: string };
 
 function describeMergeState(found: StoppingMergeState): string {
-  if (found.state === "merge-failed")
-    return `git merge main failed without conflicts:\n${found.output}`;
+  if (found.state === "merge-failed") return `git merge main failed without conflicts:\n${found.output}`;
+  if (found.state === "unreadable") return `MERGE_HEAD does not name exactly one commit:\n${found.heads.join("\n")}`;
   const head = `MERGE_HEAD ${found.mergeHead.slice(0, 9)}`;
   switch (found.state) {
     case "conflicted":

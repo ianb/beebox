@@ -10,17 +10,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import {
-  deltaSinceTested,
-  formatSinceTested,
-  resolveTested,
-  sinceTested,
-} from "./finish-preflight-delta.js";
+import { deltaSinceTested, formatSinceTested, resolveTested, sinceTested } from "./finish-preflight-delta.js";
 import { TestedRevisionError } from "./finish-preflight-errors.js";
-import {
-  verificationCommands,
-  type VerificationCommand,
-} from "./finish-preflight-lib.js";
+import { verificationCommands, type VerificationCommand } from "./finish-preflight-lib.js";
 
 const PACKAGES = new Set(["beebox", "site"]);
 const hasScript = (): boolean => true;
@@ -29,12 +21,7 @@ const NO_SKIP = { value: false, reason: "" };
 /** A sheet as preflight builds it for a branch that touched beebox code, bin/, and docs. */
 function sheet(selectorFailed: boolean): VerificationCommand[] {
   return verificationCommands({
-    paths: [
-      "beebox/src/core/box.ts",
-      "bin/tool.ts",
-      "beebox/docs/a.md",
-      "ios-app/A.swift",
-    ],
+    paths: ["beebox/src/core/box.ts", "bin/tool.ts", "beebox/docs/a.md", "ios-app/A.swift"],
     workspacePackages: PACKAGES,
     hasScript,
     skipTypecheckLint: NO_SKIP,
@@ -44,7 +31,7 @@ function sheet(selectorFailed: boolean): VerificationCommand[] {
 
 function delta(
   paths: string[],
-  deltaTests: { count: number; failed: boolean; note?: string } | null,
+  deltaTests: { count: number; failed: boolean; note?: string; causes?: string[] } | null,
 ) {
   return deltaSinceTested({
     paths,
@@ -52,7 +39,7 @@ function delta(
     workspacePackages: PACKAGES,
     hasScript,
     selectorFailed: false,
-    deltaTests: deltaTests === null ? null : { note: "", ...deltaTests },
+    deltaTests: deltaTests === null ? null : { note: "", causes: [], ...deltaTests },
   });
 }
 
@@ -73,26 +60,43 @@ test("a markdown-only delta reaches the site build and nothing else", () => {
 
 test("beebox source the selector finds no test for leaves beebox tests unreached, with the reason", () => {
   const result = delta(["beebox/src/core/box.ts"], { count: 0, failed: false });
-  const tests = result.checks.find(
-    (check) => check.command === "pnpm --dir beebox test:changed",
-  );
+  const tests = result.checks.find((check) => check.command === "pnpm --dir beebox test:changed");
   assert.deepEqual(tests, {
     command: "pnpm --dir beebox test:changed",
     reached: false,
     note: "no test imports these paths",
   });
-  assert.deepEqual(reachedOf(result), [
-    "pnpm --dir beebox typecheck",
-    "bin/smoke",
-    "pnpm lint:changed",
-  ]);
+  assert.deepEqual(reachedOf(result), ["pnpm --dir beebox typecheck", "bin/smoke", "pnpm lint:changed"]);
 });
 
 test("the selector reaches beebox tests even through a path the per-path map does not send there", () => {
   // A bin/ script a beebox test spawns: the selector's spawner edges see it.
-  const result = delta(["bin/tool.ts"], { count: 2, failed: false });
+  const result = delta(["bin/tool.ts", "bin/other.ts"], { count: 2, failed: false, causes: ["bin/tool.ts"] });
   assert.ok(reachedOf(result).includes("pnpm --dir beebox test:changed"));
-  assert.ok(reachedOf(result).includes("pnpm test"));
+  assert.deepEqual(
+    result.groups.map((group) => [group.paths, group.checks]),
+    [
+      [["bin/tool.ts"], ["pnpm --dir beebox test:changed", "pnpm test", "pnpm typecheck"]],
+      [["bin/other.ts"], ["pnpm test", "pnpm typecheck"]],
+    ],
+  );
+});
+
+test("tests selected through no single path still reach beebox tests, and say so", () => {
+  // Tests the graph cannot resolve run on every change and name no path.
+  const result = delta(["beebox/src/core/box.ts"], { count: 3, failed: false, causes: [] });
+  assert.deepEqual(result.checks[0], {
+    command: "pnpm --dir beebox test:changed",
+    reached: true,
+    note: "3 tests selected, none through a single path",
+  });
+});
+
+test("a change to a check's own runner reaches that check", () => {
+  for (const path of ["bin/smoke", "bin/smoke-lib.ts"]) {
+    assert.ok(reachedOf(delta([path], null)).includes("bin/smoke"), path);
+  }
+  assert.ok(!reachedOf(delta(["bin/smokestack.ts"], null)).includes("bin/smoke"));
 });
 
 test("a failed delta selection counts beebox tests as reached", () => {
@@ -109,12 +113,7 @@ test("a failed delta selection counts beebox tests as reached", () => {
 });
 
 test("a shared input reaches every check, beebox tests included", () => {
-  for (const path of [
-    "pnpm-lock.yaml",
-    "eslint.config.mjs",
-    "patches/x.patch",
-    "newdir/thing.ts",
-  ]) {
+  for (const path of ["pnpm-lock.yaml", "eslint.config.mjs", "patches/x.patch", "newdir/thing.ts"]) {
     const result = delta([path], { count: 0, failed: false });
     assert.deepEqual(
       result.checks.filter((check) => !check.reached),
@@ -127,9 +126,7 @@ test("a shared input reaches every check, beebox tests included", () => {
 
 test("Apple matches by kind, since its command names the sheet's paths", () => {
   const result = delta(["ios-app/B.swift"], null);
-  assert.deepEqual(reachedOf(result), [
-    "bin/apple-test --changed ios-app/A.swift",
-  ]);
+  assert.deepEqual(reachedOf(result), ["bin/apple-test --changed ios-app/A.swift"]);
 });
 
 test("a sheet whose selector failed names beebox's full suite, and the delta still matches it", () => {
@@ -139,7 +136,7 @@ test("a sheet whose selector failed names beebox's full suite, and the delta sti
     workspacePackages: PACKAGES,
     hasScript,
     selectorFailed: true,
-    deltaTests: { count: 1, failed: false, note: "" },
+    deltaTests: { count: 1, failed: false, note: "", causes: ["beebox/test/x.test.ts"] },
   });
   assert.ok(reachedOf(result).includes("pnpm --dir beebox test"));
 });
@@ -160,9 +157,7 @@ test("skipped sheet checks are left out, and every path is printed once", () => 
     selectorFailed: false,
     deltaTests: null,
   });
-  assert.deepEqual(result.checks, [
-    { command: "pnpm --dir site build --base /", reached: true },
-  ]);
+  assert.deepEqual(result.checks, [{ command: "pnpm --dir site build --base /", reached: true }]);
   const text = formatSinceTested({
     rev: "abc",
     sha: "a".repeat(40),
@@ -170,8 +165,7 @@ test("skipped sheet checks are left out, and every path is printed once", () => 
     ...result,
     selectedTests: null,
   });
-  for (const path of paths)
-    assert.equal(text.filter((line) => line.trim() === path).length, 1, path);
+  for (const path of paths) assert.equal(text.filter((line) => line.trim() === path).length, 1, path);
   assert.ok(text.includes("  reaches no listed check:"));
 });
 
@@ -236,18 +230,12 @@ test("a tested revision that is not a commit, or not in HEAD, is refused", () =>
     const refused = (fn: () => unknown, pattern: RegExp): void => {
       assert.throws(
         fn,
-        (e: unknown) =>
-          e instanceof TestedRevisionError &&
-          e.exitCode === 2 &&
-          pattern.test(e.message),
+        (e: unknown) => e instanceof TestedRevisionError && e.exitCode === 2 && pattern.test(e.message),
       );
     };
     refused(() => resolveTested(fx.dir, "no-such-ref"), /not a commit/);
     // Three-dot from `side` would diff from the merge base and hide b.txt.
-    refused(
-      () => sinceTested(input(fx.dir, "side")),
-      /not an ancestor of HEAD/,
-    );
+    refused(() => sinceTested(input(fx.dir, "side")), /not an ancestor of HEAD/);
   } finally {
     fx.cleanup();
   }

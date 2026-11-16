@@ -363,6 +363,7 @@ test("the text sheet puts the decision fields first and shortens the test list",
     codeChanged: true,
     selectedTests: {
       files,
+      causes: ["beebox/src/y.ts"],
       reasons: [
         { reason: "imports beebox/src/y.ts", count: 38 },
         { reason: "the test itself changed", count: 2 },

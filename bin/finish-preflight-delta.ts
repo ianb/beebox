@@ -16,12 +16,7 @@ import { spawnSync } from "node:child_process";
 import { gitOrNull } from "./lib/git.js";
 import { changedPaths } from "./test-git.js";
 import { TestedRevisionError } from "./finish-preflight-errors.js";
-import {
-  groupOf,
-  ROOT_FILES,
-  verificationCommands,
-  type VerificationCommand,
-} from "./finish-preflight-lib.js";
+import { groupOf, ROOT_FILES, verificationCommands, type VerificationCommand } from "./finish-preflight-lib.js";
 import { selection } from "./finish-preflight-select.js";
 
 export interface DeltaCheck {
@@ -59,12 +54,11 @@ export interface DeltaInput {
   /** The sheet's selector failed, so its beebox test command is `test`: names must match. */
   selectorFailed: boolean;
   /** The selector run on the delta; null when the sheet runs no beebox tests. */
-  deltaTests: { count: number; failed: boolean; note: string } | null;
+  deltaTests: { count: number; failed: boolean; note: string; causes: string[] } | null;
 }
 
 /** Apple's command carries its paths, so Apple checks match by kind. */
-const checkKey = (command: VerificationCommand): string =>
-  command.kind === "apple" ? "apple" : command.command;
+const checkKey = (command: VerificationCommand): string => (command.kind === "apple" ? "apple" : command.command);
 
 const isBeeboxTests = (command: VerificationCommand): boolean =>
   command.kind === "tests" && command.isolate?.packageDir === "beebox";
@@ -72,68 +66,63 @@ const isBeeboxTests = (command: VerificationCommand): boolean =>
 function isSharedInput(path: string, workspacePackages: Set<string>): boolean {
   const group = groupOf(path, workspacePackages);
   if (group.kind === "unknown") return true;
-  return (
-    group.kind === "root" &&
-    (ROOT_FILES.has(path) || path.startsWith("patches/"))
-  );
+  return group.kind === "root" && (ROOT_FILES.has(path) || path.startsWith("patches/"));
 }
 
-/** Which of the sheet's run (not skipped) checks the delta reaches, and through which paths. */
-export function deltaSinceTested(input: DeltaInput): {
-  checks: DeltaCheck[];
-  groups: DeltaGroup[];
-} {
-  const listed = input.verification.filter(
-    (command) => command.skip === undefined,
-  );
+/**
+ * A path that is the check's own runner, or a sibling module of it
+ * (`bin/smoke`, `bin/smoke-lib.ts`): the map sends these to the root suite,
+ * but they change the check itself.
+ */
+function isRunnerOf(path: string, command: VerificationCommand): boolean {
+  const runner = command.argv[0] ?? "";
+  if (!runner.startsWith("bin/")) return false;
+  return path === runner || path.startsWith(`${runner}-`) || path.startsWith(`${runner}.`);
+}
+
+/**
+ * Which of the sheet's run (not skipped) checks the delta reaches, and through
+ * which paths. beebox tests follow the selector when it ran: a path reaches
+ * them when a selection reason names it.
+ */
+export function deltaSinceTested(input: DeltaInput): { checks: DeltaCheck[]; groups: DeltaGroup[] } {
+  const listed = input.verification.filter((command) => command.skip === undefined);
+  const selector = input.deltaTests !== null && !input.deltaTests.failed ? input.deltaTests : null;
+  const causes = new Set(selector?.causes);
   const groups = new Map<string, DeltaGroup>();
   const reached = new Set<string>();
   for (const path of input.paths) {
     const shared = isSharedInput(path, input.workspacePackages);
-    const keys = shared
-      ? listed.map(checkKey)
-      : verificationCommands({
-          paths: [path],
-          workspacePackages: input.workspacePackages,
-          hasScript: input.hasScript,
-          skipTypecheckLint: { value: false, reason: "" },
-          selectorFailed: input.selectorFailed,
-        })
-          .filter((command) => command.skip === undefined)
-          .map(checkKey);
-    const checks = listed
-      .filter((command) => keys.includes(checkKey(command)))
-      .map((command) => command.command);
+    const keys = verificationCommands({
+      paths: [path],
+      workspacePackages: input.workspacePackages,
+      hasScript: input.hasScript,
+      skipTypecheckLint: { value: false, reason: "" },
+      selectorFailed: input.selectorFailed,
+    })
+      .filter((command) => command.skip === undefined)
+      .map(checkKey);
+    const reaches = (command: VerificationCommand): boolean => {
+      if (shared || isRunnerOf(path, command)) return true;
+      if (isBeeboxTests(command) && selector !== null) return causes.has(path);
+      return keys.includes(checkKey(command));
+    };
+    const checks = listed.filter(reaches).map((command) => command.command);
     for (const command of checks) reached.add(command);
     const key = `${String(shared)}\0${checks.join("\0")}`;
     const group = groups.get(key) ?? { checks, shared, paths: [] };
     group.paths.push(path);
     groups.set(key, group);
   }
-  const sharedReach = input.paths.some((path) =>
-    isSharedInput(path, input.workspacePackages),
-  );
   const checks = listed.map((command): DeltaCheck => {
     const byPath = reached.has(command.command);
-    if (!isBeeboxTests(command) || input.deltaTests === null)
-      return { command: command.command, reached: byPath };
-    // The selector also sees what the per-path map cannot (a bin/ script a test spawns).
-    if (input.deltaTests.failed)
-      return {
-        command: command.command,
-        reached: true,
-        note: input.deltaTests.note,
-      };
+    if (!isBeeboxTests(command) || input.deltaTests === null) return { command: command.command, reached: byPath };
+    if (input.deltaTests.failed) return { command: command.command, reached: true, note: input.deltaTests.note };
     const { count } = input.deltaTests;
-    const note =
-      count === 0
-        ? "no test imports these paths"
-        : `${String(count)} tests selected`;
-    return {
-      command: command.command,
-      reached: sharedReach || count > 0,
-      note,
-    };
+    if (count === 0) return { command: command.command, reached: byPath, note: "no test imports these paths" };
+    // Tests the graph cannot resolve run on any change and name no path.
+    const note = `${String(count)} tests selected${byPath ? "" : ", none through a single path"}`;
+    return { command: command.command, reached: true, note };
   });
   return { checks, groups: [...groups.values()] };
 }
@@ -167,11 +156,8 @@ export function sinceTested(input: {
     throw new TestedRevisionError({ rev, sha });
   }
   const paths = changedPaths({ base: sha, cwd: root });
-  const runsBeeboxTests = input.verification.some(
-    (command) => command.skip === undefined && isBeeboxTests(command),
-  );
-  const tests =
-    runsBeeboxTests && paths.length > 0 ? selection({ root, base: sha }) : null;
+  const runsBeeboxTests = input.verification.some((command) => command.skip === undefined && isBeeboxTests(command));
+  const tests = runsBeeboxTests && paths.length > 0 ? selection({ root, base: sha }) : null;
   const delta = deltaSinceTested({
     paths,
     verification: input.verification,
@@ -185,6 +171,7 @@ export function sinceTested(input: {
             count: tests.files.length,
             failed: tests.failed === true,
             note: tests.note,
+            causes: tests.causes,
           },
   });
   return { rev, sha, paths, ...delta, selectedTests: tests?.files ?? null };
@@ -197,9 +184,7 @@ export function formatSinceTested(delta: SinceTested): string[] {
   ];
   for (const check of delta.checks) {
     const note = check.note === undefined ? "" : `  (${check.note})`;
-    lines.push(
-      `  ${check.reached ? "reached    " : "not reached"} ${check.command}${note}`,
-    );
+    lines.push(`  ${check.reached ? "reached    " : "not reached"} ${check.command}${note}`);
   }
   for (const group of delta.groups) {
     const label = group.shared

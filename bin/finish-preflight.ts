@@ -23,7 +23,7 @@ import { parseArgs } from "node:util";
 import { git, gitBranch, gitTopLevel } from "./lib/git.js";
 import { changedPaths } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
-import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
+import { clearLeftoverMerge, mergeMain, type MergeResult } from "./finish-preflight-merge.js";
 import { selection, type SelectedTests } from "./finish-preflight-select.js";
 import { formatSinceTested, resolveTested, sinceTested, type SinceTested } from "./finish-preflight-delta.js";
 import {
@@ -189,9 +189,10 @@ export function buildSheet(input: { merge: boolean; tested?: string }): Sheet {
   const mergeSkipped =
     !input.merge &&
     spawnSync("git", ["merge-base", "--is-ancestor", "main", "HEAD"], { cwd: root }).status !== 0;
+  const cleared = input.merge ? undefined : clearLeftoverMerge(root);
   const merge: MergeResult = input.merge
     ? mergeMain(root)
-    : { status: "up-to-date", broughtPaths: [], resolved: [] };
+    : { status: "up-to-date", broughtPaths: [], resolved: [], ...(cleared === undefined ? {} : { clearedMergeHead: cleared }) };
 
   const changed = changedPaths({ base: "main", cwd: root });
   const packages = new Set(packageOwnerDirs(root));

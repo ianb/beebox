@@ -33,7 +33,7 @@ export interface Selection {
 }
 
 /** The reason for a selected test that is itself among the changed paths. */
-const CHANGED_TEST_REASON = "the test itself changed";
+export const CHANGED_TEST_REASON = "the test itself changed";
 /** The reason for an entrypoint in `graph.unresolved`, selected on every change. */
 const UNRESOLVED_REASON = "graph cannot resolve its imports (always runs)";
 

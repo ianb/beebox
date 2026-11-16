@@ -84,9 +84,12 @@ where they differ from two-dot.
   command string; `apple` by kind, because its command carries paths). The
   single-path call never sends a root config file to a package's checks, so a
   **shared input** (a root file in `ROOT_FILES`, `patches/`, an unclassified
-  directory) reaches every sheet check. beebox tests are reached when the
-  selector, run on the whole delta against the tested revision, selects at
-  least one test, fails, or a shared input is in the delta.
+  directory) reaches every sheet check, and a check's own runner or a sibling
+  module of it (`bin/smoke`, `bin/smoke-lib.ts`) reaches that check. beebox
+  tests follow the selector, run on the whole delta against the tested
+  revision: a path reaches them when a selection reason names it; the check
+  is reached when any test is selected, the selector fails, or a shared input
+  is in the delta.
 
 ## Tracks / scope
 
@@ -195,6 +198,10 @@ path; the agent text keeps reuse as judgment and carries `--tested` through
 reruns. Rejected: reporting checks absent from the sheet (NOT in scope).
 Command names match because the per-path calls use the sheet's own
 `selectorFailed`.
+
+Diff review (codex gpt-6-sol), 2026-11-15. Fixed: a `MERGE_HEAD` naming
+several commits is never cleared; `--no-merge` reads the merge state too; a
+check's runner reaches it; path groups follow the selector's reasons.
 
 ## Rollout shape
 

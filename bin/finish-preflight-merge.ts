@@ -13,18 +13,14 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   formatHistory,
   mergeHistories,
   parseHistoryText,
 } from "../beebox/src/dev/lib/context-history.js";
-import {
-  MergeConflictError,
-  MergeStateError,
-  type StoppingMergeState,
-} from "./finish-preflight-errors.js";
+import { MergeConflictError, MergeStateError, type StoppingMergeState } from "./finish-preflight-errors.js";
 import { git, gitOrNull } from "./lib/git.js";
 
 export interface MergeResult {
@@ -89,21 +85,12 @@ function parseMigrationList(text: string): MigrationList | null {
  * but append entries.
  */
 export const appendBranchMigrations: ContentRule = ({ base, ours, theirs }) => {
-  const [baseList, ourList, theirList] = [base, ours, theirs].map(
-    parseMigrationList,
-  );
+  const [baseList, ourList, theirList] = [base, ours, theirs].map(parseMigrationList);
   if (baseList == null || ourList == null || theirList == null) return null;
-  const sameText = (a: string[], b: string[]): boolean =>
-    a.join("\n") === b.join("\n");
-  if (
-    !sameText(baseList.head, ourList.head) ||
-    !sameText(baseList.tail, ourList.tail)
-  )
-    return null;
+  const sameText = (a: string[], b: string[]): boolean => a.join("\n") === b.join("\n");
+  if (!sameText(baseList.head, ourList.head) || !sameText(baseList.tail, ourList.tail)) return null;
   const baseEntries = baseList.entries.map((entry) => entry.lines.join("\n"));
-  const ourPrefix = ourList.entries
-    .slice(0, baseEntries.length)
-    .map((entry) => entry.lines.join("\n"));
+  const ourPrefix = ourList.entries.slice(0, baseEntries.length).map((entry) => entry.lines.join("\n"));
   if (!sameText(ourPrefix, baseEntries)) return null;
   const mainNames = new Set(theirList.entries.map((entry) => entry.name));
   const appended = ourList.entries.slice(baseEntries.length);
@@ -121,8 +108,7 @@ function ledgerRows(text: string): Set<string> {
   const rows = new Set<string>();
   for (const [box, audits] of Object.entries(parseHistoryText(text))) {
     for (const [auditId, entries] of Object.entries(audits)) {
-      for (const entry of entries)
-        rows.add(JSON.stringify([box, auditId, entry]));
+      for (const entry of entries) rows.add(JSON.stringify([box, auditId, entry]));
     }
   }
   return rows;
@@ -139,20 +125,12 @@ export const mergeLedger: ContentRule = ({ base, ours, theirs }) => {
     const rows = ledgerRows(side);
     if ([...baseRows].some((row) => !rows.has(row))) return null;
   }
-  return formatHistory(
-    mergeHistories(parseHistoryText(ours), parseHistoryText(theirs)),
-  );
+  return formatHistory(mergeHistories(parseHistoryText(ours), parseHistoryText(theirs)));
 };
 
 const CONTENT_RULES: Record<string, { name: string; rule: ContentRule }> = {
-  "beebox/src/dev/context-history.yaml": {
-    name: "both sides' rows",
-    rule: mergeLedger,
-  },
-  "beebox/src/core/migrations.ts": {
-    name: "main's list + branch entries",
-    rule: appendBranchMigrations,
-  },
+  "beebox/src/dev/context-history.yaml": { name: "both sides' rows", rule: mergeLedger },
+  "beebox/src/core/migrations.ts": { name: "main's list + branch entries", rule: appendBranchMigrations },
 };
 
 /**
@@ -160,37 +138,23 @@ const CONTENT_RULES: Record<string, { name: string; rule: ContentRule }> = {
  * resolved, so they describe the result rather than either side.
  */
 const REGENERATED: Record<string, string[]> = {
-  "beebox/docs/doc-graph.md": [
-    "pnpm",
-    "--dir",
-    "beebox",
-    "--silent",
-    "doc-graph",
-  ],
+  "beebox/docs/doc-graph.md": ["pnpm", "--dir", "beebox", "--silent", "doc-graph"],
 };
 
 /** Every path must have a rule that applies, or nothing is written. */
 function resolveConflicts(root: string, conflicted: string[]): string[] | null {
-  if (!conflicted.every((path) => path in CONTENT_RULES || path in REGENERATED))
-    return null;
-  const stage = (n: number, path: string): string =>
-    git(["show", `:${String(n)}:${path}`], { cwd: root, onError: "throw" });
+  if (!conflicted.every((path) => path in CONTENT_RULES || path in REGENERATED)) return null;
+  const stage = (n: number, path: string): string => git(["show", `:${String(n)}:${path}`], { cwd: root, onError: "throw" });
   const writes: { path: string; text: string }[] = [];
   for (const path of conflicted) {
     const content = CONTENT_RULES[path];
     if (content === undefined) continue;
     let text: string | null;
     try {
-      text = content.rule({
-        base: stage(1, path),
-        ours: stage(2, path),
-        theirs: stage(3, path),
-      });
+      text = content.rule({ base: stage(1, path), ours: stage(2, path), theirs: stage(3, path) });
     } catch (e) {
       // A side that does not parse (a hand-edited ledger) is a person's call.
-      console.error(
-        `finish-preflight: ${path}: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      console.error(`finish-preflight: ${path}: ${e instanceof Error ? e.message : String(e)}`);
       text = null;
     }
     if (text === null) return null;
@@ -201,17 +165,13 @@ function resolveConflicts(root: string, conflicted: string[]): string[] | null {
     const argv = REGENERATED[path];
     if (argv === undefined) continue;
     const [command = "", ...args] = argv;
-    if (spawnSync(command, args, { cwd: root, stdio: "ignore" }).status !== 0)
-      return null;
+    if (spawnSync(command, args, { cwd: root, stdio: "ignore" }).status !== 0) return null;
   }
   git(["add", "--", ...conflicted], { cwd: root, onError: "throw" });
-  return conflicted.map(
-    (path) => `${path} (${CONTENT_RULES[path]?.name ?? "regenerated"})`,
-  );
+  return conflicted.map((path) => `${path} (${CONTENT_RULES[path]?.name ?? "regenerated"})`);
 }
 
-const lines = (text: string): string[] =>
-  text.split("\n").filter((line) => line !== "");
+const lines = (text: string): string[] => text.split("\n").filter((line) => line !== "");
 
 export type MergeState =
   | { state: "none" }
@@ -228,28 +188,27 @@ export type MergeState =
  * MERGE_HEAD, nothing is unmerged, and nothing is staged.
  */
 export function readMergeState(root: string): MergeState {
-  const mergeHead = gitOrNull(
-    ["rev-parse", "-q", "--verify", "MERGE_HEAD^{commit}"],
-    { cwd: root },
-  );
-  if (mergeHead === null) return { state: "none" };
+  const file = join(root, git(["rev-parse", "--git-path", "MERGE_HEAD"], { cwd: root, onError: "throw" }));
+  if (!existsSync(file)) return { state: "none" };
+  // git keeps one line per merged commit; rev-parse reads only the first, so an
+  // octopus merge would pass the HEAD^2 check with heads left unchecked.
+  const heads = lines(readFileSync(file, "utf-8"));
+  const mergeHead = heads.length === 1 ? gitOrNull(["rev-parse", "-q", "--verify", `${heads[0] ?? ""}^{commit}`], { cwd: root }) : null;
+  if (mergeHead === null) return { state: "unreadable", heads };
   const unmerged = lines(
     git(["diff", "--name-only", "--diff-filter=U"], {
       cwd: root,
       onError: "throw",
     }),
   );
-  if (unmerged.length > 0)
-    return { state: "conflicted", mergeHead, paths: [...new Set(unmerged)] };
+  if (unmerged.length > 0) return { state: "conflicted", mergeHead, paths: [...new Set(unmerged)] };
   const staged = lines(
     git(["diff", "--cached", "--name-only", "HEAD"], {
       cwd: root,
       onError: "throw",
     }),
   );
-  const recorded =
-    gitOrNull(["rev-parse", "-q", "--verify", "HEAD^2"], { cwd: root }) ===
-    mergeHead;
+  const recorded = gitOrNull(["rev-parse", "-q", "--verify", "HEAD^2"], { cwd: root }) === mergeHead;
   if (recorded)
     return staged.length === 0
       ? { state: "finished", mergeHead }
@@ -259,8 +218,12 @@ export function readMergeState(root: string): MergeState {
     : { state: "resolved-uncommitted", mergeHead, staged };
 }
 
-/** Clears a provably finished leftover merge; any other merge state stops the finish. */
-function clearLeftoverMerge(root: string): string | undefined {
+/**
+ * Clears a provably finished leftover merge; any other merge state stops the
+ * finish. `--no-merge` runs it too: a sheet read over a half-done merge would
+ * describe a tree nobody committed.
+ */
+export function clearLeftoverMerge(root: string): string | undefined {
   const found = readMergeState(root);
   if (found.state === "none") return undefined;
   if (found.state !== "finished") throw new MergeStateError(found);
@@ -309,8 +272,7 @@ export function mergeMain(root: string): MergeResult {
     resolved = resolution;
   }
   const after = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
-  if (before === after)
-    return { status: "up-to-date", broughtPaths: [], resolved, ...cleared };
+  if (before === after) return { status: "up-to-date", broughtPaths: [], resolved, ...cleared };
   const brought = lines(
     git(["diff", "--name-only", "--no-renames", `${before}..HEAD`], {
       cwd: root,
