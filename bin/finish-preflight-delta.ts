@@ -2,7 +2,7 @@
  * `bin/finish-preflight --tested <rev>`: the paths changed since a revision
  * whose checks passed, and which of the sheet's checks they reach. The finish
  * agent decides whether a pass still holds; this only reports, and skips
- * nothing (issues/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md,
+ * nothing (issues/closed/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md,
  * plan:finish-preflight-tested-delta).
  *
  * Reach comes from the maps the sheet already uses: each path goes through

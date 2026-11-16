@@ -3,7 +3,7 @@ title: "finish-preflight reports the delta since a tested revision"
 status: draft
 workstream: finish-preflight-merge-state
 issues:
-  - ../../../issues/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md
+  - ../../../issues/closed/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md
 ---
 # finish-preflight reports the delta since a tested revision
 
@@ -13,7 +13,7 @@ they reach, and marks the checks no delta path reaches. The finish agent then
 decides which passes still hold without working out the delta by hand.
 
 **Issues addressed:**
-`issues/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md`.
+`issues/closed/features/2026-11-13-finish-preflight-reports-delta-since-tested-revision.md`.
 Searched `issues/` for "tested revision", "delta", "reuse": the retrospective
 watch item `finish-tested-revision-record` is the same request and is cited by
 that issue; nothing else.

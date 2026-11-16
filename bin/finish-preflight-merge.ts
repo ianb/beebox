@@ -183,7 +183,7 @@ export type MergeState =
  * What a `MERGE_HEAD` left in the worktree means. git refuses to start a merge
  * while one exists, and a merge preflight committed or a person finished by
  * hand can leave it behind
- * (issues/bugs/2026-11-13-finish-preflight-misreads-a-finished-merge.md).
+ * (issues/closed/bugs/2026-11-13-finish-preflight-misreads-a-finished-merge.md).
  * Only "finished" is safe to clear: HEAD is a merge whose second parent is
  * MERGE_HEAD, nothing is unmerged, and nothing is staged.
  */
