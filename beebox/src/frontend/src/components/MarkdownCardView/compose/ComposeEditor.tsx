@@ -169,7 +169,8 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const done = async () => {
     if (session === null || await session.sync.close()) onClose();
   };
-  const stateText = saveStateText(saveState);
+  // A save of malformed text always fails: say what fixes it, not "retrying".
+  const stateText = malformed && saveState.kind === "not-saved" ? "Not saved until the broken tag is fixed" : saveStateText(saveState);
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
@@ -199,10 +200,10 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         >
           Accept
         </Button>
-        <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
+        <Button id={controlAddress("bbx-composition-commit", instance)} label="Commit composition" title="Commit: record this version in the card's history. Edits save to disk on their own." size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Commit</Button>
         <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
-      {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is malformed, so its marks show as raw text.</ErrorText> : null}
+      {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is broken, so the marks show as raw text and nothing saves. Undo (Ctrl/⌘+Z), or fix the tag in the text: each opening tag needs its closing tag.</ErrorText> : null}
       {session === null ? null : <Attach view={session.view} focused={focused} />}
     </Frame>
   );

@@ -78,7 +78,7 @@ void test("save before the debounce", async (t) => {
   t.check(await h.sync.save(), true);
   t.check(h.writes, [{ baseRegionHash: "h:Draft.", text: "Draft, edited.", commit: true }]);
   t.check(h.pending(), []);
-  t.check(h.states, ["Saving…", "Saved"]);
+  t.check(h.states, ["Saving…", "Committed"]);
 });
 
 // ## Autosave writes without a commit; its own echo is ignored
@@ -87,7 +87,7 @@ void test("autosave and own echo", async (t) => {
   h.type("Draft two.");
   await h.fire();
   t.check(h.writes, [{ baseRegionHash: "h:Draft.", text: "Draft two.", commit: false }]);
-  t.check(h.states, ["Saving…", "Saved to disk"]);
+  t.check(h.states, ["Saving…", "Saved"]);
   h.setDisk({ text: "Draft two.", regionHash: "h:Draft two." });
   h.sync.remoteChanged();
   await h.sync.settled();
@@ -115,7 +115,7 @@ void test("conflict on write", async (t) => {
     { baseRegionHash: "h:One two. Three four.", text: "One two. Three four, mine.", commit: false },
     { baseRegionHash: "agent", text: "One two.\n\nThree four, mine.", commit: false },
   ]);
-  t.check(h.states, ["Saving…", "Saving…", "Saved to disk"]);
+  t.check(h.states, ["Saving…", "Saving…", "Saved"]);
 });
 
 // ## A failing write shows "Not saved" and retries
@@ -128,7 +128,7 @@ void test("failing write retries", async (t) => {
     states: ["Saving…", "Not saved: network down, retrying"], pending: [3000], unsaved: true,
   });
   await h.fire();
-  t.check(h.states.slice(2), ["Saving…", "Saved to disk"]);
+  t.check(h.states.slice(2), ["Saving…", "Saved"]);
   t.check(h.sync.hasUnsaved(), false);
 });
 
@@ -168,7 +168,7 @@ void test("failing read retries", async (t) => {
   t.check(h.pending(), [6000]);
   await h.fire();
   t.check({ text: h.text(), states: h.states.slice(1), pending: h.pending() }, {
-    text: "One two three.", states: ["Not synced: socket closed, retrying", "Saved to disk"], pending: [],
+    text: "One two three.", states: ["Not synced: socket closed, retrying", "Saved"], pending: [],
   });
   // Each failed read is logged, so a console shows why the strip said "Not synced":
   t.check(warnings(), ["Compose: reading the composition failed: Error: socket closed", "Compose: reading the composition failed: Error: socket closed"]);
@@ -195,7 +195,7 @@ void test("dispose flush retries", async (t) => {
   t.check({ flushed: await result, writes: failing.writes.length, unsaved: failing.sync.hasUnsaved() }, { flushed: { ok: false, error: "offline" }, writes: 4, unsaved: true });
 });
 
-// ## After Save, an agent change merged in from disk makes the state "Saved to disk", not "Saved"
+// ## After Commit, an agent change merged in from disk makes the state "Saved", not "Committed"
 void test("saved goes stale on a remote change", async (t) => {
   const h = harness("One two.");
   h.type("One two, mine.");
@@ -203,5 +203,5 @@ void test("saved goes stale on a remote change", async (t) => {
   h.setDisk({ text: "One two, mine. Agent's line.", regionHash: "agent" });
   h.sync.remoteChanged();
   await h.sync.settled();
-  t.check({ text: h.text(), states: h.states }, { text: "One two, mine. Agent's line.", states: ["Saving…", "Saved", "Saved to disk"] });
+  t.check({ text: h.text(), states: h.states }, { text: "One two, mine. Agent's line.", states: ["Saving…", "Committed", "Saved"] });
 });
