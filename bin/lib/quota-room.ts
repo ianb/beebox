@@ -19,12 +19,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { isRecord } from "../../beebox/src/shared/is-record.js";
+import { MODEL_ID } from "../../beebox/src/shared/model-ids.js";
 import type { Quota } from "../../workstreams-app/src/shared/documents.js";
 
 type QuotaWindow = Quota["windows"][number];
 
-export const SOL = "gpt-6-sol";
-const ASTRA = "gpt-6-astra";
+export const SOL = MODEL_ID.sol;
+const ASTRA = MODEL_ID.astra;
 const WEEK_MINUTES = 10_080;
 /** Room, in percentage points, at which Astra is affordable. */
 const ASTRA_MIN_ROOM = 15;

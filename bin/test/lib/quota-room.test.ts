@@ -39,19 +39,19 @@ void test("pick: each branch of the rule", async (t) => {
     earlyLow: pick(10, 0.5),
     // First day, 11% used: already spending fast.
     earlyHigh: pick(11, 0.5),
-  }, { roomAtThreshold: "gpt-6-astra", roomJustUnder: "gpt-6-sol", earlyLow: "gpt-6-astra", earlyHigh: "gpt-6-sol" });
+  }, { roomAtThreshold: "gpt-6.2-astra", roomJustUnder: "gpt-6.2-sol", earlyLow: "gpt-6.2-astra", earlyHigh: "gpt-6.2-sol" });
 });
 
 void test("pick: an unreadable quota picks Sol and says why", async (t) => {
   const quota = { provider: "codex" as const, status: "unavailable" as const, fetchedAt: RESET, windows: [], message: "not logged in" };
-  t.check(pickCodexReviewModel(quota, at(3)), { model: "gpt-6-sol", reason: "no Codex 7-day window (not logged in)" });
+  t.check(pickCodexReviewModel(quota, at(3)), { model: "gpt-6.2-sol", reason: "no Codex 7-day window (not logged in)" });
 });
 
 void test("pick reads the general weekly window, never another pool's", async (t) => {
   // Halfway through the week the general window at 40% has 10 points of room
   // (Sol); a named pool at 0% would have 50 (Astra).
   const quota = { ...codex(40), windows: [{ ...weekly(0), label: "other-pool · 7-day window" }, weekly(40)] };
-  t.check(pickCodexReviewModel(quota, at(3.5)).model, "gpt-6-sol");
+  t.check(pickCodexReviewModel(quota, at(3.5)).model, "gpt-6.2-sol");
 });
 
 void test("summarizeCosts averages by model and drops a row whose window reset mid-run", async (t) => {
