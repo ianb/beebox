@@ -71,7 +71,7 @@ void test("A pin is visible to the next status read:", async (t) => {
   // A model the box's engine cannot run is refused at the boundary rather than
   // stored and silently ignored later.
 
-  const foreign = "gpt-6.1-sol";
+  const foreign = "gpt-6.2-sol";
   await t.checkThrows(() => caller(server).chat.setDefaultModel({ model: foreign }), `TRPCError: Model ${foreign} is unavailable for claude chats`);
 
   // A model no engine offers is refused by the settings path too, rather than being

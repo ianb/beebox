@@ -108,6 +108,24 @@ Speaker 1: I went home.`);
   t.check(diarized.diarized, true);
 });
 
+// A provider's speaker numbers can start at 1 or follow another order. Speakers
+// are numbered by first appearance, so the first voice is always Speaker 0
+// (shown to the agent as "Speaker 1A" after relabeling), never Speaker 1 or 2.
+void test("Speakers are numbered by first appearance, whatever ids the provider sent", async (t) => {
+  const result = shapeOpenRouterResult({
+    text: "Hi.Hello.Bye.",
+    duration: 3,
+    segments: [
+      { text: "Hi.", start: 0, end: 1, speaker: 2 },
+      { text: "Hello.", start: 1, end: 2, speaker: 1 },
+      { text: "Bye.", start: 2, end: 3, speaker: 2 },
+    ],
+  }, { diarization: true, wordTimestamps: false });
+  await t.checkText(result.text, `Speaker 0: Hi.
+Speaker 1: Hello.
+Speaker 0: Bye.`);
+});
+
 // Diarization requested but no speaker on any segment is the mono-speaker case, or
 // a provider that ignored the option. Either way the text is rebuilt from the
 // segments and `diarized` says plainly that it is not speaker-labeled — which is

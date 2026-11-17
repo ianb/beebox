@@ -23,7 +23,7 @@ allowed-tools: Bash, Read, Grep, Glob
   accept-or-fix decisions, never silently fixed.
 - **An adversarial reviewer never says "clean".** Its "not fit" verdict does
   not stop the work; the human's risk judgment does.
-- **Name the engine and model** (`codex gpt-6-sol`) wherever you report it.
+- **Name the engine and model** (`codex gpt-6.2-sol`) wherever you report it.
 - Presumptively reject mid-operation I/O-failure windows in one-shot operator
   tools, exotic input encodings, and attacker-is-the-owner scenarios.
 - Reject "add tests" as a finding. A test finding names the claim the code
@@ -127,9 +127,9 @@ bin/cross-model-run --engine codex --prompt-file scratch/cross-model/<name>.prom
 
 It runs the reviewer read-only at `--effort high` and prints the answer path
 and answer. Claude defaults to `claude-opus-5-5`; Codex defaults to
-`gpt-6-sol`. Pass `--hard` for a difficult review (an open design, concurrency,
+`gpt-6.2-sol`. Pass `--hard` for a difficult review (an open design, concurrency,
 security, a large or cross-cutting diff, a disputed finding): Codex then picks
-`gpt-6-astra` when the weekly quota has room (`bin/quota-room`). Routine
+`gpt-6.2-astra` when the weekly quota has room (`bin/quota-room`). Routine
 reviews, about half, stay on Sol. With `--engine claude`, use `--model fable` for plan mode;
 honor a human's model override within the family. `--help`
 lists `--out`, `--cwd`, and `--timeout` (default 30 min). A nonzero exit (127

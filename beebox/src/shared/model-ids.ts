@@ -4,8 +4,8 @@
  * version bump now changes one place.
  *
  * `opus`, `sonnet`, and `haiku` track the current Claude models — now 5.5;
- * `sol` tracks GPT-6.1 Sol. Older selections that still carry a retired ID
- * (including Opus 5, Sonnet 5, Haiku 4.5, GPT-6 Sol, and earlier `[1m]`
+ * `sol` and `astra` track GPT-6.2 Sol and Astra. Older selections that still carry a retired ID
+ * (including Opus 5, Sonnet 5, Haiku 4.5, GPT-6 and 6.1 Sol, GPT-6 Astra, and earlier `[1m]`
  * context variants Claude Code no longer exposes) are carried forward by
  * {@link normalizeModelId} at model admission and agent spawn boundaries, so
  * a persisted or procedure-card value keeps working.
@@ -21,8 +21,8 @@ export const MODEL_ID = {
   fable: "claude-fable-5-2",
   luna: "gpt-6-luna",
   terra: "gpt-5.6-terra",
-  sol: "gpt-6.1-sol",
-  astra: "gpt-6-astra",
+  sol: "gpt-6.2-sol",
+  astra: "gpt-6.2-astra",
   // GLM family (Z.ai's Anthropic-compatible endpoint) — rides the claude
   // engine; the endpoint/token come from the machine secret store per run.
   glm: "glm-5.3",
@@ -33,8 +33,8 @@ export const MODEL_ID = {
  * Retired model IDs that older persisted chat selections or box procedure cards
  * may still carry, mapped to their current replacement. Older Opus IDs fold
  * into Opus 5.5; Sonnet 5 folds into Sonnet 5.5; Haiku 4.5 folds into Haiku
- * 5.5; GPT-5.6 Luna folds into GPT-6 Luna; GPT-5.6 and GPT-6 Sol fold into
- * GPT-6.1 Sol; Fable 5, its `[1m]` variant, and Fable 5.1 fold into Fable 5.2 (1M context
+ * 5.5; GPT-5.6 Luna folds into GPT-6 Luna; GPT-5.6, GPT-6 and GPT-6.1 Sol fold into
+ * GPT-6.2 Sol; GPT-6 Astra folds into GPT-6.2 Astra; Fable 5, its `[1m]` variant, and Fable 5.1 fold into Fable 5.2 (1M context
  * is native to the 5-tier — the `[1m]` suffix was a Claude Code convention
  * that no longer exists).
  */
@@ -50,6 +50,8 @@ const RETIRED_MODEL_IDS: Record<string, string> = {
   "gpt-5.6-luna": MODEL_ID.luna,
   "gpt-5.6-sol": MODEL_ID.sol,
   "gpt-6-sol": MODEL_ID.sol,
+  "gpt-6.1-sol": MODEL_ID.sol,
+  "gpt-6-astra": MODEL_ID.astra,
 };
 
 /**
