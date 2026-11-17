@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:51:11Z
-Total documents: 708
+Generated: 2026-11-17T19:51:53Z
+Total documents: 709
 
 ## Issues
 
@@ -88,6 +88,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
+- **docs/implemented-plans/theme-studio-shared-coverage.md** — "Restore shared theme rule coverage" (157 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
@@ -3120,7 +3121,7 @@ References:
 
 #### docs/box/whats-new.md
 
-Title: "What's new in Bee Box" | 22 lines | current reference
+Title: "What's new in Bee Box" | 23 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/whats-new.md:110 (mention) — `docs/box/whats-new.md` is in every install.
@@ -8872,6 +8873,13 @@ Referenced by:
 References:
 - → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
 - → docs/theme-authoring.md (mention)
+
+#### docs/implemented-plans/theme-studio-shared-coverage.md **[ORPHAN]**
+
+Title: "Restore shared theme rule coverage" | 157 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-11-17-theme-studio-misses-current-shared-css-rules.md (frontmatter)
 
 #### docs/implemented-plans/theme-studio.md
 

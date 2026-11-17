@@ -13,6 +13,7 @@ import { useEffect, type RefObject } from "react";
 import { composing } from "../../../lib/composing";
 import { joinTranscript } from "../InteractiveChat-helpers";
 import { useComposerCaret } from "./composer-caret";
+import { COMPOSER_FOCUS_KEYS } from "../shortcuts";
 import type { ComposerRowProps } from "../composer-row-props";
 
 function textareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
@@ -53,6 +54,7 @@ export function ComposerTextarea({
       autoFocus
       enterKeyHint={mobile ? "enter" : "send"}
       aria-label="Message"
+      aria-keyshortcuts={COMPOSER_FOCUS_KEYS}
       value={isTranscribing ? joinTranscript(input, transcript) : input}
       onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); composing.noteTyped(e.target.value); setInput(e.target.value); } }}
       onKeyDown={onKeyDown}

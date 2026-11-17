@@ -50,6 +50,7 @@ import { AppBarChipSlot, useAppBarPublishedPlace } from "../app-bar-chrome";
 import { placeLabel } from "../../lib/place-label";
 import { usePointSelection } from "../point-selection-context";
 import { captureSelectedText } from "../SelectionCapture";
+import { COMPOSER_FOCUS_KEYS } from "../chat/shortcuts";
 
 function PointSelectionButton({ standalone }: { standalone: boolean }) {
   const mode = usePointSelection();
@@ -57,7 +58,8 @@ function PointSelectionButton({ standalone }: { standalone: boolean }) {
   useEffect(() => { if (standalone) mode?.setActive(false); }, [standalone, mode]);
   if (standalone || !mode) return null;
   return <button id="bbx-point-select" type="button" aria-label={mode.active ? "Done selecting" : "Select content"}
-    title={mode.active ? "Done selecting" : "Select content"} aria-pressed={mode.active}
+    title={mode.active ? "Done selecting" : "Select content (Ctrl+L adds selected text)"} aria-pressed={mode.active}
+    aria-keyshortcuts={mode.active ? undefined : COMPOSER_FOCUS_KEYS}
     onPointerDown={(event) => {
       if (event.pointerType === "mouse" && !mode.active && captureSelectedText()) {
         event.preventDefault();

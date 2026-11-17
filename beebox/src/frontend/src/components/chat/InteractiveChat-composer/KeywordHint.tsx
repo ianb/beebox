@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
  * Spoken phrases surfaced while there's transcribed text to act on — each a
  * representative phrasing of an action in speech-keywords.ts (alternates like
  * "start over", "stop listening", "deliver the message" work too). Ordered so
- * the rotation leads with the one the user most likely wants next.
+ * the rotation leads with the one the user most likely wants next. Enter
+ * sends too (shortcuts.ts), so it rides the send hint.
  */
-const WITH_TEXT_HINTS = ['"send message"', '"send checkpoint"', '"over and out"', '"erase message"', '"cancel message"', '"microphone off"'] as const;
+const WITH_TEXT_HINTS = ['"send message" or Enter', '"send checkpoint"', '"over and out"', '"erase message"', '"cancel message"', '"microphone off"'] as const;
 /** Before anything is said, only ending the session is meaningful. */
 const EMPTY_HINTS = ['"microphone off"'] as const;
 const ROTATE_MS = 10000;

@@ -1,5 +1,8 @@
 /** States the ordinary card view reaches through authored content or transient workspace UI. */
 
+import { useState } from "react";
+import { CompositionFrame, CompositionReadError } from "../../../../components/MarkdownCardView/CompositionFrame";
+
 import { Accordion } from "../../../../components/ui/Accordion";
 import { Text } from "../../../../components/ui/Text";
 import { Hint } from "../../../../components/ui/Hint";
@@ -53,4 +56,12 @@ export function AccordionSpecimens() {
       <Button id="bbx-studio-material-ghost" intent="ghost" size="sm">Card action</Button>
     </Accordion>
   </div>;
+}
+
+/** The real editor frame in its failed-read state, without loading or saving a box document. */
+export function CompositionEditorSpecimen() {
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  return <><div ref={setHost} /><CompositionFrame host={host}>
+    <CompositionReadError message="The composition could not be loaded: sample document unavailable." instance="studio" onClose={() => {}} />
+  </CompositionFrame></>;
 }
