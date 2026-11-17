@@ -2,7 +2,7 @@
 // the given sketch files, what they import, and one boundary file per sketch
 // that checks its exports together against `TeaModule<D, M>` (`M` from `init`'s
 // return type, `D` from `typeof params`). `cli run` runs it before it loads a
-// sketch, and `gallery check` runs it once over every exercise.
+// sketch, and `examples check` runs it once over every example.
 //
 // It uses the TypeScript 7 compiler through its API, in the compiler's Go
 // process, loaded on first use. The config and the boundary files are virtual:

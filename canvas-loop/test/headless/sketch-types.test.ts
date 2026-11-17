@@ -1,6 +1,6 @@
 // The sketch contract check (returned-scene plan, Track 4): a type error in a
 // sketch, in a file it imports, or between its exports fails the check, and
-// `cli run` and `gallery check` stop before rendering such a sketch. The
+// `cli run` and `examples check` stop before rendering such a sketch. The
 // fixtures sit in a temp directory, outside the package, as a box figure or a
 // scratch sketch would.
 import assert from "node:assert/strict";
@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { after, test } from "node:test";
-import { checkGallery } from "../../src/headless/gallery.js";
+import { checkExamples } from "../../src/headless/examples-check.js";
 import { checkSketchTypes } from "../../src/headless/sketch-types.js";
 import type { SketchTypeError } from "../../src/headless/sketch-types.js";
 
@@ -124,28 +124,40 @@ test("cli run stops before the run on a type error, with the error on stderr and
   assert.throws(() => readFileSync(join(out, "stale.png")), "the out directory is emptied, as a run empties it");
 });
 
-test("gallery check fails an exercise whose exports do not fit, and does not render it", async () => {
-  const gallery = join(dir, "gallery");
-  mkdirSync(join(gallery, "bad"), { recursive: true });
-  writeFileSync(join(gallery, "bad", "sketch-tea.ts"), readFileSync(cases.model, "utf8"));
-  writeFileSync(join(gallery, "bad", "meta.yaml"), "frames: 1\n");
-  const result = await checkGallery({ galleryDir: pathToFileURL(`${gallery}/`) });
+test("examples check fails an example whose exports do not fit, and does not render it", async () => {
+  const examples = join(dir, "examples");
+  mkdirSync(examples, { recursive: true });
+  writeFileSync(join(examples, "bad-tea.ts"), readFileSync(cases.model, "utf8"));
+  writeFileSync(join(examples, "bad-tea-events.json"), '[{ "frame": 0, "type": "snapshot" }]');
+  const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
   assert.equal(result.ok, false);
-  assert.deepEqual(result.entries.map((e) => [e.slug, e.ok]), [["bad", false]]);
-  assert.match(result.entries[0]?.detail ?? "", /^type errors, not run:\n {2}.*sketch-tea\.ts - error TS2322: the export "draw" does not fit/);
+  assert.deepEqual(result.entries.map((e) => [e.name, e.ok]), [["bad", false]]);
+  assert.match(result.entries[0]?.detail ?? "", /^type errors, not run:\n {2}.*bad-tea\.ts - error TS2322: the export "draw" does not fit/);
 });
 
-test("gallery check renders nothing when any file has a type error", async () => {
-  // Exercise "a" imports a helper outside the gallery that has a type error; "b" is clean.
-  const gallery = join(dir, "gallery-shared");
-  for (const slug of ["a", "b"]) {
-    mkdirSync(join(gallery, slug), { recursive: true });
-    writeFileSync(join(gallery, slug, "meta.yaml"), "frames: 1\n");
-  }
-  writeFileSync(join(gallery, "a", "sketch-tea.ts"), readFileSync(cases.helper, "utf8").replace('"./helper.js"', '"../../helper.js"'));
-  writeFileSync(join(gallery, "b", "sketch-tea.ts"), readFileSync(clean, "utf8"));
-  const result = await checkGallery({ galleryDir: pathToFileURL(`${gallery}/`) });
-  assert.deepEqual(result.entries.map((e) => [e.slug, e.ok]), [["(type check)", false], ["a", false], ["b", false]]);
+test("examples check renders nothing when an imported helper has a type error", async () => {
+  // Example "a" imports a helper outside the examples that has a type error; "b" is clean.
+  const examples = join(dir, "examples-shared");
+  mkdirSync(examples, { recursive: true });
+  writeFileSync(join(examples, "a-tea.ts"), readFileSync(cases.helper, "utf8").replace('"./helper.js"', '"../helper.js"'));
+  writeFileSync(join(examples, "b-tea.ts"), readFileSync(clean, "utf8"));
+  const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
+  assert.deepEqual(result.entries.map((e) => [e.name, e.ok]), [["(type check)", false], ["a", false], ["b", false]]);
   assert.match(result.entries[0]?.detail ?? "", /helper\.ts:2:9 - error TS2322/);
   for (const entry of result.entries.slice(1)) assert.match(entry.detail, /^not run: the type check failed/);
+});
+
+test("examples check fails an example with no events file, or one that does not end with a snapshot, before rendering", async () => {
+  const examples = join(dir, "examples-events");
+  mkdirSync(examples, { recursive: true });
+  for (const name of ["none", "empty", "late", "unsorted"]) writeFileSync(join(examples, `${name}-tea.ts`), readFileSync(clean, "utf8"));
+  writeFileSync(join(examples, "empty-tea-events.json"), "[]");
+  writeFileSync(join(examples, "late-tea-events.json"), '[{ "frame": 5, "type": "snapshot" }, { "frame": 5, "type": "keydown", "key": "r" }]');
+  // The run length comes from the largest frame, not the last entry.
+  writeFileSync(join(examples, "unsorted-tea-events.json"), '[{ "frame": 2, "type": "snapshot" }, { "frame": 9, "type": "mousedown", "x": 1, "y": 1 }]');
+  const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
+  const detail = new Map(result.entries.map((e) => [e.name, e.detail]));
+  assert.deepEqual(result.entries.map((e) => e.ok), [false, false, false, false]);
+  assert.equal(detail.get("none"), "canvas-loop: no events file: add none-tea-events.json beside the sketch");
+  for (const name of ["empty", "late", "unsorted"]) assert.equal(detail.get(name), "canvas-loop: end the events file with a snapshot at its last frame", name);
 });

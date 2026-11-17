@@ -3,8 +3,8 @@
 // drew, since frame N's events dispatch before frame N's draw. Frame 0 has no
 // scene, so no targets. The transcript names what each click landed on. An
 // entry with a `target` aims at the named drawing's centre (chunk B3), and a
-// bad aim stops the run. The scale example (B5) runs its own events file:
-// gallery:check covers src/gallery/ only, so this test keeps it running.
+// bad aim stops the run. The scale example (B5) runs its own events file plus
+// one click in empty space, which examples:check would fail as unhandled.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -80,7 +80,8 @@ test("a target entry clicks the named drawing's centre; a later move keeps the p
 
 test("the scale example adds weights by pan name and removes a nested weight", async () => {
   const module = toTeaModule(scaleTea);
-  const events = parseTeaEvents(JSON.parse(readFileSync(fileURLToPath(new URL("../../src/examples/scale-tea-events.json", import.meta.url)), "utf8")), module.params);
+  const own = parseTeaEvents(JSON.parse(readFileSync(fileURLToPath(new URL("../../src/examples/scale-tea-events.json", import.meta.url)), "utf8")), module.params);
+  const events = [...own, { frame: 75, type: "mousedown" as const, x: 240, y: 20 }];
   const dir = tmpDir();
   const result = await teaRun(teaRunOptions(module, { outDir: dir, frames: 90, events }));
   assert.deepEqual(result.errors, []);

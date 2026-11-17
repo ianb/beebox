@@ -4,8 +4,8 @@ import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "../errors.js";
-import { checkGallery } from "../gallery.js";
-import type { GalleryCheckResult } from "../gallery.js";
+import { checkExamples } from "../examples-check.js";
+import type { ExampleCheckResult } from "../examples-check.js";
 import type { RunResult } from "../recorder/frame-recorder.js";
 import { toTeaModule } from "../tea-load.js";
 import { parseTeaEvents } from "../tea-events.js";
@@ -64,9 +64,9 @@ function reportResult(result: RunResult): void {
   if (result.errors.length > 0) process.exitCode = 1;
 }
 
-function reportGalleryResult(result: GalleryCheckResult): void {
+function reportExamplesResult(result: ExampleCheckResult): void {
   for (const entry of result.entries) {
-    console.log(`${entry.ok ? "PASS" : "FAIL"}  ${entry.slug} — ${entry.detail}`);
+    console.log(`${entry.ok ? "PASS" : "FAIL"}  ${entry.name} — ${entry.detail}`);
   }
   if (!result.ok) process.exitCode = 1;
 }
@@ -137,12 +137,12 @@ async function main(): Promise<void> {
     },
   });
   const command = parsed.positionals[0];
-  if (command === "gallery") {
+  if (command === "examples") {
     const sub = parsed.positionals[1];
     if (sub !== "check") {
-      throw new CliError({ detail: `unknown gallery subcommand "${sub ?? ""}"; usage: cli gallery check` });
+      throw new CliError({ detail: `unknown examples subcommand "${sub ?? ""}"; usage: cli examples check` });
     }
-    reportGalleryResult(await checkGallery());
+    reportExamplesResult(await checkExamples());
     return;
   }
   if (command === "diff") {
@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] [--no-typecheck] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [--frames N] [--every N] [--seed N] [--fps N] [--events file] [--out dir] [--zoom x,y,w,h[@scale]] [--timing] [--outline] [--ratio R] [--scene [first]] [--note text] [--no-typecheck] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli examples check`,
     });
   }
   if (sketchArg === undefined) {

@@ -38,7 +38,7 @@
     "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 \"test/**/!(*.gpu).test.ts\" \"test/**/*.test.tsx\" && TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test --test-timeout=120000 --test-concurrency=1 \"test/**/*.gpu.test.ts\"",
     "build:playground": "node --import tsx src/browser/build.ts",
     "build:dev-demo": "node --import tsx src/dev-demo/build.ts",
-    "gallery:check": "node --import tsx src/headless/cli/main.ts gallery check",
+    "examples:check": "node --import tsx src/headless/cli/main.ts examples check",
     "sounds:build": "node --import tsx src/headless/sound-library-build.ts"
   },
   "dependencies": {
