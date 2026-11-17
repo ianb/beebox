@@ -1,6 +1,6 @@
 ---
 title: "canvas-loop: a tracked GPU lock and live page; keep the showcase pieces"
-status: active
+status: implemented
 workstream: canvas-brushes
 issues:
   - ../../../issues/closed/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md
@@ -8,7 +8,7 @@ issues:
 ---
 # canvas-loop: a tracked GPU lock and live page; keep the showcase pieces
 
-A subplan of [canvas-brushes.md](canvas-brushes.md). On 2026-11-17 a worktree
+A subplan of [canvas-brushes.md](../plans/canvas-brushes.md). On 2026-11-17 a worktree
 cull deleted this branch's ignored `scratch/`. The work lost three tools that
 later work depends on (a GPU lock wrapper, a live page builder, and per-chunk
 compare scripts) and four showcase sketches. This plan puts the tools that are
@@ -176,7 +176,7 @@ are existing repo code. No search run.
   `livePage(entries: readonly { key: string; label: string; module: unknown }[])`
   — the replayed `walks-now/page.ts` generalized: `?s=<key>` picks the entry;
   errors from `onError` append to a list that stays until reload. The builder
-  (`canvas-loop/src/headless/page-build.ts`) writes a temporary entry file
+  (`canvas-loop/src/browser/page-build.ts`) writes a temporary entry file
   that imports each sketch by absolute path and calls `livePage`, bundles it
   with the shared esbuild helper (inlining `figure.css`), and writes the HTML.
   Labels default to the sketch's directory name when the file is
