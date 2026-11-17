@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Figures sleep in hidden tabs.** A figure whose tab is hidden sleeps as
+  one scrolled off screen does: its loop stops at once and its GPU
+  resources are freed after two seconds. It wakes when the tab is shown and
+  the canvas is in view.
 - **A GPU lock and a live page.** `cli`, `examples:check` and the GPU tests
   hold the repo's machine-wide GPU lock (`bin/with-gpu`). `cli page
   <sketch.ts>…` builds one page of live sketches with their controls, a

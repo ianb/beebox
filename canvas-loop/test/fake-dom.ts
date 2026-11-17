@@ -142,8 +142,17 @@ export const rafState: {
   now: 0,
 };
 
+/** Holds the fake document's listeners (figures watch `visibilitychange`). */
+const documentEvents = new FakeElement("#document");
+
 Object.assign(globalThis, {
-  document: { createElement: (tag: string) => new FakeElement(tag), activeElement: null },
+  document: {
+    createElement: (tag: string) => new FakeElement(tag),
+    activeElement: null,
+    visibilityState: "visible",
+    addEventListener: (type: string, fn: Listener) => documentEvents.addEventListener(type, fn),
+    removeEventListener: (type: string, fn: Listener) => documentEvents.removeEventListener(type, fn),
+  },
   requestAnimationFrame: (cb: (now: number) => void): number => {
     rafState.pending.set(rafState.next, cb);
     return rafState.next++;
