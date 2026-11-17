@@ -6,8 +6,8 @@ us more. Every change lands here — hand-written and terse.
 ## 0.2.0
 
 - **Soft noise.** A `noise` voice takes `color` (`white`, `pink`, `brown`)
-  and `attack` seconds, which swells it in and lets it fall away over the
-  rest of its duration: wind and leaves. Without them it sounds as before.
+  and `attack` seconds (less than `duration`), which swells it in and lets
+  it fall away over the rest of its duration: wind and leaves. Without them it sounds as before.
 - **Smaller messages.** A `draw` that returns a component's `Drawing` (which
   may be `undefined`) gets a type-check line saying to return a list. A
   faint-mark warning for a mark drawn in a picture body names the picture
@@ -16,10 +16,12 @@ us more. Every change lands here — hand-written and terse.
   toward, by the colour's alpha, keeping the picture's alpha. It is applied
   as the kept image is laid down (a per-draw value in the draw shader), so
   far trees can take haze from one picture with no new version or layer.
+  Inside a lit group the tint colours the picture, not its materials.
 - **Perceptual colours.** Every colour reads `oklch()`, `oklab()` and
   `color-mix(in oklab | oklch | srgb, …)`, parsed by canvas-loop itself so
   both runtimes agree (a 2D context refused them headless and would read
-  them back unparsed in a browser). A colour outside sRGB keeps its
+  them back unparsed in a browser). `none` reads as 0. `color-mix` mixes
+  its colours as given and fits the result. A colour outside sRGB keeps its
   lightness and hue and loses chroma. A bad colour's error gives an
   `oklch()` example.
 - **What new picture versions cost.** BRUSHES.md ("Animation and pictures")
@@ -27,9 +29,9 @@ us more. Every change lands here — hand-written and terse.
   at. `--timing` adds a line per captured frame listing new versions and
   picture tiles by key, with milliseconds; in a browser, the figure's
   `surface.pictureCosts()` gives the same since its last call. The hint
-  for a picture drawn again every frame names new versions when they are
-  the cause (a growing picture placed at two depths), instead of blaming
-  its scale.
+  for a picture drawn again every frame names new versions when the key got
+  one in each frame of the run (a growing picture placed at two depths),
+  instead of blaming its scale.
 - **Breaking: `mouseleave`.** `Msg` gains `{ type: "mouseleave" }`: the
   pointer left the canvas (the browser's `pointerleave` of the primary
   pointer, after the `mouseup` of a press that slid off; a lifted finger).
@@ -39,8 +41,9 @@ us more. Every change lands here — hand-written and terse.
 - **Headless runs of picture-heavy scenes are about 9× faster.** Testing
   mode compared every kept picture version in every frame, and kept a stack
   for each node it drew again. Now a kept version is compared in the frame
-  that made it, the next two frames, and every 30th frame after; a re-record
-  keeps no call sites. A 60-frame run of a 55-tree scene went from 90 s to
+  that made it, the next two frames, and then when asked for 30 or more
+  frames after its last comparison; a re-record keeps no call sites (a new
+  version first made inside one keeps them). A 60-frame run of a 55-tree scene went from 90 s to
   10 s with the same pixels. A run that takes longer than 3 seconds prints
   `frame N/M, S s` to stderr every 3 seconds.
 - **Breaking: one set of examples; the gallery is gone.** `src/gallery/`

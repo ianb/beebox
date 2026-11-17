@@ -68,8 +68,9 @@ export class SceneRecorder extends PureHelpers implements View {
   /** The paper of each `v.paper` scope: an identity `at` node the walk replaces with its children. */
   readonly #papers = new WeakMap<SceneNode, PaperSettings>();
   readonly #children: Children;
-  /** Testing mode: the stack of the call that made each node, for the walk's warnings; one map per frame. */
+  /** Testing mode: the stack of the call that made each node, for the walk's warnings; one map per frame (`#frameSites`), none in a re-record. */
   #sites: WeakMap<SceneNode, CallSite> | undefined;
+  #frameSites: WeakMap<SceneNode, CallSite> | undefined;
   /** Testing mode: the nodes made this frame and not yet put in a scope, a picture body or the root, with their call. */
   #made: Map<SceneNode, string> | undefined;
   /** How many testing-mode re-records of kept pictures are running: their nodes are not counted as made, but may still take nodes that were. */
@@ -121,7 +122,7 @@ export class SceneRecorder extends PureHelpers implements View {
   record(draw: (v: View) => unknown): FrameRecord {
     const out: FrameOutputs = { logs: [], snapshots: [], cursor: undefined, controls: [], pictures: [] };
     ({ size: this.#size, picture: this.#picture, out: this.#out } = { size: this.#canvas, picture: undefined, out });
-    this.#sites = this.#audit === undefined ? undefined : new WeakMap();
+    this.#sites = this.#frameSites = this.#audit === undefined ? undefined : new WeakMap();
     this.#made = this.#audit === undefined ? undefined : new Map();
     this.#again = 0;
     this.#table.beginFrame();
@@ -141,7 +142,7 @@ export class SceneRecorder extends PureHelpers implements View {
       standIns = this.#text === undefined ? [] : this.#resolver.resolve(this.#children.list("stand-ins", drawStandIns(this, out.controls)), top);
     } finally {
       notes = this.#notes.end();
-      this.#sites = undefined;
+      this.#sites = this.#frameSites = undefined;
       this.#made = undefined;
     }
     return { scene: { ...this.#canvas, children: root }, ...out, debugBoxes: [...debugBoxesOf(root), ...controlBoxes(out.controls)], standIns, ...notes };
@@ -297,21 +298,19 @@ export class SceneRecorder extends PureHelpers implements View {
   }
 
   // ── pictures (section 5, R7) ──
-  /** Record `body` as a picture's nodes, then resolve them: its own coordinates, box and paper. A re-record (testing mode) counts no node as made. */
+  /** Record `body` as a picture's nodes, then resolve them: its own coordinates, box and paper. A re-record (testing mode) keeps no call sites and counts no node as made. */
   #recordBody(name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }): readonly SceneNode[] {
-    const saved = { size: this.#size, picture: this.#picture, sites: this.#sites };
-    let recorded: readonly SceneNode[];
-    // A re-record is compared and dropped: its nodes keep no stack (one per node was most of a picture-heavy run's time).
-    ({ size: this.#size, picture: this.#picture, sites: this.#sites } = { size: a.size, picture: name, sites: a.again ? undefined : this.#sites });
-    if (a.again) this.#again++;
+    const saved = { size: this.#size, picture: this.#picture, sites: this.#sites, again: this.#again };
+    // A re-record is compared and dropped: its nodes keep no stack (one per node was most of a picture-heavy run's time) and are not counted as made.
+    // A new version is kept, even one first asked for inside a re-record: its nodes get both.
+    ({ size: this.#size, picture: this.#picture, sites: this.#sites, again: this.#again } = { size: a.size, picture: name, sites: a.again ? undefined : this.#frameSites, again: a.again ? this.#again + 1 : 0 });
     try {
-      recorded = this.#children.list(`the body of ${name}`, a.body());
+      const recorded = this.#children.list(`the body of ${name}`, a.body());
+      const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false, paper: a.paper };
+      return this.#audit?.text.body(() => this.#resolver.resolve(recorded, ctx)) ?? this.#resolver.resolve(recorded, ctx);
     } finally {
-      ({ size: this.#size, picture: this.#picture, sites: this.#sites } = saved);
-      if (a.again) this.#again--;
+      ({ size: this.#size, picture: this.#picture, sites: this.#sites, again: this.#again } = saved);
     }
-    const ctx: ResolveContext = { matrix: IDENTITY, size: a.size, picture: name, lit: 0, inMask: false, paper: a.paper };
-    return this.#audit?.text.body(() => this.#resolver.resolve(recorded, ctx)) ?? this.#resolver.resolve(recorded, ctx);
   }
   /** What a picture call needs from the recorder; `call` must be made while `draw` runs. */
   #scope(call: string): PictureScope {

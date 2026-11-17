@@ -286,7 +286,8 @@ export class Lowering {
         else this.#draw({ shape: linShape(fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m)), tx: 0, ty: 0, paint: imageRec(v, m), mode: 0, erase: false, mat: this.#matColor(inner, undefined) }, inner);
       },
     });
-    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase, tint: n.tint === undefined ? undefined : this.#colors(n.tint) }, here);
+    // A material layer holds material values, not colours: no tint there.
+    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase, tint: mat === undefined && n.tint !== undefined ? this.#colors(n.tint) : undefined }, here);
   }
 
   /**

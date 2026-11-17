@@ -181,7 +181,8 @@ export function assertVoice(voice: Voice): void {
       },
     );
     check(voice.color === undefined || NOISE_COLORS.has(voice.color), { where, detail: `"color" must be white, pink or brown (got ${JSON.stringify(voice.color)})` });
-    check(inRange(voice.attack, { min: 0, max: voice.duration }), { where, detail: `"attack" must be 0..duration seconds (got ${String(voice.attack)})` });
+    // An attack as long as the sound would end it at full loudness, a click: it must leave time to fall away.
+    check(voice.attack === undefined || (inRange(voice.attack, { min: 0, max: voice.duration }) && voice.attack < voice.duration), { where, detail: `"attack" must be at least 0 and less than "duration" (got ${String(voice.attack)})` });
     return;
   }
   check(inRange(voice.freq, { min: 20, max: 20_000, required: true }), {

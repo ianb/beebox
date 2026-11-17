@@ -6,7 +6,8 @@
 // a dropped version is recorded again when asked for. In testing mode the
 // recorder re-records an asked-for version and compares (`firstDifference`)
 // when an audit is due (`auditDue`): in the frame that made it, in the next
-// `AUDIT_FIRST` frames, and then every `AUDIT_EVERY`th frame.
+// `AUDIT_FIRST` frames, and then at the first ask `AUDIT_EVERY` frames or
+// more after the last comparison.
 import { SketchUsageError } from "../../core/errors.js";
 import type { PaperSettings, PictureVersion, PixelsVersion } from "../nodes.js";
 import { weightOf } from "../weight.js";
@@ -95,6 +96,8 @@ interface Entry {
   readonly version: Version;
   readonly made: number;
   lastAsked: number;
+  /** The last frame testing mode compared it in. */
+  audited: number;
   readonly use: Use;
   /** About how many bytes the recording holds. */
   readonly weight: number;
@@ -109,7 +112,7 @@ export const REUSE_WINDOW = 30;
 /** Testing mode compares a kept version in each of the frames after the one that made it, up to this many. */
 export const AUDIT_FIRST = 2;
 
-/** Then every this many frames (half a second): a stale capture that lasts that long is still found, and a picture-heavy run does not record every body every frame. */
+/** Then at the first ask this many frames (half a second) or more after the last comparison: a stale capture that lasts that long is still found, and a picture-heavy run does not record every body every frame. */
 export const AUDIT_EVERY = 30;
 
 /** The versions a sketch's pictures have recorded, across frames. */
@@ -162,7 +165,7 @@ export class PictureTable {
   add(version: Version): number | undefined {
     const use: Use = { made: this.#frame, again: false };
     const list = this.#entries.get(version.key) ?? [];
-    list.push({ version, made: this.#frame, lastAsked: this.#frame, use, weight: weightOf(version) });
+    list.push({ version, made: this.#frame, lastAsked: this.#frame, audited: this.#frame, use, weight: weightOf(version) });
     this.#entries.set(version.key, list);
     const last = this.#runs.get(version.key);
     const run = last === undefined ? 1 : last.frame === this.#frame ? last.run : last.frame === this.#frame - 1 ? last.run + 1 : 1;
@@ -176,15 +179,17 @@ export class PictureTable {
 
   /**
    * Whether testing mode should record `version` again and compare: a second
-   * ask in the frame that made it, its next `AUDIT_FIRST` frames, then every
-   * `AUDIT_EVERY`th frame. Every ask in a due frame is compared, so two
-   * drawings sharing a key are found whichever asks first.
+   * ask in the frame that made it, its next `AUDIT_FIRST` frames, then the
+   * first ask at least `AUDIT_EVERY` frames after the last comparison. Every
+   * ask in a frame that compares is compared, so two drawings sharing a key
+   * are found whichever asks first.
    */
   auditDue(version: Version): boolean {
     const entry = this.#entries.get(version.key)?.find((e) => e.version === version);
     if (entry === undefined) return true;
-    const age = this.#frame - entry.made;
-    return age <= AUDIT_FIRST || age % AUDIT_EVERY === 0;
+    const due = this.#frame - entry.made <= AUDIT_FIRST || entry.audited === this.#frame || this.#frame - entry.audited >= AUDIT_EVERY;
+    if (due) entry.audited = this.#frame;
+    return due;
   }
 
   /** Whether `version` was added this frame (so asking for it again this frame was a second call). */

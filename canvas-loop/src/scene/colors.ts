@@ -67,17 +67,19 @@ function fit(lab: Lab, alpha: number): Rgba {
   return [clip(rgb[0]), clip(rgb[1]), clip(rgb[2]), clip(alpha)];
 }
 
-/** A CSS number, or a percentage of `full` (`50%` of 0.4 is 0.2); undefined when it is neither. */
+/** A CSS number, or a percentage of `full` (`50%` of 0.4 is 0.2), or `none` (0, as CSS draws a missing component); undefined when it is none of these. */
 function amount(text: string | undefined, full: number): number | undefined {
   if (text === undefined) return undefined;
+  if (text.toLowerCase() === "none") return 0;
   const m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(%?)$/i.exec(text);
   if (m === null) return undefined;
   const n = Number(m[1]);
   return m[2] === "%" ? (n / 100) * full : n;
 }
 
-/** A hue in degrees: a number, or `deg`, `rad`, `grad` or `turn`. */
+/** A hue in degrees: a number, or `deg`, `rad`, `grad` or `turn`, or `none` (0). */
 function hue(text: string | undefined): number | undefined {
+  if (text?.toLowerCase() === "none") return 0;
   const m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(deg|rad|grad|turn)?$/i.exec(text ?? "");
   if (m === null) return undefined;
   const n = Number(m[1]);
@@ -99,8 +101,14 @@ function lchToLab([L, C, h]: readonly [number, number, number]): Lab {
   return [L, Math.max(0, C) * Math.cos(r), Math.max(0, C) * Math.sin(r)];
 }
 
+/** A colour as OKLab and alpha, before it is fitted to sRGB: mixing works on these, and fits once at the end. */
+interface Ok {
+  readonly lab: Lab;
+  readonly alpha: number;
+}
+
 /** `oklch(…)` or `oklab(…)` as OKLab and alpha, or undefined when malformed. */
-function parseOk(fn: string, body: string): { lab: Lab; alpha: number } | undefined {
+function parseOk(fn: string, body: string): Ok | undefined {
   const c = channels(body);
   if (c === undefined) return undefined;
   const L = amount(c.parts[0], 1);
@@ -132,48 +140,69 @@ function topLevel(body: string): string[] {
   return out;
 }
 
-/** A `color-mix` operand: a colour and its optional percentage, at either end. */
-function operand(text: string, parse: (css: string) => Rgba): { color: Rgba; share: number | undefined } {
+interface Parsers {
+  /** The runtime's parser, for every colour canvas-loop does not parse itself. */
+  readonly parse: (css: string) => Rgba;
+  readonly bad: () => Error;
+}
+
+/** A `color-mix` operand: a colour, unfitted when canvas-loop parses it, and its optional percentage, at either end. */
+function operand(text: string, a: Parsers): { color: Ok; share: number | undefined } {
   const m = /^(.*?)\s+([\d.]+%)$/.exec(text) ?? /^([\d.]+%)\s+(.*)$/.exec(text);
-  if (m === null) return { color: parse(text), share: undefined };
-  const [colorText, share] = (m[2] ?? "").endsWith("%") ? [m[1] ?? "", m[2] ?? ""] : [m[2] ?? "", m[1] ?? ""];
-  return { color: parse(colorText), share: amount(share, 1) };
+  const [colorText, share] = m === null ? [text, undefined] : (m[2] ?? "").endsWith("%") ? [m[1] ?? "", m[2]] : [m[2] ?? "", m[1]];
+  const own = perceived(colorText, a);
+  const rgba = own === undefined ? a.parse(colorText) : undefined;
+  return { color: own ?? { lab: rgbToLab(rgba ?? [0, 0, 0]), alpha: rgba?.[3] ?? 1 }, share: share === undefined ? undefined : amount(share, 1) };
 }
 
 const SPACES = ["oklab", "oklch", "srgb"] as const;
 
-/** The mix of two colours in `space` at `t` of the way to `b`, alpha premultiplied as CSS mixes. */
-function mixIn(space: (typeof SPACES)[number], at: { a: Rgba; b: Rgba; t: number }): Rgba {
+/** The mix of two colours in `space` at `t` of the way to `b`, alpha premultiplied as CSS mixes; not yet fitted. */
+function mixIn(space: (typeof SPACES)[number], at: { a: Ok; b: Ok; t: number }): Ok {
   const { a, b, t } = at;
-  const alpha = a[3] + (b[3] - a[3]) * t;
-  const lerp = (x: number, y: number): number => (alpha === 0 ? x + (y - x) * t : (x * a[3] + (y * b[3] - x * a[3]) * t) / alpha);
-  if (space === "srgb") return [lerp(a[0], b[0]), lerp(a[1], b[1]), lerp(a[2], b[2]), alpha];
-  const la = rgbToLab(a);
-  const lb = rgbToLab(b);
-  if (space === "oklab") return fit([lerp(la[0], lb[0]), lerp(la[1], lb[1]), lerp(la[2], lb[2])], alpha);
+  const alpha = a.alpha + (b.alpha - a.alpha) * t;
+  const lerp = (x: number, y: number): number => (alpha === 0 ? x + (y - x) * t : (x * a.alpha + (y * b.alpha - x * a.alpha) * t) / alpha);
+  if (space === "srgb") {
+    // Unclipped sRGB, so a colour outside it is mixed as given and fitted once at the end.
+    const [ra, rb] = [labToRgb(a.lab), labToRgb(b.lab)];
+    return { lab: rgbToLab([lerp(ra[0], rb[0]), lerp(ra[1], rb[1]), lerp(ra[2], rb[2])]), alpha };
+  }
+  const [la, lb] = [a.lab, b.lab];
+  if (space === "oklab") return { lab: [lerp(la[0], lb[0]), lerp(la[1], lb[1]), lerp(la[2], lb[2])], alpha };
   // OKLCH: the shorter way round the hue circle; a grey takes the other colour's hue.
   const polar = (l: Lab): [number, number, number] => [l[0], Math.hypot(l[1], l[2]), (Math.atan2(l[2], l[1]) * 180) / Math.PI];
   const [pa, pb] = [polar(la), polar(lb)];
   const ha = pa[1] < 1e-4 ? pb[2] : pa[2];
   const hb = pb[1] < 1e-4 ? ha : pb[2];
   const dh = ((((hb - ha) % 360) + 540) % 360) - 180;
-  return fit(lchToLab([lerp(pa[0], pb[0]), lerp(pa[1], pb[1]), ha + dh * t]), alpha);
+  return { lab: lchToLab([lerp(pa[0], pb[0]), lerp(pa[1], pb[1]), ha + dh * t]), alpha };
 }
 
 /** `color-mix(in <space>, a [p%], b [q%])`, with CSS's percentage rules; undefined when malformed. */
-function parseMix(body: string, parse: (css: string) => Rgba): Rgba | undefined {
+function parseMix(body: string, a: Parsers): Ok | undefined {
   const [head, first, second, extra] = topLevel(body);
   const space = /^in\s+(\w+)$/i.exec(head ?? "")?.[1]?.toLowerCase();
   const known = SPACES.find((s) => s === space);
   if (known === undefined || first === undefined || second === undefined || extra !== undefined) return undefined;
-  const a = operand(first, parse);
-  const b = operand(second, parse);
-  const p = a.share ?? (b.share === undefined ? 0.5 : 1 - b.share);
-  const q = b.share ?? 1 - p;
+  const x = operand(first, a);
+  const y = operand(second, a);
+  const p = x.share ?? (y.share === undefined ? 0.5 : 1 - y.share);
+  const q = y.share ?? 1 - p;
   const sum = p + q;
   if (!(sum > 0) || p < 0 || q < 0) return undefined;
-  const mixed = mixIn(known, { a: a.color, b: b.color, t: q / sum });
-  return sum < 1 ? [mixed[0], mixed[1], mixed[2], mixed[3] * sum] : mixed;
+  const mixed = mixIn(known, { a: x.color, b: y.color, t: q / sum });
+  return sum < 1 ? { lab: mixed.lab, alpha: mixed.alpha * sum } : mixed;
+}
+
+/** A colour canvas-loop parses itself, unfitted; undefined when `css` is not one; throws `bad` when it is one but malformed. */
+function perceived(css: string, a: Parsers): Ok | undefined {
+  const m = /^\s*(oklch|oklab|color-mix)\(\s*(.*)\)\s*$/is.exec(css);
+  if (m === null) return undefined;
+  const fn = (m[1] ?? "").toLowerCase();
+  const body = m[2] ?? "";
+  const ok = fn === "color-mix" ? parseMix(body, a) : parseOk(fn, body);
+  if (ok === undefined) throw a.bad();
+  return ok;
 }
 
 /**
@@ -181,19 +210,9 @@ function parseMix(body: string, parse: (css: string) => Rgba): Rgba | undefined 
  * is not one (the 2D context parses the rest). Throws `bad` for a malformed
  * one, so a typo is named rather than handed on.
  */
-export function parsePerceptual(css: string, a: { parse: (css: string) => Rgba; bad: () => Error }): Rgba | undefined {
-  const m = /^\s*(oklch|oklab|color-mix)\(\s*(.*)\)\s*$/is.exec(css);
-  if (m === null) return undefined;
-  const fn = (m[1] ?? "").toLowerCase();
-  const body = m[2] ?? "";
-  if (fn === "color-mix") {
-    const mixed = parseMix(body, a.parse);
-    if (mixed === undefined) throw a.bad();
-    return mixed;
-  }
-  const ok = parseOk(fn, body);
-  if (ok === undefined) throw a.bad();
-  return fit(ok.lab, ok.alpha);
+export function parsePerceptual(css: string, a: Parsers): Rgba | undefined {
+  const ok = perceived(css, a);
+  return ok === undefined ? undefined : fit(ok.lab, ok.alpha);
 }
 
 // ── The runtime's 2D context ──

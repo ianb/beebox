@@ -124,7 +124,7 @@ test("a picture body has its own coordinates and box; it may not log, snapshot o
   }
 });
 
-test("testing mode compares a kept version in its first frames, then every 30th frame; a stale capture that lasts is found then", () => {
+test("testing mode compares a kept version in its first frames, then 30 frames after the last comparison; a stale capture that lasts is found then", () => {
   const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
   let runs = 0;
   const draw = (color: string) => (v: View): Drawing => v.place(v.picture({ key: "card", width: 20, height: 10, deps: [1] }, () => {
@@ -133,9 +133,31 @@ test("testing mode compares a kept version in its first frames, then every 30th 
   }), 0, 0);
   const warnings: (readonly string[])[] = [];
   for (let frame = 0; frame <= 60; frame++) warnings.push(rec.record(draw(frame < 10 ? "#000" : "#fff")).warnings);
-  assert.equal(runs, 5, "recorded at frame 0, compared at frames 1, 2, 30 and 60");
-  assert.deepEqual(warnings.slice(0, 30).flat(), [], "the change at frame 10 falls between audits");
-  assert.match(warnings[30]?.[0] ?? "", /picture "card" \[1] drew differently from its kept version/);
+  assert.equal(runs, 4, "recorded at frame 0, compared at frames 1, 2 and 32");
+  assert.deepEqual(warnings.slice(0, 32).flat(), [], "the change at frame 10 falls between audits");
+  assert.match(warnings[32]?.[0] ?? "", /picture "card" \[1] drew differently from its kept version/);
+  // Asked for only on odd frames, it is still compared: at the first ask 30 or more frames after the last comparison.
+  const odd = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  const seen: (readonly string[])[] = [];
+  for (let frame = 0; frame <= 40; frame++) seen.push(odd.record(frame % 2 === 1 || frame === 0 ? draw(frame < 3 ? "#000" : "#fff") : () => null).warnings);
+  assert.deepEqual(seen.slice(0, 31).flat(), []);
+  assert.match(seen[31]?.[0] ?? "", /picture "card" \[1] drew differently/);
+});
+
+test("a new version first asked for inside a re-record keeps its checks: a drawing its body drops still warns", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  let level = 1;
+  const inner = (v: View): Picture => v.picture({ key: "leaf", width: 10, height: 10, deps: [level] }, () => {
+    if (level === 2) v.circle(2, 2, 1, { fill: "#000" });
+    return v.rect(0, 0, level, level, { fill: "#000" });
+  });
+  // The outer body reads `level` too, outside its deps: its frame-1 comparison asks for the new inner version.
+  const draw = (v: View): Drawing => v.place(v.picture({ key: "tree", width: 20, height: 20 }, () => v.place(inner(v), 0, 0)), 0, 0);
+  assert.deepEqual(rec.record(draw).warnings, []);
+  level = 2;
+  const again = rec.record(draw).warnings;
+  assert.ok(again.some((w) => /picture "tree" drew differently/.test(w)), again.join("\n"));
+  assert.ok(again.some((w) => /v\.circle made a drawing that was not returned.*\(at test\/scene\/recorder\.pictures\.test\.ts:\d+:\d+\)/.test(w)), again.join("\n"));
 });
 
 test("a placement's tint is a colour, checked at the call", () => {

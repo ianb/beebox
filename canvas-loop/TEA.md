@@ -214,12 +214,12 @@ A brush preset kept in a variable needs its type, or TypeScript widens
 
 Colors are CSS strings: hex (`"#38bdf8"`), names (`"tomato"`), `rgb()`,
 `rgba()`, `hsl()`, and the perceptual `oklch()`, `oklab()` and
-`color-mix()`. Build a palette in OKLCH: lightness 0..1, chroma 0..about
+`color-mix()` (`none` reads as 0). Build a palette in OKLCH: lightness 0..1, chroma 0..about
 0.37, hue in degrees, so equal steps look equal and a hue keeps its
 lightness. Mix two colours with `color-mix(in oklab, a, b 30%)` (also `in
-oklch`, the short way round the hue circle, and `in srgb`). Every colour
-draws in sRGB: one outside it keeps its lightness and hue and loses chroma
-until it fits.
+oklch`, the short way round the hue circle, and `in srgb`); the colours
+are mixed as given, then fitted. Every colour draws in sRGB: one outside it
+keeps its lightness and hue and loses chroma until it fits.
 
 ```ts
 const LEAF = (light: number, hue: number): string => `oklch(${light} 0.14 ${hue})`;
@@ -467,7 +467,8 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
 - A placed picture draws as if its drawing were drawn there: brush widths,
   effect lengths and text follow the scale of the scopes around it.
 - Headless runs record a kept version again and compare: in the frame that
-  made it, in the next two frames, and then every 30th frame. A body that
+  made it, in the next two frames, and then whenever it is asked for 30 or
+  more frames after its last comparison. A body that
   reads a value not in `deps` warns, naming the picture and the first
   difference; a value that changes and comes back within half a second can
   go unseen. A picture whose `deps` change in every frame warns too: it gains
@@ -629,8 +630,8 @@ Every voice has `id`, `at` (the frame it starts on) and `gain` 0..1 (default 0.5
   `duration`, `wave` sine/triangle/square), `noise` (`duration`): raw
   primitives. A `square` tone is harsh; avoid it.
 - `noise` takes `color` (`white`, the default, hisses; `pink` rustles like
-  leaves; `brown` rumbles like wind) and `attack` (seconds to swell in; it
-  then falls away over the rest of `duration`). Without `attack` it starts
+  leaves; `brown` rumbles like wind) and `attack` (seconds to swell in, less
+  than `duration`; it then falls away over the rest). Without `attack` it starts
   loud and dies away fast, a click or a swish. A gust of wind:
   ``{ id: `gust-${n}`, at, kind: "noise", color: "brown", duration: 4, attack: 1.5, gain: 0.2 }``.
 

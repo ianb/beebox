@@ -40,6 +40,12 @@ test("color-mix mixes in oklab, oklch or srgb, with CSS's percentage rules", () 
   near(parse("color-mix(in oklab, rgba(255, 0, 0, 0) 50%, #0000ff)"), { is: parse("color-mix(in oklab, #0000ff, #0000ff)").map((c, i) => (i === 3 ? 0.5 : c)), label: "a clear colour lends no hue" });
 });
 
+test("color-mix mixes the colours as given and fits the result once; none is a missing component, drawn as 0", () => {
+  near(parse("color-mix(in oklch, oklch(0.7 0.4 140), oklch(0.7 0 140))"), { is: parse("oklch(0.7 0.2 140)"), label: "half the given chroma, not half the fitted one" });
+  near(parse("oklch(0.7 0.1 none)"), { is: parse("oklch(0.7 0.1 0)"), label: "a missing hue" });
+  near(parse("oklab(0.7 none 0.05 / none)"), { is: parse("oklab(0.7 0 0.05 / 0)"), label: "a missing a and alpha" });
+});
+
 test("a malformed perceptual colour is an error, and the 2D context still parses the rest", () => {
   for (const bad of ["oklch(0.5 0.1)", "oklch(0.5 0.1 20 / 1 / 2)", "oklab(a b c)", "color-mix(in hsl, red, blue)", "color-mix(in oklab, red)"]) {
     assert.throws(() => parse(bad), (e: unknown) => e instanceof SketchUsageError && e.message.includes(`"${bad}" is not a CSS colour`), bad);

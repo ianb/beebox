@@ -320,6 +320,21 @@ onGpu("section 10: a key with a new version each frame, placed at two fixed scal
   const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
   assert.equal(hints.length, 1, hints.join("\n"));
   assert.match(hints[0] ?? "", /hint: picture "sapling" got new versions in each of the last 3 frames \(now deps \[\d+]\), each placed at more than one scale or rotation \(now \[1, 0, 0, 1]\)/);
+  // One version, placed at two scales in its first frame and at a new scale in each of the next two: the scale is the cause.
+  const scaled = await runCase({
+    id: "one-version-new-scales",
+    mistake: "one version placed at a new scale each frame",
+    channel: "none",
+    names: [],
+    frames: 4,
+    draw: (v, m) => {
+      const pic = v.picture({ key: "stone", width: 20, height: 20 }, () => v.rect(0, 0, 4, 4, { fill: "#2a9d8f" }));
+      return (m.t === 1 ? [0.5, 1] : [1 + m.t * 0.25]).map((s) => v.at({ scale: s }, v.place(pic, 2, 2)));
+    },
+  });
+  const said = scaled.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(said.length, 1, said.join("\n"));
+  assert.match(said[0] ?? "", /hint: picture "stone" was placed at a scale or rotation it has no kept image for/);
 });
 
 onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async () => {
