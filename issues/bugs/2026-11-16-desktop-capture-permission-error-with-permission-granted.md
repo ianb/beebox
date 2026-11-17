@@ -8,7 +8,7 @@ discovered-by: Ian
 discovered-in: main session — developer tried capture on a desktop browser, 2026-11-16
 ---
 
-The developer opened capture in a desktop browser and got a permission error. The browser's site permission for the box looked correct. The exact message text is not recorded.
+The developer opened capture in a desktop browser and got a permission error. The browser's site permission for the box looked correct. The exact message text is not recorded, and nothing records it: the box's client debug log has no entry for the failure. Capture puts the error only in the on-screen banner (`setError`), and does not send it to the client log.
 
 Capture shows the browser's raw error after a fixed prefix: "Camera access failed: …", "Camera switch failed: …" (`beebox/src/frontend/src/pages/capture/useCaptureSession/useCaptureCamera.ts`) or "Microphone access failed: …" (`useCaptureSession/hook.ts`). It does not look at the error name. So different causes produce similar text, and none of these messages tells the person what to do.
 
@@ -22,4 +22,4 @@ Capture shows the browser's raw error after a fixed prefix: "Camera access faile
 
 - Map the error name to a message that tells the person what to do: system settings, close the other app, or "that camera is not connected, using the default".
 - If the stored device is gone, clear the stored choice and start the default device.
-- Next time the error happens, record the exact text to confirm the cause.
+- Send each capture device error to the client debug log, with the error name, message, and requested constraints, so a report can be checked afterward.
