@@ -3,8 +3,8 @@ title: "canvas-loop: a tracked GPU lock and live page; keep the showcase pieces"
 status: active
 workstream: canvas-brushes
 issues:
-  - ../../../issues/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md
-  - ../../../issues/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md
+  - ../../../issues/closed/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md
+  - ../../../issues/closed/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md
 ---
 # canvas-loop: a tracked GPU lock and live page; keep the showcase pieces
 
@@ -16,8 +16,8 @@ still needed into tracked code, keeps the recovered sketches where a cull
 cannot reach them, and records which parts of two filed issues no longer hold.
 
 **Issues addressed:**
-`issues/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md`
-and `issues/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md`: both
+`issues/closed/code-quality/2026-11-16-canvas-loop-compare-and-speed-harness-in-scratch.md`
+and `issues/closed/code-quality/2026-11-16-doc-code-blocks-are-not-checked.md`: both
 closed without building their proposals, because neither problem shows on
 current main (NOT in scope gives the checks). Searched `issues/`
 for "gpu", "lock", "scratch", "showcase", "walks-now", "live page": no other

@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **A GPU lock and a live page.** `cli`, `examples:check` and the GPU tests
+  hold the repo's machine-wide GPU lock (`bin/with-gpu`). `cli page
+  <sketch.ts>…` builds one page of live sketches with their controls, a
+  frames/s readout and the picture-cost line, served from `dev/`.
 - **Steady 60 Hz frames.** A browser figure's frame interval within 2 ms of
   a whole number of 1/60 s steps now counts as exactly that many. Chrome's
   frame timestamps wander (15.2 ms, then 18.2 ms), and depending on where

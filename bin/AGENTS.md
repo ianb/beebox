@@ -73,6 +73,13 @@ worktree. It is the landing operation used by `/finish`; `--list` and
 `--dry-run` are read-only. Details:
 [worktree lifecycle](docs/worktree-lifecycle.md).
 
+## Machine-wide locks (`bin/with-slot.ts`, `bin/with-gpu`)
+
+`bin/with-slot.ts -- <cmd>` holds one of the test semaphore's slots (beebox's
+whole-tree `lint` and `typecheck` use it). `bin/with-gpu <cmd>` holds the one
+GPU lock (`~/.cache/beebox/locks/gpu`), shared by every checkout and box;
+canvas-loop's GPU scripts take it. Both reuse `bin/test-locks.ts`.
+
 ## Schedules (`bin/schedules`)
 
 Use `bbx-authoring-schedules` to author recurring work and `bin/schedules list`

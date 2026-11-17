@@ -1,10 +1,13 @@
 ---
 title: "canvas-loop before/after compare and speed checks live in per-chunk scratch copies"
-workstream: unattached
+workstream: canvas-brushes
 area: canvas-loop
 filed-by: agent
 discovered-in: worktree-retrospective — retrospective 20261116-005159
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-17):** Checked against main on 2026-11-17 (plan:canvas-loop-harness-and-doc-check.subplan). The scripts compared the gallery and cache cases, both since deleted from main; no renderer or performance change is open, and examples:check covers run-to-run determinism. The tracked GPU lock (bin/with-gpu) and live page (cli page) that the same scratch work relied on were built instead. If a renderer change needs a before/after: render each example with cli run in both trees and cli diff the PNGs; the live page's frames/s line covers speed spot checks.
 
 Renderer work in canvas-loop checks each chunk two ways: a byte compare of
 PNGs and transcripts against a reference checkout, and a pointer-latency
