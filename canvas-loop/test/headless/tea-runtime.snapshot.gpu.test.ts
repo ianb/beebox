@@ -63,3 +63,17 @@ test("the events parser accepts a snapshot (with and without label) and rejects 
     (e: unknown) => e instanceof EventScriptError && e.message.includes('"label" must be a string'),
   );
 });
+
+test("a mousepath the sketch handles captures its first and last frames, not the moves between", async () => {
+  const dir = tmpDir();
+  const follower: LoadedTeaModule = toTeaModule({
+    canvas: { width: 50, height: 50 },
+    init: () => ({ x: 0 }),
+    update: (model: { x: number }, msg: Msg) => (msg.type === "mousemove" ? { x: msg.x } : model),
+    draw: (v: View, model: { x: number }) => [v.background("#000000"), v.circle(model.x, 25, 4, { fill: "#ffffff" })],
+  });
+  const events = parseTeaEvents([{ frame: 2, type: "mousepath", points: [[5, 25], [45, 25]], frames: 8 }], {});
+  await teaRun(teaRunOptions(follower, { outDir: dir, frames: 14, every: 30, events }));
+  const captured = [...readTranscript(dir).matchAll(/^### frame (\d+)/gm)].map((m) => Number(m[1]));
+  assert.deepEqual(captured, [0, 2, 10, 13], "frame 0, the path's ends and the last frame");
+});

@@ -80,16 +80,25 @@ export function effectsReach(e: Effects | undefined): number {
 /** Whether a stroke along `g` turns a corner, where a miter join can reach past it. */
 const hasCorners = (g: Geom): boolean => !(g.kind === "ellipse" || (g.kind === "poly" && !g.closed && g.points.length <= 2));
 
-/** How far a stroke reaches past the outline: a plain one by up to a weight (a square cap), a miter at a corner up to 5 weights; a brushed one by its wobble, its marks' reach (brush-reach.ts) and a 2 px edge. */
-function strokeReach(g: Geom, s: ShapeStyle): number {
-  if (s.brush !== undefined) return (s.brush.gesture.wobble ?? 0) + brushGrowth(s.brush.brush, s.weight) + 2;
-  if (s.stroke === undefined) return 0;
+/** How far a plain stroke reaches past the outline: up to a weight (a square cap), a miter at a corner up to 5 weights. */
+function plainReach(g: Geom, s: ShapeStyle): number {
+  if (s.stroke === undefined || s.brush !== undefined) return 0;
   return s.join === "miter" && hasCorners(g) ? 5 * s.weight : s.weight;
 }
 
-/** A shape's outline padded by how far its ink reaches: its stroke (`strokeReach`) and its own effects. */
-export function shapeBox(g: Geom, s: ShapeStyle): Box {
-  return pad(geomBox(g), strokeReach(g, s) + effectsReach(s.effects));
+/**
+ * A shape's box under `m`: its outline padded by its plain stroke and its own
+ * effects, transformed. A brushed mark is laid in brush space, after the
+ * transform (scene/brush/expand.ts): its tip is `weight × √|det|` wide even
+ * under a scale that squashes one axis, and its wobble is in those units. So
+ * its reach (brush-reach.ts, at most the weight times the largest stretch),
+ * its wobble and a 2 px edge pad the transformed box.
+ */
+export function shapeBoxUnder(m: Mat, a: { geom: Geom; style: ShapeStyle }): Box {
+  const { geom: g, style: s } = a;
+  const box = transformed(m, pad(geomBox(g), plainReach(g, s) + effectsReach(s.effects)));
+  if (s.brush === undefined) return box;
+  return pad(box, (s.brush.gesture.wobble ?? 0) + brushGrowth(s.brush.brush, s.weight) * maxScale(m) + 2);
 }
 
 const casts = (m: Material | undefined): boolean => (m?.castsShadow ?? false) !== false;
@@ -143,7 +152,7 @@ function nodeBox(n: SceneNode, a: { m: Mat; ground: Box; own: boolean }): Box | 
   const { m } = a;
   switch (n.kind) {
     case "shape":
-      return casts(n.style.material) && !a.own ? undefined : transformed(m, shapeBox(n.geom, n.style));
+      return casts(n.style.material) && !a.own ? undefined : shapeBoxUnder(m, n);
     case "text": {
       // Each line from its first pen position to two sizes past its last (a glyph is narrower), a line height either side.
       const halo = n.halo?.width ?? 0;

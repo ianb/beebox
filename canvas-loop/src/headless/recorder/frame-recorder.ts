@@ -81,11 +81,12 @@ export class FrameRecorder implements SketchHost {
   /**
    * Record a scripted-input line with its engagement verdict
    * (`mousedown (297,288) → select-planet`). Counts as frame content, so the
-   * frame is captured even if the input drew nothing new.
+   * frame is captured even if the input drew nothing new; a `quiet` one (a
+   * move inside a mousepath) is written without making the frame captured.
    */
-  recordInput(entry: { event: string; verdict: string }): void {
+  recordInput(entry: { event: string; verdict: string; quiet?: boolean }): void {
     this.#entries.push({ kind: "input", frame: this.#currentFrame, event: entry.event, verdict: entry.verdict });
-    this.#frameHadLog = true;
+    if (entry.quiet !== true) this.#frameHadLog = true;
   }
 
   // ── frame lifecycle ────────────────────────────────────────────────

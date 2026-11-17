@@ -246,7 +246,7 @@ class TeaRunner {
     this.#handledNames = [];
     const changed = this.#fold(msg);
     const text = verdict({ handled: this.#handledNames, changed });
-    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
+    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text, quiet: event.type === "mousemove" && event.quiet === true });
     if (this.#handledNames.length > 0) this.#recordActivity();
   }
 

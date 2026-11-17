@@ -26,7 +26,7 @@ import { maxScale } from "../mat.js";
 import type { CallSite } from "../call-site.js";
 import type { Geom, Mat, PictureVersion, PixelsVersion, ShapeStyle } from "../nodes.js";
 import type { Box } from "../bounds.js";
-import { effectsReach, shapeBox, transformed, versionBox } from "../bounds.js";
+import { effectsReach, shapeBoxUnder, transformed, versionBox } from "../bounds.js";
 
 const r = (n: number): number => Math.round(n);
 const boxText = (b: Box): string => `(${r(b.x0)},${r(b.y0)})–(${r(b.x1)},${r(b.y1)})`;
@@ -149,7 +149,7 @@ export class OffCanvas {
   /** A shape under `matrix` (to canvas coordinates), drawn at `site`; in a lit group (`lit`) a shadow caster is not checked. */
   shape(what: string, a: { geom: Geom; style: ShapeStyle; matrix: Mat; lit: boolean; site: CallSite | undefined }): void {
     if (!this.#open || (a.lit && (a.style.material?.castsShadow ?? false) !== false)) return;
-    this.#drawing(what, { box: transformed(a.matrix, shapeBox(a.geom, a.style)), crossing: false, site: a.site });
+    this.#drawing(what, { box: shapeBoxUnder(a.matrix, { geom: a.geom, style: a.style }), crossing: false, site: a.site });
   }
 
   /** A placement: the version's whole body under `matrix` (the placement's). One holding a light or a shadow caster can reach anywhere and is not checked. */

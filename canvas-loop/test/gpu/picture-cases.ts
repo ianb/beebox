@@ -121,6 +121,8 @@ function spill(v: View): Drawing {
     v.circle(170, 50, 8, { fill: "#f4a261", effects: { glow: { blur: 12, color: "#e9c46a", strength: 2 } } }),
     v.circle(90, 80, 6, { fill: "#264653", effects: { shadow: { x: 10, y: 14, blur: 4, color: "rgba(0,0,0,0.6)" } } }),
     v.group({ effects: { blur: 5 } }, v.rect(-10, -10, 25, 25, { fill: "#457b9d" })),
+    // Squashed across: the brush's round tip keeps its width in the transformed space.
+    v.at({ translate: [-40, 60], scale: [0.15, 6] }, v.line(0, 0, 0, 4, { stroke: "#9d0208", weight: 12, brush: "ink" })),
   ];
 }
 
@@ -130,8 +132,8 @@ function spill(v: View): Drawing {
  * draws in a group, and the self-sizing one's box holds every painted pixel.
  */
 export async function pictureSpill(handle: GpuHandle): Promise<void> {
-  const size = { width: 220, height: 150 };
-  const at = { translate: [20, 15] as const };
+  const size = { width: 260, height: 150 };
+  const at = { translate: [55, 15] as const };
   const direct = await renderOnce(handle, { size, draw: (v) => v.at(at, v.group({}, spill(v))) });
   let box = { x: 0, y: 0, width: 0, height: 0 };
   const auto = await renderOnce(handle, { size, draw: (v) => {
@@ -149,5 +151,5 @@ export async function pictureSpill(handle: GpuHandle): Promise<void> {
     if (!inside && alphaAt(auto, [x, y]) > 0) outside.push(`(${x}, ${y})`);
   }
   assert.deepEqual(outside.slice(0, 5), [], `the self-sizing box ${JSON.stringify(box)} holds every painted pixel`);
-  assert.ok(box.x < -10 && box.y < -10, "the box reaches the blurred square at negative coordinates");
+  assert.ok(box.x < -40 && box.y < -10, "the box reaches the squashed line and the blurred square at negative coordinates");
 }

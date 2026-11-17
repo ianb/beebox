@@ -9,7 +9,9 @@ us more. Every change lands here — hand-written and terse.
   a whole number of 1/60 s steps now counts as exactly that many. Chrome's
   frame timestamps wander (15.2 ms, then 18.2 ms), and depending on where
   the step clock stood, a short frame ran no step and drew nothing and the
-  next ran two: up to a fifth of frames skipped on a 60 Hz display.
+  next ran two: up to a fifth of frames skipped on a 60 Hz display. The time
+  snapping takes or gives is added back once it reaches half a step, so a
+  display a little off 60 Hz (55 Hz) still runs 60 steps a second.
 - **`mousepath` in events files.** `{ "frame", "type": "mousepath",
   "points": [[x, y], …], "frames" }` is one `mousemove` a frame along the
   points at an even speed, so a hover or a drag is one line instead of
@@ -22,8 +24,9 @@ us more. Every change lands here — hand-written and terse.
   `v.width`, `v.height`, `v.background` and `keepInside` are errors. Giving
   only one of `width` and `height` is an error. A size never clipped and
   still does not. The off-canvas check's boxes now hold a stamp brush's
-  scatter (they could miss it), and a corner-free stroke (a line, an
-  ellipse) no longer pads by a miter.
+  scatter and a brush tip under a scale that squashes one axis (they could
+  miss both), and a corner-free stroke (a line, an ellipse) no longer pads
+  by a miter.
 - **Soft noise.** A `noise` voice takes `color` (`white`, `pink`, `brown`)
   and `attack` seconds (less than `duration`), which swells it in and lets
   it fall away over the rest of its duration: wind and leaves. Without them it sounds as before.

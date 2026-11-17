@@ -20,26 +20,11 @@ import type { PlaygroundModule } from "../sketch-types.js";
 import type { DrawSurface, ParamOverrides, RuntimeDeps } from "./engine-types.js";
 import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
 import { HitScenes } from "./hit-scene.js";
+import { FrameClock, STEP_MS } from "./frame-clock.js";
 
 export type { DrawSurface, Drawn, EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
-const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
-const MAX_DT_MS = 250;
-/** A frame interval this close to a whole number of steps is that number: a 60 Hz display's timestamps wander by a millisecond or two. */
-const SNAP_MS = 2;
-
-/**
- * The time a frame advances. Within `SNAP_MS` of a whole number of steps it
- * is exactly that many: otherwise a 15.2 ms frame after a short remainder runs
- * no step (no draw) and the 18.2 ms frame after it runs two, a visible stutter
- * on a 60 Hz display. Other rates (120 Hz, 144 Hz) are not near a whole step
- * and keep their exact time.
- */
-export function frameTime(dt: number): number {
-  const whole = Math.round(dt / STEP_MS);
-  return whole >= 1 && Math.abs(dt - whole * STEP_MS) <= SNAP_MS ? whole * STEP_MS : dt;
-}
 
 // A queued input before it is stamped with the frame it dispatches on. `snapshot`
 // is a scripted-only directive (a forced capture, never live UI input), so it is
@@ -84,6 +69,7 @@ export class Runtime {
   // The canvas no longer shows the current model and params; the next frame draws.
   #dirty = true;
   #acc = 0;
+  readonly #clock = new FrameClock();
   #last: number | undefined;
   #onFrame: (frame: number) => void;
   #onVoice: ((voice: Voice) => void) | undefined;
@@ -201,6 +187,7 @@ export class Runtime {
     this.#frame = 0;
     this.#hits.restart();
     this.#acc = 0;
+    this.#clock.reset();
     this.#last = undefined;
     this.#score.clear();
     this.#waiting = [];
@@ -273,9 +260,7 @@ export class Runtime {
       if (this.#dirty) this.#draw();
       return;
     }
-    let dt = frameTime(now - last);
-    if (dt > MAX_DT_MS) dt = STEP_MS;
-    this.#acc += dt;
+    this.#acc += this.#clock.advance(now - last);
     let steps = 0;
     while (this.#acc >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
       this.#doFrame();
