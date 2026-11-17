@@ -12,7 +12,7 @@ import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit, withMutedAudio } from "./launch-options.js";
 import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
-import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
+import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, seedsBrowseKey, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
 // JS expression evaluated in the page. The beebox frontend exposes
@@ -72,7 +72,7 @@ const PAGE_CHANGING = new Set([
  * only on `open`, so a long session of clicks and snapshots on one page was
  * signed out halfway (D-chemistry journey, 2026-10-09: "Your session has ended"
  * exactly 30 minutes after the walker's only `open`). Re-seed it on every
- * command while the browser is on this worktree's origin.
+ * command while the browser is on a page the key covers.
  */
 async function refreshAuthCookie(ctx: WorktreeContext): Promise<void> {
   let current: string;
@@ -81,7 +81,7 @@ async function refreshAuthCookie(ctx: WorktreeContext): Promise<void> {
   } catch (_e) {
     return; // No page yet; the next `open` seeds the cookie.
   }
-  if (isOwnOrigin(current, ctx)) await run(authCookieArgs(current, ctx));
+  if (seedsBrowseKey(current, ctx)) await run(authCookieArgs(current, ctx));
 }
 
 /**
@@ -260,7 +260,7 @@ async function dispatch(input: DispatchInput): Promise<number> {
     const rest = args.slice(1);
     const target = rest[0];
     const url = target === undefined ? undefined : rewriteOpenUrl(target, ctx);
-    if (url !== undefined && isOwnOrigin(url, ctx)) {
+    if (url !== undefined && seedsBrowseKey(url, ctx)) {
       await run(authCookieArgs(url, ctx));
     }
     const passArgs = url === undefined ? ["open"] : ["open", url, ...rest.slice(1)];

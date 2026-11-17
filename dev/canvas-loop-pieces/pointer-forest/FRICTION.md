@@ -312,3 +312,40 @@ shorthand).
 - A `mousepath` hover captures a PNG per frame (see fractal-paint P2).
 - `place` takes one `tint`; haze and dryness are mixed into one colour in
   the sketch (`tintOf`). Fine.
+
+## 2026-11-17: trees that grow in, not up in scale
+
+Growth is now structure. Each species and variant is a plan built once from
+a seed (`tree-tea.ts`): a trunk, limbs and twigs with the age each starts, a
+length rate and a cap, and leaf clumps that start on a twig at an age of
+their own. `grownAt(plan, age)` reads it at one of 16 age levels; the three
+part pictures are kept per `species-variant` key with `deps: [level]`. A birch
+rises as a leafy whip, sheds the stem leaves as arching limbs come, then
+hangs twig sprays with small clusters; a fir adds a whorl at the leader's tip
+each step and its cone comes from older whorls being longer; broadleaves
+lengthen, thicken, branch and fork, with clumps on new twigs; a blossom
+flowers last. Dieback reads the same plan backwards. `growth-strip-tea.ts`
+draws every species at a run of levels side by side.
+
+### N7. Picture cost of growth by version, not by scale
+
+- Each new version records in 1–8 ms headless (`--timing`); the paths are
+  the same few fills per part as before, so recording stays cheap.
+- Dying back at 0.7 growth/s walked each tree through all 16 levels in about
+  a second: Chrome showed up to 167 ms/s of new pictures. Dying trees now
+  draw every fourth level (a subset that growth shares): peak 124 ms/s, most
+  seconds under 80.
+- Chrome, 960×540, 8 s sweep then leave, 10 s regrowth: 53–60 frames/s
+  presented, rAF median 16.7 ms, p95 16.8 ms, p99 31.8 ms, 37 of 1046 frames
+  over 20 ms. The scale-growth version measured the same in the same session
+  (p99 33.3 ms, 36 over 20 ms), so the slow frames are this machine today,
+  not growth.
+
+### N8. Small things
+
+- A rAF timestamp can be earlier than the `performance.now()` read just
+  before `requestAnimationFrame`, so a sweep script that computes time from
+  it goes negative on the first frame (it threw, and the page's error line
+  showed it). Clamp at 0. Browser behaviour, not canvas-loop.
+- No library change needed this pass: self-sizing pictures meant a growing
+  tree needed no bounds bookkeeping at all.

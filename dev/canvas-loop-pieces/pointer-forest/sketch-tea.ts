@@ -3,13 +3,15 @@
 // pointer has gone (or left the canvas), they grow back. The wood sways in a
 // slow wind. Hover only: clicks do nothing.
 //
-// Each tree is three kept pictures drawn around its base (tree-tea.ts): the
-// wind moves the two crown layers by a pixel or so, which reuses their kept
-// images, and growth is a scale in a few steps. The dry look is a `tint`.
+// Each tree is three kept pictures drawn around its base (tree-tea.ts), one
+// version per age level: a tree grows by gaining trunk, limbs, twigs and
+// leaves, not by scaling, and dies back the same way in reverse. The wind
+// moves the two crown layers by a pixel or so, which reuses their kept
+// images. The dry look is a `tint`.
 import type { DeepReadonly, Drawing, Msg, ParamValues, ParamsDecl, RootDrawing, Util, Vec2, View, Voice } from "@ianbicking/canvas-loop";
 import { type Lch, ok, rng, toward } from "./color-tea.js";
 import { AIR, H, HORIZON, W, foreground, glaze, haze, landPicture } from "./land-tea.js";
-import { HEIGHT, PALETTES, SHAPES, SPECIES, type Species, VARIANTS, treePicture } from "./tree-tea.js";
+import { HEIGHT, PALETTES, PLANS, SPECIES, type Species, VARIANTS, heightAt, levelOf, treePicture } from "./tree-tea.js";
 
 export const params = {
   marker: { type: "boolean", default: false, label: "Show pointer", hint: "a ring where the pointer is (for recordings)" },
@@ -46,6 +48,8 @@ interface Tree {
   readonly rate: number;
   /** Leaves owed to the air, fractional. */
   readonly owed: number;
+  /** Dying back this frame: drawn in coarser age steps, so a fast dieback meets few new picture versions. */
+  readonly dying: boolean;
   readonly phase: number;
 }
 
@@ -76,8 +80,6 @@ export interface Model {
 const R_IN = 40;
 const R_OUT = 120;
 const FPS = 60;
-/** Growth is drawn at this many sizes: each is one more kept image per part. */
-const LEVELS = 12;
 const DRY: Lch = [0.72, 0.13, 72];
 
 function pickSpecies(u: Util<P>, band: number): Species {
@@ -98,10 +100,10 @@ export function init(u: Util<P>): Model {
     for (let i = 0; i < b.n; i++) {
       const x = ((i + 0.5 + (u.random() - 0.5) * 0.85) / b.n) * (W + 60) - 30;
       const y = b.y0 + u.random() * (b.y1 - b.y0);
-      const max = 0.8 + u.random() * 0.2;
+      const max = 0.82 + u.random() * 0.18;
       trees.push({
         id: trees.length, x, y, band, species: pickSpecies(u, band), variant: Math.floor(u.random(VARIANTS)),
-        growth: max, max, fear: 0, calm: 999, delay: 45 + Math.floor(u.random(90)), rate: 0.12 + u.random(0.07), owed: 0, phase: u.random(Math.PI * 2),
+        growth: max, max, fear: 0, calm: 999, dying: false, delay: 45 + Math.floor(u.random(90)), rate: 0.12 + u.random(0.07), owed: 0, phase: u.random(Math.PI * 2),
       });
     }
   });
@@ -125,13 +127,6 @@ function distTo(t: DeepReadonly<Tree>, p: Vec2): number {
 
 const AUTUMN: readonly Lch[] = [[0.74, 0.16, 75], [0.6, 0.18, 45], [0.82, 0.15, 95], [0.5, 0.15, 30]];
 
-/** How much of the full size a tree at `growth` is drawn at: in `LEVELS` steps, so each step is one kept image. */
-function drawnSize(growth: number): number {
-  if (growth <= 0) return 0;
-  const step = Math.ceil(growth * LEVELS) / LEVELS;
-  return 0.18 + 0.82 * step;
-}
-
 interface Step { trees: Tree[]; spawn: { x: number; y: number; floor: number; s: number; species: Species }[]; voices: Voice[]; matured: number }
 
 function stepTree(u: Util<P>, model: DeepReadonly<Model>, t: DeepReadonly<Tree>, out: Step): void {
@@ -145,7 +140,7 @@ function stepTree(u: Util<P>, model: DeepReadonly<Model>, t: DeepReadonly<Tree>,
   if (growth > target) {
     if (t.fear < 0.35 && fear >= 0.35 && growth > 0.2) out.voices.push({ id: `rustle-${t.id}-${frame}`, at: frame, kind: "noise", color: "pink", attack: 0.1, duration: 0.6, gain: 0.04 + 0.05 * s });
     const before = growth;
-    growth = Math.max(target, growth - 1.1 / FPS);
+    growth = Math.max(target, growth - 0.7 / FPS);
     owed += (before - growth) * 40 * (growth > 0.05 ? 1 : 0.3);
   } else if (growth < target && calm > t.delay) {
     if (growth === 0) {
@@ -159,12 +154,12 @@ function stepTree(u: Util<P>, model: DeepReadonly<Model>, t: DeepReadonly<Tree>,
       out.matured += 1;
     }
   }
-  const h = HEIGHT[species] * s * drawnSize(growth);
+  const h = heightAt(species, growth) * s;
   while (owed >= 1) {
     owed -= 1;
     out.spawn.push({ x: t.x + (u.random() - 0.5) * h * 0.7, y: t.y - h * (0.4 + u.random() * 0.5), floor: t.y + u.random(10 * s), s, species });
   }
-  out.trees.push({ ...t, growth, species, variant, fear, calm, owed });
+  out.trees.push({ ...t, growth, species, variant, fear, calm, owed, dying: growth < t.growth });
 }
 
 function stepLeaves(u: Util<P>, model: DeepReadonly<Model>, spawn: Step["spawn"]): { leaves: FallingLeaf[]; nextId: number } {
@@ -268,20 +263,21 @@ function tintOf(band: Band, fear: number): string | undefined {
 
 function drawTree(v: View, t: DeepReadonly<Tree>, frame: number): Drawing {
   const band = BANDS[t.band] ?? BANDS[0];
-  const shape = SHAPES[t.species][t.variant] ?? SHAPES.oak[0];
-  if (band === undefined || shape === undefined) return null;
-  const size = drawnSize(t.growth);
-  const scale = band.scale * size;
-  const crown = HEIGHT[t.species] * scale * 0.3;
+  const plan = PLANS[t.species][t.variant] ?? PLANS.oak[0];
+  if (band === undefined || plan === undefined) return null;
+  const level = t.dying ? Math.ceil(levelOf(t.growth) / 4) * 4 : levelOf(t.growth);
+  const size = Math.min(1, t.growth * 1.4);
+  const scale = band.scale;
+  const crown = HEIGHT[t.species] * scale * 0.3 * size;
   // Wind: a slow swell travelling across the wood, and a shiver when the pointer is near. In screen pixels.
   const swell = Math.sin(frame / 95 - t.x / 160 + t.phase * 0.3) * 0.6 + Math.sin(frame / 37 + t.phase) * 0.35;
   const sway = (1.2 + 1.6 * band.scale) * swell * size + t.fear * Math.sin(frame * 0.9 + t.phase) * 1.6;
   const tint = tintOf(band, t.fear);
   const opts = tint === undefined ? {} : { tint };
-  const part = (p: "wood" | "back" | "front", dx: number): Drawing => v.place(treePicture(v, shape, { variant: t.variant, part: p }), dx / Math.max(0.05, scale), 0, opts);
+  const part = (p: "wood" | "back" | "front", dx: number): Drawing => v.place(treePicture(v, plan, { part: p, level }), dx / scale, 0, opts);
   return v.at({ translate: [Math.round(t.x), Math.round(t.y)] }, [
-    flowers(v, t.id, Math.min(1, Math.max(0, 1 - size * 2.5))),
-    size > 0 && [
+    flowers(v, t.id, Math.min(1, Math.max(0, 1 - t.growth * 3))),
+    level > 0 && [
       // A long shadow away from the low sun on the left.
       v.ellipse(crown * 1.8, 3, crown * 2.4, crown * 0.26, {
         fill: v.ellipseGradient(crown * 1.4, 3, crown * 2.6, crown * 0.26, [[0, ok([0.34, 0.1, 265], 0.42)], [0.6, ok([0.34, 0.1, 265], 0.2)], [1, ok([0.34, 0.1, 265], 0)]]),

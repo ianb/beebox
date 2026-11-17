@@ -55,7 +55,9 @@ Hooks and launchers are thin adapters; `bin/workstreams` and
 cleanup, sweep, launch, or generated mirrors, read
 [worktree lifecycle](docs/worktree-lifecycle.md). Its exact-PID detection,
 fail-closed behavior (`launching` and `unknown` count as live), self-ancestor exclusion, and nested-agent hook
-rules protect live work. `--force` never overrides liveness.
+rules protect live work. `--force` never overrides liveness. A removed
+worktree's `scratch/` is kept for 14 days at
+`~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/`.
 
 ## Lifecycle commands
 

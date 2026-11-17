@@ -41,7 +41,8 @@
 #   sweep              Remove worktrees whose branch is fully merged into
 #                      main, are clean, and have no active claude/codex session.
 #                      Also prunes orphaned browse/log/pid state for
-#                      already-removed worktrees. Add --dry-run to preview.
+#                      already-removed worktrees and scratch/ copies kept
+#                      by removals over 14 days ago. Add --dry-run to preview.
 #   help               This text.
 
 set -euo pipefail
@@ -1033,6 +1034,14 @@ case "$cmd" in
         [ -d "$WT_ROOT/$name" ] && continue
         echo "orphan exhibits (manual cull only): $d ($(du -sh "$d" 2>/dev/null | cut -f1))"
       done
+    fi
+
+    # Kept scratch/ copies from earlier removals expire into the trash drained
+    # below (bin/lib/worktree-teardown.sh, wt_scratch_prune).
+    if [ "$dry_run" = true ]; then
+      wt_scratch_prune --dry-run
+    else
+      wt_scratch_prune
     fi
 
     # Drain the trash even when nothing was removed this run. Otherwise the only

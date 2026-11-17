@@ -29,5 +29,6 @@ ignored by git.
 
 ## Lifecycle
 
-No cleanup policy yet. If it grows unmanageable, prune by hand or add
-a sweep to a periodic task. Files here can vanish at any time.
+No cleanup policy inside a live checkout. When a worktree is removed, the
+contents of its `scratch/` move to `~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/`
+and is deleted 14 days later; keep anything longer-lived somewhere tracked.

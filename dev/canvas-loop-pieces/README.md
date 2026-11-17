@@ -9,7 +9,7 @@ commit check lints or type-checks these files; building their page does.
 | --- | --- | --- |
 | `thimble-quay/` | A canal town through a day: brushed buildings, weather, lamps at night, sound, and almost everything clickable | `events.json` |
 | `mochi-must-not-fall/` | A lane-defense game in ink on rice paper | `events.json` (a whole game) |
-| `pointer-forest/` | A wood that clears where the pointer goes and grows back when it leaves | `ev-hover.json` |
+| `pointer-forest/` | A wood that clears where the pointer goes and grows back when it leaves; `growth-strip-tea.ts` shows each species from seedling to mature | `ev-hover.json` |
 | `pointer-forest/v3/` | The earlier version, with recursive branching trees | `v3/ev-story.json` |
 | `fractal-paint/` | A paint program whose strokes grow by a chosen rule (keys 1–4, `p` palette, `c` clear) | `ev-demo.json`, `ev-coral.json` |
 
