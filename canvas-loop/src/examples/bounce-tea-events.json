@@ -1,13 +1,17 @@
 [
-  {"frame": 6, "type": "mousedown", "x": 200, "y": 150},
-  {"frame": 8, "type": "mousemove", "x": 212, "y": 144},
-  {"frame": 10, "type": "mousemove", "x": 224, "y": 138},
-  {"frame": 12, "type": "mousemove", "x": 236, "y": 132},
-  {"frame": 14, "type": "mousemove", "x": 248, "y": 126},
-  {"frame": 16, "type": "mousemove", "x": 260, "y": 120},
-  {"frame": 17, "type": "mouseup", "x": 260, "y": 120},
-  {"frame": 17, "type": "snapshot", "label": "released"},
-  {"frame": 90, "type": "keydown", "key": "r"},
-  {"frame": 90, "type": "snapshot", "label": "reset"},
-  {"frame": 119, "type": "snapshot", "label": "end"}
+  { "frame": 10, "type": "mousedown", "x": 150, "y": 244 },
+  { "frame": 11, "type": "mousemove", "x": 159, "y": 237 },
+  { "frame": 12, "type": "mousemove", "x": 168, "y": 230 },
+  { "frame": 13, "type": "mousemove", "x": 177, "y": 223 },
+  { "frame": 14, "type": "mousemove", "x": 186, "y": 216 },
+  { "frame": 15, "type": "mousemove", "x": 195, "y": 209 },
+  { "frame": 16, "type": "mousemove", "x": 204, "y": 202 },
+  { "frame": 17, "type": "mousemove", "x": 213, "y": 195 },
+  { "frame": 18, "type": "mousemove", "x": 222, "y": 188 },
+  { "frame": 18, "type": "snapshot", "label": "held, off centre" },
+  { "frame": 19, "type": "mouseup", "x": 222, "y": 188 },
+  { "frame": 34, "type": "snapshot", "label": "thrown" },
+  { "frame": 60, "type": "snapshot", "label": "bouncing" },
+  { "frame": 110, "type": "keydown", "key": "r" },
+  { "frame": 110, "type": "snapshot", "label": "reset" }
 ]
