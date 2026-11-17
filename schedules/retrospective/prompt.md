@@ -74,12 +74,29 @@ validates it and shows you a parse failure.
 5. Write the digest to `scratch/retrospective-digest.md` in this worktree and
    publish it: `bin/exhibits add --title "Retrospective <date>"
    --prose "<one sentence: landed, or waiting and why>"
-   scratch/retrospective-digest.md`. The digest says what you saw (how many
-   entries, which patterns), what you changed (paths, and the entries behind
-   each), what you filed, and the watch list as a count plus its new items.
-   Each edit gets one line; omit entries that produced nothing.
+   scratch/retrospective-digest.md`. The reader is the developer, who has not
+   read the packet, the entries, or this prompt, and may not remember the last
+   digest. Write for that person:
+   - Open with two sentences: what this job is (it reads agents' feedback notes
+     every three days and turns repeated complaints into guidance edits), and
+     whether this run's edits are on main or waiting.
+   - **Needs you** comes first. Each item says in plain words what keeps going
+     wrong, how often, what you propose, and what changes for agents if the
+     developer says yes or no. Write "Nothing" if nothing waits.
+   - **Changed**: one bullet per edit saying what an agent will now do
+     differently, then the file as a link. Evidence entries go in a final
+     **Evidence** section, grouped by edit, not inline.
+   - **Filed**: each issue as its title in words, linked.
+   - **Watch list**: one sentence saying it holds problems seen once, which
+     become edits on a second sighting; the count; then each new item as a
+     sentence. Never print a bare kebab id.
+   - Link every repo path as
+     `[<path>](http://localhost:3210/workstreams/browse?file=<path>)`. Define
+     any tool, check, or skill name the first time it appears. Omit entry
+     counts per workstream, model names, and review round counts.
 6. Report with `bin/schedules alert --run <id> --title "<one line>" --message
-   "<Markdown: the finding, then a list with the exhibit URL>"
+   "<Markdown: what needs the developer, or that nothing does; then the
+   exhibit URL>"
    --priority <normal|fyi>`:
    - **normal** — something waits on a person: an unlanded branch, or a watch
      item that needs a decision.
