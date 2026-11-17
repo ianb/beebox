@@ -88,4 +88,7 @@ test("required fields and the wave name are checked", () => {
   assert.throws(() => assertVoice(bad({ id: "n", at: 0, kind: "noise" })), /"duration"/u);
   assert.throws(() => assertVoice(bad({ id: "t", at: 0, kind: "tone", duration: 1 })), /"freq"/u);
   assert.throws(() => assertVoice(bad({ id: "w", at: 0, kind: "tone", freq: 440, duration: 1, wave: "sawtooth" })), /"wave" must be sine, triangle or square/u);
+  assert.throws(() => assertVoice(bad({ id: "p", at: 0, kind: "noise", duration: 1, color: "blue" })), /"color" must be white, pink or brown \(got "blue"\)/u);
+  assert.throws(() => assertVoice({ id: "a", at: 0, kind: "noise", duration: 1, attack: 1.5 }), /"attack" must be 0..duration seconds \(got 1.5\)/u);
+  assert.doesNotThrow(() => assertVoice({ id: "wind", at: 0, kind: "noise", duration: 3, color: "brown", attack: 1.2 }));
 });

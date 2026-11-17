@@ -628,6 +628,11 @@ Every voice has `id`, `at` (the frame it starts on) and `gain` 0..1 (default 0.5
 - `pluck` (`freq`, `decay` seconds, `brightness` 0..1), `tone` (`freq`,
   `duration`, `wave` sine/triangle/square), `noise` (`duration`): raw
   primitives. A `square` tone is harsh; avoid it.
+- `noise` takes `color` (`white`, the default, hisses; `pink` rustles like
+  leaves; `brown` rumbles like wind) and `attack` (seconds to swell in; it
+  then falls away over the rest of `duration`). Without `attack` it starts
+  loud and dies away fast, a click or a swish. A gust of wind:
+  ``{ id: `gust-${n}`, at, kind: "noise", color: "brown", duration: 4, attack: 1.5, gain: 0.2 }``.
 
 `u.scaleNote(step, { root, scale })` returns a note name `step` scale steps
 from `root` (default `"C4"`; negative steps go down). `scale` is `pentatonic`

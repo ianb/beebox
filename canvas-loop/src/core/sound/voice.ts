@@ -38,10 +38,14 @@ export interface ToneVoice extends VoiceBase {
   readonly wave?: "sine" | "triangle" | "square";
 }
 
-/** A burst of noise that fades over `duration` (a click, a tap, a swish). */
+/** A burst of noise that fades over `duration` (a click, a tap, a swish); with `attack`, a swell (wind, a gust through leaves). */
 export interface NoiseVoice extends VoiceBase {
   readonly kind: "noise";
   readonly duration: number;
+  /** `white` (default) hisses; `pink` rustles, like leaves; `brown` rumbles, like wind or surf. */
+  readonly color?: "white" | "pink" | "brown";
+  /** Seconds to swell in. Without it the burst starts at full loudness and dies away; with it, it rises over `attack` and falls away over the rest of `duration`. */
+  readonly attack?: number;
 }
 
 /** One note on a synthesized instrument (see `INSTRUMENTS`). */
@@ -67,6 +71,7 @@ export interface SampleVoice extends VoiceBase {
 export type Voice = PluckVoice | ToneVoice | NoiseVoice | NoteVoice | SampleVoice;
 
 const WAVES: ReadonlySet<string> = new Set(["sine", "triangle", "square"]);
+const NOISE_COLORS: ReadonlySet<string> = new Set(["white", "pink", "brown"]);
 
 /** Longest sound a voice can make, in seconds. */
 export const MAX_SECONDS = 10;
@@ -74,7 +79,7 @@ export const MAX_SECONDS = 10;
 const KEYS: Record<Voice["kind"], ReadonlySet<string>> = {
   pluck: new Set(["id", "at", "gain", "kind", "freq", "decay", "brightness"]),
   tone: new Set(["id", "at", "gain", "kind", "freq", "duration", "wave"]),
-  noise: new Set(["id", "at", "gain", "kind", "duration"]),
+  noise: new Set(["id", "at", "gain", "kind", "duration", "color", "attack"]),
   note: new Set(["id", "at", "gain", "kind", "instrument", "note", "duration"]),
   sample: new Set(["id", "at", "gain", "kind", "name", "variant", "rate"]),
 };
@@ -175,6 +180,8 @@ export function assertVoice(voice: Voice): void {
         detail: `"duration" must be over 0 and at most ${MAX_SECONDS} seconds`,
       },
     );
+    check(voice.color === undefined || NOISE_COLORS.has(voice.color), { where, detail: `"color" must be white, pink or brown (got ${JSON.stringify(voice.color)})` });
+    check(inRange(voice.attack, { min: 0, max: voice.duration }), { where, detail: `"attack" must be 0..duration seconds (got ${String(voice.attack)})` });
     return;
   }
   check(inRange(voice.freq, { min: 20, max: 20_000, required: true }), {

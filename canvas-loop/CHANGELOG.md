@@ -5,6 +5,9 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Soft noise.** A `noise` voice takes `color` (`white`, `pink`, `brown`)
+  and `attack` seconds, which swells it in and lets it fall away over the
+  rest of its duration: wind and leaves. Without them it sounds as before.
 - **Smaller messages.** A `draw` that returns a component's `Drawing` (which
   may be `undefined`) gets a type-check line saying to return a list. A
   faint-mark warning for a mark drawn in a picture body names the picture
