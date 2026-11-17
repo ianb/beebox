@@ -286,7 +286,7 @@ export class Lowering {
         else this.#draw({ shape: linShape(fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m)), tx: 0, ty: 0, paint: imageRec(v, m), mode: 0, erase: false, mat: this.#matColor(inner, undefined) }, inner);
       },
     });
-    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase }, here);
+    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase, tint: n.tint === undefined ? undefined : this.#colors(n.tint) }, here);
   }
 
   /**
@@ -308,12 +308,13 @@ export class Lowering {
     const raster = `${linearKey(rm)}|${this.#brush.ratio}`;
     const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, rm);
     const grid = tilesOver(vis);
+    const tint = n.tint === undefined ? undefined : this.#colors(n.tint);
     const tiles = readsSurroundings(v) ? [wholeLayer(grid, { raster, name: v.key })] : grid.map((t) => ({ key: `${raster}|${t.x0 / TILE},${t.y0 / TILE}`, tile: t }));
     for (const { key, tile } of tiles) {
       const job = this.#tileJob(v, { key, tile, rm, ground, here });
       if (isEmpty(job.rect)) continue;
       const shifted = { x0: job.rect.x0 + ix, y0: job.rect.y0 + iy, x1: job.rect.x1 + ix, y1: job.rect.y1 + iy };
-      const item: Item = { k: "layer", job, mask: undefined, opacity: n.opacity, mode: modeOf(n.blend), erase: n.erase, shift: [ix, iy], box: clipBox(here.clip, shifted), clip: here.clip };
+      const item: Item = { k: "layer", job, mask: undefined, opacity: n.opacity, mode: modeOf(n.blend), erase: n.erase, shift: [ix, iy], box: clipBox(here.clip, shifted), clip: here.clip, tint };
       if (!isEmpty(item.box)) here.job.items.push(item);
     }
   }
@@ -347,7 +348,7 @@ export class Lowering {
     here.job.items.push({ k: "shape", piece: p, paint: d.paint, box, mode: d.mode, erase: d.erase, clip: here.clip, mat: d.mat });
   }
 
-  #layer(l: { job: Job; mask: Job | undefined; opacity: number; mode: number; erase: boolean; mat?: Rgba | undefined }, here: Here): void {
+  #layer(l: { job: Job; mask: Job | undefined; opacity: number; mode: number; erase: boolean; mat?: Rgba | undefined; tint?: Rgba | undefined }, here: Here): void {
     const area = l.mask === undefined ? l.job.rect : inter(l.job.rect, l.mask.rect);
     const item: Item = { k: "layer", ...l, box: clipBox(here.clip, area), clip: here.clip };
     if (!isEmpty(item.box)) here.job.items.push(item);

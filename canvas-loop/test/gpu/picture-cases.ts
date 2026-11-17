@@ -70,6 +70,17 @@ export async function placeOptions(handle: GpuHandle): Promise<void> {
     ];
   } });
   assert.deepEqual(rgbaAt(multiplied, [50, 20]), [255, 0, 0, 255], "yellow × red is red");
+  // A tint moves the colours toward its colour by its alpha and keeps the picture's alpha: through kept tiles and through an image's layer.
+  const tinted = await renderOnce(handle, { size, draw: (v) => [
+    v.place(square(v), 10, 10, { tint: "rgba(0, 0, 255, 0.25)" }),
+    v.place(square(v), 40, 10, { tint: "#0000ff", opacity: 0.5 }),
+    v.at({ scale: 10 }, v.place(v.pixels({ key: "red", width: 2, height: 2 }, (im) => im.data.set([255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255])), 7, 1, { tint: "rgba(0, 0, 255, 0.5)" })),
+  ] });
+  // rgbaAt reads premultiplied bytes.
+  for (const [x, want] of [[20, [191, 0, 64, 255]], [50, [0, 0, 128, 128]], [80, [128, 0, 128, 255]]] as const) {
+    const got = rgbaAt(tinted, [x, 20]);
+    assert.ok(got.every((c, i) => Math.abs(c - (want[i] ?? 0)) <= 1), `tint at x=${x}: ${got.join(",")}, want ${want.join(",")}`);
+  }
 }
 
 /** `background` inside a picture fills the picture's box under the placement, not the canvas. */

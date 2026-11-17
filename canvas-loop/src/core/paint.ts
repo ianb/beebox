@@ -335,6 +335,8 @@ export interface PlaceOptions {
   readonly opacity?: number;
   readonly blend?: BlendMode;
   readonly erase?: boolean;
+  /** A colour the picture's colours move toward, by the colour's alpha (`"oklch(0.85 0.04 240 / 0.4)"`: 40% of the way); the picture's alpha is kept. Applied as the kept image is laid down, so it costs no new version. */
+  readonly tint?: string;
   /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
   readonly name?: string;
 }

@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **`place(…, { tint })`.** A colour the placed picture's colours move
+  toward, by the colour's alpha, keeping the picture's alpha. It is applied
+  as the kept image is laid down (a per-draw value in the draw shader), so
+  far trees can take haze from one picture with no new version or layer.
 - **Perceptual colours.** Every colour reads `oklch()`, `oklab()` and
   `color-mix(in oklab | oklch | srgb, …)`, parsed by canvas-loop itself so
   both runtimes agree (a 2D context refused them headless and would read

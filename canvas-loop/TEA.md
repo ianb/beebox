@@ -444,8 +444,11 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
 - `v.picture({ key, width, height, deps?, paper? }, body)` returns a
   `Picture`. `body` returns the picture's drawing in the picture's own
   coordinates, 0..width and 0..height. `v.place(picture, x, y, { opacity?,
-  blend?, erase?, material? }?)` puts its top-left at (x, y), under the scopes
-  around it.
+  blend?, erase?, material?, tint? }?)` puts its top-left at (x, y), under the
+  scopes around it. `tint` is a colour the picture's colours move toward, by
+  the colour's alpha: `tint: "oklch(0.85 0.04 240 / 0.4)"` takes a far tree
+  40% of the way to haze. It is applied as the kept image is laid down, so
+  it makes no new version.
 - A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
   only when the version is new, and a new version is drawn again at every
   scale it is placed at: changing `deps` costs a full draw (see

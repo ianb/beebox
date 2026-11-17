@@ -470,6 +470,11 @@ Examples: [`paint`](./src/examples/paint-tea.ts) — a chain of pictures, one st
 
 ### Recipes
 
+- **Distance.** Place far copies of a picture with a `tint` toward the sky's
+  haze, stronger with distance:
+  ``v.place(tree, x, y, { tint: `oklch(0.86 0.03 230 / ${0.5 * depth})` })``.
+  One picture serves every depth.
+
 - **Light under a night shade.** Darken the page with a multiply rect, then
   draw lit windows and lamps after it with `blend: "screen"` in their style,
   or as a picture placed with `{ blend: "screen" }`. For real light and

@@ -139,7 +139,7 @@ function nodeLine(n: SceneNode, cx: LightContext): string {
       return `light ${l.kind} at (${r(l.at[0])},${r(l.at[1])}) height ${r(l.height)} ${l.color} energy ${r(l.energy)}${peakText(l, cx)}`;
     }
     case "place":
-      return `place ${versionName(n.picture)} at (${r(n.x)},${r(n.y)}) opacity ${n.opacity} blend ${n.blend}${n.erase ? " erase" : ""}`;
+      return `place ${versionName(n.picture)} at (${r(n.x)},${r(n.y)}) opacity ${n.opacity} blend ${n.blend}${n.erase ? " erase" : ""}${n.tint === undefined ? "" : ` tint ${n.tint}`}`;
   }
 }
 

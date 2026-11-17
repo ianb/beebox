@@ -167,10 +167,12 @@ export function checkColours(node: SceneNode, colors: ColorParser): void {
       if (node.lighting !== undefined) parse(`${where} lighting.ambient`, node.lighting.ambient);
       return;
     }
+    case "place":
+      if (node.tint !== undefined) parse("place tint", node.tint);
+      return;
     case "at":
     case "clip":
     case "mask":
-    case "place":
     case "debug":
       return;
   }

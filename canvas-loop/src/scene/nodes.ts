@@ -193,6 +193,8 @@ export interface PlaceNode {
   readonly erase: boolean;
   /** A material for the picture's shapes that have none, inside a lit group (R8). */
   readonly material: Material | undefined;
+  /** A colour the picture's colours move toward, by its alpha, as the kept image is laid down. */
+  readonly tint: string | undefined;
 }
 
 /** A light with its defaults filled in, in the coordinates of its call (R8). */

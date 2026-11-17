@@ -4,9 +4,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
-import type { Drawing, Picture, View } from "../../src/core/tea.js";
+import type { Drawing, Picture, PlaceOptions, View } from "../../src/core/tea.js";
 import { sceneOutline } from "../../src/scene/outline.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
+import { createCanvas } from "@napi-rs/canvas";
+import type { Ctx2D } from "../../src/core/ctx2d.js";
+import { colorsFrom } from "../../src/scene/colors.js";
 
 const usage = (message: RegExp) => (e: unknown): boolean => e instanceof SketchUsageError && message.test(e.message);
 
@@ -133,6 +136,21 @@ test("testing mode compares a kept version in its first frames, then every 30th 
   assert.equal(runs, 5, "recorded at frame 0, compared at frames 1, 2, 30 and 60");
   assert.deepEqual(warnings.slice(0, 30).flat(), [], "the change at frame 10 falls between audits");
   assert.match(warnings[30]?.[0] ?? "", /picture "card" \[1] drew differently from its kept version/);
+});
+
+test("a placement's tint is a colour, checked at the call", () => {
+  // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D, as in src/device/open.ts
+  const rec = new SceneRecorder({ width: 20, height: 20 }, { colors: colorsFrom(createCanvas(1, 1).getContext("2d") as unknown as Ctx2D) });
+  const placed = (tint: unknown) => (v: View): Drawing => {
+    // A sketch without types can pass anything: set it past the option's type.
+    const options: PlaceOptions = {};
+    Reflect.set(options, "tint", tint);
+    return v.place(v.picture({ key: "dot", width: 4, height: 4 }, () => v.rect(0, 0, 4, 4, { fill: "#000" })), 0, 0, options);
+  };
+  const node = rec.record(placed("oklch(0.8 0.05 240 / 0.4)")).scene.children[0];
+  assert.ok(node?.kind === "place" && node.tint === "oklch(0.8 0.05 240 / 0.4)");
+  assert.throws(() => rec.record(placed("bluish")), usage(/place tint "bluish" is not a CSS colour/));
+  assert.throws(() => rec.record(placed(3)), usage(/place tint must be a CSS colour string, got number/));
 });
 
 test("pixels fill once per version; a fully transparent fill warns in testing mode", () => {

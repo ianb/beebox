@@ -8,7 +8,8 @@
 // - DRAW_WGSL: the compositing probe's draw shader, reading coverage from the
 //   atlas instead of looping over edges. A draw is one quad over its box in the
 //   target layer; layers are premultiplied rgba8unorm. A draw's source (`src`)
-//   is a coverage piece (0), a layer (1, with a mask 2), a brushed mark in the
+//   is a coverage piece (0), a layer (1, with a mask 2; its colour holds a
+//   placement's tint), a brushed mark in the
 //   mark atlas painted (3) or carrying its own colours (4), or a glyph cell (5).
 //   Brushed marks lose grain to the paper and take their opacity here, once.
 //   In a lit group's material layers (R8) a draw's colour is replaced by its
@@ -160,6 +161,8 @@ fn source(d: Draw, pix: vec2f, cov: ptr<function, f32>) -> vec4f {
     case 1u, 2u: {
       *cov = 1.0;
       s = ld(srcT, pix, d.srcO) * d.opacity;
+      // A placement's tint: the colours move toward it by its alpha, the layer's alpha kept (zero: no tint).
+      s = vec4f(mix(s.rgb, d.color.rgb * s.a, d.color.a), s.a);
       if (d.src == 2u) { s = s * ld(maskT, pix, d.maskO).a; }
     }
     case 3u: { *cov = markAt(d, pix).a; s = paint(d, pix); }
