@@ -4,7 +4,8 @@ import type { EmissionDispatch } from "../../conversation/use-bound-emission/hoo
  * Composer + session action handlers for InteractiveChat: building and
  * dispatching the wrapped send payload, paste/drop image intake, the
  * zoomed-view / time-passed attribute builders, load-older paging, the
- * process/session controls, the composer keydown shortcuts, and the
+ * process/session controls, the composer keydown shortcuts and the
+ * page-wide chat keys (`shortcuts.ts`), and the
  * textarea focus/scroll effects. Bundled into one hook so the component
  * body stays focused on composition.
  */
@@ -25,6 +26,7 @@ import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../../../machines/chat
 import { openerSendDecision, type OpenerSendOutcome } from "../../../openers/opener-send";
 import { isComposing } from "../../../../lib/ime";
 import { useUndeliveredVerbs } from "./undelivered-verbs";
+import { useChatShortcuts } from "../../shortcuts";
 
 interface ChatActionsOpts {
   captureEmissionDispatch: () => EmissionDispatch;
@@ -48,6 +50,11 @@ interface ChatActionsOpts {
   onSend: () => void;
   isTranscribing: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  /** For Enter-while-dictating; see `shortcuts.ts`. */
+  transcription: Parameters<typeof useChatShortcuts>[0]["transcription"];
+  ensureComposerVisibleRef: React.MutableRefObject<() => void>;
+  /** Off under the native composer, which owns its own input. */
+  shortcutsEnabled: boolean;
   transcriptTick: string;
   typingMode: boolean;
   typingLocked: boolean;
@@ -60,7 +67,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    awaitPendingUploads, captureEmissionDispatch, sendDisabledReason,
+    awaitPendingUploads, captureEmissionDispatch, sendDisabledReason, transcription, ensureComposerVisibleRef, shortcutsEnabled,
   } = opts;
   const navigate = useNavigate();
 
@@ -243,6 +250,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   );
 
   useTextareaFocus({ isTranscribing, typingMode, textareaRef, transcriptTick });
+  useChatShortcuts({ enabled: shortcutsEnabled, textareaRef, ensureComposerVisibleRef, isTranscribing, transcription, readInput: inputStore.get, sendDisabledReason });
   const undeliveredVerbs = useUndeliveredVerbs({ captureEmissionDispatch, send, sessionId });
 
   return {
