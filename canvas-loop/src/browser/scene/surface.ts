@@ -20,6 +20,8 @@ import type { Scene } from "../../scene/nodes.js";
 import type { GpuHandle } from "../../device/open.js";
 import type { GpuLease, LeaseGpu } from "./shared-gpu.js";
 import { leaseGpu } from "./shared-gpu.js";
+import { PictureCosts } from "../../scene/picture-costs.js";
+import type { PictureCost } from "../../scene/picture-costs.js";
 
 /** Everything one `draw` produced (draft section 8). */
 type FrameRecord = ReturnType<SceneRecorder["record"]>;
@@ -78,6 +80,7 @@ export class SceneSurface implements DrawSurface {
   #frameQueued = false;
   #tail: Promise<void> = Promise.resolve();
   #log: (args: readonly unknown[]) => void = () => {};
+  readonly #costs = new PictureCosts();
   /** `draw` calls recorded, and frames put on screen. */
   records = 0;
   presents = 0;
@@ -140,6 +143,7 @@ export class SceneSurface implements DrawSurface {
   draw(model: unknown, params: ParamValues<ParamsDecl>): Drawn {
     const rec = this.#record(model, params);
     this.records++;
+    this.#costs.recorded(rec.pictures);
     for (const line of rec.logs) this.#log([line]);
     for (const w of rec.warnings) this.#log([`warning: ${w}`]);
     if (rec.cursor !== undefined && this.#d.canvas.style.cursor !== rec.cursor) this.#d.canvas.style.cursor = rec.cursor;
@@ -165,6 +169,11 @@ export class SceneSurface implements DrawSurface {
   /** Bytes and counts the renderer holds between frames (zero while asleep). */
   get held(): SurfaceRenderer["held"] | undefined {
     return this.#renderer?.held;
+  }
+
+  /** What new picture versions cost, by key, since the last call (picture-costs.ts): a dev readout of which pictures make frames slow. */
+  pictureCosts(): PictureCost[] {
+    return this.#costs.take();
   }
 
   /** Counts and CPU times of the last frame drawn. */
@@ -205,6 +214,7 @@ export class SceneSurface implements DrawSurface {
     const t0 = performance.now();
     try {
       const px = await renderer.present(scene, { ratio: this.#d.ratio, target: this.#context.getCurrentTexture(), read: this.capture });
+      if (renderer.stats.pictures.length > 0) this.#costs.lowered(renderer.stats.pictures);
       if (px !== undefined) this.lastPixels = px;
       if (px !== undefined && why === "wake") this.wakePixels = px;
     } catch (error) {

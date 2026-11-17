@@ -8,7 +8,7 @@ import type { Bounds } from "../core/paint.js";
 import { polylines } from "./geometry/flatten.js";
 import { apply } from "./mat.js";
 import type { Geom, Mat, SceneNode, ShapeNode } from "./nodes.js";
-import { geomBox, transformed } from "./bounds.js";
+import { geomBox, transformed, versionRect } from "./bounds.js";
 import type { Box } from "./bounds.js";
 
 /** A box with the first baseline found in it, or null for none. */
@@ -96,7 +96,10 @@ function nodeBox(n: SceneNode): LBox | null {
     case "mask":
       return listBox(n.body);
     case "place":
-      return { x0: n.x, y0: n.y, x1: n.x + n.picture.width, y1: n.y + n.picture.height, baseline: null };
+    {
+      const r = versionRect(n.picture);
+      return { x0: n.x + r.x0, y0: n.y + r.y0, x1: n.x + r.x1, y1: n.y + r.y1, baseline: null };
+    }
     case "background":
     case "light":
     case "debug":

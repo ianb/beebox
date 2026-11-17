@@ -4,9 +4,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SketchUsageError } from "../../src/core/errors.js";
-import type { Drawing, Picture, View } from "../../src/core/tea.js";
+import type { Drawing, Picture, PlaceOptions, View } from "../../src/core/tea.js";
 import { sceneOutline } from "../../src/scene/outline.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
+import { createCanvas } from "@napi-rs/canvas";
+import type { Ctx2D } from "../../src/core/ctx2d.js";
+import { colorsFrom } from "../../src/scene/colors.js";
+import { openTextMeasurer } from "../../src/device/open.js";
 
 const usage = (message: RegExp) => (e: unknown): boolean => e instanceof SketchUsageError && message.test(e.message);
 
@@ -121,6 +125,57 @@ test("a picture body has its own coordinates and box; it may not log, snapshot o
   }
 });
 
+test("testing mode compares a kept version in its first frames, then 30 frames after the last comparison; a stale capture that lasts is found then", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  let runs = 0;
+  const draw = (color: string) => (v: View): Drawing => v.place(v.picture({ key: "card", width: 20, height: 10, deps: [1] }, () => {
+    runs++;
+    return v.rect(0, 0, 5, 5, { fill: color });
+  }), 0, 0);
+  const warnings: (readonly string[])[] = [];
+  for (let frame = 0; frame <= 60; frame++) warnings.push(rec.record(draw(frame < 10 ? "#000" : "#fff")).warnings);
+  assert.equal(runs, 4, "recorded at frame 0, compared at frames 1, 2 and 32");
+  assert.deepEqual(warnings.slice(0, 32).flat(), [], "the change at frame 10 falls between audits");
+  assert.match(warnings[32]?.[0] ?? "", /picture "card" \[1] drew differently from its kept version/);
+  // Asked for only on odd frames, it is still compared: at the first ask 30 or more frames after the last comparison.
+  const odd = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  const seen: (readonly string[])[] = [];
+  for (let frame = 0; frame <= 40; frame++) seen.push(odd.record(frame % 2 === 1 || frame === 0 ? draw(frame < 3 ? "#000" : "#fff") : () => null).warnings);
+  assert.deepEqual(seen.slice(0, 31).flat(), []);
+  assert.match(seen[31]?.[0] ?? "", /picture "card" \[1] drew differently/);
+});
+
+test("a new version first asked for inside a re-record keeps its checks: a drawing its body drops still warns", () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { audit: true });
+  let level = 1;
+  const inner = (v: View): Picture => v.picture({ key: "leaf", width: 10, height: 10, deps: [level] }, () => {
+    if (level === 2) v.circle(2, 2, 1, { fill: "#000" });
+    return v.rect(0, 0, level, level, { fill: "#000" });
+  });
+  // The outer body reads `level` too, outside its deps: its frame-1 comparison asks for the new inner version.
+  const draw = (v: View): Drawing => v.place(v.picture({ key: "tree", width: 20, height: 20 }, () => v.place(inner(v), 0, 0)), 0, 0);
+  assert.deepEqual(rec.record(draw).warnings, []);
+  level = 2;
+  const again = rec.record(draw).warnings;
+  assert.ok(again.some((w) => /picture "tree" drew differently/.test(w)), again.join("\n"));
+  assert.ok(again.some((w) => /v\.circle made a drawing that was not returned.*\(at test\/scene\/recorder\.pictures\.test\.ts:\d+:\d+\)/.test(w)), again.join("\n"));
+});
+
+test("a placement's tint is a colour, checked at the call", () => {
+  // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D, as in src/device/open.ts
+  const rec = new SceneRecorder({ width: 20, height: 20 }, { colors: colorsFrom(createCanvas(1, 1).getContext("2d") as unknown as Ctx2D) });
+  const placed = (tint: unknown) => (v: View): Drawing => {
+    // A sketch without types can pass anything: set it past the option's type.
+    const options: PlaceOptions = {};
+    Reflect.set(options, "tint", tint);
+    return v.place(v.picture({ key: "dot", width: 4, height: 4 }, () => v.rect(0, 0, 4, 4, { fill: "#000" })), 0, 0, options);
+  };
+  const node = rec.record(placed("oklch(0.8 0.05 240 / 0.4)")).scene.children[0];
+  assert.ok(node?.kind === "place" && node.tint === "oklch(0.8 0.05 240 / 0.4)");
+  assert.throws(() => rec.record(placed("bluish")), usage(/place tint "bluish" is not a CSS colour/));
+  assert.throws(() => rec.record(placed(3)), usage(/place tint must be a CSS colour string, got number/));
+});
+
 test("pixels fill once per version; a fully transparent fill warns in testing mode", () => {
   const rec = new SceneRecorder({ width: 10, height: 10 }, { audit: true });
   let fills = 0;
@@ -141,7 +196,7 @@ test("pixels fill once per version; a fully transparent fill warns in testing mo
 
 test("place checks its picture and options; the outline lists each placed version once", () => {
   const rec = new SceneRecorder({ width: 100, height: 80 });
-  assert.throws(() => rec.record((v) => v.place({ width: 1, height: 1, get pictureBrand(): never { throw new Error("brand"); } }, 0, 0)), usage(/must come from v.picture or v.pixels/));
+  assert.throws(() => rec.record((v) => v.place({ x: 0, y: 0, width: 1, height: 1, get pictureBrand(): never { throw new Error("brand"); } }, 0, 0)), usage(/must come from v.picture or v.pixels/));
   assert.throws(() => rec.record((v) => v.place(v.picture({ key: "k", width: 1, height: 1 }, () => {}), 0, 0, { opacity: 2 })), /place opacity must be a number in 0..1/);
   const scene = rec.record((v) => {
     const p = v.picture({ key: "dot", width: 4, height: 4, deps: ["a"] }, () => v.circle(2, 2, 2, { fill: "#000" }));
@@ -210,4 +265,62 @@ test("poses that change every frame and come back (one walker, pose = frame % 4;
     }
     assert.deepEqual(warnings, []);
   }
+});
+
+test("a picture without a size sizes itself to everything its drawing paints, and places by its own origin", () => {
+  const rec = new SceneRecorder({ width: 200, height: 100 });
+  let runs = 0;
+  const seen: { box: number[]; bounds: unknown }[] = [];
+  const draw = (v: View): Drawing => {
+    const pic = v.picture({ key: "tree", deps: [1] }, () => {
+      runs++;
+      return [
+        v.line(0, 0, 0, -40, { stroke: "#000", weight: 6 }),
+        v.circle(10, -40, 10, { fill: "#0a0", effects: { glow: { blur: 4, color: "#ff0", strength: 1 } } }),
+        v.light({ kind: "point", at: [500, 500] }),
+      ];
+    });
+    const placed = v.place(pic, 100, 90);
+    seen.push({ box: [pic.x, pic.y, pic.width, pic.height], bounds: v.bounds(placed) });
+    return placed;
+  };
+  rec.record(draw);
+  rec.record(draw);
+  assert.equal(runs, 1, "the version is reused like a sized one");
+  // The line by a weight either way (a square cap's reach): x −6..6, y −46..6; the circle 0..20 × −50..−30, plus 3 × the glow's blur.
+  assert.deepEqual(seen[0]?.box, [-12, -62, 44, 68], "the box: the stroke's reach, the glow's reach, the light adding nothing");
+  assert.deepEqual(seen[0]?.bounds, { x: 88, y: 28, w: 44, h: 68, baseline: null }, "v.bounds of the placement is the box, moved by the placement");
+  const outline = sceneOutline(rec.record(draw).scene);
+  assert.match(outline, /picture "tree" \[1] 44×68 sized to its drawing from \(-12, -62\)/);
+});
+
+test("a self-sizing picture is its own version; it has no size to read, no background, no keepInside", async () => {
+  const rec = new SceneRecorder({ width: 100, height: 80 }, { text: await openTextMeasurer() });
+  const sizes: number[] = [];
+  rec.record((v) => [
+    v.place(v.picture({ key: "k", width: 30, height: 30 }, () => v.rect(0, 0, 5, 5, { fill: "#000" })), 0, 0),
+    v.place(v.picture({ key: "k" }, () => v.rect(0, 0, 5, 5, { fill: "#000" })), 0, 0),
+  ].map((n) => (sizes.push(v.bounds(n)?.w ?? -1), n)));
+  assert.deepEqual(sizes, [30, 5], "the sized and the self-sizing versions of one key are kept apart");
+  const inBody = (body: (v: View) => Drawing) => () => rec.record((v) => v.place(v.picture({ key: "bad" }, () => body(v)), 0, 0));
+  assert.throws(inBody((v) => v.rect(0, 0, v.width, 5, { fill: "#000" })), usage(/v\.width inside the body of picture "bad", which sizes itself from its drawing/));
+  assert.throws(inBody((v) => v.background("#fff")), usage(/v\.background \(it fills the picture's box\) inside the body of picture "bad"/));
+  assert.throws(inBody((v) => v.text("hi", { x: 0, y: 0 }, { keepInside: true })), usage(/v\.text with keepInside inside the body of picture "bad"/));
+  rec.record((v) => v.place(v.picture({ key: "label" }, () => v.text("hi", { x: 0, y: 0 })), 0, 0));
+  assert.throws(() => rec.record((v) => v.picture({ key: "half", width: 10 }, () => null) && null), usage(/picture "half": give both width and height, or neither/));
+  const empty: number[] = [];
+  rec.record((v) => {
+    const pic = v.picture({ key: "nothing" }, () => null);
+    empty.push(pic.x, pic.y, pic.width, pic.height);
+    return [v.place(pic, 3, 4)];
+  });
+  assert.deepEqual(empty, [0, 0, 0, 0], "a picture that paints nothing has an empty box at its origin");
+  // A brush tip under a squashing scale is weight × √|det| wide (12 here), not weight × the largest stretch (1200).
+  const squashed: number[] = [];
+  rec.record((v) => {
+    const pic = v.picture({ key: "squashed" }, () => v.at({ scale: [0.01, 100] }, v.line(0, 0, 0, 1, { stroke: "#000", weight: 12, brush: "ink" })));
+    squashed.push(pic.width, pic.height);
+    return [v.place(pic, 0, 0)];
+  });
+  assert.deepEqual(squashed, [16, 116], "the box: the tip's radius 6 and a 2 px edge either side; height 100 plus the same");
 });

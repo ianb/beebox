@@ -4,7 +4,8 @@ import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 
 /** One entry in a TEA events script: scripted input, a param edit, a trigger, or a snapshot. */
 export type TeaScriptEvent =
-  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string }
+  | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number; target?: string; quiet?: true }
+  | { frame: number; type: "mouseleave" }
   | { frame: number; type: "keydown" | "keyup"; key?: string }
   | { frame: number; type: "param"; name: string; value: number | boolean | string }
   | { frame: number; type: "trigger"; name: string }
@@ -140,6 +141,13 @@ function parseMouseEvent(params: { record: Record<string, unknown>; frame: numbe
   return { frame, type, target };
 }
 
+function parseLeaveEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {
+  const { record, frame, where } = params;
+  const extra = Object.keys(record).filter((key) => key !== "frame" && key !== "type");
+  if (extra.length > 0) throw new EventScriptError({ detail: `${where}: a mouseleave has no position or target, only "frame" and "type"; got ${extra.map((k) => `"${k}"`).join(", ")}` });
+  return { frame, type: "mouseleave" };
+}
+
 function parseSnapshotEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {
   const { record, frame, where } = params;
   const label = record["label"];
@@ -151,7 +159,53 @@ function parseSnapshotEvent(params: { record: Record<string, unknown>; frame: nu
   return event;
 }
 
-function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): TeaScriptEvent {
+/** Most moves one `mousepath` may expand to: a minute at 60 frames a second. */
+const PATH_MOVES = 3600;
+
+function readPoints(record: Record<string, unknown>, where: string): (readonly [number, number])[] {
+  const points = record["points"];
+  const ok = (p: unknown): p is [number, number] => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === "number" && Number.isFinite(n));
+  if (!Array.isArray(points) || points.length < 2 || !points.every(ok)) throw new EventScriptError({ detail: `${where}: a mousepath's "points" must be a list of two or more [x, y] pairs of finite numbers` });
+  return points;
+}
+
+/**
+ * `{ frame, type: "mousepath", points, frames }`: one `mousemove` a frame
+ * from `frame` to `frame + frames`, walking the polyline through `points` at
+ * an even speed, first at its first point and last at its last. The moves
+ * between are `quiet`: they do not make their frame a captured one.
+ */
+function parsePathEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent[] {
+  const { record, frame, where } = params;
+  const extra = Object.keys(record).filter((key) => !["frame", "type", "points", "frames"].includes(key));
+  if (extra.length > 0) throw new EventScriptError({ detail: `${where}: a mousepath takes "frame", "type", "points" and "frames"; got ${extra.map((k) => `"${k}"`).join(", ")}` });
+  const points = readPoints(record, where);
+  const frames = record["frames"];
+  if (typeof frames !== "number" || !Number.isInteger(frames) || frames < 1 || frames >= PATH_MOVES) throw new EventScriptError({ detail: `${where}: a mousepath's "frames" must be a whole number 1..${PATH_MOVES - 1}: the frames it takes from its first point to its last` });
+  const cum = [0];
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1] ?? [0, 0];
+    const [bx, by] = points[i] ?? [0, 0];
+    cum.push((cum[i - 1] ?? 0) + Math.hypot(bx - ax, by - ay));
+  }
+  const total = cum.at(-1) ?? 0;
+  const round = (n: number): number => Math.round(n * 100) / 100;
+  const at = (d: number): [number, number] => {
+    let i = 1;
+    while (i < points.length - 1 && (cum[i] ?? 0) < d) i++;
+    const [ax, ay] = points[i - 1] ?? [0, 0];
+    const [bx, by] = points[i] ?? [0, 0];
+    const span = (cum[i] ?? 0) - (cum[i - 1] ?? 0);
+    const t = span === 0 ? 1 : (d - (cum[i - 1] ?? 0)) / span;
+    return [round(ax + (bx - ax) * t), round(ay + (by - ay) * t)];
+  };
+  return Array.from({ length: frames + 1 }, (_, k) => {
+    const [x, y] = at((total * k) / frames);
+    return k === 0 || k === frames ? { frame: frame + k, type: "mousemove", x, y } : { frame: frame + k, type: "mousemove", x, y, quiet: true };
+  });
+}
+
+function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): TeaScriptEvent | TeaScriptEvent[] {
   const { raw, index, decl } = params;
   const where = `event[${index}]`;
   if (!isRecord(raw)) {
@@ -165,19 +219,21 @@ function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): Te
   if (type === "param") return parseParamEvent({ record: raw, frame, decl, where });
   if (type === "trigger") return parseTriggerEvent({ record: raw, frame, decl, where });
   if (type === "snapshot") return parseSnapshotEvent({ record: raw, frame, where });
+  if (type === "mouseleave") return parseLeaveEvent({ record: raw, frame, where });
+  if (type === "mousepath") return parsePathEvent({ record: raw, frame, where });
   if (isMouseType(type)) return parseMouseEvent({ record: raw, frame, type, where });
   if (isKeyType(type)) return parseKeyEvent({ record: raw, frame, type, where });
   throw new EventScriptError({
-    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup|param|trigger|snapshot`,
+    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|mousepath|mouseleave|keydown|keyup|param|trigger|snapshot`,
   });
 }
 
-/** Validate and normalize a TEA events JSON array against the sketch's param declaration. */
+/** Validate and normalize a TEA events JSON array against the sketch's param declaration; a `mousepath` becomes its moves, in its place in file order. */
 export function parseTeaEvents(raw: unknown, decl: ParamsDecl): TeaScriptEvent[] {
   if (!Array.isArray(raw)) {
     throw new EventScriptError({ detail: "top level must be a JSON array of events" });
   }
-  return raw.map((entry, index) => parseOne({ raw: entry, index, decl }));
+  return raw.flatMap((entry, index) => parseOne({ raw: entry, index, decl }));
 }
 
 /** Group events by frame, preserving file order within each frame. */

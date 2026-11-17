@@ -72,6 +72,7 @@ type Msg =
   | { type: "mousedown"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "mouseup"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "mousemove"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mouseleave" }
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }
@@ -84,6 +85,12 @@ the page, and a press always ends with `mouseup`, even when the finger leaves
 the canvas or the browser cancels the touch. A finger has no hover: a touch
 sketch gets `mousemove` only while pressed. Hit areas a fingertip must land
 on want to be about 40 pixels across.
+
+`mouseleave` says the pointer is gone: the mouse moved off the canvas, or a
+finger lifted (after its `mouseup`). Clear hover state on it. A press that
+slides off the canvas keeps sending `mousemove` until its `mouseup`; the
+`mouseleave` comes after. An events file sends it as
+`{ "frame": 90, "type": "mouseleave" }`, with no position.
 
 Example: [`bounce`](./src/examples/bounce-tea.ts) — a drag as a mode on the model, from `mousedown` to `mouseup`.
 
@@ -205,7 +212,19 @@ A brush preset kept in a variable needs its type, or TypeScript widens
 `preset` to `string`: `const SHADE: BrushPreset = { preset: "bristle", load: 0.4 }`.
 [BRUSHES.md](./BRUSHES.md) lists the presets, their fields and gestures.
 
-Colors are CSS strings only (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`).
+Colors are CSS strings: hex (`"#38bdf8"`), names (`"tomato"`), `rgb()`,
+`rgba()`, `hsl()`, and the perceptual `oklch()`, `oklab()` and
+`color-mix()` (`none` reads as 0). Build a palette in OKLCH: lightness 0..1, chroma 0..about
+0.37, hue in degrees, so equal steps look equal and a hue keeps its
+lightness. Mix two colours with `color-mix(in oklab, a, b 30%)` (also `in
+oklch`, the short way round the hue circle, and `in srgb`); the colours
+are mixed as given, then fitted. Every colour draws in sRGB: one outside it
+keeps its lightness and hue and loses chroma until it fits.
+
+```ts
+const LEAF = (light: number, hue: number): string => `oklch(${light} 0.14 ${hue})`;
+const mist = (c: string, t: number): string => `color-mix(in oklab, ${c}, oklch(0.9 0.03 230) ${Math.round(t * 100)}%)`;
+```
 
 The style is checked at each call. An unknown key, a negative `weight`, an
 unknown brush name or a color that does not parse throws an error that names
@@ -359,7 +378,8 @@ second function that computes its size.
 - Text is exactly what `textBounds` gives. `baseline` is the first text's
   alphabetic baseline y, or `null` when the drawing has no text or a rotation
   or skew turns it.
-- A placed picture is its declared `width × height`. Backgrounds, lights and
+- A placed picture is its box: `width × height` from its origin, or for one
+  that sizes itself, the box around what it paints. Backgrounds, lights and
   `erase` shapes add nothing; a clip cuts the box.
 - Measuring does not return the drawing: return it as well, or testing mode
   warns that it was not returned.
@@ -406,29 +426,46 @@ drawn in a few poses, a sign. A picture's drawing is reused across frames, so
 a still part costs nothing to keep.
 
 ```ts
+// Drawn around the middle of its floor; it sizes itself.
 const STALL = (v: View, colour: string): Picture =>
-  v.picture({ key: "stall", width: 120, height: 90, deps: [colour] }, () => [
-    v.rect(0, 30, 120, 60, { fill: colour }),
-    v.polygon([[0, 30], [60, 0], [120, 30]], { fill: "#7c2d12" }),
+  v.picture({ key: "stall", deps: [colour] }, () => [
+    v.rect(-60, -60, 120, 60, { fill: colour }),
+    v.polygon([[-60, -60], [0, -90], [60, -60]], { fill: "#7c2d12" }),
   ]);
 
 export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   const red = STALL(v, "#b91c1c");
   return [
-    v.place(red, 20, 200),
-    v.place(STALL(v, "#1d4ed8"), 160, 200),          // a second version
-    v.at({ translate: [300, 200], scale: 0.5 }, v.place(red, 0, 0)),
+    v.place(red, 80, 290),                           // floor's middle at (80, 290)
+    v.place(STALL(v, "#1d4ed8"), 220, 290),          // a second version
+    v.at({ translate: [360, 290], scale: 0.5 }, v.place(red, 0, 0)),
   ];
 }
 ```
 
-- `v.picture({ key, width, height, deps?, paper? }, body)` returns a
+- `v.picture({ key, width?, height?, deps?, paper? }, body)` returns a
   `Picture`. `body` returns the picture's drawing in the picture's own
-  coordinates, 0..width and 0..height. `v.place(picture, x, y, { opacity?,
-  blend?, erase?, material? }?)` puts its top-left at (x, y), under the scopes
+  coordinates. `v.place(picture, x, y, { opacity?, blend?, erase?,
+  material?, tint? }?)` puts the body's (0, 0) at (x, y), under the scopes
   around it.
-- A **version** is the key, the size, the `paper` and the values of `deps`. `body` runs
-  only when the version is new. Put in `deps` everything the body reads that
+- **Size.** Leave `width` and `height` out and the picture sizes itself:
+  its box is the box around everything its drawing paints, strokes, brush
+  marks, blur, glow and shadow included. Draw it around a point that is
+  convenient to place by (a tree's base at (0, 0), placed at the base), not
+  inside a box you compute. `picture.x`, `picture.y`, `picture.width` and
+  `picture.height` give its box in its own coordinates (`x`, `y` are often
+  negative). Its body has no size to read: `v.width`, `v.height`,
+  `v.background` and `keepInside` text are errors there. Give a size when the
+  body needs one (a background, a full-canvas layer) or the picture should
+  take a fixed room in a layout: the box is then 0..width × 0..height.
+  Either way the size clips nothing: drawing outside the box is kept. `tint` is a colour the picture's colours move toward, by
+  the colour's alpha: `tint: "oklch(0.85 0.04 240 / 0.4)"` takes a far tree
+  40% of the way to haze. It is applied as the kept image is laid down, so
+  it makes no new version.
+- A **version** is the key, the size (or that it has none), the `paper` and the values of `deps`. `body` runs
+  only when the version is new, and a new version is drawn again at every
+  scale it is placed at: changing `deps` costs a full draw (see
+  [BRUSHES.md](./BRUSHES.md#animation-and-pictures)). Put in `deps` everything the body reads that
   can change: a colour, a pose name, a param. `deps` are plain data (numbers,
   strings, booleans, `null`, and arrays and objects of these) compared by
   value. Leave `deps` out for a drawing that never changes.
@@ -436,16 +473,18 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   version without running `body`. A `Picture` from an earlier frame is
   refused at `place`. Versions not asked for stay kept for a while (within a
   memory budget), so poses that come back are not recorded again.
-- Inside `body`, `v.width` and `v.height` are the picture's size, and
-  `keepInside` text keeps inside the picture's box. Drawing outside the box
-  is kept, so glows and shadows can spill over it.
+- Inside a sized picture's `body`, `v.width` and `v.height` are the
+  picture's size, and `keepInside` text keeps inside its box.
 - `log`, `snapshot`, `cursor` and `control` are errors inside `body`.
 - A placed picture draws as if its drawing were drawn there: brush widths,
   effect lengths and text follow the scale of the scopes around it.
-- Headless runs record every picture again each frame and compare it with
-  the kept version. A body that reads a value not in `deps` warns, naming the
-  picture and the first difference. A picture whose `deps` change in every
-  frame warns too: it gains nothing.
+- Headless runs record a kept version again and compare: in the frame that
+  made it, in the next two frames, and then whenever it is asked for 30 or
+  more frames after its last comparison. A body that
+  reads a value not in `deps` warns, naming the picture and the first
+  difference; a value that changes and comes back within half a second can
+  go unseen. A picture whose `deps` change in every frame warns too: it gains
+  nothing.
 - `paper` sets the paper the picture's brushes use. A picture never takes
   the paper of the scope it is placed in.
 
@@ -602,6 +641,11 @@ Every voice has `id`, `at` (the frame it starts on) and `gain` 0..1 (default 0.5
 - `pluck` (`freq`, `decay` seconds, `brightness` 0..1), `tone` (`freq`,
   `duration`, `wave` sine/triangle/square), `noise` (`duration`): raw
   primitives. A `square` tone is harsh; avoid it.
+- `noise` takes `color` (`white`, the default, hisses; `pink` rustles like
+  leaves; `brown` rumbles like wind) and `attack` (seconds to swell in, less
+  than `duration`; it then falls away over the rest). Without `attack` it starts
+  loud and dies away fast, a click or a swish. A gust of wind:
+  ``{ id: `gust-${n}`, at, kind: "noise", color: "brown", duration: 4, attack: 1.5, gain: 0.2 }``.
 
 `u.scaleNote(step, { root, scale })` returns a note name `step` scale steps
 from `root` (default `"C4"`; negative steps go down). `scale` is `pentatonic`

@@ -6,7 +6,8 @@ import type { Runtime } from "./runtime/engine.js";
  * Wire pointer/key listeners on the canvas straight into the runtime's input
  * methods — the same dispatch path scripted events take. Pointer events cover
  * mouse, touch and pen; each reaches the sketch as `mousedown`/`mousemove`/
- * `mouseup`, so sketches and events files are the same for every device.
+ * `mouseup`/`mouseleave`, so sketches and events files are the same for every
+ * device.
  * Returns a teardown that removes every listener.
  */
 export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => void {
@@ -42,6 +43,11 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     send("mouseup", e);
   };
+  // The primary pointer left the canvas, or a finger lifted. While pressed, capture keeps its moves; the leave comes after the release.
+  const onLeave = (e: PointerEvent): void => {
+    if (!e.isPrimary || pressedId !== undefined) return;
+    runtime.pointer({ type: "mouseleave" });
+  };
   const onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
     runtime.enableSound();
@@ -55,6 +61,7 @@ export function wireInput(canvas: HTMLCanvasElement, runtime: Runtime): () => vo
     ["pointerup", release],
     ["pointercancel", release],
     ["lostpointercapture", release],
+    ["pointerleave", onLeave],
   ] as const;
   for (const [type, fn] of listeners) canvas.addEventListener(type, fn);
   canvas.addEventListener("keydown", onKeyDown);

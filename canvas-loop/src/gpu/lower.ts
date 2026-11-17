@@ -11,7 +11,7 @@ import type { BlendMode } from "../core/paint.js";
 import type { BrushExpander } from "../scene/brush/expand.js";
 import type { ColorParser } from "../scene/colors.js";
 import { det, invert, mul } from "../scene/mat.js";
-import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
+import type { Geom, GroupNode, Mat, PaperSettings, PictureVersion, PixelsVersion, PlaceNode, SceneNode, Scene, ShapeNode, TextNode } from "../scene/nodes.js";
 import { MAX_CASTER_HEIGHT } from "../scene/nodes.js";
 import type { Effects, Material } from "../core/tea.js";
 import type { Rgba } from "../scene/colors.js";
@@ -35,8 +35,15 @@ import { linearKey } from "../scene/hash.js";
 import type { RasterCache } from "./rasters.js";
 import { TILE, tilesOver, wholeLayer } from "./rasters.js";
 import { readsSurroundings } from "./picture-reads.js";
+import { versionRect } from "../scene/bounds.js";
 import { ShapeGeometry } from "./shape-geometry.js";
 import { lineQuads } from "./text.js";
+
+/** A version's box as a rect geometry (a self-sizing picture's from its drawing), where its `background` fills. */
+const rectOf = (v: PictureVersion | PixelsVersion): Geom => {
+  const r = versionRect(v);
+  return { kind: "rect", x: r.x0, y: r.y0, w: r.x1 - r.x0, h: r.y1 - r.y0 };
+};
 
 interface Here {
   readonly job: Job;
@@ -75,6 +82,8 @@ export class Lowering {
   readonly #path = new NodePath();
   /** Picture tiles lowered this frame, shared by every placement that needs them. */
   readonly #drawing = new Map<PictureVersion, Map<string, Job>>();
+  /** Per picture key: tiles lowered this frame and their CPU milliseconds (`FrameStats.pictures`). */
+  readonly #tileCost = new Map<string, { key: string; tiles: number; ms: number }>();
 
   constructor(options: { colors: ColorParser; width: number; height: number; ratio: number; expander: BrushExpander; glyphs: GlyphCache; kept: KeptValues; rasters: RasterCache; brushLimit: number }) {
     this.#geo = new ShapeGeometry(options.kept);
@@ -90,6 +99,11 @@ export class Lowering {
   /** CPU milliseconds this lowering spent on brushed strokes: expansion, preparation and placement (`FrameStats.cpu.brush`). */
   get brushMs(): number {
     return this.#brushMs;
+  }
+
+  /** Per picture key, the tiles this lowering drew afresh and the CPU milliseconds they took (nested pictures count in each). */
+  get pictureTiles(): { key: string; tiles: number; ms: number }[] {
+    return [...this.#tileCost.values()];
   }
 
   lower(scene: Scene): Job {
@@ -268,7 +282,7 @@ export class Lowering {
       this.#placeTiles(n, { version: v, m, here });
       return;
     }
-    const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m);
+    const ground = fillRings(rectOf(v), m);
     // R8: the placement's material for the picture's shapes that have none.
     const mat = here.mat === undefined ? undefined : { ...here.mat, fallback: n.material ?? here.mat.fallback };
     const job = this.#job(`place ${v.kind} "${v.key}"`, {
@@ -279,7 +293,8 @@ export class Lowering {
         else this.#draw({ shape: linShape(fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, m)), tx: 0, ty: 0, paint: imageRec(v, m), mode: 0, erase: false, mat: this.#matColor(inner, undefined) }, inner);
       },
     });
-    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase }, here);
+    // A material layer holds material values, not colours: no tint there.
+    this.#layer({ job, mask: undefined, opacity: n.opacity, mode: mat === undefined ? modeOf(n.blend) : 0, erase: n.erase, tint: mat === undefined && n.tint !== undefined ? this.#colors(n.tint) : undefined }, here);
   }
 
   /**
@@ -299,14 +314,15 @@ export class Lowering {
     const vis = { x0: here.visible.x0 - ix, y0: here.visible.y0 - iy, x1: here.visible.x1 - ix, y1: here.visible.y1 - iy };
     if (isEmpty(vis)) return;
     const raster = `${linearKey(rm)}|${this.#brush.ratio}`;
-    const ground = fillRings({ kind: "rect", x: 0, y: 0, w: v.width, h: v.height }, rm);
+    const ground = fillRings(rectOf(v), rm);
     const grid = tilesOver(vis);
+    const tint = n.tint === undefined ? undefined : this.#colors(n.tint);
     const tiles = readsSurroundings(v) ? [wholeLayer(grid, { raster, name: v.key })] : grid.map((t) => ({ key: `${raster}|${t.x0 / TILE},${t.y0 / TILE}`, tile: t }));
     for (const { key, tile } of tiles) {
       const job = this.#tileJob(v, { key, tile, rm, ground, here });
       if (isEmpty(job.rect)) continue;
       const shifted = { x0: job.rect.x0 + ix, y0: job.rect.y0 + iy, x1: job.rect.x1 + ix, y1: job.rect.y1 + iy };
-      const item: Item = { k: "layer", job, mask: undefined, opacity: n.opacity, mode: modeOf(n.blend), erase: n.erase, shift: [ix, iy], box: clipBox(here.clip, shifted), clip: here.clip };
+      const item: Item = { k: "layer", job, mask: undefined, opacity: n.opacity, mode: modeOf(n.blend), erase: n.erase, shift: [ix, iy], box: clipBox(here.clip, shifted), clip: here.clip, tint };
       if (!isEmpty(item.box)) here.job.items.push(item);
     }
   }
@@ -318,7 +334,10 @@ export class Lowering {
     if (kept !== undefined) return { name: `kept tile ${key} of "${v.key}"`, rect: kept.rect, items: [], clips: [], fx: undefined, tex: kept.tex, keptPeaks: kept.peaks };
     const drawing = this.#drawing.get(v)?.get(key);
     if (drawing !== undefined) return drawing;
+    const t0 = performance.now();
     const job = this.#job(`place picture "${v.key}" tile ${key}`, { effects: undefined, here: { ...a.here, matrix: rm, visible: tile, seen: tile, ground: a.ground, groundMatrix: rm }, body: (inner) => this.#nodes(v.children, inner) });
+    const cost = this.#tileCost.get(v.key) ?? { key: v.key, tiles: 0, ms: 0 };
+    this.#tileCost.set(v.key, { key: v.key, tiles: cost.tiles + 1, ms: cost.ms + performance.now() - t0 });
     if (isEmpty(job.rect)) this.#rasters.store(v, { key, rect: EMPTY, tex: undefined });
     else job.keep = { version: v, key };
     const map = this.#drawing.get(v) ?? new Map<string, Job>();
@@ -337,7 +356,7 @@ export class Lowering {
     here.job.items.push({ k: "shape", piece: p, paint: d.paint, box, mode: d.mode, erase: d.erase, clip: here.clip, mat: d.mat });
   }
 
-  #layer(l: { job: Job; mask: Job | undefined; opacity: number; mode: number; erase: boolean; mat?: Rgba | undefined }, here: Here): void {
+  #layer(l: { job: Job; mask: Job | undefined; opacity: number; mode: number; erase: boolean; mat?: Rgba | undefined; tint?: Rgba | undefined }, here: Here): void {
     const area = l.mask === undefined ? l.job.rect : inter(l.job.rect, l.mask.rect);
     const item: Item = { k: "layer", ...l, box: clipBox(here.clip, area), clip: here.clip };
     if (!isEmpty(item.box)) here.job.items.push(item);

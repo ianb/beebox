@@ -123,6 +123,7 @@ export function update(model: DeepReadonly<Model>, msg: Msg): Model {
     case "mousedown":
     case "mouseup":
     case "mousemove":
+    case "mouseleave":
     case "trigger":
       return { ...model, lastUp: { ...model.lastUp }, soles: [...model.soles] };
   }

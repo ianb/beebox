@@ -93,17 +93,47 @@ function tone(voice: ToneVoice, sampleRate: number): Float32Array<ArrayBuffer> {
   return out;
 }
 
+/** A source of white, pink or brown noise, each about as loud as white noise at its peaks. */
+function noiseSource(color: NonNullable<NoiseVoice["color"]>, random: SeededRandom): () => number {
+  const white = (): number => random.next() * 2 - 1;
+  if (color === "white") return white;
+  if (color === "brown") {
+    // Integrated white noise, leaking back toward zero so it does not drift.
+    let b = 0;
+    return () => {
+      b = (b + 0.02 * white()) / 1.02;
+      return b * 3.5;
+    };
+  }
+  // Pink: Paul Kellet's economy filter, -3 dB an octave.
+  let [b0, b1, b2] = [0, 0, 0];
+  return () => {
+    const w = white();
+    b0 = 0.99765 * b0 + w * 0.099046;
+    b1 = 0.963 * b1 + w * 0.2965164;
+    b2 = 0.57 * b2 + w * 1.0526913;
+    return (b0 + b1 + b2 + w * 0.1848) * 0.25;
+  };
+}
+
+/** Without an attack, an exponential fade to 1/1000; with one, a half-cosine rise over `attack` and fall over the rest. */
+function noiseEnvelope(i: number, a: { length: number; attack: number | undefined }): number {
+  if (a.attack === undefined) return Math.exp((-Math.log(1000) / a.length) * i);
+  if (i < a.attack) return 0.5 - 0.5 * Math.cos((Math.PI * i) / a.attack);
+  return 0.5 + 0.5 * Math.cos((Math.PI * (i - a.attack)) / Math.max(1, a.length - a.attack));
+}
+
 function noise(
   voice: NoiseVoice,
   sampleRate: number,
 ): Float32Array<ArrayBuffer> {
   const length = Math.ceil(voice.duration * sampleRate);
   const out = new Float32Array(length);
-  const random = new SeededRandom(seedOf(voice.id));
+  const next = noiseSource(voice.color ?? "white", new SeededRandom(seedOf(voice.id)));
   const gain = voice.gain ?? DEFAULT_GAIN;
-  const fade = Math.log(1000) / length;
+  const attack = voice.attack === undefined ? undefined : Math.round(voice.attack * sampleRate);
   for (let i = 0; i < length; i += 1)
-    out[i] = (random.next() * 2 - 1) * gain * Math.exp(-fade * i);
+    out[i] = Math.max(-1, Math.min(1, next())) * gain * noiseEnvelope(i, { length, attack });
   return out;
 }
 

@@ -14,7 +14,7 @@ import { checkKeys, checkName } from "./options.js";
 
 const STYLE_KEYS = ["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects", "name"];
 const GROUP_KEYS = ["name", "opacity", "blend", "effects", "lighting", "clip"];
-const PLACE_KEYS = ["name", "material", "opacity", "blend", "erase"];
+const PLACE_KEYS = ["name", "material", "opacity", "blend", "erase", "tint"];
 
 export function copyPoints(points: readonly Vec2[]): Vec2[] {
   return points.map((p): Vec2 => [p[0], p[1]]);
@@ -165,14 +165,15 @@ export function resolveGroup(options: GroupOptions): { name: string | undefined;
 }
 
 /** Placement options (R7), checked and copied. */
-export function resolvePlace(options: PlaceOptions | undefined): { name: string | undefined; opacity: number; blend: BlendMode; erase: boolean; material: Material | undefined } {
+export function resolvePlace(options: PlaceOptions | undefined): { name: string | undefined; opacity: number; blend: BlendMode; erase: boolean; material: Material | undefined; tint: string | undefined } {
   const o = options ?? {};
   checkKeys("place", { options: o, keys: PLACE_KEYS, what: "option" });
   const opacity = o.opacity ?? 1;
   assertUnit(opacity, "place opacity");
   const blend = o.blend ?? "normal";
   compositeOp(blend);
-  return { name: checkName(o.name, "place"), opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place") };
+  if (o.tint !== undefined && typeof o.tint !== "string") throw new SketchUsageError({ detail: `place tint must be a CSS colour string, got ${typeof o.tint}` });
+  return { name: checkName(o.name, "place"), opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place"), tint: o.tint };
 }
 
 /** A rounded rectangle as path commands (corner arcs as quadratic curves), as today's `roundRect`. */

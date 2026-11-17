@@ -24,7 +24,7 @@ import { readDirBytes, readTranscript, teaRunOptions, tmpDir } from "../helpers.
 import { parity } from "./compare.js";
 import { CASE_NAMES, drawDraft, fixtures } from "./fixtures.js";
 import { brushBlends, brushParity, frozen, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
-import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
+import { pictureBackground, pictureSpill, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
 import { rotatedText, subRun, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
@@ -197,6 +197,7 @@ onGpu("paper is scoped to its group; a picture keeps the paper where it was reco
 onGpu("placing a picture replays it under the placement transform (R7)", placementReplays);
 onGpu("placement opacity, erase and blend apply to the picture's layer", placeOptions);
 onGpu("background inside a picture fills the picture's box, not the canvas", pictureBackground);
+onGpu("a picture's size never clips its drawing; a self-sizing box holds every painted pixel", pictureSpill);
 onGpu("pixels images are sampled bilinearly at their own resolution", pixelImages);
 onGpu("text sits where today's does, at today's size, through the glyph atlas", async (handle, t) => {
   if (text !== undefined) await textParity(handle, { t, text });
@@ -304,6 +305,53 @@ for (const c of CASES) {
     }
   });
 }
+
+onGpu("section 10: a key with a new version each frame, placed at two fixed scales, gets a hint naming new versions, not scale", async () => {
+  const out = await runCase({
+    id: "growing-picture",
+    mistake: "a growing picture with a new version every frame, placed at two depths",
+    channel: "none",
+    names: [],
+    frames: 6,
+    draw: (v, m) => {
+      const grow = v.picture({ key: "sapling", width: 20, height: 20, deps: [m.t] }, () => v.rect(0, 20 - m.t, 4, m.t, { fill: "#2a9d8f" }));
+      return [0.5, 1].map((s) => v.at({ scale: s }, v.place(grow, 2, 2)));
+    },
+  });
+  const hints = out.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(hints.length, 1, hints.join("\n"));
+  assert.match(hints[0] ?? "", /hint: picture "sapling" got new versions in each of the last 3 frames \(now deps \[\d+]\), each placed at more than one scale or rotation \(now \[1, 0, 0, 1]\)/);
+  // One version, placed at two scales in its first frame and at a new scale in each of the next two: the scale is the cause.
+  const scaled = await runCase({
+    id: "one-version-new-scales",
+    mistake: "one version placed at a new scale each frame",
+    channel: "none",
+    names: [],
+    frames: 4,
+    draw: (v, m) => {
+      const pic = v.picture({ key: "stone", width: 20, height: 20 }, () => v.rect(0, 0, 4, 4, { fill: "#2a9d8f" }));
+      return (m.t === 1 ? [0.5, 1] : [1 + m.t * 0.25]).map((s) => v.at({ scale: s }, v.place(pic, 2, 2)));
+    },
+  });
+  const said = scaled.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(said.length, 1, said.join("\n"));
+  assert.match(said[0] ?? "", /hint: picture "stone" was placed at a scale or rotation it has no kept image for/);
+  // An old version at a new scale each frame, beside a new version of the same key placed once each frame: still the scale.
+  const beside = await runCase({
+    id: "old-version-new-scales",
+    mistake: "an old version at new scales while the key adds versions",
+    channel: "none",
+    names: [],
+    frames: 6,
+    draw: (v, m) => {
+      const pic = (n: number): Picture => v.picture({ key: "moss", width: 20, height: 20, deps: [n] }, () => v.rect(0, 0, 2 + n, 4, { fill: "#2a9d8f" }));
+      return [v.place(pic(m.t), 30, 2), v.at({ scale: 1 + m.t * 0.25 }, v.place(pic(0), 2, 2))];
+    },
+  });
+  const besideSaid = beside.transcript.split("\n").filter((l) => l.includes("hint:"));
+  assert.equal(besideSaid.length, 1, besideSaid.join("\n"));
+  assert.match(besideSaid[0] ?? "", /hint: picture "moss" was placed at a scale or rotation it has no kept image for/);
+});
 
 onGpu("section 10: a picture placed at a new rotation every frame gets one performance hint; fixed scales get none", async () => {
   const out = await runCase({

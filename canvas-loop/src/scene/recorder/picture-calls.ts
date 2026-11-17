@@ -1,6 +1,7 @@
 // `v.picture` and `v.pixels` (draft section 5): find or record the version
-// for the current values. In testing mode every asked-for version is recorded
-// again and compared, and a difference warns, telling a stale capture (the
+// for the current values. In testing mode an asked-for version is recorded
+// again and compared when its audit is due (`PictureTable.auditDue`), and a
+// difference warns, telling a stale capture (the
 // body reads a value not in deps) from two drawings sharing a key. A key that
 // records a new version in every frame for over half a second, whose versions
 // are not asked for again, warns.
@@ -10,6 +11,7 @@ import { versionName } from "../outline.js";
 import type { PaperSettings, PictureVersion, PixelsVersion, SceneNode } from "../nodes.js";
 import { PictureHandle, REUSE_WINDOW, checkPictureOptions, copyDeps, firstDifference, sameData } from "./pictures.js";
 import { DEFAULT_PAPER, resolvePaper } from "./brush-style.js";
+import { inkBox } from "../bounds.js";
 import type { PictureTable } from "./pictures.js";
 
 /** What the recorder lends a picture call. */
@@ -18,11 +20,16 @@ export interface PictureScope {
   readonly audit: boolean;
   readonly frame: object;
   /** Record a body in the picture's own coordinates, box and paper; `again` for a testing-mode re-record of a kept version. */
-  readonly recordBody: (name: string, a: { size: { width: number; height: number }; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
+  readonly recordBody: (name: string, a: { size: { width: number; height: number } | undefined; paper: PaperSettings; body: () => unknown; again: boolean }) => readonly SceneNode[];
   readonly warn: (once: string, message: string) => void;
+  /** A new version was recorded, taking `ms`. */
+  readonly recorded: (key: string, ms: number) => void;
 }
 
 type Version = PictureVersion | PixelsVersion;
+
+/** The clock, kept at load: a headless run's determinism guard refuses `performance.now` while the sketch runs, and timing a body is the runtime's business. */
+const clock = performance.now.bind(performance);
 type Fill = (image: { data: Uint8ClampedArray; width: number; height: number }) => void;
 
 const depsText = (v: Version): string => (v.deps === undefined ? "no deps" : `deps ${JSON.stringify(v.deps)}`);
@@ -44,27 +51,42 @@ function warnStale(s: PictureScope, a: { name: string; version: Version; diff: s
   s.warn(`${shared ? "shared" : "stale"} ${a.version.key}`, `${a.name} ${why}; first difference at ${a.diff}`);
 }
 
+/** A self-sizing picture's box: around everything its drawing paints (`inkBox`), out to whole logical pixels; empty at the origin when it paints nothing. */
+function selfSize(children: readonly SceneNode[]): { x: number; y: number; width: number; height: number } {
+  const box = inkBox(children);
+  if (box === null) return { x: 0, y: 0, width: 0, height: 0 };
+  const x = Math.floor(box.x0);
+  const y = Math.floor(box.y0);
+  return { x, y, width: Math.ceil(box.x1) - x, height: Math.ceil(box.y1) - y };
+}
+
 export function recordPicture(s: PictureScope, a: { options: PictureOptions; body: () => unknown }): PictureHandle {
-  const { key, width, height } = checkPictureOptions(a.options, "picture");
+  const { key, size } = checkPictureOptions(a.options, "picture");
   const deps = copyDeps(a.options.deps, key);
   const paper = a.options.paper === undefined ? DEFAULT_PAPER : resolvePaper(a.options.paper);
-  const found = s.table.find({ kind: "picture", key, width, height, deps, paper });
-  if (found !== undefined && !s.audit) return new PictureHandle(found, s.frame);
+  const found = s.table.find({ kind: "picture", key, size, deps, paper });
+  if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
   const name = versionName({ kind: "picture", key, deps });
-  const children = s.recordBody(name, { size: { width, height }, paper, body: a.body, again: found !== undefined });
+  const t0 = clock();
+  const children = s.recordBody(name, { size, paper, body: a.body, again: found !== undefined });
   if (found?.kind === "picture") {
     const diff = firstDifference({ a: found.children, b: children }, name);
     if (diff !== undefined) warnStale(s, { name, version: found, diff });
     return new PictureHandle(found, s.frame);
   }
-  return added(s, { kind: "picture", key, width, height, deps, paper, children });
+  const box = size === undefined ? selfSize(children) : { x: 0, y: 0, ...size };
+  s.recorded(key, clock() - t0);
+  return added(s, { kind: "picture", key, sized: size !== undefined, ...box, deps, paper, children });
 }
 
 export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill: Fill }): PictureHandle {
-  const { key, width, height } = checkPictureOptions(a.options, "pixels");
+  const { key, size } = checkPictureOptions(a.options, "pixels");
+  if (size === undefined) throw new SketchUsageError({ detail: `pixels "${key}": width and height are required` });
+  const { width, height } = size;
   const deps = copyDeps(a.options.deps, key);
-  const found = s.table.find({ kind: "pixels", key, width, height, deps });
-  if (found !== undefined && !s.audit) return new PictureHandle(found, s.frame);
+  const found = s.table.find({ kind: "pixels", key, size, deps });
+  if (found !== undefined && !(s.audit && s.table.auditDue(found))) return new PictureHandle(found, s.frame);
+  const t0 = clock();
   const given = new Uint8ClampedArray(width * height * 4);
   const image = { data: given, width, height };
   a.fill(image);
@@ -76,5 +98,6 @@ export function recordPixels(s: PictureScope, a: { options: PictureOptions; fill
     return new PictureHandle(found, s.frame);
   }
   if (s.audit && data.every((v, i) => i % 4 !== 3 || v === 0)) s.warn(`clear ${key}`, `${name}: the fill left every pixel transparent (alpha is every 4th byte, data[i + 3]; 255 is opaque)`);
+  s.recorded(key, clock() - t0);
   return added(s, { kind: "pixels", key, width, height, deps, data });
 }

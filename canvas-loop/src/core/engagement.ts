@@ -57,6 +57,8 @@ export function describeInput(msg: InteractionMsg): string {
     case "mouseup":
     case "mousemove":
       return `${msg.type} (${msg.x},${msg.y})${onText(msg)}`;
+    case "mouseleave":
+      return "mouseleave";
     case "keydown":
     case "keyup":
       return `${msg.type} ${msg.key}`;

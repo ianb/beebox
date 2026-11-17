@@ -81,6 +81,13 @@ test("a removed View member gets what replaces it, as the recorder's RemovedCall
   ]);
 });
 
+test("a draw that returns a component's Drawing is told to wrap it in a list", async () => {
+  const path = sketch("component-tea.ts", { imports: 'import type { Drawing } from "@ianbicking/canvas-loop";\n', draw: "function tree(v: View): Drawing {\n  return v.circle(5, 5, 4, { fill: \"#000\" });\n}\nexport function draw(v: View): RootDrawing {\n  return tree(v);\n}" });
+  const errors = errorsIn(await checkSketchTypes([path]), path);
+  assert.equal(errors.length, 1, JSON.stringify(errors));
+  assert.ok(errors[0]?.message.endsWith("\n  a Drawing may be undefined, which draw may not return (it means a draw that forgot to return); return a list instead: return [tree(v, model)]"), errors[0]?.message);
+});
+
 test("a draw that returns nothing gets the statement-draw replacement, as the recorder's RemovedCallError would say", async () => {
   const errors = errorsIn(await checkSketchTypes([cases.nothing]), cases.nothing);
   assert.equal(errors.length, 1, JSON.stringify(errors));

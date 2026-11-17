@@ -8,11 +8,17 @@ import { OffCanvas } from "./off-canvas.js";
 import { TextChecks } from "./text-checks.js";
 import type { GlyphMissing } from "./text-checks.js";
 
+/** A brushed mark's call, and the picture version whose body drew it (undefined at the top level). */
+export interface MarkSite {
+  readonly line: CallSite;
+  readonly picture: string | undefined;
+}
+
 export class Audit {
   readonly offCanvas: OffCanvas;
   readonly text: TextChecks;
   /** Brushed marks whose strength the faint-mark check judges, with where the sketch drew them. */
-  readonly #marks = new WeakMap<ShapeNode, CallSite>();
+  readonly #marks = new WeakMap<ShapeNode, MarkSite>();
 
   constructor(canvas: { width: number; height: number }, o: { glyphMissing: GlyphMissing | undefined; fontKnown: ((family: string) => boolean) | undefined; warn: (once: string, a: { message: string; line: string | undefined }) => void }) {
     this.offCanvas = new OffCanvas(canvas);
@@ -35,13 +41,13 @@ export class Audit {
    * stencil). A brushed stroke that is drawn, not erased and not marked
    * `gesture({ faint: true })` keeps its call site for the faint-mark check.
    */
-  shape(node: ShapeNode, a: { seen: boolean; site: CallSite }): void {
+  shape(node: ShapeNode, a: { seen: boolean; site: CallSite; picture: string | undefined }): void {
     const s = node.style;
-    if (a.seen && s.brush !== undefined && s.stroke !== undefined && !s.erase && s.brush.gesture.faint !== true) this.#marks.set(node, a.site);
+    if (a.seen && s.brush !== undefined && s.stroke !== undefined && !s.erase && s.brush.gesture.faint !== true) this.#marks.set(node, { line: a.site, picture: a.picture });
   }
 
-  /** Where the sketch drew brushed mark `node`, when its strength is judged. */
-  markSite(node: ShapeNode): CallSite | undefined {
+  /** Where the sketch drew brushed mark `node`, and the picture version whose body drew it, when its strength is judged. */
+  markSite(node: ShapeNode): MarkSite | undefined {
     return this.#marks.get(node);
   }
 }

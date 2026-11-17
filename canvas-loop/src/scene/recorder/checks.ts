@@ -141,7 +141,8 @@ export function checkColours(node: SceneNode, colors: ColorParser): void {
       colors(css);
     } catch (error) {
       if (!(error instanceof SketchUsageError)) throw error;
-      throw new SketchUsageError({ detail: `${where} "${css}" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)" or "teal")` });
+      const perceptual = /^\s*(oklch|oklab|color-mix)\(/i.test(css) ? "; canvas-loop reads oklch(L C H [/ A]), oklab(L a b [/ A]) and color-mix(in oklab|oklch|srgb, colour [p%], colour [q%])" : "";
+      throw new SketchUsageError({ detail: `${where} "${css}" is not a CSS colour (for example "#2a9d8f", "rgba(42,157,143,0.5)", "teal" or "oklch(0.7 0.12 160)")${perceptual}` });
     }
   };
   switch (node.kind) {
@@ -166,10 +167,12 @@ export function checkColours(node: SceneNode, colors: ColorParser): void {
       if (node.lighting !== undefined) parse(`${where} lighting.ambient`, node.lighting.ambient);
       return;
     }
+    case "place":
+      if (node.tint !== undefined) parse("place tint", node.tint);
+      return;
     case "at":
     case "clip":
     case "mask":
-    case "place":
     case "debug":
       return;
   }

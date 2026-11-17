@@ -35,6 +35,8 @@ export interface Rec {
   readonly pwidth?: number;
   /** A clip's rings: coverage from their summed winding, computed per pixel. */
   readonly rings?: readonly (readonly number[])[];
+  /** A layer's tint: straight colour, and how far its colours move toward it (alpha). */
+  readonly tint?: Rgba | undefined;
   /** In a material layer (R8): the material, straight, drawn in place of the colour. */
   readonly mat?: Rgba | undefined;
   /** Testing mode: the slot (1 and up) the peak-writing draw keeps this mark's largest alpha in (peaks.ts). */
@@ -71,7 +73,7 @@ function itemRecsOf(it: Item, a: { box: R; clip: ClipRef | undefined; mode: numb
       return [{ box, src: 0, mode, paint: it.paint, clip, cov: { o: rectO(p.box), slot: [p.slot?.x ?? 0, p.slot?.y ?? 0] } }];
     }
     case "layer":
-      return [{ box, src: it.mask === undefined ? 1 : 2, mode, job: it.job, ...(it.mask === undefined ? {} : { mask: it.mask }), ...(it.shift === undefined ? {} : { shift: it.shift }), clip, opacity: it.opacity }];
+      return [{ box, src: it.mask === undefined ? 1 : 2, mode, job: it.job, ...(it.mask === undefined ? {} : { mask: it.mask }), ...(it.shift === undefined ? {} : { shift: it.shift }), clip, opacity: it.opacity, tint: it.tint }];
     case "mark": {
       const cell = it.mark;
       const paper = it.brush.paper;
@@ -136,6 +138,8 @@ export function pack(recs: readonly Rec[], tgt: { rect: R; tex: GPUTexture }): {
     const o = i * WORDS;
     f.set([r.box.x0, r.box.y0, r.box.x1, r.box.y1, tgt.rect.x0, tgt.rect.y0, tgt.tex.width, tgt.tex.height], o);
     if (r.paint !== undefined) packPaint(r.paint, { f, u, o, stops });
+    // A layer has no paint: its colour slot holds the tint.
+    else if (r.tint !== undefined) f.set(r.tint, o + 8);
     if (r.cov !== undefined) f.set([...r.cov.o, ...r.cov.slot], o + 24);
     if (r.rings !== undefined) f.set(packRings(r.rings, edges), o + 30);
     packSources(r, { f, o });

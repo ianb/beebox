@@ -145,7 +145,7 @@ interface Mat4 {
 export type Item =
   | (Common & Mat4 & { readonly k: "shape"; readonly piece: Piece; readonly paint: PaintRec })
   /** A layer; `shift` (whole device pixels) moves a picture tile from raster space to the target's. */
-  | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number; readonly shift?: readonly [number, number] })
+  | (Common & Mat4 & { readonly k: "layer"; readonly job: Job; readonly mask: Job | undefined; readonly opacity: number; readonly shift?: readonly [number, number]; readonly tint?: Rgba | undefined })
   /** A brushed mark; `node` (in colour, not material layers) is the stroke it draws, for testing mode's faint-mark check. */
   | (Common & Mat4 & { readonly k: "mark"; readonly mark: TexMark; readonly tinted: boolean; readonly paint: PaintRec; readonly brush: BrushRec; readonly node?: ShapeNode | undefined })
   | (Common & { readonly k: "smear"; readonly smear: SmearRec })

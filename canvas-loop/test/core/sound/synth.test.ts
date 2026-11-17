@@ -50,6 +50,28 @@ test("tones and noise last their duration", () => {
   );
 });
 
+test("pink and brown noise are as loud as white at their peaks and duller; an attack swells in, then falls away", () => {
+  const render = (color: "white" | "pink" | "brown"): Float32Array => renderVoice({ id: "n", at: 0, kind: "noise", duration: 1, color, gain: 1, attack: 0.5 }, { sampleRate: SAMPLE_RATE });
+  // How much of the signal is sample-to-sample change: high frequencies.
+  const roughness = (s: Float32Array): number => {
+    let diff = 0;
+    let level = 0;
+    for (let i = 1; i < s.length; i++) {
+      diff += Math.abs((s[i] ?? 0) - (s[i - 1] ?? 0));
+      level += Math.abs(s[i] ?? 0);
+    }
+    return diff / level;
+  };
+  const [white, pink, brown] = [render("white"), render("pink"), render("brown")];
+  for (const s of [white, pink, brown]) {
+    const peak = Math.max(...s.map(Math.abs));
+    assert.ok(peak > 0.3 && peak <= 1, `peak ${peak}`);
+  }
+  assert.ok(roughness(white) > roughness(pink) && roughness(pink) > roughness(brown), `${roughness(white)} > ${roughness(pink)} > ${roughness(brown)}`);
+  const level = ([from, to]: readonly [number, number]): number => Math.max(...pink.slice(from * SAMPLE_RATE, to * SAMPLE_RATE).map(Math.abs));
+  assert.ok(level([0, 0.05]) < 0.05 && level([0.45, 0.55]) > 4 * level([0, 0.05]) && level([0.95, 1]) < 0.05, "silent at both ends, loudest at the attack's end");
+});
+
 test("mix places voices at their frame, cuts at the end, and never clips", () => {
   const voices: Voice[] = [
     { id: "x", at: 30, kind: "tone", freq: 440, duration: 1, gain: 1 },

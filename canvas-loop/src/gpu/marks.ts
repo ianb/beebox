@@ -5,8 +5,8 @@
 // (smear.ts), its dabs written on the GPU. Grain is cut against paper
 // anchored to the picture or the scene (`toPaper`), then the brush opacity
 // applies once.
-import type { BristleBrush } from "../core/brush/types.js";
 import type { BrushExpander, GpuSet, SmearSet } from "../scene/brush/expand.js";
+import { brushGrowth } from "../scene/brush-reach.js";
 import type { ColorParser } from "../scene/colors.js";
 import { invert } from "../scene/mat.js";
 import type { Mat, ShapeNode } from "../scene/nodes.js";
@@ -42,33 +42,9 @@ function mappedBox(b: { x0: number; y0: number; x1: number; y1: number }, a: { e
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
 }
 
-/** How far a bristle wanders sideways, as a fraction of the brush's half-width (the `bristles` entry, shader-bristle.ts). */
-const BRISTLE_DRIFT = 0.12;
-
-/**
- * How far past the centreline a bristle mark can reach, in brush px: the
- * outermost bristle's offset (with spread and drift) plus half its thickest
- * line.
- */
-function bristleReach(width: number, brush: BristleBrush): number {
-  const n = Math.max(1, Math.round(brush.bristles));
-  const offset = 1 + (brush.spread * 2) / n + BRISTLE_DRIFT;
-  const thickest = (width / n) * 2.2 * (1 + brush.spread / 2);
-  return (offset * width) / 2 + thickest / 2;
-}
-
 /** How far past the prepared box (brush space) a stroke's marks reach before the quad or strip edge: see `gpuBox`. */
 function growth(set: GpuSet): number {
-  const w = set.prepared.width;
-  switch (set.kind) {
-    case "ink":
-      return w / 2;
-    case "stamp":
-      return (w / 2) * (1 + set.brush.sizeJitter / 2) + (set.brush.scatter * w) / 2;
-    case "bristle":
-      // The outermost bristle point and half the thickest bristle, and the other half again for the mitre.
-      return bristleReach(w, set.brush) + (w / Math.max(1, Math.round(set.brush.bristles))) * 1.1 * (1 + set.brush.spread / 2);
-  }
+  return brushGrowth(set.brush, set.prepared.width);
 }
 
 /**

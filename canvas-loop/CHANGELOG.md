@@ -5,6 +5,69 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Steady 60 Hz frames.** A browser figure's frame interval within 2 ms of
+  a whole number of 1/60 s steps now counts as exactly that many. Chrome's
+  frame timestamps wander (15.2 ms, then 18.2 ms), and depending on where
+  the step clock stood, a short frame ran no step and drew nothing and the
+  next ran two: up to a fifth of frames skipped on a 60 Hz display. The time
+  snapping takes or gives is added back once it reaches half a step, so a
+  display a little off 60 Hz (55 Hz) still runs 60 steps a second.
+- **`mousepath` in events files.** `{ "frame", "type": "mousepath",
+  "points": [[x, y], …], "frames" }` is one `mousemove` a frame along the
+  points at an even speed, so a hover or a drag is one line instead of
+  sixty. The moves between its ends do not force a captured frame.
+- **Pictures size themselves.** `v.picture` without `width` and `height`
+  takes the box around everything its drawing paints: strokes, brush marks
+  (scatter, bristle spread and wobble), blur, glow and shadow. `place` puts
+  the body's (0, 0) at (x, y), so draw a tree around its base and place it
+  there. `Picture` gains `x` and `y`, its box's left and top. In such a body
+  `v.width`, `v.height`, `v.background` and `keepInside` are errors. Giving
+  only one of `width` and `height` is an error. A size never clipped and
+  still does not. The off-canvas check's boxes now hold a stamp brush's
+  scatter and a brush tip under a scale that squashes one axis (they could
+  miss both), and a corner-free stroke (a line, an ellipse) no longer pads
+  by a miter.
+- **Soft noise.** A `noise` voice takes `color` (`white`, `pink`, `brown`)
+  and `attack` seconds (less than `duration`), which swells it in and lets
+  it fall away over the rest of its duration: wind and leaves. Without them it sounds as before.
+- **Smaller messages.** A `draw` that returns a component's `Drawing` (which
+  may be `undefined`) gets a type-check line saying to return a list. A
+  faint-mark warning for a mark drawn in a picture body names the picture
+  version (`faint mark (line in picture "wood-oak-2" [3])`).
+- **`place(…, { tint })`.** A colour the placed picture's colours move
+  toward, by the colour's alpha, keeping the picture's alpha. It is applied
+  as the kept image is laid down (a per-draw value in the draw shader), so
+  far trees can take haze from one picture with no new version or layer.
+  Inside a lit group the tint colours the picture, not its materials.
+- **Perceptual colours.** Every colour reads `oklch()`, `oklab()` and
+  `color-mix(in oklab | oklch | srgb, …)`, parsed by canvas-loop itself so
+  both runtimes agree (a 2D context refused them headless and would read
+  them back unparsed in a browser). `none` reads as 0. `color-mix` mixes
+  its colours as given and fits the result. A colour outside sRGB keeps its
+  lightness and hue and loses chroma. A bad colour's error gives an
+  `oklch()` example.
+- **What new picture versions cost.** BRUSHES.md ("Animation and pictures")
+  says a new version is recorded and drawn again at every scale it is placed
+  at. `--timing` adds a line per captured frame listing new versions and
+  picture tiles by key, with milliseconds; in a browser, the figure's
+  `surface.pictureCosts()` gives the same since its last call. The hint
+  for a picture drawn again every frame names new versions when the key got
+  one in each frame of the run (a growing picture placed at two depths),
+  instead of blaming its scale.
+- **Breaking: `mouseleave`.** `Msg` gains `{ type: "mouseleave" }`: the
+  pointer left the canvas (the browser's `pointerleave` of the primary
+  pointer, after the `mouseup` of a press that slid off; a lifted finger).
+  An events file sends `{ "frame": N, "type": "mouseleave" }`. A switch on
+  `msg.type` needs the case. In a browser, a figure written before it that
+  returns nothing for it keeps its model; a headless run stays strict.
+- **Headless runs of picture-heavy scenes are about 9× faster.** Testing
+  mode compared every kept picture version in every frame, and kept a stack
+  for each node it drew again. Now a kept version is compared in the frame
+  that made it, the next two frames, and then when asked for 30 or more
+  frames after its last comparison; a re-record keeps no call sites (a new
+  version first made inside one keeps them). A 60-frame run of a 55-tree scene went from 90 s to
+  10 s with the same pixels. A run that takes longer than 3 seconds prints
+  `frame N/M, S s` to stderr every 3 seconds.
 - **Breaking: one set of examples; the gallery is gone.** `src/gallery/`
   (agent-exercise records, model comparisons, run histories) is deleted;
   `git show 6fff6140c:canvas-loop/src/gallery/<entry>/sketch-tea.ts` finds an

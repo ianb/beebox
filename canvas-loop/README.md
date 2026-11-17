@@ -53,8 +53,9 @@ renderer.
 `--ratio` sets the pixel density (default 1). `--scene` writes each captured
 frame's drawing as an outline into the transcript (`--scene first`: only the
 first). `--outline` draws picture, clip and `debugBox` outlines over each
-captured frame; `--timing` adds render counts and draw times to the
-transcript (see [BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
+captured frame; `--timing` adds render counts, draw times and the new
+picture versions by key, with their cost, to the transcript (see
+[BRUSHES.md](./BRUSHES.md#seeing-what-you-made)).
 
 `--zoom` (repeatable) also writes an enlarged crop of that region beside every
 captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and
@@ -82,7 +83,8 @@ change crops to judge them.
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 emptied first. On success it prints only the transcript path and frame
 count; each sketch error prints one line and exits nonzero (the transcript is
-still written, with the error frame-tagged).
+still written, with the error frame-tagged). A run that takes longer than 3
+seconds prints `frame 120/700, 9 s` to stderr every 3 seconds.
 
 Read `transcript.md` — the inline `![frame N](frame-NNNN.png)` images render
 directly in tools that display markdown images (including Claude Code's `Read`).
@@ -110,8 +112,17 @@ events see the folds before them), and hit-testing a moving target is a calculat
 ]
 ```
 
-- Input types are `mousedown`, `mouseup`, `mousemove`, `keydown` and `keyup`.
-  Each becomes a `Msg` of the same type.
+- Input types are `mousedown`, `mouseup`, `mousemove`, `mouseleave` (no
+  position: the pointer left the canvas), `keydown` and `keyup`. Each becomes
+  a `Msg` of the same type.
+- `mousepath` scripts a pointer moving: `{ "frame": 100, "type":
+  "mousepath", "points": [[40, 200], [300, 120], [520, 180]], "frames": 60 }`
+  is one `mousemove` a frame from frame 100 to 160, walking the line through
+  `points` at an even speed, first at its first point and last at its last.
+  Each move is an ordinary `mousemove` in the entry's place in file order.
+  Put a `mousedown` before it and a `mouseup` after it for a drag. The moves
+  between its first and last do not make their frames captured ones (see
+  [Capture policy](#capture-policy)).
 - A mouse entry can aim by name instead of by position: `"target": "pan-left"`
   clicks the centre (in whole pixels) of the topmost drawing with that `name`
   in the frame drawn before the event, at any depth and inside placed
@@ -134,8 +145,8 @@ Each input line in the transcript gets an engagement verdict
 ## Capture policy
 
 To keep image counts sane, a frame's PNG is captured when it is frame 0, the
-final frame, an `--every N` multiple, or a frame that logged, ran an event, or
-called `snapshot()`. Consecutive identical frames are hashed and deduped: the
+final frame, an `--every N` multiple, or a frame that logged, ran an event
+(other than a move inside a `mousepath`), or called `snapshot()`. Consecutive identical frames are hashed and deduped: the
 transcript references the earlier PNG and notes `(unchanged)` instead of writing
 a duplicate.
 

@@ -9,6 +9,7 @@
 // unless one of these changed it; a container whose children changed comes
 // back as a copy. Warnings name the line each node's
 // call kept (testing mode); an error names the node path too.
+import { SketchUsageError } from "../../core/errors.js";
 import type { TextBounds, TextBox, TextOptions, TextRun } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { CallSite } from "../call-site.js";
@@ -25,7 +26,8 @@ import { sameData } from "./pictures.js";
 /** Where the walk is: the transform to canvas (or body) coordinates, the box text keeps inside, the picture body's name for messages, lit groups open around it, and mask artwork. */
 export interface ResolveContext {
   readonly matrix: Mat;
-  readonly size: { readonly width: number; readonly height: number };
+  /** Undefined inside a self-sizing picture's body. */
+  readonly size: { readonly width: number; readonly height: number } | undefined;
   readonly picture: string | undefined;
   readonly lit: number;
   readonly inMask: boolean;
@@ -167,7 +169,7 @@ export class Resolver {
         const r = withPaper(n, ctx.paper);
         if (audit !== undefined) {
           const site = this.#site(n);
-          audit.shape(r, { seen: !ctx.inMask, site: site ?? NO_SITE });
+          audit.shape(r, { seen: !ctx.inMask, site: site ?? NO_SITE, picture: ctx.picture });
           // Checked against the canvas, except in a picture body (placed anywhere) or a mask's artwork.
           if (ctx.picture === undefined && !ctx.inMask) audit.offCanvas.shape(n.call, { geom: n.geom, style: n.style, matrix: ctx.matrix, lit: ctx.lit > 0, site });
         }
@@ -229,6 +231,7 @@ export class Resolver {
     let bounds = facts.bounds;
     const keep = facts.keep;
     if (keep !== undefined && this.#d.text !== undefined) {
+      if (ctx.size === undefined) throw new SketchUsageError({ detail: `text with keepInside in the body of ${ctx.picture ?? "a picture"}, which sizes itself from its drawing: there is no box to keep inside; give the picture a width and height` });
       const laid = recordText(keep.content, { box: keep.box, options: keep.options, measurer: this.#d.text, matrix: ctx.matrix, canvas: ctx.size });
       ({ node, bounds } = laid);
     }

@@ -139,7 +139,7 @@ function nodeLine(n: SceneNode, cx: LightContext): string {
       return `light ${l.kind} at (${r(l.at[0])},${r(l.at[1])}) height ${r(l.height)} ${l.color} energy ${r(l.energy)}${peakText(l, cx)}`;
     }
     case "place":
-      return `place ${versionName(n.picture)} at (${r(n.x)},${r(n.y)}) opacity ${n.opacity} blend ${n.blend}${n.erase ? " erase" : ""}`;
+      return `place ${versionName(n.picture)} at (${r(n.x)},${r(n.y)}) opacity ${n.opacity} blend ${n.blend}${n.erase ? " erase" : ""}${n.tint === undefined ? "" : ` tint ${n.tint}`}`;
   }
 }
 
@@ -183,7 +183,7 @@ export function sceneOutline(scene: Scene, colors?: ColorParser): string {
   for (const v of versions) {
     if (done.has(v)) continue;
     done.add(v);
-    out.push(`${versionName(v)} ${r(v.width)}×${r(v.height)}`);
+    out.push(`${versionName(v)} ${r(v.width)}×${r(v.height)}${v.kind === "picture" && !v.sized ? ` sized to its drawing from (${r(v.x)}, ${r(v.y)})` : ""}`);
     if (v.kind === "picture") outlineInto(out, { nodes: v.children, depth: 1, versions, cx: { colors, lighting: undefined } });
   }
   return out.join("\n");

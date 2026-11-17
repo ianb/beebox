@@ -82,7 +82,7 @@ test("group, at, place and style refuse unknown keys; hit: true is told every na
   const cases: [(v: View) => unknown, RegExp][] = [
     [(v) => v.group(hit, []), /group: unknown option "hit" \(name, opacity, blend, effects, lighting, clip\); there is no hit flag: every name is a target/],
     [(v) => v.at(hit, []), /at: unknown option "hit" \(name, .*\); there is no hit flag/],
-    [(v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => null), 0, 0, hit), /place: unknown option "hit" \(name, material, opacity, blend, erase\); there is no hit flag/],
+    [(v) => v.place(v.picture({ key: "p", width: 1, height: 1 }, () => null), 0, 0, hit), /place: unknown option "hit" \(name, material, opacity, blend, erase, tint\); there is no hit flag/],
     [(v) => v.rect(0, 0, 1, 1, hit), /rect: unknown style key "hit" .*; there is no hit flag/],
     [(v) => v.at(rotation, []), /at: unknown option "rotation"/],
   ];

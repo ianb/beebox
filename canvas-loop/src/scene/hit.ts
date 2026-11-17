@@ -16,6 +16,7 @@ import type { Vec2 } from "../core/paint.js";
 import { polylines } from "./geometry/flatten.js";
 import type { Poly } from "./geometry/flatten.js";
 import { dashPolys } from "./geometry/dash.js";
+import { versionRect } from "./bounds.js";
 import { dotRings, strokeRings } from "./geometry/stroke.js";
 import { IDENTITY, apply, invert, maxScale, mul } from "./mat.js";
 import type { Geom, Mat, PictureVersion, PlaceNode, Scene, SceneNode, ShapeNode, ShapeStyle } from "./nodes.js";
@@ -212,7 +213,8 @@ function place(n: PlaceNode, h: Here): Hit | undefined {
   const inner = under(h, [1, 0, 0, 1, n.x, n.y]);
   if (inner === undefined) return undefined;
   const v = n.picture;
-  const ground = inBox({ x: 0, y: 0, w: v.width, h: v.height }, inner.p);
+  const r = versionRect(v);
+  const ground = inBox({ x: r.x0, y: r.y0, w: v.width, h: v.height }, inner.p);
   if (v.kind === "pixels") return ground ? hitOf(h.names) : undefined;
   return walk(v.children, { ...inner, ground });
 }

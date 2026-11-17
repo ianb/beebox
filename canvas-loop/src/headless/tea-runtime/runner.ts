@@ -59,7 +59,12 @@ export interface TeaRunOptions {
   scene?: boolean | "first";
   /** Scene renderer, tests: open the GPU device another way. Default: the process's one device. */
   openGpu?: () => Promise<GpuHandle | undefined>;
+  /** A slow run's progress (`frame 120/700, 30 s`), given every `PROGRESS_EVERY_MS` once the run has taken that long; the CLI writes it to stderr. */
+  progress?: (line: string) => void;
 }
+
+/** A run reports progress once it has taken this long, and again each time this much longer has passed. */
+const PROGRESS_EVERY_MS = 3000;
 
 /** A run is in progress in this process (its guards and console capture are process-wide). */
 let running = false;
@@ -130,8 +135,15 @@ class TeaRunner {
   async #execute(): Promise<void> {
     try {
       this.#model = this.#sketch("init", () => this.#options.module.init(this.#util));
-      for (let frame = 0; frame < this.#options.frames; frame++) {
+      const start = performance.now();
+      let reported = start;
+      const { frames, progress } = this.#options;
+      for (let frame = 0; frame < frames; frame++) {
         await this.#runFrame(frame);
+        const now = performance.now();
+        if (progress === undefined || now - reported < PROGRESS_EVERY_MS || frame + 1 === frames) continue;
+        reported = now;
+        progress(`frame ${frame + 1}/${frames}, ${((now - start) / 1000).toFixed(0)} s`);
       }
       this.#surface.finish();
       for (const [file, bytes] of soundFiles(this.#score.voices(), { frames: this.#options.frames, fps: this.#options.fps })) {
@@ -160,7 +172,8 @@ class TeaRunner {
     this.#recorder.beginFrame(frame);
     this.#step = { frame, name: "update" };
     const events = this.#eventsByFrame.get(frame) ?? [];
-    this.#recorder.markEvents(events.length > 0);
+    // A quiet move (inside a mousepath) does not make the frame a captured one.
+    this.#recorder.markEvents(events.some((e) => !(e.type === "mousemove" && e.quiet === true)));
     for (const event of events) this.#dispatchEvent(event);
     const tick = (): void => void this.#fold({ type: "tick", frame });
     if (this.#timer === undefined) tick();
@@ -213,12 +226,13 @@ class TeaRunner {
         this.#state.params = guardParams(this.#options.module.params, { ...this.#state.params, [event.name]: event.value });
         this.#recorder.recordParam({ name: event.name, value: event.value });
         this.#fold({ type: "param", name: event.name, value: event.value });
-        this.#recordActivity();
+        this.#recordActivity(false);
         return;
       }
       case "mousedown":
       case "mouseup":
       case "mousemove":
+      case "mouseleave":
       case "keydown":
       case "keyup":
       case "trigger":
@@ -232,15 +246,16 @@ class TeaRunner {
     this.#handledNames = [];
     const changed = this.#fold(msg);
     const text = verdict({ handled: this.#handledNames, changed });
-    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text });
-    if (this.#handledNames.length > 0) this.#recordActivity();
+    const quiet = event.type === "mousemove" && event.quiet === true;
+    if (this.#unhandled.show(msg, text)) this.#recorder.recordInput({ event: describeInput(msg), verdict: text, quiet });
+    if (this.#handledNames.length > 0) this.#recordActivity(quiet);
   }
 
-  /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive). */
-  #recordActivity(): void {
+  /** The sketch's `activity(model)` after an action, as a transcript line (what a host would receive); `quiet` for a move inside a mousepath. */
+  #recordActivity(quiet: boolean): void {
     const model = this.#model;
     const json = withGuards(() => this.#activity.json(model));
-    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}` });
+    if (json !== undefined) this.#recorder.recordLog({ level: "log", message: `activity ${json}`, quiet });
   }
 
   #fold(msg: Msg): boolean {
@@ -274,6 +289,8 @@ class TeaRunner {
         const { target, targets } = scene === undefined ? { target: undefined, targets: [] } : hitTest(scene, [this.#mouseX, this.#mouseY]);
         return { type: event.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }
+      case "mouseleave":
+        return { type: "mouseleave" };
       case "keydown":
       case "keyup":
         return { type: event.type, key: event.key ?? "" };

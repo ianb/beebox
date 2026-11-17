@@ -208,6 +208,7 @@ export class GpuRenderer {
     stats.keptHits = this.#kept.hits;
     stats.keptMisses = this.#kept.misses;
     stats.cpu = { lower: t1 - t0, atlas: t2 - t1, encode: t3 - t2, submit: 0, brush: lowering.brushMs + stats.cpu.brush };
+    stats.pictures = lowering.pictureTiles;
     const times = timer?.resolve(enc, a.temp);
     const peakRead = plan === undefined ? undefined : { read: peaks === undefined ? undefined : copyPeaks(peaks.buffer, { enc, device, temp: a.temp }), plan };
     const submit = (): void => {

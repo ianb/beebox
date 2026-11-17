@@ -5,6 +5,7 @@
 import type { Vec2 } from "../../core/paint.js";
 import { polylines } from "../../scene/geometry/flatten.js";
 import { IDENTITY, apply, mul } from "../../scene/mat.js";
+import { versionRect } from "../../scene/bounds.js";
 import type { Geom, Mat, SceneNode } from "../../scene/nodes.js";
 
 /** A clip's outline or a placed picture's box, for `run --outline`, in canvas coordinates. */
@@ -44,8 +45,9 @@ function walkOutlines(nodes: readonly SceneNode[], a: { m: Mat; out: Outline[] }
         break;
       case "place": {
         const { x, y } = n;
-        const { width: w, height: h } = n.picture;
-        a.out.push({ kind: "picture", label: n.picture.key, points: [apply(a.m, [x, y]), apply(a.m, [x + w, y]), apply(a.m, [x + w, y + h]), apply(a.m, [x, y + h])] });
+        const r = versionRect(n.picture);
+        const [x0, y0, x1, y1] = [x + r.x0, y + r.y0, x + r.x1, y + r.y1];
+        a.out.push({ kind: "picture", label: n.picture.key, points: [apply(a.m, [x0, y0]), apply(a.m, [x1, y0]), apply(a.m, [x1, y1]), apply(a.m, [x0, y1])] });
         if (n.picture.kind === "picture") walkOutlines(n.picture.children, { ...a, m: mul(a.m, [1, 0, 0, 1, x, y]) });
         break;
       }

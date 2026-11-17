@@ -270,7 +270,8 @@ group, so give it a group with light and dark parts.
 Lengths (blur, glow, shadow offset, bleed, hatch spacing) are in the
 coordinates where the group is: under `at({ scale: 0.5 })` a blur is half as
 wide, and a shadow's offset turns with a rotation. A group's layer grows to
-hold its blur, glow and shadow, and a picture keeps what spills past its box.
+hold its blur, glow and shadow, and a picture keeps what spills past its box
+(one without a size takes all of it into its box).
 Effects work under scales along the axes and under rotation with a uniform
 scale; under `skew`, or a rotated non-uniform scale, an effect is an error.
 
@@ -432,12 +433,12 @@ each frame:
 
 - A still background goes in one picture with no `deps`. A static part that
   changes with a param puts the param in `deps`:
-  `v.picture({ key: "sky", width: 600, height: 300, deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
+  `v.picture({ key: "sky", deps: [p.dusk] }, () => drawSky(v, p.dusk))`.
 - A thing that moves but keeps its look (a character, a boat, a cloud) is a
   picture placed at a new position each frame. Draw each pose as its own
   version (`deps: [pose]`) and switch between them. A pose not shown for a
   while stays kept, so a walk cycle draws each pose once:
-  `v.picture({ key: "walker", width: 80, height: 120, deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
+  `v.picture({ key: "walker", deps: [kind, pose] }, () => paintWalker(v, kind, pose))`.
   Do not pack poses into one sheet picture and clip to one.
 - The renderer keeps a placed picture's pixels while its version, scale and
   rotation stay the same; a move reuses them, since placements snap to whole
@@ -445,10 +446,26 @@ each frame:
   `scale: [-1, 1]`. A picture that turns or scales by a new amount in every
   frame (rocking, breathing) is drawn again each time, and headless runs give
   a hint: draw that part as a group, or as a few poses.
+- A new version costs what the first draw did: its body runs, and its marks
+  are drawn again at every scale it is placed at. A tree of a few hundred
+  brushed marks takes about 5–20 ms to record and as much again to draw. A
+  picture that grows, wilts or changes shape through `deps` pays this at
+  every step, and a frame that meets several new versions drops. Grow in a
+  few steps (8 levels, not 100), let things share levels, and fade from one
+  kept level to the next with `place(…, { opacity })`.
+- Each drawing call is a draw of its own, even a three-pixel leaf. A crown
+  of a thousand leaves in a few colours is cheaper as one `v.path` per
+  colour, each leaf a closed subpath (`move`, `line`s, `close`): in a
+  55-tree scene that took a frame's draws from 103,000 to 6,000 and its new
+  leaf versions from about 100 ms to 8 ms each to record.
+- To see which pictures cost: `--timing` lists, per captured frame, the new
+  versions by key with their milliseconds; in a browser,
+  `figure.surface.pictureCosts()` (the figure from `mountSketch`'s `inspect`
+  option) gives the same since its last call.
 
 ```ts
-const boat = v.picture({ key: "boat", width: 120, height: 60 }, () => paintBoat(v));
-return v.place(boat, x - 60, y - 40 + Math.round(Math.sin(model.frame / 30) * 3));  // bob
+const boat = v.picture({ key: "boat" }, () => paintBoat(v));             // drawn around its waterline's middle
+return v.place(boat, x, y + Math.round(Math.sin(model.frame / 30) * 3));  // bob
 ```
 
 - A mark's randomness comes from its points, so a mark whose points move
@@ -458,6 +475,11 @@ return v.place(boat, x - 60, y - 40 + Math.round(Math.sin(model.frame / 30) * 3)
 Examples: [`paint`](./src/examples/paint-tea.ts) — a chain of pictures, one stroke each; [`lamps`](./src/examples/lamps-tea.ts) — tweens of the frames since a click.
 
 ### Recipes
+
+- **Distance.** Place far copies of a picture with a `tint` toward the sky's
+  haze, stronger with distance:
+  ``v.place(tree, x, y, { tint: `oklch(0.86 0.03 230 / ${0.5 * depth})` })``.
+  One picture serves every depth.
 
 - **Light under a night shade.** Darken the page with a multiply rect, then
   draw lit windows and lamps after it with `blend: "screen"` in their style,

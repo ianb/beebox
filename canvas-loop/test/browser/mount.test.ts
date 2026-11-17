@@ -119,11 +119,11 @@ test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", a
   const canvas = container?.find((el) => el.tagName === "canvas");
   assert.ok(canvas !== null && canvas !== undefined, "canvas present before teardown");
   assert.ok(rafState.pending.size > 0, "the loop has a pending frame before teardown");
-  assert.equal(canvas.addedListeners, 7, "input wiring attached its listeners");
+  assert.equal(canvas.addedListeners, 8, "input wiring attached its listeners");
 
   teardown();
   assert.equal(rafState.pending.size, 0, "teardown cancels the pending animation frame");
-  assert.equal(canvas.removedListeners, 7, "teardown removes every input listener");
+  assert.equal(canvas.removedListeners, 8, "teardown removes every input listener");
   assert.equal(mount.children.length, 0, "teardown removes the container from the mount");
 });
 
@@ -278,6 +278,33 @@ test("touch drives the sketch: a drag arrives as mousedown/mousemove/mouseup, pa
   runFrames(2);
   assert.deepEqual(seen, ["mousedown 10,10", "mousemove 20,15", "mouseup 20,15"]);
   assert.deepEqual([...canvas.captured], [], "capture released");
+  // A leave while pressed is held back (capture keeps the moves); one after the release, and only the primary pointer's, is sent.
+  canvas.fire("pointerdown", touch(7, { x: 10, y: 10 }));
+  canvas.fire("pointerleave", touch(7, { x: 60, y: 10 }));
+  canvas.fire("pointerup", touch(7, { x: 60, y: 10 }));
+  canvas.fire("pointerleave", touch(8, { x: 60, y: 10, isPrimary: false }));
+  canvas.fire("pointerleave", touch(7, { x: 60, y: 10 }));
+  runFrames(2);
+  assert.deepEqual(seen.slice(3), ["mousedown 10,10", "mouseup 60,10", "mouseleave"]);
+  attached.teardown();
+});
+
+test("a figure written before mouseleave (no case for it, so update returns undefined) keeps its model and runs on", async () => {
+  const errors: unknown[] = [];
+  const raw = {
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: () => ({ n: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: { n: number }, msg: Msg, _u: Util): { n: number } | undefined => (msg.type === "mouseleave" ? undefined : { n: model.n + 1 }),
+    draw: () => null,
+  };
+  const canvas = new FakeElement("canvas");
+  const attached = attachSketch(asHTMLCanvas(canvas), { module: asPlaygroundModule(raw), seed: 1, paused: false, onFrame: () => {}, onError: (e) => errors.push(e), gpu: fakeGpu() });
+  await attached.ready;
+  canvas.fire("pointerleave", { pointerId: 1, isPrimary: true, pointerType: "mouse", clientX: 60, clientY: 10 });
+  runFrames(3);
+  assert.deepEqual(errors, []);
   attached.teardown();
 });
 

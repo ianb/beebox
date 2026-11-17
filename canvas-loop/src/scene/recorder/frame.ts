@@ -11,6 +11,8 @@ export interface FrameOutputs {
   snapshots: (string | undefined)[];
   cursor: CursorKind | undefined;
   controls: ControlPlacement[];
+  /** New picture versions recorded this frame: key and milliseconds (testing-mode re-records excluded). */
+  pictures: { key: string; ms: number }[];
 }
 
 /** Everything one `draw` produced (draft section 8), and testing-mode warnings. */
@@ -28,4 +30,6 @@ export interface FrameRecord {
   readonly warnings: readonly string[];
   /** Testing-mode performance hints (draft section 10): costs, not mistakes. */
   readonly hints: readonly string[];
+  /** New picture versions recorded this frame, with the milliseconds each took. */
+  readonly pictures: readonly { key: string; ms: number }[];
 }

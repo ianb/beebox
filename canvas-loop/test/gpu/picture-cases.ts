@@ -70,6 +70,17 @@ export async function placeOptions(handle: GpuHandle): Promise<void> {
     ];
   } });
   assert.deepEqual(rgbaAt(multiplied, [50, 20]), [255, 0, 0, 255], "yellow × red is red");
+  // A tint moves the colours toward its colour by its alpha and keeps the picture's alpha: through kept tiles and through an image's layer.
+  const tinted = await renderOnce(handle, { size, draw: (v) => [
+    v.place(square(v), 10, 10, { tint: "rgba(0, 0, 255, 0.25)" }),
+    v.place(square(v), 40, 10, { tint: "#0000ff", opacity: 0.5 }),
+    v.at({ scale: 10 }, v.place(v.pixels({ key: "red", width: 2, height: 2 }, (im) => im.data.set([255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255])), 7, 1, { tint: "rgba(0, 0, 255, 0.5)" })),
+  ] });
+  // rgbaAt reads premultiplied bytes.
+  for (const [x, want] of [[20, [191, 0, 64, 255]], [50, [0, 0, 128, 128]], [80, [128, 0, 128, 255]]] as const) {
+    const got = rgbaAt(tinted, [x, 20]);
+    assert.ok(got.every((c, i) => Math.abs(c - (want[i] ?? 0)) <= 1), `tint at x=${x}: ${got.join(",")}, want ${want.join(",")}`);
+  }
 }
 
 /** `background` inside a picture fills the picture's box under the placement, not the canvas. */
@@ -98,4 +109,47 @@ export async function pixelImages(handle: GpuHandle): Promise<void> {
   assert.ok(Math.abs(r(20) - 128) <= 8, `sampled smoothly between pixels (got ${r(20)})`);
   assert.ok(r(15) < r(20) && r(20) < r(25), "bilinear: a ramp between the two pixel centres");
   assert.equal(alphaAt(px, [45, 10]), 0, "nothing outside the image");
+}
+
+/** Ink that reaches well past its outline: a wide stroke, brush marks that scatter and spread, a glow, a shadow, a blurred group, and a part at negative coordinates. */
+function spill(v: View): Drawing {
+  return [
+    v.rect(70, 40, 30, 20, { stroke: "#1d3557", weight: 14, join: "round" }),
+    v.line(20, 20, 60, 90, { stroke: "#2a9d8f", weight: 10, brush: { preset: "pencil" }, gesture: { wobble: 3, seed: 2 } }),
+    v.curve([[120, 20], [150, 60], [130, 100]], false, { stroke: "#e76f51", weight: 12, brush: { preset: "bristle", spread: 1 }, gesture: { seed: 4 } }),
+    v.line(40, 110, 140, 110, { stroke: "#6d597a", weight: 8, brush: { kind: "stamp", opacity: 1, grain: 0, tip: "hard", spacing: 0.3, flow: 1, sizeByPressure: 0, opacityByPressure: 0, scatter: 8, sizeJitter: 0.5 } }),
+    v.circle(170, 50, 8, { fill: "#f4a261", effects: { glow: { blur: 12, color: "#e9c46a", strength: 2 } } }),
+    v.circle(90, 80, 6, { fill: "#264653", effects: { shadow: { x: 10, y: 14, blur: 4, color: "rgba(0,0,0,0.6)" } } }),
+    v.group({ effects: { blur: 5 } }, v.rect(-10, -10, 25, 25, { fill: "#457b9d" })),
+    // Squashed across: the brush's round tip keeps its width in the transformed space.
+    v.at({ translate: [-40, 60], scale: [0.15, 6] }, v.line(0, 0, 0, 4, { stroke: "#9d0208", weight: 12, brush: "ink" })),
+  ];
+}
+
+/**
+ * A picture's size never clips: placed at the origin (so brush paper lines
+ * up), a self-sizing picture and one declared 1×1 both draw what the drawing
+ * draws in a group, and the self-sizing one's box holds every painted pixel.
+ */
+export async function pictureSpill(handle: GpuHandle): Promise<void> {
+  const size = { width: 260, height: 150 };
+  const at = { translate: [55, 15] as const };
+  const direct = await renderOnce(handle, { size, draw: (v) => v.at(at, v.group({}, spill(v))) });
+  let box = { x: 0, y: 0, width: 0, height: 0 };
+  const auto = await renderOnce(handle, { size, draw: (v) => {
+    const pic = v.picture({ key: "spill" }, () => spill(v));
+    box = { x: pic.x, y: pic.y, width: pic.width, height: pic.height };
+    return v.at(at, v.place(pic, 0, 0));
+  } });
+  const tiny = await renderOnce(handle, { size, draw: (v) => v.at(at, v.place(v.picture({ key: "spill-1", width: 1, height: 1 }, () => spill(v)), 0, 0)) });
+  assert.ok(maxDiff(direct.data, auto.data) <= 1, `a self-sizing picture draws what its drawing draws (largest difference ${maxDiff(direct.data, auto.data)})`);
+  assert.ok(maxDiff(direct.data, tiny.data) <= 1, `a 1×1 picture draws all of its drawing (largest difference ${maxDiff(direct.data, tiny.data)})`);
+  const x0 = at.translate[0] + box.x, y0 = at.translate[1] + box.y;
+  const outside: string[] = [];
+  for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) {
+    const inside = x >= x0 && x < x0 + box.width && y >= y0 && y < y0 + box.height;
+    if (!inside && alphaAt(auto, [x, y]) > 0) outside.push(`(${x}, ${y})`);
+  }
+  assert.deepEqual(outside.slice(0, 5), [], `the self-sizing box ${JSON.stringify(box)} holds every painted pixel`);
+  assert.ok(box.x < -40 && box.y < -10, "the box reaches the squashed line and the blurred square at negative coordinates");
 }

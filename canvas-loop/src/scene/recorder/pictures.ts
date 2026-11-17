@@ -4,7 +4,10 @@
 // frames stay while their recordings fit in about 16 MB, least recently asked
 // for dropped first, so a pose a walk cycle shows again is not recorded again;
 // a dropped version is recorded again when asked for. In testing mode the
-// recorder re-records each asked-for version and compares (`firstDifference`).
+// recorder re-records an asked-for version and compares (`firstDifference`)
+// when an audit is due (`auditDue`): in the frame that made it, in the next
+// `AUDIT_FIRST` frames, and then at the first ask `AUDIT_EVERY` frames or
+// more after the last comparison.
 import { SketchUsageError } from "../../core/errors.js";
 import type { PaperSettings, PictureVersion, PixelsVersion } from "../nodes.js";
 import { weightOf } from "../weight.js";
@@ -93,6 +96,8 @@ interface Entry {
   readonly version: Version;
   readonly made: number;
   lastAsked: number;
+  /** The last frame testing mode compared it in. */
+  audited: number;
   readonly use: Use;
   /** About how many bytes the recording holds. */
   readonly weight: number;
@@ -103,6 +108,12 @@ const IDLE_BUDGET = 16 * 1024 * 1024;
 
 /** Frames a new version has to be asked for again before the churn check counts it as used once: half a second, longer than a walk cycle's poses take to come back. */
 export const REUSE_WINDOW = 30;
+
+/** Testing mode compares a kept version in each of the frames after the one that made it, up to this many. */
+export const AUDIT_FIRST = 2;
+
+/** Then at the first ask this many frames (half a second) or more after the last comparison: a stale capture that lasts that long is still found, and a picture-heavy run does not record every body every frame. */
+export const AUDIT_EVERY = 30;
 
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {
@@ -131,10 +142,11 @@ export class PictureTable {
   }
 
   /** The version for these values, if recorded and kept. */
-  find(id: { kind: Version["kind"]; key: string; width: number; height: number; deps: readonly unknown[] | undefined; paper?: PaperSettings }): Version | undefined {
+  find(id: { kind: Version["kind"]; key: string; size: Size | undefined; deps: readonly unknown[] | undefined; paper?: PaperSettings }): Version | undefined {
     const hit = this.#entries.get(id.key)?.find((e) => {
       const v = e.version;
-      return v.kind === id.kind && v.width === id.width && v.height === id.height && sameData(v.deps, id.deps) && (v.kind !== "picture" || sameData(v.paper, id.paper));
+      const size = id.size === undefined ? v.kind === "picture" && !v.sized : (v.kind === "pixels" || v.sized) && v.width === id.size.width && v.height === id.size.height;
+      return v.kind === id.kind && size && sameData(v.deps, id.deps) && (v.kind !== "picture" || sameData(v.paper, id.paper));
     });
     if (hit === undefined) return undefined;
     hit.lastAsked = this.#frame;
@@ -154,7 +166,7 @@ export class PictureTable {
   add(version: Version): number | undefined {
     const use: Use = { made: this.#frame, again: false };
     const list = this.#entries.get(version.key) ?? [];
-    list.push({ version, made: this.#frame, lastAsked: this.#frame, use, weight: weightOf(version) });
+    list.push({ version, made: this.#frame, lastAsked: this.#frame, audited: this.#frame, use, weight: weightOf(version) });
     this.#entries.set(version.key, list);
     const last = this.#runs.get(version.key);
     const run = last === undefined ? 1 : last.frame === this.#frame ? last.run : last.frame === this.#frame - 1 ? last.run + 1 : 1;
@@ -164,6 +176,21 @@ export class PictureTable {
     if (run < REUSE_WINDOW + 3) return undefined;
     const judged = uses.filter((u) => u.made <= this.#frame - REUSE_WINDOW);
     return judged.filter((u) => !u.again).length * 2 > judged.length ? run : undefined;
+  }
+
+  /**
+   * Whether testing mode should record `version` again and compare: a second
+   * ask in the frame that made it, its next `AUDIT_FIRST` frames, then the
+   * first ask at least `AUDIT_EVERY` frames after the last comparison. Every
+   * ask in a frame that compares is compared, so two drawings sharing a key
+   * are found whichever asks first.
+   */
+  auditDue(version: Version): boolean {
+    const entry = this.#entries.get(version.key)?.find((e) => e.version === version);
+    if (entry === undefined) return true;
+    const due = this.#frame - entry.made <= AUDIT_FIRST || entry.audited === this.#frame || this.#frame - entry.audited >= AUDIT_EVERY;
+    if (due) entry.audited = this.#frame;
+    return due;
   }
 
   /** Whether `version` was added this frame (so asking for it again this frame was a second call). */
@@ -193,6 +220,12 @@ export class PictureHandle {
     this.version = version;
     this.frame = frame;
   }
+  get x(): number {
+    return this.version.kind === "picture" ? this.version.x : 0;
+  }
+  get y(): number {
+    return this.version.kind === "picture" ? this.version.y : 0;
+  }
   get width(): number {
     return this.version.width;
   }
@@ -212,14 +245,27 @@ export function placedVersion(picture: unknown, frame: object): Version {
   return picture.version;
 }
 
-/** A picture's key and size, checked; `pixels` needs whole pixels. */
-export function checkPictureOptions(o: { key: unknown; width: unknown; height: unknown }, call: "picture" | "pixels"): { key: string; width: number; height: number } {
+interface Size {
+  readonly width: number;
+  readonly height: number;
+}
+
+/** A picture's key and size, checked: a picture may leave out both width and height (it sizes itself); `pixels` needs both, in whole pixels. */
+export function checkPictureOptions(o: { key: unknown; width?: unknown; height?: unknown }, call: "picture" | "pixels"): { key: string; size: Size | undefined } {
   const { key, width, height } = o;
   if (typeof key !== "string" || key === "") throw new SketchUsageError({ detail: `${call}: key must be a non-empty string` });
+  if (call === "picture" && width === undefined && height === undefined) return { key, size: undefined };
+  if (call === "picture" && (width === undefined || height === undefined)) throw new SketchUsageError({ detail: `picture "${key}": give both width and height, or neither (the picture then sizes itself from its drawing); got only ${width === undefined ? "height" : "width"}` });
   for (const [name, v] of [["width", width], ["height", height]] as const) {
     const ok = typeof v === "number" && Number.isFinite(v) && v > 0 && (call === "picture" || (Number.isInteger(v) && v <= 4096));
     if (!ok) throw new SketchUsageError({ detail: `${call} "${key}": ${name} must be ${call === "pixels" ? "a whole number of pixels, 1..4096" : "a number > 0"}, got ${String(v)}` });
   }
   if (typeof width !== "number" || typeof height !== "number") throw new SketchUsageError({ detail: `${call}: width and height must be numbers` });
-  return { key, width, height };
+  return { key, size: { width, height } };
+}
+
+/** The size `a.call` reads: refused inside the body of a picture that sizes itself, whose size is known only once its drawing is. */
+export function sizeToRead(size: Size | undefined, a: { call: string; picture: string | undefined }): Size {
+  if (size !== undefined) return size;
+  throw new SketchUsageError({ detail: `${a.call} inside the body of ${a.picture ?? "a picture"}, which sizes itself from its drawing: it has no size while it records; give the picture a width and height, or draw without it` });
 }

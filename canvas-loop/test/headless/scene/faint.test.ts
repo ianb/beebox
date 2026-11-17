@@ -12,6 +12,11 @@ test("a mark under 8% warns with its call, its strength and its line; one at 8% 
   assert.deepEqual(faintWarnings([{ call: "line", alpha: 0.01, line: "a.ts:3:5" }], state), [], "each line once per run");
 });
 
+test("a mark drawn in a picture body names the picture version, since a shared helper's line does not say which", () => {
+  const [out] = faintWarnings([{ call: "line", alpha: 0.02, line: "tree.ts:9:5", picture: 'picture "wood-oak-2" [3]' }], faintState());
+  assert.ok(out?.startsWith('faint mark (line in picture "wood-oak-2" [3]): '), out);
+});
+
 test("after 8 warnings, one says the rest are suppressed, then none; a line is read only for a faint mark", () => {
   const state = faintState();
   const marks = Array.from({ length: 12 }, (_, i) => ({ call: "line", alpha: 0.01, line: `a.ts:${i}:1` }));
