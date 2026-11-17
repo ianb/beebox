@@ -105,7 +105,7 @@ No critical gap.
 - Transition state: ADDRESSED. A tab loaded before deploy has no HEIF code and keeps the old refusal; a reload picks it up. A tab whose worker chunk was removed by a later deploy gets the "reader didn't load" toast, which says to reload.
 - More than three photos: ADDRESSED by existing routing (`file-routing.ts`, `INLINE_PHOTO_LIMIT`): they upload as files, no decode. The agent converts per its prompt.
 - Safari 17+ / iOS 17+ app: ADDRESSED. Native decode succeeds; the worker never loads. Older Safari and WKWebView reach the libheif path like Chrome; module workers exist there from Safari 15. Not run on those engines.
-- A HEIC whose MIME type is empty (a browser with no HEIC entry in its MIME table): ADDRESSED. `file-routing.ts` treats an empty-type `.heic`/`.heif` name as a photo, so it reaches the decoder, which checks the bytes (`file-routing.test.ts`, "An untyped HEIC is a photo").
+- A HEIC whose MIME type is empty (a browser with no HEIC entry in its MIME table): ADDRESSED. `file-routing.ts` treats an empty-type `.heic`/`.heif` name as a photo, so it reaches the decoder, which checks the bytes (`file-routing.test.ts`, "An untyped HEIC is a photo"). A HEIC with neither a type nor a HEIC name still uploads as a plain file: routing is synchronous by design (it guards the inline-count race), so it cannot read bytes, and browsers give clipboard images a type (`image/png` in Chrome). Accepted. An untyped `.HEIC` whose bytes are broken is reported as damaged, not as an unsupported format (`image-paste.test.ts`).
 
 ## NOT in scope
 

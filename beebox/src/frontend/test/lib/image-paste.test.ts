@@ -79,3 +79,12 @@ void test("A HEIC that libheif could not read is damaged, whatever its type says
 void test("A HEIC reader that did not load says so, and says what to do", async (t) => {
   t.check(unsupportedImageMessage([failedWith({ name: "IMG_1139.HEIC", type: "image/heic", error: new HeifDecoderUnavailableError("404") })]), "HEIC files can't be added right now: the HEIC reader didn't load. Reload the page and try again.");
 });
+
+// ## An untyped file named for a listed format is damaged, not unsupported
+//
+// A HEIC with an empty `type` whose header is broken never reaches libheif.
+// Its name still says HEIC, which the message lists as working, so it is
+// reported as unreadable.
+void test("An untyped file named for a listed format is damaged, not unsupported", async (t) => {
+  t.check(unsupportedImageMessage([failed("IMG_4521.HEIC", "")]), "That image file can't be read; it may be damaged.");
+});

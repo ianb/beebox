@@ -62,4 +62,3 @@ export async function decodeHeifToBitmap(blob: Blob): Promise<ImageBitmap> {
     worker.terminate();
   }
 }
-

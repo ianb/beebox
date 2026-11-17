@@ -237,6 +237,9 @@ export function extractTransferFiles(
  */
 const ACCEPTED_IMAGE_TYPES: ReadonlySet<string> = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"]);
 
+/** The same formats by extension, for a file whose `type` is empty. */
+const ACCEPTED_IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(["JPG", "JPEG", "PNG", "GIF", "WEBP", "HEIC", "HEIF"]);
+
 /** A picked file that did not become an attachment, and what {@link processImageBlob} threw for it. */
 export interface ImageFailure {
   file: File;
@@ -284,12 +287,14 @@ type FailureKind = "reader-unavailable" | "damaged" | "unsupported";
  * Why one file failed. The HEIF errors are decided by the bytes, so they
  * classify a HEIC whose `type` is empty (a paste) correctly. Otherwise a file
  * of a format the app accepts that still failed to decode is damaged:
- * blaming its format would contradict the list the message gives.
+ * blaming its format would contradict the list the message gives. With no
+ * `type`, the extension names the format, as it does in the message.
  */
 function failureKind(file: File, error: unknown): FailureKind {
   if (error instanceof HeifDecoderUnavailableError) return "reader-unavailable";
   if (error instanceof HeifUnreadableError) return "damaged";
-  return ACCEPTED_IMAGE_TYPES.has(file.type) ? "damaged" : "unsupported";
+  const listed = file.type === "" ? ACCEPTED_IMAGE_EXTENSIONS.has(formatLabel(file)) : ACCEPTED_IMAGE_TYPES.has(file.type);
+  return listed ? "damaged" : "unsupported";
 }
 
 /** "HEIC" from `image/heic`; falls back to the extension, else "". */
