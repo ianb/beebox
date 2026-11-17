@@ -37,8 +37,8 @@ the artifact, and exploratory spikes (spike first; plan if it survives).
 4. Write for a reader six months from now with no context — Simplified
    Technical English in spirit: short sentences, active voice, one idea per
    sentence, consistent terms. Not a chat transcript.
-5. Run the cross-model plan review and adjudicate it before the first
-   implementation chunk; code written while the review runs gets rewritten.
+5. Run the cross-model plan review and adjudicate it before you write code;
+   do not implement while it runs.
    When a review round or the boxholder reverses a decision, or you revise the
    plan after commits, search the plan for the old wording and rewrite every
    place it appears: the next reviewer reads the plan as authority.
@@ -56,22 +56,22 @@ long multi-track plan serially in dependency order; don't compress it.
 These are what make a plan checkable rather than a story. They apply when
 writing and when reviewing.
 
-- **Evidence matches the claim.** A `file:line` quote proves that the quoted
+- **Cite, and prove the whole claim.** Any claim about existing code or
+  behaviour quotes `file:line` plus verbatim text. The quote proves that the
   text exists. It does not prove "every", "none", "the same as", "reusable
   as-is", what the code does when it runs, or that a value reaches its
-  consumer. Each claim a track would be wrong without is a row in the
-  template's *Code claims* table, with the evidence that claim needs. An
-  empty search is the evidence for "none": write the search down. A subagent
-  summary, handoff, issue, older plan, doc, or code comment is a lead: get the
-  evidence yourself or mark the row unverified.
+  consumer; the template's *Depends on* bullet names the evidence each of
+  those needs. A subagent summary, handoff, issue, older plan, doc, or code
+  comment is a lead: get the evidence yourself or mark the claim UNVERIFIED.
+- **Searches that came back empty are findings.** "Searched for X in Y, found
+  nothing" is the evidence for "none"; write it down.
 - **No numeric scoring.** No confidence levels, completeness scores, or 1–10
   ratings. A finding that needs a number needs better prose.
 - **Walk each user scenario before calling the plan ready.** Trace it hop by
   hop against the real code: who writes what, which process runs, what the
   person sees, what is left behind. Walk the way out as well as the way in
-  (the thing ends, is deleted, clears), and write the walk under the *Code
-  claims* table. When the plan depends on an external model or API, call it
-  with realistic data.
+  (the thing ends, is deleted, clears), and write the walk in the plan. When
+  the plan depends on an external model or API, call it with realistic data.
 
 ## Size and scope review
 
@@ -101,10 +101,9 @@ do not reinterpret it as aspirational.
 
 ## Reviewing an existing plan
 
-Read the plan; check every template section is present. Re-derive *Code
-claims* rows instead of reading them: rerun a search, follow a flow one hop
-past where the plan stops, run the command. A track claim with no row, and an
-unverified row that a first chunk depends on, are findings.
+Read the plan; check every template section is present and every claim cited.
+Re-derive each track's *Depends on* facts instead of reading them: widen the
+search, follow a flow one hop past where the plan stops, run the command.
 For external prior art, verify the premises the design relies on; do not repeat
 searches that have no bearing on a design decision.
 Write findings to a sibling `<plan>.review.md`:
@@ -113,7 +112,6 @@ Write findings to a sibling `<plan>.review.md`:
 # Plan Engineering Review — <topic>
 ## What already exists
 ## Ontology (verified against the code's own names)
-## Code claims (rows re-derived, and how)
 ## Prior art (external) — verified      ← verify external premises the design depends on
 ## Stated preferences this plan trades against
 ## Could this be simpler? (verified)

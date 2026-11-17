@@ -24,8 +24,8 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 <!-- Name the smallest fix, the chosen design's tracks/subprojects, and
      estimated changed lines (additions plus deletions): source and tests,
      authored docs, generated output, as three figures; this plan not counted.
-     Explain what the fuller design buys. Over 2,000 total changed lines is a
-     BIG CHANGE; the skill's *Size and scope review* has the rules. -->
+     Explain what the fuller design buys. Over 2,000 lines without generated
+     output is a BIG CHANGE; the skill's *Size and scope review* has the rules. -->
 
 ## Stated preferences this plan trades against
 
@@ -77,25 +77,18 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
      - Direction — the proposed change, with actual shapes (signatures,
        schema fields, tag attributes) where known
      - Vocabulary lock-ins — names/shapes committed across the codebase
+     - Depends on — each fact about existing code or an external service that
+       this track would be wrong without, with evidence that proves all of it:
+       - this text exists: file:line and the quote, read by you
+       - all / none / only / same as / reusable as-is: the search, where you
+         ran it, and each hit (callers, implementers, importers, write sites)
+       - what it does when it runs (returns, delivers, retries, rejects,
+         costs): the command or test you ran, and its output
+       - a value reaches X: every hop from producer to consumer, file:line each
+       A fact from a subagent, handoff, issue, older plan, doc, or code
+       comment is UNVERIFIED until you hold that evidence; mark it so.
      - First implementation chunk — commit-sized, with NO open questions
-       inside it (an open question there means design isn't done) -->
-
-## Code claims
-
-<!-- Every statement about existing code or an external service that a track
-     would be wrong without, one row each. The evidence depends on the claim:
-     - this text exists: file:line and the quote, read by you
-     - all / none / only / same as / reusable as-is: the search you ran and
-       every hit accounted for (callers, implementers, importers, write sites)
-     - what it does when it runs (returns, delivers, retries, rejects, costs):
-       the command or test you ran, and its output
-     - a value reaches X: every hop from producer to consumer, file:line each
-     A claim from a subagent, handoff, issue, older plan, doc, or code comment
-     is unverified until you hold that evidence. No first chunk may depend on
-     an unverified row. Under the table, each scenario walk as numbered hops. -->
-
-| Claim | Evidence | Verified? |
-|---|---|---|
+       and no UNVERIFIED fact inside it (either means design isn't done) -->
 
 ## Could this be simpler?
 
@@ -130,8 +123,9 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Agent-flow / user-flow edge cases
 
-<!-- Mark each ADDRESSED (cite where), DEFERRED (cite the open question), or
-     GAP:
+<!-- First, each scenario walk as numbered hops, file:line per hop, the way
+     in and the way out. Then mark each of these ADDRESSED (cite where),
+     DEFERRED (cite the open question), or GAP:
      - Wrong tag / wrong field — the agent picks the wrong one of two similar things
      - Stale ref — the target moved or was archived between write and read
      - Two agents touching the same card — chat agent and reactor concurrently
