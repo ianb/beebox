@@ -188,7 +188,8 @@ export default (cl, { mount, figure }) =>
   \`update\` with \`u.textBounds\` / \`u.textWidth\`.
 - **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
   \`canvas-loop.md\`; brushes, paper, effects, glow, lighting and pictures in
-  \`canvas-loop-brushes.md\` (both beside this file).
+  \`canvas-loop-brushes.md\` (both beside this file). Worked examples, one per
+  technique, are in \`canvas-loop-examples.md\`.
 - **canvas-loop figures draw with WebGPU.** A device without it shows "This
   figure can't draw on this device" in place of the figure. Do not switch a
   figure to another runtime for this unless the boxholder asks.

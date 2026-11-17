@@ -40,7 +40,7 @@ import { generateBbxCommands } from "./bbx-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "../content.js";
 import { generateProcedureGuide } from "./procedure-guide.js";
 import { generateTriageGuide } from "./triage.js";
-import { generateCanvasLoopBrushesDoc, generateCanvasLoopDoc } from "./canvas-loop-doc.js";
+import { generateCanvasLoopBrushesDoc, generateCanvasLoopDoc, generateCanvasLoopExamplesDoc } from "./canvas-loop-doc.js";
 import { BOX_PACKAGE_DOCS, PACKAGE_DOCS_DIR_NAME } from "../shared.js";
 
 export interface EngineDoc {
@@ -68,6 +68,7 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
   { filename: "canvas-loop.md", readWhen: "Writing a canvas-loop figure: the sketch contract, the drawing draw returns, styles, text, scopes, pictures, input, sound.", generate: generateCanvasLoopDoc },
   { filename: "canvas-loop-brushes.md", readWhen: "Using canvas-loop brushes, paper, effects (wash, glow, hatching) and lighting in a figure.", generate: generateCanvasLoopBrushesDoc },
+  { filename: "canvas-loop-examples.md", readWhen: "Looking for a whole canvas-loop figure to start from: drag, typed answer, sound, event-time animation, physics, painting, brushes, effects, lighting.", generate: generateCanvasLoopExamplesDoc },
 ];
 
 /** Prose docs for box agents, shipped as-is (frontmatter stripped). */
