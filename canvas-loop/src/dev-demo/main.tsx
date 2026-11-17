@@ -6,7 +6,7 @@
 //
 //   • Orbit  — uncontrolled: state lives inside the figure. `onEvent` streams
 //     the recorded input log to a live "last input" readout (watching).
-//   • Fjord  — controlled + localStorage: the host owns the values, so
+//   • Brushes — controlled + localStorage: the host owns the values, so
 //     persistence is a few lines of composition here, not a component feature.
 import { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -15,42 +15,43 @@ import type { ParamRecord } from "@ianbicking/canvas-loop/react";
 import type { TeaScriptEvent } from "../headless/tea-events.js";
 import { asPlaygroundModule } from "../browser/sketch-types.js";
 import * as orbit from "../examples/orbit-tea.js";
-import * as fjord from "../examples/fjord-tea.js";
+import * as brushes from "../examples/brushes-tea.js";
 
 const orbitModule = asPlaygroundModule(orbit);
-const fjordModule = asPlaygroundModule(fjord);
+const brushesModule = asPlaygroundModule(brushes);
 
-const FJORD_KEY = "canvas-loop-demo:fjord-params";
-const FJORD_DEFAULTS: ParamRecord = { tide: 0, timeOfDay: "day" };
+const BRUSHES_KEY = "canvas-loop-demo:brushes-params";
 
-// Read the persisted fjord params, field by field, with no cast — an unknown
-// parse result is validated against the two known fields and otherwise ignored.
-function loadFjordParams(): ParamRecord {
+// Read the persisted brushes params. Each stored field is kept only when the
+// brushes declaration accepts it; anything else falls back to the default.
+function loadBrushesParams(): ParamRecord {
   let raw: string | null = null;
   try {
-    raw = window.localStorage.getItem(FJORD_KEY);
+    raw = window.localStorage.getItem(BRUSHES_KEY);
   } catch (_e) {
-    return FJORD_DEFAULTS;
+    return {};
   }
-  if (raw === null) return FJORD_DEFAULTS;
+  if (raw === null) return {};
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (_e) {
-    return FJORD_DEFAULTS;
+    return {};
   }
-  if (typeof parsed !== "object" || parsed === null) return FJORD_DEFAULTS;
-  const tide = "tide" in parsed ? parsed.tide : undefined;
-  const timeOfDay = "timeOfDay" in parsed ? parsed.timeOfDay : undefined;
-  return {
-    tide: typeof tide === "number" ? tide : FJORD_DEFAULTS["tide"] ?? 0,
-    timeOfDay: typeof timeOfDay === "string" ? timeOfDay : FJORD_DEFAULTS["timeOfDay"] ?? "day",
-  };
+  if (typeof parsed !== "object" || parsed === null) return {};
+  const stored = new Map(Object.entries(parsed));
+  const accepted = Object.entries(brushes.params).flatMap(([name, decl]): [string, string | number][] => {
+    const value = stored.get(name);
+    if (decl.type === "select" && typeof value === "string" && new Set<string>(decl.options).has(value)) return [[name, value]];
+    if (decl.type === "number" && typeof value === "number" && value >= decl.min && value <= decl.max) return [[name, value]];
+    return [];
+  });
+  return Object.fromEntries(accepted);
 }
 
-function saveFjordParams(values: ParamRecord): void {
+function saveBrushesParams(values: ParamRecord): void {
   try {
-    window.localStorage.setItem(FJORD_KEY, JSON.stringify(values));
+    window.localStorage.setItem(BRUSHES_KEY, JSON.stringify(values));
   } catch (_e) {
     // Storage may be unavailable (private mode / quota); the figure still works.
   }
@@ -76,29 +77,29 @@ function OrbitDemo(): JSX.Element {
   );
 }
 
-function FjordDemo(): JSX.Element {
-  const [params, setParams] = useState<ParamRecord>(loadFjordParams);
+function BrushesDemo(): JSX.Element {
+  const [params, setParams] = useState<ParamRecord>(loadBrushesParams);
   const handleParamsChange = useCallback((values: ParamRecord): void => {
     setParams(values);
-    saveFjordParams(values);
+    saveBrushesParams(values);
   }, []);
   const handleClear = useCallback((): void => {
     try {
-      window.localStorage.removeItem(FJORD_KEY);
+      window.localStorage.removeItem(BRUSHES_KEY);
     } catch (_e) {
       // Ignore storage errors — resetting the in-memory params is enough.
     }
-    setParams(FJORD_DEFAULTS);
+    setParams({});
   }, []);
   return (
     <section className="demo-card">
-      <h2>Fjord — controlled + localStorage persistence</h2>
+      <h2>Brushes — controlled + localStorage persistence</h2>
       <p className="demo-note">
         The host owns the values (<code>params</code> + <code>onParamsChange</code>), so persistence is composition:
         each change is written to <code>localStorage</code> and restored on reload. Host-injected changes dispatch
         through the normal param message path.
       </p>
-      <SketchFigure module={fjordModule} params={params} onParamsChange={handleParamsChange} />
+      <SketchFigure module={brushesModule} params={params} onParamsChange={handleParamsChange} />
       <p className="demo-note">
         <button type="button" className="demo-link" onClick={handleClear}>
           clear saved state
@@ -119,7 +120,7 @@ function App(): JSX.Element {
         </p>
       </header>
       <OrbitDemo />
-      <FjordDemo />
+      <BrushesDemo />
     </main>
   );
 }

@@ -152,9 +152,9 @@ test("examples check fails an example with no events file, or one that does not 
   mkdirSync(examples, { recursive: true });
   for (const name of ["none", "empty", "late", "unsorted"]) writeFileSync(join(examples, `${name}-tea.ts`), readFileSync(clean, "utf8"));
   writeFileSync(join(examples, "empty-tea-events.json"), "[]");
-  writeFileSync(join(examples, "late-tea-events.json"), '[{ "frame": 5, "type": "snapshot" }, { "frame": 5, "type": "keydown", "key": "r" }]');
+  writeFileSync(join(examples, "late-tea-events.json"), '[{ "frame": 5, "type": "snapshot" }, { "frame": 7, "type": "keydown", "key": "r" }]');
   // The run length comes from the largest frame, not the last entry.
-  writeFileSync(join(examples, "unsorted-tea-events.json"), '[{ "frame": 2, "type": "snapshot" }, { "frame": 9, "type": "mousedown", "x": 1, "y": 1 }]');
+  writeFileSync(join(examples, "unsorted-tea-events.json"), '[{ "frame": 9, "type": "mousedown", "x": 1, "y": 1 }, { "frame": 2, "type": "snapshot" }]');
   const result = await checkExamples({ examplesDir: pathToFileURL(`${examples}/`) });
   const detail = new Map(result.entries.map((e) => [e.name, e.detail]));
   assert.deepEqual(result.entries.map((e) => e.ok), [false, false, false, false]);

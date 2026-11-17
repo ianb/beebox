@@ -1,0 +1,8 @@
+[
+  { "frame": 0, "type": "param", "name": "look", "value": "plain" },
+  { "frame": 0, "type": "snapshot", "label": "plain" },
+  { "frame": 1, "type": "param", "name": "look", "value": "wash" },
+  { "frame": 1, "type": "snapshot", "label": "wash" },
+  { "frame": 2, "type": "param", "name": "look", "value": "hatching" },
+  { "frame": 2, "type": "snapshot", "label": "hatching" }
+]

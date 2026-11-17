@@ -260,20 +260,20 @@ const KEY = "my-sketch-params";
 function PersistedFigure() {
   const [params, setParams] = useState(() => {
     const saved = localStorage.getItem(KEY);
-    return saved ? JSON.parse(saved) : { tide: 0, timeOfDay: "day" };
+    return saved ? JSON.parse(saved) : { brush: "ink", weight: 6 };
   });
   const onParamsChange = useCallback((values) => {
     setParams(values);
     localStorage.setItem(KEY, JSON.stringify(values)); // restore on reload
   }, []);
-  return <SketchFigure module={fjord} params={params} onParamsChange={onParamsChange} />;
+  return <SketchFigure module={brushes} params={params} onParamsChange={onParamsChange} />;
 }
 ```
 
 ### Demo
 
 `src/dev-demo/main.tsx` embeds two figures — orbit (uncontrolled, controls +
-recorder + an `onEvent` readout) and fjord (controlled, wired to `localStorage`
+recorder + an `onEvent` readout) and brushes (controlled, wired to `localStorage`
 with a "clear saved state" link). Build the self-contained page with:
 
 ```sh

@@ -56,11 +56,10 @@ function sketchUrl(examplesDir: URL, name: string): URL {
   return new URL(`${name}${SKETCH_SUFFIX}`, examplesDir);
 }
 
-/** The run length the events file sets: frames 0 … its last frame, which must hold only snapshots. */
+/** The run length the events file sets: frames 0 … its last frame, which must hold a snapshot. */
 function runFrames(events: readonly TeaScriptEvent[]): number {
   const last = Math.max(...events.map((event) => event.frame));
-  const atLast = events.filter((event) => event.frame === last);
-  if (events.length === 0 || atLast.some((event) => event.type !== "snapshot")) {
+  if (!events.some((event) => event.frame === last && event.type === "snapshot")) {
     throw new CliError({ detail: "end the events file with a snapshot at its last frame" });
   }
   return last + 1;
