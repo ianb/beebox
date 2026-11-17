@@ -3,7 +3,7 @@
 // the sky lands with a `knock`, a different take each time; playing every bar
 // once earns a `chime`. Each sound gets a new id from a counter in the model.
 // It starts at `model.frame + 1`: the model holds the last tick's frame, so
-// that is the frame of the click. Linked from TEA.md "Sound".
+// that is the frame of the click or the landing. Linked from TEA.md "Sound".
 import type { DeepReadonly, Drawing, Msg, RootDrawing, Util, View, Voice } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 400, height: 260 };
@@ -56,7 +56,9 @@ function playBar(model: DeepReadonly<Model>, bar: number, u: Util): Model {
 function tick(model: DeepReadonly<Model>, frame: number): Model {
   const landed = model.balls.filter((b) => b.y + b.vy >= FLOOR - 6);
   const falling = model.balls.filter((b) => b.y + b.vy < FLOOR - 6).map((b) => ({ ...b, y: b.y + b.vy, vy: b.vy + GRAVITY }));
-  return landed.reduce<Model>((m) => hear(m, { kind: "knock", bar: -1, note: "" }), { ...model, frame, balls: falling });
+  // Hear the landings before the model takes this tick's frame, so a knock starts on the frame the ball lands.
+  const heard = landed.reduce<Model>((m) => hear(m, { kind: "knock", bar: -1, note: "" }), { ...model, balls: falling });
+  return { ...heard, frame };
 }
 
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util): Model {
