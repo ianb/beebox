@@ -132,3 +132,6 @@ tmp/
 temp/
 tmp-*/
 _tmp-*/
+
+# canvas-loop live pages (`pnpm --dir canvas-loop run cli page`): built, rebuildable
+dev/canvas-loop-pages/
