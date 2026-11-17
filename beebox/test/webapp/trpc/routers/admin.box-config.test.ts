@@ -208,7 +208,7 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
     agentEngine: "codex",
     agentModel: "gpt-5.6-sol",
   }));
-  t.check((await caller(box.root).admin.boxConfig()).agentModel, "gpt-6.1-sol");
+  t.check((await caller(box.root).admin.boxConfig()).agentModel, "gpt-6.2-sol");
 
   // An invalid configured engine is not presented as a valid Claude default. The
   // runtime rejects this value too, so Admin must surface the same configuration

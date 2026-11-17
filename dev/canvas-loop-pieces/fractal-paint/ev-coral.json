@@ -1,0 +1,191 @@
+[
+ {
+  "frame": 0,
+  "type": "param",
+  "name": "palette",
+  "value": "coral"
+ },
+ {
+  "frame": 4,
+  "type": "mousedown",
+  "x": 300,
+  "y": 560
+ },
+ {
+  "frame": 4,
+  "type": "mousepath",
+  "frames": 24,
+  "points": [
+   [
+    300,
+    560
+   ],
+   [
+    292,
+    500
+   ],
+   [
+    300,
+    440
+   ],
+   [
+    322,
+    390
+   ],
+   [
+    350,
+    352
+   ]
+  ]
+ },
+ {
+  "frame": 28,
+  "type": "mouseup",
+  "x": 350,
+  "y": 352
+ },
+ {
+  "frame": 70,
+  "type": "snapshot",
+  "label": "branch: a stroke grows into a plant"
+ },
+ {
+  "frame": 72,
+  "type": "keydown",
+  "key": "3"
+ },
+ {
+  "frame": 74,
+  "type": "mousedown",
+  "x": 640,
+  "y": 160
+ },
+ {
+  "frame": 74,
+  "type": "mousepath",
+  "frames": 18,
+  "points": [
+   [
+    640,
+    160
+   ],
+   [
+    700,
+    150
+   ],
+   [
+    760,
+    175
+   ],
+   [
+    790,
+    225
+   ]
+  ]
+ },
+ {
+  "frame": 92,
+  "type": "mouseup",
+  "x": 790,
+  "y": 225
+ },
+ {
+  "frame": 180,
+  "type": "snapshot",
+  "label": "spiral"
+ },
+ {
+  "frame": 182,
+  "type": "keydown",
+  "key": "2"
+ },
+ {
+  "frame": 184,
+  "type": "mousedown",
+  "x": 560,
+  "y": 520
+ },
+ {
+  "frame": 184,
+  "type": "mousepath",
+  "frames": 16,
+  "points": [
+   [
+    560,
+    520
+   ],
+   [
+    640,
+    470
+   ],
+   [
+    720,
+    500
+   ],
+   [
+    800,
+    450
+   ],
+   [
+    880,
+    520
+   ]
+  ]
+ },
+ {
+  "frame": 200,
+  "type": "mouseup",
+  "x": 880,
+  "y": 520
+ },
+ {
+  "frame": 250,
+  "type": "snapshot",
+  "label": "gasket"
+ },
+ {
+  "frame": 252,
+  "type": "keydown",
+  "key": "4"
+ },
+ {
+  "frame": 254,
+  "type": "mousedown",
+  "x": 480,
+  "y": 250
+ },
+ {
+  "frame": 254,
+  "type": "mousepath",
+  "frames": 14,
+  "points": [
+   [
+    480,
+    250
+   ],
+   [
+    510,
+    230
+   ],
+   [
+    540,
+    250
+   ],
+   [
+    560,
+    200
+   ]
+  ]
+ },
+ {
+  "frame": 268,
+  "type": "mouseup",
+  "x": 560,
+  "y": 200
+ },
+ {
+  "frame": 320,
+  "type": "snapshot",
+  "label": "mandala"
+ }
+]

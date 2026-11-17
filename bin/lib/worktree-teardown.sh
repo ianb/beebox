@@ -511,6 +511,75 @@ wt_trash_reap() {
   return 0
 }
 
+# ── Culled scratch/ retention ───────────────────────────────────────────
+#
+# scratch/ is gitignored, so the worktree trash-mv used to take it silently,
+# and agents keep working tools there across days (the 2026-11-17
+# canvas-brushes cull deleted scripts that later work needed). A removal
+# therefore moves scratch/'s contents, less the tracked README, to
+# WT_SCRATCH_KEEP_ROOT/<name>-<UTC stamp> first and says where. `bin/workstreams sweep` trashes kept copies
+# older than WT_SCRATCH_KEEP_DAYS. No size cap: the move is a same-volume
+# rename (cross-volume only if BBX_STATE_DIR is moved), and the largest scratch/ seen (~570MB, mostly PNG renders) costs
+# disk only for the retention window.
+WT_SCRATCH_KEEP_ROOT="$WT_STATE_DIR/culled-scratch"
+WT_SCRATCH_KEEP_DAYS=14
+
+# wt_scratch_retain <worktree_path> <name>
+#
+# Moves every entry of <worktree_path>/scratch except the tracked README.md to
+# a new dir under the keep root. The README stays so the checkout remains
+# clean for a Git-level removal (native WorktreeRemove). Non-zero when an entry
+# could not be moved; a removal caller must then refuse rather than trash it.
+wt_scratch_retain() {
+  local worktree_path="$1" name="$2" src entry dest size
+  local entries=()
+  src="$worktree_path/scratch"
+  [ -d "$src" ] && [ ! -L "$src" ] || return 0
+  for entry in "$src"/* "$src"/.[!.]* "$src"/..?*; do
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    [ "$entry" = "$src/README.md" ] && continue
+    entries+=("$entry")
+  done
+  [ "${#entries[@]}" -gt 0 ] || return 0
+  dest="$WT_SCRATCH_KEEP_ROOT/$name-$(date -u +%Y%m%dT%H%M%SZ)"
+  [ -e "$dest" ] && dest="$dest-$$"
+  [ -e "$dest" ] && return 1
+  mkdir -p "$dest" || return 1
+  if ! mv "${entries[@]}" "$dest/"; then
+    # Drop the keep dir if nothing reached it; otherwise name what did.
+    if ! rmdir "$dest" 2>/dev/null; then
+      wt_say "partly kept scratch/ at $dest; deleted after $WT_SCRATCH_KEEP_DAYS days"
+      wt_log "scratch partly kept wt=$worktree_path dest=$dest"
+    fi
+    return 1
+  fi
+  size=$(du -sh "$dest" 2>/dev/null | cut -f1 | tr -d ' ')
+  wt_say "kept scratch/ (${size:-?}) at $dest; deleted after $WT_SCRATCH_KEEP_DAYS days"
+  wt_log "scratch kept wt=$worktree_path dest=$dest size=${size:-?}"
+  return 0
+}
+
+# wt_scratch_prune [--dry-run]
+#
+# Moves kept scratch copies older than WT_SCRATCH_KEEP_DAYS into the trash dir
+# for the next wt_trash_reap, printing one line per copy. --dry-run only lists.
+wt_scratch_prune() {
+  local dry="${1:-}" d trash="${WT_TRASH:-$WT_STATE_DIR/trash}"
+  [ -d "$WT_SCRATCH_KEEP_ROOT" ] || return 0
+  while IFS= read -r -d '' d; do
+    if [ "$dry" = "--dry-run" ]; then
+      echo "expired kept scratch: $d"
+      continue
+    fi
+    mkdir -p "$trash" || return 1
+    if mv "$d" "$trash/scratch-$(basename "$d")"; then
+      echo "expired kept scratch: $d"
+      wt_log "scratch expired dest=$d"
+    fi
+  done < <(find "$WT_SCRATCH_KEEP_ROOT" -mindepth 1 -maxdepth 1 -type d -mmin "+$((WT_SCRATCH_KEEP_DAYS * 1440))" -print0)
+  return 0
+}
+
 # The private-issues shadow worktree (bin/private-issues): remove it iff merged
 # into private main AND strictly clean; anything else is preserved as an orphan
 # OUTSIDE this worktree (the mount is only a symlink, so public cleanup cannot
@@ -626,6 +695,13 @@ wt_remove_now_locked() {
   if git_lock_reason=$(wt_git_worktree_lock_reason "$worktree_path"); then
     wt_git_admin_lock_release
     wt_say "refusing removal: Git worktree is locked: $git_lock_reason"
+    return 1
+  fi
+
+  if ! wt_scratch_retain "$worktree_path" "$name"; then
+    wt_git_admin_lock_release
+    wt_say "refusing removal: scratch/ could not be moved to $WT_SCRATCH_KEEP_ROOT"
+    wt_log "scratch keep failed wt=$worktree_path"
     return 1
   fi
 

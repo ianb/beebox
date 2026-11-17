@@ -1,51 +1,18 @@
 // Bundles the browser playground into ONE self-contained HTML file — every
 // module inlined, zero runtime imports, no external requests (it is published
-// behind a strict CSP). esbuild bundles src/browser/app/playground.ts (runtime +
-// every example) to an ES module; this script wraps it in a dark, minimal HTML
-// shell with inline CSS. The output is the TRACKED dev/canvas-loop-examples.html,
+// behind a strict CSP). bundle.ts bundles src/browser/app/playground.ts (runtime +
+// every example) to an ES module and wraps it in a dark, minimal HTML shell
+// with this file's inline CSS. The output is the TRACKED dev/canvas-loop-examples.html,
 // served at /<worktree>/dev/canvas-loop-examples.html. Regenerate after
 // changing an example with `pnpm --dir canvas-loop run build:playground`.
-import { build } from "esbuild";
-import type { OnResolveArgs, Plugin } from "esbuild";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { bundleEntry, htmlPage } from "./bundle.js";
 
 const HERE = import.meta.dirname;
 const ENTRY = resolve(HERE, "app/playground.ts");
 const OUT_DIR = resolve(HERE, "../../../dev");
 const OUT_FILE = resolve(OUT_DIR, "canvas-loop-examples.html");
-
-// The repo writes NodeNext `.js` import specifiers that point at `.ts` sources;
-// esbuild resolves real files, so remap each relative `.js` to its `.ts`.
-const tsResolve: Plugin = {
-  name: "ts-from-js-specifier",
-  setup(pluginBuild) {
-    pluginBuild.onResolve({ filter: /\.js$/ }, (args: OnResolveArgs) => {
-      if (!args.path.startsWith(".")) return null;
-      const tsPath = resolve(args.resolveDir, args.path).replace(/\.js$/, ".ts");
-      return existsSync(tsPath) ? { path: tsPath } : null;
-    });
-  },
-};
-
-function renderHtml(js: string): string {
-  // Neutralise any `</script>` that could close the inline block early.
-  const safe = js.replace(/<\/script>/gi, "<\\/script>");
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>canvas-loop examples</title>
-<style>${CSS}</style>
-</head>
-<body>
-<div id="app"></div>
-<script type="module">${safe}</script>
-</body>
-</html>
-`;
-}
 
 const CSS = `
 :root { color-scheme: dark; }
@@ -106,32 +73,11 @@ summary { cursor: pointer; color: #93c5fd; }
 `;
 
 async function main(): Promise<void> {
-  const result = await build({
-    entryPoints: [ENTRY],
-    bundle: true,
-    // ESM, in a module script: the scene code reads import.meta.url (scene/call-site.ts).
-    format: "esm",
-    platform: "browser",
-    target: ["es2022"],
-    minify: true,
-    write: false,
-    plugins: [tsResolve],
-    logLevel: "warning",
-  });
-  const output = result.outputFiles[0];
-  if (output === undefined) throw new BuildError({ detail: "esbuild produced no output" });
-  const html = renderHtml(output.text);
+  const html = htmlPage({ title: "canvas-loop examples", css: CSS, js: await bundleEntry(ENTRY) });
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(OUT_FILE, html);
   const kib = (Buffer.byteLength(html) / 1024).toFixed(1);
   console.log(`${OUT_FILE} — ${kib} KiB`);
-}
-
-class BuildError extends Error {
-  name = "BuildError";
-  constructor(options: { detail: string }) {
-    super(`build: ${options.detail}`);
-  }
 }
 
 await main();

@@ -17,6 +17,7 @@ import { BrowseSession } from "./tour-lib/browse.js";
 import { auditBackdrops, describeBackdropFailure } from "./tour-lib/backdrop.js";
 import { auditContrast, describeContrastFailure, mergeContrastSteps, type ContrastStep } from "./tour-lib/contrast.js";
 import { collectRules, describeUncoveredRule, matchRules, ruleTargets, type RuleExemption, type RuleTarget } from "./tour-lib/rules.js";
+import { checkFocusedStudio } from "./theme-check-focus.js";
 import { jobKey, loadLastRun, retryJobs, runId, saveLastRun, sourceFingerprint, ThemeCheckError, validateLastRun, type ThemeJob } from "./theme-check-run.js";
 
 /**
@@ -102,6 +103,8 @@ async function openStudio(session: BrowseSession, { c, marker }: { c: StudioCase
   } catch (cause) {
     throw new ThemeCheckError(`theme studio did not render #bbx-theme-studio-scroll for ${caseName(c)} within 30 seconds: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
   }
+  try { await session.run(["wait", ".bbx-app-nav"]); }
+  catch (cause) { throw new ThemeCheckError(`normal studio navigation is not visible for ${caseName(c)}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause }); }
   // Activity lives outside the transcript; expanding it exposes its hint and actions.
   const ambientToggle = "#bbx-theme-studio-ambient button[aria-expanded]";
   try {
@@ -157,11 +160,11 @@ interface Coverage {
   unparsable: Set<string>;
 }
 
-async function checkScreen(session: BrowseSession, { c, screen, coverage, marker }: { c: StudioCase; screen: Screen; coverage: Coverage; marker: string }): Promise<number> {
+async function checkScreen(session: BrowseSession, { c, screen, coverage, marker, state }: { c: StudioCase; screen: Screen; coverage: Coverage; marker: string; state: string }): Promise<number> {
   const result = await auditBackdrops(session);
   const lines = result.failures.map((f) => `  ${describeBackdropFailure(f)}\n`);
   for (const image of result.unloaded) lines.push(`  ${image} did not load, so it was not measured\n`);
-  if (lines.length > 0) process.stdout.write(`${caseName(c)} ${String(screen.width)}×${String(screen.height)}: ${String(lines.length)} backdrop misses\n${lines.join("")}`);
+  if (lines.length > 0) process.stdout.write(`${caseName(c)} ${state} ${String(screen.width)}×${String(screen.height)}: ${String(lines.length)} backdrop misses\n${lines.join("")}`);
   const name = caseName(c);
   let targets = coverage.targets.get(name);
   if (targets === undefined) {
@@ -280,7 +283,7 @@ async function main(): Promise<number> {
   const fingerprint = await sourceFingerprint();
   const result = await runJobs(selected.jobs, {
     workers, id, fingerprint,
-    run: (session, { job: { kind, screen, c }, marker }) => kind === "contrast" ? checkContrast(session, { c, screen, outDir, marker }) : checkScreen(session, { c, screen, coverage, marker }),
+    run: (session, { job: { kind, screen, c }, marker }) => kind === "contrast" ? checkContrast(session, { c, screen, outDir, marker }) : checkFocusedStudio(session, { screen, name: caseName(c), check: (state) => checkScreen(session, { c, screen, coverage, marker, state }) }),
   });
   let misses = result.misses;
   const coverageMisses = selected.completeCoverage ? reportCoverage(coverage) : 0;

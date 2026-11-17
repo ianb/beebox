@@ -42,6 +42,9 @@ export function repairMissingSentenceSpaces(text: string): string {
 /**
  * Build a speaker-prefixed transcript from Voxtral diarized segments.
  * Consecutive segments from the same speaker are merged into one block.
+ * Speakers are numbered from 0 in the order they first speak: providers'
+ * own ids may start at 1 or follow another order, and the first voice must
+ * read as "Speaker 1A" after `relabelDiarizedSpeakers`.
  * Returns null if no segments have a speaker_id (e.g. mono speaker, or
  * diarization didn't run).
  */
@@ -53,11 +56,12 @@ export function buildDiarizedText(
     return null;
   }
   const lines: string[] = [];
+  const order = new Map<string, number>();
   let currentSpeaker: string | null = null;
   let currentText: string[] = [];
   function flush(): void {
     if (currentSpeaker === null || currentText.length === 0) return;
-    lines.push(`${formatSpeakerLabel(currentSpeaker)}: ${currentText.join(" ").trim()}`);
+    lines.push(`${speakerLabel(currentSpeaker, order)}: ${currentText.join(" ").trim()}`);
     currentText = [];
   }
   for (const seg of segments) {
@@ -108,9 +112,13 @@ export function relabelDiarizedSpeakers(text: string, letter: string): string {
   return text.replace(/\bSpeaker (\d+)\b/g, (_, n) => `Speaker ${Number(n) + 1}${letter}`);
 }
 
-function formatSpeakerLabel(speakerId: string): string {
-  // "speaker_0" → "Speaker 0", "speaker_1" → "Speaker 1", fallback to raw.
-  const m = speakerId.match(/^speaker[_-]?(\d+)$/i);
-  if (m) return `Speaker ${m[1]}`;
-  return speakerId;
+/** "Speaker N" with N the speaker's first-appearance index; "unknown" stays raw. */
+function speakerLabel(speakerId: string, order: Map<string, number>): string {
+  if (speakerId === "unknown") return speakerId;
+  let index = order.get(speakerId);
+  if (index === undefined) {
+    index = order.size;
+    order.set(speakerId, index);
+  }
+  return `Speaker ${String(index)}`;
 }

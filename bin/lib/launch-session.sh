@@ -28,7 +28,7 @@ launch_session_build() {
   fi
 
   if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
-    LS_MODEL="gpt-6-sol"
+    LS_MODEL="gpt-6.2-sol"
   fi
 
   # A `glm-*` model routes the SAME claude agent at Z.ai's Anthropic-compatible

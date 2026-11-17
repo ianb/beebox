@@ -46,20 +46,24 @@ void test("Fable 5 itself is retired the same way:", async (t) => {
   t.check(MODEL_ID.fable, "claude-fable-5-2");
 });
 
-// GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6 Sol and GPT-6 Sol move to GPT-6.1
-// Sol. Terra stays on GPT-5.6 because GPT-6 has no Terra tier.
-void test("GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6 Sol and GPT-6 Sol move to GPT-6.1 Sol.", async (t) => {
+// GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6, GPT-6 and GPT-6.1 Sol move to
+// GPT-6.2 Sol, and GPT-6 Astra to GPT-6.2 Astra. Terra stays on GPT-5.6 because GPT-6 has no Terra tier.
+void test("Retired GPT IDs move to the current Luna, Sol, and Astra", async (t) => {
   t.check(
     [
       normalizeModelId("gpt-5.6-luna"),
       normalizeModelId("gpt-5.6-sol"),
       normalizeModelId("gpt-6-sol"),
+      normalizeModelId("gpt-6.1-sol"),
+      normalizeModelId("gpt-6-astra"),
       normalizeModelId("gpt-5.6-terra"),
     ],
     [
     "gpt-6-luna",
-    "gpt-6.1-sol",
-    "gpt-6.1-sol",
+    "gpt-6.2-sol",
+    "gpt-6.2-sol",
+    "gpt-6.2-sol",
+    "gpt-6.2-astra",
     "gpt-5.6-terra",
   ],
   );

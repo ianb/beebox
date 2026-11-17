@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run a command holding the machine-wide GPU lock: bin/with-gpu [--] <cmd…>.
+# Thin shim: bin/with-slot.ts --gpu holds the logic (TypeScript, run via tsx).
+[ "${1:-}" = "--" ] && shift
+exec node --import tsx "$(dirname "$0")/with-slot.ts" --gpu -- "$@"

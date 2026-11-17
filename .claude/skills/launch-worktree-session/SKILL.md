@@ -32,9 +32,9 @@ window's use against the clock).
 
 - `--agent claude --model claude-opus-5-5`: most implementation and
   well-scoped design work. Whenever Opus is chosen, use 5.5.
-- `--agent claude --model claude-fable-5-1`: difficult reasoning, unresolved
+- `--agent claude --model claude-fable-5-2`: difficult reasoning, unresolved
   architecture, or large multi-track work that will delegate heavily.
-- `--agent codex` (`gpt-6-sol`, or `gpt-6-astra` for harder work): an
+- `--agent codex` (`gpt-6.2-sol`, or `gpt-6.2-astra` for harder work): an
   independent model family for cross-model review or a second opinion, or when
   Claude quota is tight.
 - Small models (`gpt-6-luna`, `sonnet`, `glm-*`): bounded mechanical work

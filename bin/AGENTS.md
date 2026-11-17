@@ -55,7 +55,9 @@ Hooks and launchers are thin adapters; `bin/workstreams` and
 cleanup, sweep, launch, or generated mirrors, read
 [worktree lifecycle](docs/worktree-lifecycle.md). Its exact-PID detection,
 fail-closed behavior (`launching` and `unknown` count as live), self-ancestor exclusion, and nested-agent hook
-rules protect live work. `--force` never overrides liveness.
+rules protect live work. `--force` never overrides liveness. A removed
+worktree's `scratch/` is kept for 14 days at
+`~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/`.
 
 ## Lifecycle commands
 
@@ -72,6 +74,13 @@ main on `main` and a branch containing main; a refusal means return to the
 worktree. It is the landing operation used by `/finish`; `--list` and
 `--dry-run` are read-only. Details:
 [worktree lifecycle](docs/worktree-lifecycle.md).
+
+## Machine-wide locks (`bin/with-slot.ts`, `bin/with-gpu`)
+
+`bin/with-slot.ts -- <cmd>` holds one of the test semaphore's slots (beebox's
+whole-tree `lint` and `typecheck` use it). `bin/with-gpu <cmd>` holds the one
+GPU lock (`~/.cache/beebox/locks/gpu`), shared by every checkout and box;
+canvas-loop's GPU scripts take it. Both reuse `bin/test-locks.ts`.
 
 ## Schedules (`bin/schedules`)
 

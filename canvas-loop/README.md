@@ -90,7 +90,9 @@ Read `transcript.md` — the inline `![frame N](frame-NNNN.png)` images render
 directly in tools that display markdown images (including Claude Code's `Read`).
 
 Run one heavy GPU process at a time on a machine: several large renders at
-once have crashed the GPU driver.
+once have crashed the GPU driver. `cli`, `examples:check` and the GPU tests
+take a machine-wide lock (`bin/with-gpu` at the repo root); wrap other GPU
+work in it.
 
 ## Events file
 
@@ -324,4 +326,5 @@ stylesheet once: `import "@ianbicking/canvas-loop/browser/figure.css"`.
 pnpm --dir canvas-loop test        # node --test; *.gpu.test.ts files run one at a time
 pnpm --dir canvas-loop typecheck
 pnpm --dir canvas-loop lint         # @ianbicking/personal-vibe-check preset
+pnpm --dir canvas-loop run cli page <sketch.ts>… [--name n]   # live page at /<worktree>/dev/canvas-loop-pages/<n>.html
 ```

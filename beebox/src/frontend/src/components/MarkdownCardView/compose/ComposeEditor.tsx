@@ -8,7 +8,7 @@
  * element as `host`, so the editor survives the block remounting.
  */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { CompositionFrame as Frame, CompositionReadError } from "../CompositionFrame";
 import { Transaction } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
@@ -46,12 +46,6 @@ const theme = EditorView.theme({
   ".cm-scroller": { fontFamily: "inherit", lineHeight: "inherit" },
   ".cm-content": { padding: "0.75rem 1rem", caretColor: "currentColor" },
 });
-
-/** The editor's frame, rendered where the composition block stands; nothing while the block is not mounted. */
-function Frame({ host, children }: { host: HTMLElement | null; children: ReactNode }): ReactNode {
-  if (host === null) return null;
-  return createPortal(<section aria-label="Composition editor" className="bbx-composition bbx-composition-editor my-4 rounded border border-card-pen">{children}</section>, host);
-}
 
 interface Session {
   view: EditorView;
@@ -243,10 +237,7 @@ export function ComposeEditor({ cardPath, onClose, host, instance, initialMark }
   const message = "error" in read ? `The composition could not be loaded: ${read.error}` : saveStateText({ kind: "removed", problem: read.problem });
   return (
     <Frame host={host}>
-      <Row gap="sm" align="center" justify="between" className="px-2 py-1">
-        <ErrorText>{message}</ErrorText>
-        <Button id={controlAddress("bbx-composition-close", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={onClose}>Done</Button>
-      </Row>
+      <CompositionReadError message={message} instance={instance} onClose={onClose} />
     </Frame>
   );
 }
