@@ -1,9 +1,9 @@
 ---
 title: "Accept HEIC photos in the chat composer"
-status: draft
+status: implemented
 workstream: heic-upload
 issues:
-  - ../../../issues/features/2026-11-16-accept-heic-images-in-chat.md
+  - ../../../issues/closed/features/2026-11-16-accept-heic-images-in-chat.md
 ---
 # Accept HEIC photos in the chat composer
 
