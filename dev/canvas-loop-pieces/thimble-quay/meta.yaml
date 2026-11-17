@@ -1,0 +1,29 @@
+slug: busy-town-showcase
+title: "Thimble Quay: a canal town through a day, with things to click"
+created: 2026-11-16
+model: opus-5.5
+driver: opus-5.5
+cycles: 16
+tier: tea
+migrated: "2026-11-15: rewritten mechanically to the returned form (returned-scene R2: a codemod)"
+harness-commit: d3eb0fe26
+frames: 545
+seed: 42
+fps: 60
+every: 200
+reconstructed: false
+audit: >
+  Round 1 judged by the driving agent from frames. The boxholder then looked at it ("Some cool stuff there", "Water reflection is very cool!") and asked for clearer rain with clouds that arrive and leave, rain sound and thunder, the released balloon in front of the buildings, every person clickable, window light that does not paint over the awnings, a proper hot-air balloon that can be clicked, and clouds that do not move with the sun. Round 2 does all of these; judged again from frames and zoomed crops. In the browser (walks-now page) it holds 60 frames/s by day, at night in the rain, and in snow, after a few seconds of warm-up at load. Round 3: the hot-air balloon's height is continuous state with a soft ceiling (twelve clicks in a row keep it on screen, and it cools back down smoothly), clicks on a roof in front of it go to the building, and with the library now keeping idle picture versions each pose is its own picture (no warm-up dip at load) and the window glows follow the small-blur, high-strength recipe.
+self-report-summary: >
+  The still town (sky, hills, six shops, the hall and clock tower, street, canal, its reflection) is painted once into pictures with ink, wash, bristle, chalk and pencil brushes under a watercolour wash effect and paper. Folk, vehicles, pigeons, ducks and windmill sails are one kept picture per pose (round 1 used pose sheets shown through a clip, before the library kept idle versions). Night is one multiply over the frame, then lit-window and lamp pictures; the lamps are real point lights in a lit group over the town picture, screened on.
+features-exercised:
+  - brushes ink, wash, bristle, chalk, pencil with gestures (pressure, wobble, seed) and colour jitter
+  - group effects wash and paper; paper scope; glow, blur, brightness and saturation effects
+  - lit group with point lights over a placed picture (lamp pools), emissive-style glows
+  - pictures with deps (lit-window mask, lamp mask, weather), one kept picture per pose, flipped placements
+  - text (shop signs, tram, hover hints with halo and keepInside)
+  - blend modes multiply, screen, add
+  - pointer hit-testing on moving targets, hover cue and cursor, u.handled verdicts
+  - params of every kind (number, select, boolean, trigger), param-driven model state
+  - sound - samples (bell, creak, ding, toggle, click, drop, pop, rise, clink, page, zap, question) and marimba and kalimba notes from u.scaleNote, scheduled into future frames
+  - sibling -tea helper files
