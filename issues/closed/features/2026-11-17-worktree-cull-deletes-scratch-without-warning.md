@@ -1,10 +1,13 @@
 ---
 title: "A worktree cull deletes its ignored scratch/ with no warning or copy"
-workstream: unattached
+workstream: canvas-brushes
 area: dev-tooling
 filed-by: agent
 discovered-in: canvas-brushes — recovery after the 2026-11-17 cull
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-17):** Fixed by a5ac7ac02, 59cd4f1a2, a5c714327.
 
 `bin/lib/worktree-teardown.sh` moves a culled worktree to a trash directory,
 and a reaper deletes it. The ignored `scratch/` goes with it. On 2026-11-17 the
