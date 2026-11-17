@@ -452,6 +452,11 @@ each frame:
   every step, and a frame that meets several new versions drops. Grow in a
   few steps (8 levels, not 100), let things share levels, and fade from one
   kept level to the next with `place(…, { opacity })`.
+- Each drawing call is a draw of its own, even a three-pixel leaf. A crown
+  of a thousand leaves in a few colours is cheaper as one `v.path` per
+  colour, each leaf a closed subpath (`move`, `line`s, `close`): in a
+  55-tree scene that took a frame's draws from 103,000 to 6,000 and its new
+  leaf versions from about 100 ms to 8 ms each to record.
 - To see which pictures cost: `--timing` lists, per captured frame, the new
   versions by key with their milliseconds; in a browser,
   `figure.surface.pictureCosts()` (the figure from `mountSketch`'s `inspect`
