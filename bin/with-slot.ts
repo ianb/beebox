@@ -15,17 +15,40 @@
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
  * plan:change-based-test-selection, mechanism A.
+ *
+ * `--gpu` takes the machine-wide GPU lock instead (bin/with-gpu): one GPU-heavy
+ * process at a time, because several at once have crashed the GPU driver
+ * (canvas-loop/AGENTS.md, "GPU"). It lives in the beebox state directory, not
+ * the checkout, so every worktree and box shares it. A child sees
+ * BBX_GPU_LOCK_HELD (the holder's pid) and runs a nested wrapped command
+ * without queueing behind its own parent — only while that pid still holds the
+ * lock, so a background child that outlives its holder queues like anyone.
+ * A live holder is never expired by age (a long render keeps the GPU); a dead
+ * or pre-boot one is. Unlike the slots it fails closed: an unusable lock
+ * directory stops the command rather than letting it run unguarded.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { gitBranch, gitCommonDir } from "./lib/git.js";
-import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
+import { acquire, acquireNamed, holdsNamed, lockDir, type Held, type Tier } from "./test-locks.js";
 
 export interface Args {
   tier: Tier;
+  gpu: boolean;
   command: string[];
 }
+
+/** Set in a GPU lock holder's children: a nested `with-gpu` runs its command without queueing. */
+export const GPU_LOCK_HELD_ENV = "BBX_GPU_LOCK_HELD";
+
+/**
+ * The GPU lock's directory: one fixed place per user, shared by every checkout
+ * and box. BBX_GPU_LOCK_DIR moves it (tests only).
+ */
+export const gpuLockDir = (): string => process.env.BBX_GPU_LOCK_DIR ?? join(homedir(), ".cache/beebox/locks");
 
 /** Nothing after `--`, or no `--` at all: there is no command to run. */
 export class MissingSeparatorError extends Error {
@@ -63,13 +86,14 @@ export function parseArgs(argv: string[]): Args {
   const flags = argv.slice(0, separator);
   const command = argv.slice(separator + 1);
   if (command.length === 0) throw new MissingCommandError();
+  const gpu = flags.includes("--gpu");
   const tierIndex = flags.indexOf("--tier");
-  if (tierIndex === -1) return { tier: "ordinary", command };
+  if (tierIndex === -1) return { tier: "ordinary", gpu, command };
   const tier = flags[tierIndex + 1];
   if (tier !== "ordinary" && tier !== "careful") {
     throw new InvalidTierError(tier);
   }
-  return { tier, command };
+  return { tier, gpu, command };
 }
 
 /** The one lock this process holds, so a signal handler can let it go. */
@@ -120,12 +144,42 @@ function installSignalReleases(): void {
   }
 }
 
+/**
+ * The GPU lock, waiting as long as it takes; null when a parent already holds
+ * it. Fails closed: an error here stops the command.
+ */
+async function holdGpu(): Promise<Held | null> {
+  const parent = Number(process.env[GPU_LOCK_HELD_ENV]);
+  if (Number.isInteger(parent) && holdsNamed({ dir: gpuLockDir(), name: "gpu", pid: parent })) return null;
+  const claim = await acquireNamed({
+    dir: gpuLockDir(),
+    name: "gpu",
+    branch: gitBranchOrCwd(),
+    waitMs: Number.POSITIVE_INFINITY,
+    waitingFor: "the GPU",
+    label: "with-gpu",
+    maxAgeMs: Number.POSITIVE_INFINITY,
+  });
+  heldSlot = claim.held;
+  return claim.held;
+}
+
+/** The lock record's "branch": the git branch, or the directory when not in a checkout (a box). */
+function gitBranchOrCwd(): string {
+  try {
+    return gitBranch();
+  } catch (_e) {
+    // Not a git checkout: name the directory instead, which is what a waiter needs to find the holder.
+    return process.cwd();
+  }
+}
+
 /** stdio inherited throughout: this wrapper reads nothing and rewrites nothing. */
-function run(command: string[]): Promise<number> {
+function run(command: string[], env: NodeJS.ProcessEnv): Promise<number> {
   const [executable, ...args] = command;
   if (executable === undefined) throw new EmptyCommandError();
   return new Promise((resolve) => {
-    const child = spawn(executable, args, { stdio: "inherit" });
+    const child = spawn(executable, args, { stdio: "inherit", env });
     activeChild = child;
     child.on("error", (error) => {
       activeChild = null;
@@ -142,9 +196,11 @@ function run(command: string[]): Promise<number> {
 async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   installSignalReleases();
-  const held = await holdSlot(args.tier);
+  const held = args.gpu ? await holdGpu() : await holdSlot(args.tier);
+  // The pid that holds the lock: ours, or the parent's when it let us through.
+  const env = args.gpu ? { ...process.env, [GPU_LOCK_HELD_ENV]: held === null ? (process.env[GPU_LOCK_HELD_ENV] ?? "") : String(process.pid) } : process.env;
   try {
-    return await run(args.command);
+    return await run(args.command, env);
   } finally {
     releaseHeld(held);
   }
