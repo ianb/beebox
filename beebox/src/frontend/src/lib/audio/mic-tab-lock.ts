@@ -12,6 +12,7 @@
  */
 
 import { isRecord } from "@shared/is-record";
+import { registerReloadBlocker } from "../reload-blockers";
 
 const CHANNEL_NAME = "callback-mic-lock";
 
@@ -59,9 +60,11 @@ function ensureChannel(): BroadcastChannel | null {
 export function claimMicAcrossTabs(onEvict: () => void): () => void {
   const bc = ensureChannel();
   evictListeners.add(onEvict);
+  const unblockReload = registerReloadBlocker("recording", () => true);
   // eslint-disable-next-line unicorn/require-post-message-target-origin -- BroadcastChannel.postMessage takes no targetOrigin (the rule targets window.postMessage)
   bc?.postMessage({ type: "claim", tabId } satisfies ClaimMessage);
   return () => {
     evictListeners.delete(onEvict);
+    unblockReload();
   };
 }

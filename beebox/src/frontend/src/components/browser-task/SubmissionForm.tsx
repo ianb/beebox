@@ -28,6 +28,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { InlineAction } from "../ui/InlineAction";
 import { List } from "../ui/List";
+import { registerReloadBlocker } from "../../lib/reload-blockers";
 
 const MANIFEST_FILE = "records.json";
 
@@ -59,6 +60,9 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
   const [validation, setValidation] = useState<SubmissionValidation | { ok: false; issues: SubmissionIssue[] } | null>(null);
   const [upload, setUpload] = useState<UploadState>({ phase: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
+  // Picked files live only in this page; a reload would drop them silently.
+  const holdingFiles = files.length > 0 || upload.phase === "uploading";
+  useEffect(() => (holdingFiles ? registerReloadBlocker("upload", () => true) : undefined), [holdingFiles]);
 
   const onPick = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(event.target.files ?? []);

@@ -7,8 +7,9 @@
  * timers are passed in, so this runs without a browser in tests.
  */
 import { errorMessage } from "@shared/error-guards";
-import { normalizeComposition } from "@shared/composition/text";
-import { diffToChanges, mergeComposition, type MergeConflict, type TextChange } from "@shared/composition/merge";
+import { normalizeComposition } from "@shared/composition/marks/text";
+import { diffToChanges, mergeComposition, type MergeConflict } from "@shared/composition/merge";
+import type { TextChange } from "@shared/composition/marks/scan";
 
 export type ReadResult = { text: string; regionHash: string } | { problem: string };
 export type WriteResult =
@@ -44,8 +45,8 @@ export function saveStateText(state: SaveState): string {
   switch (state.kind) {
     case "idle": return "";
     case "saving": return "Saving…";
-    case "saved-disk": return "Saved to disk";
-    case "saved": return "Saved";
+    case "saved-disk": return "Saved";
+    case "saved": return "Committed";
     case "not-saved": return `Not saved: ${state.error}, retrying`;
     case "not-synced": return state.retrying ? `Not synced: ${state.error}, retrying` : `Not synced: ${state.error}`;
     case "commit-failed": return state.message;
@@ -148,6 +149,17 @@ export class CompositionSync {
     return await this.enqueue(() => this.write(false)) || this.stopped;
   }
 
+  /**
+   * Write what is unsaved (no commit), then run `step` with the region hash
+   * the disk now has, before any later write or read: a resolve action
+   * (`plan:composition-copy-and-accept-all`) works on the text on screen.
+   * `null` when the write failed or the card's composition is gone.
+   */
+  afterFlush<T>(step: (regionHash: string) => Promise<T>): Promise<T | null> {
+    this.clearTimer();
+    return this.enqueue(async () => (await this.write(false) ? step(this.syncedHash) : null));
+  }
+
   /** Resolves once the reads and writes queued so far have finished. */
   async settled(): Promise<void> {
     await this.lane;
@@ -217,7 +229,7 @@ export class CompositionSync {
     const local = this.opts.editor.text();
     const { merged, conflicts } = mergeComposition(this.base, { local, remote: theirs });
     this.opts.editor.applyRemote({ changes: diffToChanges(local, merged), conflicts });
-    // The disk now holds text the last commit does not: no longer "Saved".
+    // The disk now holds text the last commit does not: no longer "Committed".
     if (this.state.kind === "saved") this.setState({ kind: "saved-disk" });
     this.base = theirs;
     this.syncedHash = remote.regionHash;

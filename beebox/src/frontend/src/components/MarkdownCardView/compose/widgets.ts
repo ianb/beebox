@@ -12,7 +12,7 @@
 import { EditorSelection, EditorState, Prec, StateField, Transaction, type Extension, type Range, type RangeSet } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, keymap, type DecorationSet } from "@codemirror/view";
 import { el, widgetButton } from "./dom";
-import { acceptChanges, emptyJoinerRanges, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
+import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "@shared/composition/marks/scan";
 
 const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note"]);
 
@@ -150,6 +150,45 @@ export function acceptSelection(view: EditorView): boolean {
   return true;
 }
 
+/** An open mark (not `source`) in the editor: its place among the open marks, and the range Go to selects. */
+export interface OpenMarkRange {
+  kind: Exclude<MarkKind, "source">;
+  index: number;
+  from: number;
+  to: number;
+  /** The mark's words, whitespace collapsed. */
+  words: string;
+}
+
+/**
+ * The open marks in text order. A gap or note is one widget, so its range is
+ * the whole mark (typing replaces it); a joiner's or check's is its words.
+ */
+export function openMarkRanges(state: EditorState): OpenMarkRange[] {
+  const { scan } = state.field(marksField);
+  const out: OpenMarkRange[] = [];
+  for (const mark of scan.marks) {
+    if (mark.kind === "source") continue;
+    const words = state.sliceDoc(mark.openTo, mark.closeFrom).replaceAll(/\s+/g, " ").trim();
+    const [from, to] = WHOLE.has(mark.kind) ? [mark.openFrom, mark.closeTo] : [mark.openTo, mark.closeFrom];
+    out.push({ kind: mark.kind, index: out.length, from, to, words });
+  }
+  return out;
+}
+
+/**
+ * Select an open mark and scroll it into view. `false` (nothing selected)
+ * when the mark at that index is not the one named: another kind or other
+ * words, as when the agent added a mark before it since the person looked.
+ */
+export function selectOpenMark(view: EditorView, target: { index: number; kind: string; words: string }): boolean {
+  const mark = openMarkRanges(view.state)[target.index];
+  if (mark?.kind !== target.kind || mark.words !== target.words) return false;
+  view.dispatch({ selection: EditorSelection.range(mark.from, mark.to), effects: EditorView.scrollIntoView(mark.from, { y: "center" }) });
+  view.focus();
+  return true;
+}
+
 /** A deletion that empties a joiner removes the joiner's tags too. */
 const dropEmptyJoiners = EditorState.transactionFilter.of((tr) => {
   if (!tr.docChanged || !tr.isUserEvent("delete") || tr.annotation(Transaction.remote) === true) return tr;
@@ -158,6 +197,34 @@ const dropEmptyJoiners = EditorState.transactionFilter.of((tr) => {
   if (scan.malformed) return tr;
   const ranges = emptyJoinerRanges(text, scan.marks);
   return ranges.length === 0 ? tr : [tr, { changes: ranges, sequential: true }];
+});
+
+/**
+ * Typing over a selection, deleting one, cutting, word-delete, or a phone
+ * keyboard's edit keeps any tag it would remove without its partner, so the
+ * marks stay paired. Undo, remote merges, and the mark buttons pass through.
+ */
+const keepPairs = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || tr.annotation(Transaction.remote) === true) return tr;
+  if (!tr.isUserEvent("input") && !(tr.isUserEvent("delete") && !tr.isUserEvent("delete.mark"))) return tr;
+  const { scan } = tr.startState.field(marksField);
+  if (scan.malformed) return tr;
+  const changes: { from: number; to: number; insert: string }[] = [];
+  // eslint-disable-next-line max-params -- CodeMirror's iterChanges callback signature is fixed by the library.
+  tr.changes.iterChanges((from, to, _fromB, _toB, inserted) => changes.push({ from, to, insert: inserted.toString() }));
+  const kept = keepDelimiters(changes, scan.marks);
+  if (kept === null) return tr;
+  const set = tr.startState.changes(kept);
+  // A delete that only reached kept tags steps over them, as Backspace and Delete do.
+  if (set.empty) {
+    const [first] = changes;
+    const last = changes.at(-1);
+    if (first === undefined || last === undefined) return tr;
+    return { selection: EditorSelection.cursor(tr.isUserEvent("delete.forward") ? last.to : first.from), scrollIntoView: true };
+  }
+  const last = kept.findLast((c) => c.insert !== "") ?? kept.at(-1);
+  const selection = tr.newSelection.main.empty && last !== undefined ? EditorSelection.cursor(set.mapPos(last.to, 1)) : undefined;
+  return { changes: set, selection, effects: tr.effects, scrollIntoView: tr.scrollIntoView, userEvent: tr.annotation(Transaction.userEvent) };
 });
 
 /**
@@ -188,6 +255,8 @@ export function markWidgets(): Extension {
   return [
     marksField,
     dropEmptyJoiners,
+    // Filters run last-registered first: pairs are kept before empty joiners drop.
+    keepPairs,
     Prec.high(keymap.of([
       { key: "Backspace", run: deleteAcross(false) },
       { key: "Delete", run: deleteAcross(true) },

@@ -12004,6 +12004,14 @@ test1:
       peak: 40196
       added: 5092
       turns: 7
+  whats-new-answer:
+    - date: 2026-11-16T12:01:08.320Z
+      boxCommit: a2ceddd15c94e9cde4afe1a6690231469e82a102
+      repoCommit: 465514c1ff81941df8d33174969aa68bf69c5d5a
+      initial: 35139
+      peak: 38113
+      added: 2974
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

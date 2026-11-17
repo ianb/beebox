@@ -41,7 +41,7 @@ import { generateCardDoc, generateConnectorsDocs } from "../content.js";
 import { generateProcedureGuide } from "./procedure-guide.js";
 import { generateTriageGuide } from "./triage.js";
 import { generateCanvasLoopBrushesDoc, generateCanvasLoopDoc, generateCanvasLoopExamplesDoc } from "./canvas-loop-doc.js";
-import { BOX_PACKAGE_DOCS, PACKAGE_DOCS_DIR_NAME } from "../shared.js";
+import { BOX_PACKAGE_DOCS, PACKAGE_DOCS_DIR_NAME, WHATS_NEW_FILE } from "../shared.js";
 
 export interface EngineDoc {
   filename: string;
@@ -84,7 +84,8 @@ class ProseDocFrontmatterError extends Error {
 /** The hand-written docs under `docs/box/`: body as the doc, `read-when` as its index row. */
 function proseDocs(packageRoot: string): { doc: EngineDoc; readWhen: string }[] {
   const dir = join(packageRoot, PROSE_DOCS_DIR);
-  const files = readdirSync(dir).filter((f) => f.endsWith(".md")).toSorted();
+  // The person's changelog ships here but is copied into each box instead (box-docs.ts).
+  const files = readdirSync(dir).filter((f) => f.endsWith(".md") && f !== WHATS_NEW_FILE).toSorted();
   return files.map((file) => {
     const raw = readFileSync(join(dir, file), "utf-8");
     const fm = parseFrontmatterObject(raw);

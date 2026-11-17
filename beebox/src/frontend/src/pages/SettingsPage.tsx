@@ -12,6 +12,7 @@ import { Stack } from "../components/ui/Stack";
 import { AdminHangProbe, ProbeSection } from "../components/admin/AdminHangProbe";
 import { PasswordSection } from "../components/settings/PasswordSection";
 import { BoxSystemThemePicker } from "../components/themes/SystemThemePicker";
+import { WhatsNewSection } from "../components/settings/WhatsNewSection";
 
 export function SettingsPage() {
   const { boxSlug } = useParams({ strict: false });
@@ -40,5 +41,7 @@ function SettingsSections({ boxKey }: { boxKey: string }) {
         <ProbeSection name="CalendarSection"><CalendarSection /></ProbeSection>
 
         <ProbeSection name="DriveSection"><DriveSection /></ProbeSection>
+
+        <ProbeSection name="WhatsNewSection"><WhatsNewSection /></ProbeSection>
   </>;
 }

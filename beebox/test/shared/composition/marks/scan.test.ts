@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { acceptChanges, emptyJoinerRanges, scanMarks, wholeMarkRange, type TextChange } from "../../../../src/components/MarkdownCardView/compose/scan.js";
+import { acceptChanges, emptyJoinerRanges, keepDelimiters, scanMarks, wholeMarkRange, type TextChange } from "../../../../src/shared/composition/marks/scan.js";
 
 // ## Inline marks of each kind, with their delimiter ranges
 void test("inline marks", async (t) => {
@@ -162,4 +162,29 @@ void test("empty joiners", async (t) => {
   const text = `them. ${J}${E} By May ${J}kept${E}`;
   const after = applyChanges(text, emptyJoinerRanges(text, scanMarks(text).marks).map((r): TextChange => ({ ...r, insert: "" })));
   t.check(after, `them. By May ${J}kept${E}`);
+});
+
+// ## An edit never deletes one tag of a pair
+//
+// Deleting or typing over a selection that holds one tag of a mark but not
+// its partner keeps that tag, so the composition stays saveable. Two joiners
+// side by side are where this bites: a selection across their boundary holds
+// the first one's closer and the second one's opener.
+void test("edits keep unpaired tags", async (t) => {
+  const keep = (text: string, changes: TextChange[]) => {
+    const kept = keepDelimiters(changes, scanMarks(text).marks);
+    return kept === null ? null : applyChanges(text, kept);
+  };
+  const text = `${J}vendor neutral${E} ${J}it works${E}`;
+  const closer = text.indexOf(E);
+  // Deleting the first joiner's closer alone leaves the text as it was.
+  t.check(keep(text, [{ from: closer, to: closer + E.length, insert: "" }]), text);
+  // Typing over "tral ... It" keeps both tags; the typed text lands where the selection began.
+  const from = text.indexOf("tral");
+  const to = text.indexOf("it works") + 2;
+  t.check(keep(text, [{ from, to, insert: "-" }]), `${J}vendor neu-${E}${J} works${E}`);
+  // A selection that holds a whole mark deletes it with both tags.
+  t.check(keep(text, [{ from: 0, to: closer + E.length, insert: "" }]), null);
+  // An edit that touches no tag passes through.
+  t.check(keep(text, [{ from, to: from + 4, insert: "x" }]), null);
 });

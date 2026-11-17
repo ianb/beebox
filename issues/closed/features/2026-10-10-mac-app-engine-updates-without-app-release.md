@@ -51,5 +51,5 @@ equivalent. Find out whether Claude Code updates itself inside the VM, and
 whether an engine-image channel is enough to keep it current.
 
 Related: [Mac companion app](../../features/2026-10-07-mac-companion-app.md),
-[detect a server update](../../features/2026-08-03-detect-server-update-prompt-client-reload.md),
+[detect a server update](2026-08-03-detect-server-update-prompt-client-reload.md),
 [web warns when the iOS app is out of date](../../features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md).

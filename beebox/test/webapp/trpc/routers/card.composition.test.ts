@@ -135,3 +135,56 @@ Composition-Save: person`);
     "PRECONDITION_FAILED: The card's composition cannot be edited (none)",
   );
 });
+
+// # `card.resolveComposition`
+//
+// A resolve action commits the person's pending edits first, then the edit
+// alone (`plan:composition-copy-and-accept-all`). A stale hash, nothing to
+// do, or an index holding another kind commits nothing.
+void test("composition resolve", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  const J = '{% editorial kind="joiner" %}but{% /editorial %}';
+  const N = '{% editorial kind="note" %}Shorter?{% /editorial %}';
+  await box.write(cardPath, card("Notes.", `Odette came ${J} left. ${N} The end.`));
+  box.commitAll("seed");
+  const c = caller(box.root);
+  const read = await c.card.readComposition({ path: cardPath });
+  if (!("text" in read)) throw new Error("expected a region");
+
+  // ## Pending edits commit as a Save, then the accept commits on its own
+
+  const autosaved = await c.card.writeComposition({ path: cardPath, baseRegionHash: read.regionHash, text: `Odette came ${J} left early. ${N} The end.`, commit: false });
+  if (autosaved.status !== "written") throw new Error("expected a write");
+  events.length = 0;
+  const accepted = await c.card.resolveComposition({ path: cardPath, baseRegionHash: autosaved.regionHash, request: { action: "accept-joiners" } });
+  const acceptedText = `Odette came but left early. ${N} The end.`;
+  t.check(accepted, { status: "resolved", regionHash: sha(acceptedText), text: acceptedText, commitWarning: null });
+  t.check(await box.read(cardPath), card("Notes.", acceptedText));
+  t.checkText(git(box.root, "log", "-2", "--format=%s%n%(trailers:only,unfold)"), `Accept agent words: _content/Letter.doc.card
+Source: webapp
+Endpoint: card.resolveComposition
+Composition-Resolve: accept-joiners
+
+Save composition: _content/Letter.doc.card
+Source: webapp
+Endpoint: card.resolveComposition
+Composition-Save: person`);
+  t.check(git(box.root, "status", "--porcelain"), "");
+  t.check(events, ["file-change _content/Letter.doc.card"]);
+  if (accepted.status !== "resolved") throw new Error("expected a resolve");
+
+  // ## A stale hash, nothing to do, or the wrong kind at an index: no write, no commit
+
+  const head = git(box.root, "rev-parse", "HEAD");
+  t.check(await c.card.resolveComposition({ path: cardPath, baseRegionHash: read.regionHash, request: { action: "remove-notes" } }), { status: "conflict", committedEdits: null });
+  t.check(await c.card.resolveComposition({ path: cardPath, baseRegionHash: accepted.regionHash, request: { action: "accept-joiners" } }), { status: "nothing" });
+  t.check(await c.card.resolveComposition({ path: cardPath, baseRegionHash: accepted.regionHash, request: { action: "keep-check", index: 0 } }), { status: "refused" });
+  t.check(git(box.root, "rev-parse", "HEAD"), head);
+
+  // ## One note by index: with no pending edits, only the removal commits
+
+  const removed = await c.card.resolveComposition({ path: cardPath, baseRegionHash: accepted.regionHash, request: { action: "remove-note", index: 0 } });
+  t.check(removed, { status: "resolved", regionHash: sha("Odette came but left early. The end."), text: "Odette came but left early. The end.", commitWarning: null });
+  t.check(git(box.root, "log", "-2", "--format=%s"), "Remove a note: _content/Letter.doc.card\nAccept agent words: _content/Letter.doc.card");
+});

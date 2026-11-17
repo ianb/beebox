@@ -19,7 +19,7 @@ changes.
 Related, not resolved here:
 [release discipline and update story](../../../issues/decisions/2026-07-20-release-discipline-and-update-story.md)
 (this plan settles the cadence question for the desktop channel only);
-[detect a server update, prompt reload](../../../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md)
+[detect a server update, prompt reload](../../../issues/closed/features/2026-08-03-detect-server-update-prompt-client-reload.md)
 (a browser tab open during a box restart; the app does not solve it);
 [installation remaining work](../../../issues/features/2026-07-19-installation-remaining-work.md)
 item 6 (a published image is now a fact; this plan adds labels to it). Searched

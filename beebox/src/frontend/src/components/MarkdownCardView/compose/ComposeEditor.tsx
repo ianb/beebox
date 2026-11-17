@@ -13,7 +13,7 @@ import { Transaction } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { errorMessage } from "@shared/error-guards";
-import { normalizeComposition } from "@shared/composition/text";
+import { normalizeComposition } from "@shared/composition/marks/text";
 import { controlAddress } from "@shared/ui-scan/control-address";
 import { trpcClient } from "../../../lib/trpc/client";
 import { displayName } from "../../../lib/display-name";
@@ -28,7 +28,9 @@ import { Text } from "../../ui/Text";
 import type { ComposeEditorProps } from "../Composition";
 import { addConflicts, conflictWidgets, openConflictCount } from "./conflicts";
 import { CompositionSync, saveStateText, type ReadResult, type SaveState, type Schedule } from "./sync";
-import { acceptSelection, canAccept, isMalformed, markWidgets } from "./widgets";
+import { acceptSelection, canAccept, isMalformed, markWidgets, openMarkRanges, selectOpenMark, type OpenMarkRange } from "./widgets";
+import { MarksMenu } from "./MarksMenu";
+import { registerReloadBlocker } from "../../../lib/reload-blockers";
 
 const AUTOSAVE_MS = 800;
 const RETRY_MS = 3000;
@@ -56,12 +58,13 @@ interface Session {
   sync: CompositionSync;
 }
 
-function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, focused }: {
+function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, onMarks, focused }: {
   cardPath: string;
   initial: { text: string; regionHash: string };
   onState: (state: SaveState) => void;
   onMalformed: (malformed: boolean) => void;
   onAcceptable: (acceptable: boolean) => void;
+  onMarks: (marks: OpenMarkRange[]) => void;
   focused: { current: boolean };
 }): Session {
   let sync: CompositionSync | null = null;
@@ -87,12 +90,14 @@ function createSession({ cardPath, initial, onState, onMalformed, onAcceptable, 
         if (update.docChanged || update.selectionSet) onAcceptable(canAccept(update.state));
         if (!update.docChanged) return;
         onMalformed(isMalformed(update.state));
+        onMarks(openMarkRanges(update.state));
         if (!update.transactions.some((tr) => tr.annotation(Transaction.remote) === true)) sync?.localChanged();
       }),
     ],
   });
   onMalformed(isMalformed(view.state));
   onAcceptable(canAccept(view.state));
+  onMarks(openMarkRanges(view.state));
   sync = new CompositionSync({
     client: {
       read: () => trpcClient.card.readComposition.query({ path: cardPath }),
@@ -127,23 +132,27 @@ function Attach({ view, focused }: { view: EditorView; focused: { current: boole
   return <div ref={slot} className="not-prose" />;
 }
 
-function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorProps & { initial: { text: string; regionHash: string } }): ReactNode {
+function Editor({ cardPath, onClose, host, instance, initialMark, initial }: ComposeEditorProps & { initial: { text: string; regionHash: string } }): ReactNode {
   const [session, setSession] = useState<Session | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
   const [malformed, setMalformed] = useState(false);
   const [acceptable, setAcceptable] = useState(false);
+  const [marks, setMarks] = useState<OpenMarkRange[]>([]);
+  const [resolveMessage, setResolveMessage] = useState<string | null>(null);
   const focused = useRef(false);
 
   // The session lives as long as this component, which `CardBody` keeps
   // mounted while composing; the frame around it may move between hosts.
   useEffect(() => {
-    const created = createSession({ cardPath, initial, onState: setSaveState, onMalformed: setMalformed, onAcceptable: setAcceptable, focused });
+    const created = createSession({ cardPath, initial, onState: setSaveState, onMalformed: setMalformed, onAcceptable: setAcceptable, onMarks: setMarks, focused });
     setSession(created);
     let ended = false;
+    const losesEdits = () => created.sync.hasUnsaved() || (!ended && openConflictCount(created.view.state) > 0);
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (created.sync.hasUnsaved() || (!ended && openConflictCount(created.view.state) > 0)) event.preventDefault();
+      if (losesEdits()) event.preventDefault();
     };
     window.addEventListener("beforeunload", beforeUnload);
+    const unblockReload = registerReloadBlocker("compose-edits", losesEdits);
     return () => {
       ended = true;
       // A flush that never gets through keeps the leave warning on, and says
@@ -151,6 +160,7 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
       void created.sync.dispose().then((flushed) => {
         if (flushed.ok) {
           window.removeEventListener("beforeunload", beforeUnload);
+          unblockReload();
           return;
         }
         console.error(`Compose: the final write of ${cardPath} failed:`, flushed.error);
@@ -162,10 +172,20 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
 
   useLiveRefresh({ when: fileChangeAt(cardPath), refresh: () => session?.sync.remoteChanged() });
 
+  // Copy's "Go to it": select that mark once the editor is in the page (the
+  // child `Attach` has placed it by the time this effect runs). Once per session.
+  const wentTo = useRef<Session | null>(null);
+  useEffect(() => {
+    if (session === null || initialMark === null || wentTo.current === session) return;
+    wentTo.current = session;
+    selectOpenMark(session.view, initialMark);
+  }, [session, initialMark]);
+
   const done = async () => {
     if (session === null || await session.sync.close()) onClose();
   };
-  const stateText = saveStateText(saveState);
+  // A save of malformed text always fails: say what fixes it, not "retrying".
+  const stateText = malformed && saveState.kind === "not-saved" ? "Not saved until the broken tag is fixed" : saveStateText(saveState);
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
@@ -195,16 +215,18 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         >
           Accept
         </Button>
-        <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
+        {session === null ? null : <MarksMenu view={session.view} sync={session.sync} marks={marks} cardPath={cardPath} instance={instance} onMessage={setResolveMessage} />}
+        <Button id={controlAddress("bbx-composition-commit", instance)} label="Commit composition" title="Commit: record this version in the card's history. Edits save to disk on their own." size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Commit</Button>
         <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
-      {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is malformed, so its marks show as raw text.</ErrorText> : null}
+      {resolveMessage === null ? null : <ErrorText className="px-4 pt-2">{resolveMessage}</ErrorText>}
+      {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is broken, so the marks show as raw text and nothing saves. Undo (Ctrl/⌘+Z), or fix the tag in the text: each opening tag needs its closing tag.</ErrorText> : null}
       {session === null ? null : <Attach view={session.view} focused={focused} />}
     </Frame>
   );
 }
 
-export function ComposeEditor({ cardPath, onClose, host, instance }: ComposeEditorProps): ReactNode {
+export function ComposeEditor({ cardPath, onClose, host, instance, initialMark }: ComposeEditorProps): ReactNode {
   const [read, setRead] = useState<ReadResult | { error: string } | null>(null);
   useEffect(() => {
     let live = true;
@@ -217,7 +239,7 @@ export function ComposeEditor({ cardPath, onClose, host, instance }: ComposeEdit
     };
   }, [cardPath]);
   if (read === null) return <Frame host={host}><StatusMessage busy>Loading…</StatusMessage></Frame>;
-  if ("text" in read) return <Editor cardPath={cardPath} onClose={onClose} host={host} instance={instance} initial={read} />;
+  if ("text" in read) return <Editor cardPath={cardPath} onClose={onClose} host={host} instance={instance} initialMark={initialMark} initial={read} />;
   const message = "error" in read ? `The composition could not be loaded: ${read.error}` : saveStateText({ kind: "removed", problem: read.problem });
   return (
     <Frame host={host}>

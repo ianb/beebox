@@ -86,6 +86,13 @@ evicted before warnings/errors when the bounded offline queue fills.
 - The panel shows all captured log entries with timestamps, filterable
 - Opening the panel enables verbose forwarding (all log levels sent to server)
 
+A tab whose frontend is older than the one the server serves writes
+`[build] skew client=<id> server=<id> action=<wait|banner|reload>` (with
+`blockers=…` when a draft, stream, upload, recording, or unsaved edit held
+the reload back), and the page loaded by that reload writes
+`[build] reloaded client=<old> server=<new>`. No such line rules a stale
+bundle out.
+
 ### During local development
 
 ```bash
