@@ -102,7 +102,7 @@ do not reinterpret it as aspirational.
 ## Reviewing an existing plan
 
 Read the plan; check every template section is present and every claim cited.
-Re-derive each track's *Depends on* facts instead of reading them: widen the
+Re-derive each track's *Depends on* facts instead of trusting them: widen the
 search, follow a flow one hop past where the plan stops, run the command.
 For external prior art, verify the premises the design relies on; do not repeat
 searches that have no bearing on a design decision.

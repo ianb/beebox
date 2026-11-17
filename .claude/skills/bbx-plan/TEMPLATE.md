@@ -30,6 +30,7 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 ## Stated preferences this plan trades against
 
 <!-- Which of these apply, and the specific principles findings will trace to:
+     - the boxholder's decisions about this work, quoted
      - beebox/docs/engineering-principles.md — the principles, by number
      - beebox/AGENTS.md — conventions, validation contract, "no features
        beyond the task"
@@ -123,8 +124,8 @@ list as the frontmatter. If none, "none" and the terms you searched. -->
 
 ## Agent-flow / user-flow edge cases
 
-<!-- First, each scenario walk as numbered hops, file:line per hop, the way
-     in and the way out. Then mark each of these ADDRESSED (cite where),
+<!-- First, each scenario walk as numbered hops, file:line per existing hop,
+     the way in and the way out. Then mark each of these ADDRESSED (cite where),
      DEFERRED (cite the open question), or GAP:
      - Wrong tag / wrong field — the agent picks the wrong one of two similar things
      - Stale ref — the target moved or was archived between write and read
