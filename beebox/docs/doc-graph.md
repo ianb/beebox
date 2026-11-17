@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-17T19:05:49Z
-Total documents: 708
+Generated: 2026-11-17T19:44:44Z
+Total documents: 709
 
 ## Issues
 
@@ -88,6 +88,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
+- **docs/implemented-plans/theme-studio-shared-coverage.md** — "Restore shared theme rule coverage" (157 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
@@ -365,7 +366,7 @@ Referenced by:
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
 - ../.claude/skills/launch-worktree-session/SKILL.md:66 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
-- ../bin/docs/worktree-lifecycle.md:79 (mention) — Both agents read the tracked `AGENTS.md` files directly.
+- ../bin/docs/worktree-lifecycle.md:84 (mention) — Both agents read the tracked `AGENTS.md` files directly.
 - ../dev/devprocess-talk/bottlenecks.md:109 (mention) — 2. **Prose rule → measured failure → check.** Sigils (rule Sep 20, refusal Oct 7 after 83 sessions); Codex guidance (han
 - ../dev/devprocess-talk/chapters.md:298 (mention) — file: AGENTS.md
 - ../dev/devprocess-talk/chunks/README.md:102 (mention) — | CLAUDE.md / AGENTS.md, the root file, the package file | "the instruction file every agent reads first" |
@@ -953,7 +954,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:208 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:210 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:90 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -7648,7 +7649,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:191 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:193 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
@@ -8874,6 +8875,13 @@ Referenced by:
 References:
 - → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
 - → docs/theme-authoring.md (mention)
+
+#### docs/implemented-plans/theme-studio-shared-coverage.md **[ORPHAN]**
+
+Title: "Restore shared theme rule coverage" | 157 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-11-17-theme-studio-misses-current-shared-css-rules.md (frontmatter)
 
 #### docs/implemented-plans/theme-studio.md
 
@@ -10242,7 +10250,7 @@ Title: "Document comments: a communication medium in the workstreams app" | 947 
 Referenced by:
 - docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
 - docs/plans/general-browser.md:19 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/AGENTS.md:109 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../bin/AGENTS.md:111 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
 - ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
@@ -11333,7 +11341,7 @@ Title: "An agent-neutral worktree control surface" | 706 lines | proposal | part
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:28 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/docs/worktree-lifecycle.md:123 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
+- ../bin/docs/worktree-lifecycle.md:128 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:99 (mention) — - **Lives in:** `bin/workstreams` (1080 lines; `list`, `create`, `resume`, `remove`, `close`, `release`, `reset-test`, `
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)

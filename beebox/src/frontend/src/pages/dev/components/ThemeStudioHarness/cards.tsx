@@ -37,7 +37,7 @@ import { Table, Td, Th } from "../../../../components/ui/Table";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { WorkspaceUpdating } from "../../../../components/chat/WorkspaceUpdating";
 import { QUESTION_PATH, QuestionCard } from "./question";
-import { AccordionSpecimens, FigureErrorSpecimen, QuoteSpecimens, WorkspaceSpecimens } from "./specimens";
+import { CompositionEditorSpecimen, AccordionSpecimens, FigureErrorSpecimen, QuoteSpecimens, WorkspaceSpecimens } from "./specimens";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -111,7 +111,7 @@ function tab(path: string, { label, pinned }: { label: string; pinned: boolean }
  * the desk's direct child. A card is themed (`data-active-card`); any other
  * file sits on a neutral desk.
  */
-function CompanionDesk({ id, label, tabs, active, identities, content, children }: {
+function CompanionDesk({ id, label, tabs, active, identities, content, children, focused, onFocus }: {
   id: string;
   /** Names the desk, as the workspace names a pane, so each desk's pane controls are its own. */
   label: string;
@@ -120,16 +120,18 @@ function CompanionDesk({ id, label, tabs, active, identities, content, children 
   identities: Map<string, CardIdentity>;
   content: "card" | "neutral";
   children: ReactNode;
+  focused?: boolean;
+  onFocus?: (focused: boolean) => void;
 }) {
   const material = useCompanionMaterial(active);
   const mobile = useMobileChatViewport();
-  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0"
+  return <div ref={material} data-active-card={content === "card" || undefined} data-card-focused={focused || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0"
     role="group" aria-label={label}>
-    <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
+    {focused ? <div className="bbx-companion-focus-controls"><PaneControls pane="left" mobile={mobile} focused pdfMenu={null} onAction={() => onFocus?.(false)} /></div> : <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={id} tabs={tabs} activePath={active} identities={identities} boxSlug={undefined}
         onSelectTab={noop} onCloseTab={noop} onTogglePin={noop} />
-      <PaneControls pane="left" mobile={mobile} focused={false} pdfMenu={null} onAction={noop} />
-    </div>
+      <PaneControls pane="left" mobile={mobile} focused={false} pdfMenu={null} onAction={(action) => { if (action === "focusPane") onFocus?.(true); }} />
+    </div>}
     <div role="tabpanel" id={workspacePanelId(active)} aria-hidden={false} data-card-content={content} className="bbx-interface-card-desk flex-1 min-h-0">
       <MaterialContext.Provider value={content === "neutral"}>{children}</MaterialContext.Provider>
     </div>
@@ -161,6 +163,8 @@ function ReadingCard({ theme }: { theme: Theme }) {
       <QuoteSpecimens />
       <WorkspaceSpecimens />
       <AccordionSpecimens />
+      {/* Editing intentionally collapses this card's Contents label, as in production. */}
+      <CompositionEditorSpecimen />
     </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
       <CheckboxField id="bbx-studio-check" label="Bring spare envelopes" checked={checked} onChange={setChecked} />
@@ -215,7 +219,7 @@ function SystemThemePanel() {
   </Stack></Card>;
 }
 
-export function StudioCards({ name, stock }: { name: string; stock: string }) {
+export function StudioCards({ name, stock, focused, onFocus }: { name: string; stock: string; focused: boolean; onFocus: (focused: boolean) => void }) {
   const theme: Theme = { choice: { name, stock }, origin: { kind: "engine" }, problem: null };
   // Tabs carry the card theme in their identities, as a card's own theme would.
   const identity = (title: string, glyph: string): CardIdentity => ({ title, symbol: { glyph }, type: "doc", cardTheme: { name, stock } });
@@ -227,13 +231,14 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     [QUESTION_PATH, identity("Hall opening", "❓")],
   ]);
   return <div className="min-w-0 space-y-4">
-    <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
+    <CompanionDesk focused={focused} onFocus={onFocus} id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
       tabs={[tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: true }),
         ...["Map of the hall", "Labels and markers", "Volunteer shifts", "Seed packets"].map((label) => tab(`notes/${label}.doc.card`, { label, pinned: false })),
         tab(READING_PATH, { label: "Seed exchange", pinned: false }),
         ...["Door checklist", "Opening notes", "Visitors", "After the event"].map((label) => tab(`notes/${label}.doc.card`, { label, pinned: false }))]}>
       <ReadingCard theme={theme} />
     </CompanionDesk>
+    {focused ? null : <>
     <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"
       tabs={[tab(SETTINGS_PATH, { label: "Settings", pinned: false }), tab("notes/Volunteers.doc.card", { label: "Volunteers", pinned: false })]}>
       <SettingsCard theme={theme} />
@@ -246,5 +251,6 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
       tabs={[tab(FILE_PATH, { label: "packing-list.txt", pinned: false })]}>
       <Pre className="m-4">{"envelopes  40\nlabels     2 sheets\ntape       1 roll\npens       6"}</Pre>
     </CompanionDesk>
+    </>}
   </div>;
 }
