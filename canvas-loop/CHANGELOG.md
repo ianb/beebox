@@ -5,6 +5,10 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **`mousepath` in events files.** `{ "frame", "type": "mousepath",
+  "points": [[x, y], …], "frames" }` is one `mousemove` a frame along the
+  points at an even speed, so a hover or a drag is one line instead of
+  sixty.
 - **Pictures size themselves.** `v.picture` without `width` and `height`
   takes the box around everything its drawing paints: strokes, brush marks
   (scatter, bristle spread and wobble), blur, glow and shadow. `place` puts

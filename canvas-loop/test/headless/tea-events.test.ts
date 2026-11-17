@@ -76,3 +76,29 @@ test("a mouseleave has only a frame and a type", () => {
   assert.deepEqual(parseTeaEvents([{ frame: 9, type: "mouseleave" }], decl), [{ frame: 9, type: "mouseleave" }]);
   assert.throws(() => parseTeaEvents([{ frame: 9, type: "mouseleave", x: -20 }], decl), (e: unknown) => e instanceof EventScriptError && e.message.includes('event[0]: a mouseleave has no position or target, only "frame" and "type"; got "x"'));
 });
+
+test("a mousepath becomes one mousemove a frame along its points at an even speed, in its place in file order", () => {
+  const events = parseTeaEvents([
+    { frame: 4, type: "mousedown", x: 0, y: 0 },
+    { frame: 4, type: "mousepath", points: [[0, 0], [30, 0], [30, 10]], frames: 4 },
+    { frame: 6, type: "keydown", key: "a" },
+    { frame: 8, type: "mouseup", x: 30, y: 10 },
+  ], decl);
+  assert.deepEqual(events, [
+    { frame: 4, type: "mousedown", x: 0, y: 0 },
+    { frame: 4, type: "mousemove", x: 0, y: 0 },
+    { frame: 5, type: "mousemove", x: 10, y: 0 },
+    { frame: 6, type: "mousemove", x: 20, y: 0 },
+    { frame: 7, type: "mousemove", x: 30, y: 0 },
+    { frame: 8, type: "mousemove", x: 30, y: 10 },
+    { frame: 6, type: "keydown", key: "a" },
+    { frame: 8, type: "mouseup", x: 30, y: 10 },
+  ]);
+  const bad = (entry: object, text: string): void => {
+    assert.throws(() => parseTeaEvents([entry], decl), (e: unknown) => e instanceof EventScriptError && e.message.includes(text));
+  };
+  bad({ frame: 1, type: "mousepath", points: [[0, 0]], frames: 3 }, '"points" must be a list of two or more [x, y] pairs');
+  bad({ frame: 1, type: "mousepath", points: [[0, 0], [1, "a"]], frames: 3 }, '"points" must be');
+  bad({ frame: 1, type: "mousepath", points: [[0, 0], [1, 1]], frames: 0 }, '"frames" must be a whole number 1..3599');
+  bad({ frame: 1, type: "mousepath", points: [[0, 0], [1, 1]], frames: 2, to: [3, 3] }, 'a mousepath takes "frame", "type", "points" and "frames"; got "to"');
+});
