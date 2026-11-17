@@ -50,8 +50,8 @@ Capabilities are injected, not ambient — `update` gets `Util` (randomness,
 params, log, `handled`) and no drawing; `draw` gets `View` (drawing, log,
 snapshot) and no randomness. That withholding *is* the enforcement.
 
-The lint preset caps functions at 2 parameters, except in `src/examples/`
-and `src/gallery/`. Elsewhere, put this exact comment on `update` and `draw`:
+The lint preset caps functions at 2 parameters, except in `src/examples/`.
+Elsewhere, put this exact comment on `update` and `draw`:
 `// eslint-disable-next-line max-params -- TEA contract signature`.
 
 Every param may also carry `label` (the words its control shows; default: the
@@ -678,8 +678,7 @@ variants the name has.
   load waits up to 0.25 s, then is dropped with a console line. Restart stops
   sounding voices.
 - Replay from the start is exact. Seeking to a frame is not supported yet.
-- Examples: `canvas-loop/src/gallery/guitar-strings/`,
-  `canvas-loop/src/examples/sound-tea.ts`.
+- Example: [`sound`](./src/examples/sound-tea.ts).
 
 ## Params reference
 

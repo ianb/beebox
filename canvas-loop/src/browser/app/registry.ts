@@ -3,9 +3,6 @@
 // one variance boundary between a sketch's `DeepReadonly<Model>` signatures and
 // the runtime's opaque-model contract — the browser analog of the CLI's
 // tea-load. Sketch modules are imported UNCHANGED.
-import * as clock from "../../gallery/clock/sketch-tea.js";
-import * as particles from "../../gallery/particles-opus/sketch-tea.js";
-import * as pelican from "../../gallery/pelican-bicycle/sketch-tea.js";
 import * as fjord from "../../examples/fjord-tea.js";
 import * as orbit from "../../examples/orbit-tea.js";
 import * as brushes from "../../examples/brushes-tea.js";
@@ -22,7 +19,4 @@ export const REGISTRY: readonly RegistryEntry[] = [
   { id: "scale", label: "Scale", module: asPlaygroundModule(scale) },
   { id: "orbit", label: "Orbit", module: asPlaygroundModule(orbit) },
   { id: "fjord", label: "Fjord", module: asPlaygroundModule(fjord) },
-  { id: "particles", label: "Particles", module: asPlaygroundModule(particles) },
-  { id: "clock", label: "Clock", module: asPlaygroundModule(clock) },
-  { id: "pelican", label: "Pelican", module: asPlaygroundModule(pelican) },
 ];

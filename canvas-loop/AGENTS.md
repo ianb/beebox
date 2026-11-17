@@ -7,8 +7,8 @@ browser. Real DOM or CSS app UI stays with the browse skill.
 Reference, read before writing: [TEA.md](TEA.md) (sketch contract; `draw`
 returns its drawing; name files `*-tea.ts`), [README.md](README.md) (run,
 events, capture, `<SketchFigure>`), [BRUSHES.md](BRUSHES.md) (brushes,
-effects, lighting) and [src/gallery/README.md](src/gallery/README.md)
-(exercise corpus). For work on the renderer: [RENDERER.md](RENDERER.md).
+effects, lighting). The examples in `src/examples/` show how the pieces
+fit. For work on the renderer: [RENDERER.md](RENDERER.md).
 
 ## The loop
 
@@ -32,16 +32,21 @@ Use determinism to verify. Add params that land frames on round instants (a
 `timeScale`) or draw a readout of the model's belief, then spot-check chosen
 frames against the closed form. Only aesthetic targets need many iterations.
 
-## Gallery
+## Examples
 
-To bank or re-run an exercise, follow [src/gallery/README.md](src/gallery/README.md):
-`src/gallery/<slug>/` with `task.md`, `sketch*.ts`, `events.json`, `meta.yaml`,
-one appended `runs.jsonl` line, then `pnpm --dir canvas-loop run gallery:check`
-must pass before commit. Do not commit PNGs or transcripts.
+Add an example only when it shows what the docs do not. An example is one
+sketch, `src/examples/<name>-tea.ts`, with no sibling helpers, and one events
+file, `<name>-tea-events.json`, whose last frame holds a snapshot. Its header
+comment opens with its one point and names the doc section that links it.
+`draw` returns lists (`.map`, `&&`, components), and a pointer hits by name.
+Add it to `src/browser/app/registry.ts`, then run
+`pnpm --dir canvas-loop run examples:check` before commit: it fails on a
+warning and on a scripted input that reads `(unhandled)`. Do not commit PNGs
+or transcripts.
 
 ## GPU
 
-- Run one heavy GPU process at a time on a machine (`gallery:check`, the test
+- Run one heavy GPU process at a time on a machine (`examples:check`, the test
   suite, long renders): several at once have crashed the GPU driver.
 - A test that opens a GPU device goes in a `*.gpu.test.ts` file. `pnpm test`
   runs those one at a time, after the rest.
