@@ -244,3 +244,114 @@ void test("Removal stops immediately when the worktree directory cannot move int
     reported: true,
   });
 });
+
+// ## A removal keeps scratch/ work outside the trash
+//
+// scratch/ is gitignored, so the worktree trash-mv used to delete it silently.
+// A removal moves a scratch/ holding more than its README to the kept-scratch
+// root and names the path; a README-only scratch/ is not kept. When the move
+// fails, removal refuses before any destructive step.
+void test("A removal moves a scratch/ holding more than its README to the kept-scratch r...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(scratchRoot, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const scratchRoot = await mkdtemp(join(tmpdir(), "workstream-cull-scratch-test-"));
+  const mono = join(scratchRoot, "mono");
+  const worktrees = join(scratchRoot, "worktrees");
+  const state = join(scratchRoot, "state");
+  await execFileAsync("mkdir", ["-p", mono, worktrees, state]);
+  await git(mono, "init", "-b", "main");
+  await git(mono, "config", "user.email", "test@example.com");
+  await git(mono, "config", "user.name", "Cull Test");
+  await execFileAsync("bash", ["-c", 'mkdir -p "$1/scratch" && printf readme > "$1/scratch/README.md"', "fixture", mono]);
+  await git(mono, "add", "scratch/README.md");
+  await git(mono, "commit", "-m", "fixture");
+  const removeScript = (branch: string, stub: string) => [
+    '. "$1"',
+    'WT_MONO="$2"',
+    'WT_ROOT="$3"',
+    'WT_BOX_ROOT="$4"',
+    'WT_STATE_DIR="$5"',
+    'WT_LOG_FILE="$5/worktree-cleanup.log"',
+    'WT_SCRATCH_KEEP_ROOT="$5/culled-scratch"',
+    "WT_AHEAD=0",
+    "WT_DIRTY=0",
+    stub,
+    `wt_remove_now "$6" ${branch}`,
+  ].filter((line) => line !== "").join("; ");
+  const run = async (worktree: string, removal: { branch: string; stub?: string }) =>
+    execFileAsync("bash", ["-c", removeScript(removal.branch, removal.stub ?? ""), "scratch-test", teardownLib, mono, worktrees, join(scratchRoot, "boxes"), state, worktree]);
+  const listKept = async () =>
+    (await execFileAsync("bash", ["-c", 'ls "$1" 2>/dev/null || true', "ls", join(state, "culled-scratch")])).stdout.split("\n").filter((line) => line !== "");
+
+  const kept = join(worktrees, "kept-fixture");
+  await git(mono, "worktree", "add", "-b", "worktree-kept-fixture", kept, "main");
+  await execFileAsync("bash", ["-c", 'mkdir -p "$1/scratch/tools" && printf work > "$1/scratch/tools/build.ts"', "fixture", kept]);
+  const keptRun = await run(kept, { branch: "worktree-kept-fixture" });
+  const keptNames = await listKept();
+  const keptName = keptNames[0] ?? "";
+  const keptFile = await readFile(join(state, "culled-scratch", keptName, "tools/build.ts"), "utf8").catch(() => "(missing)");
+  t.check({
+    names: keptNames.length,
+    named: /^kept-fixture-\d{8}T\d{6}Z$/.test(keptName),
+    file: keptFile,
+    reported: keptRun.stdout.includes("kept scratch/") && keptRun.stdout.includes(join(state, "culled-scratch", keptName)),
+  }, { names: 1, named: true, file: "work", reported: true });
+
+  const readmeOnly = join(worktrees, "readme-fixture");
+  await git(mono, "worktree", "add", "-b", "worktree-readme-fixture", readmeOnly, "main");
+  const readmeRun = await run(readmeOnly, { branch: "worktree-readme-fixture" });
+  t.check({ names: (await listKept()).length, reported: readmeRun.stdout.includes("kept scratch/") }, { names: 1, reported: false });
+
+  const refused = join(worktrees, "refused-fixture");
+  await git(mono, "worktree", "add", "-b", "worktree-refused-fixture", refused, "main");
+  await execFileAsync("bash", ["-c", 'printf work > "$1/scratch/notes.md"', "fixture", refused]);
+  const failure = await expectFailure(run(refused, {
+    branch: "worktree-refused-fixture",
+    stub: 'mv() { case "$1" in */scratch) echo "simulated move failure" >&2; return 1 ;; esac; command mv "$@"; }',
+  }));
+  const notes = await readFile(join(refused, "scratch/notes.md"), "utf8").catch(() => "(missing)");
+  const branchExists = await git(mono, "show-ref", "--verify", "refs/heads/worktree-refused-fixture").then(() => true, () => false);
+  t.check({ code: failure.code, notes, branchExists, reported: failure.stdout.includes("refusing removal: scratch/") }, {
+    code: 1,
+    notes: "work",
+    branchExists: true,
+    reported: true,
+  });
+});
+
+// ## Sweep expires kept scratch copies after the retention window
+//
+// A kept copy older than the window moves to the trash for the reaper; a newer
+// one stays. Dry-run only lists.
+void test("A kept copy older than the window moves to the trash for the reaper; a newer ...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(pruneRoot, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const pruneRoot = await mkdtemp(join(tmpdir(), "workstream-scratch-prune-test-"));
+  const keepRoot = join(pruneRoot, "culled-scratch");
+  await execFileAsync("mkdir", ["-p", join(keepRoot, "old-20260101T000000Z"), join(keepRoot, "new-20260101T000000Z")]);
+  await execFileAsync("touch", ["-t", "202601010000", join(keepRoot, "old-20260101T000000Z")]);
+  const pruneScript = (flag: string) => [
+    '. "$1"',
+    'WT_STATE_DIR="$2"',
+    'WT_TRASH="$2/trash"',
+    'WT_LOG_FILE="$2/worktree-cleanup.log"',
+    'WT_SCRATCH_KEEP_ROOT="$2/culled-scratch"',
+    `wt_scratch_prune ${flag}`,
+    'ls "$2/culled-scratch"',
+    'ls "$2/trash" 2>/dev/null || true',
+  ].join("; ");
+  const dry = (await execFileAsync("bash", ["-c", pruneScript("--dry-run"), "prune", teardownLib, pruneRoot])).stdout;
+  t.check(dry, `expired kept scratch: ${keepRoot}/old-20260101T000000Z\nnew-20260101T000000Z\nold-20260101T000000Z\n`);
+  const real = (await execFileAsync("bash", ["-c", pruneScript(""), "prune", teardownLib, pruneRoot])).stdout;
+  t.check(real, `expired kept scratch: ${keepRoot}/old-20260101T000000Z\nnew-20260101T000000Z\nscratch-old-20260101T000000Z\n`);
+});

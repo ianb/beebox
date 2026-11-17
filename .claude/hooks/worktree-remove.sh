@@ -72,6 +72,9 @@ fi
 setup_state_file=$(wt_git_setup_state_file "$NAME")
 printf 'native-removal-pending\t%s\n' "$WT_PATH" > "$setup_state_file"
 wt_remove_private_issues "$WT_PATH"
+# Claude Code's removal cannot be refused from here, so a failed move is only
+# reported.
+wt_scratch_retain "$WT_PATH" "$NAME" || echo "[worktree-remove] scratch/ could not be moved to $WT_SCRATCH_KEEP_ROOT"
 
 wt_remove_satellites "$NAME"
 wt_trash_reap

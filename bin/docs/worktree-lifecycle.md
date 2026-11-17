@@ -63,6 +63,11 @@ an unmerged test-box branch is pushed as `keep/<workstream>-<date>` before
 deletion; push failure refuses the cull. Private worktrees are removed only
 when merged and strictly clean, otherwise reported as orphans.
 
+A removal moves a `scratch/` that holds more than its README to
+`~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/` before trashing the tree,
+and prints and logs that path. A failed move refuses the removal; native
+WorktreeRemove can only report it. Sweep trashes kept copies older than 14 days.
+
 ## Sessions and generated guidance
 
 Managed Claude and Codex use the same create path. Codex runs in foreground so
