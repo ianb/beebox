@@ -7,6 +7,7 @@ on 2026-11-16, with the week before it filled in. Ask the box about any of
 them.
 - 2026-11-17 **Changed**: iPhone photos in HEIC format now attach to a chat in Chrome and Firefox, not only Safari. The box still keeps the original photo.
 
+- 2026-11-17 **Changed**: Focus card now gives the card the whole window: the top bar and tabs step aside, the message box stays, and a button at the right returns to the split.
 - 2026-11-16 **New**: This list. Open it from your profile menu or Settings, or ask the box what's new.
 - 2026-11-15 **New**: When you write with the box in the composition editor, an Accept control marks the agent's text in your draft as your own.
 - 2026-11-14 **Agent**: When the box makes you something interactive, such as a practice problem, it can watch how you do and offer a hint when you seem stuck, without you asking.

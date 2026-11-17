@@ -20,6 +20,7 @@ import type { SidecarTab } from "../../sidecar-tabs";
 import type { PaneId } from "../state-types.js";
 import type { AddSelectionInput } from "../../../../lib/selection/position";
 import { withoutFragment } from "../../../../lib/view-url";
+import { displayName } from "../../../../lib/display-name";
 import type { SessionContentBlock } from "../../../../api";
 import { useTurnEditedPaths } from "./turn-edits";
 import { IntentionStrip } from "../../../intention/IntentionStrip";
@@ -29,6 +30,12 @@ import { WorkspaceUpdating } from "../../WorkspaceUpdating";
 
 interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
+}
+
+/** Its tab names the panel; focused, there is no tab row, so the card's title does. */
+function panelName({ path, visible, focused, identities }: { path: string; visible: boolean; focused: boolean; identities: Map<string, { title?: string }> }) {
+  if (focused) return { "aria-label": identities.get(path)?.title ?? displayName(path) };
+  return { "aria-labelledby": visible ? workspaceTabId(path) : undefined };
 }
 
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
@@ -45,6 +52,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
   const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
+  const focused = !workspace.mobile && workspace.state.layout.kind === "focus";
   const fileView = <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState} fragment={tab.target.fragment}
     canPushViewState={visible}
     onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
@@ -53,16 +61,20 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection }: CardCall
     onNavigate={(target, hint) => { logActivity({ card: tab.target.path, kind: "navigated", detail: target.path }); workspace.open(target, { ...hint, originatingPane: pane }); }}
     onAddSelection={onAddSelection} />;
   // Named by side, so the two panes' "Focus card" and "Properties" are told apart.
-  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
+  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined} data-card-focused={focused || undefined}
     role="group" aria-label={pane === "left" ? "Left pane" : "Right pane"}
     style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 2 }}
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>
-    {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
+    {/* Focused, the card has the window: no tab row, only a way back out. */}
+    {visible && focused ? <div className="bbx-companion-focus-controls">
+      <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
+    </div> : null}
+    {visible && !focused ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={workspace.mobile ? "bbx-panel-tabs-mobile" : pane === "left" ? "bbx-panel-tabs" : "bbx-panel-tabs-right"} tabs={tabs} activePath={tab.target.path} identities={identities} boxSlug={boxSlug}
         onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} closeLabel={closeLabel} />
       <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
-    <div role="tabpanel" id={workspacePanelId(tab.target.path)} aria-labelledby={visible ? workspaceTabId(tab.target.path) : undefined} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
+    <div role="tabpanel" id={workspacePanelId(tab.target.path)} {...panelName({ path: tab.target.path, visible, focused, identities })} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
       data-card-content={themedSurface ? "card" : "neutral"}
       className="bbx-interface-card-desk flex-1 min-h-0 overflow-auto"
       onFocus={() => workspace.activate(tab.target.path)}

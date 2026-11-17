@@ -176,6 +176,33 @@
 @media (max-width: 640px) {
   .bbx-companion-desk[data-active-card] { --bbx-desk-gutter: 12px; }
 }
+/* A focused card has the window to itself: no app bar, no tab row, a thin
+   frame. Its pane controls stand in a narrow right margin, clear of the
+   card's own corner controls (Properties) and of a PDF's toolbar. */
+.bbx-box-presentation:has(.bbx-companion-desk[data-card-focused]:not([hidden])) .bbx-app-nav {
+  display: none;
+}
+.bbx-companion-desk[data-card-focused] .bbx-interface-card-desk[data-card-content="card"] {
+  --bbx-card-desk-padding: 8px;
+  padding-top: var(--bbx-card-desk-padding);
+}
+.bbx-companion-desk[data-card-focused] .bbx-interface-card-desk {
+  padding-right: 48px;
+}
+.bbx-companion-focus-controls > [role="group"] {
+  flex-direction: column;
+  padding: 2px 0;
+}
+.bbx-companion-focus-controls {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  z-index: 2;
+  border-radius: 999px;
+  background: var(--bbx-paper, #fff);
+  border: 1px solid var(--bbx-edge, #e8ddd0);
+  box-shadow: 0 2px 6px #3c2d1924;
+}
 
 /* Paint the selected tab with the sheet's actual stock texture (the shared
    ::before rules), rather than a separate approximation of that material. */

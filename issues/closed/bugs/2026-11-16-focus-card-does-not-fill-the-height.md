@@ -1,12 +1,15 @@
 ---
 title: "Focus card does not fill the window height, and the card workspace wastes space"
-workstream: unattached
+workstream: card-focus-space
 area: beebox
 labels: [chat, workspace, layout]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — developer used Focus card in the chat workspace, 2026-11-16
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-17):** Resolved for the Focus card layout by 93dc1938f..0eb4ca975: focus drops the app bar and tab row, thins the frame, and moves controls to a side margin. Split-layout chrome was not changed (not requested).
 
 The chat workspace shows cards in panes beside the chat. Each pane has a row of controls: Move right or left (arrow), Focus card (four corners), and Minimize cards (dash). They are in `beebox/src/frontend/src/components/chat/workspace/PaneControls.tsx`.
 
