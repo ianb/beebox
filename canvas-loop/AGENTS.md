@@ -58,9 +58,8 @@ or transcripts.
 
 To try sketches live (controls, frames/s, what new picture versions cost),
 `pnpm --dir canvas-loop run cli page <sketch.ts>… [--name n]` builds one page
-and prints its dev URL. Larger sketches kept for looking at live in
-`dev/canvas-loop-pieces/`, not in the examples. Keep tools in tracked code:
-a worktree cull deletes `scratch/`.
+and prints its dev URL; the sketches can live outside the repo. Keep tools
+in tracked code: a worktree cull keeps `scratch/` for only 14 days.
 
 ## Audit norms
 

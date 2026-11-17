@@ -1,8 +1,0 @@
-[
-  { "frame": 0, "type": "snapshot", "label": "the wood at rest" },
-  { "frame": 20, "type": "mousepath", "frames": 150, "points": [[120, 420], [300, 360], [480, 400], [620, 330], [760, 410], [700, 470], [520, 450]] },
-  { "frame": 170, "type": "snapshot", "label": "a path cleared where the pointer went" },
-  { "frame": 200, "type": "mouseleave" },
-  { "frame": 300, "type": "snapshot", "label": "saplings coming back" },
-  { "frame": 520, "type": "snapshot", "label": "the wood grown back" }
-]
