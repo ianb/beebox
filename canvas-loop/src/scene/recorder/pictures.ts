@@ -83,10 +83,17 @@ export function firstDifference(pair: { a: readonly unknown[]; b: readonly unkno
   return undefined;
 }
 
+/** Whether a version was asked for again in a frame after the one that made it. */
+interface Use {
+  readonly made: number;
+  again: boolean;
+}
+
 interface Entry {
   readonly version: Version;
   readonly made: number;
   lastAsked: number;
+  readonly use: Use;
   /** About how many bytes the recording holds. */
   readonly weight: number;
 }
@@ -94,11 +101,14 @@ interface Entry {
 /** Bytes of recordings not asked for in the last two frames that the table keeps. */
 const IDLE_BUDGET = 16 * 1024 * 1024;
 
+/** Frames a new version has to be asked for again before the churn check counts it as used once: half a second, longer than a walk cycle's poses take to come back. */
+export const REUSE_WINDOW = 30;
+
 /** The versions a sketch's pictures have recorded, across frames. */
 export class PictureTable {
   readonly #entries = new Map<string, Entry[]>();
-  /** Per key: the last frame a new version was added, how many frames running had one, and the frame that run started. */
-  readonly #runs = new Map<string, { frame: number; run: number; start: number }>();
+  /** Per key: the last frame a new version was added, how many frames running had one, and the uses of the versions added in the run's last `REUSE_WINDOW + 3` frames. */
+  readonly #runs = new Map<string, { frame: number; run: number; uses: Use[] }>();
   #frame = 0;
 
   /** A new frame: drop the least recently asked-for versions while those not asked for in the last two frames weigh more than `IDLE_BUDGET`. */
@@ -128,27 +138,32 @@ export class PictureTable {
     });
     if (hit === undefined) return undefined;
     hit.lastAsked = this.#frame;
+    if (hit.made < this.#frame) hit.use.again = true;
     return hit.version;
   }
 
   /**
-   * Add a new version. Returns whether its key churns: it added a new version
-   * in each of the last 3 frames (this one included), and most of the
-   * versions it added in that run before this frame were not asked for again
-   * in a later frame. A walk cycle adds versions in a row of frames while it
-   * first shows its poses, but asks for most of them again.
+   * Add a new version. Returns how many frames running its key has added a
+   * new version when the key churns, else `undefined`. A key churns when it
+   * has added a new version in every frame for longer than `REUSE_WINDOW`
+   * and most of the versions it added `REUSE_WINDOW` to `REUSE_WINDOW + 2`
+   * frames ago were never asked for again. A walk cycle adds versions in a
+   * row of frames while it first shows its poses (every frame, at a high game
+   * speed), but its poses come back within the window.
    */
-  add(version: Version): boolean {
+  add(version: Version): number | undefined {
+    const use: Use = { made: this.#frame, again: false };
     const list = this.#entries.get(version.key) ?? [];
-    list.push({ version, made: this.#frame, lastAsked: this.#frame, weight: weightOf(version) });
+    list.push({ version, made: this.#frame, lastAsked: this.#frame, use, weight: weightOf(version) });
     this.#entries.set(version.key, list);
     const last = this.#runs.get(version.key);
     const run = last === undefined ? 1 : last.frame === this.#frame ? last.run : last.frame === this.#frame - 1 ? last.run + 1 : 1;
-    const start = run === 1 || last === undefined ? this.#frame : last.start;
-    this.#runs.set(version.key, { frame: this.#frame, run, start });
-    if (run < 3) return false;
-    const before = list.filter((e) => e.made >= start && e.made < this.#frame);
-    return before.filter((e) => e.lastAsked === e.made).length * 2 > before.length;
+    const oldest = this.#frame - REUSE_WINDOW - 2;
+    const uses = [...(run === 1 || last === undefined ? [] : last.uses.filter((u) => u.made >= oldest)), use];
+    this.#runs.set(version.key, { frame: this.#frame, run, uses });
+    if (run < REUSE_WINDOW + 3) return undefined;
+    const judged = uses.filter((u) => u.made <= this.#frame - REUSE_WINDOW);
+    return judged.filter((u) => !u.again).length * 2 > judged.length ? run : undefined;
   }
 
   /** Whether `version` was added this frame (so asking for it again this frame was a second call). */

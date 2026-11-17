@@ -10,7 +10,7 @@ import type { Scene } from "../../src/scene/nodes.js";
 import { SceneRecorder } from "../../src/scene/recorder/view.js";
 import { drawSheet } from "./brush-sheet.js";
 import { SMEARS_SIZE, drawSmears } from "./smears.js";
-import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
+import * as walkerSheet from "./intra-walk-styles/sketch-tea.js";
 import { portFrames } from "./cache-cases.js";
 
 /** Every brush kind: the brush sheet (ink, marker, pencil, chalk, airbrush, wash, bristle) and the smear case (smudge, wet). */

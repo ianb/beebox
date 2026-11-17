@@ -1,0 +1,9 @@
+[
+  { "frame": 10, "type": "mousedown", "target": "lamp-b" },
+  { "frame": 15, "type": "snapshot", "label": "b catches" },
+  { "frame": 20, "type": "snapshot", "label": "b dips" },
+  { "frame": 40, "type": "mousedown", "target": "lamp-a" },
+  { "frame": 48, "type": "mousedown", "target": "lamp-c" },
+  { "frame": 60, "type": "snapshot", "label": "b full, a and c warming" },
+  { "frame": 119, "type": "snapshot", "label": "all lit" }
+]

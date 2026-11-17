@@ -7,7 +7,8 @@
 //   - a firefly whose path is `v.tweenPoint` keyframes with eases, drawn with `blend: "add"`
 //   - an old photo inset with `saturation` and `sepia`
 //
-// `draw` only paints; `update` only counts frames. See TEA.md and BRUSHES.md.
+// Linked from BRUSHES.md "Effects" and "Making something glow", and TEA.md
+// "Scopes" (`mask`).
 import type { DeepReadonly, Drawing, Msg, RootDrawing, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const canvas = { width: 480, height: 320 };
@@ -21,7 +22,7 @@ export function init(_u: Util): Model {
 }
 
 export function update(model: DeepReadonly<Model>, msg: Msg, _u: Util): Model {
-  return msg.type === "tick" ? { frame: model.frame + 1 } : { ...model };
+  return msg.type === "tick" ? { frame: msg.frame } : model;
 }
 
 const HILLS: Vec2[] = [
@@ -55,18 +56,18 @@ function sky(v: View): Drawing {
 }
 
 function lake(v: View): Drawing {
-  const drawn: Drawing[] = [];
-  drawn.push(v.rect(0, 210, 480, 110, { fill: "#101633" }));
   // The lamp's reflection, fading out as it goes down into the water.
   const fade = v.linearGradient(0, 210, 0, 320, [
     [0, "rgba(0,0,0,0.8)"],
     [1, "rgba(0,0,0,0)"],
   ]);
-  drawn.push(v.mask(
-    v.rect(0, 210, 480, 110, { fill: fade }),
-    v.group({ effects: { blur: 4 } }, v.rect(222, 214, 16, 90, { fill: "#ffd84a" })),
-  ));
-  return drawn;
+  return [
+    v.rect(0, 210, 480, 110, { fill: "#101633" }),
+    v.mask(
+      v.rect(0, 210, 480, 110, { fill: fade }),
+      v.group({ effects: { blur: 4 } }, v.rect(222, 214, 16, 90, { fill: "#ffd84a" })),
+    ),
+  ];
 }
 
 function lamp(v: View): Drawing {

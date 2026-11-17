@@ -5,12 +5,12 @@
 // missing. Every GPU step (a frame, sleep's release, waking) runs in one
 // queue, so a release never lands inside a frame; frames that arrive while
 // one is drawing collapse to the newest.
-import type { ControlBox, ParamsDecl, ParamValues } from "../../core/tea.js";
-import type { TextBox, TextOptions } from "../../core/paint.js";
+import type { ParamsDecl, ParamValues } from "../../core/tea.js";
+import type { TextBox, TextOptions, TextRun } from "../../core/paint.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import { SketchMountError } from "../../scene/errors.js";
 import type { TextMeasure } from "../../core/text/measure.js";
-import type { DrawSurface } from "../runtime/engine.js";
+import type { DrawSurface, Drawn } from "../runtime/engine.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
 import type { ColorParser } from "../../scene/colors.js";
 import { GpuRenderer } from "../../gpu/renderer.js";
@@ -102,7 +102,7 @@ export class SceneSurface implements DrawSurface {
     this.#recorder = new SceneRecorder(d.size, { text: d.text, colors: d.colors, seed: d.seed, params: { decl: d.decl, values: () => this.#params } });
     this.textMeasure = {
       width: (content, options) => d.text.width(content, options),
-      bounds: (...[content, box, options]: [string, TextBox, TextOptions?]) => d.text.place(content, { box, options: options ?? {}, where: { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: d.size } }).bounds,
+      bounds: (...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]) => d.text.place(content, { box, options: options ?? {}, where: { transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, pixelRatio: 1, canvas: d.size } }).bounds,
     };
     this.#attach();
   }
@@ -137,16 +137,24 @@ export class SceneSurface implements DrawSurface {
     void this.#enqueue(() => this.#renderer?.release());
   }
 
-  draw(model: unknown, params: ParamValues<ParamsDecl>): ReadonlyMap<string, ControlBox> {
-    this.#params = params;
-    const rec = this.#recorder.record((v): unknown => Reflect.apply(this.#d.draw, undefined, [v, model, params]));
+  draw(model: unknown, params: ParamValues<ParamsDecl>): Drawn {
+    const rec = this.#record(model, params);
     this.records++;
     for (const line of rec.logs) this.#log([line]);
     for (const w of rec.warnings) this.#log([`warning: ${w}`]);
     if (rec.cursor !== undefined && this.#d.canvas.style.cursor !== rec.cursor) this.#d.canvas.style.cursor = rec.cursor;
     this.#kept = rec;
     this.#show(rec.scene);
-    return new Map(rec.controls.map((c) => [c.name, c.box]));
+    return { placements: new Map(rec.controls.map((c) => [c.name, c.box])), scene: rec.scene };
+  }
+
+  recordScene(model: unknown, params: ParamValues<ParamsDecl>): Scene {
+    return this.#record(model, params).scene;
+  }
+
+  #record(model: unknown, params: ParamValues<ParamsDecl>): FrameRecord {
+    this.#params = params;
+    return this.#recorder.record((v): unknown => Reflect.apply(this.#d.draw, undefined, [v, model, params]));
   }
 
   /** The last recorded frame (kept for waking). */

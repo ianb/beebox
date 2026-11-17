@@ -94,3 +94,21 @@ export async function rotatedText(handle: GpuHandle, text: TextMeasurer): Promis
   const box = inkBox(px.data, { width: px.width, rect: [0, 0, px.width, px.height] });
   assert.ok(box !== undefined && box[3] - box[1] > 40, "rotated text draws, its ink running downhill");
 }
+
+/** A sub run (plan:canvas-loop-layout-text-hits.subplan, C2) draws smaller and lower than the same glyph in plain text; its base run lands where plain text does. */
+export async function subRun(handle: GpuHandle, text: TextMeasurer): Promise<void> {
+  const size = { width: 120, height: 200 };
+  const o = { size: 40, valign: "baseline" } as const;
+  const px = await renderOnce(handle, { size, text, draw: (v) => [v.background(BG), v.text(["H", { text: "2", sub: true }], { x: 20, y: 60 }, o), v.text("H2", { x: 20, y: 150 }, o)] });
+  const split = Math.round(20 + text.width("H", o));
+  const ink = (rect: readonly [number, number, number, number]): readonly [number, number, number, number] => {
+    const box = inkBox(px.data, { width: size.width, rect });
+    assert.ok(box !== undefined, `ink in ${rect.join(",")}`);
+    return box;
+  };
+  const [runH, plainH] = [ink([0, 0, split - 1, 100]), ink([0, 100, split - 1, 100])];
+  assert.deepEqual(runH.map((v, i) => (i % 2 === 1 ? v + 90 : v)), plainH, "the base run sits where plain text does");
+  const [sub, two] = [ink([split, 0, size.width - split, 100]), ink([split, 100, size.width - split, 100])];
+  assert.ok(sub[3] - sub[1] < 0.8 * (two[3] - two[1]), `smaller: ${sub.join(",")} against ${two.join(",")}`);
+  assert.ok(sub[3] - 60 > two[3] - 150 + 5, `lower: ${sub.join(",")} against ${two.join(",")}`);
+}

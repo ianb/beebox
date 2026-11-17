@@ -102,6 +102,7 @@ events see the folds before them), and hit-testing a moving target is a calculat
   { "frame": 6, "type": "mousedown", "x": 200, "y": 150 },
   { "frame": 8, "type": "mousemove", "x": 212, "y": 144 },
   { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
+  { "frame": 30, "type": "mousedown", "target": "pan-left" },
   { "frame": 40, "type": "snapshot", "label": "mid-arc" },
   { "frame": 55, "type": "param", "name": "speed", "value": 2.5 },
   { "frame": 90, "type": "keydown", "key": "r" },
@@ -111,6 +112,14 @@ events see the folds before them), and hit-testing a moving target is a calculat
 
 - Input types are `mousedown`, `mouseup`, `mousemove`, `keydown` and `keyup`.
   Each becomes a `Msg` of the same type.
+- A mouse entry can aim by name instead of by position: `"target": "pan-left"`
+  clicks the centre (in whole pixels) of the topmost drawing with that `name`
+  in the frame drawn before the event, at any depth and inside placed
+  pictures. Give `target` or `x`/`y`, not both. When no drawing has the name,
+  or its centre lands on another named drawing or on nothing named (a ring's
+  hole), the run stops with an error that says what the centre hit; aim with
+  `x` and `y` then. A frame-0 event cannot aim: nothing is drawn yet. A
+  browser's recorded events keep `x` and `y` only.
 - `param` sets a declared param and becomes a `param` msg. `trigger` becomes a
   `trigger` msg. Both are checked against the sketch's `params` before frame
   0: an unknown name or a wrong value type is an error.
@@ -132,32 +141,56 @@ a duplicate.
 
 ## Worked example
 
-`src/examples/bounce-tea.ts` + `src/examples/bounce-tea-events.json` — a
-bouncing ball you can grab (mousedown within its radius), drag, and throw
-(release with the drag velocity); `r` resets it. It uses pointer and key msgs,
-seeded `u.random` in `init`, `u.log`, `u.handled`, and a labelled `snapshot`
-event:
+[`src/examples/bounce-tea.ts`](./src/examples/bounce-tea.ts) +
+[`bounce-tea-events.json`](./src/examples/bounce-tea-events.json): a ball
+you press on, carry and throw; `r` resets it. A press on the ball (named
+`ball`) enters a held mode that keeps where on the ball you took it; each
+move carries it; the release throws it with the last move's velocity:
 
 ```sh
 pnpm --dir canvas-loop run cli run src/examples/bounce-tea.ts \
   --events src/examples/bounce-tea-events.json --out out
 ```
 
-Produces a 13-image transcript for 120 frames:
+The transcript gives each scripted input its verdict:
 
 ```md
-**[frame 16]** mousemove (260,120) → drag
+**[frame 10]** mousedown (150,244) on ball → grab
 
-### frame 16
-![frame 16](frame-0016.png)
+**[frame 11]** mousemove (159,237) on ball → drag
 
-**[frame 17]** log: released with velocity 12 -6
+**[frame 19]** mouseup (222,188) on ball → throw
 
-**[frame 17]** mouseup (260,120) → release
-
-### frame 17 — released
-![frame 17 — released](frame-0017.png)
+### frame 34 — thrown
+![frame 34 — thrown](frame-0034.png)
 ```
+
+## Examples
+
+Each example in `src/examples/` is one sketch, `<name>-tea.ts`, and one
+events file, `<name>-tea-events.json`, that drives it. Its header comment
+states the one thing it shows and the doc section that links it.
+`pnpm --dir canvas-loop run examples:check` runs every example from its
+events file, twice: it fails on a type or lint error, a transcript warning,
+a scripted input that reads `(unhandled)`, or two runs that differ. The
+playground page, `dev/canvas-loop-examples.html`, shows them all; rebuild it
+after changing an example with `pnpm --dir canvas-loop run build:playground`.
+
+| Example | Shows |
+| --- | --- |
+| [`bounce`](./src/examples/bounce-tea.ts) | a drag as a mode: grab offset, throw, key reset |
+| [`orbit`](./src/examples/orbit-tea.ts) | every param kind; a trigger resets the model and leaves the params; clicking a moving body by name |
+| [`scale`](./src/examples/scale-tea.ts) | names on nested drawings, `targets`, `row` and `column` |
+| [`answer-box`](./src/examples/answer-box-tea.ts) | a typed answer over the canvas (`text` param, `v.control`); `activity` |
+| [`sound`](./src/examples/sound-tea.ts) | sounds chosen by meaning; a voice id per sound; `at` is `model.frame + 1`, the click's frame |
+| [`lamps`](./src/examples/lamps-tea.ts) | event-time animation: a start frame per id, then tweens of `frame - start` |
+| [`pendulum`](./src/examples/pendulum-tea.ts) | physics stepped in `update` at a fixed time step; a slider on the canvas |
+| [`paint`](./src/examples/paint-tea.ts) | strokes from the pointer kept as data, drawn through a chain of pictures |
+| [`brushes`](./src/examples/brushes-tea.ts) | every brush preset under every pressure |
+| [`paint-mixing`](./src/examples/paint-mixing-tea.ts) | colour jitter, smudge, wet paint and paper |
+| [`looks`](./src/examples/looks-tea.ts) | wash and hatching on one scene |
+| [`effects`](./src/examples/effects-tea.ts) | blur, glow, shadow, mask fade, tween, colour adjustment |
+| [`night-room`](./src/examples/night-room-tea.ts) | a lit room: lights, materials, caster heights, tone curve, a flickering lamp |
 
 ## React figure (`./react`)
 
@@ -251,20 +284,20 @@ const KEY = "my-sketch-params";
 function PersistedFigure() {
   const [params, setParams] = useState(() => {
     const saved = localStorage.getItem(KEY);
-    return saved ? JSON.parse(saved) : { tide: 0, timeOfDay: "day" };
+    return saved ? JSON.parse(saved) : { brush: "ink", weight: 6 };
   });
   const onParamsChange = useCallback((values) => {
     setParams(values);
     localStorage.setItem(KEY, JSON.stringify(values)); // restore on reload
   }, []);
-  return <SketchFigure module={fjord} params={params} onParamsChange={onParamsChange} />;
+  return <SketchFigure module={brushes} params={params} onParamsChange={onParamsChange} />;
 }
 ```
 
 ### Demo
 
 `src/dev-demo/main.tsx` embeds two figures — orbit (uncontrolled, controls +
-recorder + an `onEvent` readout) and fjord (controlled, wired to `localStorage`
+recorder + an `onEvent` readout) and brushes (controlled, wired to `localStorage`
 with a "clear saved state" link). Build the self-contained page with:
 
 ```sh

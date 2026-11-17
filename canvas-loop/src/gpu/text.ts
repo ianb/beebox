@@ -3,7 +3,7 @@
 // translation and uniform scale the pen snaps to a quarter pixel and the cell
 // lands on whole device pixels, so the glyph is copied unresampled; under
 // rotation or skew it is resampled bilinearly.
-import type { Mat, TextLine, TextNode } from "../scene/nodes.js";
+import type { Mat, TextLine, TextNode, TextRunSpan } from "../scene/nodes.js";
 import type { GlyphCache } from "./glyphs.js";
 import type { GlyphQuad, R } from "./jobs.js";
 import { inter, isEmpty } from "./jobs.js";
@@ -20,15 +20,18 @@ export function lineQuads(n: TextNode, a: { line: TextLine; halo: boolean; matri
   if (!(s > 0) || !Number.isFinite(s)) return [];
   const tol = 1e-9 * s;
   const aligned = Math.abs(m[1]) <= tol && Math.abs(m[2]) <= tol && m[0] > 0 && Math.abs(m[0] - m[3]) <= tol;
-  const font = `${n.style} ${Math.round(n.size * s * 64) / 64}px ${n.family}`;
+  // A runs text takes each glyph's size, style and baseline move from its run.
+  const runOf = (i: number): TextRunSpan | undefined => n.runs?.find((r) => i >= r.from && i < r.to);
+  const fontOf = (run: TextRunSpan | undefined): string => `${run?.style ?? n.style} ${Math.round((run?.size ?? n.size) * s * 64) / 64}px ${n.family}`;
   const halo = a.halo && n.halo !== undefined ? n.halo.width * s : 0;
   // Device → texels of the cell, relative to the pen: s · M⁻¹ (linear).
   const k = s / (m[0] * m[3] - m[1] * m[2]);
   const inv = [m[3] * k, -m[1] * k, -m[2] * k, m[0] * k] as const;
   const out: GlyphQuad[] = [];
   for (const [i, ch] of a.line.glyphs.entries()) {
+    const run = runOf(i);
     const x = a.line.xs[i] ?? 0;
-    const y = a.line.y;
+    const y = a.line.y + (run?.dy ?? 0);
     let px = m[0] * x + m[2] * y + m[4];
     let py = m[1] * x + m[3] * y + m[5];
     let fx = 0;
@@ -41,7 +44,7 @@ export function lineQuads(n: TextNode, a: { line: TextLine; halo: boolean; matri
       px = qx.whole + fx;
       py = qy.whole + fy;
     }
-    const cell = a.glyphs.cell({ font, ch, baseline: n.baseline, halo, fx, fy });
+    const cell = a.glyphs.cell({ font: fontOf(run), ch, baseline: n.baseline, halo, fx, fy });
     if (cell === undefined) continue;
     const t: [number, number] = [cell.ax - (inv[0] * px + inv[2] * py), cell.ay - (inv[1] * px + inv[3] * py)];
     // The cell's corners back on the device: pen + (M/s)·(texel − anchor).

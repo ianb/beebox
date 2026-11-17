@@ -22,13 +22,13 @@ export { TeaUtil } from "../headless/tea-util.js";
 export type { UtilText } from "../headless/tea-util.js";
 export { NoGpuAdapterError } from "../scene/errors.js";
 
-// ── The sketch contract check (`cli run`, `gallery check`) ──────────────
+// ── The sketch contract check (`cli run`, `examples check`) ──────────────
 export { checkSketchTypes, formatSketchTypeError } from "../headless/sketch-types.js";
 export type { SketchTypeError } from "../headless/sketch-types.js";
 
-// ── Gallery corpus check (`cli gallery check`) ────────────────────────
-export { checkGallery } from "../headless/gallery.js";
-export type { GalleryCheckEntry, GalleryCheckResult } from "../headless/gallery.js";
+// ── Examples check (`cli examples check`) ─────────────────────────────
+export { checkExamples } from "../headless/examples-check.js";
+export type { ExampleCheckEntry, ExampleCheckResult } from "../headless/examples-check.js";
 
 // ── Experimental: frame diff views (`cli diff`) ───────────────────────
 export { statsLine, writeDiff } from "../headless/diff.js";

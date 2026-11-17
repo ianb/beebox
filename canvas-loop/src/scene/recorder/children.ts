@@ -42,11 +42,18 @@ export class Children {
   /** `children` of `call` flattened into a new list of this frame's nodes. */
   list(call: string, children: unknown): SceneNode[] {
     const out: SceneNode[] = [];
-    this.#add(children, { call, out, frame: this.#d.frame() });
+    this.#add(children, { call, out, frame: this.#d.frame(), take: true });
     return out;
   }
 
-  #add(x: unknown, a: { call: string; out: SceneNode[]; frame: object }): void {
+  /** As `list`, but the nodes are not taken: a measure (`v.bounds`) does not count as returning them. */
+  look(call: string, children: unknown): SceneNode[] {
+    const out: SceneNode[] = [];
+    this.#add(children, { call, out, frame: this.#d.frame(), take: false });
+    return out;
+  }
+
+  #add(x: unknown, a: { call: string; out: SceneNode[]; frame: object; take: boolean }): void {
     if (x === null || x === undefined || x === false) return;
     if (Array.isArray(x)) {
       for (const child of x) this.#add(child, a);
@@ -58,7 +65,7 @@ export class Children {
     }
     if (typeof x === "object" && isNode(x)) {
       if (x[MADE_IN] !== a.frame) throw new SketchUsageError({ detail: `${a.call}: this drawing was made in an earlier frame; make it again in draw, or record it once as a picture` });
-      this.#d.taken(x);
+      if (a.take) this.#d.taken(x);
       a.out.push(x);
       return;
     }

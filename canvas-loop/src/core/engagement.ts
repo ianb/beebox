@@ -13,35 +13,50 @@ export function verdict(a: { handled: readonly string[]; changed: boolean }): st
   return a.changed ? "Δmodel" : "(unhandled)";
 }
 
-/** Shows the first "(unhandled)" per input type and counts the rest. */
+/** ` on X in Y` for a mouse message with named drawings under it; empty otherwise. */
+function onText(msg: InteractionMsg): string {
+  if (msg.type !== "mousedown" && msg.type !== "mouseup" && msg.type !== "mousemove") return "";
+  return msg.targets.length === 0 ? "" : ` on ${msg.targets.join(" in ")}`;
+}
+
+/**
+ * Shows the first "(unhandled)" per input type and target path, and counts
+ * the rest. The path is part of the key so that a named click the sketch did
+ * not handle still shows after an earlier miss in empty space.
+ */
 export class UnhandledFold {
   #seen = new Set<string>();
-  #more = new Map<string, number>();
+  /** Per key: the line the summary names, and how many were hidden. */
+  #more = new Map<string, { label: string; count: number }>();
 
   /** True when this input's line should be shown. */
-  show(type: string, text: string): boolean {
+  show(msg: InteractionMsg, text: string): boolean {
     if (text !== "(unhandled)") return true;
-    if (!this.#seen.has(type)) {
-      this.#seen.add(type);
+    // The names as a list: a name may itself contain " in ", so the printed path is not a key.
+    const targets = msg.type === "mousedown" || msg.type === "mouseup" || msg.type === "mousemove" ? msg.targets : [];
+    const key = JSON.stringify([msg.type, targets]);
+    if (!this.#seen.has(key)) {
+      this.#seen.add(key);
       return true;
     }
-    this.#more.set(type, (this.#more.get(type) ?? 0) + 1);
+    const more = this.#more.get(key);
+    this.#more.set(key, { label: msg.type + onText(msg), count: (more?.count ?? 0) + 1 });
     return false;
   }
 
-  /** One line per input type with hidden "(unhandled)" lines. */
+  /** One line per input type and target path with hidden "(unhandled)" lines. */
   summary(): string[] {
-    return [...this.#more].map(([type, count]) => `${type}: ${count} more unhandled (not listed)`);
+    return [...this.#more.values()].map(({ label, count }) => `${label}: ${count} more unhandled (not listed)`);
   }
 }
 
-/** Human description of an interaction for the transcript (`mousedown (297,288)`, `keydown ArrowUp`, `trigger reset`). */
+/** Human description of an interaction for the transcript (`mousedown (297,288) on weight-2 in pan-left`, `keydown ArrowUp`, `trigger reset`). */
 export function describeInput(msg: InteractionMsg): string {
   switch (msg.type) {
     case "mousedown":
     case "mouseup":
     case "mousemove":
-      return `${msg.type} (${msg.x},${msg.y})`;
+      return `${msg.type} (${msg.x},${msg.y})${onText(msg)}`;
     case "keydown":
     case "keyup":
       return `${msg.type} ${msg.key}`;

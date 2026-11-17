@@ -1,5 +1,5 @@
 // The View's pure helpers, which compute values and record nothing: curve
-// paths, tubes, offsets, gradients, tweens and easing, as today's View has them.
+// paths, tubes, offsets, gradients, tweens, easing and `toCanvas`, as today's View has them.
 // Below them, the members the scene API removed (removed.ts).
 import { curveCommands } from "../../core/contours.js";
 import { ease, tween, tweenPoint } from "../../core/ease.js";
@@ -8,6 +8,10 @@ import { ellipseGradient, linearGradient, radialGradient } from "../../core/pain
 import type { ColorStop, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../../core/paint.js";
 import { offsetPoints, tubePath } from "../../core/shapes.js";
 import type { TubeOptions } from "../../core/shapes.js";
+import { SketchUsageError } from "../../core/errors.js";
+import type { AtOptions } from "../../core/tea.js";
+import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
+import { checkAt } from "./checks.js";
 import { RemovedCalls } from "./removed.js";
 
 export class PureHelpers extends RemovedCalls {
@@ -37,5 +41,15 @@ export class PureHelpers extends RemovedCalls {
   }
   ease(name: EaseName, u: number): number {
     return ease(name, u);
+  }
+  /** `point` under each scope's transform, innermost first, as the walk composes them. */
+  toCanvas(point: Vec2, scopes: readonly AtOptions[]): Vec2 {
+    if (!Array.isArray(scopes)) throw new SketchUsageError({ detail: "toCanvas(point, scopes): list the at options the point is inside, outermost first, e.g. v.toCanvas([0, 33], [{ translate: [x, y] }, { rotate: a }])" });
+    let matrix = IDENTITY;
+    for (const options of scopes) {
+      checkAt(options);
+      matrix = mul(matrix, matrixOf(options));
+    }
+    return apply(matrix, point);
   }
 }

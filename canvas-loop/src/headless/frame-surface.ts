@@ -1,5 +1,6 @@
 // The seam a headless run draws through, implemented by the scene surface
 // (headless/scene/surface.ts): what the runner asks of a frame.
+import type { Scene } from "../scene/nodes.js";
 import type { Pixels } from "./recorder/capture.js";
 import type { UtilText } from "./tea-util.js";
 
@@ -19,6 +20,8 @@ export interface FrameSurface {
   readonly adapter: string | undefined;
   /** Run one frame's `draw` against this surface's View; its logs, warnings and snapshots go to the host. Synchronous. */
   draw(paint: (v: unknown) => unknown): void;
+  /** The scene the last `draw` recorded, which pointer messages are hit-tested against; undefined before the first. */
+  hitScene(): Scene | undefined;
   /** The last drawn frame, rendered. */
   capture(): Promise<Capture>;
   /** After the last frame: end-of-run warnings go to the host. */

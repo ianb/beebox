@@ -75,13 +75,13 @@ const job = (name: string, items: Item[]): Job => ({ name, rect: { x0: 0, y0: 0,
 const common = { box: { x0: 10, y0: 10, x1: 20, y1: 20 }, mode: 0, clip: null } as const;
 const paint = { kind: 0, color: [0, 0, 0, 1], inv: [1, 0, 0, 1, 0, 0], scaleY: 1, grad: [0, 0, 0, 0], stops: [] } as const;
 const brush = { grain: 0, opacity: 1, paper: { toPaper: [1, 0, 0, 1, 0, 0], scale: 1, lo: 0, hi: 1, seed: 0, width: 1 } } as const;
-const shape = (call: string): ShapeNode => ({ kind: "shape", call, geom: { kind: "rect", x: 0, y: 0, w: 1, h: 1 }, style: { fill: undefined, stroke: "#000", weight: 1, dash: undefined, cap: "butt", join: "miter", blend: "normal", erase: false, effects: undefined, brush: undefined, material: undefined, effectsPaper: undefined } });
+const shape = (call: string): ShapeNode => ({ kind: "shape", call, name: undefined, geom: { kind: "rect", x: 0, y: 0, w: 1, h: 1 }, style: { fill: undefined, stroke: "#000", weight: 1, dash: undefined, cap: "butt", join: "miter", blend: "normal", erase: false, effects: undefined, brush: undefined, material: undefined, effectsPaper: undefined } });
 // A stamp stroke with no contours: the peak plan reads only the item.
 const gpu: GpuSource = { prepared: { kind: "stamp", contours: [], width: 1, wobble: 0, base: undefined, box: common.box }, brush: { kind: "stamp", opacity: 1, grain: 0, tip: "hard", spacing: 1, flow: 1, sizeByPressure: 0, opacityByPressure: 0, scatter: 0, sizeJitter: 0 }, lin: [1, 0, 0, 1], ratio: 1 };
 const mark = (node: ShapeNode | undefined, a?: { erase?: boolean; box?: Item["box"] }): Item => ({ ...common, ...(a?.box === undefined ? {} : { box: a.box }), erase: a?.erase ?? false, k: "mark", mark: { box: common.box, ox: 0, oy: 0, gpu }, tinted: false, paint, brush, node });
 const layer = (child: Job, opacity: number): Item => ({ ...common, erase: false, k: "layer", job: child, mask: undefined, opacity });
 
-test("peak slots: one per drawn colour mark item; each item's peak times the largest product of opacities to its layer", () => {
+test("peak slots: one per drawn colour mark item; a mark's peak leaves out the opacity of the layers around it", () => {
   const a = shape("line");
   const b = shape("curve");
   const c = shape("arc");
@@ -93,10 +93,10 @@ test("peak slots: one per drawn colour mark item; each item's peak times the lar
   const plan = planPeaks([tile, faded, mask, body, root]);
   assert.equal(plan.slots.size, 3, "erasing, nodeless and undrawn marks get no slot; a mask's mark gets one but no part");
   const raw = [0, 1, 0.5, 1];
-  assert.deepEqual(peaksOf(plan.frame, raw).map((m) => [m.node.call, m.alpha]).toSorted(), [["curve", 0.1], ["line", 0.8]], "the tile is reached at 0.2 × 0.5 and at 0.8; the arc in the mask is not measured");
+  assert.deepEqual(peaksOf(plan.frame, raw).map((m) => [m.node.call, m.alpha]).toSorted(), [["curve", 0.5], ["line", 1]], "the tile's line keeps its own peak under layers at 0.2 × 0.5 and 0.8; the arc in the mask is not measured");
 });
 
-test("peak aggregation: each item takes its own layer's opacity before the largest per mark is taken (review probe)", () => {
+test("peak aggregation: a mark across two tiles takes its stronger part, whatever opacity each tile is placed at", () => {
   // One stroke across two tiles of a picture: its opaque end in a tile placed at 1%, its 1% end in a tile placed at 100%.
   const stroke = shape("line");
   const opaqueEnd = job("tile 0,0", [mark(stroke)]);
@@ -104,12 +104,11 @@ test("peak aggregation: each item takes its own layer's opacity before the large
   const root = job("canvas", [layer(opaqueEnd, 0.01), layer(faintEnd, 1)]);
   const plan = planPeaks([opaqueEnd, faintEnd, root]);
   // Slots follow the jobs' order: the opaque end's item is 1, the faint end's 2.
-  const raw = [0, 1, 0.01];
-  const [only] = peaksOf(plan.frame, raw);
-  assert.ok(only !== undefined && Math.abs(only.alpha - 0.01) < 1e-9, `both visible ends are about 1% (${String(only?.alpha)})`);
+  const [only] = peaksOf(plan.frame, [0, 1, 0.01]);
+  assert.equal(only?.alpha, 1);
 });
 
-test("peak slots: a kept tile reused this frame brings its marks' strengths, times the opacity around the reuse", () => {
+test("peak slots: a kept tile reused this frame brings its marks' strengths as measured, whatever opacity it is placed at", () => {
   const kept = shape("line");
   const drawn = shape("curve");
   const reused: Job = { ...job("kept tile", []), tex: undefined, keptPeaks: [{ node: kept, alpha: 0.9 }] };
@@ -117,5 +116,5 @@ test("peak slots: a kept tile reused this frame brings its marks' strengths, tim
   const group = job("group", [layer(fresh, 0.5)]);
   const root = job("canvas", [layer(reused, 0.05), layer(group, 1)]);
   const plan = planPeaks([fresh, group, root]);
-  assert.deepEqual(peaksOf(plan.frame, [0, 0.6]).map((m) => [m.node.call, Math.round(m.alpha * 1000) / 1000]).toSorted(), [["curve", 0.3], ["line", 0.045]]);
+  assert.deepEqual(peaksOf(plan.frame, [0, 0.6]).map((m) => [m.node.call, Math.round(m.alpha * 1000) / 1000]).toSorted(), [["curve", 0.6], ["line", 0.9]]);
 });

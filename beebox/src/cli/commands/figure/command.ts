@@ -5,7 +5,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { errorMessage } from "../../../shared/error-guards.js";
-import { FigureRunError, listCanvasLoopFigures, prepareFigureJob, runFigureJob, type FigureRunResult } from "./run.js";
+import { checkSharedCode, FigureRunError, listCanvasLoopFigures, prepareFigureJob, runFigureJob, type FigureRunResult, type SharedTypeErrors } from "./run.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -45,6 +45,46 @@ function report(result: FigureRunResult): void {
   for (const warning of result.warnings) write(`    warning: ${warning}\n`);
 }
 
+/**
+ * Each shared file's type errors once, with the figures that import it, in
+ * first-seen order. Each figure is its own program, so one file can get
+ * different errors per figure: the distinct lines are merged.
+ */
+export function sharedTypeErrors(results: readonly FigureRunResult[]): Array<SharedTypeErrors[number] & { figures: string[] }> {
+  const byFile = new Map<string, { file: string; lines: string[]; figures: string[] }>();
+  for (const result of results) {
+    for (const { file, lines } of result.shared ?? []) {
+      const seen = byFile.get(file);
+      if (seen === undefined) byFile.set(file, { file, lines: [...lines], figures: [result.card] });
+      else {
+        seen.figures.push(result.card);
+        for (const line of lines) if (!seen.lines.includes(line)) seen.lines.push(line);
+      }
+    }
+  }
+  return [...byFile.values()];
+}
+
+function reportShared(shared: ReturnType<typeof sharedTypeErrors>): void {
+  if (shared.length === 0) return;
+  process.stderr.write("Type errors in files the figures import (each stops every figure that imports it):\n");
+  for (const { file, lines, figures } of shared) {
+    process.stderr.write(`  ${file} — imported by ${String(figures.length)} failing figure(s)\n`);
+    for (const line of lines) process.stderr.write(`    ${line.replaceAll("\n", "\n      ")}\n`);
+  }
+}
+
+/** `--lib`: type-check `src/lib/` on its own and run no figure. */
+async function runLibCheck(boxRoot: string, json: boolean): Promise<boolean> {
+  const { files, errors } = await checkSharedCode(boxRoot);
+  if (json) process.stdout.write(`${JSON.stringify({ ok: errors.length === 0, files, errors })}\n`);
+  else {
+    for (const error of errors) process.stderr.write(`${error}\n`);
+    process.stdout.write(`src/lib: ${String(files)} file(s), ${String(errors.length)} type error(s)\n`);
+  }
+  return errors.length === 0;
+}
+
 const figureRunCommand = new Command("run")
   .description("Render canvas-loop figures headlessly: a transcript (logs, input verdicts, warnings) and frame PNGs under _tmp/figure-run/. With no card, every canvas-loop figure in the box; exit non-zero on any error")
   .argument("[cards...]", "Figure card paths (box-relative)")
@@ -54,10 +94,16 @@ const figureRunCommand = new Command("run")
   .option("--params <name=value>", "Start a declared param at this value (repeatable)", collectParam, {})
   .option("--scene [first]", "Write each captured frame's drawing as an outline into the transcript (first: only the first frame's)")
   .option("--timeout <ms>", "Stop a run after this long", String(DEFAULT_TIMEOUT_MS))
-  .option("--json", "Emit { ok, figures: [...] }")
-  .action(async (cards: string[], options: { events?: string; frames?: string; every?: string; params: Record<string, string>; scene?: string | true; timeout: string; json?: boolean }) => {
+  .option("--lib", "Only type-check the box's shared code (the .ts files under src/lib/) as figure imports are checked; run no figure")
+  .option("--json", "Emit { ok, figures: [...], shared: [...] }")
+  .action(async (cards: string[], options: { events?: string; frames?: string; every?: string; params: Record<string, string>; scene?: string | true; timeout: string; lib?: boolean; json?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
+      if (options.lib === true) {
+        if (cards.length > 0) throw new FigureRunError({ detail: "--lib takes no card" });
+        process.exitCode = (await runLibCheck(boxRoot, options.json === true)) ? 0 : 1;
+        return;
+      }
       const { scene, cards: named } = sceneOption(options.scene, cards);
       const targets = named.length > 0 ? named : await listCanvasLoopFigures(boxRoot);
       if (options.events !== undefined && targets.length !== 1) throw new FigureRunError({ detail: "--events needs exactly one card" });
@@ -76,13 +122,16 @@ const figureRunCommand = new Command("run")
           });
           results.push(await runFigureJob({ boxRoot, cardRel, job, timeoutMs }));
         } catch (error) {
-          results.push({ card, ok: false, errors: [errorMessage(error)], warnings: [] });
+          const shared = error instanceof FigureRunError && error.shared.length > 0 ? { shared: error.shared } : {};
+          results.push({ card, ok: false, errors: [errorMessage(error)], warnings: [], ...shared });
         }
       }
       const ok = results.every((r) => r.ok);
-      if (options.json === true) process.stdout.write(`${JSON.stringify({ ok, figures: results })}\n`);
+      const shared = sharedTypeErrors(results);
+      if (options.json === true) process.stdout.write(`${JSON.stringify({ ok, figures: results.map(({ shared: _s, ...r }) => r), shared })}\n`);
       else {
         for (const result of results) report(result);
+        reportShared(shared);
         process.stdout.write(`${String(results.length)} figure(s), ${String(results.filter((r) => !r.ok).length)} failing\n`);
       }
       process.exitCode = ok ? 0 : 1;

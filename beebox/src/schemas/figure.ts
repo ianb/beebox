@@ -172,6 +172,7 @@ export default (cl, { mount, figure }) =>
 
   A card param matching no module param (or declared for a \`trigger\`) sets
   no control; its value still reaches the factory as \`figure.params\`.
+  \`bbx figure run\` lists such params in its warnings.
 - **Text from the link or typed by the learner is a \`text\` param**:
   \`{ type: "text", default: "", placeholder?, multiline?, maxLength? }\`.
   Place it with \`v.control(name, box)\` for a real text box over the canvas
@@ -187,7 +188,8 @@ export default (cl, { mount, figure }) =>
   \`update\` with \`u.textBounds\` / \`u.textWidth\`.
 - **The drawing API** (\`View\`, styles, text, scopes, input, sound) is in
   \`canvas-loop.md\`; brushes, paper, effects, glow, lighting and pictures in
-  \`canvas-loop-brushes.md\` (both beside this file).
+  \`canvas-loop-brushes.md\` (both beside this file). Worked examples, one per
+  technique, are in \`canvas-loop-examples.md\`.
 - **canvas-loop figures draw with WebGPU.** A device without it shows "This
   figure can't draw on this device" in place of the figure. Do not switch a
   figure to another runtime for this unless the boxholder asks.
@@ -245,6 +247,8 @@ bbx figure run <card path>          # or no path: every canvas-loop figure in th
   transcript (\`--scene first\`: only the first frame's).
 - Code outside the default export runs in Node: keep \`window\`, \`document\`
   and \`matchMedia\` inside the factory.
+- A type error in a file several figures import prints once, after the
+  figures. \`bbx figure run --lib\` type-checks \`src/lib/\` on its own.
 
 The events file is a JSON array; all events for frame N run, in file order,
 before frame N's draw (canvas coordinates, 60 frames a second):

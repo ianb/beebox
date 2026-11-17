@@ -26,7 +26,7 @@ import { CASE_NAMES, drawDraft, fixtures } from "./fixtures.js";
 import { brushBlends, brushParity, frozen, brushStability, expansionCache, paperScopes } from "./brush-cases.js";
 import { pictureBackground, pixelImages, placeOptions, placementReplays } from "./picture-cases.js";
 import { anisotropicEffects, clipUnions, failedFrames, offscreenShapes } from "./renderer-cases.js";
-import { rotatedText, textParity } from "./text-cases.js";
+import { rotatedText, subRun, textParity } from "./text-cases.js";
 import { hatchingAmount, hatchingTones, painterlyBounds, painterlyRepeats, pigmentMoves, washCanvasEdge } from "./paint-cases.js";
 import { casterHeights, casterOnCaster, casterOutlineFringe, lightPeaks, smoothPenumbra, castingAmount, featheredCoverage, fullCone, hardEdges, litRepeats, lightsInPictures, materialScopes, nestedLighting, scaledTallCaster, stableShadowGrain, thinTallCaster, toneCurve, touchingCasters, translucentMaterial, zeroHeightFloor } from "./light-cases.js";
 import { halfOverReceiver, materialLayerCount, nonReceivingCaster, placedNonReceiver, skyKeepsLight, translucentNonReceiver } from "./receives-shadow-cases.js";
@@ -37,9 +37,9 @@ import { keptPictureFaint, peakVariantSameBytes, peaksMeasured } from "./peak-ca
 import { CASES } from "./dev-loop/cases.js";
 import { runCase } from "./dev-loop/run-case.js";
 import * as sceneSketchModule from "./scene-sketch.js";
-import * as walkerSheet from "../../src/gallery/intra-walk-styles/sketch-tea.js";
-import * as hallwayPort from "../../src/gallery/intra-rooms/sketch-tea.js";
-import * as chemistryPort from "../../src/gallery/balance-reaction-2/sketch-tea.js";
+import * as walkerSheet from "./intra-walk-styles/sketch-tea.js";
+import * as hallwayPort from "./intra-rooms/sketch-tea.js";
+import * as chemistryPort from "./balance-reaction-2/sketch-tea.js";
 
 let gpu: GpuHandle | undefined;
 let text: TextMeasurer | undefined;
@@ -204,6 +204,9 @@ onGpu("text sits where today's does, at today's size, through the glyph atlas", 
 onGpu("text under a rotation draws through the glyph atlas", async (handle) => {
   if (text !== undefined) await rotatedText(handle, text);
 });
+onGpu("a sub run draws smaller and lower; its base run sits where plain text does", async (handle) => {
+  if (text !== undefined) await subRun(handle, text);
+});
 onGpu("wash, hatching and paper repeat byte for byte, at ratio 1 and 2", painterlyRepeats);
 onGpu("a wash's bleed grows the group's layer; hatching and paper never change alpha (R5)", painterlyBounds);
 onGpu("pigment, hatching lines and paper texture move and turn with the group (section 4)", pigmentMoves);
@@ -263,8 +266,8 @@ onGpu("a wide picture that reads its surroundings is one layer over what can be 
 onGpu("pixels images and pictures in a lit group snap to whole device pixels (draft 2.6)", everyPlacementSnaps);
 
 onGpu("testing mode's faint-mark readback leaves the colour output byte-identical", peakVariantSameBytes);
-onGpu("a mark's measured peak is its resolved alpha times its groups' opacities; erasing marks are not measured", peaksMeasured);
-onGpu("a picture tile reused from an earlier frame keeps its marks' peaks, times the opacity it is placed at now", keptPictureFaint);
+onGpu("a mark's measured peak is its resolved alpha, before its groups' opacities; erasing marks are not measured", peaksMeasured);
+onGpu("a picture tile reused from an earlier frame keeps its marks' peaks, whatever opacity it is placed at now", keptPictureFaint);
 
 // The dev-loop checklist (beebox/docs/plans/canvas-loop-scene/stage4/dev-loop.md): each deliberately bad
 // sketch runs through the headless runner, and its message must come out on the expected channel naming

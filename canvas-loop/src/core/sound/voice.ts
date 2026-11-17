@@ -231,17 +231,49 @@ export function voiceDetail(voice: Voice): string {
 /** Most new voices one frame may declare. */
 export const MAX_NEW_PER_FRAME = 32;
 
+/** How long a voice counts as sounding for the voice budget: a quarter second at 60 frames a second. */
+export const SOUNDING_FRAMES = 15;
+/** Most voices of one sound that may sound at once; a new one past this is dropped. */
+export const MAX_SAME_SOUND = 4;
+/** Most voices that may sound at once; a new one past this is dropped. */
+export const MAX_SOUNDING = 16;
+
+/** What counts as the same sound for the budget: a sample by name (any take or rate), a note on one instrument, a pitch. */
+export function soundOf(voice: Voice): string {
+  switch (voice.kind) {
+    case "sample":
+      return voice.name;
+    case "note":
+      return `${voice.instrument} ${voice.note}`;
+    case "pluck":
+    case "tone":
+      return `${voice.kind} ${voice.freq} Hz`;
+    case "noise":
+      return "noise";
+  }
+}
+
 /**
  * The run's voices by id. A voice is one occurrence: re-declaring an id with
  * the same data is harmless, with different data is an error, and a new
- * voice may not start before the frame that declares it.
+ * voice may not start before the frame that declares it. A new voice is
+ * dropped when `MAX_SAME_SOUND` kept voices of the same sound, or
+ * `MAX_SOUNDING` in all, start within `SOUNDING_FRAMES` of its start, before
+ * or after: each voice counts for that long whatever its length. The budget
+ * is counted in frames, not sample lengths (the browser loads samples
+ * later), so both runtimes drop the same voices.
  */
 export class Score {
-  #voices = new Map<string, { voice: Voice; key: string }>();
+  #voices = new Map<string, { voice: Voice; key: string; kept: boolean }>();
+  /** Kept voices that may still count toward the budget. */
+  #sounding: { at: number; sound: string }[] = [];
 
-  /** Add the voices `sound` returned after frame `frame`'s tick. Returns the newly seen ones. */
-  add(voices: readonly Voice[], frame: number): Voice[] {
+  /** Add the voices `sound` returned after frame `frame`'s tick: the newly seen ones to play, and those the budget dropped. */
+  add(voices: readonly Voice[], frame: number): { added: Voice[]; dropped: Voice[] } {
     const added: Voice[] = [];
+    const dropped: Voice[] = [];
+    let fresh = 0;
+    this.#sounding = this.#sounding.filter((s) => s.at > frame - SOUNDING_FRAMES);
     for (const voice of voices) {
       assertVoice(voice);
       const key = JSON.stringify(voice, Object.keys(voice).toSorted());
@@ -259,23 +291,34 @@ export class Score {
           detail: `sound: voice "${voice.id}" starts at frame ${voice.at}, before frame ${frame} where it was first declared`,
         });
       }
-      this.#voices.set(voice.id, { voice: { ...voice }, key });
-      added.push(voice);
+      fresh += 1;
+      const sound = soundOf(voice);
+      // Earlier and later starts both count: a voice declared ahead (a delay) reserves its quarter second.
+      const now = this.#sounding.filter((s) => Math.abs(voice.at - s.at) < SOUNDING_FRAMES);
+      const kept = now.length < MAX_SOUNDING && now.filter((s) => s.sound === sound).length < MAX_SAME_SOUND;
+      this.#voices.set(voice.id, { voice: { ...voice }, key, kept });
+      if (kept) {
+        this.#sounding.push({ at: voice.at, sound });
+        added.push(voice);
+      } else {
+        dropped.push(voice);
+      }
     }
-    if (added.length > MAX_NEW_PER_FRAME) {
+    if (fresh > MAX_NEW_PER_FRAME) {
       throw new SketchUsageError({
-        detail: `sound: ${added.length} new voices on frame ${frame} (at most ${MAX_NEW_PER_FRAME})`,
+        detail: `sound: ${fresh} new voices on frame ${frame} (at most ${MAX_NEW_PER_FRAME})`,
       });
     }
-    return added;
+    return { added, dropped };
   }
 
-  /** Every voice seen, in first-seen order. */
+  /** Every voice kept, in first-seen order. */
   voices(): Voice[] {
-    return [...this.#voices.values()].map((entry) => entry.voice);
+    return [...this.#voices.values()].filter((entry) => entry.kept).map((entry) => entry.voice);
   }
 
   clear(): void {
     this.#voices.clear();
+    this.#sounding = [];
   }
 }

@@ -8,7 +8,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { promises as fs, realpathSync } from "node:fs";
 import * as path from "node:path";
-import { listCanvasLoopFigures, prepareFigureJob, runFigureJob } from "../../../../src/cli/commands/figure/run.js";
+import { checkSharedCode, FigureRunError, listCanvasLoopFigures, prepareFigureJob, runFigureJob, type FigureRunResult } from "../../../../src/cli/commands/figure/run.js";
+import { sharedTypeErrors } from "../../../../src/cli/commands/figure/command.js";
 import { any } from "@ianbicking/tap-check/check";
 import { findReservedNestedSegment } from "../../../../src/lib/box-reserved-segments.js";
 import { figureStarterSketch } from "../../../../src/templates/builtins/starters.js";
@@ -91,6 +92,13 @@ void test("--params overrides a default; a param the sketch lacks is an error", 
   };
   const good = await run({ speed: "4" });
   t.check(good.ok, true);
+  // A card param the module lacks is one warning here; the browser stays quiet about it.
+  await box.write(CARD, card("params:\n  - { name: left, type: number, default: 1 }\n  - { name: speed, type: number }\n  - { name: right, type: string }\n"));
+  const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: CARD, frames: 1, params: {} });
+  // The other warnings are the scene's (overlapping text); only the card-param one is checked.
+  t.check((await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 60_000 })).warnings.filter((w) => w.startsWith("card params")), [
+    "card params not in the module's params: left, right. They set no control and are not set in this run; the factory still reads them from figure.params",
+  ]);
   const bad = await run({ sped: "4" });
   t.check(bad.ok, false);
   t.check(bad.errors, [any(String).includes('initial param "sped": the sketch declares no such param')]);
@@ -123,14 +131,45 @@ void test("A type error in an imported helper, or a wrong style value, stops the
   await box.write(CARD, card(""));
   await box.write("_content/figs/Dot.attach/helper.ts", "export const radius: number = \"four\";\n");
   await box.write("_content/figs/Dot.attach/dot-tea.ts", `import { radius } from "./helper.js";\n${ENTRY.replace('v.background("#fff"),', "v.background(\"#fff\"), v.circle(5, 5, radius, { fill: \"#000\" }),")}`);
-  await t.checkThrows(
-    () => prepareFigureJob({ boxRoot: box.root, card: CARD, params: {} }),
-    "FigureRunError: _content/figs/Dot.attach/dot-tea.ts: the sketch does not type-check, so it was not run. Fix these and run again:\n" +
-      "_content/figs/Dot.attach/helper.ts:1:14 - error TS2322: Type 'string' is not assignable to type 'number'.",
-  );
+  // The helper's error is kept apart, so a whole-box run prints it once (see the shared-code test).
+  const thrown = await prepareFigureJob({ boxRoot: box.root, card: CARD, params: {} }).then(() => null, (error: unknown) => error);
+  t.check(thrown instanceof FigureRunError ? { message: thrown.message, shared: thrown.shared } : thrown, {
+    message: "_content/figs/Dot.attach/dot-tea.ts: the sketch does not type-check, so it was not run: 1 error(s) in files it imports, listed once after the figures: _content/figs/Dot.attach/helper.ts",
+    shared: [{ file: "_content/figs/Dot.attach/helper.ts", lines: ["_content/figs/Dot.attach/helper.ts:1:14 - error TS2322: Type 'string' is not assignable to type 'number'."] }],
+  });
 
   await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY.replace('v.background("#fff"),', 'v.background("#fff"), v.line(0, 0, 9, 9, { stroke: "#000", cap: "triangle" }),'));
   t.check(await prepareError(box.root), any(String).includes("dot-tea.ts:11:").includes('Type \'"triangle"\' is not assignable'));
+});
+
+// A whole-box run reported an error in shared code once per importing figure,
+// and ran figures in the trash. Each shared file's errors now print once, the
+// trash is skipped, and `--lib` checks src/lib with no figure.
+void test("A shared helper's type error is reported once for its importers; trashed figures are not listed; --lib checks src/lib", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("src/lib/radius.ts", "export const radius: number = \"four\";\n");
+  await box.write("src/lib/fine.ts", "export const fine = 1;\n");
+  const entry = `import { radius } from "@/src/lib/radius";\n${ENTRY.replace('v.background("#fff"),', 'v.background("#fff"), v.circle(5, 5, radius, { fill: "#000" }),')}`;
+  for (const name of ["A", "B"]) {
+    await box.write(`_content/figs/${name}.figure.card`, card("").replace("title: Dot", `title: ${name}`));
+    await box.write(`_content/figs/${name}.attach/dot-tea.ts`, entry);
+  }
+  await box.write("_bookkeeping/trash/Gone.figure.card", card(""));
+  t.check(await listCanvasLoopFigures(box.root), ["_content/figs/A.figure.card", "_content/figs/B.figure.card"]);
+  const results: FigureRunResult[] = [];
+  for (const figure of ["_content/figs/A.figure.card", "_content/figs/B.figure.card"]) {
+    const error = await prepareFigureJob({ boxRoot: box.root, card: figure, params: {} }).then(() => null, (e: unknown) => e);
+    if (error instanceof FigureRunError) results.push({ card: figure, ok: false, errors: [error.message], warnings: [], shared: error.shared });
+  }
+  const line = "src/lib/radius.ts:1:14 - error TS2322: Type 'string' is not assignable to type 'number'.";
+  t.check(sharedTypeErrors(results), [{ file: "src/lib/radius.ts", lines: [line], figures: ["_content/figs/A.figure.card", "_content/figs/B.figure.card"] }]);
+  t.check(await checkSharedCode(box.root), { files: 2, errors: [line] });
+  // Each figure is its own program, so one file's errors can differ by figure: the distinct lines are merged, each once.
+  const other = "src/lib/radius.ts:1:1 - error TS9999: another.";
+  t.check(sharedTypeErrors([...results, { card: "c", ok: false, errors: [], warnings: [], shared: [{ file: "src/lib/radius.ts", lines: [other, line] }] }]), [
+    { file: "src/lib/radius.ts", lines: [line, other], figures: ["_content/figs/A.figure.card", "_content/figs/B.figure.card", "c"] },
+  ]);
 });
 
 void test("A removed View call is named with what replaces it", async (t) => {
@@ -183,17 +222,19 @@ void test("With no Vulkan driver the run gives the possible causes and a transcr
   const missing = path.join(box.root, "_tmp", "no-such-driver.json");
   process.env["VK_DRIVER_FILES"] = missing;
   process.env["VK_ICD_FILENAMES"] = missing;
-  await box.write(CARD, card(""));
+  // A card param the module lacks is still named when the run fails.
+  await box.write(CARD, card("params:\n  - { name: left, type: number, default: 1 }\n"));
   await box.write("_content/figs/Dot.attach/dot-tea.ts", ENTRY);
   const { cardRel, job } = await prepareFigureJob({ boxRoot: box.root, card: CARD, frames: 1, params: {} });
   const result = await runFigureJob({ boxRoot: box.root, cardRel, job, timeoutMs: 60_000 });
   // This text comes only from NoGpuAdapterError, so it also shows the setup reached the adapter request.
   t.check(
-    { ok: result.ok, errors: result.errors, transcript: result.transcript },
+    { ok: result.ok, errors: result.errors, transcript: result.transcript, warnings: result.warnings },
     {
       ok: false,
       errors: ["no GPU adapter: Dawn found no GPU it can use here. Possible causes: no Vulkan driver is installed (on Linux, Mesa's mesa-vulkan-drivers), the driver does not load inside the box's sandbox, or the driver rejects this machine. Ask the boxholder; rewriting the sketch will not help."],
       transcript: path.join("_tmp", "figure-run", "content", "figs", "Dot", "out", "transcript.md"),
+      warnings: ["card params not in the module's params: left. They set no control and are not set in this run; the factory still reads them from figure.params"],
     },
   );
   t.check(await fs.readFile(path.join(box.root, result.transcript ?? ""), "utf8"), any(String).includes("NoGpuAdapterError"));

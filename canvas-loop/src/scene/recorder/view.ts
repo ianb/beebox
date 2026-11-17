@@ -13,12 +13,13 @@ import { curveCommands } from "../../core/contours.js";
 import { SketchUsageError } from "../../core/errors.js";
 import { formatArgs } from "../../core/format.js";
 import { MADE_IN } from "../../core/paint.js";
-import type { ClipShape, DrawingNode, Paint, PathCommand, TextBounds, TextBox, TextOptions, Vec2 } from "../../core/paint.js";
+import type { Bounds, ClipShape, Drawing, DrawingNode, FlowOptions, Paint, PathCommand, TextBounds, TextBox, TextOptions, TextRun, Vec2 } from "../../core/paint.js";
 import type { TextMeasurer } from "../../core/text/measure.js";
+import { checkContent } from "../../core/text/measure.js";
 import type { ControlBox, CursorKind } from "../../core/tea.js";
 import type { AtOptions, GroupOptions, Light, Paper, Picture, PictureOptions, PlaceOptions, Style, View } from "../../core/tea.js";
 import { RemovedCallError, STATEMENT_DRAW, UnsupportedCallError } from "../errors.js";
-import { IDENTITY, apply, matrixOf, mul } from "../mat.js";
+import { IDENTITY, matrixOf } from "../mat.js";
 import type { ColorParser } from "../colors.js";
 import { checkAt, checkColours, checkGeom, checkNumbers, checkPoints } from "./checks.js";
 import type { Geom, PaperSettings, SceneNode, ShapeNode, TextNode } from "../nodes.js";
@@ -44,6 +45,9 @@ import { controlBoxes, drawStandIns, placeControl } from "./controls.js";
 import type { ControlParams } from "./controls.js";
 import type { FrameOutputs, FrameRecord } from "./frame.js";
 import { Children } from "./children.js";
+import { layoutBox } from "../layout-box.js";
+import { flowChildren } from "./flow.js";
+import { checkName } from "./options.js";
 
 /** Testing mode warns of at most this many drawings made and not returned in one frame. */
 const UNRETURNED_PER_FRAME = 8;
@@ -168,7 +172,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live(call);
     checkGeom(call, args.geom);
     const style = resolveStyle(args.style, { call, paper: DEFAULT_PAPER });
-    return this.#stamp({ kind: "shape", call, geom: args.geom, style }, call);
+    return this.#stamp({ kind: "shape", call, name: checkName(args.style.name, call), geom: args.geom, style }, call);
   }
   /** An output that is not drawing: only while `draw` runs, and never in a picture body. */
   #notInPicture(call: string): void {
@@ -221,34 +225,29 @@ export class SceneRecorder extends PureHelpers implements View {
     return this.#text;
   }
   /** `content` laid out where no transform moves it, kept inside the canvas or the picture's box. */
-  #layText(content: string, at: { box: TextBox; options: TextOptions | undefined }): ReturnType<typeof recordText> {
+  #layText(content: string | readonly TextRun[], at: { box: TextBox; options: TextOptions | undefined; call: string }): ReturnType<typeof recordText> {
+    checkContent(content, at);
     return recordText(content, { box: at.box, options: at.options ?? {}, measurer: this.#measurer("text"), matrix: IDENTITY, canvas: this.#size });
   }
   /** Text laid out where no transform moves it; a `keepInside` node is laid out again by the walk under its transform. */
-  text(...[content, box, options]: [string, TextBox, TextOptions?]): DrawingNode {
+  text(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): DrawingNode {
     this.#notes.live("text");
-    const { node, bounds } = this.#layText(content, { box, options });
+    const { node, bounds } = this.#layText(content, { box, options, call: "v.text" });
     const made = this.#stamp(node, "text");
     const keepInside = options?.keepInside === true;
-    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { box: { ...box }, options: structuredClone({ ...options }) } : undefined });
+    if (keepInside || this.#audit !== undefined) this.#texts.set(made, { bounds, unboxed: box.w === undefined && !keepInside, overlay: options?.overlay === true, keep: keepInside ? { content: structuredClone(content), box: { ...box }, options: structuredClone({ ...options }) } : undefined });
     return made;
   }
-  textBounds(...[content, box, options]: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#layText(content, { box, options }).bounds;
+  textBounds(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds {
+    return this.#layText(content, { box, options, call: "v.textBounds" }).bounds;
   }
-  textWidth(content: string, options?: TextOptions): number {
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number {
+    checkContent(content, { call: "v.textWidth", options });
     return this.#measurer("textWidth").width(content, options);
   }
-
-  /** A pure helper: `point` under each scope's transform, innermost first, as the walk composes them. */
-  toCanvas(point: Vec2, scopes: readonly AtOptions[]): Vec2 {
-    if (!Array.isArray(scopes)) throw new SketchUsageError({ detail: "toCanvas(point, scopes): list the at options the point is inside, outermost first, e.g. v.toCanvas([0, 33], [{ translate: [x, y] }, { rotate: a }])" });
-    let matrix = IDENTITY;
-    for (const options of scopes) {
-      checkAt(options);
-      matrix = mul(matrix, matrixOf(options));
-    }
-    return apply(matrix, point);
+  bounds(drawing: Drawing): Bounds | null {
+    this.#notes.live("bounds");
+    return layoutBox(this.#children.look("bounds", drawing));
   }
 
   // ── scopes ──
@@ -256,7 +255,7 @@ export class SceneRecorder extends PureHelpers implements View {
     this.#notes.live("at");
     const kids = this.#children.list("at", children);
     checkAt(options);
-    return this.#stamp({ kind: "at", matrix: matrixOf(options), children: kids }, "at");
+    return this.#stamp({ kind: "at", name: checkName(options.name, "at"), matrix: matrixOf(options), children: kids }, "at");
   }
   group(options: GroupOptions, children: unknown): DrawingNode {
     this.#notes.live("group");
@@ -274,13 +273,25 @@ export class SceneRecorder extends PureHelpers implements View {
     const mask = this.#children.list("mask", maskArt);
     return this.#stamp({ kind: "mask", mask, body: this.#children.list("mask", children) }, "mask");
   }
+  row(options: FlowOptions, children: unknown): DrawingNode {
+    return this.#flow("row", { options, children });
+  }
+  column(options: FlowOptions, children: unknown): DrawingNode {
+    return this.#flow("column", { options, children });
+  }
+  /** A flow: one `at` node holding each placed child in its own translating `at` (flow.ts). */
+  #flow(call: "row" | "column", a: { options: FlowOptions; children: unknown }): DrawingNode {
+    this.#notes.live(call);
+    const kids = flowChildren(call, { options: a.options, nodes: this.#children.list(call, a.children) });
+    return this.#stamp({ kind: "at", name: checkName(a.options.name, call), matrix: IDENTITY, children: kids }, call);
+  }
   /** R9 (draft 2.11): the paper for every brushed stroke and effect in `children`. */
   paper(...args: [Paper, unknown] | [Paper]): DrawingNode {
     this.#notes.live("paper");
     if (args.length === 1) throw new RemovedCallError({ call: "v.paper(settings) as a statement", replacement: "v.paper(settings, children) sets the paper for the drawing it holds" });
     const [settings, children] = args;
     const kids = this.#children.list("paper", children);
-    const node = this.#stamp({ kind: "at", matrix: IDENTITY, children: kids }, "paper");
+    const node = this.#stamp({ kind: "at", name: undefined, matrix: IDENTITY, children: kids }, "paper");
     this.#papers.set(node, resolvePaper(settings));
     return node;
   }

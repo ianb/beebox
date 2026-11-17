@@ -5,6 +5,51 @@ us more. Every change lands here — hand-written and terse.
 
 ## 0.2.0
 
+- **Breaking: one set of examples; the gallery is gone.** `src/gallery/`
+  (agent-exercise records, model comparisons, run histories) is deleted;
+  `git show 6fff6140c:canvas-loop/src/gallery/<entry>/sketch-tea.ts` finds an
+  entry. Its three renderer fixtures (the walker, the Hallway, the
+  chemistry page) moved unchanged to `test/gpu/<name>/`. `src/examples/`
+  holds thirteen small examples, each one sketch and one events file, each
+  showing one thing the docs link to: `bounce`, `orbit`, `scale`,
+  `answer-box`, `sound`, `lamps`, `pendulum`, `paint`, `brushes`,
+  `paint-mixing`, `looks`, `effects`, `night-room` (README "Examples").
+  New: `lamps`, `pendulum`, `paint`, and `looks` (replacing `still-life`
+  and `washed-shapes`). Retired: `alien-reference`, `brushes-sampler`,
+  `fjord`. The dev demo's controlled figure is now `brushes`.
+- **Breaking: `examples:check` replaces `gallery:check`** (`cli examples
+  check`, `checkExamples`). It runs every example from its events file,
+  whose last frame must hold a snapshot, twice, and fails on a type or lint
+  error, a `warn:` or `error:` transcript line, a scripted input that reads
+  `(unhandled)`, or bytes that differ. The whole set runs in about 9
+  seconds (the gallery check took 10–11 minutes).
+- **The playground page is tracked.** `build:playground` writes
+  `dev/canvas-loop-examples.html`, every example in one page.
+
+- **Text runs.** `v.text`, `textBounds` and `textWidth` (on `v` and `u`)
+  take a list of runs, `string | { text, sub?, sup?, style? }`, for
+  formulas and exponents: `["H", { text: "2", sub: true }, "O"]`. Sub and
+  sup draw at 0.7 × size, moved 0.22 × size down or 0.38 × size up. One
+  line with one box, baseline and fill; a newline, `wrap: true` or an
+  unknown key throws.
+- **Names and hits.** `name` on any drawing (styles, text, `at`, `group`,
+  `place`, `row`, `column`). Mouse messages carry `target` and `targets`,
+  the named drawings under the pointer in the last frame drawn, innermost
+  first; unnamed drawings do not block. An events file can aim with
+  `"target": "pan-left"`. Transcripts print `on X in Y`, `--scene` outlines
+  print names, and `onEvent` mouse entries carry `targets`.
+- **Layout: `v.bounds`, `v.row`, `v.column`.** `v.bounds(drawing)` gives any
+  drawing's layout box `{ x, y, w, h, baseline }` (shape geometry plus half
+  the stroke, text's `textBounds`, a placement's declared size) and does not
+  count as returning it. `v.row` and `v.column` place their children by
+  those boxes, `gap` apart, with `v.text`'s `align`/`valign` names; a row
+  can line children up on their text baselines. Each returns one node.
+- **Quieter checks; a voice budget** (gaps a game sketch found). The
+  faint-mark check leaves out group and placement `opacity`, so a fade does
+  not warn. The picture churn warning waits 30 frames for versions to come
+  back, so poses that change every frame stay quiet. A new voice is dropped
+  when 4 of the same sound or 16 in all started in the last 15 frames. A
+  negative radius says to clamp with `Math.max(0, …)`.
 - **Breaking: `draw` returns its drawing.** Each drawing call on `v` returns a
   node and draws nothing by itself; `draw` returns a node, a list (nested
   lists flatten; `null`, `undefined` and `false` are skipped) or `null`

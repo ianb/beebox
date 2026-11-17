@@ -1433,6 +1433,17 @@ tests:
       factory's `cl` argument. A pass names the box-can't-resolve-the-package
       reason, not just the syntax.
 
+  # Status (2026-11-16): figure-canvas-loop-examples passes (knows_about; the
+  # agent found canvas-loop-examples.md from the box-docs listing after
+  # card-figure.md, 3 files read, ~35k ctx) and picked bounce for the drag and
+  # sound for the landing knock.
+  - id: figure-canvas-loop-examples
+    prompt: "You are writing a canvas-loop figure where the learner drags a weight and hears a sound when it lands. Where do you look for a whole working figure to start from?"
+    expected_level: knows_about
+    watch_for: "Names canvas-loop-examples.md (bounce for the drag, sound for the voice)"
+    correct_contains: ["canvas-loop-examples.md"]
+    tags: [cards, figure]
+
   # Status (2026-11-12): figure-canvas-loop-check, -api-docs, figure-shared-code
   # and figure-activity added with `bbx figure run`, the canvas-loop box docs
   # and figure activity; `--filter figure` passes 12/12 on the worktree's test1.
@@ -1501,6 +1512,36 @@ tests:
     watch_for: "Explains the device or browser lacks WebGPU, suggests updating the OS or browser or using another device; does not rewrite the figure or switch it to another runtime unless the boxholder asks"
     correct_contains: ["WebGPU"]
     correct_matches: ["updat|another device|other device"]
+    tags: [cards, schemas, figure]
+
+  # Status (2026-11-16): figure-named-hits added with names and hits in
+  # canvas-loop (plan:canvas-loop-layout-text-hits, B4). knows_about: the
+  # answer is in the box doc canvas-loop.md ("Names and hits"), which loads
+  # on demand, not in always-on context. Passes 1/1 on the worktree's test1
+  # (3 reads, 2 greps): greps canvas-loop.md for "hit", reads the section,
+  # names the pans and checks msg.targets.includes; no hit-test function.
+
+  - id: figure-named-hits
+    prompt: "In a canvas-loop figure, how does update find which of several drawn pans the learner clicked?"
+    expected_level: knows_about
+    watch_for: "Reads canvas-loop.md (Names and hits); gives each pan a name (name: \"pan-left\" on the drawing or its v.at) and reads msg.target or msg.targets.includes(…) in update; does not write a hit-test function over the pans' positions"
+    should_read_any: ["node_modules/beebox/box-docs/canvas-loop.md"]
+    correct_matches: ["msg\\.targets?\\b|\\btargets?\\.includes", "\\bname\\s*:|`name`"]
+    tags: [cards, schemas, figure]
+
+  # Status (2026-11-16): figure-formula-runs added with text runs in
+  # canvas-loop (plan:canvas-loop-layout-text-hits, C3). knows_about, as
+  # figure-named-hits: the answer is in canvas-loop.md ("Text"). Passes 1/1
+  # on the worktree's test1 (2 reads, 2 greps): greps canvas-loop.md for
+  # "subscript", writes v.text(["H", sub("2"), "SO", sub("4")], …) and warns
+  # off the Unicode subscript digits.
+
+  - id: figure-formula-runs
+    prompt: "How do you draw H₂SO₄ with a real subscript in a canvas-loop figure?"
+    expected_level: knows_about
+    watch_for: "Reads canvas-loop.md (Text); writes one v.text with runs, { text: \"2\", sub: true } and { text: \"4\", sub: true }; does not use Unicode subscript digits or draw the pieces as separate texts at hand-computed offsets"
+    should_read_any: ["node_modules/beebox/box-docs/canvas-loop.md"]
+    correct_matches: ["sub\\s*:\\s*true"]
     tags: [cards, schemas, figure]
 
   # === Questions: Lifecycle and Learning ===

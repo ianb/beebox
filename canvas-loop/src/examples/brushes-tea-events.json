@@ -1,0 +1,22 @@
+[
+  { "frame": 0, "type": "snapshot", "label": "bristle, taper" },
+  { "frame": 1, "type": "param", "name": "brush", "value": "ink" },
+  { "frame": 1, "type": "param", "name": "weight", "value": 8 },
+  { "frame": 1, "type": "snapshot", "label": "ink" },
+  { "frame": 2, "type": "param", "name": "brush", "value": "pencil" },
+  { "frame": 2, "type": "param", "name": "weight", "value": 5 },
+  { "frame": 2, "type": "snapshot", "label": "pencil" },
+  { "frame": 3, "type": "param", "name": "brush", "value": "chalk" },
+  { "frame": 3, "type": "param", "name": "weight", "value": 16 },
+  { "frame": 3, "type": "snapshot", "label": "chalk" },
+  { "frame": 4, "type": "param", "name": "brush", "value": "marker" },
+  { "frame": 4, "type": "param", "name": "pressure", "value": "even" },
+  { "frame": 4, "type": "snapshot", "label": "marker, even" },
+  { "frame": 5, "type": "param", "name": "brush", "value": "wash" },
+  { "frame": 5, "type": "param", "name": "weight", "value": 40 },
+  { "frame": 5, "type": "param", "name": "pressure", "value": "swell" },
+  { "frame": 5, "type": "snapshot", "label": "wash, swell" },
+  { "frame": 6, "type": "param", "name": "brush", "value": "airbrush" },
+  { "frame": 6, "type": "param", "name": "pressure", "value": "press" },
+  { "frame": 6, "type": "snapshot", "label": "airbrush, press" }
+]

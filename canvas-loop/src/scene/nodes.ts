@@ -62,6 +62,8 @@ export interface ShapeNode {
   readonly kind: "shape";
   /** The View call that made it (`rect`, `curve`, …), for messages and outlines. */
   readonly call: string;
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly geom: Geom;
   readonly style: ShapeStyle;
 }
@@ -73,6 +75,8 @@ export interface BackgroundNode {
 /** R3: a transform for the children; no layer. */
 export interface AtNode {
   readonly kind: "at";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly matrix: Mat;
   readonly children: readonly SceneNode[];
 }
@@ -124,9 +128,19 @@ export interface TextLine {
   /** Where the line's `baseline` sits. */
   readonly y: number;
 }
+/** One run of a runs text, over line 0's glyphs `from` to `to`: its size, style, and baseline move (down positive). */
+export interface TextRunSpan {
+  readonly from: number;
+  readonly to: number;
+  readonly size: number;
+  readonly style: TextStyle;
+  readonly dy: number;
+}
 /** `text`: measured and laid out when recorded (draft section 7); drawn through a glyph atlas. */
 export interface TextNode {
   readonly kind: "text";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly content: string;
   readonly family: string;
   readonly style: TextStyle;
@@ -134,6 +148,12 @@ export interface TextNode {
   /** The Canvas2D `textBaseline` each line's `y` is measured to. */
   readonly baseline: "top" | "middle" | "bottom" | "alphabetic";
   readonly lines: readonly TextLine[];
+  /** The text's bounds as laid out at the call (its `TextBounds` rectangle). */
+  readonly box: { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+  /** The first line's alphabetic baseline y (distinct from `baseline`, the Canvas2D mode). */
+  readonly baselineY: number;
+  /** A runs text's runs; its one line is then on the alphabetic baseline. Undefined for plain text. */
+  readonly runs: readonly TextRunSpan[] | undefined;
   readonly fill: Paint;
   readonly halo: { readonly paint: Paint; readonly width: number } | undefined;
   readonly blend: BlendMode;
@@ -163,6 +183,8 @@ export interface PixelsVersion {
 /** R7: a picture replayed under the current transform plus (x, y), into its own layer. */
 export interface PlaceNode {
   readonly kind: "place";
+  /** The drawing's `name` option: a target for pointer messages; undefined when unnamed. */
+  readonly name: string | undefined;
   readonly picture: PictureVersion | PixelsVersion;
   readonly x: number;
   readonly y: number;

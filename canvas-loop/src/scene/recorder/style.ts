@@ -10,8 +10,11 @@ import { UnsupportedCallError } from "../errors.js";
 import type { Geom, LightingRec, PaperSettings, ShapeStyle } from "../nodes.js";
 import { resolveBrushStroke } from "./brush-style.js";
 import { checkPainterly, copyMaterial, resolveLighting } from "./light.js";
+import { checkKeys, checkName } from "./options.js";
 
-const STYLE_KEYS = new Set(["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects"]);
+const STYLE_KEYS = ["fill", "stroke", "weight", "brush", "gesture", "blend", "erase", "dash", "cap", "join", "material", "effects", "name"];
+const GROUP_KEYS = ["name", "opacity", "blend", "effects", "lighting", "clip"];
+const PLACE_KEYS = ["name", "material", "opacity", "blend", "erase"];
 
 export function copyPoints(points: readonly Vec2[]): Vec2[] {
   return points.map((p): Vec2 => [p[0], p[1]]);
@@ -112,12 +115,10 @@ function copyDash(style: Style, call: string): readonly number[] | undefined {
   return [...dash];
 }
 
-/** Check a draft 2.2 Style at the call and fill in its defaults. */
+/** Check a draft 2.2 Style at the call and fill in its defaults. Its `name` goes on the node, not in the resolved style. */
 export function resolveStyle(style: Style, at: { call: string; paper: PaperSettings }): ShapeStyle {
   const { call } = at;
-  for (const key of Object.keys(style)) {
-    if (!STYLE_KEYS.has(key)) throw new SketchUsageError({ detail: `${call}: unknown style key "${key}" (${[...STYLE_KEYS].join(", ")})` });
-  }
+  checkKeys(call, { options: style, keys: STYLE_KEYS, what: "style key" });
   const { weight, cap, join } = style;
   if (weight !== undefined && !(Number.isFinite(weight) && weight >= 0)) throw new SketchUsageError({ detail: `${call}: style.weight must be a number ≥ 0 (got ${String(weight)})` });
   compositeOp(style.blend ?? "normal");
@@ -155,21 +156,23 @@ export function clipGeoms(shape: ClipShape | readonly ClipShape[]): Geom[] {
 
 /** Group options, checked and copied. */
 export function resolveGroup(options: GroupOptions): { name: string | undefined; opacity: number; blend: BlendMode; effects: Effects | undefined; lighting: LightingRec | undefined; clip: Geom[] | undefined } {
+  checkKeys("group", { options, keys: GROUP_KEYS, what: "option" });
   const opacity = options.opacity ?? 1;
   assertUnit(opacity, "group opacity");
   const blend = options.blend ?? "normal";
   compositeOp(blend);
-  return { name: options.name, opacity, blend, effects: copyEffects(options.effects, "group"), lighting: resolveLighting(options.lighting), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
+  return { name: checkName(options.name, "group"), opacity, blend, effects: copyEffects(options.effects, "group"), lighting: resolveLighting(options.lighting), clip: options.clip === undefined ? undefined : clipGeoms(options.clip) };
 }
 
 /** Placement options (R7), checked and copied. */
-export function resolvePlace(options: PlaceOptions | undefined): { opacity: number; blend: BlendMode; erase: boolean; material: Material | undefined } {
+export function resolvePlace(options: PlaceOptions | undefined): { name: string | undefined; opacity: number; blend: BlendMode; erase: boolean; material: Material | undefined } {
   const o = options ?? {};
+  checkKeys("place", { options: o, keys: PLACE_KEYS, what: "option" });
   const opacity = o.opacity ?? 1;
   assertUnit(opacity, "place opacity");
   const blend = o.blend ?? "normal";
   compositeOp(blend);
-  return { opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place") };
+  return { name: checkName(o.name, "place"), opacity, blend, erase: o.erase ?? false, material: copyMaterial(o.material, "place") };
 }
 
 /** A rounded rectangle as path commands (corner arcs as quadratic curves), as today's `roundRect`. */

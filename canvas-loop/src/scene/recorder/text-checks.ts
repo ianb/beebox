@@ -185,16 +185,21 @@ export class TextChecks {
   #glyphs(node: TextNode, site: CallSite): void {
     const missing = this.#glyphMissing;
     if (missing === undefined) return;
-    const key = `${node.style} ${node.family}\u0000${node.content}`;
-    if (this.#glyphsChecked.has(key)) return;
-    // A label that changes every frame (a counter) adds a key each frame.
-    if (this.#glyphsChecked.size > 10_000) this.#glyphsChecked.clear();
-    this.#glyphsChecked.add(key);
-    for (const char of new Set(node.content)) {
-      const once = `glyph ${node.style} ${node.family} ${char}`;
-      if (DRAWS_NOTHING.test(char) || this.#glyphsWarned.has(once) || !missing(char, node)) continue;
-      this.#glyphsWarned.add(once);
-      this.#warn(once, { message: glyphMessage(char, node), line: site.line });
+    // Each run is checked in its own style.
+    const glyphs = node.lines[0]?.glyphs ?? [];
+    const parts = node.runs?.map((r) => ({ style: r.style, family: node.family, text: glyphs.slice(r.from, r.to).join("") })) ?? [{ style: node.style, family: node.family, text: node.content }];
+    for (const font of parts) {
+      const key = `${font.style} ${font.family}\u0000${font.text}`;
+      if (this.#glyphsChecked.has(key)) continue;
+      // A label that changes every frame (a counter) adds a key each frame.
+      if (this.#glyphsChecked.size > 10_000) this.#glyphsChecked.clear();
+      this.#glyphsChecked.add(key);
+      for (const char of new Set(font.text)) {
+        const once = `glyph ${font.style} ${font.family} ${char}`;
+        if (DRAWS_NOTHING.test(char) || this.#glyphsWarned.has(once) || !missing(char, font)) continue;
+        this.#glyphsWarned.add(once);
+        this.#warn(once, { message: glyphMessage(char, font), line: site.line });
+      }
     }
   }
 }

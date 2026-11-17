@@ -11980,6 +11980,30 @@ test1:
       peak: 38926
       added: 3834
       turns: 7
+  figure-named-hits:
+    - date: 2026-11-16T21:04:57.601Z
+      boxCommit: 58c7527bc8ae0fcbab84741963800bc3e091049b
+      repoCommit: dc759ee5eea89bfafcfe6760d152b6df3979d0f7
+      initial: 35124
+      peak: 39755
+      added: 4631
+      turns: 7
+  figure-formula-runs:
+    - date: 2026-11-16T21:36:11.130Z
+      boxCommit: 121cc2ff4f7195722d3f6d95e9d1bc8dc38bdf55
+      repoCommit: 6a57b9d5e36a0309cc798f03681ed33bf8533ddd
+      initial: 35084
+      peak: 40960
+      added: 5876
+      turns: 5
+  figure-canvas-loop-examples:
+    - date: 2026-11-17T00:39:30.313Z
+      boxCommit: 121cc2ff4f7195722d3f6d95e9d1bc8dc38bdf55
+      repoCommit: edde8d0a1df4da5d99d07f1fe2c4d5d66906472f
+      initial: 35104
+      peak: 40196
+      added: 5092
+      turns: 7
   whats-new-answer:
     - date: 2026-11-16T12:01:08.320Z
       boxCommit: a2ceddd15c94e9cde4afe1a6690231469e82a102

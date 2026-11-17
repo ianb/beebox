@@ -34,6 +34,18 @@ function initialParams(decl: ParamsDecl, job: FigureJob): Record<string, string 
 }
 
 /**
+ * One warning naming the card params the module does not declare, or none.
+ * Such a param sets no control and does not reach this run; a factory may
+ * still read it from `figure.params`, so it is reported here, once per run,
+ * and not in the browser.
+ */
+export function undeclaredCardParams(decl: ParamsDecl, cardParams: readonly string[]): string[] {
+  const missing = cardParams.filter((name) => decl[name] === undefined);
+  if (missing.length === 0) return [];
+  return [`card params not in the module's params: ${missing.join(", ")}. They set no control and are not set in this run; the factory still reads them from figure.params`];
+}
+
+/**
  * The error line for a run that threw. No GPU adapter is the host's problem,
  * not the sketch's, so its text says to ask the boxholder.
  */
@@ -48,7 +60,7 @@ function isJob(value: unknown): value is FigureJob {
   return isRecord(value) && typeof value["compiled"] === "string" && typeof value["outDir"] === "string";
 }
 
-/** Run the job in `jobFile`; prints `{ transcript?, framesRun?, imageCount?, errors }` as the last stdout line. */
+/** Run the job in `jobFile`; prints `{ transcript?, framesRun?, imageCount?, errors, warnings? }` as the last stdout line. */
 export async function runFigureOne(jobFile: string): Promise<void> {
   const errors: string[] = [];
   const parsed: unknown = JSON.parse(await fs.readFile(jobFile, "utf8"));
@@ -70,8 +82,11 @@ export async function runFigureOne(jobFile: string): Promise<void> {
     process.stdout.write(`${JSON.stringify({ errors: ["the entry has no exports"] })}\n`);
     return;
   }
+  // Named before the run, so a run that fails (no GPU) still reports them.
+  let warnings: string[] = [];
   try {
     const module = toTeaModule(imported);
+    warnings = undeclaredCardParams(module.params, job.cardParams);
     const rawEvents: unknown = job.events === undefined ? [] : JSON.parse(await fs.readFile(job.events, "utf8"));
     const events = parseTeaEvents(rawEvents, module.params);
     const last = Math.max(-1, ...events.map((event) => event.frame));
@@ -89,11 +104,11 @@ export async function runFigureOne(jobFile: string): Promise<void> {
       initialParams: initialParams(module.params, job),
       scene: job.scene,
     });
-    process.stdout.write(`${JSON.stringify({ transcript: result.transcriptPath, framesRun: result.framesRun, imageCount: result.imageCount, errors: result.errors })}\n`);
+    process.stdout.write(`${JSON.stringify({ transcript: result.transcriptPath, framesRun: result.framesRun, imageCount: result.imageCount, errors: result.errors, warnings })}\n`);
   } catch (error) {
     errors.push(runErrorText(error));
     // The runner wrote a transcript (its header and the failure line) before it threw.
     const transcript = error instanceof NoGpuAdapterError ? error.transcriptPath : undefined;
-    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors })}\n`);
+    process.stdout.write(`${JSON.stringify({ ...(transcript === undefined ? {} : { transcript }), errors, warnings })}\n`);
   }
 }

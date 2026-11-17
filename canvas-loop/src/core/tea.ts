@@ -7,7 +7,7 @@ import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGr
 import type { Paper } from "./brush/types.js";
 import type { ScaleName } from "./sound/notes.js";
 import type { Voice } from "./sound/voice.js";
-import type { AtOptions, Drawing, DrawingNode, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions } from "./paint.js";
+import type { AtOptions, Bounds, Drawing, DrawingNode, FlowOptions, GroupOptions, Light, Picture, PictureOptions, PlaceOptions, RootDrawing, Style, TextBounds, TextBox, TextOptions, TextRun } from "./paint.js";
 
 import type { TubeOptions } from "./shapes.js";
 import type { EaseName, Keyframe } from "./ease.js";
@@ -29,7 +29,7 @@ export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, 
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, SmearBrush, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
 export type { Drawing, DrawingNode, RootDrawing } from "./paint.js";
-export type { AtOptions, BrushPreset, Effects, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, Wash } from "./paint.js";
+export type { AtOptions, Bounds, BrushPreset, Effects, FlowOptions, GroupOptions, Hatching, Light, Lighting, Material, Picture, PictureOptions, PlaceOptions, Shadow, Style, TextBounds, TextBox, TextOptions, TextRun, Wash } from "./paint.js";
 export type { EaseName, Keyframe } from "./ease.js";
 export type { TubeOptions } from "./shapes.js";
 export type { NoiseVoice, NoteVoice, PluckVoice, SampleVoice, ToneVoice, Voice } from "./sound/voice.js";
@@ -132,15 +132,28 @@ export type DeepReadonly<T> = T extends (...args: never[]) => unknown
 
 // ── Messages ─────────────────────────────────────────────────────────
 /**
+ * Where a mouse message is, in canvas pixels, and the named drawings under it
+ * in the last frame drawn before the message (none at frame 0).
+ */
+export interface Pointer {
+  x: number;
+  y: number;
+  /** The innermost named drawing under the pointer (`targets[0]`), or undefined. */
+  target: string | undefined;
+  /** That name and the names of the named drawings around it, innermost first; empty when nothing named is under the pointer. */
+  targets: readonly string[];
+}
+
+/**
  * The runtime-defined discriminated union folded through `update`. Time is a
  * message (`tick`); scripted input, parameter edits, and triggers are the rest.
  * Switch exhaustively on `msg.type`.
  */
 export type Msg =
   | { type: "tick"; frame: number }
-  | { type: "mousedown"; x: number; y: number }
-  | { type: "mouseup"; x: number; y: number }
-  | { type: "mousemove"; x: number; y: number }
+  | ({ type: "mousedown" } & Pointer)
+  | ({ type: "mouseup" } & Pointer)
+  | ({ type: "mousemove" } & Pointer)
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }
@@ -182,13 +195,13 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
    * The width `v.text` gives `content` with these options, measured without
    * drawing (cached), so hit areas and layout in `update` match what `draw` shows.
    */
-  textWidth(content: string, options?: TextOptions): number;
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number;
   /**
    * The bounds `v.text(content, box, options)` would draw, measured without
    * drawing: wrapping, `fit` and `keepInside` included, as for text drawn
    * without a `v.at` transform.
    */
-  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  textBounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
 }
 
 /**
@@ -239,11 +252,17 @@ export interface View {
    * black, left, top. To place a label by its size, measure it first with
    * `textBounds` or `textWidth`.
    */
-  text(content: string, box: TextBox, options?: TextOptions): DrawingNode;
+  text(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): DrawingNode;
   /** The bounds `text` would draw for these arguments where no transform moves it (inside the canvas, or the picture's box in a body). */
-  textBounds(content: string, box: TextBox, options?: TextOptions): TextBounds;
+  textBounds(content: string | readonly TextRun[], box: TextBox, options?: TextOptions): TextBounds;
   /** How wide `text` would draw with these options (logical pixels). */
-  textWidth(content: string, options?: TextOptions): number;
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number;
+  /** The layout box of `drawing` (any drawing of this frame), or null when it draws nothing. It does not count as returning it. */
+  bounds(drawing: Drawing): Bounds | null;
+  /** `children` left to right by their layout boxes, `gap` apart; one node holding each child in its own translating `at`. */
+  row(options: FlowOptions, children: Drawing): DrawingNode;
+  /** `children` top to bottom by their layout boxes, `gap` apart; its baseline is its first child's. */
+  column(options: Omit<FlowOptions, "valign"> & { valign?: "top" | "middle" | "bottom" }, children: Drawing): DrawingNode;
   /** Transform `children` (matrix, then translate, rotate, skew, scale). No layer: they composite with their siblings. */
   at(options: AtOptions, children: Drawing): DrawingNode;
   /** `children` as one isolated layer: opacity, blend, clip, effects and lighting apply to it as a whole. */

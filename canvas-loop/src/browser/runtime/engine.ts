@@ -19,8 +19,9 @@ import { initialParams, sanitizeParamChange } from "../param-validate.js";
 import type { PlaygroundModule } from "../sketch-types.js";
 import type { DrawSurface, ParamOverrides, RuntimeDeps } from "./engine-types.js";
 import type { EmittedEvent, RuntimeLog } from "./engine-types.js";
+import { HitScenes } from "./hit-scene.js";
 
-export type { DrawSurface, EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
+export type { DrawSurface, Drawn, EmittedEvent, ParamOverrides, RuntimeDeps, RuntimeLog } from "./engine-types.js";
 
 const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
@@ -28,8 +29,9 @@ const MAX_DT_MS = 250;
 
 // A queued input before it is stamped with the frame it dispatches on. `snapshot`
 // is a scripted-only directive (a forced capture, never live UI input), so it is
-// excluded from the browser's intent stream and its recorded event log.
-type InputIntent<T> = T extends unknown ? Omit<T, "frame"> : never;
+// excluded from the browser's intent stream and its recorded event log, and so
+// is a mouse entry's `target` (scripted aim): the log keeps x and y only.
+type InputIntent<T> = T extends unknown ? Omit<T, "frame" | "target"> : never;
 type Intent = InputIntent<Exclude<TeaScriptEvent, { type: "snapshot" }>>;
 
 function deepFreeze(value: unknown, seen: WeakSet<object>): void {
@@ -85,6 +87,8 @@ export class Runtime {
   // Per-event engagement accumulator (mirrors the headless runners); reset
   // before each interaction fold, read after. BrowserUtil.handled pushes here.
   #handledNames: string[] = [];
+  // What pointer messages are hit-tested against (hit-scene.ts).
+  #hits = new HitScenes((s) => this.#surface.recordScene(s.model, s.params));
 
   constructor(deps: RuntimeDeps) {
     this.#module = deps.module;
@@ -181,6 +185,7 @@ export class Runtime {
     this.#pending = [];
     this.#log = [];
     this.#frame = 0;
+    this.#hits.restart();
     this.#acc = 0;
     this.#last = undefined;
     this.#score.clear();
@@ -283,6 +288,7 @@ export class Runtime {
     this.#fold({ type: "tick", frame: this.#frame });
     this.#collectSound();
     this.#frame += 1;
+    this.#hits.frameEnded({ model: this.#model, params: this.#params });
   }
 
   // After a fold, as headless does: new voices join the score; any whose frame
@@ -291,7 +297,7 @@ export class Runtime {
     const sound = this.#module.sound;
     if (sound === undefined) return;
     const frame = this.#frame;
-    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame));
+    this.#waiting.push(...this.#score.add(sound(this.#model, this.#params), frame).added);
     const due = this.#waiting.filter((voice) => voice.at <= frame);
     if (due.length === 0) return;
     this.#waiting = this.#waiting.filter((voice) => voice.at > frame);
@@ -324,8 +330,10 @@ export class Runtime {
       return entry;
     }
     this.#handledNames = [];
-    const changed = this.#fold(this.#toMsg(intent));
-    return { ...entry, handled: [...this.#handledNames], changed };
+    const msg = this.#toMsg(intent);
+    const changed = this.#fold(msg);
+    const emitted = { ...entry, handled: [...this.#handledNames], changed };
+    return "targets" in msg ? { ...emitted, targets: msg.targets } : emitted;
   }
 
   #toMsg(intent: Intent): Msg {
@@ -335,7 +343,8 @@ export class Runtime {
       case "mousemove": {
         if (intent.x !== undefined) this.#mouseX = intent.x;
         if (intent.y !== undefined) this.#mouseY = intent.y;
-        return { type: intent.type, x: this.#mouseX, y: this.#mouseY };
+        const { target, targets } = this.#hits.at([this.#mouseX, this.#mouseY]);
+        return { type: intent.type, x: this.#mouseX, y: this.#mouseY, target, targets };
       }
       case "keydown":
       case "keyup":
@@ -366,41 +375,14 @@ export class Runtime {
 
   #draw(): void {
     this.#dirty = false;
-    const placements = this.#surface.draw(this.#model, this.#params);
+    const model = this.#model;
+    const params = this.#params;
+    const { placements, scene } = this.#surface.draw(model, params);
+    this.#hits.drew({ model, params, scene });
     this.#onPlace?.(placements);
   }
 
   #recordLog(args: readonly unknown[]): void {
     this.#onLog({ frame: this.#frame, message: args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") });
   }
-}
-
-/** What `watchVisibility` drives: a runtime, or a figure that also frees its GPU resources while asleep. */
-export type Sleeper = Pick<Runtime, "suspend" | "resume" | "invalidate" | "fontsLoaded">;
-
-/**
- * Sleep while off screen: suspend the runtime's loop when the canvas leaves
- * the viewport (with a margin, so it wakes just before it scrolls in) and
- * resume it on return. Also redraw once when a web font finishes loading,
- * since a still figure otherwise keeps the fallback font it first drew with.
- * Hosts without these APIs (bare Node) get no watching. Returns a teardown.
- */
-export function watchVisibility(canvas: HTMLCanvasElement, runtime: Sleeper): () => void {
-  const observer = typeof IntersectionObserver === "undefined" ? undefined : new IntersectionObserver((entries) => {
-    const onScreen = entries.at(-1)?.isIntersecting;
-    if (onScreen === true) runtime.resume();
-    else if (onScreen === false) runtime.suspend();
-  }, { rootMargin: "200px" });
-  observer?.observe(canvas);
-  // A resized canvas (rotation, a narrower pane) redraws, so over-canvas inputs resize with it.
-  const resized = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(() => runtime.invalidate());
-  resized?.observe(canvas);
-  const fonts = typeof document === "undefined" ? undefined : document.fonts;
-  const redraw = (): void => runtime.fontsLoaded();
-  fonts?.addEventListener("loadingdone", redraw);
-  return () => {
-    observer?.disconnect();
-    resized?.disconnect();
-    fonts?.removeEventListener("loadingdone", redraw);
-  };
 }

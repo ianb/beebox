@@ -1,0 +1,12 @@
+[
+  { "frame": 6, "type": "snapshot", "label": "flicker" },
+  { "frame": 12, "type": "snapshot", "label": "flicker" },
+  { "frame": 18, "type": "param", "name": "heights", "value": "all 32" },
+  { "frame": 18, "type": "snapshot", "label": "every caster at 32" },
+  { "frame": 24, "type": "param", "name": "heights", "value": "varied" },
+  { "frame": 24, "type": "param", "name": "tone", "value": "clip" },
+  { "frame": 24, "type": "snapshot", "label": "no tone curve" },
+  { "frame": 30, "type": "param", "name": "tone", "value": "film" },
+  { "frame": 30, "type": "param", "name": "lampX", "value": 480 },
+  { "frame": 30, "type": "snapshot", "label": "lamp moved right" }
+]

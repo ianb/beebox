@@ -88,7 +88,7 @@ export interface Ctx2D {
   fillText(text: string, x: number, y: number): void;
   strokeText(text: string, x: number, y: number): void;
   setLineDash(segments: number[]): void;
-  measureText(text: string): { readonly width: number };
+  measureText(text: string): { readonly width: number; readonly alphabeticBaseline: number };
   createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
 }

@@ -34,10 +34,10 @@ test("assertVoice names the voice and the key", () => {
 test("a voice is one occurrence: re-declaring is harmless, changing it or backdating it is an error", () => {
   const score = new Score();
   const first: Voice = { id: "pluck-1", at: 10, kind: "pluck", freq: 196 };
-  assert.deepEqual(score.add([first], 10), [first]);
+  assert.deepEqual(score.add([first], 10).added, [first]);
   assert.deepEqual(
     score.add([first], 11),
-    [],
+    { added: [], dropped: [] },
     "returning it again is harmless",
   );
   assert.throws(
@@ -59,6 +59,27 @@ test("at most 32 new voices a frame", () => {
     duration: 0.05,
   }));
   assert.throws(() => new Score().add(many, 0), /33 new voices on frame 0/u);
+});
+
+test("a voice budget drops a fifth voice of one sound, and a seventeenth voice in all, within a quarter second", () => {
+  const score = new Score();
+  const thud = (n: number, at: number): Voice => ({ id: `thud-${n}`, at, kind: "sample", name: "thud", variant: n });
+  const first = score.add([0, 1, 2, 3, 4].map((n) => thud(n, 10 + n)), 10);
+  assert.deepEqual(first.added.map((v) => v.id), ["thud-0", "thud-1", "thud-2", "thud-3"]);
+  assert.deepEqual(first.dropped.map((v) => v.id), ["thud-4"], "other takes of the same sample are the same sound");
+  assert.deepEqual(score.add([thud(4, 14)], 12), { added: [], dropped: [] }, "a dropped voice declared again stays dropped");
+  assert.deepEqual(score.add([thud(5, 25)], 25).added.map((v) => v.id), ["thud-5"], "15 frames after the first, it has room again");
+  const notes = Array.from({ length: 14 }, (_, i): Voice => ({ id: `note-${i}`, at: 30, kind: "note", instrument: "marimba", note: `${"CDEFGAB"[i % 7] ?? "C"}${4 + Math.floor(i / 7)}` }));
+  const chord = score.add([...notes, thud(6, 30), thud(7, 30)], 30);
+  assert.deepEqual(chord.dropped.map((v) => v.id), ["thud-7"], "thud-5 still sounds, so 14 notes and thud-6 make sixteen in all");
+  assert.equal(score.voices().length, 4 + 1 + 15, "only kept voices are in the score");
+});
+
+test("a voice declared ahead reserves its start: four thuds due at frame 30 leave no room for one due at 29", () => {
+  const score = new Score();
+  const thud = (n: number, at: number): Voice => ({ id: `t${n}`, at, kind: "sample", name: "thud" });
+  assert.equal(score.add([0, 1, 2, 3].map((n) => thud(n, 30)), 0).added.length, 4);
+  assert.deepEqual(score.add([thud(4, 29)], 1).dropped.map((v) => v.id), ["t4"]);
 });
 
 test("required fields and the wave name are checked", () => {

@@ -1,6 +1,6 @@
 // Testing mode's faint-mark readback (gpu/peaks.ts): the peak-writing draw
 // leaves colour output byte-identical, and the peaks it reads are the marks'
-// resolved alpha times the opacity of the groups around them.
+// resolved alpha, before the opacity of the groups around them.
 import assert from "node:assert/strict";
 import type { GpuHandle } from "../../src/device/open.js";
 import { GpuRenderer } from "../../src/gpu/renderer.js";
@@ -61,10 +61,10 @@ export async function peaksMeasured(handle: GpuHandle): Promise<void> {
   assert.deepEqual(rest, [], "an erasing mark is not measured");
   assert.ok(marker !== undefined && Math.abs(marker - 0.7) < 0.01, `an opaque marker peaks at its preset's brush opacity, 0.7 (${String(marker)})`);
   assert.ok(half !== undefined && Math.abs(half - 0.5) < 0.02, `paint alpha 0.5 peaks at 0.5 (${String(half)})`);
-  assert.ok(nested !== undefined && Math.abs(nested - 0.125) < 0.01, `nested group opacities multiply: 0.25 × 0.5 (${String(nested)})`);
+  assert.ok(nested !== undefined && nested > 0.9, `group opacities are left out: a fade does not make a mark faint (${String(nested)})`);
 }
 
-// Review probe: a picture kept from an earlier frame, placed fainter, still has its marks judged (and is still reused).
+// A picture kept from an earlier frame and placed fainter (a fade) keeps its marks' strengths, and is still reused.
 export async function keptPictureFaint(handle: GpuHandle): Promise<void> {
   const recorder = new SceneRecorder({ width: 80, height: 60 });
   const frame = (opacity: number): Scene =>
@@ -81,7 +81,7 @@ export async function keptPictureFaint(handle: GpuHandle): Promise<void> {
     assert.ok(renderer.stats.tileHits > 0, "the picture's tile is reused");
     assert.equal(renderer.stats.tilesDrawn, 0);
     const [again] = renderer.peaks;
-    assert.ok(again !== undefined && again.node === first.node && Math.abs(again.alpha - 0.01) < 0.002, `reused at 1%, the kept peak times 0.01 (${String(again?.alpha)})`);
+    assert.ok(again !== undefined && again.node === first.node && again.alpha === first.alpha, `reused at 1%, the kept peak as measured (${String(again?.alpha)})`);
   } finally {
     renderer.destroy();
   }

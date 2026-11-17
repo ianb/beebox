@@ -101,7 +101,7 @@ test("misuse fails at the call, as today", () => {
   assert.throws(() => recorder().record((v) => v.group({ opacity: 2 }, [])), /group opacity must be a number in 0..1/);
 });
 
-test("a number that is not finite is an error naming the call's argument", () => {
+test("a number that is not finite, or a negative radius, is an error naming the call's argument", () => {
   const cases: readonly [(v: View) => Drawing, RegExp][] = [
     [(v) => v.line(0, 0, Number.NaN, 4, { stroke: "#000" }), /line: x2 must be a finite number, got NaN/],
     [(v) => v.triangle(0, 0, 1, 1, 2, Infinity, { fill: "#000" }), /triangle: y3 must be a finite number, got Infinity/],
@@ -109,7 +109,8 @@ test("a number that is not finite is an error naming the call's argument", () =>
     // A command with an extra element is kept whole, so the bad number is still reported.
     // @ts-expect-error -- a line command with three numbers
     [(v) => v.path([["move", 0, 0], ["line", 1, 2, Number.NaN]], { stroke: "#000" }), /path: command 1 \(line\) must hold finite numbers, got \[line, 1, 2, NaN]/],
-    [(v) => v.ellipse(0, 0, 3, -1, { fill: "#000" }), /ellipse: ry must be a finite number ≥ 0, got -1/],
+    [(v) => v.ellipse(0, 0, 3, -1, { fill: "#000" }), /ellipse: ry must be ≥ 0, got -1 \(a size computed from time or input can go below 0.*Math\.max\(0, …\)/],
+    [(v) => v.circle(10, 10, -3, { fill: "#000" }), /circle: radius must be ≥ 0, got -3 /],
     [(v) => v.at({ scale: [1, Number.NaN] }, []), /at: scale\[1] must be a finite number, got NaN/],
   ];
   for (const [draw, message] of cases) assert.throws(() => recorder().record(draw), (e: unknown) => e instanceof SketchUsageError && message.test(e.message));

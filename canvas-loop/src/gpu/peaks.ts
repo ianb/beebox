@@ -3,27 +3,26 @@
 // the draw shader (shader-draw.ts), which keeps the largest alpha the item's
 // composite draw resolves (paint alpha × coverage × paper grain × brush
 // opacity) with an atomic max. The slots are read back once per rendered
-// frame. Each item's peak is multiplied by the opacity of the groups and
-// placements around its own layer (the largest product along any path from
-// the canvas), then a mark's strength is the largest over its items. A
-// picture tile drawn this frame keeps its marks' strengths, relative to the
-// tile, beside its kept raster (rasters.ts); a later frame that reuses the
-// tile takes them times the opacity around the reuse, so a kept picture
-// placed fainter still warns. Mask layers are stencils and material layers
-// are not colour, so neither is measured.
+// frame. A mark's strength is the largest over its items. The opacity of the
+// groups and placements around it is left out: a sketch sets that number on
+// purpose, usually to fade something in or out, and a fade passing through a
+// few faint frames is not a mistake. A picture tile drawn this frame keeps its
+// marks' strengths beside its kept raster (rasters.ts); a later frame that
+// reuses the tile takes them as they are. Mask layers are stencils and
+// material layers are not colour, so neither is measured.
 import type { ShapeNode } from "../scene/nodes.js";
 import type { Item, Job } from "./jobs.js";
 import { inter, isEmpty } from "./jobs.js";
 import type { PeakPipelines } from "./pipelines.js";
 
-/** One brushed mark's strength in a rendered frame: its peak alpha times its groups' opacity. */
+/** One brushed mark's strength in a rendered frame: its peak alpha, before the opacity of its groups and placements. */
 export interface MarkPeak {
   readonly node: ShapeNode;
   readonly alpha: number;
 }
 
-/** One contribution to a mark's strength: an item measured this frame (its slot), or a kept tile's mark; times the opacity around it. */
-export type PeakPart = { readonly node: ShapeNode; readonly factor: number } & ({ readonly slot: number } | { readonly alpha: number });
+/** One contribution to a mark's strength: an item measured this frame (its slot), or a kept tile's mark. */
+export type PeakPart = { readonly node: ShapeNode } & ({ readonly slot: number } | { readonly alpha: number });
 
 /** The frame's peak slots (one per mark item, 1 and up), what the canvas's marks are made of, and each tile drawn this frame to keep with its marks. */
 export interface PeakPlan {
@@ -32,30 +31,29 @@ export interface PeakPlan {
   readonly tiles: readonly { readonly job: Job; readonly parts: readonly PeakPart[] }[];
 }
 
-/** The largest product of layer opacities from `start` to each layer below it (kept tiles included). */
-function opacityFrom(start: Job): Map<Job, number> {
-  const opacity = new Map<Job, number>([[start, 1]]);
+/** `start` and every layer below it (kept tiles included). */
+function layersFrom(start: Job): Set<Job> {
+  const seen = new Set<Job>([start]);
   const work = [start];
   for (let job = work.pop(); job !== undefined; job = work.pop()) {
-    const outer = opacity.get(job) ?? 0;
     for (const it of job.items) {
-      if (it.k !== "layer" || outer * it.opacity <= (opacity.get(it.job) ?? -1)) continue;
-      opacity.set(it.job, outer * it.opacity);
+      if (it.k !== "layer" || seen.has(it.job)) continue;
+      seen.add(it.job);
       work.push(it.job);
     }
   }
-  return opacity;
+  return seen;
 }
 
 /** The parts of the marks under `start`: items drawn this frame (in `slots`) and kept tiles' marks. */
 function partsUnder(start: Job, slots: ReadonlyMap<Item, number>): PeakPart[] {
   const parts: PeakPart[] = [];
-  for (const [job, factor] of opacityFrom(start)) {
+  for (const job of layersFrom(start)) {
     for (const it of job.items) {
       const slot = slots.get(it);
-      if (slot !== undefined && it.k === "mark" && it.node !== undefined) parts.push({ node: it.node, factor, slot });
+      if (slot !== undefined && it.k === "mark" && it.node !== undefined) parts.push({ node: it.node, slot });
     }
-    for (const p of job.keptPeaks ?? []) parts.push({ node: p.node, factor, alpha: p.alpha });
+    for (const p of job.keptPeaks ?? []) parts.push({ node: p.node, alpha: p.alpha });
   }
   return parts;
 }
@@ -77,11 +75,11 @@ export function planPeaks(jobs: readonly Job[]): PeakPlan {
   };
 }
 
-/** Each mark's strength: the largest over its parts of the part's peak (`raw[slot]`, 0..1, or a kept tile's) times its factor. */
+/** Each mark's strength: the largest over its parts of the part's peak (`raw[slot]`, 0..1, or a kept tile's). */
 export function peaksOf(parts: readonly PeakPart[], raw: readonly number[]): MarkPeak[] {
   const best = new Map<ShapeNode, number>();
   for (const p of parts) {
-    const alpha = ("slot" in p ? (raw[p.slot] ?? 0) : p.alpha) * p.factor;
+    const alpha = "slot" in p ? (raw[p.slot] ?? 0) : p.alpha;
     best.set(p.node, Math.max(best.get(p.node) ?? 0, alpha));
   }
   return [...best].map(([node, alpha]) => ({ node, alpha }));

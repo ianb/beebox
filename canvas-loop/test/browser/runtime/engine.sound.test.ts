@@ -6,7 +6,10 @@ import { Runtime } from "../../../src/browser/runtime/engine.js";
 import type { PlaygroundModule } from "../../../src/browser/sketch-types.js";
 import type { Msg, Voice } from "../../../src/core/tea.js";
 import type { TextMeasure } from "../../../src/core/text/measure.js";
+import type { Scene } from "../../../src/scene/nodes.js";
 import { rafState } from "../../fake-dom.js";
+
+const EMPTY: Scene = { width: 10, height: 10, children: [] };
 
 // Text is never measured here: only the voices are under test.
 const textMeasure: TextMeasure = { width: () => 0, bounds: (_content, box) => ({ x: box.x, y: box.y, w: 0, h: 0, lines: 0, size: 0, overflow: false }) };
@@ -28,7 +31,7 @@ function heard(stepMs: number): string[] {
   const runtime = new Runtime({
     module,
     // A surface that draws nothing.
-    surface: () => ({ textMeasure, forgetTextWidths: () => {}, draw: () => new Map() }),
+    surface: () => ({ textMeasure, forgetTextWidths: () => {}, draw: () => ({ placements: new Map(), scene: EMPTY }), recordScene: () => EMPTY }),
     seed: 1,
     onFrame: () => {},
     onLog: () => {},

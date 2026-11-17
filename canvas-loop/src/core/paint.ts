@@ -14,6 +14,13 @@ export type { BlendMode, Effects, Hatching, Shadow, Wash } from "./compose.js";
 export type TextStyle = "normal" | "italic" | "bold" | "bold italic";
 
 /**
+ * One piece of a one-line text: a string, or a run that is a subscript, a
+ * superscript (0.7 × the call's size, moved 0.22 × size down or 0.38 × size
+ * up), or in another `style`. The whole text has one box, one baseline, one fill.
+ */
+export type TextRun = string | { text: string; sub?: boolean; sup?: boolean; style?: TextStyle };
+
+/**
  * Where `text` writes. Without `w`, `align` places the text about `x`; without
  * `h`, `valign` places it about `y`. With `w`, lines wrap to it.
  */
@@ -48,6 +55,8 @@ export interface TextOptions {
   overlay?: boolean;
   blend?: BlendMode;
   erase?: boolean;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  name?: string;
 }
 
 /** What `text` drew: the ink box in logical pixels, the line count, and the size used. */
@@ -60,6 +69,37 @@ export interface TextBounds {
   size: number;
   /** True when the text overflows the box at that size. */
   overflow: boolean;
+}
+
+/**
+ * A drawing's layout box (`v.bounds`), in the coordinates where it is
+ * returned: shape geometry plus half the stroke, text's line boxes, a placed
+ * picture's declared size. `baseline` is the first text's alphabetic baseline
+ * y, or null when it holds no text or a rotation or skew moves it.
+ */
+export interface Bounds {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  baseline: number | null;
+}
+
+/**
+ * Where `v.row` and `v.column` put their children: in order, `gap` apart,
+ * about (x, y) (default 0, 0). In a row, `align` places the whole row about
+ * `x` and `valign` lines each child up at `y`; in a column, `align` lines each
+ * child up at `x` and `valign` places the whole column about `y`.
+ */
+export interface FlowOptions {
+  readonly x?: number;
+  readonly y?: number;
+  readonly gap?: number;
+  readonly align?: "left" | "center" | "right";
+  /** "baseline" (rows only): each child's first text baseline on `y`; a child with none by its bottom. */
+  readonly valign?: "top" | "middle" | "bottom" | "baseline";
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /**
@@ -89,6 +129,8 @@ export interface Style {
   readonly material?: Material;
   /** Effects on this shape alone: it draws into its own layer, the effects apply, then the layer composites with `blend` or `erase`. */
   readonly effects?: Effects;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** A brush preset with some fields changed, as plain data. */
@@ -103,6 +145,8 @@ export interface AtOptions {
   readonly skew?: readonly [number, number];
   /** `[a, b, c, d, e, f]` as Canvas2D `transform()` and CSS `matrix()`. */
   readonly matrix?: readonly [number, number, number, number, number, number];
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** A single point, `[x, y]`. The vertex form used by `polygon` and `clip`. */
@@ -178,7 +222,7 @@ export function ellipseGradient(...args: [number, number, number, number, readon
 
 /** Options for `group`: opacity applied once to the finished group, its blend mode, clip, effects and lighting. */
 export interface GroupOptions {
-  /** Names the group in warnings, scene outlines and diffs; draws nothing. */
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
   readonly name?: string;
   readonly opacity?: number;
   readonly blend?: BlendMode;
@@ -291,6 +335,8 @@ export interface PlaceOptions {
   readonly opacity?: number;
   readonly blend?: BlendMode;
   readonly erase?: boolean;
+  /** Names the drawing: pointer messages report the names under the pointer, and warnings and scene outlines show it. Draws nothing; need not be unique. */
+  readonly name?: string;
 }
 
 /** Any gradient handle. */

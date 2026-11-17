@@ -409,7 +409,13 @@ Not built: smudge, watercolor, pixel API, layers (see NOT in scope).
 
 ## Subplans
 
-none
+- [canvas-loop-layout-text-hits.subplan.md](canvas-loop-layout-text-hits.subplan.md):
+  layout boxes and flows, text runs, and named hits, from a box agent's
+  figure-migration report (2026-11-16).
+- [canvas-loop-examples.subplan.md](canvas-loop-examples.subplan.md):
+  replaces the gallery and the examples directory with one set of minimal,
+  instructional examples (2026-11-16); it supersedes Track F's gallery
+  entries.
 
 ## Failure modes
 

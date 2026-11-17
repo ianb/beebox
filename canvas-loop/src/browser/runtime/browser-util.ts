@@ -8,7 +8,8 @@ import { recordOf } from "../../core/records.js";
 import { SketchUsageError } from "../../headless/errors.js";
 import type { SeededRandom } from "../../core/prng.js";
 import type { ParamsDecl, ParamValues, Util } from "../../core/tea.js";
-import type { TextBounds, TextBox, TextOptions } from "../../core/paint.js";
+import type { TextBounds, TextBox, TextOptions, TextRun } from "../../core/paint.js";
+import { checkContent } from "../../core/text/measure.js";
 import type { TextMeasure } from "../../core/text/measure.js";
 
 export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
@@ -62,12 +63,14 @@ export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
     return recordOf(keys, value);
   }
 
-  textWidth(content: string, options?: TextOptions): number {
+  textWidth(content: string | readonly TextRun[], options?: TextOptions): number {
+    checkContent(content, { call: "u.textWidth", options });
     return this.#text().width(content, options);
   }
 
-  textBounds(...args: [string, TextBox, TextOptions?]): TextBounds {
-    return this.#text().bounds(...args);
+  textBounds(...[content, box, options]: [string | readonly TextRun[], TextBox, TextOptions?]): TextBounds {
+    checkContent(content, { call: "u.textBounds", options });
+    return this.#text().bounds(content, box, options);
   }
 
   handled(name: string): void {

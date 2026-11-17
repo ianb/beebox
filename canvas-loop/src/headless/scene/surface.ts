@@ -11,7 +11,7 @@ import type { SketchHost } from "../../core/types.js";
 import { openGpu, openTextMeasurer } from "../../device/open.js";
 import type { GpuHandle } from "../../device/open.js";
 import { GpuRenderer } from "../../gpu/renderer.js";
-import type { SceneNode } from "../../scene/nodes.js";
+import type { Scene, SceneNode } from "../../scene/nodes.js";
 import { sceneOutline } from "../../scene/outline.js";
 import { SceneRecorder } from "../../scene/recorder/view.js";
 import { GpuRenderError } from "../../scene/errors.js";
@@ -123,6 +123,10 @@ export class SceneSurface implements FrameSurface {
     const rec = this.#recorder.record((v) => paint(v));
     this.#last = rec;
     for (const label of rec.snapshots) this.#o.host.requestSnapshot(label);
+  }
+
+  hitScene(): Scene | undefined {
+    return this.#last?.scene;
   }
 
   async capture(): Promise<Capture> {

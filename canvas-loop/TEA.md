@@ -50,8 +50,8 @@ Capabilities are injected, not ambient — `update` gets `Util` (randomness,
 params, log, `handled`) and no drawing; `draw` gets `View` (drawing, log,
 snapshot) and no randomness. That withholding *is* the enforcement.
 
-The lint preset caps functions at 2 parameters, except in `src/examples/`
-and `src/gallery/`. Elsewhere, put this exact comment on `update` and `draw`:
+The lint preset caps functions at 2 parameters, except in `src/examples/`.
+Elsewhere, put this exact comment on `update` and `draw`:
 `// eslint-disable-next-line max-params -- TEA contract signature`.
 
 Every param may also carry `label` (the words its control shows; default: the
@@ -69,9 +69,9 @@ exhaustively on `msg.type` (the type-aware lint enforces it):
 ```ts
 type Msg =
   | { type: "tick"; frame: number }
-  | { type: "mousedown"; x: number; y: number }
-  | { type: "mouseup"; x: number; y: number }
-  | { type: "mousemove"; x: number; y: number }
+  | { type: "mousedown"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mouseup"; x: number; y: number; target: string | undefined; targets: readonly string[] }
+  | { type: "mousemove"; x: number; y: number; target: string | undefined; targets: readonly string[] }
   | { type: "keydown"; key: string }
   | { type: "keyup"; key: string }
   | { type: "param"; name: string; value: number | boolean | string }
@@ -84,6 +84,8 @@ the page, and a press always ends with `mouseup`, even when the finger leaves
 the canvas or the browser cancels the touch. A finger has no hover: a touch
 sketch gets `mousemove` only while pressed. Hit areas a fingertip must land
 on want to be about 40 pixels across.
+
+Example: [`bounce`](./src/examples/bounce-tea.ts) — a drag as a mode on the model, from `mousedown` to `mouseup`.
 
 ## Frame-N guarantee
 
@@ -105,6 +107,8 @@ So `draw` must read only `model` and `p`: a value from anywhere else (a module
 `let`, the clock) would go stale. To animate, change the model on `tick`. A
 figure scrolled off screen sleeps: its frames stop until it is back, as when
 paused, and a sound playing when it left is cut off.
+
+Example: [`pendulum`](./src/examples/pendulum-tea.ts) — physics stepped in `update` at a fixed time step.
 
 ## Drawing
 
@@ -143,9 +147,9 @@ export function draw(v: View, model: DeepReadonly<Model>): RootDrawing {
   that returns one. `draw` returns a **`RootDrawing`**: the same without
   `undefined`. An empty frame returns `null` or `[]`.
 - A loop that carries state (a running total, the previous point) can push
-  into a local `const out: Drawing[] = []` and return it. The gallery's
-  sketches were converted to this form by a script and use `out.push`
-  everywhere; write `.map`, `&&` and components instead.
+  into a local `const out: Drawing[] = []` and return it. Otherwise write
+  `.map`, `&&` and components. For pieces placed one after another, use
+  [`v.row` and `v.column`](#layout), not a cursor.
 - A scope copies its children when it is called: changing the array later
   changes nothing.
 - A node belongs to the frame that made it. Make the drawing again in each
@@ -291,7 +295,31 @@ u.textWidth(s, options)
   `overlay: true`, and the check skips it; the text under it is still checked
   against the rest. Headless runs also warn when
   the font has no glyph for a character, which draws as an empty box or
-  nothing; use a plain word or another character.
+  nothing; use a plain word or another character. Unicode subscript and
+  superscript digits (`₂`, `⁻`) are missing in the headless fonts: write
+  them as runs.
+
+Text content can be a list of runs instead of a string, for formulas,
+units and exponents. A run is a string or `{ text, sub?, sup?, style? }`:
+
+```ts
+const sub = (text: string) => ({ text, sub: true });
+v.text(["H", sub("2"), "O"], { x: 40, y: 80 }, { size: 28, valign: "baseline" }) // H₂O
+v.text(["10", { text: "−3", sup: true }, " mol L", { text: "−1", sup: true }], { x: 40, y: 120 }, UNITS)
+v.text(["k", { text: "obs", sub: true, style: "italic" }], { x: 40, y: 160 }, LABEL)
+```
+
+- `sub` and `sup` draw at 0.7 × `size`; `sub` moves the baseline down by
+  0.22 × `size`, `sup` up by 0.38 × `size`. `style` sets that run's style.
+- Runs are one line, measured and drawn as one text: one box (the line box
+  at `size`, which layout and `keepInside` use; a large subscript's
+  descender can reach a little below it), one baseline, one `fill`, one
+  `name`.
+  `textWidth` and `textBounds` (on `v` and `u`) take runs too.
+- A `w` box aligns the line inside it and does not wrap; `fit` shrinks every
+  run together.
+- These throw at the call: `\n` in a run, `wrap: true`, a run with both `sub`
+  and `sup`, and any other key (a run in another color is its own `v.text`).
 
 ### Scopes
 
@@ -316,6 +344,59 @@ Each scope takes its children as its last argument and returns one node.
   union of an array of them.
 - `v.paper(settings, children)` sets the paper grain for the brushes and
   effects in its children (see [BRUSHES.md](./BRUSHES.md#paper)).
+
+Example: [`effects`](./src/examples/effects-tea.ts) — `mask` fades a reflection out with a gradient.
+
+### Layout
+
+`v.bounds(drawing)` returns the layout box of any drawing of this frame:
+`{ x, y, w, h, baseline }` in the coordinates where it is returned, or `null`
+when it draws nothing. Measure a component's result instead of writing a
+second function that computes its size.
+
+- A shape is its geometry (a path by its curve) plus half its stroke weight.
+  Miter spikes, brush wobble and effects are not counted.
+- Text is exactly what `textBounds` gives. `baseline` is the first text's
+  alphabetic baseline y, or `null` when the drawing has no text or a rotation
+  or skew turns it.
+- A placed picture is its declared `width × height`. Backgrounds, lights and
+  `erase` shapes add nothing; a clip cuts the box.
+- Measuring does not return the drawing: return it as well, or testing mode
+  warns that it was not returned.
+
+`v.row(options, children)` and `v.column(options, children)` place their
+children one after another by their layout boxes and return one node, which
+can go in another row or column. Options: `x`, `y` (default 0), `gap`
+(default 0), `align`, `valign`, with `v.text`'s names. Draw each child at
+`(0, 0)` and let the flow move it:
+
+```ts
+v.column({ x: 300, y: 330, gap: 6, align: "center" }, [
+  v.text("Left pan", { x: 0, y: 0 }, LABEL),
+  v.row({ gap: 4, valign: "baseline" }, model.left.map((w) => v.text(`${w} g`, { x: 0, y: 0 }, SMALL))),
+])
+```
+
+- A row runs left to right. `valign` lines each child up and says what `y`
+  is: `"top"` (default), `"middle"`, `"bottom"`, or `"baseline"` (each
+  child's first text baseline on `y`; a child with no baseline sits on it by
+  its bottom). `align` places the whole row about `x`: `"left"` (default),
+  `"center"` or `"right"`.
+- A column runs top to bottom. `align` lines each child up and says what `x`
+  is; `valign` (`"top"`, `"middle"`, `"bottom"`) places the whole column about
+  `y`. A column's baseline is its first child's, so a column sits in a
+  baseline row by its first line.
+- Each child is moved by its box, so a child drawn at its own `(0, 0)` and one
+  drawn at `(240, 80)` land the same. A child that draws nothing a layout can
+  place (`null`, a light) takes no room and no gap.
+- Every node in the flattened children is one item. A component that returns
+  a list (an arrow as a line and a head) becomes two items with a gap
+  between; wrap it to make one: `v.at({}, arrow(v))`.
+- The positions are fixed when the call returns. Text with `keepInside` that
+  later slides back inside the canvas moves alone; the flow keeps the box
+  from the call, so the text can then overlap its neighbour.
+
+Example: [`scale`](./src/examples/scale-tea.ts) — a caption laid out as a column holding a row.
 
 ### Pictures
 
@@ -373,6 +454,60 @@ image: `fill({ data, width, height })` writes straight RGBA bytes (alpha is
 every fourth byte; 255 is opaque) into a zeroed array when the version is
 new. Place it like a picture; scaled up, it blurs as an image does.
 
+Example: [`paint`](./src/examples/paint-tea.ts) — finished strokes drawn through a chain of pictures.
+
+### Names and hits
+
+Give a drawing a `name`, and a mouse message says when the pointer is on it.
+`update` reads the name instead of repeating `draw`'s position math. `name`
+goes in a shape's style and in the options of `v.text`, `v.at`, `v.group`,
+`v.place`, `v.row` and `v.column`; it adds no layer.
+
+```ts
+v.at({ translate: [150, 200], name: "pan-left" }, [
+  v.arc(0, 0, 60, 0, Math.PI, { fill: "transparent", stroke: INK, weight: 3 }),
+  model.left.map((w, i) => v.circle(-30 + 20 * i, 12, 9, { fill: GOLD, name: `weight-${w.id}` })),
+]),
+v.text("Left", { x: 150, y: 290 }, LABEL),        // unnamed: does not block the pan
+```
+
+```ts
+case "mousedown": {
+  const weight = msg.targets.find((t) => t.startsWith("weight-"));
+  if (weight !== undefined) { u.handled("remove-weight"); return removeWeight(model, weight); }
+  if (msg.targets.includes("pan-left")) { u.handled("add-weight"); return addWeight(model, "left"); }
+  return model;
+}
+```
+
+- `msg.target` is the innermost name under the pointer; `msg.targets` lists
+  every name on its path, innermost first (`["weight-3", "pan-left"]`). Use
+  `targets.includes(…)` for a name that can hold named drawings.
+- A shape hits where it paints: its fill, and the band its stroke draws. A
+  ring with only a stroke misses in its hole; add `fill: "transparent"` to
+  fill it. Text hits in its `textBounds` box.
+- Only named drawings take a hit. An unnamed label drawn over a named pan
+  does not block it. To give a small control the 40-pixel area a fingertip
+  needs, draw a larger `fill: "transparent"` shape under the same name.
+- Build names from the model's ids (`weight-${w.id}`), and in `update` look
+  the id up again: an item `update` has removed since the frame was drawn is
+  not found, so ignore it.
+- `v.clip` and `v.mask` take no options: wrap them in `v.at({ name }, …)`.
+- The hit scene is the last frame drawn before the message: the first event
+  of frame N hits frame N−1's drawing, as an events file sees it. At frame 0
+  nothing is drawn, so `targets` is empty. A replay gives the same targets.
+- `--scene` outlines print each node's name, so you can read the names a
+  frame holds; the transcript prints `on weight-3 in pan-left` after the
+  position.
+- Known gaps. A headless run and a browser can measure text slightly
+  differently, so a click a pixel inside a text's edge can miss in one of
+  them. While the playground is paused, clicks hit the last running frame,
+  not what the paused redraw shows. When the GPU is behind, a click hits the
+  newest recorded frame, which can be one display frame ahead of the image
+  on screen.
+
+Example: [`scale`](./src/examples/scale-tea.ts) — clicks on named pans and on the weights inside them.
+
 ### Other `View` members
 
 - `v.width`, `v.height`: the canvas size, or the picture's size inside a
@@ -409,6 +544,8 @@ new. Place it like a picture; scaled up, it blurs as an image does.
 call throws `RemovedCallError` naming what replaces it. Use pictures for
 `cache`, `sprite` and `image`, `effects: { paper }` for `paperTexture`, and the
 `View`'s calls, `at({ matrix })` or `v.pixels` for `ctx`.
+
+Example: [`lamps`](./src/examples/lamps-tea.ts) — animation as tweens of the frames since a recorded click.
 
 ## Sound
 
@@ -534,6 +671,16 @@ variants the name has.
   for frame N run before its tick, so a sound from a click on frame N starts
   at `model.frame + 1` when the model keeps the last tick's frame.
 - At most 32 new voices a frame.
+- A voice budget keeps busy moments from piling up: a new voice is dropped
+  when 4 kept voices of the same sound, or 16 in all, start within 15 frames
+  (a quarter second) of its start, before or after it. Each voice counts for
+  that quarter second whatever its length, so a long tone repeated slowly is
+  not limited. The same sound is a
+  sample by name (any `variant` or `rate`), a note by instrument and note
+  name, or a `pluck` or `tone` by `freq`. So a sketch can return a sound for
+  every hit without counting them itself. A dropped voice stays dropped; the
+  transcript shows `sound dropped "hit-9" thud: …`. Both runtimes drop the
+  same voices.
 - Headless runs write `sound.wav` and `sound.png` (the waveform, a red mark at
   each voice start, a grey line each second) beside the frames, and a
   transcript line per voice (`sound sample "hit-3" ding #3`). The same voice
@@ -544,8 +691,7 @@ variants the name has.
   load waits up to 0.25 s, then is dropped with a console line. Restart stops
   sounding voices.
 - Replay from the start is exact. Seeking to a frame is not supported yet.
-- Examples: `canvas-loop/src/gallery/guitar-strings/`,
-  `canvas-loop/src/examples/sound-tea.ts`.
+- Example: [`sound`](./src/examples/sound-tea.ts).
 
 ## Params reference
 
@@ -566,6 +712,8 @@ union. Read values via `u.params.name` (in `update`) and the `p` argument (in
 Every declaration also takes `label`, `hint` and `panel`. `panel: false`
 keeps the param out of the side panel.
 
+Example: [`orbit`](./src/examples/orbit-tea.ts) — every param kind; a trigger resets the model and leaves the params.
+
 ### Inputs over the canvas
 
 `v.control(name, { x, y, w, h?, size?, align?, bold? })` in `draw` puts the
@@ -580,6 +728,8 @@ edit (empty included) as a `param` msg, so `update` sees the answer as it is
 typed; keys typed into it are not `keydown` msgs. Use `u.handled` and a check
 button, or check on each edit, as the exercise needs. Only `mountSketch` figures
 place inputs so far; the React figure and the playground keep the panel.
+
+Example: [`answer-box`](./src/examples/answer-box-tea.ts) — a typed answer checked on each edit.
 
 ## Activity
 
@@ -601,9 +751,12 @@ it and the console warns once; the sketch keeps running. What the host does
 with it is the host's business: a beebox figure logs it as the person's
 activity for the chat agent.
 
+Example: [`answer-box`](./src/examples/answer-box-tea.ts) — `activity` after each handled input.
+
 ## Events file
 
-The format is in the [README](./README.md#events-file).
+The format is in the [README](./README.md#events-file). A mouse entry can aim
+at a named drawing with `"target": "pan-left"` instead of `x` and `y`.
 
 ## Engagement verdicts
 
@@ -612,13 +765,13 @@ Every scripted **interaction** event (mouse, key, trigger — not `tick`, not
 an events file reads as a test of whether each input connected:
 
 ```
-**[frame 30]** mousedown (297,288) → select-planet
+**[frame 30]** mousedown (180,216) on pan-left → add-weight
 **[frame 40]** keydown ArrowUp → Δmodel
 **[frame 55]** mousedown (200,150) → (unhandled)
 ```
 
-- **a name**: `update` called `u.handled("select-planet")` (several calls
-  join with `, `).
+- **a name**: `update` called `u.handled("add-weight")` (several calls
+  join with `, `). `on pan-left` names the [drawings hit](#names-and-hits).
 - **Δmodel**: no name, but `update` returned a different model reference.
 - **(unhandled)**: no name and the same model. Nothing engaged.
 
@@ -682,27 +835,36 @@ Lint enforces most of it on `*-tea.ts` (`tea/no-module-state`,
 ## Worked example
 
 [`src/examples/orbit-tea.ts`](./src/examples/orbit-tea.ts) +
-[`src/examples/orbit-tea-events.json`](./src/examples/orbit-tea-events.json) — a sun with
-three orbiting planets. It exercises every param type (`speed-scale` number,
-`show-orbits` boolean, `focus` select, `reset` trigger), a mode union
-(`{ type: "idle" } | { type: "selected"; index }`), and direct pointer
-manipulation (click a *moving* planet to select it; ArrowUp/Down nudge its
-speed). Because position is a pure function of `frame`, hit-testing a moving
-target is a calculation, not trial and error.
+[`src/examples/orbit-tea-events.json`](./src/examples/orbit-tea-events.json): a sun with
+three orbiting planets. It declares every param type (`speed-scale` number,
+`show-orbits` boolean, `focus` select, `reset` trigger), keeps a mode union
+(`{ type: "idle" } | { type: "selected"; name }`), and names each planet, so
+a click on a *moving* planet selects it by name with no position math in
+`update`; ArrowUp and ArrowDown change the selected planet's speed. The
+events file aims its clicks with `"target": "planet-Venus"`.
 
 `draw` returns one list: a `.map` over the planets, `&&` for what a param or
-the mode turns on, and small components (`drawPlanet`, `drawHud`):
+the mode turns on, and a small component per planet:
 
 ```ts
 return [
   v.background("#0b1020"),
-  p["show-orbits"] && model.planets.map((planet) => v.circle(CENTER_X, CENTER_Y, planet.orbitRadius, ORBIT_RING)),
-  v.circle(CENTER_X, CENTER_Y, SUN_RADIUS, { fill: "#facc15" }),
-  model.planets.map((planet, i) =>
-    drawPlanet({ v, planet, pos: planetPos({ planet, frame: model.frame, scale }), selected: mode.type === "selected" && mode.index === i }),
-  ),
-  drawHud({ v, model, p }),
+  p["show-orbits"] && model.planets.map((pl) => v.circle(SUN.x, SUN.y, pl.orbit, { stroke: "#26324f", weight: 1 })),
+  v.circle(SUN.x, SUN.y, 20, { fill: "#fcd34d", effects: { glow: { blur: 18, color: "#f59e0b", strength: 2 } } }),
+  model.planets.map((pl) => drawPlanet(v, { planet: pl, at: position(pl), selected: pl.name === selected })),
+  v.column({ x: 12, y: 12, gap: 4 }, [ /* the readout */ ]),
 ];
+```
+
+```ts
+case "mousedown": {
+  const hit = model.planets.find((p) => msg.targets.includes(`planet-${p.name}`));
+  if (hit !== undefined) {
+    u.handled(`select ${hit.name}`);
+    return { ...model, mode: { type: "selected", name: hit.name } };
+  }
+  …
+}
 ```
 
 Note the boundary: `reset` restores the *model* (planets, selection) but leaves

@@ -9,12 +9,12 @@ import { renderToString } from "react-dom/server";
 import { SketchFigure } from "@ianbicking/canvas-loop/react";
 import { asPlaygroundModule } from "../src/browser/sketch-types.js";
 import * as orbit from "../src/examples/orbit-tea.js";
-import * as fjord from "../src/examples/fjord-tea.js";
+import * as brushes from "../src/examples/brushes-tea.js";
 import { controlModels } from "../src/browser/controls-model.js";
 import { resolveValues } from "../src/react/SketchFigure/figure-internals.js";
 
 const orbitModule = asPlaygroundModule(orbit);
-const fjordModule = asPlaygroundModule(fjord);
+const brushesModule = asPlaygroundModule(brushes);
 
 // If any of window/document/HTMLCanvasElement is defined, the render below could
 // silently pass by using a real DOM. Assert the bare Node test env has none, so
@@ -38,10 +38,10 @@ test("renderToString is safe with controls, recorder, and controlled params enab
   assert.doesNotThrow(() => {
     renderToString(
       createElement(SketchFigure, {
-        module: fjordModule,
+        module: brushesModule,
         showControls: true,
         showRecorder: true,
-        params: { tide: 0.5, timeOfDay: "dusk" },
+        params: { weight: 30, brush: "chalk" },
         onParamsChange: () => {},
         onEvent: () => {},
       }),
@@ -54,10 +54,10 @@ test("renderToString is safe with controls, recorder, and controlled params enab
 // Full controlled dispatch (host change → runtime.setParam → param event) needs
 // the browser and is exercised on the dev demo page (dev/canvas-loop.html).
 test("controlled params override declaration defaults in the rendered controls", () => {
-  const decl = fjordModule.params ?? {};
-  const values = resolveValues({ decl, overrides: { tide: 0.5, timeOfDay: "dusk" } });
-  assert.equal(values["tide"], 0.5, "the host-supplied value wins over the default");
-  assert.equal(values["timeOfDay"], "dusk", "the host-supplied select value wins over the default");
+  const decl = brushesModule.params ?? {};
+  const values = resolveValues({ decl, overrides: { weight: 30, brush: "chalk" } });
+  assert.equal(values["weight"], 30, "the host-supplied value wins over the default");
+  assert.equal(values["brush"], "chalk", "the host-supplied select value wins over the default");
 });
 
 test("uncontrolled initialParams override declaration defaults", () => {
