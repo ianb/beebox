@@ -166,7 +166,7 @@
   padding: 6px 10px;
 }
 /* Chat material ink, read by text in the reply, pending and meta materials. */
-.bbx-box-presentation[data-chrome-theme="ribbon"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+.bbx-box-presentation[data-chrome-theme="ribbon"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material, .bbx-composer-material) {
   --bbx-ink: #173f35;
   --bbx-danger: #a32745;
   --bbx-ink-soft: #514a34;

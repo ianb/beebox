@@ -71,6 +71,10 @@
 }
 /* Keep the real composer's structure and keyboard behavior intact. */
 .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material {
+  --bbx-ink: #344957;
+  --bbx-ink-soft: #596c71;
+  --bbx-pen: #a33d54;
+  --bbx-danger: #9c1e3f;
   background: #fffdf5;
   color: #344957;
   border: 1px solid #9bb4b6;

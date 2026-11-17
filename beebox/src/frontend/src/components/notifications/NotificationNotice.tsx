@@ -4,6 +4,7 @@
  * app-shell banner and the chat's `chat:new` banner both render it.
  */
 
+import { MaterialContext } from "../ui/material";
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { CloseButton } from "../ui/CloseButton";
@@ -36,7 +37,7 @@ export function NotificationNotice({ title, body, url, fullBody, onDismiss, idPr
   const shownBody = fullBody === true ? body.trim() : (body.split("\n").find((line) => line.trim() !== "") ?? "");
   const link = url === undefined ? null : linkParts(url);
   return (
-    <Row gap="sm" align="start" className={INFO_BANNER_CLASSES}>
+    <MaterialContext.Provider value={false}><Row gap="sm" align="start" className={INFO_BANNER_CLASSES}>
       <Stack gap="xs" className="flex-1 min-w-0">
         <Text weight="semibold" size="sm">{title}</Text>
         {shownBody === "" ? null : <Text as="p" size="sm" tone="muted" className="whitespace-pre-line">{shownBody}</Text>}
@@ -48,6 +49,6 @@ export function NotificationNotice({ title, body, url, fullBody, onDismiss, idPr
         )}
       </Stack>
       <CloseButton id={`${idPrefix}-dismiss`} size="sm" label={`Dismiss notification: ${title}`} onClick={onDismiss} />
-    </Row>
+    </Row></MaterialContext.Provider>
   );
 }

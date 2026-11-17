@@ -10,6 +10,7 @@
  * still has a heading.
  */
 
+import { ComposerMaterial } from "../../ComposerMaterial";
 import type { ReactNode, SyntheticEvent } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
@@ -53,7 +54,7 @@ export function ChatStatusBanners(props: {
           {/* Real space text node (not just margin) so a copy of the banner
               keeps the message and "dismiss" separated. */}
           {message}{"  "}
-          <InlineAction id="bbx-chat-error-dismiss" intent={tone.button} onClick={onDismissError}>
+          <InlineAction material={false} id="bbx-chat-error-dismiss" intent={tone.button} onClick={onDismissError}>
             dismiss
           </InlineAction>
         </div>
@@ -100,7 +101,7 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
       <span>
         {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
       </span>
-      <InlineAction id="bbx-chat-expired-attachments-dismiss" intent="subtle" onClick={onDismiss} className="shrink-0">
+      <InlineAction material={false} id="bbx-chat-expired-attachments-dismiss" intent="subtle" onClick={onDismiss} className="shrink-0">
         dismiss
       </InlineAction>
     </div>
@@ -238,13 +239,13 @@ export function ChatView(props: {
         onPointerDownCapture={interacted} onFocusCapture={interacted} onKeyDownCapture={interacted}>
         {barChrome}
         {workspace}
-        <div className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
+        <ComposerMaterial className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
           <div className="bbx-composer-notices">{props.selectionNotice}</div>
           {props.ambientRegion}
           {props.failedRegion}
           {statusBanners}
           {composerSection}
-        </div>
+        </ComposerMaterial>
       </div>
       {debugLog}
     </>

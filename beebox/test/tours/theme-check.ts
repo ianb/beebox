@@ -102,7 +102,18 @@ async function openStudio(session: BrowseSession, { c, marker }: { c: StudioCase
   } catch (cause) {
     throw new ThemeCheckError(`theme studio did not render #bbx-theme-studio-scroll for ${caseName(c)} within 30 seconds: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
   }
-  await session.eval(`${SCROLLER}.dataset.themeCheckRun = ${JSON.stringify(marker)}`);
+  // Activity lives outside the transcript; expanding it exposes its hint and actions.
+  const ambientToggle = "#bbx-theme-studio-ambient button[aria-expanded]";
+  try {
+    await session.run(["wait", ambientToggle]);
+    await session.run(["scrollintoview", ambientToggle]);
+    await session.run(["click", ambientToggle]);
+    await session.run(["wait", "--fn", `document.querySelector(${JSON.stringify(ambientToggle)})?.getAttribute("aria-expanded") === "true"`]);
+  } catch (cause) {
+    throw new ThemeCheckError(`could not expand conversation activity for ${caseName(c)}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+  }
+  await session.run(["mouse", "move", "0", "0"]);
+  await session.eval(`${SCROLLER}.scrollTop = 0; ${SCROLLER}.dataset.themeCheckRun = ${JSON.stringify(marker)}`);
 }
 
 async function checkMarker(session: BrowseSession, marker: string): Promise<void> {

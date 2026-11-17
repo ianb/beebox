@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import { Image } from "../../../ui/Image/view";
 import { Text } from "../../../ui/Text";
 import type { ScreenshotIndicator } from "./screenshot-request-handler";
-import { StatusPill } from "./StatusPill";
+import { StatusPill } from "../../StatusPill";
 
 /** How long a "shared" row lingers before it ages out. */
 const INDICATOR_TTL_MS = 6_000;

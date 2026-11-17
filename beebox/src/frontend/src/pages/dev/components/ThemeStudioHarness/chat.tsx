@@ -6,6 +6,7 @@
  * shown in chat, and the composer in its states.
  */
 
+import { AmbientSpecimen, ComposerNoticeSpecimen } from "./ambient";
 import type { SessionEntry } from "../../../../api";
 import { AssistantMessage, CompactionMessage, InterruptedMessage, UserMessage } from "../../../../components/chat/ChatMessages/view";
 import { CalloutStack } from "../../../../components/chat/CalloutBlock";
@@ -51,6 +52,7 @@ const OWN = [
   ...entry({ uuid: "studio-upload", type: "user", ...DANA },
     "<upload doc=\"tmp-upload/seeds/Batch.upload-batch.card\" files=\"3\" bytes=\"2 MB\" failed=\"1\">\nPhotos of the seed table\n\n3 files uploaded (2 MB).\n</upload>"),
 ];
+const CALL = entry({ uuid: "studio-call", type: "user", ...DANA }, '<call people="Dana, Lee" duration="12:04" started="2026-08-01T10:00:00Z">[0:03] Dana: Bring spare envelopes.</call>');
 const QUEUED = entry({ uuid: "studio-queued", type: "user", ...DANA, pending: true }, "And bring the spare tape.");
 const OTHER = entry({ uuid: "studio-other", type: "user", user: "Lee", userEmail: "lee@example.com" }, "I can bring the folding table.");
 const REPLY: SessionEntry[] = [{
@@ -88,6 +90,7 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
       <LoadOlderHeader hasOlder loadingOlder={false} onLoadOlder={noop} />
       <CompactionMessage entries={COMPACTED} />
       <UserMessage entries={OWN} currentUserEmail="dana@example.com" currentUserName="Dana" />
+      <div id="bbx-theme-studio-call"><UserMessage entries={CALL} currentUserEmail="dana@example.com" currentUserName="Dana" /></div>
       <UserMessage entries={OTHER} currentUserEmail="dana@example.com" currentUserName="Dana" />
       <AssistantMessage entries={REPLY} />
       <InterruptedMessage />
@@ -98,6 +101,8 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
     </div>
     {/* Each state keeps the composer's ids, which theme rules key on, so the ids repeat. */}
     <div className="space-y-3">
+      <AmbientSpecimen />
+      <ComposerNoticeSpecimen />
       {[RESTING, ...COMPOSER_STATES].map((spec, i) => <div key={i} role="group" aria-label={`Composer state ${i + 1}`}>
         <ComposerSpecimen spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />
       </div>)}
