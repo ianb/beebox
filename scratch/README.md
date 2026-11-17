@@ -29,6 +29,6 @@ ignored by git.
 
 ## Lifecycle
 
-No cleanup policy inside a live checkout. When a worktree is removed, its
-`scratch/` moves to `~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/`
+No cleanup policy inside a live checkout. When a worktree is removed, the
+contents of its `scratch/` move to `~/.cache/beebox/culled-scratch/<name>-<UTC stamp>/`
 and is deleted 14 days later; keep anything longer-lived somewhere tracked.

@@ -516,37 +516,37 @@ wt_trash_reap() {
 # scratch/ is gitignored, so the worktree trash-mv used to take it silently,
 # and agents keep working tools there across days (the 2026-11-17
 # canvas-brushes cull deleted scripts that later work needed). A removal
-# therefore moves a non-empty scratch/ to WT_SCRATCH_KEEP_ROOT/<name>-<UTC
-# stamp> first and says where. `bin/workstreams sweep` trashes kept copies
+# therefore moves scratch/'s contents, less the tracked README, to
+# WT_SCRATCH_KEEP_ROOT/<name>-<UTC stamp> first and says where. `bin/workstreams sweep` trashes kept copies
 # older than WT_SCRATCH_KEEP_DAYS. No size cap: the move is a same-volume
-# rename, and the largest scratch/ seen (~570MB, mostly PNG renders) costs
+# rename (cross-volume only if BBX_STATE_DIR is moved), and the largest scratch/ seen (~570MB, mostly PNG renders) costs
 # disk only for the retention window.
 WT_SCRATCH_KEEP_ROOT="$WT_STATE_DIR/culled-scratch"
 WT_SCRATCH_KEEP_DAYS=14
 
 # wt_scratch_retain <worktree_path> <name>
 #
-# Moves <worktree_path>/scratch to the keep root when it holds anything besides
-# the tracked README.md. Non-zero when it holds work that could not be moved;
-# a removal caller must then refuse rather than trash it.
+# Moves every entry of <worktree_path>/scratch except the tracked README.md to
+# a new dir under the keep root. The README stays so the checkout remains
+# clean for a Git-level removal (native WorktreeRemove). Non-zero when an entry
+# could not be moved; a removal caller must then refuse rather than trash it.
 wt_scratch_retain() {
-  local worktree_path="$1" name="$2" src entry has_work="" dest size
+  local worktree_path="$1" name="$2" src entry dest size
+  local entries=()
   src="$worktree_path/scratch"
   [ -d "$src" ] && [ ! -L "$src" ] || return 0
   for entry in "$src"/* "$src"/.[!.]* "$src"/..?*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
     [ "$entry" = "$src/README.md" ] && continue
-    has_work=1
-    break
+    entries+=("$entry")
   done
-  [ -n "$has_work" ] || return 0
-  mkdir -p "$WT_SCRATCH_KEEP_ROOT" || return 1
+  [ "${#entries[@]}" -gt 0 ] || return 0
   dest="$WT_SCRATCH_KEEP_ROOT/$name-$(date -u +%Y%m%dT%H%M%SZ)"
   [ -e "$dest" ] && dest="$dest-$$"
   [ -e "$dest" ] && return 1
-  mv "$src" "$dest" || return 1
-  # A rename keeps the old mtime; the retention clock starts at the cull.
-  touch "$dest" || true
+  mkdir -p "$dest" || return 1
+  # On failure, drop the keep dir if nothing reached it.
+  mv "${entries[@]}" "$dest/" || { rmdir "$dest" 2>/dev/null || true; return 1; }
   size=$(du -sh "$dest" 2>/dev/null | cut -f1 | tr -d ' ')
   wt_say "kept scratch/ (${size:-?}) at $dest; deleted after $WT_SCRATCH_KEEP_DAYS days"
   wt_log "scratch kept wt=$worktree_path dest=$dest size=${size:-?}"
@@ -570,7 +570,7 @@ wt_scratch_prune() {
       echo "expired kept scratch: $d"
       wt_log "scratch expired dest=$d"
     fi
-  done < <(find "$WT_SCRATCH_KEEP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime "+$WT_SCRATCH_KEEP_DAYS" -print0)
+  done < <(find "$WT_SCRATCH_KEEP_ROOT" -mindepth 1 -maxdepth 1 -type d -mmin "+$((WT_SCRATCH_KEEP_DAYS * 1440))" -print0)
   return 0
 }
 

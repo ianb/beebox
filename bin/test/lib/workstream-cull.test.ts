@@ -248,10 +248,10 @@ void test("Removal stops immediately when the worktree directory cannot move int
 // ## A removal keeps scratch/ work outside the trash
 //
 // scratch/ is gitignored, so the worktree trash-mv used to delete it silently.
-// A removal moves a scratch/ holding more than its README to the kept-scratch
-// root and names the path; a README-only scratch/ is not kept. When the move
-// fails, removal refuses before any destructive step.
-void test("A removal moves a scratch/ holding more than its README to the kept-scratch r...", async (t) => {
+// A removal moves scratch/'s contents, less the tracked README, to the
+// kept-scratch root and names the path; a README-only scratch/ is not kept.
+// When the move fails, removal refuses before any destructive step.
+void test("A removal moves scratch/'s contents, less the tracked README, to the kept-scr...", async (t) => {
   t.teardown(async () => {
     try {
       await rm(scratchRoot, { recursive: true, force: true });
@@ -295,12 +295,14 @@ void test("A removal moves a scratch/ holding more than its README to the kept-s
   const keptNames = await listKept();
   const keptName = keptNames[0] ?? "";
   const keptFile = await readFile(join(state, "culled-scratch", keptName, "tools/build.ts"), "utf8").catch(() => "(missing)");
+  const keptReadme = await readFile(join(state, "culled-scratch", keptName, "README.md"), "utf8").then(() => true, () => false);
   t.check({
     names: keptNames.length,
     named: /^kept-fixture-\d{8}T\d{6}Z$/.test(keptName),
     file: keptFile,
+    keptReadme,
     reported: keptRun.stdout.includes("kept scratch/") && keptRun.stdout.includes(join(state, "culled-scratch", keptName)),
-  }, { names: 1, named: true, file: "work", reported: true });
+  }, { names: 1, named: true, file: "work", keptReadme: false, reported: true });
 
   const readmeOnly = join(worktrees, "readme-fixture");
   await git(mono, "worktree", "add", "-b", "worktree-readme-fixture", readmeOnly, "main");
@@ -312,7 +314,7 @@ void test("A removal moves a scratch/ holding more than its README to the kept-s
   await execFileAsync("bash", ["-c", 'printf work > "$1/scratch/notes.md"', "fixture", refused]);
   const failure = await expectFailure(run(refused, {
     branch: "worktree-refused-fixture",
-    stub: 'mv() { case "$1" in */scratch) echo "simulated move failure" >&2; return 1 ;; esac; command mv "$@"; }',
+    stub: 'mv() { case "$1" in */scratch/*) echo "simulated move failure" >&2; return 1 ;; esac; command mv "$@"; }',
   }));
   const notes = await readFile(join(refused, "scratch/notes.md"), "utf8").catch(() => "(missing)");
   const branchExists = await git(mono, "show-ref", "--verify", "refs/heads/worktree-refused-fixture").then(() => true, () => false);
@@ -322,6 +324,15 @@ void test("A removal moves a scratch/ holding more than its README to the kept-s
     branchExists: true,
     reported: true,
   });
+
+  // Native WorktreeRemove keeps scratch/ without removing the checkout, which
+  // Git then removes only if it is clean: the tracked README must stay.
+  await execFileAsync("bash", ["-c", '. "$1"; WT_STATE_DIR="$2"; WT_LOG_FILE="$2/worktree-cleanup.log"; WT_SCRATCH_KEEP_ROOT="$2/culled-scratch"; wt_scratch_retain "$3" refused-fixture', "retain", teardownLib, state, refused]);
+  t.check({
+    status: (await git(refused, "status", "--porcelain", "--untracked-files=all")).stdout,
+    notesLeft: await readFile(join(refused, "scratch/notes.md"), "utf8").then(() => true, () => false),
+    kept: (await listKept()).length,
+  }, { status: "", notesLeft: false, kept: 2 });
 });
 
 // ## Sweep expires kept scratch copies after the retention window
